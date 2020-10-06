@@ -11,6 +11,6 @@ set(SRC
     Target.h
 )
 
-add_executable(ig_generator ${SRC})
-target_link_libraries(ig_generator PUBLIC ig_lib_runtime tinyparser_mitsuba)
-target_include_directories(ig_generator PRIVATE ${tinymitsuba_dir})
+add_executable(iggenerator ${SRC})
+target_link_libraries(iggenerator PUBLIC ig_lib_runtime tinyparser_mitsuba)
+target_include_directories(iggenerator PRIVATE ${tinymitsuba_dir})
