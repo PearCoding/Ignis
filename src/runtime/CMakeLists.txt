@@ -24,6 +24,8 @@ set(SRC
     log/FileLogListener.cpp
     log/FileLogListener.h
     log/LogListener.h
+    math/BoundingBox.h
+    math/Triangle.h
     mesh/ObjFile.cpp
     mesh/ObjFile.h
     mesh/PlyFile.cpp

@@ -221,4 +221,10 @@ constexpr float Sqrt2  = 1.41421356237309504880;
 constexpr float Deg2Rad = Pi / 180.0f;
 constexpr float Rad2Deg = 180.0f * InvPi;
 
+/// Clamps a between b and c.
+template <typename T>
+inline T clamp(T a, T b, T c)
+{
+	return (a < b) ? b : ((a > c) ? c : a);
+}
 } // namespace IG
