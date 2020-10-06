@@ -19,6 +19,8 @@ set(SRC
     Logger.h 
     Image.cpp
     Image.h
+    bvh/BVH.h
+    bvh/MemoryPool.h
     log/ConsoleLogListener.cpp
     log/ConsoleLogListener.h
     log/FileLogListener.cpp

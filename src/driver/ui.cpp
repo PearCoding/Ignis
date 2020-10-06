@@ -21,7 +21,8 @@
 
 #include "Logger.h"
 
-using namespace IG;
+namespace IG {
+namespace UI {
 
 #define CULL_BAD_COLOR
 #define CATCH_BAD_COLOR
@@ -394,7 +395,9 @@ static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, si
 {
 }
 
-void rodent_ui_init(int width, int height)
+////////////////////////////////////////////////////////////////
+
+void init(int width, int height)
 {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
 		IG_LOG(L_FATAL) << "Cannot initialize SDL." << std::endl;
@@ -402,7 +405,7 @@ void rodent_ui_init(int width, int height)
 	sWidth	= width;
 	sHeight = height;
 	sWindow = SDL_CreateWindow(
-		"Rodent",
+		"Ignis",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
 		width,
@@ -424,7 +427,7 @@ void rodent_ui_init(int width, int height)
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	(void)io;
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // if enabled -> ImGuiKey_Space has to be mapped
 	ImGui::StyleColorsDark();
 
 	ImGuiSDL::Initialize(sRenderer, width, height);
@@ -432,7 +435,7 @@ void rodent_ui_init(int width, int height)
 	read_pose_file();
 }
 
-void rodent_ui_close()
+void close()
 {
 	ImGuiSDL::Deinitialize();
 
@@ -444,7 +447,7 @@ void rodent_ui_close()
 	sBuffer.clear();
 }
 
-void rodent_ui_settitle(const char* str)
+void setTitle(const char* str)
 {
 	if (sLockInteraction) {
 		std::stringstream sstream;
@@ -454,7 +457,7 @@ void rodent_ui_settitle(const char* str)
 		SDL_SetWindowTitle(sWindow, str);
 }
 
-bool rodent_ui_handleinput(uint32_t& iter, Camera& cam)
+bool handleInput(uint32_t& iter, Camera& cam)
 {
 	return handle_events(iter, cam);
 }
@@ -507,7 +510,7 @@ static void handle_imgui(uint32_t iter)
 	ImGui::End();
 }
 
-void rodent_ui_update(uint32_t iter)
+void update(uint32_t iter)
 {
 	update_texture(sBuffer.data(), sTexture, sWidth, sHeight, iter);
 	if (sScreenshotRequest) {
@@ -526,3 +529,6 @@ void rodent_ui_update(uint32_t iter)
 
 	SDL_RenderPresent(sRenderer);
 }
+
+} // namespace UI
+} // namespace IG
