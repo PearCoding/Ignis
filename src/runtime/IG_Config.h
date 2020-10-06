@@ -209,6 +209,7 @@ using Quaternionf = Eigen::Quaternionf;
 /* Useful constants */
 constexpr float Epsilon = std::numeric_limits<float>::epsilon();
 constexpr float Inf		= std::numeric_limits<float>::infinity();
+constexpr float FltMax	= std::numeric_limits<float>::max();
 
 constexpr float Pi	   = 3.14159265358979323846;
 constexpr float InvPi  = 0.31830988618379067154; // 1/pi

@@ -42,14 +42,14 @@ struct RGB {
 
 	inline RGB applyGamma(float f = 0.5f) const
 	{
-		return rgb(std::pow(r, f), std::pow(g, f), std::pow(b, f));
+		return RGB(std::pow(r, f), std::pow(g, f), std::pow(b, f));
 	}
 
 	inline RGB clamp(const RGB& min, const RGB& max) const
 	{
-		return RGB(clamp(r, min.r, max.r),
-				   clamp(g, min.g, max.b),
-				   clamp(b, min.b, max.g));
+		return RGB(IG::clamp(r, min.r, max.r),
+				   IG::clamp(g, min.g, max.b),
+				   IG::clamp(b, min.b, max.g));
 	}
 
 	inline float luminance() const
@@ -110,10 +110,10 @@ struct RGBA {
 
 	inline RGBA clamp(const RGBA& min, const RGBA& max) const
 	{
-		return RGBA(clamp(r, min.r, max.r),
-					clamp(g, min.g, max.b),
-					clamp(b, min.b, max.g),
-					clamp(a, min.a, max.a));
+		return RGBA(IG::clamp(r, min.r, max.r),
+					IG::clamp(g, min.g, max.b),
+					IG::clamp(b, min.b, max.g),
+					IG::clamp(a, min.a, max.a));
 	}
 };
 

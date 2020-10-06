@@ -52,21 +52,21 @@ struct BoundingBox {
 
 	inline bool isEmpty() const
 	{
-		return min.x > max.x || min.y > max.y || min.z > max.z;
+		return (min.array() > max.array()).any();
 	}
 
 	inline bool isInside(const Vector3f& v) const
 	{
-		return (v >= min).all() && (v <= max).all();
+		return (v.array() >= min.array()).all() && (v.array() <= max.array()).all();
 	}
 
 	inline bool isOverlapping(const BoundingBox& bb) const
 	{
-		return (min <= bb.max).all() && (max >= bb.min).all();
+		return (min.array() <= bb.max.array()).all() && (max.array() >= bb.min.array()).all();
 	}
 
-	inline static BoundingBox Empty() { return BoundingBox(Vector3f(FLT_MAX), Vector3f(-FLT_MAX)); }
-	inline static BoundingBox Full() { return BoundingBox(Vector3f(-FLT_MAX), Vector3f(FLT_MAX)); }
+	inline static BoundingBox Empty() { return BoundingBox(Vector3f(FltMax, FltMax, FltMax), Vector3f(-FltMax, -FltMax, -FltMax)); }
+	inline static BoundingBox Full() { return BoundingBox(Vector3f(-FltMax, -FltMax, -FltMax), Vector3f(FltMax, FltMax, FltMax)); }
 };
 
 } // namespace IG
