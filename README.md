@@ -7,6 +7,7 @@ Ignis is a raytracer for the RENEGADE project implemented using the Artic fronte
  - AnyDSL <https://github.com/AnyDSL/anydsl>
  - Eigen3 <http://eigen.tuxfamily.org>
  - OpenImageIO <https://sites.google.com/site/openimageio/home>
+ - LZ4 <https://github.com/lz4/lz4>
 
 ### Optional
 

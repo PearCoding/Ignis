@@ -32,6 +32,10 @@ find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(OpenImageIO REQUIRED)
 include_directories(${OIIO_INCLUDE_DIR})
 
+# LZ4 compression
+find_package(LZ4 REQUIRED)
+include_directories(${LZ4_INCLUDE_DIR})
+
 # Enable folders for Visual Studio
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
