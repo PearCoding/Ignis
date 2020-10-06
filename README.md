@@ -8,6 +8,7 @@ Ignis is a raytracer for the RENEGADE project implemented using the Artic fronte
  - Eigen3 <http://eigen.tuxfamily.org>
  - OpenImageIO <https://sites.google.com/site/openimageio/home>
  - LZ4 <https://github.com/lz4/lz4>
+ - TinyParser-Mitsuba <https://github.com/PearCoding/TinyParser-Mitsuba>
 
 ### Optional
 
@@ -21,8 +22,8 @@ Once the dependencies are installed, first create a directory to build the appli
     mkdir build
     cd build
 
-Use your favorite generator (here Ninja) and set the scene to be build using SCENE_FILE
+Use your favorite generator (e.g. Ninja) and set the scene to be build using SCENE_FILE
 
-    cmake -G Ninja .. -DSCENE_FILE=myfile.obj
+    cmake -G Ninja .. -DSCENE_FILE=myfile.xml
     ninja
 

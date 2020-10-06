@@ -18,6 +18,9 @@ set(CMAKE_DEBUG_POSTFIX  "_d")
 
 MESSAGE(STATUS "Building Ignis ${Ignis_VERSION}")
 
+# Setup CPM
+include(cmake/SetupCPM.cmake)
+
 # Locate AnyDSL runtime
 find_package(AnyDSL_runtime REQUIRED)
 include_directories(${AnyDSL_runtime_INCLUDE_DIRS})
@@ -35,6 +38,7 @@ include_directories(${OIIO_INCLUDE_DIR})
 # LZ4 compression
 find_package(LZ4 REQUIRED)
 include_directories(${LZ4_INCLUDE_DIR})
+
 
 # Enable folders for Visual Studio
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

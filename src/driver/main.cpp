@@ -9,6 +9,12 @@
 
 #include "ui.h"
 
+#include "Color.h"
+#include "bvh/BVH.h"
+#include "math/BoundingBox.h"
+#include "math/Triangle.h"
+#include "Buffer.h"
+
 #ifndef NDEBUG
 #include <fenv.h>
 #endif
@@ -21,8 +27,8 @@ using namespace IG;
 
 int main(int, char**)
 {
-	int width = 400, height = 400;
-	rodent_ui_init(width, height);
+	int width = 800, height = 600;
+	UI::init(width, height);
 
 	// Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
@@ -33,14 +39,14 @@ int main(int, char**)
 	feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 #endif
 
-    uint32_t iter;
+	uint32_t iter;
 	Camera camera(Vector3f::Zero(), Vector3f::UnitZ(), Vector3f::UnitY(), 60, width / (float)height);
 	bool done = false;
 	while (!done) {
-		done = rodent_ui_handleinput(iter, camera);
-		rodent_ui_update(iter);
+		done = UI::handleInput(iter, camera);
+		UI::update(iter);
 	}
 
-	rodent_ui_close();
+	UI::close();
 	return 0;
 }
