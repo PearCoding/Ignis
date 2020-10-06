@@ -25,6 +25,9 @@ include_directories(${AnyDSL_runtime_INCLUDE_DIRS})
 # Make sure the filesystem library is available
 find_package(Filesystem REQUIRED)
 
+# Locate Eigen
+find_package(Eigen3 REQUIRED NO_MODULE)
+
 # Locate OpenImageIO
 find_package(OpenImageIO REQUIRED)
 include_directories(${OIIO_INCLUDE_DIR})

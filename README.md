@@ -5,6 +5,7 @@ Ignis is raytracer implemented using the AnyDSL compiler framework (https://anyd
 ## Dependencies
 
  - AnyDSL <https://github.com/AnyDSL/anydsl>
+ - Eigen3 <http://eigen.tuxfamily.org>
  - OpenImageIO <https://sites.google.com/site/openimageio/home>
 
 ### Optional

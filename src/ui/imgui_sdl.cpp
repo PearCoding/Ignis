@@ -674,3 +674,9 @@ namespace ImGuiSDL
 		SDL_SetRenderDrawBlendMode(CurrentDevice->Renderer, blendMode);
 	}
 }
+
+// Include implementation of imgui
+#include "imgui.cpp"
+#include "imgui_demo.cpp"
+#include "imgui_draw.cpp"
+#include "imgui_widgets.cpp"
