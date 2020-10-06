@@ -13,6 +13,7 @@ set(SRC
 )
 
 add_library(ig_runtime STATIC ${SRC})
+add_dependencies(ig_runtime ighwinfo)
 target_link_libraries(ig_runtime PUBLIC Eigen3::Eigen)
 target_include_directories(ig_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 target_compile_features(ig_runtime PUBLIC cxx_std_17)

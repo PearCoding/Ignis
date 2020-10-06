@@ -1,7 +1,7 @@
 {
     "files.associations": {
         "*.impala": "rust",
-        "*.prc": "lisp",
+        "*.art": "rust",
         "cctype": "cpp",
         "clocale": "cpp",
         "cmath": "cpp",
@@ -64,6 +64,7 @@
         "cfenv": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "core": "cpp"
+        "core": "cpp",
+        "complex": "cpp"
     }
 }
