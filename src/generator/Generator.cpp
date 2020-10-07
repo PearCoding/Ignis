@@ -373,9 +373,9 @@ static void setup_shapes(const Object& elem, const LoadInfo& info, GenContext& c
 	   << "        face_normals: @ |i| face_normals.load_vec3(i),\n"
 	   << "        face_area:    @ |i| face_area.load_f32(i),\n"
 	   << "        triangles:    @ |i| { let (i, j, k, _) = indices.load_int4(i); (i, j, k) },\n"
-	   << "        attrs:        @ |_| (false, @ |j| vec2_to_4(texcoords.load_vec2(j), 0.0f, 0.0f)),\n"
+	   << "        attrs:        @ |_| (false, @ |j| vec2_to_4(texcoords.load_vec2(j), 0.0, 0.0)),\n"
 	   << "        num_attrs:    1,\n"
-	   << "        num_tris:     " << ctx.Mesh.indices.size() / 4 << "\n"
+	   << "        num_tris:     " << size_t(ctx.Mesh.indices.size() / 4) << "\n"
 	   << "    };\n"
 	   << "    let bvh = device.load_bvh(\"data/bvh.bin\");\n";
 
