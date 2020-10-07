@@ -15,4 +15,17 @@ enum class Target : uint32 {
 	AMDGPU_MEGAKERNEL,
 	INVALID
 };
+
+inline bool require_padding(Target target)
+{
+	switch (target) {
+	default:
+		return false;
+	case Target::NVVM_STREAMING:
+	case Target::NVVM_MEGAKERNEL:
+	case Target::AMDGPU_STREAMING:
+	case Target::AMDGPU_MEGAKERNEL:
+		return true;
+	}
 }
+} // namespace IG

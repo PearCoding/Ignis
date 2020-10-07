@@ -1,0 +1,132 @@
+// Change these variables to use another random number generator
+//type RndState = u64;
+//static randi = mwc64x;
+type RndState = u32;
+static randi = xorshift;
+
+fn @randf(rnd: &mut RndState) -> f32 {
+    // Assumes IEEE 754 floating point format
+    let x = randi(rnd) as u32;
+    bitcast[f32]((127:u32 << 23) | (x & 0x7FFFFF)) - 1
+}
+
+// MWC64X: http://cas.ee.ic.ac.uk/people/dt10/research/rngs-gpu-mwc64x.html
+fn @mwc64x(seed: &mut u64) -> i32 {
+    let c = *seed >> 32;
+    let x = *seed & 0xFFFFFFFF;
+    *seed = x * 4294883355 + c;
+    (x as i32)^(c as i32)
+}
+
+// 32-bit version of the xorshift random number generator
+fn @xorshift(seed: &mut u32) -> i32 {
+    let mut x = *seed;
+    x = select(x == 0, 1:u32, x);
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x <<  5;
+    *seed = x;
+    x as i32
+}
+
+// Result of sampling a direction
+struct DirSample {
+    dir: Vec3,
+    pdf: f32
+}
+
+fn @make_dir_sample(math: Intrinsics, c: f32, s: f32, phi: f32, pdf: f32) -> DirSample {
+    let x = s * math.cosf(phi);
+    let y = s * math.sinf(phi);
+    let z = c;
+    DirSample {
+        dir = make_vec3(x, y, z),
+        pdf = pdf
+    }
+}
+
+// Samples a point uniformly on a triangle
+fn @sample_triangle(mut u: f32, mut v: f32, v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
+    if (u + v > 1) {
+        u = 1 - u;
+        v = 1 - v;
+    }
+    vec3_add(
+        vec3_add(
+            vec3_mulf(v0, 1 - v - u),
+            vec3_mulf(v1, u)),
+        vec3_mulf(v2, v)
+    )
+}
+
+// Probability density function for uniform sphere sampling
+fn @uniform_sphere_pdf() -> f32 { 1 / (4 * flt_pi) }
+
+// Samples a direction uniformly on a sphere
+fn @sample_uniform_sphere(math: Intrinsics, u: f32, v: f32) -> DirSample {
+    let c = 2 * v - 1;
+    let s = math.sqrtf(1 - c * c);
+    let phi = 2 * flt_pi * u;
+    make_dir_sample(math, c, s, phi, uniform_sphere_pdf())
+}
+
+// Probability density function for cosine weighted hemisphere sampling
+fn @cosine_hemisphere_pdf(c: f32) -> f32 { c * (1 / flt_pi) }
+
+// Samples a direction on a hemisphere proportionally to the cosine with the surface normal
+fn @sample_cosine_hemisphere(math: Intrinsics, u: f32, v: f32) -> DirSample {
+    let c = math.sqrtf(1 - v);
+    let s = math.sqrtf(v);
+    let phi = 2 * flt_pi * u;
+    make_dir_sample(math, c, s, phi, cosine_hemisphere_pdf(c))
+}
+
+// Probability density function for cosine-power weighted hemisphere sampling
+fn @cosine_power_hemisphere_pdf(_math: Intrinsics, c: f32, k: f32) -> f32 {
+    fastpow/*math.powf*/(c, k) * (k + 1) * (1 / (2 * flt_pi))
+}
+
+// Samples a direction on a hemisphere proportionally to the power of the cosine with the surface normal
+fn @sample_cosine_power_hemisphere(math: Intrinsics, k: f32, u: f32, v: f32) -> DirSample {
+    let c = math.fminf(fastpow/*math.powf*/(v, 1 / (k + 1)), 1);
+    let s = math.sqrtf(1 - c * c);
+    let phi = 2 * flt_pi * u;
+    // We have:
+    // pow(c, k) = pow(pow(v, 1 / (k + 1)), k)
+    //           = pow(v, k / (k + 1))
+    //           = v * pow(v, -1 / (k + 1))
+    //           = v / c
+    let pow_c_k = select(c != 0, v / c, 0:f32);
+    let pdf = pow_c_k * (k + 1) * (1 / (2 * flt_pi));
+    make_dir_sample(math, c, s, phi, pdf)
+}
+
+// Initializer for Bernstein's hash function
+fn @bernstein_init() -> u32 { 5381:u32 }
+
+// Bernstein's hash function
+fn @bernstein_hash(mut h: u32, d: u32) -> u32 {
+    h = (h * 33) ^ ( d        & 0xFF);
+    h = (h * 33) ^ ((d >>  8) & 0xFF);
+    h = (h * 33) ^ ((d >> 16) & 0xFF);
+    h = (h * 33) ^ ((d >> 24) & 0xFF);
+    h
+}
+
+// Initializer for the FNV hash function
+fn @fnv_init() -> u32 { 0x811C9DC5 }
+
+// FNV hash function
+fn @fnv_hash(mut h: u32, d: u32) -> u32 {
+    h = (h * 16777619) ^ ( d        & 0xFF);
+    h = (h * 16777619) ^ ((d >>  8) & 0xFF);
+    h = (h * 16777619) ^ ((d >> 16) & 0xFF);
+    h = (h * 16777619) ^ ((d >> 24) & 0xFF);
+    h
+}
+
+// Returns the probability to continue given the contribution of a path
+fn @russian_roulette(c: Color, clamp: f32) -> f32 {
+    let prob = 2 * color_luminance(c);
+    if prob > clamp { clamp } else { prob }
+}

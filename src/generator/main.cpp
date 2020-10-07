@@ -1,6 +1,8 @@
 #include <iostream>
 
 #include "Target.h"
+#include "BVHAdapter.h"
+#include "IO.h"
 
 int main(int argc, char **argv)
 {

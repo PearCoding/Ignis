@@ -18,6 +18,9 @@ set(CMAKE_DEBUG_POSTFIX  "_d")
 
 MESSAGE(STATUS "Building Ignis ${Ignis_VERSION}")
 
+# Setup artic clang flags
+set(ARTIC_CLANG_FLAGS -O3 -march=native -ffast-math CACHE STRING "Artic Clang compilation options")
+
 # Setup CPM
 include(cmake/SetupCPM.cmake)
 

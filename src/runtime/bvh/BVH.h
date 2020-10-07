@@ -394,7 +394,7 @@ private:
 			BoundingBox cur_bb = ref.bb;
 			for (size_t j = first_bin; j < last_bin; j++) {
 				BoundingBox left_bb, right_bb;
-				tris[ref.id].compute_split(left_bb, right_bb, axis, j < num_bins - 1 ? axis_min + (j + 1) * bin_size : axis_max);
+				tris[ref.id].computeSplit(left_bb, right_bb, axis, j < num_bins - 1 ? axis_min + (j + 1) * bin_size : axis_max);
 				bins[j].bb.extend(left_bb.overlap(cur_bb));
 				cur_bb.overlap(right_bb);
 			}
@@ -496,7 +496,7 @@ private:
 		while (left_count < first_right) {
 			const Ref& ref = refs[left_count];
 			BoundingBox left_split_bb, right_split_bb;
-			tris[ref.id].compute_split(left_split_bb, right_split_bb, split.axis, split.position);
+			tris[ref.id].computeSplit(left_split_bb, right_split_bb, split.axis, split.position);
 			left_split_bb.overlap(ref.bb);
 			right_split_bb.overlap(ref.bb);
 

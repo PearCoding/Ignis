@@ -1,4 +1,4 @@
-
+add_subdirectory(artic)
 add_subdirectory(hardware)
 add_subdirectory(runtime)
 add_subdirectory(generator)

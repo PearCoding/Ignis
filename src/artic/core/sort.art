@@ -1,0 +1,93 @@
+type SortingNetwork = fn (i32, fn (i32, i32) -> ()) -> ();
+
+fn @bose_nelson_sort(n: i32, cmp_swap: fn (i32, i32) -> ()) -> () {
+    fn @(?i & ?len) p_star(i: i32, len: i32) -> () {
+        if len > 1 {
+            let m = len / 2;
+            p_star(i, m);
+            p_star((i + m), (len - m));
+            p_bracket(i, m, (i + m), (len - m));
+        }
+    }
+
+    fn @(?i1 & ?len1 & ?i2 & ?len2) p_bracket(i1: i32, len1: i32, i2: i32, len2: i32) -> () {
+        if len1 == 1 && len2 == 1 {
+            cmp_swap(i1, i2);
+        } else if len1 == 1 && len2 == 2 {
+            cmp_swap(i1, i2 + 1);
+            cmp_swap(i1, i2);
+        } else if len1 == 2 && len2 == 1 {
+            cmp_swap(i1, i2);
+            cmp_swap(i1 + 1, i2);
+        } else {
+            let a = len1 / 2;
+            let b = select(len1 % 2 != 0, len2 / 2, (len2 + 1) / 2);
+            p_bracket(i1, a, i2, b);
+            p_bracket((i1 + a), (len1 - a), (i2 + b), (len2 - b));
+            p_bracket((i1 + a), (len1 - a), i2, b);
+        }
+    }
+
+    p_star(0, n)
+}
+
+fn @batcher_sort(n: i32, cmp_swap: fn (i32, i32) -> ()) -> () {
+    fn @(?i & ?len & ?r) merge(i: i32, len: i32, r: i32) -> () {
+        let step = r * 2;
+        if step < len {
+            merge(i, len, step);
+            merge(i + r, len, step);
+            for j in unroll_step(i + r, i + len - r, step) {
+                // Remove comparators for non-existing elements
+                if j < n && j + r < n {
+                    cmp_swap(j, j + r)
+                }
+            }
+        } else {
+            // idem
+            if i < n && i + r < n {
+                cmp_swap(i, i + r);
+            }
+        }
+    }
+
+    fn @(?i & ?len) sort(i: i32, len: i32) -> () {
+        if len > 1 {
+            let m = len / 2;
+            sort(i, m);
+            sort(i + m, m);
+            merge(i, len, 1)
+        }
+    }
+
+    // Compute closest power of two
+    let p = 1 << ilog2(n);
+    sort(0, p)
+}
+
+fn @bitonic_sort(n: i32, cmp_swap: fn (i32, i32) -> ()) -> () {
+    fn @(?i & ?len) merge(i: i32, len: i32, dir: bool) -> () {
+        if len > 1 {
+            // Compute greatest power of two lower than len
+            let m = 1 << (ilog2(len) - 1);
+
+            for j in unroll(i, i + len - m) {
+                cmp_swap(select(dir, j, j + m), select(dir, j + m, j));
+            }
+
+            merge(i, m, dir);
+            merge(i + m, len - m, dir);
+        }
+    }
+
+    fn @(?i & ?len) sort(i: i32, len: i32, dir: bool) -> () {
+        if len > 1 {
+            let m = len / 2;
+            sort(i, m, !dir);
+            sort(i + m, len - m, dir);
+            merge(i, len, dir);
+        }
+    }
+
+    sort(0, n, true)
+}
