@@ -1,32 +1,28 @@
 set(ARTIC_SRC
-    core/color.art
-    core/common.art
-    core/cpu_common.art
-    core/matrix.art
-    core/random.art
-    core/sort.art
-    core/vector.art
-    render/camera.art
-    render/driver.art
-    render/geometry.art
-    render/image.art
-    render/light.art
-    render/mapping_cpu.art
-    render/mapping_gpu.art
-    render/material.art
-    render/renderer.art
-    render/scene.art
-    traversal/intersection.art
-    traversal/mapping_cpu.art
-    traversal/mapping_gpu.art
-    traversal/stack.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/color.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/common.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/cpu_common.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/matrix.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/random.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/sort.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/camera.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/driver.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/geometry.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/image.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/light.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_cpu.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_gpu.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/material.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/scene.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/traversal/intersection.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/traversal/mapping_cpu.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/traversal/mapping_gpu.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/traversal/stack.art
 )
 
-anydsl_runtime_wrap(ARTIC_OBJS
-    NAME "artic"
-    CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
-    IMPALA_FLAGS --log-level info --max-errors 5
-    FILES ${ARTIC_SRC} ${CMAKE_CURRENT_BINARY_DIR}/main.impala)
+set(ARTIC_SRC ${ARTIC_SRC} PARENT_SCOPE)
 
 anydsl_runtime_wrap(DISCARD_TMP_OBJS
     NAME "interface"

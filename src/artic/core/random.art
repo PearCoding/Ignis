@@ -45,6 +45,12 @@ fn @make_dir_sample(math: Intrinsics, c: f32, s: f32, phi: f32, pdf: f32) -> Dir
     }
 }
 
+fn @spherical_from_dir(math: Intrinsics, dir: Vec3) -> (f32, f32) {
+    let theta = math.acosf(dir.z);
+    let phi = math.atan2f(dir.y, dir.x);
+    (theta, phi)
+}
+
 // Samples a point uniformly on a triangle
 fn @sample_triangle(mut u: f32, mut v: f32, v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
     if (u + v > 1) {

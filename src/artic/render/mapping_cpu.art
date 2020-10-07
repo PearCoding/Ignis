@@ -335,7 +335,7 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
     let mut film_height : i32;
-    rodent_get_film_data(0, &mut film_pixels, &mut film_width, &mut film_height);
+    ignis_get_film_data(0, &mut film_pixels, &mut film_width, &mut film_height);
     (film_pixels, film_width, film_height)
 }
 
@@ -369,8 +369,8 @@ fn @cpu_trace( scene: Scene
             let mut primary   : PrimaryStream;
             let mut secondary : SecondaryStream;
             let capacity = spp * tile_size * tile_size;
-            rodent_cpu_get_primary_stream(&mut primary,     capacity);
-            rodent_cpu_get_secondary_stream(&mut secondary, capacity);
+            ignis_cpu_get_primary_stream(&mut primary,     capacity);
+            ignis_cpu_get_secondary_stream(&mut secondary, capacity);
 
             let mut id = 0;
             let num_rays = spp * (ymax - ymin) * (xmax - xmin);
@@ -470,9 +470,9 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             vector_compact
         )
     },
-    present = @ || rodent_present(0),
+    present = @ || ignis_present(0),
     load_buffer = @ |filename| {
-        let p = rodent_load_buffer(0, filename);
+        let p = ignis_load_buffer(0, filename);
         DeviceBuffer {
             load_f32  = @ |i| (p as &[f32])(i),
             load_i32  = @ |i| (p as &[i32])(i),
@@ -488,12 +488,12 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         if vector_width == 8 {
             let mut nodes: &[Node8];
             let mut tris: &[Tri4];
-            rodent_load_bvh8_tri4(0, filename, &mut nodes, &mut tris);
+            ignis_load_bvh8_tri4(0, filename, &mut nodes, &mut tris);
             make_cpu_bvh8_tri4(nodes, tris)
         } else {
             let mut nodes: &[Node4];
             let mut tris: &[Tri4];
-            rodent_load_bvh4_tri4(0, filename, &mut nodes, &mut tris);
+            ignis_load_bvh4_tri4(0, filename, &mut nodes, &mut tris);
             make_cpu_bvh4_tri4(nodes, tris)
         }
     },
@@ -501,7 +501,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         let mut pixel_data: &[u8];
         let mut width: i32;
         let mut height: i32;
-        rodent_load_image(0, filename, &mut pixel_data, &mut width, &mut height);
+        ignis_load_image(0, filename, &mut pixel_data, &mut width, &mut height);
         make_image_rgba32(@ |x, y| (pixel_data as &[u32])(y * width + x), width, height)
     }
 }

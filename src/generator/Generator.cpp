@@ -368,14 +368,14 @@ static void setup_shapes(const Object& elem, const LoadInfo& info, GenContext& c
 	   << "    let texcoords    = device.load_buffer(\"data/texcoords.bin\");\n"
 	   << "    let indices      = device.load_buffer(\"data/indices.bin\");\n"
 	   << "    let tri_mesh     = TriMesh {\n"
-	   << "        vertices:     @ |i| vertices.load_vec3(i),\n"
-	   << "        normals:      @ |i| normals.load_vec3(i),\n"
-	   << "        face_normals: @ |i| face_normals.load_vec3(i),\n"
-	   << "        face_area:    @ |i| face_area.load_f32(i),\n"
-	   << "        triangles:    @ |i| { let (i, j, k, _) = indices.load_int4(i); (i, j, k) },\n"
-	   << "        attrs:        @ |_| (false, @ |j| vec2_to_4(texcoords.load_vec2(j), 0.0, 0.0)),\n"
-	   << "        num_attrs:    1,\n"
-	   << "        num_tris:     " << size_t(ctx.Mesh.indices.size() / 4) << "\n"
+	   << "        vertices     = @ |i| vertices.load_vec3(i),\n"
+	   << "        normals      = @ |i| normals.load_vec3(i),\n"
+	   << "        face_normals = @ |i| face_normals.load_vec3(i),\n"
+	   << "        face_area    = @ |i| face_area.load_f32(i),\n"
+	   << "        triangles    = @ |i| { let (i, j, k, _) = indices.load_int4(i); (i, j, k) },\n"
+	   << "        attrs        = @ |_| (false, @ |j| vec2_to_4(texcoords.load_vec2(j), 0.0, 0.0)),\n"
+	   << "        num_attrs    = 1,\n"
+	   << "        num_tris     = " << size_t(ctx.Mesh.indices.size() / 4) << "\n"
 	   << "    };\n"
 	   << "    let bvh = device.load_bvh(\"data/bvh.bin\");\n";
 
@@ -649,9 +649,9 @@ static size_t setup_lights(const Object& elem, const LoadInfo& info, const GenCo
 
 	os << "\n    // Lights\n";
 	if (light_count == 0) { // Camera light
-		os << "    let lights = @ |_| make_camera_light(math, camera, make_spectrum_identity());\n";
+		os << "    let lights = @ |_ : i32| make_camera_light(math, camera, make_spectrum_identity());\n";
 	} else {
-		os << "    let lights = @ |i| match i {\n";
+		os << "    let lights = @ |i : i32| match i {\n";
 		for (size_t i = 0; i < light_count; ++i) {
 			if (i == light_count - 1)
 				os << "        _ => light_" << i << "\n";
@@ -676,7 +676,7 @@ static void convert_scene(const Scene& scene, const LoadInfo& info, std::ostream
 	size_t light_count = setup_lights(scene, info, ctx, os);
 
 	os << "\n    // Geometries\n"
-	   << "    let geometries = @ |i| match i {\n";
+	   << "    let geometries = @ |i : i32| match i {\n";
 	for (uint32_t s = 0; s < ctx.Materials.size(); ++s) {
 		os << "        ";
 		if (s != ctx.Materials.size() - 1)
@@ -689,12 +689,12 @@ static void convert_scene(const Scene& scene, const LoadInfo& info, std::ostream
 
 	os << "\n    // Scene\n"
 	   << "    let scene = Scene {\n"
-	   << "        num_geometries: " << ctx.Materials.size() << ",\n"
-	   << "        num_lights:     " << light_count << ",\n"
-	   << "        geometries:     @ |i| geometries(i),\n"
-	   << "        lights:         @ |i| lights(i),\n"
-	   << "        camera:         camera,\n"
-	   << "        bvh:            bvh\n"
+	   << "        num_geometries = " << ctx.Materials.size() << ",\n"
+	   << "        num_lights     = " << light_count << ",\n"
+	   << "        geometries     = @ |i : i32| geometries(i),\n"
+	   << "        lights         = @ |i : i32| lights(i),\n"
+	   << "        camera         = camera,\n"
+	   << "        bvh            = bvh\n"
 	   << "    };\n";
 }
 
@@ -722,7 +722,7 @@ bool generate(const std::filesystem::path& filepath, const GeneratorOptions& opt
 		   << "    right: Vec3,\n"
 		   << "    width: f32,\n"
 		   << "    height: f32\n"
-		   << "};\n"
+		   << "}\n"
 		   << "\n"
 		   << "#[export] fn get_spp() -> i32 { " << options.spp << " }\n"
 		   << "\n"

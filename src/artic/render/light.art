@@ -117,6 +117,65 @@ fn @make_point_light(math: Intrinsics, pos: Vec3, color: Color) = Light {
     has_area = false
 }
 
+// This samples the environment by naive sphere sampling
+fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) -> Light {
+    Light {
+        sample_direct = @ |rnd, from| {
+            let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
+            make_direct_sample(vec3_mulf(from,max_radius), intensity, 1.0, uniform_sphere_pdf(), 1.0)
+        },
+        sample_emission = @ |rnd| {
+            let u = randf(rnd);
+            let v = randf(rnd);
+            let sample = sample_uniform_sphere(math, u, v);
+            let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
+            make_emission_sample(vec3_mulf(sample.dir,max_radius), sample.dir, intensity, 1.0, sample.pdf, 1.0)
+        },
+        emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
+        has_area = false
+    }
+}
+
+/* TODO: This should contain a distribution map for efficient sampling */
+fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Texture) -> Light {
+    Light {
+        sample_direct = @ |rnd, from| {
+            let (theta, phi) = spherical_from_dir(math, from);
+            let u = theta / flt_pi;
+            let v = phi / (2.0 * flt_pi);
+            let intensity = color_mulf(tex(make_vec2(u,v)), 1.0 / (4.0 * flt_pi));
+            make_direct_sample(vec3_mulf(from,max_radius), intensity, 1.0, uniform_sphere_pdf(), 1.0)
+        },
+        sample_emission = @ |rnd| {
+            let u = randf(rnd);
+            let v = randf(rnd);
+            let sample = sample_uniform_sphere(math, u, v);
+            let intensity = color_mulf(tex(make_vec2(u,v)), 1.0 / (4.0 * flt_pi));
+            make_emission_sample(vec3_mulf(sample.dir,max_radius), sample.dir, intensity, 1.0, sample.pdf, 1.0)
+        },
+        emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
+        has_area = false
+    }
+}
+
+fn @make_camera_light(math: Intrinsics, camera: Camera, color: Color) -> Light {
+    Light {
+        sample_direct = @ |rnd, from| {
+            let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
+            make_direct_sample(camera.origin(), intensity, 1.0, uniform_sphere_pdf(), 1.0)
+        },
+        sample_emission = @ |rnd| {
+            let u = randf(rnd);
+            let v = randf(rnd);
+            let sample = sample_uniform_sphere(math, u, v);
+            let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
+            make_emission_sample(camera.origin(), sample.dir, intensity, 1.0, sample.pdf, 1.0)
+        },
+        emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
+        has_area = false
+    }
+}
+
 fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
     sample_direct = @ |rnd, from| {
         let (pos, n, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
@@ -145,6 +204,33 @@ fn @make_precomputed_triangle_light(math: Intrinsics, v0: Vec3, v1: Vec3, v2: Ve
         sample = @ |uv| (sample_triangle(uv.x, uv.y, v0, v1, v2), n, inv_area),
         normal = @ |_| n,
         pdf = @ |_| inv_area
+    };
+    make_area_light(math, emitter, color)
+}
+
+fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, color: Color) -> Light {
+    let emitter = AreaEmitter {
+        sample = @ |uv| {
+            let f = (uv.x * (count as f32)) as i32;
+            let uv2 = make_vec2(uv.x/(f as f32), uv.y);
+            let (i0, i1, i2) = mesh.triangles(f+off);
+            let v0  = mesh.vertices(i0);
+            let v1  = mesh.vertices(i1);
+            let v2  = mesh.vertices(i2);
+            let n   = mesh.face_normals(f+off);
+            let inv_area = 1.0/mesh.face_area(f+off);
+            (sample_triangle(uv2.x, uv2.y, v0, v1, v2), n, inv_area)
+        },
+        normal = @ |uv| {
+            let f = (uv.x * (count as f32)) as i32;
+            let uv2 = make_vec2(uv.x/(f as f32), uv.y);
+            mesh.face_normals(f+off)
+        },
+        pdf = @ |uv| {
+            let f = (uv.x * (count as f32)) as i32;
+            let uv2 = make_vec2(uv.x/(f as f32), uv.y);
+            1.0/mesh.face_area(f+off)
+        }
     };
     make_area_light(math, emitter, color)
 }

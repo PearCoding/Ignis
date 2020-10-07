@@ -14,14 +14,14 @@ struct Settings {
     // Force the export of the primary and secondary stream types
     let mut primary : PrimaryStream;
     let mut secondary : SecondaryStream;
-    rodent_cpu_get_primary_stream(&mut primary, 0);
-    rodent_cpu_get_secondary_stream(&mut secondary, 0);
+    ignis_cpu_get_primary_stream(&mut primary, 0);
+    ignis_cpu_get_secondary_stream(&mut secondary, 0);
 
     // Force the export of BVH types
     let (mut node2 : &[Node2], mut tri1 : &[Tri1]);
     let (mut node4 : &[Node4], mut tri4 : &[Tri4]);
     let  mut node8 : &[Node8];
-    rodent_load_bvh2_tri1(0, "", &mut node2, &mut tri1);
-    rodent_load_bvh4_tri4(0, "", &mut node4, &mut tri4);
-    rodent_load_bvh8_tri4(0, "", &mut node8, &mut tri4);
+    ignis_load_bvh2_tri1(0, "", &mut node2, &mut tri1);
+    ignis_load_bvh4_tri4(0, "", &mut node4, &mut tri4);
+    ignis_load_bvh8_tri4(0, "", &mut node8, &mut tri4);
 }

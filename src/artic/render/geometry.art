@@ -11,6 +11,7 @@ struct TriMesh {
     vertices:     fn (i32) -> Vec3,
     normals:      fn (i32) -> Vec3,
     face_normals: fn (i32) -> Vec3,
+    face_area:    fn (i32) -> f32,
     triangles:    fn (i32) -> (i32, i32, i32),
     attrs:        fn (i32) -> (bool, fn (i32) -> Vec4),
     num_attrs:    i32,

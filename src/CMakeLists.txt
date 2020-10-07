@@ -1,4 +1,6 @@
+# This directory should be first as it is exposing ARTIC_SRC
 add_subdirectory(artic)
+
 add_subdirectory(hardware)
 add_subdirectory(runtime)
 add_subdirectory(generator)
