@@ -87,32 +87,32 @@ private:
 			if (parent >= 0 && child >= 0) {
 				assert(parent >= 0 && parent < nodes.size());
 				assert(child >= 0 && child < N);
-				nodes[parent].child[child] = i + 1;
+				nodes[parent].child.e[child] = i + 1;
 			}
 
 			assert(count >= 2 && count <= N);
 
 			for (size_t j = 0; j < count; j++) {
-				const BoundingBox& bbox = bboxes(j);
-				nodes[i].bounds[0][j]	= bbox.min.x;
-				nodes[i].bounds[2][j]	= bbox.min.y;
-				nodes[i].bounds[4][j]	= bbox.min.z;
+				const BoundingBox& bbox	  = bboxes(j);
+				nodes[i].bounds.e[0].e[j] = bbox.min(0);
+				nodes[i].bounds.e[2].e[j] = bbox.min(1);
+				nodes[i].bounds.e[4].e[j] = bbox.min(2);
 
-				nodes[i].bounds[1][j] = bbox.max.x;
-				nodes[i].bounds[3][j] = bbox.max.y;
-				nodes[i].bounds[5][j] = bbox.max.z;
+				nodes[i].bounds.e[1].e[j] = bbox.max(0);
+				nodes[i].bounds.e[3].e[j] = bbox.max(1);
+				nodes[i].bounds.e[5].e[j] = bbox.max(2);
 			}
 
 			for (size_t j = count; j < N; ++j) {
-				nodes[i].bounds[0][j] = Inf;
-				nodes[i].bounds[2][j] = Inf;
-				nodes[i].bounds[4][j] = Inf;
+				nodes[i].bounds.e[0].e[j] = Inf;
+				nodes[i].bounds.e[2].e[j] = Inf;
+				nodes[i].bounds.e[4].e[j] = Inf;
 
-				nodes[i].bounds[1][j] = -Inf;
-				nodes[i].bounds[3][j] = -Inf;
-				nodes[i].bounds[5][j] = -Inf;
+				nodes[i].bounds.e[1].e[j] = -Inf;
+				nodes[i].bounds.e[3].e[j] = -Inf;
+				nodes[i].bounds.e[5].e[j] = -Inf;
 
-				nodes[i].child[j] = 0;
+				nodes[i].child.e[j] = 0;
 			}
 
 			return i;
@@ -122,9 +122,9 @@ private:
 	struct LeafWriter {
 		Adapter& adapter;
 		const std::vector<IG::Triangle>& in_tris;
-		const std::vector<uint32_t>& indices;
+		const std::vector<uint32>& indices;
 
-		LeafWriter(Adapter& adapter, const std::vector<IG::Triangle>& in_tris, const std::vector<uint32_t>& indices)
+		LeafWriter(Adapter& adapter, const std::vector<IG::Triangle>& in_tris, const std::vector<uint32>& indices)
 			: adapter(adapter)
 			, in_tris(in_tris)
 			, indices(indices)
@@ -137,7 +137,7 @@ private:
 			auto& nodes = adapter.nodes_;
 			auto& tris	= adapter.tris_;
 
-			nodes[parent].child[child] = ~tris.size();
+			nodes[parent].child.e[child] = ~tris.size();
 
 			// Group triangles by packets of M
 			for (size_t i = 0; i < ref_count; i += M) {
@@ -151,33 +151,33 @@ private:
 					const Vector3f e1 = in_tri.v0 - in_tri.v1;
 					const Vector3f e2 = in_tri.v2 - in_tri.v0;
 					const Vector3f n  = e1.cross(e2);
-					tri.v0[0][j]	  = in_tri.v0.x;
-					tri.v0[1][j]	  = in_tri.v0.y;
-					tri.v0[2][j]	  = in_tri.v0.z;
+					tri.v0.e[0].e[j]  = in_tri.v0(0);
+					tri.v0.e[1].e[j]  = in_tri.v0(1);
+					tri.v0.e[2].e[j]  = in_tri.v0(2);
 
-					tri.e1[0][j] = e1.x;
-					tri.e1[1][j] = e1.y;
-					tri.e1[2][j] = e1.z;
+					tri.e1.e[0].e[j] = e1(0);
+					tri.e1.e[1].e[j] = e1(1);
+					tri.e1.e[2].e[j] = e1(2);
 
-					tri.e2[0][j] = e2.x;
-					tri.e2[1][j] = e2.y;
-					tri.e2[2][j] = e2.z;
+					tri.e2.e[0].e[j] = e2(0);
+					tri.e2.e[1].e[j] = e2(1);
+					tri.e2.e[2].e[j] = e2(2);
 
-					tri.n[0][j] = n.x;
-					tri.n[1][j] = n.y;
-					tri.n[2][j] = n.z;
+					tri.n.e[0].e[j] = n(0);
+					tri.n.e[1].e[j] = n(1);
+					tri.n.e[2].e[j] = n(2);
 
-					tri.prim_id[j] = id;
-					tri.geom_id[j] = indices[id * 4 + 3];
+					tri.prim_id.e[j] = id;
+					tri.geom_id.e[j] = indices[id * 4 + 3];
 				}
 
 				for (size_t j = c; j < 4; j++)
-					tri.prim_id[j] = 0xFFFFFFFF;
+					tri.prim_id.e[j] = 0xFFFFFFFF;
 
 				tris.emplace_back(tri);
 			}
 			assert(ref_count > 0);
-			tris.back().prim_id[M - 1] |= 0x80000000;
+			tris.back().prim_id.e[M - 1] |= 0x80000000;
 		}
 	};
 };
@@ -273,9 +273,9 @@ private:
 	struct LeafWriter {
 		Adapter& adapter;
 		const std::vector<IG::Triangle>& in_tris;
-		const std::vector<uint32_t>& indices;
+		const std::vector<uint32>& indices;
 
-		LeafWriter(Adapter& adapter, const std::vector<IG::Triangle>& in_tris, const std::vector<uint32_t>& indices)
+		LeafWriter(Adapter& adapter, const std::vector<IG::Triangle>& in_tris, const std::vector<uint32>& indices)
 			: adapter(adapter)
 			, in_tris(in_tris)
 			, indices(indices)
@@ -324,14 +324,15 @@ inline void build_bvh(const TriMesh& tri_mesh,
 	adapter.build(tri_mesh, in_tris);
 }
 
+namespace IO {
 template <typename Node, typename Tri>
 inline void write_bvh(std::vector<Node>& nodes, std::vector<Tri>& tris)
 {
 	std::ofstream of("data/bvh.bin", std::ios::app | std::ios::binary);
 	size_t node_size = sizeof(Node);
 	size_t tri_size	 = sizeof(Tri);
-	of.write((char*)&node_size, sizeof(uint32_t));
-	of.write((char*)&tri_size, sizeof(uint32_t));
+	of.write((char*)&node_size, sizeof(uint32));
+	of.write((char*)&tri_size, sizeof(uint32));
 	write_buffer(of, nodes);
 	write_buffer(of, tris);
 }
@@ -352,4 +353,5 @@ inline bool must_build_bvh(const std::string& name, Target target)
 	}
 	return true;
 }
+} // namespace IO
 } // namespace IG

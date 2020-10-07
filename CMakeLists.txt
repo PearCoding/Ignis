@@ -42,6 +42,8 @@ include_directories(${OIIO_INCLUDE_DIR})
 find_package(LZ4 REQUIRED)
 include_directories(${LZ4_INCLUDE_DIR})
 
+# ZLib is used in the generator
+find_package(ZLIB REQUIRED)
 
 # Enable folders for Visual Studio
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

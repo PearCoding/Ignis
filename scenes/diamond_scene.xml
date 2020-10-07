@@ -1,0 +1,92 @@
+<scene version="2.1.0">
+
+<!-- Defaults, these can be set via the command line: -Darg=value -->
+
+	<default name="spp" value="128"/>
+	<default name="resx" value="1000"/>
+	<default name="resy" value="1000"/>
+
+<!-- Camera and Rendering Parameters -->
+
+	<integrator type="path">
+		<integer name="max_depth" value="64"/>
+	</integrator>
+	<sensor type="perspective">
+		<string name="fov_axis" value="x"/>
+		<float name="fov" value="39.597755"/>
+		<float name="near_clip" value="0.100000"/>
+		<float name="far_clip" value="100.000000"/>
+		<transform name="to_world">
+			<rotate x="1" angle="-179.999991348578"/>
+			<rotate y="1" angle="5.008956130975331e-06"/>
+			<rotate z="1" angle="-180.00000500895632"/>
+			<translate value="0.000000 0.000000 3.849529"/>
+		</transform>
+		<sampler type="independent">
+			<integer name="sample_count" value="$spp"/>
+		</sampler>
+		<film type="hdrfilm">
+			<integer name="width" value="$resx"/>
+			<integer name="height" value="$resy"/>
+		</film>
+	</sensor>
+
+<!-- Materials -->
+
+	<bsdf type="twosided" id="mat-GrayWall">
+		<bsdf type="diffuse">
+			<rgb value="1.000000 1.000000 1.000000" name="reflectance"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="mat-ColoredWall">
+		<bsdf type="diffuse">
+			<rgb value="0.106039 0.195687 0.800000" name="reflectance"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="roughdielectric" id="mat-Diamond">
+		<float name="alpha" value="0.002500"/>
+		<string name="distribution" value="beckmann"/>
+		<float name="int_ior" value="2.3"/>
+		<rgb value="1.000000 1.000000 1.000000" name="specular_transmittance"/>
+	</bsdf>
+
+<!-- Emitters -->
+
+	<shape type="rectangle">
+		<boolean name="flip_normals" value="true"/>
+		<transform name="to_world">
+			<matrix value="0.000000 0.084366 -0.053688 -0.700000 0.000000 0.053688 0.084366 0.100000 0.100000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 1.000000"/>
+		</transform>
+		<emitter type="area">
+			<rgb value="62.500000 62.500000 62.500000" name="radiance"/>
+		</emitter>
+		<bsdf type="null"/>
+	</shape>
+
+<!-- Shapes -->
+
+	<shape type="ply">
+		<string name="filename" value="meshes/Bottom.ply"/>
+		<ref id="mat-GrayWall" name="bsdf"/>
+	</shape>
+	<shape type="ply">
+		<string name="filename" value="meshes/Top.ply"/>
+		<ref id="mat-GrayWall" name="bsdf"/>
+	</shape>
+	<shape type="ply">
+		<string name="filename" value="meshes/Left.ply"/>
+		<ref id="mat-ColoredWall" name="bsdf"/>
+	</shape>
+	<shape type="ply">
+		<string name="filename" value="meshes/Right.ply"/>
+		<ref id="mat-ColoredWall" name="bsdf"/>
+	</shape>
+	<shape type="ply">
+		<string name="filename" value="meshes/Back.ply"/>
+		<ref id="mat-GrayWall" name="bsdf"/>
+	</shape>
+	<shape type="ply">
+		<string name="filename" value="meshes/dobj.ply"/>
+		<ref id="mat-Diamond" name="bsdf"/>
+	</shape>
+</scene>

@@ -9,6 +9,7 @@ Ignis is a raytracer for the RENEGADE project implemented using the Artic fronte
  - OpenImageIO <https://sites.google.com/site/openimageio/home>
  - LZ4 <https://github.com/lz4/lz4>
  - TinyParser-Mitsuba <https://github.com/PearCoding/TinyParser-Mitsuba>
+ - ZLib <https://zlib.net/>
 
 ### Optional
 

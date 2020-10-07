@@ -9,6 +9,8 @@ CPMFindPackage(
 set(SRC 
     main.cpp
     BVHAdapter.h
+    Generator.cpp
+    Generator.h
     IO.cpp
     IO.h
     Target.h
@@ -16,6 +18,6 @@ set(SRC
 
 add_executable(iggenerator ${SRC})
 add_dependencies(iggenerator artic_c_interface)
-target_link_libraries(iggenerator PUBLIC ig_lib_runtime tinyparser_mitsuba)
+target_link_libraries(iggenerator PUBLIC ig_lib_runtime tinyparser_mitsuba ZLIB::ZLIB)
 target_include_directories(iggenerator PRIVATE ${tinymitsuba_dir})
 target_include_directories(iggenerator PRIVATE ${CMAKE_BINARY_DIR}) # Required for generated_interface.h

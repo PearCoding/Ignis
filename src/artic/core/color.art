@@ -5,6 +5,7 @@ struct Color {
 }
 
 fn @make_color(r: f32, g: f32, b: f32) = Color { r = r, g = g, b = b }
+fn @make_gray_color(g: f32) = make_color(g, g, g)
 
 fn @color_add(a: Color, b: Color) = make_color(a.r + b.r, a.g + b.g, a.b + b.b)
 fn @color_mul(a: Color, b: Color) = make_color(a.r * b.r, a.g * b.g, a.b * b.b)
