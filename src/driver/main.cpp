@@ -52,7 +52,6 @@ static inline void usage()
 			  << "   --fov    degrees    Sets the horizontal field of view (in degrees)\n"
 			  << "   --spp    spp        Enables benchmarking mode and sets the number of iterations based on the given spp\n"
 			  << "   --bench  iterations Enables benchmarking mode and sets the number of iterations\n"
-			  << "   --nimg   iterations Enables output extraction every n iterations\n"
 			  << "   -o       image.exr  Writes the output image to a file" << std::endl;
 }
 
@@ -60,7 +59,6 @@ int main(int argc, char** argv)
 {
 	std::string out_file;
 	size_t bench_iter = 0;
-	size_t nimg_iter  = 0;
 	size_t width	  = 1080;
 	size_t height	  = 720;
 	float fov		  = 60.0f;
@@ -92,9 +90,6 @@ int main(int argc, char** argv)
 			} else if (!strcmp(argv[i], "--fov")) {
 				check_arg(argc, argv, i, 1);
 				fov = strtof(argv[++i], nullptr);
-			} else if (!strcmp(argv[i], "--nimg")) {
-				check_arg(argc, argv, i, 1);
-				nimg_iter = strtoul(argv[++i], nullptr, 10);
 			} else if (!strcmp(argv[i], "--spp")) {
 				check_arg(argc, argv, i, 1);
 				bench_iter = (size_t)std::ceil(strtoul(argv[++i], nullptr, 10) / (float)get_spp());
@@ -130,16 +125,11 @@ int main(int argc, char** argv)
 	_mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
 #endif
 
-#if !defined(NDEBUG)
-	feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-#endif
-
 	auto spp		= get_spp();
 	bool done		= false;
 	uint64_t timing = 0;
 	uint32_t frames = 0;
 	uint32_t iter	= 0;
-	uint32_t niter	= 0;
 	std::vector<double> samples_sec;
 	while (!done) {
 #ifdef WITH_UI
@@ -173,7 +163,7 @@ int main(int argc, char** argv)
 			auto frames_sec = double(frames) * 1000.0 / double(timing);
 #ifdef WITH_UI
 			std::ostringstream os;
-			os << "Rodent [" << frames_sec << " FPS, "
+			os << "Ignis [" << frames_sec << " FPS, "
 			   << iter * spp << " "
 			   << "sample" << (iter * spp > 1 ? "s" : "") << "]";
 			UI::setTitle(os.str().c_str());

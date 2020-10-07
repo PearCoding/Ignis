@@ -54,7 +54,7 @@ static bool check_option(int i, int argc, char** argv)
 int main(int argc, char** argv)
 {
 	if (argc <= 1) {
-        // No logger use, as this may happen very often and the actual application did not start yet
+		// No logger use, as this may happen very often and the actual application did not start yet
 		std::cerr << "Not enough arguments. Run with --help to get a list of options." << std::endl;
 		return EXIT_FAILURE;
 	}
@@ -149,8 +149,8 @@ int main(int argc, char** argv)
 			IG_LOG(L_WARNING) << "No vector instruction set detected. Select the target platform manually to improve performance." << std::endl;
 	}
 
-    if(output == "")
-        output = "main.art";
+	if (output == "")
+		output = "main.art";
 
 	std::ofstream of(output);
 	if (generate(filename, options, of))
