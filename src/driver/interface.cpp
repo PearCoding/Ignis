@@ -29,7 +29,7 @@ using Bvh4Tri4 = Bvh<Node4, Tri4>;
 using Bvh8Tri4 = Bvh<Node8, Tri4>;
 
 struct Interface {
-	using DeviceImage = std::tuple<anydsl::Array<uint8_t>, int32_t, int32_t>;
+	using DeviceImage = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
 
 	struct DeviceData {
 		std::unordered_map<std::string, Bvh2Tri1> bvh2_tri1;
@@ -53,16 +53,17 @@ struct Interface {
 	size_t film_height;
 
 	Interface(size_t width, size_t height)
-		: film_width(width)
+		: host_pixels(width * height * 3)
+		, film_width(width)
 		, film_height(height)
-		, host_pixels(width * height * 3)
+
 	{
 	}
 
 	template <typename T>
 	anydsl::Array<T>& resize_array(int32_t dev, anydsl::Array<T>& array, size_t size, size_t multiplier)
 	{
-		auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
+		int64_t capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
 		if (array.size() < capacity) {
 			auto n = capacity * multiplier;
 			array  = std::move(anydsl::Array<T>(dev, reinterpret_cast<T*>(anydsl_alloc(dev, sizeof(T) * n)), n));
@@ -143,7 +144,7 @@ struct Interface {
 
 	DeviceImage copy_to_device(int32_t dev, const ImageRgba32& img)
 	{
-		return DeviceImage{ copy_to_device(dev, reinterpret_cast<uint8_t*>(img.pixels.get()), img.width * img.height * 4),
+		return DeviceImage{ copy_to_device(dev, img.pixels.get(), img.width * img.height * 4),
 							(int32_t)img.width, (int32_t)img.height };
 	}
 
@@ -300,10 +301,10 @@ void ignis_get_film_data(int32_t dev, float** pixels, int32_t* width, int32_t* h
 	*height = interface->film_height;
 }
 
-void ignis_load_image(int32_t dev, const char* file, uint8_t** pixels, int32_t* width, int32_t* height)
+void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height)
 {
 	auto& img = interface->load_image(dev, file);
-	*pixels	  = const_cast<uint8_t*>(std::get<0>(img).data());
+	*pixels	  = const_cast<float*>(std::get<0>(img).data());
 	*width	  = std::get<1>(img);
 	*height	  = std::get<2>(img);
 }
