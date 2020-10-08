@@ -96,7 +96,7 @@ struct Shape {
 	IG::Material Material;
 };
 
-struct GenContext {
+struct GeneratorContext {
 	std::vector<Shape> Shapes;
 	std::vector<Material> Materials;
 	std::unordered_set<std::shared_ptr<Object>> Textures;
@@ -169,7 +169,7 @@ inline Vector3f applyNormalTransform(const Transform& t, const Vector3f& v)
 }
 
 // Unpack bsdf such that twosided materials are ignored and texture nodes are registered
-inline std::shared_ptr<Object> add_bsdf(const std::shared_ptr<Object>& elem, GenContext& ctx)
+inline std::shared_ptr<Object> add_bsdf(const std::shared_ptr<Object>& elem, GeneratorContext& ctx)
 {
 	if (elem->pluginType() == "twosided") {
 		if (elem->anonymousChildren().size() != 1)
@@ -187,7 +187,7 @@ inline std::shared_ptr<Object> add_bsdf(const std::shared_ptr<Object>& elem, Gen
 }
 
 // Unpack emission such that texture nodes are registered
-inline std::shared_ptr<Object> add_light(const std::shared_ptr<Object>& elem, GenContext& ctx)
+inline std::shared_ptr<Object> add_light(const std::shared_ptr<Object>& elem, GeneratorContext& ctx)
 {
 	for (const auto& child : elem->namedChildren()) {
 		if (child.second->type() == OT_TEXTURE)
@@ -248,9 +248,10 @@ inline TriMesh setup_mesh_cube(const Object& elem, const LoadInfo& info)
 inline TriMesh setup_mesh_obj(const Object& elem, const LoadInfo& info)
 {
 	const auto filename = info.handlePath(elem.property("filename").getString());
-	auto trimesh		= obj::load(filename, 0);
+	IG_LOG(L_INFO) << "Trying to load obj file " << filename << std::endl;
+	auto trimesh = obj::load(filename, 0);
 	if (trimesh.vertices.empty()) {
-		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << "" << std::endl;
+		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << std::endl;
 		return TriMesh();
 	}
 
@@ -260,9 +261,10 @@ inline TriMesh setup_mesh_obj(const Object& elem, const LoadInfo& info)
 inline TriMesh setup_mesh_ply(const Object& elem, const LoadInfo& info)
 {
 	const auto filename = info.handlePath(elem.property("filename").getString());
-	auto trimesh		= ply::load(filename);
+	IG_LOG(L_INFO) << "Trying to load ply file " << filename << std::endl;
+	auto trimesh = ply::load(filename);
 	if (trimesh.vertices.empty()) {
-		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << "" << std::endl;
+		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << std::endl;
 		return TriMesh();
 	}
 	return trimesh;
@@ -272,15 +274,16 @@ inline TriMesh setup_mesh_serialized(const Object& elem, const LoadInfo& info)
 {
 	size_t shape_index	= elem.property("shape_index").getInteger(0);
 	const auto filename = info.handlePath(elem.property("filename").getString());
-	auto trimesh		= mts::load(filename, shape_index);
+	IG_LOG(L_INFO) << "Trying to load serialized file " << filename << std::endl;
+	auto trimesh = mts::load(filename, shape_index);
 	if (trimesh.vertices.empty()) {
-		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << "" << std::endl;
+		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << std::endl;
 		return TriMesh();
 	}
 	return trimesh;
 }
 
-static void setup_shapes(const Object& elem, const LoadInfo& info, GenContext& ctx, std::ostream& os)
+static void setup_shapes(const Object& elem, const LoadInfo& info, GeneratorContext& ctx, std::ostream& os)
 {
 	std::unordered_map<Material, uint32_t, MaterialHash> unique_mats;
 
@@ -304,8 +307,10 @@ static void setup_shapes(const Object& elem, const LoadInfo& info, GenContext& c
 			continue;
 		}
 
-		if (child_mesh.vertices.empty())
+		if (child_mesh.vertices.empty()) {
+			IG_LOG(L_WARNING) << "While loading shape type '" << child->pluginType() << "' no vertices were generated" << std::endl;
 			continue;
+		}
 
 		auto flip = child->property("flip_normals").getBool();
 		if (flip)
@@ -326,22 +331,19 @@ static void setup_shapes(const Object& elem, const LoadInfo& info, GenContext& c
 		shape.ItxCount	= child_mesh.indices.size();
 
 		// Setup material & light
+		shape.Material.MeshId = ctx.Shapes.size();
 		for (const auto& inner_child : child->anonymousChildren()) {
 			if (inner_child->type() == OT_BSDF)
 				shape.Material.BSDF = add_bsdf(inner_child, ctx);
-			else if (inner_child->type() == OT_EMITTER) {
-				shape.Material.Light  = add_light(inner_child, ctx);
-				shape.Material.MeshId = ctx.Shapes.size();
-			}
+			else if (inner_child->type() == OT_EMITTER)
+				shape.Material.Light = add_light(inner_child, ctx);
 		}
 
 		for (const auto& inner_child : child->namedChildren()) {
 			if (inner_child.second->type() == OT_BSDF)
 				shape.Material.BSDF = add_bsdf(inner_child.second, ctx);
-			else if (inner_child.second->type() == OT_EMITTER) {
-				shape.Material.Light  = add_light(inner_child.second, ctx);
-				shape.Material.MeshId = ctx.Shapes.size();
-			}
+			else if (inner_child.second->type() == OT_EMITTER)
+				shape.Material.Light = add_light(inner_child.second, ctx);
 		}
 
 		if (!unique_mats.count(shape.Material)) {
@@ -385,7 +387,7 @@ static void setup_shapes(const Object& elem, const LoadInfo& info, GenContext& c
 
 	// Generate BVHs
 	if (IO::must_build_bvh(info.FilePath.string(), info.Target)) {
-		IG_LOG(L_INFO) << "Generating BVH for '" << info.FilePath << "'" << std::endl;
+		IG_LOG(L_INFO) << "Generating BVH for " << info.FilePath << "" << std::endl;
 		std::remove("data/bvh.bin");
 		if (info.Target == Target::NVVM_STREAMING || info.Target == Target::NVVM_MEGAKERNEL || info.Target == Target::AMDGPU_STREAMING || info.Target == Target::AMDGPU_MEGAKERNEL) {
 			std::vector<typename BvhNTriM<2, 1>::Node> nodes;
@@ -406,7 +408,7 @@ static void setup_shapes(const Object& elem, const LoadInfo& info, GenContext& c
 		std::ofstream bvh_stamp("data/bvh.stamp");
 		bvh_stamp << int(info.Target) << " " << info.FilePath;
 	} else {
-		IG_LOG(L_INFO) << "Reusing existing BVH for '" << info.FilePath << "'" << std::endl;
+		IG_LOG(L_INFO) << "Reusing existing BVH for " << info.FilePath << "" << std::endl;
 	}
 
 	// Calculate scene bounding box
@@ -416,22 +418,22 @@ static void setup_shapes(const Object& elem, const LoadInfo& info, GenContext& c
 	ctx.SceneDiameter = (ctx.SceneBBox.max - ctx.SceneBBox.min).norm();
 }
 
-static void load_texture(const std::string& filename, const LoadInfo& info, const GenContext& ctx, std::ostream& os)
+static void load_texture(const std::string& filename, const LoadInfo& info, const GeneratorContext& ctx, std::ostream& os)
 {
 	const auto c_name = info.handlePath(filename);
 	const auto id	  = info.makeId(filename);
-	os << "    let image_" << id << " = device.load_img(\"" << c_name.string() << "\");\n";
+	os << "    let image_" << id << " = device.load_image(\"" << c_name.string() << "\");\n";
 	os << "    let tex_" << id << " = make_texture(math, make_repeat_border(), make_bilinear_filter(), image_" << id << ");\n";
 }
 
-static void setup_textures(const Object& elem, const LoadInfo& info, const GenContext& ctx, std::ostream& os)
+static void setup_textures(const Object& elem, const LoadInfo& info, const GeneratorContext& ctx, std::ostream& os)
 {
 	if (ctx.Textures.empty())
 		return;
 
 	std::unordered_set<std::string> mapped;
 
-	IG_LOG(L_INFO) << "Generating images for '" << info.FilePath << "'" << std::endl;
+	IG_LOG(L_INFO) << "Generating images for " << info.FilePath << "" << std::endl;
 	os << "\n    // Images\n";
 	for (const auto& tex : ctx.Textures) {
 		if (tex->pluginType() != "bitmap")
@@ -451,8 +453,8 @@ static void setup_textures(const Object& elem, const LoadInfo& info, const GenCo
 	}
 }
 
-static std::string extractTexture(const std::shared_ptr<Object>& tex, const LoadInfo& info, const GenContext& ctx);
-static std::string extractMaterialPropertyColor(const std::shared_ptr<Object>& obj, const std::string& name, const LoadInfo& info, const GenContext& ctx, float def = 0.0f)
+static std::string extractTexture(const std::shared_ptr<Object>& tex, const LoadInfo& info, const GeneratorContext& ctx);
+static std::string extractMaterialPropertyColor(const std::shared_ptr<Object>& obj, const std::string& name, const LoadInfo& info, const GeneratorContext& ctx, float def = 0.0f)
 {
 	std::stringstream sstream;
 
@@ -501,7 +503,7 @@ static std::string extractMaterialPropertyColor(const std::shared_ptr<Object>& o
 	return sstream.str();
 }
 
-static std::string extractTexture(const std::shared_ptr<Object>& tex, const LoadInfo& info, const GenContext& ctx)
+static std::string extractTexture(const std::shared_ptr<Object>& tex, const LoadInfo& info, const GeneratorContext& ctx)
 {
 	std::stringstream sstream;
 	if (tex->pluginType() == "bitmap") {
@@ -530,12 +532,12 @@ static std::string extractTexture(const std::shared_ptr<Object>& tex, const Load
 	return sstream.str();
 }
 
-static void setup_materials(const Object& elem, const LoadInfo& info, const GenContext& ctx, std::ostream& os)
+static void setup_materials(const Object& elem, const LoadInfo& info, const GeneratorContext& ctx, std::ostream& os)
 {
 	if (ctx.Materials.empty())
 		return;
 
-	IG_LOG(L_INFO) << "Generating lights for '" << info.FilePath << "'" << std::endl;
+	IG_LOG(L_INFO) << "Generating trimesh lights for " << info.FilePath << "" << std::endl;
 	os << "\n    // Emission\n";
 	size_t light_counter = 0;
 	for (const auto& mat : ctx.Materials) {
@@ -549,7 +551,7 @@ static void setup_materials(const Object& elem, const LoadInfo& info, const GenC
 		++light_counter;
 	}
 
-	IG_LOG(L_INFO) << "Generating materials for '" << info.FilePath << "'" << std::endl;
+	IG_LOG(L_INFO) << "Generating materials for " << info.FilePath << "" << std::endl;
 	os << "\n    // Materials\n";
 
 	light_counter = 0;
@@ -568,8 +570,8 @@ static void setup_materials(const Object& elem, const LoadInfo& info, const GenC
 			   << extractMaterialPropertyColor(mat.BSDF, "specular_transmittance", info, ctx, 1.0f) << ");\n";
 		} else if (mat.BSDF->pluginType() == "conductor" || mat.BSDF->pluginType() == "roughconductor" /*TODO*/) {
 			os << "        let bsdf = make_conductor_bsdf(math, surf, "
-			   << extractMaterialPropertyColor(mat.BSDF, "eta", info, ctx, 0.63660f) << ", "
-			   << extractMaterialPropertyColor(mat.BSDF, "k", info, ctx, 2.7834f) << ", " // TODO: Better defaults?
+			   << escape_f32(mat.BSDF->property("eta").getNumber(0.63660f)) << ", "
+			   << escape_f32(mat.BSDF->property("k").getNumber(2.7834f)) << ", " // TODO: Better defaults?
 			   << extractMaterialPropertyColor(mat.BSDF, "specular_reflectance", info, ctx, 1.0f) << ");\n";
 		} else if (mat.BSDF->pluginType() == "phong" || mat.BSDF->pluginType() == "plastic" /*TODO*/ || mat.BSDF->pluginType() == "roughplastic" /*TODO*/) {
 			os << "        let bsdf = make_phong_bsdf(math, surf, "
@@ -593,9 +595,9 @@ static void setup_materials(const Object& elem, const LoadInfo& info, const GenC
 	}
 }
 
-static size_t setup_lights(const Object& elem, const LoadInfo& info, const GenContext& ctx, std::ostream& os)
+static size_t setup_lights(const Object& elem, const LoadInfo& info, const GeneratorContext& ctx, std::ostream& os)
 {
-	IG_LOG(L_INFO) << "Generating lights for '" << info.FilePath << "'" << std::endl;
+	IG_LOG(L_INFO) << "Generating lights for " << info.FilePath << "" << std::endl;
 	size_t light_count = 0;
 	// Make sure area lights are the first ones
 	for (const auto& m : ctx.Materials) {
@@ -666,7 +668,7 @@ static size_t setup_lights(const Object& elem, const LoadInfo& info, const GenCo
 
 static void convert_scene(const Scene& scene, const LoadInfo& info, std::ostream& os)
 {
-	GenContext ctx;
+	GeneratorContext ctx;
 
 	setup_integrator(scene, info, os);
 	setup_camera(scene, info, os);

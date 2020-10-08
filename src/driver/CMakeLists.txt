@@ -33,8 +33,17 @@ anydsl_runtime_wrap(ARTIC_OBJS
     FILES ${ARTIC_SRC} ${CMAKE_CURRENT_BINARY_DIR}/${GENERATED_FILE})
 
 # Setup actual driver
-SET(CMD_FILES main.cpp interface.cpp ${ARTIC_OBJS})
-SET(UI_FILES ${CMD_FILES} ui.cpp ui.h)
+SET(CMD_FILES 
+    main.cpp 
+    Interface.cpp
+    Interface.h
+    ${ARTIC_OBJS})
+SET(UI_FILES 
+    ${CMD_FILES}
+    Pose.cpp
+    Pose.h
+    UI.cpp
+    UI.h)
 
 if(IG_HAS_UI)
     add_executable(ignis ${UI_FILES})

@@ -1,10 +1,6 @@
-#include "ui.h"
-
-#include <chrono>
-#include <ctime>
-#include <fstream>
-#include <iomanip>
-#include <sstream>
+#include "UI.h"
+#include "Interface.h"
+#include "Pose.h"
 
 #include <SDL.h>
 
@@ -15,8 +11,7 @@
 #include "Image.h"
 #include "Logger.h"
 
-// Interface
-float* get_pixels();
+#include "generated_interface.h"
 
 namespace IG {
 namespace UI {
@@ -31,20 +26,6 @@ static SDL_Texture* sTexture;
 static std::vector<uint32_t> sBuffer;
 static int sWidth;
 static int sHeight;
-
-struct CameraPose {
-	Vector3f Eye = Vector3f(0, 0, 0);
-	Vector3f Dir = Vector3f(0, 0, 1);
-	Vector3f Up	 = Vector3f(0, 1, 0);
-
-	inline CameraPose() = default;
-	inline explicit CameraPose(const Camera& cam)
-		: Eye(cam.eye)
-		, Dir(cam.dir)
-		, Up(cam.up)
-	{
-	}
-};
 
 struct LuminanceInfo {
 	float Min = Inf;
@@ -63,63 +44,14 @@ static LuminanceInfo sLastLum;
 constexpr size_t HISTOGRAM_SIZE = 100;
 static std::array<float, HISTOGRAM_SIZE> sHistogram;
 
-static CameraPose sLastCameraPose;
-
 static bool sToneMapping_Automatic = true;
 static float sToneMapping_Exposure = 1.0f;
 static float sToneMapping_Offset   = 0.0f;
 
-
 // Pose IO
-static std::array<CameraPose, 10> sCameraPoses;
 constexpr char POSE_FILE[] = "data/poses.lst";
-
-static CameraPose read_pose(std::istream& in)
-{
-	CameraPose pose;
-	in >> pose.Eye[0] >> pose.Eye[1] >> pose.Eye[2];
-	in >> pose.Dir[0] >> pose.Dir[1] >> pose.Dir[2];
-	in >> pose.Up[0] >> pose.Up[1] >> pose.Up[2];
-	return pose;
-}
-
-static void write_pose(const CameraPose& pose, std::ostream& out)
-{
-	out << pose.Eye[0] << " " << pose.Eye[1] << " " << pose.Eye[2];
-	out << " " << pose.Dir[0] << " " << pose.Dir[1] << " " << pose.Dir[2];
-	out << " " << pose.Up[0] << " " << pose.Up[1] << " " << pose.Up[2];
-}
-
-inline bool file_exists(const std::string& name)
-{
-	return std::ifstream(name.c_str()).good();
-}
-
-static void read_pose_file()
-{
-	// Reset poses
-	for (auto& pose : sCameraPoses)
-		pose = CameraPose();
-
-	// Check if pose exists
-	if (!file_exists(POSE_FILE))
-		return;
-
-	// Read all poses
-	std::ifstream stream(POSE_FILE);
-	for (size_t i = 0; i < sCameraPoses.size() && stream.good(); ++i) {
-		sCameraPoses[i] = read_pose(stream);
-	}
-}
-
-static void write_pose_file()
-{
-	std::ofstream stream(POSE_FILE);
-	for (size_t i = 0; i < sCameraPoses.size(); ++i) {
-		write_pose(sCameraPoses[i], stream);
-		stream << std::endl;
-	}
-}
+static PoseManager sPoseManager;
+CameraPose sLastCameraPose;
 
 // Events
 static void handle_pose_input(size_t posenmbr, bool capture, const Camera& cam)
@@ -127,9 +59,8 @@ static void handle_pose_input(size_t posenmbr, bool capture, const Camera& cam)
 	if (!capture) {
 		sPoseRequest = posenmbr;
 	} else {
-		sCameraPoses[posenmbr].Eye = cam.eye;
-		sCameraPoses[posenmbr].Dir = cam.dir;
-		sCameraPoses[posenmbr].Up  = cam.up;
+		sPoseManager.setPose(posenmbr, CameraPose(cam));
+		IG_LOG(L_INFO) << "Captured pose for " << posenmbr << std::endl;
 	}
 }
 
@@ -375,8 +306,9 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 	}
 
 	if (sPoseRequest >= 0) {
-		cam.eye = sCameraPoses[sPoseRequest].Eye;
-		cam.update_dir(sCameraPoses[sPoseRequest].Dir, sCameraPoses[sPoseRequest].Up);
+		auto pose = sPoseManager.pose(sPoseRequest);
+		cam.eye	  = pose.Eye;
+		cam.update_dir(pose.Dir, pose.Up);
 		iter		 = 0;
 		sPoseRequest = -1;
 	}
@@ -387,162 +319,164 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 }
 
 // ToneMapping
-#define RGB_C(r,g,b) (((r) << 16) | ((g) << 8) | (b))
+#define RGB_C(r, g, b) (((r) << 16) | ((g) << 8) | (b))
 
-static inline RGB xyz_to_srgb(const RGB& c) {
-    return RGB(  3.2404542f*c.r - 1.5371385f*c.g - 0.4985314f*c.b, 
-                -0.9692660f*c.r + 1.8760108f*c.g + 0.0415560f*c.b,
-                 0.0556434f*c.r - 0.2040259f*c.g + 1.0572252f*c.b);
+static inline RGB xyz_to_srgb(const RGB& c)
+{
+	return RGB(3.2404542f * c.r - 1.5371385f * c.g - 0.4985314f * c.b,
+			   -0.9692660f * c.r + 1.8760108f * c.g + 0.0415560f * c.b,
+			   0.0556434f * c.r - 0.2040259f * c.g + 1.0572252f * c.b);
 }
 
-static inline RGB srgb_to_xyz(const RGB& c) {
-    return RGB( 0.4124564f*c.r + 0.3575761f*c.g + 0.1804375f*c.b,
-                0.2126729f*c.r + 0.7151522f*c.g + 0.0721750f*c.b,
-                0.0193339f*c.r + 0.1191920f*c.g + 0.9503041f*c.b);
+static inline RGB srgb_to_xyz(const RGB& c)
+{
+	return RGB(0.4124564f * c.r + 0.3575761f * c.g + 0.1804375f * c.b,
+			   0.2126729f * c.r + 0.7151522f * c.g + 0.0721750f * c.b,
+			   0.0193339f * c.r + 0.1191920f * c.g + 0.9503041f * c.b);
 }
 
-static inline RGB xyY_to_srgb(const RGB& c) {
-    return c.g == 0 ? RGB(0,0,0) : xyz_to_srgb(RGB(c.r*c.b/c.g, c.b, (1-c.r-c.g)*c.b/c.g));
+static inline RGB xyY_to_srgb(const RGB& c)
+{
+	return c.g == 0 ? RGB(0, 0, 0) : xyz_to_srgb(RGB(c.r * c.b / c.g, c.b, (1 - c.r - c.g) * c.b / c.g));
 }
 
-static inline RGB srgb_to_xyY(const RGB& c) {
-    const auto s = srgb_to_xyz(c);
-    const auto n = s.r+s.g+s.b;
-    return (n == 0)?RGB(0,0,0):RGB(s.r/n, s.g/n, s.g);
+static inline RGB srgb_to_xyY(const RGB& c)
+{
+	const auto s = srgb_to_xyz(c);
+	const auto n = s.r + s.g + s.b;
+	return (n == 0) ? RGB(0, 0, 0) : RGB(s.r / n, s.g / n, s.g);
 }
 
-static inline float reinhard_modified(float L) {
-    constexpr float WhitePoint = 4.0f;
-    return (L*(1.0f+L/(WhitePoint*WhitePoint)))/(1.0f+L);
+static inline float reinhard_modified(float L)
+{
+	constexpr float WhitePoint = 4.0f;
+	return (L * (1.0f + L / (WhitePoint * WhitePoint))) / (1.0f + L);
 }
 
-static void analzeLuminance(size_t width, size_t height, uint32_t iter) {
-    const auto film = get_pixels();
-    auto inv_iter = 1.0f / iter;
-    const float avgFactor = 1.0f/(width*height);
-    sLastLum = LuminanceInfo();
+static void analzeLuminance(size_t width, size_t height, uint32_t iter)
+{
+	const auto film		  = get_pixels(); // sRGB
+	auto inv_iter		  = 1.0f / iter;
+	const float avgFactor = 1.0f / (width * height);
+	sLastLum			  = LuminanceInfo();
 
-    // Extract basic information
-    for (size_t y = 0; y < height; ++y) {
-        for (size_t x = 0; x < width; ++x) {
-            auto r = film[(y * width + x) * 3 + 0];
-            auto g = film[(y * width + x) * 3 + 1];
-            auto b = film[(y * width + x) * 3 + 2];
+	// Extract basic information
+	for (size_t y = 0; y < height; ++y) {
+		for (size_t x = 0; x < width; ++x) {
+			auto r = film[(y * width + x) * 3 + 0];
+			auto g = film[(y * width + x) * 3 + 1];
+			auto b = film[(y * width + x) * 3 + 2];
 
-            const auto L = srgb_to_xyY(RGB(r,g,b)).b * inv_iter;
+			const auto L = srgb_to_xyY(RGB(r, g, b)).b * inv_iter;
 
-            sLastLum.Max = std::max(sLastLum.Max, L);
-            sLastLum.Min = std::min(sLastLum.Min, L);
-            sLastLum.Avg += L * avgFactor;
-        }
-    }
+			sLastLum.Max = std::max(sLastLum.Max, L);
+			sLastLum.Min = std::min(sLastLum.Min, L);
+			sLastLum.Avg += L * avgFactor;
+		}
+	}
 
-    // Setup histogram
-    sHistogram.fill(0.0f);
-    const float histogram_factor = HISTOGRAM_SIZE/std::max(sLastLum.Max, 1.0f);
-    for (size_t y = 0; y < height; ++y) {
-        for (size_t x = 0; x < width; ++x) {
-            auto r = film[(y * width + x) * 3 + 0];
-            auto g = film[(y * width + x) * 3 + 1];
-            auto b = film[(y * width + x) * 3 + 2];
+	// Setup histogram
+	sHistogram.fill(0.0f);
+	const float histogram_factor = HISTOGRAM_SIZE / std::max(sLastLum.Max, 1.0f);
+	for (size_t y = 0; y < height; ++y) {
+		for (size_t x = 0; x < width; ++x) {
+			auto r = film[(y * width + x) * 3 + 0];
+			auto g = film[(y * width + x) * 3 + 1];
+			auto b = film[(y * width + x) * 3 + 2];
 
-            const auto L  = srgb_to_xyY(RGB(r,g,b)).b * inv_iter;
-            const int idx = std::max(0, std::min<int>(L * histogram_factor, HISTOGRAM_SIZE-1));
-            sHistogram[idx] += avgFactor;
-        }
-    }
+			const auto L  = srgb_to_xyY(RGB(r, g, b)).b * inv_iter;
+			const int idx = std::max(0, std::min<int>(L * histogram_factor, HISTOGRAM_SIZE - 1));
+			sHistogram[idx] += avgFactor;
+		}
+	}
 
-    // Estimate for reinhard
+	// Estimate for reinhard
 #ifdef USE_MEDIAN_FOR_LUMINANCE_ESTIMATION
-    if(!sToneMapping_Automatic) {
-        sLastLum.Est = sLastLum.Max;
-        return;
-    }
-    constexpr size_t WINDOW_S = 3;
-    constexpr size_t EDGE_S = WINDOW_S/2;
-    std::array<float, WINDOW_S*WINDOW_S> window;
+	if (!sToneMapping_Automatic) {
+		sLastLum.Est = sLastLum.Max;
+		return;
+	}
+	constexpr size_t WINDOW_S = 3;
+	constexpr size_t EDGE_S	  = WINDOW_S / 2;
+	std::array<float, WINDOW_S * WINDOW_S> window;
 
-    for (size_t y = EDGE_S; y < height-EDGE_S; ++y) {
-        for (size_t x = EDGE_S; x < width-EDGE_S; ++x) {
+	for (size_t y = EDGE_S; y < height - EDGE_S; ++y) {
+		for (size_t x = EDGE_S; x < width - EDGE_S; ++x) {
 
-            size_t i = 0;
-            for(size_t wy = 0; wy <WINDOW_S; ++wy) {
-                for(size_t wx = 0; wx <WINDOW_S; ++wx) {
-                    const auto ix = x + wx - EDGE_S;
-                    const auto iy = y + wy - EDGE_S;
+			size_t i = 0;
+			for (size_t wy = 0; wy < WINDOW_S; ++wy) {
+				for (size_t wx = 0; wx < WINDOW_S; ++wx) {
+					const auto ix = x + wx - EDGE_S;
+					const auto iy = y + wy - EDGE_S;
 
-                    auto r = film[(iy * width + ix) * 3 + 0];
-                    auto g = film[(iy * width + ix) * 3 + 1];
-                    auto b = film[(iy * width + ix) * 3 + 2];
+					auto r = film[(iy * width + ix) * 3 + 0];
+					auto g = film[(iy * width + ix) * 3 + 1];
+					auto b = film[(iy * width + ix) * 3 + 2];
 
-                    window[i] = srgb_to_xyY(RGB(r,g,b)).b;
-                    ++i;
-                }
-            }
+					window[i] = srgb_to_xyY(RGB(r, g, b)).b;
+					++i;
+				}
+			}
 
-            std::sort(window.begin(), window.end());
-            const auto L = window[window.size()/2];
-            sLastLum.Est = std::max(sLastLum.Est, L * inv_iter);
-        }
-    }
+			std::sort(window.begin(), window.end());
+			const auto L = window[window.size() / 2];
+			sLastLum.Est = std::max(sLastLum.Est, L * inv_iter);
+		}
+	}
 #else
-    sLastLum.Est = sLastLum.Max;
+	sLastLum.Est = sLastLum.Max;
 #endif
 }
 
-static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, size_t height, uint32_t iter) {
-    auto film = get_pixels();
-    auto inv_iter = 1.0f / iter;
-    auto inv_gamma = 1.0f / 2.2f;
-    
-    const float avgFactor = 1.0f/(width*height);
-    
-    const float exposure_factor = std::pow(2.0, sToneMapping_Exposure);
-    analzeLuminance(width, height, iter);
+static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, size_t height, uint32_t iter)
+{
+	auto film	   = get_pixels();
+	auto inv_iter  = 1.0f / iter;
+	auto inv_gamma = 1.0f / 2.2f;
 
-    for (size_t y = 0; y < height; ++y) {
-        for (size_t x = 0; x < width; ++x) {
-            auto r = film[(y * width + x) * 3 + 0] * inv_iter;
-            auto g = film[(y * width + x) * 3 + 1] * inv_iter;
-            auto b = film[(y * width + x) * 3 + 2] * inv_iter;
+	const float exposure_factor = std::pow(2.0, sToneMapping_Exposure);
+	analzeLuminance(width, height, iter);
 
-            const auto xyY = srgb_to_xyY(RGB(r,g,b));
+	for (size_t y = 0; y < height; ++y) {
+		for (size_t x = 0; x < width; ++x) {
+			auto r = film[(y * width + x) * 3 + 0] * inv_iter;
+			auto g = film[(y * width + x) * 3 + 1] * inv_iter;
+			auto b = film[(y * width + x) * 3 + 2] * inv_iter;
+
+			const auto xyY = srgb_to_xyY(RGB(r, g, b));
 #ifdef CULL_BAD_COLOR
-            if(std::isinf(xyY.b)) {
+			if (std::isinf(xyY.b)) {
 #ifdef CATCH_BAD_COLOR
-                buf[y * width + x] = RGB_C(255, 0, 150);//Pink
+				buf[y * width + x] = RGB_C(255, 0, 150); //Pink
 #endif
-                continue;
-            } else if(std::isnan(xyY.b)) {
+				continue;
+			} else if (std::isnan(xyY.b)) {
 #ifdef CATCH_BAD_COLOR
-                buf[y * width + x] = RGB_C(0, 255, 255);//Cyan
+				buf[y * width + x] = RGB_C(0, 255, 255); //Cyan
 #endif
-                continue;
-            } else if(xyY.r < 0.0f || xyY.g < 0.0f || xyY.b < 0.0f) {
+				continue;
+			} else if (xyY.r < 0.0f || xyY.g < 0.0f || xyY.b < 0.0f) {
 #ifdef CATCH_BAD_COLOR
-                buf[y * width + x] = RGB_C(255, 255, 0);//Orange
+				buf[y * width + x] = RGB_C(255, 255, 0); //Orange
 #endif
-                continue;
-            }
+				continue;
+			}
 #endif
 
-            RGB color;
-            if(sToneMapping_Automatic) {
-                const float L = xyY.b / sLastLum.Est;
-                color = xyY_to_srgb(RGB(xyY.r, xyY.g, reinhard_modified(L)));
-            } else {
-                color = RGB(exposure_factor * r + sToneMapping_Offset,
-                            exposure_factor * g + sToneMapping_Offset,
-                            exposure_factor * b + sToneMapping_Offset);
-            }
+			RGB color;
+			if (sToneMapping_Automatic) {
+				const float L = xyY.b / sLastLum.Est;
+				color		  = xyY_to_srgb(RGB(xyY.r, xyY.g, reinhard_modified(L)));
+			} else {
+				color = RGB(exposure_factor * r + sToneMapping_Offset,
+							exposure_factor * g + sToneMapping_Offset,
+							exposure_factor * b + sToneMapping_Offset);
+			}
 
-            buf[y * width + x] =
-                (uint32_t(clamp(std::pow(color.r, inv_gamma), 0.0f, 1.0f) * 255.0f) << 16) |
-                (uint32_t(clamp(std::pow(color.g, inv_gamma), 0.0f, 1.0f) * 255.0f) << 8)  |
-                 uint32_t(clamp(std::pow(color.b, inv_gamma), 0.0f, 1.0f) * 255.0f);
-        }
-    }
-    SDL_UpdateTexture(texture, nullptr, buf, width * sizeof(uint32_t));
+			buf[y * width + x] = (uint32_t(clamp(std::pow(color.r, inv_gamma), 0.0f, 1.0f) * 255.0f) << 16) | (uint32_t(clamp(std::pow(color.g, inv_gamma), 0.0f, 1.0f) * 255.0f) << 8) | uint32_t(clamp(std::pow(color.b, inv_gamma), 0.0f, 1.0f) * 255.0f);
+		}
+	}
+	SDL_UpdateTexture(texture, nullptr, buf, width * sizeof(uint32_t));
 }
 
 ////////////////////////////////////////////////////////////////
@@ -582,7 +516,7 @@ void init(int width, int height)
 
 	ImGuiSDL::Initialize(sRenderer, width, height);
 
-	read_pose_file();
+	sPoseManager.load(POSE_FILE);
 }
 
 void close()
@@ -621,7 +555,7 @@ static void handle_imgui(uint32_t iter)
 	ImGui::Begin("Control");
 	if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Text("Iter %i", iter);
-		ImGui::Text("SPP %i", iter /* get_spp()*/);
+		ImGui::Text("SPP %i", iter * get_spp());
 		ImGui::Text("Max Lum %f", sLastLum.Max);
 		ImGui::Text("Min Lum %f", sLastLum.Min);
 		ImGui::Text("Avg Lum %f", sLastLum.Avg);
@@ -644,15 +578,16 @@ static void handle_imgui(uint32_t iter)
 
 	if (ImGui::CollapsingHeader("Poses")) {
 		if (ImGui::Button("Reload"))
-			read_pose_file();
+			sPoseManager.load(POSE_FILE);
 		ImGui::SameLine();
 		if (ImGui::Button("Save"))
-			write_pose_file();
+			sPoseManager.save(POSE_FILE);
 
 		bool f = false;
-		for (size_t i = 0; i < sCameraPoses.size(); ++i) {
+		for (size_t i = 0; i < sPoseManager.poseCount(); ++i) {
+			const auto pose = sPoseManager.pose(i);
 			std::stringstream sstream;
-			sstream << i + 1 << " | " << sCameraPoses[i].Eye(0) << " " << sCameraPoses[i].Eye(1) << " " << sCameraPoses[i].Eye(2);
+			sstream << i + 1 << " | " << pose.Eye(0) << " " << pose.Eye(1) << " " << pose.Eye(2);
 			if (ImGui::Selectable(sstream.str().c_str(), &f))
 				sPoseRequest = (int)i;
 		}

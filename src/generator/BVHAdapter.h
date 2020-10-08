@@ -290,13 +290,13 @@ private:
 
 			nodes[parent].child.e[child] = ~tris.size();
 
-			for (int i = 0; i < ref_count; i++) {
+			for (size_t i = 0; i < ref_count; i++) {
 				const int ref	  = refs(i);
 				auto& tri		  = in_tris[ref];
 				const Vector3f e1 = tri.v0 - tri.v1;
 				const Vector3f e2 = tri.v2 - tri.v0;
-				const Vector3f n  = e1.cross(e2);
-				int geom_id		  = indices[ref * 4 + 3];
+				//const Vector3f n  = e1.cross(e2);
+				int geom_id = indices[ref * 4 + 3];
 				tris.emplace_back(Tri1{
 					{ tri.v0(0), tri.v0(1), tri.v0(2) }, 0, { e1(0), e1(1), e1(2) }, geom_id, { e2(0), e2(1), e2(2) }, ref });
 			}

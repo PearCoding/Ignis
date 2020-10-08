@@ -41,6 +41,15 @@ fn @fresnel_factor(k: f32, cos_i: f32, cos_t: f32) -> f32 {
     (R_s * R_s + R_p * R_p) * 0.5
 }
 
+fn @conductor_factor(n: f32, k: f32, cos_i: f32) -> f32 {
+    let f	 = n*n + k*k;
+    let d1	 = f * cos_i * cos_i;
+	let d2	 = 2.0 * n * cos_i;
+	let R_s  = (d1 - d2) / (d1 + d2);
+	let R_p  = (f - d2 + cos_i*cos_i) / (f + d2 + cos_i*cos_i);
+    (R_s * R_s + R_p * R_p) * 0.5
+}
+
 // Creates a material with no emission
 fn @make_material(bsdf: Bsdf) = Material {
     bsdf =        bsdf,
@@ -144,6 +153,22 @@ fn @make_glass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks
         }
         // Reflection
         make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, 1, ks, false)
+    },
+    is_specular = true
+}
+
+// Creates a perfect conductor BSDF
+fn @make_conductor_bsdf(_math: Intrinsics, surf: SurfaceElement, ior: f32, k: f32, ks: Color) = Bsdf {
+    eval   = @ |_, _| black,
+    pdf    = @ |_, _| 0,
+    sample = @ |_, out_dir, _| {
+        let n = surf.local.col(2);
+        let cos_i = vec3_dot(out_dir, n);
+
+        let f = conductor_factor(ior, k, cos_i);
+
+        let color = color_mulf(ks, f);
+        make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, 1, color, false)
     },
     is_specular = true
 }

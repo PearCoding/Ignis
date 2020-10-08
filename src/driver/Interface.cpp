@@ -1,4 +1,3 @@
-#include <chrono>
 #include <fstream>
 #include <unordered_map>
 
@@ -221,6 +220,7 @@ thread_local anydsl::Array<float> Interface::cpu_secondary;
 
 static std::unique_ptr<Interface> interface;
 
+namespace IG {
 void setup_interface(size_t width, size_t height)
 {
 	interface.reset(new Interface(width, height));
@@ -240,6 +240,7 @@ void clear_pixels()
 {
 	return interface->clear();
 }
+} // namespace IG
 
 inline void get_ray_stream(RayStream& rays, float* ptr, size_t capacity)
 {

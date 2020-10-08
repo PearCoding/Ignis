@@ -1,13 +1,5 @@
-#include <algorithm>
-#include <array>
-#include <chrono>
-#include <cmath>
-#include <cstring>
-#include <memory>
-#include <sstream>
-#include <string>
-
-#include "ui.h"
+#include "UI.h"
+#include "Interface.h"
 
 #include "Buffer.h"
 #include "Color.h"
@@ -18,20 +10,7 @@
 
 #include "generated_interface.h"
 
-#ifndef NDEBUG
-#include <fenv.h>
-#endif
-
-#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-#include <x86intrin.h>
-#endif
-
 using namespace IG;
-
-void setup_interface(size_t, size_t);
-float* get_pixels();
-void clear_pixels();
-void cleanup_interface();
 
 static inline void check_arg(int argc, char** argv, int arg, int n)
 {

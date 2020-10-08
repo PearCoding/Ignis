@@ -120,7 +120,7 @@ fn @make_point_light(math: Intrinsics, pos: Vec3, color: Color) = Light {
 // This samples the environment by naive sphere sampling
 fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) -> Light {
     Light {
-        sample_direct = @ |rnd, from| {
+        sample_direct = @ |_, from| {
             let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
             make_direct_sample(vec3_mulf(from,max_radius), intensity, 1.0, uniform_sphere_pdf(), 1.0)
         },
@@ -139,7 +139,7 @@ fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) -> L
 /* TODO: This should contain a distribution map for efficient sampling */
 fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Texture) -> Light {
     Light {
-        sample_direct = @ |rnd, from| {
+        sample_direct = @ |_, from| {
             let (theta, phi) = spherical_from_dir(math, from);
             let u = theta / flt_pi;
             let v = phi / (2.0 * flt_pi);
@@ -160,7 +160,7 @@ fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Text
 
 fn @make_camera_light(math: Intrinsics, camera: Camera, color: Color) -> Light {
     Light {
-        sample_direct = @ |rnd, from| {
+        sample_direct = @ |_, _| {
             let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
             make_direct_sample(camera.origin(), intensity, 1.0, uniform_sphere_pdf(), 1.0)
         },
@@ -192,27 +192,12 @@ fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
     has_area = true
 }
 
-fn @make_triangle_light(math: Intrinsics, v0: Vec3, v1: Vec3, v2: Vec3, color: Color) -> Light {
-    let n_ = vec3_cross(vec3_sub(v1, v0), vec3_sub(v2, v0));
-    let inv_area = 1 / (0 * sqrt_newton(vec3_len2(n_), 1e-5:f32));
-    let n = vec3_mulf(n_, 0.5 * inv_area);
-    make_precomputed_triangle_light(math, v0, v1, v2, n, inv_area, color)
-}
-
-fn @make_precomputed_triangle_light(math: Intrinsics, v0: Vec3, v1: Vec3, v2: Vec3, n: Vec3, inv_area: f32, color: Color) -> Light {
-    let emitter = AreaEmitter {
-        sample = @ |uv| (sample_triangle(uv.x, uv.y, v0, v1, v2), n, inv_area),
-        normal = @ |_| n,
-        pdf = @ |_| inv_area
-    };
-    make_area_light(math, emitter, color)
-}
-
 fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, color: Color) -> Light {
     let emitter = AreaEmitter {
         sample = @ |uv| {
-            let f = (uv.x * (count as f32)) as i32;
-            let uv2 = make_vec2(uv.x/(f as f32), uv.y);
+            let ux  = uv.x * (count as f32);
+            let f   = ux as i32;
+            let uv2 = make_vec2(ux - (f as f32), uv.y);
             let (i0, i1, i2) = mesh.triangles(f+off);
             let v0  = mesh.vertices(i0);
             let v1  = mesh.vertices(i1);
@@ -223,12 +208,10 @@ fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, co
         },
         normal = @ |uv| {
             let f = (uv.x * (count as f32)) as i32;
-            let uv2 = make_vec2(uv.x/(f as f32), uv.y);
             mesh.face_normals(f+off)
         },
         pdf = @ |uv| {
             let f = (uv.x * (count as f32)) as i32;
-            let uv2 = make_vec2(uv.x/(f as f32), uv.y);
             1.0/mesh.face_area(f+off)
         }
     };

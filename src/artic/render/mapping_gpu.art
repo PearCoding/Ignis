@@ -547,7 +547,7 @@ fn @make_gpu_device( dev_id: i32
         let mut height: i32;
         ignis_load_image(dev_id, filename, &mut pixel_data, &mut width, &mut height);
         let (ptr, stride) = (pixel_data, width);
-        make_image(@ |x, y| read_pixel(ptr as &[f32], y * stride + x), width, height)
+        make_image(@ |x, y| read_pixel(ptr, y * stride + x), width, height)
     }
 }
 
