@@ -9,7 +9,8 @@ struct ImageRgba32 {
 
     inline bool isValid() const { return pixels != nullptr; }
     void applyGammaCorrection();
-    
+    void flipY();
+
     static ImageRgba32 load(const std::filesystem::path& path);
     bool save(const std::filesystem::path& path);
 };

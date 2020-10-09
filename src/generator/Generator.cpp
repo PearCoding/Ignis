@@ -67,14 +67,14 @@ struct LoadInfo {
 };
 
 struct Material {
-	uint32_t MeshId = 0;
+	uint32_t MeshLightPairId = 0;
 	std::shared_ptr<Object> BSDF;
 	std::shared_ptr<Object> Light;
 };
 
 inline bool operator==(const Material& a, const Material& b)
 {
-	return a.MeshId == b.MeshId && a.BSDF == b.BSDF && a.Light == b.Light;
+	return a.BSDF == b.BSDF && a.Light == b.Light && (!a.Light || a.MeshLightPairId == b.MeshLightPairId);
 }
 
 class MaterialHash {
@@ -83,7 +83,7 @@ public:
 	{
 		size_t h1 = std::hash<decltype(s.BSDF)>()(s.BSDF);
 		size_t h2 = std::hash<decltype(s.Light)>()(s.Light);
-		size_t h3 = std::hash<decltype(s.MeshId)>()(s.MeshId);
+		size_t h3 = std::hash<decltype(s.MeshLightPairId)>()(s.Light ? s.MeshLightPairId : 0); // Dont bother with meshid if no light is present
 		return (h1 ^ (h2 << 1)) ^ (h3 << 1);
 	}
 };
@@ -122,12 +122,14 @@ inline void setup_integrator(const Object& obj, const LoadInfo& info, std::ostre
 		if (child->pluginType() == "path") {
 			os << "    let renderer = make_path_tracing_renderer(" << lastMPL << " /*max_path_len*/, " << info.SPP << " /*spp*/);\n";
 			return;
+		} else if (child->pluginType() == "debug") {
+			os << "     let renderer = make_debug_renderer();\n";
+			return;
 		}
 	}
 
 	IG_LOG(L_WARNING) << "No known integrator specified, therefore using path tracer" << std::endl;
 	os << "    let renderer = make_path_tracing_renderer(" << lastMPL << " /*max_path_len*/, " << info.SPP << " /*spp*/);\n";
-	//os << "     let renderer = make_debug_renderer();\n";
 }
 
 inline void setup_camera(const Object& obj, const LoadInfo& info, std::ostream& os)
@@ -144,50 +146,50 @@ inline void setup_camera(const Object& obj, const LoadInfo& info, std::ostream& 
 	   << "    );\n";
 }
 
-inline Vector3f applyRotationScale(const Transform& t, const Vector3f& v)
-{
-	Vector3f res;
-	for (int i = 0; i < 3; ++i) {
-		res[i] = 0;
-		for (int j = 0; j < 3; ++j)
-			res[i] += t(i, j) * v[j];
+struct TransformCache {
+	Matrix4f TransformMatrix;
+	Matrix3f NormalMatrix;
+
+	TransformCache(const Transform& t)
+	{
+		TransformMatrix = Eigen::Map<const Eigen::Matrix<float, 4, 4, Eigen::RowMajor>>(t.matrix.data());
+		NormalMatrix	= TransformMatrix.block<3, 3>(0, 0).transpose().inverse();
 	}
-	return res;
-}
 
-inline Vector3f applyTransformAffine(const Transform& t, const Vector3f& v)
+	inline Vector3f applyTransform(const Vector3f& v) const
+	{
+		Vector4f w = TransformMatrix * Vector4f(v(0), v(1), v(2), 1.0f);
+		w /= w(3);
+		return Vector3f(w(0), w(1), w(2));
+	}
+
+	inline Vector3f applyNormal(const Vector3f& n) const
+	{
+		return (NormalMatrix * n).normalized();
+	}
+};
+
+// Unpack bsdf such that texture nodes are registered
+inline void add_textures_of_bsdf(const std::shared_ptr<Object>& bsdf, GeneratorContext& ctx)
 {
-	return applyRotationScale(t, v) + Vector3f(t(0, 3), t(1, 3), t(2, 3));
-}
+	for (const auto& child : bsdf->namedChildren()) {
+		if (child.second->type() == OT_TEXTURE)
+			ctx.Textures.insert(child.second);
+		else if (child.second->type() == OT_BSDF)
+			add_textures_of_bsdf(child.second, ctx);
+	}
 
-// Apply inverse of transpose of orthogonal part of the transform
-// which is the original orthogonal part if non-uniform scale is prohibited.
-// TODO: We are ignoring non-uniform scale properties
-inline Vector3f applyNormalTransform(const Transform& t, const Vector3f& v)
-{
-	return applyRotationScale(t, v);
-}
-
-// Unpack bsdf such that twosided materials are ignored and texture nodes are registered
-inline std::shared_ptr<Object> add_bsdf(const std::shared_ptr<Object>& elem, GeneratorContext& ctx)
-{
-	if (elem->pluginType() == "twosided") {
-		if (elem->anonymousChildren().size() != 1)
-			IG_LOG(L_ERROR) << "Invalid twosided bsdf" << std::endl;
-		// IG_LOG(L_WARNING) << "Ignoring twosided bsdf" << std::endl;
-		return add_bsdf(elem->anonymousChildren().front(), ctx);
-	} else {
-		for (const auto& child : elem->namedChildren()) {
-			if (child.second->type() == OT_TEXTURE)
-				ctx.Textures.insert(child.second);
-		}
-
-		return elem;
+	for (const auto& child : bsdf->anonymousChildren()) {
+		if (child->type() == OT_TEXTURE)
+			ctx.Textures.insert(child);
+		else if (child->type() == OT_BSDF)
+			add_textures_of_bsdf(child, ctx);
 	}
 }
 
 // Unpack emission such that texture nodes are registered
-inline std::shared_ptr<Object> add_light(const std::shared_ptr<Object>& elem, GeneratorContext& ctx)
+inline std::shared_ptr<Object>
+add_light(const std::shared_ptr<Object>& elem, GeneratorContext& ctx)
 {
 	for (const auto& child : elem->namedChildren()) {
 		if (child.second->type() == OT_TEXTURE)
@@ -208,13 +210,19 @@ inline void insert_index(TriMesh& mesh, const std::array<uint32_t, N>& arr)
 	mesh.indices.insert(mesh.indices.end(), arr.begin(), arr.end());
 }
 
-inline void add_rectangle(TriMesh& mesh, const std::array<Vector3f, 4>& points, const Vector3f& N)
+inline float triangle_area(const std::array<StVector3f, 3>& points)
+{
+	return 0.5f * (points[1] - points[0]).cross(points[2] - points[0]).norm();
+}
+
+inline void add_rectangle(TriMesh& mesh, const std::array<StVector3f, 4>& points, const StVector3f& N)
 {
 	uint32_t off = mesh.vertices.size();
 	mesh.vertices.insert(mesh.vertices.end(), points.begin(), points.end());
 	mesh.normals.insert(mesh.normals.end(), { N, N, N, N });
-	mesh.texcoords.insert(mesh.texcoords.end(), { Vector2f(0, 0), Vector2f(0, 1), Vector2f(1, 1), Vector2f(1, 0) });
+	mesh.texcoords.insert(mesh.texcoords.end(), { StVector2f(0, 0), StVector2f(0, 1), StVector2f(1, 1), StVector2f(1, 0) });
 	mesh.face_normals.insert(mesh.face_normals.end(), { N, N });
+	mesh.face_area.insert(mesh.face_area.end(), { triangle_area({ points[0], points[1], points[2] }), triangle_area({ points[2], points[3], points[0] }) });
 	insert_index(mesh, map_rectangle_index({ 0 + off, 1 + off, 2 + off, 3 + off }));
 }
 
@@ -316,13 +324,13 @@ static void setup_shapes(const Object& elem, const LoadInfo& info, GeneratorCont
 		if (flip)
 			child_mesh.flipNormals();
 
-		auto transform = child->property("to_world").getTransform();
+		TransformCache transform = TransformCache(child->property("to_world").getTransform());
 		for (size_t i = 0; i < child_mesh.vertices.size(); ++i)
-			child_mesh.vertices[i] = applyTransformAffine(transform, child_mesh.vertices[i]);
+			child_mesh.vertices[i] = transform.applyTransform(child_mesh.vertices[i]);
 		for (size_t i = 0; i < child_mesh.normals.size(); ++i)
-			child_mesh.normals[i] = applyNormalTransform(transform, child_mesh.normals[i]);
+			child_mesh.normals[i] = transform.applyNormal(child_mesh.normals[i]);
 		for (size_t i = 0; i < child_mesh.face_normals.size(); ++i)
-			child_mesh.face_normals[i] = applyNormalTransform(transform, child_mesh.face_normals[i]);
+			child_mesh.face_normals[i] = transform.applyNormal(child_mesh.face_normals[i]);
 
 		Shape shape;
 		shape.VtxOffset = ctx.Mesh.vertices.size();
@@ -331,18 +339,20 @@ static void setup_shapes(const Object& elem, const LoadInfo& info, GeneratorCont
 		shape.ItxCount	= child_mesh.indices.size();
 
 		// Setup material & light
-		shape.Material.MeshId = ctx.Shapes.size();
+		shape.Material.MeshLightPairId = ctx.Shapes.size();
 		for (const auto& inner_child : child->anonymousChildren()) {
-			if (inner_child->type() == OT_BSDF)
-				shape.Material.BSDF = add_bsdf(inner_child, ctx);
-			else if (inner_child->type() == OT_EMITTER)
+			if (inner_child->type() == OT_BSDF) {
+				shape.Material.BSDF = inner_child;
+				add_textures_of_bsdf(shape.Material.BSDF, ctx);
+			} else if (inner_child->type() == OT_EMITTER)
 				shape.Material.Light = add_light(inner_child, ctx);
 		}
 
 		for (const auto& inner_child : child->namedChildren()) {
-			if (inner_child.second->type() == OT_BSDF)
-				shape.Material.BSDF = add_bsdf(inner_child.second, ctx);
-			else if (inner_child.second->type() == OT_EMITTER)
+			if (inner_child.second->type() == OT_BSDF) {
+				shape.Material.BSDF = inner_child.second;
+				add_textures_of_bsdf(shape.Material.BSDF, ctx);
+			} else if (inner_child.second->type() == OT_EMITTER)
 				shape.Material.Light = add_light(inner_child.second, ctx);
 		}
 
@@ -374,10 +384,10 @@ static void setup_shapes(const Object& elem, const LoadInfo& info, GeneratorCont
 	   << "        normals      = @ |i| normals.load_vec3(i),\n"
 	   << "        face_normals = @ |i| face_normals.load_vec3(i),\n"
 	   << "        face_area    = @ |i| face_area.load_f32(i),\n"
-	   << "        triangles    = @ |i| { let (i, j, k, _) = indices.load_int4(i); (i, j, k) },\n"
+	   << "        triangles    = @ |i| { let (i0, i1, i2, _) = indices.load_int4(i); (i0, i1, i2) },\n"
 	   << "        attrs        = @ |_| (false, @ |j| vec2_to_4(texcoords.load_vec2(j), 0.0, 0.0)),\n"
 	   << "        num_attrs    = 1,\n"
-	   << "        num_tris     = " << size_t(ctx.Mesh.indices.size() / 4) << "\n"
+	   << "        num_tris     = " << size_t(ctx.Mesh.faceCount()) << "\n"
 	   << "    };\n"
 	   << "    let bvh = device.load_bvh(\"data/bvh.bin\");\n";
 
@@ -469,7 +479,7 @@ static std::string extractMaterialPropertyColor(const std::shared_ptr<Object>& o
 			break;
 		case PT_RGB: {
 			auto v_rgb = prop.getRGB();
-			sstream << "make_color(" << escape_f32(v_rgb.r) << ", " << escape_f32(v_rgb.r) << ", " << escape_f32(v_rgb.r) << ")";
+			sstream << "make_color(" << escape_f32(v_rgb.r) << ", " << escape_f32(v_rgb.g) << ", " << escape_f32(v_rgb.b) << ")";
 		} break;
 		case PT_SPECTRUM: {
 			// TODO
@@ -532,6 +542,47 @@ static std::string extractTexture(const std::shared_ptr<Object>& tex, const Load
 	return sstream.str();
 }
 
+static std::string extractBSDF(const std::shared_ptr<Object>& bsdf, const LoadInfo& info, const GeneratorContext& ctx)
+{
+	std::stringstream sstream;
+	if (!bsdf) {
+		sstream << "make_black_bsdf()";
+	} else if (bsdf->pluginType() == "diffuse" || bsdf->pluginType() == "roughdiffuse" /*TODO*/) {
+		sstream << "make_diffuse_bsdf(math, surf, " << extractMaterialPropertyColor(bsdf, "reflectance", info, ctx) << ")";
+	} else if (bsdf->pluginType() == "dielectric" || bsdf->pluginType() == "roughdielectric" /*TODO*/ || bsdf->pluginType() == "thindielectric" /*TODO*/) {
+		sstream << "make_glass_bsdf(math, surf, "
+				<< escape_f32(bsdf->property("ext_ior").getNumber(1.000277f)) << ", "
+				<< escape_f32(bsdf->property("int_ior").getNumber(1.5046f)) << ", "
+				<< extractMaterialPropertyColor(bsdf, "specular_reflectance", info, ctx, 1.0f) << ", "
+				<< extractMaterialPropertyColor(bsdf, "specular_transmittance", info, ctx, 1.0f) << ")";
+	} else if (bsdf->pluginType() == "conductor" || bsdf->pluginType() == "roughconductor" /*TODO*/) {
+		sstream << "make_conductor_bsdf(math, surf, "
+				<< escape_f32(bsdf->property("eta").getNumber(0.63660f)) << ", "
+				<< escape_f32(bsdf->property("k").getNumber(2.7834f)) << ", " // TODO: Better defaults?
+				<< extractMaterialPropertyColor(bsdf, "specular_reflectance", info, ctx, 1.0f) << ")";
+	} else if (bsdf->pluginType() == "phong" || bsdf->pluginType() == "plastic" /*TODO*/ || bsdf->pluginType() == "roughplastic" /*TODO*/) {
+		sstream << "make_phong_bsdf(math, surf, "
+				<< extractMaterialPropertyColor(bsdf, "specular_reflectance", info, ctx, 1.0f) << ", "
+				<< escape_f32(bsdf->property("exponent").getNumber(30)) << ")";
+	} else if (bsdf->pluginType() == "mask") {
+		if (bsdf->anonymousChildren().size() != 1)
+			IG_LOG(L_ERROR) << "Invalid mask bsdf" << std::endl;
+		sstream << "make_mix_bsdf(make_passthrough_bsdf(surf), "
+				<< extractBSDF(bsdf->anonymousChildren()[0], info, ctx) << ", "
+				<< escape_f32(bsdf->property("opacity").getNumber(0.95f)) << ")";
+	} else if (bsdf->pluginType() == "twosided") { /* Ignore */
+		if (bsdf->anonymousChildren().size() != 1)
+			IG_LOG(L_ERROR) << "Invalid twosided bsdf" << std::endl;
+		sstream << extractBSDF(bsdf->anonymousChildren()[0], info, ctx);
+	} else if (bsdf->pluginType() == "null") {
+		sstream << "make_black_bsdf()/* Null */";
+	} else {
+		IG_LOG(L_WARNING) << "Unknown bsdf '" << bsdf->pluginType() << "'" << std::endl;
+		sstream << "make_black_bsdf()/* Unknown */";
+	}
+	return sstream.str();
+}
+
 static void setup_materials(const Object& elem, const LoadInfo& info, const GeneratorContext& ctx, std::ostream& os)
 {
 	if (ctx.Materials.empty())
@@ -544,7 +595,7 @@ static void setup_materials(const Object& elem, const LoadInfo& info, const Gene
 		if (!mat.Light)
 			continue;
 
-		const auto& shape = ctx.Shapes[mat.MeshId];
+		const auto& shape = ctx.Shapes[mat.MeshLightPairId];
 		os << "    let light_" << light_counter << " = make_trimesh_light(math, tri_mesh, "
 		   << (shape.ItxOffset / 4) << ", " << (shape.ItxCount / 4) << ", "
 		   << extractMaterialPropertyColor(mat.Light, "radiance", info, ctx) << ");\n";
@@ -557,32 +608,8 @@ static void setup_materials(const Object& elem, const LoadInfo& info, const Gene
 	light_counter = 0;
 	for (size_t i = 0; i < ctx.Materials.size(); ++i) {
 		const auto& mat = ctx.Materials[i];
-		os << "    let material_" << i << " : Shader = @ |ray, hit, surf| {\n";
-		if (!mat.BSDF) {
-			os << "        let bsdf = make_black_bsdf();\n";
-		} else if (mat.BSDF->pluginType() == "diffuse" || mat.BSDF->pluginType() == "roughdiffuse" /*TODO*/) {
-			os << "        let bsdf = make_diffuse_bsdf(math, surf, " << extractMaterialPropertyColor(mat.BSDF, "reflectance", info, ctx) << ");\n";
-		} else if (mat.BSDF->pluginType() == "dielectric" || mat.BSDF->pluginType() == "roughdielectric" /*TODO*/ || mat.BSDF->pluginType() == "thindielectric" /*TODO*/) {
-			os << "        let bsdf = make_glass_bsdf(math, surf, "
-			   << escape_f32(mat.BSDF->property("ext_ior").getNumber(1.000277f)) << ", "
-			   << escape_f32(mat.BSDF->property("int_ior").getNumber(1.5046f)) << ", "
-			   << extractMaterialPropertyColor(mat.BSDF, "specular_reflectance", info, ctx, 1.0f) << ", "
-			   << extractMaterialPropertyColor(mat.BSDF, "specular_transmittance", info, ctx, 1.0f) << ");\n";
-		} else if (mat.BSDF->pluginType() == "conductor" || mat.BSDF->pluginType() == "roughconductor" /*TODO*/) {
-			os << "        let bsdf = make_conductor_bsdf(math, surf, "
-			   << escape_f32(mat.BSDF->property("eta").getNumber(0.63660f)) << ", "
-			   << escape_f32(mat.BSDF->property("k").getNumber(2.7834f)) << ", " // TODO: Better defaults?
-			   << extractMaterialPropertyColor(mat.BSDF, "specular_reflectance", info, ctx, 1.0f) << ");\n";
-		} else if (mat.BSDF->pluginType() == "phong" || mat.BSDF->pluginType() == "plastic" /*TODO*/ || mat.BSDF->pluginType() == "roughplastic" /*TODO*/) {
-			os << "        let bsdf = make_phong_bsdf(math, surf, "
-			   << extractMaterialPropertyColor(mat.BSDF, "specular_reflectance", info, ctx, 1.0f) << ", "
-			   << escape_f32(mat.BSDF->property("exponent").getNumber(30)) << ");\n";
-		} else if (mat.BSDF->pluginType() == "null") {
-			os << "        let bsdf = make_black_bsdf();/* Null */\n";
-		} else {
-			IG_LOG(L_WARNING) << "Unknown bsdf '" << mat.BSDF->pluginType() << "'" << std::endl;
-			os << "        let bsdf = make_black_bsdf();\n";
-		}
+		os << "    let material_" << i << " : Shader = @ |ray, hit, surf| {\n"
+		   << "        let bsdf = " << extractBSDF(mat.BSDF, info, ctx) << ";\n";
 
 		if (mat.Light)
 			os << "        make_emissive_material(surf, bsdf, light_" << light_counter << ")\n";

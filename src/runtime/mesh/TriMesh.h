@@ -4,15 +4,20 @@
 
 namespace IG {
 
-// We assume Vector2f and Vector3f are not vectorized!
+template <size_t N>
+using StVectorXf = Eigen::Matrix<float, N, 1, Eigen::DontAlign>;
+using StVector3f = StVectorXf<3>;
+using StVector2f = StVectorXf<2>;
 
 struct TriMesh {
-	std::vector<Vector3f> vertices;
+	std::vector<StVector3f> vertices;
 	std::vector<uint32> indices; // A triangle is based as [i0,i1,i2,m] with m = Material
-	std::vector<Vector3f> normals;
-	std::vector<Vector3f> face_normals;
+	std::vector<StVector3f> normals;
+	std::vector<StVector3f> face_normals;
 	std::vector<float> face_area;
-	std::vector<Vector2f> texcoords;
+	std::vector<StVector2f> texcoords;
+
+	inline size_t faceCount() const { return indices.size() / 4; }
 
 	void fixNormals();
 	void flipNormals();
@@ -25,13 +30,4 @@ struct TriMesh {
 	void makeTexCoordsZero();
 };
 
-void computeFaceNormals(const std::vector<uint32>& indices,
-						const std::vector<Vector3f>& vertices,
-						std::vector<Vector3f>& face_normals,
-						std::vector<float>& face_area,
-						size_t first_index);
-void computeVertexNormals(const std::vector<uint32>& indices,
-						  const std::vector<Vector3f>& face_normals,
-						  std::vector<Vector3f>& normals,
-						  size_t first_index);
 } // namespace IG

@@ -18,6 +18,17 @@ void ImageRgba32::applyGammaCorrection()
 	}
 }
 
+void ImageRgba32::flipY()
+{
+	const size_t slice = 4 * width;
+	for (size_t y = 0; y < height / 2; ++y) {
+		float* s1 = &pixels[y * slice];
+		float* s2 = &pixels[(height - y - 1) * slice];
+		if (s1 != s2)
+			std::swap_ranges(s1, s1 + slice, s2);
+	}
+}
+
 ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 {
 	auto in = ImageInput::open(path);
@@ -30,6 +41,7 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 	img.height = spec.height;
 	img.pixels.reset(new float[img.width * img.height * 4]);
 
+	bool wasBGR = false;
 	switch (spec.nchannels) {
 	case 1: { // Gray
 		std::vector<float> scanline(spec.width * spec.nchannels);
@@ -45,6 +57,7 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 		}
 	} break;
 	case 3: { // RGB
+		wasBGR = spec.channelnames[0] == "B";
 		std::vector<float> scanline(spec.width * spec.nchannels);
 		for (int y = 0; y < spec.height; ++y) {
 			in->read_scanline(y, 0, TypeDesc::FLOAT, &scanline[0]);
@@ -57,11 +70,19 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 		}
 	} break;
 	case 4: // RGBA
+		wasBGR = spec.channelnames[0] == "B";
 		in->read_image(TypeDesc::FLOAT, img.pixels.get());
 		break;
 	default:
 		return ImageRgba32();
 	}
+
+	if (wasBGR) {
+		for (int i = 0; i < spec.height * spec.width; ++i)
+			std::swap(img.pixels[4 * i + 0], img.pixels[4 * i + 2]);
+	}
+
+	img.flipY();
 
 	in->close();
 	return img;

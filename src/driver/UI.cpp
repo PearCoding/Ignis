@@ -473,7 +473,9 @@ static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, si
 							exposure_factor * b + sToneMapping_Offset);
 			}
 
-			buf[y * width + x] = (uint32_t(clamp(std::pow(color.r, inv_gamma), 0.0f, 1.0f) * 255.0f) << 16) | (uint32_t(clamp(std::pow(color.g, inv_gamma), 0.0f, 1.0f) * 255.0f) << 8) | uint32_t(clamp(std::pow(color.b, inv_gamma), 0.0f, 1.0f) * 255.0f);
+			buf[y * width + x] = (uint32_t(clamp(std::pow(color.r, inv_gamma), 0.0f, 1.0f) * 255.0f) << 16)
+								 | (uint32_t(clamp(std::pow(color.g, inv_gamma), 0.0f, 1.0f) * 255.0f) << 8)
+								 | uint32_t(clamp(std::pow(color.b, inv_gamma), 0.0f, 1.0f) * 255.0f);
 		}
 	}
 	SDL_UpdateTexture(texture, nullptr, buf, width * sizeof(uint32_t));

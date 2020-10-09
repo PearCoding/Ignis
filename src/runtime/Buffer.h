@@ -4,9 +4,13 @@
 #include <istream>
 #include <ostream>
 
-#include <lz4.h>
-
 #include "IG_Config.h"
+
+// #define IG_NO_COMPRESS
+
+#ifndef IG_NO_COMPRESS
+#include <lz4.h>
+#endif
 
 namespace IG {
 namespace IO {
@@ -21,7 +25,11 @@ inline void skip_buffer(std::istream& is)
 template <typename Array>
 inline void decompress(const std::vector<char>& in, Array& out)
 {
+#ifndef IG_NO_COMPRESS
 	LZ4_decompress_safe(in.data(), (char*)out.data(), in.size(), out.size() * sizeof(out[0]));
+#else
+	std::memcpy((char*)out.data(), in.data(), out.size() * sizeof(out[0]));
+#endif
 }
 
 template <typename Array>
@@ -46,9 +54,14 @@ inline void read_buffer(const std::string& file_name, Array& array)
 template <typename Array>
 inline void compress(const Array& in, std::vector<char>& out)
 {
-	size_t in_size = sizeof(in[0]) * in.size();
+	const size_t in_size = sizeof(in[0]) * in.size();
+#ifndef IG_NO_COMPRESS
 	out.resize(LZ4_compressBound(in_size));
 	out.resize(LZ4_compress_default((const char*)in.data(), out.data(), in_size, out.size()));
+#else
+	out.resize(in_size);
+	std::memcpy((char*)out.data(), in.data(), in_size);
+#endif
 }
 
 template <typename Array>
@@ -64,7 +77,7 @@ inline void write_buffer(std::ostream& os, const Array& array)
 }
 
 template <typename Array>
-inline void write_buffer(const std::string& file_name, const Array& array)
+inline void  write_buffer(const std::string& file_name, const Array& array)
 {
 	std::ofstream of(file_name, std::ios::binary);
 	write_buffer(of, array);

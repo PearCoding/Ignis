@@ -4,8 +4,8 @@
 namespace IG {
 
 void computeFaceNormals(const std::vector<uint32>& indices,
-						const std::vector<Vector3f>& vertices,
-						std::vector<Vector3f>& face_normals,
+						const std::vector<StVector3f>& vertices,
+						std::vector<StVector3f>& face_normals,
 						std::vector<float>& face_area,
 						size_t first_index)
 {
@@ -29,8 +29,8 @@ void computeFaceNormals(const std::vector<uint32>& indices,
 }
 
 void computeVertexNormals(const std::vector<uint32_t>& indices,
-						  const std::vector<Vector3f>& face_normals,
-						  std::vector<Vector3f>& normals,
+						  const std::vector<StVector3f>& face_normals,
+						  std::vector<StVector3f>& normals,
 						  size_t first_index)
 {
 	for (auto i = first_index, k = indices.size(); i < k; i += 4) {
@@ -108,17 +108,14 @@ void TriMesh::replaceMaterial(uint32 m_idx)
 
 void TriMesh::computeFaceNormals(size_t first_index)
 {
-	if (face_normals.size() < indices.size() / 4) {
-		face_normals.resize(indices.size() / 4);
-		face_area.resize(indices.size() / 4);
-	}
+	face_normals.resize(faceCount());
+	face_area.resize(faceCount());
 	IG::computeFaceNormals(indices, vertices, face_normals, face_area, first_index);
 }
 
 void TriMesh::computeVertexNormals(size_t first_index)
 {
-	if (normals.size() < face_normals.size() * 3)
-		normals.resize(face_normals.size() * 3);
+	normals.resize(faceCount() * 3);
 	IG::computeVertexNormals(indices, face_normals, normals, first_index);
 }
 

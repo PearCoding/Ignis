@@ -152,3 +152,7 @@ fn @swap[T](a: &mut T, b: &mut T) -> () {
     *a = *b;
     *b = tmp;
 }
+
+fn @abs(a: f32) -> f32 {
+    if a < 0 { -a } else { a }
+}
