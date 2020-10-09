@@ -353,5 +353,11 @@ inline bool must_build_bvh(const std::string& name, Target target)
 	}
 	return true;
 }
+
+inline void write_bvh_stamp(const std::string& name, Target target)
+{
+	std::ofstream bvh_stamp("data/bvh.stamp");
+	bvh_stamp << int(target) << " " << name;
+}
 } // namespace IO
 } // namespace IG

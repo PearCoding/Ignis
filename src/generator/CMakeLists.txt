@@ -11,6 +11,16 @@ set(SRC
     BVHAdapter.h
     Generator.cpp
     Generator.h
+    GeneratorBSDF.cpp
+    GeneratorBSDF.h
+    GeneratorContext.cpp
+    GeneratorContext.h
+    GeneratorEnvironment.cpp
+    GeneratorEnvironment.h
+    GeneratorLight.cpp
+    GeneratorLight.h
+    GeneratorShape.cpp
+    GeneratorShape.h
     IO.cpp
     IO.h
     Target.h

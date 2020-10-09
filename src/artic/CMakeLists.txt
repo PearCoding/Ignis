@@ -14,6 +14,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_cpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_gpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/material.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/microfacet.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/scene.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/intersection.art
