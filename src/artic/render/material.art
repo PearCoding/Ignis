@@ -96,6 +96,36 @@ fn @make_diffuse_bsdf(math: Intrinsics, surf: SurfaceElement, kd: Color) = Bsdf 
     is_specular = false
 }
 
+// Creates a BSDF based on orennayar
+fn @make_orennayar_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
+    let a2 = alpha * alpha;
+    let eval = @ |in_dir : Vec3, out_dir : Vec3| {
+        let p1 = positive_cos(in_dir, surf.local.col(2));
+        let p2 = positive_cos(out_dir, surf.local.col(2));
+        let s  = p1 * p2 + positive_cos(out_dir, in_dir);
+        let t  = math.fmaxf(p1, p2);
+
+        let A = 1 - 0.5 * a2 / (a2 + 0.33);
+        let B = 0.45 * a2 / (a2 + 0.09);
+        let C = 0.17 * a2 / (a2 + 0.13); // Correction term
+        color_add(color_mulf(kd, (A + (B * s / t)) / flt_pi), color_mul(kd, color_mulf(kd, C / flt_pi)))
+    };
+
+    Bsdf {
+        eval = eval,
+        pdf = @ |in_dir, _| cosine_hemisphere_pdf(positive_cos(in_dir, surf.local.col(2))),
+        sample = @ |rnd, out_dir, _| {
+            let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd));
+            make_bsdf_sample(surf, mat3x3_mul(surf.local, sample.dir), sample.pdf, sample.dir.z, eval(sample.dir, out_dir), false)
+        },
+        is_specular = false
+    }
+}
+
+fn @make_rough_diffuse_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
+    if alpha > 0 { make_orennayar_bsdf(math, surf, alpha, kd) } else { make_diffuse_bsdf(math, surf, kd) }
+}
+
 // Creates a physically-correct Phong BSDF
 fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
     eval = @ |in_dir, out_dir| {
