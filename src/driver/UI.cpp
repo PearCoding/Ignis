@@ -481,6 +481,39 @@ static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, si
 	SDL_UpdateTexture(texture, nullptr, buf, width * sizeof(uint32_t));
 }
 
+static void make_screenshot(size_t width, size_t height, uint32_t iter)
+{
+	std::stringstream out_file;
+	auto now	   = std::chrono::system_clock::now();
+	auto in_time_t = std::chrono::system_clock::to_time_t(now);
+	out_file << "screenshot_" << std::put_time(std::localtime(&in_time_t), "%Y_%m_%d_%H_%M_%S") << ".exr";
+
+	ImageRgba32 img;
+	img.width  = width;
+	img.height = height;
+	img.pixels.reset(new float[width * height * 4]);
+
+	auto film	  = get_pixels();
+	auto inv_iter = 1.0f / iter;
+	for (size_t y = 0; y < height; ++y) {
+		for (size_t x = 0; x < width; ++x) {
+			auto r = film[(y * width + x) * 3 + 0];
+			auto g = film[(y * width + x) * 3 + 1];
+			auto b = film[(y * width + x) * 3 + 2];
+
+			img.pixels[4 * (y * width + x) + 0] = r * inv_iter;
+			img.pixels[4 * (y * width + x) + 1] = g * inv_iter;
+			img.pixels[4 * (y * width + x) + 2] = b * inv_iter;
+			img.pixels[4 * (y * width + x) + 3] = 1.0f;
+		}
+	}
+
+	if (!img.save(out_file.str()))
+		IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "'" << std::endl;
+	else
+		IG_LOG(L_INFO) << "Screenshot saved to '" << out_file.str() << "'" << std::endl;
+}
+
 ////////////////////////////////////////////////////////////////
 
 void init(int width, int height)
@@ -579,11 +612,15 @@ static void handle_imgui(uint32_t iter)
 	}
 
 	if (ImGui::CollapsingHeader("Poses")) {
-		if (ImGui::Button("Reload"))
+		if (ImGui::Button("Reload")) {
 			sPoseManager.load(POSE_FILE);
+			IG_LOG(L_INFO) << "Poses loaed from '" << POSE_FILE << "'" << std::endl;
+		}
 		ImGui::SameLine();
-		if (ImGui::Button("Save"))
+		if (ImGui::Button("Save")) {
 			sPoseManager.save(POSE_FILE);
+			IG_LOG(L_INFO) << "Poses saved to '" << POSE_FILE << "'" << std::endl;
+		}
 
 		bool f = false;
 		for (size_t i = 0; i < sPoseManager.poseCount(); ++i) {
@@ -601,7 +638,7 @@ void update(uint32_t iter)
 {
 	update_texture(sBuffer.data(), sTexture, sWidth, sHeight, iter);
 	if (sScreenshotRequest) {
-		//make_screenshot(sWidth, sHeight, iter);
+		make_screenshot(sWidth, sHeight, iter);
 		sScreenshotRequest = false;
 	}
 	SDL_RenderClear(sRenderer);
