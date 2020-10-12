@@ -117,63 +117,69 @@ fn @make_point_light(math: Intrinsics, pos: Vec3, color: Color) = Light {
     has_area = false
 }
 
+fn @make_directional_light(_math: Intrinsics, dir: Vec3, max_radius: f32, color: Color) = Light {
+    sample_direct = @ |_, from| {
+        let k = vec3_dot(dir, from);
+        make_direct_sample(vec3_mulf(from, max_radius), if k > 0.9999999 {color} else {black}, 1, 1, 1)
+    },
+    sample_emission = @ |_| {
+        make_emission_sample(vec3_mulf(dir, max_radius), dir, color, 1, 1, 1)
+    },
+    emission = @ |_, _| make_emission_value(black, 1, 1),
+    has_area = false
+}
+
 // This samples the environment by naive sphere sampling
-fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) -> Light {
-    Light {
-        sample_direct = @ |_, from| {
-            let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
-            make_direct_sample(vec3_mulf(from,max_radius), intensity, 1.0, uniform_sphere_pdf(), 1.0)
-        },
-        sample_emission = @ |rnd| {
-            let u = randf(rnd);
-            let v = randf(rnd);
-            let sample = sample_uniform_sphere(math, u, v);
-            let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
-            make_emission_sample(vec3_mulf(sample.dir,max_radius), sample.dir, intensity, 1.0, sample.pdf, 1.0)
-        },
-        emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
-        has_area = false
-    }
+fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) = Light {
+    sample_direct = @ |_, from| {
+        let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
+        make_direct_sample(vec3_mulf(from,max_radius), intensity, 1.0, uniform_sphere_pdf(), 1.0)
+    },
+    sample_emission = @ |rnd| {
+        let u = randf(rnd);
+        let v = randf(rnd);
+        let sample = sample_uniform_sphere(math, u, v);
+        let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
+        make_emission_sample(vec3_mulf(sample.dir,max_radius), sample.dir, intensity, 1.0, sample.pdf, 1.0)
+    },
+    emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
+    has_area = false
 }
 
 /* TODO: This should contain a distribution map for efficient sampling */
-fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Texture) -> Light {
-    Light {
-        sample_direct = @ |_, from| {
-            let (theta, phi) = spherical_from_dir(math, from);
-            let u = theta / flt_pi;
-            let v = phi / (2.0 * flt_pi);
-            let intensity = color_mulf(tex(make_vec2(u,v)), 1.0 / (4.0 * flt_pi));
-            make_direct_sample(vec3_mulf(from,max_radius), intensity, 1.0, uniform_sphere_pdf(), 1.0)
-        },
-        sample_emission = @ |rnd| {
-            let u = randf(rnd);
-            let v = randf(rnd);
-            let sample = sample_uniform_sphere(math, u, v);
-            let intensity = color_mulf(tex(make_vec2(u,v)), 1.0 / (4.0 * flt_pi));
-            make_emission_sample(vec3_mulf(sample.dir,max_radius), sample.dir, intensity, 1.0, sample.pdf, 1.0)
-        },
-        emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
-        has_area = false
-    }
+fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Texture) = Light {
+    sample_direct = @ |_, from| {
+        let (theta, phi) = spherical_from_dir(math, from);
+        let u = theta / flt_pi;
+        let v = phi / (2.0 * flt_pi);
+        let intensity = color_mulf(tex(make_vec2(u,v)), 1.0 / (4.0 * flt_pi));
+        make_direct_sample(vec3_mulf(from,max_radius), intensity, 1.0, uniform_sphere_pdf(), 1.0)
+    },
+    sample_emission = @ |rnd| {
+        let u = randf(rnd);
+        let v = randf(rnd);
+        let sample = sample_uniform_sphere(math, u, v);
+        let intensity = color_mulf(tex(make_vec2(u,v)), 1.0 / (4.0 * flt_pi));
+        make_emission_sample(vec3_mulf(sample.dir,max_radius), sample.dir, intensity, 1.0, sample.pdf, 1.0)
+    },
+    emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
+    has_area = false
 }
 
-fn @make_camera_light(math: Intrinsics, camera: Camera, color: Color) -> Light {
-    Light {
-        sample_direct = @ |_, _| {
-            let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
-            make_direct_sample(camera.origin(), intensity, 1.0, uniform_sphere_pdf(), 1.0)
-        },
-        sample_emission = @ |rnd| {
-            let u = randf(rnd);
-            let v = randf(rnd);
-            let sample = sample_uniform_sphere(math, u, v);
-            let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
-            make_emission_sample(camera.origin(), sample.dir, intensity, 1.0, sample.pdf, 1.0)
-        },
-        emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
-        has_area = false
-    }
+fn @make_camera_light(math: Intrinsics, camera: Camera, color: Color) = Light {
+    sample_direct = @ |_, _| {
+        let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
+        make_direct_sample(camera.origin(), intensity, 1.0, uniform_sphere_pdf(), 1.0)
+    },
+    sample_emission = @ |rnd| {
+        let u = randf(rnd);
+        let v = randf(rnd);
+        let sample = sample_uniform_sphere(math, u, v);
+        let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
+        make_emission_sample(camera.origin(), sample.dir, intensity, 1.0, sample.pdf, 1.0)
+    },
+    emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
+    has_area = false
 }
 
 fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {

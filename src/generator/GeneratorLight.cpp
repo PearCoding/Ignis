@@ -28,7 +28,7 @@ std::string GeneratorLight::extract(const std::shared_ptr<TPMObject>& light, con
 		sstream << "make_directional_light(math, make_vec3("
 				<< dir.x << ", " << dir.y << ", " << dir.z << "), "
 				<< ctx.Environment.SceneDiameter << ", "
-				<< power << "))";
+				<< "make_gray_color(" << power << "))";
 	} else if (light->pluginType() == "constant") {
 		sstream << "make_environment_light(math, "
 				<< ctx.Environment.SceneDiameter << ", "
