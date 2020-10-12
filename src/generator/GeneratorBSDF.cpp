@@ -38,6 +38,15 @@ static void bsdf_conductor(const std::shared_ptr<TPMObject>& bsdf, const Generat
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ")";
 }
 
+static void bsdf_plastic(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+{
+	os << "make_plastic_bsdf(math, surf, "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", 1.000277f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", 1.49f) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "diffuse_reflectance", 0.5f) << ")";
+}
+
 static void bsdf_phong(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_phong_bsdf(math, surf, "
@@ -99,8 +108,8 @@ static struct {
 	{ "conductor", bsdf_conductor },
 	{ "roughconductor", bsdf_conductor }, /*TODO*/
 	{ "phong", bsdf_phong },
-	{ "plastic", bsdf_phong },		/*TODO*/
-	{ "roughplastic", bsdf_phong }, /*TODO*/
+	{ "plastic", bsdf_plastic },
+	{ "roughplastic", bsdf_plastic }, /*TODO*/
 	{ "blendbsdf", bsdf_blend },
 	{ "mask", bsdf_mask },
 	{ "twosided", bsdf_twosided },

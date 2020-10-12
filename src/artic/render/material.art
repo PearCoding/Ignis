@@ -35,21 +35,6 @@ struct Bsdf {
     is_specular: bool
 }
 
-fn @fresnel_factor(k: f32, cos_i: f32, cos_t: f32) -> f32 {
-    let R_s = (k * cos_i - cos_t) / (k * cos_i + cos_t);
-    let R_p = (cos_i - k * cos_t) / (cos_i + k * cos_t);
-    (R_s * R_s + R_p * R_p) * 0.5
-}
-
-fn @conductor_factor(n: f32, k: f32, cos_i: f32) -> f32 {
-    let f	 = n*n + k*k;
-    let d1	 = f * cos_i * cos_i;
-	let d2	 = 2.0 * n * cos_i;
-	let R_s  = (d1 - d2) / (d1 + d2);
-	let R_p  = (f - d2 + cos_i*cos_i) / (f + d2 + cos_i*cos_i);
-    (R_s * R_s + R_p * R_p) * 0.5
-}
-
 // Creates a material with no emission
 fn @make_material(bsdf: Bsdf) = Material {
     bsdf =        bsdf,
@@ -147,6 +132,54 @@ fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) 
     is_specular = false
 }
 
+// Creates a plastic bsdf based on Fresnel equation
+fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kd: Color) -> Bsdf {
+    // Calculate approximate diffuse Fresnel reflectance
+    let fdr1 = fresnel_diffuse_factor(n1, n2);
+    // let fdr2 = fresnel_diffuse_factor(n2, n1);
+
+    Bsdf {
+        eval   = @ |in_dir, out_dir| {
+            let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
+            let n = surf.local.col(2);
+            let cos_i = vec3_dot(out_dir, n);
+            let cos_o = vec3_dot(in_dir, n);
+
+            let fi = fresnel(math, k, cos_i);
+            let fo = fresnel(math, k, cos_o);
+
+            let factor = cosine_hemisphere_pdf(cos_i) * (1 - fi.factor) * (1 - fo.factor) / (k * k * (1 - fdr1));
+            color_lerp(ks, kd, factor)
+        },
+        pdf    = @ |in_dir, _| {
+            let k     = if surf.is_entering { n1 / n2 } else { n2 / n1 };
+            let n     = surf.local.col(2);
+            let cos_i = vec3_dot(in_dir, n);
+            let fi    = fresnel(math, k, cos_i);
+            (1 - fi.factor) * cosine_hemisphere_pdf(cos_i)
+        },
+        sample = @ |rnd, out_dir, _| {
+            let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
+            let n = surf.local.col(2);
+            let cos_i = vec3_dot(out_dir, n);
+
+            let fi = fresnel(math, k, cos_i);
+
+            if (randf(rnd) > fi.factor) {
+                // Diffuse reflection
+                let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd)); 
+                let fo     = fresnel(math, k, sample.dir.z);
+                let factor = (1-fo.factor) / (k * k * (1 - fdr1));
+                make_bsdf_sample(surf, mat3x3_mul(surf.local, sample.dir), (1-fi.factor) * sample.pdf, sample.dir.z, color_mulf(kd, factor), false)
+            } else {
+                // Reflection
+                make_bsdf_sample(surf, vec3_reflect(out_dir, n), fi.factor, 1, color_mulf(ks, fi.factor), false)
+            }
+        },
+        is_specular = false
+    }
+}
+
 // Creates a perfect mirror BSDF
 fn @make_mirror_bsdf(_math: Intrinsics, surf: SurfaceElement, ks: Color) = Bsdf {
     eval   = @ |_, _| black,
@@ -165,12 +198,13 @@ fn @make_glass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks
         let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
         let n = surf.local.col(2);
         let cos_i = vec3_dot(out_dir, n);
-        let cos2_t = 1 - k * k * (1 - cos_i * cos_i);
 
-        if cos2_t > 0 {
+        let fterm = fresnel(math, k, cos_i);
+
+        if !fterm.total {
             // Refraction
-            let cos_t = math.sqrtf(cos2_t);
-            let F = fresnel_factor(k, cos_i, cos_t);
+            let cos_t = fterm.cos_t;
+            let F     = fterm.factor;
             if (randf(rnd) > F) {
                 let t = vec3_sub(vec3_mulf(n, k * cos_i - cos_t), vec3_mulf(out_dir, k));
                 let adjoint_term = if adjoint { k * k } else { 1 };

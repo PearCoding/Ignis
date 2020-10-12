@@ -8,6 +8,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/camera.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/driver.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/fresnel.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/geometry.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/image.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/light.art

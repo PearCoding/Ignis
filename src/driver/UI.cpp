@@ -75,7 +75,7 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 	static float tspeed				   = 0.1f;
 
 	SDL_Event event;
-	const bool hover = ImGui::IsAnyItemHovered() || ImGui::IsAnyWindowHovered();
+	const bool hover = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
 	while (SDL_PollEvent(&event)) {
 		bool key_down = event.type == SDL_KEYDOWN;
 		switch (event.type) {

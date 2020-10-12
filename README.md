@@ -23,8 +23,8 @@ Once the dependencies are installed, first create a directory to build the appli
     mkdir build
     cd build
 
-Use your favorite generator (e.g. Ninja) and set the scene to be build using SCENE_FILE
+Use your favorite generator (e.g. Ninja) and set the scene to be build using IG_SCENE_FILE
 
-    cmake -G Ninja .. -DSCENE_FILE=myfile.xml
+    cmake -G Ninja .. -DIG_SCENE_FILE=../scenes/diamond_scene.xml
     ninja
 

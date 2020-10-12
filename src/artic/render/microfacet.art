@@ -1,8 +1,42 @@
-// Similar to a BSDF 
+// Similar to a BSDF -> Microfacet D term
 struct MicrofacetDistribution {
     eval: fn (Vec3, Vec3) -> f32,
     pdf: fn (Vec3, Vec3) -> f32,
     sample: fn (&mut RndState, Vec3) -> (Vec3, f32, f32)
+}
+
+fn make_iso_beckmann_distribution(math: Intrinsics, surf: SurfaceElement, alpha: f32) -> MicrofacetDistribution {
+    let a2 = alpha * alpha;
+    MicrofacetDistribution {
+        eval = @|wi, wo| {
+            let h     = vec3_normalize(math, vec3_add(wi, wo));
+            let cosT  = vec3_dot(surf.local.col(2), h);
+            let cos2T = cosT * cosT;
+            let tan2T = (1-cos2T) /cos2T;
+            if(tan2T == flt_inf) { return(0) }
+            let norm  = 1 / (flt_pi * a2 * cos2T * cos2T);
+            norm * math.expf(-tan2T / a2)
+        },
+        pdf = @|wi, wo| {  // TODO
+            let h = vec3_normalize(math, vec3_add(wi,wo));
+            let ndoth = vec3_dot(surf.local.col(2), h);
+            1.0 / (flt_pi * a2 * ndoth * ndoth * ndoth * 4)
+        },
+        sample = @ |rnd, out_dir| { // TODO
+            let u0 = randf(rnd);
+            let u1 = randf(rnd);
+            let t2 = a2 * u1 / (1.0 - u1);
+            let cosTheta = 1.0/math.sqrtf(1+ t2);
+            let sinTheta = math.sqrtf(1.0 - cosTheta * cosTheta);
+            let cosPhi   = math.cosf(2.0 * flt_pi * u0);
+            let sinPhi   = math.sinf(2.0 * flt_pi * u0);
+
+            let s = 1.0 + u1 / (1.0 - u1);
+            let pdf = 1.0 / (flt_pi * a2 * cosTheta * cosTheta * cosTheta * s * s);
+            let h = make_vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+            (vec3_reflect(out_dir, h), pdf, 1)
+        },
+    }
 }
 
 fn make_iso_ggx_distribution(math: Intrinsics, surf: SurfaceElement, alpha: f32) -> MicrofacetDistribution {
