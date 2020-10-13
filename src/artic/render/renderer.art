@@ -43,7 +43,7 @@ fn @make_debug_renderer() -> Renderer {
     @ |scene, device, iter| {
         let path_tracer = PathTracer {
             on_emit   = make_camera_emitter(scene, device, iter),
-            on_hit    = @ |ray, _hit, _state, surf, _mat| {
+            on_hit    = @ |_ray, _hit, _state, surf, _mat| {
                 let n = surf.local.col(2);
                 make_option(make_color(abs(n.x), abs(n.y), abs(n.z)))
                 //make_option(color_mulf(white, -vec3_dot(ray.dir, surf.local.col(2))))

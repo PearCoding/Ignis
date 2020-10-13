@@ -61,6 +61,14 @@ fn @make_bsdf_sample(surf: SurfaceElement, in_dir: Vec3, pdf: f32, cos: f32, col
     }
 }
 
+// Weight pdf and color based on respective factors
+fn @bsdf_sample_mulf(sample: BsdfSample, pdf_f: f32, color_f: f32) = BsdfSample {
+    in_dir = sample.in_dir,
+    pdf    = sample.pdf * pdf_f,
+    cos    = sample.cos,
+    color  = color_mulf(sample.color, color_f)
+}
+
 // Creates a fully absorbing BSDF that behaves like a black body
 fn @make_black_bsdf() = Bsdf {
     eval =   @ |_, _| black,
@@ -132,52 +140,45 @@ fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) 
     is_specular = false
 }
 
-// Creates a plastic bsdf based on Fresnel equation
+// Creates a plastic bsdf based on Fresnel equation (which is just a variadic mix bsdf with extra diffuse term)
 fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kd: Color) -> Bsdf {
+    // Layered BSDF
+    let diffuse = make_diffuse_bsdf(math, surf, kd);
+    let mirror  = make_mirror_bsdf(math, surf, ks);
+
+    let N   = surf.local.col(2);
+    let eta = if surf.is_entering { n1 / n2 } else { n2 / n1 };
     // Calculate approximate diffuse Fresnel reflectance
-    let fdr1 = fresnel_diffuse_factor(n1, n2);
-    // let fdr2 = fresnel_diffuse_factor(n2, n1);
+    let fdr = fresnel_diffuse_factor(n2 / n1);
 
-    Bsdf {
+    // Diffuse inner scattering term
+    let diff_scattering = @|cos_i : f32| {
+        let fi = fresnel(math, eta, cos_i);
+         (1 - fi.factor) / (eta * eta * (1 - fdr))
+    };
+
+    // Apply inner scattering term to diffuse bsdf
+    let diffuse_extra = Bsdf {
         eval   = @ |in_dir, out_dir| {
-            let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
-            let n = surf.local.col(2);
-            let cos_i = vec3_dot(out_dir, n);
-            let cos_o = vec3_dot(in_dir, n);
-
-            let fi = fresnel(math, k, cos_i);
-            let fo = fresnel(math, k, cos_o);
-
-            let factor = cosine_hemisphere_pdf(cos_i) * (1 - fi.factor) * (1 - fo.factor) / (k * k * (1 - fdr1));
-            color_lerp(ks, kd, factor)
+            let cos_i = positive_cos(in_dir, N);
+            color_mulf(diffuse.eval(in_dir, out_dir), diff_scattering(cos_i))
         },
-        pdf    = @ |in_dir, _| {
-            let k     = if surf.is_entering { n1 / n2 } else { n2 / n1 };
-            let n     = surf.local.col(2);
-            let cos_i = vec3_dot(in_dir, n);
-            let fi    = fresnel(math, k, cos_i);
-            (1 - fi.factor) * cosine_hemisphere_pdf(cos_i)
+        pdf    = diffuse.pdf,
+        sample = @ |rnd, out_dir, adjoint| {
+            let s = diffuse.sample(rnd, out_dir, adjoint);
+            BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos, color = color_mulf(s.color,  diff_scattering(s.cos)) }
         },
-        sample = @ |rnd, out_dir, _| {
-            let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
-            let n = surf.local.col(2);
-            let cos_i = vec3_dot(out_dir, n);
+        is_specular = diffuse.is_specular
+    };
 
-            let fi = fresnel(math, k, cos_i);
+    // Fresnel based mix function
+    let mix_f = @|out_dir : Vec3| -> f32 {
+        let cos_o = positive_cos(out_dir, N);
+        let fo    = fresnel(math, eta, cos_o);
+        fo.factor
+    };
 
-            if (randf(rnd) > fi.factor) {
-                // Diffuse reflection
-                let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd)); 
-                let fo     = fresnel(math, k, sample.dir.z);
-                let factor = (1-fo.factor) / (k * k * (1 - fdr1));
-                make_bsdf_sample(surf, mat3x3_mul(surf.local, sample.dir), (1-fi.factor) * sample.pdf, sample.dir.z, color_mulf(kd, factor), false)
-            } else {
-                // Reflection
-                make_bsdf_sample(surf, vec3_reflect(out_dir, n), fi.factor, 1, color_mulf(ks, fi.factor), false)
-            }
-        },
-        is_specular = false
-    }
+    make_variadic_mix_bsdf(diffuse_extra, mirror, mix_f)
 }
 
 // Creates a perfect mirror BSDF
@@ -241,17 +242,22 @@ fn @make_passthrough_bsdf(surf: SurfaceElement) = Bsdf {
     is_specular = true
 }
 
-// Creates a BSDF that interpolates between two other BSDFs
-fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = Bsdf {
-    eval = @ |in_dir, out_dir|
+// Creates a BSDF that interpolates between two other BSDFs based on a variadic mix function
+fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) = Bsdf {
+    eval = @ |in_dir, out_dir| {
+        let k = mix_f(out_dir);
         color_lerp(mat1.eval(in_dir, out_dir),
                    mat2.eval(in_dir, out_dir),
-                   k),
-    pdf = @ |in_dir, out_dir|
+                   k)
+    },
+    pdf = @ |in_dir, out_dir| {
+        let k = mix_f(out_dir);
         lerp(mat1.pdf(in_dir, out_dir),
              mat2.pdf(in_dir, out_dir),
-             k),
+             k)
+    },
     sample = @ |rnd, out_dir, adjoint| {
+        let k = mix_f(out_dir);
         let (sample, pdf, color) = if randf(rnd) >= k {
             let s = mat1.sample(rnd, out_dir, adjoint);
             let p = lerp(s.pdf, mat2.pdf(s.in_dir, out_dir), k);
@@ -267,3 +273,6 @@ fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = Bsdf {
     },
     is_specular = mat1.is_specular & mat2.is_specular
 }
+
+// Creates a BSDF that interpolates between two other BSDFs
+fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = make_variadic_mix_bsdf(mat1, mat2, @|_| k)

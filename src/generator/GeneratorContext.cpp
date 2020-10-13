@@ -114,9 +114,8 @@ std::string GeneratorContext::extractMaterialPropertyNumber(const std::shared_pt
 			if (v_rgb.r == v_rgb.g && v_rgb.r == v_rgb.b) { // Same value everywhere
 				sstream << v_rgb.r;
 			} else {
-				// TODO
-				IG_LOG(L_WARNING) << "No support for rgb number values" << std::endl;
-				sstream << def;
+				IG_LOG(L_WARNING) << "RGB input for '" << propname << "' not supported. Using average instead" << std::endl;
+				sstream << (v_rgb.r + v_rgb.g + v_rgb.b) / 3.0f;
 			}
 		} break;
 		case PT_SPECTRUM: {

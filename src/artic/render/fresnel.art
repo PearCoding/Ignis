@@ -17,7 +17,7 @@ fn @fresnel_factor(eta: f32, cos_i: f32, cos_t: f32) -> f32 {
     (R_s * R_s + R_p * R_p) * 0.5
 }
 
-fn @snell(eta: f32, cos_i: f32) = 1 - (1 - cos_i*cos_i) * eta * eta
+fn @snell(eta: f32, cos_i: f32) = 1 - (1 - cos_i * cos_i) * eta * eta
 
 fn @fresnel(math: Intrinsics, eta: f32, cos_i: f32) -> FresnelTerm {
     let cos2_t = snell(eta, cos_i);
@@ -42,8 +42,7 @@ fn @conductor_factor(n: f32, k: f32, cos_i: f32) -> f32 {
 /* This value quantifies what fraction of diffuse incident illumination
  * will, on average, be reflected at a dielectric material boundary
  */
-fn @fresnel_diffuse_factor(n1: f32, n2: f32) -> f32 {
-    let eta = n2/n1;
+fn @fresnel_diffuse_factor(eta: f32) -> f32 {
     if(eta < 1) {
         /* Fit by Egan and Hilgeman (1973). Works reasonably well for
          * "normal" IOR values (<2).
