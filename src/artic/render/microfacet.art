@@ -1,45 +1,98 @@
-// Similar to a BSDF -> Microfacet D term
-struct MicrofacetDistribution {
-    eval: fn (Vec3, Vec3) -> f32,
-    pdf: fn (Vec3, Vec3) -> f32,
-    sample: fn (&mut RndState, Vec3) -> (Vec3, f32, f32)
+struct MicrofacetSample {
+    normal: Vec3,          
+    pdf   : f32
 }
 
-fn make_iso_beckmann_distribution(math: Intrinsics, surf: SurfaceElement, alpha: f32) -> MicrofacetDistribution {
-    let a2 = alpha * alpha;
-    MicrofacetDistribution {
-        eval = @|wi, wo| {
-            let h     = vec3_normalize(math, vec3_add(wi, wo));
-            let cosT  = vec3_dot(surf.local.col(2), h);
-            let cos2T = cosT * cosT;
-            let tan2T = (1-cos2T) /cos2T;
-            if(tan2T == flt_inf) { return(0) }
-            let norm  = 1 / (flt_pi * a2 * cos2T * cos2T);
-            norm * math.expf(-tan2T / a2)
-        },
-        pdf = @|wi, wo| {  // TODO
-            let h = vec3_normalize(math, vec3_add(wi,wo));
-            let ndoth = vec3_dot(surf.local.col(2), h);
-            1.0 / (flt_pi * a2 * ndoth * ndoth * ndoth * 4)
-        },
-        sample = @ |rnd, out_dir| { // TODO
-            let u0 = randf(rnd);
-            let u1 = randf(rnd);
-            let t2 = a2 * u1 / (1.0 - u1);
-            let cosTheta = 1.0/math.sqrtf(1+ t2);
-            let sinTheta = math.sqrtf(1.0 - cosTheta * cosTheta);
-            let cosPhi   = math.cosf(2.0 * flt_pi * u0);
-            let sinPhi   = math.sinf(2.0 * flt_pi * u0);
+struct MicrofacetModel {
+    D     : fn (Vec3) -> f32,
+    G1    : fn (Vec3, Vec3) -> f32,
+    sample: fn (&mut RndState, Vec3) -> MicrofacetSample
+}
 
-            let s = 1.0 + u1 / (1.0 - u1);
-            let pdf = 1.0 / (flt_pi * a2 * cosTheta * cosTheta * cosTheta * s * s);
-            let h = make_vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-            (vec3_reflect(out_dir, h), pdf, 1)
-        },
+fn @make_aniso_beckmann_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
+    D = @|m| {
+        let cosZ = vec3_dot(surf.local.col(2), m);
+        let cosX = vec3_dot(surf.local.col(0), m);
+        let cosY = vec3_dot(surf.local.col(1), m);
+
+        let kx = cosX / alpha_u;
+        let ky = cosY / alpha_v;
+        let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
+
+        let norm  = 1 / (flt_pi * alpha_u * alpha_v * cosZ * cosZ * cosZ * cosZ);
+        norm * math.expf(-k2)
+    },
+    G1 = @|w, m| {
+        let cosZ = vec3_dot(surf.local.col(2), w);
+        if cosZ * vec3_dot(w, m) <= 0.0 { return(0) };
+
+        let cosX = vec3_dot(surf.local.col(0), w);
+        let cosY = vec3_dot(surf.local.col(1), w);
+
+        let kx = alpha_u * cosX;
+        let ky = alpha_v * cosY;
+        let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
+
+        if k2 == 0.0 { return(1) };
+
+        let a  = math.rsqrtf(k2);
+        let a2 = 1/k2;
+
+        if a >= 1.6 { 
+            1.0
+        } else { 
+            (3.535 * a + 2.181 * a2) / (1.0 + 2.276 * a + 2.577 * a2) 
+        }
+    },
+    sample = @ |rnd, _| {
+        let u0 = randf(rnd);
+        let u1 = randf(rnd);
+        
+        let ar      = alpha_v / alpha_u;
+        let tanPhi  = ar * math.tanf(2 * flt_pi * u1);
+        let cosPhi_ = math.sqrtf(1 - tanPhi*tanPhi);
+        let cosPhi  = if abs(u1-0.5) < 0.25 { -cosPhi_ } else { cosPhi_ };
+        let sinPhi  = cosPhi * tanPhi;
+
+        let kx = cosPhi / alpha_u;
+        let ky = sinPhi / alpha_v;
+        let k2 = 1 / (kx * kx + ky * ky);
+
+        let cosTheta  = math.rsqrtf(1 - k2 * math.logf(1.0 - u0));
+        let cosTheta2 = cosTheta * cosTheta;
+        let sinTheta  = math.sqrtf(1 - cosTheta2);
+
+        let pdf = (1 - u0) / (flt_pi * alpha_u * alpha_v * cosTheta2 * cosTheta);
+        let lh  = make_vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta); // Microfacet normal in local shading space
+        MicrofacetSample { normal = mat3x3_mul(surf.local, lh), pdf = pdf}
     }
 }
 
-fn make_iso_ggx_distribution(math: Intrinsics, surf: SurfaceElement, alpha: f32) -> MicrofacetDistribution {
+///////////////////////////////////
+
+struct MicrofacetDistribution {
+    D     : fn (Vec3) -> f32, /* Normal */
+    G     : fn (Vec3, Vec3, Vec3) -> f32, /* Wi, Wo, Normal */
+    pdf   : fn (Vec3) -> f32, /* Wi, Normal */
+    sample: fn (&mut RndState, Vec3) -> MicrofacetSample
+}
+
+fn @make_microfacet_distribution(model: MicrofacetModel, surf: SurfaceElement) = MicrofacetDistribution {
+    D      = model.D,
+    G      = @ |wi, wo, m| model.G1(wi, m) * model.G1(wo, m),
+    pdf    = @ |m| model.D(m) * vec3_dot(surf.local.col(2), m),
+    sample = model.sample
+}
+
+fn @make_beckmann_distribution(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
+    if alpha_u == alpha_v {// TODO: Add isotropic specialization
+        make_microfacet_distribution(make_aniso_beckmann_model(math, surf, alpha_u, alpha_v), surf)
+    } else {
+        make_microfacet_distribution(make_aniso_beckmann_model(math, surf, alpha_u, alpha_v), surf)
+    }
+}
+
+/*fn make_iso_ggx_distribution(math: Intrinsics, surf: SurfaceElement, alpha: f32) -> MicrofacetDistribution {
     let a2 = alpha * alpha;
     MicrofacetDistribution {
         eval = @|wi, wo| {
@@ -69,4 +122,4 @@ fn make_iso_ggx_distribution(math: Intrinsics, surf: SurfaceElement, alpha: f32)
             (vec3_reflect(out_dir, h), pdf, 1)
         },
     }
-}
+}*/

@@ -142,19 +142,21 @@ fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) 
 
 // Creates a plastic bsdf based on Fresnel equation (which is just a variadic mix bsdf with extra diffuse term)
 fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kd: Color) -> Bsdf {
+    if !surf.is_entering { return(make_black_bsdf()) }; // No shading from the inside
+
     // Layered BSDF
     let diffuse = make_diffuse_bsdf(math, surf, kd);
     let mirror  = make_mirror_bsdf(math, surf, ks);
 
     let N   = surf.local.col(2);
-    let eta = if surf.is_entering { n1 / n2 } else { n2 / n1 };
+    let eta = n1 / n2; // Some systems use n2 / n1 for eta
     // Calculate approximate diffuse Fresnel reflectance
-    let fdr = fresnel_diffuse_factor(n2 / n1);
+    let fdr = fresnel_diffuse_factor(eta);
 
     // Diffuse inner scattering term
     let diff_scattering = @|cos_i : f32| {
         let fi = fresnel(math, eta, cos_i);
-         (1 - fi.factor) / (eta * eta * (1 - fdr))
+         (1 - fi.factor) * eta * eta / (1 - fdr)
     };
 
     // Apply inner scattering term to diffuse bsdf
@@ -218,6 +220,30 @@ fn @make_glass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks
     is_specular = true
 }
 
+// Creates a perfect glass BSDF with thin interface approximation
+fn @make_thinglass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
+    eval   = @ |_, _| black,
+    pdf    = @ |_, _| 0,
+    sample = @ |rnd, out_dir, _| {
+        let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
+        let n = surf.local.col(2);
+        let cos_i = vec3_dot(out_dir, n);
+
+        let fterm = fresnel(math, k, cos_i);
+
+        if !fterm.total {
+            // Refraction
+            let F     = if fterm.factor < 1.0 { fterm.factor + (1 - fterm.factor) * fterm.factor / (fterm.factor + 1) } else { 1.0 };
+            if (randf(rnd) > F) {
+                return(make_bsdf_sample(surf, out_dir, 1, 1, kt, true))
+            }
+        }
+        // Reflection
+        make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, 1, ks, false)
+    },
+    is_specular = true
+}
+
 // Creates a perfect conductor BSDF
 fn @make_conductor_bsdf(_math: Intrinsics, surf: SurfaceElement, ior: f32, k: f32, ks: Color) = Bsdf {
     eval   = @ |_, _| black,
@@ -234,11 +260,57 @@ fn @make_conductor_bsdf(_math: Intrinsics, surf: SurfaceElement, ior: f32, k: f3
     is_specular = true
 }
 
+// Creates a microfacet conductor BSDF
+fn @make_rough_conductor_bsdf(math: Intrinsics, surf: SurfaceElement, ior: f32, k: f32, ks: Color, micro: MicrofacetDistribution) -> Bsdf {
+    if !surf.is_entering { return(make_black_bsdf()) }; // No shading from the inside
+
+    let N = surf.local.col(2);
+    Bsdf {
+        eval   = @ |in_dir, out_dir| {
+            let cos_o = vec3_dot(out_dir, N);
+            let cos_i = vec3_dot(in_dir, N);
+
+            let H  = vec3_halfway(math, in_dir, out_dir);
+            let D  = micro.D(H);
+            let G  = micro.G(in_dir, out_dir, H);
+            let F  = conductor_factor(ior, k, vec3_dot(out_dir, H));
+            color_mulf(ks, F * D * G / (4 * cos_o * cos_i))
+        },
+        pdf    = @ |in_dir, out_dir| {
+            let H     = vec3_halfway(math, in_dir, out_dir);
+            let jacob = 1 / (4 * vec3_dot(in_dir, H)); // Jacobian of the half-direction mapping
+            if vec3_dot(in_dir, H) <= 0.0 { return(0) } else { micro.pdf(H) * jacob }
+        },
+        sample = @ |rnd, out_dir, _| {
+            let s      = micro.sample(rnd, out_dir);
+            let H      = s.normal;
+            let in_dir = vec3_reflect(out_dir, H);
+
+            let cos_o   = vec3_dot(out_dir, N);
+            let cos_i   = vec3_dot(in_dir, N);
+            if cos_i <= 0.0 { return(make_bsdf_sample(surf, in_dir, 0, 0, black, false)) };
+
+            let cos_h   = vec3_dot(H, N);
+            let cos_h_o = vec3_dot(out_dir, H); // = cos_h_i
+            if cos_h_o <= 0.0 { return(make_bsdf_sample(surf, in_dir, 0, 0, black, false)) };
+
+            let jacob   = 1 / (4 * cos_h_o); // Jacobian of the half-direction mapping
+
+            let G = micro.G(in_dir, out_dir, H);
+            let F = conductor_factor(ior, k, cos_h_o);
+
+            let color = color_mulf(ks, F * G / (4 * cos_o * cos_i * cos_h));
+            make_bsdf_sample(surf, in_dir, s.pdf * jacob, cos_i, color, false)
+        },
+        is_specular = false
+    }
+}
+
 // Creates a BSDF that passthroughs all rays and behaves like a refractive interface with ior=1
 fn @make_passthrough_bsdf(surf: SurfaceElement) = Bsdf {
     eval   = @ |_, _| black,
     pdf    = @ |_, _| 0,
-    sample = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, white, false),
+    sample = @ |_, out_dir, _| make_bsdf_sample(surf, out_dir, 1, 1, white, true),
     is_specular = true
 }
 

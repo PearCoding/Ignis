@@ -2,6 +2,20 @@
 #include "Logger.h"
 
 namespace IG {
+static void setup_microfacet(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+{
+	std::string alpha_u, alpha_v;
+	if (bsdf->property("alpha_u").isValid()) {
+		alpha_u = ctx.extractMaterialPropertyNumber(bsdf, "alpha_u", 0.1f);
+		alpha_v = ctx.extractMaterialPropertyNumber(bsdf, "alpha_v", 0.1f);
+	} else {
+		alpha_u = ctx.extractMaterialPropertyNumber(bsdf, "alpha", 0.1f);
+		alpha_v = alpha_u;
+	}
+
+	os << "make_beckmann_distribution(math, surf, " << alpha_u << ", " << alpha_v << ")";
+}
+
 static void bsdf_error(const std::string& msg, std::ostream& os)
 {
 	IG_LOG(L_ERROR) << msg << std::endl;
@@ -30,12 +44,31 @@ static void bsdf_dielectric(const std::shared_ptr<TPMObject>& bsdf, const Genera
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_transmittance", 1.0f) << ")";
 }
 
+static void bsdf_thindielectric(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+{
+	os << "make_thinglass_bsdf(math, surf, "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", 1.000277f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", 1.5046f) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_transmittance", 1.0f) << ")";
+}
+
 static void bsdf_conductor(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_conductor_bsdf(math, surf, "
 	   << ctx.extractMaterialPropertyNumber(bsdf, "eta", 0.63660f) << ", "
 	   << ctx.extractMaterialPropertyNumber(bsdf, "k", 2.7834f) << ", " // TODO: Better defaults?
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ")";
+}
+
+static void bsdf_rough_conductor(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+{
+	os << "make_rough_conductor_bsdf(math, surf, "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "eta", 0.63660f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "k", 2.7834f) << ", " // TODO: Better defaults?
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", ";
+	setup_microfacet(bsdf, ctx, os);
+	os << ")";
 }
 
 static void bsdf_plastic(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
@@ -104,9 +137,9 @@ static struct {
 	{ "roughdiffuse", bsdf_orennayar },
 	{ "dielectric", bsdf_dielectric },
 	{ "roughdielectric", bsdf_dielectric }, /*TODO*/
-	{ "thindielectric", bsdf_dielectric },	/*TODO*/
+	{ "thindielectric", bsdf_thindielectric },
 	{ "conductor", bsdf_conductor },
-	{ "roughconductor", bsdf_conductor }, /*TODO*/
+	{ "roughconductor", bsdf_rough_conductor },
 	{ "phong", bsdf_phong },
 	{ "plastic", bsdf_plastic },
 	{ "roughplastic", bsdf_plastic }, /*TODO*/

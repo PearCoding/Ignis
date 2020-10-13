@@ -81,6 +81,8 @@ fn @vec2_normalize(math: Intrinsics, v: Vec2) = vec2_mulf(v, 1 / vec2_len(math, 
 fn @vec3_normalize(math: Intrinsics, v: Vec3) = vec3_mulf(v, 1 / vec3_len(math, v))
 fn @vec4_normalize(math: Intrinsics, v: Vec4) = vec4_mulf(v, 1 / vec4_len(math, v))
 
+fn @vec3_halfway(math: Intrinsics, a: Vec3, b: Vec3) = vec3_normalize(math, vec3_add(a, b))
+
 fn @vec2_lerp(a: Vec2, b: Vec2, k: f32) = vec2_zip(a, b, |x, y| lerp(x, y, k))
 fn @vec3_lerp(a: Vec3, b: Vec3, k: f32) = vec3_zip(a, b, |x, y| lerp(x, y, k))
 fn @vec4_lerp(a: Vec4, b: Vec4, k: f32) = vec4_zip(a, b, |x, y| lerp(x, y, k))
