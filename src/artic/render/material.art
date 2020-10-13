@@ -123,7 +123,7 @@ fn @make_rough_diffuse_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, 
 fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
     eval = @ |in_dir, out_dir| {
         let cos = positive_cos(in_dir, vec3_reflect(out_dir, surf.local.col(2)));
-        color_mulf(ks, fastpow/*math.powf*/(cos, ns) * (ns + 2) * (1 / (2 * flt_pi)))
+        color_mulf(ks, fastpow/*math.powf*/(cos, ns) * (ns + 2) / (2 * flt_pi))
     },
     pdf = @ |in_dir, out_dir| {
         let cos = positive_cos(in_dir, vec3_reflect(out_dir, surf.local.col(2)));
@@ -233,10 +233,8 @@ fn @make_thinglass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32
 
         if !fterm.total {
             // Refraction
-            let F     = if fterm.factor < 1.0 { fterm.factor + (1 - fterm.factor) * fterm.factor / (fterm.factor + 1) } else { 1.0 };
-            if (randf(rnd) > F) {
-                return(make_bsdf_sample(surf, out_dir, 1, 1, kt, true))
-            }
+            let F = if fterm.factor < 1.0 { fterm.factor + (1 - fterm.factor) * fterm.factor / (fterm.factor + 1) } else { 1.0 };
+            if (randf(rnd) > F) { return(make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, kt, true)) }
         }
         // Reflection
         make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, 1, ks, false)
@@ -310,7 +308,7 @@ fn @make_rough_conductor_bsdf(math: Intrinsics, surf: SurfaceElement, ior: f32, 
 fn @make_passthrough_bsdf(surf: SurfaceElement) = Bsdf {
     eval   = @ |_, _| black,
     pdf    = @ |_, _| 0,
-    sample = @ |_, out_dir, _| make_bsdf_sample(surf, out_dir, 1, 1, white, true),
+    sample = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, white, true),
     is_specular = true
 }
 
