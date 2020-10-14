@@ -24,10 +24,10 @@ fn @make_orthonormal_mat3x3(n: Vec3) -> Mat3x3 {
 
     let t  = make_vec3(1 + sign * n.x * n.x * a, sign * b, -sign * n.x);
     let bt = make_vec3(b, sign + n.y * n.y * a, -n.y);
-    Mat3x3 {
-        col = [t, bt, n]
-    }
+    make_mat3x3(t, bt, n)
 }
+
+fn @flip_orthonormal_mat3x3(m: Mat3x3) = make_mat3x3(m.col(0), vec3_neg(m.col(1)), vec3_neg(m.col(2)))
 
 fn @make_mat3x4(c0: Vec3, c1: Vec3, c2: Vec3, c3: Vec3) = Mat3x4 { col = [c0, c1, c2, c3] }
 fn @make_mat4x4(c0: Vec4, c1: Vec4, c2: Vec4, c3: Vec4) = Mat4x4 { col = [c0, c1, c2, c3] }

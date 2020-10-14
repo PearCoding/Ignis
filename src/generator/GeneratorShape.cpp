@@ -153,9 +153,11 @@ void GeneratorShape::setup(const TPMObject& root, GeneratorContext& ctx)
 			continue;
 		}
 
-		auto flip = child->property("flip_normals").getBool();
-		if (flip)
+		if (child->property("flip_normals").getBool())
 			child_mesh.flipNormals();
+
+		if (child->property("face_normals").getBool())
+			child_mesh.setupFaceNormalsAsVertexNormals();
 
 		TransformCache transform = TransformCache(child->property("to_world").getTransform());
 		for (size_t i = 0; i < child_mesh.vertices.size(); ++i)

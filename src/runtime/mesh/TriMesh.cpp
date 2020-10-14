@@ -124,4 +124,48 @@ void TriMesh::makeTexCoordsZero()
 	texcoords.resize(vertices.size());
 	std::fill(texcoords.begin(), texcoords.end(), Vector2f::Zero());
 }
+
+void TriMesh::setupFaceNormalsAsVertexNormals()
+{
+	// Copy triangle vertices such that each face is unique
+	std::vector<StVector3f> new_vertices;
+	new_vertices.resize(faceCount() * 3);
+	for (size_t f = 0; f < faceCount(); ++f) {
+		new_vertices[3 * f + 0] = vertices[indices[4 * f + 0]];
+		new_vertices[3 * f + 1] = vertices[indices[4 * f + 1]];
+		new_vertices[3 * f + 2] = vertices[indices[4 * f + 2]];
+	}
+	vertices = std::move(new_vertices);
+
+	// Use face normals for each vertex
+	std::vector<StVector3f> new_normals;
+	new_normals.resize(faceCount() * 3);
+	for (size_t f = 0; f < faceCount(); ++f) {
+		const StVector3f facenormal = face_normals[f];
+		new_normals[3 * f + 0]		= facenormal;
+		new_normals[3 * f + 1]		= facenormal;
+		new_normals[3 * f + 2]		= facenormal;
+	}
+	normals = std::move(new_normals);
+
+	// Copy texcoords if necessary
+	if (!texcoords.empty()) {
+		std::vector<StVector2f> new_texcoords;
+		new_texcoords.resize(faceCount() * 3);
+		for (size_t f = 0; f < faceCount(); ++f) {
+			new_texcoords[3 * f + 0] = texcoords[indices[4 * f + 0]];
+			new_texcoords[3 * f + 1] = texcoords[indices[4 * f + 1]];
+			new_texcoords[3 * f + 2] = texcoords[indices[4 * f + 2]];
+		}
+		texcoords = std::move(new_texcoords);
+	}
+
+	// Setup new indexing list
+	for (size_t f = 0; f < faceCount(); ++f) {
+		indices[4 * f + 0] = 3 * f + 0;
+		indices[4 * f + 1] = 3 * f + 1;
+		indices[4 * f + 2] = 3 * f + 2;
+	}
+}
+
 } // namespace IG

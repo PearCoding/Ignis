@@ -28,6 +28,7 @@ struct TriMesh {
 	void computeFaceNormals(size_t first_index = 0);
 	void computeVertexNormals(size_t first_index = 0);
 	void makeTexCoordsZero();
+	void setupFaceNormalsAsVertexNormals();
 };
 
 } // namespace IG

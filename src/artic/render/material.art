@@ -21,7 +21,7 @@ fn @invert_surface_element(surf: SurfaceElement) = SurfaceElement {
     face_normal = vec3_neg(surf.face_normal),
     uv_coords   = surf.uv_coords,
     attr        = surf.attr,
-    local       = surf.local
+    local       = flip_orthonormal_mat3x3(surf.local)
 }
 
 // Result of sampling a BSDF
@@ -149,8 +149,8 @@ fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) 
     is_specular = false
 }
 
-// Creates a plastic bsdf based on Fresnel equation (which is just a variadic mix bsdf with extra diffuse term). This is the front facing version
-fn @make_plastic_bsdf_front(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kd: Color) -> Bsdf {
+// Creates a plastic bsdf based on Fresnel equation (which is just a variadic mix bsdf with extra diffuse term)
+fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kd: Color) -> Bsdf {
     // Layered BSDF
     let diffuse = make_diffuse_bsdf(math, surf, kd);
     let mirror  = make_mirror_bsdf(math, surf, ks);
@@ -188,16 +188,6 @@ fn @make_plastic_bsdf_front(math: Intrinsics, surf: SurfaceElement, n1: f32, n2:
     };
 
     make_variadic_mix_bsdf(diffuse_extra, mirror, mix_f)
-}
-
-// Creates a plastic bsdf based on Fresnel equation (which is just a variadic mix bsdf with extra diffuse term)
-fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kd: Color) -> Bsdf {
-    if !surf.is_entering { 
-        make_plastic_bsdf_front(math, invert_surface_element(surf), n2, n1, ks, kd)
-    }
-    else {
-        make_plastic_bsdf_front(math, surf, n1, n2, ks, kd)
-    }
 }
 
 // Creates a perfect mirror BSDF
