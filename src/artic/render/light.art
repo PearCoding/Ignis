@@ -115,7 +115,7 @@ fn @make_point_light(math: Intrinsics, pos: Vec3, color: Color) = Light {
     },
     emission = @ |_, _| make_emission_value(black, 1, 1),
     has_area = false
-}
+};
 
 fn @make_directional_light(_math: Intrinsics, dir: Vec3, max_radius: f32, color: Color) = Light {
     sample_direct = @ |_, from| {
@@ -127,7 +127,7 @@ fn @make_directional_light(_math: Intrinsics, dir: Vec3, max_radius: f32, color:
     },
     emission = @ |_, _| make_emission_value(black, 1, 1),
     has_area = false
-}
+};
 
 // This samples the environment by naive sphere sampling
 fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) = Light {
@@ -144,7 +144,7 @@ fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) = Li
     },
     emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
     has_area = false
-}
+};
 
 /* TODO: This should contain a distribution map for efficient sampling */
 fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Texture) = Light {
@@ -164,7 +164,7 @@ fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Text
     },
     emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
     has_area = false
-}
+};
 
 fn @make_camera_light(math: Intrinsics, camera: Camera, color: Color) = Light {
     sample_direct = @ |_, _| {
@@ -180,7 +180,7 @@ fn @make_camera_light(math: Intrinsics, camera: Camera, color: Color) = Light {
     },
     emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
     has_area = false
-}
+};
 
 fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
     sample_direct = @ |rnd, from| {
@@ -196,7 +196,7 @@ fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
     },
     emission = @ |dir, uv_coords| make_emission_value(color, area.pdf(uv_coords), cosine_hemisphere_pdf(vec3_dot(area.normal(uv_coords), dir))),
     has_area = true
-}
+};
 
 fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, color: Color) -> Light {
     let emitter = AreaEmitter {

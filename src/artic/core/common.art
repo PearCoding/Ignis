@@ -15,16 +15,16 @@ enum Option[T] {
     None
 }
 
-fn @make_option[T](t: T) = Option[T]::Some(t)
+fn @make_option[T](t: T) = Option[T]::Some(t);
 fn @is_some[T](opt: Option[T]) = match opt {
     Option[T]::Some(_) => true,
     _ => false
-}
-fn @is_none[T](opt: Option[T]) = !is_some(opt)
+};
+fn @is_none[T](opt: Option[T]) = !is_some(opt);
 fn @from_option[T](opt: Option[T], def: T) = match opt {
     Option[T]::Some(x) => x,
     _ => def
-}
+};
 
 // Fast division -------------------------------------------------------------------
 
@@ -82,14 +82,12 @@ fn @fastpow(x: f32, p: f32) -> f32 {
 
 #[import(cc = "device", name = "llvm.expect.i1")] fn expect(bool, bool) -> bool;
 
-fn @  likely(cond: bool) -> bool { expect(cond,  true) }
-fn @unlikely(cond: bool) -> bool { expect(cond, false) }
+fn @  likely(cond: bool) = expect(cond,  true);
+fn @unlikely(cond: bool) = expect(cond, false);
 
 // Misc. ---------------------------------------------------------------------------
 
-fn @prodsign(x: f32, y: f32) -> f32 {
-    bitcast[f32](bitcast[i32](x) ^ (bitcast[i32](y) & bitcast[i32](0x80000000:u32)))
-}
+fn @prodsign(x: f32, y: f32) = bitcast[f32](bitcast[i32](x) ^ (bitcast[i32](y) & bitcast[i32](0x80000000:u32)));
 
 fn @safe_rcp(x: f32) -> f32 {
     let min_rcp = 1e-8:f32;

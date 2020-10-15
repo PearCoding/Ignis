@@ -22,7 +22,7 @@ fn @invert_surface_element(surf: SurfaceElement) = SurfaceElement {
     uv_coords   = surf.uv_coords,
     attr        = surf.attr,
     local       = flip_orthonormal_mat3x3(surf.local)
-}
+};
 
 // Result of sampling a BSDF
 struct BsdfSample {
@@ -49,14 +49,14 @@ fn @make_material(bsdf: Bsdf) = Material {
     bsdf =        bsdf,
     emission =    @ |_| make_emission_value(black, 1, 1),
     is_emissive = false
-}
+};
 
 // Creates a material that emits light
 fn @make_emissive_material(surf: SurfaceElement, bsdf: Bsdf, light: Light) = Material {
     bsdf = bsdf,
     emission = @ |in_dir| light.emission(in_dir, surf.uv_coords),
     is_emissive = true
-}
+};
 
 // Creates a BSDF sample and checks that it lies on the right side of the surface
 fn @make_bsdf_sample(surf: SurfaceElement, in_dir: Vec3, pdf: f32, cos: f32, color: Color, inverted: bool) -> BsdfSample {
@@ -76,7 +76,7 @@ fn @bsdf_sample_mulf(sample: BsdfSample, pdf_f: f32, color_f: f32) = BsdfSample 
     pdf    = sample.pdf * pdf_f,
     cos    = sample.cos,
     color  = color_mulf(sample.color, color_f)
-}
+};
 
 // Creates a fully absorbing BSDF that behaves like a black body
 fn @make_black_bsdf() = Bsdf {
@@ -84,7 +84,7 @@ fn @make_black_bsdf() = Bsdf {
     pdf  =   @ |_, _| 0,
     sample = @ |_, out_dir, _| BsdfSample { in_dir = out_dir, pdf = 1, cos = 1, color = black },
     is_specular = false
-}
+};
 
 // Creates a purely diffuse BSDF
 fn @make_diffuse_bsdf(math: Intrinsics, surf: SurfaceElement, kd: Color) = Bsdf {
@@ -96,7 +96,7 @@ fn @make_diffuse_bsdf(math: Intrinsics, surf: SurfaceElement, kd: Color) = Bsdf 
         make_bsdf_sample(surf, mat3x3_mul(surf.local, sample.dir), sample.pdf, sample.dir.z, color, false)
     },
     is_specular = false
-}
+};
 
 // Creates a BSDF based on orennayar
 fn @make_orennayar_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
@@ -147,7 +147,7 @@ fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) 
         make_bsdf_sample(surf, in_dir, sample.pdf, cos, color, false)
     },
     is_specular = false
-}
+};
 
 // Creates a plastic bsdf based on Fresnel equation (which is just a variadic mix bsdf with extra diffuse term)
 fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kd: Color) -> Bsdf {
@@ -198,7 +198,7 @@ fn @make_mirror_bsdf(_math: Intrinsics, surf: SurfaceElement, ks: Color) = Bsdf 
         make_bsdf_sample(surf, vec3_reflect(out_dir, surf.local.col(2)), 1, 1, ks, false)
     },
     is_specular = true
-}
+};
 
 // Creates a perfect glass BSDF
 fn @make_glass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
@@ -225,7 +225,7 @@ fn @make_glass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks
         make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, 1, ks, false)
     },
     is_specular = true
-}
+};
 
 // Creates a perfect glass BSDF with thin interface approximation
 fn @make_thinglass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
@@ -247,7 +247,7 @@ fn @make_thinglass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32
         make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, 1, ks, false)
     },
     is_specular = true
-}
+};
 
 // Creates a perfect conductor BSDF
 fn @make_conductor_bsdf(_math: Intrinsics, surf: SurfaceElement, ior: f32, k: f32, ks: Color) = Bsdf {
@@ -263,7 +263,7 @@ fn @make_conductor_bsdf(_math: Intrinsics, surf: SurfaceElement, ior: f32, k: f3
         make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, 1, color, false)
     },
     is_specular = true
-}
+};
 
 // Creates a microfacet conductor BSDF. This is the front version
 fn @make_rough_conductor_bsdf_front(math: Intrinsics, surf: SurfaceElement, ior: f32, k: f32, ks: Color, micro: MicrofacetDistribution) -> Bsdf {
@@ -325,7 +325,7 @@ fn @make_passthrough_bsdf(surf: SurfaceElement) = Bsdf {
     pdf    = @ |_, _| 0,
     sample = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, white, true),
     is_specular = true
-}
+};
 
 // Creates a BSDF that interpolates between two other BSDFs based on a variadic mix function
 fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) = Bsdf {
@@ -357,7 +357,7 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) = Bsd
         BsdfSample { in_dir = sample.in_dir, pdf = pdf, cos = sample.cos, color = color }
     },
     is_specular = mat1.is_specular & mat2.is_specular
-}
+};
 
 // Creates a BSDF that interpolates between two other BSDFs
-fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = make_variadic_mix_bsdf(mat1, mat2, @|_| k)
+fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = make_variadic_mix_bsdf(mat1, mat2, @|_| k);

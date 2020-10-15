@@ -66,7 +66,7 @@ fn @make_aniso_beckmann_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f
         let lh  = make_vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta); // Microfacet normal in local shading space
         MicrofacetSample { normal = mat3x3_mul(surf.local, lh), pdf = pdf}
     }
-}
+};
 
 ///////////////////////////////////
 
@@ -82,7 +82,7 @@ fn @make_microfacet_distribution(model: MicrofacetModel, surf: SurfaceElement) =
     G      = @ |wi, wo, m| model.G1(wi, m) * model.G1(wo, m),
     pdf    = @ |m| model.D(m) * vec3_dot(surf.local.col(2), m),
     sample = model.sample
-}
+};
 
 fn @make_beckmann_distribution(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
     if alpha_u == alpha_v {// TODO: Add isotropic specialization

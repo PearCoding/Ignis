@@ -17,7 +17,7 @@ fn @make_image(pixels: fn (i32, i32) -> Color, width: i32, height: i32) = Image 
     pixels = pixels,
     width  = width,
     height = height
-}
+};
 
 fn @make_clamp_border() -> BorderHandling {
     let clamp = @ |math: Intrinsics, x: f32| math.fminf(1, math.fmaxf(0, x));
