@@ -42,7 +42,6 @@ find_package(Eigen3 REQUIRED NO_MODULE)
 
 # Locate OpenImageIO
 find_package(OpenImageIO REQUIRED)
-include_directories(${OIIO_INCLUDE_DIR})
 
 # LZ4 compression
 find_package(LZ4 REQUIRED)

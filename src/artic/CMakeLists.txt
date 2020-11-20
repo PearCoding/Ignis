@@ -28,6 +28,6 @@ set(ARTIC_SRC ${ARTIC_SRC} PARENT_SCOPE)
 
 anydsl_runtime_wrap(DISCARD_TMP_OBJS
     NAME "interface"
-    FILES ${ARTIC_SRC} dummy_main.impala
+    FILES ${ARTIC_SRC} dummy_main.art
     INTERFACE ${CMAKE_BINARY_DIR}/generated_interface)
 add_custom_target(artic_c_interface ALL DEPENDS ${CMAKE_BINARY_DIR}/generated_interface.h)

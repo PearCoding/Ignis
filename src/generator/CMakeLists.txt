@@ -1,6 +1,6 @@
 CPMFindPackage(
     NAME tinyparser_mitsuba
-    GIT_REPOSITORY git@github.com:PearCoding/TinyParser-Mitsuba.git
+    GITHUB_REPOSITORY PearCoding/TinyParser-Mitsuba
     GIT_TAG master
 )
 

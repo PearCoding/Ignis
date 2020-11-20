@@ -1,7 +1,7 @@
 # Get tinyobjloader
 CPMFindPackage(
     NAME tinyobjloader
-    GIT_REPOSITORY git@github.com:tinyobjloader/tinyobjloader.git
+    GITHUB_REPOSITORY tinyobjloader/tinyobjloader
     GIT_TAG master
     DOWNLOAD_ONLY
 )
@@ -37,7 +37,8 @@ set(SRC
 
 add_library(ig_lib_runtime STATIC ${SRC})
 add_dependencies(ig_lib_runtime ighwinfo tinyobjloader)
-target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen ${LZ4_LIBRARY} ${OPENIMAGEIO_LIBRARIES})
+target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen ${LZ4_LIBRARY} OpenImageIO::OpenImageIO OpenImageIO::OpenImageIO_Util)
 target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR})
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 target_compile_features(ig_lib_runtime PUBLIC cxx_std_17)
+

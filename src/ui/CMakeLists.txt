@@ -1,6 +1,6 @@
 CPMFindPackage(
     NAME imgui
-    GIT_REPOSITORY git@github.com:ocornut/imgui.git
+    GITHUB_REPOSITORY ocornut/imgui
     GIT_TAG master
     DOWNLOAD_ONLY
 )
