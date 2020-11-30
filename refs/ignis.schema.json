@@ -9,16 +9,22 @@
         "technique": { "$ref": "#/definitions/Technique"},
         "camera": { "$ref": "#/definitions/Camera" },
         "film": { "$ref": "#/definitions/Film" },
-        "materials": {
-            "description": "List of materials",
+        "textures": {
+            "description": "List of textures",
             "type": "array",
-            "items": { "$ref": "#/definitions/Material" },
+            "items": { "$ref": "#/definitions/Texture" },
             "uniqueItems": true
         },
-        "meshes": {
-            "description": "List of meshes",
+        "bsdfs": {
+            "description": "List of bsdfs",
             "type": "array",
-            "items": { "$ref": "#/definitions/Mesh" },
+            "items": { "$ref": "#/definitions/BSDF" },
+            "uniqueItems": true
+        },
+        "shapes": {
+            "description": "List of shapes",
+            "type": "array",
+            "items": { "$ref": "#/definitions/Shape" },
             "uniqueItems": true
         },
         "entities": {
@@ -66,8 +72,8 @@
             },
             "additionalProperties": true
         },
-        "Material": {
-            "description": "Material properties",
+        "Texture": {
+            "description": "Texture properties",
             "type": "object",
             "required": ["type", "name"],
             "properties": { 
@@ -76,10 +82,20 @@
             },
             "additionalProperties": true
         },
-        "Mesh": {
-            "description": "Mesh properties",
+        "BSDF": {
+            "description": "BSDF properties",
             "type": "object",
-            "required": ["type", "name", "filename"],
+            "required": ["type", "name"],
+            "properties": { 
+                "type": { "type":"string"},
+                "name": { "type":"string"}
+            },
+            "additionalProperties": true
+        },
+        "Shape": {
+            "description": "Shape properties",
+            "type": "object",
+            "required": ["type", "name"],
             "properties": { 
                 "type": { "type":"string"},
                 "name": { "type":"string"},
@@ -88,14 +104,15 @@
             "additionalProperties": true
         },
         "Entity": {
-            "description": "Material properties",
+            "description": "Entity properties",
             "type": "object",
             "required": ["type", "name"],
             "properties": { 
                 "type": { "type":"string"},
                 "name": { "type":"string"},
                 "transform": { "$ref":"#/definitions/Transform" },
-                "material": { "type":"string" }
+                "bsdf": { "type":"string" },
+                "shape": { "type":"string" }
             },
             "additionalProperties": true
         },

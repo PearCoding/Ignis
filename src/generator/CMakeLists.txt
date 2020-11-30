@@ -1,9 +1,11 @@
 CPMFindPackage(
-    NAME tinyparser_mitsuba
-    GITHUB_REPOSITORY PearCoding/TinyParser-Mitsuba
+    NAME rapidjson
+    GITHUB_REPOSITORY Tencent/rapidjson
     GIT_TAG master
+    DOWNLOAD_ONLY
 )
 
+set(RAPIDJSON_INCLUDE_DIR "${rapidjson_SOURCE_DIR}/include")
 ################################################################
 
 set(SRC 
@@ -15,19 +17,27 @@ set(SRC
     GeneratorBSDF.h
     GeneratorContext.cpp
     GeneratorContext.h
+    GeneratorEntity.cpp
+    GeneratorEntity.h
     GeneratorEnvironment.cpp
     GeneratorEnvironment.h
     GeneratorLight.cpp
     GeneratorLight.h
     GeneratorShape.cpp
     GeneratorShape.h
+    GeneratorTexture.cpp
+    GeneratorTexture.h
     IO.cpp
     IO.h
+    Loader.cpp
+    Loader.h
     Target.h
 )
 
 add_executable(iggenerator ${SRC})
 add_dependencies(iggenerator artic_c_interface)
-target_link_libraries(iggenerator PUBLIC ig_lib_runtime tinyparser_mitsuba ZLIB::ZLIB)
-target_include_directories(iggenerator PRIVATE ${tinymitsuba_dir})
-target_include_directories(iggenerator PRIVATE ${CMAKE_BINARY_DIR}) # Required for generated_interface.h
+target_link_libraries(iggenerator PUBLIC ig_lib_runtime ZLIB::ZLIB)
+target_include_directories(iggenerator PRIVATE 
+    ${RAPIDJSON_INCLUDE_DIR}
+    ${CMAKE_BINARY_DIR}# Required for generated_interface.h
+)

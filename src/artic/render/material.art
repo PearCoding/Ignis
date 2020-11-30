@@ -58,6 +58,8 @@ fn @make_emissive_material(surf: SurfaceElement, bsdf: Bsdf, light: Light) = Mat
     is_emissive = true
 };
 
+fn @make_empty_material() = make_material(make_black_bsdf());
+
 // Creates a BSDF sample and checks that it lies on the right side of the surface
 fn @make_bsdf_sample(surf: SurfaceElement, in_dir: Vec3, pdf: f32, cos: f32, color: Color, inverted: bool) -> BsdfSample {
     // Checks that the sample is above the surface (or under it if inverted is true)

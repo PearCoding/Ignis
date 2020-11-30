@@ -1,9 +1,11 @@
 #include "Generator.h"
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "BVHAdapter.h"
 #include "IO.h"
@@ -11,30 +13,40 @@
 #include "Logger.h"
 
 #include "GeneratorBSDF.h"
+#include "GeneratorEntity.h"
 #include "GeneratorLight.h"
 #include "GeneratorShape.h"
+#include "GeneratorTexture.h"
 
 namespace IG {
-/* Notice: Ignis only supports a small subset of the Mitsuba (0.6 and 2.0) project files */
-
-using namespace TPM_NAMESPACE;
+using namespace Loader;
 
 struct SceneBuilder {
 	GeneratorContext Context;
 
-	inline void setup_integrator(const Object& obj, std::ostream& os)
+	inline static std::string makeId(const std::string& name)
 	{
+		std::string id = name; // TODO?
+		std::transform(id.begin(), id.end(), id.begin(), [](char c) {
+			if (std::isspace(c) || !std::isalnum(c))
+				return '_';
+			return c;
+		});
+		return id;
+	}
+
+	inline void setup_integrator(std::ostream& os)
+	{
+		const auto technique = Context.Scene.technique();
+
 		// TODO: Use the sensor sample count as ssp
 		size_t lastMPL = Context.MaxPathLen;
-		for (const auto& child : obj.anonymousChildren()) {
-			if (child->type() != OT_INTEGRATOR)
-				continue;
-
-			lastMPL = child->property("max_depth").getInteger(Context.MaxPathLen);
-			if (child->pluginType() == "path") {
+		if (technique) {
+			lastMPL = technique->property("max_depth").getInteger(Context.MaxPathLen);
+			if (technique->pluginType() == "path") {
 				os << "    let renderer = make_path_tracing_renderer(" << lastMPL << " /*max_path_len*/, " << Context.SPP << " /*spp*/);\n";
 				return;
-			} else if (child->pluginType() == "debug") {
+			} else if (technique->pluginType() == "debug") {
 				os << "     let renderer = make_debug_renderer();\n";
 				return;
 			}
@@ -44,7 +56,7 @@ struct SceneBuilder {
 		os << "    let renderer = make_path_tracing_renderer(" << lastMPL << " /*max_path_len*/, " << Context.SPP << " /*spp*/);\n";
 	}
 
-	inline void setup_camera(const Object& /*obj*/, std::ostream& os)
+	inline void setup_camera(std::ostream& os)
 	{
 		// TODO: Extract default settings?
 		// Setup camera
@@ -58,12 +70,12 @@ struct SceneBuilder {
 		   << "    );\n";
 	}
 
-	void setup_shapes(const Object& elem, std::ostream& os)
+	void setup_shapes(std::ostream& os)
 	{
-		GeneratorShape::setup(elem, Context);
+		GeneratorShape::setup(Context);
 
 		if (Context.Environment.Shapes.empty()) {
-			IG_LOG(L_ERROR) << "No mesh available" << std::endl;
+			IG_LOG(L_ERROR) << "No shapes available" << std::endl;
 			return;
 		}
 
@@ -84,13 +96,47 @@ struct SceneBuilder {
 		   << "        attrs        = @ |_| (false, @ |j| vec2_to_4(texcoords.load_vec2(j), 0.0, 0.0)),\n"
 		   << "        num_attrs    = 1,\n"
 		   << "        num_tris     = " << size_t(Context.Environment.Mesh.faceCount()) << "\n"
-		   << "    };\n"
-		   << "    let bvh = device.load_bvh(\"data/bvh.bin\");\n";
+		   << "    };\n";
 
 		if (Context.Environment.Mesh.face_area.size() < 4) // Make sure it is not too small
 			Context.Environment.Mesh.face_area.resize(16);
 		IO::write_tri_mesh(Context.Environment.Mesh, Context.EnablePadding);
+	}
 
+	void setup_entities(std::ostream& os)
+	{
+		GeneratorEntity::setup(Context);
+
+		if (Context.Environment.Entities.empty()) {
+			IG_LOG(L_ERROR) << "No entities available" << std::endl;
+			return;
+		}
+
+		std::vector<uint32> mapping;
+		mapping.reserve(Context.Environment.Entities.size());
+		for (const auto& pair : Context.Environment.Entities) {
+			uint32 shapeId = std::distance(Context.Scene.shapes().begin(), Context.Scene.shapes().find(pair.second.Shape));
+			mapping.emplace_back(shapeId);
+		}
+		IO::write_buffer("data/entity_mappings.bin", mapping);
+
+		std::vector<float> transforms;
+		mapping.reserve(Context.Environment.Entities.size() * 16);
+		for (const auto& pair : Context.Environment.Entities) {
+			for (size_t i = 0; i < 16; ++i)
+				transforms.emplace_back(pair.second.Transform.matrix()(i));
+		}
+		IO::write_buffer("data/entity_transforms.bin", IO::pad_buffer(transforms, Context.EnablePadding, sizeof(float) * 16));
+
+		os << "\n    // Entity Mappings\n"
+		   << "    let entity_mappings   = device.load_buffer(\"data/entity_mappings.bin\");\n"
+		   << "    let entity_to_shape   = @ |id : i32| entity_mappings.load_i32(id);\n"
+		   << "    let entity_transforms = device.load_buffer(\"data/entity_transforms.bin\");\n"
+		   << "    let get_entity_mat    = @ |id : i32| make_mat4x4(entity_transforms.load_vec4(4*id),entity_transforms.load_vec4(4*id+1),entity_transforms.load_vec4(4*id+2),entity_transforms.load_vec4(4*id+3));\n"
+		   << "    let bvh               = device.load_bvh(\"data/bvh.bin\");\n";
+
+		// TODO
+		IG_LOG(L_INFO) << "Generating entity table and BVH" << std::endl;
 		// Generate BVHs
 		if (IO::must_build_bvh(Context.FilePath.string(), Context.Target)) {
 			IG_LOG(L_INFO) << "Generating BVH for " << Context.FilePath << "" << std::endl;
@@ -120,130 +166,163 @@ struct SceneBuilder {
 		Context.Environment.calculateBoundingBox();
 	}
 
-	void setup_bitmap_textures(const Object& elem, std::ostream& os)
+	void setup_textures(std::ostream& os)
 	{
-		if (Context.Environment.Textures.empty())
+		if (Context.Scene.textures().empty())
 			return;
 
-		std::unordered_set<std::string> mapped;
-
-		IG_LOG(L_INFO) << "Generating images for " << Context.FilePath << "" << std::endl;
-		os << "\n    // Images\n";
-		for (const auto& tex : Context.Environment.Textures) {
-			if (tex->pluginType() != "bitmap")
-				continue;
-
-			std::string filename = tex->property("filename").getString();
-			if (filename.empty()) {
-				IG_LOG(L_WARNING) << "Invalid texture found" << std::endl;
-				continue;
-			}
-
-			if (mapped.count(filename)) // FIXME: Different properties?
-				continue;
-
-			mapped.insert(filename);
-			os << "    " << Context.generateTextureLoadInstruction(filename) << "\n";
+		IG_LOG(L_INFO) << "Generating textures for " << Context.FilePath << "" << std::endl;
+		os << "\n    // Textures\n";
+		for (const auto& pair : Context.Scene.textures()) {
+			const std::string name = pair.first;
+			const auto tex		   = pair.second;
+			os << "    tex_" << makeId(name) << " = " << GeneratorTexture::extract(tex, Context) << ";\n";
 		}
 	}
 
-	void setup_materials(const Object& elem, std::ostream& os)
+	void setup_bsdfs(std::ostream& os)
 	{
-		if (Context.Environment.Materials.empty())
+		if (Context.Scene.bsdfs().empty())
 			return;
 
-		IG_LOG(L_INFO) << "Generating trimesh lights for " << Context.FilePath << "" << std::endl;
-		os << "\n    // Emission\n";
-		size_t light_counter = 0;
-		for (const auto& mat : Context.Environment.Materials) {
-			if (!mat.Light)
-				continue;
+		IG_LOG(L_INFO) << "Generating bsdfs for " << Context.FilePath << "" << std::endl;
+		os << "\n    // BSDFs\n";
 
-			const auto& shape = Context.Environment.Shapes[mat.MeshLightPairId];
-			os << "    let light_" << light_counter << " = make_trimesh_light(math, tri_mesh, "
-			   << (shape.ItxOffset / 4) << ", " << (shape.ItxCount / 4) << ", "
-			   << Context.extractMaterialPropertyColor(mat.Light, "radiance") << ");\n";
-			++light_counter;
-		}
-
-		IG_LOG(L_INFO) << "Generating materials for " << Context.FilePath << "" << std::endl;
-		os << "\n    // Materials\n";
-
-		light_counter = 0;
-		for (size_t i = 0; i < Context.Environment.Materials.size(); ++i) {
-			const auto& mat = Context.Environment.Materials[i];
-			os << "    let material_" << i << " : Shader = @ |ray, hit, surf| {\n"
-			   << "        let bsdf = " << GeneratorBSDF::extract(mat.BSDF, Context) << ";\n";
-
-			if (mat.Light)
-				os << "        make_emissive_material(surf, bsdf, light_" << light_counter << ")\n";
-			else
-				os << "        make_material(bsdf)\n";
-			os << "    };\n";
-
-			if (mat.Light)
-				++light_counter;
+		for (const auto& pair : Context.Scene.bsdfs()) {
+			const std::string name = pair.first;
+			const auto& mat		   = pair.second;
+			os << "    let bsdf_" << makeId(name) << " = @ |ray : Ray, hit : Hit, surf : SurfaceElement| -> Bsdf { " << GeneratorBSDF::extract(mat, Context) << " };\n";
 		}
 	}
 
-	size_t setup_lights(const Object& elem, std::ostream& os)
+	size_t setup_lights(std::ostream& os)
 	{
 		IG_LOG(L_INFO) << "Generating lights for " << Context.FilePath << "" << std::endl;
-		size_t light_count = 0;
-		// Make sure area lights are the first ones
-		for (const auto& m : Context.Environment.Materials) {
-			if (m.Light)
-				++light_count;
-		}
-
-		for (const auto& child : elem.anonymousChildren()) {
-			if (child->type() != OT_EMITTER)
-				continue;
-			os << "    let light_" << light_count << " = " << GeneratorLight::extract(child, Context) << ";\n";
-			++light_count;
-		}
 
 		os << "\n    // Lights\n";
-		if (light_count == 0) { // Camera light
+		for (const auto& pair : Context.Scene.lights()) {
+			const auto name	 = pair.first;
+			const auto light = pair.second;
+
+			if (light->pluginType() != "area") {
+				os << "    let light_" << makeId(name) << " = " << GeneratorLight::extract(light, Context) << ";\n";
+			} else {
+				const std::string entityName = light->property("entity").getString();
+
+				if (Context.Environment.Entities.count(entityName) > 0) {
+					const auto& entity = Context.Environment.Entities[entityName];
+					const Shape shape  = Context.Environment.Shapes[entity.Shape];
+					os << "    let light_" << makeId(name) << " = make_trimesh_light(math, tri_mesh, "
+					   << (shape.ItxOffset / 4) << ", " << (shape.ItxCount / 4) << ", "
+					   << Context.extractMaterialPropertyColor(light, "radiance") << ");\n";
+				} else {
+					IG_LOG(L_ERROR) << "Light " << name << " connected to unknown entity " << entityName << std::endl;
+				}
+			}
+		}
+
+		os << "\n    // Light Mappings\n";
+		if (Context.Scene.lights().empty()) { // Camera light
 			os << "    let lights = @ |_ : i32| make_camera_light(math, camera, white);\n";
 		} else {
 			os << "    let lights = @ |i : i32| match i {\n";
-			for (size_t i = 0; i < light_count; ++i) {
-				if (i == light_count - 1)
-					os << "        _ => light_" << i << "\n";
+			size_t counter = 0;
+			for (const auto& pair : Context.Scene.lights()) {
+				if (counter == Context.Scene.lights().size() - 1)
+					os << "        _ => light_" << makeId(pair.first) << "\n";
 				else
-					os << "        " << i << " => light_" << i << ",\n";
+					os << "        " << counter << " => light_" << makeId(pair.first) << ",\n";
+				++counter;
 			}
 			os << "    };\n";
 		}
 
-		return light_count;
+		return Context.Scene.lights().size();
 	}
 
-	void convert_scene(const Scene& scene, std::ostream& os)
+	void setup_materials(std::ostream& os)
 	{
-		setup_integrator(scene, os);
-		setup_camera(scene, os);
-		setup_shapes(scene, os);
-		setup_bitmap_textures(scene, os);
-		setup_materials(scene, os);
-		size_t light_count = setup_lights(scene, os);
+		IG_LOG(L_INFO) << "Generating materials for " << Context.FilePath << "" << std::endl;
 
+		// Extract area light entity connections
+		std::unordered_map<std::string, std::string> entity_light_map;
+		for (const auto& pair : Context.Scene.lights()) {
+			const auto name	 = pair.first;
+			const auto light = pair.second;
+
+			if (light->pluginType() != "area")
+				continue;
+
+			const std::string entityName = light->property("entity").getString();
+			if (entity_light_map.count(entityName)) {
+				IG_LOG(L_ERROR) << "Entity " << entityName << " is already defined as light!" << std::endl;
+				continue;
+			}
+
+			entity_light_map.insert({ entityName, name });
+		}
+
+		// Setup "materials"
+		os << "\n    // Materials\n";
+		for (const auto& pair : Context.Environment.Entities) {
+			const bool isEmissive = entity_light_map.count(pair.first);
+			os << "    let material_" << makeId(pair.first) << " : Shader = @ |ray, hit, surf| ";
+			if (isEmissive)
+				os << "make_emissive_material(surf,";
+			else
+				os << "make_material(";
+
+			if (pair.second.BSDF.empty())
+				os << "make_black_bsdf()";
+			else
+				os << "bsdf_" << makeId(pair.second.BSDF) << "(ray, hit, surf)";
+
+			if (isEmissive)
+				os << ", light_" << makeId(entity_light_map[pair.first]);
+
+			os << ");\n";
+		}
+	}
+
+	void setup_geometries(std::ostream& os)
+	{
+		IG_LOG(L_INFO) << "Generating geometries for " << Context.FilePath << "" << std::endl;
+
+		// Setup geometries
 		os << "\n    // Geometries\n"
 		   << "    let geometries = @ |i : i32| match i {\n";
-		for (uint32_t s = 0; s < Context.Environment.Materials.size(); ++s) {
-			os << "        ";
-			if (s != Context.Environment.Materials.size() - 1)
-				os << s;
-			else
-				os << "_";
-			os << " => make_tri_mesh_geometry(math, tri_mesh, material_" << s << "),\n";
+		if (Context.Environment.Entities.empty()) {
+			os << "        _ =>  make_tri_mesh_geometry(math, tri_mesh, @ |_, _, _| make_empty_material())\n";
+		} else {
+			size_t counter = 0;
+			for (const auto& pair : Context.Environment.Entities) {
+				os << "        ";
+				if (counter != Context.Environment.Entities.size() - 1)
+					os << counter;
+				else
+					os << "_";
+				os << " => make_tri_mesh_geometry(math, tri_mesh, material_" << makeId(pair.first) << "),\n";
+				++counter;
+			}
 		}
 		os << "    };\n";
+	}
+
+	void convert_scene(std::ostream& os)
+	{
+		setup_integrator(os);
+		setup_camera(os);
+		setup_shapes(os);
+		setup_entities(os);
+		setup_textures(os);
+		setup_bsdfs(os);
+		size_t light_count = setup_lights(os);
+		setup_materials(os);
+		setup_geometries(os);
 
 		os << "\n    // Scene\n"
 		   << "    let scene = Scene {\n"
-		   << "        num_geometries = " << Context.Environment.Materials.size() << ",\n"
+		   << "        num_geometries = " << Context.Environment.Entities.size() << ",\n"
 		   << "        num_lights     = " << light_count << ",\n"
 		   << "        geometries     = @ |i : i32| geometries(i),\n"
 		   << "        lights         = @ |i : i32| lights(i),\n"
@@ -255,14 +334,12 @@ struct SceneBuilder {
 
 bool generate(const std::filesystem::path& filepath, const GeneratorOptions& options, std::ostream& os)
 {
-	IG_LOG(L_INFO) << "Converting MTS file " << filepath << "" << std::endl;
+	IG_LOG(L_INFO) << "Converting JSON file " << filepath << "" << std::endl;
 
 	try {
 		SceneLoader loader;
 		loader.addArgument("SPP", std::to_string(options.spp));
 		loader.addArgument("MAX_PATH_LENGTH", std::to_string(options.max_path_length));
-
-		auto scene = loader.loadFromFile(filepath);
 
 		std::filesystem::create_directories("data/textures");
 
@@ -284,6 +361,7 @@ bool generate(const std::filesystem::path& filepath, const GeneratorOptions& opt
 		   << "#[export] fn render(settings: &Settings, iter: i32) -> () {\n";
 
 		SceneBuilder builder;
+		builder.Context.Scene		  = loader.loadFromFile(filepath);
 		builder.Context.FilePath	  = std::filesystem::canonical(filepath);
 		builder.Context.Target		  = options.target;
 		builder.Context.MaxPathLen	  = options.max_path_length;
@@ -326,14 +404,14 @@ bool generate(const std::filesystem::path& filepath, const GeneratorOptions& opt
 
 		os << "    let math     = device.intrinsics;\n";
 
-		builder.convert_scene(scene, os);
+		builder.convert_scene(os);
 
 		os << "\n"
 		   << "    renderer(scene, device, iter);\n"
 		   << "    device.present();\n"
 		   << "}\n";
 	} catch (const std::exception& e) {
-		IG_LOG(L_ERROR) << "Invalid MTS file: " << e.what() << std::endl;
+		IG_LOG(L_ERROR) << "Invalid JSON file: " << e.what() << std::endl;
 		return false;
 	}
 

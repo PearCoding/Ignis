@@ -7,15 +7,15 @@
 
 namespace IG {
 
-using namespace TPM_NAMESPACE;
+using namespace Loader;
 
 struct TransformCache {
 	Matrix4f TransformMatrix;
 	Matrix3f NormalMatrix;
 
-	TransformCache(const Transform& t)
+	TransformCache(const Transformf& t)
 	{
-		TransformMatrix = Eigen::Map<const Eigen::Matrix<float, 4, 4, Eigen::RowMajor>>(t.matrix.data());
+		TransformMatrix = t.matrix();
 		NormalMatrix	= TransformMatrix.block<3, 3>(0, 0).transpose().inverse();
 	}
 
@@ -101,6 +101,7 @@ inline TriMesh setup_mesh_obj(const Object& elem, const GeneratorContext& ctx)
 
 inline TriMesh setup_mesh_ply(const Object& elem, const GeneratorContext& ctx)
 {
+	IG_LOG(L_INFO) << "Trying to load ply file " << elem.property("filename").getString() << std::endl;
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
 	IG_LOG(L_INFO) << "Trying to load ply file " << filename << std::endl;
 	auto trimesh = ply::load(filename);
@@ -111,11 +112,11 @@ inline TriMesh setup_mesh_ply(const Object& elem, const GeneratorContext& ctx)
 	return trimesh;
 }
 
-inline TriMesh setup_mesh_serialized(const Object& elem, const GeneratorContext& ctx)
+inline TriMesh setup_mesh_mitsuba(const Object& elem, const GeneratorContext& ctx)
 {
 	size_t shape_index	= elem.property("shape_index").getInteger(0);
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
-	IG_LOG(L_INFO) << "Trying to load serialized file " << filename << std::endl;
+	IG_LOG(L_INFO) << "Trying to load serialized mitsuba file " << filename << std::endl;
 	auto trimesh = mts::load(filename, shape_index);
 	if (trimesh.vertices.empty()) {
 		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << std::endl;
@@ -124,13 +125,14 @@ inline TriMesh setup_mesh_serialized(const Object& elem, const GeneratorContext&
 	return trimesh;
 }
 
-void GeneratorShape::setup(const TPMObject& root, GeneratorContext& ctx)
+void GeneratorShape::setup(GeneratorContext& ctx)
 {
-	std::unordered_map<Material, uint32_t, MaterialHash> unique_mats;
+	size_t counter = 0;
+	for (const auto& pair : ctx.Scene.shapes()) {
+		const auto child = pair.second;
 
-	for (const auto& child : root.anonymousChildren()) {
-		if (child->type() != OT_SHAPE)
-			continue;
+		const size_t id = counter;
+		++counter;
 
 		TriMesh child_mesh;
 		if (child->pluginType() == "rectangle") {
@@ -141,8 +143,8 @@ void GeneratorShape::setup(const TPMObject& root, GeneratorContext& ctx)
 			child_mesh = setup_mesh_obj(*child, ctx);
 		} else if (child->pluginType() == "ply") {
 			child_mesh = setup_mesh_ply(*child, ctx);
-		} else if (child->pluginType() == "serialized") {
-			child_mesh = setup_mesh_serialized(*child, ctx);
+		} else if (child->pluginType() == "mitsuba") {
+			child_mesh = setup_mesh_mitsuba(*child, ctx);
 		} else {
 			IG_LOG(L_WARNING) << "Can not load shape type '" << child->pluginType() << "'" << std::endl;
 			continue;
@@ -173,36 +175,10 @@ void GeneratorShape::setup(const TPMObject& root, GeneratorContext& ctx)
 		shape.VtxCount	= child_mesh.vertices.size();
 		shape.ItxCount	= child_mesh.indices.size();
 
-		// Setup material & light
-		shape.Material.MeshLightPairId = ctx.Environment.Shapes.size();
-		for (const auto& inner_child : child->anonymousChildren()) {
-			if (inner_child->type() == OT_BSDF) {
-				shape.Material.BSDF = inner_child;
-				ctx.registerTexturesFromBSDF(shape.Material.BSDF);
-			} else if (inner_child->type() == OT_EMITTER) {
-				shape.Material.Light = inner_child;
-				ctx.registerTexturesFromLight(shape.Material.Light);
-			}
-		}
-
-		for (const auto& inner_child : child->namedChildren()) {
-			if (inner_child.second->type() == OT_BSDF) {
-				shape.Material.BSDF = inner_child.second;
-				ctx.registerTexturesFromBSDF(shape.Material.BSDF);
-			} else if (inner_child.second->type() == OT_EMITTER) {
-				shape.Material.Light = inner_child.second;
-				ctx.registerTexturesFromLight(shape.Material.Light);
-			}
-		}
-
-		if (!unique_mats.count(shape.Material)) {
-			unique_mats.emplace(shape.Material, ctx.Environment.Materials.size());
-			ctx.Environment.Materials.emplace_back(shape.Material);
-		}
-
-		child_mesh.replaceMaterial(unique_mats.at(shape.Material));
+		child_mesh.replaceID(id);
+		
 		ctx.Environment.Mesh.mergeFrom(child_mesh);
-		ctx.Environment.Shapes.emplace_back(std::move(shape));
+		ctx.Environment.Shapes.insert({ pair.first, std::move(shape) });
 	}
 }
 

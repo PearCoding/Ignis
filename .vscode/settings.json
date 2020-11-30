@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "*.impala": "rust",
+        "*.prc": "lisp",
         "*.art": "rust",
         "cctype": "cpp",
         "clocale": "cpp",
@@ -65,6 +66,21 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "core": "cpp",
-        "complex": "cpp"
+        "complex": "cpp",
+        "forward_list": "cpp",
+        "regex": "cpp",
+        "shared_mutex": "cpp",
+        "variant": "cpp",
+        "csignal": "cpp",
+        "strstream": "cpp",
+        "typeindex": "cpp",
+        "*.ipp": "cpp",
+        "transform": "cpp",
+        "state": "cpp",
+        "shape": "cpp",
+        "object": "cpp",
+        "matrixd": "cpp",
+        "matrixf": "cpp",
+        "image": "cpp"
     }
 }

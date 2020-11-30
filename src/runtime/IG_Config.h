@@ -205,6 +205,9 @@ using Matrix3f = Eigen::Matrix3f;
 using Matrix4f = Eigen::Matrix4f;
 
 using Quaternionf = Eigen::Quaternionf;
+using Transformf = Eigen::Affine3f;
+
+using Colorf = Eigen::Array3f;
 
 /* Useful constants */
 constexpr float Epsilon = std::numeric_limits<float>::epsilon();

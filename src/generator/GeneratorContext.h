@@ -3,9 +3,13 @@
 #include "GeneratorEnvironment.h"
 #include "Target.h"
 
+#include <filesystem>
+
 namespace IG {
 
 struct GeneratorContext {
+	Loader::Scene Scene;
+	
 	std::filesystem::path FilePath;
 	IG::Target Target;
 	size_t MaxPathLen;
@@ -28,25 +32,8 @@ struct GeneratorContext {
 		}
 	}
 
-	inline std::string makeId(const std::filesystem::path& path) const
-	{
-		std::string id = path; // TODO?
-		std::transform(id.begin(), id.end(), id.begin(), [](char c) {
-			if (std::isspace(c) || !std::isalnum(c))
-				return '_';
-			return c;
-		});
-		return id;
-	}
-
-	std::string generateTextureLoadInstruction(const std::string& filename, std::string* tex_hndl = nullptr) const;
-
-	void registerTexturesFromBSDF(const std::shared_ptr<TPMObject>& obj);
-	void registerTexturesFromLight(const std::shared_ptr<TPMObject>& obj);
-
-	std::string extractMaterialPropertyColor(const std::shared_ptr<TPMObject>& obj, const std::string& propname, float def = 0.0f) const;
-	std::string extractMaterialPropertyNumber(const std::shared_ptr<TPMObject>& obj, const std::string& propname, float def = 0.0f) const;
-	std::string extractTexture(const std::shared_ptr<TPMObject>& tex) const;
+	std::string extractMaterialPropertyColor(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def = 0.0f) const;
+	std::string extractMaterialPropertyNumber(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def = 0.0f) const;
 };
 
 }

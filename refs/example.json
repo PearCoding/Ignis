@@ -11,18 +11,19 @@
         "size": [1920, 1080],
         "spp": 4
     },
-    "materials":[
+    "bsdfs":[
         {"type":"diffuse", "name":"BunnyMaterial", "albedo":[1,0,0]},
         {"type":"principled", "name":"TeapotMaterial", "base":[0,1,1], "roughness":0.4}
     ],
-    "meshes": [
+    "shapes": [
         {"type":"obj", "name": "Teapot", "filename":"myteapot.obj"},
-        {"type":"ply", "name": "Bunny", "filename":"bunny.ply"}
+        {"type":"ply", "name": "Bunny", "filename":"bunny.ply"},
+        {"type":"plane", "name": "Plane", "size": [1,1]}
     ],
     "entities": [
-        {"type":"mesh", "name": "Bunny", "material":"BunnyMaterial", "mesh":"Bunny", "transform":{ "position":[0,0,1] }},
-        {"type":"mesh", "name": "Teapot", "material":"TeapotMaterial", "mesh":"Teapot", "transform":{ "position":[0,2,0] }},
-        {"type":"plane", "name": "Light", "size": [1,1], "transform":{ "matrix":[1,0,0,0,0,1,0,1,0,0,-1,2,0,0,0,1] }}
+        {"name": "Bunny", "bsdf":"BunnyMaterial", "shape":"Bunny", "transform":{ "position":[0,0,1] }},
+        {"name": "Teapot", "bsdf":"TeapotMaterial", "shape":"Teapot", "transform":{ "position":[0,2,0] }},
+        {"name": "Light", "shape":"Plane", "transform":{ "matrix":[1,0,0,0,0,1,0,1,0,0,-1,2,0,0,0,1] }}
     ],
     "lights": [
         {"type":"distant", "name": "Distant", "direction":[-1,0,0]},

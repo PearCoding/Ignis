@@ -2,7 +2,7 @@
 #include "Logger.h"
 
 namespace IG {
-static void setup_microfacet(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void setup_microfacet(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	std::string alpha_u, alpha_v;
 	if (bsdf->property("alpha_u").isValid()) {
@@ -22,12 +22,12 @@ static void bsdf_error(const std::string& msg, std::ostream& os)
 	os << "make_black_bsdf()/* ERROR */";
 }
 
-static void bsdf_diffuse(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_diffuse(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_diffuse_bsdf(math, surf, " << ctx.extractMaterialPropertyColor(bsdf, "reflectance") << ")";
 }
 
-static void bsdf_orennayar(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_orennayar(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_rough_diffuse_bsdf(math, surf, "
 	   << ctx.extractMaterialPropertyNumber(bsdf, "alpha", 0.0f) << ", "
@@ -35,7 +35,7 @@ static void bsdf_orennayar(const std::shared_ptr<TPMObject>& bsdf, const Generat
 	   << ")";
 }
 
-static void bsdf_dielectric(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_dielectric(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_glass_bsdf(math, surf, "
 	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", 1.000277f) << ", "
@@ -44,7 +44,7 @@ static void bsdf_dielectric(const std::shared_ptr<TPMObject>& bsdf, const Genera
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_transmittance", 1.0f) << ")";
 }
 
-static void bsdf_thindielectric(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_thindielectric(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_thinglass_bsdf(math, surf, "
 	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", 1.000277f) << ", "
@@ -53,7 +53,7 @@ static void bsdf_thindielectric(const std::shared_ptr<TPMObject>& bsdf, const Ge
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_transmittance", 1.0f) << ")";
 }
 
-static void bsdf_conductor(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_conductor(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_conductor_bsdf(math, surf, "
 	   << ctx.extractMaterialPropertyNumber(bsdf, "eta", 0.63660f) << ", "
@@ -61,7 +61,7 @@ static void bsdf_conductor(const std::shared_ptr<TPMObject>& bsdf, const Generat
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ")";
 }
 
-static void bsdf_rough_conductor(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_rough_conductor(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_rough_conductor_bsdf(math, surf, "
 	   << ctx.extractMaterialPropertyNumber(bsdf, "eta", 0.63660f) << ", "
@@ -71,7 +71,7 @@ static void bsdf_rough_conductor(const std::shared_ptr<TPMObject>& bsdf, const G
 	os << ")";
 }
 
-static void bsdf_plastic(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_plastic(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_plastic_bsdf(math, surf, "
 	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", 1.000277f) << ", "
@@ -80,55 +80,64 @@ static void bsdf_plastic(const std::shared_ptr<TPMObject>& bsdf, const Generator
 	   << ctx.extractMaterialPropertyColor(bsdf, "diffuse_reflectance", 0.5f) << ")";
 }
 
-static void bsdf_phong(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_phong(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_phong_bsdf(math, surf, "
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", "
 	   << ctx.extractMaterialPropertyNumber(bsdf, "exponent", 30) << ")";
 }
 
-static void bsdf_blend(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_blend(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
-	if (bsdf->anonymousChildren().size() != 2) {
+	const std::string first	 = bsdf->property("first").getString();
+	const std::string second = bsdf->property("second").getString();
+
+	if (first.empty() || second.empty()) {
 		bsdf_error("Invalid blend bsdf", os);
+	} else if (first == second) {
+		os << GeneratorBSDF::extract(ctx.Scene.bsdf(first), ctx);
 	} else {
-		os << GeneratorBSDF::extract(bsdf->anonymousChildren()[0], ctx) << ", "
-		   << GeneratorBSDF::extract(bsdf->anonymousChildren()[1], ctx) << ", "
+		os << GeneratorBSDF::extract(ctx.Scene.bsdf(first), ctx) << ", "
+		   << GeneratorBSDF::extract(ctx.Scene.bsdf(second), ctx) << ", "
 		   << ctx.extractMaterialPropertyNumber(bsdf, "weight", 0.5f) << ")";
 	}
 }
 
-static void bsdf_mask(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_mask(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
-	if (bsdf->anonymousChildren().size() != 1) {
+	const std::string masked = bsdf->property("bsdf").getString();
+
+	if (masked.empty())
 		bsdf_error("Invalid mask bsdf", os);
-	} else {
+	else
 		os << "make_mix_bsdf(make_passthrough_bsdf(surf), "
-		   << GeneratorBSDF::extract(bsdf->anonymousChildren()[0], ctx) << ", "
+		   << GeneratorBSDF::extract(ctx.Scene.bsdf(masked), ctx) << ", "
 		   << ctx.extractMaterialPropertyNumber(bsdf, "opacity", 0.5f) << ")";
-	}
 }
 
-static void bsdf_twosided(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os)
-{ /* Ignore */
-	if (bsdf->anonymousChildren().size() != 1)
+static void bsdf_twosided(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+{
+	/* Ignore */
+	const std::string other = bsdf->property("bsdf").getString();
+
+	if (other.empty())
 		bsdf_error("Invalid twosided bsdf", os);
 	else
-		os << GeneratorBSDF::extract(bsdf->anonymousChildren()[0], ctx);
+		os << GeneratorBSDF::extract(ctx.Scene.bsdf(other), ctx);
 }
 
-static void bsdf_null(const std::shared_ptr<TPMObject>&, const GeneratorContext&, std::ostream& os)
+static void bsdf_null(const std::shared_ptr<Loader::Object>&, const GeneratorContext&, std::ostream& os)
 {
 	os << "make_black_bsdf()/* Null */";
 }
 
-static void bsdf_unknown(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext&, std::ostream& os)
+static void bsdf_unknown(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext&, std::ostream& os)
 {
 	IG_LOG(L_WARNING) << "Unknown bsdf '" << bsdf->pluginType() << "'" << std::endl;
 	os << "make_black_bsdf()/* Null */";
 }
 
-using BSDFGenerator = void (*)(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx, std::ostream& os);
+using BSDFGenerator = void (*)(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os);
 static struct {
 	const char* Name;
 	BSDFGenerator Generator;
@@ -150,7 +159,7 @@ static struct {
 	{ "", nullptr }
 };
 
-std::string GeneratorBSDF::extract(const std::shared_ptr<TPMObject>& bsdf, const GeneratorContext& ctx)
+std::string GeneratorBSDF::extract(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx)
 {
 	std::stringstream sstream;
 

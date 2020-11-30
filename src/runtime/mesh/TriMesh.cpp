@@ -96,14 +96,14 @@ void TriMesh::mergeFrom(const TriMesh& src)
 		indices[idx_offset + i + 0] = src.indices[i + 0] + vtx_offset;
 		indices[idx_offset + i + 1] = src.indices[i + 1] + vtx_offset;
 		indices[idx_offset + i + 2] = src.indices[i + 2] + vtx_offset;
-		indices[idx_offset + i + 3] = src.indices[i + 3]; // Material
+		indices[idx_offset + i + 3] = src.indices[i + 3]; // ID
 	}
 }
 
-void TriMesh::replaceMaterial(uint32 m_idx)
+void TriMesh::replaceID(uint32 m_idx)
 {
 	for (size_t i = 0; i < indices.size(); i += 4)
-		indices[i + 3] = m_idx; // Material
+		indices[i + 3] = m_idx; // ID
 }
 
 void TriMesh::computeFaceNormals(size_t first_index)

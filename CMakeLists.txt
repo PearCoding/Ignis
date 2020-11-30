@@ -38,7 +38,7 @@ MESSAGE(STATUS "Building Ignis Rodent ${Ignis_VERSION}")
 # Options
 set(IG_TARGET_PLATFORM "" CACHE STRING "Target platform for the generator tool. Leave empty to autodetect CPU. Use iggenerator --help to list possible platforms.")
 set(IG_TARGET_DEVICE "" CACHE STRING "Target device on the selected platform. Leave empty to use the default.")
-set(IG_SCENE_FILE "${PROJECT_SOURCE_DIR}/scenes/diamond_scene.xml" CACHE FILEPATH "Absolute path to an Mitsuba scene")
+set(IG_SCENE_FILE "${PROJECT_SOURCE_DIR}/scenes/diamond_scene.json" CACHE FILEPATH "Absolute path to an Mitsuba scene")
 set(IG_MEGAKERNEL_FUSION ON CACHE BOOL "Set to true to enable simple shader fusion for megakernel mappings")
 
 # Setup artic clang flags

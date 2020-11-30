@@ -53,4 +53,3 @@ The Ignis Rodent client has an optional UI and multiple ways to interact with th
  - `Numpad 9` look behind you.
  - `Numpad 2468` to rotate the camera.
  - Mouse to rotate the camera.
- 

@@ -3,7 +3,7 @@
 #include "GeneratorContext.h"
 
 namespace IG {
-struct GeneratorShape {
+struct GeneratorEntity {
 	static void setup(GeneratorContext& ctx);
 };
 } // namespace IG

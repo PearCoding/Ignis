@@ -23,7 +23,7 @@ struct TriMesh {
 	void flipNormals();
 	void scale(float scale);
 	void mergeFrom(const TriMesh& src);
-	void replaceMaterial(uint32 m_idx);
+	void replaceID(uint32 m_idx);
 
 	void computeFaceNormals(size_t first_index = 0);
 	void computeVertexNormals(size_t first_index = 0);
