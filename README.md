@@ -23,32 +23,34 @@ Once the dependencies are installed, first create a directory to build the appli
     mkdir build
     cd build
 
-Use your favorite generator (e.g. Ninja) and set the scene to be build using IG_SCENE_FILE
+Use your favorite generator (e.g. `Ninja`) and set the scene to be build using `IG_SCENE_FILE`
 
     cmake -G Ninja .. -DIG_SCENE_FILE=../scenes/diamond_scene.xml
     ninja
 
-## Using
+If `Ninja` is not available you may skip the `-G Ninja` parameter.
+
+## How to use
 
 The Ignis Rodent client has an optional UI and multiple ways to interact with the scene:
 
- - 1..9 number keys to switch between views.
- - 1..9 and STRG/CTRL to save the current view on that slot.
- - F2 to toggle the UI.
- - F3 to toggle the interaction lock. If enabled, no view changing interaction is possible.
- - F11 to save a screenshot. The image will be saved in the current working directory.
- - t to toggle automatic tonemapping.
- - g to reset tonemapping properties. Only works if automatic tonemapping is disabled.
- - f to increase (or with SHIFT, decrease) tonemapping exposure. Step size can be decreased with STRG/CTRL. Only works if automatic tonemapping is disabled.
- - v to increase (or with SHIFT, decrease) tonemapping offset. Step size can be decreased with STRG/CTRL. Only works if automatic tonemapping is disabled.
- - WASD or arrow keys to travel through the scene.
- - Q,E to rotate the camera around the viewing direction. 
- - PageUp,PageDown to pan the camera up and down. 
- - Notepad +/- to change the travel speed.
- - Numpad 1 to switch to front view.
- - Numpad 3 to switch to side view.
- - Numpad 7 to switch to top view.
- - Numpad 9 look behind you.
- - Numpad 2,4,6,8 to rotate the camera.
+ - `1..9` number keys to switch between views.
+ - `1..9` and `Strg/Ctrl` to save the current view on that slot.
+ - `F2` to toggle the UI.
+ - `F3` to toggle the interaction lock. If enabled, no view changing interaction is possible.
+ - `F11` to save a screenshot. The image will be saved in the current working directory.
+ - `t` to toggle automatic tonemapping.
+ - `g` to reset tonemapping properties. Only works if automatic tonemapping is disabled.
+ - `f` to increase (or with `Shift` to decrease) tonemapping exposure. Step size can be decreased with `Strg/Ctrl`. Only works if automatic tonemapping is disabled.
+ - `v` to increase (or with `Shift` to decrease) tonemapping offset. Step size can be decreased with `Strg/Ctrl`. Only works if automatic tonemapping is disabled.
+ - `WASD` or arrow keys to travel through the scene.
+ - `Q/E` to rotate the camera around the viewing direction. 
+ - `PageUp/PageDown` to pan the camera up and down. 
+ - `Notepad +/-` to change the travel speed.
+ - `Numpad 1` to switch to front view.
+ - `Numpad 3` to switch to side view.
+ - `Numpad 7` to switch to top view.
+ - `Numpad 9` look behind you.
+ - `Numpad 2468` to rotate the camera.
  - Mouse to rotate the camera.
  
