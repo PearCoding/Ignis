@@ -8,7 +8,7 @@
  - Eigen3 <http://eigen.tuxfamily.org>
  - OpenImageIO <https://sites.google.com/site/openimageio/home>
  - LZ4 <https://github.com/lz4/lz4>
- - TinyParser-Mitsuba <https://github.com/PearCoding/TinyParser-Mitsuba>
+ - RapidJSON <https://rapidjson.org/>
  - ZLib <https://zlib.net/>
 
 ### Optional
@@ -25,10 +25,15 @@ Once the dependencies are installed, first create a directory to build the appli
 
 Use your favorite generator (e.g. `Ninja`) and set the scene to be build using `IG_SCENE_FILE`
 
-    cmake -G Ninja .. -DIG_SCENE_FILE=../scenes/diamond_scene.xml
+    cmake -G Ninja .. -DIG_SCENE_FILE=../scenes/diamond_scene.json
     cmake --build .
 
 If `Ninja` is not available you may skip the `-G Ninja` parameter.
+
+## Scene description
+
+Ignis Rodent uses a JSON based flat scene description with instancing. Support for shading nodes is planned. Image and procedural texture support is available.
+A schema is available at [refs/ignis.schema.json](refs/ignis.schema.json)
 
 ## How to use
 
