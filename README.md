@@ -26,7 +26,7 @@ Once the dependencies are installed, first create a directory to build the appli
 Use your favorite generator (e.g. `Ninja`) and set the scene to be build using `IG_SCENE_FILE`
 
     cmake -G Ninja .. -DIG_SCENE_FILE=../scenes/diamond_scene.xml
-    ninja
+    cmake --build .
 
 If `Ninja` is not available you may skip the `-G Ninja` parameter.
 
