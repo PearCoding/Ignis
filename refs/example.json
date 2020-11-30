@@ -1,0 +1,31 @@
+{
+    "technique": {
+        "type": "bdpt",
+        "max_depth": 16
+    },
+    "camera": {
+        "fov": 32,
+        "transform": { "position": [0, 0, 0] }
+    },
+    "film": {
+        "size": [1920, 1080],
+        "spp": 4
+    },
+    "materials":[
+        {"type":"diffuse", "name":"BunnyMaterial", "albedo":[1,0,0]},
+        {"type":"principled", "name":"TeapotMaterial", "base":[0,1,1], "roughness":0.4}
+    ],
+    "meshes": [
+        {"type":"obj", "name": "Teapot", "filename":"myteapot.obj"},
+        {"type":"ply", "name": "Bunny", "filename":"bunny.ply"}
+    ],
+    "entities": [
+        {"type":"mesh", "name": "Bunny", "material":"BunnyMaterial", "mesh":"Bunny", "transform":{ "position":[0,0,1] }},
+        {"type":"mesh", "name": "Teapot", "material":"TeapotMaterial", "mesh":"Teapot", "transform":{ "position":[0,2,0] }},
+        {"type":"plane", "name": "Light", "size": [1,1], "transform":{ "matrix":[1,0,0,0,0,1,0,1,0,0,-1,2,0,0,0,1] }}
+    ],
+    "lights": [
+        {"type":"distant", "name": "Distant", "direction":[-1,0,0]},
+        {"type":"area", "name": "AreaLight", "entity":"Light", "radiance":[1,1,1]}
+    ]
+}

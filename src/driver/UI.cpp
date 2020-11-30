@@ -212,6 +212,24 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 				case SDLK_t:
 					sToneMapping_Automatic = !sToneMapping_Automatic;
 					break;
+				case SDLK_g:
+					if (!sToneMapping_Automatic) {
+						sToneMapping_Exposure = 1.0f;
+						sToneMapping_Offset	  = 0.0f;
+					}
+					break;
+				case SDLK_f:
+					if (!sToneMapping_Automatic) {
+						const float delta = io.KeyCtrl ? 0.05f : 0.5f;
+						sToneMapping_Exposure += io.KeyShift ? -delta : delta;
+					}
+					break;
+				case SDLK_v:
+					if (!sToneMapping_Automatic) {
+						const float delta = io.KeyCtrl ? 0.05f : 0.5f;
+						sToneMapping_Offset += io.KeyShift ? -delta : delta;
+					}
+					break;
 				case SDLK_F2:
 					sShowUI = !sShowUI;
 					break;
@@ -606,8 +624,8 @@ static void handle_imgui(uint32_t iter)
 	if (ImGui::CollapsingHeader("ToneMapping", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Checkbox("Automatic", &sToneMapping_Automatic);
 		if (!sToneMapping_Automatic) {
-			ImGui::SliderFloat("Exposure", &sToneMapping_Exposure, 0.01f, 10.0f);
-			ImGui::SliderFloat("Offset", &sToneMapping_Offset, 0.0f, 10.0f);
+			ImGui::SliderFloat("Exposure", &sToneMapping_Exposure, -10.0f, 10.0f);
+			ImGui::SliderFloat("Offset", &sToneMapping_Offset, -10.0f, 10.0f);
 		}
 	}
 

@@ -1,0 +1,164 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "ignis.schema.json",
+    "title": "Ignis Rodent",
+    "description": "Ignis rodent scene description language",
+    "type": "object",
+    "required": ["camera", "film"],
+    "properties": {
+        "technique": { "$ref": "#/definitions/Technique"},
+        "camera": { "$ref": "#/definitions/Camera" },
+        "film": { "$ref": "#/definitions/Film" },
+        "materials": {
+            "description": "List of materials",
+            "type": "array",
+            "items": { "$ref": "#/definitions/Material" },
+            "uniqueItems": true
+        },
+        "meshes": {
+            "description": "List of meshes",
+            "type": "array",
+            "items": { "$ref": "#/definitions/Mesh" },
+            "uniqueItems": true
+        },
+        "entities": {
+            "description": "List of entities",
+            "type": "array",
+            "items": {"$ref": "#/definitions/Entity" },
+            "uniqueItems": true
+        },
+        "lights": {
+            "description": "List of lights",
+            "type": "array",
+            "items": { "$ref": "#/definitions/Light" },
+            "uniqueItems": true
+        }
+    },
+    "definitions": {
+        "Technique": {
+            "description": "Technique properties",
+            "type": "object",
+            "required": ["type"],
+            "properties": { 
+                "type": { "type":"string"},
+                "max_depth": { "type":"integer", "minimum":0 }
+            },
+            "additionalProperties": true
+        },
+        "Camera": {
+            "description": "Camera properties",
+            "type": "object",
+            "required": [],
+            "properties": { 
+                "type": { "type":"string"},
+                "fov": { "type":"number", "minimum":0 },
+                "transform": { "$ref":"#/definitions/Transform" }
+            },
+            "additionalProperties": true
+        },
+        "Film": {
+            "description": "Film/Image properties",
+            "type": "object",
+            "required": ["size"],
+            "properties": { 
+                "size": { "$ref":"#/definitions/Size" },
+                "spp": { "type":"integer", "minimum":0 }
+            },
+            "additionalProperties": true
+        },
+        "Material": {
+            "description": "Material properties",
+            "type": "object",
+            "required": ["type", "name"],
+            "properties": { 
+                "type": { "type":"string"},
+                "name": { "type":"string"}
+            },
+            "additionalProperties": true
+        },
+        "Mesh": {
+            "description": "Mesh properties",
+            "type": "object",
+            "required": ["type", "name", "filename"],
+            "properties": { 
+                "type": { "type":"string"},
+                "name": { "type":"string"},
+                "filename": { "type":"string"}
+            },
+            "additionalProperties": true
+        },
+        "Entity": {
+            "description": "Material properties",
+            "type": "object",
+            "required": ["type", "name"],
+            "properties": { 
+                "type": { "type":"string"},
+                "name": { "type":"string"},
+                "transform": { "$ref":"#/definitions/Transform" },
+                "material": { "type":"string" }
+            },
+            "additionalProperties": true
+        },
+        "Light": {
+            "description": "Light properties",
+            "type": "object",
+            "required": ["type", "name"],
+            "properties": { 
+                "type": { "type":"string"},
+                "name": { "type":"string"}
+            },
+            "additionalProperties": true
+        },
+        "Transform": {
+            "description": "Transform properties",
+            "type": "object",
+            "required": [],
+            "properties": { 
+                "position": { "$ref":"#/definitions/Vector3" },
+                "rotation": { "$ref":"#/definitions/Vector4" },
+                "scale": { 
+                    "oneOf":[
+                        {"$ref":"#/definitions/Vector3"},
+                        {"type":"number"}
+                    ]
+                },
+                "matrix": { 
+                    "oneOf":[
+                        {"$ref":"#/definitions/Matrix3"},
+                        {"$ref":"#/definitions/Matrix4"}
+                    ]
+                }
+            }
+        },
+        "Size": {
+            "type":"array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "type": "number" }
+        },
+        "Vector3": {
+            "type":"array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": { "type": "number" }
+        },
+        "Vector4": {
+            "type":"array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": { "type": "number" }
+        },
+        "Matrix3": {
+            "type":"array",
+            "minItems": 9,
+            "maxItems": 9,
+            "items": { "type": "number" }
+        },
+        "Matrix4": {
+            "type":"array",
+            "minItems": 16,
+            "maxItems": 16,
+            "items": { "type": "number" }
+        }
+    }
+}
