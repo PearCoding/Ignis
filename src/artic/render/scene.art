@@ -1,12 +1,14 @@
 // Compile-time scene data
 struct Scene {
-    num_geometries: i32,
-    num_lights:     i32,
+    num_entities: i32,
+    num_shapes:   i32,
+    num_lights:   i32,
 
-    geometries: fn (i32) -> Geometry,
-    lights:     fn (i32) -> Light,
-    camera:     Camera,
-    bvh:        Bvh    
+    entities: fn (i32) -> Entity,
+    shapes:   fn (i32) -> Shape,
+    lights:   fn (i32) -> Light,
+    camera:   Camera, 
+    bvh:      SceneBvh
 }
 
 // Rendering device
@@ -18,7 +20,8 @@ struct Device {
 
     // General formats
     load_buffer: fn (&[u8]) -> DeviceBuffer,
-    load_bvh: fn (&[u8]) -> Bvh,
+    load_tri_bvh: fn (&[u8]) -> PrimBvh,
+    load_scene_bvh: fn (&[u8]) -> SceneBvh,
     load_image: fn (&[u8]) -> Image
 }
 

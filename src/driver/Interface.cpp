@@ -17,15 +17,19 @@
 
 using namespace IG;
 
-template <typename Node, typename Triangle>
+template <typename Node, typename Object>
 struct Bvh {
 	anydsl::Array<Node> nodes;
-	anydsl::Array<Triangle> tris;
+	anydsl::Array<Object> objs;
 };
 
 using Bvh2Tri1 = Bvh<Node2, Tri1>;
 using Bvh4Tri4 = Bvh<Node4, Tri4>;
 using Bvh8Tri4 = Bvh<Node8, Tri4>;
+
+using Bvh2Bbox = Bvh<Node2, TaggedBBox>;
+using Bvh4Bbox = Bvh<Node4, TaggedBBox>;
+using Bvh8Bbox = Bvh<Node8, TaggedBBox>;
 
 struct Interface {
 	using DeviceImage = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
@@ -34,6 +38,9 @@ struct Interface {
 		std::unordered_map<std::string, Bvh2Tri1> bvh2_tri1;
 		std::unordered_map<std::string, Bvh4Tri4> bvh4_tri4;
 		std::unordered_map<std::string, Bvh8Tri4> bvh8_tri4;
+		std::unordered_map<std::string, Bvh2Bbox> bvh2_bbox;
+		std::unordered_map<std::string, Bvh4Bbox> bvh4_bbox;
+		std::unordered_map<std::string, Bvh8Bbox> bvh8_bbox;
 		std::unordered_map<std::string, anydsl::Array<uint8_t>> buffers;
 		std::unordered_map<std::string, DeviceImage> images;
 		anydsl::Array<int32_t> tmp_buffer;
@@ -106,7 +113,7 @@ struct Interface {
 		auto it			= bvh2_tri1.find(filename);
 		if (it != bvh2_tri1.end())
 			return it->second;
-		return bvh2_tri1[filename] = std::move(load_bvh<Node2, Tri1>(dev, filename));
+		return bvh2_tri1[filename] = std::move(load_tri_bvh<Node2, Tri1>(dev, filename));
 	}
 
 	const Bvh4Tri4& load_bvh4_tri4(int32_t dev, const std::string& filename)
@@ -115,7 +122,7 @@ struct Interface {
 		auto it			= bvh4_tri4.find(filename);
 		if (it != bvh4_tri4.end())
 			return it->second;
-		return bvh4_tri4[filename] = std::move(load_bvh<Node4, Tri4>(dev, filename));
+		return bvh4_tri4[filename] = std::move(load_tri_bvh<Node4, Tri4>(dev, filename));
 	}
 
 	const Bvh8Tri4& load_bvh8_tri4(int32_t dev, const std::string& filename)
@@ -124,12 +131,42 @@ struct Interface {
 		auto it			= bvh8_tri4.find(filename);
 		if (it != bvh8_tri4.end())
 			return it->second;
-		return bvh8_tri4[filename] = std::move(load_bvh<Node8, Tri4>(dev, filename));
+		return bvh8_tri4[filename] = std::move(load_tri_bvh<Node8, Tri4>(dev, filename));
+	}
+
+	const Bvh2Bbox& load_bvh2_bbox(int32_t dev, const std::string& filename)
+	{
+		auto& bvh2_bbox = devices[dev].bvh2_bbox;
+		auto it			= bvh2_bbox.find(filename);
+		if (it != bvh2_bbox.end())
+			return it->second;
+		return bvh2_bbox[filename] = std::move(load_scene_bvh<Node2>(dev, filename));
+	}
+
+	const Bvh4Bbox& load_bvh4_bbox(int32_t dev, const std::string& filename)
+	{
+		auto& bvh4_bbox = devices[dev].bvh4_bbox;
+		auto it			= bvh4_bbox.find(filename);
+		if (it != bvh4_bbox.end())
+			return it->second;
+		return bvh4_bbox[filename] = std::move(load_scene_bvh<Node4>(dev, filename));
+	}
+
+	const Bvh8Bbox& load_bvh8_bbox(int32_t dev, const std::string& filename)
+	{
+		auto& bvh8_bbox = devices[dev].bvh8_bbox;
+		auto it			= bvh8_bbox.find(filename);
+		if (it != bvh8_bbox.end())
+			return it->second;
+		return bvh8_bbox[filename] = std::move(load_scene_bvh<Node8>(dev, filename));
 	}
 
 	template <typename T>
 	anydsl::Array<T> copy_to_device(int32_t dev, const T* data, size_t n)
 	{
+		if (n == 0)
+			return anydsl::Array<T>();
+
 		anydsl::Array<T> array(dev, reinterpret_cast<T*>(anydsl_alloc(dev, n * sizeof(T))), n);
 		anydsl_copy(0, data, 0, dev, array.data(), 0, sizeof(T) * n);
 		return array;
@@ -148,28 +185,55 @@ struct Interface {
 	}
 
 	template <typename Node, typename Tri>
-	Bvh<Node, Tri> load_bvh(int32_t dev, const std::string& filename)
+	Bvh<Node, Tri> load_tri_bvh(int32_t dev, const std::string& filename)
 	{
 		std::ifstream is(filename, std::ios::binary);
 		if (!is)
-			IG_LOG(L_ERROR) << "Cannot open BVH '" << filename << "'" << std::endl;
+			IG_LOG(L_ERROR) << "Cannot open shape BVH '" << filename << "'" << std::endl;
 		do {
 			size_t node_size = 0, tri_size = 0;
 			is.read((char*)&node_size, sizeof(uint32_t));
 			is.read((char*)&tri_size, sizeof(uint32_t));
 			if (node_size == sizeof(Node) && tri_size == sizeof(Tri)) {
-				IG_LOG(L_INFO) << "Loaded BVH file '" << filename << "'" << std::endl;
+				IG_LOG(L_INFO) << "Loaded shape BVH file '" << filename << "'" << std::endl;
 				std::vector<Node> nodes;
 				std::vector<Tri> tris;
 				IO::read_buffer(is, nodes);
 				IO::read_buffer(is, tris);
+				IG_LOG(L_INFO) << ">> " << nodes.size() << " nodes and " << tris.size() << " triangles" << std::endl;
 				return Bvh<Node, Tri>{ std::move(copy_to_device(dev, nodes)), std::move(copy_to_device(dev, tris)) };
 			}
 			IO::skip_buffer(is);
 			IO::skip_buffer(is);
 		} while (!is.eof() && is);
-		IG_LOG(L_ERROR) << "Invalid BVH file" << std::endl;
+		IG_LOG(L_ERROR) << "Invalid shape BVH file" << std::endl;
 		return Bvh<Node, Tri>{};
+	}
+
+	template <typename Node>
+	Bvh<Node, TaggedBBox> load_scene_bvh(int32_t dev, const std::string& filename)
+	{
+		std::ifstream is(filename, std::ios::binary);
+		if (!is)
+			IG_LOG(L_ERROR) << "Cannot open scene BVH '" << filename << "'" << std::endl;
+		do {
+			size_t node_size = 0, obj_size = 0;
+			is.read((char*)&node_size, sizeof(uint32_t));
+			is.read((char*)&obj_size, sizeof(uint32_t));
+			if (node_size == sizeof(Node) && obj_size == sizeof(TaggedBBox)) {
+				IG_LOG(L_INFO) << "Loaded scene BVH file '" << filename << "'" << std::endl;
+				std::vector<Node> nodes;
+				std::vector<TaggedBBox> objs;
+				IO::read_buffer(is, nodes);
+				IO::read_buffer(is, objs);
+				IG_LOG(L_INFO) << ">> " << nodes.size() << " nodes and " << objs.size() << " objects" << std::endl;
+				return Bvh<Node, TaggedBBox>{ std::move(copy_to_device(dev, nodes)), std::move(copy_to_device(dev, objs)) };
+			}
+			IO::skip_buffer(is);
+			IO::skip_buffer(is);
+		} while (!is.eof() && is);
+		IG_LOG(L_ERROR) << "Invalid scene BVH file" << std::endl;
+		return Bvh<Node, TaggedBBox>{};
 	}
 
 	const anydsl::Array<uint8_t>& load_buffer(int32_t dev, const std::string& filename)
@@ -204,6 +268,7 @@ struct Interface {
 	{
 		anydsl::copy(devices[dev].film_pixels, host_pixels);
 	}
+
 	void clear()
 	{
 		std::fill(host_pixels.begin(), host_pixels.end(), 0.0f);
@@ -258,7 +323,7 @@ inline void get_ray_stream(RayStream& rays, float* ptr, size_t capacity)
 inline void get_primary_stream(PrimaryStream& primary, float* ptr, size_t capacity)
 {
 	get_ray_stream(primary.rays, ptr, capacity);
-	primary.geom_id	  = (int*)ptr + 9 * capacity;
+	primary.ent_id	  = (int*)ptr + 9 * capacity;
 	primary.prim_id	  = (int*)ptr + 10 * capacity;
 	primary.t		  = ptr + 11 * capacity;
 	primary.u		  = ptr + 12 * capacity;
@@ -320,21 +385,42 @@ void ignis_load_bvh2_tri1(int32_t dev, const char* file, Node2** nodes, Tri1** t
 {
 	auto& bvh = interface->load_bvh2_tri1(dev, file);
 	*nodes	  = const_cast<Node2*>(bvh.nodes.data());
-	*tris	  = const_cast<Tri1*>(bvh.tris.data());
+	*tris	  = const_cast<Tri1*>(bvh.objs.data());
 }
 
 void ignis_load_bvh4_tri4(int32_t dev, const char* file, Node4** nodes, Tri4** tris)
 {
 	auto& bvh = interface->load_bvh4_tri4(dev, file);
 	*nodes	  = const_cast<Node4*>(bvh.nodes.data());
-	*tris	  = const_cast<Tri4*>(bvh.tris.data());
+	*tris	  = const_cast<Tri4*>(bvh.objs.data());
 }
 
 void ignis_load_bvh8_tri4(int32_t dev, const char* file, Node8** nodes, Tri4** tris)
 {
 	auto& bvh = interface->load_bvh8_tri4(dev, file);
 	*nodes	  = const_cast<Node8*>(bvh.nodes.data());
-	*tris	  = const_cast<Tri4*>(bvh.tris.data());
+	*tris	  = const_cast<Tri4*>(bvh.objs.data());
+}
+
+void ignis_load_bvh2_bbox(int32_t dev, const char* file, Node2** nodes, TaggedBBox** objs)
+{
+	auto& bvh = interface->load_bvh2_bbox(dev, file);
+	*nodes	  = const_cast<Node2*>(bvh.nodes.data());
+	*objs	  = const_cast<TaggedBBox*>(bvh.objs.data());
+}
+
+void ignis_load_bvh4_bbox(int32_t dev, const char* file, Node4** nodes, TaggedBBox** objs)
+{
+	auto& bvh = interface->load_bvh4_bbox(dev, file);
+	*nodes	  = const_cast<Node4*>(bvh.nodes.data());
+	*objs	  = const_cast<TaggedBBox*>(bvh.objs.data());
+}
+
+void ignis_load_bvh8_bbox(int32_t dev, const char* file, Node8** nodes, TaggedBBox** objs)
+{
+	auto& bvh = interface->load_bvh8_bbox(dev, file);
+	*nodes	  = const_cast<Node8*>(bvh.nodes.data());
+	*objs	  = const_cast<TaggedBBox*>(bvh.objs.data());
 }
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int32_t size)

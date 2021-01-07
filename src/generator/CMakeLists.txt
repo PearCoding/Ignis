@@ -10,7 +10,7 @@ set(RAPIDJSON_INCLUDE_DIR "${rapidjson_SOURCE_DIR}/include")
 
 set(SRC 
     main.cpp
-    BVHAdapter.h
+    BVHIO.h
     Generator.cpp
     Generator.h
     GeneratorBSDF.cpp
@@ -31,7 +31,9 @@ set(SRC
     IO.h
     Loader.cpp
     Loader.h
+    SceneBVHAdapter.h
     Target.h
+    TriBVHAdapter.h
 )
 
 add_executable(iggenerator ${SRC})

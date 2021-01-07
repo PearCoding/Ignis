@@ -40,6 +40,7 @@ set(IG_TARGET_PLATFORM "" CACHE STRING "Target platform for the generator tool. 
 set(IG_TARGET_DEVICE "" CACHE STRING "Target device on the selected platform. Leave empty to use the default.")
 set(IG_SCENE_FILE "${PROJECT_SOURCE_DIR}/scenes/diamond_scene.json" CACHE FILEPATH "Absolute path to an Mitsuba scene")
 set(IG_MEGAKERNEL_FUSION ON CACHE BOOL "Set to true to enable simple shader fusion for megakernel mappings")
+set(IG_ALWAYS_BUILD_BVH OFF CACHE BOOL "Always force the BVH to be rebuilt")
 
 # Setup artic clang flags
 set(ARTIC_CLANG_FLAGS -O3 -march=native -ffast-math CACHE STRING "Artic Clang compilation options")

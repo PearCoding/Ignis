@@ -1,0 +1,39 @@
+#[import(cc = "C")] fn ignis_test_expect_eq_f32(f32, f32) -> i32;
+#[import(cc = "C")] fn ignis_test_fail(&[u8]) -> ();
+#[import(cc = "C")] fn ignis_dbg_echo_i32(i32) -> ();
+#[import(cc = "C")] fn ignis_dbg_echo_f32(f32) -> ();
+#[import(cc = "C")] fn ignis_dbg_echo_vec2(&Vec2) -> ();
+#[import(cc = "C")] fn ignis_dbg_echo_vec3(&Vec3) -> ();
+#[import(cc = "C")] fn ignis_dbg_echo_vec4(&Vec4) -> ();
+#[import(cc = "C")] fn ignis_dbg_echo_mat3x3(&Mat3x3) -> ();
+#[import(cc = "C")] fn ignis_dbg_echo_mat4x4(&Mat4x4) -> ();
+
+fn @eq_f32(a: f32, b: f32) -> bool {
+    ignis_test_expect_eq_f32(a, b) == 0
+}
+
+fn eq_mat3x3(A : Mat3x3, B : Mat3x3) -> bool {
+    for i in range(0, 3) {
+        for j in range(0, 3) {
+            if !eq_f32(mat3x3_at(A, i,j), mat3x3_at(B, i,j)) {
+                return(false)
+            }
+        }
+    }
+
+    true
+}
+
+fn eq_mat4x4(A : Mat4x4, B : Mat4x4) -> bool {
+    for i in range(0, 4) {
+        for j in range(0, 4) {
+            if !eq_f32(mat4x4_at(A, i,j), mat4x4_at(B, i,j)) {
+                return(false)
+            }
+        }
+    }
+
+    true
+}
+
+fn eq_vec3(A : Vec3, B : Vec3) = eq_f32(A.x, B.x) && eq_f32(A.y, B.y) && eq_f32(A.z, B.z);

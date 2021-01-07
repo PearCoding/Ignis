@@ -1,9 +1,8 @@
 // Abstract geometry object (tied to one device)
-struct Geometry {
+struct Shape {
     // Computes the surface element after an intersection on this geometry
     surface_element: fn (Ray, Hit) -> SurfaceElement,
-    // Shader for this geometry
-    shader: Shader
+    bvh: PrimBvh
 }
 
 // Triangle mesh with per-vertex/per-face attributes
@@ -19,7 +18,7 @@ struct TriMesh {
 }
 
 // Creates a geometry object from a triangle mesh definition
-fn @make_tri_mesh_geometry(math: Intrinsics, tri_mesh: TriMesh, shader: Shader) = Geometry {
+fn @make_trimesh_shape(math: Intrinsics, tri_mesh: TriMesh, bvh: PrimBvh) = Shape {
     surface_element = @ |ray, hit| {
         let (i0, i1, i2) = tri_mesh.triangles(hit.prim_id);
 
@@ -49,5 +48,6 @@ fn @make_tri_mesh_geometry(math: Intrinsics, tri_mesh: TriMesh, shader: Shader) 
             attr =        attr
         }
     },
-    shader = shader
+    bvh = bvh
 };
+

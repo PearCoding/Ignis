@@ -16,8 +16,20 @@ struct GeneratorContext {
 	size_t SPP;
 	bool Fusion;
 	bool EnablePadding;
+	bool ForceBVHBuild;
 
 	GeneratorEnvironment Environment;
+
+	inline static std::string makeId(const std::string& name)
+	{
+		std::string id = name; // TODO?
+		std::transform(id.begin(), id.end(), id.begin(), [](char c) {
+			if (std::isspace(c) || !std::isalnum(c))
+				return '_';
+			return c;
+		});
+		return id;
+	}
 
 	inline std::filesystem::path handlePath(const std::filesystem::path& path) const
 	{

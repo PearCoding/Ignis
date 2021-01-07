@@ -1,0 +1,19 @@
+# Compile artic stuff
+anydsl_runtime_wrap(ARTIC_OBJS
+    NAME "artic_test"
+    FRONTEND "artic"
+    CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
+    FILES ${ARTIC_SRC} ${ARTIC_TEST_SRC}
+    INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/generated_test_interface)
+
+# Setup actual test
+SET(_FILES 
+    interface.cpp 
+    main.cpp 
+    ${ARTIC_OBJS}
+    ${CMAKE_CURRENT_BINARY_DIR}/generated_test_interface.h)
+    
+add_executable(igtest ${_FILES})
+target_link_libraries(igtest PRIVATE ${AnyDSL_runtime_LIBRARIES} ig_lib_runtime)
+target_include_directories(igtest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME ignis_test COMMAND igtest)

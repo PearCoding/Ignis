@@ -25,6 +25,6 @@ inline std::vector<uint8> pad_buffer(const std::vector<T>& elems, bool enable, s
 	return new_elems;
 }
 
-void write_tri_mesh(const TriMesh& tri_mesh, bool enable_padding);
+void write_tri_mesh(const std::string& suffix, const TriMesh& tri_mesh, bool enable_padding);
 } // namespace IO
 } // namespace IG

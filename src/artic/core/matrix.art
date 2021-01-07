@@ -32,29 +32,26 @@ fn @flip_orthonormal_mat3x3(m: Mat3x3) = make_mat3x3(m.col(0), vec3_neg(m.col(1)
 fn @make_mat3x4(c0: Vec3, c1: Vec3, c2: Vec3, c3: Vec3) = Mat3x4 { col = [c0, c1, c2, c3] };
 fn @make_mat4x4(c0: Vec4, c1: Vec4, c2: Vec4, c3: Vec4) = Mat4x4 { col = [c0, c1, c2, c3] };
 
-fn @mat2x2_row(m: Mat2x2, i: i32) -> Vec2 {
-    [make_vec2(m.col(0).x, m.col(1).x),
-     make_vec2(m.col(0).y, m.col(1).y)](i)
-}
+fn @mat2x2_transpose(m: Mat2x2) = make_mat2x2(make_vec2(m.col(0).x, m.col(1).x),
+                                              make_vec2(m.col(0).y, m.col(1).y));
 
-fn @mat3x3_row(m: Mat3x3, i: i32) -> Vec3 {
-    [make_vec3(m.col(0).x, m.col(1).x, m.col(2).x),
-     make_vec3(m.col(0).y, m.col(1).y, m.col(2).y),
-     make_vec3(m.col(0).z, m.col(1).z, m.col(2).z)](i)
-} 
+fn @mat3x3_transpose(m: Mat3x3) = make_mat3x3(make_vec3(m.col(0).x, m.col(1).x, m.col(2).x),
+                                              make_vec3(m.col(0).y, m.col(1).y, m.col(2).y),
+                                              make_vec3(m.col(0).z, m.col(1).z, m.col(2).z));
 
+fn @mat4x4_transpose(m: Mat4x4) = make_mat4x4(make_vec4(m.col(0).x, m.col(1).x, m.col(2).x, m.col(3).x),
+                                              make_vec4(m.col(0).y, m.col(1).y, m.col(2).y, m.col(3).y),
+                                              make_vec4(m.col(0).z, m.col(1).z, m.col(2).z, m.col(3).z),
+                                              make_vec4(m.col(0).w, m.col(1).w, m.col(2).w, m.col(3).w));
+
+fn @mat2x2_row(m: Mat2x2, i: i32) = mat2x2_transpose(m).col(i);
+fn @mat3x3_row(m: Mat3x3, i: i32) = mat3x3_transpose(m).col(i);
 fn @mat3x4_row(m: Mat3x4, i: i32) -> Vec4 {
     [make_vec4(m.col(0).x, m.col(1).x, m.col(2).x, m.col(3).x),
      make_vec4(m.col(0).y, m.col(1).y, m.col(2).y, m.col(3).y),
      make_vec4(m.col(0).z, m.col(1).z, m.col(2).z, m.col(3).z)](i)
 } 
-
-fn @mat4x4_row(m: Mat4x4, i: i32) -> Vec4 {
-    [make_vec4(m.col(0).x, m.col(1).x, m.col(2).x, m.col(3).x),
-     make_vec4(m.col(0).y, m.col(1).y, m.col(2).y, m.col(3).y),
-     make_vec4(m.col(0).z, m.col(1).z, m.col(2).z, m.col(3).z),
-     make_vec4(m.col(0).w, m.col(1).w, m.col(2).w, m.col(3).w)](i)
-} 
+fn @mat4x4_row(m: Mat4x4, i: i32) = mat4x4_transpose(m).col(i);
 
 fn @mat2x2_identity() = make_mat2x2(
     make_vec2(1, 0),
@@ -111,3 +108,113 @@ fn @mat4x4_matmul(a: Mat4x4, b: Mat4x4) = make_mat4x4(
     mat4x4_mul(a, b.col(1)),
     mat4x4_mul(a, b.col(2)),
     mat4x4_mul(a, b.col(3)));
+
+fn @mat3x3_at(a: Mat3x3, row: i32, col: i32) = [a.col(col).x, a.col(col).y, a.col(col).z](row);
+fn @mat4x4_at(a: Mat4x4, row: i32, col: i32) = [a.col(col).x, a.col(col).y, a.col(col).z, a.col(col).w](row);
+
+fn @mat3x3_det(a: Mat3x3) = mat3x3_at(a, 0, 0) * (mat3x3_at(a, 1, 1) * mat3x3_at(a, 2, 2) - mat3x3_at(a, 2, 1) * mat3x3_at(a, 1, 2)) -
+                            mat3x3_at(a, 0, 1) * (mat3x3_at(a, 1, 0) * mat3x3_at(a, 2, 2) - mat3x3_at(a, 1, 2) * mat3x3_at(a, 2, 0)) +
+                            mat3x3_at(a, 0, 2) * (mat3x3_at(a, 1, 0) * mat3x3_at(a, 2, 1) - mat3x3_at(a, 1, 1) * mat3x3_at(a, 2, 0));
+
+fn @mat4x4_det(a: Mat4x4) {
+    let inv0 =  mat4x4_at(a, 1, 1) * mat4x4_at(a, 2, 2) * mat4x4_at(a, 3, 3) - mat4x4_at(a, 1, 1) * mat4x4_at(a, 2, 3) * mat4x4_at(a, 3, 2) - mat4x4_at(a, 2, 1) * mat4x4_at(a, 1, 2) * mat4x4_at(a, 3, 3) + mat4x4_at(a, 2, 1) * mat4x4_at(a, 1, 3) * mat4x4_at(a, 3, 2) + mat4x4_at(a, 3, 1) * mat4x4_at(a, 1, 2) * mat4x4_at(a, 2, 3) - mat4x4_at(a, 3, 1) * mat4x4_at(a, 1, 3) * mat4x4_at(a, 2, 2);
+    let inv1 = -mat4x4_at(a, 1, 0) * mat4x4_at(a, 2, 2) * mat4x4_at(a, 3, 3) + mat4x4_at(a, 1, 0) * mat4x4_at(a, 2, 3) * mat4x4_at(a, 3, 2) + mat4x4_at(a, 2, 0) * mat4x4_at(a, 1, 2) * mat4x4_at(a, 3, 3) - mat4x4_at(a, 2, 0) * mat4x4_at(a, 1, 3) * mat4x4_at(a, 3, 2) - mat4x4_at(a, 3, 0) * mat4x4_at(a, 1, 2) * mat4x4_at(a, 2, 3) + mat4x4_at(a, 3, 0) * mat4x4_at(a, 1, 3) * mat4x4_at(a, 2, 2);
+    let inv2 =  mat4x4_at(a, 1, 0) * mat4x4_at(a, 2, 1) * mat4x4_at(a, 3, 3) - mat4x4_at(a, 1, 0) * mat4x4_at(a, 2, 3) * mat4x4_at(a, 3, 1) - mat4x4_at(a, 2, 0) * mat4x4_at(a, 1, 1) * mat4x4_at(a, 3, 3) + mat4x4_at(a, 2, 0) * mat4x4_at(a, 1, 3) * mat4x4_at(a, 3, 1) + mat4x4_at(a, 3, 0) * mat4x4_at(a, 1, 1) * mat4x4_at(a, 2, 3) - mat4x4_at(a, 3, 0) * mat4x4_at(a, 1, 3) * mat4x4_at(a, 2, 1);
+    let inv3 = -mat4x4_at(a, 1, 0) * mat4x4_at(a, 2, 1) * mat4x4_at(a, 3, 2) + mat4x4_at(a, 1, 0) * mat4x4_at(a, 2, 2) * mat4x4_at(a, 3, 1) + mat4x4_at(a, 2, 0) * mat4x4_at(a, 1, 1) * mat4x4_at(a, 3, 2) - mat4x4_at(a, 2, 0) * mat4x4_at(a, 1, 2) * mat4x4_at(a, 3, 1) - mat4x4_at(a, 3, 0) * mat4x4_at(a, 1, 1) * mat4x4_at(a, 2, 2) + mat4x4_at(a, 3, 0) * mat4x4_at(a, 1, 2) * mat4x4_at(a, 2, 1);
+    mat4x4_at(a, 0, 0) * inv0 + mat4x4_at(a, 0, 1) * inv1 + mat4x4_at(a, 0, 2) * inv2 + mat4x4_at(a, 0, 3) * inv3
+}
+
+// Will invert the matrix, but will not check if its possible.
+fn @mat3x3_invert_det(a : Mat3x3) -> (Mat3x3, f32) {
+    let det = mat3x3_det(a);
+    let inv_det = 1 / det;
+
+    let m00 = inv_det * (mat3x3_at(a, 1, 1) * mat3x3_at(a, 2, 2) - mat3x3_at(a, 2, 1) * mat3x3_at(a, 1, 2));
+    let m01 = inv_det * (mat3x3_at(a, 0, 2) * mat3x3_at(a, 2, 1) - mat3x3_at(a, 0, 1) * mat3x3_at(a, 2, 2));
+    let m02 = inv_det * (mat3x3_at(a, 0, 1) * mat3x3_at(a, 1, 2) - mat3x3_at(a, 0, 2) * mat3x3_at(a, 1, 1));
+    let m10 = inv_det * (mat3x3_at(a, 1, 2) * mat3x3_at(a, 2, 0) - mat3x3_at(a, 1, 0) * mat3x3_at(a, 2, 2));
+    let m11 = inv_det * (mat3x3_at(a, 0, 0) * mat3x3_at(a, 2, 2) - mat3x3_at(a, 0, 2) * mat3x3_at(a, 2, 0));
+    let m12 = inv_det * (mat3x3_at(a, 1, 0) * mat3x3_at(a, 0, 2) - mat3x3_at(a, 0, 0) * mat3x3_at(a, 1, 2));
+    let m20 = inv_det * (mat3x3_at(a, 1, 0) * mat3x3_at(a, 2, 1) - mat3x3_at(a, 2, 0) * mat3x3_at(a, 1, 1));
+    let m21 = inv_det * (mat3x3_at(a, 2, 0) * mat3x3_at(a, 0, 1) - mat3x3_at(a, 0, 0) * mat3x3_at(a, 2, 1));
+    let m22 = inv_det * (mat3x3_at(a, 0, 0) * mat3x3_at(a, 1, 1) - mat3x3_at(a, 1, 0) * mat3x3_at(a, 0, 1));
+
+    (make_mat3x3(make_vec3(m00,m10,m20), make_vec3(m01,m11,m21), make_vec3(m02,m12,m22)), det)
+}
+
+// Will invert the matrix, but will not check if its possible.
+fn @mat4x4_invert_det(a: Mat4x4) -> (Mat4x4, f32) {
+    let A2323 = mat4x4_at(a, 2, 2) * mat4x4_at(a, 3, 3) - mat4x4_at(a, 2, 3) * mat4x4_at(a, 3, 2);
+    let A1323 = mat4x4_at(a, 2, 1) * mat4x4_at(a, 3, 3) - mat4x4_at(a, 2, 3) * mat4x4_at(a, 3, 1);
+    let A1223 = mat4x4_at(a, 2, 1) * mat4x4_at(a, 3, 2) - mat4x4_at(a, 2, 2) * mat4x4_at(a, 3, 1);
+    let A0323 = mat4x4_at(a, 2, 0) * mat4x4_at(a, 3, 3) - mat4x4_at(a, 2, 3) * mat4x4_at(a, 3, 0);
+    let A0223 = mat4x4_at(a, 2, 0) * mat4x4_at(a, 3, 2) - mat4x4_at(a, 2, 2) * mat4x4_at(a, 3, 0);
+    let A0123 = mat4x4_at(a, 2, 0) * mat4x4_at(a, 3, 1) - mat4x4_at(a, 2, 1) * mat4x4_at(a, 3, 0);
+    let A2313 = mat4x4_at(a, 1, 2) * mat4x4_at(a, 3, 3) - mat4x4_at(a, 1, 3) * mat4x4_at(a, 3, 2);
+    let A1313 = mat4x4_at(a, 1, 1) * mat4x4_at(a, 3, 3) - mat4x4_at(a, 1, 3) * mat4x4_at(a, 3, 1);
+    let A1213 = mat4x4_at(a, 1, 1) * mat4x4_at(a, 3, 2) - mat4x4_at(a, 1, 2) * mat4x4_at(a, 3, 1);
+    let A2312 = mat4x4_at(a, 1, 2) * mat4x4_at(a, 2, 3) - mat4x4_at(a, 1, 3) * mat4x4_at(a, 2, 2);
+    let A1312 = mat4x4_at(a, 1, 1) * mat4x4_at(a, 2, 3) - mat4x4_at(a, 1, 3) * mat4x4_at(a, 2, 1);
+    let A1212 = mat4x4_at(a, 1, 1) * mat4x4_at(a, 2, 2) - mat4x4_at(a, 1, 2) * mat4x4_at(a, 2, 1);
+    let A0313 = mat4x4_at(a, 1, 0) * mat4x4_at(a, 3, 3) - mat4x4_at(a, 1, 3) * mat4x4_at(a, 3, 0);
+    let A0213 = mat4x4_at(a, 1, 0) * mat4x4_at(a, 3, 2) - mat4x4_at(a, 1, 2) * mat4x4_at(a, 3, 0);
+    let A0312 = mat4x4_at(a, 1, 0) * mat4x4_at(a, 2, 3) - mat4x4_at(a, 1, 3) * mat4x4_at(a, 2, 0);
+    let A0212 = mat4x4_at(a, 1, 0) * mat4x4_at(a, 2, 2) - mat4x4_at(a, 1, 2) * mat4x4_at(a, 2, 0);
+    let A0113 = mat4x4_at(a, 1, 0) * mat4x4_at(a, 3, 1) - mat4x4_at(a, 1, 1) * mat4x4_at(a, 3, 0);
+    let A0112 = mat4x4_at(a, 1, 0) * mat4x4_at(a, 2, 1) - mat4x4_at(a, 1, 1) * mat4x4_at(a, 2, 0);
+
+    let det =  mat4x4_at(a, 0, 0) * (  mat4x4_at(a, 1, 1) * A2323 -  mat4x4_at(a, 1, 2) * A1323 +  mat4x4_at(a, 1, 3) * A1223 ) 
+            -  mat4x4_at(a, 0, 1) * (  mat4x4_at(a, 1, 0) * A2323 -  mat4x4_at(a, 1, 2) * A0323 +  mat4x4_at(a, 1, 3) * A0223 ) 
+            +  mat4x4_at(a, 0, 2) * (  mat4x4_at(a, 1, 0) * A1323 -  mat4x4_at(a, 1, 1) * A0323 +  mat4x4_at(a, 1, 3) * A0123 ) 
+            -  mat4x4_at(a, 0, 3) * (  mat4x4_at(a, 1, 0) * A1223 -  mat4x4_at(a, 1, 1) * A0223 +  mat4x4_at(a, 1, 2) * A0123 );
+    let inv_det = 1/det;
+
+    let m00 = inv_det *  (mat4x4_at(a, 1, 1) * A2323 - mat4x4_at(a, 1, 2) * A1323 + mat4x4_at(a, 1, 3) * A1223);
+    let m01 = inv_det * -(mat4x4_at(a, 0, 1) * A2323 - mat4x4_at(a, 0, 2) * A1323 + mat4x4_at(a, 0, 3) * A1223);
+    let m02 = inv_det *  (mat4x4_at(a, 0, 1) * A2313 - mat4x4_at(a, 0, 2) * A1313 + mat4x4_at(a, 0, 3) * A1213);
+    let m03 = inv_det * -(mat4x4_at(a, 0, 1) * A2312 - mat4x4_at(a, 0, 2) * A1312 + mat4x4_at(a, 0, 3) * A1212);
+    let m10 = inv_det * -(mat4x4_at(a, 1, 0) * A2323 - mat4x4_at(a, 1, 2) * A0323 + mat4x4_at(a, 1, 3) * A0223);
+    let m11 = inv_det *  (mat4x4_at(a, 0, 0) * A2323 - mat4x4_at(a, 0, 2) * A0323 + mat4x4_at(a, 0, 3) * A0223);
+    let m12 = inv_det * -(mat4x4_at(a, 0, 0) * A2313 - mat4x4_at(a, 0, 2) * A0313 + mat4x4_at(a, 0, 3) * A0213);
+    let m13 = inv_det *  (mat4x4_at(a, 0, 0) * A2312 - mat4x4_at(a, 0, 2) * A0312 + mat4x4_at(a, 0, 3) * A0212);
+    let m20 = inv_det *  (mat4x4_at(a, 1, 0) * A1323 - mat4x4_at(a, 1, 1) * A0323 + mat4x4_at(a, 1, 3) * A0123);
+    let m21 = inv_det * -(mat4x4_at(a, 0, 0) * A1323 - mat4x4_at(a, 0, 1) * A0323 + mat4x4_at(a, 0, 3) * A0123);
+    let m22 = inv_det *  (mat4x4_at(a, 0, 0) * A1313 - mat4x4_at(a, 0, 1) * A0313 + mat4x4_at(a, 0, 3) * A0113);
+    let m23 = inv_det * -(mat4x4_at(a, 0, 0) * A1312 - mat4x4_at(a, 0, 1) * A0312 + mat4x4_at(a, 0, 3) * A0112);
+    let m30 = inv_det * -(mat4x4_at(a, 1, 0) * A1223 - mat4x4_at(a, 1, 1) * A0223 + mat4x4_at(a, 1, 2) * A0123);
+    let m31 = inv_det *  (mat4x4_at(a, 0, 0) * A1223 - mat4x4_at(a, 0, 1) * A0223 + mat4x4_at(a, 0, 2) * A0123);
+    let m32 = inv_det * -(mat4x4_at(a, 0, 0) * A1213 - mat4x4_at(a, 0, 1) * A0213 + mat4x4_at(a, 0, 2) * A0113);
+    let m33 = inv_det *  (mat4x4_at(a, 0, 0) * A1212 - mat4x4_at(a, 0, 1) * A0212 + mat4x4_at(a, 0, 2) * A0112);
+
+    (make_mat4x4(make_vec4(m00,m10,m20,m30), make_vec4(m01,m11,m21,m31), make_vec4(m02,m12,m22,m32), make_vec4(m03,m13,m23,m33)), det)
+}
+
+fn @mat3x3_invert(a: Mat3x3) -> Mat3x3 {
+    let (m, _) = mat3x3_invert_det(a);
+    m
+}
+
+fn @mat4x4_invert(a: Mat4x4) -> Mat4x4 {
+    let (m, _) = mat4x4_invert_det(a);
+    m
+}
+
+fn @mat4x4_linear(a: Mat4x4) = make_mat3x3(
+    make_vec3(a.col(0).x, a.col(0).y, a.col(0).z),
+    make_vec3(a.col(1).x, a.col(1).y, a.col(1).z),
+    make_vec3(a.col(2).x, a.col(2).y, a.col(2).z)
+);
+
+// This is invalid if scale is non-uniform.
+// We have to use the transpose inverse, but ....
+//fn @mat4x4_normal(a: Mat4x4) = mat4x4_linear(a);
+fn @mat4x4_normal(a: Mat4x4) = mat3x3_transpose(mat3x3_invert(mat4x4_linear(a)));
+
+fn @mat4x4_transform_point(a: Mat4x4, v: Vec3) -> Vec3 {
+    let res = mat4x4_mul(a, make_vec4(v.x, v.y, v.z, 1));
+    let inv_w = 1/res.w;
+    make_vec3(res.x*inv_w, res.y*inv_w, res.z*inv_w)
+}
+
+fn @mat4x4_transform_direction(a: Mat4x4, v: Vec3) = mat3x3_mul(mat4x4_linear(a), v);
+fn @mat4x4_transform_normal(math: Intrinsics, a: Mat4x4, v: Vec3) = vec3_normalize(math, mat3x3_mul(mat4x4_normal(a), v));

@@ -5,6 +5,12 @@
 #include "mesh/ObjFile.h"
 #include "mesh/PlyFile.h"
 
+#include "BVHIO.h"
+#include "IO.h"
+#include "TriBVHAdapter.h"
+
+#include <sstream>
+
 namespace IG {
 
 using namespace Loader;
@@ -127,12 +133,8 @@ inline TriMesh setup_mesh_mitsuba(const Object& elem, const GeneratorContext& ct
 
 void GeneratorShape::setup(GeneratorContext& ctx)
 {
-	size_t counter = 0;
 	for (const auto& pair : ctx.Scene.shapes()) {
 		const auto child = pair.second;
-
-		const size_t id = counter;
-		++counter;
 
 		TriMesh child_mesh;
 		if (child->pluginType() == "rectangle") {
@@ -169,17 +171,84 @@ void GeneratorShape::setup(GeneratorContext& ctx)
 		for (size_t i = 0; i < child_mesh.face_normals.size(); ++i)
 			child_mesh.face_normals[i] = transform.applyNormal(child_mesh.face_normals[i]);
 
-		Shape shape;
-		shape.VtxOffset = ctx.Environment.Mesh.vertices.size();
-		shape.ItxOffset = ctx.Environment.Mesh.indices.size();
-		shape.VtxCount	= child_mesh.vertices.size();
-		shape.ItxCount	= child_mesh.indices.size();
-
-		child_mesh.replaceID(id);
+		// Build bounding box
+		BoundingBox bbox = BoundingBox::Empty();
+		for (const auto& v : child_mesh.vertices)
+			bbox.extend(v);
 		
-		ctx.Environment.Mesh.mergeFrom(child_mesh);
-		ctx.Environment.Shapes.insert({ pair.first, std::move(shape) });
+		bbox.inflate(0.0001f); // Make sure it has a volume
+
+		const std::string suffix = GeneratorContext::makeId(pair.first);
+
+		Shape shape;
+		shape.VtxCount	  = child_mesh.vertices.size();
+		shape.ItxCount	  = child_mesh.indices.size();
+		shape.BoundingBox = bbox;
+		shape.TriMesh	  = "trimesh_" + suffix;
+		shape.BVH		  = "bvh_" + suffix;
+		ctx.Environment.Shapes.insert({ pair.first, shape });
+
+		// Export data:
+		IG_LOG(L_INFO) << "Generating triangle mesh for shape " << pair.first << std::endl;
+		if (child_mesh.face_area.size() < 4) // Make sure it is not too small
+			child_mesh.face_area.resize(16);
+		IO::write_tri_mesh(suffix, child_mesh, ctx.EnablePadding);
+
+		// Generate BVH
+		if (ctx.ForceBVHBuild || IO::must_build_bvh(suffix, ctx.FilePath.string(), ctx.Target)) {
+			IG_LOG(L_INFO) << "Generating BVH for shape " << pair.first << std::endl;
+			IO::remove_bvh(suffix);
+			if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
+				std::vector<typename BvhNTriM<2, 1>::Node> nodes;
+				std::vector<typename BvhNTriM<2, 1>::Tri> tris;
+				build_bvh<2, 1>(child_mesh, nodes, tris);
+				IO::write_bvh(suffix, nodes, tris);
+			} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
+				std::vector<typename BvhNTriM<4, 4>::Node> nodes;
+				std::vector<typename BvhNTriM<4, 4>::Tri> tris;
+				build_bvh<4, 4>(child_mesh, nodes, tris);
+				IO::write_bvh(suffix, nodes, tris);
+			} else {
+				std::vector<typename BvhNTriM<8, 4>::Node> nodes;
+				std::vector<typename BvhNTriM<8, 4>::Tri> tris;
+				build_bvh<8, 4>(child_mesh, nodes, tris);
+				IO::write_bvh(suffix, nodes, tris);
+			}
+			IO::write_bvh_stamp(suffix, ctx.FilePath.string(), ctx.Target);
+		} else {
+			IG_LOG(L_INFO) << "Reusing existing BVH for shape " << pair.first << std::endl;
+		}
 	}
 }
 
+std::string GeneratorShape::dump(const GeneratorContext& ctx)
+{
+	std::stringstream sstream;
+
+	for (const auto& pair : ctx.Scene.shapes()) {
+		const std::string suffix = GeneratorContext::makeId(pair.first);
+		const size_t numTris	 = ctx.Environment.Shapes.at(pair.first).ItxCount;
+
+		sstream << "    // ---- Shape " << pair.first << "\n"
+				<< "    let vertices_" << suffix << " = device.load_buffer(\"data/meshes/vertices_" << suffix << ".bin\");\n"
+				<< "    let normals_" << suffix << " = device.load_buffer(\"data/meshes/normals_" << suffix << ".bin\");\n"
+				<< "    let face_normals_" << suffix << " = device.load_buffer(\"data/meshes/face_normals_" << suffix << ".bin\");\n"
+				<< "    let face_area_" << suffix << " = device.load_buffer(\"data/meshes/face_area_" << suffix << ".bin\");\n"
+				<< "    let texcoords_" << suffix << " = device.load_buffer(\"data/meshes/texcoords_" << suffix << ".bin\");\n"
+				<< "    let indices_" << suffix << " = device.load_buffer(\"data/meshes/indices_" << suffix << ".bin\");\n"
+				<< "    let trimesh_" << suffix << " = TriMesh {\n"
+				<< "       vertices     = @ |i| vertices_" << suffix << ".load_vec3(i),\n"
+				<< "       normals      = @ |i| normals_" << suffix << ".load_vec3(i),\n"
+				<< "       face_normals = @ |i| face_normals_" << suffix << ".load_vec3(i),\n"
+				<< "       face_area    = @ |i| face_area_" << suffix << ".load_f32(i),\n"
+				<< "       triangles    = @ |i| { let (i0, i1, i2, _) = indices_" << suffix << ".load_int4(i); (i0, i1, i2) },\n"
+				<< "       attrs        = @ |_| (false, @ |j| vec2_to_4(texcoords_" << suffix << ".load_vec2(j), 0.0, 0.0)),\n"
+				<< "       num_attrs    = 1,\n"
+				<< "       num_tris     = " << numTris << "\n"
+				<< "    };\n"
+				<< "    let bvh_" << suffix << " = device.load_tri_bvh(\"" << IO::bvh_filepath(suffix) << "\");\n";
+	}
+
+	return sstream.str();
+}
 } // namespace IG

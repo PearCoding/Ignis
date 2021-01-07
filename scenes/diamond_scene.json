@@ -36,7 +36,7 @@
 		{"name":"Left","shape":"Left", "bsdf":"mat-ColoredWall"},
 		{"name":"Right","shape":"Right", "bsdf":"mat-ColoredWall"},
 		{"name":"Back","shape":"Back", "bsdf":"mat-GrayWall"},
-		{"name":"dobj","shape":"dobj", "bsdf":"mat-Diamond"}
+		{"name":"dobj","shape":"dobj", "bsdf":"mat-Diamond", "transform":{"position":[1,0,0]}}
 	],
 	"lights": [
 		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[62,62,62]}

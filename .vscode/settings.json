@@ -81,6 +81,11 @@
         "object": "cpp",
         "matrixd": "cpp",
         "matrixf": "cpp",
-        "image": "cpp"
+        "image": "cpp",
+        "boundingbox": "cpp",
+        "node": "cpp",
+        "glextensions": "cpp",
+        "graphicscontext": "cpp",
+        "texture": "cpp"
     }
 }

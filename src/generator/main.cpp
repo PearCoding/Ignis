@@ -35,6 +35,7 @@ static void usage()
 			  << "           --max-path-len        Sets the maximum path length (default: 64)\n"
 			  << "    -spp   --samples-per-pixel   Sets the number of samples per pixel (default: 4)\n"
 			  << "           --fusion              Enables megakernel shader fusion (default: disabled)\n"
+			  << "           --force-bvh           Force bvh to be build\n"
 			  << "Available targets:\n"
 			  << "    generic, sse42, avx, avx2, asimd,\n"
 			  << "    nvvm = nvvm-streaming, nvvm-megakernel,\n"
@@ -67,6 +68,7 @@ int main(int argc, char** argv)
 	options.max_path_length = 64;
 	options.target			= Target::INVALID;
 	options.fusion			= false;
+	options.force_bvh_build = false;
 
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
@@ -120,6 +122,8 @@ int main(int argc, char** argv)
 				options.max_path_length = strtol(argv[i], NULL, 10);
 			} else if (!strcmp(argv[i], "--fusion")) {
 				options.fusion = true;
+			} else if (!strcmp(argv[i], "--force-bvh")) {
+				options.force_bvh_build = true;
 			} else {
 				IG_LOG(L_ERROR) << "Unknown option '" << argv[i] << "'. Aborting." << std::endl;
 				return EXIT_FAILURE;

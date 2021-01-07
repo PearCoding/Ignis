@@ -24,6 +24,16 @@ fn @invert_surface_element(surf: SurfaceElement) = SurfaceElement {
     local       = flip_orthonormal_mat3x3(surf.local)
 };
 
+// Map local surface element to global surface element based on the given entity
+fn @map_surface_element(math: Intrinsics, surf: SurfaceElement, ent: Entity) = SurfaceElement {
+    is_entering = surf.is_entering,
+    point       = mat4x4_transform_point(ent.to_global, surf.point),
+    face_normal = mat4x4_transform_normal(math, ent.to_global, surf.face_normal),
+    uv_coords   = surf.uv_coords,
+    attr        = surf.attr,
+    local       = mat3x3_matmul(mat4x4_linear(ent.to_global), surf.local)
+};
+
 // Result of sampling a BSDF
 struct BsdfSample {
     in_dir: Vec3,  // Sampled direction

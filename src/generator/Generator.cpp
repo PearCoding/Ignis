@@ -7,8 +7,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "BVHAdapter.h"
+#include "BVHIO.h"
 #include "IO.h"
+#include "TriBVHAdapter.h"
 
 #include "Logger.h"
 
@@ -24,19 +25,11 @@ using namespace Loader;
 struct SceneBuilder {
 	GeneratorContext Context;
 
-	inline static std::string makeId(const std::string& name)
-	{
-		std::string id = name; // TODO?
-		std::transform(id.begin(), id.end(), id.begin(), [](char c) {
-			if (std::isspace(c) || !std::isalnum(c))
-				return '_';
-			return c;
-		});
-		return id;
-	}
-
 	inline void setup_integrator(std::ostream& os)
 	{
+		os << "    let renderer = make_debug_renderer();\n";
+		return;
+
 		const auto technique = Context.Scene.technique();
 
 		// TODO: Use the sensor sample count as ssp
@@ -47,7 +40,7 @@ struct SceneBuilder {
 				os << "    let renderer = make_path_tracing_renderer(" << lastMPL << " /*max_path_len*/, " << Context.SPP << " /*spp*/);\n";
 				return;
 			} else if (technique->pluginType() == "debug") {
-				os << "     let renderer = make_debug_renderer();\n";
+				os << "    let renderer = make_debug_renderer();\n";
 				return;
 			}
 		}
@@ -72,98 +65,67 @@ struct SceneBuilder {
 
 	void setup_shapes(std::ostream& os)
 	{
-		GeneratorShape::setup(Context);
-
 		if (Context.Environment.Shapes.empty()) {
 			IG_LOG(L_ERROR) << "No shapes available" << std::endl;
 			return;
 		}
 
-		IG_LOG(L_INFO) << "Generating merged triangle mesh" << std::endl;
-		os << "\n    // Triangle mesh\n"
-		   << "    let vertices     = device.load_buffer(\"data/vertices.bin\");\n"
-		   << "    let normals      = device.load_buffer(\"data/normals.bin\");\n"
-		   << "    let face_normals = device.load_buffer(\"data/face_normals.bin\");\n"
-		   << "    let face_area    = device.load_buffer(\"data/face_area.bin\");\n"
-		   << "    let texcoords    = device.load_buffer(\"data/texcoords.bin\");\n"
-		   << "    let indices      = device.load_buffer(\"data/indices.bin\");\n"
-		   << "    let tri_mesh     = TriMesh {\n"
-		   << "        vertices     = @ |i| vertices.load_vec3(i),\n"
-		   << "        normals      = @ |i| normals.load_vec3(i),\n"
-		   << "        face_normals = @ |i| face_normals.load_vec3(i),\n"
-		   << "        face_area    = @ |i| face_area.load_f32(i),\n"
-		   << "        triangles    = @ |i| { let (i0, i1, i2, _) = indices.load_int4(i); (i0, i1, i2) },\n"
-		   << "        attrs        = @ |_| (false, @ |j| vec2_to_4(texcoords.load_vec2(j), 0.0, 0.0)),\n"
-		   << "        num_attrs    = 1,\n"
-		   << "        num_tris     = " << size_t(Context.Environment.Mesh.faceCount()) << "\n"
-		   << "    };\n";
+		IG_LOG(L_INFO) << "Generating shapes for " << Context.FilePath << "" << std::endl;
 
-		if (Context.Environment.Mesh.face_area.size() < 4) // Make sure it is not too small
-			Context.Environment.Mesh.face_area.resize(16);
-		IO::write_tri_mesh(Context.Environment.Mesh, Context.EnablePadding);
+		os << "\n    // Shapes\n";
+		os << GeneratorShape::dump(Context);
+
+		os << "\n    // Shape Mappings\n";
+		os << "    let shapes = @ |i : i32| match i {\n";
+		size_t counter = 0;
+		for (const auto& pair : Context.Environment.Shapes) {
+			if (counter == Context.Environment.Shapes.size() - 1)
+				os << "        _ => ";
+			else
+				os << "        " << counter << " => ";
+
+			os << "make_trimesh_shape(math, " << pair.second.TriMesh << ", " << pair.second.BVH << "),\n";
+			++counter;
+		}
+		os << "    };\n";
 	}
 
 	void setup_entities(std::ostream& os)
 	{
-		GeneratorEntity::setup(Context);
-
 		if (Context.Environment.Entities.empty()) {
 			IG_LOG(L_ERROR) << "No entities available" << std::endl;
 			return;
 		}
 
-		std::vector<uint32> mapping;
-		mapping.reserve(Context.Environment.Entities.size());
-		for (const auto& pair : Context.Environment.Entities) {
-			uint32 shapeId = std::distance(Context.Scene.shapes().begin(), Context.Scene.shapes().find(pair.second.Shape));
-			mapping.emplace_back(shapeId);
-		}
-		IO::write_buffer("data/entity_mappings.bin", mapping);
-
-		std::vector<float> transforms;
-		mapping.reserve(Context.Environment.Entities.size() * 16);
-		for (const auto& pair : Context.Environment.Entities) {
-			for (size_t i = 0; i < 16; ++i)
-				transforms.emplace_back(pair.second.Transform.matrix()(i));
-		}
-		IO::write_buffer("data/entity_transforms.bin", IO::pad_buffer(transforms, Context.EnablePadding, sizeof(float) * 16));
-
-		os << "\n    // Entity Mappings\n"
-		   << "    let entity_mappings   = device.load_buffer(\"data/entity_mappings.bin\");\n"
-		   << "    let entity_to_shape   = @ |id : i32| entity_mappings.load_i32(id);\n"
-		   << "    let entity_transforms = device.load_buffer(\"data/entity_transforms.bin\");\n"
-		   << "    let get_entity_mat    = @ |id : i32| make_mat4x4(entity_transforms.load_vec4(4*id),entity_transforms.load_vec4(4*id+1),entity_transforms.load_vec4(4*id+2),entity_transforms.load_vec4(4*id+3));\n"
-		   << "    let bvh               = device.load_bvh(\"data/bvh.bin\");\n";
-
-		// TODO
-		IG_LOG(L_INFO) << "Generating entity table and BVH" << std::endl;
-		// Generate BVHs
-		if (IO::must_build_bvh(Context.FilePath.string(), Context.Target)) {
-			IG_LOG(L_INFO) << "Generating BVH for " << Context.FilePath << "" << std::endl;
-			std::remove("data/bvh.bin");
-			if (Context.Target == Target::NVVM_STREAMING || Context.Target == Target::NVVM_MEGAKERNEL || Context.Target == Target::AMDGPU_STREAMING || Context.Target == Target::AMDGPU_MEGAKERNEL) {
-				std::vector<typename BvhNTriM<2, 1>::Node> nodes;
-				std::vector<typename BvhNTriM<2, 1>::Tri> tris;
-				build_bvh<2, 1>(Context.Environment.Mesh, nodes, tris);
-				IO::write_bvh(nodes, tris);
-			} else if (Context.Target == Target::GENERIC || Context.Target == Target::ASIMD || Context.Target == Target::SSE42) {
-				std::vector<typename BvhNTriM<4, 4>::Node> nodes;
-				std::vector<typename BvhNTriM<4, 4>::Tri> tris;
-				build_bvh<4, 4>(Context.Environment.Mesh, nodes, tris);
-				IO::write_bvh(nodes, tris);
-			} else {
-				std::vector<typename BvhNTriM<8, 4>::Node> nodes;
-				std::vector<typename BvhNTriM<8, 4>::Tri> tris;
-				build_bvh<8, 4>(Context.Environment.Mesh, nodes, tris);
-				IO::write_bvh(nodes, tris);
+		auto writeTransform = [&](const Transformf& transform) {
+			const Matrix4f mat = transform.matrix();
+			os << "make_mat4x4(";
+			for (size_t col = 0; col < 4; ++col) {
+				os << "make_vec4(" << mat.col(col)(0) << ", " << mat.col(col)(1) << ", " << mat.col(col)(2) << ", " << mat.col(col)(3) << ")";
+				if (col != 3)
+					os << ",";
 			}
-			IO::write_bvh_stamp(Context.FilePath.string(), Context.Target);
-		} else {
-			IG_LOG(L_INFO) << "Reusing existing BVH for " << Context.FilePath << "" << std::endl;
-		}
+			os << ")";
+		};
 
-		// Calculate scene bounding box
-		Context.Environment.calculateBoundingBox();
+		os << "\n    // Entities\n"
+		   << "    let entities = @ |i : i32| match i {\n";
+		size_t counter = 0;
+		for (const auto& pair : Context.Environment.Entities) {
+			const std::string id = GeneratorContext::makeId(pair.first);
+			const uint32 shapeID = std::distance(Context.Environment.Shapes.begin(), Context.Environment.Shapes.find(pair.second.Shape));
+
+			if (counter == Context.Environment.Entities.size() - 1)
+				os << "        _ => ";
+			else
+				os << "        " << counter << " => ";
+
+			os << "make_entity(";
+			writeTransform(pair.second.Transform);
+			os << ", " << shapeID << ", material_" << id << "),\n";
+			++counter;
+		}
+		os << "    };\n";
 	}
 
 	void setup_textures(std::ostream& os)
@@ -176,7 +138,7 @@ struct SceneBuilder {
 		for (const auto& pair : Context.Scene.textures()) {
 			const std::string name = pair.first;
 			const auto tex		   = pair.second;
-			os << "    tex_" << makeId(name) << " = " << GeneratorTexture::extract(tex, Context) << ";\n";
+			os << "    tex_" << GeneratorContext::makeId(name) << " = " << GeneratorTexture::extract(tex, Context) << ";\n";
 		}
 	}
 
@@ -191,11 +153,11 @@ struct SceneBuilder {
 		for (const auto& pair : Context.Scene.bsdfs()) {
 			const std::string name = pair.first;
 			const auto& mat		   = pair.second;
-			os << "    let bsdf_" << makeId(name) << " = @ |ray : Ray, hit : Hit, surf : SurfaceElement| -> Bsdf { " << GeneratorBSDF::extract(mat, Context) << " };\n";
+			os << "    let bsdf_" << GeneratorContext::makeId(name) << " = @ |ray : Ray, hit : Hit, surf : SurfaceElement| -> Bsdf { " << GeneratorBSDF::extract(mat, Context) << " };\n";
 		}
 	}
 
-	size_t setup_lights(std::ostream& os)
+	void setup_lights(std::ostream& os)
 	{
 		IG_LOG(L_INFO) << "Generating lights for " << Context.FilePath << "" << std::endl;
 
@@ -205,15 +167,16 @@ struct SceneBuilder {
 			const auto light = pair.second;
 
 			if (light->pluginType() != "area") {
-				os << "    let light_" << makeId(name) << " = " << GeneratorLight::extract(light, Context) << ";\n";
+				os << "    let light_" << GeneratorContext::makeId(name) << " = " << GeneratorLight::extract(light, Context) << ";\n";
 			} else {
 				const std::string entityName = light->property("entity").getString();
 
 				if (Context.Environment.Entities.count(entityName) > 0) {
 					const auto& entity = Context.Environment.Entities[entityName];
 					const Shape shape  = Context.Environment.Shapes[entity.Shape];
-					os << "    let light_" << makeId(name) << " = make_trimesh_light(math, tri_mesh, "
-					   << (shape.ItxOffset / 4) << ", " << (shape.ItxCount / 4) << ", "
+					os << "    let light_" << GeneratorContext::makeId(name) << " = make_trimesh_light(math, "
+					   << shape.TriMesh << ", 0, "
+					   << (shape.ItxCount / 4) << ", "
 					   << Context.extractMaterialPropertyColor(light, "radiance") << ");\n";
 				} else {
 					IG_LOG(L_ERROR) << "Light " << name << " connected to unknown entity " << entityName << std::endl;
@@ -229,15 +192,13 @@ struct SceneBuilder {
 			size_t counter = 0;
 			for (const auto& pair : Context.Scene.lights()) {
 				if (counter == Context.Scene.lights().size() - 1)
-					os << "        _ => light_" << makeId(pair.first) << "\n";
+					os << "        _ => light_" << GeneratorContext::makeId(pair.first) << "\n";
 				else
-					os << "        " << counter << " => light_" << makeId(pair.first) << ",\n";
+					os << "        " << counter << " => light_" << GeneratorContext::makeId(pair.first) << ",\n";
 				++counter;
 			}
 			os << "    };\n";
 		}
-
-		return Context.Scene.lights().size();
 	}
 
 	void setup_materials(std::ostream& os)
@@ -266,7 +227,7 @@ struct SceneBuilder {
 		os << "\n    // Materials\n";
 		for (const auto& pair : Context.Environment.Entities) {
 			const bool isEmissive = entity_light_map.count(pair.first);
-			os << "    let material_" << makeId(pair.first) << " : Shader = @ |ray, hit, surf| ";
+			os << "    let material_" << GeneratorContext::makeId(pair.first) << " : Shader = @ |ray, hit, surf| ";
 			if (isEmissive)
 				os << "make_emissive_material(surf,";
 			else
@@ -275,60 +236,43 @@ struct SceneBuilder {
 			if (pair.second.BSDF.empty())
 				os << "make_black_bsdf()";
 			else
-				os << "bsdf_" << makeId(pair.second.BSDF) << "(ray, hit, surf)";
+				os << "bsdf_" << GeneratorContext::makeId(pair.second.BSDF) << "(ray, hit, surf)";
 
 			if (isEmissive)
-				os << ", light_" << makeId(entity_light_map[pair.first]);
+				os << ", light_" << GeneratorContext::makeId(entity_light_map[pair.first]);
 
 			os << ");\n";
 		}
 	}
 
-	void setup_geometries(std::ostream& os)
-	{
-		IG_LOG(L_INFO) << "Generating geometries for " << Context.FilePath << "" << std::endl;
-
-		// Setup geometries
-		os << "\n    // Geometries\n"
-		   << "    let geometries = @ |i : i32| match i {\n";
-		if (Context.Environment.Entities.empty()) {
-			os << "        _ =>  make_tri_mesh_geometry(math, tri_mesh, @ |_, _, _| make_empty_material())\n";
-		} else {
-			size_t counter = 0;
-			for (const auto& pair : Context.Environment.Entities) {
-				os << "        ";
-				if (counter != Context.Environment.Entities.size() - 1)
-					os << counter;
-				else
-					os << "_";
-				os << " => make_tri_mesh_geometry(math, tri_mesh, material_" << makeId(pair.first) << "),\n";
-				++counter;
-			}
-		}
-		os << "    };\n";
-	}
-
 	void convert_scene(std::ostream& os)
 	{
+		GeneratorShape::setup(Context);
+		GeneratorEntity::setup(Context);
+
 		setup_integrator(os);
 		setup_camera(os);
 		setup_shapes(os);
-		setup_entities(os);
 		setup_textures(os);
 		setup_bsdfs(os);
-		size_t light_count = setup_lights(os);
+		setup_lights(os);
 		setup_materials(os);
-		setup_geometries(os);
+		setup_entities(os);
 
 		os << "\n    // Scene\n"
+		   << "    let bvh = device.load_scene_bvh(\"data/bvh.bin\");\n"
 		   << "    let scene = Scene {\n"
-		   << "        num_geometries = " << Context.Environment.Entities.size() << ",\n"
-		   << "        num_lights     = " << light_count << ",\n"
-		   << "        geometries     = @ |i : i32| geometries(i),\n"
-		   << "        lights         = @ |i : i32| lights(i),\n"
-		   << "        camera         = camera,\n"
-		   << "        bvh            = bvh\n"
+		   << "        num_entities = " << Context.Environment.Entities.size() << ",\n"
+		   << "        num_shapes   = " << Context.Environment.Shapes.size() << ",\n"
+		   << "        num_lights   = " << Context.Scene.lights().size() << ",\n"
+		   << "        entities     = entities, \n"
+		   << "        shapes       = shapes,\n"
+		   << "        lights       = lights,\n"
+		   << "        camera       = camera,\n"
+		   << "        bvh          = bvh\n"
 		   << "    };\n";
+
+		std::cout << Context.Environment.SceneBBox.diameter() << std::endl;
 	}
 };
 
@@ -342,6 +286,7 @@ bool generate(const std::filesystem::path& filepath, const GeneratorOptions& opt
 		loader.addArgument("MAX_PATH_LENGTH", std::to_string(options.max_path_length));
 
 		std::filesystem::create_directories("data/textures");
+		std::filesystem::create_directories("data/meshes");
 
 		os << "//------------------------------------------------------------------------------------\n"
 		   << "// Generated from " << filepath << " with ignis generator tool\n"
@@ -368,6 +313,7 @@ bool generate(const std::filesystem::path& filepath, const GeneratorOptions& opt
 		builder.Context.SPP			  = options.spp;
 		builder.Context.Fusion		  = options.fusion;
 		builder.Context.EnablePadding = require_padding(options.target);
+		builder.Context.ForceBVHBuild = options.force_bvh_build;
 
 		switch (options.target) {
 		case Target::GENERIC:

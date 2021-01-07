@@ -201,7 +201,7 @@ static std::shared_ptr<Object> handleAnonymousObject(Scene& scene, ObjectType ty
 			throw std::runtime_error("Expected type to be a string");
 	}
 
-	const auto pluginType = getString(obj["type"]);
+	const auto pluginType = obj.HasMember("type") ? getString(obj["type"]) : "";
 
 	auto ptr = std::make_shared<Object>(type, pluginType);
 	populateObject(ptr, obj);
@@ -214,10 +214,14 @@ static void handleNamedObject(Scene& scene, ObjectType type, const rapidjson::Va
 		if (!obj["type"].IsString())
 			throw std::runtime_error("Expected type to be a string");
 	}
+
+	if (!obj.HasMember("name"))
+		throw std::runtime_error("Expected name");
+
 	if (!obj["name"].IsString())
 		throw std::runtime_error("Expected name to be a string");
 
-	const auto pluginType = getString(obj["type"]);
+	const auto pluginType = obj.HasMember("type") ? getString(obj["type"]) : "";
 	const auto name		  = getString(obj["name"]);
 
 	auto ptr = std::make_shared<Object>(type, pluginType);

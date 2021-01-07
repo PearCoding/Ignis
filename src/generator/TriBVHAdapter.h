@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Buffer.h"
 #include "bvh/BVH.h"
 #include "math/Triangle.h"
 #include "mesh/TriMesh.h"
@@ -11,6 +10,32 @@
 #include "generated_interface.h"
 
 namespace IG {
+
+template <>
+struct ObjectAdapter<Triangle> {
+	const Triangle& tri;
+
+	ObjectAdapter(const Triangle& t)
+		: tri(t)
+	{
+	}
+
+	inline BoundingBox computeBoundingBox() const
+	{
+		return tri.computeBoundingBox();
+	}
+
+	inline Vector3f center() const
+	{
+		return (tri.v0 + tri.v1 + tri.v2) * (1.0f / 3.0f);
+	}
+
+	inline void computeSplit(IG::BoundingBox& left_bb, IG::BoundingBox& right_bb, int axis, float split) const
+	{
+		tri.computeSplit(left_bb, right_bb, axis, split);
+	}
+};
+
 template <size_t N, size_t M>
 struct BvhNTriM {
 };
@@ -46,7 +71,7 @@ class BvhNTriMAdapter {
 		}
 	};
 
-	using BvhBuilder = SplitBvhBuilder<N, CostFn>;
+	using BvhBuilder = SplitBvhBuilder<Triangle, N, CostFn>;
 	using Adapter	 = BvhNTriMAdapter;
 	using Node		 = typename BvhNTriM<N, M>::Node;
 	using Tri		 = typename BvhNTriM<N, M>::Tri;
@@ -65,6 +90,9 @@ public:
 	void build(const TriMesh& tri_mesh, const std::vector<IG::Triangle>& tris)
 	{
 		builder_.build(tris, NodeWriter(*this), LeafWriter(*this, tris, tri_mesh.indices), M / 2);
+#ifdef STATISTICS
+		builder_.print_stats();
+#endif
 	}
 
 private:
@@ -168,7 +196,6 @@ private:
 					tri.n.e[2].e[j] = n(2);
 
 					tri.prim_id.e[j] = id;
-					tri.geom_id.e[j] = indices[id * 4 + 3];
 				}
 
 				for (size_t j = c; j < 4; j++)
@@ -195,7 +222,7 @@ class BvhNTriMAdapter<2, 1> {
 		}
 	};
 
-	using BvhBuilder = SplitBvhBuilder<2, CostFn>;
+	using BvhBuilder = SplitBvhBuilder<Triangle, 2, CostFn>;
 	using Adapter	 = BvhNTriMAdapter;
 	using Node		 = Node2;
 	using Tri		 = Tri1;
@@ -214,6 +241,9 @@ public:
 	void build(const TriMesh& tri_mesh, const std::vector<IG::Triangle>& tris)
 	{
 		builder_.build(tris, NodeWriter(*this), LeafWriter(*this, tris, tri_mesh.indices), 2);
+#ifdef STATISTICS
+		builder_.print_stats();
+#endif
 	}
 
 private:
@@ -295,10 +325,8 @@ private:
 				auto& tri		  = in_tris[ref];
 				const Vector3f e1 = tri.v0 - tri.v1;
 				const Vector3f e2 = tri.v2 - tri.v0;
-				//const Vector3f n  = e1.cross(e2);
-				int geom_id = indices[ref * 4 + 3];
 				tris.emplace_back(Tri1{
-					{ tri.v0(0), tri.v0(1), tri.v0(2) }, 0, { e1(0), e1(1), e1(2) }, geom_id, { e2(0), e2(1), e2(2) }, ref });
+					{ tri.v0(0), tri.v0(1), tri.v0(2) }, 0, { e1(0), e1(1), e1(2) }, 0, { e2(0), e2(1), e2(2) }, ref });
 			}
 
 			// Add sentinel
@@ -323,41 +351,4 @@ inline void build_bvh(const TriMesh& tri_mesh,
 	}
 	adapter.build(tri_mesh, in_tris);
 }
-
-namespace IO {
-template <typename Node, typename Tri>
-inline void write_bvh(std::vector<Node>& nodes, std::vector<Tri>& tris)
-{
-	std::ofstream of("data/bvh.bin", std::ios::app | std::ios::binary);
-	size_t node_size = sizeof(Node);
-	size_t tri_size	 = sizeof(Tri);
-	of.write((char*)&node_size, sizeof(uint32));
-	of.write((char*)&tri_size, sizeof(uint32));
-	write_buffer(of, nodes);
-	write_buffer(of, tris);
-}
-
-inline bool must_build_bvh(const std::string& name, Target target)
-{
-	std::ifstream bvh_stamp("data/bvh.stamp", std::fstream::in);
-	if (bvh_stamp) {
-		int bvh_target;
-		bvh_stamp >> bvh_target;
-		if (bvh_target != (int)target)
-			return true;
-		std::string bvh_name;
-		bvh_stamp >> bvh_name;
-		if (bvh_name != name)
-			return true;
-		return false;
-	}
-	return true;
-}
-
-inline void write_bvh_stamp(const std::string& name, Target target)
-{
-	std::ofstream bvh_stamp("data/bvh.stamp");
-	bvh_stamp << int(target) << " " << name;
-}
-} // namespace IO
 } // namespace IG

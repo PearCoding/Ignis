@@ -3,11 +3,15 @@
 #include <stack>
 
 #include "MemoryPool.h"
-#include "math/Triangle.h"
+#include "math/BoundingBox.h"
+
+#define STATISTICS
+#ifdef STATISTICS
+#include <chrono>
+#endif
 
 namespace IG {
 /* BVH implementation originally used by Rodent */
-
 template <typename Node, int N>
 struct MultiNode {
 	Node nodes[N];
@@ -68,31 +72,37 @@ struct MultiNode {
 	}
 };
 
+template <typename T>
+struct ObjectAdapter {
+};
+
 /// Builds a SBVH (Spatial split BVH), given the set of triangles and the alpha parameter
 /// that controls when to do a spatial split. The tree is built in depth-first order.
 /// See  Stich et al., "Spatial Splits in Bounding Volume Hierarchies", 2009
 /// http://www.nvidia.com/docs/IO/77714/sbvh.pdf
-template <size_t N, typename CostFn>
-class SplitBvhBuilder {
+template <class Object, size_t N, typename CostFn, bool UseSpatialSplits>
+class SplitBvhBuilderBase {
 public:
+	using ObjectAdapter = IG::ObjectAdapter<Object>;
+
 	template <typename NodeWriter, typename LeafWriter>
-	void build(const std::vector<Triangle>& tris, NodeWriter write_node, LeafWriter write_leaf, size_t leaf_threshold, float alpha = 1e-5f)
+	void build(const std::vector<Object>& objs, NodeWriter write_node, LeafWriter write_leaf, size_t leaf_threshold, float alpha = 1e-5f)
 	{
 		assert(leaf_threshold >= 1);
 
 #ifdef STATISTICS
-		total_tris_ += tris.size();
+		total_objs_ += objs.size();
 		auto time_start = std::chrono::high_resolution_clock::now();
 #endif
 
-		const size_t tri_count = tris.size();
+		const size_t obj_count = objs.size();
 
-		Ref* initial_refs	= mem_pool_.alloc<Ref>(tri_count);
-		right_bbs_			= mem_pool_.alloc<BoundingBox>(std::max(spatial_bins(), tri_count));
+		Ref* initial_refs	= mem_pool_.alloc<Ref>(obj_count);
+		right_bbs_			= mem_pool_.alloc<BoundingBox>(std::max(spatial_bins(), obj_count));
 		BoundingBox mesh_bb = BoundingBox::Empty();
-		for (size_t i = 0; i < tri_count; i++) {
-			const Triangle& tri = tris[i];
-			initial_refs[i].bb	= tri.computeBoundingBox();
+		for (size_t i = 0; i < obj_count; i++) {
+			const Object& obj  = objs[i];
+			initial_refs[i].bb = ObjectAdapter(obj).computeBoundingBox();
 			mesh_bb.extend(initial_refs[i].bb);
 			initial_refs[i].id = i;
 		}
@@ -100,11 +110,11 @@ public:
 		const float spatial_threshold = mesh_bb.halfArea() * alpha;
 
 		std::stack<Node> stack;
-		stack.emplace(initial_refs, tri_count, mesh_bb, -1);
+		stack.emplace(initial_refs, obj_count, mesh_bb, -1);
 
-		std::vector<Vector3f> centers(tris.size());
-		for (size_t i = 0; i < tris.size(); ++i)
-			centers[i] = (tris[i].v0 + tris[i].v1 + tris[i].v2) * (1.0f / 3.0f);
+		std::vector<Vector3f> centers(objs.size());
+		for (size_t i = 0; i < objs.size(); ++i)
+			centers[i] = ObjectAdapter(objs[i]).center();
 
 		while (!stack.empty()) {
 			MultiNode<Node, N> multi_node(stack.top());
@@ -131,16 +141,16 @@ public:
 					find_object_split(object_split, centers.data(), axis, refs, ref_count);
 
 				SpatialSplit spatial_split;
-				if (BoundingBox(object_split.left_bb).overlap(object_split.right_bb).halfArea() > spatial_threshold) {
+				if (UseSpatialSplits && BoundingBox(object_split.left_bb).overlap(object_split.right_bb).halfArea() > spatial_threshold) {
 					// Try spatial splits
 					for (size_t axis = 0; axis < 3; axis++) {
 						if (parent_bb.min[axis] == parent_bb.max[axis])
 							continue;
-						find_spatial_split(spatial_split, parent_bb, tris, axis, refs, ref_count);
+						find_spatial_split(spatial_split, parent_bb, objs, axis, refs, ref_count);
 					}
 				}
 
-				bool spatial		   = spatial_split.cost < object_split.cost;
+				bool spatial		   = UseSpatialSplits && spatial_split.cost < object_split.cost;
 				const float split_cost = spatial ? spatial_split.cost : object_split.cost;
 
 				if (split_cost + CostFn::traversal_cost(parent_bb.halfArea()) >= node.cost) {
@@ -153,7 +163,7 @@ public:
 					Ref *left_refs, *right_refs;
 					BoundingBox left_bb, right_bb;
 					size_t left_count, right_count;
-					apply_spatial_split(spatial_split, tris,
+					apply_spatial_split(spatial_split, objs,
 										refs, ref_count,
 										left_refs, left_count, left_bb,
 										right_refs, right_count, right_bb);
@@ -213,7 +223,7 @@ public:
 
 #ifdef STATISTICS
 		auto time_end = std::chrono::high_resolution_clock::now();
-		total_time_ += std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_start);
+		total_time_ += std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_start).count();
 #endif
 
 		mem_pool_.cleanup();
@@ -227,7 +237,7 @@ public:
 				  << total_leaves_ << " leaves, "
 				  << object_splits_ << " object splits, "
 				  << spatial_splits_ << " spatial splits, "
-				  << "+" << (total_refs_ - total_tris_) * 100 / total_tris_ << "% references)"
+				  << "+" << (total_refs_ - total_objs_) * 100 / total_objs_ << "% references)"
 				  << std::endl;
 	}
 #endif
@@ -255,10 +265,10 @@ private:
 	};
 
 	struct ObjectSplit {
-		size_t axis;
-		float cost;
+		size_t axis = 0;
+		float cost	= 0.0f;
 		BoundingBox left_bb, right_bb;
-		size_t left_count;
+		size_t left_count = 0;
 
 		ObjectSplit()
 			: cost(std::numeric_limits<float>::max())
@@ -267,9 +277,9 @@ private:
 	};
 
 	struct SpatialSplit {
-		size_t axis;
-		float cost;
-		float position;
+		size_t axis	   = 0;
+		float cost	   = 0.0f;
+		float position = 0.0f;
 
 		SpatialSplit()
 			: cost(std::numeric_limits<float>::max())
@@ -278,12 +288,12 @@ private:
 	};
 
 	struct Node {
-		Ref* refs;
-		size_t ref_count;
+		Ref* refs		 = nullptr;
+		size_t ref_count = 0;
 		BoundingBox bbox;
-		float cost;
-		bool tested;
-		int parent;
+		float cost	= 0.0f;
+		bool tested = false;
+		int parent	= 0;
 
 		Node() {}
 		Node(Ref* refs, size_t ref_count, const BoundingBox& bbox, int parent)
@@ -370,7 +380,7 @@ private:
 	}
 
 	size_t spatial_binning(Bin* bins, size_t num_bins, SpatialSplit& split,
-						   const std::vector<Triangle>& tris, size_t axis,
+						   const std::vector<Object>& objs, size_t axis,
 						   Ref* refs, size_t ref_count,
 						   float axis_min, float axis_max)
 	{
@@ -394,7 +404,7 @@ private:
 			BoundingBox cur_bb = ref.bb;
 			for (size_t j = first_bin; j < last_bin; j++) {
 				BoundingBox left_bb, right_bb;
-				tris[ref.id].computeSplit(left_bb, right_bb, axis, j < num_bins - 1 ? axis_min + (j + 1) * bin_size : axis_max);
+				ObjectAdapter(objs[ref.id]).computeSplit(left_bb, right_bb, axis, j < num_bins - 1 ? axis_min + (j + 1) * bin_size : axis_max);
 				bins[j].bb.extend(left_bb.overlap(cur_bb));
 				cur_bb.overlap(right_bb);
 			}
@@ -436,7 +446,7 @@ private:
 	}
 
 	void find_spatial_split(SpatialSplit& split, const BoundingBox& parent_bb,
-							const std::vector<Triangle>& tris, size_t axis,
+							const std::vector<Object>& objs, size_t axis,
 							Ref* refs, size_t ref_count)
 	{
 		float axis_min = parent_bb.min[axis];
@@ -449,7 +459,7 @@ private:
 			if (axis_max <= axis_min)
 				break;
 
-			size_t split_index = spatial_binning(bins, spatial_bins(), split, tris, axis, refs, ref_count, axis_min, axis_max);
+			size_t split_index = spatial_binning(bins, spatial_bins(), split, objs, axis, refs, ref_count, axis_min, axis_max);
 			if (split_index == size_t(-1))
 				break;
 
@@ -461,7 +471,7 @@ private:
 	}
 
 	void apply_spatial_split(const SpatialSplit& split,
-							 const std::vector<Triangle>& tris,
+							 const std::vector<Object>& objs,
 							 Ref* refs, size_t ref_count,
 							 Ref*& left_refs, size_t& left_count, BoundingBox& left_bb,
 							 Ref*& right_refs, size_t& right_count, BoundingBox& right_bb)
@@ -496,7 +506,7 @@ private:
 		while (left_count < first_right) {
 			const Ref& ref = refs[left_count];
 			BoundingBox left_split_bb, right_split_bb;
-			tris[ref.id].computeSplit(left_split_bb, right_split_bb, split.axis, split.position);
+			ObjectAdapter(objs[ref.id]).computeSplit(left_split_bb, right_split_bb, split.axis, split.position);
 			left_split_bb.overlap(ref.bb);
 			right_split_bb.overlap(ref.bb);
 
@@ -554,17 +564,23 @@ private:
 	}
 
 #ifdef STATISTICS
-	std::chrono::duration<std::chrono::milliseconds> total_time_ = 0;
-	size_t total_nodes_											 = 0;
-	size_t total_leaves_										 = 0;
-	size_t total_refs_											 = 0;
-	size_t total_tris_											 = 0;
-	size_t spatial_splits_										 = 0;
-	size_t object_splits_										 = 0;
+	size_t total_time_	   = 0 /*ms*/;
+	size_t total_nodes_	   = 0;
+	size_t total_leaves_   = 0;
+	size_t total_refs_	   = 0;
+	size_t total_objs_	   = 0;
+	size_t spatial_splits_ = 0;
+	size_t object_splits_  = 0;
 #endif
 
 	BoundingBox* right_bbs_;
 	MemoryPool<> mem_pool_;
 };
+
+template <class Object, size_t N, typename CostFn>
+using SplitBvhBuilder = SplitBvhBuilderBase<Object, N, CostFn, true>;
+
+template <class Object, size_t N, typename CostFn>
+using BasicBvhBuilder = SplitBvhBuilderBase<Object, N, CostFn, false>;
 
 } // namespace IG

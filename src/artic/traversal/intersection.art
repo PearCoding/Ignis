@@ -1,8 +1,18 @@
-struct Bvh {
+
+// Bottom level SBVH
+struct PrimBvh {
     node:     fn (i32) -> Node, // Access to one node of the BVH
     prim:     fn (i32) -> Prim, // Access to one (possibly packed) primitive
     prefetch: fn (i32) -> (),   // Prefetches a leaf or inner node
     arity:    i32,              // Arity of the BVH (number of children per node)
+}
+
+// Top level BVH
+struct SceneBvh {
+    node:     fn (i32) -> Node,       // Access to one node of the BVH
+    bbox:     fn (i32) -> TaggedBBox, // Access to one TaggedBBox
+    prefetch: fn (i32) -> (),         // Prefetches a leaf or inner node
+    arity:    i32,                    // Arity of the BVH (number of children per node)
 }
 
 struct Node {
@@ -31,7 +41,7 @@ struct Hit {
     distance:  f32,    // Distance to the intersection point
     uv_coords: Vec2,   // Surface coordinates
     prim_id:   i32,    // Primitive identifier, or -1 (no intersection found)
-    geom_id:   i32     // Geometry identifier, or -1 (no intersection found)
+    ent_id:    i32     // Entity identifier, or -1 (no intersection found)
 }
 
 struct Tri {
@@ -46,6 +56,13 @@ struct Tri {
 struct BBox {
     min: Vec3,         // Minimum corner
     max: Vec3          // Maximum corner
+}
+
+struct TaggedBBox {
+    min: Vec3,    // Minimum corner
+    pad0: f32,
+    max: Vec3,    // Maximum corner
+    tag: i32      // Identifier pointing to a entity
 }
 
 // Min/max functions required to perform the ray-box test
@@ -96,11 +113,18 @@ fn @make_ray(org: Vec3, dir: Vec3, tmin: f32, tmax: f32) -> Ray {
     }
 }
 
-fn @make_hit(geom_id: i32, prim_id: i32, t: f32, uv: Vec2) = Hit {
+fn @transform_ray(ray: Ray, m: Mat4x4, m_det: f32) = make_ray(
+    mat4x4_transform_point(m, ray.org),
+    mat4x4_transform_direction(m, ray.dir),
+    m_det*ray.tmin,
+    m_det*ray.tmax
+);
+
+fn @make_hit(ent_id: i32, prim_id: i32, t: f32, uv: Vec2) = Hit {
     distance  = t,
     uv_coords = uv,
     prim_id   = prim_id,
-    geom_id   = geom_id
+    ent_id    = ent_id
 };
 
 fn @make_tri(v0: Vec3, e1: Vec3, e2: Vec3, n: Vec3) = Tri {
@@ -115,6 +139,13 @@ fn @make_tri(v0: Vec3, e1: Vec3, e2: Vec3, n: Vec3) = Tri {
 fn @make_bbox(min: Vec3, max: Vec3) = BBox {
     min = min,
     max = max
+};
+
+fn @make_tagged_bbox(min: Vec3, max: Vec3, tag: i32) = TaggedBBox {
+    min  = min,
+    pad0 = 0,
+    max  = max,
+    tag  = tag
 };
 
 fn @ray_octant(ray: Ray) -> RayOctant {
@@ -187,3 +218,16 @@ fn @intersect_ray_box(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> (
 
     (tentry, texit)
 }
+
+fn @intersect_ray_box_single(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> Option[f32] {
+    let (entry, exit) = intersect_ray_box(min_max, ordered, ray, bbox);
+    let mask = entry <= exit;
+
+    if mask {
+        make_option(select(entry < 1e-5, exit, entry))
+    } else {
+        Option[f32]::None
+    }
+}
+
+fn @intersect_ray_tagged_box(min_max: MinMax, ray: Ray, bbox: TaggedBBox) = intersect_ray_box_single(min_max, false, ray, make_bbox(bbox.min, bbox.max));

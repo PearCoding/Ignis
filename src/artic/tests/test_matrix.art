@@ -1,0 +1,122 @@
+fn is_mat3x3_identity(A : Mat3x3) = eq_mat3x3(A, mat3x3_identity());
+fn is_mat4x4_identity(A : Mat4x4) = eq_mat4x4(A, mat4x4_identity());
+
+fn test_matrix3_invert() {
+    let mut err = 0;
+
+    let A = make_mat3x3(make_vec3(4, 2, 2),
+                        make_vec3(-4,0,-1), 
+                        make_vec3(0, 3, -1));
+    let B = make_mat3x3(make_vec3(-0.15, -0.4, -0.1),
+                        make_vec3(0.2, 0.2, 0.2), 
+                        make_vec3(0.6, 0.6, -0.4));
+    let Det : f32 = -20.0;
+    
+    let(inv, det) = mat3x3_invert_det(A);
+    if !eq_f32(det, Det) {
+        ++err;
+        ignis_test_fail("Determinant is wrong!");
+    }
+    
+    if !eq_mat3x3(inv, B) {
+        ++err;
+        ignis_test_fail("Inverse is wrong!");
+    }
+
+    let k = mat3x3_matmul(A, inv);
+    
+    if !is_mat3x3_identity(k) {
+        ++err;
+        ignis_test_fail("Multiplication with inverse does not result into identity matrix!");
+    }
+
+    err  
+}
+
+fn test_matrix4_invert() {
+    let mut err = 0;
+
+    let A = make_mat4x4(make_vec4(4, 2, 2, -2),
+                        make_vec4(-4,0,-1,0), 
+                        make_vec4(0, 3, -1, 2),
+                        make_vec4(-1,-2,1,0));
+    let B = make_mat4x4(make_vec4(-0.08, -0.28, -0.08, -0.2),
+                        make_vec4(0.2, 0.2, 0.2, 0), 
+                        make_vec4(0.32, 0.12, 0.32, 0.8),
+                        make_vec4(-0.14, -0.24, 0.36, 0.4));
+    let Det : f32 = -50.0;
+    
+    let(inv, det) = mat4x4_invert_det(A);
+    if !eq_f32(det, Det) {
+        ++err;
+        ignis_test_fail("Determinant is wrong!");
+    }
+    
+    if !eq_mat4x4(inv, B) {
+        ++err;
+        ignis_test_fail("Inverse is wrong!");
+    }
+
+    let k = mat4x4_matmul(A, inv);
+    
+    if !is_mat4x4_identity(k) {
+        ++err;
+        ignis_test_fail("Multiplication with inverse does not result into identity matrix!");
+    }
+
+    err  
+}
+
+fn test_matrix4_transform() {
+    let mut err = 0;
+
+    let A = make_mat4x4(make_vec4(0, 0, 1, 0),
+                        make_vec4(-1,0, 0, 0), 
+                        make_vec4(0, 1, 0, 0),
+                        make_vec4(0, 0, 0, 1));
+    let B = make_mat4x4(make_vec4(0, -1, 0, 0),
+                        make_vec4(0, 0, 1, 0), 
+                        make_vec4(1, 0, 0, 0),
+                        make_vec4(0, 0, 0, 1));
+    let V = make_vec3(1,2,3);
+    let RV = make_vec3(-2,3,1);
+
+    let k = mat4x4_transform_point(A, V);
+
+    if !eq_vec3(k, RV) {
+        ++err;
+        ignis_test_fail("Transformation is wrong!");
+    }
+
+    let inv = mat4x4_invert(A);
+    if !eq_mat4x4(inv, B) {
+        ++err;
+        ignis_test_fail("Inverse is wrong!");
+    }
+
+    //ignis_dbg_echo_vec3(k);
+    //ignis_dbg_echo_mat4x4(A);
+    //ignis_dbg_echo_mat4x4(B);
+    //ignis_dbg_echo_mat4x4(inv);
+
+    let k2 = mat4x4_transform_point(inv, k);
+
+    //ignis_dbg_echo_vec3(k2);
+
+    if !eq_vec3(k2, V) {
+        ++err;
+        ignis_test_fail("Inverse transformation is wrong!");
+    }
+
+    err
+}
+
+#[export] fn test_matrix() -> i32 { 
+    let mut err = 0;
+
+    err += test_matrix3_invert();
+    err += test_matrix4_invert();
+    err += test_matrix4_transform();
+
+    err
+ }

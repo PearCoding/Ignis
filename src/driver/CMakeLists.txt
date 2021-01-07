@@ -3,9 +3,12 @@ if (IG_SCENE_FILE STREQUAL "")
     message(FATAL_ERROR "Please specify a valid mitsuba scene file in the IG_SCENE_FILE variable")
 endif()
 
-set(GENERATOR_OPTIONS "")
+if(IG_ALWAYS_BUILD_BVH)
+    set(GENERATOR_OPTIONS ${GENERATOR_OPTIONS} "--force-bvh")
+endif()
+
 if (NOT IG_TARGET_PLATFORM STREQUAL "")
-    set(GENERATOR_OPTIONS "--target" "${IG_TARGET_PLATFORM}")
+    set(GENERATOR_OPTIONS ${GENERATOR_OPTIONS} "--target" "${IG_TARGET_PLATFORM}")
 endif()
 if (NOT IG_TARGET_DEVICE STREQUAL "")
     set(GENERATOR_OPTIONS ${GENERATOR_OPTIONS} "--device" "${IG_TARGET_DEVICE}")
@@ -28,8 +31,9 @@ set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/${GENERATED_FILE} PROPER
 # Compile artic stuff
 anydsl_runtime_wrap(ARTIC_OBJS
     NAME "artic"
+    FRONTEND "artic"
     CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
-    IMPALA_FLAGS --log-level info --max-errors 5
+    ARTIC_FLAGS --log-level info --max-errors 5
     FILES ${ARTIC_SRC} ${CMAKE_CURRENT_BINARY_DIR}/${GENERATED_FILE})
 
 # Setup actual driver

@@ -1,0 +1,13 @@
+// Dummy file used to generate a C interface for the renderer
+#[export] fn _test_dummy() -> i32 { 
+    ignis_test_expect_eq_f32(0,0);
+    ignis_test_fail("");
+    ignis_dbg_echo_i32(0);
+    ignis_dbg_echo_f32(0.0);
+    ignis_dbg_echo_vec2(make_vec2(0,0));
+    ignis_dbg_echo_vec3(make_vec3(0,0,0));
+    ignis_dbg_echo_vec4(make_vec4(0,0,0,0));
+    ignis_dbg_echo_mat3x3(mat3x3_identity());
+    ignis_dbg_echo_mat4x4(mat4x4_identity());
+    0
+ }

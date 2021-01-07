@@ -20,6 +20,8 @@ struct BoundingBox {
 	{
 	}
 
+	inline Vector3f diameter() const { return max - min; }
+
 	inline BoundingBox& extend(const BoundingBox& bb)
 	{
 		min = min.cwiseMin(bb.min);
@@ -43,11 +45,52 @@ struct BoundingBox {
 		return kx * (ky + kz) + ky * kz;
 	}
 
+	inline float volume() const
+	{
+		const Vector3f len = max - min;
+		return len(0) * len(1) * len(2);
+	}
+
+	inline void inflate(float eps)
+	{
+		const Vector3f len = max - min;
+		for (size_t i = 0; i < 3; ++i) {
+			if (len(i) < eps) {
+				max[i] += eps / 2;
+				min[i] -= eps / 2;
+			}
+		}
+	}
+
 	inline BoundingBox& overlap(const BoundingBox& bb)
 	{
 		min = min.cwiseMax(bb.min);
 		max = max.cwiseMin(bb.max);
 		return *this;
+	}
+
+	inline void computeSplit(BoundingBox& left_bb, BoundingBox& right_bb, int axis, float split) const
+	{
+		left_bb	 = *this;
+		right_bb = *this;
+
+		const float off = (max(axis) - min(axis)) * split;
+		left_bb.max(axis) -= off;
+		right_bb.min(axis) += off;
+	}
+
+	inline BoundingBox transformed(const Transformf& transform) const
+	{
+		BoundingBox bbox = Empty();
+		bbox.extend(transform * min);							   // 000
+		bbox.extend(transform * Vector3f(max(0), min(1), min(2))); // 100
+		bbox.extend(transform * Vector3f(min(0), max(1), min(2))); // 010
+		bbox.extend(transform * Vector3f(max(0), max(1), min(2))); // 110
+		bbox.extend(transform * Vector3f(min(0), min(1), max(2))); // 001
+		bbox.extend(transform * Vector3f(max(0), min(1), max(2))); // 101
+		bbox.extend(transform * Vector3f(min(0), max(1), max(2))); // 011
+		bbox.extend(transform * max);							   // 111
+		return bbox;
 	}
 
 	inline bool isEmpty() const
