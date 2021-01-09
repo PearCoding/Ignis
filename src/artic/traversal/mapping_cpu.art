@@ -119,9 +119,18 @@ fn @make_cpu_bvh8_tri4(nodes: &[Node8], tris: &[Tri4]) = PrimBvh {
 
 // Special bbox intersectors
 
-fn @make_cpu_bvh4_bbox(nodes: &[Node4], objs: &[TaggedBBox]) = SceneBvh {
+fn @make_cpu_tagged_bbox(j: i32, objs: &[TaggedBBox1]) -> TaggedBBox {
+    let obj = objs(j);
+    make_tagged_bbox(
+        make_vec3(obj.min(0), obj.min(1), obj.min(2)),
+        make_vec3(obj.max(0), obj.max(1), obj.max(2)),
+        obj.tag
+    )
+}
+
+fn @make_cpu_bvh4_bbox(nodes: &[Node4], objs: &[TaggedBBox1]) = SceneBvh {
     node = @ |j| make_cpu_node4(j, nodes),
-    bbox = @ |i| objs(i),
+    bbox = @ |j| make_cpu_tagged_bbox(j, objs),
     prefetch = @ |id| {
         let ptr = select(id < 0, &objs(!id) as &[u8], &nodes(id - 1) as &[u8]);
         cpu_prefetch_bytes(ptr, 128)
@@ -129,9 +138,9 @@ fn @make_cpu_bvh4_bbox(nodes: &[Node4], objs: &[TaggedBBox]) = SceneBvh {
     arity = 4
 };
 
-fn @make_cpu_bvh8_bbox(nodes: &[Node8], objs: &[TaggedBBox]) = SceneBvh {
+fn @make_cpu_bvh8_bbox(nodes: &[Node8], objs: &[TaggedBBox1]) = SceneBvh {
     node = @ |j| make_cpu_node8(j, nodes),
-    bbox = @ |i| objs(i),
+    bbox = @ |j| make_cpu_tagged_bbox(j, objs),
     prefetch = @ |id| {
         let ptr = select(id < 0, &objs(!id) as &[u8], &nodes(id - 1) as &[u8]);
         cpu_prefetch_bytes(ptr, 256)
@@ -361,19 +370,18 @@ fn cpu_traverse_single_helper( mut ray: Ray
             if any_hit && unlikely(stack.is_empty()) { exit() }
 
             // Intersect leaves here
-            let ent_id    = !stack.pop().node;
-            let entity    = scene.entities(ent_id);
-            let shape     = scene.shapes(entity.shape);
-            let local_ray = transform_ray(ray, entity.to_local, entity.local_det);
-            let local_hit = cpu_traverse_single_helper_prim(local_ray, ray_octant(local_ray), min_max, shape.bvh, any_hit, 1/*root*/);
+            let ent_id          = !stack.pop().node;
+            let shape           = scene.shapes(scene.entities.shape(ent_id));
+            let (local_ray, sf) = transform_ray(cpu_intrinsics, ray, scene.entities.local_mat4x4(ent_id));
+            let local_hit       = cpu_traverse_single_helper_prim(local_ray, ray_octant(local_ray), min_max, shape.bvh, any_hit, 1/*root*/);
 
             if local_hit.prim_id != -1 {
-                let glb_dist = local_hit.distance * entity.global_det;
+                let glb_dist = local_hit.distance / sf;
 
                 if glb_dist <= hit.distance {
                     hit           = local_hit;
                     hit.distance  = glb_dist;
-                    hit.ent_id   = ent_id;
+                    hit.ent_id    = ent_id;
                     ray.tmax      = hit.distance;
 
                     // Early exit mode
@@ -618,19 +626,18 @@ fn cpu_traverse_hybrid_helper( mut ray: Ray
         if unlikely(is_leaf(stack.top())) {
             let active = (stack.top().tmin <= ray.tmax) & !terminated;
             if active {
-                let ent_id     = !stack.pop().node;
-                let entity     = scene.entities(ent_id);
-                let shape      = scene.shapes(entity.shape);
-                let local_ray  = transform_ray(ray, entity.to_local, entity.local_det);
-                let local_hit  = cpu_traverse_hybrid_helper_prim(local_ray, vector_width, min_max, shape.bvh, single, any_hit, 1/*root*/);
+                let ent_id          = !stack.pop().node;
+                let shape           = scene.shapes(scene.entities.shape(ent_id));
+                let (local_ray, sf) = transform_ray(cpu_intrinsics, ray, scene.entities.local_mat4x4(ent_id));
+                let local_hit       = cpu_traverse_hybrid_helper_prim(local_ray, vector_width, min_max, shape.bvh, single, any_hit, 1/*root*/);
 
                 if local_hit.prim_id != -1 {
-                    let glb_dist = local_hit.distance * entity.global_det;
+                    let glb_dist = local_hit.distance / sf;
 
                     if glb_dist <= hit.distance {
                         hit           = local_hit;
                         hit.distance  = glb_dist;
-                        hit.ent_id   = ent_id;
+                        hit.ent_id    = ent_id;
                         ray.tmax      = hit.distance;
 
                         // Early exit mode

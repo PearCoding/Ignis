@@ -198,7 +198,7 @@ private:
 					tri.prim_id.e[j] = id;
 				}
 
-				for (size_t j = c; j < 4; j++)
+				for (size_t j = c; j < M; j++)
 					tri.prim_id.e[j] = 0xFFFFFFFF;
 
 				tris.emplace_back(tri);
@@ -315,6 +315,8 @@ private:
 		template <typename RefFn>
 		void operator()(int parent, int child, const BoundingBox& /*leaf_bb*/, size_t ref_count, RefFn refs)
 		{
+			assert(ref_count > 0);
+
 			auto& nodes = adapter.nodes_;
 			auto& tris	= adapter.tris_;
 
@@ -322,7 +324,7 @@ private:
 
 			for (size_t i = 0; i < ref_count; i++) {
 				const int ref	  = refs(i);
-				auto& tri		  = in_tris[ref];
+				const auto& tri	  = in_tris[ref];
 				const Vector3f e1 = tri.v0 - tri.v1;
 				const Vector3f e2 = tri.v2 - tri.v0;
 				tris.emplace_back(Tri1{

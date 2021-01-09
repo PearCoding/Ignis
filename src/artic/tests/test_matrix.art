@@ -111,7 +111,7 @@ fn test_matrix4_transform() {
     err
 }
 
-#[export] fn test_matrix() -> i32 { 
+fn test_matrix() -> i32 { 
     let mut err = 0;
 
     err += test_matrix3_invert();

@@ -163,7 +163,7 @@ void GeneratorShape::setup(GeneratorContext& ctx)
 		if (child->property("face_normals").getBool())
 			child_mesh.setupFaceNormalsAsVertexNormals();
 
-		TransformCache transform = TransformCache(child->property("to_world").getTransform());
+		TransformCache transform = TransformCache(child->property("transform").getTransform());
 		for (size_t i = 0; i < child_mesh.vertices.size(); ++i)
 			child_mesh.vertices[i] = transform.applyTransform(child_mesh.vertices[i]);
 		for (size_t i = 0; i < child_mesh.normals.size(); ++i)
@@ -175,8 +175,7 @@ void GeneratorShape::setup(GeneratorContext& ctx)
 		BoundingBox bbox = BoundingBox::Empty();
 		for (const auto& v : child_mesh.vertices)
 			bbox.extend(v);
-		
-		bbox.inflate(0.0001f); // Make sure it has a volume
+		bbox.inflate(1e-5f); // Make sure it has a volume
 
 		const std::string suffix = GeneratorContext::makeId(pair.first);
 
@@ -190,8 +189,6 @@ void GeneratorShape::setup(GeneratorContext& ctx)
 
 		// Export data:
 		IG_LOG(L_INFO) << "Generating triangle mesh for shape " << pair.first << std::endl;
-		if (child_mesh.face_area.size() < 4) // Make sure it is not too small
-			child_mesh.face_area.resize(16);
 		IO::write_tri_mesh(suffix, child_mesh, ctx.EnablePadding);
 
 		// Generate BVH
@@ -227,15 +224,15 @@ std::string GeneratorShape::dump(const GeneratorContext& ctx)
 
 	for (const auto& pair : ctx.Scene.shapes()) {
 		const std::string suffix = GeneratorContext::makeId(pair.first);
-		const size_t numTris	 = ctx.Environment.Shapes.at(pair.first).ItxCount;
+		const size_t numTris	 = ctx.Environment.Shapes.at(pair.first).ItxCount/4; // (I0, I1, I2, M)
 
 		sstream << "    // ---- Shape " << pair.first << "\n"
-				<< "    let vertices_" << suffix << " = device.load_buffer(\"data/meshes/vertices_" << suffix << ".bin\");\n"
-				<< "    let normals_" << suffix << " = device.load_buffer(\"data/meshes/normals_" << suffix << ".bin\");\n"
+				<< "    let vertices_" << suffix << "     = device.load_buffer(\"data/meshes/vertices_" << suffix << ".bin\");\n"
+				<< "    let normals_" << suffix << "      = device.load_buffer(\"data/meshes/normals_" << suffix << ".bin\");\n"
 				<< "    let face_normals_" << suffix << " = device.load_buffer(\"data/meshes/face_normals_" << suffix << ".bin\");\n"
-				<< "    let face_area_" << suffix << " = device.load_buffer(\"data/meshes/face_area_" << suffix << ".bin\");\n"
-				<< "    let texcoords_" << suffix << " = device.load_buffer(\"data/meshes/texcoords_" << suffix << ".bin\");\n"
-				<< "    let indices_" << suffix << " = device.load_buffer(\"data/meshes/indices_" << suffix << ".bin\");\n"
+				<< "    let face_area_" << suffix << "    = device.load_buffer(\"data/meshes/face_area_" << suffix << ".bin\");\n"
+				<< "    let texcoords_" << suffix << "    = device.load_buffer(\"data/meshes/texcoords_" << suffix << ".bin\");\n"
+				<< "    let indices_" << suffix << "      = device.load_buffer(\"data/meshes/indices_" << suffix << ".bin\");\n"
 				<< "    let trimesh_" << suffix << " = TriMesh {\n"
 				<< "       vertices     = @ |i| vertices_" << suffix << ".load_vec3(i),\n"
 				<< "       normals      = @ |i| normals_" << suffix << ".load_vec3(i),\n"

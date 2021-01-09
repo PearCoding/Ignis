@@ -110,15 +110,14 @@ fn @gpu_shade( acc: Accelerator
         }
 
         let mut state = make_primary_stream_state_reader(primary, 1)(ray_id, 0);
-        let ray   = make_ray_stream_reader(primary.rays, 1)(ray_id, 0);
-        let pixel = primary.rays.id(ray_id);
+        let ray       = make_ray_stream_reader(primary.rays, 1)(ray_id, 0);
+        let pixel     = primary.rays.id(ray_id);
 
         let hit      = make_primary_stream_hit_reader(primary, 1)(ray_id, 0);
-        let ent      = scene.entities(ent_id);
-        let shp      = scene.shapes(ent.shape);
+        let shp      = scene.shapes(scene.entities.shape(ent_id));
         let lcl_surf = shp.surface_element(ray, hit);
-        let glb_surf = map_surface_element(intrinsics, lcl_surf, ent);
-        let mat      = ent.shader(ray, hit, glb_surf);
+        let glb_surf = map_surface_element(intrinsics, lcl_surf, scene.entities.global_mat4x4(ent_id), scene.entities.normal_mat3x3(ent_id));
+        let mat      = scene.entities.shader(ent_id)(ray, hit, glb_surf);
 
         let on_hit = path_tracer.on_hit;
         if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) {
@@ -163,7 +162,7 @@ fn @copy_primary_ray( primary: PrimaryStream
     other_primary.rays.tmin(dst_id)  = primary.rays.tmin(src_id);
     other_primary.rays.tmax(dst_id)  = primary.rays.tmax(src_id);
     if keep_hit {
-        other_primary.ent_id(dst_id) = primary.ent_id(src_id);
+        other_primary.ent_id(dst_id)  = primary.ent_id(src_id);
         other_primary.prim_id(dst_id) = primary.prim_id(src_id);
         other_primary.t(dst_id)       = primary.t(src_id);
         other_primary.u(dst_id)       = primary.u(src_id);
@@ -454,11 +453,10 @@ fn @gpu_mega_kernel_trace( dev_id: i32
             let mut trace_shadow = false;
             for i in unroll(0, scene.num_entities) {
                 if i == scene.num_entities - 1 || hit.ent_id == i {
-                    let ent      = scene.entities(i);
-                    let shp      = scene.shapes(ent.shape);
+                    let shp      = scene.shapes(scene.entities.shape(i));
                     let lcl_surf = shp.surface_element(ray, hit);
-                    let glb_surf = map_surface_element(intrinsics, lcl_surf, ent);
-                    let mat      = ent.shader(ray, hit, glb_surf);
+                    let glb_surf = map_surface_element(intrinsics, lcl_surf, scene.entities.global_mat4x4(i), scene.entities.normal_mat3x3(i));
+                    let mat      = scene.entities.shader(i)(ray, hit, glb_surf);
 
                     let on_hit = path_tracer.on_hit;
                     match @on_hit(ray, hit, &mut state, glb_surf, mat) {
@@ -562,7 +560,7 @@ fn @make_nvvm_device(dev: i32, streaming: bool) -> Device {
     };
     let load_scene_bvh = @ |filename: &[u8]| {
         let mut nodes: &[Node2];
-        let mut objs: &[TaggedBBox];
+        let mut objs: &[TaggedBBox1];
         ignis_load_bvh2_bbox(dev_id, filename, &mut nodes, &mut objs);
         make_gpu_bvh2_bbox(nodes, objs, true)
     };
@@ -595,6 +593,19 @@ fn @make_nvvm_device(dev: i32, streaming: bool) -> Device {
             load_int4 = @ |i| {
                 let v = nvvm_ldg4_i32(&(p as &addrspace(1)[simd[i32 * 4]](i)));
                 (v(0), v(1), v(2), v(3))
+            },
+            load_mat3x3 = @ |i| {
+                let v0 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(3*i)));
+                let v1 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(3*i+1)));
+                let v2 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(3*i+2)));
+                make_mat3x3(make_vec3(v0(0), v0(1), v0(2)), make_vec3(v0(3), v1(0), v1(1)), make_vec3(v1(2), v1(3), v2(0)))
+            },
+            load_mat4x4 = @ |i| {
+                let v0 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(4*i)));
+                let v1 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(4*i+1)));
+                let v2 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(4*i+2)));
+                let v3 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(4*i+3)));
+                make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)), make_vec4(v1(0), v1(1), v1(2), v1(3)), make_vec4(v2(0), v2(1), v2(2), v2(3)), make_vec4(v3(0), v3(1), v3(2), v3(3)))
             }
         }
     };
@@ -628,7 +639,7 @@ fn @make_amdgpu_device(dev: i32, streaming: bool) -> Device {
     };
     let load_scene_bvh = @ |filename: &[u8]| {
         let mut nodes: &[Node2];
-        let mut objs: &[TaggedBBox];
+        let mut objs: &[TaggedBBox1];
         ignis_load_bvh2_bbox(dev_id, filename, &mut nodes, &mut objs);
         make_gpu_bvh2_bbox(nodes, objs, false)
     };
@@ -661,6 +672,19 @@ fn @make_amdgpu_device(dev: i32, streaming: bool) -> Device {
             load_int4 = @ |i| {
                 let v = (p as &addrspace(1)[simd[i32 * 4]])(i);
                 (v(0), v(1), v(2), v(3))
+            },
+            load_mat3x3 = @ |i| {
+                let v0 = (p as &addrspace(1)[simd[f32 * 4]])(3*i);
+                let v1 = (p as &addrspace(1)[simd[f32 * 4]])(3*i+1);
+                let v2 = (p as &addrspace(1)[simd[f32 * 4]])(3*i+2);
+                make_mat3x3(make_vec3(v0(0), v0(1), v0(2)), make_vec3(v0(3), v1(0), v1(1)), make_vec3(v1(2), v1(3), v2(0)))
+            },
+            load_mat4x4 = @ |i| {
+                let v0 = (p as &addrspace(1)[simd[f32 * 4]])(4*i);
+                let v1 = (p as &addrspace(1)[simd[f32 * 4]])(4*i+1);
+                let v2 = (p as &addrspace(1)[simd[f32 * 4]])(4*i+2);
+                let v3 = (p as &addrspace(1)[simd[f32 * 4]])(4*i+3);
+                make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)), make_vec4(v1(0), v1(1), v1(2), v1(3)), make_vec4(v2(0), v2(1), v2(2), v2(3)), make_vec4(v3(0), v3(1), v3(2), v3(3)))
             }
         }
     };

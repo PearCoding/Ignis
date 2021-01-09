@@ -1,0 +1,4 @@
+
+#[export] fn test_main() -> i32 { 
+    test_matrix() + test_intersection()
+}

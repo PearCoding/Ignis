@@ -4,7 +4,7 @@ struct Scene {
     num_shapes:   i32,
     num_lights:   i32,
 
-    entities: fn (i32) -> Entity,
+    entities: EntityMap,
     shapes:   fn (i32) -> Shape,
     lights:   fn (i32) -> Light,
     camera:   Camera, 
@@ -26,14 +26,16 @@ struct Device {
 }
 
 struct DeviceBuffer {
-    load_i32:  fn (i32) -> i32,
-    load_f32:  fn (i32) -> f32,
-    load_vec2: fn (i32) -> Vec2,
-    load_vec3: fn (i32) -> Vec3,
-    load_vec4: fn (i32) -> Vec4,
-    load_int2: fn (i32) -> (i32, i32),
-    load_int3: fn (i32) -> (i32, i32, i32),
-    load_int4: fn (i32) -> (i32, i32, i32, i32),
+    load_i32:    fn (i32) -> i32,
+    load_f32:    fn (i32) -> f32,
+    load_vec2:   fn (i32) -> Vec2,
+    load_vec3:   fn (i32) -> Vec3,
+    load_vec4:   fn (i32) -> Vec4,
+    load_int2:   fn (i32) -> (i32, i32),
+    load_int3:   fn (i32) -> (i32, i32, i32),
+    load_int4:   fn (i32) -> (i32, i32, i32, i32),
+    load_mat3x3: fn (i32) -> Mat3x3,
+    load_mat4x4: fn (i32) -> Mat4x4,
 }
 
 type Renderer = fn (Scene, Device, i32) -> ();

@@ -18,6 +18,39 @@ fn test_tri_intersect() {
     err  
 }
 
+fn test_tri_no_intersect() {
+    let mut err = 0;
+
+    let tri = make_tri(make_vec3(0,0,0), make_vec3(-1,0,0), make_vec3(0,1,0), make_vec3(0,0,-1));
+    let ray = make_ray(make_vec3(0.2,4.4,1), make_vec3(0,0,-1), 0, 10);
+    
+    if let Option[(f32, f32, f32)]::Some(_) = intersect_ray_tri(cpu_intrinsics, false, ray, tri) {
+        ++err;
+        ignis_test_fail("Triangle was intersected, which should not happen!");
+    }
+
+    err  
+}
+
+// If backface culling is disabled, this one should intersect!
+fn test_tri_no_cull_intersect() {
+    let mut err = 0;
+
+    let tri = make_tri(make_vec3(0,0,0), make_vec3(-1,0,0), make_vec3(0,1,0), make_vec3(0,0,-1));
+    let ray = make_ray(make_vec3(0.2,0.4,-1), make_vec3(0,0,1), 0, 10);
+    
+    if let Option[(f32, f32, f32)]::Some((t, u, v)) = intersect_ray_tri(cpu_intrinsics, false, ray, tri) {
+        if !eq_f32(t, 1) || !eq_f32(u, 0.2) || !eq_f32(v, 0.4){
+            ++err;
+        }
+    } else {
+        ++err;
+        ignis_test_fail("Triangle was not intersected!");
+    }
+
+    err  
+}
+
 fn test_bbox_intersect() {
     let mut err = 0;
 
@@ -37,11 +70,65 @@ fn test_bbox_intersect() {
     err
 }
 
-#[export] fn test_intersection() -> i32 { 
+fn test_bbox_no_intersect() {
+    let mut err = 0;
+
+    let tbbox = make_tagged_bbox(make_vec3(0,0,0), make_vec3(1,1,1), 0);
+    let ray = make_ray(make_vec3(0.2,3.4,2), make_vec3(0,0,-1), 0, 10);
+    let defminmax = make_default_min_max();
+
+    if let Option[f32]::Some(_) = intersect_ray_tagged_box(defminmax, ray, tbbox) {
+        ++err;
+        ignis_test_fail("BBox was intersected, but should not be!");
+    }
+
+    err
+}
+
+fn test_bbox_flat_intersect() {
+    let mut err = 0;
+
+    let tbbox = make_tagged_bbox(make_vec3(0,0,0), make_vec3(1,1,0), 0);
+    let ray = make_ray(make_vec3(0.2,0.4,2), make_vec3(0,0,-1), 0, 10);
+    let defminmax = make_default_min_max();
+
+    if let Option[f32]::Some(t) = intersect_ray_tagged_box(defminmax, ray, tbbox) {
+        if !eq_f32(t, 1) {
+            ++err;
+        }
+    } else {
+        ++err;
+        ignis_test_fail("BBox was not intersected!");
+    }
+
+    err
+}
+
+fn test_bbox_empty_intersect() {
+    let mut err = 0;
+
+    let tbbox = make_tagged_bbox(make_vec3(100,100,100), make_vec3(-100,-100,-100), 0);
+    let ray = make_ray(make_vec3(0.2,0.4,2), make_vec3(0,0,-1), 0, 10);
+    let defminmax = make_default_min_max();
+
+    if let Option[f32]::Some(t) = intersect_ray_tagged_box(defminmax, ray, tbbox) {
+        ++err;
+        ignis_test_fail("Empty bbox was intersected, but should not be!");
+    }
+
+    err
+}
+
+fn test_intersection() -> i32 { 
     let mut err = 0;
 
     err += test_tri_intersect();
+    err += test_tri_no_intersect();
+    err += test_tri_no_cull_intersect();
     err += test_bbox_intersect();
+    err += test_bbox_no_intersect();
+    err += test_bbox_flat_intersect();
+    err += test_bbox_empty_intersect();
 
     err
  }

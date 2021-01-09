@@ -27,9 +27,6 @@ struct SceneBuilder {
 
 	inline void setup_integrator(std::ostream& os)
 	{
-		os << "    let renderer = make_debug_renderer();\n";
-		return;
-
 		const auto technique = Context.Scene.technique();
 
 		// TODO: Use the sensor sample count as ssp
@@ -97,35 +94,9 @@ struct SceneBuilder {
 			return;
 		}
 
-		auto writeTransform = [&](const Transformf& transform) {
-			const Matrix4f mat = transform.matrix();
-			os << "make_mat4x4(";
-			for (size_t col = 0; col < 4; ++col) {
-				os << "make_vec4(" << mat.col(col)(0) << ", " << mat.col(col)(1) << ", " << mat.col(col)(2) << ", " << mat.col(col)(3) << ")";
-				if (col != 3)
-					os << ",";
-			}
-			os << ")";
-		};
-
-		os << "\n    // Entities\n"
-		   << "    let entities = @ |i : i32| match i {\n";
-		size_t counter = 0;
-		for (const auto& pair : Context.Environment.Entities) {
-			const std::string id = GeneratorContext::makeId(pair.first);
-			const uint32 shapeID = std::distance(Context.Environment.Shapes.begin(), Context.Environment.Shapes.find(pair.second.Shape));
-
-			if (counter == Context.Environment.Entities.size() - 1)
-				os << "        _ => ";
-			else
-				os << "        " << counter << " => ";
-
-			os << "make_entity(";
-			writeTransform(pair.second.Transform);
-			os << ", " << shapeID << ", material_" << id << "),\n";
-			++counter;
-		}
-		os << "    };\n";
+		IG_LOG(L_INFO) << "Generating entity mappings for " << Context.FilePath << "" << std::endl;
+		os << "\n    // Entities\n";
+		os << GeneratorEntity::dump(Context);
 	}
 
 	void setup_textures(std::ostream& os)
@@ -265,14 +236,12 @@ struct SceneBuilder {
 		   << "        num_entities = " << Context.Environment.Entities.size() << ",\n"
 		   << "        num_shapes   = " << Context.Environment.Shapes.size() << ",\n"
 		   << "        num_lights   = " << Context.Scene.lights().size() << ",\n"
-		   << "        entities     = entities, \n"
+		   << "        entities     = entity_map, \n"
 		   << "        shapes       = shapes,\n"
 		   << "        lights       = lights,\n"
 		   << "        camera       = camera,\n"
 		   << "        bvh          = bvh\n"
 		   << "    };\n";
-
-		std::cout << Context.Environment.SceneBBox.diameter() << std::endl;
 	}
 };
 

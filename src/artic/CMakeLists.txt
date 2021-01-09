@@ -29,6 +29,7 @@ set(ARTIC_TEST_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/dummy_test.art
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_intersection.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_main.art
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_matrix.art
 )
 

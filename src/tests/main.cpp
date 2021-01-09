@@ -5,10 +5,7 @@
 
 int main(int argc, char** argv)
 {
-	int err = 0;
-
-	err += test_matrix();
-	err += test_intersection();
+	int err = test_main();
 
 	if (err != 0)
 		std::cout << err << " failed tests!" << std::endl;

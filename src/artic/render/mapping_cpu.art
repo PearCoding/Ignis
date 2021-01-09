@@ -278,15 +278,14 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
             let mut state = read_primary_state(i, 0);
             let ray_id    = primary.rays.id(i);
 
-            let ent  = scene.entities(entity_id);
-            let shp  = scene.shapes(ent.shape);
-            let surf = shp.surface_element(ray, hit);
-            // TODO: localize
-            let mat  = ent.shader(ray, hit, surf);
+            let shp      = scene.shapes(scene.entities.shape(entity_id));
+            let lcl_surf = shp.surface_element(ray, hit);
+            let glb_surf = map_surface_element(cpu_intrinsics, lcl_surf, scene.entities.global_mat4x4(entity_id), scene.entities.normal_mat3x3(entity_id));
+            let mat      = scene.entities.shader(entity_id)(ray, hit, glb_surf);
 
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
             let on_hit = path_tracer.on_hit;
-            let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, surf, mat) { color } else { black };
+            let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) { color } else { black };
 
             for lane in unroll(0, vector_width) {
                 let j = bitcast[i32](rv_extract(bitcast[f32](ray_id), lane));
@@ -301,7 +300,7 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
 
             // Compute shadow rays
             let on_shadow = path_tracer.on_shadow;
-            if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, hit, &mut state, surf, mat) {
+            if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, hit, &mut state, glb_surf, mat) {
                 write_secondary_ray(i, 0, new_ray);
                 secondary.color_r(i) = color.r;
                 secondary.color_g(i) = color.g;
@@ -313,7 +312,7 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
 
             // Sample new rays
             let on_bounce = path_tracer.on_bounce;
-            if let Option[(Ray, RayState)]::Some(new_ray, new_state) = @on_bounce(ray, hit, &mut state, surf, mat) {
+            if let Option[(Ray, RayState)]::Some(new_ray, new_state) = @on_bounce(ray, hit, &mut state, glb_surf, mat) {
                 write_primary_ray(i, 0, new_ray);
                 write_primary_state(i, 0, new_state);
             } else {
@@ -467,14 +466,22 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     load_buffer = @ |filename| {
         let p = ignis_load_buffer(0, filename);
         DeviceBuffer {
-            load_f32  = @ |i| (p as &[f32])(i),
-            load_i32  = @ |i| (p as &[i32])(i),
-            load_vec2 = @ |i| { let q = p as &[f32]; make_vec2(q(i * 2 + 0), q(i * 2 + 1)) },
-            load_vec3 = @ |i| { let q = p as &[f32]; make_vec3(q(i * 3 + 0), q(i * 3 + 1), q(i * 3 + 2)) },
-            load_vec4 = @ |i| { let v = (p as &[simd[f32 * 4]])(i); make_vec4(v(0), v(1), v(2), v(3)) },
-            load_int2 = @ |i| { let q = p as &[i32]; (q(i * 2 + 0), q(i * 2 + 1)) },
-            load_int3 = @ |i| { let q = p as &[i32]; (q(i * 3 + 0), q(i * 3 + 1), q(i * 3 + 2)) },
-            load_int4 = @ |i| { let v = (p as &[simd[i32 * 4]])(i); (v(0), v(1), v(2), v(3)) }
+            load_f32    = @ |i| (p as &[f32])(i),
+            load_i32    = @ |i| (p as &[i32])(i),
+            load_vec2   = @ |i| { let q = p as &[f32]; make_vec2(q(i * 2 + 0), q(i * 2 + 1)) },
+            load_vec3   = @ |i| { let q = p as &[f32]; make_vec3(q(i * 3 + 0), q(i * 3 + 1), q(i * 3 + 2)) },
+            load_vec4   = @ |i| { let v = (p as &[simd[f32 * 4]])(i); make_vec4(v(0), v(1), v(2), v(3)) },
+            load_int2   = @ |i| { let q = p as &[i32]; (q(i * 2 + 0), q(i * 2 + 1)) },
+            load_int3   = @ |i| { let q = p as &[i32]; (q(i * 3 + 0), q(i * 3 + 1), q(i * 3 + 2)) },
+            load_int4   = @ |i| { let v = (p as &[simd[i32 * 4]])(i); (v(0), v(1), v(2), v(3)) },
+            load_mat3x3 = @ |i| { let q = p as &[f32]; make_mat3x3(make_vec3(q(i * 9 + 0), q(i * 9 + 1), q(i * 9 + 2)), make_vec3(q(i * 9 + 3), q(i * 9 + 4), q(i * 9 + 5)), make_vec3(q(i * 9 + 6), q(i * 9 + 7), q(i * 9 + 8))) },
+            load_mat4x4 = @ |i| {
+                let v0 = (p as &[simd[f32 * 4]])(4*i+0);
+                let v1 = (p as &[simd[f32 * 4]])(4*i+1);
+                let v2 = (p as &[simd[f32 * 4]])(4*i+2);
+                let v3 = (p as &[simd[f32 * 4]])(4*i+3);   
+                make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)), make_vec4(v1(0), v1(1), v1(2), v1(3)), make_vec4(v2(0), v2(1), v2(2), v2(3)), make_vec4(v3(0), v3(1), v3(2), v3(3)))
+            }
         }
     },
     load_tri_bvh = @ |filename| {
@@ -493,12 +500,12 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     load_scene_bvh = @ |filename| {
         if vector_width == 8 {
             let mut nodes: &[Node8];
-            let mut objs: &[TaggedBBox];
+            let mut objs: &[TaggedBBox1];
             ignis_load_bvh8_bbox(0, filename, &mut nodes, &mut objs);
             make_cpu_bvh8_bbox(nodes, objs)
         } else {
             let mut nodes: &[Node4];
-            let mut objs: &[TaggedBBox];
+            let mut objs: &[TaggedBBox1];
             ignis_load_bvh4_bbox(0, filename, &mut nodes, &mut objs);
             make_cpu_bvh4_bbox(nodes, objs)
         }

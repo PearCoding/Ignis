@@ -1,21 +1,7 @@
-// Abstract geometry object (tied to one device)
-struct Entity {
-    to_local: Mat4x4, 
-    to_global: Mat4x4, 
-    local_det: f32, // Global to local absolute determinant
-    global_det: f32, // Local to global absolute determinant
-    shape: i32,
-    shader: Shader  // Shader for this entity
-}
-
-fn @make_entity(to_local: Mat4x4, shape: i32, shader: Shader) -> Entity {
-    let (inv, det) = mat4x4_invert_det(to_local);
-    Entity {
-        to_local = to_local,
-        to_global = inv,
-        local_det = abs(det),
-        global_det = abs(1/det),
-        shape = shape,
-        shader = shader
-    }
+struct EntityMap {
+    local_mat4x4:  fn(i32) -> Mat4x4,
+    global_mat4x4: fn(i32) -> Mat4x4,
+    normal_mat3x3: fn(i32) -> Mat3x3,
+    shape:         fn(i32) -> i32,
+    shader:        fn(i32) -> Shader
 }

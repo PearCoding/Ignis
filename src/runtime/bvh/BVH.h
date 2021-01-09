@@ -5,7 +5,7 @@
 #include "MemoryPool.h"
 #include "math/BoundingBox.h"
 
-#define STATISTICS
+//#define STATISTICS
 #ifdef STATISTICS
 #include <chrono>
 #endif
@@ -127,10 +127,9 @@ public:
 				Ref* refs					 = node.refs;
 				auto ref_count				 = node.ref_count;
 				const BoundingBox& parent_bb = node.bbox;
-				assert(ref_count != 0);
 
 				if (ref_count <= leaf_threshold) {
-					// This candidate does not have enough triangles
+					// This candidate does not have enough objects
 					multi_node.nodes[node_id].tested = true;
 					continue;
 				}

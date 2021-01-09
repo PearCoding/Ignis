@@ -85,9 +85,11 @@ inline static Matrix3f getMatrix3f(const rapidjson::Value& obj)
 	if (len != 9)
 		throw std::runtime_error("Expected matrix of length 9 (3x3)");
 
+	// Eigen uses column major by default. Our input is row major!
 	Matrix3f mat;
-	for (size_t i = 0; i < 9; ++i)
-		mat(i) = array[i].GetFloat();
+	for (size_t i = 0; i < 3; ++i)
+		for (size_t j = 0; j < 3; ++j)
+			mat(i, j) = array[i* 3 + j].GetFloat();
 	return mat;
 }
 
@@ -99,8 +101,9 @@ inline static Matrix4f getMatrix4f(const rapidjson::Value& obj)
 		throw std::runtime_error("Expected matrix of length 16 (4x4)");
 
 	Matrix4f mat;
-	for (size_t i = 0; i < 16; ++i)
-		mat(i) = array[i].GetFloat();
+	for (size_t i = 0; i < 4; ++i)
+		for (size_t j = 0; j < 4; ++j)
+			mat(i, j) = array[i * 4 + j].GetFloat();
 	return mat;
 }
 
@@ -143,35 +146,31 @@ inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson:
 		if (name == "transform") {
 			if (itr->value.IsObject()) {
 				Transformf transform = Transformf::Identity();
-				if (itr->value.HasMember("position")) {
-					Vector3f pos = getVector3f(itr->value["position"]);
-					transform.translate(pos);
-				}
-
-				if (itr->value.HasMember("scale")) {
-					if (itr->value["scale"].IsNumber()) {
-						transform.scale(itr->value["scale"].GetFloat());
+				for (auto val = itr->value.MemberBegin(); val != itr->value.MemberEnd(); ++val) {
+					if (val->name == "position") {
+						Vector3f pos = getVector3f(val->value);
+						transform.translate(pos);
+					} else if (val->name == "scale") {
+						if (val->value.IsNumber()) {
+							transform.scale(val->value.GetFloat());
+						} else {
+							Vector3f s = getVector3f(val->value);
+							transform.scale(s);
+						}
+					} else if (val->name == "rotation") {
+						// TODO
+					} else if (val->name == "matrix") {
+						const size_t len = val->value.GetArray().Size();
+						if (len == 9)
+							transform = transform * Transformf(getMatrix3f(val->value));
+						else if (len == 16)
+							transform = transform * Transformf(getMatrix4f(val->value));
+						else
+							throw std::runtime_error("Expected transform property to be an array of size 9 or 16");
 					} else {
-						Vector3f s = getVector3f(itr->value["scale"]);
-						transform.scale(s);
+						throw std::runtime_error("Transform property got unknown entry type '" + std::string(val->name.GetString()) + "'");
 					}
 				}
-
-				if (itr->value.HasMember("rotation")) {
-					// TODO
-				}
-
-				if (itr->value.HasMember("matrix")) {
-					const size_t len = itr->value["matrix"].GetArray().Size();
-					if (len == 9)
-						ptr->setProperty(name, Property::fromTransform(Transformf(getMatrix3f(itr->value["matrix"]))));
-					else if (len == 16)
-						ptr->setProperty(name, Property::fromTransform(Transformf(getMatrix4f(itr->value["matrix"]))));
-					else
-						throw std::runtime_error("Expected transform property to be an array of size 9 or 16");
-					return; // Ignore other pos, scale stuff
-				}
-
 				ptr->setProperty(name, Property::fromTransform(transform));
 			} else if (itr->value.IsArray()) {
 				const size_t len = itr->value.GetArray().Size();

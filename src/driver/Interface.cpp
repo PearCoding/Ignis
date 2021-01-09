@@ -27,9 +27,9 @@ using Bvh2Tri1 = Bvh<Node2, Tri1>;
 using Bvh4Tri4 = Bvh<Node4, Tri4>;
 using Bvh8Tri4 = Bvh<Node8, Tri4>;
 
-using Bvh2Bbox = Bvh<Node2, TaggedBBox>;
-using Bvh4Bbox = Bvh<Node4, TaggedBBox>;
-using Bvh8Bbox = Bvh<Node8, TaggedBBox>;
+using Bvh2Bbox = Bvh<Node2, TaggedBBox1>;
+using Bvh4Bbox = Bvh<Node4, TaggedBBox1>;
+using Bvh8Bbox = Bvh<Node8, TaggedBBox1>;
 
 struct Interface {
 	using DeviceImage = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
@@ -164,8 +164,10 @@ struct Interface {
 	template <typename T>
 	anydsl::Array<T> copy_to_device(int32_t dev, const T* data, size_t n)
 	{
-		if (n == 0)
+		if (n == 0) {
+			IG_LOG(L_ERROR) << "Trying to copy an empty array to device!" << std::endl;
 			return anydsl::Array<T>();
+		}
 
 		anydsl::Array<T> array(dev, reinterpret_cast<T*>(anydsl_alloc(dev, n * sizeof(T))), n);
 		anydsl_copy(0, data, 0, dev, array.data(), 0, sizeof(T) * n);
@@ -211,7 +213,7 @@ struct Interface {
 	}
 
 	template <typename Node>
-	Bvh<Node, TaggedBBox> load_scene_bvh(int32_t dev, const std::string& filename)
+	Bvh<Node, TaggedBBox1> load_scene_bvh(int32_t dev, const std::string& filename)
 	{
 		std::ifstream is(filename, std::ios::binary);
 		if (!is)
@@ -220,20 +222,20 @@ struct Interface {
 			size_t node_size = 0, obj_size = 0;
 			is.read((char*)&node_size, sizeof(uint32_t));
 			is.read((char*)&obj_size, sizeof(uint32_t));
-			if (node_size == sizeof(Node) && obj_size == sizeof(TaggedBBox)) {
+			if (node_size == sizeof(Node) && obj_size == sizeof(TaggedBBox1)) {
 				IG_LOG(L_INFO) << "Loaded scene BVH file '" << filename << "'" << std::endl;
 				std::vector<Node> nodes;
-				std::vector<TaggedBBox> objs;
+				std::vector<TaggedBBox1> objs;
 				IO::read_buffer(is, nodes);
 				IO::read_buffer(is, objs);
 				IG_LOG(L_INFO) << ">> " << nodes.size() << " nodes and " << objs.size() << " objects" << std::endl;
-				return Bvh<Node, TaggedBBox>{ std::move(copy_to_device(dev, nodes)), std::move(copy_to_device(dev, objs)) };
+				return Bvh<Node, TaggedBBox1>{ std::move(copy_to_device(dev, nodes)), std::move(copy_to_device(dev, objs)) };
 			}
 			IO::skip_buffer(is);
 			IO::skip_buffer(is);
 		} while (!is.eof() && is);
 		IG_LOG(L_ERROR) << "Invalid scene BVH file" << std::endl;
-		return Bvh<Node, TaggedBBox>{};
+		return Bvh<Node, TaggedBBox1>{};
 	}
 
 	const anydsl::Array<uint8_t>& load_buffer(int32_t dev, const std::string& filename)
@@ -322,6 +324,9 @@ inline void get_ray_stream(RayStream& rays, float* ptr, size_t capacity)
 
 inline void get_primary_stream(PrimaryStream& primary, float* ptr, size_t capacity)
 {
+	// TODO: This is bad behavior. Need better abstraction
+	static_assert(sizeof(int) == 4, "Invalid bytesize configuration");
+	
 	get_ray_stream(primary.rays, ptr, capacity);
 	primary.ent_id	  = (int*)ptr + 9 * capacity;
 	primary.prim_id	  = (int*)ptr + 10 * capacity;
@@ -402,25 +407,25 @@ void ignis_load_bvh8_tri4(int32_t dev, const char* file, Node8** nodes, Tri4** t
 	*tris	  = const_cast<Tri4*>(bvh.objs.data());
 }
 
-void ignis_load_bvh2_bbox(int32_t dev, const char* file, Node2** nodes, TaggedBBox** objs)
+void ignis_load_bvh2_bbox(int32_t dev, const char* file, Node2** nodes, TaggedBBox1** objs)
 {
 	auto& bvh = interface->load_bvh2_bbox(dev, file);
 	*nodes	  = const_cast<Node2*>(bvh.nodes.data());
-	*objs	  = const_cast<TaggedBBox*>(bvh.objs.data());
+	*objs	  = const_cast<TaggedBBox1*>(bvh.objs.data());
 }
 
-void ignis_load_bvh4_bbox(int32_t dev, const char* file, Node4** nodes, TaggedBBox** objs)
+void ignis_load_bvh4_bbox(int32_t dev, const char* file, Node4** nodes, TaggedBBox1** objs)
 {
 	auto& bvh = interface->load_bvh4_bbox(dev, file);
 	*nodes	  = const_cast<Node4*>(bvh.nodes.data());
-	*objs	  = const_cast<TaggedBBox*>(bvh.objs.data());
+	*objs	  = const_cast<TaggedBBox1*>(bvh.objs.data());
 }
 
-void ignis_load_bvh8_bbox(int32_t dev, const char* file, Node8** nodes, TaggedBBox** objs)
+void ignis_load_bvh8_bbox(int32_t dev, const char* file, Node8** nodes, TaggedBBox1** objs)
 {
 	auto& bvh = interface->load_bvh8_bbox(dev, file);
 	*nodes	  = const_cast<Node8*>(bvh.nodes.data());
-	*objs	  = const_cast<TaggedBBox*>(bvh.objs.data());
+	*objs	  = const_cast<TaggedBBox1*>(bvh.objs.data());
 }
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int32_t size)

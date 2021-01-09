@@ -56,7 +56,7 @@ fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], is_nvvm: bool) -> PrimBvh
                     let n   = vec3_cross(e1, e2);
                     let tri = make_tri(v0, e1, e2, n);
                     if let Option[(f32, f32, f32)]::Some((t, u, v)) = intersect_ray_tri(math, false /*backface_culling*/, ray, tri) {
-                            make_option(make_hit(0/* Will be set later*/, prim_id & 0x7FFFFFFF, t, make_vec2(u, v)))
+                        make_option(make_hit(0/* Will be set later*/, prim_id & 0x7FFFFFFF, t, make_vec2(u, v)))
                     } else {
                         Option[Hit]::None
                     }
@@ -73,7 +73,7 @@ fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], is_nvvm: bool) -> PrimBvh
 
 // Special intersections
 
-fn @make_gpu_bvh2_bbox(nodes: &[Node2], objs: &[TaggedBBox], is_nvvm: bool) -> SceneBvh {
+fn @make_gpu_bvh2_bbox(nodes: &[Node2], objs: &[TaggedBBox1], is_nvvm: bool) -> SceneBvh {
     // Use texture cache when generating code with NVVM
     let load4_f32 = @ |p: &addrspace(1)[simd[f32 * 4]], i: i32| if is_nvvm { nvvm_ldg4_f32(&p(i)) } else { p(i) };
     let load4_i32 = @ |p: &addrspace(1)[simd[i32 * 4]], i: i32| if is_nvvm { nvvm_ldg4_i32(&p(i)) } else { p(i) };
@@ -103,6 +103,7 @@ fn @make_gpu_bvh2_bbox(nodes: &[Node2], objs: &[TaggedBBox], is_nvvm: bool) -> S
         bbox = @ |j| {
             let simd_ptr = &objs(j) as &addrspace(1)[simd[f32 * 4]];
             let min = load4_f32(simd_ptr, 0);
+            // min(3) is padding
             let max = load4_f32(simd_ptr, 1);
             let tag = bitcast[i32](max(3));
             make_tagged_bbox(make_vec3(min(0), min(1), min(2)), make_vec3(max(0), max(1), max(2)), tag)
@@ -138,7 +139,7 @@ fn @gpu_traverse_single_helper_prim( gpu_intrinsics: Intrinsics
                                     , root: i32
                                     ) -> Hit {
     let mut hit = empty_hit(ray.tmax);
-    let stack = alloc_stack();
+    let stack   = alloc_stack();
     stack.push(root, undef[f32]());
 
     while !stack.is_empty() {
@@ -192,9 +193,7 @@ fn @gpu_traverse_single_helper_prim( gpu_intrinsics: Intrinsics
         }
 
         while is_leaf(stack.top()) {
-            hit.prim_id = 0;
-            break()
-            /*let leaf_ref = stack.pop();
+            let leaf_ref = stack.pop();
             let mut prim_id = !leaf_ref.node;
             while true {
                 let prim = bvh.prim(prim_id++);
@@ -206,12 +205,12 @@ fn @gpu_traverse_single_helper_prim( gpu_intrinsics: Intrinsics
                         hit = prim_hit;
                         ray.tmax = prim_hit.distance;
 
-                        if any_hit && hit.prim_id >= 0 { return(hit) }
+                        if any_hit { return(hit) }
                     }
                 }
 
                 if prim.is_last { break() }
-            }*/
+            }
         }
     }
 
@@ -226,8 +225,43 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
                               , any_hit: bool
                               , root: i32
                               ) -> Hit {
-    let bvh = scene.bvh;
+
     let mut hit = empty_hit(ray.tmax);
+    /*if scene.num_entities == 1 {
+        // No need for the scene bvh if there is just one entity
+        let shape           = scene.shapes(scene.entities.shape(0));
+        let (local_ray, sf) = transform_ray(gpu_intrinsics, ray, scene.entities.local_mat4x4(0));
+        let local_hit       = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape.bvh, any_hit, 1);
+
+        if local_hit.prim_id >= 0 {
+            let glb_dist = local_hit.distance / sf;
+            hit          = make_hit(0, local_hit.prim_id, glb_dist, local_hit.uv_coords);
+        }
+        return(hit)
+    }*/
+
+    /*if scene.num_entities >= 1 {
+        for i in range(0, scene.num_entities) {
+            let shape           = scene.shapes(scene.entities.shape(i));
+            let (local_ray, sf) = transform_ray(gpu_intrinsics, ray, scene.entities.local_mat4x4(i));
+            let local_hit       = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape.bvh, any_hit, 1);
+
+            if local_hit.prim_id >= 0 {
+                let glb_dist = local_hit.distance / sf;
+
+                if glb_dist <= hit.distance {
+                    hit      = make_hit(i, local_hit.prim_id, glb_dist, local_hit.uv_coords);
+                    ray.tmax = glb_dist;
+
+                    // Early exit mode
+                    if any_hit { return(hit) }
+                }
+            }
+        }
+        return(hit)
+    }*/
+
+    let bvh   = scene.bvh;
     let stack = alloc_stack();
     stack.push(root, undef[f32]());
 
@@ -287,25 +321,24 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
             while true {
                 let tagbbox = bvh.bbox(bbox_id++);
 
-                if let Option[f32]::Some(_) = intersect_ray_tagged_box(min_max, ray, tagbbox) {
-                    let entity_id = tagbbox.tag & 0x7FFFFFFF;
-                    let entity    = scene.entities(entity_id);
-                    let shape     = scene.shapes(entity.shape);
-                    let local_ray = transform_ray(ray, entity.to_local, entity.local_det);
-                    let local_hit = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape.bvh, any_hit, 1/*root*/);
+                if let Option[f32]::Some(t) = intersect_ray_tagged_box(min_max, ray, tagbbox) {
+                    if t <= hit.distance {
+                        let entity_id       = tagbbox.tag & 0x7FFFFFFF;
+                        let shape           = scene.shapes(scene.entities.shape(entity_id));
+                        let (local_ray, sf) = transform_ray(gpu_intrinsics, ray, scene.entities.local_mat4x4(entity_id));
+                        let local_hit       = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape.bvh, any_hit, 1);
 
-                    if local_hit.prim_id >= 0 {
-                        let glb_dist = local_hit.distance * entity.global_det;
+                        if local_hit.prim_id >= 0 {
+                            let glb_dist = local_hit.distance / sf;
 
-                        /*if glb_dist <= hit.distance {*/
-                            hit           = local_hit;
-                            hit.distance  = glb_dist;
-                            hit.ent_id    = entity_id;
-                            //ray.tmax      = glb_dist;
+                            if glb_dist >= t && glb_dist <= hit.distance {
+                                hit      = make_hit(entity_id, local_hit.prim_id, glb_dist, local_hit.uv_coords);
+                                ray.tmax = glb_dist;
 
-                            // Early exit mode
-                            /*if any_hit { */return(hit) //}
-                        //}
+                                // Early exit mode
+                                if any_hit { return(hit) }
+                            }
+                        }
                     }
                 }
 

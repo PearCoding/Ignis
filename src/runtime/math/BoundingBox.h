@@ -5,9 +5,10 @@
 namespace IG {
 /// Bounding box represented by its two extreme points.
 struct BoundingBox {
-	Vector3f min, max;
+	Vector3f min = Vector3f::Zero();
+	Vector3f max = Vector3f::Zero();
 
-	inline BoundingBox() {}
+	inline BoundingBox() = default;
 	inline BoundingBox(const Vector3f& f)
 		: min(f)
 		, max(f)
@@ -91,6 +92,18 @@ struct BoundingBox {
 		bbox.extend(transform * Vector3f(min(0), max(1), max(2))); // 011
 		bbox.extend(transform * max);							   // 111
 		return bbox;
+		/*const Vector3f xmin = transform.linear().col(0) * min(0);
+		const Vector3f xmax = transform.linear().col(0) * max(0);
+
+		const Vector3f ymin = transform.linear().col(1) * min(1);
+		const Vector3f ymax = transform.linear().col(1) * max(1);
+
+		const Vector3f zmin = transform.linear().col(2) * min(2);
+		const Vector3f zmax = transform.linear().col(2) * max(2);
+
+		return BoundingBox(
+			xmin.cwiseMin(xmax) + ymin.cwiseMin(ymax) + zmin.cwiseMin(zmax) + transform.translation(),
+			xmin.cwiseMax(xmax) + ymin.cwiseMax(ymax) + zmin.cwiseMax(zmax) + transform.translation());*/
 	}
 
 	inline bool isEmpty() const

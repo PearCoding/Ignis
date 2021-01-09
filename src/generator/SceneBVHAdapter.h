@@ -37,6 +37,43 @@ struct ObjectAdapter<BoundingBox> {
 	}
 };
 
+template <typename Adapter>
+struct LeafWriterBBox1 {
+	Adapter& adapter;
+	const std::vector<IG::BoundingBox>& in_objs;
+
+	LeafWriterBBox1(Adapter& adapter, const std::vector<IG::BoundingBox>& in_objs)
+		: adapter(adapter)
+		, in_objs(in_objs)
+	{
+	}
+
+	template <typename RefFn>
+	void operator()(int parent, int child, const BoundingBox& /*leaf_bb*/, size_t ref_count, RefFn refs)
+	{
+		//assert(ref_count > 0);
+
+		auto& nodes = adapter.nodes_;
+		auto& objs	= adapter.objs_;
+
+		nodes[parent].child.e[child] = ~objs.size();
+
+		for (size_t i = 0; i < ref_count; ++i) {
+			const int id	   = refs(i);
+			const auto& in_obj = in_objs[id];
+
+			objs.emplace_back(TaggedBBox1{
+				{ in_obj.min(0), in_obj.min(1), in_obj.min(2) },
+				0,
+				{ in_obj.max(0), in_obj.max(1), in_obj.max(2) },
+				id });
+		}
+
+		// Tag last entry
+		objs.back().tag |= 0x80000000;
+	}
+};
+
 template <size_t N>
 struct BvhNBbox {
 };
@@ -72,7 +109,9 @@ class BvhNBboxAdapter {
 	using BvhBuilder = BasicBvhBuilder<BoundingBox, N, CostFn>;
 	using Adapter	 = BvhNBboxAdapter;
 	using Node		 = typename BvhNBbox<N>::Node;
-	using Obj		 = TaggedBBox;
+	using Obj		 = TaggedBBox1;
+
+	friend class LeafWriterBBox1<Adapter>;
 
 	std::vector<Node>& nodes_;
 	std::vector<Obj>& objs_;
@@ -87,7 +126,7 @@ public:
 
 	void build(const std::vector<BoundingBox>& objs)
 	{
-		builder_.build(objs, NodeWriter(*this), LeafWriter(*this, objs), 1);
+		builder_.build(objs, NodeWriter(*this), LeafWriterBBox1<Adapter>(*this, objs), 1);
 #ifdef STATISTICS
 		builder_.print_stats();
 #endif
@@ -116,7 +155,7 @@ private:
 				nodes[parent].child.e[child] = i + 1;
 			}
 
-			assert(count >= 2 && count <= N);
+			assert(count >= 1 && count <= N);
 
 			for (size_t j = 0; j < count; j++) {
 				const BoundingBox& bbox	  = bboxes(j);
@@ -144,48 +183,6 @@ private:
 			return i;
 		}
 	};
-
-	struct LeafWriter {
-		Adapter& adapter;
-		const std::vector<IG::BoundingBox>& in_objs;
-
-		LeafWriter(Adapter& adapter, const std::vector<IG::BoundingBox>& in_objs)
-			: adapter(adapter)
-			, in_objs(in_objs)
-		{
-		}
-
-		template <typename RefFn>
-		void operator()(int parent, int child, const BoundingBox& /*leaf_bb*/, size_t ref_count, RefFn refs)
-		{
-			auto& nodes = adapter.nodes_;
-			auto& objs	= adapter.objs_;
-
-			nodes[parent].child.e[child] = ~objs.size();
-
-			for (size_t i = 0; i < ref_count; ++i) {
-				const int id	   = refs(i);
-				const auto& in_obj = in_objs[id];
-
-				TaggedBBox obj;
-				obj.min.x = in_obj.min(0);
-				obj.min.y = in_obj.min(1);
-				obj.min.z = in_obj.min(2);
-
-				obj.pad0 = 0;
-				
-				obj.max.x = in_obj.max(0);
-				obj.max.y = in_obj.max(1);
-				obj.max.z = in_obj.max(2);
-
-				obj.tag = id;
-				objs.emplace_back(obj);
-			}
-
-			assert(ref_count > 0);
-			objs.back().tag |= 0x80000000; // Tag last entry
-		}
-	};
 };
 
 template <>
@@ -204,7 +201,9 @@ class BvhNBboxAdapter<2> {
 	using BvhBuilder = BasicBvhBuilder<BoundingBox, 2, CostFn>;
 	using Adapter	 = BvhNBboxAdapter;
 	using Node		 = typename BvhNBbox<2>::Node;
-	using Obj		 = TaggedBBox;
+	using Obj		 = TaggedBBox1;
+
+	friend class LeafWriterBBox1<Adapter>;
 
 	std::vector<Node>& nodes_;
 	std::vector<Obj>& objs_;
@@ -219,7 +218,7 @@ public:
 
 	void build(const std::vector<IG::BoundingBox>& objs)
 	{
-		builder_.build(objs, NodeWriter(*this), LeafWriter(*this, objs), 2);
+		builder_.build(objs, NodeWriter(*this), LeafWriterBBox1<Adapter>(*this, objs), 2);
 #ifdef STATISTICS
 		builder_.print_stats();
 #endif
@@ -243,7 +242,7 @@ private:
 			nodes.emplace_back();
 
 			if (parent >= 0 && child >= 0) {
-				assert(parent >= 0 && parent < nodes.size());
+				assert(parent >= 0 && parent < (int)nodes.size());
 				assert(child >= 0 && child < 2);
 				nodes[parent].child.e[child] = i + 1;
 			}
@@ -278,52 +277,11 @@ private:
 			return i;
 		}
 	};
-
-	struct LeafWriter {
-		Adapter& adapter;
-		const std::vector<IG::BoundingBox>& in_objs;
-
-		LeafWriter(Adapter& adapter, const std::vector<IG::BoundingBox>& in_objs)
-			: adapter(adapter)
-			, in_objs(in_objs)
-		{
-		}
-
-		template <typename RefFn>
-		void operator()(int parent, int child, const BoundingBox& /*leaf_bb*/, size_t ref_count, RefFn refs)
-		{
-			auto& nodes = adapter.nodes_;
-			auto& objs	= adapter.objs_;
-
-			nodes[parent].child.e[child] = ~nodes.size();
-
-			for (size_t i = 0; i < ref_count; ++i) {
-				const int id	   = refs(i);
-				const auto& in_obj = in_objs[id];
-
-				TaggedBBox obj;
-				obj.min.x = in_obj.min(0);
-				obj.min.y = in_obj.min(1);
-				obj.min.z = in_obj.min(2);
-
-				obj.pad0 = 0;
-
-				obj.max.x = in_obj.max(0);
-				obj.max.y = in_obj.max(1);
-				obj.max.z = in_obj.max(2);
-
-				obj.tag = id;
-				objs.emplace_back(obj);
-			}
-			assert(ref_count > 0);
-			objs.back().tag |= 0x80000000; // Tag last entry
-		}
-	};
 };
 
 template <size_t N>
 inline void build_scene_bvh(std::vector<typename BvhNBbox<N>::Node>& nodes,
-							std::vector<TaggedBBox>& objs,
+							std::vector<TaggedBBox1>& objs,
 							std::vector<BoundingBox>& boundingBoxes)
 {
 	BvhNBboxAdapter<N> adapter(nodes, objs);

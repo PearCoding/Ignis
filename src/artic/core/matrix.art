@@ -112,6 +112,8 @@ fn @mat4x4_matmul(a: Mat4x4, b: Mat4x4) = make_mat4x4(
 fn @mat3x3_at(a: Mat3x3, row: i32, col: i32) = [a.col(col).x, a.col(col).y, a.col(col).z](row);
 fn @mat4x4_at(a: Mat4x4, row: i32, col: i32) = [a.col(col).x, a.col(col).y, a.col(col).z, a.col(col).w](row);
 
+fn @mat3x3_normalize_cols(math : Intrinsics, a : Mat3x3) = make_mat3x3(vec3_normalize(math, a.col(0)), vec3_normalize(math, a.col(1)), vec3_normalize(math, a.col(2)));
+
 fn @mat3x3_det(a: Mat3x3) = mat3x3_at(a, 0, 0) * (mat3x3_at(a, 1, 1) * mat3x3_at(a, 2, 2) - mat3x3_at(a, 2, 1) * mat3x3_at(a, 1, 2)) -
                             mat3x3_at(a, 0, 1) * (mat3x3_at(a, 1, 0) * mat3x3_at(a, 2, 2) - mat3x3_at(a, 1, 2) * mat3x3_at(a, 2, 0)) +
                             mat3x3_at(a, 0, 2) * (mat3x3_at(a, 1, 0) * mat3x3_at(a, 2, 1) - mat3x3_at(a, 1, 1) * mat3x3_at(a, 2, 0));
@@ -216,5 +218,5 @@ fn @mat4x4_transform_point(a: Mat4x4, v: Vec3) -> Vec3 {
     make_vec3(res.x*inv_w, res.y*inv_w, res.z*inv_w)
 }
 
-fn @mat4x4_transform_direction(a: Mat4x4, v: Vec3) = mat3x3_mul(mat4x4_linear(a), v);
+fn @mat4x4_transform_direction(math: Intrinsics, a: Mat4x4, v: Vec3) = vec3_normalize(math, mat3x3_mul(mat4x4_linear(a), v));
 fn @mat4x4_transform_normal(math: Intrinsics, a: Mat4x4, v: Vec3) = vec3_normalize(math, mat3x3_mul(mat4x4_normal(a), v));
