@@ -198,7 +198,7 @@ fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
     has_area = true
 };
 
-fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, color: Color) -> Light {
+fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, color: Color, global_m: Mat4x4, normal_m: Mat3x3) -> Light {
     let emitter = AreaEmitter {
         sample = @ |uv| {
             let ux  = uv.x * (count as f32);
@@ -210,11 +210,13 @@ fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, co
             let v2  = mesh.vertices(i2);
             let n   = mesh.face_normals(f+off);
             let inv_area = 1.0/mesh.face_area(f+off);
-            (sample_triangle(uv2.x, uv2.y, v0, v1, v2), n, inv_area)
+            (mat4x4_transform_point(global_m, sample_triangle(uv2.x, uv2.y, v0, v1, v2)),
+             mat3x3_mul(normal_m, n),
+             inv_area)
         },
         normal = @ |uv| {
             let f = (uv.x * (count as f32)) as i32;
-            mesh.face_normals(f+off)
+            mat3x3_mul(normal_m, mesh.face_normals(f+off))
         },
         pdf = @ |uv| {
             let f = (uv.x * (count as f32)) as i32;

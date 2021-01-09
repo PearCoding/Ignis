@@ -22,6 +22,38 @@
 namespace IG {
 using namespace Loader;
 
+static inline std::string writeMatrix(const Matrix4f& m)
+{
+	if (m.isIdentity())
+		return "mat4x4_identity()";
+
+	std::stringstream sstream;
+	sstream << "make_mat4x4(";
+	for (size_t col = 0; col < 4; ++col) {
+		sstream << "make_vec4(" << m.col(col)(0) << ", " << m.col(col)(1) << ", " << m.col(col)(2) << ", " << m.col(col)(3) << ")";
+		if (col != 3)
+			sstream << ",";
+	}
+	sstream << ")";
+	return sstream.str();
+}
+
+static inline std::string writeMatrix(const Matrix3f& m)
+{
+	if (m.isIdentity())
+		return "mat3x3_identity()";
+
+	std::stringstream sstream;
+	sstream << "make_mat3x3(";
+	for (size_t col = 0; col < 3; ++col) {
+		sstream << "make_vec3(" << m.col(col)(0) << ", " << m.col(col)(1) << ", " << m.col(col)(2) << ")";
+		if (col != 2)
+			sstream << ",";
+	}
+	sstream << ")";
+	return sstream.str();
+}
+
 struct SceneBuilder {
 	GeneratorContext Context;
 
@@ -145,10 +177,16 @@ struct SceneBuilder {
 				if (Context.Environment.Entities.count(entityName) > 0) {
 					const auto& entity = Context.Environment.Entities[entityName];
 					const Shape shape  = Context.Environment.Shapes[entity.Shape];
+
+					const Matrix4f global_m = entity.Transform.matrix();
+					const Matrix3f normal_m = global_m.transpose().inverse().block<3, 3>(0, 0);
+
 					os << "    let light_" << GeneratorContext::makeId(name) << " = make_trimesh_light(math, "
 					   << shape.TriMesh << ", 0, "
 					   << (shape.ItxCount / 4) << ", "
-					   << Context.extractMaterialPropertyColor(light, "radiance") << ");\n";
+					   << Context.extractMaterialPropertyColor(light, "radiance") << ", "
+					   << writeMatrix(global_m) << ", "
+					   << writeMatrix(normal_m) << ");\n";
 				} else {
 					IG_LOG(L_ERROR) << "Light " << name << " connected to unknown entity " << entityName << std::endl;
 				}

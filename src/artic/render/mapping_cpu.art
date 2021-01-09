@@ -278,8 +278,10 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
             let mut state = read_primary_state(i, 0);
             let ray_id    = primary.rays.id(i);
 
+            let (local_ray, _) = transform_ray(cpu_intrinsics, ray, scene.entities.local_mat4x4(entity_id));
+
             let shp      = scene.shapes(scene.entities.shape(entity_id));
-            let lcl_surf = shp.surface_element(ray, hit);
+            let lcl_surf = shp.surface_element(local_ray, hit);
             let glb_surf = map_surface_element(cpu_intrinsics, lcl_surf, scene.entities.global_mat4x4(entity_id), scene.entities.normal_mat3x3(entity_id));
             let mat      = scene.entities.shader(entity_id)(ray, hit, glb_surf);
 

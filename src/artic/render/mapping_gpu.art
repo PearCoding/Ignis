@@ -113,9 +113,11 @@ fn @gpu_shade( acc: Accelerator
         let ray       = make_ray_stream_reader(primary.rays, 1)(ray_id, 0);
         let pixel     = primary.rays.id(ray_id);
 
+        let (local_ray, _) = transform_ray(intrinsics, ray, scene.entities.local_mat4x4(ent_id));
+
         let hit      = make_primary_stream_hit_reader(primary, 1)(ray_id, 0);
         let shp      = scene.shapes(scene.entities.shape(ent_id));
-        let lcl_surf = shp.surface_element(ray, hit);
+        let lcl_surf = shp.surface_element(local_ray, hit);
         let glb_surf = map_surface_element(intrinsics, lcl_surf, scene.entities.global_mat4x4(ent_id), scene.entities.normal_mat3x3(ent_id));
         let mat      = scene.entities.shader(ent_id)(ray, hit, glb_surf);
 
@@ -136,7 +138,7 @@ fn @gpu_shade( acc: Accelerator
         }
 
         let on_bounce = path_tracer.on_bounce;
-        if let Option[(Ray, RayState)]::Some(new_ray, new_state) = @on_bounce(ray, hit, &mut state, glb_surf, mat) {
+        if let Option[(Ray, RayState)]::Some(new_ray, new_state) = @on_bounce(ray, hit, &mut state, lcl_surf, mat) {
             make_ray_stream_writer(primary.rays, 1)(ray_id, 0, new_ray);
             make_primary_stream_state_writer(primary, 1)(ray_id, 0, new_state);
         } 
@@ -453,8 +455,10 @@ fn @gpu_mega_kernel_trace( dev_id: i32
             let mut trace_shadow = false;
             for i in unroll(0, scene.num_entities) {
                 if i == scene.num_entities - 1 || hit.ent_id == i {
+                    let (local_ray, _) = transform_ray(intrinsics, ray, scene.entities.local_mat4x4(i));
+
                     let shp      = scene.shapes(scene.entities.shape(i));
-                    let lcl_surf = shp.surface_element(ray, hit);
+                    let lcl_surf = shp.surface_element(local_ray, hit);
                     let glb_surf = map_surface_element(intrinsics, lcl_surf, scene.entities.global_mat4x4(i), scene.entities.normal_mat3x3(i));
                     let mat      = scene.entities.shader(i)(ray, hit, glb_surf);
 
