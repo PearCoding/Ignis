@@ -1,5 +1,5 @@
-#include "UI.h"
 #include "Interface.h"
+#include "UI.h"
 
 #include "Buffer.h"
 #include "Color.h"
@@ -38,37 +38,38 @@ int main(int argc, char** argv)
 {
 	std::string out_file;
 	size_t bench_iter = 0;
-	size_t width	  = 1080;
-	size_t height	  = 720;
-	float fov		  = 60.0f;
-	Vector3f eye(0.0f, 0.0f, 0.0f), dir(0.0f, 0.0f, 1.0f), up(0.0f, 1.0f, 0.0f);
+
+	// Get default settings from script
+	InitialSettings default_settings = get_default_settings();
+	default_settings.film_width		 = std::max(100, default_settings.film_width);
+	default_settings.film_height	 = std::max(100, default_settings.film_height);
 
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
 			if (!strcmp(argv[i], "--width")) {
 				check_arg(argc, argv, i, 1);
-				width = strtoul(argv[++i], nullptr, 10);
+				default_settings.film_width = strtoul(argv[++i], nullptr, 10);
 			} else if (!strcmp(argv[i], "--height")) {
 				check_arg(argc, argv, i, 1);
-				height = strtoul(argv[++i], nullptr, 10);
+				default_settings.film_height = strtoul(argv[++i], nullptr, 10);
 			} else if (!strcmp(argv[i], "--eye")) {
 				check_arg(argc, argv, i, 3);
-				eye(0) = strtof(argv[++i], nullptr);
-				eye(1) = strtof(argv[++i], nullptr);
-				eye(2) = strtof(argv[++i], nullptr);
+				default_settings.eye.x = strtof(argv[++i], nullptr);
+				default_settings.eye.y = strtof(argv[++i], nullptr);
+				default_settings.eye.z = strtof(argv[++i], nullptr);
 			} else if (!strcmp(argv[i], "--dir")) {
 				check_arg(argc, argv, i, 3);
-				dir(0) = strtof(argv[++i], nullptr);
-				dir(1) = strtof(argv[++i], nullptr);
-				dir(2) = strtof(argv[++i], nullptr);
+				default_settings.dir.x = strtof(argv[++i], nullptr);
+				default_settings.dir.y = strtof(argv[++i], nullptr);
+				default_settings.dir.z = strtof(argv[++i], nullptr);
 			} else if (!strcmp(argv[i], "--up")) {
 				check_arg(argc, argv, i, 3);
-				up(0) = strtof(argv[++i], nullptr);
-				up(1) = strtof(argv[++i], nullptr);
-				up(2) = strtof(argv[++i], nullptr);
+				default_settings.up.x = strtof(argv[++i], nullptr);
+				default_settings.up.y = strtof(argv[++i], nullptr);
+				default_settings.up.z = strtof(argv[++i], nullptr);
 			} else if (!strcmp(argv[i], "--fov")) {
 				check_arg(argc, argv, i, 1);
-				fov = strtof(argv[++i], nullptr);
+				default_settings.fov = strtof(argv[++i], nullptr);
 			} else if (!strcmp(argv[i], "--spp")) {
 				check_arg(argc, argv, i, 1);
 				bench_iter = (size_t)std::ceil(strtoul(argv[++i], nullptr, 10) / (float)get_spp());
@@ -91,13 +92,18 @@ int main(int argc, char** argv)
 		}
 	}
 
-	Camera camera(eye, dir, up, fov, (float)width / (float)height);
+	Camera camera(
+		Vector3f(default_settings.eye.x, default_settings.eye.y, default_settings.eye.z),
+		Vector3f(default_settings.dir.x, default_settings.dir.y, default_settings.dir.z),
+		Vector3f(default_settings.up.x, default_settings.up.y, default_settings.up.z),
+		default_settings.fov,
+		(float)default_settings.film_width / (float)default_settings.film_height);
 
 #ifdef WITH_UI
-	UI::init(width, height);
+	UI::init(default_settings.film_width, default_settings.film_height);
 #endif
 
-	setup_interface(width, height);
+	setup_interface(default_settings.film_width, default_settings.film_height);
 
 	// Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
@@ -131,7 +137,7 @@ int main(int argc, char** argv)
 		auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
 		if (bench_iter != 0) {
-			samples_sec.emplace_back(1000.0 * double(spp * width * height) / double(elapsed_ms));
+			samples_sec.emplace_back(1000.0 * double(spp * default_settings.film_width * default_settings.film_height) / double(elapsed_ms));
 			if (samples_sec.size() == bench_iter)
 				break;
 		}

@@ -157,8 +157,10 @@ void GeneratorShape::setup(GeneratorContext& ctx)
 			continue;
 		}
 
-		if (child->property("flip_normals").getBool())
+		if (child->property("flip_normals").getBool()) {
+			std::cout << "FLIPPING NORMALS!" << std::endl;
 			child_mesh.flipNormals();
+		}
 
 		if (child->property("face_normals").getBool())
 			child_mesh.setupFaceNormalsAsVertexNormals();

@@ -86,6 +86,8 @@
         "node": "cpp",
         "glextensions": "cpp",
         "graphicscontext": "cpp",
-        "texture": "cpp"
+        "texture": "cpp",
+        "camera": "cpp",
+        "viewport": "cpp"
     }
 }

@@ -80,7 +80,6 @@ struct SceneBuilder {
 
 	inline void setup_camera(std::ostream& os)
 	{
-		// TODO: Extract default settings?
 		// Setup camera
 		os << "\n    // Camera\n"
 		   << "    let camera = make_perspective_camera(\n"
@@ -281,6 +280,40 @@ struct SceneBuilder {
 		   << "        bvh          = bvh\n"
 		   << "    };\n";
 	}
+
+	void setup_default_settings(std::ostream& os)
+	{
+		constexpr int DEFAULT_WIDTH	 = 800;
+		constexpr int DEFAULT_HEIGHT = 600;
+		constexpr float DEFAULT_FOV	 = 60;
+
+		const auto camera = Context.Scene.camera();
+		const auto film	  = Context.Scene.film();
+
+		const int width	 = film ? film->property("size").getVector2(Vector2f(DEFAULT_WIDTH, DEFAULT_HEIGHT)).x() : DEFAULT_WIDTH;
+		const int height = film ? film->property("size").getVector2(Vector2f(DEFAULT_WIDTH, DEFAULT_HEIGHT)).y() : DEFAULT_HEIGHT;
+
+		Vector3f eye = Vector3f::Zero();
+		Vector3f dir = Vector3f(0, 0, 1);
+		Vector3f up	 = Vector3f(0, 1, 0);
+		float fov	 = DEFAULT_FOV;
+
+		if (camera) {
+			const Transformf t = camera->property("transform").getTransform();
+			eye				   = t * eye;
+			dir				   = t.linear().col(2);
+			up				   = t.linear().col(1);
+
+			fov = camera->property("fov").getNumber(DEFAULT_FOV);
+		}
+
+		os << "    eye         = make_vec3(" << eye(0) << ", " << eye(1) << ", " << eye(2) << "),\n"
+		   << "    dir         = make_vec3(" << dir(0) << ", " << dir(1) << ", " << dir(2) << "),\n"
+		   << "    up          = make_vec3(" << up(0) << ", " << up(1) << ", " << up(2) << "),\n"
+		   << "    fov         = " << fov << ",\n"
+		   << "    film_width  = " << width << ",\n"
+		   << "    film_height = " << height << "\n";
+	}
 };
 
 bool generate(const std::filesystem::path& filepath, const GeneratorOptions& options, std::ostream& os)
@@ -295,23 +328,6 @@ bool generate(const std::filesystem::path& filepath, const GeneratorOptions& opt
 		std::filesystem::create_directories("data/textures");
 		std::filesystem::create_directories("data/meshes");
 
-		os << "//------------------------------------------------------------------------------------\n"
-		   << "// Generated from " << filepath << " with ignis generator tool\n"
-		   << "//------------------------------------------------------------------------------------\n"
-		   << "\n"
-		   << "struct Settings {\n"
-		   << "    eye: Vec3,\n"
-		   << "    dir: Vec3,\n"
-		   << "    up: Vec3,\n"
-		   << "    right: Vec3,\n"
-		   << "    width: f32,\n"
-		   << "    height: f32\n"
-		   << "}\n"
-		   << "\n"
-		   << "#[export] fn get_spp() -> i32 { " << options.spp << " }\n"
-		   << "\n"
-		   << "#[export] fn render(settings: &Settings, iter: i32) -> () {\n";
-
 		SceneBuilder builder;
 		builder.Context.Scene		  = loader.loadFromFile(filepath);
 		builder.Context.FilePath	  = std::filesystem::canonical(filepath);
@@ -321,6 +337,38 @@ bool generate(const std::filesystem::path& filepath, const GeneratorOptions& opt
 		builder.Context.Fusion		  = options.fusion;
 		builder.Context.EnablePadding = require_padding(options.target);
 		builder.Context.ForceBVHBuild = options.force_bvh_build;
+
+		os << "//------------------------------------------------------------------------------------\n"
+		   << "// Generated from " << filepath << " with ignis generator tool\n"
+		   << "//------------------------------------------------------------------------------------\n"
+		   << "\n"
+		   << "struct InitialSettings {\n"
+		   << "    eye:         Vec3,\n"
+		   << "    dir:         Vec3,\n"
+		   << "    up:          Vec3,\n"
+		   << "    fov:         f32,\n"
+		   << "    film_width:  i32,\n"
+		   << "    film_height: i32\n"
+		   << "}\n"
+		   << "\n"
+		   << "struct Settings {\n"
+		   << "    eye:    Vec3,\n"
+		   << "    dir:    Vec3,\n"
+		   << "    up:     Vec3,\n"
+		   << "    right:  Vec3,\n"
+		   << "    width:  f32,\n"
+		   << "    height: f32\n"
+		   << "}\n"
+		   << "\n"
+		   << "#[export] fn get_spp() -> i32 { " << options.spp << " }\n"
+		   << "\n";
+
+		os << "#[export] fn get_default_settings() = InitialSettings {\n";
+		builder.setup_default_settings(os);
+		os << "};\n"
+		   << "\n";
+
+		os << "#[export] fn render(settings: &Settings, iter: i32) -> () {\n";
 
 		switch (options.target) {
 		case Target::GENERIC:

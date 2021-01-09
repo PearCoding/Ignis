@@ -2,6 +2,8 @@
 
 'Ignis Rodent' is a raytracer for the RENEGADE project implemented using the Artic frontend of the AnyDSL compiler framework (https://anydsl.github.io/) and based on Rodent (https://github.com/AnyDSL/rodent).
 
+![Example render by Ignis Rodent](refs/screenshot.jpg)
+
 ## Dependencies
 
  - AnyDSL <https://github.com/AnyDSL/anydsl>

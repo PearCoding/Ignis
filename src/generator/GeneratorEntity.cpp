@@ -63,8 +63,6 @@ void GeneratorEntity::setup(GeneratorContext& ctx)
 		const BoundingBox& shapeBox = ctx.Environment.Shapes[pair.second.Shape].BoundingBox;
 		const BoundingBox entityBox = shapeBox.transformed(pair.second.Transform);
 
-		std::cout << entityBox.diameter() << entityBox.min << std::endl;
-
 		boundingBoxes.emplace_back(entityBox);
 		ctx.Environment.SceneBBox.extend(entityBox);
 	}

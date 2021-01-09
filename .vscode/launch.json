@@ -30,7 +30,8 @@
             "request": "launch",
             "program": "${command:cmake.buildDirectory}/bin/iggenerator",
             "args": [
-                "${workspaceFolder}/scenes/diamond_scene.xml",
+                "${workspaceFolder}/scenes/diamond_scene.json",
+                "--target", "nvvm"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",

@@ -111,7 +111,7 @@ fn test_bbox_empty_intersect() {
     let ray = make_ray(make_vec3(0.2,0.4,2), make_vec3(0,0,-1), 0, 10);
     let defminmax = make_default_min_max();
 
-    if let Option[f32]::Some(t) = intersect_ray_tagged_box(defminmax, ray, tbbox) {
+    if let Option[f32]::Some(_) = intersect_ray_tagged_box(defminmax, ray, tbbox) {
         ++err;
         ignis_test_fail("Empty bbox was intersected, but should not be!");
     }
