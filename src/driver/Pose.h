@@ -25,9 +25,13 @@ public:
 	void load(const std::filesystem::path& file);
 	void save(const std::filesystem::path& file) const;
 
+	inline void setInitalPose(const CameraPose& pose) { mInitialPose = pose; }
+	inline CameraPose initialPose() const { return mInitialPose; }
+
 	inline size_t poseCount() const { return mPoses.size(); }
 
 private:
+	CameraPose mInitialPose;
 	std::array<CameraPose, 10> mPoses;
 };
 } // namespace IG

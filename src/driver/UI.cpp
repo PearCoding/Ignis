@@ -35,6 +35,7 @@ struct LuminanceInfo {
 };
 
 static int sPoseRequest		   = -1;
+static bool sPoseResetRequest  = false;
 static bool sScreenshotRequest = false;
 static bool sShowUI			   = true;
 static bool sLockInteraction   = false;
@@ -47,6 +48,18 @@ static std::array<float, HISTOGRAM_SIZE> sHistogram;
 static bool sToneMapping_Automatic = true;
 static float sToneMapping_Exposure = 1.0f;
 static float sToneMapping_Offset   = 0.0f;
+
+enum class ToneMappingMethod {
+	None = 0,
+	Reinhard,
+	ModifiedReinhard,
+	ACES
+};
+static const char* ToneMappingMethodOptions[] = {
+	"None", "Reinhard", "Mod. Reinhard", "ACES"
+};
+static const char* sToneMapping_Method = ToneMappingMethodOptions[(int)ToneMappingMethod::ACES];
+static bool sToneMappingGamma		   = false;
 
 // Pose IO
 constexpr char POSE_FILE[] = "data/poses.lst";
@@ -64,8 +77,15 @@ static void handle_pose_input(size_t posenmbr, bool capture, const Camera& cam)
 	}
 }
 
+// Events
 static bool handle_events(uint32_t& iter, Camera& cam)
 {
+	static bool first_call = true;
+	if (first_call) {
+		sPoseManager.setInitalPose(CameraPose(cam));
+		first_call = false;
+	}
+
 	ImGuiIO& io = ImGui::GetIO();
 
 	static bool camera_on			   = false;
@@ -206,6 +226,9 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 					case SDLK_0:
 						handle_pose_input(9, capture, cam);
 						break;
+					case SDLK_r:
+						sPoseResetRequest = true;
+						break;
 					}
 				}
 				switch (event.key.keysym.sym) {
@@ -323,12 +346,13 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 			tspeed *= 0.9f;
 	}
 
-	if (sPoseRequest >= 0) {
-		auto pose = sPoseManager.pose(sPoseRequest);
+	if (sPoseResetRequest || sPoseRequest >= 0) {
+		auto pose = sPoseResetRequest ? sPoseManager.initialPose() : sPoseManager.pose(sPoseRequest);
 		cam.eye	  = pose.Eye;
 		cam.update_dir(pose.Dir, pose.Up);
-		iter		 = 0;
-		sPoseRequest = -1;
+		iter			  = 0;
+		sPoseRequest	  = -1;
+		sPoseResetRequest = false;
 	}
 
 	sLastCameraPose = CameraPose(cam);
@@ -365,10 +389,33 @@ static inline RGB srgb_to_xyY(const RGB& c)
 	return (n == 0) ? RGB(0, 0, 0) : RGB(s.r / n, s.g / n, s.g);
 }
 
+static inline float reinhard(float L)
+{
+	return L / (1.0f + L);
+}
+
 static inline float reinhard_modified(float L)
 {
 	constexpr float WhitePoint = 4.0f;
 	return (L * (1.0f + L / (WhitePoint * WhitePoint))) / (1.0f + L);
+}
+
+static inline float aces(float L)
+{
+	constexpr float a = 2.51f;
+	constexpr float b = 0.03f;
+	constexpr float c = 2.43f;
+	constexpr float d = 0.59f;
+	constexpr float e = 0.14f;
+	return std::min(1.0f, std::max(0.0f, (L * (a * L + b)) / (L * (c * L + d) + e)));
+}
+
+static inline float srgb_gamma(float x)
+{
+	if (x <= 0.0031308f)
+		return 12.92f * x;
+	else
+		return 1.055f * std::pow(x, 0.416666667f) - 0.055f;
 }
 
 static void analzeLuminance(size_t width, size_t height, uint32_t iter)
@@ -481,14 +528,25 @@ static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, si
 			}
 #endif
 
-			RGB color;
-			if (sToneMapping_Automatic) {
-				const float L = xyY.b / sLastLum.Est;
-				color		  = xyY_to_srgb(RGB(xyY.r, xyY.g, reinhard_modified(L)));
-			} else {
-				color = RGB(exposure_factor * r + sToneMapping_Offset,
-							exposure_factor * g + sToneMapping_Offset,
-							exposure_factor * b + sToneMapping_Offset);
+			float L;
+			if (sToneMapping_Automatic)
+				L = xyY.b / sLastLum.Est;
+			else
+				L = exposure_factor * xyY.b + sToneMapping_Offset;
+
+			if (sToneMapping_Method == ToneMappingMethodOptions[(int)ToneMappingMethod::Reinhard])
+				L = reinhard(L);
+			else if (sToneMapping_Method == ToneMappingMethodOptions[(int)ToneMappingMethod::ModifiedReinhard])
+				L = reinhard_modified(L);
+			else if (sToneMapping_Method == ToneMappingMethodOptions[(int)ToneMappingMethod::ACES])
+				L = aces(L);
+
+			RGB color = xyY_to_srgb(RGB(xyY.r, xyY.g, L));
+
+			if (sToneMappingGamma) {
+				color.r = srgb_gamma(color.r);
+				color.g = srgb_gamma(color.g);
+				color.b = srgb_gamma(color.b);
 			}
 
 			buf[y * width + x] = (uint32_t(clamp(std::pow(color.r, inv_gamma), 0.0f, 1.0f) * 255.0f) << 16)
@@ -627,6 +685,18 @@ static void handle_imgui(uint32_t iter)
 			ImGui::SliderFloat("Exposure", &sToneMapping_Exposure, -10.0f, 10.0f);
 			ImGui::SliderFloat("Offset", &sToneMapping_Offset, -10.0f, 10.0f);
 		}
+		if (ImGui::BeginCombo("Method", sToneMapping_Method)) {
+			for (int i = 0; i < IM_ARRAYSIZE(ToneMappingMethodOptions); ++i) {
+				bool is_selected = (sToneMapping_Method == ToneMappingMethodOptions[i]);
+				if (ImGui::Selectable(ToneMappingMethodOptions[i], is_selected))
+					sToneMapping_Method = ToneMappingMethodOptions[i];
+				if (is_selected)
+					ImGui::SetItemDefaultFocus();
+			}
+
+			ImGui::EndCombo();
+		}
+		ImGui::Checkbox("Gamma", &sToneMappingGamma);
 	}
 
 	if (ImGui::CollapsingHeader("Poses")) {

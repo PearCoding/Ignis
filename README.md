@@ -46,10 +46,11 @@ The Ignis Rodent client has an optional UI and multiple ways to interact with th
  - `F2` to toggle the UI.
  - `F3` to toggle the interaction lock. If enabled, no view changing interaction is possible.
  - `F11` to save a screenshot. The image will be saved in the current working directory.
- - `t` to toggle automatic tonemapping.
- - `g` to reset tonemapping properties. Only works if automatic tonemapping is disabled.
- - `f` to increase (or with `Shift` to decrease) tonemapping exposure. Step size can be decreased with `Strg/Ctrl`. Only works if automatic tonemapping is disabled.
- - `v` to increase (or with `Shift` to decrease) tonemapping offset. Step size can be decreased with `Strg/Ctrl`. Only works if automatic tonemapping is disabled.
+ - `R` to reset to initial view.
+ - `T` to toggle automatic tonemapping.
+ - `G` to reset tonemapping properties. Only works if automatic tonemapping is disabled.
+ - `F` to increase (or with `Shift` to decrease) tonemapping exposure. Step size can be decreased with `Strg/Ctrl`. Only works if automatic tonemapping is disabled.
+ - `V` to increase (or with `Shift` to decrease) tonemapping offset. Step size can be decreased with `Strg/Ctrl`. Only works if automatic tonemapping is disabled.
  - `WASD` or arrow keys to travel through the scene.
  - `Q/E` to rotate the camera around the viewing direction. 
  - `PageUp/PageDown` to pan the camera up and down. 
