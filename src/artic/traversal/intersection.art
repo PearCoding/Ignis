@@ -232,14 +232,14 @@ fn @intersect_ray_box(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> (
     (tentry, texit)
 }
 
-fn @intersect_ray_box_single(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> Option[f32] {
+fn @intersect_ray_box_single(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> Option[(f32,f32)] {
     let (entry, exit) = intersect_ray_box(min_max, ordered, ray, bbox);
     let mask = (entry <= exit) & (exit >= 0);
 
     if mask {
-        make_option(select(entry < 1e-5, exit, entry))
+        make_option((entry, exit))
     } else {
-        Option[f32]::None
+        Option[(f32,f32)]::None
     }
 }
 

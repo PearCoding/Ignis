@@ -1,6 +1,6 @@
 {
     "technique": {
-        "type": "bdpt",
+        "type": "path",
         "max_depth": 16
     },
     "camera": {
@@ -13,7 +13,8 @@
     },
     "bsdfs":[
         {"type":"diffuse", "name":"BunnyMaterial", "albedo":[1,0,0]},
-        {"type":"principled", "name":"TeapotMaterial", "base":[0,1,1], "roughness":0.4}
+        {"type":"principled", "name":"TeapotMaterial", "base":[0,1,1], "roughness":0.4},
+        {"type":"klems", "name":"WindowMaterial", "path":"/home/yazici/dev/window.xml"}
     ],
     "shapes": [
         {"type":"obj", "name": "Teapot", "filename":"myteapot.obj"},
@@ -23,7 +24,8 @@
     "entities": [
         {"name": "Bunny", "bsdf":"BunnyMaterial", "shape":"Bunny", "transform":{ "position":[0,0,1] }},
         {"name": "Teapot", "bsdf":"TeapotMaterial", "shape":"Teapot", "transform":{ "position":[0,2,0] }},
-        {"name": "Light", "shape":"Plane", "transform":{ "matrix":[1,0,0,0,0,1,0,1,0,0,-1,2,0,0,0,1] }}
+        {"name": "Light", "shape":"Plane", "transform":{ "matrix":[1,0,0,0,0,1,0,1,0,0,-1,2,0,0,0,1] }},
+        {"name": "Window", "bsdf":"WindowMaterial", "shape":"Plane", "transform":{ "position":[0,0,-1] }}
     ],
     "lights": [
         {"type":"distant", "name": "Distant", "direction":[-1,0,0]},

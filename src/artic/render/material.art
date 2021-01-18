@@ -321,7 +321,7 @@ fn @make_rough_conductor_bsdf_front(math: Intrinsics, surf: SurfaceElement, ior:
     }
 }
 
-// Creates a microfacet conductor BSDF. This is the front version
+// Creates a microfacet conductor BSDF. This is the two-sided version
 fn @make_rough_conductor_bsdf(math: Intrinsics, surf: SurfaceElement, ior: f32, k: f32, ks: Color, micro: MicrofacetDistribution) -> Bsdf {
     if !surf.is_entering { 
         make_rough_conductor_bsdf_front(math, invert_surface_element(surf), ior, k, ks, micro)
@@ -333,11 +333,34 @@ fn @make_rough_conductor_bsdf(math: Intrinsics, surf: SurfaceElement, ior: f32, 
 
 // Creates a BSDF that passthroughs all rays and behaves like a refractive interface with ior=1
 fn @make_passthrough_bsdf(surf: SurfaceElement) = Bsdf {
-    eval   = @ |_, _| black,
-    pdf    = @ |_, _| 0,
-    sample = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, white, true),
+    eval        = @ |_, _| black,
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, white, true),
     is_specular = true
 };
+
+// Creates a BSDF that allows one-sided bsdfs to behave the same for both sides
+// Do not use this BSDF with two-sided bsdfs, as proper relationships will be broken!
+fn @make_twosided_bsdf(surf: SurfaceElement, mat: Bsdf) -> Bsdf {
+    if surf.is_entering {
+        mat
+    } else {
+        Bsdf {
+            eval        = @ |in_dir, out_dir| mat.eval(vec3_neg(in_dir), vec3_neg(out_dir)),
+            pdf         = @ |in_dir, out_dir| mat.pdf(vec3_neg(in_dir), vec3_neg(out_dir)),
+            sample      = @ |rnd, out_dir, adjoint| {
+                let s = mat.sample(rnd, vec3_neg(out_dir), adjoint);
+                BsdfSample{
+                    in_dir = vec3_neg(s.in_dir),
+                    pdf    = s.pdf,
+                    cos    = s.cos,
+                    color  = s.color
+                }
+            },
+            is_specular = mat.is_specular
+        }
+    }
+}
 
 // Creates a BSDF that interpolates between two other BSDFs based on a variadic mix function
 fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) = Bsdf {

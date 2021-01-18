@@ -321,7 +321,7 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
             while true {
                 let tagbbox = bvh.bbox(bbox_id++);
 
-                if let Option[f32]::Some(t) = intersect_ray_tagged_box(min_max, ray, tagbbox) {
+                if let Option[(f32,f32)]::Some((t,_)) = intersect_ray_tagged_box(min_max, ray, tagbbox) {
                     if t <= hit.distance {
                         let entity_id       = tagbbox.tag & 0x7FFFFFFF;
                         let shape           = scene.shapes(scene.entities.shape(entity_id));

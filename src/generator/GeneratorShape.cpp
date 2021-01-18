@@ -22,7 +22,7 @@ struct TransformCache {
 	TransformCache(const Transformf& t)
 	{
 		TransformMatrix = t.matrix();
-		NormalMatrix	= TransformMatrix.block<3, 3>(0, 0).transpose().inverse();
+		NormalMatrix	= TransformMatrix.transpose().inverse().block<3, 3>(0, 0);
 	}
 
 	inline Vector3f applyTransform(const Vector3f& v) const
@@ -157,21 +157,21 @@ void GeneratorShape::setup(GeneratorContext& ctx)
 			continue;
 		}
 
-		if (child->property("flip_normals").getBool()) {
-			std::cout << "FLIPPING NORMALS!" << std::endl;
+		if (child->property("flip_normals").getBool())
 			child_mesh.flipNormals();
-		}
 
 		if (child->property("face_normals").getBool())
 			child_mesh.setupFaceNormalsAsVertexNormals();
 
 		TransformCache transform = TransformCache(child->property("transform").getTransform());
-		for (size_t i = 0; i < child_mesh.vertices.size(); ++i)
-			child_mesh.vertices[i] = transform.applyTransform(child_mesh.vertices[i]);
-		for (size_t i = 0; i < child_mesh.normals.size(); ++i)
-			child_mesh.normals[i] = transform.applyNormal(child_mesh.normals[i]);
-		for (size_t i = 0; i < child_mesh.face_normals.size(); ++i)
-			child_mesh.face_normals[i] = transform.applyNormal(child_mesh.face_normals[i]);
+		if (!transform.TransformMatrix.isIdentity()) {
+			for (size_t i = 0; i < child_mesh.vertices.size(); ++i)
+				child_mesh.vertices[i] = transform.applyTransform(child_mesh.vertices[i]);
+			for (size_t i = 0; i < child_mesh.normals.size(); ++i)
+				child_mesh.normals[i] = transform.applyNormal(child_mesh.normals[i]);
+			for (size_t i = 0; i < child_mesh.face_normals.size(); ++i)
+				child_mesh.face_normals[i] = transform.applyNormal(child_mesh.face_normals[i]);
+		}
 
 		// Build bounding box
 		BoundingBox bbox = BoundingBox::Empty();
@@ -226,7 +226,7 @@ std::string GeneratorShape::dump(const GeneratorContext& ctx)
 
 	for (const auto& pair : ctx.Scene.shapes()) {
 		const std::string suffix = GeneratorContext::makeId(pair.first);
-		const size_t numTris	 = ctx.Environment.Shapes.at(pair.first).ItxCount/4; // (I0, I1, I2, M)
+		const size_t numTris	 = ctx.Environment.Shapes.at(pair.first).ItxCount / 4; // (I0, I1, I2, M)
 
 		sstream << "    // ---- Shape " << pair.first << "\n"
 				<< "    let vertices_" << suffix << "     = device.load_buffer(\"data/meshes/vertices_" << suffix << ".bin\");\n"
