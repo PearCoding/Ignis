@@ -112,6 +112,7 @@
         "vec4i": "cpp",
         "vec4s": "cpp",
         "vec4ui": "cpp",
-        "vec4us": "cpp"
+        "vec4us": "cpp",
+        "mixinvector": "cpp"
     }
 }

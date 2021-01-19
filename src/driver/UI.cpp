@@ -13,6 +13,9 @@
 
 #include "generated_interface.h"
 
+#include <atomic>
+#include <execution>
+
 namespace IG {
 namespace UI {
 
@@ -28,10 +31,19 @@ static int sWidth;
 static int sHeight;
 
 struct LuminanceInfo {
-	float Min = Inf;
-	float Max = 0.0f;
-	float Avg = 0.0f;
-	float Est = 0.000001f;
+	std::atomic<float> Min = Inf;
+	std::atomic<float> Max = 0.0f;
+	float Avg			   = 0.0f;
+	float Est			   = 0.000001f;
+
+	inline LuminanceInfo& operator=(const LuminanceInfo& other)
+	{
+		Min = other.Min.load();
+		Max = other.Max.load();
+		Avg = other.Avg;
+		Est = other.Est;
+		return *this;
+	}
 };
 
 static int sPoseRequest		   = -1;
@@ -43,7 +55,8 @@ static bool sLockInteraction   = false;
 // Stats
 static LuminanceInfo sLastLum;
 constexpr size_t HISTOGRAM_SIZE = 100;
-static std::array<float, HISTOGRAM_SIZE> sHistogram;
+static std::array<std::atomic<uint32>, HISTOGRAM_SIZE> sHistogram;
+static std::array<float, HISTOGRAM_SIZE> sHistogramF;
 
 static bool sToneMapping_Automatic = true;
 static float sToneMapping_Exposure = 1.0f;
@@ -418,6 +431,134 @@ static inline float srgb_gamma(float x)
 		return 1.055f * std::pow(x, 0.416666667f) - 0.055f;
 }
 
+// We do not make use of C++20, therefore we do have our own Range
+template <typename T>
+class Range {
+public:
+	class Iterator : public std::iterator<std::random_access_iterator_tag, T> {
+		friend class Range;
+
+	public:
+		using difference_type = typename std::iterator<std::random_access_iterator_tag, T>::difference_type;
+
+		inline T operator*() const { return mValue; }
+		inline T operator[](const T& n) const { return mValue + n; }
+
+		inline const Iterator& operator++()
+		{
+			++mValue;
+			return *this;
+		}
+
+		inline Iterator operator++(int)
+		{
+			Iterator copy(*this);
+			++mValue;
+			return copy;
+		}
+
+		inline const Iterator& operator--()
+		{
+			--mValue;
+			return *this;
+		}
+
+		inline Iterator operator--(int)
+		{
+			Iterator copy(*this);
+			--mValue;
+			return copy;
+		}
+
+		inline Iterator& operator+=(const Iterator& other)
+		{
+			mValue += other.mValue;
+			return *this;
+		}
+
+		inline Iterator& operator+=(const T& other)
+		{
+			mValue += other;
+			return *this;
+		}
+
+		inline Iterator& operator-=(const Iterator& other)
+		{
+			mValue -= other.mValue;
+			return *this;
+		}
+
+		inline Iterator& operator-=(const T& other)
+		{
+			mValue -= other;
+			return *this;
+		}
+
+		inline bool operator<(const Iterator& other) const { return mValue < other.mValue; }
+		inline bool operator<=(const Iterator& other) const { return mValue <= other.mValue; }
+		inline bool operator>(const Iterator& other) const { return mValue > other.mValue; }
+		inline bool operator>=(const Iterator& other) const { return mValue >= other.mValue; }
+
+		inline bool operator==(const Iterator& other) const { return mValue == other.mValue; }
+		inline bool operator!=(const Iterator& other) const { return mValue != other.mValue; }
+
+		inline Iterator operator+(const Iterator& b) const { return Iterator(mValue + *b); }
+		inline Iterator operator+(const Iterator::difference_type& b) const { return Iterator(mValue + b); }
+		inline friend Iterator operator+(const Iterator::difference_type& a, const Iterator& b) { return Iterator(a + *b); }
+		inline difference_type operator-(const Iterator& b) const { return difference_type(mValue - *b); }
+		inline Iterator operator-(const Iterator::difference_type& b) const { return Iterator(mValue - b); }
+		inline friend Iterator operator-(const Iterator::difference_type& a, const Iterator& b) { return Iterator(a - *b); }
+
+		inline Iterator()
+			: mValue(0)
+		{
+		}
+
+		inline explicit Iterator(const T& start)
+			: mValue(start)
+		{
+		}
+
+		inline Iterator(const Iterator& other) = default;
+		inline Iterator(Iterator&& other)	   = default;
+		inline Iterator& operator=(const Iterator& other) = default;
+		inline Iterator& operator=(Iterator&& other) = default;
+
+	private:
+		T mValue;
+	};
+
+	Iterator begin() const { return mBegin; }
+	Iterator end() const { return mEnd; }
+	Range(const T& begin, const T& end)
+		: mBegin(begin)
+		, mEnd(end)
+	{
+	}
+
+private:
+	Iterator mBegin;
+	Iterator mEnd;
+};
+
+template <typename T>
+void updateMaximum(std::atomic<T>& maximum_value, T const& value) noexcept
+{
+	T prev_value = maximum_value;
+	while (prev_value < value && !maximum_value.compare_exchange_weak(prev_value, value)) {
+	}
+}
+
+template <typename T>
+void updateMinimum(std::atomic<T>& minimum_value, T const& value) noexcept
+{
+	T prev_value = minimum_value;
+	while (prev_value > value && !minimum_value.compare_exchange_weak(prev_value, value)) {
+	}
+}
+
+using RangeS = Range<size_t>;
+
 static void analzeLuminance(size_t width, size_t height, uint32_t iter)
 {
 	const auto film		  = get_pixels(); // sRGB
@@ -425,42 +566,49 @@ static void analzeLuminance(size_t width, size_t height, uint32_t iter)
 	const float avgFactor = 1.0f / (width * height);
 	sLastLum			  = LuminanceInfo();
 
+	const RangeS imageRange(0, width * height);
+
+	const auto getL = [&](size_t ind) -> float {
+		auto r = film[ind * 3 + 0];
+		auto g = film[ind * 3 + 1];
+		auto b = film[ind * 3 + 2];
+
+		return srgb_to_xyY(RGB(r, g, b)).b * inv_iter;
+	};
+
 	// Extract basic information
-	for (size_t y = 0; y < height; ++y) {
-		for (size_t x = 0; x < width; ++x) {
-			auto r = film[(y * width + x) * 3 + 0];
-			auto g = film[(y * width + x) * 3 + 1];
-			auto b = film[(y * width + x) * 3 + 2];
+	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), [&](size_t ind) {
+		const auto L = getL(ind);
 
-			const auto L = srgb_to_xyY(RGB(r, g, b)).b * inv_iter;
+		updateMaximum(sLastLum.Max, L);
+		updateMinimum(sLastLum.Min, L);
+	});
 
-			sLastLum.Max = std::max(sLastLum.Max, L);
-			sLastLum.Min = std::min(sLastLum.Min, L);
-			sLastLum.Avg += L * avgFactor;
-		}
-	}
+	sLastLum.Avg = std::transform_reduce(std::execution::par_unseq, imageRange.begin(), imageRange.end(), 0.0f, std::plus<>(),
+										 [&](size_t ind) { return getL(ind) * avgFactor; });
 
 	// Setup histogram
-	sHistogram.fill(0.0f);
-	const float histogram_factor = HISTOGRAM_SIZE / std::max(sLastLum.Max, 1.0f);
-	for (size_t y = 0; y < height; ++y) {
-		for (size_t x = 0; x < width; ++x) {
-			auto r = film[(y * width + x) * 3 + 0];
-			auto g = film[(y * width + x) * 3 + 1];
-			auto b = film[(y * width + x) * 3 + 2];
+	for (auto& a : sHistogram)
+		a = 0;
 
-			const auto L  = srgb_to_xyY(RGB(r, g, b)).b * inv_iter;
-			const int idx = std::max(0, std::min<int>(L * histogram_factor, HISTOGRAM_SIZE - 1));
-			sHistogram[idx] += avgFactor;
-		}
-	}
+	const float histogram_factor = HISTOGRAM_SIZE / std::max(sLastLum.Max.load(), 1.0f);
+	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), [&](size_t ind) {
+		const auto L  = getL(ind);
+		const int idx = std::max(0, std::min<int>(L * histogram_factor, HISTOGRAM_SIZE - 1));
+		sHistogram[idx]++;
+	});
 
-	// Estimate for reinhard
+	for (size_t i = 0; i < sHistogram.size(); ++i)
+		sHistogramF[i] = sHistogram[i] * avgFactor;
+
 #ifdef USE_MEDIAN_FOR_LUMINANCE_ESTIMATION
 	if (!sToneMapping_Automatic) {
 		sLastLum.Est = sLastLum.Max;
 		return;
 	}
+
+	// Estimate for reinhard
+	// TODO: Parallel?
 	constexpr size_t WINDOW_S = 3;
 	constexpr size_t EDGE_S	  = WINDOW_S / 2;
 	std::array<float, WINDOW_S * WINDOW_S> window;
@@ -502,58 +650,59 @@ static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, si
 	const float exposure_factor = std::pow(2.0, sToneMapping_Exposure);
 	analzeLuminance(width, height, iter);
 
-	for (size_t y = 0; y < height; ++y) {
-		for (size_t x = 0; x < width; ++x) {
-			auto r = film[(y * width + x) * 3 + 0] * inv_iter;
-			auto g = film[(y * width + x) * 3 + 1] * inv_iter;
-			auto b = film[(y * width + x) * 3 + 2] * inv_iter;
+	const RangeS imageRange(0, width * height);
 
-			const auto xyY = srgb_to_xyY(RGB(r, g, b));
+	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), [&](size_t ind) {
+		auto r = film[ind * 3 + 0] * inv_iter;
+		auto g = film[ind * 3 + 1] * inv_iter;
+		auto b = film[ind * 3 + 2] * inv_iter;
+
+		const auto xyY = srgb_to_xyY(RGB(r, g, b));
 #ifdef CULL_BAD_COLOR
-			if (std::isinf(xyY.b)) {
+		if (std::isinf(xyY.b)) {
 #ifdef CATCH_BAD_COLOR
-				buf[y * width + x] = RGB_C(255, 0, 150); //Pink
+			buf[ind] = RGB_C(255, 0, 150); //Pink
 #endif
-				continue;
-			} else if (std::isnan(xyY.b)) {
+			return;
+		} else if (std::isnan(xyY.b)) {
 #ifdef CATCH_BAD_COLOR
-				buf[y * width + x] = RGB_C(0, 255, 255); //Cyan
+			buf[ind] = RGB_C(0, 255, 255); //Cyan
 #endif
-				continue;
-			} else if (xyY.r < 0.0f || xyY.g < 0.0f || xyY.b < 0.0f) {
+			return;
+		} else if (xyY.r < 0.0f || xyY.g < 0.0f || xyY.b < 0.0f) {
 #ifdef CATCH_BAD_COLOR
-				buf[y * width + x] = RGB_C(255, 255, 0); //Orange
+			buf[ind] = RGB_C(255, 255, 0); //Orange
 #endif
-				continue;
-			}
-#endif
-
-			float L;
-			if (sToneMapping_Automatic)
-				L = xyY.b / sLastLum.Est;
-			else
-				L = exposure_factor * xyY.b + sToneMapping_Offset;
-
-			if (sToneMapping_Method == ToneMappingMethodOptions[(int)ToneMappingMethod::Reinhard])
-				L = reinhard(L);
-			else if (sToneMapping_Method == ToneMappingMethodOptions[(int)ToneMappingMethod::ModifiedReinhard])
-				L = reinhard_modified(L);
-			else if (sToneMapping_Method == ToneMappingMethodOptions[(int)ToneMappingMethod::ACES])
-				L = aces(L);
-
-			RGB color = xyY_to_srgb(RGB(xyY.r, xyY.g, L));
-
-			if (sToneMappingGamma) {
-				color.r = srgb_gamma(color.r);
-				color.g = srgb_gamma(color.g);
-				color.b = srgb_gamma(color.b);
-			}
-
-			buf[y * width + x] = (uint32_t(clamp(std::pow(color.r, inv_gamma), 0.0f, 1.0f) * 255.0f) << 16)
-								 | (uint32_t(clamp(std::pow(color.g, inv_gamma), 0.0f, 1.0f) * 255.0f) << 8)
-								 | uint32_t(clamp(std::pow(color.b, inv_gamma), 0.0f, 1.0f) * 255.0f);
+			return;
 		}
-	}
+#endif
+
+		float L;
+		if (sToneMapping_Automatic)
+			L = xyY.b / sLastLum.Est;
+		else
+			L = exposure_factor * xyY.b + sToneMapping_Offset;
+
+		if (sToneMapping_Method == ToneMappingMethodOptions[(int)ToneMappingMethod::Reinhard])
+			L = reinhard(L);
+		else if (sToneMapping_Method == ToneMappingMethodOptions[(int)ToneMappingMethod::ModifiedReinhard])
+			L = reinhard_modified(L);
+		else if (sToneMapping_Method == ToneMappingMethodOptions[(int)ToneMappingMethod::ACES])
+			L = aces(L);
+
+		RGB color = xyY_to_srgb(RGB(xyY.r, xyY.g, L));
+
+		if (sToneMappingGamma) {
+			color.r = srgb_gamma(color.r);
+			color.g = srgb_gamma(color.g);
+			color.b = srgb_gamma(color.b);
+		}
+
+		buf[ind] = (uint32_t(clamp(std::pow(color.r, inv_gamma), 0.0f, 1.0f) * 255.0f) << 16)
+				   | (uint32_t(clamp(std::pow(color.g, inv_gamma), 0.0f, 1.0f) * 255.0f) << 8)
+				   | uint32_t(clamp(std::pow(color.b, inv_gamma), 0.0f, 1.0f) * 255.0f);
+	});
+
 	SDL_UpdateTexture(texture, nullptr, buf, width * sizeof(uint32_t));
 }
 
@@ -571,18 +720,18 @@ static void make_screenshot(size_t width, size_t height, uint32_t iter)
 
 	auto film	  = get_pixels();
 	auto inv_iter = 1.0f / iter;
-	for (size_t y = 0; y < height; ++y) {
-		for (size_t x = 0; x < width; ++x) {
-			auto r = film[(y * width + x) * 3 + 0];
-			auto g = film[(y * width + x) * 3 + 1];
-			auto b = film[(y * width + x) * 3 + 2];
+	const RangeS imageRange(0, width * height);
 
-			img.pixels[4 * (y * width + x) + 0] = r * inv_iter;
-			img.pixels[4 * (y * width + x) + 1] = g * inv_iter;
-			img.pixels[4 * (y * width + x) + 2] = b * inv_iter;
-			img.pixels[4 * (y * width + x) + 3] = 1.0f;
-		}
-	}
+	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), [&](size_t ind) {
+		auto r = film[ind * 3 + 0];
+		auto g = film[ind * 3 + 1];
+		auto b = film[ind * 3 + 2];
+
+		img.pixels[4 * ind + 0] = r * inv_iter;
+		img.pixels[4 * ind + 1] = g * inv_iter;
+		img.pixels[4 * ind + 2] = b * inv_iter;
+		img.pixels[4 * ind + 3] = 1.0f;
+	});
 
 	if (!img.save(out_file.str()))
 		IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "'" << std::endl;
@@ -667,15 +816,15 @@ static void handle_imgui(uint32_t iter)
 	if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Text("Iter %i", iter);
 		ImGui::Text("SPP %i", iter * get_spp());
-		ImGui::Text("Max Lum %f", sLastLum.Max);
-		ImGui::Text("Min Lum %f", sLastLum.Min);
+		ImGui::Text("Max Lum %f", sLastLum.Max.load());
+		ImGui::Text("Min Lum %f", sLastLum.Min.load());
 		ImGui::Text("Avg Lum %f", sLastLum.Avg);
 		ImGui::Text("Cam Eye (%f, %f, %f)", sLastCameraPose.Eye(0), sLastCameraPose.Eye(1), sLastCameraPose.Eye(2));
 		ImGui::Text("Cam Dir (%f, %f, %f)", sLastCameraPose.Dir(0), sLastCameraPose.Dir(1), sLastCameraPose.Dir(2));
 		ImGui::Text("Cam Up  (%f, %f, %f)", sLastCameraPose.Up(0), sLastCameraPose.Up(1), sLastCameraPose.Up(2));
 
 		ImGui::PushItemWidth(-1);
-		ImGui::PlotHistogram("", sHistogram.data(), HISTOGRAM_SIZE, 0, nullptr, 0.0f, 1.0f, ImVec2(0, 60));
+		ImGui::PlotHistogram("", sHistogramF.data(), HISTOGRAM_SIZE, 0, nullptr, 0.0f, 1.0f, ImVec2(0, 60));
 		ImGui::PopItemWidth();
 	}
 
