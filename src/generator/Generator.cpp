@@ -140,7 +140,7 @@ struct SceneBuilder {
 		for (const auto& pair : Context.Scene.textures()) {
 			const std::string name = pair.first;
 			const auto tex		   = pair.second;
-			os << "    tex_" << GeneratorContext::makeId(name) << " = " << GeneratorTexture::extract(tex, Context) << ";\n";
+			os << "    let tex_" << GeneratorContext::makeId(name) << " = " << GeneratorTexture::extract(tex, Context) << ";\n";
 		}
 	}
 

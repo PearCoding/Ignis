@@ -72,3 +72,7 @@ fn @make_texture(math: Intrinsics, border: BorderHandling, filter: ImageFilter, 
         filter(math, image, make_vec2(u, v))
     }
 }
+
+fn @make_black_texture() -> Texture {
+    @ |_uv| { black }
+}
