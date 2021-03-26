@@ -1,6 +1,6 @@
 #add_library(ig_lib_driver_base STATIC interface.cpp)
 if (IG_SCENE_FILE STREQUAL "")
-    message(FATAL_ERROR "Please specify a valid mitsuba scene file in the IG_SCENE_FILE variable")
+    message(FATAL_ERROR "Please specify a valid scene file in the IG_SCENE_FILE variable")
 endif()
 
 if(IG_ALWAYS_BUILD_BVH)
@@ -50,9 +50,10 @@ SET(UI_FILES
     UI.h)
 
 if(IG_HAS_UI)
+    find_package(TBB REQUIRED) # Required for parallel stuff in UI.cpp
     add_executable(ignis ${UI_FILES})
     target_compile_definitions(ignis PRIVATE "-DWITH_UI")
-    target_link_libraries(ignis PRIVATE ig_lib_ui)
+    target_link_libraries(ignis PRIVATE ig_lib_ui TBB::tbb)
 else()
     add_executable(ignis ${CMD_FILES})
 endif()
