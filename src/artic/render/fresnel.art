@@ -65,3 +65,44 @@ fn @fresnel_diffuse_factor(eta: f32) -> f32 {
         0.919317 - 3.4793 * ieta1 + 6.75335 * ieta2 - 7.80989 * ieta3 + 4.98554 * ieta4 - 1.36881 * ieta5
     }
 }
+
+
+fn @schlick_approx(f: f32) -> f32{
+    let s = 1 - f;
+    s * s * s * s * s
+}
+
+fn @dielectric(math: Intrinsics, absHdotV: f32, eta_i: f32, eta_t: f32)-> f32{
+    let mut cosThetaI = clamp(absHdotV, -1, 1);
+    let mut etaI = eta_i;
+    let mut etaT = eta_t; 
+
+    if (cosThetaI <= 0) {
+        swap[f32](&mut etaI, &mut etaT);
+        cosThetaI = abs(cosThetaI);
+    }
+
+    let sinThetaI = math.sqrtf(get_max(0, 1 - cosThetaI * cosThetaI));
+    let sinThetaT = etaI / etaT * sinThetaI;
+
+    if (sinThetaT >= 1) { return (1) };
+    let cosThetaT = math.sqrtf(get_max(0, 1 - sinThetaT * sinThetaT));
+    let Rparl = ((etaT * cosThetaI) - (etaI * cosThetaT)) /
+                  ((etaT * cosThetaI) + (etaI * cosThetaT));
+    let Rperp = ((etaI * cosThetaI) - (etaT * cosThetaT)) /
+                  ((etaI * cosThetaI) + (etaT * cosThetaT));
+    (Rparl * Rparl + Rperp * Rperp) / 2
+}
+
+fn @schlick(R0: Color, dot: f32)-> Color{
+    let s = schlick_approx(dot);
+    let snd = color_mulf(color_add(make_gray_color(1),color_mulf(R0, -1)), s);
+    color_add(R0, snd)
+}
+
+fn @schlick_from_relative_ior(math: Intrinsics, relative_ior: f32)-> f32{
+    let eta1 = math.sqrtf(relative_ior - 1);
+    let eta2 = math.sqrtf(relative_ior + 1);
+
+    eta1 / eta2
+}
