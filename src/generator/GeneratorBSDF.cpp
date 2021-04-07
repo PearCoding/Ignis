@@ -87,6 +87,27 @@ static void bsdf_phong(const std::shared_ptr<Loader::Object>& bsdf, const Genera
 	   << ctx.extractMaterialPropertyNumber(bsdf, "exponent", 30) << ")";
 }
 
+static void bsdf_disney(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+{ 
+	os << "make_disney_bsdf(math, surf, "
+	   << ctx.extractMaterialPropertyColor(bsdf, "base_color", 0.16f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "flatness", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "metallic", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "ior", 1.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "specular_tint", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "roughness", 0.5f) << ", "
+       << ctx.extractMaterialPropertyNumber(bsdf, "anisotropic", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "sheen", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "sheen_tint", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "clearcoat", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "clearcoat_gloss", 1.f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "spec_trans", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "relative_ior", 1.1f) << ", "
+       << ctx.extractMaterialPropertyNumber(bsdf, "scatter_distance", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "diff_trans", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "transmittance", 1.f) << ")";
+}
+
 static void bsdf_blend(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	const std::string first	 = bsdf->property("first").getString();
@@ -150,6 +171,7 @@ static struct {
 	{ "conductor", bsdf_conductor },
 	{ "roughconductor", bsdf_rough_conductor },
 	{ "phong", bsdf_phong },
+	{ "disney", bsdf_disney },
 	{ "plastic", bsdf_plastic },
 	{ "roughplastic", bsdf_plastic }, /*TODO*/
 	{ "blendbsdf", bsdf_blend },

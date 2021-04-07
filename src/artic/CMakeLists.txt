@@ -7,6 +7,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/sort.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/camera.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/disney.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/driver.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/entity.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/fresnel.art
@@ -24,6 +25,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/mapping_gpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/stack.art
 )
+
 
 set(ARTIC_TEST_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/dummy_test.art
