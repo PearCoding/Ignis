@@ -1,6 +1,7 @@
 struct PathTracer {
     on_emit:   RayEmitter,
     on_hit:    fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[Color],
+    on_nonhit: fn (Ray, &RayState) -> Option[Color],
     on_shadow: fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[(Ray, Color)],
     on_bounce: fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[(Ray, RayState)],
 }
@@ -47,6 +48,7 @@ fn @make_debug_renderer() -> Renderer {
                 let n = surf.local.col(2);
                 make_option(make_color(abs(n.x), abs(n.y), abs(n.z)))
             },
+            on_nonhit = @ |_, _| Option[(Color)]::None,
             on_shadow = @ |_, _, _, _, _| Option[(Ray, Color)]::None,
             on_bounce = @ |_, _, _, _, _| Option[(Ray, RayState)]::None,
         };
@@ -80,30 +82,48 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32) -> Renderer {
             let light = @lights(light_id);
             let sample_direct = light.sample_direct;
             let light_sample = @sample_direct(rnd, surf.point);
-            let light_dir = vec3_sub(light_sample.pos, surf.point);
-            let vis = vec3_dot(light_dir, surf.local.col(2));
+            if light.infinite {
+                let light_dir = light_sample.pos;
+                let vis = vec3_dot(light_dir, surf.local.col(2));
 
-            if vis > 0 && light_sample.cos > 0 {
-                let inv_d = 1 / vec3_len(device.intrinsics, light_dir);
-                let inv_d2 = inv_d * inv_d;
-                let in_dir = vec3_mulf(light_dir, inv_d);
-                let out_dir = vec3_neg(ray.dir);
+                if vis > 0 {
+                    let in_dir = light_dir;
+                    let out_dir = vec3_neg(ray.dir);
 
-                let pdf_e = if light.has_area { mat.bsdf.pdf(in_dir, out_dir) } else { 0 };
-                let pdf_l = light_sample.pdf_area * pdf_lightpick;
-                let inv_pdf_l = 1 / pdf_l;
+                    let cos_e = vis;
 
-                let cos_e = vis * inv_d;
-                let cos_l = light_sample.cos;
+                    let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
+                    return(make_option(
+                        make_ray(surf.point, light_dir, offset, 1 - offset),
+                        color_mulf(contrib, cos_e)
+                    ))
+                }
+            } else {
+                let light_dir = vec3_sub(light_sample.pos, surf.point);
+                let vis = vec3_dot(light_dir, surf.local.col(2));
 
-                let mis = if light.has_area { 1 / (1 + pdf_e * cos_l * inv_d2 * inv_pdf_l) } else { 1 };
-                let geom_factor = cos_e * cos_l * inv_d2 * inv_pdf_l;
+                if vis > 0 && light_sample.cos > 0 {
+                    let inv_d = 1 / vec3_len(device.intrinsics, light_dir);
+                    let inv_d2 = inv_d * inv_d;
+                    let in_dir = vec3_mulf(light_dir, inv_d);
+                    let out_dir = vec3_neg(ray.dir);
 
-                let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
-                return(make_option(
-                    make_ray(surf.point, light_dir, offset, 1 - offset),
-                    color_mulf(contrib, geom_factor * mis)
-                ))
+                    let pdf_e = if light.has_area { mat.bsdf.pdf(in_dir, out_dir) } else { 0 };
+                    let pdf_l = light_sample.pdf_area * pdf_lightpick;
+                    let inv_pdf_l = 1 / pdf_l;
+
+                    let cos_e = vis * inv_d;
+                    let cos_l = light_sample.cos;
+
+                    let mis = if light.has_area { 1 / (1 + pdf_e * cos_l * inv_d2 * inv_pdf_l) } else { 1 };
+                    let geom_factor = cos_e * cos_l * inv_d2 * inv_pdf_l;
+
+                    let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
+                    return(make_option(
+                        make_ray(surf.point, light_dir, offset, 1 - offset),
+                        color_mulf(contrib, geom_factor * mis)
+                    ))
+                }
             }
             return(Option[(Ray, Color)]::None)
         }
@@ -121,6 +141,31 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32) -> Renderer {
                 let next_mis = state.mis * hit.distance * hit.distance / vec3_dot(out_dir, surf.local.col(2));
                 let mis = 1 / (1 + next_mis * pdf_lightpick * emit.pdf_area);
                 make_option(color_mulf(color_mul(state.contrib, emit.intensity), mis))
+            } else {
+                Option[Color]::None
+            }
+        }
+
+        fn @on_nonhit( ray: Ray
+                     , state: &RayState) {
+            let mut inflights = 0;
+            let mut color = make_color(0, 0, 0);
+            let lights = scene.lights;
+
+            for light_id in range(0, scene.num_lights) {
+                let light = @lights(light_id);
+                if light.infinite {
+                    inflights += 1;
+
+                    let out_dir = vec3_neg(ray.dir);
+                    let emit = light.emission(out_dir, make_vec2(0,0));
+                    let mis = 1 / (1 + state.mis * pdf_lightpick * emit.pdf_dir); // TODO: Really?
+                    color = color_add(color, color_mulf(color_mul(state.contrib, emit.intensity), mis));
+                }
+            }
+
+            if inflights > 0 {
+                make_option(color)
             } else {
                 Option[Color]::None
             }
@@ -152,6 +197,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32) -> Renderer {
         let path_tracer = PathTracer {
             on_emit   = on_emit,
             on_hit    = on_hit,
+            on_nonhit = on_nonhit,
             on_shadow = on_shadow,
             on_bounce = on_bounce
         };

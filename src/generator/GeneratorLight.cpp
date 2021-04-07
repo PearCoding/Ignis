@@ -21,15 +21,28 @@ std::string GeneratorLight::extract(const std::shared_ptr<Loader::Object>& light
 				<< dir(0) << ", " << dir(1) << ", " << dir(2) << "), "
 				<< ctx.Environment.SceneDiameter << ", "
 				<< ctx.extractMaterialPropertyColor(light, "irradiance", 1.0f) << ")";
-	} else if (light->pluginType() == "sun" || light->pluginType() == "sunsky") { // TODO
-		IG_LOG(L_WARNING) << "Sun emitter is approximated by directional light" << std::endl;
-		auto dir   = light->property("sun_direction").getVector3();
-		auto power = light->property("scale").getNumber(1.0f);
-		sstream << "make_directional_light(math, make_vec3("
+	} else if (light->pluginType() == "sun") {
+		auto dir		= light->property("sun_direction").getVector3();
+		auto power		= light->property("sun_scale").getNumber(1.0f);
+		auto sun_radius = light->property("sun_radius_scale").getNumber(1.0f);
+		sstream << "make_sun_light(math, make_vec3("
 				<< dir(0) << ", " << dir(1) << ", " << dir(2) << "), "
 				<< ctx.Environment.SceneDiameter << ", "
+				<< sun_radius << ", "
 				<< "make_gray_color(" << power << "))";
-	} else if (light->pluginType() == "constant" || light->pluginType() == "envmap") {
+	} else if (light->pluginType() == "sunsky") {
+		IG_LOG(L_WARNING) << "Sunsky emitter is approximated by directional light with environmental fallow" << std::endl;
+		auto dir	   = light->property("sun_direction").getVector3();
+		auto sun_power = light->property("sun_scale").getNumber(1.0f);
+		auto sky_power = light->property("sky_scale").getNumber(1.0f);
+		auto sun_radius = light->property("sun_radius_scale").getNumber(1.0f);
+		sstream << "make_sunsky_light(math, make_vec3("
+				<< dir(0) << ", " << dir(1) << ", " << dir(2) << "), "
+				<< ctx.Environment.SceneDiameter << ", "
+				<< sun_radius << ", "
+				<< "make_gray_color(" << sun_power << "), "
+				<< "make_gray_color(" << sky_power << "))";
+	} else if (light->pluginType() == "constant" || light->pluginType() == "env" || light->pluginType() == "envmap") {
 		sstream << "make_environment_light(math, "
 				<< ctx.Environment.SceneDiameter << ", "
 				<< ctx.extractMaterialPropertyColor(light, "radiance", 1.0f) << ")";

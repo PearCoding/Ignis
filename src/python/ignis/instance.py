@@ -3,6 +3,7 @@ from .pyignis import *
 _g_width = 0
 _g_height = 0
 
+# We could add the .pyignis module path be shifting it upwards to the resource path automaticly... but quite bothersome...
 
 class Ignis:
     def __init__(self, width=0, height=0):
@@ -44,7 +45,7 @@ class Ignis:
 
     def render(self, settings=None):
         self.iteration += 1
-        render(self.default_settings()
+        render(self.default_settings
                if settings is None else settings, self.iteration)
 
     @property

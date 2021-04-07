@@ -45,6 +45,17 @@ fn @make_dir_sample(math: Intrinsics, c: f32, s: f32, phi: f32, pdf: f32) -> Dir
     }
 }
 
+// Result of sampling a position
+struct PosSample {
+    pos: Vec3,
+    pdf: f32
+}
+
+fn @make_pos_sample(math: Intrinsics, pos: Vec3, pdf: f32) = PosSample {
+    pos = pos,
+    pdf = pdf
+};
+
 fn @spherical_from_dir(math: Intrinsics, dir: Vec3) -> (f32, f32) {
     let theta = math.acosf(dir.z);
     let phi = math.atan2f(dir.y, dir.x);
@@ -105,6 +116,34 @@ fn @sample_cosine_power_hemisphere(math: Intrinsics, k: f32, u: f32, v: f32) -> 
     let pow_c_k = select(c != 0, v / c, 0:f32);
     let pdf = pow_c_k * (k + 1) * (1 / (2 * flt_pi));
     make_dir_sample(math, c, s, phi, pdf)
+}
+
+fn @uniform_disk_pdf(radius: f32) -> f32 { 1 / (flt_pi*radius*radius) }
+
+// Samples uniform concentric disk
+fn @sample_uniform_disk(math: Intrinsics, u: f32, v: f32, radius: f32) -> PosSample {
+    if (u == 0 && v == 0) {
+        return (make_pos_sample(math, make_vec3(0,0,0), uniform_disk_pdf(radius)))
+    }
+    
+    let a = (2 * u) - 1;
+    let b = (2 * v) - 1;
+    
+    // Uses squares instead of absolute values
+    if ((a*a) > (b*b)) { 
+        // Top half
+        let phi = (flt_pi/4) * (b/a);
+        let x = radius * math.cosf(phi) * a;
+        let y = radius * math.sinf(phi) * a;
+        make_pos_sample(math, make_vec3(x,y,0), uniform_disk_pdf(radius))
+    }
+    else {
+        // Bottom half
+        let phi = (flt_pi/2) - ((flt_pi/4) * (a/b));
+        let x = radius * math.cosf(phi) * b;
+        let y = radius * math.sinf(phi) * b;
+        make_pos_sample(math, make_vec3(x,y,0), uniform_disk_pdf(radius))
+    }
 }
 
 // Initializer for Bernstein's hash function

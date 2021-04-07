@@ -10,13 +10,6 @@
 
 namespace py = pybind11;
 
-struct Context {
-	size_t Width;
-	size_t Height;
-};
-
-static Context sContext; // Not the best way to handle it
-
 PYBIND11_MODULE(pyignis, m)
 {
 	m.doc() = R"pbdoc(
