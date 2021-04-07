@@ -58,12 +58,40 @@ struct Interface {
 	size_t film_width;
 	size_t film_height;
 
+	std::vector<std::string> resource_paths;
+
 	Interface(size_t width, size_t height)
 		: host_pixels(width * height * 3)
 		, film_width(width)
 		, film_height(height)
 
 	{
+	}
+
+	inline std::string lookupPath(const std::string& path) const
+	{
+		auto exists = [](const std::string& p) {
+			std::ifstream f(p.c_str());
+			return f.good();
+		};
+
+		// If empty, do not bother any further
+		if (path.empty())
+			return path;
+
+		// If exists, nothing to escape
+		if (exists(path))
+			return path;
+
+		// Check if one of the lookup paths work
+		for (const std::string& dirs : resource_paths) {
+			const std::string p = dirs + "/" + path;
+			if (exists(p))
+				return p;
+		}
+
+		// Nothing found
+		return path;
 	}
 
 	template <typename T>
@@ -189,15 +217,16 @@ struct Interface {
 	template <typename Node, typename Tri>
 	Bvh<Node, Tri> load_tri_bvh(int32_t dev, const std::string& filename)
 	{
-		std::ifstream is(filename, std::ios::binary);
+		const std::string lpath = lookupPath(filename);
+		std::ifstream is(lpath, std::ios::binary);
 		if (!is)
-			IG_LOG(L_ERROR) << "Cannot open shape BVH '" << filename << "'" << std::endl;
+			IG_LOG(L_ERROR) << "Cannot open shape BVH '" << lpath << "'" << std::endl;
 		do {
 			size_t node_size = 0, tri_size = 0;
 			is.read((char*)&node_size, sizeof(uint32_t));
 			is.read((char*)&tri_size, sizeof(uint32_t));
 			if (node_size == sizeof(Node) && tri_size == sizeof(Tri)) {
-				IG_LOG(L_INFO) << "Loaded shape BVH file '" << filename << "'" << std::endl;
+				IG_LOG(L_INFO) << "Loaded shape BVH file '" << lpath << "'" << std::endl;
 				std::vector<Node> nodes;
 				std::vector<Tri> tris;
 				IO::read_buffer(is, nodes);
@@ -215,15 +244,16 @@ struct Interface {
 	template <typename Node>
 	Bvh<Node, TaggedBBox1> load_scene_bvh(int32_t dev, const std::string& filename)
 	{
-		std::ifstream is(filename, std::ios::binary);
+		const std::string lpath = lookupPath(filename);
+		std::ifstream is(lpath, std::ios::binary);
 		if (!is)
-			IG_LOG(L_ERROR) << "Cannot open scene BVH '" << filename << "'" << std::endl;
+			IG_LOG(L_ERROR) << "Cannot open scene BVH '" << lpath << "'" << std::endl;
 		do {
 			size_t node_size = 0, obj_size = 0;
 			is.read((char*)&node_size, sizeof(uint32_t));
 			is.read((char*)&obj_size, sizeof(uint32_t));
 			if (node_size == sizeof(Node) && obj_size == sizeof(TaggedBBox1)) {
-				IG_LOG(L_INFO) << "Loaded scene BVH file '" << filename << "'" << std::endl;
+				IG_LOG(L_INFO) << "Loaded scene BVH file '" << lpath << "'" << std::endl;
 				std::vector<Node> nodes;
 				std::vector<TaggedBBox1> objs;
 				IO::read_buffer(is, nodes);
@@ -244,12 +274,13 @@ struct Interface {
 		auto it		  = buffers.find(filename);
 		if (it != buffers.end())
 			return it->second;
-		std::ifstream is(filename, std::ios::binary);
+		const std::string lpath = lookupPath(filename);
+		std::ifstream is(lpath, std::ios::binary);
 		if (!is)
-			IG_LOG(L_ERROR) << "Cannot open buffer '" << filename << "'" << std::endl;
+			IG_LOG(L_ERROR) << "Cannot open buffer '" << lpath << "'" << std::endl;
 		std::vector<uint8_t> vector;
 		IO::read_buffer(is, vector);
-		IG_LOG(L_INFO) << "Loaded buffer '" << filename << "'" << std::endl;
+		IG_LOG(L_INFO) << "Loaded buffer '" << lpath << "'" << std::endl;
 		return buffers[filename] = std::move(copy_to_device(dev, vector));
 	}
 
@@ -259,10 +290,11 @@ struct Interface {
 		auto it		 = images.find(filename);
 		if (it != images.end())
 			return it->second;
-		ImageRgba32 img = ImageRgba32::load(filename);
+		const std::string lpath = lookupPath(filename);
+		ImageRgba32 img			= ImageRgba32::load(lpath);
 		if (!img.isValid())
-			IG_LOG(L_ERROR) << "Cannot load image '" << filename << "'" << std::endl;
-		IG_LOG(L_INFO) << "Loaded image '" << filename << "'" << std::endl;
+			IG_LOG(L_ERROR) << "Cannot load image '" << lpath << "'" << std::endl;
+		IG_LOG(L_INFO) << "Loaded image '" << lpath << "'" << std::endl;
 		return images[filename] = std::move(copy_to_device(dev, img));
 	}
 
@@ -293,6 +325,17 @@ void setup_interface(size_t width, size_t height)
 	interface.reset(new Interface(width, height));
 }
 
+void get_interface(size_t& width, size_t& height)
+{
+	if (interface) {
+		width  = interface->film_width;
+		height = interface->film_height;
+	} else {
+		width  = 0;
+		height = 0;
+	}
+}
+
 void cleanup_interface()
 {
 	interface.reset();
@@ -306,6 +349,11 @@ float* get_pixels()
 void clear_pixels()
 {
 	return interface->clear();
+}
+
+void add_resource_path(const char* path)
+{
+	interface->resource_paths.push_back(path);
 }
 } // namespace IG
 
@@ -326,7 +374,7 @@ inline void get_primary_stream(PrimaryStream& primary, float* ptr, size_t capaci
 {
 	// TODO: This is bad behavior. Need better abstraction
 	static_assert(sizeof(int) == 4, "Invalid bytesize configuration");
-	
+
 	get_ray_stream(primary.rays, ptr, capacity);
 	primary.ent_id	  = (int*)ptr + 9 * capacity;
 	primary.prim_id	  = (int*)ptr + 10 * capacity;

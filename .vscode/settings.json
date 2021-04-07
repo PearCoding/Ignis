@@ -1,7 +1,7 @@
 {
     "files.associations": {
-        "*.impala": "rust",
         "*.prc": "lisp",
+        "*.impala": "rust",
         "*.art": "rust",
         "cctype": "cpp",
         "clocale": "cpp",
@@ -113,6 +113,13 @@
         "vec4s": "cpp",
         "vec4ui": "cpp",
         "vec4us": "cpp",
-        "mixinvector": "cpp"
-    }
+        "mixinvector": "cpp",
+        "execution": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "ranges": "cpp",
+        "stop_token": "cpp",
+        "valarray": "cpp"
+    },
+    "cmake.configureOnOpen": true
 }

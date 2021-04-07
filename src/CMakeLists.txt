@@ -4,10 +4,15 @@ add_subdirectory(artic)
 add_subdirectory(hardware)
 add_subdirectory(runtime)
 add_subdirectory(generator)
+add_subdirectory(scene)
 add_subdirectory(driver)
 
 if(IG_HAS_UI)
     add_subdirectory(ui)
+endif()
+
+if(IG_HAS_PYTHON_API)
+    add_subdirectory(python)
 endif()
 
 add_subdirectory(tests)

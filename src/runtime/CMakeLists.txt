@@ -11,6 +11,7 @@ CPMFindPackage(
 set(SRC 
     IG_Config.h
     Buffer.h
+    Camera.h
     Color.h
     Logger.cpp
     Logger.h 
@@ -41,4 +42,5 @@ target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen ${LZ4_LIBRARY} OpenIma
 target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR})
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 target_compile_features(ig_lib_runtime PUBLIC cxx_std_17)
+set_target_properties(ig_lib_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

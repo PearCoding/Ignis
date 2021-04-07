@@ -7,7 +7,7 @@ endif()
 # Prevent in source builds
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 	if(NOT DEFINED WITH_IN_SOURCE_BUILD)
-		message(FATAL_ERROR "CMake generation for Ignis is not allowed within the source directory! Define WITH_IN_SOURCE_BUILD if absolutely necessary!" )
+		messag(FATAL_ERROR "CMake generation for Ignis is not allowed within the source directory! Define WITH_IN_SOURCE_BUILD if absolutely necessary!" )
 	endif()
 endif()
 
@@ -33,7 +33,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 set(CMAKE_DEBUG_POSTFIX  "_d")
 
-MESSAGE(STATUS "Building Ignis Rodent ${Ignis_VERSION}")
+message(STATUS "Building Ignis Rodent ${Ignis_VERSION}")
 
 # Options
 set(IG_TARGET_PLATFORM "" CACHE STRING "Target platform for the generator tool. Leave empty to autodetect CPU. Use iggenerator --help to list possible platforms.")
@@ -41,6 +41,7 @@ set(IG_TARGET_DEVICE "" CACHE STRING "Target device on the selected platform. Le
 set(IG_SCENE_FILE "${PROJECT_SOURCE_DIR}/scenes/diamond_scene.json" CACHE FILEPATH "Absolute path to an Mitsuba scene")
 set(IG_MEGAKERNEL_FUSION ON CACHE BOOL "Set to true to enable simple shader fusion for megakernel mappings")
 set(IG_ALWAYS_BUILD_BVH OFF CACHE BOOL "Always force the BVH to be rebuilt")
+set(IG_ENABLE_PYTHON_API OFF CACHE BOOL "Build additional python API")
 
 # Setup artic clang flags
 set(ARTIC_CLANG_FLAGS -O3 -march=native -ffast-math CACHE STRING "Artic Clang compilation options")
@@ -92,7 +93,18 @@ if(IG_ENABLE_UI)
 endif()
 
 if(IG_HAS_UI)
-    MESSAGE(STATUS "Building with UI")
+    message(STATUS "Building with UI")
+endif()
+
+if(IG_ENABLE_PYTHON_API)
+	find_package (Python3 COMPONENTS Development)
+	if(Python3_FOUND)
+		set(IG_HAS_PYTHON_API ON)
+	endif()
+endif()
+
+if(IG_HAS_PYTHON_API)
+	message(STATUS "Building with python API")
 endif()
 
 # Traverse to underlying directories

@@ -1,5 +1,9 @@
+#include "Camera.h"
 #include "Interface.h"
+
+#ifdef WITH_UI
 #include "UI.h"
+#endif
 
 #include "Buffer.h"
 #include "Color.h"
