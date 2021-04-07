@@ -17,27 +17,17 @@
 	},
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-GrayWall", "reflectance":[1,1,1]},
-		{"type":"diffuse", "name": "mat-ColoredWall", "reflectance":[0.106039, 0.195687, 0.800000]},
 		{"type":"roughdielectric", "name": "mat-Diamond", "alpha": 0.0025, "int_ior": 2.3, "specular_transmittance":[1,1,1]}
 	],
 	"shapes": [
-		{"type":"rectangle", "name":"AreaLight", "flip_normals":true, "transform": [0, 0.084366, -0.053688, -0.7, 0, 0.053688, 0.084366, 0.1, 0.1, 0, 0, 0, 0, 0, 0, 1]},
 		{"type":"ply", "name":"Bottom", "filename":"meshes/Bottom.ply"},
-		{"type":"ply", "name":"Top", "filename":"meshes/Top.ply"},
-		{"type":"ply", "name":"Left", "filename":"meshes/Left.ply"},
-		{"type":"ply", "name":"Right", "filename":"meshes/Right.ply"},
-		{"type":"ply", "name":"Back", "filename":"meshes/Back.ply"}
+		{"type":"ply", "name":"dobj", "filename":"meshes/dobj.ply"}
 	],
 	"entities": [
-		{"name":"AreaLight", "shape":"AreaLight"},
 		{"name":"Bottom","shape":"Bottom", "bsdf":"mat-GrayWall"},
-		{"name":"Top","shape":"Top", "bsdf":"mat-GrayWall"},
-		{"name":"Left","shape":"Left", "bsdf":"mat-ColoredWall"},
-		{"name":"Right","shape":"Right", "bsdf":"mat-ColoredWall"},
-		{"name":"Back","shape":"Back", "bsdf":"mat-GrayWall"}
+		{"name":"dobj1","shape":"dobj", "bsdf":"mat-Diamond"}
 	],
 	"lights": [
-		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[62,62,62]},
-		{"type":"env", "name":"Environment", "radiance":[62,62,62]}
+		{"type":"sunsky", "name":"SunSky", "sun_direction":[0.4082482904638631,0.4082482904638631,0.8164965809277261]}
 	]
 }

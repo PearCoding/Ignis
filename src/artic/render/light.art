@@ -153,8 +153,8 @@ fn @make_point_light(math: Intrinsics, pos: Vec3, color: Color) = Light {
 };
 
 fn @make_directional_light(_math: Intrinsics, dir: Vec3, max_radius: f32, color: Color) = Light {
-    sample_direct = @ |_, from| {
-        make_direct_sample(vec3_add(from, vec3_mulf(dir, max_radius)), color, 1, 1, 1)
+    sample_direct = @ |_, _| {
+        make_direct_sample(dir, color, 1, 1, 1)
     },
     sample_emission = @ |_| {
         make_emission_sample(vec3_mulf(dir, max_radius), dir, color, 1, 1, 1)
@@ -165,18 +165,18 @@ fn @make_directional_light(_math: Intrinsics, dir: Vec3, max_radius: f32, color:
 };
 
 fn @make_sun_light(math: Intrinsics, dir: Vec3, max_radius: f32, sun_radius: f32, color: Color) = Light {
-    sample_direct = @ |rnd, from| {
+    sample_direct = @ |rnd, _| {
         let u = randf(rnd);
         let v = randf(rnd);
         let sample = sample_uniform_disk(math, u, v, sun_radius);
-        let np = vec3_add(from, mat3x3_mul(make_orthonormal_mat3x3(dir), sample.pos));
-        make_direct_sample(vec3_add(np, vec3_mulf(dir, max_radius)), color, 1.0, sample.pdf, 1.0)
+        let ndir = vec3_normalize(math, mat3x3_mul(make_orthonormal_mat3x3(dir), sample.pos));
+        make_direct_sample(ndir, color, 1.0, sample.pdf, 1.0)
     },
     sample_emission = @ |rnd| {
         let u = randf(rnd);
         let v = randf(rnd);
         let sample = sample_uniform_disk(math, u, v, sun_radius);
-        let ndir = mat3x3_mul(make_orthonormal_mat3x3(dir), sample.pos);
+        let ndir = vec3_normalize(math, mat3x3_mul(make_orthonormal_mat3x3(dir), sample.pos));
         make_emission_sample(vec3_mulf(dir, max_radius), ndir, color, 1.0, sample.pdf, 1.0)
     },
     emission = @ |_, _| make_emission_value(black, 1, 1),
@@ -186,18 +186,19 @@ fn @make_sun_light(math: Intrinsics, dir: Vec3, max_radius: f32, sun_radius: f32
 
 // This samples the environment by naive sphere sampling
 fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) = Light {
-    sample_direct = @ |_, from| {
-        let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
-        make_direct_sample(vec3_mulf(from,max_radius), intensity, 1.0, uniform_sphere_pdf(), 1.0)
+    sample_direct = @ |rnd, _| {
+        let u = randf(rnd);
+        let v = randf(rnd);
+        let sample = sample_uniform_sphere(math, u, v);
+        make_direct_sample(sample.dir, color, 1.0, uniform_sphere_pdf(), 1.0)
     },
     sample_emission = @ |rnd| {
         let u = randf(rnd);
         let v = randf(rnd);
         let sample = sample_uniform_sphere(math, u, v);
-        let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
-        make_emission_sample(vec3_mulf(sample.dir,max_radius), sample.dir, intensity, 1.0, sample.pdf, 1.0)
+        make_emission_sample(vec3_mulf(sample.dir,max_radius), sample.dir, color, 1.0, sample.pdf, 1.0)
     },
-    emission = @ |_, _| make_emission_value(color_mulf(color, 1.0 / (4.0 * flt_pi)), 1.0, uniform_sphere_pdf()),
+    emission = @ |_, _| make_emission_value(color, 1.0, uniform_sphere_pdf()),
     has_area = false,
     infinite = true
 };

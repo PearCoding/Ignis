@@ -31,11 +31,10 @@ std::string GeneratorLight::extract(const std::shared_ptr<Loader::Object>& light
 				<< sun_radius << ", "
 				<< "make_gray_color(" << power << "))";
 	} else if (light->pluginType() == "sunsky") {
-		IG_LOG(L_WARNING) << "Sunsky emitter is approximated by directional light with environmental fallow" << std::endl;
 		auto dir	   = light->property("sun_direction").getVector3();
 		auto sun_power = light->property("sun_scale").getNumber(1.0f);
 		auto sky_power = light->property("sky_scale").getNumber(1.0f);
-		auto sun_radius = light->property("sun_radius_scale").getNumber(1.0f);
+		auto sun_radius = light->property("sun_radius_scale").getNumber(10.0f);
 		sstream << "make_sunsky_light(math, make_vec3("
 				<< dir(0) << ", " << dir(1) << ", " << dir(2) << "), "
 				<< ctx.Environment.SceneDiameter << ", "

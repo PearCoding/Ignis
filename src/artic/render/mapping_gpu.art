@@ -150,7 +150,7 @@ fn @gpu_shade( acc: Accelerator
 
 // Shade nonhits
 fn @gpu_nonshade( acc: Accelerator
-             , intrinsics: Intrinsics
+             , _intrinsics: Intrinsics
              , atomics: Atomics
              , scene: Scene
              , path_tracer: PathTracer
@@ -159,7 +159,7 @@ fn @gpu_nonshade( acc: Accelerator
              , primary: PrimaryStream
              , first: i32, last: i32) -> () {
     let n = last - first;
-    gpu_exec_1d(acc, n, 64 /*block_size*/, |work_item| {
+    gpu_exec_1d(acc, n, 64, |work_item| {
         let ray_id = first + work_item.gidx();
         if ray_id >= last {
             return()
@@ -398,7 +398,7 @@ fn @gpu_streaming_trace( dev_id: i32
         }
 
         let last = ray_ends(scene.num_entities); // Last entry
-        if(first > 0 && first < last) {
+        if(first < last) {
             gpu_nonshade(acc, intrinsics, atomics, scene, path_tracer, film_pixels, spp, primary, first, last);
             // Do not set first as last
         }
