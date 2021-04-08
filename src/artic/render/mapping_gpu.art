@@ -138,7 +138,7 @@ fn @gpu_shade( acc: Accelerator
         }
 
         let on_bounce = path_tracer.on_bounce;
-        if let Option[(Ray, RayState)]::Some(new_ray, new_state) = @on_bounce(ray, hit, &mut state, lcl_surf, mat) {
+        if let Option[(Ray, RayState)]::Some(new_ray, new_state) = @on_bounce(ray, hit, &mut state, glb_surf, mat) {
             make_ray_stream_writer(primary.rays, 1)(ray_id, 0, new_ray);
             make_primary_stream_state_writer(primary, 1)(ray_id, 0, new_state);
         } 

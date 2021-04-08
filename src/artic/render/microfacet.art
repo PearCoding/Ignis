@@ -24,7 +24,7 @@ fn @make_aniso_beckmann_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f
     },
     G1 = @|w, m| {
         let cosZ = vec3_dot(surf.local.col(2), w);
-        if cosZ * vec3_dot(w, m) <= 0.0 { return(0) };
+        if cosZ * vec3_dot(w, m) <= flt_eps { return(0) };
 
         let cosX = vec3_dot(surf.local.col(0), w);
         let cosY = vec3_dot(surf.local.col(1), w);
@@ -33,10 +33,10 @@ fn @make_aniso_beckmann_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f
         let ky = alpha_v * cosY;
         let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
 
-        if k2 == 0.0 { return(1) };
+        if k2 <= flt_eps { return(1) };
 
         let a  = math.rsqrtf(k2);
-        let a2 = 1/k2;
+        let a2 = 1 / k2;
 
         if a >= 1.6 { 
             1.0
