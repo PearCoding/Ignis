@@ -116,20 +116,32 @@ fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
         }
     },
     sample_emission = @ |rnd| {
-        let A = lightA.sample_emission(rnd);
-        let B = lightB.sample_emission(rnd);
-        let u = randf(rnd);
+        if lightA.has_area && lightB.has_area {
+            let A = lightA.sample_emission(rnd);
+            let B = lightB.sample_emission(rnd);
+            let u = randf(rnd);
 
-        if u < probability {
-            make_emission_sample(A.pos, A.dir, A.intensity, A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, A.cos)
+            if u < probability {
+                make_emission_sample(A.pos, A.dir, A.intensity, A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, A.cos)
+            } else {
+                make_emission_sample(B.pos, B.dir, B.intensity, A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, B.cos)
+            }
+        } else if !lightA.has_area && lightB.has_area {
+            lightB.sample_emission(rnd)
         } else {
-            make_emission_sample(B.pos, B.dir, B.intensity, A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, B.cos)
+            lightA.sample_emission(rnd)
         }
     },
     emission = @ |dir, uv_coords| {
-        let A = lightA.emission(dir, uv_coords);
-        let B = lightB.emission(dir, uv_coords); 
-        make_emission_value(color_lerp(A.intensity,B.intensity, probability), A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability) 
+        if lightA.has_area && lightB.has_area {
+            let A = lightA.emission(dir, uv_coords);
+            let B = lightB.emission(dir, uv_coords); 
+            make_emission_value(color_lerp(A.intensity,B.intensity, probability), A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability) 
+        } else if !lightA.has_area && lightB.has_area {
+            lightB.emission(dir, uv_coords)
+        } else {
+            lightA.emission(dir, uv_coords)
+        }
     },
     has_area = (lightA.has_area || lightB.has_area),
     infinite = (lightA.infinite || lightB.infinite)
@@ -199,7 +211,7 @@ fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) = Li
         make_emission_sample(vec3_mulf(sample.dir,max_radius), sample.dir, color, 1.0, sample.pdf, 1.0)
     },
     emission = @ |_, _| make_emission_value(color, 1.0, uniform_sphere_pdf()),
-    has_area = false,
+    has_area = true,
     infinite = true
 };
 
@@ -215,18 +227,23 @@ fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Text
         let (theta, phi) = spherical_from_dir(math, from);
         let u = theta / flt_pi;
         let v = phi / (2.0 * flt_pi);
-        let intensity = color_mulf(tex(make_vec2(u,v)), 1.0 / (4.0 * flt_pi));
+        let intensity = tex(make_vec2(u,v));
         make_direct_sample(vec3_mulf(from,max_radius), intensity, 1.0, uniform_sphere_pdf(), 1.0)
     },
     sample_emission = @ |rnd| {
         let u = randf(rnd);
         let v = randf(rnd);
         let sample = sample_uniform_sphere(math, u, v);
-        let intensity = color_mulf(tex(make_vec2(u,v)), 1.0 / (4.0 * flt_pi));
+        let intensity = tex(make_vec2(u,v));
         make_emission_sample(vec3_mulf(sample.dir,max_radius), sample.dir, intensity, 1.0, sample.pdf, 1.0)
     },
-    emission = @ |_, _| make_emission_value(black, 1.0, 1.0), // TODO
-    has_area = false,
+    emission = @ |dir, _| {
+        let (theta, phi) = spherical_from_dir(math, dir);
+        let u = theta / flt_pi;
+        let v = phi / (2.0 * flt_pi);
+        make_emission_value(tex(make_vec2(u,v)), 1.0, uniform_sphere_pdf())
+    },
+    has_area = true,
     infinite = true
 };
 

@@ -152,7 +152,7 @@ fn @gpu_shade( acc: Accelerator
 fn @gpu_nonshade( acc: Accelerator
              , _intrinsics: Intrinsics
              , atomics: Atomics
-             , scene: Scene
+             , _scene: Scene
              , path_tracer: PathTracer
              , film_pixels: &mut [f32]
              , spp: i32
@@ -165,16 +165,16 @@ fn @gpu_nonshade( acc: Accelerator
             return()
         }
 
-        let state = make_primary_stream_state_reader(primary, 1)(ray_id, 0);
-        let ray       = make_ray_stream_reader(primary.rays, 1)(ray_id, 0);
-        let pixel     = primary.rays.id(ray_id);
+        let mut state = make_primary_stream_state_reader(primary, 1)(ray_id, 0);
+        let ray   = make_ray_stream_reader(primary.rays, 1)(ray_id, 0);
+        let pixel = primary.rays.id(ray_id);
 
         let on_nonhit = path_tracer.on_nonhit;
-        if let Option[Color]::Some(color) = @on_nonhit(ray, &state) {
+        if let Option[Color]::Some(color) = @on_nonhit(ray, &mut state) {
             gpu_accumulate(atomics, film_pixels, pixel, color, spp);
         }
         
-        primary.rays.id(ray_id) = -1;
+        primary.rays.id(ray_id) = -1; // Kill ray as it goes to nowhere
     });
 }
 
@@ -397,15 +397,17 @@ fn @gpu_streaming_trace( dev_id: i32
             first = last;
         }
 
-        let last = ray_ends(scene.num_entities); // Last entry
+        // Shade non-hits as well
+        let last = ray_ends(scene.num_entities);
         if(first < last) {
             gpu_nonshade(acc, intrinsics, atomics, scene, path_tracer, film_pixels, spp, primary, first, last);
-            // Do not set first as last
+            // Do not set first as last (to make sure they drop out)
         }
+
+        acc.sync();
 
         primary.size   = first;
         secondary.size = first;
-        acc.sync();
 
         if first > 0 {
             // Trace secondary rays

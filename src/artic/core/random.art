@@ -51,7 +51,7 @@ struct PosSample {
     pdf: f32
 }
 
-fn @make_pos_sample(math: Intrinsics, pos: Vec3, pdf: f32) = PosSample {
+fn @make_pos_sample(pos: Vec3, pdf: f32) = PosSample {
     pos = pos,
     pdf = pdf
 };
@@ -123,7 +123,7 @@ fn @uniform_disk_pdf(radius: f32) -> f32 { 1 / (flt_pi*radius*radius) }
 // Samples uniform concentric disk
 fn @sample_uniform_disk(math: Intrinsics, u: f32, v: f32, radius: f32) -> PosSample {
     if (u == 0 && v == 0) {
-        return (make_pos_sample(math, make_vec3(0,0,0), uniform_disk_pdf(radius)))
+        return (make_pos_sample(make_vec3(0,0,0), uniform_disk_pdf(radius)))
     }
     
     let a = (2 * u) - 1;
@@ -135,14 +135,14 @@ fn @sample_uniform_disk(math: Intrinsics, u: f32, v: f32, radius: f32) -> PosSam
         let phi = (flt_pi/4) * (b/a);
         let x = radius * math.cosf(phi) * a;
         let y = radius * math.sinf(phi) * a;
-        make_pos_sample(math, make_vec3(x,y,0), uniform_disk_pdf(radius))
+        make_pos_sample(make_vec3(x,y,0), uniform_disk_pdf(radius))
     }
     else {
         // Bottom half
         let phi = (flt_pi/2) - ((flt_pi/4) * (a/b));
         let x = radius * math.cosf(phi) * b;
         let y = radius * math.sinf(phi) * b;
-        make_pos_sample(math, make_vec3(x,y,0), uniform_disk_pdf(radius))
+        make_pos_sample(make_vec3(x,y,0), uniform_disk_pdf(radius))
     }
 }
 
