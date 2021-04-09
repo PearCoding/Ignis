@@ -36,7 +36,7 @@ fn @smith_GGX1(math: Intrinsics, w: Vec3, a: f32)-> f32{
 fn @make_clearcoat_bsdf(math: Intrinsics, clearcoat: f32, alpha: f32, wo: Vec3, H: Vec3, wi: Vec3, upper_hemisphere: bool) = Bsdf {
     eval = @ |_in_dir, _out_dir| {
 
-        if (clearcoat <= 0 || !upper_hemisphere) { return (make_gray_color(0)) }
+        if (clearcoat <= 0 || !upper_hemisphere) { return (black) }
 
         let absNdotH = abs_cos_theta(H);
         let HdotL = vec3_dot(H, wi);
@@ -75,7 +75,7 @@ fn @make_diffuse_brdf(roughness: f32, _flatness: f32, wo: Vec3, H: Vec3, wi: Vec
         let fv = schlick_approx(absNdotV);
 
         let retro = compute_retro_diffuse(roughness, H, wi, fl, fv);
-        if (retro == 0) {return (make_gray_color(0))}
+        if (retro == 0) {return (black)}
         make_gray_color(1 / flt_pi * retro)
     },
     pdf = @ |_in_dir, _out_dir| {
@@ -179,7 +179,6 @@ fn @sheen_lobe(sheen: f32, base_color: Color, sheen_tint: f32, H: Vec3, wi: Vec3
     let tint = calculate_tint(base_color);
     color_mulf(color_lerp(make_gray_color(1), tint, sheen_tint), sheen * schlick_approx(HdotL))
 }
-
 
 //disney bsdf
 fn @make_disney_bsdf(math: Intrinsics, surf: SurfaceElement, base_color: Color, flatness: f32, metallic: f32, ior: f32, specular_tint: f32, roughness: f32,

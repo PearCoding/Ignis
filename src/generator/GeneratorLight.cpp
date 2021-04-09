@@ -78,9 +78,12 @@ static void light_cie_cloudy(const std::shared_ptr<Loader::Object>& light, const
 
 static void light_env(const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
 {
-	os << "make_environment_light(math, "
-	   << ctx.Environment.SceneDiameter << ", "
-	   << ctx.extractMaterialPropertyColor(light, "radiance", 1.0f) << ")";
+	bool isTexture = false;
+	auto radiance  = ctx.extractMaterialPropertyColorLight(light, "radiance", 1.0f, isTexture);
+	if (isTexture)
+		os << "make_environment_light_textured(math, " << ctx.Environment.SceneDiameter << ", " << radiance << ")";
+	else
+		os << "make_environment_light(math, " << ctx.Environment.SceneDiameter << ", " << radiance << ")";
 }
 
 static void light_error(const std::string& msg, std::ostream& os)

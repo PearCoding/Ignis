@@ -254,18 +254,19 @@ fn @make_thinglass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32
     pdf    = @ |_, _| 0,
     sample = @ |rnd, out_dir, _| {
         let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
-        let n = surf.local.col(2);
-        let cos_i = vec3_dot(out_dir, n);
+        let N = surf.local.col(2);
+        let cos_i = positive_cos(out_dir, N);
 
         let fterm = fresnel(math, k, cos_i);
+        let F = /*if fterm.factor < 1.0 {*/ fterm.factor + (1 - fterm.factor) * fterm.factor / (fterm.factor + 1) /*} else { 1.0 }*/;
 
-        if !fterm.total {
+        if randf(rnd) > F {
             // Refraction
-            let F = if fterm.factor < 1.0 { fterm.factor + (1 - fterm.factor) * fterm.factor / (fterm.factor + 1) } else { 1.0 };
-            if (randf(rnd) > F) { return(make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, kt, true)) }
+            make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, kt, true)
+        } else {
+            // Reflection
+            make_bsdf_sample(surf, vec3_reflect(out_dir, N), 1, 1, ks, false)
         }
-        // Reflection
-        make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, 1, ks, false)
     },
     is_specular = true
 };

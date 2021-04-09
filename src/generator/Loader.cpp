@@ -1,10 +1,12 @@
 #include "Loader.h"
+#include "Logger.h"
 
 #include <cmath>
 #include <fstream>
 #include <sstream>
 
 #include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 
 namespace IG {
@@ -89,7 +91,7 @@ inline static Matrix3f getMatrix3f(const rapidjson::Value& obj)
 	Matrix3f mat;
 	for (size_t i = 0; i < 3; ++i)
 		for (size_t j = 0; j < 3; ++j)
-			mat(i, j) = array[i* 3 + j].GetFloat();
+			mat(i, j) = array[i * 3 + j].GetFloat();
 	return mat;
 }
 
@@ -327,14 +329,20 @@ public:
 	}
 };
 
-Scene SceneLoader::loadFromFile(const char* path)
+constexpr auto JsonFlags = rapidjson::kParseDefaultFlags | rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag | rapidjson::kParseNanAndInfFlag | rapidjson::kParseEscapedApostropheFlag;
+
+Scene SceneLoader::loadFromFile(const char* path, bool& ok)
 {
 	std::ifstream ifs(path);
 	rapidjson::IStreamWrapper isw(ifs);
 
+	ok = true;
 	rapidjson::Document doc;
-	if (doc.ParseStream(isw).HasParseError())
+	if (doc.ParseStream<JsonFlags>(isw).HasParseError()) {
+		ok = false;
+		IG_LOG(L_ERROR) << "JSON[" << doc.GetErrorOffset() << "]: " << rapidjson::GetParseError_En(doc.GetParseError()) << std::endl;
 		return Scene();
+	}
 
 	const auto dir = extractDirectoryOfPath(path);
 	if (dir.empty()) {
@@ -347,19 +355,27 @@ Scene SceneLoader::loadFromFile(const char* path)
 	}
 }
 
-Scene SceneLoader::loadFromString(const char* str)
+Scene SceneLoader::loadFromString(const char* str, bool& ok)
 {
 	rapidjson::Document doc;
-	if (doc.Parse(str).HasParseError())
+	if (doc.Parse<JsonFlags>(str).HasParseError()) {
+		ok = false;
+		IG_LOG(L_ERROR) << "JSON[" << doc.GetErrorOffset() << "]: " << rapidjson::GetParseError_En(doc.GetParseError()) << std::endl;
 		return Scene();
+	}
+	ok = true;
 	return InternalSceneLoader::loadFromJSON(*this, doc);
 }
 
-Scene SceneLoader::loadFromString(const char* str, size_t max_len)
+Scene SceneLoader::loadFromString(const char* str, size_t max_len, bool& ok)
 {
 	rapidjson::Document doc;
-	if (doc.Parse(str, max_len).HasParseError())
+	if (doc.Parse<JsonFlags>(str, max_len).HasParseError()) {
+		ok = false;
+		IG_LOG(L_ERROR) << "JSON[" << doc.GetErrorOffset() << "]: " << rapidjson::GetParseError_En(doc.GetParseError()) << std::endl;
 		return Scene();
+	}
+	ok = true;
 	return InternalSceneLoader::loadFromJSON(*this, doc);
 }
 } // namespace Loader

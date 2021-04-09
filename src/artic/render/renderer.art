@@ -187,7 +187,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
 
                     let out_dir = vec3_neg(ray.dir);
                     let emit = light.emission(out_dir, make_vec2(0,0));
-                    let mis = 1 / (1 + state.mis * pdf_lightpick * emit.pdf_dir);
+                    let mis  = 1 / (1 + state.mis * pdf_lightpick * emit.pdf_dir);
                     color = color_add(color, color_mulf(color_mul(state.contrib, emit.intensity), mis));
                 }
             }

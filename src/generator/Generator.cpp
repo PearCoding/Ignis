@@ -322,7 +322,14 @@ bool generate(const std::filesystem::path& filepath, const GeneratorOptions& opt
 		std::filesystem::create_directories("data/meshes");
 
 		SceneBuilder builder;
-		builder.Context.Scene		  = loader.loadFromFile(filepath);
+
+		bool ok;
+		builder.Context.Scene = loader.loadFromFile(filepath, ok);
+		if (!ok) {
+			IG_LOG(L_ERROR) << "Could not load JSON." << std::endl;
+			return false;
+		}
+
 		builder.Context.FilePath	  = std::filesystem::canonical(filepath);
 		builder.Context.Target		  = options.target;
 		builder.Context.MaxPathLen	  = options.max_path_length;

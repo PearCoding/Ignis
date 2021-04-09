@@ -307,22 +307,25 @@ class SceneLoader {
 public:
 	inline SceneLoader() = default;
 
-	inline Scene loadFromFile(const std::string& path)
+	inline Scene loadFromFile(const std::string& path, bool& ok)
 	{
-		return loadFromFile(path.c_str());
+		return loadFromFile(path.c_str(), ok);
 	}
-	inline Scene loadFromString(const std::string& str);
+	inline Scene loadFromString(const std::string& str, bool& ok)
+	{
+		return loadFromString(str.c_str(), ok);
+	}
 
 #ifdef TPM_HAS_STRING_VIEW
-	inline Scene loadFromString(const std::string_view& str)
+	inline Scene loadFromString(const std::string_view& str, bool& ok)
 	{
-		return loadFromString(str.data(), str.size());
+		return loadFromString(str.data(), str.size(), ok);
 	}
 #endif
 
-	Scene loadFromFile(const char* path);
-	Scene loadFromString(const char* str);
-	Scene loadFromString(const char* str, size_t max_len);
+	Scene loadFromFile(const char* path, bool& ok);
+	Scene loadFromString(const char* str, bool& ok);
+	Scene loadFromString(const char* str, size_t max_len, bool& ok);
 
 	inline void addLookupDir(const std::string& path)
 	{

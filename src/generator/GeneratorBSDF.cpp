@@ -2,6 +2,11 @@
 #include "Logger.h"
 
 namespace IG {
+
+constexpr float AIR_IOR	   = 1.000277f;
+constexpr float GLASS_IOR  = 1.55f;
+constexpr float RUBBER_IOR = 1.49f;
+
 static void setup_microfacet(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	std::string alpha_u, alpha_v;
@@ -38,8 +43,8 @@ static void bsdf_orennayar(const std::shared_ptr<Loader::Object>& bsdf, const Ge
 static void bsdf_dielectric(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_glass_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", 1.000277f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", 1.5046f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", AIR_IOR) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", GLASS_IOR) << ", "
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", "
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_transmittance", 1.0f) << ")";
 }
@@ -47,10 +52,16 @@ static void bsdf_dielectric(const std::shared_ptr<Loader::Object>& bsdf, const G
 static void bsdf_thindielectric(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_thinglass_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", 1.000277f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", 1.5046f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", AIR_IOR) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", GLASS_IOR) << ", "
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", "
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_transmittance", 1.0f) << ")";
+}
+
+static void bsdf_mirror(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+{
+	os << "make_mirror_bsdf(math, surf, "
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ")";
 }
 
 static void bsdf_conductor(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
@@ -74,8 +85,8 @@ static void bsdf_rough_conductor(const std::shared_ptr<Loader::Object>& bsdf, co
 static void bsdf_plastic(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
 	os << "make_plastic_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", 1.000277f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", 1.49f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", AIR_IOR) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", RUBBER_IOR) << ", "
 	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", "
 	   << ctx.extractMaterialPropertyColor(bsdf, "diffuse_reflectance", 0.5f) << ")";
 }
@@ -88,24 +99,24 @@ static void bsdf_phong(const std::shared_ptr<Loader::Object>& bsdf, const Genera
 }
 
 static void bsdf_disney(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
-{ 
+{
 	os << "make_disney_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyColor(bsdf, "base_color", 0.16f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "flatness", 0.5f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "metallic", 0.5f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "ior", 1.5f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "specular_tint", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "base_color", 0.8f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "flatness", 0.0f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "metallic", 0.0f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "ior", GLASS_IOR) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "specular_tint", 0.0f) << ", "
 	   << ctx.extractMaterialPropertyNumber(bsdf, "roughness", 0.5f) << ", "
-       << ctx.extractMaterialPropertyNumber(bsdf, "anisotropic", 0.5f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "sheen", 0.5f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "sheen_tint", 0.5f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "clearcoat", 0.5f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "clearcoat_gloss", 1.f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "spec_trans", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "anisotropic", 0.0f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "sheen", 0.0f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "sheen_tint", 0.0f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "clearcoat", 0.0f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "clearcoat_gloss", 0.0f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "spec_trans", 0.0f) << ", "
 	   << ctx.extractMaterialPropertyNumber(bsdf, "relative_ior", 1.1f) << ", "
-       << ctx.extractMaterialPropertyNumber(bsdf, "scatter_distance", 0.5f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "diff_trans", 0.5f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "transmittance", 1.f) << ")";
+	   << ctx.extractMaterialPropertyNumber(bsdf, "scatter_distance", 0.5f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "diff_trans", 0.0f) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "transmittance", 1.0f) << ")";
 }
 
 static void bsdf_blend(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
@@ -147,6 +158,11 @@ static void bsdf_twosided(const std::shared_ptr<Loader::Object>& bsdf, const Gen
 		os << GeneratorBSDF::extract(ctx.Scene.bsdf(other), ctx);
 }
 
+static void bsdf_passthrough(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+{
+	os << "make_passthrough_bsdf(surf)";
+}
+
 static void bsdf_null(const std::shared_ptr<Loader::Object>&, const GeneratorContext&, std::ostream& os)
 {
 	os << "make_black_bsdf()/* Null */";
@@ -155,7 +171,7 @@ static void bsdf_null(const std::shared_ptr<Loader::Object>&, const GeneratorCon
 static void bsdf_unknown(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext&, std::ostream& os)
 {
 	IG_LOG(L_WARNING) << "Unknown bsdf '" << bsdf->pluginType() << "'" << std::endl;
-	os << "make_black_bsdf()/* Null */";
+	os << "make_black_bsdf()/* Unknown " << bsdf->pluginType() << " */";
 }
 
 using BSDFGenerator = void (*)(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os);
@@ -165,9 +181,11 @@ static struct {
 } _generators[] = {
 	{ "diffuse", bsdf_diffuse },
 	{ "roughdiffuse", bsdf_orennayar },
+	{ "glass", bsdf_dielectric },
 	{ "dielectric", bsdf_dielectric },
 	{ "roughdielectric", bsdf_dielectric }, /*TODO*/
 	{ "thindielectric", bsdf_thindielectric },
+	{ "mirror", bsdf_mirror }, // Specialized conductor
 	{ "conductor", bsdf_conductor },
 	{ "roughconductor", bsdf_rough_conductor },
 	{ "phong", bsdf_phong },
@@ -177,6 +195,7 @@ static struct {
 	{ "blendbsdf", bsdf_blend },
 	{ "mask", bsdf_mask },
 	{ "twosided", bsdf_twosided },
+	{ "passthrough", bsdf_passthrough },
 	{ "null", bsdf_null },
 	{ "", nullptr }
 };
