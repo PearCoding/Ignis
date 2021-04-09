@@ -706,6 +706,19 @@ static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, si
 	SDL_UpdateTexture(texture, nullptr, buf, width * sizeof(uint32_t));
 }
 
+static RGB get_film_data(size_t width, size_t height, uint32_t iter, uint32_t x, uint32_t y)
+{
+	auto film			 = get_pixels();
+	const float inv_iter = 1.0f / iter;
+	const uint32_t ind	 = y * width + x;
+
+	return RGB{
+		film[ind * 3 + 0] * inv_iter,
+		film[ind * 3 + 1] * inv_iter,
+		film[ind * 3 + 2] * inv_iter
+	};
+}
+
 static void make_screenshot(size_t width, size_t height, uint32_t iter)
 {
 	std::stringstream out_file;
@@ -807,15 +820,23 @@ bool handleInput(uint32_t& iter, Camera& cam)
 }
 
 constexpr size_t UI_W = 300;
-constexpr size_t UI_H = 400;
+constexpr size_t UI_H = 440;
 static void handle_imgui(uint32_t iter)
 {
+	int mouse_x, mouse_y;
+	SDL_GetMouseState(&mouse_x, &mouse_y);
+
+	RGB rgb{ 0, 0, 0 };
+	if (mouse_x >= 0 && mouse_x < sWidth && mouse_y >= 0 && mouse_y < sHeight)
+		rgb = get_film_data(sWidth, sHeight, iter, mouse_x, mouse_y);
+
 	ImGui::SetNextWindowPos(ImVec2(5, 5), ImGuiCond_Once);
 	ImGui::SetNextWindowSize(ImVec2(UI_W, UI_H), ImGuiCond_Once);
 	ImGui::Begin("Control");
 	if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Text("Iter %i", iter);
-		ImGui::Text("SPP %i", iter * get_spp());
+		ImGui::Text("SPP  %i", iter * get_spp());
+		ImGui::Text("Cursor  (%f, %f, %f)", rgb.r, rgb.g, rgb.b);
 		ImGui::Text("Max Lum %f", sLastLum.Max.load());
 		ImGui::Text("Min Lum %f", sLastLum.Min.load());
 		ImGui::Text("Avg Lum %f", sLastLum.Avg);
