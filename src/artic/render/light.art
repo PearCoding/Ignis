@@ -34,13 +34,13 @@ struct AreaEmitter {
 // Opaque light structure
 struct Light {
     // Samples direct illumination from this light source at the given point on a surface
-    sample_direct: fn (&mut RndState, Vec3) -> DirectLightSample,
+    sample_direct: fn (&mut RndState, SurfaceElement) -> DirectLightSample,
     // Samples the emitting surface of the light
     sample_emission: fn (&mut RndState) -> EmissionSample,
     // Returns the emission properties of the light at a given point on its surface
     emission: fn (Vec3, Vec2) -> EmissionValue,
-    // true if the light has an area (can be hit by a ray)
-    has_area: bool,
+    // true if the light is a delta light (can not be hit by a ray)
+    delta: bool,
     // true if the light is infinite
     infinite: bool
 }
@@ -116,7 +116,7 @@ fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
         }
     },
     sample_emission = @ |rnd| {
-        if lightA.has_area && lightB.has_area {
+        if !lightA.delta && !lightB.delta {
             let A = lightA.sample_emission(rnd);
             let B = lightB.sample_emission(rnd);
             let u = randf(rnd);
@@ -126,24 +126,24 @@ fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
             } else {
                 make_emission_sample(B.pos, B.dir, B.intensity, A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, B.cos)
             }
-        } else if !lightA.has_area && lightB.has_area {
+        } else if lightA.delta && !lightB.delta {
             lightB.sample_emission(rnd)
         } else {
             lightA.sample_emission(rnd)
         }
     },
     emission = @ |dir, uv_coords| {
-        if lightA.has_area && lightB.has_area {
+        if !lightA.delta && !lightB.delta {
             let A = lightA.emission(dir, uv_coords);
             let B = lightB.emission(dir, uv_coords); 
             make_emission_value(color_lerp(A.intensity,B.intensity, probability), A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability) 
-        } else if !lightA.has_area && lightB.has_area {
+        } else if lightA.delta && !lightB.delta {
             lightB.emission(dir, uv_coords)
         } else {
             lightA.emission(dir, uv_coords)
         }
     },
-    has_area = (lightA.has_area || lightB.has_area),
+    delta = (lightA.delta && lightB.delta),
     infinite = (lightA.infinite || lightB.infinite)
 };
 
@@ -160,7 +160,7 @@ fn @make_point_light(math: Intrinsics, pos: Vec3, color: Color) = Light {
         make_emission_sample(pos, sample.dir, intensity, 1, sample.pdf, 1)
     },
     emission = @ |_, _| make_emission_value(black, 1, 1),
-    has_area = false,
+    delta    = true,
     infinite = false
 };
 
@@ -172,7 +172,7 @@ fn @make_directional_light(_math: Intrinsics, dir: Vec3, max_radius: f32, color:
         make_emission_sample(vec3_mulf(dir, max_radius), dir, color, 1, 1, 1)
     },
     emission = @ |_, _| make_emission_value(black, 1, 1),
-    has_area = false,
+    delta    = true,
     infinite = true
 };
 
@@ -192,7 +192,7 @@ fn @make_sun_light(math: Intrinsics, dir: Vec3, max_radius: f32, sun_radius: f32
         make_emission_sample(vec3_mulf(dir, max_radius), ndir, color, 1.0, sample.pdf, 1.0)
     },
     emission = @ |_, _| make_emission_value(black, 1, 1),
-    has_area = false,
+    delta    = true,
     infinite = true
 };
 
@@ -211,7 +211,7 @@ fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) = Li
         make_emission_sample(vec3_mulf(sample.dir,max_radius), sample.dir, color, 1.0, sample.pdf, 1.0)
     },
     emission = @ |_, _| make_emission_value(color, 1.0, uniform_sphere_pdf()),
-    has_area = true,
+    delta    = false,
     infinite = true
 };
 
@@ -243,7 +243,7 @@ fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Text
         let v = phi / (2.0 * flt_pi);
         make_emission_value(tex(make_vec2(u,v)), 1.0, uniform_sphere_pdf())
     },
-    has_area = true,
+    delta    = false,
     infinite = true
 };
 
@@ -265,7 +265,7 @@ fn @make_environment_light_function(math: Intrinsics, max_radius: f32, func: fn(
     emission = @ |dir, _| {
         make_emission_value(func(dir), 1.0, uniform_sphere_pdf())
     },
-    has_area = true,
+    delta    = false,
     infinite = true
 };
 
@@ -296,14 +296,14 @@ fn @make_camera_light(math: Intrinsics, camera: Camera, color: Color) = Light {
         make_emission_sample(camera.origin(), sample.dir, intensity, 1.0, sample.pdf, 1.0)
     },
     emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
-    has_area = false,
+    delta    = true,
     infinite = false
 };
 
 fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
-    sample_direct = @ |rnd, from| {
+    sample_direct = @ |rnd, from_surf| {
         let (pos, n, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
-        let dir = vec3_sub(from, pos);
+        let dir = vec3_sub(from_surf.point, pos);
         let cos = vec3_dot(dir, n) / vec3_len(math, dir);
         make_direct_sample(pos, color, area_pdf, cosine_hemisphere_pdf(cos), cos)
     },
@@ -313,7 +313,7 @@ fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
         make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color, area_pdf, sample.pdf, sample.dir.z)
     },
     emission = @ |dir, uv_coords| make_emission_value(color, area.pdf(uv_coords), cosine_hemisphere_pdf(vec3_dot(area.normal(uv_coords), dir))),
-    has_area = true,
+    delta    = false,
     infinite = false
 };
 

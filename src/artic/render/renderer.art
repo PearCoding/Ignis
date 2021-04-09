@@ -101,26 +101,28 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
             let lights = scene.lights;
             let light = @lights(light_id);
             let sample_direct = light.sample_direct;
-            let light_sample = @sample_direct(rnd, surf.point);
+            let light_sample = @sample_direct(rnd, surf);
             if light.infinite {
-                let light_dir = light_sample.pos;
+                let light_dir = light_sample.pos; // Infinite lights return a direction instead of a position
                 let vis = vec3_dot(light_dir, surf.local.col(2));
 
                 if vis > flt_eps {
-                    let in_dir = light_dir;
+                    let in_dir  = light_dir; // TODO: Check correct orientation
                     let out_dir = vec3_neg(ray.dir);
 
-                    let pdf_e = mat.bsdf.pdf(in_dir, out_dir);
-                    let pdf_l = light_sample.pdf_dir * pdf_lightpick;
+                    let pdf_e     = mat.bsdf.pdf(in_dir, out_dir);        // Pdf to sample the "infinite" light based on bsdf
+                    let pdf_l     = light_sample.pdf_dir * pdf_lightpick; // Pdf to sample the light based on NEE
                     let inv_pdf_l = 1 / pdf_l;
 
-                    let mis = if light.has_area { 1 / (1 + pdf_e * inv_pdf_l) } else { 1 };
+                    let mis   = if light.delta { 1 } else { 1 / (1 + pdf_e * inv_pdf_l) };
                     let cos_e = vis;
+                    let cos_l = light_sample.cos; // Usually, this is just 1
+                    let geom_factor = cos_e * cos_l * inv_pdf_l; // No distance, as it is infinite far away
 
                     let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
                     return(make_option(
                         make_ray(surf.point, light_dir, offset, 1 - offset),
-                        color_mulf(contrib, cos_e * mis)
+                        color_mulf(contrib, geom_factor * mis)
                     ))
                 }
             } else {
@@ -128,19 +130,19 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                 let vis = vec3_dot(light_dir, surf.local.col(2));
 
                 if vis > flt_eps && light_sample.cos > flt_eps {
-                    let inv_d = 1 / vec3_len(device.intrinsics, light_dir);
-                    let inv_d2 = inv_d * inv_d;
-                    let in_dir = vec3_mulf(light_dir, inv_d);
+                    let inv_d   = 1 / vec3_len(device.intrinsics, light_dir);
+                    let inv_d2  = inv_d * inv_d;
+                    let in_dir  = vec3_mulf(light_dir, inv_d);
                     let out_dir = vec3_neg(ray.dir);
 
-                    let pdf_e = if light.has_area { mat.bsdf.pdf(in_dir, out_dir) } else { 0 };
-                    let pdf_l = light_sample.pdf_area * pdf_lightpick;
+                    let pdf_e     = if light.delta { 1 } else {  mat.bsdf.pdf(in_dir, out_dir) };
+                    let pdf_l     = light_sample.pdf_area * pdf_lightpick;
                     let inv_pdf_l = 1 / pdf_l;
 
                     let cos_e = vis * inv_d;
                     let cos_l = light_sample.cos;
 
-                    let mis = if light.has_area { 1 / (1 + pdf_e * cos_l * inv_d2 * inv_pdf_l) } else { 1 };
+                    let mis = if light.delta { 1 } else { 1 / (1 + pdf_e * cos_l * inv_d2 * inv_pdf_l) };
                     let geom_factor = cos_e * cos_l * inv_d2 * inv_pdf_l;
 
                     let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
@@ -180,7 +182,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
             for light_id in unroll(0, scene.num_lights) {
                 let light = @lights(light_id);
                 // Do not include delta lights or finite lights
-                if light.infinite && light.has_area {
+                if light.infinite && !light.delta {
                     inflights += 1;
 
                     let out_dir = vec3_neg(ray.dir);
