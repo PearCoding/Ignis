@@ -76,3 +76,13 @@ fn @make_texture(math: Intrinsics, border: BorderHandling, filter: ImageFilter, 
 fn @make_black_texture() -> Texture {
     @ |_uv| { black }
 }
+
+fn @texture_dx(tex: Texture, point: Vec2) -> Color {
+    let delta = 0.0001:f32;
+    color_mulf(color_sub(tex(make_vec2(point.x-delta,point.y)), tex(make_vec2(point.x+delta,point.y))), 1/(2*delta))
+}
+
+fn @texture_dy(tex: Texture, point: Vec2) -> Color {
+    let delta = 0.0001:f32;
+    color_mulf(color_sub(tex(make_vec2(point.x, point.y-delta)), tex(make_vec2(point.x,point.y+delta))), 1/(2*delta))
+}

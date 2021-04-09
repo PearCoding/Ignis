@@ -40,7 +40,7 @@ std::string GeneratorContext::extractMaterialPropertyColorLight(const std::share
 	return sstream.str();
 }
 
-std::string GeneratorContext::extractMaterialPropertyColor(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def) const
+std::string GeneratorContext::extractMaterialPropertyColor(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def, const char* surfParameter) const
 {
 	std::stringstream sstream;
 
@@ -58,7 +58,7 @@ std::string GeneratorContext::extractMaterialPropertyColor(const std::shared_ptr
 			sstream << "make_color(" << v_rgb(0) << ", " << v_rgb(1) << ", " << v_rgb(2) << ")";
 		} break;
 		case PT_STRING:
-			sstream << "tex_" << prop.getString() << "(vec4_to_2(surf.attr(0)))";
+			sstream << "tex_" << prop.getString() << "(vec4_to_2(" << surfParameter << ".attr(0)))";
 			break;
 		default:
 			IG_LOG(L_WARNING) << "Unknown property type for '" << propname << "'" << std::endl;
@@ -72,7 +72,7 @@ std::string GeneratorContext::extractMaterialPropertyColor(const std::shared_ptr
 	return sstream.str();
 }
 
-std::string GeneratorContext::extractMaterialPropertyNumber(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def) const
+std::string GeneratorContext::extractMaterialPropertyNumber(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def, const char* surfParameter) const
 {
 	std::stringstream sstream;
 
@@ -95,7 +95,7 @@ std::string GeneratorContext::extractMaterialPropertyNumber(const std::shared_pt
 			}
 		} break;
 		case PT_STRING:
-			sstream << "tex_" << prop.getString() << "(vec4_to_2(surf.attr(0))).x";
+			sstream << "tex_" << prop.getString() << "(vec4_to_2(" << surfParameter << ".attr(0))).r";
 			break;
 		default:
 			IG_LOG(L_WARNING) << "Unknown property type for '" << propname << "'" << std::endl;
@@ -104,6 +104,60 @@ std::string GeneratorContext::extractMaterialPropertyNumber(const std::shared_pt
 		}
 	} else {
 		sstream << def;
+	}
+
+	return sstream.str();
+}
+
+std::string GeneratorContext::extractMaterialPropertyNumberDx(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, const char* surfParameter) const
+{
+	std::stringstream sstream;
+
+	auto prop = obj->property(propname);
+	if (prop.isValid()) {
+		switch (prop.type()) {
+		case PT_INTEGER:
+		case PT_NUMBER:
+		case PT_VECTOR3:
+			sstream << 0.0f;
+			break;
+		case PT_STRING:
+			sstream << "texture_dx(tex_" << prop.getString() << ", vec4_to_2(" << surfParameter << ".attr(0))).r";
+			break;
+		default:
+			IG_LOG(L_WARNING) << "Unknown property type for '" << propname << "'" << std::endl;
+			sstream << 0.0f;
+			break;
+		}
+	} else {
+		sstream << 0.0f;
+	}
+
+	return sstream.str();
+}
+
+std::string GeneratorContext::extractMaterialPropertyNumberDy(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, const char* surfParameter) const
+{
+	std::stringstream sstream;
+
+	auto prop = obj->property(propname);
+	if (prop.isValid()) {
+		switch (prop.type()) {
+		case PT_INTEGER:
+		case PT_NUMBER:
+		case PT_VECTOR3:
+			sstream << 0.0f;
+			break;
+		case PT_STRING:
+			sstream << "texture_dy(tex_" << prop.getString() << ", vec4_to_2(" << surfParameter << ".attr(0))).r";
+			break;
+		default:
+			IG_LOG(L_WARNING) << "Unknown property type for '" << propname << "'" << std::endl;
+			sstream << 0.0f;
+			break;
+		}
+	} else {
+		sstream << 0.0f;
 	}
 
 	return sstream.str();

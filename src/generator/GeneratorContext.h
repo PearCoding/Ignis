@@ -45,8 +45,10 @@ struct GeneratorContext {
 	}
 
 	std::string extractMaterialPropertyColorLight(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def, bool& isTexture) const;
-	std::string extractMaterialPropertyColor(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def = 0.0f) const;
-	std::string extractMaterialPropertyNumber(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def = 0.0f) const;
+	std::string extractMaterialPropertyColor(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def = 0.0f, const char* surfParameter = "surf") const;
+	std::string extractMaterialPropertyNumber(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def = 0.0f, const char* surfParameter = "surf") const;
+	std::string extractMaterialPropertyNumberDx(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, const char* surfParameter = "surf") const;
+	std::string extractMaterialPropertyNumberDy(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, const char* surfParameter = "surf") const;
 };
 
 }

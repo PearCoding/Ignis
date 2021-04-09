@@ -7,18 +7,18 @@ constexpr float AIR_IOR	   = 1.000277f;
 constexpr float GLASS_IOR  = 1.55f;
 constexpr float RUBBER_IOR = 1.49f;
 
-static void setup_microfacet(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void setup_microfacet(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
 	std::string alpha_u, alpha_v;
 	if (bsdf->property("alpha_u").isValid()) {
-		alpha_u = ctx.extractMaterialPropertyNumber(bsdf, "alpha_u", 0.1f);
-		alpha_v = ctx.extractMaterialPropertyNumber(bsdf, "alpha_v", 0.1f);
+		alpha_u = ctx.extractMaterialPropertyNumber(bsdf, "alpha_u", 0.1f, options.SurfaceParameter.c_str());
+		alpha_v = ctx.extractMaterialPropertyNumber(bsdf, "alpha_v", 0.1f, options.SurfaceParameter.c_str());
 	} else {
-		alpha_u = ctx.extractMaterialPropertyNumber(bsdf, "alpha", 0.1f);
+		alpha_u = ctx.extractMaterialPropertyNumber(bsdf, "alpha", 0.1f, options.SurfaceParameter.c_str());
 		alpha_v = alpha_u;
 	}
 
-	os << "make_beckmann_distribution(math, surf, " << alpha_u << ", " << alpha_v << ")";
+	os << "make_beckmann_distribution(math, " << options.SurfaceParameter << ", " << alpha_u << ", " << alpha_v << ")";
 }
 
 static void bsdf_error(const std::string& msg, std::ostream& os)
@@ -27,99 +27,105 @@ static void bsdf_error(const std::string& msg, std::ostream& os)
 	os << "make_black_bsdf()/* ERROR */";
 }
 
-static void bsdf_diffuse(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_unknown(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext&, std::ostream& os)
 {
-	os << "make_diffuse_bsdf(math, surf, " << ctx.extractMaterialPropertyColor(bsdf, "reflectance") << ")";
+	IG_LOG(L_WARNING) << "Unknown bsdf '" << bsdf->pluginType() << "'" << std::endl;
+	os << "make_black_bsdf()/* Unknown " << bsdf->pluginType() << " */";
 }
 
-static void bsdf_orennayar(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_diffuse(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
-	os << "make_rough_diffuse_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "alpha", 0.0f) << ", "
-	   << ctx.extractMaterialPropertyColor(bsdf, "reflectance")
+	os << "make_diffuse_bsdf(math, " << options.SurfaceParameter << ", " << ctx.extractMaterialPropertyColor(bsdf, "reflectance", 1.0f, options.SurfaceParameter.c_str()) << ")";
+}
+
+static void bsdf_orennayar(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
+{
+	os << "make_rough_diffuse_bsdf(math, " << options.SurfaceParameter << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "alpha", 0.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "reflectance", 1.0f, options.SurfaceParameter.c_str())
 	   << ")";
 }
 
-static void bsdf_dielectric(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_dielectric(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
-	os << "make_glass_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", AIR_IOR) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", GLASS_IOR) << ", "
-	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", "
-	   << ctx.extractMaterialPropertyColor(bsdf, "specular_transmittance", 1.0f) << ")";
+	os << "make_glass_bsdf(math, " << options.SurfaceParameter << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", AIR_IOR, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", GLASS_IOR, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_transmittance", 1.0f, options.SurfaceParameter.c_str()) << ")";
 }
 
-static void bsdf_thindielectric(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_thindielectric(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
-	os << "make_thinglass_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", AIR_IOR) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", GLASS_IOR) << ", "
-	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", "
-	   << ctx.extractMaterialPropertyColor(bsdf, "specular_transmittance", 1.0f) << ")";
+	os << "make_thinglass_bsdf(math, " << options.SurfaceParameter << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", AIR_IOR, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", GLASS_IOR, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_transmittance", 1.0f, options.SurfaceParameter.c_str()) << ")";
 }
 
-static void bsdf_mirror(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_mirror(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
-	os << "make_mirror_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ")";
+	os << "make_mirror_bsdf(math, " << options.SurfaceParameter << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f, options.SurfaceParameter.c_str()) << ")";
 }
 
-static void bsdf_conductor(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_conductor(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
-	os << "make_conductor_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "eta", 0.63660f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "k", 2.7834f) << ", " // TODO: Better defaults?
-	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ")";
+	os << "make_conductor_bsdf(math, " << options.SurfaceParameter << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "eta", 0.63660f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "k", 2.7834f, options.SurfaceParameter.c_str()) << ", " // TODO: Better defaults?
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f, options.SurfaceParameter.c_str()) << ")";
 }
 
-static void bsdf_rough_conductor(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_rough_conductor(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
-	os << "make_rough_conductor_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "eta", 0.63660f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "k", 2.7834f) << ", " // TODO: Better defaults?
-	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", ";
-	setup_microfacet(bsdf, ctx, os);
+	os << "make_rough_conductor_bsdf(math, " << options.SurfaceParameter << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "eta", 0.63660f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "k", 2.7834f, options.SurfaceParameter.c_str()) << ", " // TODO: Better defaults?
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f, options.SurfaceParameter.c_str()) << ", ";
+	setup_microfacet(bsdf, ctx, options, os);
 	os << ")";
 }
 
-static void bsdf_plastic(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_plastic(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
-	os << "make_plastic_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", AIR_IOR) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", RUBBER_IOR) << ", "
-	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", "
-	   << ctx.extractMaterialPropertyColor(bsdf, "diffuse_reflectance", 0.5f) << ")";
+	os << "make_plastic_bsdf(math, " << options.SurfaceParameter << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "ext_ior", AIR_IOR, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "int_ior", RUBBER_IOR, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "diffuse_reflectance", 0.5f, options.SurfaceParameter.c_str()) << ")";
 }
 
-static void bsdf_phong(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_phong(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
-	os << "make_phong_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "exponent", 30) << ")";
+	os << "make_phong_bsdf(math, " << options.SurfaceParameter << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "specular_reflectance", 1.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "exponent", 30, options.SurfaceParameter.c_str()) << ")";
 }
 
-static void bsdf_disney(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_disney(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
-	os << "make_disney_bsdf(math, surf, "
-	   << ctx.extractMaterialPropertyColor(bsdf, "base_color", 0.8f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "flatness", 0.0f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "metallic", 0.0f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "ior", GLASS_IOR) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "specular_tint", 0.0f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "roughness", 0.5f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "anisotropic", 0.0f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "sheen", 0.0f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "sheen_tint", 0.0f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "clearcoat", 0.0f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "clearcoat_gloss", 0.0f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "spec_trans", 0.0f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "relative_ior", 1.1f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "scatter_distance", 0.5f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "diff_trans", 0.0f) << ", "
-	   << ctx.extractMaterialPropertyNumber(bsdf, "transmittance", 1.0f) << ")";
+	os << "make_disney_bsdf(math, " << options.SurfaceParameter << ", "
+	   << ctx.extractMaterialPropertyColor(bsdf, "base_color", 0.8f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "flatness", 0.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "metallic", 0.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "ior", GLASS_IOR, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "specular_tint", 0.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "roughness", 0.5f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "anisotropic", 0.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "sheen", 0.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "sheen_tint", 0.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "clearcoat", 0.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "clearcoat_gloss", 0.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "spec_trans", 0.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "relative_ior", 1.1f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "scatter_distance", 0.5f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "diff_trans", 0.0f, options.SurfaceParameter.c_str()) << ", "
+	   << ctx.extractMaterialPropertyNumber(bsdf, "transmittance", 1.0f, options.SurfaceParameter.c_str()) << ")";
 }
 
-static void bsdf_blend(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_blend(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
 	const std::string first	 = bsdf->property("first").getString();
 	const std::string second = bsdf->property("second").getString();
@@ -131,23 +137,23 @@ static void bsdf_blend(const std::shared_ptr<Loader::Object>& bsdf, const Genera
 	} else {
 		os << GeneratorBSDF::extract(ctx.Scene.bsdf(first), ctx) << ", "
 		   << GeneratorBSDF::extract(ctx.Scene.bsdf(second), ctx) << ", "
-		   << ctx.extractMaterialPropertyNumber(bsdf, "weight", 0.5f) << ")";
+		   << ctx.extractMaterialPropertyNumber(bsdf, "weight", 0.5f, options.SurfaceParameter.c_str()) << ")";
 	}
 }
 
-static void bsdf_mask(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_mask(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
 	const std::string masked = bsdf->property("bsdf").getString();
 
 	if (masked.empty())
 		bsdf_error("Invalid mask bsdf", os);
 	else
-		os << "make_mix_bsdf(make_passthrough_bsdf(surf), "
+		os << "make_mix_bsdf(make_passthrough_bsdf(" << options.SurfaceParameter << "), "
 		   << GeneratorBSDF::extract(ctx.Scene.bsdf(masked), ctx) << ", "
 		   << ctx.extractMaterialPropertyNumber(bsdf, "opacity", 0.5f) << ")";
 }
 
-static void bsdf_twosided(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_twosided(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
 	/* Ignore */
 	const std::string other = bsdf->property("bsdf").getString();
@@ -158,23 +164,51 @@ static void bsdf_twosided(const std::shared_ptr<Loader::Object>& bsdf, const Gen
 		os << GeneratorBSDF::extract(ctx.Scene.bsdf(other), ctx);
 }
 
-static void bsdf_passthrough(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+static void bsdf_passthrough(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
 	os << "make_passthrough_bsdf(surf)";
 }
 
-static void bsdf_null(const std::shared_ptr<Loader::Object>&, const GeneratorContext&, std::ostream& os)
+static void bsdf_null(const std::shared_ptr<Loader::Object>&, const GeneratorContext&, const BSDFExtractOption& options, std::ostream& os)
 {
 	os << "make_black_bsdf()/* Null */";
 }
 
-static void bsdf_unknown(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext&, std::ostream& os)
+static void bsdf_normalmap(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
-	IG_LOG(L_WARNING) << "Unknown bsdf '" << bsdf->pluginType() << "'" << std::endl;
-	os << "make_black_bsdf()/* Unknown " << bsdf->pluginType() << " */";
+	const std::string inner = bsdf->property("bsdf").getString();
+	auto map				= ctx.extractMaterialPropertyColor(bsdf, "map", 1.0f, options.SurfaceParameter.c_str());
+
+	BSDFExtractOption opts2 = options;
+	opts2.SurfaceParameter += "a";
+
+	if (inner.empty())
+		bsdf_error("Invalid normalmap bsdf", os);
+	else
+		os << "make_normalmap(math, " << options.SurfaceParameter << ", @|" << opts2.SurfaceParameter << "| -> Bsdf { "
+		   << GeneratorBSDF::extract(ctx.Scene.bsdf(inner), ctx, opts2) << " }, "
+		   << map << ")";
 }
 
-using BSDFGenerator = void (*)(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os);
+static void bsdf_bumpmap(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
+{
+	const std::string inner = bsdf->property("bsdf").getString();
+	auto mapdx				= ctx.extractMaterialPropertyNumberDx(bsdf, "map", options.SurfaceParameter.c_str());
+	auto mapdy				= ctx.extractMaterialPropertyNumberDy(bsdf, "map", options.SurfaceParameter.c_str());
+
+	BSDFExtractOption opts2 = options;
+	opts2.SurfaceParameter += "a";
+
+	if (inner.empty())
+		bsdf_error("Invalid normalmap bsdf", os);
+	else
+		os << "make_bumpmap(math, " << options.SurfaceParameter << ", @|" << opts2.SurfaceParameter << "| -> Bsdf { "
+		   << GeneratorBSDF::extract(ctx.Scene.bsdf(inner), ctx, opts2) << " }, "
+		   << mapdx << ", "
+		   << mapdy << ")";
+}
+
+using BSDFGenerator = void (*)(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os);
 static struct {
 	const char* Name;
 	BSDFGenerator Generator;
@@ -197,10 +231,12 @@ static struct {
 	{ "twosided", bsdf_twosided },
 	{ "passthrough", bsdf_passthrough },
 	{ "null", bsdf_null },
+	{ "bumpmap", bsdf_bumpmap },
+	{ "normalmap", bsdf_normalmap },
 	{ "", nullptr }
 };
 
-std::string GeneratorBSDF::extract(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx)
+std::string GeneratorBSDF::extract(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options)
 {
 	std::stringstream sstream;
 
@@ -209,7 +245,7 @@ std::string GeneratorBSDF::extract(const std::shared_ptr<Loader::Object>& bsdf, 
 	} else {
 		for (size_t i = 0; _generators[i].Generator; ++i) {
 			if (_generators[i].Name == bsdf->pluginType()) {
-				_generators[i].Generator(bsdf, ctx, sstream);
+				_generators[i].Generator(bsdf, ctx, options, sstream);
 				return sstream.str();
 			}
 		}

@@ -270,9 +270,9 @@ TriMesh load(const std::filesystem::path& path)
 					header.NYElem = header.VertexPropCount;
 				else if (name == "nz")
 					header.NZElem = header.VertexPropCount;
-				else if (name == "u")
+				else if (name == "u" || name == "s")
 					header.UElem = header.VertexPropCount;
-				else if (name == "v")
+				else if (name == "v" || name == "t")
 					header.VElem = header.VertexPropCount;
 				++header.VertexPropCount;
 			} else if (type == "list") {
