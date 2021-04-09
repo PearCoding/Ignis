@@ -86,7 +86,7 @@ static std::vector<Ray> read_input(std::istream& is, bool file)
 static void write_output(std::ostream& is, bool file, float* data, size_t count, uint32 spp)
 {
 	for (size_t i = 0; i < count; ++i) {
-		is << data[i] / spp << std::endl;
+		is << data[3 * i + 0] / spp << " " << data[3 * i + 1] / spp << " " << data[3 * i + 2] / spp << std::endl;
 	}
 }
 
@@ -120,9 +120,9 @@ int main(int argc, char** argv)
 	}
 
 	std::vector<Ray> rays;
-	if (in_file.empty())
+	if (in_file.empty()) {
 		rays = read_input(std::cin, false);
-	else {
+	} else {
 		std::ifstream stream(in_file);
 		rays = read_input(stream, true);
 	}
@@ -154,9 +154,9 @@ int main(int argc, char** argv)
 
 	// Extract data
 	auto film = get_pixels();
-	if (out_file.empty())
+	if (out_file.empty()) {
 		write_output(std::cout, false, film, rays.size(), sample_count);
-	else {
+	} else {
 		std::ofstream stream(out_file);
 		write_output(stream, true, film, rays.size(), sample_count);
 	}

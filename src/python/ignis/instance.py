@@ -5,6 +5,7 @@ _g_height = 0
 
 # We could add the .pyignis module path be shifting it upwards to the resource path automaticly... but quite bothersome...
 
+
 class Ignis:
     def __init__(self, width=0, height=0):
         if width <= 0 or height <= 0:

@@ -364,7 +364,8 @@ void clear_pixels()
 
 void add_resource_path(const char* path)
 {
-	interface->resource_paths.push_back(path);
+	if (std::find(interface->resource_paths.begin(), interface->resource_paths.end(), path) == interface->resource_paths.end())
+		interface->resource_paths.push_back(path);
 }
 } // namespace IG
 

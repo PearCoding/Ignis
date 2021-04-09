@@ -1,5 +1,6 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include "Camera.h"
 #include "Interface.h"
@@ -9,6 +10,23 @@
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 namespace py = pybind11;
+
+static inline float safe_rcp(float x)
+{
+	constexpr float min_rcp = 1e-8f;
+	if ((x > 0 ? x : -x) < min_rcp) {
+		return std::signbit(x) ? -std::numeric_limits<float>::max() : std::numeric_limits<float>::max();
+	} else {
+		return 1 / x;
+	}
+}
+
+static inline Ray construct_ray(const Vec3& org, const Vec3& dir, float tmin, float tmax) { return Ray{ org, dir, Vec3{ 0, 0, 0 }, Vec3{ 0, 0, 0 }, tmin, tmax }; }
+static inline Vec3 array_vec3(py::array_t<float> arr)
+{
+	auto r = arr.unchecked<1>();
+	return Vec3{ r(0), r(1), r(2) };
+}
 
 PYBIND11_MODULE(pyignis, m)
 {
@@ -42,6 +60,41 @@ PYBIND11_MODULE(pyignis, m)
 		);
 	});
 
+	m.def(
+		"trace", [](const std::vector<Ray>& rays) {
+			std::vector<Ray> copy = rays;
+			for (auto& ray : copy) {
+				ray.inv_dir.x = safe_rcp(ray.dir.x);
+				ray.inv_dir.y = safe_rcp(ray.dir.y);
+				ray.inv_dir.z = safe_rcp(ray.dir.z);
+
+				ray.inv_org.x = -(ray.org.x * ray.inv_dir.x);
+				ray.inv_org.y = -(ray.org.y * ray.inv_dir.y);
+				ray.inv_org.z = -(ray.org.z * ray.inv_dir.z);
+			}
+
+			Settings settings;
+			settings.ray_count = copy.size();
+			settings.rays	   = copy.data();
+			settings.width	   = copy.size();
+			settings.height	   = 1;
+			settings.eye	   = Vec3{ 0, 0, 0 };
+			settings.dir	   = Vec3{ 0, 0, 1 };
+			settings.up		   = Vec3{ 0, 1, 0 };
+			settings.right	   = Vec3{ 1, 0, 0 };
+			render(&settings, 1);
+
+			std::vector<float> res(copy.size());
+			float* data = IG::get_pixels();
+			for (size_t i = 0; i < copy.size(); ++i) {
+				res.push_back(data[3 * i + 0]);
+				res.push_back(data[3 * i + 1]);
+				res.push_back(data[3 * i + 2]);
+			}
+			return res;
+		},
+		"Trace rays through the scene");
+
 	m.def("add_resource_path", &IG::add_resource_path, "Add path to the resource lookup table.");
 
 	m.attr("__version__") = MACRO_STRINGIFY(IGNIS_VERSION);
@@ -58,9 +111,7 @@ PYBIND11_MODULE(pyignis, m)
 		})
 		.def(py::init([]() { return Vec3{ 0, 0, 0 }; }))
 		.def(py::init([](float x, float y, float z) { return Vec3{ x, y, z }; }))
-		.def(py::init([](py::array_t<float> arr) { 
-            auto r = arr.unchecked<1>();
-            return Vec3{ r(0), r(1), r(2) }; }))
+		.def(py::init(&array_vec3))
 		.def_readwrite("x", &Vec3::x)
 		.def_readwrite("y", &Vec3::y)
 		.def_readwrite("z", &Vec3::z);
@@ -97,4 +148,12 @@ PYBIND11_MODULE(pyignis, m)
 				camera.h
 			};
 		});
+
+	py::class_<Ray>(m, "Ray")
+		.def(py::init([](py::array_t<float> org, py::array_t<float> dir) { return construct_ray(array_vec3(org), array_vec3(dir), 0, std::numeric_limits<float>::max()); }))
+		.def(py::init([](py::array_t<float> org, py::array_t<float> dir, float tmin, float tmax) { return construct_ray(array_vec3(org), array_vec3(dir), tmin, tmax); }))
+		.def_readwrite("org", &Ray::org)
+		.def_readwrite("dir", &Ray::dir)
+		.def_readwrite("tmin", &Ray::tmin)
+		.def_readwrite("tmax", &Ray::tmax);
 }
