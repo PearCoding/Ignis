@@ -15,7 +15,9 @@ struct Settings {
     up:     Vec3,
     right:  Vec3,
     width:  f32,
-    height: f32
+    height: f32,
+    ray_count: i32,
+    rays: &[Ray]
 }
 
 #[export] fn get_spp() -> i32 { 1 }

@@ -597,6 +597,9 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_image(dev_id, filename, &mut pixel_data, &mut width, &mut height);
         let (ptr, stride) = (pixel_data, width);
         make_image(@ |x, y| read_pixel(ptr, y * stride + x), width, height)
+    },
+    load_rays = @ |count: i32, rays: &[Ray]| {
+        ignis_load_rays(dev_id, count, rays)
     }
 };
 

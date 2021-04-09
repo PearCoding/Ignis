@@ -15,6 +15,7 @@
 #[import(cc = "C")] fn ignis_load_bvh4_bbox(i32, &[u8], &mut &[Node4], &mut &[TaggedBBox1]) -> ();
 #[import(cc = "C")] fn ignis_load_bvh8_bbox(i32, &[u8], &mut &[Node8], &mut &[TaggedBBox1]) -> ();
 #[import(cc = "C")] fn ignis_load_image(i32, &[u8], &mut &[f32], &mut i32, &mut i32) -> ();
+#[import(cc = "C")] fn ignis_load_rays(i32, i32, &[Ray]) -> &[Ray];
 #[import(cc = "C")] fn ignis_present(i32) -> ();
 
 // Ray streams ---------------------------------------------------------------------

@@ -48,6 +48,7 @@ struct Interface {
 		anydsl::Array<float> second_primary;
 		anydsl::Array<float> secondary;
 		anydsl::Array<float> film_pixels;
+		anydsl::Array<Ray> ray_list;
 	};
 	std::unordered_map<int32_t, DeviceData> devices;
 
@@ -284,6 +285,11 @@ struct Interface {
 		return buffers[filename] = std::move(copy_to_device(dev, vector));
 	}
 
+	const anydsl::Array<Ray>& load_rays(int32_t dev, size_t n, Ray* rays)
+	{
+		return devices[dev].ray_list = std::move(copy_to_device(dev, rays, n));
+	}
+
 	const DeviceImage& load_image(int32_t dev, const std::string& filename)
 	{
 		auto& images = devices[dev].images;
@@ -323,6 +329,11 @@ namespace IG {
 void setup_interface(size_t width, size_t height)
 {
 	interface.reset(new Interface(width, height));
+
+	// Force flush to zero mode for denormals
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+	_mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
+#endif
 }
 
 void get_interface(size_t& width, size_t& height)
@@ -432,6 +443,12 @@ uint8_t* ignis_load_buffer(int32_t dev, const char* file)
 {
 	auto& array = interface->load_buffer(dev, file);
 	return const_cast<uint8_t*>(array.data());
+}
+
+Ray* ignis_load_rays(int32_t dev, size_t n, Ray* rays)
+{
+	auto& array = interface->load_rays(dev, n, rays);
+	return const_cast<Ray*>(array.data());
 }
 
 void ignis_load_bvh2_tri1(int32_t dev, const char* file, Node2** nodes, Tri1** tris)

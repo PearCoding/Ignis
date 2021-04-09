@@ -61,21 +61,14 @@ struct SceneBuilder {
 	{
 		const auto technique = Context.Scene.technique();
 
-		// TODO: Use the sensor sample count as ssp
-		size_t lastMPL = Context.MaxPathLen;
-		if (technique) {
-			lastMPL = technique->property("max_depth").getInteger(Context.MaxPathLen);
-			if (technique->pluginType() == "path") {
-				os << "    let renderer = make_path_tracing_renderer(" << lastMPL << " /*max_path_len*/, " << Context.SPP << " /*spp*/);\n";
-				return;
-			} else if (technique->pluginType() == "debug") {
-				os << "    let renderer = make_debug_renderer();\n";
-				return;
-			}
+		os << "    let emitter = if settings.ray_count > 0 { make_list_emitter(settings.ray_count, device.load_rays(settings.ray_count, settings.rays)) } else { make_camera_emitter() };\n";
+		if (technique && technique->pluginType() == "debug") {
+			os << "    let renderer = make_debug_renderer(emitter);\n";
+		} else {
+			size_t lastMPL = technique->property("max_depth").getInteger(Context.MaxPathLen);
+			os << "    let renderer = make_path_tracing_renderer(" << lastMPL << " /*max_path_len*/, if settings.ray_count > 0 { 1 } else {" << Context.SPP << "} /*spp*/, emitter);\n";
+			return;
 		}
-
-		IG_LOG(L_WARNING) << "No known integrator specified, therefore using path tracer" << std::endl;
-		os << "    let renderer = make_path_tracing_renderer(" << lastMPL << " /*max_path_len*/, " << Context.SPP << " /*spp*/);\n";
 	}
 
 	inline void setup_camera(std::ostream& os)
@@ -357,7 +350,9 @@ bool generate(const std::filesystem::path& filepath, const GeneratorOptions& opt
 		   << "    up:     Vec3,\n"
 		   << "    right:  Vec3,\n"
 		   << "    width:  f32,\n"
-		   << "    height: f32\n"
+		   << "    height: f32,\n"
+		   << "    ray_count: i32,\n"
+		   << "    rays: &[Ray]\n"
 		   << "}\n"
 		   << "\n"
 		   << "#[export] fn get_spp() -> i32 { " << options.spp << " }\n"

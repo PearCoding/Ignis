@@ -14,6 +14,7 @@ struct RayState {
 }
 
 type RayEmitter = fn (i32, i32, i32, i32, i32) -> (Ray, RayState);
+type RayEmitterFactory = fn (Scene, Device, i32) -> RayEmitter;
 
 fn @make_ray_state(rnd: RndState, contrib: Color, mis: f32, depth: i32) -> RayState {
     RayState {
@@ -24,26 +25,45 @@ fn @make_ray_state(rnd: RndState, contrib: Color, mis: f32, depth: i32) -> RaySt
     }
 }
 
-fn @make_camera_emitter(scene: Scene, _device: Device, iter: i32) -> RayEmitter {
-    @ |sample, x, y, width, height| {
-        let mut hash = fnv_init();
-        hash = fnv_hash(hash, sample as u32);
-        hash = fnv_hash(hash, iter as u32);
-        hash = fnv_hash(hash, x as u32);
-        hash = fnv_hash(hash, y as u32);
-        let mut rnd = hash /*as RndState*/;
-        let kx = 2 * (x as f32 + randf(&mut rnd)) / (width  as f32) - 1;
-        let ky = 1 - 2 * (y as f32 + randf(&mut rnd)) / (height as f32);
-        let ray = scene.camera.generate_ray(kx, ky);
-        let state = make_ray_state(rnd, white, 0, 0);
-        (ray, state)
+fn @make_camera_emitter() -> RayEmitterFactory {
+    @ |scene, _device, iter| -> RayEmitter {
+        @ |sample, x, y, width, height| {
+            let mut hash = fnv_init();
+            hash = fnv_hash(hash, sample as u32);
+            hash = fnv_hash(hash, iter as u32);
+            hash = fnv_hash(hash, x as u32);
+            hash = fnv_hash(hash, y as u32);
+            let mut rnd = hash /*as RndState*/;
+            let kx = 2 * (x as f32 + randf(&mut rnd)) / (width  as f32) - 1;
+            let ky = 1 - 2 * (y as f32 + randf(&mut rnd)) / (height as f32);
+            let ray = scene.camera.generate_ray(kx, ky);
+            let state = make_ray_state(rnd, white, 0, 0);
+            (ray, state)
+        }
     }
 }
 
-fn @make_debug_renderer() -> Renderer {
+fn @make_list_emitter(ray_count: i32, rays: &[Ray]) -> RayEmitterFactory {
+    @ |_scene, _device, iter| -> RayEmitter {
+        @ |sample, x, y, width, _height| {
+            let mut hash = fnv_init();
+            hash = fnv_hash(hash, sample as u32);
+            hash = fnv_hash(hash, iter as u32);
+            hash = fnv_hash(hash, x as u32);
+            hash = fnv_hash(hash, y as u32);
+            let rnd = hash /*as RndState*/;
+            let id = y*width + x;
+            let ray = if id < ray_count { rays(id) } else { rays(0) };
+            let state = make_ray_state(rnd, white, 0, 0);
+            (ray, state)
+        }
+    }
+}
+
+fn @make_debug_renderer(emitter: RayEmitterFactory) -> Renderer {
     @ |scene, device, iter| {
         let path_tracer = PathTracer {
-            on_emit   = make_camera_emitter(scene, device, iter),
+            on_emit   = emitter(scene, device, iter),
             on_hit    = @ |_ray, _hit, _state, surf, _mat| {
                 let n = surf.local.col(2);
                 make_option(make_color(abs(n.x), abs(n.y), abs(n.z)))
@@ -57,12 +77,12 @@ fn @make_debug_renderer() -> Renderer {
     }
 }
 
-fn @make_path_tracing_renderer(max_path_len: i32, spp: i32) -> Renderer {
+fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterFactory) -> Renderer {
     @ |scene, device, iter| {
         let offset : f32 = 0.001;
         let pdf_lightpick = 1 / (scene.num_lights as f32);
 
-        let on_emit = make_camera_emitter(scene, device, iter);
+        let on_emit = emitter(scene, device, iter);
 
         fn @on_shadow( ray: Ray
                      , _hit: Hit

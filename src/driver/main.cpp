@@ -24,7 +24,7 @@ static inline void check_arg(int argc, char** argv, int arg, int n)
 
 static inline void usage()
 {
-	std::cout << "Usage: rodent [options]\n"
+	std::cout << "Usage: ignis [options]\n"
 			  << "Available options:\n"
 			  << "   --help              Shows this message\n"
 			  << "   --width  pixels     Sets the viewport horizontal dimension (in pixels)\n"
@@ -109,11 +109,6 @@ int main(int argc, char** argv)
 
 	setup_interface(default_settings.film_width, default_settings.film_height);
 
-	// Force flush to zero mode for denormals
-#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-	_mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
-#endif
-
 	auto spp		= get_spp();
 	bool done		= false;
 	uint64_t timing = 0;
@@ -133,7 +128,8 @@ int main(int argc, char** argv)
 			Vec3{ camera.up(0), camera.up(1), camera.up(2) },
 			Vec3{ camera.right(0), camera.right(1), camera.right(2) },
 			camera.w,
-			camera.h
+			camera.h,
+			0, nullptr // No artifical ray streams
 		};
 
 		auto ticks = std::chrono::high_resolution_clock::now();
