@@ -16,7 +16,7 @@
         "spp": 4
 	},
 	"bsdfs": [
-		{"type":"roughdiffuse", "name": "mat-Sphere", "reflectance": [1,1,1], "alpha": 0.4}
+		{"type":"disney", "name": "mat-Sphere", "base_color": [1,1,1], "alpha": 0.4}
 	],
 	"shapes": [
 		{"type":"ply", "name":"Sphere", "filename":"meshes/Sphere.ply"}

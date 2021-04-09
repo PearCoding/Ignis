@@ -184,11 +184,11 @@ fn @sheen_lobe(sheen: f32, base_color: Color, sheen_tint: f32, H: Vec3, wi: Vec3
 //disney bsdf
 fn @make_disney_bsdf(math: Intrinsics, surf: SurfaceElement, base_color: Color, flatness: f32, metallic: f32, ior: f32, specular_tint: f32, roughness: f32,
                      anisotropic: f32, sheen: f32, sheen_tint: f32, clearcoat: f32, clearcoat_gloss: f32, _spec_trans: f32, 
-                     relative_ior: f32, _scatter_distance: f32, _diff_trans: f32, _transmittance: f32) = Bsdf{
-    eval = @ |in_dir, out_dir| {
-
-        let wo = vec3_normalize(math, mat3x3_mul(surf.local, out_dir));
-        let wi = vec3_normalize(math, mat3x3_mul(surf.local, in_dir));
+                     relative_ior: f32, _scatter_distance: f32, _diff_trans: f32, _transmittance: f32) -> Bsdf {
+    let eval = @ |in_dir : Vec3, out_dir : Vec3| {
+        let lsurf = mat3x3_transpose(surf.local);
+        let wo = vec3_normalize(math, mat3x3_mul(lsurf, out_dir));
+        let wi = vec3_normalize(math, mat3x3_mul(lsurf, in_dir));
         let H  = vec3_normalize(math, vec3_add(wi,wo));
 
         let NdotV = cos_theta(wo);
@@ -211,14 +211,18 @@ fn @make_disney_bsdf(math: Intrinsics, surf: SurfaceElement, base_color: Color, 
         // ((diffuse * base_color) + sheen) * diffuse_weight
         let diff = color_mulf(color_add(color_mul(diffuse, base_color),sheen), diffuse_weight);
 
-        let reflectance =  color_add(color_add(specular, diff), clearcoat_lobe);
-        color_mulf(reflectance, abs(NdotL))
-    },
-    pdf = @ |_in_dir, _out_dir| {
-        0
-    },
-    sample = @ |_rnd, out_dir, _adjoint| {
-        BsdfSample { in_dir = out_dir, pdf = 1, cos = 0, color = black }
-    },
-    is_specular = false
-};
+        color_add(color_add(specular, diff), clearcoat_lobe)
+    };
+
+    Bsdf {
+        eval = eval,
+        pdf = @ |in_dir, _| cosine_hemisphere_pdf(positive_cos(in_dir, surf.local.col(2))),
+        sample = @ |rnd, out_dir, _| {
+            let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd));
+            let gdir   = vec3_normalize(math, mat3x3_mul(surf.local, sample.dir));
+            let color  = eval(gdir, out_dir);
+            make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, sample.dir.z, color, false)
+        },
+        is_specular = false
+    }
+}
