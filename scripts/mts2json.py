@@ -43,9 +43,9 @@ def toFloat(var):
     return var
 
 
-def toLower(name):
-    name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+CamelCasePattern = pattern = re.compile(r'((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
+def toSnakeCase(name):
+    return pattern.sub(r'_\1', name).lower()
 
 
 def computeTransformation(child):
@@ -201,7 +201,7 @@ def getAdditionalProperties(child, res_dict):
             if(elem.tag == "texture"):
                 tex_name = "texture_" + str(texCount)
                 texCount = texCount + 1
-                prop = elem.attrib['name']
+                prop = toSnakeCase(elem.attrib['name'])
                 res_dict[prop] = tex_name
                 getTexture(elem, textures, tex_name)
                 continue
@@ -210,21 +210,21 @@ def getAdditionalProperties(child, res_dict):
             if(elem.tag == "integer"):
                 if (child.tag == "camera" or child.tag == "film"):
                     continue  # Already done
-                prop = toLower(elem.attrib['name'])
+                prop = toSnakeCase(elem.attrib['name'])
                 val = toInt(elem.attrib['value'])
                 res_dict[prop] = val
             elif (elem.tag == "rgb"):
-                prop = toLower(elem.attrib['name'])
+                prop = toSnakeCase(elem.attrib['name'])
                 vec = elem.attrib['value']
                 vec = re.split(',\s|\s', vec)
                 vec = [toFloat(v) for v in vec]
                 res_dict[prop] = vec
             elif (elem.tag == "float"):
-                prop = toLower(elem.attrib['name'])
+                prop = toSnakeCase(elem.attrib['name'])
                 val = toFloat(elem.attrib['value'])
                 res_dict[prop] = val
             elif (elem.tag == "point" or elem.tag == "vector"):
-                prop = toLower(elem.attrib['name'])
+                prop = toSnakeCase(elem.attrib['name'])
                 vec = [0, 0, 0]
                 if('value' in elem.attrib):
                     vec = elem.attrib['value']
@@ -239,7 +239,7 @@ def getAdditionalProperties(child, res_dict):
                 vec = [toFloat(v) for v in vec]
                 res_dict[prop] = vec
             elif (elem.tag == "spectrum"):
-                prop = toLower(elem.attrib['name'])
+                prop = toSnakeCase(elem.attrib['name'])
                 if ('value' in elem.attrib):
                     vec = elem.attrib['value']
                     vec = re.split(',\s|\s', vec)
@@ -249,7 +249,7 @@ def getAdditionalProperties(child, res_dict):
                     res_dict[prop] = elem.attrib['filename']
             elif (elem.tag == "boolean" or elem.tag == "string"):
                 val = elem.attrib['value']
-                prop = toLower(elem.attrib['name'])
+                prop = toSnakeCase(elem.attrib['name'])
                 res_dict[prop] = val
             elif(elem.tag == "rfilter"):
                 res_dict["rfilter"] = elem.attrib['type']
