@@ -39,12 +39,12 @@ struct BsdfSample {
     in_dir: Vec3,  // Sampled direction
     pdf:    f32,   // BSDF value for the sample
     cos:    f32,   // Cosine between the sampled direction and the surface normal
-    color:  Color  // Color of the sample
+    color:  Color  // Color of the sample, with cosine and pdf already applied
 }
 
 // Opaque BSDF structure
 struct Bsdf {
-    // Evaluates the reflectance of the material for the given pair of directions
+    // Evaluates the reflectance of the material for the given pair of directions, the cosine term is already applied
     eval: fn (Vec3, Vec3) -> Color,
     // Evaluates the sampling probability density for a given pair of directions
     pdf: fn (Vec3, Vec3) -> f32,
@@ -107,13 +107,12 @@ fn @make_black_bsdf() = Bsdf {
 
 // Creates a purely two-sided diffuse BSDF
 fn @make_diffuse_bsdf(math: Intrinsics, surf: SurfaceElement, kd: Color) = Bsdf {
-    eval = @ |_, _| color_mulf(kd, 1 / flt_pi),
+    eval = @ |in_dir, _| color_mulf(kd, positive_cos(in_dir, surf.local.col(2)) / flt_pi),
     pdf = @ |in_dir, _| cosine_hemisphere_pdf(positive_cos(in_dir, surf.local.col(2))),
     sample = @ |rnd, _, _| {
         let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd));
-        let color  = color_mulf(kd, 1 / flt_pi);
         let gdir   = vec3_normalize(math, mat3x3_mul(surf.local, sample.dir));
-        make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, sample.dir.z, color, false)
+        make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, sample.dir.z, kd, false)
     },
     is_specular = false
 };
@@ -130,7 +129,7 @@ fn @make_orennayar_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, kd: 
         let A = 1 - 0.5 * a2 / (a2 + 0.33);
         let B = 0.45 * a2 / (a2 + 0.09);
         let C = 0.17 * a2 / (a2 + 0.13); // Correction term
-        color_add(color_mulf(kd, (A + (B * s / t)) / flt_pi), color_mul(kd, color_mulf(kd, C / flt_pi)))
+        color_mulf(color_add(color_mulf(kd, (A + (B * s / t)) / flt_pi), color_mul(kd, color_mulf(kd, C / flt_pi))), p1)
     };
 
     Bsdf {
@@ -139,7 +138,7 @@ fn @make_orennayar_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, kd: 
         sample = @ |rnd, out_dir, _| {
             let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd));
             let gdir   = mat3x3_mul(surf.local, sample.dir);
-            make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, sample.dir.z, eval(gdir, out_dir), false)
+            make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, sample.dir.z, color_mulf(eval(gdir, out_dir), 1/sample.pdf), false)
         },
         is_specular = false
     }
@@ -152,8 +151,9 @@ fn @make_rough_diffuse_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, 
 // Creates a physically-correct Phong BSDF
 fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
     eval = @ |in_dir, out_dir| {
-        let cos = positive_cos(in_dir, vec3_reflect(out_dir, surf.local.col(2)));
-        color_mulf(ks, fastpow/*math.powf*/(cos, ns) * (ns + 2) / (2 * flt_pi))
+        let cosI = positive_cos(in_dir, surf.local.col(2));
+        let cos  = positive_cos(in_dir, vec3_reflect(out_dir, surf.local.col(2)));
+        color_mulf(ks, cosI * fastpow/*math.powf*/(cos, ns) * (ns + 2) / (2 * flt_pi))
     },
     pdf = @ |in_dir, out_dir| {
         let cos = positive_cos(in_dir, vec3_reflect(out_dir, surf.local.col(2)));
@@ -164,7 +164,7 @@ fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) 
         let sample      = sample_cosine_power_hemisphere(math, ns, randf(rnd), randf(rnd));
         let in_dir      = mat3x3_mul(make_orthonormal_mat3x3(reflect_out), sample.dir);
         let cos         = positive_cos(in_dir, surf.local.col(2));
-        let color       = color_mulf(ks, sample.pdf * (ns + 2) / (ns + 1));
+        let color       = color_mulf(ks, (ns + 2) / (ns + 1));
         make_bsdf_sample(surf, in_dir, sample.pdf, cos, color, false)
     },
     is_specular = false
@@ -301,7 +301,7 @@ fn @make_rough_conductor_bsdf_front(math: Intrinsics, surf: SurfaceElement, ior:
             let D  = micro.D(H);
             let G  = micro.G(in_dir, out_dir, H);
             let F  = conductor_factor(ior, k, positive_cos(out_dir, H));
-            color_mulf(ks, F * D * G / (4 * cos_o * cos_i))
+            color_mulf(ks, F * D * G / (4 * cos_o))
         },
         pdf    = @ |in_dir, out_dir| {
             let H     = vec3_halfway(math, in_dir, out_dir);
@@ -331,7 +331,7 @@ fn @make_rough_conductor_bsdf_front(math: Intrinsics, surf: SurfaceElement, ior:
             let G = micro.G(in_dir, out_dir, H);
             let F = conductor_factor(ior, k, cos_h_o);
 
-            let color = color_mulf(ks, F * G / (4 * cos_o * cos_i * cos_h));
+            let color = color_mulf(ks, F * G / (4 * cos_o * cos_h));
             make_bsdf_sample(surf, in_dir, s.pdf * jacob, cos_i, color, false)
         },
         is_specular = false

@@ -115,14 +115,12 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                     let inv_pdf_l = 1 / pdf_l;
 
                     let mis   = if light.delta { 1 } else { 1 / (1 + pdf_e * inv_pdf_l) };
-                    let cos_e = vis;
                     let cos_l = light_sample.cos; // Usually, this is just 1
-                    let geom_factor = cos_e * cos_l * inv_pdf_l; // No distance, as it is infinite far away
 
                     let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
                     return(make_option(
                         make_ray(surf.point, light_dir, offset, 1 - offset),
-                        color_mulf(contrib, geom_factor * mis)
+                        color_mulf(contrib, cos_l * mis)
                     ))
                 }
             } else {
@@ -135,15 +133,13 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                     let in_dir  = vec3_mulf(light_dir, inv_d);
                     let out_dir = vec3_neg(ray.dir);
 
-                    let pdf_e     = if light.delta { 1 } else {  mat.bsdf.pdf(in_dir, out_dir) };
-                    let pdf_l     = light_sample.pdf_area * pdf_lightpick;
-                    let inv_pdf_l = 1 / pdf_l;
+                    let pdf_e = if light.delta { 1 } else {  mat.bsdf.pdf(in_dir, out_dir) };
+                    let pdf_l = light_sample.pdf_area * pdf_lightpick;
 
-                    let cos_e = vis * inv_d;
                     let cos_l = light_sample.cos;
 
-                    let mis = if light.delta { 1 } else { 1 / (1 + pdf_e * cos_l * inv_d2 * inv_pdf_l) };
-                    let geom_factor = cos_e * cos_l * inv_d2 * inv_pdf_l;
+                    let mis = if light.delta { 1 } else { 1 / (1 + pdf_e * cos_l * inv_d2 / pdf_l) };
+                    let geom_factor = inv_d * cos_l * inv_d2;
 
                     let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
                     return(make_option(
@@ -206,7 +202,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                      , mat: Material
                      ) -> Option[(Ray, RayState)] {
             // Russian roulette and maximum depth
-            let rr_prob = russian_roulette(state.contrib, 0.75);
+            let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette(state.contrib, 0.75) };
             if state.depth >= max_path_len || randf(&mut state.rnd) >= rr_prob {
                 return(Option[(Ray, RayState)]::None)
             }
@@ -218,10 +214,10 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
             // The bsdf might reject the sampling
             if mat_sample.pdf <= flt_eps { return(Option[(Ray, RayState)]::None) }
 
-            let contrib = color_mul(state.contrib, mat_sample.color);
+            let contrib = color_mul(state.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
             
             let mis = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
-            let new_contrib = color_mulf(contrib, mat_sample.cos / (mat_sample.pdf * rr_prob));
+            let new_contrib = color_mulf(contrib, 1 / rr_prob);
 
             make_option(
                 make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
