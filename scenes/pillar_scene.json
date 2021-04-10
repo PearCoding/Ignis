@@ -15,9 +15,18 @@
 		"size": [1000, 1000],
         "spp": 4
 	},
+	"textures": [
+		{
+			"type": "bitmap",
+			"name": "tex",
+			"filename": "bumpmap.png",
+			"filter_type": "trilinear"
+		}
+	],
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Ground", "reflectance":[1,1,1]},
-		{"type":"diffuse", "name": "mat-Pillar", "reflectance":[1,1,1]}
+		{"type":"roughconductor", "name": "mat-Inner", "reflectance":[1,1,1], "alpha":0.16},
+		{"type":"bumpmap", "name": "mat-Pillar", "bsdf":"mat-Inner", "map":"tex"}
 	],
 	"shapes": [
 		{"type":"ply", "name":"Bottom", "filename":"meshes/Bottom.ply"},
@@ -28,6 +37,6 @@
 		{"name":"Pillar","shape":"Pillar", "bsdf":"mat-Pillar", "transform": [ 0.25,0,0,0, 0,0.25,0,-1, 0,0,0.25,0, 0,0,0,1 ]}
 	],
 	"lights": [
-		{"type":"direction", "name":"Distant", "direction":[0.4082482904638631,0.4082482904638631,0.8164965809277261]}
+		{"type":"sunsky", "name":"Distant", "sun_direction":[0.4082482904638631,0.4082482904638631,0.8164965809277261]}
 	]
 }
