@@ -51,7 +51,7 @@ fn @make_aniso_beckmann_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f
         let ar      = alpha_v / alpha_u;
         let tanPhi  = ar * math.tanf(2 * flt_pi * u1);
         let cosPhi_ = math.sqrtf(1 - tanPhi*tanPhi);
-        let cosPhi  = if abs(u1-0.5) < 0.25 { -cosPhi_ } else { cosPhi_ };
+        let cosPhi  = if fabs(u1-0.5) < 0.25 { -cosPhi_ } else { cosPhi_ };
         let sinPhi  = cosPhi * tanPhi;
 
         let kx = cosPhi / alpha_u;

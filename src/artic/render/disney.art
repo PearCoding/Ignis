@@ -67,7 +67,7 @@ fn @compute_retro_diffuse(roughness: f32, H: Vec3, wi: Vec3, fl: f32, fv: f32) -
 
 fn @make_diffuse_brdf(roughness: f32, _flatness: f32, wo: Vec3, H: Vec3, wi: Vec3, diffuse_weight: f32) = Bsdf {
     eval = @ |_in_dir, _out_dir| {   
-        if (diffuse_weight <= 0) {return (make_gray_color(0)) }
+        if (diffuse_weight <= 0) {return (black) }
         let absNdotL = abs_cos_theta(wi);
         let absNdotV = abs_cos_theta(wo);
 
@@ -90,7 +90,7 @@ fn @make_diffuse_brdf(roughness: f32, _flatness: f32, wo: Vec3, H: Vec3, wi: Vec
 
 //Specular part
 fn @disney_fresnel(math: Intrinsics, base_color: Color, relative_ior: f32, specular_tint: f32, metallic: f32, ior: f32, wo: Vec3, H: Vec3, wi: Vec3)-> Color{
-    let absHdotV = abs(vec3_dot(H, wo));
+    let absHdotV = fabs(vec3_dot(H, wo));
 
     let tint = calculate_tint(base_color);
 
@@ -119,7 +119,7 @@ fn @ggx_aniso_d(ax: f32, ay: f32, H: Vec3) -> f32{
 
 fn @smithG_GGX_aniso(math: Intrinsics, w: Vec3, ax: f32, ay: f32) -> f32{
     
-        let abs_tan_theta = abs(tan_theta(math, w));
+        let abs_tan_theta = fabs(tan_theta(math, w));
         if (abs_tan_theta == flt_inf) { return (0) }
 
         let a = math.sqrtf(cos_2_phi(w) * ax * ax + sin_2_phi(w) * ay * ay);
@@ -136,7 +136,7 @@ fn @make_specular_brdf(math: Intrinsics, anisotropic: f32, roughness: f32, base_
         let NdotV = cos_theta(wo);
 
         //upper hemisphere + do not divide by 0
-        if (NdotL <= 0 || NdotV <= 0){return (make_gray_color(0)) }
+        if (NdotL <= 0 || NdotV <= 0){return (black) }
 
         let aspect = math.sqrtf(1 - 0.9 * anisotropic);
         let r2 = roughness * roughness;
@@ -173,7 +173,7 @@ fn @calculate_tint(base_color: Color)->Color{
 }
 
 fn @sheen_lobe(sheen: f32, base_color: Color, sheen_tint: f32, H: Vec3, wi: Vec3)-> Color{
-    if (sheen <= 0 ){ return (make_gray_color(0)) }
+    if (sheen <= 0 ){ return (black) }
 
     let HdotL = vec3_dot(H, wi);
     let tint = calculate_tint(base_color);
@@ -210,7 +210,7 @@ fn @make_disney_bsdf(math: Intrinsics, surf: SurfaceElement, base_color: Color, 
         // ((diffuse * base_color) + sheen) * diffuse_weight
         let diff = color_mulf(color_add(color_mul(diffuse, base_color),sheen), diffuse_weight);
 
-        color_mulf(color_add(color_add(specular, diff), clearcoat_lobe), abs(NdotL))
+        color_mulf(color_add(color_add(specular, diff), clearcoat_lobe), fabs(NdotL))
     };
 
     Bsdf {

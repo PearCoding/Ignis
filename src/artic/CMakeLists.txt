@@ -2,11 +2,13 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/color.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/cpu_common.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/interval.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/matrix.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/random.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/sort.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/camera.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/cdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/disney.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/driver.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/entity.art

@@ -151,23 +151,20 @@ fn @swap[T](a: &mut T, b: &mut T) -> () {
     *b = tmp;
 }
 
-fn @abs(a: f32) -> f32 {
-    if a < 0 { -a } else { a }
-}
+fn @abs(a: i32) = if a < 0 { -a } else { a };
+fn @fabs(a: f32) = if a < 0 { -a } else { a };
 
+fn @min(a: i32, b: i32) = if a < b { a } else { b };
+fn @fmin(a: f32, b: f32) = if a < b { a } else { b };
 
-fn @get_min(a: f32, b: f32)-> f32{
-    if(a <= b) { return (a) }
-    b
-}
+fn @max(a: i32, b: i32) = if a > b { a } else { b };
+fn @fmax(a: f32, b: f32) = if a > b { a } else { b };
 
-fn @get_max(a: f32, b: f32)-> f32{
-    if(a >= b) { return (a) }
-    b
-}
+fn @clamp(v: i32, l: i32, u: i32) = min(u, max(l, v));
+fn @fclamp(v: f32, l: f32, u: f32) = fmin(u, fmax(l, v));
 
 fn @abs_cos_theta(v: Vec3)-> f32{
-    abs(v.z)
+    fabs(v.z)
 }
 
 fn @cos_theta(v: Vec3)-> f32{
@@ -179,7 +176,7 @@ fn @sin_theta(math: Intrinsics, v: Vec3)-> f32{
 }
 
 fn @sin_2_theta(v: Vec3)-> f32{
-    get_max(0, 1 - cos_2_theta(v))
+    fmax(0, 1 - cos_2_theta(v))
 }
 
 fn @cos_2_theta(v: Vec3)->f32{
@@ -190,7 +187,7 @@ fn @sin_2_phi(v: Vec3)->f32{
     let s = sin_2_theta(v);
     if (s  <= 0) { return (0) }
 
-	get_min(1, v.y * v.y / s)
+	fmin(1, v.y * v.y / s)
 }
 
 fn @tan_theta(math: Intrinsics, v: Vec3)->f32{
@@ -202,11 +199,5 @@ fn @cos_2_phi(v: Vec3)->f32{
     let s = sin_2_theta(v);
     if (s  <= 0) { return (0) }
 
-    get_min(1, v.x * v.x / s)
-}
-
-fn @clamp(v: f32, l: f32, u: f32)->f32{
-    if (v < l) { return (l) }
-    if (v > u) { return (u) }
-    v
+    fmin(1, v.x * v.x / s)
 }

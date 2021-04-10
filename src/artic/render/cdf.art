@@ -1,0 +1,78 @@
+struct CDF1D {
+    data: &[f32],
+    size: i32
+}
+
+struct Sample1d {
+    pos: f32,
+    pdf: f32
+}
+
+fn @make_cdf_1d(data: &[f32], size: i32) = CDF1D {
+    data = data,
+    size = size
+};
+
+fn @sample_cdf_1d_rem(u: f32, cdf: CDF1D) -> (Sample1d, i32) {
+    let off = Interval::binary_search(cdf.size, @|i:i32| cdf.data(i) <= u);
+    let rem = u - cdf.data(off);
+    let pdf = cdf.data(off+1) - cdf.data(off);
+
+    (
+        Sample1d {
+            pos = (off as f32 + rem / pdf) / (cdf.size as f32 - 1),
+            pdf = pdf
+        },
+    off)
+}
+
+fn @sample_cdf_1d(u: f32, cdf: CDF1D) -> Sample1d {
+    let (sample, _) = sample_cdf_1d_rem(u, cdf);
+
+    sample
+}
+
+fn @pdf_cdf_1d(x: f32, cdf: CDF1D) -> f32 {
+    let off = min((x * (cdf.size as f32 - 1)) as i32, cdf.size - 2);
+
+    cdf.data(off+1) - cdf.data(off)
+}
+
+////////////////// 2D
+struct CDF2D {
+    conditional:  &[f32],
+    marginal:     &[f32],
+    size_slice:    i32,
+    size_marginal: i32
+}
+
+struct Sample2d {
+    pos: Vec2,
+    pdf: f32
+}
+
+// First entry is the marginal!
+fn @make_cdf_2d(data: &[f32], size_x: i32, size_y: i32) = CDF2D {
+    conditional   = &data(size_y) as &[f32],
+    marginal      = data,
+    size_slice    = size_x,
+    size_marginal = size_y
+};
+
+fn @sample_cdf_2d(uv: Vec2, cdf: CDF2D) -> Sample2d {
+    let (sample1, off) = sample_cdf_1d_rem(uv.x, make_cdf_1d(cdf.marginal, cdf.size_marginal));
+    let sample2 = sample_cdf_1d(uv.y, make_cdf_1d(&cdf.conditional(off * cdf.size_slice) as &[f32], cdf.size_slice));
+
+    Sample2d {
+        pos = make_vec2(sample2.pos, sample1.pos),
+        pdf = sample2.pdf * sample1.pdf
+    }
+}
+
+fn @pdf_cdf_2d(p: Vec2, cdf: CDF2D) -> f32 {
+    let pdf1 = pdf_cdf_1d(p.y, make_cdf_1d(cdf.marginal, cdf.size_marginal));
+    let off  = min((p.y * (cdf.size_marginal as f32 - 1)) as i32, cdf.size_marginal - 2);
+    let pdf2 = pdf_cdf_1d(p.x, make_cdf_1d(&cdf.conditional(off * cdf.size_slice) as &[f32], cdf.size_slice));
+    
+    pdf1 * pdf2
+}

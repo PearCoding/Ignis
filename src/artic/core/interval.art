@@ -1,0 +1,19 @@
+mod Interval {
+    fn @binary_search(size : i32, pred: fn (i32) -> bool) -> i32 {
+        let mut first = 0 : i32;
+    	let mut len   = size;
+
+        while len > 0 {
+            let half   = len / 2;
+            let middle = first + half;
+            if @pred(middle) {
+                first = middle + 1;
+                len -= half + 1;
+            } else {
+                len = half;
+            }
+        }
+
+        super::clamp(first-1, 0, size-2)
+    }
+}
