@@ -416,7 +416,7 @@ fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = make_variadic_mix_bsdf(mat1,
 
 // Normal Mapping
 fn @make_normalmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color) -> Bsdf {
-    let N = vec3_normalize(math, make_vec3(normal.r, normal.g, normal.b));
+    let N = vec3_normalize(math, mat3x3_mul(mat3x3_transpose(surf.local), vec3_normalize(math, make_vec3(normal.r, normal.g, normal.b))));
     @bsdf_factory(SurfaceElement{
         is_entering = surf.is_entering,
         point       = surf.point,
