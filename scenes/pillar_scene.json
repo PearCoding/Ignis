@@ -21,10 +21,18 @@
 			"name": "tex",
 			"filename": "bumpmap.png",
 			"filter_type": "trilinear"
+		},
+		{
+			"type": "checkerboard",
+			"name": "check",
+			"scale_x": 10,
+			"scale_y": 5,
+			"color0": [0.3,0.3,0.3],
+			"color1": [1,1,1]
 		}
 	],
 	"bsdfs": [
-		{"type":"diffuse", "name": "mat-Ground", "reflectance":[1,1,1]},
+		{"type":"diffuse", "name": "mat-Ground", "reflectance":"check"},
 		{"type":"roughconductor", "name": "mat-Inner", "reflectance":[1,1,1], "alpha":0.16},
 		{"type":"bumpmap", "name": "mat-Pillar", "bsdf":"mat-Inner", "map":"tex"}
 	],

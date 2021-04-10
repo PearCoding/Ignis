@@ -3,6 +3,7 @@ add_subdirectory(artic)
 
 add_subdirectory(hardware)
 add_subdirectory(runtime)
+add_subdirectory(skysun)
 add_subdirectory(generator)
 add_subdirectory(scene)
 add_subdirectory(driver)

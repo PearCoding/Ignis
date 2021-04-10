@@ -216,9 +216,9 @@ fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) = Li
 };
 
 // This samples the environment by naive sphere sampling
-fn @make_sunsky_light(math: Intrinsics, dir: Vec3, max_radius: f32, sun_radius: f32, sun_color: Color, sky_color: Color) = make_mix_light(
+fn @make_sunsky_light(math: Intrinsics, dir: Vec3, max_radius: f32, sun_radius: f32, sun_color: Color, sky_tex: Texture) = make_mix_light(
         make_sun_light(math, dir, max_radius, sun_radius, sun_color),
-        make_cie_uniform_light(math, max_radius, sky_color, sky_color, 0.2), 
+        make_environment_light_textured(math, max_radius, sky_tex), 
         0.5);
 
 /* TODO: This should contain a distribution map for efficient sampling */

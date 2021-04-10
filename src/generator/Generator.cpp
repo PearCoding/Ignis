@@ -161,9 +161,7 @@ struct SceneBuilder {
 			const auto name	 = pair.first;
 			const auto light = pair.second;
 
-			if (light->pluginType() != "area") {
-				os << "    let light_" << GeneratorContext::makeId(name) << " = " << GeneratorLight::extract(light, Context) << ";\n";
-			} else {
+			if (light->pluginType() == "area") {
 				const std::string entityName = light->property("entity").getString();
 
 				if (Context.Environment.Entities.count(entityName) > 0) {
@@ -182,6 +180,12 @@ struct SceneBuilder {
 				} else {
 					IG_LOG(L_ERROR) << "Light " << name << " connected to unknown entity " << entityName << std::endl;
 				}
+			} else if (light->pluginType() == "sky" || light->pluginType() == "sunsky") {
+				const std::string tex_name = GeneratorContext::makeId(name);
+				os << "    let skytex_" << tex_name << " = make_texture(math, make_repeat_border(), make_bilinear_filter(), device.load_image(\"data/skytex_" << tex_name << ".exr\"));\n";
+				os << "    let light_" << tex_name << " = " << GeneratorLight::extract(name, light, Context) << ";\n";
+			} else {
+				os << "    let light_" << GeneratorContext::makeId(name) << " = " << GeneratorLight::extract(name, light, Context) << ";\n";
 			}
 		}
 

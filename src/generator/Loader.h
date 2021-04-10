@@ -53,12 +53,16 @@ public:
 	inline PropertyType type() const { return mType; }
 	inline bool isValid() const { return mType != PT_NONE; }
 
-	inline Number getNumber(Number def = Number(0), bool* ok = nullptr) const
+	inline Number getNumber(Number def = Number(0), bool* ok = nullptr, bool exact = false) const
 	{
 		if (mType == PT_NUMBER) {
 			if (ok)
 				*ok = true;
 			return mNumber;
+		} else if (!exact && mType == PT_INTEGER) {
+			if (ok)
+				*ok = true;
+			return mInteger;
 		} else {
 			if (ok)
 				*ok = false;

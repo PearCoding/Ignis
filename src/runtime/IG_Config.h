@@ -43,15 +43,9 @@
 #pragma warning(disable : 4251 4996)
 #endif
 
-// Check if C++14
-#ifdef IG_CC_MSC
-#if _MSVC_LANG < 201402
-#pragma message("PearRay requires C++14 to compile successfully")
-#endif
-#else
-#if __cplusplus < 201300
-#warning PearRay requires C++14 to compile successfully
-#endif
+// Check if C++17
+#if __cplusplus < 201703L
+#warning Ignis requires C++17 to compile successfully
 #endif
 
 // clang-format off

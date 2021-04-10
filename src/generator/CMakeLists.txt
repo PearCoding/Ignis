@@ -38,7 +38,7 @@ set(SRC
 
 add_executable(iggenerator ${SRC})
 add_dependencies(iggenerator artic_c_interface)
-target_link_libraries(iggenerator PUBLIC ig_lib_runtime ZLIB::ZLIB)
+target_link_libraries(iggenerator PUBLIC ig_lib_runtime ig_lib_skysun ZLIB::ZLIB)
 target_include_directories(iggenerator PRIVATE 
     ${RAPIDJSON_INCLUDE_DIR}
     ${CMAKE_BINARY_DIR}# Required for generated_interface.h

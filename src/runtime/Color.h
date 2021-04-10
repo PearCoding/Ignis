@@ -32,6 +32,10 @@ struct RGB {
 
 	inline explicit RGB(const RGBA& rgba);
 
+	inline float operator[](size_t index) const {
+		return reinterpret_cast<const float*>(this)[index];
+	}
+
 	inline RGB& operator+=(const RGB& p)
 	{
 		r += p.r;
