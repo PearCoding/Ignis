@@ -210,7 +210,7 @@ fn @make_disney_bsdf(math: Intrinsics, surf: SurfaceElement, base_color: Color, 
         // ((diffuse * base_color) + sheen) * diffuse_weight
         let diff = color_mulf(color_add(color_mul(diffuse, base_color),sheen), diffuse_weight);
 
-        color_add(color_add(specular, diff), clearcoat_lobe)
+        color_mulf(color_add(color_add(specular, diff), clearcoat_lobe), abs(NdotL))
     };
 
     Bsdf {
@@ -219,7 +219,7 @@ fn @make_disney_bsdf(math: Intrinsics, surf: SurfaceElement, base_color: Color, 
         sample = @ |rnd, out_dir, _| {
             let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd));
             let gdir   = vec3_normalize(math, mat3x3_mul(surf.local, sample.dir));
-            let color  = eval(gdir, out_dir);
+            let color  = color_mulf(eval(gdir, out_dir), sample.pdf);
             make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, sample.dir.z, color, false)
         },
         is_specular = false
