@@ -129,19 +129,20 @@ static void bsdf_disney(const std::shared_ptr<Loader::Object>& bsdf, const Gener
 
 static void bsdf_prep_klems(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
 {
-	// TODO
+	const std::filesystem::path filename = ctx.handlePath(bsdf->property("filename").getString());
+	const std::string id				 = GeneratorContext::makeId(filename);
+	const std::string out_file			 = "data/klems_" + filename.stem().generic_string() + ".bin";
+	const bool ok						 = KlemsLoader::prepare(filename.generic_string(), out_file);
+
+	os << "    let klems_" << id << " = device.load_klems(\"" << out_file.c_str() << "\");\n";
 }
 
 static void bsdf_klems(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
 	const std::filesystem::path filename = ctx.handlePath(bsdf->property("filename").getString());
-	const std::string out_file			 = "data/klems_" + filename.stem().generic_string() + ".bin";
-	const bool ok						 = KlemsLoader::prepare(filename.generic_string(), out_file);
+	const std::string id				 = GeneratorContext::makeId(filename);
 
-	if (!ok)
-		os << "make_black_bsdf() /* Could not load Klems */";
-	else
-		os << "make_black_bsdf() /*TODO*/";
+	os << "make_klems_bsdf(math, surf, klems_" << id << ")";
 }
 
 static void bsdf_blend(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)

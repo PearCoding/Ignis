@@ -11,6 +11,7 @@
 #include "Image.h"
 #include "Logger.h"
 #include "bvh/BVH.h"
+#include "klems/KlemsLoader.h"
 #include "mesh/TriMesh.h"
 
 #include "generated_interface.h"
@@ -31,6 +32,26 @@ using Bvh2Bbox = Bvh<Node2, TaggedBBox1>;
 using Bvh4Bbox = Bvh<Node4, TaggedBBox1>;
 using Bvh8Bbox = Bvh<Node8, TaggedBBox1>;
 
+struct KlemsBasisProxy {
+	anydsl::Array<::KlemsThetaBasis> ThetaBasis;
+	anydsl::Array<uint32_t> ThetaLinearOffsets;
+	uint32_t ThetaCount;
+	uint32_t EntryCount;
+};
+
+struct KlemsComponentProxy {
+	KlemsBasisProxy RowBasis;
+	KlemsBasisProxy ColumnBasis;
+	anydsl::Array<float> Matrix;
+};
+
+struct KlemsModelProxy {
+	KlemsComponentProxy FrontReflection;
+	KlemsComponentProxy BackReflection;
+	KlemsComponentProxy FrontTransmission;
+	KlemsComponentProxy BackTransmission;
+};
+
 struct Interface {
 	using DeviceImage = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
 
@@ -45,7 +66,7 @@ struct Interface {
 		std::unordered_map<std::string, DeviceImage> images;
 		std::unordered_map<std::string, CDF1D> cdf1d;
 		std::unordered_map<std::string, CDF2D> cdf2d;
-		std::unordered_map<std::string, KlemsModel> klems;
+		std::unordered_map<std::string, KlemsModelProxy> klems;
 		anydsl::Array<int32_t> tmp_buffer;
 		anydsl::Array<float> first_primary;
 		anydsl::Array<float> second_primary;
@@ -310,31 +331,72 @@ struct Interface {
 	const CDF1D& load_cdf1d(int32_t dev, const std::string& filename)
 	{
 		auto& cdf1d = devices[dev].cdf1d;
-		auto it			= cdf1d.find(filename);
+		auto it		= cdf1d.find(filename);
 		if (it != cdf1d.end())
 			return it->second;
-			// TODO
+		// TODO
 		return CDF1D{};
 	}
 
 	const CDF2D& load_cdf2d(int32_t dev, const std::string& filename)
 	{
 		auto& cdf2d = devices[dev].cdf2d;
-		auto it			= cdf2d.find(filename);
+		auto it		= cdf2d.find(filename);
 		if (it != cdf2d.end())
 			return it->second;
-			// TODO
+		// TODO
 		return CDF2D{};
 	}
 
-	const KlemsModel& load_klems(int32_t dev, const std::string& filename)
+	KlemsBasisProxy klems2internal(int32_t dev, const IG::KlemsBasis& model)
+	{
+		std::vector<::KlemsThetaBasis> new_basis;
+		new_basis.resize(model.ThetaBasis.size());
+		for (const auto& theta : model.ThetaBasis)
+			new_basis.push_back(::KlemsThetaBasis{ theta.CenterTheta, theta.UpperTheta, theta.LowerTheta, theta.PhiCount });
+
+		KlemsBasisProxy basis;
+		basis.EntryCount		 = model.EntryCount;
+		basis.ThetaCount		 = new_basis.size();
+		basis.ThetaBasis		 = copy_to_device(dev, new_basis);
+		basis.ThetaLinearOffsets = copy_to_device(dev, model.ThetaLinearOffset);
+		return basis;
+	}
+
+	KlemsComponentProxy klems2internal(int32_t dev, const IG::KlemsComponent& model)
+	{
+		KlemsComponentProxy component;
+		component.RowBasis	  = klems2internal(dev, model.RowBasis);
+		component.ColumnBasis = klems2internal(dev, model.ColumnBasis);
+		component.Matrix	  = copy_to_device(dev, model.Matrix);
+		return component;
+	}
+
+	KlemsModelProxy klems2internal(int32_t dev, const IG::KlemsModel& model)
+	{
+		KlemsModelProxy m;
+		m.FrontReflection	= klems2internal(dev, model.FrontReflection);
+		m.FrontTransmission = klems2internal(dev, model.FrontTransmission);
+		m.BackReflection	= klems2internal(dev, model.BackReflection);
+		m.BackTransmission	= klems2internal(dev, model.BackTransmission);
+		return m;
+	}
+
+	const KlemsModelProxy& load_klems(int32_t dev, const std::string& filename)
 	{
 		auto& klems = devices[dev].klems;
-		auto it			= klems.find(filename);
+		auto it		= klems.find(filename);
 		if (it != klems.end())
 			return it->second;
-			// TODO
-		return KlemsModel{};
+
+		const std::string lpath = lookupPath(filename);
+
+		IG::KlemsModel model;
+		if (!KlemsLoader::load(lpath, model))
+			IG_LOG(L_ERROR) << "Cannot load klems binary '" << lpath << "'" << std::endl;
+		IG_LOG(L_INFO) << "Loaded klems '" << lpath << "'" << std::endl;
+
+		return klems[filename] = std::move(klems2internal(dev, model));
 	}
 
 	void present(int32_t dev)
@@ -445,6 +507,29 @@ inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t 
 	secondary.size	  = 0;
 }
 
+static void bridge_klems(::KlemsBasis& basis, const KlemsBasisProxy& proxy)
+{
+	basis.entry_count		  = proxy.EntryCount;
+	basis.theta_count		  = proxy.ThetaCount;
+	basis.theta_basis		  = const_cast<::KlemsThetaBasis*>(proxy.ThetaBasis.data());
+	basis.theta_linear_offset = const_cast<uint32_t*>(proxy.ThetaLinearOffsets.data());
+}
+
+static void bridge_klems(::KlemsComponent& component, const KlemsComponentProxy& proxy)
+{
+	bridge_klems(component.row_basis, proxy.RowBasis);
+	bridge_klems(component.column_basis, proxy.ColumnBasis);
+	component.matrix = const_cast<float*>(proxy.Matrix.data());
+}
+
+static void bridge_klems(::KlemsModel& klems, const KlemsModelProxy& proxy)
+{
+	bridge_klems(klems.front_reflection, proxy.FrontReflection);
+	bridge_klems(klems.front_transmission, proxy.FrontTransmission);
+	bridge_klems(klems.back_reflection, proxy.BackReflection);
+	bridge_klems(klems.back_transmission, proxy.BackTransmission);
+}
+
 extern "C" {
 
 void ignis_get_film_data(int32_t dev, float** pixels, int32_t* width, int32_t* height)
@@ -537,9 +622,10 @@ void ignis_load_cdf2d(int32_t dev, const char* file, CDF2D* cdf)
 	*cdf = interface->load_cdf2d(dev, file);
 }
 
-void ignis_load_klems(int32_t dev, const char* file, KlemsModel* klems)
+void ignis_load_klems(int32_t dev, const char* file, ::KlemsModel* klems)
 {
-	*klems = interface->load_klems(dev, file);
+	const auto& proxy = interface->load_klems(dev, file);
+	bridge_klems(*klems, proxy);
 }
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int32_t size)

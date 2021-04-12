@@ -8,25 +8,13 @@
 
 namespace IG {
 
-class KlemsBasis {
+class InternalKlemsBasis {
 public:
 	using MultiIndex = std::pair<int, int>;
 
-	KlemsBasis() = default;
+	InternalKlemsBasis() = default;
 
-	struct ThetaBasis {
-		float CenterTheta;
-		float LowerTheta;
-		float UpperTheta;
-		uint32_t PhiCount;
-
-		inline bool isValid() const
-		{
-			return PhiCount > 0 && LowerTheta < UpperTheta;
-		}
-	};
-
-	inline void addBasis(const ThetaBasis& basis)
+	inline void addBasis(const KlemsThetaBasis& basis)
 	{
 		mThetaBasis.push_back(basis);
 	}
@@ -34,7 +22,7 @@ public:
 	inline void setup()
 	{
 		std::sort(mThetaBasis.begin(), mThetaBasis.end(),
-				  [](const ThetaBasis& a, const ThetaBasis& b) { return a.UpperTheta < b.UpperTheta; });
+				  [](const KlemsThetaBasis& a, const KlemsThetaBasis& b) { return a.UpperTheta < b.UpperTheta; });
 
 		mThetaLinearOffset.resize(mThetaBasis.size());
 		uint32_t off = 0;
@@ -60,34 +48,19 @@ public:
 		}
 	}
 
-	inline void read(std::istream& is)
-	{
-		mThetaBasis.clear();
-
-		uint32_t theta_count = 0;
-		is.read(reinterpret_cast<char*>(&theta_count), sizeof(uint32_t));
-		for (uint32_t i = 0; i < theta_count; ++i) {
-			ThetaBasis basis;
-			is.read(reinterpret_cast<char*>(&basis.CenterTheta), sizeof(float));
-			is.read(reinterpret_cast<char*>(&basis.LowerTheta), sizeof(float));
-			is.read(reinterpret_cast<char*>(&basis.UpperTheta), sizeof(float));
-			is.read(reinterpret_cast<char*>(&basis.PhiCount), sizeof(uint32_t));
-			mThetaBasis.push_back(basis);
-		}
-
-		setup();
-	}
+	inline const std::vector<KlemsThetaBasis>& thetaBasis() const { return mThetaBasis; }
+	inline const std::vector<uint32_t>& thetaLinearOffset() const { return mThetaLinearOffset; }
 
 private:
-	std::vector<ThetaBasis> mThetaBasis;
+	std::vector<KlemsThetaBasis> mThetaBasis;
 	std::vector<uint32_t> mThetaLinearOffset;
 	uint32_t mEntryCount = 0;
 };
 
 using KlemsMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;
-class KlemsComponent {
+class InternalKlemsComponent {
 public:
-	inline KlemsComponent(const std::shared_ptr<KlemsBasis>& row, const std::shared_ptr<KlemsBasis>& column)
+	inline InternalKlemsComponent(const std::shared_ptr<InternalKlemsBasis>& row, const std::shared_ptr<InternalKlemsBasis>& column)
 		: mRowBasis(row)
 		, mColumnBasis(column)
 		, mMatrix(row->entryCount(), column->entryCount())
@@ -109,8 +82,8 @@ public:
 		//TODO
 	}
 
-	inline std::shared_ptr<KlemsBasis> row() const { return mRowBasis; }
-	inline std::shared_ptr<KlemsBasis> column() const { return mColumnBasis; }
+	inline std::shared_ptr<InternalKlemsBasis> row() const { return mRowBasis; }
+	inline std::shared_ptr<InternalKlemsBasis> column() const { return mColumnBasis; }
 
 	inline void write(std::ostream& os)
 	{
@@ -120,18 +93,9 @@ public:
 		os.write(reinterpret_cast<const char*>(mMatrix.data()), sizeof(float) * mMatrix.size());
 	}
 
-	inline void read(std::istream& is)
-	{
-		mRowBasis->read(is);
-		mColumnBasis->read(is);
-
-		mMatrix = KlemsMatrix(mRowBasis->entryCount(), mColumnBasis->entryCount());
-		is.read(reinterpret_cast<char*>(mMatrix.data()), sizeof(float) * mMatrix.size());
-	}
-
 private:
-	std::shared_ptr<KlemsBasis> mRowBasis;
-	std::shared_ptr<KlemsBasis> mColumnBasis;
+	std::shared_ptr<InternalKlemsBasis> mRowBasis;
+	std::shared_ptr<InternalKlemsBasis> mColumnBasis;
 	KlemsMatrix mMatrix;
 };
 
@@ -147,7 +111,7 @@ enum AllowedComponents {
 	AC_All				 = AC_FrontAll | AC_BackAll
 };
 
-bool KlemsLoader::prepare(const std::string& in_xml, const std::string& out_data)
+bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data)
 {
 	const int allowedComponents = AC_All;
 
@@ -179,7 +143,7 @@ bool KlemsLoader::prepare(const std::string& in_xml, const std::string& out_data
 		return false;
 	}
 
-	std::unordered_map<std::string, std::shared_ptr<KlemsBasis>> allbasis;
+	std::unordered_map<std::string, std::shared_ptr<InternalKlemsBasis>> allbasis;
 	for (const auto& anglebasis : datadefinition.children("AngleBasis")) {
 		const char* name = anglebasis.child_value("AngleBasisName");
 		if (!name) {
@@ -188,9 +152,9 @@ bool KlemsLoader::prepare(const std::string& in_xml, const std::string& out_data
 		}
 
 		// Extract basis information
-		std::shared_ptr<KlemsBasis> fullbasis = std::make_shared<KlemsBasis>();
+		std::shared_ptr<InternalKlemsBasis> fullbasis = std::make_shared<InternalKlemsBasis>();
 		for (const auto& child : anglebasis.children("AngleBasisBlock")) {
-			KlemsBasis::ThetaBasis basis;
+			KlemsThetaBasis basis;
 
 			const auto bounds = child.child("ThetaBounds");
 			basis.LowerTheta  = Deg2Rad * bounds.child("LowerTheta").text().as_float(0);
@@ -219,10 +183,10 @@ bool KlemsLoader::prepare(const std::string& in_xml, const std::string& out_data
 		return false;
 	}
 
-	std::shared_ptr<KlemsComponent> reflectionFront;
-	std::shared_ptr<KlemsComponent> transmissionFront;
-	std::shared_ptr<KlemsComponent> reflectionBack;
-	std::shared_ptr<KlemsComponent> transmissionBack;
+	std::shared_ptr<InternalKlemsComponent> reflectionFront;
+	std::shared_ptr<InternalKlemsComponent> transmissionFront;
+	std::shared_ptr<InternalKlemsComponent> reflectionBack;
+	std::shared_ptr<InternalKlemsComponent> transmissionBack;
 	// Extract wavelengths
 	for (const auto& data : layer.children("WavelengthData")) {
 		const char* type = data.child_value("Wavelength");
@@ -243,8 +207,8 @@ bool KlemsLoader::prepare(const std::string& in_xml, const std::string& out_data
 			return false;
 		}
 
-		std::shared_ptr<KlemsBasis> columnBasis;
-		std::shared_ptr<KlemsBasis> rowBasis;
+		std::shared_ptr<InternalKlemsBasis> columnBasis;
+		std::shared_ptr<InternalKlemsBasis> rowBasis;
 		if (allbasis.count(columnBasisName))
 			columnBasis = allbasis.at(columnBasisName);
 		if (allbasis.count(rowBasisName))
@@ -255,7 +219,7 @@ bool KlemsLoader::prepare(const std::string& in_xml, const std::string& out_data
 		}
 
 		// Setup component
-		std::shared_ptr<KlemsComponent> component = std::make_shared<KlemsComponent>(rowBasis, columnBasis);
+		std::shared_ptr<InternalKlemsComponent> component = std::make_shared<InternalKlemsComponent>(rowBasis, columnBasis);
 
 		// Parse list of floats
 		const char* scat_str = block.child_value("ScatteringData");
@@ -324,6 +288,57 @@ bool KlemsLoader::prepare(const std::string& in_xml, const std::string& out_data
 	transmissionFront->write(stream);
 	reflectionBack->write(stream);
 	transmissionBack->write(stream);
+
+	return true;
+}
+
+static void read(std::istream& is, KlemsBasis& basis)
+{
+	uint32_t theta_count = 0;
+	is.read(reinterpret_cast<char*>(&theta_count), sizeof(uint32_t));
+	for (uint32_t i = 0; i < theta_count; ++i) {
+		KlemsThetaBasis theta;
+		is.read(reinterpret_cast<char*>(&theta.CenterTheta), sizeof(float));
+		is.read(reinterpret_cast<char*>(&theta.LowerTheta), sizeof(float));
+		is.read(reinterpret_cast<char*>(&theta.UpperTheta), sizeof(float));
+		is.read(reinterpret_cast<char*>(&theta.PhiCount), sizeof(uint32_t));
+		basis.ThetaBasis.push_back(theta);
+	}
+
+	std::sort(basis.ThetaBasis.begin(), basis.ThetaBasis.end(),
+			  [](const KlemsThetaBasis& a, const KlemsThetaBasis& b) { return a.UpperTheta < b.UpperTheta; });
+
+	basis.ThetaLinearOffset.resize(basis.ThetaBasis.size());
+	uint32_t off = 0;
+	for (size_t i = 0; i < basis.ThetaBasis.size(); ++i) {
+		basis.ThetaLinearOffset[i] = off;
+		off += basis.ThetaBasis[i].PhiCount;
+	}
+
+	basis.EntryCount = off;
+}
+
+static void read(std::istream& stream, KlemsComponent& component)
+{
+	read(stream, component.RowBasis);
+	read(stream, component.ColumnBasis);
+
+	component.Matrix.resize(component.matrixSize());
+	stream.read(reinterpret_cast<char*>(component.Matrix.data()), sizeof(float) * component.Matrix.size());
+}
+
+bool KlemsLoader::load(const std::filesystem::path& in_data, KlemsModel& model)
+{
+	std::ifstream stream(in_data.generic_string(), std::ios::binary);
+	if (!stream) {
+		IG_LOG(L_ERROR) << "Could not load " <<	in_data << std::endl;
+		return false;
+	}
+
+	read(stream, model.FrontReflection);
+	read(stream, model.FrontTransmission);
+	read(stream, model.BackReflection);
+	read(stream, model.BackTransmission);
 
 	return true;
 }

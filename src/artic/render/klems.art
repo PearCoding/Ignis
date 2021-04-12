@@ -2,13 +2,14 @@ struct KlemsThetaBasis {
     center:    f32,
     lower:     f32,
     upper:     f32,
-    phi_count: i32
+    phi_count: u32
 }
 
 struct KlemsBasis {
     theta_basis: &[KlemsThetaBasis],
-    theta_linear_offset: &[i32],
-    entry_count: i32
+    theta_linear_offset: &[u32],
+    theta_count: u32,
+    entry_count: u32
 }
 
 struct KlemsComponent {
@@ -22,4 +23,72 @@ struct KlemsModel {
     back_reflection:    KlemsComponent,
     front_transmission: KlemsComponent,
     back_transmission:  KlemsComponent
+}
+
+// Our sampling space flips implicitly to the inside configuration and has to be considered when working with the Klems basis
+// therefor the opposite funtions fi and bi are not needed
+fn @k_fo(v: Vec3) = v;
+fn @k_fi(v: Vec3) = make_vec3(-v.x, -v.y, v.z);
+fn @k_bo(v: Vec3) = make_vec3(v.x, v.y, -v.z);
+fn @k_bi(v: Vec3) = vec3_neg(v);
+
+fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) = min(basis.phi_count as i32 - 1, max(0, (phi * (basis.phi_count as f32) * flt_inv_pi / 2) as i32)) as u32;
+fn @k_multi_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> (u32, u32) {
+    let i = Interval::binary_search(basis.theta_count as i32, @|k| basis.theta_basis(k).lower <= theta) as u32;
+    let j = k_phi_index(phi, basis.theta_basis(i));
+    (i, j)
+}
+
+fn @k_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> u32 {
+    let (i, j) = k_multi_index_of(theta, phi, basis);
+    basis.theta_linear_offset(i) + j
+}
+
+fn @k_eval_component_index(row: u32, col: u32, component: KlemsComponent) = component.matrix(row * component.column_basis.entry_count + col);
+
+fn @k_eval_component(math: Intrinsics, in_dir: Vec3, out_dir: Vec3, component: KlemsComponent) {
+    let (in_theta, in_phi)   = spherical_from_dir(math, in_dir);
+    let (out_theta, out_phi) = spherical_from_dir(math, out_dir);
+    let row = k_index_of(in_theta, in_phi, component.row_basis);
+    let col = k_index_of(out_theta, out_phi, component.column_basis);
+    k_eval_component_index(row, col, component)
+}
+
+// TODO: Add proper sampling!
+// TODO: Add tint
+fn @make_klems_bsdf(math: Intrinsics, surf: SurfaceElement, klems: KlemsModel) -> Bsdf {
+    let lsurf = mat3x3_transpose(surf.local);
+    let local_eval = |wi : Vec3, wo : Vec3| {
+		let inFront	 = wi.z > 0;
+        let outFront = wo.z > 0;
+
+        let factor = match (inFront, outFront) {
+            (true, true)   => k_eval_component(math, k_fi(wi), k_fo(wo), klems.front_reflection),
+            (true, false)  => k_eval_component(math, k_fi(wi), k_bo(wo), klems.front_transmission),
+            (false, true)  => k_eval_component(math, k_bi(wi), k_bo(wo), klems.back_transmission),
+            (false, false) => k_eval_component(math, k_bi(wi), k_fo(wo), klems.back_reflection)
+        };
+
+        make_gray_color(factor * math.fabsf(wi.z))
+    };
+
+    Bsdf {
+        eval   = @ |in_dir, out_dir| {
+            let wo = vec3_normalize(math, mat3x3_mul(lsurf, out_dir));
+            let wi = vec3_normalize(math, mat3x3_mul(lsurf, in_dir));
+            local_eval(wi, wo)
+        },
+        pdf    = @ |_, _| uniform_sphere_pdf(),
+        sample = @ |rnd, out_dir, _| {
+            let wo = vec3_normalize(math, mat3x3_mul(lsurf, out_dir));
+            let u = randf(rnd);
+            let v = randf(rnd);
+            let sample = sample_uniform_sphere(math, u, v);
+            let gdir   = vec3_normalize(math, mat3x3_mul(surf.local, sample.dir));
+            let is_trans = (sample.dir.z < 0) ^ (wo.z < 0);
+            let color = color_mulf(local_eval(sample.dir, wo), 1/sample.pdf);
+            make_bsdf_sample(surf, gdir, sample.pdf, math.fabsf(sample.dir.z), color, is_trans)
+        },
+        is_specular = false
+    }
 }
