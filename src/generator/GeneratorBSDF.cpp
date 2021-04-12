@@ -1,6 +1,8 @@
 #include "GeneratorBSDF.h"
 #include "Logger.h"
 
+#include "klems/KlemsLoader.h"
+
 namespace IG {
 
 constexpr float AIR_IOR	   = 1.000277f;
@@ -125,6 +127,23 @@ static void bsdf_disney(const std::shared_ptr<Loader::Object>& bsdf, const Gener
 	   << ctx.extractMaterialPropertyNumber(bsdf, "transmittance", 1.0f, options.SurfaceParameter.c_str()) << ")";
 }
 
+static void bsdf_prep_klems(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os)
+{
+	// TODO
+}
+
+static void bsdf_klems(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
+{
+	const std::filesystem::path filename = ctx.handlePath(bsdf->property("filename").getString());
+	const std::string out_file			 = "data/klems_" + filename.stem().generic_string() + ".bin";
+	const bool ok						 = KlemsLoader::prepare(filename.generic_string(), out_file);
+
+	if (!ok)
+		os << "make_black_bsdf() /* Could not load Klems */";
+	else
+		os << "make_black_bsdf() /*TODO*/";
+}
+
 static void bsdf_blend(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os)
 {
 	const std::string first	 = bsdf->property("first").getString();
@@ -226,6 +245,7 @@ static struct {
 	{ "disney", bsdf_disney },
 	{ "plastic", bsdf_plastic },
 	{ "roughplastic", bsdf_plastic }, /*TODO*/
+	{ "klems", bsdf_klems },
 	{ "blendbsdf", bsdf_blend },
 	{ "mask", bsdf_mask },
 	{ "twosided", bsdf_twosided },
@@ -253,5 +273,29 @@ std::string GeneratorBSDF::extract(const std::shared_ptr<Loader::Object>& bsdf, 
 	}
 
 	return sstream.str();
+}
+
+using BSDFPreparator = void (*)(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, std::ostream& os);
+static struct {
+	const char* Name;
+	BSDFPreparator Preparator;
+} _preparators[] = {
+	{ "klems", bsdf_prep_klems },
+	{ "", nullptr }
+};
+
+std::string GeneratorBSDF::prepare(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx)
+{
+	if (bsdf) {
+		for (size_t i = 0; _preparators[i].Preparator; ++i) {
+			if (_preparators[i].Name == bsdf->pluginType()) {
+				std::stringstream sstream;
+				_preparators[i].Preparator(bsdf, ctx, sstream);
+				return sstream.str();
+			}
+		}
+	}
+
+	return "";
 }
 } // namespace IG

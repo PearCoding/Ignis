@@ -7,6 +7,7 @@
 
 #include "Buffer.h"
 #include "Color.h"
+#include "Image.h"
 #include "Logger.h"
 #include "bvh/BVH.h"
 #include "math/BoundingBox.h"
@@ -36,6 +37,32 @@ static inline void usage()
 			  << "   --spp    spp        Enables benchmarking mode and sets the number of iterations based on the given spp\n"
 			  << "   --bench  iterations Enables benchmarking mode and sets the number of iterations\n"
 			  << "   -o       image.exr  Writes the output image to a file" << std::endl;
+}
+
+static void save_image(const std::string& path, size_t width, size_t height, uint32_t iter)
+{
+	ImageRgb24 img;
+	img.width  = width;
+	img.height = height;
+	img.pixels.reset(new float[width * height * 3]);
+
+	auto film	  = get_pixels();
+	auto inv_iter = 1.0f / iter;
+
+	for (size_t ind = 0; ind < width * height; ++ind) {
+		auto r = film[ind * 3 + 0];
+		auto g = film[ind * 3 + 1];
+		auto b = film[ind * 3 + 2];
+
+		img.pixels[3 * ind + 0] = r * inv_iter;
+		img.pixels[3 * ind + 1] = g * inv_iter;
+		img.pixels[3 * ind + 2] = b * inv_iter;
+	}
+
+	if (!img.save(path))
+		IG_LOG(L_ERROR) << "Failed to save EXR file '" << path << "'" << std::endl;
+	else
+		IG_LOG(L_INFO) << "Image saved to '" << path << "'" << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -95,6 +122,17 @@ int main(int argc, char** argv)
 			return EXIT_FAILURE;
 		}
 	}
+
+#ifndef WITH_UI
+	if (bench_iter <= 0) {
+		IG_LOG(L_ERROR) << "No valid spp count given" << std::endl;
+		return EXIT_FAILURE;
+	}
+	if(out_file == "") {
+		IG_LOG(L_ERROR) << "No output file given" << std::endl;
+		return EXIT_FAILURE;	
+	}
+#endif
 
 	Camera camera(
 		Vector3f(default_settings.eye.x, default_settings.eye.y, default_settings.eye.z),
@@ -166,10 +204,8 @@ int main(int argc, char** argv)
 	UI::close();
 #endif
 
-	/*if (out_file != "") {
-		save_image(out_file, width, height, iter);
-		info("Image saved to '", out_file, "'");
-	}*/
+	if (out_file != "")
+		save_image(out_file, default_settings.film_width, default_settings.film_height, iter);
 
 	cleanup_interface();
 
@@ -181,5 +217,6 @@ int main(int argc, char** argv)
 					   << "/" << samples_sec.back() * inv
 					   << " (min/med/max Msamples/s)" << std::endl;
 	}
-	return 0;
+
+	return EXIT_SUCCESS;
 }

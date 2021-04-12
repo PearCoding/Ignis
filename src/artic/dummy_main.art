@@ -49,4 +49,14 @@ struct Settings {
     ignis_load_bvh2_bbox(0, "", &mut node2, &mut tagged_bbox);
     ignis_load_bvh4_bbox(0, "", &mut node4, &mut tagged_bbox);
     ignis_load_bvh8_bbox(0, "", &mut node8, &mut tagged_bbox);
+
+    // Force the export of the CDF types
+    let mut cdf1 : CDF1D;
+    let mut cdf2 : CDF2D;
+    ignis_load_cdf1d(0, "", &mut cdf1);
+    ignis_load_cdf2d(0, "", &mut cdf2);
+
+    // Force the export of the klems model
+    let mut klems : KlemsModel;
+    ignis_load_klems(0, "", &mut klems);
 }

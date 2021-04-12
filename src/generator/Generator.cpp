@@ -148,6 +148,14 @@ struct SceneBuilder {
 		for (const auto& pair : Context.Scene.bsdfs()) {
 			const std::string name = pair.first;
 			const auto& mat		   = pair.second;
+			std::string line	   = GeneratorBSDF::prepare(mat, Context);
+			if (!line.empty())
+				os << line << "\n";
+		}
+
+		for (const auto& pair : Context.Scene.bsdfs()) {
+			const std::string name = pair.first;
+			const auto& mat		   = pair.second;
 			os << "    let bsdf_" << GeneratorContext::makeId(name) << " = @ |ray : Ray, hit : Hit, surf : SurfaceElement| -> Bsdf { " << GeneratorBSDF::extract(mat, Context) << " };\n";
 		}
 	}

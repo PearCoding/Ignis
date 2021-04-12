@@ -43,6 +43,9 @@ struct Interface {
 		std::unordered_map<std::string, Bvh8Bbox> bvh8_bbox;
 		std::unordered_map<std::string, anydsl::Array<uint8_t>> buffers;
 		std::unordered_map<std::string, DeviceImage> images;
+		std::unordered_map<std::string, CDF1D> cdf1d;
+		std::unordered_map<std::string, CDF2D> cdf2d;
+		std::unordered_map<std::string, KlemsModel> klems;
 		anydsl::Array<int32_t> tmp_buffer;
 		anydsl::Array<float> first_primary;
 		anydsl::Array<float> second_primary;
@@ -304,6 +307,36 @@ struct Interface {
 		return images[filename] = std::move(copy_to_device(dev, img));
 	}
 
+	const CDF1D& load_cdf1d(int32_t dev, const std::string& filename)
+	{
+		auto& cdf1d = devices[dev].cdf1d;
+		auto it			= cdf1d.find(filename);
+		if (it != cdf1d.end())
+			return it->second;
+			// TODO
+		return CDF1D{};
+	}
+
+	const CDF2D& load_cdf2d(int32_t dev, const std::string& filename)
+	{
+		auto& cdf2d = devices[dev].cdf2d;
+		auto it			= cdf2d.find(filename);
+		if (it != cdf2d.end())
+			return it->second;
+			// TODO
+		return CDF2D{};
+	}
+
+	const KlemsModel& load_klems(int32_t dev, const std::string& filename)
+	{
+		auto& klems = devices[dev].klems;
+		auto it			= klems.find(filename);
+		if (it != klems.end())
+			return it->second;
+			// TODO
+		return KlemsModel{};
+	}
+
 	void present(int32_t dev)
 	{
 		anydsl::copy(devices[dev].film_pixels, host_pixels);
@@ -492,6 +525,21 @@ void ignis_load_bvh8_bbox(int32_t dev, const char* file, Node8** nodes, TaggedBB
 	auto& bvh = interface->load_bvh8_bbox(dev, file);
 	*nodes	  = const_cast<Node8*>(bvh.nodes.data());
 	*objs	  = const_cast<TaggedBBox1*>(bvh.objs.data());
+}
+
+void ignis_load_cdf1d(int32_t dev, const char* file, CDF1D* cdf)
+{
+	*cdf = interface->load_cdf1d(dev, file);
+}
+
+void ignis_load_cdf2d(int32_t dev, const char* file, CDF2D* cdf)
+{
+	*cdf = interface->load_cdf2d(dev, file);
+}
+
+void ignis_load_klems(int32_t dev, const char* file, KlemsModel* klems)
+{
+	*klems = interface->load_klems(dev, file);
 }
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int32_t size)

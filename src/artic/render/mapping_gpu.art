@@ -598,9 +598,22 @@ fn @make_gpu_device( dev_id: i32
         let (ptr, stride) = (pixel_data, width);
         make_image(@ |x, y| read_pixel(ptr, y * stride + x), width, height)
     },
-    load_rays = @ |count: i32, rays: &[Ray]| {
-        ignis_load_rays(dev_id, count, rays)
-    }
+    load_cdf1d = @ |filename: &[u8]| {
+        let mut cdf: CDF1D;
+        ignis_load_cdf1d(dev_id, filename, &mut cdf);
+        cdf
+    },
+    load_cdf2d = @ |filename: &[u8]| {
+        let mut cdf: CDF2D;
+        ignis_load_cdf2d(dev_id, filename, &mut cdf);
+        cdf
+    },
+    load_klems = @ |filename: &[u8]| {
+        let mut model: KlemsModel;
+        ignis_load_klems(dev_id, filename, &mut model);
+        model
+    },
+    load_rays = @ |count: i32, rays: &[Ray]| ignis_load_rays(dev_id, count, rays)
 };
 
 fn @make_nvvm_device(dev: i32, streaming: bool) -> Device {

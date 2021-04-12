@@ -1,0 +1,25 @@
+struct KlemsThetaBasis {
+    center:    f32,
+    lower:     f32,
+    upper:     f32,
+    phi_count: i32
+}
+
+struct KlemsBasis {
+    theta_basis: &[KlemsThetaBasis],
+    theta_linear_offset: &[i32],
+    entry_count: i32
+}
+
+struct KlemsComponent {
+    row_basis:    KlemsBasis,
+    column_basis: KlemsBasis,
+    matrix:       &[f32]
+}
+
+struct KlemsModel {
+    front_reflection:   KlemsComponent,
+    back_reflection:    KlemsComponent,
+    front_transmission: KlemsComponent,
+    back_transmission:  KlemsComponent
+}

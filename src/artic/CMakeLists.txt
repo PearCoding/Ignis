@@ -14,6 +14,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/entity.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/fresnel.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/image.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/klems.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/light.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_cpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_gpu.art

@@ -23,7 +23,10 @@ struct Device {
     load_tri_bvh: fn (&[u8]) -> PrimBvh,
     load_scene_bvh: fn (&[u8]) -> SceneBvh,
     load_image: fn (&[u8]) -> Image,
-    load_rays: fn (i32, &[Ray]) -> &[Ray]
+    load_rays: fn (i32, &[Ray]) -> &[Ray],
+    load_cdf1d: fn (&[u8]) -> CDF1D,
+    load_cdf2d: fn (&[u8]) -> CDF2D,
+    load_klems: fn (&[u8]) -> KlemsModel
 }
 
 struct DeviceBuffer {

@@ -519,6 +519,21 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         ignis_load_image(0, filename, &mut pixel_data, &mut width, &mut height);
         make_image(@ |x, y| make_color(pixel_data(4*y * width + 4*x + 0), pixel_data(4*y * width + 4*x + 1), pixel_data(4*y * width + 4*x + 2)), width, height)
     },
+    load_cdf1d = @ |filename: &[u8]| {
+        let mut cdf: CDF1D;
+        ignis_load_cdf1d(0, filename, &mut cdf);
+        cdf
+    },
+    load_cdf2d = @ |filename: &[u8]| {
+        let mut cdf: CDF2D;
+        ignis_load_cdf2d(0, filename, &mut cdf);
+        cdf
+    },
+    load_klems = @ |filename: &[u8]| {
+        let mut model: KlemsModel;
+        ignis_load_klems(0, filename, &mut model);
+        model
+    },
     load_rays = @ |count: i32, rays: &[Ray]| {
         ignis_load_rays(0, count, rays)
     }

@@ -40,7 +40,7 @@ add_library(ignis_scene
     ${ARTIC_OBJS}
     Interface.cpp
     Interface.h)
-target_link_libraries(ignis_scene PUBLIC ${AnyDSL_runtime_LIBRARIES} ig_lib_runtime)
+target_link_libraries(ignis_scene PUBLIC ${AnyDSL_runtime_LIBRARIES} ig_lib_runtime ig_lib_klems)
 add_dependencies(ignis_scene artic_c_interface)
 target_include_directories(ignis_scene PUBLIC ${CMAKE_BINARY_DIR}) # Required for generated_interface.h
 target_include_directories(ignis_scene PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
