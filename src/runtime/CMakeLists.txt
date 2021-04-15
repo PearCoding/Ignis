@@ -36,8 +36,8 @@ set(SRC
     mesh/TriMesh.h
 )
 
-add_library(ig_lib_runtime STATIC ${SRC})
-add_dependencies(ig_lib_runtime ighwinfo tinyobjloader)
+add_library(ig_lib_runtime STATIC ${SRC} "${CMAKE_BINARY_DIR}/HW_Features.h")
+add_dependencies(ig_lib_runtime tinyobjloader)
 target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen ${LZ4_LIBRARY} OpenImageIO::OpenImageIO OpenImageIO::OpenImageIO_Util)
 target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR})
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)

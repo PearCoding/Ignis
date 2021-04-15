@@ -6,8 +6,8 @@ CPMAddPackage(
 )
 
 set(out_file "${CMAKE_BINARY_DIR}/HW_Features.h")
-add_custom_target(ighwinfo
+add_custom_command(
+  OUTPUT "${out_file}"
   COMMAND $<TARGET_FILE:hwinfo> --header --prefix IG > ${out_file}
-  BYPRODUCTS "${out_file}"
   COMMENT "Generating hardware feature information: ${out_file}" 
   VERBATIM)
