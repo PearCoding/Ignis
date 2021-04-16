@@ -79,6 +79,7 @@ foreach(var ${VARIANTS})
     add_custom_command(
         OUTPUT "${out_file}"
         COMMAND $<TARGET_FILE:stpp> ${args} ${CMAKE_CURRENT_SOURCE_DIR}/main.artpp > ${out_file}
+        MAIN_DEPENDENCY main.artpp
         COMMENT "Generating variant file: ${out_file}" 
         VERBATIM)
     set(_objs ) # Reset list

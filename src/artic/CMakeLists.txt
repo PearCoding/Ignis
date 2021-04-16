@@ -2,6 +2,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/color.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/cpu_common.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/host.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/interval.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/matrix.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/random.art

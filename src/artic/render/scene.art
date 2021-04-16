@@ -1,3 +1,17 @@
+// Loaded scene
+struct SceneDatabase {
+    num_entities:  i32,
+    num_shapes:    i32,
+    num_lights:    i32,
+    num_materials: i32,
+
+    entities: EntityMap,
+    shapes:   fn (i32) -> Shape,
+    lights:   fn (i32) -> Light,
+    camera:   Camera, 
+    bvh:      SceneBvh
+}
+
 // Compile-time scene data
 struct Scene {
     num_entities: i32,
