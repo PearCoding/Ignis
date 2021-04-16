@@ -1,15 +1,22 @@
-// Loaded scene
-struct SceneDatabase {
-    num_entities:  i32,
-    num_shapes:    i32,
-    num_lights:    i32,
-    num_materials: i32,
+// Loaded raw scene
+struct Lookup {
+    type_id: i32, // Type ID depends on the actual dyntable usecase
+    offset:  i32  // Offset to start of the DynTable in bytes
+}
 
-    entities: EntityMap,
-    shapes:   fn (i32) -> Shape,
-    lights:   fn (i32) -> Light,
-    camera:   Camera, 
-    bvh:      SceneBvh
+// TODO: Prolly the mother of all cache misses :O
+struct DynTable {
+    count:  i32,
+    header: &[Lookup],
+    start:  &[u8]
+}
+
+struct SceneDatabase {
+    shapes:   DynTable,
+    entities: DynTable,
+    lights:   DynTable,
+    shaders:  DynTable, 
+    bvh:      &[u8]
 }
 
 // Compile-time scene data
@@ -29,15 +36,16 @@ struct Scene {
 struct Device {
     intrinsics: Intrinsics,
 
-    trace: fn (Scene, PathTracer, i32) -> (),
+    trace:   fn (Scene, PathTracer, i32) -> (),
     present: fn () -> (),
 
     // General formats
-    load_buffer: fn (&[u8]) -> DeviceBuffer,
-    load_tri_bvh: fn (&[u8]) -> PrimBvh,
+    load_buffer:    fn (&[u8]) -> DeviceBuffer,
+    load_tri_bvh:   fn (&[u8]) -> PrimBvh,
     load_scene_bvh: fn (&[u8]) -> SceneBvh,
+
     load_image: fn (&[u8]) -> Image,
-    load_rays: fn (i32, &[Ray]) -> &[Ray],
+    load_rays:  fn (i32, &[Ray]) -> &[Ray],
     load_cdf1d: fn (&[u8]) -> CDF1D,
     load_cdf2d: fn (&[u8]) -> CDF2D,
     load_klems: fn (&[u8]) -> KlemsModel

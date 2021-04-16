@@ -5,6 +5,14 @@ struct Shape {
     bvh: PrimBvh
 }
 
+struct TriShape {
+    data: &[u8],
+    num_face: i32,
+    num_verts: i32,
+    num_norms: i32,
+    num_attrs: i32
+}
+
 // Triangle mesh with per-vertex/per-face attributes
 struct TriMesh {
     vertices:     fn (i32) -> Vec3,
