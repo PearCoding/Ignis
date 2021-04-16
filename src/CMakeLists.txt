@@ -8,6 +8,7 @@ add_subdirectory(hdr2exr)
 add_subdirectory(exrscale)
 
 add_subdirectory(runtime)
+add_subdirectory(serialization)
 add_subdirectory(skysun)
 add_subdirectory(klems)
 add_subdirectory(generator)

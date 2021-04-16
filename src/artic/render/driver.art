@@ -19,6 +19,7 @@
 #[import(cc = "C")] fn ignis_load_cdf1d(i32, &[u8], &mut CDF1D) -> ();
 #[import(cc = "C")] fn ignis_load_cdf2d(i32, &[u8], &mut CDF2D) -> ();
 #[import(cc = "C")] fn ignis_load_klems(i32, &[u8], &mut KlemsModel) -> ();
+#[import(cc = "C")] fn ignis_load_scene(i32, &mut SceneDatabase) -> ();
 #[import(cc = "C")] fn ignis_present(i32) -> ();
 
 // Ray streams ---------------------------------------------------------------------

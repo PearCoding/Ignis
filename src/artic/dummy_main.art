@@ -59,4 +59,8 @@ struct Settings {
     // Force the export of the klems model
     let mut klems : KlemsModel;
     ignis_load_klems(0, "", &mut klems);
+
+    // Force the export
+    let mut dtb : SceneDatabase;
+    ignis_load_scene(0, &mut dtb);
 }
