@@ -11,9 +11,6 @@ build/*
 # Float buffers
 *.fbuf
 
-# Image files
-*.png
-
 # Precompiled Headers
 *.gch
 *.pch

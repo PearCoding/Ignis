@@ -19,7 +19,7 @@
 		{
 			"type": "bitmap",
 			"name": "tex",
-			"filename": "normalmap.png",
+			"filename": "textures/bumpmap.png",
 			"filter_type": "trilinear"
 		},
 		{
@@ -34,7 +34,7 @@
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Ground", "reflectance":"check"},
 		{"type":"roughconductor", "name": "mat-Inner", "reflectance":[1,1,1], "alpha":0.16},
-		{"type":"normalmap", "name": "mat-Pillar", "bsdf":"mat-Inner", "map":"tex"}
+		{"type":"bumpmap", "name": "mat-Pillar", "bsdf":"mat-Inner", "map":"tex", "strength":0.2}
 	],
 	"shapes": [
 		{"type":"ply", "name":"Bottom", "filename":"meshes/Bottom.ply"},

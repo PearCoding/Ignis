@@ -215,6 +215,7 @@ static void bsdf_bumpmap(const std::shared_ptr<Loader::Object>& bsdf, const Gene
 	const std::string inner = bsdf->property("bsdf").getString();
 	auto mapdx				= ctx.extractMaterialPropertyNumberDx(bsdf, "map", options.SurfaceParameter.c_str());
 	auto mapdy				= ctx.extractMaterialPropertyNumberDy(bsdf, "map", options.SurfaceParameter.c_str());
+	auto strength			= ctx.extractMaterialPropertyNumber(bsdf, "strength", 1.0f, options.SurfaceParameter.c_str());
 
 	BSDFExtractOption opts2 = options;
 	opts2.SurfaceParameter += "a";
@@ -225,7 +226,8 @@ static void bsdf_bumpmap(const std::shared_ptr<Loader::Object>& bsdf, const Gene
 		os << "make_bumpmap(math, " << options.SurfaceParameter << ", @|" << opts2.SurfaceParameter << "| -> Bsdf { "
 		   << GeneratorBSDF::extract(ctx.Scene.bsdf(inner), ctx, opts2) << " }, "
 		   << mapdx << ", "
-		   << mapdy << ")";
+		   << mapdy << ", "
+		   << strength << ")";
 }
 
 using BSDFGenerator = void (*)(const std::shared_ptr<Loader::Object>& bsdf, const GeneratorContext& ctx, const BSDFExtractOption& options, std::ostream& os);

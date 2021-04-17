@@ -414,28 +414,66 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) = Bsd
 // Creates a BSDF that interpolates between two other BSDFs
 fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = make_variadic_mix_bsdf(mat1, mat2, @|_| k);
 
+fn @shading_normal_adjoint(in_dir: Vec3, out_dir: Vec3, ns: Vec3, ng: Vec3) -> f32 {
+    let ons = positive_cos(out_dir, ns);
+    let ins = positive_cos(in_dir, ns);
+    let ong = positive_cos(out_dir, ng);
+    let ing = positive_cos(in_dir, ng);
+    if ins <= flt_eps || ong <= flt_eps { 0 } else { (ons/ins) * (ing/ong) }
+}
+
 // Normal Mapping
 fn @make_normalmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color) -> Bsdf {
-    let N = vec3_normalize(math, mat3x3_mul(mat3x3_transpose(surf.local), vec3_normalize(math, make_vec3(normal.r, normal.g, normal.b))));
-    @bsdf_factory(SurfaceElement{
+    let N    = vec3_normalize(math, mat3x3_mul(mat3x3_transpose(surf.local), vec3_normalize(math, make_vec3(normal.r, normal.g, normal.b))));
+    let bsdf = @bsdf_factory(SurfaceElement{
         is_entering = surf.is_entering,
         point       = surf.point,
         face_normal = surf.face_normal,
         uv_coords   = surf.uv_coords,
         attr        = surf.attr,
         local       = make_orthonormal_mat3x3(N)
-    })
+    });
+
+    Bsdf {
+        eval        = bsdf.eval,
+        pdf         = bsdf.pdf,
+        sample      = @ |rnd, out_dir, adjoint| {
+            let s = bsdf.sample(rnd, out_dir, adjoint);
+            if adjoint {
+                let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
+                BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos /*TODO: Really?*/, color = color_mulf(s.color, fac) }
+            } else {
+                s
+            }
+        },
+        is_specular = bsdf.is_specular
+    }
 }
 
 // Bump Mapping
-fn @make_bumpmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, dx: f32, dy: f32) -> Bsdf {
-    let N = vec3_normalize(math, vec3_sub(surf.local.col(2), vec3_add(vec3_mulf(surf.local.col(0), dx), vec3_mulf(surf.local.col(1), dy))));
-    @bsdf_factory(SurfaceElement{
+fn @make_bumpmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, dx: f32, dy: f32, strength: f32) -> Bsdf {
+    let N = vec3_normalize(math, vec3_sub(surf.local.col(2), vec3_mulf(vec3_add(vec3_mulf(surf.local.col(0), dx), vec3_mulf(surf.local.col(1), dy)), strength)));
+    let bsdf = @bsdf_factory(SurfaceElement{
         is_entering = surf.is_entering,
         point       = surf.point,
         face_normal = surf.face_normal,
         uv_coords   = surf.uv_coords,
         attr        = surf.attr,
         local       = make_orthonormal_mat3x3(N)
-    })
+    });
+
+    Bsdf {
+        eval        = bsdf.eval,
+        pdf         = bsdf.pdf,
+        sample      = @ |rnd, out_dir, adjoint| {
+            let s = bsdf.sample(rnd, out_dir, adjoint);
+            if adjoint {
+                let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
+                BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos /*TODO: Really?*/, color = color_mulf(s.color, fac) }
+            } else {
+                s
+            }
+        },
+        is_specular = bsdf.is_specular
+    }
 }
