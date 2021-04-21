@@ -131,23 +131,41 @@ static void light_cie_cloudy(const std::string& name, const std::shared_ptr<Load
 	   << groundbrightness << ")";
 }
 
+static inline float perez_model(float zenithAngle, float sunAngle, float a, float b, float c, float d, float e)
+{
+	float zc = std::cos(zenithAngle);
+	float sc = std::cos(sunAngle);
+
+	float A = 1 + a * std::exp(b * zc);
+	float B = 1 + c * std::exp(d * sunAngle) + e * sc * sc;
+	return A * B;
+}
+
 static void light_perez(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
 {
 	auto ea		 = extractEA(light);
 	Vector3f dir = ea.toDirection();
 
-	auto lum = ctx.extractMaterialPropertyColor(light, "luminance", 1.0f);
-	auto a	 = light->property("a").getNumber(1.0f);
-	auto b	 = light->property("b").getNumber(1.0f);
-	auto c	 = light->property("c").getNumber(1.0f);
-	auto d	 = light->property("d").getNumber(1.0f);
-	auto e	 = light->property("e").getNumber(1.0f);
+	auto a = light->property("a").getNumber(1.0f);
+	auto b = light->property("b").getNumber(1.0f);
+	auto c = light->property("c").getNumber(1.0f);
+	auto d = light->property("d").getNumber(1.0f);
+	auto e = light->property("e").getNumber(1.0f);
 
 	os << "make_perez_light(math, "
 	   << ctx.Environment.SceneDiameter << ", "
-	   << "make_vec3(" << dir(0) << ", " << dir(1) << ", " << dir(2) << "), "
-	   << lum << ", "
-	   << a << ", "
+	   << "make_vec3(" << dir(0) << ", " << dir(1) << ", " << dir(2) << "), ";
+
+	if (light->properties().count("luminance")) {
+		auto lum = ctx.extractMaterialPropertyColor(light, "luminance", 1.0f);
+		os << lum << ", ";
+	} else {
+		auto zenith			= ctx.extractMaterialPropertyColor(light, "zenith", 1.0f);
+		const float groundZ = perez_model(0, -dir(2), a, b, c, d, e); // TODO: Validate
+		os << "color_mulf(" << zenith << ", " << groundZ << "), ";
+	}
+
+	os << a << ", "
 	   << b << ", "
 	   << c << ", "
 	   << d << ", "
