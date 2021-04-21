@@ -131,6 +131,29 @@ static void light_cie_cloudy(const std::string& name, const std::shared_ptr<Load
 	   << groundbrightness << ")";
 }
 
+static void light_perez(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
+{
+	auto ea		 = extractEA(light);
+	Vector3f dir = ea.toDirection();
+
+	auto lum = ctx.extractMaterialPropertyColor(light, "luminance", 1.0f);
+	auto a	 = light->property("a").getNumber(1.0f);
+	auto b	 = light->property("b").getNumber(1.0f);
+	auto c	 = light->property("c").getNumber(1.0f);
+	auto d	 = light->property("d").getNumber(1.0f);
+	auto e	 = light->property("e").getNumber(1.0f);
+
+	os << "make_perez_light(math, "
+	   << ctx.Environment.SceneDiameter << ", "
+	   << "make_vec3(" << dir(0) << ", " << dir(1) << ", " << dir(2) << "), "
+	   << lum << ", "
+	   << a << ", "
+	   << b << ", "
+	   << c << ", "
+	   << d << ", "
+	   << e << ")";
+}
+
 static void light_env(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
 {
 	bool isTexture = false;
@@ -170,6 +193,7 @@ static struct {
 	{ "cieuniform", light_cie_uniform },
 	{ "cie_cloudy", light_cie_cloudy },
 	{ "ciecloudy", light_cie_cloudy },
+	{ "perez", light_perez },
 	{ "uniform", light_env },
 	{ "env", light_env },
 	{ "envmap", light_env },

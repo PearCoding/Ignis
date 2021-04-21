@@ -288,6 +288,18 @@ fn @make_cie_sky_light(math: Intrinsics, max_radius: f32, zenith: Color, ground:
 fn @make_cie_uniform_light(math: Intrinsics, max_radius: f32, zenith: Color, ground: Color, groundBrightness: f32) = @make_cie_sky_light(math, max_radius, zenith, ground, groundBrightness, false);
 fn @make_cie_cloudy_light(math: Intrinsics, max_radius: f32, zenith: Color, ground: Color, groundBrightness: f32) = @make_cie_sky_light(math, max_radius, zenith, ground, groundBrightness, true);
 
+fn @make_perez_light(math: Intrinsics, max_radius: f32, sun_dir: Vec3, lum: Color, a: f32, b: f32, c: f32, d: f32, e: f32)  =
+    make_environment_light_function(math, max_radius, @|dir|{
+        let theta = -dir.y;                 // Cosine between zenith and direction
+        let sun_c = vec3_dot(dir, sun_dir); // Cosine between sun and direction
+        let sun_a = math.acosf(sun_c);      // Angle between sun and direction
+
+        let A      = if math.fabsf(theta) <= flt_eps { 1 } else { 1 + a * math.expf(b / theta) };
+        let B      = 1 + c * math.expf(d * sun_a) + e * sun_c * sun_c;
+        let factor = A * B;
+        color_mulf(lum, factor)
+});
+
 fn @make_camera_light(math: Intrinsics, camera: Camera, color: Color) = Light {
     sample_direct = @ |_, _| {
         let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
