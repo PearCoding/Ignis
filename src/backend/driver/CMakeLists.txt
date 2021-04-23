@@ -12,12 +12,6 @@ set(CAMERAS
     #"-D CAMERA_FISHEYE"
     "-D CAMERA_LIST")
 
-set(CAMERA_NAMES
-    "Perspective"
-    #"Orthogonal"
-    #"Fisheye"
-    "List")
-
 set(DEVICES
     "-D DEVICE_DEFAULT"
     #"-D DEVICE_AVX"
@@ -30,25 +24,29 @@ set(DEVICES
     #"-D DEVICE_AMD_MEGA"
     )
 
-set(DEVICE_NAMES
-    "Default"
-    #"AVX"
-    "AVX2"
-    "SSE42"
-    "ASIMD"
-    "NVVM"
-    #"NVVM_MEGA"
-    #"AMD"
-    #"AMD_MEGA"
-    )
-
 set(RENDERER
     "-D RENDERER_PATH"
     "-D RENDERER_DEBUG")
 
-set(RENDERER_NAMES
-    "Path"
-    "Debug")
+
+function(extract_name out_var in_var)
+    string(REGEX REPLACE "^([a-zA-Z]+_)(.+)$" "\\2" _t1 ${in_var})
+    string(TOLOWER ${_t1} _t2)
+    set(${out_var} ${_t2} PARENT_SCOPE)
+endfunction()
+
+function(var_to_name out_var variant)
+    string(REPLACE " " ";" _l1 "${variant}")
+    set(_names )
+    foreach(_var1 ${_l1})
+        if(NOT "${_var1}" STREQUAL "-D")
+            extract_name(_n1 ${_var1})
+            list(APPEND _names "${_n1}")
+        endif()
+    endforeach()
+    string(JOIN "_" _names2 ${_names})
+    set(${out_var} ${_names2} PARENT_SCOPE)
+endfunction()
 
 function(cross out_list list1 list2 sep)
     set(_list )
@@ -63,16 +61,12 @@ endfunction()
 cross(VARIANTS_1 CAMERAS DEVICES " ")
 cross(VARIANTS_2 VARIANTS_1 RENDERER " ")
 
-cross(VARIANT_NAMES_1 CAMERA_NAMES DEVICE_NAMES "_")
-cross(VARIANT_NAMES_2 VARIANT_NAMES_1 RENDERER_NAMES "_")
-
 set(VARIANTS ${VARIANTS_2})
-set(VARIANT_NAMES ${VARIANT_NAMES_2})
 
 set(_counter 0)
 set(_targets )
 foreach(var ${VARIANTS})
-    list(GET VARIANT_NAMES ${_counter} var_name)
+    var_to_name(var_name ${var})
     message(STATUS "${var_name} = ${var}")
     set(out_file "${CMAKE_CURRENT_BINARY_DIR}/main_${var_name}.art")
     separate_arguments(args UNIX_COMMAND ${var})
