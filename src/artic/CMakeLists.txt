@@ -10,6 +10,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/camera.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/cdf.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/data.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/disney.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/driver.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/entity.art
@@ -30,17 +31,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/stack.art
 )
 
-
-set(ARTIC_TEST_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/dummy_test.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_common.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_intersection.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_main.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_matrix.art
-)
-
 set(ARTIC_SRC ${ARTIC_SRC} PARENT_SCOPE)
-set(ARTIC_TEST_SRC ${ARTIC_TEST_SRC} PARENT_SCOPE)
 
 anydsl_runtime_wrap(DISCARD_TMP_OBJS
     NAME "interface"

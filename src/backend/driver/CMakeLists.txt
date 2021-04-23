@@ -89,7 +89,7 @@ foreach(var ${VARIANTS})
         CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
         ARTIC_FLAGS --log-level info --max-errors 5
         FILES ${ARTIC_SRC} ${out_file})
-    set(_target_name ignis_driver_${var_name})
+    set(_target_name ig_driver_${var_name})
     add_library(${_target_name} MODULE ${_objs})
     set_target_properties(${_target_name} PROPERTIES PREFIX "")
     list(APPEND _targets ${_target_name})

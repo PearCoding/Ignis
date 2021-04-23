@@ -1,24 +1,3 @@
-// Loaded raw scene
-struct Lookup {
-    type_id: i32, // Type ID depends on the actual dyntable usecase
-    offset:  i32  // Offset to start of the DynTable in bytes
-}
-
-// TODO: Prolly the mother of all cache misses :O
-struct DynTable {
-    count:  i32,
-    header: &[Lookup],
-    start:  &[u8]
-}
-
-struct SceneDatabase {
-    shapes:   DynTable,
-    entities: DynTable,
-    lights:   DynTable,
-    shaders:  DynTable, 
-    bvh:      &[u8]
-}
-
 // Compile-time scene data
 struct Scene {
     num_entities: i32,

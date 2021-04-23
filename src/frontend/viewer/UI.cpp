@@ -31,7 +31,7 @@ static int sWidth;
 static int sHeight;
 
 struct LuminanceInfo {
-	std::atomic<float> Min = Inf;
+	std::atomic<float> Min = FltInf;
 	std::atomic<float> Max = 0.0f;
 	float Avg			   = 0.0f;
 	float Est			   = 0.000001f;

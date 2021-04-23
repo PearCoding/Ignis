@@ -1,0 +1,30 @@
+struct LookupEntry {
+    type_id: u32, // Type ID depends on the actual dyntable usecase
+    offset:  u32  // Offset to start of the DynTable in bytes
+}
+
+// TODO: Prolly the mother of all cache misses :O
+struct DynTable {
+    count:  u64,            // Entry counts
+    header: &[LookupEntry], // Pointer to an array of lookup entries
+    size:   u64,            // Size in bytes of the buffer 'start' is pointing to
+    start:  &[u8]           // Pointer to an buffer of size 'size'
+}
+
+struct SceneDatabase {
+    shapes:   DynTable,
+    entities: DynTable,
+    lights:   DynTable,
+    shaders:  DynTable, 
+    bvh:      &[u8]
+}
+
+struct EntityData {
+    shape_id:   i32,
+    mat_id:     i32,
+    local_mat:  [f32 * 16],
+    global_mat: [f32 * 16],
+    norm_mat:   [f32 * 9],
+    _pad:       [f32 * 3]
+}
+

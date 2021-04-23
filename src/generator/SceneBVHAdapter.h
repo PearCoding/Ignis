@@ -169,13 +169,13 @@ private:
 			}
 
 			for (size_t j = count; j < N; ++j) {
-				nodes[i].bounds.e[0].e[j] = Inf;
-				nodes[i].bounds.e[2].e[j] = Inf;
-				nodes[i].bounds.e[4].e[j] = Inf;
+				nodes[i].bounds.e[0].e[j] = FltInf;
+				nodes[i].bounds.e[2].e[j] = FltInf;
+				nodes[i].bounds.e[4].e[j] = FltInf;
 
-				nodes[i].bounds.e[1].e[j] = -Inf;
-				nodes[i].bounds.e[3].e[j] = -Inf;
-				nodes[i].bounds.e[5].e[j] = -Inf;
+				nodes[i].bounds.e[1].e[j] = -FltInf;
+				nodes[i].bounds.e[3].e[j] = -FltInf;
+				nodes[i].bounds.e[5].e[j] = -FltInf;
 
 				nodes[i].child.e[j] = 0;
 			}
@@ -266,12 +266,12 @@ private:
 				nodes[i].bounds.e[9]	 = bbox2.max(1);
 				nodes[i].bounds.e[11]	 = bbox2.max(2);
 			} else {
-				nodes[i].bounds.e[6]  = Inf;
-				nodes[i].bounds.e[8]  = Inf;
-				nodes[i].bounds.e[10] = Inf;
-				nodes[i].bounds.e[7]  = -Inf;
-				nodes[i].bounds.e[9]  = -Inf;
-				nodes[i].bounds.e[11] = -Inf;
+				nodes[i].bounds.e[6]  = FltInf;
+				nodes[i].bounds.e[8]  = FltInf;
+				nodes[i].bounds.e[10] = FltInf;
+				nodes[i].bounds.e[7]  = -FltInf;
+				nodes[i].bounds.e[9]  = -FltInf;
+				nodes[i].bounds.e[11] = -FltInf;
 			}
 
 			return i;

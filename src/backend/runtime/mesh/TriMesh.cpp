@@ -50,7 +50,7 @@ void TriMesh::fixNormals()
 	bool fixed_normals = false;
 	for (auto& n : normals) {
 		float len2 = n.squaredNorm();
-		if (len2 <= Epsilon || std::isnan(len2)) {
+		if (len2 <= FltEps || std::isnan(len2)) {
 			fixed_normals = true;
 			n			  = Vector3f::UnitY();
 		} else
