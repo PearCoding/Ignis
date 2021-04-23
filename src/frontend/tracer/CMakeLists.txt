@@ -3,4 +3,5 @@ SET(CMD_FILES
     main.cpp )
 
 add_executable(ignis_trace ${CMD_FILES})
-target_link_libraries(ignis_trace PRIVATE ignis_scene)
+add_dependencies(ignis_trace ignis_drivers)
+target_link_libraries(ignis_trace PRIVATE ig_lib_runtime)

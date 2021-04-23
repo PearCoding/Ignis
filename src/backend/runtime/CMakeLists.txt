@@ -4,6 +4,7 @@ CPMFindPackage(
     GITHUB_REPOSITORY tinyobjloader/tinyobjloader
     GIT_TAG master
     DOWNLOAD_ONLY
+    EXCLUDE_FROM_ALL
 )
 
 CPMFindPackage(
@@ -11,6 +12,7 @@ CPMFindPackage(
     GITHUB_REPOSITORY Tencent/rapidjson
     GIT_TAG master
     DOWNLOAD_ONLY
+    EXCLUDE_FROM_ALL
 )
 
 ################################################################
@@ -47,7 +49,6 @@ set(SRC
 )
 
 add_library(ig_lib_runtime STATIC ${SRC} "${CMAKE_BINARY_DIR}/HW_Features.h")
-add_dependencies(ig_lib_runtime tinyobjloader ignis_drivers)
 target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen ${LZ4_LIBRARY} OpenImageIO::OpenImageIO)
 target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include)
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)

@@ -12,6 +12,10 @@ set(CAMERAS
     #"-D CAMERA_FISHEYE"
     "-D CAMERA_LIST")
 
+# It is more useful (and user friendly) to choose between cpu and gpu
+# Each of the two groups selects the respective best architecture (e.g., AVX2 for CPU and NVVM for GPU)
+# This would require a prepass to generate a list of targets to generate
+# Multi vendor multi GPU and CPU combinations would be bothersome, but who has this kind of configuration?
 set(DEVICES
     "-D DEVICE_DEFAULT"
     #"-D DEVICE_AVX"
