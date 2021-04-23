@@ -73,7 +73,7 @@ fn @make_fishlens_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f
             (xasp, yasp)
         },
         FisheyeAspectMode::Full => {
-            let diameter = host_sqrtf(asp * asp + 1) * h;
+            let diameter = cpu_intrinsics.sqrtf(asp * asp + 1) * h;
             let min_s	 = fmin(w, h);
             let f        = diameter / min_s;
             let xasp = if asp < 1 { f } else { f / asp };

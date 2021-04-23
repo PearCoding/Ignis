@@ -681,10 +681,4 @@ int64_t clock_us()
 #endif
 }
 
-// Some host related code
-float host_sqrtf(float a)
-{
-	return std::sqrt(a);
-}
-
 } // extern "C"
