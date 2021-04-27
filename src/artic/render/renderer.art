@@ -1,7 +1,7 @@
 struct PathTracer {
     on_emit:   RayEmitter,
     on_hit:    fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[Color],
-    on_nonhit: fn (Ray, &mut RayState) -> Option[Color],
+    on_miss: fn (Ray, &mut RayState) -> Option[Color],
     on_shadow: fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[(Ray, Color)],
     on_bounce: fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[(Ray, RayState)],
 }
@@ -68,7 +68,7 @@ fn @make_debug_renderer(emitter: RayEmitterFactory) -> Renderer {
                 let n = surf.local.col(2);
                 make_option(make_color(fabs(n.x), fabs(n.y), fabs(n.z)))
             },
-            on_nonhit = @ |_, _| Option[(Color)]::None,
+            on_miss   = @ |_, _| Option[(Color)]::None,
             on_shadow = @ |_, _, _, _, _| Option[(Ray, Color)]::None,
             on_bounce = @ |_, _, _, _, _| Option[(Ray, RayState)]::None,
         };
@@ -169,8 +169,8 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
             }
         }
 
-        fn @on_nonhit( ray: Ray
-                     , state: &mut RayState) {
+        fn @on_miss( ray: Ray
+                   , state: &mut RayState) {
             let mut inflights = 0;
             let mut color = make_color(0, 0, 0);
             let lights = scene.lights;
@@ -228,7 +228,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
         let path_tracer = PathTracer {
             on_emit   = on_emit,
             on_hit    = on_hit,
-            on_nonhit = on_nonhit,
+            on_miss   = on_miss,
             on_shadow = on_shadow,
             on_bounce = on_bounce
         };

@@ -7,6 +7,8 @@ struct PrimBvh {
     arity:    i32,              // Arity of the BVH (number of children per node)
 }
 
+type BVHTable = fn (i32) -> PrimBvh;
+
 // Top level BVH
 struct SceneBvh {
     node:     fn (i32) -> Node,       // Access to one node of the BVH

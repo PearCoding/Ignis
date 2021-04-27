@@ -59,3 +59,4 @@ fn @make_trimesh_shape(math: Intrinsics, tri_mesh: TriMesh, bvh: PrimBvh) = Shap
     bvh = bvh
 };
 
+type ShapeTable  = fn (i32) -> Shape;

@@ -11,20 +11,29 @@ struct DynTable {
     start:  &[u8]           // Pointer to an buffer of size 'size'
 }
 
+fn @get_lookup_entry(ind: u64, tbl: &DynTable) -> LookupEntry {
+    // TODO: Check boundaries
+    tbl.header(ind)
+}
+
+fn @get_table_entry[T](off: u64, tbl: &DynTable) -> &T {
+    // TODO: Check boundaries
+    (&tbl.start(off)) as &T
+}
+
 struct SceneDatabase {
     shapes:   DynTable,
     entities: DynTable,
     lights:   DynTable,
-    shaders:  DynTable, 
-    bvh:      &[u8]
+    shaders:  DynTable,
+    bvhs:     DynTable
 }
 
-struct EntityData {
-    shape_id:   i32,
-    mat_id:     i32,
-    local_mat:  [f32 * 16],
-    global_mat: [f32 * 16],
-    norm_mat:   [f32 * 9],
-    _pad:       [f32 * 3]
+struct SceneAccessor {
+    shapes:   ShapeTable, // Defined in shape.art
+    entities: EntityTable,// Defined in entity.art
+    lights:   LightTable, // Defined in light.art
+    shaders:  ShaderTable,// Defined in material.art
+    bvhs:     BVHTable    // Defined in intersection.art
 }
 

@@ -1,35 +1,7 @@
 // Dummy file used to generate a C interface for the renderer
 
-struct InitialSettings {
-    eye:         Vec3,
-    dir:         Vec3,
-    up:          Vec3,
-    fov:         f32,
-    film_width:  i32,
-    film_height: i32
-}
-
-struct Settings {
-    eye:    Vec3,
-    dir:    Vec3,
-    up:     Vec3,
-    right:  Vec3,
-    width:  f32,
-    height: f32,
-    ray_count: i32,
-    rays: &[Ray]
-}
-
-#[export] fn get_spp() -> i32 { 1 }
-#[export] fn get_default_settings() = InitialSettings {
-    eye         = make_vec3(0, 0, 0),
-    dir         = make_vec3(0, 0, -1),
-    up          = make_vec3(0, 1, 0),
-    fov         = 60,
-    film_width  = 400,
-    film_height = 400
-};
-#[export] fn render(_settings: &Settings, _iter: i32) -> () {
+#[export]
+fn _dummy() -> () {
     // Force the export of the primary and secondary stream types
     let mut primary : PrimaryStream;
     let mut secondary : SecondaryStream;

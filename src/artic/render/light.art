@@ -361,3 +361,5 @@ fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, co
     };
     make_area_light(math, emitter, color)
 }
+
+type LightTable  = fn (i32) -> Light;

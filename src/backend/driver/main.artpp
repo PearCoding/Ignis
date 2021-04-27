@@ -116,7 +116,7 @@ fn render(settings: &Settings, iter: i32) -> () {
     );
 #endif
 
-    let database = device.load_scene_database();
+    let database = device.load_scene();
     let scene    = Scene {
         database = database,
         camera   = camera

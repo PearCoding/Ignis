@@ -477,3 +477,5 @@ fn @make_bumpmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (Surfa
         is_specular = bsdf.is_specular
     }
 }
+
+type ShaderTable = fn (i32) -> Shader;

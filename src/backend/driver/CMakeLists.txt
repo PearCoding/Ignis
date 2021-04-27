@@ -10,7 +10,8 @@ set(CAMERAS
     "-D CAMERA_PERSPECTIVE"
     #"-D CAMERA_ORTHOGONAL"
     #"-D CAMERA_FISHEYE"
-    "-D CAMERA_LIST")
+    #"-D CAMERA_LIST"
+)
 
 # It is more useful (and user friendly) to choose between cpu and gpu
 # Each of the two groups selects the respective best architecture (e.g., AVX2 for CPU and NVVM for GPU)
@@ -26,12 +27,14 @@ set(DEVICES
     #"-D DEVICE_NVVM_MEGA"
     #"-D DEVICE_AMD"
     #"-D DEVICE_AMD_MEGA"
-    )
+)
 
 set(RENDERER
-    "-D RENDERER_PATH"
-    "-D RENDERER_DEBUG")
+    #"-D RENDERER_PATH"
+    "-D RENDERER_DEBUG"
+)
 
+#############################################
 
 function(extract_name out_var in_var)
     string(REGEX REPLACE "^([a-zA-Z]+_)(.+)$" "\\2" _t1 ${in_var})
