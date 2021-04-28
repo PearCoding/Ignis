@@ -18,11 +18,11 @@ set(CAMERAS
 # This would require a prepass to generate a list of targets to generate
 # Multi vendor multi GPU and CPU combinations would be bothersome, but who has this kind of configuration?
 set(DEVICES
-    "-D DEVICE_DEFAULT"
+    #"-D DEVICE_DEFAULT"
     #"-D DEVICE_AVX"
-    "-D DEVICE_AVX2"
-    "-D DEVICE_SSE42"
-    "-D DEVICE_ASIMD"
+    #"-D DEVICE_AVX2"
+    #"-D DEVICE_SSE42"
+    #"-D DEVICE_ASIMD"
     "-D DEVICE_NVVM"
     #"-D DEVICE_NVVM_MEGA"
     #"-D DEVICE_AMD"

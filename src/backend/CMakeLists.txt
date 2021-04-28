@@ -1,5 +1,2 @@
 add_subdirectory(driver)
 add_subdirectory(runtime)
-add_subdirectory(serialization)
-add_subdirectory(skysun)
-add_subdirectory(klems)

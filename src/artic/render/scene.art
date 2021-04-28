@@ -1,7 +1,8 @@
 // Compile-time scene data
 struct Scene {
     database: SceneAccessor,
-    camera:   Camera
+    camera:   Camera,
+    bvh:      SceneBvh
 }
 
 // Rendering device

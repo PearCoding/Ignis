@@ -326,7 +326,7 @@ bool generate(const std::filesystem::path& filepath, const GeneratorOptions& opt
 	IG_LOG(L_INFO) << "Converting JSON file " << filepath << "" << std::endl;
 
 	try {
-		SceneLoader loader;
+		SceneParser loader;
 		loader.addArgument("SPP", std::to_string(options.spp));
 		loader.addArgument("MAX_PATH_LENGTH", std::to_string(options.max_path_length));
 
