@@ -363,3 +363,9 @@ fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, co
 }
 
 type LightTable  = fn (i32) -> Light;
+
+fn @make_light_table(math: Intrinsics, dtb: &DynTable) -> LightTable {
+    @ |_id| {
+        make_environment_light(math, 0, make_color(1,1,1))
+    } 
+}

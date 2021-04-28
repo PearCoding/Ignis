@@ -73,7 +73,7 @@ fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], is_nvvm: bool) -> PrimBvh
 
 // Special intersections
 
-fn @make_gpu_bvh2_bbox(nodes: &[Node2], objs: &[TaggedBBox1], is_nvvm: bool) -> SceneBvh {
+fn @make_gpu_bvh2_ent(nodes: &[Node2], objs: &[EntityLeaf1], is_nvvm: bool) -> SceneBvh {
     // Use texture cache when generating code with NVVM
     let load4_f32 = @ |p: &addrspace(1)[simd[f32 * 4]], i: i32| if is_nvvm { nvvm_ldg4_f32(&p(i)) } else { p(i) };
     let load4_i32 = @ |p: &addrspace(1)[simd[i32 * 4]], i: i32| if is_nvvm { nvvm_ldg4_i32(&p(i)) } else { p(i) };
@@ -100,13 +100,22 @@ fn @make_gpu_bvh2_bbox(nodes: &[Node2], objs: &[TaggedBBox1], is_nvvm: bool) -> 
                 child = @ |i| children(i)
             }
         },
-        bbox = @ |j| {
+        ent = @ |j| {
             let simd_ptr = &objs(j) as &addrspace(1)[simd[f32 * 4]];
             let min = load4_f32(simd_ptr, 0);
             // min(3) is padding
             let max = load4_f32(simd_ptr, 1);
-            let tag = bitcast[i32](max(3));
-            make_tagged_bbox(make_vec3(min(0), min(1), min(2)), make_vec3(max(0), max(1), max(2)), tag)
+            // max(3) is padding
+            let c0 = load4_f32(simd_ptr, 2);
+            let c1 = load4_f32(simd_ptr, 3);
+            let c2 = load4_f32(simd_ptr, 4);
+            let c3 = load4_f32(simd_ptr, 5);
+            make_entity_leaf(
+                make_vec3(min(0), min(1), min(2)), make_vec3(max(0), max(1), max(2)), 
+                make_mat4x4(make_vec4(c0(0),c0(1),c0(2),c0(3)),
+                            make_vec4(c1(0),c1(1),c1(2),c1(3)),
+                            make_vec4(c2(0),c2(1),c2(2),c2(3)),
+                            make_vec4(c3(0),c3(1),c3(2),c3(3))))
         },
         prefetch = @ |_| (), // Not implemented
         arity = 2
@@ -317,22 +326,21 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
 
         while is_leaf(stack.top()) {
             let leaf_ref      = stack.pop();
-            let mut bbox_id   = !leaf_ref.node;
+            let mut ref_id   = !leaf_ref.node;
             while true {
-                let tagbbox = bvh.bbox(bbox_id++);
+                let leaf = bvh.ent(ref_id++);
 
-                if let Option[(f32,f32)]::Some((t,_)) = intersect_ray_tagged_box(min_max, ray, tagbbox) {
+                if let Option[(f32,f32)]::Some((t,_)) = intersect_ray_box(min_max, false, ray, leaf.bbox) {
                     if t <= hit.distance {
-                        let entity_id       = tagbbox.tag & 0x7FFFFFFF;
-                        let shape           = scene.shapes(scene.entities.shape(entity_id));
-                        let (local_ray, sf) = transform_ray(gpu_intrinsics, ray, scene.entities.local_mat4x4(entity_id));
+                        let shape           = scene.database.shapes(leaf.shape_id);
+                        let (local_ray, sf) = transform_ray(gpu_intrinsics, ray, leaf.local);
                         let local_hit       = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape.bvh, any_hit, 1);
 
                         if local_hit.prim_id >= 0 {
                             let glb_dist = local_hit.distance / sf;
 
                             if glb_dist >= t && glb_dist <= hit.distance {
-                                hit      = make_hit(entity_id, local_hit.prim_id, glb_dist, local_hit.uv_coords);
+                                hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, glb_dist, local_hit.uv_coords);
                                 ray.tmax = glb_dist;
 
                                 // Early exit mode
@@ -342,7 +350,7 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
                     }
                 }
 
-                if tagbbox.tag < 0 { break() }
+                if leaf.entity_id < 0 { break() }
             }
         }
     }

@@ -70,7 +70,6 @@ cross(VARIANTS_2 VARIANTS_1 RENDERER " ")
 
 set(VARIANTS ${VARIANTS_2})
 
-set(_counter 0)
 set(_targets )
 foreach(var ${VARIANTS})
     var_to_name(var_name ${var})
@@ -89,12 +88,13 @@ foreach(var ${VARIANTS})
         FRONTEND "artic"
         CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
         ARTIC_FLAGS --log-level info --max-errors 5
+        INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/driver_interface
         FILES ${ARTIC_SRC} ${out_file})
     set(_target_name ig_driver_${var_name})
-    add_library(${_target_name} MODULE ${_objs})
+    add_library(${_target_name} MODULE ${_objs} Interface.cpp Interface.h ${CMAKE_CURRENT_BINARY_DIR}/driver_interface.h)
     set_target_properties(${_target_name} PROPERTIES PREFIX "")
+    target_compile_definitions(${_target_name} PRIVATE ${args})
     list(APPEND _targets ${_target_name})
-    math(EXPR _counter "${_counter}+1")
 endforeach()
 
 add_custom_target(ignis_drivers)

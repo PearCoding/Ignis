@@ -9,10 +9,16 @@ struct PrimBvh {
 
 type BVHTable = fn (i32) -> PrimBvh;
 
+fn @make_bvh_table(dtb: &DynTable) -> BVHTable {
+    @|id| {
+        
+    }
+}
+
 // Top level BVH
 struct SceneBvh {
     node:     fn (i32) -> Node,       // Access to one node of the BVH
-    bbox:     fn (i32) -> TaggedBBox, // Access to one TaggedBBox
+    ent:      fn (i32) -> EntityLeaf, // Access to one EntityLeaf
     prefetch: fn (i32) -> (),         // Prefetches a leaf or inner node
     arity:    i32,                    // Arity of the BVH (number of children per node)
 }
@@ -60,18 +66,20 @@ struct BBox {
     max: Vec3          // Maximum corner
 }
 
-struct TaggedBBox {
-    min: Vec3,    // Minimum corner
-    max: Vec3,    // Maximum corner
-    tag: i32      // Identifier pointing to a entity
+struct EntityLeaf {
+    bbox      : BBox,   // Bounding box
+    entity_id : i32, // Entity ID
+    shape_id  : i32, // Shape ID
+    local     : Mat4x4 // Matrix to local system
 }
 
 // Used as storage
-struct TaggedBBox1 {
-    min: [f32 * 3], // Minimum corner
-    pad0: i32,      // Padding
-    max: [f32 * 3], // Maximum corner
-    tag: i32        // Identifier pointing to a entity
+struct EntityLeaf1 {
+    min       : [f32 * 3], // Minimum corner
+    entity_id : i32,       // Entity ID
+    max       : [f32 * 3], // Maximum corner
+    shape_id  : i32,       // Shape/BVH ID
+    local     : Mat4x4     // Matrix to local system
 }
 
 // Min/max functions required to perform the ray-box test
@@ -153,10 +161,11 @@ fn @make_bbox(min: Vec3, max: Vec3) = BBox {
     max = max
 };
 
-fn @make_tagged_bbox(min: Vec3, max: Vec3, tag: i32) = TaggedBBox {
-    min  = min,
-    max  = max,
-    tag  = tag
+fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, local: Mat4x4) = EntityLeaf {
+    bbox      = bbox,
+    entity_id = entity_id,
+    shape_id  = shape_id,
+    local     = local
 };
 
 fn @is_bbox_empty(bbox: BBox) = bbox.max.x < bbox.min.x || bbox.max.y < bbox.min.y || bbox.max.z < bbox.min.z;
@@ -244,5 +253,3 @@ fn @intersect_ray_box_single(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBo
         Option[(f32,f32)]::None
     }
 }
-
-fn @intersect_ray_tagged_box(min_max: MinMax, ray: Ray, bbox: TaggedBBox) = intersect_ray_box_single(min_max, false, ray, make_bbox(bbox.min, bbox.max));

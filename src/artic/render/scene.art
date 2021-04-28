@@ -1,5 +1,9 @@
 // Compile-time scene data
 struct Scene {
+    num_entities: i32,
+    num_shapes:   i32,
+    num_lights:   i32,
+    
     database: SceneAccessor,
     camera:   Camera,
     bvh:      SceneBvh

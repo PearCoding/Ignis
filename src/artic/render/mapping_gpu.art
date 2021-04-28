@@ -618,17 +618,17 @@ fn @make_gpu_device( dev_id: i32
 
 fn @make_nvvm_device(dev: i32, streaming: bool) -> Device {
     let dev_id = runtime_device(1, dev);
-    let load_tri_bvh = @ |filename: &[u8]| {
+    let load_tri_bvh = @ |id: i32| {
         let mut nodes: &[Node2];
         let mut tris: &[Tri1];
-        ignis_load_bvh2_tri1(dev_id, filename, &mut nodes, &mut tris);
+        ignis_load_bvh2_tri1(dev_id, id, &mut nodes, &mut tris);
         make_gpu_bvh2_tri1(nodes, tris, true)
     };
-    let load_scene_bvh = @ |filename: &[u8]| {
+    let load_scene_bvh = @ || {
         let mut nodes: &[Node2];
-        let mut objs: &[TaggedBBox1];
-        ignis_load_bvh2_bbox(dev_id, filename, &mut nodes, &mut objs);
-        make_gpu_bvh2_bbox(nodes, objs, true)
+        let mut objs: &[EntityLeaf1];
+        ignis_load_bvh2_ent(dev_id, &mut nodes, &mut objs);
+        make_gpu_bvh2_ent(nodes, objs, true)
     };
     let pixel_entry = @ |p: &[f32], i: i32| nvvm_ldg_f32(&(p as &addrspace(1)[f32])(i));
     let read_pixel = @ |p: &[f32], i: i32| make_color(pixel_entry(p,4*i+0), pixel_entry(p,4*i+1), pixel_entry(p,4*i+2));
@@ -697,17 +697,17 @@ fn @make_nvvm_device(dev: i32, streaming: bool) -> Device {
 
 fn @make_amdgpu_device(dev: i32, streaming: bool) -> Device {
     let dev_id = runtime_device(3, dev);
-    let load_tri_bvh = @ |filename: &[u8]| {
+    let load_tri_bvh = @ |id : i32| {
         let mut nodes: &[Node2];
         let mut tris: &[Tri1];
-        ignis_load_bvh2_tri1(dev_id, filename, &mut nodes, &mut tris);
+        ignis_load_bvh2_tri1(dev_id, id, &mut nodes, &mut tris);
         make_gpu_bvh2_tri1(nodes, tris, false)
     };
-    let load_scene_bvh = @ |filename: &[u8]| {
+    let load_scene_bvh = @ || {
         let mut nodes: &[Node2];
-        let mut objs: &[TaggedBBox1];
-        ignis_load_bvh2_bbox(dev_id, filename, &mut nodes, &mut objs);
-        make_gpu_bvh2_bbox(nodes, objs, false)
+        let mut objs: &[EntityLeaf1];
+        ignis_load_bvh2_ent(dev_id, &mut nodes, &mut objs);
+        make_gpu_bvh2_ent(nodes, objs, false)
     };
     let pixel_entry = @ |p: &[f32], i: i32| p(i);
     let read_pixel = @ |p: &[f32], i: i32| make_color(pixel_entry(p,4*i+0), pixel_entry(p,4*i+1), pixel_entry(p,4*i+2));

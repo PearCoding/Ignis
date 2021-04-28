@@ -12,7 +12,7 @@ fn _dummy() -> () {
     let (mut node2 : &[Node2], mut tri1 : &[Tri1]);
     let (mut node4 : &[Node4], mut tri4 : &[Tri4]);
     let  mut node8 : &[Node8];
-    let  mut tagged_bbox : &[TaggedBBox1];
+    let  mut tagged_bbox : &[EntityLeaf1];
     
     ignis_load_bvh2_tri1(0, "", &mut node2, &mut tri1);
     ignis_load_bvh4_tri4(0, "", &mut node4, &mut tri4);

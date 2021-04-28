@@ -62,7 +62,7 @@ struct LeafWriterBBox1 {
 			const int id	   = refs(i);
 			const auto& in_obj = in_objs[id];
 
-			objs.emplace_back(TaggedBBox1{
+			objs.emplace_back(EntityLeaf1{
 				{ in_obj.min(0), in_obj.min(1), in_obj.min(2) },
 				0,
 				{ in_obj.max(0), in_obj.max(1), in_obj.max(2) },
@@ -109,7 +109,7 @@ class BvhNBboxAdapter {
 	using BvhBuilder = BasicBvhBuilder<BoundingBox, N, CostFn>;
 	using Adapter	 = BvhNBboxAdapter;
 	using Node		 = typename BvhNBbox<N>::Node;
-	using Obj		 = TaggedBBox1;
+	using Obj		 = EntityLeaf1;
 
 	friend class LeafWriterBBox1<Adapter>;
 
@@ -201,7 +201,7 @@ class BvhNBboxAdapter<2> {
 	using BvhBuilder = BasicBvhBuilder<BoundingBox, 2, CostFn>;
 	using Adapter	 = BvhNBboxAdapter;
 	using Node		 = typename BvhNBbox<2>::Node;
-	using Obj		 = TaggedBBox1;
+	using Obj		 = EntityLeaf1;
 
 	friend class LeafWriterBBox1<Adapter>;
 
@@ -281,7 +281,7 @@ private:
 
 template <size_t N>
 inline void build_scene_bvh(std::vector<typename BvhNBbox<N>::Node>& nodes,
-							std::vector<TaggedBBox1>& objs,
+							std::vector<EntityLeaf1>& objs,
 							std::vector<BoundingBox>& boundingBoxes)
 {
 	BvhNBboxAdapter<N> adapter(nodes, objs);

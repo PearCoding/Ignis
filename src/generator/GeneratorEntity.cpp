@@ -75,17 +75,17 @@ void GeneratorEntity::setup(GeneratorContext& ctx)
 		IO::remove_bvh("");
 		if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
 			std::vector<typename BvhNBbox<2>::Node> nodes;
-			std::vector<TaggedBBox1> objs;
+			std::vector<EntityLeaf1> objs;
 			build_scene_bvh<2>(nodes, objs, boundingBoxes);
 			IO::write_bvh("", nodes, objs);
 		} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
 			std::vector<typename BvhNBbox<4>::Node> nodes;
-			std::vector<TaggedBBox1> objs;
+			std::vector<EntityLeaf1> objs;
 			build_scene_bvh<4>(nodes, objs, boundingBoxes);
 			IO::write_bvh("", nodes, objs);
 		} else {
 			std::vector<typename BvhNBbox<8>::Node> nodes;
-			std::vector<TaggedBBox1> objs;
+			std::vector<EntityLeaf1> objs;
 			build_scene_bvh<8>(nodes, objs, boundingBoxes);
 			IO::write_bvh("", nodes, objs);
 		}

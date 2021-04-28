@@ -264,6 +264,7 @@ fn @cpu_traverse_secondary(scene: Scene, min_max: MinMax, secondary: &SecondaryS
 }
 
 fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, scene: Scene, path_tracer: PathTracer, accumulate: fn (i32, Color) -> (), begin: i32, end: i32, vector_width: i32) -> () {
+    let entity = scene.database.entities(entity_id);
     fn cpu_shade_specialized(primary: &PrimaryStream, secondary: &SecondaryStream, begin: i32, end: i32) -> () {
         let read_primary_ray    = make_ray_stream_reader(primary.rays, 1);
         let read_primary_hit    = make_primary_stream_hit_reader(*primary, 1);
@@ -278,12 +279,12 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
             let mut state = read_primary_state(i, 0);
             let ray_id    = primary.rays.id(i);
 
-            let (local_ray, _) = transform_ray(cpu_intrinsics, ray, scene.entities.local_mat4x4(entity_id));
+            let (local_ray, _) = transform_ray(cpu_intrinsics, ray, entity.local_mat);
 
-            let shp      = scene.shapes(scene.entities.shape(entity_id));
+            let shp      = scene.database.shapes(entity.shape_id);
             let lcl_surf = shp.surface_element(local_ray, hit);
-            let glb_surf = map_surface_element(cpu_intrinsics, lcl_surf, scene.entities.global_mat4x4(entity_id), scene.entities.normal_mat3x3(entity_id));
-            let mat      = scene.entities.shader(entity_id)(ray, hit, glb_surf);
+            let glb_surf = map_surface_element(cpu_intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
+            let mat      = scene.database.shaders(entity.mat_id)(ray, hit, glb_surf);
 
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
             let on_hit = path_tracer.on_hit;
@@ -465,7 +466,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         )
     },
     present = @ || ignis_present(0),
-    load_buffer = @ |filename| {
+    /*load_buffer = @ |filename| {
         let p = ignis_load_buffer(0, filename);
         DeviceBuffer {
             load_f32    = @ |i| (p as &[f32])(i),
@@ -486,30 +487,30 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             }
         }
     },
-    load_tri_bvh = @ |filename| {
+    load_tri_bvh = @ |id| {
         if vector_width == 8 {
             let mut nodes: &[Node8];
             let mut tris: &[Tri4];
-            ignis_load_bvh8_tri4(0, filename, &mut nodes, &mut tris);
+            ignis_load_bvh8_tri4(0, id, &mut nodes, &mut tris);
             make_cpu_bvh8_tri4(nodes, tris)
         } else {
             let mut nodes: &[Node4];
             let mut tris: &[Tri4];
-            ignis_load_bvh4_tri4(0, filename, &mut nodes, &mut tris);
+            ignis_load_bvh4_tri4(0, id, &mut nodes, &mut tris);
             make_cpu_bvh4_tri4(nodes, tris)
         }
     },
-    load_scene_bvh = @ |filename| {
+    load_scene_bvh = @ || {
         if vector_width == 8 {
             let mut nodes: &[Node8];
-            let mut objs: &[TaggedBBox1];
-            ignis_load_bvh8_bbox(0, filename, &mut nodes, &mut objs);
-            make_cpu_bvh8_bbox(nodes, objs)
+            let mut objs: &[EntityLeaf1];
+            ignis_load_bvh8_ent(0, &mut nodes, &mut objs);
+            make_cpu_bvh8_ent(nodes, objs)
         } else {
             let mut nodes: &[Node4];
-            let mut objs: &[TaggedBBox1];
-            ignis_load_bvh4_bbox(0, filename, &mut nodes, &mut objs);
-            make_cpu_bvh4_bbox(nodes, objs)
+            let mut objs: &[EntityLeaf1];
+            ignis_load_bvh4_ent(0, &mut nodes, &mut objs);
+            make_cpu_bvh4_ent(nodes, objs)
         }
     },
     load_image = @ |filename| {
@@ -536,6 +537,11 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     },
     load_rays = @ |count: i32, rays: &[Ray]| {
         ignis_load_rays(0, count, rays)
+    }*/
+    load_scene = @|| {
+        let mut database : SceneDatabase;
+        ignis_load_scene(0, &mut database);
+        make_scene_accessor(cpu_intrinsics, database)
     }
 };
 

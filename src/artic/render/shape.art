@@ -1,16 +1,15 @@
 // Abstract geometry object (tied to one device)
 struct Shape {
     // Computes the surface element after an intersection on this geometry
-    surface_element: fn (Ray, Hit) -> SurfaceElement,
-    bvh: PrimBvh
+    surface_element: fn (Ray, Hit) -> SurfaceElement
 }
 
 struct TriShape {
-    data: &[u8],
     num_face: i32,
     num_verts: i32,
     num_norms: i32,
-    num_attrs: i32
+    num_attrs: i32,
+    data: &[u8]
 }
 
 // Triangle mesh with per-vertex/per-face attributes
@@ -26,7 +25,7 @@ struct TriMesh {
 }
 
 // Creates a geometry object from a triangle mesh definition
-fn @make_trimesh_shape(math: Intrinsics, tri_mesh: TriMesh, bvh: PrimBvh) = Shape {
+fn @make_trimesh_shape(math: Intrinsics, tri_mesh: TriMesh) = Shape {
     surface_element = @ |local_ray, hit| {
         let (i0, i1, i2) = tri_mesh.triangles(hit.prim_id);
 
@@ -55,8 +54,28 @@ fn @make_trimesh_shape(math: Intrinsics, tri_mesh: TriMesh, bvh: PrimBvh) = Shap
             local =       make_orthonormal_mat3x3(if vec3_dot(local_ray.dir, normal) <= 0 { normal } else { vec3_neg(normal) }),
             attr =        attr
         }
-    },
-    bvh = bvh
+    }
 };
 
 type ShapeTable  = fn (i32) -> Shape;
+
+fn @make_shape_table(math: Intrinsics, dtb: &DynTable) -> ShapeTable {
+    @ |id| {
+        let entry = get_lookup_entry(id as u64, dtb);
+        // Type is TriMesh for currently.
+        let data  = get_table_entry[TriShape](entry.offset as u64, dtb);
+        
+        let trimesh = TriMesh { // TODO: This is actually device specific!
+            vertices     = |_i:i32| make_vec3(0,0,0),
+            normals      = |_i:i32| make_vec3(0,0,1),
+            face_normals = |_i:i32| make_vec3(0,0,1),
+            face_area    = |_i:i32| 0,
+            triangles    = |_i:i32| (0, 1, 2),
+            attrs        = |_attr:i32| (false, |_i:i32| make_vec4(0,0,0,0)),
+            num_attrs    = data.num_attrs,
+            num_tris     = data.num_face
+        };
+
+        make_trimesh_shape(math, trimesh)
+    } 
+}

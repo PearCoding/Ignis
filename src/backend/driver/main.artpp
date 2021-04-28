@@ -44,13 +44,6 @@ struct Settings {
     device: i32
 }
 
-#[export] 
-#if CAMERA_LIST
-fn get_spp() = 1:i32;
-#else
-fn get_spp() = 4:i32;
-#endif
-
 #[export]
 fn render(settings: &Settings, iter: i32) -> () {
 // Setup device

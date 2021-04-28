@@ -119,18 +119,20 @@ fn @make_cpu_bvh8_tri4(nodes: &[Node8], tris: &[Tri4]) = PrimBvh {
 
 // Special bbox intersectors
 
-fn @make_cpu_tagged_bbox(j: i32, objs: &[TaggedBBox1]) -> TaggedBBox {
+fn @make_cpu_entity_leaf(j: i32, objs: &[EntityLeaf1]) -> EntityLeaf {
     let obj = objs(j);
-    make_tagged_bbox(
-        make_vec3(obj.min(0), obj.min(1), obj.min(2)),
-        make_vec3(obj.max(0), obj.max(1), obj.max(2)),
-        obj.tag
+    make_entity_leaf(
+        make_bbox(make_vec3(obj.min(0), obj.min(1), obj.min(2)),
+                  make_vec3(obj.max(0), obj.max(1), obj.max(2))),
+        obj.entity_id,
+        obj.shape_id,
+        obj.local
     )
 }
 
-fn @make_cpu_bvh4_bbox(nodes: &[Node4], objs: &[TaggedBBox1]) = SceneBvh {
+fn @make_cpu_bvh4_ent(nodes: &[Node4], objs: &[EntityLeaf1]) = SceneBvh {
     node = @ |j| make_cpu_node4(j, nodes),
-    bbox = @ |j| make_cpu_tagged_bbox(j, objs),
+    ent  = @ |j| make_cpu_entity_leaf(j, objs),
     prefetch = @ |id| {
         let ptr = select(id < 0, &objs(!id) as &[u8], &nodes(id - 1) as &[u8]);
         cpu_prefetch_bytes(ptr, 128)
@@ -138,9 +140,9 @@ fn @make_cpu_bvh4_bbox(nodes: &[Node4], objs: &[TaggedBBox1]) = SceneBvh {
     arity = 4
 };
 
-fn @make_cpu_bvh8_bbox(nodes: &[Node8], objs: &[TaggedBBox1]) = SceneBvh {
+fn @make_cpu_bvh8_ent(nodes: &[Node8], objs: &[EntityLeaf1]) = SceneBvh {
     node = @ |j| make_cpu_node8(j, nodes),
-    bbox = @ |j| make_cpu_tagged_bbox(j, objs),
+    ent  = @ |j| make_cpu_entity_leaf(j, objs),
     prefetch = @ |id| {
         let ptr = select(id < 0, &objs(!id) as &[u8], &nodes(id - 1) as &[u8]);
         cpu_prefetch_bytes(ptr, 256)
@@ -370,23 +372,29 @@ fn cpu_traverse_single_helper( mut ray: Ray
             if any_hit && unlikely(stack.is_empty()) { exit() }
 
             // Intersect leaves here
-            let ent_id          = !stack.pop().node;
-            let shape           = scene.shapes(scene.entities.shape(ent_id));
-            let (local_ray, sf) = transform_ray(cpu_intrinsics, ray, scene.entities.local_mat4x4(ent_id));
-            let local_hit       = cpu_traverse_single_helper_prim(local_ray, ray_octant(local_ray), min_max, shape.bvh, any_hit, 1/*root*/);
+            let leaf_ref   = stack.pop();
+            let mut ref_id = !leaf_ref.node;
+            while true {
+                let leaf            = bvh.ent(ref_id++);
+                let shape           = scene.database.shapes(leaf.shape_id);
+                let (local_ray, sf) = transform_ray(cpu_intrinsics, ray, leaf.local);
+                let local_hit       = cpu_traverse_single_helper_prim(local_ray, ray_octant(local_ray), min_max, shape.bvh, any_hit, 1/*root*/);
 
-            if local_hit.prim_id != -1 {
-                let glb_dist = local_hit.distance / sf;
+                if local_hit.prim_id != -1 {
+                    let glb_dist = local_hit.distance / sf;
 
-                if glb_dist <= hit.distance {
-                    hit           = local_hit;
-                    hit.distance  = glb_dist;
-                    hit.ent_id    = ent_id;
-                    ray.tmax      = hit.distance;
+                    if glb_dist <= hit.distance {
+                        hit           = local_hit;
+                        hit.distance  = glb_dist;
+                        hit.ent_id    = leaf.entity_id & 0x7FFFFFFF;
+                        ray.tmax      = hit.distance;
 
-                    // Early exit mode
-                    if any_hit { exit() }
+                        // Early exit mode
+                        if any_hit { exit() }
+                    }
                 }
+
+                if leaf.entity_id < 0 { break() }
             }
         }
     }
@@ -624,11 +632,13 @@ fn cpu_traverse_hybrid_helper( mut ray: Ray
         }
 
         if unlikely(is_leaf(stack.top())) {
-            let active = (stack.top().tmin <= ray.tmax) & !terminated;
-            if active {
-                let ent_id          = !stack.pop().node;
-                let shape           = scene.shapes(scene.entities.shape(ent_id));
-                let (local_ray, sf) = transform_ray(cpu_intrinsics, ray, scene.entities.local_mat4x4(ent_id));
+            let active     = (stack.top().tmin <= ray.tmax) & !terminated;
+            let leaf_ref   = stack.pop();
+            let mut ref_id = !leaf_ref.node;
+            while active {
+                let leaf            = bvh.ent(ref_id++);
+                let shape           = scene.database.shapes(leaf.shape_id);
+                let (local_ray, sf) = transform_ray(cpu_intrinsics, ray, leaf.local);
                 let local_hit       = cpu_traverse_hybrid_helper_prim(local_ray, vector_width, min_max, shape.bvh, single, any_hit, 1/*root*/);
 
                 if local_hit.prim_id != -1 {
@@ -637,13 +647,15 @@ fn cpu_traverse_hybrid_helper( mut ray: Ray
                     if glb_dist <= hit.distance {
                         hit           = local_hit;
                         hit.distance  = glb_dist;
-                        hit.ent_id    = ent_id;
+                        hit.ent_id    = leaf.entity_id & 0x7FFFFFFF;
                         ray.tmax      = hit.distance;
 
                         // Early exit mode
                         if any_hit { exit() }
                     }
                 }
+
+                if leaf.entity_id < 0 { break() }
             }
         }
     }
