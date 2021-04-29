@@ -5,7 +5,6 @@ struct Scene {
     num_lights:   i32,
     
     database: SceneAccessor,
-    camera:   Camera,
     bvh:      SceneBvh
 }
 
@@ -28,11 +27,11 @@ struct Device {
 
     load_scene_bvh:      fn () -> SceneBvh,
     load_scene_database: fn () -> SceneDatabase,
-    load_entity_table:   fn (&DynTable) -> EntityTable,
-    load_shape_table:    fn (&DynTable) -> ShapeTable,
-    load_light_table:    fn (&DynTable) -> LightTable,
-    load_shader_table:   fn (&DynTable) -> ShaderTable,
-    load_bvh_table:      fn (&DynTable) -> BVHTable
+    load_entity_table:   fn (DynTable) -> EntityTable,
+    load_shape_table:    fn (DynTable) -> ShapeTable,
+    load_light_table:    fn (DynTable) -> LightTable,
+    load_shader_table:   fn (DynTable) -> ShaderTable,
+    load_bvh_table:      fn (DynTable) -> BVHTable
 }
 
 struct DeviceBuffer {

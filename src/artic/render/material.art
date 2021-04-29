@@ -480,7 +480,7 @@ fn @make_bumpmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (Surfa
 
 type ShaderTable = fn (i32) -> Shader;
 
-fn @make_shader_table(math: Intrinsics, dtb: &DynTable) -> ShaderTable {
+fn @make_shader_table(math: Intrinsics, dtb: DynTable) -> ShaderTable {
     |_id| {
         @|_ray, _hit, surf| make_material(make_diffuse_bsdf(math, surf, make_color(0.8, 0.8, 0.8)))
     } 

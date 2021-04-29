@@ -25,8 +25,8 @@ fn @make_ray_state(rnd: RndState, contrib: Color, mis: f32, depth: i32) -> RaySt
     }
 }
 
-fn @make_camera_emitter() -> RayEmitterFactory {
-    @ |scene, _device, iter| -> RayEmitter {
+fn @make_camera_emitter(camera: Camera) -> RayEmitterFactory {
+    @ |_scene, _device, iter| -> RayEmitter {
         @ |sample, x, y, width, height| {
             let mut hash = fnv_init();
             hash = fnv_hash(hash, sample as u32);
@@ -36,7 +36,7 @@ fn @make_camera_emitter() -> RayEmitterFactory {
             let mut rnd = hash /*as RndState*/;
             let kx = 2 * (x as f32 + randf(&mut rnd)) / (width  as f32) - 1;
             let ky = 1 - 2 * (y as f32 + randf(&mut rnd)) / (height as f32);
-            let ray = scene.camera.generate_ray(kx, ky);
+            let ray = camera.generate_ray(kx, ky);
             let state = make_ray_state(rnd, white, 0, 0);
             (ray, state)
         }

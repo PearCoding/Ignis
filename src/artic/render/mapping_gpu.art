@@ -719,7 +719,7 @@ fn @make_gpu_device( dev_id: i32
     load_shader_table = @ |dtb| make_shader_table(intrinsics, dtb),
     load_bvh_table    = @ |dtb| -> BVHTable {
         let hdr_s = sizeof[PrimBvhHeader]() as u32;
-        @ |id| {
+        |id| {
             let entry  = get_lookup_entry(id as u64, dtb, accb); 
             let header = get_table_entry(entry.offset as u64, dtb, accb);
             let leaf_offset = header.load_i32(0) as u32;
