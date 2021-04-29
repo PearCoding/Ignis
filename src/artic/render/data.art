@@ -11,16 +11,6 @@ struct DynTable {
     start:  &[u8]           // Pointer to an buffer of size 'size'
 }
 
-fn @get_lookup_entry(ind: u64, tbl: &DynTable) -> LookupEntry {
-    // TODO: Check boundaries
-    tbl.header(ind)
-}
-
-fn @get_table_entry[T](off: u64, tbl: &DynTable) -> &T {
-    // TODO: Check boundaries
-    (&tbl.start(off)) as &T
-}
-
 struct SceneDatabase {
     shapes:   DynTable,
     entities: DynTable,
@@ -37,10 +27,22 @@ struct SceneAccessor {
     bvhs:     BVHTable    // Defined in intersection.art
 }
 
-fn @make_scene_accessor(math: Intrinsics, database: &SceneDatabase) = SceneAccessor {
-    shapes   = make_shape_table(math, database.shapes),   // Defined in shape.art
-    entities = make_entity_table(database.entities),      // Defined in entity.art
-    lights   = make_light_table(math, database.lights),   // Defined in light.art
-    shaders  = make_shader_table(math, database.shaders), // Defined in material.art
-    bvhs     = make_bvh_table(database)                   // Defined in intersection.art
-};
+type DeviceBufferAccessor = fn (&[u8]) -> DeviceBuffer;
+fn @get_lookup_entry(ind: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> LookupEntry {
+    // TODO: Check boundaries
+    let data = acc(&tbl.header(ind) as &[u8]);
+    LookupEntry {
+        type_id = data.load_i32(0) as u32,
+        offset  = data.load_i32(1) as u32
+    }
+}
+
+fn @get_table_ptr(off: u64, tbl: &DynTable) -> &[u8] {
+    // TODO: Check boundaries
+    &tbl.start(off) as &[u8]
+}
+
+fn @get_table_entry(off: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> DeviceBuffer {
+    // TODO: Check boundaries
+    acc(get_table_ptr(off, tbl))
+}

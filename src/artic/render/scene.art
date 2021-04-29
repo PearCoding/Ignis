@@ -19,7 +19,6 @@ struct Device {
     // General formats
     //load_buffer:    fn (&[u8]) -> DeviceBuffer,
     //load_tri_bvh:   fn (&[u8]) -> PrimBvh,
-    //load_scene_bvh: fn (&[u8]) -> SceneBvh,
 
     //load_image: fn (&[u8]) -> Image,
     //load_rays:  fn (i32, &[Ray]) -> &[Ray],
@@ -27,7 +26,13 @@ struct Device {
     //load_cdf2d: fn (&[u8]) -> CDF2D,
     //load_klems: fn (&[u8]) -> KlemsModel,
 
-    load_scene: fn () -> SceneAccessor
+    load_scene_bvh:      fn () -> SceneBvh,
+    load_scene_database: fn () -> SceneDatabase,
+    load_entity_table:   fn (&DynTable) -> EntityTable,
+    load_shape_table:    fn (&DynTable) -> ShapeTable,
+    load_light_table:    fn (&DynTable) -> LightTable,
+    load_shader_table:   fn (&DynTable) -> ShaderTable,
+    load_bvh_table:      fn (&DynTable) -> BVHTable
 }
 
 struct DeviceBuffer {

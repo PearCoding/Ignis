@@ -1,7 +1,7 @@
 struct PathTracer {
     on_emit:   RayEmitter,
     on_hit:    fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[Color],
-    on_miss: fn (Ray, &mut RayState) -> Option[Color],
+    on_miss:   fn (Ray, &mut RayState) -> Option[Color],
     on_shadow: fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[(Ray, Color)],
     on_bounce: fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[(Ray, RayState)],
 }
@@ -98,7 +98,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
             let rnd = &mut state.rnd;
             // Note: randi() returns random integers, but we only want positive integers here
             let light_id = (randi(rnd) & 0x7FFFFFFF) % scene.num_lights;
-            let lights = scene.lights;
+            let lights = scene.database.lights;
             let light = @lights(light_id);
             let sample_direct = light.sample_direct;
             let light_sample = @sample_direct(rnd, surf);
@@ -173,9 +173,10 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                    , state: &mut RayState) {
             let mut inflights = 0;
             let mut color = make_color(0, 0, 0);
-            let lights = scene.lights;
+            let lights = scene.database.lights;
 
-            for light_id in unroll(0, scene.num_lights) {
+            // TODO: Better use randomness to pick one infinite light
+            for light_id in range(0, scene.num_lights) {
                 let light = @lights(light_id);
                 // Do not include delta lights or finite lights
                 if light.infinite && !light.delta {

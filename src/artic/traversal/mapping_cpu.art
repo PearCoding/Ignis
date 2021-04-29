@@ -376,9 +376,10 @@ fn cpu_traverse_single_helper( mut ray: Ray
             let mut ref_id = !leaf_ref.node;
             while true {
                 let leaf            = bvh.ent(ref_id++);
-                let shape           = scene.database.shapes(leaf.shape_id);
+                //let shape           = scene.database.shapes(leaf.shape_id);
+                let shape_bvh       = scene.database.bvhs(leaf.shape_id);
                 let (local_ray, sf) = transform_ray(cpu_intrinsics, ray, leaf.local);
-                let local_hit       = cpu_traverse_single_helper_prim(local_ray, ray_octant(local_ray), min_max, shape.bvh, any_hit, 1/*root*/);
+                let local_hit       = cpu_traverse_single_helper_prim(local_ray, ray_octant(local_ray), min_max, shape_bvh, any_hit, 1/*root*/);
 
                 if local_hit.prim_id != -1 {
                     let glb_dist = local_hit.distance / sf;
@@ -637,9 +638,10 @@ fn cpu_traverse_hybrid_helper( mut ray: Ray
             let mut ref_id = !leaf_ref.node;
             while active {
                 let leaf            = bvh.ent(ref_id++);
-                let shape           = scene.database.shapes(leaf.shape_id);
+                //let shape           = scene.database.shapes(leaf.shape_id);
+                let shape_bvh       = scene.database.bvhs(leaf.shape_id);
                 let (local_ray, sf) = transform_ray(cpu_intrinsics, ray, leaf.local);
-                let local_hit       = cpu_traverse_hybrid_helper_prim(local_ray, vector_width, min_max, shape.bvh, single, any_hit, 1/*root*/);
+                let local_hit       = cpu_traverse_hybrid_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
 
                 if local_hit.prim_id != -1 {
                     let glb_dist = local_hit.distance / sf;

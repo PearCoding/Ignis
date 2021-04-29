@@ -59,11 +59,14 @@ fn @make_trimesh_shape(math: Intrinsics, tri_mesh: TriMesh) = Shape {
 
 type ShapeTable  = fn (i32) -> Shape;
 
-fn @make_shape_table(math: Intrinsics, dtb: &DynTable) -> ShapeTable {
-    @ |id| {
-        let entry = get_lookup_entry(id as u64, dtb);
+fn @make_shape_table(math: Intrinsics, dtb: &DynTable, acc: DeviceBufferAccessor) -> ShapeTable {
+    |id| {
+        let entry = get_lookup_entry(id as u64, dtb, acc);
         // Type is TriMesh for currently.
-        let data  = get_table_entry[TriShape](entry.offset as u64, dtb);
+        let data  = get_table_entry(entry.offset as u64, dtb, acc);
+
+        let num_face  = data.load_i32(0);
+        let num_attrs = data.load_i32(3);
         
         let trimesh = TriMesh { // TODO: This is actually device specific!
             vertices     = |_i:i32| make_vec3(0,0,0),
@@ -72,8 +75,8 @@ fn @make_shape_table(math: Intrinsics, dtb: &DynTable) -> ShapeTable {
             face_area    = |_i:i32| 0,
             triangles    = |_i:i32| (0, 1, 2),
             attrs        = |_attr:i32| (false, |_i:i32| make_vec4(0,0,0,0)),
-            num_attrs    = data.num_attrs,
-            num_tris     = data.num_face
+            num_attrs    = num_attrs,
+            num_tris     = num_face
         };
 
         make_trimesh_shape(math, trimesh)

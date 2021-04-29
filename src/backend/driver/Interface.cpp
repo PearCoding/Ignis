@@ -1,4 +1,5 @@
 #include "Interface.h"
+#include _INTERFACE_HEADER
 
 extern "C" {
 IG_EXPORT DriverInterface ig_get_interface()
@@ -13,12 +14,14 @@ IG_EXPORT DriverInterface ig_get_interface()
 
 	interface.Configuration = 0;
 // Expose Target
-#if defined(DEVICE_GENERIC)
+#if defined(DEVICE_DEFAULT)
 	interface.Configuration |= IG_C_DEVICE_GENERIC;
 #elif defined(DEVICE_AVX)
 	interface.Configuration |= IG_C_DEVICE_AVX;
-#elif defined(DEVICE_AVX_2)
+#elif defined(DEVICE_AVX2)
 	interface.Configuration |= IG_C_DEVICE_AVX2;
+#elif defined(DEVICE_AVX512)
+	interface.Configuration |= IG_C_DEVICE_AVX512;
 #elif defined(DEVICE_SSE42)
 	interface.Configuration |= IG_C_DEVICE_SSE42;
 #elif defined(DEVICE_ASIMD)

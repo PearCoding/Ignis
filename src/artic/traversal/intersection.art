@@ -7,13 +7,11 @@ struct PrimBvh {
     arity:    i32,              // Arity of the BVH (number of children per node)
 }
 
-type BVHTable = fn (i32) -> PrimBvh;
-
-fn @make_bvh_table(dtb: &DynTable) -> BVHTable {
-    @|id| {
-        
-    }
+struct PrimBvhHeader {
+    leaf_offset: u32
 }
+
+type BVHTable = fn (i32) -> PrimBvh;
 
 // Top level BVH
 struct SceneBvh {

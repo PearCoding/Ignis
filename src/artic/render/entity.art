@@ -9,10 +9,11 @@ struct EntityMap {
 struct EntityData {
     shape_id:   i32,
     mat_id:     i32,
-    local_mat:  [f32 * 16], // TODO: Check if on-the-fly calcution is worth it?
+    _pad1:      [i32 * 2],
+    local_mat:  [f32 * 16], // TODO: Check if on-the-fly calculation is worth it?
     global_mat: [f32 * 16],
     normal_mat: [f32 * 9],
-    _pad:       [f32 * 3]
+    _pad2:      f32
 }
 
 struct Entity {
@@ -25,26 +26,18 @@ struct Entity {
 
 type EntityTable = fn (i32) -> Entity;
 
-fn @make_entity_table(dtb: &DynTable) -> EntityTable {
+fn @make_entity_table(dtb: &DynTable, acc: DeviceBufferAccessor) -> EntityTable {
     let elem_s = sizeof[EntityData]() as u64;
-    @ |id| {
+    |id| {
         //let entry = get_lookup_entry(id as u64, dtb); // No need as we have only one type!
-        let data = get_table_entry[EntityData](elem_s * (id as u64), dtb);
+        let data = get_table_entry(elem_s * (id as u64), dtb, acc);
 
         Entity {
-            shape_id   = data.shape_id,
-            mat_id     = data.mat_id,
-            local_mat  = make_mat4x4(make_vec4(data.local_mat(0), data.local_mat(1), data.local_mat(2), data.local_mat(3)),
-                                     make_vec4(data.local_mat(4), data.local_mat(5), data.local_mat(6), data.local_mat(7)),
-                                     make_vec4(data.local_mat(8), data.local_mat(9), data.local_mat(10),data.local_mat(11)),
-                                     make_vec4(data.local_mat(12),data.local_mat(13),data.local_mat(14),data.local_mat(15))),
-            global_mat = make_mat4x4(make_vec4(data.global_mat(0), data.global_mat(1), data.global_mat(2), data.global_mat(3)),
-                                     make_vec4(data.global_mat(4), data.global_mat(5), data.global_mat(6), data.global_mat(7)),
-                                     make_vec4(data.global_mat(8), data.global_mat(9), data.global_mat(10),data.global_mat(11)),
-                                     make_vec4(data.global_mat(12),data.global_mat(13),data.global_mat(14),data.global_mat(15))),
-            normal_mat = make_mat3x3(make_vec3(data.normal_mat(0), data.normal_mat(1), data.normal_mat(2)),
-                                     make_vec3(data.normal_mat(3), data.normal_mat(4), data.normal_mat(5)),
-                                     make_vec3(data.normal_mat(6), data.normal_mat(7), data.normal_mat(8)))
+            shape_id   = data.load_i32(0),
+            mat_id     = data.load_i32(1),
+            local_mat  = data.load_mat4x4(4),
+            global_mat = data.load_mat4x4(20),
+            normal_mat = data.load_mat3x3(36)
         }
     } 
 }

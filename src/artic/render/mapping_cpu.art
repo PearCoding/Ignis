@@ -450,6 +450,25 @@ fn @cpu_trace( scene: Scene
 
 // CPU device ----------------------------------------------------------------------
 
+fn @make_cpu_buffer(p: &[u8]) = DeviceBuffer {
+    load_f32    = @ |i| (p as &[f32])(i),
+    load_i32    = @ |i| (p as &[i32])(i),
+    load_vec2   = @ |i| { let q = p as &[f32]; make_vec2(q(i * 2 + 0), q(i * 2 + 1)) },
+    load_vec3   = @ |i| { let q = p as &[f32]; make_vec3(q(i * 3 + 0), q(i * 3 + 1), q(i * 3 + 2)) },
+    load_vec4   = @ |i| { let v = (p as &[simd[f32 * 4]])(i); make_vec4(v(0), v(1), v(2), v(3)) },
+    load_int2   = @ |i| { let q = p as &[i32]; (q(i * 2 + 0), q(i * 2 + 1)) },
+    load_int3   = @ |i| { let q = p as &[i32]; (q(i * 3 + 0), q(i * 3 + 1), q(i * 3 + 2)) },
+    load_int4   = @ |i| { let v = (p as &[simd[i32 * 4]])(i); (v(0), v(1), v(2), v(3)) },
+    load_mat3x3 = @ |i| { let q = p as &[f32]; make_mat3x3(make_vec3(q(i * 9 + 0), q(i * 9 + 1), q(i * 9 + 2)), make_vec3(q(i * 9 + 3), q(i * 9 + 4), q(i * 9 + 5)), make_vec3(q(i * 9 + 6), q(i * 9 + 7), q(i * 9 + 8))) },
+    load_mat4x4 = @ |i| {
+        let v0 = (p as &[simd[f32 * 4]])(4*i+0);
+        let v1 = (p as &[simd[f32 * 4]])(4*i+1);
+        let v2 = (p as &[simd[f32 * 4]])(4*i+2);
+        let v3 = (p as &[simd[f32 * 4]])(4*i+3);   
+        make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)), make_vec4(v1(0), v1(1), v1(2), v1(3)), make_vec4(v2(0), v2(1), v2(2), v2(3)), make_vec4(v3(0), v3(1), v3(2), v3(3)))
+    }
+};
+
 fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_width: i32, num_cores: i32, tile_size: i32) = Device {
     intrinsics = cpu_intrinsics,
     trace = @ |scene, path_tracer, spp| {
@@ -469,22 +488,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     /*load_buffer = @ |filename| {
         let p = ignis_load_buffer(0, filename);
         DeviceBuffer {
-            load_f32    = @ |i| (p as &[f32])(i),
-            load_i32    = @ |i| (p as &[i32])(i),
-            load_vec2   = @ |i| { let q = p as &[f32]; make_vec2(q(i * 2 + 0), q(i * 2 + 1)) },
-            load_vec3   = @ |i| { let q = p as &[f32]; make_vec3(q(i * 3 + 0), q(i * 3 + 1), q(i * 3 + 2)) },
-            load_vec4   = @ |i| { let v = (p as &[simd[f32 * 4]])(i); make_vec4(v(0), v(1), v(2), v(3)) },
-            load_int2   = @ |i| { let q = p as &[i32]; (q(i * 2 + 0), q(i * 2 + 1)) },
-            load_int3   = @ |i| { let q = p as &[i32]; (q(i * 3 + 0), q(i * 3 + 1), q(i * 3 + 2)) },
-            load_int4   = @ |i| { let v = (p as &[simd[i32 * 4]])(i); (v(0), v(1), v(2), v(3)) },
-            load_mat3x3 = @ |i| { let q = p as &[f32]; make_mat3x3(make_vec3(q(i * 9 + 0), q(i * 9 + 1), q(i * 9 + 2)), make_vec3(q(i * 9 + 3), q(i * 9 + 4), q(i * 9 + 5)), make_vec3(q(i * 9 + 6), q(i * 9 + 7), q(i * 9 + 8))) },
-            load_mat4x4 = @ |i| {
-                let v0 = (p as &[simd[f32 * 4]])(4*i+0);
-                let v1 = (p as &[simd[f32 * 4]])(4*i+1);
-                let v2 = (p as &[simd[f32 * 4]])(4*i+2);
-                let v3 = (p as &[simd[f32 * 4]])(4*i+3);   
-                make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)), make_vec4(v1(0), v1(1), v1(2), v1(3)), make_vec4(v2(0), v2(1), v2(2), v2(3)), make_vec4(v3(0), v3(1), v3(2), v3(3)))
-            }
+            
         }
     },
     load_tri_bvh = @ |id| {
@@ -500,19 +504,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             make_cpu_bvh4_tri4(nodes, tris)
         }
     },
-    load_scene_bvh = @ || {
-        if vector_width == 8 {
-            let mut nodes: &[Node8];
-            let mut objs: &[EntityLeaf1];
-            ignis_load_bvh8_ent(0, &mut nodes, &mut objs);
-            make_cpu_bvh8_ent(nodes, objs)
-        } else {
-            let mut nodes: &[Node4];
-            let mut objs: &[EntityLeaf1];
-            ignis_load_bvh4_ent(0, &mut nodes, &mut objs);
-            make_cpu_bvh4_ent(nodes, objs)
-        }
-    },
+    
     load_image = @ |filename| {
         let mut pixel_data: &[f32];
         let mut width: i32;
@@ -538,13 +530,49 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     load_rays = @ |count: i32, rays: &[Ray]| {
         ignis_load_rays(0, count, rays)
     }*/
-    load_scene = @|| {
-        let mut database : SceneDatabase;
+    load_scene_bvh = @ || {
+        if vector_width == 8 {
+            let mut nodes: &[Node8];
+            let mut objs: &[EntityLeaf1];
+            ignis_load_bvh8_ent(0, &mut nodes, &mut objs);
+            make_cpu_bvh8_ent(nodes, objs)
+        } else {
+            let mut nodes: &[Node4];
+            let mut objs: &[EntityLeaf1];
+            ignis_load_bvh4_ent(0, &mut nodes, &mut objs);
+            make_cpu_bvh4_ent(nodes, objs)
+        }
+    },
+    load_scene_database = @|| {
+        let mut database: SceneDatabase;
         ignis_load_scene(0, &mut database);
-        make_scene_accessor(cpu_intrinsics, database)
+        database
+    },
+    load_entity_table = @ |dtb| make_entity_table(dtb, make_cpu_buffer),
+    load_shape_table  = @ |dtb| make_shape_table(cpu_intrinsics, dtb, make_cpu_buffer),
+    load_light_table  = @ |dtb| make_light_table(cpu_intrinsics, dtb),
+    load_shader_table = @ |dtb| make_shader_table(cpu_intrinsics, dtb),
+    load_bvh_table    = @ |dtb| -> BVHTable {
+        let hdr_s = sizeof[PrimBvhHeader]() as u32;
+        |id| {
+            let entry  = get_lookup_entry(id as u64, dtb, make_cpu_buffer); 
+            let header = get_table_entry(entry.offset as u64, dtb, make_cpu_buffer);
+            let leaf_offset = header.load_i32(0) as u32;
+    
+            if vector_width == 8 {
+                let nodes = get_table_ptr((entry.offset + hdr_s) as u64, dtb) as &[Node8];
+                let tris  = get_table_ptr((entry.offset + hdr_s + leaf_offset) as u64, dtb) as &[Tri4];
+                make_cpu_bvh8_tri4(nodes, tris)
+            } else {
+                let nodes = get_table_ptr((entry.offset + hdr_s) as u64, dtb) as &[Node4];
+                let tris  = get_table_ptr((entry.offset + hdr_s + leaf_offset) as u64, dtb) as &[Tri4];
+                make_cpu_bvh4_tri4(nodes, tris)
+            }
+        } 
     }
 };
 
+fn @make_avx512_device()      = make_cpu_device( true,  true, make_cpu_int_min_max(),16, 0, 32); // Not tested
 fn @make_avx2_device()        = make_cpu_device( true,  true, make_cpu_int_min_max(), 8, 0, 16);
 fn @make_avx_device()         = make_cpu_device( true,  true, make_cpu_int_min_max(), 8, 0, 16);
 fn @make_sse42_device()       = make_cpu_device(false,  true, make_cpu_int_min_max(), 4, 0, 16);

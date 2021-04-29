@@ -19,10 +19,11 @@ set(CAMERAS
 # Multi vendor multi GPU and CPU combinations would be bothersome, but who has this kind of configuration?
 set(DEVICES
     #"-D DEVICE_DEFAULT"
-    #"-D DEVICE_AVX"
-    #"-D DEVICE_AVX2"
-    #"-D DEVICE_SSE42"
-    #"-D DEVICE_ASIMD"
+    #"-D DEVICE_AVX"     # NOT WORKING -> TOO MUCH RV
+    #"-D DEVICE_AVX2"    # NOT WORKING -> TOO MUCH RV
+    #"-D DEVICE_AVX512"  # NOT WORKING -> TOO MUCH RV [NOT_TESTED, as not supported by my CPU]
+    #"-D DEVICE_SSE42"   # NOT WORKING -> TOO MUCH RV
+    #"-D DEVICE_ASIMD"   # NOT WORKING -> SEGMENTATION FAULT
     "-D DEVICE_NVVM"
     #"-D DEVICE_NVVM_MEGA"
     #"-D DEVICE_AMD"
@@ -70,6 +71,8 @@ cross(VARIANTS_2 VARIANTS_1 RENDERER " ")
 
 set(VARIANTS ${VARIANTS_2})
 
+option(IG_BUILD_DRIVER_PARALLEL "Build driver files in parallel. Not recommended" OFF)
+
 set(_targets )
 foreach(var ${VARIANTS})
     var_to_name(var_name ${var})
@@ -83,17 +86,33 @@ foreach(var ${VARIANTS})
         COMMENT "Generating variant file: ${out_file}" 
         VERBATIM)
     set(_objs ) # Reset list
+    set(_interface_name driver_interface_${var_name})
     anydsl_runtime_wrap(_objs
         NAME "artic_${var_name}"
         FRONTEND "artic"
         CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
         ARTIC_FLAGS --log-level info --max-errors 5
-        INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/driver_interface
+        INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/${_interface_name}
         FILES ${ARTIC_SRC} ${out_file})
     set(_target_name ig_driver_${var_name})
-    add_library(${_target_name} MODULE ${_objs} Interface.cpp Interface.h ${CMAKE_CURRENT_BINARY_DIR}/driver_interface.h)
+    add_library(${_target_name} MODULE ${_objs} Interface.cpp Interface.h ${CMAKE_CURRENT_BINARY_DIR}/${_interface_name}.h)
     set_target_properties(${_target_name} PROPERTIES PREFIX "")
-    target_compile_definitions(${_target_name} PRIVATE ${args})
+    target_compile_definitions(${_target_name} PRIVATE ${args} -D_INTERFACE_HEADER="${_interface_name}.h")
+    target_link_libraries(${_target_name} PRIVATE ig_lib_runtime)
+    target_include_directories(${_target_name} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+
+    # Some of the compilation process requires a lot of memory.
+    # Prevent parallel build of the drivers (per default) by chaining them together
+    # This will rebuild all the drivers up the line,
+    # however drivers are dynamicly defined and ment to be rebuild anyway.
+    if(NOT IG_BUILD_DRIVER_PARALLEL)
+        list(LENGTH _targets _length)
+        if(_length GREATER 0)
+            list(GET _targets -1 _prev)
+            add_dependencies(${_target_name} ${_prev})
+        endif()
+    endif()
+
     list(APPEND _targets ${_target_name})
 endforeach()
 

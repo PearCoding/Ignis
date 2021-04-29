@@ -113,13 +113,14 @@ fn @gpu_shade( acc: Accelerator
         let ray       = make_ray_stream_reader(primary.rays, 1)(ray_id, 0);
         let pixel     = primary.rays.id(ray_id);
 
-        let (local_ray, _) = transform_ray(intrinsics, ray, scene.entities.local_mat4x4(ent_id));
+        let entity         = scene.database.entities(ent_id);
+        let (local_ray, _) = transform_ray(intrinsics, ray, entity.local_mat);
 
         let hit      = make_primary_stream_hit_reader(primary, 1)(ray_id, 0);
-        let shp      = scene.shapes(scene.entities.shape(ent_id));
+        let shp      = scene.database.shapes(entity.shape_id);
         let lcl_surf = shp.surface_element(local_ray, hit);
-        let glb_surf = map_surface_element(intrinsics, lcl_surf, scene.entities.global_mat4x4(ent_id), scene.entities.normal_mat3x3(ent_id));
-        let mat      = scene.entities.shader(ent_id)(ray, hit, glb_surf);
+        let glb_surf = map_surface_element(intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
+        let mat      = scene.database.shaders(entity.mat_id)(ray, hit, glb_surf);
 
         let on_hit = path_tracer.on_hit;
         if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) {
@@ -499,14 +500,15 @@ fn @gpu_mega_kernel_trace( dev_id: i32
             let mut shadow_color: Color;
             let mut shadow_ray: Ray;
             let mut trace_shadow = false;
-            for i in unroll(0, scene.num_entities) {
+            for i in range(0, scene.num_entities) {
                 if i == scene.num_entities - 1 || hit.ent_id == i {
-                    let (local_ray, _) = transform_ray(intrinsics, ray, scene.entities.local_mat4x4(i));
+                    let entity         = scene.database.entities(i);
+                    let (local_ray, _) = transform_ray(intrinsics, ray, entity.local_mat);
 
-                    let shp      = scene.shapes(scene.entities.shape(i));
+                    let shp      = scene.database.shapes(entity.shape_id);
                     let lcl_surf = shp.surface_element(local_ray, hit);
-                    let glb_surf = map_surface_element(intrinsics, lcl_surf, scene.entities.global_mat4x4(i), scene.entities.normal_mat3x3(i));
-                    let mat      = scene.entities.shader(i)(ray, hit, glb_surf);
+                    let glb_surf = map_surface_element(intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
+                    let mat      = scene.database.shaders(entity.mat_id)(ray, hit, glb_surf);
 
                     let on_hit = path_tracer.on_hit;
                     match @on_hit(ray, hit, &mut state, glb_surf, mat) {
@@ -549,90 +551,9 @@ fn @gpu_mega_kernel_trace( dev_id: i32
 
 // GPU device ----------------------------------------------------------------------
 
-fn @make_gpu_device( dev_id: i32
-                   , acc: Accelerator
-                   , intrinsics: Intrinsics
-                   , min_max: MinMax
-                   , load_tri_bvh: fn (&[u8]) -> PrimBvh
-                   , load_scene_bvh: fn (&[u8]) -> SceneBvh
-                   , read_pixel: fn (&[f32], i32) -> Color
-                   , make_buffer: fn (&[i8]) -> DeviceBuffer
-                   , atomics: Atomics
-                   , streaming: bool
-                   ) = Device {
-    intrinsics = intrinsics,
-    trace = @ |scene, path_tracer, spp| {
-        if streaming {
-            gpu_streaming_trace(
-                dev_id,
-                acc,
-                intrinsics,
-                atomics,
-                min_max,
-                scene,
-                path_tracer,
-                spp
-            )
-        } else {
-            gpu_mega_kernel_trace(
-                dev_id,
-                acc,
-                intrinsics,
-                atomics,
-                min_max,
-                scene,
-                path_tracer,
-                spp
-            )
-        }
-    },
-    present = @ || ignis_present(dev_id),
-    load_buffer = @ |filename: &[u8]| make_buffer(ignis_load_buffer(dev_id, filename)),
-    load_tri_bvh = load_tri_bvh,
-    load_scene_bvh = load_scene_bvh,
-    load_image = @ |filename: &[u8]| {
-        let mut pixel_data: &[f32];
-        let mut width: i32;
-        let mut height: i32;
-        ignis_load_image(dev_id, filename, &mut pixel_data, &mut width, &mut height);
-        let (ptr, stride) = (pixel_data, width);
-        make_image(@ |x, y| read_pixel(ptr, y * stride + x), width, height)
-    },
-    load_cdf1d = @ |filename: &[u8]| {
-        let mut cdf: CDF1D;
-        ignis_load_cdf1d(dev_id, filename, &mut cdf);
-        cdf
-    },
-    load_cdf2d = @ |filename: &[u8]| {
-        let mut cdf: CDF2D;
-        ignis_load_cdf2d(dev_id, filename, &mut cdf);
-        cdf
-    },
-    load_klems = @ |filename: &[u8]| {
-        let mut model: KlemsModel;
-        ignis_load_klems(dev_id, filename, &mut model);
-        model
-    },
-    load_rays = @ |count: i32, rays: &[Ray]| ignis_load_rays(dev_id, count, rays)
-};
 
-fn @make_nvvm_device(dev: i32, streaming: bool) -> Device {
-    let dev_id = runtime_device(1, dev);
-    let load_tri_bvh = @ |id: i32| {
-        let mut nodes: &[Node2];
-        let mut tris: &[Tri1];
-        ignis_load_bvh2_tri1(dev_id, id, &mut nodes, &mut tris);
-        make_gpu_bvh2_tri1(nodes, tris, true)
-    };
-    let load_scene_bvh = @ || {
-        let mut nodes: &[Node2];
-        let mut objs: &[EntityLeaf1];
-        ignis_load_bvh2_ent(dev_id, &mut nodes, &mut objs);
-        make_gpu_bvh2_ent(nodes, objs, true)
-    };
-    let pixel_entry = @ |p: &[f32], i: i32| nvvm_ldg_f32(&(p as &addrspace(1)[f32])(i));
-    let read_pixel = @ |p: &[f32], i: i32| make_color(pixel_entry(p,4*i+0), pixel_entry(p,4*i+1), pixel_entry(p,4*i+2));
-    let make_buffer = @ |p: &[i8]| {
+fn @make_gpu_buffer(p: &[u8], is_nvvm: bool) -> DeviceBuffer {
+    if is_nvvm {
         DeviceBuffer {
             load_f32  = @ |i| nvvm_ldg_f32(&((p as &addrspace(1)[f32])(i))),
             load_i32  = @ |i| nvvm_ldg_i32(&((p as &addrspace(1)[i32])(i))),
@@ -674,44 +595,7 @@ fn @make_nvvm_device(dev: i32, streaming: bool) -> Device {
                 make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)), make_vec4(v1(0), v1(1), v1(2), v1(3)), make_vec4(v2(0), v2(1), v2(2), v2(3)), make_vec4(v3(0), v3(1), v3(2), v3(3)))
             }
         }
-    };
-    let atomics = Atomics {
-        add_global_i32 = @ |p, i| nvvm_atomic_add_global_i32(p as &mut addrspace(1)i32, i),
-        add_global_f32 = @ |p, i| nvvm_atomic_add_global_f32(p as &mut addrspace(1)f32, i),
-        add_shared_i32 = @ |p, i| nvvm_atomic_add_shared(p, i),
-        add_shared_f32 = @ |p, i| atomic_p3(11:u32, p, i, 2:u32, "")
-    };
-    make_gpu_device(
-        dev_id,
-        nvvm_accelerator(dev),
-        nvvm_intrinsics,
-        make_nvvm_min_max(),
-        load_tri_bvh,
-        load_scene_bvh,
-        read_pixel,
-        make_buffer,
-        atomics,
-        streaming
-    )
-}
-
-fn @make_amdgpu_device(dev: i32, streaming: bool) -> Device {
-    let dev_id = runtime_device(3, dev);
-    let load_tri_bvh = @ |id : i32| {
-        let mut nodes: &[Node2];
-        let mut tris: &[Tri1];
-        ignis_load_bvh2_tri1(dev_id, id, &mut nodes, &mut tris);
-        make_gpu_bvh2_tri1(nodes, tris, false)
-    };
-    let load_scene_bvh = @ || {
-        let mut nodes: &[Node2];
-        let mut objs: &[EntityLeaf1];
-        ignis_load_bvh2_ent(dev_id, &mut nodes, &mut objs);
-        make_gpu_bvh2_ent(nodes, objs, false)
-    };
-    let pixel_entry = @ |p: &[f32], i: i32| p(i);
-    let read_pixel = @ |p: &[f32], i: i32| make_color(pixel_entry(p,4*i+0), pixel_entry(p,4*i+1), pixel_entry(p,4*i+2));
-    let make_buffer = @ |p: &[i8]| {
+    } else {
         DeviceBuffer {
             load_f32  = @ |i| (p as &addrspace(1)[f32])(i),
             load_i32  = @ |i| (p as &addrspace(1)[i32])(i),
@@ -753,7 +637,127 @@ fn @make_amdgpu_device(dev: i32, streaming: bool) -> Device {
                 make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)), make_vec4(v1(0), v1(1), v1(2), v1(3)), make_vec4(v2(0), v2(1), v2(2), v2(3)), make_vec4(v3(0), v3(1), v3(2), v3(3)))
             }
         }
+    }
+}
+
+fn @make_gpu_device( dev_id: i32
+                   , acc: Accelerator
+                   , intrinsics: Intrinsics
+                   , min_max: MinMax
+                   , read_pixel: fn (&[f32], i32) -> Color
+                   , accb: DeviceBufferAccessor
+                   , atomics: Atomics
+                   , streaming: bool
+                   , is_nvvm: bool
+                   ) = Device {
+    intrinsics = intrinsics,
+    trace = @ |scene, path_tracer, spp| {
+        if streaming {
+            gpu_streaming_trace(
+                dev_id,
+                acc,
+                intrinsics,
+                atomics,
+                min_max,
+                scene,
+                path_tracer,
+                spp
+            )
+        } else {
+            gpu_mega_kernel_trace(
+                dev_id,
+                acc,
+                intrinsics,
+                atomics,
+                min_max,
+                scene,
+                path_tracer,
+                spp
+            )
+        }
+    },
+    present = @ || ignis_present(dev_id),
+    /*load_buffer = @ |filename: &[u8]| make_buffer(ignis_load_buffer(dev_id, filename)),
+    load_image = @ |filename: &[u8]| {
+        let mut pixel_data: &[f32];
+        let mut width: i32;
+        let mut height: i32;
+        ignis_load_image(dev_id, filename, &mut pixel_data, &mut width, &mut height);
+        let (ptr, stride) = (pixel_data, width);
+        make_image(@ |x, y| read_pixel(ptr, y * stride + x), width, height)
+    },
+    load_cdf1d = @ |filename: &[u8]| {
+        let mut cdf: CDF1D;
+        ignis_load_cdf1d(dev_id, filename, &mut cdf);
+        cdf
+    },
+    load_cdf2d = @ |filename: &[u8]| {
+        let mut cdf: CDF2D;
+        ignis_load_cdf2d(dev_id, filename, &mut cdf);
+        cdf
+    },
+    load_klems = @ |filename: &[u8]| {
+        let mut model: KlemsModel;
+        ignis_load_klems(dev_id, filename, &mut model);
+        model
+    },
+    load_rays = @ |count: i32, rays: &[Ray]| ignis_load_rays(dev_id, count, rays)*/
+    load_scene_bvh = @|| {
+        let mut nodes: &[Node2];
+        let mut objs: &[EntityLeaf1];
+        ignis_load_bvh2_ent(dev_id, &mut nodes, &mut objs);
+        make_gpu_bvh2_ent(nodes, objs, is_nvvm)
+    },
+    load_scene_database = @|| {
+        let mut database: SceneDatabase;
+        ignis_load_scene(0, &mut database);
+        database
+    },
+    load_entity_table = @ |dtb| make_entity_table(dtb, accb),
+    load_shape_table  = @ |dtb| make_shape_table(intrinsics, dtb, accb),
+    load_light_table  = @ |dtb| make_light_table(intrinsics, dtb),
+    load_shader_table = @ |dtb| make_shader_table(intrinsics, dtb),
+    load_bvh_table    = @ |dtb| -> BVHTable {
+        let hdr_s = sizeof[PrimBvhHeader]() as u32;
+        @ |id| {
+            let entry  = get_lookup_entry(id as u64, dtb, accb); 
+            let header = get_table_entry(entry.offset as u64, dtb, accb);
+            let leaf_offset = header.load_i32(0) as u32;
+
+            let nodes = get_table_ptr((entry.offset + hdr_s) as u64, dtb) as &[Node2];
+            let tris  = get_table_ptr((entry.offset + hdr_s + leaf_offset) as u64, dtb) as &[Tri1];
+            make_gpu_bvh2_tri1(nodes, tris, is_nvvm)
+        } 
+    }
+};
+
+fn @make_nvvm_device(dev: i32, streaming: bool) -> Device {
+    let dev_id = runtime_device(1, dev);
+    let pixel_entry = @ |p: &[f32], i: i32| nvvm_ldg_f32(&(p as &addrspace(1)[f32])(i));
+    let read_pixel = @ |p: &[f32], i: i32| make_color(pixel_entry(p,4*i+0), pixel_entry(p,4*i+1), pixel_entry(p,4*i+2));
+    let atomics = Atomics {
+        add_global_i32 = @ |p, i| nvvm_atomic_add_global_i32(p as &mut addrspace(1)i32, i),
+        add_global_f32 = @ |p, i| nvvm_atomic_add_global_f32(p as &mut addrspace(1)f32, i),
+        add_shared_i32 = @ |p, i| nvvm_atomic_add_shared(p, i),
+        add_shared_f32 = @ |p, i| atomic_p3(11:u32, p, i, 2:u32, "")
     };
+    make_gpu_device(
+        dev_id,
+        nvvm_accelerator(dev),
+        nvvm_intrinsics,
+        make_nvvm_min_max(),
+        read_pixel,
+        @ |ptr| make_gpu_buffer(ptr, true),
+        atomics,
+        streaming,
+        true
+    )
+}
+
+fn @make_amdgpu_device(dev: i32, streaming: bool) -> Device {
+    let dev_id = runtime_device(3, dev);
+    let pixel_entry = @ |p: &[f32], i: i32| p(i);
+    let read_pixel = @ |p: &[f32], i: i32| make_color(pixel_entry(p,4*i+0), pixel_entry(p,4*i+1), pixel_entry(p,4*i+2));
     let atomics = Atomics {
         add_global_i32 = @ |p, i| amdgcn_atomic_add_global_i32(p as &mut addrspace(1)i32, i),
         add_global_f32 = @ |p, i| amdgcn_atomic_add_global_f32(p as &mut addrspace(1)f32, i),
@@ -765,11 +769,10 @@ fn @make_amdgpu_device(dev: i32, streaming: bool) -> Device {
         amdgpu_accelerator(dev),
         amdgpu_intrinsics,
         make_amdgpu_min_max(),
-        load_tri_bvh,
-        load_scene_bvh,
         read_pixel,
-        make_buffer,
+        @ |ptr| make_gpu_buffer(ptr, false),
         atomics,
-        streaming
+        streaming,
+        false
     )
 }

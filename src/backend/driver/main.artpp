@@ -49,8 +49,10 @@ fn render(settings: &Settings, iter: i32) -> () {
 // Setup device
 #if DEVICE_AVX
     let device = make_avx_device();
-#elif DEVICE_AVX_2
+#elif DEVICE_AVX2
     let device = make_avx2_device();
+#elif DEVICE_AVX512
+    let device = make_avx512_device();
 #elif DEVICE_SSE42
     let device = make_sse42_device();
 #elif DEVICE_ASIMD
@@ -71,10 +73,14 @@ fn render(settings: &Settings, iter: i32) -> () {
 
 #if CAMERA_LIST
     let emitter = make_list_emitter(settings.camera.ray_count, device.load_rays(settings.camera.ray_count, settings.camera.rays));
+#if !RENDERER_DEBUG
     let spp     = 1:i32;
+#endif
 #else 
     let emitter = make_camera_emitter();
+#if !RENDERER_DEBUG
     let spp     = 4:i32;
+#endif
 #endif
      
 #if RENDERER_PATH
@@ -109,10 +115,22 @@ fn render(settings: &Settings, iter: i32) -> () {
     );
 #endif
 
-    let database = device.load_scene();
-    let scene    = Scene {
-        database = database,
-        camera   = camera
+    let dtb = device.load_scene_database();
+    let acc = SceneAccessor {
+        shapes   = device.load_shape_table(dtb.shapes),  
+        entities = device.load_entity_table(dtb.entities),      
+        lights   = device.load_light_table(dtb.lights),   
+        shaders  = device.load_shader_table(dtb.shaders), 
+        bvhs     = device.load_bvh_table(dtb.bvhs)                  
+    };
+
+    let scene = Scene {
+        num_entities = dtb.entities.count as i32,
+        num_shapes   = dtb.shapes.count as i32,
+        num_lights   = dtb.lights.count as i32,
+        database     = acc,
+        camera       = camera,
+        bvh          = device.load_scene_bvh()
     };
 
     renderer(scene, device, iter);

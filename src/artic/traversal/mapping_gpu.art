@@ -101,17 +101,18 @@ fn @make_gpu_bvh2_ent(nodes: &[Node2], objs: &[EntityLeaf1], is_nvvm: bool) -> S
             }
         },
         ent = @ |j| {
-            let simd_ptr = &objs(j) as &addrspace(1)[simd[f32 * 4]];
-            let min = load4_f32(simd_ptr, 0);
-            // min(3) is padding
-            let max = load4_f32(simd_ptr, 1);
-            // max(3) is padding
-            let c0 = load4_f32(simd_ptr, 2);
-            let c1 = load4_f32(simd_ptr, 3);
-            let c2 = load4_f32(simd_ptr, 4);
-            let c3 = load4_f32(simd_ptr, 5);
+            let simd_ptr  = &objs(j) as &addrspace(1)[simd[f32 * 4]];
+            let min       = load4_f32(simd_ptr, 0);
+            let entity_id = min(3) as i32;
+            let max       = load4_f32(simd_ptr, 1);
+            let shape_id  = max(3) as i32;
+            let c0        = load4_f32(simd_ptr, 2);
+            let c1        = load4_f32(simd_ptr, 3);
+            let c2        = load4_f32(simd_ptr, 4);
+            let c3        = load4_f32(simd_ptr, 5);
             make_entity_leaf(
-                make_vec3(min(0), min(1), min(2)), make_vec3(max(0), max(1), max(2)), 
+                make_bbox(make_vec3(min(0), min(1), min(2)), make_vec3(max(0), max(1), max(2))), 
+                entity_id, shape_id,
                 make_mat4x4(make_vec4(c0(0),c0(1),c0(2),c0(3)),
                             make_vec4(c1(0),c1(1),c1(2),c1(3)),
                             make_vec4(c2(0),c2(1),c2(2),c2(3)),
@@ -330,11 +331,11 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
             while true {
                 let leaf = bvh.ent(ref_id++);
 
-                if let Option[(f32,f32)]::Some((t,_)) = intersect_ray_box(min_max, false, ray, leaf.bbox) {
+                if let Option[(f32,f32)]::Some((t,_)) = intersect_ray_box_single(min_max, false, ray, leaf.bbox) {
                     if t <= hit.distance {
-                        let shape           = scene.database.shapes(leaf.shape_id);
+                        let shape_bvh       = scene.database.bvhs(leaf.shape_id);
                         let (local_ray, sf) = transform_ray(gpu_intrinsics, ray, leaf.local);
-                        let local_hit       = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape.bvh, any_hit, 1);
+                        let local_hit       = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape_bvh, any_hit, 1);
 
                         if local_hit.prim_id >= 0 {
                             let glb_dist = local_hit.distance / sf;
