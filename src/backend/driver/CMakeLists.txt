@@ -8,9 +8,9 @@ CPMAddPackage(
 # TODO: Make it configurable
 set(CAMERAS
     "-D CAMERA_PERSPECTIVE"
-    "-D CAMERA_ORTHOGONAL"
-    "-D CAMERA_FISHLENS"
-    "-D CAMERA_LIST"
+    #"-D CAMERA_ORTHOGONAL"
+    #"-D CAMERA_FISHLENS"
+    #"-D CAMERA_LIST"
 )
 
 # It is more useful (and user friendly) to choose between cpu and gpu
@@ -25,7 +25,7 @@ set(DEVICES
     #"-D DEVICE_SSE42"   # NOT WORKING -> TOO MUCH RV
     #"-D DEVICE_ASIMD"   # NOT WORKING -> SEGMENTATION FAULT
     "-D DEVICE_NVVM"
-    "-D DEVICE_NVVM_MEGA"
+    #"-D DEVICE_NVVM_MEGA"
     #"-D DEVICE_AMD"
     #"-D DEVICE_AMD_MEGA"
 )
@@ -92,14 +92,14 @@ foreach(var ${VARIANTS})
         FRONTEND "artic"
         CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
         ARTIC_FLAGS --log-level info --max-errors 5
-        INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/${_interface_name}
         FILES ${ARTIC_SRC} ${out_file})
     set(_target_name ig_driver_${var_name})
-    add_library(${_target_name} MODULE ${_objs} Interface.cpp Interface.h ${CMAKE_CURRENT_BINARY_DIR}/${_interface_name}.h)
+    add_library(${_target_name} MODULE ${_objs} glue.cpp ${CMAKE_BINARY_DIR}/generated_interface.h)
     set_target_properties(${_target_name} PROPERTIES PREFIX "")
-    target_compile_definitions(${_target_name} PRIVATE ${args} -D_INTERFACE_HEADER="${_interface_name}.h")
-    target_link_libraries(${_target_name} PRIVATE ig_lib_runtime)
-    target_include_directories(${_target_name} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+    target_compile_definitions(${_target_name} PRIVATE ${args})
+    target_link_libraries(${_target_name} PRIVATE ${AnyDSL_runtime_LIBRARIES} ig_lib_runtime)
+    target_include_directories(${_target_name} PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
+    add_dependencies(${_target_name} artic_c_interface)
 
     # Some of the compilation process requires a lot of memory.
     # Prevent parallel build of the drivers (per default) by chaining them together

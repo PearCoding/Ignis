@@ -1,7 +1,18 @@
 // Dummy file used to generate a C interface for the renderer
+struct Settings {
+    eye:       Vec3,
+    dir:       Vec3,
+    up:        Vec3,
+    right:     Vec3,
+    width:     f32,
+    height:    f32,
+    ray_count: i32,
+    rays:      &[Ray],
+    device:    i32
+}
 
 #[export]
-fn _dummy() -> () {
+fn ig_render(_settings: &Settings, _iter: i32) -> () {
     // Force the export of the primary and secondary stream types
     let mut primary : PrimaryStream;
     let mut secondary : SecondaryStream;
@@ -14,23 +25,19 @@ fn _dummy() -> () {
     let  mut node8 : &[Node8];
     let  mut tagged_bbox : &[EntityLeaf1];
     
-    ignis_load_bvh2_tri1(0, "", &mut node2, &mut tri1);
-    ignis_load_bvh4_tri4(0, "", &mut node4, &mut tri4);
-    ignis_load_bvh8_tri4(0, "", &mut node8, &mut tri4);
-
-    ignis_load_bvh2_bbox(0, "", &mut node2, &mut tagged_bbox);
-    ignis_load_bvh4_bbox(0, "", &mut node4, &mut tagged_bbox);
-    ignis_load_bvh8_bbox(0, "", &mut node8, &mut tagged_bbox);
+    ignis_load_bvh2_ent(0, &mut node2, &mut tagged_bbox);
+    ignis_load_bvh4_ent(0, &mut node4, &mut tagged_bbox);
+    ignis_load_bvh8_ent(0, &mut node8, &mut tagged_bbox);
 
     // Force the export of the CDF types
-    let mut cdf1 : CDF1D;
+    /*let mut cdf1 : CDF1D;
     let mut cdf2 : CDF2D;
     ignis_load_cdf1d(0, "", &mut cdf1);
     ignis_load_cdf2d(0, "", &mut cdf2);
 
     // Force the export of the klems model
     let mut klems : KlemsModel;
-    ignis_load_klems(0, "", &mut klems);
+    ignis_load_klems(0, "", &mut klems);*/
 
     // Force the export
     let mut dtb : SceneDatabase;

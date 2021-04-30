@@ -1,5 +1,4 @@
 #include "UI.h"
-#include "Interface.h"
 #include "Pose.h"
 
 #include <SDL.h>
@@ -10,8 +9,6 @@
 #include "Color.h"
 #include "Image.h"
 #include "Logger.h"
-
-#include "generated_interface.h"
 
 #include <atomic>
 #include <execution>
@@ -29,6 +26,7 @@ static SDL_Texture* sTexture;
 static std::vector<uint32_t> sBuffer;
 static int sWidth;
 static int sHeight;
+static const float* sPixels;
 
 struct LuminanceInfo {
 	std::atomic<float> Min = FltInf;
@@ -561,7 +559,7 @@ using RangeS = Range<size_t>;
 
 static void analzeLuminance(size_t width, size_t height, uint32_t iter)
 {
-	const auto film		  = get_pixels(); // sRGB
+	const float* film	  = sPixels; // sRGB
 	auto inv_iter		  = 1.0f / iter;
 	const float avgFactor = 1.0f / (width * height);
 	sLastLum			  = LuminanceInfo();
@@ -643,9 +641,9 @@ static void analzeLuminance(size_t width, size_t height, uint32_t iter)
 
 static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, size_t height, uint32_t iter)
 {
-	auto film	   = get_pixels();
-	auto inv_iter  = 1.0f / iter;
-	auto inv_gamma = 1.0f / 2.2f;
+	const float* film = sPixels;
+	auto inv_iter	  = 1.0f / iter;
+	auto inv_gamma	  = 1.0f / 2.2f;
 
 	const float exposure_factor = std::pow(2.0, sToneMapping_Exposure);
 	analzeLuminance(width, height, iter);
@@ -708,7 +706,7 @@ static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, si
 
 static RGB get_film_data(size_t width, size_t height, uint32_t iter, uint32_t x, uint32_t y)
 {
-	auto film			 = get_pixels();
+	const float* film	 = sPixels;
 	const float inv_iter = 1.0f / iter;
 	const uint32_t ind	 = y * width + x;
 
@@ -731,8 +729,8 @@ static void make_screenshot(size_t width, size_t height, uint32_t iter)
 	img.height = height;
 	img.pixels.reset(new float[width * height * 4]);
 
-	auto film	  = get_pixels();
-	auto inv_iter = 1.0f / iter;
+	const float* film = sPixels;
+	auto inv_iter	  = 1.0f / iter;
 	const RangeS imageRange(0, width * height);
 
 	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), [&](size_t ind) {
@@ -754,13 +752,14 @@ static void make_screenshot(size_t width, size_t height, uint32_t iter)
 
 ////////////////////////////////////////////////////////////////
 
-void init(int width, int height)
+void init(int width, int height, const float* pixels)
 {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
 		IG_LOG(L_FATAL) << "Cannot initialize SDL." << std::endl;
 
 	sWidth	= width;
 	sHeight = height;
+	sPixels = pixels;
 	sWindow = SDL_CreateWindow(
 		"Ignis",
 		SDL_WINDOWPOS_UNDEFINED,
@@ -835,7 +834,7 @@ static void handle_imgui(uint32_t iter)
 	ImGui::Begin("Control");
 	if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Text("Iter %i", iter);
-		ImGui::Text("SPP  %i", iter * get_spp());
+		ImGui::Text("SPP  %i", iter * 4);
 		ImGui::Text("Cursor  (%f, %f, %f)", rgb.r, rgb.g, rgb.b);
 		ImGui::Text("Max Lum %f", sLastLum.Max.load());
 		ImGui::Text("Min Lum %f", sLastLum.Min.load());

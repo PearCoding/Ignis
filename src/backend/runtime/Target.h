@@ -5,6 +5,7 @@
 namespace IG {
 enum class Target : uint32 {
 	GENERIC = 0,
+	AVX512,
 	AVX2,
 	AVX,
 	SSE42,

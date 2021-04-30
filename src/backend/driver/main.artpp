@@ -1,51 +1,17 @@
-struct PerspectiveSettings {
-    eye:    Vec3,
-    dir:    Vec3,
-    up:     Vec3,
-    right:  Vec3,
-    width:  f32,
-    height: f32
-}
-
-struct OrthogonalSettings {
-    eye:    Vec3,
-    dir:    Vec3,
-    up:     Vec3,
-    right:  Vec3,
-    width:  f32,
-    height: f32
-}
-
-struct FisheyeSettings {
-    eye:    Vec3,
-    dir:    Vec3,
-    up:     Vec3,
-    right:  Vec3,
-    width:  f32,
-    height: f32
-}
-
-struct RayListSettings {
-    ray_count: i32,
-    rays:      &[Ray]
-}
-
 struct Settings {
-#if CAMERA_PERSPECTIVE
-    camera: PerspectiveSettings,
-#elif CAMERA_ORTHOGONAL
-    camera: OrthogonalSettings,
-#elif CAMERA_FISHLENS
-    camera: FisheyeSettings,
-#else
-    camera: RayListSettings,
-#endif
-
-    device: i32
+    eye:       Vec3,
+    dir:       Vec3,
+    up:        Vec3,
+    right:     Vec3,
+    width:     f32,
+    height:    f32,
+    ray_count: i32,
+    rays:      &[Ray],
+    device:    i32
 }
 
 #[export]
-fn render(settings: &Settings, iter: i32) -> () {
+fn ig_render(settings: &Settings, iter: i32) -> () {
 #if DEVICE_AVX
     let device = make_avx_device();
 #elif DEVICE_AVX2
@@ -73,31 +39,31 @@ fn render(settings: &Settings, iter: i32) -> () {
 #if CAMERA_PERSPECTIVE
     let camera = make_perspective_camera(
         math,
-        settings.camera.eye,
-        make_mat3x3(settings.camera.right, settings.camera.up, settings.camera.dir),
-        settings.camera.width,
-        settings.camera.height
+        settings.eye,
+        make_mat3x3(settings.right, settings.up, settings.dir),
+        settings.width,
+        settings.height
     );
 #elif CAMERA_ORTHOGONAL
     let camera = make_orthogonal_camera(
         math,
-        settings.camera.eye,
-        make_mat3x3(settings.camera.right, settings.camera.up, settings.camera.dir),
-        settings.camera.width,
-        settings.camera.height
+        settings.eye,
+        make_mat3x3(settings.right, settings.up, settings.dir),
+        settings.width,
+        settings.height
     );
 #elif CAMERA_FISHLENS
     let camera = make_fishlens_camera(
         math,
-        settings.camera.eye,
-        make_mat3x3(settings.camera.right, settings.camera.up, settings.camera.dir),
-        settings.camera.width,
-        settings.camera.height
+        settings.eye,
+        make_mat3x3(settings.right, settings.up, settings.dir),
+        settings.width,
+        settings.height
     );
 #endif
 
 #if CAMERA_LIST
-    let emitter = make_list_emitter(settings.camera.ray_count, settings.camera.rays);
+    let emitter = make_list_emitter(settings.ray_count, settings.rays);
 #if !RENDERER_DEBUG
     let spp     = 1:i32;
 #endif

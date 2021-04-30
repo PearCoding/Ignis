@@ -2,8 +2,6 @@
 
 #include "IG_Config.h"
 
-#include <filesystem>
-
 namespace IG {
 class SharedLibrary {
 public:

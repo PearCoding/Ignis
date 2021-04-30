@@ -1,19 +1,14 @@
 #include "Camera.h"
-#include "Interface.h"
 
 #ifdef WITH_UI
 #include "UI.h"
 #endif
 
-#include "Buffer.h"
-#include "Color.h"
-#include "Image.h"
+#include "Loader.h"
 #include "Logger.h"
-#include "bvh/BVH.h"
-#include "math/BoundingBox.h"
-#include "math/Triangle.h"
+#include "Runtime.h"
 
-#include "generated_interface.h"
+constexpr int SPP = 4; // Render SPP is always 4!
 
 using namespace IG;
 
@@ -25,7 +20,7 @@ static inline void check_arg(int argc, char** argv, int arg, int n)
 
 static inline void usage()
 {
-	std::cout << "Usage: ignis [options]\n"
+	std::cout << "Usage: ignis file [options]\n"
 			  << "Available options:\n"
 			  << "   --help              Shows this message\n"
 			  << "   --width  pixels     Sets the viewport horizontal dimension (in pixels)\n"
@@ -39,71 +34,47 @@ static inline void usage()
 			  << "   -o       image.exr  Writes the output image to a file" << std::endl;
 }
 
-static void save_image(const std::string& path, size_t width, size_t height, uint32_t iter)
-{
-	ImageRgb24 img;
-	img.width  = width;
-	img.height = height;
-	img.pixels.reset(new float[width * height * 3]);
-
-	auto film	  = get_pixels();
-	auto inv_iter = 1.0f / iter;
-
-	for (size_t ind = 0; ind < width * height; ++ind) {
-		auto r = film[ind * 3 + 0];
-		auto g = film[ind * 3 + 1];
-		auto b = film[ind * 3 + 2];
-
-		img.pixels[3 * ind + 0] = r * inv_iter;
-		img.pixels[3 * ind + 1] = g * inv_iter;
-		img.pixels[3 * ind + 2] = b * inv_iter;
-	}
-
-	if (!img.save(path))
-		IG_LOG(L_ERROR) << "Failed to save EXR file '" << path << "'" << std::endl;
-	else
-		IG_LOG(L_INFO) << "Image saved to '" << path << "'" << std::endl;
-}
-
 int main(int argc, char** argv)
 {
+	std::string in_file;
 	std::string out_file;
 	size_t bench_iter = 0;
-
-	// Get default settings from script
-	InitialSettings default_settings = get_default_settings();
-	default_settings.film_width		 = std::max(100, default_settings.film_width);
-	default_settings.film_height	 = std::max(100, default_settings.film_height);
+	int film_width	  = 800;
+	int film_height	  = 600;
+	Vector3f eye	  = Vector3f::Zero();
+	Vector3f dir	  = Vector3f::UnitY();
+	Vector3f up		  = Vector3f::UnitZ();
+	float fov		  = 60;
 
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
 			if (!strcmp(argv[i], "--width")) {
 				check_arg(argc, argv, i, 1);
-				default_settings.film_width = strtoul(argv[++i], nullptr, 10);
+				film_width = strtoul(argv[++i], nullptr, 10);
 			} else if (!strcmp(argv[i], "--height")) {
 				check_arg(argc, argv, i, 1);
-				default_settings.film_height = strtoul(argv[++i], nullptr, 10);
+				film_height = strtoul(argv[++i], nullptr, 10);
 			} else if (!strcmp(argv[i], "--eye")) {
 				check_arg(argc, argv, i, 3);
-				default_settings.eye.x = strtof(argv[++i], nullptr);
-				default_settings.eye.y = strtof(argv[++i], nullptr);
-				default_settings.eye.z = strtof(argv[++i], nullptr);
+				eye(0) = strtof(argv[++i], nullptr);
+				eye(1) = strtof(argv[++i], nullptr);
+				eye(2) = strtof(argv[++i], nullptr);
 			} else if (!strcmp(argv[i], "--dir")) {
 				check_arg(argc, argv, i, 3);
-				default_settings.dir.x = strtof(argv[++i], nullptr);
-				default_settings.dir.y = strtof(argv[++i], nullptr);
-				default_settings.dir.z = strtof(argv[++i], nullptr);
+				dir(0) = strtof(argv[++i], nullptr);
+				dir(1) = strtof(argv[++i], nullptr);
+				dir(2) = strtof(argv[++i], nullptr);
 			} else if (!strcmp(argv[i], "--up")) {
 				check_arg(argc, argv, i, 3);
-				default_settings.up.x = strtof(argv[++i], nullptr);
-				default_settings.up.y = strtof(argv[++i], nullptr);
-				default_settings.up.z = strtof(argv[++i], nullptr);
+				up(0) = strtof(argv[++i], nullptr);
+				up(1) = strtof(argv[++i], nullptr);
+				up(2) = strtof(argv[++i], nullptr);
 			} else if (!strcmp(argv[i], "--fov")) {
 				check_arg(argc, argv, i, 1);
-				default_settings.fov = strtof(argv[++i], nullptr);
+				fov = strtof(argv[++i], nullptr);
 			} else if (!strcmp(argv[i], "--spp")) {
 				check_arg(argc, argv, i, 1);
-				bench_iter = (size_t)std::ceil(strtoul(argv[++i], nullptr, 10) / (float)get_spp());
+				bench_iter = (size_t)std::ceil(strtoul(argv[++i], nullptr, 10) / (float)SPP);
 			} else if (!strcmp(argv[i], "--bench")) {
 				check_arg(argc, argv, i, 1);
 				bench_iter = strtoul(argv[++i], nullptr, 10);
@@ -118,9 +89,18 @@ int main(int argc, char** argv)
 				return EXIT_FAILURE;
 			}
 		} else {
-			IG_LOG(L_ERROR) << "Unexpected argument '" << argv[i] << "'" << std::endl;
-			return EXIT_FAILURE;
+			if (in_file.empty()) {
+				in_file = argv[i];
+			} else {
+				IG_LOG(L_ERROR) << "Unexpected argument '" << argv[i] << "'" << std::endl;
+				return EXIT_FAILURE;
+			}
 		}
+	}
+
+	if (in_file == "") {
+		IG_LOG(L_ERROR) << "No input file given" << std::endl;
+		return EXIT_FAILURE;
 	}
 
 #ifndef WITH_UI
@@ -128,26 +108,32 @@ int main(int argc, char** argv)
 		IG_LOG(L_ERROR) << "No valid spp count given" << std::endl;
 		return EXIT_FAILURE;
 	}
-	if(out_file == "") {
+	if (out_file == "") {
 		IG_LOG(L_ERROR) << "No output file given" << std::endl;
-		return EXIT_FAILURE;	
+		return EXIT_FAILURE;
 	}
 #endif
 
-	Camera camera(
-		Vector3f(default_settings.eye.x, default_settings.eye.y, default_settings.eye.z),
-		Vector3f(default_settings.dir.x, default_settings.dir.y, default_settings.dir.z),
-		Vector3f(default_settings.up.x, default_settings.up.y, default_settings.up.z),
-		default_settings.fov,
-		(float)default_settings.film_width / (float)default_settings.film_height);
+	std::unique_ptr<Runtime> runtime;
+	try {
+		LoaderOptions opts;
+		opts.target = Target::NVVM_STREAMING; // TODO
+		opts.fusion = false;
+		opts.device = 0;
+
+		runtime = std::make_unique<Runtime>(in_file, opts);
+	} catch (const std::exception& e) {
+		IG_LOG(L_ERROR) << e.what() << std::endl;
+		return EXIT_FAILURE;
+	}
+
+	Camera camera(eye, dir, up, fov, (float)film_width / (float)film_height);
+	runtime->setup(film_width, film_height);
 
 #ifdef WITH_UI
-	UI::init(default_settings.film_width, default_settings.film_height);
+	UI::init(film_width, film_height, runtime->getFramebuffer());
 #endif
 
-	setup_interface(default_settings.film_width, default_settings.film_height);
-
-	auto spp		= get_spp();
 	bool done		= false;
 	uint64_t timing = 0;
 	uint32_t frames = 0;
@@ -157,25 +143,14 @@ int main(int argc, char** argv)
 #ifdef WITH_UI
 		done = UI::handleInput(iter, camera);
 #endif
-		if (iter == 0)
-			clear_pixels();
-
-		Settings settings{
-			Vec3{ camera.eye(0), camera.eye(1), camera.eye(2) },
-			Vec3{ camera.dir(0), camera.dir(1), camera.dir(2) },
-			Vec3{ camera.up(0), camera.up(1), camera.up(2) },
-			Vec3{ camera.right(0), camera.right(1), camera.right(2) },
-			camera.w,
-			camera.h,
-			0, nullptr // No artifical ray streams
-		};
 
 		auto ticks = std::chrono::high_resolution_clock::now();
-		render(&settings, iter++);
+		runtime->step(camera);
+		iter++;
 		auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
 		if (bench_iter != 0) {
-			samples_sec.emplace_back(1000.0 * double(spp * default_settings.film_width * default_settings.film_height) / double(elapsed_ms));
+			samples_sec.emplace_back(1000.0 * double(SPP * film_width * film_height) / double(elapsed_ms));
 			if (samples_sec.size() == bench_iter)
 				break;
 		}
@@ -187,8 +162,8 @@ int main(int argc, char** argv)
 #ifdef WITH_UI
 			std::ostringstream os;
 			os << "Ignis [" << frames_sec << " FPS, "
-			   << iter * spp << " "
-			   << "sample" << (iter * spp > 1 ? "s" : "") << "]";
+			   << iter * SPP << " "
+			   << "sample" << (iter * SPP > 1 ? "s" : "") << "]";
 			UI::setTitle(os.str().c_str());
 #endif
 			frames = 0;
@@ -203,11 +178,6 @@ int main(int argc, char** argv)
 #ifdef WITH_UI
 	UI::close();
 #endif
-
-	if (out_file != "")
-		save_image(out_file, default_settings.film_width, default_settings.film_height, iter);
-
-	cleanup_interface();
 
 	if (bench_iter != 0) {
 		auto inv = 1.0e-6;

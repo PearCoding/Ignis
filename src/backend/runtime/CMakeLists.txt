@@ -37,11 +37,17 @@ set(SRC
     Logger.h
     Parser.cpp
     Parser.h
+    Runtime.cpp
+    Runtime.h
     SharedLibrary.cpp
     SharedLibrary.h
     Target.h
     bvh/BVH.h
     bvh/MemoryPool.h
+    driver/Configuration.h
+    driver/DriverManager.cpp
+    driver/DriverManager.h
+    driver/Interface.h
     klems/KlemsLoader.cpp
     klems/KlemsLoader.h
     log/ConsoleLogListener.cpp
@@ -69,6 +75,8 @@ set(SRC
     serialization/Serializer.cpp
     serialization/Serializer.h
     serialization/Serializer.inl
+    serialization/VectorSerializer.cpp
+    serialization/VectorSerializer.h
     skysun/ElevationAzimuth.h
     skysun/SkyModel.cpp
     skysun/SkyModel.h
@@ -80,9 +88,13 @@ set(SRC
     skysun/model/ArHosekSkyModelData_CIEXYZ.h
     skysun/model/ArHosekSkyModelData_RGB.h
     skysun/model/ArHosekSkyModelData_Spectral.h
+    table/DynTable.h
+    table/SceneDatabase.h
 )
 
-add_library(ig_lib_runtime STATIC ${SRC} "${CMAKE_BINARY_DIR}/HW_Features.h")
+set(HW_HEADER "${CMAKE_BINARY_DIR}/HW_Features.h")
+set_source_files_properties(${HW_HEADER} PROPERTIES GENERATED ON)
+add_library(ig_lib_runtime STATIC ${SRC} ${HW_HEADER})
 if(NOT WIN32)
     find_package(Threads REQUIRED)
     target_link_libraries(ig_lib_runtime PUBLIC Threads::Threads)
