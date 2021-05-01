@@ -1,11 +1,11 @@
-#include "GeneratorLight.h"
+#include "LoaderLight.h"
 #include "Logger.h"
 #include "skysun/SkyModel.h"
 #include "skysun/SunLocation.h"
 
 namespace IG {
 
-static ElevationAzimuth extractEA(const std::shared_ptr<Loader::Object>& obj)
+static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
 {
 	if (obj->property("direction").isValid()) {
 		return ElevationAzimuth::fromDirection(obj->property("direction").getVector3(Vector3f(0, 0, 1)));
@@ -31,17 +31,17 @@ static ElevationAzimuth extractEA(const std::shared_ptr<Loader::Object>& obj)
 	}
 }
 
-static void setup_sky(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx)
+/*static void setup_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	auto ground	   = light->property("ground").getVector3(Vector3f(0.8f, 0.8f, 0.8f));
 	auto turbidity = light->property("turbidity").getNumber(3.0f);
 	auto ea		   = extractEA(light);
 
 	SkyModel model(ground, ea, turbidity);
-	model.save("data/skytex_" + GeneratorContext::makeId(name) + ".exr");
-}
+	model.save("data/skytex_" + LoaderContext::makeId(name) + ".exr");
+}*/
 
-static void light_point(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
+static void light_point(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
 {
 	auto pos = light->property("position").getVector3();
 	os << "make_point_light(math, make_vec3("
@@ -49,13 +49,13 @@ static void light_point(const std::string& name, const std::shared_ptr<Loader::O
 	   << ctx.extractMaterialPropertyColor(light, "intensity", 1.0f) << ")";
 }
 
-static void light_area(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
+static void light_area(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
 {
 	IG_LOG(L_WARNING) << "Area emitter without a shape is not allowed" << std::endl;
 	os << "make_point_light(math, make_vec3(0,0,0), pink)/* Inv. Area */";
 }
 
-static void light_directional(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
+static void light_directional(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
 {
 	auto ea		 = extractEA(light);
 	Vector3f dir = ea.toDirection();
@@ -66,7 +66,7 @@ static void light_directional(const std::string& name, const std::shared_ptr<Loa
 	   << ctx.extractMaterialPropertyColor(light, "irradiance", 1.0f) << ")";
 }
 
-static void light_sun(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
+static void light_sun(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
 {
 	auto ea		 = extractEA(light);
 	Vector3f dir = ea.toDirection();
@@ -80,19 +80,19 @@ static void light_sun(const std::string& name, const std::shared_ptr<Loader::Obj
 	   << "make_gray_color(" << power << "))";
 }
 
-static void light_sky(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
+/*static void light_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
 {
 	setup_sky(name, light, ctx);
 
-	std::string tex_path = "skytex_" + GeneratorContext::makeId(name);
+	std::string tex_path = "skytex_" + LoaderContext::makeId(name);
 	os << "make_environment_light_textured(math, " << ctx.Environment.SceneDiameter << ", " << tex_path << ")";
 }
 
 // TODO: Why not just add two lights instead of this combination?
-static void light_sunsky(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
+static void light_sunsky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
 {
 	setup_sky(name, light, ctx);
-	const std::string tex_path = "skytex_" + GeneratorContext::makeId(name);
+	const std::string tex_path = "skytex_" + LoaderContext::makeId(name);
 
 	auto ea		 = extractEA(light);
 	Vector3f dir = ea.toDirection();
@@ -105,9 +105,9 @@ static void light_sunsky(const std::string& name, const std::shared_ptr<Loader::
 	   << sun_radius << ", "
 	   << "make_gray_color(" << sun_power << "), "
 	   << tex_path << ")";
-}
+}*/
 
-static void light_cie_uniform(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
+static void light_cie_uniform(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
 {
 	auto zenith			  = ctx.extractMaterialPropertyColor(light, "zenith", 1.0f);
 	auto ground			  = ctx.extractMaterialPropertyColor(light, "ground", 1.0f);
@@ -119,7 +119,7 @@ static void light_cie_uniform(const std::string& name, const std::shared_ptr<Loa
 	   << groundbrightness << ")";
 }
 
-static void light_cie_cloudy(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
+static void light_cie_cloudy(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
 {
 	auto zenith			  = ctx.extractMaterialPropertyColor(light, "zenith", 1.0f);
 	auto ground			  = ctx.extractMaterialPropertyColor(light, "ground", 1.0f);
@@ -141,7 +141,7 @@ static inline float perez_model(float zenithAngle, float sunAngle, float a, floa
 	return A * B;
 }
 
-static void light_perez(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
+static void light_perez(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
 {
 	auto ea		 = extractEA(light);
 	Vector3f dir = ea.toDirection();
@@ -172,7 +172,7 @@ static void light_perez(const std::string& name, const std::shared_ptr<Loader::O
 	   << e << ")";
 }
 
-static void light_env(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os)
+static void light_env(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
 {
 	bool isTexture = false;
 	auto radiance  = ctx.extractMaterialPropertyColorLight(light, "radiance", 1.0f, isTexture);
@@ -188,25 +188,25 @@ static void light_error(const std::string& msg, std::ostream& os)
 	os << "make_point_light(math, make_vec3(0,0,0), pink)/* " << msg << " */";
 }
 
-static void light_unknown(const std::shared_ptr<Loader::Object>& light, const GeneratorContext&, std::ostream& os)
+static void light_unknown(const std::shared_ptr<Parser::Object>& light, const LoaderContext&, std::ostream& os)
 {
 	IG_LOG(L_WARNING) << "Unknown emitter type '" << light->pluginType() << "'" << std::endl;
 	os << "make_point_light(math, make_vec3(0,0,0), pink)/* Unknown */";
 }
 
-using LightGenerator = void (*)(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx, std::ostream& os);
+using LightLoader = void (*)(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os);
 static struct {
 	const char* Name;
-	LightGenerator Generator;
+	LightLoader Loader;
 } _generators[] = {
 	{ "point", light_point },
 	{ "area", light_area },
 	{ "directional", light_directional },
 	{ "direction", light_directional },
 	{ "sun", light_sun },
-	{ "sunsky", light_sunsky },
+	/*{ "sunsky", light_sunsky },
 	{ "skysun", light_sunsky },
-	{ "sky", light_sky },
+	{ "sky", light_sky },*/
 	{ "cie_uniform", light_cie_uniform },
 	{ "cieuniform", light_cie_uniform },
 	{ "cie_cloudy", light_cie_cloudy },
@@ -219,16 +219,16 @@ static struct {
 	{ "", nullptr }
 };
 
-std::string GeneratorLight::extract(const std::string& name, const std::shared_ptr<Loader::Object>& light, const GeneratorContext& ctx)
+std::string LoaderLight::extract(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	std::stringstream sstream;
 
 	if (!light) {
 		light_error("No light given", sstream);
 	} else {
-		for (size_t i = 0; _generators[i].Generator; ++i) {
+		for (size_t i = 0; _generators[i].Loader; ++i) {
 			if (_generators[i].Name == light->pluginType()) {
-				_generators[i].Generator(name, light, ctx, sstream);
+				_generators[i].Loader(name, light, ctx, sstream);
 				return sstream.str();
 			}
 		}

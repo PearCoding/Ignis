@@ -22,6 +22,13 @@ CPMAddPackage(
     EXCLUDE_FROM_ALL
 )
 
+CPMAddPackage(
+    NAME hwinfo
+    GITHUB_REPOSITORY PearCoding/hwinfo 
+    GIT_TAG main
+    EXCLUDE_FROM_ALL
+)
+
 ################################################################
 
 set(SRC 
@@ -44,12 +51,28 @@ set(SRC
     Target.h
     bvh/BVH.h
     bvh/MemoryPool.h
+    bvh/SceneBVHAdapter.h
+    bvh/TriBVHAdapter.h
     driver/Configuration.h
     driver/DriverManager.cpp
     driver/DriverManager.h
     driver/Interface.h
     klems/KlemsLoader.cpp
     klems/KlemsLoader.h
+    loader/LoaderBSDF.cpp
+    loader/LoaderBSDF.h
+    loader/LoaderContext.cpp
+    loader/LoaderContext.h
+    loader/LoaderEntity.cpp
+    loader/LoaderEntity.h
+    loader/LoaderEnvironment.cpp
+    loader/LoaderEnvironment.h
+    loader/LoaderLight.cpp
+    loader/LoaderLight.h
+    loader/LoaderShape.cpp
+    loader/LoaderShape.h
+    loader/LoaderTexture.cpp
+    loader/LoaderTexture.h
     log/ConsoleLogListener.cpp
     log/ConsoleLogListener.h
     log/FileLogListener.cpp
@@ -93,7 +116,12 @@ set(SRC
 )
 
 set(HW_HEADER "${CMAKE_BINARY_DIR}/HW_Features.h")
-set_source_files_properties(${HW_HEADER} PROPERTIES GENERATED ON)
+add_custom_command(
+  OUTPUT "${HW_HEADER}"
+  COMMAND $<TARGET_FILE:hwinfo> --header --prefix IG > ${HW_HEADER}
+  COMMENT "Generating hardware feature information: ${HW_HEADER}" 
+  VERBATIM)
+  
 add_library(ig_lib_runtime STATIC ${SRC} ${HW_HEADER})
 if(NOT WIN32)
     find_package(Threads REQUIRED)
@@ -101,7 +129,6 @@ if(NOT WIN32)
 endif()
 target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen PRIVATE ${CMAKE_DL_LIBS} ${LZ4_LIBRARY} OpenImageIO::OpenImageIO pugixml)
 target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include)
-target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 target_compile_features(ig_lib_runtime PUBLIC cxx_std_17)
 set_target_properties(ig_lib_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
-

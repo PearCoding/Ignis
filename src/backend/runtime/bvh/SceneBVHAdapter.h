@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bvh/BVH.h"
+#include "BVH.h"
 #include "math/BoundingBox.h"
 
 #include "Target.h"
@@ -9,40 +9,46 @@
 #include "generated_interface.h"
 
 namespace IG {
+struct EntityObject {
+	BoundingBox BBox;
+	uint32 ShapeID;
+	uint32 MaterialID;
+	Matrix4f Local;
+};
 
 template <>
-struct ObjectAdapter<BoundingBox> {
-	const BoundingBox& bbox;
+struct ObjectAdapter<EntityObject> {
+	const EntityObject& obj;
 
-	ObjectAdapter(const BoundingBox& t)
-		: bbox(t)
+	ObjectAdapter(const EntityObject& t)
+		: obj(t)
 	{
 	}
 
 	inline BoundingBox computeBoundingBox() const
 	{
-		return bbox;
+		return obj.BBox;
 	}
 
 	inline Vector3f center() const
 	{
-		return (bbox.max + bbox.min) * (1.0f / 2.0f);
+		return (obj.BBox.max + obj.BBox.min) * (1.0f / 2.0f);
 	}
 
-	inline void computeSplit(IG::BoundingBox& left_bb, IG::BoundingBox& right_bb, int axis, float split) const
+	inline void computeSplit(BoundingBox& left_bb, BoundingBox& right_bb, int axis, float split) const
 	{
 		// Should not be used
 		IG_ASSERT(false, "Compute Split should not be used when UseSpatialSplits is disabled");
-		bbox.computeSplit(left_bb, right_bb, axis, split);
+		obj.BBox.computeSplit(left_bb, right_bb, axis, split);
 	}
 };
 
 template <typename Adapter>
-struct LeafWriterBBox1 {
+struct LeafWriterEnt1 {
 	Adapter& adapter;
-	const std::vector<IG::BoundingBox>& in_objs;
+	const std::vector<EntityObject>& in_objs;
 
-	LeafWriterBBox1(Adapter& adapter, const std::vector<IG::BoundingBox>& in_objs)
+	LeafWriterEnt1(Adapter& adapter, const std::vector<EntityObject>& in_objs)
 		: adapter(adapter)
 		, in_objs(in_objs)
 	{
@@ -63,38 +69,42 @@ struct LeafWriterBBox1 {
 			const auto& in_obj = in_objs[id];
 
 			objs.emplace_back(EntityLeaf1{
-				{ in_obj.min(0), in_obj.min(1), in_obj.min(2) },
-				0,
-				{ in_obj.max(0), in_obj.max(1), in_obj.max(2) },
-				id });
+				{ in_obj.BBox.min(0), in_obj.BBox.min(1), in_obj.BBox.min(2) },
+				id,
+				{ in_obj.BBox.max(0), in_obj.BBox.max(1), in_obj.BBox.max(2) },
+				(int)in_obj.ShapeID,
+				{ { { { in_obj.Local(0, 0), in_obj.Local(1, 0), in_obj.Local(2, 0), in_obj.Local(3, 0) },
+					  { in_obj.Local(0, 1), in_obj.Local(1, 1), in_obj.Local(2, 1), in_obj.Local(3, 1) },
+					  { in_obj.Local(0, 2), in_obj.Local(1, 2), in_obj.Local(2, 2), in_obj.Local(3, 2) },
+					  { in_obj.Local(0, 3), in_obj.Local(1, 3), in_obj.Local(2, 3), in_obj.Local(3, 3) } } } } });
 		}
 
 		// Tag last entry
-		objs.back().tag |= 0x80000000;
+		objs.back().entity_id |= 0x80000000;
 	}
 };
 
 template <size_t N>
-struct BvhNBbox {
+struct BvhNEnt {
 };
 
 template <>
-struct BvhNBbox<8> {
+struct BvhNEnt<8> {
 	using Node = Node8;
 };
 
 template <>
-struct BvhNBbox<4> {
+struct BvhNEnt<4> {
 	using Node = Node4;
 };
 
 template <>
-struct BvhNBbox<2> {
+struct BvhNEnt<2> {
 	using Node = Node2;
 };
 
 template <size_t N>
-class BvhNBboxAdapter {
+class BvhNEntAdapter {
 	struct CostFn {
 		static float leaf_cost(int count, float area)
 		{
@@ -106,27 +116,27 @@ class BvhNBboxAdapter {
 		}
 	};
 
-	using BvhBuilder = BasicBvhBuilder<BoundingBox, N, CostFn>;
-	using Adapter	 = BvhNBboxAdapter;
-	using Node		 = typename BvhNBbox<N>::Node;
+	using BvhBuilder = BasicBvhBuilder<EntityObject, N, CostFn>;
+	using Adapter	 = BvhNEntAdapter;
+	using Node		 = typename BvhNEnt<N>::Node;
 	using Obj		 = EntityLeaf1;
 
-	friend class LeafWriterBBox1<Adapter>;
+	friend class LeafWriterEnt1<Adapter>;
 
 	std::vector<Node>& nodes_;
 	std::vector<Obj>& objs_;
 	BvhBuilder builder_;
 
 public:
-	BvhNBboxAdapter(std::vector<Node>& nodes, std::vector<Obj>& objs)
+	BvhNEntAdapter(std::vector<Node>& nodes, std::vector<Obj>& objs)
 		: nodes_(nodes)
 		, objs_(objs)
 	{
 	}
 
-	void build(const std::vector<BoundingBox>& objs)
+	void build(const std::vector<EntityObject>& objs)
 	{
-		builder_.build(objs, NodeWriter(*this), LeafWriterBBox1<Adapter>(*this, objs), 1);
+		builder_.build(objs, NodeWriter(*this), LeafWriterEnt1<Adapter>(*this, objs), 1);
 #ifdef STATISTICS
 		builder_.print_stats();
 #endif
@@ -186,7 +196,7 @@ private:
 };
 
 template <>
-class BvhNBboxAdapter<2> {
+class BvhNEntAdapter<2> {
 	struct CostFn {
 		static float leaf_cost(int count, float area)
 		{
@@ -198,27 +208,27 @@ class BvhNBboxAdapter<2> {
 		}
 	};
 
-	using BvhBuilder = BasicBvhBuilder<BoundingBox, 2, CostFn>;
-	using Adapter	 = BvhNBboxAdapter;
-	using Node		 = typename BvhNBbox<2>::Node;
+	using BvhBuilder = BasicBvhBuilder<EntityObject, 2, CostFn>;
+	using Adapter	 = BvhNEntAdapter;
+	using Node		 = typename BvhNEnt<2>::Node;
 	using Obj		 = EntityLeaf1;
 
-	friend class LeafWriterBBox1<Adapter>;
+	friend class LeafWriterEnt1<Adapter>;
 
 	std::vector<Node>& nodes_;
 	std::vector<Obj>& objs_;
 	BvhBuilder builder_;
 
 public:
-	BvhNBboxAdapter(std::vector<Node>& nodes, std::vector<Obj>& objs)
+	BvhNEntAdapter(std::vector<Node>& nodes, std::vector<Obj>& objs)
 		: nodes_(nodes)
 		, objs_(objs)
 	{
 	}
 
-	void build(const std::vector<IG::BoundingBox>& objs)
+	void build(const std::vector<EntityObject>& objs)
 	{
-		builder_.build(objs, NodeWriter(*this), LeafWriterBBox1<Adapter>(*this, objs), 2);
+		builder_.build(objs, NodeWriter(*this), LeafWriterEnt1<Adapter>(*this, objs), 2);
 #ifdef STATISTICS
 		builder_.print_stats();
 #endif
@@ -280,11 +290,11 @@ private:
 };
 
 template <size_t N>
-inline void build_scene_bvh(std::vector<typename BvhNBbox<N>::Node>& nodes,
+inline void build_scene_bvh(std::vector<typename BvhNEnt<N>::Node>& nodes,
 							std::vector<EntityLeaf1>& objs,
-							std::vector<BoundingBox>& boundingBoxes)
+							std::vector<EntityObject>& in_objs)
 {
-	BvhNBboxAdapter<N> adapter(nodes, objs);
-	adapter.build(boundingBoxes);
+	BvhNEntAdapter<N> adapter(nodes, objs);
+	adapter.build(in_objs);
 }
 } // namespace IG

@@ -77,11 +77,29 @@ inline void write_buffer(std::ostream& os, const Array& array)
 }
 
 template <typename Array>
-inline void  write_buffer(const std::string& file_name, const Array& array)
+inline void write_buffer(const std::string& file_name, const Array& array)
 {
 	std::ofstream of(file_name, std::ios::binary);
 	write_buffer(of, array);
 }
 
+template <typename T>
+inline std::vector<uint8> pad_buffer(const std::vector<T>& elems, bool enable, size_t size)
+{
+	std::vector<uint8> new_elems;
+	if (!enable) {
+		new_elems.resize(sizeof(T) * elems.size());
+		memcpy(new_elems.data(), elems.data(), sizeof(T) * elems.size());
+		return new_elems;
+	}
+	assert(size >= sizeof(T));
+	new_elems.resize(size * elems.size(), 0);
+	uint8* ptr = new_elems.data();
+	for (auto& elem : elems) {
+		memcpy(ptr, &elem, sizeof(T));
+		ptr += size;
+	}
+	return new_elems;
+}
 } // namespace IO
 } // namespace IG

@@ -5,7 +5,7 @@
 namespace IG {
 Runtime::Runtime(const std::filesystem::path& path, const LoaderOptions& opts)
 	: mInit(false)
-	, mDevice(opts.device)
+	, mDevice(opts.Device)
 	, mIteration(0)
 {
 	if (!mManager.init())
@@ -17,6 +17,7 @@ Runtime::Runtime(const std::filesystem::path& path, const LoaderOptions& opts)
 	LoaderResult result;
 	if (!Loader::load(path, m_opts, result))
 		throw std::runtime_error("Could not load scene!");
+	mLoadedRenderSettings = result.DesiredSettings;
 
 	const uint64 newConfig = mManager.checkConfiguration(result.DesiredConfiguration);
 	if (newConfig != result.DesiredConfiguration) {

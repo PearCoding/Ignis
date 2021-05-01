@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Loader.h"
 #include "driver/DriverManager.h"
 #include "table/SceneDatabase.h"
 
@@ -19,12 +20,15 @@ public:
 	void clearFramebuffer(int aov = -1);
 	inline uint32 iterationCount() const { return mIteration; }
 
+	inline const LoaderRenderSettings& loadedRenderSettings() const { return mLoadedRenderSettings; }
+
 private:
 	void shutdown();
 
 	bool mInit;
 
 	SceneDatabase mDatabase;
+	LoaderRenderSettings mLoadedRenderSettings;
 	DriverInterface mLoadedInterface;
 	DriverManager mManager;
 

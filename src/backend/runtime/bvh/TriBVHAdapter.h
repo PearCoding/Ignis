@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bvh/BVH.h"
+#include "BVH.h"
 #include "math/Triangle.h"
 #include "mesh/TriMesh.h"
 

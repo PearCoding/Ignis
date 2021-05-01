@@ -1,19 +1,16 @@
-#include "GeneratorShape.h"
+#include "LoaderShape.h"
 
 #include "Logger.h"
+#include "bvh/TriBVHAdapter.h"
 #include "mesh/MtsSerializedFile.h"
 #include "mesh/ObjFile.h"
 #include "mesh/PlyFile.h"
-
-#include "BVHIO.h"
-#include "IO.h"
-#include "TriBVHAdapter.h"
 
 #include <sstream>
 
 namespace IG {
 
-using namespace Loader;
+using namespace Parser;
 
 struct TransformCache {
 	Matrix4f TransformMatrix;
@@ -92,7 +89,7 @@ inline TriMesh setup_mesh_cube(const Object& elem)
 	return mesh;
 }
 
-inline TriMesh setup_mesh_obj(const Object& elem, const GeneratorContext& ctx)
+inline TriMesh setup_mesh_obj(const Object& elem, const LoaderContext& ctx)
 {
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
 	IG_LOG(L_INFO) << "Trying to load obj file " << filename << std::endl;
@@ -105,7 +102,7 @@ inline TriMesh setup_mesh_obj(const Object& elem, const GeneratorContext& ctx)
 	return trimesh;
 }
 
-inline TriMesh setup_mesh_ply(const Object& elem, const GeneratorContext& ctx)
+inline TriMesh setup_mesh_ply(const Object& elem, const LoaderContext& ctx)
 {
 	IG_LOG(L_INFO) << "Trying to load ply file " << elem.property("filename").getString() << std::endl;
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
@@ -118,7 +115,7 @@ inline TriMesh setup_mesh_ply(const Object& elem, const GeneratorContext& ctx)
 	return trimesh;
 }
 
-inline TriMesh setup_mesh_mitsuba(const Object& elem, const GeneratorContext& ctx)
+inline TriMesh setup_mesh_mitsuba(const Object& elem, const LoaderContext& ctx)
 {
 	size_t shape_index	= elem.property("shape_index").getInteger(0);
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
@@ -131,7 +128,7 @@ inline TriMesh setup_mesh_mitsuba(const Object& elem, const GeneratorContext& ct
 	return trimesh;
 }
 
-void GeneratorShape::setup(GeneratorContext& ctx)
+void LoaderShape::setup(LoaderContext& ctx)
 {
 	for (const auto& pair : ctx.Scene.shapes()) {
 		const auto child = pair.second;
@@ -179,73 +176,44 @@ void GeneratorShape::setup(GeneratorContext& ctx)
 			bbox.extend(v);
 		bbox.inflate(1e-5f); // Make sure it has a volume
 
-		const std::string suffix = GeneratorContext::makeId(pair.first);
-
 		Shape shape;
 		shape.VtxCount	  = child_mesh.vertices.size();
 		shape.ItxCount	  = child_mesh.indices.size();
 		shape.BoundingBox = bbox;
-		shape.TriMesh	  = "trimesh_" + suffix;
-		shape.BVH		  = "bvh_" + suffix;
-		ctx.Environment.Shapes.insert({ pair.first, shape });
+		ctx.Environment.Shapes.push_back(shape);
 
 		// Export data:
 		IG_LOG(L_INFO) << "Generating triangle mesh for shape " << pair.first << std::endl;
-		IO::write_tri_mesh(suffix, child_mesh, ctx.EnablePadding);
+		// TODO
 
 		// Generate BVH
-		if (ctx.ForceBVHBuild || IO::must_build_bvh(suffix, ctx.FilePath.string(), ctx.Target)) {
-			IG_LOG(L_INFO) << "Generating BVH for shape " << pair.first << std::endl;
-			IO::remove_bvh(suffix);
-			if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
-				std::vector<typename BvhNTriM<2, 1>::Node> nodes;
-				std::vector<typename BvhNTriM<2, 1>::Tri> tris;
-				build_bvh<2, 1>(child_mesh, nodes, tris);
-				IO::write_bvh(suffix, nodes, tris);
-			} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
-				std::vector<typename BvhNTriM<4, 4>::Node> nodes;
-				std::vector<typename BvhNTriM<4, 4>::Tri> tris;
-				build_bvh<4, 4>(child_mesh, nodes, tris);
-				IO::write_bvh(suffix, nodes, tris);
-			} else {
-				std::vector<typename BvhNTriM<8, 4>::Node> nodes;
-				std::vector<typename BvhNTriM<8, 4>::Tri> tris;
-				build_bvh<8, 4>(child_mesh, nodes, tris);
-				IO::write_bvh(suffix, nodes, tris);
-			}
-			IO::write_bvh_stamp(suffix, ctx.FilePath.string(), ctx.Target);
+		IG_LOG(L_INFO) << "Generating BVH for shape " << pair.first << std::endl;
+		if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
+			std::vector<typename BvhNTriM<2, 1>::Node> nodes;
+			std::vector<typename BvhNTriM<2, 1>::Tri> tris;
+			build_bvh<2, 1>(child_mesh, nodes, tris);
+			// TODO
+		} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
+			std::vector<typename BvhNTriM<4, 4>::Node> nodes;
+			std::vector<typename BvhNTriM<4, 4>::Tri> tris;
+			build_bvh<4, 4>(child_mesh, nodes, tris);
+			// TODO
 		} else {
-			IG_LOG(L_INFO) << "Reusing existing BVH for shape " << pair.first << std::endl;
+			std::vector<typename BvhNTriM<8, 4>::Node> nodes;
+			std::vector<typename BvhNTriM<8, 4>::Tri> tris;
+			build_bvh<8, 4>(child_mesh, nodes, tris);
+			// TODO
 		}
 	}
 }
 
-std::string GeneratorShape::dump(const GeneratorContext& ctx)
+std::string LoaderShape::dump(const LoaderContext& ctx)
 {
 	std::stringstream sstream;
 
 	for (const auto& pair : ctx.Scene.shapes()) {
-		const std::string suffix = GeneratorContext::makeId(pair.first);
-		const size_t numTris	 = ctx.Environment.Shapes.at(pair.first).ItxCount / 4; // (I0, I1, I2, M)
-
-		sstream << "    // ---- Shape " << pair.first << "\n"
-				<< "    let vertices_" << suffix << "     = device.load_buffer(\"data/meshes/vertices_" << suffix << ".bin\");\n"
-				<< "    let normals_" << suffix << "      = device.load_buffer(\"data/meshes/normals_" << suffix << ".bin\");\n"
-				<< "    let face_normals_" << suffix << " = device.load_buffer(\"data/meshes/face_normals_" << suffix << ".bin\");\n"
-				<< "    let face_area_" << suffix << "    = device.load_buffer(\"data/meshes/face_area_" << suffix << ".bin\");\n"
-				<< "    let texcoords_" << suffix << "    = device.load_buffer(\"data/meshes/texcoords_" << suffix << ".bin\");\n"
-				<< "    let indices_" << suffix << "      = device.load_buffer(\"data/meshes/indices_" << suffix << ".bin\");\n"
-				<< "    let trimesh_" << suffix << " = TriMesh {\n"
-				<< "       vertices     = @ |i| vertices_" << suffix << ".load_vec3(i),\n"
-				<< "       normals      = @ |i| normals_" << suffix << ".load_vec3(i),\n"
-				<< "       face_normals = @ |i| face_normals_" << suffix << ".load_vec3(i),\n"
-				<< "       face_area    = @ |i| face_area_" << suffix << ".load_f32(i),\n"
-				<< "       triangles    = @ |i| { let (i0, i1, i2, _) = indices_" << suffix << ".load_int4(i); (i0, i1, i2) },\n"
-				<< "       attrs        = @ |_| (false, @ |j| vec2_to_4(texcoords_" << suffix << ".load_vec2(j), 0.0, 0.0)),\n"
-				<< "       num_attrs    = 1,\n"
-				<< "       num_tris     = " << numTris << "\n"
-				<< "    };\n"
-				<< "    let bvh_" << suffix << " = device.load_tri_bvh(\"" << IO::bvh_filepath(suffix) << "\");\n";
+		const uint32 id		 = ctx.Environment.ShapeIDs.at(pair.first);
+		const size_t numTris = ctx.Environment.Shapes.at(id).ItxCount / 4; // (I0, I1, I2, M)
 	}
 
 	return sstream.str();

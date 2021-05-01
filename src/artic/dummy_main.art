@@ -12,6 +12,10 @@ struct Settings {
 }
 
 #[export]
+fn _dummy1(_tri1: &[Tri1], _tri4: &[Tri4]) -> () {
+}
+
+#[export]
 fn ig_render(_settings: &Settings, _iter: i32) -> () {
     // Force the export of the primary and secondary stream types
     let mut primary : PrimaryStream;
@@ -20,14 +24,14 @@ fn ig_render(_settings: &Settings, _iter: i32) -> () {
     ignis_cpu_get_secondary_stream(&mut secondary, 0);
 
     // Force the export of BVH types
-    let (mut node2 : &[Node2], mut tri1 : &[Tri1]);
-    let (mut node4 : &[Node4], mut tri4 : &[Tri4]);
-    let  mut node8 : &[Node8];
-    let  mut tagged_bbox : &[EntityLeaf1];
+    let mut node2 : &[Node2];
+    let mut node4 : &[Node4];
+    let mut node8 : &[Node8];
+    let mut entityleaf : &[EntityLeaf1];
     
-    ignis_load_bvh2_ent(0, &mut node2, &mut tagged_bbox);
-    ignis_load_bvh4_ent(0, &mut node4, &mut tagged_bbox);
-    ignis_load_bvh8_ent(0, &mut node8, &mut tagged_bbox);
+    ignis_load_bvh2_ent(0, &mut node2, &mut entityleaf);
+    ignis_load_bvh4_ent(0, &mut node4, &mut entityleaf);
+    ignis_load_bvh8_ent(0, &mut node8, &mut entityleaf);
 
     // Force the export of the CDF types
     /*let mut cdf1 : CDF1D;

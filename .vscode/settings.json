@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "*.prc": "lisp",
+        "*.artpp": "rust",
         "*.impala": "rust",
         "*.art": "rust",
         "cctype": "cpp",
@@ -119,7 +120,8 @@
         "concepts": "cpp",
         "ranges": "cpp",
         "stop_token": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "filesystem": "cpp"
     },
     "cmake.configureOnOpen": true
 }

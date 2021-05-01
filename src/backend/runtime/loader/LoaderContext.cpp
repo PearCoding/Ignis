@@ -1,12 +1,12 @@
-#include "GeneratorContext.h"
+#include "LoaderContext.h"
 
 #include "Logger.h"
 
 namespace IG {
 
-using namespace Loader;
+using namespace Parser;
 
-std::string GeneratorContext::extractMaterialPropertyColorLight(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def, bool& isTexture) const
+std::string LoaderContext::extractMaterialPropertyColorLight(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, float def, bool& isTexture) const
 {
 	isTexture = false;
 	std::stringstream sstream;
@@ -40,7 +40,7 @@ std::string GeneratorContext::extractMaterialPropertyColorLight(const std::share
 	return sstream.str();
 }
 
-std::string GeneratorContext::extractMaterialPropertyColor(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def, const char* surfParameter) const
+std::string LoaderContext::extractMaterialPropertyColor(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, float def, const char* surfParameter) const
 {
 	std::stringstream sstream;
 
@@ -72,7 +72,7 @@ std::string GeneratorContext::extractMaterialPropertyColor(const std::shared_ptr
 	return sstream.str();
 }
 
-std::string GeneratorContext::extractMaterialPropertyNumber(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, float def, const char* surfParameter) const
+std::string LoaderContext::extractMaterialPropertyNumber(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, float def, const char* surfParameter) const
 {
 	std::stringstream sstream;
 
@@ -109,7 +109,7 @@ std::string GeneratorContext::extractMaterialPropertyNumber(const std::shared_pt
 	return sstream.str();
 }
 
-std::string GeneratorContext::extractMaterialPropertyNumberDx(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, const char* surfParameter) const
+std::string LoaderContext::extractMaterialPropertyNumberDx(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, const char* surfParameter) const
 {
 	std::stringstream sstream;
 
@@ -136,7 +136,7 @@ std::string GeneratorContext::extractMaterialPropertyNumberDx(const std::shared_
 	return sstream.str();
 }
 
-std::string GeneratorContext::extractMaterialPropertyNumberDy(const std::shared_ptr<Loader::Object>& obj, const std::string& propname, const char* surfParameter) const
+std::string LoaderContext::extractMaterialPropertyNumberDy(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, const char* surfParameter) const
 {
 	std::stringstream sstream;
 

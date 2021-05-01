@@ -8,6 +8,8 @@
 #include "Logger.h"
 #include "Runtime.h"
 
+#include <optional>
+
 constexpr int SPP = 4; // Render SPP is always 4!
 
 using namespace IG;
@@ -22,16 +24,24 @@ static inline void usage()
 {
 	std::cout << "Usage: ignis file [options]\n"
 			  << "Available options:\n"
-			  << "   --help              Shows this message\n"
-			  << "   --width  pixels     Sets the viewport horizontal dimension (in pixels)\n"
-			  << "   --height pixels     Sets the viewport vertical dimension (in pixels)\n"
-			  << "   --eye    x y z      Sets the position of the camera\n"
-			  << "   --dir    x y z      Sets the direction vector of the camera\n"
-			  << "   --up     x y z      Sets the up vector of the camera\n"
-			  << "   --fov    degrees    Sets the horizontal field of view (in degrees)\n"
-			  << "   --spp    spp        Enables benchmarking mode and sets the number of iterations based on the given spp\n"
-			  << "   --bench  iterations Enables benchmarking mode and sets the number of iterations\n"
-			  << "   -o       image.exr  Writes the output image to a file" << std::endl;
+			  << "   -h      --help                Shows this message\n"
+			  << "           --width    pixels     Sets the viewport horizontal dimension (in pixels)\n"
+			  << "           --height   pixels     Sets the viewport vertical dimension (in pixels)\n"
+			  << "           --eye      x y z      Sets the position of the camera\n"
+			  << "           --dir      x y z      Sets the direction vector of the camera\n"
+			  << "           --up       x y z      Sets the up vector of the camera\n"
+			  << "           --fov      degrees    Sets the horizontal field of view (in degrees)\n"
+			  << "   -t      --target   target     Sets the target platform (default: autodetect CPU)\n"
+			  << "   -d      --device   device     Sets the device to use on the selected platform (default: 0)\n"
+			  << "           --cpu                 Use autodetected CPU target\n"
+			  << "           --gpu                 Use autodetected GPU target\n"
+			  << "           --spp      spp        Enables benchmarking mode and sets the number of iterations based on the given spp\n"
+			  << "           --bench    iterations Enables benchmarking mode and sets the number of iterations\n"
+			  << "   -o      --output   image.exr  Writes the output image to a file\n"
+			  << "Available targets:\n"
+			  << "    generic, sse42, avx, avx2, avx512, asimd,\n"
+			  << "    nvvm = nvvm-streaming, nvvm-megakernel,\n"
+			  << "    amdgpu = amdgpu-streaming, amdgpu-megakernel" << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -39,39 +49,68 @@ int main(int argc, char** argv)
 	std::string in_file;
 	std::string out_file;
 	size_t bench_iter = 0;
-	int film_width	  = 800;
-	int film_height	  = 600;
-	Vector3f eye	  = Vector3f::Zero();
-	Vector3f dir	  = Vector3f::UnitY();
-	Vector3f up		  = Vector3f::UnitZ();
-	float fov		  = 60;
+	std::optional<int> a_film_width;
+	std::optional<int> a_film_height;
+	std::optional<Vector3f> eye;
+	std::optional<Vector3f> dir;
+	std::optional<Vector3f> up;
+	std::optional<float> fov;
+	Target target = Target::INVALID;
+	int device	  = 0;
 
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
 			if (!strcmp(argv[i], "--width")) {
 				check_arg(argc, argv, i, 1);
-				film_width = strtoul(argv[++i], nullptr, 10);
+				a_film_width = strtoul(argv[++i], nullptr, 10);
 			} else if (!strcmp(argv[i], "--height")) {
 				check_arg(argc, argv, i, 1);
-				film_height = strtoul(argv[++i], nullptr, 10);
+				a_film_height = strtoul(argv[++i], nullptr, 10);
 			} else if (!strcmp(argv[i], "--eye")) {
 				check_arg(argc, argv, i, 3);
-				eye(0) = strtof(argv[++i], nullptr);
-				eye(1) = strtof(argv[++i], nullptr);
-				eye(2) = strtof(argv[++i], nullptr);
+				eye = { Vector3f(strtof(argv[++i], nullptr), strtof(argv[++i], nullptr), strtof(argv[++i], nullptr)) };
 			} else if (!strcmp(argv[i], "--dir")) {
 				check_arg(argc, argv, i, 3);
-				dir(0) = strtof(argv[++i], nullptr);
-				dir(1) = strtof(argv[++i], nullptr);
-				dir(2) = strtof(argv[++i], nullptr);
+				dir = { Vector3f(strtof(argv[++i], nullptr), strtof(argv[++i], nullptr), strtof(argv[++i], nullptr)) };
 			} else if (!strcmp(argv[i], "--up")) {
 				check_arg(argc, argv, i, 3);
-				up(0) = strtof(argv[++i], nullptr);
-				up(1) = strtof(argv[++i], nullptr);
-				up(2) = strtof(argv[++i], nullptr);
+				up = { Vector3f(strtof(argv[++i], nullptr), strtof(argv[++i], nullptr), strtof(argv[++i], nullptr)) };
 			} else if (!strcmp(argv[i], "--fov")) {
 				check_arg(argc, argv, i, 1);
 				fov = strtof(argv[++i], nullptr);
+			} else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--target")) {
+				check_arg(argc, argv, i++, 1);
+				if (!strcmp(argv[i], "sse42"))
+					target = Target::SSE42;
+				else if (!strcmp(argv[i], "avx"))
+					target = Target::AVX;
+				else if (!strcmp(argv[i], "avx2"))
+					target = Target::AVX2;
+				else if (!strcmp(argv[i], "avx512"))
+					target = Target::AVX512;
+				else if (!strcmp(argv[i], "asimd"))
+					target = Target::ASIMD;
+				else if (!strcmp(argv[i], "nvvm") || !strcmp(argv[i], "nvvm-streaming"))
+					target = Target::NVVM_STREAMING;
+				else if (!strcmp(argv[i], "nvvm-megakernel"))
+					target = Target::NVVM_MEGAKERNEL;
+				else if (!strcmp(argv[i], "amdgpu") || !strcmp(argv[i], "amdgpu-streaming"))
+					target = Target::AMDGPU_STREAMING;
+				else if (!strcmp(argv[i], "amdgpu-megakernel"))
+					target = Target::AMDGPU_MEGAKERNEL;
+				else if (!strcmp(argv[i], "generic"))
+					target = Target::GENERIC;
+				else {
+					IG_LOG(L_ERROR) << "Unknown target '" << argv[i] << "'. Aborting." << std::endl;
+					return EXIT_FAILURE;
+				}
+			} else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--device")) {
+				check_arg(argc, argv, i++, 1);
+				device = strtoul(argv[i], NULL, 10);
+			} else if (!strcmp(argv[i], "--cpu")) {
+				target = getRecommendedCPUTarget();
+			} else if (!strcmp(argv[i], "--gpu")) {
+				target = Target::NVVM_STREAMING; // TODO: Select based on environment
 			} else if (!strcmp(argv[i], "--spp")) {
 				check_arg(argc, argv, i, 1);
 				bench_iter = (size_t)std::ceil(strtoul(argv[++i], nullptr, 10) / (float)SPP);
@@ -81,7 +120,7 @@ int main(int argc, char** argv)
 			} else if (!strcmp(argv[i], "-o")) {
 				check_arg(argc, argv, i, 1);
 				out_file = argv[++i];
-			} else if (!strcmp(argv[i], "--help")) {
+			} else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
 				usage();
 				return EXIT_SUCCESS;
 			} else {
@@ -97,6 +136,9 @@ int main(int argc, char** argv)
 			}
 		}
 	}
+
+	if (target == Target::INVALID)
+		target = getRecommendedCPUTarget();
 
 	if (in_file == "") {
 		IG_LOG(L_ERROR) << "No input file given" << std::endl;
@@ -117,9 +159,8 @@ int main(int argc, char** argv)
 	std::unique_ptr<Runtime> runtime;
 	try {
 		LoaderOptions opts;
-		opts.target = Target::NVVM_STREAMING; // TODO
-		opts.fusion = false;
-		opts.device = 0;
+		opts.Target = Target::NVVM_STREAMING; // TODO
+		opts.Device = 0;
 
 		runtime = std::make_unique<Runtime>(in_file, opts);
 	} catch (const std::exception& e) {
@@ -127,7 +168,10 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 
-	Camera camera(eye, dir, up, fov, (float)film_width / (float)film_height);
+	const auto def		  = runtime->loadedRenderSettings();
+	const int film_width  = a_film_width.value_or(def.FilmWidth);
+	const int film_height = a_film_height.value_or(def.FilmHeight);
+	Camera camera(eye.value_or(def.CameraEye), dir.value_or(def.CameraDir), up.value_or(def.CameraUp), fov.value_or(def.FOV), (float)film_width / (float)film_height);
 	runtime->setup(film_width, film_height);
 
 #ifdef WITH_UI

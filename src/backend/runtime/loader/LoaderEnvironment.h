@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Loader.h"
+#include "Parser.h"
 #include "math/BoundingBox.h"
 
 #include <unordered_set>
@@ -12,19 +12,19 @@ struct Shape {
 	size_t VtxCount;
 	size_t ItxCount;
 	IG::BoundingBox BoundingBox;
-	std::string TriMesh;
-	std::string BVH;
 };
 
 struct Entity {
 	Transformf Transform;
-	std::string Shape;
-	std::string BSDF;
+	uint32 Shape;
+	uint32 BSDF;
 };
 
-struct GeneratorEnvironment {
-	std::unordered_map<std::string, Shape> Shapes;
-	std::unordered_map<std::string, Entity> Entities;
+struct LoaderEnvironment {
+	std::vector<Shape> Shapes;
+	std::vector<Entity> Entities;
+	std::unordered_map<std::string, uint32> ShapeIDs;
+	std::unordered_map<std::string, uint32> BsdfIDs;
 
 	BoundingBox SceneBBox;
 	float SceneDiameter = 0.0f;
