@@ -1,0 +1,4 @@
+// These functions only work CPU host code
+#[import(cc = "C")] fn ig_host_print(&[u8]) -> ();
+#[import(cc = "C")] fn ig_host_print_i(i64) -> ();
+#[import(cc = "C")] fn ig_host_print_f(f64) -> ();

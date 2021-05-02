@@ -65,6 +65,9 @@ fn @make_shape_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor)
         // Type is TriMesh for currently.
         let data  = get_table_entry(entry.offset as u64, dtb, acc);
 
+        ig_host_print("Load: ");
+        ig_host_print_i(id as i64);
+        ig_host_print("\n");
         let num_face  = data.load_i32(0);
         let num_attrs = data.load_i32(3);
         

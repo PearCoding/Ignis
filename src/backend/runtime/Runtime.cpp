@@ -18,6 +18,7 @@ Runtime::Runtime(const std::filesystem::path& path, const LoaderOptions& opts)
 	if (!Loader::load(path, m_opts, result))
 		throw std::runtime_error("Could not load scene!");
 	mLoadedRenderSettings = result.DesiredSettings;
+	mDatabase			  = std::move(result.Database);
 
 	const uint64 newConfig = mManager.checkConfiguration(result.DesiredConfiguration);
 	if (newConfig != result.DesiredConfiguration) {

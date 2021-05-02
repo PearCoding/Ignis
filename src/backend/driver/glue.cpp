@@ -489,6 +489,21 @@ void ignis_present(int32_t dev)
 		sInterface->present(dev);
 }
 
+void ig_host_print(const char* str)
+{
+	std::cout << str;
+}
+
+void ig_host_print_i(int64_t number)
+{
+	std::cout << number;
+}
+
+void ig_host_print_f(double number)
+{
+	std::cout << number;
+}
+
 int64_t clock_us()
 {
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)

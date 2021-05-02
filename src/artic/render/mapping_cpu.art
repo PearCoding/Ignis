@@ -543,7 +543,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             make_cpu_bvh4_ent(nodes, objs)
         }
     },
-    load_scene_database = @|| {
+    load_scene_database = @ || {
         let mut database: SceneDatabase;
         ignis_load_scene(0, &mut database);
         database

@@ -12,6 +12,7 @@ struct Settings {
 
 #[export]
 fn ig_render(settings: &Settings, iter: i32) -> () {
+    ig_host_print("START\n");
 #if DEVICE_AVX
     let device = make_avx_device();
 #elif DEVICE_AVX2
@@ -61,7 +62,7 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
         settings.height
     );
 #endif
-
+    ig_host_print("MIDDLE\n");
 #if CAMERA_LIST
     let emitter = make_list_emitter(settings.ray_count, settings.rays);
 #if !RENDERER_DEBUG
@@ -80,7 +81,7 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
     let renderer = make_debug_renderer(emitter);
 #endif
 
-print_string("A1");
+    ig_host_print("A1\n");
     let dtb = device.load_scene_database();
     let acc = SceneAccessor {
         shapes   = device.load_shape_table(dtb.shapes),  
@@ -90,7 +91,7 @@ print_string("A1");
         bvhs     = device.load_bvh_table(dtb.bvhs)                  
     };
 
-    print_string("A2");
+    ig_host_print("A2\n");
     let scene = Scene {
         num_entities = dtb.entities.count as i32,
         num_shapes   = dtb.shapes.count as i32,
@@ -99,8 +100,8 @@ print_string("A1");
         bvh          = device.load_scene_bvh()
     };
 
-    print_string("A3");
+    ig_host_print("A3\n");
     renderer(scene, device, iter);
-    print_string("A4");
+    ig_host_print("A4\n");
     device.present();
 }

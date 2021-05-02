@@ -78,21 +78,22 @@ inline void Serializer::write(const std::wstring& v)
 
 template <typename T, typename Alloc>
 inline std::enable_if_t<is_trivial_serializable<T>::value, void>
-Serializer::write(const std::vector<T, Alloc>& vec)
+Serializer::write(const std::vector<T, Alloc>& vec, bool naked)
 {
-	write((uint64)vec.size());
+	if (!naked)
+		write((uint64)vec.size());
 	writeRawLooped(reinterpret_cast<const uint8*>(vec.data()),
 				   vec.size() * sizeof(T));
 }
 
 template <typename T, typename Alloc>
 inline std::enable_if_t<!is_trivial_serializable<T>::value, void>
-Serializer::write(const std::vector<T, Alloc>& vec)
+Serializer::write(const std::vector<T, Alloc>& vec, bool naked)
 {
-	write((uint64)vec.size());
-	for (size_t i = 0; i < vec.size(); ++i) {
+	if (!naked)
+		write((uint64)vec.size());
+	for (size_t i = 0; i < vec.size(); ++i)
 		write(vec.at(i));
-	}
 }
 
 template <typename T1, typename T2>
@@ -119,30 +120,27 @@ inline void Serializer::write(const ISerializable& v)
 }
 
 template <typename T, typename Alloc>
-void Serializer::write_padded(const std::vector<T, Alloc>& vec, size_t padding)
+void Serializer::write_padded(const std::vector<T, Alloc>& vec, size_t padding, bool naked)
 {
 	// TODO: Faster approach?
 	constexpr size_t TSize = sizeof(T);
 	const size_t defect	   = TSize % padding;
 
+	if (defect == 0) {
+		write(vec, naked);
+		return;
+	}
+
 	uint8_t _tmp = 0;
 
-	write((uint64)vec.size());
+	if (!naked)
+		write((uint64)vec.size());
 	for (size_t i = 0; i < vec.size(); ++i) {
 		write(vec.at(i));
 
 		for (size_t j = 0; j < defect; ++j)
 			write(_tmp);
 	}
-}
-
-template <typename T, typename Alloc>
-void Serializer::write_padded(const std::vector<T, Alloc>& vec, size_t padding, bool enabled)
-{
-	if (enabled)
-		write_padded(vec, padding);
-	else
-		write(vec);
 }
 
 //////////////////////////////////////////////////////////

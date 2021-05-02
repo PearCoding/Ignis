@@ -41,20 +41,17 @@ public:
 	inline void write(const ISerializable& v);
 	template <typename T, typename Alloc>
 	inline std::enable_if_t<is_trivial_serializable<T>::value, void>
-	write(const std::vector<T, Alloc>& vec);
+	write(const std::vector<T, Alloc>& vec, bool naked = false);
 	template <typename T, typename Alloc>
 	inline std::enable_if_t<!is_trivial_serializable<T>::value, void>
-	write(const std::vector<T, Alloc>& vec);
+	write(const std::vector<T, Alloc>& vec, bool naked = false);
 	template <typename T1, typename T2>
 	inline void write(const std::unordered_map<T1, T2>& map);
 	template <typename Scalar, int Rows, int Cols, int Options>
 	inline void write(const Eigen::Matrix<Scalar, Rows, Cols, Options>& v);
 
 	template <typename T, typename Alloc>
-	void write_padded(const std::vector<T, Alloc>& vec, size_t padding);
-	
-	template <typename T, typename Alloc>
-	void write_padded(const std::vector<T, Alloc>& vec, size_t padding, bool enabled);
+	void write_padded(const std::vector<T, Alloc>& vec, size_t padding, bool naked = false);
 
 	// Read
 	inline void read(bool& v);
@@ -115,6 +112,6 @@ template <typename T1, typename T2>
 inline Serializer& operator|(Serializer& ser, std::unordered_map<T1, T2>& v);
 template <typename Scalar, int Rows, int Cols, int Options>
 inline Serializer& operator|(Serializer& ser, Eigen::Matrix<Scalar, Rows, Cols, Options>& v);
-} // namespace PR
+} // namespace IG
 
 #include "Serializer.inl"

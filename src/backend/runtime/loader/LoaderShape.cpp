@@ -193,12 +193,25 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 		IG_LOG(L_INFO) << "Generating triangle mesh for shape " << pair.first << std::endl;
 		auto& meshData = result.Database.ShapeTable.addLookup(0); // TODO: No use of the typeid currently
 		VectorSerializer meshSerializer(meshData, false);
-		meshSerializer.write_padded(child_mesh.vertices, sizeof(float) * 4, ctx.EnablePadding);
-		meshSerializer.write_padded(child_mesh.normals, sizeof(float) * 4, ctx.EnablePadding);
-		meshSerializer.write_padded(child_mesh.face_normals, sizeof(float) * 4, ctx.EnablePadding);
-		meshSerializer.write(child_mesh.face_area);
-		meshSerializer.write(child_mesh.indices);
-		meshSerializer.write_padded(child_mesh.texcoords, sizeof(float) * 4, ctx.EnablePadding);
+		meshSerializer.write((uint32)child_mesh.faceCount());
+		meshSerializer.write((uint32)child_mesh.vertices.size());
+		meshSerializer.write((uint32)child_mesh.normals.size());
+		meshSerializer.write((uint32)0);
+		/*if (ctx.EnablePadding) {
+			meshSerializer.write_padded(child_mesh.vertices, sizeof(float) * 4, true);
+			meshSerializer.write_padded(child_mesh.normals, sizeof(float) * 4, true);
+			meshSerializer.write_padded(child_mesh.face_normals, sizeof(float) * 4, true);
+			meshSerializer.write(child_mesh.face_area, true);
+			meshSerializer.write(child_mesh.indices, true);
+			meshSerializer.write_padded(child_mesh.texcoords, sizeof(float) * 4, true);
+		} else {
+			meshSerializer.write(child_mesh.vertices, true);
+			meshSerializer.write(child_mesh.normals, true);
+			meshSerializer.write(child_mesh.face_normals, true);
+			meshSerializer.write(child_mesh.face_area, true);
+			meshSerializer.write(child_mesh.indices, true);
+			meshSerializer.write(child_mesh.texcoords, true);
+		}*/
 
 		// Generate BVH
 		IG_LOG(L_INFO) << "Generating BVH for shape " << pair.first << std::endl;
@@ -208,20 +221,23 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 			std::vector<typename BvhNTriM<2, 1>::Node> nodes;
 			std::vector<typename BvhNTriM<2, 1>::Tri> tris;
 			build_bvh<2, 1>(child_mesh, nodes, tris);
-			bvhSerializer.write(nodes);
-			bvhSerializer.write(tris);
+			bvhSerializer.write((uint32)nodes.size());
+			bvhSerializer.write(nodes, true);
+			bvhSerializer.write(tris, true);
 		} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
 			std::vector<typename BvhNTriM<4, 4>::Node> nodes;
 			std::vector<typename BvhNTriM<4, 4>::Tri> tris;
 			build_bvh<4, 4>(child_mesh, nodes, tris);
-			bvhSerializer.write(nodes);
-			bvhSerializer.write(tris);
+			bvhSerializer.write((uint32)nodes.size());
+			bvhSerializer.write(nodes, true);
+			bvhSerializer.write(tris, true);
 		} else {
 			std::vector<typename BvhNTriM<8, 4>::Node> nodes;
 			std::vector<typename BvhNTriM<8, 4>::Tri> tris;
 			build_bvh<8, 4>(child_mesh, nodes, tris);
-			bvhSerializer.write(nodes);
-			bvhSerializer.write(tris);
+			bvhSerializer.write((uint32)nodes.size());
+			bvhSerializer.write(nodes, true);
+			bvhSerializer.write(tris, true);
 		}
 	}
 

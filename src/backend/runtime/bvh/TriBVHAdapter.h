@@ -118,7 +118,7 @@ private:
 				nodes[parent].child.e[child] = i + 1;
 			}
 
-			assert(count >= 2 && count <= N);
+			assert(count >= 1 && count <= N);
 
 			for (size_t j = 0; j < count; j++) {
 				const BoundingBox& bbox	  = bboxes(j);

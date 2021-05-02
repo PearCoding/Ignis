@@ -4,6 +4,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/cpu_common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/interval.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/matrix.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/print.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/random.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/sort.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art

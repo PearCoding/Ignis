@@ -159,7 +159,7 @@ int main(int argc, char** argv)
 	std::unique_ptr<Runtime> runtime;
 	try {
 		LoaderOptions opts;
-		opts.Target = Target::NVVM_STREAMING; // TODO
+		opts.Target = Target::GENERIC; // TODO
 		opts.Device = 0;
 
 		runtime = std::make_unique<Runtime>(in_file, opts);
