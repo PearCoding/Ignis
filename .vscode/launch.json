@@ -5,37 +5,19 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "ignis",
+            "name": "igview",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${command:cmake.buildDirectory}/bin/ignis",
-            "args": [],
+            "program": "${command:cmake.buildDirectory}/bin/igview",
+            "args": ["${workspaceFolder}/scenes/diamond_scene.xml"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "targetArchitecture": "x64",
-            "setupCommands": [
+            "environment": [
                 {
-                    "description": "Automatische Strukturierung und Einrückung für \"gdb\" aktivieren",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
+                    "name": "IG_DRIVER_PATH",
+                    "value": "${workspaceFolder}/build/lib"
                 }
-            ]
-        },
-        {
-            "name": "iggenerator",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${command:cmake.buildDirectory}/bin/iggenerator",
-            "args": [
-                "${workspaceFolder}/scenes/diamond_scene.json",
-                "--target", "nvvm"
             ],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build",
-            "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
             "targetArchitecture": "x64",

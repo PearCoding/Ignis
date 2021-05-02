@@ -52,6 +52,7 @@ void Runtime::step(const Camera& camera)
 	settings.height	   = camera.h;
 	settings.ray_count = 0;
 	settings.rays	   = nullptr; // No artifical ray streams
+	settings.device	   = mDevice;
 
 	mLoadedInterface.RenderFunction(&settings, mIteration++);
 }

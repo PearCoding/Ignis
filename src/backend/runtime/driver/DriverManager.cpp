@@ -40,6 +40,16 @@ inline static bool isSharedLibrary(const std::filesystem::path& path)
 	return path.extension() == ".so" || path.extension() == ".dll";
 }
 
+inline static bool endsWith(std::string_view str, std::string_view suffix)
+{
+	return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
+}
+
+inline static bool startsWith(std::string_view str, std::string_view prefix)
+{
+	return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
+}
+
 static path_set getDriversFromPath(const std::filesystem::path& path)
 {
 	path_set drivers;
@@ -47,7 +57,10 @@ static path_set getDriversFromPath(const std::filesystem::path& path)
 		if (!entry.is_regular_file())
 			continue;
 		if (isSharedLibrary(entry.path())
-			&& entry.path().stem().string().rfind(_IG_DRIVER_LIB_PREFIX, 0) == 0)
+#ifdef IG_DEBUG // Only debug builds
+			&& endsWith(entry.path().stem().string(), "_d")
+#endif
+			&& startsWith(entry.path().stem().string(), _IG_DRIVER_LIB_PREFIX))
 			drivers.insert(entry.path());
 	}
 

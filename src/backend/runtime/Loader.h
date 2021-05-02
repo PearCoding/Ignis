@@ -10,12 +10,12 @@ struct LoaderOptions {
 };
 
 struct LoaderRenderSettings {
-	uint32 FilmWidth   = 0;
-	uint32 FilmHeight  = 0;
+	uint32 FilmWidth   = 800;
+	uint32 FilmHeight  = 600;
 	Vector3f CameraEye = Vector3f::Zero();
 	Vector3f CameraDir = Vector3f::UnitZ();
 	Vector3f CameraUp  = Vector3f::UnitY();
-	float FOV;
+	float FOV		   = 60;
 };
 
 struct LoaderResult {

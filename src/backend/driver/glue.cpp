@@ -1,5 +1,6 @@
 #include "driver/Configuration.h"
 #include "driver/Interface.h"
+#include "table/SceneDatabase.h"
 
 #include "generated_interface.h"
 
@@ -19,6 +20,20 @@ using Bvh2Ent = Bvh<Node2, EntityLeaf1>;
 using Bvh4Ent = Bvh<Node4, EntityLeaf1>;
 using Bvh8Ent = Bvh<Node8, EntityLeaf1>;
 
+struct DynTableProxy {
+	size_t EntryCount;
+	anydsl::Array<LookupEntry> LookupEntries;
+	anydsl::Array<uint8_t> Data;
+};
+
+struct SceneDatabaseProxy {
+	DynTableProxy Entities;
+	DynTableProxy Shapes;
+	DynTableProxy Lights;
+	DynTableProxy Shaders;
+	DynTableProxy BVHs;
+};
+
 struct Interface {
 	using DeviceImage = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
 
@@ -27,7 +42,8 @@ struct Interface {
 		Bvh2Ent bvh2_ent;
 		Bvh4Ent bvh4_ent;
 		Bvh8Ent bvh8_ent;
-		//SceneDatabaseProxy database;
+		bool database_loaded = false;
+		SceneDatabaseProxy database;
 		anydsl::Array<int32_t> tmp_buffer;
 		anydsl::Array<float> first_primary;
 		anydsl::Array<float> second_primary;
@@ -143,6 +159,34 @@ struct Interface {
 	{
 		// TODO
 		return Bvh<Node, EntityLeaf1>{};
+	}
+
+	DynTableProxy load_dyntable(int32_t dev, const IG::DynTable& tbl)
+	{
+		static_assert(sizeof(LookupEntry) == sizeof(IG::LookupEntry), "Expected generated Lookup Entry and internal Lookup Entry to be of same size!");
+
+		DynTableProxy proxy;
+		proxy.EntryCount	= tbl.entryCount();
+		proxy.LookupEntries = std::move(copy_to_device<LookupEntry>(dev, (LookupEntry*)tbl.lookups().data(), tbl.lookups().size()));
+		proxy.Data			= std::move(copy_to_device(dev, tbl.data()));
+		return proxy;
+	}
+
+	const SceneDatabaseProxy& load_scene_database(int32_t dev)
+	{
+		if (devices[dev].database_loaded)
+			return devices[dev].database;
+		devices[dev].database_loaded = true;
+
+		SceneDatabaseProxy& proxy = devices[dev].database;
+
+		proxy.Entities = std::move(load_dyntable(dev, database->EntityTable));
+		proxy.Shapes   = std::move(load_dyntable(dev, database->ShapeTable));
+		proxy.Lights   = std::move(load_dyntable(dev, database->LightTable));
+		proxy.Shaders  = std::move(load_dyntable(dev, database->ShaderTable));
+		proxy.BVHs	   = std::move(load_dyntable(dev, database->BVHTable));
+
+		return proxy;
 	}
 
 	void present(int32_t dev)
@@ -382,6 +426,26 @@ void ignis_load_bvh8_ent(int32_t dev, Node8** nodes, EntityLeaf1** objs)
 	auto& bvh = sInterface->load_bvh8_ent(dev);
 	*nodes	  = const_cast<Node8*>(bvh.nodes.data());
 	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.data());
+}
+
+void ignis_load_scene(int32_t dev, SceneDatabase* dtb)
+{
+	auto& proxy = sInterface->load_scene_database(dev);
+
+	auto assign = [](const DynTableProxy& tbl) {
+		DynTable devtbl;
+		devtbl.count  = tbl.EntryCount;
+		devtbl.header = const_cast<LookupEntry*>(tbl.LookupEntries.data());
+		devtbl.size	  = tbl.Data.size();
+		devtbl.start  = const_cast<uint8_t*>(tbl.Data.data());
+		return devtbl;
+	};
+
+	dtb->entities = std::move(assign(proxy.Entities));
+	dtb->shapes	  = std::move(assign(proxy.Shapes));
+	dtb->lights	  = std::move(assign(proxy.Lights));
+	dtb->shaders  = std::move(assign(proxy.Shaders));
+	dtb->bvhs	  = std::move(assign(proxy.BVHs));
 }
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int32_t size)
