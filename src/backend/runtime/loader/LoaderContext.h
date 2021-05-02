@@ -12,7 +12,6 @@ struct LoaderContext {
 	
 	std::filesystem::path FilePath;
 	IG::Target Target;
-	bool Fusion;
 	bool EnablePadding;
 
 	LoaderEnvironment Environment;

@@ -118,6 +118,33 @@ inline void Serializer::write(const ISerializable& v)
 	const_cast<ISerializable&>(v).serialize(*this);
 }
 
+template <typename T, typename Alloc>
+void Serializer::write_padded(const std::vector<T, Alloc>& vec, size_t padding)
+{
+	// TODO: Faster approach?
+	constexpr size_t TSize = sizeof(T);
+	const size_t defect	   = TSize % padding;
+
+	uint8_t _tmp = 0;
+
+	write((uint64)vec.size());
+	for (size_t i = 0; i < vec.size(); ++i) {
+		write(vec.at(i));
+
+		for (size_t j = 0; j < defect; ++j)
+			write(_tmp);
+	}
+}
+
+template <typename T, typename Alloc>
+void Serializer::write_padded(const std::vector<T, Alloc>& vec, size_t padding, bool enabled)
+{
+	if (enabled)
+		write_padded(vec, padding);
+	else
+		write(vec);
+}
+
 //////////////////////////////////////////////////////////
 
 inline void Serializer::readRawLooped(uint8* data, size_t size)

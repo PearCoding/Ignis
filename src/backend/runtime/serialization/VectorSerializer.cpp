@@ -4,7 +4,7 @@ namespace IG {
 VectorSerializer::VectorSerializer(std::vector<uint8>& data, bool readmode)
 	: Serializer(readmode)
 	, mData(data)
-	, mIt(0)
+	, mIt(data.size())
 {
 }
 

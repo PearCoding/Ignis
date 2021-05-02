@@ -50,6 +50,12 @@ public:
 	template <typename Scalar, int Rows, int Cols, int Options>
 	inline void write(const Eigen::Matrix<Scalar, Rows, Cols, Options>& v);
 
+	template <typename T, typename Alloc>
+	void write_padded(const std::vector<T, Alloc>& vec, size_t padding);
+	
+	template <typename T, typename Alloc>
+	void write_padded(const std::vector<T, Alloc>& vec, size_t padding, bool enabled);
+
 	// Read
 	inline void read(bool& v);
 	inline void read(int8& v);

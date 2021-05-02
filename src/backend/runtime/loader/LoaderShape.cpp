@@ -1,10 +1,13 @@
 #include "LoaderShape.h"
+#include "Loader.h"
 
 #include "Logger.h"
 #include "bvh/TriBVHAdapter.h"
 #include "mesh/MtsSerializedFile.h"
 #include "mesh/ObjFile.h"
 #include "mesh/PlyFile.h"
+
+#include "serialization/VectorSerializer.h"
 
 #include <sstream>
 
@@ -128,7 +131,7 @@ inline TriMesh setup_mesh_mitsuba(const Object& elem, const LoaderContext& ctx)
 	return trimesh;
 }
 
-void LoaderShape::setup(LoaderContext& ctx)
+bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 {
 	for (const auto& pair : ctx.Scene.shapes()) {
 		const auto child = pair.second;
@@ -176,46 +179,52 @@ void LoaderShape::setup(LoaderContext& ctx)
 			bbox.extend(v);
 		bbox.inflate(1e-5f); // Make sure it has a volume
 
+		// Register shape into environment
+		const uint32 shapeID = ctx.Environment.Shapes.size();
 		Shape shape;
 		shape.VtxCount	  = child_mesh.vertices.size();
 		shape.ItxCount	  = child_mesh.indices.size();
 		shape.BoundingBox = bbox;
+
 		ctx.Environment.Shapes.push_back(shape);
+		ctx.Environment.ShapeIDs[pair.first] = shapeID;
 
 		// Export data:
 		IG_LOG(L_INFO) << "Generating triangle mesh for shape " << pair.first << std::endl;
-		// TODO
+		auto& meshData = result.Database.ShapeTable.addLookup(0); // TODO: No use of the typeid currently
+		VectorSerializer meshSerializer(meshData, false);
+		meshSerializer.write_padded(child_mesh.vertices, sizeof(float) * 4, ctx.EnablePadding);
+		meshSerializer.write_padded(child_mesh.normals, sizeof(float) * 4, ctx.EnablePadding);
+		meshSerializer.write_padded(child_mesh.face_normals, sizeof(float) * 4, ctx.EnablePadding);
+		meshSerializer.write(child_mesh.face_area);
+		meshSerializer.write(child_mesh.indices);
+		meshSerializer.write_padded(child_mesh.texcoords, sizeof(float) * 4, ctx.EnablePadding);
 
 		// Generate BVH
 		IG_LOG(L_INFO) << "Generating BVH for shape " << pair.first << std::endl;
+		auto& bvhData = result.Database.BVHTable.addLookup(0); // TODO: No use of the typeid currently
+		VectorSerializer bvhSerializer(bvhData, false);
 		if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
 			std::vector<typename BvhNTriM<2, 1>::Node> nodes;
 			std::vector<typename BvhNTriM<2, 1>::Tri> tris;
 			build_bvh<2, 1>(child_mesh, nodes, tris);
-			// TODO
+			bvhSerializer.write(nodes);
+			bvhSerializer.write(tris);
 		} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
 			std::vector<typename BvhNTriM<4, 4>::Node> nodes;
 			std::vector<typename BvhNTriM<4, 4>::Tri> tris;
 			build_bvh<4, 4>(child_mesh, nodes, tris);
-			// TODO
+			bvhSerializer.write(nodes);
+			bvhSerializer.write(tris);
 		} else {
 			std::vector<typename BvhNTriM<8, 4>::Node> nodes;
 			std::vector<typename BvhNTriM<8, 4>::Tri> tris;
 			build_bvh<8, 4>(child_mesh, nodes, tris);
-			// TODO
+			bvhSerializer.write(nodes);
+			bvhSerializer.write(tris);
 		}
 	}
-}
 
-std::string LoaderShape::dump(const LoaderContext& ctx)
-{
-	std::stringstream sstream;
-
-	for (const auto& pair : ctx.Scene.shapes()) {
-		const uint32 id		 = ctx.Environment.ShapeIDs.at(pair.first);
-		const size_t numTris = ctx.Environment.Shapes.at(id).ItxCount / 4; // (I0, I1, I2, M)
-	}
-
-	return sstream.str();
+	return true;
 }
 } // namespace IG

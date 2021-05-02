@@ -3,8 +3,8 @@
 #include "LoaderContext.h"
 
 namespace IG {
+struct LoaderResult;
 struct LoaderShape {
-	static void setup(LoaderContext& ctx);
-	static std::string dump(const LoaderContext& ctx);
+	static bool load(LoaderContext& ctx, LoaderResult& result);
 };
 } // namespace IG
