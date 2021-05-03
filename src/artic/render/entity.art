@@ -13,7 +13,7 @@ struct EntityData {
     local_mat:  [f32 * 16], // TODO: Check if on-the-fly calculation is worth it?
     global_mat: [f32 * 16],
     normal_mat: [f32 * 9],
-    _pad2:      f32
+    _pad2:      [f32 * 3]
 }
 
 struct Entity {
@@ -28,13 +28,14 @@ type EntityTable = fn (i32) -> Entity;
 
 fn @make_entity_table(dtb: DynTable, acc: DeviceBufferAccessor) -> EntityTable {
     let elem_s = sizeof[EntityData]() as u64;
-    |id| {
+    @ |id| {
         //let entry = get_lookup_entry(id as u64, dtb); // No need as we have only one type!
         let data = get_table_entry(elem_s * (id as u64), dtb, acc);
 
+        let (shape_id, mat_id) = data.load_int2(0);
         Entity {
-            shape_id   = data.load_i32(0),
-            mat_id     = data.load_i32(1),
+            shape_id   = shape_id,
+            mat_id     = mat_id,
             local_mat  = data.load_mat4x4(4),
             global_mat = data.load_mat4x4(20),
             normal_mat = data.load_mat3x3(36)

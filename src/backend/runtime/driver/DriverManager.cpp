@@ -59,6 +59,8 @@ static path_set getDriversFromPath(const std::filesystem::path& path)
 		if (isSharedLibrary(entry.path())
 #ifdef IG_DEBUG // Only debug builds
 			&& endsWith(entry.path().stem().string(), "_d")
+#else
+			&& !endsWith(entry.path().stem().string(), "_d")
 #endif
 			&& startsWith(entry.path().stem().string(), _IG_DRIVER_LIB_PREFIX))
 			drivers.insert(entry.path());
@@ -98,10 +100,36 @@ bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
 
 uint64 DriverManager::checkConfiguration(uint64 config) const
 {
-	if (mLoadedDrivers.count(config) > 0)
-		return config;
-	// TODO: Use special system to setup this!
-	return DefaultConfiguration;
+#define CHECK_RET(c)                 \
+	if (mLoadedDrivers.count(c) > 0) \
+	return c
+
+	CHECK_RET(config);
+
+	// Check without extra flags
+	if (config & IG_C_NO_INSTANCES)
+		return checkConfiguration(config & ~IG_C_NO_INSTANCES);
+
+	// First check gpu pairs drivers/devices
+	const uint64 devConfig = config & ~IG_C_MASK_DEVICE;
+	if (config & IG_C_DEVICE_NVVM_STREAMING)
+		CHECK_RET(devConfig | IG_C_DEVICE_NVVM_MEGA);
+	if (config & IG_C_DEVICE_NVVM_MEGA)
+		CHECK_RET(devConfig | IG_C_DEVICE_NVVM_STREAMING);
+	if (config & IG_C_DEVICE_AMD_STREAMING)
+		CHECK_RET(devConfig | IG_C_DEVICE_AMD_MEGA);
+	if (config & IG_C_DEVICE_AMD_MEGA)
+		CHECK_RET(devConfig | IG_C_DEVICE_AMD_STREAMING);
+
+	CHECK_RET(devConfig | IG_C_DEVICE_AVX512);
+	CHECK_RET(devConfig | IG_C_DEVICE_AVX2);
+	CHECK_RET(devConfig | IG_C_DEVICE_AVX);
+	CHECK_RET(devConfig | IG_C_DEVICE_SSE42);
+	CHECK_RET(devConfig | IG_C_DEVICE_ASIMD);
+
+	//TODO: What about camera and renderer? We assume they are always built!
+	return devConfig | IG_C_DEVICE_GENERIC;
+#undef CHECK_RET
 }
 
 bool DriverManager::load(uint64 config, DriverInterface& interface) const
@@ -139,6 +167,7 @@ bool DriverManager::addModule(const std::filesystem::path& path)
 
 		// Silently replace
 		mLoadedDrivers[interface.Configuration] = library;
+		mHasTarget.insert(configurationToTarget(interface.Configuration));
 	} catch (const std::exception& e) {
 		IG_LOG(L_ERROR) << "Loading error for module " << path << ": " << e.what() << std::endl;
 		return false;

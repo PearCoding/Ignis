@@ -9,5 +9,6 @@ struct SceneDatabase {
 	DynTable LightTable;
 	DynTable ShaderTable;
 	DynTable BVHTable;
+	std::vector<uint8> BVH;
 };
 } // namespace IG

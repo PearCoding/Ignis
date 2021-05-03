@@ -122,6 +122,11 @@ inline void Serializer::write(const ISerializable& v)
 template <typename T, typename Alloc>
 void Serializer::write_padded(const std::vector<T, Alloc>& vec, size_t padding, bool naked)
 {
+	if (padding == 0) {
+		write(vec, naked);
+		return;
+	}
+	
 	// TODO: Faster approach?
 	constexpr size_t TSize = sizeof(T);
 	const size_t defect	   = TSize % padding;

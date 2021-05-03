@@ -552,90 +552,106 @@ fn @gpu_mega_kernel_trace( dev_id: i32
 // GPU device ----------------------------------------------------------------------
 
 
-fn @make_gpu_buffer(p: &[u8], is_nvvm: bool) -> DeviceBuffer {
+fn @make_gpu_buffer(p: &addrspace(1)[u8], is_nvvm: bool) -> DeviceBuffer {
     if is_nvvm {
         DeviceBuffer {
             load_f32  = @ |i| nvvm_ldg_f32(&((p as &addrspace(1)[f32])(i))),
             load_i32  = @ |i| nvvm_ldg_i32(&((p as &addrspace(1)[i32])(i))),
             load_vec2 = @ |i| {
-                let v = nvvm_ldg4_f32(&(p as &addrspace(1)[simd[f32 * 4]](i)));
+                let v = nvvm_ldg4_f32(&(&p(i * 4) as &addrspace(1)[simd[f32 * 4]](0)));
                 make_vec2(v(0), v(1))
             },
             load_vec3 = @ |i| {
-                let v = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(i)));
+                let v = nvvm_ldg4_f32(&((&p(i * 4) as &addrspace(1)[simd[f32 * 4]])(0)));
                 make_vec3(v(0), v(1), v(2))
             },
             load_vec4 = @ |i| {
-                let v = nvvm_ldg4_f32(&(p as &addrspace(1)[simd[f32 * 4]](i)));
+                let v = nvvm_ldg4_f32(&(&p(i * 4) as &addrspace(1)[simd[f32 * 4]](0)));
                 make_vec4(v(0), v(1), v(2), v(3))
             },
             load_int2 = @ |i| {
-                let v = nvvm_ldg4_i32(&(p as &addrspace(1)[simd[i32 * 4]](i)));
+                let v = nvvm_ldg4_i32(&(&p(i * 4) as &addrspace(1)[simd[i32 * 4]](0)));
                 (v(0), v(1))
             },
             load_int3 = @ |i| {
-                let v = nvvm_ldg4_i32(&(p as &addrspace(1)[simd[i32 * 4]](i)));
+                let v = nvvm_ldg4_i32(&(&p(i * 4) as &addrspace(1)[simd[i32 * 4]](0)));
                 (v(0), v(1), v(2))
             },
             load_int4 = @ |i| {
-                let v = nvvm_ldg4_i32(&(p as &addrspace(1)[simd[i32 * 4]](i)));
+                let v = nvvm_ldg4_i32(&(&p(i * 4) as &addrspace(1)[simd[i32 * 4]](0)));
                 (v(0), v(1), v(2), v(3))
             },
             load_mat3x3 = @ |i| {
-                let v0 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(3*i)));
-                let v1 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(3*i+1)));
-                let v2 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(3*i+2)));
-                make_mat3x3(make_vec3(v0(0), v0(1), v0(2)), make_vec3(v0(3), v1(0), v1(1)), make_vec3(v1(2), v1(3), v2(0)))
+                let q  = &p(i * 4);
+                let v0 = nvvm_ldg4_f32(&((q as &addrspace(1)[simd[f32 * 4]])(0)));
+                let v1 = nvvm_ldg4_f32(&((q as &addrspace(1)[simd[f32 * 4]])(1)));
+                let v2 = nvvm_ldg4_f32(&((q as &addrspace(1)[simd[f32 * 4]])(2)));
+                make_mat3x3(make_vec3(v0(0), v0(1), v0(2)),
+                            make_vec3(v0(3), v1(0), v1(1)), 
+                            make_vec3(v1(2), v1(3), v2(0)))
             },
             load_mat4x4 = @ |i| {
-                let v0 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(4*i)));
-                let v1 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(4*i+1)));
-                let v2 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(4*i+2)));
-                let v3 = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(4*i+3)));
-                make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)), make_vec4(v1(0), v1(1), v1(2), v1(3)), make_vec4(v2(0), v2(1), v2(2), v2(3)), make_vec4(v3(0), v3(1), v3(2), v3(3)))
-            }
+                let q  = &p(i * 4);
+                let v0 = nvvm_ldg4_f32(&((q as &addrspace(1)[simd[f32 * 4]])(0)));
+                let v1 = nvvm_ldg4_f32(&((q as &addrspace(1)[simd[f32 * 4]])(1)));
+                let v2 = nvvm_ldg4_f32(&((q as &addrspace(1)[simd[f32 * 4]])(2)));
+                let v3 = nvvm_ldg4_f32(&((q as &addrspace(1)[simd[f32 * 4]])(3)));
+                make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)),
+                            make_vec4(v1(0), v1(1), v1(2), v1(3)),
+                            make_vec4(v2(0), v2(1), v2(2), v2(3)), 
+                            make_vec4(v3(0), v3(1), v3(2), v3(3)))
+            },
+            has_padding = true
         }
     } else {
         DeviceBuffer {
             load_f32  = @ |i| (p as &addrspace(1)[f32])(i),
             load_i32  = @ |i| (p as &addrspace(1)[i32])(i),
             load_vec2 = @ |i| {
-                let v = (p as &addrspace(1)[simd[f32 * 4]])(i);
+                let v = (&p(i * 4) as &addrspace(1)[simd[f32 * 4]])(0);
                 make_vec2(v(0), v(1))
             },
             load_vec3 = @ |i| {
-                let v = (p as &addrspace(1)[simd[f32 * 4]])(i);
+                let v = (&p(i * 4) as &addrspace(1)[simd[f32 * 4]])(0);
                 make_vec3(v(0), v(1), v(2))
             },
             load_vec4 = @ |i| {
-                let v = (p as &addrspace(1)[simd[f32 * 4]])(i);
+                let v = (&p(i * 4) as &addrspace(1)[simd[f32 * 4]])(0);
                 make_vec4(v(0), v(1), v(2), v(3))
             },
             load_int2 = @ |i| {
-                let v = (p as &addrspace(1)[simd[i32 * 4]])(i);
+                let v = (&p(i * 4) as &addrspace(1)[simd[i32 * 4]])(0);
                 (v(0), v(1))
             },
             load_int3 = @ |i| {
-                let v = (p as &addrspace(1)[simd[i32 * 4]])(i);
+                let v = (&p(i * 4) as &addrspace(1)[simd[i32 * 4]])(0);
                 (v(0), v(1), v(2))
             },
             load_int4 = @ |i| {
-                let v = (p as &addrspace(1)[simd[i32 * 4]])(i);
+                let v = (&p(i * 4) as &addrspace(1)[simd[i32 * 4]])(0);
                 (v(0), v(1), v(2), v(3))
             },
             load_mat3x3 = @ |i| {
-                let v0 = (p as &addrspace(1)[simd[f32 * 4]])(3*i);
-                let v1 = (p as &addrspace(1)[simd[f32 * 4]])(3*i+1);
-                let v2 = (p as &addrspace(1)[simd[f32 * 4]])(3*i+2);
-                make_mat3x3(make_vec3(v0(0), v0(1), v0(2)), make_vec3(v0(3), v1(0), v1(1)), make_vec3(v1(2), v1(3), v2(0)))
+                let q  = &p(i * 4);
+                let v0 = (q as &addrspace(1)[simd[f32 * 4]])(0);
+                let v1 = (q as &addrspace(1)[simd[f32 * 4]])(1);
+                let v2 = (q as &addrspace(1)[simd[f32 * 4]])(2);
+                make_mat3x3(make_vec3(v0(0), v0(1), v0(2)),
+                            make_vec3(v0(3), v1(0), v1(1)),
+                            make_vec3(v1(2), v1(3), v2(0)))
             },
             load_mat4x4 = @ |i| {
-                let v0 = (p as &addrspace(1)[simd[f32 * 4]])(4*i);
-                let v1 = (p as &addrspace(1)[simd[f32 * 4]])(4*i+1);
-                let v2 = (p as &addrspace(1)[simd[f32 * 4]])(4*i+2);
-                let v3 = (p as &addrspace(1)[simd[f32 * 4]])(4*i+3);
-                make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)), make_vec4(v1(0), v1(1), v1(2), v1(3)), make_vec4(v2(0), v2(1), v2(2), v2(3)), make_vec4(v3(0), v3(1), v3(2), v3(3)))
-            }
+                let q  = &p(i * 4);
+                let v0 = (q as &addrspace(1)[simd[f32 * 4]])(0);
+                let v1 = (q as &addrspace(1)[simd[f32 * 4]])(1);
+                let v2 = (q as &addrspace(1)[simd[f32 * 4]])(2);
+                let v3 = (q as &addrspace(1)[simd[f32 * 4]])(3);
+                make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)),
+                            make_vec4(v1(0), v1(1), v1(2), v1(3)), 
+                            make_vec4(v2(0), v2(1), v2(2), v2(3)), 
+                            make_vec4(v3(0), v3(1), v3(2), v3(3)))
+            },
+            has_padding = true
         }
     }
 }
@@ -718,14 +734,13 @@ fn @make_gpu_device( dev_id: i32
     load_light_table  = @ |dtb| make_light_table(intrinsics, dtb),
     load_shader_table = @ |dtb| make_shader_table(intrinsics, dtb),
     load_bvh_table    = @ |dtb| -> BVHTable {
-        let hdr_s = sizeof[PrimBvhHeader]() as u32;
-        |id| {
+        @ |id| {
             let entry  = get_lookup_entry(id as u64, dtb, accb); 
             let header = get_table_entry(entry.offset as u64, dtb, accb);
             let leaf_offset = header.load_i32(0) as u32;
 
-            let nodes = get_table_ptr((entry.offset + hdr_s) as u64, dtb) as &[Node2];
-            let tris  = get_table_ptr((entry.offset + hdr_s + leaf_offset) as u64, dtb) as &[Tri1];
+            let nodes = get_table_ptr((entry.offset + 4) as u64, dtb) as &[Node2];
+            let tris  = get_table_ptr((entry.offset + 4 + leaf_offset) as u64, dtb) as &[Tri1];
             make_gpu_bvh2_tri1(nodes, tris, is_nvvm)
         } 
     }
@@ -747,7 +762,7 @@ fn @make_nvvm_device(dev: i32, streaming: bool) -> Device {
         nvvm_intrinsics,
         make_nvvm_min_max(),
         read_pixel,
-        @ |ptr| make_gpu_buffer(ptr, true),
+        @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], true),
         atomics,
         streaming,
         true
@@ -770,7 +785,7 @@ fn @make_amdgpu_device(dev: i32, streaming: bool) -> Device {
         amdgpu_intrinsics,
         make_amdgpu_min_max(),
         read_pixel,
-        @ |ptr| make_gpu_buffer(ptr, false),
+        @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], false),
         atomics,
         streaming,
         false

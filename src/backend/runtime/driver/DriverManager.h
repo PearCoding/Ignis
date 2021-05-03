@@ -2,8 +2,10 @@
 
 #include "Interface.h"
 #include "SharedLibrary.h"
+#include "Target.h"
 
 #include <unordered_map>
+#include <unordered_set>
 
 namespace IG {
 class DriverManager {
@@ -13,7 +15,8 @@ public:
 	bool load(uint64 config, DriverInterface& interface) const;
 
 private:
-    bool addModule(const std::filesystem::path& path);
+	bool addModule(const std::filesystem::path& path);
 	std::unordered_map<uint64, SharedLibrary> mLoadedDrivers;
+	std::unordered_set<Target> mHasTarget;
 };
 } // namespace IG

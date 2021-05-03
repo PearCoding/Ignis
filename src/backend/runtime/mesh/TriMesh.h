@@ -9,6 +9,9 @@ using StVectorXf = Eigen::Matrix<float, N, 1, Eigen::DontAlign>;
 using StVector3f = StVectorXf<3>;
 using StVector2f = StVectorXf<2>;
 
+static_assert(sizeof(StVector3f) == sizeof(float)*3, "Expected storage vector types to be well sized");
+static_assert(sizeof(StVector2f) == sizeof(float)*2, "Expected storage vector types to be well sized");
+
 struct TriMesh {
 	std::vector<StVector3f> vertices;
 	std::vector<uint32> indices; // A triangle is based as [i0,i1,i2,m] with m = Material

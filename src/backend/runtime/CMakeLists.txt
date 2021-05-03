@@ -38,12 +38,8 @@ set(SRC
     Color.h 
     Image.cpp
     Image.h
-    Loader.cpp
-    Loader.h
     Logger.cpp
     Logger.h
-    Parser.cpp
-    Parser.h
     Runtime.cpp
     Runtime.h
     SharedLibrary.cpp
@@ -53,12 +49,15 @@ set(SRC
     bvh/MemoryPool.h
     bvh/SceneBVHAdapter.h
     bvh/TriBVHAdapter.h
+    driver/Configuration.cpp
     driver/Configuration.h
     driver/DriverManager.cpp
     driver/DriverManager.h
     driver/Interface.h
     klems/KlemsLoader.cpp
     klems/KlemsLoader.h
+    loader/Loader.cpp
+    loader/Loader.h
     loader/LoaderBSDF.cpp
     loader/LoaderBSDF.h
     loader/LoaderContext.cpp
@@ -73,6 +72,8 @@ set(SRC
     loader/LoaderShape.h
     loader/LoaderTexture.cpp
     loader/LoaderTexture.h
+    loader/Parser.cpp
+    loader/Parser.h
     log/ConsoleLogListener.cpp
     log/ConsoleLogListener.h
     log/FileLogListener.cpp

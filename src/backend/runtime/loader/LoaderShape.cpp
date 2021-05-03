@@ -191,31 +191,23 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 
 		// Export data:
 		IG_LOG(L_INFO) << "Generating triangle mesh for shape " << pair.first << std::endl;
-		auto& meshData = result.Database.ShapeTable.addLookup(0); // TODO: No use of the typeid currently
+		size_t padding = ctx.EnablePadding ? sizeof(float) * 4 : 0;
+		auto& meshData = result.Database.ShapeTable.addLookup(0, padding); // TODO: No use of the typeid currently
 		VectorSerializer meshSerializer(meshData, false);
 		meshSerializer.write((uint32)child_mesh.faceCount());
 		meshSerializer.write((uint32)child_mesh.vertices.size());
 		meshSerializer.write((uint32)child_mesh.normals.size());
 		meshSerializer.write((uint32)0);
-		/*if (ctx.EnablePadding) {
-			meshSerializer.write_padded(child_mesh.vertices, sizeof(float) * 4, true);
-			meshSerializer.write_padded(child_mesh.normals, sizeof(float) * 4, true);
-			meshSerializer.write_padded(child_mesh.face_normals, sizeof(float) * 4, true);
-			meshSerializer.write(child_mesh.face_area, true);
-			meshSerializer.write(child_mesh.indices, true);
-			meshSerializer.write_padded(child_mesh.texcoords, sizeof(float) * 4, true);
-		} else {
-			meshSerializer.write(child_mesh.vertices, true);
-			meshSerializer.write(child_mesh.normals, true);
-			meshSerializer.write(child_mesh.face_normals, true);
-			meshSerializer.write(child_mesh.face_area, true);
-			meshSerializer.write(child_mesh.indices, true);
-			meshSerializer.write(child_mesh.texcoords, true);
-		}*/
+		meshSerializer.write_padded(child_mesh.vertices, padding, true);
+		meshSerializer.write_padded(child_mesh.normals, padding, true);
+		meshSerializer.write_padded(child_mesh.face_normals, padding, true);
+		meshSerializer.write(child_mesh.indices, true); // Already aligned
+		//meshSerializer.write_padded(child_mesh.texcoords, padding, true);
+		//meshSerializer.write(child_mesh.face_area, true);
 
 		// Generate BVH
 		IG_LOG(L_INFO) << "Generating BVH for shape " << pair.first << std::endl;
-		auto& bvhData = result.Database.BVHTable.addLookup(0); // TODO: No use of the typeid currently
+		auto& bvhData = result.Database.BVHTable.addLookup(0);
 		VectorSerializer bvhSerializer(bvhData, false);
 		if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
 			std::vector<typename BvhNTriM<2, 1>::Node> nodes;

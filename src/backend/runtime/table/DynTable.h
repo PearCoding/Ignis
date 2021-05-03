@@ -14,8 +14,13 @@ public:
 
 	inline size_t entryCount() const { return mLookups.size(); }
 	inline void reserve(size_t size) { mData.reserve(size); }
-	inline std::vector<uint8>& addLookup(uint32 typeID)
+	inline std::vector<uint8>& addLookup(uint32 typeID, size_t padding = 0)
 	{
+		if (padding != 0) {
+			size_t defect = mData.size() % padding;
+			mData.resize(mData.size() + defect);
+		}
+		
 		mLookups.push_back(LookupEntry{ typeID, (uint32)mData.size() });
 		return mData;
 	}

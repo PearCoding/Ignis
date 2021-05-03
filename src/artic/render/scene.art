@@ -16,9 +16,6 @@ struct Device {
     present: fn () -> (),
 
     // General formats
-    //load_buffer:    fn (&[u8]) -> DeviceBuffer,
-    //load_tri_bvh:   fn (&[u8]) -> PrimBvh,
-
     //load_image: fn (&[u8]) -> Image,
     //load_rays:  fn (i32, &[Ray]) -> &[Ray],
     //load_cdf1d: fn (&[u8]) -> CDF1D,
@@ -34,6 +31,7 @@ struct Device {
     load_bvh_table:      fn (DynTable) -> BVHTable
 }
 
+// Device buffer with granularity 4 bytes. The index is always given in multiple of 4. E.g., index 1 is byte 4!
 struct DeviceBuffer {
     load_i32:    fn (i32) -> i32,
     load_f32:    fn (i32) -> f32,
@@ -45,6 +43,7 @@ struct DeviceBuffer {
     load_int4:   fn (i32) -> (i32, i32, i32, i32),
     load_mat3x3: fn (i32) -> Mat3x3,
     load_mat4x4: fn (i32) -> Mat4x4,
+    has_padding: bool // True if vec2, vec3, int2 and int3 are expected to be like vec4 or int4 in memory
 }
 
 type Renderer = fn (Scene, Device, i32) -> ();

@@ -278,12 +278,12 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 		} break;
 		case SDL_MOUSEBUTTONDOWN:
 			if (event.button.button == SDL_BUTTON_LEFT && !hover && !sLockInteraction) {
-				SDL_SetRelativeMouseMode(SDL_TRUE);
+				//SDL_SetRelativeMouseMode(SDL_TRUE);
 				camera_on = true;
 			}
 			break;
 		case SDL_MOUSEBUTTONUP:
-			SDL_SetRelativeMouseMode(SDL_FALSE);
+			//SDL_SetRelativeMouseMode(SDL_FALSE);
 			camera_on = false;
 			break;
 		case SDL_MOUSEMOTION:

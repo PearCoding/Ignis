@@ -4,7 +4,6 @@
 #include "UI.h"
 #endif
 
-#include "Loader.h"
 #include "Logger.h"
 #include "Runtime.h"
 
@@ -158,9 +157,9 @@ int main(int argc, char** argv)
 
 	std::unique_ptr<Runtime> runtime;
 	try {
-		LoaderOptions opts;
-		opts.Target = Target::GENERIC; // TODO
-		opts.Device = 0;
+		RuntimeOptions opts;
+		opts.DesiredTarget = target;
+		opts.Device		   = device;
 
 		runtime = std::make_unique<Runtime>(in_file, opts);
 	} catch (const std::exception& e) {
@@ -188,6 +187,9 @@ int main(int argc, char** argv)
 		done = UI::handleInput(iter, camera);
 #endif
 
+		if (iter == 0)
+			runtime->clearFramebuffer();
+
 		auto ticks = std::chrono::high_resolution_clock::now();
 		runtime->step(camera);
 		iter++;
@@ -201,7 +203,7 @@ int main(int argc, char** argv)
 
 		frames++;
 		timing += elapsed_ms;
-		if (frames > 10 || timing >= 2500) {
+		if (frames > 10 || timing >= 2000) {
 			auto frames_sec = double(frames) * 1000.0 / double(timing);
 #ifdef WITH_UI
 			std::ostringstream os;
@@ -222,6 +224,8 @@ int main(int argc, char** argv)
 #ifdef WITH_UI
 	UI::close();
 #endif
+
+	runtime.reset();
 
 	if (bench_iter != 0) {
 		auto inv = 1.0e-6;

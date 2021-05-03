@@ -11,14 +11,14 @@
 #endif
 
 template <typename Node, typename Object>
-struct Bvh {
+struct BvhProxy {
 	anydsl::Array<Node> nodes;
 	anydsl::Array<Object> objs;
 };
 
-using Bvh2Ent = Bvh<Node2, EntityLeaf1>;
-using Bvh4Ent = Bvh<Node4, EntityLeaf1>;
-using Bvh8Ent = Bvh<Node8, EntityLeaf1>;
+using Bvh2Ent = BvhProxy<Node2, EntityLeaf1>;
+using Bvh4Ent = BvhProxy<Node4, EntityLeaf1>;
+using Bvh8Ent = BvhProxy<Node8, EntityLeaf1>;
 
 struct DynTableProxy {
 	size_t EntryCount;
@@ -60,8 +60,6 @@ struct Interface {
 	const IG::SceneDatabase* database;
 	size_t film_width;
 	size_t film_height;
-
-	std::vector<std::string> resource_paths;
 
 	Interface(size_t width, size_t height, const IG::SceneDatabase* database)
 		: host_pixels(width * height * 3)
@@ -155,10 +153,14 @@ struct Interface {
 	}
 
 	template <typename Node>
-	Bvh<Node, EntityLeaf1> load_scene_bvh(int32_t dev)
+	BvhProxy<Node, EntityLeaf1> load_scene_bvh(int32_t dev)
 	{
-		// TODO
-		return Bvh<Node, EntityLeaf1>{};
+		uint32_t nodeCount = *reinterpret_cast<const uint32_t*>(&database->BVH[0]);
+		size_t triSize	   = database->BVH.size() - sizeof(uint32_t) - nodeCount * sizeof(Node);
+		return BvhProxy<Node, EntityLeaf1>{
+			copy_to_device(dev, reinterpret_cast<const Node*>(&database->BVH[sizeof(uint32_t)]), nodeCount),
+			copy_to_device(dev, reinterpret_cast<const EntityLeaf1*>(&database->BVH[sizeof(uint32_t) + nodeCount * sizeof(Node)]), triSize / sizeof(EntityLeaf1))
+		};
 	}
 
 	DynTableProxy load_dyntable(int32_t dev, const IG::DynTable& tbl)
