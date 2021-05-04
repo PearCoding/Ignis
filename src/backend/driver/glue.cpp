@@ -10,6 +10,9 @@
 #include <x86intrin.h>
 #endif
 
+#include <mutex>
+#include <thread>
+
 template <typename Node, typename Object>
 struct BvhProxy {
 	anydsl::Array<Node> nodes;
@@ -53,8 +56,12 @@ struct Interface {
 	};
 	std::unordered_map<int32_t, DeviceData> devices;
 
-	static thread_local anydsl::Array<float> cpu_primary;
-	static thread_local anydsl::Array<float> cpu_secondary;
+	struct CPUData {
+		anydsl::Array<float> cpu_primary;
+		anydsl::Array<float> cpu_secondary;
+	};
+	std::mutex thread_mutex;
+	std::unordered_map<std::thread::id, std::unique_ptr<CPUData>> thread_data;
 
 	anydsl::Array<float> host_pixels;
 	const IG::SceneDatabase* database;
@@ -70,6 +77,10 @@ struct Interface {
 	{
 	}
 
+	~Interface()
+	{
+	}
+
 	template <typename T>
 	anydsl::Array<T>& resize_array(int32_t dev, anydsl::Array<T>& array, size_t size, size_t multiplier)
 	{
@@ -81,14 +92,28 @@ struct Interface {
 		return array;
 	}
 
+	inline CPUData* get_thread_data()
+	{
+		thread_local CPUData* dataptr = nullptr;
+		if (!dataptr) {
+			thread_mutex.lock();
+			if (!thread_data.count(std::this_thread::get_id()))
+				thread_data[std::this_thread::get_id()] = std::make_unique<CPUData>();
+
+			dataptr = thread_data[std::this_thread::get_id()].get();
+			thread_mutex.unlock();
+		}
+		return dataptr;
+	}
+
 	anydsl::Array<float>& cpu_primary_stream(size_t size)
 	{
-		return resize_array(0, cpu_primary, size, 20);
+		return resize_array(0, get_thread_data()->cpu_primary, size, 20);
 	}
 
 	anydsl::Array<float>& cpu_secondary_stream(size_t size)
 	{
-		return resize_array(0, cpu_secondary, size, 13);
+		return resize_array(0, get_thread_data()->cpu_secondary, size, 13);
 	}
 
 	anydsl::Array<float>& gpu_first_primary_stream(int32_t dev, size_t size)
@@ -158,8 +183,8 @@ struct Interface {
 		uint32_t nodeCount = *reinterpret_cast<const uint32_t*>(&database->BVH[0]);
 		size_t triSize	   = database->BVH.size() - sizeof(uint32_t) - nodeCount * sizeof(Node);
 		return BvhProxy<Node, EntityLeaf1>{
-			copy_to_device(dev, reinterpret_cast<const Node*>(&database->BVH[sizeof(uint32_t)]), nodeCount),
-			copy_to_device(dev, reinterpret_cast<const EntityLeaf1*>(&database->BVH[sizeof(uint32_t) + nodeCount * sizeof(Node)]), triSize / sizeof(EntityLeaf1))
+			std::move(copy_to_device(dev, reinterpret_cast<const Node*>(&database->BVH[sizeof(uint32_t)]), nodeCount)),
+			std::move(copy_to_device(dev, reinterpret_cast<const EntityLeaf1*>(&database->BVH[sizeof(uint32_t) + nodeCount * sizeof(Node)]), triSize / sizeof(EntityLeaf1)))
 		};
 	}
 
@@ -206,9 +231,6 @@ struct Interface {
 		}
 	}
 };
-
-thread_local anydsl::Array<float> Interface::cpu_primary;
-thread_local anydsl::Array<float> Interface::cpu_secondary;
 
 static std::unique_ptr<Interface> sInterface;
 
