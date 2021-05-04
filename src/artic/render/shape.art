@@ -25,37 +25,44 @@ struct TriMesh {
 }
 
 // Creates a geometry object from a triangle mesh definition
-fn @make_trimesh_shape(math: Intrinsics, tri_mesh: TriMesh) = Shape {
-    surface_element = @ |local_ray, hit| {
-        let (i0, i1, i2) = tri_mesh.triangles(hit.prim_id);
+fn @make_trimesh_shape(math: Intrinsics, tri_mesh: TriMesh) -> Shape {
+    let f_tris  = tri_mesh.triangles;
+    let f_n     = tri_mesh.normals;
+    let f_fn    = tri_mesh.face_normals;
+    let f_attrs = tri_mesh.attrs;
 
-        let face_normal = tri_mesh.face_normals(hit.prim_id);
-        let normal = vec3_normalize(math, vec3_lerp2(tri_mesh.normals(i0), tri_mesh.normals(i1), tri_mesh.normals(i2), hit.uv_coords.x, hit.uv_coords.y));
-        let is_entering = vec3_dot(local_ray.dir, face_normal) <= 0;
+    Shape {
+        surface_element = @ |local_ray, hit| {
+            let (i0, i1, i2) = @f_tris(hit.prim_id);
 
-        fn @attr(i: i32) -> Vec4 {
-            if i >= tri_mesh.num_attrs {
-                make_vec4(0, 0, 0, 0)
-            } else {
-                let (per_face, attr_value) = tri_mesh.attrs(i);
-                if per_face {
-                    attr_value(hit.prim_id)
+            let face_normal = @f_fn(hit.prim_id);
+            let normal = vec3_normalize(math, vec3_lerp2(@f_n(i0), @f_n(i1), @f_n(i2), hit.uv_coords.x, hit.uv_coords.y));
+            let is_entering = vec3_dot(local_ray.dir, face_normal) <= 0;
+
+            fn @attr(i: i32) -> Vec4 {
+                if i >= tri_mesh.num_attrs {
+                    make_vec4(0, 0, 0, 0)
                 } else {
-                    vec4_lerp2(attr_value(i0), attr_value(i1), attr_value(i2), hit.uv_coords.x, hit.uv_coords.y)
+                    let (per_face, attr_value) = @f_attrs(i);
+                    if per_face {
+                        attr_value(hit.prim_id)
+                    } else {
+                        vec4_lerp2(attr_value(i0), attr_value(i1), attr_value(i2), hit.uv_coords.x, hit.uv_coords.y)
+                    }
                 }
             }
-        }
 
-        SurfaceElement {
-            is_entering = is_entering,
-            point =       vec3_add(local_ray.org, vec3_mulf(local_ray.dir, hit.distance)),
-            face_normal = if is_entering { face_normal } else { vec3_neg(face_normal) },
-            uv_coords =   hit.uv_coords,
-            local =       make_orthonormal_mat3x3(if vec3_dot(local_ray.dir, normal) <= 0 { normal } else { vec3_neg(normal) }),
-            attr =        attr
+            SurfaceElement {
+                is_entering = is_entering,
+                point =       vec3_add(local_ray.org, vec3_mulf(local_ray.dir, hit.distance)),
+                face_normal = if is_entering { face_normal } else { vec3_neg(face_normal) },
+                uv_coords =   hit.uv_coords,
+                local =       make_orthonormal_mat3x3(if vec3_dot(local_ray.dir, normal) <= 0 { normal } else { vec3_neg(normal) }),
+                attr =        attr
+            }
         }
     }
-};
+}
 
 type ShapeTable  = fn (i32) -> Shape;
 
@@ -72,16 +79,32 @@ fn @make_shape_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor)
         let n_start    = v_start   + num_verts * v_size;
         let fn_start   = n_start   + num_norms * v_size;
         let ind_start  = fn_start  + num_face * v_size;
+        ig_host_print_i(id as i64);
+        ig_host_print(" ");
+        ig_host_print_i(num_verts as i64);
+        ig_host_print(" ");
+        ig_host_print_i(num_norms as i64);
+        ig_host_print(" ");
+        ig_host_print_i(num_face as i64);
+        ig_host_print(" ");
+        ig_host_print_i(id as i64);
+        ig_host_print(" ");
+        ig_host_print_i(n_start as i64);
+        ig_host_print(" ");
+        ig_host_print_i(fn_start as i64);
+        ig_host_print(" ");
+        ig_host_print_i(ind_start as i64);
+        ig_host_print("\n");
         //let attr_start = ind_start + num_face * 4;
         //let fa_start   = attr_start + num_attrs * 4;
         
         let trimesh = TriMesh {
-            vertices     = |i:i32| data.load_vec3(v_start   + i*v_size),
-            normals      = |i:i32| make_vec3(0,0,1), //data.load_vec3(n_start   + i*v_size),
-            face_normals = |i:i32| data.load_vec3(fn_start  + i*v_size),
-            face_area    = |i:i32| 0,//data.load_f32(fa_start   + i),
-            triangles    = |i:i32| { let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
-            attrs        = |_attr:i32| (false, |_i:i32| make_vec4(0,0,0,0)), // TODO
+            vertices     = @ |i:i32| { ig_host_print_i(i as i64); ig_host_print("v\n"); data.load_vec3(v_start   + i*v_size) },
+            normals      = @ |i:i32| { ig_host_print_i(i as i64); ig_host_print("n\n"); data.load_vec3(n_start   + i*v_size) },
+            face_normals = @ |i:i32| { ig_host_print_i(i as i64); ig_host_print("fn\n"); data.load_vec3(fn_start  + i*v_size) },
+            face_area    = @ |i:i32| 0,//data.load_f32(fa_start   + i),
+            triangles    = @ |i:i32| { ig_host_print_i(i as i64); ig_host_print("i\n"); let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
+            attrs        = @ |_attr:i32| (false, |_i:i32| make_vec4(0,0,0,0)), // TODO
             num_attrs    = num_attrs,
             num_tris     = num_face
         };
