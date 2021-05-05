@@ -515,17 +515,25 @@ void ignis_present(int32_t dev)
 
 void ig_host_print(const char* str)
 {
-	std::cout << str;
+	std::cout << str << std::flush;
 }
 
 void ig_host_print_i(int64_t number)
 {
-	std::cout << number;
+	std::cout << number << std::flush;
 }
 
 void ig_host_print_f(double number)
 {
-	std::cout << number;
+	std::cout << number << std::flush;
+}
+
+void ig_host_print_p(const char* ptr)
+{
+	std::cout << std::internal << std::hex << std::setw(sizeof(ptr) * 2 + 2) << std::setfill('0')
+			  << (const void*)ptr
+			  << std::resetiosflags(std::ios::internal) << std::resetiosflags(std::ios::hex)
+			  << std::flush;
 }
 
 int64_t clock_us()

@@ -334,7 +334,7 @@ fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
     infinite = false
 };
 
-fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, color: Color, global_m: Mat4x4, normal_m: Mat3x3) -> Light {
+/*fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, color: Color, global_m: Mat4x4, normal_m: Mat3x3) -> Light {
     let emitter = AreaEmitter {
         sample = @ |uv| {
             let ux  = uv.x * (count as f32);
@@ -360,7 +360,7 @@ fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, co
         }
     };
     make_area_light(math, emitter, color)
-}
+}*/
 
 type LightTable  = fn (i32) -> Light;
 

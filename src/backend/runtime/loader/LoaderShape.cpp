@@ -189,21 +189,25 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 		ctx.Environment.Shapes.push_back(shape);
 		ctx.Environment.ShapeIDs[pair.first] = shapeID;
 
+		IG_ASSERT(child_mesh.face_normals.size() == child_mesh.faceCount(), "Expected valid face normals!");
+		IG_ASSERT((child_mesh.indices.size() % 4) == 0, "Expected index buffer count to be a multiple of 4!");
+
 		// Export data:
 		IG_LOG(L_INFO) << "Generating triangle mesh for shape " << pair.first << std::endl;
-		size_t padding = ctx.EnablePadding ? sizeof(float) * 4 : 0;
-		auto& meshData = result.Database.ShapeTable.addLookup(0, padding); // TODO: No use of the typeid currently
+		constexpr size_t ALIGNMENT = sizeof(float) * 4;
+
+		auto& meshData = result.Database.ShapeTable.addLookup(0, ALIGNMENT); // TODO: No use of the typeid currently
 		VectorSerializer meshSerializer(meshData, false);
 		meshSerializer.write((uint32)child_mesh.faceCount());
 		meshSerializer.write((uint32)child_mesh.vertices.size());
 		meshSerializer.write((uint32)child_mesh.normals.size());
 		meshSerializer.write((uint32)0);
-		meshSerializer.write_padded(child_mesh.vertices, padding, true);
-		meshSerializer.write_padded(child_mesh.normals, padding, true);
-		meshSerializer.write_padded(child_mesh.face_normals, padding, true);
+		meshSerializer.write_aligned(child_mesh.vertices, ALIGNMENT, true);
+		meshSerializer.write_aligned(child_mesh.normals, ALIGNMENT, true);
+		meshSerializer.write_aligned(child_mesh.face_normals, ALIGNMENT, true);
 		meshSerializer.write(child_mesh.indices, true); // Already aligned
-		//meshSerializer.write_padded(child_mesh.texcoords, padding, true);
-		//meshSerializer.write(child_mesh.face_area, true);
+		meshSerializer.write_aligned(child_mesh.texcoords, ALIGNMENT, true);
+		meshSerializer.write(child_mesh.face_area, true);
 
 		// Generate BVH
 		IG_LOG(L_INFO) << "Generating BVH for shape " << pair.first << std::endl;

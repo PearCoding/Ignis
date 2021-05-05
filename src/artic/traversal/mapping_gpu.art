@@ -235,44 +235,11 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
                               , any_hit: bool
                               , root: i32
                               ) -> Hit {
-
     let mut hit = empty_hit(ray.tmax);
-    /*if scene.num_entities == 1 {
-        // No need for the scene bvh if there is just one entity
-        let shape           = scene.shapes(scene.entities.shape(0));
-        let (local_ray, sf) = transform_ray(gpu_intrinsics, ray, scene.entities.local_mat4x4(0));
-        let local_hit       = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape.bvh, any_hit, 1);
 
-        if local_hit.prim_id >= 0 {
-            let glb_dist = local_hit.distance / sf;
-            hit          = make_hit(0, local_hit.prim_id, glb_dist, local_hit.uv_coords);
-        }
-        return(hit)
-    }*/
-
-    /*if scene.num_entities >= 1 {
-        for i in range(0, scene.num_entities) {
-            let shape           = scene.shapes(scene.entities.shape(i));
-            let (local_ray, sf) = transform_ray(gpu_intrinsics, ray, scene.entities.local_mat4x4(i));
-            let local_hit       = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape.bvh, any_hit, 1);
-
-            if local_hit.prim_id >= 0 {
-                let glb_dist = local_hit.distance / sf;
-
-                if glb_dist <= hit.distance {
-                    hit      = make_hit(i, local_hit.prim_id, glb_dist, local_hit.uv_coords);
-                    ray.tmax = glb_dist;
-
-                    // Early exit mode
-                    if any_hit { return(hit) }
-                }
-            }
-        }
-        return(hit)
-    }*/
-
-    let bvh   = scene.bvh;
-    let stack = alloc_stack();
+    let bvh       = scene.bvh;
+    let prim_bvhs = scene.database.bvhs;
+    let stack     = alloc_stack();
     stack.push(root, undef[f32]());
 
     while !stack.is_empty() {
@@ -326,14 +293,14 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
         }
 
         while is_leaf(stack.top()) {
-            let leaf_ref      = stack.pop();
-            let mut ref_id   = !leaf_ref.node;
+            let leaf_ref   = stack.pop();
+            let mut ref_id = !leaf_ref.node;
             while true {
                 let leaf = bvh.ent(ref_id++);
 
                 if let Option[(f32,f32)]::Some((t,_)) = intersect_ray_box_single(min_max, false, ray, leaf.bbox) {
                     if t <= hit.distance {
-                        let shape_bvh       = scene.database.bvhs(leaf.shape_id);
+                        let shape_bvh       = @prim_bvhs(leaf.shape_id);
                         let (local_ray, sf) = transform_ray(gpu_intrinsics, ray, leaf.local);
                         let local_hit       = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape_bvh, any_hit, 1);
 

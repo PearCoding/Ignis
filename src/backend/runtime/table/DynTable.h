@@ -5,7 +5,8 @@
 namespace IG {
 struct LookupEntry {
 	uint32 TypeID;
-	uint32 Offset;
+	uint32 Flags;
+	uint64 Offset;
 };
 
 class DynTable {

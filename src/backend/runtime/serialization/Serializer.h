@@ -51,7 +51,7 @@ public:
 	inline void write(const Eigen::Matrix<Scalar, Rows, Cols, Options>& v);
 
 	template <typename T, typename Alloc>
-	void write_padded(const std::vector<T, Alloc>& vec, size_t padding, bool naked = false);
+	void write_aligned(const std::vector<T, Alloc>& vec, size_t padding, bool naked = false);
 
 	// Read
 	inline void read(bool& v);

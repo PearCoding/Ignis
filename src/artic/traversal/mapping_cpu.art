@@ -170,7 +170,7 @@ fn @make_cpu_int_min_max() -> MinMax {
 // Traversal kernels ---------------------------------------------------------------
 
 // Traverses a primitive BVH with a single ray.
-fn cpu_traverse_single_helper_prim( mut ray: Ray
+fn @cpu_traverse_single_helper_prim( mut ray: Ray
                                     , octant: RayOctant
                                     , min_max: MinMax
                                     , bvh: PrimBvh
@@ -189,7 +189,7 @@ fn cpu_traverse_single_helper_prim( mut ray: Ray
     stack.push(root, ray.tmin);
 
     let extract_hit = @ |hit: Hit, lane: i32| Hit {
-        ent_id    = -1/*bitcast[i32](rv_extract(bitcast[f32](hit.ent_id), lane))*/, // Not used here, will be replaced in the top level BVH
+        ent_id    = -1, // Not used here, will be replaced in the top level BVH
         prim_id   = bitcast[i32](rv_extract(bitcast[f32](hit.prim_id), lane)),
         distance  = rv_extract(hit.distance, lane),
         uv_coords = make_vec2(rv_extract(hit.uv_coords.x, lane), rv_extract(hit.uv_coords.y, lane))
@@ -256,7 +256,7 @@ fn cpu_traverse_single_helper_prim( mut ray: Ray
             if any_hit && unlikely(stack.is_empty()) { exit() }
 
             // Intersect leaves here
-            let mut prim_id = !stack.pop().node;
+            let mut prim_id    = !stack.pop().node;
             let mut terminated = false;
             while true {
                 let prim = bvh.prim(prim_id++);
@@ -291,7 +291,7 @@ fn cpu_traverse_single_helper_prim( mut ray: Ray
     hit
 }
 
-fn cpu_traverse_single_helper( mut ray: Ray
+fn @cpu_traverse_single_helper( mut ray: Ray
                               , octant: RayOctant
                               , min_max: MinMax
                               , scene: Scene
@@ -301,7 +301,7 @@ fn cpu_traverse_single_helper( mut ray: Ray
     let bvh = scene.bvh;
 
     let mut hit = empty_hit(ray.tmax);
-    let stack = alloc_stack();
+    let stack   = alloc_stack();
 
     stack.push(root, ray.tmin);
 
@@ -382,7 +382,7 @@ fn cpu_traverse_single_helper( mut ray: Ray
 }
 
 // Traverses a BVH with a packet of rays, assuming execution inside a vectorized region.
-fn cpu_traverse_hybrid_helper_prim( mut ray: Ray
+fn @cpu_traverse_hybrid_helper_prim( mut ray: Ray
                               , vector_width: i32
                               , min_max: MinMax
                               , bvh: PrimBvh
@@ -419,7 +419,7 @@ fn cpu_traverse_hybrid_helper_prim( mut ray: Ray
         rv_store(&mut hit_ptr.uv_coords.x, lane, hit.uv_coords.x);
         rv_store(&mut hit_ptr.uv_coords.y, lane, hit.uv_coords.y);
         rv_store(bitcast[&mut f32](&mut hit_ptr.prim_id), lane, bitcast[f32](hit.prim_id));
-        rv_store(bitcast[&mut f32](&mut hit_ptr.ent_id), lane, bitcast[f32](hit.ent_id));
+        //rv_store(bitcast[&mut f32](&mut hit_ptr.ent_id), lane, bitcast[f32](hit.ent_id)); // Optimization: No need for the ent id in prim BVH
     };
 
     while true {
@@ -485,7 +485,7 @@ fn cpu_traverse_hybrid_helper_prim( mut ray: Ray
             let mut prim_id = !stack.pop().node;
             while true {
                 let prim = bvh.prim(prim_id++);
-                for i in range(0, prim.size) {
+                for i in unroll(0, prim.size) {
                     if unlikely(!prim.is_valid(i)) { break() }
 
                     if active {
@@ -511,7 +511,7 @@ fn cpu_traverse_hybrid_helper_prim( mut ray: Ray
     hit
 }
 
-fn cpu_traverse_hybrid_helper( mut ray: Ray
+fn @cpu_traverse_hybrid_helper( mut ray: Ray
                               , vector_width: i32
                               , min_max: MinMax
                               , scene: Scene
@@ -519,7 +519,8 @@ fn cpu_traverse_hybrid_helper( mut ray: Ray
                               , any_hit: bool
                               , root: i32
                               ) -> Hit {
-    let bvh = scene.bvh;
+    let bvh       = scene.bvh;
+    let prim_bvhs = scene.database.bvhs;
 
     let switch_threshold = match vector_width {
         4  => 3,
@@ -612,27 +613,27 @@ fn cpu_traverse_hybrid_helper( mut ray: Ray
 
         if unlikely(is_leaf(stack.top())) {
             let mut active = (stack.top().tmin <= ray.tmax) & !terminated;
-            let leaf_ref   = stack.pop();
-            let mut ref_id = !leaf_ref.node;
+            let mut ref_id = !stack.pop().node;
             while true {
                 let leaf = bvh.ent(ref_id++);
-                let shape_bvh       = scene.database.bvhs(leaf.shape_id);
+
+                let shape_bvh       = @prim_bvhs(leaf.shape_id);
                 let (local_ray, sf) = transform_ray(cpu_intrinsics, ray, leaf.local);
                 let local_hit       = cpu_traverse_hybrid_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
                 
                 if active {
-                    let was_hit  = (local_hit.prim_id != -1) & (local_hit.distance <= hit.distance * sf);
+                    let was_hit  = (local_hit.prim_id != -1) & (local_hit.distance / sf <= hit.distance);
 
                     if was_hit {
                         hit.prim_id  = local_hit.prim_id;
                         hit.distance = local_hit.distance / sf;
                         hit.ent_id   = leaf.entity_id & 0x7FFFFFFF;
                         ray.tmax     = hit.distance;
-                    }
                     
-                    if any_hit && rv_any(was_hit) {
-                        terminated = true;
-                        active = false;
+                        if any_hit {
+                            terminated = true;
+                            active     = false;
+                        }
                     }
                 }
 
@@ -674,7 +675,6 @@ fn @cpu_traverse_hybrid( min_max: MinMax
                         , single: bool
                         , any_hit: bool
                         ) -> () {
-    //cpu_traverse_single(min_max, scene, rays, hits, packet_size, num_packets, any_hit)
     for i in range(0, num_packets) {
         vectorize(packet_size, |j| {
             hits(i, j, cpu_traverse_hybrid_helper(rays(i, j), packet_size, min_max, scene, single, any_hit, 1 /*root*/))

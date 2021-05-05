@@ -1,6 +1,7 @@
 struct LookupEntry {
     type_id: u32, // Type ID depends on the actual dyntable usecase
-    offset:  u32  // Offset to start of the DynTable in bytes (should be u64 to fit the functions)
+    flags:   u32, // Optional flags, currently not used
+    offset:  u64  // Offset to start of the DynTable in bytes
 }
 
 // TODO: Prolly the mother of all cache misses :O
@@ -27,13 +28,31 @@ struct SceneAccessor {
     bvhs:     BVHTable    // Defined in intersection.art
 }
 
+// Device buffer. Granularity is 4 byte per index
+struct DeviceBuffer {
+    load_i32:      fn (i32) -> i32,
+    load_f32:      fn (i32) -> f32,
+    load_vec2:     fn (i32) -> Vec2,
+    load_vec3:     fn (i32) -> Vec3,
+    load_vec4:     fn (i32) -> Vec4,
+    load_int2:     fn (i32) -> (i32, i32),
+    load_int3:     fn (i32) -> (i32, i32, i32),
+    load_int4:     fn (i32) -> (i32, i32, i32, i32),
+    load_mat3x3:   fn (i32) -> Mat3x3,
+    load_mat4x4:   fn (i32) -> Mat4x4,
+    has_alignment: bool // True if vec2, vec3, int2 and int3 are expected to be like vec4 or int4 in memory
+}
+
 type DeviceBufferAccessor = fn (&[u8]) -> DeviceBuffer;
 fn @get_lookup_entry(ind: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> LookupEntry {
     // TODO: Check boundaries
-    let data = acc(&tbl.header(ind) as &[u8]);
+    //tbl.header(ind)
+    let data = acc((&tbl.header(ind)) as &[u8]);
+    let (type_id, flags, off1, off2) = data.load_int4(0);
     LookupEntry {
-        type_id = data.load_i32(0) as u32,
-        offset  = data.load_i32(1) as u32
+         type_id = type_id as u32,
+         flags   = flags as u32,
+         offset  = ((off1 as u64) << 32) | (off2 as u64) // TODO: This assumes little endian
     }
 }
 

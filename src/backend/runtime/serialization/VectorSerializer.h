@@ -8,6 +8,8 @@ public:
 	VectorSerializer(std::vector<uint8>& data, bool readmode);
 	virtual ~VectorSerializer();
 
+	void ensureAlignment(size_t alignment);
+
 	// Interface
 	virtual bool isValid() const override;
 	virtual size_t writeRaw(const uint8* data, size_t size) override;

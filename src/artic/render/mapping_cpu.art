@@ -183,8 +183,7 @@ fn @cpu_compact_secondary(secondary: &SecondaryStream, vector_width: i32, vector
                     secondary.color_b(k) = secondary.color_b(i);
                     k++;
                 }
-            } 
-
+            }
         }
         k
     }
@@ -265,29 +264,46 @@ fn @cpu_traverse_secondary(scene: Scene, min_max: MinMax, secondary: &SecondaryS
 
 fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, scene: Scene, path_tracer: PathTracer, accumulate: fn (i32, Color) -> (), begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_shade_specialized(primary: &PrimaryStream, secondary: &SecondaryStream, begin: i32, end: i32) -> () {
+        if begin == end { return() }
+
         let read_primary_ray    = make_ray_stream_reader(primary.rays, 1);
         let read_primary_hit    = make_primary_stream_hit_reader(*primary, 1);
         let read_primary_state  = make_primary_stream_state_reader(*primary, 1);
         let write_primary_ray   = make_ray_stream_writer(primary.rays, 1);
         let write_primary_state = make_primary_stream_state_writer(*primary, 1);
         let write_secondary_ray = make_ray_stream_writer(secondary.rays, 1);
+        
+        let entities  = scene.database.entities;
+        let shapes    = scene.database.shapes;
+        let shaders   = scene.database.shaders;
+        let on_hit    = path_tracer.on_hit;
+        let on_shadow = path_tracer.on_shadow;
+        let on_bounce = path_tracer.on_bounce;
+        let entity    = @entities(entity_id);
+        ig_host_print("A\n");
+        ig_host_print_i(entity.shape_id as i64);
+        ig_host_print("\n");
+        let shape     = @shapes(entity.shape_id);
+        ig_host_print("B\n");
+        let shader    = @shaders(entity.mat_id);
+        ig_host_print("C\n");
+        let surfelem  = shape.surface_element;
 
         for i, vector_width in vectorized_range(vector_width, begin, end) {
             let ray       = read_primary_ray(i, 0);
             let hit       = read_primary_hit(i, 0);
             let mut state = read_primary_state(i, 0);
             let ray_id    = primary.rays.id(i);
-            let entity    = scene.database.entities(entity_id);
 
             let (local_ray, _) = transform_ray(cpu_intrinsics, ray, entity.local_mat);
 
-            let shp      = scene.database.shapes(entity.shape_id);
-            let lcl_surf = shp.surface_element(local_ray, hit);
+            ig_host_print("D\n");
+            let lcl_surf = @surfelem(local_ray, hit);
+            ig_host_print("E\n");
             let glb_surf = map_surface_element(cpu_intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
-            let mat      = scene.database.shaders(entity.mat_id)(ray, hit, glb_surf);
+            let mat      = @shader(ray, hit, glb_surf);
 
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
-            let on_hit = path_tracer.on_hit;
             let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) { color } else { black };
 
             for lane in unroll(0, vector_width) {
@@ -302,7 +318,6 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
             }
 
             // Compute shadow rays
-            let on_shadow = path_tracer.on_shadow;
             if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, hit, &mut state, glb_surf, mat) {
                 write_secondary_ray(i, 0, new_ray);
                 secondary.color_r(i) = color.r;
@@ -314,7 +329,6 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
             }
 
             // Sample new rays
-            let on_bounce = path_tracer.on_bounce;
             if let Option[(Ray, RayState)]::Some(new_ray, new_state) = @on_bounce(ray, hit, &mut state, glb_surf, mat) {
                 write_primary_ray(i, 0, new_ray);
                 write_primary_state(i, 0, new_state);
@@ -323,7 +337,7 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
             }
         }
     }
-    cpu_shade_specialized(primary, secondary, begin, end);
+    $cpu_shade_specialized(primary, secondary, begin, end);
 }
 
 fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
@@ -383,6 +397,7 @@ fn @cpu_trace( scene: Scene
                 });
                 atomic(1:u32, &mut total_rays, primary.size as i64, 7:u32, "");
 
+                // ig_host_print("TRAVERSE!");
                 // Sort hits by shader id, and filter invalid hits
                 let mut ray_begins : [i32 * 1024];
                 let mut ray_ends   : [i32 * 1024];
@@ -391,12 +406,17 @@ fn @cpu_trace( scene: Scene
                 // Perform (vectorized) shading
                 cpu_profile(&mut shading_counter, || {
                     let mut begin = 0;
-                    for ent_id in unroll(0, scene.num_entities) {
+                    for ent_id in range(0, scene.num_entities) {
+                        // ig_host_print("Ent ");
+                        // ig_host_print_i(ent_id as i64);
+                        // ig_host_print("\n");
                         let end = ray_ends(ent_id);
                         cpu_shade(ent_id, primary, secondary, scene, path_tracer, accumulate, begin, end, vector_width);
                         begin = end;
                     }
                 });
+
+                // ig_host_print("SHADE!\n");
                 // Filter terminated rays
                 secondary.size = primary.size;
                 primary.size   = cpu_compact_primary(primary, vector_width, vector_compact);
@@ -458,7 +478,8 @@ fn @make_cpu_buffer(p: &[u8]) = DeviceBuffer {
     load_vec4   = @ |i| { let v = (&p(i * 4) as &[simd[f32 * 4]])(0); make_vec4(v(0), v(1), v(2), v(3)) },
     load_int2   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1)) },
     load_int3   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1), q(i + 2)) },
-    load_int4   = @ |i| { let v = (&p(i * 4) as &[simd[i32 * 4]])(0); (v(0), v(1), v(2), v(3)) },
+    //load_int4   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1), q(i + 2), q(i + 3)) },
+    load_int4   = @ |i| { let v = ((&p(i * 4)) as &[simd[i32 * 4]])(0); (v(0), v(1), v(2), v(3)) },
     load_mat3x3 = @ |i| { let q = p as &[f32]; 
         make_mat3x3(make_vec3(q(i + 0), q(i + 1), q(i + 2)),
                     make_vec3(q(i + 3), q(i + 4), q(i + 5)),
@@ -468,14 +489,65 @@ fn @make_cpu_buffer(p: &[u8]) = DeviceBuffer {
         let v0 = q(0);
         let v1 = q(1);
         let v2 = q(2);
-        let v3 = q(3);   
+        let v3 = q(3);
         make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)),
                     make_vec4(v1(0), v1(1), v1(2), v1(3)),
                     make_vec4(v2(0), v2(1), v2(2), v2(3)),
                     make_vec4(v3(0), v3(1), v3(2), v3(3)))
     },
-    has_padding = false
+    has_alignment = false
 };
+
+// fn @make_cpu_buffer(p: &[u8]) = DeviceBuffer {
+//     load_f32  = @ |i| (p as &[f32])(i),
+//     load_i32  = @ |i| (p as &[i32])(i),
+//     load_vec2 = @ |i| {
+//         let v = (&p(i * 4) as &[simd[f32 * 4]])(0);
+//         make_vec2(v(0), v(1))
+//     },
+//     load_vec3 = @ |i| {
+//         let v = (&p(i * 4) as &[simd[f32 * 4]])(0);
+//         make_vec3(v(0), v(1), v(2))
+//     },
+//     load_vec4 = @ |i| {
+//         let v = (&p(i * 4) as &[simd[f32 * 4]])(0);
+//         make_vec4(v(0), v(1), v(2), v(3))
+//     },
+//     load_int2 = @ |i| {
+//         let v = (&p(i * 4) as &[simd[i32 * 4]])(0);
+//         (v(0), v(1))
+//     },
+//     load_int3 = @ |i| {
+//         let v = (&p(i * 4) as &[simd[i32 * 4]])(0);
+//         (v(0), v(1), v(2))
+//     },
+//     load_int4 = @ |i| {
+//         let v = (&p(i * 4) as &[simd[i32 * 4]])(0);
+//         (v(0), v(1), v(2), v(3))
+//     },
+//     load_mat3x3 = @ |i| {
+//         let q  = &p(i * 4);
+//         let v0 = (q as &[simd[f32 * 4]])(0);
+//         let v1 = (q as &[simd[f32 * 4]])(1);
+//         let v2 = (q as &[simd[f32 * 4]])(2);
+//         make_mat3x3(make_vec3(v0(0), v0(1), v0(2)),
+//                     make_vec3(v0(3), v1(0), v1(1)),
+//                     make_vec3(v1(2), v1(3), v2(0)))
+//     },
+//     load_mat4x4 = @ |i| {
+//         let q  = &p(i * 4);
+//         let v0 = (q as &[simd[f32 * 4]])(0);
+//         let v1 = (q as &[simd[f32 * 4]])(1);
+//         let v2 = (q as &[simd[f32 * 4]])(2);
+//         let v3 = (q as &[simd[f32 * 4]])(3);
+//         make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)),
+//                     make_vec4(v1(0), v1(1), v1(2), v1(3)), 
+//                     make_vec4(v2(0), v2(1), v2(2), v2(3)), 
+//                     make_vec4(v3(0), v3(1), v3(2), v3(3)))
+//     },
+//     has_padding = true
+// };
+
 
 fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_width: i32, num_cores: i32, tile_size: i32) = Device {
     intrinsics = cpu_intrinsics,
@@ -544,16 +616,16 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     load_bvh_table    = @ |dtb| -> BVHTable {
         @ |id| {
             let entry  = get_lookup_entry(id as u64, dtb, make_cpu_buffer); 
-            let header = get_table_entry(entry.offset as u64, dtb, make_cpu_buffer);
-            let leaf_offset = header.load_i32(0) as u32;
+            let header = get_table_entry(entry.offset, dtb, make_cpu_buffer);
+            let leaf_offset = header.load_i32(0) as u64;
     
             if vector_width == 8 {
-                let nodes = get_table_ptr((entry.offset + 4) as u64, dtb) as &[Node8];
-                let tris  = get_table_ptr((entry.offset + 4 + leaf_offset) as u64, dtb) as &[Tri4];
+                let nodes = get_table_ptr(entry.offset + 4 , dtb) as &[Node8];
+                let tris  = get_table_ptr(entry.offset + 4 + leaf_offset * (sizeof[Node8]() as u64), dtb) as &[Tri4];
                 make_cpu_bvh8_tri4(nodes, tris)
             } else {
-                let nodes = get_table_ptr((entry.offset + 4) as u64, dtb) as &[Node4];
-                let tris  = get_table_ptr((entry.offset + 4 + leaf_offset) as u64, dtb) as &[Tri4];
+                let nodes = get_table_ptr(entry.offset + 4, dtb) as &[Node4];
+                let tris  = get_table_ptr(entry.offset + 4 + leaf_offset * (sizeof[Node4]() as u64), dtb) as &[Tri4];
                 make_cpu_bvh4_tri4(nodes, tris)
             }
         } 

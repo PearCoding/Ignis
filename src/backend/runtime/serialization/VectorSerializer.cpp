@@ -12,6 +12,16 @@ VectorSerializer::~VectorSerializer()
 {
 }
 
+void VectorSerializer::ensureAlignment(size_t alignment)
+{
+	if (alignment == 0)
+		return;
+
+	const size_t defect = mData.size() % alignment;
+	for (size_t i = 0; i < defect; ++i)
+		write((uint8)0);
+}
+
 bool VectorSerializer::isValid() const
 {
 	return isReadMode() ? mIt < mData.size() : mIt == mData.size();
