@@ -88,18 +88,6 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
         bvhs     = device.load_bvh_table(dtb.bvhs)                  
     };
 
-    // ig_host_print("S=");
-    // ig_host_print_i(dtb.entities.count as i64);
-    // ig_host_print(" ");
-    // ig_host_print_i(dtb.shapes.count as i64);
-    // ig_host_print(" ");
-    // ig_host_print_i(dtb.lights.count as i64);
-    // ig_host_print(" ");
-    // ig_host_print_i(dtb.shaders.count as i64);
-    // ig_host_print(" ");
-    // ig_host_print_i(dtb.bvhs.count as i64);
-    // ig_host_print("\n");
-
     let scene = Scene {
         num_entities = dtb.entities.count as i32,
         num_shapes   = dtb.shapes.count   as i32,

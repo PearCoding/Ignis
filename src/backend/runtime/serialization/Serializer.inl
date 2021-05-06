@@ -120,16 +120,16 @@ inline void Serializer::write(const ISerializable& v)
 }
 
 template <typename T, typename Alloc>
-void Serializer::write_aligned(const std::vector<T, Alloc>& vec, size_t padding, bool naked)
+void Serializer::write_aligned(const std::vector<T, Alloc>& vec, size_t alignment, bool naked)
 {
-	if (padding == 0) {
+	if (alignment == 0) {
 		write(vec, naked);
 		return;
 	}
 	
 	// TODO: Faster approach?
 	constexpr size_t TSize = sizeof(T);
-	const size_t defect	   = TSize % padding;
+	const size_t defect	   = alignment - (TSize % alignment);
 
 	if (defect == 0) {
 		write(vec, naked);

@@ -52,7 +52,7 @@ fn @get_lookup_entry(ind: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> Loo
     LookupEntry {
          type_id = type_id as u32,
          flags   = flags as u32,
-         offset  = ((off1 as u64) << 32) | (off2 as u64) // TODO: This assumes little endian
+         offset  = ((off2 as u64) << 32) | (off1 as u64) // TODO: This assumes little endian
     }
 }
 

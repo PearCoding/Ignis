@@ -218,6 +218,9 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 			std::vector<typename BvhNTriM<2, 1>::Tri> tris;
 			build_bvh<2, 1>(child_mesh, nodes, tris);
 			bvhSerializer.write((uint32)nodes.size());
+			// bvhSerializer.write((uint32)0);
+			// bvhSerializer.write((uint32)0);
+			// bvhSerializer.write((uint32)0);
 			bvhSerializer.write(nodes, true);
 			bvhSerializer.write(tris, true);
 		} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
@@ -225,6 +228,9 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 			std::vector<typename BvhNTriM<4, 4>::Tri> tris;
 			build_bvh<4, 4>(child_mesh, nodes, tris);
 			bvhSerializer.write((uint32)nodes.size());
+			// bvhSerializer.write((uint32)0);
+			// bvhSerializer.write((uint32)0);
+			// bvhSerializer.write((uint32)0);
 			bvhSerializer.write(nodes, true);
 			bvhSerializer.write(tris, true);
 		} else {
@@ -232,6 +238,9 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 			std::vector<typename BvhNTriM<8, 4>::Tri> tris;
 			build_bvh<8, 4>(child_mesh, nodes, tris);
 			bvhSerializer.write((uint32)nodes.size());
+			// bvhSerializer.write((uint32)0);
+			// bvhSerializer.write((uint32)0);
+			// bvhSerializer.write((uint32)0);
 			bvhSerializer.write(nodes, true);
 			bvhSerializer.write(tris, true);
 		}

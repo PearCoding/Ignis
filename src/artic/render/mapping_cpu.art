@@ -280,13 +280,8 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
         let on_shadow = path_tracer.on_shadow;
         let on_bounce = path_tracer.on_bounce;
         let entity    = @entities(entity_id);
-        ig_host_print("A\n");
-        ig_host_print_i(entity.shape_id as i64);
-        ig_host_print("\n");
         let shape     = @shapes(entity.shape_id);
-        ig_host_print("B\n");
         let shader    = @shaders(entity.mat_id);
-        ig_host_print("C\n");
         let surfelem  = shape.surface_element;
 
         for i, vector_width in vectorized_range(vector_width, begin, end) {
@@ -297,9 +292,7 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
 
             let (local_ray, _) = transform_ray(cpu_intrinsics, ray, entity.local_mat);
 
-            ig_host_print("D\n");
             let lcl_surf = @surfelem(local_ray, hit);
-            ig_host_print("E\n");
             let glb_surf = map_surface_element(cpu_intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
             let mat      = @shader(ray, hit, glb_surf);
 
@@ -397,7 +390,6 @@ fn @cpu_trace( scene: Scene
                 });
                 atomic(1:u32, &mut total_rays, primary.size as i64, 7:u32, "");
 
-                // ig_host_print("TRAVERSE!");
                 // Sort hits by shader id, and filter invalid hits
                 let mut ray_begins : [i32 * 1024];
                 let mut ray_ends   : [i32 * 1024];
@@ -407,16 +399,12 @@ fn @cpu_trace( scene: Scene
                 cpu_profile(&mut shading_counter, || {
                     let mut begin = 0;
                     for ent_id in range(0, scene.num_entities) {
-                        // ig_host_print("Ent ");
-                        // ig_host_print_i(ent_id as i64);
-                        // ig_host_print("\n");
                         let end = ray_ends(ent_id);
                         cpu_shade(ent_id, primary, secondary, scene, path_tracer, accumulate, begin, end, vector_width);
                         begin = end;
                     }
                 });
 
-                // ig_host_print("SHADE!\n");
                 // Filter terminated rays
                 secondary.size = primary.size;
                 primary.size   = cpu_compact_primary(primary, vector_width, vector_compact);

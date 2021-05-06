@@ -1,11 +1,3 @@
-struct EntityMap {
-    local_mat4x4:  fn(i32) -> Mat4x4,
-    global_mat4x4: fn(i32) -> Mat4x4,
-    normal_mat3x3: fn(i32) -> Mat3x3,
-    shape:         fn(i32) -> i32,
-    shader:        fn(i32) -> Shader
-}
-
 struct EntityData {
     shape_id:   i32,
     mat_id:     i32,
