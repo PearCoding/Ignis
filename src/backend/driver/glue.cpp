@@ -216,6 +216,17 @@ struct Interface {
 		return proxy;
 	}
 
+	SceneInfo load_scene_info(int32_t dev)
+	{
+		IG_UNUSED(dev);
+
+		SceneInfo info;
+		info.num_entities = database->EntityTable.entryCount();
+		info.num_shapes	  = database->ShapeTable.entryCount();
+		info.num_lights	  = database->LightTable.entryCount();
+		return info;
+	}
+
 	void present(int32_t dev)
 	{
 		anydsl::copy(devices[dev].film_pixels, host_pixels);
@@ -456,12 +467,15 @@ void ignis_load_scene(int32_t dev, SceneDatabase* dtb)
 {
 	auto& proxy = sInterface->load_scene_database(dev);
 
-	auto assign = [](const DynTableProxy& tbl) {
+	auto assign = [&](const DynTableProxy& tbl) {
 		DynTable devtbl;
+		//anydsl_copy(0, &tbl.EntryCount, 0, dev, &devtbl.count, 0, sizeof(tbl.EntryCount));
 		devtbl.count  = tbl.EntryCount;
 		devtbl.header = const_cast<LookupEntry*>(tbl.LookupEntries.data());
-		devtbl.size	  = tbl.Data.size();
-		devtbl.start  = const_cast<uint8_t*>(tbl.Data.data());
+		uint64_t size = tbl.Data.size();
+		devtbl.size   = size;
+		// anydsl_copy(0, &size, 0, dev, &devtbl.size, 0, sizeof(devtbl.size));
+		devtbl.start = const_cast<uint8_t*>(tbl.Data.data());
 		return devtbl;
 	};
 
@@ -470,6 +484,11 @@ void ignis_load_scene(int32_t dev, SceneDatabase* dtb)
 	dtb->lights	  = std::move(assign(proxy.Lights));
 	dtb->shaders  = std::move(assign(proxy.Shaders));
 	dtb->bvhs	  = std::move(assign(proxy.BVHs));
+}
+
+void ignis_load_scene_info(int32_t dev, SceneInfo* info)
+{
+	*info = sInterface->load_scene_info(dev);
 }
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int32_t size)

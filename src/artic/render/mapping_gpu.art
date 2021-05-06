@@ -22,7 +22,7 @@ fn @gpu_traverse_primary(primary: PrimaryStream, acc: Accelerator, intrinsics: I
         min_max,
         scene,
         make_ray_stream_reader(primary.rays, 1),
-        make_primary_stream_hit_writer(primary, 1, scene.num_entities),
+        make_primary_stream_hit_writer(primary, 1, scene.info.num_entities),
         1 /*packet_size*/,
         primary.size /*num_packets*/,
         false /*any_hit*/
@@ -229,9 +229,9 @@ fn @gpu_sort_primary( primary: PrimaryStream
     let block_size = 64;
 
     // Fill ray_ends with 0s
-    gpu_exec_1d(acc, scene.num_entities + 1, block_size, |work_item| {
+    gpu_exec_1d(acc, scene.info.num_entities + 1, block_size, |work_item| {
         let ent_id = work_item.gidx();
-        if ent_id > scene.num_entities {
+        if ent_id > scene.info.num_entities {
             return()
         }
         gpu_tmp(ent_id) = 0;
@@ -251,14 +251,14 @@ fn @gpu_sort_primary( primary: PrimaryStream
 
     // Perform a scan on the CPU (there are very few elements to scan)
     let mut ray_begins : [i32 * 1024];
-    runtime_copy(dev_id, gpu_tmp as &[i8], 0, 0, ray_ends as &mut [i8], 0, sizeof[i32]() * (scene.num_entities + 1) as i64);
+    runtime_copy(dev_id, gpu_tmp as &[i8], 0, 0, ray_ends as &mut [i8], 0, sizeof[i32]() * (scene.info.num_entities + 1) as i64);
     let mut n = 0;
-    for i in range(0, scene.num_entities + 1) {
+    for i in range(0, scene.info.num_entities + 1) {
         ray_begins(i) = n;
         n += ray_ends(i);
         ray_ends(i) = n;
     }
-    runtime_copy(0, &ray_begins as &[i8], 0, dev_id, gpu_tmp as &mut [i8], 0, sizeof[i32]() * (scene.num_entities + 1) as i64);
+    runtime_copy(0, &ray_begins as &[i8], 0, dev_id, gpu_tmp as &mut [i8], 0, sizeof[i32]() * (scene.info.num_entities + 1) as i64);
 
     // Sort rays
     gpu_exec_1d(acc, primary.size, block_size, |work_item| {
@@ -375,9 +375,11 @@ fn @gpu_streaming_trace( dev_id: i32
     ignis_gpu_get_second_primary_stream(dev_id, &mut other_primary, capacity);
     ignis_gpu_get_secondary_stream(dev_id, &mut secondary, capacity);
 
+    ig_host_print("A");
     let mut gpu_tmp : &mut [i32];
     ignis_gpu_get_tmp_buffer(dev_id, &mut gpu_tmp, 1024);
 
+    ig_host_print("B");
     let mut id = 0;
     let num_rays = spp * film_width * film_height;
     while id < num_rays || primary.size > 0 {
@@ -386,17 +388,23 @@ fn @gpu_streaming_trace( dev_id: i32
             primary.size = gpu_generate_rays(primary, capacity, acc, intrinsics, path_tracer, &mut id, film_width, film_height, spp);
         }
 
+        acc.sync();
+        ig_host_print("C");
         // Traverse primary rays
         gpu_traverse_primary(primary, acc, intrinsics, min_max, scene);
 
+        acc.sync();
+        ig_host_print("D");
         // Sort rays by entity
         let mut ray_ends : [i32 * 1024];
         gpu_sort_primary(primary, other_primary, dev_id, acc, intrinsics, atomics, scene, gpu_tmp, &mut ray_ends);
         gpu_swap_streams(&mut primary, &mut other_primary);
 
+        acc.sync();
+        ig_host_print("E");
         // Shade rays
         let mut first = 0;
-        for ent_id in unroll(0, scene.num_entities) {
+        for ent_id in range(0, scene.info.num_entities) {
             let last = ray_ends(ent_id);
             if first >= last {
                 continue()
@@ -405,13 +413,16 @@ fn @gpu_streaming_trace( dev_id: i32
             first = last;
         }
 
+        acc.sync();
+        ig_host_print("F");
         // Shade non-hits as well
-        let last = ray_ends(scene.num_entities);
+        let last = ray_ends(scene.info.num_entities);
         if(first < last) {
             gpu_missshade(acc, intrinsics, atomics, scene, path_tracer, film_pixels, spp, primary, first, last);
             // Do not set first as last (to make sure they drop out)
         }
 
+        ig_host_print("G");
         acc.sync();
 
         primary.size   = first;
@@ -515,8 +526,8 @@ fn @gpu_mega_kernel_trace( dev_id: i32
             let mut shadow_color: Color;
             let mut shadow_ray: Ray;
             let mut trace_shadow = false;
-            for i in range(0, scene.num_entities) {
-                if i == scene.num_entities - 1 || hit.ent_id == i {
+            for i in range(0, scene.info.num_entities) {
+                if i == scene.info.num_entities - 1 || hit.ent_id == i {
                     let entity         = @entities(i);
                     let shape          = @shapes(entity.shape_id);
                     let shader         = @shaders(entity.mat_id);
@@ -739,8 +750,13 @@ fn @make_gpu_device( dev_id: i32
     },
     load_scene_database = @|| {
         let mut database: SceneDatabase;
-        ignis_load_scene(0, &mut database);
+        ignis_load_scene(dev_id, &mut database);
         database
+    },
+    load_scene_info = @|| {
+        let mut info: SceneInfo;
+        ignis_load_scene_info(dev_id, &mut info);
+        info
     },
     load_entity_table = @ |dtb| make_entity_table(dtb, accb),
     load_shape_table  = @ |dtb| make_shape_table(intrinsics, dtb, accb),

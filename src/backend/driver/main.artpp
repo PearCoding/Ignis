@@ -89,11 +89,9 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
     };
 
     let scene = Scene {
-        num_entities = dtb.entities.count as i32,
-        num_shapes   = dtb.shapes.count   as i32,
-        num_lights   = dtb.lights.count   as i32,
-        database     = acc,
-        bvh          = device.load_scene_bvh()
+        info     = device.load_scene_info(),
+        database = acc,
+        bvh      = device.load_scene_bvh()
     };
 
     renderer(scene, device, iter);

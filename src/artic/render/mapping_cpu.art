@@ -236,7 +236,7 @@ fn @cpu_traverse_primary(scene: Scene, min_max: MinMax, primary: &PrimaryStream,
             min_max,
             scene,
             make_ray_stream_reader(primary.rays, vector_width),
-            make_primary_stream_hit_writer(*primary, vector_width, scene.num_entities),
+            make_primary_stream_hit_writer(*primary, vector_width, scene.info.num_entities),
             vector_width /*packet_size*/,
             primary.size / vector_width + select(primary.size % vector_width != 0, 1, 0),
             single,
@@ -359,6 +359,7 @@ fn @cpu_trace( scene: Scene
         film_pixels(pixel * 3 + 1) += color.g * inv;
         film_pixels(pixel * 3 + 2) += color.b * inv;
     }
+
     let mut primary_counter = 0:i64;
     let mut bounces_counter = 0:i64;
     let mut shadow_counter  = 0:i64;
@@ -393,12 +394,12 @@ fn @cpu_trace( scene: Scene
                 // Sort hits by shader id, and filter invalid hits
                 let mut ray_begins : [i32 * 1024];
                 let mut ray_ends   : [i32 * 1024];
-                primary.size = cpu_sort_primary(primary, &mut ray_begins, &mut ray_ends, scene.num_entities);
+                primary.size = cpu_sort_primary(primary, &mut ray_begins, &mut ray_ends, scene.info.num_entities);
 
                 // Perform (vectorized) shading
                 cpu_profile(&mut shading_counter, || {
                     let mut begin = 0;
-                    for ent_id in range(0, scene.num_entities) {
+                    for ent_id in range(0, scene.info.num_entities) {
                         let end = ray_ends(ent_id);
                         cpu_shade(ent_id, primary, secondary, scene, path_tracer, accumulate, begin, end, vector_width);
                         begin = end;
@@ -597,6 +598,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         ignis_load_scene(0, &mut database);
         database
     },
+    load_scene_info = cpu_get_scene_info,
     load_entity_table = @ |dtb| make_entity_table(dtb, make_cpu_buffer),
     load_shape_table  = @ |dtb| make_shape_table(cpu_intrinsics, dtb, make_cpu_buffer),
     load_light_table  = @ |dtb| make_light_table(cpu_intrinsics, dtb),
@@ -626,3 +628,9 @@ fn @make_avx_device()         = make_cpu_device( true,  true, make_cpu_int_min_m
 fn @make_sse42_device()       = make_cpu_device(false,  true, make_cpu_int_min_max(), 4, 0, 16);
 fn @make_asimd_device()       = make_cpu_device(false, false, make_cpu_int_min_max(), 4, 0, 16);
 fn @make_cpu_default_device() = make_cpu_device(false, false, make_default_min_max(), 1, 0, 16);
+
+fn @cpu_get_scene_info() -> SceneInfo {
+    let mut info : SceneInfo;
+    ignis_load_scene_info(0, &mut info);
+    info
+}

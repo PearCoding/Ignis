@@ -46,4 +46,7 @@ fn ig_render(_settings: &Settings, _iter: i32) -> () {
     // Force the export
     let mut dtb : SceneDatabase;
     ignis_load_scene(0, &mut dtb);
+
+    let mut info : SceneInfo;
+    ignis_load_scene_info(0, &mut info);
 }

@@ -80,8 +80,9 @@ fn @make_debug_renderer(emitter: RayEmitterFactory) -> Renderer {
 
 fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterFactory) -> Renderer {
     @ |scene, device, iter| {
-        let offset : f32 = 0.001;
-        let pdf_lightpick = 1 / (scene.num_lights as f32);
+        let offset : f32  = 0.001;
+        let num_lights    = scene.info.num_lights;
+        let pdf_lightpick = 1 / (num_lights as f32);
 
         let on_emit = emitter(scene, device, iter);
 
@@ -98,7 +99,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
 
             let rnd = &mut state.rnd;
             // Note: randi() returns random integers, but we only want positive integers here
-            let light_id = (randi(rnd) & 0x7FFFFFFF) % scene.num_lights;
+            let light_id = (randi(rnd) & 0x7FFFFFFF) % num_lights;
             let lights = scene.database.lights;
             let light = @lights(light_id);
             let sample_direct = light.sample_direct;
@@ -177,7 +178,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
             let lights = scene.database.lights;
 
             // TODO: Better use randomness to pick one infinite light
-            for light_id in range(0, scene.num_lights) {
+            for light_id in range(0, num_lights) {
                 let light = @lights(light_id);
                 // Do not include delta lights or finite lights
                 if light.infinite && !light.delta {

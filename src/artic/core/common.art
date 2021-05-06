@@ -191,3 +191,5 @@ fn @cos_2_phi(v: Vec3)->f32{
 
     fmin(1, v.x * v.x / s)
 }
+
+#[import(cc = "device", name = "llvm.debugtrap")] fn ig_trap() -> ();

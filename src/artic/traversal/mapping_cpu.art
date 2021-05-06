@@ -296,7 +296,7 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                               , vector_width: i32
                               , min_max: MinMax
                               , bvh: PrimBvh
-                              , single: bool
+                              , _single: bool // TODO: This path produces and introduces some nasty bugs!
                               , any_hit: bool
                               , root: i32
                               ) -> Hit {
@@ -342,7 +342,7 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
             let active = (stack.top().tmin <= ray.tmax) & !terminated;
             let mask = rv_ballot(active);
             if likely(mask != 0) {
-                // TODO: This path produces and introduces some nasty bugs!
+                
                 // if single && cpu_popcount32(mask) <= switch_threshold {
                 //     for lane in cpu_one_bits(mask) {
                 //         let lane_ray = load_ray(&ray, lane);

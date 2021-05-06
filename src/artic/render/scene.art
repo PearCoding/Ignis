@@ -1,9 +1,12 @@
-// Compile-time scene data
-struct Scene {
+// Scene data
+struct SceneInfo {
     num_entities: i32,
     num_shapes:   i32,
-    num_lights:   i32,
-    
+    num_lights:   i32
+}
+
+struct Scene {
+    info:     SceneInfo,
     database: SceneAccessor,
     bvh:      SceneBvh
 }
@@ -24,6 +27,7 @@ struct Device {
 
     load_scene_bvh:      fn () -> SceneBvh,
     load_scene_database: fn () -> SceneDatabase,
+    load_scene_info:     fn () -> SceneInfo,
     load_entity_table:   fn (DynTable) -> EntityTable,
     load_shape_table:    fn (DynTable) -> ShapeTable,
     load_light_table:    fn (DynTable) -> LightTable,
