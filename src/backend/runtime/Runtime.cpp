@@ -25,11 +25,11 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 		throw std::runtime_error("Could not parse scene!");
 
 	// Extract technique
-	const auto technique = lopts.Scene.technique();
-	if (technique && technique->pluginType() == "debug")
+	// const auto technique = lopts.Scene.technique();
+	// if (technique && technique->pluginType() == "debug")
 		lopts.Configuration |= IG_C_RENDERER_DEBUG;
-	else
-		lopts.Configuration |= IG_C_RENDERER_PATH;
+	/*else
+		lopts.Configuration |= IG_C_RENDERER_PATH;*/
 
 	// Extract film
 	const auto film = lopts.Scene.film();

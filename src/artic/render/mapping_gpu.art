@@ -752,8 +752,8 @@ fn @make_gpu_device( dev_id: i32
             let header = get_table_entry(entry.offset, dtb, accb);
             let leaf_offset = header.load_i32(0) as u64;
 
-            let nodes = get_table_ptr(entry.offset + 4, dtb) as &[Node2];
-            let tris  = get_table_ptr(entry.offset + 4 + leaf_offset * (sizeof[Node2]() as u64), dtb) as &[Tri1];
+            let nodes = get_table_ptr(entry.offset + 16, dtb) as &[Node2];
+            let tris  = get_table_ptr(entry.offset + 16 + leaf_offset * (sizeof[Node2]() as u64), dtb) as &[Tri1];
             make_gpu_bvh2_tri1(nodes, tris, is_nvvm)
         } 
     }

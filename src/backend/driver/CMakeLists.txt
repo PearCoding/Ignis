@@ -19,11 +19,11 @@ set(CAMERAS
 # Multi vendor multi GPU and CPU combinations would be bothersome, but who has this kind of configuration?
 set(DEVICES
     "-D DEVICE_DEFAULT"
-    #"-D DEVICE_AVX"     # NOT WORKING -> TOO MUCH RV
-    #"-D DEVICE_AVX2"    # NOT WORKING -> TOO MUCH RV
-    #"-D DEVICE_AVX512"  # NOT WORKING -> TOO MUCH RV [NOT_TESTED, as not supported by my CPU]
-    #"-D DEVICE_SSE42"   # NOT WORKING -> TOO MUCH RV
-    #"-D DEVICE_ASIMD"   # NOT WORKING -> SEGMENTATION FAULT
+    "-D DEVICE_AVX"
+    "-D DEVICE_AVX2"
+    "-D DEVICE_AVX512"  # [NOT_TESTED, as not supported by my CPU]
+    "-D DEVICE_SSE42"
+    "-D DEVICE_ASIMD"
     "-D DEVICE_NVVM"
     #"-D DEVICE_NVVM_MEGA"
     #"-D DEVICE_AMD"

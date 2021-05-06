@@ -232,7 +232,7 @@ fn @cpu_generate_rays( primary: PrimaryStream
 
 fn @cpu_traverse_primary(scene: Scene, min_max: MinMax, primary: &PrimaryStream, single: bool, vector_width: i32) -> () {
     fn cpu_traverse_primary_specialized(primary: &PrimaryStream) -> () {
-        cpu_traverse_hybrid(
+        cpu_traverse(
             min_max,
             scene,
             make_ray_stream_reader(primary.rays, vector_width),
@@ -248,7 +248,7 @@ fn @cpu_traverse_primary(scene: Scene, min_max: MinMax, primary: &PrimaryStream,
 
 fn @cpu_traverse_secondary(scene: Scene, min_max: MinMax, secondary: &SecondaryStream, single: bool, vector_width: i32) -> () {
     fn cpu_traverse_secondary_specialized(secondary: &SecondaryStream) -> () {
-        cpu_traverse_hybrid(
+        cpu_traverse(
             min_max,
             scene,
             make_ray_stream_reader(secondary.rays, vector_width),
@@ -608,12 +608,12 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             let leaf_offset = header.load_i32(0) as u64;
     
             if vector_width == 8 {
-                let nodes = get_table_ptr(entry.offset + 4 , dtb) as &[Node8];
-                let tris  = get_table_ptr(entry.offset + 4 + leaf_offset * (sizeof[Node8]() as u64), dtb) as &[Tri4];
+                let nodes = get_table_ptr(entry.offset + 16 , dtb) as &[Node8];
+                let tris  = get_table_ptr(entry.offset + 16 + leaf_offset * (sizeof[Node8]() as u64), dtb) as &[Tri4];
                 make_cpu_bvh8_tri4(nodes, tris)
             } else {
-                let nodes = get_table_ptr(entry.offset + 4, dtb) as &[Node4];
-                let tris  = get_table_ptr(entry.offset + 4 + leaf_offset * (sizeof[Node4]() as u64), dtb) as &[Tri4];
+                let nodes = get_table_ptr(entry.offset + 16, dtb) as &[Node4];
+                let tris  = get_table_ptr(entry.offset + 16 + leaf_offset * (sizeof[Node4]() as u64), dtb) as &[Tri4];
                 make_cpu_bvh4_tri4(nodes, tris)
             }
         } 

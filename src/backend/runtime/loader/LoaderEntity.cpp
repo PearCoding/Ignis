@@ -81,7 +81,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
 	ctx.Environment.SceneDiameter = ctx.Environment.SceneBBox.diameter().norm();
 
-	// Build bvh
+	// Build bvh (keep in mind that this BVH has no pre-padding as in the case for shape BVHs)
 	IG_LOG(L_INFO) << "Generating BVH for scene" << std::endl;
 	VectorSerializer bvhSerializer(result.Database.BVH, false);
 	if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
