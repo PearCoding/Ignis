@@ -375,11 +375,9 @@ fn @gpu_streaming_trace( dev_id: i32
     ignis_gpu_get_second_primary_stream(dev_id, &mut other_primary, capacity);
     ignis_gpu_get_secondary_stream(dev_id, &mut secondary, capacity);
 
-    ig_host_print("A");
     let mut gpu_tmp : &mut [i32];
     ignis_gpu_get_tmp_buffer(dev_id, &mut gpu_tmp, 1024);
 
-    ig_host_print("B");
     let mut id = 0;
     let num_rays = spp * film_width * film_height;
     while id < num_rays || primary.size > 0 {
@@ -388,20 +386,14 @@ fn @gpu_streaming_trace( dev_id: i32
             primary.size = gpu_generate_rays(primary, capacity, acc, intrinsics, path_tracer, &mut id, film_width, film_height, spp);
         }
 
-        acc.sync();
-        ig_host_print("C");
         // Traverse primary rays
         gpu_traverse_primary(primary, acc, intrinsics, min_max, scene);
 
-        acc.sync();
-        ig_host_print("D");
         // Sort rays by entity
         let mut ray_ends : [i32 * 1024];
         gpu_sort_primary(primary, other_primary, dev_id, acc, intrinsics, atomics, scene, gpu_tmp, &mut ray_ends);
         gpu_swap_streams(&mut primary, &mut other_primary);
 
-        acc.sync();
-        ig_host_print("E");
         // Shade rays
         let mut first = 0;
         for ent_id in range(0, scene.info.num_entities) {
@@ -413,8 +405,6 @@ fn @gpu_streaming_trace( dev_id: i32
             first = last;
         }
 
-        acc.sync();
-        ig_host_print("F");
         // Shade non-hits as well
         let last = ray_ends(scene.info.num_entities);
         if(first < last) {
@@ -422,7 +412,6 @@ fn @gpu_streaming_trace( dev_id: i32
             // Do not set first as last (to make sure they drop out)
         }
 
-        ig_host_print("G");
         acc.sync();
 
         primary.size   = first;

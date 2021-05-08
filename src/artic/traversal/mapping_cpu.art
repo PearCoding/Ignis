@@ -495,13 +495,11 @@ fn @cpu_traverse_helper( mut ray: Ray
                 
                 if active {
                     if local_hit.prim_id != -1 {
-                        let new_distance = local_hit.distance / sf;
+                        let glb_dist = local_hit.distance / sf;
                         
-                        if new_distance <= hit.distance {
-                            hit.prim_id  = local_hit.prim_id;
-                            hit.distance = new_distance;
-                            hit.ent_id   = leaf.entity_id & 0x7FFFFFFF;
-                            ray.tmax     = hit.distance;
+                        if glb_dist <= hit.distance {
+                            hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, glb_dist, local_hit.uv_coords);
+                            ray.tmax = hit.distance;
                         
                             if any_hit {
                                 terminated = true;

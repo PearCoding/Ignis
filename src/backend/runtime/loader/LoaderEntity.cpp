@@ -15,6 +15,20 @@ inline void writeMatrix(Serializer& serializer, const Eigen::MatrixBase<Derived>
 			serializer.write(m(i, j));
 }
 
+template <size_t N>
+inline static void setup_bvh(std::vector<EntityObject>& input, LoaderResult& result)
+{
+	using Node = typename BvhNEnt<N>::Node;
+	std::vector<Node> nodes;
+	std::vector<EntityLeaf1> objs;
+	build_scene_bvh<N>(nodes, objs, input);
+
+	result.Database.BVH.Nodes.resize(sizeof(Node) * nodes.size());
+	std::memcpy(result.Database.BVH.Nodes.data(), nodes.data(), result.Database.BVH.Nodes.size());
+	result.Database.BVH.Leaves.resize(sizeof(EntityLeaf1) * objs.size());
+	std::memcpy(result.Database.BVH.Leaves.data(), objs.data(), result.Database.BVH.Leaves.size());
+}
+
 bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 {
 	// Fill entity list
@@ -44,7 +58,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 	}
 
 	// Write transform cache
-	IG_LOG(L_INFO) << "Generating entity transform cache" << std::endl;
+	IG_LOG(L_DEBUG) << "Generating entity transform cache" << std::endl;
 	for (const auto& ent : ctx.Environment.Entities) {
 		auto& entityData = result.Database.EntityTable.addLookup(0); // We do not make use of the typeid
 		VectorSerializer entitySerializer(entityData, false);
@@ -82,29 +96,13 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 	ctx.Environment.SceneDiameter = ctx.Environment.SceneBBox.diameter().norm();
 
 	// Build bvh (keep in mind that this BVH has no pre-padding as in the case for shape BVHs)
-	IG_LOG(L_INFO) << "Generating BVH for scene" << std::endl;
-	VectorSerializer bvhSerializer(result.Database.BVH, false);
+	IG_LOG(L_DEBUG) << "Generating BVH for scene" << std::endl;
 	if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
-		std::vector<typename BvhNEnt<2>::Node> nodes;
-		std::vector<EntityLeaf1> objs;
-		build_scene_bvh<2>(nodes, objs, in_objs);
-		bvhSerializer.write((uint32)nodes.size());
-		bvhSerializer.write(nodes, true);
-		bvhSerializer.write(objs, true);
+		setup_bvh<2>(in_objs, result);
 	} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
-		std::vector<typename BvhNEnt<4>::Node> nodes;
-		std::vector<EntityLeaf1> objs;
-		build_scene_bvh<4>(nodes, objs, in_objs);
-		bvhSerializer.write((uint32)nodes.size());
-		bvhSerializer.write(nodes, true);
-		bvhSerializer.write(objs, true);
+		setup_bvh<4>(in_objs, result);
 	} else {
-		std::vector<typename BvhNEnt<8>::Node> nodes;
-		std::vector<EntityLeaf1> objs;
-		build_scene_bvh<8>(nodes, objs, in_objs);
-		bvhSerializer.write((uint32)nodes.size());
-		bvhSerializer.write(nodes, true);
-		bvhSerializer.write(objs, true);
+		setup_bvh<8>(in_objs, result);
 	}
 
 	return true;

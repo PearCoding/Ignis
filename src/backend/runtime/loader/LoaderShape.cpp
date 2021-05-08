@@ -95,7 +95,7 @@ inline TriMesh setup_mesh_cube(const Object& elem)
 inline TriMesh setup_mesh_obj(const Object& elem, const LoaderContext& ctx)
 {
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
-	IG_LOG(L_INFO) << "Trying to load obj file " << filename << std::endl;
+	IG_LOG(L_DEBUG) << "Trying to load obj file " << filename << std::endl;
 	auto trimesh = obj::load(filename, 0);
 	if (trimesh.vertices.empty()) {
 		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << std::endl;
@@ -107,9 +107,8 @@ inline TriMesh setup_mesh_obj(const Object& elem, const LoaderContext& ctx)
 
 inline TriMesh setup_mesh_ply(const Object& elem, const LoaderContext& ctx)
 {
-	IG_LOG(L_INFO) << "Trying to load ply file " << elem.property("filename").getString() << std::endl;
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
-	IG_LOG(L_INFO) << "Trying to load ply file " << filename << std::endl;
+	IG_LOG(L_DEBUG) << "Trying to load ply file " << filename << std::endl;
 	auto trimesh = ply::load(filename);
 	if (trimesh.vertices.empty()) {
 		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << std::endl;
@@ -122,13 +121,27 @@ inline TriMesh setup_mesh_mitsuba(const Object& elem, const LoaderContext& ctx)
 {
 	size_t shape_index	= elem.property("shape_index").getInteger(0);
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
-	IG_LOG(L_INFO) << "Trying to load serialized mitsuba file " << filename << std::endl;
+	IG_LOG(L_DEBUG) << "Trying to load serialized mitsuba file " << filename << std::endl;
 	auto trimesh = mts::load(filename, shape_index);
 	if (trimesh.vertices.empty()) {
 		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << std::endl;
 		return TriMesh();
 	}
 	return trimesh;
+}
+
+template <size_t N, size_t T>
+static void setup_prim_bvh(VectorSerializer& serializer, const TriMesh& mesh)
+{
+	std::vector<typename BvhNTriM<N, T>::Node> nodes;
+	std::vector<typename BvhNTriM<N, T>::Tri> tris;
+	build_bvh<N, T>(mesh, nodes, tris);
+	serializer.write((uint32)nodes.size());
+	serializer.write((uint32)0); // Padding
+	serializer.write((uint32)0); // Padding
+	serializer.write((uint32)0); // Padding
+	serializer.write(nodes, true);
+	serializer.write(tris, true);
 }
 
 bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
@@ -193,7 +206,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 		IG_ASSERT((child_mesh.indices.size() % 4) == 0, "Expected index buffer count to be a multiple of 4!");
 
 		// Export data:
-		IG_LOG(L_INFO) << "Generating triangle mesh for shape " << pair.first << std::endl;
+		IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << pair.first << std::endl;
 		constexpr size_t ALIGNMENT = sizeof(float) * 4;
 
 		auto& meshData = result.Database.ShapeTable.addLookup(0, ALIGNMENT); // TODO: No use of the typeid currently
@@ -210,39 +223,15 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 		meshSerializer.write(child_mesh.face_area, true);
 
 		// Generate BVH
-		IG_LOG(L_INFO) << "Generating BVH for shape " << pair.first << std::endl;
-		auto& bvhData = result.Database.BVHTable.addLookup(0);
+		IG_LOG(L_DEBUG) << "Generating BVH for shape " << pair.first << std::endl;
+		auto& bvhData = result.Database.BVHTable.addLookup(0, ALIGNMENT);
 		VectorSerializer bvhSerializer(bvhData, false);
 		if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
-			std::vector<typename BvhNTriM<2, 1>::Node> nodes;
-			std::vector<typename BvhNTriM<2, 1>::Tri> tris;
-			build_bvh<2, 1>(child_mesh, nodes, tris);
-			bvhSerializer.write((uint32)nodes.size());
-			bvhSerializer.write((uint32)0); // Padding
-			bvhSerializer.write((uint32)0); // Padding
-			bvhSerializer.write((uint32)0); // Padding
-			bvhSerializer.write(nodes, true);
-			bvhSerializer.write(tris, true);
+			setup_prim_bvh<2, 1>(bvhSerializer, child_mesh);
 		} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
-			std::vector<typename BvhNTriM<4, 4>::Node> nodes;
-			std::vector<typename BvhNTriM<4, 4>::Tri> tris;
-			build_bvh<4, 4>(child_mesh, nodes, tris);
-			bvhSerializer.write((uint32)nodes.size());
-			bvhSerializer.write((uint32)0); // Padding
-			bvhSerializer.write((uint32)0); // Padding
-			bvhSerializer.write((uint32)0); // Padding
-			bvhSerializer.write(nodes, true);
-			bvhSerializer.write(tris, true);
+			setup_prim_bvh<4, 4>(bvhSerializer, child_mesh);
 		} else {
-			std::vector<typename BvhNTriM<8, 4>::Node> nodes;
-			std::vector<typename BvhNTriM<8, 4>::Tri> tris;
-			build_bvh<8, 4>(child_mesh, nodes, tris);
-			bvhSerializer.write((uint32)nodes.size());
-			bvhSerializer.write((uint32)0); // Padding
-			bvhSerializer.write((uint32)0); // Padding
-			bvhSerializer.write((uint32)0); // Padding
-			bvhSerializer.write(nodes, true);
-			bvhSerializer.write(tris, true);
+			setup_prim_bvh<8, 4>(bvhSerializer, child_mesh);
 		}
 	}
 

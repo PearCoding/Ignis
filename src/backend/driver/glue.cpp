@@ -180,11 +180,11 @@ struct Interface {
 	template <typename Node>
 	BvhProxy<Node, EntityLeaf1> load_scene_bvh(int32_t dev)
 	{
-		uint32_t nodeCount = *reinterpret_cast<const uint32_t*>(&database->BVH[0]);
-		size_t triSize	   = database->BVH.size() - sizeof(uint32_t) - nodeCount * sizeof(Node);
+		const size_t node_count = database->BVH.Nodes.size() / sizeof(Node);
+		const size_t leaf_count = database->BVH.Leaves.size() / sizeof(EntityLeaf1);
 		return BvhProxy<Node, EntityLeaf1>{
-			std::move(copy_to_device(dev, reinterpret_cast<const Node*>(&database->BVH[sizeof(uint32_t)]), nodeCount)),
-			std::move(copy_to_device(dev, reinterpret_cast<const EntityLeaf1*>(&database->BVH[sizeof(uint32_t) + nodeCount * sizeof(Node)]), triSize / sizeof(EntityLeaf1)))
+			std::move(copy_to_device(dev, reinterpret_cast<const Node*>(database->BVH.Nodes.data()), node_count)),
+			std::move(copy_to_device(dev, reinterpret_cast<const EntityLeaf1*>(database->BVH.Leaves.data()), leaf_count))
 		};
 	}
 
@@ -469,21 +469,19 @@ void ignis_load_scene(int32_t dev, SceneDatabase* dtb)
 
 	auto assign = [&](const DynTableProxy& tbl) {
 		DynTable devtbl;
-		//anydsl_copy(0, &tbl.EntryCount, 0, dev, &devtbl.count, 0, sizeof(tbl.EntryCount));
 		devtbl.count  = tbl.EntryCount;
 		devtbl.header = const_cast<LookupEntry*>(tbl.LookupEntries.data());
 		uint64_t size = tbl.Data.size();
-		devtbl.size   = size;
-		// anydsl_copy(0, &size, 0, dev, &devtbl.size, 0, sizeof(devtbl.size));
-		devtbl.start = const_cast<uint8_t*>(tbl.Data.data());
+		devtbl.size	  = size;
+		devtbl.start  = const_cast<uint8_t*>(tbl.Data.data());
 		return devtbl;
 	};
 
-	dtb->entities = std::move(assign(proxy.Entities));
-	dtb->shapes	  = std::move(assign(proxy.Shapes));
-	dtb->lights	  = std::move(assign(proxy.Lights));
-	dtb->shaders  = std::move(assign(proxy.Shaders));
-	dtb->bvhs	  = std::move(assign(proxy.BVHs));
+	dtb->entities = assign(proxy.Entities);
+	dtb->shapes	  = assign(proxy.Shapes);
+	dtb->lights	  = assign(proxy.Lights);
+	dtb->shaders  = assign(proxy.Shaders);
+	dtb->bvhs	  = assign(proxy.BVHs);
 }
 
 void ignis_load_scene_info(int32_t dev, SceneInfo* info)

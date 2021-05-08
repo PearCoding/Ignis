@@ -81,11 +81,11 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
 
     let dtb = device.load_scene_database();
     let acc = SceneAccessor {
-        shapes   = device.load_shape_table(dtb.shapes),  
-        entities = device.load_entity_table(dtb.entities),      
-        lights   = device.load_light_table(dtb.lights),   
-        shaders  = device.load_shader_table(dtb.shaders), 
-        bvhs     = device.load_bvh_table(dtb.bvhs)                  
+        shapes   = device.load_shape_table(dtb.shapes),
+        entities = device.load_entity_table(dtb.entities),
+        lights   = device.load_light_table(dtb.lights),
+        shaders  = device.load_shader_table(dtb.shaders),
+        bvhs     = device.load_bvh_table(dtb.bvhs)
     };
 
     let scene = Scene {
