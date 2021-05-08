@@ -8,9 +8,9 @@ CPMAddPackage(
 # TODO: Make it configurable
 set(CAMERAS
     "-D CAMERA_PERSPECTIVE"
-    #"-D CAMERA_ORTHOGONAL"
-    #"-D CAMERA_FISHLENS"
-    #"-D CAMERA_LIST"
+    "-D CAMERA_ORTHOGONAL"
+    "-D CAMERA_FISHLENS"
+    "-D CAMERA_LIST"
 )
 
 # It is more useful (and user friendly) to choose between cpu and gpu

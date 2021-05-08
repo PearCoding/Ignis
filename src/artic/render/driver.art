@@ -11,7 +11,7 @@
 #[import(cc = "C")] fn ignis_load_bvh4_ent(i32, &mut &[Node4], &mut &[EntityLeaf1]) -> ();
 #[import(cc = "C")] fn ignis_load_bvh8_ent(i32, &mut &[Node8], &mut &[EntityLeaf1]) -> ();
 //#[import(cc = "C")] fn ignis_load_image(i32, &[u8], &mut &[f32], &mut i32, &mut i32) -> ();
-#[import(cc = "C")] fn ignis_load_rays(i32, i32, &[Ray]) -> &[Ray];
+#[import(cc = "C")] fn ignis_load_rays(i32, &mut &[Ray]) -> ();
 /*#[import(cc = "C")] fn ignis_load_cdf1d(i32, &[u8], &mut CDF1D) -> ();
 #[import(cc = "C")] fn ignis_load_cdf2d(i32, &[u8], &mut CDF2D) -> ();
 #[import(cc = "C")] fn ignis_load_klems(i32, &[u8], &mut KlemsModel) -> ();*/

@@ -20,7 +20,6 @@ struct Device {
 
     // General formats
     //load_image: fn (&[u8]) -> Image,
-    //load_rays:  fn (i32, &[Ray]) -> &[Ray],
     //load_cdf1d: fn (&[u8]) -> CDF1D,
     //load_cdf2d: fn (&[u8]) -> CDF2D,
     //load_klems: fn (&[u8]) -> KlemsModel,
@@ -32,7 +31,9 @@ struct Device {
     load_shape_table:    fn (DynTable) -> ShapeTable,
     load_light_table:    fn (DynTable) -> LightTable,
     load_shader_table:   fn (DynTable) -> ShaderTable,
-    load_bvh_table:      fn (DynTable) -> BVHTable
+    load_bvh_table:      fn (DynTable) -> BVHTable,
+
+    load_rays: fn () -> &[Ray]
 }
 
 type Renderer = fn (Scene, Device, i32) -> ();

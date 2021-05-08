@@ -4,20 +4,14 @@
 
 namespace IG {
 struct SceneDatabase;
-}
+struct Ray;
+} // namespace IG
 
 // Not in namespace IG
 struct DriverSetupSettings {
 	IG::uint32 framebuffer_width;
 	IG::uint32 framebuffer_height;
 	IG::SceneDatabase* database;
-};
-
-struct DriverRay {
-	float origin[3];
-	float dir[3];
-	float tmin;
-	float tmax;
 };
 
 struct DriverRenderSettings {
@@ -27,9 +21,9 @@ struct DriverRenderSettings {
 	float right[3];
 	float width;
 	float height;
-	IG::uint32 ray_count;
-	DriverRay* rays;
+	const IG::Ray* rays; // If non-null, width contains the number of rays and height is set to 1
 	IG::uint32 device;
+	IG::uint32 max_path_length;
 };
 
 using DriverRenderFunction			 = void (*)(const DriverRenderSettings*, IG::uint32);

@@ -43,7 +43,7 @@ fn @make_camera_emitter(camera: Camera) -> RayEmitterFactory {
     }
 }
 
-fn @make_list_emitter(ray_count: i32, rays: &[Ray]) -> RayEmitterFactory {
+fn @make_list_emitter(rays: &[Ray]) -> RayEmitterFactory {
     @ |_scene, _device, iter| -> RayEmitter {
         @ |sample, x, y, width, _height| {
             let mut hash = fnv_init();
@@ -53,7 +53,7 @@ fn @make_list_emitter(ray_count: i32, rays: &[Ray]) -> RayEmitterFactory {
             hash = fnv_hash(hash, y as u32);
             let rnd = hash /*as RndState*/;
             let id = y*width + x;
-            let ray = if id < ray_count { rays(id) } else { rays(0) };
+            let ray = if id < width { rays(id) } else { rays(0) };
             let state = make_ray_state(rnd, white, 0, 0);
             (ray, state)
         }

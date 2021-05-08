@@ -11,15 +11,26 @@ struct LoaderOptions;
 struct RuntimeOptions {
 	Target DesiredTarget;
 	uint32 Device;
+	std::string OverrideTechnique;
+	std::string OverrideCamera;
+	std::optional<std::pair<uint32, uint32>> OverrideFilmSize;
+	std::optional<std::pair<Transformf, float>> OverrideCameraSettings;
 };
 
 struct RuntimeRenderSettings {
-	uint32 FilmWidth   = 800;
-	uint32 FilmHeight  = 600;
-	Vector3f CameraEye = Vector3f::Zero();
-	Vector3f CameraDir = Vector3f::UnitZ();
-	Vector3f CameraUp  = Vector3f::UnitY();
-	float FOV		   = 60;
+	uint32 FilmWidth	 = 800;
+	uint32 FilmHeight	 = 600;
+	Vector3f CameraEye	 = Vector3f::Zero();
+	Vector3f CameraDir	 = Vector3f::UnitZ();
+	Vector3f CameraUp	 = Vector3f::UnitY();
+	float FOV			 = 60;
+	uint32 MaxPathLength = 64;
+};
+
+struct Ray {
+	Vector3f Origin;
+	Vector3f Direction;
+	Vector2f Range;
 };
 
 class Runtime {
@@ -29,6 +40,7 @@ public:
 
 	void setup(uint32 framebuffer_width, uint32 framebuffer_height);
 	void step(const Camera& camera);
+	void trace(const std::vector<Ray>& rays, std::vector<float>& data);
 
 	const float* getFramebuffer(int aov = 0) const;
 	// aov<0 will clear all aovs

@@ -761,6 +761,11 @@ fn @make_gpu_device( dev_id: i32
             let tris  = get_table_ptr(entry.offset + 16 + leaf_offset * (sizeof[Node2]() as u64), dtb) as &[Tri1];
             make_gpu_bvh2_tri1(nodes, tris, is_nvvm)
         } 
+    },
+    load_rays = @ || {
+        let mut rays: &[Ray]; // TODO: Alignment?
+        ignis_load_rays(dev_id, &mut rays);
+        rays
     }
 };
 

@@ -1,0 +1,11 @@
+// General-purpose render settings
+struct Settings {
+    eye:          Vec3,
+    dir:          Vec3,
+    up:           Vec3,
+    right:        Vec3,
+    width:        f32,
+    height:       f32,
+    device:       i32,
+    max_path_len: i32
+}

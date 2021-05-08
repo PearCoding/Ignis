@@ -1,3 +1,4 @@
+#include "Runtime.h"
 #include "driver/Configuration.h"
 #include "driver/Interface.h"
 #include "table/SceneDatabase.h"
@@ -37,6 +38,16 @@ struct SceneDatabaseProxy {
 	DynTableProxy BVHs;
 };
 
+static inline float safe_rcp(float x)
+{
+	constexpr float min_rcp = 1e-8f;
+	if ((x > 0 ? x : -x) < min_rcp) {
+		return std::signbit(x) ? -std::numeric_limits<float>::max() : std::numeric_limits<float>::max();
+	} else {
+		return 1 / x;
+	}
+}
+
 struct Interface {
 	using DeviceImage = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
 
@@ -52,7 +63,7 @@ struct Interface {
 		anydsl::Array<float> second_primary;
 		anydsl::Array<float> secondary;
 		anydsl::Array<float> film_pixels;
-		//anydsl::Array<Ray> ray_list;
+		anydsl::Array<Ray> ray_list;
 	};
 	std::unordered_map<int32_t, DeviceData> devices;
 
@@ -67,6 +78,8 @@ struct Interface {
 	const IG::SceneDatabase* database;
 	size_t film_width;
 	size_t film_height;
+
+	const IG::Ray* ray_list; // film_width contains number of rays
 
 	Interface(size_t width, size_t height, const IG::SceneDatabase* database)
 		: host_pixels(width * height * 3)
@@ -158,6 +171,50 @@ struct Interface {
 			return devices[dev].bvh8_ent;
 		devices[dev].scene_ent		 = true;
 		return devices[dev].bvh8_ent = std::move(load_scene_bvh<Node8>(dev));
+	}
+
+	const anydsl::Array<Ray>& load_ray_list(int32_t dev)
+	{
+		if (devices[dev].ray_list.size() != 0)
+			return devices[dev].ray_list;
+
+		std::vector<Ray> rays;
+		rays.reserve(film_width);
+
+		for (size_t i = 0; i < film_width; ++i) {
+			const IG::Ray dRay = ray_list[i];
+
+			float norm = dRay.Direction.norm();
+			if (norm < std::numeric_limits<float>::epsilon()) {
+				std::cerr << "Invalid ray given: Ray has zero direction!" << std::endl;
+				norm = 1;
+			}
+
+			Ray ray;
+			ray.org.x = dRay.Origin(0);
+			ray.org.y = dRay.Origin(1);
+			ray.org.z = dRay.Origin(2);
+
+			ray.dir.x = dRay.Direction(0) / norm;
+			ray.dir.y = dRay.Direction(1) / norm;
+			ray.dir.z = dRay.Direction(2) / norm;
+
+			// Calculate invert components
+			ray.inv_dir.x = safe_rcp(ray.dir.x);
+			ray.inv_dir.y = safe_rcp(ray.dir.y);
+			ray.inv_dir.z = safe_rcp(ray.dir.z);
+
+			ray.inv_org.x = -(ray.org.x * ray.inv_dir.x);
+			ray.inv_org.y = -(ray.org.y * ray.inv_dir.y);
+			ray.inv_org.z = -(ray.org.z * ray.inv_dir.z);
+
+			ray.tmin = dRay.Range(0);
+			ray.tmax = dRay.Range(1);
+
+			rays.push_back(ray);
+		}
+
+		return devices[dev].ray_list = std::move(copy_to_device(dev, rays));
 	}
 
 	template <typename T>
@@ -264,9 +321,9 @@ void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
 	renderSettings.right.y = settings->right[1];
 	renderSettings.right.z = settings->right[2];
 
-	// TODO
-	renderSettings.ray_count = 0;
-	renderSettings.rays		 = nullptr;
+	renderSettings.max_path_len = settings->max_path_length;
+
+	sInterface->ray_list = settings->rays;
 
 	ig_render(&renderSettings, (int)iter);
 }
@@ -487,6 +544,11 @@ void ignis_load_scene(int32_t dev, SceneDatabase* dtb)
 void ignis_load_scene_info(int32_t dev, SceneInfo* info)
 {
 	*info = sInterface->load_scene_info(dev);
+}
+
+void ignis_load_rays(int32_t dev, Ray** list)
+{
+	*list = const_cast<Ray*>(sInterface->load_ray_list(dev).data());
 }
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int32_t size)

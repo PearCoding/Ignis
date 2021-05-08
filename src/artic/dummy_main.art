@@ -1,16 +1,4 @@
 // Dummy file used to generate a C interface for the renderer
-struct Settings {
-    eye:       Vec3,
-    dir:       Vec3,
-    up:        Vec3,
-    right:     Vec3,
-    width:     f32,
-    height:    f32,
-    ray_count: i32,
-    rays:      &[Ray],
-    device:    i32
-}
-
 #[export]
 fn _dummy1(_tri1: &[Tri1], _tri4: &[Tri4]) -> () {
 }
@@ -49,4 +37,7 @@ fn ig_render(_settings: &Settings, _iter: i32) -> () {
 
     let mut info : SceneInfo;
     ignis_load_scene_info(0, &mut info);
+
+    let mut rays : &[Ray];
+    ignis_load_rays(0, &mut rays); 
 }

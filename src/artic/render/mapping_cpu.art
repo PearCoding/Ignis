@@ -577,9 +577,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         ignis_load_klems(0, filename, &mut model);
         model
     },
-    load_rays = @ |count: i32, rays: &[Ray]| {
-        ignis_load_rays(0, count, rays)
-    }*/
+   */
     load_scene_bvh = @ || {
         if vector_width == 8 {
             let mut nodes: &[Node8];
@@ -619,6 +617,11 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
                 make_cpu_bvh4_tri4(nodes, tris)
             }
         } 
+    },
+    load_rays = @ || {
+        let mut rays: &[Ray];
+        ignis_load_rays(0, &mut rays);
+        rays
     }
 };
 
