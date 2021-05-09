@@ -76,8 +76,8 @@ static inline void setup_camera(RuntimeRenderSettings& settings, LoaderOptions& 
 	}
 
 	settings.CameraEye = cameraTransform * Vector3f::Zero();
-	settings.CameraUp  = cameraTransform.linear().col(2);
-	settings.CameraDir = cameraTransform.linear().col(1);
+	settings.CameraDir = cameraTransform.linear().col(2);
+	settings.CameraUp  = cameraTransform.linear().col(1);
 }
 
 Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
