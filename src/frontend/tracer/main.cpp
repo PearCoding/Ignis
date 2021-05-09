@@ -152,10 +152,9 @@ int main(int argc, char** argv)
 	std::unique_ptr<Runtime> runtime;
 	try {
 		RuntimeOptions opts;
-		opts.DesiredTarget	  = target;
-		opts.Device			  = device;
-		opts.OverrideCamera	  = "list";
-		opts.OverrideFilmSize = std::make_pair<uint32, uint32>(rays.size(), 1);
+		opts.DesiredTarget	= target;
+		opts.Device			= device;
+		opts.OverrideCamera = "list";
 
 		runtime = std::make_unique<Runtime>(scene_file, opts);
 	} catch (const std::exception& e) {

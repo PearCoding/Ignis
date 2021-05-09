@@ -28,16 +28,11 @@ static inline void setup_technique(RuntimeRenderSettings& settings, LoaderOption
 
 static inline void setup_film(RuntimeRenderSettings& settings, const LoaderOptions& lopts, const RuntimeOptions& opts)
 {
-	if (opts.OverrideFilmSize.has_value()) {
-		settings.FilmWidth	= opts.OverrideFilmSize.value().first;
-		settings.FilmHeight = opts.OverrideFilmSize.value().second;
-	} else {
-		const auto film = lopts.Scene.film();
-		if (film) {
-			const auto filmSize = film->property("size").getVector2(Vector2f(settings.FilmWidth, settings.FilmHeight));
-			settings.FilmWidth	= filmSize.x();
-			settings.FilmHeight = filmSize.y();
-		}
+	const auto film = lopts.Scene.film();
+	if (film) {
+		const auto filmSize = film->property("size").getVector2(Vector2f(settings.FilmWidth, settings.FilmHeight));
+		settings.FilmWidth	= filmSize.x();
+		settings.FilmHeight = filmSize.y();
 	}
 }
 
@@ -64,15 +59,10 @@ static inline void setup_camera(RuntimeRenderSettings& settings, LoaderOptions& 
 
 	// Get initial location
 	Transformf cameraTransform;
-	if (opts.OverrideCameraSettings.has_value()) {
-		cameraTransform = opts.OverrideCameraSettings.value().first;
-		settings.FOV	= opts.OverrideCameraSettings.value().second;
-	} else {
-		const auto camera = lopts.Scene.camera();
-		if (camera) {
-			cameraTransform = camera->property("transform").getTransform();
-			settings.FOV	= camera->property("fov").getNumber(settings.FOV);
-		}
+	const auto camera = lopts.Scene.camera();
+	if (camera) {
+		cameraTransform = camera->property("transform").getTransform();
+		settings.FOV	= camera->property("fov").getNumber(settings.FOV);
 	}
 
 	settings.CameraEye = cameraTransform * Vector3f::Zero();

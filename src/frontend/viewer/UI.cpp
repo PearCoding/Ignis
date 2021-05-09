@@ -4,6 +4,7 @@
 #include <SDL.h>
 
 #include "imgui.h"
+#include "imgui_markdown.h"
 #include "imgui_sdl.h"
 
 #include "Color.h"
@@ -47,6 +48,7 @@ struct LuminanceInfo {
 static int sPoseRequest		   = -1;
 static bool sPoseResetRequest  = false;
 static bool sScreenshotRequest = false;
+static bool sShowHelp		   = false;
 static bool sShowUI			   = true;
 static bool sLockInteraction   = false;
 
@@ -59,6 +61,8 @@ static std::array<float, HISTOGRAM_SIZE> sHistogramF;
 static bool sToneMapping_Automatic = true;
 static float sToneMapping_Exposure = 1.0f;
 static float sToneMapping_Offset   = 0.0f;
+
+static bool sRunning = true;
 
 enum class ToneMappingMethod {
 	None = 0,
@@ -89,7 +93,7 @@ static void handle_pose_input(size_t posenmbr, bool capture, const Camera& cam)
 }
 
 // Events
-static bool handle_events(uint32_t& iter, Camera& cam)
+static bool handle_events(uint32_t& iter, bool& run, Camera& cam)
 {
 	static bool first_call = true;
 	if (first_call) {
@@ -104,6 +108,8 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 	static bool speed[2]			   = { false, false };
 	const float rspeed				   = 0.005f;
 	static float tspeed				   = 0.1f;
+
+	const bool canInteract = !sLockInteraction && run;
 
 	SDL_Event event;
 	const bool hover = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
@@ -189,7 +195,7 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 			// Followings should only be handled once
 			if (event.type == SDL_KEYUP) {
 				const bool capture = io.KeyCtrl;
-				if (!sLockInteraction) {
+				if (canInteract) {
 					switch (event.key.keysym.sym) {
 					case SDLK_KP_1:
 						cam.update_dir(Vector3f(0, 0, 1), Vector3f(0, 1, 0));
@@ -264,6 +270,12 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 						sToneMapping_Offset += io.KeyShift ? -delta : delta;
 					}
 					break;
+				case SDLK_p:
+					run = !run;
+					break;
+				case SDLK_F1:
+					sShowHelp = !sShowHelp;
+					break;
 				case SDLK_F2:
 					sShowUI = !sShowUI;
 					break;
@@ -277,17 +289,21 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 			}
 		} break;
 		case SDL_MOUSEBUTTONDOWN:
-			if (event.button.button == SDL_BUTTON_LEFT && !hover && !sLockInteraction) {
-				//SDL_SetRelativeMouseMode(SDL_TRUE);
+			if (event.button.button == SDL_BUTTON_LEFT && !hover && canInteract) {
+#ifndef IG_DEBUG
+				SDL_SetRelativeMouseMode(SDL_TRUE);
+#endif
 				camera_on = true;
 			}
 			break;
 		case SDL_MOUSEBUTTONUP:
-			//SDL_SetRelativeMouseMode(SDL_FALSE);
+#ifndef IG_DEBUG
+			SDL_SetRelativeMouseMode(SDL_FALSE);
+#endif
 			camera_on = false;
 			break;
 		case SDL_MOUSEMOTION:
-			if (camera_on && !hover && !sLockInteraction) {
+			if (camera_on && !hover && canInteract) {
 				cam.rotate(event.motion.xrel * rspeed, event.motion.yrel * rspeed);
 				iter = 0;
 			}
@@ -318,55 +334,58 @@ static bool handle_events(uint32_t& iter, Camera& cam)
 	io.MouseDown[0] = buttons & SDL_BUTTON(SDL_BUTTON_LEFT);
 	io.MouseDown[1] = buttons & SDL_BUTTON(SDL_BUTTON_RIGHT);
 
-	if (!sLockInteraction) {
-		for (bool b : arrows) {
-			if (b) {
-				iter = 0;
-				break;
+	if (run) {
+		if (!sLockInteraction) {
+			for (bool b : arrows) {
+				if (b) {
+					iter = 0;
+					break;
+				}
 			}
+
+			const float drspeed = 10 * rspeed;
+			if (arrows[0])
+				cam.move(0, 0, tspeed);
+			if (arrows[1])
+				cam.move(0, 0, -tspeed);
+			if (arrows[2])
+				cam.move(-tspeed, 0, 0);
+			if (arrows[3])
+				cam.move(tspeed, 0, 0);
+			if (arrows[4])
+				cam.roll(drspeed);
+			if (arrows[5])
+				cam.roll(-drspeed);
+			if (arrows[6])
+				cam.move(0, tspeed, 0);
+			if (arrows[7])
+				cam.move(0, -tspeed, 0);
+			if (arrows[8])
+				cam.rotate(0, drspeed);
+			if (arrows[9])
+				cam.rotate(0, -drspeed);
+			if (arrows[10])
+				cam.rotate(-drspeed, 0);
+			if (arrows[11])
+				cam.rotate(drspeed, 0);
+			if (speed[0])
+				tspeed *= 1.1f;
+			if (speed[1])
+				tspeed *= 0.9f;
 		}
 
-		const float drspeed = 10 * rspeed;
-		if (arrows[0])
-			cam.move(0, 0, tspeed);
-		if (arrows[1])
-			cam.move(0, 0, -tspeed);
-		if (arrows[2])
-			cam.move(-tspeed, 0, 0);
-		if (arrows[3])
-			cam.move(tspeed, 0, 0);
-		if (arrows[4])
-			cam.roll(drspeed);
-		if (arrows[5])
-			cam.roll(-drspeed);
-		if (arrows[6])
-			cam.move(0, tspeed, 0);
-		if (arrows[7])
-			cam.move(0, -tspeed, 0);
-		if (arrows[8])
-			cam.rotate(0, drspeed);
-		if (arrows[9])
-			cam.rotate(0, -drspeed);
-		if (arrows[10])
-			cam.rotate(-drspeed, 0);
-		if (arrows[11])
-			cam.rotate(drspeed, 0);
-		if (speed[0])
-			tspeed *= 1.1f;
-		if (speed[1])
-			tspeed *= 0.9f;
-	}
-
-	if (sPoseResetRequest || sPoseRequest >= 0) {
-		auto pose = sPoseResetRequest ? sPoseManager.initialPose() : sPoseManager.pose(sPoseRequest);
-		cam.eye	  = pose.Eye;
-		cam.update_dir(pose.Dir, pose.Up);
-		iter			  = 0;
-		sPoseRequest	  = -1;
-		sPoseResetRequest = false;
+		if (sPoseResetRequest || sPoseRequest >= 0) {
+			auto pose = sPoseResetRequest ? sPoseManager.initialPose() : sPoseManager.pose(sPoseRequest);
+			cam.eye	  = pose.Eye;
+			cam.update_dir(pose.Dir, pose.Up);
+			iter			  = 0;
+			sPoseRequest	  = -1;
+			sPoseResetRequest = false;
+		}
 	}
 
 	sLastCameraPose = CameraPose(cam);
+	sRunning		= run;
 
 	return false;
 }
@@ -813,15 +832,15 @@ void setTitle(const char* str)
 		SDL_SetWindowTitle(sWindow, str);
 }
 
-bool handleInput(uint32_t& iter, Camera& cam)
+bool handleInput(uint32_t& iter, bool& run, Camera& cam)
 {
-	return handle_events(iter, cam);
+	return handle_events(iter, run, cam);
 }
 
-constexpr size_t UI_W = 300;
-constexpr size_t UI_H = 440;
 static void handle_imgui(uint32_t iter)
 {
+	constexpr size_t UI_W = 300;
+	constexpr size_t UI_H = 440;
 	int mouse_x, mouse_y;
 	SDL_GetMouseState(&mouse_x, &mouse_y);
 
@@ -888,6 +907,69 @@ static void handle_imgui(uint32_t iter)
 				sPoseRequest = (int)i;
 		}
 	}
+	ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "Press F1 for help...");
+	ImGui::End();
+}
+
+inline static void markdownFormatCallback(const ImGui::MarkdownFormatInfo& markdownFormatInfo_, bool start_)
+{
+	switch (markdownFormatInfo_.type) {
+	default:
+		ImGui::defaultMarkdownFormatCallback(markdownFormatInfo_, start_);
+		break;
+	case ImGui::MarkdownFormatType::EMPHASIS:
+		if (start_)
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.16f, 0.57f, 0.94f, 1));
+		else
+			ImGui::PopStyleColor();
+		break;
+	}
+}
+
+static void handle_help()
+{
+	constexpr size_t UI_W = 300;
+	constexpr size_t UI_H = 500;
+
+	static const std::string Markdown =
+		R"(- *1..9* number keys to switch between views.
+- *1..9* and *Strg/Ctrl* to save the current view on that slot.
+- *F1* to toggle this help window.
+- *F2* to toggle the UI.
+- *F3* to toggle the interaction lock. 
+  If enabled, no view changing interaction is possible.
+- *F11* to save a screenshot.
+  The image will be saved in the current working directory.
+- *R* to reset to initial view.
+- *P* to pause current rendering. Also implies an interaction lock.
+- *T* to toggle automatic tonemapping.
+- *G* to reset tonemapping properties.
+  Only works if automatic tonemapping is disabled.
+- *F* to increase (or with *Shift* to decrease) tonemapping exposure.
+  Step size can be decreased with *Strg/Ctrl*.
+  Only works if automatic tonemapping is disabled.
+- *V* to increase (or with *Shift* to decrease) tonemapping offset.
+  Step size can be decreased with *Strg/Ctrl*.
+  Only works if automatic tonemapping is disabled.
+- *WASD* or arrow keys to travel through the scene.
+- *Q/E* to rotate the camera around the viewing direction. 
+- *PageUp/PageDown* to pan the camera up and down. 
+- *Notepad +/-* to change the travel speed.
+- *Numpad 1* to switch to front view.
+- *Numpad 3* to switch to side view.
+- *Numpad 7* to switch to top view.
+- *Numpad 9* look behind you.
+- *Numpad 2468* to rotate the camera.
+- Mouse to rotate the camera.
+)";
+
+	ImGui::MarkdownConfig config;
+	config.formatCallback = markdownFormatCallback;
+
+	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
+	ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Once);
+	ImGui::Begin("Help");
+	ImGui::Markdown(Markdown.c_str(), Markdown.length(), config);
 	ImGui::End();
 }
 
@@ -901,9 +983,12 @@ void update(uint32_t iter)
 	SDL_RenderClear(sRenderer);
 	SDL_RenderCopy(sRenderer, sTexture, nullptr, nullptr);
 
-	if (sShowUI) {
+	if (sShowUI || sShowHelp) {
 		ImGui::NewFrame();
-		handle_imgui(iter);
+		if (sShowUI)
+			handle_imgui(iter);
+		if (sShowHelp)
+			handle_help();
 		ImGui::Render();
 		ImGuiSDL::Render(ImGui::GetDrawData());
 	}

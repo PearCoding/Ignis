@@ -47,6 +47,18 @@ PYBIND11_MODULE(pyignis, m)
 		.def_readwrite("Direction", &Ray::Direction)
 		.def_readwrite("Range", &Ray::Range);
 
+	py::enum_<Target>(m, "Target")
+		.value("GENERIC", Target::GENERIC)
+		.value("ASIMD", Target::ASIMD)
+		.value("SSE42", Target::SSE42)
+		.value("AVX", Target::AVX)
+		.value("AVX2", Target::AVX2)
+		.value("AVX512", Target::AVX512)
+		.value("NVVM_STREAMING", Target::NVVM_STREAMING)
+		.value("NVVM_MEGAKERNEL", Target::NVVM_MEGAKERNEL)
+		.value("AMDGPU_STREAMING", Target::AMDGPU_STREAMING)
+		.value("AMDGPU_MEGAKERNEL", Target::AMDGPU_MEGAKERNEL);
+
 	py::class_<Runtime>(m, "Runtime")
 		.def(py::init([](const std::string& path, const RuntimeOptions& opts) { return std::make_unique<Runtime>(path, opts); }))
 		.def("setup", &Runtime::setup)

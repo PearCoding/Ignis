@@ -13,8 +13,6 @@ struct RuntimeOptions {
 	uint32 Device;
 	std::string OverrideTechnique;
 	std::string OverrideCamera;
-	std::optional<std::pair<uint32, uint32>> OverrideFilmSize;
-	std::optional<std::pair<Transformf, float>> OverrideCameraSettings;
 };
 
 struct RuntimeRenderSettings {

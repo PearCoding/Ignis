@@ -23,24 +23,30 @@ static inline void usage()
 {
 	std::cout << "Usage: ignis file [options]\n"
 			  << "Available options:\n"
-			  << "   -h      --help                Shows this message\n"
-			  << "           --width    pixels     Sets the viewport horizontal dimension (in pixels)\n"
-			  << "           --height   pixels     Sets the viewport vertical dimension (in pixels)\n"
-			  << "           --eye      x y z      Sets the position of the camera\n"
-			  << "           --dir      x y z      Sets the direction vector of the camera\n"
-			  << "           --up       x y z      Sets the up vector of the camera\n"
-			  << "           --fov      degrees    Sets the horizontal field of view (in degrees)\n"
-			  << "   -t      --target   target     Sets the target platform (default: autodetect CPU)\n"
-			  << "   -d      --device   device     Sets the device to use on the selected platform (default: 0)\n"
-			  << "           --cpu                 Use autodetected CPU target\n"
-			  << "           --gpu                 Use autodetected GPU target\n"
-			  << "           --spp      spp        Enables benchmarking mode and sets the number of iterations based on the given spp\n"
-			  << "           --bench    iterations Enables benchmarking mode and sets the number of iterations\n"
-			  << "   -o      --output   image.exr  Writes the output image to a file\n"
+			  << "   -h      --help                 Shows this message\n"
+			  << "           --width     pixels     Sets the viewport horizontal dimension (in pixels)\n"
+			  << "           --height    pixels     Sets the viewport vertical dimension (in pixels)\n"
+			  << "           --eye       x y z      Sets the position of the camera\n"
+			  << "           --dir       x y z      Sets the direction vector of the camera\n"
+			  << "           --up        x y z      Sets the up vector of the camera\n"
+			  << "           --fov       degrees    Sets the horizontal field of view (in degrees)\n"
+			  << "           --camera    cam_type   Override camera type\n"
+			  << "           --technique tech_type  Override technique/integrator type\n"
+			  << "   -t      --target    target     Sets the target platform (default: autodetect CPU)\n"
+			  << "   -d      --device    device     Sets the device to use on the selected platform (default: 0)\n"
+			  << "           --cpu                  Use autodetected CPU target\n"
+			  << "           --gpu                  Use autodetected GPU target\n"
+			  << "           --spp       spp        Enables benchmarking mode and sets the number of iterations based on the given spp\n"
+			  << "           --bench     iterations Enables benchmarking mode and sets the number of iterations\n"
+			  << "   -o      --output    image.exr  Writes the output image to a file\n"
 			  << "Available targets:\n"
 			  << "    generic, sse42, avx, avx2, avx512, asimd,\n"
 			  << "    nvvm = nvvm-streaming, nvvm-megakernel,\n"
-			  << "    amdgpu = amdgpu-streaming, amdgpu-megakernel" << std::endl;
+			  << "    amdgpu = amdgpu-streaming, amdgpu-megakernel\n"
+			  << "Available cameras:\n"
+			  << "    perspective, orthogonal, fishlens\n"
+			  << "Available techniques:\n"
+			  << "    path, debug" << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -56,6 +62,8 @@ int main(int argc, char** argv)
 	std::optional<float> fov;
 	Target target = Target::INVALID;
 	int device	  = 0;
+	std::string overrideTechnique;
+	std::string overrideCamera;
 
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
@@ -119,6 +127,12 @@ int main(int argc, char** argv)
 			} else if (!strcmp(argv[i], "-o")) {
 				check_arg(argc, argv, i, 1);
 				out_file = argv[++i];
+			} else if (!strcmp(argv[i], "--camera")) {
+				check_arg(argc, argv, i, 1);
+				overrideCamera = argv[++i];
+			} else if (!strcmp(argv[i], "--technique")) {
+				check_arg(argc, argv, i, 1);
+				overrideTechnique = argv[++i];
 			} else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
 				usage();
 				return EXIT_SUCCESS;
@@ -158,8 +172,10 @@ int main(int argc, char** argv)
 	std::unique_ptr<Runtime> runtime;
 	try {
 		RuntimeOptions opts;
-		opts.DesiredTarget = target;
-		opts.Device		   = device;
+		opts.DesiredTarget	   = target;
+		opts.Device			   = device;
+		opts.OverrideTechnique = overrideTechnique;
+		opts.OverrideCamera	   = overrideCamera;
 
 		runtime = std::make_unique<Runtime>(in_file, opts);
 	} catch (const std::exception& e) {
@@ -177,6 +193,7 @@ int main(int argc, char** argv)
 	UI::init(film_width, film_height, runtime->getFramebuffer());
 #endif
 
+	bool running	= true;
 	bool done		= false;
 	uint64_t timing = 0;
 	uint32_t frames = 0;
@@ -184,36 +201,53 @@ int main(int argc, char** argv)
 	std::vector<double> samples_sec;
 	while (!done) {
 #ifdef WITH_UI
-		done = UI::handleInput(iter, camera);
+		bool prevRun = running;
+		done = UI::handleInput(iter, running, camera);
 #endif
 
-		if (iter == 0)
-			runtime->clearFramebuffer();
+		if (running) {
+			if (iter == 0)
+				runtime->clearFramebuffer();
 
-		auto ticks = std::chrono::high_resolution_clock::now();
-		runtime->step(camera);
-		iter++;
-		auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
+			auto ticks = std::chrono::high_resolution_clock::now();
+			runtime->step(camera);
+			iter++;
+			auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
-		if (bench_iter != 0) {
-			samples_sec.emplace_back(1000.0 * double(SPP * film_width * film_height) / double(elapsed_ms));
-			if (samples_sec.size() == bench_iter)
-				break;
-		}
+			if (bench_iter != 0) {
+				samples_sec.emplace_back(1000.0 * double(SPP * film_width * film_height) / double(elapsed_ms));
+				if (samples_sec.size() == bench_iter)
+					break;
+			}
 
-		frames++;
-		timing += elapsed_ms;
-		if (frames > 10 || timing >= 2000) {
-			auto frames_sec = double(frames) * 1000.0 / double(timing);
+			frames++;
+			timing += elapsed_ms;
+			if (frames > 10 || timing >= 2000) {
+				auto frames_sec = double(frames) * 1000.0 / double(timing);
 #ifdef WITH_UI
-			std::ostringstream os;
-			os << "Ignis [" << frames_sec << " FPS, "
-			   << iter * SPP << " "
-			   << "sample" << (iter * SPP > 1 ? "s" : "") << "]";
-			UI::setTitle(os.str().c_str());
+				std::ostringstream os;
+				os << "Ignis [" << frames_sec << " FPS, "
+				   << iter * SPP << " "
+				   << "sample" << (iter * SPP > 1 ? "s" : "") << "]";
+				UI::setTitle(os.str().c_str());
 #endif
-			frames = 0;
-			timing = 0;
+				frames = 0;
+				timing = 0;
+			}
+		} else {
+			frames++;
+
+#ifdef WITH_UI
+			if (prevRun != running || frames > 100) {
+				std::ostringstream os;
+				os << "Ignis [Paused, "
+				   << iter * SPP << " "
+				   << "sample" << (iter * SPP > 1 ? "s" : "") << "]";
+				UI::setTitle(os.str().c_str());
+				frames = 0;
+				timing = 0;
+			}
+#endif
 		}
 
 #ifdef WITH_UI
