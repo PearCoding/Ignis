@@ -3,7 +3,8 @@
 #include "LoaderContext.h"
 
 namespace IG {
+struct LoaderResult;
 struct LoaderLight {
-	static std::string extract(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx);
+	static bool load(LoaderContext& ctx, LoaderResult& result);
 };
 } // namespace IG

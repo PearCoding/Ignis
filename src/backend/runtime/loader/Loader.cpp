@@ -18,10 +18,10 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 		return false;
 
 	/*if (!LoaderBSDF::load(ctx, result))
-		return false;
+		return false;*/
 
 	if (!LoaderLight::load(ctx, result))
-		return false;*/
+		return false;
 
 	if (!LoaderEntity::load(ctx, result))
 		return false;

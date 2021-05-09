@@ -1,9 +1,25 @@
 #include "LoaderLight.h"
+#include "Loader.h"
 #include "Logger.h"
+#include "serialization/VectorSerializer.h"
 #include "skysun/SkyModel.h"
 #include "skysun/SunLocation.h"
 
 namespace IG {
+
+enum LightType {
+	LIGHT_POINT				   = 0x0,
+	LIGHT_AREA				   = 0x1,
+	LIGHT_DIRECTIONAL		   = 0x2,
+	LIGHT_SUN				   = 0x3,
+	LIGHT_SKY				   = 0x4,
+	LIGHT_SUNSKY			   = 0x5,
+	LIGHT_CIE_UNIFORM		   = 0x10,
+	LIGHT_CIE_CLOUDY		   = 0x11,
+	LIGHT_PEREZ				   = 0x12,
+	LIGHT_ENVIRONMENT		   = 0x20,
+	LIGHT_ENVIRONMENT_TEXTURED = 0x21
+};
 
 static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
 {
@@ -41,46 +57,52 @@ static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
 	model.save("data/skytex_" + LoaderContext::makeId(name) + ".exr");
 }*/
 
-static void light_point(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
+static void light_point(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
-	auto pos = light->property("position").getVector3();
-	os << "make_point_light(math, make_vec3("
-	   << pos(0) << ", " << pos(1) << ", " << pos(2) << "), "
-	   << ctx.extractMaterialPropertyColor(light, "intensity", 1.0f) << ")";
+	auto pos	   = light->property("position").getVector3();
+	auto intensity = ctx.extractColor(light, "intensity");
+
+	auto& data = result.Database.LightTable.addLookup(LIGHT_POINT, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+	serializer.write(pos);
+	serializer.write((uint32)0); // PADDING
+	serializer.write(intensity);
 }
 
-static void light_area(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
+static void light_area(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
-	IG_LOG(L_WARNING) << "Area emitter without a shape is not allowed" << std::endl;
-	os << "make_point_light(math, make_vec3(0,0,0), pink)/* Inv. Area */";
+	//TODO
 }
 
-static void light_directional(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
+static void light_directional(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
-	auto ea		 = extractEA(light);
-	Vector3f dir = ea.toDirection();
+	auto ea			= extractEA(light);
+	Vector3f dir	= ea.toDirection();
+	auto irradiance = ctx.extractColor(light, "irradiance");
 
-	os << "make_directional_light(math, make_vec3("
-	   << dir(0) << ", " << dir(1) << ", " << dir(2) << "), "
-	   << ctx.Environment.SceneDiameter << ", "
-	   << ctx.extractMaterialPropertyColor(light, "irradiance", 1.0f) << ")";
+	auto& data = result.Database.LightTable.addLookup(LIGHT_DIRECTIONAL, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+	serializer.write(dir);
+	serializer.write((uint32)0); // PADDING
+	serializer.write(irradiance);
 }
 
-static void light_sun(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
+static void light_sun(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
 	auto ea		 = extractEA(light);
 	Vector3f dir = ea.toDirection();
 
 	auto power		= light->property("sun_scale").getNumber(1.0f);
 	auto sun_radius = light->property("sun_radius_scale").getNumber(1.0f);
-	os << "make_sun_light(math, make_vec3("
-	   << dir(0) << ", " << dir(1) << ", " << dir(2) << "), "
-	   << ctx.Environment.SceneDiameter << ", "
-	   << sun_radius << ", "
-	   << "make_gray_color(" << power << "))";
+
+	auto& data = result.Database.LightTable.addLookup(LIGHT_SUN, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+	serializer.write(dir);
+	serializer.write(power);
+	serializer.write(sun_radius);
 }
 
-/*static void light_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
+/*static void light_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
 	setup_sky(name, light, ctx);
 
@@ -89,7 +111,7 @@ static void light_sun(const std::string& name, const std::shared_ptr<Parser::Obj
 }
 
 // TODO: Why not just add two lights instead of this combination?
-static void light_sunsky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
+static void light_sunsky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
 	setup_sky(name, light, ctx);
 	const std::string tex_path = "skytex_" + LoaderContext::makeId(name);
@@ -107,28 +129,30 @@ static void light_sunsky(const std::string& name, const std::shared_ptr<Parser::
 	   << tex_path << ")";
 }*/
 
-static void light_cie_uniform(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
+static void light_cie_uniform(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
-	auto zenith			  = ctx.extractMaterialPropertyColor(light, "zenith", 1.0f);
-	auto ground			  = ctx.extractMaterialPropertyColor(light, "ground", 1.0f);
+	auto zenith			  = ctx.extractColor(light, "zenith");
+	auto ground			  = ctx.extractColor(light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
-	os << "make_cie_uniform_light(math, "
-	   << ctx.Environment.SceneDiameter << ", "
-	   << zenith << ", "
-	   << ground << ", "
-	   << groundbrightness << ")";
+
+	auto& data = result.Database.LightTable.addLookup(LIGHT_CIE_UNIFORM, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+	serializer.write(zenith);
+	serializer.write(groundbrightness);
+	serializer.write(ground);
 }
 
-static void light_cie_cloudy(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
+static void light_cie_cloudy(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
-	auto zenith			  = ctx.extractMaterialPropertyColor(light, "zenith", 1.0f);
-	auto ground			  = ctx.extractMaterialPropertyColor(light, "ground", 1.0f);
+	auto zenith			  = ctx.extractColor(light, "zenith");
+	auto ground			  = ctx.extractColor(light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
-	os << "make_cie_cloudy_light(math, "
-	   << ctx.Environment.SceneDiameter << ", "
-	   << zenith << ", "
-	   << ground << ", "
-	   << groundbrightness << ")";
+
+	auto& data = result.Database.LightTable.addLookup(LIGHT_CIE_CLOUDY, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+	serializer.write(zenith);
+	serializer.write(groundbrightness);
+	serializer.write(ground);
 }
 
 static inline float perez_model(float zenithAngle, float sunAngle, float a, float b, float c, float d, float e)
@@ -141,7 +165,7 @@ static inline float perez_model(float zenithAngle, float sunAngle, float a, floa
 	return A * B;
 }
 
-static void light_perez(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
+static void light_perez(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
 	auto ea		 = extractEA(light);
 	Vector3f dir = ea.toDirection();
@@ -152,49 +176,44 @@ static void light_perez(const std::string& name, const std::shared_ptr<Parser::O
 	auto d = light->property("d").getNumber(1.0f);
 	auto e = light->property("e").getNumber(1.0f);
 
-	os << "make_perez_light(math, "
-	   << ctx.Environment.SceneDiameter << ", "
-	   << "make_vec3(" << dir(0) << ", " << dir(1) << ", " << dir(2) << "), ";
-
+	Vector3f color;
 	if (light->properties().count("luminance")) {
-		auto lum = ctx.extractMaterialPropertyColor(light, "luminance", 1.0f);
-		os << lum << ", ";
+		color = ctx.extractColor(light, "luminance");
 	} else {
-		auto zenith			= ctx.extractMaterialPropertyColor(light, "zenith", 1.0f);
+		auto zenith			= ctx.extractColor(light, "zenith");
 		const float groundZ = perez_model(0, -dir(2), a, b, c, d, e); // TODO: Validate
-		os << "color_mulf(" << zenith << ", " << groundZ << "), ";
+		color				= zenith * groundZ;
 	}
 
-	os << a << ", "
-	   << b << ", "
-	   << c << ", "
-	   << d << ", "
-	   << e << ")";
+	auto& data = result.Database.LightTable.addLookup(LIGHT_PEREZ, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+	serializer.write(dir);
+	serializer.write(a);
+	serializer.write(b);
+	serializer.write(c);
+	serializer.write(d);
+	serializer.write(e);
+	serializer.write(color);
 }
 
-static void light_env(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os)
+static void light_env(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
-	bool isTexture = false;
-	auto radiance  = ctx.extractMaterialPropertyColorLight(light, "radiance", 1.0f, isTexture);
-	if (isTexture)
-		os << "make_environment_light_textured(math, " << ctx.Environment.SceneDiameter << ", " << radiance << ")";
-	else
-		os << "make_environment_light(math, " << ctx.Environment.SceneDiameter << ", " << radiance << ")";
+	bool isTexture = ctx.isTexture(light, "radiance");
+
+	const LightType type = isTexture ? LIGHT_ENVIRONMENT_TEXTURED : LIGHT_ENVIRONMENT;
+	auto& data			 = result.Database.LightTable.addLookup(type, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+
+	if (isTexture) {
+		const uint32 id = ctx.extractTextureID(light, "radiance");
+		serializer.write(id);
+	} else {
+		const Vector3f color = ctx.extractColor(light, "radiance");
+		serializer.write(color);
+	}
 }
 
-static void light_error(const std::string& msg, std::ostream& os)
-{
-	IG_LOG(L_ERROR) << msg << std::endl;
-	os << "make_point_light(math, make_vec3(0,0,0), pink)/* " << msg << " */";
-}
-
-static void light_unknown(const std::shared_ptr<Parser::Object>& light, const LoaderContext&, std::ostream& os)
-{
-	IG_LOG(L_WARNING) << "Unknown emitter type '" << light->pluginType() << "'" << std::endl;
-	os << "make_point_light(math, make_vec3(0,0,0), pink)/* Unknown */";
-}
-
-using LightLoader = void (*)(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, std::ostream& os);
+using LightLoader = void (*)(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result);
 static struct {
 	const char* Name;
 	LightLoader Loader;
@@ -219,23 +238,24 @@ static struct {
 	{ "", nullptr }
 };
 
-std::string LoaderLight::extract(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+bool LoaderLight::load(LoaderContext& ctx, LoaderResult& result)
 {
-	std::stringstream sstream;
+	for (const auto& pair : ctx.Scene.lights()) {
+		const auto light = pair.second;
 
-	if (!light) {
-		light_error("No light given", sstream);
-	} else {
+		bool found = false;
 		for (size_t i = 0; _generators[i].Loader; ++i) {
 			if (_generators[i].Name == light->pluginType()) {
-				_generators[i].Loader(name, light, ctx, sstream);
-				return sstream.str();
+				_generators[i].Loader(pair.first, light, ctx, result);
+				found = true;
+				break;
 			}
 		}
-		light_unknown(light, ctx, sstream);
+		if (!found)
+			IG_LOG(L_ERROR) << "No light type '" << light->pluginType() << "' available" << std::endl;
 	}
 
-	return sstream.str();
+	return true;
 }
 
 } // namespace IG

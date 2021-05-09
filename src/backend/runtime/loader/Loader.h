@@ -5,6 +5,8 @@
 #include "table/SceneDatabase.h"
 
 namespace IG {
+constexpr size_t DefaultAlignment = sizeof(float) * 4;
+
 struct LoaderOptions {
 	std::filesystem::path FilePath;
 	Parser::Scene Scene;
