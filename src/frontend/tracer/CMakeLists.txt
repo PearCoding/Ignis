@@ -2,6 +2,6 @@
 SET(CMD_FILES 
     main.cpp )
 
-add_executable(ignis_trace ${CMD_FILES})
-add_dependencies(ignis_trace ignis_drivers)
-target_link_libraries(ignis_trace PRIVATE ig_lib_runtime)
+add_executable(igtrace ${CMD_FILES})
+add_dependencies(igtrace ignis_drivers)
+target_link_libraries(igtrace PRIVATE ig_lib_runtime)

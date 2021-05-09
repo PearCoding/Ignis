@@ -1,14 +1,5 @@
-#include "Camera.h"
-#include "Interface.h"
-
-#include "Buffer.h"
-#include "Color.h"
 #include "Logger.h"
-#include "bvh/BVH.h"
-#include "math/BoundingBox.h"
-#include "math/Triangle.h"
-
-#include "generated_interface.h"
+#include "Runtime.h"
 
 #include <fstream>
 #include <sstream>
@@ -23,12 +14,16 @@ static inline void check_arg(int argc, char** argv, int arg, int n)
 
 static inline void usage()
 {
-	std::cout << "Usage: ignis_trace [options]\n"
+	std::cout << "Usage: igtrace file [options]\n"
 			  << "Available options:\n"
-			  << "   --help           Shows this message\n"
-			  << "   -n count         Samples per ray. Default is 1\n"
-			  << "   -i list.txt      Read list of rays from file instead of the standard input\n"
-			  << "   -o radiance.txt  Write radiance for each ray into file instead of standard output" << std::endl;
+			  << "   -h      --help                   Shows this message\n"
+			  << "   -t      --target   target        Sets the target platform (default: autodetect CPU)\n"
+			  << "   -d      --device   device        Sets the device to use on the selected platform (default: 0)\n"
+			  << "           --cpu                    Use autodetected CPU target\n"
+			  << "           --gpu                    Use autodetected GPU target\n"
+			  << "   -n      --count    count         Samples per ray. Default is 1\n"
+			  << "   -i      --input    list.txt      Read list of rays from file instead of the standard input\n"
+			  << "   -o      --output   radiance.txt  Write radiance for each ray into file instead of standard output" << std::endl;
 }
 
 static inline float safe_rcp(float x)
@@ -51,33 +46,12 @@ static std::vector<Ray> read_input(std::istream& is, bool file)
 		std::stringstream stream(line);
 
 		Ray ray;
-		stream >> ray.org.x >> ray.org.y >> ray.org.z >> ray.dir.x >> ray.dir.y >> ray.dir.z >> ray.tmin >> ray.tmax;
+		stream >> ray.Origin(0) >> ray.Origin(1) >> ray.Origin(2) >> ray.Direction(0) >> ray.Direction(1) >> ray.Direction(2) >> ray.Range(0) >> ray.Range(1);
 
-		if (ray.tmax <= ray.tmin)
-			ray.tmax = std::numeric_limits<float>::max();
-
-		// Normalize direction
-		const float norm = std::sqrt(ray.dir.x * ray.dir.x + ray.dir.y * ray.dir.y + ray.dir.z * ray.dir.z);
-		if (norm < std::numeric_limits<float>::epsilon()) {
-			std::cerr << "Invalid ray given: Ray has zero direction!" << std::endl;
-			continue;
-		}
-		ray.dir.x /= norm;
-		ray.dir.y /= norm;
-		ray.dir.z /= norm;
-
-		// Calculate invert components
-		ray.inv_dir.x = safe_rcp(ray.dir.x);
-		ray.inv_dir.y = safe_rcp(ray.dir.y);
-		ray.inv_dir.z = safe_rcp(ray.dir.z);
-
-		ray.inv_org.x = -(ray.org.x * ray.inv_dir.x);
-		ray.inv_org.y = -(ray.org.y * ray.inv_dir.y);
-		ray.inv_org.z = -(ray.org.z * ray.inv_dir.z);
+		if (ray.Range(1) <= ray.Range(0))
+			ray.Range(1) = std::numeric_limits<float>::max();
 
 		rays.push_back(ray);
-
-		std::cout << "R(O[" << ray.org.x << ", " << ray.org.y << ", " << ray.org.z << "], D[" << ray.dir.x << ", " << ray.dir.y << ", " << ray.dir.z << "], T[" << ray.tmin << ", " << ray.tmax << "])" << std::endl;
 	}
 
 	return rays;
@@ -92,38 +66,81 @@ static void write_output(std::ostream& is, bool file, float* data, size_t count,
 
 int main(int argc, char** argv)
 {
+	std::string scene_file;
 	uint32 sample_count = 1;
-	std::string in_file;
+	std::string ray_file;
 	std::string out_file;
+	Target target = Target::INVALID;
+	int device	  = 0;
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
-			if (!strcmp(argv[i], "-n")) {
+			if (!strcmp(argv[i], "-n") || !strcmp(argv[i], "--count")) {
 				check_arg(argc, argv, i, 1);
 				sample_count = strtoul(argv[++i], nullptr, 10);
-			} else if (!strcmp(argv[i], "-o")) {
+			} else if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--output")) {
 				check_arg(argc, argv, i, 1);
 				out_file = argv[++i];
-			} else if (!strcmp(argv[i], "-i")) {
+			} else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--input")) {
 				check_arg(argc, argv, i, 1);
-				in_file = argv[++i];
-			} else if (!strcmp(argv[i], "--help")) {
+				ray_file = argv[++i];
+			} else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
 				usage();
 				return EXIT_SUCCESS;
+			} else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--target")) {
+				check_arg(argc, argv, i++, 1);
+				if (!strcmp(argv[i], "sse42"))
+					target = Target::SSE42;
+				else if (!strcmp(argv[i], "avx"))
+					target = Target::AVX;
+				else if (!strcmp(argv[i], "avx2"))
+					target = Target::AVX2;
+				else if (!strcmp(argv[i], "avx512"))
+					target = Target::AVX512;
+				else if (!strcmp(argv[i], "asimd"))
+					target = Target::ASIMD;
+				else if (!strcmp(argv[i], "nvvm") || !strcmp(argv[i], "nvvm-streaming"))
+					target = Target::NVVM_STREAMING;
+				else if (!strcmp(argv[i], "nvvm-megakernel"))
+					target = Target::NVVM_MEGAKERNEL;
+				else if (!strcmp(argv[i], "amdgpu") || !strcmp(argv[i], "amdgpu-streaming"))
+					target = Target::AMDGPU_STREAMING;
+				else if (!strcmp(argv[i], "amdgpu-megakernel"))
+					target = Target::AMDGPU_MEGAKERNEL;
+				else if (!strcmp(argv[i], "generic"))
+					target = Target::GENERIC;
+				else {
+					IG_LOG(L_ERROR) << "Unknown target '" << argv[i] << "'. Aborting." << std::endl;
+					return EXIT_FAILURE;
+				}
+			} else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--device")) {
+				check_arg(argc, argv, i++, 1);
+				device = strtoul(argv[i], NULL, 10);
+			} else if (!strcmp(argv[i], "--cpu")) {
+				target = getRecommendedCPUTarget();
+			} else if (!strcmp(argv[i], "--gpu")) {
+				target = Target::NVVM_STREAMING; // TODO: Select based on environment
 			} else {
 				IG_LOG(L_ERROR) << "Unknown option '" << argv[i] << "'" << std::endl;
 				return EXIT_FAILURE;
 			}
 		} else {
-			IG_LOG(L_ERROR) << "Unexpected argument '" << argv[i] << "'" << std::endl;
-			return EXIT_FAILURE;
+			if (scene_file.empty()) {
+				scene_file = argv[i];
+			} else {
+				IG_LOG(L_ERROR) << "Unexpected argument '" << argv[i] << "'" << std::endl;
+				return EXIT_FAILURE;
+			}
 		}
 	}
 
+	if (target == Target::INVALID)
+		target = getRecommendedCPUTarget();
+
 	std::vector<Ray> rays;
-	if (in_file.empty()) {
+	if (ray_file.empty()) {
 		rays = read_input(std::cin, false);
 	} else {
-		std::ifstream stream(in_file);
+		std::ifstream stream(ray_file);
 		rays = read_input(stream, true);
 	}
 
@@ -132,36 +149,40 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 
-	setup_interface(rays.size(), 1);
+	std::unique_ptr<Runtime> runtime;
+	try {
+		RuntimeOptions opts;
+		opts.DesiredTarget	  = target;
+		opts.Device			  = device;
+		opts.OverrideCamera	  = "list";
+		opts.OverrideFilmSize = std::make_pair<uint32, uint32>(rays.size(), 1);
 
-	Settings settings{
-		Vec3{ 0, 0, 0 },
-		Vec3{ 0, 0, 1 },
-		Vec3{ 0, 1, 0 },
-		Vec3{ 1, 0, 0 },
-		1,
-		1,
-		(int)rays.size(),
-		rays.data()
-	};
+		runtime = std::make_unique<Runtime>(scene_file, opts);
+	} catch (const std::exception& e) {
+		IG_LOG(L_ERROR) << e.what() << std::endl;
+		return EXIT_FAILURE;
+	}
 
+	runtime->setup(rays.size(), 1);
+
+	std::vector<float> accum_data;
+	std::vector<float> iter_data;
 	for (uint32 iter = 0; iter < sample_count; ++iter) {
-		if (iter == 0)
-			clear_pixels();
+		runtime->trace(rays, iter_data);
 
-		render(&settings, iter++);
+		if (accum_data.size() != iter_data.size())
+			accum_data.resize(iter_data.size(), 0.0f);
+		for (size_t i = 0; i < iter_data.size(); ++i)
+			accum_data[i] += iter_data[i];
 	}
 
 	// Extract data
-	auto film = get_pixels();
 	if (out_file.empty()) {
-		write_output(std::cout, false, film, rays.size(), sample_count);
+		write_output(std::cout, false, accum_data.data(), rays.size(), sample_count);
 	} else {
 		std::ofstream stream(out_file);
-		write_output(stream, true, film, rays.size(), sample_count);
+		write_output(stream, true, accum_data.data(), rays.size(), sample_count);
 	}
 
-	cleanup_interface();
-
-	return 0;
+	return EXIT_SUCCESS;
 }

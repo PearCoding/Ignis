@@ -334,6 +334,12 @@ constexpr auto JsonFlags = rapidjson::kParseDefaultFlags | rapidjson::kParseComm
 Scene SceneParser::loadFromFile(const char* path, bool& ok)
 {
 	std::ifstream ifs(path);
+	if (!ifs.good()) {
+		ok = false;
+		IG_LOG(L_ERROR) << "Could not open file '" << path << "'" << std::endl;
+		return Scene();
+	}
+
 	rapidjson::IStreamWrapper isw(ifs);
 
 	ok = true;
@@ -378,5 +384,5 @@ Scene SceneParser::loadFromString(const char* str, size_t max_len, bool& ok)
 	ok = true;
 	return InternalSceneParser::loadFromJSON(*this, doc);
 }
-} // namespace Loader
+} // namespace Parser
 } // namespace IG
