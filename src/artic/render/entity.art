@@ -1,7 +1,8 @@
 struct EntityData {
     shape_id:   i32,
     mat_id:     i32,
-    _pad1:      [i32 * 2],
+    light_id:   i32,
+    _pad1:      i32,
     local_mat:  [f32 * 16], // TODO: Check if on-the-fly calculation is worth it?
     global_mat: [f32 * 16],
     normal_mat: [f32 * 9],
@@ -11,6 +12,8 @@ struct EntityData {
 struct Entity {
     shape_id:   i32,
     mat_id:     i32,
+    light_id:   i32,
+    emissive:   bool,
     local_mat:  Mat4x4,
     global_mat: Mat4x4,
     normal_mat: Mat3x3
@@ -24,10 +27,12 @@ fn @make_entity_table(dtb: DynTable, acc: DeviceBufferAccessor) -> EntityTable {
         //let entry = get_lookup_entry(id as u64, dtb); // No need as we have only one type!
         let data = get_table_entry(elem_s * (id as u64), dtb, acc);
 
-        let (shape_id, mat_id) = data.load_int2(0);
+        let (shape_id, mat_id, light_id) = data.load_int3(0);
         Entity {
             shape_id   = shape_id,
             mat_id     = mat_id,
+            light_id   = light_id,
+            emissive   = light_id >= 0,
             local_mat  = data.load_mat4x4(4),
             global_mat = data.load_mat4x4(20),
             normal_mat = data.load_mat3x3(36)

@@ -575,7 +575,7 @@ fn @make_shader_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor
                 0x07 => load_rough_conductor_bsdf(math, data, ray, hit, surf), // BSDF_ROUGH_CONDUCTOR  
                 0x10 => load_plastic_bsdf(math, data, ray, hit, surf),         // BSDF_PLASTIC		  
                 0x11 => load_phong_bsdf(math, data, ray, hit, surf),           // BSDF_PHONG			  
-                //0x12 => load_disney_bsdf(math, data, ray, hit, surf),          // BSDF_DISNEY			  
+                0x12 => load_disney_bsdf(math, data, ray, hit, surf),          // BSDF_DISNEY			  
                 0x20 => load_blend_bsdf(math, data, ray, hit, surf),           // BSDF_BLEND			  
                 0x21 => load_mask_bsdf(math, data, ray, hit, surf),            // BSDF_MASK			  
                 0x22 => load_passthrough_bsdf(math, data, ray, hit, surf),     // BSDF_PASSTROUGH		  

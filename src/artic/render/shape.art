@@ -1,7 +1,8 @@
 // Abstract geometry object (tied to one device)
 struct Shape {
     // Computes the surface element after an intersection on this geometry
-    surface_element: fn (Ray, Hit) -> SurfaceElement
+    surface_element: fn (Ray, Hit) -> SurfaceElement,
+    mesh: TriMesh
 }
 
 struct TriShape {
@@ -14,14 +15,14 @@ struct TriShape {
 
 // Triangle mesh with per-vertex/per-face attributes
 struct TriMesh {
-    vertices:     fn (i32) -> Vec3,
-    normals:      fn (i32) -> Vec3,
-    face_normals: fn (i32) -> Vec3,
-    face_area:    fn (i32) -> f32,
-    triangles:    fn (i32) -> (i32, i32, i32),
-    attrs:        fn (i32) -> (bool, fn (i32) -> Vec4),
-    num_attrs:    i32,
-    num_tris:     i32
+    vertices:      fn (i32) -> Vec3,
+    normals:       fn (i32) -> Vec3,
+    face_normals:  fn (i32) -> Vec3,
+    face_inv_area: fn (i32) -> f32,
+    triangles:     fn (i32) -> (i32, i32, i32),
+    attrs:         fn (i32) -> (bool, fn (i32) -> Vec4),
+    num_attrs:     i32,
+    num_tris:      i32
 }
 
 // Creates a geometry object from a triangle mesh definition
@@ -60,7 +61,8 @@ fn @make_trimesh_shape(math: Intrinsics, tri_mesh: TriMesh) -> Shape {
                 local =       make_orthonormal_mat3x3(if vec3_dot(local_ray.dir, normal) <= 0 { normal } else { vec3_neg(normal) }),
                 attr =        attr
             }
-        }
+        },
+        mesh = tri_mesh
     }
 }
 
@@ -82,14 +84,14 @@ fn @make_shape_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor)
         let fa_start   = attr_start + num_attrs * 4;
         
         let trimesh = TriMesh {
-            vertices     = @ |i:i32| data.load_vec3(v_start  + i*4),
-            normals      = @ |i:i32| data.load_vec3(n_start  + i*4),
-            face_normals = @ |i:i32| data.load_vec3(fn_start + i*4),
-            face_area    = @ |i:i32| data.load_f32(fa_start  + i),
-            triangles    = @ |i:i32| { let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
-            attrs        = @ |_attr:i32| (false, |_i:i32| make_vec4(0,0,0,0)), // TODO
-            num_attrs    = num_attrs,
-            num_tris     = num_face
+            vertices      = @ |i:i32| data.load_vec3(v_start  + i*4),
+            normals       = @ |i:i32| data.load_vec3(n_start  + i*4),
+            face_normals  = @ |i:i32| data.load_vec3(fn_start + i*4),
+            face_inv_area = @ |i:i32| data.load_f32(fa_start  + i),
+            triangles     = @ |i:i32| { let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
+            attrs         = @ |_attr:i32| (false, |_i:i32| make_vec4(0,0,0,0)), // TODO
+            num_attrs     = num_attrs,
+            num_tris      = num_face
         };
 
         make_trimesh_shape(math, trimesh)

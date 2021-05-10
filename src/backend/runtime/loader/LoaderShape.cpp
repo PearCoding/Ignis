@@ -61,7 +61,7 @@ inline void add_rectangle(TriMesh& mesh, const std::array<StVector3f, 4>& points
 	mesh.normals.insert(mesh.normals.end(), { N, N, N, N });
 	mesh.texcoords.insert(mesh.texcoords.end(), { StVector2f(0, 0), StVector2f(0, 1), StVector2f(1, 1), StVector2f(1, 0) });
 	mesh.face_normals.insert(mesh.face_normals.end(), { N, N });
-	mesh.face_area.insert(mesh.face_area.end(), { triangle_area({ points[0], points[1], points[2] }), triangle_area({ points[2], points[3], points[0] }) });
+	mesh.face_inv_area.insert(mesh.face_inv_area.end(), { triangle_area({ points[0], points[1], points[2] }), triangle_area({ points[2], points[3], points[0] }) });
 	insert_index(mesh, map_rectangle_index({ 0 + off, 1 + off, 2 + off, 3 + off }));
 }
 
@@ -219,7 +219,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 		meshSerializer.write_aligned(child_mesh.face_normals, DefaultAlignment, true);
 		meshSerializer.write(child_mesh.indices, true); // Already aligned
 		meshSerializer.write_aligned(child_mesh.texcoords, DefaultAlignment, true);
-		meshSerializer.write(child_mesh.face_area, true);
+		meshSerializer.write(child_mesh.face_inv_area, true);
 
 		// Generate BVH
 		IG_LOG(L_DEBUG) << "Generating BVH for shape " << pair.first << std::endl;

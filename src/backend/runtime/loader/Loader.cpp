@@ -20,6 +20,9 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 	if (!LoaderBSDF::load(ctx, result))
 		return false;
 
+	if (!LoaderLight::setup_area(ctx))
+		return false;
+
 	if (!LoaderEntity::load(ctx, result))
 		return false;
 

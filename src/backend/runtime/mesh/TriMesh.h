@@ -17,7 +17,7 @@ struct TriMesh {
 	std::vector<uint32> indices; // A triangle is based as [i0,i1,i2,m] with m = Material
 	std::vector<StVector3f> normals;
 	std::vector<StVector3f> face_normals;
-	std::vector<float> face_area;
+	std::vector<float> face_inv_area;
 	std::vector<StVector2f> texcoords;
 
 	inline size_t faceCount() const { return indices.size() / 4; }
@@ -28,6 +28,7 @@ struct TriMesh {
 	void mergeFrom(const TriMesh& src);
 	void replaceID(uint32 m_idx);
 
+	void computeFaceAreaOnly(size_t first_index = 0);
 	void computeFaceNormals(size_t first_index = 0);
 	void computeVertexNormals(size_t first_index = 0);
 	void makeTexCoordsZero();

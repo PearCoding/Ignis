@@ -270,4 +270,20 @@ bool LoaderLight::load(LoaderContext& ctx, LoaderResult& result)
 	return true;
 }
 
+bool LoaderLight::setup_area(LoaderContext& ctx)
+{
+	uint32 counter = 0;
+	for (const auto& pair : ctx.Scene.lights()) {
+		const auto light = pair.second;
+
+		if (light->pluginType() == "area") {
+			const std::string entity		= light->property("entity").getString();
+			ctx.Environment.AreaIDs[entity] = counter;
+		}
+		
+		++counter;
+	}
+	return true;
+}
+
 } // namespace IG

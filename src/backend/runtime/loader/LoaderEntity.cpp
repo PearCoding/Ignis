@@ -67,12 +67,14 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 		// Register name for lights to assosciate with 
 		ctx.Environment.EntityIDs[pair.first] = counter++;
 
+		const int32 lightID = ctx.Environment.AreaIDs.count(pair.first) == 0 ? -1 : (int32)ctx.Environment.AreaIDs.at(pair.first);
+
 		// Write data to dyntable
 		auto& entityData = result.Database.EntityTable.addLookup(0, DefaultAlignment); // We do not make use of the typeid
 		VectorSerializer entitySerializer(entityData, false);
 		entitySerializer.write((uint32)shapeID);
 		entitySerializer.write((uint32)bsdfID);
-		entitySerializer.write((uint32)0); // Padding
+		entitySerializer.write((int32)lightID);
 		entitySerializer.write((uint32)0); // Padding
 		writeMatrix(entitySerializer, transform.matrix());
 		writeMatrix(entitySerializer, invTransform.matrix());

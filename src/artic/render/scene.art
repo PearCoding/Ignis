@@ -25,14 +25,15 @@ struct Device {
     //load_cdf2d: fn (&[u8]) -> CDF2D,
     //load_klems: fn (&[u8]) -> KlemsModel,
 
-    load_scene_bvh:      fn () -> SceneBvh,
-    load_scene_database: fn () -> SceneDatabase,
-    load_scene_info:     fn () -> SceneInfo,
-    load_entity_table:   fn (DynTable) -> EntityTable,
-    load_shape_table:    fn (DynTable) -> ShapeTable,
-    load_light_table:    fn (DynTable, SceneInfo) -> LightTable,
-    load_shader_table:   fn (DynTable) -> ShaderTable,
-    load_bvh_table:      fn (DynTable) -> BVHTable,
+    load_scene_bvh:       fn () -> SceneBvh,
+    load_scene_database:  fn () -> SceneDatabase,
+    load_scene_info:      fn () -> SceneInfo,
+    load_entity_table:    fn (DynTable) -> EntityTable,
+    load_shape_table:     fn (DynTable) -> ShapeTable,
+    load_light_table:     fn (DynTable, SceneInfo, LightAccessor) -> LightTable,
+    load_arealight_table: fn (DynTable, LightAccessor) -> LightTable,
+    load_shader_table:    fn (DynTable) -> ShaderTable,
+    load_bvh_table:       fn (DynTable) -> BVHTable,
 
     load_rays: fn () -> &[Ray]
 }

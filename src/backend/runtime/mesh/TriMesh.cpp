@@ -3,10 +3,33 @@
 
 namespace IG {
 
+void computeFaceAreas(const std::vector<uint32>& indices,
+					  const std::vector<StVector3f>& vertices,
+					  std::vector<float>& face_inv_area,
+					  size_t first_index)
+{
+	bool hasBadArea = false;
+	for (auto i = first_index, k = indices.size(); i < k; i += 4) {
+		const auto& v0	 = vertices[indices[i + 0]];
+		const auto& v1	 = vertices[indices[i + 1]];
+		const auto& v2	 = vertices[indices[i + 2]];
+		const Vector3f N = (v1 - v0).cross(v2 - v0);
+		float lN		 = N.norm();
+		if (lN < 0.00000001f) {
+			lN		   = 1.0f;
+			hasBadArea = true;
+		}
+		face_inv_area[i / 4] = 1 / (0.5f * lN);
+	}
+
+	if (hasBadArea)
+		IG_LOG(L_WARNING) << "Triangle mesh contains triangles with zero area" << std::endl;
+}
+
 void computeFaceNormals(const std::vector<uint32>& indices,
 						const std::vector<StVector3f>& vertices,
 						std::vector<StVector3f>& face_normals,
-						std::vector<float>& face_area,
+						std::vector<float>& face_inv_area,
 						size_t first_index)
 {
 	bool hasBadArea = false;
@@ -20,8 +43,8 @@ void computeFaceNormals(const std::vector<uint32>& indices,
 			lN		   = 1.0f;
 			hasBadArea = true;
 		}
-		face_normals[i / 4] = N / lN;
-		face_area[i / 4]	= 0.5f * lN;
+		face_normals[i / 4]	 = N / lN;
+		face_inv_area[i / 4] = 1 / (0.5f * lN);
 	}
 
 	if (hasBadArea)
@@ -89,7 +112,7 @@ void TriMesh::mergeFrom(const TriMesh& src)
 	normals.insert(normals.end(), src.normals.begin(), src.normals.end());
 	texcoords.insert(texcoords.end(), src.texcoords.begin(), src.texcoords.end());
 	face_normals.insert(face_normals.end(), src.face_normals.begin(), src.face_normals.end());
-	face_area.insert(face_area.end(), src.face_area.begin(), src.face_area.end());
+	face_inv_area.insert(face_inv_area.end(), src.face_inv_area.begin(), src.face_inv_area.end());
 
 	indices.resize(idx_offset + src.indices.size());
 	for (size_t i = 0; i < src.indices.size(); i += 4) {
@@ -106,11 +129,17 @@ void TriMesh::replaceID(uint32 m_idx)
 		indices[i + 3] = m_idx; // ID
 }
 
+void TriMesh::computeFaceAreaOnly(size_t first_index)
+{
+	face_inv_area.resize(faceCount());
+	IG::computeFaceAreas(indices, vertices, face_inv_area, first_index);
+}
+
 void TriMesh::computeFaceNormals(size_t first_index)
 {
 	face_normals.resize(faceCount());
-	face_area.resize(faceCount());
-	IG::computeFaceNormals(indices, vertices, face_normals, face_area, first_index);
+	face_inv_area.resize(faceCount());
+	IG::computeFaceNormals(indices, vertices, face_normals, face_inv_area, first_index);
 }
 
 void TriMesh::computeVertexNormals(size_t first_index)

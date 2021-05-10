@@ -411,48 +411,55 @@ fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
     infinite = false
 };
 
-fn @load_area_light(math: Intrinsics, _data: DeviceBuffer, info: SceneInfo) -> Light {
-    // TODO
-    make_environment_light(math, info.scene_radius, black)
+struct LightAccessor {
+    shapes:   ShapeTable,
+    entities: EntityTable
 }
 
-/*fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, color: Color, global_m: Mat4x4, normal_m: Mat3x3) -> Light {
+fn @load_area_light(math: Intrinsics, data: DeviceBuffer, acc: LightAccessor) -> Light {
+    let e0    = data.load_vec4(0);
+    let id    = bitcast[i32](e0.x);
+    let color = make_color(e0.y, e0.z, e0.w);
+
+    let entity  = acc.entities(id);
+    let shape   = acc.shapes(entity.shape_id);
+    let mesh    = shape.mesh;
     let emitter = AreaEmitter {
         sample = @ |uv| {
-            let ux  = uv.x * (count as f32);
+            let ux  = uv.x * (mesh.num_tris as f32);
             let f   = ux as i32;
             let uv2 = make_vec2(ux - (f as f32), uv.y);
-            let (i0, i1, i2) = mesh.triangles(f+off);
+            let (i0, i1, i2) = mesh.triangles(f);
             let v0  = mesh.vertices(i0);
             let v1  = mesh.vertices(i1);
             let v2  = mesh.vertices(i2);
-            let n   = mesh.face_normals(f+off);
-            let inv_area = 1.0/mesh.face_area(f+off);
-            (mat4x4_transform_point(global_m, sample_triangle(uv2.x, uv2.y, v0, v1, v2)),
-             mat3x3_mul(normal_m, n),
+            let n   = mesh.face_normals(f);
+            let inv_area = mesh.face_inv_area(f);
+            (mat4x4_transform_point(entity.global_mat, sample_triangle(uv2.x, uv2.y, v0, v1, v2)),
+             mat3x3_mul(entity.normal_mat, n),
              inv_area)
         },
         normal = @ |uv| {
-            let f = (uv.x * (count as f32)) as i32;
-            mat3x3_mul(normal_m, mesh.face_normals(f+off))
+            let f = (uv.x * (mesh.num_tris as f32)) as i32;
+            mat3x3_mul(entity.normal_mat, mesh.face_normals(f))
         },
         pdf = @ |uv| {
-            let f = (uv.x * (count as f32)) as i32;
-            1.0/mesh.face_area(f+off)
+            let f = (uv.x * (mesh.num_tris as f32)) as i32;
+            mesh.face_inv_area(f)
         }
     };
     make_area_light(math, emitter, color)
-}*/
+}
 
 type LightTable  = fn (i32) -> Light;
 
-fn @make_light_table(math: Intrinsics, dtb: DynTable, info: SceneInfo, acc: DeviceBufferAccessor) -> LightTable {
+fn @make_light_table(math: Intrinsics, dtb: DynTable, info: SceneInfo, acc: DeviceBufferAccessor, lacc: LightAccessor) -> LightTable {
     @ |id| {
         let entry = get_lookup_entry(id as u64, dtb, acc);
         let data  = get_table_entry(entry.offset, dtb, acc);
         match entry.type_id {
             0x00 => load_point_light(math, data, info),                // LIGHT_POINT
-            0x01 => load_area_light(math, data, info),                 // LIGHT_AREA				   
+            0x01 => load_area_light(math, data, lacc),                 // LIGHT_AREA				   
             0x02 => load_directional_light(math, data, info),          // LIGHT_DIRECTIONAL		   
             0x03 => load_sun_light(math, data, info),                  // LIGHT_SUN				   
             0x04 => load_sky_light(math, data, info),                  // LIGHT_SKY				   
@@ -464,5 +471,14 @@ fn @make_light_table(math: Intrinsics, dtb: DynTable, info: SceneInfo, acc: Devi
             0x21 => load_environment_textured_light(math, data, info), // LIGHT_ENVIRONMENT_TEXTURED
             _ =>  make_environment_light(math, 0, black)
         }
+    } 
+}
+
+// Same as before, but assume given id is always a area light
+fn @make_arealight_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor, lacc: LightAccessor) -> LightTable {
+    @ |id| {
+        let entry = get_lookup_entry(id as u64, dtb, acc);
+        let data  = get_table_entry(entry.offset, dtb, acc);
+        load_area_light(math, data, lacc)
     } 
 }

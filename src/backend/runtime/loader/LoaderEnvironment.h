@@ -25,6 +25,7 @@ struct LoaderEnvironment {
 	std::unordered_map<std::string, uint32> EntityIDs; // TODO: This can be large... maybe change?
 	std::unordered_map<std::string, uint32> ShapeIDs;
 	std::unordered_map<std::string, uint32> BsdfIDs;
+	std::unordered_map<std::string, uint32> AreaIDs; // Map entity to area light
 
 	BoundingBox SceneBBox;
 	float SceneDiameter = 0.0f;

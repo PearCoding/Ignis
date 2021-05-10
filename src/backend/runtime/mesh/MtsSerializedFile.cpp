@@ -269,7 +269,7 @@ TriMesh load(const std::filesystem::path& file, size_t shapeIndex)
 	trimesh.normals.resize(vertexCount);
 	trimesh.texcoords.resize(vertexCount);
 	trimesh.face_normals.resize(triCount);
-	trimesh.face_area.resize(triCount);
+	trimesh.face_inv_area.resize(triCount);
 	trimesh.indices.resize(triCount * 4);
 
 	if (mesh_flags & MF_DOUBLE)

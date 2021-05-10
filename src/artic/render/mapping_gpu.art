@@ -107,6 +107,7 @@ fn @gpu_shade( acc: Accelerator
     let entities = scene.database.entities;
     let shapes   = scene.database.shapes;
     let shaders  = scene.database.shaders;
+    let alights  = scene.database.arealights;
     
     gpu_exec_1d(acc, n, 64 /*block_size*/, |work_item| {
         let ray_id = first + work_item.gidx();
@@ -127,7 +128,7 @@ fn @gpu_shade( acc: Accelerator
         let lcl_surf = shape.surface_element(local_ray, hit);
         let glb_surf = map_surface_element(intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
         let bsdf     = @shader(ray, hit, glb_surf);
-        let mat      = make_material(bsdf);
+        let mat      = if entity.emissive { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
 
         let on_hit = path_tracer.on_hit;
         if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) {
@@ -444,6 +445,7 @@ fn @gpu_mega_kernel_trace( dev_id: i32
     let entities  = scene.database.entities;
     let shapes    = scene.database.shapes;
     let shaders   = scene.database.shaders;
+    let alights   = scene.database.arealights;
     let on_emit   = path_tracer.on_emit;
     let on_hit    = path_tracer.on_hit;
     let on_shadow = path_tracer.on_shadow;
@@ -525,7 +527,7 @@ fn @gpu_mega_kernel_trace( dev_id: i32
             let lcl_surf = shape.surface_element(local_ray, hit);
             let glb_surf = map_surface_element(intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
             let bsdf     = @shader(ray, hit, glb_surf);
-            let mat      = make_material(bsdf);
+            let mat      = if entity.emissive { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
 
             match @on_hit(ray, hit, &mut state, glb_surf, mat) {
                 Option[Color]::Some(color) => {
@@ -745,11 +747,12 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_scene_info(dev_id, &mut info);
         info
     },
-    load_entity_table = @ |dtb| make_entity_table(dtb, accb),
-    load_shape_table  = @ |dtb| make_shape_table(intrinsics, dtb, accb),
-    load_light_table  = @ |dtb, info| make_light_table(intrinsics, dtb, info, accb),
-    load_shader_table = @ |dtb| make_shader_table(intrinsics, dtb, accb),
-    load_bvh_table    = @ |dtb| -> BVHTable {
+    load_entity_table    = @ |dtb| make_entity_table(dtb, accb),
+    load_shape_table     = @ |dtb| make_shape_table(intrinsics, dtb, accb),
+    load_light_table     = @ |dtb, info, lacc| make_light_table(intrinsics, dtb, info, accb, lacc),
+    load_arealight_table = @ |dtb, lacc| make_arealight_table(intrinsics, dtb, accb, lacc),
+    load_shader_table    = @ |dtb| make_shader_table(intrinsics, dtb, accb),
+    load_bvh_table       = @ |dtb| -> BVHTable {
         @ |id| {
             let entry  = get_lookup_entry(id as u64, dtb, accb); 
             let header = get_table_entry(entry.offset, dtb, accb);
