@@ -8,6 +8,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/random.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/sort.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/bsdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/camera.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/cdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/data.art

@@ -17,16 +17,16 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 	if (!LoaderShape::load(ctx, result))
 		return false;
 
-	/*if (!LoaderBSDF::load(ctx, result))
-		return false;*/
-
-	if (!LoaderLight::load(ctx, result))
+	if (!LoaderBSDF::load(ctx, result))
 		return false;
 
 	if (!LoaderEntity::load(ctx, result))
 		return false;
 
+	if (!LoaderLight::load(ctx, result))
+		return false;
 
+	result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;
 	return true;
 }
 } // namespace IG

@@ -8,9 +8,9 @@ CPMAddPackage(
 # TODO: Make it configurable
 set(CAMERAS
     "-D CAMERA_PERSPECTIVE"
-    "-D CAMERA_ORTHOGONAL"
-    "-D CAMERA_FISHLENS"
-    "-D CAMERA_LIST"
+    #"-D CAMERA_ORTHOGONAL"
+    #"-D CAMERA_FISHLENS"
+    #"-D CAMERA_LIST"
 )
 
 # It is more useful (and user friendly) to choose between cpu and gpu
@@ -19,13 +19,13 @@ set(CAMERAS
 # Multi vendor multi GPU and CPU combinations would be bothersome, but who has this kind of configuration?
 set(DEVICES
     "-D DEVICE_DEFAULT"
-    "-D DEVICE_AVX"
-    "-D DEVICE_AVX2"
-    "-D DEVICE_AVX512"  # [NOT_TESTED, as not supported by my CPU]
-    "-D DEVICE_SSE42"
-    "-D DEVICE_ASIMD"
+    #"-D DEVICE_AVX"
+    #"-D DEVICE_AVX2"
+    #"-D DEVICE_AVX512"  # [NOT_TESTED, as not supported by my CPU]
+    #"-D DEVICE_SSE42"
+    #"-D DEVICE_ASIMD"
     "-D DEVICE_NVVM"
-    "-D DEVICE_NVVM_MEGA"
+    #"-D DEVICE_NVVM_MEGA"
     #"-D DEVICE_AMD"
     #"-D DEVICE_AMD_MEGA"
 )

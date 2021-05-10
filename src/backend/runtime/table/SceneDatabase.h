@@ -15,6 +15,7 @@ struct SceneDatabase {
 	DynTable ShaderTable;
 	DynTable BVHTable;
 
-	SceneBVH BVH;
+	IG::SceneBVH SceneBVH;
+	float SceneRadius;
 };
 } // namespace IG

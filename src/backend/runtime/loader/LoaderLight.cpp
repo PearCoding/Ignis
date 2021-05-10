@@ -71,7 +71,19 @@ static void light_point(const std::string& name, const std::shared_ptr<Parser::O
 
 static void light_area(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
-	//TODO
+	const std::string entity = light->property("entity").getString();
+
+	uint32 entity_id = 0;
+	if (!ctx.Environment.EntityIDs.count(entity))
+		IG_LOG(L_ERROR) << "No entity named '" << entity << "' exists for area light" << std::endl;
+	else
+		entity_id = ctx.Environment.EntityIDs.at(entity);
+
+	auto radiance = ctx.extractColor(light, "radiance");
+	auto& data	  = result.Database.LightTable.addLookup(LIGHT_AREA, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+	serializer.write((uint32)entity_id);
+	serializer.write(radiance);
 }
 
 static void light_directional(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
@@ -223,9 +235,9 @@ static struct {
 	{ "directional", light_directional },
 	{ "direction", light_directional },
 	{ "sun", light_sun },
-	/*{ "sunsky", light_sunsky },
-	{ "skysun", light_sunsky },
-	{ "sky", light_sky },*/
+	{ "sunsky", light_cie_uniform }, // TODO
+	{ "skysun", light_cie_uniform }, // TODO
+	{ "sky", light_cie_uniform },	 // TODO
 	{ "cie_uniform", light_cie_uniform },
 	{ "cieuniform", light_cie_uniform },
 	{ "cie_cloudy", light_cie_cloudy },

@@ -2,7 +2,8 @@
 struct SceneInfo {
     num_entities: i32,
     num_shapes:   i32,
-    num_lights:   i32
+    num_lights:   i32,
+    scene_radius: f32
 }
 
 struct Scene {
@@ -29,7 +30,7 @@ struct Device {
     load_scene_info:     fn () -> SceneInfo,
     load_entity_table:   fn (DynTable) -> EntityTable,
     load_shape_table:    fn (DynTable) -> ShapeTable,
-    load_light_table:    fn (DynTable) -> LightTable,
+    load_light_table:    fn (DynTable, SceneInfo) -> LightTable,
     load_shader_table:   fn (DynTable) -> ShaderTable,
     load_bvh_table:      fn (DynTable) -> BVHTable,
 
@@ -37,4 +38,4 @@ struct Device {
 }
 
 type Renderer = fn (Scene, Device, i32) -> ();
-type Shader   = fn (Ray, Hit, SurfaceElement) -> Material;
+type Shader   = fn (Ray, Hit, SurfaceElement) -> Bsdf;

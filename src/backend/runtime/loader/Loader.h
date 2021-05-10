@@ -15,6 +15,7 @@ struct LoaderOptions {
 
 struct LoaderResult {
 	SceneDatabase Database;
+	float SceneRadius;
 };
 
 class Loader {

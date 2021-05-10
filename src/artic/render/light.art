@@ -147,6 +147,7 @@ fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
     infinite = (lightA.infinite || lightB.infinite)
 };
 
+//-------------------------------------------
 fn @make_point_light(math: Intrinsics, pos: Vec3, color: Color) = Light {
     sample_direct = @ |_, _| {
         let intensity = color_mulf(color, 1 / (4 * flt_pi));
@@ -164,6 +165,14 @@ fn @make_point_light(math: Intrinsics, pos: Vec3, color: Color) = Light {
     infinite = false
 };
 
+fn @load_point_light(math: Intrinsics, data: DeviceBuffer, _info: SceneInfo) -> Light {
+    let pos   = data.load_vec3(0);
+    let color = data.load_vec3(4);
+
+    make_point_light(math, pos, vec3_to_color(color))
+}
+
+//-------------------------------------------
 fn @make_directional_light(_math: Intrinsics, dir: Vec3, max_radius: f32, color: Color) = Light {
     sample_direct = @ |_, _| {
         make_direct_sample(dir, color, 1, 1, 1)
@@ -176,6 +185,14 @@ fn @make_directional_light(_math: Intrinsics, dir: Vec3, max_radius: f32, color:
     infinite = true
 };
 
+fn @load_directional_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) -> Light {
+    let dir   = data.load_vec3(0);
+    let color = data.load_vec3(4);
+
+    make_directional_light(math, dir, info.scene_radius, vec3_to_color(color))
+}
+
+//-------------------------------------------
 fn @make_sun_light(math: Intrinsics, dir: Vec3, max_radius: f32, sun_radius: f32, color: Color) = Light {
     sample_direct = @ |rnd, _| {
         let u = randf(rnd);
@@ -196,6 +213,33 @@ fn @make_sun_light(math: Intrinsics, dir: Vec3, max_radius: f32, sun_radius: f32
     infinite = true
 };
 
+fn @load_sun_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) -> Light {
+    let e0    = data.load_vec4(0);
+    let dir   = make_vec3(e0.x, e0.y, e0.z);
+    let power = e0.w;
+    let sun_r = data.load_f32(4);
+
+    make_sun_light(math, dir, info.scene_radius, sun_r, make_gray_color(power))
+}
+
+fn @load_sky_light(math: Intrinsics, _data: DeviceBuffer, info: SceneInfo) -> Light {
+    // TODO
+    make_environment_light(math, info.scene_radius, black)
+}
+
+//-------------------------------------------
+// This samples the environment by naive sphere sampling
+fn @make_sunsky_light(math: Intrinsics, dir: Vec3, max_radius: f32, sun_radius: f32, sun_color: Color, sky_tex: Texture) = make_mix_light(
+        make_sun_light(math, dir, max_radius, sun_radius, sun_color),
+        make_environment_light_textured(math, max_radius, sky_tex), 
+        0.5);
+
+fn @load_sunsky_light(math: Intrinsics, _data: DeviceBuffer, info: SceneInfo) -> Light {
+    // TODO
+    make_environment_light(math, info.scene_radius, black)
+}
+
+//-------------------------------------------
 // This samples the environment by naive sphere sampling
 fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) = Light {
     sample_direct = @ |rnd, _| {
@@ -215,12 +259,12 @@ fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) = Li
     infinite = true
 };
 
-// This samples the environment by naive sphere sampling
-fn @make_sunsky_light(math: Intrinsics, dir: Vec3, max_radius: f32, sun_radius: f32, sun_color: Color, sky_tex: Texture) = make_mix_light(
-        make_sun_light(math, dir, max_radius, sun_radius, sun_color),
-        make_environment_light_textured(math, max_radius, sky_tex), 
-        0.5);
+fn @load_environment_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) -> Light {
+    let color = data.load_vec3(0);
+    make_environment_light(math, info.scene_radius, vec3_to_color(color))
+}
 
+//-------------------------------------------
 /* TODO: This should contain a distribution map for efficient sampling */
 fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Texture) -> Light {
     let eval = @|dir : Vec3| -> Color {
@@ -252,6 +296,12 @@ fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Text
     }
 }
 
+fn @load_environment_textured_light(math: Intrinsics, _data: DeviceBuffer, info: SceneInfo) -> Light {
+    // TODO
+    make_environment_light(math, info.scene_radius, black)
+}
+
+//-------------------------------------------
 fn @make_environment_light_function(math: Intrinsics, max_radius: f32, func: fn(Vec3)->Color) = Light {
     sample_direct = @ |rnd, _| {
         let u = randf(rnd);
@@ -285,9 +335,19 @@ fn @make_cie_sky_light(math: Intrinsics, max_radius: f32, zenith: Color, ground:
         color_mulf(color_add(color_mulf(zenith, c1 * a), color_mulf(ground, groundBrightness * c2 * b)), denom)
 });
 
-fn @make_cie_uniform_light(math: Intrinsics, max_radius: f32, zenith: Color, ground: Color, groundBrightness: f32) = @make_cie_sky_light(math, max_radius, zenith, ground, groundBrightness, false);
-fn @make_cie_cloudy_light(math: Intrinsics, max_radius: f32, zenith: Color, ground: Color, groundBrightness: f32) = @make_cie_sky_light(math, max_radius, zenith, ground, groundBrightness, true);
+fn @load_cie_sky_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo, cloudy: bool) -> Light {
+    let e0               = data.load_vec4(0);
+    let zenith           = make_color(e0.x, e0.y, e0.z);
+    let groundBrightness = e0.w;
+    let ground           = vec3_to_color(data.load_vec3(4));
+    make_cie_sky_light(math, info.scene_radius, zenith, ground, groundBrightness, cloudy)
+}
 
+//-------------------------------------------
+fn @load_cie_uniform_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) = @load_cie_sky_light(math, data, info, false);
+fn @load_cie_cloudy_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo)  = @load_cie_sky_light(math, data, info, true);
+
+//-------------------------------------------
 fn @make_perez_light(math: Intrinsics, max_radius: f32, sun_dir: Vec3, lum: Color, a: f32, b: f32, c: f32, d: f32, e: f32)  =
     make_environment_light_function(math, max_radius, @|dir|{
         let theta = -dir.y;                 // Cosine between zenith and direction
@@ -300,6 +360,22 @@ fn @make_perez_light(math: Intrinsics, max_radius: f32, sun_dir: Vec3, lum: Colo
         color_mulf(lum, factor)
 });
 
+fn @load_perez_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) -> Light {
+    let e0    = data.load_vec4(0);
+    let e1    = data.load_vec4(4);
+    let color = vec3_to_color(data.load_vec3(8));
+    
+    let dir = make_vec3(e0.x, e0.y, e0.z);
+    let a   = e0.w;
+    let b   = e1.x;
+    let c   = e1.y;
+    let d   = e1.z;
+    let e   = e1.w;
+    
+    make_perez_light(math, info.scene_radius, dir, color, a, b, c, d, e)
+}
+
+//-------------------------------------------
 fn @make_camera_light(math: Intrinsics, camera: Camera, color: Color) = Light {
     sample_direct = @ |_, _| {
         let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
@@ -317,6 +393,7 @@ fn @make_camera_light(math: Intrinsics, camera: Camera, color: Color) = Light {
     infinite = false
 };
 
+//-------------------------------------------
 fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
     sample_direct = @ |rnd, from_surf| {
         let (pos, n, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
@@ -333,6 +410,11 @@ fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
     delta    = false,
     infinite = false
 };
+
+fn @load_area_light(math: Intrinsics, _data: DeviceBuffer, info: SceneInfo) -> Light {
+    // TODO
+    make_environment_light(math, info.scene_radius, black)
+}
 
 /*fn @make_trimesh_light(math: Intrinsics, mesh: TriMesh, off: i32, count: i32, color: Color, global_m: Mat4x4, normal_m: Mat3x3) -> Light {
     let emitter = AreaEmitter {
@@ -364,8 +446,23 @@ fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
 
 type LightTable  = fn (i32) -> Light;
 
-fn @make_light_table(math: Intrinsics, dtb: DynTable) -> LightTable {
-    @ |_id| {
-        make_environment_light(math, 0, make_color(1,1,1))
+fn @make_light_table(math: Intrinsics, dtb: DynTable, info: SceneInfo, acc: DeviceBufferAccessor) -> LightTable {
+    @ |id| {
+        let entry = get_lookup_entry(id as u64, dtb, acc);
+        let data  = get_table_entry(entry.offset, dtb, acc);
+        match entry.type_id {
+            0x00 => load_point_light(math, data, info),                // LIGHT_POINT
+            0x01 => load_area_light(math, data, info),                 // LIGHT_AREA				   
+            0x02 => load_directional_light(math, data, info),          // LIGHT_DIRECTIONAL		   
+            0x03 => load_sun_light(math, data, info),                  // LIGHT_SUN				   
+            0x04 => load_sky_light(math, data, info),                  // LIGHT_SKY				   
+            0x05 => load_sunsky_light(math, data, info),               // LIGHT_SUNSKY			   
+            0x10 => load_cie_uniform_light(math, data, info),          // LIGHT_CIE_UNIFORM		   
+            0x11 => load_cie_cloudy_light(math, data, info),           // LIGHT_CIE_CLOUDY		   
+            0x12 => load_perez_light(math, data, info),                // LIGHT_PEREZ				  
+            0x20 => load_environment_light(math, data, info),          // LIGHT_ENVIRONMENT		  
+            0x21 => load_environment_textured_light(math, data, info), // LIGHT_ENVIRONMENT_TEXTURED
+            _ =>  make_environment_light(math, 0, black)
+        }
     } 
 }

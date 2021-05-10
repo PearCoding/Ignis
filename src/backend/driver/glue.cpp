@@ -237,11 +237,11 @@ struct Interface {
 	template <typename Node>
 	BvhProxy<Node, EntityLeaf1> load_scene_bvh(int32_t dev)
 	{
-		const size_t node_count = database->BVH.Nodes.size() / sizeof(Node);
-		const size_t leaf_count = database->BVH.Leaves.size() / sizeof(EntityLeaf1);
+		const size_t node_count = database->SceneBVH.Nodes.size() / sizeof(Node);
+		const size_t leaf_count = database->SceneBVH.Leaves.size() / sizeof(EntityLeaf1);
 		return BvhProxy<Node, EntityLeaf1>{
-			std::move(copy_to_device(dev, reinterpret_cast<const Node*>(database->BVH.Nodes.data()), node_count)),
-			std::move(copy_to_device(dev, reinterpret_cast<const EntityLeaf1*>(database->BVH.Leaves.data()), leaf_count))
+			std::move(copy_to_device(dev, reinterpret_cast<const Node*>(database->SceneBVH.Nodes.data()), node_count)),
+			std::move(copy_to_device(dev, reinterpret_cast<const EntityLeaf1*>(database->SceneBVH.Leaves.data()), leaf_count))
 		};
 	}
 
@@ -281,6 +281,7 @@ struct Interface {
 		info.num_entities = database->EntityTable.entryCount();
 		info.num_shapes	  = database->ShapeTable.entryCount();
 		info.num_lights	  = database->LightTable.entryCount();
+		info.scene_radius = database->SceneRadius;
 		return info;
 	}
 

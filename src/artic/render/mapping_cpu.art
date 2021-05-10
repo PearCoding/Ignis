@@ -63,7 +63,7 @@ fn cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut [i32], ray_ends: &
                 swap(&mut primary.rays.tmin(k),  &mut primary.rays.tmin(j));
                 swap(&mut primary.rays.tmax(k),  &mut primary.rays.tmax(j));
 
-                swap(&mut primary.ent_id(k),   &mut primary.ent_id(j));
+                swap(&mut primary.ent_id(k),    &mut primary.ent_id(j));
                 swap(&mut primary.prim_id(k),   &mut primary.prim_id(j));
                 swap(&mut primary.t(k),         &mut primary.t(j));
                 swap(&mut primary.u(k),         &mut primary.u(j));
@@ -294,7 +294,8 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
 
             let lcl_surf = @surfelem(local_ray, hit);
             let glb_surf = map_surface_element(cpu_intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
-            let mat      = @shader(ray, hit, glb_surf);
+            let bsdf     = @shader(ray, hit, glb_surf);
+            let mat      = make_material(bsdf);
 
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
             let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) { color } else { black };
@@ -331,6 +332,40 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
         }
     }
     $cpu_shade_specialized(primary, secondary, begin, end);
+}
+
+fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate: fn (i32, Color) -> (), begin: i32, end: i32, vector_width: i32) -> () {
+    fn cpu_miss_shade_specialized(primary: &PrimaryStream, begin: i32, end: i32) -> () {
+        if begin == end { return() }
+
+        let read_primary_ray    = make_ray_stream_reader(primary.rays, 1);
+        let read_primary_state  = make_primary_stream_state_reader(*primary, 1);
+        
+        let on_miss = path_tracer.on_miss;
+
+        for i, vector_width in vectorized_range(vector_width, begin, end) {
+            let ray       = read_primary_ray(i, 0);
+            let mut state = read_primary_state(i, 0);
+            let ray_id    = primary.rays.id(i);
+
+            // Execute hit point shading, and add the contribution of each lane to the frame buffer
+            let hit_color = if let Option[Color]::Some(color) = @on_miss(ray, &mut state) { color } else { black };
+
+            for lane in unroll(0, vector_width) {
+                let j = bitcast[i32](rv_extract(bitcast[f32](ray_id), lane));
+                accumulate(j,
+                    make_color(
+                        rv_extract(hit_color.r, lane),
+                        rv_extract(hit_color.g, lane),
+                        rv_extract(hit_color.b, lane)
+                    )
+                );
+            }
+
+            primary.rays.id(i) = -1;
+        }
+    }
+    $cpu_miss_shade_specialized(primary, begin, end);
 }
 
 fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
@@ -403,6 +438,12 @@ fn @cpu_trace( scene: Scene
                         let end = ray_ends(ent_id);
                         cpu_shade(ent_id, primary, secondary, scene, path_tracer, accumulate, begin, end, vector_width);
                         begin = end;
+                    }
+
+                    // Shade misses as well
+                    let last = ray_ends(scene.info.num_entities);
+                    if(begin < last) {
+                        cpu_miss_shade(primary, path_tracer, accumulate, begin, last, vector_width);
                     }
                 });
 
@@ -599,8 +640,8 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     load_scene_info = cpu_get_scene_info,
     load_entity_table = @ |dtb| make_entity_table(dtb, make_cpu_buffer),
     load_shape_table  = @ |dtb| make_shape_table(cpu_intrinsics, dtb, make_cpu_buffer),
-    load_light_table  = @ |dtb| make_light_table(cpu_intrinsics, dtb),
-    load_shader_table = @ |dtb| make_shader_table(cpu_intrinsics, dtb),
+    load_light_table  = @ |dtb, info| make_light_table(cpu_intrinsics, dtb, info, make_cpu_buffer),
+    load_shader_table = @ |dtb| make_shader_table(cpu_intrinsics, dtb, make_cpu_buffer),
     load_bvh_table    = @ |dtb| -> BVHTable {
         @ |id| {
             let entry  = get_lookup_entry(id as u64, dtb, make_cpu_buffer); 

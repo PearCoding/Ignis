@@ -22,7 +22,7 @@ struct Entity {
 
 struct LoaderEnvironment {
 	std::vector<Shape> Shapes;
-	std::vector<Entity> Entities;
+	std::unordered_map<std::string, uint32> EntityIDs; // TODO: This can be large... maybe change?
 	std::unordered_map<std::string, uint32> ShapeIDs;
 	std::unordered_map<std::string, uint32> BsdfIDs;
 

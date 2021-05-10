@@ -207,24 +207,23 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 
 		// Export data:
 		IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << pair.first << std::endl;
-		constexpr size_t ALIGNMENT = sizeof(float) * 4;
-
-		auto& meshData = result.Database.ShapeTable.addLookup(0, ALIGNMENT); // TODO: No use of the typeid currently
+		
+		auto& meshData = result.Database.ShapeTable.addLookup(0, DefaultAlignment); // TODO: No use of the typeid currently
 		VectorSerializer meshSerializer(meshData, false);
 		meshSerializer.write((uint32)child_mesh.faceCount());
 		meshSerializer.write((uint32)child_mesh.vertices.size());
 		meshSerializer.write((uint32)child_mesh.normals.size());
 		meshSerializer.write((uint32)0);
-		meshSerializer.write_aligned(child_mesh.vertices, ALIGNMENT, true);
-		meshSerializer.write_aligned(child_mesh.normals, ALIGNMENT, true);
-		meshSerializer.write_aligned(child_mesh.face_normals, ALIGNMENT, true);
+		meshSerializer.write_aligned(child_mesh.vertices, DefaultAlignment, true);
+		meshSerializer.write_aligned(child_mesh.normals, DefaultAlignment, true);
+		meshSerializer.write_aligned(child_mesh.face_normals, DefaultAlignment, true);
 		meshSerializer.write(child_mesh.indices, true); // Already aligned
-		meshSerializer.write_aligned(child_mesh.texcoords, ALIGNMENT, true);
+		meshSerializer.write_aligned(child_mesh.texcoords, DefaultAlignment, true);
 		meshSerializer.write(child_mesh.face_area, true);
 
 		// Generate BVH
 		IG_LOG(L_DEBUG) << "Generating BVH for shape " << pair.first << std::endl;
-		auto& bvhData = result.Database.BVHTable.addLookup(0, ALIGNMENT);
+		auto& bvhData = result.Database.BVHTable.addLookup(0, DefaultAlignment);
 		VectorSerializer bvhSerializer(bvhData, false);
 		if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
 			setup_prim_bvh<2, 1>(bvhSerializer, child_mesh);

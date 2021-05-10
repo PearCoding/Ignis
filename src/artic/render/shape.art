@@ -86,7 +86,7 @@ fn @make_shape_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor)
             normals      = @ |i:i32| data.load_vec3(n_start  + i*4),
             face_normals = @ |i:i32| data.load_vec3(fn_start + i*4),
             face_area    = @ |i:i32| data.load_f32(fa_start  + i),
-            triangles    =  |i:i32| { let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
+            triangles    = @ |i:i32| { let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
             attrs        = @ |_attr:i32| (false, |_i:i32| make_vec4(0,0,0,0)), // TODO
             num_attrs    = num_attrs,
             num_tris     = num_face

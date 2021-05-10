@@ -12,7 +12,6 @@ namespace IG {
 struct EntityObject {
 	BoundingBox BBox;
 	uint32 ShapeID;
-	uint32 MaterialID;
 	Matrix4f Local;
 };
 
