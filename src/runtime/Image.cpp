@@ -31,7 +31,7 @@ void ImageRgba32::flipY()
 
 ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 {
-	auto in = ImageInput::open(path);
+	auto in = ImageInput::open(path.generic_u8string());
 	if (!in)
 		return ImageRgba32();
 	const ImageSpec& spec = in->spec();
@@ -95,7 +95,7 @@ bool ImageRgba32::save(const std::filesystem::path& path)
 
 bool ImageRgba32::save(const std::filesystem::path& path, const float* rgb, size_t width, size_t height)
 {
-	auto out = ImageOutput::create(path);
+	auto out = ImageOutput::create(path.generic_u8string());
 	if (!out)
 		return false;
 
@@ -197,7 +197,7 @@ bool ImageRgb24::save(const std::filesystem::path& path)
 
 bool ImageRgb24::save(const std::filesystem::path& path, const float* rgb, size_t width, size_t height)
 {
-	auto out = ImageOutput::create(path);
+	auto out = ImageOutput::create(path.generic_u8string());
 	if (!out)
 		return false;
 

@@ -331,7 +331,7 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
                         if local_hit.prim_id >= 0 {
                             let glb_dist = local_hit.distance / sf;
 
-                            if glb_dist >= t && glb_dist <= hit.distance {
+                            if glb_dist <= hit.distance {
                                 hit      = make_hit(entity_id, local_hit.prim_id, glb_dist, local_hit.uv_coords);
                                 ray.tmax = glb_dist;
 
