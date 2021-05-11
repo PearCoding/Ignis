@@ -148,6 +148,15 @@ fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
 };
 
 //-------------------------------------------
+fn @make_null_light() = Light {
+    sample_direct = @ |_, _| undef[DirectLightSample](),
+    sample_emission = @ |_| undef[EmissionSample](),
+    emission = @ |_, _| make_emission_value(black, 1, 1),
+    delta    = true,
+    infinite = true
+};
+
+//-------------------------------------------
 fn @make_point_light(math: Intrinsics, pos: Vec3, color: Color) = Light {
     sample_direct = @ |_, _| {
         let intensity = color_mulf(color, 1 / (4 * flt_pi));

@@ -2,7 +2,7 @@
 #include "Logger.h"
 
 namespace IG {
-static void tex_image(const std::shared_ptr<Parser::Object>& tex, const LoaderContext& ctx, std::ostream& os)
+/* static void tex_image(const std::shared_ptr<Parser::Object>& tex, const LoaderContext& ctx, std::ostream& os)
 {
 	const std::string filename	  = ctx.handlePath(tex->property("filename").getString());
 	const std::string filter_type = tex->property("filter_type").getString("bilinear");
@@ -36,18 +36,6 @@ static void tex_checkerboard(const std::shared_ptr<Parser::Object>& tex, const L
 	os << "make_checkerboard_texture(make_vec2(" << scale_x << ", " << scale_y << "), " << color0 << ", " << color1 << ")";
 }
 
-static void tex_error(const std::string& msg, std::ostream& os)
-{
-	IG_LOG(L_ERROR) << msg << std::endl;
-	os << "make_black_texture()/* ERROR */";
-}
-
-static void tex_unknown(const std::shared_ptr<Parser::Object>& tex, const LoaderContext&, std::ostream& os)
-{
-	IG_LOG(L_WARNING) << "Unknown texture '" << tex->pluginType() << "'" << std::endl;
-	os << "make_black_texture()/* Null */";
-}
-
 using TextureLoader = void (*)(const std::shared_ptr<Parser::Object>& tex, const LoaderContext& ctx, std::ostream& os);
 static struct {
 	const char* Name;
@@ -57,24 +45,10 @@ static struct {
 	{ "bitmap", tex_image },
 	{ "checkerboard", tex_checkerboard },
 	{ "", nullptr }
-};
+}; */
 
-std::string LoaderTexture::extract(const std::shared_ptr<Parser::Object>& tex, const LoaderContext& ctx)
+bool LoaderTexture::load(const std::shared_ptr<Parser::Object>& tex, const LoaderContext& ctx, LoaderResult& res)
 {
-	std::stringstream sstream;
-
-	if (!tex) {
-		tex_error("No tex given", sstream);
-	} else {
-		for (size_t i = 0; _generators[i].Loader; ++i) {
-			if (_generators[i].Name == tex->pluginType()) {
-				_generators[i].Loader(tex, ctx, sstream);
-				return sstream.str();
-			}
-		}
-		tex_unknown(tex, ctx, sstream);
-	}
-
-	return sstream.str();
+	return true;
 }
 } // namespace IG

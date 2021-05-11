@@ -12,7 +12,7 @@ inline void writeMatrix(Serializer& serializer, const Eigen::MatrixBase<Derived>
 {
 	for (int i = 0; i < m.rows(); ++i)
 		for (int j = 0; j < m.cols(); ++j)
-			serializer.write(m(i, j));
+			serializer.write((float)m(i, j));
 }
 
 template <size_t N>
@@ -36,6 +36,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 	ctx.Environment.SceneBBox = BoundingBox::Empty();
 
 	std::vector<EntityObject> in_objs;
+	result.Database.EntityTable.reserve(ctx.Scene.entities().size() * 48);
 	for (const auto& pair : ctx.Scene.entities()) {
 		const auto child = pair.second;
 
@@ -63,8 +64,8 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
 		// Extend scene box
 		ctx.Environment.SceneBBox.extend(entityBox);
-		
-		// Register name for lights to assosciate with 
+
+		// Register name for lights to assosciate with
 		ctx.Environment.EntityIDs[pair.first] = counter++;
 
 		const int32 lightID = ctx.Environment.AreaIDs.count(pair.first) == 0 ? -1 : (int32)ctx.Environment.AreaIDs.at(pair.first);
@@ -76,15 +77,15 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 		entitySerializer.write((uint32)bsdfID);
 		entitySerializer.write((int32)lightID);
 		entitySerializer.write((uint32)0); // Padding
-		writeMatrix(entitySerializer, transform.matrix());
 		writeMatrix(entitySerializer, invTransform.matrix());
+		writeMatrix(entitySerializer, transform.matrix());
 		writeMatrix(entitySerializer, transform.matrix().block<3, 3>(0, 0).transpose().inverse());
 
 		// Extract information for BVH building
 		EntityObject obj;
-		obj.BBox	   = entityBox;
-		obj.Local	   = invTransform.matrix();
-		obj.ShapeID	   = shapeID;
+		obj.BBox	= entityBox;
+		obj.Local	= invTransform.matrix();
+		obj.ShapeID = shapeID;
 		in_objs.emplace_back(obj);
 	}
 

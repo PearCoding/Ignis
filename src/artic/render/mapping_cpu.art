@@ -282,7 +282,8 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
         let on_bounce = path_tracer.on_bounce;
         let entity    = @entities(entity_id);
         let shape     = @shapes(entity.shape_id);
-        let shader    = @shaders(entity.mat_id);
+        let shader    = @shaders(entity.bsdf_id);
+        //let light     = if unlikely(entity.emissive) { @alights(entity.light_id) } else { make_null_light() };
         let surfelem  = shape.surface_element;
 
         for i, vector_width in vectorized_range(vector_width, begin, end) {
@@ -296,11 +297,11 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
             let lcl_surf = @surfelem(local_ray, hit);
             let glb_surf = map_surface_element(cpu_intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
             let bsdf     = @shader(ray, hit, glb_surf);
-            let mat      = if entity.emissive { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
+            let mat      = if unlikely(entity.emissive) { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
 
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
             let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) { color } else { black };
-
+            
             for lane in unroll(0, vector_width) {
                 let j = bitcast[i32](rv_extract(bitcast[f32](ray_id), lane));
                 accumulate(j,

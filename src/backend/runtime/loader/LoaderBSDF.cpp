@@ -332,8 +332,8 @@ static struct {
 	{ "disney", bsdf_disney },
 	{ "plastic", bsdf_plastic },
 	{ "roughplastic", bsdf_plastic }, /*TODO*/
-	/*{ "klems", bsdf_klems },
-	{ "blendbsdf", bsdf_blend },*/
+	/*{ "klems", bsdf_klems },*/
+	{ "blendbsdf", bsdf_blend },
 	{ "mask", bsdf_mask },
 	{ "twosided", bsdf_twosided },
 	{ "passthrough", bsdf_passthrough },

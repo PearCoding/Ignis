@@ -22,7 +22,7 @@ struct TransformCache {
 	TransformCache(const Transformf& t)
 	{
 		TransformMatrix = t.matrix();
-		NormalMatrix	= TransformMatrix.transpose().inverse().block<3, 3>(0, 0);
+		NormalMatrix	= TransformMatrix.block<3, 3>(0, 0).transpose().inverse();
 	}
 
 	inline Vector3f applyTransform(const Vector3f& v) const

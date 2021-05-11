@@ -20,7 +20,7 @@ set(CAMERAS
 set(DEVICES
     "-D DEVICE_DEFAULT"
     #"-D DEVICE_AVX"
-    #"-D DEVICE_AVX2"
+    "-D DEVICE_AVX2"
     #"-D DEVICE_AVX512"  # [NOT_TESTED, as not supported by my CPU]
     #"-D DEVICE_SSE42"
     #"-D DEVICE_ASIMD"
@@ -32,7 +32,7 @@ set(DEVICES
 
 set(RENDERER
     "-D RENDERER_PATH"
-    "-D RENDERER_DEBUG"
+    #"-D RENDERER_DEBUG"
 )
 
 #############################################

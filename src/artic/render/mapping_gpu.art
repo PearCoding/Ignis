@@ -121,14 +121,14 @@ fn @gpu_shade( acc: Accelerator
 
         let entity         = @entities(ent_id);
         let shape          = @shapes(entity.shape_id);
-        let shader         = @shaders(entity.mat_id);
+        let shader         = @shaders(entity.bsdf_id);
         let (local_ray, _) = transform_ray(intrinsics, ray, entity.local_mat);
 
         let hit      = make_primary_stream_hit_reader(primary, 1)(ray_id, 0);
         let lcl_surf = shape.surface_element(local_ray, hit);
         let glb_surf = map_surface_element(intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
         let bsdf     = @shader(ray, hit, glb_surf);
-        let mat      = if entity.emissive { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
+        let mat      = if unlikely(entity.emissive) { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
 
         let on_hit = path_tracer.on_hit;
         if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) {
@@ -150,8 +150,7 @@ fn @gpu_shade( acc: Accelerator
         if let Option[(Ray, RayState)]::Some(new_ray, new_state) = @on_bounce(ray, hit, &mut state, glb_surf, mat) {
             make_ray_stream_writer(primary.rays, 1)(ray_id, 0, new_ray);
             make_primary_stream_state_writer(primary, 1)(ray_id, 0, new_state);
-        } 
-        else {
+        } else {
             primary.rays.id(ray_id) = -1;
         }
     });
@@ -506,11 +505,8 @@ fn @gpu_mega_kernel_trace( dev_id: i32
             let hit = gpu_traverse_single_helper(intrinsics, min_max, ray, scene, false /*any_hit*/, 1 /*root*/);
             if hit.prim_id == -1 {
                 let on_miss = path_tracer.on_miss;
-                match @on_miss(ray, &mut state) {
-                    Option[Color]::Some(color) => {
-                        final_color = color_add(final_color, color);
-                    },
-                    _ => ()
+                if let Option[Color]::Some(color) = @on_miss(ray, &mut state) {
+                    final_color = color_add(final_color, color);
                 }
                 continue()
             }
@@ -521,37 +517,28 @@ fn @gpu_mega_kernel_trace( dev_id: i32
             
             let entity         = @entities(hit.ent_id);
             let shape          = @shapes(entity.shape_id);
-            let shader         = @shaders(entity.mat_id);
+            let shader         = @shaders(entity.bsdf_id);
             let (local_ray, _) = transform_ray(intrinsics, ray, entity.local_mat);
 
             let lcl_surf = shape.surface_element(local_ray, hit);
             let glb_surf = map_surface_element(intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
             let bsdf     = @shader(ray, hit, glb_surf);
-            let mat      = if entity.emissive { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
+            let mat      = if unlikely(entity.emissive) { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
 
-            match @on_hit(ray, hit, &mut state, glb_surf, mat) {
-                Option[Color]::Some(color) => {
-                    final_color = color_add(final_color, color);
-                },
-                _ => ()
+            if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) {
+                final_color = color_add(final_color, color);
             }
 
-            match @on_shadow(ray, hit, &mut state, glb_surf, mat) {
-                Option[(Ray, Color)]::Some(ray, color) => {
-                    shadow_color = color;
-                    shadow_ray   = ray;
-                    trace_shadow = true;
-                },
-                _ => ()
+            if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, hit, &mut state, glb_surf, mat) {
+                shadow_color = color;
+                shadow_ray   = new_ray;
+                trace_shadow = true;
             }
 
-            match @on_bounce(ray, hit, &mut state, glb_surf, mat) {
-                Option[(Ray, RayState)]::Some(new_ray, new_state) => {
-                    ray   = new_ray;
-                    state = new_state;
-                    pixel &= pixel_mask;
-                },
-                _ => ()
+            if let Option[(Ray, RayState)]::Some(new_ray, new_state) = @on_bounce(ray, hit, &mut state, glb_surf, mat) {
+                ray   = new_ray;
+                state = new_state;
+                pixel &= pixel_mask;
             }
 
             if trace_shadow && gpu_traverse_single_helper(intrinsics, min_max, shadow_ray, scene, true /*any_hit*/, 1 /*root*/).prim_id == -1 {
@@ -563,7 +550,6 @@ fn @gpu_mega_kernel_trace( dev_id: i32
 }
 
 // GPU device ----------------------------------------------------------------------
-
 
 fn @make_gpu_buffer(p: &addrspace(1)[u8], is_nvvm: bool) -> DeviceBuffer {
     if is_nvvm {
@@ -673,7 +659,7 @@ fn @make_gpu_device( dev_id: i32
                    , acc: Accelerator
                    , intrinsics: Intrinsics
                    , min_max: MinMax
-                   , read_pixel: fn (&[f32], i32) -> Color
+                   , _read_pixel: fn (&[f32], i32) -> Color
                    , accb: DeviceBufferAccessor
                    , atomics: Atomics
                    , streaming: bool
