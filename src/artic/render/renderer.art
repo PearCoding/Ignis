@@ -135,7 +135,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                     let in_dir  = vec3_mulf(light_dir, inv_d);
                     let out_dir = vec3_neg(ray.dir);
 
-                    let pdf_e = if light.delta { 1 } else {  mat.bsdf.pdf(in_dir, out_dir) };
+                    let pdf_e = if light.delta { 1 } else { mat.bsdf.pdf(in_dir, out_dir) };
                     let pdf_l = light_sample.pdf_area * pdf_lightpick;
 
                     let cos_l = light_sample.cos;
@@ -150,7 +150,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                     ))
                 }
             }
-            return(Option[(Ray, Color)]::None)
+            Option[(Ray, Color)]::None
         }
 
         fn @on_hit( ray: Ray
@@ -174,8 +174,8 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
         fn @on_miss( ray: Ray
                    , state: &mut RayState) {
             let mut inflights = 0;
-            let mut color = make_color(0, 0, 0);
-            let lights = scene.database.lights;
+            let mut color     = black;
+            let lights        = scene.database.lights;
 
             // TODO: Better use randomness to pick one infinite light
             for light_id in range(0, num_lights) {

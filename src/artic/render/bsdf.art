@@ -1,11 +1,11 @@
 // Opaque description of a point on a surface
 struct SurfaceElement {
-    is_entering: bool,              // True if the path enters the surface
-    point:       Vec3,              // Point on the surface
-    face_normal: Vec3,              // Geometric normal at the surface point
-    uv_coords:   Vec2,              // UV coordinates on the surface
-    attr:        fn (i32) -> Vec4,  // Vertex attributes (interpolated)
-    local:       Mat3x3             // Local coordinate system at the surface point
+    is_entering: bool,  // True if the path enters the surface
+    point:       Vec3,  // Point on the surface
+    face_normal: Vec3,  // Geometric normal at the surface point
+    uv_coords:   Vec2,  // UV coordinates on the surface
+    tex_coords:  Vec2,  // Vertex attributes (interpolated)
+    local:       Mat3x3 // Local coordinate system at the surface point
 }
 
 fn @invert_surface_element(surf: SurfaceElement) = SurfaceElement {
@@ -13,7 +13,7 @@ fn @invert_surface_element(surf: SurfaceElement) = SurfaceElement {
     point       = surf.point,
     face_normal = vec3_neg(surf.face_normal),
     uv_coords   = surf.uv_coords,
-    attr        = surf.attr,
+    tex_coords  = surf.tex_coords,
     local       = flip_orthonormal_mat3x3(surf.local)
 };
 
@@ -23,7 +23,7 @@ fn @map_surface_element(math: Intrinsics, surf: SurfaceElement, global_mat: Mat4
     point       = mat4x4_transform_point(global_mat, surf.point),
     face_normal = vec3_normalize(math, mat3x3_mul(normal_mat, surf.face_normal)),
     uv_coords   = surf.uv_coords,
-    attr        = surf.attr,
+    tex_coords  = surf.tex_coords,
     local       = mat3x3_normalize_cols(math, mat3x3_matmul(normal_mat, surf.local))
 };
 
@@ -497,7 +497,7 @@ fn @make_normalmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (Sur
         point       = surf.point,
         face_normal = surf.face_normal,
         uv_coords   = surf.uv_coords,
-        attr        = surf.attr,
+        tex_coords  = surf.tex_coords,
         local       = make_orthonormal_mat3x3(N)
     });
 
@@ -531,7 +531,7 @@ fn @make_bumpmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (Surfa
         point       = surf.point,
         face_normal = surf.face_normal,
         uv_coords   = surf.uv_coords,
-        attr        = surf.attr,
+        tex_coords  = surf.tex_coords,
         local       = make_orthonormal_mat3x3(N)
     });
 
