@@ -68,6 +68,12 @@ static inline void setup_camera(RuntimeRenderSettings& settings, LoaderOptions& 
 	settings.CameraEye = cameraTransform * Vector3f::Zero();
 	settings.CameraDir = cameraTransform.linear().col(2);
 	settings.CameraUp  = cameraTransform.linear().col(1);
+
+	settings.TMin = camera->property("near_clip").getNumber(settings.TMin);
+	settings.TMax = camera->property("far_clip").getNumber(settings.TMax);
+
+	if (settings.TMax < settings.TMin)
+		std::swap(settings.TMin, settings.TMax);
 }
 
 Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
@@ -135,15 +141,17 @@ void Runtime::step(const Camera& camera)
 
 	DriverRenderSettings settings;
 	for (int i = 0; i < 3; ++i)
-		settings.eye[i] = camera.eye(i);
+		settings.eye[i] = camera.Eye(i);
 	for (int i = 0; i < 3; ++i)
-		settings.dir[i] = camera.dir(i);
+		settings.dir[i] = camera.Direction(i);
 	for (int i = 0; i < 3; ++i)
-		settings.up[i] = camera.up(i);
+		settings.up[i] = camera.Up(i);
 	for (int i = 0; i < 3; ++i)
-		settings.right[i] = camera.right(i);
-	settings.width			 = camera.w;
-	settings.height			 = camera.h;
+		settings.right[i] = camera.Right(i);
+	settings.width			 = camera.SensorWidth;
+	settings.height			 = camera.SensorHeight;
+	settings.tmin			 = camera.TMin;
+	settings.tmax			 = camera.TMax;
 	settings.rays			 = nullptr; // No artifical ray streams
 	settings.device			 = mDevice;
 	settings.max_path_length = mLoadedRenderSettings.MaxPathLength;

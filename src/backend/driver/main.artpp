@@ -30,7 +30,9 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
         settings.eye,
         make_mat3x3(settings.right, settings.up, settings.dir),
         settings.width,
-        settings.height
+        settings.height,
+        settings.tmin,
+        settings.tmax
     );
 #elif CAMERA_ORTHOGONAL
     let camera = make_orthogonal_camera(
@@ -38,7 +40,9 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
         settings.eye,
         make_mat3x3(settings.right, settings.up, settings.dir),
         settings.width,
-        settings.height
+        settings.height,
+        settings.tmin,
+        settings.tmax
     );
 #elif CAMERA_FISHLENS
     let camera = make_fishlens_camera(
@@ -46,7 +50,9 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
         settings.eye,
         make_mat3x3(settings.right, settings.up, settings.dir),
         settings.width,
-        settings.height
+        settings.height,
+        settings.tmin,
+        settings.tmax
     );
 #endif
 #if CAMERA_LIST

@@ -30,6 +30,7 @@ static inline void usage()
 			  << "           --dir       x y z      Sets the direction vector of the camera\n"
 			  << "           --up        x y z      Sets the up vector of the camera\n"
 			  << "           --fov       degrees    Sets the horizontal field of view (in degrees)\n"
+			  << "           --range     tmin tmax  Sets near and far clip range in world units\n"
 			  << "           --camera    cam_type   Override camera type\n"
 			  << "           --technique tech_type  Override technique/integrator type\n"
 			  << "   -t      --target    target     Sets the target platform (default: autodetect CPU)\n"
@@ -60,6 +61,7 @@ int main(int argc, char** argv)
 	std::optional<Vector3f> dir;
 	std::optional<Vector3f> up;
 	std::optional<float> fov;
+	std::optional<Vector2f> trange;
 	Target target = Target::INVALID;
 	int device	  = 0;
 	std::string overrideTechnique;
@@ -82,6 +84,9 @@ int main(int argc, char** argv)
 			} else if (!strcmp(argv[i], "--up")) {
 				check_arg(argc, argv, i, 3);
 				up = { Vector3f(strtof(argv[++i], nullptr), strtof(argv[++i], nullptr), strtof(argv[++i], nullptr)) };
+			} else if (!strcmp(argv[i], "--range")) {
+				check_arg(argc, argv, i, 2);
+				trange = { Vector2f(strtof(argv[++i], nullptr), strtof(argv[++i], nullptr)) };
 			} else if (!strcmp(argv[i], "--fov")) {
 				check_arg(argc, argv, i, 1);
 				fov = strtof(argv[++i], nullptr);
@@ -186,7 +191,10 @@ int main(int argc, char** argv)
 	const auto def		  = runtime->loadedRenderSettings();
 	const int film_width  = a_film_width.value_or(def.FilmWidth);
 	const int film_height = a_film_height.value_or(def.FilmHeight);
-	Camera camera(eye.value_or(def.CameraEye), dir.value_or(def.CameraDir), up.value_or(def.CameraUp), fov.value_or(def.FOV), (float)film_width / (float)film_height);
+	const auto clip		  = trange.value_or(Vector2f(def.TMin, def.TMax));
+	Camera camera(eye.value_or(def.CameraEye), dir.value_or(def.CameraDir), up.value_or(def.CameraUp),
+				  fov.value_or(def.FOV), (float)film_width / (float)film_height,
+				  clip(0), clip(1));
 	runtime->setup(film_width, film_height);
 
 #ifdef WITH_UI
@@ -202,7 +210,7 @@ int main(int argc, char** argv)
 	while (!done) {
 #ifdef WITH_UI
 		bool prevRun = running;
-		done = UI::handleInput(iter, running, camera);
+		done		 = UI::handleInput(iter, running, camera);
 #endif
 
 		if (running) {

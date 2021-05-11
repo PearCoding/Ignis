@@ -2,6 +2,7 @@
     "files.associations": {
         "*.prc": "lisp",
         "*.artpp": "rust",
+        "*.nvvm": "llvm",
         "*.impala": "rust",
         "*.art": "rust",
         "cctype": "cpp",
@@ -121,7 +122,13 @@
         "ranges": "cpp",
         "stop_token": "cpp",
         "valarray": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "*.def": "cpp",
+        "cassert": "cpp",
+        "cerrno": "cpp",
+        "cfloat": "cpp",
+        "ciso646": "cpp",
+        "climits": "cpp"
     },
     "cmake.configureOnOpen": true
 }

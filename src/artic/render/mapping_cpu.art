@@ -280,11 +280,10 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
         let on_hit    = path_tracer.on_hit;
         let on_shadow = path_tracer.on_shadow;
         let on_bounce = path_tracer.on_bounce;
-        let entity    = @entities(entity_id);
-        let shape     = @shapes(entity.shape_id);
-        let shader    = @shaders(entity.bsdf_id);
+        let entity    = entities(entity_id);
+        let shape     = shapes(entity.shape_id);
+        let shader    = shaders(entity.bsdf_id);
         //let light     = if unlikely(entity.emissive) { @alights(entity.light_id) } else { make_null_light() };
-        let surfelem  = shape.surface_element;
 
         for i, vector_width in vectorized_range(vector_width, begin, end) {
             let ray       = read_primary_ray(i, 0);
@@ -294,9 +293,9 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
 
             let (local_ray, _) = transform_ray(cpu_intrinsics, ray, entity.local_mat);
 
-            let lcl_surf = @surfelem(local_ray, hit);
+            let lcl_surf = shape.surface_element(local_ray, hit);
             let glb_surf = map_surface_element(cpu_intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);
-            let bsdf     = @shader(ray, hit, glb_surf);
+            let bsdf     = shader(ray, hit, glb_surf);
             let mat      = if unlikely(entity.emissive) { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
 
             // Execute hit point shading, and add the contribution of each lane to the frame buffer

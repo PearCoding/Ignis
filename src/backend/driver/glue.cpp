@@ -321,6 +321,8 @@ void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
 	renderSettings.right.x = settings->right[0];
 	renderSettings.right.y = settings->right[1];
 	renderSettings.right.z = settings->right[2];
+	renderSettings.tmin	   = settings->tmin;
+	renderSettings.tmax	   = settings->tmax;
 
 	renderSettings.max_path_len = settings->max_path_length;
 

@@ -210,7 +210,7 @@ static bool handle_events(uint32_t& iter, bool& run, Camera& cam)
 						iter = 0;
 						break;
 					case SDLK_KP_9:
-						cam.update_dir(-cam.dir, cam.up);
+						cam.update_dir(-cam.Direction, cam.Up);
 						iter = 0;
 						break;
 					case SDLK_1:
@@ -376,7 +376,7 @@ static bool handle_events(uint32_t& iter, bool& run, Camera& cam)
 
 		if (sPoseResetRequest || sPoseRequest >= 0) {
 			auto pose = sPoseResetRequest ? sPoseManager.initialPose() : sPoseManager.pose(sPoseRequest);
-			cam.eye	  = pose.Eye;
+			cam.Eye	  = pose.Eye;
 			cam.update_dir(pose.Dir, pose.Up);
 			iter			  = 0;
 			sPoseRequest	  = -1;

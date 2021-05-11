@@ -21,6 +21,8 @@ struct DriverRenderSettings {
 	float right[3];
 	float width;
 	float height;
+	float tmin;
+	float tmax;
 	const IG::Ray* rays; // If non-null, width contains the number of rays and height is set to 1
 	IG::uint32 device;
 	IG::uint32 max_path_length;

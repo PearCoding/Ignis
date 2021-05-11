@@ -4,46 +4,50 @@
 
 namespace IG {
 struct Camera {
-	Vector3f eye;
-	Vector3f dir;
-	Vector3f right;
-	Vector3f up;
-	float w, h;
+	Vector3f Eye;
+	Vector3f Direction;
+	Vector3f Right;
+	Vector3f Up;
+	float SensorWidth, SensorHeight;
+	float TMin, TMax;
 
-	inline Camera(const Vector3f& e, const Vector3f& d, const Vector3f& u, float fov, float ratio)
+	inline Camera(const Vector3f& e, const Vector3f& d, const Vector3f& u, float fov, float ratio, float tmin, float tmax)
 	{
-		eye	  = e;
-		dir	  = d.normalized();
-		right = dir.cross(u).normalized();
-		up	  = right.cross(dir).normalized();
+		Eye		  = e;
+		Direction = d.normalized();
+		Right	  = Direction.cross(u).normalized();
+		Up		  = Right.cross(Direction).normalized();
 
-		w = std::tan(fov * Deg2Rad / 2);
-		h = w / ratio;
+		SensorWidth	 = std::tan(fov * Deg2Rad / 2);
+		SensorHeight = SensorWidth / ratio;
+
+		TMin = tmin;
+		TMax = tmax;
 	}
 
 	inline void rotate(float yaw, float pitch)
 	{
-		dir	  = Eigen::AngleAxisf(-pitch, right) * Eigen::AngleAxisf(-yaw, up) * dir;
-		right = dir.cross(up).normalized();
-		up	  = right.cross(dir).normalized();
+		Direction = Eigen::AngleAxisf(-pitch, Right) * Eigen::AngleAxisf(-yaw, Up) * Direction;
+		Right	  = Direction.cross(Up).normalized();
+		Up		  = Right.cross(Direction).normalized();
 	}
 
 	inline void roll(float angle)
 	{
-		right = Eigen::AngleAxisf(angle, dir) * right;
-		up	  = Eigen::AngleAxisf(angle, dir) * up;
+		Right = Eigen::AngleAxisf(angle, Direction) * Right;
+		Up	  = Eigen::AngleAxisf(angle, Direction) * Up;
 	}
 
 	inline void update_dir(const Vector3f& ndir, const Vector3f& nup)
 	{
-		dir	  = ndir;
-		right = dir.cross(nup).normalized();
-		up	  = right.cross(dir).normalized();
+		Direction = ndir;
+		Right	  = Direction.cross(nup).normalized();
+		Up		  = Right.cross(Direction).normalized();
 	}
 
 	inline void move(float x, float y, float z)
 	{
-		eye += right * x + up * y + dir * z;
+		Eye += Right * x + Up * y + Direction * z;
 	}
 };
 } // namespace IG

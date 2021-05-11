@@ -33,12 +33,12 @@ PYBIND11_MODULE(pyignis, m)
 		.def_readwrite("FilmHeight", &RuntimeRenderSettings::FilmHeight);
 
 	py::class_<Camera>(m, "Camera")
-		.def_readwrite("Eye", &Camera::eye)
-		.def_readwrite("Direction", &Camera::dir)
-		.def_readwrite("Right", &Camera::right)
-		.def_readwrite("Up", &Camera::up)
-		.def_readwrite("SensorWidth", &Camera::w)
-		.def_readwrite("SensorHeight", &Camera::h);
+		.def_readwrite("Eye", &Camera::Eye)
+		.def_readwrite("Direction", &Camera::Direction)
+		.def_readwrite("Right", &Camera::Right)
+		.def_readwrite("Up", &Camera::Up)
+		.def_readwrite("SensorWidth", &Camera::SensorWidth)
+		.def_readwrite("SensorHeight", &Camera::SensorHeight);
 
 	py::class_<Ray>(m, "Ray")
 		.def(py::init([](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, 1) }; }))

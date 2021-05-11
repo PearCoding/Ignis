@@ -10,9 +10,9 @@ struct CameraPose {
 
 	inline CameraPose() = default;
 	inline explicit CameraPose(const Camera& cam)
-		: Eye(cam.eye)
-		, Dir(cam.dir)
-		, Up(cam.up)
+		: Eye(cam.Eye)
+		, Dir(cam.Direction)
+		, Up(cam.Up)
 	{
 	}
 };

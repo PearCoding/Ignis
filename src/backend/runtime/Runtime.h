@@ -22,6 +22,8 @@ struct RuntimeRenderSettings {
 	Vector3f CameraDir	 = Vector3f::UnitZ();
 	Vector3f CameraUp	 = Vector3f::UnitY();
 	float FOV			 = 60;
+	float TMin			 = 0;
+	float TMax			 = std::numeric_limits<float>::max();
 	uint32 MaxPathLength = 64;
 };
 

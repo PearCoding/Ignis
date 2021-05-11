@@ -126,7 +126,8 @@ fn @make_ray(org: Vec3, dir: Vec3, tmin: f32, tmax: f32) -> Ray {
 
 // Transforms ray and returns scale factor as well
 fn @transform_ray(math: Intrinsics, ray: Ray, m: Mat4x4) -> (Ray, f32) {
-    let d = mat3x3_mul(mat4x4_linear(m), ray.dir);
+    let d4 = mat4x4_mul(m, make_vec4(ray.dir.x, ray.dir.y, ray.dir.z, 0));
+    let d  = make_vec3(d4.x, d4.y, d4.z);
     let scale_factor = vec3_len(math, d);
     let nd = vec3_mulf(d, 1/scale_factor);
 
@@ -209,7 +210,7 @@ fn @intersect_ray_tri(math: Intrinsics, backface_culling: bool, ray: Ray, tri: T
     mask &= t >= abs_det * ray.tmin;
     mask &= t <= abs_det * ray.tmax;
 
-    if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
+    //if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
 
     if mask {
         let inv_det = 1 / abs_det;
