@@ -76,6 +76,13 @@ static const char* ToneMappingMethodOptions[] = {
 static const char* sToneMapping_Method = ToneMappingMethodOptions[(int)ToneMappingMethod::ACES];
 static bool sToneMappingGamma		   = false;
 
+static DebugMode sCurrentDebugMode	  = DebugMode::Normal;
+static const char* DebugModeOptions[] = {
+	"Normal", "Tangent", "Bitangent", "Geom. Norm.", "Tex. Coords", "UV Coords", "Hit Dist.", "Prim ID", "Entity ID"
+};
+static const char* sDebugMode_Method = DebugModeOptions[(int)sCurrentDebugMode];
+static bool sShowDebugMode			 = false;
+
 // Pose IO
 constexpr char POSE_FILE[] = "data/poses.lst";
 static PoseManager sPoseManager;
@@ -771,8 +778,10 @@ static void make_screenshot(size_t width, size_t height, uint32_t iter)
 
 ////////////////////////////////////////////////////////////////
 
-void init(int width, int height, const float* pixels)
+void init(int width, int height, const float* pixels, bool showDebug)
 {
+	sShowDebugMode = showDebug;
+
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
 		IG_LOG(L_FATAL) << "Cannot initialize SDL." << std::endl;
 
@@ -837,6 +846,8 @@ bool handleInput(uint32_t& iter, bool& run, Camera& cam)
 	return handle_events(iter, run, cam);
 }
 
+DebugMode currentDebugMode() { return sCurrentDebugMode; }
+
 static void handle_imgui(uint32_t iter)
 {
 	constexpr size_t UI_W = 300;
@@ -865,6 +876,24 @@ static void handle_imgui(uint32_t iter)
 		ImGui::PushItemWidth(-1);
 		ImGui::PlotHistogram("", sHistogramF.data(), HISTOGRAM_SIZE, 0, nullptr, 0.0f, 1.0f, ImVec2(0, 60));
 		ImGui::PopItemWidth();
+	}
+
+	if (sShowDebugMode) {
+		if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
+			if (ImGui::BeginCombo("Mode", sDebugMode_Method)) {
+				for (int i = 0; i < IM_ARRAYSIZE(DebugModeOptions); ++i) {
+					bool is_selected = (sDebugMode_Method == DebugModeOptions[i]);
+					if (ImGui::Selectable(DebugModeOptions[i], is_selected)) {
+						sDebugMode_Method = DebugModeOptions[i];
+						sCurrentDebugMode = (DebugMode)i;
+					}
+					if (is_selected)
+						ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndCombo();
+			}
+		}
 	}
 
 	if (ImGui::CollapsingHeader("ToneMapping", ImGuiTreeNodeFlags_DefaultOpen)) {

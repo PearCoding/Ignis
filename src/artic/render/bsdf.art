@@ -75,8 +75,16 @@ fn @bsdf_sample_mulf(sample: BsdfSample, pdf_f: f32, color_f: f32) = BsdfSample 
 };
 
 // Creates a fully absorbing BSDF that behaves like a black body
-fn @make_black_bsdf() = Bsdf {
+fn @make_black_bsdf(surf: SurfaceElement) = Bsdf {
     eval =   @ |_, _| black,
+    pdf  =   @ |_, _| 0,
+    sample = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, black, true),
+    is_specular = true
+};
+
+// Error 
+fn @make_error_bsdf() = Bsdf {
+    eval =   @ |_, _| pink,
     pdf  =   @ |_, _| 0,
     sample = @ |_, _, _| reject_bsdf_sample(),
     is_specular = false
@@ -582,7 +590,7 @@ fn @make_shader_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor
                 0x30 => load_normalmap_bsdf(math, data, ray, hit, surf),       // BSDF_NORMAL_MAP		  
                 0x31 => load_bumpmap_bsdf(math, data, ray, hit, surf),         // BSDF_BUMP_MAP		  
                 //0x40 => load_klems_bsdf(math, data, ray, hit, surf),           // BSDF_KLEMS		
-                _    => make_black_bsdf()
+                _    => make_error_bsdf()
             }
         }
     } 

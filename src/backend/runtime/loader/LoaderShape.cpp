@@ -38,58 +38,59 @@ struct TransformCache {
 	}
 };
 
-inline constexpr std::array<uint32_t, 8> map_rectangle_index(const std::array<uint32_t, 4>& points)
-{
-	return { points[0], points[1], points[2], 0, points[2], points[3], points[0], 0 };
-}
-
-template <size_t N>
-inline void insert_index(TriMesh& mesh, const std::array<uint32_t, N>& arr)
-{
-	mesh.indices.insert(mesh.indices.end(), arr.begin(), arr.end());
-}
-
-inline float triangle_area(const std::array<StVector3f, 3>& points)
-{
-	return 0.5f * (points[1] - points[0]).cross(points[2] - points[0]).norm();
-}
-
-inline void add_rectangle(TriMesh& mesh, const std::array<StVector3f, 4>& points, const StVector3f& N)
-{
-	uint32_t off = mesh.vertices.size();
-	mesh.vertices.insert(mesh.vertices.end(), points.begin(), points.end());
-	mesh.normals.insert(mesh.normals.end(), { N, N, N, N });
-	mesh.texcoords.insert(mesh.texcoords.end(), { StVector2f(0, 0), StVector2f(0, 1), StVector2f(1, 1), StVector2f(1, 0) });
-	mesh.face_normals.insert(mesh.face_normals.end(), { N, N });
-	mesh.face_inv_area.insert(mesh.face_inv_area.end(), { triangle_area({ points[0], points[1], points[2] }), triangle_area({ points[2], points[3], points[0] }) });
-	insert_index(mesh, map_rectangle_index({ 0 + off, 1 + off, 2 + off, 3 + off }));
-}
-
 inline TriMesh setup_mesh_rectangle(const Object& elem)
 {
-	const Vector3f N = Vector3f(0, 0, 1);
-	TriMesh mesh;
-	add_rectangle(mesh, { Vector3f(-1, -1, 0), Vector3f(1, -1, 0), Vector3f(1, 1, 0), Vector3f(-1, 1, 0) }, N);
-	return mesh;
+	const float width	  = elem.property("width").getNumber(2.0f);
+	const float height	  = elem.property("height").getNumber(2.0f);
+	const Vector3f origin = elem.property("origin").getVector3(Vector3f(-width / 2, -height / 2, 0));
+	return TriMesh::MakePlane(origin, Vector3f::UnitX() * width, Vector3f::UnitY() * height);
 }
 
 inline TriMesh setup_mesh_cube(const Object& elem)
 {
-	const Vector3f NZ = Vector3f(0, 0, 1);
-	const Vector3f NY = Vector3f(0, 1, 0);
-	const Vector3f NX = Vector3f(1, 0, 0);
+	const float width	  = elem.property("width").getNumber(2.0f);
+	const float height	  = elem.property("height").getNumber(2.0f);
+	const float depth	  = elem.property("depth").getNumber(2.0f);
+	const Vector3f origin = elem.property("origin").getVector3(Vector3f(-width / 2, -height / 2, -depth / 2));
+	return TriMesh::MakeBox(origin, Vector3f::UnitX() * width, Vector3f::UnitY() * height, Vector3f::UnitZ() * depth);
+}
 
-	// TODO: Fix order (is it?)
-	TriMesh mesh;
-	add_rectangle(mesh, { Vector3f(-1, -1, -1), Vector3f(1, -1, -1), Vector3f(1, 1, -1), Vector3f(-1, 1, -1) }, -NZ);
-	add_rectangle(mesh, { Vector3f(-1, -1, 1), Vector3f(-1, 1, 1), Vector3f(1, 1, 1), Vector3f(1, -1, 1) }, NZ);
+inline TriMesh setup_mesh_sphere(const Object& elem)
+{
+	const Vector3f center = elem.property("center").getVector3();
+	const float radius	  = elem.property("radius").getNumber(1.0f);
+	const uint32 stacks	  = elem.property("stacks").getInteger(32);
+	const uint32 slices	  = elem.property("slices").getInteger(16);
+	return TriMesh::MakeSphere(center, radius, stacks, slices);
+}
 
-	add_rectangle(mesh, { Vector3f(1, -1, -1), Vector3f(1, 1, -1), Vector3f(1, 1, 1), Vector3f(1, -1, 1) }, NX);
-	add_rectangle(mesh, { Vector3f(-1, -1, -1), Vector3f(-1, -1, 1), Vector3f(-1, 1, 1), Vector3f(-1, 1, -1) }, -NX);
+inline TriMesh setup_mesh_cylinder(const Object& elem)
+{
+	const Vector3f baseCenter = elem.property("p0").getVector3();
+	const Vector3f tipCenter  = elem.property("p1").getVector3(Vector3f(0, 0, 1));
+	const float radius		  = elem.property("radius").getNumber(1.0f);
+	const uint32 sections	  = elem.property("sections").getInteger(32);
+	const bool filled		  = elem.property("filled").getBool(true);
+	return TriMesh::MakeCylinder(baseCenter, radius, tipCenter, radius, sections, filled);
+}
 
-	add_rectangle(mesh, { Vector3f(-1, -1, -1), Vector3f(1, -1, -1), Vector3f(1, -1, 1), Vector3f(-1, -1, 1) }, -NY);
-	add_rectangle(mesh, { Vector3f(-1, 1, -1), Vector3f(-1, 1, 1), Vector3f(1, 1, 1), Vector3f(1, 1, -1) }, NY);
-	return mesh;
+inline TriMesh setup_mesh_cone(const Object& elem)
+{
+	const Vector3f baseCenter = elem.property("p0").getVector3();
+	const Vector3f tipCenter  = elem.property("p1").getVector3(Vector3f(0, 0, 1));
+	const float radius		  = elem.property("radius").getNumber(1.0f);
+	const uint32 sections	  = elem.property("sections").getInteger(32);
+	const bool filled		  = elem.property("filled").getBool(true);
+	return TriMesh::MakeCone(baseCenter, radius, tipCenter, sections, filled);
+}
+
+inline TriMesh setup_mesh_disk(const Object& elem)
+{
+	const Vector3f origin = elem.property("origin").getVector3();
+	const Vector3f normal = elem.property("normal").getVector3(Vector3f(0, 0, 1));
+	const float radius	  = elem.property("radius").getNumber(1.0f);
+	const uint32 sections = elem.property("sections").getInteger(32);
+	return TriMesh::MakeDisk(origin, normal, radius, sections);
 }
 
 inline TriMesh setup_mesh_obj(const Object& elem, const LoaderContext& ctx)
@@ -154,6 +155,14 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 			child_mesh = setup_mesh_rectangle(*child);
 		} else if (child->pluginType() == "cube") {
 			child_mesh = setup_mesh_cube(*child);
+		} else if (child->pluginType() == "sphere") {
+			child_mesh = setup_mesh_sphere(*child);
+		} else if (child->pluginType() == "cylinder") {
+			child_mesh = setup_mesh_cylinder(*child);
+		} else if (child->pluginType() == "cone") {
+			child_mesh = setup_mesh_cone(*child);
+		} else if (child->pluginType() == "disk") {
+			child_mesh = setup_mesh_disk(*child);
 		} else if (child->pluginType() == "obj") {
 			child_mesh = setup_mesh_obj(*child, ctx);
 		} else if (child->pluginType() == "ply") {
@@ -207,7 +216,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 
 		// Export data:
 		IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << pair.first << std::endl;
-		
+
 		auto& meshData = result.Database.ShapeTable.addLookup(0, DefaultAlignment); // TODO: No use of the typeid currently
 		VectorSerializer meshSerializer(meshData, false);
 		meshSerializer.write((uint32)child_mesh.faceCount());

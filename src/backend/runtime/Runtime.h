@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DebugMode.h"
 #include "driver/DriverManager.h"
 #include "loader/Loader.h"
 #include "table/SceneDatabase.h"
@@ -49,6 +50,10 @@ public:
 
 	inline const RuntimeRenderSettings& loadedRenderSettings() const { return mLoadedRenderSettings; }
 
+	inline DebugMode currentDebugMode() const { return mDebugMode; }
+	inline void setDebugMode(DebugMode mode) { mDebugMode = mode; }
+
+	inline uint32 configuration() const { return mConfiguration; }
 private:
 	void shutdown();
 
@@ -61,5 +66,7 @@ private:
 
 	size_t mDevice;
 	uint32 mIteration;
+	uint32 mConfiguration;
+	DebugMode mDebugMode;
 };
 } // namespace IG

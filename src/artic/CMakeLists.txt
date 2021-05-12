@@ -12,6 +12,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/camera.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/cdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/data.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/debugtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/disney.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/driver.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/entity.art
@@ -23,6 +24,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_gpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/material.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/microfacet.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/pathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/scene.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/shape.art

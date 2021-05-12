@@ -70,7 +70,7 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
 #if RENDERER_PATH
     let renderer = make_path_tracing_renderer(settings.max_path_len, spp, emitter);
 #else
-    let renderer = make_debug_renderer(emitter);
+    let renderer = make_debug_renderer(settings.debug_mode, emitter);
 #endif
 
     let dtb  = device.load_scene_database();

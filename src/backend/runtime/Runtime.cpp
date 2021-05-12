@@ -80,6 +80,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	: mInit(false)
 	, mDevice(opts.Device)
 	, mIteration(0)
+	, mDebugMode(DebugMode::Normal)
 {
 	if (!mManager.init())
 		throw std::runtime_error("Could not init modules!");
@@ -121,6 +122,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	IG_LOG(L_INFO) << "Loading configuration " << configurationToString(newConfig) << std::endl;
 	if (!mManager.load(newConfig, mLoadedInterface))
 		throw std::runtime_error("Error loading interface!");
+	mConfiguration = newConfig;
 }
 
 Runtime::~Runtime()
@@ -155,6 +157,7 @@ void Runtime::step(const Camera& camera)
 	settings.rays			 = nullptr; // No artifical ray streams
 	settings.device			 = mDevice;
 	settings.max_path_length = mLoadedRenderSettings.MaxPathLength;
+	settings.debug_mode		 = (uint32)mDebugMode;
 
 	mLoadedInterface.RenderFunction(&settings, mIteration++);
 }

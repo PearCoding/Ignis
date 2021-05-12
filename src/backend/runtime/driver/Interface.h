@@ -26,6 +26,7 @@ struct DriverRenderSettings {
 	const IG::Ray* rays; // If non-null, width contains the number of rays and height is set to 1
 	IG::uint32 device;
 	IG::uint32 max_path_length;
+	IG::uint32 debug_mode; // Only useful for debug integrator
 };
 
 using DriverRenderFunction			 = void (*)(const DriverRenderSettings*, IG::uint32);

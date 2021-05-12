@@ -6,6 +6,7 @@
 
 #include "Logger.h"
 #include "Runtime.h"
+#include "driver/Configuration.h"
 
 #include <optional>
 
@@ -198,7 +199,10 @@ int main(int argc, char** argv)
 	runtime->setup(film_width, film_height);
 
 #ifdef WITH_UI
-	UI::init(film_width, film_height, runtime->getFramebuffer());
+	bool isDebug = runtime->configuration() & IG_C_RENDERER_DEBUG;
+	UI::init(film_width, film_height, runtime->getFramebuffer(), isDebug);
+	DebugMode currentDebugMode = UI::currentDebugMode();
+	runtime->setDebugMode(currentDebugMode);
 #endif
 
 	bool running	= true;
@@ -211,6 +215,13 @@ int main(int argc, char** argv)
 #ifdef WITH_UI
 		bool prevRun = running;
 		done		 = UI::handleInput(iter, running, camera);
+
+		const DebugMode newDebugMode = UI::currentDebugMode();
+		if (currentDebugMode != newDebugMode) {
+			currentDebugMode = newDebugMode;
+			runtime->setDebugMode(currentDebugMode);
+			iter = 0;
+		}
 #endif
 
 		if (running) {

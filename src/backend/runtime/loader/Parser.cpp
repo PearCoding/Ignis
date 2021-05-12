@@ -99,11 +99,12 @@ inline static Matrix4f getMatrix4f(const rapidjson::Value& obj)
 {
 	const auto& array = obj.GetArray();
 	const size_t len  = array.Size();
-	if (len != 16)
-		throw std::runtime_error("Expected matrix of length 16 (4x4)");
+	const size_t rows = len == 12 ? 3 : 4;
+	if (len != 16 && len != 12)
+		throw std::runtime_error("Expected matrix of length 16 (4x4) or length 12 (3x4)");
 
-	Matrix4f mat;
-	for (size_t i = 0; i < 4; ++i)
+	Matrix4f mat = Matrix4f::Identity();
+	for (size_t i = 0; i < rows; ++i)
 		for (size_t j = 0; j < 4; ++j)
 			mat(i, j) = array[i * 4 + j].GetFloat();
 	return mat;
@@ -165,7 +166,7 @@ inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson:
 						const size_t len = val->value.GetArray().Size();
 						if (len == 9)
 							transform = transform * Transformf(getMatrix3f(val->value));
-						else if (len == 16)
+						else if (len == 12 || len == 16)
 							transform = transform * Transformf(getMatrix4f(val->value));
 						else
 							throw std::runtime_error("Expected transform property to be an array of size 9 or 16");
@@ -180,7 +181,7 @@ inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson:
 					ptr->setProperty(name, Property::fromTransform(Transformf::Identity()));
 				else if (len == 9)
 					ptr->setProperty(name, Property::fromTransform(Transformf(getMatrix3f(itr->value))));
-				else if (len == 16)
+				else if (len == 12 || len == 16)
 					ptr->setProperty(name, Property::fromTransform(Transformf(getMatrix4f(itr->value))));
 				else
 					throw std::runtime_error("Expected transform property to be an array of size 9 or 16");

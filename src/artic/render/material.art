@@ -17,5 +17,3 @@ fn @make_emissive_material(surf: SurfaceElement, bsdf: Bsdf, light: Light) = Mat
     emission = @ |in_dir| light.emission(in_dir, surf.uv_coords),
     is_emissive = true
 };
-
-fn @make_empty_material() = make_material(make_black_bsdf());

@@ -36,6 +36,7 @@ set(SRC
     Buffer.h
     Camera.h
     Color.h 
+    DebugMode.h
     Image.cpp
     Image.h
     Logger.cpp
@@ -87,6 +88,7 @@ set(SRC
     mesh/ObjFile.h
     mesh/PlyFile.cpp
     mesh/PlyFile.h
+    mesh/Tangent.h
     mesh/TriMesh.cpp
     mesh/TriMesh.h
     serialization/BufferSerializer.cpp
