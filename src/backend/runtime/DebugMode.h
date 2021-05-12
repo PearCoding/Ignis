@@ -8,8 +8,15 @@ enum class DebugMode {
 	GeometryNormal,
 	TexCoords,
 	UVCoords,
+    Point,
 	HitDistance,
+    PrimIDRaw,
 	PrimID,
-	EntityID
+    EntityIDRaw,
+	EntityID,
+    IsEmissive,
+    IsSpecular,
+    IsEntering,
+    CheckBSDF
 };
 }

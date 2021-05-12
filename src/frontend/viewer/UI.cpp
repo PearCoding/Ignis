@@ -78,13 +78,15 @@ static bool sToneMappingGamma		   = false;
 
 static DebugMode sCurrentDebugMode	  = DebugMode::Normal;
 static const char* DebugModeOptions[] = {
-	"Normal", "Tangent", "Bitangent", "Geom. Norm.", "Tex. Coords", "UV Coords", "Hit Dist.", "Prim ID", "Entity ID"
+	"Normal", "Tangent", "Bitangent", "Geom. Norm.", "Tex. Coords", "UV Coords", "Point", "Hit Dist.",
+	"Raw Prim ID", "Prim ID", "Raw Entity ID", "Entity ID",
+	"Is Emissive", "Is Specular", "Is Entering", "Check BSDF"
 };
 static const char* sDebugMode_Method = DebugModeOptions[(int)sCurrentDebugMode];
 static bool sShowDebugMode			 = false;
 
 // Pose IO
-constexpr char POSE_FILE[] = "data/poses.lst";
+constexpr char POSE_FILE[] = "poses.lst";
 static PoseManager sPoseManager;
 CameraPose sLastCameraPose;
 
@@ -95,7 +97,7 @@ static void handle_pose_input(size_t posenmbr, bool capture, const Camera& cam)
 		sPoseRequest = posenmbr;
 	} else {
 		sPoseManager.setPose(posenmbr, CameraPose(cam));
-		IG_LOG(L_INFO) << "Captured pose for " << posenmbr << std::endl;
+		IG_LOG(L_INFO) << "Captured pose for " << posenmbr + 1 << std::endl;
 	}
 }
 
@@ -883,11 +885,11 @@ static void handle_imgui(uint32_t iter)
 			if (ImGui::BeginCombo("Mode", sDebugMode_Method)) {
 				for (int i = 0; i < IM_ARRAYSIZE(DebugModeOptions); ++i) {
 					bool is_selected = (sDebugMode_Method == DebugModeOptions[i]);
-					if (ImGui::Selectable(DebugModeOptions[i], is_selected)) {
+					if (ImGui::Selectable(DebugModeOptions[i], is_selected) && sRunning) {
 						sDebugMode_Method = DebugModeOptions[i];
 						sCurrentDebugMode = (DebugMode)i;
 					}
-					if (is_selected)
+					if (is_selected && sRunning)
 						ImGui::SetItemDefaultFocus();
 				}
 

@@ -325,12 +325,12 @@ TriMesh TriMesh::MakeBox(const Vector3f& origin, const Vector3f& xAxis, const Ve
 	const Vector3f lll = origin;
 	const Vector3f hhh = origin + xAxis + yAxis + zAxis;
 
-	TriMesh mesh; // TODO: Check orientation
-	addPlane(mesh, lll, xAxis, yAxis, 0);
+	TriMesh mesh;
+	addPlane(mesh, lll, yAxis, xAxis, 0);
 	addPlane(mesh, lll, xAxis, zAxis, 4);
-	addPlane(mesh, lll, yAxis, zAxis, 8);
+	addPlane(mesh, lll, zAxis, yAxis, 8);
 	addPlane(mesh, hhh, -xAxis, -yAxis, 12);
-	addPlane(mesh, hhh, -xAxis, -zAxis, 16);
+	addPlane(mesh, hhh, -zAxis, -xAxis, 16);
 	addPlane(mesh, hhh, -yAxis, -zAxis, 20);
 
 	return mesh;
@@ -340,14 +340,12 @@ TriMesh TriMesh::MakeCone(const Vector3f& baseCenter, float baseRadius, const Ve
 {
 	sections = std::max<uint32>(3, sections);
 
-	// TODO: Check orientation
-	TriMesh mesh;
-
 	const Vector3f H = (baseCenter - tipPos).normalized();
 	Vector3f Nx, Ny;
 	Tangent::frame(H, Nx, Ny);
 
-	addDisk(mesh, baseCenter, -H, Nx, Ny, baseRadius, sections, 0, fill_cap);
+	TriMesh mesh;
+	addDisk(mesh, baseCenter, H, Nx, Ny, baseRadius, sections, 0, fill_cap);
 
 	mesh.vertices.push_back(tipPos);
 	mesh.normals.push_back(H);
@@ -361,7 +359,7 @@ TriMesh TriMesh::MakeCone(const Vector3f& baseCenter, float baseRadius, const Ve
 
 		const Vector3f dx = mesh.vertices[NC] - mesh.vertices[C];
 		const Vector3f dy = tipPos - mesh.vertices[C];
-		const Vector3f lN = dx.cross(dy);
+		const Vector3f lN = -dx.cross(dy);
 		const float area  = lN.norm() / 2;
 		const Vector3f N  = lN / (2 * area);
 
@@ -378,16 +376,14 @@ TriMesh TriMesh::MakeCylinder(const Vector3f& baseCenter, float baseRadius, cons
 {
 	sections = std::max<uint32>(3, sections);
 
-	// TODO: Check orientation
-	TriMesh mesh;
-
 	const Vector3f H = (baseCenter - topCenter).normalized();
 	Vector3f Nx, Ny;
 	Tangent::frame(H, Nx, Ny);
 
+	TriMesh mesh;
 	const uint32 off = fill_cap ? sections + 1 : sections;
-	addDisk(mesh, baseCenter, -H, Nx, Ny, baseRadius, sections, 0, fill_cap);
-	addDisk(mesh, topCenter, H, Nx, Ny, topRadius, sections, off, fill_cap);
+	addDisk(mesh, baseCenter, H, Nx, Ny, baseRadius, sections, 0, fill_cap);
+	addDisk(mesh, topCenter, -H, Nx, Ny, topRadius, sections, off, fill_cap);
 
 	const uint32 start = fill_cap ? 1 : 0; // Skip disk origin
 	for (uint32 i = 0; i < sections; ++i) {
@@ -396,7 +392,7 @@ TriMesh TriMesh::MakeCylinder(const Vector3f& baseCenter, float baseRadius, cons
 
 		const Vector3f dx = mesh.vertices[NC] - mesh.vertices[C];
 		const Vector3f dy = mesh.vertices[C + off] - mesh.vertices[C];
-		const Vector3f lN = dx.cross(dy);
+		const Vector3f lN = -dx.cross(dy);
 		const float area  = lN.norm() / 2;
 		const Vector3f N  = lN / (2 * area);
 

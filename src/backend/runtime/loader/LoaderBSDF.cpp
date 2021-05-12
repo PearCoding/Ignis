@@ -24,7 +24,8 @@ enum BsdfType {
 	BSDF_PASSTROUGH		  = 0x22,
 	BSDF_NORMAL_MAP		  = 0x30,
 	BSDF_BUMP_MAP		  = 0x31,
-	BSDF_KLEMS			  = 0x40
+	BSDF_KLEMS			  = 0x40,
+	BSDF_INVALID		  = 0xFF
 };
 
 constexpr float AIR_IOR			   = 1.000277f;
@@ -32,6 +33,12 @@ constexpr float GLASS_IOR		   = 1.55f;
 constexpr float RUBBER_IOR		   = 1.49f;
 constexpr float ETA_DEFAULT		   = 0.63660f;
 constexpr float ABSORPTION_DEFAULT = 2.7834f;
+
+static void bsdf_error(const std::string& msg, LoaderResult& result)
+{
+	IG_LOG(L_ERROR) << msg << std::endl;
+	result.Database.ShaderTable.addLookup(BSDF_INVALID, DefaultAlignment);
+}
 
 static uint32 setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, VectorSerializer& serializer)
 {
@@ -226,12 +233,16 @@ static void bsdf_blend(const std::string& name, const std::shared_ptr<Parser::Ob
 	const std::string second = bsdf->property("second").getString();
 
 	if (first.empty() || second.empty() || ctx.Environment.BsdfIDs.count(first) == 0 || ctx.Environment.BsdfIDs.count(second) == 0) {
-		IG_LOG(L_ERROR) << "Invalid blend bsdf" << std::endl;
+		bsdf_error("Invalid blend bsdf", result);
 	} else if (first == second) {
 		const uint32 firstID		  = ctx.Environment.BsdfIDs.at(first);
 		ctx.Environment.BsdfIDs[name] = firstID;
 	} else {
-		const uint32 firstID  = ctx.Environment.BsdfIDs.at(first);
+		const uint32 firstID		  = ctx.Environment.BsdfIDs.at(first);
+		ctx.Environment.BsdfIDs[name] = firstID;
+
+		//TODO
+		/* const uint32 firstID  = ctx.Environment.BsdfIDs.at(first);
 		const uint32 secondID = ctx.Environment.BsdfIDs.at(second);
 
 		const float weight = bsdf->property("weight").getNumber(0.5f);
@@ -240,7 +251,7 @@ static void bsdf_blend(const std::string& name, const std::shared_ptr<Parser::Ob
 		VectorSerializer serializer(data, false);
 		serializer.write(firstID);
 		serializer.write(secondID);
-		serializer.write(weight);
+		serializer.write(weight); */
 	}
 }
 
@@ -249,16 +260,19 @@ static void bsdf_mask(const std::string& name, const std::shared_ptr<Parser::Obj
 	const std::string masked = bsdf->property("bsdf").getString();
 
 	if (masked.empty() || ctx.Environment.BsdfIDs.count(masked) == 0) {
-		IG_LOG(L_ERROR) << "Invalid masked bsdf" << std::endl;
+		bsdf_error("Invalid masked bsdf", result);
 	} else {
+		const uint32 maskedID		  = ctx.Environment.BsdfIDs.at(masked);
+		ctx.Environment.BsdfIDs[name] = maskedID;
 
-		const uint32 maskedID = ctx.Environment.BsdfIDs.at(masked);
+		//TODO
+		/* const uint32 maskedID = ctx.Environment.BsdfIDs.at(masked);
 		const float weight	  = bsdf->property("weight").getNumber(0.5f);
 
 		auto& data = result.Database.ShaderTable.addLookup(BSDF_MASK, DefaultAlignment);
 		VectorSerializer serializer(data, false);
 		serializer.write(maskedID);
-		serializer.write(weight);
+		serializer.write(weight); */
 	}
 }
 
@@ -268,7 +282,7 @@ static void bsdf_twosided(const std::string& name, const std::shared_ptr<Parser:
 	const std::string other = bsdf->property("bsdf").getString();
 
 	if (other.empty() || ctx.Environment.BsdfIDs.count(other) == 0)
-		IG_LOG(L_ERROR) << "Invalid twosided bsdf" << std::endl;
+		bsdf_error("Invalid twosided bsdf", result);
 	else
 		ctx.Environment.BsdfIDs[name] = ctx.Environment.BsdfIDs.at(other);
 }
@@ -278,41 +292,33 @@ static void bsdf_passthrough(const std::string&, const std::shared_ptr<Parser::O
 	result.Database.ShaderTable.addLookup(BSDF_PASSTROUGH, DefaultAlignment);
 }
 
-/*static void bsdf_normalmap(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx,  LoaderResult& result)
+static void bsdf_normalmap(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
 {
 	const std::string inner = bsdf->property("bsdf").getString();
-	auto map				= ctx.extractMaterialPropertyColor(bsdf, "map", 1.0f, options.SurfaceParameter.c_str());
 
-	BSDFExtractOption opts2 = options;
-	opts2.SurfaceParameter += "a";
+	if (inner.empty() || ctx.Environment.BsdfIDs.count(inner) == 0) {
+		bsdf_error("Invalid normal map bsdf", result);
+	} else {
+		const uint32 innerID		  = ctx.Environment.BsdfIDs.at(inner);
+		ctx.Environment.BsdfIDs[name] = innerID;
 
-	if (inner.empty())
-		bsdf_error("Invalid normalmap bsdf", os);
-	else
-		os << "make_normalmap(math, " << options.SurfaceParameter << ", @|" << opts2.SurfaceParameter << "| -> Bsdf { "
-		   << LoaderBSDF::extract(ctx.Scene.bsdf(inner), ctx, opts2) << " }, "
-		   << map << ")";
+		//TODO
+	}
 }
 
-static void bsdf_bumpmap(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx,  LoaderResult& result)
+static void bsdf_bumpmap(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
 {
 	const std::string inner = bsdf->property("bsdf").getString();
-	auto mapdx				= ctx.extractMaterialPropertyNumberDx(bsdf, "map", options.SurfaceParameter.c_str());
-	auto mapdy				= ctx.extractMaterialPropertyNumberDy(bsdf, "map", options.SurfaceParameter.c_str());
-	auto strength			= ctx.extractMaterialPropertyNumber(bsdf, "strength", 1.0f, options.SurfaceParameter.c_str());
 
-	BSDFExtractOption opts2 = options;
-	opts2.SurfaceParameter += "a";
+	if (inner.empty() || ctx.Environment.BsdfIDs.count(inner) == 0) {
+		bsdf_error("Invalid bump map bsdf", result);
+	} else {
+		const uint32 innerID		  = ctx.Environment.BsdfIDs.at(inner);
+		ctx.Environment.BsdfIDs[name] = innerID;
 
-	if (inner.empty())
-		bsdf_error("Invalid normalmap bsdf", os);
-	else
-		os << "make_bumpmap(math, " << options.SurfaceParameter << ", @|" << opts2.SurfaceParameter << "| -> Bsdf { "
-		   << LoaderBSDF::extract(ctx.Scene.bsdf(inner), ctx, opts2) << " }, "
-		   << mapdx << ", "
-		   << mapdy << ", "
-		   << strength << ")";
-}*/
+		//TODO
+	}
+}
 
 using BSDFLoader = void (*)(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result);
 static struct {
@@ -338,8 +344,8 @@ static struct {
 	{ "twosided", bsdf_twosided },
 	{ "passthrough", bsdf_passthrough },
 	{ "null", bsdf_passthrough },
-	/*{ "bumpmap", bsdf_bumpmap },
-	{ "normalmap", bsdf_normalmap },*/
+	{ "bumpmap", bsdf_bumpmap },
+	{ "normalmap", bsdf_normalmap },
 	{ "", nullptr }
 };
 
@@ -362,8 +368,10 @@ bool LoaderBSDF::load(LoaderContext& ctx, LoaderResult& result)
 			}
 		}
 
-		if (!found)
+		if (!found) {
 			IG_LOG(L_ERROR) << "Bsdf '" << pair.first << "' has unknown type '" << bsdf->pluginType() << "'" << std::endl;
+			result.Database.ShaderTable.addLookup(BSDF_INVALID, DefaultAlignment);
+		}
 	}
 
 	return true;

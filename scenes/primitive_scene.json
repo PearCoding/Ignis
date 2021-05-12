@@ -41,6 +41,7 @@
 	],
 	"lights": [
 		//{"type":"env", "name":"Light", "radiance":[1,1,1]},
-		{"type":"point", "name":"Light", "position":[0,0,5], "intensity":[100,100,100]}
+		//{"type":"point", "name":"Light", "position":[0,0,5], "intensity":[100,100,100]}
+		{"type":"directional", "name":"Light", "direction":[-1,0,-1], "radiance":[1,1,1]}
 	]
 }

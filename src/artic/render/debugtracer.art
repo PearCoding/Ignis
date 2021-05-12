@@ -26,42 +26,82 @@ fn @color_map(i: i32) = [
 
 fn @make_debug_renderer(debug_mode: i32, emitter: RayEmitterFactory) -> Renderer {
     @ |scene, device, iter| {
+        let math = device.intrinsics;
         let path_tracer = PathTracer {
             on_emit   = emitter(scene, device, iter),
-            on_hit    = @ |_ray, hit, _state, surf, _mat| {
+            on_hit    = @ |ray, hit, state, surf, mat| {
                 match debug_mode {
                     1 => { // DEBUG_TANGENT
                         let n = surf.local.col(0);
-                        make_option(make_color(fabs(n.x), fabs(n.y), fabs(n.z)))
+                        make_option(make_color(math.fabsf(n.x), math.fabsf(n.y), math.fabsf(n.z)))
                     },
                     2 => { // DEBUG_BITANGENT
                         let n = surf.local.col(1);
-                        make_option(make_color(fabs(n.x), fabs(n.y), fabs(n.z)))
+                        make_option(make_color(math.fabsf(n.x), math.fabsf(n.y), math.fabsf(n.z)))
                     },
                     3 => { // DEBUG_GEOMETRY_NORMAL
                         let n = surf.face_normal;
-                        make_option(make_color(fabs(n.x), fabs(n.y), fabs(n.z)))
+                        make_option(make_color(math.fabsf(n.x), math.fabsf(n.y), math.fabsf(n.z)))
                     },
                     4 => { // DEBUG_TEXCOORDS
                         let n = surf.tex_coords;
-                        make_option(make_color(fabs(n.x), fabs(n.y), 0))
+                        make_option(make_color(math.fabsf(n.x), math.fabsf(n.y), 0))
                     },
                     5 => { // DEBUG_UVCOORDS
                         let n = hit.uv_coords;
-                        make_option(make_color(fabs(n.x), fabs(n.y), 0))
+                        make_option(make_color(math.fabsf(n.x), math.fabsf(n.y), 0))
                     },
-                    6 => { // DEBUG_HIT_DISTANCE
+                    6 => { // DEBUG_POINT
+                        make_option(vec3_to_color(surf.point))
+                    },
+                    7 => { // DEBUG_HIT_DISTANCE
                         make_option(make_color(hit.distance, hit.distance, hit.distance))
                     },
-                    7 => { // DEBUG_PRIM_ID
+                    8 => { // DEBUG_PRIM_ID_RAW
+                        let v = hit.prim_id as f32;
+                        make_option(make_gray_color(v))
+                    },
+                    9 => { // DEBUG_PRIM_ID
                         make_option(color_map(hit.prim_id))
                     },
-                    8 => { // DEBUG_ENTITY_ID
+                    10 => { // DEBUG_ENTITY_ID_RAW
+                        let v = hit.ent_id as f32;
+                        make_option(make_gray_color(v))
+                    },
+                    11 => { // DEBUG_ENTITY_ID
                         make_option(color_map(hit.ent_id))
+                    },
+                    12 => { // DEBUG_EMISSIVE
+                        make_option(if mat.is_emissive { green } else { red })
+                    },
+                    13 => { // DEBUG_SPECULAR
+                        make_option(if mat.bsdf.is_specular {green } else { red })
+                    },
+                    14 => { // DEBUG_ENTERING
+                        make_option(if surf.is_entering { green } else { red })
+                    },
+                    15 => { // DEBUG_CHECK_BSDF
+                        let mut tmp = state.rnd;
+                        let out_dir = vec3_neg(ray.dir);
+                        let mat_sample = mat.bsdf.sample(&mut tmp, out_dir, false);
+                        
+                        let pdf = mat.bsdf.pdf(mat_sample.in_dir, out_dir);
+                        let evl = color_mulf(mat.bsdf.eval(mat_sample.in_dir, out_dir), 1/pdf);
+
+                        let pdf_diff = math.fabsf(mat_sample.pdf-pdf);
+                        let w_diff   = math.fabsf(mat_sample.color.r - evl.r)
+                                     + math.fabsf(mat_sample.color.g - evl.g)
+                                     + math.fabsf(mat_sample.color.b - evl.b);
+
+                        let pdf_good = if pdf_diff <= 0.001:f32 { 1 } else { 0 };
+                        let w_good   = if w_diff   <= 0.001:f32 { 1 } else { 0 };
+                        let index    = (w_good << 1) | pdf_good;
+                        let color    = [red, orange, yellow, green](index);
+                        make_option(color)
                     },
                     _ => { // DEBUG_NORMAL 
                         let n = surf.local.col(2);
-                        make_option(make_color(fabs(n.x), fabs(n.y), fabs(n.z)))
+                        make_option(make_color(math.fabsf(n.x), math.fabsf(n.y), math.fabsf(n.z)))
                     }
                 }
             },
