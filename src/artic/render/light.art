@@ -1,27 +1,27 @@
 // Result from sampling a light source
 struct EmissionSample {
-    pos: Vec3,          // Position on the light source
-    dir: Vec3,          // Direction of the light going outwards
-    intensity: Color,   // Intensity along the direction
-    pdf_area: f32,      // Probability to sample the point on the light
-    pdf_dir: f32,       // Probability to sample the direction on the light, conditioned on the point on the light source
-    cos: f32            // Cosine between the direction and the light source geometry
+    pos:       Vec3,  // Position on the light source
+    dir:       Vec3,  // Direction of the light going outwards
+    intensity: Color, // Intensity along the direction
+    pdf_area:  f32,   // Probability to sample the point on the light
+    pdf_dir:   f32,   // Probability to sample the direction on the light, conditioned on the point on the light source
+    cos:       f32    // Cosine between the direction and the light source geometry
 }
 
 // Result from sampling direct lighting from a light source
 struct DirectLightSample {
-    pos: Vec3,          // Position on the light source (or direction if infinite)
-    intensity: Color,   // Intensity along the direction
-    pdf_area: f32,      // Probability to sample the point on the light
-    pdf_dir: f32,       // Probability to sample the direction using emission sampling
-    cos: f32            // Cosine between the direction and the light source geometry
+    posdir:    Vec3,  // Position on the light source (or direction if infinite)
+    intensity: Color, // Intensity along the direction
+    pdf_area:  f32,   // Probability to sample the point on the light
+    pdf_dir:   f32,   // Probability to sample the direction using emission sampling
+    cos:       f32    // Cosine between the direction and the light source geometry
 }
 
 // Emission properties of a light source
 struct EmissionValue {
-    intensity: Color,   // Intensity along the direction
-    pdf_area: f32,      // Probability to sample the point on the light
-    pdf_dir: f32        // Probability to sample the direction using emission sampling
+    intensity: Color, // Intensity along the direction
+    pdf_area:  f32,   // Probability to sample the point on the light
+    pdf_dir:   f32    // Probability to sample the direction using emission sampling
 }
 
 // Surface that emits light
@@ -45,63 +45,28 @@ struct Light {
     infinite: bool
 }
 
-fn @make_emission_sample(pos: Vec3, dir: Vec3, intensity: Color, pdf_area: f32, pdf_dir: f32, cos: f32) -> EmissionSample {
-    if pdf_area > 0 && pdf_dir > 0 && cos > 0 {
-        EmissionSample {
-            pos = pos,
-            dir = dir,
-            intensity = intensity,
-            pdf_area = pdf_area,
-            pdf_dir = pdf_dir,
-            cos = cos
-        }
-    } else {
-        EmissionSample {
-            pos = pos,
-            dir = dir,
-            intensity = black,
-            pdf_area = 1,
-            pdf_dir = 1,
-            cos = 1
-        }
-    }
-}
+fn @make_emission_sample(pos: Vec3, dir: Vec3, intensity: Color, pdf_area: f32, pdf_dir: f32, cos: f32) = EmissionSample {
+    pos       = pos,
+    dir       = dir,
+    intensity = intensity,
+    pdf_area  = pdf_area,
+    pdf_dir   = pdf_dir,
+    cos       = cos
+};
 
-fn @make_direct_sample(pos: Vec3, intensity: Color, pdf_area: f32, pdf_dir: f32, cos: f32) -> DirectLightSample {
-    if pdf_area > 0 && pdf_dir > 0 && cos > 0 {
-        DirectLightSample {
-            pos = pos,
-            intensity = intensity,
-            pdf_area = pdf_area,
-            pdf_dir = pdf_dir,
-            cos = cos
-        }
-    } else {
-        DirectLightSample {
-            pos = pos,
-            intensity = black,
-            pdf_area = 1,
-            pdf_dir = 1,
-            cos = 0
-        }
-    }
-}
+fn @make_direct_sample(posdir: Vec3, intensity: Color, pdf_area: f32, pdf_dir: f32, cos: f32) = DirectLightSample {
+    posdir    = posdir,
+    intensity = intensity,
+    pdf_area  = pdf_area,
+    pdf_dir   = pdf_dir,
+    cos       = cos
+};
 
-fn @make_emission_value(intensity: Color, pdf_area: f32, pdf_dir: f32) -> EmissionValue {
-    if pdf_dir > 0 {
-        EmissionValue {
-            intensity = intensity,
-            pdf_area = pdf_area,
-            pdf_dir = pdf_dir
-        }
-    } else {
-        EmissionValue {
-            intensity = black,
-            pdf_area = 1,
-            pdf_dir = 1
-        }
-    }
-}
+fn @make_emission_value(intensity: Color, pdf_area: f32, pdf_dir: f32) = EmissionValue {
+    intensity = intensity,
+    pdf_area  = pdf_area,
+    pdf_dir   = pdf_dir
+};
 
 // This samples the environment by naive sphere sampling
 fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
@@ -110,9 +75,11 @@ fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
         let B = lightB.sample_direct(rnd, from);
         let u = randf(rnd);
         if u < probability {
-            make_direct_sample(A.pos, A.intensity, A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, A.cos)
+            make_direct_sample(A.posdir, A.intensity,
+                 A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, A.cos)
         } else {
-            make_direct_sample(B.pos, B.intensity, A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, B.cos)
+            make_direct_sample(B.posdir, B.intensity,
+                 A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, B.cos)
         }
     },
     sample_emission = @ |rnd| {
@@ -122,9 +89,11 @@ fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
             let u = randf(rnd);
 
             if u < probability {
-                make_emission_sample(A.pos, A.dir, A.intensity, A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, A.cos)
+                make_emission_sample(A.pos, A.dir, A.intensity,
+                     A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, A.cos)
             } else {
-                make_emission_sample(B.pos, B.dir, B.intensity, A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, B.cos)
+                make_emission_sample(B.pos, B.dir, B.intensity,
+                     A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, B.cos)
             }
         } else if lightA.delta && !lightB.delta {
             lightB.sample_emission(rnd)
@@ -385,24 +354,6 @@ fn @load_perez_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) -> L
 }
 
 //-------------------------------------------
-fn @make_camera_light(math: Intrinsics, camera: Camera, color: Color) = Light {
-    sample_direct = @ |_, _| {
-        let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
-        make_direct_sample(camera.origin(), intensity, 1.0, uniform_sphere_pdf(), 1.0)
-    },
-    sample_emission = @ |rnd| {
-        let u = randf(rnd);
-        let v = randf(rnd);
-        let sample = sample_uniform_sphere(math, u, v);
-        let intensity = color_mulf(color, 1.0 / (4.0 * flt_pi));
-        make_emission_sample(camera.origin(), sample.dir, intensity, 1.0, sample.pdf, 1.0)
-    },
-    emission = @ |_, _| make_emission_value(black, 1.0, 1.0),
-    delta    = true,
-    infinite = false
-};
-
-//-------------------------------------------
 fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
     sample_direct = @ |rnd, from_surf| {
         let (pos, n, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
@@ -460,7 +411,7 @@ fn @load_area_light(math: Intrinsics, data: DeviceBuffer, acc: LightAccessor) ->
     make_area_light(math, emitter, color)
 }
 
-type LightTable  = fn (i32) -> Light;
+type LightTable = fn (i32) -> Light;
 
 fn @make_light_table(math: Intrinsics, dtb: DynTable, info: SceneInfo, acc: DeviceBufferAccessor, lacc: LightAccessor) -> LightTable {
     @ |id| {
@@ -483,7 +434,8 @@ fn @make_light_table(math: Intrinsics, dtb: DynTable, info: SceneInfo, acc: Devi
     } 
 }
 
-// Same as before, but assume given id is always a area light
+// Same purpose as make_light_table, but assume given type_id is always an area light
+// This improves code compilation and overall performance by magnitudes...
 fn @make_arealight_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor, lacc: LightAccessor) -> LightTable {
     @ |id| {
         let entry = get_lookup_entry(id as u64, dtb, acc);

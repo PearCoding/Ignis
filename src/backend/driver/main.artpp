@@ -69,6 +69,8 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
      
 #if RENDERER_PATH
     let renderer = make_path_tracing_renderer(settings.max_path_len, spp, emitter);
+#elif RENDERER_AO
+    let renderer = make_ao_renderer(spp, emitter);
 #else
     let renderer = make_debug_renderer(settings.debug_mode, emitter);
 #endif

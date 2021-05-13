@@ -124,16 +124,18 @@ fn @make_ray(org: Vec3, dir: Vec3, tmin: f32, tmax: f32) -> Ray {
     }
 }
 
-// Transforms ray and returns scale factor as well
-fn @transform_ray(math: Intrinsics, ray: Ray, m: Mat4x4) -> (Ray, f32) {
-    let d4 = mat4x4_mul(m, make_vec4(ray.dir.x, ray.dir.y, ray.dir.z, 0));
-    let d  = make_vec3(d4.x, d4.y, d4.z);
-    let scale_factor = vec3_len(math, d);
-    let nd = vec3_mulf(d, 1/scale_factor);
+// Transforms ray. The direction is not normalized
+// This can be used to assign as scale factor to upcoming intersections
+fn @transform_ray(ray: Ray, m: Mat4x4) = make_ray(
+    mat4x4_transform_point(m, ray.org),
+    mat4x4_transform_direction(m, ray.dir),
+    ray.tmin, ray.tmax);
 
-    (make_ray(mat4x4_transform_point(m, ray.org), nd, scale_factor * ray.tmin, scale_factor * ray.tmax), 
-    scale_factor)
-}
+// Transforms ray. The direction is normalized
+fn @transform_norm_ray(math: Intrinsics, ray: Ray, m: Mat4x4) = make_ray(
+    mat4x4_transform_point(m, ray.org),
+    vec3_normalize(math, mat4x4_transform_direction(m, ray.dir)),
+    ray.tmin, ray.tmax);
 
 fn @make_hit(ent_id: i32, prim_id: i32, t: f32, uv: Vec2) = Hit {
     distance  = t,
@@ -210,7 +212,7 @@ fn @intersect_ray_tri(math: Intrinsics, backface_culling: bool, ray: Ray, tri: T
     mask &= t >= abs_det * ray.tmin;
     mask &= t <= abs_det * ray.tmax;
 
-    //if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
+    if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
 
     if mask {
         let inv_det = 1 / abs_det;
@@ -238,13 +240,13 @@ fn @intersect_ray_box(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> (
     (tentry, texit)
 }
 
-fn @intersect_ray_box_single(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> Option[(f32,f32)] {
+fn @intersect_ray_box_single(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> Option[f32] {
     let (entry, exit) = intersect_ray_box(min_max, ordered, ray, bbox);
     let mask = (entry <= exit) & (exit >= 0);
 
     if mask {
-        make_option((entry, exit))
+        make_option(select(entry < 1e-5, exit, entry))
     } else {
-        Option[(f32,f32)]::None
+        Option[f32]::None
     }
 }

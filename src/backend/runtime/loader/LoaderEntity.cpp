@@ -10,8 +10,8 @@ using namespace Parser;
 template <typename Derived>
 inline void writeMatrix(Serializer& serializer, const Eigen::MatrixBase<Derived>& m)
 {
-	for (int i = 0; i < m.rows(); ++i)
-		for (int j = 0; j < m.cols(); ++j)
+	for (int j = 0; j < m.cols(); ++j)
+		for (int i = 0; i < m.rows(); ++i)
 			serializer.write((float)m(i, j));
 }
 

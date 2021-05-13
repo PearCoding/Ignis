@@ -1,9 +1,7 @@
 // Opaque camera object
 struct Camera {
     // Generates a ray for a point on the image plane (in [-1, 1]^2)
-    generate_ray: fn (f32, f32) -> Ray,
-    // Return position of camera
-    origin: fn() -> Vec3
+    generate_ray: fn (f32, f32) -> Ray
 }
 
 // Creates a perspective camera
@@ -22,8 +20,7 @@ fn @make_perspective_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h
                 )
             );
             make_ray(eye, d, tmin, tmax)
-        },
-        origin = @ || eye
+        }
     }
 }
 
@@ -41,8 +38,7 @@ fn @make_orthogonal_camera(_math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h
                             eye
                       );
             make_ray(pos, dir, tmin, tmax)
-        },
-        origin = @ || eye
+        }
     }
 }
 
@@ -96,7 +92,6 @@ fn @make_fishlens_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f
             let nd = make_vec3(sT*cP, sT*sP, cT);
             let d  = vec3_normalize(math, mat3x3_mul(V, nd));
             make_ray(eye, d, tmin, tmax)
-        },
-        origin = @ || eye
+        }
     }
 }

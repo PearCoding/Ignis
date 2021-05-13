@@ -56,7 +56,7 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool) -> Prim {
             let n   = vec3_cross(e1, e2);
             let tri = make_tri(v0, e1, e2, n);
             if let Option[(f32, f32, f32)]::Some((t, u, v)) = intersect_ray_tri(math, false /*backface_culling*/, ray, tri) {
-                make_option(make_hit(0/* Will be set later*/, prim_id & 0x7FFFFFFF, t, make_vec2(u, v)))
+                make_option(make_hit(-1/* Will be set later*/, prim_id & 0x7FFFFFFF, t, make_vec2(u, v)))
             } else {
                 Option[Hit]::None
             }
@@ -280,18 +280,16 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
             while true {
                 let leaf = bvh.ent(ref_id++);
 
-                if let Option[(f32,f32)]::Some((t,_)) = intersect_ray_box_single(min_max, false, ray, leaf.bbox) {
+                if let Option[f32]::Some(t) = intersect_ray_box_single(min_max, false, ray, leaf.bbox) {
                     if t <= hit.distance {
-                        let shape_bvh       = @prim_bvhs(leaf.shape_id);
-                        let (local_ray, sf) = transform_ray(gpu_intrinsics, ray, leaf.local);
-                        let local_hit       = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape_bvh, any_hit, 1);
+                        let shape_bvh = @prim_bvhs(leaf.shape_id);
+                        let local_ray = transform_ray(ray, leaf.local);
+                        let local_hit = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape_bvh, any_hit, 1);
 
                         if local_hit.prim_id != -1 {
-                            let glb_dist = local_hit.distance / sf;
-
-                            if glb_dist <= hit.distance {
-                                hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, glb_dist, local_hit.uv_coords);
-                                ray.tmax = glb_dist;
+                            if local_hit.distance <= hit.distance {
+                                hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.uv_coords);
+                                ray.tmax = hit.distance;
 
                                 // Early exit mode
                                 if any_hit { return(hit) }

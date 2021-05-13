@@ -29,10 +29,10 @@ fn @map_surface_element(math: Intrinsics, surf: SurfaceElement, global_mat: Mat4
 
 // Result of sampling a BSDF
 struct BsdfSample {
-    in_dir: Vec3,  // Sampled direction
-    pdf:    f32,   // BSDF value for the sample
-    cos:    f32,   // Cosine between the sampled direction and the surface normal
-    color:  Color  // Color of the sample, with cosine and pdf already applied
+    in_dir: Vec3, // Sampled direction
+    pdf:    f32,  // BSDF value for the sample
+    cos:    f32,  // Cosine between the sampled direction and the surface normal
+    color:  Color // Color of the sample, with cosine and pdf already applied
 }
 
 // Opaque BSDF structure

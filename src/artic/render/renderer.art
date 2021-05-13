@@ -18,10 +18,10 @@ type RayEmitterFactory = fn (Scene, Device, i32) -> RayEmitter;
 
 fn @make_ray_state(rnd: RndState, contrib: Color, mis: f32, depth: i32) -> RayState {
     RayState {
-        rnd = rnd,
+        rnd     = rnd,
         contrib = contrib,
-        mis = mis,
-        depth = depth
+        mis     = mis,
+        depth   = depth
     }
 }
 

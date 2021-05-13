@@ -48,7 +48,7 @@ static inline void usage()
 			  << "Available cameras:\n"
 			  << "    perspective, orthogonal, fishlens\n"
 			  << "Available techniques:\n"
-			  << "    path, debug" << std::endl;
+			  << "    path, debug, ao" << std::endl;
 }
 
 int main(int argc, char** argv)

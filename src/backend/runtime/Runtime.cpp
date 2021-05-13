@@ -22,6 +22,8 @@ static inline void setup_technique(RuntimeRenderSettings& settings, LoaderOption
 
 	if (tech_type == "debug")
 		lopts.Configuration |= IG_C_RENDERER_DEBUG;
+	else if(tech_type == "ao")
+		lopts.Configuration |= IG_C_RENDERER_AO;
 	else
 		lopts.Configuration |= IG_C_RENDERER_PATH;
 }

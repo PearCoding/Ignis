@@ -20,12 +20,12 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
             let rnd = &mut state.rnd;
             // Note: randi() returns random integers, but we only want positive integers here
             let light_id = (randi(rnd) & 0x7FFFFFFF) % num_lights;
-            let lights = scene.database.lights;
-            let light = @lights(light_id);
+            let lights   = scene.database.lights;
+            let light    = @lights(light_id);
             let sample_direct = light.sample_direct;
             let light_sample = @sample_direct(rnd, surf);
             if light.infinite {
-                let light_dir = light_sample.pos; // Infinite lights return a direction instead of a position
+                let light_dir = light_sample.posdir; // Infinite lights return a direction instead of a position
                 let vis = vec3_dot(light_dir, surf.local.col(2));
 
                 if vis > flt_eps {
@@ -35,18 +35,18 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                     let pdf_e     = mat.bsdf.pdf(in_dir, out_dir);        // Pdf to sample the "infinite" light based on bsdf
                     let pdf_l     = light_sample.pdf_dir * pdf_lightpick; // Pdf to sample the light based on NEE
                     let inv_pdf_l = 1 / pdf_l;
-
+                    
                     let mis   = if light.delta { 1 } else { 1 / (1 + pdf_e * inv_pdf_l) };
                     let cos_l = light_sample.cos; // Usually, this is just 1
 
                     let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
                     return(make_option(
-                        make_ray(surf.point, light_dir, offset, 1 - offset),
+                        make_ray(surf.point, light_dir, offset, flt_max),
                         color_mulf(contrib, cos_l * mis)
                     ))
                 }
-            } else {
-                let light_dir = vec3_sub(light_sample.pos, surf.point);
+            }  else {
+                let light_dir = vec3_sub(light_sample.posdir, surf.point);
                 let vis = vec3_dot(light_dir, surf.local.col(2));
 
                 if vis > flt_eps && light_sample.cos > flt_eps {
@@ -92,7 +92,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
         }
 
         fn @on_miss( ray: Ray
-                   , state: &mut RayState) {
+                   , state: &mut RayState) -> Option[Color] {
             let mut inflights = 0;
             let mut color     = black;
             let lights        = scene.database.lights;
@@ -123,7 +123,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                      , state: &mut RayState
                      , surf: SurfaceElement
                      , mat: Material
-                     ) -> Option[(Ray, RayState)] {
+                     ) -> Option[(Ray, RayState)] {            
             // Russian roulette and maximum depth
             let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette(state.contrib, 0.75) };
             if state.depth >= max_path_len || randf(&mut state.rnd) >= rr_prob {

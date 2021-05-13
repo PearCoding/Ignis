@@ -86,7 +86,7 @@ fn @make_cpu_tri4(tris: &[Tri4]) -> fn (i32) -> Prim {
             match intersect_ray_tri(math, false /*backface_culling*/, ray, tri) {
                 Option[(f32, f32, f32)]::Some(t, u, v) => {
                     let prim_id = tri_ptr.prim_id(i) & 0x7FFFFFFF;
-                    make_option(make_hit(0, prim_id, t, make_vec2(u, v)))
+                    make_option(make_hit(-1, prim_id, t, make_vec2(u, v)))
                 },
                 Option[(f32, f32, f32)]::None => Option[Hit]::None
             }
@@ -120,13 +120,16 @@ fn @make_cpu_bvh8_tri4(nodes: &[Node8], tris: &[Tri4]) = PrimBvh {
 // Special bbox intersectors
 
 fn @make_cpu_entity_leaf(j: i32, objs: &[EntityLeaf1]) -> EntityLeaf {
-    let obj = objs(j);
+    let d  = make_cpu_buffer(&objs(j) as &[u8]);
+    let e0 = d.load_vec4(0);
+    let e1 = d.load_vec4(4);
+    let m  = d.load_mat4x4(8);
     make_entity_leaf(
-        make_bbox(make_vec3(obj.min(0), obj.min(1), obj.min(2)),
-                  make_vec3(obj.max(0), obj.max(1), obj.max(2))),
-        obj.entity_id,
-        obj.shape_id,
-        obj.local
+        make_bbox(make_vec3(e0.x, e0.y, e0.z),
+                  make_vec3(e1.x, e1.y, e1.z)),
+        bitcast[i32](e0.w),
+        bitcast[i32](e1.w),
+        m
     )
 }
 
@@ -406,7 +409,7 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                             ray.tmax = prim_hit.distance;
                             if any_hit {
                                 terminated = true;
-                                active = false;
+                                active     = false;
                             }
                         }
                     }
@@ -447,9 +450,7 @@ fn @cpu_traverse_helper( mut ray: Ray
             if unlikely(stack.is_empty()) { exit() }
             let active = (stack.top().tmin <= ray.tmax) & !terminated;
             let mask = rv_ballot(active);
-            if likely(mask != 0) {
-                break()
-            }
+            if likely(mask != 0) { break() }
             stack.pop();
         }
 
@@ -489,24 +490,28 @@ fn @cpu_traverse_helper( mut ray: Ray
             while true {
                 let leaf = bvh.ent(ref_id++);
 
-                let shape_bvh       = @prim_bvhs(leaf.shape_id);
-                let (local_ray, sf) = transform_ray(cpu_intrinsics, ray, leaf.local);
-                let local_hit       = cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
-                
-                if active {
-                    if local_hit.prim_id != -1 {
-                        let glb_dist = local_hit.distance / sf;
+                let mut was_hit = false;
+                if let Option[f32]::Some(t) = intersect_ray_box_single(min_max, false, ray, leaf.bbox) {
+                    if t <= hit.distance {
+                        let shape_bvh = @prim_bvhs(leaf.shape_id);
+                        let local_ray = transform_ray(ray, leaf.local);
+                        let local_hit = cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
                         
-                        if glb_dist <= hit.distance {
-                            hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, glb_dist, local_hit.uv_coords);
-                            ray.tmax = hit.distance;
-                        
-                            if any_hit {
-                                terminated = true;
-                                active     = false;
+                        if active {
+                            if local_hit.prim_id != -1 {
+                                if local_hit.distance <= hit.distance {
+                                    hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.uv_coords);
+                                    ray.tmax = hit.distance;
+                                    was_hit  = true;    
+                                }
                             }
                         }
                     }
+                }
+
+                if any_hit && was_hit {
+                    terminated = true;
+                    active     = false;
                 }
 
                 // Early exit mode

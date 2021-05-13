@@ -119,10 +119,10 @@ fn @gpu_shade( acc: Accelerator
         let ray       = make_ray_stream_reader(primary.rays, 1)(ray_id, 0);
         let pixel     = primary.rays.id(ray_id);
 
-        let entity         = @entities(ent_id);
-        let shape          = @shapes(entity.shape_id);
-        let shader         = @shaders(entity.bsdf_id);
-        let (local_ray, _) = transform_ray(intrinsics, ray, entity.local_mat);
+        let entity    = @entities(ent_id);
+        let shape     = @shapes(entity.shape_id);
+        let shader    = @shaders(entity.bsdf_id);
+        let local_ray = transform_norm_ray(intrinsics, ray, entity.local_mat);
 
         let hit      = make_primary_stream_hit_reader(primary, 1)(ray_id, 0);
         let lcl_surf = shape.surface_element(local_ray, hit);
@@ -286,8 +286,8 @@ fn @gpu_generate_rays( primary: PrimaryStream
                      ) -> i32 {
     let first_ray_id = *id;
     let first_dst_id = primary.size;
-    let num_rays = cpu_intrinsics.min(spp * film_width * film_height - first_ray_id, capacity - first_dst_id);
-    let film_div = make_fast_div(film_width as u32);
+    let num_rays     = cpu_intrinsics.min(spp * film_width * film_height - first_ray_id, capacity - first_dst_id);
+    let film_div     = make_fast_div(film_width as u32);
 
     let ray_ids     = primary.rays.id;
     let write_ray   = make_ray_stream_writer(primary.rays, 1);
@@ -413,10 +413,9 @@ fn @gpu_streaming_trace( dev_id: i32
             // Do not set first as last (to make sure they drop out)
         }
 
-        acc.sync();
-
         primary.size   = first;
         secondary.size = first;
+        acc.sync();
 
         if first > 0 {
             // Trace secondary rays
@@ -515,10 +514,10 @@ fn @gpu_mega_kernel_trace( dev_id: i32
             let mut shadow_ray:    Ray;
             let mut trace_shadow = false;
             
-            let entity         = @entities(hit.ent_id);
-            let shape          = @shapes(entity.shape_id);
-            let shader         = @shaders(entity.bsdf_id);
-            let (local_ray, _) = transform_ray(intrinsics, ray, entity.local_mat);
+            let entity    = @entities(hit.ent_id);
+            let shape     = @shapes(entity.shape_id);
+            let shader    = @shaders(entity.bsdf_id);
+            let local_ray = transform_norm_ray(intrinsics, ray, entity.local_mat);
 
             let lcl_surf = shape.surface_element(local_ray, hit);
             let glb_surf = map_surface_element(intrinsics, lcl_surf, entity.global_mat, entity.normal_mat);

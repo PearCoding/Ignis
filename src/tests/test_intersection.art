@@ -58,8 +58,8 @@ fn test_bbox_intersect() {
     let ray = make_ray(make_vec3(0.2,0.4,2), make_vec3(0,0,-1), 0, 10);
     let defminmax = make_default_min_max();
 
-    if let Option[(f32,f32)]::Some((t0, _)) = intersect_ray_box_single(defminmax, false, ray, tbbox) {
-        if !eq_f32(t0, 1) {
+    if let Option[f32]::Some(t) = intersect_ray_box_single(defminmax, false, ray, tbbox) {
+        if !eq_f32(t, 1) {
             ++err;
         }
     } else {
@@ -77,7 +77,7 @@ fn test_bbox_no_intersect() {
     let ray = make_ray(make_vec3(0.2,3.4,2), make_vec3(0,0,-1), 0, 10);
     let defminmax = make_default_min_max();
 
-    if let Option[(f32,f32)]::Some((_,_)) = intersect_ray_box_single(defminmax, false, ray, tbbox) {
+    if let Option[f32]::Some(_) = intersect_ray_box_single(defminmax, false, ray, tbbox) {
         ++err;
         ignis_test_fail("BBox was intersected, but should not be!");
     }
@@ -92,7 +92,7 @@ fn test_bbox_flat_intersect() {
     let ray = make_ray(make_vec3(0.2,0.4,2), make_vec3(0,0,-1), 0, 10);
     let defminmax = make_default_min_max();
 
-    if let Option[(f32,f32)]::Some((t, _)) = intersect_ray_box_single(defminmax, false, ray, tbbox) {
+    if let Option[f32]::Some(t) = intersect_ray_box_single(defminmax, false, ray, tbbox) {
         if !eq_f32(t, 1) {
             ++err;
         }
@@ -111,7 +111,7 @@ fn test_bbox_empty_intersect() {
     let ray = make_ray(make_vec3(0.2,0.4,2), make_vec3(0,0,-1), 0, 10);
     let defminmax = make_default_min_max();
 
-    if let Option[(f32,f32)]::Some((_, _)) = intersect_ray_box_single(defminmax, false, ray, tbbox) {
+    if let Option[f32]::Some(_) = intersect_ray_box_single(defminmax, false, ray, tbbox) {
         ++err;
         ignis_test_fail("Empty bbox was intersected, but should not be!");
     }

@@ -39,6 +39,8 @@ std::string configurationToString(uint64 config)
 		stream << "[Path]";
 	if (config & IG_C_RENDERER_DEBUG)
 		stream << "[Debug]";
+	if (config & IG_C_RENDERER_AO)
+		stream << "[AO]";
 
 	if (config & IG_C_NO_INSTANCES)
 		stream << "[NoInstances]";

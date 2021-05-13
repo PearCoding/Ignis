@@ -97,7 +97,7 @@ struct Interface {
 	template <typename T>
 	anydsl::Array<T>& resize_array(int32_t dev, anydsl::Array<T>& array, size_t size, size_t multiplier)
 	{
-		int64_t capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
+		const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
 		if (array.size() < capacity) {
 			auto n = capacity * multiplier;
 			array  = std::move(anydsl::Array<T>(dev, reinterpret_cast<T*>(anydsl_alloc(dev, sizeof(T) * n)), n));
@@ -450,6 +450,8 @@ IG_EXPORT DriverInterface ig_get_interface()
 // Expose Integrator
 #if defined(RENDERER_PATH)
 	interface.Configuration |= IG::IG_C_RENDERER_PATH;
+#elif defined(RENDERER_AO)
+	interface.Configuration |= IG::IG_C_RENDERER_AO;
 #elif defined(RENDERER_DEBUG)
 	interface.Configuration |= IG::IG_C_RENDERER_DEBUG;
 #else
