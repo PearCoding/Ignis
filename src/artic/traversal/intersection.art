@@ -7,10 +7,12 @@ struct PrimBvh {
     arity:    i32,              // Arity of the BVH (number of children per node)
 }
 
+type BVHTable = fn (i32) -> PrimBvh;
+
 // Top level BVH
 struct SceneBvh {
     node:     fn (i32) -> Node,       // Access to one node of the BVH
-    bbox:     fn (i32) -> TaggedBBox, // Access to one TaggedBBox
+    ent:      fn (i32) -> EntityLeaf, // Access to one EntityLeaf
     prefetch: fn (i32) -> (),         // Prefetches a leaf or inner node
     arity:    i32,                    // Arity of the BVH (number of children per node)
 }
@@ -58,18 +60,20 @@ struct BBox {
     max: Vec3          // Maximum corner
 }
 
-struct TaggedBBox {
-    min: Vec3,    // Minimum corner
-    max: Vec3,    // Maximum corner
-    tag: i32      // Identifier pointing to a entity
+struct EntityLeaf {
+    bbox      : BBox,   // Bounding box
+    entity_id : i32, // Entity ID
+    shape_id  : i32, // Shape ID
+    local     : Mat3x4 // Matrix to local system
 }
 
 // Used as storage
-struct TaggedBBox1 {
-    min: [f32 * 3], // Minimum corner
-    pad0: i32,      // Padding
-    max: [f32 * 3], // Maximum corner
-    tag: i32        // Identifier pointing to a entity
+struct EntityLeaf1 {
+    min       : [f32 * 3], // Minimum corner
+    entity_id : i32,       // Entity ID
+    max       : [f32 * 3], // Maximum corner
+    shape_id  : i32,       // Shape/BVH ID
+    local     : Mat3x4     // Matrix to local system
 }
 
 // Min/max functions required to perform the ray-box test
@@ -120,15 +124,18 @@ fn @make_ray(org: Vec3, dir: Vec3, tmin: f32, tmax: f32) -> Ray {
     }
 }
 
-// Transforms ray and returns scale factor as well
-fn @transform_ray(math: Intrinsics, ray: Ray, m: Mat4x4) -> (Ray, f32) {
-    let d = mat3x3_mul(mat4x4_linear(m), ray.dir);
-    let scale_factor = vec3_len(math, d);
-    let nd = vec3_mulf(d, 1/scale_factor);
+// Transforms ray. The direction is not normalized
+// This can be used to assign as scale factor to upcoming intersections
+fn @transform_ray(ray: Ray, m: Mat3x4) = make_ray(
+    mat3x4_transform_point(m, ray.org),
+    mat3x4_transform_direction(m, ray.dir),
+    ray.tmin, ray.tmax);
 
-    (make_ray(mat4x4_transform_point(m, ray.org), nd, scale_factor * ray.tmin, scale_factor * ray.tmax), 
-    scale_factor)
-}
+// Transforms ray. The direction is normalized
+fn @transform_norm_ray(math: Intrinsics, ray: Ray, m: Mat3x4) = make_ray(
+    mat3x4_transform_point(m, ray.org),
+    vec3_normalize(math, mat3x4_transform_direction(m, ray.dir)),
+    ray.tmin, ray.tmax);
 
 fn @make_hit(ent_id: i32, prim_id: i32, t: f32, uv: Vec2) = Hit {
     distance  = t,
@@ -151,10 +158,11 @@ fn @make_bbox(min: Vec3, max: Vec3) = BBox {
     max = max
 };
 
-fn @make_tagged_bbox(min: Vec3, max: Vec3, tag: i32) = TaggedBBox {
-    min  = min,
-    max  = max,
-    tag  = tag
+fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, local: Mat3x4) = EntityLeaf {
+    bbox      = bbox,
+    entity_id = entity_id,
+    shape_id  = shape_id,
+    local     = local
 };
 
 fn @is_bbox_empty(bbox: BBox) = bbox.max.x < bbox.min.x || bbox.max.y < bbox.min.y || bbox.max.z < bbox.min.z;
@@ -232,15 +240,13 @@ fn @intersect_ray_box(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> (
     (tentry, texit)
 }
 
-fn @intersect_ray_box_single(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> Option[(f32,f32)] {
+fn @intersect_ray_box_single(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> Option[f32] {
     let (entry, exit) = intersect_ray_box(min_max, ordered, ray, bbox);
     let mask = (entry <= exit) & (exit >= 0);
 
     if mask {
-        make_option((entry, exit))
+        make_option(select(entry < 1e-5, exit, entry))
     } else {
-        Option[(f32,f32)]::None
+        Option[f32]::None
     }
 }
-
-fn @intersect_ray_tagged_box(min_max: MinMax, ray: Ray, bbox: TaggedBBox) = intersect_ray_box_single(min_max, false, ray, make_bbox(bbox.min, bbox.max));

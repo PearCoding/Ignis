@@ -1,0 +1,161 @@
+fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterFactory) -> Renderer {
+    @ |scene, device, iter| {
+        let offset : f32  = 0.001;
+        let num_lights    = scene.info.num_lights;
+        let pdf_lightpick = 1 / (num_lights as f32);
+
+        let on_emit = emitter(scene, device, iter);
+
+        fn @on_shadow( ray: Ray
+                     , _hit: Hit
+                     , state: &mut RayState
+                     , surf: SurfaceElement
+                     , mat: Material
+                     ) -> Option[(Ray, Color)] {
+            // No shadow rays for specular materials
+            if mat.bsdf.is_specular {
+                return(Option[(Ray, Color)]::None)
+            }
+
+            let rnd = &mut state.rnd;
+            // Note: randi() returns random integers, but we only want positive integers here
+            let light_id = (randi(rnd) & 0x7FFFFFFF) % num_lights;
+            let lights   = scene.database.lights;
+            let light    = @lights(light_id);
+            let sample_direct = light.sample_direct;
+            let light_sample = @sample_direct(rnd, surf);
+            if light.infinite {
+                let light_dir = light_sample.posdir; // Infinite lights return a direction instead of a position
+                let vis = vec3_dot(light_dir, surf.local.col(2));
+
+                if vis > flt_eps {
+                    let in_dir  = light_dir; // TODO: Check correct orientation
+                    let out_dir = vec3_neg(ray.dir);
+
+                    let pdf_e     = mat.bsdf.pdf(in_dir, out_dir);        // Pdf to sample the "infinite" light based on bsdf
+                    let pdf_l     = light_sample.pdf_dir * pdf_lightpick; // Pdf to sample the light based on NEE
+                    let inv_pdf_l = 1 / pdf_l;
+                    
+                    let mis   = if light.delta { 1 } else { 1 / (1 + pdf_e * inv_pdf_l) };
+                    let cos_l = light_sample.cos; // Usually, this is just 1
+
+                    let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
+                    return(make_option(
+                        make_ray(surf.point, light_dir, offset, flt_max),
+                        color_mulf(contrib, cos_l * mis)
+                    ))
+                }
+            }  else {
+                let light_dir = vec3_sub(light_sample.posdir, surf.point);
+                let vis = vec3_dot(light_dir, surf.local.col(2));
+
+                if vis > flt_eps && light_sample.cos > flt_eps {
+                    let inv_d   = 1 / vec3_len(device.intrinsics, light_dir);
+                    let inv_d2  = inv_d * inv_d;
+                    let in_dir  = vec3_mulf(light_dir, inv_d);
+                    let out_dir = vec3_neg(ray.dir);
+
+                    let pdf_e = if light.delta { 1 } else { mat.bsdf.pdf(in_dir, out_dir) };
+                    let pdf_l = light_sample.pdf_area * pdf_lightpick;
+
+                    let cos_l = light_sample.cos;
+
+                    let mis = if light.delta { 1 } else { 1 / (1 + pdf_e * cos_l * inv_d2 / pdf_l) };
+                    let geom_factor = inv_d * cos_l * inv_d2;
+
+                    let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
+                    return(make_option(
+                        make_ray(surf.point, light_dir, offset, 1 - offset),
+                        color_mulf(contrib, geom_factor * mis)
+                    ))
+                }
+            }
+            Option[(Ray, Color)]::None
+        }
+
+        fn @on_hit( ray: Ray
+                  , hit: Hit
+                  , state: &mut RayState
+                  , surf: SurfaceElement
+                  , mat: Material
+                  ) -> Option[Color] {
+            // Hits on a light source
+            if mat.is_emissive && surf.is_entering {
+                let out_dir = vec3_neg(ray.dir);
+                let emit = mat.emission(out_dir);
+                let next_mis = state.mis * hit.distance * hit.distance / vec3_dot(out_dir, surf.local.col(2));
+                let mis = 1 / (1 + next_mis * pdf_lightpick * emit.pdf_area);
+                make_option(color_mulf(color_mul(state.contrib, emit.intensity), mis))
+            } else {
+                Option[Color]::None
+            }
+        }
+
+        fn @on_miss( ray: Ray
+                   , state: &mut RayState) -> Option[Color] {
+            let mut inflights = 0;
+            let mut color     = black;
+            let lights        = scene.database.lights;
+
+            // TODO: Better use randomness to pick one infinite light
+            for light_id in range(0, num_lights) {
+                let light = @lights(light_id);
+                // Do not include delta lights or finite lights
+                if light.infinite && !light.delta {
+                    inflights += 1;
+
+                    let out_dir = vec3_neg(ray.dir);
+                    let emit = light.emission(out_dir, make_vec2(0,0));
+                    let mis  = 1 / (1 + state.mis * pdf_lightpick * emit.pdf_dir);
+                    color = color_add(color, color_mulf(color_mul(state.contrib, emit.intensity), mis));
+                }
+            }
+
+            if inflights > 0 {
+                make_option(color)
+            } else {
+                Option[Color]::None
+            }
+        }
+
+        fn @on_bounce( ray: Ray
+                     , _hit: Hit
+                     , state: &mut RayState
+                     , surf: SurfaceElement
+                     , mat: Material
+                     ) -> Option[(Ray, RayState)] {            
+            // Russian roulette and maximum depth
+            let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette(state.contrib, 0.75) };
+            if state.depth >= max_path_len || randf(&mut state.rnd) >= rr_prob {
+                return(Option[(Ray, RayState)]::None)
+            }
+
+            // Bounce
+            let out_dir = vec3_neg(ray.dir);
+            let mat_sample = mat.bsdf.sample(&mut state.rnd, out_dir, false);
+
+            // The bsdf might reject the sampling
+            if mat_sample.pdf <= flt_eps { return(Option[(Ray, RayState)]::None) }
+
+            let contrib = color_mul(state.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+            
+            let mis = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
+            let new_contrib = color_mulf(contrib, 1 / rr_prob);
+
+            make_option(
+                make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
+                make_ray_state(state.rnd, new_contrib, mis, state.depth + 1)
+            )
+        }
+
+        let path_tracer = PathTracer {
+            on_emit   = on_emit,
+            on_hit    = on_hit,
+            on_miss   = on_miss,
+            on_shadow = on_shadow,
+            on_bounce = on_bounce
+        };
+
+        device.trace(scene, path_tracer, spp);
+    }
+}

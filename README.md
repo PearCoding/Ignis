@@ -43,10 +43,12 @@ The Ignis Rodent client has an optional UI and multiple ways to interact with th
 
  - `1..9` number keys to switch between views.
  - `1..9` and `Strg/Ctrl` to save the current view on that slot.
+ - `F1` to toggle the help window.
  - `F2` to toggle the UI.
  - `F3` to toggle the interaction lock. If enabled, no view changing interaction is possible.
  - `F11` to save a screenshot. The image will be saved in the current working directory.
  - `R` to reset to initial view.
+ - `P` to pause current rendering. Also implies an interaction lock.
  - `T` to toggle automatic tonemapping.
  - `G` to reset tonemapping properties. Only works if automatic tonemapping is disabled.
  - `F` to increase (or with `Shift` to decrease) tonemapping exposure. Step size can be decreased with `Strg/Ctrl`. Only works if automatic tonemapping is disabled.

@@ -1,35 +1,10 @@
 // Dummy file used to generate a C interface for the renderer
-
-struct InitialSettings {
-    eye:         Vec3,
-    dir:         Vec3,
-    up:          Vec3,
-    fov:         f32,
-    film_width:  i32,
-    film_height: i32
+#[export]
+fn _dummy1(_tri1: &[Tri1], _tri4: &[Tri4]) -> () {
 }
 
-struct Settings {
-    eye:    Vec3,
-    dir:    Vec3,
-    up:     Vec3,
-    right:  Vec3,
-    width:  f32,
-    height: f32,
-    ray_count: i32,
-    rays: &[Ray]
-}
-
-#[export] fn get_spp() -> i32 { 1 }
-#[export] fn get_default_settings() = InitialSettings {
-    eye         = make_vec3(0, 0, 0),
-    dir         = make_vec3(0, 0, -1),
-    up          = make_vec3(0, 1, 0),
-    fov         = 60,
-    film_width  = 400,
-    film_height = 400
-};
-#[export] fn render(_settings: &Settings, _iter: i32) -> () {
+#[export]
+fn ig_render(_settings: &Settings, _iter: i32) -> () {
     // Force the export of the primary and secondary stream types
     let mut primary : PrimaryStream;
     let mut secondary : SecondaryStream;
@@ -37,26 +12,32 @@ struct Settings {
     ignis_cpu_get_secondary_stream(&mut secondary, 0);
 
     // Force the export of BVH types
-    let (mut node2 : &[Node2], mut tri1 : &[Tri1]);
-    let (mut node4 : &[Node4], mut tri4 : &[Tri4]);
-    let  mut node8 : &[Node8];
-    let  mut tagged_bbox : &[TaggedBBox1];
+    let mut node2 : &[Node2];
+    let mut node4 : &[Node4];
+    let mut node8 : &[Node8];
+    let mut entityleaf : &[EntityLeaf1];
     
-    ignis_load_bvh2_tri1(0, "", &mut node2, &mut tri1);
-    ignis_load_bvh4_tri4(0, "", &mut node4, &mut tri4);
-    ignis_load_bvh8_tri4(0, "", &mut node8, &mut tri4);
-
-    ignis_load_bvh2_bbox(0, "", &mut node2, &mut tagged_bbox);
-    ignis_load_bvh4_bbox(0, "", &mut node4, &mut tagged_bbox);
-    ignis_load_bvh8_bbox(0, "", &mut node8, &mut tagged_bbox);
+    ignis_load_bvh2_ent(0, &mut node2, &mut entityleaf);
+    ignis_load_bvh4_ent(0, &mut node4, &mut entityleaf);
+    ignis_load_bvh8_ent(0, &mut node8, &mut entityleaf);
 
     // Force the export of the CDF types
-    let mut cdf1 : CDF1D;
+    /*let mut cdf1 : CDF1D;
     let mut cdf2 : CDF2D;
     ignis_load_cdf1d(0, "", &mut cdf1);
     ignis_load_cdf2d(0, "", &mut cdf2);
 
     // Force the export of the klems model
     let mut klems : KlemsModel;
-    ignis_load_klems(0, "", &mut klems);
+    ignis_load_klems(0, "", &mut klems);*/
+
+    // Force the export
+    let mut dtb : SceneDatabase;
+    ignis_load_scene(0, &mut dtb);
+
+    let mut info : SceneInfo;
+    ignis_load_scene_info(0, &mut info);
+
+    let mut rays : &[Ray];
+    ignis_load_rays(0, &mut rays); 
 }

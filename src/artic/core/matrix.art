@@ -201,16 +201,8 @@ fn @mat4x4_invert(a: Mat4x4) -> Mat4x4 {
     m
 }
 
-fn @mat4x4_linear(a: Mat4x4) = make_mat3x3(
-    make_vec3(a.col(0).x, a.col(0).y, a.col(0).z),
-    make_vec3(a.col(1).x, a.col(1).y, a.col(1).z),
-    make_vec3(a.col(2).x, a.col(2).y, a.col(2).z)
-);
-
-// This is invalid if scale is non-uniform.
-// We have to use the transpose inverse, but ....
-//fn @mat4x4_normal(a: Mat4x4) = mat4x4_linear(a);
-fn @mat4x4_normal(a: Mat4x4) = mat3x3_transpose(mat3x3_invert(mat4x4_linear(a)));
+fn @mat3x4_transform_point(a: Mat3x4, v: Vec3)     = mat3x4_mul(a, make_vec4(v.x, v.y, v.z, 1));
+fn @mat3x4_transform_direction(a: Mat3x4, v: Vec3) = mat3x4_mul(a, make_vec4(v.x, v.y, v.z, 0));
 
 fn @mat4x4_transform_point(a: Mat4x4, v: Vec3) -> Vec3 {
     let res = mat4x4_mul(a, make_vec4(v.x, v.y, v.z, 1));
@@ -218,5 +210,7 @@ fn @mat4x4_transform_point(a: Mat4x4, v: Vec3) -> Vec3 {
     make_vec3(res.x*inv_w, res.y*inv_w, res.z*inv_w)
 }
 
-fn @mat4x4_transform_direction(math: Intrinsics, a: Mat4x4, v: Vec3) = vec3_normalize(math, mat3x3_mul(mat4x4_linear(a), v));
-fn @mat4x4_transform_normal(math: Intrinsics, a: Mat4x4, v: Vec3) = vec3_normalize(math, mat3x3_mul(mat4x4_normal(a), v));
+fn @mat4x4_transform_direction(a: Mat4x4, v: Vec3) -> Vec3 {
+    let res = mat4x4_mul(a, make_vec4(v.x, v.y, v.z, 0));
+    make_vec3(res.x, res.y, res.z)
+}

@@ -1,0 +1,132 @@
+struct LookupEntry {
+    type_id: u32, // Type ID depends on the actual dyntable usecase
+    flags:   u32, // Optional flags, currently not used
+    offset:  u64  // Offset to start of the DynTable in bytes
+}
+
+// TODO: Prolly the mother of all cache misses :O
+struct DynTable {
+    count:  u64,            // Entry counts
+    header: &[LookupEntry], // Pointer to an array of lookup entries
+    size:   u64,            // Size in bytes of the buffer 'start' is pointing to
+    start:  &[u8]           // Pointer to an buffer of size 'size'
+}
+
+struct MapEntry {
+    first:  u32,
+    second: u32
+}
+
+struct MapTable {
+    count:   u64,         // Entry counts
+    entries: &[MapEntry], // Pointer to an array of lookup entries
+}
+
+struct RawBufferTable {
+    count:   u64,      // Entry counts
+    entries: &[&[u8]], // Pointer to device specific pointers
+}
+
+struct SceneDatabase {
+    buffers:  RawBufferTable,
+    textures: DynTable,
+    shapes:   DynTable,
+    entities: DynTable,
+    lights:   DynTable,
+    shaders:  DynTable,
+    bvhs:     DynTable
+}
+
+// Stage 1: Initial stage after loading buffers
+struct Stage1Accessor {
+    info:    SceneInfo,
+    buffers: BufferTable
+}
+
+// Stage 2: Initial stage after loading texture tables
+struct Stage2Accessor {
+    info:     SceneInfo,
+    buffers:  BufferTable,  
+    textures: TextureTable 
+}
+
+// Stage 3: Second stage after loading shapes and entities
+struct Stage3Accessor {
+    info:     SceneInfo,
+    buffers:  BufferTable,  
+    textures: TextureTable,
+    shapes:   ShapeTable,
+    entities: EntityTable
+}
+
+// Essentially Stage4Accessor, after loading everything else
+struct SceneAccessor {
+    info:       SceneInfo,
+    buffers:    BufferTable,  // Defined here
+    textures:   TextureTable, // Defined in texture.art
+    shapes:     ShapeTable,   // Defined in shape.art
+    entities:   EntityTable,  // Defined in entity.art
+    lights:     LightTable,   // Defined in light.art
+    arealights: LightTable,   // Defined in light.art
+    shaders:    BsdfTable,  // Defined in material.art
+    bvhs:       BVHTable      // Defined in intersection.art
+}
+
+// Device buffer. Granularity is 4 byte per index
+struct DeviceBuffer {
+    load_i32:      fn (i32) -> i32,
+    load_f32:      fn (i32) -> f32,
+    load_vec2:     fn (i32) -> Vec2,
+    load_vec3:     fn (i32) -> Vec3,
+    load_vec4:     fn (i32) -> Vec4,
+    load_int2:     fn (i32) -> (i32, i32),
+    load_int3:     fn (i32) -> (i32, i32, i32),
+    load_int4:     fn (i32) -> (i32, i32, i32, i32),
+    load_mat3x3:   fn (i32) -> Mat3x3,
+    load_mat3x4:   fn (i32) -> Mat3x4,
+    load_mat4x4:   fn (i32) -> Mat4x4,
+    has_alignment: bool // True if vec2, vec3, int2 and int3 are expected to be like vec4 or int4 in memory
+}
+
+fn @join_u32(a: u32, b: u32) = ((b as u64) << 32) | (a as u64); // TODO: This assumes little endian
+
+type DeviceBufferAccessor = fn (&[u8]) -> DeviceBuffer;
+fn @get_lookup_entry(ind: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> LookupEntry {
+    // TODO: Check boundaries
+    //tbl.header(ind)
+    let data = acc((&tbl.header(ind)) as &[u8]);
+    let (type_id, flags, off1, off2) = data.load_int4(0);
+    LookupEntry {
+         type_id = bitcast[u32](type_id),
+         flags   = bitcast[u32](flags),
+         offset  = join_u32(bitcast[u32](off1), bitcast[u32](off2))
+    }
+}
+
+fn @get_table_ptr(off: u64, tbl: &DynTable) -> &[u8] {
+    // TODO: Check boundaries
+    &tbl.start(off) as &[u8]
+}
+
+fn @get_table_entry(off: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> DeviceBuffer {
+    // TODO: Check boundaries
+    acc(get_table_ptr(off, tbl))
+}
+
+//-----------------
+
+type BufferTable = fn (i32) -> (&[u8], DeviceBuffer);
+
+fn @make_buffer_table(_math: Intrinsics, dtb: RawBufferTable, acc: DeviceBufferAccessor) -> BufferTable {
+    @ |id| {
+        let k    = id % 2;
+        let ap   = &dtb.entries(id - k); // Aligned pointer
+        let data = acc(ap as &[u8]);
+
+        let (e0, e1, e2, e3) = data.load_int4(0); 
+
+        let ptr_addr = if k == 1 { join_u32(bitcast[u32](e2), bitcast[u32](e3)) } else { join_u32(bitcast[u32](e0), bitcast[u32](e1)) };
+        let ptr      = ptr_addr as &[u8];
+        (ptr, acc(ptr))
+    } 
+}

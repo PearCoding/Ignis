@@ -24,6 +24,13 @@ fn @is_black(c: Color) = (c.r == 0 && c.g == 0 && c.b == 0);
 fn @vec3_to_color(v: Vec3) = make_color(v.x, v.y, v.z);
 fn @color_to_vec3(c: Color) = make_vec3(c.r, c.g, c.b);
 
-static black = Color { r = 0, g = 0, b = 0 };
-static white = Color { r = 1, g = 1, b = 1 };
-static pink  = Color { r = 1, g = 0, b = 1 }; 
+static black   = Color { r = 0, g = 0, b = 0 };
+static white   = Color { r = 1, g = 1, b = 1 };
+static pink    = Color { r = 1, g = 0, b = 1 }; 
+static red     = Color { r = 1, g = 0, b = 0 }; 
+static green   = Color { r = 0, g = 1, b = 0 }; 
+static blue    = Color { r = 0, g = 0, b = 1 }; 
+static yellow  = Color { r = 1, g = 1, b = 0 }; 
+static magenta = Color { r = 1, g = 0, b = 1 };
+static cyan    = Color { r = 0, g = 1, b = 1 };  
+static orange  = Color { r = 1, g = 0.5, b = 0 }; 

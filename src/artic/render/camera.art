@@ -1,13 +1,11 @@
 // Opaque camera object
 struct Camera {
     // Generates a ray for a point on the image plane (in [-1, 1]^2)
-    generate_ray: fn (f32, f32) -> Ray,
-    // Return position of camera
-    origin: fn() -> Vec3
+    generate_ray: fn (f32, f32) -> Ray
 }
 
 // Creates a perspective camera
-fn @make_perspective_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f32) -> Camera {
+fn @make_perspective_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
     let dir   = view.col(2);
     let right = view.col(0);
     let up    = view.col(1);
@@ -21,14 +19,13 @@ fn @make_perspective_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h
                     dir
                 )
             );
-            make_ray(eye, d, 0, flt_max)
-        },
-        origin = @ || eye
+            make_ray(eye, d, tmin, tmax)
+        }
     }
 }
 
 // Creates an orthogonal camera
-fn @make_orthogonal_camera(_math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f32) -> Camera {
+fn @make_orthogonal_camera(_math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
     let dir   = view.col(2);
     let right = view.col(0);
     let up    = view.col(1);
@@ -40,9 +37,8 @@ fn @make_orthogonal_camera(_math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h
                                     vec3_mulf(up, h * y)),
                             eye
                       );
-            make_ray(pos, dir, 0, flt_max)
-        },
-        origin = @ || eye
+            make_ray(pos, dir, tmin, tmax)
+        }
     }
 }
 
@@ -53,7 +49,7 @@ enum FisheyeAspectMode {
 }
 
 // Creates a fishlens camera
-fn @make_fishlens_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f32) -> Camera {
+fn @make_fishlens_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
     let fov = flt_pi;
     let V   = mat3x3_transpose(view);
     let asp = w / h;
@@ -73,7 +69,7 @@ fn @make_fishlens_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f
             (xasp, yasp)
         },
         FisheyeAspectMode::Full => {
-            let diameter = host_sqrtf(asp * asp + 1) * h;
+            let diameter = cpu_intrinsics.sqrtf(asp * asp + 1) * h;
             let min_s	 = fmin(w, h);
             let f        = diameter / min_s;
             let xasp = if asp < 1 { f } else { f / asp };
@@ -95,8 +91,7 @@ fn @make_fishlens_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f
             let cP = if r < flt_eps { 0 } else { nx / r };
             let nd = make_vec3(sT*cP, sT*sP, cT);
             let d  = vec3_normalize(math, mat3x3_mul(V, nd));
-            make_ray(eye, d, 0, flt_max)
-        },
-        origin = @ || eye
+            make_ray(eye, d, tmin, tmax)
+        }
     }
 }

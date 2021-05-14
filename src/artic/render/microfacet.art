@@ -85,11 +85,7 @@ fn @make_microfacet_distribution(model: MicrofacetModel, surf: SurfaceElement) =
 };
 
 fn @make_beckmann_distribution(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
-    if alpha_u == alpha_v {// TODO: Add isotropic specialization
-        make_microfacet_distribution(make_aniso_beckmann_model(math, surf, alpha_u, alpha_v), surf)
-    } else {
-        make_microfacet_distribution(make_aniso_beckmann_model(math, surf, alpha_u, alpha_v), surf)
-    }
+    make_microfacet_distribution(make_aniso_beckmann_model(math, surf, alpha_u, alpha_v), surf)
 }
 
 /*fn make_iso_ggx_distribution(math: Intrinsics, surf: SurfaceElement, alpha: f32) -> MicrofacetDistribution {

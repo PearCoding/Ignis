@@ -5,105 +5,15 @@ struct Image {
     height:   i32
 }
 
-struct BorderHandling {
-    horz: fn (Intrinsics, f32) -> f32,
-    vert: fn (Intrinsics, f32) -> f32
-}
-
-type Texture = fn (Vec2) -> Color;
-type ImageFilter = fn (Intrinsics, Image, Vec2) -> Color;
-
 fn @make_image(pixels: fn (i32, i32) -> Color, width: i32, height: i32) = Image {
     pixels = pixels,
     width  = width,
     height = height
 };
 
-fn @make_clamp_border() -> BorderHandling {
-    let clamp = @ |math: Intrinsics, x: f32| math.fminf(1, math.fmaxf(0, x));
-    BorderHandling {
-        horz = clamp,
-        vert = clamp
-    }
-}
-
-fn @make_repeat_border() -> BorderHandling {
-    let repeat = @ |math: Intrinsics, x: f32| x - math.floorf(x);
-    BorderHandling {
-        horz = repeat,
-        vert = repeat
-    }
-}
-
-fn @make_mirror_border() -> BorderHandling {
-    let mirror = @ |math: Intrinsics, x: f32| { if ((x as i32) % 2) == 0 { x - math.floorf(x) } else { 1 - (x - math.floorf(x)) } };
-
-    BorderHandling {
-        horz = mirror,
-        vert = mirror
-    }
-}
-
-fn @make_nearest_filter() -> ImageFilter {
-    @ |math, img, uv| {
-        img.pixels(math.min((uv.x * img.width  as f32) as i32, img.width  - 1),
-                   math.min((uv.y * img.height as f32) as i32, img.height - 1))
-    }
-}
-
-fn @make_bilinear_filter() -> ImageFilter {
-    @ |math, img, uv| {
-        let u = uv.x * img.width as f32;
-        let v = uv.y * img.height as f32;
-        let x0 = math.min(u as i32, img.width  - 1);
-        let y0 = math.min(v as i32, img.height - 1);
-        let x1 = math.min(x0 + 1, img.width  - 1);
-        let y1 = math.min(y0 + 1, img.height - 1);
-        let kx = u - (u as i32 as f32);
-        let ky = v - (v as i32 as f32);
-
-        let p00 = img.pixels(x0, y0);
-        let p10 = img.pixels(x1, y0);
-        let p01 = img.pixels(x0, y1);
-        let p11 = img.pixels(x1, y1);
-
-        let interp = @ |x00: f32, x10: f32, x01: f32, x11: f32| lerp(lerp(x00, x10, kx), lerp(x01, x11, kx), ky);
-        make_color(interp(p00.r, p10.r, p01.r, p11.r),
-                   interp(p00.g, p10.g, p01.g, p11.g),
-                   interp(p00.b, p10.b, p01.b, p11.b))
-    }
-}
-
-fn @make_texture(math: Intrinsics, border: BorderHandling, filter: ImageFilter, image: Image) -> Texture {
-    @ |uv| {
-        let u = border.horz(math, uv.x);
-        let v = border.vert(math, uv.y);
-        filter(math, image, make_vec2(u, v))
-    }
-}
-
-fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color) -> Texture {
-    @ |uv| { 
-        let suv = vec2_mul(uv, scale);
-        let parity_x = ((suv.x as i32) % 2) == 0;
-        let parity_y = ((suv.y as i32) % 2) == 0;
-
-        if parity_x ^ parity_y { color0 } else { color1 }
-    }
-}
-
-fn @make_black_texture() -> Texture {
-    @ |_uv| { black }
-}
-
-fn @texture_dx(tex: Texture, point: Vec2) -> Color {
-    let delta = 0.001:f32;
-    //color_mulf(color_sub(tex(make_vec2(point.x + delta, point.y)), tex(make_vec2(point.x - delta, point.y))), 1/(2*delta))
-    color_mulf(color_sub(tex(make_vec2(point.x + delta, point.y)), tex(make_vec2(point.x, point.y))), 1/delta)
-}
-
-fn @texture_dy(tex: Texture, point: Vec2) -> Color {
-    let delta = 0.001:f32;
-    //color_mulf(color_sub(tex(make_vec2(point.x, point.y + delta)), tex(make_vec2(point.x, point.y - delta))), 1/(2*delta))
-    color_mulf(color_sub(tex(make_vec2(point.x, point.y + delta)), tex(make_vec2(point.x, point.y))), 1/delta)
+fn @load_image_from_buffer(bufferID: i32, tbl: BufferTable) -> Image {
+    let (_, data)       = tbl(bufferID);
+    let (width, height) = data.load_int2(0);
+    
+    make_image(@|x, y| vec3_to_color(data.load_vec3(4 + 4 * (y * width + x))), width, height)
 }

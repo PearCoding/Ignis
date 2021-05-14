@@ -1,0 +1,45 @@
+{
+	"technique": {
+		"type": "path",
+		"max_depth": 1
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 60,
+		"near_clip": 0.01,
+		"far_clip": 100,
+		"transform": [ 1,0,0,0, 0,0,1,-8, 0,1,0,0 ]
+	},
+	"film": {
+		"type": "hdr",
+		"size": [1000, 1000],
+        "spp": 4
+	},
+	"bsdfs": [
+		{"type":"diffuse", "name": "ground", "reflectance":[0.8, 0.8, 0.8]},
+		{"type":"diffuse", "name": "object", "reflectance":[0.95, 0.95, 0.95]}
+	],
+	"shapes": [
+		{"type":"rectangle", "name":"Bottom", "width":10, "height":8},
+		{"type":"cube", "name":"ObjBox"},
+		{"type":"sphere", "name":"ObjSphere"},
+		{"type":"cylinder", "name":"ObjCylinder"},
+		{"type":"cylinder", "name":"ObjCylinder2", "filled":false},
+		{"type":"cone", "name":"ObjCone"},
+		{"type":"cone", "name":"ObjCone2", "filled":false},
+		{"type":"disk", "name":"ObjDisk"}
+	],
+	"entities": [
+		{"name":"Bottom","shape":"Bottom", "bsdf":"ground", "transform": {"position":[0,0,-1]}},
+		{"name":"Sphere","shape":"ObjSphere", "bsdf":"object", "transform": {"position":[-2,0,0]}},
+		{"name":"Cube","shape":"ObjBox", "bsdf":"object", "transform": {"position":[-4,0,0], "scale":0.5}},
+		{"name":"Cylinder","shape":"ObjCylinder", "bsdf":"object", "transform": {"position":[0,-1,-1]}},
+		{"name":"Cylinder2","shape":"ObjCylinder2", "bsdf":"object", "transform": {"position":[0,1,-1]}},
+		{"name":"Cone","shape":"ObjCone", "bsdf":"object", "transform": [1,0,0,2, 0,1,0,-1, 0,0,-1,0]},
+		{"name":"Cone2","shape":"ObjCone2", "bsdf":"object", "transform": [1,0,0,2, 0,1,0,1, 0,0,-1,0]},
+		{"name":"Disk","shape":"ObjDisk", "bsdf":"object", "transform": {"position":[4,0,0]}}
+	],
+	"lights": [
+		{"type":"env", "name":"Light", "radiance":[1,1,1]}
+	]
+}

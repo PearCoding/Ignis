@@ -36,11 +36,7 @@ set(CMAKE_DEBUG_POSTFIX  "_d")
 message(STATUS "Building Ignis Rodent ${Ignis_VERSION}")
 
 # Options
-set(IG_TARGET_PLATFORM "" CACHE STRING "Target platform for the generator tool. Leave empty to autodetect CPU. Use iggenerator --help to list possible platforms.")
-set(IG_TARGET_DEVICE "" CACHE STRING "Target device on the selected platform. Leave empty to use the default.")
-set(IG_SCENE_FILE "${PROJECT_SOURCE_DIR}/scenes/diamond_scene.json" CACHE FILEPATH "Absolute path to an Mitsuba scene")
-set(IG_MEGAKERNEL_FUSION ON CACHE BOOL "Set to true to enable simple shader fusion for megakernel mappings")
-set(IG_ALWAYS_BUILD_BVH OFF CACHE BOOL "Always force the BVH to be rebuilt")
+set(IG_DISABLE_TARGETS "" CACHE STRING "Target platforms to not build a driver for.")
 set(IG_ENABLE_PYTHON_API OFF CACHE BOOL "Build additional python API")
 
 # Setup artic clang flags
