@@ -3,6 +3,7 @@
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
 #include "LoaderShape.h"
+#include "LoaderTexture.h"
 #include "driver/Configuration.h"
 
 namespace IG {
@@ -13,6 +14,9 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 	ctx.Target		  = configurationToTarget(opts.Configuration);
 	ctx.EnablePadding = doesTargetRequirePadding(ctx.Target);
 	ctx.Scene		  = opts.Scene;
+
+	if (!LoaderTexture::load(ctx, result))
+		return false;
 
 	if (!LoaderShape::load(ctx, result))
 		return false;

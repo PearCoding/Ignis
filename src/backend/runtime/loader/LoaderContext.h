@@ -7,12 +7,14 @@
 
 namespace IG {
 
+struct SceneDatabase;
 struct LoaderContext {
 	Parser::Scene Scene;
 
 	std::filesystem::path FilePath;
 	IG::Target Target;
 	bool EnablePadding;
+	std::unordered_map<std::string, uint32> Images; // Image to Buffer
 
 	LoaderEnvironment Environment;
 
@@ -32,6 +34,8 @@ struct LoaderContext {
 	bool isTexture(const std::shared_ptr<Parser::Object>& obj, const std::string& propname) const;
 	uint32 extractTextureID(const std::shared_ptr<Parser::Object>& obj, const std::string& propname) const;
 	Vector3f extractColor(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, const Vector3f& def = Vector3f::Ones()) const;
+
+	uint32 loadImage(const std::filesystem::path& path, SceneDatabase& dtb, bool& ok);
 };
 
 } // namespace IG

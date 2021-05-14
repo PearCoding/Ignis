@@ -30,6 +30,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/scene.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/shape.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/settings.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/texture.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/intersection.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/mapping_cpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/mapping_gpu.art

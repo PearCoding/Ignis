@@ -76,22 +76,36 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
 #endif
 
     let dtb  = device.load_scene_database();
-    let info = device.load_scene_info();
-    let lacc = LightAccessor {
-        shapes   = device.load_shape_table(dtb.shapes),
-        entities = device.load_entity_table(dtb.entities)
+    let stage1 = Stage1Accessor {
+        info     = device.load_scene_info(),
+        buffers  = device.load_buffer_table(dtb.buffers)
+    };
+    let stage2 = Stage2Accessor {
+        info     = stage1.info,
+        buffers  = stage1.buffers,
+        textures = device.load_texture_table(dtb.textures, stage1)
+    };
+    let stage3 = Stage3Accessor {
+        info     = stage2.info,
+        buffers  = stage2.buffers,
+        textures = stage2.textures,
+        shapes   = device.load_shape_table(dtb.shapes, stage2),
+        entities = device.load_entity_table(dtb.entities, stage2)
     };
     let acc  = SceneAccessor {
-        shapes     = lacc.shapes,
-        entities   = lacc.entities,
-        lights     = device.load_light_table(dtb.lights, info, lacc),
-        arealights = device.load_arealight_table(dtb.lights, lacc),
-        shaders    = device.load_shader_table(dtb.shaders),
+        info       = stage3.info,
+        buffers    = stage3.buffers,
+        textures   = stage3.textures,
+        shapes     = stage3.shapes,
+        entities   = stage3.entities,
+        lights     = device.load_light_table(dtb.lights, stage3),
+        arealights = device.load_arealight_table(dtb.lights, stage3),
+        shaders    = device.load_shader_table(dtb.shaders, stage3),
         bvhs       = device.load_bvh_table(dtb.bvhs)
     };
 
     let scene = Scene {
-        info     = info,
+        info     = acc.info,
         database = acc,
         bvh      = device.load_scene_bvh()
     };

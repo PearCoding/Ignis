@@ -37,7 +37,7 @@ constexpr float ABSORPTION_DEFAULT = 2.7834f;
 static void bsdf_error(const std::string& msg, LoaderResult& result)
 {
 	IG_LOG(L_ERROR) << msg << std::endl;
-	result.Database.ShaderTable.addLookup(BSDF_INVALID, DefaultAlignment);
+	result.Database.BsdfTable.addLookup(BSDF_INVALID, DefaultAlignment);
 }
 
 static uint32 setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, VectorSerializer& serializer)
@@ -60,7 +60,7 @@ static void bsdf_diffuse(const std::string&, const std::shared_ptr<Parser::Objec
 {
 	auto albedo = ctx.extractColor(bsdf, "reflectance");
 
-	auto& data = result.Database.ShaderTable.addLookup(BSDF_DIFFUSE, DefaultAlignment);
+	auto& data = result.Database.BsdfTable.addLookup(BSDF_DIFFUSE, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(albedo);
 }
@@ -70,7 +70,7 @@ static void bsdf_orennayar(const std::string&, const std::shared_ptr<Parser::Obj
 	auto albedo = ctx.extractColor(bsdf, "reflectance");
 	float alpha = bsdf->property("alpha").getNumber(0.0f);
 
-	auto& data = result.Database.ShaderTable.addLookup(BSDF_ORENNAYAR, DefaultAlignment);
+	auto& data = result.Database.BsdfTable.addLookup(BSDF_ORENNAYAR, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(albedo);
 	serializer.write(alpha);
@@ -83,7 +83,7 @@ static void bsdf_dielectric(const std::string&, const std::shared_ptr<Parser::Ob
 	float ext_ior	  = bsdf->property("ext_ior").getNumber(AIR_IOR);
 	float int_ior	  = bsdf->property("int_ior").getNumber(GLASS_IOR);
 
-	auto& data = result.Database.ShaderTable.addLookup(BSDF_DIELECTRIC, DefaultAlignment);
+	auto& data = result.Database.BsdfTable.addLookup(BSDF_DIELECTRIC, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write(ext_ior);
@@ -98,7 +98,7 @@ static void bsdf_thindielectric(const std::string&, const std::shared_ptr<Parser
 	float ext_ior	  = bsdf->property("ext_ior").getNumber(AIR_IOR);
 	float int_ior	  = bsdf->property("int_ior").getNumber(GLASS_IOR);
 
-	auto& data = result.Database.ShaderTable.addLookup(BSDF_THIN_DIELECTRIC, DefaultAlignment);
+	auto& data = result.Database.BsdfTable.addLookup(BSDF_THIN_DIELECTRIC, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write(ext_ior);
@@ -110,7 +110,7 @@ static void bsdf_mirror(const std::string&, const std::shared_ptr<Parser::Object
 {
 	auto specular_reflectance = ctx.extractColor(bsdf, "specular_reflectance");
 
-	auto& data = result.Database.ShaderTable.addLookup(BSDF_MIRROR, DefaultAlignment);
+	auto& data = result.Database.BsdfTable.addLookup(BSDF_MIRROR, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_reflectance);
 }
@@ -121,7 +121,7 @@ static void bsdf_conductor(const std::string&, const std::shared_ptr<Parser::Obj
 	float eta		  = bsdf->property("eta").getNumber(ETA_DEFAULT);
 	float k			  = bsdf->property("k").getNumber(ABSORPTION_DEFAULT);
 
-	auto& data = result.Database.ShaderTable.addLookup(BSDF_CONDUCTOR, DefaultAlignment);
+	auto& data = result.Database.BsdfTable.addLookup(BSDF_CONDUCTOR, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write((uint32)0); //PADDING
@@ -135,7 +135,7 @@ static void bsdf_rough_conductor(const std::string&, const std::shared_ptr<Parse
 	float eta		  = bsdf->property("eta").getNumber(ETA_DEFAULT);
 	float k			  = bsdf->property("k").getNumber(ABSORPTION_DEFAULT);
 
-	auto& data = result.Database.ShaderTable.addLookup(BSDF_ROUGH_CONDUCTOR, DefaultAlignment);
+	auto& data = result.Database.BsdfTable.addLookup(BSDF_ROUGH_CONDUCTOR, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write((uint32)0); //PADDING
@@ -151,7 +151,7 @@ static void bsdf_plastic(const std::string&, const std::shared_ptr<Parser::Objec
 	float ext_ior	  = bsdf->property("ext_ior").getNumber(AIR_IOR);
 	float int_ior	  = bsdf->property("int_ior").getNumber(RUBBER_IOR);
 
-	auto& data = result.Database.ShaderTable.addLookup(BSDF_PLASTIC, DefaultAlignment);
+	auto& data = result.Database.BsdfTable.addLookup(BSDF_PLASTIC, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write(ext_ior);
@@ -164,7 +164,7 @@ static void bsdf_phong(const std::string&, const std::shared_ptr<Parser::Object>
 	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
 	float exponent	  = bsdf->property("exponent").getNumber(30);
 
-	auto& data = result.Database.ShaderTable.addLookup(BSDF_PHONG, DefaultAlignment);
+	auto& data = result.Database.BsdfTable.addLookup(BSDF_PHONG, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write(exponent);
@@ -189,7 +189,7 @@ static void bsdf_disney(const std::string&, const std::shared_ptr<Parser::Object
 	float diff_trans	   = bsdf->property("diff_trans").getNumber(0.0f);
 	float transmittance	   = bsdf->property("transmittance").getNumber(1.0f);
 
-	auto& data = result.Database.ShaderTable.addLookup(BSDF_DISNEY, DefaultAlignment);
+	auto& data = result.Database.BsdfTable.addLookup(BSDF_DISNEY, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(base_color);
 	serializer.write(flatness);
@@ -247,7 +247,7 @@ static void bsdf_blend(const std::string& name, const std::shared_ptr<Parser::Ob
 
 		const float weight = bsdf->property("weight").getNumber(0.5f);
 
-		auto& data = result.Database.ShaderTable.addLookup(BSDF_BLEND, DefaultAlignment);
+		auto& data = result.Database.BsdfTable.addLookup(BSDF_BLEND, DefaultAlignment);
 		VectorSerializer serializer(data, false);
 		serializer.write(firstID);
 		serializer.write(secondID);
@@ -269,7 +269,7 @@ static void bsdf_mask(const std::string& name, const std::shared_ptr<Parser::Obj
 		/* const uint32 maskedID = ctx.Environment.BsdfIDs.at(masked);
 		const float weight	  = bsdf->property("weight").getNumber(0.5f);
 
-		auto& data = result.Database.ShaderTable.addLookup(BSDF_MASK, DefaultAlignment);
+		auto& data = result.Database.BsdfTable.addLookup(BSDF_MASK, DefaultAlignment);
 		VectorSerializer serializer(data, false);
 		serializer.write(maskedID);
 		serializer.write(weight); */
@@ -289,7 +289,7 @@ static void bsdf_twosided(const std::string& name, const std::shared_ptr<Parser:
 
 static void bsdf_passthrough(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
 {
-	result.Database.ShaderTable.addLookup(BSDF_PASSTROUGH, DefaultAlignment);
+	result.Database.BsdfTable.addLookup(BSDF_PASSTROUGH, DefaultAlignment);
 }
 
 static void bsdf_normalmap(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
@@ -370,7 +370,7 @@ bool LoaderBSDF::load(LoaderContext& ctx, LoaderResult& result)
 
 		if (!found) {
 			IG_LOG(L_ERROR) << "Bsdf '" << pair.first << "' has unknown type '" << bsdf->pluginType() << "'" << std::endl;
-			result.Database.ShaderTable.addLookup(BSDF_INVALID, DefaultAlignment);
+			result.Database.BsdfTable.addLookup(BSDF_INVALID, DefaultAlignment);
 		}
 	}
 

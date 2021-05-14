@@ -31,6 +31,8 @@ struct DynTableProxy {
 };
 
 struct SceneDatabaseProxy {
+	anydsl::Array<void*> Buffers;
+	DynTableProxy Textures;
 	DynTableProxy Entities;
 	DynTableProxy Shapes;
 	DynTableProxy Lights;
@@ -49,7 +51,8 @@ static inline float safe_rcp(float x)
 }
 
 struct Interface {
-	using DeviceImage = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
+	using DeviceImage	   = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
+	using BufferTableProxy = std::vector<anydsl::Array<uint8_t>>;
 
 	struct DeviceData {
 		bool scene_ent = false;
@@ -64,6 +67,7 @@ struct Interface {
 		anydsl::Array<float> secondary;
 		anydsl::Array<float> film_pixels;
 		anydsl::Array<Ray> ray_list;
+		BufferTableProxy buffers;
 	};
 	std::unordered_map<int32_t, DeviceData> devices;
 
@@ -256,18 +260,52 @@ struct Interface {
 		return proxy;
 	}
 
+	// Load all the buffers to device which are registred by the loading and assembly stage
+	// TODO: This can take awhile... dynamic on and off loading would be great...
+	BufferTableProxy load_buffers(int32_t dev)
+	{
+		if (database->Buffers.empty()) {
+			return BufferTableProxy();
+		}
+
+		BufferTableProxy proxy;
+		proxy.reserve(database->Buffers.size());
+		for (size_t i = 0; i < database->Buffers.size(); ++i)
+			proxy.push_back(std::move(copy_to_device(dev, database->Buffers[i])));
+		return proxy;
+	}
+
+	// Setup a table containing device pointer to buffers in the device
+	anydsl::Array<void*> load_buffer_pointers(int32_t dev)
+	{
+		if (database->Buffers.empty()) {
+			return anydsl::Array<void*>();
+		}
+
+		std::vector<void*> pointers;
+		pointers.reserve(database->Buffers.size());
+		for (size_t i = 0; i < database->Buffers.size(); ++i)
+			pointers.push_back(devices[dev].buffers[i].data());
+		anydsl::Array<void*> array;
+		return copy_to_device(dev, pointers);
+	}
+
+	// Load all the data assembled in previous stages to the device
 	const SceneDatabaseProxy& load_scene_database(int32_t dev)
 	{
 		if (devices[dev].database_loaded)
 			return devices[dev].database;
 		devices[dev].database_loaded = true;
 
+		devices[dev].buffers	  = std::move(load_buffers(dev));
 		SceneDatabaseProxy& proxy = devices[dev].database;
 
+		proxy.Buffers  = std::move(load_buffer_pointers(dev));
+		proxy.Textures = std::move(load_dyntable(dev, database->TextureTable));
 		proxy.Entities = std::move(load_dyntable(dev, database->EntityTable));
 		proxy.Shapes   = std::move(load_dyntable(dev, database->ShapeTable));
 		proxy.Lights   = std::move(load_dyntable(dev, database->LightTable));
-		proxy.Shaders  = std::move(load_dyntable(dev, database->ShaderTable));
+		proxy.Shaders  = std::move(load_dyntable(dev, database->BsdfTable));
 		proxy.BVHs	   = std::move(load_dyntable(dev, database->BVHTable));
 
 		return proxy;
@@ -485,26 +523,6 @@ void ignis_get_film_data(int32_t dev, float** pixels, int32_t* width, int32_t* h
 	*height = sInterface->film_height;
 }
 
-/*void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height)
-{
-	auto& img = sInterface->load_image(dev, file);
-	*pixels	  = const_cast<float*>(std::get<0>(img).data());
-	*width	  = std::get<1>(img);
-	*height	  = std::get<2>(img);
-}
-
-uint8_t* ignis_load_buffer(int32_t dev, const char* file)
-{
-	auto& array = sInterface->load_buffer(dev, file);
-	return const_cast<uint8_t*>(array.data());
-}*/
-
-/*Ray* ignis_load_rays(int32_t dev, size_t n, Ray* rays)
-{
-	auto& array = sInterface->load_rays(dev, n, rays);
-	return const_cast<Ray*>(array.data());
-}*/
-
 void ignis_load_bvh2_ent(int32_t dev, Node2** nodes, EntityLeaf1** objs)
 {
 	auto& bvh = sInterface->load_bvh2_ent(dev);
@@ -530,6 +548,9 @@ void ignis_load_scene(int32_t dev, SceneDatabase* dtb)
 {
 	auto& proxy = sInterface->load_scene_database(dev);
 
+	dtb->buffers.count	 = proxy.Buffers.size() / sizeof(void*);
+	dtb->buffers.entries = reinterpret_cast<uint8_t**>(const_cast<void**>(proxy.Buffers.data()));
+
 	auto assign = [&](const DynTableProxy& tbl) {
 		DynTable devtbl;
 		devtbl.count  = tbl.EntryCount;
@@ -540,6 +561,7 @@ void ignis_load_scene(int32_t dev, SceneDatabase* dtb)
 		return devtbl;
 	};
 
+	dtb->textures = assign(proxy.Textures);
 	dtb->entities = assign(proxy.Entities);
 	dtb->shapes	  = assign(proxy.Shapes);
 	dtb->lights	  = assign(proxy.Lights);

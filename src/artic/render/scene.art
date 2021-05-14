@@ -28,11 +28,13 @@ struct Device {
     load_scene_bvh:       fn () -> SceneBvh,
     load_scene_database:  fn () -> SceneDatabase,
     load_scene_info:      fn () -> SceneInfo,
-    load_entity_table:    fn (DynTable) -> EntityTable,
-    load_shape_table:     fn (DynTable) -> ShapeTable,
-    load_light_table:     fn (DynTable, SceneInfo, LightAccessor) -> LightTable,
-    load_arealight_table: fn (DynTable, LightAccessor) -> LightTable,
-    load_shader_table:    fn (DynTable) -> ShaderTable,
+    load_buffer_table:    fn (RawBufferTable) -> BufferTable,
+    load_texture_table:   fn (DynTable, Stage1Accessor) -> TextureTable,
+    load_entity_table:    fn (DynTable, Stage2Accessor) -> EntityTable,
+    load_shape_table:     fn (DynTable, Stage2Accessor) -> ShapeTable,
+    load_light_table:     fn (DynTable, Stage3Accessor) -> LightTable,
+    load_arealight_table: fn (DynTable, Stage3Accessor) -> LightTable,
+    load_shader_table:    fn (DynTable, Stage3Accessor) -> BsdfTable,
     load_bvh_table:       fn (DynTable) -> BVHTable,
 
     load_rays: fn () -> &[Ray]

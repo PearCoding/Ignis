@@ -1,42 +1,72 @@
 #include "LoaderTexture.h"
+#include "Loader.h"
 #include "Logger.h"
+#include "serialization/VectorSerializer.h"
 
 namespace IG {
-/* static void tex_image(const std::shared_ptr<Parser::Object>& tex, const LoaderContext& ctx, std::ostream& os)
+enum TextureType {
+	TEX_IMAGE		 = 0x00,
+	TEX_CHECKERBOARD = 0x10,
+	TEX_INVALID		 = 0xFF
+};
+
+enum TextureImageFilter {
+	TIF_NEAREST	 = 0x0,
+	TIF_BILINEAR = 0x1
+};
+
+enum TextureImageWrap {
+	TIW_REPEAT = 0x0,
+	TIW_MIRROR = 0x1,
+	TIW_CLAMP
+};
+
+static void tex_image(const std::string&, const std::shared_ptr<Parser::Object>& tex, LoaderContext& ctx, LoaderResult& result)
 {
 	const std::string filename	  = ctx.handlePath(tex->property("filename").getString());
 	const std::string filter_type = tex->property("filter_type").getString("bilinear");
 	const std::string wrap_mode	  = tex->property("wrap_mode").getString("repeat");
 
-	std::string filter_m;
-	if (filter_type == "nearest")
-		filter_m = "make_nearest_filter()";
-	else
-		filter_m = "make_bilinear_filter()";
+	bool ok			= false;
+	uint32 bufferID = ctx.loadImage(filename, result.Database, ok);
 
-	std::string wrap_m;
-	if (wrap_mode == "mirror")
-		wrap_m = "make_mirror_border()";
-	else if (wrap_mode == "clamp")
-		wrap_m = "make_clamp_border()";
-	else
-		wrap_m = "make_repeat_border()";
+	if (ok) {
+		uint32 filter = TIF_BILINEAR;
+		if (filter_type == "nearest")
+			filter = TIF_NEAREST;
 
-	os << "make_texture(math, " << wrap_m << ", " << filter_m << ", device.load_image(\"" << filename << "\"))";
+		uint32 wrap = TIW_REPEAT;
+		if (wrap_mode == "mirror")
+			wrap = TIW_MIRROR;
+		else if (wrap_mode == "clamp")
+			wrap = TIW_CLAMP;
+
+		auto& data = result.Database.TextureTable.addLookup(TEX_IMAGE, DefaultAlignment);
+		VectorSerializer serializer(data, false);
+		serializer.write(bufferID);
+		serializer.write(filter);
+		serializer.write(wrap);
+	} else {
+		result.Database.TextureTable.addLookup(TEX_INVALID, DefaultAlignment);
+	}
 }
 
-static void tex_checkerboard(const std::shared_ptr<Parser::Object>& tex, const LoaderContext& ctx, std::ostream& os)
+static void tex_checkerboard(const std::string&, const std::shared_ptr<Parser::Object>& tex, LoaderContext& ctx, LoaderResult& result)
 {
+	const auto color0	= ctx.extractColor(tex, "color0", Vector3f::Zero());
+	const auto color1	= ctx.extractColor(tex, "color1", Vector3f::Ones());
 	const float scale_x = tex->property("scale_x").getNumber(1.0f);
 	const float scale_y = tex->property("scale_y").getNumber(1.0f);
-	bool _ignore;
-	const auto color0 = ctx.extractMaterialPropertyColorLight(tex, "color0", 0.0f, _ignore);
-	const auto color1 = ctx.extractMaterialPropertyColorLight(tex, "color1", 1.0f, _ignore);
 
-	os << "make_checkerboard_texture(make_vec2(" << scale_x << ", " << scale_y << "), " << color0 << ", " << color1 << ")";
+	auto& data = result.Database.TextureTable.addLookup(TEX_CHECKERBOARD, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+	serializer.write(color0);
+	serializer.write(scale_x);
+	serializer.write(color1);
+	serializer.write(scale_y);
 }
 
-using TextureLoader = void (*)(const std::shared_ptr<Parser::Object>& tex, const LoaderContext& ctx, std::ostream& os);
+using TextureLoader = void (*)(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result);
 static struct {
 	const char* Name;
 	TextureLoader Loader;
@@ -45,10 +75,33 @@ static struct {
 	{ "bitmap", tex_image },
 	{ "checkerboard", tex_checkerboard },
 	{ "", nullptr }
-}; */
+};
 
-bool LoaderTexture::load(const std::shared_ptr<Parser::Object>& tex, const LoaderContext& ctx, LoaderResult& res)
+bool LoaderTexture::load(LoaderContext& ctx, LoaderResult& result)
 {
+	size_t counter = 0;
+	for (const auto& pair : ctx.Scene.textures()) {
+		ctx.Environment.TextureID[pair.first] = counter++;
+	}
+
+	for (const auto& pair : ctx.Scene.textures()) {
+		const auto tex = pair.second;
+
+		bool found = false;
+		for (size_t i = 0; _generators[i].Loader; ++i) {
+			if (_generators[i].Name == tex->pluginType()) {
+				_generators[i].Loader(pair.first, tex, ctx, result);
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) {
+			IG_LOG(L_ERROR) << "Texture '" << pair.first << "' has unknown type '" << tex->pluginType() << "'" << std::endl;
+			result.Database.TextureTable.addLookup(TEX_INVALID, DefaultAlignment);
+		}
+	}
+
 	return true;
 }
 } // namespace IG

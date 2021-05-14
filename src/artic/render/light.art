@@ -143,7 +143,7 @@ fn @make_point_light(math: Intrinsics, pos: Vec3, color: Color) = Light {
     infinite = false
 };
 
-fn @load_point_light(math: Intrinsics, data: DeviceBuffer, _info: SceneInfo) -> Light {
+fn @load_point_light(math: Intrinsics, data: DeviceBuffer, _stage: Stage3Accessor) -> Light {
     let pos   = data.load_vec3(0);
     let color = data.load_vec3(4);
 
@@ -163,11 +163,11 @@ fn @make_directional_light(_math: Intrinsics, dir: Vec3, max_radius: f32, color:
     infinite = true
 };
 
-fn @load_directional_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) -> Light {
+fn @load_directional_light(math: Intrinsics, data: DeviceBuffer, stage: Stage3Accessor) -> Light {
     let dir   = data.load_vec3(0);
     let color = data.load_vec3(4);
 
-    make_directional_light(math, dir, info.scene_radius, vec3_to_color(color))
+    make_directional_light(math, dir, stage.info.scene_radius, vec3_to_color(color))
 }
 
 //-------------------------------------------
@@ -191,18 +191,18 @@ fn @make_sun_light(math: Intrinsics, dir: Vec3, max_radius: f32, sun_radius: f32
     infinite = true
 };
 
-fn @load_sun_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) -> Light {
+fn @load_sun_light(math: Intrinsics, data: DeviceBuffer, stage: Stage3Accessor) -> Light {
     let e0    = data.load_vec4(0);
     let dir   = make_vec3(e0.x, e0.y, e0.z);
     let power = e0.w;
     let sun_r = data.load_f32(4);
 
-    make_sun_light(math, dir, info.scene_radius, sun_r, make_gray_color(power))
+    make_sun_light(math, dir, stage.info.scene_radius, sun_r, make_gray_color(power))
 }
 
-fn @load_sky_light(math: Intrinsics, _data: DeviceBuffer, info: SceneInfo) -> Light {
+fn @load_sky_light(math: Intrinsics, _data: DeviceBuffer, stage: Stage3Accessor) -> Light {
     // TODO
-    make_environment_light(math, info.scene_radius, black)
+    make_environment_light(math, stage.info.scene_radius, black)
 }
 
 //-------------------------------------------
@@ -212,9 +212,9 @@ fn @make_sunsky_light(math: Intrinsics, dir: Vec3, max_radius: f32, sun_radius: 
         make_environment_light_textured(math, max_radius, sky_tex), 
         0.5);
 
-fn @load_sunsky_light(math: Intrinsics, _data: DeviceBuffer, info: SceneInfo) -> Light {
+fn @load_sunsky_light(math: Intrinsics, _data: DeviceBuffer, stage: Stage3Accessor) -> Light {
     // TODO
-    make_environment_light(math, info.scene_radius, black)
+    make_environment_light(math, stage.info.scene_radius, black)
 }
 
 //-------------------------------------------
@@ -237,9 +237,9 @@ fn @make_environment_light(math: Intrinsics, max_radius: f32, color: Color) = Li
     infinite = true
 };
 
-fn @load_environment_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) -> Light {
+fn @load_environment_light(math: Intrinsics, data: DeviceBuffer, stage: Stage3Accessor) -> Light {
     let color = data.load_vec3(0);
-    make_environment_light(math, info.scene_radius, vec3_to_color(color))
+    make_environment_light(math, stage.info.scene_radius, vec3_to_color(color))
 }
 
 //-------------------------------------------
@@ -274,9 +274,10 @@ fn @make_environment_light_textured(math: Intrinsics, max_radius: f32, tex: Text
     }
 }
 
-fn @load_environment_textured_light(math: Intrinsics, _data: DeviceBuffer, info: SceneInfo) -> Light {
-    // TODO
-    make_environment_light(math, info.scene_radius, black)
+fn @load_environment_textured_light(math: Intrinsics, data: DeviceBuffer, stage: Stage3Accessor) -> Light {
+    let tex_id  = data.load_i32(0);
+    let texture = stage.textures(tex_id);
+    make_environment_light_textured(math, stage.info.scene_radius, texture)
 }
 
 //-------------------------------------------
@@ -313,17 +314,17 @@ fn @make_cie_sky_light(math: Intrinsics, max_radius: f32, zenith: Color, ground:
         color_mulf(color_add(color_mulf(zenith, c1 * a), color_mulf(ground, groundBrightness * c2 * b)), denom)
 });
 
-fn @load_cie_sky_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo, cloudy: bool) -> Light {
+fn @load_cie_sky_light(math: Intrinsics, data: DeviceBuffer, stage: Stage3Accessor, cloudy: bool) -> Light {
     let e0               = data.load_vec4(0);
     let zenith           = make_color(e0.x, e0.y, e0.z);
     let groundBrightness = e0.w;
     let ground           = vec3_to_color(data.load_vec3(4));
-    make_cie_sky_light(math, info.scene_radius, zenith, ground, groundBrightness, cloudy)
+    make_cie_sky_light(math, stage.info.scene_radius, zenith, ground, groundBrightness, cloudy)
 }
 
 //-------------------------------------------
-fn @load_cie_uniform_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) = @load_cie_sky_light(math, data, info, false);
-fn @load_cie_cloudy_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo)  = @load_cie_sky_light(math, data, info, true);
+fn @load_cie_uniform_light(math: Intrinsics, data: DeviceBuffer, stage: Stage3Accessor) = @load_cie_sky_light(math, data, stage, false);
+fn @load_cie_cloudy_light(math: Intrinsics, data: DeviceBuffer, stage: Stage3Accessor)  = @load_cie_sky_light(math, data, stage, true);
 
 //-------------------------------------------
 fn @make_perez_light(math: Intrinsics, max_radius: f32, sun_dir: Vec3, lum: Color, a: f32, b: f32, c: f32, d: f32, e: f32)  =
@@ -338,7 +339,7 @@ fn @make_perez_light(math: Intrinsics, max_radius: f32, sun_dir: Vec3, lum: Colo
         color_mulf(lum, factor)
 });
 
-fn @load_perez_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) -> Light {
+fn @load_perez_light(math: Intrinsics, data: DeviceBuffer, stage: Stage3Accessor) -> Light {
     let e0    = data.load_vec4(0);
     let e1    = data.load_vec4(4);
     let color = vec3_to_color(data.load_vec3(8));
@@ -350,7 +351,7 @@ fn @load_perez_light(math: Intrinsics, data: DeviceBuffer, info: SceneInfo) -> L
     let d   = e1.z;
     let e   = e1.w;
     
-    make_perez_light(math, info.scene_radius, dir, color, a, b, c, d, e)
+    make_perez_light(math, stage.info.scene_radius, dir, color, a, b, c, d, e)
 }
 
 //-------------------------------------------
@@ -371,12 +372,7 @@ fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
     infinite = false
 };
 
-struct LightAccessor {
-    shapes:   ShapeTable,
-    entities: EntityTable
-}
-
-fn @load_area_light(math: Intrinsics, data: DeviceBuffer, acc: LightAccessor) -> Light {
+fn @load_area_light(math: Intrinsics, data: DeviceBuffer, acc: Stage3Accessor) -> Light {
     let e0    = data.load_vec4(0);
     let id    = bitcast[i32](e0.x);
     let color = make_color(e0.y, e0.z, e0.w);
@@ -413,22 +409,22 @@ fn @load_area_light(math: Intrinsics, data: DeviceBuffer, acc: LightAccessor) ->
 
 type LightTable = fn (i32) -> Light;
 
-fn @make_light_table(math: Intrinsics, dtb: DynTable, info: SceneInfo, acc: DeviceBufferAccessor, lacc: LightAccessor) -> LightTable {
+fn @make_light_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor, stage: Stage3Accessor) -> LightTable {
     @ |id| {
         let entry = get_lookup_entry(id as u64, dtb, acc);
         let data  = get_table_entry(entry.offset, dtb, acc);
         match entry.type_id {
-            0x00 => load_point_light(math, data, info),                // LIGHT_POINT
-            0x01 => load_area_light(math, data, lacc),                 // LIGHT_AREA				   
-            0x02 => load_directional_light(math, data, info),          // LIGHT_DIRECTIONAL		   
-            0x03 => load_sun_light(math, data, info),                  // LIGHT_SUN				   
-            0x04 => load_sky_light(math, data, info),                  // LIGHT_SKY				   
-            0x05 => load_sunsky_light(math, data, info),               // LIGHT_SUNSKY			   
-            0x10 => load_cie_uniform_light(math, data, info),          // LIGHT_CIE_UNIFORM		   
-            0x11 => load_cie_cloudy_light(math, data, info),           // LIGHT_CIE_CLOUDY		   
-            0x12 => load_perez_light(math, data, info),                // LIGHT_PEREZ				  
-            0x20 => load_environment_light(math, data, info),          // LIGHT_ENVIRONMENT		  
-            0x21 => load_environment_textured_light(math, data, info), // LIGHT_ENVIRONMENT_TEXTURED
+            0x00 => load_point_light(math, data, stage),                // LIGHT_POINT
+            0x01 => load_area_light(math, data, stage),                 // LIGHT_AREA				   
+            0x02 => load_directional_light(math, data, stage),          // LIGHT_DIRECTIONAL		   
+            0x03 => load_sun_light(math, data, stage),                  // LIGHT_SUN				   
+            0x04 => load_sky_light(math, data, stage),                  // LIGHT_SKY				   
+            0x05 => load_sunsky_light(math, data, stage),               // LIGHT_SUNSKY			   
+            0x10 => load_cie_uniform_light(math, data, stage),          // LIGHT_CIE_UNIFORM		   
+            0x11 => load_cie_cloudy_light(math, data, stage),           // LIGHT_CIE_CLOUDY		   
+            0x12 => load_perez_light(math, data, stage),                // LIGHT_PEREZ				  
+            0x20 => load_environment_light(math, data, stage),          // LIGHT_ENVIRONMENT		  
+            0x21 => load_environment_textured_light(math, data, stage), // LIGHT_ENVIRONMENT_TEXTURED
             _ =>  make_environment_light(math, 0, black)
         }
     } 
@@ -436,10 +432,10 @@ fn @make_light_table(math: Intrinsics, dtb: DynTable, info: SceneInfo, acc: Devi
 
 // Same purpose as make_light_table, but assume given type_id is always an area light
 // This improves code compilation and overall performance by magnitudes...
-fn @make_arealight_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor, lacc: LightAccessor) -> LightTable {
+fn @make_arealight_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor, stage: Stage3Accessor) -> LightTable {
     @ |id| {
         let entry = get_lookup_entry(id as u64, dtb, acc);
         let data  = get_table_entry(entry.offset, dtb, acc);
-        load_area_light(math, data, lacc)
+        load_area_light(math, data, stage)
     } 
 }
