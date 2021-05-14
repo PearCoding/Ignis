@@ -18,9 +18,9 @@ fn @invert_surface_element(surf: SurfaceElement) = SurfaceElement {
 };
 
 // Map local surface element to global surface element based on the given entity
-fn @map_surface_element(math: Intrinsics, surf: SurfaceElement, global_mat: Mat4x4, normal_mat: Mat3x3) = SurfaceElement {
+fn @map_surface_element(math: Intrinsics, surf: SurfaceElement, global_mat: Mat3x4, normal_mat: Mat3x3) = SurfaceElement {
     is_entering = surf.is_entering,
-    point       = mat4x4_transform_point(global_mat, surf.point),
+    point       = mat3x4_transform_point(global_mat, surf.point),
     face_normal = vec3_normalize(math, mat3x3_mul(normal_mat, surf.face_normal)),
     uv_coords   = surf.uv_coords,
     tex_coords  = surf.tex_coords,

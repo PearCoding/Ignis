@@ -40,6 +40,7 @@ struct DeviceBuffer {
     load_int3:     fn (i32) -> (i32, i32, i32),
     load_int4:     fn (i32) -> (i32, i32, i32, i32),
     load_mat3x3:   fn (i32) -> Mat3x3,
+    load_mat3x4:   fn (i32) -> Mat3x4,
     load_mat4x4:   fn (i32) -> Mat4x4,
     has_alignment: bool // True if vec2, vec3, int2 and int3 are expected to be like vec4 or int4 in memory
 }

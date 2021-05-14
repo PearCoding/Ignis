@@ -77,8 +77,8 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 		entitySerializer.write((uint32)bsdfID);
 		entitySerializer.write((int32)lightID);
 		entitySerializer.write((uint32)0); // Padding
-		writeMatrix(entitySerializer, invTransform.matrix());
-		writeMatrix(entitySerializer, transform.matrix());
+		writeMatrix(entitySerializer, invTransform.matrix().block<3, 4>(0, 0));
+		writeMatrix(entitySerializer, transform.matrix().block<3, 4>(0, 0));
 		writeMatrix(entitySerializer, transform.matrix().block<3, 3>(0, 0).transpose().inverse());
 
 		// Extract information for BVH building

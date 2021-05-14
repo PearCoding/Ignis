@@ -3,8 +3,8 @@ struct EntityData {
     bsdf_id:    i32,
     light_id:   i32,
     _pad1:      i32,
-    local_mat:  [f32 * 16], // TODO: Check if on-the-fly calculation is worth it?
-    global_mat: [f32 * 16],
+    local_mat:  [f32 * 12], // TODO: Check if on-the-fly calculation is worth it?
+    global_mat: [f32 * 12],
     normal_mat: [f32 * 9],
     _pad2:      [f32 * 3]
 }
@@ -14,8 +14,8 @@ struct Entity {
     bsdf_id:    i32,
     light_id:   i32,
     emissive:   bool,
-    local_mat:  Mat4x4,
-    global_mat: Mat4x4,
+    local_mat:  Mat3x4,
+    global_mat: Mat3x4,
     normal_mat: Mat3x3
 }
 
@@ -33,9 +33,9 @@ fn @make_entity_table(dtb: DynTable, acc: DeviceBufferAccessor) -> EntityTable {
             bsdf_id    = bsdf_id,
             light_id   = light_id,
             emissive   = light_id >= 0,
-            local_mat  = data.load_mat4x4(4),
-            global_mat = data.load_mat4x4(20),
-            normal_mat = data.load_mat3x3(36)
+            local_mat  = data.load_mat3x4(4),
+            global_mat = data.load_mat3x4(16),
+            normal_mat = data.load_mat3x3(28)
         }
     } 
 }

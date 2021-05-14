@@ -123,7 +123,7 @@ fn @make_cpu_entity_leaf(j: i32, objs: &[EntityLeaf1]) -> EntityLeaf {
     let d  = make_cpu_buffer(&objs(j) as &[u8]);
     let e0 = d.load_vec4(0);
     let e1 = d.load_vec4(4);
-    let m  = d.load_mat4x4(8);
+    let m  = d.load_mat3x4(8);
     make_entity_leaf(
         make_bbox(make_vec3(e0.x, e0.y, e0.z),
                   make_vec3(e1.x, e1.y, e1.z)),

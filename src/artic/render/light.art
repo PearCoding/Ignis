@@ -395,7 +395,7 @@ fn @load_area_light(math: Intrinsics, data: DeviceBuffer, acc: LightAccessor) ->
             let v2  = mesh.vertices(i2);
             let n   = mesh.face_normals(f);
             let inv_area = mesh.face_inv_area(f);
-            (mat4x4_transform_point(entity.global_mat, sample_triangle(uv2.x, uv2.y, v0, v1, v2)),
+            (mat3x4_transform_point(entity.global_mat, sample_triangle(uv2.x, uv2.y, v0, v1, v2)),
              mat3x3_mul(entity.normal_mat, n),
              inv_area)
         },

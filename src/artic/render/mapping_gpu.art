@@ -588,6 +588,16 @@ fn @make_gpu_buffer(p: &addrspace(1)[u8], is_nvvm: bool) -> DeviceBuffer {
                             make_vec3(v0(3), v1(0), v1(1)), 
                             make_vec3(v1(2), v1(3), v2(0)))
             },
+            load_mat3x4 = @ |i| {
+                let q  = &p(i * 4);
+                let v0 = nvvm_ldg4_f32(&((q as &addrspace(1)[simd[f32 * 4]])(0)));
+                let v1 = nvvm_ldg4_f32(&((q as &addrspace(1)[simd[f32 * 4]])(1)));
+                let v2 = nvvm_ldg4_f32(&((q as &addrspace(1)[simd[f32 * 4]])(2)));
+                make_mat3x4(make_vec3(v0(0), v0(1), v0(2)),
+                            make_vec3(v0(3), v1(0), v1(1)),
+                            make_vec3(v1(2), v1(3), v2(0)),
+                            make_vec3(v2(1), v2(2), v2(3)))
+            },
             load_mat4x4 = @ |i| {
                 let q  = &p(i * 4);
                 let v0 = nvvm_ldg4_f32(&((q as &addrspace(1)[simd[f32 * 4]])(0)));
@@ -637,6 +647,16 @@ fn @make_gpu_buffer(p: &addrspace(1)[u8], is_nvvm: bool) -> DeviceBuffer {
                 make_mat3x3(make_vec3(v0(0), v0(1), v0(2)),
                             make_vec3(v0(3), v1(0), v1(1)),
                             make_vec3(v1(2), v1(3), v2(0)))
+            },
+            load_mat3x4 = @ |i| {
+                let q  = &p(i * 4);
+                let v0 = (q as &addrspace(1)[simd[f32 * 4]])(0);
+                let v1 = (q as &addrspace(1)[simd[f32 * 4]])(1);
+                let v2 = (q as &addrspace(1)[simd[f32 * 4]])(2);
+                make_mat3x4(make_vec3(v0(0), v0(1), v0(2)),
+                            make_vec3(v0(3), v1(0), v1(1)),
+                            make_vec3(v1(2), v1(3), v2(0)),
+                            make_vec3(v2(1), v2(2), v2(3)))
             },
             load_mat4x4 = @ |i| {
                 let q  = &p(i * 4);

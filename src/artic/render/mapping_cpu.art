@@ -515,6 +515,16 @@ fn @make_cpu_buffer(p: &[u8]) = DeviceBuffer {
         make_mat3x3(make_vec3(q(i + 0), q(i + 1), q(i + 2)),
                     make_vec3(q(i + 3), q(i + 4), q(i + 5)),
                     make_vec3(q(i + 6), q(i + 7), q(i + 8))) },
+    load_mat3x4 = @ |i| {
+        let q  = &p(i * 4) as &[simd[f32 * 4]];
+        let v0 = q(0);
+        let v1 = q(1);
+        let v2 = q(2);
+        make_mat3x4(make_vec3(v0(0), v0(1), v0(2)),
+                    make_vec3(v0(3), v1(0), v1(1)),
+                    make_vec3(v1(2), v1(3), v2(0)),
+                    make_vec3(v2(1), v2(2), v2(3)))
+    },
     load_mat4x4 = @ |i| {
         let q  = &p(i * 4) as &[simd[f32 * 4]];
         let v0 = q(0);

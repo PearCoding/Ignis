@@ -72,10 +72,10 @@ struct LeafWriterEnt1 {
 				id,
 				{ in_obj.BBox.max(0), in_obj.BBox.max(1), in_obj.BBox.max(2) },
 				(int)in_obj.ShapeID,
-				{ { { { in_obj.Local(0, 0), in_obj.Local(1, 0), in_obj.Local(2, 0), in_obj.Local(3, 0) },
-					  { in_obj.Local(0, 1), in_obj.Local(1, 1), in_obj.Local(2, 1), in_obj.Local(3, 1) },
-					  { in_obj.Local(0, 2), in_obj.Local(1, 2), in_obj.Local(2, 2), in_obj.Local(3, 2) },
-					  { in_obj.Local(0, 3), in_obj.Local(1, 3), in_obj.Local(2, 3), in_obj.Local(3, 3) } } } } });
+				{ { { { in_obj.Local(0, 0), in_obj.Local(1, 0), in_obj.Local(2, 0) },
+					  { in_obj.Local(0, 1), in_obj.Local(1, 1), in_obj.Local(2, 1) },
+					  { in_obj.Local(0, 2), in_obj.Local(1, 2), in_obj.Local(2, 2) },
+					  { in_obj.Local(0, 3), in_obj.Local(1, 3), in_obj.Local(2, 3) } } } } });
 		}
 
 		// Tag last entry

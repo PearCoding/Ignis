@@ -201,6 +201,9 @@ fn @mat4x4_invert(a: Mat4x4) -> Mat4x4 {
     m
 }
 
+fn @mat3x4_transform_point(a: Mat3x4, v: Vec3)     = mat3x4_mul(a, make_vec4(v.x, v.y, v.z, 1));
+fn @mat3x4_transform_direction(a: Mat3x4, v: Vec3) = mat3x4_mul(a, make_vec4(v.x, v.y, v.z, 0));
+
 fn @mat4x4_transform_point(a: Mat4x4, v: Vec3) -> Vec3 {
     let res = mat4x4_mul(a, make_vec4(v.x, v.y, v.z, 1));
     let inv_w = 1/res.w;
