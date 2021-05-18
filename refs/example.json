@@ -14,7 +14,7 @@
     "bsdfs":[
         {"type":"diffuse", "name":"BunnyMaterial", "albedo":[1,0,0]},
         {"type":"principled", "name":"TeapotMaterial", "base":[0,1,1], "roughness":0.4},
-        {"type":"klems", "name":"WindowMaterial", "path":"/home/yazici/dev/window.xml"}
+        {"type":"klems", "name":"WindowMaterial", "path":"window.xml"}
     ],
     "shapes": [
         {"type":"obj", "name": "Teapot", "filename":"myteapot.obj"},

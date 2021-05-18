@@ -6,7 +6,6 @@ CPMAddPackage(
 )
 
 ###########################################################
-# TODO: Extract cpuid information while in configuration to pick best devices
 set(IG_DISABLE_DEVICES "" CACHE STRING "Devices to not build a driver for.")
 mark_as_advanced(IG_DISABLE_DEVICES)
 
@@ -14,22 +13,75 @@ string(REPLACE " " ";" _DISABLED_DEVICES "${IG_DISABLE_DEVICES}")
 list(REMOVE_DUPLICATES _DISABLED_DEVICES)
 list(TRANSFORM _DISABLED_DEVICES TOUPPER)
 
-# It is more useful (and user friendly) to choose between cpu and gpu
-# Each of the two groups selects the respective best architecture (e.g., AVX2 for CPU and NVVM for GPU)
-# This would require a prepass to generate a list of targets to generate
-# Multi vendor multi GPU and CPU combinations would be bothersome, but who has this kind of configuration?
-set(DEVICE_SELECTION
-    "DEFAULT"
-    #"AVX"
-    "AVX2"
-    #"AVX512"  # [NOT_TESTED, as not supported by my CPU]
-    #"SSE42"
-    #"ASIMD"
-    "NVVM"
-    #"NVVM_MEGA"
-    #"AMD"
-    #"AMD_MEGA"
-)
+###########################################################
+option(IG_ASSUME_NVIDIA "Assume CUDA libraries are available" OFF)
+mark_as_advanced(IG_ASSUME_NVIDIA)
+if(IG_ASSUME_NVIDIA OR AnyDSL_runtime_HAS_CUDA_SUPPORT)
+    set(_HAS_CUDA ON)
+else()
+    find_library(CUDA_LIBRARY cudart HINTS ${CUDA_DIR} PATHS /usr/local/cuda
+    ENV CUDA_PATH
+    ENV CUDA_LIB_PATH
+    PATH_SUFFIXES "lib/Win32" "lib" "libWin32")
+    if(EXISTS "${CUDA_LIBRARY}")
+        set(_HAS_CUDA ON)
+    endif()
+endif()
+
+###########################################################
+option(IG_ASSUME_AMD "Assume AMD rocm libraries are available" OFF)
+mark_as_advanced(IG_ASSUME_AMD)
+if(IG_ASSUME_AMD OR AnyDSL_runtime_HAS_HSA_SUPPORT)
+    set(_HAS_HSA ON)
+else()
+    find_library(HSA_LIBRARY hsa-runtime64 HINTS ${HSA_DIR} PATHS /opt/rocm PATH_SUFFIXES lib)
+    if(EXISTS "${HSA_LIBRARY}")
+        set(_HAS_HSA ON)
+    endif()
+endif()
+
+###########################################################
+include(CMakeDependentOption)
+option(IG_WITH_DEVICE_CPU "Enable CPU device with optional vectorization support" ON)
+option(IG_WITH_DEVICE_GPU "Enable GPU device for NVidia or AMD GPUs" ON)
+cmake_dependent_option(IG_WITH_DEVICE_CPU_SIMD   "Enable CPU vectorized device" ON  "IG_WITH_DEVICE_CPU" OFF)
+cmake_dependent_option(IG_WITH_DEVICE_GPU_MEGA   "Use mega kernel instead"      OFF "IG_WITH_DEVICE_GPU" OFF)
+cmake_dependent_option(IG_WITH_DEVICE_GPU_NVIDIA "Enable NVidia GPU device"     ON  "IG_WITH_DEVICE_GPU;_HAS_CUDA" OFF)
+cmake_dependent_option(IG_WITH_DEVICE_GPU_AMD    "Enable AMD GPU device"        ON  "IG_WITH_DEVICE_GPU;_HAS_HSA"  OFF)
+
+set(DEVICE_SELECTION )
+
+if(IG_WITH_DEVICE_CPU)
+    # TODO: Select best feature for current host
+    if(IG_WITH_DEVICE_CPU_SIMD)
+        list(APPEND DEVICE_SELECTION
+            #"SSE42"
+            #"AVX"
+            "AVX2"
+            #"AVX512"
+            #"ASIMD"
+            )
+    else()
+        list(APPEND DEVICE_SELECTION "DEFAULT")
+    endif()
+endif()
+
+if(IG_WITH_DEVICE_GPU)
+    if(IG_WITH_DEVICE_GPU_NVIDIA)
+        if(IG_WITH_DEVICE_GPU_MEGA)
+            list(APPEND DEVICE_SELECTION "NVVM_MEGA")
+        else()
+            list(APPEND DEVICE_SELECTION "NVVM")
+        endif()
+    endif()
+    if(IG_WITH_DEVICE_GPU_AMD)
+        if(IG_WITH_DEVICE_GPU_MEGA)
+            list(APPEND DEVICE_SELECTION "AMD_MEGA")
+        else()
+            list(APPEND DEVICE_SELECTION "AMD")
+        endif()
+    endif()
+endif()
 
 set(DEVICES )
 foreach(dev IN LISTS DEVICE_SELECTION)
@@ -39,7 +91,6 @@ foreach(dev IN LISTS DEVICE_SELECTION)
 endforeach()
 
 ###########################################################
-
 option(IG_WITH_CAMERA_PERSPECTIVE  "Enable perspective camera" ON)
 option(IG_WITH_CAMERA_ORTHOGONAL   "Enable orthogonal camera" OFF)
 option(IG_WITH_CAMERA_FISHLENS     "Enable fishlens camera" ON)
@@ -61,7 +112,6 @@ if(IG_WITH_TRACER)
 endif()
 
 ###########################################################
-
 option(IG_WITH_RENDERER_PATH  "Enable path tracer" ON)
 option(IG_WITH_RENDERER_AO    "Enable ambient occulusion renderer" OFF)
 option(IG_WITH_RENDERER_DEBUG "Enable debug renderer" ON)
@@ -80,7 +130,6 @@ if(IG_WITH_RENDERER_DEBUG)
 endif()
 
 ###########################################################
-
 function(extract_name out_var in_var)
     string(REGEX REPLACE "^([a-zA-Z]+_)(.+)$" "\\2" _t1 ${in_var})
     string(TOLOWER ${_t1} _t2)
@@ -116,7 +165,6 @@ cross(VARIANTS_2 VARIANTS_1 RENDERER " ")
 set(VARIANTS ${VARIANTS_2})
 
 ###########################################################
-
 option(IG_BUILD_DRIVER_PARALLEL "Build driver files in parallel. Not recommended" OFF)
 
 set(_targets )
@@ -150,7 +198,7 @@ foreach(var ${VARIANTS})
     # Some of the compilation process requires a lot of memory.
     # Prevent parallel build of the drivers (per default) by chaining them together
     # This will rebuild all the drivers up the line,
-    # however drivers are dynamicly defined and ment to be rebuild anyway.
+    # however drivers are dynamically defined and ment to be rebuild anyway.
     if(NOT IG_BUILD_DRIVER_PARALLEL)
         list(LENGTH _targets _length)
         if(_length GREATER 0)
