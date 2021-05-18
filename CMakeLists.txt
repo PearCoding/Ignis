@@ -36,11 +36,10 @@ set(CMAKE_DEBUG_POSTFIX  "_d")
 message(STATUS "Building Ignis Rodent ${Ignis_VERSION}")
 
 # Options
-set(IG_DISABLE_TARGETS "" CACHE STRING "Target platforms to not build a driver for.")
-option(IG_WITH_VIEWER		"Build interactive viewer igview" ON)
-option(IG_WITH_TRACER		"Build tracing frontend igtrace" ON)
-option(IG_WITH_PYTHON_API	"Build python API" ON)
-option(IG_WITH_TOOLS		"Build tools" ON)
+option(IG_WITH_VIEWER     "Build interactive viewer igview" ON)
+option(IG_WITH_TRACER     "Build tracing frontend igtrace" ON)
+option(IG_WITH_PYTHON_API "Build python API" ON)
+option(IG_WITH_TOOLS      "Build tools" ON)
 
 # Setup artic clang flags
 set(ARTIC_CLANG_FLAGS -O3 -march=native -ffast-math CACHE STRING "Artic Clang compilation options")
@@ -68,7 +67,7 @@ find_package(ZLIB REQUIRED)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Make sure we use march native
-option(IG_OPTIMIZE_FOR_NATIVE	"Build with -march=native if possible" ON)
+option(IG_OPTIMIZE_FOR_NATIVE "Build with -march=native if possible" ON)
 include(CheckCXXCompilerFlag)
 if(IG_OPTIMIZE_FOR_NATIVE)
 	CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)

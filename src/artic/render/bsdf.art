@@ -42,29 +42,24 @@ struct Bsdf {
     // Evaluates the sampling probability density for a given pair of directions
     pdf: fn (Vec3, Vec3) -> f32,
     // Samples a direction
-    sample: fn (&mut RndState, Vec3, bool) -> BsdfSample,
+    sample: fn (&mut RndState, Vec3, bool) -> Option[BsdfSample],
     // Returns true if the material is purely specular
     is_specular: bool
 }
 
 // Creates a BSDF sample and checks that it lies on the right side of the surface
-fn @make_bsdf_sample(surf: SurfaceElement, in_dir: Vec3, pdf: f32, cos: f32, color: Color, inverted: bool) -> BsdfSample {
+fn @make_bsdf_sample(surf: SurfaceElement, in_dir: Vec3, pdf: f32, cos: f32, color: Color, inverted: bool) -> Option[BsdfSample] {
     // Checks that the sample is above the surface (or under it if inverted is true)
     let valid = (pdf > 0) && (inverted ^ (vec3_dot(in_dir, surf.face_normal) > 0));
-    BsdfSample {
+    make_option(BsdfSample {
         in_dir = in_dir,
         pdf    = if valid { pdf } else { 1 },
         cos    = cos,
         color  = if valid { color } else { black }
-    }
+    })
 }
 
-fn @reject_bsdf_sample() = BsdfSample {
-    in_dir = make_vec3(0,0,1),
-    pdf    = 0,
-    cos    = 0,
-    color  = black
-};
+fn @reject_bsdf_sample() = Option[BsdfSample]::None;
 
 // Weight pdf and color based on respective factors
 fn @bsdf_sample_mulf(sample: BsdfSample, pdf_f: f32, color_f: f32) = BsdfSample {
@@ -201,8 +196,11 @@ fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, 
         },
         pdf    = diffuse.pdf,
         sample = @ |rnd, out_dir, adjoint| {
-            let s = diffuse.sample(rnd, out_dir, adjoint);
-            BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos, color = color_mulf(s.color,  diff_scattering(s.cos)) }
+            if let Option[BsdfSample]::Some(s) = diffuse.sample(rnd, out_dir, adjoint) {
+                make_option(BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos, color = color_mulf(s.color,  diff_scattering(s.cos)) })
+            } else {
+                Option[BsdfSample]::None
+            }
         },
         is_specular = diffuse.is_specular
     };
@@ -449,18 +447,23 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) = Bsd
     },
     sample = @ |rnd, out_dir, adjoint| {
         let k = mix_f(out_dir);
-        let (sample, pdf, color) = if randf(rnd) >= k {
-            let s = mat1.sample(rnd, out_dir, adjoint);
-            let p = lerp(s.pdf, mat2.pdf(s.in_dir, out_dir), k);
-            let c = color_lerp(s.color, mat2.eval(s.in_dir, out_dir), k);
-            (s, p, c)
+        if randf(rnd) >= k {
+            if let Option[BsdfSample]::Some(s) = mat1.sample(rnd, out_dir, adjoint) {
+                let p = lerp(s.pdf, mat2.pdf(s.in_dir, out_dir), k);
+                let c = color_lerp(s.color, mat2.eval(s.in_dir, out_dir), k);
+                make_option(BsdfSample { in_dir = s.in_dir, pdf = p, cos = s.cos, color = c })
+            } else {
+                Option[BsdfSample]::None
+            }
         } else {
-            let s = mat2.sample(rnd, out_dir, adjoint);
-            let p = lerp(mat1.pdf(s.in_dir, out_dir), s.pdf, k);
-            let c = color_lerp(mat1.eval(s.in_dir, out_dir), s.color, k);
-            (s, p, c)
-        };
-        BsdfSample { in_dir = sample.in_dir, pdf = pdf, cos = sample.cos, color = color }
+            if let Option[BsdfSample]::Some(s) = mat2.sample(rnd, out_dir, adjoint) {
+                let p = lerp(mat1.pdf(s.in_dir, out_dir), s.pdf, k);
+                let c = color_lerp(mat1.eval(s.in_dir, out_dir), s.color, k);
+                make_option(BsdfSample { in_dir = s.in_dir, pdf = p, cos = s.cos, color = c })
+            } else {
+                Option[BsdfSample]::None
+            }
+        }
     },
     is_specular = mat1.is_specular & mat2.is_specular
 };
@@ -513,12 +516,15 @@ fn @make_normalmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (Sur
         eval        = bsdf.eval,
         pdf         = bsdf.pdf,
         sample      = @ |rnd, out_dir, adjoint| {
-            let s = bsdf.sample(rnd, out_dir, adjoint);
-            if adjoint {
-                let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
-                BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos /*TODO: Really?*/, color = color_mulf(s.color, fac) }
+            if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, out_dir, adjoint) {
+                if adjoint {
+                    let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
+                    make_option(BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos /*TODO: Really?*/, color = color_mulf(s.color, fac) })
+                } else {
+                    make_option(s)
+                }
             } else {
-                s
+                Option[BsdfSample]::None
             }
         },
         is_specular = bsdf.is_specular
@@ -547,12 +553,15 @@ fn @make_bumpmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (Surfa
         eval        = bsdf.eval,
         pdf         = bsdf.pdf,
         sample      = @ |rnd, out_dir, adjoint| {
-            let s = bsdf.sample(rnd, out_dir, adjoint);
-            if adjoint {
-                let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
-                BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos /*TODO: Really?*/, color = color_mulf(s.color, fac) }
+            if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, out_dir, adjoint) {
+                if adjoint {
+                    let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
+                    make_option(BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos /*TODO: Really?*/, color = color_mulf(s.color, fac) })
+                } else {
+                    make_option(s)
+                }
             } else {
-                s
+                Option[BsdfSample]::None
             }
         },
         is_specular = bsdf.is_specular

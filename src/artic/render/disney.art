@@ -52,7 +52,7 @@ fn @make_clearcoat_bsdf(math: Intrinsics, clearcoat: f32, alpha: f32, wo: Vec3, 
         0
     },
     sample = @ |_rnd, out_dir, _adjoint| {
-        BsdfSample { in_dir = out_dir, pdf = 0, cos = 1, color = black }
+        make_option(BsdfSample { in_dir = out_dir, pdf = 0, cos = 1, color = black })
     },
     is_specular = false
 };
@@ -82,7 +82,7 @@ fn @make_diffuse_brdf(roughness: f32, _flatness: f32, wo: Vec3, H: Vec3, wi: Vec
         0
     },
     sample = @ |_rnd, out_dir, _adjoint| {
-        BsdfSample { in_dir = out_dir, pdf = 0, cos = 1, color = black }
+        make_option(BsdfSample { in_dir = out_dir, pdf = 0, cos = 1, color = black })
     },
     is_specular = false
 };
@@ -159,7 +159,7 @@ fn @make_specular_brdf(math: Intrinsics, anisotropic: f32, roughness: f32, base_
         0
     },
     sample = @ |_rnd, out_dir, _adjoint| {
-        BsdfSample { in_dir = out_dir, pdf = 0, cos = 1, color = black }
+        make_option(BsdfSample { in_dir = out_dir, pdf = 0, cos = 1, color = black })
     },
     is_specular = true
 };

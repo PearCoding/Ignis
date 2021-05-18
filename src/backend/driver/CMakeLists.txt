@@ -7,23 +7,36 @@ CPMAddPackage(
 
 ###########################################################
 # TODO: Extract cpuid information while in configuration to pick best devices
+set(IG_DISABLE_DEVICES "" CACHE STRING "Devices to not build a driver for.")
+mark_as_advanced(IG_DISABLE_DEVICES)
+
+string(REPLACE " " ";" _DISABLED_DEVICES "${IG_DISABLE_DEVICES}")
+list(REMOVE_DUPLICATES _DISABLED_DEVICES)
+list(TRANSFORM _DISABLED_DEVICES TOUPPER)
 
 # It is more useful (and user friendly) to choose between cpu and gpu
 # Each of the two groups selects the respective best architecture (e.g., AVX2 for CPU and NVVM for GPU)
 # This would require a prepass to generate a list of targets to generate
 # Multi vendor multi GPU and CPU combinations would be bothersome, but who has this kind of configuration?
-set(DEVICES
-    #"-D DEVICE_DEFAULT"
-    #"-D DEVICE_AVX"
-    "-D DEVICE_AVX2"
-    #"-D DEVICE_AVX512"  # [NOT_TESTED, as not supported by my CPU]
-    #"-D DEVICE_SSE42"
-    #"-D DEVICE_ASIMD"
-    "-D DEVICE_NVVM"
-    #"-D DEVICE_NVVM_MEGA"
-    #"-D DEVICE_AMD"
-    #"-D DEVICE_AMD_MEGA"
+set(DEVICE_SELECTION
+    "DEFAULT"
+    #"AVX"
+    "AVX2"
+    #"AVX512"  # [NOT_TESTED, as not supported by my CPU]
+    #"SSE42"
+    #"ASIMD"
+    "NVVM"
+    #"NVVM_MEGA"
+    #"AMD"
+    #"AMD_MEGA"
 )
+
+set(DEVICES )
+foreach(dev IN LISTS DEVICE_SELECTION)
+    if(NOT "${dev}" IN_LIST _DISABLED_DEVICES)
+        list(APPEND DEVICES "-D DEVICE_${dev}")
+    endif()
+endforeach()
 
 ###########################################################
 
@@ -109,7 +122,7 @@ option(IG_BUILD_DRIVER_PARALLEL "Build driver files in parallel. Not recommended
 set(_targets )
 foreach(var ${VARIANTS})
     var_to_name(var_name ${var})
-    message(STATUS "${var_name} = ${var}")
+    message(VERBOSE "Driver: ${var_name} = ${var}")
     set(out_file "${CMAKE_CURRENT_BINARY_DIR}/main_${var_name}.art")
     separate_arguments(args UNIX_COMMAND ${var})
     add_custom_command(

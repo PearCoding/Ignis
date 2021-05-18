@@ -132,20 +132,19 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
 
             // Bounce
             let out_dir = vec3_neg(ray.dir);
-            let mat_sample = mat.bsdf.sample(&mut state.rnd, out_dir, false);
+            if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(&mut state.rnd, out_dir, false) {
+                let contrib = color_mul(state.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+                
+                let mis = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
+                let new_contrib = color_mulf(contrib, 1 / rr_prob);
 
-            // The bsdf might reject the sampling
-            if mat_sample.pdf <= flt_eps { return(Option[(Ray, RayState)]::None) }
-
-            let contrib = color_mul(state.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
-            
-            let mis = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
-            let new_contrib = color_mulf(contrib, 1 / rr_prob);
-
-            make_option(
-                make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
-                make_ray_state(state.rnd, new_contrib, mis, state.depth + 1)
-            )
+                make_option(
+                    make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
+                    make_ray_state(state.rnd, new_contrib, mis, state.depth + 1)
+                    )
+            } else {
+                Option[(Ray, RayState)]::None
+            }
         }
 
         let path_tracer = PathTracer {
