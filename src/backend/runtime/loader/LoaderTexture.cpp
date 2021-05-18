@@ -41,7 +41,21 @@ static void tex_image(const std::string&, const std::shared_ptr<Parser::Object>&
 		else if (wrap_mode == "clamp")
 			wrap = TIW_CLAMP;
 
-		auto& data = result.Database.TextureTable.addLookup(TEX_IMAGE, DefaultAlignment);
+		uint32 type_id = 0;
+		if(wrap == TIW_CLAMP && filter == TIF_NEAREST )
+			type_id = 0;
+		else if(wrap == TIW_CLAMP && filter == TIF_BILINEAR )
+			type_id = 1;
+		else if(wrap == TIW_REPEAT && filter == TIF_NEAREST )
+			type_id = 2;
+		else if(wrap == TIW_REPEAT && filter == TIF_BILINEAR )
+			type_id = 3;
+		else if(wrap == TIW_MIRROR && filter == TIF_NEAREST )
+			type_id = 4;
+		else if(wrap == TIW_MIRROR && filter == TIF_BILINEAR )
+			type_id = 5;
+
+		auto& data = result.Database.TextureTable.addLookup(type_id, DefaultAlignment);
 		VectorSerializer serializer(data, false);
 		serializer.write(bufferID);
 		serializer.write(filter);

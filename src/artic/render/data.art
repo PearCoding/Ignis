@@ -22,13 +22,8 @@ struct MapTable {
     entries: &[MapEntry], // Pointer to an array of lookup entries
 }
 
-struct RawBufferTable {
-    count:   u64,      // Entry counts
-    entries: &[&[u8]], // Pointer to device specific pointers
-}
-
 struct SceneDatabase {
-    buffers:  RawBufferTable,
+    buffers:  DynTable,
     textures: DynTable,
     shapes:   DynTable,
     entities: DynTable,
@@ -115,18 +110,11 @@ fn @get_table_entry(off: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> Devi
 
 //-----------------
 
-type BufferTable = fn (i32) -> (&[u8], DeviceBuffer);
+type BufferTable = fn (i32) -> DeviceBuffer;
 
-fn @make_buffer_table(_math: Intrinsics, dtb: RawBufferTable, acc: DeviceBufferAccessor) -> BufferTable {
+fn @make_buffer_table(_math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor) -> BufferTable {
     @ |id| {
-        let k    = id % 2;
-        let ap   = &dtb.entries(id - k); // Aligned pointer
-        let data = acc(ap as &[u8]);
-
-        let (e0, e1, e2, e3) = data.load_int4(0); 
-
-        let ptr_addr = if k == 1 { join_u32(bitcast[u32](e2), bitcast[u32](e3)) } else { join_u32(bitcast[u32](e0), bitcast[u32](e1)) };
-        let ptr      = ptr_addr as &[u8];
-        (ptr, acc(ptr))
+        let entry = get_lookup_entry(id as u64, dtb, acc);
+        get_table_entry(entry.offset, dtb, acc)
     } 
 }

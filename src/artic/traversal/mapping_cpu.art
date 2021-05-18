@@ -27,7 +27,7 @@ fn @make_cpu_node4(j: i32, nodes: &[Node4]) = Node {
     },
     ordered_bbox = @ |i, octant| {
         let ptr = &nodes(j).bounds as &[f32];
-        let align_ptr = @ |i: i32| rv_align(&ptr(i) as &i8, 16) as &[f32];
+        let align_ptr = @ |k: i32| rv_align(&ptr(k) as &i8, 16) as &[f32];
         let ox = (octant & 1) << 2;
         let oy = (octant & 2) << 1;
         let oz = (octant & 4);
@@ -54,7 +54,7 @@ fn @make_cpu_node8(j: i32, nodes: &[Node8]) = Node {
     },
     ordered_bbox = @ |i, octant| {
         let ptr = &nodes(j).bounds as &[f32];
-        let align_ptr = @ |i: i32| rv_align(&ptr(i) as &i8, 32 /*FIXME: AVX code works with 16?*/) as &[f32];
+        let align_ptr = @ |k: i32| rv_align(&ptr(k) as &i8, 32 /*FIXME: AVX code works with 16?*/) as &[f32];
         let ox = (octant & 1) << 3;
         let oy = (octant & 2) << 2;
         let oz = (octant & 4) << 1;
@@ -191,11 +191,11 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
 
     stack.push(root, ray.tmin);
 
-    let extract_hit = @ |hit: Hit, lane: i32| Hit {
+    let extract_hit = @ |hit2: Hit, lane: i32| Hit {
         ent_id    = -1, // Not used here, will be replaced in the top level BVH
-        prim_id   = bitcast[i32](rv_extract(bitcast[f32](hit.prim_id), lane)),
-        distance  = rv_extract(hit.distance, lane),
-        uv_coords = make_vec2(rv_extract(hit.uv_coords.x, lane), rv_extract(hit.uv_coords.y, lane))
+        prim_id   = bitcast[i32](rv_extract(bitcast[f32](hit2.prim_id), lane)),
+        distance  = rv_extract(hit2.distance, lane),
+        uv_coords = make_vec2(rv_extract(hit2.uv_coords.x, lane), rv_extract(hit2.uv_coords.y, lane))
     };
 
     // Traversal loop
@@ -247,9 +247,9 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
 
                 if !any_hit && num_intrs >= 3 {
                     // Sort them by distance along the ray
-                    for i in unroll(3, bvh.arity + 1) {
-                        if i == bvh.arity || num_intrs == i {
-                            stack.sort_n(i, @ |a, b| a < b, sorting_network, branchless);
+                    for j in unroll(3, bvh.arity + 1) {
+                        if j == bvh.arity || num_intrs == j {
+                            stack.sort_n(j, @ |a, b| a < b, sorting_network, branchless);
                             break()
                         }
                     }
@@ -441,6 +441,11 @@ fn @cpu_traverse_helper( mut ray: Ray
     let stack = alloc_stack();
     stack.push(root, ray.tmin);
 
+    // pe_info("vector_width", vector_width);
+    // pe_info("root", root);
+    // pe_info("single", single);
+    // pe_info("any_hit", any_hit);
+
     while true {
         let exit = break;
         let cull = continue;
@@ -536,6 +541,9 @@ fn @cpu_traverse( min_max: MinMax
                 , single: bool
                 , any_hit: bool
                 ) -> () {
+
+    // pe_info("single_pre", single);
+    // pe_info("any_hit_pre", any_hit);
     for i in range(0, num_packets) {
         vectorize(packet_size, |j| {
             hits(i, j, cpu_traverse_helper(rays(i, j), packet_size, min_max, scene, single, any_hit, 1 /*root*/))

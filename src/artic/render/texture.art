@@ -69,18 +69,9 @@ fn @make_image_texture(math: Intrinsics, border: BorderHandling, filter: ImageFi
     }
 }
 
-fn @load_image_texture(math: Intrinsics, data: DeviceBuffer, stage: Stage1Accessor) -> Texture {
-    let (bufferID, filterMode, borderMode) = data.load_int3(0);
-    let image  = load_image_from_buffer(bufferID, stage.buffers);
-    let border = match borderMode {
-        0x1 => make_mirror_border(),
-        0x2 => make_clamp_border(),
-          _ => make_repeat_border()
-    };
-    let filter = match filterMode {
-        0x0 => make_nearest_filter(),
-          _ => make_bilinear_filter()
-    };
+fn @load_image_texture(math: Intrinsics, data: DeviceBuffer, stage: Stage1Accessor, border: BorderHandling, filter: ImageFilter) -> Texture {
+    let bufferID = data.load_i32(0);
+    let image    = load_image_from_buffer(bufferID, stage.buffers);
     make_image_texture(math, border, filter, image)
 }
 
@@ -131,9 +122,27 @@ fn @make_texture_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccesso
         let entry = get_lookup_entry(id as u64, dtb, acc);
         let data  = get_table_entry(entry.offset, dtb, acc);
         match entry.type_id {
-            0x00 => load_image_texture(math, data, stage), // TEX_IMAGE
-            0x10 => load_checkerboard_texture(math, data, stage),    // TEX_CHECKERBOARD
-               _ =>  make_invalid_texture()
+            0x00 => load_image_texture(math, data, stage, make_clamp_border(), make_nearest_filter()),   // TEX_IMAGE
+            0x01 => load_image_texture(math, data, stage, make_clamp_border(), make_bilinear_filter()),  // TEX_IMAGE
+            0x02 => load_image_texture(math, data, stage, make_repeat_border(), make_nearest_filter()),  // TEX_IMAGE
+            0x03 => load_image_texture(math, data, stage, make_repeat_border(), make_bilinear_filter()), // TEX_IMAGE
+            0x04 => load_image_texture(math, data, stage, make_mirror_border(), make_nearest_filter()),  // TEX_IMAGE
+            0x05 => load_image_texture(math, data, stage, make_mirror_border(), make_bilinear_filter()), // TEX_IMAGE
+            0x10 => load_checkerboard_texture(math, data, stage),                                        // TEX_CHECKERBOARD
+               _ => make_invalid_texture()
         }
+        /*if unlikely(entry.type_id > 6) {
+            make_invalid_texture()
+        } else {
+            [
+                @|| load_image_texture(math, data, stage, make_clamp_border(), make_nearest_filter()),   // TEX_IMAGE
+                @|| load_image_texture(math, data, stage, make_clamp_border(), make_bilinear_filter()),  // TEX_IMAGE
+                @|| load_image_texture(math, data, stage, make_repeat_border(), make_nearest_filter()),  // TEX_IMAGE
+                @|| load_image_texture(math, data, stage, make_repeat_border(), make_bilinear_filter()), // TEX_IMAGE
+                @|| load_image_texture(math, data, stage, make_mirror_border(), make_nearest_filter()),  // TEX_IMAGE
+                @|| load_image_texture(math, data, stage, make_mirror_border(), make_bilinear_filter()), // TEX_IMAGE
+                @|| load_checkerboard_texture(math, data, stage)                                         // TEX_CHECKERBOARD
+            ](entry.type_id)()
+        }*/
     } 
 }

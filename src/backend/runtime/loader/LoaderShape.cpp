@@ -223,9 +223,9 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 		meshSerializer.write((uint32)child_mesh.vertices.size());
 		meshSerializer.write((uint32)child_mesh.normals.size());
 		meshSerializer.write((uint32)0);
-		meshSerializer.write_aligned(child_mesh.vertices, DefaultAlignment, true);
-		meshSerializer.write_aligned(child_mesh.normals, DefaultAlignment, true);
-		meshSerializer.write_aligned(child_mesh.face_normals, DefaultAlignment, true);
+		meshSerializer.writeAligned(child_mesh.vertices, DefaultAlignment, true);
+		meshSerializer.writeAligned(child_mesh.normals, DefaultAlignment, true);
+		meshSerializer.writeAligned(child_mesh.face_normals, DefaultAlignment, true);
 		meshSerializer.write(child_mesh.indices, true);	  // Already aligned
 		meshSerializer.write(child_mesh.texcoords, true); // Aligned to 4*2 bytes
 		meshSerializer.write(child_mesh.face_inv_area, true);

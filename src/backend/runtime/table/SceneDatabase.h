@@ -9,7 +9,7 @@ struct SceneBVH {
 };
 
 struct SceneDatabase {
-	std::vector<std::vector<uint8>> Buffers;
+	DynTable BufferTable;
 	DynTable TextureTable;
 	DynTable EntityTable;
 	DynTable ShapeTable;

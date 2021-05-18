@@ -81,23 +81,27 @@ fn @make_debug_renderer(debug_mode: i32, emitter: RayEmitterFactory) -> Renderer
                         make_option(if surf.is_entering { green } else { red })
                     },
                     15 => { // DEBUG_CHECK_BSDF
-                        let mut tmp = state.rnd;
-                        let out_dir = vec3_neg(ray.dir);
-                        let mat_sample = mat.bsdf.sample(&mut tmp, out_dir, false);
-                        
-                        let pdf = mat.bsdf.pdf(mat_sample.in_dir, out_dir);
-                        let evl = color_mulf(mat.bsdf.eval(mat_sample.in_dir, out_dir), 1/pdf);
+                        if mat.bsdf.is_specular {
+                            make_option(green)
+                        } else {
+                            let mut tmp = state.rnd;
+                            let out_dir = vec3_neg(ray.dir);
+                            let mat_sample = mat.bsdf.sample(&mut tmp, out_dir, false);
+                            
+                            let pdf = mat.bsdf.pdf(mat_sample.in_dir, out_dir);
+                            let evl = color_mulf(mat.bsdf.eval(mat_sample.in_dir, out_dir), 1/pdf);
 
-                        let pdf_diff = math.fabsf(mat_sample.pdf-pdf);
-                        let w_diff   = math.fabsf(mat_sample.color.r - evl.r)
-                                     + math.fabsf(mat_sample.color.g - evl.g)
-                                     + math.fabsf(mat_sample.color.b - evl.b);
+                            let pdf_diff = math.fabsf(mat_sample.pdf-pdf);
+                            let w_diff   = math.fabsf(mat_sample.color.r - evl.r)
+                                        + math.fabsf(mat_sample.color.g - evl.g)
+                                        + math.fabsf(mat_sample.color.b - evl.b);
 
-                        let pdf_good = if pdf_diff <= 0.001:f32 { 1 } else { 0 };
-                        let w_good   = if w_diff   <= 0.001:f32 { 1 } else { 0 };
-                        let index    = (w_good << 1) | pdf_good;
-                        let color    = [red, orange, yellow, green](index);
-                        make_option(color)
+                            let pdf_good = if pdf_diff <= 0.001:f32 { 1 } else { 0 };
+                            let w_good   = if w_diff   <= 0.001:f32 { 1 } else { 0 };
+                            let index    = (w_good << 1) | pdf_good;
+                            let color    = [red, orange, yellow, green](index);
+                            make_option(color)
+                        }
                     },
                     _ => { // DEBUG_NORMAL 
                         let n = surf.local.col(2);

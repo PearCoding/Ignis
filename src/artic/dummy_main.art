@@ -38,6 +38,6 @@ fn ig_render(_settings: &Settings, _iter: i32) -> () {
     let mut info : SceneInfo;
     ignis_load_scene_info(0, &mut info);
 
-    let mut rays : &[Ray];
+    let mut rays : &[StreamRay];
     ignis_load_rays(0, &mut rays); 
 }

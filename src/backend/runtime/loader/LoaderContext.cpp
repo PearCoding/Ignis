@@ -65,22 +65,20 @@ uint32 LoaderContext::loadImage(const std::filesystem::path& path, SceneDatabase
 			return 0;
 		}
 
-		// Write into internal data
-		std::vector<uint8> data;
-		data.reserve(sizeof(float) * 4 * image.width * image.height + sizeof(uint32) * 4);
-
-		{
-			VectorSerializer serializer(data, false);
-			serializer.write((uint32)image.width);
-			serializer.write((uint32)image.height);
-			serializer.write((uint32)0); // Padding
-			serializer.write((uint32)0); // Padding
-			serializer.writeRaw(reinterpret_cast<uint8*>(image.pixels.get()), sizeof(float) * 4 * image.width * image.height);
-		}
-
 		// Register via buffer id
-		uint32 id = (uint32)dtb.Buffers.size();
-		dtb.Buffers.emplace_back(std::move(data));
+		uint32 id	  = dtb.BufferTable.entryCount();
+		uint32 typeID = 0; // TODO: In future we might use this type specifier
+		auto& data	  = dtb.BufferTable.addLookup(typeID, 4 * sizeof(float));
+
+		data.reserve(data.size() + sizeof(float) * 4 * image.width * image.height + sizeof(uint32) * 4);
+
+		VectorSerializer serializer(data, false);
+		serializer.write((uint32)image.width);
+		serializer.write((uint32)image.height);
+		serializer.write((uint32)0); // Padding
+		serializer.write((uint32)0); // Padding
+		serializer.writeRaw(reinterpret_cast<uint8*>(image.pixels.get()), sizeof(float) * 4 * image.width * image.height);
+
 		Images[hash_able] = id;
 		ok				  = true;
 		return id;

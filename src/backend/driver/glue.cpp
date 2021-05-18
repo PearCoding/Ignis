@@ -14,10 +14,68 @@
 #include <mutex>
 #include <thread>
 
+/// Some arrays do not need new allocations at the host if the data is already provided and properly arranged.
+/// However, this assumes that the pointer is always properly aligned!
+/// For external devices (e.g., GPU) a standard anydsl array will be used
+// TODO: Make a fallback for cases in which the pointer is not aligned
+template <typename T>
+class ShallowArray {
+public:
+	inline ShallowArray()
+		: device_mem()
+		, host_mem(nullptr)
+		, device(0)
+		, size_(0)
+	{
+	}
+
+	inline ShallowArray(int32_t dev, const T* ptr, size_t n)
+		: device_mem()
+		, host_mem(nullptr)
+		, device(dev)
+		, size_(n)
+	{
+		if (dev != 0) {
+			if (n != 0) {
+				device_mem = std::move(anydsl::Array<T>(dev, reinterpret_cast<T*>(anydsl_alloc(dev, sizeof(T) * n)), n));
+				anydsl_copy(0, ptr, 0, dev, device_mem.data(), 0, sizeof(T) * n);
+			}
+		} else {
+			host_mem = ptr;
+		}
+	}
+
+	inline ShallowArray(ShallowArray&&) = default;
+	inline ShallowArray& operator=(ShallowArray&&) = default;
+
+	inline ~ShallowArray() = default;
+
+	inline const anydsl::Array<T>& device_data() const { return device_mem; }
+	inline const T* host_data() const { return host_mem; }
+
+	inline const T* ptr() const
+	{
+		if (is_host())
+			return host_data();
+		else
+			return device_data().data();
+	}
+
+	inline bool has_data() const { return ptr() != nullptr && size_ > 0; }
+	inline bool is_host() const { return host_mem != nullptr && device == 0; }
+	inline size_t size() const { return size_; }
+
+private:
+	anydsl::Array<T> device_mem;
+	const T* host_mem;
+	int32_t device;
+	size_t size_;
+};
+
 template <typename Node, typename Object>
 struct BvhProxy {
-	anydsl::Array<Node> nodes;
-	anydsl::Array<Object> objs;
+	ShallowArray<Node> nodes;
+	ShallowArray<Object> objs;
 };
 
 using Bvh2Ent = BvhProxy<Node2, EntityLeaf1>;
@@ -26,12 +84,12 @@ using Bvh8Ent = BvhProxy<Node8, EntityLeaf1>;
 
 struct DynTableProxy {
 	size_t EntryCount;
-	anydsl::Array<LookupEntry> LookupEntries;
-	anydsl::Array<uint8_t> Data;
+	ShallowArray<LookupEntry> LookupEntries;
+	ShallowArray<uint8_t> Data;
 };
 
 struct SceneDatabaseProxy {
-	anydsl::Array<void*> Buffers;
+	DynTableProxy Buffers;
 	DynTableProxy Textures;
 	DynTableProxy Entities;
 	DynTableProxy Shapes;
@@ -51,8 +109,7 @@ static inline float safe_rcp(float x)
 }
 
 struct Interface {
-	using DeviceImage	   = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
-	using BufferTableProxy = std::vector<anydsl::Array<uint8_t>>;
+	using DeviceImage = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
 
 	struct DeviceData {
 		bool scene_ent = false;
@@ -66,8 +123,7 @@ struct Interface {
 		anydsl::Array<float> second_primary;
 		anydsl::Array<float> secondary;
 		anydsl::Array<float> film_pixels;
-		anydsl::Array<Ray> ray_list;
-		BufferTableProxy buffers;
+		anydsl::Array<StreamRay> ray_list;
 	};
 	std::unordered_map<int32_t, DeviceData> devices;
 
@@ -177,12 +233,12 @@ struct Interface {
 		return devices[dev].bvh8_ent = std::move(load_scene_bvh<Node8>(dev));
 	}
 
-	const anydsl::Array<Ray>& load_ray_list(int32_t dev)
+	const anydsl::Array<StreamRay>& load_ray_list(int32_t dev)
 	{
 		if (devices[dev].ray_list.size() != 0)
 			return devices[dev].ray_list;
 
-		std::vector<Ray> rays;
+		std::vector<StreamRay> rays;
 		rays.reserve(film_width);
 
 		for (size_t i = 0; i < film_width; ++i) {
@@ -194,7 +250,8 @@ struct Interface {
 				norm = 1;
 			}
 
-			Ray ray;
+			// FIXME: Bytewise they are essentially the same...
+			StreamRay ray;
 			ray.org.x = dRay.Origin(0);
 			ray.org.y = dRay.Origin(1);
 			ray.org.z = dRay.Origin(2);
@@ -202,15 +259,6 @@ struct Interface {
 			ray.dir.x = dRay.Direction(0) / norm;
 			ray.dir.y = dRay.Direction(1) / norm;
 			ray.dir.z = dRay.Direction(2) / norm;
-
-			// Calculate invert components
-			ray.inv_dir.x = safe_rcp(ray.dir.x);
-			ray.inv_dir.y = safe_rcp(ray.dir.y);
-			ray.inv_dir.z = safe_rcp(ray.dir.z);
-
-			ray.inv_org.x = -(ray.org.x * ray.inv_dir.x);
-			ray.inv_org.y = -(ray.org.y * ray.inv_dir.y);
-			ray.inv_org.z = -(ray.org.z * ray.inv_dir.z);
 
 			ray.tmin = dRay.Range(0);
 			ray.tmax = dRay.Range(1);
@@ -244,8 +292,8 @@ struct Interface {
 		const size_t node_count = database->SceneBVH.Nodes.size() / sizeof(Node);
 		const size_t leaf_count = database->SceneBVH.Leaves.size() / sizeof(EntityLeaf1);
 		return BvhProxy<Node, EntityLeaf1>{
-			std::move(copy_to_device(dev, reinterpret_cast<const Node*>(database->SceneBVH.Nodes.data()), node_count)),
-			std::move(copy_to_device(dev, reinterpret_cast<const EntityLeaf1*>(database->SceneBVH.Leaves.data()), leaf_count))
+			std::move(ShallowArray<Node>(dev, reinterpret_cast<const Node*>(database->SceneBVH.Nodes.data()), node_count)),
+			std::move(ShallowArray<EntityLeaf1>(dev, reinterpret_cast<const EntityLeaf1*>(database->SceneBVH.Leaves.data()), leaf_count))
 		};
 	}
 
@@ -255,39 +303,9 @@ struct Interface {
 
 		DynTableProxy proxy;
 		proxy.EntryCount	= tbl.entryCount();
-		proxy.LookupEntries = std::move(copy_to_device<LookupEntry>(dev, (LookupEntry*)tbl.lookups().data(), tbl.lookups().size()));
-		proxy.Data			= std::move(copy_to_device(dev, tbl.data()));
+		proxy.LookupEntries = std::move(ShallowArray<LookupEntry>(dev, (LookupEntry*)tbl.lookups().data(), tbl.lookups().size()));
+		proxy.Data			= std::move(ShallowArray<uint8_t>(dev, tbl.data().data(), tbl.data().size()));
 		return proxy;
-	}
-
-	// Load all the buffers to device which are registred by the loading and assembly stage
-	// TODO: This can take awhile... dynamic on and off loading would be great...
-	BufferTableProxy load_buffers(int32_t dev)
-	{
-		if (database->Buffers.empty()) {
-			return BufferTableProxy();
-		}
-
-		BufferTableProxy proxy;
-		proxy.reserve(database->Buffers.size());
-		for (size_t i = 0; i < database->Buffers.size(); ++i)
-			proxy.push_back(std::move(copy_to_device(dev, database->Buffers[i])));
-		return proxy;
-	}
-
-	// Setup a table containing device pointer to buffers in the device
-	anydsl::Array<void*> load_buffer_pointers(int32_t dev)
-	{
-		if (database->Buffers.empty()) {
-			return anydsl::Array<void*>();
-		}
-
-		std::vector<void*> pointers;
-		pointers.reserve(database->Buffers.size());
-		for (size_t i = 0; i < database->Buffers.size(); ++i)
-			pointers.push_back(devices[dev].buffers[i].data());
-		anydsl::Array<void*> array;
-		return copy_to_device(dev, pointers);
 	}
 
 	// Load all the data assembled in previous stages to the device
@@ -297,10 +315,11 @@ struct Interface {
 			return devices[dev].database;
 		devices[dev].database_loaded = true;
 
-		devices[dev].buffers	  = std::move(load_buffers(dev));
 		SceneDatabaseProxy& proxy = devices[dev].database;
 
-		proxy.Buffers  = std::move(load_buffer_pointers(dev));
+		// Load all the buffers to device which are registred by the loading and assembly stage
+		// TODO: This might take awhile... dynamic on and off loading would be great...
+		proxy.Buffers  = std::move(load_dyntable(dev, database->BufferTable));
 		proxy.Textures = std::move(load_dyntable(dev, database->TextureTable));
 		proxy.Entities = std::move(load_dyntable(dev, database->EntityTable));
 		proxy.Shapes   = std::move(load_dyntable(dev, database->ShapeTable));
@@ -526,41 +545,38 @@ void ignis_get_film_data(int32_t dev, float** pixels, int32_t* width, int32_t* h
 void ignis_load_bvh2_ent(int32_t dev, Node2** nodes, EntityLeaf1** objs)
 {
 	auto& bvh = sInterface->load_bvh2_ent(dev);
-	*nodes	  = const_cast<Node2*>(bvh.nodes.data());
-	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.data());
+	*nodes	  = const_cast<Node2*>(bvh.nodes.ptr());
+	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.ptr());
 }
 
 void ignis_load_bvh4_ent(int32_t dev, Node4** nodes, EntityLeaf1** objs)
 {
 	auto& bvh = sInterface->load_bvh4_ent(dev);
-	*nodes	  = const_cast<Node4*>(bvh.nodes.data());
-	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.data());
+	*nodes	  = const_cast<Node4*>(bvh.nodes.ptr());
+	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.ptr());
 }
 
 void ignis_load_bvh8_ent(int32_t dev, Node8** nodes, EntityLeaf1** objs)
 {
 	auto& bvh = sInterface->load_bvh8_ent(dev);
-	*nodes	  = const_cast<Node8*>(bvh.nodes.data());
-	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.data());
+	*nodes	  = const_cast<Node8*>(bvh.nodes.ptr());
+	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.ptr());
 }
 
 void ignis_load_scene(int32_t dev, SceneDatabase* dtb)
 {
-	auto& proxy = sInterface->load_scene_database(dev);
-
-	dtb->buffers.count	 = proxy.Buffers.size() / sizeof(void*);
-	dtb->buffers.entries = reinterpret_cast<uint8_t**>(const_cast<void**>(proxy.Buffers.data()));
-
 	auto assign = [&](const DynTableProxy& tbl) {
 		DynTable devtbl;
 		devtbl.count  = tbl.EntryCount;
-		devtbl.header = const_cast<LookupEntry*>(tbl.LookupEntries.data());
+		devtbl.header = const_cast<LookupEntry*>(tbl.LookupEntries.ptr());
 		uint64_t size = tbl.Data.size();
 		devtbl.size	  = size;
-		devtbl.start  = const_cast<uint8_t*>(tbl.Data.data());
+		devtbl.start  = const_cast<uint8_t*>(tbl.Data.ptr());
 		return devtbl;
 	};
 
+	auto& proxy	  = sInterface->load_scene_database(dev);
+	dtb->buffers  = assign(proxy.Buffers);
 	dtb->textures = assign(proxy.Textures);
 	dtb->entities = assign(proxy.Entities);
 	dtb->shapes	  = assign(proxy.Shapes);
@@ -574,9 +590,9 @@ void ignis_load_scene_info(int32_t dev, SceneInfo* info)
 	*info = sInterface->load_scene_info(dev);
 }
 
-void ignis_load_rays(int32_t dev, Ray** list)
+void ignis_load_rays(int32_t dev, StreamRay** list)
 {
-	*list = const_cast<Ray*>(sInterface->load_ray_list(dev).data());
+	*list = const_cast<StreamRay*>(sInterface->load_ray_list(dev).data());
 }
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int32_t size)

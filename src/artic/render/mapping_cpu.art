@@ -107,40 +107,40 @@ fn @cpu_move_ray_stream(rays: RayStream, i: i32, j: i32) -> () {
 }
 
 fn @cpu_compact_primary(primary: &PrimaryStream, vector_width: i32, vector_compact: bool) -> i32 {
-    fn cpu_compact_primary_specialized(primary: &PrimaryStream) -> i32 {
+    fn cpu_compact_primary_specialized(primary2: &PrimaryStream) -> i32 {
         let mut k = 0;
         if vector_compact {
-            for i in range_step(0, primary.size, vector_width) {
+            for i in range_step(0, primary2.size, vector_width) {
                 vectorize(vector_width, |j| { 
                     let id = primary.rays.id(i + j);
-                    let mask = (id >= 0) & (i + j < primary.size);
+                    let mask = (id >= 0) & (i + j < primary2.size);
 
-                    primary.rays.id(k + j) = bitcast[i32](rv_compact(bitcast[f32](id), mask));
+                    primary2.rays.id(k + j) = bitcast[i32](rv_compact(bitcast[f32](id), mask));
 
-                    cpu_compact_ray_stream(primary.rays, k + j, i + j, mask);
+                    cpu_compact_ray_stream(primary2.rays, k + j, i + j, mask);
 
-                    primary.rnd(k + j)       = bitcast[u32](rv_compact(bitcast[f32](primary.rnd(i + j)), mask));
-                    primary.mis(k + j)       = rv_compact(primary.mis(i + j), mask);
-                    primary.contrib_r(k + j) = rv_compact(primary.contrib_r(i + j), mask);
-                    primary.contrib_g(k + j) = rv_compact(primary.contrib_g(i + j), mask);
-                    primary.contrib_b(k + j) = rv_compact(primary.contrib_b(i + j), mask);
-                    primary.depth(k + j)     = bitcast[i32](rv_compact(bitcast[f32](primary.depth(i + j)), mask));
+                    primary2.rnd(k + j)       = bitcast[u32](rv_compact(bitcast[f32](primary2.rnd(i + j)), mask));
+                    primary2.mis(k + j)       = rv_compact(primary2.mis(i + j), mask);
+                    primary2.contrib_r(k + j) = rv_compact(primary2.contrib_r(i + j), mask);
+                    primary2.contrib_g(k + j) = rv_compact(primary2.contrib_g(i + j), mask);
+                    primary2.contrib_b(k + j) = rv_compact(primary2.contrib_b(i + j), mask);
+                    primary2.depth(k + j)     = bitcast[i32](rv_compact(bitcast[f32](primary2.depth(i + j)), mask));
 
                     k += cpu_popcount32(rv_ballot(mask));
                 });
             }
         } else {
-            for i in range(0, primary.size) {
-                let id = primary.rays.id(i);
+            for i in range(0, primary2.size) {
+                let id = primary2.rays.id(i);
                 if id >= 0 {
-                    primary.rays.id(k) = id;
-                    cpu_move_ray_stream(primary.rays, k, i);
-                    primary.rnd(k)       = primary.rnd(i);
-                    primary.mis(k)       = primary.mis(i);
-                    primary.contrib_r(k) = primary.contrib_r(i);
-                    primary.contrib_g(k) = primary.contrib_g(i);
-                    primary.contrib_b(k) = primary.contrib_b(i);
-                    primary.depth(k)     = primary.depth(i);
+                    primary2.rays.id(k) = id;
+                    cpu_move_ray_stream(primary2.rays, k, i);
+                    primary2.rnd(k)       = primary2.rnd(i);
+                    primary2.mis(k)       = primary2.mis(i);
+                    primary2.contrib_r(k) = primary2.contrib_r(i);
+                    primary2.contrib_g(k) = primary2.contrib_g(i);
+                    primary2.contrib_b(k) = primary2.contrib_b(i);
+                    primary2.depth(k)     = primary2.depth(i);
                     k++;
                 }
             } 
@@ -151,36 +151,36 @@ fn @cpu_compact_primary(primary: &PrimaryStream, vector_width: i32, vector_compa
 }
 
 fn @cpu_compact_secondary(secondary: &SecondaryStream, vector_width: i32, vector_compact: bool) -> i32 {
-    fn cpu_compact_secondary_specialized(secondary: &SecondaryStream) -> i32 {
+    fn cpu_compact_secondary_specialized(secondary2: &SecondaryStream) -> i32 {
         let mut k = 0;
         if vector_compact {
-            for i in range_step(0, secondary.size, vector_width) {
+            for i in range_step(0, secondary2.size, vector_width) {
                 vectorize(vector_width, |j| {
-                    let id = secondary.rays.id(i + j);
-                    let mask = (id >= 0) & (i + j < secondary.size);
+                    let id = secondary2.rays.id(i + j);
+                    let mask = (id >= 0) & (i + j < secondary2.size);
 
-                    secondary.rays.id(k + j) = bitcast[i32](rv_compact(bitcast[f32](id), mask));
+                    secondary2.rays.id(k + j) = bitcast[i32](rv_compact(bitcast[f32](id), mask));
 
-                    cpu_compact_ray_stream(secondary.rays, k + j, i + j, mask);
+                    cpu_compact_ray_stream(secondary2.rays, k + j, i + j, mask);
 
-                    secondary.prim_id(k + j) = bitcast[i32](rv_compact(bitcast[f32](secondary.prim_id(i + j)), mask));
-                    secondary.color_r(k + j) = rv_compact(secondary.color_r(i + j), mask);
-                    secondary.color_g(k + j) = rv_compact(secondary.color_g(i + j), mask);
-                    secondary.color_b(k + j) = rv_compact(secondary.color_b(i + j), mask);
+                    secondary2.prim_id(k + j) = bitcast[i32](rv_compact(bitcast[f32](secondary2.prim_id(i + j)), mask));
+                    secondary2.color_r(k + j) = rv_compact(secondary2.color_r(i + j), mask);
+                    secondary2.color_g(k + j) = rv_compact(secondary2.color_g(i + j), mask);
+                    secondary2.color_b(k + j) = rv_compact(secondary2.color_b(i + j), mask);
 
                     k += cpu_popcount32(rv_ballot(mask));
                 });
             }
         } else {
-            for i in range(0, secondary.size) {
-                let id = secondary.rays.id(i);
+            for i in range(0, secondary2.size) {
+                let id = secondary2.rays.id(i);
                 if id >= 0 {
-                    secondary.rays.id(k) = id;
-                    cpu_move_ray_stream(secondary.rays, k, i);
-                    secondary.prim_id(k) = secondary.prim_id(i);
-                    secondary.color_r(k) = secondary.color_r(i);
-                    secondary.color_g(k) = secondary.color_g(i);
-                    secondary.color_b(k) = secondary.color_b(i);
+                    secondary2.rays.id(k) = id;
+                    cpu_move_ray_stream(secondary2.rays, k, i);
+                    secondary2.prim_id(k) = secondary2.prim_id(i);
+                    secondary2.color_r(k) = secondary2.color_r(i);
+                    secondary2.color_g(k) = secondary2.color_g(i);
+                    secondary2.color_b(k) = secondary2.color_b(i);
                     k++;
                 }
             }
@@ -231,47 +231,50 @@ fn @cpu_generate_rays( primary: PrimaryStream
 }
 
 fn @cpu_traverse_primary(scene: Scene, min_max: MinMax, primary: &PrimaryStream, single: bool, vector_width: i32) -> () {
-    fn cpu_traverse_primary_specialized(primary: &PrimaryStream) -> () {
+    fn cpu_traverse_primary_specialized(scene2: Scene, primary2: &PrimaryStream) -> () {
         cpu_traverse(
             min_max,
-            scene,
-            make_ray_stream_reader(primary.rays, vector_width),
-            make_primary_stream_hit_writer(*primary, vector_width, scene.info.num_entities),
+            scene2,
+            make_ray_stream_reader(primary2.rays, vector_width),
+            make_primary_stream_hit_writer(*primary2, vector_width, scene.info.num_entities),
             vector_width /*packet_size*/,
-            primary.size / vector_width + select(primary.size % vector_width != 0, 1, 0),
+            primary2.size / vector_width + select(primary2.size % vector_width != 0, 1, 0),
             single,
             false /*any_hit*/
         );
     }
-    $cpu_traverse_primary_specialized(primary);
+    $cpu_traverse_primary_specialized(scene, primary);
 }
 
 fn @cpu_traverse_secondary(scene: Scene, min_max: MinMax, secondary: &SecondaryStream, single: bool, vector_width: i32) -> () {
-    fn cpu_traverse_secondary_specialized(secondary: &SecondaryStream) -> () {
+    fn cpu_traverse_secondary_specialized(scene2: Scene, secondary2: &SecondaryStream) -> () {
         cpu_traverse(
             min_max,
-            scene,
-            make_ray_stream_reader(secondary.rays, vector_width),
-            make_secondary_stream_hit_writer(*secondary, vector_width),
+            scene2,
+            make_ray_stream_reader(secondary2.rays, vector_width),
+            make_secondary_stream_hit_writer(*secondary2, vector_width),
             vector_width /*packet_size*/,
-            secondary.size / vector_width + select(secondary.size % vector_width != 0, 1, 0),
+            secondary2.size / vector_width + select(secondary2.size % vector_width != 0, 1, 0),
             single,
             true /*any_hit*/
         );
     }
-    $cpu_traverse_secondary_specialized(secondary);
+    $cpu_traverse_secondary_specialized(scene, secondary);
 }
 
 fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, scene: Scene, path_tracer: PathTracer, accumulate: fn (i32, Color) -> (), begin: i32, end: i32, vector_width: i32) -> () {
-    fn cpu_shade_specialized(primary: &PrimaryStream, secondary: &SecondaryStream, begin: i32, end: i32) -> () {
+    // pe_info("entity_id", entity_id);
+    // pe_info("shade:vector_width", vector_width);
+    
+    fn cpu_shade_specialized(entity_id2: i32, primary2: &PrimaryStream, secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
-        let read_primary_ray    = make_ray_stream_reader(primary.rays, 1);
-        let read_primary_hit    = make_primary_stream_hit_reader(*primary, 1);
-        let read_primary_state  = make_primary_stream_state_reader(*primary, 1);
-        let write_primary_ray   = make_ray_stream_writer(primary.rays, 1);
-        let write_primary_state = make_primary_stream_state_writer(*primary, 1);
-        let write_secondary_ray = make_ray_stream_writer(secondary.rays, 1);
+        let read_primary_ray    = make_ray_stream_reader(primary2.rays, 1);
+        let read_primary_hit    = make_primary_stream_hit_reader(*primary2, 1);
+        let read_primary_state  = make_primary_stream_state_reader(*primary2, 1);
+        let write_primary_ray   = make_ray_stream_writer(primary2.rays, 1);
+        let write_primary_state = make_primary_stream_state_writer(*primary2, 1);
+        let write_secondary_ray = make_ray_stream_writer(secondary2.rays, 1);
         
         let entities  = scene.database.entities;
         let shapes    = scene.database.shapes;
@@ -280,16 +283,16 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
         let on_hit    = path_tracer.on_hit;
         let on_shadow = path_tracer.on_shadow;
         let on_bounce = path_tracer.on_bounce;
-        let entity    = entities(entity_id);
+        let entity    = entities(entity_id2);
         let shape     = shapes(entity.shape_id);
         let shader    = shaders(entity.bsdf_id);
         //let light     = if unlikely(entity.emissive) { @alights(entity.light_id) } else { make_null_light() };
 
-        for i, vector_width in vectorized_range(vector_width, begin, end) {
+        for i, r_vector_width in vectorized_range(vector_width, begin2, end2) {
             let ray       = read_primary_ray(i, 0);
             let hit       = read_primary_hit(i, 0);
             let mut state = read_primary_state(i, 0);
-            let ray_id    = primary.rays.id(i);
+            let ray_id    = primary2.rays.id(i);
 
             let local_ray = transform_norm_ray(cpu_intrinsics, ray, entity.local_mat);
 
@@ -301,7 +304,7 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
             let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) { color } else { black };
             
-            for lane in unroll(0, vector_width) {
+            for lane in unroll(0, r_vector_width) {
                 let j = bitcast[i32](rv_extract(bitcast[f32](ray_id), lane));
                 accumulate(j,
                     make_color(
@@ -315,12 +318,12 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
             // Compute shadow rays
             if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, hit, &mut state, glb_surf, mat) {
                 write_secondary_ray(i, 0, new_ray);
-                secondary.color_r(i) = color.r;
-                secondary.color_g(i) = color.g;
-                secondary.color_b(i) = color.b;
-                secondary.rays.id(i) = ray_id;
+                secondary2.color_r(i) = color.r;
+                secondary2.color_g(i) = color.g;
+                secondary2.color_b(i) = color.b;
+                secondary2.rays.id(i) = ray_id;
             } else {
-                secondary.rays.id(i) = -1;
+                secondary2.rays.id(i) = -1;
             }
 
             // Sample new rays
@@ -328,31 +331,31 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
                 write_primary_ray(i, 0, new_ray);
                 write_primary_state(i, 0, new_state);
             } else {
-                primary.rays.id(i) = -1;
+                primary2.rays.id(i) = -1;
             }
         }
     }
-    $cpu_shade_specialized(primary, secondary, begin, end);
+    $cpu_shade_specialized(entity_id, primary, secondary, begin, end);
 }
 
 fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate: fn (i32, Color) -> (), begin: i32, end: i32, vector_width: i32) -> () {
-    fn cpu_miss_shade_specialized(primary: &PrimaryStream, begin: i32, end: i32) -> () {
+    fn cpu_miss_shade_specialized(primary2: &PrimaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
-        let read_primary_ray   = make_ray_stream_reader(primary.rays, 1);
-        let read_primary_state = make_primary_stream_state_reader(*primary, 1);
+        let read_primary_ray   = make_ray_stream_reader(primary2.rays, 1);
+        let read_primary_state = make_primary_stream_state_reader(*primary2, 1);
         
         let on_miss = path_tracer.on_miss;
 
-        for i, vector_width in vectorized_range(vector_width, begin, end) {
+        for i, r_vector_width in vectorized_range(vector_width, begin2, end2) {
             let ray       = read_primary_ray(i, 0);
             let mut state = read_primary_state(i, 0);
-            let ray_id    = primary.rays.id(i);
+            let ray_id    = primary2.rays.id(i);
 
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
             let hit_color = if let Option[Color]::Some(color) = @on_miss(ray, &mut state) { color } else { black };
 
-            for lane in unroll(0, vector_width) {
+            for lane in unroll(0, r_vector_width) {
                 let j = bitcast[i32](rv_extract(bitcast[f32](ray_id), lane));
                 accumulate(j,
                     make_color(
@@ -363,7 +366,7 @@ fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate:
                 );
             }
 
-            primary.rays.id(i) = -1;
+            primary2.rays.id(i) = -1;
         }
     }
     $cpu_miss_shade_specialized(primary, begin, end);
@@ -650,7 +653,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         } 
     },
     load_rays = @ || {
-        let mut rays: &[Ray];
+        let mut rays: &[StreamRay];
         ignis_load_rays(0, &mut rays);
         rays
     }

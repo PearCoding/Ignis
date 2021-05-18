@@ -43,7 +43,7 @@ fn @make_camera_emitter(camera: Camera) -> RayEmitterFactory {
     }
 }
 
-fn @make_list_emitter(rays: &[Ray]) -> RayEmitterFactory {
+fn @make_list_emitter(rays: &[StreamRay]) -> RayEmitterFactory {
     @ |_scene, _device, iter| -> RayEmitter {
         @ |sample, x, y, width, _height| {
             let mut hash = fnv_init();
@@ -52,8 +52,11 @@ fn @make_list_emitter(rays: &[Ray]) -> RayEmitterFactory {
             hash = fnv_hash(hash, x as u32);
             hash = fnv_hash(hash, y as u32);
             let rnd = hash /*as RndState*/;
-            let id = y*width + x;
-            let ray = if id < width { rays(id) } else { rays(0) };
+            let id  = y*width + x;
+            
+            let stream_ray = if id < width { rays(id) } else { StreamRay{org=make_vec3(0,0,0), dir=make_vec3(0,0,1), tmin=0, tmax=0}};
+            
+            let ray   = make_ray(stream_ray.org, stream_ray.dir, stream_ray.tmin, stream_ray.tmax);
             let state = make_ray_state(rnd, white, 0, 0);
             (ray, state)
         }

@@ -292,7 +292,7 @@ fn @gpu_generate_rays( primary: PrimaryStream
     let ray_ids     = primary.rays.id;
     let write_ray   = make_ray_stream_writer(primary.rays, 1);
     let write_state = make_primary_stream_state_writer(primary, 1);
-    let write_id    = @ |i: i32, _: i32, id: i32| ray_ids(i) = id;
+    let write_id    = @ |i: i32, _: i32, id2: i32| ray_ids(i) = id2;
 
     gpu_exec_1d(acc, num_rays, 64 /*block_size*/, |work_item| {
         let gid = work_item.gidx();
@@ -745,7 +745,7 @@ fn @make_gpu_device( dev_id: i32
         } 
     },
     load_rays = @ || {
-        let mut rays: &[Ray]; // TODO: Alignment?
+        let mut rays: &[StreamRay]; // TODO: Alignment?
         ignis_load_rays(dev_id, &mut rays);
         rays
     }

@@ -28,7 +28,7 @@ struct Device {
     load_scene_bvh:       fn () -> SceneBvh,
     load_scene_database:  fn () -> SceneDatabase,
     load_scene_info:      fn () -> SceneInfo,
-    load_buffer_table:    fn (RawBufferTable) -> BufferTable,
+    load_buffer_table:    fn (DynTable) -> BufferTable,
     load_texture_table:   fn (DynTable, Stage1Accessor) -> TextureTable,
     load_entity_table:    fn (DynTable, Stage2Accessor) -> EntityTable,
     load_shape_table:     fn (DynTable, Stage2Accessor) -> ShapeTable,
@@ -37,7 +37,7 @@ struct Device {
     load_shader_table:    fn (DynTable, Stage3Accessor) -> BsdfTable,
     load_bvh_table:       fn (DynTable) -> BVHTable,
 
-    load_rays: fn () -> &[Ray]
+    load_rays: fn () -> &[StreamRay]
 }
 
 type Renderer = fn (Scene, Device, i32) -> ();

@@ -135,8 +135,7 @@ Runtime::~Runtime()
 
 void Runtime::step(const Camera& camera)
 {
-	if (!mInit)
-		return;
+	IG_ASSERT(mInit, "Expected to be initialized!");
 
 	if (mLoadedInterface.Configuration & IG_C_CAMERA_LIST) {
 		IG_LOG(L_ERROR) << "Trying to use step() in a trace driver!" << std::endl;

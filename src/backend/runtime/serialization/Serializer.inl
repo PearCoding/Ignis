@@ -120,7 +120,7 @@ inline void Serializer::write(const ISerializable& v)
 }
 
 template <typename T, typename Alloc>
-void Serializer::write_aligned(const std::vector<T, Alloc>& vec, size_t alignment, bool naked)
+void Serializer::writeAligned(const std::vector<T, Alloc>& vec, size_t alignment, bool naked)
 {
 	if (alignment == 0) {
 		write(vec, naked);

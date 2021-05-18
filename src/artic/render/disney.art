@@ -202,13 +202,13 @@ fn @make_disney_bsdf(math: Intrinsics, surf: SurfaceElement, base_color: Color, 
         let diffuse_brdf = make_diffuse_brdf(roughness, flatness, wo, H, wi, diffuse_weight);
         let diffuse = diffuse_brdf.eval(in_dir, out_dir);
 
-        let sheen = sheen_lobe(sheen, base_color, sheen_tint, H, wi);
+        let sheen_w = sheen_lobe(sheen, base_color, sheen_tint, H, wi);
        
         let specular_brdf = make_specular_brdf(math, anisotropic, roughness, base_color, relative_ior, specular_tint, metallic, ior, wo, H, wi);
         let specular = specular_brdf.eval(in_dir, out_dir);
         
         // ((diffuse * base_color) + sheen) * diffuse_weight
-        let diff = color_mulf(color_add(color_mul(diffuse, base_color),sheen), diffuse_weight);
+        let diff = color_mulf(color_add(color_mul(diffuse, base_color),sheen_w), diffuse_weight);
 
         color_mulf(color_add(color_add(specular, diff), clearcoat_lobe), fabs(NdotL))
     };
