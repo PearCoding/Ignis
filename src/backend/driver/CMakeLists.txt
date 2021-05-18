@@ -5,13 +5,8 @@ CPMAddPackage(
     EXCLUDE_FROM_ALL
 )
 
-# TODO: Make it configurable
-set(CAMERAS
-    "-D CAMERA_PERSPECTIVE"
-    #"-D CAMERA_ORTHOGONAL"
-    #"-D CAMERA_FISHLENS"
-    #"-D CAMERA_LIST"
-)
+###########################################################
+# TODO: Extract cpuid information while in configuration to pick best devices
 
 # It is more useful (and user friendly) to choose between cpu and gpu
 # Each of the two groups selects the respective best architecture (e.g., AVX2 for CPU and NVVM for GPU)
@@ -25,18 +20,53 @@ set(DEVICES
     #"-D DEVICE_SSE42"
     #"-D DEVICE_ASIMD"
     "-D DEVICE_NVVM"
-    "-D DEVICE_NVVM_MEGA"
+    #"-D DEVICE_NVVM_MEGA"
     #"-D DEVICE_AMD"
     #"-D DEVICE_AMD_MEGA"
 )
 
-set(RENDERER
-    "-D RENDERER_PATH"
-    #"-D RENDERER_DEBUG"
-    #"-D RENDERER_AO"
-)
+###########################################################
 
-#############################################
+option(IG_WITH_CAMERA_PERSPECTIVE  "Enable perspective camera" ON)
+option(IG_WITH_CAMERA_ORTHOGONAL   "Enable orthogonal camera" OFF)
+option(IG_WITH_CAMERA_FISHLENS     "Enable fishlens camera" ON)
+
+if(IG_WITH_CAMERA_PERSPECTIVE)
+    list(APPEND CAMERAS "-D CAMERA_PERSPECTIVE")
+endif()
+
+if(IG_WITH_CAMERA_ORTHOGONAL)
+    list(APPEND CAMERAS "-D CAMERA_ORTHOGONAL")
+endif()
+
+if(IG_WITH_CAMERA_FISHLENS)
+    list(APPEND CAMERAS "-D CAMERA_FISHLENS")
+endif()
+
+if(IG_WITH_TRACER)
+    list(APPEND CAMERAS "-D CAMERA_LIST")
+endif()
+
+###########################################################
+
+option(IG_WITH_RENDERER_PATH  "Enable path tracer" ON)
+option(IG_WITH_RENDERER_AO    "Enable ambient occulusion renderer" OFF)
+option(IG_WITH_RENDERER_DEBUG "Enable debug renderer" ON)
+
+set(RENDERER )
+if(IG_WITH_RENDERER_PATH)
+    list(APPEND RENDERER "-D RENDERER_PATH")
+endif()
+
+if(IG_WITH_RENDERER_AO)
+    list(APPEND RENDERER "-D RENDERER_AO")
+endif()
+
+if(IG_WITH_RENDERER_DEBUG)
+    list(APPEND RENDERER "-D RENDERER_DEBUG")
+endif()
+
+###########################################################
 
 function(extract_name out_var in_var)
     string(REGEX REPLACE "^([a-zA-Z]+_)(.+)$" "\\2" _t1 ${in_var})
@@ -71,6 +101,8 @@ cross(VARIANTS_1 CAMERAS DEVICES " ")
 cross(VARIANTS_2 VARIANTS_1 RENDERER " ")
 
 set(VARIANTS ${VARIANTS_2})
+
+###########################################################
 
 option(IG_BUILD_DRIVER_PARALLEL "Build driver files in parallel. Not recommended" OFF)
 

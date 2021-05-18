@@ -37,7 +37,10 @@ message(STATUS "Building Ignis Rodent ${Ignis_VERSION}")
 
 # Options
 set(IG_DISABLE_TARGETS "" CACHE STRING "Target platforms to not build a driver for.")
-set(IG_ENABLE_PYTHON_API OFF CACHE BOOL "Build additional python API")
+option(IG_WITH_VIEWER		"Build interactive viewer igview" ON)
+option(IG_WITH_TRACER		"Build tracing frontend igtrace" ON)
+option(IG_WITH_PYTHON_API	"Build python API" ON)
+option(IG_WITH_TOOLS		"Build tools" ON)
 
 # Setup artic clang flags
 set(ARTIC_CLANG_FLAGS -O3 -march=native -ffast-math CACHE STRING "Artic Clang compilation options")
@@ -58,10 +61,6 @@ find_package(Eigen3 REQUIRED NO_MODULE)
 # Locate OpenImageIO
 find_package(OpenImageIO REQUIRED)
 
-# LZ4 compression
-find_package(LZ4 REQUIRED)
-include_directories(${LZ4_INCLUDE_DIR})
-
 # ZLib is used in the generator
 find_package(ZLIB REQUIRED)
 
@@ -79,20 +78,21 @@ if(IG_OPTIMIZE_FOR_NATIVE)
 endif()
 
 # Optional GUI
-option(IG_ENABLE_UI	"Build with interactive viewer" ON)
-if(IG_ENABLE_UI)
+if(IG_WITH_VIEWER)
     find_package(SDL2)
 
     if(SDL2_FOUND)
         set(IG_HAS_UI ON)
+	else()
+    	message(WARNING "Interactive viewer was requested but no SDL2 libraries were found. Disabling viewer")
     endif()
 endif()
 
 if(IG_HAS_UI)
-    message(STATUS "Building with UI")
+    message(STATUS "Building with interactive viewer")
 endif()
 
-if(IG_ENABLE_PYTHON_API)
+if(IG_WITH_PYTHON_API)
 	find_package (Python3 COMPONENTS Development)
 	if(Python3_FOUND)
 		set(IG_HAS_PYTHON_API ON)
@@ -100,7 +100,7 @@ if(IG_ENABLE_PYTHON_API)
 endif()
 
 if(IG_HAS_PYTHON_API)
-	message(STATUS "Building with python API")
+	message(STATUS "Building with Python API")
 endif()
 
 # Traverse to underlying directories
