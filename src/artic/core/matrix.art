@@ -83,6 +83,11 @@ fn @mat3x3_mul(m: Mat3x3, v: Vec3) = make_vec3(
     vec3_dot(mat3x3_row(m, 1), v),
     vec3_dot(mat3x3_row(m, 2), v));
 
+fn @mat3x3_left_mul(m: Mat3x3, v: Vec3) = make_vec3(
+    vec3_dot(m.col(0), v),
+    vec3_dot(m.col(1), v),
+    vec3_dot(m.col(2), v));
+
 fn @mat3x4_mul(m: Mat3x4, v: Vec4) = make_vec3(
     vec4_dot(mat3x4_row(m, 0), v),
     vec4_dot(mat3x4_row(m, 1), v),

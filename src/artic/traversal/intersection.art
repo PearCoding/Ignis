@@ -133,11 +133,19 @@ fn @make_ray(org: Vec3, dir: Vec3, tmin: f32, tmax: f32) -> Ray {
 }
 
 // Transforms ray. The direction is not normalized
-// This can be used to assign as scale factor to upcoming intersections
 fn @transform_ray(ray: Ray, m: Mat3x4) = make_ray(
     mat3x4_transform_point(m, ray.org),
     mat3x4_transform_direction(m, ray.dir),
     ray.tmin, ray.tmax);
+
+// fn @transform_ray(math: Intrinsics, ray: Ray, m: Mat3x4) -> (Ray, f32) {
+//     let d = mat3x4_transform_direction(m, ray.dir);
+//     let scale_factor = vec3_len(math, d);
+//     let nd = vec3_mulf(d, 1/scale_factor);
+
+//     (make_ray(mat3x4_transform_point(m, ray.org), nd, scale_factor * ray.tmin, scale_factor * ray.tmax), 
+//     scale_factor)
+// }
 
 // Transforms ray. The direction is normalized
 fn @transform_norm_ray(math: Intrinsics, ray: Ray, m: Mat3x4) = make_ray(
@@ -187,19 +195,6 @@ fn @empty_bbox() = make_bbox(
     make_vec3( flt_max,  flt_max,  flt_max),
     make_vec3(-flt_max, -flt_max, -flt_max));
 
-fn @bbox_extend(a: BBox, b: BBox) = make_bbox(
-    vec3_min(a.min, b.min),
-    vec3_max(a.max, b.max));
-
-fn @bbox_append(a: BBox, b: Vec3) = make_bbox(
-    vec3_min(a.min, b),
-    vec3_max(a.max, b));
-
-fn @bbox_half_area(a: BBox) -> f32 {
-    let ext = vec3_sub(a.max, a.min);
-    ext.x * (ext.y + ext.z) + ext.y * ext.z
-}
-
 fn @intersect_ray_tri(math: Intrinsics, backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
     let c = vec3_sub(tri.v0, ray.org);
     let r = vec3_cross(ray.dir, c);
@@ -220,7 +215,7 @@ fn @intersect_ray_tri(math: Intrinsics, backface_culling: bool, ray: Ray, tri: T
     mask &= t >= abs_det * ray.tmin;
     mask &= t <= abs_det * ray.tmax;
 
-    if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
+    // if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
 
     if mask {
         let inv_det = 1 / abs_det;
@@ -254,6 +249,17 @@ fn @intersect_ray_box_single(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBo
 
     if mask {
         make_option(select(entry < 1e-5, exit, entry))
+    } else {
+        Option[f32]::None
+    }
+}
+
+fn @intersect_ray_box_single_min(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> Option[f32] {
+    let (entry, exit) = intersect_ray_box(min_max, ordered, ray, bbox);
+    let mask = (entry <= exit) & (exit >= 0);
+
+    if mask {
+        make_option(entry)
     } else {
         Option[f32]::None
     }

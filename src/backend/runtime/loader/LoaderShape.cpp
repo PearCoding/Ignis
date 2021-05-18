@@ -222,7 +222,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 		meshSerializer.write((uint32)child_mesh.faceCount());
 		meshSerializer.write((uint32)child_mesh.vertices.size());
 		meshSerializer.write((uint32)child_mesh.normals.size());
-		meshSerializer.write((uint32)0);
+		meshSerializer.write((uint32)child_mesh.texcoords.size());
 		meshSerializer.writeAligned(child_mesh.vertices, DefaultAlignment, true);
 		meshSerializer.writeAligned(child_mesh.normals, DefaultAlignment, true);
 		meshSerializer.writeAligned(child_mesh.face_normals, DefaultAlignment, true);

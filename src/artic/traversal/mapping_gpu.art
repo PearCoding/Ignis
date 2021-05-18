@@ -273,7 +273,7 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
             while true {
                 let leaf = bvh.ent(ref_id++);
 
-                if let Option[f32]::Some(t) = intersect_ray_box_single(min_max, false, ray, leaf.bbox) {
+                if let Option[f32]::Some(t) = intersect_ray_box_single_min(min_max, false, ray, leaf.bbox) {
                     if t <= hit.distance {
                         let shape_bvh = @prim_bvhs(leaf.shape_id);
                         let local_ray = transform_ray(ray, leaf.local);
