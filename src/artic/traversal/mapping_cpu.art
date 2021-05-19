@@ -194,7 +194,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
         ent_id    = -1, // Not used here, will be replaced in the top level BVH
         prim_id   = bitcast[i32](rv_extract(bitcast[f32](hit2.prim_id), lane)),
         distance  = rv_extract(hit2.distance, lane),
-        uv_coords = make_vec2(rv_extract(hit2.uv_coords.x, lane), rv_extract(hit2.uv_coords.y, lane))
+        prim_coords = make_vec2(rv_extract(hit2.prim_coords.x, lane), rv_extract(hit2.prim_coords.y, lane))
     };
 
     // Traversal loop
@@ -328,8 +328,8 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
 
     let store_hit = @ |hit_ptr: &mut Hit, lane: i32, hit: Hit| {
         rv_store(&mut hit_ptr.distance, lane, hit.distance);
-        rv_store(&mut hit_ptr.uv_coords.x, lane, hit.uv_coords.x);
-        rv_store(&mut hit_ptr.uv_coords.y, lane, hit.uv_coords.y);
+        rv_store(&mut hit_ptr.prim_coords.x, lane, hit.prim_coords.x);
+        rv_store(&mut hit_ptr.prim_coords.y, lane, hit.prim_coords.y);
         rv_store(bitcast[&mut f32](&mut hit_ptr.prim_id), lane, bitcast[f32](hit.prim_id));
         //rv_store(bitcast[&mut f32](&mut hit_ptr.ent_id), lane, bitcast[f32](hit.ent_id)); // Optimization: No need for the ent id in prim BVH
     }; */
@@ -503,7 +503,7 @@ fn @cpu_traverse_helper( mut ray: Ray
                         if active {
                             if local_hit.prim_id != -1 {
                                 if local_hit.distance <= hit.distance {
-                                    hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.uv_coords);
+                                    hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
                                     ray.tmax = hit.distance;
                                     
                                     if any_hit {

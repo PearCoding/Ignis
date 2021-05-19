@@ -78,7 +78,7 @@ static bool sToneMappingGamma		   = false;
 
 static DebugMode sCurrentDebugMode	  = DebugMode::Normal;
 static const char* DebugModeOptions[] = {
-	"Normal", "Tangent", "Bitangent", "Geom. Norm.", "Tex. Coords", "UV Coords", "Point", "Hit Dist.",
+	"Normal", "Tangent", "Bitangent", "Geometric Normal", "Texture Coords", "Prim Coords", "Point", "Hit Distance",
 	"Raw Prim ID", "Prim ID", "Raw Entity ID", "Entity ID",
 	"Is Emissive", "Is Specular", "Is Entering", "Check BSDF"
 };

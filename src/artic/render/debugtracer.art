@@ -47,8 +47,8 @@ fn @make_debug_renderer(debug_mode: i32, emitter: RayEmitterFactory) -> Renderer
                         let n = surf.tex_coords;
                         make_option(make_color(math.fabsf(n.x), math.fabsf(n.y), 0))
                     },
-                    5 => { // DEBUG_UVCOORDS
-                        let n = hit.uv_coords;
+                    5 => { // DEBUG_PRIMCOORDS
+                        let n = hit.prim_coords;
                         make_option(make_color(math.fabsf(n.x), math.fabsf(n.y), 0))
                     },
                     6 => { // DEBUG_POINT

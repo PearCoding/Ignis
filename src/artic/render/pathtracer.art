@@ -65,7 +65,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
 
                     let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
                     return(make_option(
-                        make_ray(surf.point, in_dir, offset, 1 - offset),
+                        make_ray(surf.point, light_dir, offset, 1 - offset),
                         color_mulf(contrib, geom_factor * mis)
                     ))
                 }
@@ -125,7 +125,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                      , state: &mut RayState
                      , surf: SurfaceElement
                      , mat: Material
-                     ) -> Option[(Ray, RayState)] {    
+                     ) -> Option[(Ray, RayState)] {
             // Russian roulette and maximum depth
             let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette(state.contrib, 0.75) };
             if state.depth >= max_path_len || randf(&mut state.rnd) >= rr_prob {

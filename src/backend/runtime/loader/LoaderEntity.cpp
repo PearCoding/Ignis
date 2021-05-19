@@ -76,10 +76,10 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 		entitySerializer.write((uint32)shapeID);
 		entitySerializer.write((uint32)bsdfID);
 		entitySerializer.write((int32)lightID);
-		entitySerializer.write((uint32)0); // Padding
-		writeMatrix(entitySerializer, invTransform.matrix().block<3, 4>(0, 0));
-		writeMatrix(entitySerializer, transform.matrix().block<3, 4>(0, 0));
-		writeMatrix(entitySerializer, transform.matrix().block<3, 3>(0, 0).transpose().inverse());
+		entitySerializer.write((uint32)0);														   // Padding
+		writeMatrix(entitySerializer, invTransform.matrix().block<3, 4>(0, 0));					   // To Local
+		writeMatrix(entitySerializer, transform.matrix().block<3, 4>(0, 0));					   // To Global
+		writeMatrix(entitySerializer, transform.matrix().block<3, 3>(0, 0).transpose().inverse()); // To Global [Normal]
 
 		// Extract information for BVH building
 		EntityObject obj;

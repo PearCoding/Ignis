@@ -83,12 +83,20 @@ if(IG_WITH_DEVICE_GPU)
     endif()
 endif()
 
+if(NOT DEVICE_SELECTION)
+    message(FATAL_ERROR "No devices selected. Aborting")
+endif()
+
 set(DEVICES )
 foreach(dev IN LISTS DEVICE_SELECTION)
     if(NOT "${dev}" IN_LIST _DISABLED_DEVICES)
         list(APPEND DEVICES "-D DEVICE_${dev}")
     endif()
 endforeach()
+
+if(NOT DEVICES)
+    message(FATAL_ERROR "All devices are filtered out. Aborting")
+endif()
 
 ###########################################################
 option(IG_WITH_CAMERA_PERSPECTIVE  "Enable perspective camera" ON)
@@ -111,6 +119,10 @@ if(IG_WITH_TRACER)
     list(APPEND CAMERAS "-D CAMERA_LIST")
 endif()
 
+if(NOT CAMERAS)
+    message(FATAL_ERROR "No cameras selected. Aborting")
+endif()
+
 ###########################################################
 option(IG_WITH_RENDERER_PATH  "Enable path tracer" ON)
 option(IG_WITH_RENDERER_AO    "Enable ambient occulusion renderer" OFF)
@@ -127,6 +139,10 @@ endif()
 
 if(IG_WITH_RENDERER_DEBUG)
     list(APPEND RENDERER "-D RENDERER_DEBUG")
+endif()
+
+if(NOT RENDERER)
+    message(FATAL_ERROR "No renderer selected. Aborting")
 endif()
 
 ###########################################################
@@ -163,6 +179,10 @@ cross(VARIANTS_1 CAMERAS DEVICES " ")
 cross(VARIANTS_2 VARIANTS_1 RENDERER " ")
 
 set(VARIANTS ${VARIANTS_2})
+
+if(NOT VARIANTS)
+    message(FATAL_ERROR "No variants available. This error should have been catched earlier... Aborting")
+endif()
 
 ###########################################################
 option(IG_BUILD_DRIVER_PARALLEL "Build driver files in parallel. Not recommended" OFF)

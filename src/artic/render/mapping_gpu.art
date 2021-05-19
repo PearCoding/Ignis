@@ -428,7 +428,6 @@ fn @gpu_streaming_trace( dev_id: i32
     }
 }
 
-// TODO: Getting rid of Mega kernels would simplify the access to the scene database, as entity, shape and shader have to be access on host only.
 fn @gpu_mega_kernel_trace( dev_id: i32
                          , acc: Accelerator
                          , intrinsics: Intrinsics

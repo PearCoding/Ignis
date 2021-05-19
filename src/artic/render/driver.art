@@ -112,8 +112,8 @@ fn @make_primary_stream_hit_writer(primary: PrimaryStream, vector_width: i32, in
         primary.ent_id(k)  = if hit.ent_id == -1 || hit.prim_id == -1 { invalid_ent_id } else { hit.ent_id };
         primary.prim_id(k) = hit.prim_id;
         primary.t(k)       = hit.distance;
-        primary.u(k)       = hit.uv_coords.x;
-        primary.v(k)       = hit.uv_coords.y;
+        primary.u(k)       = hit.prim_coords.x;
+        primary.v(k)       = hit.prim_coords.y;
     }
 }
 

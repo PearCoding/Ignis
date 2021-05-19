@@ -7,7 +7,7 @@ enum class DebugMode {
 	Bitangent,
 	GeometryNormal,
 	TexCoords,
-	UVCoords,
+	PrimCoords,
     Point,
 	HitDistance,
     PrimIDRaw,

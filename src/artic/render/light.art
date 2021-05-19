@@ -101,15 +101,15 @@ fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
             lightA.sample_emission(rnd)
         }
     },
-    emission = @ |dir, uv_coords| {
+    emission = @ |dir, prim_coords| {
         if !lightA.delta && !lightB.delta {
-            let A = lightA.emission(dir, uv_coords);
-            let B = lightB.emission(dir, uv_coords); 
+            let A = lightA.emission(dir, prim_coords);
+            let B = lightB.emission(dir, prim_coords); 
             make_emission_value(color_lerp(A.intensity,B.intensity, probability), A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability) 
         } else if lightA.delta && !lightB.delta {
-            lightB.emission(dir, uv_coords)
+            lightB.emission(dir, prim_coords)
         } else {
-            lightA.emission(dir, uv_coords)
+            lightA.emission(dir, prim_coords)
         }
     },
     delta = (lightA.delta && lightB.delta),
@@ -367,7 +367,7 @@ fn @make_area_light(math: Intrinsics, area: AreaEmitter, color: Color) = Light {
         let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd));
         make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color, area_pdf, sample.pdf, sample.dir.z)
     },
-    emission = @ |dir, uv_coords| make_emission_value(color, area.pdf(uv_coords), cosine_hemisphere_pdf(vec3_dot(area.normal(uv_coords), dir))),
+    emission = @ |dir, prim_coords| make_emission_value(color, area.pdf(prim_coords), cosine_hemisphere_pdf(vec3_dot(area.normal(prim_coords), dir))),
     delta    = false,
     infinite = false
 };
@@ -392,12 +392,12 @@ fn @load_area_light(math: Intrinsics, data: DeviceBuffer, acc: Stage3Accessor) -
             let n   = mesh.face_normals(f);
             let inv_area = mesh.face_inv_area(f);
             (mat3x4_transform_point(entity.global_mat, sample_triangle(uv2.x, uv2.y, v0, v1, v2)),
-             mat3x3_mul(entity.normal_mat, n),
+             vec3_normalize(math, mat3x3_mul(entity.normal_mat, n)),
              inv_area)
         },
         normal = @ |uv| {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
-            mat3x3_mul(entity.normal_mat, mesh.face_normals(f))
+            vec3_normalize(math, mat3x3_mul(entity.normal_mat, mesh.face_normals(f)))
         },
         pdf = @ |uv| {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;

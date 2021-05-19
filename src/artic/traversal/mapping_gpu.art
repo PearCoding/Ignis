@@ -281,7 +281,7 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
 
                         if local_hit.prim_id != -1 {
                             if local_hit.distance <= hit.distance {
-                                hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.uv_coords);
+                                hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
                                 ray.tmax = hit.distance;
 
                                 // Early exit mode
