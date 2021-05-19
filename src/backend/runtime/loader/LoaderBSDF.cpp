@@ -7,8 +7,15 @@
 
 namespace IG {
 
+struct BsdfContext {
+	LoaderContext& Context;
+	LoaderResult& Result;
+	std::unordered_map<std::string, std::string> Ignore;
+};
+
 enum BsdfType {
 	BSDF_DIFFUSE		  = 0x00,
+	BSDF_DIFFUSE_TEXTURED = 0x100, // TODO: This is not a good solution...
 	BSDF_ORENNAYAR		  = 0x01,
 	BSDF_DIELECTRIC		  = 0x02,
 	BSDF_ROUGH_DIELECTRIC = 0x03,
@@ -17,8 +24,9 @@ enum BsdfType {
 	BSDF_CONDUCTOR		  = 0x06,
 	BSDF_ROUGH_CONDUCTOR  = 0x07,
 	BSDF_PLASTIC		  = 0x10,
-	BSDF_PHONG			  = 0x11,
-	BSDF_DISNEY			  = 0x12,
+	BSDF_ROUGH_PLASTIC	  = 0x11,
+	BSDF_PHONG			  = 0x12,
+	BSDF_DISNEY			  = 0x13,
 	BSDF_BLEND			  = 0x20,
 	BSDF_MASK			  = 0x21,
 	BSDF_PASSTROUGH		  = 0x22,
@@ -56,34 +64,47 @@ static uint32 setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, Load
 	return 2;
 }
 
-static void bsdf_diffuse(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_diffuse(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto albedo = ctx.extractColor(bsdf, "reflectance");
+	if (ctx.Context.isTexture(bsdf, "reflectance")) {
+		uint32 tex_id = ctx.Context.extractTextureID(bsdf, "reflectance");
 
-	auto& data = result.Database.BsdfTable.addLookup(BSDF_DIFFUSE, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	serializer.write(albedo);
+		auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DIFFUSE_TEXTURED, DefaultAlignment);
+		VectorSerializer serializer(data, false);
+		serializer.write(tex_id);
+	} else {
+		auto albedo = ctx.Context.extractColor(bsdf, "reflectance", Vector3f::Constant(0.5f));
+
+		auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DIFFUSE, DefaultAlignment);
+		VectorSerializer serializer(data, false);
+		serializer.write(albedo);
+	}
 }
 
-static void bsdf_orennayar(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_orennayar(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto albedo = ctx.extractColor(bsdf, "reflectance");
+	auto albedo = ctx.Context.extractColor(bsdf, "reflectance", Vector3f::Constant(0.5f));
 	float alpha = bsdf->property("alpha").getNumber(0.0f);
 
-	auto& data = result.Database.BsdfTable.addLookup(BSDF_ORENNAYAR, DefaultAlignment);
+	if (alpha <= 1e-3f) {
+		bsdf_diffuse(name, bsdf, ctx);
+		return;
+	}
+
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_ORENNAYAR, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(albedo);
 	serializer.write(alpha);
 }
 
-static void bsdf_dielectric(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_dielectric(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
-	auto specular_tra = ctx.extractColor(bsdf, "specular_transmittance");
-	float ext_ior	  = ctx.extractIOR(bsdf, "ext_ior", AIR_IOR);
-	float int_ior	  = ctx.extractIOR(bsdf, "int_ior", GLASS_IOR);
+	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
+	auto specular_tra = ctx.Context.extractColor(bsdf, "specular_transmittance");
+	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
+	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", GLASS_IOR);
 
-	auto& data = result.Database.BsdfTable.addLookup(BSDF_DIELECTRIC, DefaultAlignment);
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DIELECTRIC, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write(ext_ior);
@@ -91,14 +112,14 @@ static void bsdf_dielectric(const std::string&, const std::shared_ptr<Parser::Ob
 	serializer.write(int_ior);
 }
 
-static void bsdf_thindielectric(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_thindielectric(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
-	auto specular_tra = ctx.extractColor(bsdf, "specular_transmittance");
-	float ext_ior	  = ctx.extractIOR(bsdf, "ext_ior", AIR_IOR);
-	float int_ior	  = ctx.extractIOR(bsdf, "int_ior", GLASS_IOR);
+	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
+	auto specular_tra = ctx.Context.extractColor(bsdf, "specular_transmittance");
+	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
+	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", GLASS_IOR);
 
-	auto& data = result.Database.BsdfTable.addLookup(BSDF_THIN_DIELECTRIC, DefaultAlignment);
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_THIN_DIELECTRIC, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write(ext_ior);
@@ -106,22 +127,22 @@ static void bsdf_thindielectric(const std::string&, const std::shared_ptr<Parser
 	serializer.write(int_ior);
 }
 
-static void bsdf_mirror(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_mirror(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_reflectance = ctx.extractColor(bsdf, "specular_reflectance");
+	auto specular_reflectance = ctx.Context.extractColor(bsdf, "specular_reflectance");
 
-	auto& data = result.Database.BsdfTable.addLookup(BSDF_MIRROR, DefaultAlignment);
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_MIRROR, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_reflectance);
 }
 
-static void bsdf_conductor(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_conductor(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
-	float eta		  = ctx.extractIOR(bsdf, "eta", ETA_DEFAULT);
-	float k			  = ctx.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
+	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
+	float eta		  = ctx.Context.extractIOR(bsdf, "eta", ETA_DEFAULT);
+	float k			  = ctx.Context.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
 
-	auto& data = result.Database.BsdfTable.addLookup(BSDF_CONDUCTOR, DefaultAlignment);
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_CONDUCTOR, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write((uint32)0); //PADDING
@@ -129,29 +150,29 @@ static void bsdf_conductor(const std::string&, const std::shared_ptr<Parser::Obj
 	serializer.write(k);
 }
 
-static void bsdf_rough_conductor(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_rough_conductor(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
-	float eta		  = ctx.extractIOR(bsdf, "eta", ETA_DEFAULT);
-	float k			  = ctx.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
+	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
+	float eta		  = ctx.Context.extractIOR(bsdf, "eta", ETA_DEFAULT);
+	float k			  = ctx.Context.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
 
-	auto& data = result.Database.BsdfTable.addLookup(BSDF_ROUGH_CONDUCTOR, DefaultAlignment);
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_ROUGH_CONDUCTOR, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write((uint32)0); //PADDING
 	serializer.write(eta);
 	serializer.write(k);
-	setup_microfacet(bsdf, ctx, serializer);
+	setup_microfacet(bsdf, ctx.Context, serializer);
 }
 
-static void bsdf_plastic(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_plastic(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
-	auto diffuse_ref  = ctx.extractColor(bsdf, "diffuse_reflectance");
-	float ext_ior	  = ctx.extractIOR(bsdf, "ext_ior", AIR_IOR);
-	float int_ior	  = ctx.extractIOR(bsdf, "int_ior", RUBBER_IOR);
+	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
+	auto diffuse_ref  = ctx.Context.extractColor(bsdf, "diffuse_reflectance", Vector3f::Constant(0.5f));
+	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
+	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", RUBBER_IOR);
 
-	auto& data = result.Database.BsdfTable.addLookup(BSDF_PLASTIC, DefaultAlignment);
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PLASTIC, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write(ext_ior);
@@ -159,23 +180,39 @@ static void bsdf_plastic(const std::string&, const std::shared_ptr<Parser::Objec
 	serializer.write(int_ior);
 }
 
-static void bsdf_phong(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_rough_plastic(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
+	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
+	auto diffuse_ref  = ctx.Context.extractColor(bsdf, "diffuse_reflectance", Vector3f::Constant(0.5f));
+	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
+	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", RUBBER_IOR);
+
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PLASTIC, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+	serializer.write(specular_ref);
+	serializer.write(ext_ior);
+	serializer.write(diffuse_ref);
+	serializer.write(int_ior);
+	setup_microfacet(bsdf, ctx.Context, serializer);
+}
+
+static void bsdf_phong(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+{
+	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
 	float exponent	  = bsdf->property("exponent").getNumber(30);
 
-	auto& data = result.Database.BsdfTable.addLookup(BSDF_PHONG, DefaultAlignment);
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PHONG, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(specular_ref);
 	serializer.write(exponent);
 }
 
-static void bsdf_disney(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_disney(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto base_color		   = ctx.extractColor(bsdf, "base_color");
+	auto base_color		   = ctx.Context.extractColor(bsdf, "base_color");
 	float flatness		   = bsdf->property("flatness").getNumber(0.0f);
 	float metallic		   = bsdf->property("metallic").getNumber(0.0f);
-	float ior			   = ctx.extractIOR(bsdf, "ior", GLASS_IOR);
+	float ior			   = ctx.Context.extractIOR(bsdf, "ior", GLASS_IOR);
 	float specular_tint	   = bsdf->property("specular_tint").getNumber(0.0f);
 	float roughness		   = bsdf->property("roughness").getNumber(0.5f);
 	float anisotropic	   = bsdf->property("anisotropic").getNumber(0.0f);
@@ -189,7 +226,7 @@ static void bsdf_disney(const std::string&, const std::shared_ptr<Parser::Object
 	float diff_trans	   = bsdf->property("diff_trans").getNumber(0.0f);
 	float transmittance	   = bsdf->property("transmittance").getNumber(1.0f);
 
-	auto& data = result.Database.BsdfTable.addLookup(BSDF_DISNEY, DefaultAlignment);
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DISNEY, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(base_color);
 	serializer.write(flatness);
@@ -227,23 +264,21 @@ static void bsdf_klems(const std::shared_ptr<Parser::Object>& bsdf, LoaderContex
 	os << "make_klems_bsdf(math, surf, klems_" << id << ")";
 }*/
 
-static void bsdf_blend(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_blend(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
 	const std::string first	 = bsdf->property("first").getString();
 	const std::string second = bsdf->property("second").getString();
 
-	if (first.empty() || second.empty() || ctx.Environment.BsdfIDs.count(first) == 0 || ctx.Environment.BsdfIDs.count(second) == 0) {
-		bsdf_error("Invalid blend bsdf", result);
+	if (first.empty() || second.empty()) {
+		bsdf_error("Invalid blend bsdf", ctx.Result);
 	} else if (first == second) {
-		const uint32 firstID		  = ctx.Environment.BsdfIDs.at(first);
-		ctx.Environment.BsdfIDs[name] = firstID;
+		ctx.Ignore[name] = first;
 	} else {
-		const uint32 firstID		  = ctx.Environment.BsdfIDs.at(first);
-		ctx.Environment.BsdfIDs[name] = firstID;
-
-		//TODO
-		/* const uint32 firstID  = ctx.Environment.BsdfIDs.at(first);
-		const uint32 secondID = ctx.Environment.BsdfIDs.at(second);
+		// TODO
+		ctx.Ignore[name] = first;
+		IG_LOG(L_WARNING) << "Blend currently not implemented. Ignoring effect" << std::endl;
+		/* const uint32 firstID  = ctx.Context.Environment.BsdfIDs.at(first);
+		const uint32 secondID = ctx.Context.Environment.BsdfIDs.at(second);
 
 		const float weight = bsdf->property("weight").getNumber(0.5f);
 
@@ -255,18 +290,17 @@ static void bsdf_blend(const std::string& name, const std::shared_ptr<Parser::Ob
 	}
 }
 
-static void bsdf_mask(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_mask(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
 	const std::string masked = bsdf->property("bsdf").getString();
 
-	if (masked.empty() || ctx.Environment.BsdfIDs.count(masked) == 0) {
-		bsdf_error("Invalid masked bsdf", result);
+	if (masked.empty()) {
+		bsdf_error("Invalid masked bsdf", ctx.Result);
 	} else {
-		const uint32 maskedID		  = ctx.Environment.BsdfIDs.at(masked);
-		ctx.Environment.BsdfIDs[name] = maskedID;
-
-		//TODO
-		/* const uint32 maskedID = ctx.Environment.BsdfIDs.at(masked);
+		// TODO
+		ctx.Ignore[name] = masked;
+		IG_LOG(L_WARNING) << "Mask currently not implemented. Ignoring effect" << std::endl;
+		/* const uint32 maskedID = ctx.Context.Environment.BsdfIDs.at(masked);
 		const float weight	  = bsdf->property("weight").getNumber(0.5f);
 
 		auto& data = result.Database.BsdfTable.addLookup(BSDF_MASK, DefaultAlignment);
@@ -276,51 +310,49 @@ static void bsdf_mask(const std::string& name, const std::shared_ptr<Parser::Obj
 	}
 }
 
-static void bsdf_twosided(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_twosided(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
 	// Ignore
 	const std::string other = bsdf->property("bsdf").getString();
 
-	if (other.empty() || ctx.Environment.BsdfIDs.count(other) == 0)
-		bsdf_error("Invalid twosided bsdf", result);
+	if (other.empty())
+		bsdf_error("Invalid twosided bsdf", ctx.Result);
 	else
-		ctx.Environment.BsdfIDs[name] = ctx.Environment.BsdfIDs.at(other);
+		ctx.Ignore[name] = other;
 }
 
-static void bsdf_passthrough(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_passthrough(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	result.Database.BsdfTable.addLookup(BSDF_PASSTROUGH, DefaultAlignment);
+	ctx.Result.Database.BsdfTable.addLookup(BSDF_PASSTROUGH, DefaultAlignment);
 }
 
-static void bsdf_normalmap(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
-{
-	const std::string inner = bsdf->property("bsdf").getString();
-
-	if (inner.empty() || ctx.Environment.BsdfIDs.count(inner) == 0) {
-		bsdf_error("Invalid normal map bsdf", result);
-	} else {
-		const uint32 innerID		  = ctx.Environment.BsdfIDs.at(inner);
-		ctx.Environment.BsdfIDs[name] = innerID;
-
-		//TODO
-	}
-}
-
-static void bsdf_bumpmap(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
+static void bsdf_normalmap(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
 	const std::string inner = bsdf->property("bsdf").getString();
 
-	if (inner.empty() || ctx.Environment.BsdfIDs.count(inner) == 0) {
-		bsdf_error("Invalid bump map bsdf", result);
+	if (inner.empty()) {
+		bsdf_error("Invalid normal map bsdf", ctx.Result);
 	} else {
-		const uint32 innerID		  = ctx.Environment.BsdfIDs.at(inner);
-		ctx.Environment.BsdfIDs[name] = innerID;
-
-		//TODO
+		// TODO
+		ctx.Ignore[name] = inner;
+		IG_LOG(L_WARNING) << "Normalmap currently not implemented. Ignoring effect" << std::endl;
 	}
 }
 
-using BSDFLoader = void (*)(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result);
+static void bsdf_bumpmap(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+{
+	const std::string inner = bsdf->property("bsdf").getString();
+
+	if (inner.empty()) {
+		bsdf_error("Invalid bump map bsdf", ctx.Result);
+	} else {
+		// TODO
+		ctx.Ignore[name] = inner;
+		IG_LOG(L_WARNING) << "Bumpmap currently not implemented. Ignoring effect" << std::endl;
+	}
+}
+
+using BSDFLoader = void (*)(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx);
 static struct {
 	const char* Name;
 	BSDFLoader Loader;
@@ -329,7 +361,7 @@ static struct {
 	{ "roughdiffuse", bsdf_orennayar },
 	{ "glass", bsdf_dielectric },
 	{ "dielectric", bsdf_dielectric },
-	{ "roughdielectric", bsdf_dielectric }, /*TODO*/
+	{ "roughdielectric", bsdf_dielectric }, // TODO
 	{ "thindielectric", bsdf_thindielectric },
 	{ "mirror", bsdf_mirror }, // Specialized conductor
 	{ "conductor", bsdf_conductor },
@@ -337,7 +369,7 @@ static struct {
 	{ "phong", bsdf_phong },
 	{ "disney", bsdf_disney },
 	{ "plastic", bsdf_plastic },
-	{ "roughplastic", bsdf_plastic }, /*TODO*/
+	{ "roughplastic", bsdf_rough_plastic },
 	/*{ "klems", bsdf_klems },*/
 	{ "blendbsdf", bsdf_blend },
 	{ "mask", bsdf_mask },
@@ -351,10 +383,7 @@ static struct {
 
 bool LoaderBSDF::load(LoaderContext& ctx, LoaderResult& result)
 {
-	size_t counter = 0;
-	for (const auto& pair : ctx.Scene.bsdfs()) {
-		ctx.Environment.BsdfIDs[pair.first] = counter++;
-	}
+	BsdfContext context{ ctx, result, {} };
 
 	for (const auto& pair : ctx.Scene.bsdfs()) {
 		const auto bsdf = pair.second;
@@ -362,7 +391,8 @@ bool LoaderBSDF::load(LoaderContext& ctx, LoaderResult& result)
 		bool found = false;
 		for (size_t i = 0; _generators[i].Loader; ++i) {
 			if (_generators[i].Name == bsdf->pluginType()) {
-				_generators[i].Loader(pair.first, bsdf, ctx, result);
+				ctx.Environment.BsdfIDs[pair.first] = context.Result.Database.BsdfTable.entryCount();
+				_generators[i].Loader(pair.first, bsdf, context);
 				found = true;
 				break;
 			}
@@ -372,6 +402,16 @@ bool LoaderBSDF::load(LoaderContext& ctx, LoaderResult& result)
 			IG_LOG(L_ERROR) << "Bsdf '" << pair.first << "' has unknown type '" << bsdf->pluginType() << "'" << std::endl;
 			result.Database.BsdfTable.addLookup(BSDF_INVALID, DefaultAlignment);
 		}
+	}
+
+	// Some reordering might happen, take care of it here
+	for (const auto& pair : context.Ignore) {
+		if (ctx.Environment.BsdfIDs.count(pair.first) == 0)
+			IG_LOG(L_ERROR) << "Missing BSDF '" << pair.first << "'" << std::endl;
+		else if (ctx.Environment.BsdfIDs.count(pair.second) == 0)
+			IG_LOG(L_ERROR) << "Missing BSDF '" << pair.second << "'" << std::endl;
+		else
+			ctx.Environment.BsdfIDs[pair.first] = ctx.Environment.BsdfIDs.at(pair.second);
 	}
 
 	return true;

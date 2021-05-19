@@ -43,7 +43,10 @@ def toFloat(var):
     return var
 
 
-CamelCasePattern = pattern = re.compile(r'((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
+CamelCasePattern = pattern = re.compile(
+    r'((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
+
+
 def toSnakeCase(name):
     return pattern.sub(r'_\1', name).lower()
 
@@ -248,6 +251,8 @@ def getAdditionalProperties(child, res_dict):
                 elif ('filename' in elem.attrib):
                     res_dict[prop] = elem.attrib['filename']
             elif (elem.tag == "boolean" or elem.tag == "string"):
+                if(isIOR(elem)):
+                    continue  # Ignore IOR material specification, as it is handled elsewhere
                 val = elem.attrib['value']
                 prop = toSnakeCase(elem.attrib['name'])
                 res_dict[prop] = val
@@ -296,6 +301,30 @@ def computeCameraFilm(child, camera_dict, film_dict, smapler_dict):
         getAdditionalProperties(sampler, smapler_dict)
 
 
+# TODO: Incomplete list of IORs extracted around wavelength ~540nm
+IOR_DICT = {
+    "Ag": (0.129, 3.250),
+    "Au": (0.402, 2.540),
+    "Cu": (1.040, 2.583),
+    "none": (0.000, 1.000)
+}
+
+
+def lookupIOR(bsdf_dict, material):
+    if material in IOR_DICT:
+        eta, k = IOR_DICT[material]
+        bsdf_dict['eta'] = eta
+        bsdf_dict['k'] = k
+    else:
+        print("No IOR material '" + material + "' found")
+        bsdf_dict['eta'] = 0
+        bsdf_dict['k'] = 1
+
+
+def isIOR(elem):
+    return "name" in elem.attrib and elem.attrib['name'] == "material"
+
+
 def computeBsdfs(child, bsdf_dict):
     global matCount
     if ('id' in child.attrib):
@@ -325,6 +354,8 @@ def computeBsdfs(child, bsdf_dict):
             elif (elem.tag == "bsdf"):
                 bsdf_child = computeBsdfs(elem, bsdf_dict)
                 bsdf['bsdf'] = bsdf_child
+            elif (elem.tag == "string" and isIOR(elem)):
+                lookupIOR(bsdf, elem.attrib["value"])
         getAdditionalProperties(child, bsdf)
 
     bsdf_dict.append(bsdf)

@@ -15,6 +15,8 @@ struct LoaderContext {
 	IG::Target Target;
 	bool EnablePadding;
 	std::unordered_map<std::string, uint32> Images; // Image to Buffer
+
+	std::unordered_map<std::string, uint32> TextureBuffer; // Texture to Buffer/Image, used only in workaround
 	std::vector<Vector3f> TextureAverages; // Workaround for now
 
 	LoaderEnvironment Environment;

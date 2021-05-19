@@ -61,14 +61,6 @@ fn @make_bsdf_sample(surf: SurfaceElement, in_dir: Vec3, pdf: f32, cos: f32, col
 
 fn @reject_bsdf_sample() = Option[BsdfSample]::None;
 
-// Weight pdf and color based on respective factors
-fn @bsdf_sample_mulf(sample: BsdfSample, pdf_f: f32, color_f: f32) = BsdfSample {
-    in_dir = sample.in_dir,
-    pdf    = sample.pdf * pdf_f,
-    cos    = sample.cos,
-    color  = color_mulf(sample.color, color_f)
-};
-
 // Creates a fully absorbing BSDF that behaves like a black body
 fn @make_black_bsdf(surf: SurfaceElement) = Bsdf {
     eval        = @ |_, _| black,
@@ -101,6 +93,12 @@ fn @make_diffuse_bsdf(math: Intrinsics, surf: SurfaceElement, kd: Color) = Bsdf 
 fn @load_diffuse_bsdf(math: Intrinsics, data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     let kd = vec3_to_color(data.load_vec3(0));
     make_diffuse_bsdf(math, surf, kd)
+}
+
+fn @load_diffuse_textured_bsdf(math: Intrinsics, data: DeviceBuffer, stage: Stage3Accessor, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+    let tex_id  = data.load_i32(0);
+    let texture = stage.textures(tex_id);
+    make_diffuse_bsdf(math, surf, texture(surf.tex_coords))
 }
 
 //--------------------------------------
@@ -172,10 +170,9 @@ fn @load_phong_bsdf(math: Intrinsics, data: DeviceBuffer, _ray: Ray, _hit: Hit, 
 
 //--------------------------------------
 // Creates a plastic bsdf based on Fresnel equation (which is just a variadic mix bsdf with extra diffuse term)
-fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kd: Color) -> Bsdf {
+fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, kd: Color, specularBsdf: Bsdf) -> Bsdf {
     // Layered BSDF
     let diffuse = make_diffuse_bsdf(math, surf, kd);
-    let mirror  = make_mirror_bsdf(math, surf, ks);
 
     let N   = surf.local.col(2);
     let eta = n1 / n2; // Some systems use n2 / n1 for eta
@@ -212,7 +209,7 @@ fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, 
         fo.factor
     };
 
-    make_variadic_mix_bsdf(diffuse_extra, mirror, mix_f)
+    make_variadic_mix_bsdf(diffuse_extra, specularBsdf, mix_f)
 }
 
 fn @load_plastic_bsdf(math: Intrinsics, data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
@@ -223,7 +220,24 @@ fn @load_plastic_bsdf(math: Intrinsics, data: DeviceBuffer, _ray: Ray, _hit: Hit
     let kd = make_color(e1.x, e1.y, e1.z);
     let n2 = e1.w;
 
-    make_plastic_bsdf(math, surf, n1, n2, ks, kd)
+    make_plastic_bsdf(math, surf, n1, n2, kd, make_mirror_bsdf(math, surf, ks))
+}
+
+// TODO: This bsdf is not energy conserving due to the use of the diffuse scattering model for perfect smooth specular layer!
+fn @load_rough_plastic_bsdf(math: Intrinsics, data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+    let e0 = data.load_vec4(0);
+    let e1 = data.load_vec4(4);
+    let e2 = data.load_vec2(8);
+    let ks = make_color(e0.x, e0.y, e0.z);
+    let n1 = e0.w;
+    let kd = make_color(e1.x, e1.y, e1.z);
+    let n2 = e1.w;
+    
+    let alpha_u = e2.x;
+    let alpha_v = e2.y;
+
+    let specularBsdf = make_rough_conductor_bsdf(math, surf, 0, 1, ks, make_beckmann_distribution(math, surf, alpha_u, alpha_v));
+    make_plastic_bsdf(math, surf, n1, n2, kd, specularBsdf)
 }
 
 //--------------------------------------
@@ -432,41 +446,71 @@ fn @load_passthrough_bsdf(_math: Intrinsics, _data: DeviceBuffer, _ray: Ray, _hi
 
 //--------------------------------------
 // Creates a BSDF that interpolates between two other BSDFs based on a variadic mix function
-fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) = Bsdf {
-    eval = @ |in_dir, out_dir| {
-        let k = mix_f(out_dir);
-        color_lerp(mat1.eval(in_dir, out_dir),
-                   mat2.eval(in_dir, out_dir),
-                   k)
-    },
-    pdf = @ |in_dir, out_dir| {
-        let k = mix_f(out_dir);
-        lerp(mat1.pdf(in_dir, out_dir),
-             mat2.pdf(in_dir, out_dir),
-             k)
-    },
-    sample = @ |rnd, out_dir, adjoint| {
-        let k = mix_f(out_dir);
-        if randf(rnd) >= k {
-            if let Option[BsdfSample]::Some(s) = mat1.sample(rnd, out_dir, adjoint) {
-                let p = lerp(s.pdf, mat2.pdf(s.in_dir, out_dir), k);
-                let c = color_lerp(s.color, mat2.eval(s.in_dir, out_dir), k);
-                make_option(BsdfSample { in_dir = s.in_dir, pdf = p, cos = s.cos, color = c })
-            } else {
-                Option[BsdfSample]::None
-            }
+fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bsdf {
+    let eval = @|in_dir: Vec3, out_dir: Vec3| -> Color {
+        if mat1.is_specular {
+            mat2.eval(in_dir, out_dir)
+        } else if mat2.is_specular {
+            mat1.eval(in_dir, out_dir)
         } else {
-            if let Option[BsdfSample]::Some(s) = mat2.sample(rnd, out_dir, adjoint) {
-                let p = lerp(mat1.pdf(s.in_dir, out_dir), s.pdf, k);
-                let c = color_lerp(mat1.eval(s.in_dir, out_dir), s.color, k);
-                make_option(BsdfSample { in_dir = s.in_dir, pdf = p, cos = s.cos, color = c })
-            } else {
-                Option[BsdfSample]::None
-            }
+            let k = mix_f(out_dir);
+            color_lerp(mat1.eval(in_dir, out_dir),
+                       mat2.eval(in_dir, out_dir),
+                       k)
         }
-    },
-    is_specular = mat1.is_specular & mat2.is_specular
-};
+    };
+
+    let pdf = @|in_dir: Vec3, out_dir: Vec3| -> f32 {
+        if mat1.is_specular {
+            mat2.pdf(in_dir, out_dir)
+        } else if mat2.is_specular {
+            mat1.pdf(in_dir, out_dir)
+        } else {
+            let k = mix_f(out_dir);
+            lerp(mat1.pdf(in_dir, out_dir),
+                 mat2.pdf(in_dir, out_dir),
+                 k)
+        }
+    };
+
+    Bsdf {
+        eval   = eval,
+        pdf    = pdf,
+        sample = @ |rnd, out_dir, adjoint| {
+            fn sample_mat(mat_first: Bsdf, mat_second: Bsdf, t: f32) -> Option[BsdfSample] {
+                let opt = mat_first.sample(rnd, out_dir, adjoint);
+                match opt {
+                    Option[BsdfSample]::Some(s) => {
+                        if mat_second.is_specular {
+                            make_option(s)
+                        } else {
+                            let p = lerp(s.pdf, mat_second.pdf(s.in_dir, out_dir), t);
+                            let c = color_lerp(s.color, mat_second.eval(s.in_dir, out_dir), t);
+                            make_option(BsdfSample { in_dir = s.in_dir, pdf = p, cos = s.cos, color = c })
+                        }
+                    },
+                    _ => opt
+                }
+            }
+
+            let k = mix_f(out_dir);
+            if randf(rnd) >= k {
+                if let Option[BsdfSample]::Some(s) = sample_mat(mat1, mat2, k) {
+                    make_option(s)
+                } else {
+                    mat2.sample(rnd, out_dir, adjoint)
+                }
+            } else {
+                if let Option[BsdfSample]::Some(s) = sample_mat(mat2, mat1, k) {
+                    make_option(s)
+                } else {
+                    mat1.sample(rnd, out_dir, adjoint)
+                }
+            }
+        },
+        is_specular = mat1.is_specular & mat2.is_specular
+    }
+}
 
 // Creates a BSDF that interpolates between two other BSDFs
 fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = make_variadic_mix_bsdf(mat1, mat2, @|_| k);
@@ -575,7 +619,7 @@ fn @load_bumpmap_bsdf(_math: Intrinsics, _data: DeviceBuffer, _ray: Ray, _hit: H
 
 type BsdfTable = fn (i32) -> Shader;
 
-fn @make_shader_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor, _stage: Stage3Accessor) -> BsdfTable {
+fn @make_shader_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor, stage: Stage3Accessor) -> BsdfTable {
     @ |id| {
         let entry = get_lookup_entry(id as u64, dtb, acc);
         let data  = get_table_entry(entry.offset, dtb, acc);
@@ -590,15 +634,17 @@ fn @make_shader_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor
                 0x05 => load_mirror_bsdf(math, data, ray, hit, surf),          // BSDF_MIRROR			  
                 0x06 => load_conductor_bsdf(math, data, ray, hit, surf),       // BSDF_CONDUCTOR		  
                 0x07 => load_rough_conductor_bsdf(math, data, ray, hit, surf), // BSDF_ROUGH_CONDUCTOR  
-                0x10 => load_plastic_bsdf(math, data, ray, hit, surf),         // BSDF_PLASTIC		  
-                0x11 => load_phong_bsdf(math, data, ray, hit, surf),           // BSDF_PHONG			  
-                0x12 => load_disney_bsdf(math, data, ray, hit, surf),          // BSDF_DISNEY			  
+                0x10 => load_plastic_bsdf(math, data, ray, hit, surf),         // BSDF_PLASTIC
+                0x11 => load_rough_plastic_bsdf(math, data, ray, hit, surf),   // BSDF_ROUGH_PLASTIC
+                0x12 => load_phong_bsdf(math, data, ray, hit, surf),           // BSDF_PHONG			  
+                0x13 => load_disney_bsdf(math, data, ray, hit, surf),          // BSDF_DISNEY			  
                 0x20 => load_blend_bsdf(math, data, ray, hit, surf),           // BSDF_BLEND			  
                 0x21 => load_mask_bsdf(math, data, ray, hit, surf),            // BSDF_MASK			  
                 0x22 => load_passthrough_bsdf(math, data, ray, hit, surf),     // BSDF_PASSTROUGH		  
                 0x30 => load_normalmap_bsdf(math, data, ray, hit, surf),       // BSDF_NORMAL_MAP		  
                 0x31 => load_bumpmap_bsdf(math, data, ray, hit, surf),         // BSDF_BUMP_MAP		  
-                //0x40 => load_klems_bsdf(math, data, ray, hit, surf),           // BSDF_KLEMS		
+                //0x40 => load_klems_bsdf(math, data, ray, hit, surf),           // BSDF_KLEMS	
+                0x100 => load_diffuse_textured_bsdf(math, data, stage, ray, hit, surf),	// BSDF_DIFFUSE_TEXTURED
                 _    => make_error_bsdf()
             }
         }

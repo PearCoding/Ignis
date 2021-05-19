@@ -24,7 +24,6 @@ uint32 LoaderContext::extractTextureID(const std::shared_ptr<Parser::Object>& ob
 			IG_LOG(L_ERROR) << "No texture '" << name << "' found!" << std::endl;
 			return std::numeric_limits<uint32>::max();
 		}
-
 	} else {
 		IG_LOG(L_ERROR) << "Property '" << propname << "' is not a texture!" << std::endl;
 		return std::numeric_limits<uint32>::max();
@@ -45,8 +44,8 @@ Vector3f LoaderContext::extractColor(const std::shared_ptr<Parser::Object>& obj,
 		case PT_STRING: {
 			IG_LOG(L_WARNING) << "[TODO] Replacing texture by average color" << std::endl;
 			std::string name = obj->property(propname).getString();
-			if (Environment.TextureID.count(name)) {
-				uint32 id = Environment.TextureID.at(name);
+			if (TextureBuffer.count(name)) {
+				uint32 id = TextureBuffer.at(name);
 				return TextureAverages.at(id);
 			} else {
 				IG_LOG(L_ERROR) << "No texture '" << name << "' found!" << std::endl;
@@ -76,8 +75,8 @@ float LoaderContext::extractIOR(const std::shared_ptr<Parser::Object>& obj, cons
 		case PT_STRING: {
 			IG_LOG(L_WARNING) << "[TODO] Replacing texture by average color" << std::endl;
 			std::string name = obj->property(propname).getString();
-			if (Environment.TextureID.count(name)) {
-				uint32 id = Environment.TextureID.at(name);
+			if (TextureBuffer.count(name)) {
+				uint32 id = TextureBuffer.at(name);
 				return TextureAverages.at(id).mean();
 			} else {
 				IG_LOG(L_ERROR) << "No texture '" << name << "' found!" << std::endl;

@@ -21,14 +21,15 @@ enum TextureImageWrap {
 	TIW_CLAMP
 };
 
-static void tex_image(const std::string&, const std::shared_ptr<Parser::Object>& tex, LoaderContext& ctx, LoaderResult& result)
+static void tex_image(const std::string& name, const std::shared_ptr<Parser::Object>& tex, LoaderContext& ctx, LoaderResult& result)
 {
 	const std::string filename	  = ctx.handlePath(tex->property("filename").getString());
 	const std::string filter_type = tex->property("filter_type").getString("bilinear");
 	const std::string wrap_mode	  = tex->property("wrap_mode").getString("repeat");
 
-	bool ok			= false;
-	uint32 bufferID = ctx.loadImage(filename, result.Database, ok);
+	bool ok					= false;
+	uint32 bufferID			= ctx.loadImage(filename, result.Database, ok);
+	ctx.TextureBuffer[name] = bufferID;
 
 	if (ok) {
 		uint32 filter = TIF_BILINEAR;
@@ -42,17 +43,17 @@ static void tex_image(const std::string&, const std::shared_ptr<Parser::Object>&
 			wrap = TIW_CLAMP;
 
 		uint32 type_id = 0;
-		if(wrap == TIW_CLAMP && filter == TIF_NEAREST )
+		if (wrap == TIW_CLAMP && filter == TIF_NEAREST)
 			type_id = 0;
-		else if(wrap == TIW_CLAMP && filter == TIF_BILINEAR )
+		else if (wrap == TIW_CLAMP && filter == TIF_BILINEAR)
 			type_id = 1;
-		else if(wrap == TIW_REPEAT && filter == TIF_NEAREST )
+		else if (wrap == TIW_REPEAT && filter == TIF_NEAREST)
 			type_id = 2;
-		else if(wrap == TIW_REPEAT && filter == TIF_BILINEAR )
+		else if (wrap == TIW_REPEAT && filter == TIF_BILINEAR)
 			type_id = 3;
-		else if(wrap == TIW_MIRROR && filter == TIF_NEAREST )
+		else if (wrap == TIW_MIRROR && filter == TIF_NEAREST)
 			type_id = 4;
-		else if(wrap == TIW_MIRROR && filter == TIF_BILINEAR )
+		else if (wrap == TIW_MIRROR && filter == TIF_BILINEAR)
 			type_id = 5;
 
 		auto& data = result.Database.TextureTable.addLookup(type_id, DefaultAlignment);
@@ -93,6 +94,7 @@ static struct {
 
 bool LoaderTexture::load(LoaderContext& ctx, LoaderResult& result)
 {
+	// TODO: Change to BSDF like bookkeeping of ignored elements
 	size_t counter = 0;
 	for (const auto& pair : ctx.Scene.textures()) {
 		ctx.Environment.TextureID[pair.first] = counter++;
