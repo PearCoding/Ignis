@@ -785,7 +785,7 @@ void init(int width, int height, const float* pixels, bool showDebug)
 	sShowDebugMode = showDebug;
 
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
-		IG_LOG(L_FATAL) << "Cannot initialize SDL." << std::endl;
+		IG_LOG(L_FATAL) << "Cannot initialize SDL: " << SDL_GetError() << std::endl;
 
 	sWidth	= width;
 	sHeight = height;
@@ -798,15 +798,15 @@ void init(int width, int height, const float* pixels, bool showDebug)
 		height,
 		0);
 	if (!sWindow)
-		IG_LOG(L_FATAL) << "Cannot create window." << std::endl;
+		IG_LOG(L_FATAL) << "Cannot create SDL window: " << SDL_GetError() << std::endl;
 
 	sRenderer = SDL_CreateRenderer(sWindow, -1, 0);
 	if (!sRenderer)
-		IG_LOG(L_FATAL) << "Cannot create renderer." << std::endl;
+		IG_LOG(L_FATAL) << "Cannot create SDL renderer: " << SDL_GetError() << std::endl;
 
-	sTexture = SDL_CreateTexture(sRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, width, height);
+	sTexture = SDL_CreateTexture(sRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
 	if (!sTexture)
-		IG_LOG(L_FATAL) << "Cannot create texture" << std::endl;
+		IG_LOG(L_FATAL) << "Cannot create SDL texture: " << SDL_GetError() << std::endl;
 
 	sBuffer.resize(width * height);
 	IMGUI_CHECKVERSION();

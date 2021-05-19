@@ -80,8 +80,8 @@ static void bsdf_dielectric(const std::string&, const std::shared_ptr<Parser::Ob
 {
 	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
 	auto specular_tra = ctx.extractColor(bsdf, "specular_transmittance");
-	float ext_ior	  = bsdf->property("ext_ior").getNumber(AIR_IOR);
-	float int_ior	  = bsdf->property("int_ior").getNumber(GLASS_IOR);
+	float ext_ior	  = ctx.extractIOR(bsdf, "ext_ior", AIR_IOR);
+	float int_ior	  = ctx.extractIOR(bsdf, "int_ior", GLASS_IOR);
 
 	auto& data = result.Database.BsdfTable.addLookup(BSDF_DIELECTRIC, DefaultAlignment);
 	VectorSerializer serializer(data, false);
@@ -95,8 +95,8 @@ static void bsdf_thindielectric(const std::string&, const std::shared_ptr<Parser
 {
 	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
 	auto specular_tra = ctx.extractColor(bsdf, "specular_transmittance");
-	float ext_ior	  = bsdf->property("ext_ior").getNumber(AIR_IOR);
-	float int_ior	  = bsdf->property("int_ior").getNumber(GLASS_IOR);
+	float ext_ior	  = ctx.extractIOR(bsdf, "ext_ior", AIR_IOR);
+	float int_ior	  = ctx.extractIOR(bsdf, "int_ior", GLASS_IOR);
 
 	auto& data = result.Database.BsdfTable.addLookup(BSDF_THIN_DIELECTRIC, DefaultAlignment);
 	VectorSerializer serializer(data, false);
@@ -118,8 +118,8 @@ static void bsdf_mirror(const std::string&, const std::shared_ptr<Parser::Object
 static void bsdf_conductor(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
 {
 	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
-	float eta		  = bsdf->property("eta").getNumber(ETA_DEFAULT);
-	float k			  = bsdf->property("k").getNumber(ABSORPTION_DEFAULT);
+	float eta		  = ctx.extractIOR(bsdf, "eta", ETA_DEFAULT);
+	float k			  = ctx.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
 
 	auto& data = result.Database.BsdfTable.addLookup(BSDF_CONDUCTOR, DefaultAlignment);
 	VectorSerializer serializer(data, false);
@@ -132,8 +132,8 @@ static void bsdf_conductor(const std::string&, const std::shared_ptr<Parser::Obj
 static void bsdf_rough_conductor(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, LoaderResult& result)
 {
 	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
-	float eta		  = bsdf->property("eta").getNumber(ETA_DEFAULT);
-	float k			  = bsdf->property("k").getNumber(ABSORPTION_DEFAULT);
+	float eta		  = ctx.extractIOR(bsdf, "eta", ETA_DEFAULT);
+	float k			  = ctx.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
 
 	auto& data = result.Database.BsdfTable.addLookup(BSDF_ROUGH_CONDUCTOR, DefaultAlignment);
 	VectorSerializer serializer(data, false);
@@ -148,8 +148,8 @@ static void bsdf_plastic(const std::string&, const std::shared_ptr<Parser::Objec
 {
 	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
 	auto diffuse_ref  = ctx.extractColor(bsdf, "diffuse_reflectance");
-	float ext_ior	  = bsdf->property("ext_ior").getNumber(AIR_IOR);
-	float int_ior	  = bsdf->property("int_ior").getNumber(RUBBER_IOR);
+	float ext_ior	  = ctx.extractIOR(bsdf, "ext_ior", AIR_IOR);
+	float int_ior	  = ctx.extractIOR(bsdf, "int_ior", RUBBER_IOR);
 
 	auto& data = result.Database.BsdfTable.addLookup(BSDF_PLASTIC, DefaultAlignment);
 	VectorSerializer serializer(data, false);
@@ -175,7 +175,7 @@ static void bsdf_disney(const std::string&, const std::shared_ptr<Parser::Object
 	auto base_color		   = ctx.extractColor(bsdf, "base_color");
 	float flatness		   = bsdf->property("flatness").getNumber(0.0f);
 	float metallic		   = bsdf->property("metallic").getNumber(0.0f);
-	float ior			   = bsdf->property("ior").getNumber(GLASS_IOR);
+	float ior			   = ctx.extractIOR(bsdf, "ior", GLASS_IOR);
 	float specular_tint	   = bsdf->property("specular_tint").getNumber(0.0f);
 	float roughness		   = bsdf->property("roughness").getNumber(0.5f);
 	float anisotropic	   = bsdf->property("anisotropic").getNumber(0.0f);

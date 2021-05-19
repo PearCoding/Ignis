@@ -37,9 +37,4 @@ SkyModel::SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, floa
 		arhosekskymodelstate_free(state);
 	}
 }
-
-void SkyModel::save(const std::string& path) const
-{
-	ImageRgb24::save(path, mData.data(), mAzimuthCount, mElevationCount);
-}
 } // namespace IG

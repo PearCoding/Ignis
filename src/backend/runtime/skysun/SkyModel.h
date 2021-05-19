@@ -25,8 +25,6 @@ public:
 		};
 	}
 
-	void save(const std::string& path) const;
-
 private:
 	std::vector<float> mData;
 

@@ -42,6 +42,48 @@ Vector3f LoaderContext::extractColor(const std::shared_ptr<Parser::Object>& obj,
 			return Vector3f::Ones() * prop.getNumber();
 		case PT_VECTOR3:
 			return prop.getVector3();
+		case PT_STRING: {
+			IG_LOG(L_WARNING) << "[TODO] Replacing texture by average color" << std::endl;
+			std::string name = obj->property(propname).getString();
+			if (Environment.TextureID.count(name)) {
+				uint32 id = Environment.TextureID.at(name);
+				return TextureAverages.at(id);
+			} else {
+				IG_LOG(L_ERROR) << "No texture '" << name << "' found!" << std::endl;
+				return def;
+			}
+		}
+		default:
+			IG_LOG(L_WARNING) << "Unknown property type for '" << propname << "'" << std::endl;
+			return def;
+		}
+	} else {
+		return def;
+	}
+}
+
+float LoaderContext::extractIOR(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, float def) const
+{
+	auto prop = obj->property(propname);
+	if (prop.isValid()) {
+		switch (prop.type()) {
+		case PT_INTEGER:
+			return prop.getInteger();
+		case PT_NUMBER:
+			return prop.getNumber();
+		case PT_VECTOR3:
+			return prop.getVector3().mean();
+		case PT_STRING: {
+			IG_LOG(L_WARNING) << "[TODO] Replacing texture by average color" << std::endl;
+			std::string name = obj->property(propname).getString();
+			if (Environment.TextureID.count(name)) {
+				uint32 id = Environment.TextureID.at(name);
+				return TextureAverages.at(id).mean();
+			} else {
+				IG_LOG(L_ERROR) << "No texture '" << name << "' found!" << std::endl;
+				return def;
+			}
+		}
 		default:
 			IG_LOG(L_WARNING) << "Unknown property type for '" << propname << "'" << std::endl;
 			return def;
@@ -64,6 +106,18 @@ uint32 LoaderContext::loadImage(const std::filesystem::path& path, SceneDatabase
 			ok = false;
 			return 0;
 		}
+
+		// Calculate average as needed to replace textures currently
+		Vector3f avg = Vector3f::Zero();
+		float inv_s	 = 1.0f / (image.width * image.height);
+		for (size_t i = 0; i < image.width * image.height; i += 4) {
+			avg += Vector3f(
+					   image.pixels[i * 4 + 0],
+					   image.pixels[i * 4 + 1],
+					   image.pixels[i * 4 + 2])
+				   * inv_s;
+		}
+		TextureAverages.push_back(avg);
 
 		// Register via buffer id
 		uint32 id	  = dtb.BufferTable.entryCount();
