@@ -80,12 +80,12 @@ fn @make_error_bsdf() = Bsdf {
 //--------------------------------------
 // Creates a purely two-sided diffuse BSDF
 fn @make_diffuse_bsdf(math: Intrinsics, surf: SurfaceElement, kd: Color) = Bsdf {
-    eval   = @ |in_dir, _| color_mulf(kd, positive_cos(in_dir, surf.local.col(2)) / flt_pi),
-    pdf    = @ |in_dir, _| cosine_hemisphere_pdf(positive_cos(in_dir, surf.local.col(2))),
+    eval   = @ |in_dir, _| color_mulf(kd, math.fabsf(vec3_dot(in_dir, surf.local.col(2))) / flt_pi),
+    pdf    = @ |in_dir, _| cosine_hemisphere_pdf(math.fabsf(vec3_dot(in_dir, surf.local.col(2)))),
     sample = @ |rnd, _, _| {
         let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd));
-        let gdir   = vec3_normalize(math, mat3x3_mul(surf.local, sample.dir));
-        make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, sample.dir.z, kd, false)
+        let gdir   = mat3x3_mul(surf.local, sample.dir);
+        make_bsdf_sample(surf, gdir/*if surf.is_entering { gdir } else { vec3_neg(gdir) }*/, sample.pdf, sample.dir.z, kd, false)
     },
     is_specular = false
 };
@@ -106,8 +106,8 @@ fn @load_diffuse_textured_bsdf(math: Intrinsics, data: DeviceBuffer, stage: Stag
 fn @make_orennayar_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
     let a2 = alpha * alpha;
     let eval = @ |in_dir : Vec3, out_dir : Vec3| {
-        let p1 = positive_cos(in_dir, surf.local.col(2));
-        let p2 = positive_cos(out_dir, surf.local.col(2));
+        let p1 = math.fabsf(vec3_dot(in_dir, surf.local.col(2)));
+        let p2 = math.fabsf(vec3_dot(out_dir, surf.local.col(2)));
         let s  = -p1 * p2 + positive_cos(out_dir, in_dir);
         let t  = if s <= flt_eps { 1 } else { math.fmaxf(flt_eps, math.fmaxf(p1, p2)) };
 
@@ -119,7 +119,7 @@ fn @make_orennayar_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, kd: 
 
     Bsdf {
         eval   = eval,
-        pdf    = @ |in_dir, _| cosine_hemisphere_pdf(positive_cos(in_dir, surf.local.col(2))),
+        pdf    = @ |in_dir, _| cosine_hemisphere_pdf(math.fabsf(vec3_dot(in_dir, surf.local.col(2)))),
         sample = @ |rnd, out_dir, _| {
             let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd));
             let gdir   = mat3x3_mul(surf.local, sample.dir);
@@ -141,7 +141,7 @@ fn @load_orennayar_bsdf(math: Intrinsics, data: DeviceBuffer, _ray: Ray, _hit: H
 // Creates a physically-correct Phong BSDF
 fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
     eval = @ |in_dir, out_dir| {
-        let cosI = positive_cos(in_dir, surf.local.col(2));
+        let cosI = math.fabsf(vec3_dot(in_dir, surf.local.col(2)));
         let cos  = positive_cos(in_dir, vec3_reflect(out_dir, surf.local.col(2)));
         color_mulf(ks, cosI * fastpow/*math.powf*/(cos, ns) * (ns + 2) / (2 * flt_pi))
     },
@@ -188,7 +188,7 @@ fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, 
     // Apply inner scattering term to diffuse bsdf
     let diffuse_extra = Bsdf {
         eval   = @ |in_dir, out_dir| {
-            let cos_i = positive_cos(in_dir, N);
+            let cos_i = math.fabsf(vec3_dot(in_dir, N));
             color_mulf(diffuse.eval(in_dir, out_dir), diff_scattering(cos_i))
         },
         pdf    = diffuse.pdf,
@@ -204,7 +204,7 @@ fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, 
 
     // Fresnel based mix function
     let mix_f = @|out_dir : Vec3| -> f32 {
-        let cos_o = positive_cos(out_dir, N);
+        let cos_o = math.fabsf(vec3_dot(out_dir, N));
         let fo    = fresnel(math, eta, cos_o);
         fo.factor
     };

@@ -524,7 +524,7 @@ IG_EXPORT DriverInterface ig_get_interface()
 	return interface;
 }
 
-void ignis_get_film_data(int32_t dev, float** pixels, int32_t* width, int32_t* height)
+void ignis_get_film_data(int dev, float** pixels, int* width, int* height)
 {
 	if (dev != 0) {
 		auto& device = sInterface->devices[dev];
@@ -542,28 +542,28 @@ void ignis_get_film_data(int32_t dev, float** pixels, int32_t* width, int32_t* h
 	*height = sInterface->film_height;
 }
 
-void ignis_load_bvh2_ent(int32_t dev, Node2** nodes, EntityLeaf1** objs)
+void ignis_load_bvh2_ent(int dev, Node2** nodes, EntityLeaf1** objs)
 {
 	auto& bvh = sInterface->load_bvh2_ent(dev);
 	*nodes	  = const_cast<Node2*>(bvh.nodes.ptr());
 	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.ptr());
 }
 
-void ignis_load_bvh4_ent(int32_t dev, Node4** nodes, EntityLeaf1** objs)
+void ignis_load_bvh4_ent(int dev, Node4** nodes, EntityLeaf1** objs)
 {
 	auto& bvh = sInterface->load_bvh4_ent(dev);
 	*nodes	  = const_cast<Node4*>(bvh.nodes.ptr());
 	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.ptr());
 }
 
-void ignis_load_bvh8_ent(int32_t dev, Node8** nodes, EntityLeaf1** objs)
+void ignis_load_bvh8_ent(int dev, Node8** nodes, EntityLeaf1** objs)
 {
 	auto& bvh = sInterface->load_bvh8_ent(dev);
 	*nodes	  = const_cast<Node8*>(bvh.nodes.ptr());
 	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.ptr());
 }
 
-void ignis_load_scene(int32_t dev, SceneDatabase* dtb)
+void ignis_load_scene(int dev, SceneDatabase* dtb)
 {
 	auto assign = [&](const DynTableProxy& tbl) {
 		DynTable devtbl;
@@ -585,52 +585,52 @@ void ignis_load_scene(int32_t dev, SceneDatabase* dtb)
 	dtb->bvhs	  = assign(proxy.BVHs);
 }
 
-void ignis_load_scene_info(int32_t dev, SceneInfo* info)
+void ignis_load_scene_info(int dev, SceneInfo* info)
 {
 	*info = sInterface->load_scene_info(dev);
 }
 
-void ignis_load_rays(int32_t dev, StreamRay** list)
+void ignis_load_rays(int dev, StreamRay** list)
 {
 	*list = const_cast<StreamRay*>(sInterface->load_ray_list(dev).data());
 }
 
-void ignis_cpu_get_primary_stream(PrimaryStream* primary, int32_t size)
+void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)
 {
 	auto& array = sInterface->cpu_primary_stream(size);
 	get_primary_stream(*primary, array.data(), array.size() / 20);
 }
 
-void ignis_cpu_get_secondary_stream(SecondaryStream* secondary, int32_t size)
+void ignis_cpu_get_secondary_stream(SecondaryStream* secondary, int size)
 {
 	auto& array = sInterface->cpu_secondary_stream(size);
 	get_secondary_stream(*secondary, array.data(), array.size() / 13);
 }
 
-void ignis_gpu_get_tmp_buffer(int32_t dev, int32_t** buf, int32_t size)
+void ignis_gpu_get_tmp_buffer(int dev, int** buf, int size)
 {
 	*buf = sInterface->gpu_tmp_buffer(dev, size).data();
 }
 
-void ignis_gpu_get_first_primary_stream(int32_t dev, PrimaryStream* primary, int32_t size)
+void ignis_gpu_get_first_primary_stream(int dev, PrimaryStream* primary, int size)
 {
 	auto& array = sInterface->gpu_first_primary_stream(dev, size);
 	get_primary_stream(*primary, array.data(), array.size() / 20);
 }
 
-void ignis_gpu_get_second_primary_stream(int32_t dev, PrimaryStream* primary, int32_t size)
+void ignis_gpu_get_second_primary_stream(int dev, PrimaryStream* primary, int size)
 {
 	auto& array = sInterface->gpu_second_primary_stream(dev, size);
 	get_primary_stream(*primary, array.data(), array.size() / 20);
 }
 
-void ignis_gpu_get_secondary_stream(int32_t dev, SecondaryStream* secondary, int32_t size)
+void ignis_gpu_get_secondary_stream(int dev, SecondaryStream* secondary, int size)
 {
 	auto& array = sInterface->gpu_secondary_stream(dev, size);
 	get_secondary_stream(*secondary, array.data(), array.size() / 13);
 }
 
-void ignis_present(int32_t dev)
+void ignis_present(int dev)
 {
 	if (dev != 0)
 		sInterface->present(dev);

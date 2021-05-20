@@ -410,8 +410,10 @@ bool LoaderBSDF::load(LoaderContext& ctx, LoaderResult& result)
 			IG_LOG(L_ERROR) << "Missing BSDF '" << pair.first << "'" << std::endl;
 		else if (ctx.Environment.BsdfIDs.count(pair.second) == 0)
 			IG_LOG(L_ERROR) << "Missing BSDF '" << pair.second << "'" << std::endl;
-		else
+		else {
 			ctx.Environment.BsdfIDs[pair.first] = ctx.Environment.BsdfIDs.at(pair.second);
+			IG_LOG(L_DEBUG) << "Replacing " << pair.first << " with " << pair.second << std::endl;
+		}
 	}
 
 	return true;

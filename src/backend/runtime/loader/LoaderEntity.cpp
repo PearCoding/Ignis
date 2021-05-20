@@ -42,7 +42,10 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
 		// Query shape
 		const std::string shapeName = child->property("shape").getString();
-		if (ctx.Environment.ShapeIDs.count(shapeName) == 0) {
+		if (shapeName.empty()) {
+			IG_LOG(L_ERROR) << "Entity " << pair.first << " has no shape" << std::endl;
+			continue;
+		} else if (ctx.Environment.ShapeIDs.count(shapeName) == 0) {
 			IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown shape " << shapeName << std::endl;
 			continue;
 		}
@@ -50,14 +53,20 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
 		// Query bsdf
 		const std::string bsdfName = child->property("bsdf").getString();
-		if (!bsdfName.empty() && !ctx.Scene.bsdf(bsdfName)) {
+		if (bsdfName.empty()) {
+			IG_LOG(L_ERROR) << "Entity " << pair.first << " has no bsdf" << std::endl;
+			continue;
+		} else if (!ctx.Scene.bsdf(bsdfName)) {
 			IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown bsdf " << bsdfName << std::endl;
 			continue;
 		}
-		const uint32 bsdfID = bsdfName.empty() ? std::numeric_limits<uint32>::max() : ctx.Environment.BsdfIDs.at(bsdfName);
+		IG_ASSERT(ctx.Environment.BsdfIDs.count(bsdfName) != 0, "Bsdf ID entry not available, even while Bsdf is known");
+		const uint32 bsdfID = ctx.Environment.BsdfIDs.at(bsdfName);
 
 		// Extract entity information
-		const Transformf transform	  = child->property("transform").getTransform();
+		Transformf transform = child->property("transform").getTransform();
+		transform.makeAffine();
+
 		const Transformf invTransform = transform.inverse();
 		const BoundingBox& shapeBox	  = ctx.Environment.Shapes[shapeID].BoundingBox;
 		const BoundingBox entityBox	  = shapeBox.transformed(transform);

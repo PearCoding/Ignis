@@ -19,49 +19,48 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
 
             let rnd = &mut state.rnd;
             // Note: randi() returns random integers, but we only want positive integers here
-            let light_id = (randi(rnd) & 0x7FFFFFFF) % num_lights;
-            let lights   = scene.database.lights;
-            let light    = @lights(light_id);
+            let light_id      = (randi(rnd) & 0x7FFFFFFF) % num_lights;
+            let lights        = scene.database.lights;
+            let light         = @lights(light_id);
             let sample_direct = light.sample_direct;
             let light_sample  = @sample_direct(rnd, surf);
             if light.infinite {
                 let light_dir = light_sample.posdir; // Infinite lights return a direction instead of a position
-                let vis = vec3_dot(light_dir, surf.local.col(2));
+                let vis = device.intrinsics.fabsf(vec3_dot(light_dir, surf.local.col(2)));
 
-                if vis > flt_eps {
+                if likely(vis > flt_eps) {
                     let in_dir  = light_dir; // TODO: Check correct orientation
                     let out_dir = vec3_neg(ray.dir);
 
-                    let pdf_e     = mat.bsdf.pdf(in_dir, out_dir);        // Pdf to sample the "infinite" light based on bsdf
-                    let pdf_l     = light_sample.pdf_dir * pdf_lightpick; // Pdf to sample the light based on NEE
+                    let pdf_e     = if light.delta { 1 } else { mat.bsdf.pdf(in_dir, out_dir) }; // Pdf to sample the "infinite" light based on bsdf
+                    let pdf_l     = light_sample.pdf_dir * pdf_lightpick;                        // Pdf to sample the light based on NEE
                     let inv_pdf_l = 1 / pdf_l;
                     
-                    let mis   = if light.delta { 1 } else { 1 / (1 + pdf_e * inv_pdf_l) };
-                    let cos_l = light_sample.cos; // Usually, this is just 1
+                    let mis = if light.delta { 1 } else { 1 / (1 + pdf_e * inv_pdf_l) };
 
                     let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
                     return(make_option(
                         make_ray(surf.point, light_dir, offset, flt_max),
-                        color_mulf(contrib, cos_l * mis)
+                        color_mulf(contrib, mis * inv_pdf_l)
                     ))
                 }
             }  else {
                 let light_dir = vec3_sub(light_sample.posdir, surf.point);
-                let vis = vec3_dot(light_dir, surf.local.col(2));
+                let vis = device.intrinsics.fabsf(vec3_dot(light_dir, surf.local.col(2)));
 
-                if vis > flt_eps && light_sample.cos > flt_eps {
+                if likely(vis > flt_eps) && light_sample.cos > flt_eps {
                     let inv_d   = 1 / vec3_len(device.intrinsics, light_dir);
                     let inv_d2  = inv_d * inv_d;
                     let in_dir  = vec3_mulf(light_dir, inv_d);
                     let out_dir = vec3_neg(ray.dir);
+                    let cos_l   = light_sample.cos;
 
-                    let pdf_e = if light.delta { 1 } else { mat.bsdf.pdf(in_dir, out_dir) };
-                    let pdf_l = light_sample.pdf_area * pdf_lightpick;
+                    let pdf_e     = if light.delta { 1 } else { mat.bsdf.pdf(in_dir, out_dir) * cos_l * inv_d2 };
+                    let pdf_l     = light_sample.pdf_area * pdf_lightpick;
+                    let inv_pdf_l = 1 / pdf_l;
 
-                    let cos_l = light_sample.cos;
-
-                    let mis = if light.delta { 1 } else { 1 / (1 + pdf_e * cos_l * inv_d2 / pdf_l) };
-                    let geom_factor = inv_d * cos_l * inv_d2;
+                    let mis = if light.delta { 1 } else { 1 / (1 + pdf_e * inv_pdf_l) };
+                    let geom_factor = cos_l * inv_d2 * inv_pdf_l;
 
                     let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
                     return(make_option(
