@@ -1,21 +1,23 @@
+// TODO: The Klems eval and sample process are not optimized at all...
+
 struct KlemsThetaBasis {
     center:    f32,
     lower:     f32,
     upper:     f32,
-    phi_count: u32
+    phi_count: i32
 }
 
 struct KlemsBasis {
-    theta_basis: &[KlemsThetaBasis],
-    theta_linear_offset: &[u32],
-    theta_count: u32,
-    entry_count: u32
+    theta_count: i32,
+    entry_count: i32,
+    theta_basis:         fn (i32) -> KlemsThetaBasis,
+    theta_linear_offset: fn (i32) -> i32
 }
 
 struct KlemsComponent {
     row_basis:    KlemsBasis,
     column_basis: KlemsBasis,
-    matrix:       &[f32]
+    matrix:       fn (i32) -> f32
 }
 
 struct KlemsModel {
@@ -32,19 +34,19 @@ fn @k_fi(v: Vec3) = make_vec3(-v.x, -v.y, v.z);
 fn @k_bo(v: Vec3) = make_vec3(v.x, v.y, -v.z);
 fn @k_bi(v: Vec3) = vec3_neg(v);
 
-fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) = min(basis.phi_count as i32 - 1, max(0, (phi * (basis.phi_count as f32) * flt_inv_pi / 2) as i32)) as u32;
-fn @k_multi_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> (u32, u32) {
-    let i = Interval::binary_search(basis.theta_count as i32, @|k| basis.theta_basis(k).lower <= theta) as u32;
+fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) = min(basis.phi_count - 1, max(0, (phi * (basis.phi_count as f32) * flt_inv_pi / 2) as i32));
+fn @k_multi_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> (i32, i32) {
+    let i = Interval::binary_search(basis.theta_count, @|k| basis.theta_basis(k).lower <= theta);
     let j = k_phi_index(phi, basis.theta_basis(i));
     (i, j)
 }
 
-fn @k_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> u32 {
+fn @k_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> i32 {
     let (i, j) = k_multi_index_of(theta, phi, basis);
     basis.theta_linear_offset(i) + j
 }
 
-fn @k_eval_component_index(row: u32, col: u32, component: KlemsComponent) = component.matrix(row * component.column_basis.entry_count + col);
+fn @k_eval_component_index(row: i32, col: i32, component: KlemsComponent) = component.matrix(row * component.column_basis.entry_count + col);
 
 fn @k_eval_component(math: Intrinsics, in_dir: Vec3, out_dir: Vec3, component: KlemsComponent) {
     let (in_theta, in_phi)   = spherical_from_dir(math, in_dir);
@@ -91,4 +93,50 @@ fn @make_klems_bsdf(math: Intrinsics, surf: SurfaceElement, klems: KlemsModel) -
         },
         is_specular = false
     }
+}
+
+fn @load_klems_model(data: DeviceBuffer) -> KlemsModel {
+    fn @load_klems_theta_basis(off: i32) -> KlemsThetaBasis {
+        let vec = data.load_vec4(off);
+        KlemsThetaBasis {
+            center    = vec.x,
+            lower     = vec.y,
+            upper     = vec.z,
+            phi_count = bitcast[i32](vec.w)
+        }
+    }
+
+    fn @load_klems_basis(off: i32) -> KlemsBasis {
+        let (theta_count, entry_count) = data.load_int2(off);
+        KlemsBasis {
+            theta_count         = theta_count,
+            entry_count         = entry_count,
+            theta_basis         = @|i: i32| load_klems_theta_basis(off + 4 + 4 * i),
+            theta_linear_offset = @|i: i32| data.load_i32(off + 4 + 4 * theta_count + i)
+        }
+    }
+
+    fn @load_klems_component(off: i32) -> KlemsComponent {
+        let (size_basis_1, size_basis_2) = data.load_int2(off);
+        KlemsComponent {
+            row_basis    = load_klems_basis(off + 4),
+            column_basis = load_klems_basis(off + 4 + size_basis_1),
+            matrix       = @|i: i32| data.load_f32(off + 4 + size_basis_1 + size_basis_2 + i)
+        }
+    }
+
+    let (size_comp_1, size_comp_2, size_comp_3) = data.load_int3(0);
+    KlemsModel {
+        front_reflection   = load_klems_component(4),
+        back_reflection    = load_klems_component(4 + size_comp_1),
+        front_transmission = load_klems_component(4 + size_comp_1 + size_comp_2),
+        back_transmission  = load_klems_component(4 + size_comp_1 + size_comp_2 + size_comp_3)
+    }
+}
+
+fn @load_klems_bsdf(math: Intrinsics, data: DeviceBuffer, stage: Stage3Accessor, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+    let buf_id = data.load_i32(0);
+    let buffer = stage.buffers(buf_id);
+    let model  = load_klems_model(buffer);
+    make_klems_bsdf(math, surf, model)
 }

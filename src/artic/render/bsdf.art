@@ -69,7 +69,7 @@ fn @make_black_bsdf(surf: SurfaceElement) = Bsdf {
     is_specular = true
 };
 
-// Error 
+// Error
 fn @make_error_bsdf() = Bsdf {
     eval        = @ |_, _| pink,
     pdf         = @ |_, _| 0,
@@ -232,7 +232,7 @@ fn @load_rough_plastic_bsdf(math: Intrinsics, data: DeviceBuffer, _ray: Ray, _hi
     let n1 = e0.w;
     let kd = make_color(e1.x, e1.y, e1.z);
     let n2 = e1.w;
-    
+
     let alpha_u = e2.x;
     let alpha_v = e2.y;
 
@@ -411,9 +411,9 @@ fn @make_rough_conductor_bsdf_front(math: Intrinsics, surf: SurfaceElement, ior:
 
 // Creates a microfacet conductor BSDF. This is the two-sided version
 fn @make_rough_conductor_bsdf(math: Intrinsics, surf: SurfaceElement, ior: f32, k: f32, ks: Color, micro: MicrofacetDistribution) -> Bsdf {
-    if !surf.is_entering { 
+    if !surf.is_entering {
         make_rough_conductor_bsdf_front(math, invert_surface_element(surf), ior, k, ks, micro)
-    } else { 
+    } else {
         make_rough_conductor_bsdf_front(math, surf, ior, k, ks, micro)
     }
 }
@@ -518,9 +518,9 @@ fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = make_variadic_mix_bsdf(mat1,
 fn @load_blend_bsdf(_math: Intrinsics, _data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     /*
     let (b0, b1, w)  = data.load_int3(0);
-    
+
     let weight = bitcast[f32](w);
-    
+
     let bsdf0 = $get_shader_loader(b0 as u32);
     let bsdf1 = $get_shader_loader(b1 as u32);
     make_mix_bsdf(bsdf0(math, data, ray, hit, surf), bsdf1(math, data, ray, hit, surf), weight)
@@ -626,27 +626,27 @@ fn @make_shader_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor
 
         @|ray, hit, surf| {
             match entry.type_id {
-                0x00 => load_diffuse_bsdf(math, data, ray, hit, surf),         // BSDF_DIFFUSE		  
-                0x01 => load_orennayar_bsdf(math, data, ray, hit, surf),       // BSDF_ORENNAYAR		  
-                0x02 => load_glass_bsdf(math, data, ray, hit, surf),           // BSDF_DIELECTRIC		  
-                //0x03 => load_rough_dielectric_bsdf(math, data, ray, hit, surf), // BSDF_ROUGH_DIELECTRIC 
-                0x04 => load_thin_glass_bsdf(math, data, ray, hit, surf),      // BSDF_THIN_DIELECTRIC  
-                0x05 => load_mirror_bsdf(math, data, ray, hit, surf),          // BSDF_MIRROR			  
-                0x06 => load_conductor_bsdf(math, data, ray, hit, surf),       // BSDF_CONDUCTOR		  
-                0x07 => load_rough_conductor_bsdf(math, data, ray, hit, surf), // BSDF_ROUGH_CONDUCTOR  
+                0x00 => load_diffuse_bsdf(math, data, ray, hit, surf),         // BSDF_DIFFUSE
+                0x01 => load_orennayar_bsdf(math, data, ray, hit, surf),       // BSDF_ORENNAYAR
+                0x02 => load_glass_bsdf(math, data, ray, hit, surf),           // BSDF_DIELECTRIC
+                //0x03 => load_rough_dielectric_bsdf(math, data, ray, hit, surf), // BSDF_ROUGH_DIELECTRIC
+                0x04 => load_thin_glass_bsdf(math, data, ray, hit, surf),      // BSDF_THIN_DIELECTRIC
+                0x05 => load_mirror_bsdf(math, data, ray, hit, surf),          // BSDF_MIRROR
+                0x06 => load_conductor_bsdf(math, data, ray, hit, surf),       // BSDF_CONDUCTOR
+                0x07 => load_rough_conductor_bsdf(math, data, ray, hit, surf), // BSDF_ROUGH_CONDUCTOR
                 0x10 => load_plastic_bsdf(math, data, ray, hit, surf),         // BSDF_PLASTIC
                 0x11 => load_rough_plastic_bsdf(math, data, ray, hit, surf),   // BSDF_ROUGH_PLASTIC
-                0x12 => load_phong_bsdf(math, data, ray, hit, surf),           // BSDF_PHONG			  
-                0x13 => load_disney_bsdf(math, data, ray, hit, surf),          // BSDF_DISNEY			  
-                0x20 => load_blend_bsdf(math, data, ray, hit, surf),           // BSDF_BLEND			  
-                0x21 => load_mask_bsdf(math, data, ray, hit, surf),            // BSDF_MASK			  
-                0x22 => load_passthrough_bsdf(math, data, ray, hit, surf),     // BSDF_PASSTROUGH		  
-                0x30 => load_normalmap_bsdf(math, data, ray, hit, surf),       // BSDF_NORMAL_MAP		  
-                0x31 => load_bumpmap_bsdf(math, data, ray, hit, surf),         // BSDF_BUMP_MAP		  
-                //0x40 => load_klems_bsdf(math, data, ray, hit, surf),           // BSDF_KLEMS	
+                0x12 => load_phong_bsdf(math, data, ray, hit, surf),           // BSDF_PHONG
+                0x13 => load_disney_bsdf(math, data, ray, hit, surf),          // BSDF_DISNEY
+                0x20 => load_blend_bsdf(math, data, ray, hit, surf),           // BSDF_BLEND
+                0x21 => load_mask_bsdf(math, data, ray, hit, surf),            // BSDF_MASK
+                0x22 => load_passthrough_bsdf(math, data, ray, hit, surf),     // BSDF_PASSTROUGH
+                0x30 => load_normalmap_bsdf(math, data, ray, hit, surf),       // BSDF_NORMAL_MAP
+                0x31 => load_bumpmap_bsdf(math, data, ray, hit, surf),         // BSDF_BUMP_MAP
+                0x40 => load_klems_bsdf(math, data, stage, ray, hit, surf),           // BSDF_KLEMS
                 0x100 => load_diffuse_textured_bsdf(math, data, stage, ray, hit, surf),	// BSDF_DIFFUSE_TEXTURED
                 _    => make_error_bsdf()
             }
         }
-    } 
+    }
 }

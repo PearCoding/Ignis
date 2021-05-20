@@ -780,12 +780,14 @@ static void make_screenshot(size_t width, size_t height, uint32_t iter)
 
 ////////////////////////////////////////////////////////////////
 
-void init(int width, int height, const float* pixels, bool showDebug)
+bool init(int width, int height, const float* pixels, bool showDebug)
 {
 	sShowDebugMode = showDebug;
 
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
 		IG_LOG(L_FATAL) << "Cannot initialize SDL: " << SDL_GetError() << std::endl;
+		return false;
+	}
 
 	sWidth	= width;
 	sHeight = height;
@@ -797,16 +799,22 @@ void init(int width, int height, const float* pixels, bool showDebug)
 		width,
 		height,
 		0);
-	if (!sWindow)
+	if (!sWindow) {
 		IG_LOG(L_FATAL) << "Cannot create SDL window: " << SDL_GetError() << std::endl;
+		return false;
+	}
 
 	sRenderer = SDL_CreateRenderer(sWindow, -1, 0);
-	if (!sRenderer)
+	if (!sRenderer) {
 		IG_LOG(L_FATAL) << "Cannot create SDL renderer: " << SDL_GetError() << std::endl;
+		return false;
+	}
 
 	sTexture = SDL_CreateTexture(sRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
-	if (!sTexture)
+	if (!sTexture) {
 		IG_LOG(L_FATAL) << "Cannot create SDL texture: " << SDL_GetError() << std::endl;
+		return false;
+	}
 
 	sBuffer.resize(width * height);
 	IMGUI_CHECKVERSION();
@@ -819,6 +827,7 @@ void init(int width, int height, const float* pixels, bool showDebug)
 	ImGuiSDL::Initialize(sRenderer, width, height);
 
 	sPoseManager.load(POSE_FILE);
+	return true;
 }
 
 void close()

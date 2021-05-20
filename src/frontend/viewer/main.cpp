@@ -200,7 +200,9 @@ int main(int argc, char** argv)
 
 #ifdef WITH_UI
 	bool isDebug = runtime->configuration() & IG_C_RENDERER_DEBUG;
-	UI::init(film_width, film_height, runtime->getFramebuffer(), isDebug);
+	if (!UI::init(film_width, film_height, runtime->getFramebuffer(), isDebug))
+		return EXIT_FAILURE;
+
 	DebugMode currentDebugMode = UI::currentDebugMode();
 	runtime->setDebugMode(currentDebugMode);
 #endif

@@ -5,7 +5,7 @@
 
 namespace IG {
 namespace UI {
-void init(int width, int height, const float* pixels, bool showDebug);
+bool init(int width, int height, const float* pixels, bool showDebug);
 void close();
 void setTitle(const char* str);
 bool handleInput(uint32_t& iter, bool& run, Camera& cam);
