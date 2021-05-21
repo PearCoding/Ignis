@@ -77,11 +77,9 @@ fn make_aniso_ggx_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, al
         let ky = cosY / alpha_v;
         let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
 
-        let norm = 1 / (flt_pi * alpha_u * alpha_v * cosZ * cosZ * cosZ * cosZ);
-        norm * (1 + k2) * (1 + k2)
+        1 / (flt_pi * alpha_u * alpha_v * cosZ * cosZ * cosZ * cosZ * (1 + k2) * (1 + k2))
     },
     G1 = @|w, m| { // g 1 smith
-
         let cosZ = vec3_dot(surf.local.col(2), w);
         if cosZ * vec3_dot(w, m) <= flt_eps { return(0) };
 
@@ -92,28 +90,8 @@ fn make_aniso_ggx_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, al
         let ky = alpha_v * cosY;
         let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
 
-        if k2 <= flt_eps { return(1) };
-
-        let a  = math.rsqrtf(k2);
-        let a2 = 1 / k2;
-
-        if a >= 1.6 { 
-            1.0
-        } else { 
-            (3.535 * a + 2.181 * a2) / (1.0 + 2.276 * a + 2.577 * a2) 
-        }
-        // let cosZ = vec3_dot(surf.local.col(2), w);
-        // if cosZ * vec3_dot(w, m) <= flt_eps { return(0) };
-
-        // let cosX = vec3_dot(surf.local.col(0), w);
-        // let cosY = vec3_dot(surf.local.col(1), w);
-
-        // let kx = alpha_u * cosX;
-        // let ky = alpha_v * cosY;
-        // let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
-
-        // let denom = 1 + math.sqrtf(1 + k2);
-        // if denom <= flt_eps { 0 } else { 2 / denom }
+        let denom = 1 + math.sqrtf(1 + k2);
+        if denom <= flt_eps { 0 } else { 2 / denom }
     },
     sample = @ |rnd| {
         let u0 = randf(rnd);
@@ -135,7 +113,7 @@ fn make_aniso_ggx_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, al
         let sinTheta  = math.sqrtf(1 - cosTheta2);
 
         let k2  = d2 * (sinTheta * sinTheta) / cosTheta2;
-        let pdf = (1 + k2) * (1 + k2) / (flt_pi * alpha_u * alpha_v * cosTheta2 * cosTheta);
+        let pdf = 1 / (flt_pi * alpha_u * alpha_v * cosTheta2 * cosTheta * (1 + k2) * (1 + k2));
         let lh  = make_vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
         MicrofacetSample { normal = mat3x3_mul(surf.local, lh), pdf = pdf}
     }
