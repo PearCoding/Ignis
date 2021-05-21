@@ -22,7 +22,7 @@ static inline void setup_technique(RuntimeRenderSettings& settings, LoaderOption
 
 	if (tech_type == "debug")
 		lopts.Configuration |= IG_C_RENDERER_DEBUG;
-	else if(tech_type == "ao")
+	else if (tech_type == "ao")
 		lopts.Configuration |= IG_C_RENDERER_AO;
 	else
 		lopts.Configuration |= IG_C_RENDERER_PATH;
@@ -125,6 +125,11 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	if (!mManager.load(newConfig, mLoadedInterface))
 		throw std::runtime_error("Error loading interface!");
 	mConfiguration = newConfig;
+
+	// Force flush to zero mode for denormals
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+	_mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
+#endif
 }
 
 Runtime::~Runtime()

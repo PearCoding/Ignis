@@ -4,13 +4,16 @@ set(ARTIC_TEST_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/test_intersection.art
     ${CMAKE_CURRENT_SOURCE_DIR}/test_main.art
     ${CMAKE_CURRENT_SOURCE_DIR}/test_matrix.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_microfacet.art
 )
 
 # Compile artic stuff
+SET(ARTIC_OBJS ) 
 anydsl_runtime_wrap(ARTIC_OBJS
     NAME "artic_test"
     FRONTEND "artic"
     CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
+    ARTIC_FLAGS --log-level info -Wall
     FILES ${ARTIC_SRC} ${ARTIC_TEST_SRC}
     INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/generated_test_interface)
 

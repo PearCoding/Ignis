@@ -1,0 +1,129 @@
+fn @make_surf() = SurfaceElement {
+    is_entering = true,
+    point       = make_vec3(0, 0, 0),
+    face_normal = make_vec3(0, 0, 1),
+    prim_coords = make_vec2(0, 0),
+    tex_coords  = make_vec2(0, 0),
+    local       = mat3x3_identity()
+};
+
+fn @make_H() = vec3_normalize(cpu_intrinsics, make_vec3(0, 0.2, 0.8));
+
+fn test_microfacet_ggx_iso() {
+    let mut err = 0;
+
+    let dst = $make_ggx_distribution(cpu_intrinsics, make_surf(), 0.1, 0.1);
+    let H   = make_H();
+
+    let D    = dst.D(H);
+    let pdf1 = D * H.z;
+    let pdf2 = dst.pdf(H);
+
+    if !eq_f32(pdf1, pdf2) {
+        ++err;
+    }
+
+    err  
+}
+
+fn test_microfacet_ggx_aniso() {
+    let mut err = 0;
+
+    let dst = $make_ggx_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
+    let H   = make_H();
+
+    let D    = dst.D(H);
+    let pdf1 = D * H.z;
+    let pdf2 = dst.pdf(H);
+
+    if !eq_f32(pdf1, pdf2) {
+        ++err;
+    }
+
+    err  
+}
+
+fn test_microfacet_ggx_sample() {
+    let mut err = 0;
+
+    let mut rnd = fnv_init();
+    rnd = fnv_hash(rnd, 42);
+
+    let dst    = $make_ggx_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
+    let sample = dst.sample(&mut rnd, make_vec3(0,0,1));
+    ignis_dbg_echo_vec3(sample.normal);
+    let pdf1 = sample.pdf;
+    let pdf2 = dst.pdf(sample.normal);
+
+    if !eq_f32(pdf1, pdf2) {
+        ++err;
+    }
+
+    err  
+}
+
+fn test_microfacet_beckmann_iso() {
+    let mut err = 0;
+
+    let dst = $make_beckmann_distribution(cpu_intrinsics, make_surf(), 0.1, 0.1);
+    let H   = make_H();
+
+    let D    = dst.D(H);
+    let pdf1 = D * H.z;
+    let pdf2 = dst.pdf(H);
+
+    if !eq_f32(pdf1, pdf2) {
+        ++err;
+    }
+
+    err  
+}
+
+fn test_microfacet_beckmann_aniso() {
+    let mut err = 0;
+
+    let dst = $make_beckmann_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
+    let H   = make_H();
+
+    let D    = dst.D(H);
+    let pdf1 = D * H.z;
+    let pdf2 = dst.pdf(H);
+
+    if !eq_f32(pdf1, pdf2) {
+        ++err;
+    }
+
+    err  
+}
+
+fn test_microfacet_beckmann_sample() {
+    let mut err = 0;
+
+    let mut rnd = fnv_init();
+    rnd = fnv_hash(rnd, 42);
+
+    let dst    = $make_beckmann_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
+    let sample = dst.sample(&mut rnd, make_vec3(0,0,1));
+
+    let pdf1 = sample.pdf;
+    let pdf2 = dst.pdf(sample.normal);
+
+    if !eq_f32(pdf1, pdf2) {
+        ++err;
+    }
+
+    err  
+}
+
+fn test_microfacet() -> i32 { 
+    let mut err = 0;
+
+    err += test_microfacet_ggx_iso();
+    err += test_microfacet_ggx_aniso();
+    err += test_microfacet_ggx_sample();
+    err += test_microfacet_beckmann_iso();
+    err += test_microfacet_beckmann_aniso();
+    err += test_microfacet_beckmann_sample();
+
+    err
+ }
