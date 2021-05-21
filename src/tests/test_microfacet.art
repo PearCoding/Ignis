@@ -7,17 +7,22 @@ fn @make_surf() = SurfaceElement {
     local       = mat3x3_identity()
 };
 
-fn @make_H() = vec3_normalize(cpu_intrinsics, make_vec3(0, 0.2, 0.8));
+fn @make_setup() -> (Vec3, Vec3, Vec3) {
+    let in_dir  = vec3_normalize(cpu_intrinsics, make_vec3( 1,1,1));
+    let out_dir = vec3_normalize(cpu_intrinsics, make_vec3(-1,1,1));
+    let h       = vec3_halfway(cpu_intrinsics, in_dir, out_dir);
+    (in_dir, out_dir, h)
+}
 
 fn test_microfacet_ggx_iso() {
     let mut err = 0;
 
     let dst = $make_ggx_distribution(cpu_intrinsics, make_surf(), 0.1, 0.1);
-    let H   = make_H();
+    let (wi, wo, H) = make_setup();
 
     let D    = dst.D(H);
     let pdf1 = D * H.z;
-    let pdf2 = dst.pdf(H);
+    let pdf2 = dst.pdf(wi, wo, H);
 
     if !eq_f32(pdf1, pdf2) {
         ++err;
@@ -30,11 +35,11 @@ fn test_microfacet_ggx_aniso() {
     let mut err = 0;
 
     let dst = $make_ggx_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
-    let H   = make_H();
+    let (wi, wo, H) = make_setup();
 
     let D    = dst.D(H);
     let pdf1 = D * H.z;
-    let pdf2 = dst.pdf(H);
+    let pdf2 = dst.pdf(wi, wo, H);
 
     if !eq_f32(pdf1, pdf2) {
         ++err;
@@ -49,11 +54,13 @@ fn test_microfacet_ggx_sample() {
     let mut rnd = fnv_init();
     rnd = fnv_hash(rnd, 42);
 
+    let (_, wo, _) = make_setup();
     let dst    = $make_ggx_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
-    let sample = dst.sample(&mut rnd, make_vec3(0,0,1));
-    ignis_dbg_echo_vec3(sample.normal);
+    let sample = dst.sample(&mut rnd, wo);
+    let wi     = vec3_reflect(wo, sample.normal);
+    
     let pdf1 = sample.pdf;
-    let pdf2 = dst.pdf(sample.normal);
+    let pdf2 = dst.pdf(wi, wo, sample.normal);
 
     if !eq_f32(pdf1, pdf2) {
         ++err;
@@ -66,11 +73,11 @@ fn test_microfacet_beckmann_iso() {
     let mut err = 0;
 
     let dst = $make_beckmann_distribution(cpu_intrinsics, make_surf(), 0.1, 0.1);
-    let H   = make_H();
+    let (wi, wo, H) = make_setup();
 
     let D    = dst.D(H);
     let pdf1 = D * H.z;
-    let pdf2 = dst.pdf(H);
+    let pdf2 = dst.pdf(wi, wo, H);
 
     if !eq_f32(pdf1, pdf2) {
         ++err;
@@ -83,11 +90,11 @@ fn test_microfacet_beckmann_aniso() {
     let mut err = 0;
 
     let dst = $make_beckmann_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
-    let H   = make_H();
+    let (wi, wo, H) = make_setup();
 
     let D    = dst.D(H);
     let pdf1 = D * H.z;
-    let pdf2 = dst.pdf(H);
+    let pdf2 = dst.pdf(wi, wo, H);
 
     if !eq_f32(pdf1, pdf2) {
         ++err;
@@ -102,11 +109,34 @@ fn test_microfacet_beckmann_sample() {
     let mut rnd = fnv_init();
     rnd = fnv_hash(rnd, 42);
 
+    let (_, wo, _) = make_setup();
     let dst    = $make_beckmann_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
-    let sample = dst.sample(&mut rnd, make_vec3(0,0,1));
+    let sample = dst.sample(&mut rnd, wo);
+    let wi     = vec3_reflect(wo, sample.normal);
 
     let pdf1 = sample.pdf;
-    let pdf2 = dst.pdf(sample.normal);
+    let pdf2 = dst.pdf(wi, wo, sample.normal);
+
+    if !eq_f32(pdf1, pdf2) {
+        ++err;
+    }
+
+    err  
+}
+
+fn test_microfacet_vndf_ggx_sample() {
+    let mut err = 0;
+
+    let mut rnd = fnv_init();
+    rnd = fnv_hash(rnd, 42);
+
+    let (_, wo, _) = make_setup();
+    let dst    = $make_vndf_ggx_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
+    let sample = dst.sample(&mut rnd, wo);
+    let wi     = vec3_reflect(wo, sample.normal);
+
+    let pdf1 = sample.pdf;
+    let pdf2 = dst.pdf(wi, wo, sample.normal);
 
     if !eq_f32(pdf1, pdf2) {
         ++err;
@@ -124,6 +154,7 @@ fn test_microfacet() -> i32 {
     err += test_microfacet_beckmann_iso();
     err += test_microfacet_beckmann_aniso();
     err += test_microfacet_beckmann_sample();
+    err += test_microfacet_vndf_ggx_sample();
 
     err
  }
