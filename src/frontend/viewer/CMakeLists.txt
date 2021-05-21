@@ -1,6 +1,9 @@
-# Setup actual driver
 SET(CMD_FILES 
-    main.cpp )
+    main.cpp
+    IO.cpp
+    IO.h
+    Range.h 
+    StatusObserver.h )
 SET(UI_FILES 
     ${CMD_FILES}
     Pose.cpp
@@ -8,8 +11,10 @@ SET(UI_FILES
     UI.cpp
     UI.h)
 
+# TODO: This is not well documented, and would be great to get rid of
+find_package(TBB REQUIRED) # Required for parallel stuff
+
 if(IG_HAS_UI)
-    find_package(TBB REQUIRED) # Required for parallel stuff in UI.cpp
     add_executable(igview ${UI_FILES})
     target_compile_definitions(igview PRIVATE "-DWITH_UI")
     target_link_libraries(igview PRIVATE ig_lib_ui ig_lib_runtime TBB::tbb)
@@ -17,5 +22,5 @@ if(IG_HAS_UI)
 endif()
 
 add_executable(igcli ${CMD_FILES})
-target_link_libraries(igcli PRIVATE ig_lib_runtime)
+target_link_libraries(igcli PRIVATE ig_lib_runtime TBB::tbb)
 add_dependencies(igcli ignis_drivers)

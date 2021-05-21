@@ -1,5 +1,7 @@
 #include "UI.h"
+#include "IO.h"
 #include "Pose.h"
+#include "Range.h"
 
 #include <SDL.h>
 
@@ -8,7 +10,6 @@
 #include "imgui_sdl.h"
 
 #include "Color.h"
-#include "Image.h"
 #include "Logger.h"
 
 #include <atomic>
@@ -457,116 +458,6 @@ static inline float srgb_gamma(float x)
 		return 1.055f * std::pow(x, 0.416666667f) - 0.055f;
 }
 
-// We do not make use of C++20, therefore we do have our own Range
-template <typename T>
-class Range {
-public:
-	class Iterator : public std::iterator<std::random_access_iterator_tag, T> {
-		friend class Range;
-
-	public:
-		using difference_type = typename std::iterator<std::random_access_iterator_tag, T>::difference_type;
-
-		inline T operator*() const { return mValue; }
-		inline T operator[](const T& n) const { return mValue + n; }
-
-		inline const Iterator& operator++()
-		{
-			++mValue;
-			return *this;
-		}
-
-		inline Iterator operator++(int)
-		{
-			Iterator copy(*this);
-			++mValue;
-			return copy;
-		}
-
-		inline const Iterator& operator--()
-		{
-			--mValue;
-			return *this;
-		}
-
-		inline Iterator operator--(int)
-		{
-			Iterator copy(*this);
-			--mValue;
-			return copy;
-		}
-
-		inline Iterator& operator+=(const Iterator& other)
-		{
-			mValue += other.mValue;
-			return *this;
-		}
-
-		inline Iterator& operator+=(const T& other)
-		{
-			mValue += other;
-			return *this;
-		}
-
-		inline Iterator& operator-=(const Iterator& other)
-		{
-			mValue -= other.mValue;
-			return *this;
-		}
-
-		inline Iterator& operator-=(const T& other)
-		{
-			mValue -= other;
-			return *this;
-		}
-
-		inline bool operator<(const Iterator& other) const { return mValue < other.mValue; }
-		inline bool operator<=(const Iterator& other) const { return mValue <= other.mValue; }
-		inline bool operator>(const Iterator& other) const { return mValue > other.mValue; }
-		inline bool operator>=(const Iterator& other) const { return mValue >= other.mValue; }
-
-		inline bool operator==(const Iterator& other) const { return mValue == other.mValue; }
-		inline bool operator!=(const Iterator& other) const { return mValue != other.mValue; }
-
-		inline Iterator operator+(const Iterator& b) const { return Iterator(mValue + *b); }
-		inline Iterator operator+(const Iterator::difference_type& b) const { return Iterator(mValue + b); }
-		inline friend Iterator operator+(const Iterator::difference_type& a, const Iterator& b) { return Iterator(a + *b); }
-		inline difference_type operator-(const Iterator& b) const { return difference_type(mValue - *b); }
-		inline Iterator operator-(const Iterator::difference_type& b) const { return Iterator(mValue - b); }
-		inline friend Iterator operator-(const Iterator::difference_type& a, const Iterator& b) { return Iterator(a - *b); }
-
-		inline Iterator()
-			: mValue(0)
-		{
-		}
-
-		inline explicit Iterator(const T& start)
-			: mValue(start)
-		{
-		}
-
-		inline Iterator(const Iterator& other) = default;
-		inline Iterator(Iterator&& other)	   = default;
-		inline Iterator& operator=(const Iterator& other) = default;
-		inline Iterator& operator=(Iterator&& other) = default;
-
-	private:
-		T mValue;
-	};
-
-	Iterator begin() const { return mBegin; }
-	Iterator end() const { return mEnd; }
-	Range(const T& begin, const T& end)
-		: mBegin(begin)
-		, mEnd(end)
-	{
-	}
-
-private:
-	Iterator mBegin;
-	Iterator mEnd;
-};
-
 template <typename T>
 void updateMaximum(std::atomic<T>& maximum_value, T const& value) noexcept
 {
@@ -582,8 +473,6 @@ void updateMinimum(std::atomic<T>& minimum_value, T const& value) noexcept
 	while (prev_value > value && !minimum_value.compare_exchange_weak(prev_value, value)) {
 	}
 }
-
-using RangeS = Range<size_t>;
 
 static void analzeLuminance(size_t width, size_t height, uint32_t iter)
 {
@@ -752,27 +641,7 @@ static void make_screenshot(size_t width, size_t height, uint32_t iter)
 	auto in_time_t = std::chrono::system_clock::to_time_t(now);
 	out_file << "screenshot_" << std::put_time(std::localtime(&in_time_t), "%Y_%m_%d_%H_%M_%S") << ".exr";
 
-	ImageRgba32 img;
-	img.width  = width;
-	img.height = height;
-	img.pixels.reset(new float[width * height * 4]);
-
-	const float* film = sPixels;
-	auto inv_iter	  = 1.0f / iter;
-	const RangeS imageRange(0, width * height);
-
-	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), [&](size_t ind) {
-		auto r = film[ind * 3 + 0];
-		auto g = film[ind * 3 + 1];
-		auto b = film[ind * 3 + 2];
-
-		img.pixels[4 * ind + 0] = r * inv_iter;
-		img.pixels[4 * ind + 1] = g * inv_iter;
-		img.pixels[4 * ind + 2] = b * inv_iter;
-		img.pixels[4 * ind + 3] = 1.0f;
-	});
-
-	if (!img.save(out_file.str()))
+	if (!saveImageRGB(out_file.str(), sPixels, width, height, 1.0f / iter))
 		IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "'" << std::endl;
 	else
 		IG_LOG(L_INFO) << "Screenshot saved to '" << out_file.str() << "'" << std::endl;

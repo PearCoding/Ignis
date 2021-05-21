@@ -1,7 +1,10 @@
 #include "Camera.h"
+#include "IO.h"
 
 #ifdef WITH_UI
 #include "UI.h"
+#else
+#include "StatusObserver.h"
 #endif
 
 #include "Logger.h"
@@ -159,7 +162,7 @@ int main(int argc, char** argv)
 	if (target == Target::INVALID)
 		target = getRecommendedCPUTarget();
 
-	if (in_file == "") {
+	if (in_file.empty()) {
 		IG_LOG(L_ERROR) << "No input file given" << std::endl;
 		return EXIT_FAILURE;
 	}
@@ -169,7 +172,7 @@ int main(int argc, char** argv)
 		IG_LOG(L_ERROR) << "No valid spp count given" << std::endl;
 		return EXIT_FAILURE;
 	}
-	if (out_file == "") {
+	if (out_file.empty()) {
 		IG_LOG(L_ERROR) << "No output file given" << std::endl;
 		return EXIT_FAILURE;
 	}
@@ -205,7 +208,12 @@ int main(int argc, char** argv)
 
 	DebugMode currentDebugMode = UI::currentDebugMode();
 	runtime->setDebugMode(currentDebugMode);
+#else
+	StatusObserver observer(true, 2, bench_iter * SPP);
+	observer.begin();
 #endif
+
+	IG_LOG(L_INFO) << "Started rendering..." << std::endl;
 
 	bool running	= true;
 	bool done		= false;
@@ -224,6 +232,8 @@ int main(int argc, char** argv)
 			runtime->setDebugMode(currentDebugMode);
 			iter = 0;
 		}
+#else
+		observer.update(iter * SPP);
 #endif
 
 		if (running) {
@@ -278,7 +288,18 @@ int main(int argc, char** argv)
 
 #ifdef WITH_UI
 	UI::close();
+#else
+	observer.end();
 #endif
+
+	if (!out_file.empty()) {
+		if (iter == 0)
+			iter = 1;
+		if (!saveImageRGB(out_file, runtime->getFramebuffer(), film_width, film_height, 1.0f / iter))
+			IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file << "'" << std::endl;
+		else
+			IG_LOG(L_INFO) << "Result saved to '" << out_file << "'" << std::endl;
+	}
 
 	runtime.reset();
 
