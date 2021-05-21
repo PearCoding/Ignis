@@ -103,7 +103,7 @@ The Ignis Rodent client has an optional UI and multiple ways to interact with th
  - `F1` to toggle the help window.
  - `F2` to toggle the UI.
  - `F3` to toggle the interaction lock. If enabled, no view changing interaction is possible.
- - `F11` to save a screenshot. The image will be saved in the current working directory.
+ - `F11` to save a snapshot of the current rendering. HDR information will be preserved. Use with `Strg/Ctrl` to make a LDR screenshot of the current render including UI and tonemapping. The image will be saved in the current working directory.
  - `R` to reset to initial view.
  - `P` to pause current rendering. Also implies an interaction lock.
  - `T` to toggle automatic tonemapping.

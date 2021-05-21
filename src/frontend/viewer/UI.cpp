@@ -46,12 +46,12 @@ struct LuminanceInfo {
 	}
 };
 
-static int sPoseRequest		   = -1;
-static bool sPoseResetRequest  = false;
-static bool sScreenshotRequest = false;
-static bool sShowHelp		   = false;
-static bool sShowUI			   = true;
-static bool sLockInteraction   = false;
+static int sPoseRequest		  = -1;
+static bool sPoseResetRequest = false;
+static int sScreenshotRequest = 0; // 0-Nothing, 1-Screenshot, 2-Full screenshot
+static bool sShowHelp		  = false;
+static bool sShowUI			  = true;
+static bool sLockInteraction  = false;
 
 // Stats
 static LuminanceInfo sLastLum;
@@ -293,7 +293,10 @@ static bool handle_events(uint32_t& iter, bool& run, Camera& cam)
 					sLockInteraction = !sLockInteraction;
 					break;
 				case SDLK_F11:
-					sScreenshotRequest = true;
+					if (io.KeyCtrl)
+						sScreenshotRequest = 2;
+					else
+						sScreenshotRequest = 1;
 					break;
 				}
 			}
@@ -647,6 +650,74 @@ static void make_screenshot(size_t width, size_t height, uint32_t iter)
 		IG_LOG(L_INFO) << "Screenshot saved to '" << out_file.str() << "'" << std::endl;
 }
 
+static void make_full_screenshot()
+{
+	std::stringstream out_file;
+	auto now	   = std::chrono::system_clock::now();
+	auto in_time_t = std::chrono::system_clock::to_time_t(now);
+	out_file << "screenshot_full_" << std::put_time(std::localtime(&in_time_t), "%Y_%m_%d_%H_%M_%S") << ".png";
+
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+	Uint32 rmask = 0xff000000;
+	Uint32 gmask = 0x00ff0000;
+	Uint32 bmask = 0x0000ff00;
+	Uint32 amask = 0x000000ff;
+#else
+	Uint32 rmask = 0x000000ff;
+	Uint32 gmask = 0x0000ff00;
+	Uint32 bmask = 0x00ff0000;
+	Uint32 amask = 0xff000000;
+#endif
+
+	SDL_Surface* sshot = SDL_CreateRGBSurface(0, sWidth, sHeight, 32,
+											  rmask, gmask, bmask, amask);
+
+	if (!sshot) {
+		IG_LOG(L_ERROR) << "Failed to save PNG file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
+		return;
+	}
+
+	int ret = SDL_LockSurface(sshot);
+	if (ret != 0) {
+		IG_LOG(L_ERROR) << "Failed to save PNG file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
+		return;
+	}
+
+	ret = SDL_RenderReadPixels(sRenderer, nullptr, sshot->format->format,
+							   sshot->pixels, sshot->pitch);
+	if (ret != 0) {
+		IG_LOG(L_ERROR) << "Failed to save PNG file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
+		return;
+	}
+
+	float* rgba = new float[sWidth * sHeight * 4];
+	for (size_t y = 0; y < sHeight; ++y) {
+		const uint8* src = reinterpret_cast<const uint8*>(sshot->pixels) + y * sshot->pitch;
+		float* dst		 = rgba + y * sWidth * 4;
+		for (size_t x = 0; x < sWidth; ++x) {
+			uint32 pixel = *reinterpret_cast<const uint32*>(&src[x * sshot->format->BytesPerPixel]);
+
+			uint8 r, g, b, a;
+			SDL_GetRGBA(pixel, sshot->format, &r, &g, &b, &a);
+
+			dst[x * 4 + 0] = r / 255.0f;
+			dst[x * 4 + 1] = g / 255.0f;
+			dst[x * 4 + 2] = b / 255.0f;
+			dst[x * 4 + 3] = a / 255.0f;
+		}
+	}
+
+	SDL_UnlockSurface(sshot);
+	SDL_FreeSurface(sshot);
+
+	if (!saveImageRGBA(out_file.str(), rgba, sWidth, sHeight, 1))
+		IG_LOG(L_ERROR) << "Failed to save PNG file '" << out_file.str() << "'" << std::endl;
+	else
+		IG_LOG(L_INFO) << "Screenshot saved to '" << out_file.str() << "'" << std::endl;
+
+	delete[] rgba;
+}
+
 ////////////////////////////////////////////////////////////////
 
 bool init(int width, int height, const float* pixels, bool showDebug)
@@ -847,7 +918,8 @@ static void handle_help()
 - *F2* to toggle the UI.
 - *F3* to toggle the interaction lock. 
   If enabled, no view changing interaction is possible.
-- *F11* to save a screenshot.
+- *F11* to save a snapshot of the current rendering. HDR information will be preserved.
+  Use with *Strg/Ctrl* to make a LDR screenshot of the current render including UI and tonemapping.  
   The image will be saved in the current working directory.
 - *R* to reset to initial view.
 - *P* to pause current rendering. Also implies an interaction lock.
@@ -885,9 +957,17 @@ static void handle_help()
 void update(uint32_t iter)
 {
 	update_texture(sBuffer.data(), sTexture, sWidth, sHeight, iter);
-	if (sScreenshotRequest) {
+	switch (sScreenshotRequest) {
+	case 1:
 		make_screenshot(sWidth, sHeight, iter);
-		sScreenshotRequest = false;
+		sScreenshotRequest = 0;
+		break;
+	case 2:
+		make_full_screenshot();
+		sScreenshotRequest = 0;
+		break;
+	default:
+		break;
 	}
 	SDL_RenderClear(sRenderer);
 	SDL_RenderCopy(sRenderer, sTexture, nullptr, nullptr);
