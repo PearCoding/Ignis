@@ -13,10 +13,8 @@ struct Camera {
 
 	inline Camera(const Vector3f& e, const Vector3f& d, const Vector3f& u, float fov, float ratio, float tmin, float tmax)
 	{
-		Eye		  = e;
-		Direction = d.normalized();
-		Right	  = Direction.cross(u).normalized();
-		Up		  = Right.cross(Direction).normalized();
+		Eye = e;
+		update_dir(d.normalized(), u.normalized());
 
 		SensorWidth	 = std::tan(fov * Deg2Rad / 2);
 		SensorHeight = SensorWidth / ratio;
@@ -27,9 +25,14 @@ struct Camera {
 
 	inline void rotate(float yaw, float pitch)
 	{
-		Direction = Eigen::AngleAxisf(-pitch, Right) * Eigen::AngleAxisf(-yaw, Up) * Direction;
-		Right	  = Direction.cross(Up).normalized();
-		Up		  = Right.cross(Direction).normalized();
+		Eigen::AngleAxisf pitchAngle(-pitch, Vector3f::UnitX());
+
+		Direction = pitchAngle * Direction;
+		Right	  = pitchAngle * Right;
+		Up		  = pitchAngle * Up;
+
+		Direction = Eigen::AngleAxisf(-yaw, Up) * Direction;
+		update_dir(Direction, Up);
 	}
 
 	inline void roll(float angle)

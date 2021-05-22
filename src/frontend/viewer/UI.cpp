@@ -117,6 +117,8 @@ static bool handle_events(uint32_t& iter, bool& run, Camera& cam)
 	static std::array<bool, 12> arrows = { false, false, false, false, false, false, false, false, false, false, false, false };
 	static bool speed[2]			   = { false, false };
 	const float rspeed				   = 0.005f;
+	const float slow_factor			   = 0.1f;
+	const float fast_factor			   = 1.5f;
 	static float tspeed				   = 0.1f;
 
 	const bool canInteract = !sLockInteraction && run;
@@ -317,7 +319,8 @@ static bool handle_events(uint32_t& iter, bool& run, Camera& cam)
 			break;
 		case SDL_MOUSEMOTION:
 			if (camera_on && !hover && canInteract) {
-				cam.rotate(event.motion.xrel * rspeed, event.motion.yrel * rspeed);
+				const float aspeed = rspeed * (io.KeyCtrl ? fast_factor : (io.KeyShift ? slow_factor : 1.0f));
+				cam.rotate(event.motion.xrel * aspeed, event.motion.yrel * aspeed);
 				iter = 0;
 			}
 			break;
