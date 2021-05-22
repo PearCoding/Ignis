@@ -25,10 +25,11 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
             let sample_direct = light.sample_direct;
             let light_sample  = @sample_direct(rnd, surf);
             if light.infinite {
-                let light_dir = light_sample.posdir; // Infinite lights return a direction instead of a position
-                let vis = device.intrinsics.fabsf(vec3_dot(light_dir, surf.local.col(2)));
+                let light_dir    = light_sample.posdir; // Infinite lights return a direction instead of a position
+                let vis          = vec3_dot(light_dir, surf.local.col(2));
+                let correct_side = surf.is_entering ^ (vis < 0);
 
-                if likely(vis > flt_eps) {
+                if correct_side {
                     let in_dir  = light_dir; // TODO: Check correct orientation
                     let out_dir = vec3_neg(ray.dir);
 
@@ -45,10 +46,11 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                     ))
                 }
             }  else {
-                let light_dir = vec3_sub(light_sample.posdir, surf.point);
-                let vis = device.intrinsics.fabsf(vec3_dot(light_dir, surf.local.col(2)));
+                let light_dir    = vec3_sub(light_sample.posdir, surf.point);
+                let vis          = vec3_dot(light_dir, surf.local.col(2));
+                let correct_side = surf.is_entering ^ (vis < 0);  
 
-                if likely(vis > flt_eps) && light_sample.cos > flt_eps {
+                if correct_side && light_sample.cos > flt_eps {
                     let inv_d   = 1 / vec3_len(device.intrinsics, light_dir);
                     let inv_d2  = inv_d * inv_d;
                     let in_dir  = vec3_mulf(light_dir, inv_d);
