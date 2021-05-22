@@ -49,7 +49,7 @@ void Logger::setQuiet(bool b)
 	if (mQuiet == b)
 		return;
 
-	if (b)
+	if (!b)
 		addListener(mConsoleLogListener);
 	else
 		removeListener(mConsoleLogListener);

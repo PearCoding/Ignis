@@ -25,6 +25,13 @@ project(Ignis
 	VERSION 0.1
 	DESCRIPTION "Experimental ray tracer")
 
+# For whatever reason Ignis might be used as a subproject...
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+	set(IG_SUBPROJECT OFF)
+else()
+	set(IG_SUBPROJECT ON)
+endif()
+
 # Set corresponding output directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -33,7 +40,14 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 set(CMAKE_DEBUG_POSTFIX  "_d")
 
+set(Ignis_VENDOR "Ignis project 2020-2021")
+include(Git)
+
 message(STATUS "Building Ignis Rodent ${Ignis_VERSION}")
+
+if(NOT IG_SUBPROJECT)
+    include(CTest)
+endif()
 
 # Options
 option(IG_WITH_VIEWER     "Build interactive viewer igview" ON)
@@ -101,6 +115,9 @@ endif()
 if(IG_HAS_PYTHON_API)
 	message(STATUS "Building with Python API")
 endif()
+
+configure_file(src/backend/runtime/config/Git.h.in     ${CMAKE_CURRENT_BINARY_DIR}/config/Git.h)
+configure_file(src/backend/runtime/config/Version.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/Version.h)
 
 # Traverse to underlying directories
 add_subdirectory(src)

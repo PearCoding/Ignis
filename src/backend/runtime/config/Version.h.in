@@ -1,0 +1,13 @@
+#pragma once
+
+// clang-format off
+#define IG_NAME_STRING		"${PROJECT_NAME}"
+#define IG_VENDOR_STRING	"${Ignis_VENDOR}"
+
+#define IG_VERSION_MAJOR	${Ignis_VERSION_MAJOR}
+#define IG_VERSION_MINOR	${Ignis_VERSION_MINOR}
+#define IG_VERSION_STRING 	"${Ignis_VERSION}"
+
+#define IG_VERSION_BUILD(major, minor) (((major) << 8) | (minor))
+#define IG_VERSION			IG_VERSION_BUILD(IG_VERSION_MAJOR, IG_VERSION_MINOR)
+// clang-format on

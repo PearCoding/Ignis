@@ -9,6 +9,7 @@
 
 #include "Logger.h"
 #include "Runtime.h"
+#include "config/Build.h"
 #include "driver/Configuration.h"
 
 #include <optional>
@@ -23,11 +24,26 @@ static inline void check_arg(int argc, char** argv, int arg, int n)
 		IG_LOG(L_ERROR) << "Option '" << argv[arg] << "' expects " << n << " arguments, got " << (argc - arg) << std::endl;
 }
 
+#ifdef WITH_UI
+static const char* PROGRAM_NAME = "igview";
+#else
+static const char* PROGRAM_NAME = "igcli";
+#endif
+
+static inline void version()
+{
+	std::cout << PROGRAM_NAME << " " << Build::getVersionString() << std::endl;
+}
+
 static inline void usage()
 {
-	std::cout << "Usage: ignis file [options]\n"
+	std::cout << "Usage: " << PROGRAM_NAME << " file [options]\n"
 			  << "Available options:\n"
 			  << "   -h      --help                 Shows this message\n"
+			  << "           --version              Show version and exit\n"
+			  << "   -q      --quiet                Do not print messages into console\n"
+			  << "   -v      --verbose              Print detailed information\n"
+			  << "           --no-color             Do not use decorations to make console output better\n"
 			  << "           --width     pixels     Sets the viewport horizontal dimension (in pixels)\n"
 			  << "           --height    pixels     Sets the viewport vertical dimension (in pixels)\n"
 			  << "           --eye       x y z      Sets the position of the camera\n"
@@ -70,6 +86,8 @@ int main(int argc, char** argv)
 	int device	  = 0;
 	std::string overrideTechnique;
 	std::string overrideCamera;
+	bool prettyConsole = true;
+	bool quiet		   = false;
 
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
@@ -142,8 +160,19 @@ int main(int argc, char** argv)
 			} else if (!strcmp(argv[i], "--technique")) {
 				check_arg(argc, argv, i, 1);
 				overrideTechnique = argv[++i];
+			} else if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet")) {
+				quiet = true;
+				IG_LOGGER.setQuiet(true);
+			} else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--verbose")) {
+				IG_LOGGER.setVerbosity(L_DEBUG);
+			} else if (!strcmp(argv[i], "--no-color")) {
+				prettyConsole = false;
+				IG_LOGGER.enableAnsiTerminal(false);
 			} else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
 				usage();
+				return EXIT_SUCCESS;
+			} else if (!strcmp(argv[i], "--version")) {
+				version();
 				return EXIT_SUCCESS;
 			} else {
 				IG_LOG(L_ERROR) << "Unknown option '" << argv[i] << "'" << std::endl;
@@ -158,6 +187,9 @@ int main(int argc, char** argv)
 			}
 		}
 	}
+
+	if (!quiet)
+		std::cout << Build::getCopyrightString() << std::endl;
 
 	if (target == Target::INVALID)
 		target = getRecommendedCPUTarget();
@@ -202,6 +234,8 @@ int main(int argc, char** argv)
 	runtime->setup(film_width, film_height);
 
 #ifdef WITH_UI
+	IG_UNUSED(prettyConsole);
+
 	bool isDebug = runtime->configuration() & IG_C_RENDERER_DEBUG;
 	if (!UI::init(film_width, film_height, runtime->getFramebuffer(), isDebug))
 		return EXIT_FAILURE;
@@ -209,7 +243,7 @@ int main(int argc, char** argv)
 	DebugMode currentDebugMode = UI::currentDebugMode();
 	runtime->setDebugMode(currentDebugMode);
 #else
-	StatusObserver observer(true, 2, bench_iter * SPP);
+	StatusObserver observer(prettyConsole, 2, bench_iter * SPP);
 	observer.begin();
 #endif
 

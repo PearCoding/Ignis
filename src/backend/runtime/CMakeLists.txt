@@ -49,6 +49,10 @@ set(SRC
     bvh/MemoryPool.h
     bvh/SceneBVHAdapter.h
     bvh/TriBVHAdapter.h
+    config/Build.cpp
+    config/Build.h
+    config/Git.h.in
+    config/Version.h.in
     driver/Configuration.cpp
     driver/Configuration.h
     driver/DriverManager.cpp

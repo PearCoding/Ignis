@@ -1,5 +1,6 @@
 #include "Logger.h"
 #include "Runtime.h"
+#include "config/Build.h"
 
 #include <fstream>
 #include <sstream>
@@ -12,11 +13,20 @@ static inline void check_arg(int argc, char** argv, int arg, int n)
 		IG_LOG(L_ERROR) << "Option '" << argv[arg] << "' expects " << n << " arguments, got " << (argc - arg) << std::endl;
 }
 
+static inline void version()
+{
+	std::cout << "igtrace " << Build::getVersionString() << std::endl;
+}
+
 static inline void usage()
 {
 	std::cout << "Usage: igtrace file [options]\n"
 			  << "Available options:\n"
 			  << "   -h      --help                   Shows this message\n"
+			  << "           --version                Show version and exit\n"
+			  << "   -q      --quiet                  Do not print messages into console\n"
+			  << "   -v      --verbose                Print detailed information\n"
+			  << "           --no-color               Do not use decorations to make console output better\n"
 			  << "   -t      --target   target        Sets the target platform (default: autodetect CPU)\n"
 			  << "   -d      --device   device        Sets the device to use on the selected platform (default: 0)\n"
 			  << "           --cpu                    Use autodetected CPU target\n"
@@ -39,8 +49,12 @@ static inline float safe_rcp(float x)
 static std::vector<Ray> read_input(std::istream& is, bool file)
 {
 	std::vector<Ray> rays;
-	for (std::string line; std::getline(is, line);) {
-		if (line.empty())
+	while (true) {
+		if (!file)
+			std::cout << ">> ";
+
+		std::string line;
+		if (!std::getline(is, line) || line.empty())
 			break;
 
 		std::stringstream stream(line);
@@ -72,6 +86,8 @@ int main(int argc, char** argv)
 	std::string out_file;
 	Target target = Target::INVALID;
 	int device	  = 0;
+	bool quiet	  = false;
+
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
 			if (!strcmp(argv[i], "-n") || !strcmp(argv[i], "--count")) {
@@ -83,8 +99,18 @@ int main(int argc, char** argv)
 			} else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--input")) {
 				check_arg(argc, argv, i, 1);
 				ray_file = argv[++i];
+			} else if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet")) {
+				quiet = true;
+				IG_LOGGER.setQuiet(true);
+			} else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--verbose")) {
+				IG_LOGGER.setVerbosity(L_DEBUG);
+			} else if (!strcmp(argv[i], "--no-color")) {
+				IG_LOGGER.enableAnsiTerminal(false);
 			} else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
 				usage();
+				return EXIT_SUCCESS;
+			} else if (!strcmp(argv[i], "--version")) {
+				version();
 				return EXIT_SUCCESS;
 			} else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--target")) {
 				check_arg(argc, argv, i++, 1);
@@ -132,6 +158,9 @@ int main(int argc, char** argv)
 			}
 		}
 	}
+
+	if (!quiet)
+		std::cout << Build::getCopyrightString() << std::endl;
 
 	if (target == Target::INVALID)
 		target = getRecommendedCPUTarget();
