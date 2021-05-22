@@ -147,11 +147,11 @@ void extractMeshIndices(TriMesh& trimesh, CompressedStream& cin)
 	}
 }
 
-TriMesh load(const std::filesystem::path& file, size_t shapeIndex)
+TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
 {
-	std::fstream stream(file, std::ios::in | std::ios::binary);
+	std::fstream stream(path, std::ios::in | std::ios::binary);
 	if (!stream) {
-		IG_LOG(L_ERROR) << "Given file '" << file << "' can not be opened." << std::endl;
+		IG_LOG(L_ERROR) << "Given file '" << path << "' can not be opened." << std::endl;
 		return TriMesh{};
 	}
 
@@ -161,12 +161,12 @@ TriMesh load(const std::filesystem::path& file, size_t shapeIndex)
 	stream.read(reinterpret_cast<char*>(&fileIdent), sizeof(fileIdent));
 
 	if (fileIdent != 0x041C) {
-		IG_LOG(L_ERROR) << "Given file '" << file << "' is not a valid Mitsuba serialized file." << std::endl;
+		IG_LOG(L_ERROR) << "Given file '" << path << "' is not a valid Mitsuba serialized file." << std::endl;
 		return TriMesh{};
 	}
 	stream.read(reinterpret_cast<char*>(&fileVersion), sizeof(fileVersion));
 	if (fileVersion < 3) {
-		IG_LOG(L_ERROR) << "Given file '" << file << "' has an insufficient version number " << fileVersion << " < 3." << std::endl;
+		IG_LOG(L_ERROR) << "Given file '" << path << "' has an insufficient version number " << fileVersion << " < 3." << std::endl;
 		return TriMesh{};
 	}
 
@@ -176,12 +176,12 @@ TriMesh load(const std::filesystem::path& file, size_t shapeIndex)
 	stream.read(reinterpret_cast<char*>(&shapeCount), sizeof(shapeCount));
 
 	if (!stream.good()) {
-		IG_LOG(L_ERROR) << "Given file '" << file << "' can not access end of file dictionary." << std::endl;
+		IG_LOG(L_ERROR) << "Given file '" << path << "' can not access end of file dictionary." << std::endl;
 		return TriMesh{};
 	}
 
 	if (shapeIndex >= shapeCount) {
-		IG_LOG(L_ERROR) << "Given file '" << file << "' can not access shape index " << shapeIndex << " as it only contains " << shapeCount << " shapes." << std::endl;
+		IG_LOG(L_ERROR) << "Given file '" << path << "' can not access shape index " << shapeIndex << " as it only contains " << shapeCount << " shapes." << std::endl;
 		return TriMesh{};
 	}
 
@@ -194,7 +194,7 @@ TriMesh load(const std::filesystem::path& file, size_t shapeIndex)
 		stream.read(reinterpret_cast<char*>(&shapeFileStart), sizeof(shapeFileStart));
 
 		if (!stream.good()) {
-			IG_LOG(L_ERROR) << "Given file '" << file << "' could not extract shape file offset." << std::endl;
+			IG_LOG(L_ERROR) << "Given file '" << path << "' could not extract shape file offset." << std::endl;
 			return TriMesh{};
 		}
 
@@ -214,7 +214,7 @@ TriMesh load(const std::filesystem::path& file, size_t shapeIndex)
 		stream.read(reinterpret_cast<char*>(&_shapeFileStart), sizeof(_shapeFileStart));
 
 		if (!stream.good()) {
-			IG_LOG(L_ERROR) << "Given file '" << file << "' could not extract shape file offset." << std::endl;
+			IG_LOG(L_ERROR) << "Given file '" << path << "' could not extract shape file offset." << std::endl;
 			return TriMesh{};
 		}
 
@@ -232,7 +232,7 @@ TriMesh load(const std::filesystem::path& file, size_t shapeIndex)
 	}
 
 	if (!stream.good()) {
-		IG_LOG(L_ERROR) << "Given file '" << file << "' could not extract shape file offset." << std::endl;
+		IG_LOG(L_ERROR) << "Given file '" << path << "' could not extract shape file offset." << std::endl;
 		return TriMesh{};
 	}
 
@@ -260,7 +260,7 @@ TriMesh load(const std::filesystem::path& file, size_t shapeIndex)
 	cin.read(&triCount);
 
 	if (vertexCount == 0 || triCount == 0) {
-		IG_LOG(L_ERROR) << "Given file '" << file << "' has no valid mesh." << std::endl;
+		IG_LOG(L_ERROR) << "Given file '" << path << "' has no valid mesh." << std::endl;
 		return TriMesh{};
 	}
 
@@ -282,17 +282,23 @@ TriMesh load(const std::filesystem::path& file, size_t shapeIndex)
 	else
 		extractMeshIndices<uint32_t>(trimesh, cin);
 
-	trimesh.computeFaceNormals();
+	bool hasBadAreas = false;
+	trimesh.computeFaceNormals(0, &hasBadAreas);
+	if (hasBadAreas)
+		IG_LOG(L_WARNING) << "MtsFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
 
 	if (!(mesh_flags & MF_VERTEXNORMALS)) {
-		IG_LOG(L_WARNING) << "No normals are present, computing smooth approximation." << std::endl;
+		IG_LOG(L_WARNING) << "MtsFile " << path << ": No normals are present, computing smooth approximation." << std::endl;
 		trimesh.computeVertexNormals();
 	} else {
-		trimesh.fixNormals();
+		bool hasBadNormals = false;
+		trimesh.fixNormals(&hasBadNormals);
+		if (hasBadNormals)
+			IG_LOG(L_WARNING) << "MtsFile " << path << ": Some normals were incorrect and thus had to be replaced with arbitrary values." << std::endl;
 	}
 
 	if (!(mesh_flags & MF_TEXCOORDS)) {
-		IG_LOG(L_WARNING) << "No texture coordinates are present, using default value." << std::endl;
+		IG_LOG(L_WARNING) << "MtsFile " << path << ": No texture coordinates are present, using default value." << std::endl;
 		std::fill(trimesh.texcoords.begin(), trimesh.texcoords.end(), Vector2f::Zero());
 	}
 

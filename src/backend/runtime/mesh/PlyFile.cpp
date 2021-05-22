@@ -48,7 +48,7 @@ struct Header {
 	inline bool hasIndices() const { return IndElem >= 0; }
 };
 
-static TriMesh read(std::istream& stream, const Header& header, bool ascii)
+static TriMesh read(const std::filesystem::path& path, std::istream& stream, const Header& header, bool ascii)
 {
 	const auto readFloat = [&]() {
 		float val;
@@ -82,7 +82,7 @@ static TriMesh read(std::istream& stream, const Header& header, bool ascii)
 		if (ascii) {
 			std::string line;
 			if (!std::getline(stream, line)) {
-				IG_LOG(L_ERROR) << "Not enough vertices given" << std::endl;
+				IG_LOG(L_ERROR) << "PlyFile " << path << ": Not enough vertices given" << std::endl;
 				return TriMesh{}; // Failed
 			}
 
@@ -147,7 +147,7 @@ static TriMesh read(std::istream& stream, const Header& header, bool ascii)
 	}
 
 	if (trimesh.vertices.empty()) {
-		IG_LOG(L_ERROR) << "No vertices found in ply file" << std::endl;
+		IG_LOG(L_ERROR) << "PlyFile " << path << ": No vertices found in ply file" << std::endl;
 		return TriMesh{}; // Failed
 	}
 
@@ -157,7 +157,7 @@ static TriMesh read(std::istream& stream, const Header& header, bool ascii)
 		for (int i = 0; i < header.FaceCount; ++i) {
 			std::string line;
 			if (!std::getline(stream, line)) {
-				IG_LOG(L_ERROR) << "Not enough indices given" << std::endl;
+				IG_LOG(L_ERROR) << "PlyFile " << path << ": Not enough indices given" << std::endl;
 				return TriMesh{}; // Failed
 			}
 
@@ -178,7 +178,7 @@ static TriMesh read(std::istream& stream, const Header& header, bool ascii)
 			}
 
 			if (elems != 3 && elems != 4) {
-				IG_LOG(L_ERROR) << "Only triangle or quads allowed in ply files" << std::endl;
+				IG_LOG(L_ERROR) << "PlyFile " << path << ": Only triangle or quads allowed in ply files" << std::endl;
 				return TriMesh{};
 			}
 		}
@@ -199,7 +199,7 @@ static TriMesh read(std::istream& stream, const Header& header, bool ascii)
 			}
 
 			if (elems != 3 && elems != 4) {
-				IG_LOG(L_ERROR) << "Only triangle or quads allowed in ply files" << std::endl;
+				IG_LOG(L_ERROR) << "PlyFile " << path << ": Only triangle or quads allowed in ply files" << std::endl;
 				return TriMesh{};
 			}
 		}
@@ -287,14 +287,14 @@ TriMesh load(const std::filesystem::path& path)
 				std::string name;
 				sstream >> name;
 				if (!isAllowedVertIndType(countType)) {
-					IG_LOG(L_WARNING) << "Only 'property list uchar int' is supported" << std::endl;
+					IG_LOG(L_WARNING) << "PlyFile " << path << ": Only 'property list uchar int' is supported" << std::endl;
 					continue;
 				}
 
 				if (name == "vertex_indices")
 					header.IndElem = facePropCounter - 1;
 			} else {
-				IG_LOG(L_WARNING) << "Only float or list properties allowed. Ignoring..." << std::endl;
+				IG_LOG(L_WARNING) << "PlyFile " << path << ": Only float or list properties allowed. Ignoring..." << std::endl;
 				++header.VertexPropCount;
 			}
 		} else if (action == "end_header")
@@ -308,21 +308,27 @@ TriMesh load(const std::filesystem::path& path)
 	}
 
 	header.SwitchEndianness = (method == "binary_big_endian");
-	TriMesh trimesh			= read(stream, header, (method == "ascii"));
+	TriMesh trimesh			= read(path, stream, header, (method == "ascii"));
 	if (trimesh.vertices.empty())
 		return trimesh;
 
-	trimesh.computeFaceNormals();
+	bool hasBadAreas = false;
+	trimesh.computeFaceNormals(0, &hasBadAreas);
+	if (hasBadAreas)
+		IG_LOG(L_WARNING) << "PlyFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
 
 	if (trimesh.normals.empty()) {
-		IG_LOG(L_WARNING) << "No normals are present, computing smooth approximation." << std::endl;
+		IG_LOG(L_WARNING) << "PlyFile " << path << ": No normals are present, computing smooth approximation." << std::endl;
 		trimesh.computeVertexNormals();
 	} else {
-		trimesh.fixNormals();
+		bool hasBadNormals = false;
+		trimesh.fixNormals(&hasBadNormals);
+		if (hasBadNormals)
+			IG_LOG(L_WARNING) << "PlyFile " << path << ": Some normals were incorrect and thus had to be replaced with arbitrary values." << std::endl;
 	}
 
 	if (trimesh.texcoords.empty()) {
-		IG_LOG(L_WARNING) << "No texture coordinates are present, using default value." << std::endl;
+		IG_LOG(L_WARNING) << "PlyFile " << path << ": No texture coordinates are present, using default value." << std::endl;
 		trimesh.makeTexCoordsZero();
 	}
 

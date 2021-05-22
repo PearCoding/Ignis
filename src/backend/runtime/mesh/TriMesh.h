@@ -22,14 +22,14 @@ struct TriMesh {
 
 	inline size_t faceCount() const { return indices.size() / 4; }
 
-	void fixNormals();
+	void fixNormals(bool* hasBadNormals = nullptr);
 	void flipNormals();
 	void scale(float scale);
 	void mergeFrom(const TriMesh& src);
 	void replaceID(uint32 m_idx);
 
-	void computeFaceAreaOnly(size_t first_index = 0);
-	void computeFaceNormals(size_t first_index = 0);
+	void computeFaceAreaOnly(size_t first_index = 0, bool* hasBadAreas = nullptr);
+	void computeFaceNormals(size_t first_index = 0, bool* hasBadAreas = nullptr);
 	void computeVertexNormals(size_t first_index = 0);
 	void makeTexCoordsZero();
 	void setupFaceNormalsAsVertexNormals();

@@ -27,7 +27,7 @@ struct Triangle {
 	}
 
 	/// Splits the triangle along one axis and returns the resulting two bounding boxes.
-	void computeSplit(BoundingBox& left_bb, BoundingBox& right_bb, int axis, float split) const
+	inline void computeSplit(BoundingBox& left_bb, BoundingBox& right_bb, int axis, float split) const
 	{
 		left_bb	 = BoundingBox::Empty();
 		right_bb = BoundingBox::Empty();

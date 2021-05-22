@@ -9,7 +9,15 @@
 
 #include "serialization/VectorSerializer.h"
 
+#include <chrono>
 #include <sstream>
+
+#include <tbb/parallel_for.h>
+
+// Does not improve much, as it is IO bounded
+#define IG_PARALLEL_LOAD_SHAPE
+// There is no reason to not build multiple BVHs in parallel
+#define IG_PARALLEL_BVH
 
 namespace IG {
 
@@ -93,154 +101,229 @@ inline TriMesh setup_mesh_disk(const Object& elem)
 	return TriMesh::MakeDisk(origin, normal, radius, sections);
 }
 
-inline TriMesh setup_mesh_obj(const Object& elem, const LoaderContext& ctx)
+inline TriMesh setup_mesh_obj(const std::string& name, const Object& elem, const LoaderContext& ctx)
 {
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
-	IG_LOG(L_DEBUG) << "Trying to load obj file " << filename << std::endl;
+	// IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load obj file " << filename << std::endl;
 	auto trimesh = obj::load(filename, 0);
 	if (trimesh.vertices.empty()) {
-		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << std::endl;
+		IG_LOG(L_WARNING) << "Shape '" << name << "': Can not load shape given by file " << filename << std::endl;
 		return TriMesh();
 	}
 
 	return trimesh;
 }
 
-inline TriMesh setup_mesh_ply(const Object& elem, const LoaderContext& ctx)
+inline TriMesh setup_mesh_ply(const std::string& name, const Object& elem, const LoaderContext& ctx)
 {
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
-	IG_LOG(L_DEBUG) << "Trying to load ply file " << filename << std::endl;
+	// IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load ply file " << filename << std::endl;
 	auto trimesh = ply::load(filename);
 	if (trimesh.vertices.empty()) {
-		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << std::endl;
+		IG_LOG(L_WARNING) << "Shape '" << name << "': Can not load shape given by file " << filename << std::endl;
 		return TriMesh();
 	}
 	return trimesh;
 }
 
-inline TriMesh setup_mesh_mitsuba(const Object& elem, const LoaderContext& ctx)
+inline TriMesh setup_mesh_mitsuba(const std::string& name, const Object& elem, const LoaderContext& ctx)
 {
 	size_t shape_index	= elem.property("shape_index").getInteger(0);
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
-	IG_LOG(L_DEBUG) << "Trying to load serialized mitsuba file " << filename << std::endl;
+	// IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load serialized mitsuba file " << filename << std::endl;
 	auto trimesh = mts::load(filename, shape_index);
 	if (trimesh.vertices.empty()) {
-		IG_LOG(L_WARNING) << "Can not load shape given by file " << filename << std::endl;
+		IG_LOG(L_WARNING) << "Shape '" << name << "': Can not load shape given by file " << filename << std::endl;
 		return TriMesh();
 	}
 	return trimesh;
 }
 
 template <size_t N, size_t T>
-static void setup_prim_bvh(VectorSerializer& serializer, const TriMesh& mesh)
-{
+struct BvhTemporary {
 	std::vector<typename BvhNTriM<N, T>::Node> nodes;
 	std::vector<typename BvhNTriM<N, T>::Tri> tris;
-	build_bvh<N, T>(mesh, nodes, tris);
-	serializer.write((uint32)nodes.size());
-	serializer.write((uint32)0); // Padding
-	serializer.write((uint32)0); // Padding
-	serializer.write((uint32)0); // Padding
-	serializer.write(nodes, true);
-	serializer.write(tris, true);
+};
+
+template <size_t N, size_t T>
+static void setup_bvhs(const std::vector<TriMesh>& meshes, LoaderResult& result)
+{
+	// Preload map entries
+	std::vector<BvhTemporary<N, T>> bvhs;
+	bvhs.resize(meshes.size());
+
+	const auto build_mesh = [&](size_t id) {
+		BvhTemporary<N, T>& tmp = bvhs[id];
+		const TriMesh& mesh		= meshes.at(id);
+
+		build_bvh<N, T>(mesh, tmp.nodes, tmp.tris);
+	};
+
+	// Start building!
+	IG_LOG(L_DEBUG) << "Building BVHs ..." << std::endl;
+	const auto start1 = std::chrono::high_resolution_clock::now();
+#ifdef IG_PARALLEL_BVH
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, meshes.size()),
+					  [&](const tbb::blocked_range<size_t>& range) {
+						  for (size_t i = range.begin(); i != range.end(); ++i)
+							  build_mesh(i);
+					  });
+#else
+	for (size_t i = 0; i < meshes.size(); ++i)
+		build_mesh(i);
+#endif
+	IG_LOG(L_DEBUG) << "Building BVHs took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
+
+	// Write non-parallel
+	IG_LOG(L_DEBUG) << "Storing BVHs ..." << std::endl;
+	const auto start2 = std::chrono::high_resolution_clock::now();
+	for (const auto& bvh : bvhs) {
+		auto& bvhData = result.Database.BVHTable.addLookup(0, DefaultAlignment);
+		VectorSerializer serializer(bvhData, false);
+		serializer.write((uint32)bvh.nodes.size());
+		serializer.write((uint32)0); // Padding
+		serializer.write((uint32)0); // Padding
+		serializer.write((uint32)0); // Padding
+		serializer.write(bvh.nodes, true);
+		serializer.write(bvh.tris, true);
+	}
+	IG_LOG(L_DEBUG) << "Storing BVHs took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start2).count() / 1000.0f << " seconds" << std::endl;
 }
 
 bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 {
-	for (const auto& pair : ctx.Scene.shapes()) {
-		const auto child = pair.second;
+	// To make use of parallelization and workaround the map restrictions
+	// we do have to construct a map
+	std::vector<std::string_view> ids;
+	ids.reserve(ctx.Scene.shapes().size());
+	for (const auto& pair : ctx.Scene.shapes())
+		ids.push_back(pair.first);
 
-		TriMesh child_mesh;
+	// Preallocate mesh storage
+	std::vector<TriMesh> meshes;
+	meshes.resize(ctx.Scene.shapes().size());
+	std::vector<BoundingBox> boxes;
+	boxes.resize(ctx.Scene.shapes().size());
+
+	// Load meshes in parallel
+	// This is not always useful as the bottleneck is provably the IO, but better trying...
+	const auto load_mesh = [&](size_t i) {
+		const std::string name = std::string(ids.at(i));
+		const auto child	   = ctx.Scene.shape(name);
+
+		TriMesh& mesh = meshes[i];
 		if (child->pluginType() == "rectangle") {
-			child_mesh = setup_mesh_rectangle(*child);
+			mesh = setup_mesh_rectangle(*child);
 		} else if (child->pluginType() == "cube") {
-			child_mesh = setup_mesh_cube(*child);
+			mesh = setup_mesh_cube(*child);
 		} else if (child->pluginType() == "sphere") {
-			child_mesh = setup_mesh_sphere(*child);
+			mesh = setup_mesh_sphere(*child);
 		} else if (child->pluginType() == "cylinder") {
-			child_mesh = setup_mesh_cylinder(*child);
+			mesh = setup_mesh_cylinder(*child);
 		} else if (child->pluginType() == "cone") {
-			child_mesh = setup_mesh_cone(*child);
+			mesh = setup_mesh_cone(*child);
 		} else if (child->pluginType() == "disk") {
-			child_mesh = setup_mesh_disk(*child);
+			mesh = setup_mesh_disk(*child);
 		} else if (child->pluginType() == "obj") {
-			child_mesh = setup_mesh_obj(*child, ctx);
+			mesh = setup_mesh_obj(name, *child, ctx);
 		} else if (child->pluginType() == "ply") {
-			child_mesh = setup_mesh_ply(*child, ctx);
+			mesh = setup_mesh_ply(name, *child, ctx);
 		} else if (child->pluginType() == "mitsuba") {
-			child_mesh = setup_mesh_mitsuba(*child, ctx);
+			mesh = setup_mesh_mitsuba(name, *child, ctx);
 		} else {
-			IG_LOG(L_WARNING) << "Can not load shape type '" << child->pluginType() << "'" << std::endl;
-			continue;
+			IG_LOG(L_WARNING) << "Shape '" << name << "': Can not load shape type '" << child->pluginType() << "'" << std::endl;
+			return;
 		}
 
-		if (child_mesh.vertices.empty()) {
-			IG_LOG(L_WARNING) << "While loading shape type '" << child->pluginType() << "' no vertices were generated" << std::endl;
-			continue;
+		if (mesh.vertices.empty()) {
+			IG_LOG(L_WARNING) << "Shape '" << name << "': While loading shape type '" << child->pluginType() << "' no vertices were generated" << std::endl;
+			return;
 		}
 
 		if (child->property("flip_normals").getBool())
-			child_mesh.flipNormals();
+			mesh.flipNormals();
 
 		if (child->property("face_normals").getBool())
-			child_mesh.setupFaceNormalsAsVertexNormals();
+			mesh.setupFaceNormalsAsVertexNormals();
 
 		TransformCache transform = TransformCache(child->property("transform").getTransform());
 		if (!transform.TransformMatrix.isIdentity()) {
-			for (size_t i = 0; i < child_mesh.vertices.size(); ++i)
-				child_mesh.vertices[i] = transform.applyTransform(child_mesh.vertices[i]);
-			for (size_t i = 0; i < child_mesh.normals.size(); ++i)
-				child_mesh.normals[i] = transform.applyNormal(child_mesh.normals[i]);
-			for (size_t i = 0; i < child_mesh.face_normals.size(); ++i)
-				child_mesh.face_normals[i] = transform.applyNormal(child_mesh.face_normals[i]);
+			for (size_t i = 0; i < mesh.vertices.size(); ++i)
+				mesh.vertices[i] = transform.applyTransform(mesh.vertices[i]);
+			for (size_t i = 0; i < mesh.normals.size(); ++i)
+				mesh.normals[i] = transform.applyNormal(mesh.normals[i]);
+			for (size_t i = 0; i < mesh.face_normals.size(); ++i)
+				mesh.face_normals[i] = transform.applyNormal(mesh.face_normals[i]);
 		}
 
 		// Build bounding box
-		BoundingBox bbox = BoundingBox::Empty();
-		for (const auto& v : child_mesh.vertices)
+		BoundingBox& bbox = boxes[i];
+		bbox			  = BoundingBox::Empty();
+		for (const auto& v : mesh.vertices)
 			bbox.extend(v);
 		bbox.inflate(1e-5f); // Make sure it has a volume
+	};
+
+	// Start loading!
+	IG_LOG(L_DEBUG) << "Loading shapes..." << std::endl;
+	const auto start1 = std::chrono::high_resolution_clock::now();
+#ifdef IG_PARALLEL_LOAD_SHAPE
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, meshes.size()),
+					  [&](const tbb::blocked_range<size_t>& range) {
+						  for (size_t i = range.begin(); i != range.end(); ++i)
+							  load_mesh(i);
+					  });
+#else
+	for (size_t i = 0; i < meshes.size(); ++i)
+		load_mesh(i);
+#endif
+	IG_LOG(L_DEBUG) << "Loading of shapes took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
+
+	// Write non-parallel
+	IG_LOG(L_DEBUG) << "Storing triangle meshes..." << std::endl;
+	size_t counter	  = 0;
+	const auto start2 = std::chrono::high_resolution_clock::now();
+	for (const auto& pair : ctx.Scene.shapes()) {
+		const size_t id		= counter++;
+		const TriMesh& mesh = meshes.at(id);
 
 		// Register shape into environment
-		const uint32 shapeID = ctx.Environment.Shapes.size();
 		Shape shape;
-		shape.VtxCount	  = child_mesh.vertices.size();
-		shape.ItxCount	  = child_mesh.indices.size();
-		shape.BoundingBox = bbox;
+		shape.VtxCount	  = mesh.vertices.size();
+		shape.ItxCount	  = mesh.indices.size();
+		shape.BoundingBox = boxes.at(id);
 
+		const uint32 shapeID = ctx.Environment.Shapes.size();
 		ctx.Environment.Shapes.push_back(shape);
 		ctx.Environment.ShapeIDs[pair.first] = shapeID;
 
-		IG_ASSERT(child_mesh.face_normals.size() == child_mesh.faceCount(), "Expected valid face normals!");
-		IG_ASSERT((child_mesh.indices.size() % 4) == 0, "Expected index buffer count to be a multiple of 4!");
+		IG_ASSERT(mesh.face_normals.size() == mesh.faceCount(), "Expected valid face normals!");
+		IG_ASSERT((mesh.indices.size() % 4) == 0, "Expected index buffer count to be a multiple of 4!");
 
 		// Export data:
 		IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << pair.first << std::endl;
 
 		auto& meshData = result.Database.ShapeTable.addLookup(0, DefaultAlignment); // TODO: No use of the typeid currently
 		VectorSerializer meshSerializer(meshData, false);
-		meshSerializer.write((uint32)child_mesh.faceCount());
-		meshSerializer.write((uint32)child_mesh.vertices.size());
-		meshSerializer.write((uint32)child_mesh.normals.size());
-		meshSerializer.write((uint32)child_mesh.texcoords.size());
-		meshSerializer.writeAligned(child_mesh.vertices, DefaultAlignment, true);
-		meshSerializer.writeAligned(child_mesh.normals, DefaultAlignment, true);
-		meshSerializer.writeAligned(child_mesh.face_normals, DefaultAlignment, true);
-		meshSerializer.write(child_mesh.indices, true);	  // Already aligned
-		meshSerializer.write(child_mesh.texcoords, true); // Aligned to 4*2 bytes
-		meshSerializer.write(child_mesh.face_inv_area, true);
+		meshSerializer.write((uint32)mesh.faceCount());
+		meshSerializer.write((uint32)mesh.vertices.size());
+		meshSerializer.write((uint32)mesh.normals.size());
+		meshSerializer.write((uint32)mesh.texcoords.size());
+		meshSerializer.writeAligned(mesh.vertices, DefaultAlignment, true);
+		meshSerializer.writeAligned(mesh.normals, DefaultAlignment, true);
+		meshSerializer.writeAligned(mesh.face_normals, DefaultAlignment, true);
+		meshSerializer.write(mesh.indices, true);	// Already aligned
+		meshSerializer.write(mesh.texcoords, true); // Aligned to 4*2 bytes
+		meshSerializer.write(mesh.face_inv_area, true);
+	}
+	IG_LOG(L_DEBUG) << "Storing of shapes took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
-		// Generate BVH
-		IG_LOG(L_DEBUG) << "Generating BVH for shape " << pair.first << std::endl;
-		auto& bvhData = result.Database.BVHTable.addLookup(0, DefaultAlignment);
-		VectorSerializer bvhSerializer(bvhData, false);
-		if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
-			setup_prim_bvh<2, 1>(bvhSerializer, child_mesh);
-		} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
-			setup_prim_bvh<4, 4>(bvhSerializer, child_mesh);
-		} else {
-			setup_prim_bvh<8, 4>(bvhSerializer, child_mesh);
-		}
+	if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
+		setup_bvhs<2, 1>(meshes, result);
+	} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
+		setup_bvhs<4, 4>(meshes, result);
+	} else {
+		setup_bvhs<8, 4>(meshes, result);
 	}
 
 	return true;

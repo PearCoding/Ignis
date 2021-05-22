@@ -74,6 +74,9 @@ find_package(Eigen3 REQUIRED NO_MODULE)
 # Locate OpenImageIO
 find_package(OpenImageIO REQUIRED)
 
+# Locate tbb
+find_package(TBB REQUIRED) 
+
 # ZLib is used in the generator
 find_package(ZLIB REQUIRED)
 

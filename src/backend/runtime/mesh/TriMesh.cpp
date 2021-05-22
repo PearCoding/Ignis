@@ -1,24 +1,23 @@
 #include "TriMesh.h"
-#include "Logger.h"
 #include "Tangent.h"
 
 namespace IG {
 
-void TriMesh::fixNormals()
+void TriMesh::fixNormals(bool* hasBadNormals)
 {
 	// Re-normalize all the values in the OBJ file to handle invalid meshes
-	bool fixed_normals = false;
+	bool bad = false;
 	for (auto& n : normals) {
 		float len2 = n.squaredNorm();
 		if (len2 <= FltEps || std::isnan(len2)) {
-			fixed_normals = true;
-			n			  = Vector3f::UnitY();
+			bad = true;
+			n	= Vector3f::UnitY();
 		} else
 			n /= std::sqrt(len2);
 	}
 
-	if (fixed_normals)
-		IG_LOG(L_WARNING) << "Some normals were incorrect and thus had to be replaced with arbitrary values." << std::endl;
+	if (hasBadNormals)
+		*hasBadNormals = bad;
 }
 
 void TriMesh::flipNormals()
@@ -66,10 +65,10 @@ void TriMesh::replaceID(uint32 m_idx)
 		indices[i + 3] = m_idx; // ID
 }
 
-void TriMesh::computeFaceAreaOnly(size_t first_index)
+void TriMesh::computeFaceAreaOnly(size_t first_index, bool* hasBadAreas)
 {
+	bool bad = false;
 	face_inv_area.resize(faceCount());
-	bool hasBadArea = false;
 	for (auto i = first_index, k = indices.size(); i < k; i += 4) {
 		const auto& v0	 = vertices[indices[i + 0]];
 		const auto& v1	 = vertices[indices[i + 1]];
@@ -77,22 +76,21 @@ void TriMesh::computeFaceAreaOnly(size_t first_index)
 		const Vector3f N = (v1 - v0).cross(v2 - v0);
 		float lN		 = N.norm();
 		if (lN < 0.00000001f) {
-			lN		   = 1.0f;
-			hasBadArea = true;
+			lN	= 1.0f;
+			bad = true;
 		}
 		face_inv_area[i / 4] = 1 / (0.5f * lN);
 	}
-
-	if (hasBadArea)
-		IG_LOG(L_WARNING) << "Triangle mesh contains triangles with zero area" << std::endl;
+	if (hasBadAreas)
+		*hasBadAreas = bad;
 }
 
-void TriMesh::computeFaceNormals(size_t first_index)
+void TriMesh::computeFaceNormals(size_t first_index, bool* hasBadAreas)
 {
+	bool bad = false;
 	face_normals.resize(faceCount());
 	face_inv_area.resize(faceCount());
 
-	bool hasBadArea = false;
 	for (auto i = first_index, k = indices.size(); i < k; i += 4) {
 		const auto& v0	 = vertices[indices[i + 0]];
 		const auto& v1	 = vertices[indices[i + 1]];
@@ -100,15 +98,14 @@ void TriMesh::computeFaceNormals(size_t first_index)
 		const Vector3f N = (v1 - v0).cross(v2 - v0);
 		float lN		 = N.norm();
 		if (lN < 0.00000001f) {
-			lN		   = 1.0f;
-			hasBadArea = true;
+			lN	= 1.0f;
+			bad = true;
 		}
 		face_normals[i / 4]	 = N / lN;
 		face_inv_area[i / 4] = 1 / (0.5f * lN);
 	}
-
-	if (hasBadArea)
-		IG_LOG(L_WARNING) << "Triangle mesh contains triangles with zero area" << std::endl;
+	if (hasBadAreas)
+		*hasBadAreas = bad;
 }
 
 void TriMesh::computeVertexNormals(size_t first_index)

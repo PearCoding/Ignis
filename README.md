@@ -9,6 +9,7 @@
  - AnyDSL <https://github.com/AnyDSL/anydsl>
  - Eigen3 <http://eigen.tuxfamily.org>
  - OpenImageIO <https://sites.google.com/site/openimageio/home>
+ - Intel® Threading Building Blocks https://www.threadingbuildingblocks.org/
  - ZLib <https://zlib.net/>
 
 ### Optional
@@ -38,7 +39,7 @@ Use your favorite generator (e.g. `Ninja`)
     cmake -G Ninja ..
     cmake --build .
 
-If `Ninja` is not available you may skip the `-G Ninja` parameter.
+If `Ninja` is not available you may skip the `-G Ninja` parameter. You can also set `FETCHCONTENT_UPDATES_DISCONNECTED` to `ON` to speed up the cmake steps after the initial cmake step.  
 
 ## Backends
 

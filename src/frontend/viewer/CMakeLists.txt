@@ -11,16 +11,13 @@ SET(UI_FILES
     UI.cpp
     UI.h)
 
-# TODO: This is not well documented, and would be great to get rid of
-find_package(TBB REQUIRED) # Required for parallel stuff
-
 if(IG_HAS_UI)
     add_executable(igview ${UI_FILES})
     target_compile_definitions(igview PRIVATE "-DWITH_UI")
-    target_link_libraries(igview PRIVATE ig_lib_ui ig_lib_runtime TBB::tbb)
+    target_link_libraries(igview PRIVATE ig_lib_ui ig_lib_runtime)
     add_dependencies(igview ignis_drivers)
 endif()
 
 add_executable(igcli ${CMD_FILES})
-target_link_libraries(igcli PRIVATE ig_lib_runtime TBB::tbb)
+target_link_libraries(igcli PRIVATE ig_lib_runtime)
 add_dependencies(igcli ignis_drivers)

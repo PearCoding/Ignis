@@ -19,21 +19,21 @@ TriMesh load(const std::filesystem::path& path, size_t mtl_offset)
 	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str());
 
 	if (!warn.empty())
-		IG_LOG(L_WARNING) << "[Obj] " << warn << std::endl;
+		IG_LOG(L_WARNING) << "ObjFile " << path << ": " << warn << std::endl;
 
 	if (!err.empty())
-		IG_LOG(L_ERROR) << "[Obj] " << err << std::endl;
+		IG_LOG(L_ERROR) << "ObjFile " << path << ": " << err << std::endl;
 
 	if (!ret)
 		return TriMesh{};
 
 	if (attrib.vertices.empty()) {
-		IG_LOG(L_ERROR) << "[Obj] No vertices given!" << std::endl;
+		IG_LOG(L_ERROR) << "ObjFile " << path << ": No vertices given!" << std::endl;
 		return TriMesh{};
 	}
 
 	if (shapes.size() > 1)
-		IG_LOG(L_WARNING) << "[Obj] Contains multiple shapes. Will be combined to one " << std::endl;
+		IG_LOG(L_WARNING) << "ObjFile " << path << ": Contains multiple shapes. Will be combined to one " << std::endl;
 
 	const bool hasNorms	 = (attrib.normals.size() == attrib.vertices.size());
 	const bool hasCoords = (attrib.texcoords.size() / 2 == attrib.vertices.size() / 3);
@@ -67,15 +67,22 @@ TriMesh load(const std::filesystem::path& path, size_t mtl_offset)
 		tri_mesh.vertices.emplace_back(attrib.vertices[3 * v + 0], attrib.vertices[3 * v + 1], attrib.vertices[3 * v + 2]);
 
 	// Normals
-	tri_mesh.computeFaceNormals();
+	bool hasBadAreas = false;
+	tri_mesh.computeFaceNormals(0, &hasBadAreas);
+	if (hasBadAreas)
+		IG_LOG(L_WARNING) << "ObjFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
+
 	if (hasNorms) {
 		tri_mesh.normals.reserve(attrib.normals.size() / 3);
 		for (size_t v = 0; v < attrib.normals.size() / 3; ++v)
 			tri_mesh.normals.emplace_back(attrib.normals[3 * v + 0], attrib.normals[3 * v + 1], attrib.normals[3 * v + 2]);
 
-		tri_mesh.fixNormals();
+		bool hasBadNormals = false;
+		tri_mesh.fixNormals(&hasBadNormals);
+		if (hasBadNormals)
+			IG_LOG(L_WARNING) << "ObjFile " << path << ": Some normals were incorrect and thus had to be replaced with arbitrary values." << std::endl;
 	} else {
-		IG_LOG(L_WARNING) << "[Obj] No valid normals given. Recalculating " << std::endl;
+		IG_LOG(L_WARNING) << "ObjFile " << path << ": No valid normals given. Recalculating " << std::endl;
 		tri_mesh.computeVertexNormals();
 	}
 
@@ -85,7 +92,7 @@ TriMesh load(const std::filesystem::path& path, size_t mtl_offset)
 		for (size_t v = 0; v < tri_mesh.vertices.size(); ++v)
 			tri_mesh.texcoords.emplace_back(attrib.texcoords[2 * v + 0], attrib.texcoords[2 * v + 1]);
 	} else {
-		IG_LOG(L_WARNING) << "[Obj] No texture coordinates are present, using default value." << std::endl;
+		IG_LOG(L_WARNING) << "ObjFile " << path << ": No texture coordinates are present, using default value." << std::endl;
 		tri_mesh.makeTexCoordsZero();
 	}
 
