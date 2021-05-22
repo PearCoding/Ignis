@@ -25,14 +25,23 @@ struct Camera {
 
 	inline void rotate(float yaw, float pitch)
 	{
+		update_dir(Eigen::AngleAxisf(-yaw, Up) * Eigen::AngleAxisf(-pitch, Right) * Direction, Up);
+	}
+
+	inline void rotate_fixroll(float yaw, float pitch)
+	{
 		Eigen::AngleAxisf pitchAngle(-pitch, Vector3f::UnitX());
+		Eigen::Quaternionf q1 = Eigen::Quaternionf(pitchAngle).normalized();
 
-		Direction = pitchAngle * Direction;
-		Right	  = pitchAngle * Right;
-		Up		  = pitchAngle * Up;
+		Direction = q1 * Direction;
+		Right	  = q1 * Right;
+		Up		  = Right.cross(Direction).normalized();
 
-		Direction = Eigen::AngleAxisf(-yaw, Up) * Direction;
-		update_dir(Direction, Up);
+		Eigen::AngleAxisf yawAngle(-yaw, Up);
+		Eigen::Quaternionf q2 = Eigen::Quaternionf(yawAngle).normalized();
+		Direction			  = q2 * Direction;
+		Right				  = q2 * Right;
+		Up					  = q2 * Up;
 	}
 
 	inline void roll(float angle)

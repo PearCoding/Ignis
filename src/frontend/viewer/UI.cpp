@@ -319,8 +319,13 @@ static bool handle_events(uint32_t& iter, bool& run, Camera& cam)
 			break;
 		case SDL_MOUSEMOTION:
 			if (camera_on && !hover && canInteract) {
-				const float aspeed = rspeed * (io.KeyCtrl ? fast_factor : (io.KeyShift ? slow_factor : 1.0f));
-				cam.rotate(event.motion.xrel * aspeed, event.motion.yrel * aspeed);
+				const float aspeed	= rspeed * (io.KeyCtrl ? fast_factor : (io.KeyShift ? slow_factor : 1.0f));
+				const float xmotion = event.motion.xrel * aspeed;
+				const float ymotion = event.motion.yrel * aspeed;
+				if (io.KeyAlt)
+					cam.rotate_fixroll(xmotion, ymotion);
+				else
+					cam.rotate(xmotion, ymotion);
 				iter = 0;
 			}
 			break;
@@ -944,7 +949,9 @@ static void handle_help()
 - *Numpad 7* to switch to top view.
 - *Numpad 9* look behind you.
 - *Numpad 2468* to rotate the camera.
-- Mouse to rotate the camera.
+- Mouse to rotate the camera. 
+  *Shift* will move slower, *Strg/Ctrl* will move faster.
+  Use with *Alt* to enable first person camera behaviour.
 )";
 
 	ImGui::MarkdownConfig config;
