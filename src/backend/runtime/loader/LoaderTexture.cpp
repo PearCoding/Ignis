@@ -56,13 +56,13 @@ static void tex_image(const std::string& name, const std::shared_ptr<Parser::Obj
 		else if (wrap == TIW_MIRROR && filter == TIF_BILINEAR)
 			type_id = 5;
 
-		auto& data = result.Database.TextureTable.addLookup(type_id, DefaultAlignment);
+		auto& data = result.Database.TextureTable.addLookup(type_id, 0, DefaultAlignment);
 		VectorSerializer serializer(data, false);
 		serializer.write(bufferID);
 		serializer.write(filter);
 		serializer.write(wrap);
 	} else {
-		result.Database.TextureTable.addLookup(TEX_INVALID, DefaultAlignment);
+		result.Database.TextureTable.addLookup(TEX_INVALID, 0, DefaultAlignment);
 	}
 }
 
@@ -73,7 +73,7 @@ static void tex_checkerboard(const std::string&, const std::shared_ptr<Parser::O
 	const float scale_x = tex->property("scale_x").getNumber(1.0f);
 	const float scale_y = tex->property("scale_y").getNumber(1.0f);
 
-	auto& data = result.Database.TextureTable.addLookup(TEX_CHECKERBOARD, DefaultAlignment);
+	auto& data = result.Database.TextureTable.addLookup(TEX_CHECKERBOARD, 0, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(color0);
 	serializer.write(scale_x);
@@ -114,7 +114,7 @@ bool LoaderTexture::load(LoaderContext& ctx, LoaderResult& result)
 
 		if (!found) {
 			IG_LOG(L_ERROR) << "Texture '" << pair.first << "' has unknown type '" << tex->pluginType() << "'" << std::endl;
-			result.Database.TextureTable.addLookup(TEX_INVALID, DefaultAlignment);
+			result.Database.TextureTable.addLookup(TEX_INVALID, 0, DefaultAlignment);
 		}
 	}
 

@@ -4,10 +4,28 @@
 #include "Target.h"
 
 #include <filesystem>
+#include <variant>
 
 namespace IG {
 
 struct SceneDatabase;
+
+using TextureColorVariant = std::variant<uint32, Vector3f>;
+inline bool isTexture(const TextureColorVariant& var)
+{
+	return std::holds_alternative<uint32>(var);
+}
+
+inline uint32 extractTexture(const TextureColorVariant& var)
+{
+	return std::get<uint32>(var);
+}
+
+inline Vector3f extractColor(const TextureColorVariant& var)
+{
+	return std::get<Vector3f>(var);
+}
+
 struct LoaderContext {
 	Parser::Scene Scene;
 
@@ -17,7 +35,7 @@ struct LoaderContext {
 	std::unordered_map<std::string, uint32> Images; // Image to Buffer
 
 	std::unordered_map<std::string, uint32> TextureBuffer; // Texture to Buffer/Image, used only in workaround
-	std::vector<Vector3f> TextureAverages; // Workaround for now
+	std::vector<Vector3f> TextureAverages;				   // Workaround for now
 
 	LoaderEnvironment Environment;
 
@@ -37,6 +55,7 @@ struct LoaderContext {
 	bool isTexture(const std::shared_ptr<Parser::Object>& obj, const std::string& propname) const;
 	uint32 extractTextureID(const std::shared_ptr<Parser::Object>& obj, const std::string& propname) const;
 	Vector3f extractColor(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, const Vector3f& def = Vector3f::Ones()) const;
+	TextureColorVariant extractColorTexture(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, const Vector3f& def = Vector3f::Ones()) const;
 	float extractIOR(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, float def = 1.55f) const;
 
 	uint32 loadImage(const std::filesystem::path& path, SceneDatabase& dtb, bool& ok);

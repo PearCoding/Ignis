@@ -62,7 +62,7 @@ static void light_point(const std::string& name, const std::shared_ptr<Parser::O
 	auto pos	   = light->property("position").getVector3();
 	auto intensity = ctx.extractColor(light, "intensity");
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_POINT, DefaultAlignment);
+	auto& data = result.Database.LightTable.addLookup(LIGHT_POINT, 0, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(pos);
 	serializer.write((uint32)0); // PADDING
@@ -80,7 +80,7 @@ static void light_area(const std::string& name, const std::shared_ptr<Parser::Ob
 		entity_id = ctx.Environment.EntityIDs.at(entity);
 
 	auto radiance = ctx.extractColor(light, "radiance");
-	auto& data	  = result.Database.LightTable.addLookup(LIGHT_AREA, DefaultAlignment);
+	auto& data	  = result.Database.LightTable.addLookup(LIGHT_AREA, 0, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write((uint32)entity_id);
 	serializer.write(radiance);
@@ -92,7 +92,7 @@ static void light_directional(const std::string& name, const std::shared_ptr<Par
 	Vector3f dir	= ea.toDirection();
 	auto irradiance = ctx.extractColor(light, "irradiance");
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_DIRECTIONAL, DefaultAlignment);
+	auto& data = result.Database.LightTable.addLookup(LIGHT_DIRECTIONAL, 0, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(dir);
 	serializer.write((uint32)0); // PADDING
@@ -107,7 +107,7 @@ static void light_sun(const std::string& name, const std::shared_ptr<Parser::Obj
 	auto power		= light->property("sun_scale").getNumber(1.0f);
 	auto sun_radius = light->property("sun_radius_scale").getNumber(1.0f);
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_SUN, DefaultAlignment);
+	auto& data = result.Database.LightTable.addLookup(LIGHT_SUN, 0, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(dir);
 	serializer.write(power);
@@ -147,7 +147,7 @@ static void light_cie_uniform(const std::string& name, const std::shared_ptr<Par
 	auto ground			  = ctx.extractColor(light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_CIE_UNIFORM, DefaultAlignment);
+	auto& data = result.Database.LightTable.addLookup(LIGHT_CIE_UNIFORM, 0, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(zenith);
 	serializer.write(groundbrightness);
@@ -160,7 +160,7 @@ static void light_cie_cloudy(const std::string& name, const std::shared_ptr<Pars
 	auto ground			  = ctx.extractColor(light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_CIE_CLOUDY, DefaultAlignment);
+	auto& data = result.Database.LightTable.addLookup(LIGHT_CIE_CLOUDY, 0, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(zenith);
 	serializer.write(groundbrightness);
@@ -197,7 +197,7 @@ static void light_perez(const std::string& name, const std::shared_ptr<Parser::O
 		color				= zenith * groundZ;
 	}
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_PEREZ, DefaultAlignment);
+	auto& data = result.Database.LightTable.addLookup(LIGHT_PEREZ, 0, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 	serializer.write(dir);
 	serializer.write(a);
@@ -213,7 +213,7 @@ static void light_env(const std::string& name, const std::shared_ptr<Parser::Obj
 	bool isTexture = ctx.isTexture(light, "radiance");
 
 	const LightType type = isTexture ? LIGHT_ENVIRONMENT_TEXTURED : LIGHT_ENVIRONMENT;
-	auto& data			 = result.Database.LightTable.addLookup(type, DefaultAlignment);
+	auto& data			 = result.Database.LightTable.addLookup(type, 0, DefaultAlignment);
 	VectorSerializer serializer(data, false);
 
 	if (isTexture) {

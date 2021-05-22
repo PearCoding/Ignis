@@ -13,6 +13,11 @@ struct BsdfContext {
 	std::unordered_map<std::string, std::string> Ignore;
 };
 
+enum BsdfFlags {
+	BSDF_F_TEX1 = 0x1, // First color parameter is texture
+	BSDF_F_TEX2 = 0x2  // Second color parameter is texture
+};
+
 enum BsdfType {
 	BSDF_DIFFUSE		  = 0x00,
 	BSDF_DIFFUSE_TEXTURED = 0x100, // TODO: This is not a good solution...
@@ -36,6 +41,18 @@ enum BsdfType {
 	BSDF_INVALID		  = 0xFF
 };
 
+// Always 3 units
+static inline void write_ct(const TextureColorVariant& var, VectorSerializer& serializer)
+{
+	if (isTexture(var)) {
+		serializer.write(extractTexture(var));
+		serializer.write((uint32)0);
+		serializer.write((uint32)0);
+	} else {
+		serializer.write(extractColor(var));
+	}
+}
+
 constexpr float AIR_IOR			   = 1.000277f;
 constexpr float GLASS_IOR		   = 1.55f;
 constexpr float RUBBER_IOR		   = 1.49f;
@@ -45,7 +62,7 @@ constexpr float ABSORPTION_DEFAULT = 2.7834f;
 static void bsdf_error(const std::string& msg, LoaderResult& result)
 {
 	IG_LOG(L_ERROR) << msg << std::endl;
-	result.Database.BsdfTable.addLookup(BSDF_INVALID, DefaultAlignment);
+	result.Database.BsdfTable.addLookup(BSDF_INVALID, 0, DefaultAlignment);
 }
 
 static uint32 setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, VectorSerializer& serializer)
@@ -66,85 +83,96 @@ static uint32 setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, Load
 
 static void bsdf_diffuse(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	if (ctx.Context.isTexture(bsdf, "reflectance")) {
-		uint32 tex_id = ctx.Context.extractTextureID(bsdf, "reflectance");
-
-		auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DIFFUSE_TEXTURED, DefaultAlignment);
-		VectorSerializer serializer(data, false);
-		serializer.write(tex_id);
-	} else {
-		auto albedo = ctx.Context.extractColor(bsdf, "reflectance", Vector3f::Constant(0.5f));
-
-		auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DIFFUSE, DefaultAlignment);
-		VectorSerializer serializer(data, false);
-		serializer.write(albedo);
-	}
+	const auto albedo = ctx.Context.extractColorTexture(bsdf, "reflectance", Vector3f::Constant(0.5f));
+	auto& data		  = ctx.Result.Database.BsdfTable.addLookup(BSDF_DIFFUSE, isTexture(albedo) ? BSDF_F_TEX1 : 0, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+	write_ct(albedo, serializer);
 }
 
 static void bsdf_orennayar(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto albedo = ctx.Context.extractColor(bsdf, "reflectance", Vector3f::Constant(0.5f));
-	float alpha = bsdf->property("alpha").getNumber(0.0f);
+	const float alpha = bsdf->property("alpha").getNumber(0.0f);
 
 	if (alpha <= 1e-3f) {
 		bsdf_diffuse(name, bsdf, ctx);
 		return;
 	}
 
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_ORENNAYAR, DefaultAlignment);
+	const auto albedo = ctx.Context.extractColorTexture(bsdf, "reflectance", Vector3f::Constant(0.5f));
+	auto& data		  = ctx.Result.Database.BsdfTable.addLookup(BSDF_ORENNAYAR, isTexture(albedo) ? BSDF_F_TEX1 : 0, DefaultAlignment);
 	VectorSerializer serializer(data, false);
-	serializer.write(albedo);
+	write_ct(albedo, serializer);
 	serializer.write(alpha);
 }
 
 static void bsdf_dielectric(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
-	auto specular_tra = ctx.Context.extractColor(bsdf, "specular_transmittance");
+	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
+	auto specular_tra = ctx.Context.extractColorTexture(bsdf, "specular_transmittance");
 	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
 	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", GLASS_IOR);
 
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DIELECTRIC, DefaultAlignment);
+	uint32 flags = 0;
+	if (isTexture(specular_ref))
+		flags |= BSDF_F_TEX1;
+	if (isTexture(specular_tra))
+		flags |= BSDF_F_TEX2;
+
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DIELECTRIC, flags, DefaultAlignment);
 	VectorSerializer serializer(data, false);
-	serializer.write(specular_ref);
+	write_ct(specular_ref, serializer);
 	serializer.write(ext_ior);
-	serializer.write(specular_tra);
+	write_ct(specular_tra, serializer);
 	serializer.write(int_ior);
 }
 
 static void bsdf_thindielectric(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
-	auto specular_tra = ctx.Context.extractColor(bsdf, "specular_transmittance");
+	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
+	auto specular_tra = ctx.Context.extractColorTexture(bsdf, "specular_transmittance");
 	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
 	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", GLASS_IOR);
 
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_THIN_DIELECTRIC, DefaultAlignment);
+	uint32 flags = 0;
+	if (isTexture(specular_ref))
+		flags |= BSDF_F_TEX1;
+	if (isTexture(specular_tra))
+		flags |= BSDF_F_TEX2;
+
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_THIN_DIELECTRIC, flags, DefaultAlignment);
 	VectorSerializer serializer(data, false);
-	serializer.write(specular_ref);
+	write_ct(specular_ref, serializer);
 	serializer.write(ext_ior);
-	serializer.write(specular_tra);
+	write_ct(specular_tra, serializer);
 	serializer.write(int_ior);
 }
 
 static void bsdf_mirror(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_reflectance = ctx.Context.extractColor(bsdf, "specular_reflectance");
+	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
 
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_MIRROR, DefaultAlignment);
+	uint32 flags = 0;
+	if (isTexture(specular_ref))
+		flags |= BSDF_F_TEX1;
+
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_MIRROR, flags, DefaultAlignment);
 	VectorSerializer serializer(data, false);
-	serializer.write(specular_reflectance);
+	write_ct(specular_ref, serializer);
 }
 
 static void bsdf_conductor(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
+	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
 	float eta		  = ctx.Context.extractIOR(bsdf, "eta", ETA_DEFAULT);
 	float k			  = ctx.Context.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
 
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_CONDUCTOR, DefaultAlignment);
+	uint32 flags = 0;
+	if (isTexture(specular_ref))
+		flags |= BSDF_F_TEX1;
+
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_CONDUCTOR, flags, DefaultAlignment);
 	VectorSerializer serializer(data, false);
-	serializer.write(specular_ref);
+	write_ct(specular_ref, serializer);
 	serializer.write((uint32)0); //PADDING
 	serializer.write(eta);
 	serializer.write(k);
@@ -152,13 +180,17 @@ static void bsdf_conductor(const std::string&, const std::shared_ptr<Parser::Obj
 
 static void bsdf_rough_conductor(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
+	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
 	float eta		  = ctx.Context.extractIOR(bsdf, "eta", ETA_DEFAULT);
 	float k			  = ctx.Context.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
 
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_ROUGH_CONDUCTOR, DefaultAlignment);
+	uint32 flags = 0;
+	if (isTexture(specular_ref))
+		flags |= BSDF_F_TEX1;
+
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_ROUGH_CONDUCTOR, flags, DefaultAlignment);
 	VectorSerializer serializer(data, false);
-	serializer.write(specular_ref);
+	write_ct(specular_ref, serializer);
 	serializer.write((uint32)0); //PADDING
 	serializer.write(eta);
 	serializer.write(k);
@@ -167,49 +199,65 @@ static void bsdf_rough_conductor(const std::string&, const std::shared_ptr<Parse
 
 static void bsdf_plastic(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
-	auto diffuse_ref  = ctx.Context.extractColor(bsdf, "diffuse_reflectance", Vector3f::Constant(0.5f));
+	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
+	auto diffuse_ref  = ctx.Context.extractColorTexture(bsdf, "diffuse_reflectance", Vector3f::Constant(0.5f));
 	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
 	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", RUBBER_IOR);
 
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PLASTIC, DefaultAlignment);
+	uint32 flags = 0;
+	if (isTexture(specular_ref))
+		flags |= BSDF_F_TEX1;
+	if (isTexture(diffuse_ref))
+		flags |= BSDF_F_TEX2;
+
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PLASTIC, flags, DefaultAlignment);
 	VectorSerializer serializer(data, false);
-	serializer.write(specular_ref);
+	write_ct(specular_ref, serializer);
 	serializer.write(ext_ior);
-	serializer.write(diffuse_ref);
+	write_ct(diffuse_ref, serializer);
 	serializer.write(int_ior);
 }
 
 static void bsdf_rough_plastic(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
-	auto diffuse_ref  = ctx.Context.extractColor(bsdf, "diffuse_reflectance", Vector3f::Constant(0.5f));
+	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
+	auto diffuse_ref  = ctx.Context.extractColorTexture(bsdf, "diffuse_reflectance", Vector3f::Constant(0.5f));
 	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
 	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", RUBBER_IOR);
 
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PLASTIC, DefaultAlignment);
+	uint32 flags = 0;
+	if (isTexture(specular_ref))
+		flags |= BSDF_F_TEX1;
+	if (isTexture(diffuse_ref))
+		flags |= BSDF_F_TEX2;
+
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PLASTIC, flags, DefaultAlignment);
 	VectorSerializer serializer(data, false);
-	serializer.write(specular_ref);
+	write_ct(specular_ref, serializer);
 	serializer.write(ext_ior);
-	serializer.write(diffuse_ref);
+	write_ct(diffuse_ref, serializer);
 	serializer.write(int_ior);
 	setup_microfacet(bsdf, ctx.Context, serializer);
 }
 
 static void bsdf_phong(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColor(bsdf, "specular_reflectance");
+	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
 	float exponent	  = bsdf->property("exponent").getNumber(30);
 
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PHONG, DefaultAlignment);
+	uint32 flags = 0;
+	if (isTexture(specular_ref))
+		flags |= BSDF_F_TEX1;
+
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PHONG, flags, DefaultAlignment);
 	VectorSerializer serializer(data, false);
-	serializer.write(specular_ref);
+	write_ct(specular_ref, serializer);
 	serializer.write(exponent);
 }
 
 static void bsdf_disney(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	auto base_color		   = ctx.Context.extractColor(bsdf, "base_color");
+	auto base_color		   = ctx.Context.extractColorTexture(bsdf, "base_color");
 	float flatness		   = bsdf->property("flatness").getNumber(0.0f);
 	float metallic		   = bsdf->property("metallic").getNumber(0.0f);
 	float ior			   = ctx.Context.extractIOR(bsdf, "ior", GLASS_IOR);
@@ -226,9 +274,13 @@ static void bsdf_disney(const std::string&, const std::shared_ptr<Parser::Object
 	float diff_trans	   = bsdf->property("diff_trans").getNumber(0.0f);
 	float transmittance	   = bsdf->property("transmittance").getNumber(1.0f);
 
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DISNEY, DefaultAlignment);
+	uint32 flags = 0;
+	if (isTexture(base_color))
+		flags |= BSDF_F_TEX1;
+
+	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DISNEY, flags, DefaultAlignment);
 	VectorSerializer serializer(data, false);
-	serializer.write(base_color);
+	write_ct(base_color, serializer);
 	serializer.write(flatness);
 	serializer.write(metallic);
 	serializer.write(ior);
@@ -276,7 +328,7 @@ static void bsdf_blend(const std::string& name, const std::shared_ptr<Parser::Ob
 	} else {
 		// TODO
 		ctx.Ignore[name] = first;
-		IG_LOG(L_WARNING) << "Blend currently not implemented. Ignoring effect" << std::endl;
+		IG_LOG(L_WARNING) << "Bsdf '" << name << "': Blend currently not implemented. Ignoring effect" << std::endl;
 		/* const uint32 firstID  = ctx.Context.Environment.BsdfIDs.at(first);
 		const uint32 secondID = ctx.Context.Environment.BsdfIDs.at(second);
 
@@ -299,7 +351,7 @@ static void bsdf_mask(const std::string& name, const std::shared_ptr<Parser::Obj
 	} else {
 		// TODO
 		ctx.Ignore[name] = masked;
-		IG_LOG(L_WARNING) << "Mask currently not implemented. Ignoring effect" << std::endl;
+		IG_LOG(L_WARNING) << "Bsdf '" << name << "': Mask currently not implemented. Ignoring effect" << std::endl;
 		/* const uint32 maskedID = ctx.Context.Environment.BsdfIDs.at(masked);
 		const float weight	  = bsdf->property("weight").getNumber(0.5f);
 
@@ -323,7 +375,7 @@ static void bsdf_twosided(const std::string& name, const std::shared_ptr<Parser:
 
 static void bsdf_passthrough(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
 {
-	ctx.Result.Database.BsdfTable.addLookup(BSDF_PASSTROUGH, DefaultAlignment);
+	ctx.Result.Database.BsdfTable.addLookup(BSDF_PASSTROUGH, 0, DefaultAlignment);
 }
 
 static void bsdf_normalmap(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
@@ -335,7 +387,7 @@ static void bsdf_normalmap(const std::string& name, const std::shared_ptr<Parser
 	} else {
 		// TODO
 		ctx.Ignore[name] = inner;
-		IG_LOG(L_WARNING) << "Normalmap currently not implemented. Ignoring effect" << std::endl;
+		IG_LOG(L_WARNING) << "Bsdf '" << name << "': Normalmap currently not implemented. Ignoring effect" << std::endl;
 	}
 }
 
@@ -348,7 +400,7 @@ static void bsdf_bumpmap(const std::string& name, const std::shared_ptr<Parser::
 	} else {
 		// TODO
 		ctx.Ignore[name] = inner;
-		IG_LOG(L_WARNING) << "Bumpmap currently not implemented. Ignoring effect" << std::endl;
+		IG_LOG(L_WARNING) << "Bsdf '" << name << "': Bumpmap currently not implemented. Ignoring effect" << std::endl;
 	}
 }
 
@@ -400,7 +452,7 @@ bool LoaderBSDF::load(LoaderContext& ctx, LoaderResult& result)
 
 		if (!found) {
 			IG_LOG(L_ERROR) << "Bsdf '" << pair.first << "' has unknown type '" << bsdf->pluginType() << "'" << std::endl;
-			result.Database.BsdfTable.addLookup(BSDF_INVALID, DefaultAlignment);
+			result.Database.BsdfTable.addLookup(BSDF_INVALID, 0, DefaultAlignment);
 		}
 	}
 

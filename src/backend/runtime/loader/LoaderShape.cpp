@@ -178,7 +178,7 @@ static void setup_bvhs(const std::vector<TriMesh>& meshes, LoaderResult& result)
 	IG_LOG(L_DEBUG) << "Storing BVHs ..." << std::endl;
 	const auto start2 = std::chrono::high_resolution_clock::now();
 	for (const auto& bvh : bvhs) {
-		auto& bvhData = result.Database.BVHTable.addLookup(0, DefaultAlignment);
+		auto& bvhData = result.Database.BVHTable.addLookup(0, 0, DefaultAlignment);
 		VectorSerializer serializer(bvhData, false);
 		serializer.write((uint32)bvh.nodes.size());
 		serializer.write((uint32)0); // Padding
@@ -303,7 +303,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 		// Export data:
 		IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << pair.first << std::endl;
 
-		auto& meshData = result.Database.ShapeTable.addLookup(0, DefaultAlignment); // TODO: No use of the typeid currently
+		auto& meshData = result.Database.ShapeTable.addLookup(0, 0, DefaultAlignment); // TODO: No use of the typeid currently
 		VectorSerializer meshSerializer(meshData, false);
 		meshSerializer.write((uint32)mesh.faceCount());
 		meshSerializer.write((uint32)mesh.vertices.size());
