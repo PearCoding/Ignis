@@ -102,7 +102,7 @@ struct BvhNEnt<2> {
 	using Node = Node2;
 };
 
-template <size_t N>
+template <size_t N, template <typename> typename Allocator>
 class BvhNEntAdapter {
 	struct CostFn {
 		static float leaf_cost(int count, float area)
@@ -115,25 +115,25 @@ class BvhNEntAdapter {
 		}
 	};
 
-	using BvhBuilder = BasicBvhBuilder<EntityObject, N, CostFn>;
+	using BvhBuilder = BasicBvhBuilder<EntityObject, N, CostFn, Allocator>;
 	using Adapter	 = BvhNEntAdapter;
 	using Node		 = typename BvhNEnt<N>::Node;
 	using Obj		 = EntityLeaf1;
 
 	friend class LeafWriterEnt1<Adapter>;
 
-	std::vector<Node>& nodes_;
-	std::vector<Obj>& objs_;
+	std::vector<Node, Allocator<Node>>& nodes_;
+	std::vector<Obj, Allocator<Obj>>& objs_;
 	BvhBuilder builder_;
 
 public:
-	BvhNEntAdapter(std::vector<Node>& nodes, std::vector<Obj>& objs)
+	BvhNEntAdapter(std::vector<Node, Allocator<Node>>& nodes, std::vector<Obj, Allocator<Obj>>& objs)
 		: nodes_(nodes)
 		, objs_(objs)
 	{
 	}
 
-	void build(const std::vector<EntityObject>& objs)
+	void build(const std::vector<EntityObject, Allocator<EntityObject>>& objs)
 	{
 		builder_.build(objs, NodeWriter(*this), LeafWriterEnt1<Adapter>(*this, objs), 1);
 #ifdef STATISTICS
@@ -194,8 +194,8 @@ private:
 	};
 };
 
-template <>
-class BvhNEntAdapter<2> {
+template <template <typename> typename Allocator>
+class BvhNEntAdapter<2, Allocator> {
 	struct CostFn {
 		static float leaf_cost(int count, float area)
 		{
@@ -207,25 +207,25 @@ class BvhNEntAdapter<2> {
 		}
 	};
 
-	using BvhBuilder = BasicBvhBuilder<EntityObject, 2, CostFn>;
+	using BvhBuilder = BasicBvhBuilder<EntityObject, 2, CostFn, Allocator>;
 	using Adapter	 = BvhNEntAdapter;
 	using Node		 = typename BvhNEnt<2>::Node;
 	using Obj		 = EntityLeaf1;
 
 	friend class LeafWriterEnt1<Adapter>;
 
-	std::vector<Node>& nodes_;
-	std::vector<Obj>& objs_;
+	std::vector<Node, Allocator<Node>>& nodes_;
+	std::vector<Obj, Allocator<Obj>>& objs_;
 	BvhBuilder builder_;
 
 public:
-	BvhNEntAdapter(std::vector<Node>& nodes, std::vector<Obj>& objs)
+	BvhNEntAdapter(std::vector<Node, Allocator<Node>>& nodes, std::vector<Obj, Allocator<Obj>>& objs)
 		: nodes_(nodes)
 		, objs_(objs)
 	{
 	}
 
-	void build(const std::vector<EntityObject>& objs)
+	void build(const std::vector<EntityObject, Allocator<EntityObject>>& objs)
 	{
 		builder_.build(objs, NodeWriter(*this), LeafWriterEnt1<Adapter>(*this, objs), 2);
 #ifdef STATISTICS
@@ -288,12 +288,12 @@ private:
 	};
 };
 
-template <size_t N>
-inline void build_scene_bvh(std::vector<typename BvhNEnt<N>::Node>& nodes,
-							std::vector<EntityLeaf1>& objs,
-							std::vector<EntityObject>& in_objs)
+template <size_t N, template <typename> typename Allocator>
+inline void build_scene_bvh(std::vector<typename BvhNEnt<N>::Node, Allocator<typename BvhNEnt<N>::Node>>& nodes,
+							std::vector<EntityLeaf1, Allocator<EntityLeaf1>>& objs,
+							std::vector<EntityObject, Allocator<EntityObject>>& in_objs)
 {
-	BvhNEntAdapter<N> adapter(nodes, objs);
+	BvhNEntAdapter<N, Allocator> adapter(nodes, objs);
 	adapter.build(in_objs);
 }
 } // namespace IG

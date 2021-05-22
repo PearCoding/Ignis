@@ -80,13 +80,13 @@ struct ObjectAdapter {
 /// that controls when to do a spatial split. The tree is built in depth-first order.
 /// See  Stich et al., "Spatial Splits in Bounding Volume Hierarchies", 2009
 /// http://www.nvidia.com/docs/IO/77714/sbvh.pdf
-template <class Object, size_t N, typename CostFn, bool UseSpatialSplits>
+template <class Object, size_t N, typename CostFn, bool UseSpatialSplits, template<typename> typename Allocator>
 class SplitBvhBuilderBase {
 public:
 	using ObjectAdapter = IG::ObjectAdapter<Object>;
 
 	template <typename NodeWriter, typename LeafWriter>
-	void build(const std::vector<Object>& objs, NodeWriter write_node, LeafWriter write_leaf, size_t leaf_threshold, float alpha = 1e-5f)
+	void build(const std::vector<Object, Allocator<Object>>& objs, NodeWriter write_node, LeafWriter write_leaf, size_t leaf_threshold, float alpha = 1e-5f)
 	{
 		assert(leaf_threshold >= 1);
 
@@ -109,10 +109,10 @@ public:
 
 		const float spatial_threshold = mesh_bb.halfArea() * alpha;
 
-		std::stack<Node> stack;
+		std::stack<Node, std::deque<Node, Allocator<Node>>> stack;
 		stack.emplace(initial_refs, obj_count, mesh_bb, -1);
 
-		std::vector<Vector3f> centers(objs.size());
+		std::vector<Vector3f, Allocator<Vector3f>> centers(objs.size());
 		for (size_t i = 0; i < objs.size(); ++i)
 			centers[i] = ObjectAdapter(objs[i]).center();
 
@@ -379,7 +379,7 @@ private:
 	}
 
 	size_t spatial_binning(Bin* bins, size_t num_bins, SpatialSplit& split,
-						   const std::vector<Object>& objs, size_t axis,
+						   const std::vector<Object, Allocator<Object>>& objs, size_t axis,
 						   Ref* refs, size_t ref_count,
 						   float axis_min, float axis_max)
 	{
@@ -445,7 +445,7 @@ private:
 	}
 
 	void find_spatial_split(SpatialSplit& split, const BoundingBox& parent_bb,
-							const std::vector<Object>& objs, size_t axis,
+							const std::vector<Object, Allocator<Object>>& objs, size_t axis,
 							Ref* refs, size_t ref_count)
 	{
 		float axis_min = parent_bb.min[axis];
@@ -470,7 +470,7 @@ private:
 	}
 
 	void apply_spatial_split(const SpatialSplit& split,
-							 const std::vector<Object>& objs,
+							 const std::vector<Object, Allocator<Object>>& objs,
 							 Ref* refs, size_t ref_count,
 							 Ref*& left_refs, size_t& left_count, BoundingBox& left_bb,
 							 Ref*& right_refs, size_t& right_count, BoundingBox& right_bb)
@@ -501,7 +501,7 @@ private:
 		right_count = ref_count - first_right;
 
 		// Handle straddling references
-		std::vector<Ref> dup_refs;
+		std::vector<Ref, Allocator<Ref>> dup_refs;
 		while (left_count < first_right) {
 			const Ref& ref = refs[left_count];
 			BoundingBox left_split_bb, right_split_bb;
@@ -576,10 +576,10 @@ private:
 	MemoryPool<> mem_pool_;
 };
 
-template <class Object, size_t N, typename CostFn>
-using SplitBvhBuilder = SplitBvhBuilderBase<Object, N, CostFn, true>;
+template <class Object, size_t N, typename CostFn, template<typename> typename Allocator>
+using SplitBvhBuilder = SplitBvhBuilderBase<Object, N, CostFn, true, Allocator>;
 
-template <class Object, size_t N, typename CostFn>
-using BasicBvhBuilder = SplitBvhBuilderBase<Object, N, CostFn, false>;
+template <class Object, size_t N, typename CostFn, template<typename> typename Allocator>
+using BasicBvhBuilder = SplitBvhBuilderBase<Object, N, CostFn, false, Allocator>;
 
 } // namespace IG

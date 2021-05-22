@@ -58,7 +58,7 @@ struct BvhNTriM<2, 1> {
 	using Tri  = Tri1;
 };
 
-template <size_t N, size_t M>
+template <size_t N, size_t M, template <typename> typename Allocator>
 class BvhNTriMAdapter {
 	struct CostFn {
 		static float leaf_cost(int count, float area)
@@ -71,23 +71,23 @@ class BvhNTriMAdapter {
 		}
 	};
 
-	using BvhBuilder = SplitBvhBuilder<Triangle, N, CostFn>;
+	using BvhBuilder = SplitBvhBuilder<Triangle, N, CostFn, Allocator>;
 	using Adapter	 = BvhNTriMAdapter;
 	using Node		 = typename BvhNTriM<N, M>::Node;
 	using Tri		 = typename BvhNTriM<N, M>::Tri;
 
-	std::vector<Node>& nodes_;
-	std::vector<Tri>& tris_;
+	std::vector<Node, Allocator<Node>>& nodes_;
+	std::vector<Tri, Allocator<Tri>>& tris_;
 	BvhBuilder builder_;
 
 public:
-	BvhNTriMAdapter(std::vector<Node>& nodes, std::vector<Tri>& tris)
+	BvhNTriMAdapter(std::vector<Node, Allocator<Node>>& nodes, std::vector<Tri, Allocator<Tri>>& tris)
 		: nodes_(nodes)
 		, tris_(tris)
 	{
 	}
 
-	void build(const TriMesh& tri_mesh, const std::vector<IG::Triangle>& tris)
+	void build(const TriMesh& tri_mesh, const std::vector<IG::Triangle, Allocator<IG::Triangle>>& tris)
 	{
 		builder_.build(tris, NodeWriter(*this), LeafWriter(*this, tris, tri_mesh.indices), M / 2);
 #ifdef STATISTICS
@@ -149,10 +149,10 @@ private:
 
 	struct LeafWriter {
 		Adapter& adapter;
-		const std::vector<IG::Triangle>& in_tris;
+		const std::vector<IG::Triangle, Allocator<IG::Triangle>>& in_tris;
 		const std::vector<uint32>& indices;
 
-		LeafWriter(Adapter& adapter, const std::vector<IG::Triangle>& in_tris, const std::vector<uint32>& indices)
+		LeafWriter(Adapter& adapter, const std::vector<IG::Triangle, Allocator<IG::Triangle>>& in_tris, const std::vector<uint32>& indices)
 			: adapter(adapter)
 			, in_tris(in_tris)
 			, indices(indices)
@@ -209,8 +209,8 @@ private:
 	};
 };
 
-template <>
-class BvhNTriMAdapter<2, 1> {
+template <template <typename> typename Allocator>
+class BvhNTriMAdapter<2, 1, Allocator> {
 	struct CostFn {
 		static float leaf_cost(int count, float area)
 		{
@@ -222,23 +222,23 @@ class BvhNTriMAdapter<2, 1> {
 		}
 	};
 
-	using BvhBuilder = SplitBvhBuilder<Triangle, 2, CostFn>;
+	using BvhBuilder = SplitBvhBuilder<Triangle, 2, CostFn, Allocator>;
 	using Adapter	 = BvhNTriMAdapter;
 	using Node		 = Node2;
 	using Tri		 = Tri1;
 
-	std::vector<Node>& nodes_;
-	std::vector<Tri>& tris_;
+	std::vector<Node, Allocator<Node>>& nodes_;
+	std::vector<Tri, Allocator<Tri>>& tris_;
 	BvhBuilder builder_;
 
 public:
-	BvhNTriMAdapter(std::vector<Node>& nodes, std::vector<Tri>& tris)
+	BvhNTriMAdapter(std::vector<Node, Allocator<Node>>& nodes, std::vector<Tri, Allocator<Tri>>& tris)
 		: nodes_(nodes)
 		, tris_(tris)
 	{
 	}
 
-	void build(const TriMesh& tri_mesh, const std::vector<IG::Triangle>& tris)
+	void build(const TriMesh& tri_mesh, const std::vector<IG::Triangle, Allocator<IG::Triangle>>& tris)
 	{
 		builder_.build(tris, NodeWriter(*this), LeafWriter(*this, tris, tri_mesh.indices), 2);
 #ifdef STATISTICS
@@ -302,10 +302,10 @@ private:
 
 	struct LeafWriter {
 		Adapter& adapter;
-		const std::vector<IG::Triangle>& in_tris;
+		const std::vector<IG::Triangle, Allocator<IG::Triangle>>& in_tris;
 		const std::vector<uint32>& indices;
 
-		LeafWriter(Adapter& adapter, const std::vector<IG::Triangle>& in_tris, const std::vector<uint32>& indices)
+		LeafWriter(Adapter& adapter, const std::vector<IG::Triangle, Allocator<IG::Triangle>>& in_tris, const std::vector<uint32>& indices)
 			: adapter(adapter)
 			, in_tris(in_tris)
 			, indices(indices)
@@ -337,14 +337,14 @@ private:
 	};
 };
 
-template <size_t N, size_t M>
+template <size_t N, size_t M, template <typename> typename Allocator>
 inline void build_bvh(const TriMesh& tri_mesh,
-					  std::vector<typename BvhNTriM<N, M>::Node>& nodes,
-					  std::vector<typename BvhNTriM<N, M>::Tri>& tris)
+					  std::vector<typename BvhNTriM<N, M>::Node, Allocator<typename BvhNTriM<N, M>::Node>>& nodes,
+					  std::vector<typename BvhNTriM<N, M>::Tri, Allocator<typename BvhNTriM<N, M>::Tri>>& tris)
 {
-	BvhNTriMAdapter<N, M> adapter(nodes, tris);
+	BvhNTriMAdapter<N, M, Allocator> adapter(nodes, tris);
 	auto num_tris = tri_mesh.indices.size() / 4;
-	std::vector<IG::Triangle> in_tris(num_tris);
+	std::vector<IG::Triangle, Allocator<IG::Triangle>> in_tris(num_tris);
 	for (size_t i = 0; i < num_tris; i++) {
 		auto& v0   = tri_mesh.vertices[tri_mesh.indices[i * 4 + 0]];
 		auto& v1   = tri_mesh.vertices[tri_mesh.indices[i * 4 + 1]];

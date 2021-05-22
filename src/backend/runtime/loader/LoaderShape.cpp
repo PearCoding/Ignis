@@ -13,6 +13,7 @@
 #include <sstream>
 
 #include <tbb/parallel_for.h>
+#include <tbb/scalable_allocator.h>
 
 // Does not improve much, as it is IO bounded
 #define IG_PARALLEL_LOAD_SHAPE
@@ -141,8 +142,8 @@ inline TriMesh setup_mesh_mitsuba(const std::string& name, const Object& elem, c
 
 template <size_t N, size_t T>
 struct BvhTemporary {
-	std::vector<typename BvhNTriM<N, T>::Node> nodes;
-	std::vector<typename BvhNTriM<N, T>::Tri> tris;
+	std::vector<typename BvhNTriM<N, T>::Node, tbb::scalable_allocator<typename BvhNTriM<N, T>::Node>> nodes;
+	std::vector<typename BvhNTriM<N, T>::Tri, tbb::scalable_allocator<typename BvhNTriM<N, T>::Tri>> tris;
 };
 
 template <size_t N, size_t T>
