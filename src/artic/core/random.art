@@ -56,15 +56,7 @@ fn @make_pos_sample(pos: Vec3, pdf: f32) = PosSample {
     pdf = pdf
 };
 
-fn @dir_from_spherical(math: Intrinsics, theta: f32, phi: f32) -> Vec3 {
-    let c = math.cosf(theta);
-    let s = math.sinf(theta);
-    let x = s * math.cosf(phi);
-    let y = s * math.sinf(phi);
-    let z = c;
-    make_vec3(x,y,z)
-}
-
+// Y+ Up
 fn @spherical_from_dir(math: Intrinsics, dir: Vec3) -> (f32, f32) {
     let theta = math.acosf(dir.y);
     let phi = math.atan2f(dir.z, dir.x);

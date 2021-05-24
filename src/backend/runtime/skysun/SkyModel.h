@@ -6,6 +6,8 @@
 
 namespace IG {
 struct ElevationAzimuth;
+class Serializer;
+
 class SkyModel {
 public:
 	SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, float turbidity = 3.0f, size_t resAzimuth = RES_AZ, size_t resElevation = RES_EL);
@@ -24,6 +26,8 @@ public:
 			mData[el_in * mAzimuthCount * AR_COLOR_BANDS + az_in * AR_COLOR_BANDS + 2]
 		};
 	}
+
+	void save(Serializer& serializer) const;
 
 private:
 	std::vector<float> mData;

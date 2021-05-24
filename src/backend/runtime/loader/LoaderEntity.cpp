@@ -98,11 +98,8 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 		in_objs.emplace_back(obj);
 	}
 
-	if (counter == 0) {
-		// TODO: Make this possible
-		IG_LOG(L_ERROR) << "No entities in the scene!" << std::endl;
-		return false;
-	}
+	if(counter == 0)
+		return true;
 
 	ctx.Environment.SceneDiameter = ctx.Environment.SceneBBox.diameter().norm();
 

@@ -2,6 +2,7 @@
 #include "Image.h"
 #include "SunLocation.h"
 #include "model/ArHosekSkyModel.h"
+#include "serialization/Serializer.h"
 
 namespace IG {
 SkyModel::SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, float turbidity, size_t resAzimuth, size_t resElevation)
@@ -14,13 +15,13 @@ SkyModel::SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, floa
 	const float sun_se = std::sin(solar_elevation);
 	const float sun_ce = std::cos(solar_elevation);
 
-	mData.resize(mElevationCount * mAzimuthCount * AR_COLOR_BANDS);
+	mData.resize(mElevationCount * mAzimuthCount * 4);
 	for (size_t k = 0; k < AR_COLOR_BANDS; ++k) {
 		const float albedo = ground_albedo[k];
 
 		auto* state = arhosek_rgb_skymodelstate_alloc_init(atmospheric_turbidity, albedo, solar_elevation);
 		for (size_t y = 0; y < mElevationCount; ++y) {
-			const float theta = Pi2 - std::max(0.001f, ELEVATION_RANGE * y / (float)mElevationCount);
+			const float theta = std::max(0.001f, ELEVATION_RANGE * y / (float)mElevationCount) - Pi2;
 			const float st	  = std::sin(theta);
 			const float ct	  = std::cos(theta);
 			for (size_t x = 0; x < mAzimuthCount; ++x) {
@@ -30,11 +31,21 @@ SkyModel::SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, floa
 				float gamma	   = std::acos(std::min(1.0f, std::max(-1.0f, cosGamma)));
 				float radiance = arhosek_tristim_skymodel_radiance(state, theta, gamma, k);
 
-				mData[y * mAzimuthCount * AR_COLOR_BANDS + x * AR_COLOR_BANDS + k] = std::max(0.0f, radiance);
+				mData[y * mAzimuthCount * 4 + x * 4 + k] = std::max(0.0f, radiance);
 			}
 		}
 
 		arhosekskymodelstate_free(state);
 	}
+}
+
+void SkyModel::save(Serializer& serializer) const
+{
+	serializer.write((uint32)mAzimuthCount);
+	serializer.write((uint32)mElevationCount);
+	serializer.write((uint32)0); // Padding
+	serializer.write((uint32)0); // Padding
+
+	serializer.write(mData, true);
 }
 } // namespace IG

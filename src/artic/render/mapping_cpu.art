@@ -424,56 +424,61 @@ fn @cpu_trace( scene: Scene
                     primary.size = cpu_generate_rays(primary, capacity, path_tracer, &mut id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width);
                 }
 
-                // Trace primary rays
-                cpu_profile(if first { &mut primary_counter } else { &mut bounces_counter }, || {
-                    cpu_traverse_primary(scene, min_max, primary, single, vector_width);
-                });
-                atomic(1:u32, &mut total_rays, primary.size as i64, 7:u32, "");
-
-                // Sort hits by shader id, and filter invalid hits
-                let mut ray_begins : [i32 * 1024];
-                let mut ray_ends   : [i32 * 1024];
-                primary.size = cpu_sort_primary(primary, &mut ray_begins, &mut ray_ends, scene.info.num_entities);
-
-                // Perform (vectorized) shading
-                cpu_profile(&mut shading_counter, || {
-                    let mut begin = 0;
-                    for ent_id in range(0, scene.info.num_entities) {
-                        let end = ray_ends(ent_id);
-                        cpu_shade(ent_id, primary, secondary, scene, path_tracer, accumulate, begin, end, vector_width);
-                        begin = end;
-                    }
-
-                    // Shade misses as well
-                    let last = ray_ends(scene.info.num_entities);
-                    if(begin < last) {
-                        cpu_miss_shade(primary, path_tracer, accumulate, begin, last, vector_width);
-                    }
-                });
-
-                // Filter terminated rays
-                secondary.size = primary.size;
-                primary.size   = cpu_compact_primary(primary, vector_width, vector_compact);
-
-                // Compact and trace secondary rays
-                secondary.size = cpu_compact_secondary(secondary, vector_width, vector_compact);
-                if likely(secondary.size > 0) {
-                    cpu_profile(&mut shadow_counter, || {
-                        cpu_traverse_secondary(scene, min_max, secondary, single, vector_width);
+                if scene.info.num_entities == 0 {
+                    cpu_miss_shade(primary, path_tracer, accumulate, 0, primary.size, vector_width);
+                    primary.size = 0;
+                } else {
+                    // Trace primary rays
+                    cpu_profile(if first { &mut primary_counter } else { &mut bounces_counter }, || {
+                        cpu_traverse_primary(scene, min_max, primary, single, vector_width);
                     });
-                }
+                    atomic(1:u32, &mut total_rays, primary.size as i64, 7:u32, "");
 
-                // Add the contribution for secondary rays to the frame buffer
-                for i in range(0, secondary.size) {
-                    if secondary.prim_id(i) < 0 {
-                        let j = secondary.rays.id(i);
-                        accumulate(j,
-                            make_color(
-                                secondary.color_r(i),
-                                secondary.color_g(i),
-                                secondary.color_b(i)
-                            )
-                        );
+                    // Sort hits by shader id, and filter invalid hits
+                    let mut ray_begins : [i32 * 1024];
+                    let mut ray_ends   : [i32 * 1024];
+                    primary.size = cpu_sort_primary(primary, &mut ray_begins, &mut ray_ends, scene.info.num_entities);
+
+                    // Perform (vectorized) shading
+                    cpu_profile(&mut shading_counter, || {
+                        let mut begin = 0;
+                        for ent_id in range(0, scene.info.num_entities) {
+                            let end = ray_ends(ent_id);
+                            cpu_shade(ent_id, primary, secondary, scene, path_tracer, accumulate, begin, end, vector_width);
+                            begin = end;
+                        }
+
+                        // Shade misses as well
+                        let last = ray_ends(scene.info.num_entities);
+                        if(begin < last) {
+                            cpu_miss_shade(primary, path_tracer, accumulate, begin, last, vector_width);
+                        }
+                    });
+
+                    // Filter terminated rays
+                    secondary.size = primary.size;
+                    primary.size   = cpu_compact_primary(primary, vector_width, vector_compact);
+
+                    // Compact and trace secondary rays
+                    secondary.size = cpu_compact_secondary(secondary, vector_width, vector_compact);
+                    if likely(secondary.size > 0) {
+                        cpu_profile(&mut shadow_counter, || {
+                            cpu_traverse_secondary(scene, min_max, secondary, single, vector_width);
+                        });
+                    }
+
+                    // Add the contribution for secondary rays to the frame buffer
+                    for i in range(0, secondary.size) {
+                        if secondary.prim_id(i) < 0 {
+                            let j = secondary.rays.id(i);
+                            accumulate(j,
+                                make_color(
+                                    secondary.color_r(i),
+                                    secondary.color_g(i),
+                                    secondary.color_b(i)
+                                )
+                            );
+                        }
                     }
                 }
             }

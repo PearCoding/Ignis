@@ -13,7 +13,6 @@ enum LightType {
 	LIGHT_DIRECTIONAL		   = 0x2,
 	LIGHT_SUN				   = 0x3,
 	LIGHT_SKY				   = 0x4,
-	LIGHT_SUNSKY			   = 0x5,
 	LIGHT_CIE_UNIFORM		   = 0x10,
 	LIGHT_CIE_CLOUDY		   = 0x11,
 	LIGHT_PEREZ				   = 0x12,
@@ -47,15 +46,22 @@ static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
 	}
 }
 
-/*static void setup_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static uint32 setup_sky(const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& res)
 {
 	auto ground	   = light->property("ground").getVector3(Vector3f(0.8f, 0.8f, 0.8f));
 	auto turbidity = light->property("turbidity").getNumber(3.0f);
 	auto ea		   = extractEA(light);
 
 	SkyModel model(ground, ea, turbidity);
-	model.save("data/skytex_" + LoaderContext::makeId(name) + ".exr");
-}*/
+
+	uint32 id  = res.Database.BufferTable.entryCount();
+	auto& data = res.Database.BufferTable.addLookup(0, 0, DefaultAlignment);
+
+	VectorSerializer serializer(data, false);
+	model.save(serializer);
+
+	return id;
+}
 
 static void light_point(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
@@ -114,32 +120,20 @@ static void light_sun(const std::string& name, const std::shared_ptr<Parser::Obj
 	serializer.write(sun_radius);
 }
 
-/*static void light_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
+static void light_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
-	setup_sky(name, light, ctx);
+	uint32 id = setup_sky(light, ctx, result);
 
-	std::string tex_path = "skytex_" + LoaderContext::makeId(name);
-	os << "make_environment_light_textured(math, " << ctx.Environment.SceneDiameter << ", " << tex_path << ")";
+	auto& data = result.Database.LightTable.addLookup(LIGHT_SKY, 0, DefaultAlignment);
+	VectorSerializer serializer(data, false);
+	serializer.write(id);
 }
 
-// TODO: Why not just add two lights instead of this combination?
 static void light_sunsky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
-	setup_sky(name, light, ctx);
-	const std::string tex_path = "skytex_" + LoaderContext::makeId(name);
-
-	auto ea		 = extractEA(light);
-	Vector3f dir = ea.toDirection();
-
-	auto sun_power	= light->property("sun_scale").getNumber(1.0f);
-	auto sun_radius = light->property("sun_radius_scale").getNumber(10.0f);
-	os << "make_sunsky_light(math, make_vec3("
-	   << dir(0) << ", " << dir(1) << ", " << dir(2) << "), "
-	   << ctx.Environment.SceneDiameter << ", "
-	   << sun_radius << ", "
-	   << "make_gray_color(" << sun_power << "), "
-	   << tex_path << ")";
-}*/
+	light_sky(name + "_sky", light, ctx, result);
+	light_sun(name + "_sun", light, ctx, result);
+}
 
 static void light_cie_uniform(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
@@ -235,9 +229,9 @@ static struct {
 	{ "directional", light_directional },
 	{ "direction", light_directional },
 	{ "sun", light_sun },
-	{ "sunsky", light_cie_uniform }, // TODO
-	{ "skysun", light_cie_uniform }, // TODO
-	{ "sky", light_cie_uniform },	 // TODO
+	{ "sunsky", light_sunsky },
+	{ "skysun", light_sunsky },
+	{ "sky", light_sky },
 	{ "cie_uniform", light_cie_uniform },
 	{ "cieuniform", light_cie_uniform },
 	{ "cie_cloudy", light_cie_cloudy },
@@ -280,7 +274,7 @@ bool LoaderLight::setup_area(LoaderContext& ctx)
 			const std::string entity		= light->property("entity").getString();
 			ctx.Environment.AreaIDs[entity] = counter;
 		}
-		
+
 		++counter;
 	}
 	return true;

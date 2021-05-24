@@ -268,7 +268,7 @@ fn @gpu_sort_primary( primary: PrimaryStream
             return()
         }
         let ent_id = primary.ent_id(src_id);
-        let dst_id  = atomics.add_global_i32(&mut gpu_tmp(ent_id), 1);
+        let dst_id = atomics.add_global_i32(&mut gpu_tmp(ent_id), 1);
         copy_primary_ray(primary, other_primary, src_id, dst_id, true);
     });
     acc.sync();
@@ -387,6 +387,14 @@ fn @gpu_streaming_trace( dev_id: i32
             primary.size = gpu_generate_rays(primary, capacity, acc, intrinsics, path_tracer, &mut id, film_width, film_height, spp);
         }
 
+        // Special case: No entities to intersect
+        if scene.info.num_entities == 0 {
+            gpu_missshade(acc, intrinsics, atomics, scene, path_tracer, film_pixels, spp, primary, 0, primary.size);
+            primary.size = 0;
+            acc.sync();
+            continue()
+        }
+
         // Traverse primary rays
         gpu_traverse_primary(primary, acc, intrinsics, min_max, scene);
 
@@ -428,6 +436,7 @@ fn @gpu_streaming_trace( dev_id: i32
     }
 }
 
+// TODO: Add miss shader and no entities handling
 fn @gpu_mega_kernel_trace( dev_id: i32
                          , acc: Accelerator
                          , intrinsics: Intrinsics
