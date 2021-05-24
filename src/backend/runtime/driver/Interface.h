@@ -36,6 +36,8 @@ using DriverGetFramebufferFunction	 = const float* (*)(int);
 using DriverClearFramebufferFunction = void (*)(int);
 
 struct DriverInterface {
+	IG::uint32 MajorVersion;
+	IG::uint32 MinorVersion;
 	IG::uint32 SPP;
 	const char* Name;
 	IG::uint64 Configuration;

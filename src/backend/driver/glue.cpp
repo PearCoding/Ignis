@@ -1,4 +1,5 @@
 #include "Runtime.h"
+#include "config/Version.h"
 #include "driver/Configuration.h"
 #include "driver/Interface.h"
 #include "table/SceneDatabase.h"
@@ -458,6 +459,9 @@ extern "C" {
 IG_EXPORT DriverInterface ig_get_interface()
 {
 	DriverInterface interface;
+	interface.MajorVersion = IG_VERSION_MAJOR;
+	interface.MinorVersion = IG_VERSION_MINOR;
+
 	// Expose SPP
 #ifdef CAMERA_LIST
 	interface.SPP = 1;

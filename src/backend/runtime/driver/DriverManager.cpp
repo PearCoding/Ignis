@@ -1,6 +1,7 @@
 #include "DriverManager.h"
 #include "Configuration.h"
 #include "Logger.h"
+#include "config/Version.h"
 
 #include <unordered_set>
 
@@ -164,6 +165,12 @@ bool DriverManager::addModule(const std::filesystem::path& path)
 		}
 
 		const DriverInterface interface = func();
+
+		if (interface.MajorVersion != IG_VERSION_MAJOR || interface.MinorVersion != IG_VERSION_MINOR) {
+			IG_LOG(L_WARNING) << "Skipping module " << path << " as the provided version " << interface.MajorVersion << "." << interface.MinorVersion
+							  << " does not match the runtime version " << IG_VERSION_MAJOR << "." << IG_VERSION_MINOR << std::endl;
+			return false;
+		}
 
 		// Silently replace
 		mLoadedDrivers[interface.Configuration] = library;
