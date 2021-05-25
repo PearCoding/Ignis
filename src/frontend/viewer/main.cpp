@@ -14,6 +14,9 @@
 
 #include <optional>
 
+#include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/sysutil.h>
+
 constexpr int SPP = 4; // Render SPP is always 4!
 
 using namespace IG;
@@ -37,41 +40,60 @@ static inline void version()
 
 static inline void usage()
 {
-	std::cout << "Usage: " << PROGRAM_NAME << " file [options]\n"
-			  << "Available options:\n"
-			  << "   -h      --help                 Shows this message\n"
-			  << "           --version              Show version and exit\n"
-			  << "   -q      --quiet                Do not print messages into console\n"
-			  << "   -v      --verbose              Print detailed information\n"
-			  << "           --no-color             Do not use decorations to make console output better\n"
-			  << "           --width     pixels     Sets the viewport horizontal dimension (in pixels)\n"
-			  << "           --height    pixels     Sets the viewport vertical dimension (in pixels)\n"
-			  << "           --eye       x y z      Sets the position of the camera\n"
-			  << "           --dir       x y z      Sets the direction vector of the camera\n"
-			  << "           --up        x y z      Sets the up vector of the camera\n"
-			  << "           --fov       degrees    Sets the horizontal field of view (in degrees)\n"
-			  << "           --range     tmin tmax  Sets near and far clip range in world units\n"
-			  << "           --camera    cam_type   Override camera type\n"
-			  << "           --technique tech_type  Override technique/integrator type\n"
-			  << "   -t      --target    target     Sets the target platform (default: autodetect CPU)\n"
-			  << "   -d      --device    device     Sets the device to use on the selected platform (default: 0)\n"
-			  << "           --cpu                  Use autodetected CPU target\n"
-			  << "           --gpu                  Use autodetected GPU target\n"
-			  << "           --spp       spp        Enables benchmarking mode and sets the number of iterations based on the given spp\n"
-			  << "           --bench     iterations Enables benchmarking mode and sets the number of iterations\n"
-			  << "   -o      --output    image.exr  Writes the output image to a file\n"
-			  << "Available targets:\n"
-			  << "    generic, sse42, avx, avx2, avx512, asimd,\n"
-			  << "    nvvm = nvvm-streaming, nvvm-megakernel,\n"
-			  << "    amdgpu = amdgpu-streaming, amdgpu-megakernel\n"
-			  << "Available cameras:\n"
-			  << "    perspective, orthogonal, fishlens\n"
-			  << "Available techniques:\n"
-			  << "    path, debug, ao" << std::endl;
+	std::cout
+#ifdef WITH_UI
+		<< PROGRAM_NAME << " - Ignis Viewer" << std::endl
+#else
+		<< PROGRAM_NAME << " - Ignis Command Line Renderer" << std::endl
+#endif
+		<< Build::getCopyrightString() << std::endl
+		<< "Usage: " << PROGRAM_NAME << " [options] file" << std::endl
+		<< "Available options:" << std::endl
+		<< "   -h      --help                 Shows this message" << std::endl
+		<< "           --version              Show version and exit" << std::endl
+		<< "   -q      --quiet                Do not print messages into console" << std::endl
+		<< "   -v      --verbose              Print detailed information" << std::endl
+		<< "           --no-color             Do not use decorations to make console output better" << std::endl
+		<< "           --width     pixels     Sets the viewport horizontal dimension (in pixels)" << std::endl
+		<< "           --height    pixels     Sets the viewport vertical dimension (in pixels)" << std::endl
+		<< "           --eye       x y z      Sets the position of the camera" << std::endl
+		<< "           --dir       x y z      Sets the direction vector of the camera" << std::endl
+		<< "           --up        x y z      Sets the up vector of the camera" << std::endl
+		<< "           --fov       degrees    Sets the horizontal field of view (in degrees)" << std::endl
+		<< "           --range     tmin tmax  Sets near and far clip range in world units" << std::endl
+		<< "           --camera    cam_type   Override camera type" << std::endl
+		<< "           --technique tech_type  Override technique/integrator type" << std::endl
+		<< "   -t      --target    target     Sets the target platform (default: autodetect CPU)" << std::endl
+		<< "   -d      --device    device     Sets the device to use on the selected platform (default: 0)" << std::endl
+		<< "           --cpu                  Use autodetected CPU target" << std::endl
+		<< "           --gpu                  Use autodetected GPU target" << std::endl
+		<< "           --spp       spp        Enables benchmarking mode and sets the number of iterations based on the given spp" << std::endl
+		<< "           --bench     iterations Enables benchmarking mode and sets the number of iterations" << std::endl
+		<< "   -o      --output    image.exr  Writes the output image to a file" << std::endl
+		<< "Available targets:" << std::endl
+		<< "    generic, sse42, avx, avx2, avx512, asimd," << std::endl
+		<< "    nvvm = nvvm-streaming, nvvm-megakernel," << std::endl
+		<< "    amdgpu = amdgpu-streaming, amdgpu-megakernel" << std::endl
+		<< "Available cameras:" << std::endl
+		<< "    perspective, orthogonal, fishlens" << std::endl
+		<< "Available techniques:" << std::endl
+		<< "    path, debug, ao" << std::endl;
 }
 
 int main(int argc, char** argv)
 {
+#ifdef OIIO_HAS_STACKTRACE
+	// Helpful for debugging to make sure that any crashes dump a stack trace.
+	OIIO::Sysutil::setup_crash_stacktrace("stdout");
+#endif
+
+	OIIO::Filesystem::convert_native_arguments(argc, (const char**)argv);
+
+	if (argc <= 1) {
+		usage();
+		return EXIT_SUCCESS;
+	}
+
 	std::string in_file;
 	std::string out_file;
 	size_t bench_iter = 0;

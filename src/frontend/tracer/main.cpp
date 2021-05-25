@@ -2,6 +2,9 @@
 #include "Runtime.h"
 #include "config/Build.h"
 
+#include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/sysutil.h>
+
 #include <fstream>
 #include <sstream>
 
@@ -20,20 +23,23 @@ static inline void version()
 
 static inline void usage()
 {
-	std::cout << "Usage: igtrace file [options]\n"
-			  << "Available options:\n"
-			  << "   -h      --help                   Shows this message\n"
-			  << "           --version                Show version and exit\n"
-			  << "   -q      --quiet                  Do not print messages into console\n"
-			  << "   -v      --verbose                Print detailed information\n"
-			  << "           --no-color               Do not use decorations to make console output better\n"
-			  << "   -t      --target   target        Sets the target platform (default: autodetect CPU)\n"
-			  << "   -d      --device   device        Sets the device to use on the selected platform (default: 0)\n"
-			  << "           --cpu                    Use autodetected CPU target\n"
-			  << "           --gpu                    Use autodetected GPU target\n"
-			  << "   -n      --count    count         Samples per ray. Default is 1\n"
-			  << "   -i      --input    list.txt      Read list of rays from file instead of the standard input\n"
-			  << "   -o      --output   radiance.txt  Write radiance for each ray into file instead of standard output" << std::endl;
+	std::cout
+		<< "igtrace - Ignis Command Line Tracer" << std::endl
+		<< Build::getCopyrightString() << std::endl
+		<< "Usage: igtrace [options] file" << std::endl
+		<< "Available options:" << std::endl
+		<< "   -h      --help                   Shows this message" << std::endl
+		<< "           --version                Show version and exit" << std::endl
+		<< "   -q      --quiet                  Do not print messages into console" << std::endl
+		<< "   -v      --verbose                Print detailed information" << std::endl
+		<< "           --no-color               Do not use decorations to make console output better" << std::endl
+		<< "   -t      --target   target        Sets the target platform (default: autodetect CPU)" << std::endl
+		<< "   -d      --device   device        Sets the device to use on the selected platform (default: 0)" << std::endl
+		<< "           --cpu                    Use autodetected CPU target" << std::endl
+		<< "           --gpu                    Use autodetected GPU target" << std::endl
+		<< "   -n      --count    count         Samples per ray. Default is 1" << std::endl
+		<< "   -i      --input    list.txt      Read list of rays from file instead of the standard input" << std::endl
+		<< "   -o      --output   radiance.txt  Write radiance for each ray into file instead of standard output" << std::endl;
 }
 
 static inline float safe_rcp(float x)
@@ -80,6 +86,18 @@ static void write_output(std::ostream& is, bool file, float* data, size_t count,
 
 int main(int argc, char** argv)
 {
+#ifdef OIIO_HAS_STACKTRACE
+	// Helpful for debugging to make sure that any crashes dump a stack trace.
+	OIIO::Sysutil::setup_crash_stacktrace("stdout");
+#endif
+
+	OIIO::Filesystem::convert_native_arguments(argc, (const char**)argv);
+
+	if (argc <= 1) {
+		usage();
+		return EXIT_SUCCESS;
+	}
+
 	std::string scene_file;
 	uint32 sample_count = 1;
 	std::string ray_file;

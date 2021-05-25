@@ -56,7 +56,7 @@ namespace Build {
 Version getVersion() { return Version{ IG_VERSION_MAJOR, IG_VERSION_MINOR }; }
 std::string getVersionString() { return IG_VERSION_STRING; }
 std::string getGitString() { return IG_GIT_BRANCH " " IG_GIT_REVISION; }
-std::string getCopyrightString() { return IG_NAME_STRING " " IG_VERSION_STRING " (C) " IG_VENDOR_STRING; }
+std::string getCopyrightString() { return "(C) " IG_VENDOR_STRING; }
 
 std::string getCompilerName() { return IG_CC_NAME; }
 std::string getOSName() { return IG_OS_NAME; }

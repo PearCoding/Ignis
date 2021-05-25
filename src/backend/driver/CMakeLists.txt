@@ -49,6 +49,8 @@ cmake_dependent_option(IG_WITH_DEVICE_GPU_MEGA   "Use mega kernel instead"      
 cmake_dependent_option(IG_WITH_DEVICE_GPU_NVIDIA "Enable NVidia GPU device"     ON  "IG_WITH_DEVICE_GPU;_HAS_CUDA" OFF)
 cmake_dependent_option(IG_WITH_DEVICE_GPU_AMD    "Enable AMD GPU device"        ON  "IG_WITH_DEVICE_GPU;_HAS_HSA"  OFF)
 
+cmake_dependent_option(IG_WITH_DEVICE_CPU_GENERIC_ALWAYS "Always build the generic CPU device" OFF  "IG_WITH_DEVICE_CPU" OFF)
+
 set(DEVICE_SELECTION )
 
 if(IG_WITH_DEVICE_CPU)
@@ -62,6 +64,10 @@ if(IG_WITH_DEVICE_CPU)
             #"ASIMD"
             )
     else()
+        list(APPEND DEVICE_SELECTION "DEFAULT")
+    endif()
+
+    if(IG_WITH_DEVICE_CPU_GENERIC_ALWAYS AND IG_WITH_DEVICE_CPU_SIMD)
         list(APPEND DEVICE_SELECTION "DEFAULT")
     endif()
 endif()
