@@ -14,9 +14,9 @@ int ignis_test_expect_eq_f32(float a, float b)
 		return 0;
 	}
 }
-void ignis_test_fail(const char* msg)
+void ignis_test_fail(unsigned char* msg)
 {
-	std::cout << "Expression failed: " << msg << std::endl;
+	std::cout << "Expression failed: " << (const char*)msg << std::endl;
 }
 
 void ignis_dbg_echo_i32(int a)
@@ -29,22 +29,22 @@ void ignis_dbg_echo_f32(float a)
 	std::cout << "Debug: " << a << std::endl;
 }
 
-void ignis_dbg_echo_vec2(const Vec2* v)
+void ignis_dbg_echo_vec2(Vec2* v)
 {
 	std::cout << "Debug: [" << v->x << ", " << v->y << "]" << std::endl;
 }
 
-void ignis_dbg_echo_vec3(const Vec3* v)
+void ignis_dbg_echo_vec3(Vec3* v)
 {
 	std::cout << "Debug: [" << v->x << ", " << v->y << ", " << v->z << "]" << std::endl;
 }
 
-void ignis_dbg_echo_vec4(const Vec4* v)
+void ignis_dbg_echo_vec4(Vec4* v)
 {
 	std::cout << "Debug: [" << v->x << ", " << v->y << ", " << v->z << ", " << v->w << "]" << std::endl;
 }
 
-void ignis_dbg_echo_mat3x3(const Mat3x3* m)
+void ignis_dbg_echo_mat3x3(Mat3x3* m)
 {
 	std::cout << "Debug: {" << std::endl;
 	std::cout << "  [" << m->col.e[0].x << ", " << m->col.e[1].x << ", " << m->col.e[2].x << "]" << std::endl;
@@ -53,7 +53,7 @@ void ignis_dbg_echo_mat3x3(const Mat3x3* m)
 	std::cout << "}" << std::endl;
 }
 
-void ignis_dbg_echo_mat4x4(const Mat4x4* m)
+void ignis_dbg_echo_mat4x4(Mat4x4* m)
 {
 	std::cout << "Debug: {" << std::endl;
 	std::cout << "  [" << m->col.e[0].x << ", " << m->col.e[1].x << ", " << m->col.e[2].x << ", " << m->col.e[3].x << "]" << std::endl;

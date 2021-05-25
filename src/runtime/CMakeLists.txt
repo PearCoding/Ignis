@@ -6,6 +6,13 @@ CPMFindPackage(
     DOWNLOAD_ONLY
 )
 
+CPMAddPackage(
+    NAME hwinfo
+    GITHUB_REPOSITORY PearCoding/hwinfo 
+    GIT_TAG main
+    EXCLUDE_FROM_ALL
+)
+
 ################################################################
 
 set(SRC 
@@ -36,7 +43,14 @@ set(SRC
     mesh/TriMesh.h
 )
 
-add_library(ig_lib_runtime STATIC ${SRC} "${CMAKE_BINARY_DIR}/HW_Features.h")
+set(HW_HEADER "${CMAKE_BINARY_DIR}/HW_Features.h")
+add_custom_command(
+  OUTPUT "${HW_HEADER}"
+  COMMAND $<TARGET_FILE:hwinfo> --header --prefix IG > ${HW_HEADER}
+  COMMENT "Generating hardware feature information: ${HW_HEADER}" 
+  VERBATIM)
+
+add_library(ig_lib_runtime STATIC ${SRC} ${HW_HEADER})
 add_dependencies(ig_lib_runtime tinyobjloader)
 target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen ${LZ4_LIBRARY} OpenImageIO::OpenImageIO OpenImageIO::OpenImageIO_Util)
 target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR})

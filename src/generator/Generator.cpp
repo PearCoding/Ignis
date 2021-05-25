@@ -75,7 +75,7 @@ struct SceneBuilder {
 	{
 		// Setup camera
 		os << "\n    // Camera\n"
-		   << "    let camera = make_fishlens_camera(\n"
+		   << "    let camera = make_perspective_camera(\n"
 		   << "        math,\n"
 		   << "        settings.eye,\n"
 		   << "        make_mat3x3(settings.right, settings.up, settings.dir),\n"

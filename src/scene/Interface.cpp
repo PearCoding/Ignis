@@ -570,61 +570,61 @@ Ray* ignis_load_rays(int32_t dev, size_t n, Ray* rays)
 	return const_cast<Ray*>(array.data());
 }
 
-void ignis_load_bvh2_tri1(int32_t dev, const char* file, Node2** nodes, Tri1** tris)
+void ignis_load_bvh2_tri1(int32_t dev, unsigned char* file, Node2** nodes, Tri1** tris)
 {
-	auto& bvh = interface->load_bvh2_tri1(dev, file);
+	auto& bvh = interface->load_bvh2_tri1(dev, (const char*)file);
 	*nodes	  = const_cast<Node2*>(bvh.nodes.data());
 	*tris	  = const_cast<Tri1*>(bvh.objs.data());
 }
 
-void ignis_load_bvh4_tri4(int32_t dev, const char* file, Node4** nodes, Tri4** tris)
+void ignis_load_bvh4_tri4(int32_t dev, unsigned char* file, Node4** nodes, Tri4** tris)
 {
-	auto& bvh = interface->load_bvh4_tri4(dev, file);
+	auto& bvh = interface->load_bvh4_tri4(dev, (const char*)file);
 	*nodes	  = const_cast<Node4*>(bvh.nodes.data());
 	*tris	  = const_cast<Tri4*>(bvh.objs.data());
 }
 
-void ignis_load_bvh8_tri4(int32_t dev, const char* file, Node8** nodes, Tri4** tris)
+void ignis_load_bvh8_tri4(int32_t dev, unsigned char* file, Node8** nodes, Tri4** tris)
 {
-	auto& bvh = interface->load_bvh8_tri4(dev, file);
+	auto& bvh = interface->load_bvh8_tri4(dev, (const char*)file);
 	*nodes	  = const_cast<Node8*>(bvh.nodes.data());
 	*tris	  = const_cast<Tri4*>(bvh.objs.data());
 }
 
-void ignis_load_bvh2_bbox(int32_t dev, const char* file, Node2** nodes, TaggedBBox1** objs)
+void ignis_load_bvh2_bbox(int32_t dev, unsigned char* file, Node2** nodes, TaggedBBox1** objs)
 {
-	auto& bvh = interface->load_bvh2_bbox(dev, file);
+	auto& bvh = interface->load_bvh2_bbox(dev, (const char*)file);
 	*nodes	  = const_cast<Node2*>(bvh.nodes.data());
 	*objs	  = const_cast<TaggedBBox1*>(bvh.objs.data());
 }
 
-void ignis_load_bvh4_bbox(int32_t dev, const char* file, Node4** nodes, TaggedBBox1** objs)
+void ignis_load_bvh4_bbox(int32_t dev, unsigned char* file, Node4** nodes, TaggedBBox1** objs)
 {
-	auto& bvh = interface->load_bvh4_bbox(dev, file);
+	auto& bvh = interface->load_bvh4_bbox(dev, (const char*)file);
 	*nodes	  = const_cast<Node4*>(bvh.nodes.data());
 	*objs	  = const_cast<TaggedBBox1*>(bvh.objs.data());
 }
 
-void ignis_load_bvh8_bbox(int32_t dev, const char* file, Node8** nodes, TaggedBBox1** objs)
+void ignis_load_bvh8_bbox(int32_t dev, unsigned char* file, Node8** nodes, TaggedBBox1** objs)
 {
-	auto& bvh = interface->load_bvh8_bbox(dev, file);
+	auto& bvh = interface->load_bvh8_bbox(dev, (const char*)file);
 	*nodes	  = const_cast<Node8*>(bvh.nodes.data());
 	*objs	  = const_cast<TaggedBBox1*>(bvh.objs.data());
 }
 
-void ignis_load_cdf1d(int32_t dev, const char* file, CDF1D* cdf)
+void ignis_load_cdf1d(int32_t dev, unsigned char* file, CDF1D* cdf)
 {
-	*cdf = interface->load_cdf1d(dev, file);
+	*cdf = interface->load_cdf1d(dev, (const char*)file);
 }
 
-void ignis_load_cdf2d(int32_t dev, const char* file, CDF2D* cdf)
+void ignis_load_cdf2d(int32_t dev, unsigned char* file, CDF2D* cdf)
 {
-	*cdf = interface->load_cdf2d(dev, file);
+	*cdf = interface->load_cdf2d(dev, (const char*)file);
 }
 
-void ignis_load_klems(int32_t dev, const char* file, ::KlemsModel* klems)
+void ignis_load_klems(int32_t dev, unsigned char* file, ::KlemsModel* klems)
 {
-	const auto& proxy = interface->load_klems(dev, file);
+	const auto& proxy = interface->load_klems(dev, (const char*)file);
 	bridge_klems(*klems, proxy);
 }
 
