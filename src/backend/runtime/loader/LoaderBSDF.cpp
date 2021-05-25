@@ -22,7 +22,6 @@ enum BsdfFlags {
 
 enum BsdfType {
 	BSDF_DIFFUSE		  = 0x00,
-	BSDF_DIFFUSE_TEXTURED = 0x100, // TODO: This is not a good solution...
 	BSDF_ORENNAYAR		  = 0x01,
 	BSDF_DIELECTRIC		  = 0x02,
 	BSDF_ROUGH_DIELECTRIC = 0x03,
