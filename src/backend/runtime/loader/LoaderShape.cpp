@@ -182,9 +182,9 @@ static void setup_bvhs(const std::vector<TriMesh>& meshes, LoaderResult& result)
 		auto& bvhData = result.Database.BVHTable.addLookup(0, 0, DefaultAlignment);
 		VectorSerializer serializer(bvhData, false);
 		serializer.write((uint32)bvh.nodes.size());
-		serializer.write((uint32)0); // Padding
-		serializer.write((uint32)0); // Padding
-		serializer.write((uint32)0); // Padding
+		serializer.write((uint32)bvh.tris.size()); // Not really needed, but just dump it out
+		serializer.write((uint32)0);			   // Padding
+		serializer.write((uint32)0);			   // Padding
 		serializer.write(bvh.nodes, true);
 		serializer.write(bvh.tris, true);
 	}

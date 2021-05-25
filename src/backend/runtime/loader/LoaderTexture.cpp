@@ -94,6 +94,8 @@ static struct {
 
 bool LoaderTexture::load(LoaderContext& ctx, LoaderResult& result)
 {
+	const auto start1 = std::chrono::high_resolution_clock::now();
+
 	// TODO: Change to BSDF like bookkeeping of ignored elements
 	size_t counter = 0;
 	for (const auto& pair : ctx.Scene.textures()) {
@@ -117,6 +119,8 @@ bool LoaderTexture::load(LoaderContext& ctx, LoaderResult& result)
 			result.Database.TextureTable.addLookup(TEX_INVALID, 0, DefaultAlignment);
 		}
 	}
+
+	IG_LOG(L_DEBUG) << "Storing textures took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
 	return true;
 }

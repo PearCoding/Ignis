@@ -5,6 +5,8 @@
 
 #include "klems/KlemsLoader.h"
 
+#include <chrono>
+
 namespace IG {
 
 struct BsdfContext {
@@ -437,6 +439,8 @@ bool LoaderBSDF::load(LoaderContext& ctx, LoaderResult& result)
 {
 	BsdfContext context{ ctx, result, {} };
 
+	const auto start1 = std::chrono::high_resolution_clock::now();
+
 	for (const auto& pair : ctx.Scene.bsdfs()) {
 		const auto bsdf = pair.second;
 
@@ -467,6 +471,8 @@ bool LoaderBSDF::load(LoaderContext& ctx, LoaderResult& result)
 			IG_LOG(L_DEBUG) << "Replacing " << pair.first << " with " << pair.second << std::endl;
 		}
 	}
+
+	IG_LOG(L_DEBUG) << "Storing BSDFs took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
 	return true;
 }

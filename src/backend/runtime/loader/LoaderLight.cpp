@@ -5,6 +5,8 @@
 #include "skysun/SkyModel.h"
 #include "skysun/SunLocation.h"
 
+#include <chrono>
+
 namespace IG {
 
 enum LightType {
@@ -246,6 +248,7 @@ static struct {
 
 bool LoaderLight::load(LoaderContext& ctx, LoaderResult& result)
 {
+	const auto start1 = std::chrono::high_resolution_clock::now();
 	for (const auto& pair : ctx.Scene.lights()) {
 		const auto light = pair.second;
 
@@ -261,11 +264,15 @@ bool LoaderLight::load(LoaderContext& ctx, LoaderResult& result)
 			IG_LOG(L_ERROR) << "No light type '" << light->pluginType() << "' available" << std::endl;
 	}
 
+	IG_LOG(L_DEBUG) << "Storing lights took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
+
 	return true;
 }
 
 bool LoaderLight::setup_area(LoaderContext& ctx)
 {
+	const auto start1 = std::chrono::high_resolution_clock::now();
+
 	uint32 counter = 0;
 	for (const auto& pair : ctx.Scene.lights()) {
 		const auto light = pair.second;
@@ -277,6 +284,11 @@ bool LoaderLight::setup_area(LoaderContext& ctx)
 
 		++counter;
 	}
+
+	if (ctx.Environment.AreaIDs.empty()) {
+		IG_LOG(L_DEBUG) << "Storing Area lights took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
+	}
+
 	return true;
 }
 

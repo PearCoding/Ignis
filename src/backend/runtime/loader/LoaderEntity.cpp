@@ -4,6 +4,8 @@
 #include "bvh/SceneBVHAdapter.h"
 #include "serialization/VectorSerializer.h"
 
+#include <chrono>
+
 namespace IG {
 using namespace Parser;
 
@@ -34,6 +36,8 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 	// Fill entity list
 	size_t counter			  = 0;
 	ctx.Environment.SceneBBox = BoundingBox::Empty();
+
+	const auto start1 = std::chrono::high_resolution_clock::now();
 
 	std::vector<EntityObject> in_objs;
 	result.Database.EntityTable.reserve(ctx.Scene.entities().size() * 48);
@@ -98,13 +102,16 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 		in_objs.emplace_back(obj);
 	}
 
-	if(counter == 0)
+	IG_LOG(L_DEBUG) << "Storing Entities took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
+
+	if (counter == 0)
 		return true;
 
 	ctx.Environment.SceneDiameter = ctx.Environment.SceneBBox.diameter().norm();
 
 	// Build bvh (keep in mind that this BVH has no pre-padding as in the case for shape BVHs)
 	IG_LOG(L_DEBUG) << "Generating BVH for scene" << std::endl;
+	const auto start2 = std::chrono::high_resolution_clock::now();
 	if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
 		setup_bvh<2>(in_objs, result);
 	} else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
@@ -112,6 +119,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 	} else {
 		setup_bvh<8>(in_objs, result);
 	}
+	IG_LOG(L_DEBUG) << "Building Scene BVH took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start2).count() / 1000.0f << " seconds" << std::endl;
 
 	return true;
 }

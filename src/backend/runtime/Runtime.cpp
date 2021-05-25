@@ -4,6 +4,8 @@
 #include "driver/Configuration.h"
 #include "loader/Parser.h"
 
+#include <chrono>
+
 namespace IG {
 
 static inline void setup_technique(RuntimeRenderSettings& settings, LoaderOptions& lopts, const RuntimeOptions& opts)
@@ -92,11 +94,13 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	lopts.Configuration = targetToConfiguration(opts.DesiredTarget);
 
 	// Parse scene file
+	const auto startParser = std::chrono::high_resolution_clock::now();
 	Parser::SceneParser parser;
 	bool ok		= false;
 	lopts.Scene = parser.loadFromFile(path, ok);
 	if (!ok)
 		throw std::runtime_error("Could not parse scene!");
+	IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
 
 	// Extract technique
 	setup_technique(mLoadedRenderSettings, lopts, opts);
