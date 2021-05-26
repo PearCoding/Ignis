@@ -83,9 +83,9 @@ If a system wide environment variable is not defined, you might also use the fol
 Ignis Rodent uses a JSON based flat scene description with instancing. Support for shading nodes is planned. Image and procedural texture support is available.
 A schema is available at [refs/ignis.schema.json](refs/ignis.schema.json)
 
-You might use the `scripts/mts2json.py` python script to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.
+You might use the `mts2ig` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.
 
-A Blender plugin and a Radiance scene converter is planned.
+A Blender plugin and a Radiance scene converter are planned.
 
 ## Tiny tools
 

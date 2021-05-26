@@ -66,7 +66,7 @@ static void bsdf_error(const std::string& msg, LoaderResult& result)
 	result.Database.BsdfTable.addLookup(BSDF_INVALID, 0, DefaultAlignment);
 }
 
-static uint32 setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, VectorSerializer& serializer)
+static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, VectorSerializer& serializer)
 {
 	float alpha_u, alpha_v;
 	if (bsdf->property("alpha_u").isValid()) {
@@ -79,7 +79,6 @@ static uint32 setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, Load
 
 	serializer.write(alpha_u);
 	serializer.write(alpha_v);
-	return 2;
 }
 
 static void bsdf_diffuse(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)

@@ -29,8 +29,17 @@ def toInt(var):
     try:
         var = int(var)
     except:
-        varname = var.split('$')[1]
-        var = int(defaults[varname])
+        arr = var.split('$')
+        if len(arr) != 2:
+            varname = arr[1]
+            if varname in defaults:
+                var = int(defaults[varname])
+            else:
+                print("Warning: %s has no value given" % varname)
+                var = 0
+        else:
+            print("Error: Invalid substitution entry %s" % var)
+            var = 0
     return var
 
 
@@ -38,8 +47,17 @@ def toFloat(var):
     try:
         var = float(var)
     except:
-        varname = var.split('$')[1]
-        var = float(defaults[varname])
+        arr = var.split('$')
+        if len(arr) != 2:
+            varname = arr[1]
+            if varname in defaults:
+                var = float(defaults[varname])
+            else:
+                print("Warning: %s has no value given" % varname)
+                var = 0
+        else:
+            print("Error: Invalid substitution entry %s" % var)
+            var = 0
     return var
 
 
@@ -62,13 +80,19 @@ def computeTransformation(child):
         matrix_action = np.identity(4)
 
         if (transform.tag == "translate"):
-            vec = transform.attrib['value']
-            vec = re.split(',\s|\s', vec)
+            if 'value' in transform.attrib:
+                vec = transform.attrib['value']
+                vec = re.split(',\s|\s', vec)
 
-            matrix_action[0][3] = vec[0]
-            matrix_action[1][3] = vec[1]
-            matrix_action[2][3] = vec[2]
+            else:
+                x = transform.attrib.get('x', '0')
+                y = transform.attrib.get('y', '0')
+                z = transform.attrib.get('z', '0')
+                vec = [x, y, z]
 
+            matrix_action[0][3] = toFloat(vec[0])
+            matrix_action[1][3] = toFloat(vec[1])
+            matrix_action[2][3] = toFloat(vec[2])
         elif (transform.tag == "rotate"):
             # In this case, the rotation is around a vector
             if ("value" in transform.attrib):
@@ -137,11 +161,11 @@ def computeTransformation(child):
         elif (transform.tag == "lookat"):
             origin = re.split(',\s|\s', transform.attrib['origin'])
             target = re.split(',\s|\s', transform.attrib['target'])
-            origin = np.array([toInt(o) for o in origin])
-            target = np.array([toInt(t) for t in target])
+            origin = np.array([toFloat(o) for o in origin])
+            target = np.array([toFloat(t) for t in target])
             if ('up' in child.attrib):
                 up = re.split(',\s|\s', transform.attrib['up'])
-                up = np.array([toInt(u) for u in up])
+                up = np.array([toFloat(u) for u in up])
             else:
                 up = np.array([0, 1, 0])
 
@@ -219,8 +243,14 @@ def getAdditionalProperties(child, res_dict):
             elif (elem.tag == "rgb"):
                 prop = toSnakeCase(elem.attrib['name'])
                 vec = elem.attrib['value']
-                vec = re.split(',\s|\s', vec)
-                vec = [toFloat(v) for v in vec]
+                if vec.startswith('#'):
+                    r = int(vec[1:2], 16) / 255.0
+                    g = int(vec[3:4], 16) / 255.0
+                    b = int(vec[5:6], 16) / 255.0
+                    vec = [r, g, b]
+                else:
+                    vec = re.split(',\s|\s', vec)
+                    vec = [toFloat(v) for v in vec]
                 res_dict[prop] = vec
             elif (elem.tag == "float"):
                 prop = toSnakeCase(elem.attrib['name'])
@@ -372,7 +402,12 @@ def getTexture(child, texture, tex_name):
 
 
 def computeTextures(child, textures):
-    tex_name = child.attrib['name']
+    if ('id' in child.attrib):
+        tex_name = child.attrib['id']
+    else:
+        print("Error: Texture got no name!")
+        tex_name = '_unknown'
+
     tex_type = child.attrib['type']
 
     texture = {"type": tex_type, "name": tex_name}
@@ -395,6 +430,9 @@ def computeLights(child, light_dict):
 def computeShapes(child, shape_dict, entity_dict, light_dict):
 
     shape_type = child.attrib['type']
+    if shape_type == 'serialized':
+        shape_type = 'mitsuba'
+    
     shape = {"type": shape_type}
     entity = {}
     global nameCount, bsdfs, matCount
@@ -412,8 +450,8 @@ def computeShapes(child, shape_dict, entity_dict, light_dict):
                 bsdf_name = computeBsdfs(elem, bsdfs)
             else:
                 if ('name' in elem.attrib):
-                    bsdf_name = elem.attrib["name"]
-                    entity[bsdf_name] = elem.attrib['id']
+                    bsdf_name = elem.attrib["id"]
+                    entity[elem.attrib["name"]] = elem.attrib['id']
                 else:
                     bsdf_name = elem.attrib['id']
             entity["bsdf"] = bsdf_name
@@ -488,7 +526,7 @@ if __name__ == "__main__":
             computeLights(child, lights)
         else:
             if (not str(child.tag).startswith("<cyfunction")):
-                print("Found unhandled element:", elem.tag)
+                print("Found unhandled element:", child.tag)
 
     res_dict = {}
     if (technique):
