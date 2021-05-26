@@ -106,7 +106,7 @@ inline TriMesh setup_mesh_obj(const std::string& name, const Object& elem, const
 {
 	const auto filename = ctx.handlePath(elem.property("filename").getString());
 	// IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load obj file " << filename << std::endl;
-	auto trimesh = obj::load(filename, 0);
+	auto trimesh = obj::load(filename);
 	if (trimesh.vertices.empty()) {
 		IG_LOG(L_WARNING) << "Shape '" << name << "': Can not load shape given by file " << filename << std::endl;
 		return TriMesh();
@@ -317,7 +317,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 		meshSerializer.write(mesh.texcoords, true); // Aligned to 4*2 bytes
 		meshSerializer.write(mesh.face_inv_area, true);
 	}
-	IG_LOG(L_DEBUG) << "Storing of shapes took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
+	IG_LOG(L_DEBUG) << "Storing of shapes took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start2).count() / 1000.0f << " seconds" << std::endl;
 
 	if (ctx.Target == Target::NVVM_STREAMING || ctx.Target == Target::NVVM_MEGAKERNEL || ctx.Target == Target::AMDGPU_STREAMING || ctx.Target == Target::AMDGPU_MEGAKERNEL) {
 		setup_bvhs<2, 1>(meshes, result);

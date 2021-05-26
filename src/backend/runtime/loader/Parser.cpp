@@ -198,6 +198,8 @@ inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson:
 
 static std::shared_ptr<Object> handleAnonymousObject(Scene& scene, ObjectType type, const rapidjson::Value& obj)
 {
+	IG_UNUSED(scene);
+
 	if (obj.HasMember("type")) {
 		if (!obj["type"].IsString())
 			throw std::runtime_error("Expected type to be a string");
@@ -255,6 +257,8 @@ class InternalSceneParser {
 public:
 	static Scene loadFromJSON(const SceneParser& loader, const rapidjson::Document& doc)
 	{
+		IG_UNUSED(loader);
+
 		if (!doc.IsObject())
 			throw std::runtime_error("Expected root element to be an object");
 

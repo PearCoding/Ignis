@@ -115,27 +115,35 @@ int main(int argc, char** argv)
 		if (argv[i][0] == '-') {
 			if (!strcmp(argv[i], "--width")) {
 				check_arg(argc, argv, i, 1);
-				a_film_width = strtoul(argv[++i], nullptr, 10);
+				a_film_width = strtoul(argv[i + 1], nullptr, 10);
+				++i;
 			} else if (!strcmp(argv[i], "--height")) {
 				check_arg(argc, argv, i, 1);
-				a_film_height = strtoul(argv[++i], nullptr, 10);
+				a_film_height = strtoul(argv[i + 1], nullptr, 10);
+				++i;
 			} else if (!strcmp(argv[i], "--eye")) {
 				check_arg(argc, argv, i, 3);
-				eye = { Vector3f(strtof(argv[++i], nullptr), strtof(argv[++i], nullptr), strtof(argv[++i], nullptr)) };
+				eye = { Vector3f(strtof(argv[i + 1], nullptr), strtof(argv[i + 2], nullptr), strtof(argv[i + 3], nullptr)) };
+				i += 3;
 			} else if (!strcmp(argv[i], "--dir")) {
 				check_arg(argc, argv, i, 3);
-				dir = { Vector3f(strtof(argv[++i], nullptr), strtof(argv[++i], nullptr), strtof(argv[++i], nullptr)) };
+				dir = { Vector3f(strtof(argv[i + 1], nullptr), strtof(argv[i + 2], nullptr), strtof(argv[i + 3], nullptr)) };
+				i += 3;
 			} else if (!strcmp(argv[i], "--up")) {
 				check_arg(argc, argv, i, 3);
-				up = { Vector3f(strtof(argv[++i], nullptr), strtof(argv[++i], nullptr), strtof(argv[++i], nullptr)) };
+				up = { Vector3f(strtof(argv[i + 1], nullptr), strtof(argv[i + 2], nullptr), strtof(argv[i + 3], nullptr)) };
+				i += 3;
 			} else if (!strcmp(argv[i], "--range")) {
 				check_arg(argc, argv, i, 2);
-				trange = { Vector2f(strtof(argv[++i], nullptr), strtof(argv[++i], nullptr)) };
+				trange = { Vector2f(strtof(argv[i + 1], nullptr), strtof(argv[i + 2], nullptr)) };
+				i += 2;
 			} else if (!strcmp(argv[i], "--fov")) {
 				check_arg(argc, argv, i, 1);
-				fov = strtof(argv[++i], nullptr);
+				fov = strtof(argv[i+1], nullptr);
+				++i;
 			} else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--target")) {
-				check_arg(argc, argv, i++, 1);
+				check_arg(argc, argv, i, 1);
+				++i;
 				if (!strcmp(argv[i], "sse42"))
 					target = Target::SSE42;
 				else if (!strcmp(argv[i], "avx"))
@@ -161,7 +169,8 @@ int main(int argc, char** argv)
 					return EXIT_FAILURE;
 				}
 			} else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--device")) {
-				check_arg(argc, argv, i++, 1);
+				check_arg(argc, argv, i, 1);
+				++i;
 				device = strtoul(argv[i], NULL, 10);
 			} else if (!strcmp(argv[i], "--cpu")) {
 				target = getRecommendedCPUTarget();
@@ -172,16 +181,20 @@ int main(int argc, char** argv)
 				bench_iter = (size_t)std::ceil(strtoul(argv[++i], nullptr, 10) / (float)SPP);
 			} else if (!strcmp(argv[i], "--bench")) {
 				check_arg(argc, argv, i, 1);
-				bench_iter = strtoul(argv[++i], nullptr, 10);
+				++i;
+				bench_iter = strtoul(argv[i], nullptr, 10);
 			} else if (!strcmp(argv[i], "-o")) {
 				check_arg(argc, argv, i, 1);
-				out_file = argv[++i];
+				++i;
+				out_file = argv[i];
 			} else if (!strcmp(argv[i], "--camera")) {
 				check_arg(argc, argv, i, 1);
-				overrideCamera = argv[++i];
+				++i;
+				overrideCamera = argv[i];
 			} else if (!strcmp(argv[i], "--technique")) {
 				check_arg(argc, argv, i, 1);
-				overrideTechnique = argv[++i];
+				++i;
+				overrideTechnique = argv[i];
 			} else if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet")) {
 				quiet = true;
 				IG_LOGGER.setQuiet(true);
@@ -310,8 +323,9 @@ int main(int argc, char** argv)
 			frames++;
 			timing += elapsed_ms;
 			if (frames > 10 || timing >= 2000) {
-				auto frames_sec = double(frames) * 1000.0 / double(timing);
 #ifdef WITH_UI
+				const double frames_sec = double(frames) * 1000.0 / double(timing);
+
 				std::ostringstream os;
 				os << "Ignis [" << frames_sec << " FPS, "
 				   << iter * SPP << " "

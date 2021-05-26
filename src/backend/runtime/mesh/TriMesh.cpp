@@ -232,7 +232,7 @@ inline static void addDisk(TriMesh& mesh, const Vector3f& origin, const Vector3f
 		uint32 C  = i + start;
 		uint32 NC = (i + 1 < sections ? i + 1 : 0) + start;
 		mesh.face_normals.insert(mesh.face_normals.end(), N);
-		mesh.face_inv_area.insert(mesh.face_inv_area.end(), 1 / area);
+		mesh.face_inv_area.insert(mesh.face_inv_area.end(), 1 / secArea);
 		mesh.indices.insert(mesh.indices.end(), { 0 + off, C + off, NC + off, M });
 	}
 }

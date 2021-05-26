@@ -27,6 +27,11 @@ public:
 			IG_LOG(L_ERROR) << "Could not initialize ZLIB: " << retval << std::endl;
 	}
 
+	inline ~CompressedStream()
+	{
+		inflateEnd(&mStream);
+	}
+
 	template <typename T>
 	inline void read(T* ptr)
 	{
@@ -54,12 +59,16 @@ public:
 			switch (retval) {
 			case Z_STREAM_ERROR:
 				IG_LOG(L_ERROR) << "inflate(): stream error!" << std::endl;
+				break;
 			case Z_NEED_DICT:
 				IG_LOG(L_ERROR) << "inflate(): need dictionary!" << std::endl;
+				break;
 			case Z_DATA_ERROR:
 				IG_LOG(L_ERROR) << "inflate(): data error!" << std::endl;
+				break;
 			case Z_MEM_ERROR:
 				IG_LOG(L_ERROR) << "inflate(): memory error!" << std::endl;
+				break;
 			};
 
 			size_t outputSize = size - (size_t)mStream.avail_out;

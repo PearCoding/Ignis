@@ -7,7 +7,7 @@
 
 #include "generated_test_interface.h"
 
-int main(int argc, char** argv)
+int main(int, char**)
 {
 	// Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)

@@ -7,7 +7,7 @@
 namespace IG {
 namespace obj {
 // Only partial Wavefront support -> No normal or texcoords indices supported
-TriMesh load(const std::filesystem::path& path, size_t mtl_offset)
+TriMesh load(const std::filesystem::path& path)
 {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;

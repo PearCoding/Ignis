@@ -50,6 +50,8 @@ static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
 
 static uint32 setup_sky(const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& res)
 {
+	IG_UNUSED(ctx);
+
 	auto ground	   = light->property("ground").getVector3(Vector3f(0.8f, 0.8f, 0.8f));
 	auto turbidity = light->property("turbidity").getNumber(3.0f);
 	auto ea		   = extractEA(light);
@@ -67,6 +69,8 @@ static uint32 setup_sky(const std::shared_ptr<Parser::Object>& light, const Load
 
 static void light_point(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
+	IG_UNUSED(name);
+
 	auto pos	   = light->property("position").getVector3();
 	auto intensity = ctx.extractColor(light, "intensity");
 
@@ -79,6 +83,8 @@ static void light_point(const std::string& name, const std::shared_ptr<Parser::O
 
 static void light_area(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
+	IG_UNUSED(name);
+
 	const std::string entity = light->property("entity").getString();
 
 	uint32 entity_id = 0;
@@ -96,6 +102,8 @@ static void light_area(const std::string& name, const std::shared_ptr<Parser::Ob
 
 static void light_directional(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
+	IG_UNUSED(name);
+
 	auto ea			= extractEA(light);
 	Vector3f dir	= ea.toDirection();
 	auto irradiance = ctx.extractColor(light, "irradiance");
@@ -109,6 +117,9 @@ static void light_directional(const std::string& name, const std::shared_ptr<Par
 
 static void light_sun(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
+	IG_UNUSED(name);
+	IG_UNUSED(ctx);
+
 	auto ea		 = extractEA(light);
 	Vector3f dir = ea.toDirection();
 
@@ -124,6 +135,8 @@ static void light_sun(const std::string& name, const std::shared_ptr<Parser::Obj
 
 static void light_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
+	IG_UNUSED(name);
+
 	uint32 id = setup_sky(light, ctx, result);
 
 	auto& data = result.Database.LightTable.addLookup(LIGHT_SKY, 0, DefaultAlignment);
@@ -139,6 +152,8 @@ static void light_sunsky(const std::string& name, const std::shared_ptr<Parser::
 
 static void light_cie_uniform(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
+	IG_UNUSED(name);
+
 	auto zenith			  = ctx.extractColor(light, "zenith");
 	auto ground			  = ctx.extractColor(light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
@@ -152,6 +167,8 @@ static void light_cie_uniform(const std::string& name, const std::shared_ptr<Par
 
 static void light_cie_cloudy(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
+	IG_UNUSED(name);
+
 	auto zenith			  = ctx.extractColor(light, "zenith");
 	auto ground			  = ctx.extractColor(light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
@@ -175,6 +192,8 @@ static inline float perez_model(float zenithAngle, float sunAngle, float a, floa
 
 static void light_perez(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
+	IG_UNUSED(name);
+
 	auto ea		 = extractEA(light);
 	Vector3f dir = ea.toDirection();
 
@@ -206,6 +225,8 @@ static void light_perez(const std::string& name, const std::shared_ptr<Parser::O
 
 static void light_env(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
 {
+	IG_UNUSED(name);
+	
 	bool isTexture = ctx.isTexture(light, "radiance");
 
 	const LightType type = isTexture ? LIGHT_ENVIRONMENT_TEXTURED : LIGHT_ENVIRONMENT;

@@ -314,6 +314,9 @@ static void export_property(const Property& prop, JsonWriter& writer)
 
 		writer.arrEnd();
 	} break;
+	default:
+		writer.w() << "0";
+		break;
 	}
 }
 
@@ -365,12 +368,10 @@ static void export_sensor(const Object& obj, JsonWriter& writer)
 	export_generic("camera", obj, writer);
 
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_FILM: // This is nested here
+		if (child->type() == OT_FILM) { // This is nested here
 			writer.w() << ",";
 			writer.endl();
 			export_film(*child, writer);
-			break;
 		}
 	}
 }
@@ -437,47 +438,39 @@ static void export_bsdf(const std::string& name, const Object& obj, JsonWriter& 
 
 	// Include textures
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_TEXTURE:
+		if (child->type() == OT_TEXTURE) {
 			int tex = std::distance(textures.begin(), std::find(textures.begin(), textures.end(), child.get()));
 			writer.key("texture");
 			writer.w() << "\"" << make_id("texture", tex) << "\",";
 			writer.endl();
-			break;
 		}
 	}
 
 	for (const auto& pair : obj.namedChildren()) {
-		switch (pair.second->type()) {
-		case OT_TEXTURE:
+		if (pair.second->type() == OT_TEXTURE) {
 			int tex = std::distance(textures.begin(), std::find(textures.begin(), textures.end(), pair.second.get()));
 			writer.key(pair.first);
 			writer.w() << "\"" << make_id("texture", tex) << "\",";
 			writer.endl();
-			break;
 		}
 	}
 
 	// Include bsdfs
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_BSDF:
+		if (child->type() == OT_BSDF) {
 			int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), child.get()));
 			writer.key("bsdf");
 			writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
 			writer.endl();
-			break;
 		}
 	}
 
 	for (const auto& pair : obj.namedChildren()) {
-		switch (pair.second->type()) {
-		case OT_BSDF:
+		if (pair.second->type() == OT_BSDF) {
 			int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), pair.second.get()));
 			writer.key(pair.first);
 			writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
 			writer.endl();
-			break;
 		}
 	}
 	writer.objEnd();
@@ -530,24 +523,20 @@ static void export_area_light(const std::string& name, const Object& obj, JsonWr
 	}
 
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_TEXTURE:
+		if (child->type() == OT_TEXTURE) {
 			int tex = std::distance(textures.begin(), std::find(textures.begin(), textures.end(), child.get()));
 			writer.key("texture");
 			writer.w() << "\"" << make_id("texture", tex) << "\",";
 			writer.endl();
-			break;
 		}
 	}
 
 	for (const auto& pair : obj.namedChildren()) {
-		switch (pair.second->type()) {
-		case OT_TEXTURE:
+		if (pair.second->type() == OT_TEXTURE) {
 			int tex = std::distance(textures.begin(), std::find(textures.begin(), textures.end(), pair.second.get()));
 			writer.key(pair.first);
 			writer.w() << "\"" << make_id("texture", tex) << "\",";
 			writer.endl();
-			break;
 		}
 	}
 	writer.objEnd();
@@ -571,24 +560,20 @@ static void export_light(const std::string& name, const Object& obj, JsonWriter&
 	}
 
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_TEXTURE:
+		if (child->type() == OT_TEXTURE) {
 			int tex = std::distance(textures.begin(), std::find(textures.begin(), textures.end(), child.get()));
 			writer.key("texture");
 			writer.w() << "\"" << make_id("texture", tex) << "\",";
 			writer.endl();
-			break;
 		}
 	}
 
 	for (const auto& pair : obj.namedChildren()) {
-		switch (pair.second->type()) {
-		case OT_TEXTURE:
+		if (pair.second->type() == OT_TEXTURE) {
 			int tex = std::distance(textures.begin(), std::find(textures.begin(), textures.end(), pair.second.get()));
 			writer.key(pair.first);
 			writer.w() << "\"" << make_id("texture", tex) << "\",";
 			writer.endl();
-			break;
 		}
 	}
 	writer.objEnd();
@@ -616,26 +601,22 @@ static void export_entity(const std::string& name, const Object& obj, JsonWriter
 
 	bool has_bsdf = false;
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_BSDF:
+		if (child->type() == OT_BSDF) {
 			int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), child.get()));
 			writer.key("bsdf");
 			writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
 			writer.endl();
 			has_bsdf = true;
-			break;
 		}
 	}
 
 	for (const auto& pair : obj.namedChildren()) {
-		switch (pair.second->type()) {
-		case OT_BSDF:
+		if (pair.second->type() == OT_BSDF) {
 			int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), pair.second.get()));
 			writer.key(pair.first);
 			writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
 			writer.endl();
 			has_bsdf = true;
-			break;
 		}
 	}
 
@@ -650,18 +631,14 @@ static void export_entity(const std::string& name, const Object& obj, JsonWriter
 static void extract_textures(const Object& obj, std::vector<Object*>& textures)
 {
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_TEXTURE:
+		if (child->type() == OT_TEXTURE) {
 			textures.push_back(child.get());
-			break;
 		}
 	}
 
 	for (const auto& pair : obj.namedChildren()) {
-		switch (pair.second->type()) {
-		case OT_TEXTURE:
+		if (pair.second->type() == OT_TEXTURE) {
 			textures.push_back(pair.second.get());
-			break;
 		}
 	}
 
@@ -675,6 +652,8 @@ static void extract_textures(const Object& obj, std::vector<Object*>& textures)
 			break;
 		case OT_SHAPE:
 			extract_textures(*child, textures);
+			break;
+		default:
 			break;
 		}
 	}
@@ -683,28 +662,22 @@ static void extract_textures(const Object& obj, std::vector<Object*>& textures)
 static void extract_bsdfs(const Object& obj, std::vector<Object*>& bsdfs)
 {
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_BSDF:
+		if (child->type() == OT_BSDF) {
 			bsdfs.push_back(child.get());
 			extract_bsdfs(*child.get(), bsdfs);
-			break;
 		}
 	}
 
 	for (const auto& pair : obj.namedChildren()) {
-		switch (pair.second->type()) {
-		case OT_BSDF:
+		if (pair.second->type() == OT_BSDF) {
 			bsdfs.push_back(pair.second.get());
 			extract_bsdfs(*pair.second.get(), bsdfs);
-			break;
 		}
 	}
 
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_SHAPE:
+		if (child->type() == OT_SHAPE) {
 			extract_bsdfs(*child, bsdfs);
-			break;
 		}
 	}
 }
@@ -712,18 +685,14 @@ static void extract_bsdfs(const Object& obj, std::vector<Object*>& bsdfs)
 static void extract_shapes(const Object& obj, std::vector<Object*>& shapes)
 {
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_SHAPE:
+		if (child->type() == OT_SHAPE) {
 			shapes.push_back(child.get());
-			break;
 		}
 	}
 
 	for (const auto& pair : obj.namedChildren()) {
-		switch (pair.second->type()) {
-		case OT_SHAPE:
+		if (pair.second->type() == OT_SHAPE) {
 			shapes.push_back(pair.second.get());
-			break;
 		}
 	}
 }
@@ -731,8 +700,7 @@ static void extract_shapes(const Object& obj, std::vector<Object*>& shapes)
 static void extract_area_lights(const Object& obj, std::vector<std::pair<Object*, Object*>>& area_lights)
 {
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_SHAPE:
+		if (child->type() == OT_SHAPE) {
 			for (const auto& child2 : child->anonymousChildren()) {
 				if (child2->type() == OT_EMITTER)
 					area_lights.push_back({ child.get(), child2.get() });
@@ -741,13 +709,11 @@ static void extract_area_lights(const Object& obj, std::vector<std::pair<Object*
 				if (pair.second->type() == OT_EMITTER)
 					area_lights.push_back({ child.get(), pair.second.get() });
 			}
-			break;
 		}
 	}
 
 	for (const auto& pair : obj.namedChildren()) {
-		switch (pair.second->type()) {
-		case OT_SHAPE:
+		if (pair.second->type() == OT_SHAPE) {
 			for (const auto& child2 : pair.second->anonymousChildren()) {
 				if (child2->type() == OT_EMITTER)
 					area_lights.push_back({ pair.second.get(), child2.get() });
@@ -756,7 +722,6 @@ static void extract_area_lights(const Object& obj, std::vector<std::pair<Object*
 				if (pair2.second->type() == OT_EMITTER)
 					area_lights.push_back({ pair.second.get(), pair2.second.get() });
 			}
-			break;
 		}
 	}
 }
@@ -764,18 +729,14 @@ static void extract_area_lights(const Object& obj, std::vector<std::pair<Object*
 static void extract_lights(const Object& obj, std::vector<Object*>& lights)
 {
 	for (const auto& child : obj.anonymousChildren()) {
-		switch (child->type()) {
-		case OT_EMITTER:
+		if (child->type() == OT_EMITTER) {
 			lights.push_back(child.get());
-			break;
 		}
 	}
 
 	for (const auto& pair : obj.namedChildren()) {
-		switch (pair.second->type()) {
-		case OT_EMITTER:
+		if (pair.second->type() == OT_EMITTER) {
 			lights.push_back(pair.second.get());
-			break;
 		}
 	}
 }
@@ -795,6 +756,8 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
 			writer.w() << ",";
 			writer.endl();
 			break;
+		default:
+			break;
 		}
 	}
 
@@ -805,7 +768,7 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
 	writer.key("textures");
 	writer.arrBegin();
 	writer.goIn();
-	for (int i = 0; i < textures.size(); ++i) {
+	for (int i = 0; i < (int)textures.size(); ++i) {
 		export_texture(make_id("texture", i), *textures[i], writer);
 		writer.w() << ",";
 		writer.endl();
@@ -835,7 +798,7 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
 	writer.w() << ",";
 	writer.endl();
 
-	for (int i = 0; i < bsdfs.size(); ++i) {
+	for (int i = 0; i < (int)bsdfs.size(); ++i) {
 		export_bsdf(make_id("bsdf", i), *bsdfs[i], writer, textures, bsdfs);
 		writer.w() << ",";
 		writer.endl();
@@ -852,7 +815,7 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
 	writer.key("shapes");
 	writer.arrBegin();
 	writer.goIn();
-	for (int i = 0; i < shapes.size(); ++i) {
+	for (int i = 0; i < (int)shapes.size(); ++i) {
 		export_shape(make_id("shape", i), *shapes[i], writer);
 		writer.w() << ",";
 		writer.endl();
@@ -866,7 +829,7 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
 	writer.key("entities");
 	writer.arrBegin();
 	writer.goIn();
-	for (int i = 0; i < shapes.size(); ++i) {
+	for (int i = 0; i < (int)shapes.size(); ++i) {
 		export_entity(make_id("entity", i), *shapes[i], writer, bsdfs);
 		writer.w() << ",";
 		writer.endl();
@@ -886,14 +849,13 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
 	writer.key("lights");
 	writer.arrBegin();
 	writer.goIn();
-	for (int i = 0; i < area_lights.size(); ++i) {
+	for (int i = 0; i < (int)area_lights.size(); ++i) {
 		int entity = std::distance(shapes.begin(), std::find(shapes.begin(), shapes.end(), area_lights[i].first));
 		export_area_light(make_id("light", i), *area_lights[i].second, writer, entity, textures);
 		writer.w() << ",";
 		writer.endl();
 	}
-	for (int i = 0; i < lights.size(); ++i) {
-		int entity = std::distance(shapes.begin(), std::find(shapes.begin(), shapes.end(), area_lights[i].first));
+	for (int i = 0; i < (int)lights.size(); ++i) {
 		export_light(make_id("light", i + area_lights.size()), *lights[i], writer, textures);
 		writer.w() << ",";
 		writer.endl();
@@ -918,7 +880,8 @@ int main(int argc, char** argv)
 		if (argv[i][0] == '-') {
 			if (!strcmp(argv[i], "-o")) {
 				check_arg(argc, argv, i, 1);
-				out_file = argv[++i];
+				out_file = argv[i + 1];
+				++i;
 			} else if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet")) {
 				sQuiet = true;
 			} else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--verbose")) {
@@ -936,7 +899,8 @@ int main(int argc, char** argv)
 				loader.addLookupDir(argv[i]);
 			} else if (!strcmp(argv[i], "-D") || !strcmp(argv[i], "--define")) {
 				check_arg(argc, argv, i, 2);
-				loader.addArgument(argv[i++], argv[i]);
+				loader.addArgument(argv[i + 1], argv[i + 2]);
+				i += 2;
 			} else {
 				std::cerr << "Unknown option '" << argv[i] << "'" << std::endl;
 				usage();

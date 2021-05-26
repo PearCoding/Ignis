@@ -634,6 +634,8 @@ static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, si
 
 static RGB get_film_data(size_t width, size_t height, uint32_t iter, uint32_t x, uint32_t y)
 {
+	IG_UNUSED(height);
+
 	const float* film	 = sPixels;
 	const float inv_iter = 1.0f / iter;
 	const uint32_t ind	 = y * width + x;
@@ -699,10 +701,10 @@ static void make_full_screenshot()
 	}
 
 	float* rgba = new float[sWidth * sHeight * 4];
-	for (size_t y = 0; y < sHeight; ++y) {
+	for (int y = 0; y < sHeight; ++y) {
 		const uint8* src = reinterpret_cast<const uint8*>(sshot->pixels) + y * sshot->pitch;
 		float* dst		 = rgba + y * sWidth * 4;
-		for (size_t x = 0; x < sWidth; ++x) {
+		for (int x = 0; x < sWidth; ++x) {
 			uint32 pixel = *reinterpret_cast<const uint32*>(&src[x * sshot->format->BytesPerPixel]);
 
 			uint8 r, g, b, a;
@@ -916,9 +918,6 @@ inline static void markdownFormatCallback(const ImGui::MarkdownFormatInfo& markd
 
 static void handle_help()
 {
-	constexpr size_t UI_W = 300;
-	constexpr size_t UI_H = 500;
-
 	static const std::string Markdown =
 		R"(- *1..9* number keys to switch between views.
 - *1..9* and *Strg/Ctrl* to save the current view on that slot.

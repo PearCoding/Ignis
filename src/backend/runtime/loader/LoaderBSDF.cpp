@@ -68,6 +68,9 @@ static void bsdf_error(const std::string& msg, LoaderResult& result)
 
 static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, VectorSerializer& serializer)
 {
+	IG_UNUSED(ctx);
+	IG_UNUSED(bsdf);
+	
 	float alpha_u, alpha_v;
 	if (bsdf->property("alpha_u").isValid()) {
 		alpha_u = bsdf->property("alpha_u").getNumber(0.1f);
@@ -373,7 +376,7 @@ static void bsdf_twosided(const std::string& name, const std::shared_ptr<Parser:
 		ctx.Ignore[name] = other;
 }
 
-static void bsdf_passthrough(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_passthrough(const std::string&, const std::shared_ptr<Parser::Object>&, BsdfContext& ctx)
 {
 	ctx.Result.Database.BsdfTable.addLookup(BSDF_PASSTROUGH, 0, DefaultAlignment);
 }

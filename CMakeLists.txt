@@ -122,5 +122,11 @@ endif()
 configure_file(src/backend/runtime/config/Git.h.in     ${CMAKE_CURRENT_BINARY_DIR}/config/Git.h)
 configure_file(src/backend/runtime/config/Version.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/Version.h)
 
+# Add warnings per default
+if(MSVC)
+  add_compile_options(/W4 /WX)
+else()
+  add_compile_options(-Wall -Wextra -pedantic)
+endif()
 # Traverse to underlying directories
 add_subdirectory(src)

@@ -5,7 +5,7 @@
 namespace IG {
 namespace obj {
 
-TriMesh load(const std::filesystem::path& path, size_t mtl_offset);
+TriMesh load(const std::filesystem::path& path);
 
 }
 } // namespace IG

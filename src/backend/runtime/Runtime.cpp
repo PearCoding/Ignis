@@ -32,6 +32,8 @@ static inline void setup_technique(RuntimeRenderSettings& settings, LoaderOption
 
 static inline void setup_film(RuntimeRenderSettings& settings, const LoaderOptions& lopts, const RuntimeOptions& opts)
 {
+	IG_UNUSED(opts);
+
 	const auto film = lopts.Scene.film();
 	if (film) {
 		const auto filmSize = film->property("size").getVector2(Vector2f(settings.FilmWidth, settings.FilmHeight));

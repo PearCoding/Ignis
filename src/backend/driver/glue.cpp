@@ -159,7 +159,7 @@ struct Interface {
 	anydsl::Array<T>& resize_array(int32_t dev, anydsl::Array<T>& array, size_t size, size_t multiplier)
 	{
 		const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
-		if (array.size() < capacity) {
+		if (array.size() < (int64_t)capacity) {
 			auto n = capacity * multiplier;
 			array  = std::move(anydsl::Array<T>(dev, reinterpret_cast<T*>(anydsl_alloc(dev, sizeof(T) * n)), n));
 		}

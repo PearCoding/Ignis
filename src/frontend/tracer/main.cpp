@@ -77,7 +77,7 @@ static std::vector<Ray> read_input(std::istream& is, bool file)
 	return rays;
 }
 
-static void write_output(std::ostream& is, bool file, float* data, size_t count, uint32 spp)
+static void write_output(std::ostream& is, float* data, size_t count, uint32 spp)
 {
 	for (size_t i = 0; i < count; ++i) {
 		is << data[3 * i + 0] / spp << " " << data[3 * i + 1] / spp << " " << data[3 * i + 2] / spp << std::endl;
@@ -113,10 +113,12 @@ int main(int argc, char** argv)
 				sample_count = strtoul(argv[++i], nullptr, 10);
 			} else if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--output")) {
 				check_arg(argc, argv, i, 1);
-				out_file = argv[++i];
+				++i;
+				out_file = argv[i];
 			} else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--input")) {
 				check_arg(argc, argv, i, 1);
-				ray_file = argv[++i];
+				++i;
+				ray_file = argv[i];
 			} else if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet")) {
 				quiet = true;
 				IG_LOGGER.setQuiet(true);
@@ -131,7 +133,8 @@ int main(int argc, char** argv)
 				version();
 				return EXIT_SUCCESS;
 			} else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--target")) {
-				check_arg(argc, argv, i++, 1);
+				check_arg(argc, argv, i, 1);
+				++i;
 				if (!strcmp(argv[i], "sse42"))
 					target = Target::SSE42;
 				else if (!strcmp(argv[i], "avx"))
@@ -157,8 +160,9 @@ int main(int argc, char** argv)
 					return EXIT_FAILURE;
 				}
 			} else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--device")) {
-				check_arg(argc, argv, i++, 1);
-				device = strtoul(argv[i], NULL, 10);
+				check_arg(argc, argv, i, 1);
+				++i;
+				device = strtoul(argv[i], nullptr, 10);
 			} else if (!strcmp(argv[i], "--cpu")) {
 				target = getRecommendedCPUTarget();
 			} else if (!strcmp(argv[i], "--gpu")) {
@@ -224,10 +228,10 @@ int main(int argc, char** argv)
 
 	// Extract data
 	if (out_file.empty()) {
-		write_output(std::cout, false, accum_data.data(), rays.size(), sample_count);
+		write_output(std::cout, accum_data.data(), rays.size(), sample_count);
 	} else {
 		std::ofstream stream(out_file);
-		write_output(stream, true, accum_data.data(), rays.size(), sample_count);
+		write_output(stream, accum_data.data(), rays.size(), sample_count);
 	}
 
 	return EXIT_SUCCESS;
