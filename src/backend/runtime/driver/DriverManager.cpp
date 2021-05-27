@@ -1,11 +1,13 @@
 #include "DriverManager.h"
 #include "Configuration.h"
 #include "Logger.h"
+#include "RuntimeInfo.h"
 #include "config/Version.h"
 
 #include <unordered_set>
 
 #define _IG_DRIVER_ENV_PATH_NAME "IG_DRIVER_PATH"
+#define _IG_DRIVER_ENV_SKIP_SYSTEM_PATH "IG_DRIVER_SKIP_SYSTEM_PATH"
 #define _IG_DRIVER_LIB_PREFIX "ig_driver_"
 
 namespace IG {
@@ -73,10 +75,21 @@ static path_set getDriversFromPath(const std::filesystem::path& path)
 bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
 {
 	path_set paths;
+
+	bool skipSystem = false; // Skip the system search path
 	if (!ignoreEnv) {
 		const char* envPaths = std::getenv(_IG_DRIVER_ENV_PATH_NAME);
 		if (envPaths)
 			split_env(envPaths, paths);
+
+		if (std::getenv(_IG_DRIVER_ENV_SKIP_SYSTEM_PATH))
+			skipSystem = true;
+	}
+
+	if (!skipSystem) {
+		const auto exePath = RuntimeInfo::executablePath();
+		const auto libPath = exePath.parent_path().parent_path() / "lib";
+		paths.insert(libPath);
 	}
 
 	if (!dir.empty())

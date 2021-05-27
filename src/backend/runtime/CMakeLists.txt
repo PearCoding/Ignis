@@ -42,6 +42,8 @@ set(SRC
     Logger.h
     Runtime.cpp
     Runtime.h
+    RuntimeInfo.cpp
+    RuntimeInfo.h
     SharedLibrary.cpp
     SharedLibrary.h
     Target.h

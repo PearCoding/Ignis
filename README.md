@@ -60,23 +60,11 @@ Use the `--help` argument on each of the executables to get information of possi
 
 ## Running
 
-To make it possible to run the raytracer the frontend requires the exact location where backends are located. The environment variable `IG_DRIVER_PATH` has to point to the directories containing the driver modules. The environment variable is similar to the `PATH` variable used in Linux environments and should contain absolute paths only, separated by ':' if multiple paths are provided.
+To make it possible to run the raytracer the frontend requires the exact location where backends are located. Most of the time this will work out of the box. In some rare cases the environment variable `IG_DRIVER_PATH` can be used to point to the directories containing the driver modules. The environment variable is similar to the `PATH` variable used in Linux environments and should contain absolute paths only, separated by ':' if multiple paths are provided. Setting `IG_DRIVER_SKIP_SYSTEM_PATH` will prevent the automatic search and only depend on `IG_DRIVER_PATH`.
 
-One upcoming feature will be to make the search process to work out of the box and not rely only on `IG_DRIVER_PATH`.
-
-Nevertheless, for now define the environment variable like this on Linux systems:
-
-    export IG_DRIVER_PATH=<IGNIS_INSTALL_PATH>/lib
-
-Replace "<IGNIS_INSTALL_PATH>" with an absolute path to the place the framework was installed to. 
-
-Now you might run a frontend of your choice like this:
+Run a frontend of your choice like this:
 
     igview scene/diamond_scene.json
-
-If a system wide environment variable is not defined, you might also use the following approach on Linux:
-
-    IG_DRIVER_PATH=<IGNIS_INSTALL_PATH>/lib <IGNIS_INSTALL_PATH>/bin/igview scene/diamond_scene.json
 
 ## Scene description
 
