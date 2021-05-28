@@ -1,8 +1,8 @@
-# Ignis Rodent
+# Ignis
 
-'Ignis Rodent' is a raytracer for the RENEGADE project implemented using the Artic frontend of the AnyDSL compiler framework (https://anydsl.github.io/) and based on Rodent (https://github.com/AnyDSL/rodent).
+'Ignis' is a raytracer for the RENEGADE project implemented using the Artic frontend of the AnyDSL compiler framework (https://anydsl.github.io/) and based on Rodent (https://github.com/AnyDSL/rodent).
 
-![Example render by Ignis Rodent](refs/screenshot.jpg)
+![A scene containing diamonds rendered by Ignis](refs/screenshot.jpg)
 
 ## Dependencies
 
@@ -26,41 +26,43 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
  - Simple Hardware Feature Extractor <https://github.com/PearCoding/hwinfo>
  - Simple Tag Preprocessor <https://github.com/PearCoding/stpp>
  - tinyobjloader <https://github.com/tinyobjloader/tinyobjloader>
+ - tinyparser-mitsuba <https://github.com/PearCoding/TinyParser-Mitsuba>
 
 ## Building
 
-Once the dependencies are installed, first create a directory to build the application in:
+If you made sure the required dependencies are installed in your system, create a directory to build the application in:
 
     mkdir build
     cd build
 
-Use your favorite generator (e.g. `Ninja`)
+Next step would be to configure and finally build the framework. You might use your favorite generator (e.g. `Ninja`)
 
     cmake -G Ninja ..
     cmake --build .
 
-If `Ninja` is not available you may skip the `-G Ninja` parameter. You can also set `FETCHCONTENT_UPDATES_DISCONNECTED` to `ON` to speed up the cmake steps after the initial cmake step.  
+If `Ninja` is not available, skip the `-G Ninja` parameter. You can also set `FETCHCONTENT_UPDATES_DISCONNECTED` to `ON` to speed up the cmake steps after the initial cmake configuration.  
 
 ## Backends
 
-Multiple device and feature specific modules, so-called drivers, will be compiled. They are the backend of the raytracer.
+The raytracer as multiple backends available to make sure the best optimized kernel is used for certain tasks. Therefore, multiple device and feature specific modules, so-called drivers, have to be compiled.
 
-The compilation process might take a while depending on your hardware and feature selection, as parallel compilation of the drivers is disabled by default. Multithreading might make your operating system unresponsive. You can use the CMake option `IG_BUILD_DRIVER_PARALLEL` to enable it if you like.
+The compilation process might take a while depending on your hardware and feature selection. Parallel compilation of the drivers is disabled by default. Multithreading might freeze your operating system due to the high memory and cpu use. You can use the CMake option `IG_BUILD_DRIVER_PARALLEL` to enable it if you are sure your system can handle it.
 
 ## Frontends
 
+The frontends of the raytracer communicate with the user and one, optimal selected, backend.
 Currently, four frontends are available:
 
- - `igview` This is the standard UI interface which essentially shows you how the scene is progressively rendered. Good to have a first impression of the rendered scene. Keep in mind that some power of your underlying hardware is used to render the UI and the tonemapping algorithms. Switching to the UI-less frontend `igcli` might be a good idea if no preview is necessary. Note, `igview` will be only available if the UI feature is enabled and SDL2 is available in the environment. You might disable this entirely by setting the CMake option `IG_WITH_VIEWER` to Off.
- - `igcli` The commandline only frontend is the same as `igview` but without any UI specific features. In contrary to `igview`, `igcli` requires a maximum iteration or time to be given to the application by the user, as progressive rendering is not that useful without a preview. (We might add progressive rendering back, but I need a convincing argument for that...)
- - `igtrace` This commandline only frontend ignores camera specific information and expects a list of rays from the user. It returns the contribution as a list back to the user for each ray.
- - `Python API` A simple python API is available, if Python3 was found in the environment. You might disable this entirely by setting the CMake option `IG_WITH_PYTHON_API` to Off.
+ - `igview` This is the standard UI interface which displays the scene getting progressively rendered. This frontend is very good to get a first impression of the rendered scene and fly around to pick the one best camera position. Keep in mind that some power of your underlying hardware is used to render the UI and the tonemapping algorithms. Switching to the UI-less frontend `igcli` might be a good idea if no preview is necessary. Note, `igview` will be only available if the UI feature is enabled and SDL2 is available on your system. Disable this frontend by setting the CMake option `IG_WITH_VIEWER` to Off.
+ - `igcli` The commandline only frontend is the same as `igview` but without any UI specific features and no interactive controls. In contrary to `igview`, `igcli` requires a maximum iteration or time budget to be specified by the user. Progressive rendering is not that useful without a preview. (We might add progressive rendering back, but I need a convincing argument for that...)
+ - `igtrace` This commandline only frontend ignores camera specific information and expects a list of rays from the user. It returns the contribution back to the user for each ray initially specified.
+ - `Python API` This simple python API allows to communicate with the runtime and allows you to work with the raytracer in interactive notebooks and more. The API is only available if Python3 was found in the system. You might disable the API by setting the CMake option `IG_WITH_PYTHON_API` to Off.
 
 Use the `--help` argument on each of the executables to get information of possible arguments for each frontend. Also have a look at the Wiki(TODO) and Website(TODO) for more in-depth information.
 
 ## Running
 
-To make it possible to run the raytracer the frontend requires the exact location where backends are located. Most of the time this will work out of the box. In some rare cases the environment variable `IG_DRIVER_PATH` can be used to point to the directories containing the driver modules. The environment variable is similar to the `PATH` variable used in Linux environments and should contain absolute paths only, separated by ':' if multiple paths are provided. Setting `IG_DRIVER_SKIP_SYSTEM_PATH` will prevent the automatic search and only depend on `IG_DRIVER_PATH`.
+Each frontend requires the exact location of the backends to run. An automatic search procedure will find detect them in the system. In some rare cases the automatic search procedure might fail to find all the backends. In that case the environment variable `IG_DRIVER_PATH` can be used to point to the directories containing driver modules. The environment variable is similar to the `PATH` variable used in Linux environments and should contain absolute paths only, separated by ':' if multiple paths are provided. Setting `IG_DRIVER_SKIP_SYSTEM_PATH` will prevent the automatic search and only depend on `IG_DRIVER_PATH`.
 
 Run a frontend of your choice like this:
 
@@ -68,7 +70,7 @@ Run a frontend of your choice like this:
 
 ## Scene description
 
-Ignis Rodent uses a JSON based flat scene description with instancing. Support for shading nodes is planned. Image and procedural texture support is available.
+Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is planned. Image and procedural texture support is available.
 A schema is available at [refs/ignis.schema.json](refs/ignis.schema.json)
 
 You might use the `mts2ig` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.
@@ -81,11 +83,11 @@ Two tiny tools `exr2hdr` and `hdr2exr` are available to convert between the Radi
 
 This is useful to ease the transfer from Radiance to our raytracer, but you can disable them by setting the CMake option `IG_WITH_TOOLS` to Off.
 
-Actually, the tool might even convert to any format the OpenImageIO framework supports...
+Actually, the tool might convert from any format the OpenImageIO framework supports to the second format...
 
 ## How to use `igview`
 
-The Ignis Rodent client has an optional UI and multiple ways to interact with the scene:
+The Ignis client has an optional UI and multiple ways to interact with the scene:
 
  - `1..9` number keys to switch between views.
  - `1..9` and `Strg/Ctrl` to save the current view on that slot.
