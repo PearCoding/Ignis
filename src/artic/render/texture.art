@@ -131,18 +131,5 @@ fn @make_texture_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccesso
             0x10 => load_checkerboard_texture(math, data, stage),                                        // TEX_CHECKERBOARD
                _ => make_invalid_texture()
         }
-        /*if unlikely(entry.type_id > 6) {
-            make_invalid_texture()
-        } else {
-            [
-                @|| load_image_texture(math, data, stage, make_clamp_border(), make_nearest_filter()),   // TEX_IMAGE
-                @|| load_image_texture(math, data, stage, make_clamp_border(), make_bilinear_filter()),  // TEX_IMAGE
-                @|| load_image_texture(math, data, stage, make_repeat_border(), make_nearest_filter()),  // TEX_IMAGE
-                @|| load_image_texture(math, data, stage, make_repeat_border(), make_bilinear_filter()), // TEX_IMAGE
-                @|| load_image_texture(math, data, stage, make_mirror_border(), make_nearest_filter()),  // TEX_IMAGE
-                @|| load_image_texture(math, data, stage, make_mirror_border(), make_bilinear_filter()), // TEX_IMAGE
-                @|| load_checkerboard_texture(math, data, stage)                                         // TEX_CHECKERBOARD
-            ](entry.type_id)()
-        }*/
     } 
 }

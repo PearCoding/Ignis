@@ -317,6 +317,25 @@ TriMesh TriMesh::MakePlane(const Vector3f& origin, const Vector3f& xAxis, const 
 	return mesh;
 }
 
+TriMesh TriMesh::MakeTriangle(const Vector3f& p0, const Vector3f& p1, const Vector3f& p2)
+{
+	TriMesh mesh;
+	addTriangle(mesh, p0, p1 - p0, p2 - p0, 0);
+	// FIXME: Due to a bug in BVH, we do have to make sure at least two triangles are inside a mesh!
+	// Thats why we only copy the given triangle again.
+	addTriangle(mesh, p0, p1 - p0, p2 - p0, 3); 
+	return mesh;
+}
+
+TriMesh TriMesh::MakeRectangle(const Vector3f& p0, const Vector3f& p1, const Vector3f& p2, const Vector3f& p3)
+{
+	// TODO: Could be better optimized
+	TriMesh mesh;
+	addTriangle(mesh, p0, p1 - p0, p3 - p0, 0);
+	addTriangle(mesh, p1, p2 - p1, p3 - p1, 3);
+	return mesh;
+}
+
 TriMesh TriMesh::MakeBox(const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis, const Vector3f& zAxis)
 {
 	const Vector3f lll = origin;

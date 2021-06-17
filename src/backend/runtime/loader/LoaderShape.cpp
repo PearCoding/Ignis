@@ -47,12 +47,28 @@ struct TransformCache {
 	}
 };
 
+inline TriMesh setup_mesh_triangle(const Object& elem)
+{
+	const Vector3f p0 = elem.property("p0").getVector3(Vector3f(0, 0, 0));
+	const Vector3f p1 = elem.property("p1").getVector3(Vector3f(1, 0, 0));
+	const Vector3f p2 = elem.property("p2").getVector3(Vector3f(0, 1, 0));
+	return TriMesh::MakeTriangle(p0, p1, p2);
+}
+
 inline TriMesh setup_mesh_rectangle(const Object& elem)
 {
-	const float width	  = elem.property("width").getNumber(2.0f);
-	const float height	  = elem.property("height").getNumber(2.0f);
-	const Vector3f origin = elem.property("origin").getVector3(Vector3f(-width / 2, -height / 2, 0));
-	return TriMesh::MakePlane(origin, Vector3f::UnitX() * width, Vector3f::UnitY() * height);
+	if (elem.properties().count("width") != 0) {
+		const float width	  = elem.property("width").getNumber(2.0f);
+		const float height	  = elem.property("height").getNumber(2.0f);
+		const Vector3f origin = elem.property("origin").getVector3(Vector3f(-width / 2, -height / 2, 0));
+		return TriMesh::MakePlane(origin, Vector3f::UnitX() * width, Vector3f::UnitY() * height);
+	} else {
+		const Vector3f p0 = elem.property("p0").getVector3(Vector3f(0, 0, 0));
+		const Vector3f p1 = elem.property("p1").getVector3(Vector3f(1, 0, 0));
+		const Vector3f p2 = elem.property("p2").getVector3(Vector3f(1, 1, 0));
+		const Vector3f p3 = elem.property("p3").getVector3(Vector3f(0, 1, 0));
+		return TriMesh::MakeRectangle(p0, p1, p2, p3);
+	}
 }
 
 inline TriMesh setup_mesh_cube(const Object& elem)
@@ -77,10 +93,19 @@ inline TriMesh setup_mesh_cylinder(const Object& elem)
 {
 	const Vector3f baseCenter = elem.property("p0").getVector3();
 	const Vector3f tipCenter  = elem.property("p1").getVector3(Vector3f(0, 0, 1));
-	const float radius		  = elem.property("radius").getNumber(1.0f);
 	const uint32 sections	  = elem.property("sections").getInteger(32);
 	const bool filled		  = elem.property("filled").getBool(true);
-	return TriMesh::MakeCylinder(baseCenter, radius, tipCenter, radius, sections, filled);
+
+	float baseRadius;
+	float tipRadius;
+	if (elem.properties().count("radius") != 0) {
+		baseRadius = elem.property("radius").getNumber(1.0f);
+		tipRadius  = baseRadius;
+	} else {
+		baseRadius = elem.property("bottom_radius").getNumber(1.0f);
+		tipRadius  = elem.property("top_radius").getNumber(baseRadius);
+	}
+	return TriMesh::MakeCylinder(baseCenter, baseRadius, tipCenter, tipRadius, sections, filled);
 }
 
 inline TriMesh setup_mesh_cone(const Object& elem)
@@ -213,7 +238,9 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 		const auto child	   = ctx.Scene.shape(name);
 
 		TriMesh& mesh = meshes[i];
-		if (child->pluginType() == "rectangle") {
+		if (child->pluginType() == "triangle") {
+			mesh = setup_mesh_triangle(*child);
+		} else if (child->pluginType() == "rectangle") {
 			mesh = setup_mesh_rectangle(*child);
 		} else if (child->pluginType() == "cube") {
 			mesh = setup_mesh_cube(*child);
