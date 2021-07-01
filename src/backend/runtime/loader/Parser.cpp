@@ -80,6 +80,16 @@ inline static Vector3f getVector3f(const rapidjson::Value& obj)
 	return Vector3f(array[0].GetFloat(), array[1].GetFloat(), array[2].GetFloat());
 }
 
+// [w, x, y, z]
+inline static Quaternionf getQuaternionf(const rapidjson::Value& obj)
+{
+	const auto& array = obj.GetArray();
+	const size_t len  = array.Size();
+	if (len != 4)
+		throw std::runtime_error("Expected vector of length 4");
+	return Quaternionf(array[0].GetFloat(), array[1].GetFloat(), array[2].GetFloat(), array[3].GetFloat());
+}
+
 inline static Matrix3f getMatrix3f(const rapidjson::Value& obj)
 {
 	const auto& array = obj.GetArray();
@@ -137,6 +147,31 @@ inline static Property getProperty(const rapidjson::Value& obj)
 	return Property();
 }
 
+template <typename Derived>
+Eigen::Matrix<typename Derived::Scalar, 3, 4> lookAt(Derived const& eye, Derived const& center, Derived const& up)
+{
+	typedef Eigen::Matrix<typename Derived::Scalar, 3, 4> Matrix34;
+	typedef Eigen::Matrix<typename Derived::Scalar, 3, 1> Vector3;
+	Vector3 f	 = (center - eye).normalized();
+	Vector3 u	 = up.normalized();
+	Vector3 s	 = f.cross(u).normalized();
+	u			 = s.cross(f);
+	Matrix34 mat = Matrix34::Zero();
+	mat(0, 0)	 = s.x();
+	mat(0, 1)	 = s.y();
+	mat(0, 2)	 = s.z();
+	mat(0, 3)	 = -s.dot(eye);
+	mat(1, 0)	 = u.x();
+	mat(1, 1)	 = u.y();
+	mat(1, 2)	 = u.z();
+	mat(1, 3)	 = -u.dot(eye);
+	mat(2, 0)	 = -f.x();
+	mat(2, 1)	 = -f.y();
+	mat(2, 2)	 = -f.z();
+	mat(2, 3)	 = f.dot(eye);
+	return mat;
+}
+
 inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson::Value& obj)
 {
 	for (auto itr = obj.MemberBegin(); itr != obj.MemberEnd(); ++itr) {
@@ -160,8 +195,30 @@ inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson:
 							Vector3f s = getVector3f(val->value);
 							transform.scale(s);
 						}
-					} else if (val->name == "rotation") {
-						// TODO
+					} else if (val->name == "rotation") { // [Rotation around X, Rotation around Y, Rotation around Z] all in degrees
+						Vector3f angles = getVector3f(val->value);
+						transform *= Eigen::AngleAxisf(Deg2Rad * angles(0), Vector3f::UnitX())
+									 * Eigen::AngleAxisf(Deg2Rad * angles(1), Vector3f::UnitY())
+									 * Eigen::AngleAxisf(Deg2Rad * angles(2), Vector3f::UnitZ());
+					} else if (val->name == "qrotation") { // 4D Vector quaternion
+						transform *= getQuaternionf(val->value);
+					} else if (val->name == "lookat") {
+						if (val->value.IsObject()) {
+							Vector3f origin = Vector3f::Zero();
+							Vector3f target = Vector3f::UnitY();
+							Vector3f up		= Vector3f::UnitZ();
+							for (auto val2 = val->value.MemberBegin(); val != val2->value.MemberEnd(); ++val2) {
+								if (val2->name == "origin")
+									origin = getVector3f(val2->value);
+								else if (val2->name == "target")
+									target = getVector3f(val2->value);
+								else if (val2->name == "up")
+									up = getVector3f(val2->value);
+							}
+
+							transform *= lookAt(origin, target, up);
+						} else
+							throw std::runtime_error("Expected transform lookat property to be an object with origin, target and optional up vector");
 					} else if (val->name == "matrix") {
 						const size_t len = val->value.GetArray().Size();
 						if (len == 9)
