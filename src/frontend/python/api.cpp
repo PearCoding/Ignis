@@ -15,7 +15,7 @@ using namespace IG;
 PYBIND11_MODULE(pyignis, m)
 {
 	m.doc() = R"pbdoc(
-        Ignis python scene plugin
+        Ignis python plugin
         -----------------------
         .. currentmodule:: pyignis
         .. autosummary::
@@ -54,10 +54,8 @@ PYBIND11_MODULE(pyignis, m)
 		.value("AVX", Target::AVX)
 		.value("AVX2", Target::AVX2)
 		.value("AVX512", Target::AVX512)
-		.value("NVVM_STREAMING", Target::NVVM_STREAMING)
-		.value("NVVM_MEGAKERNEL", Target::NVVM_MEGAKERNEL)
-		.value("AMDGPU_STREAMING", Target::AMDGPU_STREAMING)
-		.value("AMDGPU_MEGAKERNEL", Target::AMDGPU_MEGAKERNEL);
+		.value("NVVM", Target::NVVM)
+		.value("AMDGPU", Target::AMDGPU);
 
 	py::class_<Runtime>(m, "Runtime")
 		.def(py::init([](const std::string& path, const RuntimeOptions& opts) { return std::make_unique<Runtime>(path, opts); }))

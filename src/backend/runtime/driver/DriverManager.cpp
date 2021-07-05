@@ -126,14 +126,14 @@ uint64 DriverManager::checkConfiguration(uint64 config) const
 
 	// First check gpu pairs drivers/devices
 	const uint64 devConfig = config & ~IG_C_MASK_DEVICE;
-	if (config & IG_C_DEVICE_NVVM_STREAMING)
+	if (config & IG_C_DEVICE_NVVM)
 		CHECK_RET(devConfig | IG_C_DEVICE_NVVM_MEGA);
 	if (config & IG_C_DEVICE_NVVM_MEGA)
-		CHECK_RET(devConfig | IG_C_DEVICE_NVVM_STREAMING);
-	if (config & IG_C_DEVICE_AMD_STREAMING)
+		CHECK_RET(devConfig | IG_C_DEVICE_NVVM);
+	if (config & IG_C_DEVICE_AMDGPU)
 		CHECK_RET(devConfig | IG_C_DEVICE_AMD_MEGA);
 	if (config & IG_C_DEVICE_AMD_MEGA)
-		CHECK_RET(devConfig | IG_C_DEVICE_AMD_STREAMING);
+		CHECK_RET(devConfig | IG_C_DEVICE_AMDGPU);
 
 	CHECK_RET(devConfig | IG_C_DEVICE_AVX512);
 	CHECK_RET(devConfig | IG_C_DEVICE_AVX2);

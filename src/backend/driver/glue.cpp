@@ -484,11 +484,11 @@ IG_EXPORT DriverInterface ig_get_interface()
 #elif defined(DEVICE_ASIMD)
 	interface.Configuration |= IG::IG_C_DEVICE_ASIMD;
 #elif defined(DEVICE_NVVM)
-	interface.Configuration |= IG::IG_C_DEVICE_NVVM_STREAMING;
+	interface.Configuration |= IG::IG_C_DEVICE_NVVM;
 #elif defined(DEVICE_NVVM_MEGA)
 	interface.Configuration |= IG::IG_C_DEVICE_NVVM_MEGA;
 #elif defined(DEVICE_AMD)
-	interface.Configuration |= IG::IG_C_DEVICE_AMD_STREAMING;
+	interface.Configuration |= IG::IG_C_DEVICE_AMDGPU;
 #elif defined(DEVICE_AMD_MEGA)
 	interface.Configuration |= IG::IG_C_DEVICE_AMD_MEGA;
 #else

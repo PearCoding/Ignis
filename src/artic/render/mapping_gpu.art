@@ -349,14 +349,14 @@ fn @gpu_swap_streams(a: &mut PrimaryStream, b: &mut PrimaryStream) -> () {
     *b = tmp;
 }
 
-fn @gpu_streaming_trace( dev_id: i32
-                       , acc: Accelerator
-                       , atomics: Atomics
-                       , min_max: MinMax
-                       , scene: Scene
-                       , path_tracer: PathTracer
-                       , spp: i32
-                       ) -> () {
+fn @gpu_trace( dev_id: i32
+             , acc: Accelerator
+             , atomics: Atomics
+             , min_max: MinMax
+             , scene: Scene
+             , path_tracer: PathTracer
+             , spp: i32
+             ) -> () {
     let (film_pixels, film_width, film_height) = gpu_get_film_data(dev_id);
 
     let capacity = 1024 * 1024;
@@ -425,125 +425,6 @@ fn @gpu_streaming_trace( dev_id: i32
             gpu_swap_streams(&mut primary, &mut other_primary);
         }
     }
-}
-
-// TODO: Add miss shader and no entities handling
-fn @gpu_mega_kernel_trace( dev_id: i32
-                         , acc: Accelerator
-                         , atomics: Atomics
-                         , min_max: MinMax
-                         , scene: Scene
-                         , path_tracer: PathTracer
-                         , spp: i32
-                         ) -> () {
-    let (film_pixels, film_width, film_height) = gpu_get_film_data(dev_id);
- 
-    let entities  = scene.database.entities;
-    let shapes    = scene.database.shapes;
-    let shaders   = scene.database.shaders;
-    let alights   = scene.database.arealights;
-    let on_emit   = path_tracer.on_emit;
-    let on_hit    = path_tracer.on_hit;
-    let on_shadow = path_tracer.on_shadow;
-    let on_bounce = path_tracer.on_bounce;
-
-    // Make tiles of 2^10 = 1024 total samples
-    let mut log2_tile_size = (10 - ilog2(spp)) / 2;
-    if log2_tile_size < 0 { log2_tile_size = 0 }
-    let tile_size = 1 << log2_tile_size;
-
-    let (bx, by, bz) = (8, 8, 1);
-    let gx = bx * ((film_width  + tile_size - 1) >> log2_tile_size);
-    let gy = by * ((film_height + tile_size - 1) >> log2_tile_size);
-    let gz = 1;
-    acc.exec(|work_item| {
-        let tile_x = work_item.bidx() * tile_size;
-        let tile_y = work_item.bidy() * tile_size;
-        let tile_w = min(film_width  - tile_x, tile_size);
-        let tile_h = min(film_height - tile_y, tile_size);
-        let tile_div = make_fast_div(tile_w as u32);
-        let ray_count = tile_w * tile_h * spp;
-        let counter = &mut reserve_shared[i32](1)(0);
-        if work_item.tidx() == 0 {
-            *counter = 0
-        }
-        // Ensure consistent view of the counter
-        acc.barrier();
-
-        let mut ray: Ray;
-        let mut state: RayState;
-        let mut final_color: Color;
-        let mut pixel = -1;
-
-        let pixel_mask = 0x7FFFFFFF;
-
-        while true {
-            if unlikely(pixel < 0) {
-                if pixel != -1 {
-                    gpu_accumulate(atomics, film_pixels, pixel & pixel_mask, final_color, spp);
-                }
-
-                let id = atomics.add_shared_i32(counter, 1);
-                if id >= ray_count { break() }
-                let ray_id    = id / spp;
-                let sample_id = id % spp;
-                let in_tile_y = fast_div(tile_div, ray_id as u32) as i32;
-                let in_tile_x = ray_id - in_tile_y * tile_w;
-                let x = tile_x + in_tile_x;
-                let y = tile_y + in_tile_y;
-                let (init_ray, init_state) = @on_emit(sample_id, x, y, film_width, film_height);
-                final_color = make_color(0, 0, 0);
-                pixel = y * film_width + x;
-                ray   = init_ray;
-                state = init_state;
-            }
-            pixel |= !pixel_mask;
-
-            let hit = gpu_traverse_single_helper(min_max, ray, scene, false /*any_hit*/, 1 /*root*/);
-            if hit.prim_id == -1 {
-                let on_miss = path_tracer.on_miss;
-                if let Option[Color]::Some(color) = @on_miss(ray, &mut state) {
-                    final_color = color_add(final_color, color);
-                }
-                continue()
-            }
-
-            let mut shadow_color:  Color;
-            let mut shadow_ray:    Ray;
-            let mut trace_shadow = false;
-            
-            let entity    = @entities(hit.ent_id);
-            let shape     = @shapes(entity.shape_id);
-            let shader    = @shaders(entity.bsdf_id);
-            let local_ray = transform_norm_ray(ray, entity.local_mat);
-
-            let lcl_surf = shape.surface_element(local_ray, hit);
-            let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
-            let bsdf     = @shader(ray, hit, glb_surf);
-            let mat      = if unlikely(entity.emissive) { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
-
-            if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) {
-                final_color = color_add(final_color, color);
-            }
-
-            if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, hit, &mut state, glb_surf, mat) {
-                shadow_color = color;
-                shadow_ray   = new_ray;
-                trace_shadow = true;
-            }
-
-            if let Option[(Ray, RayState)]::Some(new_ray, new_state) = @on_bounce(ray, hit, &mut state, glb_surf, mat) {
-                ray   = new_ray;
-                state = new_state;
-                pixel &= pixel_mask;
-            }
-
-            if trace_shadow && gpu_traverse_single_helper(min_max, shadow_ray, scene, true /*any_hit*/, 1 /*root*/).prim_id == -1 {
-                final_color = color_add(final_color, shadow_color);
-            }
-        }
-    })((gx, gy, gz), (bx, by, bz));
-    acc.sync()
 }
 
 // GPU device ----------------------------------------------------------------------
@@ -677,31 +558,18 @@ fn @make_gpu_device( dev_id: i32
                    , min_max: MinMax
                    , accb: DeviceBufferAccessor
                    , atomics: Atomics
-                   , streaming: bool
                    , is_nvvm: bool
                    ) = Device {
     trace = @ |scene, path_tracer, spp| {
-        if streaming {
-            gpu_streaming_trace(
-                dev_id,
-                acc,
-                atomics,
-                min_max,
-                scene,
-                path_tracer,
-                spp
-            )
-        } else {
-            gpu_mega_kernel_trace(
-                dev_id,
-                acc,
-                atomics,
-                min_max,
-                scene,
-                path_tracer,
-                spp
-            )
-        }
+        gpu_trace(
+            dev_id,
+            acc,
+            atomics,
+            min_max,
+            scene,
+            path_tracer,
+            spp
+        )
     },
     present = @ || ignis_present(dev_id),
     load_scene_bvh = @|| {
@@ -745,7 +613,7 @@ fn @make_gpu_device( dev_id: i32
     }
 };
 
-fn @make_nvvm_device(dev: i32, streaming: bool) -> Device {
+fn @make_nvvm_device(dev: i32) -> Device {
     let dev_id  = runtime_device(1, dev);
     let atomics = Atomics {
         add_global_i32 = @ |p, i| nvvm_atomic_add_global_i32(p as &mut addrspace(1)i32, i),
@@ -759,12 +627,11 @@ fn @make_nvvm_device(dev: i32, streaming: bool) -> Device {
         make_nvvm_min_max(),
         @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], true),
         atomics,
-        streaming,
         true
     )
 }
 
-fn @make_amdgpu_device(dev: i32, streaming: bool) -> Device {
+fn @make_amdgpu_device(dev: i32) -> Device {
     let dev_id  = runtime_device(3, dev);
     let atomics = Atomics {
         add_global_i32 = @ |p, i| amdgcn_atomic_add_global_i32(p as &mut addrspace(1)i32, i),
@@ -778,7 +645,6 @@ fn @make_amdgpu_device(dev: i32, streaming: bool) -> Device {
         make_amdgpu_min_max(),
         @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], false),
         atomics,
-        streaming,
         false
     )
 }

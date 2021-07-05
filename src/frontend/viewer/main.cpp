@@ -72,8 +72,7 @@ static inline void usage()
 		<< "   -o      --output    image.exr  Writes the output image to a file" << std::endl
 		<< "Available targets:" << std::endl
 		<< "    generic, sse42, avx, avx2, avx512, asimd," << std::endl
-		<< "    nvvm = nvvm-streaming, nvvm-megakernel," << std::endl
-		<< "    amdgpu = amdgpu-streaming, amdgpu-megakernel" << std::endl
+		<< "    nvvm, amdgpu" << std::endl
 		<< "Available cameras:" << std::endl
 		<< "    perspective, orthogonal, fishlens" << std::endl
 		<< "Available techniques:" << std::endl
@@ -139,7 +138,7 @@ int main(int argc, char** argv)
 				i += 2;
 			} else if (!strcmp(argv[i], "--fov")) {
 				check_arg(argc, argv, i, 1);
-				fov = strtof(argv[i+1], nullptr);
+				fov = strtof(argv[i + 1], nullptr);
 				++i;
 			} else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--target")) {
 				check_arg(argc, argv, i, 1);
@@ -154,14 +153,10 @@ int main(int argc, char** argv)
 					target = Target::AVX512;
 				else if (!strcmp(argv[i], "asimd"))
 					target = Target::ASIMD;
-				else if (!strcmp(argv[i], "nvvm") || !strcmp(argv[i], "nvvm-streaming"))
-					target = Target::NVVM_STREAMING;
-				else if (!strcmp(argv[i], "nvvm-megakernel"))
-					target = Target::NVVM_MEGAKERNEL;
-				else if (!strcmp(argv[i], "amdgpu") || !strcmp(argv[i], "amdgpu-streaming"))
-					target = Target::AMDGPU_STREAMING;
-				else if (!strcmp(argv[i], "amdgpu-megakernel"))
-					target = Target::AMDGPU_MEGAKERNEL;
+				else if (!strcmp(argv[i], "nvvm"))
+					target = Target::NVVM;
+				else if (!strcmp(argv[i], "amdgpu"))
+					target = Target::AMDGPU;
 				else if (!strcmp(argv[i], "generic"))
 					target = Target::GENERIC;
 				else {
@@ -175,7 +170,7 @@ int main(int argc, char** argv)
 			} else if (!strcmp(argv[i], "--cpu")) {
 				target = getRecommendedCPUTarget();
 			} else if (!strcmp(argv[i], "--gpu")) {
-				target = Target::NVVM_STREAMING; // TODO: Select based on environment
+				target = Target::NVVM; // TODO: Select based on environment
 			} else if (!strcmp(argv[i], "--spp")) {
 				check_arg(argc, argv, i, 1);
 				bench_iter = (size_t)std::ceil(strtoul(argv[++i], nullptr, 10) / (float)SPP);

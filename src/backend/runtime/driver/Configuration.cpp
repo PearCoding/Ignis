@@ -17,11 +17,11 @@ std::string configurationToString(uint64 config)
 		stream << "[AVX2]";
 	if (config & IG_C_DEVICE_AVX512)
 		stream << "[AVX512]";
-	if (config & IG_C_DEVICE_NVVM_STREAMING)
+	if (config & IG_C_DEVICE_NVVM)
 		stream << "[NVVM]";
 	if (config & IG_C_DEVICE_NVVM_MEGA)
 		stream << "[NVVM_Megakernel]";
-	if (config & IG_C_DEVICE_AMD_STREAMING)
+	if (config & IG_C_DEVICE_AMDGPU)
 		stream << "[AMD]";
 	if (config & IG_C_DEVICE_AMD_MEGA)
 		stream << "[AMD_Megakernel]";
