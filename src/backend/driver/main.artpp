@@ -22,11 +22,8 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
     let device = make_cpu_default_device();
 #endif
 
-    let math = device.intrinsics;
-
 #if CAMERA_PERSPECTIVE
     let camera = make_perspective_camera(
-        math,
         settings.eye,
         make_mat3x3(settings.right, settings.up, settings.dir),
         settings.width,
@@ -36,7 +33,6 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
     );
 #elif CAMERA_ORTHOGONAL
     let camera = make_orthogonal_camera(
-        math,
         settings.eye,
         make_mat3x3(settings.right, settings.up, settings.dir),
         settings.width,
@@ -46,7 +42,6 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
     );
 #elif CAMERA_FISHLENS
     let camera = make_fishlens_camera(
-        math,
         settings.eye,
         make_mat3x3(settings.right, settings.up, settings.dir),
         settings.width,

@@ -18,13 +18,13 @@ fn @invert_surface_element(surf: SurfaceElement) = SurfaceElement {
 };
 
 // Map local surface element to global surface element based on the given entity
-fn @map_surface_element(math: Intrinsics, surf: SurfaceElement, global_mat: Mat3x4, normal_mat: Mat3x3) = SurfaceElement {
+fn @map_surface_element(surf: SurfaceElement, global_mat: Mat3x4, normal_mat: Mat3x3) = SurfaceElement {
     is_entering = surf.is_entering,
     point       = mat3x4_transform_point(global_mat, surf.point),
-    face_normal = vec3_normalize(math, mat3x3_mul(normal_mat, surf.face_normal)),
+    face_normal = vec3_normalize(mat3x3_mul(normal_mat, surf.face_normal)),
     prim_coords = surf.prim_coords,
     tex_coords  = surf.tex_coords,
-    local       = mat3x3_normalize_cols(math, mat3x3_matmul(normal_mat, surf.local))
+    local       = mat3x3_normalize_cols(mat3x3_matmul(normal_mat, surf.local))
 };
 
 // Result of sampling a BSDF
@@ -82,37 +82,37 @@ static bsdf_f_tex2:u32 = 0x2;
 
 //--------------------------------------
 // Creates a purely two-sided diffuse BSDF
-fn @make_diffuse_bsdf(math: Intrinsics, surf: SurfaceElement, kd: Color) = Bsdf {
-    eval   = @ |in_dir, _| color_mulf(kd, math.fabsf(vec3_dot(in_dir, surf.local.col(2))) / flt_pi),
-    pdf    = @ |in_dir, _| cosine_hemisphere_pdf(math.fabsf(vec3_dot(in_dir, surf.local.col(2)))),
+fn @make_diffuse_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
+    eval   = @ |in_dir, _| color_mulf(kd, math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2))) / flt_pi),
+    pdf    = @ |in_dir, _| cosine_hemisphere_pdf(math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)))),
     sample = @ |rnd, _, _| {
-        let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd));
+        let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
         let gdir   = mat3x3_mul(surf.local, sample.dir);
         make_bsdf_sample(surf, gdir/*if surf.is_entering { gdir } else { vec3_neg(gdir) }*/, sample.pdf, sample.dir.z, kd, false)
     },
     is_specular = false
 };
 
-fn @load_diffuse_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Stage3Accessor, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_diffuse_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     if (flags & bsdf_f_tex1) != 0 {
         let tex_id  = data.load_i32(0);
         let texture = stage.textures(tex_id);
-        make_diffuse_bsdf(math, surf, texture(surf.tex_coords))
+        make_diffuse_bsdf(surf, texture(surf.tex_coords))
     } else {
         let kd = vec3_to_color(data.load_vec3(0));
-        make_diffuse_bsdf(math, surf, kd)
+        make_diffuse_bsdf(surf, kd)
     }
 }
 
 //--------------------------------------
 // Creates a two-sided BSDF based on orennayar
-fn @make_orennayar_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
+fn @make_orennayar_bsdf(surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
     let a2 = alpha * alpha;
     let eval = @ |in_dir : Vec3, out_dir : Vec3| {
-        let p1 = math.fabsf(vec3_dot(in_dir, surf.local.col(2)));
-        let p2 = math.fabsf(vec3_dot(out_dir, surf.local.col(2)));
+        let p1 = math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)));
+        let p2 = math_builtins::fabs(vec3_dot(out_dir, surf.local.col(2)));
         let s  = -p1 * p2 + positive_cos(out_dir, in_dir);
-        let t  = if s <= flt_eps { 1 } else { math.fmaxf(flt_eps, math.fmaxf(p1, p2)) };
+        let t  = if s <= flt_eps { 1 } else { math_builtins::fmax(flt_eps, math_builtins::fmax(p1, p2)) };
 
         let A = 1 - 0.5 * a2 / (a2 + 0.33);
         let B = 0.45 * a2 / (a2 + 0.09);
@@ -122,9 +122,9 @@ fn @make_orennayar_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, kd: 
 
     Bsdf {
         eval   = eval,
-        pdf    = @ |in_dir, _| cosine_hemisphere_pdf(math.fabsf(vec3_dot(in_dir, surf.local.col(2)))),
+        pdf    = @ |in_dir, _| cosine_hemisphere_pdf(math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)))),
         sample = @ |rnd, out_dir, _| {
-            let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd));
+            let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
             let gdir   = mat3x3_mul(surf.local, sample.dir);
             make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, sample.dir.z, color_mulf(eval(gdir, out_dir), 1/sample.pdf), false)
         },
@@ -132,29 +132,29 @@ fn @make_orennayar_bsdf(math: Intrinsics, surf: SurfaceElement, alpha: f32, kd: 
     }
 }
 
-fn @load_orennayar_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_orennayar_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     let e0 = data.load_vec4(0);
     let kd = if (flags & bsdf_f_tex1) == 0 { make_color(e0.x, e0.y, e0.z) } else { stage.textures(bitcast[i32](e0.x))(surf.tex_coords) };
     let alpha = e0.w;
 
-    make_orennayar_bsdf(math, surf, alpha, kd)
+    make_orennayar_bsdf(surf, alpha, kd)
 }
 
 //--------------------------------------
 // Creates a physically-correct Phong BSDF
-fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
+fn @make_phong_bsdf(surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
     eval = @ |in_dir, out_dir| {
-        let cosI = math.fabsf(vec3_dot(in_dir, surf.local.col(2)));
+        let cosI = math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)));
         let cos  = positive_cos(in_dir, vec3_reflect(out_dir, surf.local.col(2)));
-        color_mulf(ks, cosI * fastpow/*math.powf*/(cos, ns) * (ns + 2) / (2 * flt_pi))
+        color_mulf(ks, cosI * fastpow/*math_builtins::pow*/(cos, ns) * (ns + 2) / (2 * flt_pi))
     },
     pdf = @ |in_dir, out_dir| {
         let cos = positive_cos(in_dir, vec3_reflect(out_dir, surf.local.col(2)));
-        cosine_power_hemisphere_pdf(math, cos, ns)
+        cosine_power_hemisphere_pdf(cos, ns)
     },
     sample = @ |rnd, out_dir, _| {
         let reflect_out = vec3_reflect(out_dir, surf.local.col(2));
-        let sample      = sample_cosine_power_hemisphere(math, ns, randf(rnd), randf(rnd));
+        let sample      = sample_cosine_power_hemisphere(ns, randf(rnd), randf(rnd));
         let in_dir      = mat3x3_mul(make_orthonormal_mat3x3(reflect_out), sample.dir);
         let cos         = positive_cos(in_dir, surf.local.col(2));
         let color       = color_mulf(ks, (ns + 2) / (ns + 1));
@@ -163,19 +163,19 @@ fn @make_phong_bsdf(math: Intrinsics, surf: SurfaceElement, ks: Color, ns: f32) 
     is_specular = false
 };
 
-fn @load_phong_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_phong_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     let e0 = data.load_vec4(0);
     let ks = if (flags & bsdf_f_tex1) == 0 { make_color(e0.x, e0.y, e0.z) } else { stage.textures(bitcast[i32](e0.x))(surf.tex_coords) };
     let ns = e0.w;
 
-    make_phong_bsdf(math, surf, ks, ns)
+    make_phong_bsdf(surf, ks, ns)
 }
 
 //--------------------------------------
 // Creates a plastic bsdf based on Fresnel equation (which is just a variadic mix bsdf with extra diffuse term)
-fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, kd: Color, specularBsdf: Bsdf) -> Bsdf {
+fn @make_plastic_bsdf(surf: SurfaceElement, n1: f32, n2: f32, kd: Color, specularBsdf: Bsdf) -> Bsdf {
     // Layered BSDF
-    let diffuse = make_diffuse_bsdf(math, surf, kd);
+    let diffuse = make_diffuse_bsdf(surf, kd);
 
     let N   = surf.local.col(2);
     let eta = n1 / n2; // Some systems use n2 / n1 for eta
@@ -184,14 +184,14 @@ fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, 
 
     // Diffuse inner scattering term
     let diff_scattering = @|cos_i : f32| {
-        let fi = fresnel(math, eta, cos_i);
+        let fi = fresnel(eta, cos_i);
          (1 - fi.factor) * eta * eta / (1 - fdr)
     };
 
     // Apply inner scattering term to diffuse bsdf
     let diffuse_extra = Bsdf {
         eval   = @ |in_dir, out_dir| {
-            let cos_i = math.fabsf(vec3_dot(in_dir, N));
+            let cos_i = math_builtins::fabs(vec3_dot(in_dir, N));
             color_mulf(diffuse.eval(in_dir, out_dir), diff_scattering(cos_i))
         },
         pdf    = diffuse.pdf,
@@ -207,15 +207,15 @@ fn @make_plastic_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, 
 
     // Fresnel based mix function
     let mix_f = @|out_dir : Vec3| -> f32 {
-        let cos_o = math.fabsf(vec3_dot(out_dir, N));
-        let fo    = fresnel(math, eta, cos_o);
+        let cos_o = math_builtins::fabs(vec3_dot(out_dir, N));
+        let fo    = fresnel(eta, cos_o);
         fo.factor
     };
 
     make_variadic_mix_bsdf(diffuse_extra, specularBsdf, mix_f)
 }
 
-fn @load_plastic_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_plastic_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     let e0 = data.load_vec4(0);
     let e1 = data.load_vec4(4);
     let ks = if (flags & bsdf_f_tex1) == 0 { make_color(e0.x, e0.y, e0.z) } else { stage.textures(bitcast[i32](e0.x))(surf.tex_coords) };
@@ -223,11 +223,11 @@ fn @load_plastic_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: S
     let kd = if (flags & bsdf_f_tex2) == 0 { make_color(e1.x, e1.y, e1.z) } else { stage.textures(bitcast[i32](e1.x))(surf.tex_coords) };
     let n2 = e1.w;
 
-    make_plastic_bsdf(math, surf, n1, n2, kd, make_mirror_bsdf(math, surf, ks))
+    make_plastic_bsdf(surf, n1, n2, kd, make_mirror_bsdf(surf, ks))
 }
 
 // TODO: This bsdf is not energy conserving due to the use of the diffuse scattering model for perfect smooth specular layer!
-fn @load_rough_plastic_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_rough_plastic_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     let e0 = data.load_vec4(0);
     let e1 = data.load_vec4(4);
     let e2 = data.load_vec2(8);
@@ -239,13 +239,13 @@ fn @load_rough_plastic_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, st
     let alpha_u = e2.x;
     let alpha_v = e2.y;
 
-    let specularBsdf = make_rough_conductor_bsdf(math, surf, 0, 1, ks, make_vndf_ggx_distribution(math, surf, alpha_u, alpha_v));
-    make_plastic_bsdf(math, surf, n1, n2, kd, specularBsdf)
+    let specularBsdf = make_rough_conductor_bsdf(surf, 0, 1, ks, make_vndf_ggx_distribution(surf, alpha_u, alpha_v));
+    make_plastic_bsdf(surf, n1, n2, kd, specularBsdf)
 }
 
 //--------------------------------------
 // Creates a perfect mirror BSDF
-fn @make_mirror_bsdf(_math: Intrinsics, surf: SurfaceElement, ks: Color) = Bsdf {
+fn @make_mirror_bsdf(surf: SurfaceElement, ks: Color) = Bsdf {
     eval   = @ |_, _| black,
     pdf    = @ |_, _| 0,
     sample = @ |_, out_dir, _| {
@@ -254,20 +254,20 @@ fn @make_mirror_bsdf(_math: Intrinsics, surf: SurfaceElement, ks: Color) = Bsdf 
     is_specular = true
 };
 
-fn @load_mirror_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_mirror_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     if (flags & bsdf_f_tex1) == 0 {
         let tex_id  = data.load_i32(0);
         let texture = stage.textures(tex_id);
-        make_mirror_bsdf(math, surf, texture(surf.tex_coords))
+        make_mirror_bsdf(surf, texture(surf.tex_coords))
     } else {
         let ks = vec3_to_color(data.load_vec3(0));
-        make_mirror_bsdf(math, surf, ks)
+        make_mirror_bsdf(surf, ks)
     }
 }
 
 //--------------------------------------
 // Creates a perfect glass BSDF
-fn @make_glass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
+fn @make_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
     eval   = @ |_, _| black,
     pdf    = @ |_, _| 0,
     sample = @ |rnd, out_dir, adjoint| {
@@ -275,7 +275,7 @@ fn @make_glass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks
         let n = surf.local.col(2);
         let cos_i = vec3_dot(out_dir, n);
 
-        let fterm = fresnel(math, k, cos_i);
+        let fterm = fresnel(k, cos_i);
 
         if !fterm.total {
             // Refraction
@@ -293,7 +293,7 @@ fn @make_glass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks
     is_specular = true
 };
 
-fn @load_glass_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_glass_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     let e0 = data.load_vec4(0);
     let e1 = data.load_vec4(4);
     let ks = if (flags & bsdf_f_tex1) == 0 { make_color(e0.x, e0.y, e0.z) } else { stage.textures(bitcast[i32](e0.x))(surf.tex_coords) };
@@ -301,12 +301,12 @@ fn @load_glass_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Sta
     let kt = if (flags & bsdf_f_tex2) == 0 { make_color(e1.x, e1.y, e1.z) } else { stage.textures(bitcast[i32](e1.x))(surf.tex_coords) };
     let n2 = e1.w;
 
-    make_glass_bsdf(math, surf, n1, n2, ks, kt)
+    make_glass_bsdf(surf, n1, n2, ks, kt)
 }
 
 //--------------------------------------
 // Creates a perfect glass BSDF with thin interface approximation
-fn @make_thin_glass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
+fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
     eval   = @ |_, _| black,
     pdf    = @ |_, _| 0,
     sample = @ |rnd, out_dir, _| {
@@ -314,7 +314,7 @@ fn @make_thin_glass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f3
         let N = surf.local.col(2);
         let cos_i = positive_cos(out_dir, N);
 
-        let fterm = fresnel(math, k, cos_i);
+        let fterm = fresnel(k, cos_i);
         let F = /*if fterm.factor < 1.0 {*/ fterm.factor + (1 - fterm.factor) * fterm.factor / (fterm.factor + 1) /*} else { 1.0 }*/;
 
         if randf(rnd) > F {
@@ -328,7 +328,7 @@ fn @make_thin_glass_bsdf(math: Intrinsics, surf: SurfaceElement, n1: f32, n2: f3
     is_specular = true
 };
 
-fn @load_thin_glass_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_thin_glass_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     let e0 = data.load_vec4(0);
     let e1 = data.load_vec4(4);
     let ks = if (flags & bsdf_f_tex1) == 0 { make_color(e0.x, e0.y, e0.z) } else { stage.textures(bitcast[i32](e0.x))(surf.tex_coords) };
@@ -336,12 +336,12 @@ fn @load_thin_glass_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage
     let kt = if (flags & bsdf_f_tex2) == 0 { make_color(e1.x, e1.y, e1.z) } else { stage.textures(bitcast[i32](e1.x))(surf.tex_coords) };
     let n2 = e1.w;
 
-    make_thin_glass_bsdf(math, surf, n1, n2, ks, kt)
+    make_thin_glass_bsdf(surf, n1, n2, ks, kt)
 }
 
 //--------------------------------------
 // Creates a perfect conductor BSDF
-fn @make_conductor_bsdf(_math: Intrinsics, surf: SurfaceElement, ior: f32, k: f32, ks: Color) = Bsdf {
+fn @make_conductor_bsdf(surf: SurfaceElement, ior: f32, k: f32, ks: Color) = Bsdf {
     eval   = @ |_, _| black,
     pdf    = @ |_, _| 0,
     sample = @ |_, out_dir, _| {
@@ -356,7 +356,7 @@ fn @make_conductor_bsdf(_math: Intrinsics, surf: SurfaceElement, ior: f32, k: f3
     is_specular = true
 };
 
-fn @load_conductor_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_conductor_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     let e0  = data.load_vec4(0);
     let e1  = data.load_vec4(4);
 
@@ -364,12 +364,12 @@ fn @load_conductor_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage:
     let ior = e1.x;
     let k   = e1.y;
 
-    make_conductor_bsdf(math, surf, ior, k, ks)
+    make_conductor_bsdf(surf, ior, k, ks)
 }
 
 //--------------------------------------
 // Creates a microfacet conductor BSDF. This is the front version
-fn @make_rough_conductor_bsdf_front(math: Intrinsics, surf: SurfaceElement, ior: f32, k: f32, ks: Color, micro: MicrofacetDistribution) -> Bsdf {
+fn @make_rough_conductor_bsdf_front(surf: SurfaceElement, ior: f32, k: f32, ks: Color, micro: MicrofacetDistribution) -> Bsdf {
     let N = surf.local.col(2);
     Bsdf {
         eval   = @ |in_dir, out_dir| {
@@ -378,14 +378,14 @@ fn @make_rough_conductor_bsdf_front(math: Intrinsics, surf: SurfaceElement, ior:
 
             if cos_o <= flt_eps || cos_i <= flt_eps { return(black) }
 
-            let H  = vec3_halfway(math, in_dir, out_dir);
+            let H  = vec3_halfway(in_dir, out_dir);
             let D  = micro.D(H);
             let G  = micro.G(in_dir, out_dir, H);
             let F  = conductor_factor(ior, k, positive_cos(out_dir, H));
             color_mulf(ks, F * D * G / (4 * cos_o))
         },
         pdf    = @ |in_dir, out_dir| {
-            let H     = vec3_halfway(math, in_dir, out_dir);
+            let H     = vec3_halfway(in_dir, out_dir);
             let dot   = positive_cos(in_dir, H);
             let jacob = 1 / (4 * dot); // Jacobian of the half-direction mapping
             if dot <= flt_eps { return(0) } else { micro.pdf(in_dir, out_dir, H) * jacob }
@@ -397,7 +397,7 @@ fn @make_rough_conductor_bsdf_front(math: Intrinsics, surf: SurfaceElement, ior:
             let s      = micro.sample(rnd, out_dir);
             if vec3_len2(s.normal) <= flt_eps { return(reject_bsdf_sample()) };
 
-            let H      = vec3_normalize(math, s.normal);
+            let H      = vec3_normalize(s.normal);
             let in_dir = vec3_reflect(out_dir, H);
 
             let cos_i   = positive_cos(in_dir, N);
@@ -420,15 +420,15 @@ fn @make_rough_conductor_bsdf_front(math: Intrinsics, surf: SurfaceElement, ior:
 }
 
 // Creates a microfacet conductor BSDF. This is the two-sided version
-fn @make_rough_conductor_bsdf(math: Intrinsics, surf: SurfaceElement, ior: f32, k: f32, ks: Color, micro: MicrofacetDistribution) -> Bsdf {
+fn @make_rough_conductor_bsdf(surf: SurfaceElement, ior: f32, k: f32, ks: Color, micro: MicrofacetDistribution) -> Bsdf {
     if !surf.is_entering {
-        make_rough_conductor_bsdf_front(math, invert_surface_element(surf), ior, k, ks, micro)
+        make_rough_conductor_bsdf_front(invert_surface_element(surf), ior, k, ks, micro)
     } else {
-        make_rough_conductor_bsdf_front(math, surf, ior, k, ks, micro)
+        make_rough_conductor_bsdf_front(surf, ior, k, ks, micro)
     }
 }
 
-fn @load_rough_conductor_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_rough_conductor_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     let e0  = data.load_vec4(0);
     let e1  = data.load_vec4(4);
     let ks  = if (flags & bsdf_f_tex1) == 0 { make_color(e0.x, e0.y, e0.z) } else { stage.textures(bitcast[i32](e0.x))(surf.tex_coords) };
@@ -438,7 +438,7 @@ fn @load_rough_conductor_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, 
     let alpha_u = e1.z;
     let alpha_v = e1.w;
 
-    make_rough_conductor_bsdf(math, surf, ior, k, ks, make_vndf_ggx_distribution(math, surf, alpha_u, alpha_v))
+    make_rough_conductor_bsdf(surf, ior, k, ks, make_vndf_ggx_distribution(surf, alpha_u, alpha_v))
 }
 
 //--------------------------------------
@@ -450,7 +450,7 @@ fn @make_passthrough_bsdf(surf: SurfaceElement) = Bsdf {
     is_specular = true
 };
 
-fn @load_passthrough_bsdf(_math: Intrinsics, _data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_passthrough_bsdf(__data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     make_passthrough_bsdf(surf)
 }
 
@@ -525,7 +525,7 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bs
 // Creates a BSDF that interpolates between two other BSDFs
 fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = make_variadic_mix_bsdf(mat1, mat2, @|_| k);
 
-fn @load_blend_bsdf(_math: Intrinsics, _data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_blend_bsdf(__data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     /*
     let (b0, b1, w)  = data.load_int3(0);
 
@@ -533,14 +533,14 @@ fn @load_blend_bsdf(_math: Intrinsics, _data: DeviceBuffer, _ray: Ray, _hit: Hit
 
     let bsdf0 = $get_shader_loader(b0 as u32);
     let bsdf1 = $get_shader_loader(b1 as u32);
-    make_mix_bsdf(bsdf0(math, data, ray, hit, surf), bsdf1(math, data, ray, hit, surf), weight)
+    make_mix_bsdf(bsdf0(data, ray, hit, surf), bsdf1(data, ray, hit, surf), weight)
     */
     // TODO
     make_passthrough_bsdf(surf)
 }
 
 //--------------------------------------
-fn @load_mask_bsdf(_math: Intrinsics, _data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_mask_bsdf(__data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     // TODO
     make_passthrough_bsdf(surf)
 }
@@ -555,8 +555,8 @@ fn @shading_normal_adjoint(in_dir: Vec3, out_dir: Vec3, ns: Vec3, ng: Vec3) -> f
 }
 
 // Normal Mapping
-fn @make_normalmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color) -> Bsdf {
-    let N    = vec3_normalize(math, mat3x3_left_mul(surf.local, vec3_normalize(math, make_vec3(normal.r, normal.g, normal.b))));
+fn @make_normalmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color) -> Bsdf {
+    let N    = vec3_normalize(mat3x3_left_mul(surf.local, vec3_normalize(make_vec3(normal.r, normal.g, normal.b))));
     let bsdf = @bsdf_factory(SurfaceElement{
         is_entering = surf.is_entering,
         point       = surf.point,
@@ -585,15 +585,15 @@ fn @make_normalmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (Sur
     }
 }
 
-fn @load_normalmap_bsdf(_math: Intrinsics, _data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_normalmap_bsdf(__data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     // TODO
     make_passthrough_bsdf(surf)
 }
 
 //--------------------------------------
 // Bump Mapping
-fn @make_bumpmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, dx: f32, dy: f32, strength: f32) -> Bsdf {
-    let N = vec3_normalize(math, vec3_sub(surf.local.col(2), vec3_mulf(vec3_add(vec3_mulf(surf.local.col(0), dx), vec3_mulf(surf.local.col(1), dy)), strength)));
+fn @make_bumpmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, dx: f32, dy: f32, strength: f32) -> Bsdf {
+    let N = vec3_normalize(vec3_sub(surf.local.col(2), vec3_mulf(vec3_add(vec3_mulf(surf.local.col(0), dx), vec3_mulf(surf.local.col(1), dy)), strength)));
     let bsdf = @bsdf_factory(SurfaceElement{
         is_entering = surf.is_entering,
         point       = surf.point,
@@ -622,38 +622,38 @@ fn @make_bumpmap(math: Intrinsics, surf: SurfaceElement, bsdf_factory: fn (Surfa
     }
 }
 
-fn @load_bumpmap_bsdf(_math: Intrinsics, _data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_bumpmap_bsdf(__data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     // TODO
     make_passthrough_bsdf(surf)
 }
 
 type BsdfTable = fn (i32) -> Shader;
 
-fn @make_shader_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor, stage: Stage3Accessor) -> BsdfTable {
+fn @make_shader_table(dtb: DynTable, acc: DeviceBufferAccessor, stage: Stage3Accessor) -> BsdfTable {
     @ |id| {
         let entry = get_lookup_entry(id as u64, dtb, acc);
         let data  = get_table_entry(entry.offset, dtb, acc);
 
         @|ray, hit, surf| {
             match entry.type_id {
-                0x00 => load_diffuse_bsdf(math, entry.flags, data, stage, ray, hit, surf),         // BSDF_DIFFUSE
-                0x01 => load_orennayar_bsdf(math, entry.flags, data, stage, ray, hit, surf),       // BSDF_ORENNAYAR
-                0x02 => load_glass_bsdf(math, entry.flags, data, stage, ray, hit, surf),           // BSDF_DIELECTRIC
-                //0x03 => load_rough_dielectric_bsdf(math, entry.flags, data, stage,  ray, hit, surf), // BSDF_ROUGH_DIELECTRIC
-                0x04 => load_thin_glass_bsdf(math, entry.flags, data, stage, ray, hit, surf),      // BSDF_THIN_DIELECTRIC
-                0x05 => load_mirror_bsdf(math, entry.flags, data, stage, ray, hit, surf),          // BSDF_MIRROR
-                0x06 => load_conductor_bsdf(math, entry.flags, data, stage, ray, hit, surf),       // BSDF_CONDUCTOR
-                0x07 => load_rough_conductor_bsdf(math, entry.flags, data, stage, ray, hit, surf), // BSDF_ROUGH_CONDUCTOR
-                0x10 => load_plastic_bsdf(math, entry.flags, data, stage, ray, hit, surf),         // BSDF_PLASTIC
-                0x11 => load_rough_plastic_bsdf(math, entry.flags, data, stage, ray, hit, surf),   // BSDF_ROUGH_PLASTIC
-                0x12 => load_phong_bsdf(math, entry.flags, data, stage, ray, hit, surf),           // BSDF_PHONG
-                0x13 => load_disney_bsdf(math, entry.flags, data, stage, ray, hit, surf),          // BSDF_DISNEY
-                0x20 => load_blend_bsdf(math, data, ray, hit, surf),                               // BSDF_BLEND
-                0x21 => load_mask_bsdf(math, data, ray, hit, surf),                                // BSDF_MASK
-                0x22 => load_passthrough_bsdf(math, data, ray, hit, surf),                         // BSDF_PASSTROUGH
-                0x30 => load_normalmap_bsdf(math, data, ray, hit, surf),                           // BSDF_NORMAL_MAP
-                0x31 => load_bumpmap_bsdf(math, data, ray, hit, surf),                             // BSDF_BUMP_MAP
-                0x40 => load_klems_bsdf(math, data, stage, ray, hit, surf),                        // BSDF_KLEMS
+                0x00 => load_diffuse_bsdf(entry.flags, data, stage, ray, hit, surf),         // BSDF_DIFFUSE
+                0x01 => load_orennayar_bsdf(entry.flags, data, stage, ray, hit, surf),       // BSDF_ORENNAYAR
+                0x02 => load_glass_bsdf(entry.flags, data, stage, ray, hit, surf),           // BSDF_DIELECTRIC
+                //0x03 => load_rough_dielectric_bsdf(entry.flags, data, stage,  ray, hit, surf), // BSDF_ROUGH_DIELECTRIC
+                0x04 => load_thin_glass_bsdf(entry.flags, data, stage, ray, hit, surf),      // BSDF_THIN_DIELECTRIC
+                0x05 => load_mirror_bsdf(entry.flags, data, stage, ray, hit, surf),          // BSDF_MIRROR
+                0x06 => load_conductor_bsdf(entry.flags, data, stage, ray, hit, surf),       // BSDF_CONDUCTOR
+                0x07 => load_rough_conductor_bsdf(entry.flags, data, stage, ray, hit, surf), // BSDF_ROUGH_CONDUCTOR
+                0x10 => load_plastic_bsdf(entry.flags, data, stage, ray, hit, surf),         // BSDF_PLASTIC
+                0x11 => load_rough_plastic_bsdf(entry.flags, data, stage, ray, hit, surf),   // BSDF_ROUGH_PLASTIC
+                0x12 => load_phong_bsdf(entry.flags, data, stage, ray, hit, surf),           // BSDF_PHONG
+                0x13 => load_disney_bsdf(entry.flags, data, stage, ray, hit, surf),          // BSDF_DISNEY
+                0x20 => load_blend_bsdf(data, ray, hit, surf),                               // BSDF_BLEND
+                0x21 => load_mask_bsdf(data, ray, hit, surf),                                // BSDF_MASK
+                0x22 => load_passthrough_bsdf(data, ray, hit, surf),                         // BSDF_PASSTROUGH
+                0x30 => load_normalmap_bsdf(data, ray, hit, surf),                           // BSDF_NORMAL_MAP
+                0x31 => load_bumpmap_bsdf(data, ray, hit, surf),                             // BSDF_BUMP_MAP
+                0x40 => load_klems_bsdf(data, stage, ray, hit, surf),                        // BSDF_KLEMS
                 _    => make_error_bsdf()
             }
         }

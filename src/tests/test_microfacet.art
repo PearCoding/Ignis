@@ -8,16 +8,16 @@ fn @make_surf() = SurfaceElement {
 };
 
 fn @make_setup() -> (Vec3, Vec3, Vec3) {
-    let in_dir  = vec3_normalize(cpu_intrinsics, make_vec3( 1,1,1));
-    let out_dir = vec3_normalize(cpu_intrinsics, make_vec3(-1,1,1));
-    let h       = vec3_halfway(cpu_intrinsics, in_dir, out_dir);
+    let in_dir  = vec3_normalize(make_vec3( 1,1,1));
+    let out_dir = vec3_normalize(make_vec3(-1,1,1));
+    let h       = vec3_halfway(in_dir, out_dir);
     (in_dir, out_dir, h)
 }
 
 fn test_microfacet_ggx_iso() {
     let mut err = 0;
 
-    let dst = $make_ggx_distribution(cpu_intrinsics, make_surf(), 0.1, 0.1);
+    let dst = $make_ggx_distribution(make_surf(), 0.1, 0.1);
     let (wi, wo, H) = make_setup();
 
     let D    = dst.D(H);
@@ -34,7 +34,7 @@ fn test_microfacet_ggx_iso() {
 fn test_microfacet_ggx_aniso() {
     let mut err = 0;
 
-    let dst = $make_ggx_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
+    let dst = $make_ggx_distribution(make_surf(), 0.05, 0.45);
     let (wi, wo, H) = make_setup();
 
     let D    = dst.D(H);
@@ -55,7 +55,7 @@ fn test_microfacet_ggx_sample() {
     rnd = fnv_hash(rnd, 42);
 
     let (_, wo, _) = make_setup();
-    let dst    = $make_ggx_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
+    let dst    = $make_ggx_distribution(make_surf(), 0.05, 0.45);
     let sample = dst.sample(&mut rnd, wo);
     let wi     = vec3_reflect(wo, sample.normal);
     
@@ -72,7 +72,7 @@ fn test_microfacet_ggx_sample() {
 fn test_microfacet_beckmann_iso() {
     let mut err = 0;
 
-    let dst = $make_beckmann_distribution(cpu_intrinsics, make_surf(), 0.1, 0.1);
+    let dst = $make_beckmann_distribution(make_surf(), 0.1, 0.1);
     let (wi, wo, H) = make_setup();
 
     let D    = dst.D(H);
@@ -89,7 +89,7 @@ fn test_microfacet_beckmann_iso() {
 fn test_microfacet_beckmann_aniso() {
     let mut err = 0;
 
-    let dst = $make_beckmann_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
+    let dst = $make_beckmann_distribution(make_surf(), 0.05, 0.45);
     let (wi, wo, H) = make_setup();
 
     let D    = dst.D(H);
@@ -110,7 +110,7 @@ fn test_microfacet_beckmann_sample() {
     rnd = fnv_hash(rnd, 42);
 
     let (_, wo, _) = make_setup();
-    let dst    = $make_beckmann_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
+    let dst    = $make_beckmann_distribution(make_surf(), 0.05, 0.45);
     let sample = dst.sample(&mut rnd, wo);
     let wi     = vec3_reflect(wo, sample.normal);
 
@@ -131,7 +131,7 @@ fn test_microfacet_vndf_ggx_sample() {
     rnd = fnv_hash(rnd, 42);
 
     let (_, wo, _) = make_setup();
-    let dst    = $make_vndf_ggx_distribution(cpu_intrinsics, make_surf(), 0.05, 0.45);
+    let dst    = $make_vndf_ggx_distribution(make_surf(), 0.05, 0.45);
     let sample = dst.sample(&mut rnd, wo);
     let wi     = vec3_reflect(wo, sample.normal);
 

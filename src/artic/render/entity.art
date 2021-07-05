@@ -21,7 +21,7 @@ struct Entity {
 
 type EntityTable = fn (i32) -> Entity;
 
-fn @make_entity_table(_math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor, _stage: Stage2Accessor) -> EntityTable {
+fn @make_entity_table(dtb: DynTable, acc: DeviceBufferAccessor, _stage: Stage2Accessor) -> EntityTable {
     let elem_s = sizeof[EntityData]() as u64;
     @ |id| {
         //let entry = get_lookup_entry(id as u64, dtb); // No need as we have only one type!

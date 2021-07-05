@@ -49,13 +49,13 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool) -> Prim {
     let tri2     = load4_f32(simd_ptr, 2);
     let prim_id  = bitcast[i32](tri2(3));
     Prim {
-        intersect = @ |_, math, ray| {
+        intersect = @ |_, ray| {
             let v0  = make_vec3(tri0(0), tri0(1), tri0(2));
             let e1  = make_vec3(tri1(0), tri1(1), tri1(2));
             let e2  = make_vec3(tri2(0), tri2(1), tri2(2));
             let n   = vec3_cross(e1, e2);
             let tri = make_tri(v0, e1, e2, n);
-            if let Option[(f32, f32, f32)]::Some((t, u, v)) = intersect_ray_tri(math, false /*backface_culling*/, ray, tri) {
+            if let Option[(f32, f32, f32)]::Some((t, u, v)) = intersect_ray_tri(false /*backface_culling*/, ray, tri) {
                 make_option(make_hit(-1/* Will be set later*/, prim_id & 0x7FFFFFFF, t, make_vec2(u, v)))
             } else {
                 Option[Hit]::None
@@ -116,8 +116,7 @@ fn @make_amdgpu_min_max() = make_min_max(ocml_fminf, ocml_fmaxf, false);
 // Traversal kernel  ---------------------------------------------------------------
 
 // Traverses a single ray at a time. 
-fn @gpu_traverse_single_helper_prim( gpu_intrinsics: Intrinsics
-                                    , min_max: MinMax
+fn @gpu_traverse_single_helper_prim( min_max: MinMax
                                     , mut ray: Ray
                                     , bvh: PrimBvh
                                     , any_hit: bool
@@ -186,7 +185,7 @@ fn @gpu_traverse_single_helper_prim( gpu_intrinsics: Intrinsics
                 for k in unroll(0, prim.size) {
                     if !prim.is_valid(k) { break() }
 
-                    if let Option[Hit]::Some(prim_hit) = prim.intersect(k, gpu_intrinsics, ray) {
+                    if let Option[Hit]::Some(prim_hit) = prim.intersect(k, ray) {
                         hit = prim_hit;
                         ray.tmax = prim_hit.distance;
 
@@ -203,8 +202,7 @@ fn @gpu_traverse_single_helper_prim( gpu_intrinsics: Intrinsics
 }
 
 // Traverses a single ray at a time. 
-fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
-                              , min_max: MinMax
+fn @gpu_traverse_single_helper( min_max: MinMax
                               , mut ray: Ray
                               , scene: Scene
                               , any_hit: bool
@@ -277,7 +275,7 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
                     if t <= hit.distance {
                         let shape_bvh = @prim_bvhs(leaf.shape_id);
                         let local_ray = transform_ray(ray, leaf.local);
-                        let local_hit = gpu_traverse_single_helper_prim(gpu_intrinsics, min_max, local_ray, shape_bvh, any_hit, 1);
+                        let local_hit = gpu_traverse_single_helper_prim(min_max, local_ray, shape_bvh, any_hit, 1);
 
                         if local_hit.prim_id != -1 {
                             if local_hit.distance <= hit.distance {
@@ -302,7 +300,6 @@ fn @gpu_traverse_single_helper( gpu_intrinsics: Intrinsics
 // Wrapper  ------------------------------------------------------------------------
 
 fn @gpu_traverse_single( acc: Accelerator
-                       , gpu_intrinsics: Intrinsics
                        , min_max: MinMax
                        , scene: Scene
                        , rays: fn (i32, i32) -> Ray
@@ -320,6 +317,6 @@ fn @gpu_traverse_single( acc: Accelerator
         let (i, j) = (work_item.tidx() + work_item.bidx() * block_size, work_item.tidy());
         if (i + j) >= ray_count { return() }
 
-        hits(i, j, gpu_traverse_single_helper(gpu_intrinsics, min_max, rays(i, j), scene, any_hit, 1 /*root*/));
+        hits(i, j, gpu_traverse_single_helper(min_max, rays(i, j), scene, any_hit, 1 /*root*/));
     })(grid, block);
 }

@@ -1,13 +1,13 @@
 struct BorderHandling {
-    horz: fn (Intrinsics, f32) -> f32,
-    vert: fn (Intrinsics, f32) -> f32
+    horz: fn (f32) -> f32,
+    vert: fn (f32) -> f32
 }
 
 type Texture = fn (Vec2) -> Color;
-type ImageFilter = fn (Intrinsics, Image, Vec2) -> Color;
+type ImageFilter = fn (Image, Vec2) -> Color;
 
 fn @make_clamp_border() -> BorderHandling {
-    let clamp = @ |math: Intrinsics, x: f32| math.fminf(1, math.fmaxf(0, x));
+    let clamp = @ |x: f32| math_builtins::fmin[f32](1, math_builtins::fmax[f32](0, x));
     BorderHandling {
         horz = clamp,
         vert = clamp
@@ -15,7 +15,7 @@ fn @make_clamp_border() -> BorderHandling {
 }
 
 fn @make_repeat_border() -> BorderHandling {
-    let repeat = @ |math: Intrinsics, x: f32| x - math.floorf(x);
+    let repeat = @ |x: f32| x - math_builtins::floor(x);
     BorderHandling {
         horz = repeat,
         vert = repeat
@@ -23,7 +23,7 @@ fn @make_repeat_border() -> BorderHandling {
 }
 
 fn @make_mirror_border() -> BorderHandling {
-    let mirror = @ |math: Intrinsics, x: f32| { if ((x as i32) % 2) == 0 { x - math.floorf(x) } else { 1 - (x - math.floorf(x)) } };
+    let mirror = @ |x: f32| { if ((x as i32) % 2) == 0 { x - math_builtins::floor(x) } else { 1 - (x - math_builtins::floor(x)) } };
 
     BorderHandling {
         horz = mirror,
@@ -32,20 +32,20 @@ fn @make_mirror_border() -> BorderHandling {
 }
 
 fn @make_nearest_filter() -> ImageFilter {
-    @ |math, img, uv| {
-        img.pixels(math.min((uv.x * img.width  as f32) as i32, img.width  - 1),
-                   math.min((uv.y * img.height as f32) as i32, img.height - 1))
+    @ |img, uv| {
+        img.pixels(min((uv.x * img.width  as f32) as i32, img.width  - 1),
+                   min((uv.y * img.height as f32) as i32, img.height - 1))
     }
 }
 
 fn @make_bilinear_filter() -> ImageFilter {
-    @ |math, img, uv| {
+    @ |img, uv| {
         let u = uv.x * img.width as f32;
         let v = uv.y * img.height as f32;
-        let x0 = math.min(u as i32, img.width  - 1);
-        let y0 = math.min(v as i32, img.height - 1);
-        let x1 = math.min(x0 + 1, img.width  - 1);
-        let y1 = math.min(y0 + 1, img.height - 1);
+        let x0 = min(u as i32, img.width  - 1);
+        let y0 = min(v as i32, img.height - 1);
+        let x1 = min(x0 + 1, img.width  - 1);
+        let y1 = min(y0 + 1, img.height - 1);
         let kx = u - (u as i32 as f32);
         let ky = v - (v as i32 as f32);
 
@@ -61,18 +61,18 @@ fn @make_bilinear_filter() -> ImageFilter {
     }
 }
 
-fn @make_image_texture(math: Intrinsics, border: BorderHandling, filter: ImageFilter, image: Image) -> Texture {
+fn @make_image_texture(border: BorderHandling, filter: ImageFilter, image: Image) -> Texture {
     @ |uv| {
-        let u = border.horz(math, uv.x);
-        let v = border.vert(math, uv.y);
-        filter(math, image, make_vec2(u, v))
+        let u = border.horz(uv.x);
+        let v = border.vert(uv.y);
+        filter(image, make_vec2(u, v))
     }
 }
 
-fn @load_image_texture(math: Intrinsics, data: DeviceBuffer, stage: Stage1Accessor, border: BorderHandling, filter: ImageFilter) -> Texture {
+fn @load_image_texture(data: DeviceBuffer, stage: Stage1Accessor, border: BorderHandling, filter: ImageFilter) -> Texture {
     let bufferID = data.load_i32(0);
     let image    = load_image_from_buffer(bufferID, stage.buffers);
-    make_image_texture(math, border, filter, image)
+    make_image_texture(border, filter, image)
 }
 
 fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color) -> Texture {
@@ -85,7 +85,7 @@ fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color) -> Text
     }
 }
 
-fn @load_checkerboard_texture(_math: Intrinsics, data: DeviceBuffer, _stage: Stage1Accessor) -> Texture {
+fn @load_checkerboard_texture(data: DeviceBuffer, _stage: Stage1Accessor) -> Texture {
     let e0      = data.load_vec4(0);
     let e1      = data.load_vec4(4);
     let color0  = make_color(e0.x, e0.y, e0.z);
@@ -117,18 +117,18 @@ fn @texture_dy(tex: Texture, point: Vec2) -> Color {
 
 type TextureTable = fn (i32) -> Texture;
 
-fn @make_texture_table(math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor, stage: Stage1Accessor) -> TextureTable {
+fn @make_texture_table(dtb: DynTable, acc: DeviceBufferAccessor, stage: Stage1Accessor) -> TextureTable {
     @ |id| {
         let entry = get_lookup_entry(id as u64, dtb, acc);
         let data  = get_table_entry(entry.offset, dtb, acc);
         match entry.type_id {
-            0x00 => load_image_texture(math, data, stage, make_clamp_border(), make_nearest_filter()),   // TEX_IMAGE
-            0x01 => load_image_texture(math, data, stage, make_clamp_border(), make_bilinear_filter()),  // TEX_IMAGE
-            0x02 => load_image_texture(math, data, stage, make_repeat_border(), make_nearest_filter()),  // TEX_IMAGE
-            0x03 => load_image_texture(math, data, stage, make_repeat_border(), make_bilinear_filter()), // TEX_IMAGE
-            0x04 => load_image_texture(math, data, stage, make_mirror_border(), make_nearest_filter()),  // TEX_IMAGE
-            0x05 => load_image_texture(math, data, stage, make_mirror_border(), make_bilinear_filter()), // TEX_IMAGE
-            0x10 => load_checkerboard_texture(math, data, stage),                                        // TEX_CHECKERBOARD
+            0x00 => load_image_texture(data, stage, make_clamp_border(), make_nearest_filter()),   // TEX_IMAGE
+            0x01 => load_image_texture(data, stage, make_clamp_border(), make_bilinear_filter()),  // TEX_IMAGE
+            0x02 => load_image_texture(data, stage, make_repeat_border(), make_nearest_filter()),  // TEX_IMAGE
+            0x03 => load_image_texture(data, stage, make_repeat_border(), make_bilinear_filter()), // TEX_IMAGE
+            0x04 => load_image_texture(data, stage, make_mirror_border(), make_nearest_filter()),  // TEX_IMAGE
+            0x05 => load_image_texture(data, stage, make_mirror_border(), make_bilinear_filter()), // TEX_IMAGE
+            0x10 => load_checkerboard_texture(data, stage),                                        // TEX_CHECKERBOARD
                _ => make_invalid_texture()
         }
     } 

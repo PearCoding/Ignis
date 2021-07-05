@@ -10,7 +10,7 @@ struct MicrofacetModel {
 }
 
 
-fn @g_1_walter(math: Intrinsics, surf: SurfaceElement, w: Vec3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
+fn @g_1_walter(surf: SurfaceElement, w: Vec3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
     let cosZ = vec3_dot(surf.local.col(2), w);
     if cosZ * vec3_dot(w, m) <= flt_eps { return(0) };
 
@@ -23,7 +23,7 @@ fn @g_1_walter(math: Intrinsics, surf: SurfaceElement, w: Vec3, m: Vec3, alpha_u
 
     if k2 <= flt_eps { return(1) };
 
-    let a  = math.rsqrtf(k2);
+    let a  = 1 / math_builtins::sqrt(k2);
     let a2 = 1 / k2;
 
     if a >= 1.6 { 
@@ -33,7 +33,7 @@ fn @g_1_walter(math: Intrinsics, surf: SurfaceElement, w: Vec3, m: Vec3, alpha_u
     }
 }
 
-fn @g_1_smith(math: Intrinsics, surf: SurfaceElement, w: Vec3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
+fn @g_1_smith(surf: SurfaceElement, w: Vec3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
     let cosZ = vec3_dot(surf.local.col(2), w);
     if cosZ * vec3_dot(w, m) <= flt_eps { return(0) };
 
@@ -44,11 +44,11 @@ fn @g_1_smith(math: Intrinsics, surf: SurfaceElement, w: Vec3, m: Vec3, alpha_u:
     let ky = alpha_v * cosY;
     let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
 
-    let denom = 1 + math.sqrtf(1 + k2);
+    let denom = 1 + math_builtins::sqrt(1 + k2);
     if denom <= flt_eps { 0 } else { 2 / denom }
 }
 
-fn @ndf_beckmann(math: Intrinsics, surf: SurfaceElement, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
+fn @ndf_beckmann(surf: SurfaceElement, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
     let cosZ = vec3_dot(surf.local.col(2), m);
     let cosX = vec3_dot(surf.local.col(0), m);
     let cosY = vec3_dot(surf.local.col(1), m);
@@ -58,10 +58,10 @@ fn @ndf_beckmann(math: Intrinsics, surf: SurfaceElement, m: Vec3, alpha_u: f32, 
     let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
 
     let norm  = 1 / (flt_pi * alpha_u * alpha_v * cosZ * cosZ * cosZ * cosZ);
-    norm * math.expf(-k2)
+    norm * math_builtins::exp(-k2)
 }
 
-fn @ndf_ggx(_math: Intrinsics, surf: SurfaceElement, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
+fn @ndf_ggx(surf: SurfaceElement, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
     let cosZ = vec3_dot(surf.local.col(2), m); // cosTheta
     let cosX = vec3_dot(surf.local.col(0), m); // cosPhi * sinTheta
     let cosY = vec3_dot(surf.local.col(1), m); // sinPhi * sinTheta
@@ -73,25 +73,25 @@ fn @ndf_ggx(_math: Intrinsics, surf: SurfaceElement, m: Vec3, alpha_u: f32, alph
     1 / (flt_pi * alpha_u * alpha_v * cosZ * cosZ * cosZ * cosZ * (1 + k2) * (1 + k2))
 }
 
-fn @make_aniso_beckmann_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
-    D  = @|m| ndf_beckmann(math, surf, m, alpha_u, alpha_v),
-    G1 = @|w, m| g_1_walter(math, surf, w, m, alpha_u, alpha_v),
+fn @make_aniso_beckmann_model(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
+    D  = @|m| ndf_beckmann(surf, m, alpha_u, alpha_v),
+    G1 = @|w, m| g_1_walter(surf, w, m, alpha_u, alpha_v),
     sample = @ |rnd| {
         let u0 = randf(rnd);
         let u1 = randf(rnd);
         
         let ar     = alpha_v / alpha_u;
-        let phi    = math.atanf(ar * math.tanf(2 * flt_pi * u1));
-        let cosPhi = math.cosf(phi);
-        let sinPhi = math.sqrtf(1 - cosPhi*cosPhi);
+        let phi    = math_builtins::atan(ar * math_builtins::tan(2 * flt_pi * u1));
+        let cosPhi = math_builtins::cos(phi);
+        let sinPhi = math_builtins::sqrt(1 - cosPhi*cosPhi);
 
         let kx = cosPhi / alpha_u;
         let ky = sinPhi / alpha_v;
         let k2 = 1 / (kx * kx + ky * ky);
 
-        let cosTheta  = math.rsqrtf(1 - k2 * math.logf(1.0 - u0));
+        let cosTheta  = 1 / math_builtins::sqrt(1 - k2 * math_builtins::log(1.0 - u0));
         let cosTheta2 = cosTheta * cosTheta;
-        let sinTheta  = math.sqrtf(1 - cosTheta2);
+        let sinTheta  = math_builtins::sqrt(1 - cosTheta2);
 
         let pdf = (1 - u0) / (flt_pi * alpha_u * alpha_v * cosTheta2 * cosTheta);
         let lh  = make_vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta); // Microfacet normal in local shading space
@@ -99,17 +99,17 @@ fn @make_aniso_beckmann_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f
     }
 };
 
-fn make_aniso_ggx_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
-    D  = @|m| ndf_ggx(math, surf, m, alpha_u, alpha_v),
-    G1 = @|w, m| g_1_smith(math, surf, w, m, alpha_u, alpha_v),
+fn make_aniso_ggx_model(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
+    D  = @|m| ndf_ggx(surf, m, alpha_u, alpha_v),
+    G1 = @|w, m| g_1_smith(surf, w, m, alpha_u, alpha_v),
     sample = @ |rnd| {
         let u0 = randf(rnd);
         let u1 = randf(rnd);
         
         let ar     = alpha_v / alpha_u;
-        let phi    = math.atanf(ar * math.tanf(2 * flt_pi * u1));
-        let cosPhi = math.cosf(phi);
-        let sinPhi = math.sqrtf(1 - cosPhi*cosPhi);
+        let phi    = math_builtins::atan(ar * math_builtins::tan(2 * flt_pi * u1));
+        let cosPhi = math_builtins::cos(phi);
+        let sinPhi = math_builtins::sqrt(1 - cosPhi*cosPhi);
 
         let kx = cosPhi / alpha_u;
         let ky = sinPhi / alpha_v;
@@ -117,9 +117,9 @@ fn make_aniso_ggx_model(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, al
         let a2 = 1 / d2;
         let t2 = a2 * u0 / (1 - u0);
 
-        let cosTheta  = math.rsqrtf(1 + t2);
+        let cosTheta  = 1/math_builtins::sqrt(1 + t2);
         let cosTheta2 = cosTheta * cosTheta;
-        let sinTheta  = math.sqrtf(1 - cosTheta2);
+        let sinTheta  = math_builtins::sqrt(1 - cosTheta2);
 
         let k2  = d2 * (sinTheta * sinTheta) / cosTheta2;
         let pdf = 1 / (flt_pi * alpha_u * alpha_v * cosTheta2 * cosTheta * (1 + k2) * (1 + k2));
@@ -143,18 +143,18 @@ fn @make_microfacet_distribution(model: MicrofacetModel, surf: SurfaceElement) =
     sample = @ |rnd, _| model.sample(rnd)
 };
 
-fn @make_beckmann_distribution(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
-    make_microfacet_distribution(make_aniso_beckmann_model(math, surf, alpha_u, alpha_v), surf)
+fn @make_beckmann_distribution(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
+    make_microfacet_distribution(make_aniso_beckmann_model(surf, alpha_u, alpha_v), surf)
 }
 
-fn @make_ggx_distribution(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
-    make_microfacet_distribution(make_aniso_ggx_model(math, surf, alpha_u, alpha_v), surf)
+fn @make_ggx_distribution(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
+    make_microfacet_distribution(make_aniso_ggx_model(surf, alpha_u, alpha_v), surf)
 }
 
 // Based on:
 // Journal of Computer Graphics Techniques Vol. 7, No. 4, 2018 http://jcgt.org.
 // Sampling the GGX Distribution of Visible Normals. Eric Heitz
-fn @sample_vndf_ggx(rnd: &mut RndState, math: Intrinsics, surf: SurfaceElement, vN: Vec3, alpha_u: f32, alpha_v: f32) -> Vec3 {
+fn @sample_vndf_ggx(rnd: &mut RndState, surf: SurfaceElement, vN: Vec3, alpha_u: f32, alpha_v: f32) -> Vec3 {
     let u0 = randf(rnd);
     let u1 = randf(rnd);
 
@@ -162,44 +162,44 @@ fn @sample_vndf_ggx(rnd: &mut RndState, math: Intrinsics, surf: SurfaceElement, 
     let cosZ = vec3_dot(surf.local.col(2), vN); // cosTheta
     let cosX = vec3_dot(surf.local.col(0), vN); // cosPhi * sinTheta
     let cosY = vec3_dot(surf.local.col(1), vN); // sinPhi * sinTheta
-    let VH   = vec3_normalize(math, make_vec3(alpha_u*cosX, alpha_v*cosY, cosZ));
+    let VH   = vec3_normalize(make_vec3(alpha_u*cosX, alpha_v*cosY, cosZ));
 
 	// Section 4.1: orthonormal basis (with special case if cross product is zero)
     let lensq = VH.x*VH.x + VH.y * VH.y;
-	let T1    = if lensq > flt_eps { vec3_mulf(make_vec3(-VH.y, VH.x, 0), math.rsqrtf(lensq)) } else { make_vec3(1, 0, 0) };
+	let T1    = if lensq > flt_eps { vec3_mulf(make_vec3(-VH.y, VH.x, 0), 1/math_builtins::sqrt(lensq)) } else { make_vec3(1, 0, 0) };
 	let T2    = vec3_cross(VH, T1);
 
 	// Section 4.2: parameterization of the projected area
-	let r	= math.sqrtf(u0);
+	let r	= math_builtins::sqrt(u0);
 	let phi = 2 * flt_pi * u1;
-	let t1	= r * math.cosf(phi);
-	let t2_	= r * math.sinf(phi);
+	let t1	= r * math_builtins::cos(phi);
+	let t2_	= r * math_builtins::sin(phi);
 	let s	= 0.5 * (1+ VH.z);
-	let t2	= (1 - s) * math.sqrtf(1 - t1 * t1) + s * t2_;
+	let t2	= (1 - s) * math_builtins::sqrt(1 - t1 * t1) + s * t2_;
 
 	// Section 4.3: reprojection onto hemisphere
 	let Nh = vec3_add(vec3_add(vec3_mulf(T1, t1), vec3_mulf(T2, t2)),
-                      vec3_mulf(VH, math.sqrtf(math.fmaxf(0, 1 + t2*t2-t1*t1))));
+                      vec3_mulf(VH, math_builtins::sqrt(math_builtins::fmax[f32](0, 1 + t2*t2-t1*t1))));
 
     // Section 3.4: transforming the normal back to the ellipsoid configuration
-	mat3x3_mul(surf.local, vec3_normalize(math, make_vec3(alpha_u * Nh.x, alpha_v * Nh.y, math.fmaxf(0, Nh.z))))
+	mat3x3_mul(surf.local, vec3_normalize(make_vec3(alpha_u * Nh.x, alpha_v * Nh.y, math_builtins::fmax[f32](0, Nh.z))))
 }
 
-fn @pdf_vndf_ggx(math: Intrinsics, surf: SurfaceElement, w: Vec3, h: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
+fn @pdf_vndf_ggx(surf: SurfaceElement, w: Vec3, h: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
     let cosZ = vec3_dot(surf.local.col(2), w);
-    g_1_smith(math, surf, w, h, alpha_u, alpha_v) * math.fabsf(vec3_dot(w, h)) * ndf_ggx(math, surf, h, alpha_u, alpha_v) / cosZ
+    g_1_smith(surf, w, h, alpha_u, alpha_v) * math_builtins::fabs(vec3_dot(w, h)) * ndf_ggx(surf, h, alpha_u, alpha_v) / cosZ
 }
 
-fn @make_vndf_ggx_distribution(math: Intrinsics, surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
-    let model = make_aniso_ggx_model(math, surf, alpha_u, alpha_v);
+fn @make_vndf_ggx_distribution(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
+    let model = make_aniso_ggx_model(surf, alpha_u, alpha_v);
 
     MicrofacetDistribution {
         D      = model.D,
         G      = @ |wi, wo, m| model.G1(wi, m) * model.G1(wo, m),
-        pdf    = @ | _, wo, m| pdf_vndf_ggx(math, surf, wo, m, alpha_u, alpha_v),
+        pdf    = @ | _, wo, m| pdf_vndf_ggx(surf, wo, m, alpha_u, alpha_v),
         sample = @ |rnd, wo|   {
-            let m   = sample_vndf_ggx(rnd, math, surf, wo, alpha_u, alpha_v);
-            let pdf = pdf_vndf_ggx(math, surf, wo, m, alpha_u, alpha_v);
+            let m   = sample_vndf_ggx(rnd, surf, wo, alpha_u, alpha_v);
+            let pdf = pdf_vndf_ggx(surf, wo, m, alpha_u, alpha_v);
             MicrofacetSample { normal = m, pdf = pdf }
         }
     }
