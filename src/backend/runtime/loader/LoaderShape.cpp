@@ -73,9 +73,9 @@ inline TriMesh setup_mesh_rectangle(const Object& elem)
 
 inline TriMesh setup_mesh_cube(const Object& elem)
 {
-	const float width	  = elem.property("width").getNumber(2.0f);
-	const float height	  = elem.property("height").getNumber(2.0f);
-	const float depth	  = elem.property("depth").getNumber(2.0f);
+	const float width	  = elem.property("width").getNumber(1.0f);
+	const float height	  = elem.property("height").getNumber(1.0f);
+	const float depth	  = elem.property("depth").getNumber(1.0f);
 	const Vector3f origin = elem.property("origin").getVector3(Vector3f(-width / 2, -height / 2, -depth / 2));
 	return TriMesh::MakeBox(origin, Vector3f::UnitX() * width, Vector3f::UnitY() * height, Vector3f::UnitZ() * depth);
 }
@@ -181,8 +181,8 @@ static void setup_bvhs(const std::vector<TriMesh>& meshes, LoaderResult& result)
 	const auto build_mesh = [&](size_t id) {
 		BvhTemporary<N, T>& tmp = bvhs[id];
 		const TriMesh& mesh		= meshes.at(id);
-
-		build_bvh<N, T>(mesh, tmp.nodes, tmp.tris);
+		if (mesh.faceCount() > 0)
+			build_bvh<N, T>(mesh, tmp.nodes, tmp.tris);
 	};
 
 	// Start building!
@@ -242,7 +242,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 			mesh = setup_mesh_triangle(*child);
 		} else if (child->pluginType() == "rectangle") {
 			mesh = setup_mesh_rectangle(*child);
-		} else if (child->pluginType() == "cube") {
+		} else if (child->pluginType() == "cube" || child->pluginType() == "box") {
 			mesh = setup_mesh_cube(*child);
 		} else if (child->pluginType() == "sphere") {
 			mesh = setup_mesh_sphere(*child);
