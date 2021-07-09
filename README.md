@@ -2,7 +2,7 @@
 
 'Ignis' is a raytracer for the RENEGADE project implemented using the Artic frontend of the AnyDSL compiler framework (https://anydsl.github.io/) and based on Rodent (https://github.com/AnyDSL/rodent).
 
-![A scene containing diamonds rendered by Ignis](refs/screenshot.jpg)
+![A scene containing diamonds rendered by Ignis](docs/screenshot.jpg)
 
 ## Dependencies
 

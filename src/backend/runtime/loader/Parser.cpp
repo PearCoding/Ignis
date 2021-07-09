@@ -173,26 +173,21 @@ Eigen::Matrix<typename Derived1::Scalar, 3, 4> lookAt(const Eigen::MatrixBase<De
 													  const Eigen::MatrixBase<Derived2>& center,
 													  const Eigen::MatrixBase<Derived3>& up)
 {
-	typedef Eigen::Matrix<typename Derived1::Scalar, 3, 4> Matrix34;
 	typedef Eigen::Matrix<typename Derived1::Scalar, 3, 1> Vector3;
-	Vector3 f	 = (center - eye).normalized();
-	Vector3 u	 = up.normalized();
-	Vector3 s	 = f.cross(u).normalized();
-	u			 = s.cross(f);
-	Matrix34 mat = Matrix34::Zero();
-	mat(0, 0)	 = s.x();
-	mat(0, 1)	 = s.y();
-	mat(0, 2)	 = s.z();
-	mat(0, 3)	 = -s.dot(eye);
-	mat(1, 0)	 = u.x();
-	mat(1, 1)	 = u.y();
-	mat(1, 2)	 = u.z();
-	mat(1, 3)	 = -u.dot(eye);
-	mat(2, 0)	 = -f.x();
-	mat(2, 1)	 = -f.y();
-	mat(2, 2)	 = -f.z();
-	mat(2, 3)	 = f.dot(eye);
-	return mat;
+	typedef Eigen::Matrix<typename Derived1::Scalar, 3, 4> Matrix34;
+
+	Vector3 f = (center - eye).normalized();
+	Vector3 u = up.normalized();
+	Vector3 s = f.cross(u).normalized();
+	u		  = s.cross(f);
+
+	Matrix34 m;
+	m.col(0) = s;
+	m.col(1) = u;
+	m.col(2) = f;
+	m.col(3) = eye;
+
+	return m;
 }
 
 inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson::Value& obj)

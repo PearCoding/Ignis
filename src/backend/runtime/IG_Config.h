@@ -148,9 +148,9 @@ private:                                           \
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <memory>
-#include <filesystem>
 
 // Eigen3 Library
 #include <Eigen/Dense>
