@@ -62,12 +62,25 @@ inline static std::string getString(const rapidjson::Value& obj)
 	return std::string(obj.GetString(), obj.GetStringLength());
 }
 
+inline bool checkArrayIsAllNumber(const rapidjson::GenericArray<true, rapidjson::Value>& arr)
+{
+	if (arr.Size() == 0)
+		return false;
+	for (rapidjson::SizeType i = 0; i < arr.Size(); ++i) {
+		if (!arr[i].IsNumber())
+			return false;
+	}
+	return true;
+}
+
 inline static Vector2f getVector2f(const rapidjson::Value& obj)
 {
 	const auto& array = obj.GetArray();
 	const size_t len  = array.Size();
 	if (len != 2)
 		throw std::runtime_error("Expected vector of length 2");
+	if (!checkArrayIsAllNumber(array))
+		throw std::runtime_error("Given vector is not only numbers");
 	return Vector2f(array[0].GetFloat(), array[1].GetFloat());
 }
 
@@ -77,6 +90,8 @@ inline static Vector3f getVector3f(const rapidjson::Value& obj)
 	const size_t len  = array.Size();
 	if (len != 3)
 		throw std::runtime_error("Expected vector of length 3");
+	if (!checkArrayIsAllNumber(array))
+		throw std::runtime_error("Given vector is not only numbers");
 	return Vector3f(array[0].GetFloat(), array[1].GetFloat(), array[2].GetFloat());
 }
 
@@ -87,6 +102,8 @@ inline static Quaternionf getQuaternionf(const rapidjson::Value& obj)
 	const size_t len  = array.Size();
 	if (len != 4)
 		throw std::runtime_error("Expected vector of length 4");
+	if (!checkArrayIsAllNumber(array))
+		throw std::runtime_error("Given vector is not only numbers");
 	return Quaternionf(array[0].GetFloat(), array[1].GetFloat(), array[2].GetFloat(), array[3].GetFloat());
 }
 
@@ -96,6 +113,8 @@ inline static Matrix3f getMatrix3f(const rapidjson::Value& obj)
 	const size_t len  = array.Size();
 	if (len != 9)
 		throw std::runtime_error("Expected matrix of length 9 (3x3)");
+	if (!checkArrayIsAllNumber(array))
+		throw std::runtime_error("Given matrix is not only numbers");
 
 	// Eigen uses column major by default. Our input is row major!
 	Matrix3f mat;
@@ -112,6 +131,8 @@ inline static Matrix4f getMatrix4f(const rapidjson::Value& obj)
 	const size_t rows = len == 12 ? 3 : 4;
 	if (len != 16 && len != 12)
 		throw std::runtime_error("Expected matrix of length 16 (4x4) or length 12 (3x4)");
+	if (!checkArrayIsAllNumber(array))
+		throw std::runtime_error("Given matrix is not only numbers");
 
 	Matrix4f mat = Matrix4f::Identity();
 	for (size_t i = 0; i < rows; ++i)
