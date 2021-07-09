@@ -2,7 +2,7 @@
 
 A quick and dirty tutorial to run a simple evalglare analyses.
 
- 1. Make sure you have a running setup of Ignis. Have a look at docs/TutorialSetup.md to compile the Ignis framework. 
+ 1. Make sure you have a running setup of Ignis. Have a look at [docs/TutorialSetup.md](TutorialEvalglare.md) to compile the Ignis framework. 
     1. Make sure the fishlens camera is available. It is enabled by default.
  2. Build your own scene using one of the available tools.
     1. We will use the `scene/diamond_scene.json` example. Keep in mind that this is a horrible scene for evalglare...

@@ -8,7 +8,7 @@ A quick and dirty tutorial to show how to setup AnyDSL and Ignis on a typical Li
     3. Optional: Use `ninja` instead of `make` as it is superior in any regard.
     4. Run `./setup.sh` inside a terminal at the root directory and get a coffee.
  2. Clone Ignis from https://github.com/PearCoding/Ignis
-    1. Make sure all the dependencies listed in README.md are installed.
+    1. Make sure all the dependencies listed in [README.md](../README.md) are installed.
     2. Run `mkdir build && cd build && cmake ..`
     3. Run `ccmake .` inside the `build/` directory.
     4. Change `AnyDSL_runtime_DIR` to `ANYDSL_ROOT/runtime/build/share/anydsl/cmake`, with `ANYDSL_ROOT` being the path to the root of the AnyDSL framework.
