@@ -10,8 +10,8 @@ class Camera;
 struct LoaderOptions;
 
 struct RuntimeOptions {
-	Target DesiredTarget;
-	uint32 Device;
+	Target DesiredTarget = Target::GENERIC;
+	uint32 Device		 = 0;
 	std::string OverrideTechnique;
 	std::string OverrideCamera;
 };
@@ -54,6 +54,7 @@ public:
 	inline void setDebugMode(DebugMode mode) { mDebugMode = mode; }
 
 	inline uint32 configuration() const { return mConfiguration; }
+
 private:
 	void shutdown();
 
