@@ -112,7 +112,7 @@ fn @get_table_entry(off: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> Devi
 
 type BufferTable = fn (i32) -> DeviceBuffer;
 
-fn @make_buffer_table(_math: Intrinsics, dtb: DynTable, acc: DeviceBufferAccessor) -> BufferTable {
+fn @make_buffer_table(dtb: DynTable, acc: DeviceBufferAccessor) -> BufferTable {
     @ |id| {
         let entry = get_lookup_entry(id as u64, dtb, acc);
         get_table_entry(entry.offset, dtb, acc)

@@ -15,7 +15,7 @@ using namespace IG;
 PYBIND11_MODULE(pyignis, m)
 {
 	m.doc() = R"pbdoc(
-        Ignis python scene plugin
+        Ignis python plugin
         -----------------------
         .. currentmodule:: pyignis
         .. autosummary::
@@ -25,14 +25,19 @@ PYBIND11_MODULE(pyignis, m)
 	m.attr("__version__") = MACRO_STRINGIFY(IGNIS_VERSION);
 
 	py::class_<RuntimeOptions>(m, "RuntimeOptions")
+		.def(py::init([]() { return RuntimeOptions(); }))
 		.def_readwrite("DesiredTarget", &RuntimeOptions::DesiredTarget)
-		.def_readwrite("Device", &RuntimeOptions::Device);
+		.def_readwrite("Device", &RuntimeOptions::Device)
+		.def_readwrite("OverrideCamera", &RuntimeOptions::OverrideCamera)
+		.def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique);
 
 	py::class_<RuntimeRenderSettings>(m, "RuntimeRenderSettings")
+		.def(py::init([]() { return RuntimeRenderSettings(); }))
 		.def_readwrite("FilmWidth", &RuntimeRenderSettings::FilmWidth)
 		.def_readwrite("FilmHeight", &RuntimeRenderSettings::FilmHeight);
 
 	py::class_<Camera>(m, "Camera")
+		.def(py::init([](const Vector3f& e, const Vector3f& d, const Vector3f& u, float fov, float ratio, float tmin, float tmax) { return Camera(e, d, u, fov, ratio, tmin, tmax); }))
 		.def_readwrite("Eye", &Camera::Eye)
 		.def_readwrite("Direction", &Camera::Direction)
 		.def_readwrite("Right", &Camera::Right)
@@ -54,12 +59,11 @@ PYBIND11_MODULE(pyignis, m)
 		.value("AVX", Target::AVX)
 		.value("AVX2", Target::AVX2)
 		.value("AVX512", Target::AVX512)
-		.value("NVVM_STREAMING", Target::NVVM_STREAMING)
-		.value("NVVM_MEGAKERNEL", Target::NVVM_MEGAKERNEL)
-		.value("AMDGPU_STREAMING", Target::AMDGPU_STREAMING)
-		.value("AMDGPU_MEGAKERNEL", Target::AMDGPU_MEGAKERNEL);
+		.value("NVVM", Target::NVVM)
+		.value("AMDGPU", Target::AMDGPU);
 
 	py::class_<Runtime>(m, "Runtime")
+		.def(py::init([](const std::string& path) { return std::make_unique<Runtime>(path, RuntimeOptions()); }))
 		.def(py::init([](const std::string& path, const RuntimeOptions& opts) { return std::make_unique<Runtime>(path, opts); }))
 		.def("setup", &Runtime::setup)
 		.def("step", &Runtime::step)

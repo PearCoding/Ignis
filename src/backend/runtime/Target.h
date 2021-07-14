@@ -11,10 +11,8 @@ enum class Target : uint32 {
 	AVX,
 	SSE42,
 	ASIMD,
-	NVVM_STREAMING,
-	NVVM_MEGAKERNEL,
-	AMDGPU_STREAMING,
-	AMDGPU_MEGAKERNEL,
+	NVVM,
+	AMDGPU,
 	INVALID
 };
 
@@ -23,10 +21,8 @@ inline bool doesTargetRequirePadding(Target target)
 	switch (target) {
 	default:
 		return false;
-	case Target::NVVM_STREAMING:
-	case Target::NVVM_MEGAKERNEL:
-	case Target::AMDGPU_STREAMING:
-	case Target::AMDGPU_MEGAKERNEL:
+	case Target::NVVM:
+	case Target::AMDGPU:
 		return true;
 	}
 }

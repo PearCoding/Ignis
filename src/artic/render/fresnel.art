@@ -19,12 +19,12 @@ fn @fresnel_factor(eta: f32, cos_i: f32, cos_t: f32) -> f32 {
 
 fn @snell(eta: f32, cos_i: f32) = 1 - (1 - cos_i * cos_i) * eta * eta;
 
-fn @fresnel(math: Intrinsics, eta: f32, cos_i: f32) -> FresnelTerm {
+fn @fresnel(eta: f32, cos_i: f32) -> FresnelTerm {
     let cos2_t = snell(eta, cos_i);
     if cos2_t <= 0.0 {
         make_fresnel_term(-1.0, 1.0)
     } else {
-        let cos_t = math.sqrtf(cos2_t);
+        let cos_t = math_builtins::sqrt(cos2_t);
         make_fresnel_term(cos_t, fresnel_factor(eta, cos_i, cos_t))
     }
 }
@@ -72,21 +72,21 @@ fn @schlick_approx(f: f32) -> f32{
     s * s * s * s * s
 }
 
-fn @dielectric(math: Intrinsics, absHdotV: f32, eta_i: f32, eta_t: f32)-> f32{
-    let mut cosThetaI = fclamp(absHdotV, -1, 1);
+fn @dielectric(absHdotV: f32, eta_i: f32, eta_t: f32)-> f32{
+    let mut cosThetaI = math_builtins::fmin[f32](1, math_builtins::fmax[f32](-1, absHdotV));
     let mut etaI = eta_i;
     let mut etaT = eta_t; 
 
     if (cosThetaI <= 0) {
         swap[f32](&mut etaI, &mut etaT);
-        cosThetaI = fabs(cosThetaI);
+        cosThetaI = math_builtins::fabs(cosThetaI);
     }
 
-    let sinThetaI = math.sqrtf(fmax(0, 1 - cosThetaI * cosThetaI));
+    let sinThetaI = math_builtins::sqrt(math_builtins::fmax[f32](0, 1 - cosThetaI * cosThetaI));
     let sinThetaT = etaI / etaT * sinThetaI;
 
     if (sinThetaT >= 1) { return (1) };
-    let cosThetaT = math.sqrtf(fmax(0, 1 - sinThetaT * sinThetaT));
+    let cosThetaT = math_builtins::sqrt(math_builtins::fmax[f32](0, 1 - sinThetaT * sinThetaT));
     let Rparl = ((etaT * cosThetaI) - (etaI * cosThetaT)) /
                   ((etaT * cosThetaI) + (etaI * cosThetaT));
     let Rperp = ((etaI * cosThetaI) - (etaT * cosThetaT)) /
@@ -100,9 +100,9 @@ fn @schlick(R0: Color, dot: f32)-> Color{
     color_add(R0, snd)
 }
 
-fn @schlick_from_relative_ior(math: Intrinsics, relative_ior: f32)-> f32{
-    let eta1 = math.sqrtf(relative_ior - 1);
-    let eta2 = math.sqrtf(relative_ior + 1);
+fn @schlick_from_relative_ior(relative_ior: f32)-> f32{
+    let eta1 = math_builtins::sqrt(relative_ior - 1);
+    let eta2 = math_builtins::sqrt(relative_ior + 1);
 
     eta1 / eta2
 }

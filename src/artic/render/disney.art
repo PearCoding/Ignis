@@ -26,14 +26,14 @@ fn @GTR1(absHdotL: f32, a: f32)->f32{
 
 }
 
-fn @smith_GGX1(math: Intrinsics, w: Vec3, a: f32)-> f32{
+fn @smith_GGX1(w: Vec3, a: f32)-> f32{
     let a2 = a * a;
     let absNdotV = abs_cos_theta(w);
 
-    2 / (1 + math.sqrtf(a2 + ( 1 - a2) * absNdotV * absNdotV))
+    2 / (1 + math_builtins::sqrt(a2 + ( 1 - a2) * absNdotV * absNdotV))
 }
 
-fn @make_clearcoat_bsdf(math: Intrinsics, clearcoat: f32, alpha: f32, wo: Vec3, H: Vec3, wi: Vec3, upper_hemisphere: bool) = Bsdf {
+fn @make_clearcoat_bsdf(clearcoat: f32, alpha: f32, wo: Vec3, H: Vec3, wi: Vec3, upper_hemisphere: bool) = Bsdf {
     eval = @ |_in_dir, _out_dir| {
 
         if (clearcoat <= 0 || !upper_hemisphere) { return (black) }
@@ -43,8 +43,8 @@ fn @make_clearcoat_bsdf(math: Intrinsics, clearcoat: f32, alpha: f32, wo: Vec3, 
 
         let d = GTR1(absNdotH, lerp(0.1, 0.001, alpha));
         let f = lerp(1,schlick_approx(HdotL), 0.04);
-        let gl = smith_GGX1(math, wi, 0.25);
-        let gv = smith_GGX1(math, wo, 0.25);
+        let gl = smith_GGX1(wi, 0.25);
+        let gv = smith_GGX1(wo, 0.25);
 
         make_gray_color(0.25 * clearcoat * d * f * gl * gv)
     },
@@ -89,16 +89,16 @@ fn @make_diffuse_brdf(roughness: f32, _flatness: f32, wo: Vec3, H: Vec3, wi: Vec
 
 
 //Specular part
-fn @disney_fresnel(math: Intrinsics, base_color: Color, relative_ior: f32, specular_tint: f32, metallic: f32, ior: f32, wo: Vec3, H: Vec3, wi: Vec3)-> Color{
-    let absHdotV = fabs(vec3_dot(H, wo));
+fn @disney_fresnel(base_color: Color, relative_ior: f32, specular_tint: f32, metallic: f32, ior: f32, wo: Vec3, H: Vec3, wi: Vec3)-> Color{
+    let absHdotV = math_builtins::fabs(vec3_dot(H, wo));
 
     let tint = calculate_tint(base_color);
 
-    let r = color_mulf(color_lerp(make_gray_color(1), tint, specular_tint), schlick_from_relative_ior(math, relative_ior));
+    let r = color_mulf(color_lerp(make_gray_color(1), tint, specular_tint), schlick_from_relative_ior(relative_ior));
     
     let R0 = (color_lerp(r, base_color, metallic));
 
-    let d = dielectric(math, absHdotV, 1, ior);
+    let d = dielectric(absHdotV, 1, ior);
     let metallic_fresnel = schlick(R0, vec3_dot(wi, H));
 
     color_lerp(make_gray_color(d), metallic_fresnel, metallic)
@@ -117,19 +117,19 @@ fn @ggx_aniso_d(ax: f32, ay: f32, H: Vec3) -> f32{
     1 / (flt_pi * ax * ay * (HdotX2/ax2 + HdotY2/ay2 + costheta2) * (HdotX2/ax2 + HdotY2/ay2 + costheta2))
 }
 
-fn @smithG_GGX_aniso(math: Intrinsics, w: Vec3, ax: f32, ay: f32) -> f32{
+fn @smithG_GGX_aniso(w: Vec3, ax: f32, ay: f32) -> f32{
     
-        let abs_tan_theta = fabs(tan_theta(math, w));
+        let abs_tan_theta = math_builtins::fabs(tan_theta(w));
         if (abs_tan_theta == flt_inf) { return (0) }
 
-        let a = math.sqrtf(cos_2_phi(w) * ax * ax + sin_2_phi(w) * ay * ay);
+        let a = math_builtins::sqrt(cos_2_phi(w) * ax * ax + sin_2_phi(w) * ay * ay);
         let a2tan2theta = a * a * abs_tan_theta * abs_tan_theta;
         if (a2tan2theta == 0){ return (0)}
-        let lambda = 0.5 * (-1 + math.sqrtf(1 + a2tan2theta));
+        let lambda = 0.5 * (-1 + math_builtins::sqrt(1 + a2tan2theta));
         1 / (1 + lambda)
 }
 
-fn @make_specular_brdf(math: Intrinsics, anisotropic: f32, roughness: f32, base_color: Color, relative_ior: f32, specular_tint: f32, metallic: f32, ior: f32, wo: Vec3, H: Vec3, wi: Vec3) = Bsdf {
+fn @make_specular_brdf(anisotropic: f32, roughness: f32, base_color: Color, relative_ior: f32, specular_tint: f32, metallic: f32, ior: f32, wo: Vec3, H: Vec3, wi: Vec3) = Bsdf {
     eval = @ |_in_dir, _out_dir| {
 
         let NdotL = cos_theta(wi);
@@ -138,16 +138,16 @@ fn @make_specular_brdf(math: Intrinsics, anisotropic: f32, roughness: f32, base_
         //upper hemisphere + do not divide by 0
         if (NdotL <= 0 || NdotV <= 0){return (black) }
 
-        let aspect = math.sqrtf(1 - 0.9 * anisotropic);
+        let aspect = math_builtins::sqrt(1 - 0.9 * anisotropic);
         let r2 = roughness * roughness;
         let ax = r2 / aspect;
         let ay = r2 * aspect;
 
         let d = ggx_aniso_d(ax, ay, H);
-        let g1 = smithG_GGX_aniso(math, wi, ax, ay);
-        let gv = smithG_GGX_aniso(math, wo, ax, ay);
+        let g1 = smithG_GGX_aniso(wi, ax, ay);
+        let gv = smithG_GGX_aniso(wo, ax, ay);
 
-        let f = disney_fresnel(math, base_color, relative_ior, specular_tint, metallic, ior, wo, H, wi);
+        let f = disney_fresnel(base_color, relative_ior, specular_tint, metallic, ior, wo, H, wi);
 
         let dg = d * g1 * gv;
         let c1 = color_mulf(f, dg);
@@ -181,14 +181,14 @@ fn @sheen_lobe(sheen: f32, base_color: Color, sheen_tint: f32, H: Vec3, wi: Vec3
 }
 
 //disney bsdf
-fn @make_disney_bsdf(math: Intrinsics, surf: SurfaceElement, base_color: Color, flatness: f32, metallic: f32, ior: f32, specular_tint: f32, roughness: f32,
+fn @make_disney_bsdf(surf: SurfaceElement, base_color: Color, flatness: f32, metallic: f32, ior: f32, specular_tint: f32, roughness: f32,
                      anisotropic: f32, sheen: f32, sheen_tint: f32, clearcoat: f32, clearcoat_gloss: f32, _spec_trans: f32, 
                      relative_ior: f32, _scatter_distance: f32, _diff_trans: f32, _transmittance: f32) -> Bsdf {
     let eval = @ |in_dir : Vec3, out_dir : Vec3| {
         let lsurf = mat3x3_transpose(surf.local);
-        let wo = vec3_normalize(math, mat3x3_mul(lsurf, out_dir));
-        let wi = vec3_normalize(math, mat3x3_mul(lsurf, in_dir));
-        let H  = vec3_normalize(math, vec3_add(wi,wo));
+        let wo = vec3_normalize(mat3x3_mul(lsurf, out_dir));
+        let wi = vec3_normalize(mat3x3_mul(lsurf, in_dir));
+        let H  = vec3_normalize(vec3_add(wi,wo));
 
         let NdotV = cos_theta(wo);
         let NdotL = cos_theta(wi);
@@ -196,7 +196,7 @@ fn @make_disney_bsdf(math: Intrinsics, surf: SurfaceElement, base_color: Color, 
         let upper_hemisphere = NdotL >= 0 && NdotV >= 0;
         let diffuse_weight = (1 - metallic);
 
-        let clearcoat_bsdf = make_clearcoat_bsdf(math, clearcoat, clearcoat_gloss, wo, H, wi, upper_hemisphere);
+        let clearcoat_bsdf = make_clearcoat_bsdf(clearcoat, clearcoat_gloss, wo, H, wi, upper_hemisphere);
         let clearcoat_lobe = clearcoat_bsdf.eval(in_dir, out_dir);
         
         let diffuse_brdf = make_diffuse_brdf(roughness, flatness, wo, H, wi, diffuse_weight);
@@ -204,21 +204,21 @@ fn @make_disney_bsdf(math: Intrinsics, surf: SurfaceElement, base_color: Color, 
 
         let sheen_w = sheen_lobe(sheen, base_color, sheen_tint, H, wi);
        
-        let specular_brdf = make_specular_brdf(math, anisotropic, roughness, base_color, relative_ior, specular_tint, metallic, ior, wo, H, wi);
+        let specular_brdf = make_specular_brdf(anisotropic, roughness, base_color, relative_ior, specular_tint, metallic, ior, wo, H, wi);
         let specular = specular_brdf.eval(in_dir, out_dir);
         
         // ((diffuse * base_color) + sheen) * diffuse_weight
         let diff = color_mulf(color_add(color_mul(diffuse, base_color),sheen_w), diffuse_weight);
 
-        color_mulf(color_add(color_add(specular, diff), clearcoat_lobe), fabs(NdotL))
+        color_mulf(color_add(color_add(specular, diff), clearcoat_lobe), math_builtins::fabs(NdotL))
     };
 
     Bsdf {
         eval = eval,
         pdf = @ |in_dir, _| cosine_hemisphere_pdf(positive_cos(in_dir, surf.local.col(2))),
         sample = @ |rnd, out_dir, _| {
-            let sample = sample_cosine_hemisphere(math, randf(rnd), randf(rnd));
-            let gdir   = vec3_normalize(math, mat3x3_mul(surf.local, sample.dir));
+            let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+            let gdir   = vec3_normalize(mat3x3_mul(surf.local, sample.dir));
             let color  = color_mulf(eval(gdir, out_dir), sample.pdf);
             make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, sample.dir.z, color, false)
         },
@@ -226,7 +226,7 @@ fn @make_disney_bsdf(math: Intrinsics, surf: SurfaceElement, base_color: Color, 
     }
 }
 
-fn @load_disney_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_disney_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     let e0 = data.load_vec4(0);
     let e1 = data.load_vec4(4);
     let e2 = data.load_vec4(8);
@@ -236,13 +236,13 @@ fn @load_disney_bsdf(math: Intrinsics, flags: u32, data: DeviceBuffer, stage: St
     if (flags & bsdf_f_tex1) != 0 {
         let tex_id  = bitcast[i32](e0.x);
         let texture = stage.textures(tex_id);
-        make_disney_bsdf(math, surf, texture(surf.tex_coords), e0.w,
+        make_disney_bsdf(surf, texture(surf.tex_coords), e0.w,
                         e1.x, e1.y, e1.z, e1.w,
                         e2.x, e2.y, e2.z, e2.w,
                         e3.x, e3.y, e3.z, e3.w,
                         e4.x, e4.y)
     } else {
-        make_disney_bsdf(math, surf, make_color(e0.x, e0.y, e0.z), e0.w,
+        make_disney_bsdf(surf, make_color(e0.x, e0.y, e0.z), e0.w,
                         e1.x, e1.y, e1.z, e1.w,
                         e2.x, e2.y, e2.z, e2.w,
                         e3.x, e3.y, e3.z, e3.w,

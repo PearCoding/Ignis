@@ -5,14 +5,14 @@ struct Camera {
 }
 
 // Creates a perspective camera
-fn @make_perspective_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
+fn @make_perspective_camera(eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
     let dir   = view.col(2);
     let right = view.col(0);
     let up    = view.col(1);
 
     Camera {
         generate_ray = @ |x, y| {
-            let d = vec3_normalize(math,
+            let d = vec3_normalize(
                 vec3_add(
                     vec3_add(vec3_mulf(right, w * x),
                              vec3_mulf(up, h * y)),
@@ -25,7 +25,7 @@ fn @make_perspective_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h
 }
 
 // Creates an orthogonal camera
-fn @make_orthogonal_camera(_math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
+fn @make_orthogonal_camera(eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
     let dir   = view.col(2);
     let right = view.col(0);
     let up    = view.col(1);
@@ -49,7 +49,7 @@ enum FisheyeAspectMode {
 }
 
 // Creates a fishlens camera
-fn @make_fishlens_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
+fn @make_fishlens_camera(eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
     let fov = flt_pi;
     let V   = mat3x3_transpose(view);
     let asp = w / h;
@@ -69,8 +69,8 @@ fn @make_fishlens_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f
             (xasp, yasp)
         },
         FisheyeAspectMode::Full => {
-            let diameter = cpu_intrinsics.sqrtf(asp * asp + 1) * h;
-            let min_s	 = fmin(w, h);
+            let diameter = math_builtins::sqrt(asp * asp + 1) * h;
+            let min_s	 = math_builtins::fmin(w, h);
             let f        = diameter / min_s;
             let xasp = if asp < 1 { f } else { f / asp };
             let yasp = if asp > 1 { f } else { f * asp };
@@ -82,15 +82,15 @@ fn @make_fishlens_camera(math: Intrinsics, eye: Vec3, view: Mat3x3, w: f32, h: f
         generate_ray = @ |x, y| {
             let nx    = x * xasp;
             let ny    = y * yasp;
-            let r	  = math.sqrtf(nx * nx + ny * ny);
+            let r	  = math_builtins::sqrt(nx * nx + ny * ny);
 		    let theta = r * fov / 2;
 
-		    let sT = math.sinf(theta);
-            let cT = math.cosf(theta);
+		    let sT = math_builtins::sin(theta);
+            let cT = math_builtins::cos(theta);
             let sP = if r < flt_eps { 0 } else { ny / r };
             let cP = if r < flt_eps { 0 } else { nx / r };
             let nd = make_vec3(sT*cP, sT*sP, cT);
-            let d  = vec3_normalize(math, mat3x3_mul(V, nd));
+            let d  = vec3_normalize(mat3x3_mul(V, nd));
             make_ray(eye, d, tmin, tmax)
         }
     }

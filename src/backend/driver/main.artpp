@@ -11,22 +11,15 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
 #elif DEVICE_ASIMD
     let device = make_asimd_device();
 #elif DEVICE_NVVM
-    let device = make_nvvm_device(settings.device,   true);
-#elif DEVICE_NVVM_MEGA
-    let device = make_nvvm_device(settings.device,   false);
-#elif DEVICE_AMD
-    let device = make_amdgpu_device(settings.device, true);
-#elif DEVICE_AMD_MEGA
-    let device = make_amdgpu_device(settings.device, false);
+    let device = make_nvvm_device(settings.device);
+#elif DEVICE_AMDGPU
+    let device = make_amdgpu_device(settings.device);
 #else
     let device = make_cpu_default_device();
 #endif
 
-    let math = device.intrinsics;
-
 #if CAMERA_PERSPECTIVE
     let camera = make_perspective_camera(
-        math,
         settings.eye,
         make_mat3x3(settings.right, settings.up, settings.dir),
         settings.width,
@@ -36,7 +29,6 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
     );
 #elif CAMERA_ORTHOGONAL
     let camera = make_orthogonal_camera(
-        math,
         settings.eye,
         make_mat3x3(settings.right, settings.up, settings.dir),
         settings.width,
@@ -46,7 +38,6 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
     );
 #elif CAMERA_FISHLENS
     let camera = make_fishlens_camera(
-        math,
         settings.eye,
         make_mat3x3(settings.right, settings.up, settings.dir),
         settings.width,

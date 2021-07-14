@@ -24,7 +24,7 @@ struct Node {
 }
 
 struct Prim {
-    intersect: fn (i32, Intrinsics, Ray) -> Option[Hit],    // Intersects a primitive in the packet
+    intersect: fn (i32, Ray) -> Option[Hit],    // Intersects a primitive in the packet
     is_valid:  fn (i32) -> bool,                            // Returns true if the primitive in the packet is valid
     is_last:   bool,                                        // True if this is the last primitive packet in the leaf
     size:      i32                                          // Number of primitives in the packet (must be a constant)
@@ -138,9 +138,9 @@ fn @transform_ray(ray: Ray, m: Mat3x4) = make_ray(
     mat3x4_transform_direction(m, ray.dir),
     ray.tmin, ray.tmax);
 
-fn @transform_ray2(math: Intrinsics, ray: Ray, m: Mat3x4) -> (Ray, f32) {
+fn @transform_ray2(ray: Ray, m: Mat3x4) -> (Ray, f32) {
     let d = mat3x4_transform_direction(m, ray.dir);
-    let scale_factor = vec3_len(math, d);
+    let scale_factor = vec3_len(d);
     let nd = vec3_mulf(d, 1/scale_factor);
 
     (make_ray(mat3x4_transform_point(m, ray.org), nd, scale_factor * ray.tmin, scale_factor * ray.tmax), 
@@ -148,9 +148,9 @@ fn @transform_ray2(math: Intrinsics, ray: Ray, m: Mat3x4) -> (Ray, f32) {
 }
 
 // Transforms ray. The direction is normalized
-fn @transform_norm_ray(math: Intrinsics, ray: Ray, m: Mat3x4) = make_ray(
+fn @transform_norm_ray(ray: Ray, m: Mat3x4) = make_ray(
     mat3x4_transform_point(m, ray.org),
-    vec3_normalize(math, mat3x4_transform_direction(m, ray.dir)),
+    vec3_normalize(mat3x4_transform_direction(m, ray.dir)),
     ray.tmin, ray.tmax);
 
 fn @make_hit(ent_id: i32, prim_id: i32, t: f32, uv: Vec2) = Hit {
@@ -195,11 +195,11 @@ fn @empty_bbox() = make_bbox(
     make_vec3( flt_max,  flt_max,  flt_max),
     make_vec3(-flt_max, -flt_max, -flt_max));
 
-fn @intersect_ray_tri(math: Intrinsics, backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
+fn @intersect_ray_tri(backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
     let c = vec3_sub(tri.v0, ray.org);
     let r = vec3_cross(ray.dir, c);
     let det = vec3_dot(tri.n, ray.dir);
-    let abs_det = math.fabsf(det);
+    let abs_det = math_builtins::fabs(det);
 
     let u = prodsign(vec3_dot(r, tri.e2), det);
     let mut mask = u >= 0;

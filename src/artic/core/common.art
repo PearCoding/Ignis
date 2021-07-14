@@ -123,11 +123,11 @@ fn @lerp2(a: f32, b: f32, c: f32, k1: f32, k2: f32) -> f32 {
     (1 - k1 - k2) * a + k1 * b + k2 * c
 }
 
-fn @triangle_area(math: Intrinsics, v0: Vec3, v1: Vec3, v2: Vec3) -> f32 {
+fn @triangle_area(v0: Vec3, v1: Vec3, v2: Vec3) -> f32 {
     let e1 = vec3_sub(v1, v0);
     let e2 = vec3_sub(v2, v0);
     let  n = vec3_cross(e1, e2);
-    0.5 * vec3_len(math, n)
+    0.5 * vec3_len(n)
 }
 
 fn @positive_cos(a: Vec3, b: Vec3) -> f32 {
@@ -142,31 +142,24 @@ fn @swap[T](a: &mut T, b: &mut T) -> () {
 }
 
 fn @abs(a: i32) = if a < 0 { -a } else { a };
-fn @fabs(a: f32) = if a < 0 { -a } else { a };
-
 fn @min(a: i32, b: i32) = if a < b { a } else { b };
-fn @fmin(a: f32, b: f32) = if a < b { a } else { b };
-
 fn @max(a: i32, b: i32) = if a > b { a } else { b };
-fn @fmax(a: f32, b: f32) = if a > b { a } else { b };
-
 fn @clamp(v: i32, l: i32, u: i32) = min(u, max(l, v));
-fn @fclamp(v: f32, l: f32, u: f32) = fmin(u, fmax(l, v));
 
 fn @abs_cos_theta(v: Vec3)-> f32{
-    fabs(v.z)
+    math_builtins::fabs(v.z)
 }
 
 fn @cos_theta(v: Vec3)-> f32{
     v.z
 }
 
-fn @sin_theta(math: Intrinsics, v: Vec3)-> f32{
-    math.sqrtf((sin_2_theta(v)))
+fn @sin_theta(v: Vec3)-> f32{
+    math_builtins::sqrt((sin_2_theta(v)))
 }
 
 fn @sin_2_theta(v: Vec3)-> f32{
-    fmax(0, 1 - cos_2_theta(v))
+    math_builtins::fmax[f32](0, 1 - cos_2_theta(v))
 }
 
 fn @cos_2_theta(v: Vec3)->f32{
@@ -177,19 +170,19 @@ fn @sin_2_phi(v: Vec3)->f32{
     let s = sin_2_theta(v);
     if (s  <= 0) { return (0) }
 
-	fmin(1, v.y * v.y / s)
+	math_builtins::fmin[f32](1, v.y * v.y / s)
 }
 
-fn @tan_theta(math: Intrinsics, v: Vec3)->f32{
+fn @tan_theta(v: Vec3)->f32{
     if (abs_cos_theta(v) <=  0) { return (0) }
-    sin_theta(math, v) / cos_theta(v)
+    sin_theta(v) / cos_theta(v)
 }
 
 fn @cos_2_phi(v: Vec3)->f32{
     let s = sin_2_theta(v);
     if (s  <= 0) { return (0) }
 
-    fmin(1, v.x * v.x / s)
+    math_builtins::fmin[f32](1, v.x * v.x / s)
 }
 
 #[import(cc = "device", name = "llvm.debugtrap")] fn ig_trap() -> ();

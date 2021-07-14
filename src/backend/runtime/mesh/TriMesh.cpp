@@ -253,8 +253,9 @@ TriMesh TriMesh::MakeSphere(const Vector3f& center, float radius, uint32 stacks,
 	const float area	 = 4 * Pi * radius * radius / (stacks * slices); //TODO: Really?
 	const float inv_area = 1 / area;
 
+	// TODO: We create a 2*stacks of redundant vertices at the two critical points... remove them
 	// Vertices
-	for (uint32 i = 0; i < stacks; ++i) {
+	for (uint32 i = 0; i <= stacks; ++i) {
 		float rho  = (float)i * drho;
 		float srho = (float)(sin(rho));
 		float crho = (float)(cos(rho));
@@ -280,12 +281,12 @@ TriMesh TriMesh::MakeSphere(const Vector3f& center, float radius, uint32 stacks,
 	}
 
 	// Indices
-	for (uint32 i = 0; i < stacks; ++i) {
+	for (uint32 i = 0; i <= stacks; ++i) {
 		const uint32 currSliceOff = i * slices;
-		const uint32 nextSliceOff = i + 1 < stacks ? (i + 1) * slices : 0;
+		const uint32 nextSliceOff = ((i + 1) % (stacks + 1)) * slices;
 
 		for (uint32 j = 0; j < slices; ++j) {
-			const uint32 nextJ = j + 1 < slices ? j + 1 : 0;
+			const uint32 nextJ = ((j + 1) % slices);
 			const uint32 id0   = currSliceOff + j;
 			const uint32 id1   = currSliceOff + nextJ;
 			const uint32 id2   = nextSliceOff + j;
@@ -323,7 +324,7 @@ TriMesh TriMesh::MakeTriangle(const Vector3f& p0, const Vector3f& p1, const Vect
 	addTriangle(mesh, p0, p1 - p0, p2 - p0, 0);
 	// FIXME: Due to a bug in BVH, we do have to make sure at least two triangles are inside a mesh!
 	// Thats why we only copy the given triangle again.
-	addTriangle(mesh, p0, p1 - p0, p2 - p0, 3); 
+	addTriangle(mesh, p0, p1 - p0, p2 - p0, 3);
 	return mesh;
 }
 

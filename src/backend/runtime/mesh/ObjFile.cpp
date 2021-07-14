@@ -32,7 +32,7 @@ TriMesh load(const std::filesystem::path& path)
 		return TriMesh{};
 	}
 
-	if (shapes.size() > 1)
+	if (shapes.size() > 1) // TODO: Supporting this would be great
 		IG_LOG(L_WARNING) << "ObjFile " << path << ": Contains multiple shapes. Will be combined to one " << std::endl;
 
 	const bool hasNorms	 = (attrib.normals.size() == attrib.vertices.size());

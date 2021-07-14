@@ -48,9 +48,9 @@ fn @k_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> i32 {
 
 fn @k_eval_component_index(row: i32, col: i32, component: KlemsComponent) = component.matrix(row * component.column_basis.entry_count + col);
 
-fn @k_eval_component(math: Intrinsics, in_dir: Vec3, out_dir: Vec3, component: KlemsComponent) {
-    let (in_theta, in_phi)   = spherical_from_dir(math, in_dir);
-    let (out_theta, out_phi) = spherical_from_dir(math, out_dir);
+fn @k_eval_component(in_dir: Vec3, out_dir: Vec3, component: KlemsComponent) {
+    let (in_theta, in_phi)   = spherical_from_dir(in_dir);
+    let (out_theta, out_phi) = spherical_from_dir(out_dir);
     let row = k_index_of(in_theta, in_phi, component.row_basis);
     let col = k_index_of(out_theta, out_phi, component.column_basis);
     k_eval_component_index(row, col, component)
@@ -58,38 +58,38 @@ fn @k_eval_component(math: Intrinsics, in_dir: Vec3, out_dir: Vec3, component: K
 
 // TODO: Add proper sampling!
 // TODO: Add tint
-fn @make_klems_bsdf(math: Intrinsics, surf: SurfaceElement, klems: KlemsModel) -> Bsdf {
+fn @make_klems_bsdf(surf: SurfaceElement, klems: KlemsModel) -> Bsdf {
     let lsurf = mat3x3_transpose(surf.local);
     let local_eval = |wi : Vec3, wo : Vec3| {
 		let inFront	 = wi.z > 0;
         let outFront = wo.z > 0;
 
         let factor = match (inFront, outFront) {
-            (true, true)   => k_eval_component(math, k_fi(wi), k_fo(wo), klems.front_reflection),
-            (true, false)  => k_eval_component(math, k_fi(wi), k_bo(wo), klems.front_transmission),
-            (false, true)  => k_eval_component(math, k_bi(wi), k_bo(wo), klems.back_transmission),
-            (false, false) => k_eval_component(math, k_bi(wi), k_fo(wo), klems.back_reflection)
+            (true, true)   => k_eval_component(k_fi(wi), k_fo(wo), klems.front_reflection),
+            (true, false)  => k_eval_component(k_fi(wi), k_bo(wo), klems.front_transmission),
+            (false, true)  => k_eval_component(k_bi(wi), k_bo(wo), klems.back_transmission),
+            (false, false) => k_eval_component(k_bi(wi), k_fo(wo), klems.back_reflection)
         };
 
-        make_gray_color(factor * math.fabsf(wi.z))
+        make_gray_color(factor * math_builtins::fabs(wi.z))
     };
 
     Bsdf {
         eval   = @ |in_dir, out_dir| {
-            let wo = vec3_normalize(math, mat3x3_mul(lsurf, out_dir));
-            let wi = vec3_normalize(math, mat3x3_mul(lsurf, in_dir));
+            let wo = vec3_normalize(mat3x3_mul(lsurf, out_dir));
+            let wi = vec3_normalize(mat3x3_mul(lsurf, in_dir));
             local_eval(wi, wo)
         },
         pdf    = @ |_, _| uniform_sphere_pdf(),
         sample = @ |rnd, out_dir, _| {
-            let wo = vec3_normalize(math, mat3x3_mul(lsurf, out_dir));
+            let wo = vec3_normalize(mat3x3_mul(lsurf, out_dir));
             let u = randf(rnd);
             let v = randf(rnd);
-            let sample = sample_uniform_sphere(math, u, v);
-            let gdir   = vec3_normalize(math, mat3x3_mul(surf.local, sample.dir));
+            let sample = sample_uniform_sphere(u, v);
+            let gdir   = vec3_normalize(mat3x3_mul(surf.local, sample.dir));
             let is_trans = (sample.dir.z < 0) ^ (wo.z < 0);
             let color = color_mulf(local_eval(sample.dir, wo), 1/sample.pdf);
-            make_bsdf_sample(surf, gdir, sample.pdf, math.fabsf(sample.dir.z), color, is_trans)
+            make_bsdf_sample(surf, gdir, sample.pdf, math_builtins::fabs(sample.dir.z), color, is_trans)
         },
         is_specular = false
     }
@@ -134,9 +134,9 @@ fn @load_klems_model(data: DeviceBuffer) -> KlemsModel {
     }
 }
 
-fn @load_klems_bsdf(math: Intrinsics, data: DeviceBuffer, stage: Stage3Accessor, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
+fn @load_klems_bsdf(data: DeviceBuffer, stage: Stage3Accessor, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     let buf_id = data.load_i32(0);
     let buffer = stage.buffers(buf_id);
     let model  = load_klems_model(buffer);
-    make_klems_bsdf(math, surf, model)
+    make_klems_bsdf(surf, model)
 }
