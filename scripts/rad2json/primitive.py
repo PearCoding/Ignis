@@ -13,7 +13,6 @@ class Primitive:
 
     def __str__(self):
         #To print readable object details
-        #https://realpython.com/python-print/#printing-custom-data-types
         return f"Primitive(Type: {self.type}, Identifier:{self.identifier})"
     
     def __repr__(self):

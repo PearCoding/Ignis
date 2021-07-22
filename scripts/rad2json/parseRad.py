@@ -1,11 +1,9 @@
 import shlex
 import logging
 import config
+import copy
 from primitive import Primitive
-
-#TODO
-#logging across modules
-#while accessing variables from config, do I need to use global keyword?
+from command import Command
 
 
 identifierList = []
@@ -29,10 +27,12 @@ def isModifierDef(line):
 
 
 def parseRad(radFile):
-    #parses the provided .rad file, and adds the retrieved primitives to a list.
+    #parses the provided .rad file, and adds the retrieved primitives and commands to a list.
     logging.debug("parseRad() called.")
+    logging.debug("Walking through .rad, and saving the geometry declarations on a stack.")
 
-    primitives = []
+    # primitives = []
+    declarations = []       #declarations refer to both primitives and commands
 
     line = radFile.readline()
     while line:
@@ -47,7 +47,8 @@ def parseRad(radFile):
             continue
         if isCommand(line):
             logging.debug("Its a command def")
-            config.commands.append(line[1:])      #Remove the "!" at the front and store the command.
+            c = Command(line[1:])      #Remove the "!" at the front and store the command.
+            declarations.append(c)
             line = radFile.readline()
             continue
         if isModifierDef(line):
@@ -75,9 +76,10 @@ def parseRad(radFile):
             if(p.noOfStrings == len(p.stringList)):
                 p.state = 'stringsRead'
                 line = radFile.readline()
+                continue
             if(p.noOfStrings < len(p.stringList)):
-                logging.error("More string arguments provided than expected. Aborting.")
-                break
+                logging.error(f"More string arguments provided for '{p.identifier}' primitive than expected. ABORTING.")
+                exit()
 
         #read the int arguments
         if p.state == 'stringsRead':
@@ -94,9 +96,10 @@ def parseRad(radFile):
             if(p.noOfInts == len(p.intList)):
                 p.state = 'intsRead'
                 line = radFile.readline()
+                continue
             if(p.noOfInts < len(p.intList)):
-                logging.error("More int arguments provided than expected. Aborting.")
-                break
+                logging.error(f"More int arguments provided for '{p.identifier}' primitive than expected. ABORTING.")
+                exit()
 
         #read the float arguments
         if p.state == 'intsRead':
@@ -112,22 +115,19 @@ def parseRad(radFile):
 
             if(p.noOfFloats == len(p.floatList)):
                 p.state = 'floatsRead'
-                line = radFile.readline()
             if(p.noOfFloats < len(p.floatList)):
-                logging.error("More float arguments provided than expected. Aborting.")
-                break
+                logging.error(f"More float arguments provided for '{p.identifier}' primitive than expected. ABORTING.")
+                exit()
 
         if p.state == 'floatsRead':
-            primitives.append(p)
-            p.state = "idle"
-            #TODO: ideally the object should be deleted here.
-            # del p
+            declarations.append(copy.deepcopy(p))
+            del p
 
         line = radFile.readline()
 
-    logging.info(f"number of primitives: {len(primitives)}")
-    # for p in primitives:
-    #     logging.info(p)
+    logging.info(f"number of declarations: {len(declarations)}")
+    # for d in declarations:
+    #     logging.info(d)
         # logging.debug(repr(p))
 
-    return primitives
+    return declarations

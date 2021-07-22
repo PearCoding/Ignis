@@ -2,14 +2,11 @@
 # Converts radiance scene file to Ignis scene description
 
 #TODO:
-#handle transformations passed with mesh (/home/akshay/workspace/saarland/sem2/HiWi/Radiance-master/test/renders/vase.rad is a decent example on how transformations are being specified) 
-#loading instance (compound surface given by an octree file)
+#handle -i flag in xform when passed on its own (i.e. independent of -a flag)
+#process the .rad files passed with xform
 #make sure nameCount variable functions as expected
-#handle mirroring, -a and -i flags in xform
-#process a file passed with xform
-#all commands are processed together at the end.
 #simplify how the transformation matrix of the camera (and others) is passed: a lookat dictionary can be passed now. (Note target is a position, target = origin + direction).
-#rotation in Ignis is in degrees.
+#get rid of config.py
 
 import argparse
 import numpy as np
@@ -53,10 +50,10 @@ if __name__ == "__main__":
     logging.info(f".rad file relative folder: {config.RAD_FOLDER_PATH}")
 
     with open(radFilePath, 'r') as radFile:
-        primitives = parseRad(radFile)
+        declarations = parseRad(radFile)
 
     #structure the data
-    jsonData = restructurePrimitives(primitives)
+    jsonData = restructurePrimitives(declarations)
 
     #write data in the output file
     jsonFilePath = args.OutputFile
@@ -64,3 +61,5 @@ if __name__ == "__main__":
         jsonFilePath = os.path.splitext(radFilePath)[0]+'.json'
     with open(jsonFilePath, "w") as jsonFile:
         jsonFile.write(jsonData)
+
+    logging.info(f"Scene written to {jsonFilePath}.")
