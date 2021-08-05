@@ -193,14 +193,15 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
 			i2 = readIdx();
 			trimesh.indices.insert(trimesh.indices.end(), { i0, i1, i2, 0 });
 
-			if (elems == 4) {
-				uint32_t i3 = readIdx();
-				trimesh.indices.insert(trimesh.indices.end(), { i0, i2, i3, 0 });
-			}
-
-			if (elems != 3 && elems != 4) {
-				IG_LOG(L_ERROR) << "PlyFile " << path << ": Only triangle or quads allowed in ply files" << std::endl;
-				return TriMesh{};
+			if (elems >= 4) {
+				// Simple CONVEX triangulation. This will not work all the time
+				// but getting a full triangulator working is not worth the effort.... (at least for now)
+				uint32_t prevI = i2;
+				for(uint8_t j = 3; j < elems; ++j) {
+					uint32_t nextI = readIdx();
+					trimesh.indices.insert(trimesh.indices.end(), { i0, prevI, nextI, 0 });
+					prevI = nextI;
+				}
 			}
 		}
 	}
