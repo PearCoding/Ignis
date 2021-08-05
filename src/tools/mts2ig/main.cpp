@@ -281,8 +281,8 @@ static void export_property(const Property& prop, JsonWriter& writer)
 	case PT_STRING:
 		writer.w() << "\"" << prop.getString() << "\"";
 		break;
-	case PT_RGB: {
-		const auto rgb = prop.getRGB();
+	case PT_COLOR: {
+		const auto rgb = prop.getColor();
 		writer.arrBegin();
 		writer.w() << rgb.r << ",";
 		writer.s();
