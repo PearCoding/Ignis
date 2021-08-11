@@ -71,14 +71,20 @@ find_package(Filesystem REQUIRED)
 # Locate Eigen
 find_package(Eigen3 REQUIRED NO_MODULE)
 
-# Locate OpenImageIO
-find_package(OpenImageIO REQUIRED)
-
 # Locate tbb
 find_package(TBB REQUIRED) 
 
 # ZLib is used in the generator
 find_package(ZLIB REQUIRED)
+
+# Use stb for image io
+CPMAddPackage(
+    NAME stb
+    GITHUB_REPOSITORY nothings/stb 
+    GIT_TAG master
+    DOWNLOAD_ONLY
+    EXCLUDE_FROM_ALL
+)
 
 # Enable folders for Visual Studio
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

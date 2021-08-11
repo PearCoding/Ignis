@@ -1,62 +1,44 @@
 #include <filesystem>
 #include <iostream>
 
-#include <OpenImageIO/imageio.h>
+#include "Image.h"
 
-using namespace OIIO;
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+using namespace IG;
 int main(int argc, char** argv)
 {
-	if (argc != 2) {
-		std::cout << "Expected exr2hdr INPUT" << std::endl;
+	if (argc != 2 && argc != 3) {
+		std::cout << "Expected exr2hdr INPUT (OUTPUT)" << std::endl;
 		return EXIT_FAILURE;
 	}
 
 	const std::string input	 = argv[1];
-	const std::string output = std::filesystem::path(input).replace_extension(".hdr").generic_string();
+	const std::string output = argc == 3 ? argv[2] : std::filesystem::path(input).replace_extension(".hdr").generic_string();
 
-	// Input
-	auto in = ImageInput::open(input);
-	if (!in) {
-		std::cout << "Could not open " << input << ": " << OIIO::geterror() << std::endl;
-		return EXIT_FAILURE;
-	}
+	try {
+		// Input
+		ImageRgba32 image = ImageRgba32::load(input);
+		if (!image.isValid())
+			return EXIT_FAILURE;
 
-	const ImageSpec& spec = in->spec();
-	int xres			  = spec.width;
-	int yres			  = spec.height;
-	int channels		  = spec.nchannels;
+		// Output
+		image.flipY();
 
-	int r = std::distance(spec.channelnames.begin(), std::find(spec.channelnames.begin(), spec.channelnames.end(), "R"));
-	int g = std::distance(spec.channelnames.begin(), std::find(spec.channelnames.begin(), spec.channelnames.end(), "G"));
-	int b = std::distance(spec.channelnames.begin(), std::find(spec.channelnames.begin(), spec.channelnames.end(), "B"));
-
-	std::vector<float> line(xres * channels);
-	std::vector<float> pixels(xres * yres * 3);
-	for (int y = 0; y < yres; ++y) {
-		in->read_scanline(y, 0, &line[0]);
-		for (int x = 0; x < xres; ++x) {
-			pixels[y * xres * 3 + x * 3 + 0] = line[x * channels + r];
-			pixels[y * xres * 3 + x * 3 + 1] = line[x * channels + g];
-			pixels[y * xres * 3 + x * 3 + 2] = line[x * channels + b];
+		std::vector<float> data(3 * image.width * image.height);
+		for (size_t i = 0; i < image.width * image.height; ++i) {
+			data[i * 3 + 0] = image.pixels[i * 4 + 0];
+			data[i * 3 + 1] = image.pixels[i * 4 + 1];
+			data[i * 3 + 2] = image.pixels[i * 4 + 2];
 		}
-	}
-	in->close();
-
-	// Output
-	auto out = ImageOutput::create(output);
-	if (!out) {
-		std::cout << "Could not create " << output << ": " << OIIO::geterror() << std::endl;
+		int ret = stbi_write_hdr(output.c_str(), image.width, image.height, 3, data.data());
+		if (ret <= 0)
+			return EXIT_FAILURE;
+	} catch (const std::exception& e) {
+		std::cerr << e.what() << std::endl;
 		return EXIT_FAILURE;
 	}
-
-	if (!out->open(output, ImageSpec(xres, yres, 3, TypeFloat))) {
-		std::cout << "Could not open " << output << ": " << out->geterror() << std::endl;
-		return EXIT_FAILURE;
-	}
-
-	out->write_image(TypeFloat, &pixels[0]);
-	out->close();
-	in->close();
 
 	return EXIT_SUCCESS;
 }

@@ -29,6 +29,14 @@ CPMAddPackage(
     EXCLUDE_FROM_ALL
 )
 
+CPMAddPackage(
+    NAME tinyexr
+    GITHUB_REPOSITORY syoyo/tinyexr 
+    GIT_TAG master
+    DOWNLOAD_ONLY
+    EXCLUDE_FROM_ALL
+)
+
 ################################################################
 
 set(SRC 
@@ -135,8 +143,8 @@ if(NOT WIN32)
     find_package(Threads REQUIRED)
     target_link_libraries(ig_lib_runtime PUBLIC Threads::Threads)
 endif()
-target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen PRIVATE ${CMAKE_DL_LIBS} OpenImageIO::OpenImageIO pugixml TBB::tbb TBB::tbbmalloc ZLIB::ZLIB)
-target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include)
+target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen PRIVATE ${CMAKE_DL_LIBS} pugixml TBB::tbb TBB::tbbmalloc ZLIB::ZLIB)
+target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR})
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 target_compile_definitions(ig_lib_runtime PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
 target_compile_features(ig_lib_runtime PUBLIC cxx_std_17)

@@ -14,9 +14,6 @@
 
 #include <optional>
 
-#include <OpenImageIO/filesystem.h>
-#include <OpenImageIO/sysutil.h>
-
 constexpr int SPP = 4; // Render SPP is always 4!
 
 using namespace IG;
@@ -81,13 +78,6 @@ static inline void usage()
 
 int main(int argc, char** argv)
 {
-#ifdef OIIO_HAS_STACKTRACE
-	// Helpful for debugging to make sure that any crashes dump a stack trace.
-	OIIO::Sysutil::setup_crash_stacktrace("stdout");
-#endif
-
-	OIIO::Filesystem::convert_native_arguments(argc, (const char**)argv);
-
 	if (argc <= 1) {
 		usage();
 		return EXIT_SUCCESS;
