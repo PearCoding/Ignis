@@ -3,7 +3,7 @@ fn @make_ao_renderer(spp: i32, emitter: RayEmitterFactory) -> Renderer {
 
     @ |scene, device, iter| {
         let path_tracer = PathTracer {
-            on_emit   = emitter(scene, device, iter),
+            on_emit   = emitter(device, iter),
             on_hit    = @ |_, _, _, _, _| Option[(Color)]::None,
             on_miss   = @ |_, _| Option[(Color)]::None,
             on_shadow = @ |ray, _, state, surf, _| {

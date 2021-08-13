@@ -192,7 +192,7 @@ fn @cpu_compact_secondary(secondary: &SecondaryStream, vector_width: i32, vector
 
 fn @cpu_generate_rays( primary: PrimaryStream
                      , capacity: i32
-                     , path_tracer: PathTracer
+                     , emitter: RayEmitter
                      , id: &mut i32
                      , xmin: i32
                      , ymin: i32
@@ -219,8 +219,7 @@ fn @cpu_generate_rays( primary: PrimaryStream
         let in_tile_x = in_tile_pixel - in_tile_y * tile_width;
         let x = xmin + in_tile_x;
         let y = ymin + in_tile_y;
-        let on_emit = path_tracer.on_emit;
-        let (ray, state) = @on_emit(sample, x, y, film_width, film_height);
+        let (ray, state) = @emitter(sample, x, y, film_width, film_height);
         let cur_ray = primary.size + i;
         write_ray(cur_ray, 0, ray);
         write_state(cur_ray, 0, state);
@@ -421,14 +420,17 @@ fn @cpu_trace( scene: Scene
 
                 // (Re-)generate primary rays
                 if primary.size < capacity {
-                    primary.size = cpu_generate_rays(primary, capacity, path_tracer, &mut id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width);
+                    // [Call to Emittor]
+                    primary.size = cpu_generate_rays(primary, capacity, path_tracer.on_emit, &mut id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width);
                 }
 
                 if scene.info.num_entities == 0 {
+                    // [Call to Shader]
                     cpu_miss_shade(primary, path_tracer, accumulate, 0, primary.size, vector_width);
                     primary.size = 0;
                 } else {
                     // Trace primary rays
+                    // [Call to Intersector]
                     cpu_profile(if first { &mut primary_counter } else { &mut bounces_counter }, || {
                         cpu_traverse_primary(scene, min_max, primary, single, vector_width);
                     });
@@ -440,6 +442,7 @@ fn @cpu_trace( scene: Scene
                     primary.size = cpu_sort_primary(primary, &mut ray_begins, &mut ray_ends, scene.info.num_entities);
 
                     // Perform (vectorized) shading
+                    // [Call to Shader]
                     cpu_profile(&mut shading_counter, || {
                         let mut begin = 0;
                         for ent_id in range(0, scene.info.num_entities) {
@@ -460,6 +463,7 @@ fn @cpu_trace( scene: Scene
                     primary.size   = cpu_compact_primary(primary, vector_width, vector_compact);
 
                     // Compact and trace secondary rays
+                    // [Call to Intersector]
                     secondary.size = cpu_compact_secondary(secondary, vector_width, vector_compact);
                     if likely(secondary.size > 0) {
                         cpu_profile(&mut shadow_counter, || {

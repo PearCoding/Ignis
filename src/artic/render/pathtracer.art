@@ -4,7 +4,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
         let num_lights    = scene.info.num_lights;
         let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
 
-        let on_emit = emitter(scene, device, iter);
+        let on_emit = emitter(device, iter);
 
         fn @on_shadow( ray: Ray
                      , _hit: Hit

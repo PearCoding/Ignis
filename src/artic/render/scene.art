@@ -17,6 +17,8 @@ struct Device {
     trace:   fn (Scene, PathTracer, i32) -> (),
     present: fn () -> (),
 
+    //make_emitter: fn (RayEmitter) -> DeviceEmitter,
+
     // General formats
     //load_image: fn (&[u8]) -> Image,
     //load_cdf1d: fn (&[u8]) -> CDF1D,
@@ -40,3 +42,5 @@ struct Device {
 
 type Renderer = fn (Scene, Device, i32) -> ();
 type Shader   = fn (Ray, Hit, SurfaceElement) -> Bsdf;
+
+type DeviceEmitter = fn (PrimaryStream, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> i32;

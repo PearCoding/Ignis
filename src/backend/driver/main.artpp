@@ -47,12 +47,12 @@ fn ig_render(settings: &Settings, iter: i32) -> () {
     );
 #endif
 #if CAMERA_LIST
-    let emitter = make_list_emitter(device.load_rays());
+    let emitter = make_list_emitter_factory(device.load_rays());
 #if !RENDERER_DEBUG
     let spp     = 1:i32;
 #endif
 #else 
-    let emitter = make_camera_emitter(camera);
+    let emitter = make_camera_emitter_factory(camera);
 #if !RENDERER_DEBUG
     let spp     = 4:i32;
 #endif

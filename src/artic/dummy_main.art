@@ -41,3 +41,10 @@ fn ig_render(_settings: &Settings, _iter: i32) -> () {
     let mut rays : &[StreamRay];
     ignis_load_rays(0, &mut rays); 
 }
+
+#[export]
+fn ig_emitter(_settings: &Settings, _iter: i32,
+    _primary: &PrimaryStream, _capacity: i32, 
+    _xmin: i32, _xmax: i32, _ymin: i32, _ymax: i32) -> i32 {
+    0
+}

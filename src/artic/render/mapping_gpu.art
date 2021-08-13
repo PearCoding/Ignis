@@ -271,7 +271,7 @@ fn @gpu_sort_primary( primary: PrimaryStream
 fn @gpu_generate_rays( primary: PrimaryStream
                      , capacity: i32
                      , acc: Accelerator
-                     , path_tracer: PathTracer
+                     , emitter: RayEmitter
                      , id: &mut i32
                      , film_width: i32
                      , film_height: i32
@@ -299,8 +299,7 @@ fn @gpu_generate_rays( primary: PrimaryStream
         let pixel  = ray_id / spp;
         let y = fast_div(film_div, pixel as u32) as i32;
         let x = pixel - y * film_width;
-        let on_emit = path_tracer.on_emit;
-        let (ray, state) = @on_emit(sample, x, y, film_width, film_height);
+        let (ray, state) = @emitter(sample, x, y, film_width, film_height);
         write_ray(dst_id, 0, ray);
         write_state(dst_id, 0, state);
         write_id(dst_id, 0, pixel);
@@ -374,11 +373,13 @@ fn @gpu_trace( dev_id: i32
     let num_rays = spp * film_width * film_height;
     while id < num_rays || primary.size > 0 {
         // Regenerate rays
+        // [Call to Emittor]
         if primary.size < capacity && id < num_rays {
-            primary.size = gpu_generate_rays(primary, capacity, acc, path_tracer, &mut id, film_width, film_height, spp);
+            primary.size = gpu_generate_rays(primary, capacity, acc, path_tracer.on_emit, &mut id, film_width, film_height, spp);
         }
 
         // Special case: No entities to intersect
+        // [Call to Shader]
         if scene.info.num_entities == 0 {
             gpu_missshade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, 0, primary.size);
             primary.size = 0;
@@ -387,6 +388,7 @@ fn @gpu_trace( dev_id: i32
         }
 
         // Traverse primary rays
+        // [Call to Intersector]
         gpu_traverse_primary(primary, acc, min_max, scene);
 
         // Sort rays by entity
@@ -395,6 +397,7 @@ fn @gpu_trace( dev_id: i32
         gpu_swap_streams(&mut primary, &mut other_primary);
 
         // Shade rays
+        // [Call to Shader]
         let mut first = 0;
         for ent_id in range(0, scene.info.num_entities) {
             let last = ray_ends(ent_id);
@@ -406,6 +409,7 @@ fn @gpu_trace( dev_id: i32
         }
 
         // Shade non-hits as well
+        // [Call to Shader]
         let last = ray_ends(scene.info.num_entities);
         if(first < last) {
             gpu_missshade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, first, last);
@@ -418,6 +422,7 @@ fn @gpu_trace( dev_id: i32
 
         if first > 0 {
             // Trace secondary rays
+            // [Call to Intersector]
             gpu_traverse_secondary(secondary, acc, atomics, min_max, scene, film_pixels, spp);
 
             // Compact primary rays
