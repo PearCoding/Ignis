@@ -1,18 +1,16 @@
 # Get dependencies
-CPMFindPackage(
+CPMAddPackage(
     NAME tinyobjloader
     GITHUB_REPOSITORY tinyobjloader/tinyobjloader
     GIT_TAG master
-    DOWNLOAD_ONLY
-    EXCLUDE_FROM_ALL
+    DOWNLOAD_ONLY YES
 )
 
-CPMFindPackage(
+CPMAddPackage(
     NAME rapidjson
     GITHUB_REPOSITORY Tencent/rapidjson
     GIT_TAG master
-    DOWNLOAD_ONLY
-    EXCLUDE_FROM_ALL
+    DOWNLOAD_ONLY YES
 )
 
 CPMAddPackage(
@@ -33,8 +31,7 @@ CPMAddPackage(
     NAME tinyexr
     GITHUB_REPOSITORY syoyo/tinyexr 
     GIT_TAG master
-    DOWNLOAD_ONLY
-    EXCLUDE_FROM_ALL
+    DOWNLOAD_ONLY YES
 )
 
 ################################################################

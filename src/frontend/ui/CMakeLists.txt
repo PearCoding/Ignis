@@ -1,8 +1,8 @@
-CPMFindPackage(
+CPMAddPackage(
     NAME imgui
     GITHUB_REPOSITORY ocornut/imgui
     GIT_TAG master
-    DOWNLOAD_ONLY
+    DOWNLOAD_ONLY YES
 )
 
 add_library(ig_lib_ui STATIC imgui_sdl.cpp imgui_sdl.h imgui_markdown.h)

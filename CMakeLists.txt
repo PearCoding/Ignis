@@ -82,8 +82,7 @@ CPMAddPackage(
     NAME stb
     GITHUB_REPOSITORY nothings/stb 
     GIT_TAG master
-    DOWNLOAD_ONLY
-    EXCLUDE_FROM_ALL
+    DOWNLOAD_ONLY YES
 )
 
 # Enable folders for Visual Studio
