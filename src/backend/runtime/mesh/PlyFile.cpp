@@ -1,5 +1,6 @@
 #include "PlyFile.h"
 #include "Logger.h"
+#include "Triangulation.h"
 
 #include <climits>
 #include <fstream>
@@ -26,6 +27,40 @@ T swap_endian(T u)
 }
 
 namespace ply {
+static std::vector<uint32_t> triangulatePly(const std::filesystem::path& path,
+											const std::vector<Vector3f>& vertices, const std::vector<uint32_t> glb_indices)
+{
+	if (vertices.size() < 3) {
+		return {};
+	} else if (vertices.size() == 3) {
+		std::vector<uint32_t> convex_inds;
+		convex_inds.insert(convex_inds.end(), { glb_indices[0], glb_indices[1], glb_indices[2] });
+		return convex_inds;
+	} else if (vertices.size() == 4) {
+		std::vector<uint32_t> convex_inds;
+		convex_inds.insert(convex_inds.end(), { glb_indices[0], glb_indices[1], glb_indices[2] });
+		convex_inds.insert(convex_inds.end(), { glb_indices[0], glb_indices[2], glb_indices[3] });
+		return convex_inds;
+	} else {
+		std::vector<int> inds = Triangulation::triangulate(vertices);
+		if (!inds.empty()) {
+			std::vector<uint32_t> res_indices(inds.size());
+			std::transform(inds.begin(), inds.end(), res_indices.begin(), [&](int i) { return glb_indices[i]; });
+			return res_indices;
+		}
+
+		// Could not triangulate, lets just convex triangulate and give up
+		IG_LOG(L_WARNING) << "PlyFile " << path << ": Given polygonal face is malformed, approximating with convex triangulation" << std::endl;
+		std::vector<uint32_t> convex_inds;
+		convex_inds.insert(convex_inds.end(), { glb_indices[0], glb_indices[1], glb_indices[2] });
+		for (uint32_t j = 3; j < (uint32_t)vertices.size(); ++j) {
+			uint32_t prev = j - 1;
+			uint32_t next = j;
+			convex_inds.insert(convex_inds.end(), { glb_indices[0], glb_indices[prev], glb_indices[next] });
+		}
+		return convex_inds;
+	}
+}
 
 struct Header {
 	int VertexCount		  = 0;
@@ -153,6 +188,10 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
 
 	trimesh.indices.reserve(header.FaceCount * 4);
 
+	std::vector<uint32_t> tmp_indices;
+	tmp_indices.reserve(3);
+	std::vector<Vector3f> tmp_vertices;
+	tmp_vertices.reserve(3);
 	if (ascii) {
 		for (int i = 0; i < header.FaceCount; ++i) {
 			std::string line;
@@ -165,22 +204,20 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
 
 			uint32_t elems;
 			sstream >> elems;
+			tmp_indices.resize(elems);
+			tmp_vertices.resize(elems);
 
-			uint32_t i0, i1, i2;
-			sstream >> i0 >> i1 >> i2;
+			for (uint32_t elem = 0; elem < elems; ++elem) {
+				uint32_t index;
+				sstream >> index;
+				tmp_indices[elem]  = index;
+				tmp_vertices[elem] = trimesh.vertices[index];
+			}
 
-			trimesh.indices.insert(trimesh.indices.end(), { i0, i1, i2, 0 });
+			std::vector<uint32_t> inds = triangulatePly(path, tmp_vertices, tmp_indices);
 
-			if (elems >= 4) {
-				// Simple CONVEX triangulation. This will not work all the time
-				// but getting a full triangulator working is not worth the effort.... (at least for now)
-				uint32_t prevI = i2;
-				for (uint8_t j = 3; j < elems; ++j) {
-					uint32_t nextI;
-					sstream >> nextI;
-					trimesh.indices.insert(trimesh.indices.end(), { i0, prevI, nextI, 0 });
-					prevI = nextI;
-				}
+			for (size_t f = 0; f < inds.size() / 3; ++f) {
+				trimesh.indices.insert(trimesh.indices.end(), { inds[f * 3 + 0], inds[f * 3 + 1], inds[f * 3 + 2], 0 });
 			}
 		}
 	} else {
@@ -188,21 +225,19 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
 			uint8_t elems;
 			stream.read(reinterpret_cast<char*>(&elems), sizeof(elems));
 
-			uint32_t i0, i1, i2;
-			i0 = readIdx();
-			i1 = readIdx();
-			i2 = readIdx();
-			trimesh.indices.insert(trimesh.indices.end(), { i0, i1, i2, 0 });
+			tmp_indices.resize(elems);
+			tmp_vertices.resize(elems);
 
-			if (elems >= 4) {
-				// Simple CONVEX triangulation. This will not work all the time
-				// but getting a full triangulator working is not worth the effort.... (at least for now)
-				uint32_t prevI = i2;
-				for (uint8_t j = 3; j < elems; ++j) {
-					uint32_t nextI = readIdx();
-					trimesh.indices.insert(trimesh.indices.end(), { i0, prevI, nextI, 0 });
-					prevI = nextI;
-				}
+			for (uint32_t elem = 0; elem < elems; ++elem) {
+				uint32_t index	   = readIdx();
+				tmp_indices[elem]  = index;
+				tmp_vertices[elem] = trimesh.vertices[index];
+			}
+
+			std::vector<uint32_t> inds = triangulatePly(path, tmp_vertices, tmp_indices);
+
+			for (size_t f = 0; f < inds.size() / 3; ++f) {
+				trimesh.indices.insert(trimesh.indices.end(), { inds[f * 3 + 0], inds[f * 3 + 1], inds[f * 3 + 2], 0 });
 			}
 		}
 	}

@@ -102,6 +102,8 @@ set(SRC
     mesh/PlyFile.cpp
     mesh/PlyFile.h
     mesh/Tangent.h
+    mesh/Triangulation.cpp
+    mesh/Triangulation.h
     mesh/TriMesh.cpp
     mesh/TriMesh.h
     serialization/BufferSerializer.cpp
