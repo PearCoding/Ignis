@@ -8,7 +8,6 @@
 
  - AnyDSL <https://github.com/AnyDSL/anydsl>
  - Eigen3 <http://eigen.tuxfamily.org>
- - OpenImageIO <https://sites.google.com/site/openimageio/home>
  - Intel® Threading Building Blocks https://www.threadingbuildingblocks.org/
  - ZLib <https://zlib.net/>
 
@@ -25,6 +24,8 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
  - RapidJSON <https://rapidjson.org/>
  - Simple Hardware Feature Extractor <https://github.com/PearCoding/hwinfo>
  - Simple Tag Preprocessor <https://github.com/PearCoding/stpp>
+ - stb <https://github.com/nothings/stb>
+ - tinyexr <https://github.com/syoyo/tinyexr>
  - tinyobjloader <https://github.com/tinyobjloader/tinyobjloader>
  - tinyparser-mitsuba <https://github.com/PearCoding/TinyParser-Mitsuba>
 
@@ -75,7 +76,9 @@ A schema is available at [refs/ignis.schema.json](refs/ignis.schema.json)
 
 You might use the `mts2ig` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.
 
-A Blender plugin and a Radiance scene converter are planned.
+You can also use `rad2json` to convert geometry used in the Radiance framework to our tool. Keep in mind that no BSDF and lights are mapped as the two raytracers are vastile different in these regards.
+
+A Blender plugin is planned for the future.
 
 ## Tiny tools
 
@@ -83,7 +86,7 @@ Two tiny tools `exr2hdr` and `hdr2exr` are available to convert between the Radi
 
 This is useful to ease the transfer from Radiance to our raytracer, but you can disable them by setting the CMake option `IG_WITH_TOOLS` to Off.
 
-Actually, the tool might convert from any format the OpenImageIO framework supports to the second format...
+Actually, the tool might convert from any format the stb_image framework supports to the second format...
 
 ## How to use `igview`
 

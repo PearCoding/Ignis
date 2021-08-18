@@ -1,4 +1,4 @@
-option(IG_WITH_CONVERTER_MITSUBA "Build tool to convert from mitsuba to our format" ON)
+option(IG_WITH_CONVERTER_MITSUBA "Build tool to convert from mitsuba to our format" OFF)
 
 if(IG_WITH_CONVERTER_MITSUBA)
     add_subdirectory(mts2ig)

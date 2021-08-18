@@ -2,9 +2,6 @@
 #include "Runtime.h"
 #include "config/Build.h"
 
-#include <OpenImageIO/filesystem.h>
-#include <OpenImageIO/sysutil.h>
-
 #include <fstream>
 #include <sstream>
 
@@ -86,13 +83,6 @@ static void write_output(std::ostream& is, float* data, size_t count, uint32 spp
 
 int main(int argc, char** argv)
 {
-#ifdef OIIO_HAS_STACKTRACE
-	// Helpful for debugging to make sure that any crashes dump a stack trace.
-	OIIO::Sysutil::setup_crash_stacktrace("stdout");
-#endif
-
-	OIIO::Filesystem::convert_native_arguments(argc, (const char**)argv);
-
 	if (argc <= 1) {
 		usage();
 		return EXIT_SUCCESS;

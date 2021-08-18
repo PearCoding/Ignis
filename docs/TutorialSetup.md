@@ -13,5 +13,5 @@ A quick and dirty tutorial to show how to setup AnyDSL and Ignis on a typical Li
     3. Run `ccmake .` inside the `build/` directory.
     4. Change `AnyDSL_runtime_DIR` to `ANYDSL_ROOT/runtime/build/share/anydsl/cmake`, with `ANYDSL_ROOT` being the path to the root of the AnyDSL framework.
     5. Select the drivers you want to compile. All interesting options regarding Ignis start with `IG_`
-    6. Run `cmake --build` inside the `build/` directory and get your second coffee.
+    6. Run `cmake --build .` inside the `build/` directory and get your second coffee.
  3. Run `./bin/igview ../scenes/diamond_scene.json` inside the `build/` directory to see if your setup works. This particular render requires the perspective camera and path tracer technique.

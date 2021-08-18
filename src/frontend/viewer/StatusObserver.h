@@ -2,6 +2,8 @@
 
 #include "IG_Config.h"
 
+#include <iomanip>
+
 namespace IG {
 #define REMOVE_LAST_LINE "\33[2K\r"
 #define SAVE_CURSOR "\33[s"

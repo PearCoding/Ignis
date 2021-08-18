@@ -1,8 +1,15 @@
 #include "Image.h"
 #include "Logger.h"
 
-#include <OpenImageIO/imageio.h>
-using namespace OIIO;
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+// We already make use of zlib, so use it here aswell
+#include "zlib.h"
+#define TINYEXR_USE_THREAD (1)
+#define TINYEXR_USE_MINIZ (0)
+#define TINYEXR_IMPLEMENTATION
+#include "tinyexr.h"
 
 namespace IG {
 void ImageRgba32::applyGammaCorrection()
@@ -29,62 +36,177 @@ void ImageRgba32::flipY()
 	}
 }
 
+inline bool ends_with(std::string const& value, std::string const& ending)
+{
+	if (ending.size() > value.size())
+		return false;
+	return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
 ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 {
-	auto in = ImageInput::open(path.generic_u8string());
-	if (!in)
-		return ImageRgba32();
-	const ImageSpec& spec = in->spec();
+	std::string ext = path.extension();
+	bool useExr		= ends_with(ext, ".exr");
 
 	ImageRgba32 img;
-	img.width  = spec.width;
-	img.height = spec.height;
-	img.pixels.reset(new float[img.width * img.height * 4]);
 
-	bool wasBGR = false;
-	switch (spec.nchannels) {
-	case 1: { // Gray
-		std::vector<float> scanline(spec.width * spec.nchannels);
-		for (int y = 0; y < spec.height; ++y) {
-			in->read_scanline(y, 0, TypeDesc::FLOAT, &scanline[0]);
-			for (int x = 0; x < spec.width; ++x) {
-				float g									   = scanline[x];
-				img.pixels[y * spec.width * 4 + x * 4 + 0] = g;
-				img.pixels[y * spec.width * 4 + x * 4 + 1] = g;
-				img.pixels[y * spec.width * 4 + x * 4 + 2] = g;
-				img.pixels[y * spec.width * 4 + x * 4 + 3] = 1;
+	if (useExr) {
+		EXRVersion exr_version;
+		int ret = ParseEXRVersionFromFile(&exr_version, path.generic_u8string().c_str());
+		if (ret != 0) {
+			throw ImageLoadException("Could not extract exr version information", path);
+			return {};
+		}
+
+		EXRHeader exr_header;
+		InitEXRHeader(&exr_header);
+
+		const char* err = nullptr;
+		ret				= ParseEXRHeaderFromFile(&exr_header, &exr_version, path.generic_u8string().c_str(), &err);
+		if (ret != 0) {
+			throw ImageLoadException(err, path);
+			FreeEXRErrorMessage(err);
+			return {};
+		}
+
+		// Make sure exr loads full floating point
+		for (int i = 0; i < exr_header.num_channels; i++) {
+			if (exr_header.pixel_types[i] == TINYEXR_PIXELTYPE_HALF)
+				exr_header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT;
+		}
+
+		EXRImage exr_image;
+		InitEXRImage(&exr_image);
+		ret = LoadEXRImageFromFile(&exr_image, &exr_header, path.generic_u8string().c_str(), &err);
+		if (ret != TINYEXR_SUCCESS) {
+			throw ImageLoadException(err, path);
+			FreeEXRErrorMessage(err);
+			FreeEXRHeader(&exr_header);
+			return {};
+		}
+
+		img.width  = exr_image.width;
+		img.height = exr_image.height;
+
+		// Extract channel information
+		int idxR = -1;
+		int idxG = -1;
+		int idxB = -1;
+		int idxA = -1;
+		int idxY = -1;
+
+		int channels = 0;
+		for (int c = 0; c < exr_header.num_channels; ++c) {
+			size_t len = strlen(exr_header.channels[c].name);
+			if (len >= 2)
+				continue; // Ignore AOVs
+
+			char channel = exr_header.channels[c].name[len - 1];
+			switch (channel) {
+			case 'A':
+				idxA = c;
+				break;
+			case 'R':
+				idxR = c;
+				break;
+			case 'G':
+				idxG = c;
+				break;
+			case 'B':
+				idxB = c;
+				break;
+			default:
+			case 'Y':
+				idxY = c;
+				break;
+			}
+			++channels;
+		}
+
+		img.pixels.reset(new float[img.width * img.height * 4]);
+
+		// TODO: Tiled
+		if (channels == 1) {
+			int idx = idxY != -1 ? idxY : idxA;
+			for (size_t i = 0; i < img.width * img.height; ++i) {
+				float g				  = reinterpret_cast<float**>(exr_image.images)[idx][i];
+				img.pixels[i * 4 + 0] = g;
+				img.pixels[i * 4 + 1] = g;
+				img.pixels[i * 4 + 2] = g;
+				img.pixels[i * 4 + 3] = 1;
+			}
+		} else {
+			if (idxR == -1 || idxG == -1 || idxB == -1) {
+				FreeEXRHeader(&exr_header);
+				FreeEXRImage(&exr_image);
+				return {}; // TODO: Error message
+			}
+
+			for (size_t i = 0; i < img.width * img.height; ++i) {
+				img.pixels[4 * i + 0] = reinterpret_cast<float**>(exr_image.images)[idxR][i];
+				img.pixels[4 * i + 1] = reinterpret_cast<float**>(exr_image.images)[idxG][i];
+				img.pixels[4 * i + 2] = reinterpret_cast<float**>(exr_image.images)[idxB][i];
+				if (idxA != -1)
+					img.pixels[4 * i + 3] = reinterpret_cast<float**>(exr_image.images)[idxA][i];
+				else
+					img.pixels[4 * i + 3] = 1;
 			}
 		}
-	} break;
-	case 3: { // RGB
-		wasBGR = spec.channelnames[0] == "B";
-		std::vector<float> scanline(spec.width * spec.nchannels);
-		for (int y = 0; y < spec.height; ++y) {
-			in->read_scanline(y, 0, TypeDesc::FLOAT, &scanline[0]);
-			for (int x = 0; x < spec.width; ++x) {
-				img.pixels[y * spec.width * 4 + x * 4 + 0] = scanline[3 * x + 0];
-				img.pixels[y * spec.width * 4 + x * 4 + 1] = scanline[3 * x + 1];
-				img.pixels[y * spec.width * 4 + x * 4 + 2] = scanline[3 * x + 2];
-				img.pixels[y * spec.width * 4 + x * 4 + 3] = 1;
-			}
+
+		FreeEXRHeader(&exr_header);
+		FreeEXRImage(&exr_image);
+
+		img.flipY();
+	} else {
+		stbi_set_unpremultiply_on_load(1);
+
+		int width, height, channels;
+		float* data = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 0);
+
+		if (data == nullptr) {
+			throw ImageLoadException("Could not load image", path);
+			return {};
 		}
-	} break;
-	case 4: // RGBA
-		wasBGR = spec.channelnames[0] == "B";
-		in->read_image(TypeDesc::FLOAT, img.pixels.get());
-		break;
-	default:
-		return ImageRgba32();
+
+		img.width  = width;
+		img.height = height;
+		img.pixels.reset(new float[img.width * img.height * 4]);
+
+		switch (channels) {
+		case 0:
+			return ImageRgba32();
+		case 1: // Gray
+			for (size_t i = 0; i < img.width * img.height; ++i) {
+				float g				  = data[i];
+				img.pixels[i * 4 + 0] = g;
+				img.pixels[i * 4 + 1] = g;
+				img.pixels[i * 4 + 2] = g;
+				img.pixels[i * 4 + 3] = 1;
+			}
+			break;
+		case 3: // RGB
+			for (size_t i = 0; i < img.width * img.height; ++i) {
+				img.pixels[i * 4 + 0] = data[i * 3 + 0];
+				img.pixels[i * 4 + 1] = data[i * 3 + 1];
+				img.pixels[i * 4 + 2] = data[i * 3 + 2];
+				img.pixels[i * 4 + 3] = 1;
+			}
+			break;
+		case 4: // RGBA
+			std::memcpy(img.pixels.get(), data, sizeof(float) * 4 * img.width * img.height);
+			break;
+		default:
+			for (size_t i = 0; i < img.width * img.height; ++i) {
+				img.pixels[i * 4 + 0] = data[i * channels + 1];
+				img.pixels[i * 4 + 1] = data[i * channels + 2];
+				img.pixels[i * 4 + 2] = data[i * channels + 3];
+				img.pixels[i * 4 + 3] = data[i * channels + 0];
+			}
+			break;
+		}
+		stbi_image_free(data);
 	}
 
-	if (wasBGR) {
-		for (int i = 0; i < spec.height * spec.width; ++i)
-			std::swap(img.pixels[4 * i + 0], img.pixels[4 * i + 2]);
-	}
-
-	img.flipY();
-
-	in->close();
 	return img;
 }
 
@@ -93,119 +215,82 @@ bool ImageRgba32::save(const std::filesystem::path& path)
 	return save(path, pixels.get(), width, height);
 }
 
-bool ImageRgba32::save(const std::filesystem::path& path, const float* rgb, size_t width, size_t height)
+bool ImageRgba32::save(const std::filesystem::path& path, const float* rgba, size_t width, size_t height)
 {
-	auto out = ImageOutput::create(path.generic_u8string());
-	if (!out)
+	std::string ext = path.extension();
+	bool useExr		= ends_with(ext, ".exr");
+
+	// We only support .exr output
+	if (!useExr)
 		return false;
 
-	ImageSpec spec(width, height, 4, TypeDesc::FLOAT);
-	out->open(path, spec);
-	out->write_image(TypeDesc::FLOAT, rgb);
-	out->close();
+	EXRHeader header;
+	InitEXRHeader(&header);
+	header.compression_type = TINYEXR_COMPRESSIONTYPE_PIZ;
+
+	EXRImage image;
+	InitEXRImage(&image);
+
+	image.num_channels = 4;
+
+	std::vector<float> images[4];
+	images[0].resize(width * height);
+	images[1].resize(width * height);
+	images[2].resize(width * height);
+	images[3].resize(width * height);
+
+	// Split into layers
+	for (size_t i = 0; i < width * height; ++i) {
+		images[0][i] = rgba[4 * i + 0];
+		images[1][i] = rgba[4 * i + 1];
+		images[2][i] = rgba[4 * i + 2];
+		images[3][i] = rgba[4 * i + 3];
+	}
+
+	float* image_ptr[4];
+	image_ptr[0] = &(images[3].at(0)); // A
+	image_ptr[1] = &(images[2].at(0)); // B
+	image_ptr[2] = &(images[1].at(0)); // G
+	image_ptr[3] = &(images[0].at(0)); // R
+
+	image.images = (unsigned char**)image_ptr;
+	image.width	 = width;
+	image.height = height;
+
+	header.num_channels = image.num_channels;
+	header.channels		= (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo) * header.num_channels);
+
+	// Must be ABGR order, since most of EXR viewers expect this channel order.
+	strncpy(header.channels[0].name, "A", 255);
+	header.channels[0].name[strlen("A")] = '\0';
+	strncpy(header.channels[1].name, "B", 255);
+	header.channels[1].name[strlen("B")] = '\0';
+	strncpy(header.channels[2].name, "G", 255);
+	header.channels[2].name[strlen("G")] = '\0';
+	strncpy(header.channels[3].name, "R", 255);
+	header.channels[3].name[strlen("R")] = '\0';
+
+	header.pixel_types			 = (int*)malloc(sizeof(int) * header.num_channels);
+	header.requested_pixel_types = (int*)malloc(sizeof(int) * header.num_channels);
+	for (int i = 0; i < header.num_channels; ++i) {
+		header.pixel_types[i]			= TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
+		header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
+	}
+
+	const char* err = nullptr;
+	int ret			= SaveEXRImageToFile(&image, &header, path.generic_u8string().c_str(), &err);
+
+	free(header.channels);
+	free(header.pixel_types);
+	free(header.requested_pixel_types);
+
+	if (ret != TINYEXR_SUCCESS) {
+		throw ImageSaveException(err, path);
+		FreeEXRErrorMessage(err); // free's buffer for an error message
+		return false;
+	}
 
 	return true;
 }
 
-///////////////////////////////////////
-
-void ImageRgb24::applyGammaCorrection()
-{
-	IG_ASSERT(isValid(), "Expected valid image");
-
-	for (size_t y = 0; y < height; ++y) {
-		for (size_t x = 0; x < width; ++x) {
-			auto* pix = &pixels[3 * (y * width + x)];
-			for (int i = 0; i < 3; ++i)
-				pix[i] = std::pow(pix[i], 2.2f);
-		}
-	}
-}
-
-void ImageRgb24::flipY()
-{
-	const size_t slice = 3 * width;
-	for (size_t y = 0; y < height / 2; ++y) {
-		float* s1 = &pixels[y * slice];
-		float* s2 = &pixels[(height - y - 1) * slice];
-		if (s1 != s2)
-			std::swap_ranges(s1, s1 + slice, s2);
-	}
-}
-
-ImageRgb24 ImageRgb24::load(const std::filesystem::path& path)
-{
-	auto in = ImageInput::open(path);
-	if (!in)
-		return ImageRgb24();
-	const ImageSpec& spec = in->spec();
-
-	ImageRgb24 img;
-	img.width  = spec.width;
-	img.height = spec.height;
-	img.pixels.reset(new float[img.width * img.height * 3]);
-
-	bool wasBGR = false;
-	switch (spec.nchannels) {
-	case 1: { // Gray
-		std::vector<float> scanline(spec.width * spec.nchannels);
-		for (int y = 0; y < spec.height; ++y) {
-			in->read_scanline(y, 0, TypeDesc::FLOAT, &scanline[0]);
-			for (int x = 0; x < spec.width; ++x) {
-				float g									   = scanline[x];
-				img.pixels[y * spec.width * 3 + x * 3 + 0] = g;
-				img.pixels[y * spec.width * 3 + x * 3 + 1] = g;
-				img.pixels[y * spec.width * 3 + x * 3 + 2] = g;
-			}
-		}
-	} break;
-	case 3: // RGB
-		wasBGR = spec.channelnames[0] == "B";
-		in->read_image(TypeDesc::FLOAT, img.pixels.get());
-		break;
-	case 4: { // RGBA
-		wasBGR = spec.channelnames[0] == "B";
-		std::vector<float> scanline(spec.width * spec.nchannels);
-		for (int y = 0; y < spec.height; ++y) {
-			in->read_scanline(y, 0, TypeDesc::FLOAT, &scanline[0]);
-			for (int x = 0; x < spec.width; ++x) {
-				img.pixels[y * spec.width * 3 + x * 3 + 0] = scanline[4 * x + 0];
-				img.pixels[y * spec.width * 3 + x * 3 + 1] = scanline[4 * x + 1];
-				img.pixels[y * spec.width * 3 + x * 3 + 2] = scanline[4 * x + 2];
-			}
-		}
-	} break;
-	default:
-		return ImageRgb24();
-	}
-
-	if (wasBGR) {
-		for (int i = 0; i < spec.height * spec.width; ++i)
-			std::swap(img.pixels[3 * i + 0], img.pixels[3 * i + 2]);
-	}
-
-	img.flipY();
-
-	in->close();
-	return img;
-}
-
-bool ImageRgb24::save(const std::filesystem::path& path)
-{
-	return save(path, pixels.get(), width, height);
-}
-
-bool ImageRgb24::save(const std::filesystem::path& path, const float* rgb, size_t width, size_t height)
-{
-	auto out = ImageOutput::create(path.generic_u8string());
-	if (!out)
-		return false;
-
-	ImageSpec spec(width, height, 3, TypeDesc::FLOAT);
-	out->open(path, spec);
-	out->write_image(TypeDesc::FLOAT, rgb);
-	out->close();
-
-	return true;
-}
 } // namespace IG

@@ -14,6 +14,7 @@
 
 #include <mutex>
 #include <thread>
+#include <iomanip>
 
 /// Some arrays do not need new allocations at the host if the data is already provided and properly arranged.
 /// However, this assumes that the pointer is always properly aligned!
