@@ -76,7 +76,9 @@ A schema is available at [refs/ignis.schema.json](refs/ignis.schema.json)
 
 You might use the `mts2ig` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.
 
-A Blender plugin and a Radiance scene converter are planned.
+You can also use `rad2json` to convert geometry used in the Radiance framework to our tool. Keep in mind that no BSDF and lights are mapped as the two raytracers are vastile different in these regards.
+
+A Blender plugin is planned for the future.
 
 ## Tiny tools
 

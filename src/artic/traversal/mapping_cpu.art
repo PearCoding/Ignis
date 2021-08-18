@@ -326,12 +326,12 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
         tmax = rv_load(&ray_ptr.tmax, lane)
     };
 
-    let store_hit = @ |hit_ptr: &mut Hit, lane: i32, hit: Hit| {
-        rv_store(&mut hit_ptr.distance, lane, hit.distance);
-        rv_store(&mut hit_ptr.prim_coords.x, lane, hit.prim_coords.x);
-        rv_store(&mut hit_ptr.prim_coords.y, lane, hit.prim_coords.y);
-        rv_store(bitcast[&mut f32](&mut hit_ptr.prim_id), lane, bitcast[f32](hit.prim_id));
-        //rv_store(bitcast[&mut f32](&mut hit_ptr.ent_id), lane, bitcast[f32](hit.ent_id)); // Optimization: No need for the ent id in prim BVH
+    let store_hit = @ |hit_ptr: &mut Hit, lane: i32, hit2: Hit| {
+        rv_store(&mut hit_ptr.distance, lane, hit2.distance);
+        rv_store(&mut hit_ptr.prim_coords.x, lane, hit2.prim_coords.x);
+        rv_store(&mut hit_ptr.prim_coords.y, lane, hit2.prim_coords.y);
+        rv_store(bitcast[&mut f32](&mut hit_ptr.prim_id), lane, bitcast[f32](hit2.prim_id));
+        //rv_store(bitcast[&mut f32](&mut hit_ptr.ent_id), lane, bitcast[f32](hit2.ent_id)); // Optimization: No need for the ent id in prim BVH
     };
 
     while true {
