@@ -15,6 +15,11 @@
 #[import(cc = "C")] fn ignis_load_scene_info(i32, &mut SceneInfo) -> ();
 #[import(cc = "C")] fn ignis_present(i32) -> ();
 
+#[import(cc = "C")] fn ignis_handle_primary_trace(i32, &mut PrimaryStream) -> ();
+#[import(cc = "C")] fn ignis_handle_secondary_trace(i32, &mut SecondaryStream) -> ();
+#[import(cc = "C")] fn ignis_handle_shader(i32, i32, &mut PrimaryStream) -> ();
+#[import(cc = "C")] fn ignis_handle_emission(i32, &mut PrimaryStream) -> i32;
+
 // Ray streams ---------------------------------------------------------------------
 
 // 9

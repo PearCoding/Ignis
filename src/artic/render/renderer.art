@@ -1,5 +1,4 @@
 struct PathTracer {
-    on_emit:   RayEmitter,
     on_hit:    fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[Color],
     on_miss:   fn (Ray, &mut RayState) -> Option[Color],
     on_shadow: fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[(Ray, Color)],
@@ -14,7 +13,7 @@ struct RayState {
 }
 
 type RayEmitter = fn (i32, i32, i32, i32, i32) -> (Ray, RayState);
-type RayEmitterFactory = fn (Device, i32) -> RayEmitter;
+type RayEmitterFactory = fn (i32) -> RayEmitter;
 
 fn @make_ray_state(rnd: RndState, contrib: Color, mis: f32, depth: i32) -> RayState {
     RayState {
@@ -26,7 +25,7 @@ fn @make_ray_state(rnd: RndState, contrib: Color, mis: f32, depth: i32) -> RaySt
 }
 
 fn @make_camera_emitter_factory(camera: Camera) -> RayEmitterFactory {
-    @ |_device, iter| -> RayEmitter {
+    @ |iter| -> RayEmitter {
         @ |sample, x, y, width, height| {
             let mut hash = fnv_init();
             hash = fnv_hash(hash, sample as u32);
@@ -44,7 +43,7 @@ fn @make_camera_emitter_factory(camera: Camera) -> RayEmitterFactory {
 }
 
 fn @make_list_emitter_factory(rays: &[StreamRay]) -> RayEmitterFactory {
-    @ |_device, iter| -> RayEmitter {
+    @ |iter| -> RayEmitter {
         @ |sample, x, y, width, _height| {
             let mut hash = fnv_init();
             hash = fnv_hash(hash, sample as u32);

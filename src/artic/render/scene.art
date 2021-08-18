@@ -28,13 +28,13 @@ struct Device {
     load_scene_bvh:       fn () -> SceneBvh,
     load_scene_database:  fn () -> SceneDatabase,
     load_scene_info:      fn () -> SceneInfo,
-    load_buffer_table:    fn (DynTable) -> BufferTable,
-    load_texture_table:   fn (DynTable, Stage1Accessor) -> TextureTable,
+    load_buffer_table:    fn (DynTable) -> BufferTable, // [Obsolete]
+    load_texture_table:   fn (DynTable, Stage1Accessor) -> TextureTable, // [Obsolete]
     load_entity_table:    fn (DynTable, Stage2Accessor) -> EntityTable,
     load_shape_table:     fn (DynTable, Stage2Accessor) -> ShapeTable,
-    load_light_table:     fn (DynTable, Stage3Accessor) -> LightTable,
-    load_arealight_table: fn (DynTable, Stage3Accessor) -> LightTable,
-    load_shader_table:    fn (DynTable, Stage3Accessor) -> BsdfTable,
+    load_light_table:     fn (DynTable, Stage3Accessor) -> LightTable, // [Obsolete]
+    load_arealight_table: fn (DynTable, Stage3Accessor) -> LightTable, // [Obsolete]
+    load_shader_table:    fn (DynTable, Stage3Accessor) -> BsdfTable, // [Obsolete]
     load_bvh_table:       fn (DynTable) -> BVHTable,
 
     load_rays: fn () -> &[StreamRay]
@@ -42,5 +42,3 @@ struct Device {
 
 type Renderer = fn (Scene, Device, i32) -> ();
 type Shader   = fn (Ray, Hit, SurfaceElement) -> Bsdf;
-
-type DeviceEmitter = fn (PrimaryStream, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> i32;

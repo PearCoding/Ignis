@@ -1,10 +1,8 @@
-fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterFactory) -> Renderer {
+fn @make_path_tracing_renderer(max_path_len: i32, spp: i32) -> Renderer {
     @ |scene, device, iter| {
         let offset : f32  = 0.001;
         let num_lights    = scene.info.num_lights;
         let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
-
-        let on_emit = emitter(device, iter);
 
         fn @on_shadow( ray: Ray
                      , _hit: Hit
@@ -30,7 +28,7 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
                 let correct_side = surf.is_entering ^ (vis < 0);
 
                 if correct_side {
-                    let in_dir  = light_dir; // TODO: Check correct orientation
+                    let in_dir  = light_dir; 
                     let out_dir = vec3_neg(ray.dir);
 
                     let pdf_e     = if light.delta { 1 } else { mat.bsdf.pdf(in_dir, out_dir) }; // Pdf to sample the "infinite" light based on bsdf
@@ -151,7 +149,6 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32, emitter: RayEmitterF
         }
 
         let path_tracer = PathTracer {
-            on_emit   = on_emit,
             on_hit    = on_hit,
             on_miss   = on_miss,
             on_shadow = on_shadow,

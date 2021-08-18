@@ -58,7 +58,7 @@ fn ig_emitter(settings: &Settings, iter: i32,
 
     let spp = 4;
     
-    let emitter = emitterfactory(device, iter);
+    let emitter = emitterfactory(iter);
     let dev_emitter = device.make_emitter(emitter);  
     dev_emitter(primary, capacity, xmin, xmax, ymin, ymax, settings.width, settings.height, spp)
 }
