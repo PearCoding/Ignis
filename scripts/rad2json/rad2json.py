@@ -3,10 +3,8 @@
 
 #TODO:
 #handle -i flag in xform when passed on its own (i.e. independent of -a flag)
-#process the .rad files passed with xform
-#make sure nameCount variable functions as expected
 #simplify how the transformation matrix of the camera (and others) is passed: a lookat dictionary can be passed now. (Note target is a position, target = origin + direction).
-#get rid of config.py
+#write a readme and install.py
 
 import argparse
 import numpy as np
@@ -15,8 +13,6 @@ import os
 import logging
 import config
 from parseRad import parseRad
-from restructurePrimitives import restructurePrimitives
-
 
 
 if __name__ == "__main__":
@@ -35,31 +31,28 @@ if __name__ == "__main__":
     logging.basicConfig(level=args.loglevel)
     # logging.basicConfig(level=args.loglevel, filename='mts2json.log', format='%(asctime)s %(levelname)s:%(message)s')
 
-
-    #parse the input file
+    #get the input file
     radFilePath = args.InputFile
     if (not radFilePath.suffix == '.rad'):
         logging.error("The specified input file is not a .rad file.")
         exit()
-    if (not radFilePath.exists()):
-        logging.error("The specified input file does not exist.")
-        exit()
-    
-    radFilePath = os.path.join(".",radFilePath)         #explicitly giving it a relative path. else the next line wont work
-    config.RAD_FOLDER_PATH = os.path.relpath(os.path.dirname(radFilePath))
-    logging.info(f".rad file relative folder: {config.RAD_FOLDER_PATH}")
 
-    with open(radFilePath, 'r') as radFile:
-        declarations = parseRad(radFile)
+    config.RAD_FILE_FOLDER = os.path.relpath(os.path.dirname(os.path.abspath(radFilePath)))         #doing abspath() to give path to a file when it is in the current folder
+    logging.info(f"Relative path of the master rad file: {config.RAD_FILE_FOLDER}")
+    radFilePath = os.path.join(config.RAD_FILE_FOLDER, os.path.basename(radFilePath))
 
-    #structure the data
-    jsonData = restructurePrimitives(declarations)
-
-    #write data in the output file
+    #output path
     jsonFilePath = args.OutputFile
     if jsonFilePath is None:
         jsonFilePath = os.path.splitext(radFilePath)[0]+'.json'
+    config.JSON_FILE_FOLDER = os.path.dirname(jsonFilePath)
+
+    #parse the .rad file to Ignis compatible .json format
+    jsonData = parseRad([radFilePath])
+
+
+    #write data in the output file
     with open(jsonFilePath, "w") as jsonFile:
         jsonFile.write(jsonData)
 
-    logging.info(f"Scene written to {jsonFilePath}.")
+    print(f"Scene written to {jsonFilePath}.")
