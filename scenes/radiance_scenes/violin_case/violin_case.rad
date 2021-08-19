@@ -1,0 +1,5 @@
+!xform -a 4 -t 0 3 0 -i 1
+void mesh violin_case
+5 violin_case.rtm -t 0 0 2
+0
+0

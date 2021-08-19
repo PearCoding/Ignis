@@ -1,0 +1,9 @@
+#testing rad files passed with xform
+
+#!xform -t 5 0 0 ./cornell.rad
+
+#!xform -t 5 0 0 ./violin_case/violin_case.rad
+
+#!xform -a 2 -t 5 0 0 -i 1 ./violin_case/violin_case.rad
+
+!xform -t 5 0 0 ./violin_case/violin_case.rad cornell.rad
