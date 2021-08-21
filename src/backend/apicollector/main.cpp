@@ -54,7 +54,7 @@ int main(int argc, char** argv)
 			replace_all(line, "\\", "\\\\");
 			replace_all(line, "\"", "\\\"");
 			if (!line.empty() && line != "\n")
-				stream << "\"" << line << "\"" << std::endl;
+				stream << "\"" << line << "\\n\"" << std::endl;
 		}
 
 		stream << ";" << std::endl;
