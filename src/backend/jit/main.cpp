@@ -6,10 +6,20 @@
 #include <thorin/be/codegen.h>
 #include <thorin/world.h>
 
+#include <fstream>
 #include <string>
 #include <vector>
 
 extern const char* ig_api[];
+extern const char* ig_api_paths[];
+
+#ifdef IG_DEBUG
+constexpr int OPT_LEVEL = 0;
+constexpr bool DEBUG	= true;
+#else
+constexpr int OPT_LEVEL = 3;
+constexpr bool DEBUG	= false;
+#endif
 
 int main(int argc, char** argv)
 {
@@ -20,7 +30,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> paths;
 	std::vector<std::string> file_data;
 	for (int i = 0; ig_api[i]; ++i) {
-		paths.emplace_back("...");
+		paths.emplace_back(std::string("[EMBEDDED]") + ig_api_paths[i]);
 		file_data.emplace_back(ig_api[i]);
 	}
 
@@ -42,5 +52,19 @@ int main(int argc, char** argv)
 	world.cleanup();
 	world.opt();
 
-	return 0;
+	thorin::DeviceBackends backends(world, OPT_LEVEL, DEBUG);
+	auto emit_to_file = [&](thorin::CodeGen& cg) {
+		auto name = std::string("TEST") + cg.file_ext();
+		std::ofstream file(name);
+		if (!file)
+			artic::log::error("cannot open '{}' for writing", name);
+		else
+			cg.emit_stream(file);
+	};
+	for (auto& cg : backends.cgs) {
+		if (cg)
+			emit_to_file(*cg);
+	}
+
+	return EXIT_SUCCESS;
 }

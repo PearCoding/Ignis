@@ -2,6 +2,9 @@ set(SRC
     main.cpp
 )
 
+# We could drop some sources from ARTIC_SRC and let it adapt to the actual shading system we jit,
+# but that is not worth the effort currently
+
 # Grapped from AnyDSL runtime
 set(ARTIC_RUNTIME_FILES
     ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics.impala

@@ -53,6 +53,7 @@ int main(int argc, char** argv)
 			// Make sure its properly escaped
 			replace_all(line, "\\", "\\\\");
 			replace_all(line, "\"", "\\\"");
+			replace_all(line, "\t", "  ");
 			if (!line.empty() && line != "\n")
 				stream << "\"" << line << "\\n\"" << std::endl;
 		}
@@ -66,6 +67,16 @@ int main(int argc, char** argv)
 	for (const auto& input : inputs) {
 		std::string name = get_name(input);
 		stream << "  s_" << name << "," << std::endl;
+	}
+	stream << "  nullptr" << std::endl
+		   << "};" << std::endl;
+
+	stream << std::endl
+		   << "const char* ig_api_paths[] = {" << std::endl;
+	for (const auto& input : inputs) {
+		std::string filename  = input.filename().generic_u8string();
+		std::string directory = input.parent_path().stem().generic_u8string();
+		stream << "  \"" << directory << "/" << filename << "\"," << std::endl;
 	}
 	stream << "  nullptr" << std::endl
 		   << "};" << std::endl;
