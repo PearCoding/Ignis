@@ -5,18 +5,8 @@ set(SRC
 # We could drop some sources from ARTIC_SRC and let it adapt to the actual shading system we jit,
 # but that is not worth the effort currently
 
-# Grapped from AnyDSL runtime
+# Grapped from AnyDSL runtime, as it was missing while jit compiling (BUG)
 set(ARTIC_RUNTIME_FILES
-    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics.impala
-    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics_rv.impala
-    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics_cpu.impala
-    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics_hls.impala
-    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics_cuda.impala
-    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics_nvvm.impala
-    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics_amdgpu.impala
-    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics_opencl.impala
-    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics_thorin.impala
-    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/runtime.impala
     ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics_math.impala
 )
 
@@ -29,7 +19,6 @@ add_custom_command(
         VERBATIM)
 
 add_executable(ig_jit ${SRC} ${API_SRC_FILE})
-target_link_libraries(ig_jit PUBLIC std::filesystem ${AnyDSL_runtime_LIBRARIES} ${Thorin_LIBRARIES} libartic)
-target_include_directories(ig_jit PUBLIC ${Thorin_INCLUDE_DIRS})
+target_link_libraries(ig_jit PUBLIC std::filesystem ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES})
 target_compile_definitions(ig_jit PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
 target_compile_features(ig_jit PUBLIC cxx_std_17)
