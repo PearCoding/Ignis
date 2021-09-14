@@ -13,7 +13,10 @@
 #include "Logger.h"
 
 #include <atomic>
+
+#ifndef IG_NO_EXECUTION_H
 #include <execution>
+#endif
 
 namespace IG {
 namespace UI {
@@ -503,26 +506,48 @@ static void analzeLuminance(size_t width, size_t height, uint32_t iter)
 	};
 
 	// Extract basic information
-	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), [&](size_t ind) {
+	const auto updateRange = [&](size_t ind) {
 		const auto L = getL(ind);
 
 		updateMaximum(sLastLum.Max, L);
 		updateMinimum(sLastLum.Min, L);
-	});
+	};
 
+#ifndef IG_NO_EXECUTION_H
+	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), updateRange);
+#else
+	for (size_t i : imageRange)
+		updateRange(i);
+#endif
+
+	const auto lumFactor = [&](size_t ind) { return getL(ind) * avgFactor; };
+#ifndef IG_NO_EXECUTION_H
 	sLastLum.Avg = std::transform_reduce(std::execution::par_unseq, imageRange.begin(), imageRange.end(), 0.0f, std::plus<>(),
-										 [&](size_t ind) { return getL(ind) * avgFactor; });
+										 lumFactor);
+#else
+	sLastLum.Avg = 0;
+	for (size_t i : imageRange)
+		sLastLum.Avg += lumFactor(i);
+
+#endif
 
 	// Setup histogram
 	for (auto& a : sHistogram)
 		a = 0;
 
 	const float histogram_factor = HISTOGRAM_SIZE / std::max(sLastLum.Max.load(), 1.0f);
-	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), [&](size_t ind) {
-		const auto L  = getL(ind);
-		const int idx = std::max(0, std::min<int>(L * histogram_factor, HISTOGRAM_SIZE - 1));
-		sHistogram[idx]++;
-	});
+	const auto updateHistogram	 = [&](size_t ind) {
+		  const auto L	= getL(ind);
+		  const int idx = std::max(0, std::min<int>(L * histogram_factor, HISTOGRAM_SIZE - 1));
+		  sHistogram[idx]++;
+	};
+
+#ifndef IG_NO_EXECUTION_H
+	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), updateHistogram);
+#else
+	for (size_t i : imageRange)
+		updateHistogram(i);
+#endif
 
 	for (size_t i = 0; i < sHistogram.size(); ++i)
 		sHistogramF[i] = sHistogram[i] * avgFactor;
@@ -578,7 +603,7 @@ static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, si
 
 	const RangeS imageRange(0, width * height);
 
-	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), [&](size_t ind) {
+	const auto updateImage = [&](size_t ind) {
 		auto r = film[ind * 3 + 0] * inv_iter;
 		auto g = film[ind * 3 + 1] * inv_iter;
 		auto b = film[ind * 3 + 2] * inv_iter;
@@ -627,7 +652,14 @@ static void update_texture(uint32_t* buf, SDL_Texture* texture, size_t width, si
 		buf[ind] = (uint32_t(clamp(std::pow(color.r, inv_gamma), 0.0f, 1.0f) * 255.0f) << 16)
 				   | (uint32_t(clamp(std::pow(color.g, inv_gamma), 0.0f, 1.0f) * 255.0f) << 8)
 				   | uint32_t(clamp(std::pow(color.b, inv_gamma), 0.0f, 1.0f) * 255.0f);
-	});
+	};
+
+#ifndef IG_NO_EXECUTION_H
+	std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), updateImage);
+#else
+	for (size_t i : imageRange)
+		updateImage(i);
+#endif
 
 	SDL_UpdateTexture(texture, nullptr, buf, width * sizeof(uint32_t));
 }
