@@ -12,6 +12,7 @@
 #include "Color.h"
 #include "Logger.h"
 
+#include <iomanip>
 #include <atomic>
 
 #ifndef IG_NO_EXECUTION_H
