@@ -3,8 +3,7 @@
 
 #TODO:
 #handle -i flag in xform when passed on its own (i.e. independent of -a flag)
-#simplify how the transformation matrix of the camera (and others) is passed: a lookat dictionary can be passed now. (Note target is a position, target = origin + direction).
-#write a readme and install.py
+#simplify how the transformation matrix of the camera (and others) is passed: a lookat dictionary can be passed now. (Note target is a position, target = origin + direction).y
 
 import argparse
 import numpy as np

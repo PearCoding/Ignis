@@ -85,12 +85,16 @@ def processShape(primitive, global_tform):
 
     if (p_type == "polygon"):
 
-        N = float(primitive.noOfFloats)
-        
+        N = primitive.noOfFloats
         if(N % 3 != 0):
             logging.error(f"Can't process the polygon with {primitive.noOfFloats} elements (should be a multiple of 3).")
             return
-        if(N == 12):
+        if(N == 9):
+            shape["type"] = "triangle"
+            shape["p0"] = primitive.floatList[0:3]
+            shape["p1"] = primitive.floatList[3:6]
+            shape["p2"] = primitive.floatList[6:9]
+        elif(N == 12):
             #assuming that 12 arguments are used only to define a rectangle, and not an irregular shape:
             shape["type"] = "rectangle"
             shape["p0"] = primitive.floatList[0:3]

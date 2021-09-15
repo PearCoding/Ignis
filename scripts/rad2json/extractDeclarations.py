@@ -31,13 +31,12 @@ def extractDeclarations(radFile):
     logging.debug("extractDeclarations() called.")
     logging.debug("Walking through .rad, and saving the geometry declarations on a stack.")
 
-    # primitives = []
     declarations = []       #declarations refer to both primitives and commands
 
     line = radFile.readline()
     while line:
         line = line.strip()
-        logging.debug("New line: " + repr(line))
+        # logging.debug("New line: " + repr(line))
 
         if isComment(line):
             line = radFile.readline()
@@ -56,78 +55,76 @@ def extractDeclarations(radFile):
             elements = shlex.split(line)    #this preserves quoted substrings
 
             #create a Primitive object by passing modifier, type and identifier parameters
-            p = Primitive(elements[0], elements[1], elements[2])
+            mod = elements.pop(0)
+            typ = elements.pop(0)
+            ide = elements.pop(0)
+            p = Primitive(mod, typ, ide)
             identifierList.append(p.identifier)
-            logging.debug(repr(p))
-            line = radFile.readline()
-            continue
-                
+ 
         #read the string arguments once modifier has been defined
         if p.state == 'initialized':
-            elements = shlex.split(line)    #this preserves quoted substrings
-            # logging.debug("elements: ",elements)
+            if len(elements) == 0:
+                line = radFile.readline()
+                line = line.strip()
+                # logging.debug("New line: " + repr(line))
+                elements = shlex.split(line)    #this preserves quoted substrings
+
             if p.noOfStrings == -1:
                 p.noOfStrings = int(elements.pop(0))
-                logging.debug("noOfStrings: " + str(p.noOfStrings))
 
-            p.stringList.extend(elements)
-            logging.debug("strings p: " + ' '.join(p.stringList))
+            readIndices = min(p.noOfStrings, len(elements))         #two extreme cases need to be handled: string list spanning multiple lines or entire declaration (str, int, float) in the same line.
+            p.stringList.extend(elements[0:readIndices])
+            del elements[0:readIndices]
 
             if(p.noOfStrings == len(p.stringList)):
                 p.state = 'stringsRead'
-                line = radFile.readline()
-                continue
-            if(p.noOfStrings < len(p.stringList)):
-                logging.error(f"More string arguments provided for '{p.identifier}' primitive than expected. ABORTING.")
-                exit()
 
         #read the int arguments
         if p.state == 'stringsRead':
-            elements = line.split()
-            elements = list(map(int, elements))
-            # logging.debug("elements: ",elements)
-            if p.noOfInts == -1:
-                p.noOfInts = elements.pop(0)
-                logging.debug("noOfInts: " + str(p.noOfInts))
+            if len(elements) == 0:
+                line = line.strip()
+                # logging.debug("New line: " + repr(line))
+                line = radFile.readline()
+                elements = line.split()
 
-            p.intList.extend(elements)
-            logging.debug("ints p: " + ' '.join(p.intList))
+            if p.noOfInts == -1:
+                p.noOfInts = int(elements.pop(0))
+
+            readIndices = min(p.noOfInts, len(elements)) 
+            intElements = list(map(int, elements[0:readIndices]))
+            p.intList.extend(intElements)
+            del elements[0:readIndices]
 
             if(p.noOfInts == len(p.intList)):
                 p.state = 'intsRead'
-                line = radFile.readline()
-                continue
-            if(p.noOfInts < len(p.intList)):
-                logging.error(f"More int arguments provided for '{p.identifier}' primitive than expected. ABORTING.")
-                exit()
 
         #read the float arguments
         if p.state == 'intsRead':
-            elements = line.split()
-            elements = list(map(float, elements))
-            # logging.debug("elements: ",elements)
+            if len(elements) == 0:
+                line = line.strip()
+                # logging.debug("New line: " + repr(line))
+                line = radFile.readline()
+                elements = line.split()
+
             if p.noOfFloats == -1:
                 p.noOfFloats = int(elements.pop(0))
-                logging.debug("noOfFloats: " + str(p.noOfFloats))
 
-            p.floatList.extend(elements)
-            logging.debug("floats of p: " + ' '.join(map(str,p.floatList)))
+            readIndices = min(p.noOfFloats, len(elements)) 
+            floatElements = list(map(float, elements[0:readIndices]))
+            p.floatList.extend(floatElements)
+            del elements[0:readIndices]
 
             if(p.noOfFloats == len(p.floatList)):
                 p.state = 'floatsRead'
-            if(p.noOfFloats < len(p.floatList)):
-                logging.error(f"More float arguments provided for '{p.identifier}' primitive than expected. ABORTING.")
-                exit()
 
         if p.state == 'floatsRead':
             declarations.append(copy.deepcopy(p))
             del p
+            line = radFile.readline()
 
-        line = radFile.readline()
-
-    # logging.info(f"number of declarations: {len(declarations)}")
-    # for d in declarations:
-    #     logging.info(d)
-        # logging.debug(repr(p))
+    logging.info(f"number of declarations: {len(declarations)}")
+    for d in declarations:
+        # logging.info(d)
+        logging.debug(repr(d))
 
     return declarations
