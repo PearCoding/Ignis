@@ -1,3 +1,4 @@
+import parseRad
 from primitive import Primitive
 from command import Command
 import json
@@ -8,6 +9,8 @@ import config
 import itertools
 import copy
 from transformation import Transformation
+from jsonmerge import merge
+import struct
 
 #variables relevant for reading
 shapeList = ["sphere", "polygon", "ring", "cylinder", "cone"]
@@ -29,7 +32,7 @@ lights = []
 sampler = {}
 
 
-def processShape(primitive):
+def processShape(primitive, global_tform):
     
     #process the geometry
     p_type = primitive.type
@@ -50,7 +53,15 @@ def processShape(primitive):
         shape["center"] = [0, 0, 0]
         shape["radius"] = primitive.floatList[3]
         
-        transform = {"translate": primitive.floatList[0:3]}
+        tform = Transformation()
+        tx = float(primitive.floatList[0])
+        ty = float(primitive.floatList[1])
+        tz = float(primitive.floatList[2])
+        tform.translate(tx, ty, tz)
+        transform = {"matrix": tform.transformation.flatten().tolist()}
+        shape["transform"] = transform
+
+        transform = {"matrix": global_tform.transformation.flatten().tolist()}
         entity["transform"] = transform
 
     if (p_type == "ring"):
@@ -60,21 +71,63 @@ def processShape(primitive):
         shape["origin"] = [0, 0, 0]
         shape["radius"] = primitive.floatList[7]
         shape["normal"] = primitive.floatList[3:6]
+        
+        tform = Transformation()
+        tx = float(primitive.floatList[0])
+        ty = float(primitive.floatList[1])
+        tz = float(primitive.floatList[2])
+        tform.translate(tx, ty, tz)
+        transform = {"matrix": tform.transformation.flatten().tolist()}
+        shape["transform"] = transform
 
-        transform = {"translate": primitive.floatList[0:3]}
+        transform = {"matrix": global_tform.transformation.flatten().tolist()}
         entity["transform"] = transform
 
     if (p_type == "polygon"):
-        if(primitive.noOfFloats != 12):
-            logging.error("Can't process the polygon. " + primitive.noOfFloats + " float arguments provided.")
-        #assuming that 12 arguments are used only to define a rectangle, and no irregular shapes:
-        shape["type"] = "rectangle"
-        shape["p0"] = primitive.floatList[0:3]
-        shape["p1"] = primitive.floatList[3:6]
-        shape["p2"] = primitive.floatList[6:9]
-        shape["p3"] = primitive.floatList[9:12]
 
-        transform = {"translate": [0,0,0]}
+        N = float(primitive.noOfFloats)
+        
+        if(N % 3 != 0):
+            logging.error(f"Can't process the polygon with {primitive.noOfFloats} elements (should be a multiple of 3).")
+            return
+        if(N == 12):
+            #assuming that 12 arguments are used only to define a rectangle, and not an irregular shape:
+            shape["type"] = "rectangle"
+            shape["p0"] = primitive.floatList[0:3]
+            shape["p1"] = primitive.floatList[3:6]
+            shape["p2"] = primitive.floatList[6:9]
+            shape["p3"] = primitive.floatList[9:12]
+        else:
+            #save the polygon geometry in a .ply file
+            plyFileName = f'{name}.ply'         #this file will be created in the same folder as the output JSON file
+            shape["type"] = "ply"
+            shape["filename"] = plyFileName
+
+            # Write header of .ply file
+            fid = open(os.path.join(config.JSON_FILE_FOLDER, plyFileName),'wb')
+            fid.write(bytes('ply\n', 'utf-8'))
+            fid.write(bytes('format ascii 1.0\n', 'utf-8'))
+            fid.write(bytes('comment polygon created by rad2json\n', 'utf-8'))
+            fid.write(bytes(f'element vertex {int(N/3)}\n', 'utf-8'))
+            fid.write(bytes('property float x\n', 'utf-8'))
+            fid.write(bytes('property float y\n', 'utf-8'))
+            fid.write(bytes('property float z\n', 'utf-8'))
+            fid.write(bytes('element face 1\n', 'utf-8'))  #there is 1 "face" elements in the file
+            fid.write(bytes('property list uchar int vertex_indices\n', 'utf-8'))	#"vertex_indices" is a list of ints
+            fid.write(bytes('end_header\n', 'utf-8'))
+        
+            # Write 3D points to .ply file
+            for i in range(int(N/3)):
+                fid.write(bytes(f'{primitive.floatList[3*i]} {primitive.floatList[3*i+1]} {primitive.floatList[3*i+2]}\n', 'utf-8'))
+
+            fid.write(bytes(f'{int(N/3)}', 'utf-8'))
+            for i in range(int(N/3)):
+                fid.write(bytes(f' {i}', 'utf-8'))
+            fid.write(bytes('\n', 'utf-8'))
+
+            fid.close()   
+
+        transform = {"matrix": global_tform.transformation.flatten().tolist()}
         entity["transform"] = transform
 
     if (p_type == "cylinder"):
@@ -83,9 +136,8 @@ def processShape(primitive):
         shape["tipCenter"] = primitive.floatList[3:6]
         shape["radius"] = primitive.floatList[6]
         
-        #not explicitly defining transform as the base and tip center already are defined in global space here
-        # transform = {"translate": primitive.floatList[0:3]}
-        # entity["transform"] = transform
+        transform = {"matrix": global_tform.transformation.flatten().tolist()}
+        entity["transform"] = transform
             
     if (p_type == "cone"):
         shape["type"] = "cone"
@@ -95,15 +147,14 @@ def processShape(primitive):
         shape["tipCenter"] = primitive.floatList[3:6]
         shape["radius"] = max(primitive.floatList[6], primitive.floatList[7])
         
-        # transform = {"translate": primitive.floatList[0:3]}
-        # entity["transform"] = transform
+        transform = {"matrix": global_tform.transformation.flatten().tolist()}
+        entity["transform"] = transform
 
     shapes.append(shape)
     entities.append(entity)
     
 
     #process other properties
-
     light = {}
     if (primitive.modifier in lightDict):
         light["type"] = "area"
@@ -113,20 +164,21 @@ def processShape(primitive):
         lights.append(light)
 
 
-def handleMeshFile(fileName, transformations):
+def handleMeshFile(rtmFilename, transformations, global_tform):
     
     #we assume that the rad file specifies the rtm file path relative to itself.
-    fileName = os.path.join(config.RAD_FOLDER_PATH, fileName)
-    logging.info(f"Radiance mesh file name: {fileName}")
+    path = os.path.join(*config.path_stack)
+    rtmFilename = os.path.join(path, rtmFilename)
+    logging.info(f"Radiance mesh file name: {rtmFilename}")
 
-    if (not fileName.endswith('.rtm')):
+    if (not rtmFilename.endswith('.rtm')):
         logging.warning("The specified mesh file is not a .rtm file. Ignoring the mesh.")
         return
-    if (not os.path.isfile(fileName)):
+    if (not os.path.isfile(rtmFilename)):
         logging.warning("The specified mesh .rtm file does not exist. Ignoring the mesh.")
         return    
     
-    with open(fileName, 'rb') as rtmFile:
+    with open(rtmFilename, 'rb') as rtmFile:
         #read the second line
         line = rtmFile.readline()
         line = rtmFile.readline().decode('utf-8')
@@ -136,16 +188,17 @@ def handleMeshFile(fileName, transformations):
         logging.warning("Multiple obj files mentioned in .rtm, selecting the first one.")
     objFilename = objFilenames[0]
 
-    logging.info("Obj file to be loaded: " + objFilename)
+    #we assume that the rtm file specifies the obj file path relative to itself.
+    objRelativePath = os.path.join(os.path.dirname(rtmFilename), objFilename)
+    logging.info(f"Obj file to be referenced: {objRelativePath}")
 
     #Check if the obj file exists
-    if (not os.path.isfile(os.path.join(os.path.dirname(fileName), objFilename))):
-        logging.warning("The specified mesh .obj file does not exist. Make sure it is present before running the Ignis software.")
+    if (not os.path.isfile(objRelativePath)):
+        logging.warning(f"The specified {objRelativePath} file does not exist. Make sure it is present before running the Ignis software.")
 
 
     #parse the transformations
-    #set defaults
-    tform = Transformation()
+    tform = Transformation()        #default transformation
 
     while len(transformations) > 0:
         argument = transformations.pop(0)
@@ -156,15 +209,12 @@ def handleMeshFile(fileName, transformations):
             tform.translate(tx, ty, tz)
         elif argument == "-rx":
             rx = float(transformations.pop(0))
-            # tform.rotate(rx, 0, 0)
             tform.rotate_x(rx)
         elif argument == "-ry":
             ry = float(transformations.pop(0))
-            # tform.rotate(0, ry, 0)
             tform.rotate_y(ry)
         elif argument == "-rz":
             rz = float(transformations.pop(0))
-            # tform.rotate(0, 0, rz)
             tform.rotate_z(rz)
         elif argument == "-s":
             s = float(transformations.pop(0))
@@ -176,11 +226,8 @@ def handleMeshFile(fileName, transformations):
         elif argument == "-mz":
             tform.mirror_z()
         else:
-            logging.warning(f"Unknown transformation argument '{argument}'' for {fileName} ignored.")
+            logging.warning(f"Unknown transformation argument '{argument}'' for {rtmFilename} ignored.")
 
-    # transform = {"translate": [tform.tx, tform.ty, tform.tz],
-    #             "rotate": [tform.rx, tform.ry, tform.rz],
-    #             "scale": [tform.sx, tform.sy, tform.sz]}
     transform = {"matrix": tform.transformation.flatten().tolist()}
 
     shape = {}
@@ -191,12 +238,15 @@ def handleMeshFile(fileName, transformations):
     nameCount = nameCount + 1
     shape["type"] = "obj"
     shape["name"] = name
-    shape["filename"] = objFilename
+    # shape["filename"] = objFilename
+    shape["filename"] =  os.path.relpath(objRelativePath, config.JSON_FILE_FOLDER)
     shape["transform"] = transform
     shapes.append(shape)
 
 
-    #check if transformations has been specified by a preceeding xform, create one entity corresponding to each
+    #check if transformations has been specified by a preceeding xform. If yes, create one entity corresponding to each
+    #note that the tforms in xform_tform_list already contain global_tform. So, we explicitly apply global_tform only when xform_tform_list is not specified
+
     #get the transformation from a preceeding xform command.
     global xform_tform_list
     if len(xform_tform_list) > 0:
@@ -209,9 +259,6 @@ def handleMeshFile(fileName, transformations):
             entity["name"] = name + '_' + str(count)
             entity["shape"] = name
             entity["bsdf"] = bsdfs[0]["name"]
-            # transform = {"translate": [tf.tx, tf.ty, tf.tz],
-            #             "rotate": [tf.rx, tf.ry, tf.rz],
-            #             "scale": [tf.sx, tf.sy, tf.sz]}'
             transform = {"matrix": tf.transformation.flatten().tolist()}
             entity["transform"] = transform
             entities.append(entity)
@@ -220,6 +267,8 @@ def handleMeshFile(fileName, transformations):
         entity["name"] = name
         entity["shape"] = name
         entity["bsdf"] = bsdfs[0]["name"]
+        transform = {"matrix": global_tform.transformation.flatten().tolist()}
+        entity["transform"] = transform
         entities.append(entity)
 
     
@@ -246,9 +295,6 @@ def generateBox(material, name, width, height, depth, tform = None):
             entity["name"] = name + '_' + str(count)
             entity["shape"] = name
             entity["bsdf"] = bsdfs[0]["name"]
-            # transform = {"translate": [tf.tx, tf.ty, tf.tz],
-            #             "rotate": [tf.rx, tf.ry, tf.rz],
-            #             "scale": [tf.sx, tf.sy, tf.sz]}'
             transform = {"matrix": tf.transformation.flatten().tolist()}
             entity["transform"] = transform
             entities.append(entity)
@@ -294,7 +340,7 @@ def combine_tforms(tform_holder):
 
     return composite_tforms
 
-def handleCommand(command):
+def handleCommand(command, global_tform, depth):
     elements = shlex.split(command)
 
     global xform_tform_list
@@ -312,11 +358,16 @@ def handleCommand(command):
         if len(xform_tform_list) > 0:
             tform = copy.deepcopy(xform_tform_list)
             xform_tform_list.clear()
-
+        else:
+            #note that the tforms in xform_tform_list already contain global_tform. So, we explicitly apply global_tform only when xform tforms are not used
+            tform = [global_tform]          #generateBox() function expects the transformations in a list
+            
         generateBox(material, name, width, height, depth, tform)
 
+        return None
+
     elif elements[0] == "xform":
-        #NOTE: we keep track of only the last xform, which can be used by a subsequent command
+        #NOTE: if a rad file is not passed with xform, we keep track of the latest xform, which can be used by a subsequent command
 
         logging.debug("Parsing xform command.")
         elements.pop(0)     #Removes the "xform" keyword
@@ -327,7 +378,7 @@ def handleCommand(command):
         #variable to store the partial transformations (mainly used to handle the -a flag)
         xform_holder = []
 
-        #set defaults
+        #default transformation
         xform = Transformation()
 
         while len(elements) > 0:
@@ -340,15 +391,12 @@ def handleCommand(command):
                 xform.translate(tx, ty, tz)
             elif argument == "-rx":
                 rx = float(elements.pop(0))
-                # xform.rotate(rx, 0, 0)
                 xform.rotate_x(rx)
             elif argument == "-ry":
                 ry = float(elements.pop(0))
-                # xform.rotate(0, ry, 0)
                 xform.rotate_y(ry)
             elif argument == "-rz":
                 rz = float(elements.pop(0))
-                # xform.rotate(0, 0, rz)
                 xform.rotate_z(rz)
             elif argument == "-s":
                 s = float(elements.pop(0))
@@ -364,53 +412,84 @@ def handleCommand(command):
                 xform_holder.append(xform)
                 #create a new xform and let the subsequent transformations be applied to this
                 xform = Transformation(is_array = True, num_instances = int(elements.pop(0)))
-            elif argument == "-i":          #TODO: not processing -i flag which is not associated with a '-a' flag
-                #we ignore the int passed with the argument for now
+            elif argument == "-i":          
+                logging.warning("'-i' flag currently works only in association with a preceding '-a' flag.")
+                #we ignore the int passed with the argument as it is used only with independent '-i' flag
                 _ = elements.pop(0)
                 #end the current tform by putting it in a list
                 xform_holder.append(xform)
                 #create a new tform for subsequent transformations
                 xform = Transformation()
             elif argument.endswith(".rad"):
-                xform_files.append(argument)
+                # filename = os.path.join(config.RAD_FILE_FOLDER, argument)
+                filename = argument
+                logging.debug(f"{filename} provided with xform")
+                xform_files.append(filename)
             else:
                 logging.warning(f"Unknown argument {argument} in xform ignored.")
-        
+
         #end the current tform by putting it in a list
         xform_holder.append(xform)
-        #go through the xforms and generate one tform corresponding to each instance
-        final_tforms = combine_tforms(xform_holder)
-        
-        #process all the files which have been passed, else it will be saved and used later by a command (basically by a standard input).
+
+        #ignore the -a sections of xform when .rad files are specified with it (to ignore complications)
         if len(xform_files) > 0:
-            #TODO: actually process the file
-            ...
+            for t in xform_holder:
+                if t.isArray is True:
+                    logging.warning("Ignoring the -a sections of xform specified for .rad files")
+                    t = Transformation()
+        
+        #go through the xforms and generate one tform corresponding to each instance
+        xform_tforms = combine_tforms(xform_holder)
+
+        # logging.debug(f"Intermediate combined xform tforms: {xform_tforms}")
+        # logging.debug(f"Global tform: {repr(global_tform)}")
+
+        #to each of the xform tform, apply the global tform
+        final_tform_list = []
+        for xform_tform in xform_tforms:
+            xform_tform.transform(global_tform)
+            final_tform_list.append(copy.deepcopy(xform_tform))
+
+        logging.debug(f"Final xform tforms: {final_tform_list}")
+
+        #process all the files which have been passed, else the xform will be saved and used later by a command (basically by a standard input).
+        if len(xform_files) > 0:
+            radJSONdump = parseRad.parseRad(xform_files, final_tform_list[0], depth+1)       #we allow only a single transformation to be passed here since '-a' flag is ignored
+            return radJSONdump
         else:
-            xform_tform_list = final_tforms
+            xform_tform_list = final_tform_list
+            return None
 
     else:
         logging.warning(f"Can't parse the command: {command}. Ignoring it.")
+        return None
 
 
-def restructurePrimitives(declarations):
-    #iterates through a list of primitives and restructures them to Ignis compatible form
-    logging.debug("restructurePrimitives() called.")
+def restructureDeclarations(declarations, global_tform, depth):
+    #iterates through a list of primitives and commands and restructures them to Ignis compatible form
+    logging.debug(f"restructureDeclarations() called with tform: {repr(global_tform)} at depth {depth}")
     logging.debug("Retrieving geometries from stacks and saving them in json compatible structures.")
 
-    #move this inside processShape() when each material has a different bsdf
-    bsdfs.append({"type":"diffuse", "name": "gray", "reflectance":[0.8,0.8,0.8]})
+
+    if depth == 1:
+        bsdfs.append({"type":"diffuse", "name": "gray", "reflectance":[0.8,0.8,0.8]})   #move this inside processShape() when each material has a different bsdf 
+        lights.append({"type":"env", "name":"Light", "radiance":[1,1,1]})
+
+    commandJSONdump = None
 
     for d in declarations:
         if isinstance(d, Command): 
-            handleCommand(d.command)
+            commandJSONdump_new = handleCommand(d.command, global_tform, depth)
+            #commandJSONdump is valid only when there is an xform command with .rad file mentioned in it (which calls parseRad() and returns the rad geometry as json data)
+            commandJSONdump = merge(commandJSONdump_new, commandJSONdump)
         elif isinstance(d, Primitive): 
             if d.type == 'light':
                 #store the radiance value; to be used later when the corresponding shape gets processed.
                 lightDict[d.identifier] = d.floatList
             elif d.type in shapeList:
-                processShape(d)
+                processShape(d, global_tform)
             elif d.type == 'mesh': 
-                handleMeshFile(d.stringList.pop(0), d.stringList) 
+                handleMeshFile(d.stringList.pop(0), d.stringList, global_tform) 
             else:
                 logging.warning(f"Can't handle primitive of type '{d.type}'.")
 
@@ -436,19 +515,20 @@ def restructurePrimitives(declarations):
                             0,0,0,1]
     # rview -vtv -vp 0.49 0 0 -vd -1 0 0 -vu 0 0 1 -vh 80 -vv 80 -vo 0 -va 0 -vs 0 -vl 0
     #https://www.3dgep.com/understanding-the-view-matrix/
-    
-    # uncomment if you need env light too 
-    # lights.append({"type":"env", "name":"Light", "radiance":[1,1,1]})
+
 
     res_dict = {}
     res_dict['technique'] = technique
     res_dict['camera'] = camera
     res_dict['film'] = film
     res_dict['bsdfs'] = bsdfs
+    res_dict['lights'] = lights
     res_dict['shapes'] = shapes
     res_dict['entities'] = entities
-    res_dict['lights'] = lights
 
     jsonData = json.dumps(res_dict, indent=4)
     
+    if commandJSONdump is not None:
+        jsonData = merge(commandJSONdump, jsonData)
+
     return jsonData

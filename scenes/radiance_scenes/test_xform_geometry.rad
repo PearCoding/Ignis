@@ -1,0 +1,11 @@
+!xform -t 2 2 2 -t 0.5 -1 1.7 -s 3.2 -rx 30 -my -rz -10
+!genbox mat.wall obj.box 1 1 1 -i
+
+#!xform -a 5 -t 1.2 1.2 1.2 -i 1 -t 0 0 5
+#!genbox mat.wall obj.box 1 1 1 -i
+
+#!xform -a 5 -ry 10 -a 2 -rx 50 -i 1
+#!genbox mat.wall obj.box 1 1 1 -i
+
+!xform -a 5 -t 1.2 1.2 1.2 -a 2 -t 1.2 0 0 -i 1 -t 0 0 0
+!genbox mat.wall obj.box 1 1 1 -i

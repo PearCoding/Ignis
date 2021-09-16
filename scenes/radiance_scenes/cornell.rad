@@ -4,7 +4,6 @@ void light mat.light
 3 100.0 100.0 100.0
 
 mat.light polygon obj.source
-#void polygon obj.source
 0
 0
 12 -0.1 -0.1 0.45 -0.1 0.1 0.45 0.1 0.1 0.45 0.1 -0.1 0.45
@@ -19,8 +18,7 @@ void glass mat.sphere2
 0
 3 0.2 0.2 0.8
 
-void sphere obj.sphere
-#mat.sphere sphere obj.sphere
+mat.sphere sphere obj.sphere
 0
 0
 4 -0.2 0.1 -0.3 0.1
@@ -40,12 +38,10 @@ void plastic mat.blue_wall
 0
 5 .2 .2 .7 0 .1
 
-#!xform -t -0.5 -0.5 -0.5
 !xform -t 1 1 1
 !genbox mat.wall obj.box 1 1 1 -i
 
-#mat.red_wall polygon obj.box.1540
-void polygon obj.box.1540
+mat.red_wall polygon obj.box.1540
 0
 0
 12
@@ -54,8 +50,7 @@ void polygon obj.box.1540
                 0.5               -0.5                0.5
                 0.5               -0.5               -0.5
 
-#mat.white_wall polygon obj.box.4620
-void polygon obj.box.4620
+mat.white_wall polygon obj.box.4620
 0
 0
 12
@@ -64,8 +59,7 @@ void polygon obj.box.4620
                -0.5                0.5                0.5
                -0.5               -0.5                0.5
 
-#mat.white_wall polygon obj.box.2310
-void polygon obj.box.2310
+mat.white_wall polygon obj.box.2310
 0
 0
 12
@@ -74,8 +68,7 @@ void polygon obj.box.2310
                 0.5                0.5               -0.5
                -0.5                0.5               -0.5
 
-#mat.blue_wall polygon obj.box.3267
-void polygon obj.box.3267
+mat.blue_wall polygon obj.box.3267
 0
 0
 12
@@ -84,8 +77,7 @@ void polygon obj.box.3267
                -0.5                0.5               -0.5
                 0.5                0.5               -0.5
 
-#mat.white_wall polygon obj.box.5137
-void polygon obj.box.5137
+mat.white_wall polygon obj.box.5137
 0
 0
 12
@@ -94,8 +86,7 @@ void polygon obj.box.5137
                 0.5               -0.5               -0.5
                 0.5               -0.5                0.5
 
-#mat.white_wall polygon obj.box.6457
-void polygon obj.box.6457
+mat.white_wall polygon obj.box.6457
 0
 0
 12

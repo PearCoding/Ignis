@@ -1,0 +1,10 @@
+rad2json.py script is used to convert Radiance compatible .rad files to Ignis compatible .json files.
+
+Required packages: jsonmerge
+
+Syntax:
+rad2json.py path/to/input/rad/file [path/to/output/json/file] [-v/--verbose] [-d/--debug]
+
+If the output path is not provided, it will store the json file by the same name and path as the input.
+
+Sample radiance files can be found in ../../scenes/radiance_scenes folder.
