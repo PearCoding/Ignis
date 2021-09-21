@@ -118,3 +118,11 @@ fn @make_buffer_table(dtb: DynTable, acc: DeviceBufferAccessor) -> BufferTable {
         get_table_entry(entry.offset, dtb, acc)
     } 
 }
+
+// Mandatory information for the tracing part
+struct TraceAccessor {
+    info:       SceneInfo,
+    shapes:     ShapeTable,  // Defined in shape.art
+    entities:   EntityTable, // Defined in entity.art
+    bvhs:       BVHTable     // Defined in intersection.art
+}

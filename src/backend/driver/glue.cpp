@@ -12,9 +12,9 @@
 #include <x86intrin.h>
 #endif
 
+#include <iomanip>
 #include <mutex>
 #include <thread>
-#include <iomanip>
 
 /// Some arrays do not need new allocations at the host if the data is already provided and properly arranged.
 /// However, this assumes that the pointer is always properly aligned!
@@ -140,6 +140,7 @@ struct Interface {
 	const IG::SceneDatabase* database;
 	size_t film_width;
 	size_t film_height;
+	IG::uint32 iteration;
 
 	const IG::Ray* ray_list; // film_width contains number of rays
 
@@ -386,9 +387,10 @@ void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
 	renderSettings.max_path_len = settings->max_path_length;
 	renderSettings.debug_mode	= settings->debug_mode;
 
-	sInterface->ray_list = settings->rays;
+	sInterface->ray_list  = settings->rays;
+	sInterface->iteration = iter;
 
-	ig_render(&renderSettings, (int)iter);
+	ig_render(&renderSettings);
 }
 
 void glue_setup(const DriverSetupSettings* settings)
@@ -494,30 +496,6 @@ IG_EXPORT DriverInterface ig_get_interface()
 	interface.Configuration |= IG::IG_C_DEVICE_AMD_MEGA;
 #else
 #error No device selected!
-#endif
-
-// Expose Camera
-#if defined(CAMERA_PERSPECTIVE)
-	interface.Configuration |= IG::IG_C_CAMERA_PERSPECTIVE;
-#elif defined(CAMERA_ORTHOGONAL)
-	interface.Configuration |= IG::IG_C_CAMERA_ORTHOGONAL;
-#elif defined(CAMERA_FISHLENS)
-	interface.Configuration |= IG::IG_C_CAMERA_FISHLENS;
-#elif defined(CAMERA_LIST)
-	interface.Configuration |= IG::IG_C_CAMERA_LIST;
-#else
-#error No camera selected!
-#endif
-
-// Expose Integrator
-#if defined(RENDERER_PATH)
-	interface.Configuration |= IG::IG_C_RENDERER_PATH;
-#elif defined(RENDERER_AO)
-	interface.Configuration |= IG::IG_C_RENDERER_AO;
-#elif defined(RENDERER_DEBUG)
-	interface.Configuration |= IG::IG_C_RENDERER_DEBUG;
-#else
-#error No renderer selected!
 #endif
 
 	interface.SetupFunction			   = glue_setup;

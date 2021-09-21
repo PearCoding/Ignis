@@ -1,8 +1,8 @@
-fn @make_ao_renderer(spp: i32) -> Renderer {
+fn @make_ao_renderer() -> PathTracerFactory {
     let offset:f32 = 0.001;
 
-    @ |scene, device, iter| {
-        let path_tracer = PathTracer {
+    @ |_scene| {
+        PathTracer {
             on_hit    = @ |_, _, _, _, _| Option[(Color)]::None,
             on_miss   = @ |_, _| Option[(Color)]::None,
             on_shadow = @ |ray, _, state, surf, _| {
@@ -18,8 +18,6 @@ fn @make_ao_renderer(spp: i32) -> Renderer {
                 }
             },
             on_bounce = @ |_, _, _, _, _| Option[(Ray, RayState)]::None,
-        };
-
-        device.trace(scene, path_tracer, spp);
+        }
     }
 }

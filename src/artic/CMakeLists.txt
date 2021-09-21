@@ -26,6 +26,7 @@ set(ARTIC_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/material.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/microfacet.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pathtracer.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/pipeline.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/scene.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/shape.art

@@ -5,6 +5,8 @@ struct PathTracer {
     on_bounce: fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[(Ray, RayState)],
 }
 
+type PathTracerFactory = fn (Scene) -> PathTracer;
+
 struct RayState {
     rnd:     RndState,
     contrib: Color,

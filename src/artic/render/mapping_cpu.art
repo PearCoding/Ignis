@@ -229,8 +229,8 @@ fn @cpu_generate_rays( primary: PrimaryStream
     primary.size + num_rays
 }
 
-fn @cpu_traverse_primary(scene: Scene, min_max: MinMax, primary: &PrimaryStream, single: bool, vector_width: i32) -> () {
-    fn cpu_traverse_primary_specialized(scene2: Scene, primary2: &PrimaryStream) -> () {
+fn @cpu_traverse_primary(scene: SceneGeometry, min_max: MinMax, primary: &PrimaryStream, single: bool, vector_width: i32) -> () {
+    fn cpu_traverse_primary_specialized(scene2: SceneGeometry, primary2: &PrimaryStream) -> () {
         cpu_traverse(
             min_max,
             scene2,
@@ -245,8 +245,8 @@ fn @cpu_traverse_primary(scene: Scene, min_max: MinMax, primary: &PrimaryStream,
     $cpu_traverse_primary_specialized(scene, primary);
 }
 
-fn @cpu_traverse_secondary(scene: Scene, min_max: MinMax, secondary: &SecondaryStream, single: bool, vector_width: i32) -> () {
-    fn cpu_traverse_secondary_specialized(scene2: Scene, secondary2: &SecondaryStream) -> () {
+fn @cpu_traverse_secondary(scene: SceneGeometry, min_max: MinMax, secondary: &SecondaryStream, single: bool, vector_width: i32) -> () {
+    fn cpu_traverse_secondary_specialized(scene2: SceneGeometry, secondary2: &SecondaryStream) -> () {
         cpu_traverse(
             min_max,
             scene2,
@@ -379,8 +379,8 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
-fn @cpu_trace( scene: Scene
-             , path_tracer: PathTracer
+fn @cpu_trace( scene: SceneGeometry
+             , pipeline: Pipeline
              , min_max: MinMax
              , single: bool
              , tile_size: i32
@@ -421,17 +421,20 @@ fn @cpu_trace( scene: Scene
                 // (Re-)generate primary rays
                 if primary.size < capacity {
                     // [Call to Emittor]
-                    primary.size = cpu_generate_rays(primary, capacity, path_tracer.on_emit, &mut id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width);
+                    primary.size = pipeline.on_generate(primary, capacity, &mut id, xmin, ymin, xmax, ymax);
+                    //primary.size = cpu_generate_rays(primary, capacity, path_tracer.on_emit, &mut id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width);
                 }
 
                 if scene.info.num_entities == 0 {
                     // [Call to Shader]
-                    cpu_miss_shade(primary, path_tracer, accumulate, 0, primary.size, vector_width);
+                    pipeline.on_miss_shade(primary, 0, primary.size);
+                    //cpu_miss_shade(primary, path_tracer, accumulate, 0, primary.size, vector_width);
                     primary.size = 0;
                 } else {
                     // Trace primary rays
                     // [Call to Intersector]
                     cpu_profile(if first { &mut primary_counter } else { &mut bounces_counter }, || {
+                        //pipeline.on_traverse_primary(scene, primary, single);
                         cpu_traverse_primary(scene, min_max, primary, single, vector_width);
                     });
                     atomic(1:u32, &mut total_rays, primary.size as i64, 7:u32, "");
@@ -447,14 +450,16 @@ fn @cpu_trace( scene: Scene
                         let mut begin = 0;
                         for ent_id in range(0, scene.info.num_entities) {
                             let end = ray_ends(ent_id);
-                            cpu_shade(ent_id, primary, secondary, scene, path_tracer, accumulate, begin, end, vector_width);
+                            pipeline.on_hit_shade(ent_id, primary, secondary, begin, end);
+                            //cpu_shade(ent_id, primary, secondary, scene, path_tracer, accumulate, begin, end, vector_width);
                             begin = end;
                         }
 
                         // Shade misses as well
                         let last = ray_ends(scene.info.num_entities);
                         if(begin < last) {
-                            cpu_miss_shade(primary, path_tracer, accumulate, begin, last, vector_width);
+                            pipeline.on_miss_shade(primary, begin, last);
+                            //cpu_miss_shade(primary, path_tracer, accumulate, begin, last, vector_width);
                         }
                     });
 
@@ -467,6 +472,7 @@ fn @cpu_trace( scene: Scene
                     secondary.size = cpu_compact_secondary(secondary, vector_width, vector_compact);
                     if likely(secondary.size > 0) {
                         cpu_profile(&mut shadow_counter, || {
+                            //pipeline.on_traverse_secondary(scene, secondary, single);
                             cpu_traverse_secondary(scene, min_max, secondary, single, vector_width);
                         });
                     }
@@ -552,10 +558,10 @@ fn @make_cpu_buffer(p: &[u8]) = DeviceBuffer {
 };
 
 fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_width: i32, num_cores: i32, tile_size: i32) = Device {
-    trace = @ |scene, path_tracer, spp| {
+    trace = @ |scene, pipeline, spp| {
         cpu_trace(
             scene,
-            path_tracer,
+            pipeline,
             min_max,
             single,
             tile_size,
@@ -585,13 +591,8 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         database
     },
     load_scene_info      = cpu_get_scene_info,
-    load_buffer_table    = @ |dtb| make_buffer_table(dtb, make_cpu_buffer), // [Obsolete]
-    load_texture_table   = @ |dtb, stage| make_texture_table(dtb, make_cpu_buffer, stage), // [Obsolete]
-    load_entity_table    = @ |dtb, stage| make_entity_table(dtb, make_cpu_buffer, stage),
-    load_shape_table     = @ |dtb, stage| make_shape_table(dtb, make_cpu_buffer, stage),
-    load_light_table     = @ |dtb, stage| make_light_table(dtb, make_cpu_buffer, stage), // [Obsolete]
-    load_arealight_table = @ |dtb, stage| make_arealight_table(dtb, make_cpu_buffer, stage), // [Obsolete]
-    load_shader_table    = @ |dtb, stage| make_shader_table(dtb, make_cpu_buffer, stage), // [Obsolete]
+    load_entity_table    = @ |dtb| make_entity_table(dtb, make_cpu_buffer),
+    load_shape_table     = @ |dtb| make_shape_table(dtb, make_cpu_buffer),
     load_bvh_table       = @ |dtb| -> BVHTable {
         @ |id| {
             let entry  = get_lookup_entry(id as u64,   dtb, make_cpu_buffer); 

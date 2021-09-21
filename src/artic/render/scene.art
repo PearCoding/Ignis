@@ -9,36 +9,27 @@ struct SceneInfo {
 struct Scene {
     info:     SceneInfo,
     database: SceneAccessor,
+}
+
+struct SceneGeometry {
+    info:     SceneInfo,
+    database: TraceAccessor,
     bvh:      SceneBvh
 }
 
 // Rendering device
 struct Device {
-    trace:   fn (Scene, PathTracer, i32) -> (),
+    trace:   fn (SceneGeometry, Pipeline, i32) -> (),
     present: fn () -> (),
-
-    //make_emitter: fn (RayEmitter) -> DeviceEmitter,
-
-    // General formats
-    //load_image: fn (&[u8]) -> Image,
-    //load_cdf1d: fn (&[u8]) -> CDF1D,
-    //load_cdf2d: fn (&[u8]) -> CDF2D,
-    //load_klems: fn (&[u8]) -> KlemsModel,
 
     load_scene_bvh:       fn () -> SceneBvh,
     load_scene_database:  fn () -> SceneDatabase,
     load_scene_info:      fn () -> SceneInfo,
-    load_buffer_table:    fn (DynTable) -> BufferTable, // [Obsolete]
-    load_texture_table:   fn (DynTable, Stage1Accessor) -> TextureTable, // [Obsolete]
-    load_entity_table:    fn (DynTable, Stage2Accessor) -> EntityTable,
-    load_shape_table:     fn (DynTable, Stage2Accessor) -> ShapeTable,
-    load_light_table:     fn (DynTable, Stage3Accessor) -> LightTable, // [Obsolete]
-    load_arealight_table: fn (DynTable, Stage3Accessor) -> LightTable, // [Obsolete]
-    load_shader_table:    fn (DynTable, Stage3Accessor) -> BsdfTable, // [Obsolete]
+    load_entity_table:    fn (DynTable) -> EntityTable,
+    load_shape_table:     fn (DynTable) -> ShapeTable,
     load_bvh_table:       fn (DynTable) -> BVHTable,
 
     load_rays: fn () -> &[StreamRay]
 }
 
-type Renderer = fn (Scene, Device, i32) -> ();
-type Shader   = fn (Ray, Hit, SurfaceElement) -> Bsdf;
+type Shader = fn (Ray, Hit, SurfaceElement) -> Bsdf;

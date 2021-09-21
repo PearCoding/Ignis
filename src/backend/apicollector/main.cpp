@@ -22,6 +22,8 @@ inline std::string get_name(const std::filesystem::path& path)
 	return directory + "_" + filename;
 }
 
+/// Simple tool to collect all artic related source code and embed it into a c file for on demand loading
+/// without mangling with files in the given host operating system.
 int main(int argc, char** argv)
 {
 	std::vector<std::filesystem::path> inputs;

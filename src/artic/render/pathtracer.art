@@ -1,5 +1,5 @@
-fn @make_path_tracing_renderer(max_path_len: i32, spp: i32) -> Renderer {
-    @ |scene, device, iter| {
+fn @make_path_tracing_renderer(max_path_len: i32) -> PathTracerFactory {
+    @ |scene| {
         let offset : f32  = 0.001;
         let num_lights    = scene.info.num_lights;
         let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
@@ -148,13 +148,11 @@ fn @make_path_tracing_renderer(max_path_len: i32, spp: i32) -> Renderer {
             }
         }
 
-        let path_tracer = PathTracer {
+        PathTracer {
             on_hit    = on_hit,
             on_miss   = on_miss,
             on_shadow = on_shadow,
             on_bounce = on_bounce
-        };
-
-        device.trace(scene, path_tracer, spp);
+        }
     }
 }

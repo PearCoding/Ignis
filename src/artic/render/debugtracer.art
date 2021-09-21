@@ -24,9 +24,9 @@ fn @color_map(i: i32) = [
         make_color(0.112500, 0.317935, 0.450000)
     ](i%23);
 
-fn @make_debug_renderer(debug_mode: i32) -> Renderer {
-    @ |scene, device, iter| {
-        let path_tracer = PathTracer {
+fn @make_debug_renderer(debug_mode: i32) -> PathTracerFactory {
+    @ |_scene| {
+        PathTracer {
             on_hit    = @ |ray, hit, state, surf, mat| {
                 match debug_mode {
                     1 => { // DEBUG_TANGENT
@@ -112,8 +112,6 @@ fn @make_debug_renderer(debug_mode: i32) -> Renderer {
             on_miss   = @ |_, _| Option[(Color)]::None,
             on_shadow = @ |_, _, _, _, _| Option[(Ray, Color)]::None,
             on_bounce = @ |_, _, _, _, _| Option[(Ray, RayState)]::None,
-        };
-
-        device.trace(scene, path_tracer, 1);
+        }
     }
 }

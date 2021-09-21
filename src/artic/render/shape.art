@@ -55,7 +55,7 @@ fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
 
 type ShapeTable  = fn (i32) -> Shape;
 
-fn @make_shape_table(dtb: DynTable, acc: DeviceBufferAccessor, _stage: Stage2Accessor) -> ShapeTable {
+fn @make_shape_table(dtb: DynTable, acc: DeviceBufferAccessor) -> ShapeTable {
     @ |id| {
         let entry = get_lookup_entry(id as u64, dtb, acc); // Type is TriMesh for currently.
         let data  = get_table_entry(entry.offset, dtb, acc);

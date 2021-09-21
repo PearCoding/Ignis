@@ -15,7 +15,7 @@ fn @gpu_get_film_data(dev_id: i32) -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
-fn @gpu_traverse_primary(primary: PrimaryStream, acc: Accelerator, min_max: MinMax, scene: Scene) -> () {
+fn @gpu_traverse_primary(primary: PrimaryStream, acc: Accelerator, min_max: MinMax, scene: SceneGeometry) -> () {
     gpu_traverse_single(
         acc,
         min_max,
@@ -55,7 +55,7 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
                           , acc: Accelerator
                           , atomics: Atomics
                           , min_max: MinMax
-                          , scene: Scene
+                          , scene: SceneGeometry
                           , film_pixels: &mut [f32]
                           , spp: i32
                           ) -> () {
@@ -217,7 +217,7 @@ fn @gpu_sort_primary( primary: PrimaryStream
                     , dev_id: i32
                     , acc: Accelerator
                     , atomics: Atomics
-                    , scene: Scene
+                    , scene: SceneGeometry
                     , gpu_tmp:  &mut [i32]
                     , ray_ends: &mut [i32]
                     ) -> () {
@@ -352,8 +352,8 @@ fn @gpu_trace( dev_id: i32
              , acc: Accelerator
              , atomics: Atomics
              , min_max: MinMax
-             , scene: Scene
-             , path_tracer: PathTracer
+             , scene: SceneGeometry
+             , pipeline: Pipeline
              , spp: i32
              ) -> () {
     let (film_pixels, film_width, film_height) = gpu_get_film_data(dev_id);
@@ -375,13 +375,15 @@ fn @gpu_trace( dev_id: i32
         // Regenerate rays
         // [Call to Emittor]
         if primary.size < capacity && id < num_rays {
-            primary.size = gpu_generate_rays(primary, capacity, acc, path_tracer.on_emit, &mut id, film_width, film_height, spp);
+            primary.size = pipeline.on_generate(primary, capacity, &mut id, 0, 0, film_width, film_height);
+            //primary.size = gpu_generate_rays(primary, capacity, acc, path_tracer.on_emit, &mut id, film_width, film_height, spp);
         }
 
         // Special case: No entities to intersect
         // [Call to Shader]
         if scene.info.num_entities == 0 {
-            gpu_missshade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, 0, primary.size);
+            pipeline.on_miss_shade(primary, 0, primary.size);
+            //gpu_missshade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, 0, primary.size);
             primary.size = 0;
             acc.sync();
             continue()
@@ -389,6 +391,7 @@ fn @gpu_trace( dev_id: i32
 
         // Traverse primary rays
         // [Call to Intersector]
+        //pipeline.on_traverse_primary(scene, primary, true);
         gpu_traverse_primary(primary, acc, min_max, scene);
 
         // Sort rays by entity
@@ -404,7 +407,8 @@ fn @gpu_trace( dev_id: i32
             if first >= last {
                 continue()
             }
-            gpu_shade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, secondary, first, last, ent_id);
+            pipeline.on_hit_shade(ent_id, primary, secondary, first, last);
+            //gpu_shade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, secondary, first, last, ent_id);
             first = last;
         }
 
@@ -412,7 +416,8 @@ fn @gpu_trace( dev_id: i32
         // [Call to Shader]
         let last = ray_ends(scene.info.num_entities);
         if(first < last) {
-            gpu_missshade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, first, last);
+            pipeline.on_miss_shade(primary, first, last);
+            //gpu_missshade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, first, last);
             // Do not set first as last (to make sure they drop out)
         }
 
@@ -423,6 +428,7 @@ fn @gpu_trace( dev_id: i32
         if first > 0 {
             // Trace secondary rays
             // [Call to Intersector]
+            //pipeline.on_traverse_secondary(scene, secondary, true);
             gpu_traverse_secondary(secondary, acc, atomics, min_max, scene, film_pixels, spp);
 
             // Compact primary rays
@@ -565,14 +571,14 @@ fn @make_gpu_device( dev_id: i32
                    , atomics: Atomics
                    , is_nvvm: bool
                    ) = Device {
-    trace = @ |scene, path_tracer, spp| {
+    trace = @ |scene, pipeline, spp| {
         gpu_trace(
             dev_id,
             acc,
             atomics,
             min_max,
             scene,
-            path_tracer,
+            pipeline,
             spp
         )
     },
@@ -593,13 +599,8 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_scene_info(dev_id, &mut info);
         info
     },
-    load_buffer_table    = @ |dtb| make_buffer_table(dtb, accb),
-    load_texture_table   = @ |dtb, stage| make_texture_table(dtb, make_cpu_buffer, stage),
-    load_entity_table    = @ |dtb, stage| make_entity_table(dtb, accb, stage),
-    load_shape_table     = @ |dtb, stage| make_shape_table(dtb, accb, stage),
-    load_light_table     = @ |dtb, stage| make_light_table(dtb, accb, stage),
-    load_arealight_table = @ |dtb, stage| make_arealight_table(dtb, accb, stage),
-    load_shader_table    = @ |dtb, stage| make_shader_table(dtb, accb, stage),
+    load_entity_table    = @ |dtb| make_entity_table(dtb, accb),
+    load_shape_table     = @ |dtb| make_shape_table(dtb, accb),
     load_bvh_table       = @ |dtb| -> BVHTable {
         @ |id| {
             let entry  = get_lookup_entry(id as u64, dtb, accb); 

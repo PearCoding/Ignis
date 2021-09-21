@@ -173,12 +173,12 @@ fn @make_cpu_int_min_max() -> MinMax {
 
 // Traverses a primitive BVH with a single ray.
 fn @cpu_traverse_single_helper_prim( mut ray: Ray
-                                    , octant: RayOctant
-                                    , min_max: MinMax
-                                    , bvh: PrimBvh
-                                    , any_hit: bool
-                                    , root: i32
-                                    ) -> Hit {
+                                   , octant: RayOctant
+                                   , min_max: MinMax
+                                   , bvh: PrimBvh
+                                   , any_hit: bool
+                                   , root: i32
+                                   ) -> Hit {
     let sorting_network = match bvh.arity {
         8 => batcher_sort,
         _ => bose_nelson_sort
@@ -295,13 +295,13 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
 
 // Traverses a BVH with a packet of rays, assuming execution inside a vectorized region.
 fn @cpu_traverse_helper_prim( mut ray: Ray
-                              , vector_width: i32
-                              , min_max: MinMax
-                              , bvh: PrimBvh
-                              , single: bool // TODO: This path produces and introduces some nasty bugs!
-                              , any_hit: bool
-                              , root: i32
-                              ) -> Hit {
+                            , vector_width: i32
+                            , min_max: MinMax
+                            , bvh: PrimBvh
+                            , single: bool // TODO: This path produces and introduces some nasty bugs!
+                            , any_hit: bool
+                            , root: i32
+                            ) -> Hit {
 
     let switch_threshold = match vector_width {
         4  => 3,
@@ -425,13 +425,13 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
 }
 
 fn @cpu_traverse_helper( mut ray: Ray
-                              , vector_width: i32
-                              , min_max: MinMax
-                              , scene: Scene
-                              , single: bool
-                              , any_hit: bool
-                              , root: i32
-                              ) -> Hit {
+                       , vector_width: i32
+                       , min_max: MinMax
+                       , scene: SceneGeometry
+                       , single: bool
+                       , any_hit: bool
+                       , root: i32
+                       ) -> Hit {
     let bvh       = scene.bvh;
     let prim_bvhs = scene.database.bvhs;
 
@@ -530,7 +530,7 @@ fn @cpu_traverse_helper( mut ray: Ray
 // Wrapper ------------------------------------------------------------------------
 
 fn @cpu_traverse( min_max: MinMax
-                , scene: Scene
+                , scene: SceneGeometry
                 , rays: fn (i32, i32) -> Ray
                 , hits: fn (i32, i32, Hit) -> ()
                 , packet_size: i32
