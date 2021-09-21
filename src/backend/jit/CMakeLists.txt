@@ -1,5 +1,5 @@
 set(SRC 
-    main.cpp
+    jit.cpp
 )
 
 # We could drop some sources from ARTIC_SRC and let it adapt to the actual shading system we jit,
@@ -18,7 +18,7 @@ add_custom_command(
         COMMENT "Embedding API: ${API_SRC_FILE}" 
         VERBATIM)
 
-add_executable(ig_jit ${SRC} ${API_SRC_FILE})
-target_link_libraries(ig_jit PUBLIC std::filesystem ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES})
-target_compile_definitions(ig_jit PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
-target_compile_features(ig_jit PUBLIC cxx_std_17)
+add_library(ig_lib_jit STATIC ${SRC} ${API_SRC_FILE})
+target_link_libraries(ig_lib_jit PUBLIC std::filesystem ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES})
+target_compile_definitions(ig_lib_jit PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
+target_compile_features(ig_lib_jit PUBLIC cxx_std_17)

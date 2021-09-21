@@ -16,18 +16,16 @@ constexpr bool DEBUG	= false;
 #endif
 
 // TODO: Change this to a library and adapt it for the several programming stages (emitter, shader, [traversal])
-int main(int argc, char** argv)
+bool ig_compile_source(const std::string& src)
 {
 	std::stringstream source;
 
 	for (int i = 0; ig_api[i]; ++i)
 		source << ig_api[i];
+	
+	source << std::endl;
+	source << src;
 
 	std::string source_str = source.str();
-	int res				   = anydsl_compile(source_str.c_str(), source_str.size(), OPT_LEVEL);
-
-	if (res < 0)
-		return EXIT_FAILURE;
-
-	return EXIT_SUCCESS;
+	return anydsl_compile(source_str.c_str(), source_str.size(), OPT_LEVEL) >= 0;
 }
