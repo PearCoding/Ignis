@@ -1,5 +1,6 @@
 set(SRC 
     jit.cpp
+    jit.h
 )
 
 # We could drop some sources from ARTIC_SRC and let it adapt to the actual shading system we jit,
@@ -20,5 +21,6 @@ add_custom_command(
 
 add_library(ig_lib_jit STATIC ${SRC} ${API_SRC_FILE})
 target_link_libraries(ig_lib_jit PUBLIC std::filesystem ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES})
+target_include_directories(ig_lib_jit PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 target_compile_definitions(ig_lib_jit PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
 target_compile_features(ig_lib_jit PUBLIC cxx_std_17)

@@ -310,6 +310,21 @@ fn @gpu_generate_rays( primary: PrimaryStream
     primary.size + num_rays
 }
 
+fn @gpu_generate_rays_handler(dev_id: i32
+                            , capacity: i32
+                            , acc: Accelerator
+                            , emitter: RayEmitter
+                            , id: &mut i32
+                            , spp: i32
+                            ) -> i32 {
+    let (_, film_width, film_height) = gpu_get_film_data(dev_id);
+
+    let mut primary: PrimaryStream;
+    ignis_gpu_get_first_primary_stream(dev_id, &mut primary, capacity);
+
+    gpu_generate_rays(primary, capacity, acc, emitter, id, film_width, film_height, spp)
+}
+
 fn @gpu_compact_primary( primary: PrimaryStream
                        , other_primary: PrimaryStream
                        , dev_id: i32
@@ -581,6 +596,9 @@ fn @make_gpu_device( dev_id: i32
             pipeline,
             spp
         )
+    },
+    generate_rays = @ | capacity, emitter, id, _xmin, _ymin, _xmax, _ymax, spp | -> i32 {
+        gpu_generate_rays_handler(dev_id, capacity, acc, emitter, id, spp)
     },
     present = @ || ignis_present(dev_id),
     load_scene_bvh = @|| {

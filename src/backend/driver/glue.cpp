@@ -140,7 +140,9 @@ struct Interface {
 	const IG::SceneDatabase* database;
 	size_t film_width;
 	size_t film_height;
-	IG::uint32 iteration;
+
+	IG::uint32 current_iteration;
+	Settings current_settings;
 
 	const IG::Ray* ray_list = nullptr; // film_width contains number of rays
 
@@ -403,8 +405,9 @@ void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
 {
 	Settings renderSettings = convert_settings(settings);
 
-	sInterface->ray_list  = settings->rays;
-	sInterface->iteration = iter;
+	sInterface->ray_list		  = settings->rays;
+	sInterface->current_iteration = iter;
+	sInterface->current_settings  = renderSettings;
 
 	ig_render(&renderSettings);
 }

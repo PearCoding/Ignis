@@ -229,6 +229,22 @@ fn @cpu_generate_rays( primary: PrimaryStream
     primary.size + num_rays
 }
 
+fn @cpu_generate_rays_handler(capacity: i32
+                            , emitter: RayEmitter
+                            , id: &mut i32
+                            , xmin: i32
+                            , ymin: i32
+                            , xmax: i32
+                            , ymax: i32
+                            , spp: i32
+                            , vector_width: i32) -> i32 {
+    let (_, film_width, film_height) = cpu_get_film_data();
+
+    let mut primary : PrimaryStream;
+    ignis_cpu_get_primary_stream(&mut primary, capacity);
+    cpu_generate_rays(primary, capacity, emitter, id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width)
+}
+
 fn @cpu_traverse_primary(scene: SceneGeometry, min_max: MinMax, primary: &PrimaryStream, single: bool, vector_width: i32) -> () {
     fn cpu_traverse_primary_specialized(scene2: SceneGeometry, primary2: &PrimaryStream) -> () {
         cpu_traverse(
@@ -570,6 +586,9 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             vector_width,
             vector_compact
         )
+    },
+    generate_rays = @ | capacity, emitter, id, xmin, ymin, xmax, ymax, spp | -> i32 {
+        cpu_generate_rays_handler(capacity, emitter, id, xmin, ymin, xmax, ymax, spp, vector_width)
     },
     present = @ || ignis_present(0),
     load_scene_bvh = @ || {

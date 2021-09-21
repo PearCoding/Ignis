@@ -19,8 +19,9 @@ struct SceneGeometry {
 
 // Rendering device
 struct Device {
-    trace:   fn (SceneGeometry, Pipeline, i32) -> (),
-    present: fn () -> (),
+    trace:         fn (SceneGeometry, Pipeline, i32) -> (),
+    generate_rays: fn (i32, RayEmitter, &mut i32, i32, i32, i32, i32, i32) -> i32, 
+    present:       fn () -> (),
 
     load_scene_bvh:       fn () -> SceneBvh,
     load_scene_database:  fn () -> SceneDatabase,

@@ -1,7 +1,8 @@
+#include "jit.h"
+
 #include <anydsl_jit.h>
 
 #include <sstream>
-#include <string>
 #include <vector>
 
 extern const char* ig_api[];
@@ -15,8 +16,8 @@ constexpr int OPT_LEVEL = 3;
 constexpr bool DEBUG	= false;
 #endif
 
+namespace IG {
 // TODO: Change this to a library and adapt it for the several programming stages (emitter, shader, [traversal])
-/// Compile given source together with the ignis standard library and return pointer to the main function 'ig_main'
 void* ig_compile_source(const std::string& src)
 {
 	std::stringstream source;
@@ -33,4 +34,5 @@ void* ig_compile_source(const std::string& src)
 		return nullptr;
 
 	return anydsl_lookup_function(ret, "ig_main");
+}
 }
