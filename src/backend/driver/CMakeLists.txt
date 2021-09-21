@@ -142,8 +142,8 @@ foreach(var ${VARIANTS})
     separate_arguments(args UNIX_COMMAND ${var})
     add_custom_command(
         OUTPUT "${out_file}"
-        COMMAND $<TARGET_FILE:stpp> ${args} ${CMAKE_CURRENT_SOURCE_DIR}/tracer/tracer.artpp > ${out_file}
-        MAIN_DEPENDENCY tracer/tracer.artpp
+        COMMAND $<TARGET_FILE:stpp> ${args} ${CMAKE_CURRENT_SOURCE_DIR}/tracer.artpp > ${out_file}
+        MAIN_DEPENDENCY tracer.artpp
         COMMENT "Generating variant file: ${out_file}" 
         VERBATIM)
     set(_objs ) # Reset list
