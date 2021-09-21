@@ -114,8 +114,8 @@ bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
 
 uint64 DriverManager::checkConfiguration(uint64 config) const
 {
-#define CHECK_RET(c)                 \
-	if (mLoadedDrivers.count(c) > 0) \
+#define CHECK_RET(c)                                    \
+	if (mLoadedDrivers.count((c)&IG_C_MASK_DEVICE) > 0) \
 	return c
 
 	CHECK_RET(config);
@@ -126,22 +126,12 @@ uint64 DriverManager::checkConfiguration(uint64 config) const
 
 	// First check gpu pairs drivers/devices
 	const uint64 devConfig = config & ~IG_C_MASK_DEVICE;
-	if (config & IG_C_DEVICE_NVVM)
-		CHECK_RET(devConfig | IG_C_DEVICE_NVVM_MEGA);
-	if (config & IG_C_DEVICE_NVVM_MEGA)
-		CHECK_RET(devConfig | IG_C_DEVICE_NVVM);
-	if (config & IG_C_DEVICE_AMDGPU)
-		CHECK_RET(devConfig | IG_C_DEVICE_AMD_MEGA);
-	if (config & IG_C_DEVICE_AMD_MEGA)
-		CHECK_RET(devConfig | IG_C_DEVICE_AMDGPU);
-
 	CHECK_RET(devConfig | IG_C_DEVICE_AVX512);
 	CHECK_RET(devConfig | IG_C_DEVICE_AVX2);
 	CHECK_RET(devConfig | IG_C_DEVICE_AVX);
 	CHECK_RET(devConfig | IG_C_DEVICE_SSE42);
 	CHECK_RET(devConfig | IG_C_DEVICE_ASIMD);
 
-	//TODO: What about camera and renderer? We assume they are always built!
 	return devConfig | IG_C_DEVICE_GENERIC;
 #undef CHECK_RET
 }
@@ -149,7 +139,7 @@ uint64 DriverManager::checkConfiguration(uint64 config) const
 bool DriverManager::load(uint64 config, DriverInterface& interface) const
 {
 	config = checkConfiguration(config);
-	if (!mLoadedDrivers.count(config)) {
+	if (!mLoadedDrivers.count(config & IG_C_MASK_DEVICE)) {
 		IG_LOG(L_ERROR) << "No driver available!" << std::endl;
 		return false; // No driver available!
 	}

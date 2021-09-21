@@ -41,15 +41,8 @@ fn ig_render(_settings: &Settings) -> () {
     let mut rays : &[StreamRay];
     ignis_load_rays(0, &mut rays);
 
-    let mut id : i32;
+    /*let mut id : i32;
     ignis_handle_ray_generation(primary, 0, &mut id, 0, 0, 0, 0);
     ignis_handle_miss_shader(&mut primary, 0, 0);
-    ignis_handle_hit_shader(0, &mut primary, &mut secondary, 0, 0);
-}
-
-#[export]
-fn ig_emitter(_settings: &Settings, _iter: i32,
-    _primary: &PrimaryStream, _capacity: i32, 
-    _xmin: i32, _xmax: i32, _ymin: i32, _ymax: i32) -> i32 {
-    0
+    ignis_handle_hit_shader(0, &mut primary, &mut secondary, 0, 0);*/
 }

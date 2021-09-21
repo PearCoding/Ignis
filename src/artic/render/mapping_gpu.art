@@ -375,14 +375,14 @@ fn @gpu_trace( dev_id: i32
         // Regenerate rays
         // [Call to Emittor]
         if primary.size < capacity && id < num_rays {
-            primary.size = pipeline.on_generate(primary, capacity, &mut id, 0, 0, film_width, film_height);
+            primary.size = pipeline.on_generate(capacity, &mut id, 0, 0, film_width, film_height);
             //primary.size = gpu_generate_rays(primary, capacity, acc, path_tracer.on_emit, &mut id, film_width, film_height, spp);
         }
 
         // Special case: No entities to intersect
         // [Call to Shader]
         if scene.info.num_entities == 0 {
-            pipeline.on_miss_shade(primary, 0, primary.size);
+            pipeline.on_miss_shade(0, primary.size);
             //gpu_missshade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, 0, primary.size);
             primary.size = 0;
             acc.sync();
@@ -407,7 +407,7 @@ fn @gpu_trace( dev_id: i32
             if first >= last {
                 continue()
             }
-            pipeline.on_hit_shade(ent_id, primary, secondary, first, last);
+            pipeline.on_hit_shade(ent_id, first, last);
             //gpu_shade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, secondary, first, last, ent_id);
             first = last;
         }
@@ -416,7 +416,7 @@ fn @gpu_trace( dev_id: i32
         // [Call to Shader]
         let last = ray_ends(scene.info.num_entities);
         if(first < last) {
-            pipeline.on_miss_shade(primary, first, last);
+            pipeline.on_miss_shade(first, last);
             //gpu_missshade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, first, last);
             // Do not set first as last (to make sure they drop out)
         }

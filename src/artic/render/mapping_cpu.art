@@ -421,13 +421,13 @@ fn @cpu_trace( scene: SceneGeometry
                 // (Re-)generate primary rays
                 if primary.size < capacity {
                     // [Call to Emittor]
-                    primary.size = pipeline.on_generate(primary, capacity, &mut id, xmin, ymin, xmax, ymax);
+                    primary.size = pipeline.on_generate(capacity, &mut id, xmin, ymin, xmax, ymax);
                     //primary.size = cpu_generate_rays(primary, capacity, path_tracer.on_emit, &mut id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width);
                 }
 
                 if scene.info.num_entities == 0 {
                     // [Call to Shader]
-                    pipeline.on_miss_shade(primary, 0, primary.size);
+                    pipeline.on_miss_shade(0, primary.size);
                     //cpu_miss_shade(primary, path_tracer, accumulate, 0, primary.size, vector_width);
                     primary.size = 0;
                 } else {
@@ -450,7 +450,7 @@ fn @cpu_trace( scene: SceneGeometry
                         let mut begin = 0;
                         for ent_id in range(0, scene.info.num_entities) {
                             let end = ray_ends(ent_id);
-                            pipeline.on_hit_shade(ent_id, primary, secondary, begin, end);
+                            pipeline.on_hit_shade(ent_id, begin, end);
                             //cpu_shade(ent_id, primary, secondary, scene, path_tracer, accumulate, begin, end, vector_width);
                             begin = end;
                         }
@@ -458,7 +458,7 @@ fn @cpu_trace( scene: SceneGeometry
                         // Shade misses as well
                         let last = ray_ends(scene.info.num_entities);
                         if(begin < last) {
-                            pipeline.on_miss_shade(primary, begin, last);
+                            pipeline.on_miss_shade(begin, last);
                             //cpu_miss_shade(primary, path_tracer, accumulate, begin, last, vector_width);
                         }
                     });

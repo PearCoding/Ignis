@@ -142,14 +142,23 @@ struct Interface {
 	size_t film_height;
 	IG::uint32 iteration;
 
-	const IG::Ray* ray_list; // film_width contains number of rays
+	const IG::Ray* ray_list = nullptr; // film_width contains number of rays
 
-	Interface(size_t width, size_t height, const IG::SceneDatabase* database)
+	IG::RayGenerationShader ray_generation_shader;
+	IG::MissShader miss_shader;
+	IG::HitShader hit_shader;
+
+	Interface(size_t width, size_t height, const IG::SceneDatabase* database,
+			  IG::RayGenerationShader ray_generation_shader,
+			  IG::MissShader miss_shader,
+			  IG::HitShader hit_shader)
 		: host_pixels(width * height * 3)
 		, database(database)
 		, film_width(width)
 		, film_height(height)
-
+		, ray_generation_shader(ray_generation_shader)
+		, miss_shader(miss_shader)
+		, hit_shader(hit_shader)
 	{
 	}
 
@@ -363,7 +372,7 @@ struct Interface {
 
 static std::unique_ptr<Interface> sInterface;
 
-void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
+static Settings convert_settings(const DriverRenderSettings* settings)
 {
 	Settings renderSettings;
 	renderSettings.device  = settings->device;
@@ -387,6 +396,13 @@ void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
 	renderSettings.max_path_len = settings->max_path_length;
 	renderSettings.debug_mode	= settings->debug_mode;
 
+	return renderSettings;
+}
+
+void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
+{
+	Settings renderSettings = convert_settings(settings);
+
 	sInterface->ray_list  = settings->rays;
 	sInterface->iteration = iter;
 
@@ -395,7 +411,8 @@ void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
 
 void glue_setup(const DriverSetupSettings* settings)
 {
-	sInterface = std::make_unique<Interface>(settings->framebuffer_width, settings->framebuffer_height, settings->database);
+	sInterface = std::make_unique<Interface>(settings->framebuffer_width, settings->framebuffer_height, settings->database,
+											 settings->ray_generation_shader, settings->miss_shader, settings->hit_shader);
 }
 
 void glue_shutdown()
@@ -611,6 +628,21 @@ void ignis_gpu_get_secondary_stream(int dev, SecondaryStream* secondary, int siz
 {
 	auto& array = sInterface->gpu_secondary_stream(dev, size);
 	get_secondary_stream(*secondary, array.data(), array.size() / 13);
+}
+
+int ignis_handle_ray_generation(int capacity, int* id, int xmin, int ymin, int xmax, int ymax)
+{
+	return sInterface->ray_generation_shader(capacity, id, xmin, ymin, xmax, ymax);
+}
+
+void ignis_handle_miss_shader(int first, int last)
+{
+	sInterface->miss_shader(first, last);
+}
+
+void ignis_handle_hit_shader(int entity_id, int first, int last)
+{
+	sInterface->hit_shader(entity_id, first, last);
 }
 
 void ignis_present(int dev)

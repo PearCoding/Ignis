@@ -5,6 +5,10 @@
 namespace IG {
 struct SceneDatabase;
 struct Ray;
+
+using RayGenerationShader = int (*)(int, int*, int, int, int, int);
+using MissShader		  = void (*)(int, int);
+using HitShader			  = void (*)(int, int, int);
 } // namespace IG
 
 // Not in namespace IG
@@ -12,6 +16,9 @@ struct DriverSetupSettings {
 	IG::uint32 framebuffer_width;
 	IG::uint32 framebuffer_height;
 	IG::SceneDatabase* database;
+	IG::RayGenerationShader ray_generation_shader;
+	IG::MissShader miss_shader;
+	IG::HitShader hit_shader;
 };
 
 struct DriverRenderSettings {

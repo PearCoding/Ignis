@@ -33,14 +33,14 @@ fn ig_render(settings: &Settings) -> () {
     };
 
     let pipeline = Pipeline {
-        on_generate   = @ | primary, capacity, id, xmin, ymin, xmax, ymax | -> i32 {
-            ignis_handle_ray_generation(primary, capacity, id, xmin, ymin, xmax, ymax)
+        on_generate   = @ | capacity, id, xmin, ymin, xmax, ymax | -> i32 {
+            ignis_handle_ray_generation(capacity, id, xmin, ymin, xmax, ymax)
         },
-        on_miss_shade = @ | primary, first, last | {
-            ignis_handle_miss_shader(primary, first, last);
+        on_miss_shade = @ | first, last | {
+            ignis_handle_miss_shader(first, last);
         },
-        on_hit_shade  = @ | entity_id, primary, secondary, first, last| {
-            ignis_handle_hit_shader(entity_id, primary, secondary, first, last);
+        on_hit_shade  = @ | entity_id, first, last| {
+            ignis_handle_hit_shader(entity_id, first, last);
         }
     };
 

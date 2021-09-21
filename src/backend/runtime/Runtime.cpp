@@ -127,8 +127,8 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 		throw std::runtime_error("Could not load scene!");
 	mDatabase = std::move(result.Database);
 
-	IG_LOG(L_INFO) << "Loading configuration " << configurationToString(newConfig) << std::endl;
-	if (!mManager.load(newConfig, mLoadedInterface))
+	IG_LOG(L_INFO) << "Loading configuration " << configurationToString(newConfig & IG_C_MASK_DEVICE) << std::endl;
+	if (!mManager.load(newConfig & IG_C_MASK_DEVICE, mLoadedInterface))
 		throw std::runtime_error("Error loading interface!");
 	mConfiguration = newConfig;
 
