@@ -22,22 +22,6 @@ std::string configurationToString(uint64 config)
 	if (config & IG_C_DEVICE_AMDGPU)
 		stream << "[AMD]";
 
-	if (config & IG_C_CAMERA_PERSPECTIVE)
-		stream << "[Perspective]";
-	if (config & IG_C_CAMERA_ORTHOGONAL)
-		stream << "[Orthogonal]";
-	if (config & IG_C_CAMERA_FISHLENS)
-		stream << "[Fishlens]";
-	if (config & IG_C_CAMERA_LIST)
-		stream << "[List]";
-
-	if (config & IG_C_RENDERER_PATH)
-		stream << "[Path]";
-	if (config & IG_C_RENDERER_DEBUG)
-		stream << "[Debug]";
-	if (config & IG_C_RENDERER_AO)
-		stream << "[AO]";
-
 	if (config & IG_C_NO_INSTANCES)
 		stream << "[NoInstances]";
 

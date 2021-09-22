@@ -2,6 +2,7 @@
 #include "Camera.h"
 #include "Logger.h"
 #include "driver/Configuration.h"
+#include "jit.h"
 #include "loader/Parser.h"
 
 #include <chrono>
@@ -21,13 +22,7 @@ static inline void setup_technique(RuntimeRenderSettings& settings, LoaderOption
 	} else {
 		tech_type = opts.OverrideTechnique;
 	}
-
-	if (tech_type == "debug")
-		lopts.Configuration |= IG_C_RENDERER_DEBUG;
-	else if (tech_type == "ao")
-		lopts.Configuration |= IG_C_RENDERER_AO;
-	else
-		lopts.Configuration |= IG_C_RENDERER_PATH;
+	lopts.TechniqueType = tech_type;
 }
 
 static inline void setup_film(RuntimeRenderSettings& settings, const LoaderOptions& lopts, const RuntimeOptions& opts)
@@ -54,14 +49,7 @@ static inline void setup_camera(RuntimeRenderSettings& settings, LoaderOptions& 
 			camera_type = camera->pluginType();
 	}
 
-	if (camera_type == "orthogonal")
-		lopts.Configuration |= IG_C_CAMERA_ORTHOGONAL;
-	else if (camera_type == "fishlens")
-		lopts.Configuration |= IG_C_CAMERA_FISHLENS;
-	else if (camera_type == "list")
-		lopts.Configuration |= IG_C_CAMERA_LIST;
-	else
-		lopts.Configuration |= IG_C_CAMERA_PERSPECTIVE;
+	lopts.CameraType = camera_type;
 
 	// Get initial location
 	Transformf cameraTransform;
@@ -86,6 +74,8 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	: mInit(false)
 	, mDevice(opts.Device)
 	, mIteration(0)
+	, mIsTrace(false)
+	, mIsDebug(false)
 	, mDebugMode(DebugMode::Normal)
 {
 	if (!mManager.init())
@@ -132,6 +122,20 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 		throw std::runtime_error("Error loading interface!");
 	mConfiguration = newConfig;
 
+	mIsDebug = lopts.TechniqueType == "debug";
+	mIsTrace = lopts.CameraType == "list";
+
+	IG_LOG(L_INFO) << "Ray Generation Shader:" << std::endl
+				   << result.RayGenerationShader << std::endl;
+	IG_LOG(L_INFO) << "Miss Shader:" << std::endl
+				   << result.MissShader << std::endl;
+	IG_LOG(L_INFO) << "Hit Shader:" << std::endl
+				   << result.HitShader << std::endl;
+
+	RayGenerationShader = std::move(result.RayGenerationShader);
+	MissShader			= std::move(result.MissShader);
+	HitShader			= std::move(result.HitShader);
+
 	// Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
 	_mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
@@ -148,7 +152,7 @@ void Runtime::step(const Camera& camera)
 {
 	IG_ASSERT(mInit, "Expected to be initialized!");
 
-	if (mLoadedInterface.Configuration & IG_C_CAMERA_LIST) {
+	if (mIsTrace) {
 		IG_LOG(L_ERROR) << "Trying to use step() in a trace driver!" << std::endl;
 		return;
 	}
@@ -179,7 +183,7 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
 	if (!mInit)
 		return;
 
-	if (!(mLoadedInterface.Configuration & IG_C_CAMERA_LIST)) {
+	if (!mIsTrace) {
 		IG_LOG(L_ERROR) << "Trying to use trace() in a camera driver!" << std::endl;
 		return;
 	}
@@ -212,9 +216,19 @@ void Runtime::clearFramebuffer(int aov)
 void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 {
 	DriverSetupSettings settings;
-	settings.database			= &mDatabase;
-	settings.framebuffer_width	= std::max(1u, framebuffer_width);
-	settings.framebuffer_height = std::max(1u, framebuffer_height);
+	settings.database			   = &mDatabase;
+	settings.framebuffer_width	   = std::max(1u, framebuffer_width);
+	settings.framebuffer_height	   = std::max(1u, framebuffer_height);
+
+	IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
+	settings.ray_generation_shader = ig_compile_source(RayGenerationShader);
+
+	IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
+	settings.miss_shader		   = nullptr; // TODO
+
+	IG_LOG(L_DEBUG) << "Compiling hit shader" << std::endl;
+	settings.hit_shader			   = nullptr; // TODO
+
 	mLoadedInterface.SetupFunction(&settings);
 	mInit = true;
 

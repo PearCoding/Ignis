@@ -146,14 +146,14 @@ struct Interface {
 
 	const IG::Ray* ray_list = nullptr; // film_width contains number of rays
 
-	IG::RayGenerationShader ray_generation_shader;
-	IG::MissShader miss_shader;
-	IG::HitShader hit_shader;
+	void* ray_generation_shader;
+	void* miss_shader;
+	void* hit_shader;
 
 	Interface(size_t width, size_t height, const IG::SceneDatabase* database,
-			  IG::RayGenerationShader ray_generation_shader,
-			  IG::MissShader miss_shader,
-			  IG::HitShader hit_shader)
+			  void* ray_generation_shader,
+			  void* miss_shader,
+			  void* hit_shader)
 		: host_pixels(width * height * 3)
 		, database(database)
 		, film_width(width)
@@ -354,6 +354,17 @@ struct Interface {
 		info.num_lights	  = database->LightTable.entryCount();
 		info.scene_radius = database->SceneRadius;
 		return info;
+	}
+
+	int run_ray_generation_shader(int capacity, int* id, int xmin, int ymin, int xmax, int ymax)
+	{
+		using Callback = decltype(ig_ray_generation_shader);
+		std::cout << capacity << " " << *id << " " << xmin << " " << ymin << " " << xmax << " " << ymax << std::endl;
+		IG_ASSERT(ray_generation_shader != nullptr, "Expected ray generation shader to be valid");
+		Callback* callback = (Callback*)ray_generation_shader;
+		int ret			   = callback(&current_settings, current_iteration, capacity, id, xmin, ymin, xmax, ymax);
+		std::cout << "Hehe" << std::endl;
+		return ret;
 	}
 
 	void present(int32_t dev)
@@ -635,17 +646,17 @@ void ignis_gpu_get_secondary_stream(int dev, SecondaryStream* secondary, int siz
 
 int ignis_handle_ray_generation(int capacity, int* id, int xmin, int ymin, int xmax, int ymax)
 {
-	return sInterface->ray_generation_shader(capacity, id, xmin, ymin, xmax, ymax);
+	return sInterface->run_ray_generation_shader(capacity, id, xmin, ymin, xmax, ymax);
 }
 
 void ignis_handle_miss_shader(int first, int last)
 {
-	sInterface->miss_shader(first, last);
+	//sInterface->run_miss_shader(first, last);
 }
 
 void ignis_handle_hit_shader(int entity_id, int first, int last)
 {
-	sInterface->hit_shader(entity_id, first, last);
+	//sInterface->run_hit_shader(entity_id, first, last);
 }
 
 void ignis_present(int dev)

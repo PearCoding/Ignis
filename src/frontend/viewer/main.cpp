@@ -256,8 +256,7 @@ int main(int argc, char** argv)
 #ifdef WITH_UI
 	IG_UNUSED(prettyConsole);
 
-	bool isDebug = runtime->configuration() & IG_C_RENDERER_DEBUG;
-	if (!UI::init(film_width, film_height, runtime->getFramebuffer(), isDebug))
+	if (!UI::init(film_width, film_height, runtime->getFramebuffer(), runtime->isDebug()))
 		return EXIT_FAILURE;
 
 	DebugMode currentDebugMode = UI::currentDebugMode();

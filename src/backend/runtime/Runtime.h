@@ -52,6 +52,8 @@ public:
 
 	inline DebugMode currentDebugMode() const { return mDebugMode; }
 	inline void setDebugMode(DebugMode mode) { mDebugMode = mode; }
+	inline bool isDebug() const { return mIsDebug; }
+	inline bool isTrace() const { return mIsTrace; }
 
 	inline uint32 configuration() const { return mConfiguration; }
 
@@ -68,6 +70,13 @@ private:
 	size_t mDevice;
 	uint32 mIteration;
 	uint32 mConfiguration;
+
+	bool mIsTrace;
+	bool mIsDebug;
 	DebugMode mDebugMode;
+
+	std::string RayGenerationShader;
+	std::string MissShader;
+	std::string HitShader;
 };
 } // namespace IG

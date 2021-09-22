@@ -46,3 +46,8 @@ fn ig_render(_settings: &Settings) -> () {
     ignis_handle_miss_shader(&mut primary, 0, 0);
     ignis_handle_hit_shader(0, &mut primary, &mut secondary, 0, 0);*/
 }
+
+#[export]
+fn ig_ray_generation_shader(_settings: &Settings, _iter: i32, _capacity: i32, _id: &mut i32, _xmin: i32, _ymin: i32, _xmax: i32, _ymax: i32) -> i32 {
+    0
+}

@@ -1,5 +1,6 @@
 #include "Loader.h"
 #include "LoaderBSDF.h"
+#include "LoaderCamera.h"
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
 #include "LoaderShape.h"
@@ -19,6 +20,15 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 	ctx.Target		  = configurationToTarget(opts.Configuration);
 	ctx.EnablePadding = doesTargetRequirePadding(ctx.Target);
 	ctx.Scene		  = opts.Scene;
+	ctx.CameraType	  = opts.CameraType;
+	ctx.TechniqueType = opts.TechniqueType;
+
+	// Generate Ray Generation Shader
+	if (!LoaderCamera::load(ctx, result))
+		return false;
+
+	// Generate Miss Shader
+	// Generate Hit Shader
 
 	if (!LoaderTexture::load(ctx, result))
 		return false;

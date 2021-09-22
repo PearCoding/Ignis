@@ -34,6 +34,9 @@ struct LoaderContext {
 	bool EnablePadding;
 	std::unordered_map<std::string, uint32> Images; // Image to Buffer
 
+	std::string CameraType;
+	std::string TechniqueType;
+
 	std::unordered_map<std::string, uint32> TextureBuffer; // Texture to Buffer/Image, used only in workaround
 	std::vector<Vector3f> TextureAverages;				   // Workaround for now
 

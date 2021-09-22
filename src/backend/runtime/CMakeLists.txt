@@ -71,6 +71,8 @@ set(SRC
     loader/Loader.h
     loader/LoaderBSDF.cpp
     loader/LoaderBSDF.h
+    loader/LoaderCamera.cpp
+    loader/LoaderCamera.h
     loader/LoaderContext.cpp
     loader/LoaderContext.h
     loader/LoaderEntity.cpp
@@ -85,6 +87,8 @@ set(SRC
     loader/LoaderTexture.h
     loader/Parser.cpp
     loader/Parser.h
+    loader/ShaderUtils.cpp
+    loader/ShaderUtils.h
     log/ConsoleLogListener.cpp
     log/ConsoleLogListener.h
     log/FileLogListener.cpp

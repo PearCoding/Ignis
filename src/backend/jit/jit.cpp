@@ -8,12 +8,11 @@
 extern const char* ig_api[];
 extern const char* ig_api_paths[];
 
+// TODO: Really fixed at compile time?
 #ifdef IG_DEBUG
 constexpr int OPT_LEVEL = 0;
-constexpr bool DEBUG	= true;
 #else
 constexpr int OPT_LEVEL = 3;
-constexpr bool DEBUG	= false;
 #endif
 
 namespace IG {

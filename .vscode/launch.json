@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.buildDirectory}/bin/igview",
-            "args": ["${workspaceFolder}/scenes/diamond_scene.json", "--cpu"],
+            "args": ["${workspaceFolder}/scenes/sky_scene.json", "--target", "generic"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
             "environment": [
