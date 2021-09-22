@@ -256,12 +256,12 @@ fn @make_mirror_bsdf(surf: SurfaceElement, ks: Color) = Bsdf {
 
 fn @load_mirror_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
     if (flags & bsdf_f_tex1) == 0 {
+        let ks = vec3_to_color(data.load_vec3(0));
+        make_mirror_bsdf(surf, ks)
+    } else {
         let tex_id  = data.load_i32(0);
         let texture = stage.textures(tex_id);
         make_mirror_bsdf(surf, texture(surf.tex_coords))
-    } else {
-        let ks = vec3_to_color(data.load_vec3(0));
-        make_mirror_bsdf(surf, ks)
     }
 }
 
