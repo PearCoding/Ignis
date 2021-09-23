@@ -46,6 +46,7 @@ struct SharedLibraryInternal {
 SharedLibrary::SharedLibrary() {}
 
 SharedLibrary::SharedLibrary(const std::filesystem::path& file)
+	: mPath(file)
 {
 	const std::string u8 = file.u8string();
 
@@ -82,4 +83,4 @@ void SharedLibrary::unload()
 {
 	mInternal.reset();
 }
-} // namespace PR
+} // namespace IG

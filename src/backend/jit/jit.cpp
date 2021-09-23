@@ -16,6 +16,11 @@ constexpr int OPT_LEVEL = 3;
 #endif
 
 namespace IG {
+void ig_init_jit(const std::string& driver_path)
+{
+	anydsl_link(driver_path.c_str());
+}
+
 // TODO: Change this to a library and adapt it for the several programming stages (emitter, shader, [traversal])
 void* ig_compile_source(const std::string& src)
 {
@@ -34,4 +39,4 @@ void* ig_compile_source(const std::string& src)
 
 	return anydsl_lookup_function(ret, "ig_main");
 }
-}
+} // namespace IG

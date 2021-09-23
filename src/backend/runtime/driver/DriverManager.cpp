@@ -156,6 +156,16 @@ bool DriverManager::load(uint64 config, DriverInterface& interface) const
 	return true;
 }
 
+std::filesystem::path DriverManager::getPath(uint64 config) const
+{
+	config = checkConfiguration(config);
+	if (!mLoadedDrivers.count(config & IG_C_MASK_DEVICE))
+		return {}; // No driver available!
+
+	const SharedLibrary& library = mLoadedDrivers.at(config);
+	return library.path();
+}
+
 bool DriverManager::addModule(const std::filesystem::path& path)
 {
 	try {
@@ -176,7 +186,7 @@ bool DriverManager::addModule(const std::filesystem::path& path)
 		}
 
 		// Silently replace
-		mLoadedDrivers[interface.Configuration] = library;
+		mLoadedDrivers[interface.Configuration] = std::move(library);
 		mHasTarget.insert(configurationToTarget(interface.Configuration));
 	} catch (const std::exception& e) {
 		IG_LOG(L_ERROR) << "Loading error for module " << path << ": " << e.what() << std::endl;

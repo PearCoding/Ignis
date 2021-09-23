@@ -359,11 +359,9 @@ struct Interface {
 	int run_ray_generation_shader(int capacity, int* id, int xmin, int ymin, int xmax, int ymax)
 	{
 		using Callback = decltype(ig_ray_generation_shader);
-		std::cout << capacity << " " << *id << " " << xmin << " " << ymin << " " << xmax << " " << ymax << std::endl;
 		IG_ASSERT(ray_generation_shader != nullptr, "Expected ray generation shader to be valid");
-		Callback* callback = (Callback*)ray_generation_shader;
-		int ret			   = callback(&current_settings, current_iteration, capacity, id, xmin, ymin, xmax, ymax);
-		std::cout << "Hehe" << std::endl;
+		auto callback = (Callback*)ray_generation_shader;
+		int ret		  = callback(&current_settings, current_iteration, capacity, id, xmin, ymin, xmax, ymax);
 		return ret;
 	}
 

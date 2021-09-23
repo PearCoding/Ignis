@@ -13,6 +13,7 @@ public:
 	bool init(const std::filesystem::path& dir = std::filesystem::current_path(), bool ignoreEnv = false);
 	uint64 checkConfiguration(uint64 config) const;
 	bool load(uint64 config, DriverInterface& interface) const;
+	std::filesystem::path getPath(uint64 config) const;
 
 private:
 	bool addModule(const std::filesystem::path& path);

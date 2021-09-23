@@ -216,18 +216,21 @@ void Runtime::clearFramebuffer(int aov)
 void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 {
 	DriverSetupSettings settings;
-	settings.database			   = &mDatabase;
-	settings.framebuffer_width	   = std::max(1u, framebuffer_width);
-	settings.framebuffer_height	   = std::max(1u, framebuffer_height);
+	settings.database			= &mDatabase;
+	settings.framebuffer_width	= std::max(1u, framebuffer_width);
+	settings.framebuffer_height = std::max(1u, framebuffer_height);
+
+	IG_LOG(L_DEBUG) << "Init JIT compiling" << std::endl;
+	ig_init_jit(mManager.getPath(mConfiguration & IG_C_MASK_DEVICE).generic_u8string());
 
 	IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
 	settings.ray_generation_shader = ig_compile_source(RayGenerationShader);
 
 	IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
-	settings.miss_shader		   = nullptr; // TODO
+	settings.miss_shader = nullptr; // TODO
 
 	IG_LOG(L_DEBUG) << "Compiling hit shader" << std::endl;
-	settings.hit_shader			   = nullptr; // TODO
+	settings.hit_shader = nullptr; // TODO
 
 	mLoadedInterface.SetupFunction(&settings);
 	mInit = true;

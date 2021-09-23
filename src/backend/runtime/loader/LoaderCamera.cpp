@@ -13,10 +13,9 @@ bool LoaderCamera::load(LoaderContext& ctx, LoaderResult& result)
 	std::stringstream stream;
 
 	stream << "#[export] fn ig_main(settings: &Settings, iter: i32, capacity: i32, id: &mut i32, xmin: i32, ymin: i32, xmax: i32, ymax: i32) -> i32 {" << std::endl;
-	stream << "  print_string(\"A\\n\");" << std::endl;
 	stream << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl;
 	stream << std::endl;
-stream << "  print_string(\"B\\n\");" << std::endl;
+	
 	std::string gen;
 	if (ctx.CameraType == "perspective")
 		gen = "make_perspective_camera";
@@ -41,7 +40,6 @@ stream << "  print_string(\"B\\n\");" << std::endl;
 			   << std::endl;
 	}
 
-stream << "  print_string(\"C\\n\");" << std::endl;
 	if (ctx.CameraType == "list") {
 		stream << "  let emitter = make_list_emitter(device.load_rays(), iter);" << std::endl;
 	} else {
@@ -49,13 +47,11 @@ stream << "  print_string(\"C\\n\");" << std::endl;
 		stream << "  let emitter = make_camera_emitter(camera, iter);" << std::endl;
 	}
 
-	stream << "  print_string(\"This is a test\\n\");" << std::endl;
 	stream << "  let spp = 4 : i32;" << std::endl; // TODO ?
 	stream << "  device.generate_rays(capacity, emitter, id, xmin, ymin, xmax, ymax, spp)" << std::endl;
 	stream << "}" << std::endl;
 
 	result.RayGenerationShader = stream.str();
-
 	return true;
 }
 
