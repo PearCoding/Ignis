@@ -23,6 +23,8 @@ struct Device {
     generate_rays: fn (i32, RayEmitter, &mut i32, i32, i32, i32, i32, i32) -> i32, 
     present:       fn () -> (),
 
+    handle_miss_shader: fn (PathTracer, i32, i32, i32) -> (), 
+    
     load_scene_bvh:       fn () -> SceneBvh,
     load_scene_database:  fn () -> SceneDatabase,
     load_scene_info:      fn () -> SceneInfo,

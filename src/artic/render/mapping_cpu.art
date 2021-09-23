@@ -387,6 +387,21 @@ fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate:
     $cpu_miss_shade_specialized(primary, begin, end);
 }
 
+fn @cpu_miss_shade_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i32, vector_width: i32) -> () {
+    let (film_pixels, _, _) = cpu_get_film_data();
+
+    fn @accumulate(pixel: i32, color: Color) -> () {
+        let inv = 1 / (spp as f32);
+        film_pixels(pixel * 3 + 0) += color.r * inv;
+        film_pixels(pixel * 3 + 1) += color.g * inv;
+        film_pixels(pixel * 3 + 2) += color.b * inv;
+    }
+
+    let mut primary : PrimaryStream;
+    ignis_cpu_get_primary_stream_const(&mut primary);
+    cpu_miss_shade(primary, path_tracer, accumulate, begin, end, vector_width);
+}
+
 fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
@@ -589,6 +604,9 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     },
     generate_rays = @ | capacity, emitter, id, xmin, ymin, xmax, ymax, spp | -> i32 {
         cpu_generate_rays_handler(capacity, emitter, id, xmin, ymin, xmax, ymax, spp, vector_width)
+    },
+    handle_miss_shader = @ | path_tracer, first, last, spp | {
+        cpu_miss_shade_handler(path_tracer, first, last, spp, vector_width);
     },
     present = @ || ignis_present(0),
     load_scene_bvh = @ || {

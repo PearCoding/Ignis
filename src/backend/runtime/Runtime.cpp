@@ -227,10 +227,10 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 	settings.ray_generation_shader = ig_compile_source(RayGenerationShader);
 
 	IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
-	settings.miss_shader = nullptr; // TODO
+	settings.miss_shader = ig_compile_source(MissShader);
 
 	IG_LOG(L_DEBUG) << "Compiling hit shader" << std::endl;
-	settings.hit_shader = nullptr; // TODO
+	//settings.hit_shader = ig_compile_source(HitShader); // TODO
 
 	mLoadedInterface.SetupFunction(&settings);
 	mInit = true;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IG_Config.h"
+#include <vector>
 
 namespace IG {
 struct SceneDatabase;
@@ -14,7 +15,7 @@ struct DriverSetupSettings {
 	IG::SceneDatabase* database;
 	void* ray_generation_shader;
 	void* miss_shader;
-	void* hit_shader;
+	std::vector<void*> hit_shaders;
 };
 
 struct DriverRenderSettings {

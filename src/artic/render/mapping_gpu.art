@@ -153,9 +153,8 @@ fn @gpu_shade( acc: Accelerator
 }
 
 // Shade nonhits
-fn @gpu_missshade( acc: Accelerator
+fn @gpu_miss_shade( acc: Accelerator
                 , atomics: Atomics
-                , _scene: Scene
                 , path_tracer: PathTracer
                 , film_pixels: &mut [f32]
                 , spp: i32
@@ -180,6 +179,14 @@ fn @gpu_missshade( acc: Accelerator
         
         primary.rays.id(ray_id) = -1; // Kill ray as it goes to nowhere
     });
+}
+
+fn @gpu_miss_shade_handler(dev_id: i32, acc: Accelerator, atomics: Atomics, path_tracer: PathTracer, begin: i32, end: i32, spp: i32) -> () {
+    let (film_pixels, _, _) = gpu_get_film_data(dev_id);
+
+    let mut primary: PrimaryStream;
+    ignis_gpu_get_first_primary_stream_const(dev_id, &mut primary);
+    gpu_miss_shade(acc, atomics, path_tracer, film_pixels, spp, primary, begin, end);
 }
 
 fn @copy_primary_ray( primary: PrimaryStream
@@ -599,6 +606,9 @@ fn @make_gpu_device( dev_id: i32
     },
     generate_rays = @ | capacity, emitter, id, _xmin, _ymin, _xmax, _ymax, spp | -> i32 {
         gpu_generate_rays_handler(dev_id, capacity, acc, emitter, id, spp)
+    },
+    handle_miss_shader = @ | path_tracer, first, last, spp | {
+        gpu_miss_shade_handler(dev_id, acc, atomics, path_tracer, first, last, spp);
     },
     present = @ || ignis_present(dev_id),
     load_scene_bvh = @|| {
