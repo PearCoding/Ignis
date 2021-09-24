@@ -129,12 +129,14 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 				   << result.RayGenerationShader << std::endl;
 	IG_LOG(L_INFO) << "Miss Shader:" << std::endl
 				   << result.MissShader << std::endl;
-	IG_LOG(L_INFO) << "Hit Shader:" << std::endl
-				   << result.HitShader << std::endl;
+	for (const auto& shader : result.HitShaders) {
+		IG_LOG(L_INFO) << "Hit Shader:" << std::endl
+					   << shader << std::endl;
+	}
 
 	RayGenerationShader = std::move(result.RayGenerationShader);
 	MissShader			= std::move(result.MissShader);
-	HitShader			= std::move(result.HitShader);
+	HitShaders			= std::move(result.HitShaders);
 
 	// Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
@@ -230,7 +232,8 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 	settings.miss_shader = ig_compile_source(MissShader);
 
 	IG_LOG(L_DEBUG) << "Compiling hit shader" << std::endl;
-	//settings.hit_shader = ig_compile_source(HitShader); // TODO
+	for (const auto& shader : HitShaders)
+		settings.hit_shaders.push_back(ig_compile_source(shader));
 
 	mLoadedInterface.SetupFunction(&settings);
 	mInit = true;

@@ -4,7 +4,7 @@
 
 namespace IG {
 struct LoaderResult;
-struct LoaderCamera {
-	static bool load(LoaderContext& ctx, LoaderResult& res);
+struct RayGenerationShader {
+	static std::string setup(LoaderContext& ctx, LoaderResult& res);
 };
 } // namespace IG

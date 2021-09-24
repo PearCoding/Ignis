@@ -1,11 +1,13 @@
 #include "Loader.h"
+#include "HitShader.h"
 #include "LoaderBSDF.h"
-#include "LoaderCamera.h"
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
 #include "LoaderShape.h"
 #include "LoaderTexture.h"
 #include "Logger.h"
+#include "MissShader.h"
+#include "RayGenerationShader.h"
 #include "driver/Configuration.h"
 
 #include <chrono>
@@ -24,12 +26,16 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 	ctx.TechniqueType = opts.TechniqueType;
 
 	// Generate Ray Generation Shader
-	if (!LoaderCamera::load(ctx, result))
+	result.RayGenerationShader = RayGenerationShader::setup(ctx, result);
+	if (result.RayGenerationShader.empty())
 		return false;
 
 	// Generate Miss Shader
-	// Generate Hit Shader
+	result.MissShader = MissShader::setup(ctx, result);
+	if (result.MissShader.empty())
+		return false;
 
+	// Generate Hit Shader
 	if (!LoaderTexture::load(ctx, result))
 		return false;
 
@@ -47,6 +53,13 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
 	if (!LoaderLight::load(ctx, result))
 		return false;
+
+	for (size_t i = 0; i < result.Database.EntityTable.entryCount(); ++i) {
+		std::string shader = HitShader::setup(i, ctx, result);
+		if (shader.empty())
+			return false;
+		result.HitShaders.push_back(shader);
+	}
 
 	result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;
 

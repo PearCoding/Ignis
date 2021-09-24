@@ -77,6 +77,6 @@ private:
 
 	std::string RayGenerationShader;
 	std::string MissShader;
-	std::string HitShader;
+	std::vector<std::string> HitShaders;
 };
 } // namespace IG

@@ -1,4 +1,4 @@
-#include "LoaderCamera.h"
+#include "RayGenerationShader.h"
 #include "Loader.h"
 #include "Logger.h"
 #include "ShaderUtils.h"
@@ -8,14 +8,14 @@
 namespace IG {
 using namespace Parser;
 
-bool LoaderCamera::load(LoaderContext& ctx, LoaderResult& result)
+std::string RayGenerationShader::setup(LoaderContext& ctx, LoaderResult& result)
 {
 	std::stringstream stream;
 
 	stream << "#[export] fn ig_main(settings: &Settings, iter: i32, capacity: i32, id: &mut i32, xmin: i32, ymin: i32, xmax: i32, ymax: i32) -> i32 {" << std::endl;
 	stream << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl;
 	stream << std::endl;
-	
+
 	std::string gen;
 	if (ctx.CameraType == "perspective")
 		gen = "make_perspective_camera";
@@ -25,7 +25,7 @@ bool LoaderCamera::load(LoaderContext& ctx, LoaderResult& result)
 		gen = "make_fishlens_camera";
 	else if (ctx.CameraType != "list") {
 		IG_LOG(L_ERROR) << "Unknown camera type '" << ctx.CameraType << "'" << std::endl;
-		return false;
+		return {};
 	}
 
 	if (!gen.empty()) {
@@ -51,8 +51,7 @@ bool LoaderCamera::load(LoaderContext& ctx, LoaderResult& result)
 	stream << "  device.generate_rays(capacity, emitter, id, xmin, ymin, xmax, ymax, spp)" << std::endl;
 	stream << "}" << std::endl;
 
-	result.RayGenerationShader = stream.str();
-	return true;
+	return stream.str();
 }
 
 } // namespace IG

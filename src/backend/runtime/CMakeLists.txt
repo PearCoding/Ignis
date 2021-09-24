@@ -67,12 +67,12 @@ set(SRC
     driver/Interface.h
     klems/KlemsLoader.cpp
     klems/KlemsLoader.h
+    loader/HitShader.cpp
+    loader/HitShader.h
     loader/Loader.cpp
     loader/Loader.h
     loader/LoaderBSDF.cpp
     loader/LoaderBSDF.h
-    loader/LoaderCamera.cpp
-    loader/LoaderCamera.h
     loader/LoaderContext.cpp
     loader/LoaderContext.h
     loader/LoaderEntity.cpp
@@ -85,8 +85,12 @@ set(SRC
     loader/LoaderShape.h
     loader/LoaderTexture.cpp
     loader/LoaderTexture.h
+    loader/MissShader.cpp
+    loader/MissShader.h
     loader/Parser.cpp
     loader/Parser.h
+    loader/RayGenerationShader.cpp
+    loader/RayGenerationShader.h
     loader/ShaderUtils.cpp
     loader/ShaderUtils.h
     log/ConsoleLogListener.cpp
