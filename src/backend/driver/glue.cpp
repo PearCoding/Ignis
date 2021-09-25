@@ -91,12 +91,8 @@ struct DynTableProxy {
 };
 
 struct SceneDatabaseProxy {
-	DynTableProxy Buffers;
-	DynTableProxy Textures;
 	DynTableProxy Entities;
 	DynTableProxy Shapes;
-	DynTableProxy Lights;
-	DynTableProxy Shaders;
 	DynTableProxy BVHs;
 };
 
@@ -358,12 +354,8 @@ struct Interface {
 
 		// Load all the buffers to device which are registred by the loading and assembly stage
 		// TODO: This might take awhile... dynamic on and off loading would be great...
-		proxy.Buffers  = std::move(load_dyntable(dev, database->BufferTable));
-		proxy.Textures = std::move(load_dyntable(dev, database->TextureTable));
 		proxy.Entities = std::move(load_dyntable(dev, database->EntityTable));
 		proxy.Shapes   = std::move(load_dyntable(dev, database->ShapeTable));
-		proxy.Lights   = std::move(load_dyntable(dev, database->LightTable));
-		proxy.Shaders  = std::move(load_dyntable(dev, database->BsdfTable));
 		proxy.BVHs	   = std::move(load_dyntable(dev, database->BVHTable));
 
 		return proxy;
@@ -381,12 +373,12 @@ struct Interface {
 		return info;
 	}
 
-	int run_ray_generation_shader(int capacity, int* id, int xmin, int ymin, int xmax, int ymax)
+	int run_ray_generation_shader(int* id, int xmin, int ymin, int xmax, int ymax)
 	{
 		using Callback = decltype(ig_ray_generation_shader);
 		IG_ASSERT(ray_generation_shader != nullptr, "Expected ray generation shader to be valid");
 		auto callback = (Callback*)ray_generation_shader;
-		int ret		  = callback(&current_settings, current_iteration, capacity, id, xmin, ymin, xmax, ymax);
+		int ret		  = callback(&current_settings, current_iteration, id, xmin, ymin, xmax, ymax);
 		return ret;
 	}
 
@@ -395,7 +387,7 @@ struct Interface {
 		using Callback = decltype(ig_miss_shader);
 		IG_ASSERT(miss_shader != nullptr, "Expected miss shader to be valid");
 		auto callback = (Callback*)miss_shader;
-		callback(&current_settings, current_iteration, first, last);
+		callback(&current_settings, first, last);
 	}
 
 	void run_hit_shader(int entity_id, int first, int last)
@@ -405,7 +397,7 @@ struct Interface {
 		void* hit_shader = hit_shaders[entity_id];
 		IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
 		auto callback = (Callback*)hit_shader;
-		callback(&current_settings, current_iteration, first, last);
+		callback(&current_settings, entity_id, first, last);
 	}
 
 	void present(int32_t dev)
@@ -447,8 +439,7 @@ static Settings convert_settings(const DriverRenderSettings* settings)
 	renderSettings.tmin	   = settings->tmin;
 	renderSettings.tmax	   = settings->tmax;
 
-	renderSettings.max_path_len = settings->max_path_length;
-	renderSettings.debug_mode	= settings->debug_mode;
+	renderSettings.debug_mode = settings->debug_mode;
 
 	return renderSettings;
 }
@@ -631,12 +622,8 @@ void ignis_load_scene(int dev, SceneDatabase* dtb)
 	};
 
 	auto& proxy	  = sInterface->load_scene_database(dev);
-	dtb->buffers  = assign(proxy.Buffers);
-	dtb->textures = assign(proxy.Textures);
 	dtb->entities = assign(proxy.Entities);
 	dtb->shapes	  = assign(proxy.Shapes);
-	dtb->lights	  = assign(proxy.Lights);
-	dtb->shaders  = assign(proxy.Shaders);
 	dtb->bvhs	  = assign(proxy.BVHs);
 }
 
@@ -715,9 +702,9 @@ void ignis_gpu_get_secondary_stream_const(int dev, SecondaryStream* secondary)
 	get_secondary_stream(*secondary, array.data(), array.size() / 13);
 }
 
-int ignis_handle_ray_generation(int capacity, int* id, int xmin, int ymin, int xmax, int ymax)
+int ignis_handle_ray_generation(int* id, int xmin, int ymin, int xmax, int ymax)
 {
-	return sInterface->run_ray_generation_shader(capacity, id, xmin, ymin, xmax, ymax);
+	return sInterface->run_ray_generation_shader(id, xmin, ymin, xmax, ymax);
 }
 
 void ignis_handle_miss_shader(int first, int last)

@@ -143,13 +143,6 @@ fn @make_point_light(pos: Vec3, color: Color) = Light {
     infinite = false
 };
 
-fn @load_point_light(data: DeviceBuffer, _stage: Stage3Accessor) -> Light {
-    let pos   = data.load_vec3(0);
-    let color = data.load_vec3(4);
-
-    make_point_light(pos, vec3_to_color(color))
-}
-
 //-------------------------------------------
 fn @make_directional_light(dir: Vec3, max_radius: f32, color: Color) = Light {
     sample_direct = @ |_, _| {
@@ -162,13 +155,6 @@ fn @make_directional_light(dir: Vec3, max_radius: f32, color: Color) = Light {
     delta    = true,
     infinite = true
 };
-
-fn @load_directional_light(data: DeviceBuffer, stage: Stage3Accessor) -> Light {
-    let dir   = data.load_vec3(0);
-    let color = data.load_vec3(4);
-
-    make_directional_light(dir, stage.info.scene_radius, vec3_to_color(color))
-}
 
 //-------------------------------------------
 fn @make_sun_light(dir: Vec3, max_radius: f32, sun_radius: f32, color: Color) = Light {
@@ -191,38 +177,6 @@ fn @make_sun_light(dir: Vec3, max_radius: f32, sun_radius: f32, color: Color) = 
     infinite = true
 };
 
-fn @load_sun_light(data: DeviceBuffer, stage: Stage3Accessor) -> Light {
-    let e0    = data.load_vec4(0);
-    let dir   = make_vec3(e0.x, e0.y, e0.z);
-    let power = e0.w;
-    let sun_r = data.load_f32(4);
-
-    make_sun_light(dir, stage.info.scene_radius, sun_r, make_gray_color(power))
-}
-
-fn @load_sky_light(data: DeviceBuffer, stage: Stage3Accessor) -> Light {
-    let buffer_id = data.load_i32(0);
-    let buffer    = stage.buffers(buffer_id);
-    let (azim_n, elev_n) = buffer.load_int2(0);
-
-    let func = @|dir:Vec3| {
-        let (theta, phi) = spherical_from_dir(dir);
-
-        let azimuth   = if phi < 0 { phi + 2 * flt_pi } else { phi };
-        let elevation = theta - flt_pi / 2;
-
-        let u = azimuth / (2 * flt_pi);
-        let v = if elevation < 0 { 0 } else { 2 * elevation / flt_pi };
-
-        let x = (u * ((azim_n - 1) as f32)) as i32;
-        let y = (v * ((elev_n - 1) as f32)) as i32;
-
-        vec3_to_color(buffer.load_vec3(4 + y * azim_n * 4 + x * 4))
-    };
-
-    make_environment_light_function(stage.info.scene_radius, func)
-}
-
 //-------------------------------------------
 // This samples the environment by naive sphere sampling
 fn @make_environment_light(max_radius: f32, color: Color) = Light {
@@ -242,11 +196,6 @@ fn @make_environment_light(max_radius: f32, color: Color) = Light {
     delta    = false,
     infinite = true
 };
-
-fn @load_environment_light(data: DeviceBuffer, stage: Stage3Accessor) -> Light {
-    let color = data.load_vec3(0);
-    make_environment_light(stage.info.scene_radius, vec3_to_color(color))
-}
 
 //-------------------------------------------
 /* TODO: This should contain a distribution map for efficient sampling */
@@ -278,12 +227,6 @@ fn @make_environment_light_textured(max_radius: f32, tex: Texture) -> Light {
         delta    = false,
         infinite = true
     }
-}
-
-fn @load_environment_textured_light(data: DeviceBuffer, stage: Stage3Accessor) -> Light {
-    let tex_id  = data.load_i32(0);
-    let texture = stage.textures(tex_id);
-    make_environment_light_textured(stage.info.scene_radius, texture)
 }
 
 //-------------------------------------------
@@ -320,18 +263,6 @@ fn @make_cie_sky_light(max_radius: f32, zenith: Color, ground: Color, groundBrig
         color_mulf(color_add(color_mulf(zenith, c1 * a), color_mulf(ground, groundBrightness * c2 * b)), denom)
 });
 
-fn @load_cie_sky_light(data: DeviceBuffer, stage: Stage3Accessor, cloudy: bool) -> Light {
-    let e0               = data.load_vec4(0);
-    let zenith           = make_color(e0.x, e0.y, e0.z);
-    let groundBrightness = e0.w;
-    let ground           = vec3_to_color(data.load_vec3(4));
-    make_cie_sky_light(stage.info.scene_radius, zenith, ground, groundBrightness, cloudy)
-}
-
-//-------------------------------------------
-fn @load_cie_uniform_light(data: DeviceBuffer, stage: Stage3Accessor) = @load_cie_sky_light(data, stage, false);
-fn @load_cie_cloudy_light(data: DeviceBuffer, stage: Stage3Accessor)  = @load_cie_sky_light(data, stage, true);
-
 //-------------------------------------------
 fn @make_perez_light(max_radius: f32, sun_dir: Vec3, lum: Color, a: f32, b: f32, c: f32, d: f32, e: f32)  =
     make_environment_light_function(max_radius, @|dir|{
@@ -344,21 +275,6 @@ fn @make_perez_light(max_radius: f32, sun_dir: Vec3, lum: Color, a: f32, b: f32,
         let factor = A * B;
         color_mulf(lum, factor)
 });
-
-fn @load_perez_light(data: DeviceBuffer, stage: Stage3Accessor) -> Light {
-    let e0    = data.load_vec4(0);
-    let e1    = data.load_vec4(4);
-    let color = vec3_to_color(data.load_vec3(8));
-    
-    let dir = make_vec3(e0.x, e0.y, e0.z);
-    let a   = e0.w;
-    let b   = e1.x;
-    let c   = e1.y;
-    let d   = e1.z;
-    let e   = e1.w;
-    
-    make_perez_light(stage.info.scene_radius, dir, color, a, b, c, d, e)
-}
 
 //-------------------------------------------
 fn @make_area_light(area: AreaEmitter, color: Color) = Light {
@@ -378,69 +294,8 @@ fn @make_area_light(area: AreaEmitter, color: Color) = Light {
     infinite = false
 };
 
-fn @load_area_light(data: DeviceBuffer, acc: Stage3Accessor) -> Light {
-    let e0    = data.load_vec4(0);
-    let id    = bitcast[i32](e0.x);
-    let color = make_color(e0.y, e0.z, e0.w);
-
-    let entity  = acc.entities(id);
-    let shape   = acc.shapes(entity.shape_id);
-    let mesh    = shape.mesh;
-    let emitter = AreaEmitter {
-        sample = @ |uv| {
-            let ux  = uv.x * (mesh.num_tris as f32);
-            let f   = ux as i32;
-            let uv2 = make_vec2(ux - (f as f32), uv.y);
-            let (i0, i1, i2) = mesh.triangles(f);
-            let v0  = mesh.vertices(i0);
-            let v1  = mesh.vertices(i1);
-            let v2  = mesh.vertices(i2);
-            let n   = mesh.face_normals(f);
-            let inv_area = mesh.face_inv_area(f);
-            (mat3x4_transform_point(entity.global_mat, sample_triangle(uv2.x, uv2.y, v0, v1, v2)),
-             vec3_normalize(mat3x3_mul(entity.normal_mat, n)),
-             inv_area)
-        },
-        normal = @ |uv| {
-            let f = (uv.x * (mesh.num_tris as f32)) as i32;
-            vec3_normalize(mat3x3_mul(entity.normal_mat, mesh.face_normals(f)))
-        },
-        pdf = @ |uv| {
-            let f = (uv.x * (mesh.num_tris as f32)) as i32;
-            mesh.face_inv_area(f)
-        }
-    };
-    make_area_light(emitter, color)
-}
-
 type LightTable = fn (i32) -> Light;
 
-fn @make_light_table(dtb: DynTable, acc: DeviceBufferAccessor, stage: Stage3Accessor) -> LightTable {
-    @ |id| {
-        let entry = get_lookup_entry(id as u64, dtb, acc);
-        let data  = get_table_entry(entry.offset, dtb, acc);
-        match entry.type_id {
-            0x00 => load_point_light(data, stage),                // LIGHT_POINT
-            0x01 => load_area_light(data, stage),                 // LIGHT_AREA				   
-            0x02 => load_directional_light(data, stage),          // LIGHT_DIRECTIONAL		   
-            0x03 => load_sun_light(data, stage),                  // LIGHT_SUN				   
-            0x04 => load_sky_light(data, stage),                  // LIGHT_SKY			   
-            0x10 => load_cie_uniform_light(data, stage),          // LIGHT_CIE_UNIFORM		   
-            0x11 => load_cie_cloudy_light(data, stage),           // LIGHT_CIE_CLOUDY		   
-            0x12 => load_perez_light(data, stage),                // LIGHT_PEREZ				  
-            0x20 => load_environment_light(data, stage),          // LIGHT_ENVIRONMENT		  
-            0x21 => load_environment_textured_light(data, stage), // LIGHT_ENVIRONMENT_TEXTURED
-            _ =>  make_environment_light(0, black)
-        }
-    } 
-}
-
-// Same purpose as make_light_table, but assume given type_id is always an area light
-// This improves code compilation and overall performance by magnitudes...
-fn @make_arealight_table(dtb: DynTable, acc: DeviceBufferAccessor, stage: Stage3Accessor) -> LightTable {
-    @ |id| {
-        let entry = get_lookup_entry(id as u64, dtb, acc);
-        let data  = get_table_entry(entry.offset, dtb, acc);
-        load_area_light(data, stage)
-    } 
+fn make_null_light_table() -> LightTable {
+    @ |_| make_null_light()
 }

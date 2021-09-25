@@ -12,7 +12,7 @@ std::string RayGenerationShader::setup(LoaderContext& ctx, LoaderResult& result)
 {
 	std::stringstream stream;
 
-	stream << "#[export] fn ig_main(settings: &Settings, iter: i32, capacity: i32, id: &mut i32, xmin: i32, ymin: i32, xmax: i32, ymax: i32) -> i32 {" << std::endl;
+	stream << "#[export] fn ig_main(settings: &Settings, iter: i32, id: &mut i32, xmin: i32, ymin: i32, xmax: i32, ymax: i32) -> i32 {" << std::endl;
 	stream << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl;
 	stream << std::endl;
 
@@ -48,7 +48,7 @@ std::string RayGenerationShader::setup(LoaderContext& ctx, LoaderResult& result)
 	}
 
 	stream << "  let spp = 4 : i32;" << std::endl; // TODO ?
-	stream << "  device.generate_rays(capacity, emitter, id, xmin, ymin, xmax, ymax, spp)" << std::endl;
+	stream << "  device.generate_rays(emitter, id, xmin, ymin, xmax, ymax, spp)" << std::endl;
 	stream << "}" << std::endl;
 
 	return stream.str();

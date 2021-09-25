@@ -25,7 +25,6 @@ struct RuntimeRenderSettings {
 	float FOV			 = 60;
 	float TMin			 = 0;
 	float TMax			 = FltMax;
-	uint32 MaxPathLength = 64;
 };
 
 struct Ray {

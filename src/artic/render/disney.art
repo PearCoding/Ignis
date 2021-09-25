@@ -225,27 +225,3 @@ fn @make_disney_bsdf(surf: SurfaceElement, base_color: Color, flatness: f32, met
         is_specular = false
     }
 }
-
-fn @load_disney_bsdf(flags: u32, data: DeviceBuffer, stage: Stage3Accessor,  _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
-    let e0 = data.load_vec4(0);
-    let e1 = data.load_vec4(4);
-    let e2 = data.load_vec4(8);
-    let e3 = data.load_vec4(12);
-    let e4 = data.load_vec4(16);
-
-    if (flags & bsdf_f_tex1) != 0 {
-        let tex_id  = bitcast[i32](e0.x);
-        let texture = stage.textures(tex_id);
-        make_disney_bsdf(surf, texture(surf.tex_coords), e0.w,
-                        e1.x, e1.y, e1.z, e1.w,
-                        e2.x, e2.y, e2.z, e2.w,
-                        e3.x, e3.y, e3.z, e3.w,
-                        e4.x, e4.y)
-    } else {
-        make_disney_bsdf(surf, make_color(e0.x, e0.y, e0.z), e0.w,
-                        e1.x, e1.y, e1.z, e1.w,
-                        e2.x, e2.y, e2.z, e2.w,
-                        e3.x, e3.y, e3.z, e3.w,
-                        e4.x, e4.y)
-    }
-}

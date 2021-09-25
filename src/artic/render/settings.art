@@ -9,6 +9,5 @@ struct Settings {
     tmax:         f32,
     height:       f32,
     device:       i32,
-    max_path_len: i32,
     debug_mode:   i32
 }

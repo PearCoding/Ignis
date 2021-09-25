@@ -27,8 +27,7 @@ fn @cpu_parallel_tiles(body: fn (i32, i32, i32, i32) -> ()) =
     }
 };
 
-#[export]
-fn cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut [i32], ray_ends: &mut[i32], num_geometries: i32) -> i32 {
+fn @cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut [i32], ray_ends: &mut[i32], num_geometries: i32) -> i32 {
     // Count the number of rays per shader
     for i in range(0, num_geometries + 1) {
         ray_ends(i) = 0;
@@ -277,10 +276,7 @@ fn @cpu_traverse_secondary(scene: SceneGeometry, min_max: MinMax, secondary: &Se
     $cpu_traverse_secondary_specialized(scene, secondary);
 }
 
-fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, scene: Scene, path_tracer: PathTracer, accumulate: fn (i32, Color) -> (), begin: i32, end: i32, vector_width: i32) -> () {
-    // pe_info("entity_id", entity_id);
-    // pe_info("shade:vector_width", vector_width);
-    
+fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: Shader, scene: Scene, path_tracer: PathTracer, accumulate: fn (i32, Color) -> (), begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_shade_specialized(entity_id2: i32, primary2: &PrimaryStream, secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -293,15 +289,11 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
         
         let entities  = scene.database.entities;
         let shapes    = scene.database.shapes;
-        let shaders   = scene.database.shaders;
-        let alights   = scene.database.arealights;
         let on_hit    = path_tracer.on_hit;
         let on_shadow = path_tracer.on_shadow;
         let on_bounce = path_tracer.on_bounce;
         let entity    = entities(entity_id2);
         let shape     = shapes(entity.shape_id);
-        let shader    = shaders(entity.bsdf_id);
-        //let light     = if unlikely(entity.emissive) { @alights(entity.light_id) } else { make_null_light() };
 
         for i, r_vector_width in vectorized_range(vector_width, begin2, end2) {
             let ray       = read_primary_ray(i, 0);
@@ -313,10 +305,9 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
 
             let lcl_surf = shape.surface_element(local_ray, hit);
             let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
-            let bsdf     = shader(ray, hit, glb_surf);
-            let mat      = if unlikely(entity.emissive) { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
-
+            
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
+            let mat       = @shader(ray, hit, glb_surf);
             let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) { color } else { black };
             
             for lane in unroll(0, r_vector_width) {
@@ -351,6 +342,23 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
         }
     }
     $cpu_shade_specialized(entity_id, primary, secondary, begin, end);
+}
+
+fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tracer: PathTracer, begin: i32, end: i32, spp: i32, vector_width: i32) -> () {
+    let (film_pixels, _, _) = cpu_get_film_data();
+
+    fn @accumulate(pixel: i32, color: Color) -> () {
+        let inv = 1 / (spp as f32);
+        film_pixels(pixel * 3 + 0) += color.r * inv;
+        film_pixels(pixel * 3 + 1) += color.g * inv;
+        film_pixels(pixel * 3 + 2) += color.b * inv;
+    }
+
+    let mut primary : PrimaryStream;
+    ignis_cpu_get_primary_stream_const(&mut primary);
+    let mut secondary : SecondaryStream;
+    ignis_cpu_get_secondary_stream_const(&mut secondary);
+    cpu_hit_shade(entity_id, primary, secondary, shader, scene, path_tracer, accumulate, begin, end, vector_width);
 }
 
 fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate: fn (i32, Color) -> (), begin: i32, end: i32, vector_width: i32) -> () {
@@ -410,6 +418,8 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
+fn @cpu_get_stream_capacity(spp: i32, tile_size: i32) = spp * tile_size * tile_size;
+
 fn @cpu_trace( scene: SceneGeometry
              , pipeline: Pipeline
              , min_max: MinMax
@@ -440,7 +450,7 @@ fn @cpu_trace( scene: SceneGeometry
             // Get ray streams/states from the CPU driver
             let mut primary   : PrimaryStream;
             let mut secondary : SecondaryStream;
-            let capacity = spp * tile_size * tile_size;
+            let capacity = @cpu_get_stream_capacity(spp, tile_size);
             ignis_cpu_get_primary_stream(&mut primary,     capacity);
             ignis_cpu_get_secondary_stream(&mut secondary, capacity);
 
@@ -452,7 +462,7 @@ fn @cpu_trace( scene: SceneGeometry
                 // (Re-)generate primary rays
                 if primary.size < capacity {
                     // [Call to Emittor]
-                    primary.size = pipeline.on_generate(capacity, &mut id, xmin, ymin, xmax, ymax);
+                    primary.size = pipeline.on_generate(&mut id, xmin, ymin, xmax, ymax);
                     //primary.size = cpu_generate_rays(primary, capacity, path_tracer.on_emit, &mut id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width);
                 }
 
@@ -602,11 +612,14 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             vector_compact
         )
     },
-    generate_rays = @ | capacity, emitter, id, xmin, ymin, xmax, ymax, spp | -> i32 {
-        cpu_generate_rays_handler(capacity, emitter, id, xmin, ymin, xmax, ymax, spp, vector_width)
+    generate_rays = @ | emitter, id, xmin, ymin, xmax, ymax, spp | -> i32 {
+        cpu_generate_rays_handler(@cpu_get_stream_capacity(spp, tile_size), emitter, id, xmin, ymin, xmax, ymax, spp, vector_width)
     },
     handle_miss_shader = @ | path_tracer, first, last, spp | {
         cpu_miss_shade_handler(path_tracer, first, last, spp, vector_width);
+    },
+    handle_hit_shader = @ | entity_id, shader, scene, path_tracer, first, last, spp | {
+        cpu_hit_shade_handler(entity_id, shader, scene, path_tracer, first, last, spp, vector_width);
     },
     present = @ || ignis_present(0),
     load_scene_bvh = @ || {

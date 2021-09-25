@@ -14,10 +14,9 @@ static inline void setup_technique(RuntimeRenderSettings& settings, LoaderOption
 	std::string tech_type;
 	if (opts.OverrideTechnique.empty()) {
 		const auto technique = lopts.Scene.technique();
-		if (technique) {
-			tech_type			   = technique->pluginType();
-			settings.MaxPathLength = technique->property("max_depth").getInteger(settings.MaxPathLength);
-		} else
+		if (technique)
+			tech_type = technique->pluginType();
+		else
 			tech_type = "path";
 	} else {
 		tech_type = opts.OverrideTechnique;
@@ -125,12 +124,12 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	mIsDebug = lopts.TechniqueType == "debug";
 	mIsTrace = lopts.CameraType == "list";
 
-	IG_LOG(L_INFO) << "Ray Generation Shader:" << std::endl
+	IG_LOG(L_DEBUG) << "Ray Generation Shader:" << std::endl
 				   << result.RayGenerationShader << std::endl;
-	IG_LOG(L_INFO) << "Miss Shader:" << std::endl
+	IG_LOG(L_DEBUG) << "Miss Shader:" << std::endl
 				   << result.MissShader << std::endl;
 	for (const auto& shader : result.HitShaders) {
-		IG_LOG(L_INFO) << "Hit Shader:" << std::endl
+		IG_LOG(L_DEBUG) << "Hit Shader:" << std::endl
 					   << shader << std::endl;
 	}
 
@@ -168,14 +167,13 @@ void Runtime::step(const Camera& camera)
 		settings.up[i] = camera.Up(i);
 	for (int i = 0; i < 3; ++i)
 		settings.right[i] = camera.Right(i);
-	settings.width			 = camera.SensorWidth;
-	settings.height			 = camera.SensorHeight;
-	settings.tmin			 = camera.TMin;
-	settings.tmax			 = camera.TMax;
-	settings.rays			 = nullptr; // No artifical ray streams
-	settings.device			 = mDevice;
-	settings.max_path_length = mLoadedRenderSettings.MaxPathLength;
-	settings.debug_mode		 = (uint32)mDebugMode;
+	settings.width		= camera.SensorWidth;
+	settings.height		= camera.SensorHeight;
+	settings.tmin		= camera.TMin;
+	settings.tmax		= camera.TMax;
+	settings.rays		= nullptr; // No artifical ray streams
+	settings.device		= mDevice;
+	settings.debug_mode = (uint32)mDebugMode;
 
 	mLoadedInterface.RenderFunction(&settings, mIteration++);
 }
@@ -191,11 +189,10 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
 	}
 
 	DriverRenderSettings settings;
-	settings.width			 = rays.size();
-	settings.height			 = 1;
-	settings.rays			 = rays.data();
-	settings.device			 = mDevice;
-	settings.max_path_length = mLoadedRenderSettings.MaxPathLength;
+	settings.width	= rays.size();
+	settings.height = 1;
+	settings.rays	= rays.data();
+	settings.device = mDevice;
 
 	mLoadedInterface.RenderFunction(&settings, mIteration++);
 

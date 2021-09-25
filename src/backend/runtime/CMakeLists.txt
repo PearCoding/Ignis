@@ -83,6 +83,8 @@ set(SRC
     loader/LoaderLight.h
     loader/LoaderShape.cpp
     loader/LoaderShape.h
+    loader/LoaderTechnique.cpp
+    loader/LoaderTechnique.h
     loader/LoaderTexture.cpp
     loader/LoaderTexture.h
     loader/MissShader.cpp

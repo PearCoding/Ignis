@@ -23,48 +23,20 @@ struct MapTable {
 }
 
 struct SceneDatabase {
-    buffers:  DynTable,
-    textures: DynTable,
     shapes:   DynTable,
     entities: DynTable,
-    lights:   DynTable,
-    shaders:  DynTable,
     bvhs:     DynTable
 }
 
-// Stage 1: Initial stage after loading buffers
-struct Stage1Accessor {
-    info:    SceneInfo,
-    buffers: BufferTable
-}
-
-// Stage 2: Initial stage after loading texture tables
-struct Stage2Accessor {
-    info:     SceneInfo,
-    buffers:  BufferTable,  
-    textures: TextureTable 
-}
-
-// Stage 3: Second stage after loading shapes and entities
-struct Stage3Accessor {
-    info:     SceneInfo,
-    buffers:  BufferTable,  
-    textures: TextureTable,
-    shapes:   ShapeTable,
-    entities: EntityTable
-}
-
-// Essentially Stage4Accessor, after loading everything else
+// Essentially the scene for shading. No bvh information used
+// We could drop most shape and entity information as well
+// if area lights are handled differently (in the future)
 struct SceneAccessor {
     info:       SceneInfo,
-    buffers:    BufferTable,  // Defined here
-    textures:   TextureTable, // Defined in texture.art
     shapes:     ShapeTable,   // Defined in shape.art
     entities:   EntityTable,  // Defined in entity.art
     lights:     LightTable,   // Defined in light.art
     arealights: LightTable,   // Defined in light.art
-    shaders:    BsdfTable,  // Defined in material.art
-    bvhs:       BVHTable      // Defined in intersection.art
 }
 
 // Device buffer. Granularity is 4 byte per index
@@ -109,15 +81,6 @@ fn @get_table_entry(off: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> Devi
 }
 
 //-----------------
-
-type BufferTable = fn (i32) -> DeviceBuffer;
-
-fn @make_buffer_table(dtb: DynTable, acc: DeviceBufferAccessor) -> BufferTable {
-    @ |id| {
-        let entry = get_lookup_entry(id as u64, dtb, acc);
-        get_table_entry(entry.offset, dtb, acc)
-    } 
-}
 
 // Mandatory information for the tracing part
 struct TraceAccessor {
