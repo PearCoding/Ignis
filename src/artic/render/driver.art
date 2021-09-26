@@ -12,6 +12,7 @@
 #[import(cc = "C")] fn ignis_gpu_get_secondary_stream(i32, &mut SecondaryStream, i32) -> ();
 #[import(cc = "C")] fn ignis_gpu_get_secondary_stream_const(i32, &mut SecondaryStream) -> ();
 #[import(cc = "C")] fn ignis_gpu_get_tmp_buffer(i32, &mut &mut [i32], i32) -> ();
+#[import(cc = "C")] fn ignis_gpu_swap_primary_streams(i32) -> ();
 #[import(cc = "C")] fn ignis_load_bvh2_ent(i32, &mut &[Node2], &mut &[EntityLeaf1]) -> ();
 #[import(cc = "C")] fn ignis_load_bvh4_ent(i32, &mut &[Node4], &mut &[EntityLeaf1]) -> ();
 #[import(cc = "C")] fn ignis_load_bvh8_ent(i32, &mut &[Node8], &mut &[EntityLeaf1]) -> ();

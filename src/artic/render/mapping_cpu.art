@@ -27,7 +27,7 @@ fn @cpu_parallel_tiles(body: fn (i32, i32, i32, i32) -> ()) =
     }
 };
 
-fn @cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut [i32], ray_ends: &mut[i32], num_geometries: i32) -> i32 {
+fn @cpu_sort_primary(primary: &PrimaryStream, ray_ends: &mut[i32], num_geometries: i32) -> i32 {
     // Count the number of rays per shader
     for i in range(0, num_geometries + 1) {
         ray_ends(i) = 0;
@@ -35,7 +35,9 @@ fn @cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut [i32], ray_ends: 
     for i in range(0, primary.size) {
         ray_ends(primary.ent_id(i))++;
     }
+
     // Compute scan over shader bins
+    let mut ray_begins : [i32 * 1024];
     let mut n = 0;
     for i in range(0, num_geometries + 1) {
         ray_begins(i) = n;
@@ -450,49 +452,40 @@ fn @cpu_trace( scene: SceneGeometry
             // Get ray streams/states from the CPU driver
             let mut primary   : PrimaryStream;
             let mut secondary : SecondaryStream;
-            let capacity = @cpu_get_stream_capacity(spp, tile_size);
+            let capacity = cpu_get_stream_capacity(spp, tile_size);
             ignis_cpu_get_primary_stream(&mut primary,     capacity);
             ignis_cpu_get_secondary_stream(&mut secondary, capacity);
 
             let mut id = 0;
             let num_rays = spp * (ymax - ymin) * (xmax - xmin);
             while id < num_rays || primary.size > 0 {
-                let first = id == 0;
+                let is_first = id == 0;
 
                 // (Re-)generate primary rays
                 if primary.size < capacity {
-                    // [Call to Emittor]
                     primary.size = pipeline.on_generate(&mut id, xmin, ymin, xmax, ymax);
-                    //primary.size = cpu_generate_rays(primary, capacity, path_tracer.on_emit, &mut id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width);
                 }
 
                 if scene.info.num_entities == 0 {
-                    // [Call to Shader]
                     pipeline.on_miss_shade(0, primary.size);
-                    //cpu_miss_shade(primary, path_tracer, accumulate, 0, primary.size, vector_width);
                     primary.size = 0;
                 } else {
                     // Trace primary rays
-                    // [Call to Intersector]
-                    cpu_profile(if first { &mut primary_counter } else { &mut bounces_counter }, || {
-                        //pipeline.on_traverse_primary(scene, primary, single);
+                    cpu_profile(if is_first { &mut primary_counter } else { &mut bounces_counter }, || {
                         cpu_traverse_primary(scene, min_max, primary, single, vector_width);
                     });
                     atomic(1:u32, &mut total_rays, primary.size as i64, 7:u32, "");
 
                     // Sort hits by shader id, and filter invalid hits
-                    let mut ray_begins : [i32 * 1024];
-                    let mut ray_ends   : [i32 * 1024];
-                    primary.size = cpu_sort_primary(primary, &mut ray_begins, &mut ray_ends, scene.info.num_entities);
+                    let mut ray_ends : [i32 * 1024];
+                    primary.size = cpu_sort_primary(primary, &mut ray_ends, scene.info.num_entities);
 
                     // Perform (vectorized) shading
-                    // [Call to Shader]
                     cpu_profile(&mut shading_counter, || {
                         let mut begin = 0;
                         for ent_id in range(0, scene.info.num_entities) {
                             let end = ray_ends(ent_id);
                             pipeline.on_hit_shade(ent_id, begin, end);
-                            //cpu_shade(ent_id, primary, secondary, scene, path_tracer, accumulate, begin, end, vector_width);
                             begin = end;
                         }
 
@@ -500,7 +493,6 @@ fn @cpu_trace( scene: SceneGeometry
                         let last = ray_ends(scene.info.num_entities);
                         if(begin < last) {
                             pipeline.on_miss_shade(begin, last);
-                            //cpu_miss_shade(primary, path_tracer, accumulate, begin, last, vector_width);
                         }
                     });
 
@@ -509,11 +501,9 @@ fn @cpu_trace( scene: SceneGeometry
                     primary.size   = cpu_compact_primary(primary, vector_width, vector_compact);
 
                     // Compact and trace secondary rays
-                    // [Call to Intersector]
                     secondary.size = cpu_compact_secondary(secondary, vector_width, vector_compact);
                     if likely(secondary.size > 0) {
                         cpu_profile(&mut shadow_counter, || {
-                            //pipeline.on_traverse_secondary(scene, secondary, single);
                             cpu_traverse_secondary(scene, min_max, secondary, single, vector_width);
                         });
                     }

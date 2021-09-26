@@ -5,9 +5,9 @@ fn @make_ao_renderer() -> PathTracer {
         on_hit    = @ |_, _, _, _, _| Option[(Color)]::None,
         on_miss   = @ |_, _| Option[(Color)]::None,
         on_shadow = @ |ray, _, state, surf, _| {
-            let mat = make_diffuse_bsdf(surf, white);
+            let bsdf    = make_diffuse_bsdf(surf, white);
             let out_dir = vec3_neg(ray.dir);
-            if let Option[BsdfSample]::Some(sample) = mat.sample(&mut state.rnd, out_dir, false) {
+            if let Option[BsdfSample]::Some(sample) = bsdf.sample(&mut state.rnd, out_dir, false) {
                 make_option(
                     make_ray(surf.point, sample.in_dir, offset, flt_max),
                     sample.color

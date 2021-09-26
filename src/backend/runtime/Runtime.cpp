@@ -9,7 +9,7 @@
 
 namespace IG {
 
-static inline void setup_technique(RuntimeRenderSettings& settings, LoaderOptions& lopts, const RuntimeOptions& opts)
+static inline void setup_technique(LoaderOptions& lopts, const RuntimeOptions& opts)
 {
 	std::string tech_type;
 	if (opts.OverrideTechnique.empty()) {
@@ -94,7 +94,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
 
 	// Extract technique
-	setup_technique(mLoadedRenderSettings, lopts, opts);
+	setup_technique(lopts, opts);
 
 	// Extract film
 	setup_film(mLoadedRenderSettings, lopts, opts);
@@ -126,6 +126,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 
 	IG_LOG(L_DEBUG) << "Ray Generation Shader:" << std::endl
 				   << result.RayGenerationShader << std::endl;
+
 	IG_LOG(L_DEBUG) << "Miss Shader:" << std::endl
 				   << result.MissShader << std::endl;
 	for (const auto& shader : result.HitShaders) {

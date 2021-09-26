@@ -21,7 +21,7 @@ std::string RayGenerationShader::setup(LoaderContext& ctx, LoaderResult& result)
 		gen = "make_perspective_camera";
 	else if (ctx.CameraType == "orthogonal")
 		gen = "make_orthogonal_camera";
-	else if (ctx.CameraType == "fishlens")
+	else if (ctx.CameraType == "fishlens" || ctx.CameraType == "fisheye")
 		gen = "make_fishlens_camera";
 	else if (ctx.CameraType != "list") {
 		IG_LOG(L_ERROR) << "Unknown camera type '" << ctx.CameraType << "'" << std::endl;

@@ -4,6 +4,15 @@ struct Camera {
     generate_ray: fn (f32, f32) -> Ray
 }
 
+//
+fn @make_test_camera() -> Camera {
+    Camera {
+        generate_ray = @ |_,_| {
+            make_ray(make_vec3(0,0,4), make_vec3(0,0,-1), 0, flt_max)
+        }
+    }
+}
+
 // Creates a perspective camera
 fn @make_perspective_camera(eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
     let dir   = view.col(2);

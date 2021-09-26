@@ -160,11 +160,12 @@ fn @gpu_hit_shade_handler(dev_id: i32
                         , end: i32
                         , spp: i32) -> () {
     let (film_pixels, _, _) = gpu_get_film_data(dev_id);
-
+    
     let mut primary : PrimaryStream;
     ignis_gpu_get_first_primary_stream_const(dev_id, &mut primary);
     let mut secondary : SecondaryStream;
     ignis_gpu_get_secondary_stream_const(dev_id, &mut secondary);
+
     gpu_hit_shade(acc, atomics, shader, scene, path_tracer, film_pixels, spp, primary, secondary, begin, end, entity_id);
 }
 
@@ -202,6 +203,7 @@ fn @gpu_miss_shade_handler(dev_id: i32, acc: Accelerator, atomics: Atomics, path
 
     let mut primary: PrimaryStream;
     ignis_gpu_get_first_primary_stream_const(dev_id, &mut primary);
+
     gpu_miss_shade(acc, atomics, path_tracer, film_pixels, spp, primary, begin, end);
 }
 
@@ -329,7 +331,7 @@ fn @gpu_generate_rays( primary: PrimaryStream
     });
     acc.sync();
 
-    *id += num_rays;
+    *id = first_ray_id + num_rays;
     primary.size + num_rays
 }
 
@@ -380,10 +382,12 @@ fn @gpu_compact_primary( primary: PrimaryStream
     size
 }
 
-fn @gpu_swap_streams(a: &mut PrimaryStream, b: &mut PrimaryStream) -> () {
+fn @gpu_swap_streams(dev_id: i32, a: &mut PrimaryStream, b: &mut PrimaryStream) -> () {
     let tmp = *a;
     *a = *b;
     *b = tmp;
+    // We have to make sure that other parts of the runtime also swap it
+    ignis_gpu_swap_primary_streams(dev_id); 
 }
 
 static GPUStreamCapacity = 1024 * 1024;
@@ -397,13 +401,12 @@ fn @gpu_trace( dev_id: i32
              ) -> () {
     let (film_pixels, film_width, film_height) = gpu_get_film_data(dev_id);
 
-    let capacity = GPUStreamCapacity;
     let mut primary:       PrimaryStream;
     let mut other_primary: PrimaryStream;
     let mut secondary:     SecondaryStream;
-    ignis_gpu_get_first_primary_stream(dev_id, &mut primary, capacity);
-    ignis_gpu_get_second_primary_stream(dev_id, &mut other_primary, capacity);
-    ignis_gpu_get_secondary_stream(dev_id, &mut secondary, capacity);
+    ignis_gpu_get_first_primary_stream(dev_id, &mut primary, GPUStreamCapacity);
+    ignis_gpu_get_second_primary_stream(dev_id, &mut other_primary, GPUStreamCapacity);
+    ignis_gpu_get_secondary_stream(dev_id, &mut secondary, GPUStreamCapacity);
 
     let mut gpu_tmp : &mut [i32];
     ignis_gpu_get_tmp_buffer(dev_id, &mut gpu_tmp, 1024);
@@ -412,34 +415,27 @@ fn @gpu_trace( dev_id: i32
     let num_rays = spp * film_width * film_height;
     while id < num_rays || primary.size > 0 {
         // Regenerate rays
-        // [Call to Emittor]
-        if primary.size < capacity && id < num_rays {
+        if primary.size < GPUStreamCapacity && id < num_rays {
             primary.size = pipeline.on_generate(&mut id, 0, 0, film_width, film_height);
-            //primary.size = gpu_generate_rays(primary, capacity, acc, path_tracer.on_emit, &mut id, film_width, film_height, spp);
         }
 
         // Special case: No entities to intersect
-        // [Call to Shader]
         if scene.info.num_entities == 0 {
             pipeline.on_miss_shade(0, primary.size);
-            //gpu_missshade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, 0, primary.size);
             primary.size = 0;
             acc.sync();
             continue()
         }
 
         // Traverse primary rays
-        // [Call to Intersector]
-        //pipeline.on_traverse_primary(scene, primary, true);
         gpu_traverse_primary(primary, acc, min_max, scene);
 
         // Sort rays by entity
         let mut ray_ends : [i32 * 1024];
         gpu_sort_primary(primary, other_primary, dev_id, acc, atomics, scene, gpu_tmp, &mut ray_ends);
-        gpu_swap_streams(&mut primary, &mut other_primary);
+        gpu_swap_streams(dev_id, &mut primary, &mut other_primary);
 
         // Shade rays
-        // [Call to Shader]
         let mut first = 0;
         for ent_id in range(0, scene.info.num_entities) {
             let last = ray_ends(ent_id);
@@ -447,16 +443,13 @@ fn @gpu_trace( dev_id: i32
                 continue()
             }
             pipeline.on_hit_shade(ent_id, first, last);
-            //gpu_shade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, secondary, first, last, ent_id);
             first = last;
         }
 
         // Shade non-hits as well
-        // [Call to Shader]
         let last = ray_ends(scene.info.num_entities);
         if(first < last) {
             pipeline.on_miss_shade(first, last);
-            //gpu_missshade(acc, atomics, scene, path_tracer, film_pixels, spp, primary, first, last);
             // Do not set first as last (to make sure they drop out)
         }
 
@@ -466,19 +459,16 @@ fn @gpu_trace( dev_id: i32
 
         if first > 0 {
             // Trace secondary rays
-            // [Call to Intersector]
-            //pipeline.on_traverse_secondary(scene, secondary, true);
             gpu_traverse_secondary(secondary, acc, atomics, min_max, scene, film_pixels, spp);
 
             // Compact primary rays
             other_primary.size = gpu_compact_primary(primary, other_primary, dev_id, acc, atomics, gpu_tmp);
-            gpu_swap_streams(&mut primary, &mut other_primary);
+            gpu_swap_streams(dev_id, &mut primary, &mut other_primary);
         }
     }
 }
 
 // GPU device ----------------------------------------------------------------------
-
 fn @make_gpu_buffer(p: &addrspace(1)[u8], is_nvvm: bool) -> DeviceBuffer {
     if is_nvvm {
         DeviceBuffer {
@@ -647,9 +637,9 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_scene_info(dev_id, &mut info);
         info
     },
-    load_entity_table    = @ |dtb| make_entity_table(dtb, accb),
-    load_shape_table     = @ |dtb| make_shape_table(dtb, accb),
-    load_bvh_table       = @ |dtb| -> BVHTable {
+    load_entity_table = @ |dtb| make_entity_table(dtb, accb),
+    load_shape_table  = @ |dtb| make_shape_table(dtb, accb),
+    load_bvh_table    = @ |dtb| -> BVHTable {
         @ |id| {
             let entry  = get_lookup_entry(id as u64, dtb, accb); 
             let header = get_table_entry(entry.offset, dtb, accb);

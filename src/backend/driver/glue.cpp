@@ -122,6 +122,18 @@ struct Interface {
 		anydsl::Array<float> secondary;
 		anydsl::Array<float> film_pixels;
 		anydsl::Array<StreamRay> ray_list;
+		anydsl::Array<float>* current_first_primary;
+		anydsl::Array<float>* current_second_primary;
+
+		inline DeviceData()
+			: scene_ent(false)
+			, database_loaded(false)
+		{
+			current_first_primary  = &first_primary;
+			current_second_primary = &second_primary;
+		}
+
+		~DeviceData() = default;
 	};
 	std::unordered_map<int32_t, DeviceData> devices;
 
@@ -196,6 +208,7 @@ struct Interface {
 
 	anydsl::Array<float>& cpu_primary_stream_const()
 	{
+		IG_ASSERT(get_thread_data()->cpu_primary.size() > 0, "Expected cpu primary stream to be initialized");
 		return get_thread_data()->cpu_primary;
 	}
 
@@ -206,27 +219,30 @@ struct Interface {
 
 	anydsl::Array<float>& cpu_secondary_stream_const()
 	{
+		IG_ASSERT(get_thread_data()->cpu_secondary.size() > 0, "Expected cpu secondary stream to be initialized");
 		return get_thread_data()->cpu_secondary;
 	}
 
 	anydsl::Array<float>& gpu_first_primary_stream(int32_t dev, size_t size)
 	{
-		return resize_array(dev, devices[dev].first_primary, size, 20);
+		return resize_array(dev, *devices[dev].current_first_primary, size, 20);
 	}
 
 	anydsl::Array<float>& gpu_first_primary_stream_const(int32_t dev)
 	{
-		return devices[dev].first_primary;
+		IG_ASSERT(devices[dev].current_first_primary->size() > 0, "Expected gpu first primary stream to be initialized");
+		return *devices[dev].current_first_primary;
 	}
 
 	anydsl::Array<float>& gpu_second_primary_stream(int32_t dev, size_t size)
 	{
-		return resize_array(dev, devices[dev].second_primary, size, 20);
+		return resize_array(dev, *devices[dev].current_second_primary, size, 20);
 	}
 
 	anydsl::Array<float>& gpu_second_primary_stream_const(int32_t dev)
 	{
-		return devices[dev].second_primary;
+		IG_ASSERT(devices[dev].current_second_primary->size() > 0, "Expected gpu second primary stream to be initialized");
+		return *devices[dev].current_second_primary;
 	}
 
 	anydsl::Array<float>& gpu_secondary_stream(int32_t dev, size_t size)
@@ -236,12 +252,18 @@ struct Interface {
 
 	anydsl::Array<float>& gpu_secondary_stream_const(int32_t dev)
 	{
+		IG_ASSERT(devices[dev].secondary.size() > 0, "Expected gpu secondary stream to be initialized");
 		return devices[dev].secondary;
 	}
 
 	anydsl::Array<int32_t>& gpu_tmp_buffer(int32_t dev, size_t size)
 	{
 		return resize_array(dev, devices[dev].tmp_buffer, size, 1);
+	}
+
+	void gpu_swap_primary_streams(int32_t dev)
+	{
+		std::swap(devices[dev].current_first_primary, devices[dev].current_second_primary);
 	}
 
 	const Bvh2Ent& load_bvh2_ent(int32_t dev)
@@ -384,6 +406,7 @@ struct Interface {
 
 	void run_miss_shader(int first, int last)
 	{
+		//std::cout << "MISS [" << first << ", " << last << "]" << std::endl;
 		using Callback = decltype(ig_miss_shader);
 		IG_ASSERT(miss_shader != nullptr, "Expected miss shader to be valid");
 		auto callback = (Callback*)miss_shader;
@@ -392,6 +415,7 @@ struct Interface {
 
 	void run_hit_shader(int entity_id, int first, int last)
 	{
+		//std::cout << "HIT " << entity_id << " [" << first << ", " << last << "]" << std::endl;
 		using Callback = decltype(ig_hit_shader);
 		IG_ASSERT(entity_id >= 0 && entity_id < (int)hit_shaders.size(), "Expected entity id for hit shaders to be valid");
 		void* hit_shader = hit_shaders[entity_id];
@@ -700,6 +724,11 @@ void ignis_gpu_get_secondary_stream_const(int dev, SecondaryStream* secondary)
 {
 	auto& array = sInterface->gpu_secondary_stream_const(dev);
 	get_secondary_stream(*secondary, array.data(), array.size() / 13);
+}
+
+void ignis_gpu_swap_primary_streams(int dev)
+{
+	sInterface->gpu_swap_primary_streams(dev);
 }
 
 int ignis_handle_ray_generation(int* id, int xmin, int ymin, int xmax, int ymax)

@@ -21,7 +21,8 @@ fn @mwc64x(seed: &mut u64) -> i32 {
 // 32-bit version of the xorshift random number generator
 fn @xorshift(seed: &mut u32) -> i32 {
     let mut x = *seed;
-    x = select(x == 0, 1:u32, x);
+    //x = select(x == 0, 1:u32, x); // FIXME: These if clauses crash in vectorization
+    x = if x == 0 { 1:u32 } else { x };
     x ^= x << 13;
     x ^= x >> 17;
     x ^= x <<  5;

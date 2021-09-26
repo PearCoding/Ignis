@@ -31,9 +31,9 @@ fn @make_camera_emitter(camera: Camera, iter: i32) -> RayEmitter {
         hash = fnv_hash(hash, x as u32);
         hash = fnv_hash(hash, y as u32);
         let mut rnd = hash /*as RndState*/;
-        let kx = 2 * (x as f32 + randf(&mut rnd)) / (width  as f32) - 1;
+        let kx = 2 * (x as f32 + randf(&mut rnd)) / (width as f32) - 1;
         let ky = 1 - 2 * (y as f32 + randf(&mut rnd)) / (height as f32);
-        let ray = camera.generate_ray(kx, ky);
+        let ray   = camera.generate_ray(kx, ky);
         let state = make_ray_state(rnd, white, 0, 0);
         (ray, state)
     }
