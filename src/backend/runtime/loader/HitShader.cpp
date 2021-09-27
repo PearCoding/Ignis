@@ -1,5 +1,6 @@
 #include "HitShader.h"
 #include "Loader.h"
+#include "LoaderLight.h"
 #include "LoaderTechnique.h"
 #include "Logger.h"
 #include "ShaderUtils.h"
@@ -17,15 +18,14 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& re
 		   << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
 		   << std::endl;
 
-	// TODO: Setup lights
+	if (LoaderTechnique::requireLights(ctx))
+		stream << LoaderLight::generate(ctx, result);
 
 	stream << "  let dtb  = device.load_scene_database();" << std::endl
 		   << "  let acc  = SceneAccessor {" << std::endl
-		   << "    info       = device.load_scene_info()," << std::endl
+		   << "    info       = " << ShaderUtils::generateSceneInfoInline(ctx) << "," << std::endl
 		   << "    shapes     = device.load_shape_table(dtb.shapes)," << std::endl
 		   << "    entities   = device.load_entity_table(dtb.entities)," << std::endl
-		   << "    lights     = make_null_light_table()," << std::endl
-		   << "    arealights = make_null_light_table()" << std::endl
 		   << "  };" << std::endl
 		   << std::endl;
 
@@ -39,7 +39,7 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& re
 	stream << "  let shader : Shader = @|_ray, _hit, surf| make_material(make_diffuse_bsdf(surf, white));" << std::endl
 		   << std::endl;
 
-	stream << "  let technique = " << LoaderTechnique::generate(false, ctx, result) << ";" << std::endl
+	stream << LoaderTechnique::generate(ctx, result) << std::endl
 		   << std::endl;
 
 	stream << "  let spp = 4 : i32;" << std::endl // TODO ?

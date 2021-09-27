@@ -390,8 +390,6 @@ struct Interface {
 		SceneInfo info;
 		info.num_entities = database->EntityTable.entryCount();
 		info.num_shapes	  = database->ShapeTable.entryCount();
-		info.num_lights	  = database->LightTable.entryCount();
-		info.scene_radius = database->SceneRadius;
 		return info;
 	}
 

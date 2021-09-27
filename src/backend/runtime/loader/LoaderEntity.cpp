@@ -64,8 +64,9 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 			IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown bsdf " << bsdfName << std::endl;
 			continue;
 		}
-		IG_ASSERT(ctx.Environment.BsdfIDs.count(bsdfName) != 0, "Bsdf ID entry not available, even while Bsdf is known");
-		const uint32 bsdfID = ctx.Environment.BsdfIDs.at(bsdfName);
+		
+		// TODO
+		const uint32 bsdfID = 0;// ctx.Environment.BsdfIDs.at(bsdfName);
 
 		// Extract entity information
 		Transformf transform = child->property("transform").getTransform();
@@ -81,7 +82,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 		// Register name for lights to assosciate with
 		ctx.Environment.EntityIDs[pair.first] = counter++;
 
-		const int32 lightID = ctx.Environment.AreaIDs.count(pair.first) == 0 ? -1 : (int32)ctx.Environment.AreaIDs.at(pair.first);
+		const int32 lightID = -1;//ctx.Environment.AreaIDs.count(pair.first) == 0 ? -1 : (int32)ctx.Environment.AreaIDs.at(pair.first);
 
 		// Write data to dyntable
 		auto& entityData = result.Database.EntityTable.addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
@@ -104,8 +105,10 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
 	IG_LOG(L_DEBUG) << "Storing Entities took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
-	if (counter == 0)
+	if (counter == 0) {
+		ctx.Environment.SceneDiameter = 0;
 		return true;
+	}
 
 	ctx.Environment.SceneDiameter = ctx.Environment.SceneBBox.diameter().norm();
 

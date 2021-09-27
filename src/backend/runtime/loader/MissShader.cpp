@@ -1,5 +1,6 @@
 #include "MissShader.h"
 #include "Loader.h"
+#include "LoaderLight.h"
 #include "LoaderTechnique.h"
 #include "Logger.h"
 #include "ShaderUtils.h"
@@ -17,7 +18,10 @@ std::string MissShader::setup(LoaderContext& ctx, LoaderResult& result)
 	stream << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl;
 	stream << std::endl;
 
-	stream << "  let technique = " << LoaderTechnique::generate(true, ctx, result) << ";" << std::endl;
+	if (LoaderTechnique::requireLights(ctx))
+		stream << LoaderLight::generate(ctx, result);
+
+	stream << LoaderTechnique::generate(ctx, result) << std::endl;
 	stream << std::endl;
 
 	stream << "  let spp = 4 : i32;" << std::endl; // TODO ?

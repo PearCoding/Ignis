@@ -9,12 +9,8 @@ struct SceneBVH {
 };
 
 struct SceneDatabase {
-	DynTable BufferTable;
-	DynTable TextureTable;
 	DynTable EntityTable;
 	DynTable ShapeTable;
-	DynTable LightTable;
-	DynTable BsdfTable;
 	DynTable BVHTable;
 
 	IG::SceneBVH SceneBVH;

@@ -4,26 +4,29 @@
 #include "serialization/VectorSerializer.h"
 
 namespace IG {
-std::string LoaderTechnique::generate(bool is_miss_shader, LoaderContext& ctx, LoaderResult& result)
+
+bool LoaderTechnique::requireLights(LoaderContext& ctx)
+{
+	return ctx.TechniqueType == "path";
+}
+
+std::string LoaderTechnique::generate(LoaderContext& ctx, LoaderResult& result)
 {
 	std::stringstream stream;
 
 	std::string tech_type = ctx.TechniqueType;
 
-	// TODO: Setup path tracer
-	// and also setup lights if necessary 
-	// (it is already defined if its a hit shader)
-
 	if (tech_type == "ao") {
-		stream << "make_ao_renderer()";
-	} /* else if (tech_type == "path") {
-		const auto technique = lopts.Scene.technique();
-		if (technique) {
-			settings.MaxPathLength = technique->property("max_depth").getInteger(64);
-		}
-	} */
-	else {
-		stream << "make_debug_renderer(settings.debug_mode)";
+		stream << "  let technique = make_ao_renderer();";
+	} else if (tech_type == "path") {
+		int max_depth		 = 64;
+		const auto technique = ctx.Scene.technique();
+		if (technique)
+			max_depth = technique->property("max_depth").getInteger(max_depth);
+
+		stream << "  let technique = make_path_renderer(" << max_depth << ", num_lights, lights);";
+	} else {
+		stream << "  let technique = make_debug_renderer(settings.debug_mode);";
 	}
 
 	return stream.str();

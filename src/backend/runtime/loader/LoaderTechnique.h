@@ -5,6 +5,7 @@
 namespace IG {
 struct LoaderResult;
 struct LoaderTechnique {
-	static std::string generate(bool is_miss_shader, LoaderContext& ctx, LoaderResult& res);
+	static bool requireLights(LoaderContext& ctx);
+	static std::string generate(LoaderContext& ctx, LoaderResult& res);
 };
 } // namespace IG

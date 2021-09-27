@@ -25,6 +25,13 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 	ctx.CameraType	  = opts.CameraType;
 	ctx.TechniqueType = opts.TechniqueType;
 
+	// Load content
+	if (!LoaderShape::load(ctx, result))
+		return false;
+
+	if (!LoaderEntity::load(ctx, result))
+		return false;
+
 	// Generate Ray Generation Shader
 	result.RayGenerationShader = RayGenerationShader::setup(ctx, result);
 	if (result.RayGenerationShader.empty())
@@ -36,24 +43,6 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 		return false;
 
 	// Generate Hit Shader
-	if (!LoaderTexture::load(ctx, result))
-		return false;
-
-	if (!LoaderShape::load(ctx, result))
-		return false;
-
-	if (!LoaderBSDF::load(ctx, result))
-		return false;
-
-	if (!LoaderLight::setup_area(ctx))
-		return false;
-
-	if (!LoaderEntity::load(ctx, result))
-		return false;
-
-	if (!LoaderLight::load(ctx, result))
-		return false;
-
 	for (size_t i = 0; i < result.Database.EntityTable.entryCount(); ++i) {
 		std::string shader = HitShader::setup(i, ctx, result);
 		if (shader.empty())

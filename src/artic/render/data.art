@@ -35,8 +35,6 @@ struct SceneAccessor {
     info:       SceneInfo,
     shapes:     ShapeTable,   // Defined in shape.art
     entities:   EntityTable,  // Defined in entity.art
-    lights:     LightTable,   // Defined in light.art
-    arealights: LightTable,   // Defined in light.art
 }
 
 // Device buffer. Granularity is 4 byte per index

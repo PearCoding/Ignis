@@ -1,9 +1,7 @@
 // Scene data
 struct SceneInfo {
     num_entities: i32,
-    num_shapes:   i32,
-    num_lights:   i32,
-    scene_radius: f32
+    num_shapes:   i32
 }
 
 struct Scene {

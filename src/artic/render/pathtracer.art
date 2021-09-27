@@ -1,4 +1,4 @@
-fn @make_path_tracing_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -> PathTracer {
+fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -> PathTracer {
     let offset : f32  = 0.001;
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
 

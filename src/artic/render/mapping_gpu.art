@@ -448,7 +448,7 @@ fn @gpu_trace( dev_id: i32
 
         // Shade non-hits as well
         let last = ray_ends(scene.info.num_entities);
-        if(first < last) {
+        if first < last {
             pipeline.on_miss_shade(first, last);
             // Do not set first as last (to make sure they drop out)
         }

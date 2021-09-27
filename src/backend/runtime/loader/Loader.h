@@ -17,7 +17,6 @@ struct LoaderOptions {
 
 struct LoaderResult {
 	SceneDatabase Database;
-	float SceneRadius;
 	std::string RayGenerationShader;
 	std::string MissShader;
 	std::vector<std::string> HitShaders;
