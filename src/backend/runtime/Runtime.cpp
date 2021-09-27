@@ -125,13 +125,13 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	mIsTrace = lopts.CameraType == "list";
 
 	IG_LOG(L_DEBUG) << "Ray Generation Shader:" << std::endl
-				   << result.RayGenerationShader << std::endl;
+					<< result.RayGenerationShader << std::endl;
 
 	IG_LOG(L_DEBUG) << "Miss Shader:" << std::endl
-				   << result.MissShader << std::endl;
+					<< result.MissShader << std::endl;
 	for (const auto& shader : result.HitShaders) {
 		IG_LOG(L_DEBUG) << "Hit Shader:" << std::endl
-					   << shader << std::endl;
+						<< shader << std::endl;
 	}
 
 	RayGenerationShader = std::move(result.RayGenerationShader);
@@ -224,14 +224,14 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 	ig_init_jit(mManager.getPath(mConfiguration & IG_C_MASK_DEVICE).generic_u8string());
 
 	IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
-	settings.ray_generation_shader = ig_compile_source(RayGenerationShader);
+	settings.ray_generation_shader = ig_compile_source(RayGenerationShader, "ig_ray_generation_shader");
 
 	IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
-	settings.miss_shader = ig_compile_source(MissShader);
+	settings.miss_shader = ig_compile_source(MissShader, "ig_miss_shader");
 
 	IG_LOG(L_DEBUG) << "Compiling hit shader" << std::endl;
-	for (const auto& shader : HitShaders)
-		settings.hit_shaders.push_back(ig_compile_source(shader));
+	for (size_t i = 0; i < HitShaders.size(); ++i)
+		settings.hit_shaders.push_back(ig_compile_source(HitShaders[i], "ig_hit_shader_" + std::to_string(i)));
 
 	mLoadedInterface.SetupFunction(&settings);
 	mInit = true;

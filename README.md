@@ -1,4 +1,5 @@
 # Ignis
+> NOTE: This branch requires currently the AnyDSL runtime fork: https://github.com/PearCoding/runtime
 
 'Ignis' is a raytracer for the RENEGADE project implemented using the Artic frontend of the AnyDSL compiler framework (https://anydsl.github.io/) and based on Rodent (https://github.com/AnyDSL/rodent).
 

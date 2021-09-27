@@ -13,7 +13,7 @@ std::string MissShader::setup(LoaderContext& ctx, LoaderResult& result)
 {
 	std::stringstream stream;
 
-	stream << "#[export] fn ig_main(settings: &Settings, first: i32, last: i32) -> () {" << std::endl;
+	stream << "#[export] fn ig_miss_shader(settings: &Settings, first: i32, last: i32) -> () {" << std::endl;
 	stream << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl;
 	stream << std::endl;
 
