@@ -485,13 +485,15 @@ fn @cpu_trace( scene: SceneGeometry
                         let mut begin = 0;
                         for ent_id in range(0, scene.info.num_entities) {
                             let end = ray_ends(ent_id);
-                            pipeline.on_hit_shade(ent_id, begin, end);
+                            if begin < end {
+                                pipeline.on_hit_shade(ent_id, begin, end);
+                            }
                             begin = end;
                         }
 
                         // Shade misses as well
                         let last = ray_ends(scene.info.num_entities);
-                        if(begin < last) {
+                        if begin < last {
                             pipeline.on_miss_shade(begin, last);
                         }
                     });

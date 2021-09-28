@@ -390,7 +390,7 @@ fn @gpu_swap_streams(dev_id: i32, a: &mut PrimaryStream, b: &mut PrimaryStream) 
     ignis_gpu_swap_primary_streams(dev_id); 
 }
 
-static GPUStreamCapacity = 1024 * 1024;
+static GPUStreamCapacity = 10 * 1024 * 1024;
 fn @gpu_trace( dev_id: i32
              , acc: Accelerator
              , atomics: Atomics

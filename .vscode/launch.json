@@ -4,12 +4,38 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "igview",
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.buildDirectory}/bin/igview",
-            "args": ["${workspaceFolder}/scenes/sky_scene.json", "--target", "generic"],
+            "args": ["${workspaceFolder}/scenes/sky_scene.json"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build",
+            "environment": [
+                {
+                    "name": "IG_DRIVER_PATH",
+                    "value": "${workspaceFolder}/build/lib"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "targetArchitecture": "x64",
+            "setupCommands": [
+                {
+                    "description": "Automatische Strukturierung und Einrückung für \"gdb\" aktivieren",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "igcli",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.buildDirectory}/bin/igcli",
+            "args": ["${workspaceFolder}/scenes/sky_scene.json", "--spp", "32", "-o", "test.exr"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
             "environment": [

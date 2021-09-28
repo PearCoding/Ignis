@@ -12,9 +12,11 @@ using namespace Parser;
 
 std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& result)
 {
+	IG_UNUSED(entity_id);
+	
 	std::stringstream stream;
 
-	stream << "#[export] fn ig_hit_shader_" << entity_id << "(settings: &Settings, entity_id: i32, first: i32, last: i32) -> () {" << std::endl
+	stream << "#[export] fn ig_hit_shader(settings: &Settings, entity_id: i32, first: i32, last: i32) -> () {" << std::endl
 		   << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
 		   << std::endl;
 

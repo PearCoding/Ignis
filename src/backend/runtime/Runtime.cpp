@@ -231,7 +231,7 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 
 	IG_LOG(L_DEBUG) << "Compiling hit shader" << std::endl;
 	for (size_t i = 0; i < HitShaders.size(); ++i)
-		settings.hit_shaders.push_back(ig_compile_source(HitShaders[i], "ig_hit_shader_" + std::to_string(i)));
+		settings.hit_shaders.push_back(ig_compile_source(HitShaders[i], "ig_hit_shader"));
 
 	mLoadedInterface.SetupFunction(&settings);
 	mInit = true;
