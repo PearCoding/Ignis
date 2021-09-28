@@ -1,6 +1,5 @@
 #include "Runtime.h"
 #include "config/Version.h"
-#include "driver/Configuration.h"
 #include "driver/Interface.h"
 #include "table/SceneDatabase.h"
 
@@ -374,8 +373,6 @@ struct Interface {
 
 		SceneDatabaseProxy& proxy = devices[dev].database;
 
-		// Load all the buffers to device which are registred by the loading and assembly stage
-		// TODO: This might take awhile... dynamic on and off loading would be great...
 		proxy.Entities = std::move(load_dyntable(dev, database->EntityTable));
 		proxy.Shapes   = std::move(load_dyntable(dev, database->ShapeTable));
 		proxy.BVHs	   = std::move(load_dyntable(dev, database->BVHTable));
@@ -551,34 +548,30 @@ IG_EXPORT DriverInterface ig_get_interface()
 	interface.MinorVersion = IG_VERSION_MINOR;
 
 	// Expose SPP
-#ifdef CAMERA_LIST
-	interface.SPP = 1;
-#else
 	interface.SPP = 4;
-#endif
 
-	interface.Configuration = 0;
+	interface.Target = IG::Target::INVALID;
 // Expose Target
 #if defined(DEVICE_DEFAULT)
-	interface.Configuration |= IG::IG_C_DEVICE_GENERIC;
+	interface.Target = IG::Target::GENERIC;
 #elif defined(DEVICE_AVX)
-	interface.Configuration |= IG::IG_C_DEVICE_AVX;
+	interface.Target = IG::Target::AVX;
 #elif defined(DEVICE_AVX2)
-	interface.Configuration |= IG::IG_C_DEVICE_AVX2;
+	interface.Target = IG::Target::AVX2;
 #elif defined(DEVICE_AVX512)
-	interface.Configuration |= IG::IG_C_DEVICE_AVX512;
+	interface.Target = IG::Target::AVX512;
 #elif defined(DEVICE_SSE42)
-	interface.Configuration |= IG::IG_C_DEVICE_SSE42;
+	interface.Target = IG::Target::SSE42;
 #elif defined(DEVICE_ASIMD)
-	interface.Configuration |= IG::IG_C_DEVICE_ASIMD;
+	interface.Target = IG::Target::ASIMD;
 #elif defined(DEVICE_NVVM)
-	interface.Configuration |= IG::IG_C_DEVICE_NVVM;
+	interface.Target = IG::Target::NVVM;
 #elif defined(DEVICE_NVVM_MEGA)
-	interface.Configuration |= IG::IG_C_DEVICE_NVVM_MEGA;
+	interface.Target = IG::Target::NVVM_MEGA;
 #elif defined(DEVICE_AMD)
-	interface.Configuration |= IG::IG_C_DEVICE_AMDGPU;
+	interface.Target = IG::Target::AMDGPU;
 #elif defined(DEVICE_AMD_MEGA)
-	interface.Configuration |= IG::IG_C_DEVICE_AMD_MEGA;
+	interface.Target = IG::Target::AMD_MEGA;
 #else
 #error No device selected!
 #endif

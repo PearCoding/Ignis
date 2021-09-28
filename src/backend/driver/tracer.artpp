@@ -1,5 +1,7 @@
 #[export]
 fn ig_render(settings: &Settings) -> () {
+    maybe_unused(settings);
+
 #if DEVICE_AVX
     let device = make_avx_device();
 #elif DEVICE_AVX2

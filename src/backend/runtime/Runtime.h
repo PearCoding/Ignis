@@ -54,7 +54,7 @@ public:
 	inline bool isDebug() const { return mIsDebug; }
 	inline bool isTrace() const { return mIsTrace; }
 
-	inline uint32 configuration() const { return mConfiguration; }
+	inline Target target() const { return mTarget; }
 
 private:
 	void shutdown();
@@ -68,7 +68,7 @@ private:
 
 	size_t mDevice;
 	uint32 mIteration;
-	uint32 mConfiguration;
+	Target mTarget;
 
 	bool mIsTrace;
 	bool mIsDebug;

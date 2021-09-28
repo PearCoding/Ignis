@@ -1,5 +1,4 @@
 #include "DriverManager.h"
-#include "Configuration.h"
 #include "Logger.h"
 #include "RuntimeInfo.h"
 #include "config/Version.h"
@@ -112,39 +111,33 @@ bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
 	return true;
 }
 
-uint64 DriverManager::checkConfiguration(uint64 config) const
+Target DriverManager::resolveTarget(Target target) const
 {
-#define CHECK_RET(c)                                    \
-	if (mLoadedDrivers.count((c)&IG_C_MASK_DEVICE) > 0) \
+#define CHECK_RET(c)                   \
+	if (mLoadedDrivers.count((c)) > 0) \
 	return c
 
-	CHECK_RET(config);
+	CHECK_RET(target);
 
-	// Check without extra flags
-	if (config & IG_C_NO_INSTANCES)
-		return checkConfiguration(config & ~IG_C_NO_INSTANCES);
+	CHECK_RET(Target::AVX512);
+	CHECK_RET(Target::AVX2);
+	CHECK_RET(Target::AVX);
+	CHECK_RET(Target::SSE42);
+	CHECK_RET(Target::ASIMD);
 
-	// First check gpu pairs drivers/devices
-	const uint64 devConfig = config & ~IG_C_MASK_DEVICE;
-	CHECK_RET(devConfig | IG_C_DEVICE_AVX512);
-	CHECK_RET(devConfig | IG_C_DEVICE_AVX2);
-	CHECK_RET(devConfig | IG_C_DEVICE_AVX);
-	CHECK_RET(devConfig | IG_C_DEVICE_SSE42);
-	CHECK_RET(devConfig | IG_C_DEVICE_ASIMD);
-
-	return devConfig | IG_C_DEVICE_GENERIC;
+	return Target::GENERIC;
 #undef CHECK_RET
 }
 
-bool DriverManager::load(uint64 config, DriverInterface& interface) const
+bool DriverManager::load(Target target, DriverInterface& interface) const
 {
-	config = checkConfiguration(config);
-	if (!mLoadedDrivers.count(config & IG_C_MASK_DEVICE)) {
+	target = resolveTarget(target);
+	if (!mLoadedDrivers.count(target)) {
 		IG_LOG(L_ERROR) << "No driver available!" << std::endl;
 		return false; // No driver available!
 	}
 
-	const SharedLibrary& library = mLoadedDrivers.at(config);
+	const SharedLibrary& library = mLoadedDrivers.at(target);
 
 	GetInterfaceFunction func = (GetInterfaceFunction)library.symbol("ig_get_interface");
 	if (!func) {
@@ -156,13 +149,13 @@ bool DriverManager::load(uint64 config, DriverInterface& interface) const
 	return true;
 }
 
-std::filesystem::path DriverManager::getPath(uint64 config) const
+std::filesystem::path DriverManager::getPath(Target target) const
 {
-	config = checkConfiguration(config);
-	if (!mLoadedDrivers.count(config & IG_C_MASK_DEVICE))
+	target = resolveTarget(target);
+	if (!mLoadedDrivers.count(target))
 		return {}; // No driver available!
 
-	const SharedLibrary& library = mLoadedDrivers.at(config);
+	const SharedLibrary& library = mLoadedDrivers.at(target);
 	return library.path();
 }
 
@@ -186,8 +179,7 @@ bool DriverManager::addModule(const std::filesystem::path& path)
 		}
 
 		// Silently replace
-		mLoadedDrivers[interface.Configuration] = std::move(library);
-		mHasTarget.insert(configurationToTarget(interface.Configuration));
+		mLoadedDrivers[interface.Target] = std::move(library);
 	} catch (const std::exception& e) {
 		IG_LOG(L_ERROR) << "Loading error for module " << path << ": " << e.what() << std::endl;
 		return false;

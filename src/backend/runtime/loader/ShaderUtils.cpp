@@ -1,5 +1,4 @@
 #include "ShaderUtils.h"
-#include "driver/Configuration.h"
 
 #include <sstream>
 

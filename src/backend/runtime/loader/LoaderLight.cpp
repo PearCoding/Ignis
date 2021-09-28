@@ -45,7 +45,7 @@ std::string LoaderLight::generate(LoaderContext& ctx, LoaderResult& result)
 		   << "    match(id) {" << std::endl
 		   << "      _ => make_environment_light(" << ctx.Environment.SceneDiameter / 2 << ", white)" << std::endl
 		   << "    }" << std::endl
-		   << "  };";
+		   << "  };" << std::endl;
 
 	return stream.str();
 }

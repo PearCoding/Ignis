@@ -1,7 +1,6 @@
 #include "Runtime.h"
 #include "Camera.h"
 #include "Logger.h"
-#include "driver/Configuration.h"
 #include "jit.h"
 #include "loader/Parser.h"
 
@@ -81,8 +80,8 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 		throw std::runtime_error("Could not init modules!");
 
 	LoaderOptions lopts;
-	lopts.FilePath		= path;
-	lopts.Configuration = targetToConfiguration(opts.DesiredTarget);
+	lopts.FilePath = path;
+	lopts.Target   = opts.DesiredTarget;
 
 	// Parse scene file
 	const auto startParser = std::chrono::high_resolution_clock::now();
@@ -103,23 +102,23 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	setup_camera(mLoadedRenderSettings, lopts, opts);
 
 	// Check configuration
-	const uint64 newConfig = mManager.checkConfiguration(lopts.Configuration);
-	if (newConfig != lopts.Configuration) {
+	const Target newTarget = mManager.resolveTarget(lopts.Target);
+	if (newTarget != lopts.Target) {
 		IG_LOG(L_WARNING) << "Switched from "
-						  << configurationToString(lopts.Configuration) << " to "
-						  << configurationToString(newConfig) << std::endl;
+						  << targetToString(lopts.Target) << " to "
+						  << targetToString(newTarget) << std::endl;
 	}
-	lopts.Configuration = newConfig;
+	lopts.Target = newTarget;
 
 	LoaderResult result;
 	if (!Loader::load(lopts, result))
 		throw std::runtime_error("Could not load scene!");
 	mDatabase = std::move(result.Database);
 
-	IG_LOG(L_INFO) << "Loading configuration " << configurationToString(newConfig & IG_C_MASK_DEVICE) << std::endl;
-	if (!mManager.load(newConfig & IG_C_MASK_DEVICE, mLoadedInterface))
+	IG_LOG(L_INFO) << "Loading target " << targetToString(newTarget) << std::endl;
+	if (!mManager.load(newTarget, mLoadedInterface))
 		throw std::runtime_error("Error loading interface!");
-	mConfiguration = newConfig;
+	mTarget = newTarget;
 
 	mIsDebug = lopts.TechniqueType == "debug";
 	mIsTrace = lopts.CameraType == "list";
@@ -221,7 +220,7 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 	settings.framebuffer_height = std::max(1u, framebuffer_height);
 
 	IG_LOG(L_DEBUG) << "Init JIT compiling" << std::endl;
-	ig_init_jit(mManager.getPath(mConfiguration & IG_C_MASK_DEVICE).generic_u8string());
+	ig_init_jit(mManager.getPath(mTarget).generic_u8string());
 
 	IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
 	settings.ray_generation_shader = ig_compile_source(RayGenerationShader, "ig_ray_generation_shader");

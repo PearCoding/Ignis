@@ -60,8 +60,6 @@ set(SRC
     config/Build.h
     config/Git.h.in
     config/Version.h.in
-    driver/Configuration.cpp
-    driver/Configuration.h
     driver/DriverManager.cpp
     driver/DriverManager.h
     driver/Interface.h

@@ -10,7 +10,7 @@ constexpr size_t DefaultAlignment = sizeof(float) * 4;
 struct LoaderOptions {
 	std::filesystem::path FilePath;
 	Parser::Scene Scene;
-	uint64 Configuration;
+	IG::Target Target;
 	std::string CameraType;
 	std::string TechniqueType;
 };

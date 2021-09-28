@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IG_Config.h"
+#include "Target.h"
 #include <vector>
 
 namespace IG {
@@ -44,7 +44,7 @@ struct DriverInterface {
 	IG::uint32 MinorVersion;
 	IG::uint32 SPP;
 	const char* Name;
-	IG::uint64 Configuration;
+	IG::Target Target;
 	DriverSetupFunction SetupFunction;
 	DriverShutdownFunction ShutdownFunction;
 	DriverRenderFunction RenderFunction;

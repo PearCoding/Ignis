@@ -11,13 +11,12 @@ namespace IG {
 class DriverManager {
 public:
 	bool init(const std::filesystem::path& dir = std::filesystem::current_path(), bool ignoreEnv = false);
-	uint64 checkConfiguration(uint64 config) const;
-	bool load(uint64 config, DriverInterface& interface) const;
-	std::filesystem::path getPath(uint64 config) const;
+	Target resolveTarget(Target target) const;
+	bool load(Target target, DriverInterface& interface) const;
+	std::filesystem::path getPath(Target target) const;
 
 private:
 	bool addModule(const std::filesystem::path& path);
-	std::unordered_map<uint64, SharedLibrary> mLoadedDrivers;
-	std::unordered_set<Target> mHasTarget;
+	std::unordered_map<Target, SharedLibrary> mLoadedDrivers;
 };
 } // namespace IG

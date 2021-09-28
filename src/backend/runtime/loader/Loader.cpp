@@ -8,7 +8,6 @@
 #include "Logger.h"
 #include "MissShader.h"
 #include "RayGenerationShader.h"
-#include "driver/Configuration.h"
 
 #include <chrono>
 
@@ -19,7 +18,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
 	LoaderContext ctx;
 	ctx.FilePath	  = opts.FilePath;
-	ctx.Target		  = configurationToTarget(opts.Configuration);
+	ctx.Target		  = opts.Target;
 	ctx.EnablePadding = doesTargetRequirePadding(ctx.Target);
 	ctx.Scene		  = opts.Scene;
 	ctx.CameraType	  = opts.CameraType;
