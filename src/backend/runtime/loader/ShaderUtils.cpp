@@ -40,9 +40,21 @@ std::string ShaderUtils::constructDevice(Target target)
 std::string ShaderUtils::generateSceneInfoInline(const LoaderContext& ctx)
 {
 	std::stringstream stream;
-
 	stream << "SceneInfo { num_entities = " << ctx.Environment.EntityIDs.size() << ", num_shapes = " << ctx.Environment.ShapeIDs.size() << " }";
+	return stream.str();
+}
 
+std::string ShaderUtils::inlineVector(const Vector3f& pos)
+{
+	std::stringstream stream;
+	stream << "make_vec3(" << pos.x() << ", " << pos.y() << ", " << pos.z() << ")";
+	return stream.str();
+}
+
+std::string ShaderUtils::inlineColor(const Vector3f& color)
+{
+	std::stringstream stream;
+	stream << "make_color(" << color.x() << ", " << color.y() << ", " << color.z() << ")";
 	return stream.str();
 }
 } // namespace IG
