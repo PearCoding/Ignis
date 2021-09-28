@@ -390,7 +390,7 @@ fn @gpu_swap_streams(dev_id: i32, a: &mut PrimaryStream, b: &mut PrimaryStream) 
     ignis_gpu_swap_primary_streams(dev_id); 
 }
 
-static GPUStreamCapacity = 10 * 1024 * 1024;
+static GPUStreamCapacity = 1024 * 1024;
 fn @gpu_trace( dev_id: i32
              , acc: Accelerator
              , atomics: Atomics
@@ -439,10 +439,9 @@ fn @gpu_trace( dev_id: i32
         let mut first = 0;
         for ent_id in range(0, scene.info.num_entities) {
             let last = ray_ends(ent_id);
-            if first >= last {
-                continue()
+            if first < last {
+                pipeline.on_hit_shade(ent_id, first, last);
             }
-            pipeline.on_hit_shade(ent_id, first, last);
             first = last;
         }
 
@@ -457,7 +456,7 @@ fn @gpu_trace( dev_id: i32
         secondary.size = first;
         acc.sync();
 
-        if first > 0 {
+        if likely(first > 0) {
             // Trace secondary rays
             gpu_traverse_secondary(secondary, acc, atomics, min_max, scene, film_pixels, spp);
 

@@ -226,6 +226,7 @@ fn @cpu_generate_rays( primary: PrimaryStream
         write_state(cur_ray, 0, state);
         primary.rays.id(cur_ray) = y * film_width + x;
     }
+    
     *id = first_id + num_rays;
     primary.size + num_rays
 }
@@ -454,7 +455,7 @@ fn @cpu_trace( scene: SceneGeometry
                 let is_first = id == 0;
 
                 // (Re-)generate primary rays
-                if primary.size < capacity {
+                if primary.size < capacity && id < num_rays {
                     primary.size = pipeline.on_generate(&mut id, xmin, ymin, xmax, ymax);
                 }
 

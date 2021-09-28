@@ -395,7 +395,7 @@ struct Interface {
 		using Callback = decltype(ig_ray_generation_shader);
 		IG_ASSERT(ray_generation_shader != nullptr, "Expected ray generation shader to be valid");
 		auto callback = (Callback*)ray_generation_shader;
-		int ret		  = callback(&current_settings, current_iteration, id, xmin, ymin, xmax, ymax);
+		const int ret = callback(&current_settings, current_iteration, id, xmin, ymin, xmax, ymax);
 		return ret;
 	}
 
