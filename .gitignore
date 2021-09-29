@@ -33,3 +33,6 @@ build/*
 *.exe
 *.out
 *.app
+
+# Python cache
+__pycache__/
