@@ -262,17 +262,18 @@ static void bsdf_disney(const std::string&, const std::shared_ptr<Parser::Object
 {
 	auto base_color		   = ctx.Context.extractColorTexture(bsdf, "base_color");
 	float flatness		   = bsdf->property("flatness").getNumber(0.0f);
-	float metallic		   = bsdf->property("metallic").getNumber(0.0f);
-	float ior			   = ctx.Context.extractIOR(bsdf, "ior", GLASS_IOR);
+	float metallic		   = bsdf->property("metallic").getNumber(1.0f);
+	// float ior			   = ctx.Context.extractIOR(bsdf, "ior", GLASS_IOR);
+	float ior			   = 1.0;
 	float specular_tint	   = bsdf->property("specular_tint").getNumber(0.0f);
-	float roughness		   = bsdf->property("roughness").getNumber(0.5f);
+	float roughness		   = bsdf->property("roughness").getNumber(0.6f);
 	float anisotropic	   = bsdf->property("anisotropic").getNumber(0.0f);
-	float sheen			   = bsdf->property("sheen").getNumber(0.0f);
+	float sheen			   = bsdf->property("sheen").getNumber(1.0f);
 	float sheen_tint	   = bsdf->property("sheen_tint").getNumber(0.0f);
-	float clearcoat		   = bsdf->property("clearcoat").getNumber(0.0f);
-	float clearcoat_gloss  = bsdf->property("clearcoat_gloss").getNumber(0.0f);
+	float clearcoat		   = bsdf->property("clearcoat").getNumber(1.0f);
+	float clearcoat_gloss  = bsdf->property("clearcoat_gloss").getNumber(1.0f);
 	float spec_trans	   = bsdf->property("spec_trans").getNumber(0.0f);
-	float relative_ior	   = bsdf->property("relative_ior").getNumber(1.1f);
+	float relative_ior	   = bsdf->property("relative_ior").getNumber(1.0f);
 	float scatter_distance = bsdf->property("scatter_distance").getNumber(0.5f);
 	float diff_trans	   = bsdf->property("diff_trans").getNumber(0.0f);
 	float transmittance	   = bsdf->property("transmittance").getNumber(1.0f);
