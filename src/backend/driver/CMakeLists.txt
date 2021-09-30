@@ -153,7 +153,7 @@ foreach(var ${VARIANTS})
         FRONTEND "artic"
         CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
         ARTIC_FLAGS --log-level info -Wall
-        FILES ${ARTIC_SRC} ${out_file})
+        FILES ${ARTIC_MAIN_SRC} ${out_file})
     set(_target_name ig_driver_${var_name})
     add_library(${_target_name} MODULE ${_objs} glue.cpp)
     set_target_properties(${_target_name} PROPERTIES PREFIX "")

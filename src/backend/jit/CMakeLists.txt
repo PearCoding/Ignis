@@ -3,7 +3,7 @@ set(SRC
     jit.h
 )
 
-# We could drop some sources from ARTIC_SRC and let it adapt to the actual shading system we jit,
+# We could drop some sources from ARTIC_EXTRA_SRC and let it adapt to the actual shading system we jit,
 # but that is not worth the effort currently
 
 # Grapped from AnyDSL runtime, as it was missing while jit compiling (BUG)
@@ -14,8 +14,8 @@ set(ARTIC_RUNTIME_FILES
 set(API_SRC_FILE ${CMAKE_CURRENT_BINARY_DIR}/api.cpp)
 add_custom_command(
         OUTPUT "${API_SRC_FILE}"
-        COMMAND $<TARGET_FILE:ig_api_collector> ${ARTIC_RUNTIME_FILES} ${ARTIC_SRC} ${API_SRC_FILE}
-        DEPENDS ${ARTIC_SRC}
+        COMMAND $<TARGET_FILE:ig_api_collector> ${ARTIC_RUNTIME_FILES} ${ARTIC_EXTRA_SRC} ${API_SRC_FILE}
+        DEPENDS ${ARTIC_EXTRA_SRC}
         COMMENT "Embedding API: ${API_SRC_FILE}" 
         VERBATIM)
 

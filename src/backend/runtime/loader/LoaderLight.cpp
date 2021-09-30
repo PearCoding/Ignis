@@ -112,6 +112,7 @@ static void light_sun(std::ostream& stream, const std::string& name, const std::
 
 static void light_sky(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
+	IG_UNUSED(stream);
 	IG_UNUSED(name);
 
 	setup_sky(light, ctx);
@@ -284,8 +285,9 @@ std::string LoaderLight::generate(const LoaderContext& ctx, bool skipArea)
 	}
 
 	if (counter == 0) {
-		IG_LOG(L_WARNING) << "Scene does not contain lights. Using default constant environment light" << std::endl;
-		stream << "    _ => make_environment_light(" << ctx.Environment.SceneDiameter / 2 << ", white )," << std::endl;
+		if (!skipArea) // Don't trigger a warning if we skip areas
+			IG_LOG(L_WARNING) << "Scene does not contain lights" << std::endl;
+		stream << "    _ => make_null_light()" << std::endl;
 	}
 
 	stream << "    }" << std::endl
