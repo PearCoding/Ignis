@@ -9,7 +9,6 @@ struct MicrofacetModel {
     sample: fn (&mut RndState) -> MicrofacetSample
 }
 
-
 fn @g_1_walter(surf: SurfaceElement, w: Vec3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
     let cosZ = vec3_dot(surf.local.col(2), w);
     if cosZ * vec3_dot(w, m) <= flt_eps { return(0) };

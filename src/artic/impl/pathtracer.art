@@ -9,7 +9,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
                     , mat: Material
                     ) -> Option[(Ray, Color)] {
         // No shadow rays for specular materials
-        if mat.bsdf.is_specular {
+        if mat.bsdf.is_specular || num_lights == 0 {
             return(Option[(Ray, Color)]::None)
         }
 
@@ -94,8 +94,9 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
         let mut inflights = 0;
         let mut color     = black;
 
-        // TODO: Better use randomness to pick one infinite light
-        for light_id in range(0, num_lights) {
+        // Due to the renderer design, this will only iterate through
+        // infinite lights, as a miss shader does not contain area lights
+        for light_id in unroll(0, num_lights) {
             let light = @lights(light_id);
             // Do not include delta lights or finite lights
             if light.infinite && !light.delta {
