@@ -20,7 +20,7 @@ std::string MissShader::setup(LoaderContext& ctx, LoaderResult& result)
 		   << std::endl;
 
 	if (LoaderTechnique::requireLights(ctx))
-		stream << LoaderLight::generate(ctx)
+		stream << LoaderLight::generate(ctx, true)
 			   << std::endl;
 
 	stream << LoaderTechnique::generate(ctx, result) << std::endl

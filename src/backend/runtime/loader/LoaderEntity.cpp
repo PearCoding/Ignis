@@ -64,9 +64,6 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 			continue;
 		}
 
-		// TODO
-		const uint32 bsdfID = 0; // ctx.Environment.BsdfIDs.at(bsdfName);
-
 		// Extract entity information
 		Transformf transform = child->property("transform").getTransform();
 		transform.makeAffine();
@@ -80,20 +77,15 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
 		// Register name for lights to assosciate with
 		ctx.Environment.EntityIDs[pair.first] = ctx.Environment.Entities.size();
-		ctx.Environment.Entities.push_back({ transform, shapeName, bsdfName });
-
-		const int32 lightID = -1; //ctx.Environment.AreaIDs.count(pair.first) == 0 ? -1 : (int32)ctx.Environment.AreaIDs.at(pair.first);
+		ctx.Environment.Entities.push_back({ transform, pair.first, shapeName, bsdfName });
 
 		// Write data to dyntable
 		auto& entityData = result.Database.EntityTable.addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
 		VectorSerializer entitySerializer(entityData, false);
-		entitySerializer.write((uint32)shapeID);
-		entitySerializer.write((uint32)bsdfID);													   // FIXME: Not anymore needed?
-		entitySerializer.write((int32)lightID);													   // FIXME: Not anymore needed?
-		entitySerializer.write((uint32)0);														   // Padding
 		writeMatrix(entitySerializer, invTransform.matrix().block<3, 4>(0, 0));					   // To Local
 		writeMatrix(entitySerializer, transform.matrix().block<3, 4>(0, 0));					   // To Global
 		writeMatrix(entitySerializer, transform.matrix().block<3, 3>(0, 0).transpose().inverse()); // To Global [Normal]
+		entitySerializer.write((uint32)shapeID);
 
 		// Extract information for BVH building
 		EntityObject obj;

@@ -16,6 +16,7 @@ struct Shape {
 
 struct Entity {
 	Transformf Transform;
+	std::string Name;
 	std::string Shape;
 	std::string BSDF;
 };
@@ -25,6 +26,7 @@ struct LoaderEnvironment {
 	std::vector<Entity> Entities; // TODO: This can be large... maybe change?
 	std::unordered_map<std::string, uint32> EntityIDs; // TODO: This can be large... maybe change?
 	std::unordered_map<std::string, uint32> ShapeIDs;
+	std::unordered_map<std::string, std::string> AreaLightsMap; // Map from Entity -> Light
 
 	BoundingBox SceneBBox;
 	float SceneDiameter = 0.0f;

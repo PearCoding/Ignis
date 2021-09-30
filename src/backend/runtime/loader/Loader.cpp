@@ -31,6 +31,8 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 	if (!LoaderEntity::load(ctx, result))
 		return false;
 
+	LoaderLight::setupAreaLights(ctx);
+
 	// Generate Ray Generation Shader
 	result.RayGenerationShader = RayGenerationShader::setup(ctx, result);
 	if (result.RayGenerationShader.empty())

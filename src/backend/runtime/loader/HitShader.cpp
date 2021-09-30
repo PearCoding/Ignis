@@ -22,15 +22,19 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& re
 		   << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
 		   << std::endl;
 
+	stream << "  let dtb      = device.load_scene_database();" << std::endl
+		   << "  let shapes   = device.load_shape_table(dtb.shapes);" << std::endl
+		   << "  let entities = device.load_entity_table(dtb.entities);" << std::endl
+		   << std::endl;
+
 	if (LoaderTechnique::requireLights(ctx))
-		stream << LoaderLight::generate(ctx)
+		stream << LoaderLight::generate(ctx, false) << std::endl
 			   << std::endl;
 
-	stream << "  let dtb  = device.load_scene_database();" << std::endl
-		   << "  let acc  = SceneAccessor {" << std::endl
-		   << "    info       = " << ShaderUtils::generateSceneInfoInline(ctx) << "," << std::endl
-		   << "    shapes     = device.load_shape_table(dtb.shapes)," << std::endl
-		   << "    entities   = device.load_entity_table(dtb.entities)," << std::endl
+	stream << "  let acc  = SceneAccessor {" << std::endl
+		   << "    info     = " << ShaderUtils::generateSceneInfoInline(ctx) << "," << std::endl
+		   << "    shapes   = shapes," << std::endl
+		   << "    entities = entities," << std::endl
 		   << "  };" << std::endl
 		   << std::endl;
 
@@ -43,8 +47,18 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& re
 	const std::string bsdf_name = ctx.Environment.Entities[entity_id].BSDF;
 	stream << LoaderBSDF::generate(bsdf_name, ctx);
 
-	stream << "  let shader : Shader = @|ray, hit, surf| make_material(bsdf_" << ShaderUtils::escapeIdentifier(bsdf_name) << "(ray, hit, surf));" << std::endl
-		   << std::endl;
+	const std::string entity_name = ctx.Environment.Entities[entity_id].Name;
+	const bool isLight			  = ctx.Environment.AreaLightsMap.count(entity_name) > 0;
+
+	if (isLight) {
+		const std::string light_name = ctx.Environment.AreaLightsMap[entity_name];
+		stream << "  let shader : Shader = @|ray, hit, surf| make_emissive_material(surf, bsdf_" << ShaderUtils::escapeIdentifier(bsdf_name) << "(ray, hit, surf), "
+			   << "light_" << ShaderUtils::escapeIdentifier(light_name) << ");" << std::endl
+			   << std::endl;
+	} else {
+		stream << "  let shader : Shader = @|ray, hit, surf| make_material(bsdf_" << ShaderUtils::escapeIdentifier(bsdf_name) << "(ray, hit, surf));" << std::endl
+			   << std::endl;
+	}
 
 	stream << LoaderTechnique::generate(ctx, result) << std::endl
 		   << std::endl;

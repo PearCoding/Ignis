@@ -294,6 +294,34 @@ fn @make_area_light(area: AreaEmitter, color: Color) = Light {
     infinite = false
 };
 
+fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
+    let mesh = shape.mesh;
+    AreaEmitter {
+        sample = @ |uv| {
+            let ux  = uv.x * (mesh.num_tris as f32);
+            let f   = ux as i32;
+            let uv2 = make_vec2(ux - (f as f32), uv.y);
+            let (i0, i1, i2) = mesh.triangles(f);
+            let v0  = mesh.vertices(i0);
+            let v1  = mesh.vertices(i1);
+            let v2  = mesh.vertices(i2);
+            let n   = mesh.face_normals(f);
+            let inv_area = mesh.face_inv_area(f);
+            (mat3x4_transform_point(entity.global_mat, sample_triangle(uv2.x, uv2.y, v0, v1, v2)),
+             vec3_normalize(mat3x3_mul(entity.normal_mat, n)),
+             inv_area)
+        },
+        normal = @ |uv| {
+            let f = (uv.x * (mesh.num_tris as f32)) as i32;
+            vec3_normalize(mat3x3_mul(entity.normal_mat, mesh.face_normals(f)))
+        },
+        pdf = @ |uv| {
+            let f = (uv.x * (mesh.num_tris as f32)) as i32;
+            mesh.face_inv_area(f)
+        }
+    }
+}
+
 type LightTable = fn (i32) -> Light;
 
 fn make_null_light_table() -> LightTable {

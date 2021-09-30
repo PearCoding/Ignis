@@ -51,24 +51,21 @@ static uint32 setup_sky(const std::shared_ptr<Parser::Object>& light, const Load
 	return 0;
 }
 
-static std::string light_point(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static void light_point(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
-	IG_UNUSED(name);
-
 	auto pos	   = light->property("position").getVector3();
 	auto intensity = ctx.extractColor(light, "intensity");
 
-	std::stringstream stream;
-	stream << "make_point_light(" << ShaderUtils::inlineVector(pos)
-		   << ", " << ShaderUtils::inlineColor(intensity) << ")";
-	return stream.str();
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_point_light(" << ShaderUtils::inlineVector(pos)
+		   << ", " << ShaderUtils::inlineColor(intensity) << ");" << std::endl;
 }
 
-static std::string light_area(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static void light_area(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
 	const std::string entity = light->property("entity").getString();
+	const auto radiance		 = ctx.extractColor(light, "radiance");
 
 	uint32 entity_id = 0;
 	if (!ctx.Environment.EntityIDs.count(entity))
@@ -76,12 +73,14 @@ static std::string light_area(const std::string& name, const std::shared_ptr<Par
 	else
 		entity_id = ctx.Environment.EntityIDs.at(entity);
 
-	IG_UNUSED(entity_id);
-	// TODO
-	return "";
+	uint32 shape_id = ctx.Environment.ShapeIDs.at(ctx.Environment.Entities[entity_id].Shape);
+
+	stream << "  let ae_" << ShaderUtils::escapeIdentifier(name) << " = make_shape_area_emitter(entities(" << entity_id << "), shapes(" << shape_id << "));" << std::endl
+		   << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_area_light(ae_" << ShaderUtils::escapeIdentifier(name) << ", "
+		   << ShaderUtils::inlineColor(radiance) << ");" << std::endl;
 }
 
-static std::string light_directional(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static void light_directional(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
@@ -89,14 +88,12 @@ static std::string light_directional(const std::string& name, const std::shared_
 	Vector3f dir	= ea.toDirection();
 	auto irradiance = ctx.extractColor(light, "irradiance");
 
-	std::stringstream stream;
-	stream << "make_directional_light(" << ShaderUtils::inlineVector(dir)
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_directional_light(" << ShaderUtils::inlineVector(dir)
 		   << ", " << ctx.Environment.SceneDiameter / 2
-		   << ", " << ShaderUtils::inlineColor(irradiance) << ")";
-	return stream.str();
+		   << ", " << ShaderUtils::inlineColor(irradiance) << ");" << std::endl;
 }
 
-static std::string light_sun(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static void light_sun(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 	IG_UNUSED(ctx);
@@ -107,32 +104,28 @@ static std::string light_sun(const std::string& name, const std::shared_ptr<Pars
 	auto power		= light->property("sun_scale").getNumber(1.0f);
 	auto sun_radius = light->property("sun_radius_scale").getNumber(1.0f);
 
-	std::stringstream stream;
-	stream << "make_sun_light(" << ShaderUtils::inlineVector(dir)
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_sun_light(" << ShaderUtils::inlineVector(dir)
 		   << ", " << ctx.Environment.SceneDiameter / 2
 		   << ", " << sun_radius
-		   << ", color_mulf(white, " << power << "))";
-	return stream.str();
+		   << ", color_mulf(white, " << power << "));" << std::endl;
 }
 
-static std::string light_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static void light_sky(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
 	setup_sky(light, ctx);
 	// TODO
-	return "";
 }
 
-static std::string light_sunsky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static void light_sunsky(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
-	light_sky(name + "_sky", light, ctx);
-	light_sun(name + "_sun", light, ctx);
+	light_sky(stream, name + "_sky", light, ctx);
+	light_sun(stream, name + "_sun", light, ctx);
 	// TODO
-	return "";
 }
 
-static std::string light_cie_uniform(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static void light_cie_uniform(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
@@ -140,16 +133,14 @@ static std::string light_cie_uniform(const std::string& name, const std::shared_
 	auto ground			  = ctx.extractColor(light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
 
-	std::stringstream stream;
-	stream << "make_cie_sky_light(" << ctx.Environment.SceneDiameter / 2
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_cie_sky_light(" << ctx.Environment.SceneDiameter / 2
 		   << ", " << ShaderUtils::inlineColor(zenith)
 		   << ", " << ShaderUtils::inlineColor(ground)
 		   << ", " << groundbrightness
-		   << ", false)";
-	return stream.str();
+		   << ", false);" << std::endl;
 }
 
-static std::string light_cie_cloudy(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static void light_cie_cloudy(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
@@ -157,13 +148,11 @@ static std::string light_cie_cloudy(const std::string& name, const std::shared_p
 	auto ground			  = ctx.extractColor(light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
 
-	std::stringstream stream;
-	stream << "make_cie_sky_light(" << ctx.Environment.SceneDiameter / 2
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_cie_sky_light(" << ctx.Environment.SceneDiameter / 2
 		   << ", " << ShaderUtils::inlineColor(zenith)
 		   << ", " << ShaderUtils::inlineColor(ground)
 		   << ", " << groundbrightness
-		   << ", false)";
-	return stream.str();
+		   << ", false);" << std::endl;
 }
 
 static inline float perez_model(float zenithAngle, float sunAngle, float a, float b, float c, float d, float e)
@@ -176,7 +165,7 @@ static inline float perez_model(float zenithAngle, float sunAngle, float a, floa
 	return A * B;
 }
 
-static std::string light_perez(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static void light_perez(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
@@ -198,31 +187,27 @@ static std::string light_perez(const std::string& name, const std::shared_ptr<Pa
 		color				= zenith * groundZ;
 	}
 
-	std::stringstream stream;
-	stream << "make_perez_light(" << ctx.Environment.SceneDiameter / 2
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_perez_light(" << ctx.Environment.SceneDiameter / 2
 		   << ", " << ShaderUtils::inlineVector(dir)
 		   << ", " << ShaderUtils::inlineColor(color)
 		   << ", " << a
 		   << ", " << b
 		   << ", " << c
 		   << ", " << d
-		   << ", " << e << ")";
-	return stream.str();
+		   << ", " << e << ");" << std::endl;
 }
 
-static std::string light_env(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static void light_env(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
 	const Vector3f color = ctx.extractColor(light, "radiance");
 
-	std::stringstream stream;
-	stream << "make_environment_light(" << ctx.Environment.SceneDiameter / 2
-		   << ", " << ShaderUtils::inlineColor(color) << ")";
-	return stream.str();
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_environment_light(" << ctx.Environment.SceneDiameter / 2
+		   << ", " << ShaderUtils::inlineColor(color) << ");" << std::endl;
 }
 
-using LightLoader = std::string (*)(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx);
+using LightLoader = void (*)(std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
 static struct {
 	const char* Name;
 	LightLoader Loader;
@@ -247,29 +232,27 @@ static struct {
 	{ "", nullptr }
 };
 
-std::string LoaderLight::generate(const LoaderContext& ctx)
+std::string LoaderLight::generate(const LoaderContext& ctx, bool skipArea)
 {
-	std::stringstream stream;
+	// This will be used for now
+	auto skip = [&](const std::string& type) { return (skipArea && type == "area")
+													  || type == "sunsky"
+													  || type == "skysun"
+													  || type == "sky"; };
 
-	stream << "  let lights = @|id:i32| {" << std::endl
-		   << "    match(id) {" << std::endl;
+	std::stringstream stream;
 
 	size_t counter = 0;
 	for (const auto& pair : ctx.Scene.lights()) {
 		const auto light = pair.second;
 
-		if (light->pluginType() == "area"
-			|| light->pluginType() == "sunsky"
-			|| light->pluginType() == "skysun"
-			|| light->pluginType() == "sky")
+		if (skip(light->pluginType()))
 			continue; // FIXME: Skip for now
 
 		bool found = false;
 		for (size_t i = 0; _generators[i].Loader; ++i) {
 			if (_generators[i].Name == light->pluginType()) {
-				stream << "      " << counter << " => "
-					   << _generators[i].Loader(pair.first, light, ctx)
-					   << "," << std::endl;
+				_generators[i].Loader(stream, pair.first, light, ctx);
 				++counter;
 				found = true;
 				break;
@@ -279,18 +262,49 @@ std::string LoaderLight::generate(const LoaderContext& ctx)
 			IG_LOG(L_ERROR) << "No light type '" << light->pluginType() << "' available" << std::endl;
 	}
 
-	if (counter == 0) {
-		IG_LOG(L_WARNING) << "Scene does not contain lights. Using default constant environment light" << std::endl;
-		stream << "    " << counter << " => make_environment_light(" << ctx.Environment.SceneDiameter / 2 << ", white )," << std::endl;
-		++counter;
+	stream << "  let num_lights = " << counter << ";" << std::endl
+		   << "  let lights = @|id:i32| {" << std::endl
+		   << "    match(id) {" << std::endl;
+
+	size_t counter2 = 0;
+	for (const auto& pair : ctx.Scene.lights()) {
+		const auto light = pair.second;
+
+		if (skip(light->pluginType()))
+			continue; // FIXME: Skip for now
+
+		if (counter2 < counter - 1)
+			stream << "      " << counter2;
+		else
+			stream << "      _";
+
+		stream << " => light_" << ShaderUtils::escapeIdentifier(pair.first)
+			   << "," << std::endl;
+		++counter2;
 	}
 
-	stream << "      _ => make_null_light()" << std::endl
-		   << "    }" << std::endl
-		   << "  };" << std::endl
-		   << "  let num_lights = " << counter << ";" << std::endl;
+	if (counter == 0) {
+		IG_LOG(L_WARNING) << "Scene does not contain lights. Using default constant environment light" << std::endl;
+		stream << "    _ => make_environment_light(" << ctx.Environment.SceneDiameter / 2 << ", white )," << std::endl;
+	}
+
+	stream << "    }" << std::endl
+		   << "  };" << std::endl;
 
 	return stream.str();
+}
+
+void LoaderLight::setupAreaLights(LoaderContext& ctx)
+{
+	for (const auto& pair : ctx.Scene.lights()) {
+		const auto light = pair.second;
+
+		if (light->pluginType() != "area")
+			continue;
+
+		const std::string entity			  = light->property("entity").getString();
+		ctx.Environment.AreaLightsMap[entity] = pair.first;
+	}
 }
 
 } // namespace IG
