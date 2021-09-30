@@ -1,5 +1,6 @@
 #include "HitShader.h"
 #include "Loader.h"
+#include "LoaderBSDF.h"
 #include "LoaderLight.h"
 #include "LoaderTechnique.h"
 #include "Logger.h"
@@ -40,7 +41,10 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& re
 		   << std::endl;
 
 	// TODO: Setup proper shading tree
-	stream << "  let shader : Shader = @|_ray, _hit, surf| make_material(make_diffuse_bsdf(surf, white));" << std::endl
+	std::string bsdf_name = "test"; // TODO
+	stream << LoaderBSDF::generate(bsdf_name, ctx);
+
+	stream << "  let shader : Shader = @|ray, hit, surf| make_material(bsdf_" << bsdf_name << "(ray, hit, surf));" << std::endl
 		   << std::endl;
 
 	stream << LoaderTechnique::generate(ctx, result) << std::endl

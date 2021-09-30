@@ -1,5 +1,6 @@
 #include "ShaderUtils.h"
 
+#include <cctype>
 #include <sstream>
 
 namespace IG {
@@ -42,6 +43,13 @@ std::string ShaderUtils::generateSceneInfoInline(const LoaderContext& ctx)
 	std::stringstream stream;
 	stream << "SceneInfo { num_entities = " << ctx.Environment.EntityIDs.size() << ", num_shapes = " << ctx.Environment.ShapeIDs.size() << " }";
 	return stream.str();
+}
+
+std::string ShaderUtils::escapeIdentifier(const std::string& name)
+{
+	std::string copy = name;
+	std::replace_copy_if(name.begin(), name.end(), copy.begin(), isspace, '_');
+	return copy;
 }
 
 std::string ShaderUtils::inlineVector(const Vector3f& pos)
