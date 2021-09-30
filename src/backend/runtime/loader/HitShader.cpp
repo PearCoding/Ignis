@@ -23,7 +23,7 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& re
 		   << std::endl;
 
 	if (LoaderTechnique::requireLights(ctx))
-		stream << LoaderLight::generate(ctx, result)
+		stream << LoaderLight::generate(ctx)
 			   << std::endl;
 
 	stream << "  let dtb  = device.load_scene_database();" << std::endl
@@ -40,11 +40,10 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& re
 		   << "  };" << std::endl
 		   << std::endl;
 
-	// TODO: Setup proper shading tree
-	std::string bsdf_name = "test"; // TODO
+	const std::string bsdf_name = ctx.Environment.Entities[entity_id].BSDF;
 	stream << LoaderBSDF::generate(bsdf_name, ctx);
 
-	stream << "  let shader : Shader = @|ray, hit, surf| make_material(bsdf_" << bsdf_name << "(ray, hit, surf));" << std::endl
+	stream << "  let shader : Shader = @|ray, hit, surf| make_material(bsdf_" << ShaderUtils::escapeIdentifier(bsdf_name) << "(ray, hit, surf));" << std::endl
 		   << std::endl;
 
 	stream << LoaderTechnique::generate(ctx, result) << std::endl

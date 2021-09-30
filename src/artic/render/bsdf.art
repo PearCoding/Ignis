@@ -409,20 +409,6 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bs
 // Creates a BSDF that interpolates between two other BSDFs
 fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = make_variadic_mix_bsdf(mat1, mat2, @|_| k);
 
-fn @load_blend_bsdf(__data: DeviceBuffer, _ray: Ray, _hit: Hit, surf: SurfaceElement) -> Bsdf {
-    /*
-    let (b0, b1, w)  = data.load_int3(0);
-
-    let weight = bitcast[f32](w);
-
-    let bsdf0 = $get_shader_loader(b0 as u32);
-    let bsdf1 = $get_shader_loader(b1 as u32);
-    make_mix_bsdf(bsdf0(data, ray, hit, surf), bsdf1(data, ray, hit, surf), weight)
-    */
-    // TODO
-    make_passthrough_bsdf(surf)
-}
-
 //--------------------------------------
 fn @shading_normal_adjoint(in_dir: Vec3, out_dir: Vec3, ns: Vec3, ng: Vec3) -> f32 {
     let ons = positive_cos(out_dir, ns);

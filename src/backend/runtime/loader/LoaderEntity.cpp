@@ -34,7 +34,6 @@ inline static void setup_bvh(std::vector<EntityObject>& input, LoaderResult& res
 bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 {
 	// Fill entity list
-	size_t counter			  = 0;
 	ctx.Environment.SceneBBox = BoundingBox::Empty();
 
 	const auto start1 = std::chrono::high_resolution_clock::now();
@@ -64,9 +63,9 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 			IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown bsdf " << bsdfName << std::endl;
 			continue;
 		}
-		
+
 		// TODO
-		const uint32 bsdfID = 0;// ctx.Environment.BsdfIDs.at(bsdfName);
+		const uint32 bsdfID = 0; // ctx.Environment.BsdfIDs.at(bsdfName);
 
 		// Extract entity information
 		Transformf transform = child->property("transform").getTransform();
@@ -80,16 +79,17 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 		ctx.Environment.SceneBBox.extend(entityBox);
 
 		// Register name for lights to assosciate with
-		ctx.Environment.EntityIDs[pair.first] = counter++;
+		ctx.Environment.EntityIDs[pair.first] = ctx.Environment.Entities.size();
+		ctx.Environment.Entities.push_back({ transform, shapeName, bsdfName });
 
-		const int32 lightID = -1;//ctx.Environment.AreaIDs.count(pair.first) == 0 ? -1 : (int32)ctx.Environment.AreaIDs.at(pair.first);
+		const int32 lightID = -1; //ctx.Environment.AreaIDs.count(pair.first) == 0 ? -1 : (int32)ctx.Environment.AreaIDs.at(pair.first);
 
 		// Write data to dyntable
 		auto& entityData = result.Database.EntityTable.addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
 		VectorSerializer entitySerializer(entityData, false);
 		entitySerializer.write((uint32)shapeID);
-		entitySerializer.write((uint32)bsdfID);
-		entitySerializer.write((int32)lightID);
+		entitySerializer.write((uint32)bsdfID);													   // FIXME: Not anymore needed?
+		entitySerializer.write((int32)lightID);													   // FIXME: Not anymore needed?
 		entitySerializer.write((uint32)0);														   // Padding
 		writeMatrix(entitySerializer, invTransform.matrix().block<3, 4>(0, 0));					   // To Local
 		writeMatrix(entitySerializer, transform.matrix().block<3, 4>(0, 0));					   // To Global
@@ -105,7 +105,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
 	IG_LOG(L_DEBUG) << "Storing Entities took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
-	if (counter == 0) {
+	if (ctx.Environment.Entities.empty()) {
 		ctx.Environment.SceneDiameter = 0;
 		return true;
 	}

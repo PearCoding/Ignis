@@ -75,8 +75,8 @@ fn @make_diffuse_brdf(roughness: f32, _flatness: f32, wo: Vec3, H: Vec3, wi: Vec
         let fv = schlick_approx(absNdotV);
 
         let retro = compute_retro_diffuse(roughness, H, wi, fl, fv);
-        // make_gray_color((retro + (1 - 0.5*fl) * (1 - 0.5*fv)) / flt_pi)
-        make_gray_color((1 - 0.5*fl) * (1 - 0.5*fv) / flt_pi)
+        make_gray_color((retro + (1 - 0.5*fl) * (1 - 0.5*fv)) / flt_pi)
+        //make_gray_color((1 - 0.5*fl) * (1 - 0.5*fv) / flt_pi)
     },
     pdf = @ |_in_dir, _out_dir| {
         0

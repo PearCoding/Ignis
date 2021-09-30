@@ -247,10 +247,8 @@ static struct {
 	{ "", nullptr }
 };
 
-std::string LoaderLight::generate(LoaderContext& ctx, LoaderResult& result)
+std::string LoaderLight::generate(const LoaderContext& ctx)
 {
-	IG_UNUSED(result);
-
 	std::stringstream stream;
 
 	stream << "  let lights = @|id:i32| {" << std::endl
@@ -279,6 +277,12 @@ std::string LoaderLight::generate(LoaderContext& ctx, LoaderResult& result)
 		}
 		if (!found)
 			IG_LOG(L_ERROR) << "No light type '" << light->pluginType() << "' available" << std::endl;
+	}
+
+	if (counter == 0) {
+		IG_LOG(L_WARNING) << "Scene does not contain lights. Using default constant environment light" << std::endl;
+		stream << "    " << counter << " => make_environment_light(" << ctx.Environment.SceneDiameter / 2 << ", white )," << std::endl;
+		++counter;
 	}
 
 	stream << "      _ => make_null_light()" << std::endl

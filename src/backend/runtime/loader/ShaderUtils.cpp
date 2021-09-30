@@ -47,8 +47,19 @@ std::string ShaderUtils::generateSceneInfoInline(const LoaderContext& ctx)
 
 std::string ShaderUtils::escapeIdentifier(const std::string& name)
 {
+	IG_ASSERT(!name.empty(), "Given string should not be empty");
+
 	std::string copy = name;
-	std::replace_copy_if(name.begin(), name.end(), copy.begin(), isspace, '_');
+	if (!std::isalpha(copy[0])) {
+		copy = "_" + copy;
+	}
+
+	for (size_t i = 1; i < copy.size(); ++i) {
+		char& c = copy[i];
+		if (!std::isalnum(c))
+			c = '_';
+	}
+	
 	return copy;
 }
 

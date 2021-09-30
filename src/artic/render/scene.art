@@ -34,4 +34,5 @@ struct Device {
     load_rays: fn () -> &[StreamRay]
 }
 
+type BSDFShader = fn (Ray, Hit, SurfaceElement) -> Bsdf;
 type Shader = fn (Ray, Hit, SurfaceElement) -> Material;

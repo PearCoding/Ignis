@@ -5,6 +5,6 @@
 namespace IG {
 struct LoaderResult;
 struct LoaderLight {
-	static std::string generate(LoaderContext& ctx, LoaderResult& result);
+	static std::string generate(const LoaderContext& ctx);
 };
 } // namespace IG

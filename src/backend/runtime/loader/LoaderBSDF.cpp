@@ -16,11 +16,8 @@ constexpr float RUBBER_IOR		   = 1.49f;
 constexpr float ETA_DEFAULT		   = 0.63660f;
 constexpr float ABSORPTION_DEFAULT = 2.7834f;
 
-/*static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, VectorSerializer& serializer)
+static void setup_microfacet(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf)
 {
-	IG_UNUSED(ctx);
-	IG_UNUSED(bsdf);
-	
 	float alpha_u, alpha_v;
 	if (bsdf->property("alpha_u").isValid()) {
 		alpha_u = bsdf->property("alpha_u").getNumber(0.1f);
@@ -30,15 +27,16 @@ constexpr float ABSORPTION_DEFAULT = 2.7834f;
 		alpha_v = alpha_u;
 	}
 
-	serializer.write(alpha_u);
-	serializer.write(alpha_v);
-}*/
+	stream << " let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| make_vndf_ggx_distribution(surf,"
+		   << alpha_u << ", "
+		   << alpha_v << ");" << std::endl;
+}
 
 static void bsdf_diffuse(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
 	const auto albedo = ctx.extractColor(bsdf, "reflectance", Vector3f::Constant(0.5f));
 
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_diffuse_bsdf(surf, "
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_diffuse_bsdf(surf, "
 		   << ShaderUtils::inlineColor(albedo) << ");" << std::endl;
 }
 
@@ -53,7 +51,7 @@ static void bsdf_orennayar(std::ostream& stream, const std::string& name, const 
 
 	const auto albedo = ctx.extractColor(bsdf, "reflectance", Vector3f::Constant(0.5f));
 
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_orennayar_bsdf(surf, "
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_orennayar_bsdf(surf, "
 		   << alpha << ", "
 		   << ShaderUtils::inlineColor(albedo) << ");" << std::endl;
 }
@@ -65,7 +63,7 @@ static void bsdf_dielectric(std::ostream& stream, const std::string& name, const
 	float ext_ior	  = ctx.extractIOR(bsdf, "ext_ior", AIR_IOR);
 	float int_ior	  = ctx.extractIOR(bsdf, "int_ior", GLASS_IOR);
 
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_glass_bsdf(surf, "
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_glass_bsdf(surf, "
 		   << ext_ior << ", "
 		   << int_ior << ", "
 		   << ShaderUtils::inlineColor(specular_ref) << ", "
@@ -79,7 +77,7 @@ static void bsdf_thindielectric(std::ostream& stream, const std::string& name, c
 	float ext_ior	  = ctx.extractIOR(bsdf, "ext_ior", AIR_IOR);
 	float int_ior	  = ctx.extractIOR(bsdf, "int_ior", GLASS_IOR);
 
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_thin_glass_bsdf(surf, "
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_thin_glass_bsdf(surf, "
 		   << ext_ior << ", "
 		   << int_ior << ", "
 		   << ShaderUtils::inlineColor(specular_ref) << ", "
@@ -90,7 +88,7 @@ static void bsdf_mirror(std::ostream& stream, const std::string& name, const std
 {
 	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
 
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_mirror_bsdf(surf, "
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_mirror_bsdf(surf, "
 		   << ShaderUtils::inlineColor(specular_ref) << ");" << std::endl;
 }
 
@@ -100,7 +98,7 @@ static void bsdf_conductor(std::ostream& stream, const std::string& name, const 
 	float eta		  = ctx.extractIOR(bsdf, "eta", ETA_DEFAULT);
 	float k			  = ctx.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
 
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_thin_glass_bsdf(surf, "
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_conductor_bsdf(surf, "
 		   << eta << ", "
 		   << k << ", "
 		   << ShaderUtils::inlineColor(specular_ref) << ");" << std::endl;
@@ -112,11 +110,12 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
 	float eta		  = ctx.extractIOR(bsdf, "eta", ETA_DEFAULT);
 	float k			  = ctx.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
 
-	// TODO
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_thin_glass_bsdf(surf, "
+	setup_microfacet(stream, name, bsdf);
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_conductor_bsdf(surf, "
 		   << eta << ", "
 		   << k << ", "
-		   << ShaderUtils::inlineColor(specular_ref) << ");" << std::endl;
+		   << ShaderUtils::inlineColor(specular_ref) << ", "
+		   << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
 }
 
 static void bsdf_plastic(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
@@ -126,7 +125,7 @@ static void bsdf_plastic(std::ostream& stream, const std::string& name, const st
 	float ext_ior	  = ctx.extractIOR(bsdf, "ext_ior", AIR_IOR);
 	float int_ior	  = ctx.extractIOR(bsdf, "int_ior", RUBBER_IOR);
 
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
 		   << ext_ior << ", "
 		   << int_ior << ", "
 		   << ShaderUtils::inlineColor(diffuse_ref) << ", "
@@ -140,12 +139,14 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
 	float ext_ior	  = ctx.extractIOR(bsdf, "ext_ior", AIR_IOR);
 	float int_ior	  = ctx.extractIOR(bsdf, "int_ior", RUBBER_IOR);
 
-	// TODO
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
+	setup_microfacet(stream, name, bsdf);
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
 		   << ext_ior << ", "
 		   << int_ior << ", "
 		   << ShaderUtils::inlineColor(diffuse_ref) << ", "
-		   << "make_mirror_bsdf(surf, " << ShaderUtils::inlineColor(specular_ref) << "));" << std::endl;
+		   << "make_rough_conductor_bsdf(surf, 0, 1, "
+		   << ShaderUtils::inlineColor(specular_ref) << ", "
+		   << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf)));" << std::endl;
 }
 
 static void bsdf_phong(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
@@ -153,7 +154,7 @@ static void bsdf_phong(std::ostream& stream, const std::string& name, const std:
 	auto specular_ref = ctx.extractColor(bsdf, "specular_reflectance");
 	float exponent	  = bsdf->property("exponent").getNumber(30);
 
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_phong_bsdf(surf, "
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_phong_bsdf(surf, "
 		   << ShaderUtils::inlineColor(specular_ref) << ", "
 		   << exponent << ");" << std::endl;
 }
@@ -178,7 +179,7 @@ static void bsdf_disney(std::ostream& stream, const std::string& name, const std
 	float diff_trans	   = bsdf->property("diff_trans").getNumber(0.0f);
 	float transmittance	   = bsdf->property("transmittance").getNumber(1.0f);
 
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_disney_bsdf(surf, "
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_disney_bsdf(surf, "
 		   << ShaderUtils::inlineColor(base_color) << ", "
 		   << flatness << ", "
 		   << metallic << ", "
@@ -202,11 +203,57 @@ static void bsdf_twosided(std::ostream& stream, const std::string& name, const s
 	// Ignore
 	const std::string other = bsdf->property("bsdf").getString();
 	stream << LoaderBSDF::generate(other, ctx);
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = bsdf_" << ShaderUtils::escapeIdentifier(other) << ";" << std::endl;
 }
 
 static void bsdf_passthrough(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>&, const LoaderContext& ctx)
 {
-	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = @|_ray, _hit, surf| make_passthrough_bsdf(surf);" << std::endl;
+	IG_UNUSED(ctx);
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_passthrough_bsdf(surf);" << std::endl;
+}
+
+static void bsdf_blend(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
+{
+	const std::string first	 = bsdf->property("first").getString();
+	const std::string second = bsdf->property("second").getString();
+
+	if (first.empty() || second.empty()) {
+		IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdfs given" << std::endl;
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, _surf| make_error_bsdf();" << std::endl;
+	} else if (first == second) {
+		// Ignore it
+		stream << LoaderBSDF::generate(first, ctx);
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = bsdf_" << ShaderUtils::escapeIdentifier(first) << ";" << std::endl;
+	} else {
+		const float weight = bsdf->property("weight").getNumber(0.5f);
+
+		stream << LoaderBSDF::generate(first, ctx);
+		stream << LoaderBSDF::generate(second, ctx);
+
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf("
+			   << "bsdf_" << ShaderUtils::escapeIdentifier(first) << "(ray, hit, surf), "
+			   << "bsdf_" << ShaderUtils::escapeIdentifier(second) << "(ray, hit, surf), "
+			   << weight << ");" << std::endl;
+	}
+}
+
+static void bsdf_mask(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
+{
+	const std::string masked = bsdf->property("bsdf").getString();
+
+	if (masked.empty()) {
+		IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdfsgiven" << std::endl;
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, _surf| make_error_bsdf();" << std::endl;
+	} else {
+		const float weight = bsdf->property("weight").getNumber(0.5f);
+
+		stream << LoaderBSDF::generate(masked, ctx);
+
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf("
+			   << "bsdf_" << ShaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), "
+			   << "make_passthrough_bsdf(surf), "
+			   << weight << ");" << std::endl;
+	}
 }
 
 using BSDFLoader = void (*)(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx);
@@ -228,8 +275,8 @@ static struct {
 	{ "plastic", bsdf_plastic },
 	{ "roughplastic", bsdf_rough_plastic },
 	/*{ "klems", bsdf_klems },*/
-	//{ "blendbsdf", bsdf_blend },
-	//{ "mask", bsdf_mask },
+	{ "blendbsdf", bsdf_blend },
+	{ "mask", bsdf_mask },
 	{ "twosided", bsdf_twosided },
 	{ "passthrough", bsdf_passthrough },
 	{ "null", bsdf_passthrough },
@@ -243,17 +290,31 @@ std::string LoaderBSDF::generate(const std::string& name, const LoaderContext& c
 	std::stringstream stream;
 	const auto bsdf = ctx.Scene.bsdf(name);
 
-	bool found = false;
-	for (size_t i = 0; _generators[i].Loader; ++i) {
-		if (_generators[i].Name == bsdf->pluginType()) {
-			_generators[i].Loader(stream, name, bsdf, ctx);
-			found = true;
-			break;
+	bool error = false;
+
+	if (!bsdf) {
+		IG_LOG(L_ERROR) << "Unknown bsdf '" << name << "'" << std::endl;
+		error = true;
+	} else {
+
+		bool found = false;
+		for (size_t i = 0; _generators[i].Loader; ++i) {
+			if (_generators[i].Name == bsdf->pluginType()) {
+				_generators[i].Loader(stream, name, bsdf, ctx);
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) {
+			IG_LOG(L_ERROR) << "No bsdf type '" << bsdf->pluginType() << "' available" << std::endl;
+			error = true;
 		}
 	}
-	
-	if (!found)
-		IG_LOG(L_ERROR) << "No bsdf type '" << bsdf->pluginType() << "' available" << std::endl;
+
+	if (error) {
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, _surf| make_error_bsdf();" << std::endl;
+	}
 
 	return stream.str();
 }

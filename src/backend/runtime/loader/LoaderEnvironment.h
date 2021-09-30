@@ -16,12 +16,13 @@ struct Shape {
 
 struct Entity {
 	Transformf Transform;
-	uint32 Shape;
-	uint32 BSDF;
+	std::string Shape;
+	std::string BSDF;
 };
 
 struct LoaderEnvironment {
 	std::vector<Shape> Shapes;
+	std::vector<Entity> Entities; // TODO: This can be large... maybe change?
 	std::unordered_map<std::string, uint32> EntityIDs; // TODO: This can be large... maybe change?
 	std::unordered_map<std::string, uint32> ShapeIDs;
 
