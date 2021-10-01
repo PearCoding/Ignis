@@ -16,6 +16,13 @@
 #include <iomanip>
 #include <mutex>
 #include <thread>
+#include <type_traits>
+
+// TODO: It would be great to get the number below automatically
+// and/or make it possible to extend it for custom payloads
+constexpr size_t RayStreamSize		 = 9;
+constexpr size_t PrimaryStreamSize	 = RayStreamSize + 11;
+constexpr size_t SecondaryStreamSize = RayStreamSize + 4;
 
 /// Some arrays do not need new allocations at the host if the data is already provided and properly arranged.
 /// However, this assumes that the pointer is always properly aligned!
@@ -205,7 +212,7 @@ struct Interface {
 
 	inline anydsl::Array<float>& cpu_primary_stream(size_t size)
 	{
-		return resize_array(0, get_thread_data()->cpu_primary, size, 20);
+		return resize_array(0, get_thread_data()->cpu_primary, size, PrimaryStreamSize);
 	}
 
 	inline anydsl::Array<float>& cpu_primary_stream_const()
@@ -216,7 +223,7 @@ struct Interface {
 
 	inline anydsl::Array<float>& cpu_secondary_stream(size_t size)
 	{
-		return resize_array(0, get_thread_data()->cpu_secondary, size, 13);
+		return resize_array(0, get_thread_data()->cpu_secondary, size, SecondaryStreamSize);
 	}
 
 	inline anydsl::Array<float>& cpu_secondary_stream_const()
@@ -227,7 +234,7 @@ struct Interface {
 
 	inline anydsl::Array<float>& gpu_first_primary_stream(int32_t dev, size_t size)
 	{
-		return resize_array(dev, *devices[dev].current_first_primary, size, 20);
+		return resize_array(dev, *devices[dev].current_first_primary, size, PrimaryStreamSize);
 	}
 
 	inline anydsl::Array<float>& gpu_first_primary_stream_const(int32_t dev)
@@ -238,7 +245,7 @@ struct Interface {
 
 	inline anydsl::Array<float>& gpu_second_primary_stream(int32_t dev, size_t size)
 	{
-		return resize_array(dev, *devices[dev].current_second_primary, size, 20);
+		return resize_array(dev, *devices[dev].current_second_primary, size, PrimaryStreamSize);
 	}
 
 	inline anydsl::Array<float>& gpu_second_primary_stream_const(int32_t dev)
@@ -249,7 +256,7 @@ struct Interface {
 
 	inline anydsl::Array<float>& gpu_secondary_stream(int32_t dev, size_t size)
 	{
-		return resize_array(dev, devices[dev].secondary, size, 13);
+		return resize_array(dev, devices[dev].secondary, size, SecondaryStreamSize);
 	}
 
 	inline anydsl::Array<float>& gpu_secondary_stream_const(int32_t dev)
@@ -524,45 +531,37 @@ void glue_clearframebuffer(int aov)
 
 inline void get_ray_stream(RayStream& rays, float* ptr, size_t capacity)
 {
-	rays.id	   = (int*)ptr + 0 * capacity;
-	rays.org_x = ptr + 1 * capacity;
-	rays.org_y = ptr + 2 * capacity;
-	rays.org_z = ptr + 3 * capacity;
-	rays.dir_x = ptr + 4 * capacity;
-	rays.dir_y = ptr + 5 * capacity;
-	rays.dir_z = ptr + 6 * capacity;
-	rays.tmin  = ptr + 7 * capacity;
-	rays.tmax  = ptr + 8 * capacity;
+	static_assert(std::is_pod<RayStream>::value, "Expected RayStream to be plain old data");
+
+	float** r_ptr = reinterpret_cast<float**>(&rays);
+	for (size_t i = 0; i < RayStreamSize; ++i)
+		r_ptr[i] = ptr + i * capacity;
 }
 
 inline void get_primary_stream(PrimaryStream& primary, float* ptr, size_t capacity)
 {
-	// TODO: This is bad behavior. Need better abstraction
-	static_assert(sizeof(int) == 4, "Invalid bytesize configuration");
+	static_assert(std::is_pod<PrimaryStream>::value, "Expected PrimaryStream to be plain old data");
 
 	get_ray_stream(primary.rays, ptr, capacity);
-	primary.ent_id	  = (int*)ptr + 9 * capacity;
-	primary.prim_id	  = (int*)ptr + 10 * capacity;
-	primary.t		  = ptr + 11 * capacity;
-	primary.u		  = ptr + 12 * capacity;
-	primary.v		  = ptr + 13 * capacity;
-	primary.rnd		  = (unsigned int*)ptr + 14 * capacity;
-	primary.mis		  = ptr + 15 * capacity;
-	primary.contrib_r = ptr + 16 * capacity;
-	primary.contrib_g = ptr + 17 * capacity;
-	primary.contrib_b = ptr + 18 * capacity;
-	primary.depth	  = (int*)ptr + 19 * capacity;
-	primary.size	  = 0;
+
+	float** r_ptr = reinterpret_cast<float**>(&primary);
+	for (size_t i = RayStreamSize; i < PrimaryStreamSize; ++i)
+		r_ptr[i] = ptr + i * capacity;
+
+	primary.size = 0;
 }
 
 inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t capacity)
 {
+	static_assert(std::is_pod<SecondaryStream>::value, "Expected SecondaryStream to be plain old data");
+
 	get_ray_stream(secondary.rays, ptr, capacity);
-	secondary.prim_id = (int*)ptr + 9 * capacity;
-	secondary.color_r = ptr + 10 * capacity;
-	secondary.color_g = ptr + 11 * capacity;
-	secondary.color_b = ptr + 12 * capacity;
-	secondary.size	  = 0;
+
+	float** r_ptr = reinterpret_cast<float**>(&secondary);
+	for (size_t i = RayStreamSize; i < SecondaryStreamSize; ++i)
+		r_ptr[i] = ptr + i * capacity;
+
+	secondary.size = 0;
 }
 
 extern "C" {
@@ -688,25 +687,25 @@ void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* wi
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)
 {
 	auto& array = sInterface->cpu_primary_stream(size);
-	get_primary_stream(*primary, array.data(), array.size() / 20);
+	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
 }
 
 void ignis_cpu_get_primary_stream_const(PrimaryStream* primary)
 {
 	auto& array = sInterface->cpu_primary_stream_const();
-	get_primary_stream(*primary, array.data(), array.size() / 20);
+	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
 }
 
 void ignis_cpu_get_secondary_stream(SecondaryStream* secondary, int size)
 {
 	auto& array = sInterface->cpu_secondary_stream(size);
-	get_secondary_stream(*secondary, array.data(), array.size() / 13);
+	get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
 void ignis_cpu_get_secondary_stream_const(SecondaryStream* secondary)
 {
 	auto& array = sInterface->cpu_secondary_stream_const();
-	get_secondary_stream(*secondary, array.data(), array.size() / 13);
+	get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
 void ignis_gpu_get_tmp_buffer(int dev, int** buf, int size)
@@ -717,37 +716,37 @@ void ignis_gpu_get_tmp_buffer(int dev, int** buf, int size)
 void ignis_gpu_get_first_primary_stream(int dev, PrimaryStream* primary, int size)
 {
 	auto& array = sInterface->gpu_first_primary_stream(dev, size);
-	get_primary_stream(*primary, array.data(), array.size() / 20);
+	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
 }
 
 void ignis_gpu_get_first_primary_stream_const(int dev, PrimaryStream* primary)
 {
 	auto& array = sInterface->gpu_first_primary_stream_const(dev);
-	get_primary_stream(*primary, array.data(), array.size() / 20);
+	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
 }
 
 void ignis_gpu_get_second_primary_stream(int dev, PrimaryStream* primary, int size)
 {
 	auto& array = sInterface->gpu_second_primary_stream(dev, size);
-	get_primary_stream(*primary, array.data(), array.size() / 20);
+	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
 }
 
 void ignis_gpu_get_second_primary_stream_const(int dev, PrimaryStream* primary)
 {
 	auto& array = sInterface->gpu_second_primary_stream_const(dev);
-	get_primary_stream(*primary, array.data(), array.size() / 20);
+	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
 }
 
 void ignis_gpu_get_secondary_stream(int dev, SecondaryStream* secondary, int size)
 {
 	auto& array = sInterface->gpu_secondary_stream(dev, size);
-	get_secondary_stream(*secondary, array.data(), array.size() / 13);
+	get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
 void ignis_gpu_get_secondary_stream_const(int dev, SecondaryStream* secondary)
 {
 	auto& array = sInterface->gpu_secondary_stream_const(dev);
-	get_secondary_stream(*secondary, array.data(), array.size() / 13);
+	get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
 void ignis_gpu_swap_primary_streams(int dev)
