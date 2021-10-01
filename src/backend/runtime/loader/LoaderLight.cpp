@@ -75,7 +75,7 @@ static void light_area(std::ostream& stream, const std::string& name, const std:
 
 	uint32 shape_id = ctx.Environment.ShapeIDs.at(ctx.Environment.Entities[entity_id].Shape);
 
-	stream << "  let ae_" << ShaderUtils::escapeIdentifier(name) << " = make_shape_area_emitter(entities(" << entity_id << "), shapes(" << shape_id << "));" << std::endl
+	stream << "  let ae_" << ShaderUtils::escapeIdentifier(name) << " = make_shape_area_emitter(@cpu_entities(" << entity_id << "), @cpu_shapes(" << shape_id << "));" << std::endl
 		   << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_area_light(ae_" << ShaderUtils::escapeIdentifier(name) << ", "
 		   << ShaderUtils::inlineColor(radiance) << ");" << std::endl;
 }

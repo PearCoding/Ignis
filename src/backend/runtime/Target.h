@@ -27,6 +27,17 @@ inline bool doesTargetRequirePadding(Target target)
 	}
 }
 
+inline bool isCPU(Target target)
+{
+	switch (target) {
+	default:
+		return true;
+	case Target::NVVM:
+	case Target::AMDGPU:
+		return false;
+	}
+}
+
 inline Target getRecommendedCPUTarget()
 {
 #if defined(IG_HAS_HW_FEATURE_AVX512)
