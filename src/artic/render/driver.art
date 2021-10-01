@@ -19,6 +19,7 @@
 #[import(cc = "C")] fn ignis_load_rays(i32, &mut &[StreamRay]) -> ();
 #[import(cc = "C")] fn ignis_load_scene(i32, &mut SceneDatabase) -> ();
 #[import(cc = "C")] fn ignis_load_scene_info(i32, &mut SceneInfo) -> ();
+#[import(cc = "C")] fn ignis_load_image(i32, &[u8], &mut &[f32], &mut i32, &mut i32) -> ();
 #[import(cc = "C")] fn ignis_present(i32) -> ();
 
 //#[import(cc = "C")] fn ignis_handle_primary_trace(i32, &mut PrimaryStream) -> ();

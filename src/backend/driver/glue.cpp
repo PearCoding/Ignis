@@ -1,3 +1,5 @@
+#include "Image.h"
+#include "Logger.h"
 #include "Runtime.h"
 #include "config/Version.h"
 #include "driver/Interface.h"
@@ -123,6 +125,7 @@ struct Interface {
 		anydsl::Array<StreamRay> ray_list;
 		anydsl::Array<float>* current_first_primary;
 		anydsl::Array<float>* current_second_primary;
+		std::unordered_map<std::string, DeviceImage> images;
 
 		inline DeviceData()
 			: scene_ent(false)
@@ -157,10 +160,10 @@ struct Interface {
 	void* miss_shader;
 	std::vector<void*> hit_shaders;
 
-	Interface(size_t width, size_t height, const IG::SceneDatabase* database,
-			  void* ray_generation_shader,
-			  void* miss_shader,
-			  const std::vector<void*>& hit_shaders)
+	inline Interface(size_t width, size_t height, const IG::SceneDatabase* database,
+					 void* ray_generation_shader,
+					 void* miss_shader,
+					 const std::vector<void*>& hit_shaders)
 		: host_pixels(width * height * 3)
 		, database(database)
 		, film_width(width)
@@ -171,12 +174,12 @@ struct Interface {
 	{
 	}
 
-	~Interface()
+	inline ~Interface()
 	{
 	}
 
 	template <typename T>
-	anydsl::Array<T>& resize_array(int32_t dev, anydsl::Array<T>& array, size_t size, size_t multiplier)
+	inline anydsl::Array<T>& resize_array(int32_t dev, anydsl::Array<T>& array, size_t size, size_t multiplier)
 	{
 		const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
 		if (array.size() < (int64_t)capacity) {
@@ -200,72 +203,72 @@ struct Interface {
 		return dataptr;
 	}
 
-	anydsl::Array<float>& cpu_primary_stream(size_t size)
+	inline anydsl::Array<float>& cpu_primary_stream(size_t size)
 	{
 		return resize_array(0, get_thread_data()->cpu_primary, size, 20);
 	}
 
-	anydsl::Array<float>& cpu_primary_stream_const()
+	inline anydsl::Array<float>& cpu_primary_stream_const()
 	{
 		IG_ASSERT(get_thread_data()->cpu_primary.size() > 0, "Expected cpu primary stream to be initialized");
 		return get_thread_data()->cpu_primary;
 	}
 
-	anydsl::Array<float>& cpu_secondary_stream(size_t size)
+	inline anydsl::Array<float>& cpu_secondary_stream(size_t size)
 	{
 		return resize_array(0, get_thread_data()->cpu_secondary, size, 13);
 	}
 
-	anydsl::Array<float>& cpu_secondary_stream_const()
+	inline anydsl::Array<float>& cpu_secondary_stream_const()
 	{
 		IG_ASSERT(get_thread_data()->cpu_secondary.size() > 0, "Expected cpu secondary stream to be initialized");
 		return get_thread_data()->cpu_secondary;
 	}
 
-	anydsl::Array<float>& gpu_first_primary_stream(int32_t dev, size_t size)
+	inline anydsl::Array<float>& gpu_first_primary_stream(int32_t dev, size_t size)
 	{
 		return resize_array(dev, *devices[dev].current_first_primary, size, 20);
 	}
 
-	anydsl::Array<float>& gpu_first_primary_stream_const(int32_t dev)
+	inline anydsl::Array<float>& gpu_first_primary_stream_const(int32_t dev)
 	{
 		IG_ASSERT(devices[dev].current_first_primary->size() > 0, "Expected gpu first primary stream to be initialized");
 		return *devices[dev].current_first_primary;
 	}
 
-	anydsl::Array<float>& gpu_second_primary_stream(int32_t dev, size_t size)
+	inline anydsl::Array<float>& gpu_second_primary_stream(int32_t dev, size_t size)
 	{
 		return resize_array(dev, *devices[dev].current_second_primary, size, 20);
 	}
 
-	anydsl::Array<float>& gpu_second_primary_stream_const(int32_t dev)
+	inline anydsl::Array<float>& gpu_second_primary_stream_const(int32_t dev)
 	{
 		IG_ASSERT(devices[dev].current_second_primary->size() > 0, "Expected gpu second primary stream to be initialized");
 		return *devices[dev].current_second_primary;
 	}
 
-	anydsl::Array<float>& gpu_secondary_stream(int32_t dev, size_t size)
+	inline anydsl::Array<float>& gpu_secondary_stream(int32_t dev, size_t size)
 	{
 		return resize_array(dev, devices[dev].secondary, size, 13);
 	}
 
-	anydsl::Array<float>& gpu_secondary_stream_const(int32_t dev)
+	inline anydsl::Array<float>& gpu_secondary_stream_const(int32_t dev)
 	{
 		IG_ASSERT(devices[dev].secondary.size() > 0, "Expected gpu secondary stream to be initialized");
 		return devices[dev].secondary;
 	}
 
-	anydsl::Array<int32_t>& gpu_tmp_buffer(int32_t dev, size_t size)
+	inline anydsl::Array<int32_t>& gpu_tmp_buffer(int32_t dev, size_t size)
 	{
 		return resize_array(dev, devices[dev].tmp_buffer, size, 1);
 	}
 
-	void gpu_swap_primary_streams(int32_t dev)
+	inline void gpu_swap_primary_streams(int32_t dev)
 	{
 		std::swap(devices[dev].current_first_primary, devices[dev].current_second_primary);
 	}
 
-	const Bvh2Ent& load_bvh2_ent(int32_t dev)
+	inline const Bvh2Ent& load_bvh2_ent(int32_t dev)
 	{
 		if (devices[dev].scene_ent)
 			return devices[dev].bvh2_ent;
@@ -273,7 +276,7 @@ struct Interface {
 		return devices[dev].bvh2_ent = std::move(load_scene_bvh<Node2>(dev));
 	}
 
-	const Bvh4Ent& load_bvh4_ent(int32_t dev)
+	inline const Bvh4Ent& load_bvh4_ent(int32_t dev)
 	{
 		if (devices[dev].scene_ent)
 			return devices[dev].bvh4_ent;
@@ -281,7 +284,7 @@ struct Interface {
 		return devices[dev].bvh4_ent = std::move(load_scene_bvh<Node4>(dev));
 	}
 
-	const Bvh8Ent& load_bvh8_ent(int32_t dev)
+	inline const Bvh8Ent& load_bvh8_ent(int32_t dev)
 	{
 		if (devices[dev].scene_ent)
 			return devices[dev].bvh8_ent;
@@ -289,7 +292,7 @@ struct Interface {
 		return devices[dev].bvh8_ent = std::move(load_scene_bvh<Node8>(dev));
 	}
 
-	const anydsl::Array<StreamRay>& load_ray_list(int32_t dev)
+	inline const anydsl::Array<StreamRay>& load_ray_list(int32_t dev)
 	{
 		if (devices[dev].ray_list.size() != 0)
 			return devices[dev].ray_list;
@@ -326,7 +329,7 @@ struct Interface {
 	}
 
 	template <typename T>
-	anydsl::Array<T> copy_to_device(int32_t dev, const T* data, size_t n)
+	inline anydsl::Array<T> copy_to_device(int32_t dev, const T* data, size_t n)
 	{
 		if (n == 0)
 			return anydsl::Array<T>();
@@ -337,13 +340,18 @@ struct Interface {
 	}
 
 	template <typename T>
-	anydsl::Array<T> copy_to_device(int32_t dev, const std::vector<T>& host)
+	inline anydsl::Array<T> copy_to_device(int32_t dev, const std::vector<T>& host)
 	{
 		return copy_to_device(dev, host.data(), host.size());
 	}
 
+	inline DeviceImage copy_to_device(int32_t dev, const IG::ImageRgba32& image)
+	{
+		return DeviceImage(copy_to_device(dev, image.pixels.get(), image.width * image.height * 4), image.width, image.height);
+	}
+
 	template <typename Node>
-	BvhProxy<Node, EntityLeaf1> load_scene_bvh(int32_t dev)
+	inline BvhProxy<Node, EntityLeaf1> load_scene_bvh(int32_t dev)
 	{
 		const size_t node_count = database->SceneBVH.Nodes.size() / sizeof(Node);
 		const size_t leaf_count = database->SceneBVH.Leaves.size() / sizeof(EntityLeaf1);
@@ -353,7 +361,7 @@ struct Interface {
 		};
 	}
 
-	DynTableProxy load_dyntable(int32_t dev, const IG::DynTable& tbl)
+	inline DynTableProxy load_dyntable(int32_t dev, const IG::DynTable& tbl)
 	{
 		static_assert(sizeof(LookupEntry) == sizeof(IG::LookupEntry), "Expected generated Lookup Entry and internal Lookup Entry to be of same size!");
 
@@ -365,7 +373,7 @@ struct Interface {
 	}
 
 	// Load all the data assembled in previous stages to the device
-	const SceneDatabaseProxy& load_scene_database(int32_t dev)
+	inline const SceneDatabaseProxy& load_scene_database(int32_t dev)
 	{
 		if (devices[dev].database_loaded)
 			return devices[dev].database;
@@ -380,7 +388,7 @@ struct Interface {
 		return proxy;
 	}
 
-	SceneInfo load_scene_info(int32_t dev)
+	inline SceneInfo load_scene_info(int32_t dev)
 	{
 		IG_UNUSED(dev);
 
@@ -390,7 +398,24 @@ struct Interface {
 		return info;
 	}
 
-	int run_ray_generation_shader(int* id, int xmin, int ymin, int xmax, int ymax)
+	inline const DeviceImage& load_image(int32_t dev, const std::string& filename)
+	{
+		auto& images = devices[dev].images;
+		auto it		 = images.find(filename);
+		if (it != images.end())
+			return it->second;
+
+		try {
+			IG::ImageRgba32 img = IG::ImageRgba32::load(filename);
+			IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
+			return images[filename] = std::move(copy_to_device(dev, img));
+		} catch (const IG::ImageLoadException& e) {
+			IG_LOG(IG::L_ERROR) << e.what() << std::endl;
+			return images[filename] = std::move(copy_to_device(dev, IG::ImageRgba32()));
+		}
+	}
+
+	inline int run_ray_generation_shader(int* id, int xmin, int ymin, int xmax, int ymax)
 	{
 		using Callback = decltype(ig_ray_generation_shader);
 		IG_ASSERT(ray_generation_shader != nullptr, "Expected ray generation shader to be valid");
@@ -399,7 +424,7 @@ struct Interface {
 		return ret;
 	}
 
-	void run_miss_shader(int first, int last)
+	inline void run_miss_shader(int first, int last)
 	{
 		//std::cout << "MISS [" << first << ", " << last << "]" << std::endl;
 		using Callback = decltype(ig_miss_shader);
@@ -408,7 +433,7 @@ struct Interface {
 		callback(&current_settings, first, last);
 	}
 
-	void run_hit_shader(int entity_id, int first, int last)
+	inline void run_hit_shader(int entity_id, int first, int last)
 	{
 		//std::cout << "HIT " << entity_id << " [" << first << ", " << last << "]" << std::endl;
 		using Callback = decltype(ig_hit_shader);
@@ -419,12 +444,12 @@ struct Interface {
 		callback(&current_settings, entity_id, first, last);
 	}
 
-	void present(int32_t dev)
+	inline void present(int32_t dev)
 	{
 		anydsl::copy(devices[dev].film_pixels, host_pixels);
 	}
 
-	void clear()
+	inline void clear()
 	{
 		std::fill(host_pixels.begin(), host_pixels.end(), 0.0f);
 		for (auto& pair : devices) {
@@ -650,6 +675,14 @@ void ignis_load_scene_info(int dev, SceneInfo* info)
 void ignis_load_rays(int dev, StreamRay** list)
 {
 	*list = const_cast<StreamRay*>(sInterface->load_ray_list(dev).data());
+}
+
+void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height)
+{
+	auto& img = sInterface->load_image(dev, file);
+	*pixels	  = const_cast<float*>(std::get<0>(img).data());
+	*width	  = std::get<1>(img);
+	*height	  = std::get<2>(img);
 }
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)
