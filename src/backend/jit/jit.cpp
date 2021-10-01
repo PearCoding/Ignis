@@ -21,7 +21,6 @@ void ig_init_jit(const std::string& driver_path)
 	anydsl_link(driver_path.c_str());
 }
 
-// TODO: Change this to a library and adapt it for the several programming stages (emitter, shader, [traversal])
 void* ig_compile_source(const std::string& src, const std::string& function)
 {
 	std::stringstream source;
@@ -32,8 +31,8 @@ void* ig_compile_source(const std::string& src, const std::string& function)
 	source << std::endl;
 	source << src;
 
-	const std::string module_name = "jit_" + function;
-	anydsl_jit_set_module_name(module_name.c_str());
+	//const std::string module_name = "jit_" + function;
+	//anydsl_jit_set_module_name(module_name.c_str());
 
 	std::string source_str = source.str();
 	int ret				   = anydsl_compile(source_str.c_str(), source_str.size(), OPT_LEVEL);

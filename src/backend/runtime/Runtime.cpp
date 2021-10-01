@@ -228,7 +228,7 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 	IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
 	settings.miss_shader = ig_compile_source(MissShader, "ig_miss_shader");
 
-	IG_LOG(L_DEBUG) << "Compiling hit shader" << std::endl;
+	IG_LOG(L_DEBUG) << "Compiling hit shaders" << std::endl;
 	for (size_t i = 0; i < HitShaders.size(); ++i)
 		settings.hit_shaders.push_back(ig_compile_source(HitShaders[i], "ig_hit_shader"));
 

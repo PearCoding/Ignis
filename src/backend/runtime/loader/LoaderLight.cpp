@@ -309,4 +309,8 @@ void LoaderLight::setupAreaLights(LoaderContext& ctx)
 	}
 }
 
+bool LoaderLight::hasAreaLights(const LoaderContext& ctx)
+{
+	return !ctx.Environment.AreaLightsMap.empty();
+}
 } // namespace IG

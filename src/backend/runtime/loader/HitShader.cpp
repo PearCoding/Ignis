@@ -13,8 +13,6 @@ using namespace Parser;
 
 std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& result)
 {
-	IG_UNUSED(entity_id);
-
 	std::stringstream stream;
 
 	stream << "#[export] fn ig_hit_shader(settings: &Settings, entity_id: i32, first: i32, last: i32) -> () {" << std::endl
@@ -27,23 +25,26 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& re
 		   << "  let entities = device.load_entity_table(dtb.entities);" << std::endl
 		   << std::endl;
 
-	// FIXME: Area lights require preloaded entity and shape information
-	// which have to be loaded prior a GPU kernel
-	if (isCPU(ctx.Target)) {
-		stream << "  let cpu_shapes   = shapes;" << std::endl
-			   << "  let cpu_entities = entities;" << std::endl
-			   << std::endl;
-	} else {
-		stream << "  let cpu_dev      = make_cpu_default_device();" << std::endl
-			   << "  let cpu_dtb      = cpu_dev.load_scene_database();" << std::endl
-			   << "  let cpu_shapes   = cpu_dev.load_shape_table(cpu_dtb.shapes);" << std::endl
-			   << "  let cpu_entities = cpu_dev.load_entity_table(cpu_dtb.entities);" << std::endl
-			   << std::endl;
-	}
+	if (LoaderTechnique::requireLights(ctx)) {
+		// FIXME: Area lights require preloaded entity and shape information
+		// which have to be loaded prior a GPU kernel
+		if (LoaderLight::hasAreaLights(ctx)) {
+			if (isCPU(ctx.Target)) {
+				stream << "  let cpu_shapes   = shapes;" << std::endl
+					   << "  let cpu_entities = entities;" << std::endl
+					   << std::endl;
+			} else {
+				stream << "  let cpu_dev      = make_cpu_default_device();" << std::endl
+					   << "  let cpu_dtb      = cpu_dev.load_scene_database();" << std::endl
+					   << "  let cpu_shapes   = cpu_dev.load_shape_table(cpu_dtb.shapes);" << std::endl
+					   << "  let cpu_entities = cpu_dev.load_entity_table(cpu_dtb.entities);" << std::endl
+					   << std::endl;
+			}
+		}
 
-	if (LoaderTechnique::requireLights(ctx))
 		stream << LoaderLight::generate(ctx, false) << std::endl
 			   << std::endl;
+	}
 
 	stream << "  let acc  = SceneAccessor {" << std::endl
 		   << "    info     = " << ShaderUtils::generateSceneInfoInline(ctx) << "," << std::endl
