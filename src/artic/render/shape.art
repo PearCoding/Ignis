@@ -26,13 +26,13 @@ struct TriMesh {
 
 // Creates a geometry object from a triangle mesh definition
 fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
-    let f_tris = tri_mesh.triangles;
-    let f_n    = tri_mesh.normals;
-    let f_fn   = tri_mesh.face_normals;
-    let f_tx   = tri_mesh.tex_coords;
-
     Shape {
         surface_element = @ |local_ray, hit| {
+            let f_tris = tri_mesh.triangles;
+            let f_n    = tri_mesh.normals;
+            let f_fn   = tri_mesh.face_normals;
+            let f_tx   = tri_mesh.tex_coords;
+
             let (i0, i1, i2) = @f_tris(hit.prim_id);
 
             let face_normal = @f_fn(hit.prim_id);
@@ -55,6 +55,33 @@ fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
 
 type ShapeTable  = fn (i32) -> Shape;
 
+fn @make_shape_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32, data: DeviceBuffer) -> Shape {
+    let v_start   = 4;
+    let n_start   = v_start   + num_verts * 4;
+    let fn_start  = n_start   + num_norms * 4;
+    let ind_start = fn_start  + num_face  * 4;
+    let tex_start = ind_start + num_face  * 4;
+    let fa_start  = tex_start + num_tex   * 2;
+    
+    let trimesh = TriMesh {
+        vertices      = @ |i:i32| data.load_vec3(v_start  + i*4),
+        normals       = @ |i:i32| data.load_vec3(n_start  + i*4),
+        face_normals  = @ |i:i32| data.load_vec3(fn_start + i*4),
+        face_inv_area = @ |i:i32| data.load_f32(fa_start  + i),
+        triangles     = @ |i:i32| { let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
+        tex_coords    = @ |i:i32| data.load_vec2(tex_start + i*2),
+        num_tris      = num_face
+    };
+
+    make_trimesh_shape(trimesh)
+}
+
+fn @load_specific_shape_from_table(num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32,
+                                   offset: i32, dtb: DynTable, acc: DeviceBufferAccessor) -> Shape {
+    let data  = get_table_entry(offset as u64, dtb, acc);
+    make_shape_from_buffer(num_face, num_verts, num_norms, num_tex, data)
+}
+
 fn @make_shape_table(dtb: DynTable, acc: DeviceBufferAccessor) -> ShapeTable {
     @ |id| {
         let entry = get_lookup_entry(id as u64, dtb, acc); // Type is TriMesh for currently.
@@ -62,23 +89,6 @@ fn @make_shape_table(dtb: DynTable, acc: DeviceBufferAccessor) -> ShapeTable {
 
         let (num_face, num_verts, num_norms, num_tex) = data.load_int4(0);
         
-        let v_start   = 4;
-        let n_start   = v_start   + num_verts * 4;
-        let fn_start  = n_start   + num_norms * 4;
-        let ind_start = fn_start  + num_face  * 4;
-        let tex_start = ind_start + num_face  * 4;
-        let fa_start  = tex_start + num_tex   * 2;
-        
-        let trimesh = TriMesh {
-            vertices      = @ |i:i32| data.load_vec3(v_start  + i*4),
-            normals       = @ |i:i32| data.load_vec3(n_start  + i*4),
-            face_normals  = @ |i:i32| data.load_vec3(fn_start + i*4),
-            face_inv_area = @ |i:i32| data.load_f32(fa_start  + i),
-            triangles     = @ |i:i32| { let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
-            tex_coords    = @ |i:i32| data.load_vec2(tex_start + i*2),
-            num_tris      = num_face
-        };
-
-        make_trimesh_shape(trimesh)
+        make_shape_from_buffer(num_face, num_verts, num_norms, num_tex, data)
     } 
 }

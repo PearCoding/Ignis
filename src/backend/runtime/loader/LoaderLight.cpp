@@ -60,22 +60,78 @@ static void light_point(std::ostream& stream, const std::string& name, const std
 		   << ", " << ShaderUtils::inlineColor(intensity) << ");" << std::endl;
 }
 
+static std::string inline_mat34(const Eigen::Matrix<float, 3, 4>& mat)
+{
+	std::stringstream stream;
+	stream << "make_mat3x4(";
+	for (size_t i = 0; i < 4; ++i) {
+		stream << "make_vec3(";
+		for (size_t j = 0; j < 3; ++j) {
+			stream << mat(j, i);
+			if (j < 2)
+				stream << ", ";
+		}
+		stream << ")";
+		if (i < 3)
+			stream << ", ";
+	}
+	stream << ")";
+	return stream.str();
+}
+
+static std::string inline_mat3(const Matrix3f& mat)
+{
+	std::stringstream stream;
+	stream << "make_mat3x3(";
+	for (size_t i = 0; i < 3; ++i) {
+		stream << "make_vec3(";
+		for (size_t j = 0; j < 3; ++j) {
+			stream << mat(j, i);
+			if (j < 2)
+				stream << ", ";
+		}
+		stream << ")";
+		if (i < 2)
+			stream << ", ";
+	}
+	stream << ")";
+	return stream.str();
+}
+
+static std::string inline_entity(const Entity& entity, uint32 shapeID)
+{
+	const Eigen::Matrix<float, 3, 4> localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);				// To Local
+	const Eigen::Matrix<float, 3, 4> globalMat = entity.Transform.matrix().block<3, 4>(0, 0);						// To Global
+	const Matrix3f normalMat				   = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
+
+	std::stringstream stream;
+	stream << "Entity{ local_mat = " << inline_mat34(localMat)
+		   << ", global_mat = " << inline_mat34(globalMat)
+		   << ", normal_mat = " << inline_mat3(normalMat)
+		   << ", shape_id = " << shapeID << " }";
+	return stream.str();
+}
+
 static void light_area(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
-	const std::string entity = light->property("entity").getString();
-	const auto radiance		 = ctx.extractColor(light, "radiance");
+	const std::string entityName = light->property("entity").getString();
+	const auto radiance			 = ctx.extractColor(light, "radiance");
 
 	uint32 entity_id = 0;
-	if (!ctx.Environment.EntityIDs.count(entity))
-		IG_LOG(L_ERROR) << "No entity named '" << entity << "' exists for area light" << std::endl;
+	if (!ctx.Environment.EntityIDs.count(entityName))
+		IG_LOG(L_ERROR) << "No entity named '" << entityName << "' exists for area light" << std::endl;
 	else
-		entity_id = ctx.Environment.EntityIDs.at(entity);
+		entity_id = ctx.Environment.EntityIDs.at(entityName);
 
-	uint32 shape_id = ctx.Environment.ShapeIDs.at(ctx.Environment.Entities[entity_id].Shape);
+	const auto entity	= ctx.Environment.Entities[entity_id];
+	uint32 shape_id		= ctx.Environment.ShapeIDs.at(entity.Shape);
+	const auto shape	= ctx.Environment.Shapes[shape_id];
+	size_t shape_offset = ctx.Database->ShapeTable.lookups()[shape_id].Offset;
 
-	stream << "  let ae_" << ShaderUtils::escapeIdentifier(name) << " = make_shape_area_emitter(@cpu_entities(" << entity_id << "), @cpu_shapes(" << shape_id << "));" << std::endl
+	stream << "  let ae_" << ShaderUtils::escapeIdentifier(name) << " = make_shape_area_emitter(" << inline_entity(entity, shape_id)
+		   << ", device.load_specific_shape(" << shape.FaceCount << ", " << shape.VertexCount << ", " << shape.NormalCount << ", " << shape.TexCount << ", " << shape_offset << ", dtb.shapes));" << std::endl
 		   << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_area_light(ae_" << ShaderUtils::escapeIdentifier(name) << ", "
 		   << ShaderUtils::inlineColor(radiance) << ");" << std::endl;
 }
@@ -262,6 +318,9 @@ std::string LoaderLight::generate(const LoaderContext& ctx, bool skipArea)
 		if (!found)
 			IG_LOG(L_ERROR) << "No light type '" << light->pluginType() << "' available" << std::endl;
 	}
+
+	if (counter != 0)
+		stream << std::endl;
 
 	stream << "  let num_lights = " << counter << ";" << std::endl
 		   << "  let lights = @|id:i32| {" << std::endl

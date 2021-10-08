@@ -29,6 +29,7 @@ struct Device {
     load_scene_info:     fn () -> SceneInfo,
     load_entity_table:   fn (DynTable) -> EntityTable,
     load_shape_table:    fn (DynTable) -> ShapeTable,
+    load_specific_shape: fn (i32, i32, i32, i32, i32, DynTable) -> Shape,
     load_bvh_table:      fn (DynTable) -> BVHTable,
     load_image:          fn (&[u8]) -> Image,
 

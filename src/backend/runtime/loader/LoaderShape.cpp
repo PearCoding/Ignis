@@ -317,8 +317,10 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 
 		// Register shape into environment
 		Shape shape;
-		shape.VtxCount	  = mesh.vertices.size();
-		shape.ItxCount	  = mesh.indices.size();
+		shape.VertexCount = mesh.vertices.size();
+		shape.NormalCount = mesh.normals.size();
+		shape.TexCount	  = mesh.texcoords.size();
+		shape.FaceCount	  = mesh.faceCount();
 		shape.BoundingBox = boxes.at(id);
 
 		const uint32 shapeID = ctx.Environment.Shapes.size();

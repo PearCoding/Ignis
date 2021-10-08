@@ -41,6 +41,7 @@ struct LoaderContext {
 	std::vector<Vector3f> TextureAverages;				   // Workaround for now
 
 	LoaderEnvironment Environment;
+	SceneDatabase* Database = nullptr;
 
 	inline std::filesystem::path handlePath(const std::filesystem::path& path) const
 	{

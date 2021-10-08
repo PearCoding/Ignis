@@ -25,23 +25,8 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& re
 		   << "  let entities = device.load_entity_table(dtb.entities);" << std::endl
 		   << std::endl;
 
-	if (LoaderTechnique::requireLights(ctx)) {
-		// FIXME: Area lights require preloaded entity and shape information
-		// which have to be loaded prior a GPU kernel
-		if (LoaderLight::hasAreaLights(ctx)) {
-			if (isCPU(ctx.Target)) {
-				stream << "  let cpu_shapes   = shapes;" << std::endl
-					   << "  let cpu_entities = entities;" << std::endl
-					   << std::endl;
-			} else {
-				stream << "  let cpu_dev      = make_cpu_default_device();" << std::endl
-					   << "  let cpu_dtb      = cpu_dev.load_scene_database();" << std::endl
-					   << "  let cpu_shapes   = cpu_dev.load_shape_table(cpu_dtb.shapes);" << std::endl
-					   << "  let cpu_entities = cpu_dev.load_entity_table(cpu_dtb.entities);" << std::endl
-					   << std::endl;
-			}
-		}
-
+	const bool requireLights = LoaderTechnique::requireLights(ctx);
+	if (requireLights) {
 		stream << LoaderLight::generate(ctx, false) << std::endl
 			   << std::endl;
 	}
@@ -65,7 +50,7 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& re
 	const std::string entity_name = ctx.Environment.Entities[entity_id].Name;
 	const bool isLight			  = ctx.Environment.AreaLightsMap.count(entity_name) > 0;
 
-	if (isLight) {
+	if (isLight && requireLights) {
 		const std::string light_name = ctx.Environment.AreaLightsMap[entity_name];
 		stream << "  let shader : Shader = @|ray, hit, surf| make_emissive_material(surf, bsdf_" << ShaderUtils::escapeIdentifier(bsdf_name) << "(ray, hit, surf), "
 			   << "light_" << ShaderUtils::escapeIdentifier(light_name) << ");" << std::endl

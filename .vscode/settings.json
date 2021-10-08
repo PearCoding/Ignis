@@ -130,5 +130,6 @@
         "ciso646": "cpp",
         "climits": "cpp"
     },
-    "cmake.configureOnOpen": true
+    "cmake.configureOnOpen": false,
+    "cmake.buildDirectory": "${workspaceRoot}/build/${buildType}",
 }

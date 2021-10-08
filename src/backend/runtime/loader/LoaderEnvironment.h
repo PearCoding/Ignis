@@ -9,8 +9,10 @@
 namespace IG {
 
 struct Shape {
-	size_t VtxCount;
-	size_t ItxCount;
+	size_t VertexCount;
+	size_t NormalCount;
+	size_t TexCount;
+	size_t FaceCount;
 	IG::BoundingBox BoundingBox;
 };
 
@@ -23,7 +25,7 @@ struct Entity {
 
 struct LoaderEnvironment {
 	std::vector<Shape> Shapes;
-	std::vector<Entity> Entities; // TODO: This can be large... maybe change?
+	std::vector<Entity> Entities;					   // TODO: This can be large... maybe change?
 	std::unordered_map<std::string, uint32> EntityIDs; // TODO: This can be large... maybe change?
 	std::unordered_map<std::string, uint32> ShapeIDs;
 	std::unordered_map<std::string, std::string> AreaLightsMap; // Map from Entity -> Light

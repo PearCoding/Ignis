@@ -138,7 +138,7 @@ set(_targets )
 foreach(var ${VARIANTS})
     var_to_name(var_name ${var})
     message(VERBOSE "Driver: ${var_name} = ${var}")
-    set(out_file "${CMAKE_CURRENT_BINARY_DIR}/main_${var_name}.art")
+    set(out_file "${CMAKE_CURRENT_BINARY_DIR}/driver_${var_name}.art")
     separate_arguments(args UNIX_COMMAND ${var})
     add_custom_command(
         OUTPUT "${out_file}"
@@ -149,7 +149,7 @@ foreach(var ${VARIANTS})
     set(_objs ) # Reset list
     set(_interface_name driver_interface_${var_name})
     anydsl_runtime_wrap(_objs
-        NAME "artic_${var_name}"
+        NAME "driver_${var_name}"
         FRONTEND "artic"
         CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
         ARTIC_FLAGS --log-level info -Wall
