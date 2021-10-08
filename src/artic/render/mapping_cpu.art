@@ -231,7 +231,8 @@ fn @cpu_generate_rays( primary: PrimaryStream
     primary.size + num_rays
 }
 
-fn @cpu_generate_rays_handler(capacity: i32
+fn @cpu_generate_rays_handler(size: i32
+                            , capacity: i32
                             , emitter: RayEmitter
                             , id: &mut i32
                             , xmin: i32
@@ -244,6 +245,7 @@ fn @cpu_generate_rays_handler(capacity: i32
 
     let mut primary : PrimaryStream;
     ignis_cpu_get_primary_stream(&mut primary, capacity);
+    primary.size = size;
     cpu_generate_rays(primary, capacity, emitter, id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width)
 }
 
@@ -456,7 +458,7 @@ fn @cpu_trace( scene: SceneGeometry
 
                 // (Re-)generate primary rays
                 if primary.size < capacity && id < num_rays {
-                    primary.size = pipeline.on_generate(&mut id, xmin, ymin, xmax, ymax);
+                    primary.size = pipeline.on_generate(&mut id, primary.size, xmin, ymin, xmax, ymax);
                 }
 
                 if scene.info.num_entities == 0 {
@@ -597,8 +599,8 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             vector_compact
         )
     },
-    generate_rays = @ | emitter, id, xmin, ymin, xmax, ymax, spp | -> i32 {
-        cpu_generate_rays_handler(@cpu_get_stream_capacity(spp, tile_size), emitter, id, xmin, ymin, xmax, ymax, spp, vector_width)
+    generate_rays = @ | emitter, id, size, xmin, ymin, xmax, ymax, spp | -> i32 {
+        cpu_generate_rays_handler(size, @cpu_get_stream_capacity(spp, tile_size), emitter, id, xmin, ymin, xmax, ymax, spp, vector_width)
     },
     handle_miss_shader = @ | path_tracer, first, last, spp | {
         cpu_miss_shade_handler(path_tracer, first, last, spp, vector_width);

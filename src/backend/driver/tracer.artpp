@@ -35,8 +35,8 @@ fn ig_render(settings: &Settings) -> () {
     };
 
     let pipeline = Pipeline {
-        on_generate   = @ | id, xmin, ymin, xmax, ymax | -> i32 {
-            ignis_handle_ray_generation(id, xmin, ymin, xmax, ymax)
+        on_generate   = @ | id, size, xmin, ymin, xmax, ymax | -> i32 {
+            ignis_handle_ray_generation(id, size, xmin, ymin, xmax, ymax)
         },
         on_miss_shade = @ | first, last | {
             ignis_handle_miss_shader(first, last);

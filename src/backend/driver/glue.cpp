@@ -422,12 +422,12 @@ struct Interface {
 		}
 	}
 
-	inline int run_ray_generation_shader(int* id, int xmin, int ymin, int xmax, int ymax)
+	inline int run_ray_generation_shader(int* id, int size, int xmin, int ymin, int xmax, int ymax)
 	{
 		using Callback = decltype(ig_ray_generation_shader);
 		IG_ASSERT(ray_generation_shader != nullptr, "Expected ray generation shader to be valid");
 		auto callback = (Callback*)ray_generation_shader;
-		const int ret = callback(&current_settings, current_iteration, id, xmin, ymin, xmax, ymax);
+		const int ret = callback(&current_settings, current_iteration, id, size, xmin, ymin, xmax, ymax);
 		return ret;
 	}
 
@@ -754,9 +754,9 @@ void ignis_gpu_swap_primary_streams(int dev)
 	sInterface->gpu_swap_primary_streams(dev);
 }
 
-int ignis_handle_ray_generation(int* id, int xmin, int ymin, int xmax, int ymax)
+int ignis_handle_ray_generation(int* id, int size, int xmin, int ymin, int xmax, int ymax)
 {
-	return sInterface->run_ray_generation_shader(id, xmin, ymin, xmax, ymax);
+	return sInterface->run_ray_generation_shader(id, size, xmin, ymin, xmax, ymax);
 }
 
 void ignis_handle_miss_shader(int first, int last)

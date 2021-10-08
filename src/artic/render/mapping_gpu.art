@@ -336,6 +336,7 @@ fn @gpu_generate_rays( primary: PrimaryStream
 }
 
 fn @gpu_generate_rays_handler(dev_id: i32
+                            , size: i32
                             , capacity: i32
                             , acc: Accelerator
                             , emitter: RayEmitter
@@ -346,6 +347,7 @@ fn @gpu_generate_rays_handler(dev_id: i32
 
     let mut primary: PrimaryStream;
     ignis_gpu_get_first_primary_stream(dev_id, &mut primary, capacity);
+    primary.size = size;
 
     gpu_generate_rays(primary, capacity, acc, emitter, id, film_width, film_height, spp)
 }
@@ -390,7 +392,7 @@ fn @gpu_swap_streams(dev_id: i32, a: &mut PrimaryStream, b: &mut PrimaryStream) 
     ignis_gpu_swap_primary_streams(dev_id); 
 }
 
-static GPUStreamCapacity = 1024 * 1024;
+static GPUStreamCapacity = 1024 * 1024 * 16;
 fn @gpu_trace( dev_id: i32
              , acc: Accelerator
              , atomics: Atomics
@@ -416,7 +418,7 @@ fn @gpu_trace( dev_id: i32
     while id < num_rays || primary.size > 0 {
         // Regenerate rays
         if primary.size < GPUStreamCapacity && id < num_rays {
-            primary.size = pipeline.on_generate(&mut id, 0, 0, film_width, film_height);
+            primary.size = pipeline.on_generate(&mut id, primary.size, 0, 0, film_width, film_height);
         }
 
         // Special case: No entities to intersect
@@ -441,8 +443,8 @@ fn @gpu_trace( dev_id: i32
             let last = ray_ends(ent_id);
             if first < last {
                 pipeline.on_hit_shade(ent_id, first, last);
+                first = last;
             }
-            first = last;
         }
 
         // Shade non-hits as well
@@ -610,8 +612,8 @@ fn @make_gpu_device( dev_id: i32
             spp
         )
     },
-    generate_rays = @ | emitter, id, _xmin, _ymin, _xmax, _ymax, spp | -> i32 {
-        gpu_generate_rays_handler(dev_id, GPUStreamCapacity, acc, emitter, id, spp)
+    generate_rays = @ | emitter, id, size, _xmin, _ymin, _xmax, _ymax, spp | -> i32 {
+        gpu_generate_rays_handler(dev_id, size, GPUStreamCapacity, acc, emitter, id, spp)
     },
     handle_miss_shader = @ | path_tracer, first, last, spp | {
         gpu_miss_shade_handler(dev_id, acc, atomics, path_tracer, first, last, spp);
