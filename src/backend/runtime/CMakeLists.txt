@@ -93,6 +93,8 @@ set(SRC
     loader/RayGenerationShader.h
     loader/ShaderUtils.cpp
     loader/ShaderUtils.h
+    loader/ShadingTree.cpp
+    loader/ShadingTree.h
     log/ConsoleLogListener.cpp
     log/ConsoleLogListener.h
     log/FileLogListener.cpp

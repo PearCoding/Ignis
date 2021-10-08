@@ -54,7 +54,7 @@ static uint32 setup_sky(const std::shared_ptr<Parser::Object>& light, const Load
 static void light_point(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	auto pos	   = light->property("position").getVector3();
-	auto intensity = ctx.extractColor(light, "intensity");
+	auto intensity = ctx.extractColor(*light, "intensity");
 
 	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_point_light(" << ShaderUtils::inlineVector(pos)
 		   << ", " << ShaderUtils::inlineColor(intensity) << ");" << std::endl;
@@ -117,7 +117,7 @@ static void light_area(std::ostream& stream, const std::string& name, const std:
 	IG_UNUSED(name);
 
 	const std::string entityName = light->property("entity").getString();
-	const auto radiance			 = ctx.extractColor(light, "radiance");
+	const auto radiance			 = ctx.extractColor(*light, "radiance");
 
 	uint32 entity_id = 0;
 	if (!ctx.Environment.EntityIDs.count(entityName))
@@ -142,7 +142,7 @@ static void light_directional(std::ostream& stream, const std::string& name, con
 
 	auto ea			= extractEA(light);
 	Vector3f dir	= ea.toDirection();
-	auto irradiance = ctx.extractColor(light, "irradiance");
+	auto irradiance = ctx.extractColor(*light, "irradiance");
 
 	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_directional_light(" << ShaderUtils::inlineVector(dir)
 		   << ", " << ctx.Environment.SceneDiameter / 2
@@ -186,8 +186,8 @@ static void light_cie_uniform(std::ostream& stream, const std::string& name, con
 {
 	IG_UNUSED(name);
 
-	auto zenith			  = ctx.extractColor(light, "zenith");
-	auto ground			  = ctx.extractColor(light, "ground");
+	auto zenith			  = ctx.extractColor(*light, "zenith");
+	auto ground			  = ctx.extractColor(*light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
 
 	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_cie_sky_light(" << ctx.Environment.SceneDiameter / 2
@@ -201,8 +201,8 @@ static void light_cie_cloudy(std::ostream& stream, const std::string& name, cons
 {
 	IG_UNUSED(name);
 
-	auto zenith			  = ctx.extractColor(light, "zenith");
-	auto ground			  = ctx.extractColor(light, "ground");
+	auto zenith			  = ctx.extractColor(*light, "zenith");
+	auto ground			  = ctx.extractColor(*light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
 
 	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_cie_sky_light(" << ctx.Environment.SceneDiameter / 2
@@ -237,9 +237,9 @@ static void light_perez(std::ostream& stream, const std::string& name, const std
 
 	Vector3f color;
 	if (light->properties().count("luminance")) {
-		color = ctx.extractColor(light, "luminance");
+		color = ctx.extractColor(*light, "luminance");
 	} else {
-		auto zenith			= ctx.extractColor(light, "zenith");
+		auto zenith			= ctx.extractColor(*light, "zenith");
 		const float groundZ = perez_model(0, -dir(2), a, b, c, d, e); // TODO: Validate
 		color				= zenith * groundZ;
 	}
@@ -258,7 +258,7 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
 {
 	IG_UNUSED(name);
 
-	const Vector3f color = ctx.extractColor(light, "radiance");
+	const Vector3f color = ctx.extractColor(*light, "radiance");
 
 	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_environment_light(" << ctx.Environment.SceneDiameter / 2
 		   << ", " << ShaderUtils::inlineColor(color) << ");" << std::endl;

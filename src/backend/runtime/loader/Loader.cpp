@@ -4,7 +4,6 @@
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
 #include "LoaderShape.h"
-#include "LoaderTexture.h"
 #include "Logger.h"
 #include "MissShader.h"
 #include "RayGenerationShader.h"

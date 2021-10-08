@@ -401,7 +401,6 @@ struct Interface {
 
 		SceneInfo info;
 		info.num_entities = database->EntityTable.entryCount();
-		info.num_shapes	  = database->ShapeTable.entryCount();
 		return info;
 	}
 
@@ -412,6 +411,7 @@ struct Interface {
 		if (it != images.end())
 			return it->second;
 
+			IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
 		try {
 			IG::ImageRgba32 img = IG::ImageRgba32::load(filename);
 			IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;

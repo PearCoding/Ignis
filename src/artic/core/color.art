@@ -17,6 +17,7 @@ fn @color_lerp(a: Color, b: Color, t: f32) = make_color(
     (1 - t) * a.g + t * b.g,
     (1 - t) * a.b + t * b.b);
 
+fn @color_average(c: Color) = (c.r + c.g + c.b) / 3;
 fn @color_luminance(c: Color) = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
 
 fn @is_black(c: Color) = (c.r == 0 && c.g == 0 && c.b == 0);

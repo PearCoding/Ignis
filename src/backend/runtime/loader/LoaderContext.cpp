@@ -8,15 +8,9 @@ namespace IG {
 
 using namespace Parser;
 
-bool LoaderContext::isTexture(const std::shared_ptr<Parser::Object>& obj, const std::string& propname) const
+Vector3f LoaderContext::extractColor(const Parser::Object& obj, const std::string& propname, const Vector3f& def) const
 {
-	auto prop = obj->property(propname);
-	return prop.isValid() && prop.type() == PT_STRING;
-}
-
-Vector3f LoaderContext::extractColor(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, const Vector3f& def) const
-{
-	auto prop = obj->property(propname);
+	auto prop = obj.property(propname);
 	if (prop.isValid()) {
 		switch (prop.type()) {
 		case PT_INTEGER:
@@ -26,7 +20,7 @@ Vector3f LoaderContext::extractColor(const std::shared_ptr<Parser::Object>& obj,
 		case PT_VECTOR3:
 			return prop.getVector3();
 		case PT_STRING: {
-			std::string name = obj->property(propname).getString();
+			std::string name = obj.property(propname).getString();
 			IG_LOG(L_WARNING) << "[TODO] Replacing texture '" << name << "' by average color" << std::endl;
 			if (TextureBuffer.count(name)) {
 				uint32 id = TextureBuffer.at(name);
@@ -45,9 +39,9 @@ Vector3f LoaderContext::extractColor(const std::shared_ptr<Parser::Object>& obj,
 	}
 }
 
-float LoaderContext::extractIOR(const std::shared_ptr<Parser::Object>& obj, const std::string& propname, float def) const
+float LoaderContext::extractIOR(const Parser::Object& obj, const std::string& propname, float def) const
 {
-	auto prop = obj->property(propname);
+	auto prop = obj.property(propname);
 	if (prop.isValid()) {
 		switch (prop.type()) {
 		case PT_INTEGER:
@@ -57,7 +51,7 @@ float LoaderContext::extractIOR(const std::shared_ptr<Parser::Object>& obj, cons
 		case PT_VECTOR3:
 			return prop.getVector3().mean();
 		case PT_STRING: {
-			std::string name = obj->property(propname).getString();
+			std::string name = obj.property(propname).getString();
 			IG_LOG(L_WARNING) << "[TODO] Replacing texture '" << name << "' by average color" << std::endl;
 			if (TextureBuffer.count(name)) {
 				uint32 id = TextureBuffer.at(name);

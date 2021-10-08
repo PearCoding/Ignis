@@ -41,7 +41,7 @@ std::string ShaderUtils::constructDevice(Target target)
 std::string ShaderUtils::generateSceneInfoInline(const LoaderContext& ctx)
 {
 	std::stringstream stream;
-	stream << "SceneInfo { num_entities = " << ctx.Environment.EntityIDs.size() << ", num_shapes = " << ctx.Environment.ShapeIDs.size() << " }";
+	stream << "SceneInfo { num_entities = " << ctx.Environment.EntityIDs.size() << " }";
 	return stream.str();
 }
 

@@ -546,6 +546,10 @@ fn @cpu_trace( scene: SceneGeometry
 }
 
 // CPU device ----------------------------------------------------------------------
+fn @cpu_load_vec4(p: &[f32], elem: i32) {
+    let v = (p as &[simd[f32 * 4]])(elem);
+    make_vec4(v(0), v(1), v(2), v(3)) 
+}
 
 fn @make_cpu_buffer(p: &[u8]) = DeviceBuffer {
     load_f32    = @ |i| (p as &[f32])(i),
@@ -653,10 +657,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         let mut width      : i32;
         let mut height     : i32;
         ignis_load_image(0, filename, &mut pixel_data, &mut width, &mut height);
-        make_image_rgba32(@ |x, y| make_vec4(pixel_data(y * width*4 + x*4 + 0),
-                                             pixel_data(y * width*4 + x*4 + 1),
-                                             pixel_data(y * width*4 + x*4 + 2),
-                                             pixel_data(y * width*4 + x*4 + 3)),
+        make_image_rgba32(@ |x, y| cpu_load_vec4(pixel_data, y * width + x),
                           width, height)
     },
     load_rays = @ || {

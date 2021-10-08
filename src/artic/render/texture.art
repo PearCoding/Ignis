@@ -24,7 +24,6 @@ fn @make_repeat_border() -> BorderHandling {
 
 fn @make_mirror_border() -> BorderHandling {
     let mirror = @ |x: f32| { if ((x as i32) % 2) == 0 { x - math_builtins::floor(x) } else { 1 - (x - math_builtins::floor(x)) } };
-
     BorderHandling {
         horz = mirror,
         vert = mirror
