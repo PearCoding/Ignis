@@ -11,7 +11,7 @@
 namespace IG {
 using namespace Parser;
 
-std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& result)
+std::string HitShader::setup(int entity_id, LoaderContext& ctx)
 {
 	std::stringstream stream;
 
@@ -60,7 +60,7 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx, LoaderResult& re
 			   << std::endl;
 	}
 
-	stream << LoaderTechnique::generate(ctx, result) << std::endl
+	stream << LoaderTechnique::generate(ctx) << std::endl
 		   << std::endl;
 
 	stream << "  let spp = 4 : i32;" << std::endl // TODO ?

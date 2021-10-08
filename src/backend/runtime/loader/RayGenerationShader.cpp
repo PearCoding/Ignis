@@ -8,7 +8,7 @@
 namespace IG {
 using namespace Parser;
 
-std::string RayGenerationShader::setup(LoaderContext& ctx, LoaderResult& result)
+std::string RayGenerationShader::setup(LoaderContext& ctx)
 {
 	std::stringstream stream;
 

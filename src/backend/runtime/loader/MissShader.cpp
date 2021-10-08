@@ -10,7 +10,7 @@
 namespace IG {
 using namespace Parser;
 
-std::string MissShader::setup(LoaderContext& ctx, LoaderResult& result)
+std::string MissShader::setup(LoaderContext& ctx)
 {
 	std::stringstream stream;
 
@@ -23,7 +23,7 @@ std::string MissShader::setup(LoaderContext& ctx, LoaderResult& result)
 		stream << LoaderLight::generate(ctx, true)
 			   << std::endl;
 
-	stream << LoaderTechnique::generate(ctx, result) << std::endl
+	stream << LoaderTechnique::generate(ctx) << std::endl
 		   << std::endl;
 
 	stream << "  let spp = 4 : i32;" << std::endl // TODO ?

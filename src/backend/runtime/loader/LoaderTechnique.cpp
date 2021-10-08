@@ -10,7 +10,7 @@ bool LoaderTechnique::requireLights(LoaderContext& ctx)
 	return ctx.TechniqueType == "path";
 }
 
-std::string LoaderTechnique::generate(LoaderContext& ctx, LoaderResult& result)
+std::string LoaderTechnique::generate(LoaderContext& ctx)
 {
 	std::stringstream stream;
 

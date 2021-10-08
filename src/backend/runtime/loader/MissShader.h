@@ -3,8 +3,7 @@
 #include "LoaderContext.h"
 
 namespace IG {
-struct LoaderResult;
 struct MissShader {
-	static std::string setup(LoaderContext& ctx, LoaderResult& res);
+	static std::string setup(LoaderContext& ctx);
 };
 } // namespace IG

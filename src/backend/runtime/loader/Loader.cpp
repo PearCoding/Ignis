@@ -36,18 +36,18 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 	LoaderLight::setupAreaLights(ctx);
 
 	// Generate Ray Generation Shader
-	result.RayGenerationShader = RayGenerationShader::setup(ctx, result);
+	result.RayGenerationShader = RayGenerationShader::setup(ctx);
 	if (result.RayGenerationShader.empty())
 		return false;
 
 	// Generate Miss Shader
-	result.MissShader = MissShader::setup(ctx, result);
+	result.MissShader = MissShader::setup(ctx);
 	if (result.MissShader.empty())
 		return false;
 
 	// Generate Hit Shader
 	for (size_t i = 0; i < result.Database.EntityTable.entryCount(); ++i) {
-		std::string shader = HitShader::setup(i, ctx, result);
+		std::string shader = HitShader::setup(i, ctx);
 		if (shader.empty())
 			return false;
 		result.HitShaders.push_back(shader);
