@@ -137,6 +137,57 @@ void ShadingTree::addColor(const std::string& name, const LoaderContext& ctx, co
 	mParameters[name] = inline_str;
 }
 
+// Only use this if no basic color information suffices
+void ShadingTree::addTexture(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj)
+{
+	if (mParameters.count(name) > 0)
+		IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
+
+	const auto prop = obj.property(name);
+
+	std::string inline_str;
+	switch (prop.type()) {
+	case Parser::PT_NONE:
+		inline_str = "make_black_texture()";
+		break;
+	case Parser::PT_INTEGER:
+	case Parser::PT_NUMBER:
+		IG_LOG(L_WARNING) << "Parameter '" << name << "' expects texture but only a number was given" << std::endl;
+		inline_str = "make_constant_texture(make_gray_color(" + std::to_string(prop.getNumber()) + "))";
+		break;
+	case Parser::PT_VECTOR3: {
+		Vector3f color = prop.getVector3();
+		inline_str	   = "make_constant_texture(make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + "))";
+	} break;
+	case Parser::PT_STRING: {
+		const auto [texName, texChannel] = escapeTextureName(prop.getString());
+		std::string tex_id				 = lookupTexture(texName, ctx, false);
+
+		switch (texChannel) {
+		default:
+		case NC_NONE:
+			inline_str = tex_id;
+			break;
+		case NC_RED:
+			inline_str = "make_channel_texture(" + tex_id + ", 0)";
+			break;
+		case NC_GREEN:
+			inline_str = "make_channel_texture(" + tex_id + ", 1)";
+			break;
+		case NC_BLUE:
+			inline_str = "make_channel_texture(" + tex_id + ", 2)";
+			break;
+		}
+	} break;
+	default:
+		IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+		inline_str = "make_black_texture()";
+		break;
+	}
+
+	mParameters[name] = inline_str;
+}
+
 std::string ShadingTree::pullHeader()
 {
 	std::stringstream stream;
@@ -154,7 +205,7 @@ std::string ShadingTree::getInline(const std::string& name) const
 	return "";
 }
 
-std::string ShadingTree::lookupTexture(const std::string& name, const LoaderContext& ctx)
+std::string ShadingTree::lookupTexture(const std::string& name, const LoaderContext& ctx, bool needColor)
 {
 	if (mLoadedTextures.count(name) == 0) {
 		const auto tex = ctx.Scene.texture(name);
@@ -165,6 +216,6 @@ std::string ShadingTree::lookupTexture(const std::string& name, const LoaderCont
 
 		mHeaderLines.push_back(LoaderTexture::generate(name, *tex, ctx, *this));
 	}
-	return "tex_" + ShaderUtils::escapeIdentifier(name) + "(surf.tex_coords)";
+	return "tex_" + ShaderUtils::escapeIdentifier(name) + (needColor ? "(surf.tex_coords)" : "");
 }
 } // namespace IG

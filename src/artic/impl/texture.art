@@ -16,6 +16,21 @@ fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color) -> Text
     }
 }
 
+fn @make_constant_texture(color: Color) -> Texture {
+    @ |_uv| { color }
+}
+
+fn @make_channel_texture(tex: Texture, channel: i32) -> Texture {
+    @ |uv| { 
+        let color = tex(uv);
+        match(channel) {
+            0 => make_gray_color(color.r),
+            1 => make_gray_color(color.g),
+            _ => make_gray_color(color.b),
+        }
+    }
+}
+
 fn @make_black_texture() -> Texture {
     @ |_uv| { black }
 }

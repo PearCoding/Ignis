@@ -164,17 +164,17 @@ static void bsdf_disney(std::ostream& stream, const std::string& name, const std
 	ShadingTree tree;
 	tree.addColor("base_color", ctx, *bsdf, Vector3f::Constant(0.8f));
 	tree.addNumber("flatness", ctx, *bsdf, 0);
-	tree.addNumber("metallic", ctx, *bsdf, 1);
+	tree.addNumber("metallic", ctx, *bsdf, 0);
 	tree.addNumber("ior", ctx, *bsdf, GLASS_IOR);
 	tree.addNumber("specular_tint", ctx, *bsdf, 0);
-	tree.addNumber("roughness", ctx, *bsdf, 0.6f);
+	tree.addNumber("roughness", ctx, *bsdf, 0.5f);
 	tree.addNumber("anisotropic", ctx, *bsdf, 0);
-	tree.addNumber("sheen", ctx, *bsdf, 1);
+	tree.addNumber("sheen", ctx, *bsdf, 0);
 	tree.addNumber("sheen_tint", ctx, *bsdf, 0);
-	tree.addNumber("clearcoat", ctx, *bsdf, 1);
-	tree.addNumber("clearcoat_gloss", ctx, *bsdf, 1);
+	tree.addNumber("clearcoat", ctx, *bsdf, 0);
+	tree.addNumber("clearcoat_gloss", ctx, *bsdf, 0);
 	tree.addNumber("spec_trans", ctx, *bsdf, 0);
-	tree.addNumber("relative_ior", ctx, *bsdf, 1);
+	tree.addNumber("relative_ior", ctx, *bsdf, 1.1f);
 	tree.addNumber("scatter_distance", ctx, *bsdf, 0.5f);
 	tree.addNumber("diff_trans", ctx, *bsdf, 0);
 	tree.addNumber("transmittance", ctx, *bsdf, 1);
@@ -245,7 +245,7 @@ static void bsdf_mask(std::ostream& stream, const std::string& name, const std::
 	const std::string masked = bsdf->property("bsdf").getString();
 
 	if (masked.empty()) {
-		IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdfsgiven" << std::endl;
+		IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
 		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, _surf| make_error_bsdf();" << std::endl;
 	} else {
 		ShadingTree tree;
@@ -261,6 +261,47 @@ static void bsdf_mask(std::ostream& stream, const std::string& name, const std::
 	}
 }
 
+static void bsdf_normalmap(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
+{
+	const std::string inner = bsdf->property("bsdf").getString();
+	ShadingTree tree;
+	tree.addColor("map", ctx, *bsdf, Vector3f::Constant(1.0f));
+
+	if (inner.empty()) {
+		IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, _surf| make_error_bsdf();" << std::endl;
+	} else {
+		stream << LoaderBSDF::generate(inner, ctx);
+
+		stream << tree.pullHeader()
+			   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_normalmap(surf, @|surf2| -> Bsdf { "
+			   << " bsdf_" << ShaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) }, "
+			   << tree.getInline("map") << ");" << std::endl;
+	}
+}
+
+static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
+{
+	const std::string inner = bsdf->property("bsdf").getString();
+	ShadingTree tree;
+	tree.addTexture("map", ctx, *bsdf); // Better use some node system with explicit gradients...
+	tree.addNumber("strength", ctx, *bsdf);
+
+	if (inner.empty()) {
+		IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, _surf| make_error_bsdf();" << std::endl;
+	} else {
+		stream << LoaderBSDF::generate(inner, ctx);
+
+		stream << tree.pullHeader()
+			   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_bumpmap(surf, @|surf2| -> Bsdf { "
+			   << " bsdf_" << ShaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) }, "
+			   << " texture_dx(" << tree.getInline("map") << ", surf.tex_coords).r, "
+			   << " texture_dy(" << tree.getInline("map") << ", surf.tex_coords).r, "
+			   << tree.getInline("strength") << ");" << std::endl;
+	}
+}
+
 using BSDFLoader = void (*)(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx);
 static struct {
 	const char* Name;
@@ -271,8 +312,8 @@ static struct {
 	{ "glass", bsdf_dielectric },
 	{ "dielectric", bsdf_dielectric },
 	{ "roughdielectric", bsdf_dielectric }, // TODO
-	{ "thindielectric", bsdf_dielectric },	// TODO
-	{ "mirror", bsdf_mirror },				// Specialized conductor
+	{ "thindielectric", bsdf_dielectric },
+	{ "mirror", bsdf_mirror }, // Specialized conductor
 	{ "conductor", bsdf_conductor },
 	{ "roughconductor", bsdf_rough_conductor },
 	{ "phong", bsdf_phong },
@@ -285,8 +326,8 @@ static struct {
 	{ "twosided", bsdf_twosided },
 	{ "passthrough", bsdf_passthrough },
 	{ "null", bsdf_passthrough },
-	//{ "bumpmap", bsdf_bumpmap },
-	//{ "normalmap", bsdf_normalmap },
+	{ "bumpmap", bsdf_bumpmap },
+	{ "normalmap", bsdf_normalmap },
 	{ "", nullptr }
 };
 

@@ -15,12 +15,13 @@ public:
 
 	void addNumber(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, float def = 0);
 	void addColor(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero());
+	void addTexture(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj);
 
 	std::string pullHeader();
 	std::string getInline(const std::string& name) const;
 
 private:
-	std::string lookupTexture(const std::string& name, const LoaderContext& ctx);
+	std::string lookupTexture(const std::string& name, const LoaderContext& ctx, bool needColor=true);
 
 	const std::string mPrefix;
 	std::vector<std::string> mHeaderLines;// The order matters
