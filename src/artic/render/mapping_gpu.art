@@ -470,7 +470,7 @@ fn @gpu_trace( dev_id: i32
 }
 
 // GPU device ----------------------------------------------------------------------
-fn @nvvm_load_vec4(p: &addrspace(1)[f32], elem: i32) {,
+fn @nvvm_load_vec4(p: &addrspace(1)[f32], elem: i32) {
     let v = nvvm_ldg4_f32(&((p as &addrspace(1)[simd[f32 * 4]])(elem)));
     make_vec4(v(0), v(1), v(2), v(3))
 }

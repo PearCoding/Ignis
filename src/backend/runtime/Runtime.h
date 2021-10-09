@@ -10,21 +10,22 @@ class Camera;
 struct LoaderOptions;
 
 struct RuntimeOptions {
-	Target DesiredTarget = Target::GENERIC;
+	bool DumpShader		 = false;
+	Target DesiredTarget = Target::INVALID;
 	uint32 Device		 = 0;
 	std::string OverrideTechnique;
 	std::string OverrideCamera;
 };
 
 struct RuntimeRenderSettings {
-	uint32 FilmWidth	 = 800;
-	uint32 FilmHeight	 = 600;
-	Vector3f CameraEye	 = Vector3f::Zero();
-	Vector3f CameraDir	 = Vector3f::UnitZ();
-	Vector3f CameraUp	 = Vector3f::UnitY();
-	float FOV			 = 60;
-	float TMin			 = 0;
-	float TMax			 = FltMax;
+	uint32 FilmWidth   = 800;
+	uint32 FilmHeight  = 600;
+	Vector3f CameraEye = Vector3f::Zero();
+	Vector3f CameraDir = Vector3f::UnitZ();
+	Vector3f CameraUp  = Vector3f::UnitY();
+	float FOV		   = 60;
+	float TMin		   = 0;
+	float TMax		   = FltMax;
 };
 
 struct Ray {

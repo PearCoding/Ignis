@@ -5,6 +5,7 @@
 #include "loader/Parser.h"
 
 #include <chrono>
+#include <fstream>
 
 namespace IG {
 
@@ -68,6 +69,12 @@ static inline void setup_camera(RuntimeRenderSettings& settings, LoaderOptions& 
 		std::swap(settings.TMin, settings.TMax);
 }
 
+static inline void dumpShader(const std::string& filename, const std::string& shader)
+{
+	std::ofstream stream(filename);
+	stream << shader;
+}
+
 Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	: mInit(false)
 	, mDevice(opts.Device)
@@ -125,12 +132,20 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 
 	IG_LOG(L_DEBUG) << "Ray Generation Shader:" << std::endl
 					<< result.RayGenerationShader << std::endl;
-
 	IG_LOG(L_DEBUG) << "Miss Shader:" << std::endl
 					<< result.MissShader << std::endl;
 	for (const auto& shader : result.HitShaders) {
 		IG_LOG(L_DEBUG) << "Hit Shader:" << std::endl
 						<< shader << std::endl;
+	}
+
+	if (opts.DumpShader) {
+		dumpShader("rayGeneration.art", result.RayGenerationShader);
+		dumpShader("missShader.art", result.MissShader);
+		int counter = 0;
+		for (const auto& shader : result.HitShaders) {
+			dumpShader("hitShader" + std::to_string(counter++) + ".art", shader);
+		}
 	}
 
 	RayGenerationShader = std::move(result.RayGenerationShader);

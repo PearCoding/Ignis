@@ -27,8 +27,7 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx)
 
 	const bool requireLights = LoaderTechnique::requireLights(ctx);
 	if (requireLights) {
-		stream << LoaderLight::generate(ctx, false) << std::endl
-			   << std::endl;
+		stream << LoaderLight::generate(ctx, false) << std::endl;
 	}
 
 	stream << "  let acc  = SceneAccessor {" << std::endl
