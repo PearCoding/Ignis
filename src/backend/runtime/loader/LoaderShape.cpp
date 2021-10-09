@@ -57,7 +57,7 @@ inline TriMesh setup_mesh_triangle(const Object& elem)
 
 inline TriMesh setup_mesh_rectangle(const Object& elem)
 {
-	if (elem.properties().count("width") != 0) {
+	if (elem.properties().count("p0") == 0) {
 		const float width	  = elem.property("width").getNumber(2.0f);
 		const float height	  = elem.property("height").getNumber(2.0f);
 		const Vector3f origin = elem.property("origin").getVector3(Vector3f(-width / 2, -height / 2, 0));

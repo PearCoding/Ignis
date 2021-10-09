@@ -196,9 +196,9 @@ fn @make_cie_sky_light(max_radius: f32, zenith: Color, ground: Color, groundBrig
 //-------------------------------------------
 fn @make_perez_light(max_radius: f32, sun_dir: Vec3, lum: Color, a: f32, b: f32, c: f32, d: f32, e: f32)  =
     make_environment_light_function(max_radius, @|dir|{
-        let theta = -dir.y;                 // Cosine between zenith and direction
-        let sun_c = vec3_dot(dir, sun_dir); // Cosine between sun and direction
-        let sun_a = math_builtins::acos(sun_c);      // Angle between sun and direction
+        let theta = -dir.y;                     // Cosine between zenith and direction
+        let sun_c = vec3_dot(dir, sun_dir);     // Cosine between sun and direction
+        let sun_a = math_builtins::acos(sun_c); // Angle between sun and direction
 
         let A      = if math_builtins::fabs(theta) <= flt_eps { 1 } else { 1 + a * math_builtins::exp(b / theta) };
         let B      = 1 + c * math_builtins::exp(d * sun_a) + e * sun_c * sun_c;

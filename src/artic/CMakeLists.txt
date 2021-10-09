@@ -37,12 +37,14 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/cdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/debugtracer.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/disney.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/emitter.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/fresnel.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/klems.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/microfacet.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/pathtracer.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/pixel_sampler.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/principled.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture.art
 )
 
