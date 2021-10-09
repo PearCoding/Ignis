@@ -668,9 +668,10 @@ fn @make_gpu_device( dev_id: i32
         let mut height     : i32;
         ignis_load_image(dev_id, filename, &mut pixel_data, &mut width, &mut height);
 
+        let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
         let q = pixel_data as &addrspace(1)[f32];
-        make_image_rgba32( if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * width + x) } 
-                           else { @ |x, y| amdgpu_load_vec4(q, y * width + x) }
+        make_image_rgba32( if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
+                           else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) }
                          , width, height)
     },
     load_rays = @ || {
