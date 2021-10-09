@@ -280,7 +280,7 @@ static struct {
 	{ "plastic", bsdf_plastic },
 	{ "roughplastic", bsdf_rough_plastic },
 	/*{ "klems", bsdf_klems },*/
-	{ "blendbsdf", bsdf_blend },
+	{ "blend", bsdf_blend },
 	{ "mask", bsdf_mask },
 	{ "twosided", bsdf_twosided },
 	{ "passthrough", bsdf_passthrough },

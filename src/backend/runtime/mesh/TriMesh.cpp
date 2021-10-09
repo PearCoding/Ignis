@@ -195,7 +195,7 @@ inline static void addPlane(TriMesh& mesh, const Vector3f& origin, const Vector3
 
 	mesh.vertices.insert(mesh.vertices.end(), { origin, origin + xAxis, origin + xAxis + yAxis, origin + yAxis });
 	mesh.normals.insert(mesh.normals.end(), { N, N, N, N });
-	mesh.texcoords.insert(mesh.texcoords.end(), { Vector2f(0, 0), Vector2f(1, 0), Vector2f(0, 1), Vector2f(1, 1) });
+	mesh.texcoords.insert(mesh.texcoords.end(), { Vector2f(0, 0), Vector2f(1, 0), Vector2f(1, 1), Vector2f(0, 1) });
 	mesh.face_normals.insert(mesh.face_normals.end(), { N, N });
 	mesh.face_inv_area.insert(mesh.face_inv_area.end(), { 1 / area, 1 / area });
 	mesh.indices.insert(mesh.indices.end(), { 0 + off, 1 + off, 2 + off, M, 0 + off, 2 + off, 3 + off, M });

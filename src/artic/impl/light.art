@@ -129,11 +129,11 @@ fn @make_environment_light(max_radius: f32, color: Color) = Light {
 
 //-------------------------------------------
 /* TODO: This should contain a distribution map for efficient sampling */
-fn @make_environment_light_textured(max_radius: f32, tex: Texture) -> Light {
+fn @make_environment_light_textured(max_radius: f32, tex: Texture, theta_off: f32, phi_off: f32) -> Light {
     let eval = @|dir : Vec3| -> Color {
         let (theta, phi) = spherical_from_dir(dir);
-        let u = theta / flt_pi;
-        let v = phi / (2 * flt_pi);
+        let u = (theta + theta_off) / flt_pi;
+        let v = (phi + phi_off) / (2 * flt_pi);
 
         tex(make_vec2(v,u))
     };

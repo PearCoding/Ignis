@@ -1,13 +1,16 @@
 #include "LoaderLight.h"
 #include "Loader.h"
+#include "LoaderTexture.h"
 #include "Logger.h"
 #include "ShaderUtils.h"
+#include "ShadingTree.h"
 #include "serialization/VectorSerializer.h"
 #include "skysun/SkyModel.h"
 #include "skysun/SunLocation.h"
 
 #include <chrono>
 
+// TODO: Make use of the ShadingTree!!
 namespace IG {
 
 static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
@@ -258,10 +261,27 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
 {
 	IG_UNUSED(name);
 
-	const Vector3f color = ctx.extractColor(*light, "radiance");
+	if (light->property("radiance").type() == Parser::PT_STRING) {
+		float theta_off = light->property("theta").getNumber(0.0f) * Deg2Rad;
+		float phi_off	= light->property("phi").getNumber(0.0f) * Deg2Rad;
 
-	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_environment_light(" << ctx.Environment.SceneDiameter / 2
-		   << ", " << ShaderUtils::inlineColor(color) << ");" << std::endl;
+		const std::string tex_name = light->property("radiance").getString();
+		const auto tex			   = ctx.Scene.texture(tex_name);
+		if (!tex) {
+			IG_LOG(L_ERROR) << "Unknown texture '" << tex_name << "'" << std::endl;
+			return; //TODO
+		}
+
+		ShadingTree tree;
+		stream << LoaderTexture::generate(tex_name, *tex, ctx, tree)
+			   << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_environment_light_textured(" << ctx.Environment.SceneDiameter / 2
+			   << ", tex_" << ShaderUtils::escapeIdentifier(tex_name) << ", "
+			   << theta_off << ", " << phi_off << ");" << std::endl;
+	} else {
+		const Vector3f color = ctx.extractColor(*light, "radiance");
+		stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_environment_light(" << ctx.Environment.SceneDiameter / 2
+			   << ", " << ShaderUtils::inlineColor(color) << ");" << std::endl;
+	}
 }
 
 using LightLoader = void (*)(std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
