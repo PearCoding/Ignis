@@ -34,7 +34,7 @@
 		{"type":"diffuse", "name": "mat-Socket", "reflectance":[0.8,0.8,0.8]},
 		{"type":"dielectric", "name": "mat-Sphere1"},
 		{"type":"diffuse", "name": "mat-Sphere2"},
-		{"type":"passthrough", "name": "mat-Sphere", "bsdf":"mat-Sphere2"}
+		{"type":"thindielectric", "name": "mat-Sphere", "first":"mat-Sphere1", "second":"mat-Sphere2"}
 	],
 	"shapes": [
 		{"type":"rectangle", "name":"Ground", "width":10, "height":10},

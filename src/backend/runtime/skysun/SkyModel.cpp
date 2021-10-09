@@ -39,13 +39,8 @@ SkyModel::SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, floa
 	}
 }
 
-void SkyModel::save(Serializer& serializer) const
+void SkyModel::save(const std::filesystem::path& path) const
 {
-	serializer.write((uint32)mAzimuthCount);
-	serializer.write((uint32)mElevationCount);
-	serializer.write((uint32)0); // Padding
-	serializer.write((uint32)0); // Padding
-
-	serializer.write(mData, true);
+	ImageRgba32::save(path, mData.data(), mAzimuthCount, mElevationCount);
 }
 } // namespace IG

@@ -39,19 +39,17 @@ static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
 	}
 }
 
-static uint32 setup_sky(const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static std::string setup_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light)
 {
-	IG_UNUSED(ctx);
-
 	auto ground	   = light->property("ground").getVector3(Vector3f(0.8f, 0.8f, 0.8f));
 	auto turbidity = light->property("turbidity").getNumber(3.0f);
 	auto ea		   = extractEA(light);
 
+	std::filesystem::create_directories("data/"); // Make sure this directory exists
+	std::string path = "data/skytex_" + ShaderUtils::escapeIdentifier(name) + ".exr";
 	SkyModel model(ground, ea, turbidity);
-
-	// TODO
-
-	return 0;
+	model.save(path);
+	return path;
 }
 
 static void light_point(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
@@ -154,9 +152,6 @@ static void light_directional(std::ostream& stream, const std::string& name, con
 
 static void light_sun(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
-	IG_UNUSED(name);
-	IG_UNUSED(ctx);
-
 	auto ea		 = extractEA(light);
 	Vector3f dir = ea.toDirection();
 
@@ -171,18 +166,12 @@ static void light_sun(std::ostream& stream, const std::string& name, const std::
 
 static void light_sky(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
-	IG_UNUSED(stream);
-	IG_UNUSED(name);
+	const std::string path = setup_sky(name, light);
+	const std::string id   = ShaderUtils::escapeIdentifier(name);
 
-	setup_sky(light, ctx);
-	// TODO
-}
-
-static void light_sunsky(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
-{
-	light_sky(stream, name + "_sky", light, ctx);
-	light_sun(stream, name + "_sun", light, ctx);
-	// TODO
+	stream << "  let tex_" << id << "   = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image(\"" << path << "\"));" << std::endl
+		   << "  let light_" << id << " = make_environment_light_textured(" << ctx.Environment.SceneDiameter / 2
+		   << ", tex_" << id << ", 0, 0);" << std::endl;
 }
 
 static void light_cie_uniform(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
@@ -294,8 +283,6 @@ static struct {
 	{ "directional", light_directional },
 	{ "direction", light_directional },
 	{ "sun", light_sun },
-	{ "sunsky", light_sunsky },
-	{ "skysun", light_sunsky },
 	{ "sky", light_sky },
 	{ "cie_uniform", light_cie_uniform },
 	{ "cieuniform", light_cie_uniform },
@@ -312,10 +299,7 @@ static struct {
 std::string LoaderLight::generate(const LoaderContext& ctx, bool skipArea)
 {
 	// This will be used for now
-	auto skip = [&](const std::string& type) { return (skipArea && type == "area")
-													  || type == "sunsky"
-													  || type == "skysun"
-													  || type == "sky"; };
+	auto skip = [&](const std::string& type) { return (skipArea && type == "area"); };
 
 	std::stringstream stream;
 
@@ -324,7 +308,7 @@ std::string LoaderLight::generate(const LoaderContext& ctx, bool skipArea)
 		const auto light = pair.second;
 
 		if (skip(light->pluginType()))
-			continue; // FIXME: Skip for now
+			continue;
 
 		bool found = false;
 		for (size_t i = 0; _generators[i].Loader; ++i) {
@@ -351,7 +335,7 @@ std::string LoaderLight::generate(const LoaderContext& ctx, bool skipArea)
 		const auto light = pair.second;
 
 		if (skip(light->pluginType()))
-			continue; // FIXME: Skip for now
+			continue;
 
 		if (counter2 < counter - 1)
 			stream << "      " << counter2;
