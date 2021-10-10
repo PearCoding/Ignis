@@ -357,7 +357,7 @@ TriMesh load(const std::filesystem::path& path)
 		return trimesh;
 
 	bool hasBadAreas = false;
-	trimesh.computeFaceNormals(0, &hasBadAreas);
+	trimesh.computeFaceNormals(&hasBadAreas);
 	if (hasBadAreas)
 		IG_LOG(L_WARNING) << "PlyFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
 

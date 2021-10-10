@@ -63,6 +63,7 @@ static inline void usage()
 		<< "   -d      --device    device     Sets the device to use on the selected platform (default: 0)" << std::endl
 		<< "           --cpu                  Use autodetected CPU target" << std::endl
 		<< "           --gpu                  Use autodetected GPU target" << std::endl
+		<< "           --debug                Same as --technique debug" << std::endl
 		<< "           --spp       spp        Enables benchmarking mode and sets the number of iterations based on the given spp" << std::endl
 		<< "           --bench     iterations Enables benchmarking mode and sets the number of iterations" << std::endl
 		<< "   -o      --output    image.exr  Writes the output image to a file" << std::endl
@@ -178,6 +179,8 @@ int main(int argc, char** argv)
 				check_arg(argc, argv, i, 1);
 				++i;
 				opts.OverrideTechnique = argv[i];
+			} else if (!strcmp(argv[i], "--debug")) {
+				opts.OverrideTechnique = "debug";
 			} else if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet")) {
 				quiet = true;
 				IG_LOGGER.setQuiet(true);
