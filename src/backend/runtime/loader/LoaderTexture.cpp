@@ -7,6 +7,8 @@
 namespace IG {
 static void tex_image(std::ostream& stream, const std::string& name, const Parser::Object& tex, const LoaderContext& ctx, ShadingTree& tree)
 {
+	IG_UNUSED(tree);
+
 	const std::string filename	  = ctx.handlePath(tex.property("filename").getString());
 	const std::string filter_type = tex.property("filter_type").getString("bilinear");
 	const std::string wrap_mode	  = tex.property("wrap_mode").getString("repeat");
@@ -30,6 +32,8 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
 
 static void tex_checkerboard(std::ostream& stream, const std::string& name, const Parser::Object& tex, const LoaderContext& ctx, ShadingTree& tree)
 {
+	IG_UNUSED(tree);
+
 	const auto color0	= ctx.extractColor(tex, "color0", Vector3f::Zero());
 	const auto color1	= ctx.extractColor(tex, "color1", Vector3f::Ones());
 	const float scale_x = tex.property("scale_x").getNumber(1.0f);
