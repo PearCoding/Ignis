@@ -63,19 +63,19 @@ inline TriMesh setup_mesh_rectangle(const Object& elem)
 		const Vector3f origin = elem.property("origin").getVector3(Vector3f(-width / 2, -height / 2, 0));
 		return TriMesh::MakePlane(origin, Vector3f::UnitX() * width, Vector3f::UnitY() * height);
 	} else {
-		const Vector3f p0 = elem.property("p0").getVector3(Vector3f(0, 0, 0));
-		const Vector3f p1 = elem.property("p1").getVector3(Vector3f(1, 0, 0));
+		const Vector3f p0 = elem.property("p0").getVector3(Vector3f(-1, -1, 0));
+		const Vector3f p1 = elem.property("p1").getVector3(Vector3f(1, -1, 0));
 		const Vector3f p2 = elem.property("p2").getVector3(Vector3f(1, 1, 0));
-		const Vector3f p3 = elem.property("p3").getVector3(Vector3f(0, 1, 0));
+		const Vector3f p3 = elem.property("p3").getVector3(Vector3f(-1, 1, 0));
 		return TriMesh::MakeRectangle(p0, p1, p2, p3);
 	}
 }
 
 inline TriMesh setup_mesh_cube(const Object& elem)
 {
-	const float width	  = elem.property("width").getNumber(1.0f);
-	const float height	  = elem.property("height").getNumber(1.0f);
-	const float depth	  = elem.property("depth").getNumber(1.0f);
+	const float width	  = elem.property("width").getNumber(2.0f);
+	const float height	  = elem.property("height").getNumber(2.0f);
+	const float depth	  = elem.property("depth").getNumber(2.0f);
 	const Vector3f origin = elem.property("origin").getVector3(Vector3f(-width / 2, -height / 2, -depth / 2));
 	return TriMesh::MakeBox(origin, Vector3f::UnitX() * width, Vector3f::UnitY() * height, Vector3f::UnitZ() * depth);
 }
