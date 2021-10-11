@@ -65,6 +65,7 @@ fn @mjitt_permute(i: u32, l: u32, p: u32) -> u32
 	}
 }
 
+// FIXME: There is a bug somewhere inside this function, making the output jiggly
 fn @make_mjitt_pixel_sampler(bin_x: u32, bin_y: u32) -> PixelSampler {
     let SEED : u32 = 14512081;
     let FH   : u32 = 0x51633e2d;

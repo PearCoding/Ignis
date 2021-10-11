@@ -698,7 +698,7 @@ static void make_full_screenshot()
 	std::stringstream out_file;
 	auto now	   = std::chrono::system_clock::now();
 	auto in_time_t = std::chrono::system_clock::to_time_t(now);
-	out_file << "screenshot_full_" << std::put_time(std::localtime(&in_time_t), "%Y_%m_%d_%H_%M_%S") << ".png";
+	out_file << "screenshot_full_" << std::put_time(std::localtime(&in_time_t), "%Y_%m_%d_%H_%M_%S") << ".exr";
 
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
 	Uint32 rmask = 0xff000000;
@@ -716,20 +716,20 @@ static void make_full_screenshot()
 											  rmask, gmask, bmask, amask);
 
 	if (!sshot) {
-		IG_LOG(L_ERROR) << "Failed to save PNG file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
+		IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
 		return;
 	}
 
 	int ret = SDL_LockSurface(sshot);
 	if (ret != 0) {
-		IG_LOG(L_ERROR) << "Failed to save PNG file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
+		IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
 		return;
 	}
 
 	ret = SDL_RenderReadPixels(sRenderer, nullptr, sshot->format->format,
 							   sshot->pixels, sshot->pitch);
 	if (ret != 0) {
-		IG_LOG(L_ERROR) << "Failed to save PNG file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
+		IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
 		return;
 	}
 
@@ -754,7 +754,7 @@ static void make_full_screenshot()
 	SDL_FreeSurface(sshot);
 
 	if (!saveImageRGBA(out_file.str(), rgba, sWidth, sHeight, 1))
-		IG_LOG(L_ERROR) << "Failed to save PNG file '" << out_file.str() << "'" << std::endl;
+		IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "'" << std::endl;
 	else
 		IG_LOG(L_INFO) << "Screenshot saved to '" << out_file.str() << "'" << std::endl;
 
