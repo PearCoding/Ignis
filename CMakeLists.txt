@@ -50,10 +50,11 @@ if(NOT IG_SUBPROJECT)
 endif()
 
 # Options
-option(IG_WITH_VIEWER     "Build interactive viewer igview" ON)
-option(IG_WITH_TRACER     "Build tracing frontend igtrace" ON)
-option(IG_WITH_PYTHON_API "Build python API" ON)
-option(IG_WITH_TOOLS      "Build tools" ON)
+option(IG_WITH_VIEWER        "Build interactive viewer igview" ON)
+option(IG_WITH_TRACER        "Build tracing frontend igtrace" ON)
+option(IG_WITH_PYTHON_API    "Build python API" ON)
+option(IG_WITH_TOOLS         "Build tools" ON)
+option(IG_WITH_DOCUMENTATION "Build the documentation if Sphinx is available on the system" ON)
 
 # Setup artic clang flags
 set(ARTIC_CLANG_FLAGS -O3 -march=native -ffast-math CACHE STRING "Artic Clang compilation options")
@@ -135,3 +136,7 @@ else()
 endif()
 # Traverse to underlying directories
 add_subdirectory(src)
+
+if(IG_WITH_DOCUMENTATION)
+	add_subdirectory(docs)
+endif()

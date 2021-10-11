@@ -60,13 +60,13 @@ set(SRC
     config/Build.h
     config/Git.h.in
     config/Version.h.in
-    driver/Configuration.cpp
-    driver/Configuration.h
     driver/DriverManager.cpp
     driver/DriverManager.h
     driver/Interface.h
     klems/KlemsLoader.cpp
     klems/KlemsLoader.h
+    loader/HitShader.cpp
+    loader/HitShader.h
     loader/Loader.cpp
     loader/Loader.h
     loader/LoaderBSDF.cpp
@@ -81,10 +81,20 @@ set(SRC
     loader/LoaderLight.h
     loader/LoaderShape.cpp
     loader/LoaderShape.h
+    loader/LoaderTechnique.cpp
+    loader/LoaderTechnique.h
     loader/LoaderTexture.cpp
     loader/LoaderTexture.h
+    loader/MissShader.cpp
+    loader/MissShader.h
     loader/Parser.cpp
     loader/Parser.h
+    loader/RayGenerationShader.cpp
+    loader/RayGenerationShader.h
+    loader/ShaderUtils.cpp
+    loader/ShaderUtils.h
+    loader/ShadingTree.cpp
+    loader/ShadingTree.h
     log/ConsoleLogListener.cpp
     log/ConsoleLogListener.h
     log/FileLogListener.cpp
@@ -142,7 +152,7 @@ if(NOT WIN32)
     find_package(Threads REQUIRED)
     target_link_libraries(ig_lib_runtime PUBLIC Threads::Threads)
 endif()
-target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen std::filesystem PRIVATE ${CMAKE_DL_LIBS} pugixml TBB::tbb TBB::tbbmalloc ZLIB::ZLIB)
+target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen std::filesystem PRIVATE ${CMAKE_DL_LIBS} pugixml TBB::tbb TBB::tbbmalloc ZLIB::ZLIB ig_lib_jit)
 target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR})
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 target_compile_definitions(ig_lib_runtime PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")

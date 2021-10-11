@@ -1,6 +1,7 @@
 #pragma once
 
-#include "IG_Config.h"
+#include "Target.h"
+#include <vector>
 
 namespace IG {
 struct SceneDatabase;
@@ -12,6 +13,9 @@ struct DriverSetupSettings {
 	IG::uint32 framebuffer_width;
 	IG::uint32 framebuffer_height;
 	IG::SceneDatabase* database;
+	void* ray_generation_shader;
+	void* miss_shader;
+	std::vector<void*> hit_shaders;
 };
 
 struct DriverRenderSettings {
@@ -40,7 +44,7 @@ struct DriverInterface {
 	IG::uint32 MinorVersion;
 	IG::uint32 SPP;
 	const char* Name;
-	IG::uint64 Configuration;
+	IG::Target Target;
 	DriverSetupFunction SetupFunction;
 	DriverShutdownFunction ShutdownFunction;
 	DriverRenderFunction RenderFunction;

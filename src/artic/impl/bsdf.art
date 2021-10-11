@@ -1,0 +1,416 @@
+// Creates a fully absorbing BSDF that behaves like a black body
+fn @make_black_bsdf(surf: SurfaceElement) = Bsdf {
+    eval        = @ |_, _| black,
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, black, true),
+    is_specular = true
+};
+
+// Error
+fn @make_error_bsdf() = Bsdf {
+    eval        = @ |_, _| pink,
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, _, _| reject_bsdf_sample(),
+    is_specular = false
+};
+
+//--------------------------------------
+// Creates a purely two-sided diffuse BSDF
+fn @make_diffuse_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
+    eval   = @ |in_dir, _| color_mulf(kd, math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2))) / flt_pi),
+    pdf    = @ |in_dir, _| cosine_hemisphere_pdf(math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)))),
+    sample = @ |rnd, _, _| {
+        let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+        let gdir   = mat3x3_mul(surf.local, sample.dir);
+        make_bsdf_sample(surf, gdir/*if surf.is_entering { gdir } else { vec3_neg(gdir) }*/, sample.pdf, sample.dir.z, kd, false)
+    },
+    is_specular = false
+};
+
+//--------------------------------------
+// Creates a two-sided BSDF based on orennayar
+fn @make_orennayar_bsdf(surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
+    let a2 = alpha * alpha;
+    let eval = @ |in_dir : Vec3, out_dir : Vec3| {
+        let p1 = math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)));
+        let p2 = math_builtins::fabs(vec3_dot(out_dir, surf.local.col(2)));
+        let s  = -p1 * p2 + positive_cos(out_dir, in_dir);
+        let t  = if s <= flt_eps { 1 } else { math_builtins::fmax(flt_eps, math_builtins::fmax(p1, p2)) };
+
+        let A = 1 - 0.5 * a2 / (a2 + 0.33);
+        let B = 0.45 * a2 / (a2 + 0.09);
+        let C = 0.17 * a2 / (a2 + 0.13); // Correction term
+        color_mulf(color_add(color_mulf(kd, (A + (B * s / t)) / flt_pi), color_mul(kd, color_mulf(kd, C / flt_pi))), p1)
+    };
+
+    Bsdf {
+        eval   = eval,
+        pdf    = @ |in_dir, _| cosine_hemisphere_pdf(math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)))),
+        sample = @ |rnd, out_dir, _| {
+            let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+            let gdir   = mat3x3_mul(surf.local, sample.dir);
+            make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, sample.dir.z, color_mulf(eval(gdir, out_dir), 1/sample.pdf), false)
+        },
+        is_specular = false
+    }
+}
+
+//--------------------------------------
+// Creates a physically-correct Phong BSDF
+fn @make_phong_bsdf(surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
+    eval = @ |in_dir, out_dir| {
+        let cosI = math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)));
+        let cos  = positive_cos(in_dir, vec3_reflect(out_dir, surf.local.col(2)));
+        color_mulf(ks, cosI * fastpow/*math_builtins::pow*/(cos, ns) * (ns + 2) / (2 * flt_pi))
+    },
+    pdf = @ |in_dir, out_dir| {
+        let cos = positive_cos(in_dir, vec3_reflect(out_dir, surf.local.col(2)));
+        cosine_power_hemisphere_pdf(cos, ns)
+    },
+    sample = @ |rnd, out_dir, _| {
+        let reflect_out = vec3_reflect(out_dir, surf.local.col(2));
+        let sample      = sample_cosine_power_hemisphere(ns, randf(rnd), randf(rnd));
+        let in_dir      = mat3x3_mul(make_orthonormal_mat3x3(reflect_out), sample.dir);
+        let cos         = positive_cos(in_dir, surf.local.col(2));
+        let color       = color_mulf(ks, (ns + 2) / (ns + 1));
+        make_bsdf_sample(surf, in_dir, sample.pdf, cos, color, false)
+    },
+    is_specular = false
+};
+
+//--------------------------------------
+// Creates a plastic bsdf based on Fresnel equation (which is just a variadic mix bsdf with extra diffuse term)
+fn @make_plastic_bsdf(surf: SurfaceElement, n1: f32, n2: f32, kd: Color, specularBsdf: Bsdf) -> Bsdf {
+    // Layered BSDF
+    let diffuse = make_diffuse_bsdf(surf, kd);
+
+    let N   = surf.local.col(2);
+    let eta = n1 / n2; // Some systems use n2 / n1 for eta
+    // Calculate approximate diffuse Fresnel reflectance
+    let fdr = fresnel_diffuse_factor(eta);
+
+    // Diffuse inner scattering term
+    let diff_scattering = @|cos_i : f32| {
+        let fi = fresnel(eta, cos_i);
+         (1 - fi.factor) * eta * eta / (1 - fdr)
+    };
+
+    // Apply inner scattering term to diffuse bsdf
+    let diffuse_extra = Bsdf {
+        eval   = @ |in_dir, out_dir| {
+            let cos_i = math_builtins::fabs(vec3_dot(in_dir, N));
+            color_mulf(diffuse.eval(in_dir, out_dir), diff_scattering(cos_i))
+        },
+        pdf    = diffuse.pdf,
+        sample = @ |rnd, out_dir, adjoint| {
+            if let Option[BsdfSample]::Some(s) = diffuse.sample(rnd, out_dir, adjoint) {
+                make_option(BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos, color = color_mulf(s.color,  diff_scattering(s.cos)) })
+            } else {
+                Option[BsdfSample]::None
+            }
+        },
+        is_specular = diffuse.is_specular
+    };
+
+    // Fresnel based mix function
+    let mix_f = @|out_dir : Vec3| -> f32 {
+        let cos_o = math_builtins::fabs(vec3_dot(out_dir, N));
+        let fo    = fresnel(eta, cos_o);
+        fo.factor
+    };
+
+    make_variadic_mix_bsdf(diffuse_extra, specularBsdf, mix_f)
+}
+
+//--------------------------------------
+// Creates a perfect mirror BSDF
+fn @make_mirror_bsdf(surf: SurfaceElement, ks: Color) = Bsdf {
+    eval   = @ |_, _| black,
+    pdf    = @ |_, _| 0,
+    sample = @ |_, out_dir, _| {
+        make_bsdf_sample(surf, vec3_reflect(out_dir, surf.local.col(2)), 1, 1, ks, false)
+    },
+    is_specular = true
+};
+
+//--------------------------------------
+// Creates a perfect glass BSDF
+fn @make_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
+    eval   = @ |_, _| black,
+    pdf    = @ |_, _| 0,
+    sample = @ |rnd, out_dir, adjoint| {
+        let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
+        let n = surf.local.col(2);
+        let cos_i = vec3_dot(out_dir, n);
+
+        let fterm = fresnel(k, cos_i);
+
+        if !fterm.total {
+            // Refraction
+            let cos_t = fterm.cos_t;
+            let F     = fterm.factor;
+            if (randf(rnd) > F) {
+                let t = vec3_sub(vec3_mulf(n, k * cos_i - cos_t), vec3_mulf(out_dir, k));
+                let adjoint_term = if adjoint { k * k } else { 1 };
+                return(make_bsdf_sample(surf, t, 1, 1, color_mulf(kt, adjoint_term), true))
+            }
+        }
+        // Reflection
+        make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, 1, ks, false)
+    },
+    is_specular = true
+};
+
+//--------------------------------------
+// Creates a perfect glass BSDF with thin interface approximation
+fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
+    eval   = @ |_, _| black,
+    pdf    = @ |_, _| 0,
+    sample = @ |rnd, out_dir, _| {
+        let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
+        let N = surf.local.col(2);
+        let cos_i = positive_cos(out_dir, N);
+
+        let fterm = fresnel(k, cos_i);
+        let F = /*if fterm.factor < 1.0 {*/ fterm.factor + (1 - fterm.factor) * fterm.factor / (fterm.factor + 1) /*} else { 1.0 }*/;
+
+        if randf(rnd) > F {
+            // Refraction
+            make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, kt, true)
+        } else {
+            // Reflection
+            make_bsdf_sample(surf, vec3_reflect(out_dir, N), 1, 1, ks, false)
+        }
+    },
+    is_specular = true
+};
+
+//--------------------------------------
+// Creates a perfect conductor BSDF
+fn @make_conductor_bsdf(surf: SurfaceElement, ior: f32, k: f32, ks: Color) = Bsdf {
+    eval   = @ |_, _| black,
+    pdf    = @ |_, _| 0,
+    sample = @ |_, out_dir, _| {
+        let n = surf.local.col(2);
+        let cos_i = vec3_dot(out_dir, n);
+
+        let f = conductor_factor(ior, k, cos_i);
+
+        let color = color_mulf(ks, f);
+        make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, 1, color, false)
+    },
+    is_specular = true
+};
+
+//--------------------------------------
+// Creates a microfacet conductor BSDF. This is the front version
+fn @make_rough_conductor_bsdf_front(surf: SurfaceElement, ior: f32, k: f32, ks: Color, micro: MicrofacetDistribution) -> Bsdf {
+    let N = surf.local.col(2);
+    Bsdf {
+        eval   = @ |in_dir, out_dir| {
+            let cos_o = positive_cos(out_dir, N);
+            let cos_i = positive_cos(in_dir, N);
+
+            if cos_o <= flt_eps || cos_i <= flt_eps { return(black) }
+
+            let H  = vec3_halfway(in_dir, out_dir);
+            let D  = micro.D(H);
+            let G  = micro.G(in_dir, out_dir, H);
+            let F  = conductor_factor(ior, k, positive_cos(out_dir, H));
+            color_mulf(ks, F * D * G / (4 * cos_o))
+        },
+        pdf    = @ |in_dir, out_dir| {
+            let H     = vec3_halfway(in_dir, out_dir);
+            let dot   = positive_cos(in_dir, H);
+            let jacob = 1 / (4 * dot); // Jacobian of the half-direction mapping
+            if dot <= flt_eps { return(0) } else { micro.pdf(in_dir, out_dir, H) * jacob }
+        },
+        sample = @ |rnd, out_dir, _| {
+            let cos_o   = positive_cos(out_dir, N);
+            if cos_o <= flt_eps { return(reject_bsdf_sample()) };
+
+            let s      = micro.sample(rnd, out_dir);
+            if vec3_len2(s.normal) <= flt_eps { return(reject_bsdf_sample()) };
+
+            let H      = vec3_normalize(s.normal);
+            let in_dir = vec3_reflect(out_dir, H);
+
+            let cos_i   = positive_cos(in_dir, N);
+            if cos_i <= flt_eps { return(reject_bsdf_sample()) };
+
+            let cos_h   = positive_cos(H, N);
+            let cos_h_o = positive_cos(out_dir, H); // = cos_h_i
+            if cos_h_o <= flt_eps || cos_h <= flt_eps { return(reject_bsdf_sample()) };
+
+            let jacob   = 1 / (4 * cos_h_o); // Jacobian of the half-direction mapping
+
+            let G = micro.G(in_dir, out_dir, H);
+            let F = conductor_factor(ior, k, cos_h_o);
+
+            let color = color_mulf(ks, F * G / (4 * cos_o * cos_h));
+            make_bsdf_sample(surf, in_dir, s.pdf * jacob, cos_i, color, false)
+        },
+        is_specular = false
+    }
+}
+
+// Creates a microfacet conductor BSDF. This is the two-sided version
+fn @make_rough_conductor_bsdf(surf: SurfaceElement, ior: f32, k: f32, ks: Color, micro: MicrofacetDistribution) -> Bsdf {
+    if !surf.is_entering {
+        make_rough_conductor_bsdf_front(invert_surface_element(surf), ior, k, ks, micro)
+    } else {
+        make_rough_conductor_bsdf_front(surf, ior, k, ks, micro)
+    }
+}
+
+//--------------------------------------
+// Creates a BSDF that passthroughs all rays and behaves like a refractive interface with ior=1
+fn @make_passthrough_bsdf(surf: SurfaceElement) = Bsdf {
+    eval        = @ |_, _| black,
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, 1, white, true),
+    is_specular = true
+};
+
+//--------------------------------------
+// Creates a BSDF that interpolates between two other BSDFs based on a variadic mix function
+fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bsdf {
+    let eval = @|in_dir: Vec3, out_dir: Vec3| -> Color {
+        if mat1.is_specular {
+            mat2.eval(in_dir, out_dir)
+        } else if mat2.is_specular {
+            mat1.eval(in_dir, out_dir)
+        } else {
+            let k = mix_f(out_dir);
+            color_lerp(mat1.eval(in_dir, out_dir),
+                       mat2.eval(in_dir, out_dir),
+                       k)
+        }
+    };
+
+    let pdf = @|in_dir: Vec3, out_dir: Vec3| -> f32 {
+        if mat1.is_specular {
+            mat2.pdf(in_dir, out_dir)
+        } else if mat2.is_specular {
+            mat1.pdf(in_dir, out_dir)
+        } else {
+            let k = mix_f(out_dir);
+            lerp(mat1.pdf(in_dir, out_dir),
+                 mat2.pdf(in_dir, out_dir),
+                 k)
+        }
+    };
+
+    Bsdf {
+        eval   = eval,
+        pdf    = pdf,
+        sample = @ |rnd, out_dir, adjoint| {
+            fn sample_mat(mat_first: Bsdf, mat_second: Bsdf, t: f32) -> Option[BsdfSample] {
+                let opt = mat_first.sample(rnd, out_dir, adjoint);
+                match opt {
+                    Option[BsdfSample]::Some(s) => {
+                        if mat_second.is_specular {
+                            make_option(s)
+                        } else {
+                            let p = lerp(s.pdf, mat_second.pdf(s.in_dir, out_dir), t);
+                            let c = color_lerp(s.color, mat_second.eval(s.in_dir, out_dir), t);
+                            make_option(BsdfSample { in_dir = s.in_dir, pdf = p, cos = s.cos, color = c })
+                        }
+                    },
+                    _ => opt
+                }
+            }
+
+            let k = mix_f(out_dir);
+            if randf(rnd) >= k {
+                if let Option[BsdfSample]::Some(s) = sample_mat(mat1, mat2, k) {
+                    make_option(s)
+                } else {
+                    mat2.sample(rnd, out_dir, adjoint)
+                }
+            } else {
+                if let Option[BsdfSample]::Some(s) = sample_mat(mat2, mat1, k) {
+                    make_option(s)
+                } else {
+                    mat1.sample(rnd, out_dir, adjoint)
+                }
+            }
+        },
+        is_specular = mat1.is_specular & mat2.is_specular
+    }
+}
+
+// Creates a BSDF that interpolates between two other BSDFs
+fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = make_variadic_mix_bsdf(mat1, mat2, @|_| k);
+
+//--------------------------------------
+fn @shading_normal_adjoint(in_dir: Vec3, out_dir: Vec3, ns: Vec3, ng: Vec3) -> f32 {
+    let ons = positive_cos(out_dir, ns);
+    let ins = positive_cos(in_dir, ns);
+    let ong = positive_cos(out_dir, ng);
+    let ing = positive_cos(in_dir, ng);
+    if ins <= flt_eps || ong <= flt_eps { 0 } else { (ons/ins) * (ing/ong) }
+}
+
+// Normal Mapping
+fn @make_normalmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color) -> Bsdf {
+    let N    = vec3_normalize(mat3x3_left_mul(surf.local, vec3_normalize(make_vec3(normal.r, normal.g, normal.b))));
+    let bsdf = @bsdf_factory(SurfaceElement{
+        is_entering = surf.is_entering,
+        point       = surf.point,
+        face_normal = surf.face_normal,
+        prim_coords = surf.prim_coords,
+        tex_coords  = surf.tex_coords,
+        local       = make_orthonormal_mat3x3(N)
+    });
+
+    Bsdf {
+        eval        = bsdf.eval,
+        pdf         = bsdf.pdf,
+        sample      = @ |rnd, out_dir, adjoint| {
+            if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, out_dir, adjoint) {
+                if adjoint {
+                    let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
+                    make_option(BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos /*TODO: Really?*/, color = color_mulf(s.color, fac) })
+                } else {
+                    make_option(s)
+                }
+            } else {
+                Option[BsdfSample]::None
+            }
+        },
+        is_specular = bsdf.is_specular
+    }
+}
+
+//--------------------------------------
+// Bump Mapping
+fn @make_bumpmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, dx: f32, dy: f32, strength: f32) -> Bsdf {
+    let N = vec3_normalize(vec3_sub(surf.local.col(2), vec3_mulf(vec3_add(vec3_mulf(surf.local.col(0), dx), vec3_mulf(surf.local.col(1), dy)), strength)));
+    let bsdf = @bsdf_factory(SurfaceElement{
+        is_entering = surf.is_entering,
+        point       = surf.point,
+        face_normal = surf.face_normal,
+        prim_coords = surf.prim_coords,
+        tex_coords  = surf.tex_coords,
+        local       = make_orthonormal_mat3x3(N)
+    });
+
+    Bsdf {
+        eval        = bsdf.eval,
+        pdf         = bsdf.pdf,
+        sample      = @ |rnd, out_dir, adjoint| {
+            if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, out_dir, adjoint) {
+                if adjoint {
+                    let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
+                    make_option(BsdfSample { in_dir = s.in_dir, pdf = s.pdf, cos = s.cos /*TODO: Really?*/, color = color_mulf(s.color, fac) })
+                } else {
+                    make_option(s)
+                }
+            } else {
+                Option[BsdfSample]::None
+            }
+        },
+        is_specular = bsdf.is_specular
+    }
+}

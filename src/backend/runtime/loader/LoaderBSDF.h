@@ -5,6 +5,6 @@
 namespace IG {
 struct LoaderResult;
 struct LoaderBSDF {
-	static bool load(LoaderContext& ctx, LoaderResult& result);
+	static std::string generate(const std::string& name, const LoaderContext& ctx);
 };
 } // namespace IG

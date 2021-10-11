@@ -10,7 +10,6 @@
 #include "Logger.h"
 #include "Runtime.h"
 #include "config/Build.h"
-#include "driver/Configuration.h"
 
 #include <optional>
 
@@ -64,9 +63,11 @@ static inline void usage()
 		<< "   -d      --device    device     Sets the device to use on the selected platform (default: 0)" << std::endl
 		<< "           --cpu                  Use autodetected CPU target" << std::endl
 		<< "           --gpu                  Use autodetected GPU target" << std::endl
+		<< "           --debug                Same as --technique debug" << std::endl
 		<< "           --spp       spp        Enables benchmarking mode and sets the number of iterations based on the given spp" << std::endl
 		<< "           --bench     iterations Enables benchmarking mode and sets the number of iterations" << std::endl
 		<< "   -o      --output    image.exr  Writes the output image to a file" << std::endl
+		<< "           --dump-shader          Dump produced shaders to files in the current working directory" << std::endl
 		<< "Available targets:" << std::endl
 		<< "    generic, sse42, avx, avx2, avx512, asimd," << std::endl
 		<< "    nvvm, amdgpu" << std::endl
@@ -93,12 +94,10 @@ int main(int argc, char** argv)
 	std::optional<Vector3f> up;
 	std::optional<float> fov;
 	std::optional<Vector2f> trange;
-	Target target = Target::INVALID;
-	int device	  = 0;
-	std::string overrideTechnique;
-	std::string overrideCamera;
 	bool prettyConsole = true;
 	bool quiet		   = false;
+
+	RuntimeOptions opts;
 
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
@@ -134,21 +133,21 @@ int main(int argc, char** argv)
 				check_arg(argc, argv, i, 1);
 				++i;
 				if (!strcmp(argv[i], "sse42"))
-					target = Target::SSE42;
+					opts.DesiredTarget = Target::SSE42;
 				else if (!strcmp(argv[i], "avx"))
-					target = Target::AVX;
+					opts.DesiredTarget = Target::AVX;
 				else if (!strcmp(argv[i], "avx2"))
-					target = Target::AVX2;
+					opts.DesiredTarget = Target::AVX2;
 				else if (!strcmp(argv[i], "avx512"))
-					target = Target::AVX512;
+					opts.DesiredTarget = Target::AVX512;
 				else if (!strcmp(argv[i], "asimd"))
-					target = Target::ASIMD;
+					opts.DesiredTarget = Target::ASIMD;
 				else if (!strcmp(argv[i], "nvvm"))
-					target = Target::NVVM;
+					opts.DesiredTarget = Target::NVVM;
 				else if (!strcmp(argv[i], "amdgpu"))
-					target = Target::AMDGPU;
+					opts.DesiredTarget = Target::AMDGPU;
 				else if (!strcmp(argv[i], "generic"))
-					target = Target::GENERIC;
+					opts.DesiredTarget = Target::GENERIC;
 				else {
 					IG_LOG(L_ERROR) << "Unknown target '" << argv[i] << "'. Aborting." << std::endl;
 					return EXIT_FAILURE;
@@ -156,11 +155,11 @@ int main(int argc, char** argv)
 			} else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--device")) {
 				check_arg(argc, argv, i, 1);
 				++i;
-				device = strtoul(argv[i], NULL, 10);
+				opts.Device = strtoul(argv[i], NULL, 10);
 			} else if (!strcmp(argv[i], "--cpu")) {
-				target = getRecommendedCPUTarget();
+				opts.DesiredTarget = getRecommendedCPUTarget();
 			} else if (!strcmp(argv[i], "--gpu")) {
-				target = Target::NVVM; // TODO: Select based on environment
+				opts.DesiredTarget = Target::NVVM; // TODO: Select based on environment
 			} else if (!strcmp(argv[i], "--spp")) {
 				check_arg(argc, argv, i, 1);
 				bench_iter = (size_t)std::ceil(strtoul(argv[++i], nullptr, 10) / (float)SPP);
@@ -175,11 +174,13 @@ int main(int argc, char** argv)
 			} else if (!strcmp(argv[i], "--camera")) {
 				check_arg(argc, argv, i, 1);
 				++i;
-				overrideCamera = argv[i];
+				opts.OverrideCamera = argv[i];
 			} else if (!strcmp(argv[i], "--technique")) {
 				check_arg(argc, argv, i, 1);
 				++i;
-				overrideTechnique = argv[i];
+				opts.OverrideTechnique = argv[i];
+			} else if (!strcmp(argv[i], "--debug")) {
+				opts.OverrideTechnique = "debug";
 			} else if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet")) {
 				quiet = true;
 				IG_LOGGER.setQuiet(true);
@@ -188,6 +189,8 @@ int main(int argc, char** argv)
 			} else if (!strcmp(argv[i], "--no-color")) {
 				prettyConsole = false;
 				IG_LOGGER.enableAnsiTerminal(false);
+			} else if (!strcmp(argv[i], "--dump-shader")) {
+				opts.DumpShader = true;
 			} else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
 				usage();
 				return EXIT_SUCCESS;
@@ -211,8 +214,8 @@ int main(int argc, char** argv)
 	if (!quiet)
 		std::cout << Build::getCopyrightString() << std::endl;
 
-	if (target == Target::INVALID)
-		target = getRecommendedCPUTarget();
+	if (opts.DesiredTarget == Target::INVALID)
+		opts.DesiredTarget = getRecommendedCPUTarget();
 
 	if (in_file.empty()) {
 		IG_LOG(L_ERROR) << "No input file given" << std::endl;
@@ -232,12 +235,6 @@ int main(int argc, char** argv)
 
 	std::unique_ptr<Runtime> runtime;
 	try {
-		RuntimeOptions opts;
-		opts.DesiredTarget	   = target;
-		opts.Device			   = device;
-		opts.OverrideTechnique = overrideTechnique;
-		opts.OverrideCamera	   = overrideCamera;
-
 		runtime = std::make_unique<Runtime>(in_file, opts);
 	} catch (const std::exception& e) {
 		IG_LOG(L_ERROR) << e.what() << std::endl;
@@ -256,8 +253,7 @@ int main(int argc, char** argv)
 #ifdef WITH_UI
 	IG_UNUSED(prettyConsole);
 
-	bool isDebug = runtime->configuration() & IG_C_RENDERER_DEBUG;
-	if (!UI::init(film_width, film_height, runtime->getFramebuffer(), isDebug))
+	if (!UI::init(film_width, film_height, runtime->getFramebuffer(), runtime->isDebug()))
 		return EXIT_FAILURE;
 
 	DebugMode currentDebugMode = UI::currentDebugMode();

@@ -1,7 +1,8 @@
 #include "LoaderBSDF.h"
 #include "Loader.h"
 #include "Logger.h"
-#include "serialization/VectorSerializer.h"
+#include "ShaderUtils.h"
+#include "ShadingTree.h"
 
 #include "klems/KlemsLoader.h"
 
@@ -9,68 +10,14 @@
 
 namespace IG {
 
-struct BsdfContext {
-	LoaderContext& Context;
-	LoaderResult& Result;
-	std::unordered_map<std::string, std::string> Ignore;
-};
-
-enum BsdfFlags {
-	BSDF_F_TEX1 = 0x1, // First color parameter is texture
-	BSDF_F_TEX2 = 0x2  // Second color parameter is texture
-};
-
-enum BsdfType {
-	BSDF_DIFFUSE		  = 0x00,
-	BSDF_ORENNAYAR		  = 0x01,
-	BSDF_DIELECTRIC		  = 0x02,
-	BSDF_ROUGH_DIELECTRIC = 0x03,
-	BSDF_THIN_DIELECTRIC  = 0x04,
-	BSDF_MIRROR			  = 0x05,
-	BSDF_CONDUCTOR		  = 0x06,
-	BSDF_ROUGH_CONDUCTOR  = 0x07,
-	BSDF_PLASTIC		  = 0x10,
-	BSDF_ROUGH_PLASTIC	  = 0x11,
-	BSDF_PHONG			  = 0x12,
-	BSDF_DISNEY			  = 0x13,
-	BSDF_BLEND			  = 0x20,
-	BSDF_MASK			  = 0x21,
-	BSDF_PASSTROUGH		  = 0x22,
-	BSDF_NORMAL_MAP		  = 0x30,
-	BSDF_BUMP_MAP		  = 0x31,
-	BSDF_KLEMS			  = 0x40,
-	BSDF_INVALID		  = 0xFF
-};
-
-// Always 3 units
-static inline void write_ct(const TextureColorVariant& var, VectorSerializer& serializer)
-{
-	if (isTexture(var)) {
-		serializer.write(extractTexture(var));
-		serializer.write((uint32)0);
-		serializer.write((uint32)0);
-	} else {
-		serializer.write(extractColor(var));
-	}
-}
-
 constexpr float AIR_IOR			   = 1.000277f;
 constexpr float GLASS_IOR		   = 1.55f;
 constexpr float RUBBER_IOR		   = 1.49f;
 constexpr float ETA_DEFAULT		   = 0.63660f;
 constexpr float ABSORPTION_DEFAULT = 2.7834f;
 
-static void bsdf_error(const std::string& msg, LoaderResult& result)
+static void setup_microfacet(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf)
 {
-	IG_LOG(L_ERROR) << msg << std::endl;
-	result.Database.BsdfTable.addLookup(BSDF_INVALID, 0, DefaultAlignment);
-}
-
-static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, VectorSerializer& serializer)
-{
-	IG_UNUSED(ctx);
-	IG_UNUSED(bsdf);
-	
 	float alpha_u, alpha_v;
 	if (bsdf->property("alpha_u").isValid()) {
 		alpha_u = bsdf->property("alpha_u").getNumber(0.1f);
@@ -80,335 +27,282 @@ static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, Loader
 		alpha_v = alpha_u;
 	}
 
-	serializer.write(alpha_u);
-	serializer.write(alpha_v);
+	stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| make_vndf_ggx_distribution(surf, "
+		   << alpha_u << ", "
+		   << alpha_v << ");" << std::endl;
 }
 
-static void bsdf_diffuse(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_diffuse(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-	const auto albedo = ctx.Context.extractColorTexture(bsdf, "reflectance", Vector3f::Constant(0.5f));
-	auto& data		  = ctx.Result.Database.BsdfTable.addLookup(BSDF_DIFFUSE, isTexture(albedo) ? BSDF_F_TEX1 : 0, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	write_ct(albedo, serializer);
+	ShadingTree tree;
+	tree.addColor("reflectance", ctx, *bsdf, Vector3f::Constant(0.5f));
+
+	stream << tree.pullHeader()
+		   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_diffuse_bsdf(surf, "
+		   << tree.getInline("reflectance") << ");" << std::endl;
 }
 
-static void bsdf_orennayar(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_orennayar(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-	const float alpha = bsdf->property("alpha").getNumber(0.0f);
+	ShadingTree tree;
+	tree.addNumber("alpha", ctx, *bsdf, 0.0f);
+	tree.addColor("reflectance", ctx, *bsdf, Vector3f::Constant(0.5f));
 
-	if (alpha <= 1e-3f) {
-		bsdf_diffuse(name, bsdf, ctx);
-		return;
-	}
-
-	const auto albedo = ctx.Context.extractColorTexture(bsdf, "reflectance", Vector3f::Constant(0.5f));
-	auto& data		  = ctx.Result.Database.BsdfTable.addLookup(BSDF_ORENNAYAR, isTexture(albedo) ? BSDF_F_TEX1 : 0, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	write_ct(albedo, serializer);
-	serializer.write(alpha);
+	stream << tree.pullHeader()
+		   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_orennayar_bsdf(surf, "
+		   << tree.getInline("alpha") << ", "
+		   << tree.getInline("reflectance") << ");" << std::endl;
 }
 
-static void bsdf_dielectric(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_dielectric(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
-	auto specular_tra = ctx.Context.extractColorTexture(bsdf, "specular_transmittance");
-	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
-	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", GLASS_IOR);
+	ShadingTree tree;
+	tree.addColor("specular_reflectance", ctx, *bsdf, Vector3f::Ones());
+	tree.addColor("specular_transmittance", ctx, *bsdf, Vector3f::Ones());
+	tree.addNumber("ext_ior", ctx, *bsdf, AIR_IOR);
+	tree.addNumber("int_ior", ctx, *bsdf, GLASS_IOR);
+	bool thin = bsdf->property("thin").getBool(bsdf->pluginType() == "thindielectric");
 
-	uint32 flags = 0;
-	if (isTexture(specular_ref))
-		flags |= BSDF_F_TEX1;
-	if (isTexture(specular_tra))
-		flags |= BSDF_F_TEX2;
-
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DIELECTRIC, flags, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	write_ct(specular_ref, serializer);
-	serializer.write(ext_ior);
-	write_ct(specular_tra, serializer);
-	serializer.write(int_ior);
+	stream << tree.pullHeader()
+		   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| "
+		   << (thin ? "make_thin_glass_bsdf" : "make_glass_bsdf") << "(surf, "
+		   << tree.getInline("ext_ior") << ", "
+		   << tree.getInline("int_ior") << ", "
+		   << tree.getInline("specular_reflectance") << ", "
+		   << tree.getInline("specular_transmittance") << ");" << std::endl;
 }
 
-static void bsdf_thindielectric(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_mirror(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
-	auto specular_tra = ctx.Context.extractColorTexture(bsdf, "specular_transmittance");
-	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
-	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", GLASS_IOR);
+	ShadingTree tree;
+	tree.addColor("specular_reflectance", ctx, *bsdf, Vector3f::Ones());
 
-	uint32 flags = 0;
-	if (isTexture(specular_ref))
-		flags |= BSDF_F_TEX1;
-	if (isTexture(specular_tra))
-		flags |= BSDF_F_TEX2;
-
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_THIN_DIELECTRIC, flags, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	write_ct(specular_ref, serializer);
-	serializer.write(ext_ior);
-	write_ct(specular_tra, serializer);
-	serializer.write(int_ior);
+	stream << tree.pullHeader()
+		   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_mirror_bsdf(surf, "
+		   << tree.getInline("specular_reflectance") << ");" << std::endl;
 }
 
-static void bsdf_mirror(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_conductor(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
+	ShadingTree tree;
+	tree.addColor("specular_reflectance", ctx, *bsdf, Vector3f::Ones());
+	tree.addNumber("eta", ctx, *bsdf, ETA_DEFAULT);
+	tree.addNumber("k", ctx, *bsdf, ABSORPTION_DEFAULT);
 
-	uint32 flags = 0;
-	if (isTexture(specular_ref))
-		flags |= BSDF_F_TEX1;
-
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_MIRROR, flags, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	write_ct(specular_ref, serializer);
+	stream << tree.pullHeader()
+		   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_conductor_bsdf(surf, "
+		   << tree.getInline("eta") << ", "
+		   << tree.getInline("k") << ", "
+		   << tree.getInline("specular_reflectance") << ");" << std::endl;
 }
 
-static void bsdf_conductor(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
-	float eta		  = ctx.Context.extractIOR(bsdf, "eta", ETA_DEFAULT);
-	float k			  = ctx.Context.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
+	ShadingTree tree;
+	tree.addColor("specular_reflectance", ctx, *bsdf, Vector3f::Ones());
+	tree.addNumber("eta", ctx, *bsdf, ETA_DEFAULT);
+	tree.addNumber("k", ctx, *bsdf, ABSORPTION_DEFAULT);
 
-	uint32 flags = 0;
-	if (isTexture(specular_ref))
-		flags |= BSDF_F_TEX1;
-
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_CONDUCTOR, flags, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	write_ct(specular_ref, serializer);
-	serializer.write((uint32)0); //PADDING
-	serializer.write(eta);
-	serializer.write(k);
+	setup_microfacet(stream, name, bsdf);
+	stream << tree.pullHeader()
+		   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_conductor_bsdf(surf, "
+		   << tree.getInline("eta") << ", "
+		   << tree.getInline("k") << ", "
+		   << tree.getInline("specular_reflectance") << ", "
+		   << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
 }
 
-static void bsdf_rough_conductor(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_plastic(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
-	float eta		  = ctx.Context.extractIOR(bsdf, "eta", ETA_DEFAULT);
-	float k			  = ctx.Context.extractIOR(bsdf, "k", ABSORPTION_DEFAULT);
+	ShadingTree tree;
+	tree.addColor("specular_reflectance", ctx, *bsdf, Vector3f::Ones());
+	tree.addColor("diffuse_reflectance", ctx, *bsdf, Vector3f::Constant(0.5f));
+	tree.addNumber("ext_ior", ctx, *bsdf, AIR_IOR);
+	tree.addNumber("int_ior", ctx, *bsdf, RUBBER_IOR);
 
-	uint32 flags = 0;
-	if (isTexture(specular_ref))
-		flags |= BSDF_F_TEX1;
-
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_ROUGH_CONDUCTOR, flags, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	write_ct(specular_ref, serializer);
-	serializer.write((uint32)0); //PADDING
-	serializer.write(eta);
-	serializer.write(k);
-	setup_microfacet(bsdf, ctx.Context, serializer);
+	stream << tree.pullHeader()
+		   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
+		   << tree.getInline("ext_ior") << ", "
+		   << tree.getInline("int_ior") << ", "
+		   << tree.getInline("diffuse_reflectance") << ", "
+		   << "make_mirror_bsdf(surf, " << tree.getInline("specular_reflectance") << "));" << std::endl;
 }
 
-static void bsdf_plastic(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
-	auto diffuse_ref  = ctx.Context.extractColorTexture(bsdf, "diffuse_reflectance", Vector3f::Constant(0.5f));
-	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
-	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", RUBBER_IOR);
+	ShadingTree tree;
+	tree.addColor("specular_reflectance", ctx, *bsdf, Vector3f::Ones());
+	tree.addColor("diffuse_reflectance", ctx, *bsdf, Vector3f::Constant(0.5f));
+	tree.addNumber("ext_ior", ctx, *bsdf, AIR_IOR);
+	tree.addNumber("int_ior", ctx, *bsdf, RUBBER_IOR);
 
-	uint32 flags = 0;
-	if (isTexture(specular_ref))
-		flags |= BSDF_F_TEX1;
-	if (isTexture(diffuse_ref))
-		flags |= BSDF_F_TEX2;
-
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PLASTIC, flags, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	write_ct(specular_ref, serializer);
-	serializer.write(ext_ior);
-	write_ct(diffuse_ref, serializer);
-	serializer.write(int_ior);
+	setup_microfacet(stream, name, bsdf);
+	stream << tree.pullHeader()
+		   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
+		   << tree.getInline("ext_ior") << ", "
+		   << tree.getInline("int_ior") << ", "
+		   << tree.getInline("diffuse_reflectance") << ", "
+		   << "make_rough_conductor_bsdf(surf, 0, 1, "
+		   << tree.getInline("specular_reflectance") << ", "
+		   << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf)));" << std::endl;
 }
 
-static void bsdf_rough_plastic(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_phong(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
-	auto diffuse_ref  = ctx.Context.extractColorTexture(bsdf, "diffuse_reflectance", Vector3f::Constant(0.5f));
-	float ext_ior	  = ctx.Context.extractIOR(bsdf, "ext_ior", AIR_IOR);
-	float int_ior	  = ctx.Context.extractIOR(bsdf, "int_ior", RUBBER_IOR);
+	ShadingTree tree;
+	tree.addColor("specular_reflectance", ctx, *bsdf, Vector3f::Ones());
+	tree.addNumber("exponent", ctx, *bsdf, 30);
 
-	uint32 flags = 0;
-	if (isTexture(specular_ref))
-		flags |= BSDF_F_TEX1;
-	if (isTexture(diffuse_ref))
-		flags |= BSDF_F_TEX2;
-
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PLASTIC, flags, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	write_ct(specular_ref, serializer);
-	serializer.write(ext_ior);
-	write_ct(diffuse_ref, serializer);
-	serializer.write(int_ior);
-	setup_microfacet(bsdf, ctx.Context, serializer);
+	stream << tree.pullHeader()
+		   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_phong_bsdf(surf, "
+		   << tree.getInline("specular_reflectance") << ", "
+		   << tree.getInline("exponent") << ");" << std::endl;
 }
 
-static void bsdf_phong(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_disney(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-	auto specular_ref = ctx.Context.extractColorTexture(bsdf, "specular_reflectance");
-	float exponent	  = bsdf->property("exponent").getNumber(30);
+	ShadingTree tree;
+	tree.addColor("base_color", ctx, *bsdf, Vector3f::Constant(0.8f));
+	tree.addNumber("flatness", ctx, *bsdf, 0);
+	tree.addNumber("metallic", ctx, *bsdf, 0);
+	tree.addNumber("ior", ctx, *bsdf, GLASS_IOR);
+	tree.addNumber("specular_tint", ctx, *bsdf, 0);
+	tree.addNumber("roughness", ctx, *bsdf, 0.5f);
+	tree.addNumber("anisotropic", ctx, *bsdf, 0);
+	tree.addNumber("sheen", ctx, *bsdf, 0);
+	tree.addNumber("sheen_tint", ctx, *bsdf, 0);
+	tree.addNumber("clearcoat", ctx, *bsdf, 0);
+	tree.addNumber("clearcoat_gloss", ctx, *bsdf, 0);
+	tree.addNumber("spec_trans", ctx, *bsdf, 0);
+	tree.addNumber("relative_ior", ctx, *bsdf, 1.1f);
+	tree.addNumber("scatter_distance", ctx, *bsdf, 0.5f);
+	tree.addNumber("diff_trans", ctx, *bsdf, 0);
+	tree.addNumber("transmittance", ctx, *bsdf, 1);
 
-	uint32 flags = 0;
-	if (isTexture(specular_ref))
-		flags |= BSDF_F_TEX1;
-
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_PHONG, flags, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	write_ct(specular_ref, serializer);
-	serializer.write(exponent);
+	stream << tree.pullHeader()
+		   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_disney_bsdf(surf, "
+		   << tree.getInline("base_color") << ", "
+		   << tree.getInline("flatness") << ", "
+		   << tree.getInline("metallic") << ", "
+		   << tree.getInline("ior") << ", "
+		   << tree.getInline("specular_tint") << ", "
+		   << tree.getInline("roughness") << ", "
+		   << tree.getInline("anisotropic") << ", "
+		   << tree.getInline("sheen") << ", "
+		   << tree.getInline("sheen_tint") << ", "
+		   << tree.getInline("clearcoat") << ", "
+		   << tree.getInline("clearcoat_gloss") << ", "
+		   << tree.getInline("spec_trans") << ", "
+		   << tree.getInline("relative_ior") << ", "
+		   << tree.getInline("scatter_distance") << ", "
+		   << tree.getInline("diff_trans") << ", "
+		   << tree.getInline("transmittance") << ");" << std::endl;
 }
 
-static void bsdf_disney(const std::string&, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_twosided(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-	auto base_color		   = ctx.Context.extractColorTexture(bsdf, "base_color");
-	float flatness		   = bsdf->property("flatness").getNumber(0.0f);
-	float metallic		   = bsdf->property("metallic").getNumber(1.0f);
-	// float ior			   = ctx.Context.extractIOR(bsdf, "ior", GLASS_IOR);
-	float ior			   = 1.0;
-	float specular_tint	   = bsdf->property("specular_tint").getNumber(0.0f);
-	float roughness		   = bsdf->property("roughness").getNumber(0.6f);
-	float anisotropic	   = bsdf->property("anisotropic").getNumber(0.0f);
-	float sheen			   = bsdf->property("sheen").getNumber(1.0f);
-	float sheen_tint	   = bsdf->property("sheen_tint").getNumber(0.0f);
-	float clearcoat		   = bsdf->property("clearcoat").getNumber(1.0f);
-	float clearcoat_gloss  = bsdf->property("clearcoat_gloss").getNumber(1.0f);
-	float spec_trans	   = bsdf->property("spec_trans").getNumber(0.0f);
-	float relative_ior	   = bsdf->property("relative_ior").getNumber(1.0f);
-	float scatter_distance = bsdf->property("scatter_distance").getNumber(0.5f);
-	float diff_trans	   = bsdf->property("diff_trans").getNumber(0.0f);
-	float transmittance	   = bsdf->property("transmittance").getNumber(1.0f);
-
-	uint32 flags = 0;
-	if (isTexture(base_color))
-		flags |= BSDF_F_TEX1;
-
-	auto& data = ctx.Result.Database.BsdfTable.addLookup(BSDF_DISNEY, flags, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	write_ct(base_color, serializer);
-	serializer.write(flatness);
-	serializer.write(metallic);
-	serializer.write(ior);
-	serializer.write(specular_tint);
-	serializer.write(roughness);
-	serializer.write(anisotropic);
-	serializer.write(sheen);
-	serializer.write(sheen_tint);
-	serializer.write(clearcoat);
-	serializer.write(clearcoat_gloss);
-	serializer.write(spec_trans);
-	serializer.write(relative_ior);
-	serializer.write(scatter_distance);
-	serializer.write(diff_trans);
-	serializer.write(transmittance);
+	// Ignore
+	const std::string other = bsdf->property("bsdf").getString();
+	stream << LoaderBSDF::generate(other, ctx);
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = bsdf_" << ShaderUtils::escapeIdentifier(other) << ";" << std::endl;
 }
 
-/*static void bsdf_prep_klems(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx, std::ostream& os)
+static void bsdf_passthrough(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>&, const LoaderContext& ctx)
 {
-	const std::filesystem::path filename = ctx.handlePath(bsdf->property("filename").getString());
-	const std::string id				 = LoaderContext::makeId(filename);
-	const std::string out_file			 = "data/klems_" + filename.stem().generic_string() + ".bin";
-	const bool ok						 = KlemsLoader::prepare(filename.generic_string(), out_file);
-
-	os << "    let klems_" << id << " = device.load_klems(\"" << out_file.c_str() << "\");\n";
+	IG_UNUSED(ctx);
+	stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_passthrough_bsdf(surf);" << std::endl;
 }
 
-static void bsdf_klems(const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx,  LoaderResult& result)
-{
-	const std::filesystem::path filename = ctx.handlePath(bsdf->property("filename").getString());
-	const std::string id				 = LoaderContext::makeId(filename);
-
-	os << "make_klems_bsdf(math, surf, klems_" << id << ")";
-}*/
-
-static void bsdf_blend(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_blend(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
 	const std::string first	 = bsdf->property("first").getString();
 	const std::string second = bsdf->property("second").getString();
 
 	if (first.empty() || second.empty()) {
-		bsdf_error("Invalid blend bsdf", ctx.Result);
+		IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdfs given" << std::endl;
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, _surf| make_error_bsdf();" << std::endl;
 	} else if (first == second) {
-		ctx.Ignore[name] = first;
+		// Ignore it
+		stream << LoaderBSDF::generate(first, ctx);
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = bsdf_" << ShaderUtils::escapeIdentifier(first) << ";" << std::endl;
 	} else {
-		// TODO
-		ctx.Ignore[name] = first;
-		IG_LOG(L_WARNING) << "Bsdf '" << name << "': Blend currently not implemented. Ignoring effect" << std::endl;
-		/* const uint32 firstID  = ctx.Context.Environment.BsdfIDs.at(first);
-		const uint32 secondID = ctx.Context.Environment.BsdfIDs.at(second);
+		ShadingTree tree;
+		tree.addNumber("weight", ctx, *bsdf, 0.5f);
 
-		const float weight = bsdf->property("weight").getNumber(0.5f);
+		stream << LoaderBSDF::generate(first, ctx);
+		stream << LoaderBSDF::generate(second, ctx);
 
-		auto& data = result.Database.BsdfTable.addLookup(BSDF_BLEND, DefaultAlignment);
-		VectorSerializer serializer(data, false);
-		serializer.write(firstID);
-		serializer.write(secondID);
-		serializer.write(weight); */
+		stream << tree.pullHeader()
+			   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf("
+			   << "bsdf_" << ShaderUtils::escapeIdentifier(first) << "(ray, hit, surf), "
+			   << "bsdf_" << ShaderUtils::escapeIdentifier(second) << "(ray, hit, surf), "
+			   << tree.getInline("weight") << ");" << std::endl;
 	}
 }
 
-static void bsdf_mask(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_mask(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
 	const std::string masked = bsdf->property("bsdf").getString();
 
 	if (masked.empty()) {
-		bsdf_error("Invalid masked bsdf", ctx.Result);
+		IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, _surf| make_error_bsdf();" << std::endl;
 	} else {
-		// TODO
-		ctx.Ignore[name] = masked;
-		IG_LOG(L_WARNING) << "Bsdf '" << name << "': Mask currently not implemented. Ignoring effect" << std::endl;
-		/* const uint32 maskedID = ctx.Context.Environment.BsdfIDs.at(masked);
-		const float weight	  = bsdf->property("weight").getNumber(0.5f);
+		ShadingTree tree;
+		tree.addNumber("weight", ctx, *bsdf, 0.5f);
 
-		auto& data = result.Database.BsdfTable.addLookup(BSDF_MASK, DefaultAlignment);
-		VectorSerializer serializer(data, false);
-		serializer.write(maskedID);
-		serializer.write(weight); */
+		stream << LoaderBSDF::generate(masked, ctx);
+
+		stream << tree.pullHeader()
+			   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf("
+			   << "bsdf_" << ShaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), "
+			   << "make_passthrough_bsdf(surf), "
+			   << tree.getInline("weight") << ");" << std::endl;
 	}
 }
 
-static void bsdf_twosided(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
-{
-	// Ignore
-	const std::string other = bsdf->property("bsdf").getString();
-
-	if (other.empty())
-		bsdf_error("Invalid twosided bsdf", ctx.Result);
-	else
-		ctx.Ignore[name] = other;
-}
-
-static void bsdf_passthrough(const std::string&, const std::shared_ptr<Parser::Object>&, BsdfContext& ctx)
-{
-	ctx.Result.Database.BsdfTable.addLookup(BSDF_PASSTROUGH, 0, DefaultAlignment);
-}
-
-static void bsdf_normalmap(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_normalmap(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
 	const std::string inner = bsdf->property("bsdf").getString();
+	ShadingTree tree;
+	tree.addColor("map", ctx, *bsdf, Vector3f::Constant(1.0f));
 
 	if (inner.empty()) {
-		bsdf_error("Invalid normal map bsdf", ctx.Result);
+		IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, _surf| make_error_bsdf();" << std::endl;
 	} else {
-		// TODO
-		ctx.Ignore[name] = inner;
-		IG_LOG(L_WARNING) << "Bsdf '" << name << "': Normalmap currently not implemented. Ignoring effect" << std::endl;
+		stream << LoaderBSDF::generate(inner, ctx);
+
+		stream << tree.pullHeader()
+			   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_normalmap(surf, @|surf2| -> Bsdf { "
+			   << " bsdf_" << ShaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) }, "
+			   << tree.getInline("map") << ");" << std::endl;
 	}
 }
 
-static void bsdf_bumpmap(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx)
+static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
 	const std::string inner = bsdf->property("bsdf").getString();
+	ShadingTree tree;
+	tree.addTexture("map", ctx, *bsdf); // Better use some node system with explicit gradients...
+	tree.addNumber("strength", ctx, *bsdf);
 
 	if (inner.empty()) {
-		bsdf_error("Invalid bump map bsdf", ctx.Result);
+		IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, _surf| make_error_bsdf();" << std::endl;
 	} else {
-		// TODO
-		ctx.Ignore[name] = inner;
-		IG_LOG(L_WARNING) << "Bsdf '" << name << "': Bumpmap currently not implemented. Ignoring effect" << std::endl;
+		stream << LoaderBSDF::generate(inner, ctx);
+
+		stream << tree.pullHeader()
+			   << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_bumpmap(surf, "
+			   << "@|surf2| -> Bsdf {  bsdf_" << ShaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) }, "
+			   << "texture_dx(" << tree.getInline("map") << ", surf.tex_coords).r, "
+			   << "texture_dy(" << tree.getInline("map") << ", surf.tex_coords).r, "
+			   << tree.getInline("strength") << ");" << std::endl;
 	}
 }
 
-using BSDFLoader = void (*)(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, BsdfContext& ctx);
+using BSDFLoader = void (*)(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx);
 static struct {
 	const char* Name;
 	BSDFLoader Loader;
@@ -418,7 +312,7 @@ static struct {
 	{ "glass", bsdf_dielectric },
 	{ "dielectric", bsdf_dielectric },
 	{ "roughdielectric", bsdf_dielectric }, // TODO
-	{ "thindielectric", bsdf_thindielectric },
+	{ "thindielectric", bsdf_dielectric },
 	{ "mirror", bsdf_mirror }, // Specialized conductor
 	{ "conductor", bsdf_conductor },
 	{ "roughconductor", bsdf_rough_conductor },
@@ -427,7 +321,7 @@ static struct {
 	{ "plastic", bsdf_plastic },
 	{ "roughplastic", bsdf_rough_plastic },
 	/*{ "klems", bsdf_klems },*/
-	{ "blendbsdf", bsdf_blend },
+	{ "blend", bsdf_blend },
 	{ "mask", bsdf_mask },
 	{ "twosided", bsdf_twosided },
 	{ "passthrough", bsdf_passthrough },
@@ -437,45 +331,37 @@ static struct {
 	{ "", nullptr }
 };
 
-bool LoaderBSDF::load(LoaderContext& ctx, LoaderResult& result)
+std::string LoaderBSDF::generate(const std::string& name, const LoaderContext& ctx)
 {
-	BsdfContext context{ ctx, result, {} };
+	std::stringstream stream;
+	const auto bsdf = ctx.Scene.bsdf(name);
 
-	const auto start1 = std::chrono::high_resolution_clock::now();
+	bool error = false;
 
-	for (const auto& pair : ctx.Scene.bsdfs()) {
-		const auto bsdf = pair.second;
+	if (!bsdf) {
+		IG_LOG(L_ERROR) << "Unknown bsdf '" << name << "'" << std::endl;
+		error = true;
+	} else {
 
 		bool found = false;
 		for (size_t i = 0; _generators[i].Loader; ++i) {
 			if (_generators[i].Name == bsdf->pluginType()) {
-				ctx.Environment.BsdfIDs[pair.first] = context.Result.Database.BsdfTable.entryCount();
-				_generators[i].Loader(pair.first, bsdf, context);
+				_generators[i].Loader(stream, name, bsdf, ctx);
 				found = true;
 				break;
 			}
 		}
 
 		if (!found) {
-			IG_LOG(L_ERROR) << "Bsdf '" << pair.first << "' has unknown type '" << bsdf->pluginType() << "'" << std::endl;
-			result.Database.BsdfTable.addLookup(BSDF_INVALID, 0, DefaultAlignment);
+			IG_LOG(L_ERROR) << "No bsdf type '" << bsdf->pluginType() << "' available" << std::endl;
+			error = true;
 		}
 	}
 
-	// Some reordering might happen, take care of it here
-	for (const auto& pair : context.Ignore) {
-		if (ctx.Environment.BsdfIDs.count(pair.first) == 0)
-			IG_LOG(L_ERROR) << "Missing BSDF '" << pair.first << "'" << std::endl;
-		else if (ctx.Environment.BsdfIDs.count(pair.second) == 0)
-			IG_LOG(L_ERROR) << "Missing BSDF '" << pair.second << "'" << std::endl;
-		else {
-			ctx.Environment.BsdfIDs[pair.first] = ctx.Environment.BsdfIDs.at(pair.second);
-			IG_LOG(L_DEBUG) << "Replacing " << pair.first << " with " << pair.second << std::endl;
-		}
+	if (error) {
+		stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, _surf| make_error_bsdf();" << std::endl;
 	}
 
-	IG_LOG(L_DEBUG) << "Storing BSDFs took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
-
-	return true;
+	return stream.str();
 }
 } // namespace IG

@@ -65,11 +65,13 @@ void TriMesh::replaceID(uint32 m_idx)
 		indices[i + 3] = m_idx; // ID
 }
 
-void TriMesh::computeFaceAreaOnly(size_t first_index, bool* hasBadAreas)
+void TriMesh::computeFaceAreaOnly(bool* hasBadAreas)
 {
 	bool bad = false;
 	face_inv_area.resize(faceCount());
-	for (auto i = first_index, k = indices.size(); i < k; i += 4) {
+
+	const size_t inds = indices.size();
+	for (size_t i = 0; i < inds; i += 4) {
 		const auto& v0	 = vertices[indices[i + 0]];
 		const auto& v1	 = vertices[indices[i + 1]];
 		const auto& v2	 = vertices[indices[i + 2]];
@@ -85,13 +87,14 @@ void TriMesh::computeFaceAreaOnly(size_t first_index, bool* hasBadAreas)
 		*hasBadAreas = bad;
 }
 
-void TriMesh::computeFaceNormals(size_t first_index, bool* hasBadAreas)
+void TriMesh::computeFaceNormals(bool* hasBadAreas)
 {
 	bool bad = false;
 	face_normals.resize(faceCount());
 	face_inv_area.resize(faceCount());
 
-	for (auto i = first_index, k = indices.size(); i < k; i += 4) {
+	const size_t inds = indices.size();
+	for (size_t i = 0; i < inds; i += 4) {
 		const auto& v0	 = vertices[indices[i + 0]];
 		const auto& v1	 = vertices[indices[i + 1]];
 		const auto& v2	 = vertices[indices[i + 2]];
@@ -108,10 +111,13 @@ void TriMesh::computeFaceNormals(size_t first_index, bool* hasBadAreas)
 		*hasBadAreas = bad;
 }
 
-void TriMesh::computeVertexNormals(size_t first_index)
+void TriMesh::computeVertexNormals()
 {
 	normals.resize(faceCount() * 3);
-	for (auto i = first_index, k = indices.size(); i < k; i += 4) {
+	std::fill(normals.begin(), normals.end(), StVector3f::Zero());
+
+	const size_t inds = indices.size();
+	for (size_t i = 0; i < inds; i += 4) {
 		auto& n0	  = normals[indices[i + 0]];
 		auto& n1	  = normals[indices[i + 1]];
 		auto& n2	  = normals[indices[i + 2]];
@@ -119,6 +125,10 @@ void TriMesh::computeVertexNormals(size_t first_index)
 		n0 += n;
 		n1 += n;
 		n2 += n;
+	}
+
+	for (auto& n : normals) {
+		n.normalize();
 	}
 }
 
@@ -195,7 +205,7 @@ inline static void addPlane(TriMesh& mesh, const Vector3f& origin, const Vector3
 
 	mesh.vertices.insert(mesh.vertices.end(), { origin, origin + xAxis, origin + xAxis + yAxis, origin + yAxis });
 	mesh.normals.insert(mesh.normals.end(), { N, N, N, N });
-	mesh.texcoords.insert(mesh.texcoords.end(), { Vector2f(0, 0), Vector2f(1, 0), Vector2f(0, 1), Vector2f(1, 1) });
+	mesh.texcoords.insert(mesh.texcoords.end(), { Vector2f(0, 0), Vector2f(1, 0), Vector2f(1, 1), Vector2f(0, 1) });
 	mesh.face_normals.insert(mesh.face_normals.end(), { N, N });
 	mesh.face_inv_area.insert(mesh.face_inv_area.end(), { 1 / area, 1 / area });
 	mesh.indices.insert(mesh.indices.end(), { 0 + off, 1 + off, 2 + off, M, 0 + off, 2 + off, 3 + off, M });

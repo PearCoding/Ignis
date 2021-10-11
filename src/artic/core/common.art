@@ -141,6 +141,8 @@ fn @swap[T](a: &mut T, b: &mut T) -> () {
     *b = tmp;
 }
 
+fn @maybe_unused[T](_a: T) -> () {}
+
 fn @abs(a: i32) = if a < 0 { -a } else { a };
 fn @min(a: i32, b: i32) = if a < b { a } else { b };
 fn @max(a: i32, b: i32) = if a > b { a } else { b };

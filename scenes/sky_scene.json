@@ -50,6 +50,7 @@
 		{"name":"dobj1","shape":"dobj", "bsdf":"mat-Diamond"}
 	],
 	"lights": [
-		{"type":"sky", "name":"SunSky", "direction":[0.4082482904638631,0.4082482904638631,0.8164965809277261]}
+		{"type":"sky", "name":"Sky"},
+		{"type":"sun", "name":"Sun", "direction":[0.4082482904638631,0.4082482904638631,0.8164965809277261]}
 	]
 }

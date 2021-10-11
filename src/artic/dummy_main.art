@@ -4,7 +4,7 @@ fn _dummy1(_tri1: &[Tri1], _tri4: &[Tri4]) -> () {
 }
 
 #[export]
-fn ig_render(_settings: &Settings, _iter: i32) -> () {
+fn ig_render(_settings: &Settings) -> () {
     // Force the export of the primary and secondary stream types
     let mut primary : PrimaryStream;
     let mut secondary : SecondaryStream;
@@ -39,5 +39,18 @@ fn ig_render(_settings: &Settings, _iter: i32) -> () {
     ignis_load_scene_info(0, &mut info);
 
     let mut rays : &[StreamRay];
-    ignis_load_rays(0, &mut rays); 
+    ignis_load_rays(0, &mut rays);
+}
+
+#[export]
+fn ig_ray_generation_shader(_settings: &Settings, _iter: i32, _id: &mut i32, _size: i32, _xmin: i32, _ymin: i32, _xmax: i32, _ymax: i32) -> i32 {
+    0
+}
+
+#[export]
+fn ig_miss_shader(_settings: &Settings, _first: i32, _last: i32) -> () {
+}
+
+#[export]
+fn ig_hit_shader(_settings: &Settings, _entity_id: i32, _first: i32, _last: i32) -> () {
 }

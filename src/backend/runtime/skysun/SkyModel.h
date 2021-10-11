@@ -27,7 +27,7 @@ public:
 		};
 	}
 
-	void save(Serializer& serializer) const;
+	void save(const std::filesystem::path& path) const;
 
 private:
 	std::vector<float> mData;

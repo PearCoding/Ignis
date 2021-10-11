@@ -2,22 +2,31 @@
 
 #[import(cc = "C")] fn ignis_get_film_data(i32, &mut &mut [f32], &mut i32, &mut i32) -> ();
 #[import(cc = "C")] fn ignis_cpu_get_primary_stream(&mut PrimaryStream, i32) -> ();
+#[import(cc = "C")] fn ignis_cpu_get_primary_stream_const(&mut PrimaryStream) -> ();
 #[import(cc = "C")] fn ignis_cpu_get_secondary_stream(&mut SecondaryStream, i32) -> ();
+#[import(cc = "C")] fn ignis_cpu_get_secondary_stream_const(&mut SecondaryStream) -> ();
 #[import(cc = "C")] fn ignis_gpu_get_first_primary_stream(i32, &mut PrimaryStream, i32) -> ();
+#[import(cc = "C")] fn ignis_gpu_get_first_primary_stream_const(i32, &mut PrimaryStream) -> ();
 #[import(cc = "C")] fn ignis_gpu_get_second_primary_stream(i32, &mut PrimaryStream, i32) -> ();
+#[import(cc = "C")] fn ignis_gpu_get_second_primary_stream_const(i32, &mut PrimaryStream) -> ();
 #[import(cc = "C")] fn ignis_gpu_get_secondary_stream(i32, &mut SecondaryStream, i32) -> ();
+#[import(cc = "C")] fn ignis_gpu_get_secondary_stream_const(i32, &mut SecondaryStream) -> ();
 #[import(cc = "C")] fn ignis_gpu_get_tmp_buffer(i32, &mut &mut [i32], i32) -> ();
+#[import(cc = "C")] fn ignis_gpu_swap_primary_streams(i32) -> ();
 #[import(cc = "C")] fn ignis_load_bvh2_ent(i32, &mut &[Node2], &mut &[EntityLeaf1]) -> ();
 #[import(cc = "C")] fn ignis_load_bvh4_ent(i32, &mut &[Node4], &mut &[EntityLeaf1]) -> ();
 #[import(cc = "C")] fn ignis_load_bvh8_ent(i32, &mut &[Node8], &mut &[EntityLeaf1]) -> ();
-//#[import(cc = "C")] fn ignis_load_image(i32, &[u8], &mut &[f32], &mut i32, &mut i32) -> ();
 #[import(cc = "C")] fn ignis_load_rays(i32, &mut &[StreamRay]) -> ();
-/*#[import(cc = "C")] fn ignis_load_cdf1d(i32, &[u8], &mut CDF1D) -> ();
-#[import(cc = "C")] fn ignis_load_cdf2d(i32, &[u8], &mut CDF2D) -> ();
-#[import(cc = "C")] fn ignis_load_klems(i32, &[u8], &mut KlemsModel) -> ();*/
 #[import(cc = "C")] fn ignis_load_scene(i32, &mut SceneDatabase) -> ();
 #[import(cc = "C")] fn ignis_load_scene_info(i32, &mut SceneInfo) -> ();
+#[import(cc = "C")] fn ignis_load_image(i32, &[u8], &mut &[f32], &mut i32, &mut i32) -> ();
 #[import(cc = "C")] fn ignis_present(i32) -> ();
+
+//#[import(cc = "C")] fn ignis_handle_primary_trace(i32, &mut PrimaryStream) -> ();
+//#[import(cc = "C")] fn ignis_handle_secondary_trace(i32, &mut SecondaryStream) -> ();
+#[import(cc = "C")] fn ignis_handle_miss_shader(i32, i32) -> ();
+#[import(cc = "C")] fn ignis_handle_hit_shader(i32, i32, i32) -> ();
+#[import(cc = "C")] fn ignis_handle_ray_generation(&mut i32, i32, i32, i32, i32, i32) -> i32;
 
 // Ray streams ---------------------------------------------------------------------
 

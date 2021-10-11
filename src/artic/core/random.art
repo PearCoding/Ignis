@@ -4,10 +4,12 @@
 type RndState = u32;
 static randi = xorshift;
 
+// This trick is borrowed from Alex, who borrowed it from Mitsuba, which borrowed it from MTGP:
+// We generate a random number in [1,2) and subtract 1 from it.
 fn @randf(rnd: &mut RndState) -> f32 {
     // Assumes IEEE 754 floating point format
     let x = randi(rnd) as u32;
-    bitcast[f32]((127:u32 << 23) | (x & 0x7FFFFF)) - 1
+    bitcast[f32]((x & 0x7FFFFF) | 0x3F800000) - 1
 }
 
 // MWC64X: http://cas.ee.ic.ac.uk/people/dt10/research/rngs-gpu-mwc64x.html
@@ -56,10 +58,10 @@ fn @make_pos_sample(pos: Vec3, pdf: f32) = PosSample {
     pdf = pdf
 };
 
-// Y+ Up
+// Z+ Up
 fn @spherical_from_dir(dir: Vec3) -> (f32, f32) {
-    let theta = math_builtins::acos(dir.y);
-    let phi = math_builtins::atan2(dir.z, dir.x);
+    let theta = math_builtins::acos(dir.z);
+    let phi = math_builtins::atan2(dir.y, dir.x);
     (theta, phi)
 }
 

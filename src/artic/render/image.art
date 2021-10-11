@@ -11,9 +11,11 @@ fn @make_image(pixels: fn (i32, i32) -> Color, width: i32, height: i32) = Image 
     height = height
 };
 
-fn @load_image_from_buffer(bufferID: i32, tbl: BufferTable) -> Image {
-    let data            = tbl(bufferID);
-    let (width, height) = data.load_int2(0);
-    
-    make_image(@|x, y| vec3_to_color(data.load_vec3(4 + 4 * (y * width + x))), width, height)
-}
+fn @make_image_rgba32(pixels: fn (i32, i32) -> Vec4, width: i32, height: i32) = Image {
+    pixels = @ |x, y| {
+        let pixel = pixels(x, y);
+        make_color(pixel.x, pixel.y, pixel.z)
+    },
+    width  = width,
+    height = height
+};

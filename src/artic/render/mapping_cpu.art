@@ -27,8 +27,7 @@ fn @cpu_parallel_tiles(body: fn (i32, i32, i32, i32) -> ()) =
     }
 };
 
-#[export]
-fn cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut [i32], ray_ends: &mut[i32], num_geometries: i32) -> i32 {
+fn @cpu_sort_primary(primary: &PrimaryStream, ray_ends: &mut[i32], num_geometries: i32) -> i32 {
     // Count the number of rays per shader
     for i in range(0, num_geometries + 1) {
         ray_ends(i) = 0;
@@ -36,7 +35,9 @@ fn cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut [i32], ray_ends: &
     for i in range(0, primary.size) {
         ray_ends(primary.ent_id(i))++;
     }
+
     // Compute scan over shader bins
+    let mut ray_begins : [i32 * 1024];
     let mut n = 0;
     for i in range(0, num_geometries + 1) {
         ray_begins(i) = n;
@@ -192,7 +193,7 @@ fn @cpu_compact_secondary(secondary: &SecondaryStream, vector_width: i32, vector
 
 fn @cpu_generate_rays( primary: PrimaryStream
                      , capacity: i32
-                     , path_tracer: PathTracer
+                     , emitter: RayEmitter
                      , id: &mut i32
                      , xmin: i32
                      , ymin: i32
@@ -219,19 +220,37 @@ fn @cpu_generate_rays( primary: PrimaryStream
         let in_tile_x = in_tile_pixel - in_tile_y * tile_width;
         let x = xmin + in_tile_x;
         let y = ymin + in_tile_y;
-        let on_emit = path_tracer.on_emit;
-        let (ray, state) = @on_emit(sample, x, y, film_width, film_height);
+        let (ray, state) = @emitter(sample, x, y, film_width, film_height);
         let cur_ray = primary.size + i;
         write_ray(cur_ray, 0, ray);
         write_state(cur_ray, 0, state);
         primary.rays.id(cur_ray) = y * film_width + x;
     }
+    
     *id = first_id + num_rays;
     primary.size + num_rays
 }
 
-fn @cpu_traverse_primary(scene: Scene, min_max: MinMax, primary: &PrimaryStream, single: bool, vector_width: i32) -> () {
-    fn cpu_traverse_primary_specialized(scene2: Scene, primary2: &PrimaryStream) -> () {
+fn @cpu_generate_rays_handler(size: i32
+                            , capacity: i32
+                            , emitter: RayEmitter
+                            , id: &mut i32
+                            , xmin: i32
+                            , ymin: i32
+                            , xmax: i32
+                            , ymax: i32
+                            , spp: i32
+                            , vector_width: i32) -> i32 {
+    let (_, film_width, film_height) = cpu_get_film_data();
+
+    let mut primary : PrimaryStream;
+    ignis_cpu_get_primary_stream(&mut primary, capacity);
+    primary.size = size;
+    cpu_generate_rays(primary, capacity, emitter, id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width)
+}
+
+fn @cpu_traverse_primary(scene: SceneGeometry, min_max: MinMax, primary: &PrimaryStream, single: bool, vector_width: i32) -> () {
+    fn cpu_traverse_primary_specialized(scene2: SceneGeometry, primary2: &PrimaryStream) -> () {
         cpu_traverse(
             min_max,
             scene2,
@@ -246,8 +265,8 @@ fn @cpu_traverse_primary(scene: Scene, min_max: MinMax, primary: &PrimaryStream,
     $cpu_traverse_primary_specialized(scene, primary);
 }
 
-fn @cpu_traverse_secondary(scene: Scene, min_max: MinMax, secondary: &SecondaryStream, single: bool, vector_width: i32) -> () {
-    fn cpu_traverse_secondary_specialized(scene2: Scene, secondary2: &SecondaryStream) -> () {
+fn @cpu_traverse_secondary(scene: SceneGeometry, min_max: MinMax, secondary: &SecondaryStream, single: bool, vector_width: i32) -> () {
+    fn cpu_traverse_secondary_specialized(scene2: SceneGeometry, secondary2: &SecondaryStream) -> () {
         cpu_traverse(
             min_max,
             scene2,
@@ -262,10 +281,7 @@ fn @cpu_traverse_secondary(scene: Scene, min_max: MinMax, secondary: &SecondaryS
     $cpu_traverse_secondary_specialized(scene, secondary);
 }
 
-fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, scene: Scene, path_tracer: PathTracer, accumulate: fn (i32, Color) -> (), begin: i32, end: i32, vector_width: i32) -> () {
-    // pe_info("entity_id", entity_id);
-    // pe_info("shade:vector_width", vector_width);
-    
+fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: Shader, scene: Scene, path_tracer: PathTracer, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_shade_specialized(entity_id2: i32, primary2: &PrimaryStream, secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -278,15 +294,11 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
         
         let entities  = scene.database.entities;
         let shapes    = scene.database.shapes;
-        let shaders   = scene.database.shaders;
-        let alights   = scene.database.arealights;
         let on_hit    = path_tracer.on_hit;
         let on_shadow = path_tracer.on_shadow;
         let on_bounce = path_tracer.on_bounce;
         let entity    = entities(entity_id2);
         let shape     = shapes(entity.shape_id);
-        let shader    = shaders(entity.bsdf_id);
-        //let light     = if unlikely(entity.emissive) { @alights(entity.light_id) } else { make_null_light() };
 
         for i, r_vector_width in vectorized_range(vector_width, begin2, end2) {
             let ray       = read_primary_ray(i, 0);
@@ -298,10 +310,9 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
 
             let lcl_surf = shape.surface_element(local_ray, hit);
             let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
-            let bsdf     = shader(ray, hit, glb_surf);
-            let mat      = if unlikely(entity.emissive) { let light = @alights(entity.light_id); make_emissive_material(glb_surf, bsdf, light) } else { make_material(bsdf) };
-
+            
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
+            let mat       = @shader(ray, hit, glb_surf);
             let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) { color } else { black };
             
             for lane in unroll(0, r_vector_width) {
@@ -338,7 +349,18 @@ fn @cpu_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStre
     $cpu_shade_specialized(entity_id, primary, secondary, begin, end);
 }
 
-fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate: fn (i32, Color) -> (), begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tracer: PathTracer, begin: i32, end: i32, spp: i32, vector_width: i32) -> () {
+    let (film_pixels, _, _) = cpu_get_film_data();
+
+    let mut primary : PrimaryStream;
+    ignis_cpu_get_primary_stream_const(&mut primary);
+    let mut secondary : SecondaryStream;
+    ignis_cpu_get_secondary_stream_const(&mut secondary);
+
+    cpu_hit_shade(entity_id, primary, secondary, shader, scene, path_tracer, cpu_make_accumulator(film_pixels, spp), begin, end, vector_width);
+}
+
+fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_miss_shade_specialized(primary2: &PrimaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -372,6 +394,14 @@ fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate:
     $cpu_miss_shade_specialized(primary, begin, end);
 }
 
+fn @cpu_miss_shade_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i32, vector_width: i32) -> () {
+    let (film_pixels, _, _) = cpu_get_film_data();
+
+    let mut primary : PrimaryStream;
+    ignis_cpu_get_primary_stream_const(&mut primary);
+    cpu_miss_shade(primary, path_tracer, cpu_make_accumulator(film_pixels, spp), begin, end, vector_width);
+}
+
 fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
@@ -380,8 +410,20 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
-fn @cpu_trace( scene: Scene
-             , path_tracer: PathTracer
+type CPUAccumulator = fn (i32, Color) -> ();
+fn @cpu_make_accumulator(film_pixels: &mut [f32], spp: i32) -> CPUAccumulator {
+    @|pixel: i32, color: Color| -> () {
+        let inv = 1 / (spp as f32);
+        film_pixels(pixel * 3 + 0) += color.r * inv;
+        film_pixels(pixel * 3 + 1) += color.g * inv;
+        film_pixels(pixel * 3 + 2) += color.b * inv;
+    }
+}
+
+fn @cpu_get_stream_capacity(spp: i32, tile_size: i32) = spp * tile_size * tile_size;
+
+fn @cpu_trace( scene: SceneGeometry
+             , pipeline: Pipeline
              , min_max: MinMax
              , single: bool
              , tile_size: i32
@@ -392,12 +434,7 @@ fn @cpu_trace( scene: Scene
              ) -> () {
     let (film_pixels, film_width, film_height) = cpu_get_film_data();
 
-    fn @accumulate(pixel: i32, color: Color) -> () {
-        let inv = 1 / (spp as f32);
-        film_pixels(pixel * 3 + 0) += color.r * inv;
-        film_pixels(pixel * 3 + 1) += color.g * inv;
-        film_pixels(pixel * 3 + 2) += color.b * inv;
-    }
+    let accumulate = cpu_make_accumulator(film_pixels, spp);
 
     let mut primary_counter = 0:i64;
     let mut bounces_counter = 0:i64;
@@ -410,48 +447,49 @@ fn @cpu_trace( scene: Scene
             // Get ray streams/states from the CPU driver
             let mut primary   : PrimaryStream;
             let mut secondary : SecondaryStream;
-            let capacity = spp * tile_size * tile_size;
+            let capacity = cpu_get_stream_capacity(spp, tile_size);
             ignis_cpu_get_primary_stream(&mut primary,     capacity);
             ignis_cpu_get_secondary_stream(&mut secondary, capacity);
 
             let mut id = 0;
             let num_rays = spp * (ymax - ymin) * (xmax - xmin);
             while id < num_rays || primary.size > 0 {
-                let first = id == 0;
+                let is_first = id == 0;
 
                 // (Re-)generate primary rays
-                if primary.size < capacity {
-                    primary.size = cpu_generate_rays(primary, capacity, path_tracer, &mut id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width);
+                if primary.size < capacity && id < num_rays {
+                    primary.size = pipeline.on_generate(&mut id, primary.size, xmin, ymin, xmax, ymax);
                 }
 
                 if scene.info.num_entities == 0 {
-                    cpu_miss_shade(primary, path_tracer, accumulate, 0, primary.size, vector_width);
+                    pipeline.on_miss_shade(0, primary.size);
                     primary.size = 0;
                 } else {
                     // Trace primary rays
-                    cpu_profile(if first { &mut primary_counter } else { &mut bounces_counter }, || {
+                    cpu_profile(if is_first { &mut primary_counter } else { &mut bounces_counter }, || {
                         cpu_traverse_primary(scene, min_max, primary, single, vector_width);
                     });
                     atomic(1:u32, &mut total_rays, primary.size as i64, 7:u32, "");
 
                     // Sort hits by shader id, and filter invalid hits
-                    let mut ray_begins : [i32 * 1024];
-                    let mut ray_ends   : [i32 * 1024];
-                    primary.size = cpu_sort_primary(primary, &mut ray_begins, &mut ray_ends, scene.info.num_entities);
+                    let mut ray_ends : [i32 * 1024];
+                    primary.size = cpu_sort_primary(primary, &mut ray_ends, scene.info.num_entities);
 
                     // Perform (vectorized) shading
                     cpu_profile(&mut shading_counter, || {
                         let mut begin = 0;
                         for ent_id in range(0, scene.info.num_entities) {
                             let end = ray_ends(ent_id);
-                            cpu_shade(ent_id, primary, secondary, scene, path_tracer, accumulate, begin, end, vector_width);
+                            if begin < end {
+                                pipeline.on_hit_shade(ent_id, begin, end);
+                            }
                             begin = end;
                         }
 
                         // Shade misses as well
                         let last = ray_ends(scene.info.num_entities);
-                        if(begin < last) {
-                            cpu_miss_shade(primary, path_tracer, accumulate, begin, last, vector_width);
+                        if begin < last {
+                            pipeline.on_miss_shade(begin, last);
                         }
                     });
 
@@ -508,6 +546,10 @@ fn @cpu_trace( scene: Scene
 }
 
 // CPU device ----------------------------------------------------------------------
+fn @cpu_load_vec4(p: &[f32], elem: i32) {
+    let v = (p as &[simd[f32 * 4]])(elem);
+    make_vec4(v(0), v(1), v(2), v(3)) 
+}
 
 fn @make_cpu_buffer(p: &[u8]) = DeviceBuffer {
     load_f32    = @ |i| (p as &[f32])(i),
@@ -547,62 +589,11 @@ fn @make_cpu_buffer(p: &[u8]) = DeviceBuffer {
     has_alignment = false
 };
 
-// fn @make_cpu_buffer(p: &[u8]) = DeviceBuffer {
-//     load_f32  = @ |i| (p as &[f32])(i),
-//     load_i32  = @ |i| (p as &[i32])(i),
-//     load_vec2 = @ |i| {
-//         let v = (&p(i * 4) as &[simd[f32 * 4]])(0);
-//         make_vec2(v(0), v(1))
-//     },
-//     load_vec3 = @ |i| {
-//         let v = (&p(i * 4) as &[simd[f32 * 4]])(0);
-//         make_vec3(v(0), v(1), v(2))
-//     },
-//     load_vec4 = @ |i| {
-//         let v = (&p(i * 4) as &[simd[f32 * 4]])(0);
-//         make_vec4(v(0), v(1), v(2), v(3))
-//     },
-//     load_int2 = @ |i| {
-//         let v = (&p(i * 4) as &[simd[i32 * 4]])(0);
-//         (v(0), v(1))
-//     },
-//     load_int3 = @ |i| {
-//         let v = (&p(i * 4) as &[simd[i32 * 4]])(0);
-//         (v(0), v(1), v(2))
-//     },
-//     load_int4 = @ |i| {
-//         let v = (&p(i * 4) as &[simd[i32 * 4]])(0);
-//         (v(0), v(1), v(2), v(3))
-//     },
-//     load_mat3x3 = @ |i| {
-//         let q  = &p(i * 4);
-//         let v0 = (q as &[simd[f32 * 4]])(0);
-//         let v1 = (q as &[simd[f32 * 4]])(1);
-//         let v2 = (q as &[simd[f32 * 4]])(2);
-//         make_mat3x3(make_vec3(v0(0), v0(1), v0(2)),
-//                     make_vec3(v0(3), v1(0), v1(1)),
-//                     make_vec3(v1(2), v1(3), v2(0)))
-//     },
-//     load_mat4x4 = @ |i| {
-//         let q  = &p(i * 4);
-//         let v0 = (q as &[simd[f32 * 4]])(0);
-//         let v1 = (q as &[simd[f32 * 4]])(1);
-//         let v2 = (q as &[simd[f32 * 4]])(2);
-//         let v3 = (q as &[simd[f32 * 4]])(3);
-//         make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)),
-//                     make_vec4(v1(0), v1(1), v1(2), v1(3)), 
-//                     make_vec4(v2(0), v2(1), v2(2), v2(3)), 
-//                     make_vec4(v3(0), v3(1), v3(2), v3(3)))
-//     },
-//     has_padding = true
-// };
-
-
 fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_width: i32, num_cores: i32, tile_size: i32) = Device {
-    trace = @ |scene, path_tracer, spp| {
+    trace = @ |scene, pipeline, spp| {
         cpu_trace(
             scene,
-            path_tracer,
+            pipeline,
             min_max,
             single,
             tile_size,
@@ -611,6 +602,15 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             vector_width,
             vector_compact
         )
+    },
+    generate_rays = @ | emitter, id, size, xmin, ymin, xmax, ymax, spp | -> i32 {
+        cpu_generate_rays_handler(size, @cpu_get_stream_capacity(spp, tile_size), emitter, id, xmin, ymin, xmax, ymax, spp, vector_width)
+    },
+    handle_miss_shader = @ | path_tracer, first, last, spp | {
+        cpu_miss_shade_handler(path_tracer, first, last, spp, vector_width);
+    },
+    handle_hit_shader = @ | entity_id, shader, scene, path_tracer, first, last, spp | {
+        cpu_hit_shade_handler(entity_id, shader, scene, path_tracer, first, last, spp, vector_width);
     },
     present = @ || ignis_present(0),
     load_scene_bvh = @ || {
@@ -631,15 +631,11 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         ignis_load_scene(0, &mut database);
         database
     },
-    load_scene_info      = cpu_get_scene_info,
-    load_buffer_table    = @ |dtb| make_buffer_table(dtb, make_cpu_buffer),
-    load_texture_table   = @ |dtb, stage| make_texture_table(dtb, make_cpu_buffer, stage),
-    load_entity_table    = @ |dtb, stage| make_entity_table(dtb, make_cpu_buffer, stage),
-    load_shape_table     = @ |dtb, stage| make_shape_table(dtb, make_cpu_buffer, stage),
-    load_light_table     = @ |dtb, stage| make_light_table(dtb, make_cpu_buffer, stage),
-    load_arealight_table = @ |dtb, stage| make_arealight_table(dtb, make_cpu_buffer, stage),
-    load_shader_table    = @ |dtb, stage| make_shader_table(dtb, make_cpu_buffer, stage),
-    load_bvh_table       = @ |dtb| -> BVHTable {
+    load_scene_info       = cpu_get_scene_info,
+    load_entity_table     = @ |dtb| make_entity_table(dtb, make_cpu_buffer),
+    load_shape_table      = @ |dtb| make_shape_table(dtb, make_cpu_buffer),
+    load_specific_shape   = @ |num_face, num_vert, num_norm, num_tex, off, dtb| load_specific_shape_from_table(num_face, num_vert, num_norm, num_tex, off, dtb, make_cpu_buffer),
+    load_bvh_table        = @ |dtb| -> BVHTable {
         @ |id| {
             let entry  = get_lookup_entry(id as u64,   dtb, make_cpu_buffer); 
             let header = get_table_entry(entry.offset, dtb, make_cpu_buffer);
@@ -655,6 +651,14 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
                 make_cpu_bvh4_tri4(nodes, tris)
             }
         } 
+    },
+    load_image = @ |filename| {
+        let mut pixel_data : &[f32];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_image(0, filename, &mut pixel_data, &mut width, &mut height);
+        make_image_rgba32(@ |x, y| cpu_load_vec4(pixel_data, y * width + x),
+                          width, height)
     },
     load_rays = @ || {
         let mut rays: &[StreamRay];

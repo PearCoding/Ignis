@@ -96,53 +96,6 @@ if(NOT DEVICES)
 endif()
 
 ###########################################################
-option(IG_WITH_CAMERA_PERSPECTIVE  "Enable perspective camera" ON)
-option(IG_WITH_CAMERA_ORTHOGONAL   "Enable orthogonal camera" OFF)
-option(IG_WITH_CAMERA_FISHLENS     "Enable fishlens camera" ON)
-
-if(IG_WITH_CAMERA_PERSPECTIVE)
-    list(APPEND CAMERAS "-D CAMERA_PERSPECTIVE")
-endif()
-
-if(IG_WITH_CAMERA_ORTHOGONAL)
-    list(APPEND CAMERAS "-D CAMERA_ORTHOGONAL")
-endif()
-
-if(IG_WITH_CAMERA_FISHLENS)
-    list(APPEND CAMERAS "-D CAMERA_FISHLENS")
-endif()
-
-if(IG_WITH_TRACER)
-    list(APPEND CAMERAS "-D CAMERA_LIST")
-endif()
-
-if(NOT CAMERAS)
-    message(FATAL_ERROR "No cameras selected. Aborting")
-endif()
-
-###########################################################
-option(IG_WITH_RENDERER_PATH  "Enable path tracer" ON)
-option(IG_WITH_RENDERER_AO    "Enable ambient occulusion renderer" OFF)
-option(IG_WITH_RENDERER_DEBUG "Enable debug renderer" ON)
-
-set(RENDERER )
-if(IG_WITH_RENDERER_PATH)
-    list(APPEND RENDERER "-D RENDERER_PATH")
-endif()
-
-if(IG_WITH_RENDERER_AO)
-    list(APPEND RENDERER "-D RENDERER_AO")
-endif()
-
-if(IG_WITH_RENDERER_DEBUG)
-    list(APPEND RENDERER "-D RENDERER_DEBUG")
-endif()
-
-if(NOT RENDERER)
-    message(FATAL_ERROR "No renderer selected. Aborting")
-endif()
-
-###########################################################
 function(extract_name out_var in_var)
     string(REGEX REPLACE "^([a-zA-Z]+_)(.+)$" "\\2" _t1 ${in_var})
     string(TOLOWER ${_t1} _t2)
@@ -172,10 +125,7 @@ function(cross out_list list1 list2 sep)
     set(${out_list} ${_list} PARENT_SCOPE)
 endfunction()
 
-cross(VARIANTS_1 CAMERAS DEVICES " ")
-cross(VARIANTS_2 VARIANTS_1 RENDERER " ")
-
-set(VARIANTS ${VARIANTS_2})
+set(VARIANTS ${DEVICES})
 
 if(NOT VARIANTS)
     message(FATAL_ERROR "No variants available. This error should have been catched earlier... Aborting")
@@ -188,22 +138,22 @@ set(_targets )
 foreach(var ${VARIANTS})
     var_to_name(var_name ${var})
     message(VERBOSE "Driver: ${var_name} = ${var}")
-    set(out_file "${CMAKE_CURRENT_BINARY_DIR}/main_${var_name}.art")
+    set(out_file "${CMAKE_CURRENT_BINARY_DIR}/driver_${var_name}.art")
     separate_arguments(args UNIX_COMMAND ${var})
     add_custom_command(
         OUTPUT "${out_file}"
-        COMMAND $<TARGET_FILE:stpp> ${args} ${CMAKE_CURRENT_SOURCE_DIR}/main.artpp > ${out_file}
-        MAIN_DEPENDENCY main.artpp
+        COMMAND $<TARGET_FILE:stpp> ${args} ${CMAKE_CURRENT_SOURCE_DIR}/tracer.artpp > ${out_file}
+        MAIN_DEPENDENCY tracer.artpp
         COMMENT "Generating variant file: ${out_file}" 
         VERBATIM)
     set(_objs ) # Reset list
     set(_interface_name driver_interface_${var_name})
     anydsl_runtime_wrap(_objs
-        NAME "artic_${var_name}"
+        NAME "driver_${var_name}"
         FRONTEND "artic"
         CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
         ARTIC_FLAGS --log-level info -Wall
-        FILES ${ARTIC_SRC} ${out_file})
+        FILES ${ARTIC_MAIN_SRC} ${out_file})
     set(_target_name ig_driver_${var_name})
     add_library(${_target_name} MODULE ${_objs} glue.cpp)
     set_target_properties(${_target_name} PROPERTIES PREFIX "")

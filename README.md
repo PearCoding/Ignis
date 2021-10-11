@@ -1,5 +1,4 @@
 # Ignis
-
 'Ignis' is a raytracer for the RENEGADE project implemented using the Artic frontend of the AnyDSL compiler framework (https://anydsl.github.io/) and based on Rodent (https://github.com/AnyDSL/rodent).
 
 ![A scene containing diamonds rendered by Ignis](docs/screenshot.jpg)
@@ -20,6 +19,7 @@ The following dependencies will be downloaded and compiled automatically.
 Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more information. 
 
  - imgui <https://github.com/ocornut/imgui>
+ - imgui-markdown <https://github.com/juliettef/imgui_markdown>
  - pugixml <https://github.com/zeux/pugixml>
  - RapidJSON <https://rapidjson.org/>
  - Simple Hardware Feature Extractor <https://github.com/PearCoding/hwinfo>

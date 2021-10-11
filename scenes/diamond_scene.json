@@ -12,8 +12,7 @@
 	},
 	"film": {
 		"type": "hdr",
-		"size": [1000, 1000],
-        "spp": 4
+		"size": [1000, 1000]
 	},
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Light", "reflectance":[0,0,0]},

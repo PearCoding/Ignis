@@ -3,8 +3,8 @@
 #include "LoaderContext.h"
 
 namespace IG {
-struct LoaderResult;
+class ShadingTree;
 struct LoaderTexture {
-	static bool load(LoaderContext& ctx, LoaderResult& res);
+	static std::string generate(const std::string& name, const Parser::Object& obj, const LoaderContext& ctx, ShadingTree& tree);
 };
 } // namespace IG

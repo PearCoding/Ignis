@@ -28,7 +28,8 @@ T swap_endian(T u)
 
 namespace ply {
 static std::vector<uint32_t> triangulatePly(const std::filesystem::path& path,
-											const std::vector<Vector3f>& vertices, const std::vector<uint32_t> glb_indices)
+											const std::vector<Vector3f>& vertices, const std::vector<uint32_t> glb_indices,
+											bool& warned)
 {
 	if (vertices.size() < 3) {
 		return {};
@@ -49,8 +50,12 @@ static std::vector<uint32_t> triangulatePly(const std::filesystem::path& path,
 			return res_indices;
 		}
 
-		// Could not triangulate, lets just convex triangulate and give up
-		IG_LOG(L_WARNING) << "PlyFile " << path << ": Given polygonal face is malformed, approximating with convex triangulation" << std::endl;
+		if (!warned) {
+			// Could not triangulate, lets just convex triangulate and give up
+			IG_LOG(L_WARNING) << "PlyFile " << path << ": Given polygonal face is malformed, approximating with convex triangulation" << std::endl;
+			warned = true; // Just warn once
+		}
+
 		std::vector<uint32_t> convex_inds;
 		convex_inds.insert(convex_inds.end(), { glb_indices[0], glb_indices[1], glb_indices[2] });
 		for (uint32_t j = 3; j < (uint32_t)vertices.size(); ++j) {
@@ -192,6 +197,8 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
 	tmp_indices.reserve(3);
 	std::vector<Vector3f> tmp_vertices;
 	tmp_vertices.reserve(3);
+
+	bool warned = false;
 	if (ascii) {
 		for (int i = 0; i < header.FaceCount; ++i) {
 			std::string line;
@@ -214,7 +221,7 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
 				tmp_vertices[elem] = trimesh.vertices[index];
 			}
 
-			std::vector<uint32_t> inds = triangulatePly(path, tmp_vertices, tmp_indices);
+			std::vector<uint32_t> inds = triangulatePly(path, tmp_vertices, tmp_indices, warned);
 
 			for (size_t f = 0; f < inds.size() / 3; ++f) {
 				trimesh.indices.insert(trimesh.indices.end(), { inds[f * 3 + 0], inds[f * 3 + 1], inds[f * 3 + 2], 0 });
@@ -234,7 +241,7 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
 				tmp_vertices[elem] = trimesh.vertices[index];
 			}
 
-			std::vector<uint32_t> inds = triangulatePly(path, tmp_vertices, tmp_indices);
+			std::vector<uint32_t> inds = triangulatePly(path, tmp_vertices, tmp_indices, warned);
 
 			for (size_t f = 0; f < inds.size() / 3; ++f) {
 				trimesh.indices.insert(trimesh.indices.end(), { inds[f * 3 + 0], inds[f * 3 + 1], inds[f * 3 + 2], 0 });
@@ -350,7 +357,7 @@ TriMesh load(const std::filesystem::path& path)
 		return trimesh;
 
 	bool hasBadAreas = false;
-	trimesh.computeFaceNormals(0, &hasBadAreas);
+	trimesh.computeFaceNormals(&hasBadAreas);
 	if (hasBadAreas)
 		IG_LOG(L_WARNING) << "PlyFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
 

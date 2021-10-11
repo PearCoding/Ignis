@@ -1,0 +1,49 @@
+{
+	"technique": {
+		"type": "path",
+		"max_depth": 64
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 39.597755,
+		"near_clip": 0.1,
+		"far_clip": 100,
+		"transform": [ -1,0,0,0, 0,1,0,0, 0,0,-1,3.849529, 0,0,0,1 ]
+	},
+	"film": {
+		"type": "hdr",
+		"size": [1000, 1000],
+        "spp": 4
+	},
+	"textures": [
+		{
+			"type": "bitmap",
+			"name": "tex",
+			"filename": "textures/Ignis.png",
+			"filter_type": "trilinear"
+		},
+		{
+			"type": "checkerboard",
+			"name": "check",
+			"scale_x": 10,
+			"scale_y": 5,
+			"color0": [0.3,0.3,0.3],
+			"color1": [1,1,1]
+		}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name": "mat-Ground", "reflectance":"check"},
+		{"type":"diffuse", "name": "mat-Pillar", "reflectance":"tex"}
+	],
+	"shapes": [
+		{"type":"ply", "name":"Bottom", "filename":"meshes/Bottom.ply"},
+		{"type":"ply", "name":"Pillar", "filename":"meshes/Pillar.ply"}
+	],
+	"entities": [
+		{"name":"Bottom","shape":"Bottom", "bsdf":"mat-Ground"},
+		{"name":"Pillar","shape":"Pillar", "bsdf":"mat-Pillar", "transform": [ 0.25,0,0,0, 0,0.5,0,-1, 0,0,0.25,0, 0,0,0,1 ]}
+	],
+	"lights": [
+		{"type":"env", "name":"Environment", "radiance":[1,1,1]}
+	]
+}

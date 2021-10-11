@@ -1,0 +1,115 @@
+fn @color_map(i: i32) = [ 
+        make_color(0.450000, 0.376630, 0.112500),
+        make_color(0.112500, 0.450000, 0.405978),
+        make_color(0.112500, 0.450000, 0.229891),
+        make_color(0.450000, 0.112500, 0.376630),
+        make_color(0.435326, 0.450000, 0.112500),
+        make_color(0.112500, 0.141848, 0.450000),
+        make_color(0.435326, 0.112500, 0.450000),
+        make_color(0.112500, 0.450000, 0.141848),
+        make_color(0.347283, 0.450000, 0.112500),
+        make_color(0.450000, 0.112500, 0.200543),
+        make_color(0.112500, 0.229891, 0.450000),
+        make_color(0.450000, 0.288587, 0.112500),
+        make_color(0.347283, 0.112500, 0.450000),
+        make_color(0.450000, 0.112500, 0.288587),
+        make_color(0.450000, 0.112500, 0.112500),
+        make_color(0.450000, 0.200543, 0.112500),
+        make_color(0.171196, 0.450000, 0.112500),
+        make_color(0.112500, 0.450000, 0.317935),
+        make_color(0.259239, 0.450000, 0.112500),
+        make_color(0.259239, 0.112500, 0.450000),
+        make_color(0.112500, 0.405978, 0.450000),
+        make_color(0.171196, 0.112500, 0.450000),
+        make_color(0.112500, 0.317935, 0.450000)
+    ](i%23);
+
+fn @make_debug_renderer(debug_mode: i32) -> PathTracer {
+    PathTracer {
+        on_hit    = @ |ray, hit, state, surf, mat| {
+            match debug_mode {
+                1 => { // DEBUG_TANGENT
+                    let n = surf.local.col(0);
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z)))
+                },
+                2 => { // DEBUG_BITANGENT
+                    let n = surf.local.col(1);
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z)))
+                },
+                3 => { // DEBUG_GEOMETRY_NORMAL
+                    let n = surf.face_normal;
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z)))
+                },
+                4 => { // DEBUG_TEXCOORDS
+                    let n = surf.tex_coords;
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), 0))
+                },
+                5 => { // DEBUG_PRIMCOORDS
+                    let n = hit.prim_coords;
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), 0))
+                },
+                6 => { // DEBUG_POINT
+                    make_option(vec3_to_color(surf.point))
+                },
+                7 => { // DEBUG_HIT_DISTANCE
+                    make_option(make_color(hit.distance, hit.distance, hit.distance))
+                },
+                8 => { // DEBUG_PRIM_ID_RAW
+                    let v = hit.prim_id as f32;
+                    make_option(make_gray_color(v))
+                },
+                9 => { // DEBUG_PRIM_ID
+                    make_option(color_map(hit.prim_id))
+                },
+                10 => { // DEBUG_ENTITY_ID_RAW
+                    let v = hit.ent_id as f32;
+                    make_option(make_gray_color(v))
+                },
+                11 => { // DEBUG_ENTITY_ID
+                    make_option(color_map(hit.ent_id))
+                },
+                12 => { // DEBUG_EMISSIVE
+                    make_option(if mat.is_emissive { green } else { red })
+                },
+                13 => { // DEBUG_SPECULAR
+                    make_option(if mat.bsdf.is_specular {green } else { red })
+                },
+                14 => { // DEBUG_ENTERING
+                    make_option(if surf.is_entering { green } else { red })
+                },
+                15 => { // DEBUG_CHECK_BSDF
+                    if mat.bsdf.is_specular {
+                        make_option(green)
+                    } else {
+                        let mut tmp = state.rnd;
+                        let out_dir = vec3_neg(ray.dir);
+                        if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(&mut tmp, out_dir, false) {    
+                            let pdf = mat.bsdf.pdf(mat_sample.in_dir, out_dir);
+                            let evl = color_mulf(mat.bsdf.eval(mat_sample.in_dir, out_dir), 1/pdf);
+
+                            let pdf_diff = math_builtins::fabs(mat_sample.pdf-pdf);
+                            let w_diff   = math_builtins::fabs(mat_sample.color.r - evl.r)
+                                        + math_builtins::fabs(mat_sample.color.g - evl.g)
+                                        + math_builtins::fabs(mat_sample.color.b - evl.b);
+
+                            let pdf_good = if pdf_diff <= 0.001:f32 { 1 } else { 0 };
+                            let w_good   = if w_diff   <= 0.001:f32 { 1 } else { 0 };
+                            let index    = (w_good << 1) | pdf_good;
+                            let color    = [red, orange, yellow, green](index);
+                            make_option(color)
+                        } else { 
+                            make_option(cyan)
+                        }
+                    }
+                },
+                _ => { // DEBUG_NORMAL 
+                    let n = surf.local.col(2);
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z)))
+                }
+            }
+        },
+        on_miss   = @ |_, _| Option[(Color)]::None,
+        on_shadow = @ |_, _, _, _, _| Option[(Ray, Color)]::None,
+        on_bounce = @ |_, _, _, _, _| Option[(Ray, RayState)]::None,
+    }
+}

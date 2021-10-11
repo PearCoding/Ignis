@@ -173,12 +173,12 @@ fn @make_cpu_int_min_max() -> MinMax {
 
 // Traverses a primitive BVH with a single ray.
 fn @cpu_traverse_single_helper_prim( mut ray: Ray
-                                    , octant: RayOctant
-                                    , min_max: MinMax
-                                    , bvh: PrimBvh
-                                    , any_hit: bool
-                                    , root: i32
-                                    ) -> Hit {
+                                   , octant: RayOctant
+                                   , min_max: MinMax
+                                   , bvh: PrimBvh
+                                   , any_hit: bool
+                                   , root: i32
+                                   ) -> Hit {
     let sorting_network = match bvh.arity {
         8 => batcher_sort,
         _ => bose_nelson_sort
@@ -295,29 +295,29 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
 
 // Traverses a BVH with a packet of rays, assuming execution inside a vectorized region.
 fn @cpu_traverse_helper_prim( mut ray: Ray
-                              , vector_width: i32
-                              , min_max: MinMax
-                              , bvh: PrimBvh
-                              , single: bool // TODO: This path produces and introduces some nasty bugs!
-                              , any_hit: bool
-                              , root: i32
-                              ) -> Hit {
+                            , vector_width: i32
+                            , min_max: MinMax
+                            , bvh: PrimBvh
+                            , _single: bool // TODO: This path produces and introduces some nasty bugs!
+                            , any_hit: bool
+                            , root: i32
+                            ) -> Hit {
 
-    let switch_threshold = match vector_width {
+    /*let switch_threshold = match vector_width {
         4  => 3,
         8  => if bvh.arity == 4 { 4 } else { 6 },
         16 => 7,
         _  => vector_width / 2
-    };
+    };*/
 
     let mut hit = empty_hit(ray.tmax);
     let mut terminated = false;
     let stack = alloc_stack();
     stack.push(root, ray.tmin);
 
-    let octant = ray_octant(ray);
+    //let octant = ray_octant(ray);
 
-    let load_ray = @ |ray_ptr: &Ray, lane: i32| Ray {
+    /*let load_ray = @ |ray_ptr: &Ray, lane: i32| Ray {
         org = make_vec3(rv_load(&ray_ptr.org.x, lane), rv_load(&ray_ptr.org.y, lane), rv_load(&ray_ptr.org.z, lane)),
         dir = make_vec3(rv_load(&ray_ptr.dir.x, lane), rv_load(&ray_ptr.dir.y, lane), rv_load(&ray_ptr.dir.z, lane)),
         inv_org = make_vec3(rv_load(&ray_ptr.inv_org.x, lane), rv_load(&ray_ptr.inv_org.y, lane), rv_load(&ray_ptr.inv_org.z, lane)),
@@ -332,7 +332,7 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
         rv_store(&mut hit_ptr.prim_coords.y, lane, hit2.prim_coords.y);
         rv_store(bitcast[&mut f32](&mut hit_ptr.prim_id), lane, bitcast[f32](hit2.prim_id));
         //rv_store(bitcast[&mut f32](&mut hit_ptr.ent_id), lane, bitcast[f32](hit2.ent_id)); // Optimization: No need for the ent id in prim BVH
-    };
+    };*/
 
     while true {
         let exit = break;
@@ -344,8 +344,8 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
             let active = (stack.top().tmin <= ray.tmax) & !terminated;
             let mask = rv_ballot(active);
             if likely(mask != 0) {
-                
-                if single && cpu_popcount32(mask) <= switch_threshold {
+                // FIXME: There is a bug below
+                /*if single && cpu_popcount32(mask) <= switch_threshold {
                     for lane in cpu_one_bits(mask) {
                         let lane_ray = load_ray(&ray, lane);
                         let lane_octant = bitcast[RayOctant](rv_extract(bitcast[f32](octant), lane));
@@ -356,9 +356,9 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                         }
                     }
                     if any_hit { terminated = hit.prim_id >= 0; }
-                } else {
+                } else {*/
                     break()
-                }
+                //}
             }
             stack.pop();
         }
@@ -425,13 +425,13 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
 }
 
 fn @cpu_traverse_helper( mut ray: Ray
-                              , vector_width: i32
-                              , min_max: MinMax
-                              , scene: Scene
-                              , single: bool
-                              , any_hit: bool
-                              , root: i32
-                              ) -> Hit {
+                       , vector_width: i32
+                       , min_max: MinMax
+                       , scene: SceneGeometry
+                       , single: bool
+                       , any_hit: bool
+                       , root: i32
+                       ) -> Hit {
     let bvh       = scene.bvh;
     let prim_bvhs = scene.database.bvhs;
 
@@ -439,11 +439,6 @@ fn @cpu_traverse_helper( mut ray: Ray
     let mut terminated = false;
     let stack = alloc_stack();
     stack.push(root, ray.tmin);
-
-    // pe_info("vector_width", vector_width);
-    // pe_info("root", root);
-    // pe_info("single", single);
-    // pe_info("any_hit", any_hit);
 
     while true {
         let exit = break;
@@ -530,7 +525,7 @@ fn @cpu_traverse_helper( mut ray: Ray
 // Wrapper ------------------------------------------------------------------------
 
 fn @cpu_traverse( min_max: MinMax
-                , scene: Scene
+                , scene: SceneGeometry
                 , rays: fn (i32, i32) -> Ray
                 , hits: fn (i32, i32, Hit) -> ()
                 , packet_size: i32

@@ -5,7 +5,8 @@
 namespace IG {
 struct LoaderResult;
 struct LoaderLight {
-	static bool setup_area(LoaderContext& ctx);
-	static bool load(LoaderContext& ctx, LoaderResult& result);
+	static void setupAreaLights(LoaderContext& ctx);
+	static bool hasAreaLights(const LoaderContext& ctx);
+	static std::string generate(const LoaderContext& ctx, bool skipArea);
 };
 } // namespace IG

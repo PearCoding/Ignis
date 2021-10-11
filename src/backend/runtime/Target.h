@@ -27,6 +27,17 @@ inline bool doesTargetRequirePadding(Target target)
 	}
 }
 
+inline bool isCPU(Target target)
+{
+	switch (target) {
+	default:
+		return true;
+	case Target::NVVM:
+	case Target::AMDGPU:
+		return false;
+	}
+}
+
 inline Target getRecommendedCPUTarget()
 {
 #if defined(IG_HAS_HW_FEATURE_AVX512)
@@ -42,5 +53,31 @@ inline Target getRecommendedCPUTarget()
 #else
 	return Target::GENERIC;
 #endif
+}
+
+inline const char* targetToString(Target target)
+{
+	switch (target) {
+	case Target::GENERIC:
+		return "Generic";
+	case Target::AVX512:
+		return "AVX512";
+	case Target::AVX2:
+		return "AVX2";
+	case Target::AVX:
+		return "AVX";
+	case Target::SSE42:
+		return "SSE4.2";
+	case Target::ASIMD:
+		return "ASIMD";
+	case Target::NVVM:
+		return "NVVM";
+	case Target::AMDGPU:
+		return "AMDGPU";
+	case Target::INVALID:
+		return "Invalid";
+	default:
+		return "Unknown";
+	}
 }
 } // namespace IG

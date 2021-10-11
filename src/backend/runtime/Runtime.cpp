@@ -1,33 +1,27 @@
 #include "Runtime.h"
 #include "Camera.h"
 #include "Logger.h"
-#include "driver/Configuration.h"
+#include "jit.h"
 #include "loader/Parser.h"
 
 #include <chrono>
+#include <fstream>
 
 namespace IG {
 
-static inline void setup_technique(RuntimeRenderSettings& settings, LoaderOptions& lopts, const RuntimeOptions& opts)
+static inline void setup_technique(LoaderOptions& lopts, const RuntimeOptions& opts)
 {
 	std::string tech_type;
 	if (opts.OverrideTechnique.empty()) {
 		const auto technique = lopts.Scene.technique();
-		if (technique) {
-			tech_type			   = technique->pluginType();
-			settings.MaxPathLength = technique->property("max_depth").getInteger(settings.MaxPathLength);
-		} else
+		if (technique)
+			tech_type = technique->pluginType();
+		else
 			tech_type = "path";
 	} else {
 		tech_type = opts.OverrideTechnique;
 	}
-
-	if (tech_type == "debug")
-		lopts.Configuration |= IG_C_RENDERER_DEBUG;
-	else if (tech_type == "ao")
-		lopts.Configuration |= IG_C_RENDERER_AO;
-	else
-		lopts.Configuration |= IG_C_RENDERER_PATH;
+	lopts.TechniqueType = tech_type;
 }
 
 static inline void setup_film(RuntimeRenderSettings& settings, const LoaderOptions& lopts, const RuntimeOptions& opts)
@@ -54,14 +48,7 @@ static inline void setup_camera(RuntimeRenderSettings& settings, LoaderOptions& 
 			camera_type = camera->pluginType();
 	}
 
-	if (camera_type == "orthogonal")
-		lopts.Configuration |= IG_C_CAMERA_ORTHOGONAL;
-	else if (camera_type == "fishlens")
-		lopts.Configuration |= IG_C_CAMERA_FISHLENS;
-	else if (camera_type == "list")
-		lopts.Configuration |= IG_C_CAMERA_LIST;
-	else
-		lopts.Configuration |= IG_C_CAMERA_PERSPECTIVE;
+	lopts.CameraType = camera_type;
 
 	// Get initial location
 	Transformf cameraTransform;
@@ -82,18 +69,26 @@ static inline void setup_camera(RuntimeRenderSettings& settings, LoaderOptions& 
 		std::swap(settings.TMin, settings.TMax);
 }
 
+static inline void dumpShader(const std::string& filename, const std::string& shader)
+{
+	std::ofstream stream(filename);
+	stream << shader;
+}
+
 Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	: mInit(false)
 	, mDevice(opts.Device)
 	, mIteration(0)
+	, mIsTrace(false)
+	, mIsDebug(false)
 	, mDebugMode(DebugMode::Normal)
 {
 	if (!mManager.init())
 		throw std::runtime_error("Could not init modules!");
 
 	LoaderOptions lopts;
-	lopts.FilePath		= path;
-	lopts.Configuration = targetToConfiguration(opts.DesiredTarget);
+	lopts.FilePath = path;
+	lopts.Target   = opts.DesiredTarget;
 
 	// Parse scene file
 	const auto startParser = std::chrono::high_resolution_clock::now();
@@ -105,7 +100,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
 
 	// Extract technique
-	setup_technique(mLoadedRenderSettings, lopts, opts);
+	setup_technique(lopts, opts);
 
 	// Extract film
 	setup_film(mLoadedRenderSettings, lopts, opts);
@@ -114,23 +109,48 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	setup_camera(mLoadedRenderSettings, lopts, opts);
 
 	// Check configuration
-	const uint64 newConfig = mManager.checkConfiguration(lopts.Configuration);
-	if (newConfig != lopts.Configuration) {
+	const Target newTarget = mManager.resolveTarget(lopts.Target);
+	if (newTarget != lopts.Target) {
 		IG_LOG(L_WARNING) << "Switched from "
-						  << configurationToString(lopts.Configuration) << " to "
-						  << configurationToString(newConfig) << std::endl;
+						  << targetToString(lopts.Target) << " to "
+						  << targetToString(newTarget) << std::endl;
 	}
-	lopts.Configuration = newConfig;
+	lopts.Target = newTarget;
 
 	LoaderResult result;
 	if (!Loader::load(lopts, result))
 		throw std::runtime_error("Could not load scene!");
 	mDatabase = std::move(result.Database);
 
-	IG_LOG(L_INFO) << "Loading configuration " << configurationToString(newConfig) << std::endl;
-	if (!mManager.load(newConfig, mLoadedInterface))
+	IG_LOG(L_INFO) << "Loading target " << targetToString(newTarget) << std::endl;
+	if (!mManager.load(newTarget, mLoadedInterface))
 		throw std::runtime_error("Error loading interface!");
-	mConfiguration = newConfig;
+	mTarget = newTarget;
+
+	mIsDebug = lopts.TechniqueType == "debug";
+	mIsTrace = lopts.CameraType == "list";
+
+	IG_LOG(L_DEBUG) << "Ray Generation Shader:" << std::endl
+					<< result.RayGenerationShader << std::endl;
+	IG_LOG(L_DEBUG) << "Miss Shader:" << std::endl
+					<< result.MissShader << std::endl;
+	for (const auto& shader : result.HitShaders) {
+		IG_LOG(L_DEBUG) << "Hit Shader:" << std::endl
+						<< shader << std::endl;
+	}
+
+	if (opts.DumpShader) {
+		dumpShader("rayGeneration.art", result.RayGenerationShader);
+		dumpShader("missShader.art", result.MissShader);
+		int counter = 0;
+		for (const auto& shader : result.HitShaders) {
+			dumpShader("hitShader" + std::to_string(counter++) + ".art", shader);
+		}
+	}
+
+	RayGenerationShader = std::move(result.RayGenerationShader);
+	MissShader			= std::move(result.MissShader);
+	HitShaders			= std::move(result.HitShaders);
 
 	// Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
@@ -148,7 +168,7 @@ void Runtime::step(const Camera& camera)
 {
 	IG_ASSERT(mInit, "Expected to be initialized!");
 
-	if (mLoadedInterface.Configuration & IG_C_CAMERA_LIST) {
+	if (mIsTrace) {
 		IG_LOG(L_ERROR) << "Trying to use step() in a trace driver!" << std::endl;
 		return;
 	}
@@ -162,14 +182,13 @@ void Runtime::step(const Camera& camera)
 		settings.up[i] = camera.Up(i);
 	for (int i = 0; i < 3; ++i)
 		settings.right[i] = camera.Right(i);
-	settings.width			 = camera.SensorWidth;
-	settings.height			 = camera.SensorHeight;
-	settings.tmin			 = camera.TMin;
-	settings.tmax			 = camera.TMax;
-	settings.rays			 = nullptr; // No artifical ray streams
-	settings.device			 = mDevice;
-	settings.max_path_length = mLoadedRenderSettings.MaxPathLength;
-	settings.debug_mode		 = (uint32)mDebugMode;
+	settings.width		= camera.SensorWidth;
+	settings.height		= camera.SensorHeight;
+	settings.tmin		= camera.TMin;
+	settings.tmax		= camera.TMax;
+	settings.rays		= nullptr; // No artifical ray streams
+	settings.device		= mDevice;
+	settings.debug_mode = (uint32)mDebugMode;
 
 	mLoadedInterface.RenderFunction(&settings, mIteration++);
 }
@@ -179,17 +198,16 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
 	if (!mInit)
 		return;
 
-	if (!(mLoadedInterface.Configuration & IG_C_CAMERA_LIST)) {
+	if (!mIsTrace) {
 		IG_LOG(L_ERROR) << "Trying to use trace() in a camera driver!" << std::endl;
 		return;
 	}
 
 	DriverRenderSettings settings;
-	settings.width			 = rays.size();
-	settings.height			 = 1;
-	settings.rays			 = rays.data();
-	settings.device			 = mDevice;
-	settings.max_path_length = mLoadedRenderSettings.MaxPathLength;
+	settings.width	= rays.size();
+	settings.height = 1;
+	settings.rays	= rays.data();
+	settings.device = mDevice;
 
 	mLoadedInterface.RenderFunction(&settings, mIteration++);
 
@@ -215,6 +233,22 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 	settings.database			= &mDatabase;
 	settings.framebuffer_width	= std::max(1u, framebuffer_width);
 	settings.framebuffer_height = std::max(1u, framebuffer_height);
+
+	IG_LOG(L_DEBUG) << "Init JIT compiling" << std::endl;
+	ig_init_jit(mManager.getPath(mTarget).generic_u8string());
+
+	IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
+	settings.ray_generation_shader = ig_compile_source(RayGenerationShader, "ig_ray_generation_shader");
+
+	IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
+	settings.miss_shader = ig_compile_source(MissShader, "ig_miss_shader");
+
+	IG_LOG(L_DEBUG) << "Compiling hit shaders" << std::endl;
+	for (size_t i = 0; i < HitShaders.size(); ++i) {
+		IG_LOG(L_DEBUG) << "Hit shader [" << i << "]" << std::endl;
+		settings.hit_shaders.push_back(ig_compile_source(HitShaders[i], "ig_hit_shader"));
+	}
+
 	mLoadedInterface.SetupFunction(&settings);
 	mInit = true;
 

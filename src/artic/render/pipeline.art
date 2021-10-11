@@ -1,0 +1,9 @@
+struct Pipeline {
+    on_generate: fn ( &mut i32, i32, i32, i32, i32, i32) -> i32,
+
+    //on_traverse_primary:   fn (Scene, &PrimaryStream, bool) -> (),
+    //on_traverse_secondary: fn (Scene, &SecondaryStream, bool) -> (),
+
+    on_miss_shade: fn (i32, i32) -> (),
+    on_hit_shade:  fn (i32, i32, i32) -> ()
+}

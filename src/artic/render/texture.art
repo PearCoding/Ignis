@@ -24,7 +24,6 @@ fn @make_repeat_border() -> BorderHandling {
 
 fn @make_mirror_border() -> BorderHandling {
     let mirror = @ |x: f32| { if ((x as i32) % 2) == 0 { x - math_builtins::floor(x) } else { 1 - (x - math_builtins::floor(x)) } };
-
     BorderHandling {
         horz = mirror,
         vert = mirror
@@ -61,48 +60,6 @@ fn @make_bilinear_filter() -> ImageFilter {
     }
 }
 
-fn @make_image_texture(border: BorderHandling, filter: ImageFilter, image: Image) -> Texture {
-    @ |uv| {
-        let u = border.horz(uv.x);
-        let v = border.vert(uv.y);
-        filter(image, make_vec2(u, v))
-    }
-}
-
-fn @load_image_texture(data: DeviceBuffer, stage: Stage1Accessor, border: BorderHandling, filter: ImageFilter) -> Texture {
-    let bufferID = data.load_i32(0);
-    let image    = load_image_from_buffer(bufferID, stage.buffers);
-    make_image_texture(border, filter, image)
-}
-
-fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color) -> Texture {
-    @ |uv| { 
-        let suv = vec2_mul(uv, scale);
-        let parity_x = ((suv.x as i32) % 2) == 0;
-        let parity_y = ((suv.y as i32) % 2) == 0;
-
-        if parity_x ^ parity_y { color0 } else { color1 }
-    }
-}
-
-fn @load_checkerboard_texture(data: DeviceBuffer, _stage: Stage1Accessor) -> Texture {
-    let e0      = data.load_vec4(0);
-    let e1      = data.load_vec4(4);
-    let color0  = make_color(e0.x, e0.y, e0.z);
-    let scale_x = e0.w;
-    let color1  = make_color(e1.x, e1.y, e1.z);
-    let scale_y = e1.w;
-    make_checkerboard_texture(make_vec2(scale_x, scale_y), color0, color1)
-}
-
-fn @make_black_texture() -> Texture {
-    @ |_uv| { black }
-}
-
-fn @make_invalid_texture() -> Texture {
-    @ |_uv| { pink }
-}
-
 fn @texture_dx(tex: Texture, point: Vec2) -> Color {
     let delta = 0.001:f32;
     //color_mulf(color_sub(tex(make_vec2(point.x + delta, point.y)), tex(make_vec2(point.x - delta, point.y))), 1/(2*delta))
@@ -113,23 +70,4 @@ fn @texture_dy(tex: Texture, point: Vec2) -> Color {
     let delta = 0.001:f32;
     //color_mulf(color_sub(tex(make_vec2(point.x, point.y + delta)), tex(make_vec2(point.x, point.y - delta))), 1/(2*delta))
     color_mulf(color_sub(tex(make_vec2(point.x, point.y + delta)), tex(make_vec2(point.x, point.y))), 1/delta)
-}
-
-type TextureTable = fn (i32) -> Texture;
-
-fn @make_texture_table(dtb: DynTable, acc: DeviceBufferAccessor, stage: Stage1Accessor) -> TextureTable {
-    @ |id| {
-        let entry = get_lookup_entry(id as u64, dtb, acc);
-        let data  = get_table_entry(entry.offset, dtb, acc);
-        match entry.type_id {
-            0x00 => load_image_texture(data, stage, make_clamp_border(), make_nearest_filter()),   // TEX_IMAGE
-            0x01 => load_image_texture(data, stage, make_clamp_border(), make_bilinear_filter()),  // TEX_IMAGE
-            0x02 => load_image_texture(data, stage, make_repeat_border(), make_nearest_filter()),  // TEX_IMAGE
-            0x03 => load_image_texture(data, stage, make_repeat_border(), make_bilinear_filter()), // TEX_IMAGE
-            0x04 => load_image_texture(data, stage, make_mirror_border(), make_nearest_filter()),  // TEX_IMAGE
-            0x05 => load_image_texture(data, stage, make_mirror_border(), make_bilinear_filter()), // TEX_IMAGE
-            0x10 => load_checkerboard_texture(data, stage),                                        // TEX_CHECKERBOARD
-               _ => make_invalid_texture()
-        }
-    } 
 }

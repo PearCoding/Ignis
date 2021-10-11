@@ -28,9 +28,9 @@ struct TriMesh {
 	void mergeFrom(const TriMesh& src);
 	void replaceID(uint32 m_idx);
 
-	void computeFaceAreaOnly(size_t first_index = 0, bool* hasBadAreas = nullptr);
-	void computeFaceNormals(size_t first_index = 0, bool* hasBadAreas = nullptr);
-	void computeVertexNormals(size_t first_index = 0);
+	void computeFaceAreaOnly(bool* hasBadAreas = nullptr);
+	void computeFaceNormals(bool* hasBadAreas = nullptr);
+	void computeVertexNormals();
 	void makeTexCoordsZero();
 	void setupFaceNormalsAsVertexNormals();
 

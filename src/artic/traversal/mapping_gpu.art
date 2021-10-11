@@ -204,7 +204,7 @@ fn @gpu_traverse_single_helper_prim( min_max: MinMax
 // Traverses a single ray at a time. 
 fn @gpu_traverse_single_helper( min_max: MinMax
                               , mut ray: Ray
-                              , scene: Scene
+                              , scene: SceneGeometry
                               , any_hit: bool
                               , root: i32
                               ) -> Hit {
@@ -301,7 +301,7 @@ fn @gpu_traverse_single_helper( min_max: MinMax
 
 fn @gpu_traverse_single( acc: Accelerator
                        , min_max: MinMax
-                       , scene: Scene
+                       , scene: SceneGeometry
                        , rays: fn (i32, i32) -> Ray
                        , hits: fn (i32, i32, Hit) -> ()
                        , packet_size: i32

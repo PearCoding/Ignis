@@ -1,42 +1,39 @@
 // Scene data
 struct SceneInfo {
-    num_entities: i32,
-    num_shapes:   i32,
-    num_lights:   i32,
-    scene_radius: f32
+    num_entities: i32
 }
 
 struct Scene {
     info:     SceneInfo,
     database: SceneAccessor,
+}
+
+struct SceneGeometry {
+    info:     SceneInfo,
+    database: TraceAccessor,
     bvh:      SceneBvh
 }
 
 // Rendering device
 struct Device {
-    trace:   fn (Scene, PathTracer, i32) -> (),
-    present: fn () -> (),
+    trace:         fn (SceneGeometry, Pipeline, i32) -> (),
+    generate_rays: fn (RayEmitter, &mut i32, i32, i32, i32, i32, i32, i32) -> i32, 
+    present:       fn () -> (),
 
-    // General formats
-    //load_image: fn (&[u8]) -> Image,
-    //load_cdf1d: fn (&[u8]) -> CDF1D,
-    //load_cdf2d: fn (&[u8]) -> CDF2D,
-    //load_klems: fn (&[u8]) -> KlemsModel,
-
-    load_scene_bvh:       fn () -> SceneBvh,
-    load_scene_database:  fn () -> SceneDatabase,
-    load_scene_info:      fn () -> SceneInfo,
-    load_buffer_table:    fn (DynTable) -> BufferTable,
-    load_texture_table:   fn (DynTable, Stage1Accessor) -> TextureTable,
-    load_entity_table:    fn (DynTable, Stage2Accessor) -> EntityTable,
-    load_shape_table:     fn (DynTable, Stage2Accessor) -> ShapeTable,
-    load_light_table:     fn (DynTable, Stage3Accessor) -> LightTable,
-    load_arealight_table: fn (DynTable, Stage3Accessor) -> LightTable,
-    load_shader_table:    fn (DynTable, Stage3Accessor) -> BsdfTable,
-    load_bvh_table:       fn (DynTable) -> BVHTable,
+    handle_miss_shader: fn (PathTracer, i32, i32, i32) -> (), 
+    handle_hit_shader:  fn (i32, Shader, Scene, PathTracer, i32, i32, i32) -> (),
+    
+    load_scene_bvh:      fn () -> SceneBvh,
+    load_scene_database: fn () -> SceneDatabase,
+    load_scene_info:     fn () -> SceneInfo,
+    load_entity_table:   fn (DynTable) -> EntityTable,
+    load_shape_table:    fn (DynTable) -> ShapeTable,
+    load_specific_shape: fn (i32, i32, i32, i32, i32, DynTable) -> Shape,
+    load_bvh_table:      fn (DynTable) -> BVHTable,
+    load_image:          fn (&[u8]) -> Image,
 
     load_rays: fn () -> &[StreamRay]
 }
 
-type Renderer = fn (Scene, Device, i32) -> ();
-type Shader   = fn (Ray, Hit, SurfaceElement) -> Bsdf;
+type BSDFShader = fn (Ray, Hit, SurfaceElement) -> Bsdf;
+type Shader = fn (Ray, Hit, SurfaceElement) -> Material;

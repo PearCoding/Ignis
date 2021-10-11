@@ -1,26 +1,17 @@
 #include "LoaderLight.h"
 #include "Loader.h"
+#include "LoaderTexture.h"
 #include "Logger.h"
+#include "ShaderUtils.h"
+#include "ShadingTree.h"
 #include "serialization/VectorSerializer.h"
 #include "skysun/SkyModel.h"
 #include "skysun/SunLocation.h"
 
 #include <chrono>
 
+// TODO: Make use of the ShadingTree!!
 namespace IG {
-
-enum LightType {
-	LIGHT_POINT				   = 0x0,
-	LIGHT_AREA				   = 0x1,
-	LIGHT_DIRECTIONAL		   = 0x2,
-	LIGHT_SUN				   = 0x3,
-	LIGHT_SKY				   = 0x4,
-	LIGHT_CIE_UNIFORM		   = 0x10,
-	LIGHT_CIE_CLOUDY		   = 0x11,
-	LIGHT_PEREZ				   = 0x12,
-	LIGHT_ENVIRONMENT		   = 0x20,
-	LIGHT_ENVIRONMENT_TEXTURED = 0x21
-};
 
 static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
 {
@@ -48,136 +39,169 @@ static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
 	}
 }
 
-static uint32 setup_sky(const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& res)
+static std::string setup_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light)
 {
-	IG_UNUSED(ctx);
-
 	auto ground	   = light->property("ground").getVector3(Vector3f(0.8f, 0.8f, 0.8f));
 	auto turbidity = light->property("turbidity").getNumber(3.0f);
 	auto ea		   = extractEA(light);
 
+	std::filesystem::create_directories("data/"); // Make sure this directory exists
+	std::string path = "data/skytex_" + ShaderUtils::escapeIdentifier(name) + ".exr";
 	SkyModel model(ground, ea, turbidity);
-
-	uint32 id  = res.Database.BufferTable.entryCount();
-	auto& data = res.Database.BufferTable.addLookup(0, 0, DefaultAlignment);
-
-	VectorSerializer serializer(data, false);
-	model.save(serializer);
-
-	return id;
+	model.save(path);
+	return path;
 }
 
-static void light_point(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
+static void light_point(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
-	IG_UNUSED(name);
-
 	auto pos	   = light->property("position").getVector3();
-	auto intensity = ctx.extractColor(light, "intensity");
+	auto intensity = ctx.extractColor(*light, "intensity");
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_POINT, 0, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	serializer.write(pos);
-	serializer.write((uint32)0); // PADDING
-	serializer.write(intensity);
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_point_light(" << ShaderUtils::inlineVector(pos)
+		   << ", " << ShaderUtils::inlineColor(intensity) << ");" << std::endl;
 }
 
-static void light_area(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
+static std::string inline_mat34(const Eigen::Matrix<float, 3, 4>& mat)
+{
+	std::stringstream stream;
+	stream << "make_mat3x4(";
+	for (size_t i = 0; i < 4; ++i) {
+		stream << "make_vec3(";
+		for (size_t j = 0; j < 3; ++j) {
+			stream << mat(j, i);
+			if (j < 2)
+				stream << ", ";
+		}
+		stream << ")";
+		if (i < 3)
+			stream << ", ";
+	}
+	stream << ")";
+	return stream.str();
+}
+
+static std::string inline_mat3(const Matrix3f& mat)
+{
+	std::stringstream stream;
+	stream << "make_mat3x3(";
+	for (size_t i = 0; i < 3; ++i) {
+		stream << "make_vec3(";
+		for (size_t j = 0; j < 3; ++j) {
+			stream << mat(j, i);
+			if (j < 2)
+				stream << ", ";
+		}
+		stream << ")";
+		if (i < 2)
+			stream << ", ";
+	}
+	stream << ")";
+	return stream.str();
+}
+
+static std::string inline_entity(const Entity& entity, uint32 shapeID)
+{
+	const Eigen::Matrix<float, 3, 4> localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);				// To Local
+	const Eigen::Matrix<float, 3, 4> globalMat = entity.Transform.matrix().block<3, 4>(0, 0);						// To Global
+	const Matrix3f normalMat				   = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
+
+	std::stringstream stream;
+	stream << "Entity{ local_mat = " << inline_mat34(localMat)
+		   << ", global_mat = " << inline_mat34(globalMat)
+		   << ", normal_mat = " << inline_mat3(normalMat)
+		   << ", shape_id = " << shapeID << " }";
+	return stream.str();
+}
+
+static void light_area(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
-	const std::string entity = light->property("entity").getString();
+	const std::string entityName = light->property("entity").getString();
+	const auto radiance			 = ctx.extractColor(*light, "radiance");
 
 	uint32 entity_id = 0;
-	if (!ctx.Environment.EntityIDs.count(entity))
-		IG_LOG(L_ERROR) << "No entity named '" << entity << "' exists for area light" << std::endl;
+	if (!ctx.Environment.EntityIDs.count(entityName))
+		IG_LOG(L_ERROR) << "No entity named '" << entityName << "' exists for area light" << std::endl;
 	else
-		entity_id = ctx.Environment.EntityIDs.at(entity);
+		entity_id = ctx.Environment.EntityIDs.at(entityName);
 
-	auto radiance = ctx.extractColor(light, "radiance");
-	auto& data	  = result.Database.LightTable.addLookup(LIGHT_AREA, 0, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	serializer.write((uint32)entity_id);
-	serializer.write(radiance);
+	const auto entity	= ctx.Environment.Entities[entity_id];
+	uint32 shape_id		= ctx.Environment.ShapeIDs.at(entity.Shape);
+	const auto shape	= ctx.Environment.Shapes[shape_id];
+	size_t shape_offset = ctx.Database->ShapeTable.lookups()[shape_id].Offset;
+
+	stream << "  let ae_" << ShaderUtils::escapeIdentifier(name) << " = make_shape_area_emitter(" << inline_entity(entity, shape_id)
+		   << ", device.load_specific_shape(" << shape.FaceCount << ", " << shape.VertexCount << ", " << shape.NormalCount << ", " << shape.TexCount << ", " << shape_offset << ", dtb.shapes));" << std::endl
+		   << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_area_light(ae_" << ShaderUtils::escapeIdentifier(name) << ", "
+		   << ShaderUtils::inlineColor(radiance) << ");" << std::endl;
 }
 
-static void light_directional(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
+static void light_directional(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
 	auto ea			= extractEA(light);
 	Vector3f dir	= ea.toDirection();
-	auto irradiance = ctx.extractColor(light, "irradiance");
+	auto irradiance = ctx.extractColor(*light, "irradiance");
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_DIRECTIONAL, 0, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	serializer.write(dir);
-	serializer.write((uint32)0); // PADDING
-	serializer.write(irradiance);
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_directional_light(" << ShaderUtils::inlineVector(dir)
+		   << ", " << ctx.Environment.SceneDiameter / 2
+		   << ", " << ShaderUtils::inlineColor(irradiance) << ");" << std::endl;
 }
 
-static void light_sun(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
+static void light_sun(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
-	IG_UNUSED(name);
-	IG_UNUSED(ctx);
-
 	auto ea		 = extractEA(light);
 	Vector3f dir = ea.toDirection();
 
 	auto power		= light->property("sun_scale").getNumber(1.0f);
 	auto sun_radius = light->property("sun_radius_scale").getNumber(1.0f);
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_SUN, 0, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	serializer.write(dir);
-	serializer.write(power);
-	serializer.write(sun_radius);
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_sun_light(" << ShaderUtils::inlineVector(dir)
+		   << ", " << ctx.Environment.SceneDiameter / 2
+		   << ", " << sun_radius
+		   << ", color_mulf(white, " << power << "));" << std::endl;
 }
 
-static void light_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
+static void light_sky(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+{
+	const std::string path = setup_sky(name, light);
+	const std::string id   = ShaderUtils::escapeIdentifier(name);
+
+	stream << "  let tex_" << id << "   = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image(\"" << path << "\"));" << std::endl
+		   << "  let light_" << id << " = make_environment_light_textured(" << ctx.Environment.SceneDiameter / 2
+		   << ", tex_" << id << ", 0, 0);" << std::endl;
+}
+
+static void light_cie_uniform(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
-	uint32 id = setup_sky(light, ctx, result);
-
-	auto& data = result.Database.LightTable.addLookup(LIGHT_SKY, 0, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	serializer.write(id);
-}
-
-static void light_sunsky(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
-{
-	light_sky(name + "_sky", light, ctx, result);
-	light_sun(name + "_sun", light, ctx, result);
-}
-
-static void light_cie_uniform(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
-{
-	IG_UNUSED(name);
-
-	auto zenith			  = ctx.extractColor(light, "zenith");
-	auto ground			  = ctx.extractColor(light, "ground");
+	auto zenith			  = ctx.extractColor(*light, "zenith");
+	auto ground			  = ctx.extractColor(*light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_CIE_UNIFORM, 0, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	serializer.write(zenith);
-	serializer.write(groundbrightness);
-	serializer.write(ground);
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_cie_sky_light(" << ctx.Environment.SceneDiameter / 2
+		   << ", " << ShaderUtils::inlineColor(zenith)
+		   << ", " << ShaderUtils::inlineColor(ground)
+		   << ", " << groundbrightness
+		   << ", false);" << std::endl;
 }
 
-static void light_cie_cloudy(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
+static void light_cie_cloudy(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
-	auto zenith			  = ctx.extractColor(light, "zenith");
-	auto ground			  = ctx.extractColor(light, "ground");
+	auto zenith			  = ctx.extractColor(*light, "zenith");
+	auto ground			  = ctx.extractColor(*light, "ground");
 	auto groundbrightness = light->property("ground_brightness").getNumber(0.2f);
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_CIE_CLOUDY, 0, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	serializer.write(zenith);
-	serializer.write(groundbrightness);
-	serializer.write(ground);
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_cie_sky_light(" << ctx.Environment.SceneDiameter / 2
+		   << ", " << ShaderUtils::inlineColor(zenith)
+		   << ", " << ShaderUtils::inlineColor(ground)
+		   << ", " << groundbrightness
+		   << ", false);" << std::endl;
 }
 
 static inline float perez_model(float zenithAngle, float sunAngle, float a, float b, float c, float d, float e)
@@ -190,7 +214,7 @@ static inline float perez_model(float zenithAngle, float sunAngle, float a, floa
 	return A * B;
 }
 
-static void light_perez(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
+static void light_perez(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
 
@@ -205,44 +229,51 @@ static void light_perez(const std::string& name, const std::shared_ptr<Parser::O
 
 	Vector3f color;
 	if (light->properties().count("luminance")) {
-		color = ctx.extractColor(light, "luminance");
+		color = ctx.extractColor(*light, "luminance");
 	} else {
-		auto zenith			= ctx.extractColor(light, "zenith");
+		auto zenith			= ctx.extractColor(*light, "zenith");
 		const float groundZ = perez_model(0, -dir(2), a, b, c, d, e); // TODO: Validate
 		color				= zenith * groundZ;
 	}
 
-	auto& data = result.Database.LightTable.addLookup(LIGHT_PEREZ, 0, DefaultAlignment);
-	VectorSerializer serializer(data, false);
-	serializer.write(dir);
-	serializer.write(a);
-	serializer.write(b);
-	serializer.write(c);
-	serializer.write(d);
-	serializer.write(e);
-	serializer.write(color);
+	stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_perez_light(" << ctx.Environment.SceneDiameter / 2
+		   << ", " << ShaderUtils::inlineVector(dir)
+		   << ", " << ShaderUtils::inlineColor(color)
+		   << ", " << a
+		   << ", " << b
+		   << ", " << c
+		   << ", " << d
+		   << ", " << e << ");" << std::endl;
 }
 
-static void light_env(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result)
+static void light_env(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
 	IG_UNUSED(name);
-	
-	bool isTexture = ctx.isTexture(light, "radiance");
 
-	const LightType type = isTexture ? LIGHT_ENVIRONMENT_TEXTURED : LIGHT_ENVIRONMENT;
-	auto& data			 = result.Database.LightTable.addLookup(type, 0, DefaultAlignment);
-	VectorSerializer serializer(data, false);
+	if (light->property("radiance").type() == Parser::PT_STRING) {
+		float theta_off = light->property("theta").getNumber(0.0f) * Deg2Rad;
+		float phi_off	= light->property("phi").getNumber(0.0f) * Deg2Rad;
 
-	if (isTexture) {
-		const uint32 id = ctx.extractTextureID(light, "radiance");
-		serializer.write(id);
+		const std::string tex_name = light->property("radiance").getString();
+		const auto tex			   = ctx.Scene.texture(tex_name);
+		if (!tex) {
+			IG_LOG(L_ERROR) << "Unknown texture '" << tex_name << "'" << std::endl;
+			return; //TODO
+		}
+
+		ShadingTree tree;
+		stream << LoaderTexture::generate(tex_name, *tex, ctx, tree)
+			   << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_environment_light_textured(" << ctx.Environment.SceneDiameter / 2
+			   << ", tex_" << ShaderUtils::escapeIdentifier(tex_name) << ", "
+			   << theta_off << ", " << phi_off << ");" << std::endl;
 	} else {
-		const Vector3f color = ctx.extractColor(light, "radiance");
-		serializer.write(color);
+		const Vector3f color = ctx.extractColor(*light, "radiance");
+		stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_environment_light(" << ctx.Environment.SceneDiameter / 2
+			   << ", " << ShaderUtils::inlineColor(color) << ");" << std::endl;
 	}
 }
 
-using LightLoader = void (*)(const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx, LoaderResult& result);
+using LightLoader = void (*)(std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
 static struct {
 	const char* Name;
 	LightLoader Loader;
@@ -252,8 +283,6 @@ static struct {
 	{ "directional", light_directional },
 	{ "direction", light_directional },
 	{ "sun", light_sun },
-	{ "sunsky", light_sunsky },
-	{ "skysun", light_sunsky },
 	{ "sky", light_sky },
 	{ "cie_uniform", light_cie_uniform },
 	{ "cieuniform", light_cie_uniform },
@@ -267,16 +296,25 @@ static struct {
 	{ "", nullptr }
 };
 
-bool LoaderLight::load(LoaderContext& ctx, LoaderResult& result)
+std::string LoaderLight::generate(const LoaderContext& ctx, bool skipArea)
 {
-	const auto start1 = std::chrono::high_resolution_clock::now();
+	// This will be used for now
+	auto skip = [&](const std::string& type) { return (skipArea && type == "area"); };
+
+	std::stringstream stream;
+
+	size_t counter = 0;
 	for (const auto& pair : ctx.Scene.lights()) {
 		const auto light = pair.second;
+
+		if (skip(light->pluginType()))
+			continue;
 
 		bool found = false;
 		for (size_t i = 0; _generators[i].Loader; ++i) {
 			if (_generators[i].Name == light->pluginType()) {
-				_generators[i].Loader(pair.first, light, ctx, result);
+				_generators[i].Loader(stream, pair.first, light, ctx);
+				++counter;
 				found = true;
 				break;
 			}
@@ -285,32 +323,57 @@ bool LoaderLight::load(LoaderContext& ctx, LoaderResult& result)
 			IG_LOG(L_ERROR) << "No light type '" << light->pluginType() << "' available" << std::endl;
 	}
 
-	IG_LOG(L_DEBUG) << "Storing lights took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
+	if (counter != 0)
+		stream << std::endl;
 
-	return true;
-}
+	stream << "  let num_lights = " << counter << ";" << std::endl
+		   << "  let lights = @|id:i32| {" << std::endl
+		   << "    match(id) {" << std::endl;
 
-bool LoaderLight::setup_area(LoaderContext& ctx)
-{
-	const auto start1 = std::chrono::high_resolution_clock::now();
-
-	uint32 counter = 0;
+	size_t counter2 = 0;
 	for (const auto& pair : ctx.Scene.lights()) {
 		const auto light = pair.second;
 
-		if (light->pluginType() == "area") {
-			const std::string entity		= light->property("entity").getString();
-			ctx.Environment.AreaIDs[entity] = counter;
-		}
+		if (skip(light->pluginType()))
+			continue;
 
-		++counter;
+		if (counter2 < counter - 1)
+			stream << "      " << counter2;
+		else
+			stream << "      _";
+
+		stream << " => light_" << ShaderUtils::escapeIdentifier(pair.first)
+			   << "," << std::endl;
+		++counter2;
 	}
 
-	if (ctx.Environment.AreaIDs.empty()) {
-		IG_LOG(L_DEBUG) << "Storing Area lights took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
+	if (counter == 0) {
+		if (!skipArea) // Don't trigger a warning if we skip areas
+			IG_LOG(L_WARNING) << "Scene does not contain lights" << std::endl;
+		stream << "    _ => make_null_light()" << std::endl;
 	}
 
-	return true;
+	stream << "    }" << std::endl
+		   << "  };" << std::endl;
+
+	return stream.str();
 }
 
+void LoaderLight::setupAreaLights(LoaderContext& ctx)
+{
+	for (const auto& pair : ctx.Scene.lights()) {
+		const auto light = pair.second;
+
+		if (light->pluginType() != "area")
+			continue;
+
+		const std::string entity			  = light->property("entity").getString();
+		ctx.Environment.AreaLightsMap[entity] = pair.first;
+	}
+}
+
+bool LoaderLight::hasAreaLights(const LoaderContext& ctx)
+{
+	return !ctx.Environment.AreaLightsMap.empty();
+}
 } // namespace IG
