@@ -842,7 +842,7 @@ bool handleInput(uint32_t& iter, bool& run, Camera& cam)
 
 DebugMode currentDebugMode() { return sCurrentDebugMode; }
 
-static void handle_imgui(uint32_t iter)
+static void handle_imgui(uint32_t iter, uint32_t samplesPerLaunch)
 {
 	constexpr size_t UI_W = 300;
 	constexpr size_t UI_H = 440;
@@ -858,7 +858,7 @@ static void handle_imgui(uint32_t iter)
 	ImGui::Begin("Control");
 	if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::Text("Iter %i", iter);
-		ImGui::Text("SPP  %i", iter * 4);
+		ImGui::Text("SPP  %i", iter * samplesPerLaunch);
 		ImGui::Text("Cursor  (%f, %f, %f)", rgb.r, rgb.g, rgb.b);
 		ImGui::Text("Max Lum %f", sLastLum.Max.load());
 		ImGui::Text("Min Lum %f", sLastLum.Min.load());
@@ -996,7 +996,7 @@ static void handle_help()
 	ImGui::End();
 }
 
-void update(uint32_t iter)
+void update(uint32_t iter, uint32_t samplesPerLaunch)
 {
 	update_texture(sBuffer.data(), sTexture, sWidth, sHeight, iter);
 	switch (sScreenshotRequest) {
@@ -1017,7 +1017,7 @@ void update(uint32_t iter)
 	if (sShowUI || sShowHelp) {
 		ImGui::NewFrame();
 		if (sShowUI)
-			handle_imgui(iter);
+			handle_imgui(iter, samplesPerLaunch);
 		if (sShowHelp)
 			handle_help();
 		ImGui::Render();

@@ -8,8 +8,7 @@
         "transform": { "position": [0, 0, 0] }
     },
     "film": {
-        "size": [1920, 1080],
-        "spp": 4
+        "size": [1920, 1080]
     },
     "bsdfs":[
         {"type":"diffuse", "name":"BunnyMaterial", "albedo":[1,0,0]},

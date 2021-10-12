@@ -16,12 +16,13 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 	const auto start1 = std::chrono::high_resolution_clock::now();
 
 	LoaderContext ctx;
-	ctx.FilePath	  = opts.FilePath;
-	ctx.Target		  = opts.Target;
-	ctx.EnablePadding = doesTargetRequirePadding(ctx.Target);
-	ctx.Scene		  = opts.Scene;
-	ctx.CameraType	  = opts.CameraType;
-	ctx.TechniqueType = opts.TechniqueType;
+	ctx.FilePath		 = opts.FilePath;
+	ctx.Target			 = opts.Target;
+	ctx.EnablePadding	 = doesTargetRequirePadding(ctx.Target);
+	ctx.Scene			 = opts.Scene;
+	ctx.CameraType		 = opts.CameraType;
+	ctx.TechniqueType	 = opts.TechniqueType;
+	ctx.SamplesPerLaunch = opts.SamplesPerLaunch;
 
 	// Load content
 	if (!LoaderShape::load(ctx, result))

@@ -13,8 +13,6 @@
 
 #include <optional>
 
-constexpr int SPP = 4; // Render SPP is always 4!
-
 using namespace IG;
 
 static inline void check_arg(int argc, char** argv, int arg, int n)
@@ -65,7 +63,6 @@ static inline void usage()
 		<< "           --gpu                  Use autodetected GPU target" << std::endl
 		<< "           --debug                Same as --technique debug" << std::endl
 		<< "           --spp       spp        Enables benchmarking mode and sets the number of iterations based on the given spp" << std::endl
-		<< "           --bench     iterations Enables benchmarking mode and sets the number of iterations" << std::endl
 		<< "   -o      --output    image.exr  Writes the output image to a file" << std::endl
 		<< "           --dump-shader          Dump produced shaders to files in the current working directory" << std::endl
 		<< "Available targets:" << std::endl
@@ -162,11 +159,7 @@ int main(int argc, char** argv)
 				opts.DesiredTarget = Target::NVVM; // TODO: Select based on environment
 			} else if (!strcmp(argv[i], "--spp")) {
 				check_arg(argc, argv, i, 1);
-				bench_iter = (size_t)std::ceil(strtoul(argv[++i], nullptr, 10) / (float)SPP);
-			} else if (!strcmp(argv[i], "--bench")) {
-				check_arg(argc, argv, i, 1);
-				++i;
-				bench_iter = strtoul(argv[i], nullptr, 10);
+				bench_iter = (size_t)strtoul(argv[++i], nullptr, 10);
 			} else if (!strcmp(argv[i], "-o")) {
 				check_arg(argc, argv, i, 1);
 				++i;
@@ -249,6 +242,9 @@ int main(int argc, char** argv)
 				  fov.value_or(def.FOV), (float)film_width / (float)film_height,
 				  clip(0), clip(1));
 	runtime->setup(film_width, film_height);
+
+	const size_t SPP = runtime->samplesPerLaunch();
+	bench_iter		 = static_cast<size_t>(std::ceil(bench_iter / SPP));
 
 #ifdef WITH_UI
 	IG_UNUSED(prettyConsole);
@@ -333,7 +329,7 @@ int main(int argc, char** argv)
 		}
 
 #ifdef WITH_UI
-		UI::update(iter);
+		UI::update(iter, SPP);
 #endif
 	}
 

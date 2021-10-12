@@ -9,7 +9,7 @@ bool init(int width, int height, const float* pixels, bool showDebug);
 void close();
 void setTitle(const char* str);
 bool handleInput(uint32_t& iter, bool& run, Camera& cam);
-void update(uint32_t iter);
+void update(uint32_t iter, uint32_t samplesPerLaunch);
 DebugMode currentDebugMode();
 } // namespace UI
 } // namespace IG

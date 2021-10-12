@@ -40,16 +40,16 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
 			   << std::endl;
 	}
 
+	stream << "  let spp = " << ctx.SamplesPerLaunch << " : i32;" << std::endl;
 	if (ctx.CameraType == "list") {
 		stream << "  let emitter = make_list_emitter(device.load_rays(), iter);" << std::endl;
 	} else {
 		IG_ASSERT(!gen.empty(), "Generator function can not be empty!");
-		stream << "  let emitter = make_camera_emitter(camera, iter, make_uniform_pixel_sampler()/*make_mjitt_pixel_sampler(4,4)*/);" << std::endl;
+		stream << "  let emitter = make_camera_emitter(camera, iter, spp, make_uniform_pixel_sampler()/*make_mjitt_pixel_sampler(4,4)*/);" << std::endl;
 	}
 
-	stream << "  let spp = 4 : i32;" << std::endl; // TODO ?
-	stream << "  device.generate_rays(emitter, id, size, xmin, ymin, xmax, ymax, spp)" << std::endl;
-	stream << "}" << std::endl;
+	stream << "  device.generate_rays(emitter, id, size, xmin, ymin, xmax, ymax, spp)" << std::endl
+		   << "}" << std::endl;
 
 	return stream.str();
 }

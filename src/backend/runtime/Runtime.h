@@ -56,6 +56,7 @@ public:
 	inline bool isTrace() const { return mIsTrace; }
 
 	inline Target target() const { return mTarget; }
+	inline size_t samplesPerLaunch() const { return mLoadedInterface.SPP; }
 
 private:
 	void shutdown();

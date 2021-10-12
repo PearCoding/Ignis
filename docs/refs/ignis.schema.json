@@ -67,8 +67,7 @@
             "type": "object",
             "required": ["size"],
             "properties": { 
-                "size": { "$ref":"#/definitions/Size" },
-                "spp": { "type":"integer", "minimum":0 }
+                "size": { "$ref":"#/definitions/Size" }
             },
             "additionalProperties": true
         },

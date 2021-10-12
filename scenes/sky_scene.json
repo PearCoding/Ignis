@@ -11,9 +11,7 @@
 		"transform": [ -1,0,0,0, 0,1,0,0, 0,0,-1,4, 0,0,0,1 ]
 	},
 	"film": {
-		"type": "hdr",
-		"size": [1000, 1000],
-        "spp": 4
+		"size": [1000, 1000]
 	},
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-GrayWall", "reflectance":[1,1,1]},

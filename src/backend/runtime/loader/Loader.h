@@ -13,6 +13,7 @@ struct LoaderOptions {
 	IG::Target Target;
 	std::string CameraType;
 	std::string TechniqueType;
+	size_t SamplesPerLaunch;
 };
 
 struct LoaderResult {

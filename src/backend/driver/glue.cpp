@@ -411,7 +411,7 @@ struct Interface {
 		if (it != images.end())
 			return it->second;
 
-			IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
+		IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
 		try {
 			IG::ImageRgba32 img = IG::ImageRgba32::load(filename);
 			IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
@@ -572,7 +572,11 @@ IG_EXPORT DriverInterface ig_get_interface()
 	interface.MinorVersion = IG_VERSION_MINOR;
 
 	// Expose SPP
+#if defined(DEVICE_NVVM) || defined(DEVICE_AMD)
+	interface.SPP = 8;
+#else
 	interface.SPP = 4;
+#endif
 
 	interface.Target = IG::Target::INVALID;
 // Expose Target
@@ -590,12 +594,8 @@ IG_EXPORT DriverInterface ig_get_interface()
 	interface.Target = IG::Target::ASIMD;
 #elif defined(DEVICE_NVVM)
 	interface.Target = IG::Target::NVVM;
-#elif defined(DEVICE_NVVM_MEGA)
-	interface.Target = IG::Target::NVVM_MEGA;
 #elif defined(DEVICE_AMD)
 	interface.Target = IG::Target::AMDGPU;
-#elif defined(DEVICE_AMD_MEGA)
-	interface.Target = IG::Target::AMD_MEGA;
 #else
 #error No device selected!
 #endif

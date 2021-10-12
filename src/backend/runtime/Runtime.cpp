@@ -91,6 +91,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	lopts.Target   = opts.DesiredTarget;
 
 	// Parse scene file
+	IG_LOG(L_DEBUG) << "Parsing scene"<< std::endl;
 	const auto startParser = std::chrono::high_resolution_clock::now();
 	Parser::SceneParser parser;
 	bool ok		= false;
@@ -115,17 +116,21 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 						  << targetToString(lopts.Target) << " to "
 						  << targetToString(newTarget) << std::endl;
 	}
-	lopts.Target = newTarget;
-
-	LoaderResult result;
-	if (!Loader::load(lopts, result))
-		throw std::runtime_error("Could not load scene!");
-	mDatabase = std::move(result.Database);
+	mTarget = newTarget;
 
 	IG_LOG(L_INFO) << "Loading target " << targetToString(newTarget) << std::endl;
 	if (!mManager.load(newTarget, mLoadedInterface))
 		throw std::runtime_error("Error loading interface!");
-	mTarget = newTarget;
+
+	lopts.Target = mTarget;
+	lopts.SamplesPerLaunch = mLoadedInterface.SPP;
+	IG_LOG(L_DEBUG) << "Samples per launch = " << mLoadedInterface.SPP << std::endl;
+
+	IG_LOG(L_DEBUG) << "Loading scene"<< std::endl;
+	LoaderResult result;
+	if (!Loader::load(lopts, result))
+		throw std::runtime_error("Could not load scene!");
+	mDatabase = std::move(result.Database);
 
 	mIsDebug = lopts.TechniqueType == "debug";
 	mIsTrace = lopts.CameraType == "list";

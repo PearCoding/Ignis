@@ -26,7 +26,7 @@ std::string MissShader::setup(LoaderContext& ctx)
 	stream << LoaderTechnique::generate(ctx) << std::endl
 		   << std::endl;
 
-	stream << "  let spp = 4 : i32;" << std::endl // TODO ?
+	stream << "  let spp = " << ctx.SamplesPerLaunch << " : i32;" << std::endl
 		   << "  device.handle_miss_shader(technique, first, last, spp)" << std::endl
 		   << "}" << std::endl;
 

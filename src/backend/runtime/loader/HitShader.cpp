@@ -62,7 +62,7 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx)
 	stream << LoaderTechnique::generate(ctx) << std::endl
 		   << std::endl;
 
-	stream << "  let spp = 4 : i32;" << std::endl // TODO ?
+	stream << "  let spp = " << ctx.SamplesPerLaunch << " : i32;" << std::endl
 		   << "  device.handle_hit_shader(entity_id, shader, scene, technique, first, last, spp);" << std::endl
 		   << "}" << std::endl;
 
