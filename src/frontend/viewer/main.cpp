@@ -305,6 +305,7 @@ int main(int argc, char** argv)
 
 				std::ostringstream os;
 				os << "Ignis [" << frames_sec << " FPS, "
+				   << frames_sec * SPP << " SPS, "
 				   << iter * SPP << " "
 				   << "sample" << (iter * SPP > 1 ? "s" : "") << "]";
 				UI::setTitle(os.str().c_str());

@@ -46,9 +46,7 @@ fn ig_render(settings: &Settings) -> () {
         }
     };
 
-#if DEVICE_NVVM
-    let spp = 8 : i32;
-#elif DEVICE_AMDGPU
+#if DEVICE_NVVM || DEVICE_AMDGPU
     let spp = 8 : i32;
 #else
     let spp = 4 : i32;
