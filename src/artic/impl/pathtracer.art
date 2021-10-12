@@ -1,3 +1,11 @@
+fn @pick_light(rnd: &mut RndState, num_lights: i32) {
+    if ?num_lights && num_lights == 1 {
+        0
+    } else {
+        (randi(rnd) & 0x7FFFFFFF) % num_lights
+    }
+}
+
 fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -> PathTracer {
     let offset : f32  = 0.001;
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
@@ -15,7 +23,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
 
         let rnd = &mut state.rnd;
         // Note: randi() returns random integers, but we only want positive integers here
-        let light_id      = (randi(rnd) & 0x7FFFFFFF) % num_lights;
+        let light_id      = pick_light(rnd, num_lights);
         let light         = @lights(light_id);
         let sample_direct = light.sample_direct;
         let light_sample  = @sample_direct(rnd, surf);
