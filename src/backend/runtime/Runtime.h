@@ -15,6 +15,7 @@ struct RuntimeOptions {
 	bool AcquireStats	 = false;
 	Target DesiredTarget = Target::INVALID;
 	uint32 Device		 = 0;
+	uint32 SPI			 = 0; // Detect automatically
 	std::string OverrideTechnique;
 	std::string OverrideCamera;
 };
@@ -60,7 +61,7 @@ public:
 	inline bool isTrace() const { return mIsTrace; }
 
 	inline Target target() const { return mTarget; }
-	inline size_t samplesPerLaunch() const { return mLoadedInterface.SPP; }
+	inline size_t samplesPerIteration() const { return mSamplesPerIteration; }
 
 private:
 	void shutdown();
@@ -73,6 +74,7 @@ private:
 	DriverManager mManager;
 
 	size_t mDevice;
+	size_t mSamplesPerIteration;
 	uint32 mIteration;
 	Target mTarget;
 

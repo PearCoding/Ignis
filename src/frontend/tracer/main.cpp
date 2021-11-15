@@ -201,7 +201,7 @@ int main(int argc, char** argv)
 
 	runtime->setup(rays.size(), 1);
 
-	const size_t SPP = runtime->samplesPerLaunch();
+	const size_t SPP = runtime->samplesPerIteration();
 	sample_count	 = static_cast<size_t>(std::ceil(sample_count / SPP));
 
 	std::vector<float> accum_data;

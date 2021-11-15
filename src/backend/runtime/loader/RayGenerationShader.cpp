@@ -40,7 +40,7 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
 			   << std::endl;
 	}
 
-	stream << "  let spp = " << ctx.SamplesPerLaunch << " : i32;" << std::endl;
+	stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
 	if (ctx.CameraType == "list") {
 		stream << "  let emitter = make_list_emitter(device.load_rays(), iter);" << std::endl;
 	} else {

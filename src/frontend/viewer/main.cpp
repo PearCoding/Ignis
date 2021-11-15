@@ -95,7 +95,7 @@ int main(int argc, char** argv)
 
 	std::string in_file;
 	std::string out_file;
-	size_t bench_iter = 0;
+	size_t desired_spp = 0;
 	std::optional<int> a_film_width;
 	std::optional<int> a_film_height;
 	std::optional<Vector3f> eye;
@@ -172,7 +172,10 @@ int main(int argc, char** argv)
 				opts.DesiredTarget = Target::NVVM; // TODO: Select based on environment
 			} else if (!strcmp(argv[i], "--spp")) {
 				check_arg(argc, argv, i, 1);
-				bench_iter = (size_t)strtoul(argv[++i], nullptr, 10);
+				desired_spp = (size_t)strtoul(argv[++i], nullptr, 10);
+			} else if (!strcmp(argv[i], "--spi")) {
+				check_arg(argc, argv, i, 1);
+				opts.SPI = (size_t)strtoul(argv[++i], nullptr, 10);
 			} else if (!strcmp(argv[i], "-o")) {
 				check_arg(argc, argv, i, 1);
 				++i;
@@ -234,7 +237,7 @@ int main(int argc, char** argv)
 	}
 
 #ifndef WITH_UI
-	if (bench_iter <= 0) {
+	if (desired_spp <= 0) {
 		IG_LOG(L_ERROR) << "No valid spp count given" << std::endl;
 		return EXIT_FAILURE;
 	}
@@ -267,8 +270,8 @@ int main(int argc, char** argv)
 				  clip(0), clip(1));
 	runtime->setup(film_width, film_height);
 
-	const size_t SPI = runtime->samplesPerLaunch();
-	bench_iter		 = static_cast<size_t>(std::ceil(bench_iter / SPI));
+	const size_t SPI		  = runtime->samplesPerIteration();
+	const size_t desired_iter = static_cast<size_t>(std::ceil(desired_spp / SPI));
 
 #ifdef WITH_UI
 	IG_UNUSED(prettyConsole);
@@ -279,7 +282,7 @@ int main(int argc, char** argv)
 	DebugMode currentDebugMode = UI::currentDebugMode();
 	runtime->setDebugMode(currentDebugMode);
 #else
-	StatusObserver observer(prettyConsole, 2, bench_iter * SPI);
+	StatusObserver observer(prettyConsole, 2, desired_iter * SPI);
 	observer.begin();
 #endif
 
@@ -329,9 +332,9 @@ int main(int argc, char** argv)
 			iter++;
 			auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
-			if (bench_iter != 0) {
+			if (desired_iter != 0) {
 				samples_sec.emplace_back(1000.0 * double(SPI * film_width * film_height) / double(elapsed_ms));
-				if (samples_sec.size() == bench_iter)
+				if (samples_sec.size() == desired_iter)
 					break;
 			}
 
@@ -413,7 +416,7 @@ int main(int argc, char** argv)
 
 	runtime.reset();
 
-	if (bench_iter != 0) {
+	if (desired_iter != 0) {
 		auto inv = 1.0e-6;
 		std::sort(samples_sec.begin(), samples_sec.end());
 		IG_LOG(L_INFO) << "# " << samples_sec.front() * inv

@@ -505,6 +505,7 @@ static Settings convert_settings(const DriverRenderSettings* settings)
 {
 	Settings renderSettings;
 	renderSettings.device  = settings->device;
+	renderSettings.spi	   = settings->spi;
 	renderSettings.width   = settings->width;
 	renderSettings.height  = settings->height;
 	renderSettings.eye.x   = settings->eye[0];
@@ -548,7 +549,7 @@ void glue_setup(const DriverSetupSettings* settings)
 {
 	sInterface = std::make_unique<Interface>(settings->framebuffer_width, settings->framebuffer_height, settings->database,
 											 settings->ray_generation_shader, settings->miss_shader, settings->hit_shaders,
-											 settings->acquireStats);
+											 settings->acquire_stats);
 }
 
 void glue_shutdown()
@@ -614,13 +615,6 @@ IG_EXPORT DriverInterface ig_get_interface()
 	DriverInterface interface;
 	interface.MajorVersion = IG_VERSION_MAJOR;
 	interface.MinorVersion = IG_VERSION_MINOR;
-
-	// Expose SPP
-#if defined(DEVICE_NVVM) || defined(DEVICE_AMD)
-	interface.SPP = 8;
-#else
-	interface.SPP	 = 4;
-#endif
 
 	interface.Target = IG::Target::INVALID;
 // Expose Target

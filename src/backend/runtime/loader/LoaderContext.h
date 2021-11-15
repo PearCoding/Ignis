@@ -32,7 +32,7 @@ struct LoaderContext {
 	std::filesystem::path FilePath;
 	IG::Target Target;
 	bool EnablePadding;
-	size_t SamplesPerLaunch;
+	size_t SamplesPerIteration;
 	std::unordered_map<std::string, uint32> Images; // Image to Buffer
 
 	std::string CameraType;

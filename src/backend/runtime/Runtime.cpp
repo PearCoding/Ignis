@@ -69,6 +69,14 @@ static inline void setup_camera(RuntimeRenderSettings& settings, LoaderOptions& 
 		std::swap(settings.TMin, settings.TMax);
 }
 
+static inline size_t recommendSPI(Target target)
+{
+	if (isCPU(target))
+		return 2;
+	else
+		return 8;
+}
+
 static inline void dumpShader(const std::string& filename, const std::string& shader)
 {
 	std::ofstream stream(filename);
@@ -123,9 +131,14 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	if (!mManager.load(newTarget, mLoadedInterface))
 		throw std::runtime_error("Error loading interface!");
 
-	lopts.Target		   = mTarget;
-	lopts.SamplesPerLaunch = mLoadedInterface.SPP;
-	IG_LOG(L_DEBUG) << "Samples per launch = " << mLoadedInterface.SPP << std::endl;
+	if (opts.SPI == 0)
+		mSamplesPerIteration = recommendSPI(mTarget);
+	else
+		mSamplesPerIteration = opts.SPI;
+
+	lopts.Target			  = mTarget;
+	lopts.SamplesPerIteration = mSamplesPerIteration;
+	IG_LOG(L_DEBUG) << "Samples per iteration = " << mSamplesPerIteration << std::endl;
 
 	IG_LOG(L_DEBUG) << "Loading scene" << std::endl;
 	LoaderResult result;
@@ -194,6 +207,7 @@ void Runtime::step(const Camera& camera)
 	settings.tmax		= camera.TMax;
 	settings.rays		= nullptr; // No artifical ray streams
 	settings.device		= mDevice;
+	settings.spi		= mSamplesPerIteration;
 	settings.debug_mode = (uint32)mDebugMode;
 
 	mLoadedInterface.RenderFunction(&settings, mIteration++);
@@ -244,7 +258,7 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 	settings.database			= &mDatabase;
 	settings.framebuffer_width	= std::max(1u, framebuffer_width);
 	settings.framebuffer_height = std::max(1u, framebuffer_height);
-	settings.acquireStats		= mAcquireStats;
+	settings.acquire_stats		= mAcquireStats;
 
 	IG_LOG(L_DEBUG) << "Init JIT compiling" << std::endl;
 	ig_init_jit(mManager.getPath(mTarget).generic_u8string());

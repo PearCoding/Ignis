@@ -9,5 +9,6 @@ struct Settings {
     width:        f32,
     height:       f32,
     device:       i32,
+    spi:          i32,
     debug_mode:   i32
 }

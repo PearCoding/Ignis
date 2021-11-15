@@ -17,7 +17,7 @@ struct DriverSetupSettings {
 	void* ray_generation_shader;
 	void* miss_shader;
 	std::vector<void*> hit_shaders;
-	bool acquireStats = false;
+	bool acquire_stats = false;
 };
 
 struct DriverRenderSettings {
@@ -31,6 +31,7 @@ struct DriverRenderSettings {
 	float tmax;
 	const IG::Ray* rays; // If non-null, width contains the number of rays and height is set to 1
 	IG::uint32 device;
+	IG::uint32 spi;
 	IG::uint32 max_path_length;
 	IG::uint32 debug_mode; // Only useful for debug integrator
 };
@@ -45,7 +46,6 @@ using DriverGetStatisticsFunction	 = const IG::Statistics* (*)();
 struct DriverInterface {
 	IG::uint32 MajorVersion;
 	IG::uint32 MinorVersion;
-	IG::uint32 SPP;
 	const char* Name;
 	IG::Target Target;
 	DriverSetupFunction SetupFunction;

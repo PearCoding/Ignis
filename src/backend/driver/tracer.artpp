@@ -1,7 +1,5 @@
 #[export]
 fn ig_render(settings: &Settings) -> () {
-    maybe_unused(settings);
-
 #if DEVICE_AVX
     let device = make_avx_device();
 #elif DEVICE_AVX2
@@ -46,12 +44,6 @@ fn ig_render(settings: &Settings) -> () {
         }
     };
 
-#if DEVICE_NVVM || DEVICE_AMDGPU
-    let spp = 8 : i32;
-#else
-    let spp = 4 : i32;
-#endif
-
-    device.trace(scene, pipeline, spp);
+    device.trace(scene, pipeline, settings.spi);
     device.present();
 }

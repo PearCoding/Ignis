@@ -1,4 +1,4 @@
-fn @make_camera_emitter(camera: Camera, iter: i32, samplesPerLaunch: i32, sampler: PixelSampler) -> RayEmitter {
+fn @make_camera_emitter(camera: Camera, iter: i32, samplesPerIteration: i32, sampler: PixelSampler) -> RayEmitter {
     @ |sample, x, y, width, height| {
         let mut hash = fnv_init();
         hash = fnv_hash(hash, sample as u32);
@@ -6,7 +6,7 @@ fn @make_camera_emitter(camera: Camera, iter: i32, samplesPerLaunch: i32, sample
         hash = fnv_hash(hash, x as u32);
         hash = fnv_hash(hash, y as u32);
         let mut rnd = hash /*as RndState*/;
-        let (rx, ry) = sampler(&mut rnd, iter * samplesPerLaunch + sample);
+        let (rx, ry) = sampler(&mut rnd, iter * samplesPerIteration + sample);
         let kx = 2 * (x as f32 + rx) / (width as f32) - 1;
         let ky = 1 - 2 * (y as f32 + ry) / (height as f32);
         let ray   = camera.generate_ray(kx, ky);
