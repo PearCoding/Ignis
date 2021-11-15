@@ -6,6 +6,7 @@
 namespace IG {
 struct SceneDatabase;
 struct Ray;
+class Statistics;
 } // namespace IG
 
 // Not in namespace IG
@@ -16,6 +17,7 @@ struct DriverSetupSettings {
 	void* ray_generation_shader;
 	void* miss_shader;
 	std::vector<void*> hit_shaders;
+	bool acquireStats = false;
 };
 
 struct DriverRenderSettings {
@@ -38,6 +40,7 @@ using DriverShutdownFunction		 = void (*)();
 using DriverSetupFunction			 = void (*)(const DriverSetupSettings*);
 using DriverGetFramebufferFunction	 = const float* (*)(int);
 using DriverClearFramebufferFunction = void (*)(int);
+using DriverGetStatisticsFunction	 = const IG::Statistics* (*)();
 
 struct DriverInterface {
 	IG::uint32 MajorVersion;
@@ -50,4 +53,5 @@ struct DriverInterface {
 	DriverRenderFunction RenderFunction;
 	DriverGetFramebufferFunction GetFramebufferFunction;
 	DriverClearFramebufferFunction ClearFramebufferFunction;
+	DriverGetStatisticsFunction GetStatisticsFunction;
 };

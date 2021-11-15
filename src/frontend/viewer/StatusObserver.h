@@ -75,6 +75,9 @@ public:
 				} else {
 					std::cout << REMOVE_LAST_LINE << RESTORE_CURSOR;
 				}
+
+				if (mTargetSamples != 0)
+					drawProgressbar(currentSamples / double(mTargetSamples));
 			}
 			if (mTargetSamples != 0) {
 				const double percentage = 100 * (currentSamples / double(mTargetSamples));
@@ -100,6 +103,19 @@ public:
 	}
 
 private:
+	inline void drawProgressbar(float perc)
+	{
+		constexpr size_t LENGTH = 20;
+		size_t full_count		= (size_t)std::floor(LENGTH * perc);
+
+		std::cout << "\u2563";
+		for (size_t i = 0; i < full_count; ++i)
+			std::cout << "\u2588";
+		for (size_t i = full_count; i < LENGTH; ++i)
+			std::cout << "\u2591";
+		std::cout << "\u2560 ";
+	}
+
 	const bool mBeautify;
 	const uint64 mUpdateCycleSeconds;
 	const uint64 mTargetSamples;

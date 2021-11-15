@@ -1,7 +1,7 @@
 {
   "technique": {
     "type": "path",
-    "max_depth": 6
+    "max_depth": 2
   },
   "camera": {
     "type": "perspective",
@@ -13,7 +13,7 @@
     "fov_axis": "smaller"
   },
   "film": {
-    "size": [256, 256]
+    "size": [768, 768]
   },
   "textures": [],
   "bsdfs": [

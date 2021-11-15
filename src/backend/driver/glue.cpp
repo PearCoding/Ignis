@@ -1,6 +1,7 @@
 #include "Image.h"
 #include "Logger.h"
 #include "Runtime.h"
+#include "Statistics.h"
 #include "config/Version.h"
 #include "driver/Interface.h"
 #include "table/SceneDatabase.h"
@@ -149,6 +150,7 @@ struct Interface {
 	struct CPUData {
 		anydsl::Array<float> cpu_primary;
 		anydsl::Array<float> cpu_secondary;
+		IG::Statistics stats;
 	};
 	std::mutex thread_mutex;
 	std::unordered_map<std::thread::id, std::unique_ptr<CPUData>> thread_data;
@@ -167,10 +169,14 @@ struct Interface {
 	void* miss_shader;
 	std::vector<void*> hit_shaders;
 
+	IG::Statistics main_stats;
+	bool acquire_stats;
+
 	inline Interface(size_t width, size_t height, const IG::SceneDatabase* database,
 					 void* ray_generation_shader,
 					 void* miss_shader,
-					 const std::vector<void*>& hit_shaders)
+					 const std::vector<void*>& hit_shaders,
+					 bool acquire_stats)
 		: host_pixels(width * height * 3)
 		, database(database)
 		, film_width(width)
@@ -178,6 +184,7 @@ struct Interface {
 		, ray_generation_shader(ray_generation_shader)
 		, miss_shader(miss_shader)
 		, hit_shaders(hit_shaders)
+		, acquire_stats(acquire_stats)
 	{
 	}
 
@@ -424,31 +431,47 @@ struct Interface {
 
 	inline int run_ray_generation_shader(int* id, int size, int xmin, int ymin, int xmax, int ymax)
 	{
+		if (acquire_stats)
+			get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::RayGeneration, {});
+
 		using Callback = decltype(ig_ray_generation_shader);
 		IG_ASSERT(ray_generation_shader != nullptr, "Expected ray generation shader to be valid");
 		auto callback = (Callback*)ray_generation_shader;
 		const int ret = callback(&current_settings, current_iteration, id, size, xmin, ymin, xmax, ymax);
+
+		if (acquire_stats)
+			get_thread_data()->stats.endShaderLaunch(IG::ShaderType::RayGeneration, {});
 		return ret;
 	}
 
 	inline void run_miss_shader(int first, int last)
 	{
-		//std::cout << "MISS [" << first << ", " << last << "]" << std::endl;
+		if (acquire_stats)
+			get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::Miss, {});
+
 		using Callback = decltype(ig_miss_shader);
 		IG_ASSERT(miss_shader != nullptr, "Expected miss shader to be valid");
 		auto callback = (Callback*)miss_shader;
 		callback(&current_settings, first, last);
+
+		if (acquire_stats)
+			get_thread_data()->stats.endShaderLaunch(IG::ShaderType::Miss, {});
 	}
 
 	inline void run_hit_shader(int entity_id, int first, int last)
 	{
-		//std::cout << "HIT " << entity_id << " [" << first << ", " << last << "]" << std::endl;
+		if (acquire_stats)
+			get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::Hit, entity_id);
+
 		using Callback = decltype(ig_hit_shader);
 		IG_ASSERT(entity_id >= 0 && entity_id < (int)hit_shaders.size(), "Expected entity id for hit shaders to be valid");
 		void* hit_shader = hit_shaders[entity_id];
 		IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
 		auto callback = (Callback*)hit_shader;
 		callback(&current_settings, entity_id, first, last);
+
+		if (acquire_stats)
+			get_thread_data()->stats.endShaderLaunch(IG::ShaderType::Hit, entity_id);
 	}
 
 	inline void present(int32_t dev)
@@ -464,6 +487,15 @@ struct Interface {
 			if (device_pixels.size())
 				anydsl::copy(host_pixels, device_pixels);
 		}
+	}
+
+	inline IG::Statistics* get_full_stats()
+	{
+		main_stats.reset();
+		for (const auto& pair : thread_data)
+			main_stats.add(pair.second->stats);
+
+		return &main_stats;
 	}
 };
 
@@ -503,13 +535,20 @@ void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
 	sInterface->current_iteration = iter;
 	sInterface->current_settings  = renderSettings;
 
+	if (sInterface->acquire_stats)
+		sInterface->get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::Device, {});
+
 	ig_render(&renderSettings);
+
+	if (sInterface->acquire_stats)
+		sInterface->get_thread_data()->stats.endShaderLaunch(IG::ShaderType::Device, {});
 }
 
 void glue_setup(const DriverSetupSettings* settings)
 {
 	sInterface = std::make_unique<Interface>(settings->framebuffer_width, settings->framebuffer_height, settings->database,
-											 settings->ray_generation_shader, settings->miss_shader, settings->hit_shaders);
+											 settings->ray_generation_shader, settings->miss_shader, settings->hit_shaders,
+											 settings->acquireStats);
 }
 
 void glue_shutdown()
@@ -527,6 +566,11 @@ void glue_clearframebuffer(int aov)
 {
 	IG_UNUSED(aov);
 	sInterface->clear();
+}
+
+const IG::Statistics* glue_getstatistics()
+{
+	return sInterface->get_full_stats();
 }
 
 inline void get_ray_stream(RayStream& rays, float* ptr, size_t capacity)
@@ -575,7 +619,7 @@ IG_EXPORT DriverInterface ig_get_interface()
 #if defined(DEVICE_NVVM) || defined(DEVICE_AMD)
 	interface.SPP = 8;
 #else
-	interface.SPP = 4;
+	interface.SPP	 = 4;
 #endif
 
 	interface.Target = IG::Target::INVALID;
@@ -605,6 +649,7 @@ IG_EXPORT DriverInterface ig_get_interface()
 	interface.RenderFunction		   = glue_render;
 	interface.GetFramebufferFunction   = glue_getframebuffer;
 	interface.ClearFramebufferFunction = glue_clearframebuffer;
+	interface.GetStatisticsFunction	   = glue_getstatistics;
 
 	return interface;
 }

@@ -82,6 +82,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	, mIsTrace(false)
 	, mIsDebug(false)
 	, mDebugMode(DebugMode::Normal)
+	, mAcquireStats(opts.AcquireStats)
 {
 	if (!mManager.init())
 		throw std::runtime_error("Could not init modules!");
@@ -91,7 +92,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	lopts.Target   = opts.DesiredTarget;
 
 	// Parse scene file
-	IG_LOG(L_DEBUG) << "Parsing scene"<< std::endl;
+	IG_LOG(L_DEBUG) << "Parsing scene" << std::endl;
 	const auto startParser = std::chrono::high_resolution_clock::now();
 	Parser::SceneParser parser;
 	bool ok		= false;
@@ -122,11 +123,11 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	if (!mManager.load(newTarget, mLoadedInterface))
 		throw std::runtime_error("Error loading interface!");
 
-	lopts.Target = mTarget;
+	lopts.Target		   = mTarget;
 	lopts.SamplesPerLaunch = mLoadedInterface.SPP;
 	IG_LOG(L_DEBUG) << "Samples per launch = " << mLoadedInterface.SPP << std::endl;
 
-	IG_LOG(L_DEBUG) << "Loading scene"<< std::endl;
+	IG_LOG(L_DEBUG) << "Loading scene" << std::endl;
 	LoaderResult result;
 	if (!Loader::load(lopts, result))
 		throw std::runtime_error("Could not load scene!");
@@ -232,12 +233,18 @@ void Runtime::clearFramebuffer(int aov)
 	return mLoadedInterface.ClearFramebufferFunction(aov);
 }
 
+const Statistics* Runtime::getStatistics() const
+{
+	return mAcquireStats ? mLoadedInterface.GetStatisticsFunction() : nullptr;
+}
+
 void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 {
 	DriverSetupSettings settings;
 	settings.database			= &mDatabase;
 	settings.framebuffer_width	= std::max(1u, framebuffer_width);
 	settings.framebuffer_height = std::max(1u, framebuffer_height);
+	settings.acquireStats		= mAcquireStats;
 
 	IG_LOG(L_DEBUG) << "Init JIT compiling" << std::endl;
 	ig_init_jit(mManager.getPath(mTarget).generic_u8string());

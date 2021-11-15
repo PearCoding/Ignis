@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DebugMode.h"
+#include "Statistics.h"
 #include "driver/DriverManager.h"
 #include "loader/Loader.h"
 #include "table/SceneDatabase.h"
@@ -11,6 +12,7 @@ struct LoaderOptions;
 
 struct RuntimeOptions {
 	bool DumpShader		 = false;
+	bool AcquireStats	 = false;
 	Target DesiredTarget = Target::INVALID;
 	uint32 Device		 = 0;
 	std::string OverrideTechnique;
@@ -48,6 +50,8 @@ public:
 	void clearFramebuffer(int aov = -1);
 	inline uint32 iterationCount() const { return mIteration; }
 
+	const Statistics* getStatistics() const;
+
 	inline const RuntimeRenderSettings& loadedRenderSettings() const { return mLoadedRenderSettings; }
 
 	inline DebugMode currentDebugMode() const { return mDebugMode; }
@@ -75,6 +79,7 @@ private:
 	bool mIsTrace;
 	bool mIsDebug;
 	DebugMode mDebugMode;
+	bool mAcquireStats;
 
 	std::string RayGenerationShader;
 	std::string MissShader;

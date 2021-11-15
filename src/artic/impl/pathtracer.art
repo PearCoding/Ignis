@@ -6,6 +6,15 @@ fn @pick_light(rnd: &mut RndState, num_lights: i32) {
     }
 }
 
+// Returns the probability to continue given the contribution of a path
+fn @russian_roulette(c: Color, clamp: f32) -> f32 {
+    let prob = 2 * color_luminance(c);
+    if prob > clamp { clamp } else { prob }
+}
+
+// Russian roulette used in pbrt v4
+fn @russian_roulette_pbrt(c: Color) = math_builtins::fmax[f32](0, color_max_component(c));
+
 fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -> PathTracer {
     let offset : f32  = 0.001;
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
@@ -131,15 +140,20 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
                     , mat: Material
                     ) -> Option[(Ray, RayState)] {
         // Russian roulette and maximum depth
-        let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette(state.contrib, 0.75) };
-        if state.depth >= max_path_len || randf(&mut state.rnd) >= rr_prob {
-            return(Option[(Ray, RayState)]::None)
-        }
+        // let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette(state.contrib, 0.75) };
+        // if state.depth >= max_path_len || randf(&mut state.rnd) >= rr_prob {
+        //     return(Option[(Ray, RayState)]::None)
+        // }
 
         // Bounce
         let out_dir = vec3_neg(ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(&mut state.rnd, out_dir, false) {
             let contrib = color_mul(state.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+
+            let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette_pbrt(state.contrib) };
+            if state.depth >= max_path_len || randf(&mut state.rnd) >= rr_prob {
+                return(Option[(Ray, RayState)]::None)
+            }
             
             let mis = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
             let new_contrib = color_mulf(contrib, 1 / rr_prob);

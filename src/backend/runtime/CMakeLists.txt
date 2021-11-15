@@ -51,7 +51,10 @@ set(SRC
     RuntimeInfo.h
     SharedLibrary.cpp
     SharedLibrary.h
+    Statistics.cpp
+    Statistics.h
     Target.h
+    Timer.h
     bvh/BVH.h
     bvh/MemoryPool.h
     bvh/SceneBVHAdapter.h

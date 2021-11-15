@@ -11,6 +11,8 @@
 #include "Runtime.h"
 #include "config/Build.h"
 
+#include "Timer.h"
+
 #include <optional>
 
 using namespace IG;
@@ -63,6 +65,8 @@ static inline void usage()
 		<< "           --gpu                  Use autodetected GPU target" << std::endl
 		<< "           --debug                Same as --technique debug" << std::endl
 		<< "           --spp       spp        Enables benchmarking mode and sets the number of iterations based on the given spp" << std::endl
+		<< "           --stats                Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session" << std::endl
+		<< "           --full-stats           Acquire all stats alongside rendering. Will be dumped at the end of the rendering session" << std::endl
 		<< "   -o      --output    image.exr  Writes the output image to a file" << std::endl
 		<< "           --dump-shader          Dump produced shaders to files in the current working directory" << std::endl
 		<< "Available targets:" << std::endl
@@ -73,6 +77,14 @@ static inline void usage()
 		<< "Available techniques:" << std::endl
 		<< "    path, debug, ao" << std::endl;
 }
+
+struct SectionTimer {
+	Timer timer;
+	size_t duration_ms = 0;
+
+	inline void start() { timer.start(); }
+	inline void stop() { duration_ms += timer.stopMS(); }
+};
 
 int main(int argc, char** argv)
 {
@@ -95,6 +107,7 @@ int main(int argc, char** argv)
 	bool quiet		   = false;
 
 	RuntimeOptions opts;
+	bool all_stats = false;
 
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
@@ -184,6 +197,11 @@ int main(int argc, char** argv)
 				IG_LOGGER.enableAnsiTerminal(false);
 			} else if (!strcmp(argv[i], "--dump-shader")) {
 				opts.DumpShader = true;
+			} else if (!strcmp(argv[i], "--stats")) {
+				opts.AcquireStats = true;
+			} else if (!strcmp(argv[i], "--full-stats")) {
+				opts.AcquireStats = true;
+				all_stats		  = true;
 			} else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
 				usage();
 				return EXIT_SUCCESS;
@@ -226,6 +244,11 @@ int main(int argc, char** argv)
 	}
 #endif
 
+	SectionTimer timer_all;
+	SectionTimer timer_loading;
+	timer_all.start();
+	timer_loading.start();
+
 	std::unique_ptr<Runtime> runtime;
 	try {
 		runtime = std::make_unique<Runtime>(in_file, opts);
@@ -233,6 +256,7 @@ int main(int argc, char** argv)
 		IG_LOG(L_ERROR) << e.what() << std::endl;
 		return EXIT_FAILURE;
 	}
+	timer_loading.stop();
 
 	const auto def		  = runtime->loadedRenderSettings();
 	const int film_width  = a_film_width.value_or(def.FilmWidth);
@@ -243,8 +267,8 @@ int main(int argc, char** argv)
 				  clip(0), clip(1));
 	runtime->setup(film_width, film_height);
 
-	const size_t SPP = runtime->samplesPerLaunch();
-	bench_iter		 = static_cast<size_t>(std::ceil(bench_iter / SPP));
+	const size_t SPI = runtime->samplesPerLaunch();
+	bench_iter		 = static_cast<size_t>(std::ceil(bench_iter / SPI));
 
 #ifdef WITH_UI
 	IG_UNUSED(prettyConsole);
@@ -255,7 +279,7 @@ int main(int argc, char** argv)
 	DebugMode currentDebugMode = UI::currentDebugMode();
 	runtime->setDebugMode(currentDebugMode);
 #else
-	StatusObserver observer(prettyConsole, 2, bench_iter * SPP);
+	StatusObserver observer(prettyConsole, 2, bench_iter * SPI);
 	observer.begin();
 #endif
 
@@ -267,10 +291,20 @@ int main(int argc, char** argv)
 	uint32_t frames = 0;
 	uint32_t iter	= 0;
 	std::vector<double> samples_sec;
+
+#ifdef WITH_UI
+	SectionTimer timer_input;
+	SectionTimer timer_ui;
+#endif
+
+	SectionTimer timer_render;
 	while (!done) {
 #ifdef WITH_UI
 		bool prevRun = running;
-		done		 = UI::handleInput(iter, running, camera);
+
+		timer_input.start();
+		done = UI::handleInput(iter, running, camera);
+		timer_input.stop();
 
 		const DebugMode newDebugMode = UI::currentDebugMode();
 		if (currentDebugMode != newDebugMode) {
@@ -279,7 +313,7 @@ int main(int argc, char** argv)
 			iter = 0;
 		}
 #else
-		observer.update(iter * SPP);
+		observer.update(iter * SPI);
 #endif
 
 		if (running) {
@@ -287,12 +321,16 @@ int main(int argc, char** argv)
 				runtime->clearFramebuffer();
 
 			auto ticks = std::chrono::high_resolution_clock::now();
+
+			timer_render.start();
 			runtime->step(camera);
+			timer_render.stop();
+
 			iter++;
 			auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
 			if (bench_iter != 0) {
-				samples_sec.emplace_back(1000.0 * double(SPP * film_width * film_height) / double(elapsed_ms));
+				samples_sec.emplace_back(1000.0 * double(SPI * film_width * film_height) / double(elapsed_ms));
 				if (samples_sec.size() == bench_iter)
 					break;
 			}
@@ -305,9 +343,9 @@ int main(int argc, char** argv)
 
 				std::ostringstream os;
 				os << "Ignis [" << frames_sec << " FPS, "
-				   << frames_sec * SPP << " SPS, "
-				   << iter * SPP << " "
-				   << "sample" << (iter * SPP > 1 ? "s" : "") << "]";
+				   << frames_sec * SPI << " SPS, "
+				   << iter * SPI << " "
+				   << "sample" << (iter * SPI > 1 ? "s" : "") << "]";
 				UI::setTitle(os.str().c_str());
 #endif
 				frames = 0;
@@ -320,8 +358,8 @@ int main(int argc, char** argv)
 			if (prevRun != running || frames > 100) {
 				std::ostringstream os;
 				os << "Ignis [Paused, "
-				   << iter * SPP << " "
-				   << "sample" << (iter * SPP > 1 ? "s" : "") << "]";
+				   << iter * SPI << " "
+				   << "sample" << (iter * SPI > 1 ? "s" : "") << "]";
 				UI::setTitle(os.str().c_str());
 				frames = 0;
 				timing = 0;
@@ -330,7 +368,9 @@ int main(int argc, char** argv)
 		}
 
 #ifdef WITH_UI
-		UI::update(iter, SPP);
+		timer_ui.start();
+		UI::update(iter, SPI);
+		timer_ui.stop();
 #endif
 	}
 
@@ -340,6 +380,8 @@ int main(int argc, char** argv)
 	observer.end();
 #endif
 
+	SectionTimer timer_saving;
+	timer_saving.start();
 	if (!out_file.empty()) {
 		if (iter == 0)
 			iter = 1;
@@ -347,6 +389,26 @@ int main(int argc, char** argv)
 			IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file << "'" << std::endl;
 		else
 			IG_LOG(L_INFO) << "Result saved to '" << out_file << "'" << std::endl;
+	}
+	timer_saving.stop();
+
+	timer_all.stop();
+
+	auto stats = runtime->getStatistics();
+	if (stats) {
+		IG_LOG(L_INFO)
+			<< stats->dump(iter, all_stats)
+			<< "  Iterations: " << iter << std::endl
+			<< "  SPP: " << iter * SPI << std::endl
+			<< "  SPI: " << SPI << std::endl
+			<< "  Time: " << timer_all.duration_ms << "ms" << std::endl
+			<< "    Loading> " << timer_loading.duration_ms << "ms" << std::endl
+#ifdef WITH_UI
+			<< "    Input>   " << timer_input.duration_ms << "ms" << std::endl
+			<< "    UI>      " << timer_ui.duration_ms << "ms" << std::endl
+#endif
+			<< "    Render>  " << timer_render.duration_ms << "ms" << std::endl
+			<< "    Saving>  " << timer_saving.duration_ms << "ms" << std::endl;
 	}
 
 	runtime.reset();

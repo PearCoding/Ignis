@@ -172,9 +172,3 @@ fn @fnv_hash(mut h: u32, d: u32) -> u32 {
     h = (h * 16777619) ^ ((d >> 24) & 0xFF);
     h
 }
-
-// Returns the probability to continue given the contribution of a path
-fn @russian_roulette(c: Color, clamp: f32) -> f32 {
-    let prob = 2 * color_luminance(c);
-    if prob > clamp { clamp } else { prob }
-}
