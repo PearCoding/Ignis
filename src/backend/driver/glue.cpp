@@ -279,37 +279,42 @@ struct Interface {
 
 	inline void gpu_swap_primary_streams(int32_t dev)
 	{
-		std::swap(devices[dev].current_first_primary, devices[dev].current_second_primary);
+		auto& device = devices[dev];
+		std::swap(device.current_first_primary, device.current_second_primary);
 	}
 
 	inline const Bvh2Ent& load_bvh2_ent(int32_t dev)
 	{
-		if (devices[dev].scene_ent)
-			return devices[dev].bvh2_ent;
-		devices[dev].scene_ent		 = true;
-		return devices[dev].bvh2_ent = std::move(load_scene_bvh<Node2>(dev));
+		auto& device = devices[dev];
+		if (device.scene_ent)
+			return device.bvh2_ent;
+		device.scene_ent	   = true;
+		return device.bvh2_ent = std::move(load_scene_bvh<Node2>(dev));
 	}
 
 	inline const Bvh4Ent& load_bvh4_ent(int32_t dev)
 	{
-		if (devices[dev].scene_ent)
-			return devices[dev].bvh4_ent;
-		devices[dev].scene_ent		 = true;
-		return devices[dev].bvh4_ent = std::move(load_scene_bvh<Node4>(dev));
+		auto& device = devices[dev];
+		if (device.scene_ent)
+			return device.bvh4_ent;
+		device.scene_ent	   = true;
+		return device.bvh4_ent = std::move(load_scene_bvh<Node4>(dev));
 	}
 
 	inline const Bvh8Ent& load_bvh8_ent(int32_t dev)
 	{
-		if (devices[dev].scene_ent)
-			return devices[dev].bvh8_ent;
-		devices[dev].scene_ent		 = true;
-		return devices[dev].bvh8_ent = std::move(load_scene_bvh<Node8>(dev));
+		auto& device = devices[dev];
+		if (device.scene_ent)
+			return device.bvh8_ent;
+		device.scene_ent	   = true;
+		return device.bvh8_ent = std::move(load_scene_bvh<Node8>(dev));
 	}
 
 	inline const anydsl::Array<StreamRay>& load_ray_list(int32_t dev)
 	{
-		if (devices[dev].ray_list.size() != 0)
-			return devices[dev].ray_list;
+		auto& device = devices[dev];
+		if (device.ray_list.size() != 0)
+			return device.ray_list;
 
 		std::vector<StreamRay> rays;
 		rays.reserve(film_width);
@@ -339,7 +344,7 @@ struct Interface {
 			rays.push_back(ray);
 		}
 
-		return devices[dev].ray_list = std::move(copy_to_device(dev, rays));
+		return device.ray_list = std::move(copy_to_device(dev, rays));
 	}
 
 	template <typename T>
@@ -389,11 +394,12 @@ struct Interface {
 	// Load all the data assembled in previous stages to the device
 	inline const SceneDatabaseProxy& load_scene_database(int32_t dev)
 	{
-		if (devices[dev].database_loaded)
-			return devices[dev].database;
-		devices[dev].database_loaded = true;
+		auto& device = devices[dev];
+		if (device.database_loaded)
+			return device.database;
+		device.database_loaded = true;
 
-		SceneDatabaseProxy& proxy = devices[dev].database;
+		SceneDatabaseProxy& proxy = device.database;
 
 		proxy.Entities = std::move(load_dyntable(dev, database->EntityTable));
 		proxy.Shapes   = std::move(load_dyntable(dev, database->ShapeTable));

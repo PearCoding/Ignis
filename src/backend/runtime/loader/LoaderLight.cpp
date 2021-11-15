@@ -282,6 +282,7 @@ static struct {
 	{ "area", light_area },
 	{ "directional", light_directional },
 	{ "direction", light_directional },
+	{ "distant", light_directional },
 	{ "sun", light_sun },
 	{ "sky", light_sky },
 	{ "cie_uniform", light_cie_uniform },
