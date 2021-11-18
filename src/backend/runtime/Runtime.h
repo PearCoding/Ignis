@@ -75,6 +75,7 @@ private:
 
 	size_t mDevice;
 	size_t mSamplesPerIteration;
+	size_t mRayStateComponentCount;
 	uint32 mIteration;
 	Target mTarget;
 

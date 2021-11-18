@@ -144,7 +144,8 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	LoaderResult result;
 	if (!Loader::load(lopts, result))
 		throw std::runtime_error("Could not load scene!");
-	mDatabase = std::move(result.Database);
+	mDatabase				= std::move(result.Database);
+	mRayStateComponentCount = result.RayStateComponentCount;
 
 	mIsDebug = lopts.TechniqueType == "debug";
 	mIsTrace = lopts.CameraType == "list";
@@ -255,10 +256,11 @@ const Statistics* Runtime::getStatistics() const
 void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 {
 	DriverSetupSettings settings;
-	settings.database			= &mDatabase;
-	settings.framebuffer_width	= std::max(1u, framebuffer_width);
-	settings.framebuffer_height = std::max(1u, framebuffer_height);
-	settings.acquire_stats		= mAcquireStats;
+	settings.database					= &mDatabase;
+	settings.framebuffer_width			= std::max(1u, framebuffer_width);
+	settings.framebuffer_height			= std::max(1u, framebuffer_height);
+	settings.ray_stream_component_count = mRayStateComponentCount;
+	settings.acquire_stats				= mAcquireStats;
 
 	IG_LOG(L_DEBUG) << "Init JIT compiling" << std::endl;
 	ig_init_jit(mManager.getPath(mTarget).generic_u8string());

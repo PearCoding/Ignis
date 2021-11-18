@@ -22,7 +22,7 @@
 // TODO: It would be great to get the number below automatically
 // and/or make it possible to extend it for custom payloads
 constexpr size_t RayStreamSize		 = 9;
-constexpr size_t PrimaryStreamSize	 = RayStreamSize + 11;
+constexpr size_t PrimaryStreamSize	 = RayStreamSize + 6; // + User payload
 constexpr size_t SecondaryStreamSize = RayStreamSize + 4;
 
 /// Some arrays do not need new allocations at the host if the data is already provided and properly arranged.
@@ -159,6 +159,7 @@ struct Interface {
 	const IG::SceneDatabase* database;
 	size_t film_width;
 	size_t film_height;
+	size_t ray_state_component_count;
 
 	IG::uint32 current_iteration;
 	Settings current_settings;
@@ -172,7 +173,8 @@ struct Interface {
 	IG::Statistics main_stats;
 	bool acquire_stats;
 
-	inline Interface(size_t width, size_t height, const IG::SceneDatabase* database,
+	inline Interface(size_t width, size_t height, size_t ray_state_component_count,
+					 const IG::SceneDatabase* database,
 					 void* ray_generation_shader,
 					 void* miss_shader,
 					 const std::vector<void*>& hit_shaders,
@@ -181,6 +183,7 @@ struct Interface {
 		, database(database)
 		, film_width(width)
 		, film_height(height)
+		, ray_state_component_count(ray_state_component_count)
 		, ray_generation_shader(ray_generation_shader)
 		, miss_shader(miss_shader)
 		, hit_shaders(hit_shaders)
@@ -190,6 +193,11 @@ struct Interface {
 
 	inline ~Interface()
 	{
+	}
+
+	inline size_t get_primary_stream_size()
+	{
+		return PrimaryStreamSize + ray_state_component_count;
 	}
 
 	template <typename T>
@@ -219,7 +227,7 @@ struct Interface {
 
 	inline anydsl::Array<float>& cpu_primary_stream(size_t size)
 	{
-		return resize_array(0, get_thread_data()->cpu_primary, size, PrimaryStreamSize);
+		return resize_array(0, get_thread_data()->cpu_primary, size, get_primary_stream_size());
 	}
 
 	inline anydsl::Array<float>& cpu_primary_stream_const()
@@ -241,7 +249,7 @@ struct Interface {
 
 	inline anydsl::Array<float>& gpu_first_primary_stream(int32_t dev, size_t size)
 	{
-		return resize_array(dev, *devices[dev].current_first_primary, size, PrimaryStreamSize);
+		return resize_array(dev, *devices[dev].current_first_primary, size, get_primary_stream_size());
 	}
 
 	inline anydsl::Array<float>& gpu_first_primary_stream_const(int32_t dev)
@@ -252,7 +260,7 @@ struct Interface {
 
 	inline anydsl::Array<float>& gpu_second_primary_stream(int32_t dev, size_t size)
 	{
-		return resize_array(dev, *devices[dev].current_second_primary, size, PrimaryStreamSize);
+		return resize_array(dev, *devices[dev].current_second_primary, size, get_primary_stream_size());
 	}
 
 	inline anydsl::Array<float>& gpu_second_primary_stream_const(int32_t dev)
@@ -553,7 +561,8 @@ void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
 
 void glue_setup(const DriverSetupSettings* settings)
 {
-	sInterface = std::make_unique<Interface>(settings->framebuffer_width, settings->framebuffer_height, settings->database,
+	sInterface = std::make_unique<Interface>(settings->framebuffer_width, settings->framebuffer_height, settings->ray_stream_component_count,
+											 settings->database,
 											 settings->ray_generation_shader, settings->miss_shader, settings->hit_shaders,
 											 settings->acquire_stats);
 }
@@ -589,17 +598,19 @@ inline void get_ray_stream(RayStream& rays, float* ptr, size_t capacity)
 		r_ptr[i] = ptr + i * capacity;
 }
 
-inline void get_primary_stream(PrimaryStream& primary, float* ptr, size_t capacity)
+inline void get_primary_stream(PrimaryStream& primary, float* ptr, size_t capacity, size_t components)
 {
 	static_assert(std::is_pod<PrimaryStream>::value, "Expected PrimaryStream to be plain old data");
 
 	get_ray_stream(primary.rays, ptr, capacity);
 
 	float** r_ptr = reinterpret_cast<float**>(&primary);
-	for (size_t i = RayStreamSize; i < PrimaryStreamSize; ++i)
+	for (size_t i = RayStreamSize; i < components; ++i)
 		r_ptr[i] = ptr + i * capacity;
 
-	primary.size = 0;
+	primary.size	   = 0;
+	primary.capacity   = capacity;
+	primary.user_count = components - PrimaryStreamSize;
 }
 
 inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t capacity)
@@ -731,14 +742,16 @@ void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* wi
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)
 {
-	auto& array = sInterface->cpu_primary_stream(size);
-	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
+	const size_t components = sInterface->get_primary_stream_size();
+	auto& array				= sInterface->cpu_primary_stream(size);
+	get_primary_stream(*primary, array.data(), array.size() / components, components);
 }
 
 void ignis_cpu_get_primary_stream_const(PrimaryStream* primary)
 {
-	auto& array = sInterface->cpu_primary_stream_const();
-	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
+	const size_t components = sInterface->get_primary_stream_size();
+	auto& array				= sInterface->cpu_primary_stream_const();
+	get_primary_stream(*primary, array.data(), array.size() / components, components);
 }
 
 void ignis_cpu_get_secondary_stream(SecondaryStream* secondary, int size)
@@ -760,26 +773,30 @@ void ignis_gpu_get_tmp_buffer(int dev, int** buf, int size)
 
 void ignis_gpu_get_first_primary_stream(int dev, PrimaryStream* primary, int size)
 {
-	auto& array = sInterface->gpu_first_primary_stream(dev, size);
-	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
+	const size_t components = sInterface->get_primary_stream_size();
+	auto& array				= sInterface->gpu_first_primary_stream(dev, size);
+	get_primary_stream(*primary, array.data(), array.size() / components, components);
 }
 
 void ignis_gpu_get_first_primary_stream_const(int dev, PrimaryStream* primary)
 {
-	auto& array = sInterface->gpu_first_primary_stream_const(dev);
-	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
+	const size_t components = sInterface->get_primary_stream_size();
+	auto& array				= sInterface->gpu_first_primary_stream_const(dev);
+	get_primary_stream(*primary, array.data(), array.size() / components, components);
 }
 
 void ignis_gpu_get_second_primary_stream(int dev, PrimaryStream* primary, int size)
 {
-	auto& array = sInterface->gpu_second_primary_stream(dev, size);
-	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
+	const size_t components = sInterface->get_primary_stream_size();
+	auto& array				= sInterface->gpu_second_primary_stream(dev, size);
+	get_primary_stream(*primary, array.data(), array.size() / components, components);
 }
 
 void ignis_gpu_get_second_primary_stream_const(int dev, PrimaryStream* primary)
 {
-	auto& array = sInterface->gpu_second_primary_stream_const(dev);
-	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize);
+	const size_t components = sInterface->get_primary_stream_size();
+	auto& array				= sInterface->gpu_second_primary_stream_const(dev);
+	get_primary_stream(*primary, array.data(), array.size() / components, components);
 }
 
 void ignis_gpu_get_secondary_stream(int dev, SecondaryStream* secondary, int size)

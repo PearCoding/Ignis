@@ -110,9 +110,10 @@ fn @gpu_hit_shade( acc: Accelerator
             return()
         }
 
-        let mut state = make_primary_stream_state_reader(primary, 1)(ray_id, 0);
-        let ray       = make_ray_stream_reader(primary.rays, 1)(ray_id, 0);
-        let pixel     = primary.rays.id(ray_id);
+        let state   = make_primary_stream_state(primary, 1)(ray_id, 0);
+        let ray     = make_ray_stream_reader(primary.rays, 1)(ray_id, 0);
+        let mut rnd = make_primary_stream_rnd_state_reader(primary, 1)(ray_id, 0);
+        let pixel   = primary.rays.id(ray_id);
 
         let entity    = @entities(ent_id);
         let shape     = @shapes(entity.shape_id);
@@ -124,12 +125,12 @@ fn @gpu_hit_shade( acc: Accelerator
         
         let mat    = @shader(ray, hit, glb_surf);
         let on_hit = path_tracer.on_hit;
-        if let Option[Color]::Some(color) = @on_hit(ray, hit, &mut state, glb_surf, mat) {
+        if let Option[Color]::Some(color) = @on_hit(ray, hit, state, glb_surf, mat) {
             gpu_accumulate(atomics, film_pixels, pixel, color, spp);
         }
 
         let on_shadow = path_tracer.on_shadow;
-        if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, hit, &mut state, glb_surf, mat) {
+        if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, hit, &mut rnd, state, glb_surf, mat) {
             make_ray_stream_writer(secondary.rays, 1)(ray_id, 0, new_ray);
             secondary.color_r(ray_id) = color.r;
             secondary.color_g(ray_id) = color.g;
@@ -140,9 +141,9 @@ fn @gpu_hit_shade( acc: Accelerator
         }
 
         let on_bounce = path_tracer.on_bounce;
-        if let Option[(Ray, RayState)]::Some(new_ray, new_state) = @on_bounce(ray, hit, &mut state, glb_surf, mat) {
+        if let Option[Ray]::Some(new_ray) = @on_bounce(ray, hit, &mut rnd, state, glb_surf, mat) {
             make_ray_stream_writer(primary.rays, 1)(ray_id, 0, new_ray);
-            make_primary_stream_state_writer(primary, 1)(ray_id, 0, new_state);
+            make_primary_stream_rnd_state_writer(primary, 1)(ray_id, 0, rnd);
         } else {
             primary.rays.id(ray_id) = -1;
         }
@@ -186,11 +187,11 @@ fn @gpu_miss_shade( acc: Accelerator
             return()
         }
 
-        let mut state = make_primary_stream_state_reader(primary, 1)(ray_id, 0);
+        let state = make_primary_stream_state(primary, 1)(ray_id, 0);
         let ray   = make_ray_stream_reader(primary.rays, 1)(ray_id, 0);
         let pixel = primary.rays.id(ray_id);
 
-        if let Option[Color]::Some(color) = @on_miss(ray, &mut state) {
+        if let Option[Color]::Some(color) = @on_miss(ray, state) {
             gpu_accumulate(atomics, film_pixels, pixel, color, spp);
         }
         
@@ -230,11 +231,10 @@ fn @copy_primary_ray( primary: PrimaryStream
         other_primary.v(dst_id)       = primary.v(src_id);
     }
     other_primary.rnd(dst_id)        = primary.rnd(src_id);
-    other_primary.mis(dst_id)        = primary.mis(src_id);
-    other_primary.contrib_r(dst_id)  = primary.contrib_r(src_id);
-    other_primary.contrib_g(dst_id)  = primary.contrib_g(src_id);
-    other_primary.contrib_b(dst_id)  = primary.contrib_b(src_id);
-    other_primary.depth(dst_id)      = primary.depth(src_id);
+
+    for c in range(0, primary.user_count) {
+        other_primary.user(c * primary.capacity + dst_id) = primary.user(c * primary.capacity + src_id);
+    }
 }
 
 fn @gpu_sort_primary( primary: PrimaryStream
@@ -307,10 +307,11 @@ fn @gpu_generate_rays( primary: PrimaryStream
     let num_rays     = cpu_intrinsics.min(spp * film_width * film_height - first_ray_id, capacity - first_dst_id);
     let film_div     = make_fast_div(film_width as u32);
 
-    let ray_ids     = primary.rays.id;
-    let write_ray   = make_ray_stream_writer(primary.rays, 1);
-    let write_state = make_primary_stream_state_writer(primary, 1);
-    let write_id    = @ |i: i32, _: i32, id2: i32| ray_ids(i) = id2;
+    let ray_ids   = primary.rays.id;
+    let write_ray = make_ray_stream_writer(primary.rays, 1);
+    let write_rnd = make_primary_stream_rnd_state_writer(primary, 1);
+    let states    = make_primary_stream_state(primary, 1);
+    let write_id  = @ |i: i32, _: i32, id2: i32| ray_ids(i) = id2;
 
     gpu_exec_1d(acc, num_rays, 64 /*block_size*/, |work_item| {
         let gid = work_item.gidx();
@@ -324,9 +325,10 @@ fn @gpu_generate_rays( primary: PrimaryStream
         let pixel  = ray_id / spp;
         let y = fast_div(film_div, pixel as u32) as i32;
         let x = pixel - y * film_width;
-        let (ray, state) = @emitter(sample, x, y, film_width, film_height);
+        let state = @states(dst_id, 0);
+        let (ray, rnd) = @emitter(state, sample, x, y, film_width, film_height);
         write_ray(dst_id, 0, ray);
-        write_state(dst_id, 0, state);
+        write_rnd(dst_id, 0, rnd);
         write_id(dst_id, 0, pixel);
     });
     acc.sync();

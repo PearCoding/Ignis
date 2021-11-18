@@ -4,6 +4,7 @@
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
 #include "LoaderShape.h"
+#include "LoaderTechnique.h"
 #include "Logger.h"
 #include "MissShader.h"
 #include "RayGenerationShader.h"
@@ -23,6 +24,8 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 	ctx.CameraType			= opts.CameraType;
 	ctx.TechniqueType		= opts.TechniqueType;
 	ctx.SamplesPerIteration = opts.SamplesPerIteration;
+
+	result.RayStateComponentCount = LoaderTechnique::getRayStateComponentCount(ctx);
 
 	// Load content
 	if (!LoaderShape::load(ctx, result))

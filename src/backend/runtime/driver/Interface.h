@@ -13,6 +13,7 @@ class Statistics;
 struct DriverSetupSettings {
 	IG::uint32 framebuffer_width;
 	IG::uint32 framebuffer_height;
+	size_t ray_stream_component_count;
 	IG::SceneDatabase* database;
 	void* ray_generation_shader;
 	void* miss_shader;
