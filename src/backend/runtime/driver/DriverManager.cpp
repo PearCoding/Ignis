@@ -186,4 +186,84 @@ bool DriverManager::addModule(const std::filesystem::path& path)
 	}
 	return true;
 }
+
+bool DriverManager::hasCPU() const
+{
+	for (const auto& pair : mLoadedDrivers) {
+		if (isCPU(pair.first))
+			return true;
+	}
+	return false;
+}
+
+bool DriverManager::hasGPU() const
+{
+	for (const auto& pair : mLoadedDrivers) {
+		if (!isCPU(pair.first))
+			return true;
+	}
+	return false;
+}
+
+static int costFunction(Target target)
+{
+	// Note: The cost numbers are arbitary choosen...
+	switch (target) {
+	case Target::INVALID:
+		return 10000000;
+	default:
+	case Target::GENERIC:
+		return 100;
+	case Target::ASIMD:
+		return 50;
+	case Target::SSE42:
+		return 25;
+	case Target::AVX:
+		return 10;
+	case Target::AVX2:
+		return 5;
+	case Target::AVX512:
+		return 3;
+	case Target::AMDGPU:
+	case Target::NVVM:
+		return 1;
+	}
+}
+
+Target DriverManager::recommendCPUTarget() const
+{
+	Target recommendation = Target::GENERIC;
+
+	for (const auto& pair : mLoadedDrivers) {
+		if (isCPU(pair.first) && costFunction(pair.first) < costFunction(recommendation))
+			recommendation = pair.first;
+	}
+
+	return recommendation;
+}
+
+Target DriverManager::recommendGPUTarget() const
+{
+	Target recommendation = Target::GENERIC;
+
+	for (const auto& pair : mLoadedDrivers) {
+		if (!isCPU(pair.first) && costFunction(pair.first) < costFunction(recommendation))
+			recommendation = pair.first;
+	}
+
+	return recommendation;
+}
+
+Target DriverManager::recommendTarget() const
+{
+	Target recommendation = Target::GENERIC;
+
+	for (const auto& pair : mLoadedDrivers) {
+		if (costFunction(pair.first) < costFunction(recommendation))
+			recommendation = pair.first;
+	}
+
+	return recommendation;
+}
+
 } // namespace IG
