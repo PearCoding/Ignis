@@ -92,9 +92,10 @@ int main(int argc, char** argv)
 	uint32 sample_count = 1;
 	std::string ray_file;
 	std::string out_file;
-	Target target = Target::INVALID;
-	int device	  = 0;
-	bool quiet	  = false;
+	RuntimeOptions opts;
+	bool quiet = false;
+
+	opts.OverrideCamera = "list";
 
 	for (int i = 1; i < argc; ++i) {
 		if (argv[i][0] == '-') {
@@ -126,21 +127,21 @@ int main(int argc, char** argv)
 				check_arg(argc, argv, i, 1);
 				++i;
 				if (!strcmp(argv[i], "sse42"))
-					target = Target::SSE42;
+					opts.DesiredTarget = Target::SSE42;
 				else if (!strcmp(argv[i], "avx"))
-					target = Target::AVX;
+					opts.DesiredTarget = Target::AVX;
 				else if (!strcmp(argv[i], "avx2"))
-					target = Target::AVX2;
+					opts.DesiredTarget = Target::AVX2;
 				else if (!strcmp(argv[i], "avx512"))
-					target = Target::AVX512;
+					opts.DesiredTarget = Target::AVX512;
 				else if (!strcmp(argv[i], "asimd"))
-					target = Target::ASIMD;
+					opts.DesiredTarget = Target::ASIMD;
 				else if (!strcmp(argv[i], "nvvm"))
-					target = Target::NVVM;
+					opts.DesiredTarget = Target::NVVM;
 				else if (!strcmp(argv[i], "amdgpu"))
-					target = Target::AMDGPU;
+					opts.DesiredTarget = Target::AMDGPU;
 				else if (!strcmp(argv[i], "generic"))
-					target = Target::GENERIC;
+					opts.DesiredTarget = Target::GENERIC;
 				else {
 					IG_LOG(L_ERROR) << "Unknown target '" << argv[i] << "'. Aborting." << std::endl;
 					return EXIT_FAILURE;
@@ -148,11 +149,13 @@ int main(int argc, char** argv)
 			} else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--device")) {
 				check_arg(argc, argv, i, 1);
 				++i;
-				device = strtoul(argv[i], nullptr, 10);
+				opts.Device = strtoul(argv[i], nullptr, 10);
 			} else if (!strcmp(argv[i], "--cpu")) {
-				target = getRecommendedCPUTarget();
+				opts.RecommendCPU = true;
+				opts.RecommendGPU = false;
 			} else if (!strcmp(argv[i], "--gpu")) {
-				target = Target::NVVM; // TODO: Select based on environment
+				opts.RecommendCPU = false;
+				opts.RecommendGPU = true;
 			} else {
 				IG_LOG(L_ERROR) << "Unknown option '" << argv[i] << "'" << std::endl;
 				return EXIT_FAILURE;
@@ -170,9 +173,6 @@ int main(int argc, char** argv)
 	if (!quiet)
 		std::cout << Build::getCopyrightString() << std::endl;
 
-	if (target == Target::INVALID)
-		target = getRecommendedCPUTarget();
-
 	std::vector<Ray> rays;
 	if (ray_file.empty()) {
 		rays = read_input(std::cin, false);
@@ -188,11 +188,6 @@ int main(int argc, char** argv)
 
 	std::unique_ptr<Runtime> runtime;
 	try {
-		RuntimeOptions opts;
-		opts.DesiredTarget	= target;
-		opts.Device			= device;
-		opts.OverrideCamera = "list";
-
 		runtime = std::make_unique<Runtime>(scene_file, opts);
 	} catch (const std::exception& e) {
 		IG_LOG(L_ERROR) << e.what() << std::endl;

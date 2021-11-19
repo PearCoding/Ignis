@@ -15,6 +15,13 @@ public:
 	bool load(Target target, DriverInterface& interface) const;
 	std::filesystem::path getPath(Target target) const;
 
+	bool hasCPU() const;
+	bool hasGPU() const;
+
+	Target recommendCPUTarget() const;
+	Target recommendGPUTarget() const;
+	Target recommendTarget() const;
+
 private:
 	bool addModule(const std::filesystem::path& path);
 	std::unordered_map<Target, SharedLibrary> mLoadedDrivers;

@@ -167,9 +167,11 @@ int main(int argc, char** argv)
 				++i;
 				opts.Device = strtoul(argv[i], NULL, 10);
 			} else if (!strcmp(argv[i], "--cpu")) {
-				opts.DesiredTarget = getRecommendedCPUTarget();
+				opts.RecommendCPU = true;
+				opts.RecommendGPU = false;
 			} else if (!strcmp(argv[i], "--gpu")) {
-				opts.DesiredTarget = Target::NVVM; // TODO: Select based on environment
+				opts.RecommendCPU = false;
+				opts.RecommendGPU = true;
 			} else if (!strcmp(argv[i], "--spp")) {
 				check_arg(argc, argv, i, 1);
 				desired_spp = (size_t)strtoul(argv[++i], nullptr, 10);
@@ -227,9 +229,6 @@ int main(int argc, char** argv)
 
 	if (!quiet)
 		std::cout << Build::getCopyrightString() << std::endl;
-
-	if (opts.DesiredTarget == Target::INVALID)
-		opts.DesiredTarget = getRecommendedCPUTarget();
 
 	if (in_file.empty()) {
 		IG_LOG(L_ERROR) << "No input file given" << std::endl;

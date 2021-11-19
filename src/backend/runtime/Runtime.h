@@ -14,6 +14,8 @@ struct RuntimeOptions {
 	bool DumpShader		 = false;
 	bool AcquireStats	 = false;
 	Target DesiredTarget = Target::INVALID;
+	bool RecommendCPU	 = true;
+	bool RecommendGPU	 = true;
 	uint32 Device		 = 0;
 	uint32 SPI			 = 0; // Detect automatically
 	std::string OverrideTechnique;

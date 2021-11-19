@@ -95,9 +95,20 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	if (!mManager.init())
 		throw std::runtime_error("Could not init modules!");
 
+	// Recommend a target based on the loaded drivers
+	Target target = opts.DesiredTarget;
+	if (target == Target::INVALID) {
+		if (opts.RecommendCPU && !opts.RecommendGPU)
+			target = mManager.recommendCPUTarget();
+		else if (!opts.RecommendCPU && opts.RecommendGPU)
+			target = mManager.recommendGPUTarget();
+		else
+			target = mManager.recommendTarget();
+	}
+
 	LoaderOptions lopts;
 	lopts.FilePath = path;
-	lopts.Target   = opts.DesiredTarget;
+	lopts.Target   = target;
 
 	// Parse scene file
 	IG_LOG(L_DEBUG) << "Parsing scene" << std::endl;
