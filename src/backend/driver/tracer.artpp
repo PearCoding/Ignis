@@ -1,3 +1,5 @@
+static RayPayloadComponents = 0;
+
 #[export]
 fn ig_render(settings: &Settings) -> () {
 #if DEVICE_AVX

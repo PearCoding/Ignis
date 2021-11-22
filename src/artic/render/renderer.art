@@ -1,35 +1,19 @@
 struct PathTracer {
-    on_hit:    fn (Ray, Hit, RayState, SurfaceElement, Material) -> Option[Color],
-    on_miss:   fn (Ray, RayState) -> Option[Color],
-    on_shadow: fn (Ray, Hit, &mut RndState, RayState, SurfaceElement, Material) -> Option[(Ray, Color)],
-    on_bounce: fn (Ray, Hit, &mut RndState, RayState, SurfaceElement, Material) -> Option[Ray],
+    on_hit:    fn (Ray, Hit, RayPayload, SurfaceElement, Material) -> Option[Color],
+    on_miss:   fn (Ray, RayPayload) -> Option[Color],
+    on_shadow: fn (Ray, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[(Ray, Color)],
+    on_bounce: fn (Ray, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[(Ray, RayPayload)],
 }
 
-struct RayState {
-    get_1d: fn (i32) -> f32,
-    set_1d: fn (i32, f32) -> (),
-    get_3d: fn (i32) -> Vec3,
-    set_3d: fn (i32, Vec3) -> (),
-    get_4d: fn (i32) -> Vec4,
-    set_4d: fn (i32, Vec4) -> ()
+type RayEmitter = fn (i32, i32, i32, i32, i32) -> (Ray, RndState, RayPayload);
+
+static MaxRayPayloadComponents = 8;
+struct RayPayload {
+    components: [f32*8]
 }
 
-type RayEmitter = fn (&RayState, i32, i32, i32, i32, i32) -> (Ray, RndState);
+// fn make_empty_payload() = RayPayload {
+//     components = [0,0,0,0,0,0,0,0]
+// };
 
-fn @make_ray_state(size: i32, k: i32, ptr: &mut [f32]) = RayState {
-    get_1d  = @|idx| ptr(idx * size + k),
-    set_1d  = @|idx, val| ptr(idx * size + k) = val,
-    get_3d  = @|idx| make_vec3(ptr((idx+0) * size + k), ptr((idx+1) * size + k), ptr((idx+2) * size + k)),
-    set_3d  = @|idx, val| { 
-        ptr((idx+0) * size + k) = val.x;
-        ptr((idx+1) * size + k) = val.y;
-        ptr((idx+2) * size + k) = val.z;
-    },
-    get_4d  = @|idx| make_vec4(ptr((idx+0) * size + k), ptr((idx+1) * size + k), ptr((idx+2) * size + k), ptr((idx+3) * size + k)),
-    set_4d  = @|idx, val| { 
-        ptr((idx+0) * size + k) = val.x;
-        ptr((idx+1) * size + k) = val.y;
-        ptr((idx+2) * size + k) = val.z;
-        ptr((idx+3) * size + k) = val.w;
-    },
-};
+fn make_empty_payload() = undef[RayPayload]();

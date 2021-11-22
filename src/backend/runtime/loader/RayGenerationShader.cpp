@@ -13,6 +13,8 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
 {
 	std::stringstream stream;
 
+	stream << LoaderTechnique::generateRayPayload(ctx, true) << std::endl;
+
 	stream << "#[export] fn ig_ray_generation_shader(settings: &Settings, iter: i32, id: &mut i32, size: i32, xmin: i32, ymin: i32, xmax: i32, ymax: i32) -> i32 {" << std::endl;
 	stream << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl;
 	stream << std::endl;
@@ -41,14 +43,12 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
 			   << std::endl;
 	}
 
-	stream << "  let stateSetter = " << LoaderTechnique::generateCameraStateSetter(ctx) << ";" << std::endl;
-
 	stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
 	if (ctx.CameraType == "list") {
-		stream << "  let emitter = make_list_emitter(device.load_rays(), iter, stateSetter);" << std::endl;
+		stream << "  let emitter = make_list_emitter(device.load_rays(), iter, init_raypayload);" << std::endl;
 	} else {
 		IG_ASSERT(!gen.empty(), "Generator function can not be empty!");
-		stream << "  let emitter = make_camera_emitter(camera, iter, spp, make_uniform_pixel_sampler()/*make_mjitt_pixel_sampler(4,4)*/, stateSetter);" << std::endl;
+		stream << "  let emitter = make_camera_emitter(camera, iter, spp, make_uniform_pixel_sampler()/*make_mjitt_pixel_sampler(4,4)*/, init_raypayload);" << std::endl;
 	}
 
 	stream << "  device.generate_rays(emitter, id, size, xmin, ymin, xmax, ymax, spp)" << std::endl

@@ -17,7 +17,6 @@ struct LoaderOptions {
 };
 
 struct LoaderResult {
-	size_t RayStateComponentCount;
 	SceneDatabase Database;
 	std::string RayGenerationShader;
 	std::string MissShader;

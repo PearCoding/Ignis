@@ -110,6 +110,6 @@ fn @make_debug_renderer(debug_mode: i32) -> PathTracer {
         },
         on_miss   = @ |_, _| Option[(Color)]::None,
         on_shadow = @ |_, _, _, _, _, _| Option[(Ray, Color)]::None,
-        on_bounce = @ |_, _, _, _, _, _| Option[Ray]::None,
+        on_bounce = @ |_, _, _, _, _, _| Option[(Ray, RayPayload)]::None,
     }
 }

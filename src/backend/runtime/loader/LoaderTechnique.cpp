@@ -45,16 +45,21 @@ std::string LoaderTechnique::generate(const LoaderContext& ctx)
 	return stream.str();
 }
 
-std::string LoaderTechnique::generateCameraStateSetter(const LoaderContext& ctx)
+std::string LoaderTechnique::generateRayPayload(const LoaderContext& ctx, bool isRayGeneration)
 {
 	std::stringstream stream;
 
 	std::string tech_type = ctx.TechniqueType;
 
-	if (tech_type == "path")
-		stream << "@|state: &RayState| -> () { state.set_1d(0, 0); state.set_3d(1, make_vec3(1,1,1)); state.set_1d(4, 0); }";
-	else
-		stream << "@|state: &RayState| -> () { }";
+	stream << "static RayPayloadComponents = " << getRayStateComponentCount(ctx) << ";" << std::endl;
+
+	if (isRayGeneration) {
+		if (tech_type == "path") {
+			stream << "fn init_raypayload() = wrap_ptraypayload(PTRayPayload { mis = 0, contrib = white, depth = 1 });" << std::endl;
+		} else {
+			stream << "fn init_raypayload() = make_empty_payload();" << std::endl;
+		}
+	}
 
 	return stream.str();
 }

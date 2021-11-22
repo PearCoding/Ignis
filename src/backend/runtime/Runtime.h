@@ -12,6 +12,7 @@ struct LoaderOptions;
 
 struct RuntimeOptions {
 	bool DumpShader		 = false;
+	bool DumpShaderFull	 = false;
 	bool AcquireStats	 = false;
 	Target DesiredTarget = Target::INVALID;
 	bool RecommendCPU	 = true;
@@ -70,6 +71,8 @@ private:
 
 	bool mInit;
 
+	const RuntimeOptions mOptions;
+	
 	SceneDatabase mDatabase;
 	RuntimeRenderSettings mLoadedRenderSettings;
 	DriverInterface mLoadedInterface;
@@ -77,7 +80,6 @@ private:
 
 	size_t mDevice;
 	size_t mSamplesPerIteration;
-	size_t mRayStateComponentCount;
 	uint32 mIteration;
 	Target mTarget;
 
