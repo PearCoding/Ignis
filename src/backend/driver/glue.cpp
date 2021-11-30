@@ -14,10 +14,12 @@
 #include <x86intrin.h>
 #endif
 
+#include <atomic>
 #include <iomanip>
 #include <mutex>
 #include <thread>
 #include <type_traits>
+#include <variant>
 
 // TODO: It would be great to get the number below automatically
 // and/or make it possible to extend it for custom payloads
@@ -94,6 +96,8 @@ using Bvh2Ent = BvhProxy<Node2, EntityLeaf1>;
 using Bvh4Ent = BvhProxy<Node4, EntityLeaf1>;
 using Bvh8Ent = BvhProxy<Node8, EntityLeaf1>;
 
+using BvhVariant = std::variant<Bvh2Ent, Bvh4Ent, Bvh8Ent>;
+
 struct DynTableProxy {
 	size_t EntryCount;
 	ShallowArray<LookupEntry> LookupEntries;
@@ -120,11 +124,9 @@ struct Interface {
 	using DeviceImage = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
 
 	struct DeviceData {
-		bool scene_ent = false;
-		Bvh2Ent bvh2_ent;
-		Bvh4Ent bvh4_ent;
-		Bvh8Ent bvh8_ent;
-		bool database_loaded = false;
+		std::atomic_flag scene_loaded;
+		BvhVariant bvh_ent;
+		std::atomic_flag database_loaded;
 		SceneDatabaseProxy database;
 		anydsl::Array<int32_t> tmp_buffer;
 		anydsl::Array<float> first_primary;
@@ -137,8 +139,8 @@ struct Interface {
 		std::unordered_map<std::string, DeviceImage> images;
 
 		inline DeviceData()
-			: scene_ent(false)
-			, database_loaded(false)
+			: scene_loaded(ATOMIC_FLAG_INIT)
+			, database_loaded(ATOMIC_FLAG_INIT)
 		{
 			current_first_primary  = &first_primary;
 			current_second_primary = &second_primary;
@@ -285,31 +287,13 @@ struct Interface {
 		std::swap(device.current_first_primary, device.current_second_primary);
 	}
 
-	inline const Bvh2Ent& load_bvh2_ent(int32_t dev)
+	template<typename Bvh, typename Node>
+	inline const Bvh& load_bvh_ent(int32_t dev)
 	{
 		auto& device = devices[dev];
-		if (device.scene_ent)
-			return device.bvh2_ent;
-		device.scene_ent	   = true;
-		return device.bvh2_ent = std::move(load_scene_bvh<Node2>(dev));
-	}
-
-	inline const Bvh4Ent& load_bvh4_ent(int32_t dev)
-	{
-		auto& device = devices[dev];
-		if (device.scene_ent)
-			return device.bvh4_ent;
-		device.scene_ent	   = true;
-		return device.bvh4_ent = std::move(load_scene_bvh<Node4>(dev));
-	}
-
-	inline const Bvh8Ent& load_bvh8_ent(int32_t dev)
-	{
-		auto& device = devices[dev];
-		if (device.scene_ent)
-			return device.bvh8_ent;
-		device.scene_ent	   = true;
-		return device.bvh8_ent = std::move(load_scene_bvh<Node8>(dev));
+		if (!device.scene_loaded.test_and_set())
+			device.bvh_ent = std::move(load_scene_bvh<Node>(dev));
+		return std::get<Bvh>(device.bvh_ent);
 	}
 
 	inline const anydsl::Array<StreamRay>& load_ray_list(int32_t dev)
@@ -397,9 +381,8 @@ struct Interface {
 	inline const SceneDatabaseProxy& load_scene_database(int32_t dev)
 	{
 		auto& device = devices[dev];
-		if (device.database_loaded)
+		if (device.database_loaded.test_and_set())
 			return device.database;
-		device.database_loaded = true;
 
 		SceneDatabaseProxy& proxy = device.database;
 
@@ -421,6 +404,8 @@ struct Interface {
 
 	inline const DeviceImage& load_image(int32_t dev, const std::string& filename)
 	{
+		std::lock_guard<std::mutex> _guard(thread_mutex);
+
 		auto& images = devices[dev].images;
 		auto it		 = images.find(filename);
 		if (it != images.end())
@@ -428,9 +413,7 @@ struct Interface {
 
 		IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
 		try {
-			IG::ImageRgba32 img = IG::ImageRgba32::load(filename);
-			IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
-			return images[filename] = std::move(copy_to_device(dev, img));
+			return images[filename] = std::move(copy_to_device(dev, IG::ImageRgba32::load(filename)));
 		} catch (const IG::ImageLoadException& e) {
 			IG_LOG(IG::L_ERROR) << e.what() << std::endl;
 			return images[filename] = std::move(copy_to_device(dev, IG::ImageRgba32()));
@@ -677,21 +660,21 @@ void ignis_get_film_data(int dev, float** pixels, int* width, int* height)
 
 void ignis_load_bvh2_ent(int dev, Node2** nodes, EntityLeaf1** objs)
 {
-	auto& bvh = sInterface->load_bvh2_ent(dev);
+	auto& bvh = sInterface->load_bvh_ent<Bvh2Ent, Node2>(dev);
 	*nodes	  = const_cast<Node2*>(bvh.nodes.ptr());
 	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.ptr());
 }
 
 void ignis_load_bvh4_ent(int dev, Node4** nodes, EntityLeaf1** objs)
 {
-	auto& bvh = sInterface->load_bvh4_ent(dev);
+	auto& bvh = sInterface->load_bvh_ent<Bvh4Ent, Node4>(dev);
 	*nodes	  = const_cast<Node4*>(bvh.nodes.ptr());
 	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.ptr());
 }
 
 void ignis_load_bvh8_ent(int dev, Node8** nodes, EntityLeaf1** objs)
 {
-	auto& bvh = sInterface->load_bvh8_ent(dev);
+	auto& bvh = sInterface->load_bvh_ent<Bvh8Ent, Node8>(dev);
 	*nodes	  = const_cast<Node8*>(bvh.nodes.ptr());
 	*objs	  = const_cast<EntityLeaf1*>(bvh.objs.ptr());
 }
