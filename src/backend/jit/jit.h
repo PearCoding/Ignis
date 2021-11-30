@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 
 namespace IG {
@@ -7,5 +8,5 @@ namespace IG {
 void ig_init_jit(const std::string& driver_path);
 
 /// Compile given source together with the ignis standard library and return pointer to the given function
-void* ig_compile_source(const std::string& str, const std::string& function);
-}
+void* ig_compile_source(const std::string& str, const std::string& function, const std::filesystem::path* debug_output);
+} // namespace IG

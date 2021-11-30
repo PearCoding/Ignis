@@ -69,6 +69,7 @@ static inline void usage()
 		<< "           --full-stats           Acquire all stats alongside rendering. Will be dumped at the end of the rendering session" << std::endl
 		<< "   -o      --output    image.exr  Writes the output image to a file" << std::endl
 		<< "           --dump-shader          Dump produced shaders to files in the current working directory" << std::endl
+		<< "           --dump-shader-full     Dump produced shaders with standard library to files in the current working directory" << std::endl
 		<< "Available targets:" << std::endl
 		<< "    generic, sse42, avx, avx2, avx512, asimd," << std::endl
 		<< "    nvvm, amdgpu" << std::endl
@@ -202,6 +203,8 @@ int main(int argc, char** argv)
 				IG_LOGGER.enableAnsiTerminal(false);
 			} else if (!strcmp(argv[i], "--dump-shader")) {
 				opts.DumpShader = true;
+			} else if (!strcmp(argv[i], "--dump-shader-full")) {
+				opts.DumpShaderFull = true;
 			} else if (!strcmp(argv[i], "--stats")) {
 				opts.AcquireStats = true;
 			} else if (!strcmp(argv[i], "--full-stats")) {

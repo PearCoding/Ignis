@@ -14,6 +14,8 @@ std::string MissShader::setup(LoaderContext& ctx)
 {
 	std::stringstream stream;
 
+	stream << LoaderTechnique::generateRayPayload(ctx) << std::endl;
+	
 	stream << "#[export] fn ig_miss_shader(settings: &Settings, first: i32, last: i32) -> () {" << std::endl
 		   << "  maybe_unused(settings);" << std::endl
 		   << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl

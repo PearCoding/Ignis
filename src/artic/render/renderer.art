@@ -1,24 +1,19 @@
 struct PathTracer {
-    on_hit:    fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[Color],
-    on_miss:   fn (Ray, &mut RayState) -> Option[Color],
-    on_shadow: fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[(Ray, Color)],
-    on_bounce: fn (Ray, Hit, &mut RayState, SurfaceElement, Material) -> Option[(Ray, RayState)],
+    on_hit:    fn (Ray, Hit, RayPayload, SurfaceElement, Material) -> Option[Color],
+    on_miss:   fn (Ray, RayPayload) -> Option[Color],
+    on_shadow: fn (Ray, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[(Ray, Color)],
+    on_bounce: fn (Ray, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[(Ray, RayPayload)],
 }
 
-struct RayState {
-    rnd:     RndState,
-    contrib: Color,
-    mis:     f32,
-    depth:   i32
+type RayEmitter = fn (i32, i32, i32, i32, i32) -> (Ray, RndState, RayPayload);
+
+static MaxRayPayloadComponents = 8;
+struct RayPayload {
+    components: [f32*8]
 }
 
-type RayEmitter = fn (i32, i32, i32, i32, i32) -> (Ray, RayState);
+// fn make_empty_payload() = RayPayload {
+//     components = [0,0,0,0,0,0,0,0]
+// };
 
-fn @make_ray_state(rnd: RndState, contrib: Color, mis: f32, depth: i32) -> RayState {
-    RayState {
-        rnd     = rnd,
-        contrib = contrib,
-        mis     = mis,
-        depth   = depth
-    }
-}
+fn make_empty_payload() = undef[RayPayload]();

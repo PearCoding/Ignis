@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <optional>
 #include <sstream>
 
 #include <rapidjson/document.h>

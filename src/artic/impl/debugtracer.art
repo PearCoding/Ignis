@@ -26,7 +26,7 @@ fn @color_map(i: i32) = [
 
 fn @make_debug_renderer(debug_mode: i32) -> PathTracer {
     PathTracer {
-        on_hit    = @ |ray, hit, state, surf, mat| {
+        on_hit    = @ |ray, hit, _, surf, mat| {
             match debug_mode {
                 1 => { // DEBUG_TANGENT
                     let n = surf.local.col(0);
@@ -81,16 +81,16 @@ fn @make_debug_renderer(debug_mode: i32) -> PathTracer {
                     if mat.bsdf.is_specular {
                         make_option(green)
                     } else {
-                        let mut tmp = state.rnd;
+                        let mut tmp : RndState = 0xdeadbeef;
                         let out_dir = vec3_neg(ray.dir);
                         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(&mut tmp, out_dir, false) {    
                             let pdf = mat.bsdf.pdf(mat_sample.in_dir, out_dir);
                             let evl = color_mulf(mat.bsdf.eval(mat_sample.in_dir, out_dir), 1/pdf);
 
-                            let pdf_diff = math_builtins::fabs(mat_sample.pdf-pdf);
+                            let pdf_diff = math_builtins::fabs(mat_sample.pdf - pdf);
                             let w_diff   = math_builtins::fabs(mat_sample.color.r - evl.r)
-                                        + math_builtins::fabs(mat_sample.color.g - evl.g)
-                                        + math_builtins::fabs(mat_sample.color.b - evl.b);
+                                         + math_builtins::fabs(mat_sample.color.g - evl.g)
+                                         + math_builtins::fabs(mat_sample.color.b - evl.b);
 
                             let pdf_good = if pdf_diff <= 0.001:f32 { 1 } else { 0 };
                             let w_good   = if w_diff   <= 0.001:f32 { 1 } else { 0 };
@@ -109,7 +109,7 @@ fn @make_debug_renderer(debug_mode: i32) -> PathTracer {
             }
         },
         on_miss   = @ |_, _| Option[(Color)]::None,
-        on_shadow = @ |_, _, _, _, _| Option[(Ray, Color)]::None,
-        on_bounce = @ |_, _, _, _, _| Option[(Ray, RayState)]::None,
+        on_shadow = @ |_, _, _, _, _, _| Option[(Ray, Color)]::None,
+        on_bounce = @ |_, _, _, _, _, _| Option[(Ray, RayPayload)]::None,
     }
 }

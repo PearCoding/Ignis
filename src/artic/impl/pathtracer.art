@@ -15,13 +15,36 @@ fn @russian_roulette(c: Color, clamp: f32) -> f32 {
 // Russian roulette used in pbrt v4
 fn @russian_roulette_pbrt(c: Color) = math_builtins::fmax[f32](0, color_max_component(c));
 
+struct PTRayPayload {
+    mis: f32,
+    contrib: Color,
+    depth: i32
+}
+
+fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
+    let mut r : RayPayload;
+    r.components(0) = payload.mis;
+    r.components(1) = payload.contrib.r;
+    r.components(2) = payload.contrib.g;
+    r.components(3) = payload.contrib.b;
+    r.components(4) = bitcast[f32](payload.depth);
+    r
+}
+
+fn unrap_ptraypayload(payload: RayPayload) = PTRayPayload {
+    mis     = payload.components(0),
+    contrib = make_color(payload.components(1), payload.components(2), payload.components(3)),
+    depth   = bitcast[i32](payload.components(4))
+};
+
 fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -> PathTracer {
     let offset : f32  = 0.001;
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
 
     fn @on_shadow( ray: Ray
                     , _hit: Hit
-                    , state: &mut RayState
+                    , rnd: &mut RndState
+                    , payload: RayPayload
                     , surf: SurfaceElement
                     , mat: Material
                     ) -> Option[(Ray, Color)] {
@@ -30,7 +53,6 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
             return(Option[(Ray, Color)]::None)
         }
 
-        let rnd = &mut state.rnd;
         // Note: randi() returns random integers, but we only want positive integers here
         let light_id      = pick_light(rnd, num_lights);
         let light         = @lights(light_id);
@@ -51,7 +73,8 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
                 
                 let mis = if light.delta { 1 } else { 1 / (1 + pdf_e * inv_pdf_l) };
 
-                let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
+                let contrib = color_mul(light_sample.intensity, color_mul(unrap_ptraypayload(payload).contrib, mat.bsdf.eval(in_dir, out_dir)));
+
                 return(make_option(
                     make_ray(surf.point, light_dir, offset, flt_max),
                     color_mulf(contrib, mis * inv_pdf_l)
@@ -76,7 +99,8 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
                 let mis = if light.delta { 1 } else { 1 / (1 + pdf_e * inv_pdf_l) };
                 let geom_factor = cos_l * inv_d2 * inv_pdf_l;
 
-                let contrib = color_mul(light_sample.intensity, color_mul(state.contrib, mat.bsdf.eval(in_dir, out_dir)));
+                let contrib = color_mul(light_sample.intensity, color_mul(unrap_ptraypayload(payload).contrib, mat.bsdf.eval(in_dir, out_dir)));
+
                 return(make_option(
                     make_ray(surf.point, light_dir, offset, 1 - offset),
                     color_mulf(contrib, geom_factor * mis)
@@ -88,7 +112,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
 
     fn @on_hit( ray: Ray
                 , hit: Hit
-                , state: &mut RayState
+                , payload: RayPayload
                 , surf: SurfaceElement
                 , mat: Material
                 ) -> Option[Color] {
@@ -97,17 +121,18 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
             let out_dir = vec3_neg(ray.dir);
             let dot     = vec3_dot(out_dir, surf.local.col(2));
             if dot > flt_eps { // Only contribute proper aligned directions
+                let pt       = unrap_ptraypayload(payload);
                 let emit     = mat.emission(out_dir);
-                let next_mis = state.mis * hit.distance * hit.distance / dot;
+                let next_mis = pt.mis * hit.distance * hit.distance / dot;
                 let mis      = 1 / (1 + next_mis * pdf_lightpick * emit.pdf_area);
-                return(make_option(color_mulf(color_mul(state.contrib, emit.intensity), mis)))
+                return(make_option(color_mulf(color_mul(pt.contrib, emit.intensity), mis)))
             }
         }
         Option[Color]::None
     }
 
     fn @on_miss( ray: Ray
-                , state: &mut RayState) -> Option[Color] {
+                , payload: RayPayload) -> Option[Color] {
         let mut inflights = 0;
         let mut color     = black;
 
@@ -117,12 +142,14 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
             let light = @lights(light_id);
             // Do not include delta lights or finite lights
             if light.infinite && !light.delta {
+                let pt = unrap_ptraypayload(payload);
+
                 inflights += 1;
 
                 let out_dir = vec3_neg(ray.dir);
-                let emit = light.emission(out_dir, make_vec2(0,0));
-                let mis  = 1 / (1 + state.mis * pdf_lightpick * emit.pdf_dir);
-                color = color_add(color, color_mulf(color_mul(state.contrib, emit.intensity), mis));
+                let emit    = light.emission(out_dir, make_vec2(0,0));
+                let mis     = 1 / (1 + pt.mis * pdf_lightpick * emit.pdf_dir);
+                color = color_add(color, color_mulf(color_mul(pt.contrib, emit.intensity), mis));
             }
         }
 
@@ -135,24 +162,26 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
 
     fn @on_bounce( ray: Ray
                     , _hit: Hit
-                    , state: &mut RayState
+                    , rnd: &mut RndState
+                    , payload: RayPayload
                     , surf: SurfaceElement
                     , mat: Material
-                    ) -> Option[(Ray, RayState)] {
+                    ) -> Option[(Ray, RayPayload)] {
+        let pt = unrap_ptraypayload(payload);
         // Russian roulette and maximum depth
         // let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette(state.contrib, 0.75) };
-        // if state.depth >= max_path_len || randf(&mut state.rnd) >= rr_prob {
-        //     return(Option[(Ray, RayState)]::None)
+        // if state.depth >= max_path_len || randf(rnd) >= rr_prob {
+        //     return(Option[Ray]::None)
         // }
 
         // Bounce
         let out_dir = vec3_neg(ray.dir);
-        if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(&mut state.rnd, out_dir, false) {
-            let contrib = color_mul(state.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+        if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
+            let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
 
-            let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette_pbrt(state.contrib) };
-            if state.depth >= max_path_len || randf(&mut state.rnd) >= rr_prob {
-                return(Option[(Ray, RayState)]::None)
+            let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette_pbrt(pt.contrib) };
+            if pt.depth >= max_path_len || randf(rnd) >= rr_prob {
+                return(Option[(Ray, RayPayload)]::None)
             }
             
             let mis = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
@@ -160,10 +189,14 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable) -
 
             make_option(
                 make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
-                make_ray_state(state.rnd, new_contrib, mis, state.depth + 1)
-                )
+                wrap_ptraypayload(PTRayPayload {
+                    mis = mis,
+                    contrib = new_contrib,
+                    depth = pt.depth + 1
+                })
+            )
         } else {
-            Option[(Ray, RayState)]::None
+            Option[(Ray, RayPayload)]::None
         }
     }
 

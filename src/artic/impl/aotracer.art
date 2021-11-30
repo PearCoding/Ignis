@@ -4,10 +4,11 @@ fn @make_ao_renderer() -> PathTracer {
     PathTracer {
         on_hit    = @ |_, _, _, _, _| Option[(Color)]::None,
         on_miss   = @ |_, _| Option[(Color)]::None,
-        on_shadow = @ |ray, _, state, surf, _| {
+        on_shadow = @ |ray, _, rnd, _, surf, _| {
             let bsdf    = make_diffuse_bsdf(surf, white);
             let out_dir = vec3_neg(ray.dir);
-            if let Option[BsdfSample]::Some(sample) = bsdf.sample(&mut state.rnd, out_dir, false) {
+
+            if let Option[BsdfSample]::Some(sample) = bsdf.sample(rnd, out_dir, false) {
                 make_option(
                     make_ray(surf.point, sample.in_dir, offset, flt_max),
                     sample.color
@@ -16,6 +17,6 @@ fn @make_ao_renderer() -> PathTracer {
                 Option[(Ray, Color)]::None
             }
         },
-        on_bounce = @ |_, _, _, _, _| Option[(Ray, RayState)]::None,
+        on_bounce = @ |_, _, _, _, _, _| Option[(Ray, RayPayload)]::None,
     }
 }

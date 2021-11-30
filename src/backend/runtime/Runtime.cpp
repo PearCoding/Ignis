@@ -85,6 +85,7 @@ static inline void dumpShader(const std::string& filename, const std::string& sh
 
 Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 	: mInit(false)
+	, mOptions(opts)
 	, mDevice(opts.Device)
 	, mIteration(0)
 	, mIsTrace(false)
@@ -275,15 +276,20 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 	ig_init_jit(mManager.getPath(mTarget).generic_u8string());
 
 	IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
-	settings.ray_generation_shader = ig_compile_source(RayGenerationShader, "ig_ray_generation_shader");
+	const std::filesystem::path rgp = "rayGenerationFull.art";
+	settings.ray_generation_shader	= ig_compile_source(RayGenerationShader, "ig_ray_generation_shader",
+														mOptions.DumpShaderFull ? &rgp : nullptr);
 
 	IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
-	settings.miss_shader = ig_compile_source(MissShader, "ig_miss_shader");
+	const std::filesystem::path mp = "missShaderFull.art";
+	settings.miss_shader		   = ig_compile_source(MissShader, "ig_miss_shader",
+											   mOptions.DumpShaderFull ? &mp : nullptr);
 
 	IG_LOG(L_DEBUG) << "Compiling hit shaders" << std::endl;
 	for (size_t i = 0; i < HitShaders.size(); ++i) {
 		IG_LOG(L_DEBUG) << "Hit shader [" << i << "]" << std::endl;
-		settings.hit_shaders.push_back(ig_compile_source(HitShaders[i], "ig_hit_shader"));
+		const std::filesystem::path hp = "hitShaderFull" + std::to_string(i) + ".art";
+		settings.hit_shaders.push_back(ig_compile_source(HitShaders[i], "ig_hit_shader", mOptions.DumpShaderFull ? &hp : nullptr));
 	}
 
 	mLoadedInterface.SetupFunction(&settings);
