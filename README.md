@@ -3,6 +3,14 @@
 
 ![A scene containing diamonds rendered by Ignis](docs/screenshot.jpg)
 
+## Gallery
+
+Some scenes rendered with Ignis. Acquired from https://benedikt-bitterli.me/resources/ and converted from Mitsuba to our own format. Both images took roughly one minute to render. With an RTX 2080 Super you can even have an interactive view of the scene.
+
+![Bedroom scene by SlykDrako](docs/gallery1.jpeg)
+
+![Livingroom scene by Jay-Artist](docs/gallery2.jpeg)
+
 ## Dependencies
 
  - AnyDSL <https://github.com/AnyDSL/anydsl>
