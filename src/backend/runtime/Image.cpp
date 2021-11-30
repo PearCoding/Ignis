@@ -155,8 +155,6 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 
 		FreeEXRHeader(&exr_header);
 		FreeEXRImage(&exr_image);
-
-		img.flipY();
 	} else {
 		stbi_set_unpremultiply_on_load(1);
 
@@ -207,6 +205,7 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 		stbi_image_free(data);
 	}
 
+	img.flipY(); // Images loaded seem to tend to be flipped!
 	return img;
 }
 

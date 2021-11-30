@@ -1,8 +1,11 @@
-fn @make_image_texture(border: BorderHandling, filter: ImageFilter, image: Image) -> Texture {
+fn @make_image_texture(border: BorderHandling, filter: ImageFilter, image: Image, flip_x: bool, flip_y: bool) -> Texture {
     @ |uv| {
         let u = border.horz(uv.x);
         let v = border.vert(uv.y);
-        filter(image, make_vec2(u, v))
+
+        let u2 = if flip_x { 1 - u } else { u };
+        let v2 = if flip_y { 1 - v } else { v };
+        filter(image, make_vec2(u2, v2))
     }
 }
 

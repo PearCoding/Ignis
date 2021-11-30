@@ -12,6 +12,8 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
 	const std::string filename	  = ctx.handlePath(tex.property("filename").getString());
 	const std::string filter_type = tex.property("filter_type").getString("bilinear");
 	const std::string wrap_mode	  = tex.property("wrap_mode").getString("repeat");
+	const bool flip_x			  = tex.property("flip_x").getBool(false);
+	const bool flip_y			  = tex.property("flip_y").getBool(false);
 
 	std::string filter = "make_bilinear_filter()";
 	if (filter_type == "nearest")
@@ -27,7 +29,9 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
 		   << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_image_texture("
 		   << wrap << ", "
 		   << filter << ", "
-		   << "img_" << ShaderUtils::escapeIdentifier(name) << ");" << std::endl;
+		   << "img_" << ShaderUtils::escapeIdentifier(name) << ", "
+		   << (flip_x ? "true" : "false") << ", "
+		   << (flip_y ? "true" : "false") << ");" << std::endl;
 }
 
 static void tex_checkerboard(std::ostream& stream, const std::string& name, const Parser::Object& tex, const LoaderContext& ctx, ShadingTree& tree)
