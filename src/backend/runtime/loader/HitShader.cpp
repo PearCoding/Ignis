@@ -15,8 +15,8 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx)
 {
 	std::stringstream stream;
 
-	stream << LoaderTechnique::generateRayPayload(ctx) << std::endl;
-	
+	stream << LoaderTechnique::generateHeader(ctx) << std::endl;
+
 	stream << "#[export] fn ig_hit_shader(settings: &Settings, entity_id: i32, first: i32, last: i32) -> () {" << std::endl
 		   << "  maybe_unused(settings);" << std::endl
 		   << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
@@ -61,11 +61,13 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx)
 			   << std::endl;
 	}
 
-	stream << LoaderTechnique::generate(ctx) << std::endl
+	stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
+
+	// Will define technique
+	stream << LoaderTechnique::generate(ctx, ctx.AOVCount) << std::endl
 		   << std::endl;
 
-	stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl
-		   << "  device.handle_hit_shader(entity_id, shader, scene, technique, first, last, spp);" << std::endl
+	stream << "  device.handle_hit_shader(entity_id, shader, scene, technique, first, last, spp);" << std::endl
 		   << "}" << std::endl;
 
 	return stream.str();

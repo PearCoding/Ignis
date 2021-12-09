@@ -4,9 +4,8 @@
 
 namespace IG {
 struct LoaderTechnique {
-	static size_t getRayStateComponentCount(const LoaderContext& ctx);
 	static bool requireLights(const LoaderContext& ctx);
-	static std::string generate(const LoaderContext& ctx);
-	static std::string generateRayPayload(const LoaderContext& ctx, bool isRayGeneration = false);
+	static std::string generate(const LoaderContext& ctx, size_t& aovs);
+	static std::string generateHeader(const LoaderContext& ctx, bool isRayGeneration = false);
 };
 } // namespace IG

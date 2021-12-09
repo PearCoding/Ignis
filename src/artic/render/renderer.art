@@ -1,8 +1,8 @@
 struct PathTracer {
-    on_hit:    fn (Ray, Hit, RayPayload, SurfaceElement, Material) -> Option[Color],
-    on_miss:   fn (Ray, RayPayload) -> Option[Color],
-    on_shadow: fn (Ray, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[(Ray, Color)],
-    on_bounce: fn (Ray, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[(Ray, RayPayload)],
+    on_hit:    fn (Ray, i32, Hit, RayPayload, SurfaceElement, Material) -> Option[Color],
+    on_miss:   fn (Ray, i32, RayPayload) -> Option[Color],
+    on_shadow: fn (Ray, i32, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[(Ray, Color)],
+    on_bounce: fn (Ray, i32, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[(Ray, RayPayload)],
 }
 
 type RayEmitter = fn (i32, i32, i32, i32, i32) -> (Ray, RndState, RayPayload);

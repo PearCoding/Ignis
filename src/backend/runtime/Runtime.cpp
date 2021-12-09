@@ -158,8 +158,9 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 		throw std::runtime_error("Could not load scene!");
 	mDatabase = std::move(result.Database);
 
-	mIsDebug = lopts.TechniqueType == "debug";
-	mIsTrace = lopts.CameraType == "list";
+	mIsDebug  = lopts.TechniqueType == "debug";
+	mIsTrace  = lopts.CameraType == "list";
+	mAOVCount = result.AOVCount;
 
 	IG_LOG(L_DEBUG) << "Ray Generation Shader:" << std::endl
 					<< result.RayGenerationShader << std::endl;
@@ -271,6 +272,7 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 	settings.framebuffer_width	= std::max(1u, framebuffer_width);
 	settings.framebuffer_height = std::max(1u, framebuffer_height);
 	settings.acquire_stats		= mAcquireStats;
+	settings.aov_count			= mAOVCount;
 
 	IG_LOG(L_DEBUG) << "Init JIT compiling" << std::endl;
 	ig_init_jit(mManager.getPath(mTarget).generic_u8string());

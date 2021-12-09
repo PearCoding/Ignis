@@ -132,6 +132,7 @@ struct Interface {
 		anydsl::Array<float> first_primary;
 		anydsl::Array<float> second_primary;
 		anydsl::Array<float> secondary;
+		std::vector<anydsl::Array<float>> aovs;
 		anydsl::Array<float> film_pixels;
 		anydsl::Array<StreamRay> ray_list;
 		anydsl::Array<float>* current_first_primary;
@@ -158,6 +159,7 @@ struct Interface {
 	std::mutex thread_mutex;
 	std::unordered_map<std::thread::id, std::unique_ptr<CPUData>> thread_data;
 
+	std::vector<anydsl::Array<float>> aovs;
 	anydsl::Array<float> host_pixels;
 	const IG::SceneDatabase* database;
 	size_t film_width;
@@ -180,8 +182,10 @@ struct Interface {
 					 void* ray_generation_shader,
 					 void* miss_shader,
 					 const std::vector<void*>& hit_shaders,
-					 bool acquire_stats)
-		: host_pixels(width * height * 3)
+					 bool acquire_stats,
+					 size_t aov_count)
+		: aovs(aov_count)
+		, host_pixels(width * height * 3)
 		, database(database)
 		, film_width(width)
 		, film_height(height)
@@ -190,6 +194,8 @@ struct Interface {
 		, hit_shaders(hit_shaders)
 		, acquire_stats(acquire_stats)
 	{
+		for (auto& arr : aovs)
+			arr = std::move(anydsl::Array<float>(width * height * 3));
 	}
 
 	inline ~Interface()
@@ -287,7 +293,7 @@ struct Interface {
 		std::swap(device.current_first_primary, device.current_second_primary);
 	}
 
-	template<typename Bvh, typename Node>
+	template <typename Bvh, typename Node>
 	inline const Bvh& load_bvh_ent(int32_t dev)
 	{
 		auto& device = devices[dev];
@@ -465,8 +471,50 @@ struct Interface {
 			get_thread_data()->stats.endShaderLaunch(IG::ShaderType::Hit, entity_id);
 	}
 
+	inline float* get_film_image(int32_t dev)
+	{
+		if (dev != 0) {
+			auto& device = devices[dev];
+			if (!device.film_pixels.size()) {
+				auto film_size	   = film_width * film_height * 3;
+				auto film_data	   = reinterpret_cast<float*>(anydsl_alloc(dev, sizeof(float) * film_size));
+				device.film_pixels = std::move(anydsl::Array<float>(dev, film_data, film_size));
+				anydsl::copy(host_pixels, device.film_pixels);
+			}
+			return device.film_pixels.data();
+		} else {
+			return host_pixels.data();
+		}
+	}
+
+	inline float* get_aov_image(int32_t dev, int32_t id)
+	{
+		if (id == 0) // Id = 0 is the actual framebuffer
+			return get_film_image(dev);
+
+		int32_t index = id - 1;
+		if (dev != 0) {
+			auto& device = devices[dev];
+			if (device.aovs.size() != aovs.size())
+				device.aovs.resize(aovs.size());
+
+			if (!device.aovs[index].size()) {
+				auto film_size	   = film_width * film_height * 3;
+				auto film_data	   = reinterpret_cast<float*>(anydsl_alloc(dev, sizeof(float) * film_size));
+				device.aovs[index] = std::move(anydsl::Array<float>(dev, film_data, film_size));
+				anydsl::copy(aovs[index], device.aovs[index]);
+			}
+			return device.aovs[index].data();
+		} else {
+			return aovs[index].data();
+		}
+	}
+
 	inline void present(int32_t dev)
 	{
+		for (size_t id = 0; id < aovs.size(); ++id)
+			anydsl::copy(devices[dev].aovs[id], aovs[id]);
+
 		anydsl::copy(devices[dev].film_pixels, host_pixels);
 	}
 
@@ -477,6 +525,18 @@ struct Interface {
 			auto& device_pixels = devices[pair.first].film_pixels;
 			if (device_pixels.size())
 				anydsl::copy(host_pixels, device_pixels);
+		}
+
+		// TODO: Be more selective?
+		for (size_t id = 0; id < aovs.size(); ++id) {
+			std::fill(aovs[id].begin(), aovs[id].end(), 0.0f);
+			for (auto& pair : devices) {
+				if (devices[pair.first].aovs.empty())
+					continue;
+				auto& device_pixels = devices[pair.first].aovs[id];
+				if (device_pixels.size())
+					anydsl::copy(aovs[id], device_pixels);
+			}
 		}
 	}
 
@@ -541,7 +601,8 @@ void glue_setup(const DriverSetupSettings* settings)
 	sInterface = std::make_unique<Interface>(settings->framebuffer_width, settings->framebuffer_height,
 											 settings->database,
 											 settings->ray_generation_shader, settings->miss_shader, settings->hit_shaders,
-											 settings->acquire_stats);
+											 settings->acquire_stats,
+											 settings->aov_count);
 }
 
 void glue_shutdown()
@@ -551,12 +612,15 @@ void glue_shutdown()
 
 const float* glue_getframebuffer(int aov)
 {
-	IG_UNUSED(aov);
-	return sInterface->host_pixels.data();
+	if (aov <= 0 || (size_t)aov > sInterface->aovs.size())
+		return sInterface->host_pixels.data();
+	else
+		return sInterface->aovs[aov - 1].data();
 }
 
 void glue_clearframebuffer(int aov)
 {
+	// TODO: Be more selective
 	IG_UNUSED(aov);
 	sInterface->clear();
 }
@@ -642,20 +706,14 @@ IG_EXPORT DriverInterface ig_get_interface()
 
 void ignis_get_film_data(int dev, float** pixels, int* width, int* height)
 {
-	if (dev != 0) {
-		auto& device = sInterface->devices[dev];
-		if (!device.film_pixels.size()) {
-			auto film_size	   = sInterface->film_width * sInterface->film_height * 3;
-			auto film_data	   = reinterpret_cast<float*>(anydsl_alloc(dev, sizeof(float) * film_size));
-			device.film_pixels = std::move(anydsl::Array<float>(dev, film_data, film_size));
-			anydsl::copy(sInterface->host_pixels, device.film_pixels);
-		}
-		*pixels = device.film_pixels.data();
-	} else {
-		*pixels = sInterface->host_pixels.data();
-	}
+	*pixels = sInterface->get_film_image(dev);
 	*width	= sInterface->film_width;
 	*height = sInterface->film_height;
+}
+
+void ignis_get_aov_image(int dev, int id, float** aov_pixels)
+{
+	*aov_pixels = sInterface->get_aov_image(dev, id);
 }
 
 void ignis_load_bvh2_ent(int dev, Node2** nodes, EntityLeaf1** objs)

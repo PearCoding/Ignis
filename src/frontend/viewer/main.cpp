@@ -278,11 +278,17 @@ int main(int argc, char** argv)
 #ifdef WITH_UI
 	IG_UNUSED(prettyConsole);
 
-	if (!UI::init(film_width, film_height, runtime->getFramebuffer(), runtime->isDebug()))
+	std::unique_ptr<UI> ui;
+	try {
+		std::vector<const float*> aovs(runtime->aovCount() + 1);
+		for (size_t i = 0; i < runtime->aovCount() + 1; ++i)
+			aovs[i] = runtime->getFramebuffer(i);
+		ui = std::make_unique<UI>(film_width, film_height, aovs, runtime->isDebug());
+	} catch (...) {
 		return EXIT_FAILURE;
+	}
 
-	DebugMode currentDebugMode = UI::currentDebugMode();
-	runtime->setDebugMode(currentDebugMode);
+	runtime->setDebugMode(ui->currentDebugMode());
 #else
 	StatusObserver observer(prettyConsole, 2, desired_iter * SPI);
 	observer.begin();
@@ -308,13 +314,11 @@ int main(int argc, char** argv)
 		bool prevRun = running;
 
 		timer_input.start();
-		done = UI::handleInput(iter, running, camera);
+		done = ui->handleInput(iter, running, camera);
 		timer_input.stop();
 
-		const DebugMode newDebugMode = UI::currentDebugMode();
-		if (currentDebugMode != newDebugMode) {
-			currentDebugMode = newDebugMode;
-			runtime->setDebugMode(currentDebugMode);
+		if (runtime->currentDebugMode() != ui->currentDebugMode()) {
+			runtime->setDebugMode(ui->currentDebugMode());
 			iter = 0;
 		}
 #else
@@ -351,7 +355,7 @@ int main(int argc, char** argv)
 				   << frames_sec * SPI << " SPS, "
 				   << iter * SPI << " "
 				   << "sample" << (iter * SPI > 1 ? "s" : "") << "]";
-				UI::setTitle(os.str().c_str());
+				ui->setTitle(os.str().c_str());
 #endif
 				frames = 0;
 				timing = 0;
@@ -365,7 +369,7 @@ int main(int argc, char** argv)
 				os << "Ignis [Paused, "
 				   << iter * SPI << " "
 				   << "sample" << (iter * SPI > 1 ? "s" : "") << "]";
-				UI::setTitle(os.str().c_str());
+				ui->setTitle(os.str().c_str());
 				frames = 0;
 				timing = 0;
 			}
@@ -374,13 +378,13 @@ int main(int argc, char** argv)
 
 #ifdef WITH_UI
 		timer_ui.start();
-		UI::update(iter, SPI);
+		ui->update(iter, SPI);
 		timer_ui.stop();
 #endif
 	}
 
 #ifdef WITH_UI
-	UI::close();
+	ui.reset();
 #else
 	observer.end();
 #endif

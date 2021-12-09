@@ -43,6 +43,23 @@ fn @gpu_accumulate(atomics: Atomics, film_pixels: &mut [f32], pixel: i32, color:
     }
 }
 
+fn @gpu_get_aov_image(id: i32, dev_id: i32, atomics: Atomics, spp: i32) -> AOVImage {
+    // Width & height always the same as film_width, film_height
+    let mut ptr : &mut [f32];
+    ignis_get_aov_image(dev_id, id, &mut ptr);
+
+    fn getImage(pixels: &mut [f32]) = AOVImage {
+        splat = @|pixel, color| -> () { gpu_accumulate(atomics, pixels, pixel, color, spp) },
+        get   = @|pixel| -> Color     {
+            let ptr2 = &pixels(pixel * 3) as &[f32];
+            make_color(ptr2(0), ptr2(1), ptr2(2))
+        }
+    };
+
+    // Specialize such that ptr is not captured in a kernel
+    $getImage(ptr)
+}
+
 fn @gpu_exec_1d(acc: Accelerator, dim: i32, block_size: i32, body: fn (WorkItem) -> ()) {
     // Helper function that deduces the appropriate grid size that is at least larger
     // or equal to `dim`x1x1, and that is a multiple of the block size.
@@ -134,12 +151,12 @@ fn @gpu_hit_shade( acc: Accelerator
         
         let mat    = @shader(ray, hit, glb_surf);
         let on_hit = path_tracer.on_hit;
-        if let Option[Color]::Some(color) = @on_hit(ray, hit, payload, glb_surf, mat) {
+        if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, payload, glb_surf, mat) {
             gpu_accumulate(atomics, film_pixels, pixel, color, spp);
         }
 
         let on_shadow = path_tracer.on_shadow;
-        if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, hit, &mut rnd, payload, glb_surf, mat) {
+        if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
             write_secondary_ray(ray_id, 0, new_ray);
             secondary.color_r(ray_id) = color.r;
             secondary.color_g(ray_id) = color.g;
@@ -150,7 +167,7 @@ fn @gpu_hit_shade( acc: Accelerator
         }
 
         let on_bounce = path_tracer.on_bounce;
-        if let Option[(Ray, RayPayload)]::Some(new_ray, new_payload) = @on_bounce(ray, hit, &mut rnd, payload, glb_surf, mat) {
+        if let Option[(Ray, RayPayload)]::Some(new_ray, new_payload) = @on_bounce(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
             write_primary_ray(ray_id, 0, new_ray);
             write_primary_rnd_state(ray_id, 0, rnd);
             write_primary_payload(ray_id, 0, new_payload);
@@ -204,7 +221,7 @@ fn @gpu_miss_shade( acc: Accelerator
         let ray     = read_primary_ray(ray_id, 0);
         let pixel   = primary.rays.id(ray_id);
 
-        if let Option[Color]::Some(color) = @on_miss(ray, payload) {
+        if let Option[Color]::Some(color) = @on_miss(ray, pixel, payload) {
             gpu_accumulate(atomics, film_pixels, pixel, color, spp);
         }
         
@@ -212,7 +229,13 @@ fn @gpu_miss_shade( acc: Accelerator
     });
 }
 
-fn @gpu_miss_shade_handler(dev_id: i32, acc: Accelerator, atomics: Atomics, path_tracer: PathTracer, begin: i32, end: i32, spp: i32) -> () {
+fn @gpu_miss_shade_handler(dev_id: i32
+                         , acc: Accelerator
+                         , atomics: Atomics
+                         , path_tracer: PathTracer
+                         , begin: i32
+                         , end: i32
+                         , spp: i32) -> () {
     let (film_pixels, _, _) = gpu_get_film_data(dev_id);
 
     let mut primary: PrimaryStream;
@@ -690,6 +713,7 @@ fn @make_gpu_device( dev_id: i32
                            else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) }
                          , width, height)
     },
+    load_aov_image = @ |id, spp| gpu_get_aov_image(id, dev_id, atomics, spp),
     load_rays = @ || {
         let mut rays: &[StreamRay]; // TODO: Alignment?
         ignis_load_rays(dev_id, &mut rays);

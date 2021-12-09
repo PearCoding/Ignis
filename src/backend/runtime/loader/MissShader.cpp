@@ -14,8 +14,8 @@ std::string MissShader::setup(LoaderContext& ctx)
 {
 	std::stringstream stream;
 
-	stream << LoaderTechnique::generateRayPayload(ctx) << std::endl;
-	
+	stream << LoaderTechnique::generateHeader(ctx) << std::endl;
+
 	stream << "#[export] fn ig_miss_shader(settings: &Settings, first: i32, last: i32) -> () {" << std::endl
 		   << "  maybe_unused(settings);" << std::endl
 		   << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
@@ -25,11 +25,13 @@ std::string MissShader::setup(LoaderContext& ctx)
 		stream << LoaderLight::generate(ctx, true)
 			   << std::endl;
 
-	stream << LoaderTechnique::generate(ctx) << std::endl
+	stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
+
+	// Will define technique
+	stream << LoaderTechnique::generate(ctx, ctx.AOVCount) << std::endl
 		   << std::endl;
 
-	stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl
-		   << "  device.handle_miss_shader(technique, first, last, spp)" << std::endl
+	stream << "  device.handle_miss_shader(technique, first, last, spp)" << std::endl
 		   << "}" << std::endl;
 
 	return stream.str();

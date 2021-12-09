@@ -18,6 +18,7 @@ struct DriverSetupSettings {
 	void* miss_shader;
 	std::vector<void*> hit_shaders;
 	bool acquire_stats = false;
+	size_t aov_count = false;
 };
 
 struct DriverRenderSettings {
