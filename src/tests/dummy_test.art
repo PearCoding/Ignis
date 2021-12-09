@@ -1,3 +1,5 @@
+static RayPayloadComponents = 0;
+
 // Dummy file used to generate a C interface for the renderer
 #[export] fn _test_dummy() -> i32 { 
     ignis_test_expect_eq_f32(0,0);

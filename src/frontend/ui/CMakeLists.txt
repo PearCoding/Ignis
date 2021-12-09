@@ -7,7 +7,7 @@ CPMAddPackage(
 
 CPMAddPackage(
     NAME imgui_markdown
-    GITHUB_REPOSITORY juliettef/imgui_markdown 
+    GITHUB_REPOSITORY PearCoding/imgui_markdown 
     GIT_TAG main
     DOWNLOAD_ONLY YES
 )
