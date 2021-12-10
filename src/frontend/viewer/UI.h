@@ -15,7 +15,7 @@ enum class ToneMappingMethod {
 
 class UI {
 public:
-	UI(int width, int height, const std::vector<const float*>& aovs, bool showDebug);
+	UI(int width, int height, const std::vector<const float*>& aovs, const std::vector<std::string>& aov_names, bool showDebug);
 	~UI();
 
 	void setTitle(const char* str);
@@ -33,6 +33,7 @@ private:
 	int mWidth;
 	int mHeight;
 	std::vector<const float*> mAOVs;
+	std::vector<std::string> mAOVNames;
 	int mCurrentAOV;
 
 	const bool mShowDebug;

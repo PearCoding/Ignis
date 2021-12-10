@@ -4,6 +4,7 @@
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
 #include "LoaderShape.h"
+#include "LoaderTechnique.h"
 #include "Logger.h"
 #include "MissShader.h"
 #include "RayGenerationShader.h"
@@ -54,7 +55,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 	}
 
 	result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;
-	result.AOVCount				= ctx.AOVCount;
+	result.AOVs					= LoaderTechnique::getAOVInfo(ctx).EnabledAOVs;
 
 	IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 

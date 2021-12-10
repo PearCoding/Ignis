@@ -18,7 +18,7 @@ struct LoaderOptions {
 
 struct LoaderResult {
 	SceneDatabase Database;
-	size_t AOVCount;
+	std::vector<std::string> AOVs;
 	std::string RayGenerationShader;
 	std::string MissShader;
 	std::vector<std::string> HitShaders;

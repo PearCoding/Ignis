@@ -725,6 +725,24 @@ public:
 			ImGui::PopItemWidth();
 		}
 
+		if (Parent->mAOVs.size() > 1) {
+			if (ImGui::CollapsingHeader("AOV", ImGuiTreeNodeFlags_DefaultOpen)) {
+				const char* current_aov = Parent->mAOVNames[Parent->mCurrentAOV].c_str();
+				if (ImGui::BeginCombo("Display", current_aov)) {
+					for (size_t i = 0; i < Parent->mAOVs.size(); ++i) {
+						bool is_selected = ((int)i == Parent->mCurrentAOV);
+						if (ImGui::Selectable(Parent->mAOVNames[i].c_str(), is_selected) && Running) {
+							Parent->mCurrentAOV = (int)i;
+						}
+						if (is_selected && Running)
+							ImGui::SetItemDefaultFocus();
+					}
+
+					ImGui::EndCombo();
+				}
+			}
+		}
+
 		if (ShowDebugMode) {
 			if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
 				const char* current_method = DebugModeOptions[(int)Parent->mDebugMode];
@@ -792,10 +810,11 @@ public:
 
 ////////////////////////////////////////////////////////////////
 
-UI::UI(int width, int height, const std::vector<const float*>& aovs, bool showDebug)
+UI::UI(int width, int height, const std::vector<const float*>& aovs, const std::vector<std::string>& aov_names, bool showDebug)
 	: mWidth(width)
 	, mHeight(height)
 	, mAOVs(aovs)
+	, mAOVNames(aov_names)
 	, mCurrentAOV(0)
 	, mShowDebug(showDebug)
 	, mDebugMode(DebugMode::Normal)

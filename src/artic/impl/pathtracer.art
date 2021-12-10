@@ -21,11 +21,9 @@ struct PTRayPayload {
     depth: i32
 }
 
-static AOV_PATH_NORMAL          = 1;
-static AOV_PATH_DIRECT          = 2;
-static AOV_PATH_DIRECT_WEIGHTED = 3;
-static AOV_PATH_NEE             = 4;
-static AOV_PATH_NEE_WEIGHTED    = 5;
+static AOV_PATH_NORMAL = 1;
+static AOV_PATH_DIRECT = 2;
+static AOV_PATH_NEE    = 3;
 
 fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     let mut r : RayPayload;
@@ -47,9 +45,9 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
     let offset : f32  = 0.001;
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
 
-    let aov_normal      = @aovs(AOV_PATH_NORMAL);
-    let aov_di          = @aovs(AOV_PATH_DIRECT);
-    let aov_di_weighted = @aovs(AOV_PATH_DIRECT_WEIGHTED);
+    let aov_normal = @aovs(AOV_PATH_NORMAL);
+    let aov_di     = @aovs(AOV_PATH_DIRECT);
+    let aov_nee    = @aovs(AOV_PATH_NEE);
 
     fn @on_shadow( ray: Ray
                  , _pixel: i32
@@ -143,12 +141,9 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 let emit     = mat.emission(out_dir);
                 let next_mis = pt.mis * hit.distance * hit.distance / dot;
                 let mis      = 1 / (1 + next_mis * pdf_lightpick * emit.pdf_area);
-
-                let lr      = color_mul(pt.contrib, emit.intensity);
-                let contrib = color_mulf(lr, mis);
+                let contrib  = color_mulf(color_mul(pt.contrib, emit.intensity), mis);
                 
-                aov_di.splat(pixel, lr);
-                aov_di_weighted.splat(pixel, contrib);
+                aov_di.splat(pixel, contrib);
 
                 return(make_option(contrib))
             }
@@ -157,7 +152,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
     }
 
     fn @on_miss( ray: Ray
-               , _pixel: i32
+               , pixel: i32
                , payload: RayPayload) -> Option[Color] {
         let mut inflights = 0;
         let mut color     = black;
@@ -180,6 +175,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         }
 
         if inflights > 0 {
+            aov_di.splat(pixel, color);
             make_option(color)
         } else {
             Option[Color]::None

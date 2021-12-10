@@ -52,7 +52,7 @@ public:
 	const float* getFramebuffer(int aov = 0) const;
 	// aov<0 will clear all aovs
 	void clearFramebuffer(int aov = -1);
-	inline size_t aovCount() const { return mAOVCount; }
+	inline const std::vector<std::string> aovs() const { return mAOVs; }
 	inline uint32 iterationCount() const { return mIteration; }
 
 	const Statistics* getStatistics() const;
@@ -88,7 +88,7 @@ private:
 	bool mIsDebug;
 	DebugMode mDebugMode;
 	bool mAcquireStats;
-	size_t mAOVCount;
+	std::vector<std::string> mAOVs;
 
 	std::string RayGenerationShader;
 	std::string MissShader;

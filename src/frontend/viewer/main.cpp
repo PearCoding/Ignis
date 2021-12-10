@@ -280,10 +280,17 @@ int main(int argc, char** argv)
 
 	std::unique_ptr<UI> ui;
 	try {
-		std::vector<const float*> aovs(runtime->aovCount() + 1);
-		for (size_t i = 0; i < runtime->aovCount() + 1; ++i)
+		size_t aov_count = runtime->aovs().size() + 1;
+		std::vector<const float*> aovs(aov_count);
+		std::vector<std::string> aov_names(aov_count);
+		for (size_t i = 0; i < aov_count; ++i) {
 			aovs[i] = runtime->getFramebuffer(i);
-		ui = std::make_unique<UI>(film_width, film_height, aovs, runtime->isDebug());
+			if (i == 0)
+				aov_names[0] = "Color";
+			else
+				aov_names[i] = runtime->aovs()[i - 1];
+		}
+		ui = std::make_unique<UI>(film_width, film_height, aovs, aov_names, runtime->isDebug());
 	} catch (...) {
 		return EXIT_FAILURE;
 	}
