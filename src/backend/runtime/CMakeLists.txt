@@ -43,6 +43,8 @@ set(SRC
     DebugMode.h
     Image.cpp
     Image.h
+    ImageIO.cpp
+    ImageIO.h
     Logger.cpp
     Logger.h
     Runtime.cpp

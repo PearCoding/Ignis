@@ -399,9 +399,7 @@ int main(int argc, char** argv)
 	SectionTimer timer_saving;
 	timer_saving.start();
 	if (!out_file.empty()) {
-		if (iter == 0)
-			iter = 1;
-		if (!saveImageRGB(out_file, runtime->getFramebuffer(), film_width, film_height, 1.0f / iter))
+		if (!saveImageOutput(out_file, *runtime))
 			IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file << "'" << std::endl;
 		else
 			IG_LOG(L_INFO) << "Result saved to '" << out_file << "'" << std::endl;

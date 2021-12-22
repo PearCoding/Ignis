@@ -1,4 +1,5 @@
 #include "Image.h"
+#include "ImageIO.h"
 #include "Logger.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -8,7 +9,7 @@
 #include "zlib.h"
 #define TINYEXR_USE_THREAD (1)
 #define TINYEXR_USE_MINIZ (0)
-#define TINYEXR_IMPLEMENTATION
+// #define TINYEXR_IMPLEMENTATION // Alreay included in ImageIO.cpp
 #include "tinyexr.h"
 
 namespace IG {
@@ -223,15 +224,6 @@ bool ImageRgba32::save(const std::filesystem::path& path, const float* rgba, siz
 	if (!useExr)
 		return false;
 
-	EXRHeader header;
-	InitEXRHeader(&header);
-	header.compression_type = TINYEXR_COMPRESSIONTYPE_PIZ;
-
-	EXRImage image;
-	InitEXRImage(&image);
-
-	image.num_channels = 4;
-
 	std::vector<float> images[4];
 	images[0].resize(width * height);
 	images[1].resize(width * height);
@@ -246,50 +238,13 @@ bool ImageRgba32::save(const std::filesystem::path& path, const float* rgba, siz
 		images[3][i] = rgba[4 * i + 3];
 	}
 
-	float* image_ptr[4];
-	image_ptr[0] = &(images[3].at(0)); // A
-	image_ptr[1] = &(images[2].at(0)); // B
-	image_ptr[2] = &(images[1].at(0)); // G
-	image_ptr[3] = &(images[0].at(0)); // R
+	std::vector<const float*> image_ptrs(4);
+	image_ptrs[0] = &(images[3].at(0)); // A
+	image_ptrs[1] = &(images[2].at(0)); // B
+	image_ptrs[2] = &(images[1].at(0)); // G
+	image_ptrs[3] = &(images[0].at(0)); // R
 
-	image.images = (unsigned char**)image_ptr;
-	image.width	 = width;
-	image.height = height;
-
-	header.num_channels = image.num_channels;
-	header.channels		= (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo) * header.num_channels);
-
-	// Must be ABGR order, since most of EXR viewers expect this channel order.
-	strncpy(header.channels[0].name, "A", 255);
-	header.channels[0].name[strlen("A")] = '\0';
-	strncpy(header.channels[1].name, "B", 255);
-	header.channels[1].name[strlen("B")] = '\0';
-	strncpy(header.channels[2].name, "G", 255);
-	header.channels[2].name[strlen("G")] = '\0';
-	strncpy(header.channels[3].name, "R", 255);
-	header.channels[3].name[strlen("R")] = '\0';
-
-	header.pixel_types			 = (int*)malloc(sizeof(int) * header.num_channels);
-	header.requested_pixel_types = (int*)malloc(sizeof(int) * header.num_channels);
-	for (int i = 0; i < header.num_channels; ++i) {
-		header.pixel_types[i]			= TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
-		header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
-	}
-
-	const char* err = nullptr;
-	int ret			= SaveEXRImageToFile(&image, &header, path.generic_u8string().c_str(), &err);
-
-	free(header.channels);
-	free(header.pixel_types);
-	free(header.requested_pixel_types);
-
-	if (ret != TINYEXR_SUCCESS) {
-		throw ImageSaveException(err, path);
-		FreeEXRErrorMessage(err); // free's buffer for an error message
-		return false;
-	}
-
-	return true;
+	return ImageIO::save(path, width, height, image_ptrs, { "A", "B", "G", "R" });
 }
 
 } // namespace IG
