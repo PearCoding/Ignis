@@ -103,7 +103,7 @@ fn @cpu_sort_secondary(secondary: &SecondaryStream) -> i32 {
         // We found a ray which did intersect something
         // Put it to the end
         for j in range(i+skip, secondary.size) {
-            if secondary.prim_id(j) < 0 { 
+            if secondary.prim_id(j) < 0 {
                 secondary.rays.id(i)    = secondary.rays.id(j);
                 secondary.rays.org_x(i) = secondary.rays.org_x(j);
                 secondary.rays.org_y(i) = secondary.rays.org_y(j);
@@ -451,6 +451,51 @@ fn @cpu_miss_shade_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i
     cpu_miss_shade(primary, path_tracer, cpu_make_accumulator(film_pixels, spp), begin, end, vector_width);
 }
 
+fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: PathTracer, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+    fn cpu_advanced_shadow_specialized(secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
+        if begin == end { return() }
+
+        let read_secondary_ray   = make_ray_stream_reader(secondary2.rays, 1);
+        let read_secondary_color = make_secondary_stream_color_reader(*secondary2, 1);
+        
+        let on_hit  = path_tracer.on_shadow_hit;
+        let on_miss = path_tracer.on_shadow_miss;
+
+        let callback = if is_hit { on_hit } else { on_miss };
+
+        for i, r_vector_width in vectorized_range(vector_width, begin2, end2) {
+            let ray     = read_secondary_ray(i, 0);
+            let color   = read_secondary_color(i, 0);
+            let ray_id  = secondary2.rays.id(i);
+            let pixel   = ray_id;
+
+            // Execute hit point shading, and add the contribution of each lane to the frame buffer
+            if let Option[Color]::Some(new_color) = @callback(ray, pixel, color) { 
+                for lane in unroll(0, r_vector_width) {
+                    let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
+                    accumulate(j,
+                        make_color(
+                            rv_extract(new_color.r, lane),
+                            rv_extract(new_color.g, lane),
+                            rv_extract(new_color.b, lane)
+                        )
+                    );
+                }
+            }
+        }
+    }
+    $cpu_advanced_shadow_specialized(secondary, begin, end);
+}
+
+fn @cpu_advanced_shadow_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i32, is_hit: bool, vector_width: i32) -> () {
+    let (film_pixels, _, _) = cpu_get_film_data();
+
+    let mut secondary : SecondaryStream;
+    ignis_cpu_get_secondary_stream_const(&mut secondary);
+
+    cpu_advanced_shadow(is_hit, secondary, path_tracer, cpu_make_accumulator(film_pixels, spp), begin, end, vector_width);
+}
+
 fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
@@ -465,9 +510,29 @@ fn @cpu_get_aov_image(id: i32, spp: i32) -> AOVImage {
     ignis_get_aov_image(0, id, &mut ptr);
 
     AOVImage {
-        splat = @|pixel, color| -> () { cpu_make_accumulator(ptr, spp)(pixel, color) },
-        get   = @|pixel| -> Color     {
-            make_color(ptr(pixel * 3 + 0), ptr(pixel * 3 + 1), ptr(pixel * 3 + 2))
+        splat = @|pixel, color| -> () { 
+            let accumulate = cpu_make_accumulator(ptr, spp);
+            for lane in unroll(0, rv_num_lanes()) {
+                let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
+                accumulate(j,
+                    make_color(
+                        rv_extract(color.r, lane),
+                        rv_extract(color.g, lane),
+                        rv_extract(color.b, lane)
+                    )
+                );
+            }
+        },
+        get = @|pixel| -> Color {
+            // TODO: Make sure this is correct
+            let mut color = black;
+            for lane in unroll(0, rv_num_lanes()) {
+                let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
+                color.r = rv_insert(color.r, lane, ptr(j * 3 + 0));
+                color.g = rv_insert(color.g, lane, ptr(j * 3 + 1));
+                color.b = rv_insert(color.b, lane, ptr(j * 3 + 2));
+            }
+            color
         }
     }
 }
@@ -497,6 +562,8 @@ fn @cpu_trace( scene: SceneGeometry
     let (film_pixels, film_width, film_height) = cpu_get_film_data();
 
     let accumulate = cpu_make_accumulator(film_pixels, spp);
+
+    let has_advanced_shadow = ignis_use_advanced_shadow_handling();
 
     let mut primary_counter = 0:i64;
     let mut bounces_counter = 0:i64;
@@ -568,17 +635,29 @@ fn @cpu_trace( scene: SceneGeometry
                     }
 
                     // Add the contribution for secondary rays to the frame buffer
-                    //secondary.size = cpu_sort_secondary(secondary);
-                    for i in range(0, secondary.size) {
-                        if secondary.prim_id(i) < 0 {
-                            let j = secondary.rays.id(i);
-                            accumulate(j,
-                                make_color(
-                                    secondary.color_r(i),
-                                    secondary.color_g(i),
-                                    secondary.color_b(i)
-                                )
-                            );
+                    if has_advanced_shadow {
+                        let hit_start = cpu_sort_secondary(secondary);
+                        if hit_start != 0 {
+                            // Call valids (miss)
+                            pipeline.on_advanced_shadow(0, hit_start, false);
+                        }
+
+                        if hit_start < secondary.size {
+                            // Call invalids (hits)
+                            pipeline.on_advanced_shadow(hit_start, secondary.size, true);
+                        }
+                    } else {
+                        for i in range(0, secondary.size) {
+                            if secondary.prim_id(i) < 0 {
+                                let j = secondary.rays.id(i);
+                                accumulate(j,
+                                    make_color(
+                                        secondary.color_r(i),
+                                        secondary.color_g(i),
+                                        secondary.color_b(i)
+                                    )
+                                );
+                            }
                         }
                     }
                 }
@@ -674,6 +753,9 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     },
     handle_hit_shader = @ | entity_id, shader, scene, path_tracer, first, last, spp | {
         cpu_hit_shade_handler(entity_id, shader, scene, path_tracer, first, last, spp, vector_width);
+    },
+    handle_advanced_shadow_shader = @ | path_tracer, first, last, spp, is_hit | {
+        cpu_advanced_shadow_handler(path_tracer, first, last, spp, is_hit, vector_width);
     },
     present = @ || ignis_present(0),
     load_scene_bvh = @ || {

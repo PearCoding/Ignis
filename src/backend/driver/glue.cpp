@@ -131,12 +131,15 @@ struct Interface {
 		anydsl::Array<int32_t> tmp_buffer;
 		anydsl::Array<float> first_primary;
 		anydsl::Array<float> second_primary;
-		anydsl::Array<float> secondary;
+		anydsl::Array<float> first_secondary;
+		anydsl::Array<float> second_secondary;
 		std::vector<anydsl::Array<float>> aovs;
 		anydsl::Array<float> film_pixels;
 		anydsl::Array<StreamRay> ray_list;
 		anydsl::Array<float>* current_first_primary;
 		anydsl::Array<float>* current_second_primary;
+		anydsl::Array<float>* current_first_secondary;
+		anydsl::Array<float>* current_second_secondary;
 		std::unordered_map<std::string, DeviceImage> images;
 
 		inline DeviceData()
@@ -145,6 +148,8 @@ struct Interface {
 		{
 			current_first_primary  = &first_primary;
 			current_second_primary = &second_primary;
+			current_first_secondary  = &first_secondary;
+			current_second_secondary = &second_secondary;
 		}
 
 		~DeviceData() = default;
@@ -170,32 +175,20 @@ struct Interface {
 
 	const IG::Ray* ray_list = nullptr; // film_width contains number of rays
 
-	void* ray_generation_shader;
-	void* miss_shader;
-	std::vector<void*> hit_shaders;
+	DriverSetupSettings setup;
 
 	IG::Statistics main_stats;
-	bool acquire_stats;
 
-	inline Interface(size_t width, size_t height,
-					 const IG::SceneDatabase* database,
-					 void* ray_generation_shader,
-					 void* miss_shader,
-					 const std::vector<void*>& hit_shaders,
-					 bool acquire_stats,
-					 size_t aov_count)
-		: aovs(aov_count)
-		, host_pixels(width * height * 3)
-		, database(database)
-		, film_width(width)
-		, film_height(height)
-		, ray_generation_shader(ray_generation_shader)
-		, miss_shader(miss_shader)
-		, hit_shaders(hit_shaders)
-		, acquire_stats(acquire_stats)
+	inline Interface(const DriverSetupSettings& setup)
+		: aovs(setup.aov_count)
+		, host_pixels(setup.framebuffer_width * setup.framebuffer_height * 3)
+		, database(setup.database)
+		, film_width(setup.framebuffer_width)
+		, film_height(setup.framebuffer_height)
+		, setup(setup)
 	{
 		for (auto& arr : aovs)
-			arr = std::move(anydsl::Array<float>(width * height * 3));
+			arr = std::move(anydsl::Array<float>(film_width * film_height * 3));
 	}
 
 	inline ~Interface()
@@ -271,15 +264,27 @@ struct Interface {
 		return *devices[dev].current_second_primary;
 	}
 
-	inline anydsl::Array<float>& gpu_secondary_stream(int32_t dev, size_t size)
+	inline anydsl::Array<float>& gpu_first_secondary_stream(int32_t dev, size_t size)
 	{
-		return resize_array(dev, devices[dev].secondary, size, SecondaryStreamSize);
+		return resize_array(dev, *devices[dev].current_first_secondary, size, SecondaryStreamSize);
 	}
 
-	inline anydsl::Array<float>& gpu_secondary_stream_const(int32_t dev)
+	inline anydsl::Array<float>& gpu_first_secondary_stream_const(int32_t dev)
 	{
-		IG_ASSERT(devices[dev].secondary.size() > 0, "Expected gpu secondary stream to be initialized");
-		return devices[dev].secondary;
+		IG_ASSERT(devices[dev].current_first_secondary.size() > 0, "Expected gpu secondary stream to be initialized");
+		return *devices[dev].current_first_secondary;
+	}
+
+	inline anydsl::Array<float>& gpu_second_secondary_stream(int32_t dev, size_t size)
+	{
+		return resize_array(dev, *devices[dev].current_second_secondary, size, SecondaryStreamSize);
+	}
+
+	inline anydsl::Array<float>& gpu_second_secondary_stream_const(int32_t dev)
+	{
+		IG_ASSERT(use_advanced_shadow_handling(), "Only use second secondary stream if advanced shadow handling is enabled");
+		IG_ASSERT(devices[dev].current_second_secondary.size() > 0, "Expected gpu secondary stream to be initialized");
+		return *devices[dev].current_second_secondary;
 	}
 
 	inline anydsl::Array<int32_t>& gpu_tmp_buffer(int32_t dev, size_t size)
@@ -291,6 +296,12 @@ struct Interface {
 	{
 		auto& device = devices[dev];
 		std::swap(device.current_first_primary, device.current_second_primary);
+	}
+
+	inline void gpu_swap_secondary_streams(int32_t dev)
+	{
+		auto& device = devices[dev];
+		std::swap(device.current_first_secondary, device.current_second_secondary);
 	}
 
 	template <typename Bvh, typename Node>
@@ -428,47 +439,81 @@ struct Interface {
 
 	inline int run_ray_generation_shader(int* id, int size, int xmin, int ymin, int xmax, int ymax)
 	{
-		if (acquire_stats)
+		if (setup.acquire_stats)
 			get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::RayGeneration, {});
 
 		using Callback = decltype(ig_ray_generation_shader);
-		IG_ASSERT(ray_generation_shader != nullptr, "Expected ray generation shader to be valid");
-		auto callback = (Callback*)ray_generation_shader;
+		IG_ASSERT(setup.ray_generation_shader != nullptr, "Expected ray generation shader to be valid");
+		auto callback = (Callback*)setup.ray_generation_shader;
 		const int ret = callback(&current_settings, current_iteration, id, size, xmin, ymin, xmax, ymax);
 
-		if (acquire_stats)
+		if (setup.acquire_stats)
 			get_thread_data()->stats.endShaderLaunch(IG::ShaderType::RayGeneration, {});
 		return ret;
 	}
 
 	inline void run_miss_shader(int first, int last)
 	{
-		if (acquire_stats)
+		if (setup.acquire_stats)
 			get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::Miss, {});
 
 		using Callback = decltype(ig_miss_shader);
-		IG_ASSERT(miss_shader != nullptr, "Expected miss shader to be valid");
-		auto callback = (Callback*)miss_shader;
+		IG_ASSERT(setup.miss_shader != nullptr, "Expected miss shader to be valid");
+		auto callback = (Callback*)setup.miss_shader;
 		callback(&current_settings, first, last);
 
-		if (acquire_stats)
+		if (setup.acquire_stats)
 			get_thread_data()->stats.endShaderLaunch(IG::ShaderType::Miss, {});
 	}
 
 	inline void run_hit_shader(int entity_id, int first, int last)
 	{
-		if (acquire_stats)
+		if (setup.acquire_stats)
 			get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::Hit, entity_id);
 
 		using Callback = decltype(ig_hit_shader);
-		IG_ASSERT(entity_id >= 0 && entity_id < (int)hit_shaders.size(), "Expected entity id for hit shaders to be valid");
-		void* hit_shader = hit_shaders[entity_id];
-		IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
+		IG_ASSERT(entity_id >= 0 && entity_id < (int)setup.hit_shaders.size(), "Expected entity id for hit shaders to be valid");
+		void* hit_shader = setup.hit_shaders[entity_id];
+		IG_ASSERT(setup.hit_shader != nullptr, "Expected hit shader to be valid");
 		auto callback = (Callback*)hit_shader;
 		callback(&current_settings, entity_id, first, last);
 
-		if (acquire_stats)
+		if (setup.acquire_stats)
 			get_thread_data()->stats.endShaderLaunch(IG::ShaderType::Hit, entity_id);
+	}
+
+	inline bool use_advanced_shadow_handling()
+	{
+		return setup.advanced_shadow_hit_shader != nullptr && setup.advanced_shadow_miss_shader != nullptr;
+	}
+
+	inline void run_advanced_shadow_shader(int first, int last, bool is_hit)
+	{
+		IG_ASSERT(use_advanced_shadow_handling(), "Expected advanced shadow shader only be called if it is enabled!");
+
+		if (is_hit) {
+			if (setup.acquire_stats)
+				get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::AdvancedShadowHit, {});
+
+			using Callback = decltype(ig_advanced_shadow_shader);
+			IG_ASSERT(setup.advanced_shadow_hit_shader != nullptr, "Expected miss shader to be valid");
+			auto callback = (Callback*)setup.advanced_shadow_hit_shader;
+			callback(&current_settings, first, last);
+
+			if (setup.acquire_stats)
+				get_thread_data()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowHit, {});
+		} else {
+			if (setup.acquire_stats)
+				get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::AdvancedShadowMiss, {});
+
+			using Callback = decltype(ig_advanced_shadow_shader);
+			IG_ASSERT(setup.advanced_shadow_miss_shader != nullptr, "Expected miss shader to be valid");
+			auto callback = (Callback*)setup.advanced_shadow_miss_shader;
+			callback(&current_settings, first, last);
+
+			if (setup.acquire_stats)
+				get_thread_data()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowMiss, {});
+		}
 	}
 
 	inline float* get_film_image(int32_t dev)
@@ -587,22 +632,18 @@ void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
 	sInterface->current_iteration = iter;
 	sInterface->current_settings  = renderSettings;
 
-	if (sInterface->acquire_stats)
+	if (sInterface->setup.acquire_stats)
 		sInterface->get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::Device, {});
 
 	ig_render(&renderSettings);
 
-	if (sInterface->acquire_stats)
+	if (sInterface->setup.acquire_stats)
 		sInterface->get_thread_data()->stats.endShaderLaunch(IG::ShaderType::Device, {});
 }
 
 void glue_setup(const DriverSetupSettings* settings)
 {
-	sInterface = std::make_unique<Interface>(settings->framebuffer_width, settings->framebuffer_height,
-											 settings->database,
-											 settings->ray_generation_shader, settings->miss_shader, settings->hit_shaders,
-											 settings->acquire_stats,
-											 settings->aov_count);
+	sInterface = std::make_unique<Interface>(*settings);
 }
 
 void glue_shutdown()
@@ -826,21 +867,38 @@ void ignis_gpu_get_second_primary_stream_const(int dev, PrimaryStream* primary)
 	get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_gpu_get_secondary_stream(int dev, SecondaryStream* secondary, int size)
+void ignis_gpu_get_first_secondary_stream(int dev, SecondaryStream* secondary, int size)
 {
-	auto& array = sInterface->gpu_secondary_stream(dev, size);
+	auto& array = sInterface->gpu_first_secondary_stream(dev, size);
 	get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_get_secondary_stream_const(int dev, SecondaryStream* secondary)
+void ignis_gpu_get_first_secondary_stream_const(int dev, SecondaryStream* secondary)
 {
-	auto& array = sInterface->gpu_secondary_stream_const(dev);
+	auto& array = sInterface->gpu_first_secondary_stream_const(dev);
+	get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
+}
+
+void ignis_gpu_get_second_secondary_stream(int dev, SecondaryStream* secondary, int size)
+{
+	auto& array = sInterface->gpu_second_secondary_stream(dev, size);
+	get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
+}
+
+void ignis_gpu_get_second_secondary_stream_const(int dev, SecondaryStream* secondary)
+{
+	auto& array = sInterface->gpu_second_secondary_stream_const(dev);
 	get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
 void ignis_gpu_swap_primary_streams(int dev)
 {
 	sInterface->gpu_swap_primary_streams(dev);
+}
+
+void ignis_gpu_swap_secondary_streams(int dev)
+{
+	sInterface->gpu_swap_secondary_streams(dev);
 }
 
 int ignis_handle_ray_generation(int* id, int size, int xmin, int ymin, int xmax, int ymax)
@@ -856,6 +914,16 @@ void ignis_handle_miss_shader(int first, int last)
 void ignis_handle_hit_shader(int entity_id, int first, int last)
 {
 	sInterface->run_hit_shader(entity_id, first, last);
+}
+
+void ignis_handle_advanced_shadow_shader(int first, int last, bool is_hit)
+{
+	sInterface->run_advanced_shadow_shader(first, last, is_hit);
+}
+
+bool ignis_use_advanced_shadow_handling()
+{
+	return sInterface->use_advanced_shadow_handling();
 }
 
 void ignis_present(int dev)

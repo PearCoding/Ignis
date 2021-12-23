@@ -11,14 +11,16 @@ class Statistics;
 
 // Not in namespace IG
 struct DriverSetupSettings {
-	IG::uint32 framebuffer_width;
-	IG::uint32 framebuffer_height;
-	IG::SceneDatabase* database;
-	void* ray_generation_shader;
-	void* miss_shader;
+	IG::uint32 framebuffer_width  = 0;
+	IG::uint32 framebuffer_height = 0;
+	IG::SceneDatabase* database	  = nullptr;
+	void* ray_generation_shader	  = nullptr;
+	void* miss_shader			  = nullptr;
 	std::vector<void*> hit_shaders;
-	bool acquire_stats = false;
-	size_t aov_count = false;
+	void* advanced_shadow_hit_shader  = nullptr;
+	void* advanced_shadow_miss_shader = nullptr;
+	bool acquire_stats				  = false;
+	size_t aov_count				  = false;
 };
 
 struct DriverRenderSettings {

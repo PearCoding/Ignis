@@ -27,6 +27,8 @@ void Statistics::add(const Statistics& other)
 	addStats(mMissStats, other.mMissStats);
 	for (const auto& pair : other.mHitStats)
 		addStats(mHitStats[pair.first], pair.second);
+	addStats(mAdvancedShadowHitStats, other.mAdvancedShadowHitStats);
+	addStats(mAdvancedShadowMissStats, other.mAdvancedShadowMissStats);
 }
 
 std::string Statistics::dump(size_t iter, bool verbose) const
@@ -65,6 +67,12 @@ std::string Statistics::dump(size_t iter, bool verbose) const
 			stream << "      @" << pair.first << " " << dumpStats(pair.second) << std::endl;
 	}
 
+	if (mAdvancedShadowHitStats.count > 0 || mAdvancedShadowMissStats.count > 0) {
+		stream << "    AdvancedShadow>" << std::endl
+			   << "      Miss> " << dumpStats(mAdvancedShadowMissStats) << std::endl
+			   << "      Hits> " << dumpStats(mAdvancedShadowHitStats) << std::endl;
+	}
+	
 	return stream.str();
 }
 
@@ -80,6 +88,10 @@ Statistics::ShaderStats* Statistics::getStats(ShaderType type, size_t id)
 		return &mMissStats;
 	case ShaderType::Hit:
 		return &mHitStats[id];
+	case ShaderType::AdvancedShadowHit:
+		return &mAdvancedShadowHitStats;
+	case ShaderType::AdvancedShadowMiss:
+		return &mAdvancedShadowMissStats;
 	}
 }
 } // namespace IG

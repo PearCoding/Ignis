@@ -1,9 +1,9 @@
 #pragma once
 
-#include "LoaderContext.h"
+#include "loader/LoaderContext.h"
 
 namespace IG {
-struct MissShader {
+struct RayGenerationShader {
 	static std::string setup(LoaderContext& ctx);
 };
 } // namespace IG

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LoaderContext.h"
+#include "loader/LoaderContext.h"
 
 namespace IG {
 struct HitShader {

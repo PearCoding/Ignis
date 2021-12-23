@@ -93,5 +93,7 @@ private:
 	std::string RayGenerationShader;
 	std::string MissShader;
 	std::vector<std::string> HitShaders;
+	std::string AdvancedShadowHitShader;
+	std::string AdvancedShadowMissShader;
 };
 } // namespace IG

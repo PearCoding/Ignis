@@ -171,18 +171,33 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 						<< shader << std::endl;
 	}
 
+	if (!result.AdvancedShadowHitShader.empty()) {
+		IG_LOG(L_DEBUG) << "Advanced Shadow Hit Shader:" << std::endl
+						<< result.AdvancedShadowHitShader << std::endl;
+		IG_LOG(L_DEBUG) << "Advanced Shadow Miss Shader:" << std::endl
+						<< result.AdvancedShadowMissShader << std::endl;
+	}
+
 	if (opts.DumpShader) {
 		dumpShader("rayGeneration.art", result.RayGenerationShader);
 		dumpShader("missShader.art", result.MissShader);
+
 		int counter = 0;
 		for (const auto& shader : result.HitShaders) {
 			dumpShader("hitShader" + std::to_string(counter++) + ".art", shader);
 		}
+
+		if (!result.AdvancedShadowHitShader.empty()) {
+			dumpShader("advancedShadowHit.art", result.AdvancedShadowHitShader);
+			dumpShader("advancedShadowMiss.art", result.AdvancedShadowMissShader);
+		}
 	}
 
-	RayGenerationShader = std::move(result.RayGenerationShader);
-	MissShader			= std::move(result.MissShader);
-	HitShaders			= std::move(result.HitShaders);
+	RayGenerationShader		 = std::move(result.RayGenerationShader);
+	MissShader				 = std::move(result.MissShader);
+	HitShaders				 = std::move(result.HitShaders);
+	AdvancedShadowHitShader	 = std::move(result.AdvancedShadowHitShader);
+	AdvancedShadowMissShader = std::move(result.AdvancedShadowMissShader);
 
 	// Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
@@ -292,6 +307,17 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 		IG_LOG(L_DEBUG) << "Hit shader [" << i << "]" << std::endl;
 		const std::filesystem::path hp = "hitShaderFull" + std::to_string(i) + ".art";
 		settings.hit_shaders.push_back(ig_compile_source(HitShaders[i], "ig_hit_shader", mOptions.DumpShaderFull ? &hp : nullptr));
+	}
+
+	if (!AdvancedShadowHitShader.empty()) {
+		IG_LOG(L_DEBUG) << "Compiling advanced shadow shaders" << std::endl;
+		const std::filesystem::path ash		= "advancedShadowHitFull.art";
+		settings.advanced_shadow_hit_shader = ig_compile_source(AdvancedShadowHitShader, "ig_advanced_shadow_shader",
+																mOptions.DumpShaderFull ? &ash : nullptr);
+
+		const std::filesystem::path asm_	 = "advancedShadowMissFull.art";
+		settings.advanced_shadow_miss_shader = ig_compile_source(AdvancedShadowMissShader, "ig_advanced_shadow_shader",
+																 mOptions.DumpShaderFull ? &asm_ : nullptr);
 	}
 
 	mLoadedInterface.SetupFunction(&settings);

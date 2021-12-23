@@ -285,6 +285,7 @@ int main(int argc, char** argv)
 		std::vector<std::string> aov_names(aov_count);
 		for (size_t i = 0; i < aov_count; ++i) {
 			aovs[i] = runtime->getFramebuffer(i);
+			IG_ASSERT(aovs[i], "Expected framebuffer entry for AOV to be not NULL");
 			if (i == 0)
 				aov_names[0] = "Color";
 			else

@@ -1,10 +1,10 @@
 #include "HitShader.h"
-#include "Loader.h"
-#include "LoaderBSDF.h"
-#include "LoaderLight.h"
-#include "LoaderTechnique.h"
 #include "Logger.h"
-#include "ShaderUtils.h"
+#include "loader/Loader.h"
+#include "loader/LoaderBSDF.h"
+#include "loader/LoaderLight.h"
+#include "loader/LoaderTechnique.h"
+#include "loader/ShaderUtils.h"
 
 #include <sstream>
 

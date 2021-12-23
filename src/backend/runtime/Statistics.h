@@ -10,7 +10,9 @@ enum class ShaderType {
 	Device,
 	RayGeneration,
 	Hit,
-	Miss
+	Miss,
+	AdvancedShadowHit,
+	AdvancedShadowMiss,
 };
 
 class Statistics {
@@ -40,5 +42,7 @@ private:
 	ShaderStats mRayGenerationStats;
 	ShaderStats mMissStats;
 	std::map<size_t, ShaderStats> mHitStats;
+	ShaderStats mAdvancedShadowHitStats;
+	ShaderStats mAdvancedShadowMissStats;
 };
 } // namespace IG

@@ -17,6 +17,8 @@ fn @make_ao_renderer() -> PathTracer {
                 Option[(Ray, Color)]::None
             }
         },
-        on_bounce = @ |_, _, _, _, _, _, _| Option[(Ray, RayPayload)]::None,
+        on_bounce      = @ |_, _, _, _, _, _, _| Option[(Ray, RayPayload)]::None,
+        on_shadow_hit  = @ |_, _, _| Option[(Color)]::None,
+        on_shadow_miss = @ |_, _, _| Option[(Color)]::None,
     }
 }

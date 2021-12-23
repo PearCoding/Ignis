@@ -23,8 +23,9 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pipeline.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/renderer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/scene.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/render/shape.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/settings.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/shape.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/streams.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/texture.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/intersection.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/mapping_cpu.art

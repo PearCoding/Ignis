@@ -24,6 +24,7 @@ struct PTRayPayload {
 static AOV_PATH_NORMAL = 1;
 static AOV_PATH_DIRECT = 2;
 static AOV_PATH_NEE    = 3;
+static AOV_PATH_STATS  = 4;
 
 fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     let mut r : RayPayload;
@@ -48,6 +49,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
     let aov_normal = @aovs(AOV_PATH_NORMAL);
     let aov_di     = @aovs(AOV_PATH_DIRECT);
     let aov_nee    = @aovs(AOV_PATH_NEE);
+    let aov_stats  = @aovs(AOV_PATH_STATS);
 
     fn @on_shadow( ray: Ray
                  , _pixel: i32
@@ -129,8 +131,8 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         let pt = unrap_ptraypayload(payload);
         if pt.depth == 0 {
             aov_normal.splat(pixel, make_color(math_builtins::fabs(surf.local.col(2).x),
-                                                         math_builtins::fabs(surf.local.col(2).y),
-                                                         math_builtins::fabs(surf.local.col(2).z)));
+                                               math_builtins::fabs(surf.local.col(2).y),
+                                               math_builtins::fabs(surf.local.col(2).z)));
         }
 
         // Hits on a light source
@@ -183,7 +185,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
     }
 
     fn @on_bounce( ray: Ray
-                 , _pixel: i32
+                 , pixel: i32
                  , _hit: Hit
                  , rnd: &mut RndState
                  , payload: RayPayload
@@ -196,6 +198,8 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         // if state.depth >= max_path_len || randf(rnd) >= rr_prob {
         //     return(Option[Ray]::None)
         // }
+
+        aov_stats.splat(pixel, make_color(if pt.depth == 1 { 2 } else { 1 }, 0, 0));
 
         // Bounce
         let out_dir = vec3_neg(ray.dir);
@@ -223,10 +227,19 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         }
     }
 
+    fn @on_shadow_miss( _ray: Ray
+                      , pixel: i32
+                      , color: Color) -> Option[Color] {
+        aov_nee.splat(pixel, color);
+        make_option(color)
+    }
+
     PathTracer {
-        on_hit    = on_hit,
-        on_miss   = on_miss,
-        on_shadow = on_shadow,
-        on_bounce = on_bounce
+        on_hit         = on_hit,
+        on_miss        = on_miss,
+        on_shadow      = on_shadow,
+        on_bounce      = on_bounce,
+        on_shadow_hit  = @ |_, _, _| Option[(Color)]::None,
+        on_shadow_miss = on_shadow_miss,
     }
 }

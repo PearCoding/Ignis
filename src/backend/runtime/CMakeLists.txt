@@ -70,8 +70,6 @@ set(SRC
     driver/Interface.h
     klems/KlemsLoader.cpp
     klems/KlemsLoader.h
-    loader/HitShader.cpp
-    loader/HitShader.h
     loader/Loader.cpp
     loader/Loader.h
     loader/LoaderBSDF.cpp
@@ -90,12 +88,8 @@ set(SRC
     loader/LoaderTechnique.h
     loader/LoaderTexture.cpp
     loader/LoaderTexture.h
-    loader/MissShader.cpp
-    loader/MissShader.h
     loader/Parser.cpp
     loader/Parser.h
-    loader/RayGenerationShader.cpp
-    loader/RayGenerationShader.h
     loader/ShaderUtils.cpp
     loader/ShaderUtils.h
     loader/ShadingTree.cpp
@@ -141,6 +135,14 @@ set(SRC
     skysun/model/ArHosekSkyModelData_CIEXYZ.h
     skysun/model/ArHosekSkyModelData_RGB.h
     skysun/model/ArHosekSkyModelData_Spectral.h
+    shader/AdvancedShadowShader.cpp
+    shader/AdvancedShadowShader.h
+    shader/HitShader.cpp
+    shader/HitShader.h
+    shader/MissShader.cpp
+    shader/MissShader.h
+    shader/RayGenerationShader.cpp
+    shader/RayGenerationShader.h
     table/DynTable.h
     table/SceneDatabase.h
 )

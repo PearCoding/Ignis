@@ -1,13 +1,14 @@
 #include "Loader.h"
-#include "HitShader.h"
 #include "LoaderBSDF.h"
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
 #include "LoaderShape.h"
 #include "LoaderTechnique.h"
 #include "Logger.h"
-#include "MissShader.h"
-#include "RayGenerationShader.h"
+#include "shader/AdvancedShadowShader.h"
+#include "shader/HitShader.h"
+#include "shader/MissShader.h"
+#include "shader/RayGenerationShader.h"
 
 #include <chrono>
 
@@ -34,6 +35,8 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
 	ctx.Database = &result.Database;
 
+	TechniqueInfo info = LoaderTechnique::getInfo(ctx);
+
 	LoaderLight::setupAreaLights(ctx);
 
 	// Generate Ray Generation Shader
@@ -54,8 +57,14 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 		result.HitShaders.push_back(shader);
 	}
 
+	// Generate Advanced Shadow Shaders if requested
+	if (info.UseAdvancedShadowHandling) {
+		result.AdvancedShadowHitShader	= AdvancedShadowShader::setup(true, ctx);
+		result.AdvancedShadowMissShader = AdvancedShadowShader::setup(false, ctx);
+	}
+
 	result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;
-	result.AOVs					= LoaderTechnique::getAOVInfo(ctx).EnabledAOVs;
+	result.AOVs					= info.EnabledAOVs;
 
 	IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
