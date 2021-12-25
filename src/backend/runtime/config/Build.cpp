@@ -65,23 +65,23 @@ std::string getBuildVariant() { return IG_BUILDVARIANT_NAME; }
 std::string getBuildString()
 {
 #ifdef IG_NO_ASSERTS
-	constexpr bool hasAsserts = false;
+    constexpr bool hasAsserts = false;
 #else
-	constexpr bool hasAsserts  = true;
+    constexpr bool hasAsserts = true;
 #endif
 
-	std::stringstream stream;
-	stream << std::boolalpha
-		   << IG_NAME_STRING << " " << IG_VERSION_STRING
-		   << " (" << getBuildVariant()
-		   << ") on " __DATE__ " at " __TIME__
-		   << " with " << getCompilerName()
-		   << " { OS: " << getOSName()
-		   << "; Branch: " IG_GIT_BRANCH
-		   << "; Rev: " IG_GIT_REVISION
-		   << "} [Asserts: " << hasAsserts
-		   << "]";
-	return stream.str();
+    std::stringstream stream;
+    stream << std::boolalpha
+           << IG_NAME_STRING << " " << IG_VERSION_STRING
+           << " (" << getBuildVariant()
+           << ") on " __DATE__ " at " __TIME__
+           << " with " << getCompilerName()
+           << " { OS: " << getOSName()
+           << "; Branch: " IG_GIT_BRANCH
+           << "; Rev: " IG_GIT_REVISION
+           << "} [Asserts: " << hasAsserts
+           << "]";
+    return stream.str();
 }
 } // namespace Build
 } // namespace IG

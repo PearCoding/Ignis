@@ -1,6 +1,7 @@
 // Driver functions ----------------------------------------------------------------
 
 #[import(cc = "C")] fn ignis_get_film_data(i32, &mut &mut [f32], &mut i32, &mut i32) -> ();
+#[import(cc = "C")] fn ignis_get_aov_image(i32, i32, &mut &mut [f32]) -> ();
 #[import(cc = "C")] fn ignis_cpu_get_primary_stream(&mut PrimaryStream, i32) -> ();
 #[import(cc = "C")] fn ignis_cpu_get_primary_stream_const(&mut PrimaryStream) -> ();
 #[import(cc = "C")] fn ignis_cpu_get_secondary_stream(&mut SecondaryStream, i32) -> ();
@@ -9,10 +10,13 @@
 #[import(cc = "C")] fn ignis_gpu_get_first_primary_stream_const(i32, &mut PrimaryStream) -> ();
 #[import(cc = "C")] fn ignis_gpu_get_second_primary_stream(i32, &mut PrimaryStream, i32) -> ();
 #[import(cc = "C")] fn ignis_gpu_get_second_primary_stream_const(i32, &mut PrimaryStream) -> ();
-#[import(cc = "C")] fn ignis_gpu_get_secondary_stream(i32, &mut SecondaryStream, i32) -> ();
-#[import(cc = "C")] fn ignis_gpu_get_secondary_stream_const(i32, &mut SecondaryStream) -> ();
+#[import(cc = "C")] fn ignis_gpu_get_first_secondary_stream(i32, &mut SecondaryStream, i32) -> ();
+#[import(cc = "C")] fn ignis_gpu_get_first_secondary_stream_const(i32, &mut SecondaryStream) -> ();
+#[import(cc = "C")] fn ignis_gpu_get_second_secondary_stream(i32, &mut SecondaryStream, i32) -> ();
+#[import(cc = "C")] fn ignis_gpu_get_second_secondary_stream_const(i32, &mut SecondaryStream) -> ();
 #[import(cc = "C")] fn ignis_gpu_get_tmp_buffer(i32, &mut &mut [i32], i32) -> ();
 #[import(cc = "C")] fn ignis_gpu_swap_primary_streams(i32) -> ();
+#[import(cc = "C")] fn ignis_gpu_swap_secondary_streams(i32) -> ();
 #[import(cc = "C")] fn ignis_load_bvh2_ent(i32, &mut &[Node2], &mut &[EntityLeaf1]) -> ();
 #[import(cc = "C")] fn ignis_load_bvh4_ent(i32, &mut &[Node4], &mut &[EntityLeaf1]) -> ();
 #[import(cc = "C")] fn ignis_load_bvh8_ent(i32, &mut &[Node8], &mut &[EntityLeaf1]) -> ();
@@ -22,149 +26,11 @@
 #[import(cc = "C")] fn ignis_load_image(i32, &[u8], &mut &[f32], &mut i32, &mut i32) -> ();
 #[import(cc = "C")] fn ignis_present(i32) -> ();
 
+#[import(cc = "C")] fn ignis_use_advanced_shadow_handling() -> bool;
+
 //#[import(cc = "C")] fn ignis_handle_primary_trace(i32, &mut PrimaryStream) -> ();
 //#[import(cc = "C")] fn ignis_handle_secondary_trace(i32, &mut SecondaryStream) -> ();
 #[import(cc = "C")] fn ignis_handle_miss_shader(i32, i32) -> ();
 #[import(cc = "C")] fn ignis_handle_hit_shader(i32, i32, i32) -> ();
 #[import(cc = "C")] fn ignis_handle_ray_generation(&mut i32, i32, i32, i32, i32, i32) -> i32;
-
-// Ray streams ---------------------------------------------------------------------
-
-// 9
-struct RayStream {
-    id:    &mut [i32], // this field is also used to indicate if the ray is alive
-    org_x: &mut [f32],
-    org_y: &mut [f32],
-    org_z: &mut [f32],
-    dir_x: &mut [f32],
-    dir_y: &mut [f32],
-    dir_z: &mut [f32],
-    tmin:  &mut [f32],
-    tmax:  &mut [f32],
-}
-
-// 6+8+9=?
-struct PrimaryStream {
-    rays:       RayStream,
-    ent_id:     &mut [i32],
-    prim_id:    &mut [i32],
-    t:          &mut [f32],
-    u:          &mut [f32],
-    v:          &mut [f32],
-    rnd:        &mut [RndState],
-    user:       [&mut [f32] * 8], // User defined stuff
-    size:       i32,
-    //_pad:       i32
-}
-
-// 6+9=15
-struct SecondaryStream {
-    rays:    RayStream,
-    prim_id: &mut [i32],
-    color_r: &mut [f32],
-    color_g: &mut [f32],
-    color_b: &mut [f32],
-    size:    i32,
-    pad:     i32 // TODO: Needed for AMDGPU backend
-}
-
-fn @make_ray_stream_reader(rays: RayStream, vector_width: i32) -> fn (i32, i32) -> Ray {
-    @ |i, j| {
-        let k = i * vector_width + j;
-        make_ray(
-            make_vec3(rays.org_x(k),
-                      rays.org_y(k),
-                      rays.org_z(k)),
-            make_vec3(rays.dir_x(k),
-                      rays.dir_y(k),
-                      rays.dir_z(k)),
-            rays.tmin(k),
-            rays.tmax(k)
-        )
-    }
-}
-
-fn @make_ray_stream_writer(rays: RayStream, vector_width: i32) -> fn (i32, i32, Ray) -> () {
-    @ |i, j, ray| {
-        let k = i * vector_width + j;
-        rays.org_x(k) = ray.org.x;
-        rays.org_y(k) = ray.org.y;
-        rays.org_z(k) = ray.org.z;
-        rays.dir_x(k) = ray.dir.x;
-        rays.dir_y(k) = ray.dir.y;
-        rays.dir_z(k) = ray.dir.z;
-        rays.tmin(k)  = ray.tmin;
-        rays.tmax(k)  = ray.tmax;
-    }
-}
-
-fn @make_primary_stream_hit_reader(primary: PrimaryStream, vector_width: i32) -> fn (i32, i32) -> Hit {
-    @ |i, j| {
-        let k = i * vector_width + j;
-        make_hit(
-            primary.ent_id(k),
-            primary.prim_id(k),
-            primary.t(k),
-            make_vec2(primary.u(k),
-                      primary.v(k))
-        )
-    }
-}
-
-fn @make_primary_stream_hit_writer(primary: PrimaryStream, vector_width: i32, invalid_ent_id: i32) -> fn (i32, i32, Hit) -> () {
-    @ |i, j, hit| {
-        let k = i * vector_width + j;
-        primary.ent_id(k)  = if hit.ent_id == -1 || hit.prim_id == -1 { invalid_ent_id } else { hit.ent_id };
-        primary.prim_id(k) = hit.prim_id;
-        primary.t(k)       = hit.distance;
-        primary.u(k)       = hit.prim_coords.x;
-        primary.v(k)       = hit.prim_coords.y;
-    }
-}
-
-fn @make_secondary_stream_hit_writer(secondary: SecondaryStream, vector_width: i32) -> fn (i32, i32, Hit) -> () {
-    @ |i, j, hit| {
-        let k = i * vector_width + j;
-        secondary.prim_id(k) = hit.prim_id;
-    }
-}
-
-fn @make_primary_stream_rnd_state_reader(primary: PrimaryStream, vector_width: i32) -> fn (i32, i32) -> RndState {
-    @ |i, j| {
-        let k = i * vector_width + j;
-        primary.rnd(k)
-    }
-}
-
-fn @make_primary_stream_rnd_state_writer(primary: PrimaryStream, vector_width: i32) -> fn (i32, i32, RndState) -> () {
-    @ |i, j, state| {
-        let k = i * vector_width + j;
-        primary.rnd(k) = state;
-    }
-}
-
-fn @make_primary_stream_payload_reader(primary: PrimaryStream, vector_width: i32) -> fn (i32, i32) -> RayPayload {
-    @ |i, j| {
-        let k = i * vector_width + j;
-
-        let mut payload : RayPayload;
-
-        // TODO: Fix slow loads/stores
-        for c in unroll(0, RayPayloadComponents) {
-            payload.components(c) = primary.user(c)(k);
-        }
-
-        payload
-    }
-}
-
-fn @make_primary_stream_payload_writer(primary: PrimaryStream, vector_width: i32) -> fn (i32, i32, RayPayload) -> () {
-    @ |i, j, payload| {
-        let k = i * vector_width + j;
-
-        // TODO: Fix slow loads/stores
-        for c in unroll(0, RayPayloadComponents) {
-            primary.user(c)(k) = payload.components(c);
-        }
-    }
-}
+#[import(cc = "C")] fn ignis_handle_advanced_shadow_shader(i32, i32, bool) -> ();

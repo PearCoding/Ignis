@@ -2,7 +2,7 @@
 
 namespace IG {
 Serializer::Serializer(bool readmode)
-	: mReadMode(readmode)
+    : mReadMode(readmode)
 {
 }
 

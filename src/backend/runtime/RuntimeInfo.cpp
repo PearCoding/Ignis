@@ -15,22 +15,22 @@ std::filesystem::path RuntimeInfo::executablePath()
 {
 #ifdef IG_OS_LINUX
 #define _PROC_LINK "/proc/self/exe"
-	char linkname[PATH_MAX];
-	ssize_t r = readlink(_PROC_LINK, linkname, PATH_MAX);
+    char linkname[PATH_MAX];
+    ssize_t r = readlink(_PROC_LINK, linkname, PATH_MAX);
 
-	if (r < 0) {
-		perror("readlink");
-		return {};
-	}
+    if (r < 0) {
+        perror("readlink");
+        return {};
+    }
 
-	if (r > PATH_MAX) {
-		return {};
-	}
+    if (r > PATH_MAX) {
+        return {};
+    }
 
-	return std::string(linkname, r);
+    return std::string(linkname, r);
 
 #elif defined(IG_OS_WINDOWS)
-	wchar_t path[MAX_PATH] = { 0 };
+    wchar_t path[MAX_PATH] = { 0 };
     GetModuleFileNameW(nullptr, path, MAX_PATH);
     return path;
 #endif

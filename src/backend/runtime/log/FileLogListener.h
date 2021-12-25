@@ -6,15 +6,15 @@
 namespace IG {
 class FileLogListener : public LogListener {
 public:
-	FileLogListener();
-	virtual ~FileLogListener();
+    FileLogListener();
+    virtual ~FileLogListener();
 
-	void open(const std::string& file);
+    void open(const std::string& file);
 
-	virtual void startEntry(LogLevel level) override;
-	virtual void writeEntry(int c) override;
+    virtual void startEntry(LogLevel level) override;
+    virtual void writeEntry(int c) override;
 
 private:
-	std::fstream mStream;
+    std::fstream mStream;
 };
 } // namespace IG

@@ -35,7 +35,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.buildDirectory}/bin/igcli",
-            "args": ["${workspaceFolder}/scenes/sky_scene.json", "--spp", "32", "-o", "test.exr"],
+            "args": ["${workspaceFolder}/scenes/primitive_scene.json", "--spp", "32", "-o", "test.exr", "--cpu"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
             "environment": [

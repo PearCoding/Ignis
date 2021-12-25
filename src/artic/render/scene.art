@@ -14,26 +14,5 @@ struct SceneGeometry {
     bvh:      SceneBvh
 }
 
-// Rendering device
-struct Device {
-    trace:         fn (SceneGeometry, Pipeline, i32) -> (),
-    generate_rays: fn (RayEmitter, &mut i32, i32, i32, i32, i32, i32, i32) -> i32, 
-    present:       fn () -> (),
-
-    handle_miss_shader: fn (PathTracer, i32, i32, i32) -> (), 
-    handle_hit_shader:  fn (i32, Shader, Scene, PathTracer, i32, i32, i32) -> (),
-    
-    load_scene_bvh:      fn () -> SceneBvh,
-    load_scene_database: fn () -> SceneDatabase,
-    load_scene_info:     fn () -> SceneInfo,
-    load_entity_table:   fn (DynTable) -> EntityTable,
-    load_shape_table:    fn (DynTable) -> ShapeTable,
-    load_specific_shape: fn (i32, i32, i32, i32, i32, DynTable) -> Shape,
-    load_bvh_table:      fn (DynTable) -> BVHTable,
-    load_image:          fn (&[u8]) -> Image,
-
-    load_rays: fn () -> &[StreamRay]
-}
-
 type BSDFShader = fn (Ray, Hit, SurfaceElement) -> Bsdf;
 type Shader = fn (Ray, Hit, SurfaceElement) -> Material;

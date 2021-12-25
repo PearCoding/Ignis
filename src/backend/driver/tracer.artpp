@@ -43,6 +43,9 @@ fn ig_render(settings: &Settings) -> () {
         },
         on_hit_shade  = @ | entity_id, first, last| {
             ignis_handle_hit_shader(entity_id, first, last);
+        },
+        on_advanced_shadow = @ | first, last, is_hit | {
+            ignis_handle_advanced_shadow_shader(first, last, is_hit);
         }
     };
 
