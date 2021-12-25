@@ -169,7 +169,7 @@ static void light_sky(std::ostream& stream, const std::string& name, const std::
     const std::string path = setup_sky(name, light);
     const std::string id   = ShaderUtils::escapeIdentifier(name);
 
-    stream << "  let tex_" << id << "   = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image(\"" << path << "\"));" << std::endl
+    stream << "  let tex_" << id << "   = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image(\"" << path << "\"), false, false);" << std::endl
            << "  let light_" << id << " = make_environment_light_textured(" << ctx.Environment.SceneDiameter / 2
            << ", tex_" << id << ", 0, 0);" << std::endl;
 }
