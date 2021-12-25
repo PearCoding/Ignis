@@ -8,6 +8,7 @@ if [ ! -d "$BUILD_DIR" ]; then
     BUILD_DIR=${SCRIPT_DIR}/../build
 fi
 
+quiet=false
 scene=${SCRIPT_DIR}/../scenes/diamond_scene.json
 executable=${BUILD_DIR}/bin/igcli
 spp=64
@@ -36,6 +37,7 @@ while [ -n "$1" ]; do
         executable="$2"
         shift
         ;;
+    -q) quiet=true ;;
     --)
         shift
         break
@@ -48,10 +50,14 @@ done
 args="--spp ${spp} -o _bench.exr ${scene} $@"
 
 # Do some warm up iterations
-echo "Warm up..."
+if [ "$quiet" = false ]; then
+    echo "Warm up..."
+fi
 for ((i = 0; i < $warmup_iterations; i++)); do
-    echo $(expr $i + 1)
-    $executable ${args} > /dev/null
+    if [ "$quiet" = false ]; then
+        echo $(expr $i + 1)
+    fi
+    $executable ${args} >/dev/null
 done
 
 # Setup counters
@@ -60,9 +66,13 @@ med=0
 max=0
 
 # Start benchmark
-echo "Benchmark..."
+if [ "$quiet" = false ]; then
+    echo "Benchmark..."
+fi
 for ((i = 0; i < $num_iterations; i++)); do
-    echo $(expr $i + 1)
+    if [ "$quiet" = false ]; then
+        echo $(expr $i + 1)
+    fi
     output=$($executable ${args})
     output=$(echo "${output}" | grep -Po "$REGEX")
     output=${output:2}
