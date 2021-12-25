@@ -9,6 +9,8 @@
 #include "imgui_markdown.h"
 #include "imgui_sdl.h"
 
+#include "inspector.h"
+
 #include "Color.h"
 #include "Logger.h"
 #include "ToneMapping.h"
@@ -70,6 +72,7 @@ public:
     int ScreenshotRequest = 0; // 0-Nothing, 1-Screenshot, 2-Full screenshot
     bool ShowHelp         = false;
     bool ShowUI           = true;
+    bool ShowInspector    = false;
     bool LockInteraction  = false;
 
     int Width, Height;
@@ -289,6 +292,9 @@ public:
                         break;
                     case SDLK_m:
                         Parent->changeAOV(1);
+                        break;
+                    case SDLK_i:
+                        ShowInspector = !ShowInspector;
                         break;
                     case SDLK_F1:
                         ShowHelp = !ShowHelp;
@@ -805,6 +811,10 @@ public:
         }
         ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "Press F1 for help...");
         ImGui::End();
+
+        if (ShowInspector) {
+            ui_inspect_image(mouse_x, mouse_y, Width, Height, Buffer.data());
+        }
     }
 };
 
