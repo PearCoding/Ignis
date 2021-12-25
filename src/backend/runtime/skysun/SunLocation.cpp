@@ -8,93 +8,93 @@ namespace IG {
  */
 ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& location)
 {
-	constexpr double EARTH_MEAN_RADIUS = 6371.01;	// In km
-	constexpr double ASTRONOMICAL_UNIT = 149597890; // In km
+    constexpr double EARTH_MEAN_RADIUS = 6371.01;   // In km
+    constexpr double ASTRONOMICAL_UNIT = 149597890; // In km
 
-	// Auxiliary variables
-	double dY;
-	double dX;
+    // Auxiliary variables
+    double dY;
+    double dX;
 
-	/* Calculate difference in days between the current Julian Day
+    /* Calculate difference in days between the current Julian Day
        and JD 2451545.0, which is noon 1 January 2000 Universal Time */
-	double elapsedJulianDays, decHours;
-	{
-		// Calculate time of the day in UT decimal hours
-		decHours = timepoint.Hour - location.Timezone + (timepoint.Minute + timepoint.Seconds / 60.0) / 60.0;
+    double elapsedJulianDays, decHours;
+    {
+        // Calculate time of the day in UT decimal hours
+        decHours = timepoint.Hour - location.Timezone + (timepoint.Minute + timepoint.Seconds / 60.0) / 60.0;
 
-		// Calculate current Julian Day
-		int liAux1 = (timepoint.Month - 14) / 12;
-		int liAux2 = (1461 * (timepoint.Year + 4800 + liAux1)) / 4
-					 + (367 * (timepoint.Month - 2 - 12 * liAux1)) / 12
-					 - (3 * ((timepoint.Year + 4900 + liAux1) / 100)) / 4
-					 + timepoint.Day - 32075;
-		double dJulianDate = (double)liAux2 - 0.5 + decHours / 24.0;
+        // Calculate current Julian Day
+        int liAux1 = (timepoint.Month - 14) / 12;
+        int liAux2 = (1461 * (timepoint.Year + 4800 + liAux1)) / 4
+                     + (367 * (timepoint.Month - 2 - 12 * liAux1)) / 12
+                     - (3 * ((timepoint.Year + 4900 + liAux1) / 100)) / 4
+                     + timepoint.Day - 32075;
+        double dJulianDate = (double)liAux2 - 0.5 + decHours / 24.0;
 
-		// Calculate difference between current Julian Day and JD 2451545.0
-		elapsedJulianDays = dJulianDate - 2451545.0;
-	}
+        // Calculate difference between current Julian Day and JD 2451545.0
+        elapsedJulianDays = dJulianDate - 2451545.0;
+    }
 
-	/* Calculate ecliptic coordinates (ecliptic longitude and obliquity of the
+    /* Calculate ecliptic coordinates (ecliptic longitude and obliquity of the
        ecliptic in radians but without limiting the angle to be less than 2*Pi
        (i.e., the result may be greater than 2*Pi) */
-	double eclipticLongitude, eclipticObliquity;
-	{
-		double omega		 = 2.1429 - 0.0010394594 * elapsedJulianDays;
-		double meanLongitude = 4.8950630 + 0.017202791698 * elapsedJulianDays; // Radians
-		double anomaly		 = 6.2400600 + 0.0172019699 * elapsedJulianDays;
+    double eclipticLongitude, eclipticObliquity;
+    {
+        double omega         = 2.1429 - 0.0010394594 * elapsedJulianDays;
+        double meanLongitude = 4.8950630 + 0.017202791698 * elapsedJulianDays; // Radians
+        double anomaly       = 6.2400600 + 0.0172019699 * elapsedJulianDays;
 
-		eclipticLongitude = meanLongitude + 0.03341607 * std::sin(anomaly)
-							+ 0.00034894 * std::sin(2 * anomaly) - 0.0001134
-							- 0.0000203 * std::sin(omega);
+        eclipticLongitude = meanLongitude + 0.03341607 * std::sin(anomaly)
+                            + 0.00034894 * std::sin(2 * anomaly) - 0.0001134
+                            - 0.0000203 * std::sin(omega);
 
-		eclipticObliquity = 0.4090928 - 6.2140e-9 * elapsedJulianDays
-							+ 0.0000396 * std::cos(omega);
-	}
+        eclipticObliquity = 0.4090928 - 6.2140e-9 * elapsedJulianDays
+                            + 0.0000396 * std::cos(omega);
+    }
 
-	/* Calculate celestial coordinates ( right ascension and declination ) in radians
+    /* Calculate celestial coordinates ( right ascension and declination ) in radians
        but without limiting the angle to be less than 2*Pi (i.e., the result may be
        greater than 2*Pi) */
-	double rightAscension, declination;
-	{
-		double sinEclipticLongitude = std::sin(eclipticLongitude);
-		dY							= std::cos(eclipticObliquity) * sinEclipticLongitude;
-		dX							= std::cos(eclipticLongitude);
-		rightAscension				= std::atan2(dY, dX);
-		if (rightAscension < 0.0)
-			rightAscension += 2 * Pi;
-		declination = std::asin(std::sin(eclipticObliquity) * sinEclipticLongitude);
-	}
+    double rightAscension, declination;
+    {
+        double sinEclipticLongitude = std::sin(eclipticLongitude);
+        dY                          = std::cos(eclipticObliquity) * sinEclipticLongitude;
+        dX                          = std::cos(eclipticLongitude);
+        rightAscension              = std::atan2(dY, dX);
+        if (rightAscension < 0.0)
+            rightAscension += 2 * Pi;
+        declination = std::asin(std::sin(eclipticObliquity) * sinEclipticLongitude);
+    }
 
-	// Calculate local coordinates (azimuth and zenith angle) in degrees
-	double elevation, azimuth;
-	{
-		double greenwichMeanSiderealTime = 6.6974243242
-										   + 0.0657098283 * elapsedJulianDays + decHours;
+    // Calculate local coordinates (azimuth and zenith angle) in degrees
+    double elevation, azimuth;
+    {
+        double greenwichMeanSiderealTime = 6.6974243242
+                                           + 0.0657098283 * elapsedJulianDays + decHours;
 
-		double localMeanSiderealTime = Deg2Rad * ((float)((greenwichMeanSiderealTime * 15 + location.Longitude)));
+        double localMeanSiderealTime = Deg2Rad * ((float)((greenwichMeanSiderealTime * 15 + location.Longitude)));
 
-		double latitudeInRadians = Deg2Rad * location.Latitude;
-		double cosLatitude		 = std::cos(latitudeInRadians);
-		double sinLatitude		 = std::sin(latitudeInRadians);
+        double latitudeInRadians = Deg2Rad * location.Latitude;
+        double cosLatitude       = std::cos(latitudeInRadians);
+        double sinLatitude       = std::sin(latitudeInRadians);
 
-		double hourAngle	= localMeanSiderealTime - rightAscension;
-		double cosHourAngle = std::cos(hourAngle);
+        double hourAngle    = localMeanSiderealTime - rightAscension;
+        double cosHourAngle = std::cos(hourAngle);
 
-		elevation = std::acos(cosLatitude * cosHourAngle
-								  * std::cos(declination)
-							  + std::sin(declination) * sinLatitude);
+        elevation = std::acos(cosLatitude * cosHourAngle
+                                  * std::cos(declination)
+                              + std::sin(declination) * sinLatitude);
 
-		dY = -std::sin(hourAngle);
-		dX = std::tan(declination) * cosLatitude - sinLatitude * cosHourAngle;
+        dY = -std::sin(hourAngle);
+        dX = std::tan(declination) * cosLatitude - sinLatitude * cosHourAngle;
 
-		azimuth = std::atan2(dY, dX);
-		if (azimuth < 0.0)
-			azimuth += 2 * Pi;
+        azimuth = std::atan2(dY, dX);
+        if (azimuth < 0.0)
+            azimuth += 2 * Pi;
 
-		// Parallax Correction
-		elevation += (EARTH_MEAN_RADIUS / ASTRONOMICAL_UNIT) * std::sin(elevation);
-	}
+        // Parallax Correction
+        elevation += (EARTH_MEAN_RADIUS / ASTRONOMICAL_UNIT) * std::sin(elevation);
+    }
 
-	return ElevationAzimuth{ Pi2 - (float)elevation, (float)azimuth };
+    return ElevationAzimuth{ Pi2 - (float)elevation, (float)azimuth };
 }
 } // namespace IG

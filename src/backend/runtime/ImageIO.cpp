@@ -11,53 +11,53 @@
 namespace IG {
 
 bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t height,
-				   const std::vector<const float*>& layer_ptrs, const std::vector<std::string>& layer_names)
+                   const std::vector<const float*>& layer_ptrs, const std::vector<std::string>& layer_names)
 {
-	IG_ASSERT(layer_ptrs.size() == layer_names.size(), "Expected layer pointers and layer names of the same size");
+    IG_ASSERT(layer_ptrs.size() == layer_names.size(), "Expected layer pointers and layer names of the same size");
 
-	EXRHeader header;
-	InitEXRHeader(&header);
-	header.compression_type = TINYEXR_COMPRESSIONTYPE_PIZ;
+    EXRHeader header;
+    InitEXRHeader(&header);
+    header.compression_type = TINYEXR_COMPRESSIONTYPE_PIZ;
 
-	EXRImage image;
-	InitEXRImage(&image);
+    EXRImage image;
+    InitEXRImage(&image);
 
-	image.num_channels = layer_ptrs.size();
-	image.images	   = (unsigned char**)layer_ptrs.data();
-	image.width		   = width;
-	image.height	   = height;
+    image.num_channels = layer_ptrs.size();
+    image.images       = (unsigned char**)layer_ptrs.data();
+    image.width        = width;
+    image.height       = height;
 
-	header.num_channels = image.num_channels;
-	header.channels		= new EXRChannelInfo[header.num_channels];
+    header.num_channels = image.num_channels;
+    header.channels     = new EXRChannelInfo[header.num_channels];
 
-	constexpr size_t BUFFER_MAX = 255;
-	for (int i = 0; i < image.num_channels; ++i) {
-		const auto& name = layer_names[i];
-		strncpy(header.channels[i].name, name.c_str(), BUFFER_MAX);
-		if (name.length() >= BUFFER_MAX)
-			header.channels[i].name[BUFFER_MAX - 1] = '\0';
-	}
+    constexpr size_t BUFFER_MAX = 255;
+    for (int i = 0; i < image.num_channels; ++i) {
+        const auto& name = layer_names[i];
+        strncpy(header.channels[i].name, name.c_str(), BUFFER_MAX);
+        if (name.length() >= BUFFER_MAX)
+            header.channels[i].name[BUFFER_MAX - 1] = '\0';
+    }
 
-	header.pixel_types			 = new int[header.num_channels];
-	header.requested_pixel_types = new int[header.num_channels];
-	for (int i = 0; i < header.num_channels; ++i) {
-		header.pixel_types[i]			= TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
-		header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
-	}
+    header.pixel_types           = new int[header.num_channels];
+    header.requested_pixel_types = new int[header.num_channels];
+    for (int i = 0; i < header.num_channels; ++i) {
+        header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
+        header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
+    }
 
-	const char* err = nullptr;
-	int ret			= SaveEXRImageToFile(&image, &header, path.generic_u8string().c_str(), &err);
+    const char* err = nullptr;
+    int ret         = SaveEXRImageToFile(&image, &header, path.generic_u8string().c_str(), &err);
 
-	delete[] header.channels;
-	delete[] header.pixel_types;
-	delete[] header.requested_pixel_types;
+    delete[] header.channels;
+    delete[] header.pixel_types;
+    delete[] header.requested_pixel_types;
 
-	if (ret != TINYEXR_SUCCESS) {
-		throw ImageSaveException(err, path);
-		FreeEXRErrorMessage(err); // free's buffer for an error message
-		return false;
-	}
+    if (ret != TINYEXR_SUCCESS) {
+        throw ImageSaveException(err, path);
+        FreeEXRErrorMessage(err); // free's buffer for an error message
+        return false;
+    }
 
-	return true;
+    return true;
 }
 } // namespace IG

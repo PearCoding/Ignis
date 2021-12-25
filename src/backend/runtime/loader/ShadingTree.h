@@ -11,21 +11,21 @@ class Property;
 
 class ShadingTree {
 public:
-	ShadingTree(const std::string& prefix = "");
+    ShadingTree(const std::string& prefix = "");
 
-	void addNumber(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, float def = 0);
-	void addColor(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero());
-	void addTexture(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj);
+    void addNumber(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, float def = 0);
+    void addColor(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero());
+    void addTexture(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj);
 
-	std::string pullHeader();
-	std::string getInline(const std::string& name) const;
+    std::string pullHeader();
+    std::string getInline(const std::string& name) const;
 
 private:
-	std::string lookupTexture(const std::string& name, const LoaderContext& ctx, bool needColor=true);
+    std::string lookupTexture(const std::string& name, const LoaderContext& ctx, bool needColor = true);
 
-	const std::string mPrefix;
-	std::vector<std::string> mHeaderLines;// The order matters
-	std::unordered_set<std::string> mLoadedTextures;
-	std::unordered_map<std::string, std::string> mParameters;
+    const std::string mPrefix;
+    std::vector<std::string> mHeaderLines; // The order matters
+    std::unordered_set<std::string> mLoadedTextures;
+    std::unordered_map<std::string, std::string> mParameters;
 };
 } // namespace IG

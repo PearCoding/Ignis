@@ -12,56 +12,56 @@
 namespace IG {
 struct SharedLibraryInternal {
 #ifdef IG_OS_LINUX
-	void* Handle;
+    void* Handle;
 #elif defined(IG_OS_WINDOWS)
-	HINSTANCE Handle;
+    HINSTANCE Handle;
 #endif
 
 #ifdef IG_OS_LINUX
-	explicit SharedLibraryInternal(const std::string& path)
-		: Handle(dlopen(path.c_str(), RTLD_LAZY))
-	{
-		if (!Handle)
-			throw std::runtime_error(dlerror());
-	}
+    explicit SharedLibraryInternal(const std::string& path)
+        : Handle(dlopen(path.c_str(), RTLD_LAZY))
+    {
+        if (!Handle)
+            throw std::runtime_error(dlerror());
+    }
 #elif defined(IG_OS_WINDOWS)
-	explicit SharedLibraryInternal(const std::string& path)
-		: Handle(LoadLibraryA(path.c_str()))
-	{
-		if (!Handle) // TODO: Better use GetLastError()
-			throw std::runtime_error("Could not load library");
-	}
+    explicit SharedLibraryInternal(const std::string& path)
+        : Handle(LoadLibraryA(path.c_str()))
+    {
+        if (!Handle) // TODO: Better use GetLastError()
+            throw std::runtime_error("Could not load library");
+    }
 #endif
 
-	~SharedLibraryInternal()
-	{
+    ~SharedLibraryInternal()
+    {
 #ifdef IG_OS_LINUX
-		dlclose(Handle);
+        dlclose(Handle);
 #elif defined(IG_OS_WINDOWS)
-		FreeLibrary(Handle);
+        FreeLibrary(Handle);
 #endif
-	}
+    }
 };
 
 SharedLibrary::SharedLibrary() {}
 
 SharedLibrary::SharedLibrary(const std::filesystem::path& file)
-	: mPath(file)
+    : mPath(file)
 {
-	const std::string u8 = file.u8string();
+    const std::string u8 = file.u8string();
 
 #ifdef IG_OS_LINUX
-	try {
-		mInternal.reset(new SharedLibraryInternal(u8 + ".so"));
-	} catch (...) {
-		mInternal.reset(new SharedLibraryInternal(u8));
-	}
+    try {
+        mInternal.reset(new SharedLibraryInternal(u8 + ".so"));
+    } catch (...) {
+        mInternal.reset(new SharedLibraryInternal(u8));
+    }
 #elif defined(IG_OS_WINDOWS)
-	try {
-		mInternal.reset(new SharedLibraryInternal(u8 + ".dll"));
-	} catch (...) {
-		mInternal.reset(new SharedLibraryInternal(u8));
-	}
+    try {
+        mInternal.reset(new SharedLibraryInternal(u8 + ".dll"));
+    } catch (...) {
+        mInternal.reset(new SharedLibraryInternal(u8));
+    }
 #endif
 }
 
@@ -69,18 +69,18 @@ SharedLibrary::~SharedLibrary() {}
 
 void* SharedLibrary::symbol(const std::string& name) const
 {
-	if (!mInternal)
-		return nullptr;
+    if (!mInternal)
+        return nullptr;
 
 #ifdef IG_OS_LINUX
-	return dlsym(mInternal->Handle, name.c_str());
+    return dlsym(mInternal->Handle, name.c_str());
 #elif defined(IG_OS_WINDOWS)
-	return GetProcAddress(mInternal->Handle, name.c_str());
+    return GetProcAddress(mInternal->Handle, name.c_str());
 #endif
 }
 
 void SharedLibrary::unload()
 {
-	mInternal.reset();
+    mInternal.reset();
 }
 } // namespace IG

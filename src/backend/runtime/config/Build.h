@@ -5,9 +5,9 @@
 namespace IG {
 namespace Build {
 struct Version {
-	uint32 Major;
-	uint32 Minor;
-	inline uint32 asNumber() const { return ((Major) << 8) | (Minor); }
+    uint32 Major;
+    uint32 Minor;
+    inline uint32 asNumber() const { return ((Major) << 8) | (Minor); }
 };
 /**
  * @brief Returns version of the build

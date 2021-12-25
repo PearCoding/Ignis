@@ -76,26 +76,26 @@
 #if !defined(IG_NO_ASSERTS) && defined(IG_DEBUG)
 #include <assert.h>
 #define _IG_ASSERT_MSG(msg)                                 \
-	std::cerr << "[IGNIS] ASSERT | " << __FILE__            \
-			  << ":" << __LINE__ << " " << IG_FUNCTION_NAME \
-			  << " | " << (msg) << std::endl
+    std::cerr << "[IGNIS] ASSERT | " << __FILE__            \
+              << ":" << __LINE__ << " " << IG_FUNCTION_NAME \
+              << " | " << (msg) << std::endl
 #ifndef IG_DEBUG
 #define IG_ASSERT(cond, msg)        \
-	do {                            \
-		if (IG_UNLIKELY(!(cond))) { \
-			_IG_ASSERT_MSG((msg));  \
-			std::abort();           \
-		}                           \
-	} while (false)
+    do {                            \
+        if (IG_UNLIKELY(!(cond))) { \
+            _IG_ASSERT_MSG((msg));  \
+            std::abort();           \
+        }                           \
+    } while (false)
 #else
 #define IG_ASSERT(cond, msg)        \
-	do {                            \
-		if (IG_UNLIKELY(!(cond))) { \
-			_IG_ASSERT_MSG((msg));  \
-			IG_DEBUG_BREAK();       \
-			std::abort();           \
-		}                           \
-	} while (false)
+    do {                            \
+        if (IG_UNLIKELY(!(cond))) { \
+            _IG_ASSERT_MSG((msg));  \
+            IG_DEBUG_BREAK();       \
+            std::abort();           \
+        }                           \
+    } while (false)
 #endif
 #else
 #define IG_ASSERT(cond, msg) ((void)0)
@@ -103,26 +103,26 @@
 
 #define IG_CLASS_NON_MOVEABLE(C) \
 private:                         \
-	C(C&&)	   = delete;         \
-	C& operator=(C&&) = delete
+    C(C&&)     = delete;         \
+    C& operator=(C&&) = delete
 
 #define IG_CLASS_NON_COPYABLE(C)     \
 private:                             \
-	C(const C&) = delete;            \
-	C& operator=(const C&) = delete; \
-	IG_CLASS_NON_MOVEABLE(C)
+    C(const C&) = delete;            \
+    C& operator=(const C&) = delete; \
+    IG_CLASS_NON_MOVEABLE(C)
 
 #define IG_CLASS_NON_CONSTRUCTABLE(C) \
 private:                              \
-	C() = delete;                     \
-	IG_CLASS_NON_COPYABLE(C)
+    C() = delete;                     \
+    IG_CLASS_NON_COPYABLE(C)
 
 #define IG_CLASS_STACK_ONLY(C)                     \
 private:                                           \
-	static void* operator new(size_t)	 = delete; \
-	static void* operator new[](size_t)	 = delete; \
-	static void operator delete(void*)	 = delete; \
-	static void operator delete[](void*) = delete
+    static void* operator new(size_t)    = delete; \
+    static void* operator new[](size_t)  = delete; \
+    static void operator delete(void*)   = delete; \
+    static void operator delete[](void*) = delete
 
 #if defined(IG_CC_GNU) || defined(IG_CC_CLANG)
 #define IG_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
@@ -162,16 +162,16 @@ namespace IG {
  * due to performance issues anyway.
  */
 
-using int8	= int8_t;
+using int8  = int8_t;
 using uint8 = uint8_t;
 
-using int16	 = int16_t;
+using int16  = int16_t;
 using uint16 = uint16_t;
 
-using int32	 = int32_t;
+using int32  = int32_t;
 using uint32 = uint32_t;
 
-using int64	 = int64_t;
+using int64  = int64_t;
 using uint64 = uint64_t;
 
 /* Checks */
@@ -208,12 +208,12 @@ constexpr float FltEps = std::numeric_limits<float>::epsilon();
 constexpr float FltInf = std::numeric_limits<float>::infinity();
 constexpr float FltMax = std::numeric_limits<float>::max();
 
-constexpr float Pi	   = 3.14159265358979323846;
+constexpr float Pi     = 3.14159265358979323846;
 constexpr float InvPi  = 0.31830988618379067154; // 1/pi
 constexpr float Inv2Pi = 0.15915494309189533577; // 1/(2pi)
 constexpr float Inv4Pi = 0.07957747154594766788; // 1/(4pi)
-constexpr float Pi2	   = 1.57079632679489661923; // pi half
-constexpr float Pi4	   = 0.78539816339744830961; // pi quarter
+constexpr float Pi2    = 1.57079632679489661923; // pi half
+constexpr float Pi4    = 0.78539816339744830961; // pi quarter
 constexpr float Sqrt2  = 1.41421356237309504880;
 
 constexpr float Deg2Rad = Pi / 180.0f;
@@ -223,6 +223,6 @@ constexpr float Rad2Deg = 180.0f * InvPi;
 template <typename T>
 inline T clamp(const T& a, const T& b, const T& c)
 {
-	return (a < b) ? b : ((a > c) ? c : a);
+    return (a < b) ? b : ((a > c) ? c : a);
 }
 } // namespace IG

@@ -22,8 +22,8 @@
 
 namespace IG {
 ConsoleLogListener::ConsoleLogListener(bool useAnsi)
-	: LogListener()
-	, mUseAnsi(useAnsi)
+    : LogListener()
+    , mUseAnsi(useAnsi)
 {
 }
 
@@ -33,37 +33,37 @@ ConsoleLogListener::~ConsoleLogListener()
 
 void ConsoleLogListener::startEntry(LogLevel level)
 {
-	std::cout << "[";
-	if (mUseAnsi) {
-		switch (level) {
-		case L_DEBUG:
-			std::cout << ANSI_DARK_GRAY;
-			break;
-		case L_INFO:
-			break;
-		case L_WARNING:
-			std::cout << ANSI_YELLOW;
-			break;
-		case L_ERROR:
-			std::cout << ANSI_LIGHT_RED;
-			break;
-		case L_FATAL:
-			std::cout << ANSI_RED;
-			break;
-		}
-	}
+    std::cout << "[";
+    if (mUseAnsi) {
+        switch (level) {
+        case L_DEBUG:
+            std::cout << ANSI_DARK_GRAY;
+            break;
+        case L_INFO:
+            break;
+        case L_WARNING:
+            std::cout << ANSI_YELLOW;
+            break;
+        case L_ERROR:
+            std::cout << ANSI_LIGHT_RED;
+            break;
+        case L_FATAL:
+            std::cout << ANSI_RED;
+            break;
+        }
+    }
 
-	std::cout << Logger::levelString(level);
+    std::cout << Logger::levelString(level);
 
-	if (mUseAnsi) {
-		std::cout << ANSI_RESET;
-	}
+    if (mUseAnsi) {
+        std::cout << ANSI_RESET;
+    }
 
-	std::cout << "] ";
+    std::cout << "] ";
 }
 
 void ConsoleLogListener::writeEntry(int c)
 {
-	std::cout.put(c);
+    std::cout.put(c);
 }
 } // namespace IG

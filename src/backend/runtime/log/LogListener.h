@@ -6,10 +6,10 @@
 namespace IG {
 class LogListener {
 public:
-	LogListener()		   = default;
-	virtual ~LogListener() = default;
+    LogListener()          = default;
+    virtual ~LogListener() = default;
 
-	virtual void startEntry(LogLevel level) = 0;
-	virtual void writeEntry(int c)			= 0;
+    virtual void startEntry(LogLevel level) = 0;
+    virtual void writeEntry(int c)          = 0;
 };
 } // namespace IG
