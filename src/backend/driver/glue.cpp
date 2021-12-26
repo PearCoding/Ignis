@@ -201,7 +201,7 @@ struct Interface {
 
     inline anydsl::Array<float>& getGPUSecondaryStream(int32_t dev, size_t buffer)
     {
-        IG_ASSERT(devices[dev].current_secondary[buffer].size() > 0, "Expected gpu secondary stream to be initialized");
+        IG_ASSERT(devices[dev].current_secondary[buffer]->size() > 0, "Expected gpu secondary stream to be initialized");
         return *devices[dev].current_secondary[buffer];
     }
 
