@@ -24,6 +24,18 @@
 #include <type_traits>
 #include <variant>
 
+static inline size_t roundUp(size_t num, size_t multiple)
+{
+    if (multiple == 0)
+        return num;
+
+    int remainder = num % multiple;
+    if (remainder == 0)
+        return num;
+
+    return num + multiple - remainder;
+}
+
 // TODO: It would be great to get the number below automatically
 constexpr size_t MaxRayPayloadComponents = 8;
 constexpr size_t RayStreamSize           = 9;
@@ -56,7 +68,8 @@ struct SceneDatabaseProxy {
 
 constexpr size_t GPUStreamBufferCount = 2;
 struct Interface {
-    using DeviceImage = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
+    using DeviceImage  = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
+    using DeviceBuffer = std::tuple<anydsl::Array<uint8_t>, int32_t>;
 
     struct DeviceData {
         std::atomic_flag scene_loaded;
@@ -74,6 +87,7 @@ struct Interface {
         std::array<anydsl::Array<float>*, GPUStreamBufferCount> current_primary;
         std::array<anydsl::Array<float>*, GPUStreamBufferCount> current_secondary;
         std::unordered_map<std::string, DeviceImage> images;
+        std::unordered_map<std::string, DeviceBuffer> buffers;
 
         inline DeviceData()
             : scene_loaded(ATOMIC_FLAG_INIT)
@@ -222,8 +236,7 @@ struct Interface {
         const size_t size = getGPUTemporaryBufferSize();
         return std::forward_as_tuple(
             resizeArray(0 /*Host*/, devices[dev].ray_begins_buffer, size, 1),
-            resizeArray(0 /*Host*/, devices[dev].ray_ends_buffer, size, 1)
-        );
+            resizeArray(0 /*Host*/, devices[dev].ray_ends_buffer, size, 1));
     }
 
     inline void swapGPUPrimaryStreams(int32_t dev)
@@ -369,6 +382,27 @@ struct Interface {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;
             return images[filename] = std::move(copyToDevice(dev, IG::ImageRgba32()));
         }
+    }
+
+    inline const DeviceBuffer& requestBuffer(int32_t dev, const std::string& name, int32_t size)
+    {
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+
+        IG_ASSERT(size > 0, "Expected buffer size to be larger then zero");
+
+        // Make sure the buffer is properly sized
+        size = roundUp(size, 32);
+
+        auto& buffers = devices[dev].buffers;
+        auto it       = buffers.find(name);
+        if (it != buffers.end() && std::get<1>(it->second) == size) {
+            return it->second;
+        }
+
+        IG_LOG(IG::L_DEBUG) << "Requested buffer " << name << " with " << size << " bytes" << std::endl;
+        return buffers[name] = std::move(DeviceBuffer(
+                   std::move(anydsl::Array<uint8_t>(dev, reinterpret_cast<uint8_t*>(anydsl_alloc(dev, size)), size)),
+                   size));
     }
 
     inline int runRayGenerationShader(int* id, int size, int xmin, int ymin, int xmax, int ymax)
@@ -755,6 +789,12 @@ void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* wi
     *pixels   = const_cast<float*>(std::get<0>(img).data());
     *width    = std::get<1>(img);
     *height   = std::get<2>(img);
+}
+
+void ignis_request_buffer(int32_t dev, const char* name, uint8_t** data, int size)
+{
+    auto& buffer = sInterface->requestBuffer(dev, name, size);
+    *data        = const_cast<uint8_t*>(std::get<0>(buffer).data());
 }
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)

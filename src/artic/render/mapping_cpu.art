@@ -810,6 +810,11 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         let mut rays: &[StreamRay];
         ignis_load_rays(0, &mut rays);
         rays
+    },
+    request_buffer = @ |name, size| {
+        let mut ptr : &[u8];
+        ignis_request_buffer(0, name, &mut ptr, size);
+        make_cpu_buffer(ptr)
     }
 };
 
