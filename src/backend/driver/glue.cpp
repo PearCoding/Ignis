@@ -8,6 +8,8 @@
 
 #include "generated_interface.h"
 
+#include "ShallowArray.h"
+
 #include <anydsl_runtime.hpp>
 
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
@@ -15,6 +17,7 @@
 #endif
 
 #include <atomic>
+#include <cstring>
 #include <iomanip>
 #include <mutex>
 #include <thread>
@@ -22,74 +25,15 @@
 #include <variant>
 
 // TODO: It would be great to get the number below automatically
-// and/or make it possible to extend it for custom payloads
 constexpr size_t MaxRayPayloadComponents = 8;
 constexpr size_t RayStreamSize           = 9;
 constexpr size_t PrimaryStreamSize       = RayStreamSize + 6 + MaxRayPayloadComponents;
 constexpr size_t SecondaryStreamSize     = RayStreamSize + 4;
 
-/// Some arrays do not need new allocations at the host if the data is already provided and properly arranged.
-/// However, this assumes that the pointer is always properly aligned!
-/// For external devices (e.g., GPU) a standard anydsl array will be used
-// TODO: Make a fallback for cases in which the pointer is not aligned
-template <typename T>
-class ShallowArray {
-public:
-    inline ShallowArray()
-        : device_mem()
-        , host_mem(nullptr)
-        , device(0)
-        , size_(0)
-    {
-    }
-
-    inline ShallowArray(int32_t dev, const T* ptr, size_t n)
-        : device_mem()
-        , host_mem(nullptr)
-        , device(dev)
-        , size_(n)
-    {
-        if (dev != 0) {
-            if (n != 0) {
-                device_mem = std::move(anydsl::Array<T>(dev, reinterpret_cast<T*>(anydsl_alloc(dev, sizeof(T) * n)), n));
-                anydsl_copy(0, ptr, 0, dev, device_mem.data(), 0, sizeof(T) * n);
-            }
-        } else {
-            host_mem = ptr;
-        }
-    }
-
-    inline ShallowArray(ShallowArray&&) = default;
-    inline ShallowArray& operator=(ShallowArray&&) = default;
-
-    inline ~ShallowArray() = default;
-
-    inline const anydsl::Array<T>& device_data() const { return device_mem; }
-    inline const T* host_data() const { return host_mem; }
-
-    inline const T* ptr() const
-    {
-        if (is_host())
-            return host_data();
-        else
-            return device_data().data();
-    }
-
-    inline bool has_data() const { return ptr() != nullptr && size_ > 0; }
-    inline bool is_host() const { return host_mem != nullptr && device == 0; }
-    inline size_t size() const { return size_; }
-
-private:
-    anydsl::Array<T> device_mem;
-    const T* host_mem;
-    int32_t device;
-    size_t size_;
-};
-
 template <typename Node, typename Object>
 struct BvhProxy {
-    ShallowArray<Node> nodes;
-    ShallowArray<Object> objs;
+    ShallowArray<Node> Nodes;
+    ShallowArray<Object> Objs;
 };
 
 using Bvh2Ent = BvhProxy<Node2, EntityLeaf1>;
@@ -110,16 +54,7 @@ struct SceneDatabaseProxy {
     DynTableProxy BVHs;
 };
 
-static inline float safe_rcp(float x)
-{
-    constexpr float min_rcp = 1e-8f;
-    if ((x > 0 ? x : -x) < min_rcp) {
-        return std::signbit(x) ? -std::numeric_limits<float>::max() : std::numeric_limits<float>::max();
-    } else {
-        return 1 / x;
-    }
-}
-
+constexpr size_t GPUStreamBufferCount = 2;
 struct Interface {
     using DeviceImage = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
 
@@ -129,27 +64,25 @@ struct Interface {
         std::atomic_flag database_loaded;
         SceneDatabaseProxy database;
         anydsl::Array<int32_t> tmp_buffer;
-        anydsl::Array<float> first_primary;
-        anydsl::Array<float> second_primary;
-        anydsl::Array<float> first_secondary;
-        anydsl::Array<float> second_secondary;
+        anydsl::Array<int32_t> ray_begins_buffer; // On the host
+        anydsl::Array<int32_t> ray_ends_buffer;   // On the host
+        std::array<anydsl::Array<float>, GPUStreamBufferCount> primary;
+        std::array<anydsl::Array<float>, GPUStreamBufferCount> secondary;
         std::vector<anydsl::Array<float>> aovs;
         anydsl::Array<float> film_pixels;
         anydsl::Array<StreamRay> ray_list;
-        anydsl::Array<float>* current_first_primary;
-        anydsl::Array<float>* current_second_primary;
-        anydsl::Array<float>* current_first_secondary;
-        anydsl::Array<float>* current_second_secondary;
+        std::array<anydsl::Array<float>*, GPUStreamBufferCount> current_primary;
+        std::array<anydsl::Array<float>*, GPUStreamBufferCount> current_secondary;
         std::unordered_map<std::string, DeviceImage> images;
 
         inline DeviceData()
             : scene_loaded(ATOMIC_FLAG_INIT)
             , database_loaded(ATOMIC_FLAG_INIT)
         {
-            current_first_primary    = &first_primary;
-            current_second_primary   = &second_primary;
-            current_first_secondary  = &first_secondary;
-            current_second_secondary = &second_secondary;
+            for (size_t i = 0; i < primary.size(); ++i)
+                current_primary[i] = &primary[i];
+            for (size_t i = 0; i < secondary.size(); ++i)
+                current_secondary[i] = &secondary[i];
         }
 
         ~DeviceData() = default;
@@ -176,6 +109,7 @@ struct Interface {
     const IG::Ray* ray_list = nullptr; // film_width contains number of rays
 
     DriverSetupSettings setup;
+    IG::TechniqueVariantShaderSet shader_set;
 
     IG::Statistics main_stats;
 
@@ -195,8 +129,13 @@ struct Interface {
     {
     }
 
+    inline void setShaderSet(const IG::TechniqueVariantShaderSet& shader_set)
+    {
+        this->shader_set = shader_set;
+    }
+
     template <typename T>
-    inline anydsl::Array<T>& resize_array(int32_t dev, anydsl::Array<T>& array, size_t size, size_t multiplier)
+    inline anydsl::Array<T>& resizeArray(int32_t dev, anydsl::Array<T>& array, size_t size, size_t multiplier)
     {
         const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
         if (array.size() < (int64_t)capacity) {
@@ -206,8 +145,10 @@ struct Interface {
         return array;
     }
 
-    inline CPUData* get_thread_data()
+    inline CPUData* getThreadData()
     {
+        // FIXME: This prevents the driver to be used multiple times over the lifetime of the application
+        // It works fine if the settings are the same and/or the exact same threads are not used again
         thread_local CPUData* dataptr = nullptr;
         if (!dataptr) {
             thread_mutex.lock();
@@ -220,100 +161,93 @@ struct Interface {
         return dataptr;
     }
 
-    inline anydsl::Array<float>& cpu_primary_stream(size_t size)
+    inline anydsl::Array<float>& getCPUPrimaryStream(size_t size)
     {
-        return resize_array(0, get_thread_data()->cpu_primary, size, PrimaryStreamSize);
+        return resizeArray(0, getThreadData()->cpu_primary, size, PrimaryStreamSize);
     }
 
-    inline anydsl::Array<float>& cpu_primary_stream_const()
+    inline anydsl::Array<float>& getCPUPrimaryStream()
     {
-        IG_ASSERT(get_thread_data()->cpu_primary.size() > 0, "Expected cpu primary stream to be initialized");
-        return get_thread_data()->cpu_primary;
+        IG_ASSERT(getThreadData()->cpu_primary.size() > 0, "Expected cpu primary stream to be initialized");
+        return getThreadData()->cpu_primary;
     }
 
-    inline anydsl::Array<float>& cpu_secondary_stream(size_t size)
+    inline anydsl::Array<float>& getCPUSecondaryStream(size_t size)
     {
-        return resize_array(0, get_thread_data()->cpu_secondary, size, SecondaryStreamSize);
+        return resizeArray(0, getThreadData()->cpu_secondary, size, SecondaryStreamSize);
     }
 
-    inline anydsl::Array<float>& cpu_secondary_stream_const()
+    inline anydsl::Array<float>& getCPUSecondaryStream()
     {
-        IG_ASSERT(get_thread_data()->cpu_secondary.size() > 0, "Expected cpu secondary stream to be initialized");
-        return get_thread_data()->cpu_secondary;
+        IG_ASSERT(getThreadData()->cpu_secondary.size() > 0, "Expected cpu secondary stream to be initialized");
+        return getThreadData()->cpu_secondary;
     }
 
-    inline anydsl::Array<float>& gpu_first_primary_stream(int32_t dev, size_t size)
+    inline anydsl::Array<float>& getGPUPrimaryStream(int32_t dev, size_t buffer, size_t size)
     {
-        return resize_array(dev, *devices[dev].current_first_primary, size, PrimaryStreamSize);
+        return resizeArray(dev, *devices[dev].current_primary[buffer], size, PrimaryStreamSize);
     }
 
-    inline anydsl::Array<float>& gpu_first_primary_stream_const(int32_t dev)
+    inline anydsl::Array<float>& getGPUPrimaryStream(int32_t dev, size_t buffer)
     {
-        IG_ASSERT(devices[dev].current_first_primary->size() > 0, "Expected gpu first primary stream to be initialized");
-        return *devices[dev].current_first_primary;
+        IG_ASSERT(devices[dev].current_primary[buffer]->size() > 0, "Expected gpu primary stream to be initialized");
+        return *devices[dev].current_primary[buffer];
     }
 
-    inline anydsl::Array<float>& gpu_second_primary_stream(int32_t dev, size_t size)
+    inline anydsl::Array<float>& getGPUSecondaryStream(int32_t dev, size_t buffer, size_t size)
     {
-        return resize_array(dev, *devices[dev].current_second_primary, size, PrimaryStreamSize);
+        return resizeArray(dev, *devices[dev].current_secondary[buffer], size, SecondaryStreamSize);
     }
 
-    inline anydsl::Array<float>& gpu_second_primary_stream_const(int32_t dev)
+    inline anydsl::Array<float>& getGPUSecondaryStream(int32_t dev, size_t buffer)
     {
-        IG_ASSERT(devices[dev].current_second_primary->size() > 0, "Expected gpu second primary stream to be initialized");
-        return *devices[dev].current_second_primary;
+        IG_ASSERT(devices[dev].current_secondary[buffer].size() > 0, "Expected gpu secondary stream to be initialized");
+        return *devices[dev].current_secondary[buffer];
     }
 
-    inline anydsl::Array<float>& gpu_first_secondary_stream(int32_t dev, size_t size)
+    inline size_t getGPUTemporaryBufferSize() const
     {
-        return resize_array(dev, *devices[dev].current_first_secondary, size, SecondaryStreamSize);
+        // Upper bound extracted from "mapping_gpu.art"
+        return std::max<size_t>(32, database->EntityTable.entryCount() + 1);
     }
 
-    inline anydsl::Array<float>& gpu_first_secondary_stream_const(int32_t dev)
+    inline anydsl::Array<int32_t>& getGPUTemporaryBuffer(int32_t dev)
     {
-        IG_ASSERT(devices[dev].current_first_secondary.size() > 0, "Expected gpu secondary stream to be initialized");
-        return *devices[dev].current_first_secondary;
+        return resizeArray(dev, devices[dev].tmp_buffer, getGPUTemporaryBufferSize(), 1);
     }
 
-    inline anydsl::Array<float>& gpu_second_secondary_stream(int32_t dev, size_t size)
+    inline auto getGPURayBeginEndBuffers(int32_t dev)
     {
-        return resize_array(dev, *devices[dev].current_second_secondary, size, SecondaryStreamSize);
+        // Even while the ray begins & ends are on the CPU only the GPU backend makes use of it
+        const size_t size = getGPUTemporaryBufferSize();
+        return std::forward_as_tuple(
+            resizeArray(0 /*Host*/, devices[dev].ray_begins_buffer, size, 1),
+            resizeArray(0 /*Host*/, devices[dev].ray_ends_buffer, size, 1)
+        );
     }
 
-    inline anydsl::Array<float>& gpu_second_secondary_stream_const(int32_t dev)
-    {
-        IG_ASSERT(use_advanced_shadow_handling(), "Only use second secondary stream if advanced shadow handling is enabled");
-        IG_ASSERT(devices[dev].current_second_secondary.size() > 0, "Expected gpu secondary stream to be initialized");
-        return *devices[dev].current_second_secondary;
-    }
-
-    inline anydsl::Array<int32_t>& gpu_tmp_buffer(int32_t dev, size_t size)
-    {
-        return resize_array(dev, devices[dev].tmp_buffer, size, 1);
-    }
-
-    inline void gpu_swap_primary_streams(int32_t dev)
+    inline void swapGPUPrimaryStreams(int32_t dev)
     {
         auto& device = devices[dev];
-        std::swap(device.current_first_primary, device.current_second_primary);
+        std::swap(device.current_primary[0], device.current_primary[1]);
     }
 
-    inline void gpu_swap_secondary_streams(int32_t dev)
+    inline void swapGPUSecondaryStreams(int32_t dev)
     {
         auto& device = devices[dev];
-        std::swap(device.current_first_secondary, device.current_second_secondary);
+        std::swap(device.current_secondary[0], device.current_secondary[1]);
     }
 
     template <typename Bvh, typename Node>
-    inline const Bvh& load_bvh_ent(int32_t dev)
+    inline const Bvh& loadEntityBVH(int32_t dev)
     {
         auto& device = devices[dev];
         if (!device.scene_loaded.test_and_set())
-            device.bvh_ent = std::move(load_scene_bvh<Node>(dev));
+            device.bvh_ent = std::move(loadSceneBVH<Node>(dev));
         return std::get<Bvh>(device.bvh_ent);
     }
 
-    inline const anydsl::Array<StreamRay>& load_ray_list(int32_t dev)
+    inline const anydsl::Array<StreamRay>& loadRayList(int32_t dev)
     {
         auto& device = devices[dev];
         if (device.ray_list.size() != 0)
@@ -347,11 +281,11 @@ struct Interface {
             rays.push_back(ray);
         }
 
-        return device.ray_list = std::move(copy_to_device(dev, rays));
+        return device.ray_list = std::move(copyToDevice(dev, rays));
     }
 
     template <typename T>
-    inline anydsl::Array<T> copy_to_device(int32_t dev, const T* data, size_t n)
+    inline anydsl::Array<T> copyToDevice(int32_t dev, const T* data, size_t n)
     {
         if (n == 0)
             return anydsl::Array<T>();
@@ -362,18 +296,18 @@ struct Interface {
     }
 
     template <typename T>
-    inline anydsl::Array<T> copy_to_device(int32_t dev, const std::vector<T>& host)
+    inline anydsl::Array<T> copyToDevice(int32_t dev, const std::vector<T>& host)
     {
-        return copy_to_device(dev, host.data(), host.size());
+        return copyToDevice(dev, host.data(), host.size());
     }
 
-    inline DeviceImage copy_to_device(int32_t dev, const IG::ImageRgba32& image)
+    inline DeviceImage copyToDevice(int32_t dev, const IG::ImageRgba32& image)
     {
-        return DeviceImage(copy_to_device(dev, image.pixels.get(), image.width * image.height * 4), image.width, image.height);
+        return DeviceImage(copyToDevice(dev, image.pixels.get(), image.width * image.height * 4), image.width, image.height);
     }
 
     template <typename Node>
-    inline BvhProxy<Node, EntityLeaf1> load_scene_bvh(int32_t dev)
+    inline BvhProxy<Node, EntityLeaf1> loadSceneBVH(int32_t dev)
     {
         const size_t node_count = database->SceneBVH.Nodes.size() / sizeof(Node);
         const size_t leaf_count = database->SceneBVH.Leaves.size() / sizeof(EntityLeaf1);
@@ -383,7 +317,7 @@ struct Interface {
         };
     }
 
-    inline DynTableProxy load_dyntable(int32_t dev, const IG::DynTable& tbl)
+    inline DynTableProxy loadDyntable(int32_t dev, const IG::DynTable& tbl)
     {
         static_assert(sizeof(LookupEntry) == sizeof(IG::LookupEntry), "Expected generated Lookup Entry and internal Lookup Entry to be of same size!");
 
@@ -395,7 +329,7 @@ struct Interface {
     }
 
     // Load all the data assembled in previous stages to the device
-    inline const SceneDatabaseProxy& load_scene_database(int32_t dev)
+    inline const SceneDatabaseProxy& loadSceneDatabase(int32_t dev)
     {
         auto& device = devices[dev];
         if (device.database_loaded.test_and_set())
@@ -403,14 +337,14 @@ struct Interface {
 
         SceneDatabaseProxy& proxy = device.database;
 
-        proxy.Entities = std::move(load_dyntable(dev, database->EntityTable));
-        proxy.Shapes   = std::move(load_dyntable(dev, database->ShapeTable));
-        proxy.BVHs     = std::move(load_dyntable(dev, database->BVHTable));
+        proxy.Entities = std::move(loadDyntable(dev, database->EntityTable));
+        proxy.Shapes   = std::move(loadDyntable(dev, database->ShapeTable));
+        proxy.BVHs     = std::move(loadDyntable(dev, database->BVHTable));
 
         return proxy;
     }
 
-    inline SceneInfo load_scene_info(int32_t dev)
+    inline SceneInfo loadSceneInfo(int32_t dev)
     {
         IG_UNUSED(dev);
 
@@ -419,7 +353,7 @@ struct Interface {
         return info;
     }
 
-    inline const DeviceImage& load_image(int32_t dev, const std::string& filename)
+    inline const DeviceImage& loadImage(int32_t dev, const std::string& filename)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
 
@@ -430,93 +364,93 @@ struct Interface {
 
         IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
         try {
-            return images[filename] = std::move(copy_to_device(dev, IG::ImageRgba32::load(filename)));
+            return images[filename] = std::move(copyToDevice(dev, IG::ImageRgba32::load(filename)));
         } catch (const IG::ImageLoadException& e) {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;
-            return images[filename] = std::move(copy_to_device(dev, IG::ImageRgba32()));
+            return images[filename] = std::move(copyToDevice(dev, IG::ImageRgba32()));
         }
     }
 
-    inline int run_ray_generation_shader(int* id, int size, int xmin, int ymin, int xmax, int ymax)
+    inline int runRayGenerationShader(int* id, int size, int xmin, int ymin, int xmax, int ymax)
     {
         if (setup.acquire_stats)
-            get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::RayGeneration, {});
+            getThreadData()->stats.beginShaderLaunch(IG::ShaderType::RayGeneration, {});
 
         using Callback = decltype(ig_ray_generation_shader);
-        IG_ASSERT(setup.ray_generation_shader != nullptr, "Expected ray generation shader to be valid");
-        auto callback = (Callback*)setup.ray_generation_shader;
+        IG_ASSERT(shader_set.RayGenerationShader != nullptr, "Expected ray generation shader to be valid");
+        auto callback = (Callback*)shader_set.RayGenerationShader;
         const int ret = callback(&current_settings, current_iteration, id, size, xmin, ymin, xmax, ymax);
 
         if (setup.acquire_stats)
-            get_thread_data()->stats.endShaderLaunch(IG::ShaderType::RayGeneration, {});
+            getThreadData()->stats.endShaderLaunch(IG::ShaderType::RayGeneration, {});
         return ret;
     }
 
-    inline void run_miss_shader(int first, int last)
+    inline void runMissShader(int first, int last)
     {
         if (setup.acquire_stats)
-            get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::Miss, {});
+            getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Miss, {});
 
         using Callback = decltype(ig_miss_shader);
-        IG_ASSERT(setup.miss_shader != nullptr, "Expected miss shader to be valid");
-        auto callback = (Callback*)setup.miss_shader;
+        IG_ASSERT(shader_set.MissShader != nullptr, "Expected miss shader to be valid");
+        auto callback = (Callback*)shader_set.MissShader;
         callback(&current_settings, first, last);
 
         if (setup.acquire_stats)
-            get_thread_data()->stats.endShaderLaunch(IG::ShaderType::Miss, {});
+            getThreadData()->stats.endShaderLaunch(IG::ShaderType::Miss, {});
     }
 
-    inline void run_hit_shader(int entity_id, int first, int last)
+    inline void runHitShader(int entity_id, int first, int last)
     {
         if (setup.acquire_stats)
-            get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::Hit, entity_id);
+            getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Hit, entity_id);
 
         using Callback = decltype(ig_hit_shader);
-        IG_ASSERT(entity_id >= 0 && entity_id < (int)setup.hit_shaders.size(), "Expected entity id for hit shaders to be valid");
-        void* hit_shader = setup.hit_shaders[entity_id];
-        IG_ASSERT(setup.hit_shader != nullptr, "Expected hit shader to be valid");
+        IG_ASSERT(entity_id >= 0 && entity_id < (int)shader_set.HitShaders.size(), "Expected entity id for hit shaders to be valid");
+        void* hit_shader = shader_set.HitShaders[entity_id];
+        IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
         auto callback = (Callback*)hit_shader;
         callback(&current_settings, entity_id, first, last);
 
         if (setup.acquire_stats)
-            get_thread_data()->stats.endShaderLaunch(IG::ShaderType::Hit, entity_id);
+            getThreadData()->stats.endShaderLaunch(IG::ShaderType::Hit, entity_id);
     }
 
-    inline bool use_advanced_shadow_handling()
+    inline bool useAdvancedShadowHandling()
     {
-        return setup.advanced_shadow_hit_shader != nullptr && setup.advanced_shadow_miss_shader != nullptr;
+        return shader_set.AdvancedShadowHitShader != nullptr && shader_set.AdvancedShadowMissShader != nullptr;
     }
 
-    inline void run_advanced_shadow_shader(int first, int last, bool is_hit)
+    inline void runAdvancedShadowShader(int first, int last, bool is_hit)
     {
-        IG_ASSERT(use_advanced_shadow_handling(), "Expected advanced shadow shader only be called if it is enabled!");
+        IG_ASSERT(useAdvancedShadowHandling(), "Expected advanced shadow shader only be called if it is enabled!");
 
         if (is_hit) {
             if (setup.acquire_stats)
-                get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::AdvancedShadowHit, {});
+                getThreadData()->stats.beginShaderLaunch(IG::ShaderType::AdvancedShadowHit, {});
 
             using Callback = decltype(ig_advanced_shadow_shader);
-            IG_ASSERT(setup.advanced_shadow_hit_shader != nullptr, "Expected miss shader to be valid");
-            auto callback = (Callback*)setup.advanced_shadow_hit_shader;
+            IG_ASSERT(shader_set.AdvancedShadowHitShader != nullptr, "Expected miss shader to be valid");
+            auto callback = (Callback*)shader_set.AdvancedShadowHitShader;
             callback(&current_settings, first, last);
 
             if (setup.acquire_stats)
-                get_thread_data()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowHit, {});
+                getThreadData()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowHit, {});
         } else {
             if (setup.acquire_stats)
-                get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::AdvancedShadowMiss, {});
+                getThreadData()->stats.beginShaderLaunch(IG::ShaderType::AdvancedShadowMiss, {});
 
             using Callback = decltype(ig_advanced_shadow_shader);
-            IG_ASSERT(setup.advanced_shadow_miss_shader != nullptr, "Expected miss shader to be valid");
-            auto callback = (Callback*)setup.advanced_shadow_miss_shader;
+            IG_ASSERT(shader_set.AdvancedShadowMissShader != nullptr, "Expected miss shader to be valid");
+            auto callback = (Callback*)shader_set.AdvancedShadowMissShader;
             callback(&current_settings, first, last);
 
             if (setup.acquire_stats)
-                get_thread_data()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowMiss, {});
+                getThreadData()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowMiss, {});
         }
     }
 
-    inline float* get_film_image(int32_t dev)
+    inline float* getFilmImage(int32_t dev)
     {
         if (dev != 0) {
             auto& device = devices[dev];
@@ -532,10 +466,10 @@ struct Interface {
         }
     }
 
-    inline float* get_aov_image(int32_t dev, int32_t id)
+    inline float* getAOVImage(int32_t dev, int32_t id)
     {
         if (id == 0) // Id = 0 is the actual framebuffer
-            return get_film_image(dev);
+            return getFilmImage(dev);
 
         int32_t index = id - 1;
         if (dev != 0) {
@@ -563,29 +497,34 @@ struct Interface {
         anydsl::copy(devices[dev].film_pixels, host_pixels);
     }
 
-    inline void clear()
+    /// Clear specific aov or clear all if aov < 0. Note, aov == 0 is the framebuffer
+    inline void clear(int aov)
     {
-        std::fill(host_pixels.begin(), host_pixels.end(), 0.0f);
-        for (auto& pair : devices) {
-            auto& device_pixels = devices[pair.first].film_pixels;
-            if (device_pixels.size())
-                anydsl::copy(host_pixels, device_pixels);
+        if (aov <= 0) {
+            std::memset(host_pixels.data(), 0, sizeof(float) * host_pixels.size());
+            for (auto& pair : devices) {
+                auto& device_pixels = devices[pair.first].film_pixels;
+                if (device_pixels.size())
+                    anydsl::copy(host_pixels, device_pixels);
+            }
         }
 
-        // TODO: Be more selective?
         for (size_t id = 0; id < aovs.size(); ++id) {
-            std::fill(aovs[id].begin(), aovs[id].end(), 0.0f);
-            for (auto& pair : devices) {
-                if (devices[pair.first].aovs.empty())
-                    continue;
-                auto& device_pixels = devices[pair.first].aovs[id];
-                if (device_pixels.size())
-                    anydsl::copy(aovs[id], device_pixels);
+            if (aov < 0 || (size_t)aov == (id + 1)) {
+                auto& buffer = aovs[id];
+                std::memset(buffer.data(), 0, sizeof(float) * buffer.size());
+                for (auto& pair : devices) {
+                    if (devices[pair.first].aovs.empty())
+                        continue;
+                    auto& device_pixels = devices[pair.first].aovs[id];
+                    if (device_pixels.size())
+                        anydsl::copy(buffer, device_pixels);
+                }
             }
         }
     }
 
-    inline IG::Statistics* get_full_stats()
+    inline IG::Statistics* getFullStats()
     {
         main_stats.reset();
         for (const auto& pair : thread_data)
@@ -633,12 +572,12 @@ void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
     sInterface->current_settings  = renderSettings;
 
     if (sInterface->setup.acquire_stats)
-        sInterface->get_thread_data()->stats.beginShaderLaunch(IG::ShaderType::Device, {});
+        sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Device, {});
 
     ig_render(&renderSettings);
 
     if (sInterface->setup.acquire_stats)
-        sInterface->get_thread_data()->stats.endShaderLaunch(IG::ShaderType::Device, {});
+        sInterface->getThreadData()->stats.endShaderLaunch(IG::ShaderType::Device, {});
 }
 
 void glue_setup(const DriverSetupSettings* settings)
@@ -646,12 +585,17 @@ void glue_setup(const DriverSetupSettings* settings)
     sInterface = std::make_unique<Interface>(*settings);
 }
 
+void glue_setShaderSet(const IG::TechniqueVariantShaderSet& shaderSet)
+{
+    sInterface->setShaderSet(shaderSet);
+}
+
 void glue_shutdown()
 {
     sInterface.reset();
 }
 
-const float* glue_getframebuffer(int aov)
+const float* glue_getFramebuffer(int aov)
 {
     if (aov <= 0 || (size_t)aov > sInterface->aovs.size())
         return sInterface->host_pixels.data();
@@ -659,16 +603,14 @@ const float* glue_getframebuffer(int aov)
         return sInterface->aovs[aov - 1].data();
 }
 
-void glue_clearframebuffer(int aov)
+void glue_clearFramebuffer(int aov)
 {
-    // TODO: Be more selective
-    IG_UNUSED(aov);
-    sInterface->clear();
+    sInterface->clear(aov);
 }
 
-const IG::Statistics* glue_getstatistics()
+const IG::Statistics* glue_getStatistics()
 {
-    return sInterface->get_full_stats();
+    return sInterface->getFullStats();
 }
 
 inline void get_ray_stream(RayStream& rays, float* ptr, size_t capacity)
@@ -738,44 +680,45 @@ IG_EXPORT DriverInterface ig_get_interface()
     interface.SetupFunction            = glue_setup;
     interface.ShutdownFunction         = glue_shutdown;
     interface.RenderFunction           = glue_render;
-    interface.GetFramebufferFunction   = glue_getframebuffer;
-    interface.ClearFramebufferFunction = glue_clearframebuffer;
-    interface.GetStatisticsFunction    = glue_getstatistics;
+    interface.SetShaderSetFunction     = glue_setShaderSet;
+    interface.GetFramebufferFunction   = glue_getFramebuffer;
+    interface.ClearFramebufferFunction = glue_clearFramebuffer;
+    interface.GetStatisticsFunction    = glue_getStatistics;
 
     return interface;
 }
 
 void ignis_get_film_data(int dev, float** pixels, int* width, int* height)
 {
-    *pixels = sInterface->get_film_image(dev);
+    *pixels = sInterface->getFilmImage(dev);
     *width  = sInterface->film_width;
     *height = sInterface->film_height;
 }
 
 void ignis_get_aov_image(int dev, int id, float** aov_pixels)
 {
-    *aov_pixels = sInterface->get_aov_image(dev, id);
+    *aov_pixels = sInterface->getAOVImage(dev, id);
 }
 
 void ignis_load_bvh2_ent(int dev, Node2** nodes, EntityLeaf1** objs)
 {
-    auto& bvh = sInterface->load_bvh_ent<Bvh2Ent, Node2>(dev);
-    *nodes    = const_cast<Node2*>(bvh.nodes.ptr());
-    *objs     = const_cast<EntityLeaf1*>(bvh.objs.ptr());
+    auto& bvh = sInterface->loadEntityBVH<Bvh2Ent, Node2>(dev);
+    *nodes    = const_cast<Node2*>(bvh.Nodes.ptr());
+    *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
 void ignis_load_bvh4_ent(int dev, Node4** nodes, EntityLeaf1** objs)
 {
-    auto& bvh = sInterface->load_bvh_ent<Bvh4Ent, Node4>(dev);
-    *nodes    = const_cast<Node4*>(bvh.nodes.ptr());
-    *objs     = const_cast<EntityLeaf1*>(bvh.objs.ptr());
+    auto& bvh = sInterface->loadEntityBVH<Bvh4Ent, Node4>(dev);
+    *nodes    = const_cast<Node4*>(bvh.Nodes.ptr());
+    *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
 void ignis_load_bvh8_ent(int dev, Node8** nodes, EntityLeaf1** objs)
 {
-    auto& bvh = sInterface->load_bvh_ent<Bvh8Ent, Node8>(dev);
-    *nodes    = const_cast<Node8*>(bvh.nodes.ptr());
-    *objs     = const_cast<EntityLeaf1*>(bvh.objs.ptr());
+    auto& bvh = sInterface->loadEntityBVH<Bvh8Ent, Node8>(dev);
+    *nodes    = const_cast<Node8*>(bvh.Nodes.ptr());
+    *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
 void ignis_load_scene(int dev, SceneDatabase* dtb)
@@ -790,7 +733,7 @@ void ignis_load_scene(int dev, SceneDatabase* dtb)
         return devtbl;
     };
 
-    auto& proxy   = sInterface->load_scene_database(dev);
+    auto& proxy   = sInterface->loadSceneDatabase(dev);
     dtb->entities = assign(proxy.Entities);
     dtb->shapes   = assign(proxy.Shapes);
     dtb->bvhs     = assign(proxy.BVHs);
@@ -798,17 +741,17 @@ void ignis_load_scene(int dev, SceneDatabase* dtb)
 
 void ignis_load_scene_info(int dev, SceneInfo* info)
 {
-    *info = sInterface->load_scene_info(dev);
+    *info = sInterface->loadSceneInfo(dev);
 }
 
 void ignis_load_rays(int dev, StreamRay** list)
 {
-    *list = const_cast<StreamRay*>(sInterface->load_ray_list(dev).data());
+    *list = const_cast<StreamRay*>(sInterface->loadRayList(dev).data());
 }
 
 void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height)
 {
-    auto& img = sInterface->load_image(dev, file);
+    auto& img = sInterface->loadImage(dev, file);
     *pixels   = const_cast<float*>(std::get<0>(img).data());
     *width    = std::get<1>(img);
     *height   = std::get<2>(img);
@@ -816,114 +759,121 @@ void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* wi
 
 void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)
 {
-    auto& array = sInterface->cpu_primary_stream(size);
+    auto& array = sInterface->getCPUPrimaryStream(size);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
 void ignis_cpu_get_primary_stream_const(PrimaryStream* primary)
 {
-    auto& array = sInterface->cpu_primary_stream_const();
+    auto& array = sInterface->getCPUPrimaryStream();
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
 void ignis_cpu_get_secondary_stream(SecondaryStream* secondary, int size)
 {
-    auto& array = sInterface->cpu_secondary_stream(size);
+    auto& array = sInterface->getCPUSecondaryStream(size);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
 void ignis_cpu_get_secondary_stream_const(SecondaryStream* secondary)
 {
-    auto& array = sInterface->cpu_secondary_stream_const();
+    auto& array = sInterface->getCPUSecondaryStream();
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_get_tmp_buffer(int dev, int** buf, int size)
+void ignis_gpu_get_tmp_buffer(int dev, int** buf)
 {
-    *buf = sInterface->gpu_tmp_buffer(dev, size).data();
+    *buf = sInterface->getGPUTemporaryBuffer(dev).data();
+}
+
+void ignis_gpu_get_ray_begin_end_buffers(int dev, int** ray_begins, int** ray_ends)
+{
+    auto tuple  = sInterface->getGPURayBeginEndBuffers(dev);
+    *ray_begins = std::get<0>(tuple).data();
+    *ray_ends   = std::get<1>(tuple).data();
 }
 
 void ignis_gpu_get_first_primary_stream(int dev, PrimaryStream* primary, int size)
 {
-    auto& array = sInterface->gpu_first_primary_stream(dev, size);
+    auto& array = sInterface->getGPUPrimaryStream(dev, 0, size);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
 void ignis_gpu_get_first_primary_stream_const(int dev, PrimaryStream* primary)
 {
-    auto& array = sInterface->gpu_first_primary_stream_const(dev);
+    auto& array = sInterface->getGPUPrimaryStream(dev, 0);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
 void ignis_gpu_get_second_primary_stream(int dev, PrimaryStream* primary, int size)
 {
-    auto& array = sInterface->gpu_second_primary_stream(dev, size);
+    auto& array = sInterface->getGPUPrimaryStream(dev, 1, size);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
 void ignis_gpu_get_second_primary_stream_const(int dev, PrimaryStream* primary)
 {
-    auto& array = sInterface->gpu_second_primary_stream_const(dev);
+    auto& array = sInterface->getGPUPrimaryStream(dev, 1);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
 void ignis_gpu_get_first_secondary_stream(int dev, SecondaryStream* secondary, int size)
 {
-    auto& array = sInterface->gpu_first_secondary_stream(dev, size);
+    auto& array = sInterface->getGPUSecondaryStream(dev, 0, size);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
 void ignis_gpu_get_first_secondary_stream_const(int dev, SecondaryStream* secondary)
 {
-    auto& array = sInterface->gpu_first_secondary_stream_const(dev);
+    auto& array = sInterface->getGPUSecondaryStream(dev, 0);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
 void ignis_gpu_get_second_secondary_stream(int dev, SecondaryStream* secondary, int size)
 {
-    auto& array = sInterface->gpu_second_secondary_stream(dev, size);
+    auto& array = sInterface->getGPUSecondaryStream(dev, 1, size);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
 void ignis_gpu_get_second_secondary_stream_const(int dev, SecondaryStream* secondary)
 {
-    auto& array = sInterface->gpu_second_secondary_stream_const(dev);
+    auto& array = sInterface->getGPUSecondaryStream(dev, 1);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
 void ignis_gpu_swap_primary_streams(int dev)
 {
-    sInterface->gpu_swap_primary_streams(dev);
+    sInterface->swapGPUPrimaryStreams(dev);
 }
 
 void ignis_gpu_swap_secondary_streams(int dev)
 {
-    sInterface->gpu_swap_secondary_streams(dev);
+    sInterface->swapGPUSecondaryStreams(dev);
 }
 
 int ignis_handle_ray_generation(int* id, int size, int xmin, int ymin, int xmax, int ymax)
 {
-    return sInterface->run_ray_generation_shader(id, size, xmin, ymin, xmax, ymax);
+    return sInterface->runRayGenerationShader(id, size, xmin, ymin, xmax, ymax);
 }
 
 void ignis_handle_miss_shader(int first, int last)
 {
-    sInterface->run_miss_shader(first, last);
+    sInterface->runMissShader(first, last);
 }
 
 void ignis_handle_hit_shader(int entity_id, int first, int last)
 {
-    sInterface->run_hit_shader(entity_id, first, last);
+    sInterface->runHitShader(entity_id, first, last);
 }
 
 void ignis_handle_advanced_shadow_shader(int first, int last, bool is_hit)
 {
-    sInterface->run_advanced_shadow_shader(first, last, is_hit);
+    sInterface->runAdvancedShadowShader(first, last, is_hit);
 }
 
 bool ignis_use_advanced_shadow_handling()
 {
-    return sInterface->use_advanced_shadow_handling();
+    return sInterface->useAdvancedShadowHandling();
 }
 
 void ignis_present(int dev)

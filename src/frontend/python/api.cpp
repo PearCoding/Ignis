@@ -82,6 +82,6 @@ PYBIND11_MODULE(pyignis, m)
             );
         })
         .def("clearFramebuffer", &Runtime::clearFramebuffer)
-        .def_property_readonly("iterationCount", &Runtime::iterationCount)
+        .def_property_readonly("iterationCount", &Runtime::currentIterationCount)
         .def_property_readonly("loadedRenderSettings", &Runtime::loadedRenderSettings);
 }

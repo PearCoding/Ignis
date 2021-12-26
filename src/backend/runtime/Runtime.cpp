@@ -87,7 +87,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     : mInit(false)
     , mOptions(opts)
     , mDevice(opts.Device)
-    , mIteration(0)
+    , mCurrentIteration(0)
     , mIsTrace(false)
     , mIsDebug(false)
     , mDebugMode(DebugMode::Normal)
@@ -162,42 +162,25 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     mIsTrace = lopts.CameraType == "list";
     mAOVs    = std::move(result.AOVs);
 
-    IG_LOG(L_DEBUG) << "Ray Generation Shader:" << std::endl
-                    << result.RayGenerationShader << std::endl;
-    IG_LOG(L_DEBUG) << "Miss Shader:" << std::endl
-                    << result.MissShader << std::endl;
-    for (const auto& shader : result.HitShaders) {
-        IG_LOG(L_DEBUG) << "Hit Shader:" << std::endl
-                        << shader << std::endl;
-    }
-
-    if (!result.AdvancedShadowHitShader.empty()) {
-        IG_LOG(L_DEBUG) << "Advanced Shadow Hit Shader:" << std::endl
-                        << result.AdvancedShadowHitShader << std::endl;
-        IG_LOG(L_DEBUG) << "Advanced Shadow Miss Shader:" << std::endl
-                        << result.AdvancedShadowMissShader << std::endl;
-    }
-
     if (opts.DumpShader) {
-        dumpShader("rayGeneration.art", result.RayGenerationShader);
-        dumpShader("missShader.art", result.MissShader);
+        for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
+            const auto& variant = mTechniqueVariants[i];
+            dumpShader("v" + std::to_string(i) + "_rayGeneration.art", variant.RayGenerationShader);
+            dumpShader("v" + std::to_string(i) + "_missShader.art", variant.MissShader);
 
-        int counter = 0;
-        for (const auto& shader : result.HitShaders) {
-            dumpShader("hitShader" + std::to_string(counter++) + ".art", shader);
-        }
+            int counter = 0;
+            for (const auto& shader : variant.HitShaders) {
+                dumpShader("v" + std::to_string(i) + "_hitShader" + std::to_string(counter++) + ".art", shader);
+            }
 
-        if (!result.AdvancedShadowHitShader.empty()) {
-            dumpShader("advancedShadowHit.art", result.AdvancedShadowHitShader);
-            dumpShader("advancedShadowMiss.art", result.AdvancedShadowMissShader);
+            if (!variant.AdvancedShadowHitShader.empty()) {
+                dumpShader("v" + std::to_string(i) + "_advancedShadowHit.art", variant.AdvancedShadowHitShader);
+                dumpShader("v" + std::to_string(i) + "_advancedShadowMiss.art", variant.AdvancedShadowMissShader);
+            }
         }
     }
 
-    RayGenerationShader      = std::move(result.RayGenerationShader);
-    MissShader               = std::move(result.MissShader);
-    HitShaders               = std::move(result.HitShaders);
-    AdvancedShadowHitShader  = std::move(result.AdvancedShadowHitShader);
-    AdvancedShadowMissShader = std::move(result.AdvancedShadowMissShader);
+    mTechniqueVariants = std::move(result.TechniqueVariants);
 
     // Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
@@ -220,6 +203,8 @@ void Runtime::step(const Camera& camera)
         return;
     }
 
+    handleTechniqueVariants(mCurrentIteration);
+
     DriverRenderSettings settings;
     for (int i = 0; i < 3; ++i)
         settings.eye[i] = camera.Eye(i);
@@ -238,7 +223,7 @@ void Runtime::step(const Camera& camera)
     settings.spi        = mSamplesPerIteration;
     settings.debug_mode = (uint32)mDebugMode;
 
-    mLoadedInterface.RenderFunction(&settings, mIteration++);
+    mLoadedInterface.RenderFunction(&settings, mCurrentIteration++);
 }
 
 void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
@@ -251,13 +236,15 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
         return;
     }
 
+    handleTechniqueVariants(mCurrentIteration);
+
     DriverRenderSettings settings;
     settings.width  = rays.size();
     settings.height = 1;
     settings.rays   = rays.data();
     settings.device = mDevice;
 
-    mLoadedInterface.RenderFunction(&settings, mIteration++);
+    mLoadedInterface.RenderFunction(&settings, mCurrentIteration++);
 
     // Get result
     const float* data_ptr = getFramebuffer(0);
@@ -291,36 +278,9 @@ void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
 
     IG_LOG(L_DEBUG) << "Init JIT compiling" << std::endl;
     ig_init_jit(mManager.getPath(mTarget).generic_u8string());
-
-    IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
-    const std::filesystem::path rgp = "rayGenerationFull.art";
-    settings.ray_generation_shader  = ig_compile_source(RayGenerationShader, "ig_ray_generation_shader",
-                                                       mOptions.DumpShaderFull ? &rgp : nullptr);
-
-    IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
-    const std::filesystem::path mp = "missShaderFull.art";
-    settings.miss_shader           = ig_compile_source(MissShader, "ig_miss_shader",
-                                             mOptions.DumpShaderFull ? &mp : nullptr);
-
-    IG_LOG(L_DEBUG) << "Compiling hit shaders" << std::endl;
-    for (size_t i = 0; i < HitShaders.size(); ++i) {
-        IG_LOG(L_DEBUG) << "Hit shader [" << i << "]" << std::endl;
-        const std::filesystem::path hp = "hitShaderFull" + std::to_string(i) + ".art";
-        settings.hit_shaders.push_back(ig_compile_source(HitShaders[i], "ig_hit_shader", mOptions.DumpShaderFull ? &hp : nullptr));
-    }
-
-    if (!AdvancedShadowHitShader.empty()) {
-        IG_LOG(L_DEBUG) << "Compiling advanced shadow shaders" << std::endl;
-        const std::filesystem::path ash     = "advancedShadowHitFull.art";
-        settings.advanced_shadow_hit_shader = ig_compile_source(AdvancedShadowHitShader, "ig_advanced_shadow_shader",
-                                                                mOptions.DumpShaderFull ? &ash : nullptr);
-
-        const std::filesystem::path asm_     = "advancedShadowMissFull.art";
-        settings.advanced_shadow_miss_shader = ig_compile_source(AdvancedShadowMissShader, "ig_advanced_shadow_shader",
-                                                                 mOptions.DumpShaderFull ? &asm_ : nullptr);
-    }
-
     mLoadedInterface.SetupFunction(&settings);
+
+    compileShaders();
     mInit = true;
 
     clearFramebuffer();
@@ -331,4 +291,51 @@ void Runtime::shutdown()
     mLoadedInterface.ShutdownFunction();
 }
 
+void Runtime::compileShaders()
+{
+    mTechniqueVariantShaderSets.resize(mTechniqueVariants.size());
+    for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
+        const auto& variant = mTechniqueVariants[i];
+        auto& shaders       = mTechniqueVariantShaderSets[i];
+
+        IG_LOG(L_DEBUG) << "Handling technique variant " << i << std::endl;
+        IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
+        const std::filesystem::path rgp = "v" + std::to_string(i) + "_rayGenerationFull.art";
+        shaders.RayGenerationShader     = ig_compile_source(variant.RayGenerationShader, "ig_ray_generation_shader",
+                                                        mOptions.DumpShaderFull ? &rgp : nullptr);
+
+        IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
+        const std::filesystem::path mp = "v" + std::to_string(i) + "_missShaderFull.art";
+        shaders.MissShader             = ig_compile_source(variant.MissShader, "ig_miss_shader",
+                                               mOptions.DumpShaderFull ? &mp : nullptr);
+
+        IG_LOG(L_DEBUG) << "Compiling hit shaders" << std::endl;
+        for (size_t j = 0; j < variant.HitShaders.size(); ++j) {
+            IG_LOG(L_DEBUG) << "Hit shader [" << i << "]" << std::endl;
+            const std::filesystem::path hp = "v" + std::to_string(i) + "_hitShaderFull" + std::to_string(j) + ".art";
+            shaders.HitShaders.push_back(ig_compile_source(variant.HitShaders[j], "ig_hit_shader", mOptions.DumpShaderFull ? &hp : nullptr));
+        }
+
+        if (!variant.AdvancedShadowHitShader.empty()) {
+            IG_LOG(L_DEBUG) << "Compiling advanced shadow shaders" << std::endl;
+            const std::filesystem::path ash = "v" + std::to_string(i) + "_advancedShadowHitFull.art";
+            shaders.AdvancedShadowHitShader = ig_compile_source(variant.AdvancedShadowHitShader, "ig_advanced_shadow_shader",
+                                                                mOptions.DumpShaderFull ? &ash : nullptr);
+
+            const std::filesystem::path asm_ = "v" + std::to_string(i) + "_advancedShadowMissFull.art";
+            shaders.AdvancedShadowMissShader = ig_compile_source(variant.AdvancedShadowMissShader, "ig_advanced_shadow_shader",
+                                                                 mOptions.DumpShaderFull ? &asm_ : nullptr);
+        }
+    }
+}
+
+void Runtime::handleTechniqueVariants(uint32 nextIteration)
+{
+    if (mTechniqueVariantSelector)
+        mCurrentTechniqueVariant = mTechniqueVariantSelector(nextIteration);
+
+    IG_ASSERT(mCurrentTechniqueVariant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
+
+    mLoadedInterface.SetShaderSetFunction(mTechniqueVariantShaderSets[mCurrentTechniqueVariant]);
+}
 } // namespace IG

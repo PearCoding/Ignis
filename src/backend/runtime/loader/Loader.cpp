@@ -39,28 +39,34 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
     LoaderLight::setupAreaLights(ctx);
 
-    // Generate Ray Generation Shader
-    result.RayGenerationShader = RayGenerationShader::setup(ctx);
-    if (result.RayGenerationShader.empty())
-        return false;
+    result.TechniqueVariants.resize(info.VariantCount);
+    for (uint32 i = 0; i < info.VariantCount; ++i) {
+        auto& variant               = result.TechniqueVariants[i];
+        ctx.CurrentTechniqueVariant = i;
 
-    // Generate Miss Shader
-    result.MissShader = MissShader::setup(ctx);
-    if (result.MissShader.empty())
-        return false;
-
-    // Generate Hit Shader
-    for (size_t i = 0; i < result.Database.EntityTable.entryCount(); ++i) {
-        std::string shader = HitShader::setup(i, ctx);
-        if (shader.empty())
+        // Generate Ray Generation Shader
+        variant.RayGenerationShader = RayGenerationShader::setup(ctx);
+        if (variant.RayGenerationShader.empty())
             return false;
-        result.HitShaders.push_back(shader);
-    }
 
-    // Generate Advanced Shadow Shaders if requested
-    if (info.UseAdvancedShadowHandling) {
-        result.AdvancedShadowHitShader  = AdvancedShadowShader::setup(true, ctx);
-        result.AdvancedShadowMissShader = AdvancedShadowShader::setup(false, ctx);
+        // Generate Miss Shader
+        variant.MissShader = MissShader::setup(ctx);
+        if (variant.MissShader.empty())
+            return false;
+
+        // Generate Hit Shader
+        for (size_t i = 0; i < result.Database.EntityTable.entryCount(); ++i) {
+            std::string shader = HitShader::setup(i, ctx);
+            if (shader.empty())
+                return false;
+            variant.HitShaders.push_back(shader);
+        }
+
+        // Generate Advanced Shadow Shaders if requested
+        if (info.UseAdvancedShadowHandling) {
+            variant.AdvancedShadowHitShader  = AdvancedShadowShader::setup(true, ctx);
+            variant.AdvancedShadowMissShader = AdvancedShadowShader::setup(false, ctx);
+        }
     }
 
     result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;

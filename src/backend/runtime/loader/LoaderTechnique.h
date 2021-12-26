@@ -1,11 +1,14 @@
 #pragma once
 
 #include "LoaderContext.h"
+#include "TechniqueVariant.h"
 
 namespace IG {
 struct TechniqueInfo {
     std::vector<std::string> EnabledAOVs;
-    bool UseAdvancedShadowHandling = false;
+    bool UseAdvancedShadowHandling           = false;
+    uint32 VariantCount                      = 1;
+    TechniqueVariantSelector VariantSelector = nullptr;
 };
 
 struct LoaderTechnique {

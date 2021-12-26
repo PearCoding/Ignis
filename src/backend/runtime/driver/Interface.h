@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Target.h"
+#include "loader/TechniqueVariant.h"
 #include <vector>
 
 namespace IG {
@@ -14,13 +15,8 @@ struct DriverSetupSettings {
     IG::uint32 framebuffer_width  = 0;
     IG::uint32 framebuffer_height = 0;
     IG::SceneDatabase* database   = nullptr;
-    void* ray_generation_shader   = nullptr;
-    void* miss_shader             = nullptr;
-    std::vector<void*> hit_shaders;
-    void* advanced_shadow_hit_shader  = nullptr;
-    void* advanced_shadow_miss_shader = nullptr;
-    bool acquire_stats                = false;
-    size_t aov_count                  = false;
+    bool acquire_stats            = false;
+    size_t aov_count              = false;
 };
 
 struct DriverRenderSettings {
@@ -42,6 +38,7 @@ struct DriverRenderSettings {
 using DriverRenderFunction           = void (*)(const DriverRenderSettings*, IG::uint32);
 using DriverShutdownFunction         = void (*)();
 using DriverSetupFunction            = void (*)(const DriverSetupSettings*);
+using DriverSetShaderSet             = void (*)(const IG::TechniqueVariantShaderSet& shaderSet);
 using DriverGetFramebufferFunction   = const float* (*)(int);
 using DriverClearFramebufferFunction = void (*)(int);
 using DriverGetStatisticsFunction    = const IG::Statistics* (*)();
@@ -54,6 +51,7 @@ struct DriverInterface {
     DriverSetupFunction SetupFunction;
     DriverShutdownFunction ShutdownFunction;
     DriverRenderFunction RenderFunction;
+    DriverSetShaderSet SetShaderSetFunction;
     DriverGetFramebufferFunction GetFramebufferFunction;
     DriverClearFramebufferFunction ClearFramebufferFunction;
     DriverGetStatisticsFunction GetStatisticsFunction;

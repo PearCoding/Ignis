@@ -62,8 +62,8 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
         stream << "  let aov_normals = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
 
     if (hasMISAOV) {
-        stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spp);" << std::endl
-               << "  let aov_nee = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
+        stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
+        stream << "  let aov_nee = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
     }
 
     if (hasStatsAOV)

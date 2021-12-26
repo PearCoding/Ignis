@@ -53,7 +53,9 @@ public:
     // aov<0 will clear all aovs
     void clearFramebuffer(int aov = -1);
     inline const std::vector<std::string> aovs() const { return mAOVs; }
-    inline uint32 iterationCount() const { return mIteration; }
+
+    inline uint32 currentTechniqueVariant() const { return mCurrentTechniqueVariant; }
+    inline uint32 currentIterationCount() const { return mCurrentIteration; }
 
     const Statistics* getStatistics() const;
 
@@ -69,6 +71,8 @@ public:
 
 private:
     void shutdown();
+    void compileShaders();
+    void handleTechniqueVariants(uint32 nextIteration);
 
     bool mInit;
 
@@ -81,8 +85,10 @@ private:
 
     size_t mDevice;
     size_t mSamplesPerIteration;
-    uint32 mIteration;
     Target mTarget;
+
+    uint32 mCurrentIteration;
+    uint32 mCurrentTechniqueVariant;
 
     bool mIsTrace;
     bool mIsDebug;
@@ -90,10 +96,8 @@ private:
     bool mAcquireStats;
     std::vector<std::string> mAOVs;
 
-    std::string RayGenerationShader;
-    std::string MissShader;
-    std::vector<std::string> HitShaders;
-    std::string AdvancedShadowHitShader;
-    std::string AdvancedShadowMissShader;
+    TechniqueVariantSelector mTechniqueVariantSelector;
+    std::vector<TechniqueVariant> mTechniqueVariants;
+    std::vector<TechniqueVariantShaderSet> mTechniqueVariantShaderSets; // Compiled shaders
 };
 } // namespace IG

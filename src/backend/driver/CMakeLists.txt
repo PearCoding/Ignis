@@ -155,7 +155,7 @@ foreach(var ${VARIANTS})
         ARTIC_FLAGS --log-level info -Wall
         FILES ${ARTIC_MAIN_SRC} ${out_file})
     set(_target_name ig_driver_${var_name})
-    add_library(${_target_name} MODULE ${_objs} glue.cpp)
+    add_library(${_target_name} MODULE ${_objs} glue.cpp ShallowArray.h)
     set_target_properties(${_target_name} PROPERTIES PREFIX "")
     target_compile_definitions(${_target_name} PRIVATE ${args})
     target_link_libraries(${_target_name} PRIVATE ${AnyDSL_runtime_LIBRARIES} ig_lib_runtime)

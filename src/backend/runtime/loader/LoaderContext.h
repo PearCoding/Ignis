@@ -38,6 +38,8 @@ struct LoaderContext {
     std::string CameraType;
     std::string TechniqueType;
 
+    uint32 CurrentTechniqueVariant;
+
     std::unordered_map<std::string, uint32> TextureBuffer; // Texture to Buffer/Image, used only in workaround
     std::vector<Vector3f> TextureAverages;                 // Workaround for now
 

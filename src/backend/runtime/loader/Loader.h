@@ -2,6 +2,7 @@
 
 #include "Parser.h"
 #include "Target.h"
+#include "TechniqueVariant.h"
 #include "table/SceneDatabase.h"
 
 namespace IG {
@@ -19,11 +20,9 @@ struct LoaderOptions {
 struct LoaderResult {
     SceneDatabase Database;
     std::vector<std::string> AOVs;
-    std::string RayGenerationShader;
-    std::string MissShader;
-    std::vector<std::string> HitShaders;
-    std::string AdvancedShadowHitShader;
-    std::string AdvancedShadowMissShader;
+
+    std::vector<TechniqueVariant> TechniqueVariants;
+    TechniqueVariantSelector VariantSelector;
 };
 
 class Loader {
