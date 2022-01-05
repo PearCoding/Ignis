@@ -36,7 +36,6 @@ private:
     std::vector<std::string> mAOVNames;
     int mCurrentAOV;
 
-    const bool mShowDebug;
     DebugMode mDebugMode;
 
     ToneMappingMethod mToneMappingMethod;

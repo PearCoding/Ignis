@@ -17,6 +17,7 @@ enum class DebugMode {
     IsEmissive,
     IsSpecular,
     IsEntering,
-    CheckBSDF
+    CheckBSDF,
+    Albedo
 };
 }

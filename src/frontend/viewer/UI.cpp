@@ -37,7 +37,7 @@ static const char* ToneMappingMethodOptions[] = {
 static const char* DebugModeOptions[] = {
     "Normal", "Tangent", "Bitangent", "Geometric Normal", "Texture Coords", "Prim Coords", "Point", "Hit Distance",
     "Raw Prim ID", "Prim ID", "Raw Entity ID", "Entity ID",
-    "Is Emissive", "Is Specular", "Is Entering", "Check BSDF"
+    "Is Emissive", "Is Specular", "Is Entering", "Check BSDF", "Albedo"
 };
 
 // Pose IO
@@ -826,7 +826,6 @@ UI::UI(int width, int height, const std::vector<const float*>& aovs, const std::
     , mAOVs(aovs)
     , mAOVNames(aov_names)
     , mCurrentAOV(0)
-    , mShowDebug(showDebug)
     , mDebugMode(DebugMode::Normal)
     , mToneMappingMethod(ToneMappingMethod::ACES)
     , mInternal(std::make_unique<UIInternal>())
@@ -839,6 +838,7 @@ UI::UI(int width, int height, const std::vector<const float*>& aovs, const std::
     mInternal->Parent = this;
     mInternal->Width  = width;
     mInternal->Height = height;
+    mInternal->ShowDebugMode = showDebug;
 
     mInternal->Window = SDL_CreateWindow(
         "Ignis",

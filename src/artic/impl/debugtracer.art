@@ -102,6 +102,18 @@ fn @make_debug_renderer(debug_mode: i32) -> PathTracer {
                         }
                     }
                 },
+                16 => { // DEBUG_ALBEDO
+                    if mat.bsdf.is_specular {
+                        make_option(black)
+                    } else {
+                        // This is the reflection albedo
+                        let out_dir = vec3_neg(ray.dir);
+                        let in_dir  = vec3_reflect(out_dir, surf.local.col(2));
+                        let cos = math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)));
+                        let evl = color_mulf(mat.bsdf.eval(in_dir, out_dir), 1/cos); // We want the result without cosine term
+                        make_option(evl)
+                    }
+                },
                 _ => { // DEBUG_NORMAL 
                     let n = surf.local.col(2);
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z)))
