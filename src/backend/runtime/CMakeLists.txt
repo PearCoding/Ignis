@@ -94,6 +94,7 @@ set(SRC
     loader/ShaderUtils.h
     loader/ShadingTree.cpp
     loader/ShadingTree.h
+    loader/TechniqueInfo.h
     loader/TechniqueVariant.h
     log/ConsoleLogListener.cpp
     log/ConsoleLogListener.h

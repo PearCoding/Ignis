@@ -33,19 +33,21 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     if (!LoaderEntity::load(ctx, result))
         return false;
 
-    ctx.Database = &result.Database;
-
-    TechniqueInfo info = LoaderTechnique::getInfo(ctx);
+    ctx.Database      = &result.Database;
+    ctx.TechniqueInfo = LoaderTechnique::getInfo(ctx);
 
     LoaderLight::setupAreaLights(ctx);
 
-    result.TechniqueVariants.resize(info.VariantCount);
-    for (uint32 i = 0; i < info.VariantCount; ++i) {
+    result.TechniqueVariants.resize(ctx.TechniqueInfo.VariantCount);
+    for (uint32 i = 0; i < ctx.TechniqueInfo.VariantCount; ++i) {
         auto& variant               = result.TechniqueVariants[i];
         ctx.CurrentTechniqueVariant = i;
 
         // Generate Ray Generation Shader
-        variant.RayGenerationShader = RayGenerationShader::setup(ctx);
+        if (ctx.TechniqueInfo.OverrideCameraGenerator[ctx.CurrentTechniqueVariant])
+            variant.RayGenerationShader = ctx.TechniqueInfo.OverrideCameraGenerator[ctx.CurrentTechniqueVariant](ctx);
+        else
+            variant.RayGenerationShader = RayGenerationShader::setup(ctx);
         if (variant.RayGenerationShader.empty())
             return false;
 
@@ -63,14 +65,14 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         }
 
         // Generate Advanced Shadow Shaders if requested
-        if (info.UseAdvancedShadowHandling) {
+        if (ctx.TechniqueInfo.UseAdvancedShadowHandling[ctx.CurrentTechniqueVariant]) {
             variant.AdvancedShadowHitShader  = AdvancedShadowShader::setup(true, ctx);
             variant.AdvancedShadowMissShader = AdvancedShadowShader::setup(false, ctx);
         }
     }
 
     result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;
-    result.AOVs                 = info.EnabledAOVs;
+    result.AOVs                 = ctx.TechniqueInfo.EnabledAOVs;
 
     IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 

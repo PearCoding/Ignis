@@ -2,6 +2,7 @@
 
 #include "LoaderEnvironment.h"
 #include "Target.h"
+#include "TechniqueInfo.h"
 
 #include <filesystem>
 #include <variant>
@@ -37,6 +38,7 @@ struct LoaderContext {
 
     std::string CameraType;
     std::string TechniqueType;
+    IG::TechniqueInfo TechniqueInfo;
 
     uint32 CurrentTechniqueVariant;
 

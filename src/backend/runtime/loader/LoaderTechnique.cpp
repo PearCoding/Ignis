@@ -37,12 +37,14 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
     if (technique->property("aov_mis").getBool(false)) {
         info.EnabledAOVs.push_back("Direct Weights");
         info.EnabledAOVs.push_back("NEE Weights");
-        info.UseAdvancedShadowHandling = true;
+        info.UseAdvancedShadowHandling = { true };
     }
 
     if (technique->property("aov_stats").getBool(false)) {
         info.EnabledAOVs.push_back("Stats");
     }
+
+    info.UsesLights = { true };
 
     return info;
 }
@@ -53,9 +55,6 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     const bool hasNormalAOV = technique->property("aov_normals").getBool(false);
     const bool hasMISAOV    = technique->property("aov_mis").getBool(false);
     const bool hasStatsAOV  = technique->property("aov_stats").getBool(false);
-
-    // stream << "  let aov_images = @|_id:i32| { make_empty_aov_image() };" << std::endl;
-    // aovs = 0;
 
     size_t counter = 1;
     if (hasNormalAOV)
@@ -130,11 +129,6 @@ static TechniqueEntry* getTechniqueEntry(const std::string& name)
     }
     IG_LOG(L_ERROR) << "No technique type '" << name << "' available" << std::endl;
     return nullptr;
-}
-
-bool LoaderTechnique::requireLights(const LoaderContext& ctx)
-{
-    return ctx.TechniqueType == "path";
 }
 
 TechniqueInfo LoaderTechnique::getInfo(const LoaderContext& ctx)

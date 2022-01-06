@@ -27,7 +27,7 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx)
            << "  let entities = device.load_entity_table(dtb.entities);" << std::endl
            << std::endl;
 
-    const bool requireLights = LoaderTechnique::requireLights(ctx);
+    const bool requireLights = ctx.TechniqueInfo.UsesLights[ctx.CurrentTechniqueVariant];
     if (requireLights) {
         stream << LoaderLight::generate(ctx, false) << std::endl;
     }

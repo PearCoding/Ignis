@@ -23,7 +23,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, LoaderContext& ctx)
 
     stream << "  let is_hit = " << (is_hit ? "true" : "false") << ";" << std::endl;
 
-    if (LoaderTechnique::requireLights(ctx))
+    if (ctx.TechniqueInfo.UsesLights[ctx.CurrentTechniqueVariant])
         stream << LoaderLight::generate(ctx, true)
                << std::endl;
 
