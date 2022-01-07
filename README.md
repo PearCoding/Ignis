@@ -71,11 +71,20 @@ Use the `--help` argument on each of the executables to get information of possi
 
 ## Running
 
-Each frontend requires the exact location of the backends to run. An automatic search procedure will find detect them in the system. In some rare cases the automatic search procedure might fail to find all the backends. In that case the environment variable `IG_DRIVER_PATH` can be used to point to the directories containing driver modules. The environment variable is similar to the `PATH` variable used in Linux environments and should contain absolute paths only, separated by ':' if multiple paths are provided. Setting `IG_DRIVER_SKIP_SYSTEM_PATH` will prevent the automatic search and only depend on `IG_DRIVER_PATH`.
+Each frontend requires the exact location of the backends to run. An automatic search procedure will detect them in the system. In some rare cases the automatic search procedure might fail to find all the backends. In that case the environment variable `IG_DRIVER_PATH` can be used to point to the directories containing driver modules. The environment variable is similar to the `PATH` variable used in Linux environments and should contain absolute paths only, separated by ':' if multiple paths are provided. Setting `IG_DRIVER_SKIP_SYSTEM_PATH` will prevent the automatic search and only depend on `IG_DRIVER_PATH`.
 
 Run a frontend of your choice like this:
 
     igview scene/diamond_scene.json
+
+
+## Documentation
+
+All available components are documented in the `docs/` folder. A documentation can be created with 
+
+    cmake --build . -t ig_documentation
+
+from the `build/` folder.
 
 ## Scene description
 
@@ -102,7 +111,7 @@ The Ignis client has an optional UI and multiple ways to interact with the scene
 
  - `1..9` number keys to switch between views.
  - `1..9` and `Strg/Ctrl` to save the current view on that slot.
- - `F1` to toggle the help window.
+ - `F1` to toggle the help window. 
  - `F2` to toggle the UI.
  - `F3` to toggle the interaction lock. If enabled, no view changing interaction is possible.
  - `F11` to save a snapshot of the current rendering. HDR information will be preserved. Use with `Strg/Ctrl` to make a LDR screenshot of the current render including UI and tonemapping. The image will be saved in the current working directory.
@@ -113,12 +122,12 @@ The Ignis client has an optional UI and multiple ways to interact with the scene
  - `F` to increase (or with `Shift` to decrease) tonemapping exposure. Step size can be decreased with `Strg/Ctrl`. Only works if automatic tonemapping is disabled.
  - `V` to increase (or with `Shift` to decrease) tonemapping offset. Step size can be decreased with `Strg/Ctrl`. Only works if automatic tonemapping is disabled.
  - `WASD` or arrow keys to travel through the scene.
- - `Q/E` to rotate the camera around the viewing direction. 
+ - `Q/E` to roll the camera around the viewing direction. 
  - `PageUp/PageDown` to pan the camera up and down. 
  - `Notepad +/-` to change the travel speed.
  - `Numpad 1` to switch to front view.
  - `Numpad 3` to switch to side view.
  - `Numpad 7` to switch to top view.
- - `Numpad 9` look behind you.
+ - `Numpad 9` to look behind you.
  - `Numpad 2468` to rotate the camera.
  - Mouse to rotate the camera. `Shift` will move slower, `Strg/Ctrl` will move faster. Use with `Alt` to enable first person camera behaviour. 
