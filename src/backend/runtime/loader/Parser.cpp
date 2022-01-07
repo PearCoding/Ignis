@@ -10,6 +10,8 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 
+#include "glTFParser.h"
+
 namespace IG {
 namespace Parser {
 // TODO: (Re)Add arguments!
@@ -338,12 +340,62 @@ static void handleNamedObject(Scene& scene, ObjectType type, const rapidjson::Va
     }
 }
 
+static void handleExternalObject(SceneParser& loader, Scene& scene, const rapidjson::Value& obj)
+{
+    if (obj.HasMember("type")) {
+        if (!obj["type"].IsString())
+            throw std::runtime_error("Expected type to be a string");
+    }
+
+    if (!obj.HasMember("path"))
+        throw std::runtime_error("Expected a path for externals");
+
+    std::string pluginType = obj.HasMember("type") ? getString(obj["type"]) : "ignis";
+    std::transform(pluginType.begin(), pluginType.end(), pluginType.begin(), ::tolower);
+
+    const std::string path = resolvePath(getString(obj["path"]), loader.lookupPaths());
+
+    if (pluginType == "ignis") {
+        // Include ignis file but ignore technique, camera & film
+        bool ok           = false;
+        Scene local_scene = loader.loadFromFile(path, ok);
+
+        if (!ok)
+            throw std::runtime_error("Could not load '" + path + "'");
+
+        scene.addFrom(local_scene);
+    } else if (pluginType == "gltf") {
+        // Include and map gltf stuff
+        bool ok           = false;
+        Scene local_scene = glTFSceneParser::loadFromFile(path, ok);
+
+        if (!ok)
+            throw std::runtime_error("Could not load '" + path + "'");
+
+        scene.addFrom(local_scene);
+    } else {
+        throw std::runtime_error("Unknown external type '" + pluginType + "' given");
+    }
+}
+
+void Scene::addFrom(const Scene& other)
+{
+    for (const auto tex : other.textures())
+        addTexture(tex.first, tex.second);
+    for (const auto bsdf : other.bsdfs())
+        addBSDF(bsdf.first, bsdf.second);
+    for (const auto light : other.lights())
+        addLight(light.first, light.second);
+    for (const auto shape : other.shapes())
+        addShape(shape.first, shape.second);
+    for (const auto ent : other.entities())
+        addEntity(ent.first, ent.second);
+}
+
 class InternalSceneParser {
 public:
-    static Scene loadFromJSON(const SceneParser& loader, const rapidjson::Document& doc)
+    static Scene loadFromJSON(SceneParser& loader, const rapidjson::Document& doc)
     {
-        IG_UNUSED(loader);
-
         if (!doc.IsObject())
             throw std::runtime_error("Expected root element to be an object");
 
@@ -351,8 +403,6 @@ public:
 
         if (doc.HasMember("camera")) {
             scene.setCamera(handleAnonymousObject(scene, OT_CAMERA, doc["camera"]));
-        } else {
-            throw std::runtime_error("Expected scene to have a camera");
         }
 
         if (doc.HasMember("technique")) {
@@ -361,8 +411,17 @@ public:
 
         if (doc.HasMember("film")) {
             scene.setFilm(handleAnonymousObject(scene, OT_FILM, doc["film"]));
-        } else {
-            throw std::runtime_error("Expected scene to have a film");
+        }
+
+        if (doc.HasMember("externals")) {
+            if (!doc["externals"].IsArray())
+                throw std::runtime_error("Expected external elements to be an array");
+            for (const auto& exts : doc["externals"].GetArray()) {
+                if (!exts.IsObject())
+                    throw std::runtime_error("Expected external element to be an object");
+
+                handleExternalObject(loader, scene, exts);
+            }
         }
 
         if (doc.HasMember("shapes")) {

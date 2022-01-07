@@ -9,6 +9,12 @@
         "technique": { "$ref": "#/definitions/Technique"},
         "camera": { "$ref": "#/definitions/Camera" },
         "film": { "$ref": "#/definitions/Film" },
+        "externals": {
+            "description": "List of external files",
+            "type": "array",
+            "items": { "$ref": "#/definitions/External" },
+            "uniqueItems": true
+        },
         "textures": {
             "description": "List of textures",
             "type": "array",
@@ -41,6 +47,16 @@
         }
     },
     "definitions": {
+        "External": {
+            "description": "External properties",
+            "type": "object",
+            "required": ["path"],
+            "properties": { 
+                "type": { "type":"string"},
+                "path": { "type":"string"}
+            },
+            "additionalProperties": true
+        },
         "Technique": {
             "description": "Technique properties",
             "type": "object",

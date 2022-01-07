@@ -34,6 +34,13 @@ CPMAddPackage(
     DOWNLOAD_ONLY YES
 )
 
+CPMAddPackage(
+    NAME tinygltf
+    GITHUB_REPOSITORY syoyo/tinygltf 
+    GIT_TAG master
+    DOWNLOAD_ONLY YES
+)
+
 ################################################################
 
 set(SRC 
@@ -70,6 +77,8 @@ set(SRC
     driver/Interface.h
     klems/KlemsLoader.cpp
     klems/KlemsLoader.h
+    loader/glTFParser.cpp
+    loader/glTFParser.h
     loader/Loader.cpp
     loader/Loader.h
     loader/LoaderBSDF.cpp
@@ -162,7 +171,7 @@ if(NOT WIN32)
     target_link_libraries(ig_lib_runtime PUBLIC Threads::Threads)
 endif()
 target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen std::filesystem PRIVATE ${CMAKE_DL_LIBS} pugixml TBB::tbb TBB::tbbmalloc ZLIB::ZLIB ig_lib_jit)
-target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR})
+target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR} ${tinygltf_SOURCE_DIR})
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 target_compile_definitions(ig_lib_runtime PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
 target_compile_features(ig_lib_runtime PUBLIC cxx_std_17)

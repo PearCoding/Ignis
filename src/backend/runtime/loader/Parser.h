@@ -292,6 +292,9 @@ public:
     inline void addLight(const std::string& name, const std::shared_ptr<Object>& light) { mLights[name] = light; }
     inline void addEntity(const std::string& name, const std::shared_ptr<Object>& entity) { mEntities[name] = entity; }
 
+    // Add all information from other to this scene, except technique, film and camera information
+    void addFrom(const Scene& other);
+
 private:
     std::shared_ptr<Object> mTechnique;
     std::shared_ptr<Object> mCamera;
@@ -340,6 +343,8 @@ public:
     {
         mArguments[key] = value;
     }
+
+    inline const std::vector<std::string>& lookupPaths() const { return mLookupPaths; }
 
 private:
     std::vector<std::string> mLookupPaths;
