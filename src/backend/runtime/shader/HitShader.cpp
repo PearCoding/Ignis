@@ -22,10 +22,7 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx)
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
            << std::endl;
 
-    stream << "  let dtb      = device.load_scene_database();" << std::endl
-           << "  let shapes   = device.load_shape_table(dtb.shapes);" << std::endl
-           << "  let entities = device.load_entity_table(dtb.entities);" << std::endl
-           << std::endl;
+    stream << ShaderUtils::generateDatabase() << std::endl;
 
     const bool requireLights = ctx.TechniqueInfo.UsesLights[ctx.CurrentTechniqueVariant];
     if (requireLights) {

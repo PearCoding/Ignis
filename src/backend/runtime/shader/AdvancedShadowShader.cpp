@@ -23,9 +23,14 @@ std::string AdvancedShadowShader::setup(bool is_hit, LoaderContext& ctx)
 
     stream << "  let is_hit = " << (is_hit ? "true" : "false") << ";" << std::endl;
 
-    if (ctx.TechniqueInfo.UsesLights[ctx.CurrentTechniqueVariant])
-        stream << LoaderLight::generate(ctx, true)
+    if (ctx.TechniqueInfo.UsesLights[ctx.CurrentTechniqueVariant]) {
+        bool requireAreaLight = is_hit || ctx.TechniqueInfo.UsesAllLightsInMiss[ctx.CurrentTechniqueVariant];
+        if (requireAreaLight)
+            stream << ShaderUtils::generateDatabase() << std::endl;
+
+        stream << LoaderLight::generate(ctx, !requireAreaLight)
                << std::endl;
+    }
 
     stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
 

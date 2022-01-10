@@ -21,9 +21,13 @@ std::string MissShader::setup(LoaderContext& ctx)
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
            << std::endl;
 
-    if (ctx.TechniqueInfo.UsesLights[ctx.CurrentTechniqueVariant])
-        stream << LoaderLight::generate(ctx, ctx.TechniqueInfo.UsesAllLightsInMiss[ctx.CurrentTechniqueVariant])
+    if (ctx.TechniqueInfo.UsesLights[ctx.CurrentTechniqueVariant]) {
+        if (ctx.TechniqueInfo.UsesAllLightsInMiss[ctx.CurrentTechniqueVariant])
+            stream << ShaderUtils::generateDatabase() << std::endl;
+
+        stream << LoaderLight::generate(ctx, !ctx.TechniqueInfo.UsesAllLightsInMiss[ctx.CurrentTechniqueVariant])
                << std::endl;
+    }
 
     stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
 
