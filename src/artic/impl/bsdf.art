@@ -271,18 +271,10 @@ fn @make_rough_conductor_bsdf(surf: SurfaceElement, ior: f32, k: f32, ks: Color,
 
 // Creates a microfacet conductor BSDF based on the metallic roughness PBR style. This is the two-sided version
 fn @make_metallic_roughness_bsdf(surf: SurfaceElement, base_color: Color, metallic: f32, micro: MicrofacetDistribution) -> Bsdf {
-    let fresnelTerm = @|cosTheta : f32| {
-        let F0 = color_lerp(make_gray_color(0.04), base_color, metallic);
-        schlick(F0, cosTheta)
-    };
-    make_rough_base_conductor_bsdf(surf, base_color, fresnelTerm, micro)
-}
-
-fn @make_diffuse_metallic_roughness_bsdf(surf: SurfaceElement, base_color: Color, metallic: f32, micro: MicrofacetDistribution) -> Bsdf {
-    let diff = make_diffuse_bsdf(surf, base_color);
-    let mr = make_metallic_roughness_bsdf(surf, base_color, metallic, micro);
-    // Sample mr and only fallback to diff if necessary
-    make_add_bsdf(mr, diff)
+    let metal_bsdf = make_rough_base_conductor_bsdf(surf, base_color, @|cosTheta : f32| schlick(base_color, cosTheta), micro);
+    let specular_bsdf = make_rough_base_conductor_bsdf(surf, base_color, @|_cosTheta : f32| white, micro);
+    let dielectric_bsdf = make_plastic_bsdf(surf, 1, 1.5, base_color, specular_bsdf);
+    make_mix_bsdf(dielectric_bsdf, metal_bsdf, metallic)
 }
 
 //--------------------------------------
@@ -410,8 +402,9 @@ fn @shading_normal_adjoint(in_dir: Vec3, out_dir: Vec3, ns: Vec3, ng: Vec3) -> f
 }
 
 // Normal Mapping
+// Normal given in [0, 1] RGB fashion
 fn @make_normalmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color) -> Bsdf {
-    let N    = vec3_normalize(mat3x3_left_mul(surf.local, vec3_normalize(make_vec3(normal.r, normal.g, normal.b))));
+    let N    = vec3_normalize(mat3x3_left_mul(surf.local, vec3_normalize(make_vec3(2 * normal.r - 1, 2 * normal.g - 1, 2 * normal.b - 1))));
     let bsdf = @bsdf_factory(SurfaceElement{
         is_entering = surf.is_entering,
         point       = surf.point,

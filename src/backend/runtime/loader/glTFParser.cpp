@@ -19,23 +19,42 @@
 
 namespace IG {
 namespace Parser {
-
-struct LoadInfo {
-    std::filesystem::path CacheDir;
-};
-
-static bool imageLoader(tinygltf::Image* image, const int image_idx, std::string*,
-                        std::string*, int req_width, int req_height,
-                        const unsigned char* bytes, int size, void* user_data)
+static bool imageLoader(tinygltf::Image* img, const int, std::string*,
+                        std::string*, int, int,
+                        const unsigned char* ptr, int size, void*)
 {
-    // Do not load the actual image!
-    LoadInfo* info = (LoadInfo*)user_data;
-
-    // TODO
-
-    image->uri = (info->CacheDir / (image->name + ".exr")).generic_u8string();
+    // Do nothing, except copy if necessary
+    // This will only be called for embedded data uris
+    img->image.resize(size);
+    std::memcpy(img->image.data(), ptr, size);
 
     return true;
+}
+
+static std::filesystem::path exportImage(const tinygltf::Image& img, const tinygltf::Model& model, int id, const std::filesystem::path& dir)
+{
+    if (img.bufferView >= 0) {
+        const tinygltf::BufferView& view = model.bufferViews[img.bufferView];
+        const tinygltf::Buffer& buffer   = model.buffers[view.buffer];
+
+        std::string extension = "." + tinygltf::MimeToExt(img.mimeType);
+
+        std::filesystem::path path = dir / ("_img_" + std::to_string(id) + extension);
+        std::ofstream out(path.generic_u8string(), std::ios::binary);
+        out.write(reinterpret_cast<const char*>(buffer.data.data() + view.byteOffset), view.byteLength);
+
+        return path;
+    } else if (!img.image.empty()) {
+        std::string extension = "." + tinygltf::MimeToExt(img.mimeType);
+
+        std::filesystem::path path = dir / ("_img_" + std::to_string(id) + extension);
+        std::ofstream out(path.generic_u8string(), std::ios::binary);
+        out.write(reinterpret_cast<const char*>(img.image.data()), img.image.size());
+
+        return path;
+    } else {
+        return img.uri;
+    }
 }
 
 static void exportMeshPrimitive(const std::filesystem::path& path, const tinygltf::Model& model, const tinygltf::Primitive& primitive)
@@ -247,6 +266,7 @@ static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::
         size_t primCount           = 0;
         const tinygltf::Mesh& mesh = model.meshes[node.mesh];
         for (const auto& prim : mesh.primitives) {
+            // TODO: Support default material
             const tinygltf::Material& material = model.materials[prim.material];
             const std::string name             = mesh.name + "_" + std::to_string(primCount);
 
@@ -291,17 +311,12 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
     std::filesystem::create_directories(cache_dir / "images");
     std::filesystem::create_directories(cache_dir / "meshes");
 
-    using namespace tinygltf;
-
-    LoadInfo info;
-    info.CacheDir = cache_dir / "images";
-
-    Model model;
-    TinyGLTF loader;
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
     std::string err;
     std::string warn;
 
-    loader.SetImageLoader(imageLoader, &info);
+    loader.SetImageLoader(imageLoader, nullptr);
 
     if (real_path.extension() == ".glb")
         ok = loader.LoadBinaryFromFile(&model, &err, &warn, path);
@@ -319,11 +334,20 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
 
     Scene scene;
 
+    std::unordered_map<int, std::filesystem::path> loaded_images;
     for (const auto& tex : model.textures) {
-        const tinygltf::Image& img     = model.images[tex.source];
-        std::filesystem::path img_path = img.uri;
-        if (img_path.is_relative())
-            img_path = directory / img_path;
+        std::filesystem::path img_path;
+        if (loaded_images.count(tex.source) > 0) {
+            img_path = loaded_images[tex.source];
+        } else {
+            const tinygltf::Image& img = model.images[tex.source];
+            img_path                   = exportImage(img, model, tex.source, cache_dir / "images");
+
+            if (img_path.is_relative())
+                img_path = directory / img_path;
+
+            loaded_images[tex.source] = img_path;
+        }
 
         auto obj = std::make_shared<Object>(OT_TEXTURE, "image");
         obj->setProperty("filename", Property::fromString(std::filesystem::canonical(img_path).generic_u8string()));

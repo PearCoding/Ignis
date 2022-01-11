@@ -72,6 +72,14 @@ fn @ndf_ggx(surf: SurfaceElement, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
     1 / (flt_pi * alpha_u * alpha_v * cosZ * cosZ * cosZ * cosZ * (1 + k2) * (1 + k2))
 }
 
+fn @make_delta_model(surf: SurfaceElement) = MicrofacetModel {
+    D  = @|_| 0,
+    G1 = @|_, _| 0,
+    sample = @ |_| {
+        MicrofacetSample { normal = surf.local.col(2), pdf = 1}
+    }
+};
+
 fn @make_aniso_beckmann_model(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
     D  = @|m| ndf_beckmann(surf, m, alpha_u, alpha_v),
     G1 = @|w, m| g_1_walter(surf, w, m, alpha_u, alpha_v),
@@ -142,12 +150,24 @@ fn @make_microfacet_distribution(model: MicrofacetModel, surf: SurfaceElement) =
     sample = @ |rnd, _| model.sample(rnd)
 };
 
+fn @check_if_delta_distribution(alpha_u: f32, alpha_v: f32) = alpha_u <= 1e-2 || alpha_v <= 1e-2;
+
+fn @make_delta_distribution(surf: SurfaceElement) = make_microfacet_distribution(make_delta_model(surf), surf);
+
 fn @make_beckmann_distribution(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
-    make_microfacet_distribution(make_aniso_beckmann_model(surf, alpha_u, alpha_v), surf)
+    if check_if_delta_distribution(alpha_u, alpha_v) {
+        make_delta_distribution(surf) 
+    } else {
+        make_microfacet_distribution(make_aniso_beckmann_model(surf, alpha_u, alpha_v), surf)
+    }
 }
 
 fn @make_ggx_distribution(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
-    make_microfacet_distribution(make_aniso_ggx_model(surf, alpha_u, alpha_v), surf)
+    if check_if_delta_distribution(alpha_u, alpha_v) {
+        make_delta_distribution(surf)
+    } else { 
+        make_microfacet_distribution(make_aniso_ggx_model(surf, alpha_u, alpha_v), surf)
+    }
 }
 
 // Based on:
@@ -190,16 +210,19 @@ fn @pdf_vndf_ggx(surf: SurfaceElement, w: Vec3, h: Vec3, alpha_u: f32, alpha_v: 
 }
 
 fn @make_vndf_ggx_distribution(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
-    let model = make_aniso_ggx_model(surf, alpha_u, alpha_v);
-
-    MicrofacetDistribution {
-        D      = model.D,
-        G      = @ |wi, wo, m| model.G1(wi, m) * model.G1(wo, m),
-        pdf    = @ | _, wo, m| pdf_vndf_ggx(surf, wo, m, alpha_u, alpha_v),
-        sample = @ |rnd, wo|   {
-            let m   = sample_vndf_ggx(rnd, surf, wo, alpha_u, alpha_v);
-            let pdf = pdf_vndf_ggx(surf, wo, m, alpha_u, alpha_v);
-            MicrofacetSample { normal = m, pdf = pdf }
+    if check_if_delta_distribution(alpha_u, alpha_v) {
+        make_delta_distribution(surf)
+    } else {
+        let model = make_aniso_ggx_model(surf, alpha_u, alpha_v);
+        MicrofacetDistribution {
+            D      = model.D,
+            G      = @ |wi, wo, m| model.G1(wi, m) * model.G1(wo, m),
+            pdf    = @ | _, wo, m| pdf_vndf_ggx(surf, wo, m, alpha_u, alpha_v),
+            sample = @ |rnd, wo|   {
+                let m   = sample_vndf_ggx(rnd, surf, wo, alpha_u, alpha_v);
+                let pdf = pdf_vndf_ggx(surf, wo, m, alpha_u, alpha_v);
+                MicrofacetSample { normal = m, pdf = pdf }
+            }
         }
     }
 }

@@ -26,17 +26,25 @@ static void setup_microfacet(ShadingTree& tree, const std::shared_ptr<Parser::Ob
     tree.addNumber("alpha_scale", ctx, *bsdf, 1.0f);
 }
 
-static std::string inline_microfacet(const std::string& name, const ShadingTree& tree)
+static std::string inline_microfacet(const std::string& name, const ShadingTree& tree, bool square)
 {
+    const auto inlineIt = [&](const std::string& prop) {
+        std::stringstream stream2;
+        stream2 << tree.getInline("alpha_scale") << " * (" << tree.getInline(prop) << ")";
+        if (square)
+            stream2 << " * (" << tree.getInline(prop) << ")";
+        return stream2.str();
+    };
+
     std::stringstream stream;
     if (tree.hasParameter("alpha_u")) {
         stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| make_vndf_ggx_distribution(surf, "
-               << tree.getInline("alpha_scale") << " * " << tree.getInline("alpha_u") << ", "
-               << tree.getInline("alpha_scale") << " * " << tree.getInline("alpha_v") << ");" << std::endl;
+               << inlineIt("alpha_u") << ", "
+               << inlineIt("alpha_v") << ");" << std::endl;
     } else {
         stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| make_vndf_ggx_distribution(surf, "
-               << tree.getInline("alpha_scale") << " * " << tree.getInline("alpha") << ", "
-               << tree.getInline("alpha_scale") << " * " << tree.getInline("alpha") << ");" << std::endl;
+               << inlineIt("alpha") << ", "
+               << inlineIt("alpha") << ");" << std::endl;
     }
     return stream.str();
 }
@@ -114,7 +122,7 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
 
     setup_microfacet(tree, bsdf, ctx);
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree)
+           << inline_microfacet(name, tree, false)
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_conductor_bsdf(surf, "
            << tree.getInline("eta") << ", "
            << tree.getInline("k") << ", "
@@ -134,8 +142,8 @@ static void bsdf_metallic_roughness(std::ostream& stream, const std::string& nam
 
     setup_microfacet(tree, bsdf, ctx);
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree)
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_diffuse_metallic_roughness_bsdf(surf, "
+           << inline_microfacet(name, tree, true) // TODO: I do not like this. We should not square here and nowhere else....
+           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_metallic_roughness_bsdf(surf, "
            << "color_mul(" << tree.getInline("base_color_scale") << ", " << tree.getInline("base_color") << "), "
            << tree.getInline("metallic_scale") << " * " << tree.getInline("metallic") << ", "
            << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
@@ -167,7 +175,7 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
 
     setup_microfacet(tree, bsdf, ctx);
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree)
+           << inline_microfacet(name, tree, false)
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
            << tree.getInline("ext_ior") << ", "
            << tree.getInline("int_ior") << ", "
