@@ -16,20 +16,29 @@ constexpr float RUBBER_IOR         = 1.49f;
 constexpr float ETA_DEFAULT        = 0.63660f;
 constexpr float ABSORPTION_DEFAULT = 2.7834f;
 
-static void setup_microfacet(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf)
+static void setup_microfacet(ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-    float alpha_u, alpha_v;
-    if (bsdf->property("alpha_u").isValid()) {
-        alpha_u = bsdf->property("alpha_u").getNumber(0.1f);
-        alpha_v = bsdf->property("alpha_v").getNumber(alpha_u);
-    } else {
-        alpha_u = bsdf->property("alpha").getNumber(0.1f);
-        alpha_v = alpha_u;
-    }
+    tree.addNumber("alpha_u", ctx, *bsdf, 0.1f);
+    tree.addNumber("alpha_v", ctx, *bsdf, 0.1f);
+    tree.addNumber("alpha", ctx, *bsdf, 0.1f);
 
-    stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| make_vndf_ggx_distribution(surf, "
-           << alpha_u << ", "
-           << alpha_v << ");" << std::endl;
+    // Not exposed in the documentation, but used internally
+    tree.addNumber("alpha_scale", ctx, *bsdf, 1.0f);
+}
+
+static std::string inline_microfacet(const std::string& name, const ShadingTree& tree)
+{
+    std::stringstream stream;
+    if (tree.hasParameter("alpha_u")) {
+        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| make_vndf_ggx_distribution(surf, "
+               << tree.getInline("alpha_scale") << " * " << tree.getInline("alpha_u") << ", "
+               << tree.getInline("alpha_scale") << " * " << tree.getInline("alpha_v") << ");" << std::endl;
+    } else {
+        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| make_vndf_ggx_distribution(surf, "
+               << tree.getInline("alpha_scale") << " * " << tree.getInline("alpha") << ", "
+               << tree.getInline("alpha_scale") << " * " << tree.getInline("alpha") << ");" << std::endl;
+    }
+    return stream.str();
 }
 
 static void bsdf_diffuse(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
@@ -103,12 +112,32 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
     tree.addNumber("eta", ctx, *bsdf, ETA_DEFAULT);
     tree.addNumber("k", ctx, *bsdf, ABSORPTION_DEFAULT);
 
-    setup_microfacet(stream, name, bsdf);
+    setup_microfacet(tree, bsdf, ctx);
     stream << tree.pullHeader()
+           << inline_microfacet(name, tree)
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_conductor_bsdf(surf, "
            << tree.getInline("eta") << ", "
            << tree.getInline("k") << ", "
            << tree.getInline("specular_reflectance") << ", "
+           << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
+}
+
+static void bsdf_metallic_roughness(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
+{
+    ShadingTree tree;
+    tree.addColor("base_color", ctx, *bsdf, Vector3f::Ones());
+    tree.addNumber("metallic", ctx, *bsdf, 0);
+
+    // Not exposed in the documentation, but used internally
+    tree.addColor("base_color_scale", ctx, *bsdf, Vector3f::Ones());
+    tree.addNumber("metallic_scale", ctx, *bsdf, 0);
+
+    setup_microfacet(tree, bsdf, ctx);
+    stream << tree.pullHeader()
+           << inline_microfacet(name, tree)
+           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_diffuse_metallic_roughness_bsdf(surf, "
+           << "color_mul(" << tree.getInline("base_color_scale") << ", " << tree.getInline("base_color") << "), "
+           << tree.getInline("metallic_scale") << " * " << tree.getInline("metallic") << ", "
            << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
 }
 
@@ -136,8 +165,9 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
     tree.addNumber("ext_ior", ctx, *bsdf, AIR_IOR);
     tree.addNumber("int_ior", ctx, *bsdf, RUBBER_IOR);
 
-    setup_microfacet(stream, name, bsdf);
+    setup_microfacet(tree, bsdf, ctx);
     stream << tree.pullHeader()
+           << inline_microfacet(name, tree)
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
            << tree.getInline("ext_ior") << ", "
            << tree.getInline("int_ior") << ", "
@@ -316,6 +346,7 @@ static struct {
     { "mirror", bsdf_mirror }, // Specialized conductor
     { "conductor", bsdf_conductor },
     { "roughconductor", bsdf_rough_conductor },
+    { "metallic_roughness", bsdf_metallic_roughness },
     { "phong", bsdf_phong },
     { "disney", bsdf_disney },
     { "plastic", bsdf_plastic },

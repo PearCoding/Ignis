@@ -335,7 +335,7 @@ TriMesh load(const std::filesystem::path& path)
                     continue;
                 }
 
-                if (name == "vertex_indices")
+                if (name == "vertex_indices" || name == "vertex_index")
                     header.IndElem = facePropCounter - 1;
             } else {
                 IG_LOG(L_WARNING) << "PlyFile " << path << ": Only float or list properties allowed. Ignoring..." << std::endl;

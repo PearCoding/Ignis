@@ -51,19 +51,19 @@ static inline void setup_camera(RuntimeRenderSettings& settings, LoaderOptions& 
     lopts.CameraType = camera_type;
 
     // Get initial location
-    Transformf cameraTransform;
+    Transformf cameraTransform = Transformf::Identity();
     const auto camera = lopts.Scene.camera();
     if (camera) {
         cameraTransform = camera->property("transform").getTransform();
         settings.FOV    = camera->property("fov").getNumber(settings.FOV);
+
+        settings.TMin = camera->property("near_clip").getNumber(settings.TMin);
+        settings.TMax = camera->property("far_clip").getNumber(settings.TMax);
     }
 
     settings.CameraEye = cameraTransform * Vector3f::Zero();
     settings.CameraDir = cameraTransform.linear().col(2);
     settings.CameraUp  = cameraTransform.linear().col(1);
-
-    settings.TMin = camera->property("near_clip").getNumber(settings.TMin);
-    settings.TMax = camera->property("far_clip").getNumber(settings.TMax);
 
     if (settings.TMax < settings.TMin)
         std::swap(settings.TMin, settings.TMax);

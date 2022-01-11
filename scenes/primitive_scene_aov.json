@@ -17,6 +17,6 @@
 		"size": [1000, 1000]
 	},
 	"externals": [
-		{"path": "primitive_scene_data.json"}
+		{"filename": "primitive_scene_data.json"}
 	]
 }

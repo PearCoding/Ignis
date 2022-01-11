@@ -20,6 +20,8 @@ public:
     std::string pullHeader();
     std::string getInline(const std::string& name) const;
 
+    inline bool hasParameter(const std::string& name) const { return mParameters.count(name) > 0; }
+
 private:
     std::string lookupTexture(const std::string& name, const LoaderContext& ctx, bool needColor = true);
 

@@ -11,7 +11,6 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
 
     const std::string filename    = ctx.handlePath(tex.property("filename").getString());
     const std::string filter_type = tex.property("filter_type").getString("bilinear");
-    const std::string wrap_mode   = tex.property("wrap_mode").getString("repeat");
     const bool flip_x             = tex.property("flip_x").getBool(false);
     const bool flip_y             = tex.property("flip_y").getBool(false);
 
@@ -19,11 +18,26 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
     if (filter_type == "nearest")
         filter = "make_nearest_filter()";
 
-    std::string wrap = "make_repeat_border()";
-    if (wrap_mode == "mirror")
-        wrap = "make_mirror_border()";
-    else if (wrap_mode == "clamp")
-        wrap = "make_clamp_border()";
+    const auto getWrapMode = [](const std::string& str) {
+        if (str == "mirror")
+            return "make_mirror_border()";
+        else if (str == "clamp")
+            return "make_clamp_border()";
+        else
+            return "make_repeat_border()";
+    };
+
+    std::string wrap;
+    if (tex.property("wrap_mode_u").isValid()) {
+        std::string wrap_u = getWrapMode(tex.property("wrap_mode_u").getString("repeat"));
+        std::string wrap_v = getWrapMode(tex.property("wrap_mode_v").getString("repeat"));
+        if (wrap_u == wrap_v)
+            wrap = wrap_u;
+        else
+            wrap = "make_split_border(" + wrap_u + ", " + wrap_v + ")";
+    } else {
+        wrap = getWrapMode(tex.property("wrap_mode").getString("repeat"));
+    }
 
     stream << "  let img_" << ShaderUtils::escapeIdentifier(name) << " = device.load_image(\"" << filename << "\");" << std::endl
            << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_image_texture("

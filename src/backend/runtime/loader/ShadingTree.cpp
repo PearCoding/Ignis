@@ -215,6 +215,7 @@ std::string ShadingTree::lookupTexture(const std::string& name, const LoaderCont
         }
 
         mHeaderLines.push_back(LoaderTexture::generate(name, *tex, ctx, *this));
+        mLoadedTextures.insert(name);
     }
     return "tex_" + ShaderUtils::escapeIdentifier(name) + (needColor ? "(surf.tex_coords)" : "");
 }

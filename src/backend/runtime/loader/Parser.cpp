@@ -347,13 +347,16 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const rapidj
             throw std::runtime_error("Expected type to be a string");
     }
 
-    if (!obj.HasMember("path"))
+    if (!obj.HasMember("filename"))
         throw std::runtime_error("Expected a path for externals");
 
     std::string pluginType = obj.HasMember("type") ? getString(obj["type"]) : "ignis";
     std::transform(pluginType.begin(), pluginType.end(), pluginType.begin(), ::tolower);
 
-    const std::string path = resolvePath(getString(obj["path"]), loader.lookupPaths());
+    const std::string inc_path = getString(obj["filename"]);
+    const std::string path     = resolvePath(inc_path, loader.lookupPaths());
+    if (path.empty())
+        throw std::runtime_error("Could not find path '" + inc_path + "'");
 
     if (pluginType == "ignis") {
         // Include ignis file but ignore technique, camera & film
@@ -390,6 +393,18 @@ void Scene::addFrom(const Scene& other)
         addShape(shape.first, shape.second);
     for (const auto ent : other.entities())
         addEntity(ent.first, ent.second);
+
+    if (!mTechnique) {
+        mTechnique = other.mTechnique;
+    }
+
+    if (!mCamera) {
+        mCamera = other.mCamera;
+    }
+
+    if (!mFilm) {
+        mFilm = other.mFilm;
+    }
 }
 
 class InternalSceneParser {
@@ -482,6 +497,19 @@ constexpr auto JsonFlags = rapidjson::kParseDefaultFlags | rapidjson::kParseComm
 
 Scene SceneParser::loadFromFile(const char* path, bool& ok)
 {
+    if (std::filesystem::path(path).extension() == ".gltf" || std::filesystem::path(path).extension() == ".glb") {
+        // Load gltf directly
+        Scene scene = glTFSceneParser::loadFromFile(path, ok);
+        if (ok) {
+            // Add a constant env light to see at least something
+            if (scene.lights().empty()) {
+                auto env = std::make_shared<Object>(OT_LIGHT, "sky");
+                scene.addLight("__env", env);
+            }
+        }
+        return scene;
+    }
+
     std::ifstream ifs(path);
     if (!ifs.good()) {
         ok = false;
