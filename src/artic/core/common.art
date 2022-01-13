@@ -135,6 +135,8 @@ fn @positive_cos(a: Vec3, b: Vec3) -> f32 {
     if cos >= 0 { cos } else { 0 }
 }
 
+fn @absolute_cos(a: Vec3, b: Vec3) = math_builtins::fabs(vec3_dot(a, b));
+
 fn @swap[T](a: &mut T, b: &mut T) -> () {
     let tmp = *a;
     *a = *b;

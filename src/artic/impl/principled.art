@@ -53,7 +53,7 @@ fn @make_clearcoat_bsdf(clearcoat: f32, alpha: f32, wo: Vec3, H: Vec3, wi: Vec3,
         0
     },
     sample = @ |_rnd, out_dir, _adjoint| {
-        make_option(BsdfSample { in_dir = out_dir, pdf = 0, cos = 1, color = black })
+        make_option(BsdfSample { in_dir = out_dir, pdf = 0, color = black })
     },
     is_specular = false
 };
@@ -82,7 +82,7 @@ fn @make_diffuse_brdf(roughness: f32, _flatness: f32, wo: Vec3, H: Vec3, wi: Vec
         0
     },
     sample = @ |_rnd, out_dir, _adjoint| {
-        make_option(BsdfSample { in_dir = out_dir, pdf = 0, cos = 1, color = black })
+        make_option(BsdfSample { in_dir = out_dir, pdf = 0, color = black })
     },
     is_specular = false
 };
@@ -159,7 +159,7 @@ fn @make_specular_brdf(anisotropic: f32, roughness: f32, base_color: Color, rela
         0
     },
     sample = @ |_rnd, out_dir, _adjoint| {
-        make_option(BsdfSample { in_dir = out_dir, pdf = 0, cos = 1, color = black })
+        make_option(BsdfSample { in_dir = out_dir, pdf = 0, color = black })
     },
     is_specular = true
 };
@@ -220,7 +220,7 @@ fn @make_disney_bsdf(surf: SurfaceElement, base_color: Color, flatness: f32, met
             let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
             let gdir   = vec3_normalize(mat3x3_mul(surf.local, sample.dir));
             let color  = color_mulf(eval(gdir, out_dir), 1/sample.pdf);
-            make_bsdf_sample(surf, gdir, sample.pdf, sample.dir.z, color, false)
+            make_bsdf_sample(surf, gdir, sample.pdf, color, false)
         },
         is_specular = false
     }

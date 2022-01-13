@@ -37,7 +37,7 @@ ShadingTree::ShadingTree(const std::string& prefix)
 {
 }
 
-void ShadingTree::addNumber(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, float def)
+void ShadingTree::addNumber(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, float def, bool hasDef)
 {
     if (mParameters.count(name) > 0)
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -46,7 +46,12 @@ void ShadingTree::addNumber(const std::string& name, const LoaderContext& ctx, c
 
     std::string inline_str;
     switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        [[fallthrough]];
     case Parser::PT_NONE:
+        if (!hasDef)
+            return;
         inline_str = std::to_string(def);
         break;
     case Parser::PT_INTEGER:
@@ -78,16 +83,12 @@ void ShadingTree::addNumber(const std::string& name, const LoaderContext& ctx, c
             break;
         }
     } break;
-    default:
-        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
-        inline_str = "0";
-        break;
     }
 
     mParameters[name] = inline_str;
 }
 
-void ShadingTree::addColor(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, const Vector3f& def)
+void ShadingTree::addColor(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, const Vector3f& def, bool hasDef)
 {
     if (mParameters.count(name) > 0)
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -96,7 +97,12 @@ void ShadingTree::addColor(const std::string& name, const LoaderContext& ctx, co
 
     std::string inline_str;
     switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        [[fallthrough]];
     case Parser::PT_NONE:
+        if (!hasDef)
+            return;
         inline_str = "make_color(" + std::to_string(def.x()) + ", " + std::to_string(def.y()) + ", " + std::to_string(def.z()) + ")";
         break;
     case Parser::PT_INTEGER:
@@ -128,17 +134,13 @@ void ShadingTree::addColor(const std::string& name, const LoaderContext& ctx, co
             break;
         }
     } break;
-    default:
-        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
-        inline_str = "black";
-        break;
     }
 
     mParameters[name] = inline_str;
 }
 
 // Only use this if no basic color information suffices
-void ShadingTree::addTexture(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj)
+void ShadingTree::addTexture(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, bool hasDef)
 {
     if (mParameters.count(name) > 0)
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -147,7 +149,12 @@ void ShadingTree::addTexture(const std::string& name, const LoaderContext& ctx, 
 
     std::string inline_str;
     switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        [[fallthrough]];
     case Parser::PT_NONE:
+        if (!hasDef)
+            return;
         inline_str = "make_black_texture()";
         break;
     case Parser::PT_INTEGER:
@@ -179,10 +186,6 @@ void ShadingTree::addTexture(const std::string& name, const LoaderContext& ctx, 
             break;
         }
     } break;
-    default:
-        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
-        inline_str = "make_black_texture()";
-        break;
     }
 
     mParameters[name] = inline_str;

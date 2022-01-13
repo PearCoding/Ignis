@@ -4,9 +4,12 @@ struct MicrofacetSample {
 }
 
 struct MicrofacetModel {
-    D     : fn (Vec3) -> f32,
-    G1    : fn (Vec3, Vec3) -> f32,
-    sample: fn (&mut RndState) -> MicrofacetSample
+    D       : fn (Vec3) -> f32,
+    G1      : fn (Vec3, Vec3) -> f32,
+    sample  : fn (&mut RndState) -> MicrofacetSample,
+    alpha_u : f32,
+    alpha_v : f32,
+    is_delta: bool
 }
 
 fn @g_1_walter(surf: SurfaceElement, w: Vec3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
@@ -77,7 +80,10 @@ fn @make_delta_model(surf: SurfaceElement) = MicrofacetModel {
     G1 = @|_, _| 0,
     sample = @ |_| {
         MicrofacetSample { normal = surf.local.col(2), pdf = 1}
-    }
+    },
+    alpha_u  = 0,
+    alpha_v  = 0,
+    is_delta = true
 };
 
 fn @make_aniso_beckmann_model(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
@@ -103,7 +109,10 @@ fn @make_aniso_beckmann_model(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) 
         let pdf = (1 - u0) / (flt_pi * alpha_u * alpha_v * cosTheta2 * cosTheta);
         let lh  = make_vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta); // Microfacet normal in local shading space
         MicrofacetSample { normal = mat3x3_mul(surf.local, lh), pdf = pdf}
-    }
+    },
+    alpha_u  = alpha_u,
+    alpha_v  = alpha_v,
+    is_delta = false
 };
 
 fn make_aniso_ggx_model(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
@@ -132,25 +141,34 @@ fn make_aniso_ggx_model(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) = Micr
         let pdf = 1 / (flt_pi * alpha_u * alpha_v * cosTheta2 * cosTheta * (1 + k2) * (1 + k2));
         let lh  = make_vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
         MicrofacetSample { normal = mat3x3_mul(surf.local, lh), pdf = pdf}
-    }
+    },
+    alpha_u  = alpha_u,
+    alpha_v  = alpha_v,
+    is_delta = false
 };
 ///////////////////////////////////
 
 struct MicrofacetDistribution {
-    D     : fn (Vec3) -> f32,             // Normal
-    G     : fn (Vec3, Vec3, Vec3) -> f32, // Wi, Wo, Normal
-    pdf   : fn (Vec3, Vec3, Vec3) -> f32, // Wi, Wo, Normal
-    sample: fn (&mut RndState, Vec3) -> MicrofacetSample // RND, Wo
+    D       : fn (Vec3) -> f32,             // Normal
+    G       : fn (Vec3, Vec3, Vec3) -> f32, // Wi, Wo, Normal
+    pdf     : fn (Vec3, Vec3, Vec3) -> f32, // Wi, Wo, Normal
+    sample  : fn (&mut RndState, Vec3) -> MicrofacetSample, // RND, Wo
+    alpha_u : f32,
+    alpha_v : f32,
+    is_delta: bool
 }
 
 fn @make_microfacet_distribution(model: MicrofacetModel, surf: SurfaceElement) = MicrofacetDistribution {
-    D      = model.D,
-    G      = @ |wi, wo, m| model.G1(wi, m) * model.G1(wo, m),
-    pdf    = @ |_, _, m| model.D(m) * vec3_dot(surf.local.col(2), m),
-    sample = @ |rnd, _| model.sample(rnd)
+    D        = model.D,
+    G        = @ |wi, wo, m| model.G1(wi, m) * model.G1(wo, m),
+    pdf      = @ |_, _, m| model.D(m) * absolute_cos(surf.local.col(2), m),
+    sample   = @ |rnd, _| model.sample(rnd),
+    alpha_u  = model.alpha_u,
+    alpha_v  = model.alpha_v,
+    is_delta = model.is_delta
 };
 
-fn @check_if_delta_distribution(alpha_u: f32, alpha_v: f32) = alpha_u <= 1e-2 || alpha_v <= 1e-2;
+fn @check_if_delta_distribution(alpha_u: f32, alpha_v: f32) = alpha_u <= 1e-4 || alpha_v <= 1e-4;
 
 fn @make_delta_distribution(surf: SurfaceElement) = make_microfacet_distribution(make_delta_model(surf), surf);
 
@@ -205,8 +223,8 @@ fn @sample_vndf_ggx(rnd: &mut RndState, surf: SurfaceElement, vN: Vec3, alpha_u:
 }
 
 fn @pdf_vndf_ggx(surf: SurfaceElement, w: Vec3, h: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
-    let cosZ = vec3_dot(surf.local.col(2), w);
-    g_1_smith(surf, w, h, alpha_u, alpha_v) * math_builtins::fabs(vec3_dot(w, h)) * ndf_ggx(surf, h, alpha_u, alpha_v) / cosZ
+    let cosZ = absolute_cos(surf.local.col(2), w);
+    g_1_smith(surf, w, h, alpha_u, alpha_v) * absolute_cos(w, h) * ndf_ggx(surf, h, alpha_u, alpha_v) / cosZ
 }
 
 fn @make_vndf_ggx_distribution(surf: SurfaceElement, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
@@ -222,7 +240,10 @@ fn @make_vndf_ggx_distribution(surf: SurfaceElement, alpha_u: f32, alpha_v: f32)
                 let m   = sample_vndf_ggx(rnd, surf, wo, alpha_u, alpha_v);
                 let pdf = pdf_vndf_ggx(surf, wo, m, alpha_u, alpha_v);
                 MicrofacetSample { normal = m, pdf = pdf }
-            }
+            },
+            alpha_u  = alpha_u,
+            alpha_v  = alpha_v,
+            is_delta = false
         }
     }
 }

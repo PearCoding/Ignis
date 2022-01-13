@@ -89,7 +89,7 @@ fn @make_klems_bsdf(surf: SurfaceElement, klems: KlemsModel) -> Bsdf {
             let gdir   = vec3_normalize(mat3x3_mul(surf.local, sample.dir));
             let is_trans = (sample.dir.z < 0) ^ (wo.z < 0);
             let color = color_mulf(local_eval(sample.dir, wo), 1/sample.pdf);
-            make_bsdf_sample(surf, gdir, sample.pdf, math_builtins::fabs(sample.dir.z), color, is_trans)
+            make_bsdf_sample(surf, gdir, sample.pdf, color, is_trans)
         },
         is_specular = false
     }

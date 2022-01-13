@@ -13,9 +13,9 @@ class ShadingTree {
 public:
     ShadingTree(const std::string& prefix = "");
 
-    void addNumber(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, float def = 0);
-    void addColor(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero());
-    void addTexture(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj);
+    void addNumber(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, float def = 0, bool hasDef = true);
+    void addColor(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true);
+    void addTexture(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, bool hasDef = true);
 
     std::string pullHeader();
     std::string getInline(const std::string& name) const;

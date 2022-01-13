@@ -503,7 +503,7 @@ Scene SceneParser::loadFromFile(const char* path, bool& ok)
         if (ok) {
             // Add a constant env light to see at least something
             if (scene.lights().empty()) {
-                auto env = std::make_shared<Object>(OT_LIGHT, "sky");
+                auto env = std::make_shared<Object>(OT_LIGHT, "constant");
                 scene.addLight("__env", env);
             }
         }

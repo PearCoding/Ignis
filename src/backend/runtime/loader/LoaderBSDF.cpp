@@ -18,15 +18,15 @@ constexpr float ABSORPTION_DEFAULT = 2.7834f;
 
 static void setup_microfacet(ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-    tree.addNumber("alpha_u", ctx, *bsdf, 0.1f);
-    tree.addNumber("alpha_v", ctx, *bsdf, 0.1f);
+    tree.addNumber("alpha_u", ctx, *bsdf, 0.1f, false);
+    tree.addNumber("alpha_v", ctx, *bsdf, 0.1f, false);
     tree.addNumber("alpha", ctx, *bsdf, 0.1f);
 
     // Not exposed in the documentation, but used internally
     tree.addNumber("alpha_scale", ctx, *bsdf, 1.0f);
 }
 
-static std::string inline_microfacet(const std::string& name, const ShadingTree& tree, bool square)
+static std::string inline_microfacet(const std::string& name, const ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf, bool square)
 {
     const auto inlineIt = [&](const std::string& prop) {
         std::stringstream stream2;
@@ -36,13 +36,23 @@ static std::string inline_microfacet(const std::string& name, const ShadingTree&
         return stream2.str();
     };
 
+    std::string distribution = "make_vndf_ggx_distribution";
+    if (bsdf->property("distribution").type() == Parser::PT_STRING) {
+        std::string type = bsdf->property("distribution").getString();
+        if (type == "ggx") {
+            distribution = "make_ggx_distribution";
+        } else if (type == "beckmann") {
+            distribution = "make_beckmann_distribution";
+        }
+    }
+
     std::stringstream stream;
     if (tree.hasParameter("alpha_u")) {
-        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| make_vndf_ggx_distribution(surf, "
+        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf, "
                << inlineIt("alpha_u") << ", "
                << inlineIt("alpha_v") << ");" << std::endl;
     } else {
-        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| make_vndf_ggx_distribution(surf, "
+        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf, "
                << inlineIt("alpha") << ", "
                << inlineIt("alpha") << ");" << std::endl;
     }
@@ -122,7 +132,7 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
 
     setup_microfacet(tree, bsdf, ctx);
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree, false)
+           << inline_microfacet(name, tree, bsdf, false)
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_conductor_bsdf(surf, "
            << tree.getInline("eta") << ", "
            << tree.getInline("k") << ", "
@@ -142,7 +152,7 @@ static void bsdf_metallic_roughness(std::ostream& stream, const std::string& nam
 
     setup_microfacet(tree, bsdf, ctx);
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree, true) // TODO: I do not like this. We should not square here and nowhere else....
+           << inline_microfacet(name, tree, bsdf, true) // TODO: I do not like this. We should not square here and nowhere else....
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_metallic_roughness_bsdf(surf, "
            << "color_mul(" << tree.getInline("base_color_scale") << ", " << tree.getInline("base_color") << "), "
            << tree.getInline("metallic_scale") << " * " << tree.getInline("metallic") << ", "
@@ -175,7 +185,7 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
 
     setup_microfacet(tree, bsdf, ctx);
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree, false)
+           << inline_microfacet(name, tree, bsdf, false)
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
            << tree.getInline("ext_ior") << ", "
            << tree.getInline("int_ior") << ", "

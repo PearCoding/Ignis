@@ -21,9 +21,9 @@ public:
         int el_in = std::max(0, std::min<int>(mElevationCount - 1, int(ea.Elevation / ELEVATION_RANGE * mElevationCount)));
 
         return RGB{
-            mData[el_in * mAzimuthCount * AR_COLOR_BANDS + az_in * AR_COLOR_BANDS + 0],
-            mData[el_in * mAzimuthCount * AR_COLOR_BANDS + az_in * AR_COLOR_BANDS + 1],
-            mData[el_in * mAzimuthCount * AR_COLOR_BANDS + az_in * AR_COLOR_BANDS + 2]
+            mData[el_in * mAzimuthCount * 4 + az_in * 4 + 0],
+            mData[el_in * mAzimuthCount * 4 + az_in * 4 + 1],
+            mData[el_in * mAzimuthCount * 4 + az_in * 4 + 2]
         };
     }
 
