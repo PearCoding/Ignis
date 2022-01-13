@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DynTable.h"
+#include "math/BoundingBox.h"
 
 namespace IG {
 struct SceneBVH {
@@ -15,5 +16,6 @@ struct SceneDatabase {
 
     IG::SceneBVH SceneBVH;
     float SceneRadius;
+    BoundingBox SceneBBox;
 };
 } // namespace IG

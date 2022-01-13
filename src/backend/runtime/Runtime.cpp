@@ -36,9 +36,9 @@ static inline void setup_film(RuntimeRenderSettings& settings, const LoaderOptio
     }
 }
 
-static inline void setup_camera(RuntimeRenderSettings& settings, LoaderOptions& lopts, const RuntimeOptions& opts)
+static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts)
 {
-    // Extract camera type first
+    // Extract camera type
     std::string camera_type = "perspective";
     if (!opts.OverrideCamera.empty()) {
         camera_type = opts.OverrideCamera;
@@ -49,24 +49,42 @@ static inline void setup_camera(RuntimeRenderSettings& settings, LoaderOptions& 
     }
 
     lopts.CameraType = camera_type;
+}
 
-    // Get initial location
-    Transformf cameraTransform = Transformf::Identity();
-    const auto camera = lopts.Scene.camera();
-    if (camera) {
-        cameraTransform = camera->property("transform").getTransform();
-        settings.FOV    = camera->property("fov").getNumber(settings.FOV);
+static inline void setup_camera_view(RuntimeRenderSettings& settings, const LoaderOptions& lopts, const RuntimeOptions& opts, const BoundingBox& sceneBBox)
+{
+    if (!lopts.Scene.camera()) {
+        // If no camera information is given whatsoever, try to setup a view over the whole scene
+        const float aspect_ratio = settings.FilmWidth / settings.FilmHeight;
+        const float a            = sceneBBox.diameter().x() / 2;
+        const float b            = sceneBBox.diameter().y() / (2 * aspect_ratio);
+        const float s            = std::sin(settings.FOV * Deg2Rad / 2);
+        const float d            = std::max(a, b) * std::sqrt(1 / (s * s) - 1);
 
-        settings.TMin = camera->property("near_clip").getNumber(settings.TMin);
-        settings.TMax = camera->property("far_clip").getNumber(settings.TMax);
+        settings.CameraDir = Vector3f::UnitZ();
+        settings.CameraUp  = Vector3f::UnitY();
+        settings.CameraEye = Vector3f::UnitX() * sceneBBox.center().x()
+                             + Vector3f::UnitY() * sceneBBox.center().y()
+                             + Vector3f::UnitZ() * (sceneBBox.min.z() - d);
+    } else {
+        // Get initial location
+        Transformf cameraTransform = Transformf::Identity();
+        const auto camera          = lopts.Scene.camera();
+        if (camera) {
+            cameraTransform = camera->property("transform").getTransform();
+            settings.FOV    = camera->property("fov").getNumber(settings.FOV);
+
+            settings.TMin = camera->property("near_clip").getNumber(settings.TMin);
+            settings.TMax = camera->property("far_clip").getNumber(settings.TMax);
+        }
+
+        settings.CameraEye = cameraTransform * Vector3f::Zero();
+        settings.CameraDir = cameraTransform.linear().col(2);
+        settings.CameraUp  = cameraTransform.linear().col(1);
+
+        if (settings.TMax < settings.TMin)
+            std::swap(settings.TMin, settings.TMax);
     }
-
-    settings.CameraEye = cameraTransform * Vector3f::Zero();
-    settings.CameraDir = cameraTransform.linear().col(2);
-    settings.CameraUp  = cameraTransform.linear().col(1);
-
-    if (settings.TMax < settings.TMin)
-        std::swap(settings.TMin, settings.TMax);
 }
 
 static inline size_t recommendSPI(Target target)
@@ -128,7 +146,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     setup_film(mLoadedRenderSettings, lopts, opts);
 
     // Extract camera
-    setup_camera(mLoadedRenderSettings, lopts, opts);
+    setup_camera(lopts, opts);
 
     // Check configuration
     const Target newTarget = mManager.resolveTarget(lopts.Target);
@@ -157,6 +175,9 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     if (!Loader::load(lopts, result))
         throw std::runtime_error("Could not load scene!");
     mDatabase = std::move(result.Database);
+
+    // Pickup initial camera view
+    setup_camera_view(mLoadedRenderSettings, lopts, opts, mDatabase.SceneBBox);
 
     mIsDebug = lopts.TechniqueType == "debug";
     mIsTrace = lopts.CameraType == "list";

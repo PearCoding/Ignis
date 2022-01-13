@@ -72,6 +72,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     }
 
     result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;
+    result.Database.SceneBBox   = ctx.Environment.SceneBBox;
     result.AOVs                 = ctx.TechniqueInfo.EnabledAOVs;
 
     IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;

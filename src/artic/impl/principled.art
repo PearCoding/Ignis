@@ -99,7 +99,7 @@ fn @disney_fresnel(base_color: Color, relative_ior: f32, specular_tint: f32, met
     let R0 = (color_lerp(r, base_color, metallic));
 
     let d = dielectric(absHdotV, 1, ior);
-    let metallic_fresnel = schlick(R0, vec3_dot(wi, H));
+    let metallic_fresnel = schlick(R0, white, vec3_dot(wi, H));
 
     color_lerp(make_gray_color(d), metallic_fresnel, metallic)
 }

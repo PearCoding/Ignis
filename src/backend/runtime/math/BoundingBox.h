@@ -22,6 +22,7 @@ struct BoundingBox {
     }
 
     inline Vector3f diameter() const { return max - min; }
+    inline Vector3f center() const { return (max + min) / 2; }
 
     inline BoundingBox& extend(const BoundingBox& bb)
     {

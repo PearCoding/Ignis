@@ -94,10 +94,10 @@ fn @dielectric(absHdotV: f32, eta_i: f32, eta_t: f32)-> f32{
     (Rparl * Rparl + Rperp * Rperp) / 2
 }
 
-fn @schlick(R0: Color, dot: f32)-> Color{
+fn @schlick(f0: Color, f90: Color, dot: f32)-> Color{
     let s = schlick_approx(dot);
-    let snd = color_mulf(color_add(make_gray_color(1),color_mulf(R0, -1)), s);
-    color_add(R0, snd)
+    let snd = color_mulf(color_add(f90,color_mulf(f0, -1)), s);
+    color_add(f0, snd)
 }
 
 fn @schlick_from_relative_ior(relative_ior: f32)-> f32{
