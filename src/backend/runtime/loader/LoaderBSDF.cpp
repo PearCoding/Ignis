@@ -207,44 +207,41 @@ static void bsdf_phong(std::ostream& stream, const std::string& name, const std:
            << tree.getInline("exponent") << ");" << std::endl;
 }
 
-static void bsdf_disney(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
+static void bsdf_principled(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
     ShadingTree tree;
     tree.addColor("base_color", ctx, *bsdf, Vector3f::Constant(0.8f));
-    tree.addNumber("flatness", ctx, *bsdf, 0);
-    tree.addNumber("metallic", ctx, *bsdf, 0);
     tree.addNumber("ior", ctx, *bsdf, GLASS_IOR);
+    tree.addNumber("diffuse_transmission", ctx, *bsdf, 0);
+    tree.addNumber("specular_transmission", ctx, *bsdf, 0);
     tree.addNumber("specular_tint", ctx, *bsdf, 0);
     tree.addNumber("roughness", ctx, *bsdf, 0.5f);
     tree.addNumber("anisotropic", ctx, *bsdf, 0);
+    tree.addNumber("flatness", ctx, *bsdf, 0);
+    tree.addNumber("metallic", ctx, *bsdf, 0);
     tree.addNumber("sheen", ctx, *bsdf, 0);
     tree.addNumber("sheen_tint", ctx, *bsdf, 0);
     tree.addNumber("clearcoat", ctx, *bsdf, 0);
     tree.addNumber("clearcoat_gloss", ctx, *bsdf, 0);
-    tree.addNumber("spec_trans", ctx, *bsdf, 0);
-    tree.addNumber("relative_ior", ctx, *bsdf, 1.1f);
-    tree.addNumber("scatter_distance", ctx, *bsdf, 0.5f);
-    tree.addNumber("diff_trans", ctx, *bsdf, 0);
-    tree.addNumber("transmittance", ctx, *bsdf, 1);
+
+    bool is_thin = bsdf->property("thin").getBool(false);
 
     stream << tree.pullHeader()
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_disney_bsdf(surf, "
+           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_principled_bsdf(surf, "
            << tree.getInline("base_color") << ", "
-           << tree.getInline("flatness") << ", "
-           << tree.getInline("metallic") << ", "
            << tree.getInline("ior") << ", "
+           << tree.getInline("diffuse_transmission") << ", "
+           << tree.getInline("specular_transmission") << ", "
            << tree.getInline("specular_tint") << ", "
            << tree.getInline("roughness") << ", "
            << tree.getInline("anisotropic") << ", "
+           << tree.getInline("flatness") << ", "
+           << tree.getInline("metallic") << ", "
            << tree.getInline("sheen") << ", "
            << tree.getInline("sheen_tint") << ", "
            << tree.getInline("clearcoat") << ", "
            << tree.getInline("clearcoat_gloss") << ", "
-           << tree.getInline("spec_trans") << ", "
-           << tree.getInline("relative_ior") << ", "
-           << tree.getInline("scatter_distance") << ", "
-           << tree.getInline("diff_trans") << ", "
-           << tree.getInline("transmittance") << ");" << std::endl;
+           << (is_thin ? "true" : "false") << ");" << std::endl;
 }
 
 static void bsdf_twosided(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
@@ -366,7 +363,8 @@ static struct {
     { "roughconductor", bsdf_rough_conductor },
     { "metallic_roughness", bsdf_metallic_roughness },
     { "phong", bsdf_phong },
-    { "disney", bsdf_disney },
+    { "disney", bsdf_principled },
+    { "principled", bsdf_principled },
     { "plastic", bsdf_plastic },
     { "roughplastic", bsdf_rough_plastic },
     /*{ "klems", bsdf_klems },*/

@@ -51,7 +51,7 @@ static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts
     lopts.CameraType = camera_type;
 }
 
-static inline void setup_camera_view(RuntimeRenderSettings& settings, const LoaderOptions& lopts, const RuntimeOptions& opts, const BoundingBox& sceneBBox)
+static inline void setup_camera_view(RuntimeRenderSettings& settings, const LoaderOptions& lopts, const BoundingBox& sceneBBox)
 {
     if (!lopts.Scene.camera()) {
         // If no camera information is given whatsoever, try to setup a view over the whole scene
@@ -177,7 +177,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     mDatabase = std::move(result.Database);
 
     // Pickup initial camera view
-    setup_camera_view(mLoadedRenderSettings, lopts, opts, mDatabase.SceneBBox);
+    setup_camera_view(mLoadedRenderSettings, lopts, mDatabase.SceneBBox);
 
     mIsDebug = lopts.TechniqueType == "debug";
     mIsTrace = lopts.CameraType == "list";

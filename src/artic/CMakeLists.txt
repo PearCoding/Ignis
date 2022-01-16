@@ -48,6 +48,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/pathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/pixel_sampler.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/principled.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/shading.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture.art
 )
 
