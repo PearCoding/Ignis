@@ -58,3 +58,9 @@ fn @make_bsdf_sample(surf: SurfaceElement, in_dir: Vec3, pdf: f32, color: Color,
 }
 
 fn @reject_bsdf_sample() = Option[BsdfSample]::None;
+
+fn @scale_bsdf_sample(sample: BsdfSample, factor: f32) = BsdfSample {
+    in_dir = sample.in_dir,
+    pdf    = sample.pdf * factor,
+    color  = color_mulf(sample.color, 1 / factor)
+};

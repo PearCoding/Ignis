@@ -1,0 +1,71 @@
+fn @shading_normal_adjoint(in_dir: Vec3, out_dir: Vec3, ns: Vec3, ng: Vec3) -> f32 {
+    let ons = positive_cos(out_dir, ns);
+    let ins = positive_cos(in_dir, ns);
+    let ong = positive_cos(out_dir, ng);
+    let ing = positive_cos(in_dir, ng);
+    if ins <= flt_eps || ong <= flt_eps { 0 } else { (ons/ins) * (ing/ong) }
+}
+
+// Normal Mapping
+// Normal given in [0, 1] RGB fashion
+fn @make_normalmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color) -> Bsdf {
+    let N    = vec3_normalize(mat3x3_left_mul(surf.local, vec3_normalize(make_vec3(2 * normal.r - 1, 2 * normal.g - 1, 2 * normal.b - 1))));
+    let bsdf = @bsdf_factory(SurfaceElement{
+        is_entering = surf.is_entering,
+        point       = surf.point,
+        face_normal = surf.face_normal,
+        prim_coords = surf.prim_coords,
+        tex_coords  = surf.tex_coords,
+        local       = make_orthonormal_mat3x3(N)
+    });
+
+    Bsdf {
+        eval   = bsdf.eval,
+        pdf    = bsdf.pdf,
+        sample = @ |rnd, out_dir, adjoint| {
+            if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, out_dir, adjoint) {
+                if adjoint {
+                    let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
+                    make_option(BsdfSample { in_dir = s.in_dir, pdf = s.pdf, color = color_mulf(s.color, fac) })
+                } else {
+                    make_option(s)
+                }
+            } else {
+                Option[BsdfSample]::None
+            }
+        },
+        is_specular = bsdf.is_specular
+    }
+}
+
+//--------------------------------------
+// Bump Mapping
+fn @make_bumpmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, dx: f32, dy: f32, strength: f32) -> Bsdf {
+    let N = vec3_normalize(vec3_sub(surf.local.col(2), vec3_mulf(vec3_add(vec3_mulf(surf.local.col(0), dx), vec3_mulf(surf.local.col(1), dy)), strength)));
+    let bsdf = @bsdf_factory(SurfaceElement{
+        is_entering = surf.is_entering,
+        point       = surf.point,
+        face_normal = surf.face_normal,
+        prim_coords = surf.prim_coords,
+        tex_coords  = surf.tex_coords,
+        local       = make_orthonormal_mat3x3(N)
+    });
+
+    Bsdf {
+        eval        = bsdf.eval,
+        pdf         = bsdf.pdf,
+        sample      = @ |rnd, out_dir, adjoint| {
+            if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, out_dir, adjoint) {
+                if adjoint {
+                    let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
+                    make_option(BsdfSample { in_dir = s.in_dir, pdf = s.pdf, color = color_mulf(s.color, fac) })
+                } else {
+                    make_option(s)
+                }
+            } else {
+                Option[BsdfSample]::None
+            }
+        },
+        is_specular = bsdf.is_specular
+    }
+}

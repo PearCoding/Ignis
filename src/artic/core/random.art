@@ -47,6 +47,16 @@ fn @make_dir_sample(c: f32, s: f32, phi: f32, pdf: f32) -> DirSample {
     }
 }
 
+fn @scale_dir_sample(sample: DirSample, factor: f32) = DirSample {
+    dir = sample.dir,
+    pdf = sample.pdf * factor
+};
+
+fn @neg_dir_sample(sample: DirSample) = DirSample {
+    dir = vec3_neg(sample.dir),
+    pdf = sample.pdf
+};
+
 // Result of sampling a position
 struct PosSample {
     pos: Vec3,

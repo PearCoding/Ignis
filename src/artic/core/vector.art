@@ -72,6 +72,8 @@ fn @vec2_reflect(v: Vec2, n: Vec2) = vec2_sub(vec2_mulf(n, 2 * vec2_dot(n, v)), 
 fn @vec3_reflect(v: Vec3, n: Vec3) = vec3_sub(vec3_mulf(n, 2 * vec3_dot(n, v)), v);
 fn @vec4_reflect(v: Vec4, n: Vec4) = vec4_sub(vec4_mulf(n, 2 * vec4_dot(n, v)), v);
 
+fn @vec3_refract(v: Vec3, n: Vec3, eta: f32, cos_i: f32, cos_t: f32) = vec3_sub(vec3_mulf(n, eta * cos_i - cos_t), vec3_mulf(v, eta));
+
 fn @vec2_len(v: Vec2) = math_builtins::sqrt(vec2_len2(v));
 fn @vec3_len(v: Vec3) = math_builtins::sqrt(vec3_len2(v));
 fn @vec4_len(v: Vec4) = math_builtins::sqrt(vec4_len2(v));
@@ -81,6 +83,7 @@ fn @vec3_normalize(v: Vec3) = vec3_mulf(v, 1 / vec3_len(v));
 fn @vec4_normalize(v: Vec4) = vec4_mulf(v, 1 / vec4_len(v));
 
 fn @vec3_halfway(a: Vec3, b: Vec3) = vec3_normalize(vec3_add(a, b));
+fn @vec3_halfway_refractive(a: Vec3, n_a: f32, b: Vec3, n_b: f32) = vec3_normalize(vec3_add(vec3_mulf(a, -n_a), vec3_mulf(b, -n_b)));
 
 fn @vec2_lerp(a: Vec2, b: Vec2, k: f32) = vec2_zip(a, b, |x, y| lerp(x, y, k));
 fn @vec3_lerp(a: Vec3, b: Vec3, k: f32) = vec3_zip(a, b, |x, y| lerp(x, y, k));

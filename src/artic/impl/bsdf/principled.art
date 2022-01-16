@@ -1,0 +1,364 @@
+/* Based on the paper:
+	BURLEY, Brent; STUDIOS, Walt Disney Animation. Physically-based shading at disney. In: ACM SIGGRAPH. 2012. S. 1-7.
+	and code:
+	https://github.com/wdas/brdf/blob/master/src/brdfs/disney.brdf
+  And based on the follow-up paper:
+    BURLEY, Brent; STUDIOS, Walt Disney Animation. Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering. (2015).
+	https://blog.selfshadow.com/publications/s2015-shading-course/#course_content
+*/
+
+mod principled {
+use super as all;
+use super::math_builtins;
+use super::shading;
+
+type SurfaceElement = all::SurfaceElement;
+type Color = all::Color;
+type Vec3 = all::Vec3;
+
+struct Closure {
+    surf:                  SurfaceElement,
+    base_color:            Color,
+    ior:                   f32,
+    diffuse_transmission:  f32,
+    specular_transmission: f32,
+    specular_tint:         f32,
+    roughness:             f32,
+    anisotropic:           f32,
+    flatness:              f32,
+    metallic:              f32, 
+    sheen:                 f32,
+    sheen_tint:            f32,
+    clearcoat:             f32,
+    clearcoat_gloss:       f32,
+    thin:                  bool,
+
+    eta: f32
+}
+
+struct EvalClosure {
+    wo: Vec3,
+    wi: Vec3,
+    h:  Vec3,
+    general: Closure,
+    adjoint: bool
+}
+
+fn @tint_color(color: Color) = super::color_mulf(color, 1 / super::color_luminance(color));
+fn @sheen_tint_color(color: Color, tint: f32) = super::color_lerp(super::white, tint_color(color), tint);
+
+fn @getMicro(closure: Closure, roughness: f32, is_refl: bool) -> all::MicrofacetDistribution {
+    let aspect = math_builtins::sqrt[f32](1 - closure.anisotropic * 0.9);
+    let ax	   = math_builtins::fmax[f32](0.001, roughness * roughness / aspect);
+    let ay	   = math_builtins::fmax[f32](0.001, roughness * roughness * aspect);
+
+    if is_refl {
+        super::make_vndf_ggx_distribution(super::mat3x3_identity(), ax, ay)
+    } else {
+        super::make_ggx_distribution(super::mat3x3_identity(), ax, ay)
+    }
+}
+
+fn @getReflectionMicro(closure: Closure) = getMicro(closure, closure.roughness, true);
+fn @getRefractionMicro(closure: Closure) -> all::MicrofacetDistribution {
+    let roughness = if closure.thin { 
+        math_builtins::fmax[f32](0.0, math_builtins::fmin[f32](1.0, (0.65 * closure.ior - 0.35) * closure.roughness))
+    } else { 
+        closure.roughness
+    };
+    getMicro(closure, roughness, false)
+}
+
+fn @evalDisneyFresnelTerm(closure: EvalClosure) -> Color {
+    let HdL = super::vec3_dot(closure.wi, closure.h);
+    let HdV = super::vec3_dot(closure.wo, closure.h);
+
+    let color = tint_color(closure.general.base_color);
+
+    let a  = super::color_lerp(super::white, color, closure.general.specular_tint);
+    let r0 = super::color_lerp(super::color_mulf(a, super::schlick_from_relative_ior(closure.general.eta)), closure.general.base_color, closure.general.metallic);
+    let f1 = super::make_gray_color(super::fresnel(closure.general.eta, math_builtins::fabs(HdV)).factor);
+    let f2 = super::schlick(r0, super::white, math_builtins::fabs(HdL));
+
+    super::color_lerp(f1, f2, closure.general.metallic)
+}
+
+fn @evalRetroDiffuseTerm(closure: EvalClosure) -> f32 {
+    let r2    = closure.general.roughness * closure.general.roughness;
+    let HdotL = super::vec3_dot(closure.wi, closure.h);
+    let fd90  = 0.5 + 2 * HdotL * HdotL * r2;
+    let lk    = super::schlick_approx(shading::abs_cos_theta(closure.wi));
+    let vk    = super::schlick_approx(shading::abs_cos_theta(closure.wo));
+
+    super::flt_inv_pi * fd90 * (lk + vk + lk * vk * (fd90 - 1))
+}
+
+fn @evalSubsurfaceTerm(closure: EvalClosure) -> f32 {
+    let r2    = closure.general.roughness * closure.general.roughness;
+    let HdotL = super::vec3_dot(closure.wi, closure.h);
+    let fss90 = HdotL * HdotL * r2;
+    let aNdL  = shading::abs_cos_theta(closure.wi);
+    let aNdV  = shading::abs_cos_theta(closure.wo);
+    let lk    = super::schlick_approx(aNdL);
+    let vk    = super::schlick_approx(aNdV);
+
+    let fss = (1 - lk + fss90 * lk) * (1 - vk + fss90 * vk);
+    1.25 * (fss * (1 / (aNdL + aNdV + 1e-5) - 0.5) + 0.5)
+}
+
+fn @evalSheenTerm(closure: EvalClosure) -> Color {
+    let lk = super::schlick_approx(shading::abs_cos_theta(closure.wi));
+    super::color_mulf(sheen_tint_color(closure.general.base_color, closure.general.sheen_tint), closure.general.sheen * lk)
+}
+
+fn @evalDiffuseTerm(closure: EvalClosure) -> f32 {
+    let lk = super::schlick_approx(shading::abs_cos_theta(closure.wi));
+    let vk = super::schlick_approx(shading::abs_cos_theta(closure.wo));
+
+    let d = if closure.general.thin {1 - closure.general.flatness + evalSubsurfaceTerm(closure) * closure.general.flatness } else { 1 };
+
+    super::flt_inv_pi * d * (1 - 0.5 * lk) * (1 - 0.5 * vk)
+}
+
+fn @evalReflectionTerm(closure: EvalClosure) -> Color {
+    let micro = getReflectionMicro(closure.general);
+
+    let F = evalDisneyFresnelTerm(closure);
+    if micro.is_delta { return(F) };
+
+    let D    = micro.D(closure.h);
+    let G    = micro.G(closure.wi, closure.wo, closure.h);
+    let norm = micro.norm(closure.wi, closure.wo, closure.h);
+
+    let jacob = shading::halfway_reflective_jacobian(shading::abs_cos_theta(closure.wi));
+    super::color_mulf(F, D * G * norm * jacob)
+}
+
+fn @evalRefractionTerm(closure: EvalClosure) -> Color {
+    let micro = getRefractionMicro(closure.general);
+
+    let HdL = super::absolute_cos(closure.wi, closure.h);
+    let F   = super::fresnel(closure.general.eta, HdL).factor; 
+    if micro.is_delta {
+        if closure.general.thin {
+            return(super::color_mulf(
+                super::make_color(math_builtins::sqrt[f32](closure.general.base_color.r), math_builtins::sqrt[f32](closure.general.base_color.g), math_builtins::sqrt[f32](closure.general.base_color.b)),
+                1-F))
+        } else {
+            return(super::color_mulf(closure.general.base_color, 1-F))
+        }
+    }
+
+    let D    = micro.D(closure.h);
+    let G    = micro.G(closure.wi, closure.wo, closure.h);
+    let norm = micro.norm(closure.wi, closure.wo, closure.h);
+
+    let jacob   = shading::halfway_refractive_jacobian(closure.general.eta, shading::abs_cos_theta(closure.wi), shading::abs_cos_theta(closure.wo));
+    let spread  = if closure.adjoint { 1 / (closure.general.eta * closure.general.eta) } else { 1 };
+    let term    = (1 - F) * D * G * norm * jacob * spread;
+
+    if closure.general.thin {
+        super::color_mulf(
+            super::make_color(math_builtins::sqrt[f32](closure.general.base_color.r), math_builtins::sqrt[f32](closure.general.base_color.g), math_builtins::sqrt[f32](closure.general.base_color.b)),
+            term)
+    } else {
+        super::color_mulf(closure.general.base_color, 1/*term*/)
+    }
+}
+
+fn @evalClearcoatTerm(closure: EvalClosure) -> Color {
+    let F0 = 0.04 : f32; // IOR 1.5
+    let R  = 0.25 : f32;
+    let R2 = 0.1 * (1 - closure.general.clearcoat_gloss) + 0.01 * closure.general.clearcoat_gloss;
+
+    let aHdL = super::absolute_cos(closure.wi, closure.h);
+
+    let d    = super::ndf_ggx(super::mat3x3_identity(), closure.h, R2, R2);
+    let f    = super::schlick_f(F0, 1, aHdL);
+    let g    = super::g_1_smith(super::mat3x3_identity(), closure.wi, closure.h, R, R) * super::g_1_smith(super::mat3x3_identity(), closure.wo, closure.h, R, R);
+    let norm = super::compute_microfacet_norm(closure.wi, closure.wo, closure.h, closure.general.surf.local);
+
+    super::make_gray_color(R * d * f * g * norm)
+}
+
+struct LobeDistribution {
+    diff_refl:  f32,
+    diff_trans: f32,
+    spec_refl:  f32,
+    spec_trans: f32
+}
+
+fn @calcLobeDistribution(closure: Closure, wo: Vec3) -> LobeDistribution {
+    let diff_refl = closure.roughness * closure.roughness * (1 - closure.metallic) * (1 - closure.specular_transmission);
+
+    let has_transmission = closure.diffuse_transmission > 0 && closure.specular_transmission > 0;
+
+    let (spec_refl:f32, diff_trans:f32, spec_trans:f32) = if has_transmission {
+        let F   = super::fresnel(closure.eta, shading::abs_cos_theta(wo)).factor;
+
+        (F, closure.diffuse_transmission * diff_refl, (1 - F) * (1 - closure.metallic) * closure.specular_transmission)
+    } else {
+        (1:f32, 0:f32, 0:f32)
+    };
+
+    let norm = diff_refl + spec_refl + diff_trans + spec_trans;
+    if norm <= super::flt_eps {
+        LobeDistribution{ diff_refl = 1, diff_trans = 0, spec_refl = 0, spec_trans = 0 }
+    } else {
+        LobeDistribution{ diff_refl = diff_refl / norm, diff_trans = diff_trans / norm, spec_refl = spec_refl / norm, spec_trans = spec_trans / norm }
+    }
+}
+}
+
+// Principled BSDF
+fn @make_principled_bsdf(surf: SurfaceElement,
+                     base_color: Color,
+                     ior: f32, diffuse_transmission: f32, specular_transmission: f32, specular_tint: f32,
+                     roughness: f32, anisotropic: f32, flatness: f32, metallic: f32, 
+                     sheen: f32, sheen_tint: f32, clearcoat: f32, clearcoat_gloss: f32,
+                     thin: bool) -> Bsdf {
+    let AIR = 1.0002926 : f32;
+    let closure = principled::Closure {
+        surf                  = surf,
+        base_color            = base_color,
+        ior                   = ior,
+        diffuse_transmission  = diffuse_transmission,
+        specular_transmission = specular_transmission,
+        specular_tint         = specular_tint,
+        roughness             = roughness,
+        anisotropic           = anisotropic,
+        flatness              = flatness,
+        metallic              = metallic,
+        sheen                 = sheen,
+        sheen_tint            = sheen_tint,
+        clearcoat             = clearcoat,
+        clearcoat_gloss       = clearcoat_gloss,
+        thin                  = thin,
+        eta                   = if surf.is_entering { ior / AIR } else { AIR / ior },
+    };
+
+    let eval = @ |in_dir : Vec3, out_dir : Vec3| {
+        let wo = shading::to_local(surf, out_dir);
+        let wi = shading::to_local(surf, in_dir);
+        let eval_closure = principled::EvalClosure {
+            wo      = wo,
+            wi      = wi,
+            h       = vec3_normalize(vec3_add(wi, wo)),
+            general = closure,
+            adjoint = false // TODO?
+        };
+        
+        let is_transmission  = !shading::is_same_hemisphere(wi, wo);
+        let upper_hemisphere = shading::is_positive_hemisphere(wi) && shading::is_positive_hemisphere(wo);
+        
+        let aNdL = shading::abs_cos_theta(wi);
+
+        let mut contrib = black;
+        
+        // Diffuse part
+        if !is_transmission {
+            let diffuse_weight = (1 - metallic) * (1 - specular_transmission);
+
+            let retro  = principled::evalRetroDiffuseTerm(eval_closure) * diffuse_weight;
+            let sheenf = color_mulf(principled::evalSheenTerm(eval_closure), diffuse_weight);
+            contrib    = color_add(contrib, color_add(color_mulf(base_color, retro * aNdL), color_mulf(sheenf, aNdL)));
+
+            let diff = principled::evalDiffuseTerm(eval_closure) * (if thin { 1 - diffuse_transmission } else { diffuse_weight });
+            contrib  = color_add(contrib, color_mulf(base_color, diff * aNdL)); 
+        }
+
+        if is_transmission && thin {
+            let diff = principled::evalDiffuseTerm(eval_closure) * diffuse_transmission;
+            contrib  = color_add(contrib, color_mulf(base_color, diff * aNdL)); 
+        }
+
+        // Specular part
+        if is_transmission {
+            contrib = color_add(contrib, color_mulf(principled::evalRefractionTerm(eval_closure), (1 - metallic) * specular_transmission));
+        } else {
+            contrib = color_add(contrib, principled::evalReflectionTerm(eval_closure));
+        }
+
+        // Clearcoat
+        if upper_hemisphere {
+            contrib = color_add(contrib, color_mulf(principled::evalClearcoatTerm(eval_closure), clearcoat));
+        }
+
+        contrib
+    };
+
+    Bsdf {
+        eval = eval,
+        pdf = @ |in_dir, out_dir| -> f32 {
+            let wo       = shading::to_local(surf, out_dir);
+            let wi       = shading::to_local(surf, in_dir);
+            let lobes    = principled::calcLobeDistribution(closure, wo);
+            let diff_pdf = cosine_hemisphere_pdf(shading::abs_cos_theta(wi));
+            if shading::is_same_hemisphere(wo, wi) {
+                let micro    = principled::getReflectionMicro(closure);
+                let H        = vec3_halfway(wo, wi);
+                let dot      = positive_cos(wi, H);
+                let refl_pdf = if dot <= flt_eps { 0 } else { micro.pdf(wi, wo, H) * shading::halfway_reflective_jacobian(dot) };
+
+                lobes.diff_refl * diff_pdf + lobes.spec_refl * refl_pdf
+            } else {
+                let micro = principled::getRefractionMicro(closure);
+                let H     = vec3_halfway_refractive(wo, 1, wi, closure.eta);
+                let cos_i = vec3_dot(wi, H);
+                let cos_o = vec3_dot(wo, H);
+
+                let trans_pdf = micro.pdf(wi, wo, H) * shading::halfway_refractive_jacobian(closure.eta, cos_i, cos_o);
+
+                lobes.diff_trans * diff_pdf + lobes.spec_trans * trans_pdf
+            }
+        },
+        sample = @ |rnd, out_dir, _| {
+            let s_return = return;
+
+            let wo    = shading::to_local(surf, out_dir);
+            let lobes = principled::calcLobeDistribution(closure, wo);
+            let pick  = randf(rnd);
+
+            let sample = if pick < lobes.diff_refl {
+                // Diffuse reflection
+                scale_dir_sample(sample_cosine_hemisphere(randf(rnd), randf(rnd)), lobes.diff_refl)
+            } else if pick < lobes.diff_refl + lobes.diff_trans {
+                // Diffuse transmission
+                let a = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+                scale_dir_sample(neg_dir_sample(a), lobes.diff_trans)
+            } else if pick < lobes.diff_refl + lobes.diff_trans + lobes.spec_trans {
+                // Specular transmission
+                let micro = principled::getRefractionMicro(closure);
+                let s     = micro.sample(rnd, wo);
+                if vec3_len2(s.normal) <= flt_eps { s_return(reject_bsdf_sample()) };
+
+                let cos_o = positive_cos(wo, s.normal);
+                let fr    = fresnel(closure.eta, cos_o);
+                if fr.total {
+                    DirSample { dir = vec3_reflect(wo, s.normal), pdf = s.pdf * shading::halfway_reflective_jacobian(cos_o) * lobes.spec_trans }
+                } else {
+                    let wi    = vec3_refract(wo, s.normal, closure.eta, cos_o, fr.cos_t);
+                    DirSample { dir = wi, pdf = s.pdf * shading::halfway_refractive_jacobian(closure.eta, cos_o, fr.cos_t) * lobes.spec_trans }
+                }
+            } else {
+                // Specular reflection
+                let micro = principled::getReflectionMicro(closure);
+                let s     = micro.sample(rnd, wo);
+                if vec3_len2(s.normal) <= flt_eps { s_return(reject_bsdf_sample()) };
+
+                let H     = vec3_normalize(s.normal);
+                let cos_o = positive_cos(wo, s.normal);
+                DirSample { dir = vec3_reflect(wo, H), pdf = s.pdf * shading::halfway_reflective_jacobian(cos_o) * lobes.spec_refl }
+            };
+
+            let gdir  = shading::to_world(surf, sample.dir);
+            let color = color_mulf(eval(gdir, out_dir), 1/sample.pdf);
+            make_option(BsdfSample {
+                in_dir = gdir,
+                pdf    = sample.pdf,
+                color  = color
+            })
+        },
+        is_specular = false
+    }
+}

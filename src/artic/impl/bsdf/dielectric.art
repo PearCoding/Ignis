@@ -1,0 +1,50 @@
+// Creates a perfect glass BSDF
+fn @make_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
+    eval   = @ |_, _| black,
+    pdf    = @ |_, _| 0,
+    sample = @ |rnd, out_dir, adjoint| {
+        let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
+        let n = surf.local.col(2);
+        let cos_i = vec3_dot(out_dir, n);
+
+        let fterm = fresnel(k, cos_i);
+
+        if !fterm.total {
+            // Refraction
+            let cos_t = fterm.cos_t;
+            let F     = fterm.factor;
+            if (randf(rnd) > F) {
+                let t = vec3_refract(out_dir, n, k, cos_i, cos_t);
+                let adjoint_term = if adjoint { k * k } else { 1 };
+                return(make_bsdf_sample(surf, t, 1, color_mulf(kt, adjoint_term), true))
+            }
+        }
+        // Reflection
+        make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, ks, false)
+    },
+    is_specular = true
+};
+
+//--------------------------------------
+// Creates a perfect glass BSDF with thin interface approximation
+fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
+    eval   = @ |_, _| black,
+    pdf    = @ |_, _| 0,
+    sample = @ |rnd, out_dir, _| {
+        let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
+        let N = surf.local.col(2);
+        let cos_i = positive_cos(out_dir, N);
+
+        let fterm = fresnel(k, cos_i);
+        let F = /*if fterm.factor < 1.0 {*/ fterm.factor + (1 - fterm.factor) * fterm.factor / (fterm.factor + 1) /*} else { 1.0 }*/;
+
+        if randf(rnd) > F {
+            // Refraction
+            make_bsdf_sample(surf, vec3_neg(out_dir), 1, kt, true)
+        } else {
+            // Reflection
+            make_bsdf_sample(surf, vec3_reflect(out_dir, N), 1, ks, false)
+        }
+    },
+    is_specular = true
+};

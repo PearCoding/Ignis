@@ -1,0 +1,23 @@
+// Creates a fully absorbing BSDF that behaves like a black body
+fn @make_black_bsdf(surf: SurfaceElement) = Bsdf {
+    eval        = @ |_, _| black,
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, black, true),
+    is_specular = true
+};
+
+// Error
+fn @make_error_bsdf() = Bsdf {
+    eval        = @ |_, _| pink,
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, _, _| reject_bsdf_sample(),
+    is_specular = false
+};
+
+// Creates a BSDF that passthroughs all rays and behaves like a refractive interface with ior=1
+fn @make_passthrough_bsdf(surf: SurfaceElement) = Bsdf {
+    eval        = @ |_, _| black,
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, white, true),
+    is_specular = true
+};

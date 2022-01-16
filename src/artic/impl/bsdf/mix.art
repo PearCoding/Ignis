@@ -1,0 +1,104 @@
+// Creates a BSDF that interpolates between two other BSDFs based on a variadic mix function
+fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bsdf {
+    let eval = @|in_dir: Vec3, out_dir: Vec3| -> Color {
+        if mat1.is_specular {
+            mat2.eval(in_dir, out_dir)
+        } else if mat2.is_specular {
+            mat1.eval(in_dir, out_dir)
+        } else {
+            let k = mix_f(out_dir);
+            color_lerp(mat1.eval(in_dir, out_dir),
+                       mat2.eval(in_dir, out_dir),
+                       k)
+        }
+    };
+
+    let pdf = @|in_dir: Vec3, out_dir: Vec3| -> f32 {
+        if mat1.is_specular {
+            mat2.pdf(in_dir, out_dir)
+        } else if mat2.is_specular {
+            mat1.pdf(in_dir, out_dir)
+        } else {
+            let k = mix_f(out_dir);
+            lerp(mat1.pdf(in_dir, out_dir),
+                 mat2.pdf(in_dir, out_dir),
+                 k)
+        }
+    };
+
+    Bsdf {
+        eval   = eval,
+        pdf    = pdf,
+        sample = @ |rnd, out_dir, adjoint| {
+            fn sample_mat(mat_first: Bsdf, mat_second: Bsdf, t: f32) -> Option[BsdfSample] {
+                let opt = mat_first.sample(rnd, out_dir, adjoint);
+                match opt {
+                    Option[BsdfSample]::Some(s) => {
+                        if mat_second.is_specular {
+                            make_option(s)
+                        } else {
+                            let p = lerp(s.pdf, mat_second.pdf(s.in_dir, out_dir), t);
+                            let c = color_lerp(s.color, mat_second.eval(s.in_dir, out_dir), t);
+                            make_option(BsdfSample { in_dir = s.in_dir, pdf = p, color = c })
+                        }
+                    },
+                    _ => opt
+                }
+            }
+
+            let k = mix_f(out_dir);
+            if randf(rnd) >= k {
+                if let Option[BsdfSample]::Some(s) = sample_mat(mat1, mat2, k) {
+                    make_option(s)
+                } else {
+                    mat2.sample(rnd, out_dir, adjoint)
+                }
+            } else {
+                if let Option[BsdfSample]::Some(s) = sample_mat(mat2, mat1, k) {
+                    make_option(s)
+                } else {
+                    mat1.sample(rnd, out_dir, adjoint)
+                }
+            }
+        },
+        is_specular = mat1.is_specular & mat2.is_specular
+    }
+}
+
+// Creates a BSDF that interpolates between two other BSDFs
+fn @make_mix_bsdf(mat1: Bsdf, mat2: Bsdf, k: f32) = make_variadic_mix_bsdf(mat1, mat2, @|_| k);
+
+// Add two bsdfs together. Only the first bsdf will be used for sampling!
+fn @make_add_bsdf(mat1: Bsdf, mat2: Bsdf) -> Bsdf {
+    let eval = @|in_dir: Vec3, out_dir: Vec3| -> Color {
+        if mat1.is_specular {
+            mat2.eval(in_dir, out_dir)
+        } else if mat2.is_specular {
+            mat1.eval(in_dir, out_dir)
+        } else {
+            color_add(mat1.eval(in_dir, out_dir),
+                       mat2.eval(in_dir, out_dir))
+        }
+    };
+
+    let pdf = @|in_dir: Vec3, out_dir: Vec3| -> f32 {
+        if mat1.is_specular {
+            mat2.pdf(in_dir, out_dir)
+        } else {
+            mat1.pdf(in_dir, out_dir)
+        }
+    };
+
+    Bsdf {
+        eval   = eval,
+        pdf    = pdf,
+        sample = @ |rnd, out_dir, adjoint| {
+            let opt = mat1.sample(rnd, out_dir, adjoint);
+            match opt {
+                Option[BsdfSample]::Some(s) => make_option(s),
+                _ => mat2.sample(rnd, out_dir, adjoint)
+            }
+        },
+        is_specular = mat1.is_specular & mat2.is_specular
+    }
+}

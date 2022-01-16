@@ -35,19 +35,27 @@ set(ARTIC_MAIN_SRC
 
 set(ARTIC_EXTRA_SRC
     ${ARTIC_MAIN_SRC}
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/aotracer.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/common.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/conductor.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/dielectric.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/diffuse.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/klems.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/map.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/metal.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/mix.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/phong.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/plastic.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/principled.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/aotracer.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/debugtracer.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/pathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/cdf.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/debugtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/emitter.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/fresnel.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/klems.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/microfacet.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/pathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/pixel_sampler.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/principled.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/shading.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture.art
 )

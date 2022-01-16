@@ -48,11 +48,11 @@ static std::string inline_microfacet(const std::string& name, const ShadingTree&
 
     std::stringstream stream;
     if (tree.hasParameter("alpha_u")) {
-        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf, "
+        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf.local, "
                << inlineIt("alpha_u") << ", "
                << inlineIt("alpha_v") << ");" << std::endl;
     } else {
-        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf, "
+        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf.local, "
                << inlineIt("alpha") << ", "
                << inlineIt("alpha") << ");" << std::endl;
     }
