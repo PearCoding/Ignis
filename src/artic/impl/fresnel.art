@@ -108,3 +108,8 @@ fn @schlick_from_relative_ior(relative_ior: f32)-> f32{
 
     eta1 / eta2
 }
+
+fn @schlick_r0(eta: f32)-> f32{
+    let factor = (eta - 1) / (eta + 1);
+    factor * factor
+}

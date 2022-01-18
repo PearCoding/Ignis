@@ -1,0 +1,69 @@
+{
+	"technique": {
+		"type": "path",
+		"max_depth": 8
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 40,
+		"near_clip": 0.1,
+		"far_clip": 100,
+		"transform": [ 1,0,0,0, 0,0,1,-15, 0,1,0,0, 0,0,0,1 ]
+	},
+	"film": {
+		"size": [1000, 1000]
+	},
+	"textures": [
+		{
+			"type": "checkerboard",
+			"name": "check",
+			"scale_x": 100,
+			"scale_y": 100,
+			"color0": [0.3,0.3,0.3],
+			"color1": [1,1,1]
+		},
+		{
+			"type": "image",
+			"name": "env",
+			"filename": "textures/environment/phalzer_forest_01_4k.exr"
+		}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name": "mat-Ground", "reflectance":"check"}
+	],
+	"shapes": [
+		{"type":"rectangle", "name":"Ground", "width":100, "height":100},
+		{"type":"sphere", "name":"Sphere"}
+	],
+	"entities": [
+		{"name":"Ground","shape":"Ground", "bsdf":"mat-Ground", "transform":{"rotate":[90,0,0], "translate":[0,0,-2]}},
+		{"name":"Sphere11","shape":"Sphere", "bsdf":"mat-Sphere11", "transform":{"translate":[4,0,4]}},
+		{"name":"Sphere12","shape":"Sphere", "bsdf":"mat-Sphere12", "transform":{"translate":[4,0,2]}},
+		{"name":"Sphere13","shape":"Sphere", "bsdf":"mat-Sphere13", "transform":{"translate":[4,0,0]}},
+		{"name":"Sphere14","shape":"Sphere", "bsdf":"mat-Sphere14", "transform":{"translate":[4,0,-2]}},
+		{"name":"Sphere15","shape":"Sphere", "bsdf":"mat-Sphere15", "transform":{"translate":[4,0,-4]}},
+		{"name":"Sphere21","shape":"Sphere", "bsdf":"mat-Sphere21", "transform":{"translate":[2,0,4]}},
+		{"name":"Sphere22","shape":"Sphere", "bsdf":"mat-Sphere22", "transform":{"translate":[2,0,2]}},
+		{"name":"Sphere23","shape":"Sphere", "bsdf":"mat-Sphere23", "transform":{"translate":[2,0,0]}},
+		{"name":"Sphere24","shape":"Sphere", "bsdf":"mat-Sphere24", "transform":{"translate":[2,0,-2]}},
+		{"name":"Sphere25","shape":"Sphere", "bsdf":"mat-Sphere25", "transform":{"translate":[2,0,-4]}},
+		{"name":"Sphere31","shape":"Sphere", "bsdf":"mat-Sphere31", "transform":{"translate":[0,0,4]}},
+		{"name":"Sphere32","shape":"Sphere", "bsdf":"mat-Sphere32", "transform":{"translate":[0,0,2]}},
+		{"name":"Sphere33","shape":"Sphere", "bsdf":"mat-Sphere33", "transform":{"translate":[0,0,0]}},
+		{"name":"Sphere34","shape":"Sphere", "bsdf":"mat-Sphere34", "transform":{"translate":[0,0,-2]}},
+		{"name":"Sphere35","shape":"Sphere", "bsdf":"mat-Sphere35", "transform":{"translate":[0,0,-4]}},
+		{"name":"Sphere41","shape":"Sphere", "bsdf":"mat-Sphere41", "transform":{"translate":[-2,0,4]}},
+		{"name":"Sphere42","shape":"Sphere", "bsdf":"mat-Sphere42", "transform":{"translate":[-2,0,2]}},
+		{"name":"Sphere43","shape":"Sphere", "bsdf":"mat-Sphere43", "transform":{"translate":[-2,0,0]}},
+		{"name":"Sphere44","shape":"Sphere", "bsdf":"mat-Sphere44", "transform":{"translate":[-2,0,-2]}},
+		{"name":"Sphere45","shape":"Sphere", "bsdf":"mat-Sphere45", "transform":{"translate":[-2,0,-4]}},
+		{"name":"Sphere51","shape":"Sphere", "bsdf":"mat-Sphere51", "transform":{"translate":[-4,0,4]}},
+		{"name":"Sphere52","shape":"Sphere", "bsdf":"mat-Sphere52", "transform":{"translate":[-4,0,2]}},
+		{"name":"Sphere53","shape":"Sphere", "bsdf":"mat-Sphere53", "transform":{"translate":[-4,0,0]}},
+		{"name":"Sphere54","shape":"Sphere", "bsdf":"mat-Sphere54", "transform":{"translate":[-4,0,-2]}},
+		{"name":"Sphere55","shape":"Sphere", "bsdf":"mat-Sphere55", "transform":{"translate":[-4,0,-4]}}
+	],
+	"lights": [
+		{"type":"env", "name":"Environment", "radiance":"env"}
+	]
+}

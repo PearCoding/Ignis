@@ -1,0 +1,32 @@
+{
+	"externals": [
+		{"filename":"arrays.json"}
+	],
+	"bsdfs": [
+		{"type":"principled", "name": "mat-Sphere11", "roughness":1.00, "metallic":1.00},
+		{"type":"principled", "name": "mat-Sphere21", "roughness":1.00, "metallic":0.75},
+		{"type":"principled", "name": "mat-Sphere31", "roughness":1.00, "metallic":0.50},
+		{"type":"principled", "name": "mat-Sphere41", "roughness":1.00, "metallic":0.25},
+		{"type":"principled", "name": "mat-Sphere51", "roughness":1.00, "metallic":0.00},
+		{"type":"principled", "name": "mat-Sphere12", "roughness":0.75, "metallic":1.00},
+		{"type":"principled", "name": "mat-Sphere22", "roughness":0.75, "metallic":0.75},
+		{"type":"principled", "name": "mat-Sphere32", "roughness":0.75, "metallic":0.50},
+		{"type":"principled", "name": "mat-Sphere42", "roughness":0.75, "metallic":0.25},
+		{"type":"principled", "name": "mat-Sphere52", "roughness":0.75, "metallic":0.00},
+		{"type":"principled", "name": "mat-Sphere13", "roughness":0.50, "metallic":1.00},
+		{"type":"principled", "name": "mat-Sphere23", "roughness":0.50, "metallic":0.75},
+		{"type":"principled", "name": "mat-Sphere33", "roughness":0.50, "metallic":0.50},
+		{"type":"principled", "name": "mat-Sphere43", "roughness":0.50, "metallic":0.25},
+		{"type":"principled", "name": "mat-Sphere53", "roughness":0.50, "metallic":0.00},
+		{"type":"principled", "name": "mat-Sphere14", "roughness":0.25, "metallic":1.00},
+		{"type":"principled", "name": "mat-Sphere24", "roughness":0.25, "metallic":0.75},
+		{"type":"principled", "name": "mat-Sphere34", "roughness":0.25, "metallic":0.50},
+		{"type":"principled", "name": "mat-Sphere44", "roughness":0.25, "metallic":0.25},
+		{"type":"principled", "name": "mat-Sphere54", "roughness":0.25, "metallic":0.00},
+		{"type":"principled", "name": "mat-Sphere15", "roughness":0.00, "metallic":1.00},
+		{"type":"principled", "name": "mat-Sphere25", "roughness":0.00, "metallic":0.75},
+		{"type":"principled", "name": "mat-Sphere35", "roughness":0.00, "metallic":0.50},
+		{"type":"principled", "name": "mat-Sphere45", "roughness":0.00, "metallic":0.25},
+		{"type":"principled", "name": "mat-Sphere55", "roughness":0.00, "metallic":0.00}
+	]
+}

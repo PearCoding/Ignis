@@ -109,7 +109,7 @@ fn @make_debug_renderer(debug_mode: i32) -> PathTracer {
                         // This is the reflection albedo
                         let out_dir = vec3_neg(ray.dir);
                         let in_dir  = vec3_reflect(out_dir, surf.local.col(2));
-                        let cos = math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)));
+                        let cos = absolute_cos(in_dir, surf.local.col(2));
                         let evl = color_mulf(mat.bsdf.eval(in_dir, out_dir), 1/cos); // We want the result without cosine term
                         make_option(evl)
                     }

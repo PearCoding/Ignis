@@ -1,7 +1,7 @@
 // Creates a purely two-sided diffuse BSDF
 fn @make_diffuse_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
-    eval   = @ |in_dir, _| color_mulf(kd, math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2))) / flt_pi),
-    pdf    = @ |in_dir, _| cosine_hemisphere_pdf(math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)))),
+    eval   = @ |in_dir, _| color_mulf(kd, absolute_cos(in_dir, surf.local.col(2)) / flt_pi),
+    pdf    = @ |in_dir, _| cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))),
     sample = @ |rnd, _, _| {
         let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
         let gdir   = mat3x3_mul(surf.local, sample.dir);
@@ -15,8 +15,8 @@ fn @make_diffuse_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
 fn @make_orennayar_bsdf(surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
     let a2 = alpha * alpha;
     let eval = @ |in_dir : Vec3, out_dir : Vec3| {
-        let p1 = math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)));
-        let p2 = math_builtins::fabs(vec3_dot(out_dir, surf.local.col(2)));
+        let p1 = absolute_cos(in_dir, surf.local.col(2));
+        let p2 = absolute_cos(out_dir, surf.local.col(2));
         let s  = -p1 * p2 + positive_cos(out_dir, in_dir);
         let t  = if s <= flt_eps { 1 } else { math_builtins::fmax(flt_eps, math_builtins::fmax(p1, p2)) };
 
@@ -28,7 +28,7 @@ fn @make_orennayar_bsdf(surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
 
     Bsdf {
         eval   = eval,
-        pdf    = @ |in_dir, _| cosine_hemisphere_pdf(math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)))),
+        pdf    = @ |in_dir, _| cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))),
         sample = @ |rnd, out_dir, _| {
             let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
             let gdir   = mat3x3_mul(surf.local, sample.dir);
