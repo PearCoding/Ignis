@@ -78,13 +78,7 @@ find_package(TBB REQUIRED)
 # ZLib is used in the generator
 find_package(ZLIB REQUIRED)
 
-# Use stb for image io
-CPMAddPackage(
-    NAME stb
-    GITHUB_REPOSITORY nothings/stb 
-    GIT_TAG master
-    DOWNLOAD_ONLY YES
-)
+include(cmake/GetDependencies.cmake)
 
 # Enable folders for Visual Studio
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

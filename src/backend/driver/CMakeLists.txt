@@ -1,11 +1,3 @@
-CPMAddPackage(
-    NAME stpp
-    GITHUB_REPOSITORY PearCoding/stpp 
-    GIT_TAG main
-    EXCLUDE_FROM_ALL
-)
-
-###########################################################
 set(IG_DISABLE_DEVICES "" CACHE STRING "Devices to not build a driver for.")
 mark_as_advanced(IG_DISABLE_DEVICES)
 

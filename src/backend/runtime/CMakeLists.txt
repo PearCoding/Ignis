@@ -1,48 +1,3 @@
-# Get dependencies
-CPMAddPackage(
-    NAME tinyobjloader
-    GITHUB_REPOSITORY tinyobjloader/tinyobjloader
-    GIT_TAG master
-    DOWNLOAD_ONLY YES
-)
-
-CPMAddPackage(
-    NAME rapidjson
-    GITHUB_REPOSITORY Tencent/rapidjson
-    GIT_TAG master
-    DOWNLOAD_ONLY YES
-)
-
-CPMAddPackage(
-    NAME pugixml
-    GITHUB_REPOSITORY zeux/pugixml 
-    GIT_TAG master
-    EXCLUDE_FROM_ALL
-)
-
-CPMAddPackage(
-    NAME hwinfo
-    GITHUB_REPOSITORY PearCoding/hwinfo 
-    GIT_TAG main
-    EXCLUDE_FROM_ALL
-)
-
-CPMAddPackage(
-    NAME tinyexr
-    GITHUB_REPOSITORY syoyo/tinyexr 
-    GIT_TAG master
-    DOWNLOAD_ONLY YES
-)
-
-CPMAddPackage(
-    NAME tinygltf
-    GITHUB_REPOSITORY syoyo/tinygltf 
-    GIT_TAG master
-    DOWNLOAD_ONLY YES
-)
-
-################################################################
-
 set(SRC 
     IG_Config.h
     Camera.h
@@ -171,7 +126,7 @@ if(NOT WIN32)
     target_link_libraries(ig_lib_runtime PUBLIC Threads::Threads)
 endif()
 target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen std::filesystem PRIVATE ${CMAKE_DL_LIBS} pugixml TBB::tbb TBB::tbbmalloc ZLIB::ZLIB ig_lib_jit)
-target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR} ${tinygltf_SOURCE_DIR})
+target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR} ${tinygltf_SOURCE_DIR} ${libbvh_SOURCE_DIR}/include)
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 target_compile_definitions(ig_lib_runtime PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
 target_compile_features(ig_lib_runtime PUBLIC cxx_std_17)
