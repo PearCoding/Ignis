@@ -1,0 +1,28 @@
+{
+	"technique": {
+		"type": "path",
+		"max_depth": 64
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 40,
+		"near_clip": 0.1,
+		"far_clip": 100,
+		"transform": [ -1,0,0,0, 0,1,0,0, 0,0,-1,4, 0,0,0,1 ]
+	},
+	"film": {
+		"size": [1000, 1000]
+	},
+	"bsdfs": [
+		{"type":"disney", "name": "mat", "base_color": [1,1,1]}
+	],
+	"shapes": [
+		{"type":"triangle", "name":"Triangle"}
+	],
+	"entities": [
+		{"name":"Triangle","shape":"Triangle", "bsdf":"mat"}
+	],
+	"lights": [
+		{"type":"env", "name":"Environment", "radiance":[1,1,1]}
+	]
+}

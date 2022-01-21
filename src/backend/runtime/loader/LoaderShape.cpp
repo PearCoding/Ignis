@@ -18,7 +18,7 @@
 // Does not improve much, as it is IO bounded
 #define IG_PARALLEL_LOAD_SHAPE
 // There is no reason to not build multiple BVHs in parallel
-#define IG_PARALLEL_BVH
+//#define IG_PARALLEL_BVH
 
 namespace IG {
 

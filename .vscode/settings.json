@@ -3,6 +3,7 @@
         "*.prc": "lisp",
         "*.artpp": "rust",
         "*.nvvm": "llvm",
+        "*.llvm": "llvm",
         "*.impala": "rust",
         "*.art": "rust",
         "cctype": "cpp",
@@ -128,7 +129,8 @@
         "cerrno": "cpp",
         "cfloat": "cpp",
         "ciso646": "cpp",
-        "climits": "cpp"
+        "climits": "cpp",
+        "span": "cpp"
     },
     "cmake.configureOnOpen": false,
     "cmake.buildDirectory": "${workspaceRoot}/build/${buildType}",

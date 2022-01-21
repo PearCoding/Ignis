@@ -1,40 +1,23 @@
 #pragma once
 
-#include "BVH.h"
+#include "BvhNAdapter.h"
+#include "Target.h"
 #include "math/Triangle.h"
 #include "mesh/TriMesh.h"
 
-#include "Target.h"
+#include "bvh/bvh.hpp"
+#include "bvh/leaf_collapser.hpp"
+#include "bvh/locally_ordered_clustering_builder.hpp"
+#include "bvh/node_layout_optimizer.hpp"
+#include "bvh/parallel_reinsertion_optimizer.hpp"
+#include "bvh/spatial_split_bvh_builder.hpp"
+#include "bvh/sweep_sah_builder.hpp"
+#include "bvh/triangle.hpp"
 
 // Contains implementation for NodeN and TriN
 #include "generated_interface.h"
 
 namespace IG {
-
-template <>
-struct ObjectAdapter<Triangle> {
-    const Triangle& tri;
-
-    ObjectAdapter(const Triangle& t)
-        : tri(t)
-    {
-    }
-
-    inline BoundingBox computeBoundingBox() const
-    {
-        return tri.computeBoundingBox();
-    }
-
-    inline Vector3f center() const
-    {
-        return (tri.v0 + tri.v1 + tri.v2) * (1.0f / 3.0f);
-    }
-
-    inline void computeSplit(IG::BoundingBox& left_bb, IG::BoundingBox& right_bb, int axis, float split) const
-    {
-        tri.computeSplit(left_bb, right_bb, axis, split);
-    }
-};
 
 template <size_t N, size_t M>
 struct BvhNTriM {
@@ -58,283 +41,121 @@ struct BvhNTriM<2, 1> {
     using Tri  = Tri1;
 };
 
+struct TriangleProxy : public bvh::Triangle<float> {
+    using bvh::Triangle<float>::Triangle;
+    int prim_id;
+};
+
 template <size_t N, size_t M, template <typename> typename Allocator>
-class BvhNTriMAdapter {
-    struct CostFn {
-        static float leaf_cost(int count, float area)
-        {
-            return count * area;
-        }
-        static float traversal_cost(float area)
-        {
-            return area;
-        }
-    };
+class BvhNTriMAdapter : public BvhNAdapter<N, typename BvhNTriM<N, M>::Node, TriangleProxy, Allocator> {
+    using Parent = BvhNAdapter<N, typename BvhNTriM<N, M>::Node, TriangleProxy, Allocator>;
+    using Bvh    = typename Parent::Bvh;
+    using Node   = typename BvhNTriM<N, M>::Node;
+    using Tri    = typename BvhNTriM<N, M>::Tri;
 
-    using BvhBuilder = SplitBvhBuilder<Triangle, N, CostFn, Allocator>;
-    using Adapter    = BvhNTriMAdapter;
-    using Node       = typename BvhNTriM<N, M>::Node;
-    using Tri        = typename BvhNTriM<N, M>::Tri;
-
-    std::vector<Node, Allocator<Node>>& nodes_;
-    std::vector<Tri, Allocator<Tri>>& tris_;
-    BvhBuilder builder_;
+    std::vector<Tri, Allocator<Tri>>& tris;
 
 public:
     BvhNTriMAdapter(std::vector<Node, Allocator<Node>>& nodes, std::vector<Tri, Allocator<Tri>>& tris)
-        : nodes_(nodes)
-        , tris_(tris)
+        : Parent(nodes)
+        , tris(tris)
     {
     }
 
-    void build(const TriMesh& tri_mesh, const std::vector<IG::Triangle, Allocator<IG::Triangle>>& tris)
+protected:
+    virtual void write_leaf(const std::vector<TriangleProxy>& primitives,
+                            const Bvh& bvh,
+                            const typename Bvh::Node& node,
+                            size_t parent,
+                            size_t child) override
     {
-        builder_.build(tris, NodeWriter(*this), LeafWriter(*this, tris, tri_mesh.indices), M / 2);
-#ifdef STATISTICS
-        builder_.print_stats();
-#endif
+        IG_ASSERT(node.is_leaf(), "Expected a leaf");
+
+        this->nodes[parent].child.e[child] = ~tris.size();
+
+        const size_t ref_count = this->primitive_count_of_node(node);
+
+        // Group triangles by packets of M
+        for (size_t i = 0; i < ref_count; i += M) {
+            const size_t c = i + M <= ref_count ? M : ref_count - i;
+
+            Tri tri;
+            std::memset(&tri, 0, sizeof(Tri));
+            for (size_t j = 0; j < c; ++j) {
+                const int id       = bvh.primitive_indices[node.first_child_or_primitive + i + j];
+                const auto& in_tri = primitives[id];
+
+                tri.v0.e[0].e[j] = in_tri.p0[0];
+                tri.v0.e[1].e[j] = in_tri.p0[1];
+                tri.v0.e[2].e[j] = in_tri.p0[2];
+
+                tri.e1.e[0].e[j] = in_tri.e1[0];
+                tri.e1.e[1].e[j] = in_tri.e1[1];
+                tri.e1.e[2].e[j] = in_tri.e1[2];
+
+                tri.e2.e[0].e[j] = in_tri.e2[0];
+                tri.e2.e[1].e[j] = in_tri.e2[1];
+                tri.e2.e[2].e[j] = in_tri.e2[2];
+
+                tri.n.e[0].e[j] = in_tri.n[0];
+                tri.n.e[1].e[j] = in_tri.n[1];
+                tri.n.e[2].e[j] = in_tri.n[2];
+
+                tri.prim_id.e[j] = in_tri.prim_id;
+            }
+
+            for (size_t j = c; j < M; ++j)
+                tri.prim_id.e[j] = 0xFFFFFFFF;
+
+            tris.emplace_back(tri);
+        }
+
+        tris.back().prim_id.e[M - 1] |= 0x80000000;
     }
-
-private:
-    struct NodeWriter {
-        Adapter& adapter;
-
-        NodeWriter(Adapter& adapter)
-            : adapter(adapter)
-        {
-        }
-
-        template <typename BBoxFn>
-        int operator()(int parent, int child, const BoundingBox& /*parent_bb*/, size_t count, BBoxFn bboxes)
-        {
-            auto& nodes = adapter.nodes_;
-
-            size_t i = nodes.size();
-            nodes.emplace_back();
-
-            if (parent >= 0 && child >= 0) {
-                assert(parent >= 0 && parent < nodes.size());
-                assert(child >= 0 && child < N);
-                nodes[parent].child.e[child] = i + 1;
-            }
-
-            assert(count >= 1 && count <= N);
-
-            for (size_t j = 0; j < count; j++) {
-                const BoundingBox& bbox   = bboxes(j);
-                nodes[i].bounds.e[0].e[j] = bbox.min(0);
-                nodes[i].bounds.e[2].e[j] = bbox.min(1);
-                nodes[i].bounds.e[4].e[j] = bbox.min(2);
-
-                nodes[i].bounds.e[1].e[j] = bbox.max(0);
-                nodes[i].bounds.e[3].e[j] = bbox.max(1);
-                nodes[i].bounds.e[5].e[j] = bbox.max(2);
-            }
-
-            for (size_t j = count; j < N; ++j) {
-                nodes[i].bounds.e[0].e[j] = FltInf;
-                nodes[i].bounds.e[2].e[j] = FltInf;
-                nodes[i].bounds.e[4].e[j] = FltInf;
-
-                nodes[i].bounds.e[1].e[j] = -FltInf;
-                nodes[i].bounds.e[3].e[j] = -FltInf;
-                nodes[i].bounds.e[5].e[j] = -FltInf;
-
-                nodes[i].child.e[j] = 0;
-            }
-
-            return i;
-        }
-    };
-
-    struct LeafWriter {
-        Adapter& adapter;
-        const std::vector<IG::Triangle, Allocator<IG::Triangle>>& in_tris;
-        const std::vector<uint32>& indices;
-
-        LeafWriter(Adapter& adapter, const std::vector<IG::Triangle, Allocator<IG::Triangle>>& in_tris, const std::vector<uint32>& indices)
-            : adapter(adapter)
-            , in_tris(in_tris)
-            , indices(indices)
-        {
-        }
-
-        template <typename RefFn>
-        void operator()(int parent, int child, const BoundingBox& /*leaf_bb*/, size_t ref_count, RefFn refs)
-        {
-            auto& nodes = adapter.nodes_;
-            auto& tris  = adapter.tris_;
-
-            nodes[parent].child.e[child] = ~tris.size();
-
-            // Group triangles by packets of M
-            for (size_t i = 0; i < ref_count; i += M) {
-                const size_t c = i + M <= ref_count ? M : ref_count - i;
-
-                Tri tri;
-                std::memset(&tri, 0, sizeof(Tri));
-                for (size_t j = 0; j < c; j++) {
-                    const int id      = refs(i + j);
-                    auto& in_tri      = in_tris[id];
-                    const Vector3f e1 = in_tri.v0 - in_tri.v1;
-                    const Vector3f e2 = in_tri.v2 - in_tri.v0;
-                    const Vector3f n  = e1.cross(e2);
-                    tri.v0.e[0].e[j]  = in_tri.v0(0);
-                    tri.v0.e[1].e[j]  = in_tri.v0(1);
-                    tri.v0.e[2].e[j]  = in_tri.v0(2);
-
-                    tri.e1.e[0].e[j] = e1(0);
-                    tri.e1.e[1].e[j] = e1(1);
-                    tri.e1.e[2].e[j] = e1(2);
-
-                    tri.e2.e[0].e[j] = e2(0);
-                    tri.e2.e[1].e[j] = e2(1);
-                    tri.e2.e[2].e[j] = e2(2);
-
-                    tri.n.e[0].e[j] = n(0);
-                    tri.n.e[1].e[j] = n(1);
-                    tri.n.e[2].e[j] = n(2);
-
-                    tri.prim_id.e[j] = id;
-                }
-
-                for (size_t j = c; j < M; j++)
-                    tri.prim_id.e[j] = 0xFFFFFFFF;
-
-                tris.emplace_back(tri);
-            }
-            assert(ref_count > 0);
-            tris.back().prim_id.e[M - 1] |= 0x80000000;
-        }
-    };
 };
 
 template <template <typename> typename Allocator>
-class BvhNTriMAdapter<2, 1, Allocator> {
-    struct CostFn {
-        static float leaf_cost(int count, float area)
-        {
-            return count * area;
-        }
-        static float traversal_cost(float area)
-        {
-            return area;
-        }
-    };
+class BvhNTriMAdapter<2, 1, Allocator> : public BvhNAdapter<2, typename BvhNTriM<2, 1>::Node, TriangleProxy, Allocator> {
+    using Parent = BvhNAdapter<2, typename BvhNTriM<2, 1>::Node, TriangleProxy, Allocator>;
+    using Bvh    = typename Parent::Bvh;
+    using Node   = Node2;
+    using Tri    = Tri1;
 
-    using BvhBuilder = SplitBvhBuilder<Triangle, 2, CostFn, Allocator>;
-    using Adapter    = BvhNTriMAdapter;
-    using Node       = Node2;
-    using Tri        = Tri1;
-
-    std::vector<Node, Allocator<Node>>& nodes_;
-    std::vector<Tri, Allocator<Tri>>& tris_;
-    BvhBuilder builder_;
+    std::vector<Tri, Allocator<Tri>>& tris;
 
 public:
     BvhNTriMAdapter(std::vector<Node, Allocator<Node>>& nodes, std::vector<Tri, Allocator<Tri>>& tris)
-        : nodes_(nodes)
-        , tris_(tris)
+        : Parent(nodes)
+        , tris(tris)
     {
     }
 
-    void build(const TriMesh& tri_mesh, const std::vector<IG::Triangle, Allocator<IG::Triangle>>& tris)
+protected:
+    virtual void write_leaf(const std::vector<TriangleProxy>& primitives,
+                            const Bvh& bvh,
+                            const typename Bvh::Node& node,
+                            size_t parent,
+                            size_t child) override
     {
-        builder_.build(tris, NodeWriter(*this), LeafWriter(*this, tris, tri_mesh.indices), 2);
-#ifdef STATISTICS
-        builder_.print_stats();
-#endif
+        IG_ASSERT(node.is_leaf(), "Expected a leaf");
+
+        this->nodes[parent].child.e[child] = ~tris.size();
+
+        for (size_t i = 0; i < this->primitive_count_of_node(node); ++i) {
+            const int id = bvh.primitive_indices[node.first_child_or_primitive + i];
+            auto& in_tri = primitives[id];
+            tris.emplace_back(Tri1{
+                { in_tri.p0[0], in_tri.p0[1], in_tri.p0[2] },
+                0,
+                { in_tri.e1[0], in_tri.e1[1], in_tri.e1[2] },
+                0,
+                { in_tri.e2[0], in_tri.e2[1], in_tri.e2[2] },
+                in_tri.prim_id });
+        }
+
+        // Add sentinel
+        tris.back().prim_id |= 0x80000000;
     }
-
-private:
-    struct NodeWriter {
-        Adapter& adapter;
-
-        NodeWriter(Adapter& adapter)
-            : adapter(adapter)
-        {
-        }
-
-        template <typename BBoxFn>
-        int operator()(int parent, int child, const BoundingBox& /*parent_bb*/, size_t count, BBoxFn bboxes)
-        {
-            auto& nodes = adapter.nodes_;
-
-            size_t i = nodes.size();
-            nodes.emplace_back();
-
-            if (parent >= 0 && child >= 0) {
-                assert(parent >= 0 && parent < nodes.size());
-                assert(child >= 0 && child < 2);
-                nodes[parent].child.e[child] = i + 1;
-            }
-
-            assert(count >= 1 && count <= 2);
-
-            const BoundingBox& bbox1 = bboxes(0);
-            nodes[i].bounds.e[0]     = bbox1.min(0);
-            nodes[i].bounds.e[2]     = bbox1.min(1);
-            nodes[i].bounds.e[4]     = bbox1.min(2);
-            nodes[i].bounds.e[1]     = bbox1.max(0);
-            nodes[i].bounds.e[3]     = bbox1.max(1);
-            nodes[i].bounds.e[5]     = bbox1.max(2);
-
-            if (count == 2) {
-                const BoundingBox& bbox2 = bboxes(1);
-                nodes[i].bounds.e[6]     = bbox2.min(0);
-                nodes[i].bounds.e[8]     = bbox2.min(1);
-                nodes[i].bounds.e[10]    = bbox2.min(2);
-                nodes[i].bounds.e[7]     = bbox2.max(0);
-                nodes[i].bounds.e[9]     = bbox2.max(1);
-                nodes[i].bounds.e[11]    = bbox2.max(2);
-            } else {
-                nodes[i].bounds.e[6]  = FltInf;
-                nodes[i].bounds.e[8]  = FltInf;
-                nodes[i].bounds.e[10] = FltInf;
-                nodes[i].bounds.e[7]  = -FltInf;
-                nodes[i].bounds.e[9]  = -FltInf;
-                nodes[i].bounds.e[11] = -FltInf;
-            }
-
-            return i;
-        }
-    };
-
-    struct LeafWriter {
-        Adapter& adapter;
-        const std::vector<IG::Triangle, Allocator<IG::Triangle>>& in_tris;
-        const std::vector<uint32>& indices;
-
-        LeafWriter(Adapter& adapter, const std::vector<IG::Triangle, Allocator<IG::Triangle>>& in_tris, const std::vector<uint32>& indices)
-            : adapter(adapter)
-            , in_tris(in_tris)
-            , indices(indices)
-        {
-        }
-
-        template <typename RefFn>
-        void operator()(int parent, int child, const BoundingBox& /*leaf_bb*/, size_t ref_count, RefFn refs)
-        {
-            assert(ref_count > 0);
-
-            auto& nodes = adapter.nodes_;
-            auto& tris  = adapter.tris_;
-
-            nodes[parent].child.e[child] = ~tris.size();
-
-            for (size_t i = 0; i < ref_count; i++) {
-                const int ref     = refs(i);
-                const auto& tri   = in_tris[ref];
-                const Vector3f e1 = tri.v0 - tri.v1;
-                const Vector3f e2 = tri.v2 - tri.v0;
-                tris.emplace_back(Tri1{
-                    { tri.v0(0), tri.v0(1), tri.v0(2) }, 0, { e1(0), e1(1), e1(2) }, 0, { e2(0), e2(1), e2(2) }, ref });
-            }
-
-            // Add sentinel
-            tris.back().prim_id |= 0x80000000;
-        }
-    };
 };
 
 template <size_t N, size_t M, template <typename> typename Allocator>
@@ -342,15 +163,40 @@ inline void build_bvh(const TriMesh& tri_mesh,
                       std::vector<typename BvhNTriM<N, M>::Node, Allocator<typename BvhNTriM<N, M>::Node>>& nodes,
                       std::vector<typename BvhNTriM<N, M>::Tri, Allocator<typename BvhNTriM<N, M>::Tri>>& tris)
 {
-    BvhNTriMAdapter<N, M, Allocator> adapter(nodes, tris);
-    auto num_tris = tri_mesh.indices.size() / 4;
-    std::vector<IG::Triangle, Allocator<IG::Triangle>> in_tris(num_tris);
-    for (size_t i = 0; i < num_tris; i++) {
-        auto& v0   = tri_mesh.vertices[tri_mesh.indices[i * 4 + 0]];
-        auto& v1   = tri_mesh.vertices[tri_mesh.indices[i * 4 + 1]];
-        auto& v2   = tri_mesh.vertices[tri_mesh.indices[i * 4 + 2]];
-        in_tris[i] = Triangle(v0, v1, v2);
+    using Bvh = bvh::Bvh<float>;
+    using BvhBuilder = bvh::SpatialSplitBvhBuilder<Bvh, TriangleProxy, 64>;
+    // using BvhBuilder = bvh::LocallyOrderedClusteringBuilder<Bvh, uint32>;
+    // using BvhBuilder = bvh::SweepSahBuilder<Bvh>;
+
+    const size_t num_tris = tri_mesh.indices.size() / 4;
+    std::vector<TriangleProxy> primitives(num_tris);
+    for (size_t i = 0; i < num_tris; ++i) {
+        auto& v0      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 0]];
+        auto& v1      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 1]];
+        auto& v2      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 2]];
+        primitives[i] = TriangleProxy(v0, v1, v2);
+
+        primitives[i].prim_id = i;
     }
-    adapter.build(tri_mesh, in_tris);
+
+    auto [bboxes, centers] = bvh::compute_bounding_boxes_and_centers(primitives.data(), primitives.size());
+    auto global_bbox       = bvh::compute_bounding_boxes_union(bboxes.get(), primitives.size());
+
+    Bvh bvh;
+    BvhBuilder builder(bvh);
+    builder.build(global_bbox, primitives.data(), bboxes.get(), centers.get(), primitives.size());
+    // builder.build(global_bbox, bboxes.get(), centers.get(), primitives.size());
+
+    bvh::ParallelReinsertionOptimizer parallel_optimizer(bvh);
+    parallel_optimizer.optimize();
+
+    // bvh::LeafCollapser leaf_optimizer(bvh);
+    // leaf_optimizer.collapse();
+
+    bvh::NodeLayoutOptimizer layout_optimizer(bvh);
+    layout_optimizer.optimize();
+
+    BvhNTriMAdapter<N, M, Allocator> adapter(nodes, tris);
+    adapter.adapt(bvh, primitives);
 }
 } // namespace IG

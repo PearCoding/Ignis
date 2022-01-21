@@ -40,7 +40,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 set(CMAKE_DEBUG_POSTFIX  "_d")
 
-set(Ignis_VENDOR "Ignis project 2020-2021")
+set(Ignis_VENDOR "Ignis project 2020-2022")
 include(Git)
 
 message(STATUS "Building Ignis Rodent ${Ignis_VERSION}")
@@ -77,6 +77,9 @@ find_package(TBB REQUIRED)
 
 # ZLib is used in the generator
 find_package(ZLIB REQUIRED)
+
+# Make use of OpenMP if available
+find_package(OpenMP)
 
 include(cmake/GetDependencies.cmake)
 
