@@ -183,6 +183,8 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     mIsTrace = lopts.CameraType == "list";
     mAOVs    = std::move(result.AOVs);
 
+    mTechniqueVariants = std::move(result.TechniqueVariants);
+    
     if (opts.DumpShader) {
         for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
             const auto& variant = mTechniqueVariants[i];
@@ -200,8 +202,6 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
             }
         }
     }
-
-    mTechniqueVariants = std::move(result.TechniqueVariants);
 
     // Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)

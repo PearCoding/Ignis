@@ -69,7 +69,12 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         let light         = @lights(light_id);
         let sample_direct = light.sample_direct;
         let light_sample  = @sample_direct(rnd, surf);
+
         if light.infinite {
+            if light_sample.pdf_dir <= flt_eps {
+                return(Option[(Ray, Color)]::None)
+            }
+
             let light_dir    = light_sample.posdir; // Infinite lights return a direction instead of a position
             let vis          = vec3_dot(light_dir, surf.local.col(2));
             let correct_side = surf.is_entering ^ (vis < 0);
@@ -92,6 +97,10 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 ))
             }
         }  else {
+            if light_sample.pdf_area <= flt_eps {
+                return(Option[(Ray, Color)]::None)
+            }
+
             let light_dir    = vec3_sub(light_sample.posdir, surf.point);
             let vis          = vec3_dot(light_dir, surf.local.col(2));
             let correct_side = surf.is_entering ^ (vis < 0);  
@@ -171,8 +180,10 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
 
                 let out_dir = vec3_neg(ray.dir);
                 let emit    = light.emission(out_dir, make_vec2(0,0));
-                let mis     = 1 / (1 + pt.mis * pdf_lightpick * emit.pdf_dir);
-                color = color_add(color, color_mulf(color_mul(pt.contrib, emit.intensity), mis));
+                if emit.pdf_dir > flt_eps {
+                    let mis     = 1 / (1 + pt.mis * pdf_lightpick * emit.pdf_dir);
+                    color = color_add(color, color_mulf(color_mul(pt.contrib, emit.intensity), mis));
+                }
             }
         }
 

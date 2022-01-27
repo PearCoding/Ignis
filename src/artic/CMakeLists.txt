@@ -2,7 +2,6 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/color.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/cpu_common.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/interval.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/matrix.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/print.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/random.art
@@ -10,6 +9,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/aov.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/bsdf.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/buffer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/camera.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/data.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/device.art
@@ -53,6 +53,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/cdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/emitter.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/fresnel.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/interval.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/microfacet.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/pixel_sampler.art

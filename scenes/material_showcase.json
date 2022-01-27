@@ -33,7 +33,7 @@
 		{"type":"diffuse", "name": "mat-Socket", "reflectance":[0.8,0.8,0.8]},
 		{"type":"dielectric", "name": "mat-Sphere1"},
 		{"type":"diffuse", "name": "mat-Sphere2"},
-		{"type":"principled", "name": "mat-Sphere", "roughness": 0.4, "specular_transmission": 0.6}
+		{"type":"diffuse", "name": "mat-Sphere", "roughness": 0.4, "specular_transmission": 0.6}
 	],
 	"shapes": [
 		{"type":"rectangle", "name":"Ground", "width":10, "height":10},

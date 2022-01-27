@@ -1,6 +1,8 @@
 set(SRC 
     IG_Config.h
     Camera.h
+    CDF.cpp
+    CDF.h
     Color.h 
     DebugMode.h
     Image.cpp

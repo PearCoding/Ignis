@@ -36,7 +36,7 @@ fn @k_bi(v: Vec3) = vec3_neg(v);
 
 fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) = min(basis.phi_count - 1, max(0, (phi * (basis.phi_count as f32) * flt_inv_pi / 2) as i32));
 fn @k_multi_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> (i32, i32) {
-    let i = Interval::binary_search(basis.theta_count, @|k| basis.theta_basis(k).lower <= theta);
+    let i = interval::binary_search(basis.theta_count, @|k| basis.theta_basis(k).lower <= theta);
     let j = k_phi_index(phi, basis.theta_basis(i));
     (i, j)
 }

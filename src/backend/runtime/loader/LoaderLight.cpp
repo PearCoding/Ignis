@@ -1,4 +1,5 @@
 #include "LoaderLight.h"
+#include "CDF.h"
 #include "Loader.h"
 #include "LoaderTexture.h"
 #include "Logger.h"
@@ -50,6 +51,20 @@ static std::string setup_sky(const std::string& name, const std::shared_ptr<Pars
     SkyModel model(ground, ea, turbidity);
     model.save(path);
     return path;
+}
+
+static std::tuple<std::string, size_t, size_t> setup_cdf(const std::string& filename)
+{
+    std::string name = std::filesystem::path(filename).stem();
+
+    std::filesystem::create_directories("data/"); // Make sure this directory exists
+    std::string path = "data/cdf_" + ShaderUtils::escapeIdentifier(name) + ".bin";
+
+    size_t slice_conditional;
+    size_t slice_marginal;
+    CDF::computeForImage(filename, path, slice_conditional, slice_marginal, true);
+
+    return { path, slice_conditional, slice_marginal };
 }
 
 static void light_point(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
@@ -167,11 +182,13 @@ static void light_sun(std::ostream& stream, const std::string& name, const std::
 static void light_sky(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
     const std::string path = setup_sky(name, light);
+    const auto cdf         = setup_cdf(path);
     const std::string id   = ShaderUtils::escapeIdentifier(name);
 
     stream << "  let tex_" << id << "   = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image(\"" << path << "\"), false, false);" << std::endl
+           << "  let cdf_" << id << "   = cdf::make_cdf_2d(device.load_buffer(\"" << std::get<0>(cdf) << "\"), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
            << "  let light_" << id << " = make_environment_light_textured(" << ctx.Environment.SceneDiameter / 2
-           << ", tex_" << id << ", 0, 0);" << std::endl;
+           << ", tex_" << id << ", cdf_" << id << ", 0, 0);" << std::endl;
 }
 
 static void light_cie_uniform(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
@@ -250,6 +267,8 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
 {
     IG_UNUSED(name);
 
+    const std::string id = ShaderUtils::escapeIdentifier(name);
+
     if (light->property("radiance").type() == Parser::PT_STRING) {
         float theta_off = light->property("theta").getNumber(0.0f) * Deg2Rad;
         float phi_off   = light->property("phi").getNumber(0.0f) * Deg2Rad;
@@ -261,14 +280,26 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
             return; //TODO
         }
 
-        ShadingTree tree;
-        stream << LoaderTexture::generate(tex_name, *tex, ctx, tree)
-               << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_environment_light_textured(" << ctx.Environment.SceneDiameter / 2
-               << ", tex_" << ShaderUtils::escapeIdentifier(tex_name) << ", "
-               << theta_off << ", " << phi_off << ");" << std::endl;
+        const std::string tex_path = LoaderTexture::getFilename(*tex, ctx);
+        if (tex_path.empty()) {
+            ShadingTree tree;
+            stream << LoaderTexture::generate(tex_name, *tex, ctx, tree)
+                   << "  let light_" << id << " = make_environment_light_textured_naive(" << ctx.Environment.SceneDiameter / 2
+                   << ", tex_" << ShaderUtils::escapeIdentifier(tex_name) << ", "
+                   << theta_off << ", " << phi_off << ");" << std::endl;
+        } else {
+            const auto cdf = setup_cdf(tex_path);
+            ShadingTree tree;
+            stream << LoaderTexture::generate(tex_name, *tex, ctx, tree)
+                   << "  let cdf_" << id << "   = cdf::make_cdf_2d(device.load_buffer(\"" << std::get<0>(cdf) << "\"), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
+                   << "  let light_" << id << " = make_environment_light_textured(" << ctx.Environment.SceneDiameter / 2
+                   << ", tex_" << ShaderUtils::escapeIdentifier(tex_name)
+                   << ", cdf_" << id << ", "
+                   << theta_off << ", " << phi_off << ");" << std::endl;
+        }
     } else {
         const Vector3f color = ctx.extractColor(*light, "radiance");
-        stream << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_environment_light(" << ctx.Environment.SceneDiameter / 2
+        stream << "  let light_" << id << " = make_environment_light(" << ctx.Environment.SceneDiameter / 2
                << ", " << ShaderUtils::inlineColor(color) << ");" << std::endl;
     }
 }

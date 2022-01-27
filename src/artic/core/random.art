@@ -75,6 +75,15 @@ fn @spherical_from_dir(dir: Vec3) -> (f32, f32) {
     (theta, phi)
 }
 
+fn @dir_from_spherical(theta: f32, phi: f32) -> Vec3 {
+    let s = math_builtins::sin(theta);
+    let c = math_builtins::cos(theta);
+    let x = s * math_builtins::cos(phi);
+    let y = s * math_builtins::sin(phi);
+    let z = c;
+    make_vec3(x, y, z)
+}
+
 // Samples a point uniformly on a triangle
 fn @sample_triangle(mut u: f32, mut v: f32, v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
     if (u + v > 1) {

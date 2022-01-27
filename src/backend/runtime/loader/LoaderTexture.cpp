@@ -90,4 +90,20 @@ std::string LoaderTexture::generate(const std::string& name, const Parser::Objec
     stream << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_invalid_texture();" << std::endl;
     return stream.str();
 }
+
+std::string LoaderTexture::getFilename(const Parser::Object& obj, const LoaderContext& ctx)
+{
+    for (size_t i = 0; _generators[i].Loader; ++i) {
+        if (_generators[i].Name == obj.pluginType()) {
+            if (_generators[i].Loader == tex_image) {
+                return ctx.handlePath(obj.property("filename").getString());
+            } else {
+                return {};
+            }
+        }
+    }
+
+    IG_LOG(L_ERROR) << "No texture type '" << obj.pluginType() << "' available" << std::endl;
+    return {};
+}
 } // namespace IG

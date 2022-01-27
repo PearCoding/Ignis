@@ -1,6 +1,17 @@
+mod cdf {
+use super as all;
+use super::math_builtins;
+use super::interval;
+
+type DeviceBuffer = all::DeviceBuffer;
+type Vec2 = all::Vec2;
+
+// This implementation of CDF omits the first 0 entry and only contains [x1, x2, ..., xn-1, 1]
 struct CDF1D {
-    data: &[f32],
-    size: i32
+    data: DeviceBuffer,
+    size: i32, // This is the full cdf size, therefore e.g., if data has size = s, cdf has size = s + 1
+    off:  i32, // Offset in the device buffer
+    get:  fn (i32) -> f32
 }
 
 struct Sample1d {
@@ -8,40 +19,48 @@ struct Sample1d {
     pdf: f32
 }
 
-fn @make_cdf_1d(data: &[f32], size: i32) = CDF1D {
+fn @make_cdf_1d(data: DeviceBuffer, size: i32, off: i32) = CDF1D {
     data = data,
-    size = size
+    size = size,
+    off  = off,
+    get  = @|i| if i == 0 { 0 } else { data.load_f32(i - 1 + off) },
 };
 
 fn @sample_cdf_1d_rem(u: f32, cdf: CDF1D) -> (Sample1d, i32) {
-    let off = Interval::binary_search(cdf.size, @|i:i32| cdf.data(i) <= u);
-    let rem = u - cdf.data(off);
-    let pdf = cdf.data(off+1) - cdf.data(off);
+    let mut off = interval::binary_search(cdf.size, @|i:i32| cdf.get(i) <= u);
+    while off > 0 && cdf.get(off) >= u {
+        --off;
+    }
 
-    (
-        Sample1d {
-            pos = (off as f32 + rem / pdf) / (cdf.size as f32 - 1),
-            pdf = pdf
-        },
+    let rem = u - cdf.get(off);
+    let pdf = cdf.get(off + 1) - cdf.get(off);
+
+    (Sample1d {
+        pos = all::clampf((off as f32 + rem / pdf) / (cdf.size as f32 - 1), 0, 1),
+        pdf = pdf
+    },
     off)
 }
 
 fn @sample_cdf_1d(u: f32, cdf: CDF1D) -> Sample1d {
     let (sample, _) = sample_cdf_1d_rem(u, cdf);
-
     sample
 }
 
-fn @pdf_cdf_1d(x: f32, cdf: CDF1D) -> f32 {
-    let off = min((x * (cdf.size as f32 - 1)) as i32, cdf.size - 2);
+fn @pdf_cdf_1d_rem(x: f32, cdf: CDF1D) -> (f32, i32) {
+    let off = all::clamp((x * (cdf.size as f32 - 1)) as i32, 0, cdf.size - 2);
+    (cdf.get(off + 1) - cdf.get(off), off)
+}
 
-    cdf.data(off+1) - cdf.data(off)
+fn @pdf_cdf_1d(x: f32, cdf: CDF1D) -> f32 {
+    let (pdf, _) = pdf_cdf_1d_rem(x, cdf);
+    pdf
 }
 
 ////////////////// 2D
 struct CDF2D {
-    conditional:  &[f32],
-    marginal:     &[f32],
+    conditional:   fn (i32) -> CDF1D,
+    marginal:      CDF1D,
     size_slice:    i32,
     size_marginal: i32
 }
@@ -52,27 +71,28 @@ struct Sample2d {
 }
 
 // First entry is the marginal!
-fn @make_cdf_2d(data: &[f32], size_x: i32, size_y: i32) = CDF2D {
-    conditional   = &data(size_y) as &[f32],
-    marginal      = data,
-    size_slice    = size_x,
-    size_marginal = size_y
+fn @make_cdf_2d(data: DeviceBuffer, size_x: i32, size_y: i32) = CDF2D {
+    conditional   = @|i| make_cdf_1d(data, size_x + 1, size_y + i * size_x),
+    marginal      = make_cdf_1d(data, size_y + 1, 0),
+    size_slice    = size_x + 1,
+    size_marginal = size_y + 1
 };
 
 fn @sample_cdf_2d(uv: Vec2, cdf: CDF2D) -> Sample2d {
-    let (sample1, off) = sample_cdf_1d_rem(uv.x, make_cdf_1d(cdf.marginal, cdf.size_marginal));
-    let sample2 = sample_cdf_1d(uv.y, make_cdf_1d(&cdf.conditional(off * cdf.size_slice) as &[f32], cdf.size_slice));
+    let (sample1, off) = sample_cdf_1d_rem(uv.y, cdf.marginal);
+    let sample2 = sample_cdf_1d(uv.x, cdf.conditional(off));
 
     Sample2d {
-        pos = make_vec2(sample2.pos, sample1.pos),
-        pdf = sample2.pdf * sample1.pdf
+        pos = all::make_vec2(sample2.pos, sample1.pos),
+        pdf = sample1.pdf * sample2.pdf * (cdf.size_slice * cdf.size_marginal) as f32
     }
 }
 
 fn @pdf_cdf_2d(p: Vec2, cdf: CDF2D) -> f32 {
-    let pdf1 = pdf_cdf_1d(p.y, make_cdf_1d(cdf.marginal, cdf.size_marginal));
-    let off  = min((p.y * (cdf.size_marginal as f32 - 1)) as i32, cdf.size_marginal - 2);
-    let pdf2 = pdf_cdf_1d(p.x, make_cdf_1d(&cdf.conditional(off * cdf.size_slice) as &[f32], cdf.size_slice));
+    let (pdf1, off) = pdf_cdf_1d_rem(p.y, cdf.marginal);
+    let pdf2        = pdf_cdf_1d(p.x, cdf.conditional(off));
     
-    pdf1 * pdf2
+    pdf1 * pdf2 * (cdf.size_slice * cdf.size_marginal) as f32
+}
+
 }
