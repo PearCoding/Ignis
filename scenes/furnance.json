@@ -14,7 +14,7 @@
 		"size": [1000, 1000]
 	},
 	"bsdfs": [
-		{"type":"disney", "name": "mat-Sphere", "base_color": [1,1,1]}
+		{"type":"principled", "name": "mat-Sphere", "base_color": [1,1,1], "roughness":0}
 	],
 	"shapes": [
 		{"type":"ply", "name":"Sphere", "filename":"meshes/Sphere.ply"}

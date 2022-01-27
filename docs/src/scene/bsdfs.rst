@@ -308,9 +308,9 @@ Phong (:monosp:`phong`)
 
 .. NOTE:: We do not recommend to use this bsdf for new projects, as it disregards energy conversation or other PBR principles
 
-.. _bsdf-disney:
+.. _bsdf-principled:
 
-Disney *Principled* (:monosp:`disney`)
+Disney *Principled* (:monosp:`principled`)
 --------------------------------------
 
 .. objectparameters::
@@ -390,9 +390,9 @@ Disney *Principled* (:monosp:`disney`)
 
 .. subfigend::
   :width: 0.6
-  :label: fig-disney
+  :label: fig-principled
 
-.. WARNING:: The :monosp:`disney` bsdf is still experimental
+.. WARNING:: The :monosp:`principled` bsdf is still experimental
 
 .. _bsdf-blend:
 

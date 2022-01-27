@@ -68,8 +68,8 @@ fn @fresnel_diffuse_factor(eta: f32) -> f32 {
 
 
 fn @schlick_approx(f: f32) -> f32{
-    let s = 1 - f;
-    s * s * s * s * s
+    let s = clampf(f, 0, 1);
+    (s * s) * (s * s) * s
 }
 
 fn @dielectric(absHdotV: f32, eta_i: f32, eta_t: f32)-> f32{
@@ -110,6 +110,6 @@ fn @schlick_from_relative_ior(relative_ior: f32)-> f32{
 }
 
 fn @schlick_r0(eta: f32)-> f32{
-    let factor = (eta - 1) / (eta + 1);
+    let factor = clampf((eta - 1) / (eta + 1), 0, 1);
     factor * factor
 }

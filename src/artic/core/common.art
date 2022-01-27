@@ -150,43 +150,7 @@ fn @min(a: i32, b: i32) = if a < b { a } else { b };
 fn @max(a: i32, b: i32) = if a > b { a } else { b };
 fn @clamp(v: i32, l: i32, u: i32) = min(u, max(l, v));
 
-fn @abs_cos_theta(v: Vec3)-> f32{
-    math_builtins::fabs(v.z)
-}
+fn @clampf(v: f32, l: f32, u: f32) = math_builtins::fmin[f32](u, math_builtins::fmax[f32](l, v));
 
-fn @cos_theta(v: Vec3)-> f32{
-    v.z
-}
-
-fn @sin_theta(v: Vec3)-> f32{
-    math_builtins::sqrt((sin_2_theta(v)))
-}
-
-fn @sin_2_theta(v: Vec3)-> f32{
-    math_builtins::fmax[f32](0, 1 - cos_2_theta(v))
-}
-
-fn @cos_2_theta(v: Vec3)->f32{
-    cos_theta(v) * cos_theta(v)
-}
-
-fn @sin_2_phi(v: Vec3)->f32{
-    let s = sin_2_theta(v);
-    if (s  <= 0) { return (0) }
-
-	math_builtins::fmin[f32](1, v.y * v.y / s)
-}
-
-fn @tan_theta(v: Vec3)->f32{
-    if (abs_cos_theta(v) <=  0) { return (0) }
-    sin_theta(v) / cos_theta(v)
-}
-
-fn @cos_2_phi(v: Vec3)->f32{
-    let s = sin_2_theta(v);
-    if (s  <= 0) { return (0) }
-
-    math_builtins::fmin[f32](1, v.x * v.x / s)
-}
 
 #[import(cc = "device", name = "llvm.debugtrap")] fn ig_trap() -> ();

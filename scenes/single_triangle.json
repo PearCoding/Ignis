@@ -14,7 +14,7 @@
 		"size": [1000, 1000]
 	},
 	"bsdfs": [
-		{"type":"disney", "name": "mat", "base_color": [1,1,1]}
+		{"type":"principled", "name": "mat", "base_color": [1,1,1]}
 	],
 	"shapes": [
 		{"type":"triangle", "name":"Triangle"}

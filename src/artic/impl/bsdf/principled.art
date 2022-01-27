@@ -75,24 +75,14 @@ fn @evalDisneyFresnelTerm(closure: EvalClosure) -> Color {
     let HdL = super::absolute_cos(closure.wi, closure.h);
     let HdV = super::absolute_cos(closure.wo, closure.h);
 
-    let color = tint_color(closure.general.base_color);
+    let f1 = super::make_gray_color(super::fresnel(closure.general.eta, HdV).factor);
 
+    let color = tint_color(closure.general.base_color);
     let a  = super::color_lerp(super::white, color, closure.general.specular_tint);
     let r0 = super::color_lerp(super::color_mulf(a, super::schlick_r0(closure.general.eta)), closure.general.base_color, closure.general.metallic);
-    let f1 = super::make_gray_color(super::fresnel(closure.general.eta, HdV).factor);
     let f2 = super::schlick(r0, super::white, HdL);
 
     super::color_lerp(f1, f2, closure.general.metallic)
-}
-
-fn @evalRetroDiffuseTerm(closure: EvalClosure) -> f32 {
-    let r2    = closure.general.roughness * closure.general.roughness;
-    let HdotL = super::vec3_dot(closure.wi, closure.h);
-    let fd90  = 0.5 + 2 * HdotL * HdotL * r2;
-    let lk    = super::schlick_approx(shading::abs_cos_theta(closure.wi));
-    let vk    = super::schlick_approx(shading::abs_cos_theta(closure.wo));
-
-    super::flt_inv_pi * fd90 * (lk + vk + lk * vk * (fd90 - 1))
 }
 
 fn @evalSubsurfaceTerm(closure: EvalClosure) -> f32 {
@@ -114,20 +104,21 @@ fn @evalSheenTerm(closure: EvalClosure) -> Color {
 }
 
 fn @evalDiffuseTerm(closure: EvalClosure) -> f32 {
-    let lk = super::schlick_approx(shading::abs_cos_theta(closure.wi));
-    let vk = super::schlick_approx(shading::abs_cos_theta(closure.wo));
+    let HdotL = super::vec3_dot(closure.wi, closure.h);
+    let fd90  = 0.5 + 2 * HdotL * HdotL * closure.general.roughness;
+    let lk    = super::schlick_approx(shading::abs_cos_theta(closure.wi));
+    let vk    = super::schlick_approx(shading::abs_cos_theta(closure.wo));
+    let fd    = (1 - lk + fd90 * lk) *  (1 - vk + fd90 * vk);
 
     let d = if closure.general.thin {1 - closure.general.flatness + evalSubsurfaceTerm(closure) * closure.general.flatness } else { 1 };
 
-    super::flt_inv_pi * d * (1 - 0.5 * lk) * (1 - 0.5 * vk)
+    super::flt_inv_pi * fd * d
 }
 
 fn @evalReflectionTerm(closure: EvalClosure) -> Color {
     let micro = getReflectionMicro(closure.general);
 
-    let F = evalDisneyFresnelTerm(closure);
-    if true /*micro.is_delta*/ { return(F) };
-
+    let F    = evalDisneyFresnelTerm(closure);
     let D    = micro.D(closure.h);
     let G    = micro.G(closure.wi, closure.wo, closure.h);
     let norm = micro.norm(closure.wi, closure.wo, closure.h);
@@ -139,18 +130,8 @@ fn @evalReflectionTerm(closure: EvalClosure) -> Color {
 fn @evalRefractionTerm(closure: EvalClosure) -> Color {
     let micro = getRefractionMicro(closure.general);
 
-    let HdL = super::absolute_cos(closure.wi, closure.h);
-    let F   = super::fresnel(closure.general.eta, HdL).factor; 
-    if micro.is_delta {
-        if closure.general.thin {
-            return(super::color_mulf(
-                super::make_color(math_builtins::sqrt[f32](closure.general.base_color.r), math_builtins::sqrt[f32](closure.general.base_color.g), math_builtins::sqrt[f32](closure.general.base_color.b)),
-                1-F))
-        } else {
-            return(super::color_mulf(closure.general.base_color, 1-F))
-        }
-    }
-
+    let HdL  = super::absolute_cos(closure.wi, closure.h);
+    let F    = super::fresnel(closure.general.eta, HdL).factor; 
     let D    = micro.D(closure.h);
     let G    = micro.G(closure.wi, closure.wo, closure.h);
     let norm = micro.norm(closure.wi, closure.wo, closure.h);
@@ -191,6 +172,8 @@ struct LobeDistribution {
 }
 
 fn @calcLobeDistribution(closure: Closure, wo: Vec3) -> LobeDistribution {
+    // if true {return(LobeDistribution{ diff_refl = 1, diff_trans = 0, spec_refl = 0, spec_trans = 0 }) }
+
     let diff_refl = closure.roughness * closure.roughness * (1 - closure.metallic) * (1 - closure.specular_transmission);
 
     let has_transmission = closure.diffuse_transmission > 0 || closure.specular_transmission > 0;
@@ -260,9 +243,8 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         if !is_transmission {
             let diffuse_weight = (1 - metallic) * (1 - specular_transmission);
 
-            let retro  = principled::evalRetroDiffuseTerm(eval_closure) * diffuse_weight;
             let sheenf = color_mulf(principled::evalSheenTerm(eval_closure), diffuse_weight);
-            contrib    = color_add(contrib, color_add(color_mulf(base_color, retro * aNdL), color_mulf(sheenf, aNdL)));
+            contrib    = color_add(contrib, color_mulf(sheenf, aNdL));
 
             let diff = principled::evalDiffuseTerm(eval_closure) * (if thin { 1 - diffuse_transmission } else { diffuse_weight });
             contrib  = color_add(contrib, color_mulf(base_color, diff * aNdL)); 
@@ -300,8 +282,8 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                 let pwi      = shading::make_positive_hemisphere(wi);
                 let micro    = principled::getReflectionMicro(closure);
                 let H        = vec3_halfway(pwo, pwi);
-                let dot      = vec3_dot(pwi, H); // Is always positive
-                let refl_pdf = if dot <= flt_eps { 0 } else { micro.pdf(pwi, pwo, H) * shading::halfway_reflective_jacobian(dot) };
+                //let dot      = vec3_dot(pwi, H); // Is always positive
+                let refl_pdf = micro.pdf(pwi, pwo, H) * shading::halfway_reflective_jacobian(shading::abs_cos_theta(wi)/*dot*/);
 
                 lobes.diff_refl * diff_pdf + lobes.spec_refl * refl_pdf
             } else {
