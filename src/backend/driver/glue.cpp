@@ -18,7 +18,9 @@
 
 #include <atomic>
 #include <cstring>
+#include <fstream>
 #include <iomanip>
+#include <iterator>
 #include <mutex>
 #include <thread>
 #include <type_traits>
@@ -384,6 +386,44 @@ struct Interface {
         }
     }
 
+    std::vector<uint8_t> readBufferFile(const std::string& filename)
+    {
+        std::ifstream file(filename, std::ios::binary);
+        file.unsetf(std::ios::skipws);
+
+        std::streampos fileSize;
+        file.seekg(0, std::ios::end);
+        fileSize = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        std::vector<uint8_t> vec;
+        vec.reserve(fileSize);
+
+        vec.insert(vec.begin(),
+                   std::istream_iterator<uint8_t>(file),
+                   std::istream_iterator<uint8_t>());
+        return vec;
+    }
+
+    inline const DeviceBuffer& loadBuffer(int32_t dev, const std::string& filename)
+    {
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+
+        auto& buffers = devices[dev].buffers;
+        auto it       = buffers.find(filename);
+        if (it != buffers.end())
+            return it->second;
+
+        IG_LOG(IG::L_DEBUG) << "Loading buffer " << filename << std::endl;
+        const auto vec = readBufferFile(filename);
+
+        if ((vec.size() % sizeof(int32_t)) != 0)
+            IG_LOG(IG::L_WARNING) << "Buffer " << filename << " is not properly sized!" << std::endl;
+
+        return buffers[filename] = std::move(DeviceBuffer(
+                   std::move(copyToDevice(dev, vec)), vec.size()));
+    }
+
     inline const DeviceBuffer& requestBuffer(int32_t dev, const std::string& name, int32_t size)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
@@ -395,9 +435,8 @@ struct Interface {
 
         auto& buffers = devices[dev].buffers;
         auto it       = buffers.find(name);
-        if (it != buffers.end() && std::get<1>(it->second) == size) {
+        if (it != buffers.end() && std::get<1>(it->second) == size)
             return it->second;
-        }
 
         IG_LOG(IG::L_DEBUG) << "Requested buffer " << name << " with " << size << " bytes" << std::endl;
         return buffers[name] = std::move(DeviceBuffer(
@@ -789,6 +828,13 @@ void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* wi
     *pixels   = const_cast<float*>(std::get<0>(img).data());
     *width    = std::get<1>(img);
     *height   = std::get<2>(img);
+}
+
+void ignis_load_buffer(int32_t dev, const char* file, uint8_t** data, int32_t* size)
+{
+    auto& img = sInterface->loadBuffer(dev, file);
+    *data     = const_cast<uint8_t*>(std::get<0>(img).data());
+    *size     = std::get<1>(img);
 }
 
 void ignis_request_buffer(int32_t dev, const char* name, uint8_t** data, int size)

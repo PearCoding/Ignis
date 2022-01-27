@@ -68,7 +68,7 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool) -> Prim {
 }
 
 fn @make_gpu_ent(j: i32, objs: &[EntityLeaf1], is_nvvm: bool) -> EntityLeaf {
-    let d  = make_gpu_buffer(&objs(j) as &addrspace(1)[u8], is_nvvm);
+    let d  = make_gpu_buffer(&objs(j) as &addrspace(1)[u8], 0, is_nvvm);
     let e0 = d.load_vec4(0);
     let e1 = d.load_vec4(4);
     let m  = d.load_mat3x4(8);

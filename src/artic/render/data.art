@@ -61,6 +61,7 @@ struct DeviceBuffer {
     store_mat3x3:  fn (i32, Mat3x3) -> (),
     store_mat3x4:  fn (i32, Mat3x4) -> (),
     store_mat4x4:  fn (i32, Mat4x4) -> (),
+    count:         i32, // Given in units of i32, not bytes! Zero if unknown
     has_alignment: bool // True if vec2, vec3, int2 and int3 are expected to be like vec4 or int4 in memory
 }
 

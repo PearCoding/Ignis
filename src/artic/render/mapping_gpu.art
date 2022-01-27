@@ -661,7 +661,7 @@ fn @amdgpu_load_vec4(p: &addrspace(1)[f32], elem: i32) {
     make_vec4(v(0), v(1), v(2), v(3))
 }
 
-fn @make_gpu_buffer(p: &addrspace(1)[u8], is_nvvm: bool) -> DeviceBuffer {
+fn @make_gpu_buffer(p: &addrspace(1)[u8], count: i32, is_nvvm: bool) -> DeviceBuffer {
     let load_f32  = if is_nvvm { @|i: i32| nvvm_ldg_f32(&((p as &addrspace(1)[f32])(i))) } else { @|i: i32| (p as &addrspace(1)[f32])(i) };
     let load_i32  = if is_nvvm { @|i: i32| nvvm_ldg_i32(&((p as &addrspace(1)[i32])(i))) } else { @|i: i32| (p as &addrspace(1)[i32])(i) };
     let load_vf32 = if is_nvvm { @|i: i32| nvvm_ldg4_f32(&(&p(i * 4) as &addrspace(1)[simd[f32 * 4]](0))) } else { @|i: i32| (&p(i * 4) as &addrspace(1)[simd[f32 * 4]])(0) };
@@ -749,6 +749,7 @@ fn @make_gpu_buffer(p: &addrspace(1)[u8], is_nvvm: bool) -> DeviceBuffer {
             q(i +  8) = v.col(2).x; q(i +  9) = v.col(2).y; q(i + 10) = v.col(2).z; q(i + 11) = v.col(2).w;
             q(i + 12) = v.col(3).x; q(i + 13) = v.col(3).y; q(i + 14) = v.col(3).z; q(i + 15) = v.col(3).w;
         },
+        count         = count,
         has_alignment = true
     }
 }
@@ -832,10 +833,16 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_rays(dev_id, &mut rays);
         rays
     },
+    load_buffer = @ |filename| {
+        let mut ptr  : &[u8];
+        let mut size : i32;
+        ignis_load_buffer(dev_id, filename, &mut ptr, &mut size);
+        make_gpu_buffer(ptr as &addrspace(1)[u8], (size as i64 / sizeof[i32]()) as i32, is_nvvm)
+    },
     request_buffer = @ |name, size| {
         let mut ptr : &[u8];
         ignis_request_buffer(dev_id, name, &mut ptr, size);
-        accb(ptr)
+        make_gpu_buffer(ptr as &addrspace(1)[u8], (size as i64 / sizeof[i32]()) as i32, is_nvvm)
     }
 };
 
@@ -851,7 +858,7 @@ fn @make_nvvm_device(dev: i32) -> Device {
         dev_id,
         nvvm_accelerator(dev),
         make_nvvm_min_max(),
-        @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], true),
+        @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], 0, true),
         atomics,
         true
     )
@@ -869,7 +876,7 @@ fn @make_amdgpu_device(dev: i32) -> Device {
         dev_id,
         amdgpu_accelerator(dev),
         make_amdgpu_min_max(),
-        @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], false),
+        @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], 0, false),
         atomics,
         false
     )
