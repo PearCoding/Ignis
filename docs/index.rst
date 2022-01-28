@@ -26,6 +26,7 @@ Table of Contents:
    :caption: Scene reference
 
    src/scene/file_format
+   src/scene/externals
    src/scene/shapes
    src/scene/entities
    src/scene/bsdfs

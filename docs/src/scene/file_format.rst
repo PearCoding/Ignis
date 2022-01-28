@@ -26,6 +26,7 @@ Below is a complete scene usable with Ignis as an example.
         "film": {
             "size": [1000, 1000]
         },
+        "externals": [],
         "textures": [],
         "bsdfs": [
             {"type":"diffuse", "name": "mat-Light", "reflectance":[0,0,0]},

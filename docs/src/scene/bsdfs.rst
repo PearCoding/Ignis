@@ -311,7 +311,7 @@ Phong (:monosp:`phong`)
 .. _bsdf-principled:
 
 Disney *Principled* (:monosp:`principled`)
---------------------------------------
+------------------------------------------
 
 .. objectparameters::
 
