@@ -311,6 +311,7 @@ static void bsdf_normalmap(std::ostream& stream, const std::string& name, const 
     const std::string inner = bsdf->property("bsdf").getString();
     ShadingTree tree;
     tree.addColor("map", ctx, *bsdf, Vector3f::Constant(1.0f));
+    tree.addNumber("strength", ctx, *bsdf, 1.0f);
 
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
@@ -321,7 +322,8 @@ static void bsdf_normalmap(std::ostream& stream, const std::string& name, const 
         stream << tree.pullHeader()
                << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_normalmap(surf, @|surf2| -> Bsdf { "
                << " bsdf_" << ShaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) }, "
-               << tree.getInline("map") << ");" << std::endl;
+               << tree.getInline("map") << ","
+               << tree.getInline("strength") << ");" << std::endl;
     }
 }
 
@@ -330,7 +332,7 @@ static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const st
     const std::string inner = bsdf->property("bsdf").getString();
     ShadingTree tree;
     tree.addTexture("map", ctx, *bsdf); // Better use some node system with explicit gradients...
-    tree.addNumber("strength", ctx, *bsdf);
+    tree.addNumber("strength", ctx, *bsdf, 1.0f);
 
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;

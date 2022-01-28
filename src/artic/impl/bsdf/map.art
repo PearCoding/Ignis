@@ -8,9 +8,10 @@ fn @shading_normal_adjoint(in_dir: Vec3, out_dir: Vec3, ns: Vec3, ng: Vec3) -> f
 
 // Normal Mapping
 // Normal given in [0, 1] RGB fashion
-fn @make_normalmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color) -> Bsdf {
-    let N    = vec3_normalize(mat3x3_left_mul(surf.local, vec3_normalize(make_vec3(2 * normal.r - 1, 2 * normal.g - 1, 2 * normal.b - 1))));
-    let bsdf = @bsdf_factory(SurfaceElement{
+fn @make_normalmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color, strength: f32) -> Bsdf {
+    let oN    = vec3_normalize(mat3x3_left_mul(surf.local, vec3_normalize(make_vec3(2 * normal.r - 1, 2 * normal.g - 1, 2 * normal.b - 1))));
+    let N     = if strength != 1 { vec3_normalize(vec3_add(surf.local.col(2), vec3_mulf(vec3_sub(oN, surf.local.col(2)), strength))) } else { oN };
+    let bsdf  = @bsdf_factory(SurfaceElement{
         is_entering = surf.is_entering,
         point       = surf.point,
         face_normal = surf.face_normal,
