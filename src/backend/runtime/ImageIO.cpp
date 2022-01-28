@@ -15,8 +15,13 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
 {
     IG_ASSERT(layer_ptrs.size() == layer_names.size(), "Expected layer pointers and layer names of the same size");
 
+    // Make sure the directory containing the new file exists
+    if (!path.parent_path().empty())
+        std::filesystem::create_directories(path.parent_path());
+
     EXRHeader header;
     InitEXRHeader(&header);
+    // header.compression_type = TINYEXR_COMPRESSIONTYPE_ZIP;
     header.compression_type = TINYEXR_COMPRESSIONTYPE_PIZ;
 
     EXRImage image;

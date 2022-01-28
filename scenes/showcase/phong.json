@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"bsdfs": [
+		{"type":"phong", "name": "mat-Sphere"}
+	]
+}

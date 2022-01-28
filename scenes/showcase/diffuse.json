@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"bsdfs": [
+		{"type":"diffuse", "name": "mat-Sphere"}
+	]
+}

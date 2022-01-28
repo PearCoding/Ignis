@@ -118,9 +118,16 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime)
 
         // Framebuffer
         if (aov == 0) {
-            image_names[3 * aov + 0] = "Default.B";
-            image_names[3 * aov + 1] = "Default.G";
-            image_names[3 * aov + 2] = "Default.R";
+            if (aov_count == 1) {
+                // If we have no aovs, stick to the standard naming
+                image_names[3 * aov + 0] = "B";
+                image_names[3 * aov + 1] = "G";
+                image_names[3 * aov + 2] = "R";
+            } else {
+                image_names[3 * aov + 0] = "Default.B";
+                image_names[3 * aov + 1] = "Default.G";
+                image_names[3 * aov + 2] = "Default.R";
+            }
         } else {
             std::string name         = runtime.aovs()[aov - 1];
             image_names[3 * aov + 0] = name + ".B";

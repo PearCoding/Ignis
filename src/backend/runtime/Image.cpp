@@ -98,29 +98,19 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 
         int channels = 0;
         for (int c = 0; c < exr_header.num_channels; ++c) {
-            size_t len = strlen(exr_header.channels[c].name);
-            if (len >= 2)
-                continue; // Ignore AOVs
+            std::string name = std::string(exr_header.channels[c].name);
+            std::transform(name.begin(), name.end(), name.begin(), ::tolower);
 
-            char channel = exr_header.channels[c].name[len - 1];
-            switch (channel) {
-            case 'A':
+            if (name == "a" || name == "default.a")
                 idxA = c;
-                break;
-            case 'R':
+            else if (name == "r" || name == "default.r")
                 idxR = c;
-                break;
-            case 'G':
+            else if (name == "g" || name == "default.g")
                 idxG = c;
-                break;
-            case 'B':
+            else if (name == "b" || name == "default.b")
                 idxB = c;
-                break;
-            default:
-            case 'Y':
+            else if (name == "y" || name == "default.y")
                 idxY = c;
-                break;
-            }
             ++channels;
         }
 

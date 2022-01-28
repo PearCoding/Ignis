@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"bsdfs": [
+		{"type":"conductor", "name": "mat-Sphere"}
+	]
+}

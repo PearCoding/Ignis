@@ -10,7 +10,7 @@ import sys
 # -- Project information -----------------------------------------------------
 
 project = 'Ignis'
-copyright = '2020-2021, Ignis-Project'
+copyright = '2020-2022, Ignis-Project'
 author = 'Ömercan Yazici'
 
 
