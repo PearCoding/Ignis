@@ -14,6 +14,6 @@ fn @make_material(bsdf: Bsdf) = Material {
 // Creates a material that emits light
 fn @make_emissive_material(surf: SurfaceElement, bsdf: Bsdf, light: Light) = Material {
     bsdf = bsdf,
-    emission = @ |in_dir| light.emission(in_dir, surf.prim_coords),
+    emission = @ |in_dir| light.emission(in_dir, surf),
     is_emissive = true
 };

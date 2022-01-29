@@ -130,10 +130,14 @@ static std::string inline_entity(const Entity& entity, uint32 shapeID)
 
 static void light_area(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
-    IG_UNUSED(name);
+    ShadingTree tree(name);
+    tree.onlyUseCoords(true);
 
     const std::string entityName = light->property("entity").getString();
-    const auto radiance          = ctx.extractColor(*light, "radiance");
+    tree.addColor("radiance", ctx, *light, Vector3f::Constant(1.0f));
+
+    // Not exposed in the documentation, but used internally until we have proper shading nodes
+    tree.addColor("radiance_scale", ctx, *light, Vector3f::Constant(1.0f));
 
     uint32 entity_id = 0;
     if (!ctx.Environment.EntityIDs.count(entityName))
@@ -148,8 +152,9 @@ static void light_area(std::ostream& stream, const std::string& name, const std:
 
     stream << "  let ae_" << ShaderUtils::escapeIdentifier(name) << " = make_shape_area_emitter(" << inline_entity(entity, shape_id)
            << ", device.load_specific_shape(" << shape.FaceCount << ", " << shape.VertexCount << ", " << shape.NormalCount << ", " << shape.TexCount << ", " << shape_offset << ", dtb.shapes));" << std::endl
+           << tree.pullHeader()
            << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_area_light(ae_" << ShaderUtils::escapeIdentifier(name) << ", "
-           << ShaderUtils::inlineColor(radiance) << ");" << std::endl;
+           << " @|tex_coords| { maybe_unused(tex_coords); color_mul(" << tree.getInline("radiance_scale") << ", " << tree.getInline("radiance") << ") });" << std::endl;
 }
 
 static void light_directional(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)

@@ -148,7 +148,7 @@ static void bsdf_metallic_roughness(std::ostream& stream, const std::string& nam
 
     // Not exposed in the documentation, but used internally
     tree.addColor("base_color_scale", ctx, *bsdf, Vector3f::Ones());
-    tree.addNumber("metallic_scale", ctx, *bsdf, 0);
+    tree.addNumber("metallic_scale", ctx, *bsdf, 1);
 
     setup_microfacet(tree, bsdf, ctx);
     stream << tree.pullHeader()
@@ -226,17 +226,22 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
 
     bool is_thin = bsdf->property("thin").getBool(false);
 
+    // Not exposed in the documentation, but used internally until we have proper shading nodes
+    tree.addColor("base_color_scale", ctx, *bsdf, Vector3f::Ones());
+    tree.addNumber("metallic_scale", ctx, *bsdf, 1);
+    tree.addNumber("roughness_scale", ctx, *bsdf, 1);
+
     stream << tree.pullHeader()
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_principled_bsdf(surf, "
-           << tree.getInline("base_color") << ", "
+           << "color_mul(" << tree.getInline("base_color_scale") << ", " << tree.getInline("base_color") << "), "
            << tree.getInline("ior") << ", "
            << tree.getInline("diffuse_transmission") << ", "
            << tree.getInline("specular_transmission") << ", "
            << tree.getInline("specular_tint") << ", "
-           << tree.getInline("roughness") << ", "
+           << tree.getInline("roughness_scale") << " * " << tree.getInline("roughness") << ", "
            << tree.getInline("anisotropic") << ", "
            << tree.getInline("flatness") << ", "
-           << tree.getInline("metallic") << ", "
+           << tree.getInline("metallic_scale") << " * " << tree.getInline("metallic") << ", "
            << tree.getInline("sheen") << ", "
            << tree.getInline("sheen_tint") << ", "
            << tree.getInline("clearcoat") << ", "

@@ -34,6 +34,7 @@ static inline std::pair<std::string, NodeChannel> escapeTextureName(const std::s
 
 ShadingTree::ShadingTree(const std::string& prefix)
     : mPrefix(prefix)
+    , mUseOnlyCoords(false)
 {
 }
 
@@ -217,9 +218,9 @@ std::string ShadingTree::lookupTexture(const std::string& name, const LoaderCont
             return "pink";
         }
 
-        mHeaderLines.push_back(LoaderTexture::generate(name, *tex, ctx, *this));
+        mHeaderLines.push_back(LoaderTexture::generate(mPrefix + name, *tex, ctx, *this));
         mLoadedTextures.insert(name);
     }
-    return "tex_" + ShaderUtils::escapeIdentifier(name) + (needColor ? "(surf.tex_coords)" : "");
+    return "tex_" + ShaderUtils::escapeIdentifier(mPrefix + name) + (needColor ? (mUseOnlyCoords ? "(tex_coords)" : "(surf.tex_coords)") : "");
 }
 } // namespace IG

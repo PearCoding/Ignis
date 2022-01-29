@@ -2,6 +2,8 @@
 #include "ImageIO.h"
 #include "Logger.h"
 
+#include <unordered_set>
+
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/rapidjson.h>
@@ -247,6 +249,12 @@ static std::string getMaterialName(const tinygltf::Material& mat, size_t id)
         return mat.name;
 }
 
+inline static bool isMaterialEmissive(const tinygltf::Material& mat)
+{
+    return mat.emissiveTexture.index >= 0
+           || (mat.emissiveFactor.size() == 3 && (mat.emissiveFactor[0] > 0 || mat.emissiveFactor[1] > 0 || mat.emissiveFactor[2] > 0));
+}
+
 static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& parent)
 {
     Transformf transform = parent;
@@ -260,7 +268,7 @@ static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::
         transform.scale(Vector3f(node.scale[0], node.scale[1], node.scale[2]));
 
     if (node.rotation.size() == 4)
-        transform.rotate(Quaternionf(node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3]));
+        transform.rotate(Quaternionf(node.rotation[3], node.rotation[0], node.rotation[1], node.rotation[2]));
 
     if (node.mesh >= 0) {
         size_t primCount           = 0;
@@ -274,7 +282,24 @@ static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::
             obj->setProperty("shape", Property::fromString(name));
             obj->setProperty("bsdf", Property::fromString(getMaterialName(material, (size_t)prim.material)));
             obj->setProperty("transform", Property::fromTransform(transform));
-            scene.addEntity(node.name + "_" + name, obj);
+
+            const std::string entity_name = node.name + "_" + name;
+            scene.addEntity(entity_name, obj);
+
+            if (isMaterialEmissive(material)) {
+                auto light = std::make_shared<Object>(OT_LIGHT, "area");
+                light->setProperty("entity", Property::fromString(entity_name));
+                if (material.emissiveTexture.index >= 0) {
+                    const tinygltf::Texture& tex = model.textures[material.emissiveTexture.index];
+                    light->setProperty("radiance", Property::fromString(getTextureName(tex)));
+                    light->setProperty("radiance_scale", Property::fromVector3(Vector3f(material.emissiveFactor[0], material.emissiveFactor[1], material.emissiveFactor[2])));
+                } else {
+                    light->setProperty("radiance", Property::fromVector3(Vector3f(material.emissiveFactor[0], material.emissiveFactor[1], material.emissiveFactor[2])));
+                }
+
+                scene.addLight("_light_" + entity_name, light);
+            }
+
             ++primCount;
         }
     }
@@ -400,7 +425,7 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
     for (const auto& mat : model.materials) {
         // TODO: Add proper support for texture views etc
         std::string name = getMaterialName(mat, matCounter);
-        auto inner       = std::make_shared<Object>(OT_BSDF, "metallic_roughness");
+        auto inner       = std::make_shared<Object>(OT_BSDF, "principled");
 
         if (mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
             const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
@@ -413,18 +438,17 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
         if (mat.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0) {
             const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.metallicRoughnessTexture.index];
             inner->setProperty("metallic", Property::fromString(getTextureName(tex) + ".b"));
-            inner->setProperty("alpha", Property::fromString(getTextureName(tex) + ".g"));
+            inner->setProperty("roughness", Property::fromString(getTextureName(tex) + ".g"));
             inner->setProperty("metallic_scale", Property::fromNumber(mat.pbrMetallicRoughness.metallicFactor));
-            inner->setProperty("alpha_scale", Property::fromNumber(mat.pbrMetallicRoughness.roughnessFactor));
+            inner->setProperty("roughness_scale", Property::fromNumber(mat.pbrMetallicRoughness.roughnessFactor));
         } else {
             inner->setProperty("metallic", Property::fromNumber(mat.pbrMetallicRoughness.metallicFactor));
-            inner->setProperty("alpha", Property::fromNumber(mat.pbrMetallicRoughness.roughnessFactor));
+            inner->setProperty("roughness", Property::fromNumber(mat.pbrMetallicRoughness.roughnessFactor));
         }
 
         std::shared_ptr<Object> obj = inner;
         if (mat.normalTexture.index >= 0) {
             scene.addBSDF(name + "_inner", inner);
-
             const tinygltf::Texture& tex = model.textures[mat.normalTexture.index];
 
             obj = std::make_shared<Object>(OT_BSDF, "normalmap");

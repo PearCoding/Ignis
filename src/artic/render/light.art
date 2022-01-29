@@ -26,7 +26,7 @@ struct EmissionValue {
 
 // Surface that emits light
 struct AreaEmitter {
-    sample: fn (Vec2) -> (Vec3, Vec3, f32),
+    sample: fn (Vec2) -> (Vec3, Vec3, Vec2, f32),
     normal: fn (Vec2) -> Vec3,
     pdf:    fn (Vec2) -> f32
 }
@@ -37,8 +37,8 @@ struct Light {
     sample_direct: fn (&mut RndState, SurfaceElement) -> DirectLightSample,
     // Samples the emitting surface of the light
     sample_emission: fn (&mut RndState) -> EmissionSample,
-    // Returns the emission properties of the light at a given point on its surface
-    emission: fn (Vec3, Vec2) -> EmissionValue,
+    // Returns the emission properties of the light at a given point on its surface. The SurfaceElement is only valid if delta & infinite is false
+    emission: fn (Vec3, SurfaceElement) -> EmissionValue,
     // true if the light is a delta light (can not be hit by a ray)
     delta: bool,
     // true if the light is infinite

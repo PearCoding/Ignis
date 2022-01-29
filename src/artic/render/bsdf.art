@@ -8,6 +8,15 @@ struct SurfaceElement {
     local:       Mat3x3 // Local coordinate system at the surface point
 }
 
+fn make_invalid_surface_element() = SurfaceElement {
+    is_entering = false,
+    point       = make_vec3(0,0,0),
+    face_normal = make_vec3(0,0,0),
+    prim_coords = make_vec2(0,0),
+    tex_coords  = make_vec2(0,0),
+    local       = mat3x3_identity()
+};
+
 fn @invert_surface_element(surf: SurfaceElement) = SurfaceElement {
     is_entering = !surf.is_entering,
     point       = surf.point,

@@ -22,6 +22,10 @@ public:
 
     inline bool hasParameter(const std::string& name) const { return mParameters.count(name) > 0; }
 
+    // Use only tex_coords and not the full surf structure!
+    inline bool isOnlyUsingCoords() const { return mUseOnlyCoords; }
+    inline void onlyUseCoords(bool b) { mUseOnlyCoords = b; }
+
 private:
     std::string lookupTexture(const std::string& name, const LoaderContext& ctx, bool needColor = true);
 
@@ -29,5 +33,7 @@ private:
     std::vector<std::string> mHeaderLines; // The order matters
     std::unordered_set<std::string> mLoadedTextures;
     std::unordered_map<std::string, std::string> mParameters;
+
+    bool mUseOnlyCoords;
 };
 } // namespace IG

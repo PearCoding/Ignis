@@ -85,17 +85,12 @@ fn @dir_from_spherical(theta: f32, phi: f32) -> Vec3 {
 }
 
 // Samples a point uniformly on a triangle
-fn @sample_triangle(mut u: f32, mut v: f32, v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
+fn @sample_triangle(mut u: f32, mut v: f32) -> (f32, f32) {
     if (u + v > 1) {
         u = 1 - u;
         v = 1 - v;
     }
-    vec3_add(
-        vec3_add(
-            vec3_mulf(v0, 1 - v - u),
-            vec3_mulf(v1, u)),
-        vec3_mulf(v2, v)
-    )
+    (u, v)
 }
 
 // Probability density function for uniform sphere sampling
