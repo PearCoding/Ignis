@@ -66,9 +66,8 @@ fn @fresnel_diffuse_factor(eta: f32) -> f32 {
     }
 }
 
-
 fn @schlick_approx(f: f32) -> f32{
-    let s = clampf(f, 0, 1);
+    let s = clampf(1 - f, 0, 1);
     (s * s) * (s * s) * s
 }
 

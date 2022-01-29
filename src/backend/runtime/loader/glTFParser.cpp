@@ -289,12 +289,21 @@ static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::
             if (isMaterialEmissive(material)) {
                 auto light = std::make_shared<Object>(OT_LIGHT, "area");
                 light->setProperty("entity", Property::fromString(entity_name));
+
+                float strength = 1;
+                if (material.extensions.count("KHR_materials_emissive_strength")) {
+                    const auto& ext = material.extensions.at("KHR_materials_emissive_strength");
+                    if (ext.Has("emissiveStrength") && ext.Get("emissiveStrength").IsNumber()) {
+                        strength = ext.Get("emissiveStrength").GetNumberAsDouble();
+                    }
+                }
+
                 if (material.emissiveTexture.index >= 0) {
                     const tinygltf::Texture& tex = model.textures[material.emissiveTexture.index];
                     light->setProperty("radiance", Property::fromString(getTextureName(tex)));
-                    light->setProperty("radiance_scale", Property::fromVector3(Vector3f(material.emissiveFactor[0], material.emissiveFactor[1], material.emissiveFactor[2])));
+                    light->setProperty("radiance_scale", Property::fromVector3(Vector3f(material.emissiveFactor[0], material.emissiveFactor[1], material.emissiveFactor[2]) * strength));
                 } else {
-                    light->setProperty("radiance", Property::fromVector3(Vector3f(material.emissiveFactor[0], material.emissiveFactor[1], material.emissiveFactor[2])));
+                    light->setProperty("radiance", Property::fromVector3(Vector3f(material.emissiveFactor[0], material.emissiveFactor[1], material.emissiveFactor[2]) * strength));
                 }
 
                 scene.addLight("_light_" + entity_name, light);
@@ -319,6 +328,36 @@ static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::
             obj->setProperty("near_clip", Property::fromNumber(camera.perspective.znear));
             obj->setProperty("far_clip", Property::fromNumber(camera.perspective.zfar));
             // TODO: aspect ratio
+        }
+    }
+
+    if (node.extensions.count("KHR_lights_punctual") > 0) {
+        const auto& ext = node.extensions.at("KHR_lights_punctual");
+        if (ext.Has("light") && ext.Get("light").IsInt()) {
+            int lightID = ext.Get("light").GetNumberAsInt();
+
+            if (lightID >= 0 && lightID < (int)model.lights.size()) {
+                const auto& light = model.lights[lightID];
+
+                Vector3f color = Vector3f::Ones() * light.intensity;
+                if (light.color.size() == 3)
+                    color = Vector3f(light.color[0], light.color[1], light.color[2]) * light.intensity;
+
+                std::string type;
+                if (light.type == "point" || light.type == "spot") {
+                    // No support for spot lights
+                    auto obj = std::make_shared<Object>(OT_LIGHT, "point");
+                    obj->setProperty("position", Property::fromVector3(transform * Vector3f::Zero()));
+                    obj->setProperty("intensity", Property::fromVector3(color));
+                    scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
+                } else {
+                    Vector3f dir = (transform.linear().inverse().transpose() * Vector3f(0.0f, 0.0f, -1.0f)).normalized();
+                    auto obj     = std::make_shared<Object>(OT_LIGHT, "directional");
+                    obj->setProperty("direction", Property::fromVector3(dir));
+                    obj->setProperty("irradiance", Property::fromVector3(color));
+                    scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
+                }
+            }
         }
     }
 
@@ -446,6 +485,73 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
             inner->setProperty("roughness", Property::fromNumber(mat.pbrMetallicRoughness.roughnessFactor));
         }
 
+        // Extensions
+        if (mat.extensions.count("KHR_materials_ior") > 0) {
+            const auto& ext = mat.extensions.at("KHR_materials_ior");
+            if (ext.Has("ior") && ext.Get("ior").IsNumber()) {
+                inner->setProperty("ior", Property::fromNumber(ext.Get("ior").GetNumberAsDouble()));
+            }
+        }
+
+        if (mat.extensions.count("KHR_materials_transmission") > 0) {
+            const auto& ext = mat.extensions.at("KHR_materials_transmission");
+            int texID       = -1;
+            if (ext.Has("transmissionTexture") && ext.Get("transmissionTexture").IsInt())
+                texID = ext.GetNumberAsInt();
+
+            float factor = 1;
+            if (ext.Has("transmissionFactor") && ext.Get("transmissionFactor").IsNumber())
+                factor = ext.GetNumberAsInt();
+
+            if (texID >= 0) {
+                const tinygltf::Texture& tex = model.textures[texID];
+                inner->setProperty("specular_transmission", Property::fromString(getTextureName(tex) + ".r"));
+                inner->setProperty("specular_transmission_scale", Property::fromNumber(factor));
+            } else {
+                inner->setProperty("specular_transmission", Property::fromNumber(factor));
+            }
+        }
+
+        // Not ratified yet, but who cares
+        if (mat.extensions.count("KHR_materials_translucency") > 0) {
+            const auto& ext = mat.extensions.at("KHR_materials_translucency");
+            int texID       = -1;
+            if (ext.Has("translucencyTexture") && ext.Get("translucencyTexture").IsInt())
+                texID = ext.GetNumberAsInt();
+
+            float factor = 1;
+            if (ext.Has("translucencyFactor") && ext.Get("translucencyFactor").IsNumber())
+                factor = ext.GetNumberAsInt();
+
+            if (texID >= 0) {
+                const tinygltf::Texture& tex = model.textures[texID];
+                inner->setProperty("diffuse_transmission", Property::fromString(getTextureName(tex) + ".r"));
+                inner->setProperty("diffuse_transmission_scale", Property::fromNumber(factor));
+            } else {
+                inner->setProperty("diffuse_transmission", Property::fromNumber(factor));
+            }
+        }
+
+        // Only support for clearcoatFactor & clearcoatTexture
+        if (mat.extensions.count("KHR_materials_clearcoat") > 0) {
+            const auto& ext = mat.extensions.at("KHR_materials_clearcoat");
+            int texID       = -1;
+            if (ext.Has("clearcoatTexture") && ext.Get("clearcoatTexture").IsInt())
+                texID = ext.GetNumberAsInt();
+
+            float factor = 0;
+            if (ext.Has("clearcoatFactor") && ext.Get("clearcoatFactor").IsNumber())
+                factor = ext.GetNumberAsInt();
+
+            if (texID >= 0) {
+                const tinygltf::Texture& tex = model.textures[texID];
+                inner->setProperty("clearcoat", Property::fromString(getTextureName(tex) + ".r"));
+                inner->setProperty("clearcoat_scale", Property::fromNumber(factor));
+            } else {
+                inner->setProperty("clearcoat", Property::fromNumber(factor));
+            }
+        }
+
         std::shared_ptr<Object> obj = inner;
         if (mat.normalTexture.index >= 0) {
             scene.addBSDF(name + "_inner", inner);
@@ -478,10 +584,6 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
     const tinygltf::Scene& gltf_scene = model.scenes[model.defaultScene];
     for (int nodeId : gltf_scene.nodes)
         addNode(scene, model, model.nodes[nodeId], Transformf::Identity());
-
-    // TODO
-    // for (const auto& light : model.lights) {
-    // }
 
     return scene;
 }
