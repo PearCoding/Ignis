@@ -41,11 +41,11 @@ fn @make_same_hemisphere(a: Vec3, b: Vec3) = if is_same_hemisphere(a, b) { b } e
 fn @make_positive_hemisphere(v: Vec3)      = if is_positive_hemisphere(v) { v } else { all::vec3_neg(v) };
 
 // Jacobian of the half-direction mapping
-fn @halfway_reflective_jacobian(cos: f32) = 1 / (4 * cos);
+fn @halfway_reflective_jacobian(cos: f32) = all::safe_div(1, 4 * cos);
 // Jacobian of the half-direction mapping for refraction
 fn @halfway_refractive_jacobian(eta: f32, cos_i: f32, cos_o: f32) -> f32 {
     let jacob_d = eta * cos_i + cos_o;
-    cos_o / (jacob_d * jacob_d)
+    all::safe_div(cos_o, jacob_d * jacob_d)
 }
 
 }

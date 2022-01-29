@@ -217,7 +217,7 @@ fn @sample_vndf_ggx(rnd: &mut RndState, local: Mat3x3, vN: Vec3, alpha_u: f32, a
 	let phi = 2 * flt_pi * u1;
 	let t1	= r * math_builtins::cos(phi);
 	let t2_	= r * math_builtins::sin(phi);
-	let s	= 0.5 * (1+ VH.z);
+	let s	= 0.5 * (1 + VH.z);
 	let t2	= (1 - s) * math_builtins::sqrt(1 - t1 * t1) + s * t2_;
 
 	// Section 4.3: reprojection onto hemisphere
