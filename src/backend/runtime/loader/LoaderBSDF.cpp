@@ -230,13 +230,16 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
     tree.addColor("base_color_scale", ctx, *bsdf, Vector3f::Ones());
     tree.addNumber("metallic_scale", ctx, *bsdf, 1);
     tree.addNumber("roughness_scale", ctx, *bsdf, 1);
+    tree.addNumber("specular_transmission_scale", ctx, *bsdf, 1);
+    tree.addNumber("diffuse_transmission_scale", ctx, *bsdf, 1);
+    tree.addNumber("clearcoat_scale", ctx, *bsdf, 1);
 
     stream << tree.pullHeader()
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_principled_bsdf(surf, "
            << "color_mul(" << tree.getInline("base_color_scale") << ", " << tree.getInline("base_color") << "), "
            << tree.getInline("ior") << ", "
-           << tree.getInline("diffuse_transmission") << ", "
-           << tree.getInline("specular_transmission") << ", "
+           << tree.getInline("diffuse_transmission_scale") << " * " << tree.getInline("diffuse_transmission") << ", "
+           << tree.getInline("specular_transmission_scale") << " * " << tree.getInline("specular_transmission") << ", "
            << tree.getInline("specular_tint") << ", "
            << tree.getInline("roughness_scale") << " * " << tree.getInline("roughness") << ", "
            << tree.getInline("anisotropic") << ", "
@@ -244,7 +247,7 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
            << tree.getInline("metallic_scale") << " * " << tree.getInline("metallic") << ", "
            << tree.getInline("sheen") << ", "
            << tree.getInline("sheen_tint") << ", "
-           << tree.getInline("clearcoat") << ", "
+           << tree.getInline("clearcoat_scale") << " * " << tree.getInline("clearcoat") << ", "
            << tree.getInline("clearcoat_gloss") << ", "
            << (is_thin ? "true" : "false") << ");" << std::endl;
 }
