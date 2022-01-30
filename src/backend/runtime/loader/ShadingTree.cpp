@@ -10,6 +10,7 @@ enum NodeChannel {
     NC_RED,
     NC_GREEN,
     NC_BLUE,
+    NC_MEAN
 };
 static inline std::pair<std::string, NodeChannel> escapeTextureName(const std::string& name)
 {
@@ -25,6 +26,8 @@ static inline std::pair<std::string, NodeChannel> escapeTextureName(const std::s
             channel = NC_GREEN;
         else if (channelStr == "b" || channelStr == "z")
             channel = NC_BLUE;
+        else if (channelStr == "m")
+            channel = NC_MEAN;
         else
             IG_LOG(L_WARNING) << "Unknown channel '" << channelStr << "' in node lookup '" << name << "'" << std::endl;
 
@@ -69,8 +72,10 @@ void ShadingTree::addNumber(const std::string& name, const LoaderContext& ctx, c
 
         switch (texChannel) {
         default:
+        case NC_MEAN:
         case NC_NONE:
-            IG_LOG(L_WARNING) << "Parameter '" << name << "' expects a number but a colored texture was given. Using average instead" << std::endl;
+            if (texChannel == NC_NONE)
+                IG_LOG(L_WARNING) << "Parameter '" << name << "' expects a number but a colored texture was given. Using average instead" << std::endl;
             inline_str = "color_average(" + tex_id + ")";
             break;
         case NC_RED:
@@ -124,6 +129,9 @@ void ShadingTree::addColor(const std::string& name, const LoaderContext& ctx, co
         case NC_NONE:
             inline_str = tex_id;
             break;
+        case NC_MEAN:
+            inline_str = "make_gray_color(color_average(" + tex_id + "))";
+            break;
         case NC_RED:
             inline_str = "make_gray_color(" + tex_id + ".r)";
             break;
@@ -176,6 +184,7 @@ void ShadingTree::addTexture(const std::string& name, const LoaderContext& ctx, 
         case NC_NONE:
             inline_str = tex_id;
             break;
+        // TODO: Mean
         case NC_RED:
             inline_str = "make_channel_texture(" + tex_id + ", 0)";
             break;

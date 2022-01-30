@@ -365,6 +365,16 @@ static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::
         addNode(scene, model, model.nodes[child], transform);
 }
 
+inline int getTextureIndex(const tinygltf::Value& val, const std::string& name)
+{
+    if (val.Has(name) && val.Get(name).IsObject()) {
+        const auto& info = val.Get(name);
+        if (info.Has("index") && info.Get("index").IsInt())
+            return info.Get("index").GetNumberAsDouble();
+    }
+    return -1;
+}
+
 Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
 {
     std::filesystem::path real_path(path);
@@ -493,15 +503,32 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
             }
         }
 
+        if (mat.extensions.count("KHR_materials_sheen") > 0) {
+            const auto& ext = mat.extensions.at("KHR_materials_sheen");
+            const int texID = getTextureIndex(ext, "sheenColorTexture");
+
+            float factor = 1;
+            if (ext.Has("sheenColorFactor") && ext.Get("sheenColorFactor").IsNumber())
+                factor = ext.Get("sheenColorFactor").GetNumberAsInt();
+
+            // No support for colored sheen
+            if (texID >= 0) {
+                const tinygltf::Texture& tex = model.textures[texID];
+                inner->setProperty("sheen", Property::fromString(getTextureName(tex) + ".m"));
+                inner->setProperty("sheen_scale", Property::fromNumber(factor));
+            } else {
+                inner->setProperty("sheen", Property::fromNumber(factor));
+            }
+        }
+
+        // Only support for transmissionFactor & transmissionTexture
         if (mat.extensions.count("KHR_materials_transmission") > 0) {
             const auto& ext = mat.extensions.at("KHR_materials_transmission");
-            int texID       = -1;
-            if (ext.Has("transmissionTexture") && ext.Get("transmissionTexture").IsInt())
-                texID = ext.GetNumberAsInt();
+            const int texID = getTextureIndex(ext, "transmissionTexture");
 
             float factor = 1;
             if (ext.Has("transmissionFactor") && ext.Get("transmissionFactor").IsNumber())
-                factor = ext.GetNumberAsInt();
+                factor = ext.Get("transmissionFactor").GetNumberAsDouble();
 
             if (texID >= 0) {
                 const tinygltf::Texture& tex = model.textures[texID];
@@ -515,13 +542,11 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
         // Not ratified yet, but who cares
         if (mat.extensions.count("KHR_materials_translucency") > 0) {
             const auto& ext = mat.extensions.at("KHR_materials_translucency");
-            int texID       = -1;
-            if (ext.Has("translucencyTexture") && ext.Get("translucencyTexture").IsInt())
-                texID = ext.GetNumberAsInt();
+            const int texID = getTextureIndex(ext, "translucencyTexture");
 
             float factor = 1;
             if (ext.Has("translucencyFactor") && ext.Get("translucencyFactor").IsNumber())
-                factor = ext.GetNumberAsInt();
+                factor = ext.Get("translucencyFactor").GetNumberAsDouble();
 
             if (texID >= 0) {
                 const tinygltf::Texture& tex = model.textures[texID];
@@ -535,13 +560,11 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
         // Only support for clearcoatFactor & clearcoatTexture
         if (mat.extensions.count("KHR_materials_clearcoat") > 0) {
             const auto& ext = mat.extensions.at("KHR_materials_clearcoat");
-            int texID       = -1;
-            if (ext.Has("clearcoatTexture") && ext.Get("clearcoatTexture").IsInt())
-                texID = ext.GetNumberAsInt();
+            const int texID = getTextureIndex(ext, "clearcoatTexture");
 
             float factor = 0;
             if (ext.Has("clearcoatFactor") && ext.Get("clearcoatFactor").IsNumber())
-                factor = ext.GetNumberAsInt();
+                factor = ext.Get("clearcoatFactor").GetNumberAsDouble();
 
             if (texID >= 0) {
                 const tinygltf::Texture& tex = model.textures[texID];
