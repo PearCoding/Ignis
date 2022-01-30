@@ -1,10 +1,11 @@
 #pragma once
 
-#include "LoaderContext.h"
+#include "IG_Config.h"
 
 namespace IG {
+class ShadingTree;
 struct LoaderResult;
 struct LoaderBSDF {
-    static std::string generate(const std::string& name, const LoaderContext& ctx);
+    static std::string generate(const std::string& name, ShadingTree& ctx);
 };
 } // namespace IG

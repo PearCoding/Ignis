@@ -4,6 +4,7 @@
 #include "loader/LoaderLight.h"
 #include "loader/LoaderTechnique.h"
 #include "loader/ShaderUtils.h"
+#include "loader/ShadingTree.h"
 
 #include <sstream>
 
@@ -21,11 +22,12 @@ std::string MissShader::setup(LoaderContext& ctx)
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
            << std::endl;
 
+    ShadingTree tree(ctx);
     if (ctx.TechniqueInfo.UsesLights[ctx.CurrentTechniqueVariant]) {
         if (ctx.TechniqueInfo.UsesAllLightsInMiss[ctx.CurrentTechniqueVariant])
             stream << ShaderUtils::generateDatabase() << std::endl;
 
-        stream << LoaderLight::generate(ctx, !ctx.TechniqueInfo.UsesAllLightsInMiss[ctx.CurrentTechniqueVariant])
+        stream << LoaderLight::generate(tree, !ctx.TechniqueInfo.UsesAllLightsInMiss[ctx.CurrentTechniqueVariant])
                << std::endl;
     }
 

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "LoaderContext.h"
+#include "IG_Config.h"
 #include <unordered_map>
+#include <unordered_set>
 
 namespace IG {
 namespace Parser {
@@ -9,31 +10,47 @@ class Object;
 class Property;
 } // namespace Parser
 
+class LoaderContext;
 class ShadingTree {
-public:
-    ShadingTree(const std::string& prefix = "");
+private:
+    struct Closure {
+        std::unordered_map<std::string, std::string> Parameters;
+    };
 
-    void addNumber(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, float def = 0, bool hasDef = true);
-    void addColor(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true);
-    void addTexture(const std::string& name, const LoaderContext& ctx, const Parser::Object& obj, bool hasDef = true);
+public:
+    enum InlineMode {
+        IM_Bsdf = 0,
+        IM_Light,
+    };
+
+    ShadingTree(LoaderContext& ctx, const std::string& prefix = "");
+
+    void beginClosure();
+    void endClosure();
+
+    void addNumber(const std::string& name, const Parser::Object& obj, float def = 0, bool hasDef = true, InlineMode mode = IM_Bsdf);
+    void addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, InlineMode mode = IM_Bsdf);
+    void addTexture(const std::string& name, const Parser::Object& obj, bool hasDef = true, InlineMode mode = IM_Bsdf);
 
     std::string pullHeader();
     std::string getInline(const std::string& name) const;
+    inline bool hasParameter(const std::string& name) const { return currentClosure().Parameters.count(name) > 0; }
 
-    inline bool hasParameter(const std::string& name) const { return mParameters.count(name) > 0; }
-
-    // Use only tex_coords and not the full surf structure!
-    inline bool isOnlyUsingCoords() const { return mUseOnlyCoords; }
-    inline void onlyUseCoords(bool b) { mUseOnlyCoords = b; }
+    inline LoaderContext& context() { return mContext; }
+    inline const LoaderContext& context() const { return mContext; }
 
 private:
-    std::string lookupTexture(const std::string& name, const LoaderContext& ctx, bool needColor = true);
+    inline const Closure& currentClosure() const { return mClosures.back(); }
+    inline Closure& currentClosure() { return mClosures.back(); }
+
+    std::string lookupTexture(const std::string& name, InlineMode mode, bool needColor = true);
+
+    LoaderContext& mContext;
 
     const std::string mPrefix;
     std::vector<std::string> mHeaderLines; // The order matters
     std::unordered_set<std::string> mLoadedTextures;
-    std::unordered_map<std::string, std::string> mParameters;
 
-    bool mUseOnlyCoords;
+    std::vector<Closure> mClosures;
 };
 } // namespace IG

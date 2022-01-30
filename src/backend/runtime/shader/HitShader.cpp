@@ -5,6 +5,7 @@
 #include "loader/LoaderLight.h"
 #include "loader/LoaderTechnique.h"
 #include "loader/ShaderUtils.h"
+#include "loader/ShadingTree.h"
 
 #include <sstream>
 
@@ -24,9 +25,10 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx)
 
     stream << ShaderUtils::generateDatabase() << std::endl;
 
+    ShadingTree tree(ctx);
     const bool requireLights = ctx.TechniqueInfo.UsesLights[ctx.CurrentTechniqueVariant];
     if (requireLights) {
-        stream << LoaderLight::generate(ctx, false) << std::endl;
+        stream << LoaderLight::generate(tree, false) << std::endl;
     }
 
     stream << "  let acc  = SceneAccessor {" << std::endl
@@ -43,7 +45,7 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx)
            << std::endl;
 
     const std::string bsdf_name = ctx.Environment.Entities[entity_id].BSDF;
-    stream << LoaderBSDF::generate(bsdf_name, ctx);
+    stream << LoaderBSDF::generate(bsdf_name, tree);
 
     const std::string entity_name = ctx.Environment.Entities[entity_id].Name;
     const bool isLight            = ctx.Environment.AreaLightsMap.count(entity_name) > 0;

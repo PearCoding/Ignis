@@ -3,10 +3,11 @@
 #include "LoaderContext.h"
 
 namespace IG {
+class ShadingTree;
 struct LoaderResult;
 struct LoaderLight {
     static void setupAreaLights(LoaderContext& ctx);
     static bool hasAreaLights(const LoaderContext& ctx);
-    static std::string generate(const LoaderContext& ctx, bool skipArea);
+    static std::string generate(ShadingTree& tree, bool skipArea);
 };
 } // namespace IG

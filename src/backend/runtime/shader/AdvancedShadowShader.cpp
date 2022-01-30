@@ -4,6 +4,7 @@
 #include "loader/LoaderLight.h"
 #include "loader/LoaderTechnique.h"
 #include "loader/ShaderUtils.h"
+#include "loader/ShadingTree.h"
 
 #include <sstream>
 
@@ -13,6 +14,8 @@ using namespace Parser;
 std::string AdvancedShadowShader::setup(bool is_hit, LoaderContext& ctx)
 {
     std::stringstream stream;
+
+    ShadingTree tree(ctx);
 
     stream << LoaderTechnique::generateHeader(ctx) << std::endl;
 
@@ -28,7 +31,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, LoaderContext& ctx)
         if (requireAreaLight)
             stream << ShaderUtils::generateDatabase() << std::endl;
 
-        stream << LoaderLight::generate(ctx, !requireAreaLight)
+        stream << LoaderLight::generate(tree, !requireAreaLight)
                << std::endl;
     }
 
