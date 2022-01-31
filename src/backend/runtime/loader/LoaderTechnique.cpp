@@ -33,7 +33,7 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
     TechniqueInfo info;
 
     // Check if we have a proper defined technique
-    // It is totally fine to onyl define the type by other means then the scene config
+    // It is totally fine to only define the type by other means then the scene config
     if (technique) {
         if (technique->property("aov_normals").getBool(false))
             info.EnabledAOVs.push_back("Normals");
@@ -41,7 +41,7 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
         if (technique->property("aov_mis").getBool(false)) {
             info.EnabledAOVs.push_back("Direct Weights");
             info.EnabledAOVs.push_back("NEE Weights");
-            info.UseAdvancedShadowHandling = { true };
+            info.Variants[0].UseAdvancedShadowHandling = true;
         }
 
         if (technique->property("aov_stats").getBool(false)) {
@@ -49,7 +49,7 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
         }
     }
 
-    info.UsesLights = { true };
+    info.Variants[0].UsesLights = true;
 
     return info;
 }

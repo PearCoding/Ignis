@@ -41,6 +41,7 @@ struct LoaderContext {
     IG::TechniqueInfo TechniqueInfo;
 
     uint32 CurrentTechniqueVariant;
+    inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return TechniqueInfo.Variants[CurrentTechniqueVariant]; }
 
     std::unordered_map<std::string, uint32> TextureBuffer; // Texture to Buffer/Image, used only in workaround
     std::vector<Vector3f> TextureAverages;                 // Workaround for now

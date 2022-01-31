@@ -23,11 +23,11 @@ std::string MissShader::setup(LoaderContext& ctx)
            << std::endl;
 
     ShadingTree tree(ctx);
-    if (ctx.TechniqueInfo.UsesLights[ctx.CurrentTechniqueVariant]) {
-        if (ctx.TechniqueInfo.UsesAllLightsInMiss[ctx.CurrentTechniqueVariant])
+    if (ctx.CurrentTechniqueVariantInfo().UsesLights) {
+        if (ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss)
             stream << ShaderUtils::generateDatabase() << std::endl;
 
-        stream << LoaderLight::generate(tree, !ctx.TechniqueInfo.UsesAllLightsInMiss[ctx.CurrentTechniqueVariant])
+        stream << LoaderLight::generate(tree, !ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss)
                << std::endl;
     }
 

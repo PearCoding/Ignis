@@ -6,27 +6,30 @@ namespace IG {
 
 struct LoaderContext;
 using TechniqueCameraGenerator = std::string (*)(const LoaderContext&);
+
+struct TechniqueVariantInfo {
+    /// The variant makes uses of ShadowHit and ShadowMiss shaders. Reduces performance
+    bool UseAdvancedShadowHandling = false;
+
+    /// The variant makes use of lights
+    bool UsesLights = false;
+
+    /// The variant requires all lights (especially area lights) in the miss shader
+    bool UsesAllLightsInMiss = false;
+
+    /// The variant requires all materials to be present at all times. Reduces performance significantly [TODO]
+    bool RequiresGlobalMaterials = false;
+
+    /// The variant overrides the default camera shader
+    TechniqueCameraGenerator OverrideCameraGenerator = nullptr;
+};
+
 struct TechniqueInfo {
     /// The AOVs enabled in the current runtime. This option is shared across all variants
     std::vector<std::string> EnabledAOVs;
 
-    /// The technique makes uses of ShadowHit and ShadowMiss shaders. Reduces performances. This option is per variant
-    std::vector<bool> UseAdvancedShadowHandling = { false };
-
-    /// The technique makes use of lights. This option is per variant
-    std::vector<bool> UsesLights = { false };
-
-    /// The technique requires all lights (especially area lights) in the miss shader. This option is per variant
-    std::vector<bool> UsesAllLightsInMiss = { false };
-
-    /// The technique requires all materials present at all times. Reduces performances significantly. This option is per variant
-    std::vector<bool> RequiresGlobalMaterials = { false };
-
-    /// The technique overrides the default camera shader. This option is per variant
-    std::vector<TechniqueCameraGenerator> OverrideCameraGenerator = { nullptr };
-
-    /// The number of variants the technique uses
-    uint32 VariantCount = 1;
+    /// The variants (or passes) a technique uses. Per default only one variant is available
+    std::vector<TechniqueVariantInfo> Variants = { {} };
 
     /// Callback to select a variant for a specific iteration. If nullptr, variant 0 will be used all the time
     TechniqueVariantSelector VariantSelector = nullptr;

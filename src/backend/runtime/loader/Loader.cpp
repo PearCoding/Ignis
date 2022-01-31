@@ -36,16 +36,22 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.Database      = &result.Database;
     ctx.TechniqueInfo = LoaderTechnique::getInfo(ctx);
 
+    if (ctx.TechniqueInfo.Variants.empty()) {
+        IG_LOG(L_ERROR) << "Invalid technique with no variants" << std::endl;
+        return false;
+    }
+
     LoaderLight::setupAreaLights(ctx);
 
-    result.TechniqueVariants.resize(ctx.TechniqueInfo.VariantCount);
-    for (uint32 i = 0; i < ctx.TechniqueInfo.VariantCount; ++i) {
+    result.TechniqueVariants.resize(ctx.TechniqueInfo.Variants.size());
+    for (size_t i = 0; i < ctx.TechniqueInfo.Variants.size(); ++i) {
         auto& variant               = result.TechniqueVariants[i];
+        const auto& info            = ctx.TechniqueInfo.Variants[ctx.CurrentTechniqueVariant];
         ctx.CurrentTechniqueVariant = i;
 
         // Generate Ray Generation Shader
-        if (ctx.TechniqueInfo.OverrideCameraGenerator[ctx.CurrentTechniqueVariant])
-            variant.RayGenerationShader = ctx.TechniqueInfo.OverrideCameraGenerator[ctx.CurrentTechniqueVariant](ctx);
+        if (info.OverrideCameraGenerator)
+            variant.RayGenerationShader = info.OverrideCameraGenerator(ctx);
         else
             variant.RayGenerationShader = RayGenerationShader::setup(ctx);
         if (variant.RayGenerationShader.empty())
@@ -65,7 +71,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         }
 
         // Generate Advanced Shadow Shaders if requested
-        if (ctx.TechniqueInfo.UseAdvancedShadowHandling[ctx.CurrentTechniqueVariant]) {
+        if (info.UseAdvancedShadowHandling) {
             variant.AdvancedShadowHitShader  = AdvancedShadowShader::setup(true, ctx);
             variant.AdvancedShadowMissShader = AdvancedShadowShader::setup(false, ctx);
         }

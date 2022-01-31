@@ -26,7 +26,7 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx)
     stream << ShaderUtils::generateDatabase() << std::endl;
 
     ShadingTree tree(ctx);
-    const bool requireLights = ctx.TechniqueInfo.UsesLights[ctx.CurrentTechniqueVariant];
+    const bool requireLights = ctx.CurrentTechniqueVariantInfo().UsesLights;
     if (requireLights) {
         stream << LoaderLight::generate(tree, false) << std::endl;
     }
