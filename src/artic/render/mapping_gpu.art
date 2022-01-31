@@ -833,6 +833,7 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_rays(dev_id, &mut rays);
         rays
     },
+    load_host_buffer = load_cpu_buffer,
     load_buffer = @ |filename| {
         let mut ptr  : &[u8];
         let mut size : i32;

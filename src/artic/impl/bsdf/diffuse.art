@@ -1,6 +1,6 @@
 // Creates a purely two-sided diffuse BSDF
 fn @make_diffuse_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
-    eval   = @ |in_dir, _| color_mulf(kd, absolute_cos(in_dir, surf.local.col(2)) / flt_pi),
+    eval   = @ |in_dir, _| color_mulf(kd, absolute_cos(in_dir, surf.local.col(2)) * flt_inv_pi),
     pdf    = @ |in_dir, _| cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))),
     sample = @ |rnd, _, _| {
         let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));

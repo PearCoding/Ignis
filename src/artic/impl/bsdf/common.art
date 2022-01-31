@@ -7,8 +7,8 @@ fn @make_black_bsdf(surf: SurfaceElement) = Bsdf {
 };
 
 // Error
-fn @make_error_bsdf() = Bsdf {
-    eval        = @ |_, _| pink,
+fn @make_error_bsdf(surf: SurfaceElement) = Bsdf {
+    eval        = @ |in_dir, _| color_mulf(pink, absolute_cos(in_dir, surf.local.col(2)) * flt_inv_pi),
     pdf         = @ |_, _| 0,
     sample      = @ |_, _, _| reject_bsdf_sample(),
     is_specular = false

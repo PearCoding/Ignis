@@ -1,4 +1,4 @@
-// TODO: The Klems eval and sample process are not optimized at all...
+// TODO: The Klems sample process is not optimized at all...
 
 struct KlemsThetaBasis {
     center:    f32,
@@ -56,13 +56,56 @@ fn @k_eval_component(in_dir: Vec3, out_dir: Vec3, component: KlemsComponent) {
     k_eval_component_index(row, col, component)
 }
 
+fn @make_klems_basis(buffer: DeviceBuffer, buffer_host: DeviceBuffer, off: i32) -> (KlemsBasis, i32) {
+    let theta_count = buffer_host.load_i32(off);
+    let entry_count = buffer_host.load_i32(off+1);
+    let base_off    = 4 + off;
+    let lin_off     = (theta_count+1) * 4 + off;
+
+    (KlemsBasis {
+        theta_count = theta_count,
+        entry_count = entry_count,
+        theta_basis = @ |i| KlemsThetaBasis {
+            center    = buffer.load_f32(base_off+i*4+0),
+            lower     = buffer.load_f32(base_off+i*4+1),
+            upper     = buffer.load_f32(base_off+i*4+2),
+            phi_count = buffer.load_i32(base_off+i*4+3),
+        },
+        theta_linear_offset = @ |i| buffer.load_i32(lin_off + i)
+    }, (theta_count+1)*4+theta_count)
+}
+
+fn @make_klems_component(buffer: DeviceBuffer, buffer_host: DeviceBuffer, off: i32) -> (KlemsComponent, i32) {
+    let (row_basis, row_off) = make_klems_basis(buffer, buffer_host, off);
+    let (col_basis, col_off) = make_klems_basis(buffer, buffer_host, off + row_off);
+
+    let mat_size = row_basis.entry_count * col_basis.entry_count;
+    (KlemsComponent {
+        row_basis    = row_basis,
+        column_basis = col_basis,
+        matrix       = @ |i| buffer.load_f32(off + row_off + col_off + i)
+    }, row_off + col_off + mat_size)
+}
+
+fn @make_klems_model(buffer: DeviceBuffer, buffer_host: DeviceBuffer) -> KlemsModel {
+    let (front_reflection,   front_reflection_off)   = make_klems_component(buffer, buffer_host, 0);
+    let (front_transmission, front_transmission_off) = make_klems_component(buffer, buffer_host, front_reflection_off);
+    let (back_reflection,    back_reflection_off)    = make_klems_component(buffer, buffer_host, front_reflection_off + front_transmission_off);
+    let (back_transmission,  _)                      = make_klems_component(buffer, buffer_host, front_reflection_off + front_transmission_off + back_reflection_off);
+   
+    KlemsModel {
+        front_reflection   = front_reflection,
+        front_transmission = front_transmission,
+        back_reflection    = back_reflection,
+        back_transmission  = back_transmission
+    }
+}
+
 // TODO: Add proper sampling!
-// TODO: Add tint
-fn @make_klems_bsdf(surf: SurfaceElement, klems: KlemsModel) -> Bsdf {
-    let lsurf = mat3x3_transpose(surf.local);
+fn @make_klems_bsdf(surf: SurfaceElement, color: Color, klems: KlemsModel) -> Bsdf {
     let local_eval = |wi : Vec3, wo : Vec3| {
-		let inFront	 = wi.z > 0;
-        let outFront = wo.z > 0;
+		let inFront	 = shading::is_positive_hemisphere(wi);
+        let outFront = shading::is_positive_hemisphere(wo);
 
         let factor = match (inFront, outFront) {
             (true, true)   => k_eval_component(k_fi(wi), k_fo(wo), klems.front_reflection),
@@ -71,25 +114,32 @@ fn @make_klems_bsdf(surf: SurfaceElement, klems: KlemsModel) -> Bsdf {
             (false, false) => k_eval_component(k_bi(wi), k_fo(wo), klems.back_reflection)
         };
 
-        make_gray_color(factor * math_builtins::fabs(wi.z))
+        color_mulf(color, factor * shading::abs_cos_theta(wi))
     };
 
     Bsdf {
         eval   = @ |in_dir, out_dir| {
-            let wo = vec3_normalize(mat3x3_mul(lsurf, out_dir));
-            let wi = vec3_normalize(mat3x3_mul(lsurf, in_dir));
+            let wo = shading::to_local(surf, out_dir);
+            let wi = shading::to_local(surf, in_dir);
             local_eval(wi, wo)
         },
-        pdf    = @ |_, _| uniform_sphere_pdf(),
+        pdf    = @ |in_dir, _| cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))),
         sample = @ |rnd, out_dir, _| {
-            let wo = vec3_normalize(mat3x3_mul(lsurf, out_dir));
+            let wo = shading::to_local(surf, out_dir);
             let u = randf(rnd);
             let v = randf(rnd);
-            let sample = sample_uniform_sphere(u, v);
-            let gdir   = vec3_normalize(mat3x3_mul(surf.local, sample.dir));
-            let is_trans = (sample.dir.z < 0) ^ (wo.z < 0);
-            let color = color_mulf(local_eval(sample.dir, wo), 1/sample.pdf);
-            make_bsdf_sample(surf, gdir, sample.pdf, color, is_trans)
+            let sample = sample_cosine_hemisphere(u, v);
+            
+            if sample.pdf <= flt_eps {
+                reject_bsdf_sample()
+            } else {
+                let gdir = if randf(rnd) < 0.5 { shading::to_world(surf, sample.dir) } else { vec3_neg(shading::to_world(surf, sample.dir)) };
+                make_option(BsdfSample {
+                    in_dir = gdir,
+                    pdf    = sample.pdf,
+                    color  = color_mulf(local_eval(sample.dir, wo), 2 / sample.pdf)
+                })
+            }
         },
         is_specular = false
     }

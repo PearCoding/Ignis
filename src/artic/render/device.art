@@ -17,6 +17,7 @@ struct Device {
     load_bvh_table:      fn (DynTable) -> BVHTable,
     load_image:          fn (&[u8]) -> Image,
     load_aov_image:      fn (i32, i32) -> AOVImage,
+    load_host_buffer:    fn (&[u8]) -> DeviceBuffer,
     load_buffer:         fn (&[u8]) -> DeviceBuffer,
     request_buffer:      fn (&[u8], i32) -> DeviceBuffer,
 

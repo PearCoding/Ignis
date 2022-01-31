@@ -7,12 +7,23 @@
 #include <pugixml.hpp>
 
 namespace IG {
+struct KlemsThetaBasis {
+    float CenterTheta;
+    float LowerTheta;
+    float UpperTheta;
+    uint32_t PhiCount;
 
-class InternalKlemsBasis {
+    inline bool isValid() const
+    {
+        return PhiCount > 0 && LowerTheta < UpperTheta;
+    }
+};
+
+class KlemsBasis {
 public:
     using MultiIndex = std::pair<int, int>;
 
-    InternalKlemsBasis() = default;
+    KlemsBasis() = default;
 
     inline void addBasis(const KlemsThetaBasis& basis)
     {
@@ -39,12 +50,29 @@ public:
     inline void write(std::ostream& os)
     {
         uint32_t theta_count = mThetaBasis.size();
+        std::sort(mThetaBasis.begin(), mThetaBasis.end(),
+                  [](const KlemsThetaBasis& a, const KlemsThetaBasis& b) { return a.UpperTheta < b.UpperTheta; });
+
+        std::vector<uint32_t> offsets(mThetaBasis.size());
+        uint32_t off = 0;
+        for (size_t i = 0; i < mThetaBasis.size(); ++i) {
+            offsets[i] = off;
+            off += mThetaBasis[i].PhiCount;
+        }
+
         os.write(reinterpret_cast<const char*>(&theta_count), sizeof(uint32_t));
+        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32_t));
+        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32_t)); // Pad
+        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32_t)); // Pad
         for (auto& basis : mThetaBasis) {
             os.write(reinterpret_cast<const char*>(&basis.CenterTheta), sizeof(float));
             os.write(reinterpret_cast<const char*>(&basis.LowerTheta), sizeof(float));
             os.write(reinterpret_cast<const char*>(&basis.UpperTheta), sizeof(float));
             os.write(reinterpret_cast<const char*>(&basis.PhiCount), sizeof(uint32_t));
+        }
+
+        for (auto& val : offsets) {
+            os.write(reinterpret_cast<const char*>(&val), sizeof(uint32_t));
         }
     }
 
@@ -58,9 +86,9 @@ private:
 };
 
 using KlemsMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;
-class InternalKlemsComponent {
+class KlemsComponent {
 public:
-    inline InternalKlemsComponent(const std::shared_ptr<InternalKlemsBasis>& row, const std::shared_ptr<InternalKlemsBasis>& column)
+    inline KlemsComponent(const std::shared_ptr<KlemsBasis>& row, const std::shared_ptr<KlemsBasis>& column)
         : mRowBasis(row)
         , mColumnBasis(column)
         , mMatrix(row->entryCount(), column->entryCount())
@@ -82,8 +110,8 @@ public:
         //TODO
     }
 
-    inline std::shared_ptr<InternalKlemsBasis> row() const { return mRowBasis; }
-    inline std::shared_ptr<InternalKlemsBasis> column() const { return mColumnBasis; }
+    inline std::shared_ptr<KlemsBasis> row() const { return mRowBasis; }
+    inline std::shared_ptr<KlemsBasis> column() const { return mColumnBasis; }
 
     inline void write(std::ostream& os)
     {
@@ -94,8 +122,8 @@ public:
     }
 
 private:
-    std::shared_ptr<InternalKlemsBasis> mRowBasis;
-    std::shared_ptr<InternalKlemsBasis> mColumnBasis;
+    std::shared_ptr<KlemsBasis> mRowBasis;
+    std::shared_ptr<KlemsBasis> mColumnBasis;
     KlemsMatrix mMatrix;
 };
 
@@ -143,7 +171,7 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         return false;
     }
 
-    std::unordered_map<std::string, std::shared_ptr<InternalKlemsBasis>> allbasis;
+    std::unordered_map<std::string, std::shared_ptr<KlemsBasis>> allbasis;
     for (const auto& anglebasis : datadefinition.children("AngleBasis")) {
         const char* name = anglebasis.child_value("AngleBasisName");
         if (!name) {
@@ -152,7 +180,7 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         }
 
         // Extract basis information
-        std::shared_ptr<InternalKlemsBasis> fullbasis = std::make_shared<InternalKlemsBasis>();
+        std::shared_ptr<KlemsBasis> fullbasis = std::make_shared<KlemsBasis>();
         for (const auto& child : anglebasis.children("AngleBasisBlock")) {
             KlemsThetaBasis basis;
 
@@ -183,10 +211,10 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         return false;
     }
 
-    std::shared_ptr<InternalKlemsComponent> reflectionFront;
-    std::shared_ptr<InternalKlemsComponent> transmissionFront;
-    std::shared_ptr<InternalKlemsComponent> reflectionBack;
-    std::shared_ptr<InternalKlemsComponent> transmissionBack;
+    std::shared_ptr<KlemsComponent> reflectionFront;
+    std::shared_ptr<KlemsComponent> transmissionFront;
+    std::shared_ptr<KlemsComponent> reflectionBack;
+    std::shared_ptr<KlemsComponent> transmissionBack;
     // Extract wavelengths
     for (const auto& data : layer.children("WavelengthData")) {
         const char* type = data.child_value("Wavelength");
@@ -207,8 +235,8 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
             return false;
         }
 
-        std::shared_ptr<InternalKlemsBasis> columnBasis;
-        std::shared_ptr<InternalKlemsBasis> rowBasis;
+        std::shared_ptr<KlemsBasis> columnBasis;
+        std::shared_ptr<KlemsBasis> rowBasis;
         if (allbasis.count(columnBasisName))
             columnBasis = allbasis.at(columnBasisName);
         if (allbasis.count(rowBasisName))
@@ -219,7 +247,7 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         }
 
         // Setup component
-        std::shared_ptr<InternalKlemsComponent> component = std::make_shared<InternalKlemsComponent>(rowBasis, columnBasis);
+        std::shared_ptr<KlemsComponent> component = std::make_shared<KlemsComponent>(rowBasis, columnBasis);
 
         // Parse list of floats
         const char* scat_str = block.child_value("ScatteringData");
@@ -283,62 +311,16 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         return false;
     }
 
+    if (!reflectionFront || !reflectionBack || !transmissionFront || !transmissionBack) {
+        IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Incomplete data found" << std::endl;
+        return false;
+    }
+
     std::ofstream stream(out_data, std::ios::binary);
     reflectionFront->write(stream);
     transmissionFront->write(stream);
     reflectionBack->write(stream);
     transmissionBack->write(stream);
-
-    return true;
-}
-
-static void read(std::istream& is, KlemsBasis& basis)
-{
-    uint32_t theta_count = 0;
-    is.read(reinterpret_cast<char*>(&theta_count), sizeof(uint32_t));
-    for (uint32_t i = 0; i < theta_count; ++i) {
-        KlemsThetaBasis theta;
-        is.read(reinterpret_cast<char*>(&theta.CenterTheta), sizeof(float));
-        is.read(reinterpret_cast<char*>(&theta.LowerTheta), sizeof(float));
-        is.read(reinterpret_cast<char*>(&theta.UpperTheta), sizeof(float));
-        is.read(reinterpret_cast<char*>(&theta.PhiCount), sizeof(uint32_t));
-        basis.ThetaBasis.push_back(theta);
-    }
-
-    std::sort(basis.ThetaBasis.begin(), basis.ThetaBasis.end(),
-              [](const KlemsThetaBasis& a, const KlemsThetaBasis& b) { return a.UpperTheta < b.UpperTheta; });
-
-    basis.ThetaLinearOffset.resize(basis.ThetaBasis.size());
-    uint32_t off = 0;
-    for (size_t i = 0; i < basis.ThetaBasis.size(); ++i) {
-        basis.ThetaLinearOffset[i] = off;
-        off += basis.ThetaBasis[i].PhiCount;
-    }
-
-    basis.EntryCount = off;
-}
-
-static void read(std::istream& stream, KlemsComponent& component)
-{
-    read(stream, component.RowBasis);
-    read(stream, component.ColumnBasis);
-
-    component.Matrix.resize(component.matrixSize());
-    stream.read(reinterpret_cast<char*>(component.Matrix.data()), sizeof(float) * component.Matrix.size());
-}
-
-bool KlemsLoader::load(const std::filesystem::path& in_data, KlemsModel& model)
-{
-    std::ifstream stream(in_data.generic_string(), std::ios::binary);
-    if (!stream) {
-        IG_LOG(L_ERROR) << "Could not load " << in_data << std::endl;
-        return false;
-    }
-
-    read(stream, model.FrontReflection);
-    read(stream, model.FrontTransmission);
-    read(stream, model.BackReflection);
-    read(stream, model.BackTransmission);
 
     return true;
 }

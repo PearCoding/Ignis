@@ -17,7 +17,7 @@
 		{
 			"type": "bitmap",
 			"name": "tex",
-			"filename": "normalmap.png",
+			"filename": "textures/normalmap.png",
 			"filter_type": "trilinear"
 		},
 		{
@@ -46,6 +46,7 @@
 		{"name":"Pillar","shape":"Pillar", "bsdf":"mat-Pillar", "transform": [ 0.25,0,0,0, 0,0.25,0,-1, 0,0,0.25,0, 0,0,0,1 ]}
 	],
 	"lights": [
-		{"type":"sunsky", "name":"Distant", "sun_direction":[0.4082482904638631,0.4082482904638631,0.8164965809277261]}
+		{"type":"sky", "name":"Sky"},
+		{"type":"sun", "name":"Distant", "direction":[0.4082482904638631,0.4082482904638631,0.8164965809277261]}
 	]
 }
