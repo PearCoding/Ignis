@@ -46,7 +46,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     result.TechniqueVariants.resize(ctx.TechniqueInfo.Variants.size());
     for (size_t i = 0; i < ctx.TechniqueInfo.Variants.size(); ++i) {
         auto& variant               = result.TechniqueVariants[i];
-        const auto& info            = ctx.TechniqueInfo.Variants[ctx.CurrentTechniqueVariant];
+        const auto& info            = ctx.TechniqueInfo.Variants[i];
         ctx.CurrentTechniqueVariant = i;
 
         // Generate Ray Generation Shader
