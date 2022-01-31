@@ -180,10 +180,8 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
 
                 let out_dir = vec3_neg(ray.dir);
                 let emit    = light.emission(out_dir, make_invalid_surface_element());
-                if emit.pdf_dir > flt_eps {
-                    let mis     = 1 / (1 + pt.mis * pdf_lightpick * emit.pdf_dir);
-                    color = color_add(color, color_mulf(color_mul(pt.contrib, emit.intensity), mis));
-                }
+                let mis     = 1 / (1 + pt.mis * pdf_lightpick * emit.pdf_dir);
+                color = color_add(color, color_mulf(color_mul(pt.contrib, emit.intensity), mis));
             }
         }
 

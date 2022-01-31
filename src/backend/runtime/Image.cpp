@@ -205,7 +205,7 @@ bool ImageRgba32::save(const std::filesystem::path& path)
     return save(path, pixels.get(), width, height);
 }
 
-bool ImageRgba32::save(const std::filesystem::path& path, const float* rgba, size_t width, size_t height)
+bool ImageRgba32::save(const std::filesystem::path& path, const float* rgba, size_t width, size_t height, bool skip_alpha)
 {
     std::string ext = path.extension();
     bool useExr     = ends_with(ext, ".exr");
@@ -214,27 +214,23 @@ bool ImageRgba32::save(const std::filesystem::path& path, const float* rgba, siz
     if (!useExr)
         return false;
 
-    std::vector<float> images[4];
-    images[0].resize(width * height);
-    images[1].resize(width * height);
-    images[2].resize(width * height);
-    images[3].resize(width * height);
+    size_t channels = skip_alpha ? 3 : 4;
+    std::vector<std::vector<float>> images(channels);
+    for (size_t i = 0; i < channels; ++i)
+        images[i].resize(width * height);
 
     // Split into layers
     for (size_t i = 0; i < width * height; ++i) {
-        images[0][i] = rgba[4 * i + 0];
-        images[1][i] = rgba[4 * i + 1];
-        images[2][i] = rgba[4 * i + 2];
-        images[3][i] = rgba[4 * i + 3];
+        for (size_t j = 0; j < channels; ++j)
+            images[j][i] = rgba[4 * i + j];
     }
 
-    std::vector<const float*> image_ptrs(4);
-    image_ptrs[0] = &(images[3].at(0)); // A
-    image_ptrs[1] = &(images[2].at(0)); // B
-    image_ptrs[2] = &(images[1].at(0)); // G
-    image_ptrs[3] = &(images[0].at(0)); // R
+    std::vector<const float*> image_ptrs(channels);
+    for (size_t i = 0; i < channels; ++i)
+        image_ptrs[i] = &(images[channels - i - 1].at(0));
 
-    return ImageIO::save(path, width, height, image_ptrs, { "A", "B", "G", "R" });
+    return ImageIO::save(path, width, height, image_ptrs,
+                         skip_alpha ? std::vector<std::string>{ "B", "G", "R" } : std::vector<std::string>{ "A", "B", "G", "R" });
 }
 
 } // namespace IG

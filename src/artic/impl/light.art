@@ -152,7 +152,7 @@ fn @make_environment_light_textured(max_radius: f32, tex: Texture, env_cdf: cdf:
             let sinTheta  = math_builtins::sin(sample.pos.y*flt_pi);
             let dir       = unmap(sample.pos);
             let intensity = eval(dir);
-            make_direct_sample(dir, intensity, 1.0, sample.pdf / (sinTheta * flt_pi * flt_pi * 2), 1.0)
+            make_direct_sample(dir, intensity, 1.0, safe_div(sample.pdf, sinTheta * flt_pi * flt_pi * 2), 1.0)
         },
         sample_emission = @ |rnd| {
             let u = randf(rnd);
@@ -161,13 +161,13 @@ fn @make_environment_light_textured(max_radius: f32, tex: Texture, env_cdf: cdf:
             let sinTheta  = math_builtins::sin(sample.pos.y*flt_pi);
             let dir       = unmap(sample.pos);
             let intensity = eval(dir);
-            make_emission_sample(vec3_mulf(dir, max_radius), dir, intensity, 1.0, sample.pdf / (sinTheta * flt_pi * flt_pi * 2), 1.0)
+            make_emission_sample(vec3_mulf(dir, max_radius), dir, intensity, 1.0, safe_div(sample.pdf, sinTheta * flt_pi * flt_pi * 2), 1.0)
         },
         emission = @ |dir, _| {
             let uv        = map(dir);
             let pdf       = cdf::pdf_cdf_2d(uv, env_cdf);
             let sinTheta  = math_builtins::sin(uv.y*flt_pi);
-            make_emission_value(eval(dir), 1.0, pdf / (sinTheta * flt_pi * flt_pi * 2))
+            make_emission_value(eval(dir), 1.0, safe_div(pdf, sinTheta * flt_pi * flt_pi * 2))
         },
         delta    = false,
         infinite = true

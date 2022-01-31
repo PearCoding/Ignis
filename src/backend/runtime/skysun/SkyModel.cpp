@@ -41,6 +41,6 @@ SkyModel::SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, floa
 
 void SkyModel::save(const std::filesystem::path& path) const
 {
-    ImageRgba32::save(path, mData.data(), mAzimuthCount, mElevationCount);
+    ImageRgba32::save(path, mData.data(), mAzimuthCount, mElevationCount, true);
 }
 } // namespace IG

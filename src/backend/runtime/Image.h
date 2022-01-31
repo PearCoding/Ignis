@@ -45,6 +45,6 @@ struct ImageRgba32 {
 
     static ImageRgba32 load(const std::filesystem::path& path);
     bool save(const std::filesystem::path& path);
-    static bool save(const std::filesystem::path& path, const float* rgba, size_t width, size_t height);
+    static bool save(const std::filesystem::path& path, const float* rgba, size_t width, size_t height, bool skip_alpha = false);
 };
 } // namespace IG
