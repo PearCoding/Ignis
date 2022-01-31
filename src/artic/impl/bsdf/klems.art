@@ -137,7 +137,8 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, klems: KlemsModel) -> Bs
                 make_option(BsdfSample {
                     in_dir = gdir,
                     pdf    = sample.pdf,
-                    color  = color_mulf(local_eval(sample.dir, wo), 2 / sample.pdf)
+                    color  = color_mulf(local_eval(sample.dir, wo), 2 / sample.pdf),
+                    eta    = 1
                 })
             }
         },

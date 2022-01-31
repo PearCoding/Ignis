@@ -2,7 +2,7 @@
 fn @make_black_bsdf(surf: SurfaceElement) = Bsdf {
     eval        = @ |_, _| black,
     pdf         = @ |_, _| 0,
-    sample      = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, black, true),
+    sample      = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, black, 1, true),
     is_specular = true
 };
 
@@ -18,6 +18,6 @@ fn @make_error_bsdf(surf: SurfaceElement) = Bsdf {
 fn @make_passthrough_bsdf(surf: SurfaceElement) = Bsdf {
     eval        = @ |_, _| black,
     pdf         = @ |_, _| 0,
-    sample      = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, white, true),
+    sample      = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, white, 1, true),
     is_specular = true
 };

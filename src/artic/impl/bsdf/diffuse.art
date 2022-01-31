@@ -5,7 +5,7 @@ fn @make_diffuse_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
     sample = @ |rnd, _, _| {
         let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
         let gdir   = mat3x3_mul(surf.local, sample.dir);
-        make_bsdf_sample(surf, gdir/*if surf.is_entering { gdir } else { vec3_neg(gdir) }*/, sample.pdf, kd, false)
+        make_bsdf_sample(surf, gdir/*if surf.is_entering { gdir } else { vec3_neg(gdir) }*/, sample.pdf, kd, 1, false)
     },
     is_specular = false
 };
@@ -32,7 +32,7 @@ fn @make_orennayar_bsdf(surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
         sample = @ |rnd, out_dir, _| {
             let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
             let gdir   = mat3x3_mul(surf.local, sample.dir);
-            make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, color_mulf(eval(gdir, out_dir), 1/sample.pdf), false)
+            make_bsdf_sample(surf, if surf.is_entering { gdir } else { vec3_neg(gdir) }, sample.pdf, color_mulf(eval(gdir, out_dir), 1/sample.pdf), 1, false)
         },
         is_specular = false
     }

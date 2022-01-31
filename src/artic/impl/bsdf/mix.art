@@ -39,7 +39,7 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bs
                         } else {
                             let p = lerp(s.pdf, mat_second.pdf(s.in_dir, out_dir), t);
                             let c = color_lerp(s.color, mat_second.eval(s.in_dir, out_dir), t);
-                            make_option(BsdfSample { in_dir = s.in_dir, pdf = p, color = c })
+                            make_option(BsdfSample { in_dir = s.in_dir, pdf = p, color = c, eta = s.eta })
                         }
                     },
                     _ => opt

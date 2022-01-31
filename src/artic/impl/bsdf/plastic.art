@@ -24,7 +24,8 @@ fn @make_plastic_bsdf(surf: SurfaceElement, n1: f32, n2: f32, kd: Color, specula
         sample = @ |rnd, out_dir, adjoint| {
             if let Option[BsdfSample]::Some(s) = diffuse.sample(rnd, out_dir, adjoint) {
                 make_option(BsdfSample { in_dir = s.in_dir, pdf = s.pdf,
-                        color = color_mulf(s.color, diff_scattering(positive_cos(s.in_dir, surf.local.col(2)))) })
+                        color = color_mulf(s.color, diff_scattering(positive_cos(s.in_dir, surf.local.col(2)))),
+                        eta   = 1 })
             } else {
                 Option[BsdfSample]::None
             }

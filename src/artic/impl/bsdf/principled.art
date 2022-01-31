@@ -379,11 +379,13 @@ fn @make_principled_bsdf(surf: SurfaceElement,
             if sample.pdf <= flt_eps/* || shading::abs_cos_theta(sample.dir) <= flt_eps*/ {
                 reject_bsdf_sample()
             } else {
-                let gdir = shading::to_world(surf, sample.dir);
+                let s_eta = if shading::is_same_hemisphere(wo, sample.dir) { 1 } else { closure.eta };
+                let gdir  = shading::to_world(surf, sample.dir);
                 make_option(BsdfSample {
                     in_dir = gdir,
                     pdf    = sample.pdf,
-                    color  = color_mulf(eval(gdir, out_dir), 1 / sample.pdf)
+                    color  = color_mulf(eval(gdir, out_dir), 1 / sample.pdf),
+                    eta    = s_eta
                 })
             }
         },

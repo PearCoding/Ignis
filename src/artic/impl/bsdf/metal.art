@@ -42,7 +42,7 @@ fn @make_metallic_roughness_bsdf_front(surf: SurfaceElement, base_color: Color, 
             pdf    = @ |_, _| 0,
             sample = @ |_, out_dir, _| {
                 let in_dir = vec3_reflect(out_dir, N);
-                make_bsdf_sample(surf, in_dir, 1, @eval(in_dir, out_dir), false)
+                make_bsdf_sample(surf, in_dir, 1, @eval(in_dir, out_dir), 1, false)
             },
             is_specular = true
         }
@@ -74,7 +74,7 @@ fn @make_metallic_roughness_bsdf_front(surf: SurfaceElement, base_color: Color, 
                 let pdf     = s.pdf * jacob;
 
                 let color = color_mulf(@eval(in_dir, out_dir), 1 / pdf);
-                make_bsdf_sample(surf, in_dir, pdf, color, false)
+                make_bsdf_sample(surf, in_dir, pdf, color, 1, false)
             },
             is_specular = false
         }

@@ -16,11 +16,11 @@ fn @make_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color
             if (randf(rnd) > F) {
                 let t = vec3_refract(out_dir, n, k, cos_i, cos_t);
                 let adjoint_term = if adjoint { k * k } else { 1 };
-                return(make_bsdf_sample(surf, t, 1, color_mulf(kt, adjoint_term), true))
+                return(make_bsdf_sample(surf, t, 1, color_mulf(kt, adjoint_term), k, true))
             }
         }
         // Reflection
-        make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, ks, false)
+        make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, ks, 1, false)
     },
     is_specular = true
 };
@@ -40,10 +40,10 @@ fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: 
 
         if randf(rnd) > F {
             // Refraction
-            make_bsdf_sample(surf, vec3_neg(out_dir), 1, kt, true)
+            make_bsdf_sample(surf, vec3_neg(out_dir), 1, kt, 1 /* It is thin*/, true)
         } else {
             // Reflection
-            make_bsdf_sample(surf, vec3_reflect(out_dir, N), 1, ks, false)
+            make_bsdf_sample(surf, vec3_reflect(out_dir, N), 1, ks, 1, false)
         }
     },
     is_specular = true

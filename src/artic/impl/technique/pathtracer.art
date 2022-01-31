@@ -7,18 +7,16 @@ fn @pick_light(rnd: &mut RndState, num_lights: i32) {
 }
 
 // Returns the probability to continue given the contribution of a path
-fn @russian_roulette(c: Color, clamp: f32) -> f32 {
-    let prob = 2 * color_luminance(c);
-    if prob > clamp { clamp } else { prob }
-}
+fn @russian_roulette(c: Color, clamp: f32) = clampf(2 * color_luminance(c), 0, clamp);
 
 // Russian roulette used in pbrt v4
-fn @russian_roulette_pbrt(c: Color) = math_builtins::fmax[f32](0, color_max_component(c));
+fn @russian_roulette_pbrt(c: Color, clamp: f32) = clampf(color_max_component(c), 0, clamp);
 
 struct PTRayPayload {
-    mis: f32,
+    mis:     f32,
     contrib: Color,
-    depth: i32
+    depth:   i32,
+    eta:     f32
 }
 
 static AOV_PATH_NORMAL = 1;
@@ -33,13 +31,15 @@ fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     r.components(2) = payload.contrib.g;
     r.components(3) = payload.contrib.b;
     r.components(4) = bitcast[f32](payload.depth);
+    r.components(5) = payload.eta;
     r
 }
 
 fn unrap_ptraypayload(payload: RayPayload) = PTRayPayload {
     mis     = payload.components(0),
     contrib = make_color(payload.components(1), payload.components(2), payload.components(3)),
-    depth   = bitcast[i32](payload.components(4))
+    depth   = bitcast[i32](payload.components(4)),
+    eta     = payload.components(5),
 };
 
 fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, aovs: AOVTable) -> PathTracer {
@@ -203,7 +203,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                  ) -> Option[(Ray, RayPayload)] {
         let pt = unrap_ptraypayload(payload);
         // Russian roulette and maximum depth
-        // let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette(state.contrib, 0.75) };
+        // let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette(state.contrib, 0.95) };
         // if state.depth >= max_path_len || randf(rnd) >= rr_prob {
         //     return(Option[Ray]::None)
         // }
@@ -213,22 +213,22 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         // Bounce
         let out_dir = vec3_neg(ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
-            let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
-
-            let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette_pbrt(pt.contrib) };
+            let rr_prob = russian_roulette_pbrt(color_mulf(pt.contrib, pt.eta * pt.eta), 0.95);
             if pt.depth >= max_path_len || randf(rnd) >= rr_prob {
                 return(Option[(Ray, RayPayload)]::None)
             }
-            
-            let mis = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
+
+            let contrib     = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+            let mis         = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
             let new_contrib = color_mulf(contrib, 1 / rr_prob);
 
             make_option(
                 make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
                 wrap_ptraypayload(PTRayPayload {
-                    mis = mis,
+                    mis     = mis,
                     contrib = new_contrib,
-                    depth = pt.depth + 1
+                    depth   = pt.depth + 1,
+                    eta     = pt.eta * mat_sample.eta
                 })
             )
         } else {

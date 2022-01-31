@@ -98,9 +98,9 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
 
 static void path_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
-    constexpr int C = 1 /* MIS */ + 3 /* Contrib */ + 1 /* Depth */;
+    constexpr int C = 1 /* MIS */ + 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */;
     stream << "static RayPayloadComponents = " << C << ";" << std::endl
-           << "fn init_raypayload() = wrap_ptraypayload(PTRayPayload { mis = 0, contrib = white, depth = 1 });" << std::endl;
+           << "fn init_raypayload() = wrap_ptraypayload(PTRayPayload { mis = 0, contrib = white, depth = 1, eta = 1 });" << std::endl;
 }
 
 // Will return information about the enabled AOVs
