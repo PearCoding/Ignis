@@ -93,6 +93,8 @@ public:
     IG::PoseManager PoseManager;
     CameraPose LastCameraPose;
 
+    float CurrentTravelSpeed = 1.0f;
+
     // Events
     void handlePoseInput(size_t posenmbr, bool capture, const Camera& cam)
     {
@@ -118,10 +120,9 @@ public:
         static bool camera_on              = false;
         static std::array<bool, 12> arrows = { false, false, false, false, false, false, false, false, false, false, false, false };
         static bool speed[2]               = { false, false };
-        const float rspeed                 = 0.005f;
-        const float slow_factor            = 0.1f;
-        const float fast_factor            = 1.5f;
-        static float tspeed                = 0.1f;
+        constexpr float RSPEED             = 0.005f;
+        constexpr float SLOW_FACTOR        = 0.1f;
+        constexpr float FAST_FACTOR        = 1.5f;
 
         const bool canInteract = !LockInteraction && run;
 
@@ -330,7 +331,7 @@ public:
                 break;
             case SDL_MOUSEMOTION:
                 if (camera_on && !hover && canInteract) {
-                    const float aspeed  = rspeed * (io.KeyCtrl ? fast_factor : (io.KeyShift ? slow_factor : 1.0f));
+                    const float aspeed  = RSPEED * (io.KeyCtrl ? FAST_FACTOR : (io.KeyShift ? SLOW_FACTOR : 1.0f));
                     const float xmotion = event.motion.xrel * aspeed;
                     const float ymotion = event.motion.yrel * aspeed;
                     if (io.KeyAlt)
@@ -375,23 +376,23 @@ public:
                     }
                 }
 
-                const float drspeed = 10 * rspeed;
+                const float drspeed = 10 * RSPEED;
                 if (arrows[0])
-                    cam.move(0, 0, tspeed);
+                    cam.move(0, 0, CurrentTravelSpeed);
                 if (arrows[1])
-                    cam.move(0, 0, -tspeed);
+                    cam.move(0, 0, -CurrentTravelSpeed);
                 if (arrows[2])
-                    cam.move(-tspeed, 0, 0);
+                    cam.move(-CurrentTravelSpeed, 0, 0);
                 if (arrows[3])
-                    cam.move(tspeed, 0, 0);
+                    cam.move(CurrentTravelSpeed, 0, 0);
                 if (arrows[4])
                     cam.roll(drspeed);
                 if (arrows[5])
                     cam.roll(-drspeed);
                 if (arrows[6])
-                    cam.move(0, tspeed, 0);
+                    cam.move(0, CurrentTravelSpeed, 0);
                 if (arrows[7])
-                    cam.move(0, -tspeed, 0);
+                    cam.move(0, -CurrentTravelSpeed, 0);
                 if (arrows[8])
                     cam.rotate(0, drspeed);
                 if (arrows[9])
@@ -401,9 +402,9 @@ public:
                 if (arrows[11])
                     cam.rotate(drspeed, 0);
                 if (speed[0])
-                    tspeed *= 1.1f;
+                    CurrentTravelSpeed *= 1.1f;
                 if (speed[1])
-                    tspeed *= 0.9f;
+                    CurrentTravelSpeed *= 0.9f;
             }
 
             if (PoseResetRequest || PoseRequest >= 0) {
@@ -835,9 +836,9 @@ UI::UI(int width, int height, const std::vector<const float*>& aovs, const std::
         throw std::runtime_error("Could not setup UI");
     }
 
-    mInternal->Parent = this;
-    mInternal->Width  = width;
-    mInternal->Height = height;
+    mInternal->Parent        = this;
+    mInternal->Width         = width;
+    mInternal->Height        = height;
     mInternal->ShowDebugMode = showDebug;
 
     mInternal->Window = SDL_CreateWindow(
@@ -1000,5 +1001,10 @@ void UI::update(uint32_t iter, uint32_t samplesPerIteration)
 void UI::changeAOV(int delta_aov)
 {
     mCurrentAOV = (mCurrentAOV + delta_aov) % mAOVs.size();
+}
+
+void UI::setTravelSpeed(float v)
+{
+    mInternal->CurrentTravelSpeed = std::max(1e-5f, v);
 }
 } // namespace IG

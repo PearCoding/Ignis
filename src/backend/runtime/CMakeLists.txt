@@ -69,6 +69,7 @@ set(SRC
     log/FileLogListener.h
     log/LogListener.h
     math/BoundingBox.h
+    math/Tangent.h
     math/Triangle.h
     mesh/MtsSerializedFile.cpp
     mesh/MtsSerializedFile.h

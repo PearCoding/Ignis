@@ -26,6 +26,8 @@ public:
     inline ToneMappingMethod currentToneMappingMethod() const { return mToneMappingMethod; }
     inline int currentAOV() const { return mCurrentAOV; }
 
+    void setTravelSpeed(float v);
+
 private:
     void changeAOV(int delta_aov);
     inline const float* currentPixels() const { return mAOVs[mCurrentAOV]; }

@@ -1,0 +1,17 @@
+{
+	"bsdfs": [
+		{"type":"diffuse", "name": "room", "reflectance":[0.8, 0.8, 0.8]}
+	],
+	"shapes": [
+		{"type":"ply", "name":"Room", "filename":"meshes/Room.ply"},
+		{"type":"ply", "name":"Window", "filename":"meshes/RoomWindow.ply"}
+	],
+	"entities": [
+		{"name":"Room","shape":"Room", "bsdf":"room"},
+		{"name":"Window","shape":"Window", "bsdf":"window"}
+	],
+	"lights": [
+		{"type":"sky", "name":"Sky"},
+		{"type":"sun", "name":"Sun"}
+	]
+}

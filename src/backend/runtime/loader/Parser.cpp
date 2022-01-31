@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include "Logger.h"
+#include "math/Tangent.h"
 
 #include <cmath>
 #include <fstream>
@@ -180,9 +181,16 @@ Eigen::Matrix<typename Derived1::Scalar, 3, 4> lookAt(const Eigen::MatrixBase<De
     typedef Eigen::Matrix<typename Derived1::Scalar, 3, 4> Matrix34;
 
     Vector3 f = (center - eye).normalized();
+    if (f.squaredNorm() <= FltEps)
+        f = Vector3::UnitZ();
+
     Vector3 u = up.normalized();
     Vector3 s = f.cross(u).normalized();
     u         = s.cross(f);
+
+    if (u.squaredNorm() <= FltEps) {
+        Tangent::frame(f, s, u);
+    }
 
     Matrix34 m;
     m.col(0) = s;
@@ -503,8 +511,8 @@ Scene SceneParser::loadFromFile(const char* path, bool& ok)
         if (ok) {
             // Add a constant env light
             // if (scene.lights().empty()) {
-                auto env = std::make_shared<Object>(OT_LIGHT, "constant");
-                scene.addLight("__env", env);
+            auto env = std::make_shared<Object>(OT_LIGHT, "constant");
+            scene.addLight("__env", env);
             // }
         }
         return scene;

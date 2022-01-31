@@ -45,7 +45,6 @@ enum FisheyeAspectMode {
 // Creates a fishlens camera
 fn @make_fishlens_camera(eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
     let fov = flt_pi;
-    let V   = mat3x3_transpose(view);
     let asp = w / h;
     
     let mode = FisheyeAspectMode::Circular;
@@ -84,7 +83,7 @@ fn @make_fishlens_camera(eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tma
             let sP = if r < flt_eps { 0 } else { ny / r };
             let cP = if r < flt_eps { 0 } else { nx / r };
             let nd = make_vec3(sT*cP, sT*sP, cT);
-            let d  = vec3_normalize(mat3x3_mul(V, nd));
+            let d  = vec3_normalize(mat3x3_mul(view, nd));
             make_ray(eye, d, tmin, tmax)
         }
     }

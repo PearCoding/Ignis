@@ -69,6 +69,8 @@ public:
     inline Target target() const { return mTarget; }
     inline size_t samplesPerIteration() const { return mSamplesPerIteration; }
 
+    inline const BoundingBox& sceneBoundingBox() const { return mDatabase.SceneBBox; }
+
 private:
     void shutdown();
     void compileShaders();

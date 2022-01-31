@@ -292,6 +292,11 @@ int main(int argc, char** argv)
                 aov_names[i] = runtime->aovs()[i - 1];
         }
         ui = std::make_unique<UI>(film_width, film_height, aovs, aov_names, runtime->isDebug());
+
+        // Setup initial travelspeed
+        BoundingBox bbox = runtime->sceneBoundingBox();
+        bbox.extend(camera.Eye);
+        ui->setTravelSpeed(bbox.diameter().maxCoeff() / 50);
     } catch (...) {
         return EXIT_FAILURE;
     }
