@@ -123,6 +123,20 @@ fn @lerp2(a: f32, b: f32, c: f32, k1: f32, k2: f32) -> f32 {
     (1 - k1 - k2) * a + k1 * b + k2 * c
 }
 
+fn @diff_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
+    let cd   = c * d;
+    let diff = fmaf(a, b, -cd);
+    let err  = fmaf(-c, d, cd);
+    diff + err
+}
+
+fn @sum_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
+    let cd  = c * d;
+    let sum = fmaf(a, b, cd);
+    let err = fmaf(c, d, -cd);
+    sum + err
+}
+
 fn @triangle_area(v0: Vec3, v1: Vec3, v2: Vec3) -> f32 {
     let e1 = vec3_sub(v1, v0);
     let e2 = vec3_sub(v2, v0);
@@ -155,3 +169,4 @@ fn @clampf(v: f32, l: f32, u: f32) = math_builtins::fmin[f32](u, math_builtins::
 fn @safe_div(a: f32, b: f32) = if math_builtins::fabs(b) <= flt_eps { 0:f32 } else { a / b };
 
 #[import(cc = "device", name = "llvm.debugtrap")] fn ig_trap() -> ();
+#[import(cc = "device", name = "llvm.fma.f32")] fn fmaf(f32, f32, f32) -> f32;

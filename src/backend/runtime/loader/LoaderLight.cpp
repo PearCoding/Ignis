@@ -215,7 +215,6 @@ static void light_sky(std::ostream& stream, const std::string& name, const std::
 
 static void light_cie_env(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    IG_UNUSED(name);
     tree.beginClosure();
 
     tree.addColor("zenith", *light, Vector3f::Ones(), true, ShadingTree::IM_Light);
@@ -227,7 +226,7 @@ static void light_cie_env(std::ostream& stream, const std::string& name, const s
            << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_cie_sky_light(" << tree.context().Environment.SceneDiameter / 2
            << ", " << tree.getInline("zenith")
            << ", " << tree.getInline("ground")
-           << ", " << tree.getInline("groundbrightness")
+           << ", " << tree.getInline("ground_brightness")
            << ", " << (cloudy ? "true" : "false") << ");" << std::endl;
 
     tree.endClosure();

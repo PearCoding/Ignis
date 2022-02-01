@@ -51,6 +51,10 @@ fn @vec2_neg(v: Vec2) = vec2_map(v, |x| -x);
 fn @vec3_neg(v: Vec3) = vec3_map(v, |x| -x);
 fn @vec4_neg(v: Vec4) = vec4_map(v, |x| -x);
 
+fn @vec2_abs(v: Vec2) = vec2_map(v, |x| math_builtins::fabs(x));
+fn @vec3_abs(v: Vec3) = vec3_map(v, |x| math_builtins::fabs(x));
+fn @vec4_abs(v: Vec4) = vec4_map(v, |x| math_builtins::fabs(x));
+
 fn @vec2_mulf(v: Vec2, t: f32) = vec2_mul(v, make_vec2(t, t));
 fn @vec3_mulf(v: Vec3, t: f32) = vec3_mul(v, make_vec3(t, t, t));
 fn @vec4_mulf(v: Vec4, t: f32) = vec4_mul(v, make_vec4(t, t, t, t));
@@ -64,6 +68,16 @@ fn @vec3_cross(a: Vec3, b: Vec3) = make_vec3(
     a.z * b.x - a.x * b.z,
     a.x * b.y - a.y * b.x);
 
+fn @vec3_max_index(a: Vec3) -> i32 {
+    if a.x > a.y && a.x > a.z {
+        0
+    } else {
+        if a.y > a.z { 1 } else { 2 }
+    }
+}
+
+fn @vec3_max_value(a: Vec3) = math_builtins::fmax(a.x, math_builtins::fmax(a.y, a.z));
+        
 fn @vec2_len2(v: Vec2) = vec2_dot(v, v);
 fn @vec3_len2(v: Vec3) = vec3_dot(v, v);
 fn @vec4_len2(v: Vec4) = vec4_dot(v, v);
@@ -112,3 +126,25 @@ fn @vec4_min(a: Vec4, b: Vec4) = vec4_zip(a, b, |x, y| select(x < y, x, y));
 fn @vec2_max(a: Vec2, b: Vec2) = vec2_zip(a, b, |x, y| select(x > y, x, y));
 fn @vec3_max(a: Vec3, b: Vec3) = vec3_zip(a, b, |x, y| select(x > y, x, y));
 fn @vec4_max(a: Vec4, b: Vec4) = vec4_zip(a, b, |x, y| select(x > y, x, y));
+
+fn @vec2_at(a: Vec2, i: i32) = match(i) {
+    0 => a.x,
+    _ => a.y
+};
+
+fn @vec3_at(a: Vec3, i: i32) = match(i) {
+    0 => a.x,
+    1 => a.y,
+    _ => a.z
+};
+
+fn @vec4_at(a: Vec4, i: i32) = match(i) {
+    0 => a.x,
+    1 => a.y,
+    2 => a.z,
+    _ => a.w
+};
+
+fn @vec2_permute(a: Vec2, ix: i32, iy: i32)                   = make_vec2(vec2_at(a, ix), vec2_at(a, iy));
+fn @vec3_permute(a: Vec3, ix: i32, iy: i32, iz: i32)          = make_vec3(vec3_at(a, ix), vec3_at(a, iy), vec3_at(a, iz));
+fn @vec4_permute(a: Vec4, ix: i32, iy: i32, iz: i32, iw: i32) = make_vec4(vec4_at(a, ix), vec4_at(a, iy), vec4_at(a, iz), vec4_at(a, iw));

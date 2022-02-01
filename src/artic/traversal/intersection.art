@@ -138,15 +138,6 @@ fn @transform_ray(ray: Ray, m: Mat3x4) = make_ray(
     mat3x4_transform_direction(m, ray.dir),
     ray.tmin, ray.tmax);
 
-fn @transform_ray2(ray: Ray, m: Mat3x4) -> (Ray, f32) {
-    let d = mat3x4_transform_direction(m, ray.dir);
-    let scale_factor = vec3_len(d);
-    let nd = vec3_mulf(d, 1/scale_factor);
-
-    (make_ray(mat3x4_transform_point(m, ray.org), nd, scale_factor * ray.tmin, scale_factor * ray.tmax), 
-    scale_factor)
-}
-
 // Transforms ray. The direction is normalized
 fn @transform_norm_ray(ray: Ray, m: Mat3x4) = make_ray(
     mat3x4_transform_point(m, ray.org),
@@ -195,7 +186,7 @@ fn @empty_bbox() = make_bbox(
     make_vec3( flt_max,  flt_max,  flt_max),
     make_vec3(-flt_max, -flt_max, -flt_max));
 
-fn @intersect_ray_tri(backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
+fn @intersect_ray_tri_mt(backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
     let c = vec3_sub(tri.v0, ray.org);
     let r = vec3_cross(ray.dir, c);
     let det = vec3_dot(tri.n, ray.dir);
@@ -215,7 +206,7 @@ fn @intersect_ray_tri(backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32
     mask &= t >= abs_det * ray.tmin;
     mask &= t <= abs_det * ray.tmax;
 
-    // if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
+    if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
 
     if mask {
         let inv_det = 1 / abs_det;
@@ -224,6 +215,58 @@ fn @intersect_ray_tri(backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32
         Option[(f32, f32, f32)]::None
     }
 }
+
+fn @intersect_ray_tri_bw(_backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
+    // Permute components of triangle vertices and ray direction
+    let kz = vec3_max_index(vec3_abs(ray.dir));
+    let kx = if kz + 1 == 3 { 0 } else { kz + 1 };
+    let ky = if kx + 1 == 3 { 0 } else { kx + 1 };
+    
+    let d       = vec3_permute(ray.dir, kx, ky, kz);
+    let mut p0t = vec3_permute(vec3_sub(tri.v0, ray.org), kx, ky, kz);
+    let mut p1t = vec3_permute(vec3_sub(tri.v1, ray.org), kx, ky, kz);
+    let mut p2t = vec3_permute(vec3_sub(tri.v2, ray.org), kx, ky, kz);
+
+    // Apply shear transformation to translated vertex positions
+    let Sx = -d.x / d.z;
+    let Sy = -d.y / d.z;
+    let Sz = 1 / d.z;
+    p0t.x += Sx * p0t.z;
+    p0t.y += Sy * p0t.z;
+    p1t.x += Sx * p1t.z;
+    p1t.y += Sy * p1t.z;
+    p2t.x += Sx * p2t.z;
+    p2t.y += Sy * p2t.z;
+
+    // Compute differences
+    let e0 = diff_of_prod(p1t.x, p2t.y, p1t.y, p2t.x);
+    let e1 = diff_of_prod(p2t.x, p0t.y, p2t.y, p0t.x);
+    let e2 = diff_of_prod(p0t.x, p1t.y, p0t.y, p1t.x);
+
+    let det = e0 + e1 + e2;
+    let abs_det = math_builtins::fabs(det);
+    let mut mask = !((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0)) && abs_det != 0;
+
+    if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
+
+    // Compute scaled hit distance to triangle and test against ray range
+    p0t.z *= Sz;
+    p1t.z *= Sz;
+    p2t.z *= Sz;
+    let t = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
+    mask &= !(det < 0 && (t >= ray.tmin * det || t < ray.tmax * det)) && !(det > 0 && (t <= ray.tmin * det || t > ray.tmax * det));
+
+    if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
+
+    if mask {
+        let inv_det = 1 / det;
+        make_option(t * inv_det, e0 * inv_det, e1 * inv_det)
+    } else {
+        Option[(f32, f32, f32)]::None
+    }
+}
+
+fn @intersect_ray_tri(backface_culling: bool, ray: Ray, tri: Tri) = intersect_ray_tri_mt(backface_culling, ray, tri);
 
 fn @intersect_ray_box(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> (f32, f32) {
     if is_bbox_empty(bbox) { return((1,-1)) }
