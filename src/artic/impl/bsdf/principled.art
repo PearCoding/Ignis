@@ -127,27 +127,28 @@ fn @evalReflectionTerm(closure: EvalClosure) -> Color {
 fn @evalRefractionTerm(closure: EvalClosure) -> Color {
     let micro = getRefractionMicro(closure.general);
 
-    let HdL  = super::vec3_dot(closure.wi, closure.h);
-    let F    = super::fresnel(closure.general.eta, HdL).factor; 
-    let D    = micro.D(closure.h);
-    let G    = micro.G(closure.wi, closure.wo, closure.h);
-    let norm = micro.norm(closure.wi, closure.wo, closure.h);
+    let HdI   = super::vec3_dot(closure.wi, closure.h);
+    let HdO   = super::vec3_dot(closure.wo, closure.h);
+    let F     = super::fresnel(closure.general.eta, HdI).factor; 
+    let D     = micro.D(closure.h);
+    let G     = micro.G(closure.wi, closure.wo, closure.h);
+    let norm  = micro.norm(closure.wi, closure.wo, closure.h); // ~ cos_h_i / cos_o
 
-    let jacob   = shading::halfway_refractive_jacobian(closure.general.eta, shading::cos_theta(closure.wi), shading::cos_theta(closure.wo));
+    let jacob   = shading::halfway_refractive_jacobian(closure.general.eta, HdI, HdO);
     let spread  = if closure.adjoint { 1 / (closure.general.eta * closure.general.eta) } else { 1 };
-    let term    = (1 - F) * D * G * norm * jacob * spread;
+    let term    = closure.general.eta * closure.general.eta * (1 - F) * D * G * norm * jacob * spread * super::safe_div(1, shading::abs_cos_theta(closure.wi));
 
     if closure.general.thin {
         super::color_mulf(
             super::make_color(math_builtins::sqrt[f32](closure.general.base_color.r), math_builtins::sqrt[f32](closure.general.base_color.g), math_builtins::sqrt[f32](closure.general.base_color.b)),
             term)
     } else {
-        super::color_mulf(closure.general.base_color, 1/*term*/)
+        super::color_mulf(closure.general.base_color, term)
     }
 }
 
 fn @evalClearcoatTerm(closure: EvalClosure) -> Color {
-    let F0 = 0.04 : f32; // IOR 1.5
+    let F0 = 0.04 : f32; // sqr((eta-1)/(eta+1)) IOR 1.5
     let R  = 0.25 : f32;
     let R2 = 0.1 * (1 - closure.general.clearcoat_gloss) + 0.01 * closure.general.clearcoat_gloss;
 

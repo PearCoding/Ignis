@@ -101,13 +101,6 @@ fn @schlick(f0: Color, f90: Color, dot: f32)-> Color{
 
 fn @schlick_f(f0: f32, f90: f32, dot: f32) = f0 + (f90 - f0) * schlick_approx(dot);
 
-fn @schlick_from_relative_ior(relative_ior: f32)-> f32{
-    let eta1 = math_builtins::sqrt(relative_ior - 1);
-    let eta2 = math_builtins::sqrt(relative_ior + 1);
-
-    eta1 / eta2
-}
-
 fn @schlick_r0(eta: f32)-> f32{
     let factor = clampf((eta - 1) / (eta + 1), 0, 1);
     factor * factor

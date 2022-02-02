@@ -47,7 +47,7 @@ fn @g_1_smith(local: Mat3x3, w: Vec3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f3
     let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
 
     let denom = 1 + math_builtins::sqrt(1 + k2);
-    if denom <= flt_eps { 0 } else { 2 / denom }
+    2 / denom
 }
 
 fn @ndf_beckmann(local: Mat3x3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
@@ -70,7 +70,7 @@ fn @ndf_ggx(local: Mat3x3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
 
     let kx = cosX / alpha_u;
     let ky = cosY / alpha_v;
-    let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
+    let k2 = safe_div(kx * kx + ky * ky, cosZ * cosZ);
 
     safe_div(1, flt_pi * alpha_u * alpha_v * cosZ * cosZ * cosZ * cosZ * (1 + k2) * (1 + k2))
 }
@@ -131,15 +131,15 @@ fn @make_aniso_ggx_model(local: Mat3x3, alpha_u: f32, alpha_v: f32) = Microfacet
         let kx = cosPhi / alpha_u;
         let ky = sinPhi / alpha_v;
         let d2 = kx * kx + ky * ky;
-        let a2 = 1 / d2;
+        let a2 = safe_div(1, d2);
         let t2 = a2 * u0 / (1 - u0);
 
-        let cosTheta  = 1/math_builtins::sqrt(1 + t2);
+        let cosTheta  = 1 / math_builtins::sqrt(1 + t2);
         let cosTheta2 = cosTheta * cosTheta;
         let sinTheta  = math_builtins::sqrt(1 - cosTheta2);
 
         let k2  = d2 * (sinTheta * sinTheta) / cosTheta2;
-        let pdf = 1 / (flt_pi * alpha_u * alpha_v * cosTheta2 * cosTheta * (1 + k2) * (1 + k2));
+        let pdf = safe_div(1, flt_pi * alpha_u * alpha_v * cosTheta2 * cosTheta * (1 + k2) * (1 + k2));
         let lh  = make_vec3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
         MicrofacetSample { normal = mat3x3_mul(local, lh), pdf = pdf}
     },
@@ -161,7 +161,7 @@ struct MicrofacetDistribution {
     is_delta: bool
 }
 
-fn @compute_microfacet_norm(wi: Vec3, wo: Vec3, m: Vec3, local: Mat3x3) = absolute_cos(wi, m) / absolute_cos(local.col(2), wo);
+fn @compute_microfacet_norm(wi: Vec3, wo: Vec3, m: Vec3, local: Mat3x3) = safe_div(absolute_cos(wi, m), absolute_cos(local.col(2), wo));
 
 fn @make_microfacet_distribution(model: MicrofacetModel, local: Mat3x3) = MicrofacetDistribution {
     D        = model.D,

@@ -17,7 +17,7 @@ class Figure(FullSizeWithCrops):
         return figuregen.JPEG(sio.lin_to_srgb(sio.exposure(img, self.exposure)), quality=80)
 
     def compute_error(self, reference_image, method_image):
-        return sio.relative_mse(method_image, reference_image, 0.001)
+        return sio.relative_mse_outlier_rejection(method_image, reference_image, 0.001)
         # return sio.mse(method_image, reference_image)
 
 if __name__ == "__main__":
@@ -32,10 +32,11 @@ if __name__ == "__main__":
     title.get_element(0, 0).set_image(figuregen.PNG(np.tile([255,255,255], (1, 500))))
     title.set_title("top", "Cornell Box - Comparison")
 
-    (h, w, _) = sio.read(f"{script_dir}/reference4096.exr").shape
+    ref_img = sio.read(f"{script_dir}/reference4096.exr")
+    (h, w, _) = ref_img.shape
     
     figure = Figure(1,
-        reference_image=sio.read(f"{script_dir}/reference4096.exr"),
+        reference_image=ref_img,
         method_images=[
             sio.read(f"{result_image}"),
         ],
@@ -50,4 +51,4 @@ if __name__ == "__main__":
     rows.insert(0, [title])
 
     # Generate the figure with the pdflatex backend and default settings
-    figuregen.figure(rows, width_cm=17.7, filename=f"CornellBox.pdf")
+    figuregen.figure(rows, width_cm=17.7, filename="CornellBox.pdf")

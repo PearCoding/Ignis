@@ -1,7 +1,7 @@
 {
   "technique": {
     "type": "path",
-    "max_depth": 6
+    "max_depth": 0
   },
   "externals": [
     {"filename": "cbox-base.json"}
