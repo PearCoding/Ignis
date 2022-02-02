@@ -61,11 +61,11 @@ static inline void setup_camera_view(RuntimeRenderSettings& settings, const Load
         const float s            = std::sin(settings.FOV * Deg2Rad / 2);
         const float d            = std::max(a, b) * std::sqrt(1 / (s * s) - 1);
 
-        settings.CameraDir = Vector3f::UnitZ();
+        settings.CameraDir = -Vector3f::UnitZ();
         settings.CameraUp  = Vector3f::UnitY();
         settings.CameraEye = Vector3f::UnitX() * sceneBBox.center().x()
                              + Vector3f::UnitY() * sceneBBox.center().y()
-                             + Vector3f::UnitZ() * (sceneBBox.min.z() - d);
+                             + Vector3f::UnitZ() * (sceneBBox.max.z() + d);
     } else {
         // Get initial location
         Transformf cameraTransform = Transformf::Identity();
