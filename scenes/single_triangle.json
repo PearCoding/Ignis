@@ -14,7 +14,7 @@
 		"size": [1000, 1000]
 	},
 	"bsdfs": [
-		{"type":"principled", "name": "mat", "base_color": [1,1,1]}
+		{"type":"diffuse", "name": "mat"}
 	],
 	"shapes": [
 		{"type":"triangle", "name":"Triangle"}

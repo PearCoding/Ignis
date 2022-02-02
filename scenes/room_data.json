@@ -11,7 +11,7 @@
 		{"name":"Window","shape":"Window", "bsdf":"window"}
 	],
 	"lights": [
-		{"type":"sky", "name":"Sky"},
+		{"type":"cie_cloudy", "name":"Sky"},
 		{"type":"sun", "name":"Sun"}
 	]
 }

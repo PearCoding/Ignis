@@ -205,11 +205,14 @@ fn @sample_vndf_ggx(rnd: &mut RndState, local: Mat3x3, vN: Vec3, alpha_u: f32, a
     let cosZ = vec3_dot(local.col(2), vN); // cosTheta
     let cosX = vec3_dot(local.col(0), vN); // cosPhi * sinTheta
     let cosY = vec3_dot(local.col(1), vN); // sinPhi * sinTheta
-    let VH   = vec3_normalize(make_vec3(alpha_u*cosX, alpha_v*cosY, cosZ));
+    
+    if cosZ <= flt_eps { return(vN) };
+
+    let VH = vec3_normalize(make_vec3(alpha_u*cosX, alpha_v*cosY, cosZ));
 
 	// Section 4.1: orthonormal basis (with special case if cross product is zero)
     let lensq = VH.x*VH.x + VH.y * VH.y;
-	let T1    = if lensq > flt_eps { vec3_mulf(make_vec3(-VH.y, VH.x, 0), 1/math_builtins::sqrt(lensq)) } else { make_vec3(1, 0, 0) };
+	let T1    = if lensq > flt_eps { vec3_mulf(make_vec3(-VH.y, VH.x, 0), 1 / math_builtins::sqrt(lensq)) } else { make_vec3(1, 0, 0) };
 	let T2    = vec3_cross(VH, T1);
 
 	// Section 4.2: parameterization of the projected area
@@ -230,7 +233,7 @@ fn @sample_vndf_ggx(rnd: &mut RndState, local: Mat3x3, vN: Vec3, alpha_u: f32, a
 
 fn @pdf_vndf_ggx(local: Mat3x3, w: Vec3, h: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
     let cosZ = absolute_cos(local.col(2), w);
-    g_1_smith(local, w, h, alpha_u, alpha_v) * absolute_cos(w, h) * ndf_ggx(local, h, alpha_u, alpha_v) / cosZ
+    safe_div(g_1_smith(local, w, h, alpha_u, alpha_v) * absolute_cos(w, h) * ndf_ggx(local, h, alpha_u, alpha_v), cosZ)
 }
 
 fn @make_vndf_ggx_distribution(local: Mat3x3, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
