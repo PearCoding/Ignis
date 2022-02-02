@@ -49,7 +49,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
     let aov_normal = @aovs(AOV_PATH_NORMAL);
     let aov_di     = @aovs(AOV_PATH_DIRECT);
     let aov_nee    = @aovs(AOV_PATH_NEE);
-    let aov_stats  = @aovs(AOV_PATH_STATS);
+    //let aov_stats  = @aovs(AOV_PATH_STATS);
 
     fn @on_shadow( ray: Ray
                  , _pixel: i32
@@ -61,6 +61,10 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                  ) -> Option[(Ray, Color)] {
         // No shadow rays for specular materials
         if mat.bsdf.is_specular || num_lights == 0 {
+            return(Option[(Ray, Color)]::None)
+        }
+        
+        if unrap_ptraypayload(payload).depth + 1 >= max_path_len {
             return(Option[(Ray, Color)]::None)
         }
 
@@ -75,19 +79,18 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 return(Option[(Ray, Color)]::None)
             }
 
-            let light_dir    = light_sample.posdir; // Infinite lights return a direction instead of a position
-            let vis          = vec3_dot(light_dir, surf.local.col(2));
-            let correct_side = surf.is_entering ^ (vis < 0);
+            let light_dir = light_sample.posdir; // Infinite lights return a direction instead of a position
+            let vis       = vec3_dot(light_dir, surf.local.col(2));
 
-            if correct_side {
+            if vis > flt_eps {
                 let in_dir  = light_dir; 
                 let out_dir = vec3_neg(ray.dir);
 
-                let pdf_e     = if light.delta { 1 } else { mat.bsdf.pdf(in_dir, out_dir) }; // Pdf to sample the "infinite" light based on bsdf
+                let pdf_e     = if light.delta { 0 } else { mat.bsdf.pdf(in_dir, out_dir) }; // Pdf to sample the "infinite" light based on bsdf
                 let pdf_l     = light_sample.pdf_dir * pdf_lightpick;                        // Pdf to sample the light based on NEE
                 let inv_pdf_l = 1 / pdf_l;
                 
-                let mis = if light.delta { 1 } else { 1 / (1 + pdf_e * inv_pdf_l) };
+                let mis = 1 / (1 + pdf_e * inv_pdf_l);
 
                 let contrib = color_mul(light_sample.intensity, color_mul(unrap_ptraypayload(payload).contrib, mat.bsdf.eval(in_dir, out_dir)));
 
@@ -101,22 +104,21 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 return(Option[(Ray, Color)]::None)
             }
 
-            let light_dir    = vec3_sub(light_sample.posdir, surf.point);
-            let vis          = vec3_dot(light_dir, surf.local.col(2));
-            let correct_side = surf.is_entering ^ (vis < 0);  
+            let light_dir = vec3_sub(light_sample.posdir, surf.point);
+            let vis       = vec3_dot(light_dir, surf.local.col(2));
 
-            if correct_side && light_sample.cos > flt_eps {
+            if vis > flt_eps && light_sample.cos > flt_eps {
                 let inv_d   = 1 / vec3_len(light_dir);
                 let inv_d2  = inv_d * inv_d;
                 let in_dir  = vec3_mulf(light_dir, inv_d);
                 let out_dir = vec3_neg(ray.dir);
                 let cos_l   = light_sample.cos;
 
-                let pdf_e     = if light.delta { 1 } else { mat.bsdf.pdf(in_dir, out_dir) * cos_l * inv_d2 };
+                let pdf_e     = if light.delta { 0 } else { mat.bsdf.pdf(in_dir, out_dir) * cos_l * inv_d2 };
                 let pdf_l     = light_sample.pdf_area * pdf_lightpick;
                 let inv_pdf_l = 1 / pdf_l;
 
-                let mis = if light.delta { 1 } else { 1 / (1 + pdf_e * inv_pdf_l) };
+                let mis = 1 / (1 + pdf_e * inv_pdf_l);
                 let geom_factor = cos_l * inv_d2 * inv_pdf_l;
 
                 let contrib = color_mul(light_sample.intensity, color_mul(unrap_ptraypayload(payload).contrib, mat.bsdf.eval(in_dir, out_dir)));
@@ -194,7 +196,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
     }
 
     fn @on_bounce( ray: Ray
-                 , pixel: i32
+                 , _pixel: i32
                  , _hit: Hit
                  , rnd: &mut RndState
                  , payload: RayPayload
@@ -202,19 +204,14 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                  , mat: Material
                  ) -> Option[(Ray, RayPayload)] {
         let pt = unrap_ptraypayload(payload);
-        // Russian roulette and maximum depth
-        // let rr_prob = if mat.bsdf.is_specular { 1 } else { russian_roulette(state.contrib, 0.95) };
-        // if state.depth >= max_path_len || randf(rnd) >= rr_prob {
-        //     return(Option[Ray]::None)
-        // }
 
-        aov_stats.splat(pixel, make_color(if pt.depth == 1 { 2 } else { 1 }, 0, 0));
+        // aov_stats.splat(pixel, make_color(if pt.depth == 1 { 2 } else { 1 }, 0, 0));
 
         // Bounce
         let out_dir = vec3_neg(ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
             let rr_prob = russian_roulette_pbrt(color_mulf(pt.contrib, pt.eta * pt.eta), 0.95);
-            if pt.depth >= max_path_len || randf(rnd) >= rr_prob {
+            if pt.depth + 1 >= max_path_len || randf(rnd) >= rr_prob {
                 return(Option[(Ray, RayPayload)]::None)
             }
 

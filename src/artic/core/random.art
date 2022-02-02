@@ -94,7 +94,7 @@ fn @sample_triangle(mut u: f32, mut v: f32) -> (f32, f32) {
 }
 
 // Probability density function for uniform sphere sampling
-fn @uniform_sphere_pdf() -> f32 { 1 / (4 * flt_pi) }
+fn @uniform_sphere_pdf() = 1 / (4 * flt_pi);
 
 // Samples a direction uniformly on a sphere
 fn @sample_uniform_sphere(u: f32, v: f32) -> DirSample {
@@ -105,7 +105,7 @@ fn @sample_uniform_sphere(u: f32, v: f32) -> DirSample {
 }
 
 // Probability density function for cosine weighted hemisphere sampling
-fn @cosine_hemisphere_pdf(c: f32) -> f32 { c * (1 / flt_pi) }
+fn @cosine_hemisphere_pdf(c: f32) = c / flt_pi;
 
 // Samples a direction on a hemisphere proportionally to the cosine with the surface normal
 fn @sample_cosine_hemisphere(u: f32, v: f32) -> DirSample {
@@ -135,7 +135,7 @@ fn @sample_cosine_power_hemisphere(k: f32, u: f32, v: f32) -> DirSample {
     make_dir_sample(c, s, phi, pdf)
 }
 
-fn @uniform_disk_pdf(radius: f32) -> f32 { 1 / (flt_pi*radius*radius) }
+fn @uniform_disk_pdf(radius: f32) = 1 / (flt_pi * radius * radius);
 
 // Samples uniform concentric disk
 fn @sample_uniform_disk(u: f32, v: f32, radius: f32) -> PosSample {

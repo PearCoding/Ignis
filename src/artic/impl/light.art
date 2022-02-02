@@ -269,7 +269,7 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
             (mat3x4_transform_point(entity.global_mat, vec3_lerp2(v0, v1, v2, u, v)),
              vec3_normalize(mat3x3_mul(entity.normal_mat, n)),
              vec2_lerp2(t0, t1, t2, u, v),
-             inv_area)
+             inv_area / (mesh.num_tris as f32))
         },
         normal = @ |uv| {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
@@ -277,7 +277,7 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
         },
         pdf = @ |uv| {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
-            mesh.face_inv_area(f)
+            mesh.face_inv_area(f) / (mesh.num_tris as f32)
         }
     }
 }

@@ -77,7 +77,7 @@ void TriMesh::computeFaceAreaOnly(bool* hasBadAreas)
         const auto& v2   = vertices[indices[i + 2]];
         const Vector3f N = (v1 - v0).cross(v2 - v0);
         float lN         = N.norm();
-        if (lN < 0.00000001f) {
+        if (lN < 1e-5f) {
             lN  = 1.0f;
             bad = true;
         }
@@ -100,7 +100,7 @@ void TriMesh::computeFaceNormals(bool* hasBadAreas)
         const auto& v2   = vertices[indices[i + 2]];
         const Vector3f N = (v1 - v0).cross(v2 - v0);
         float lN         = N.norm();
-        if (lN < 0.00000001f) {
+        if (lN < 1e-5f) {
             lN  = 1.0f;
             bad = true;
         }
