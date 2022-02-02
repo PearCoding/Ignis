@@ -1,9 +1,9 @@
 {
   "technique": {
     "type": "path",
-    "max_depth": 1
+    "max_depth": 6
   },
   "externals": [
-    {"filename": "cbox-base.json"}
+    {"filename": "plane-base.json"}
   ]
 }

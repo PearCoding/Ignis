@@ -4,6 +4,6 @@
     "max_depth": 1
   },
   "externals": [
-    {"filename": "cbox-base.json"}
+    {"filename": "plane-base.json"}
   ]
 }

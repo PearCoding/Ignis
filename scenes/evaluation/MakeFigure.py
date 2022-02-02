@@ -2,53 +2,78 @@
 
 import simpleimageio as sio
 import figuregen
-from figuregen.util.templates import FullSizeWithCrops
-from figuregen.util.image import Cropbox
 import sys
 import os
 import numpy as np
+import matplotlib.cm as cm
 
-class Figure(FullSizeWithCrops):
-    def __init__(self, exposure, *args, **kwargs):
-        self.exposure = exposure
-        super().__init__(*args, **kwargs)
+def map_img(img):
+    return figuregen.PNG(sio.lin_to_srgb(img))
 
-    def tonemap(self, img):
-        return figuregen.JPEG(sio.lin_to_srgb(sio.exposure(img, self.exposure)), quality=80)
+def colormap(img, cmap=cm.inferno):
+    return cm.ScalarMappable(cmap=cmap).to_rgba(img)[...,0:3]
 
-    def compute_error(self, reference_image, method_image):
-        return sio.relative_mse_outlier_rejection(method_image, reference_image, 0.001)
-        # return sio.mse(method_image, reference_image)
+def colorbar(cmap=cm.inferno):
+    gradient = np.linspace(1, 0, 256)
+    gradient = np.vstack((gradient, gradient))
+    bar = np.swapaxes(cmap(gradient), 0, 1)
+    bar = np.repeat(bar, 5, axis=1)
+    return bar
+
+def error_image(img, ref):
+    mask = ref != 0
+    raw = np.zeros_like(ref)
+    raw[mask] = np.square((img[mask] - ref[mask]) / ref[mask])
+    max = np.percentile(raw, 99)
+    return np.clip(raw / max, 0, 1) if max != 0 else np.zeros_like(ref)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        result_image = "./cbox4096.exr"
+        result_dir = "./"
     else:
-        result_image = sys.argv[1]
+        result_dir = sys.argv[1]
+
+    scenes = [
+        ("plane", 1),
+        ("plane", 6),
+        ("cbox", 1),
+        ("cbox", 6),
+    ]
+
+    image_names = [f"{scene}4096-d{depth}" for (scene, depth) in scenes]
+    ref_names = ["ref-" + name for name in image_names]
 
     script_dir = os.path.abspath(os.path.dirname(__file__))
 
     title = figuregen.Grid(1, 1)
     title.get_element(0, 0).set_image(figuregen.PNG(np.tile([255,255,255], (1, 500))))
-    title.set_title("top", "Cornell Box - Comparison")
+    title.set_title("top", "Reference Evaluations")
 
-    ref_img = sio.read(f"{script_dir}/reference4096.exr")
-    (h, w, _) = ref_img.shape
-    
-    figure = Figure(1,
-        reference_image=ref_img,
-        method_images=[
-            sio.read(f"{result_image}"),
-        ],
-        crops=[
-            Cropbox(top=20, left=100, height=96, width=128, scale=5),
-            Cropbox(top=120, left=50, height=96, width=128, scale=5),
-        ],
-        method_names=["Reference", "Ignis"]
-    )
+    errors = []
+    grid = figuregen.Grid(len(image_names), 3)
+    i = 0
+    for scene, depth in scenes:
+        image_name = f"{scene}4096-d{depth}"
+        ref_name = "ref-" + image_name
 
-    rows = figure.figure
-    rows.insert(0, [title])
+        img = sio.read(f"{result_dir}/{image_name}.exr")
+        ref_img = sio.read(f"{script_dir}/{ref_name}.exr")
+
+        errors.append(sio.relative_mse_outlier_rejection(img, ref_img, 0.001))
+
+        grid[i,0].set_image(map_img(ref_img))
+        grid[i,1].set_image(map_img(img))
+        grid[i,2].set_image(map_img(error_image(img, ref_img)))
+
+        i += 1
+
+    grid.set_col_titles("top", ["Reference", "Render", "Rel. Error"])
+    grid.set_row_titles("left", [f"{scene}-d{depth}" for (scene, depth) in scenes])
+    grid.set_row_titles("right", [f"RelMSE {err:.2E}" for err in errors])
+
+    rows = []
+    rows.append([title])
+    rows.append([grid])
 
     # Generate the figure with the pdflatex backend and default settings
-    figuregen.figure(rows, width_cm=17.7, filename="CornellBox.pdf")
+    figuregen.figure(rows, width_cm=10, filename="Evaluation.pdf")
