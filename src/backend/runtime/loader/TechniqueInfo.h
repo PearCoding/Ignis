@@ -5,7 +5,7 @@
 namespace IG {
 
 struct LoaderContext;
-using TechniqueCameraGenerator = std::string (*)(const LoaderContext&);
+using TechniqueCameraGenerator = std::string (*)(LoaderContext&);
 
 struct TechniqueVariantInfo {
     /// The variant makes uses of ShadowHit and ShadowMiss shaders. Reduces performance
