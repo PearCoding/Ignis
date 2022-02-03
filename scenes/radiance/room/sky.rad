@@ -1,0 +1,11 @@
+!gensky -ang 45 0 -c -b 1
+
+skyfunc glow skyglow
+0
+0
+4 1 1 1 0
+
+skyglow source sky
+0
+0
+4 0 0 1 180

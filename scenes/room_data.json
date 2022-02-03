@@ -3,15 +3,14 @@
 		{"type":"diffuse", "name": "room", "reflectance":[0.8, 0.8, 0.8]}
 	],
 	"shapes": [
-		{"type":"ply", "name":"Room", "filename":"meshes/Room.ply"},
-		{"type":"ply", "name":"Window", "filename":"meshes/RoomWindow.ply"}
+		{"type":"obj", "name":"Room", "filename":"meshes/Room.obj"},
+		{"type":"obj", "name":"Window", "filename":"meshes/RoomWindow.obj"}
 	],
 	"entities": [
 		{"name":"Room","shape":"Room", "bsdf":"room"},
 		{"name":"Window","shape":"Window", "bsdf":"window"}
 	],
 	"lights": [
-		{"type":"cie_cloudy", "name":"Sky"},
-		{"type":"sun", "name":"Sun"}
+		{"type":"cie_cloudy", "name":"Sky", "has_ground": false, "transform": {"rotate": [90, 0, 0]}}
 	]
 }

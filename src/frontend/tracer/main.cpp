@@ -3,6 +3,7 @@
 #include "config/Build.h"
 
 #include <fstream>
+#include <iterator>
 #include <sstream>
 
 using namespace IG;
@@ -60,10 +61,29 @@ static std::vector<Ray> read_input(std::istream& is, bool file)
         if (!std::getline(is, line) || line.empty())
             break;
 
+        std::vector<float> data;
         std::stringstream stream(line);
 
+        std::copy(std::istream_iterator<float>(stream),
+                  std::istream_iterator<float>(),
+                  std::back_inserter(data));
+
+        if (data.size() < 6) {
+            if (&is == &std::cin)
+                std::cout << "Invalid input" << std::endl;
+            continue; // Ignore
+        }
+
         Ray ray;
-        stream >> ray.Origin(0) >> ray.Origin(1) >> ray.Origin(2) >> ray.Direction(0) >> ray.Direction(1) >> ray.Direction(2) >> ray.Range(0) >> ray.Range(1);
+        ray.Origin(0)    = data[0];
+        ray.Origin(1)    = data[1];
+        ray.Origin(2)    = data[2];
+        ray.Direction(0) = data[3];
+        ray.Direction(1) = data[4];
+        ray.Direction(2) = data[5];
+
+        ray.Range(0) = data.size() > 6 ? data[6] : 0;
+        ray.Range(1) = data.size() > 7 ? data[7] : 0;
 
         if (ray.Range(1) <= ray.Range(0))
             ray.Range(1) = std::numeric_limits<float>::max();
@@ -74,7 +94,7 @@ static std::vector<Ray> read_input(std::istream& is, bool file)
     return rays;
 }
 
-static void write_output(std::ostream& is, float* data, size_t count, uint32 spp)
+static void write_output(std::ostream& is, const float* data, size_t count, uint32 spp)
 {
     for (size_t i = 0; i < count; ++i) {
         is << data[3 * i + 0] / spp << " " << data[3 * i + 1] / spp << " " << data[3 * i + 2] / spp << std::endl;
@@ -170,6 +190,9 @@ int main(int argc, char** argv)
         }
     }
 
+    // Fix samples per iteration to 1
+    opts.SPI = 1;
+
     if (!quiet)
         std::cout << Build::getCopyrightString() << std::endl;
 
@@ -197,25 +220,27 @@ int main(int argc, char** argv)
     runtime->setup(rays.size(), 1);
 
     const size_t SPP = runtime->samplesPerIteration();
-    sample_count     = static_cast<size_t>(std::ceil(sample_count / SPP));
+    sample_count     = static_cast<size_t>(std::ceil(sample_count / (float)SPP));
 
     std::vector<float> accum_data;
     std::vector<float> iter_data;
     for (uint32 iter = 0; iter < sample_count; ++iter) {
+        if (iter == 0)
+            runtime->clearFramebuffer();
         runtime->trace(rays, iter_data);
 
         if (accum_data.size() != iter_data.size())
             accum_data.resize(iter_data.size(), 0.0f);
         for (size_t i = 0; i < iter_data.size(); ++i)
-            accum_data[i] += iter_data[i];
+            accum_data[i] = iter_data[i];
     }
 
     // Extract data
     if (out_file.empty()) {
-        write_output(std::cout, accum_data.data(), rays.size(), sample_count);
+        write_output(std::cout, accum_data.data(), rays.size(), runtime->currentIterationCount());
     } else {
         std::ofstream stream(out_file);
-        write_output(stream, accum_data.data(), rays.size(), sample_count);
+        write_output(stream, accum_data.data(), rays.size(), runtime->currentIterationCount());
     }
 
     return EXIT_SUCCESS;

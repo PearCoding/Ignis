@@ -273,7 +273,7 @@ int main(int argc, char** argv)
     runtime->setup(film_width, film_height);
 
     const size_t SPI          = runtime->samplesPerIteration();
-    const size_t desired_iter = static_cast<size_t>(std::ceil(desired_spp / SPI));
+    const size_t desired_iter = static_cast<size_t>(std::ceil(desired_spp / (float)SPI));
 
 #ifdef WITH_UI
     IG_UNUSED(prettyConsole);

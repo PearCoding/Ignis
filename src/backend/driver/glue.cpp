@@ -265,7 +265,7 @@ struct Interface {
     inline const anydsl::Array<StreamRay>& loadRayList(int32_t dev)
     {
         auto& device = devices[dev];
-        if (device.ray_list.size() != 0)
+        if (device.ray_list.size() == (int64_t)film_width)
             return device.ray_list;
 
         std::vector<StreamRay> rays;

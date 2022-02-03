@@ -184,7 +184,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     mAOVs    = std::move(result.AOVs);
 
     mTechniqueVariants = std::move(result.TechniqueVariants);
-    
+
     if (opts.DumpShader) {
         for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
             const auto& variant = mTechniqueVariants[i];
@@ -264,6 +264,7 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
     settings.height = 1;
     settings.rays   = rays.data();
     settings.device = mDevice;
+    settings.spi    = mSamplesPerIteration;
 
     mLoadedInterface.RenderFunction(&settings, mCurrentIteration++);
 
