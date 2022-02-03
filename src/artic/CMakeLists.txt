@@ -41,7 +41,6 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/diffuse.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/klems.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/map.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/metal.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/mix.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/phong.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/plastic.art

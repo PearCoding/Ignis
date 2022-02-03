@@ -27,7 +27,7 @@ fn @make_conductor_bsdf(surf: SurfaceElement, ior: f32, k: f32, ks: Color) = Bsd
 
 //--------------------------------------
 // Creates a microfacet conductor BSDF with specific fresnel term. This is the front version
-fn @make_rough_base_conductor_bsdf_front(surf: SurfaceElement, kd: Color, ks: Color, fresnelTerm: fn (f32) -> Color, micro: MicrofacetDistribution) -> Bsdf {
+fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, fresnelTerm: fn (f32) -> Color, micro: MicrofacetDistribution) -> Bsdf {
     let N = surf.local.col(2);
 
     if micro.is_delta {
@@ -35,9 +35,9 @@ fn @make_rough_base_conductor_bsdf_front(surf: SurfaceElement, kd: Color, ks: Co
             eval   = @ |_, _| black,
             pdf    = @ |_, _| 0,
             sample = @ |_, out_dir, _| {
-                let cos_i = vec3_dot(out_dir, N);
-                let F    = fresnelTerm(cos_i);
-                let IF   = color_sub(white, F);
+                let cos_o = absolute_cos(out_dir, N);
+                let F     = fresnelTerm(cos_o);
+                let IF    = color_sub(white, F);
         
                 let color = color_add(color_mul(kd, IF), color_mul(ks, F));
                 make_bsdf_sample(surf, vec3_reflect(out_dir, N), 1, color, 1, false)
@@ -45,62 +45,52 @@ fn @make_rough_base_conductor_bsdf_front(surf: SurfaceElement, kd: Color, ks: Co
             is_specular = true
         }
     } else {
+        let eval = @ |in_dir: Vec3, out_dir: Vec3| -> Color {
+            let cos_o = absolute_cos(out_dir, N);
+            let cos_i = absolute_cos(in_dir, N);
+
+            if cos_o <= flt_eps || cos_i <= flt_eps { return(black) }
+
+            let H  = vec3_halfway(in_dir, out_dir);
+            let D  = micro.D(H);
+            let G  = micro.G(in_dir, out_dir, H);
+            let F  = fresnelTerm(absolute_cos(out_dir, H));
+            let IF = color_sub(white, F);
+            color_mulf(color_add(color_mul(kd, IF), color_mul(ks, F)), D * G / (4 * cos_o))
+        };
+
         Bsdf {
-            eval   = @ |in_dir, out_dir| {
-                let cos_o = positive_cos(out_dir, N);
-                let cos_i = positive_cos(in_dir, N);
-
-                if cos_o <= flt_eps || cos_i <= flt_eps { return(black) }
-
-                let H  = vec3_halfway(in_dir, out_dir);
-                let D  = micro.D(H);
-                let G  = micro.G(in_dir, out_dir, H);
-                let F  = fresnelTerm(positive_cos(out_dir, H));
-                let IF = color_sub(white, F);
-                color_mulf(color_add(color_mul(kd, IF), color_mul(ks, F)), D * G / (4 * cos_o))
-            },
+            eval   = eval,
             pdf    = @ |in_dir, out_dir| {
-                let H     = vec3_halfway(in_dir, out_dir);
-                let dot   = positive_cos(in_dir, H);
-                let jacob = 1 / (4 * dot); // Jacobian of the half-direction mapping
-                if dot <= flt_eps { return(0) } else { micro.pdf(in_dir, out_dir, H) * jacob }
+                let H       = vec3_halfway(in_dir, out_dir);
+                let cos_h_o = positive_cos(out_dir, H);
+                let jacob   = safe_div(1, 4 * cos_h_o); // Jacobian of the half-direction mapping
+                micro.pdf(in_dir, out_dir, H) * jacob
             },
             sample = @ |rnd, out_dir, _| {
-                let cos_o   = positive_cos(out_dir, N);
+                let cos_o = absolute_cos(out_dir, N);
                 if cos_o <= flt_eps { return(reject_bsdf_sample()) };
 
-                let s      = micro.sample(rnd, out_dir);
+                let s = micro.sample(rnd, out_dir);
                 if vec3_len2(s.normal) <= flt_eps { return(reject_bsdf_sample()) };
 
-                let H      = vec3_normalize(s.normal);
+                let oH = vec3_normalize(s.normal);
+                let H  = if vec3_dot(oH, out_dir) < 0 { vec3_neg(oH) } else { oH };
+
                 let in_dir = vec3_reflect(out_dir, H);
 
-                let cos_i   = positive_cos(in_dir, N);
+                let cos_i = absolute_cos(in_dir, N);
                 if cos_i <= flt_eps { return(reject_bsdf_sample()) };
 
-                let cos_h   = positive_cos(H, N);
-                let cos_h_o = positive_cos(out_dir, H); // = cos_h_i
+                let cos_h_o = absolute_cos(out_dir, H); // = cos_h_i
+                let jacob = 1 / (4 * cos_h_o); // Jacobian of the half-direction mapping
 
-                let jacob   = 1 / (4 * cos_h_o); // Jacobian of the half-direction mapping
-
-                let G  = micro.G(in_dir, out_dir, H);
-                let F  = fresnelTerm(cos_h_o);
-                let IF = color_sub(white, F);
-
-                let color = color_mulf(color_add(color_mul(kd, IF), color_mul(ks, F)), G / (4 * cos_o * cos_h));
-                make_bsdf_sample(surf, in_dir, s.pdf * jacob, color, 1, false)
+                let pdf   = s.pdf * jacob;
+                let color = color_mulf(eval(in_dir, out_dir), safe_div(1, pdf));
+                make_bsdf_sample(surf, in_dir, pdf, color, 1, false)
             },
             is_specular = false
         }
-    }
-}
-
-// Creates a microfacet conductor BSDF with specific fresnel term. This is the two-sided version
-fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, fresnelTerm: fn (f32) -> Color, micro: MicrofacetDistribution) -> Bsdf {
-    if !surf.is_entering {
-        make_rough_base_conductor_bsdf_front(invert_surface_element(surf), kd, ks, fresnelTerm, micro)
-    } else {
-        make_rough_base_conductor_bsdf_front(surf, kd, ks, fresnelTerm, micro)
     }
 }
 

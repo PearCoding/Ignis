@@ -173,27 +173,6 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
     tree.endClosure();
 }
 
-static void bsdf_metallic_roughness(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
-{
-    tree.beginClosure();
-    tree.addColor("base_color", *bsdf, Vector3f::Ones());
-    tree.addNumber("metallic", *bsdf, 0);
-
-    // Not exposed in the documentation, but used internally
-    tree.addColor("base_color_scale", *bsdf, Vector3f::Ones());
-    tree.addNumber("metallic_scale", *bsdf, 1);
-
-    setup_microfacet(bsdf, tree);
-    stream << tree.pullHeader()
-           << inline_microfacet(name, tree, bsdf, true) // TODO: I do not like this. We should not square here and nowhere else....
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_metallic_roughness_bsdf(surf, "
-           << "color_mul(" << tree.getInline("base_color_scale") << ", " << tree.getInline("base_color") << "), "
-           << tree.getInline("metallic_scale") << " * " << tree.getInline("metallic") << ", "
-           << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
-
-    tree.endClosure();
-}
-
 static void bsdf_plastic(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure();
@@ -449,7 +428,6 @@ static struct {
     { "mirror", bsdf_mirror }, // Specialized conductor
     { "conductor", bsdf_conductor },
     { "roughconductor", bsdf_rough_conductor },
-    { "metallic_roughness", bsdf_metallic_roughness },
     { "phong", bsdf_phong },
     { "disney", bsdf_principled },
     { "principled", bsdf_principled },

@@ -143,20 +143,20 @@ fn @sample_uniform_disk(u: f32, v: f32, radius: f32) -> PosSample {
         return (make_pos_sample(make_vec3(0,0,0), uniform_disk_pdf(radius)))
     }
     
-    let a = (2 * u) - 1;
-    let b = (2 * v) - 1;
+    let a = 2 * u - 1;
+    let b = 2 * v - 1;
     
     // Uses squares instead of absolute values
-    if ((a*a) > (b*b)) { 
+    if (a * a > b * b) { 
         // Top half
-        let phi = (flt_pi/4) * (b/a);
+        let phi = (flt_pi/4) * safe_div(b, a);
         let x = radius * math_builtins::cos(phi) * a;
         let y = radius * math_builtins::sin(phi) * a;
         make_pos_sample(make_vec3(x,y,0), uniform_disk_pdf(radius))
     }
     else {
         // Bottom half
-        let phi = (flt_pi/2) - ((flt_pi/4) * (a/b));
+        let phi = (flt_pi/2) - (flt_pi/4) * safe_div(a, b);
         let x = radius * math_builtins::cos(phi) * b;
         let y = radius * math_builtins::sin(phi) * b;
         make_pos_sample(make_vec3(x,y,0), uniform_disk_pdf(radius))

@@ -44,10 +44,14 @@ fn @g_1_smith(local: Mat3x3, w: Vec3, _m: Vec3, alpha_u: f32, alpha_v: f32) -> f
 
     let kx = alpha_u * cosX;
     let ky = alpha_v * cosY;
-    let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
-
-    let denom = 1 + math_builtins::sqrt(1 + k2);
-    2 / denom
+    let a2 = kx * kx + ky * ky;
+    if a2 <= flt_eps {
+        1
+    } else {
+        let k2 = a2 / (cosZ * cosZ);
+        let denom = 1 + math_builtins::sqrt(1 + k2);
+        2 / denom
+    }
 }
 
 fn @ndf_beckmann(local: Mat3x3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
@@ -57,10 +61,9 @@ fn @ndf_beckmann(local: Mat3x3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
 
     let kx = cosX / alpha_u;
     let ky = cosY / alpha_v;
-    let k2 = (kx * kx + ky * ky) / (cosZ * cosZ);
+    let k2 = safe_div(kx * kx + ky * ky, cosZ * cosZ);
 
-    let norm = safe_div(1, flt_pi * alpha_u * alpha_v * cosZ * cosZ * cosZ * cosZ);
-    norm * math_builtins::exp(-k2)
+    safe_div(math_builtins::exp(-k2), flt_pi * alpha_u * alpha_v * cosZ * cosZ * cosZ * cosZ)
 }
 
 fn @ndf_ggx(local: Mat3x3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
@@ -70,9 +73,9 @@ fn @ndf_ggx(local: Mat3x3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
 
     let kx = cosX / alpha_u;
     let ky = cosY / alpha_v;
-    let k2 = safe_div(kx * kx + ky * ky, cosZ * cosZ);
+    let k  = kx * kx + ky * ky + cosZ * cosZ;
 
-    safe_div(1, flt_pi * alpha_u * alpha_v * cosZ * cosZ * cosZ * cosZ * (1 + k2) * (1 + k2))
+    safe_div(1, flt_pi * alpha_u * alpha_v * k * k)
 }
 
 fn @make_delta_model(local: Mat3x3) = MicrofacetModel {
