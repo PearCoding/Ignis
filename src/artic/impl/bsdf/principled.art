@@ -48,8 +48,8 @@ fn @sheen_tint_color(color: Color, tint: f32) = super::color_lerp(super::white, 
 
 fn @getMicro(closure: Closure, roughness: f32, _is_refl: bool) -> all::MicrofacetDistribution {
     let aspect = if closure.anisotropic == 0 { 1 } else { math_builtins::sqrt[f32](1 - closure.anisotropic * 0.9) };
-    let ax	   = math_builtins::fmax[f32](0.001, roughness * roughness / aspect);
-    let ay	   = math_builtins::fmax[f32](0.001, roughness * roughness * aspect);
+    let ax	   = math_builtins::fmax[f32](1e-3, roughness * roughness / aspect);
+    let ay	   = math_builtins::fmax[f32](1e-3, roughness * roughness * aspect);
 
     super::make_vndf_ggx_distribution(super::mat3x3_identity(), ax, ay)
 }
@@ -102,25 +102,24 @@ fn @evalDiffuseTerm(closure: EvalClosure) -> f32 {
 
     let diff  = (1 - 0.5 * lk) * (1 - 0.5 * vk);
 
-    let VdotL = super::vec3_dot(closure.wi, closure.wo);
-    let rr    = (VdotL + 1) * closure.general.roughness;
-    let retro = rr * (lk + vk + lk * vk * (rr - 1));
+    // let VdotL = super::absolute_cos(closure.wi, closure.wo);
+    // let rr    = (VdotL + 1) * closure.general.roughness;
+    // let retro = rr * (lk + vk + lk * vk * (rr - 1));
 
     let ss = if closure.general.thin {1 - closure.general.flatness + evalSubsurfaceTerm(closure) * closure.general.flatness } else { 1 };
 
-    super::flt_inv_pi * (diff + retro) * ss
+    super::flt_inv_pi * (diff /*+ retro*/) * ss
 }
 
 fn @evalReflectionTerm(closure: EvalClosure) -> Color {
     let micro = getReflectionMicro(closure.general);
 
-    let F    = evalDisneyFresnelTerm(closure);
-    let D    = micro.D(closure.h);
-    let G    = micro.G(closure.wi, closure.wo, closure.h);
-    let norm = micro.norm(closure.wi, closure.wo, closure.h);
+    let F = evalDisneyFresnelTerm(closure);
+    let D = micro.D(closure.h);
+    let G = micro.G(closure.wi, closure.wo, closure.h);
 
-    let jacob = shading::halfway_reflective_jacobian(all::absolute_cos(closure.wo, closure.h));
-    super::color_mulf(F, D * G * norm * jacob)
+    let jacob = shading::halfway_reflective_jacobian(shading::cos_theta(closure.wo));
+    super::color_mulf(F, D * G * math_builtins::fabs(jacob))
 }
 
 fn @evalRefractionTerm(closure: EvalClosure) -> Color {
@@ -128,12 +127,12 @@ fn @evalRefractionTerm(closure: EvalClosure) -> Color {
 
     let HdI   = super::vec3_dot(closure.wi, closure.h);
     let HdO   = super::vec3_dot(closure.wo, closure.h);
-    let F     = super::fresnel(closure.general.eta, HdI).factor; 
+    let F     = super::fresnel(closure.general.eta, math_builtins::fabs(HdO)).factor; 
     let D     = micro.D(closure.h);
     let G     = micro.G(closure.wi, closure.wo, closure.h);
     let jacob = shading::halfway_refractive_jacobian(closure.general.eta, HdI, HdO); // ~ eta * eta * cos_h_i / (cos_h_i + eta * cos_h_o)^2
-    let norm  = math_builtins::fabs(super::safe_div(HdO * jacob, shading::cos_theta(closure.wo) * shading::cos_theta(closure.wi))); // ~ cos_h_i * cos_h_o / (cos_o * cos_i) * ...
-
+    let norm  = math_builtins::fabs(super::safe_div(HdO * jacob, shading::cos_theta(closure.wo))); // ~ cos_h_i * cos_h_o / (cos_o * ~cos_i~) * ...
+    
     let term  = (1 - F) * D * G * norm;
 
     if closure.general.thin {
@@ -203,7 +202,6 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                      roughness: f32, anisotropic: f32, flatness: f32, metallic: f32, 
                      sheen: f32, sheen_tint: f32, clearcoat: f32, clearcoat_gloss: f32,
                      thin: bool) -> Bsdf {
-    let AIR = 1.0002926 : f32;
     let closure = principled::Closure {
         surf                  = surf,
         base_color            = base_color,
@@ -220,7 +218,7 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         clearcoat             = clearcoat,
         clearcoat_gloss       = clearcoat_gloss,
         thin                  = thin,
-        eta                   = if !surf.is_entering { ior / AIR } else { AIR / ior },
+        eta                   = if surf.is_entering { 1 / ior } else { ior },
     };
 
     let eval = @ |in_dir : Vec3, out_dir : Vec3| -> Color {
@@ -232,27 +230,27 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         let eval_closure = principled::EvalClosure {
             wo      = wo,
             wi      = wi,
-            h       = shading::make_positive_hemisphere(if is_transmission { vec3_halfway_refractive(wi, wo, closure.eta) } else { vec3_halfway(wi, wo) }),
+            h       = if is_transmission { vec3_halfway_refractive(wi, wo, closure.eta) } else { vec3_halfway(wi, wo) },
             general = closure
         };
         
         let upper_hemisphere = shading::is_positive_hemisphere(wi) && shading::is_positive_hemisphere(wo);
         
         let aNdL = shading::abs_cos_theta(wi);
-        if aNdL <= flt_eps || !is_transmission{ return(black) }
+        if aNdL <= flt_eps { return(black) }
 
         let mut contrib = black;
-        // if true { return(white) }
+        //  if true { return(white) }
 
         // Diffuse part
         if !is_transmission {
             let diffuse_weight = (1 - metallic) * (1 - specular_transmission);
 
             let diff = principled::evalDiffuseTerm(eval_closure) * (if thin { 1 - diffuse_transmission } else { diffuse_weight });
-            contrib  = color_add(contrib, color_mulf(base_color, diff)); 
+            contrib  = color_add(contrib, color_mulf(base_color, diff * aNdL)); 
 
             if !?sheen || (?sheen && sheen > 0) {
-                let sheenf = color_mulf(principled::evalSheenTerm(eval_closure), diffuse_weight);
+                let sheenf = color_mulf(principled::evalSheenTerm(eval_closure), diffuse_weight * aNdL);
                 contrib    = color_add(contrib, sheenf);
             }
         }
@@ -260,7 +258,7 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         if is_transmission && thin {
             if !?diffuse_transmission || (?diffuse_transmission && diffuse_transmission > 0) {
                 let diff = principled::evalDiffuseTerm(eval_closure) * diffuse_transmission;
-                contrib  = color_add(contrib, color_mulf(base_color, diff)); 
+                contrib  = color_add(contrib, color_mulf(base_color, diff * aNdL)); 
             }
         }
 
@@ -276,11 +274,11 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         // Clearcoat
         if upper_hemisphere {
             if !?clearcoat || (?clearcoat && clearcoat > 0) {
-                contrib = color_add(contrib, color_mulf(principled::evalClearcoatTerm(eval_closure), clearcoat));
+                contrib = color_add(contrib, color_mulf(principled::evalClearcoatTerm(eval_closure), clearcoat * aNdL));
             }
         }
 
-        color_mulf(contrib, aNdL)
+        contrib
     };
 
     Bsdf {
@@ -296,19 +294,19 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                 let pwi      = shading::make_positive_hemisphere(wi);
                 let micro    = principled::getReflectionMicro(closure);
                 let H        = vec3_halfway(pwo, pwi);
-                let dot      = vec3_dot(pwo, H); // Is always positive
-                let refl_pdf = micro.pdf(pwi, pwo, H) * shading::halfway_reflective_jacobian(dot);
+                let cos_h_o  = vec3_dot(pwo, H); // Is always positive
+                let refl_pdf = micro.pdf(pwi, pwo, H) * shading::halfway_reflective_jacobian(cos_h_o);
 
                 lobes.diff_refl * diff_pdf + lobes.spec_refl * refl_pdf
             } else {
-                let pwo   = shading::make_positive_hemisphere(wo);
-                let pwi   = vec3_neg(shading::make_positive_hemisphere(wi));
-                let micro = principled::getRefractionMicro(closure);
-                let H     = shading::make_positive_hemisphere(vec3_halfway_refractive(pwi, pwo, closure.eta));
-                let cos_i = vec3_dot(pwi, H);
-                let cos_o = vec3_dot(pwo, H);
+                let pwo     = shading::make_positive_hemisphere(wo);
+                let pwi     = vec3_neg(shading::make_positive_hemisphere(wi));
+                let micro   = principled::getRefractionMicro(closure);
+                let H       = vec3_halfway_refractive(pwi, pwo, closure.eta);
+                let cos_h_i = vec3_dot(pwi, H);
+                let cos_h_o = vec3_dot(pwo, H);
 
-                let trans_pdf = micro.pdf(pwi, pwo, H) * shading::halfway_refractive_jacobian(closure.eta, cos_i, cos_o);
+                let trans_pdf = micro.pdf(pwi, pwo, H) * math_builtins::fabs(shading::halfway_refractive_jacobian(closure.eta, cos_h_i, cos_h_o));
 
                 lobes.diff_trans * diff_pdf + lobes.spec_trans * trans_pdf
             }
@@ -337,25 +335,27 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                 let s     = micro.sample(rnd, pwo);
                 if vec3_len2(s.normal) <= flt_eps || s.pdf <= flt_eps { s_return(reject_bsdf_sample()) };
 
-                let H     = vec3_normalize(s.normal);
-                let cos_o = vec3_dot(pwo, H);
-                let fr    = fresnel(closure.eta, cos_o);
+                let oH = vec3_normalize(s.normal);
+                let H  = if vec3_dot(oH, pwo) < 0 { vec3_neg(oH) } else { oH };
+
+                let cos_h_o = vec3_dot(pwo, H);
+                let fr      = fresnel(closure.eta, cos_h_o);
 
                 if fr.total {
                     let pwi = vec3_normalize(vec3_reflect(pwo, H));
 
                     if shading::is_same_hemisphere(pwo, pwi) {
                         DirSample { dir = shading::make_same_hemisphere(wo, pwi),
-                                    pdf = s.pdf * shading::halfway_reflective_jacobian(cos_o) * lobes.spec_trans }
+                                    pdf = s.pdf * shading::halfway_reflective_jacobian(cos_h_o) * lobes.spec_trans }
                     } else {
                         s_return(reject_bsdf_sample()) 
                     }
                 } else {
-                    let pwi = vec3_normalize(vec3_refract(pwo, H, closure.eta, cos_o, fr.cos_t));
+                    let pwi = vec3_normalize(vec3_refract(pwo, H, closure.eta, cos_h_o, fr.cos_t));
 
                     if !shading::is_same_hemisphere(pwo, pwi) {
                         DirSample { dir = vec3_neg(shading::make_same_hemisphere(wo, pwi)), 
-                                    pdf = s.pdf * shading::halfway_refractive_jacobian(closure.eta, fr.cos_t, cos_o) * lobes.spec_trans }
+                                    pdf = s.pdf * math_builtins::fabs(shading::halfway_refractive_jacobian(closure.eta, vec3_dot(pwi, H), cos_h_o)) * lobes.spec_trans }
                     } else {
                         s_return(reject_bsdf_sample()) 
                     }
@@ -367,13 +367,13 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                 let s     = micro.sample(rnd, pwo);
                 if vec3_len2(s.normal) <= flt_eps || s.pdf <= flt_eps { s_return(reject_bsdf_sample()) };
 
-                let H     = vec3_normalize(s.normal);
-                let cos_o = vec3_dot(pwo, H);
-                let pwi   = vec3_normalize(vec3_reflect(pwo, H));
+                let H       = vec3_normalize(s.normal);
+                let cos_h_o = vec3_dot(pwo, H);
+                let pwi     = vec3_normalize(vec3_reflect(pwo, H));
 
                 if shading::is_same_hemisphere(pwo, pwi) {
                     DirSample { dir = shading::make_same_hemisphere(wo, pwi),
-                                pdf = s.pdf * shading::halfway_reflective_jacobian(cos_o) * lobes.spec_refl }
+                                pdf = s.pdf * shading::halfway_reflective_jacobian(cos_h_o) * lobes.spec_refl }
                 } else {
                     s_return(reject_bsdf_sample()) 
                 }
@@ -384,11 +384,11 @@ fn @make_principled_bsdf(surf: SurfaceElement,
             } else {
                 let spread = if adjoint && !shading::is_same_hemisphere(wo, sample.dir) { 1 / (closure.eta * closure.eta) } else { 1 };
                 let s_eta  = if shading::is_same_hemisphere(wo, sample.dir) { 1 } else { closure.eta };
-                let gdir   = shading::to_world(surf.local, sample.dir);
+                let in_dir = shading::to_world(surf.local, sample.dir);
                 make_option(BsdfSample {
-                    in_dir = gdir,
+                    in_dir = in_dir,
                     pdf    = sample.pdf,
-                    color  = color_mulf(eval(gdir, out_dir), spread / sample.pdf),
+                    color  = color_mulf(eval(in_dir, out_dir), spread / sample.pdf),
                     eta    = s_eta
                 })
             }

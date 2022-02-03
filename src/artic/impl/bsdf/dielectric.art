@@ -132,7 +132,7 @@ fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt:
 
             let cos_i = vec3_dot(N, in_dir);
             let is_transmission = cos_i * cos_o < 0;
-            let adjoint_term = if is_transmission && adjoint { eta * eta } else { 1 };
+            let adjoint_term = if is_transmission && adjoint { 1 / (eta * eta) } else { 1 };
             make_option(BsdfSample {
                 in_dir = in_dir,
                 pdf    = s.pdf * sel_pdf,
