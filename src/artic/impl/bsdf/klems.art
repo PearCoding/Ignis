@@ -119,13 +119,13 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, klems: KlemsModel) -> Bs
 
     Bsdf {
         eval   = @ |in_dir, out_dir| {
-            let wo = shading::to_local(surf, out_dir);
-            let wi = shading::to_local(surf, in_dir);
+            let wo = shading::to_local(surf.local, out_dir);
+            let wi = shading::to_local(surf.local, in_dir);
             local_eval(wi, wo)
         },
         pdf    = @ |in_dir, _| cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))),
         sample = @ |rnd, out_dir, _| {
-            let wo = shading::to_local(surf, out_dir);
+            let wo = shading::to_local(surf.local, out_dir);
             let u = randf(rnd);
             let v = randf(rnd);
             let sample = sample_cosine_hemisphere(u, v);
@@ -133,7 +133,7 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, klems: KlemsModel) -> Bs
             if sample.pdf <= flt_eps {
                 reject_bsdf_sample()
             } else {
-                let gdir = if randf(rnd) < 0.5 { shading::to_world(surf, sample.dir) } else { vec3_neg(shading::to_world(surf, sample.dir)) };
+                let gdir = if randf(rnd) < 0.5 { shading::to_world(surf.local, sample.dir) } else { vec3_neg(shading::to_world(surf.local, sample.dir)) };
                 make_option(BsdfSample {
                     in_dir = gdir,
                     pdf    = sample.pdf,

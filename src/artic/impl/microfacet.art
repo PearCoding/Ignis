@@ -12,9 +12,9 @@ struct MicrofacetModel {
     is_delta: bool
 }
 
-fn @g_1_walter(local: Mat3x3, w: Vec3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
+fn @g_1_walter(local: Mat3x3, w: Vec3, _m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
     let cosZ = vec3_dot(local.col(2), w);
-    if cosZ * vec3_dot(w, m) <= flt_eps { return(0) };
+    if  math_builtins::fabs(cosZ) <= flt_eps { return(0) };
 
     let cosX = vec3_dot(local.col(0), w);
     let cosY = vec3_dot(local.col(1), w);
@@ -35,9 +35,9 @@ fn @g_1_walter(local: Mat3x3, w: Vec3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f
     }
 }
 
-fn @g_1_smith(local: Mat3x3, w: Vec3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
+fn @g_1_smith(local: Mat3x3, w: Vec3, _m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
     let cosZ = vec3_dot(local.col(2), w);
-    if cosZ * vec3_dot(w, m) <= flt_eps { return(0) };
+    if math_builtins::fabs(cosZ) <= flt_eps { return(0) };
 
     let cosX = vec3_dot(local.col(0), w);
     let cosY = vec3_dot(local.col(1), w);
@@ -161,7 +161,7 @@ struct MicrofacetDistribution {
     is_delta: bool
 }
 
-fn @compute_microfacet_norm(wi: Vec3, wo: Vec3, m: Vec3, local: Mat3x3) = safe_div(absolute_cos(wi, m), absolute_cos(local.col(2), wo));
+fn @compute_microfacet_norm(wi: Vec3, wo: Vec3, m: Vec3, local: Mat3x3) = safe_div(vec3_dot(wi, m), vec3_dot(local.col(2), wo));
 
 fn @make_microfacet_distribution(model: MicrofacetModel, local: Mat3x3) = MicrofacetDistribution {
     D        = model.D,
@@ -197,38 +197,47 @@ fn @make_ggx_distribution(local: Mat3x3, alpha_u: f32, alpha_v: f32) -> Microfac
 // Based on:
 // Journal of Computer Graphics Techniques Vol. 7, No. 4, 2018 http://jcgt.org.
 // Sampling the GGX Distribution of Visible Normals. Eric Heitz
-fn @sample_vndf_ggx(rnd: &mut RndState, local: Mat3x3, vN: Vec3, alpha_u: f32, alpha_v: f32) -> Vec3 {
+fn @sample_vndf_ggx_11(rnd: &mut RndState, cos_theta: f32) -> Vec2 {
     let u0 = randf(rnd);
     let u1 = randf(rnd);
 
-	// Section 3.2: transforming the view direction to the hemisphere configuration
-    let cosZ = vec3_dot(local.col(2), vN); // cosTheta
-    let cosX = vec3_dot(local.col(0), vN); // cosPhi * sinTheta
-    let cosY = vec3_dot(local.col(1), vN); // sinPhi * sinTheta
+	// Sample concentric uniform disk
+    let pc = vec3_to_2(sample_uniform_disk(u0, u1, 1).pos);
+
+    // Rescale
+	let s = 0.5 * (1 + cos_theta);
+	let y = (1 - s) * safe_sqrt(1 - pc.x * pc.x) + s * pc.y;
+
+	// Project
+    let z = safe_sqrt(1 - y*y - pc.x*pc.x);
+    let sin_theta = safe_sqrt(1 - cos_theta * cos_theta);
+    let norm = safe_div(1, sin_theta * y + cos_theta * z);
+	
+    vec2_mulf(make_vec2(cos_theta * y - sin_theta * z, pc.x), norm)
+}
+
+fn @sample_vndf_ggx(rnd: &mut RndState, local: Mat3x3, vN: Vec3, alpha_u: f32, alpha_v: f32) -> Vec3 {
+    // Transform to local
+    let vL = shading::to_local(local, vN);
+
+    // Stretch
+    let sL = vec3_normalize(make_vec3(alpha_u * vL.x, alpha_v * vL.y, vL.z));
     
-    if cosZ <= flt_eps { return(vN) };
+    // Compute in slope space
+    let (sin_phi, cos_phi) = shading::sin_cos_phi(sL);
+    let slope = sample_vndf_ggx_11(rnd, shading::abs_cos_theta(sL));
 
-    let VH = vec3_normalize(make_vec3(alpha_u*cosX, alpha_v*cosY, cosZ));
+    // Unstretch
+    let slope2 = make_vec2(
+        (cos_phi * slope.x - sin_phi * slope.y) * alpha_u,
+        (sin_phi * slope.x + cos_phi * slope.y) * alpha_v
+    );
+    
+	// Compute normal
+	let Nh = vec3_normalize(make_vec3(-slope2.x, -slope2.y, 1));
 
-	// Section 4.1: orthonormal basis (with special case if cross product is zero)
-    let lensq = VH.x*VH.x + VH.y * VH.y;
-	let T1    = if lensq > flt_eps { vec3_mulf(make_vec3(-VH.y, VH.x, 0), 1 / math_builtins::sqrt(lensq)) } else { make_vec3(1, 0, 0) };
-	let T2    = vec3_cross(VH, T1);
-
-	// Section 4.2: parameterization of the projected area
-	let r	= math_builtins::sqrt(u0);
-	let phi = 2 * flt_pi * u1;
-	let t1	= r * math_builtins::cos(phi);
-	let t2_	= r * math_builtins::sin(phi);
-	let s	= 0.5 * (1 + VH.z);
-	let t2	= (1 - s) * math_builtins::sqrt(1 - t1 * t1) + s * t2_;
-
-	// Section 4.3: reprojection onto hemisphere
-	let Nh = vec3_add(vec3_add(vec3_mulf(T1, t1), vec3_mulf(T2, t2)),
-                      vec3_mulf(VH, math_builtins::sqrt(math_builtins::fmax[f32](0, 1 + t2*t2-t1*t1))));
-
-    // Section 3.4: transforming the normal back to the ellipsoid configuration
-	mat3x3_mul(local, vec3_normalize(make_vec3(alpha_u * Nh.x, alpha_v * Nh.y, math_builtins::fmax[f32](0, Nh.z))))
+    // Transform back to global
+	shading::to_world(local, Nh)
 }
 
 fn @pdf_vndf_ggx(local: Mat3x3, w: Vec3, h: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {

@@ -5,12 +5,6 @@ struct FresnelTerm {
     factor: f32
 }
 
-fn @make_fresnel_term(cos_t: f32, factor: f32) = FresnelTerm {
-    total  = cos_t <= 0.0,
-    cos_t  = if (cos_t < 0.0) { 0.0 } else { cos_t },
-    factor = factor
-};
-
 fn @fresnel_factor(eta: f32, cos_i: f32, cos_t: f32) -> f32 {
     let R_s = (eta * cos_i - cos_t) / (eta * cos_i + cos_t);
     let R_p = (cos_i - eta * cos_t) / (cos_i + eta * cos_t);
@@ -20,12 +14,21 @@ fn @fresnel_factor(eta: f32, cos_i: f32, cos_t: f32) -> f32 {
 fn @snell(eta: f32, cos_i: f32) = 1 - (1 - cos_i * cos_i) * eta * eta;
 
 fn @fresnel(eta: f32, cos_i: f32) -> FresnelTerm {
-    let cos2_t = snell(eta, cos_i);
+    let eta2 = if cos_i < 0 { 1 / eta } else { eta };
+    let cos2_t = snell(eta2, cos_i);
     if cos2_t <= 0.0 {
-        make_fresnel_term(-1.0, 1.0)
+        FresnelTerm {
+            total  = true,
+            cos_t  = 0,
+            factor = 1
+        }
     } else {
         let cos_t = math_builtins::sqrt(cos2_t);
-        make_fresnel_term(cos_t, fresnel_factor(eta, cos_i, cos_t))
+        FresnelTerm {
+            total  = false,
+            cos_t  = if cos_i < 0 { -cos_t } else { cos_t },
+            factor = fresnel_factor(eta2, math_builtins::fabs(cos_i), cos_t)
+        }
     }
 }
 

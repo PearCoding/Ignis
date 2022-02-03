@@ -105,6 +105,27 @@ static void bsdf_dielectric(std::ostream& stream, const std::string& name, const
     tree.endClosure();
 }
 
+static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+{
+    tree.beginClosure();
+    tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
+    tree.addColor("specular_transmittance", *bsdf, Vector3f::Ones());
+    tree.addNumber("ext_ior", *bsdf, AIR_IOR);
+    tree.addNumber("int_ior", *bsdf, GLASS_IOR);
+
+    setup_microfacet(bsdf, tree);
+    stream << tree.pullHeader()
+           << inline_microfacet(name, tree, bsdf, false)
+           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_glass_bsdf(surf, "
+           << tree.getInline("ext_ior") << ", "
+           << tree.getInline("int_ior") << ", "
+           << tree.getInline("specular_reflectance") << ", "
+           << tree.getInline("specular_transmittance") << ", "
+           << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
+
+    tree.endClosure();
+}
+
 static void bsdf_mirror(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure();
@@ -423,7 +444,7 @@ static struct {
     { "roughdiffuse", bsdf_orennayar },
     { "glass", bsdf_dielectric },
     { "dielectric", bsdf_dielectric },
-    { "roughdielectric", bsdf_dielectric }, // TODO
+    { "roughdielectric", bsdf_rough_dielectric },
     { "thindielectric", bsdf_dielectric },
     { "mirror", bsdf_mirror }, // Specialized conductor
     { "conductor", bsdf_conductor },

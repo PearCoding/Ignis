@@ -167,6 +167,7 @@ fn @clamp(v: i32, l: i32, u: i32) = min(u, max(l, v));
 fn @clampf(v: f32, l: f32, u: f32) = math_builtins::fmin[f32](u, math_builtins::fmax[f32](l, v));
 
 fn @safe_div(a: f32, b: f32) = if math_builtins::fabs(b) <= flt_eps { 0:f32 } else { a / b };
+fn @safe_sqrt(a: f32) = if a < 0 { 0:f32 } else { math_builtins::sqrt(a) };
 
 #[import(cc = "device", name = "llvm.debugtrap")] fn ig_trap() -> ();
 #[import(cc = "device", name = "llvm.fma.f32")] fn fmaf(f32, f32, f32) -> f32;

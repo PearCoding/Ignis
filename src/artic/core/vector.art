@@ -97,7 +97,7 @@ fn @vec3_normalize(v: Vec3) = vec3_mulf(v, 1 / vec3_len(v));
 fn @vec4_normalize(v: Vec4) = vec4_mulf(v, 1 / vec4_len(v));
 
 fn @vec3_halfway(a: Vec3, b: Vec3) = vec3_normalize(vec3_add(a, b));
-fn @vec3_halfway_refractive(a: Vec3, n_a: f32, b: Vec3, n_b: f32) = vec3_normalize(vec3_add(vec3_mulf(a, -n_a), vec3_mulf(b, -n_b)));
+fn @vec3_halfway_refractive(a: Vec3, b: Vec3, eta: f32) = vec3_normalize(vec3_add(a, vec3_mulf(b, eta)));
 
 fn @vec2_lerp(a: Vec2, b: Vec2, k: f32) = vec2_zip(a, b, |x, y| lerp(x, y, k));
 fn @vec3_lerp(a: Vec3, b: Vec3, k: f32) = vec3_zip(a, b, |x, y| lerp(x, y, k));
