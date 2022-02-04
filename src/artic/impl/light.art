@@ -211,13 +211,13 @@ fn @make_environment_light_textured_naive(max_radius: f32, tex: Texture, transfo
 // Note: groundBrightness is the same as gensky ... -b (x/0.2) in gensky as gensky makes use of the constant gprefl=0.2!
 fn @make_cie_sky_light(max_radius: f32, zenith: Color, ground: Color, groundBrightness: f32, cloudy: bool, has_ground: bool, transform: Mat3x3) =
     make_environment_light_function(max_radius, @|dir|{
-        let theta = -dir.y;
-        if !has_ground && theta < 0 { return(black) }
+        let cos_theta = -dir.y;
+        if !has_ground && cos_theta < 0 { return(black) }
 
-        let a     = math_builtins::pow[f32](theta + 1.01, 10);
+        let a     = math_builtins::pow[f32](cos_theta + 1.01, 10);
         let b	  = 1 / a;
         let denom = 1 / (a + b);
-        let c1    = if cloudy { (1 + 2 * theta) / 3} else { 1 : f32 };
+        let c1    = if cloudy { (1 + 2 * cos_theta) / 3} else { 1 : f32 };
         let c2    = if cloudy { 0.777777777 : f32} else { 1 : f32 };
         color_mulf(color_add(color_mulf(zenith, c1 * a), color_mulf(ground, groundBrightness * c2 * b)), denom)
 }, transform);
@@ -225,11 +225,11 @@ fn @make_cie_sky_light(max_radius: f32, zenith: Color, ground: Color, groundBrig
 //-------------------------------------------
 fn @make_perez_light(max_radius: f32, sun_dir: Vec3, lum: Color, a: f32, b: f32, c: f32, d: f32, e: f32, transform: Mat3x3)  =
     make_environment_light_function(max_radius, @|dir|{
-        let theta = -dir.y;                     // Cosine between zenith and direction
-        let sun_c = vec3_dot(dir, sun_dir);     // Cosine between sun and direction
-        let sun_a = math_builtins::acos(sun_c); // Angle between sun and direction
+        let cos_theta = -dir.y;                     // Cosine between zenith and direction
+        let sun_c     = vec3_dot(dir, sun_dir);     // Cosine between sun and direction
+        let sun_a     = math_builtins::acos(sun_c); // Angle between sun and direction
 
-        let A      = if math_builtins::fabs(theta) <= flt_eps { 1 } else { 1 + a * math_builtins::exp(b / theta) };
+        let A      = if math_builtins::fabs(cos_theta) <= flt_eps { 1 } else { 1 + a * math_builtins::exp(b / cos_theta) };
         let B      = 1 + c * math_builtins::exp(d * sun_a) + e * sun_c * sun_c;
         let factor = A * B;
         color_mulf(lum, factor)

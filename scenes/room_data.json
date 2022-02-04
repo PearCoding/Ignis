@@ -11,6 +11,6 @@
 		{"name":"Window","shape":"Window", "bsdf":"window"}
 	],
 	"lights": [
-		{"type":"cie_cloudy", "name":"Sky", "has_ground": false, "transform": {"rotate": [90, 0, 0]}}
+		{"type":"cie_cloudy", "name":"Sky", "has_ground": false, "ground_brightness": 0.2, "transform": {"rotate": [90, 0, 0]}}
 	]
 }

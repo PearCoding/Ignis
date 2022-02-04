@@ -164,7 +164,6 @@ static void light_area(std::ostream& stream, const std::string& name, const std:
 
 static void light_directional(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    IG_UNUSED(name);
     tree.beginClosure();
 
     auto ea      = extractEA(light);
@@ -227,7 +226,7 @@ static void light_cie_env(std::ostream& stream, const std::string& name, const s
     const Matrix3f trans = light->property("transform").getTransform().linear().transpose().inverse();
     const bool has_ground = light->property("has_ground").getBool(true);
 
-    bool cloudy = (name == "cie_cloudy" || name == "ciecloudy");
+    bool cloudy = (light->pluginType() == "cie_cloudy" || light->pluginType() == "ciecloudy");
     stream << tree.pullHeader()
            << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_cie_sky_light(" << tree.context().Environment.SceneDiameter / 2
            << ", " << tree.getInline("zenith")
@@ -252,7 +251,6 @@ static inline float perez_model(float zenithAngle, float sunAngle, float a, floa
 
 static void light_perez(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    IG_UNUSED(name);
     tree.beginClosure();
 
     auto ea      = extractEA(light);
@@ -292,7 +290,6 @@ static void light_perez(std::ostream& stream, const std::string& name, const std
 
 static void light_env(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    IG_UNUSED(name);
     tree.beginClosure();
 
     const std::string id = ShaderUtils::escapeIdentifier(name);
