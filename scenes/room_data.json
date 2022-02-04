@@ -1,16 +1,11 @@
 {
-	"bsdfs": [
-		{"type":"diffuse", "name": "room", "reflectance":[0.8, 0.8, 0.8]}
+	"externals": [
+		{"filename": "room_no_window_data.json"}
 	],
 	"shapes": [
-		{"type":"obj", "name":"Room", "filename":"meshes/Room.obj"},
 		{"type":"obj", "name":"Window", "filename":"meshes/RoomWindow.obj"}
 	],
 	"entities": [
-		{"name":"Room","shape":"Room", "bsdf":"room"},
 		{"name":"Window","shape":"Window", "bsdf":"window"}
-	],
-	"lights": [
-		{"type":"cie_cloudy", "name":"Sky", "has_ground": false, "ground_brightness": 0.2, "transform": {"rotate": [90, 0, 0]}}
 	]
 }

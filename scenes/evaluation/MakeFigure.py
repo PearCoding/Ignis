@@ -38,6 +38,7 @@ if __name__ == "__main__":
         ("plane", 6),
         ("cbox", 1),
         ("cbox", 6),
+        ("room", 4),
     ]
 
     image_names = [f"{scene}4096-d{depth}" for (scene, depth) in scenes]

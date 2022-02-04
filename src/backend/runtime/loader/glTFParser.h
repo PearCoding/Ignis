@@ -7,7 +7,7 @@ namespace Parser {
 // --------------- glTFSceneParser
 class glTFSceneParser {
 public:
-    static Scene loadFromFile(const std::string& path, bool& ok);
+    static Scene loadFromFile(const std::filesystem::path& path, bool& ok);
 };
 } // namespace Parser
 } // namespace IG

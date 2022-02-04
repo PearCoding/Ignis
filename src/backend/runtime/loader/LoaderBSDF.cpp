@@ -276,7 +276,7 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
 
 static std::string setup_klems(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
-    auto filename = ctx.handlePath(bsdf->property("filename").getString());
+    auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/klems_" + ShaderUtils::escapeIdentifier(name) + ".bin";

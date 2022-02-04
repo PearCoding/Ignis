@@ -1,0 +1,38 @@
+fn @make_null_light() = Light {
+    sample_direct = @ |_, _| undef[DirectLightSample](),
+    sample_emission = @ |_| undef[EmissionSample](),
+    emission = @ |_, _| make_emission_value(black, 1, 1),
+    delta    = true,
+    infinite = true
+};
+
+//-------------------------------------------
+fn @make_point_light(pos: Vec3, color: Color) = Light {
+    sample_direct = @ |_, _| {
+        let intensity = color_mulf(color, 1 / (4 * flt_pi));
+        make_direct_sample(pos, intensity, 1, uniform_sphere_pdf(), 1)
+    },
+    sample_emission = @ |rnd| {
+        let u = randf(rnd);
+        let v = randf(rnd);
+        let sample = sample_uniform_sphere(u, v);
+        let intensity = color_mulf(color, 1 / (4 * flt_pi));
+        make_emission_sample(pos, sample.dir, intensity, 1, sample.pdf, 1)
+    },
+    emission = @ |_, _| make_emission_value(black, 1, 1),
+    delta    = true,
+    infinite = false
+};
+
+//-------------------------------------------
+fn @make_directional_light(dir: Vec3, max_radius: f32, color: Color) = Light {
+    sample_direct = @ |_, _| {
+        make_direct_sample(dir, color, 1, 1, 1)
+    },
+    sample_emission = @ |_| {
+        make_emission_sample(vec3_mulf(dir, max_radius), dir, color, 1, 1, 1)
+    },
+    emission = @ |_, _| make_emission_value(black, 1, 1),
+    delta    = true,
+    infinite = true
+};

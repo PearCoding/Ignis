@@ -129,7 +129,7 @@ inline TriMesh setup_mesh_disk(const Object& elem)
 
 inline TriMesh setup_mesh_obj(const std::string& name, const Object& elem, const LoaderContext& ctx)
 {
-    const auto filename = ctx.handlePath(elem.property("filename").getString());
+    const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load obj file " << filename << std::endl;
     auto trimesh = obj::load(filename);
     if (trimesh.vertices.empty()) {
@@ -142,7 +142,7 @@ inline TriMesh setup_mesh_obj(const std::string& name, const Object& elem, const
 
 inline TriMesh setup_mesh_ply(const std::string& name, const Object& elem, const LoaderContext& ctx)
 {
-    const auto filename = ctx.handlePath(elem.property("filename").getString());
+    const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load ply file " << filename << std::endl;
     auto trimesh = ply::load(filename);
     if (trimesh.vertices.empty()) {
@@ -155,7 +155,7 @@ inline TriMesh setup_mesh_ply(const std::string& name, const Object& elem, const
 inline TriMesh setup_mesh_mitsuba(const std::string& name, const Object& elem, const LoaderContext& ctx)
 {
     size_t shape_index  = elem.property("shape_index").getInteger(0);
-    const auto filename = ctx.handlePath(elem.property("filename").getString());
+    const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load serialized mitsuba file " << filename << std::endl;
     auto trimesh = mts::load(filename, shape_index);
     if (trimesh.vertices.empty()) {

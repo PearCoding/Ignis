@@ -49,18 +49,7 @@ struct LoaderContext {
     LoaderEnvironment Environment;
     SceneDatabase* Database = nullptr;
 
-    inline std::filesystem::path handlePath(const std::filesystem::path& path) const
-    {
-        if (path.is_absolute())
-            return path;
-        else {
-            const auto p = std::filesystem::canonical(FilePath.parent_path() / path);
-            if (std::filesystem::exists(p))
-                return p;
-            else
-                return std::filesystem::canonical(path);
-        }
-    }
+    std::filesystem::path handlePath(const std::filesystem::path& path, const Parser::Object& obj) const;
 
     Vector3f extractColor(const Parser::Object& obj, const std::string& propname, const Vector3f& def = Vector3f::Ones()) const;
     float extractIOR(const Parser::Object& obj, const std::string& propname, float def = 1.55f) const;

@@ -45,6 +45,12 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/phong.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/plastic.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/principled.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/area.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/cie.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/common.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/env.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/mix.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/sun.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/aotracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/debugtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/pathtracer.art
@@ -53,7 +59,6 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/emitter.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/fresnel.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/interval.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/microfacet.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/pixel_sampler.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/shading.art

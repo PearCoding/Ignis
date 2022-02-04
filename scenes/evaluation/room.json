@@ -1,0 +1,15 @@
+{
+	"camera": {
+		"type": "perspective",
+		"fov": 90,
+		"near_clip": 0.01,
+		"far_clip": 100,
+		"transform": { "lookat": {"origin":[-0.5, 0, 0], "direction": [1,0,0], "up":[0,0,-1]} }
+	},
+	"film": {
+		"size": [256, 256]
+	},
+	"externals": [
+    {"filename": "../room_no_window_data.json"}
+  ]
+}

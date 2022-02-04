@@ -4,15 +4,14 @@ ZONE=E  -1.00001   1.00001  -1.00001   1.00001  -1.00001   1.00001
 materials=materials.rad
 scene=scene.rad sky.rad
 
-view=-vta -vp 0 0 0 -vd 1 0 0 -vu 0 0 1 -vh 180 -vv 180 -vo 0 -va 0 -vs 0 -vl 0
+view=-vta -vp 0 0 0 -vd 1 0 0 -vu 0 0 -1 -vh 180 -vv 180 -vo 0 -va 0 -vs 0 -vl 0
 
-render=-av 0 0 0 -ab 0 -aa 0
+render=-av 0 0 0 -aw 0
 RESOLUTION=1000
 INDIRECT=4
-QUALITY=HIGH
-DETAIL=HIGH
-VARIABILITY=HIGH
-PENUMBRAS=TRUE
+QUALITY=MEDIUM
+DETAIL=MEDIUM
+VARIABILITY=MEDIUM
 EXPOSURE=1
 
 RAWFILE=output_raw

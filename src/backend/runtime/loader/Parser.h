@@ -220,9 +220,10 @@ private:
 // --------------- Object
 class Object {
 public:
-    inline explicit Object(ObjectType type, const std::string& pluginType)
+    inline explicit Object(ObjectType type, const std::string& pluginType, const std::filesystem::path& baseDir)
         : mType(type)
         , mPluginType(pluginType)
+        , mBaseDir(baseDir)
     {
     }
 
@@ -234,6 +235,7 @@ public:
 
     inline ObjectType type() const { return mType; }
     inline const std::string& pluginType() const { return mPluginType; }
+    inline const std::filesystem::path& baseDir() const { return mBaseDir; }
 
     inline Property property(const std::string& key) const
     {
@@ -247,8 +249,9 @@ public:
     inline Property operator[](const std::string& key) const { return property(key); }
 
 private:
-    ObjectType mType;
-    std::string mPluginType;
+    const ObjectType mType;
+    const std::string mPluginType;
+    const std::filesystem::path mBaseDir;
     std::unordered_map<std::string, Property> mProperties;
 };
 
@@ -314,10 +317,7 @@ class SceneParser {
 public:
     inline SceneParser() = default;
 
-    inline Scene loadFromFile(const std::string& path, bool& ok)
-    {
-        return loadFromFile(path.c_str(), ok);
-    }
+    Scene loadFromFile(const std::filesystem::path& path, bool& ok);
     inline Scene loadFromString(const std::string& str, bool& ok)
     {
         return loadFromString(str.c_str(), ok);
@@ -330,11 +330,10 @@ public:
     }
 #endif
 
-    Scene loadFromFile(const char* path, bool& ok);
     Scene loadFromString(const char* str, bool& ok);
     Scene loadFromString(const char* str, size_t max_len, bool& ok);
 
-    inline void addLookupDir(const std::string& path)
+    inline void addLookupDir(const std::filesystem::path& path)
     {
         mLookupPaths.push_back(path);
     }
@@ -344,10 +343,10 @@ public:
         mArguments[key] = value;
     }
 
-    inline const std::vector<std::string>& lookupPaths() const { return mLookupPaths; }
+    inline const std::vector<std::filesystem::path>& lookupPaths() const { return mLookupPaths; }
 
 private:
-    std::vector<std::string> mLookupPaths;
+    std::vector<std::filesystem::path> mLookupPaths;
     std::unordered_map<std::string, std::string> mArguments;
 };
 } // namespace Parser

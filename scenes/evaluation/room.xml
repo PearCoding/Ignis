@@ -1,0 +1,42 @@
+<scene version="2.0.0">
+    <default name="spp" value="4096"/>
+    <default name="res" value="256"/>
+    <default name="max_depth" value="4"/>
+
+    <integrator type="path">
+        <integer name="max_depth" value="$max_depth"/>
+    </integrator>
+
+    <sensor type="perspective">
+        <float name="near_clip" value="0.00001"/>
+        <float name="far_clip" value="100"/>
+        <float name="fov" value="90"/>
+        <transform name="to_world">
+            <lookat origin="-0.5,0,0"
+                    target="1,0,0"
+                    up    ="0,0,-1"/>
+        </transform>
+        <sampler type="independent">  <!-- ldsampler -->
+            <integer name="sample_count" value="$spp"/>
+        </sampler>
+        <film type="hdrfilm">
+            <integer name="width" value="$res"/>
+            <integer name="height" value="$res"/>
+            <rfilter type="box"/>
+            <string name="pixel_format" value="rgb"/>
+        </film>
+    </sensor>
+    
+    <bsdf type="diffuse" id="white">
+        <rgb name="reflectance" value="0.8, 0.8, 0.8"/>
+    </bsdf>
+    
+    <shape type="obj">
+        <string name="filename" value="../meshes/Room.obj"/>
+        <ref id="white"/>
+    </shape>
+
+    <emitter type="constant" id="emitter">
+        <rgb name="radiance" value="1, 1, 1"/>
+    </emitter>
+</scene>

@@ -255,7 +255,7 @@ inline static bool isMaterialEmissive(const tinygltf::Material& mat)
            || (mat.emissiveFactor.size() == 3 && (mat.emissiveFactor[0] > 0 || mat.emissiveFactor[1] > 0 || mat.emissiveFactor[2] > 0));
 }
 
-static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& parent)
+static void addNode(Scene& scene, const std::filesystem::path& baseDir, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& parent)
 {
     Transformf transform = parent;
     if (node.matrix.size() == 16)
@@ -278,7 +278,7 @@ static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::
             const tinygltf::Material& material = model.materials[prim.material];
             const std::string name             = mesh.name + "_" + std::to_string(primCount);
 
-            auto obj = std::make_shared<Object>(OT_ENTITY, "");
+            auto obj = std::make_shared<Object>(OT_ENTITY, "", baseDir);
             obj->setProperty("shape", Property::fromString(name));
             obj->setProperty("bsdf", Property::fromString(getMaterialName(material, (size_t)prim.material)));
             obj->setProperty("transform", Property::fromTransform(transform));
@@ -287,7 +287,7 @@ static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::
             scene.addEntity(entity_name, obj);
 
             if (isMaterialEmissive(material)) {
-                auto light = std::make_shared<Object>(OT_LIGHT, "area");
+                auto light = std::make_shared<Object>(OT_LIGHT, "area", baseDir);
                 light->setProperty("entity", Property::fromString(entity_name));
 
                 float strength = 1;
@@ -316,13 +316,13 @@ static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::
     if (node.camera >= 0) {
         const tinygltf::Camera& camera = model.cameras[node.camera];
         if (camera.type == "orthographic") {
-            auto obj = std::make_shared<Object>(OT_CAMERA, "orthographic");
+            auto obj = std::make_shared<Object>(OT_CAMERA, "orthographic", baseDir);
             obj->setProperty("transform", Property::fromTransform(transform));
             obj->setProperty("near_clip", Property::fromNumber(camera.orthographic.znear));
             obj->setProperty("far_clip", Property::fromNumber(camera.orthographic.zfar));
             // TODO: xmag, ymag
         } else {
-            auto obj = std::make_shared<Object>(OT_CAMERA, "perspective");
+            auto obj = std::make_shared<Object>(OT_CAMERA, "perspective", baseDir);
             obj->setProperty("transform", Property::fromTransform(transform));
             obj->setProperty("fov", Property::fromNumber(camera.perspective.yfov));
             obj->setProperty("near_clip", Property::fromNumber(camera.perspective.znear));
@@ -346,13 +346,13 @@ static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::
                 std::string type;
                 if (light.type == "point" || light.type == "spot") {
                     // No support for spot lights
-                    auto obj = std::make_shared<Object>(OT_LIGHT, "point");
+                    auto obj = std::make_shared<Object>(OT_LIGHT, "point", baseDir);
                     obj->setProperty("position", Property::fromVector3(transform * Vector3f::Zero()));
                     obj->setProperty("intensity", Property::fromVector3(color));
                     scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
                 } else {
                     Vector3f dir = (transform.linear().inverse().transpose() * Vector3f(0.0f, 0.0f, -1.0f)).normalized();
-                    auto obj     = std::make_shared<Object>(OT_LIGHT, "directional");
+                    auto obj     = std::make_shared<Object>(OT_LIGHT, "directional", baseDir);
                     obj->setProperty("direction", Property::fromVector3(dir));
                     obj->setProperty("irradiance", Property::fromVector3(color));
                     scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
@@ -362,7 +362,7 @@ static void addNode(Scene& scene, const tinygltf::Model& model, const tinygltf::
     }
 
     for (int child : node.children)
-        addNode(scene, model, model.nodes[child], transform);
+        addNode(scene, baseDir, model, model.nodes[child], transform);
 }
 
 inline int getTextureIndex(const tinygltf::Value& val, const std::string& name)
@@ -375,11 +375,10 @@ inline int getTextureIndex(const tinygltf::Value& val, const std::string& name)
     return -1;
 }
 
-Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
+Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 {
-    std::filesystem::path real_path(path);
-    std::filesystem::path directory = real_path.parent_path();
-    std::filesystem::path cache_dir = directory / (std::string("_ignis_cache_") + real_path.stem().generic_u8string());
+    std::filesystem::path directory = path.parent_path();
+    std::filesystem::path cache_dir = directory / (std::string("_ignis_cache_") + path.stem().generic_u8string());
 
     std::filesystem::create_directories(cache_dir);
     std::filesystem::create_directories(cache_dir / "images");
@@ -392,10 +391,10 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
 
     loader.SetImageLoader(imageLoader, nullptr);
 
-    if (real_path.extension() == ".glb")
-        ok = loader.LoadBinaryFromFile(&model, &err, &warn, path);
+    if (path.extension() == ".glb")
+        ok = loader.LoadBinaryFromFile(&model, &err, &warn, path.generic_u8string());
     else
-        ok = loader.LoadASCIIFromFile(&model, &err, &warn, path);
+        ok = loader.LoadASCIIFromFile(&model, &err, &warn, path.generic_u8string());
 
     if (!warn.empty())
         IG_LOG(L_WARNING) << "glTF '" << path << "': " << warn << std::endl;
@@ -423,7 +422,7 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
             loaded_images[tex.source] = img_path;
         }
 
-        auto obj = std::make_shared<Object>(OT_TEXTURE, "image");
+        auto obj = std::make_shared<Object>(OT_TEXTURE, "image", directory);
         obj->setProperty("filename", Property::fromString(std::filesystem::canonical(img_path).generic_u8string()));
 
         if (tex.sampler >= 0) {
@@ -474,7 +473,7 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
     for (const auto& mat : model.materials) {
         // TODO: Add proper support for texture views etc
         std::string name = getMaterialName(mat, matCounter);
-        auto inner       = std::make_shared<Object>(OT_BSDF, "principled");
+        auto inner       = std::make_shared<Object>(OT_BSDF, "principled", directory);
 
         if (mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
             const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
@@ -580,7 +579,7 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
             scene.addBSDF(name + "_inner", inner);
             const tinygltf::Texture& tex = model.textures[mat.normalTexture.index];
 
-            obj = std::make_shared<Object>(OT_BSDF, "normalmap");
+            obj = std::make_shared<Object>(OT_BSDF, "normalmap", directory);
             obj->setProperty("bsdf", Property::fromString(name + "_inner"));
             obj->setProperty("map", Property::fromString(getTextureName(tex)));
         }
@@ -596,7 +595,7 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
             const std::filesystem::path ply_path = cache_dir / "meshes" / (name + ".ply");
 
             exportMeshPrimitive(ply_path, model, prim);
-            auto obj = std::make_shared<Object>(OT_SHAPE, "ply");
+            auto obj = std::make_shared<Object>(OT_SHAPE, "ply", directory);
             obj->setProperty("filename", Property::fromString(std::filesystem::canonical(ply_path).generic_u8string()));
             scene.addShape(name, obj);
 
@@ -606,7 +605,7 @@ Scene glTFSceneParser::loadFromFile(const std::string& path, bool& ok)
 
     const tinygltf::Scene& gltf_scene = model.scenes[model.defaultScene];
     for (int nodeId : gltf_scene.nodes)
-        addNode(scene, model, model.nodes[nodeId], Transformf::Identity());
+        addNode(scene, directory, model, model.nodes[nodeId], Transformf::Identity());
 
     return scene;
 }

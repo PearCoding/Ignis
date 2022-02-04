@@ -1,0 +1,28 @@
+{
+	"technique": {
+		"type": "path",
+		"max_depth": 4
+	},
+	"camera": {
+		"type": "fishlens",
+		"fov": 60,
+		"near_clip": 0.01,
+		"far_clip": 100,
+		"transform": { "lookat": {"direction": [1,0,0], "up":[0,0,-1]} }
+	},
+	"film": {
+		"size": [1000, 1000]
+	},
+	"bsdfs": [
+		{"type":"diffuse", "name": "room", "reflectance":[0.8, 0.8, 0.8]}
+	],
+	"shapes": [
+		{"type":"obj", "name":"Room", "filename":"meshes/Room.obj"}
+	],
+	"entities": [
+		{"name":"Room","shape":"Room", "bsdf":"room"}
+	],
+	"lights": [
+		{"type":"constant", "name":"Sky", "has_ground": false, "ground_brightness": 0.2, "transform": {"rotate": [90, 0, 0]}}
+	]
+}
