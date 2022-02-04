@@ -11,7 +11,7 @@
 		"transform": { "lookat": {"direction": [1,0,0], "up":[0,0,-1]} }
 	},
 	"film": {
-		"size": [1000, 1000]
+		"size": [256, 256]
 	},
 	"bsdfs": [
 		{"type":"diffuse", "name": "room", "reflectance":[0.8, 0.8, 0.8]}
