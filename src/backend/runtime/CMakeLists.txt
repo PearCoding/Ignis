@@ -35,6 +35,8 @@ set(SRC
     driver/Interface.h
     klems/KlemsLoader.cpp
     klems/KlemsLoader.h
+    klems/TensorTreeLoader.cpp
+    klems/TensorTreeLoader.h
     loader/glTFParser.cpp
     loader/glTFParser.h
     loader/Loader.cpp

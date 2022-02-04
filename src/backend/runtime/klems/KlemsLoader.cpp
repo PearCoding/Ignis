@@ -127,22 +127,8 @@ private:
     KlemsMatrix mMatrix;
 };
 
-enum AllowedComponents {
-    AC_FrontReflection   = 0x1,
-    AC_FrontTransmission = 0x2,
-    AC_BackReflection    = 0x4,
-    AC_BackTransmission  = 0x8,
-    AC_FrontAll          = AC_FrontReflection | AC_FrontTransmission,
-    AC_BackAll           = AC_BackReflection | AC_BackTransmission,
-    AC_ReflectionAll     = AC_FrontReflection | AC_BackReflection,
-    AC_TransmissionAll   = AC_FrontTransmission | AC_BackTransmission,
-    AC_All               = AC_FrontAll | AC_BackAll
-};
-
 bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data)
 {
-    const int allowedComponents = AC_All;
-
     // Read Radiance based klems BSDF xml document
     pugi::xml_document doc;
     pugi::xml_parse_result result = doc.load_file(in_xml.c_str());
@@ -281,21 +267,23 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
 
         // Select correct component
         const std::string direction = block.child_value("WavelengthDataDirection");
-        if (direction == "Transmission Front" && (allowedComponents & AC_FrontTransmission))
+        if (direction == "Transmission Front")
             transmissionFront = component;
-        else if (direction == "Scattering Back" && (allowedComponents & AC_BackReflection))
+        else if (direction == "Scattering Back")
             reflectionBack = component;
-        else if (direction == "Transmission Back" && (allowedComponents & AC_BackTransmission))
+        else if (direction == "Transmission Back")
             transmissionBack = component;
-        else if (allowedComponents & AC_FrontReflection)
+        else
             reflectionFront = component;
     }
 
-    // Make sure both transmission parts are equal if not specified otherwise
+    // FIXME: This is not the standard radiance uses. It should be handled as "black"
     if (!reflectionBack)
         reflectionBack = reflectionFront;
     if (!reflectionFront)
         reflectionFront = reflectionBack;
+
+    // Make sure both transmission parts are equal if not specified otherwise
     if (!transmissionBack)
         transmissionBack = transmissionFront;
     if (!transmissionFront)
