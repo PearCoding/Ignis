@@ -43,3 +43,9 @@ _ignis_cache*/
 # Other outputs
 out/
 data/
+
+# Some radiance output
+scenes/radiance/*/*.hdr
+scenes/radiance/*/*.exr
+scenes/radiance/*/*.unf
+scenes/radiance/*/*.oct

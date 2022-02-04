@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"bsdfs": [
+		{"type":"roughdielectric", "name": "mat-Sphere", "alpha": 0.1}
+	]
+}
