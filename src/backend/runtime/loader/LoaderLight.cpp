@@ -308,7 +308,7 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
         if (tex_path.empty()) {
             stream << LoaderTexture::generate(tex_name, *tex, tree)
                    << "  let light_" << id << " = make_environment_light_textured_naive(" << tree.context().Environment.SceneDiameter / 2
-                   << ", tex_" << ShaderUtils::escapeIdentifier(tex_name) << ", "
+                   << ", tex_" << ShaderUtils::escapeIdentifier(tex_name)
                    << ", " << ShaderUtils::inlineMatrix(trans) << ");" << std::endl;
         } else {
             const auto cdf = setup_cdf(tex_path);
@@ -316,7 +316,7 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
                    << "  let cdf_" << id << "   = cdf::make_cdf_2d(device.load_buffer(\"" << std::get<0>(cdf) << "\"), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
                    << "  let light_" << id << " = make_environment_light_textured(" << tree.context().Environment.SceneDiameter / 2
                    << ", tex_" << ShaderUtils::escapeIdentifier(tex_name)
-                   << ", cdf_" << id << ", "
+                   << ", cdf_" << id
                    << ", " << ShaderUtils::inlineMatrix(trans) << ");" << std::endl;
         }
     } else {

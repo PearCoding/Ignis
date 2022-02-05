@@ -1,0 +1,8 @@
+{
+	"externals": [
+		{"filename": "room_data.json"}
+	],
+	"bsdfs": [
+		{"type":"tensortree", "name": "window", "filename":"blinds_20deg_t45.xml"}
+	]
+}

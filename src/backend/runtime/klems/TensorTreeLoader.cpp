@@ -7,16 +7,66 @@
 #include <pugixml.hpp>
 
 namespace IG {
-// TODO
+// Only used in the building process
+struct TensorTreeNode {
+    std::vector<std::unique_ptr<TensorTreeNode>> Children;
+    std::vector<float> Values;
+};
+
+using NodeValue = int32_t;
+static inline bool isLeaf(NodeValue id) { return id < 0; }
+static inline int32_t getLeafValueOffset(NodeValue id) { return -id - 1; }
+static inline bool isLeafSingleValue(float val) { return val < 0; }
+
 class TensorTreeComponent {
 public:
     inline TensorTreeComponent()
     {
     }
 
+    inline void addNode(const TensorTreeNode& node, NodeValue* parentValue)
+    {
+        if (node.Children.empty()) {
+            size_t off = mValues.size();
+            if (parentValue)
+                *parentValue = -(static_cast<NodeValue>(off) + 1);
+
+            bool single = node.Values.size() == 1;
+            if (single) {
+                mValues.emplace_back(-node.Values.front());
+            } else {
+                mValues.insert(mValues.end(), node.Values.begin(), node.Values.end());
+            }
+        } else {
+            size_t off = mNodes.size();
+            if (parentValue)
+                *parentValue = static_cast<NodeValue>(off);
+
+            // First create the entries to linearize access
+            for (size_t i = 0; i < node.Children.size(); ++i)
+                mNodes.emplace_back();
+
+            // Recursively add nodes
+            for (size_t i = 0; i < node.Children.size(); ++i)
+                addNode(*node.Children[i], &mNodes[off + i]);
+        }
+    }
+
     inline void write(std::ostream& os)
     {
+        uint32_t node_count  = mNodes.size();
+        uint32_t value_count = mValues.size();
+
+        os.write(reinterpret_cast<const char*>(&node_count), sizeof(node_count));
+        os.write(reinterpret_cast<const char*>(&value_count), sizeof(value_count));
+
+        os.write(reinterpret_cast<const char*>(mNodes.data()), mNodes.size() * sizeof(NodeValue));
+        os.write(reinterpret_cast<const char*>(mValues.data()), mValues.size() * sizeof(float));
     }
+
+private:
+    std::vector<NodeValue> mNodes;
+    std::vector<float> mValues;
 };
 
 bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data)
@@ -77,29 +127,72 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
             return false;
         }
 
+        // Parse tree data
+        const char* scat_str = block.child_value("ScatteringData");
+
+        std::unique_ptr<TensorTreeNode> root = std::make_unique<TensorTreeNode>();
+        const size_t max_values_per_node     = dim4 ? 16 : 8;
+        std::vector<TensorTreeNode*> node_stack;
+        node_stack.push_back(root.get());
+
+        std::stringstream stream(scat_str);
+        const auto eof = std::char_traits<std::stringstream::char_type>::eof();
+        while (stream.good()) {
+            const auto c = stream.peek();
+            if (c == eof) {
+                break;
+            } else if (c == '{') {
+                stream.ignore();
+                node_stack.emplace_back(node_stack.back()->Children.emplace_back(std::make_unique<TensorTreeNode>()).get());
+            } else if (c == '}') {
+                if (node_stack.empty()) {
+                    IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Misformed scatter data" << std::endl;
+                    return false;
+                }
+
+                stream.ignore();
+                node_stack.pop_back();
+            } else if (c == ',' || std::isspace(c)) {
+                stream.ignore();
+            } else {
+                TensorTreeNode* node = node_stack.back();
+                while (stream.good() && node->Values.size() < max_values_per_node) {
+                    const auto c2 = stream.peek();
+                    if (c2 == eof) {
+                        break; // Should not happen
+                    } else if (c2 == '}') {
+                        break;
+                    } else if (c2 == ',' || std::isspace(c2)) {
+                        stream.ignore();
+                    } else {
+                        float val;
+                        stream >> val;
+                        node->Values.emplace_back(val);
+                    }
+                }
+
+                if (node->Values.size() != 1 && node->Values.size() != max_values_per_node) {
+                    IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Misformed scatter data. Bad amount of values per node" << std::endl;
+                    return false;
+                }
+            }
+        }
+
+        // Only the root shall remain
+        if (node_stack.size() != 1) {
+            IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Misformed scatter data" << std::endl;
+            return false;
+        }
+
+        // FIXME: We require children here, not a leaf. This is a limitation from our side
+        if (root->Children.empty()) {
+            IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Root of scatter data has no children" << std::endl;
+            return false;
+        }
+
         // Setup component
         std::shared_ptr<TensorTreeComponent> component = std::make_shared<TensorTreeComponent>();
-
-        // Parse list of floats
-        const char* scat_str = block.child_value("ScatteringData");
-        char* end            = nullptr;
-        Eigen::Index ind     = 0;
-        // TODO
-        // while (ind < component->matrix().size() && *scat_str) {
-        //     const float value = std::strtof(scat_str, &end);
-        //     if (scat_str == end && value == 0) {
-        //         scat_str = scat_str + 1; // Skip entry
-        //         continue;
-        //     }
-        //     const Eigen::Index row = ind / columnBasis->entryCount(); //Outgoing direction
-        //     const Eigen::Index col = ind % columnBasis->entryCount(); //Incoming direction
-
-        //     component->matrix()(row, col) = value;
-        //     ++ind;
-        //     if (scat_str == end)
-        //         break;
-        //     scat_str = end;
-        // }
+        component->addNode(*root, nullptr);
 
         // Select correct component
         const std::string direction = block.child_value("WavelengthDataDirection");

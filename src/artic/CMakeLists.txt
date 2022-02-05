@@ -7,6 +7,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/random.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/sort.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/warp.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/aov.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/bsdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/buffer.art
@@ -45,6 +46,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/phong.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/plastic.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/principled.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/tensortree.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/area.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/cie.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/common.art

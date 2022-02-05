@@ -139,28 +139,7 @@ fn @uniform_disk_pdf(radius: f32) = 1 / (flt_pi * radius * radius);
 
 // Samples uniform concentric disk
 fn @sample_uniform_disk(u: f32, v: f32, radius: f32) -> PosSample {
-    if (u == 0 && v == 0) {
-        return (make_pos_sample(make_vec3(0,0,0), uniform_disk_pdf(radius)))
-    }
-    
-    let a = 2 * u - 1;
-    let b = 2 * v - 1;
-    
-    // Uses squares instead of absolute values
-    if (a * a > b * b) { 
-        // Top half
-        let phi = (flt_pi/4) * safe_div(b, a);
-        let x = radius * math_builtins::cos(phi) * a;
-        let y = radius * math_builtins::sin(phi) * a;
-        make_pos_sample(make_vec3(x,y,0), uniform_disk_pdf(radius))
-    }
-    else {
-        // Bottom half
-        let phi = (flt_pi/2) - (flt_pi/4) * safe_div(a, b);
-        let x = radius * math_builtins::cos(phi) * b;
-        let y = radius * math_builtins::sin(phi) * b;
-        make_pos_sample(make_vec3(x,y,0), uniform_disk_pdf(radius))
-    }
+    make_pos_sample(vec2_to_3(square_to_concentric_disk(make_vec2(u, v)), 0), uniform_disk_pdf(radius))
 }
 
 // Initializer for Bernstein's hash function

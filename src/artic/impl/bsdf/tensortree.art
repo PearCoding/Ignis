@@ -1,0 +1,88 @@
+// TODO: The Tensortree sample process is not optimized at all...
+
+struct TensorTreeComponent {
+    node:  fn (i32) -> i32,
+    value: fn (i32) -> f32
+}
+
+struct TensorTreeModel {
+    front_reflection:   TensorTreeComponent,
+    back_reflection:    TensorTreeComponent,
+    front_transmission: TensorTreeComponent,
+    back_transmission:  TensorTreeComponent
+}
+
+fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) {
+    let (in_theta, in_phi)   = spherical_from_dir(in_dir);
+    let (out_theta, out_phi) = spherical_from_dir(out_dir);
+    0:f32
+}
+
+fn @make_tensortree_component(buffer: DeviceBuffer, buffer_host: DeviceBuffer, off: i32) -> (TensorTreeComponent, i32) {
+    let node_count  = buffer_host.load_i32(off);
+    let value_count = buffer_host.load_i32(off + 1);
+
+    (TensorTreeComponent {
+        node  = @|i| buffer.load_i32(off + 2 + i),
+        value = @|i| buffer.load_f32(off + 2 + value_count + i)
+    }, 2 + node_count + value_count)
+}
+
+fn @make_tensortree_model(buffer: DeviceBuffer, buffer_host: DeviceBuffer) -> TensorTreeModel {
+    let (front_reflection,   front_reflection_off)   = make_tensortree_component(buffer, buffer_host, 0);
+    let (front_transmission, front_transmission_off) = make_tensortree_component(buffer, buffer_host, front_reflection_off);
+    let (back_reflection,    back_reflection_off)    = make_tensortree_component(buffer, buffer_host, front_reflection_off + front_transmission_off);
+    let (back_transmission,  _)                      = make_tensortree_component(buffer, buffer_host, front_reflection_off + front_transmission_off + back_reflection_off);
+   
+    TensorTreeModel {
+        front_reflection   = front_reflection,
+        front_transmission = front_transmission,
+        back_reflection    = back_reflection,
+        back_transmission  = back_transmission
+    }
+}
+
+// TODO: Add proper sampling!
+fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tensortree: TensorTreeModel) -> Bsdf {
+    let local_eval = |wi : Vec3, wo : Vec3| {
+		let inFront	 = shading::is_positive_hemisphere(wi);
+        let outFront = shading::is_positive_hemisphere(wo);
+
+        let factor = match (inFront, outFront) {
+            (true, true)   => tt_eval_component(k_fi(wi), k_fo(wo), tensortree.front_reflection),
+            (true, false)  => tt_eval_component(k_fi(wi), k_bo(wo), tensortree.front_transmission),
+            (false, true)  => tt_eval_component(k_bi(wi), k_bo(wo), tensortree.back_transmission),
+            (false, false) => tt_eval_component(k_bi(wi), k_fo(wo), tensortree.back_reflection)
+        };
+
+        color_mulf(color, factor * shading::abs_cos_theta(wi))
+    };
+
+    Bsdf {
+        eval   = @ |in_dir, out_dir| {
+            let wo = shading::to_local(surf.local, out_dir);
+            let wi = shading::to_local(surf.local, in_dir);
+            local_eval(wi, wo)
+        },
+        pdf    = @ |in_dir, _| cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))),
+        sample = @ |rnd, out_dir, _| {
+            let wo = shading::to_local(surf.local, out_dir);
+            let u = randf(rnd);
+            let v = randf(rnd);
+            let sample = sample_cosine_hemisphere(u, v);
+            
+            if sample.pdf <= flt_eps {
+                reject_bsdf_sample()
+            } else {
+                let gdir = if randf(rnd) < 0.5 { shading::to_world(surf.local, sample.dir) } else { vec3_neg(shading::to_world(surf.local, sample.dir)) };
+                make_option(BsdfSample {
+                    in_dir = gdir,
+                    pdf    = sample.pdf,
+                    color  = color_mulf(local_eval(sample.dir, wo), 2 / sample.pdf),
+                    eta    = 1
+                })
+            }
+        },
+        is_specular = false
+    }
+}

@@ -71,9 +71,7 @@ public:
             os.write(reinterpret_cast<const char*>(&basis.PhiCount), sizeof(uint32_t));
         }
 
-        for (auto& val : offsets) {
-            os.write(reinterpret_cast<const char*>(&val), sizeof(uint32_t));
-        }
+        os.write(reinterpret_cast<const char*>(offsets.data()), offsets.size() * sizeof(uint32_t));
     }
 
     inline const std::vector<KlemsThetaBasis>& thetaBasis() const { return mThetaBasis; }
