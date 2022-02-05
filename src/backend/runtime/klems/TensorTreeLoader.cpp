@@ -14,16 +14,9 @@ struct TensorTreeNode {
 };
 
 using NodeValue = int32_t;
-static inline bool isLeaf(NodeValue id) { return id < 0; }
-static inline int32_t getLeafValueOffset(NodeValue id) { return -id - 1; }
-static inline bool isLeafSingleValue(float val) { return val < 0; }
 
 class TensorTreeComponent {
 public:
-    inline TensorTreeComponent()
-    {
-    }
-
     inline void addNode(const TensorTreeNode& node, NodeValue* parentValue)
     {
         if (node.Children.empty()) {

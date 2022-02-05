@@ -1,6 +1,7 @@
 // TODO: The Tensortree sample process is not optimized at all...
 
 struct TensorTreeComponent {
+    ndim:  i32,
     node:  fn (i32) -> i32,
     value: fn (i32) -> f32
 }
@@ -12,10 +13,54 @@ struct TensorTreeModel {
     back_transmission:  TensorTreeComponent
 }
 
+fn @tt_is_leaf(node_val: i32)     = node_val < 0;
+fn @tt_leaf_offset(node_val: i32) = (-node_val - 1);
+
+fn @tt_is_leaf_single_value(leaf_val: f32) = leaf_val < 0;
+
+// Returns local child offset
+fn @tt_lookup_grid(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
+    let mut spos: [f32*4];
+    let mut n    = 0:i32;
+    for i in range(component.ndim, 0) {
+        spos(i) = 2 * vec4_at(pos, i);
+        let t = if spos(i) >= 1 { 1 } else { 0 };
+        n |= t << i;
+        spos(i) -= t as f32;
+    }
+
+    (n, make_vec4(spos(0), spos(1), spos(2), spos(3)))
+}
+
+// Returns first leaf value (leaf)
+fn @tt_climb_tree(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
+    let mut pos2 = pos;
+    let mut n    = 0:i32;
+    let mut node = 0:i32;
+    while true {
+        let (n2, pos3) = tt_lookup_grid(pos2, component);
+        n    = n2;
+        pos2 = pos3;
+        node = component.node(node + n);
+        if tt_is_leaf(node) { break() }
+    }
+
+    (tt_leaf_offset(node), pos2)
+}
+
 fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) {
-    let (in_theta, in_phi)   = spherical_from_dir(in_dir);
-    let (out_theta, out_phi) = spherical_from_dir(out_dir);
-    0:f32
+    let in_pos  = concentric_disk_to_square(vec3_to_2(in_dir));
+    let out_pos = concentric_disk_to_square(vec3_to_2(out_dir));
+
+    // Climb the tree
+    let (leaf, pos) = tt_climb_tree(make_vec4(in_pos.x, in_pos.y, out_pos.x, out_pos.y), component);
+    let leaf_value = component.value(leaf);
+    if tt_is_leaf_single_value(leaf_value) {
+        -leaf_value
+    } else {
+        let (n, _) = tt_lookup_grid(pos, component);
+        component.value(leaf + n)
+    }
 }
 
 fn @make_tensortree_component(buffer: DeviceBuffer, buffer_host: DeviceBuffer, off: i32) -> (TensorTreeComponent, i32) {
@@ -23,6 +68,7 @@ fn @make_tensortree_component(buffer: DeviceBuffer, buffer_host: DeviceBuffer, o
     let value_count = buffer_host.load_i32(off + 1);
 
     (TensorTreeComponent {
+        ndim  = 4, // TODO
         node  = @|i| buffer.load_i32(off + 2 + i),
         value = @|i| buffer.load_f32(off + 2 + value_count + i)
     }, 2 + node_count + value_count)

@@ -21,6 +21,7 @@ struct RuntimeOptions {
     uint32 SPI           = 0; // Detect automatically
     std::string OverrideTechnique;
     std::string OverrideCamera;
+    std::pair<uint32, uint32> OverrideFilmSize = { 0, 0 };
 };
 
 struct RuntimeRenderSettings {
@@ -45,7 +46,7 @@ public:
     Runtime(const std::filesystem::path& path, const RuntimeOptions& opts);
     ~Runtime();
 
-    void setup(uint32 framebuffer_width, uint32 framebuffer_height);
+    void setup();
     void step(const Camera& camera);
     void trace(const std::vector<Ray>& rays, std::vector<float>& data);
 

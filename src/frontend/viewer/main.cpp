@@ -101,8 +101,6 @@ int main(int argc, char** argv)
     std::string out_file;
     size_t desired_spp = 0;
     size_t capped_spp  = 0; // Cap the SPP to the desired amount and do not render any further. Only useful for ui
-    std::optional<int> a_film_width;
-    std::optional<int> a_film_height;
     std::optional<Vector3f> eye;
     std::optional<Vector3f> dir;
     std::optional<Vector3f> up;
@@ -118,11 +116,11 @@ int main(int argc, char** argv)
         if (argv[i][0] == '-') {
             if (!strcmp(argv[i], "--width")) {
                 check_arg(argc, argv, i, 1);
-                a_film_width = strtoul(argv[i + 1], nullptr, 10);
+                opts.OverrideFilmSize.first = strtoul(argv[i + 1], nullptr, 10);
                 ++i;
             } else if (!strcmp(argv[i], "--height")) {
                 check_arg(argc, argv, i, 1);
-                a_film_height = strtoul(argv[i + 1], nullptr, 10);
+                opts.OverrideFilmSize.second = strtoul(argv[i + 1], nullptr, 10);
                 ++i;
             } else if (!strcmp(argv[i], "--eye")) {
                 check_arg(argc, argv, i, 3);
@@ -273,13 +271,11 @@ int main(int argc, char** argv)
     timer_loading.stop();
 
     const auto def        = runtime->loadedRenderSettings();
-    const int film_width  = a_film_width.value_or(def.FilmWidth);
-    const int film_height = a_film_height.value_or(def.FilmHeight);
     const auto clip       = trange.value_or(Vector2f(def.TMin, def.TMax));
     Camera camera(eye.value_or(def.CameraEye), dir.value_or(def.CameraDir), up.value_or(def.CameraUp),
-                  fov.value_or(def.FOV), (float)film_width / (float)film_height,
+                  fov.value_or(def.FOV), (float)def.FilmWidth / (float)def.FilmHeight,
                   clip(0), clip(1));
-    runtime->setup(film_width, film_height);
+    runtime->setup();
 
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(desired_spp / (float)SPI));
@@ -301,7 +297,7 @@ int main(int argc, char** argv)
             else
                 aov_names[i] = runtime->aovs()[i - 1];
         }
-        ui = std::make_unique<UI>(film_width, film_height, aovs, aov_names, runtime->isDebug());
+        ui = std::make_unique<UI>(def.FilmWidth, def.FilmHeight, aovs, aov_names, runtime->isDebug());
 
         // Setup initial travelspeed
         BoundingBox bbox = runtime->sceneBoundingBox();
@@ -363,7 +359,7 @@ int main(int argc, char** argv)
                 auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
                 if (desired_iter != 0) {
-                    samples_sec.emplace_back(1000.0 * double(SPI * film_width * film_height) / double(elapsed_ms));
+                    samples_sec.emplace_back(1000.0 * double(SPI * def.FilmWidth * def.FilmHeight) / double(elapsed_ms));
                     if (samples_sec.size() == desired_iter)
                         break;
                 }

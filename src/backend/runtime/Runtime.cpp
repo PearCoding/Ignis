@@ -26,14 +26,13 @@ static inline void setup_technique(LoaderOptions& lopts, const RuntimeOptions& o
 
 static inline void setup_film(RuntimeRenderSettings& settings, const LoaderOptions& lopts, const RuntimeOptions& opts)
 {
-    IG_UNUSED(opts);
+    Vector2f filmSize = Vector2f(settings.FilmWidth, settings.FilmHeight);
+    const auto film   = lopts.Scene.film();
+    if (film)
+        filmSize = film->property("size").getVector2(filmSize);
 
-    const auto film = lopts.Scene.film();
-    if (film) {
-        const auto filmSize = film->property("size").getVector2(Vector2f(settings.FilmWidth, settings.FilmHeight));
-        settings.FilmWidth  = filmSize.x();
-        settings.FilmHeight = filmSize.y();
-    }
+    settings.FilmWidth  = opts.OverrideFilmSize.first > 0 ? opts.OverrideFilmSize.first : filmSize.x();
+    settings.FilmHeight = opts.OverrideFilmSize.second > 0 ? opts.OverrideFilmSize.second : filmSize.y();
 }
 
 static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts)
@@ -217,7 +216,9 @@ Runtime::~Runtime()
 
 void Runtime::step(const Camera& camera)
 {
-    IG_ASSERT(mInit, "Expected to be initialized!");
+    if (!mInit) {
+        setup();
+    }
 
     if (mIsTrace) {
         IG_LOG(L_ERROR) << "Trying to use step() in a trace driver!" << std::endl;
@@ -249,8 +250,9 @@ void Runtime::step(const Camera& camera)
 
 void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
 {
-    if (!mInit)
-        return;
+    if (!mInit) {
+        setup();
+    }
 
     if (!mIsTrace) {
         IG_LOG(L_ERROR) << "Trying to use trace() in a camera driver!" << std::endl;
@@ -289,12 +291,12 @@ const Statistics* Runtime::getStatistics() const
     return mAcquireStats ? mLoadedInterface.GetStatisticsFunction() : nullptr;
 }
 
-void Runtime::setup(uint32 framebuffer_width, uint32 framebuffer_height)
+void Runtime::setup()
 {
     DriverSetupSettings settings;
     settings.database           = &mDatabase;
-    settings.framebuffer_width  = std::max(1u, framebuffer_width);
-    settings.framebuffer_height = std::max(1u, framebuffer_height);
+    settings.framebuffer_width  = std::max(1u, mLoadedRenderSettings.FilmWidth);
+    settings.framebuffer_height = std::max(1u, mLoadedRenderSettings.FilmHeight);
     settings.acquire_stats      = mAcquireStats;
     settings.aov_count          = mAOVs.size();
 

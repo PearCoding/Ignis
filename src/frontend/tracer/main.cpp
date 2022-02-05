@@ -209,6 +209,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    opts.OverrideFilmSize = { (uint32)rays.size(), 1 };
     std::unique_ptr<Runtime> runtime;
     try {
         runtime = std::make_unique<Runtime>(scene_file, opts);
@@ -217,7 +218,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    runtime->setup(rays.size(), 1);
+    runtime->setup();
 
     const size_t SPP = runtime->samplesPerIteration();
     sample_count     = static_cast<size_t>(std::ceil(sample_count / (float)SPP));

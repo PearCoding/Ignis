@@ -876,6 +876,11 @@ UI::UI(int width, int height, const std::vector<const float*>& aovs, const std::
     ImGuiSDL::Initialize(mInternal->Renderer, width, height);
 
     mInternal->PoseManager.load(POSE_FILE);
+
+    if (width < 350 || height < 500) {
+        IG_LOG(L_WARNING) << "Window too small to show UI. Hiding it by default." << std::endl;
+        mInternal->ShowUI = false;
+    }
 }
 
 UI::~UI()
