@@ -12,6 +12,15 @@ struct TensorTreeNode {
     std::vector<std::unique_ptr<TensorTreeNode>> Children;
     std::vector<float> Values;
 
+    // The root is the only node with one child. Get rid of this special case
+    inline void eat()
+    {
+        IG_ASSERT(Values.empty() && Children.size() == 1, "Invalid call to eat");
+
+        std::swap(Children[0]->Values, Values);
+        std::swap(Children[0]->Children, Children);
+    }
+
     // Will expand the node such that it has children instead of values
     // This is actually only used in a special case on the root
     inline void expand(size_t ndim)
@@ -30,6 +39,7 @@ struct TensorTreeNode {
 
 using NodeValue = int32_t;
 
+static_assert(sizeof(NodeValue) == sizeof(float), "Node and Leaf value elements have to have the same size");
 class TensorTreeComponent {
 public:
     inline TensorTreeComponent(uint32 ndim)
@@ -41,9 +51,9 @@ public:
     inline void addNode(const TensorTreeNode& node, NodeValue* parentValue)
     {
         if (node.Children.empty()) {
-            size_t off = mValues.size();
-            if (parentValue)
-                *parentValue = -(static_cast<NodeValue>(off) + 1);
+            IG_ASSERT(parentValue != nullptr, "Root can not be a leaf!");
+            size_t off   = mValues.size();
+            *parentValue = -(static_cast<NodeValue>(off) + 1);
 
             bool single = node.Values.size() == 1;
             if (single) {
@@ -72,10 +82,10 @@ public:
     inline void makeBlack()
     {
         mNodes  = std::vector<NodeValue>(mMaxValuesPerNode, 0);
-        mValues = std::vector<float>(mNodes.size(), 0);
+        mValues = std::vector<float>(1, 0);
 
         for (size_t i = 0; i < mNodes.size(); ++i)
-            mNodes[i] = -(int)(i + 1);
+            mNodes[i] = -1;
     }
 
     inline void write(std::ostream& os)
@@ -83,6 +93,7 @@ public:
         uint32_t node_count  = mNodes.size();
         uint32_t value_count = mValues.size();
 
+        // We do not make use of this header, but it might get handy in other applications
         os.write(reinterpret_cast<const char*>(&mNDim), sizeof(mNDim));
         os.write(reinterpret_cast<const char*>(&mMaxValuesPerNode), sizeof(mMaxValuesPerNode));
         os.write(reinterpret_cast<const char*>(&node_count), sizeof(node_count));
@@ -92,6 +103,9 @@ public:
         os.write(reinterpret_cast<const char*>(mValues.data()), mValues.size() * sizeof(float));
     }
 
+    inline size_t nodeCount() const { return mNodes.size(); }
+    inline size_t valueCount() const { return mValues.size(); }
+
 private:
     uint32 mNDim;
     uint32 mMaxValuesPerNode;
@@ -99,7 +113,7 @@ private:
     std::vector<float> mValues;
 };
 
-bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data)
+bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data, TensorTreeSpecification& spec)
 {
     // Read Radiance based klems BSDF xml document
     pugi::xml_document doc;
@@ -128,6 +142,8 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
         IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Expected IncidentDataStructure of 'TensorTree4' or 'TensorTree3' but got '" << type << "' instead" << std::endl;
         return false;
     }
+
+    spec.ndim = dim4 ? 4 : 3;
 
     std::shared_ptr<TensorTreeComponent> reflectionFront;
     std::shared_ptr<TensorTreeComponent> transmissionFront;
@@ -216,11 +232,20 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
 
         // Make sure the root node has children instead of being a leaf
         if (root->Children.empty()) {
-            if (root->Values.empty()) {
-                IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Root of scatter data has no children" << std::endl;
-                return false;
-            } else {
-                root->expand(max_values_per_node);
+            IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Root of scatter data has no data" << std::endl;
+            return false;
+        } else if (root->Children.size() != 1) {
+            IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Root of scatter data has invalid data" << std::endl;
+            return false;
+        } else {
+            root->eat(); // Eat the only node we have
+            if (root->Children.empty()) {
+                if (root->Values.empty()) {
+                    IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Root of scatter data has no data" << std::endl;
+                    return false;
+                } else {
+                    root->expand(max_values_per_node);
+                }
             }
         }
 
@@ -239,6 +264,8 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
         else
             reflectionFront = component;
     }
+    
+    spec.has_reflection = reflectionFront || reflectionBack;
 
     // If reflection components are not given, make them black
     // See docs/notes/BSDFdirections.txt in Radiance for more information
@@ -257,11 +284,6 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
     if (!transmissionFront)
         transmissionFront = transmissionBack;
 
-    if (!reflectionFront && !reflectionBack && !transmissionFront && !transmissionBack) {
-        IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": No valid data found" << std::endl;
-        return false;
-    }
-
     if (!transmissionFront && !transmissionBack) {
         IG_LOG(L_ERROR) << "While parsing " << in_xml << ": No transmission data found" << std::endl;
         return false;
@@ -272,11 +294,21 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
         return false;
     }
 
-    std::ofstream stream(out_data, std::ios::binary);
+    std::ofstream stream(out_data, std::ios::binary | std::ios::trunc);
     reflectionFront->write(stream);
     transmissionFront->write(stream);
     reflectionBack->write(stream);
     transmissionBack->write(stream);
+
+    // Fill missing parts in the specification
+    spec.front_reflection.node_count    = reflectionFront->nodeCount();
+    spec.front_reflection.value_count   = reflectionFront->valueCount();
+    spec.back_reflection.node_count     = reflectionBack->nodeCount();
+    spec.back_reflection.value_count    = reflectionBack->valueCount();
+    spec.front_transmission.node_count  = transmissionFront->nodeCount();
+    spec.front_transmission.value_count = transmissionFront->valueCount();
+    spec.back_transmission.node_count   = transmissionBack->nodeCount();
+    spec.back_transmission.value_count  = transmissionBack->valueCount();
 
     return true;
 }

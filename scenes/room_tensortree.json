@@ -3,6 +3,6 @@
 		{"filename": "room_data.json"}
 	],
 	"bsdfs": [
-		{"type":"tensortree", "name": "window", "filename":"blinds_20deg_t45.xml"}
+		{"type":"tensortree", "name": "window", "filename":"radiance/simple_tensor_d2_trans.xml"}
 	]
 }

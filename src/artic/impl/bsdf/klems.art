@@ -28,11 +28,10 @@ struct KlemsModel {
 }
 
 // Our sampling space flips implicitly to the inside configuration and has to be considered when working with the Klems basis
-// therefor the opposite funtions fi and bi are not needed
-fn @k_fo(v: Vec3) = v;
-fn @k_fi(v: Vec3) = make_vec3(-v.x, -v.y, v.z);
-fn @k_bo(v: Vec3) = make_vec3(v.x, v.y, -v.z);
-fn @k_bi(v: Vec3) = vec3_neg(v);
+fn @k_fo(v: Vec3) = make_vec3(v.x, -v.y, v.z);
+fn @k_fi(v: Vec3) = v;
+fn @k_bo(v: Vec3) = vec3_neg(k_fi(v));
+fn @k_bi(v: Vec3) = vec3_neg(k_fo(v));
 
 fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) = min(basis.phi_count - 1, max(0, (phi * (basis.phi_count as f32) * flt_inv_pi / 2) as i32));
 fn @k_multi_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> (i32, i32) {
@@ -103,6 +102,7 @@ fn @make_klems_model(buffer: DeviceBuffer, buffer_host: DeviceBuffer) -> KlemsMo
 
 // TODO: Add proper sampling!
 fn @make_klems_bsdf(surf: SurfaceElement, color: Color, klems: KlemsModel) -> Bsdf {
+    let refl_prob  = 0.5:f32;
     let local_eval = |wi : Vec3, wo : Vec3| {
 		let inFront	 = shading::is_positive_hemisphere(wi);
         let outFront = shading::is_positive_hemisphere(wo);
@@ -133,11 +133,11 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, klems: KlemsModel) -> Bs
             if sample.pdf <= flt_eps {
                 reject_bsdf_sample()
             } else {
-                let gdir = if randf(rnd) < 0.5 { shading::to_world(surf.local, sample.dir) } else { vec3_neg(shading::to_world(surf.local, sample.dir)) };
+                let wi = if randf(rnd) < refl_prob { shading::make_same_hemisphere(wo, sample.dir) } else { vec3_neg(shading::make_same_hemisphere(wo, sample.dir)) };
                 make_option(BsdfSample {
-                    in_dir = gdir,
+                    in_dir = shading::to_world(surf.local, wi),
                     pdf    = sample.pdf,
-                    color  = color_mulf(local_eval(sample.dir, wo), 2 / sample.pdf),
+                    color  = color_mulf(local_eval(wi, wo), safe_div(1, refl_prob * sample.pdf)),
                     eta    = 1
                 })
             }

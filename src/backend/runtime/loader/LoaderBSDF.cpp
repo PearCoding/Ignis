@@ -304,15 +304,39 @@ static void bsdf_klems(std::ostream& stream, const std::string& name, const std:
     tree.endClosure();
 }
 
-static std::string setup_tensortree(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
+static std::pair<std::string, TensorTreeSpecification> setup_tensortree(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
 {
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/tt_" + ShaderUtils::escapeIdentifier(name) + ".bin";
 
-    TensorTreeLoader::prepare(filename, path);
-    return path;
+    TensorTreeSpecification spec;
+    TensorTreeLoader::prepare(filename, path, spec);
+    return { path, spec };
+}
+
+static inline std::string dump_tt_specification(const TensorTreeSpecification& parent, const TensorTreeComponentSpecification& spec)
+{
+    std::stringstream stream;
+    stream << "TensorTreeComponentSpecification{ ndim=" << parent.ndim
+           << ", node_count=" << spec.node_count
+           << ", value_count=" << spec.value_count
+           << "}";
+    return stream.str();
+}
+
+static inline std::string dump_tt_specification(const TensorTreeSpecification& spec)
+{
+    std::stringstream stream;
+    stream << "TensorTreeSpecification{ ndim=" << spec.ndim
+           << ", has_reflection=" << (spec.has_reflection ? "true" : "false")
+           << ", front_reflection=" << dump_tt_specification(spec, spec.front_reflection)
+           << ", back_reflection=" << dump_tt_specification(spec, spec.back_reflection)
+           << ", front_transmission=" << dump_tt_specification(spec, spec.front_transmission)
+           << ", back_transmission=" << dump_tt_specification(spec, spec.back_transmission)
+           << "}";
+    return stream.str();
 }
 
 static void bsdf_tensortree(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
@@ -320,12 +344,15 @@ static void bsdf_tensortree(std::ostream& stream, const std::string& name, const
     tree.beginClosure();
     tree.addColor("base_color", *bsdf, Vector3f::Ones());
 
-    const std::string id          = ShaderUtils::escapeIdentifier(name);
-    const std::string buffer_path = setup_tensortree(name, bsdf, tree.context());
+    const std::string id = ShaderUtils::escapeIdentifier(name);
+    const auto data      = setup_tensortree(name, bsdf, tree.context());
+
+    const std::string buffer_path      = std::get<0>(data);
+    const TensorTreeSpecification spec = std::get<1>(data);
 
     stream << tree.pullHeader()
            << "  let tt_" << id << " = make_tensortree_model(device.load_buffer(\"" << buffer_path << "\"), "
-           << "device.load_host_buffer(\"" << buffer_path << "\"));" << std::endl
+           << dump_tt_specification(spec) << ");" << std::endl
            << "  let bsdf_" << id << " : BSDFShader = @|_ray, _hit, surf| make_tensortree_bsdf(surf, "
            << tree.getInline("base_color") << ", "
            << "tt_" << id << ");" << std::endl;

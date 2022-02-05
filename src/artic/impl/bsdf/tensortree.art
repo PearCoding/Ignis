@@ -1,12 +1,27 @@
 // TODO: The Tensortree sample process is not optimized at all...
+struct TensorTreeComponentSpecification {
+    ndim:        i32, 
+    node_count:  i32,
+    value_count: i32
+}
+
+struct TensorTreeSpecification {
+    ndim:               i32, // Same for all components
+    has_reflection:     bool,
+    front_reflection:   TensorTreeComponentSpecification,
+    back_reflection:    TensorTreeComponentSpecification,
+    front_transmission: TensorTreeComponentSpecification,
+    back_transmission:  TensorTreeComponentSpecification
+}
 
 struct TensorTreeComponent {
-    ndim:  i32,
-    node:  fn (i32) -> i32,
-    value: fn (i32) -> f32
+    specification: TensorTreeComponentSpecification,
+    node:          fn (i32) -> i32,
+    value:         fn (i32) -> f32
 }
 
 struct TensorTreeModel {
+    specification:      TensorTreeSpecification,
     front_reflection:   TensorTreeComponent,
     back_reflection:    TensorTreeComponent,
     front_transmission: TensorTreeComponent,
@@ -16,13 +31,13 @@ struct TensorTreeModel {
 fn @tt_is_leaf(node_val: i32)     = node_val < 0;
 fn @tt_leaf_offset(node_val: i32) = (-node_val - 1);
 
-fn @tt_is_leaf_single_value(leaf_val: f32) = leaf_val < 0;
+fn @tt_is_leaf_single_value(leaf_val: f32) = math_builtins::signbit(leaf_val);
 
 // Returns local child offset
 fn @tt_lookup_grid(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
     let mut spos: [f32*4];
     let mut n    = 0:i32;
-    for i in range(component.ndim, 0) {
+    for i in unroll(0, component.specification.ndim) {
         spos(i) = 2 * vec4_at(pos, i);
         let t = if spos(i) >= 1 { 1 } else { 0 };
         n |= t << i;
@@ -53,7 +68,7 @@ fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponen
     let out_pos = concentric_disk_to_square(vec3_to_2(out_dir));
 
     // TODO: Handle ndim==3!
-    
+
     // Climb the tree
     let (leaf, pos) = tt_climb_tree(make_vec4(in_pos.x, in_pos.y, out_pos.x, out_pos.y), component);
     let leaf_value = component.value(leaf);
@@ -65,37 +80,31 @@ fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponen
     }
 }
 
-fn @make_tensortree_component(buffer: DeviceBuffer, buffer_host: DeviceBuffer, off: i32) -> (TensorTreeComponent, i32) {
-    let ndim        = buffer_host.load_i32(off);
+fn @make_tensortree_component(spec: TensorTreeComponentSpecification, buffer: DeviceBuffer, off: i32) -> (TensorTreeComponent, i32) {
+    // let ndim        = buffer_host.load_i32(off);
     // let max_val_per_node = buffer_host.load_i32(off + 1);
-    let node_count  = buffer_host.load_i32(off + 2);
-    let value_count = buffer_host.load_i32(off + 3);
+    // let node_count  = buffer_host.load_i32(off + 2);
+    // let value_count = buffer_host.load_i32(off + 3);
 
-    // Here we make sure that the compiler creates two trees with "explicit" implementations for ndim 3 and 4
-    let tree = if ndim == 3 {
-        TensorTreeComponent {
-            ndim  = 3,
-            node  = @|i| buffer.load_i32(off + 4 + i),
-            value = @|i| buffer.load_f32(off + 4 + value_count + i)
-        }
-    } else {
-        TensorTreeComponent {
-            ndim  = 4,
-            node  = @|i| buffer.load_i32(off + 4 + i),
-            value = @|i| buffer.load_f32(off + 4 + value_count + i)
-        }
+    let node_count  = spec.node_count;
+    let value_count = spec.value_count;
+    let tree = TensorTreeComponent {
+        specification  = spec,
+        node           = @|i| buffer.load_i32(off + 4 + i),
+        value          = @|i| buffer.load_f32(off + 4 + value_count + i)
     };
 
     (tree, 4 + node_count + value_count)
 }
 
-fn @make_tensortree_model(buffer: DeviceBuffer, buffer_host: DeviceBuffer) -> TensorTreeModel {
-    let (front_reflection,   front_reflection_off)   = make_tensortree_component(buffer, buffer_host, 0);
-    let (front_transmission, front_transmission_off) = make_tensortree_component(buffer, buffer_host, front_reflection_off);
-    let (back_reflection,    back_reflection_off)    = make_tensortree_component(buffer, buffer_host, front_reflection_off + front_transmission_off);
-    let (back_transmission,  _)                      = make_tensortree_component(buffer, buffer_host, front_reflection_off + front_transmission_off + back_reflection_off);
+fn @make_tensortree_model(buffer: DeviceBuffer, specification: TensorTreeSpecification) -> TensorTreeModel {
+    let (front_reflection,   front_reflection_off)   = make_tensortree_component(specification.front_reflection, buffer, 0);
+    let (front_transmission, front_transmission_off) = make_tensortree_component(specification.front_transmission, buffer, front_reflection_off);
+    let (back_reflection,    back_reflection_off)    = make_tensortree_component(specification.back_reflection, buffer, front_reflection_off + front_transmission_off);
+    let (back_transmission,  _)                      = make_tensortree_component(specification.back_transmission, buffer, front_reflection_off + front_transmission_off + back_reflection_off);
    
     TensorTreeModel {
+        specification      = specification,
         front_reflection   = front_reflection,
         front_transmission = front_transmission,
         back_reflection    = back_reflection,
@@ -104,16 +113,25 @@ fn @make_tensortree_model(buffer: DeviceBuffer, buffer_host: DeviceBuffer) -> Te
 }
 
 // TODO: Add proper sampling!
-fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tensortree: TensorTreeModel) -> Bsdf {
-    let local_eval = |wi : Vec3, wo : Vec3| {
-		let inFront	 = shading::is_positive_hemisphere(wi);
-        let outFront = shading::is_positive_hemisphere(wo);
+fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeModel) -> Bsdf {
+    let has_refl   = tree.specification.has_reflection;
+    let refl_prob  = if has_refl { 0.5:f32 } else { 0:f32 };
+    let N          = surf.local.col(2);
+
+    let local_eval = |wi : Vec3, wo : Vec3| -> Color {
+        // Be sure to get side without the (possible) flip from the surface interaction
+		let inFront	 = surf.is_entering ^ shading::is_positive_hemisphere(wi);
+        let outFront = surf.is_entering ^ shading::is_positive_hemisphere(wo);
+
+        if shading::abs_cos_theta(wi) <= flt_eps || shading::abs_cos_theta(wo) <= flt_eps {
+            return(black)
+        }
 
         let factor = match (inFront, outFront) {
-            (true, true)   => tt_eval_component(k_fi(wi), k_fo(wo), tensortree.front_reflection),
-            (true, false)  => tt_eval_component(k_fi(wi), k_bo(wo), tensortree.front_transmission),
-            (false, true)  => tt_eval_component(k_bi(wi), k_bo(wo), tensortree.back_transmission),
-            (false, false) => tt_eval_component(k_bi(wi), k_fo(wo), tensortree.back_reflection)
+            (true, true)   => if has_refl { tt_eval_component(k_fi(wi), k_fo(wo), tree.front_reflection) } else { 0 },
+            (true, false)  => tt_eval_component(k_bi(wi), k_fo(wo), tree.front_transmission),
+            (false, true)  => tt_eval_component(k_fi(wi), k_bo(wo), tree.back_transmission),
+            (false, false) => if has_refl { tt_eval_component(k_bi(wi), k_bo(wo), tree.back_reflection) } else { 0 }
         };
 
         color_mulf(color, factor * shading::abs_cos_theta(wi))
@@ -125,7 +143,13 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tensortree: TensorT
             let wi = shading::to_local(surf.local, in_dir);
             local_eval(wi, wo)
         },
-        pdf    = @ |in_dir, _| cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))),
+        pdf    = @ |in_dir, out_dir| {
+            let cos_i = vec3_dot(N, in_dir);
+            let cos_o = vec3_dot(N, out_dir);
+
+            let is_transmission = cos_i * cos_o < 0;
+            if is_transmission || has_refl { cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))) } else { 0 }
+        },
         sample = @ |rnd, out_dir, _| {
             let wo = shading::to_local(surf.local, out_dir);
             let u = randf(rnd);
@@ -135,15 +159,20 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tensortree: TensorT
             if sample.pdf <= flt_eps {
                 reject_bsdf_sample()
             } else {
-                let gdir = if randf(rnd) < 0.5 { shading::to_world(surf.local, sample.dir) } else { vec3_neg(shading::to_world(surf.local, sample.dir)) };
+                let (wi, prob) = if randf(rnd) < refl_prob {
+                    (shading::make_same_hemisphere(wo, sample.dir), refl_prob)
+                } else { 
+                    (vec3_neg(shading::make_same_hemisphere(wo, sample.dir)), 1 - refl_prob)
+                };
+
                 make_option(BsdfSample {
-                    in_dir = gdir,
+                    in_dir = shading::to_world(surf.local, wi),
                     pdf    = sample.pdf,
-                    color  = color_mulf(local_eval(sample.dir, wo), 2 / sample.pdf),
+                    color  = color_mulf(local_eval(wi, wo), safe_div(1, prob * sample.pdf)),
                     eta    = 1
                 })
             }
         },
-        is_specular = false
+        is_specular = true // FIXME: The bsdf does not work properly together with NEE. Figure out why!
     }
 }

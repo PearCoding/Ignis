@@ -299,11 +299,6 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
     if (!transmissionFront)
         transmissionFront = transmissionBack;
 
-    if (!reflectionFront && !reflectionBack && !transmissionFront && !transmissionBack) {
-        IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": No valid data found" << std::endl;
-        return false;
-    }
-
     if (!transmissionFront && !transmissionBack) {
         IG_LOG(L_ERROR) << "While parsing " << in_xml << ": No transmission data found" << std::endl;
         return false;

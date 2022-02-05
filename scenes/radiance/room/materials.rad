@@ -3,7 +3,7 @@ void plastic white
 0
 5 .8 .8 .8 0 0
 
-void glass window_bsdf
+void BSDF window_bsdf
+6 0 ../simple_tensor_d2_trans.xml 0 0 1 .
 0
 0
-3 1 1 1

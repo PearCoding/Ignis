@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created by: Keyboard -->
+<WindowElement xmlns="http://windows.lbl.gov" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://windows.lbl.gov/BSDF-v1.4.xsd">
+<WindowElementType>System</WindowElementType>
+<FileType>BSDF</FileType>
+<Optical>
+<Layer>
+	<Material>
+		<Name>Name</Name>
+		<Manufacturer>Manufacturer</Manufacturer>
+		<DeviceType>Other</DeviceType>
+		<Thickness unit="meter">0.0</Thickness>
+		<Width unit="meter">0.1</Width>
+		<Height unit="meter">0.1</Height>
+	</Material>
+	<Geometry></Geometry>
+	<DataDefinition>
+		<IncidentDataStructure>TensorTree4</IncidentDataStructure>
+	</DataDefinition>
+	<WavelengthData>
+		<LayerNumber>System</LayerNumber>
+		<Wavelength unit="Integral">Visible</Wavelength>
+		<SourceSpectrum>CIE Illuminant D65 1nm.ssp</SourceSpectrum>
+		<DetectorSpectrum>ASTM E308 1931 Y.dsp</DetectorSpectrum>
+		<WavelengthDataBlock>
+			<WavelengthDataDirection>Transmission Back</WavelengthDataDirection>
+			<AngleBasis>LBNL/Shirley-Chiu</AngleBasis>
+			<ScatteringDataType>BTDF</ScatteringDataType>
+            <!-- Value is 0.8 / pi -->
+			<ScatteringData>
+{ 0 0 0 0 0 0 0 0.254647909 0 0 0 0 0 0 0 0 }
+			</ScatteringData>
+		</WavelengthDataBlock>
+	</WavelengthData>
+</Layer>
+</Optical>
+</WindowElement>
