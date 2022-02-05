@@ -96,6 +96,11 @@ public:
     inline KlemsMatrix& matrix() { return mMatrix; }
     inline size_t size() const { return mMatrix.size(); }
 
+    inline void makeBlack()
+    {
+        mMatrix.fill(0);
+    }
+
     inline void transpose()
     {
         mMatrix.transposeInPlace();
@@ -275,11 +280,18 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
             reflectionFront = component;
     }
 
-    // FIXME: This is not the standard radiance uses. It should be handled as "black"
-    if (!reflectionBack)
-        reflectionBack = reflectionFront;
-    if (!reflectionFront)
-        reflectionFront = reflectionBack;
+    // If reflection components are not given, make them black
+    // See docs/notes/BSDFdirections.txt in Radiance for more information
+    if (!reflectionBack) {
+        auto basis     = allbasis.begin()->second;
+        reflectionBack = std::make_shared<KlemsComponent>(basis, basis);
+        reflectionBack->makeBlack();
+    }
+    if (!reflectionFront) {
+        auto basis     = allbasis.begin()->second;
+        reflectionFront = std::make_shared<KlemsComponent>(basis, basis);
+        reflectionFront->makeBlack();
+    }
 
     // Make sure both transmission parts are equal if not specified otherwise
     if (!transmissionBack)

@@ -52,6 +52,8 @@ fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponen
     let in_pos  = concentric_disk_to_square(vec3_to_2(in_dir));
     let out_pos = concentric_disk_to_square(vec3_to_2(out_dir));
 
+    // TODO: Handle ndim==3!
+    
     // Climb the tree
     let (leaf, pos) = tt_climb_tree(make_vec4(in_pos.x, in_pos.y, out_pos.x, out_pos.y), component);
     let leaf_value = component.value(leaf);
@@ -64,14 +66,27 @@ fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponen
 }
 
 fn @make_tensortree_component(buffer: DeviceBuffer, buffer_host: DeviceBuffer, off: i32) -> (TensorTreeComponent, i32) {
-    let node_count  = buffer_host.load_i32(off);
-    let value_count = buffer_host.load_i32(off + 1);
+    let ndim        = buffer_host.load_i32(off);
+    // let max_val_per_node = buffer_host.load_i32(off + 1);
+    let node_count  = buffer_host.load_i32(off + 2);
+    let value_count = buffer_host.load_i32(off + 3);
 
-    (TensorTreeComponent {
-        ndim  = 4, // TODO
-        node  = @|i| buffer.load_i32(off + 2 + i),
-        value = @|i| buffer.load_f32(off + 2 + value_count + i)
-    }, 2 + node_count + value_count)
+    // Here we make sure that the compiler creates two trees with "explicit" implementations for ndim 3 and 4
+    let tree = if ndim == 3 {
+        TensorTreeComponent {
+            ndim  = 3,
+            node  = @|i| buffer.load_i32(off + 4 + i),
+            value = @|i| buffer.load_f32(off + 4 + value_count + i)
+        }
+    } else {
+        TensorTreeComponent {
+            ndim  = 4,
+            node  = @|i| buffer.load_i32(off + 4 + i),
+            value = @|i| buffer.load_f32(off + 4 + value_count + i)
+        }
+    };
+
+    (tree, 4 + node_count + value_count)
 }
 
 fn @make_tensortree_model(buffer: DeviceBuffer, buffer_host: DeviceBuffer) -> TensorTreeModel {

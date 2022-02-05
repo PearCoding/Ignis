@@ -11,12 +11,33 @@ namespace IG {
 struct TensorTreeNode {
     std::vector<std::unique_ptr<TensorTreeNode>> Children;
     std::vector<float> Values;
+
+    // Will expand the node such that it has children instead of values
+    // This is actually only used in a special case on the root
+    inline void expand(size_t ndim)
+    {
+        IG_ASSERT(!Values.empty() && Children.empty(), "Invalid call to expand");
+
+        Children.resize(ndim);
+        for (size_t i = 0; i < Children.size(); ++i) {
+            Children[i]         = std::make_unique<TensorTreeNode>();
+            Children[i]->Values = std::vector<float>{ Values[Values.size() == 1 ? 0 : i] };
+        }
+
+        Values.clear();
+    }
 };
 
 using NodeValue = int32_t;
 
 class TensorTreeComponent {
 public:
+    inline TensorTreeComponent(uint32 ndim)
+        : mNDim(ndim)
+        , mMaxValuesPerNode(1 << ndim)
+    {
+    }
+
     inline void addNode(const TensorTreeNode& node, NodeValue* parentValue)
     {
         if (node.Children.empty()) {
@@ -28,9 +49,12 @@ public:
             if (single) {
                 mValues.emplace_back(-node.Values.front());
             } else {
+                IG_ASSERT(node.Values.size() == mMaxValuesPerNode, "Expected valid number of values in a leaf");
                 mValues.insert(mValues.end(), node.Values.begin(), node.Values.end());
             }
         } else {
+            IG_ASSERT(node.Children.size() == mMaxValuesPerNode, "Expected valid number of children in a node");
+
             size_t off = mNodes.size();
             if (parentValue)
                 *parentValue = static_cast<NodeValue>(off);
@@ -45,11 +69,22 @@ public:
         }
     }
 
+    inline void makeBlack()
+    {
+        mNodes  = std::vector<NodeValue>(mMaxValuesPerNode, 0);
+        mValues = std::vector<float>(mNodes.size(), 0);
+
+        for (size_t i = 0; i < mNodes.size(); ++i)
+            mNodes[i] = -(int)(i + 1);
+    }
+
     inline void write(std::ostream& os)
     {
         uint32_t node_count  = mNodes.size();
         uint32_t value_count = mValues.size();
 
+        os.write(reinterpret_cast<const char*>(&mNDim), sizeof(mNDim));
+        os.write(reinterpret_cast<const char*>(&mMaxValuesPerNode), sizeof(mMaxValuesPerNode));
         os.write(reinterpret_cast<const char*>(&node_count), sizeof(node_count));
         os.write(reinterpret_cast<const char*>(&value_count), sizeof(value_count));
 
@@ -58,6 +93,8 @@ public:
     }
 
 private:
+    uint32 mNDim;
+    uint32 mMaxValuesPerNode;
     std::vector<NodeValue> mNodes;
     std::vector<float> mValues;
 };
@@ -177,14 +214,18 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
             return false;
         }
 
-        // FIXME: We require children here, not a leaf. This is a limitation from our side
+        // Make sure the root node has children instead of being a leaf
         if (root->Children.empty()) {
-            IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Root of scatter data has no children" << std::endl;
-            return false;
+            if (root->Values.empty()) {
+                IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Root of scatter data has no children" << std::endl;
+                return false;
+            } else {
+                root->expand(max_values_per_node);
+            }
         }
 
         // Setup component
-        std::shared_ptr<TensorTreeComponent> component = std::make_shared<TensorTreeComponent>();
+        std::shared_ptr<TensorTreeComponent> component = std::make_shared<TensorTreeComponent>(dim4 ? 4 : 3);
         component->addNode(*root, nullptr);
 
         // Select correct component
@@ -199,11 +240,16 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
             reflectionFront = component;
     }
 
-    // FIXME: This is not the standard radiance uses. It should be handled as "black"
-    if (!reflectionBack)
-        reflectionBack = reflectionFront;
-    if (!reflectionFront)
-        reflectionFront = reflectionBack;
+    // If reflection components are not given, make them black
+    // See docs/notes/BSDFdirections.txt in Radiance for more information
+    if (!reflectionBack) {
+        reflectionBack = std::make_shared<TensorTreeComponent>(4);
+        reflectionBack->makeBlack();
+    }
+    if (!reflectionFront) {
+        reflectionFront = std::make_shared<TensorTreeComponent>(4);
+        reflectionFront->makeBlack();
+    }
 
     // Make sure both transmission parts are equal if not specified otherwise
     if (!transmissionBack)
