@@ -212,11 +212,11 @@ fn @sample_vndf_ggx_11(rnd: &mut RndState, cos_theta: f32) -> Vec2 {
 	let y = (1 - s) * safe_sqrt(1 - pc.x * pc.x) + s * pc.y;
 
 	// Project
-    let z = safe_sqrt(1 - y*y - pc.x*pc.x);
+    let z = safe_sqrt(1 - y * y - pc.x * pc.x);
     let sin_theta = safe_sqrt(1 - cos_theta * cos_theta);
-    let norm = safe_div(1, sin_theta * y + cos_theta * z);
+    let norm = safe_div(1, sum_of_prod(sin_theta, y, cos_theta, z));
 	
-    vec2_mulf(make_vec2(cos_theta * y - sin_theta * z, pc.x), norm)
+    vec2_mulf(make_vec2(diff_of_prod(cos_theta, y, sin_theta, z), pc.x), norm)
 }
 
 fn @sample_vndf_ggx(rnd: &mut RndState, local: Mat3x3, vN: Vec3, alpha_u: f32, alpha_v: f32) -> Vec3 {

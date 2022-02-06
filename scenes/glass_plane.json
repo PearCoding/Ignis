@@ -31,11 +31,12 @@
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Fallback"},
 		{"type":"diffuse", "name": "mat-Floor", "reflectance":"check"},
-		{"type":"roughdielectric", "name": "mat-Plane", "int_ior":1.55, "alpha":0.1}
+		{"type":"roughdielectric", "name": "mat-Plane", "int_ior":1.55, "alpha":0.01},
+		// {"type":"principled", "name": "mat-Plane", "base_color": [1,1,1], "ior":1.55, "roughness":0.1, "metal": 0, "specular_transmission": 1}
 	],
 	"shapes": [
 		{"type":"rectangle", "name":"Floor", "width": 10, "height": 10},
-		{"type":"rectangle", "name":"Plane", "width": 4, "height": 4}
+		{"type":"box", "name":"Plane", "width": 4, "height": 4, "depth": 0.1}
 	],
 	"entities": [
 		{"name":"Floor","shape":"Floor", "bsdf":"mat-Floor"},

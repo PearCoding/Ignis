@@ -123,6 +123,7 @@ fn @lerp2(a: f32, b: f32, c: f32, k1: f32, k2: f32) -> f32 {
     (1 - k1 - k2) * a + k1 * b + k2 * c
 }
 
+// a*b - c*d
 fn @diff_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
     let cd   = c * d;
     let diff = fmaf(a, b, -cd);
@@ -130,6 +131,7 @@ fn @diff_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
     diff + err
 }
 
+// a*b + c*d
 fn @sum_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
     let cd  = c * d;
     let sum = fmaf(a, b, cd);

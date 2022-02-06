@@ -17,14 +17,34 @@ fn @sin_theta(v: Vec3)     = super::safe_sqrt(sin2_theta(v));
 fn @tan2_theta(v: Vec3)    = super::safe_div(sin2_theta(v), cos2_theta(v));
 fn @tan_theta(v: Vec3)     = super::safe_sqrt(tan2_theta(v));
 
-fn @cos_phi(v: Vec3)  = super::safe_div(v.x, sin_theta(v));
-fn @cos2_phi(v: Vec3) = super::safe_div(v.x * v.x, sin2_theta(v));
+// If vector (0,0,1) the cos_phi will be 1 and sin_phi 0
+fn @cos_phi(v: Vec3) -> f32 {
+    let denom = sin_theta(v);
+    if math_builtins::fabs(denom) > super::flt_eps {
+        v.x / denom
+    } else {
+        1
+    }
+}
+fn @cos2_phi(v: Vec3) -> f32 {
+    let denom = sin2_theta(v);
+    if math_builtins::fabs(denom) > super::flt_eps {
+        v.x * v.x / denom
+    } else {
+        1
+    }
+}
+
 fn @sin_phi(v: Vec3)  = super::safe_div(v.y, sin_theta(v));
 fn @sin2_phi(v: Vec3) = super::safe_div(v.y * v.y, sin2_theta(v));
 
 fn @sin_cos_phi(v: Vec3) -> (f32, f32) {
     let denom = sin_theta(v);
-    (super::safe_div(v.y, denom), super::safe_div(v.x, denom))
+    if math_builtins::fabs(denom) > super::flt_eps {
+        (v.y / denom, v.x / denom)
+    } else {
+        (0, 1)
+    }
 }
 
 fn @cos_diff_phi(a: Vec3, b: Vec3) -> f32 {
