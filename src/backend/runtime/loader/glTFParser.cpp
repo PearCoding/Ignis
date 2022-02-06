@@ -506,7 +506,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             const auto& ext = mat.extensions.at("KHR_materials_sheen");
             const int texID = getTextureIndex(ext, "sheenColorTexture");
 
-            float factor = 1;
+            float factor = 0;
             if (ext.Has("sheenColorFactor") && ext.Get("sheenColorFactor").IsNumber())
                 factor = ext.Get("sheenColorFactor").GetNumberAsInt();
 
@@ -525,7 +525,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             const auto& ext = mat.extensions.at("KHR_materials_transmission");
             const int texID = getTextureIndex(ext, "transmissionTexture");
 
-            float factor = 1;
+            float factor = 0;
             if (ext.Has("transmissionFactor") && ext.Get("transmissionFactor").IsNumber())
                 factor = ext.Get("transmissionFactor").GetNumberAsDouble();
 
@@ -536,6 +536,19 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             } else {
                 inner->setProperty("specular_transmission", Property::fromNumber(factor));
             }
+
+            bool is_thin = true;
+            if (mat.extensions.count("KHR_materials_volume")) {
+                const auto& ext2 = mat.extensions.at("KHR_materials_transmission");
+
+                // TODO: No support for textures
+                float thickness = 0;
+                if (ext2.Has("thicknessFactor") && ext2.Get("thicknessFactor").IsNumber())
+                    thickness = ext2.Get("thicknessFactor").GetNumberAsDouble();
+                is_thin = thickness <= FltEps;
+            }
+
+            inner->setProperty("thin", Property::fromBool(is_thin));
         }
 
         // Not ratified yet, but who cares
@@ -543,7 +556,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             const auto& ext = mat.extensions.at("KHR_materials_translucency");
             const int texID = getTextureIndex(ext, "translucencyTexture");
 
-            float factor = 1;
+            float factor = 0;
             if (ext.Has("translucencyFactor") && ext.Get("translucencyFactor").IsNumber())
                 factor = ext.Get("translucencyFactor").GetNumberAsDouble();
 
@@ -556,7 +569,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             }
         }
 
-        // Only support for clearcoatFactor & clearcoatTexture
+        // No support for clearcoatNormalTexture
         if (mat.extensions.count("KHR_materials_clearcoat") > 0) {
             const auto& ext = mat.extensions.at("KHR_materials_clearcoat");
             const int texID = getTextureIndex(ext, "clearcoatTexture");
@@ -571,6 +584,19 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
                 inner->setProperty("clearcoat_scale", Property::fromNumber(factor));
             } else {
                 inner->setProperty("clearcoat", Property::fromNumber(factor));
+            }
+
+            const int rTexID = getTextureIndex(ext, "clearcoatRoughnessTexture");
+            float rfactor    = 0;
+            if (ext.Has("clearcoatRoughnessFactor") && ext.Get("clearcoatRoughnessFactor").IsNumber())
+                rfactor = ext.Get("clearcoatRoughnessFactor").GetNumberAsDouble();
+
+            if (rTexID >= 0) {
+                const tinygltf::Texture& tex = model.textures[rTexID];
+                inner->setProperty("clearcoat_roughness", Property::fromString(getTextureName(tex) + ".g"));
+                inner->setProperty("clearcoat_roughness_scale", Property::fromNumber(rfactor));
+            } else {
+                inner->setProperty("clearcoat_roughness", Property::fromNumber(rfactor));
             }
         }
 

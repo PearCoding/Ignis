@@ -244,6 +244,7 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
     tree.addNumber("sheen_tint", *bsdf, 0);
     tree.addNumber("clearcoat", *bsdf, 0);
     tree.addNumber("clearcoat_gloss", *bsdf, 0);
+    tree.addNumber("clearcoat_roughness", *bsdf, 0.1);
 
     bool is_thin = bsdf->property("thin").getBool(false);
 
@@ -254,6 +255,7 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
     tree.addNumber("specular_transmission_scale", *bsdf, 1);
     tree.addNumber("diffuse_transmission_scale", *bsdf, 1);
     tree.addNumber("clearcoat_scale", *bsdf, 1);
+    tree.addNumber("clearcoat_roughness_scale", *bsdf, 1);
 
     stream << tree.pullHeader()
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_principled_bsdf(surf, "
@@ -270,6 +272,7 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
            << tree.getInline("sheen_tint") << ", "
            << tree.getInline("clearcoat_scale") << " * " << tree.getInline("clearcoat") << ", "
            << tree.getInline("clearcoat_gloss") << ", "
+           << tree.getInline("clearcoat_roughness_scale") << " * " << tree.getInline("clearcoat_roughness") << ", "
            << (is_thin ? "true" : "false") << ");" << std::endl;
 
     tree.endClosure();
