@@ -1,0 +1,19 @@
+void BSDF window_bsdf_bl
+6 0 ../simple_tensor_d2_trans.xml 0 0 1 .
+0
+0
+
+void BSDF window_bsdf_br
+6 0 ../simple_tensor_trans.xml 0 0 1 .
+0
+0
+
+void BSDF window_bsdf_tl
+6 0 ../simple_tensor_spot_refl.xml 0 0 1 .
+0
+0
+
+void BSDF window_bsdf_tr
+6 0 ../simple_tensor_spot_trans.xml 0 0 1 .
+0
+0

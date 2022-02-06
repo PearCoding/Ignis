@@ -1,0 +1,11 @@
+{
+	"externals": [
+		{"filename": "plane_array_data.json"}
+	],
+	"bsdfs": [
+		{"type":"tensortree", "name": "windowBL", "filename":"radiance/simple_tensor_d2_trans.xml"},
+		{"type":"tensortree", "name": "windowBR", "filename":"radiance/simple_tensor_trans.xml"},
+		{"type":"tensortree", "name": "windowTL", "filename":"radiance/simple_tensor_spot_refl.xml"},
+		{"type":"tensortree", "name": "windowTR", "filename":"radiance/simple_tensor_spot_trans.xml"}
+	]
+}

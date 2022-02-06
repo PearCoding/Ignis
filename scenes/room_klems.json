@@ -3,6 +3,6 @@
 		{"filename": "room_data.json"}
 	],
 	"bsdfs": [
-		{"type":"klems", "name": "window", "filename":"aerc6216_kf.xml"}
+		{"type":"klems", "name": "window", "filename":"SingleClearTrans.xml"}
 	]
 }

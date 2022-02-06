@@ -91,7 +91,7 @@ fn @make_tensortree_component(spec: TensorTreeComponentSpecification, buffer: De
     let tree = TensorTreeComponent {
         specification  = spec,
         node           = @|i| buffer.load_i32(off + 4 + i),
-        value          = @|i| buffer.load_f32(off + 4 + value_count + i)
+        value          = @|i| buffer.load_f32(off + 4 + node_count + i)
     };
 
     (tree, 4 + node_count + value_count)
@@ -165,12 +165,17 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
                     (vec3_neg(shading::make_same_hemisphere(wo, sample.dir)), 1 - refl_prob)
                 };
 
-                make_option(BsdfSample {
-                    in_dir = shading::to_world(surf.local, wi),
-                    pdf    = sample.pdf,
-                    color  = color_mulf(local_eval(wi, wo), safe_div(1, prob * sample.pdf)),
-                    eta    = 1
-                })
+                let e_pdf = prob * sample.pdf;
+                if e_pdf <= flt_eps {
+                    reject_bsdf_sample()
+                } else {
+                    make_option(BsdfSample {
+                        in_dir = shading::to_world(surf.local, wi),
+                        pdf    = sample.pdf,
+                        color  = color_mulf(local_eval(wi, wo), 1 / e_pdf),
+                        eta    = 1
+                    })
+                }
             }
         },
         is_specular = true // FIXME: The bsdf does not work properly together with NEE. Figure out why!

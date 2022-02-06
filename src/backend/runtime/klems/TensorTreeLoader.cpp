@@ -57,7 +57,7 @@ public:
 
             bool single = node.Values.size() == 1;
             if (single) {
-                mValues.emplace_back(-node.Values.front());
+                mValues.emplace_back(std::copysign(node.Values.front(), -1));
             } else {
                 IG_ASSERT(node.Values.size() == mMaxValuesPerNode, "Expected valid number of values in a leaf");
                 mValues.insert(mValues.end(), node.Values.begin(), node.Values.end());
@@ -82,7 +82,7 @@ public:
     inline void makeBlack()
     {
         mNodes  = std::vector<NodeValue>(mMaxValuesPerNode, 0);
-        mValues = std::vector<float>(1, 0);
+        mValues = std::vector<float>(1, std::copysign(0, -1));
 
         for (size_t i = 0; i < mNodes.size(); ++i)
             mNodes[i] = -1;
@@ -181,6 +181,8 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
         std::vector<TensorTreeNode*> node_stack;
         node_stack.push_back(root.get());
 
+        bool did_warn_sign = false;
+
         std::stringstream stream(scat_str);
         const auto eof = std::char_traits<std::stringstream::char_type>::eof();
         while (stream.good()) {
@@ -213,7 +215,11 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
                     } else {
                         float val;
                         stream >> val;
-                        node->Values.emplace_back(val);
+                        if (std::signbit(val) && !did_warn_sign) {
+                            IG_LOG(L_WARNING) << "Data contains negative values in " << in_xml << ": Use absolute value instead" << std::endl;
+                            did_warn_sign = true;
+                        }
+                        node->Values.emplace_back(std::abs(val));
                     }
                 }
 
@@ -264,7 +270,7 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
         else
             reflectionFront = component;
     }
-    
+
     spec.has_reflection = reflectionFront || reflectionBack;
 
     // If reflection components are not given, make them black
