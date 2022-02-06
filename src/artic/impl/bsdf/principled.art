@@ -58,7 +58,7 @@ fn @getMicro(closure: Closure, roughness: f32, _is_refl: bool) -> all::Microface
 fn @getReflectionMicro(closure: Closure) = getMicro(closure, closure.roughness, true);
 fn @getRefractionMicro(closure: Closure) -> all::MicrofacetDistribution {
     let roughness = if closure.thin { 
-        super::clampf((0.65 * closure.eta - 0.35) * closure.roughness, 0, 1)
+        super::clampf((0.65 * closure.ior - 0.35) * closure.roughness, 0, 1)
     } else { 
         closure.roughness
     };
@@ -233,19 +233,16 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         let eval_closure = principled::EvalClosure {
             wo = wo,
             wi = wi,
-            h  = if is_transmission { 
-                    if closure.thin {
-                        vec3_normalize(vec3_add(make_vec3(0, 0, 2*shading::abs_cos_theta(wi)), vec3_add(wi, wo)))
-                    } else {
-                        vec3_halfway_refractive(wi, wo, closure.eta)
-                    }
+            h  = shading::make_same_hemisphere(wo,
+                if is_transmission { 
+                    vec3_halfway_refractive(wi, wo, closure.eta)
                 } else { 
                     vec3_halfway(wi, wo)
-                },
+                }),
             general = closure
         };
         
-        let upper_hemisphere = shading::is_positive_hemisphere(wi) && shading::is_positive_hemisphere(wo);
+        let upper_hemisphere = (surf.is_entering ^ shading::is_positive_hemisphere(wi)) && ( surf.is_entering ^ shading::is_positive_hemisphere(wo));
         
         let aNdL = shading::abs_cos_theta(wi);
         if aNdL <= flt_eps { return(black) }
