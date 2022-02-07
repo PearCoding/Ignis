@@ -492,9 +492,19 @@ Scene SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
         // Load gltf directly
         Scene scene = glTFSceneParser::loadFromFile(path, ok);
         if (ok) {
-            auto env = std::make_shared<Object>(OT_LIGHT, "constant", path.parent_path());
-            env->setProperty("radiance", Property::fromNumber(InvPi));
-            scene.addLight("__env", env);
+            bool hasEnv = false;
+            for (const auto& light : scene.lights()) {
+                if (light.second->pluginType() != "area" && light.second->pluginType() != "point") {
+                    hasEnv = true;
+                    break;
+                }
+            }
+
+            if (!hasEnv) {
+                auto env = std::make_shared<Object>(OT_LIGHT, "constant", path.parent_path());
+                env->setProperty("radiance", Property::fromNumber(InvPi));
+                scene.addLight("__env", env);
+            }
         }
         return scene;
     }
