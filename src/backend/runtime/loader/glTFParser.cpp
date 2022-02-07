@@ -74,18 +74,19 @@ static void exportMeshPrimitive(const std::filesystem::path& path, const tinyglt
 
     bool hasNormal  = primitive.attributes.count("NORMAL") > 0;
     bool hasTexture = primitive.attributes.count("TEXCOORD_0") > 0;
+    bool hasIndices = primitive.indices >= 0 && primitive.indices < (int)model.accessors.size();
 
     const tinygltf::Accessor* vertices = &model.accessors[primitive.attributes.at("POSITION")];
     const tinygltf::Accessor* normals  = hasNormal ? &model.accessors[primitive.attributes.at("NORMAL")] : nullptr;
     const tinygltf::Accessor* textures = hasTexture ? &model.accessors[primitive.attributes.at("TEXCOORD_0")] : nullptr;
-    const tinygltf::Accessor* indices  = &model.accessors[primitive.indices];
+    const tinygltf::Accessor* indices  = hasIndices ? &model.accessors[primitive.indices] : nullptr;
 
     if (vertices->type != TINYGLTF_TYPE_VEC3 || vertices->componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
         IG_LOG(L_ERROR) << "glTF: Can not export mesh primitive " << path << " as it does contain an invalid POSITION attribute accessor" << std::endl;
         return;
     }
 
-    if (indices->type != TINYGLTF_TYPE_SCALAR) {
+    if (indices && indices->type != TINYGLTF_TYPE_SCALAR) {
         // TODO: Why not unsigned int, short or more?
         IG_LOG(L_ERROR) << "glTF: Can not export mesh primitive " << path << " as it does contain an invalid index accessor" << std::endl;
         return;
@@ -127,10 +128,6 @@ static void exportMeshPrimitive(const std::filesystem::path& path, const tinyglt
         texData       = (texBuffer->data.data() + texBufferView->byteOffset + textures->byteOffset);
     }
 
-    const tinygltf::BufferView* indexBufferView = &model.bufferViews[indices->bufferView];
-    const tinygltf::Buffer* indexBuffer         = &model.buffers[indexBufferView->buffer];
-    const uint8* indexData                      = (indexBuffer->data.data() + indexBufferView->byteOffset + indices->byteOffset);
-
     std::ofstream out(path.generic_u8string(), std::ios::binary);
 
     out << "ply\n"
@@ -149,7 +146,7 @@ static void exportMeshPrimitive(const std::filesystem::path& path, const tinyglt
             << "property float t\n";
     }
 
-    const size_t triangleCount = indices->count / 3;
+    const size_t triangleCount = indices ? indices->count / 3 : vertices->count / 3;
     out << "element face " << triangleCount << "\n";
     out << "property list uchar int vertex_indices\n";
     out << "end_header\n";
@@ -182,54 +179,71 @@ static void exportMeshPrimitive(const std::filesystem::path& path, const tinyglt
         }
     }
 
-    for (size_t i = 0; i < triangleCount; ++i) {
-        int byteStride    = indices->ByteStride(*indexBufferView);
-        const uint8* p_i0 = indexData + byteStride * (3 * i + 0);
-        const uint8* p_i1 = indexData + byteStride * (3 * i + 1);
-        const uint8* p_i2 = indexData + byteStride * (3 * i + 2);
+    if (indices) {
+        const tinygltf::BufferView* indexBufferView = &model.bufferViews[indices->bufferView];
+        const tinygltf::Buffer* indexBuffer         = &model.buffers[indexBufferView->buffer];
+        const uint8* indexData                      = (indexBuffer->data.data() + indexBufferView->byteOffset + indices->byteOffset);
 
-        int i0;
-        int i1;
-        int i2;
-        switch (indices->componentType) {
-        case TINYGLTF_COMPONENT_TYPE_BYTE:
-            i0 = *reinterpret_cast<const int8*>(p_i0);
-            i1 = *reinterpret_cast<const int8*>(p_i1);
-            i2 = *reinterpret_cast<const int8*>(p_i2);
-            break;
-        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-            i0 = *reinterpret_cast<const uint8*>(p_i0);
-            i1 = *reinterpret_cast<const uint8*>(p_i1);
-            i2 = *reinterpret_cast<const uint8*>(p_i2);
-            break;
-        case TINYGLTF_COMPONENT_TYPE_SHORT:
-            i0 = *reinterpret_cast<const int16*>(p_i0);
-            i1 = *reinterpret_cast<const int16*>(p_i1);
-            i2 = *reinterpret_cast<const int16*>(p_i2);
-            break;
-        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-            i0 = *reinterpret_cast<const uint16*>(p_i0);
-            i1 = *reinterpret_cast<const uint16*>(p_i1);
-            i2 = *reinterpret_cast<const uint16*>(p_i2);
-            break;
-        default:
-        case TINYGLTF_COMPONENT_TYPE_INT:
-            i0 = *reinterpret_cast<const int32*>(p_i0);
-            i1 = *reinterpret_cast<const int32*>(p_i1);
-            i2 = *reinterpret_cast<const int32*>(p_i2);
-            break;
-        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-            i0 = (int)*reinterpret_cast<const uint32*>(p_i0);
-            i1 = (int)*reinterpret_cast<const uint32*>(p_i1);
-            i2 = (int)*reinterpret_cast<const uint32*>(p_i2);
-            break;
+        for (size_t i = 0; i < triangleCount; ++i) {
+            int byteStride    = indices->ByteStride(*indexBufferView);
+            const uint8* p_i0 = indexData + byteStride * (3 * i + 0);
+            const uint8* p_i1 = indexData + byteStride * (3 * i + 1);
+            const uint8* p_i2 = indexData + byteStride * (3 * i + 2);
+
+            int i0;
+            int i1;
+            int i2;
+            switch (indices->componentType) {
+            case TINYGLTF_COMPONENT_TYPE_BYTE:
+                i0 = *reinterpret_cast<const int8*>(p_i0);
+                i1 = *reinterpret_cast<const int8*>(p_i1);
+                i2 = *reinterpret_cast<const int8*>(p_i2);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                i0 = *reinterpret_cast<const uint8*>(p_i0);
+                i1 = *reinterpret_cast<const uint8*>(p_i1);
+                i2 = *reinterpret_cast<const uint8*>(p_i2);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_SHORT:
+                i0 = *reinterpret_cast<const int16*>(p_i0);
+                i1 = *reinterpret_cast<const int16*>(p_i1);
+                i2 = *reinterpret_cast<const int16*>(p_i2);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                i0 = *reinterpret_cast<const uint16*>(p_i0);
+                i1 = *reinterpret_cast<const uint16*>(p_i1);
+                i2 = *reinterpret_cast<const uint16*>(p_i2);
+                break;
+            default:
+            case TINYGLTF_COMPONENT_TYPE_INT:
+                i0 = *reinterpret_cast<const int32*>(p_i0);
+                i1 = *reinterpret_cast<const int32*>(p_i1);
+                i2 = *reinterpret_cast<const int32*>(p_i2);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                i0 = (int)*reinterpret_cast<const uint32*>(p_i0);
+                i1 = (int)*reinterpret_cast<const uint32*>(p_i1);
+                i2 = (int)*reinterpret_cast<const uint32*>(p_i2);
+                break;
+            }
+
+            uint8 count = 3;
+            out.write(reinterpret_cast<const char*>(&count), sizeof(count));
+            out.write(reinterpret_cast<const char*>(&i0), sizeof(i0));
+            out.write(reinterpret_cast<const char*>(&i1), sizeof(i1));
+            out.write(reinterpret_cast<const char*>(&i2), sizeof(i2));
         }
-
-        uint8 count = 3;
-        out.write(reinterpret_cast<const char*>(&count), sizeof(count));
-        out.write(reinterpret_cast<const char*>(&i0), sizeof(i0));
-        out.write(reinterpret_cast<const char*>(&i1), sizeof(i1));
-        out.write(reinterpret_cast<const char*>(&i2), sizeof(i2));
+    } else {
+        for (size_t i = 0; i < triangleCount; ++i) {
+            int i0      = 3 * i + 0;
+            int i1      = 3 * i + 1;
+            int i2      = 3 * i + 2;
+            uint8 count = 3;
+            out.write(reinterpret_cast<const char*>(&count), sizeof(count));
+            out.write(reinterpret_cast<const char*>(&i0), sizeof(i0));
+            out.write(reinterpret_cast<const char*>(&i1), sizeof(i1));
+            out.write(reinterpret_cast<const char*>(&i2), sizeof(i2));
+        }
     }
 }
 
@@ -255,7 +269,7 @@ inline static bool isMaterialEmissive(const tinygltf::Material& mat)
            || (mat.emissiveFactor.size() == 3 && (mat.emissiveFactor[0] > 0 || mat.emissiveFactor[1] > 0 || mat.emissiveFactor[2] > 0));
 }
 
-static void addNode(Scene& scene, const std::filesystem::path& baseDir, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& parent)
+static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, const std::filesystem::path& baseDir, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& parent)
 {
     Transformf transform = parent;
     if (node.matrix.size() == 16)
@@ -274,36 +288,44 @@ static void addNode(Scene& scene, const std::filesystem::path& baseDir, const ti
         size_t primCount           = 0;
         const tinygltf::Mesh& mesh = model.meshes[node.mesh];
         for (const auto& prim : mesh.primitives) {
-            // TODO: Support default material
-            const tinygltf::Material& material = model.materials[prim.material];
-            const std::string name             = mesh.name + "_" + std::to_string(node.mesh) + "_" + std::to_string(primCount);
+            const tinygltf::Material* material = nullptr;
+            size_t mat_id                      = 0;
+            if (prim.material < 0 || prim.material >= (int)model.materials.size()) {
+                material = &defaultMaterial;
+                mat_id   = model.materials.size() - 1; // Was appended to the end
+            } else {
+                material = &model.materials[prim.material];
+                mat_id   = (size_t)prim.material;
+            }
+
+            const std::string name = mesh.name + "_" + std::to_string(node.mesh) + "_" + std::to_string(primCount);
 
             auto obj = std::make_shared<Object>(OT_ENTITY, "", baseDir);
             obj->setProperty("shape", Property::fromString(name));
-            obj->setProperty("bsdf", Property::fromString(getMaterialName(material, (size_t)prim.material)));
+            obj->setProperty("bsdf", Property::fromString(getMaterialName(*material, mat_id)));
             obj->setProperty("transform", Property::fromTransform(transform));
 
             const std::string entity_name = node.name + std::to_string(scene.entities().size()) + "_" + name;
             scene.addEntity(entity_name, obj);
 
-            if (isMaterialEmissive(material)) {
+            if (isMaterialEmissive(*material)) {
                 auto light = std::make_shared<Object>(OT_LIGHT, "area", baseDir);
                 light->setProperty("entity", Property::fromString(entity_name));
 
                 float strength = 1;
-                if (material.extensions.count("KHR_materials_emissive_strength")) {
-                    const auto& ext = material.extensions.at("KHR_materials_emissive_strength");
+                if (material->extensions.count("KHR_materials_emissive_strength")) {
+                    const auto& ext = material->extensions.at("KHR_materials_emissive_strength");
                     if (ext.Has("emissiveStrength") && ext.Get("emissiveStrength").IsNumber()) {
                         strength = ext.Get("emissiveStrength").GetNumberAsDouble();
                     }
                 }
 
-                if (material.emissiveTexture.index >= 0) {
-                    const tinygltf::Texture& tex = model.textures[material.emissiveTexture.index];
+                if (material->emissiveTexture.index >= 0) {
+                    const tinygltf::Texture& tex = model.textures[material->emissiveTexture.index];
                     light->setProperty("radiance", Property::fromString(getTextureName(tex)));
-                    light->setProperty("radiance_scale", Property::fromVector3(Vector3f(material.emissiveFactor[0], material.emissiveFactor[1], material.emissiveFactor[2]) * strength));
+                    light->setProperty("radiance_scale", Property::fromVector3(Vector3f(material->emissiveFactor[0], material->emissiveFactor[1], material->emissiveFactor[2]) * strength));
                 } else {
-                    light->setProperty("radiance", Property::fromVector3(Vector3f(material.emissiveFactor[0], material.emissiveFactor[1], material.emissiveFactor[2]) * strength));
+                    light->setProperty("radiance", Property::fromVector3(Vector3f(material->emissiveFactor[0], material->emissiveFactor[1], material->emissiveFactor[2]) * strength));
                 }
 
                 scene.addLight("_light_" + entity_name, light);
@@ -362,7 +384,7 @@ static void addNode(Scene& scene, const std::filesystem::path& baseDir, const ti
     }
 
     for (int child : node.children)
-        addNode(scene, baseDir, model, model.nodes[child], transform);
+        addNode(scene, defaultMaterial, baseDir, model, model.nodes[child], transform);
 }
 
 inline int getTextureIndex(const tinygltf::Value& val, const std::string& name)
@@ -468,6 +490,10 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
         scene.addTexture(getTextureName(tex), obj);
     }
+
+    tinygltf::Material defaultMaterial;
+    tinygltf::ParseMaterial(&defaultMaterial, nullptr, {}, false);
+    model.materials.push_back(defaultMaterial);
 
     size_t matCounter = 0;
     for (const auto& mat : model.materials) {
@@ -664,7 +690,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
     const tinygltf::Scene& gltf_scene = model.scenes[model.defaultScene];
     for (int nodeId : gltf_scene.nodes)
-        addNode(scene, directory, model, model.nodes[nodeId], Transformf::Identity());
+        addNode(scene, defaultMaterial, directory, model, model.nodes[nodeId], Transformf::Identity());
 
     return scene;
 }
