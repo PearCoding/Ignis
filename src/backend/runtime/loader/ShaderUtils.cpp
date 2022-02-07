@@ -93,7 +93,7 @@ std::string ShaderUtils::inlineVector(const Vector3f& pos)
 std::string ShaderUtils::inlineColor(const Vector3f& color)
 {
     std::stringstream stream;
-    stream << "make_color(" << color.x() << ", " << color.y() << ", " << color.z() << ")";
+    stream << "make_color(" << color.x() << ", " << color.y() << ", " << color.z() << ", 1)";
     return stream.str();
 }
 } // namespace IG

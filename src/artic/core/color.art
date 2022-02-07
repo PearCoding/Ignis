@@ -1,38 +1,42 @@
 struct Color {
     r: f32,
     g: f32,
-    b: f32
+    b: f32,
+    a: f32
 }
 
-fn @make_color(r: f32, g: f32, b: f32) = Color { r = r, g = g, b = b };
-fn @make_gray_color(g: f32) = make_color(g, g, g);
+fn @make_color(r: f32, g: f32, b: f32, a: f32) = Color { r = r, g = g, b = b, a = a };
+fn @make_gray_color(g: f32) = make_color(g, g, g, 1);
 
-fn @color_add(a: Color, b: Color) = make_color(a.r + b.r, a.g + b.g, a.b + b.b);
-fn @color_sub(a: Color, b: Color) = make_color(a.r - b.r, a.g - b.g, a.b - b.b);
-fn @color_diff(a: Color, b: Color) = make_color(math_builtins::fabs(a.r - b.r), math_builtins::fabs(a.g - b.g), math_builtins::fabs(a.b - b.b));
-fn @color_mul(a: Color, b: Color) = make_color(a.r * b.r, a.g * b.g, a.b * b.b);
-fn @color_mulf(c: Color, f: f32)  = make_color(c.r * f, c.g * f, c.b * f);
+fn @color_add(a: Color, b: Color)  = make_color(a.r + b.r, a.g + b.g, a.b + b.b, math_builtins::fmin[f32](1, a.a + b.a));
+fn @color_sub(a: Color, b: Color)  = make_color(a.r - b.r, a.g - b.g, a.b - b.b, math_builtins::fmax[f32](0, a.a - b.a));
+fn @color_diff(a: Color, b: Color) = make_color(math_builtins::fabs(a.r - b.r), math_builtins::fabs(a.g - b.g), math_builtins::fabs(a.b - b.b), math_builtins::fabs(a.a - b.a));
+fn @color_mul(a: Color, b: Color)  = make_color(a.r * b.r, a.g * b.g, a.b * b.b, a.a * b.a);
+fn @color_mulf(c: Color, f: f32)   = make_color(c.r * f, c.g * f, c.b * f, c.a * f);
 fn @color_lerp(a: Color, b: Color, t: f32) = make_color(
     (1 - t) * a.r + t * b.r,
     (1 - t) * a.g + t * b.g,
-    (1 - t) * a.b + t * b.b);
+    (1 - t) * a.b + t * b.b,
+    (1 - t) * a.a + t * b.a);
 
-fn @color_average(c: Color) = (c.r + c.g + c.b) / 3;
-fn @color_luminance(c: Color) = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
+fn @color_average(c: Color)       = (c.r + c.g + c.b) / 3;
+fn @color_luminance(c: Color)     = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
 fn @color_max_component(c: Color) = math_builtins::fmax[f32](c.r, math_builtins::fmax[f32](c.g, c.b));
 
 fn @is_black(c: Color) = (c.r == 0 && c.g == 0 && c.b == 0);
 
-fn @vec3_to_color(v: Vec3) = make_color(v.x, v.y, v.z);
+fn @vec3_to_color(v: Vec3)  = make_color(v.x, v.y, v.z, 1);
+fn @vec4_to_color(v: Vec4)  = make_color(v.x, v.y, v.z, v.w);
 fn @color_to_vec3(c: Color) = make_vec3(c.r, c.g, c.b);
+fn @color_to_vec4(c: Color) = make_vec4(c.r, c.g, c.b, c.a);
 
-static black   = Color { r = 0, g = 0, b = 0 };
-static white   = Color { r = 1, g = 1, b = 1 };
-static pink    = Color { r = 1, g = 0, b = 1 }; 
-static red     = Color { r = 1, g = 0, b = 0 }; 
-static green   = Color { r = 0, g = 1, b = 0 }; 
-static blue    = Color { r = 0, g = 0, b = 1 }; 
-static yellow  = Color { r = 1, g = 1, b = 0 }; 
-static magenta = Color { r = 1, g = 0, b = 1 };
-static cyan    = Color { r = 0, g = 1, b = 1 };  
-static orange  = Color { r = 1, g = 0.5, b = 0 }; 
+static black   = Color { r = 0, g = 0, b = 0, a = 1 };
+static white   = Color { r = 1, g = 1, b = 1, a = 1 };
+static pink    = Color { r = 1, g = 0, b = 1, a = 1 }; 
+static red     = Color { r = 1, g = 0, b = 0, a = 1 }; 
+static green   = Color { r = 0, g = 1, b = 0, a = 1 }; 
+static blue    = Color { r = 0, g = 0, b = 1, a = 1 }; 
+static yellow  = Color { r = 1, g = 1, b = 0, a = 1 }; 
+static magenta = Color { r = 1, g = 0, b = 1, a = 1 };
+static cyan    = Color { r = 0, g = 1, b = 1, a = 1 };  
+static orange  = Color { r = 1, g = 0.5, b = 0, a = 1 }; 

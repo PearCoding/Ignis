@@ -10,7 +10,8 @@ enum NodeChannel {
     NC_RED,
     NC_GREEN,
     NC_BLUE,
-    NC_MEAN
+    NC_MEAN,
+    NC_ALPHA
 };
 static inline std::pair<std::string, NodeChannel> escapeTextureName(const std::string& name)
 {
@@ -28,6 +29,8 @@ static inline std::pair<std::string, NodeChannel> escapeTextureName(const std::s
             channel = NC_BLUE;
         else if (channelStr == "m")
             channel = NC_MEAN;
+        else if (channelStr == "a" || channelStr == "w")
+            channel = NC_ALPHA;
         else
             IG_LOG(L_WARNING) << "Unknown channel '" << channelStr << "' in node lookup '" << name << "'" << std::endl;
 
@@ -88,6 +91,9 @@ void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, 
         case NC_BLUE:
             inline_str = tex_id + ".b";
             break;
+        case NC_ALPHA:
+            inline_str = tex_id + ".a";
+            break;
         }
     } break;
     }
@@ -110,7 +116,7 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
     case Parser::PT_NONE:
         if (!hasDef)
             return;
-        inline_str = "make_color(" + std::to_string(def.x()) + ", " + std::to_string(def.y()) + ", " + std::to_string(def.z()) + ")";
+        inline_str = "make_color(" + std::to_string(def.x()) + ", " + std::to_string(def.y()) + ", " + std::to_string(def.z()) + ", 1)";
         break;
     case Parser::PT_INTEGER:
     case Parser::PT_NUMBER:
@@ -119,7 +125,7 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
         break;
     case Parser::PT_VECTOR3: {
         Vector3f color = prop.getVector3();
-        inline_str     = "make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ")";
+        inline_str     = "make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1)";
     } break;
     case Parser::PT_STRING: {
         const auto [texName, texChannel] = escapeTextureName(prop.getString());
@@ -141,6 +147,9 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
             break;
         case NC_BLUE:
             inline_str = "make_gray_color(" + tex_id + ".b)";
+            break;
+        case NC_ALPHA:
+            inline_str = "make_gray_color(" + tex_id + ".a)";
             break;
         }
     } break;
@@ -174,7 +183,7 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
         break;
     case Parser::PT_VECTOR3: {
         Vector3f color = prop.getVector3();
-        inline_str     = "make_constant_texture(make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + "))";
+        inline_str     = "make_constant_texture(make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1))";
     } break;
     case Parser::PT_STRING: {
         const auto [texName, texChannel] = escapeTextureName(prop.getString());
@@ -194,6 +203,9 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
             break;
         case NC_BLUE:
             inline_str = "make_channel_texture(" + tex_id + ", 2)";
+            break;
+        case NC_ALPHA:
+            inline_str = "make_channel_texture(" + tex_id + ", 3)";
             break;
         }
     } break;

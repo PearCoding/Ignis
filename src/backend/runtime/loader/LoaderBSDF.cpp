@@ -409,6 +409,7 @@ static void bsdf_blend(std::ostream& stream, const std::string& name, const std:
 static void bsdf_mask(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
     const std::string masked = bsdf->property("bsdf").getString();
+    const bool inverted      = bsdf->property("inverted").getBool();
 
     if (masked.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
@@ -420,10 +421,51 @@ static void bsdf_mask(std::ostream& stream, const std::string& name, const std::
         stream << LoaderBSDF::generate(masked, tree);
 
         stream << tree.pullHeader()
-               << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf("
-               << "bsdf_" << ShaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), "
-               << "make_passthrough_bsdf(surf), "
-               << tree.getInline("weight") << ");" << std::endl;
+               << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf(";
+        if (inverted) {
+            stream
+                << "make_passthrough_bsdf(surf), "
+                << "bsdf_" << ShaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), ";
+        } else {
+            stream
+                << "bsdf_" << ShaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), "
+                << "make_passthrough_bsdf(surf), ";
+        }
+        stream << tree.getInline("weight") << ");" << std::endl;
+
+        tree.endClosure();
+    }
+}
+
+static void bsdf_cutoff(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+{
+    const std::string masked = bsdf->property("bsdf").getString();
+    const bool inverted      = bsdf->property("inverted").getBool();
+
+    if (masked.empty()) {
+        IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
+        stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+    } else {
+        tree.beginClosure();
+        tree.addNumber("weight", *bsdf, 0.5f); // Only useful with textures or other patterns
+        tree.addNumber("cutoff", *bsdf, 0.5f);
+
+        stream << LoaderBSDF::generate(masked, tree);
+
+        stream << tree.pullHeader()
+               << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf(";
+
+        if (inverted) {
+            stream
+                << "make_passthrough_bsdf(surf), "
+                << "bsdf_" << ShaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), ";
+        } else {
+            stream
+                << "bsdf_" << ShaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), "
+                << "make_passthrough_bsdf(surf), ";
+        }
+
+        stream << "if " << tree.getInline("weight") << " < " << tree.getInline("cutoff") << " { 0:f32 } else { 1:f32 } );" << std::endl;
 
         tree.endClosure();
     }
@@ -497,6 +539,7 @@ static struct {
     { "tensortree", bsdf_tensortree },
     { "blend", bsdf_blend },
     { "mask", bsdf_mask },
+    { "cutoff", bsdf_cutoff },
     { "twosided", bsdf_twosided },
     { "passthrough", bsdf_passthrough },
     { "null", bsdf_passthrough },

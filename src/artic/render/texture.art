@@ -3,7 +3,7 @@ struct BorderHandling {
     vert: fn (f32) -> f32
 }
 
-type Texture = fn (Vec2) -> Color;
+type Texture     = fn (Vec2) -> Color;
 type ImageFilter = fn (Image, Vec2) -> Color;
 
 fn @make_clamp_border() -> BorderHandling {
@@ -61,7 +61,8 @@ fn @make_bilinear_filter() -> ImageFilter {
         let interp = @ |x00: f32, x10: f32, x01: f32, x11: f32| lerp(lerp(x00, x10, kx), lerp(x01, x11, kx), ky);
         make_color(interp(p00.r, p10.r, p01.r, p11.r),
                    interp(p00.g, p10.g, p01.g, p11.g),
-                   interp(p00.b, p10.b, p01.b, p11.b))
+                   interp(p00.b, p10.b, p01.b, p11.b),
+                   interp(p00.a, p10.a, p01.a, p11.a))
     }
 }
 

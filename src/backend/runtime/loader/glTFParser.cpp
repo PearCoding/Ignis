@@ -473,32 +473,32 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
     for (const auto& mat : model.materials) {
         // TODO: Add proper support for texture views etc
         std::string name = getMaterialName(mat, matCounter);
-        auto inner       = std::make_shared<Object>(OT_BSDF, "principled", directory);
+        auto bsdf        = std::make_shared<Object>(OT_BSDF, "principled", directory);
 
         if (mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
             const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
-            inner->setProperty("base_color", Property::fromString(getTextureName(tex)));
-            inner->setProperty("base_color_scale", Property::fromVector3(Vector3f(mat.pbrMetallicRoughness.baseColorFactor[0], mat.pbrMetallicRoughness.baseColorFactor[1], mat.pbrMetallicRoughness.baseColorFactor[2])));
+            bsdf->setProperty("base_color", Property::fromString(getTextureName(tex)));
+            bsdf->setProperty("base_color_scale", Property::fromVector3(Vector3f(mat.pbrMetallicRoughness.baseColorFactor[0], mat.pbrMetallicRoughness.baseColorFactor[1], mat.pbrMetallicRoughness.baseColorFactor[2])));
         } else {
-            inner->setProperty("base_color", Property::fromVector3(Vector3f(mat.pbrMetallicRoughness.baseColorFactor[0], mat.pbrMetallicRoughness.baseColorFactor[1], mat.pbrMetallicRoughness.baseColorFactor[2])));
+            bsdf->setProperty("base_color", Property::fromVector3(Vector3f(mat.pbrMetallicRoughness.baseColorFactor[0], mat.pbrMetallicRoughness.baseColorFactor[1], mat.pbrMetallicRoughness.baseColorFactor[2])));
         }
 
         if (mat.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0) {
             const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.metallicRoughnessTexture.index];
-            inner->setProperty("metallic", Property::fromString(getTextureName(tex) + ".b"));
-            inner->setProperty("roughness", Property::fromString(getTextureName(tex) + ".g"));
-            inner->setProperty("metallic_scale", Property::fromNumber(mat.pbrMetallicRoughness.metallicFactor));
-            inner->setProperty("roughness_scale", Property::fromNumber(mat.pbrMetallicRoughness.roughnessFactor));
+            bsdf->setProperty("metallic", Property::fromString(getTextureName(tex) + ".b"));
+            bsdf->setProperty("roughness", Property::fromString(getTextureName(tex) + ".g"));
+            bsdf->setProperty("metallic_scale", Property::fromNumber(mat.pbrMetallicRoughness.metallicFactor));
+            bsdf->setProperty("roughness_scale", Property::fromNumber(mat.pbrMetallicRoughness.roughnessFactor));
         } else {
-            inner->setProperty("metallic", Property::fromNumber(mat.pbrMetallicRoughness.metallicFactor));
-            inner->setProperty("roughness", Property::fromNumber(mat.pbrMetallicRoughness.roughnessFactor));
+            bsdf->setProperty("metallic", Property::fromNumber(mat.pbrMetallicRoughness.metallicFactor));
+            bsdf->setProperty("roughness", Property::fromNumber(mat.pbrMetallicRoughness.roughnessFactor));
         }
 
         // Extensions
         if (mat.extensions.count("KHR_materials_ior") > 0) {
             const auto& ext = mat.extensions.at("KHR_materials_ior");
             if (ext.Has("ior") && ext.Get("ior").IsNumber()) {
-                inner->setProperty("ior", Property::fromNumber(ext.Get("ior").GetNumberAsDouble()));
+                bsdf->setProperty("ior", Property::fromNumber(ext.Get("ior").GetNumberAsDouble()));
             }
         }
 
@@ -513,10 +513,10 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             // No support for colored sheen
             if (texID >= 0) {
                 const tinygltf::Texture& tex = model.textures[texID];
-                inner->setProperty("sheen", Property::fromString(getTextureName(tex) + ".m"));
-                inner->setProperty("sheen_scale", Property::fromNumber(factor));
+                bsdf->setProperty("sheen", Property::fromString(getTextureName(tex) + ".m"));
+                bsdf->setProperty("sheen_scale", Property::fromNumber(factor));
             } else {
-                inner->setProperty("sheen", Property::fromNumber(factor));
+                bsdf->setProperty("sheen", Property::fromNumber(factor));
             }
         }
 
@@ -531,10 +531,10 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
             if (texID >= 0) {
                 const tinygltf::Texture& tex = model.textures[texID];
-                inner->setProperty("specular_transmission", Property::fromString(getTextureName(tex) + ".r"));
-                inner->setProperty("specular_transmission_scale", Property::fromNumber(factor));
+                bsdf->setProperty("specular_transmission", Property::fromString(getTextureName(tex) + ".r"));
+                bsdf->setProperty("specular_transmission_scale", Property::fromNumber(factor));
             } else {
-                inner->setProperty("specular_transmission", Property::fromNumber(factor));
+                bsdf->setProperty("specular_transmission", Property::fromNumber(factor));
             }
 
             bool is_thin = true;
@@ -548,7 +548,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
                 is_thin = thickness <= FltEps;
             }
 
-            inner->setProperty("thin", Property::fromBool(is_thin));
+            bsdf->setProperty("thin", Property::fromBool(is_thin));
         }
 
         // Not ratified yet, but who cares
@@ -562,10 +562,10 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
             if (texID >= 0) {
                 const tinygltf::Texture& tex = model.textures[texID];
-                inner->setProperty("diffuse_transmission", Property::fromString(getTextureName(tex) + ".r"));
-                inner->setProperty("diffuse_transmission_scale", Property::fromNumber(factor));
+                bsdf->setProperty("diffuse_transmission", Property::fromString(getTextureName(tex) + ".r"));
+                bsdf->setProperty("diffuse_transmission_scale", Property::fromNumber(factor));
             } else {
-                inner->setProperty("diffuse_transmission", Property::fromNumber(factor));
+                bsdf->setProperty("diffuse_transmission", Property::fromNumber(factor));
             }
         }
 
@@ -580,10 +580,10 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
             if (texID >= 0) {
                 const tinygltf::Texture& tex = model.textures[texID];
-                inner->setProperty("clearcoat", Property::fromString(getTextureName(tex) + ".r"));
-                inner->setProperty("clearcoat_scale", Property::fromNumber(factor));
+                bsdf->setProperty("clearcoat", Property::fromString(getTextureName(tex) + ".r"));
+                bsdf->setProperty("clearcoat_scale", Property::fromNumber(factor));
             } else {
-                inner->setProperty("clearcoat", Property::fromNumber(factor));
+                bsdf->setProperty("clearcoat", Property::fromNumber(factor));
             }
 
             const int rTexID = getTextureIndex(ext, "clearcoatRoughnessTexture");
@@ -593,24 +593,55 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
             if (rTexID >= 0) {
                 const tinygltf::Texture& tex = model.textures[rTexID];
-                inner->setProperty("clearcoat_roughness", Property::fromString(getTextureName(tex) + ".g"));
-                inner->setProperty("clearcoat_roughness_scale", Property::fromNumber(rfactor));
+                bsdf->setProperty("clearcoat_roughness", Property::fromString(getTextureName(tex) + ".g"));
+                bsdf->setProperty("clearcoat_roughness_scale", Property::fromNumber(rfactor));
             } else {
-                inner->setProperty("clearcoat_roughness", Property::fromNumber(rfactor));
+                bsdf->setProperty("clearcoat_roughness", Property::fromNumber(rfactor));
             }
         }
 
-        std::shared_ptr<Object> obj = inner;
         if (mat.normalTexture.index >= 0) {
-            scene.addBSDF(name + "_inner", inner);
+            scene.addBSDF(name + "_normal_inner", bsdf);
             const tinygltf::Texture& tex = model.textures[mat.normalTexture.index];
 
-            obj = std::make_shared<Object>(OT_BSDF, "normalmap", directory);
-            obj->setProperty("bsdf", Property::fromString(name + "_inner"));
-            obj->setProperty("map", Property::fromString(getTextureName(tex)));
+            bsdf = std::make_shared<Object>(OT_BSDF, "normalmap", directory);
+            bsdf->setProperty("bsdf", Property::fromString(name + "_normal_inner"));
+            bsdf->setProperty("map", Property::fromString(getTextureName(tex)));
         }
 
-        scene.addBSDF(name, obj);
+        if (mat.alphaMode == "MASK") {
+            scene.addBSDF(name + "_blend_inner", bsdf);
+
+            bsdf = std::make_shared<Object>(OT_BSDF, "cutoff", directory);
+            bsdf->setProperty("bsdf", Property::fromString(name + "_blend_inner"));
+            bsdf->setProperty("inverted", Property::fromBool(true));
+
+            float factor = mat.pbrMetallicRoughness.baseColorFactor[3];
+            if (factor > 0 && mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
+                const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
+                bsdf->setProperty("weight", Property::fromString(getTextureName(tex) + ".a"));
+                bsdf->setProperty("cutoff", Property::fromNumber(mat.alphaCutoff / factor));
+            } else {
+                bsdf->setProperty("weight", Property::fromNumber(factor));
+                bsdf->setProperty("cutoff", Property::fromNumber(mat.alphaCutoff));
+            }
+        } else if (mat.alphaMode == "BLEND") {
+            scene.addBSDF(name + "_blend_inner", bsdf);
+
+            bsdf = std::make_shared<Object>(OT_BSDF, "mask", directory);
+            bsdf->setProperty("bsdf", Property::fromString(name + "_blend_inner"));
+            bsdf->setProperty("inverted", Property::fromBool(true));
+
+            float factor = mat.pbrMetallicRoughness.baseColorFactor[3];
+            if (factor > 0 && mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
+                const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
+                bsdf->setProperty("weight", Property::fromString(getTextureName(tex) + ".a"));
+            } else {
+                bsdf->setProperty("weight", Property::fromNumber(factor));
+            }
+        }
+
+        scene.addBSDF(name, bsdf);
         ++matCounter;
     }
 

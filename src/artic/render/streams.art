@@ -145,6 +145,6 @@ fn @make_primary_stream_payload_writer(primary: PrimaryStream, vector_width: i32
 fn @make_secondary_stream_color_reader(secondary: SecondaryStream, vector_width: i32) -> fn (i32, i32) -> Color {
     @ |i, j| {
         let k = i * vector_width + j;
-        make_color(secondary.color_r(k), secondary.color_g(k), secondary.color_b(k))
+        make_color(secondary.color_r(k), secondary.color_g(k), secondary.color_b(k), 1/*Stream does not carry alpha information*/)
     }
 }

@@ -1,27 +1,27 @@
 fn @color_map(i: i32) = [ 
-        make_color(0.450000, 0.376630, 0.112500),
-        make_color(0.112500, 0.450000, 0.405978),
-        make_color(0.112500, 0.450000, 0.229891),
-        make_color(0.450000, 0.112500, 0.376630),
-        make_color(0.435326, 0.450000, 0.112500),
-        make_color(0.112500, 0.141848, 0.450000),
-        make_color(0.435326, 0.112500, 0.450000),
-        make_color(0.112500, 0.450000, 0.141848),
-        make_color(0.347283, 0.450000, 0.112500),
-        make_color(0.450000, 0.112500, 0.200543),
-        make_color(0.112500, 0.229891, 0.450000),
-        make_color(0.450000, 0.288587, 0.112500),
-        make_color(0.347283, 0.112500, 0.450000),
-        make_color(0.450000, 0.112500, 0.288587),
-        make_color(0.450000, 0.112500, 0.112500),
-        make_color(0.450000, 0.200543, 0.112500),
-        make_color(0.171196, 0.450000, 0.112500),
-        make_color(0.112500, 0.450000, 0.317935),
-        make_color(0.259239, 0.450000, 0.112500),
-        make_color(0.259239, 0.112500, 0.450000),
-        make_color(0.112500, 0.405978, 0.450000),
-        make_color(0.171196, 0.112500, 0.450000),
-        make_color(0.112500, 0.317935, 0.450000)
+        make_color(0.450000, 0.376630, 0.112500, 1),
+        make_color(0.112500, 0.450000, 0.405978, 1),
+        make_color(0.112500, 0.450000, 0.229891, 1),
+        make_color(0.450000, 0.112500, 0.376630, 1),
+        make_color(0.435326, 0.450000, 0.112500, 1),
+        make_color(0.112500, 0.141848, 0.450000, 1),
+        make_color(0.435326, 0.112500, 0.450000, 1),
+        make_color(0.112500, 0.450000, 0.141848, 1),
+        make_color(0.347283, 0.450000, 0.112500, 1),
+        make_color(0.450000, 0.112500, 0.200543, 1),
+        make_color(0.112500, 0.229891, 0.450000, 1),
+        make_color(0.450000, 0.288587, 0.112500, 1),
+        make_color(0.347283, 0.112500, 0.450000, 1),
+        make_color(0.450000, 0.112500, 0.288587, 1),
+        make_color(0.450000, 0.112500, 0.112500, 1),
+        make_color(0.450000, 0.200543, 0.112500, 1),
+        make_color(0.171196, 0.450000, 0.112500, 1),
+        make_color(0.112500, 0.450000, 0.317935, 1),
+        make_color(0.259239, 0.450000, 0.112500, 1),
+        make_color(0.259239, 0.112500, 0.450000, 1),
+        make_color(0.112500, 0.405978, 0.450000, 1),
+        make_color(0.171196, 0.112500, 0.450000, 1),
+        make_color(0.112500, 0.317935, 0.450000, 1)
     ](i%23);
 
 fn @make_debug_renderer(debug_mode: i32) -> PathTracer {
@@ -30,29 +30,29 @@ fn @make_debug_renderer(debug_mode: i32) -> PathTracer {
             match debug_mode {
                 1 => { // DEBUG_TANGENT
                     let n = surf.local.col(0);
-                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z)))
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 },
                 2 => { // DEBUG_BITANGENT
                     let n = surf.local.col(1);
-                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z)))
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 },
                 3 => { // DEBUG_GEOMETRY_NORMAL
                     let n = surf.face_normal;
-                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z)))
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 },
                 4 => { // DEBUG_TEXCOORDS
                     let n = surf.tex_coords;
-                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), 0))
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), 0, 1))
                 },
                 5 => { // DEBUG_PRIMCOORDS
                     let n = hit.prim_coords;
-                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), 0))
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), 0, 1))
                 },
                 6 => { // DEBUG_POINT
                     make_option(vec3_to_color(surf.point))
                 },
                 7 => { // DEBUG_HIT_DISTANCE
-                    make_option(make_color(hit.distance, hit.distance, hit.distance))
+                    make_option(make_color(hit.distance, hit.distance, hit.distance, 1))
                 },
                 8 => { // DEBUG_PRIM_ID_RAW
                     let v = hit.prim_id as f32;
@@ -116,7 +116,7 @@ fn @make_debug_renderer(debug_mode: i32) -> PathTracer {
                 },
                 _ => { // DEBUG_NORMAL 
                     let n = surf.local.col(2);
-                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z)))
+                    make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 }
             }
         },

@@ -1,28 +1,28 @@
 // Creates a BSDF that interpolates between two other BSDFs based on a variadic mix function
 fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bsdf {
     let eval = @|in_dir: Vec3, out_dir: Vec3| -> Color {
-        if mat1.is_specular {
-            mat2.eval(in_dir, out_dir)
-        } else if mat2.is_specular {
+        let k = mix_f(out_dir);
+        if ?k && k <= 0 {
             mat1.eval(in_dir, out_dir)
+        } else if ?k && k >= 1 {
+            mat2.eval(in_dir, out_dir)
         } else {
-            let k = mix_f(out_dir);
             color_lerp(mat1.eval(in_dir, out_dir),
-                       mat2.eval(in_dir, out_dir),
-                       k)
+                    mat2.eval(in_dir, out_dir),
+                    k)
         }
     };
 
     let pdf = @|in_dir: Vec3, out_dir: Vec3| -> f32 {
-        if mat1.is_specular {
-            mat2.pdf(in_dir, out_dir)
-        } else if mat2.is_specular {
+        let k = mix_f(out_dir);
+        if ?k && k <= 0 {
             mat1.pdf(in_dir, out_dir)
+        } else if ?k && k >= 1 {
+            mat2.pdf(in_dir, out_dir)
         } else {
-            let k = mix_f(out_dir);
             lerp(mat1.pdf(in_dir, out_dir),
-                 mat2.pdf(in_dir, out_dir),
-                 k)
+                mat2.pdf(in_dir, out_dir),
+                k)
         }
     };
 
@@ -47,17 +47,23 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bs
             }
 
             let k = mix_f(out_dir);
-            if randf(rnd) >= k {
-                if let Option[BsdfSample]::Some(s) = sample_mat(mat1, mat2, k) {
-                    make_option(s)
-                } else {
-                    mat2.sample(rnd, out_dir, adjoint)
-                }
+            if k <= 0 {
+                mat1.sample(rnd, out_dir, adjoint)
+            } else if k >= 1 {
+                mat2.sample(rnd, out_dir, adjoint)
             } else {
-                if let Option[BsdfSample]::Some(s) = sample_mat(mat2, mat1, k) {
-                    make_option(s)
+                if randf(rnd) >= k {
+                    if let Option[BsdfSample]::Some(s) = sample_mat(mat1, mat2, k) {
+                        make_option(s)
+                    } else {
+                        mat2.sample(rnd, out_dir, adjoint)
+                    }
                 } else {
-                    mat1.sample(rnd, out_dir, adjoint)
+                    if let Option[BsdfSample]::Some(s) = sample_mat(mat2, mat1, 1 - k) {
+                        make_option(s)
+                    } else {
+                        mat1.sample(rnd, out_dir, adjoint)
+                    }
                 }
             }
         },

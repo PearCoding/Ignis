@@ -44,7 +44,14 @@ struct EvalClosure {
     general: Closure
 }
 
-fn @tint_color(color: Color) = super::color_mulf(color, super::safe_div(1, super::color_luminance(color)));
+fn @tint_color(color: Color) -> Color {
+    let lum = super::color_luminance(color);
+    if lum <= super::flt_eps {
+        super::white
+    } else {
+        super::color_mulf(color, 1/lum)
+    }
+}
 fn @sheen_tint_color(color: Color, tint: f32) = super::color_lerp(super::white, tint_color(color), tint);
 
 fn @getMicro(closure: Closure, roughness: f32, _is_refl: bool) -> all::MicrofacetDistribution {
@@ -98,18 +105,18 @@ fn @evalSheenTerm(closure: EvalClosure) -> Color {
 }
 
 fn @evalDiffuseTerm(closure: EvalClosure) -> f32 {
-    let lk    = super::schlick_approx(shading::abs_cos_theta(closure.wi));
-    let vk    = super::schlick_approx(shading::abs_cos_theta(closure.wo));
+    let lk = super::schlick_approx(shading::abs_cos_theta(closure.wi));
+    let vk = super::schlick_approx(shading::abs_cos_theta(closure.wo));
 
-    let diff  = (1 - 0.5 * lk) * (1 - 0.5 * vk);
+    let diff = (1 - 0.5 * lk) * (1 - 0.5 * vk);
 
-    // let VdotL = super::absolute_cos(closure.wi, closure.wo);
-    // let rr    = (VdotL + 1) * closure.general.roughness;
-    // let retro = rr * (lk + vk + lk * vk * (rr - 1));
+    let VdotL = super::absolute_cos(closure.wi, closure.wo);
+    let rr    = (VdotL + 1) * closure.general.roughness;
+    let retro = rr * (lk + vk + lk * vk * (rr - 1));
 
     let ss = if closure.general.thin {1 - closure.general.flatness + evalSubsurfaceTerm(closure) * closure.general.flatness } else { 1 };
 
-    super::flt_inv_pi * (diff /*+ retro*/) * ss
+    super::flt_inv_pi * (diff + retro) * ss
 }
 
 fn @evalReflectionTerm(closure: EvalClosure) -> Color {
@@ -126,20 +133,27 @@ fn @evalReflectionTerm(closure: EvalClosure) -> Color {
 fn @evalRefractionTerm(closure: EvalClosure) -> Color {
     let micro = getRefractionMicro(closure.general);
 
-    let HdI   = super::vec3_dot(closure.wi, closure.h);
-    let HdO   = super::vec3_dot(closure.wo, closure.h);
-    let F     = super::fresnel(closure.general.eta, math_builtins::fabs(HdO)).factor; 
-    let D     = micro.D(closure.h);
-    let G     = micro.G(closure.wi, closure.wo, closure.h);
-    
-    let jacob = shading::halfway_refractive_jacobian(if closure.general.thin { 1 } else { closure.general.eta }, HdI, HdO); // ~ eta * eta * cos_h_i / (cos_h_i + eta * cos_h_o)^2
-    let norm  = math_builtins::fabs(super::safe_div(HdO * jacob, shading::cos_theta(closure.wo))); // ~ cos_h_i * cos_h_o / (cos_o * ~cos_i~) * ...
-    
-    let term  = (1 - F) * D * G * norm;
+    let term = if closure.general.thin {
+        let fterm = super::fresnel(closure.general.eta, shading::abs_cos_theta(closure.wo));
+        let F     = fterm.factor + (1 - fterm.factor) * fterm.factor / (fterm.factor + 1);
+        1 - F
+    } else {
+        let HdI = super::vec3_dot(closure.wi, closure.h);
+        let HdO = super::vec3_dot(closure.wo, closure.h);
+        let F   = super::fresnel(closure.general.eta, math_builtins::fabs(HdO)).factor;
+
+        let D = micro.D(closure.h);
+        let G = micro.G(closure.wi, closure.wo, closure.h);
+        
+        let jacob = shading::halfway_refractive_jacobian( closure.general.eta, HdI, HdO ); // ~ eta * eta * cos_h_i / (cos_h_i + eta * cos_h_o)^2
+        let norm  = math_builtins::fabs(super::safe_div(HdO * jacob, shading::cos_theta(closure.wo))); // ~ cos_h_i * cos_h_o / (cos_o * ~cos_i~) * ...
+        
+        (1 - F) * D * G * norm
+    };
 
     if closure.general.thin {
         super::color_mulf(
-            super::make_color(math_builtins::sqrt[f32](closure.general.base_color.r), math_builtins::sqrt[f32](closure.general.base_color.g), math_builtins::sqrt[f32](closure.general.base_color.b)),
+            super::make_color(math_builtins::sqrt[f32](closure.general.base_color.r), math_builtins::sqrt[f32](closure.general.base_color.g), math_builtins::sqrt[f32](closure.general.base_color.b), 1),
             term)
     } else {
         super::color_mulf(closure.general.base_color, term)

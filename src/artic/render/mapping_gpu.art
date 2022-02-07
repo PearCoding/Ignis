@@ -39,7 +39,7 @@ fn @gpu_get_aov_image(id: i32, dev_id: i32, atomics: Atomics, spp: i32) -> AOVIm
         splat = @|pixel, color| -> () { gpu_accumulate(atomics, pixels, pixel, color, spp) },
         get   = @|pixel| -> Color     {
             let ptr2 = &pixels(pixel * 3) as &[f32];
-            make_color(ptr2(0), ptr2(1), ptr2(2))
+            make_color(ptr2(0), ptr2(1), ptr2(2), 1)
         }
     };
 
@@ -102,7 +102,8 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
                 let color = make_color(
                     secondary.color_r(gid),
                     secondary.color_g(gid),
-                    secondary.color_b(gid)
+                    secondary.color_b(gid),
+                    1
                 );
                 gpu_accumulate(atomics, film_pixels, pixel, color, spp);
             }
