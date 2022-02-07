@@ -492,11 +492,9 @@ Scene SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
         // Load gltf directly
         Scene scene = glTFSceneParser::loadFromFile(path, ok);
         if (ok) {
-            // Add a constant env light
-            // if (scene.lights().empty()) {
             auto env = std::make_shared<Object>(OT_LIGHT, "constant", path.parent_path());
+            env->setProperty("radiance", Property::fromNumber(InvPi));
             scene.addLight("__env", env);
-            // }
         }
         return scene;
     }
