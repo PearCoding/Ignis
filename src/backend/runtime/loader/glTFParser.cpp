@@ -276,14 +276,14 @@ static void addNode(Scene& scene, const std::filesystem::path& baseDir, const ti
         for (const auto& prim : mesh.primitives) {
             // TODO: Support default material
             const tinygltf::Material& material = model.materials[prim.material];
-            const std::string name             = mesh.name + "_" + std::to_string(primCount);
+            const std::string name             = mesh.name + "_" + std::to_string(node.mesh) + "_" + std::to_string(primCount);
 
             auto obj = std::make_shared<Object>(OT_ENTITY, "", baseDir);
             obj->setProperty("shape", Property::fromString(name));
             obj->setProperty("bsdf", Property::fromString(getMaterialName(material, (size_t)prim.material)));
             obj->setProperty("transform", Property::fromTransform(transform));
 
-            const std::string entity_name = node.name + "_" + name;
+            const std::string entity_name = node.name + std::to_string(scene.entities().size()) + "_" + name;
             scene.addEntity(entity_name, obj);
 
             if (isMaterialEmissive(material)) {
@@ -645,10 +645,11 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
         ++matCounter;
     }
 
+    size_t meshCount = 0;
     for (const auto& mesh : model.meshes) {
         size_t primCount = 0;
         for (const auto& prim : mesh.primitives) {
-            const std::string name               = mesh.name + "_" + std::to_string(primCount);
+            const std::string name               = mesh.name + "_" + std::to_string(meshCount) + "_" + std::to_string(primCount);
             const std::filesystem::path ply_path = cache_dir / "meshes" / (name + ".ply");
 
             exportMeshPrimitive(ply_path, model, prim);
@@ -658,6 +659,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
             ++primCount;
         }
+        ++meshCount;
     }
 
     const tinygltf::Scene& gltf_scene = model.scenes[model.defaultScene];
