@@ -9,3 +9,4 @@ CPMAddPackage(
 
 add_executable(mts2ig main.cpp)
 target_link_libraries(mts2ig PRIVATE tinyparser_mitsuba)
+install(TARGETS mts2ig COMPONENT tools)

@@ -153,6 +153,7 @@ foreach(var ${VARIANTS})
     target_link_libraries(${_target_name} PRIVATE ${AnyDSL_runtime_LIBRARIES} ig_lib_runtime)
     target_include_directories(${_target_name} PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
     add_dependencies(${_target_name} artic_c_interface)
+    install(TARGETS ${_target_name} COMPONENT runtime LIBRARY DESTINATION lib/)
 
     # Some of the compilation process requires a lot of memory.
     # Prevent parallel build of the drivers (per default) by chaining them together

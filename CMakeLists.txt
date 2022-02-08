@@ -82,6 +82,7 @@ find_package(ZLIB REQUIRED)
 find_package(OpenMP)
 
 include(cmake/GetDependencies.cmake)
+include(cmake/Install.cmake)
 
 # Enable folders for Visual Studio
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
