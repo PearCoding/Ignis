@@ -11,5 +11,6 @@ RUN apt-get update && apt-get install -y libeigen3-dev libtbb-dev libsdl2-dev &&
 COPY . /ignis
 WORKDIR /ignis
 RUN ./docker/compile.sh
+ENV LD_LIBRARY_PATH="/anydsl/runtime/build/lib:${LD_LIBRARY_PATH}"
 
-ENTRYPOINT [ "/ignis/build/bin/igview", "/ignis/scenes/diamond_scene.json" ]
+ENTRYPOINT [ "igview", "/ignis/scenes/diamond_scene.json" ]
