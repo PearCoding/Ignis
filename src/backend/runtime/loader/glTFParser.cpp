@@ -275,14 +275,14 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
     if (node.matrix.size() == 16)
         transform *= Eigen::Map<Eigen::Matrix4d>(const_cast<double*>(node.matrix.data())).cast<float>();
 
-    if (node.translation.size() == 3)
-        transform.translate(Vector3f(node.translation[0], node.translation[1], node.translation[2]));
-
     if (node.scale.size() == 3)
         transform.scale(Vector3f(node.scale[0], node.scale[1], node.scale[2]));
 
     if (node.rotation.size() == 4)
         transform.rotate(Quaternionf(node.rotation[3], node.rotation[0], node.rotation[1], node.rotation[2]));
+
+    if (node.translation.size() == 3)
+        transform.translate(Vector3f(node.translation[0], node.translation[1], node.translation[2]));
 
     if (node.mesh >= 0) {
         size_t primCount           = 0;
@@ -336,20 +336,34 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
     }
 
     if (node.camera >= 0) {
-        const tinygltf::Camera& camera = model.cameras[node.camera];
-        if (camera.type == "orthographic") {
-            auto obj = std::make_shared<Object>(OT_CAMERA, "orthographic", baseDir);
-            obj->setProperty("transform", Property::fromTransform(transform));
-            obj->setProperty("near_clip", Property::fromNumber(camera.orthographic.znear));
-            obj->setProperty("far_clip", Property::fromNumber(camera.orthographic.zfar));
-            // TODO: xmag, ymag
+        if (scene.camera()) {
+            IG_LOG(L_WARNING) << "glTF: No support for multiple cameras. Using first one" << std::endl;
         } else {
-            auto obj = std::make_shared<Object>(OT_CAMERA, "perspective", baseDir);
-            obj->setProperty("transform", Property::fromTransform(transform));
-            obj->setProperty("fov", Property::fromNumber(camera.perspective.yfov));
-            obj->setProperty("near_clip", Property::fromNumber(camera.perspective.znear));
-            obj->setProperty("far_clip", Property::fromNumber(camera.perspective.zfar));
-            // TODO: aspect ratio
+            Matrix3f rot;
+            Matrix3f scale; // Ignore scale
+            transform.computeRotationScaling(&rot, &scale);
+            Vector3f trans = transform.translation();
+
+            Transformf cameraTransform;
+            cameraTransform.fromPositionOrientationScale(trans, rot, Vector3f::Ones());
+
+            const tinygltf::Camera& camera = model.cameras[node.camera];
+            if (camera.type == "orthographic") {
+                auto obj = std::make_shared<Object>(OT_CAMERA, "orthographic", baseDir);
+                obj->setProperty("transform", Property::fromTransform(cameraTransform));
+                obj->setProperty("near_clip", Property::fromNumber(camera.orthographic.znear));
+                obj->setProperty("far_clip", Property::fromNumber(camera.orthographic.zfar));
+                // TODO: xmag, ymag
+                scene.setCamera(obj);
+            } else {
+                auto obj = std::make_shared<Object>(OT_CAMERA, "perspective", baseDir);
+                obj->setProperty("transform", Property::fromTransform(cameraTransform));
+                obj->setProperty("fov", Property::fromNumber(camera.perspective.yfov));
+                obj->setProperty("near_clip", Property::fromNumber(camera.perspective.znear));
+                obj->setProperty("far_clip", Property::fromNumber(camera.perspective.zfar));
+                // TODO: aspect ratio
+                scene.setCamera(obj);
+            }
         }
     }
 
