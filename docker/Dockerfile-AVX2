@@ -12,7 +12,7 @@ COPY . /ignis
 WORKDIR /ignis
 RUN ./docker/compile.sh
 
-FROM ubuntu:20.04 as runtime
+FROM gcc:11 as runtime
 
 LABEL maintainer="Ömercan Yazici" \
       description="Ignis Raytracer with AVX2 backend" \
@@ -25,8 +25,6 @@ COPY --from=build /anydsl/thorin/build/lib/libthorin.so /usr/lib/
 COPY --from=build /anydsl/runtime/build/lib/libruntime.so /usr/lib/
 COPY --from=build /anydsl/runtime/build/lib/libruntime_jit_artic.so /usr/lib/
 COPY --from=build /anydsl/llvm_install/lib/libLLVM-12.so /usr/lib/
-# Fix this below...
-COPY --from=build /usr/lib/x86_64-linux-gnu/libstdc++.so.6 /usr/lib/x86_64-linux-gnu/libstdc++.so.6
 
 RUN apt-get update && apt-get install -y libtbb2 libsdl2-2.0-0 libgomp1 libxml2 && rm -rf /var/lib/apt/lists/* 
 
