@@ -1,4 +1,4 @@
-FROM pearcoding/anydsl:latest-avx2-jit
+FROM pearcoding/anydsl:latest-avx2-jit as build
 
 LABEL maintainer="Ömercan Yazici" \
       description="Ignis Raytracer with AVX2 backend" \
@@ -11,6 +11,23 @@ RUN apt-get update && apt-get install -y libeigen3-dev libtbb-dev libsdl2-dev &&
 COPY . /ignis
 WORKDIR /ignis
 RUN ./docker/compile.sh
-ENV LD_LIBRARY_PATH="/anydsl/runtime/build/lib:${LD_LIBRARY_PATH}"
 
-ENTRYPOINT [ "igview", "/ignis/scenes/diamond_scene.json" ]
+FROM ubuntu:20.04 as runtime
+
+LABEL maintainer="Ömercan Yazici" \
+      description="Ignis Raytracer with AVX2 backend" \
+      version="0.2.0"
+
+COPY --from=build /ignis-install/ /usr/
+COPY --from=build /anydsl/artic/build/lib/libartic.so /usr/lib/
+COPY --from=build /anydsl/impala/build/lib/libimpala.so /usr/lib/
+COPY --from=build /anydsl/thorin/build/lib/libthorin.so /usr/lib/
+COPY --from=build /anydsl/runtime/build/lib/libruntime.so /usr/lib/
+COPY --from=build /anydsl/runtime/build/lib/libruntime_jit_artic.so /usr/lib/
+COPY --from=build /anydsl/llvm_install/lib/libLLVM-12.so /usr/lib/
+# Fix this below...
+COPY --from=build /usr/lib/x86_64-linux-gnu/libstdc++.so.6 /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+
+RUN apt-get update && apt-get install -y libtbb2 libsdl2-2.0-0 libgomp1 libxml2 && rm -rf /var/lib/apt/lists/* 
+
+ENTRYPOINT [ "igcli" ]
