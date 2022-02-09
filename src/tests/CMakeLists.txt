@@ -12,8 +12,8 @@ SET(ARTIC_OBJS )
 anydsl_runtime_wrap(ARTIC_OBJS
     NAME "artic_test"
     FRONTEND "artic"
-    CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
-    ARTIC_FLAGS --log-level info -Wall
+    CLANG_FLAGS ${IG_ARTIC_CLANG_FLAGS}
+    ARTIC_FLAGS ${IG_ARTIC_FLAGS} --log-level info -Wall
     FILES ${ARTIC_EXTRA_SRC} ${ARTIC_TEST_SRC}
     INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/generated_test_interface)
 

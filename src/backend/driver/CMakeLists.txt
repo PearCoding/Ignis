@@ -133,8 +133,9 @@ if(NOT DEVICE_SELECTION)
     message(FATAL_ERROR "No devices selected. Aborting")
 endif()
 
-message(STATUS "Selected devices: ${DEVICE_SELECTION}")
-message(STATUS "Artic Clang Flags: ${ARTIC_CLANG_FLAGS}")
+message(STATUS "Selected devices:  ${DEVICE_SELECTION}")
+message(STATUS "Artic Clang Flags: ${IG_ARTIC_CLANG_FLAGS}")
+message(STATUS "Artic Flags:       ${IG_ARTIC_FLAGS}")
 
 set(DEVICES )
 foreach(dev IN LISTS DEVICE_SELECTION)
@@ -203,8 +204,8 @@ foreach(var ${VARIANTS})
     anydsl_runtime_wrap(_objs
         NAME "driver_${var_name}"
         FRONTEND "artic"
-        CLANG_FLAGS ${ARTIC_CLANG_FLAGS}
-        ARTIC_FLAGS --log-level info -Wall
+        CLANG_FLAGS ${IG_ARTIC_CLANG_FLAGS}
+        ARTIC_FLAGS ${IG_ARTIC_FLAGS} --log-level info -Wall
         FILES ${ARTIC_MAIN_SRC} ${out_file})
     set(_target_name ig_driver_${var_name})
     add_library(${_target_name} MODULE ${_objs} glue.cpp ShallowArray.h)
