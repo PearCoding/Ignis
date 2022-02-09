@@ -134,6 +134,7 @@ if(NOT DEVICE_SELECTION)
 endif()
 
 message(STATUS "Selected devices: ${DEVICE_SELECTION}")
+message(STATUS "Artic Clang Flags: ${ARTIC_CLANG_FLAGS}")
 
 set(DEVICES )
 foreach(dev IN LISTS DEVICE_SELECTION)

@@ -57,7 +57,7 @@ option(IG_WITH_TOOLS         "Build tools" ON)
 option(IG_WITH_DOCUMENTATION "Build the documentation if Sphinx is available on the system" ON)
 
 # Setup artic clang flags
-set(ARTIC_CLANG_FLAGS -O3 -march=native -ffast-math CACHE STRING "Artic Clang compilation options")
+set(ARTIC_CLANG_FLAGS -march=native -ffast-math CACHE STRING "Artic Clang compilation options")
 
 # Setup CPM
 include(cmake/SetupCPM.cmake)
