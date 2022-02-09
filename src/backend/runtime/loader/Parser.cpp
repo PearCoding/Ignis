@@ -278,10 +278,8 @@ static std::shared_ptr<Object> handleAnonymousObject(Scene& scene, ObjectType ty
 {
     IG_UNUSED(scene);
 
-    if (obj.HasMember("type")) {
-        if (!obj["type"].IsString())
-            throw std::runtime_error("Expected type to be a string");
-    }
+    if (obj.HasMember("type") && !obj["type"].IsString())
+        throw std::runtime_error("Expected type to be a string");
 
     const auto pluginType = obj.HasMember("type") ? getString(obj["type"]) : "";
 
@@ -292,10 +290,8 @@ static std::shared_ptr<Object> handleAnonymousObject(Scene& scene, ObjectType ty
 
 static void handleNamedObject(Scene& scene, ObjectType type, const std::filesystem::path& baseDir, const rapidjson::Value& obj)
 {
-    if (obj.HasMember("type")) {
-        if (!obj["type"].IsString())
-            throw std::runtime_error("Expected type to be a string");
-    }
+    if (obj.HasMember("type") && !obj["type"].IsString())
+        throw std::runtime_error("Expected type to be a string");
 
     if (!obj.HasMember("name"))
         throw std::runtime_error("Expected name");
@@ -333,10 +329,8 @@ static void handleNamedObject(Scene& scene, ObjectType type, const std::filesyst
 
 static void handleExternalObject(SceneParser& loader, Scene& scene, const std::filesystem::path& baseDir, const rapidjson::Value& obj)
 {
-    if (obj.HasMember("type")) {
-        if (!obj["type"].IsString())
-            throw std::runtime_error("Expected type to be a string");
-    }
+    if (obj.HasMember("type") && !obj["type"].IsString())
+        throw std::runtime_error("Expected type to be a string");
 
     if (!obj.HasMember("filename"))
         throw std::runtime_error("Expected a path for externals");
@@ -350,7 +344,7 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const std::f
         throw std::runtime_error("Could not find path '" + inc_path + "'");
 
     if (pluginType == "ignis") {
-        // Include ignis file but ignore technique, camera & film
+        // Include ignis file
         bool ok           = false;
         Scene local_scene = loader.loadFromFile(path, ok);
 
@@ -374,28 +368,26 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const std::f
 
 void Scene::addFrom(const Scene& other)
 {
-    for (const auto tex : other.textures())
+    for (const auto& tex : other.textures())
         addTexture(tex.first, tex.second);
-    for (const auto bsdf : other.bsdfs())
+    for (const auto& bsdf : other.bsdfs())
         addBSDF(bsdf.first, bsdf.second);
-    for (const auto light : other.lights())
+    for (const auto& light : other.lights())
         addLight(light.first, light.second);
-    for (const auto shape : other.shapes())
+    for (const auto& shape : other.shapes())
         addShape(shape.first, shape.second);
-    for (const auto ent : other.entities())
+    for (const auto& ent : other.entities())
         addEntity(ent.first, ent.second);
 
-    if (!mTechnique) {
+    // Ignore technique, camera & film if already specified
+    if (!mTechnique)
         mTechnique = other.mTechnique;
-    }
 
-    if (!mCamera) {
+    if (!mCamera)
         mCamera = other.mCamera;
-    }
 
-    if (!mFilm) {
+    if (!mFilm)
         mFilm = other.mFilm;
-    }
 }
 
 class InternalSceneParser {
@@ -407,17 +399,14 @@ public:
 
         Scene scene;
 
-        if (doc.HasMember("camera")) {
+        if (doc.HasMember("camera"))
             scene.setCamera(handleAnonymousObject(scene, OT_CAMERA, baseDir, doc["camera"]));
-        }
 
-        if (doc.HasMember("technique")) {
+        if (doc.HasMember("technique"))
             scene.setTechnique(handleAnonymousObject(scene, OT_TECHNIQUE, baseDir, doc["technique"]));
-        }
 
-        if (doc.HasMember("film")) {
+        if (doc.HasMember("film"))
             scene.setFilm(handleAnonymousObject(scene, OT_FILM, baseDir, doc["film"]));
-        }
 
         if (doc.HasMember("externals")) {
             if (!doc["externals"].IsArray())
