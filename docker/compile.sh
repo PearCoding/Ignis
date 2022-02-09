@@ -4,7 +4,7 @@
 MARCH=haswell
 CXX_FLAGS="-march=${MARCH} -mtune=generic"
 CLANG_FLAGS="-march=${MARCH};-mtune=generic;-ffast-math"
-ARTIC_FLAGS="-target-cpu=${MARCH}"
+ARTIC_FLAGS="--host-cpu=${MARCH}"
 
 mkdir -p /ignis/build
 cd /ignis/build
