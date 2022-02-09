@@ -72,13 +72,14 @@ void TriMesh::computeFaceAreaOnly(bool* hasBadAreas)
 
     const size_t inds = indices.size();
     for (size_t i = 0; i < inds; i += 4) {
-        const auto& v0   = vertices[indices[i + 0]];
-        const auto& v1   = vertices[indices[i + 1]];
-        const auto& v2   = vertices[indices[i + 2]];
-        const Vector3f N = (v1 - v0).cross(v2 - v0);
-        float lN         = N.norm();
+        const auto& v0 = vertices[indices[i + 0]];
+        const auto& v1 = vertices[indices[i + 1]];
+        const auto& v2 = vertices[indices[i + 2]];
+        Vector3f N     = (v1 - v0).cross(v2 - v0);
+        float lN       = N.norm();
         if (lN < 1e-5f) {
             lN  = 1.0f;
+            N   = Vector3f::UnitZ();
             bad = true;
         }
         face_inv_area[i / 4] = 1 / (0.5f * lN);
@@ -95,13 +96,14 @@ void TriMesh::computeFaceNormals(bool* hasBadAreas)
 
     const size_t inds = indices.size();
     for (size_t i = 0; i < inds; i += 4) {
-        const auto& v0   = vertices[indices[i + 0]];
-        const auto& v1   = vertices[indices[i + 1]];
-        const auto& v2   = vertices[indices[i + 2]];
-        const Vector3f N = (v1 - v0).cross(v2 - v0);
-        float lN         = N.norm();
+        const auto& v0 = vertices[indices[i + 0]];
+        const auto& v1 = vertices[indices[i + 1]];
+        const auto& v2 = vertices[indices[i + 2]];
+        Vector3f N     = (v1 - v0).cross(v2 - v0);
+        float lN       = N.norm();
         if (lN < 1e-5f) {
             lN  = 1.0f;
+            N   = Vector3f::UnitZ();
             bad = true;
         }
         face_normals[i / 4]  = N / lN;
@@ -260,7 +262,7 @@ TriMesh TriMesh::MakeSphere(const Vector3f& center, float radius, uint32 stacks,
     float drho   = 3.141592f / (float)stacks;
     float dtheta = 2 * 3.141592f / (float)slices;
 
-    const float area     = 4 * Pi * radius * radius / (stacks * slices); //TODO: Really?
+    const float area     = 4 * Pi * radius * radius / (stacks * slices); // TODO: Really?
     const float inv_area = 1 / area;
 
     // TODO: We create a 2*stacks of redundant vertices at the two critical points... remove them

@@ -182,7 +182,8 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     mIsTrace = lopts.CameraType == "list";
     mAOVs    = std::move(result.AOVs);
 
-    mTechniqueVariants = std::move(result.TechniqueVariants);
+    mTechniqueVariants        = std::move(result.TechniqueVariants);
+    mTechniqueVariantSelector = result.VariantSelector;
 
     if (opts.DumpShader) {
         for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
