@@ -35,25 +35,82 @@ endif()
 ###########################################################
 include(CMakeDependentOption)
 option(IG_WITH_DEVICE_CPU "Enable CPU device with optional vectorization support" ON)
-option(IG_WITH_DEVICE_GPU "Enable GPU device for NVidia or AMD GPUs" ON)
-cmake_dependent_option(IG_WITH_DEVICE_CPU_SIMD   "Enable CPU vectorized device" ON  "IG_WITH_DEVICE_CPU" OFF)
+option(IG_WITH_DEVICE_GPU "Enable GPU device for NVidia or AMD GPUs"              ON)
+
+cmake_dependent_option(IG_WITH_DEVICE_CPU_SIMD   "Enable CPU vectorized device" ON  "IG_WITH_DEVICE_CPU"           OFF)
 cmake_dependent_option(IG_WITH_DEVICE_GPU_NVIDIA "Enable NVidia GPU device"     ON  "IG_WITH_DEVICE_GPU;_HAS_CUDA" OFF)
 cmake_dependent_option(IG_WITH_DEVICE_GPU_AMD    "Enable AMD GPU device"        ON  "IG_WITH_DEVICE_GPU;_HAS_HSA"  OFF)
 
-cmake_dependent_option(IG_WITH_DEVICE_CPU_GENERIC_ALWAYS "Always build the generic CPU device" OFF  "IG_WITH_DEVICE_CPU" OFF)
+cmake_dependent_option(IG_WITH_DEVICE_CPU_SSE42          "Force SSE 4.2 driver"                OFF  "IG_WITH_DEVICE_CPU_SIMD" OFF)
+cmake_dependent_option(IG_WITH_DEVICE_CPU_AVX            "Force AVX driver"                    OFF  "IG_WITH_DEVICE_CPU_SIMD" OFF)
+cmake_dependent_option(IG_WITH_DEVICE_CPU_AVX2           "Force AVX 2 driver"                  OFF  "IG_WITH_DEVICE_CPU_SIMD" OFF)
+cmake_dependent_option(IG_WITH_DEVICE_CPU_AVX512         "Force AVX 512 driver"                OFF  "IG_WITH_DEVICE_CPU_SIMD" OFF)
+cmake_dependent_option(IG_WITH_DEVICE_CPU_BEST           "Select the best instruction set"     ON   "IG_WITH_DEVICE_CPU_SIMD" OFF)
+cmake_dependent_option(IG_WITH_DEVICE_CPU_GENERIC_ALWAYS "Always build the generic CPU driver" OFF  "IG_WITH_DEVICE_CPU"      OFF)
 
 set(DEVICE_SELECTION )
 
 if(IG_WITH_DEVICE_CPU)
-    # TODO: Select best feature for current host
     if(IG_WITH_DEVICE_CPU_SIMD)
-        list(APPEND DEVICE_SELECTION
-            #"SSE42"
-            #"AVX"
-            "AVX2"
-            #"AVX512"
-            #"ASIMD"
-            )
+        if(IG_WITH_DEVICE_CPU_BEST)
+            # TODO: This only works for x64
+            set(_code "#include <immintrin.h>
+            __m512i i;
+            int main(void) {__m521i a = _mm512_abs_epi32(i); return 0;}")
+            check_cxx_source_compiles("${_code}" HAS_AVX512)
+
+            if(HAS_AVX512)
+                set(BEST "AVX512")
+            else()
+                set(_code "#include <immintrin.h>
+                __m256i i;
+                int main(void) {__m256i a = _mm256_abs_epi16(i); return 0;}")
+                check_cxx_source_compiles("${_code}" HAS_AVX2)
+                
+                if(HAS_AVX2)
+                    set(BEST "AVX2")
+                else()
+                    set(_code "#include <immintrin.h>
+                    int main(void) {__m256 a = _mm256_setzero_ps(); return 0;}")
+                    check_cxx_source_compiles("${_code}" HAS_AVX)
+
+                    if(HAS_AVX)
+                        set(BEST "AVX")
+                    else()
+                        set(_code "#include <nmmintrin.h>
+                        unsigned int i;
+                        int main(void) {unsigned int a = _mm_crc32_u32(0, i); return 0;}")
+
+                        check_cxx_source_compiles("${_code}" HAS_SSE42)
+                        if(HAS_SSE42)
+                            set(BEST "SSE42")
+                        endif()
+                    endif()
+                endif()
+            endif()
+        else()
+            set(BEST )
+        endif()
+
+        if(IG_WITH_DEVICE_CPU_SSE42 OR BEST STREQUAL "SSE42" )
+            list(APPEND DEVICE_SELECTION "SSE42")
+        endif()
+        
+        if(IG_WITH_DEVICE_CPU_AVX OR BEST STREQUAL "AVX" )
+            list(APPEND DEVICE_SELECTION "AVX")
+        endif()
+        
+        if(IG_WITH_DEVICE_CPU_AVX2 OR BEST STREQUAL "AVX2" )
+            list(APPEND DEVICE_SELECTION "AVX2")
+        endif()
+        
+        if(IG_WITH_DEVICE_CPU_AVX512 OR BEST STREQUAL "AVX512" )
+            list(APPEND DEVICE_SELECTION "AVX512")
+        endif()
+
+        if(NOT DEVICE_SELECTION)
+            list(APPEND DEVICE_SELECTION "ASIMD")
+        endif()
     else()
         list(APPEND DEVICE_SELECTION "DEFAULT")
     endif()
@@ -75,6 +132,8 @@ endif()
 if(NOT DEVICE_SELECTION)
     message(FATAL_ERROR "No devices selected. Aborting")
 endif()
+
+message(STATUS "Selected devices: ${DEVICE_SELECTION}")
 
 set(DEVICES )
 foreach(dev IN LISTS DEVICE_SELECTION)
