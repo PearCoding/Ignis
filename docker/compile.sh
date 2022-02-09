@@ -5,11 +5,16 @@ MARCH=skylake
 CXX_FLAGS="-march=${MARCH} -mtune=generic"
 CLANG_FLAGS="-march=${MARCH};-mtune=generic;-ffast-math"
 
-# --host-attr extracted from llvm for MARCH architecture. Could be handled automatically, maybe?
-ARTIC_FLAGS="--host-triple;x86_64-linux-gnu;--host-cpu;skylake;--host-attr;+adx,+aes,+avx,+avx2,+bmi,+bmi2,+clflushopt,+cx16,+cx8,+f16c,+fma,+fsgsbase,+fxsr,+invpcid,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+prfchw,+rdrnd,+rdseed,+sahf,+sgx,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsavec,+xsaveopt,+xsaves"
-
 mkdir -p /ignis/build
 cd /ignis/build
+echo "int main(void) { return 0; }" >> test.cpp
+/anydsl/llvm_install/bin/clang ${CLANG_FLAGS//;/ } -S -emit-llvm test.cpp -o test.ll
+
+TARGET_TRIPLE=$(cat test.ll | sed -n "s/^.*target triple = \s*\"\(\S*\)\".*$/\1/p")
+TARGET_ATTR=$(cat test.ll | sed -n "s/^.*\"target-features\"=\"\(\S*\)\".*$/\1/p")
+
+ARTIC_FLAGS="--host-triple;${TARGET_TRIPLE};--host-cpu;${MARCH};--host-attr;${TARGET_ATTR}"
+
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DAnyDSL_runtime_DIR=/anydsl/runtime/build/share/anydsl/cmake -DCMAKE_INSTALL_PREFIX=/ignis-install -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DIG_ARTIC_CLANG_FLAGS="${CLANG_FLAGS}" -DIG_ARTIC_FLAGS="${ARTIC_FLAGS}" -DIG_OPTIMIZE_FOR_NATIVE=OFF -DIG_WITH_DEVICE_CPU_GENERIC_ALWAYS=ON -DIG_WITH_DEVICE_CPU_BEST=OFF -DIG_WITH_DEVICE_CPU_AVX2=ON ..
 cmake --build .
 cat /ignis/build/src/backend/driver/driver_avx2.ll | head
