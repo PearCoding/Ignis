@@ -1,4 +1,4 @@
-# Ignis
+# Ignis ![Build](https://img.shields.io/github/workflow/status/PearCoding/Ignis/Docker%20AVX2) [![Docker Pulls](https://img.shields.io/docker/pulls/pearcoding/ignis)](https://hub.docker.com/repository/docker/pearcoding/ignis)
 'Ignis' is a raytracer for the RENEGADE project implemented using the Artic frontend of the AnyDSL compiler framework (https://anydsl.github.io/) and based on Rodent (https://github.com/AnyDSL/rodent).
 
 ![A scene containing diamonds rendered by Ignis](docs/screenshot.jpg)
