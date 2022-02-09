@@ -37,6 +37,12 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
  - tinyobjloader <https://github.com/tinyobjloader/tinyobjloader>
  - tinyparser-mitsuba <https://github.com/PearCoding/TinyParser-Mitsuba>
 
+## Docker Image
+
+Ignis is available on docker hub with some preconfigured backends! [pearcoding/ignis](https://hub.docker.com/repository/docker/pearcoding/ignis)
+
+More information is available here [docker/README.md](docker/README.md)
+
 ## Building
 
 If you made sure the required dependencies are installed in your system, create a directory to build the application in:
