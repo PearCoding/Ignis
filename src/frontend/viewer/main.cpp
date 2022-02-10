@@ -66,7 +66,7 @@ static inline void usage()
         << "           --debug                Same as --technique debug" << std::endl
         << "           --spp       spp        Enables benchmarking mode and sets the number of iterations based on the given spp" << std::endl
 #ifdef WITH_UI
-        << "           --cap-spp   spp        Do not render any further than the given spp for the current view" << std::endl
+        << "           --spp-mode  spp_mode   Sets the current spp mode (default: fixed)" << std::endl
 #endif
         << "           --stats                Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session" << std::endl
         << "           --full-stats           Acquire all stats alongside rendering. Will be dumped at the end of the rendering session" << std::endl
@@ -79,7 +79,14 @@ static inline void usage()
         << "Available cameras:" << std::endl
         << "    perspective, orthogonal, fishlens" << std::endl
         << "Available techniques:" << std::endl
-        << "    path, debug, ao" << std::endl;
+        << "    path, debug, ao" << std::endl
+#ifdef WITH_UI
+        << "Available spp modes:" << std::endl
+        << "    fixed      Finish after reaching the given spp. This will close the program after the desired spp has been reached" << std::endl
+        << "    capped     Do not render any further than the given spp for the current view. This will freeze the FPS" << std::endl
+        << "    continous  Rerender view after given spp is reached. This simulates real-time raytracing habbits. Can be flickering quite a lot!" << std::endl
+#endif
+        ;
 }
 
 struct SectionTimer {
@@ -88,6 +95,12 @@ struct SectionTimer {
 
     inline void start() { timer.start(); }
     inline void stop() { duration_ms += timer.stopMS(); }
+};
+
+enum class SPPMode {
+    Fixed,
+    Capped,
+    Continous
 };
 
 int main(int argc, char** argv)
@@ -100,7 +113,7 @@ int main(int argc, char** argv)
     std::string in_file;
     std::string out_file;
     size_t desired_spp = 0;
-    size_t capped_spp  = 0; // Cap the SPP to the desired amount and do not render any further. Only useful for ui
+    SPPMode spp_mode   = SPPMode::Fixed;
     std::optional<Vector3f> eye;
     std::optional<Vector3f> dir;
     std::optional<Vector3f> up;
@@ -182,9 +195,19 @@ int main(int argc, char** argv)
                 check_arg(argc, argv, i, 1);
                 opts.SPI = (size_t)strtoul(argv[++i], nullptr, 10);
 #ifdef WITH_UI
-            } else if (!strcmp(argv[i], "--cap-spp")) {
+            } else if (!strcmp(argv[i], "--spp-mode")) {
                 check_arg(argc, argv, i, 1);
-                capped_spp = (size_t)strtoul(argv[++i], nullptr, 10);
+                ++i;
+                if (!strcmp(argv[i], "fixed"))
+                    spp_mode = SPPMode::Fixed;
+                else if (!strcmp(argv[i], "capped"))
+                    spp_mode = SPPMode::Capped;
+                else if (!strcmp(argv[i], "continous"))
+                    spp_mode = SPPMode::Continous;
+                else {
+                    IG_LOG(L_ERROR) << "Unknown spp mode '" << argv[i] << "'. Aborting." << std::endl;
+                    return EXIT_FAILURE;
+                }
 #endif
             } else if (!strcmp(argv[i], "-o")) {
                 check_arg(argc, argv, i, 1);
@@ -245,7 +268,12 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-#ifndef WITH_UI
+#ifdef WITH_UI
+    if (spp_mode != SPPMode::Fixed && desired_spp <= 0) {
+        IG_LOG(L_ERROR) << "No valid spp count given. Required by the capped or continous spp mode" << std::endl;
+        return EXIT_FAILURE;
+    }
+#else
     if (desired_spp <= 0) {
         IG_LOG(L_ERROR) << "No valid spp count given" << std::endl;
         return EXIT_FAILURE;
@@ -270,8 +298,8 @@ int main(int argc, char** argv)
     }
     timer_loading.stop();
 
-    const auto def        = runtime->loadedRenderSettings();
-    const auto clip       = trange.value_or(Vector2f(def.TMin, def.TMax));
+    const auto def  = runtime->loadedRenderSettings();
+    const auto clip = trange.value_or(Vector2f(def.TMin, def.TMax));
     Camera camera(eye.value_or(def.CameraEye), dir.value_or(def.CameraDir), up.value_or(def.CameraUp),
                   fov.value_or(def.FOV), (float)def.FilmWidth / (float)def.FilmHeight,
                   clip(0), clip(1));
@@ -279,7 +307,6 @@ int main(int argc, char** argv)
 
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(desired_spp / (float)SPI));
-    const size_t capped_iter  = static_cast<size_t>(std::ceil(capped_spp / (float)SPI));
 
 #ifdef WITH_UI
     IG_UNUSED(prettyConsole);
@@ -345,7 +372,11 @@ int main(int argc, char** argv)
 #endif
 
         if (running) {
-            if (capped_iter <= 0 || iter < capped_iter) {
+            if (spp_mode != SPPMode::Capped || iter < desired_iter) {
+                if (spp_mode == SPPMode::Continous && iter >= desired_iter) {
+                    iter = 0;
+                }
+
                 if (iter == 0)
                     runtime->clearFramebuffer();
 
@@ -358,7 +389,7 @@ int main(int argc, char** argv)
                 iter++;
                 auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
-                if (desired_iter != 0) {
+                if (spp_mode == SPPMode::Fixed && desired_iter != 0) {
                     samples_sec.emplace_back(1000.0 * double(SPI * def.FilmWidth * def.FilmHeight) / double(elapsed_ms));
                     if (samples_sec.size() == desired_iter)
                         break;
@@ -449,7 +480,7 @@ int main(int argc, char** argv)
 
     runtime.reset();
 
-    if (desired_iter != 0) {
+    if (!samples_sec.empty()) {
         auto inv = 1.0e-6;
         std::sort(samples_sec.begin(), samples_sec.end());
         IG_LOG(L_INFO) << "# " << samples_sec.front() * inv
