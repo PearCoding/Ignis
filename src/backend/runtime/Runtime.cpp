@@ -336,7 +336,7 @@ void Runtime::compileShaders()
 
         IG_LOG(L_DEBUG) << "Compiling hit shaders" << std::endl;
         for (size_t j = 0; j < variant.HitShaders.size(); ++j) {
-            IG_LOG(L_DEBUG) << "Hit shader [" << i << "]" << std::endl;
+            IG_LOG(L_DEBUG) << "Hit shader [" << j << "]" << std::endl;
             const std::filesystem::path hp = "v" + std::to_string(i) + "_hitShaderFull" + std::to_string(j) + ".art";
             shaders.HitShaders.push_back(ig_compile_source(variant.HitShaders[j], "ig_hit_shader", mOptions.DumpShaderFull ? &hp : nullptr));
         }
