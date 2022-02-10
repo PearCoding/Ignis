@@ -5,7 +5,7 @@
 	},
 	"camera": {
 		"type": "perspective",
-		"fov": 39.597755,
+		"fov": 40,
 		"near_clip": 0.1,
 		"far_clip": 100,
 		"transform": [ -1,0,0,0, 0,1,0,0, 0,0,-1,4, 0,0,0,1 ]
@@ -14,7 +14,7 @@
 		"size": [1000, 1000]
 	},
 	"bsdfs": [
-		{"type":"roughconductor", "name": "mat-Sphere", "specular_reflectance": [1,1,1], "alpha":0.01}
+		{"type":"principled", "name": "mat-Sphere", "base_color": [1,1,1], "ior": 1, "roughness": 0.5, "thin": true, "flatness":1}
 	],
 	"shapes": [
 		{"type":"ply", "name":"Sphere", "filename":"meshes/Sphere.ply"}

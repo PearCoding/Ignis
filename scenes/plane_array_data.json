@@ -13,9 +13,6 @@
 	"film": {
 		"size": [256, 256]
 	},
-	"externals": [
-		{"filename": "room_no_window_data.json"}
-	],
 	"shapes": [
 		{"type":"obj", "name":"Window", "filename":"meshes/RoomWindow.obj"}
 	],
