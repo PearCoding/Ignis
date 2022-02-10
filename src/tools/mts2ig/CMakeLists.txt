@@ -7,6 +7,6 @@ CPMAddPackage(
 
 ################################################################
 
-add_executable(mts2ig main.cpp)
+add_executable(mts2ig main.cpp SpectralMapper.cpp SpectralMapper.h)
 target_link_libraries(mts2ig PRIVATE tinyparser_mitsuba)
 install(TARGETS mts2ig COMPONENT tools)

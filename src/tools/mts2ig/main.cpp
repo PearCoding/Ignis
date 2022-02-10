@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "SpectralMapper.h"
 #include "tinyparser-mitsuba.h"
 
 using namespace TPM_NAMESPACE;
@@ -35,7 +36,7 @@ static inline void usage()
         << "           --no-ws                  Do not use any unnecessary whitespace" << std::endl
         << "   -l      --lookup    directory    Add directory as lookup path for external files" << std::endl
         << "   -D      --define    Key Value    Define key with value as an argument for mitsuba files" << std::endl
-        << "   -o      --output    scnee.json   Writes the output to a given file and not the default input file with .json" << std::endl;
+        << "   -o      --output    scene.json   Writes the output to a given file and not the default input file with .json" << std::endl;
 }
 
 class JsonWriter {
@@ -103,12 +104,12 @@ public:
     inline void arrBegin()
     {
         mStream << "[";
-        //goIn();
+        // goIn();
     }
 
     inline void arrEnd()
     {
-        //goOut();
+        // goOut();
         mStream << "]";
     }
 
@@ -260,10 +261,16 @@ static void export_property(const Property& prop, JsonWriter& writer)
             writer.s();
             writer.w() << spec.uniformValue();
             writer.arrEnd();
-        } else { // TODO: Map from spectral to RGB
-            if (!sQuiet)
-                std::cerr << "No support for spectral data" << std::endl;
-            writer.w() << "0";
+        } else {
+            const auto cie = SpectralMapper::eval(spec.wavelengths().data(), spec.weights().data(), false /*todo*/, spec.wavelengths().size());
+            const auto rgb = SpectralMapper::mapRGB(std::get<0>(cie), std::get<1>(cie), std::get<2>(cie));
+            writer.arrBegin();
+            writer.w() << std::get<0>(rgb) << ",";
+            writer.s();
+            writer.w() << std::get<1>(rgb) << ",";
+            writer.s();
+            writer.w() << std::get<2>(rgb);
+            writer.arrEnd();
         }
     } break;
     case PT_BOOL:
@@ -544,6 +551,23 @@ static void export_area_light(const std::string& name, const Object& obj, JsonWr
 
 static void export_light(const std::string& name, const Object& obj, JsonWriter& writer, const std::vector<Object*>& textures)
 {
+    if (obj.pluginType() == "sunsky") {
+        // Split these two emitters appart
+        Object obj2(obj.type(), "sun", obj.id() + "_sun");
+        for (const auto& prop : obj.properties())
+            obj2.setProperty(prop.first, prop.second);
+        export_light(name + "_sun", obj2, writer, textures);
+
+        writer.w() << ",";
+        writer.endl();
+
+        Object obj3(obj.type(), "sky", obj.id() + "_sky");
+        for (const auto& prop : obj.properties())
+            obj3.setProperty(prop.first, prop.second);
+        export_light(name + "_sky", obj3, writer, textures);
+        return;
+    }
+
     writer.objBegin();
     writer.key("name");
     writer.w() << "\"" << name << "\",";
