@@ -308,6 +308,9 @@ int main(int argc, char** argv)
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(desired_spp / (float)SPI));
 
+    if (desired_spp > 0 && (desired_spp % SPI) != 0)
+        IG_LOG(L_WARNING) << "Given spp " << desired_spp << " is not a multiple of the spi " << SPI << ". Using spp " << desired_iter * SPI << " instead" << std::endl;
+
 #ifdef WITH_UI
     IG_UNUSED(prettyConsole);
 

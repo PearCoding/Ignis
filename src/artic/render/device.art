@@ -19,7 +19,7 @@ struct Device {
     load_aov_image:      fn (i32, i32) -> AOVImage,
     load_host_buffer:    fn (&[u8]) -> DeviceBuffer,
     load_buffer:         fn (&[u8]) -> DeviceBuffer,
-    request_buffer:      fn (&[u8], i32) -> DeviceBuffer,
+    request_buffer:      fn (&[u8], i32 /* Size */, i32 /* Flags: 0x1 Clear always, 0x2 Clear only init */) -> DeviceBuffer,
 
     load_rays: fn () -> &[StreamRay]
 }

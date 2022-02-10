@@ -841,9 +841,9 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_buffer(dev_id, filename, &mut ptr, &mut size);
         make_gpu_buffer(ptr as &addrspace(1)[u8], (size as i64 / sizeof[i32]()) as i32, is_nvvm)
     },
-    request_buffer = @ |name, size| {
+    request_buffer = @ |name, size, flags| {
         let mut ptr : &[u8];
-        ignis_request_buffer(dev_id, name, &mut ptr, size);
+        ignis_request_buffer(dev_id, name, &mut ptr, size, flags);
         make_gpu_buffer(ptr as &addrspace(1)[u8], (size as i64 / sizeof[i32]()) as i32, is_nvvm)
     }
 };

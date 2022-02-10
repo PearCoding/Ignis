@@ -854,9 +854,9 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     },
     load_host_buffer = load_cpu_buffer,
     load_buffer = load_cpu_buffer,
-    request_buffer = @ |name, size| {
+    request_buffer = @ |name, size, flags| {
         let mut ptr : &[u8];
-        ignis_request_buffer(0, name, &mut ptr, size);
+        ignis_request_buffer(0, name, &mut ptr, size, flags);
         make_cpu_buffer(ptr, (size as i64 / sizeof[i32]()) as i32)
     }
 };
