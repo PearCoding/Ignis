@@ -794,6 +794,18 @@ fn @make_gpu_device( dev_id: i32
         gpu_advanced_shadow_handler(dev_id, acc, atomics, path_tracer, first, last, spp, is_hit);
     },
     present = @ || ignis_present(dev_id),
+    parallel_range = @ |body| {
+        @|start, end| {
+            let size = end - start;
+            if size > 0 {
+                gpu_exec_1d(acc, end - start, 64 /* Blocksize */, |work_item| {
+                    let gid = work_item.gidx();
+                    if gid >= size { return() }
+                    @ body(gid + start)
+                })
+            }
+        }
+    },
     load_scene_bvh = @|| {
         let mut nodes: &[Node2];
         let mut objs:  &[EntityLeaf1];

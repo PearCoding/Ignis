@@ -1,5 +1,4 @@
 // Trace function ------------------------------------------------------------------
-
 fn @cpu_parallel_tiles(body: fn (i32, i32, i32, i32) -> ()) =
     @|width: i32, height: i32, tile_width: i32, tile_height: i32, num_cores: i32| {
     if cpu_profiling_enabled && cpu_profiling_serial {
@@ -801,6 +800,13 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         cpu_advanced_shadow_handler(path_tracer, first, last, spp, is_hit, vector_width);
     },
     present = @ || ignis_present(0),
+    parallel_range = @ |body| {
+        @|start, end| {
+            for i in parallel(num_cores, start, end) {
+                @ body(i)
+            }
+        }
+    },
     load_scene_bvh = @ || {
         if vector_width == 8 {
             let mut nodes: &[Node8];
