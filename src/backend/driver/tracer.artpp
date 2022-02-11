@@ -49,6 +49,8 @@ fn ig_render(settings: &Settings) -> () {
         }
     };
 
+    ignis_handle_callback_shader(0/*BeforeIteration*/);
     device.trace(scene, pipeline, settings.spi);
+    ignis_handle_callback_shader(1/*AfterIteration*/);
     device.present();
 }

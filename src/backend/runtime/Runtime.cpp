@@ -200,6 +200,11 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
                 dumpShader("v" + std::to_string(i) + "_advancedShadowHit.art", variant.AdvancedShadowHitShader);
                 dumpShader("v" + std::to_string(i) + "_advancedShadowMiss.art", variant.AdvancedShadowMissShader);
             }
+
+            for (size_t i = 0; i < variant.CallbackShaders.size(); ++i) {
+                if (!variant.CallbackShaders[i].empty())
+                    dumpShader("v" + std::to_string(i) + "_callback" + std::to_string(i) + ".art", variant.CallbackShaders[i]);
+            }
         }
     }
 
@@ -350,6 +355,16 @@ void Runtime::compileShaders()
             const std::filesystem::path asm_ = "v" + std::to_string(i) + "_advancedShadowMissFull.art";
             shaders.AdvancedShadowMissShader = ig_compile_source(variant.AdvancedShadowMissShader, "ig_advanced_shadow_shader",
                                                                  mOptions.DumpShaderFull ? &asm_ : nullptr);
+        }
+
+        for (size_t i = 0; i < variant.CallbackShaders.size(); ++i) {
+            if (variant.CallbackShaders[i].empty()) {
+                shaders.CallbackShaders[i] = nullptr;
+            } else {
+                const std::filesystem::path asm_ = " v" + std::to_string(i) + "_callbackFull" + std::to_string(i) + ".art";
+                shaders.CallbackShaders[i]       = ig_compile_source(variant.CallbackShaders[i], "ig_callback_shader",
+                                                               mOptions.DumpShaderFull ? &asm_ : nullptr);
+            }
         }
     }
 }

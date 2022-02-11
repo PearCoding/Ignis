@@ -3,6 +3,11 @@
 #include "IG_Config.h"
 
 namespace IG {
+enum class CallbackType {
+    BeforeIteration = 0,
+    AfterIteration,
+    _COUNT
+};
 
 using TechniqueVariantSelector = uint32 (*)(uint32);
 
@@ -13,6 +18,7 @@ struct TechniqueVariantBase {
     std::vector<T> HitShaders;
     T AdvancedShadowHitShader;
     T AdvancedShadowMissShader;
+    std::array<T, (size_t)CallbackType::_COUNT> CallbackShaders{};
 };
 
 using TechniqueVariant          = TechniqueVariantBase<std::string>;

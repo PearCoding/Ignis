@@ -75,6 +75,11 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
             variant.AdvancedShadowHitShader  = AdvancedShadowShader::setup(true, ctx);
             variant.AdvancedShadowMissShader = AdvancedShadowShader::setup(false, ctx);
         }
+
+        for (size_t i = 0; i < info.CallbackGenerators.size(); ++i) {
+            if (info.CallbackGenerators[i] != nullptr)
+                variant.CallbackShaders[i] = info.CallbackGenerators[i](ctx);
+        }
     }
 
     result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;

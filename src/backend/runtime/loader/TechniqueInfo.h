@@ -3,9 +3,9 @@
 #include "TechniqueVariant.h"
 
 namespace IG {
-
 struct LoaderContext;
-using TechniqueCameraGenerator = std::string (*)(LoaderContext&);
+using TechniqueCallbackGenerator = std::string (*)(LoaderContext&);
+using TechniqueCameraGenerator   = TechniqueCallbackGenerator;
 
 struct TechniqueVariantInfo {
     /// The variant makes uses of ShadowHit and ShadowMiss shaders. Reduces performance
@@ -22,6 +22,9 @@ struct TechniqueVariantInfo {
 
     /// The variant overrides the default camera shader
     TechniqueCameraGenerator OverrideCameraGenerator = nullptr;
+
+    /// Specialized shader generators for special parts of the pipeline
+    std::array<TechniqueCallbackGenerator, (size_t)CallbackType::_COUNT> CallbackGenerators{};
 };
 
 struct TechniqueInfo {

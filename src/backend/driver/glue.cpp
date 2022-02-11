@@ -563,6 +563,17 @@ struct Interface {
         }
     }
 
+    inline void runCallbackShader(int type)
+    {
+        IG_ASSERT(type >= 0 && type < (int)IG::CallbackType::_COUNT, "Expected callback shader type to be well formed!");
+
+        if (shader_set.CallbackShaders[type] != nullptr) {
+            using Callback = decltype(ig_callback_shader);
+            auto callback  = (Callback*)shader_set.CallbackShaders[type];
+            callback(&current_settings, current_iteration);
+        }
+    }
+
     inline float* getFilmImage(int32_t dev)
     {
         if (dev != 0) {
@@ -995,6 +1006,11 @@ void ignis_handle_hit_shader(int entity_id, int first, int last)
 void ignis_handle_advanced_shadow_shader(int first, int last, bool is_hit)
 {
     sInterface->runAdvancedShadowShader(first, last, is_hit);
+}
+
+void ignis_handle_callback_shader(int type)
+{
+    sInterface->runCallbackShader(type);
 }
 
 bool ignis_use_advanced_shadow_handling()
