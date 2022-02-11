@@ -1,6 +1,11 @@
 // Device buffer. Granularity is 4 byte per index
+// Everything with a _host suffix can be used on the host environment only
+// Without a _host suffix the function can only be used in the device environment
 struct DeviceBuffer {
     add_atomic_i32: fn (i32, i32) -> i32,
+    load_i32_host:  fn (i32) -> i32,      // Load from device to host
+    store_i32_host: fn (i32, i32) -> (),  // Store from host to device
+
     load_i32:       fn (i32) -> i32,
     load_f32:       fn (i32) -> f32,
     load_vec2:      fn (i32) -> Vec2,
