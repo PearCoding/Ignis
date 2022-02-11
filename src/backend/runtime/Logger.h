@@ -36,6 +36,8 @@ public:
     Logger();
     ~Logger();
 
+    Logger& operator=(const Logger&);
+
     static const char* levelString(LogLevel l);
 
     void addListener(const std::shared_ptr<LogListener>& listener);

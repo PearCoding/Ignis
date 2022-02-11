@@ -8,6 +8,7 @@ namespace IG {
 struct SceneDatabase;
 struct Ray;
 class Statistics;
+class Logger;
 } // namespace IG
 
 // Not in namespace IG
@@ -17,6 +18,8 @@ struct DriverSetupSettings {
     IG::SceneDatabase* database   = nullptr;
     bool acquire_stats            = false;
     size_t aov_count              = false;
+
+    IG::Logger* logger = nullptr;
 };
 
 struct DriverRenderSettings {

@@ -306,6 +306,8 @@ void Runtime::setup()
     settings.acquire_stats      = mAcquireStats;
     settings.aov_count          = mAOVs.size();
 
+    settings.logger = &IG_LOGGER;
+
     IG_LOG(L_DEBUG) << "Init JIT compiling" << std::endl;
     ig_init_jit(mManager.getPath(mTarget).generic_u8string());
     mLoadedInterface.SetupFunction(&settings);

@@ -169,6 +169,9 @@ struct Interface {
         , film_height(setup.framebuffer_height)
         , setup(setup)
     {
+        // Due to the DLL interface, we do have multiple instances of the logger. Make sure they are the same
+        IG_LOGGER = *setup.logger; 
+
         for (auto& arr : aovs)
             arr = std::move(anydsl::Array<float>(film_width * film_height * 3));
     }

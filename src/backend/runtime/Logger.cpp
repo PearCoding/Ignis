@@ -31,6 +31,15 @@ Logger::~Logger()
 {
 }
 
+Logger& Logger::operator=(const Logger& other)
+{
+    mVerbosity          = other.mVerbosity;
+    mQuiet              = other.mQuiet;
+    mConsoleLogListener = other.mConsoleLogListener;
+    mListener           = other.mListener;
+    return *this;
+}
+
 const char* levelStr[] = {
     "Debug  ",
     "Info   ",
