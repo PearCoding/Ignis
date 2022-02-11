@@ -7,6 +7,13 @@ struct Atomics {
     add_shared_f32: fn (&mut addrspace(3)f32, f32) -> f32
 }
 
+fn @gpu_make_null_atomics() = Atomics {
+    add_global_i32 = @ |_, _| 0,
+    add_global_f32 = @ |_, _| 0,
+    add_shared_i32 = @ |_, _| 0,
+    add_shared_f32 = @ |_, _| 0,
+};
+
 fn @gpu_get_film_data(dev_id: i32) -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
@@ -662,13 +669,14 @@ fn @amdgpu_load_vec4(p: &addrspace(1)[f32], elem: i32) {
     make_vec4(v(0), v(1), v(2), v(3))
 }
 
-fn @make_gpu_buffer(p: &addrspace(1)[u8], count: i32, is_nvvm: bool) -> DeviceBuffer {
+fn @make_gpu_buffer(p: &addrspace(1)[u8], count: i32, atomics: Atomics, is_nvvm: bool) -> DeviceBuffer {
     let load_f32  = if is_nvvm { @|i: i32| nvvm_ldg_f32(&((p as &addrspace(1)[f32])(i))) } else { @|i: i32| (p as &addrspace(1)[f32])(i) };
     let load_i32  = if is_nvvm { @|i: i32| nvvm_ldg_i32(&((p as &addrspace(1)[i32])(i))) } else { @|i: i32| (p as &addrspace(1)[i32])(i) };
     let load_vf32 = if is_nvvm { @|i: i32| nvvm_ldg4_f32(&(&p(i * 4) as &addrspace(1)[simd[f32 * 4]](0))) } else { @|i: i32| (&p(i * 4) as &addrspace(1)[simd[f32 * 4]])(0) };
     let load_vi32 = if is_nvvm { @|i: i32| nvvm_ldg4_i32(&(&p(i * 4) as &addrspace(1)[simd[i32 * 4]](0))) } else { @|i: i32| (&p(i * 4) as &addrspace(1)[simd[i32 * 4]])(0) };
 
     DeviceBuffer {
+        add_atomic_i32 = @ |i, v| atomics.add_global_i32(&mut ((p as &mut [i32])(i)), v),
         load_f32  = load_f32,
         load_i32  = load_i32,
         load_vec2 = @ |i| {
@@ -839,12 +847,12 @@ fn @make_gpu_device( dev_id: i32
         let mut ptr  : &[u8];
         let mut size : i32;
         ignis_load_buffer(dev_id, filename, &mut ptr, &mut size);
-        make_gpu_buffer(ptr as &addrspace(1)[u8], (size as i64 / sizeof[i32]()) as i32, is_nvvm)
+        make_gpu_buffer(ptr as &addrspace(1)[u8], (size as i64 / sizeof[i32]()) as i32, atomics, is_nvvm)
     },
     request_buffer = @ |name, size, flags| {
         let mut ptr : &[u8];
         ignis_request_buffer(dev_id, name, &mut ptr, size, flags);
-        make_gpu_buffer(ptr as &addrspace(1)[u8], (size as i64 / sizeof[i32]()) as i32, is_nvvm)
+        make_gpu_buffer(ptr as &addrspace(1)[u8], (size as i64 / sizeof[i32]()) as i32, atomics, is_nvvm)
     }
 };
 
@@ -860,7 +868,7 @@ fn @make_nvvm_device(dev: i32) -> Device {
         dev_id,
         nvvm_accelerator(dev),
         make_nvvm_min_max(),
-        @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], 0, true),
+        @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], 0, atomics, true),
         atomics,
         true
     )
@@ -878,7 +886,7 @@ fn @make_amdgpu_device(dev: i32) -> Device {
         dev_id,
         amdgpu_accelerator(dev),
         make_amdgpu_min_max(),
-        @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], 0, false),
+        @ |ptr| make_gpu_buffer(ptr as &addrspace(1)[u8], 0, atomics, false),
         atomics,
         false
     )

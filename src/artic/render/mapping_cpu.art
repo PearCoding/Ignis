@@ -699,6 +699,8 @@ fn @cpu_load_vec4(p: &[f32], elem: i32) {
 }
 
 fn @make_cpu_buffer(p: &[u8], count: i32) = DeviceBuffer {
+    add_atomic_i32 = @ |i, v| atomic[i32](1:u32, (&(p as &[i32])(i) as &mut i32), v, 7:u32, ""),
+
     load_f32    = @ |i| (p as &[f32])(i),
     load_i32    = @ |i| (p as &[i32])(i),
     load_vec2   = @ |i| { let q = p as &[f32]; make_vec2(q(i + 0), q(i + 1)) },
