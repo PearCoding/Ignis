@@ -821,6 +821,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         cpu_advanced_shadow_handler(path_tracer, first, last, spp, use_framebuffer, is_hit, vector_width);
     },
     present = @ || ignis_present(0),
+    sync    = @ || {},
     parallel_range = @ |body| {
         @|start, end| {
             for i in parallel(num_cores, start, end) {

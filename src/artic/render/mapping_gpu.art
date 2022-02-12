@@ -812,6 +812,7 @@ fn @make_gpu_device( dev_id: i32
         gpu_advanced_shadow_handler(dev_id, acc, atomics, path_tracer, first, last, spp, use_framebuffer, is_hit);
     },
     present = @ || ignis_present(dev_id),
+    sync    = @ || acc.sync(),
     parallel_range = @ |body| {
         @|start, end| {
             let size = end - start;
