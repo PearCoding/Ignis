@@ -57,6 +57,7 @@ public:
 
     inline uint32 currentTechniqueVariant() const { return mCurrentTechniqueVariant; }
     inline uint32 currentIterationCount() const { return mCurrentIteration; }
+    inline uint32 currentIterationCountForFramebuffer() const { return mCurrentIterationFramebuffer; }
 
     const Statistics* getStatistics() const;
 
@@ -91,6 +92,7 @@ private:
     Target mTarget;
 
     uint32 mCurrentIteration;
+    uint32 mCurrentIterationFramebuffer;
     uint32 mCurrentTechniqueVariant;
 
     bool mIsTrace;

@@ -170,7 +170,7 @@ struct Interface {
         , setup(setup)
     {
         // Due to the DLL interface, we do have multiple instances of the logger. Make sure they are the same
-        IG_LOGGER = *setup.logger; 
+        IG_LOGGER = *setup.logger;
 
         for (auto& arr : aovs)
             arr = std::move(anydsl::Array<float>(film_width * film_height * 3));
@@ -470,7 +470,7 @@ struct Interface {
 
         auto& buffers = devices[dev].buffers;
         auto it       = buffers.find(name);
-        if (it != buffers.end() && std::get<1>(it->second) == size) {
+        if (it != buffers.end() && std::get<1>(it->second) >= size) {
             if (flags & (int)BufferRequestFlags::Clear)
                 clearArray(std::get<0>(it->second));
             return it->second;
@@ -535,6 +535,11 @@ struct Interface {
     inline bool useAdvancedShadowHandling()
     {
         return shader_set.AdvancedShadowHitShader != nullptr && shader_set.AdvancedShadowMissShader != nullptr;
+    }
+
+    inline bool isFramebufferLocked()
+    {
+        return shader_set.LockFramebuffer;
     }
 
     inline void runAdvancedShadowShader(int first, int last, bool is_hit)
@@ -827,6 +832,17 @@ void ignis_get_aov_image(int dev, int id, float** aov_pixels)
     *aov_pixels = sInterface->getAOVImage(dev, id);
 }
 
+void ignis_get_work_info(int* width, int* height)
+{
+    if (sInterface->shader_set.Width > 0 && sInterface->shader_set.Height > 0) {
+        *width  = sInterface->shader_set.Width;
+        *height = sInterface->shader_set.Height;
+    } else {
+        *width  = sInterface->film_width;
+        *height = sInterface->film_height;
+    }
+}
+
 void ignis_load_bvh2_ent(int dev, Node2** nodes, EntityLeaf1** objs)
 {
     auto& bvh = sInterface->loadEntityBVH<Bvh2Ent, Node2>(dev);
@@ -1019,6 +1035,11 @@ void ignis_handle_callback_shader(int type)
 bool ignis_use_advanced_shadow_handling()
 {
     return sInterface->useAdvancedShadowHandling();
+}
+
+bool ignis_is_framebuffer_locked()
+{
+    return sInterface->isFramebufferLocked();
 }
 
 void ignis_present(int dev)

@@ -1,5 +1,6 @@
 // Driver functions ----------------------------------------------------------------
 
+#[import(cc = "C")] fn ignis_get_work_info(&mut i32, &mut i32) -> ();
 #[import(cc = "C")] fn ignis_get_film_data(i32, &mut &mut [f32], &mut i32, &mut i32) -> ();
 #[import(cc = "C")] fn ignis_get_aov_image(i32, i32, &mut &mut [f32]) -> ();
 #[import(cc = "C")] fn ignis_cpu_get_primary_stream(&mut PrimaryStream, i32) -> ();
@@ -30,6 +31,7 @@
 #[import(cc = "C")] fn ignis_present(i32) -> ();
 
 #[import(cc = "C")] fn ignis_use_advanced_shadow_handling() -> bool;
+#[import(cc = "C")] fn ignis_is_framebuffer_locked() -> bool;
 
 //#[import(cc = "C")] fn ignis_handle_primary_trace(i32, &mut PrimaryStream) -> ();
 //#[import(cc = "C")] fn ignis_handle_secondary_trace(i32, &mut SecondaryStream) -> ();

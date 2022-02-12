@@ -24,8 +24,6 @@ std::string AdvancedShadowShader::setup(bool is_hit, LoaderContext& ctx)
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
            << std::endl;
 
-    stream << "  let is_hit = " << (is_hit ? "true" : "false") << ";" << std::endl;
-
     if (ctx.CurrentTechniqueVariantInfo().UsesLights) {
         bool requireAreaLight = is_hit || ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss;
         if (requireAreaLight)
@@ -41,7 +39,9 @@ std::string AdvancedShadowShader::setup(bool is_hit, LoaderContext& ctx)
     stream << LoaderTechnique::generate(ctx) << std::endl
            << std::endl;
 
-    stream << "  device.handle_advanced_shadow_shader(technique, first, last, spp, is_hit)" << std::endl
+    stream << "  let is_hit = " << (is_hit ? "true" : "false") << ";" << std::endl
+           << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
+           << "  device.handle_advanced_shadow_shader(technique, first, last, spp, use_framebuffer, is_hit)" << std::endl
            << "}" << std::endl;
 
     return stream.str();

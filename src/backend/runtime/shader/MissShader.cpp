@@ -37,7 +37,8 @@ std::string MissShader::setup(LoaderContext& ctx)
     stream << LoaderTechnique::generate(ctx) << std::endl
            << std::endl;
 
-    stream << "  device.handle_miss_shader(technique, first, last, spp)" << std::endl
+    stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
+           << "  device.handle_miss_shader(technique, first, last, spp, use_framebuffer)" << std::endl
            << "}" << std::endl;
 
     return stream.str();

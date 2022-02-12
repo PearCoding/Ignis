@@ -25,6 +25,17 @@ struct TechniqueVariantInfo {
 
     /// Specialized shader generators for special parts of the pipeline
     std::array<TechniqueCallbackGenerator, (size_t)CallbackType::_COUNT> CallbackGenerators{};
+
+    /// Override width & height such that the film width & height is not used
+    /// The size of the actual frame buffer stays the same however,
+    /// so be careful not to go out of bounds
+    int OverrideWidth  = -1;
+    int OverrideHeight = -1;
+
+    /// A locked framebuffer will not change and will not count towards the weights
+    /// The system is not checking brute force access to the framebuffer!
+    /// Using AOVs is still possible
+    bool LockFramebuffer = false;
 };
 
 struct TechniqueInfo {

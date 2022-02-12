@@ -105,6 +105,8 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     , mOptions(opts)
     , mDevice(opts.Device)
     , mCurrentIteration(0)
+    , mCurrentIterationFramebuffer(0)
+    , mCurrentTechniqueVariant(0)
     , mIsTrace(false)
     , mIsDebug(false)
     , mDebugMode(DebugMode::Normal)
@@ -252,6 +254,8 @@ void Runtime::step(const Camera& camera)
     settings.debug_mode = (uint32)mDebugMode;
 
     mLoadedInterface.RenderFunction(&settings, mCurrentIteration++);
+    if (!mTechniqueVariants[mCurrentTechniqueVariant].LockFramebuffer)
+        ++mCurrentIterationFramebuffer;
 }
 
 void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
@@ -275,6 +279,9 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
     settings.spi    = mSamplesPerIteration;
 
     mLoadedInterface.RenderFunction(&settings, mCurrentIteration++);
+
+    if (!mTechniqueVariants[mCurrentTechniqueVariant].LockFramebuffer)
+        ++mCurrentIterationFramebuffer;
 
     // Get result
     const float* data_ptr = getFramebuffer(0);
@@ -329,6 +336,10 @@ void Runtime::compileShaders()
     for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
         const auto& variant = mTechniqueVariants[i];
         auto& shaders       = mTechniqueVariantShaderSets[i];
+
+        shaders.Width           = variant.Width;
+        shaders.Height          = variant.Height;
+        shaders.LockFramebuffer = variant.LockFramebuffer;
 
         IG_LOG(L_DEBUG) << "Handling technique variant " << i << std::endl;
         IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;

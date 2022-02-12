@@ -4,9 +4,9 @@ struct Device {
     generate_rays: fn (RayEmitter, &mut i32, i32, i32, i32, i32, i32, i32) -> i32, 
     present:       fn () -> (),
 
-    handle_miss_shader:            fn (PathTracer, i32, i32, i32) -> (), 
-    handle_hit_shader:             fn (i32, Shader, Scene, PathTracer, i32, i32, i32) -> (),
-    handle_advanced_shadow_shader: fn (PathTracer, i32, i32, i32, bool) -> (), 
+    handle_miss_shader:            fn (PathTracer, i32, i32, i32, bool) -> (), 
+    handle_hit_shader:             fn (i32, Shader, Scene, PathTracer, i32, i32, i32, bool) -> (),
+    handle_advanced_shadow_shader: fn (PathTracer, i32, i32, i32, bool, bool) -> (), 
     
     parallel_range: fn (fn (i32) -> ()) -> fn (i32, i32) -> (),
 
@@ -21,7 +21,7 @@ struct Device {
     load_aov_image:      fn (i32, i32) -> AOVImage,
     load_host_buffer:    fn (&[u8]) -> DeviceBuffer,
     load_buffer:         fn (&[u8]) -> DeviceBuffer,
-    request_buffer:      fn (&[u8], i32 /* Size */, i32 /* Flags: 0x1 Clear always, 0x2 Clear only init */) -> DeviceBuffer,
+    request_buffer:      fn (&[u8], i32 /* Size in units!! */, i32 /* Flags: 0x1 Clear always, 0x2 Clear only init */) -> DeviceBuffer,
 
     load_rays: fn () -> &[StreamRay]
 }

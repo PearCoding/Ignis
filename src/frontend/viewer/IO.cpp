@@ -74,8 +74,8 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime)
 {
     size_t width  = runtime.loadedRenderSettings().FilmWidth;
     size_t height = runtime.loadedRenderSettings().FilmHeight;
-    float scale   = 1.0f / runtime.currentIterationCount();
-    if (runtime.currentIterationCount() == 0)
+    float scale   = 1.0f / runtime.currentIterationCountForFramebuffer();
+    if (runtime.currentIterationCountForFramebuffer() == 0)
         scale = 0;
 
     size_t aov_count = runtime.aovs().size() + 1;

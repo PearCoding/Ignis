@@ -19,6 +19,10 @@ struct TechniqueVariantBase {
     T AdvancedShadowHitShader;
     T AdvancedShadowMissShader;
     std::array<T, (size_t)CallbackType::_COUNT> CallbackShaders{};
+
+    int Width            = -1;
+    int Height           = -1;
+    bool LockFramebuffer = false;
 };
 
 using TechniqueVariant          = TechniqueVariantBase<std::string>;

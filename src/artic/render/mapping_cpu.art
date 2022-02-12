@@ -284,12 +284,12 @@ fn @cpu_generate_rays_handler(size: i32
                             , ymax: i32
                             , spp: i32
                             , vector_width: i32) -> i32 {
-    let (_, film_width, film_height) = cpu_get_film_data();
+    let (work_width, work_height) = get_work_info();
 
     let mut primary : PrimaryStream;
     ignis_cpu_get_primary_stream(&mut primary, capacity);
     primary.size = size;
-    cpu_generate_rays(primary, capacity, emitter, id, xmin, ymin, xmax, ymax, film_width, film_height, spp, vector_width)
+    cpu_generate_rays(primary, capacity, emitter, id, xmin, ymin, xmax, ymax, work_width, work_height, spp, vector_width)
 }
 
 fn @cpu_traverse_primary(scene: SceneGeometry, min_max: MinMax, primary: &PrimaryStream, single: bool, vector_width: i32) -> () {
@@ -397,7 +397,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
     $cpu_shade_specialized(entity_id, primary, secondary, begin, end);
 }
 
-fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tracer: PathTracer, begin: i32, end: i32, spp: i32, vector_width: i32) -> () {
+fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tracer: PathTracer, begin: i32, end: i32, spp: i32, use_framebuffer: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut primary : PrimaryStream;
@@ -405,7 +405,8 @@ fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tra
     let mut secondary : SecondaryStream;
     ignis_cpu_get_secondary_stream_const(&mut secondary);
 
-    cpu_hit_shade(entity_id, primary, secondary, shader, scene, path_tracer, cpu_make_accumulator(film_pixels, spp), begin, end, vector_width);
+    let accumulator = if !use_framebuffer { cpu_make_null_accumulator() } else { cpu_make_accumulator(film_pixels, spp) };
+    cpu_hit_shade(entity_id, primary, secondary, shader, scene, path_tracer, accumulator, begin, end, vector_width);
 }
 
 fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
@@ -444,12 +445,14 @@ fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate:
     $cpu_miss_shade_specialized(primary, begin, end);
 }
 
-fn @cpu_miss_shade_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i32, vector_width: i32) -> () {
+fn @cpu_miss_shade_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i32, use_framebuffer: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut primary : PrimaryStream;
     ignis_cpu_get_primary_stream_const(&mut primary);
-    cpu_miss_shade(primary, path_tracer, cpu_make_accumulator(film_pixels, spp), begin, end, vector_width);
+
+    let accumulator = if !use_framebuffer { cpu_make_null_accumulator() } else { cpu_make_accumulator(film_pixels, spp) };
+    cpu_miss_shade(primary, path_tracer, accumulator, begin, end, vector_width);
 }
 
 fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: PathTracer, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
@@ -489,13 +492,14 @@ fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: 
     $cpu_advanced_shadow_specialized(secondary, begin, end);
 }
 
-fn @cpu_advanced_shadow_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i32, is_hit: bool, vector_width: i32) -> () {
+fn @cpu_advanced_shadow_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut secondary : SecondaryStream;
     ignis_cpu_get_secondary_stream_const(&mut secondary);
 
-    cpu_advanced_shadow(is_hit, secondary, path_tracer, cpu_make_accumulator(film_pixels, spp), begin, end, vector_width);
+    let accumulator = if !use_framebuffer { cpu_make_null_accumulator() } else { cpu_make_accumulator(film_pixels, spp) };
+    cpu_advanced_shadow(is_hit, secondary, path_tracer, accumulator, begin, end, vector_width);
 }
 
 fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
@@ -504,6 +508,13 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     let mut film_height : i32;
     ignis_get_film_data(0, &mut film_pixels, &mut film_width, &mut film_height);
     (film_pixels, film_width, film_height)
+}
+
+fn @get_work_info() -> (i32, i32) {
+    let mut work_width  : i32;
+    let mut work_height : i32;
+    ignis_get_work_info(&mut work_width, &mut work_height);
+    (work_width, work_height)
 }
 
 fn @cpu_get_aov_image(id: i32, spp: i32) -> AOVImage {
@@ -550,6 +561,10 @@ fn @cpu_make_accumulator(film_pixels: &mut [f32], spp: i32) -> CPUAccumulator {
     }
 }
 
+fn @cpu_make_null_accumulator() -> CPUAccumulator {
+    @|_pixel: i32, _color: Color| -> () { }
+}
+
 fn @cpu_get_stream_capacity(spp: i32, tile_size: i32) = spp * tile_size * tile_size;
 
 fn @cpu_trace( scene: SceneGeometry
@@ -562,11 +577,13 @@ fn @cpu_trace( scene: SceneGeometry
              , vector_width: i32
              , vector_compact: bool
              ) -> () {
-    let (film_pixels, film_width, film_height) = cpu_get_film_data();
+    let (film_pixels, _film_width, _film_height) = cpu_get_film_data();
+    let (work_width, work_height)                = get_work_info();
 
     let accumulate = cpu_make_accumulator(film_pixels, spp);
 
-    let has_advanced_shadow = ignis_use_advanced_shadow_handling();
+    let has_advanced_shadow   = ignis_use_advanced_shadow_handling();
+    let is_framebuffer_locked = ignis_is_framebuffer_locked();
 
     let mut primary_counter = 0:i64;
     let mut bounces_counter = 0:i64;
@@ -574,7 +591,7 @@ fn @cpu_trace( scene: SceneGeometry
     let mut shading_counter = 0:i64;
     let mut total_counter   = 0:i64;
     let mut total_rays      = 0:i64;
-    for xmin, ymin, xmax, ymax in cpu_parallel_tiles(film_width, film_height, tile_size, tile_size, num_cores) {
+    for xmin, ymin, xmax, ymax in cpu_parallel_tiles(work_width, work_height, tile_size, tile_size, num_cores) {
         cpu_profile(&mut total_counter, || {
             // Get ray streams/states from the CPU driver
             let mut primary   : PrimaryStream;
@@ -650,17 +667,19 @@ fn @cpu_trace( scene: SceneGeometry
                             pipeline.on_advanced_shadow(hit_start, secondary.size, true);
                         }
                     } else {
-                        for i in range(0, secondary.size) {
-                            if secondary.prim_id(i) < 0 {
-                                let j = secondary.rays.id(i);
-                                accumulate(j,
-                                    make_color(
-                                        secondary.color_r(i),
-                                        secondary.color_g(i),
-                                        secondary.color_b(i),
-                                        1
-                                    )
-                                );
+                        if !is_framebuffer_locked {    
+                            for i in range(0, secondary.size) {
+                                if secondary.prim_id(i) < 0 {
+                                    let j = secondary.rays.id(i);
+                                    accumulate(j,
+                                        make_color(
+                                            secondary.color_r(i),
+                                            secondary.color_g(i),
+                                            secondary.color_b(i),
+                                            1
+                                        )
+                                    );
+                                }
                             }
                         }
                     }
@@ -769,10 +788,10 @@ fn @make_cpu_buffer(p: &[u8], count: i32) = DeviceBuffer {
 };
 
 fn @load_cpu_buffer(filename: &[u8]) {
-    let mut ptr  : &[u8];
-    let mut size : i32;
-    ignis_load_buffer(0, filename, &mut ptr, &mut size);
-    make_cpu_buffer(ptr, (size as i64 / sizeof[i32]()) as i32)
+    let mut ptr      : &[u8];
+    let mut bytesize : i32;
+    ignis_load_buffer(0, filename, &mut ptr, &mut bytesize);
+    make_cpu_buffer(ptr, (bytesize as i64 / sizeof[i32]()) as i32)
 }
 
 fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_width: i32, num_cores: i32, tile_size: i32) = Device {
@@ -792,14 +811,14 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     generate_rays = @ | emitter, id, size, xmin, ymin, xmax, ymax, spp | -> i32 {
         cpu_generate_rays_handler(size, @cpu_get_stream_capacity(spp, tile_size), emitter, id, xmin, ymin, xmax, ymax, spp, vector_width)
     },
-    handle_miss_shader = @ | path_tracer, first, last, spp | {
-        cpu_miss_shade_handler(path_tracer, first, last, spp, vector_width);
+    handle_miss_shader = @ | path_tracer, first, last, spp, use_framebuffer | {
+        cpu_miss_shade_handler(path_tracer, first, last, spp, use_framebuffer, vector_width);
     },
-    handle_hit_shader = @ | entity_id, shader, scene, path_tracer, first, last, spp | {
-        cpu_hit_shade_handler(entity_id, shader, scene, path_tracer, first, last, spp, vector_width);
+    handle_hit_shader = @ | entity_id, shader, scene, path_tracer, first, last, spp, use_framebuffer | {
+        cpu_hit_shade_handler(entity_id, shader, scene, path_tracer, first, last, spp, use_framebuffer, vector_width);
     },
-    handle_advanced_shadow_shader = @ | path_tracer, first, last, spp, is_hit | {
-        cpu_advanced_shadow_handler(path_tracer, first, last, spp, is_hit, vector_width);
+    handle_advanced_shadow_shader = @ | path_tracer, first, last, spp, use_framebuffer, is_hit | {
+        cpu_advanced_shadow_handler(path_tracer, first, last, spp, use_framebuffer, is_hit, vector_width);
     },
     present = @ || ignis_present(0),
     parallel_range = @ |body| {
@@ -866,8 +885,8 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     load_buffer = load_cpu_buffer,
     request_buffer = @ |name, size, flags| {
         let mut ptr : &[u8];
-        ignis_request_buffer(0, name, &mut ptr, size, flags);
-        make_cpu_buffer(ptr, (size as i64 / sizeof[i32]()) as i32)
+        ignis_request_buffer(0, name, &mut ptr, size * sizeof[i32]() as i32, flags);
+        make_cpu_buffer(ptr, size)
     }
 };
 

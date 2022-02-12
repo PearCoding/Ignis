@@ -49,6 +49,10 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         const auto& info            = ctx.TechniqueInfo.Variants[i];
         ctx.CurrentTechniqueVariant = i;
 
+        variant.Width           = info.OverrideWidth;
+        variant.Height          = info.OverrideHeight;
+        variant.LockFramebuffer = info.LockFramebuffer;
+
         // Generate Ray Generation Shader
         if (info.OverrideCameraGenerator)
             variant.RayGenerationShader = info.OverrideCameraGenerator(ctx);
