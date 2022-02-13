@@ -604,6 +604,8 @@ struct Interface {
             return getFilmImage(dev);
 
         int32_t index = id - 1;
+        IG_ASSERT(index < aovs.size(), "AOV index out of bounds!");
+
         if (dev != 0) {
             auto& device = devices[dev];
             if (device.aovs.size() != aovs.size())
@@ -623,7 +625,7 @@ struct Interface {
 
     inline void present(int32_t dev)
     {
-        for (size_t id = 0; id < aovs.size(); ++id)
+        for (size_t id = 0; id < devices[dev].aovs.size(); ++id)
             anydsl::copy(devices[dev].aovs[id], aovs[id]);
 
         anydsl::copy(devices[dev].film_pixels, host_pixels);
