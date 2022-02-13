@@ -381,7 +381,7 @@ int main(int argc, char** argv)
                 }
 
                 if (iter == 0)
-                    runtime->clearFramebuffer();
+                    runtime->reset();
 
                 auto ticks = std::chrono::high_resolution_clock::now();
 
@@ -441,7 +441,7 @@ int main(int argc, char** argv)
 
 #ifdef WITH_UI
         timer_ui.start();
-        ui->update(iter, SPI);
+        ui->update(runtime->currentIterationCountForFramebuffer(), SPI);
         timer_ui.stop();
 #endif
     }

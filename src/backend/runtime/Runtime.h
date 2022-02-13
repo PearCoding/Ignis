@@ -49,6 +49,7 @@ public:
     void setup();
     void step(const Camera& camera);
     void trace(const std::vector<Ray>& rays, std::vector<float>& data);
+    void reset();
 
     const float* getFramebuffer(int aov = 0) const;
     // aov<0 will clear all aovs

@@ -529,6 +529,9 @@ public:
 
     void updateSurface(uint32_t iter)
     {
+        if (iter == 0)
+            iter = 1;
+
         const float* film = Parent->currentPixels();
         auto inv_iter     = 1.0f / iter;
         auto inv_gamma    = 1.0f / 2.2f;
@@ -548,17 +551,17 @@ public:
 #ifdef CULL_BAD_COLOR
             if (std::isinf(xyY.b)) {
 #ifdef CATCH_BAD_COLOR
-                buf[ind] = RGB_C(255, 0, 150); //Pink
+                buf[ind] = RGB_C(255, 0, 150); // Pink
 #endif
                 return;
             } else if (std::isnan(xyY.b)) {
 #ifdef CATCH_BAD_COLOR
-                buf[ind] = RGB_C(0, 255, 255); //Cyan
+                buf[ind] = RGB_C(0, 255, 255); // Cyan
 #endif
                 return;
             } else if (xyY.r < 0.0f || xyY.g < 0.0f || xyY.b < 0.0f) {
 #ifdef CATCH_BAD_COLOR
-                buf[ind] = RGB_C(255, 255, 0); //Orange
+                buf[ind] = RGB_C(255, 255, 0); // Orange
 #endif
                 return;
             }
@@ -870,7 +873,7 @@ UI::UI(int width, int height, const std::vector<const float*>& aovs, const std::
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // if enabled -> ImGuiKey_Space has to be mapped
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // if enabled -> ImGuiKey_Space has to be mapped
     ImGui::StyleColorsDark();
 
     ImGuiSDL::Initialize(mInternal->Renderer, width, height);

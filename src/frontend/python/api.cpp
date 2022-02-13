@@ -72,6 +72,7 @@ PYBIND11_MODULE(pyignis, m)
             r.trace(rays, data);
             return data;
         })
+        .def("reset", &Runtime::reset)
         .def("getFramebuffer", [](const Runtime& r, uint32 aov) {
             const size_t width  = r.loadedRenderSettings().FilmWidth;
             const size_t height = r.loadedRenderSettings().FilmHeight;
@@ -83,5 +84,6 @@ PYBIND11_MODULE(pyignis, m)
         })
         .def("clearFramebuffer", &Runtime::clearFramebuffer)
         .def_property_readonly("iterationCount", &Runtime::currentIterationCount)
+        .def_property_readonly("iterationCountForFramebuffer", &Runtime::currentIterationCountForFramebuffer)
         .def_property_readonly("loadedRenderSettings", &Runtime::loadedRenderSettings);
 }

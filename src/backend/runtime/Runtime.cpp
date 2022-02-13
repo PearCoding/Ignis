@@ -299,6 +299,12 @@ void Runtime::clearFramebuffer(int aov)
     return mLoadedInterface.ClearFramebufferFunction(aov);
 }
 
+void Runtime::reset() {
+    clearFramebuffer();
+    mCurrentIteration = 0;
+    mCurrentIterationFramebuffer = 0;
+}
+
 const Statistics* Runtime::getStatistics() const
 {
     return mAcquireStats ? mLoadedInterface.GetStatisticsFunction() : nullptr;
@@ -374,6 +380,7 @@ void Runtime::compileShaders()
             if (variant.CallbackShaders[i].empty()) {
                 shaders.CallbackShaders[i] = nullptr;
             } else {
+                IG_LOG(L_DEBUG) << "Compiling callback shader [" << i << "]" << std::endl;
                 const std::filesystem::path asm_ = " v" + std::to_string(i) + "_callbackFull" + std::to_string(i) + ".art";
                 shaders.CallbackShaders[i]       = ig_compile_source(variant.CallbackShaders[i], "ig_callback_shader",
                                                                mOptions.DumpShaderFull ? &asm_ : nullptr);
