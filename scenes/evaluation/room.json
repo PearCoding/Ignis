@@ -1,4 +1,8 @@
 {
+	"technique": {
+		"type": "path",
+		"max_depth": 4
+	},
 	"camera": {
 		"type": "perspective",
 		"fov": 90,
@@ -9,7 +13,16 @@
 	"film": {
 		"size": [256, 256]
 	},
-	"externals": [
-    {"filename": "../room_no_window_data.json"}
-  ]
+	"bsdfs": [
+		{"type":"diffuse", "name": "room", "reflectance":[0.8, 0.8, 0.8]}
+	],
+	"shapes": [
+		{"type":"obj", "name":"Room", "filename":"../meshes/Room.obj"}
+	],
+	"entities": [
+		{"name":"Room","shape":"Room", "bsdf":"room"}
+	],
+	"lights": [
+		{"type":"constant", "name":"Sky", "radiance": [1,1,1]}
+	]
 }
