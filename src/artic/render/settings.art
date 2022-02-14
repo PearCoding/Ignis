@@ -1,14 +1,15 @@
 // General-purpose render settings
 struct Settings {
-    eye:          Vec3,
-    dir:          Vec3,
-    up:           Vec3,
-    right:        Vec3,
-    tmin:         f32,
-    tmax:         f32,
-    width:        f32,
-    height:       f32,
-    device:       i32,
-    spi:          i32,
-    debug_mode:   i32
+    eye:        Vec3,
+    dir:        Vec3,
+    up:         Vec3,
+    right:      Vec3,
+    tmin:       f32,
+    tmax:       f32,
+    width:      f32,
+    height:     f32,
+    device:     i32,
+    spi:        i32,
+    debug_mode: i32,
+    iter:       i32
 }

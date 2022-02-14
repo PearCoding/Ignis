@@ -670,7 +670,7 @@ struct Interface {
 
 static std::unique_ptr<Interface> sInterface;
 
-static Settings convert_settings(const DriverRenderSettings* settings)
+static Settings convert_settings(const DriverRenderSettings* settings, IG::uint32 iter)
 {
     Settings renderSettings;
     renderSettings.device  = settings->device;
@@ -691,6 +691,7 @@ static Settings convert_settings(const DriverRenderSettings* settings)
     renderSettings.right.z = settings->right[2];
     renderSettings.tmin    = settings->tmin;
     renderSettings.tmax    = settings->tmax;
+    renderSettings.iter    = (int)iter;
 
     renderSettings.debug_mode = settings->debug_mode;
 
@@ -699,7 +700,7 @@ static Settings convert_settings(const DriverRenderSettings* settings)
 
 void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
 {
-    Settings renderSettings = convert_settings(settings);
+    Settings renderSettings = convert_settings(settings, iter);
 
     sInterface->ray_list          = settings->rays;
     sInterface->current_iteration = iter;

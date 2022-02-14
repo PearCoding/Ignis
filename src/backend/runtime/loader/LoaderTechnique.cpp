@@ -1,6 +1,9 @@
 #include "LoaderTechnique.h"
 #include "Loader.h"
+#include "LoaderLight.h"
 #include "Logger.h"
+#include "ShaderUtils.h"
+#include "ShadingTree.h"
 #include "serialization/VectorSerializer.h"
 
 namespace IG {
@@ -103,6 +106,146 @@ static void path_header_loader(std::ostream& stream, const std::string&, const s
            << "fn init_raypayload() = wrap_ptraypayload(PTRayPayload { mis = 0, contrib = white, depth = 1, eta = 1 });" << std::endl;
 }
 
+/////////////////////////////////
+
+static std::string ppm_light_camera_generator(LoaderContext& ctx)
+{
+    std::stringstream stream;
+
+    stream << LoaderTechnique::generateHeader(ctx, true) << std::endl;
+
+    stream << "#[export] fn ig_ray_generation_shader(settings: &Settings, iter: i32, id: &mut i32, size: i32, xmin: i32, ymin: i32, xmax: i32, ymax: i32) -> i32 {" << std::endl
+           << "  maybe_unused(settings);" << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << std::endl;
+
+    stream << ShaderUtils::generateDatabase() << std::endl;
+
+    ShadingTree tree(ctx);
+    stream << LoaderLight::generate(tree, false) << std::endl;
+
+    stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
+    stream << "  let emitter = make_ppm_light_emitter(num_lights, lights, iter);" << std::endl;
+
+    stream << "  device.generate_rays(emitter, id, size, xmin, ymin, xmax, ymax, spp)" << std::endl
+           << "}" << std::endl;
+
+    return stream.str();
+}
+
+static std::string ppm_before_iteration_generator(LoaderContext& ctx)
+{
+    std::stringstream stream;
+
+    stream << LoaderTechnique::generateHeader(ctx, true) << std::endl;
+
+    stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
+           << "  maybe_unused(settings);" << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << std::endl;
+
+    stream << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
+           << "  ppm_handle_before_iteration(device, iter, " << ctx.CurrentTechniqueVariant << ", PPMPhotonCount, scene_bbox);" << std::endl
+           << "}" << std::endl;
+
+    return stream.str();
+}
+
+static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
+{
+    TechniqueInfo info;
+
+    // We got two passes. (0 -> Light Tracer, 1 -> Path Tracer with merging)
+    info.Variants.resize(2);
+    info.Variants[0].UsesLights = false; // LT makes no use of other lights (but starts on one)
+    info.Variants[1].UsesLights = true;  // Standard PT still use of lights in the miss shader
+
+    // To start from a light source, we do have to override the standard camera generator for LT
+    info.Variants[0].OverrideCameraGenerator = ppm_light_camera_generator;
+
+    // Each pass makes use of pre-iteration setups
+    info.Variants[0].CallbackGenerators[(int)CallbackType::BeforeIteration] = ppm_before_iteration_generator; // Reset light cache
+    info.Variants[1].CallbackGenerators[(int)CallbackType::BeforeIteration] = ppm_before_iteration_generator; // Construct query structure
+
+    // The standard approach is first LT, then PT, repeat
+    static auto variantSelector = [](uint32 iter) { return iter % 2; };
+    info.VariantSelector        = variantSelector;
+
+    // The LT works independent of the framebuffer and requires a different work size
+    const int max_photons           = technique ? technique->property("photons").getInteger(1000000) : 1000000;
+    info.Variants[0].OverrideWidth  = max_photons; // Photon count
+    info.Variants[0].OverrideHeight = 1;
+
+    info.Variants[0].LockFramebuffer = true; // We do not change the framebuffer
+
+    // Check if we have a proper defined technique
+    // It is totally fine to only define the type by other means then the scene config
+    if (technique) {
+        if (technique->property("aov").getBool(false)) {
+            info.EnabledAOVs.push_back("Direct Weights");
+            info.EnabledAOVs.push_back("Merging Weights");
+        }
+    }
+
+    return info;
+}
+
+static void ppm_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
+{
+    const int max_depth = technique ? technique->property("max_depth").getInteger(8) : 8;
+    const float radius  = technique ? technique->property("radius").getNumber(0.01f) : 0.01f; // It is better to base it on some automatic metric
+    bool is_lighttracer = ctx.CurrentTechniqueVariant == 0;
+
+    if (is_lighttracer) {
+        stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
+               << "    match(id) {" << std::endl
+               << "      _ => make_empty_aov_image()" << std::endl
+               << "    }" << std::endl
+               << "  };" << std::endl;
+    } else {
+        const bool hasAOV = technique ? technique->property("aov").getBool(false) : false;
+
+        size_t counter = 1;
+        if (hasAOV) {
+            stream << "  let aov_di   = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
+            stream << "  let aov_merg = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
+        }
+
+        stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
+               << "    match(id) {" << std::endl;
+
+        if (hasAOV) {
+            stream << "      1 => aov_di," << std::endl
+                   << "      2 => aov_merg," << std::endl;
+        }
+
+        stream << "      _ => make_empty_aov_image()" << std::endl
+               << "    }" << std::endl
+               << "  };" << std::endl;
+
+        stream << "  let ppm_radius = ppm_compute_radius(" << radius << ", settings.iter);" << std::endl;
+    }
+
+    stream << "  let scene_bbox  = " << ShaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
+           << "  let light_cache = make_ppm_lightcache(device, PPMPhotonCount, scene_bbox);" << std::endl;
+
+    if (is_lighttracer)
+        stream << "  let technique = make_ppm_light_renderer(" << max_depth << ", aovs, light_cache);" << std::endl;
+    else
+        stream << "  let technique = make_ppm_path_renderer(" << max_depth << ", num_lights, lights, ppm_radius, aovs, light_cache);" << std::endl;
+}
+
+static void ppm_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
+{
+    constexpr int C                   = 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */ + 1 /* Light/Radius */;
+    const size_t max_photons          = std::max(100, technique ? technique->property("photons").getInteger(1000000) : 1000000);
+    const size_t max_photons_per_iter = max_photons * ctx.SamplesPerIteration; // This can be very large
+
+    stream << "static RayPayloadComponents = " << C << ";" << std::endl
+           << "fn init_raypayload() = wrap_ppmraypayload(PPMRayPayload { contrib = white, depth = 1, eta = 1, radius_or_light = 0 });" << std::endl
+           << "static PPMPhotonCount = " << max_photons_per_iter << ":i32;" << std::endl;
+}
+
 // Will return information about the enabled AOVs
 using TechniqueGetInfo = TechniqueInfo (*)(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
 
@@ -121,6 +264,8 @@ static struct TechniqueEntry {
     { "ao", technique_empty_get_info, ao_body_loader, technique_empty_header_loader },
     { "path", path_get_info, path_body_loader, path_header_loader },
     { "debug", technique_empty_get_info, debug_body_loader, technique_empty_header_loader },
+    { "ppm", ppm_get_info, ppm_body_loader, ppm_header_loader },
+    { "photonmapper", ppm_get_info, ppm_body_loader, ppm_header_loader },
     { "", nullptr, nullptr, nullptr }
 };
 
