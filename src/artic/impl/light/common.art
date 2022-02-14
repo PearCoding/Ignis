@@ -32,11 +32,12 @@ fn @make_directional_light(dir: Vec3, scene_bbox: BBox, color: Color) -> Light {
         sample_direct = @ |_, _| {
             make_direct_sample(dir, color, 1, 1, 1)
         },
-        sample_emission = @ |_| {
-            make_emission_sample(vec3_add(bbox_center(scene_bbox), vec3_mulf(dir, scene_radius)), vec3_neg(dir), color, 1, 1, 1)
+        sample_emission = @ |rnd| {
+            let (pos, pos_pdf) = env_sample_pos(rnd, dir, bbox_center(scene_bbox), scene_radius);
+            make_emission_sample(pos, vec3_neg(dir), color, pos_pdf, 1, 1)
         },
         emission = @ |_, _| make_emission_value(black, 1, 1),
         delta    = true,
         infinite = true
-}
+    }
 }

@@ -2,22 +2,18 @@ fn @make_sun_light(dir: Vec3, scene_bbox: BBox, sun_radius: f32, color: Color) -
     let scene_radius = bbox_radius(scene_bbox) * 1.01;
     Light {
         sample_direct = @ |rnd, _| {
-            let u = randf(rnd);
-            let v = randf(rnd);
-            let sample = sample_uniform_disk(u, v, sun_radius);
+            let sample = sample_uniform_disk(randf(rnd), randf(rnd), sun_radius);
             let ndir = vec3_normalize(mat3x3_mul(make_orthonormal_mat3x3(dir), sample.pos));
             make_direct_sample(ndir, color, 1.0, sample.pdf, 1.0)
         },
         sample_emission = @ |rnd| {
-            let u = randf(rnd);
-            let v = randf(rnd);
-            let sample = sample_uniform_disk(u, v, sun_radius);
-            let ndir   = vec3_normalize(mat3x3_mul(make_orthonormal_mat3x3(dir), sample.pos));
-            make_emission_sample(vec3_add(bbox_center(scene_bbox), vec3_mulf(dir, scene_radius)), vec3_neg(ndir), color, 1.0, sample.pdf, 1.0)
+            let sample         = sample_uniform_disk(randf(rnd), randf(rnd), sun_radius);
+            let ndir           = vec3_normalize(mat3x3_mul(make_orthonormal_mat3x3(dir), sample.pos));
+            let (pos, pos_pdf) = env_sample_pos(rnd, ndir, bbox_center(scene_bbox), scene_radius);
+            make_emission_sample(pos, vec3_neg(ndir), color, pos_pdf, sample.pdf, 1.0)
         },
         emission = @ |_, _| make_emission_value(black, 1, 1),
         delta    = true,
         infinite = true
     }
 }
-
