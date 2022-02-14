@@ -47,10 +47,17 @@ std::string ShaderUtils::generateDatabase()
     return stream.str();
 }
 
-std::string ShaderUtils::generateSceneInfoInline(const LoaderContext& ctx)
+std::string ShaderUtils::inlineSceneInfo(const LoaderContext& ctx)
 {
     std::stringstream stream;
     stream << "SceneInfo { num_entities = " << ctx.Environment.EntityIDs.size() << " }";
+    return stream.str();
+}
+
+std::string ShaderUtils::inlineSceneBBox(const LoaderContext& ctx)
+{
+    std::stringstream stream;
+    stream << "make_bbox(" << ShaderUtils::inlineVector(ctx.Environment.SceneBBox.min) << ", " << ShaderUtils::inlineVector(ctx.Environment.SceneBBox.max) << ")";
     return stream.str();
 }
 

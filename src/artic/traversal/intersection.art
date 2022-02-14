@@ -63,11 +63,6 @@ struct Tri {
     n:  Vec3           // Geometric normal (= cross(e1, e2))
 }
 
-struct BBox {
-    min: Vec3,         // Minimum corner
-    max: Vec3          // Maximum corner
-}
-
 struct EntityLeaf {
     bbox      : BBox,   // Bounding box
     entity_id : i32, // Entity ID
@@ -160,19 +155,12 @@ fn @make_tri(v0: Vec3, e1: Vec3, e2: Vec3, n: Vec3) = Tri {
     n  = n
 };
 
-fn @make_bbox(min: Vec3, max: Vec3) = BBox {
-    min = min,
-    max = max
-};
-
 fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, local: Mat3x4) = EntityLeaf {
     bbox      = bbox,
     entity_id = entity_id,
     shape_id  = shape_id,
     local     = local
 };
-
-fn @is_bbox_empty(bbox: BBox) = bbox.max.x < bbox.min.x || bbox.max.y < bbox.min.y || bbox.max.z < bbox.min.z;
 
 fn @ray_octant(ray: Ray) -> RayOctant {
     select(ray.dir.x > 0, 1, 0) |
@@ -181,10 +169,6 @@ fn @ray_octant(ray: Ray) -> RayOctant {
 }
 
 fn @empty_hit(tmax: f32) = make_hit(-1, -1, tmax, undef[Vec2]());
-
-fn @empty_bbox() = make_bbox(
-    make_vec3( flt_max,  flt_max,  flt_max),
-    make_vec3(-flt_max, -flt_max, -flt_max));
 
 fn @intersect_ray_tri_mt(backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
     let c = vec3_sub(tri.v0, ray.org);

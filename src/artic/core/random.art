@@ -99,7 +99,7 @@ fn @uniform_sphere_pdf() = 1 / (4 * flt_pi);
 // Samples a direction uniformly on a sphere
 fn @sample_uniform_sphere(u: f32, v: f32) -> DirSample {
     let c = 2 * v - 1;
-    let s = math_builtins::sqrt(1 - c * c);
+    let s = safe_sqrt(1 - c * c);
     let phi = 2 * flt_pi * u;
     make_dir_sample(c, s, phi, uniform_sphere_pdf())
 }

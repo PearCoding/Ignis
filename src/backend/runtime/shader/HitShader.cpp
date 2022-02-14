@@ -32,7 +32,7 @@ std::string HitShader::setup(int entity_id, LoaderContext& ctx)
     }
 
     stream << "  let acc  = SceneAccessor {" << std::endl
-           << "    info     = " << ShaderUtils::generateSceneInfoInline(ctx) << "," << std::endl
+           << "    info     = " << ShaderUtils::inlineSceneInfo(ctx) << "," << std::endl
            << "    shapes   = shapes," << std::endl
            << "    entities = entities," << std::endl
            << "  };" << std::endl

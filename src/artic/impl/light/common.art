@@ -1,5 +1,5 @@
 fn @make_null_light() = Light {
-    sample_direct = @ |_, _| undef[DirectLightSample](),
+    sample_direct   = @ |_, _| undef[DirectLightSample](),
     sample_emission = @ |_| undef[EmissionSample](),
     emission = @ |_, _| make_emission_value(black, 1, 1),
     delta    = true,
@@ -25,14 +25,18 @@ fn @make_point_light(pos: Vec3, color: Color) = Light {
 };
 
 //-------------------------------------------
-fn @make_directional_light(dir: Vec3, max_radius: f32, color: Color) = Light {
-    sample_direct = @ |_, _| {
-        make_direct_sample(dir, color, 1, 1, 1)
-    },
-    sample_emission = @ |_| {
-        make_emission_sample(vec3_mulf(dir, max_radius), dir, color, 1, 1, 1)
-    },
-    emission = @ |_, _| make_emission_value(black, 1, 1),
-    delta    = true,
-    infinite = true
-};
+fn @make_directional_light(dir: Vec3, scene_bbox: BBox, color: Color) -> Light {
+    let scene_radius = bbox_radius(scene_bbox) * 1.01;
+
+    Light {
+        sample_direct = @ |_, _| {
+            make_direct_sample(dir, color, 1, 1, 1)
+        },
+        sample_emission = @ |_| {
+            make_emission_sample(vec3_add(bbox_center(scene_bbox), vec3_mulf(dir, scene_radius)), vec3_neg(dir), color, 1, 1, 1)
+        },
+        emission = @ |_, _| make_emission_value(black, 1, 1),
+        delta    = true,
+        infinite = true
+}
+}

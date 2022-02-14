@@ -1,0 +1,20 @@
+struct BBox {
+    min: Vec3, // Minimum corner
+    max: Vec3  // Maximum corner
+}
+
+fn @make_bbox(min: Vec3, max: Vec3) = BBox {
+    min = min,
+    max = max
+};
+
+fn @empty_bbox() = make_bbox(
+    make_vec3( flt_max,  flt_max,  flt_max),
+    make_vec3(-flt_max, -flt_max, -flt_max));
+
+fn @is_bbox_empty(bbox: BBox) = bbox.max.x < bbox.min.x || bbox.max.y < bbox.min.y || bbox.max.z < bbox.min.z;
+
+fn @bbox_size(bbox: BBox)    = vec3_sub(bbox.max, bbox.min);
+fn @bbox_center(bbox: BBox)  = vec3_add(bbox.min, vec3_mulf(bbox_size(bbox), 0.5));
+fn @bbox_radius2(bbox: BBox) = vec3_len2(bbox_size(bbox)) / 4;
+fn @bbox_radius(bbox: BBox)  = vec3_len(bbox_size(bbox)) / 2;

@@ -940,6 +940,7 @@ static void handleHelp()
 - *F11* to save a snapshot of the current rendering. HDR information will be preserved.
   Use with *Strg/Ctrl* to make a LDR screenshot of the current render including UI and tonemapping.  
   The image will be saved in the current working directory.
+- *I* to toggle the inspector tool.
 - *R* to reset to initial view.
 - *P* to pause current rendering. Also implies an interaction lock.
 - *T* to toggle automatic tonemapping.

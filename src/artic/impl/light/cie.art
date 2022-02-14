@@ -1,6 +1,6 @@
 // Note: groundBrightness is the same as gensky ... -b (x/0.2) in gensky as gensky makes use of the constant gprefl=0.2!
-fn @make_cie_sky_light(max_radius: f32, zenith: Color, ground: Color, groundBrightness: f32, cloudy: bool, has_ground: bool, transform: Mat3x3) =
-    make_environment_light_function(max_radius, @|dir|{
+fn @make_cie_sky_light(scene_bbox: BBox, zenith: Color, ground: Color, groundBrightness: f32, cloudy: bool, has_ground: bool, transform: Mat3x3) =
+    make_environment_light_function(scene_bbox, @|dir|{
         let cos_theta = -dir.y;
         if !has_ground && cos_theta < 0 { return(black) }
 
@@ -13,8 +13,8 @@ fn @make_cie_sky_light(max_radius: f32, zenith: Color, ground: Color, groundBrig
 }, transform);
 
 //-------------------------------------------
-fn @make_perez_light(max_radius: f32, sun_dir: Vec3, lum: Color, a: f32, b: f32, c: f32, d: f32, e: f32, transform: Mat3x3)  =
-    make_environment_light_function(max_radius, @|dir|{
+fn @make_perez_light(scene_bbox: BBox, f32, sun_dir: Vec3, lum: Color, a: f32, b: f32, c: f32, d: f32, e: f32, transform: Mat3x3)  =
+    make_environment_light_function(scene_bbox, @|dir|{
         let cos_theta = -dir.y;                     // Cosine between zenith and direction
         let sun_c     = vec3_dot(dir, sun_dir);     // Cosine between sun and direction
         let sun_a     = math_builtins::acos(sun_c); // Angle between sun and direction
