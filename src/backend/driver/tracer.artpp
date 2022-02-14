@@ -1,4 +1,4 @@
-static RayPayloadComponents = 0;
+static RayPayloadComponents = MaxRayPayloadComponents;
 
 #[export]
 fn ig_render(settings: &Settings) -> () {

@@ -121,7 +121,6 @@ fn @make_primary_stream_payload_reader(primary: PrimaryStream, vector_width: i32
 
         let mut payload : RayPayload;
 
-        // TODO: Fix slow loads/stores
         for c in unroll(0, RayPayloadComponents) {
             payload.components(c) = primary.user(c)(k);
         }
@@ -134,7 +133,6 @@ fn @make_primary_stream_payload_writer(primary: PrimaryStream, vector_width: i32
     @ |i, j, payload| {
         let k = i * vector_width + j;
 
-        // TODO: Fix slow loads/stores
         for c in unroll(0, RayPayloadComponents) {
             primary.user(c)(k) = payload.components(c);
         }

@@ -13,9 +13,7 @@ fn @make_point_light(pos: Vec3, color: Color) = Light {
         make_direct_sample(pos, intensity, 1, uniform_sphere_pdf(), 1)
     },
     sample_emission = @ |rnd| {
-        let u = randf(rnd);
-        let v = randf(rnd);
-        let sample = sample_uniform_sphere(u, v);
+        let sample    = sample_uniform_sphere(randf(rnd), randf(rnd));
         let intensity = color_mulf(color, 1 / (4 * flt_pi));
         make_emission_sample(pos, sample.dir, intensity, 1, sample.pdf, 1)
     },

@@ -13,6 +13,7 @@ fn @color_sub(a: Color, b: Color)  = make_color(a.r - b.r, a.g - b.g, a.b - b.b,
 fn @color_diff(a: Color, b: Color) = make_color(math_builtins::fabs(a.r - b.r), math_builtins::fabs(a.g - b.g), math_builtins::fabs(a.b - b.b), math_builtins::fabs(a.a - b.a));
 fn @color_mul(a: Color, b: Color)  = make_color(a.r * b.r, a.g * b.g, a.b * b.b, a.a * b.a);
 fn @color_mulf(c: Color, f: f32)   = make_color(c.r * f, c.g * f, c.b * f, c.a * f);
+fn @color_divf(c: Color, f: f32)   = make_color(c.r / f, c.g / f, c.b / f, c.a / f);
 fn @color_lerp(a: Color, b: Color, t: f32) = make_color(
     (1 - t) * a.r + t * b.r,
     (1 - t) * a.g + t * b.g,

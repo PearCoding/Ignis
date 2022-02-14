@@ -30,7 +30,7 @@ fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     r.components(1) = payload.contrib.r;
     r.components(2) = payload.contrib.g;
     r.components(3) = payload.contrib.b;
-    r.components(4) = bitcast[f32](payload.depth);
+    r.components(4) = payload.depth as f32;
     r.components(5) = payload.eta;
     r
 }
@@ -38,7 +38,7 @@ fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
 fn unrap_ptraypayload(payload: RayPayload) = PTRayPayload {
     mis     = payload.components(0),
     contrib = make_color(payload.components(1), payload.components(2), payload.components(3), 1),
-    depth   = bitcast[i32](payload.components(4)),
+    depth   = payload.components(4) as i32,
     eta     = payload.components(5),
 };
 
@@ -64,7 +64,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
             return(Option[(Ray, Color)]::None)
         }
         
-        if unrap_ptraypayload(payload).depth + 1 >= max_path_len {
+        if unrap_ptraypayload(payload).depth + 1 > max_path_len {
             return(Option[(Ray, Color)]::None)
         }
 
@@ -140,7 +140,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
               , mat: Material
               ) -> Option[Color] {
         let pt = unrap_ptraypayload(payload);
-        if pt.depth == 0 {
+        if pt.depth == 1 {
             aov_normal.splat(pixel, make_color(math_builtins::fabs(surf.local.col(2).x),
                                                math_builtins::fabs(surf.local.col(2).y),
                                                math_builtins::fabs(surf.local.col(2).z),
@@ -212,7 +212,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         let out_dir = vec3_neg(ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
             let rr_prob = russian_roulette_pbrt(color_mulf(pt.contrib, pt.eta * pt.eta), 0.95);
-            if pt.depth + 1 >= max_path_len || randf(rnd) >= rr_prob {
+            if pt.depth + 1 > max_path_len || randf(rnd) >= rr_prob {
                 return(Option[(Ray, RayPayload)]::None)
             }
 
