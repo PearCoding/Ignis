@@ -1,6 +1,6 @@
 fn @get_accelerator() = nvvm_accelerator(0); // TODO: Maybe allow AMD?
 
-fn test_add_reduction() -> i32 {
+fn test_add_reduction_gpu() -> bool {
     let acc = get_accelerator();
     let tmp = acc.alloc(sizeof[i64]());
 
@@ -17,10 +17,10 @@ fn test_add_reduction() -> i32 {
     release(tmp);
 
     let result = (N as i64  - 1) * N as i64 / 2;
-    if value == result { 0 } else { 1 }
+    value == result
 }
 
-fn test_max_reduction() -> i32 {
+fn test_max_reduction_gpu() -> bool {
     let acc = get_accelerator();
     let tmp = acc.alloc(sizeof[f32]());
 
@@ -37,10 +37,10 @@ fn test_max_reduction() -> i32 {
     release(tmp);
 
     let result = (N-1) as f32;
-    if value == result { 0 } else { 1 }
+    value == result
 }
 
-fn test_add_reduction_cpu() -> i32 {
+fn test_add_reduction_cpu() -> bool {
     let N = 100000000;
     let value = cpu_reduce[i64](N, 
         @|i| i as i64,
@@ -48,15 +48,42 @@ fn test_add_reduction_cpu() -> i32 {
     );
 
     let result = (N as i64  - 1) * N as i64 / 2;
-    if value == result { 0 } else { 1 }
+    value == result
+}
+
+fn test_max_reduction_cpu() -> bool {
+    let N = 100000;
+    let value = cpu_reduce[f32](N, 
+        @|i| i as f32,
+        @|a, b| math_builtins::fmax(a, b),
+    );
+
+    let result = (N-1) as f32;
+    value == result
 }
 
 fn test_reduction() -> i32 { 
     let mut err = 0;
 
-    err += test_add_reduction();
-    err += test_max_reduction();
-    err += test_add_reduction_cpu();
+    if !test_add_reduction_gpu() {
+        ++err;
+        ignis_test_fail("GPU based reduction with the add operator fails!");
+    }
+
+    if !test_max_reduction_gpu() {
+        ++err;
+        ignis_test_fail("GPU based reduction with the max operator fails!");
+    }
+
+    if !test_add_reduction_cpu() {
+        ++err;
+        ignis_test_fail("CPU based reduction with the add operator fails!");
+    }
+
+    if !test_max_reduction_cpu() {
+        ++err;
+        ignis_test_fail("CPU based reduction with the max operator fails!");
+    }
 
     err
 }

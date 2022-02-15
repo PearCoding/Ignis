@@ -297,7 +297,7 @@ fn @cpu_traverse_secondary(scene: SceneGeometry, min_max: MinMax, secondary: &Se
     $cpu_traverse_secondary_specialized(scene, secondary);
 }
 
-fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: Shader, scene: Scene, path_tracer: PathTracer, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: Shader, scene: Scene, path_tracer: Technique, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_shade_specialized(entity_id2: i32, primary2: &PrimaryStream, secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -370,7 +370,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
     $cpu_shade_specialized(entity_id, primary, secondary, begin, end);
 }
 
-fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tracer: PathTracer, begin: i32, end: i32, spp: i32, use_framebuffer: bool, vector_width: i32) -> () {
+fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tracer: Technique, begin: i32, end: i32, spp: i32, use_framebuffer: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut primary : PrimaryStream;
@@ -382,7 +382,7 @@ fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tra
     cpu_hit_shade(entity_id, primary, secondary, shader, scene, path_tracer, accumulator, begin, end, vector_width);
 }
 
-fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: Technique, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_miss_shade_specialized(primary2: &PrimaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -418,7 +418,7 @@ fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate:
     $cpu_miss_shade_specialized(primary, begin, end);
 }
 
-fn @cpu_miss_shade_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i32, use_framebuffer: bool, vector_width: i32) -> () {
+fn @cpu_miss_shade_handler(path_tracer: Technique, begin: i32, end: i32, spp: i32, use_framebuffer: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut primary : PrimaryStream;
@@ -428,7 +428,7 @@ fn @cpu_miss_shade_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i
     cpu_miss_shade(primary, path_tracer, accumulator, begin, end, vector_width);
 }
 
-fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: PathTracer, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: Technique, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_advanced_shadow_specialized(secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -465,7 +465,7 @@ fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: 
     $cpu_advanced_shadow_specialized(secondary, begin, end);
 }
 
-fn @cpu_advanced_shadow_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
+fn @cpu_advanced_shadow_handler(path_tracer: Technique, begin: i32, end: i32, spp: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut secondary : SecondaryStream;
@@ -802,6 +802,8 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             }
         }
     },
+    parallel_reduce_i32 = @|n, elem, op| cpu_reduce[i32](n, elem, op),
+    parallel_reduce_f32 = @|n, elem, op| cpu_reduce[f32](n, elem, op),
     load_scene_bvh = @ || {
         if vector_width == 8 {
             let mut nodes: &[Node8];

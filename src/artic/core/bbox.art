@@ -8,11 +8,11 @@ fn @make_bbox(min: Vec3, max: Vec3) = BBox {
     max = max
 };
 
-fn @empty_bbox() = make_bbox(
+fn @make_empty_bbox() = make_bbox(
     make_vec3( flt_max,  flt_max,  flt_max),
     make_vec3(-flt_max, -flt_max, -flt_max));
 
-fn @is_bbox_empty(bbox: BBox) = bbox.max.x < bbox.min.x || bbox.max.y < bbox.min.y || bbox.max.z < bbox.min.z;
+fn @bbox_is_empty(bbox: BBox) = bbox.max.x < bbox.min.x || bbox.max.y < bbox.min.y || bbox.max.z < bbox.min.z;
 
 fn @bbox_size(bbox: BBox)    = vec3_sub(bbox.max, bbox.min);
 fn @bbox_center(bbox: BBox)  = vec3_add(bbox.min, vec3_mulf(bbox_size(bbox), 0.5));

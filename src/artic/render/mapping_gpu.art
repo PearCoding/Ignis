@@ -101,7 +101,7 @@ fn @gpu_hit_shade( acc: Accelerator
              , atomics: Atomics
              , shader: Shader
              , scene: Scene
-             , path_tracer: PathTracer
+             , path_tracer: Technique
              , film_pixels: &mut [f32]
              , spp: i32
              , use_framebuffer: bool
@@ -175,7 +175,7 @@ fn @gpu_hit_shade_handler(dev_id: i32
                         , entity_id: i32
                         , shader: Shader
                         , scene: Scene
-                        , path_tracer: PathTracer
+                        , path_tracer: Technique
                         , begin: i32
                         , end: i32
                         , spp: i32
@@ -193,7 +193,7 @@ fn @gpu_hit_shade_handler(dev_id: i32
 // Shade nonhits
 fn @gpu_miss_shade( acc: Accelerator
                 , atomics: Atomics
-                , path_tracer: PathTracer
+                , path_tracer: Technique
                 , film_pixels: &mut [f32]
                 , spp: i32
                 , use_framebuffer: bool
@@ -226,7 +226,7 @@ fn @gpu_miss_shade( acc: Accelerator
 fn @gpu_miss_shade_handler(dev_id: i32
                          , acc: Accelerator
                          , atomics: Atomics
-                         , path_tracer: PathTracer
+                         , path_tracer: Technique
                          , begin: i32
                          , end: i32
                          , spp: i32
@@ -243,7 +243,7 @@ fn @gpu_miss_shade_handler(dev_id: i32
 fn @gpu_advanced_shadow(is_hit: bool
                       , acc: Accelerator
                       , atomics: Atomics
-                      , path_tracer: PathTracer
+                      , path_tracer: Technique
                       , film_pixels: &mut [f32]
                       , spp: i32
                       , use_framebuffer: bool
@@ -275,7 +275,7 @@ fn @gpu_advanced_shadow(is_hit: bool
 fn @gpu_advanced_shadow_handler(dev_id: i32
                               , acc: Accelerator
                               , atomics: Atomics
-                              , path_tracer: PathTracer
+                              , path_tracer: Technique
                               , begin: i32
                               , end: i32
                               , spp: i32
@@ -759,6 +759,35 @@ fn @make_gpu_buffer(dev: i32, p: &addrspace(1)[u8], count: i32, atomics: Atomics
     }
 }
 
+fn @gpu_handle_device_reduce[T]( dev_id: i32
+                               , acc: Accelerator
+                               , n: i32
+                               , elem: fn (i32) -> T
+                               , op: fn (T, T) -> T) -> T {
+    let block_size = if ?n && n < 10000 {
+        128
+    } else if ?n && n < 1000000 {
+        256
+    } else {
+        512
+    };
+
+    // TODO: This forces us to only use one reduce call at a single time (which is fair tbh)
+    let mut tmp_ptr : &[u8];
+    ignis_request_buffer(dev_id, "__dev_tmp_reduce", &mut tmp_ptr, sizeof[T]() as i32, 0);
+
+    gpu_reduce[T](acc, n, block_size,
+        elem, op,
+        @|v| (tmp_ptr as &mut addrspace(1)[T])(0) = v
+    );
+    acc.sync();
+
+    let mut value: T;
+    runtime_copy(dev_id, tmp_ptr as &[i8], 0, 0 /* Host */, &mut value as &mut [i8], 0, sizeof[T]());
+    
+    value
+}
+
 fn @make_gpu_device( dev_id: i32
                    , acc: Accelerator
                    , min_max: MinMax
@@ -803,6 +832,8 @@ fn @make_gpu_device( dev_id: i32
             }
         }
     },
+    parallel_reduce_i32 = @|n, elem, op| gpu_handle_device_reduce[i32](dev_id, acc, n, elem, op),
+    parallel_reduce_f32 = @|n, elem, op| gpu_handle_device_reduce[f32](dev_id, acc, n, elem, op),
     load_scene_bvh = @|| {
         let mut nodes: &[Node2];
         let mut objs:  &[EntityLeaf1];

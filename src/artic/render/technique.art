@@ -1,4 +1,4 @@
-struct PathTracer {
+struct Technique {
     on_hit:              fn (Ray, i32, Hit, RayPayload, SurfaceElement, Material) -> Option[Color],
     on_miss:             fn (Ray, i32, RayPayload) -> Option[Color],
     on_shadow:           fn (Ray, i32, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[(Ray, Color)],
@@ -11,7 +11,7 @@ type RayEmitter = fn (i32, i32, i32, i32, i32) -> (Ray, RndState, RayPayload);
 
 static MaxRayPayloadComponents = 8;
 struct RayPayload {
-    components: [f32*8]
+    components: [f32 * 8]
 }
 
 fn make_empty_payload() = undef[RayPayload]();

@@ -1,0 +1,53 @@
+// Bottom level SBVH
+struct PrimBvh {
+    node:     fn (i32) -> Node, // Access to one node of the BVH
+    prim:     fn (i32) -> Prim, // Access to one (possibly packed) primitive
+    prefetch: fn (i32) -> (),   // Prefetches a leaf or inner node
+    arity:    i32,              // Arity of the BVH (number of children per node)
+}
+
+type BVHTable = fn (i32) -> PrimBvh;
+
+// Top level BVH
+struct SceneBvh {
+    node:     fn (i32) -> Node,       // Access to one node of the BVH
+    ent:      fn (i32) -> EntityLeaf, // Access to one EntityLeaf
+    prefetch: fn (i32) -> (),         // Prefetches a leaf or inner node
+    arity:    i32,                    // Arity of the BVH (number of children per node)
+}
+
+struct Node {
+    bbox:         fn (i32) -> BBox,            // Loads the bounding box of one child node
+    ordered_bbox: fn (i32, RayOctant) -> BBox, // Loads the bounding box of one child with the given octant order (mapping specific)
+    child:        fn (i32) -> i32              // Gets the index of one child node
+}
+
+struct Prim {
+    intersect: fn (i32, Ray) -> Option[Hit], // Intersects a primitive in the packet
+    is_valid:  fn (i32) -> bool,             // Returns true if the primitive in the packet is valid
+    is_last:   bool,                         // True if this is the last primitive packet in the leaf
+    size:      i32                           // Number of primitives in the packet (must be a constant)
+}
+
+struct EntityLeaf {
+    bbox      : BBox,  // Bounding box
+    entity_id : i32,   // Entity ID
+    shape_id  : i32,   // Shape ID
+    local     : Mat3x4 // Matrix to local system
+}
+
+// Used as storage
+struct EntityLeaf1 {
+    min       : [f32 * 3], // Minimum corner
+    entity_id : i32,       // Entity ID
+    max       : [f32 * 3], // Maximum corner
+    shape_id  : i32,       // Shape/BVH ID
+    local     : Mat3x4     // Matrix to local system
+}
+
+fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, local: Mat3x4) = EntityLeaf {
+    bbox      = bbox,
+    entity_id = entity_id,
+    shape_id  = shape_id,
+    local     = local
+};
