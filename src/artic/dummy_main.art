@@ -68,3 +68,7 @@ fn ig_callback_shader(_settings: &Settings, _iter: i32) -> () {
     for _i in device.parallel_range(0, 16) {
     }
 }
+
+#[export]
+fn ig_tonemap(_device_id: i32, _in_pixels: &[f32], _out_pixels: &mut [u32], _width: i32, _height: i32, _flags: i32, _scale: f32, _exposure_factor: f32, _exposure_offset: f32) -> () {
+}

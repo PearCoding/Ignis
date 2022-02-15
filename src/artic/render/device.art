@@ -1,5 +1,7 @@
 // Rendering device
 struct Device {
+    id: i32,
+
     trace:         fn (SceneGeometry, Pipeline, i32) -> (),
     generate_rays: fn (RayEmitter, &mut i32, i32, i32, i32, i32, i32, i32) -> i32, 
     present:       fn () -> (),
@@ -9,7 +11,8 @@ struct Device {
     handle_hit_shader:             fn (i32, Shader, Scene, PathTracer, i32, i32, i32, bool) -> (),
     handle_advanced_shadow_shader: fn (PathTracer, i32, i32, i32, bool, bool) -> (), 
     
-    parallel_range: fn (fn (i32) -> ()) -> fn (i32, i32) -> (),
+    parallel_range:    fn (fn (i32) -> ())      -> fn (i32, i32) -> (),
+    parallel_range_2d: fn (fn (i32, i32) -> ()) -> fn (i32, i32, i32, i32) -> (),
 
     load_scene_bvh:      fn () -> SceneBvh,
     load_scene_database: fn () -> SceneDatabase,
@@ -20,9 +23,11 @@ struct Device {
     load_bvh_table:      fn (DynTable) -> BVHTable,
     load_image:          fn (&[u8]) -> Image,
     load_aov_image:      fn (i32, i32) -> AOVImage,
-    load_host_buffer:    fn (&[u8]) -> DeviceBuffer,
-    load_buffer:         fn (&[u8]) -> DeviceBuffer,
-    request_buffer:      fn (&[u8], i32 /* Size in units!! */, i32 /* Flags: 0x1 Clear always, 0x2 Clear only init */) -> DeviceBuffer,
+
+    load_host_buffer: fn (&[u8] /* Filename */) -> DeviceBuffer,
+    load_buffer:      fn (&[u8] /* Filename */) -> DeviceBuffer,
+    request_buffer:   fn (&[u8] /* String identifier */, i32 /* Size in units!! */, i32 /* Flags: 0x1 Clear always, 0x2 Clear only init */) -> DeviceBuffer,
+    make_buffer:      fn (&[u8] /* Pointer to data! */, i32 /* Size in units!! */) -> DeviceBuffer,
 
     load_rays: fn () -> &[StreamRay]
 }

@@ -41,6 +41,14 @@ struct Ray {
     Vector2f Range;
 };
 
+struct TonemapSettings {
+    int AOV;
+    int Flags; // 0x1 - Automatic tonemapping, 0x2 - Apply srgb gamma, 0x4-... Tonemapping method
+    float Scale;
+    float ExposureFactor;
+    float ExposureOffset;
+};
+
 class Runtime {
 public:
     Runtime(const std::filesystem::path& path, const RuntimeOptions& opts);
@@ -50,6 +58,10 @@ public:
     void step(const Camera& camera);
     void trace(const std::vector<Ray>& rays, std::vector<float>& data);
     void reset();
+
+    /// A utility function to speed up tonemapping
+    /// out_pixels should be of size width*height!
+    void tonemap(uint32* out_pixels, const TonemapSettings& settings);
 
     const float* getFramebuffer(int aov = 0) const;
     // aov<0 will clear all aovs

@@ -73,6 +73,9 @@ std::string Statistics::dump(size_t iter, bool verbose) const
                << "      Hits> " << dumpStats(mAdvancedShadowHitStats) << std::endl;
     }
 
+    if (mTonemapStats.count > 0)
+        stream << "    Tonemap>       " << dumpStats(mTonemapStats) << std::endl;
+
     return stream.str();
 }
 
@@ -92,6 +95,8 @@ Statistics::ShaderStats* Statistics::getStats(ShaderType type, size_t id)
         return &mAdvancedShadowHitStats;
     case ShaderType::AdvancedShadowMiss:
         return &mAdvancedShadowMissStats;
+    case ShaderType::Tonemap:
+        return &mTonemapStats;
     }
 }
 } // namespace IG

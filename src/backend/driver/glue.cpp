@@ -26,6 +26,10 @@
 #include <type_traits>
 #include <variant>
 
+#if defined(DEVICE_NVVM) || defined(DEVICE_AMD)
+#define DEVICE_GPU
+#endif
+
 static inline size_t roundUp(size_t num, size_t multiple)
 {
     if (multiple == 0)
@@ -122,6 +126,8 @@ struct Interface {
         std::array<anydsl::Array<float>*, GPUStreamBufferCount> current_secondary;
         std::unordered_map<std::string, DeviceImage> images;
         std::unordered_map<std::string, DeviceBuffer> buffers;
+
+        anydsl::Array<uint32_t> tonemap_pixels;
 
         inline DeviceData()
             : scene_loaded(ATOMIC_FLAG_INIT)
@@ -623,6 +629,19 @@ struct Interface {
         }
     }
 
+#ifdef DEVICE_GPU
+    inline uint32_t* getTonemapImage(int32_t dev)
+    {
+        auto& device = devices[dev];
+        if (!device.tonemap_pixels.size()) {
+            auto film_size        = film_width * film_height;
+            auto film_data        = reinterpret_cast<uint32_t*>(anydsl_alloc(dev, sizeof(uint32_t) * film_size));
+            device.tonemap_pixels = std::move(anydsl::Array<uint32_t>(dev, film_data, film_size));
+        }
+        return device.tonemap_pixels.data();
+    }
+#endif
+
     inline void present(int32_t dev)
     {
         for (size_t id = 0; id < devices[dev].aovs.size(); ++id)
@@ -748,6 +767,35 @@ const IG::Statistics* glue_getStatistics()
     return sInterface->getFullStats();
 }
 
+void glue_tonemap(int device, int aov, uint32_t* out_pixels, int flags, float scale, float exposure_factor, float exposure_offset)
+{
+    if (sInterface->setup.acquire_stats)
+        sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Tonemap, {});
+
+#ifdef DEVICE_GPU
+#if defined(DEVICE_NVVM)
+    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, device);
+#elif defined(DEVICE_AMD)
+    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, device);
+#endif
+    float* in_pixels            = sInterface->getAOVImage(dev_id, aov);
+    uint32_t* device_out_pixels = sInterface->getTonemapImage(dev_id);
+#else
+    float* in_pixels            = sInterface->getAOVImage(0, aov);
+    uint32_t* device_out_pixels = out_pixels;
+#endif
+
+    ig_tonemap(device, in_pixels, device_out_pixels, sInterface->film_width, sInterface->film_height, flags, scale, exposure_factor, exposure_offset);
+
+#ifdef DEVICE_GPU
+    int size = sInterface->film_width * sInterface->film_height;
+    anydsl_copy(dev_id, device_out_pixels, 0, 0 /* Host */, out_pixels, 0, sizeof(uint32_t) * size);
+#endif
+
+    if (sInterface->setup.acquire_stats)
+        sInterface->getThreadData()->stats.endShaderLaunch(IG::ShaderType::Tonemap, {});
+}
+
 inline void get_ray_stream(RayStream& rays, float* ptr, size_t capacity)
 {
     static_assert(std::is_pod<RayStream>::value, "Expected RayStream to be plain old data");
@@ -819,6 +867,7 @@ IG_EXPORT DriverInterface ig_get_interface()
     interface.GetFramebufferFunction   = glue_getFramebuffer;
     interface.ClearFramebufferFunction = glue_clearFramebuffer;
     interface.GetStatisticsFunction    = glue_getStatistics;
+    interface.TonemapFunction          = glue_tonemap;
 
     return interface;
 }

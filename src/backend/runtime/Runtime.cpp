@@ -224,9 +224,8 @@ Runtime::~Runtime()
 
 void Runtime::step(const Camera& camera)
 {
-    if (!mInit) {
+    if (!mInit)
         setup();
-    }
 
     if (mIsTrace) {
         IG_LOG(L_ERROR) << "Trying to use step() in a trace driver!" << std::endl;
@@ -260,9 +259,8 @@ void Runtime::step(const Camera& camera)
 
 void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
 {
-    if (!mInit) {
+    if (!mInit)
         setup();
-    }
 
     if (!mIsTrace) {
         IG_LOG(L_ERROR) << "Trying to use trace() in a camera driver!" << std::endl;
@@ -299,9 +297,10 @@ void Runtime::clearFramebuffer(int aov)
     return mLoadedInterface.ClearFramebufferFunction(aov);
 }
 
-void Runtime::reset() {
+void Runtime::reset()
+{
     clearFramebuffer();
-    mCurrentIteration = 0;
+    mCurrentIteration            = 0;
     mCurrentIterationFramebuffer = 0;
 }
 
@@ -397,5 +396,13 @@ void Runtime::handleTechniqueVariants(uint32 nextIteration)
     IG_ASSERT(mCurrentTechniqueVariant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
 
     mLoadedInterface.SetShaderSetFunction(mTechniqueVariantShaderSets[mCurrentTechniqueVariant]);
+}
+
+void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
+{
+    if (!mInit)
+        setup();
+
+    mLoadedInterface.TonemapFunction(mDevice, settings.AOV, out_pixels, settings.Flags, settings.Scale, settings.ExposureFactor, settings.ExposureOffset);
 }
 } // namespace IG

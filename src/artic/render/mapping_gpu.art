@@ -788,6 +788,7 @@ fn @make_gpu_device( dev_id: i32
                    , atomics: Atomics
                    , is_nvvm: bool
                    ) = Device {
+    id    = dev_id,
     trace = @ |scene, pipeline, spp| {
         gpu_trace(
             dev_id,
@@ -823,6 +824,24 @@ fn @make_gpu_device( dev_id: i32
                     @ body(gid + start)
                 })
             }
+        }
+    },
+    parallel_range_2d = @ |body| {
+        @|start_x, end_x, start_y, end_y| {
+            let size_x = end_x - start_x;
+            let size_y = end_y - start_y;
+
+            let block_size = if size_x <= 48 && size_y <= 48 { 16:i32 } else { 32:i32 };
+
+            let grid  = (round_up(size_x, block_size), round_up(size_y, block_size), 1);
+            let block = (block_size, block_size, 1);
+            acc.exec( @|work_item| {
+                let gid_x = work_item.gidx();
+                let gid_y = work_item.gidy();
+                if gid_x >= size_x || gid_y >= size_y { return() }
+                
+                @ body(gid_x + start_x, gid_y + start_y)
+            })(grid, block);
         }
     },
     load_scene_bvh = @|| {
@@ -884,7 +903,8 @@ fn @make_gpu_device( dev_id: i32
         let mut ptr : &[u8];
         ignis_request_buffer(dev_id, name, &mut ptr, size * sizeof[i32]() as i32, flags);
         make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm)
-    }
+    },
+    make_buffer = @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm)
 };
 
 fn @make_nvvm_device(dev: i32) -> Device {

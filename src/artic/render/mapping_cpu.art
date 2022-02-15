@@ -795,6 +795,7 @@ fn @load_cpu_buffer(filename: &[u8]) {
 }
 
 fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_width: i32, num_cores: i32, tile_size: i32) = Device {
+    id    = 0,
     trace = @ |scene, pipeline, spp| {
         cpu_trace(
             scene,
@@ -826,6 +827,17 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         @|start, end| {
             for i in parallel(num_cores, start, end) {
                 @ body(i)
+            }
+        }
+    },
+    parallel_range_2d = @ |body| {
+        @|start_x, end_x, start_y, end_y| {
+            for xmin, ymin, xmax, ymax in cpu_parallel_tiles(end_x - start_x, end_y - start_y, tile_size, tile_size, num_cores) {
+                for x in range(xmin + start_x, xmax + start_x) {
+                    for y in range(ymin + start_y, ymax + start_y) {
+                        @ body(x,y)
+                    }   
+                }
             }
         }
     },
@@ -888,7 +900,8 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         let mut ptr : &[u8];
         ignis_request_buffer(0, name, &mut ptr, size * sizeof[i32]() as i32, flags);
         make_cpu_buffer(ptr, size)
-    }
+    },
+    make_buffer = @ |ptr, size| make_cpu_buffer(ptr, size)
 };
 
 fn @make_avx512_device()      = make_cpu_device( true,  true, make_cpu_int_min_max(),16, 0, 32); // Not tested

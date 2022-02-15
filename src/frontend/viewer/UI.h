@@ -13,9 +13,10 @@ enum class ToneMappingMethod {
     ACES
 };
 
+class Runtime;
 class UI {
 public:
-    UI(int width, int height, const std::vector<const float*>& aovs, const std::vector<std::string>& aov_names, bool showDebug);
+    UI(Runtime* runtime, int width, int height, const std::vector<const float*>& aovs, const std::vector<std::string>& aov_names, bool showDebug);
     ~UI();
 
     void setTitle(const char* str);

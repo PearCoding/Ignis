@@ -1,11 +1,11 @@
 {
     "files.associations": {
+        "*.art": "rust",
         "*.prc": "lisp",
         "*.artpp": "rust",
         "*.nvvm": "llvm",
         "*.llvm": "llvm",
         "*.impala": "rust",
-        "*.art": "rust",
         "cctype": "cpp",
         "clocale": "cpp",
         "cmath": "cpp",
@@ -130,7 +130,8 @@
         "cfloat": "cpp",
         "ciso646": "cpp",
         "climits": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "any": "cpp"
     },
     "cmake.configureOnOpen": false,
     "cmake.buildDirectory": "${workspaceRoot}/build/${buildType}",

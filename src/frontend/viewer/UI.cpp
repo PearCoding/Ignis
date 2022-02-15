@@ -2,6 +2,7 @@
 #include "IO.h"
 #include "Pose.h"
 #include "Range.h"
+#include "Runtime.h"
 
 #include <SDL.h>
 
@@ -25,8 +26,6 @@
 
 namespace IG {
 
-#define CULL_BAD_COLOR
-#define CATCH_BAD_COLOR
 #define USE_MEDIAN_FOR_LUMINANCE_ESTIMATION
 
 constexpr size_t HISTOGRAM_SIZE               = 100;
@@ -61,6 +60,7 @@ struct LuminanceInfo {
 
 class UIInternal {
 public:
+    IG::Runtime* Runtime;
     UI* Parent;
     SDL_Window* Window;
     SDL_Renderer* Renderer;
@@ -523,7 +523,7 @@ public:
             }
         }
 #else
-        sLastLum.Est = sLastLum.Max;
+        LastLum.Est = LastLum.Max;
 #endif
     }
 
@@ -532,79 +532,34 @@ public:
         if (iter == 0)
             iter = 1;
 
-        const float* film = Parent->currentPixels();
-        auto inv_iter     = 1.0f / iter;
-        auto inv_gamma    = 1.0f / 2.2f;
-
-        const float exposure_factor = std::pow(2.0, ToneMapping_Exposure);
+        // TODO: Would be great if we could put this also on the device
         analzeLuminance(Width, Height, iter);
 
-        const RangeS imageRange(0, Width * Height);
+        int flags = 0;
+        if (ToneMapping_Automatic)
+            flags |= 0x1;
+        if (ToneMappingGamma)
+            flags |= 0x2;
+
+        switch (Parent->mToneMappingMethod) {
+        default:
+        case ToneMappingMethod::Reinhard:
+            flags |= (1 << 2);
+            break;
+        case ToneMappingMethod::ModifiedReinhard:
+            flags |= (2 << 2);
+            break;
+        case ToneMappingMethod::ACES:
+            flags |= (3 << 2);
+            break;
+        }
+
+        // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
         uint32* buf = Buffer.data();
-
-        const auto updateImage = [&](size_t ind) {
-            auto r = film[ind * 3 + 0] * inv_iter;
-            auto g = film[ind * 3 + 1] * inv_iter;
-            auto b = film[ind * 3 + 2] * inv_iter;
-
-            const auto xyY = srgb_to_xyY(RGB(r, g, b));
-#ifdef CULL_BAD_COLOR
-            if (std::isinf(xyY.b)) {
-#ifdef CATCH_BAD_COLOR
-                buf[ind] = RGB_C(255, 0, 150); // Pink
-#endif
-                return;
-            } else if (std::isnan(xyY.b)) {
-#ifdef CATCH_BAD_COLOR
-                buf[ind] = RGB_C(0, 255, 255); // Cyan
-#endif
-                return;
-            } else if (xyY.r < 0.0f || xyY.g < 0.0f || xyY.b < 0.0f) {
-#ifdef CATCH_BAD_COLOR
-                buf[ind] = RGB_C(255, 255, 0); // Orange
-#endif
-                return;
-            }
-#endif
-
-            float L;
-            if (ToneMapping_Automatic)
-                L = xyY.b / LastLum.Est;
-            else
-                L = exposure_factor * xyY.b + ToneMapping_Offset;
-
-            switch (Parent->mToneMappingMethod) {
-            default:
-            case ToneMappingMethod::Reinhard:
-                L = reinhard(L);
-                break;
-            case ToneMappingMethod::ModifiedReinhard:
-                L = reinhard_modified(L);
-                break;
-            case ToneMappingMethod::ACES:
-                L = aces(L);
-                break;
-            }
-
-            RGB color = xyY_to_srgb(RGB(xyY.r, xyY.g, L));
-
-            if (ToneMappingGamma) {
-                color.r = srgb_gamma(color.r);
-                color.g = srgb_gamma(color.g);
-                color.b = srgb_gamma(color.b);
-            }
-
-            buf[ind] = (uint32_t(clamp(std::pow(color.r, inv_gamma), 0.0f, 1.0f) * 255.0f) << 16)
-                       | (uint32_t(clamp(std::pow(color.g, inv_gamma), 0.0f, 1.0f) * 255.0f) << 8)
-                       | uint32_t(clamp(std::pow(color.b, inv_gamma), 0.0f, 1.0f) * 255.0f);
-        };
-
-#ifndef IG_NO_EXECUTION_H
-        std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), updateImage);
-#else
-        for (size_t i : imageRange)
-            updateImage(i);
-#endif
+        Runtime->tonemap(buf, TonemapSettings{ Parent->currentAOV(), flags,
+                                               1.0f / iter,
+                                               ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
+                                               ToneMapping_Automatic ? 0 : ToneMapping_Offset });
 
         SDL_UpdateTexture(Texture, nullptr, buf, Width * sizeof(uint32_t));
     }
@@ -824,7 +779,7 @@ public:
 
 ////////////////////////////////////////////////////////////////
 
-UI::UI(int width, int height, const std::vector<const float*>& aovs, const std::vector<std::string>& aov_names, bool showDebug)
+UI::UI(Runtime* runtime, int width, int height, const std::vector<const float*>& aovs, const std::vector<std::string>& aov_names, bool showDebug)
     : mWidth(width)
     , mHeight(height)
     , mAOVs(aovs)
@@ -839,6 +794,7 @@ UI::UI(int width, int height, const std::vector<const float*>& aovs, const std::
         throw std::runtime_error("Could not setup UI");
     }
 
+    mInternal->Runtime       = runtime;
     mInternal->Parent        = this;
     mInternal->Width         = width;
     mInternal->Height        = height;
@@ -851,6 +807,7 @@ UI::UI(int width, int height, const std::vector<const float*>& aovs, const std::
         width,
         height,
         0);
+
     if (!mInternal->Window) {
         IG_LOG(L_FATAL) << "Cannot create SDL window: " << SDL_GetError() << std::endl;
         throw std::runtime_error("Could not setup UI");

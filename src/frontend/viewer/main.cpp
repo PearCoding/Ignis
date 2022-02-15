@@ -327,7 +327,7 @@ int main(int argc, char** argv)
             else
                 aov_names[i] = runtime->aovs()[i - 1];
         }
-        ui = std::make_unique<UI>(def.FilmWidth, def.FilmHeight, aovs, aov_names, runtime->isDebug());
+        ui = std::make_unique<UI>(runtime.get(), def.FilmWidth, def.FilmHeight, aovs, aov_names, runtime->isDebug());
 
         // Setup initial travelspeed
         BoundingBox bbox = runtime->sceneBoundingBox();
