@@ -1,31 +1,4 @@
 // Trace function ------------------------------------------------------------------
-fn @cpu_parallel_tiles(body: fn (i32, i32, i32, i32) -> ()) =
-    @|width: i32, height: i32, tile_width: i32, tile_height: i32, num_cores: i32| {
-    if cpu_profiling_enabled && cpu_profiling_serial {
-        for ymin in range_step(0, height, tile_height) {
-            for xmin in range_step(0, width, tile_width) {
-                let xmax = if xmin + tile_width  < width  { xmin + tile_width  } else { width  };
-                let ymax = if ymin + tile_height < height { ymin + tile_height } else { height };
-                @body(xmin, ymin, xmax, ymax)
-            }
-        }
-    } else {
-        let num_tiles_x = round_up(width , tile_width)  / tile_width;
-        let num_tiles_y = round_up(height, tile_height) / tile_height;
-        let num_tiles = num_tiles_x * num_tiles_y;
-        let tiles_div = make_fast_div(num_tiles_x as u32);
-        for i in parallel(num_cores, 0, num_tiles) {
-            let y = fast_div(tiles_div, i as u32) as i32;
-            let x = i - num_tiles_x * y;
-            let xmin = x * tile_width;
-            let ymin = y * tile_height;
-            let xmax = min(xmin + tile_width,  width);
-            let ymax = min(ymin + tile_height, height);
-            @body(xmin, ymin, xmax, ymax)
-        }
-    }
-};
-
 fn @cpu_sort_primary(primary: &PrimaryStream, ray_ends: &mut[i32], num_geometries: i32) -> i32 {
     // Count the number of rays per shader
     for i in range(0, num_geometries + 1) {
@@ -618,7 +591,7 @@ fn @cpu_trace( scene: SceneGeometry
                     cpu_profile(if is_first { &mut primary_counter } else { &mut bounces_counter }, || {
                         cpu_traverse_primary(scene, min_max, primary, single, vector_width);
                     });
-                    atomic(1:u32, &mut total_rays, primary.size as i64, 7:u32, "");
+                    cpu_atomic_add_i64(&mut total_rays, primary.size as i64);
 
                     // Sort hits by shader id, and filter invalid hits
                     let mut ray_ends : [i32 * 1024];
@@ -717,7 +690,7 @@ fn @cpu_load_vec4(p: &[f32], elem: i32) {
 }
 
 fn @make_cpu_buffer(p: &[u8], count: i32) = DeviceBuffer {
-    add_atomic_i32 = @ |i, v| atomic[i32](1:u32, (&(p as &[i32])(i) as &mut i32), v, 7:u32, ""),
+    add_atomic_i32 = @ |i, v| cpu_atomic_add(&(p as &[i32])(i) as &mut i32, v),
     load_i32_host  = @ |i| (p as &[i32])(i),
     store_i32_host = @ |i, v| { (p as &mut [i32])(i) = v; },
 

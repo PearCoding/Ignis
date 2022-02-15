@@ -1,0 +1,62 @@
+fn @get_accelerator() = nvvm_accelerator(0); // TODO: Maybe allow AMD?
+
+fn test_add_reduction() -> i32 {
+    let acc = get_accelerator();
+    let tmp = acc.alloc(sizeof[i64]());
+
+    let N = 100000000;
+    gpu_reduce[i64](acc, N, 512,
+        @|i| i as i64,
+        @|a, b| a + b,
+        @|v| (tmp.data as &mut addrspace(1)[i64])(0) = v
+    );
+    acc.sync();
+
+    let mut value: i64;
+    runtime_copy(tmp.device, tmp.data as &[i8], 0, 0 /* Host */, &mut value as &mut [i8], 0, sizeof[i64]());
+    release(tmp);
+
+    let result = (N as i64  - 1) * N as i64 / 2;
+    if value == result { 0 } else { 1 }
+}
+
+fn test_max_reduction() -> i32 {
+    let acc = get_accelerator();
+    let tmp = acc.alloc(sizeof[f32]());
+
+    let N = 100000;
+    gpu_reduce[f32](acc, N, 64,
+        @|i| i as f32,
+        @|a, b| math_builtins::fmax(a, b),
+        @|v| (tmp.data as &mut addrspace(1)[f32])(0) = v
+    );
+    acc.sync();
+
+    let mut value: f32;
+    runtime_copy(tmp.device, tmp.data as &[i8], 0, 0 /* Host */, &mut value as &mut [i8], 0, sizeof[f32]());
+    release(tmp);
+
+    let result = (N-1) as f32;
+    if value == result { 0 } else { 1 }
+}
+
+fn test_add_reduction_cpu() -> i32 {
+    let N = 100000000;
+    let value = cpu_reduce[i64](N, 
+        @|i| i as i64,
+        @|a, b| a + b
+    );
+
+    let result = (N as i64  - 1) * N as i64 / 2;
+    if value == result { 0 } else { 1 }
+}
+
+fn test_reduction() -> i32 { 
+    let mut err = 0;
+
+    err += test_add_reduction();
+    err += test_max_reduction();
+    err += test_add_reduction_cpu();
+
+    err
+}

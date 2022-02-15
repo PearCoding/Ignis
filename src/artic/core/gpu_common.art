@@ -1,0 +1,83 @@
+struct Atomics {
+    add_global_i32: fn (&mut i32, i32) -> i32,
+    add_global_f32: fn (&mut f32, f32) -> f32,
+    add_shared_i32: fn (&mut addrspace(3)i32, i32) -> i32,
+    add_shared_f32: fn (&mut addrspace(3)f32, f32) -> f32
+}
+
+fn @gpu_make_null_atomics() = Atomics {
+    add_global_i32 = @ |_, _| 0,
+    add_global_f32 = @ |_, _| 0,
+    add_shared_i32 = @ |_, _| 0,
+    add_shared_f32 = @ |_, _| 0,
+};
+
+// Simple ranged for
+fn @gpu_exec_1d(acc: Accelerator, dim: i32, block_size: i32, body: fn (WorkItem) -> ()) {
+    // Helper function that deduces the appropriate grid size that is at least larger
+    // or equal to `dim`x1x1, and that is a multiple of the block size.
+    let grid  = (round_up(dim, block_size), 1, 1);
+    let block = (block_size, 1, 1);
+    acc.exec(body)(grid, block);
+}
+
+// Based on https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf with a single warp
+fn @gpu_reduce[T](acc: Accelerator, n: i32, block_size: i32, elem: fn (i32) -> T, op: fn (T, T) -> T, result: fn (T) -> ()) -> () {
+    if n <= 0 { return() }
+
+    fn @down2_unroll(body: fn(i32) -> ()) {
+        fn @(?beg & ?end) loop(end: i32, beg: i32) -> () {
+            if end > beg {
+                @body(end);
+                loop(end >> 1, beg)
+            }
+        }
+        loop
+    }
+
+    if n < block_size {
+        // Not worth pulling out the complex algorithm...
+        let grid  = (block_size, 1, 1);
+        let block = (block_size, 1, 1);
+        for work_item in acc.exec(grid, block) {
+            let shared = reserve_shared[T](block_size);
+            let tid    = work_item.tidx();
+            if tid < n {
+                shared(tid) = @elem(tid);
+            }
+            acc.barrier();
+            
+            for s in down2_unroll(n >> 1, 0) {
+                if tid < s {
+                    shared(tid) = @op(shared(tid), shared(tid + s));
+                }
+                acc.barrier();
+            }
+
+            if tid == 0 { result(shared(0)); } 
+        }
+    } else {
+        let grid  = (block_size, 1, 1);
+        let block = (block_size, 1, 1);
+        for work_item in acc.exec(grid, block) {
+            let shared = reserve_shared[T](block_size);
+            let tid    = work_item.tidx();
+
+            let mut sum = @elem(tid);
+            for i in range_step(tid + block_size, n, block_size) {
+                sum = @op(sum, @elem(i));
+            }
+            shared(tid) = sum;
+            acc.barrier();
+
+            for s in down2_unroll(block_size >> 1, 0) {
+                if tid < s {
+                    shared(tid) = @op(shared(tid), shared(tid + s));
+                }
+                acc.barrier();
+            }
+
+            if tid == 0 { result(shared(0)); } 
+        }
+    }
+}

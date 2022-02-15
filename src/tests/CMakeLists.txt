@@ -5,6 +5,7 @@ set(ARTIC_TEST_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/test_main.art
     ${CMAKE_CURRENT_SOURCE_DIR}/test_matrix.art
     ${CMAKE_CURRENT_SOURCE_DIR}/test_microfacet.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_reduction.art
 )
 
 # Compile artic stuff

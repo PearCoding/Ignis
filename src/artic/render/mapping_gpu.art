@@ -1,19 +1,5 @@
 // Trace function ------------------------------------------------------------------
 
-struct Atomics {
-    add_global_i32: fn (&mut i32, i32) -> i32,
-    add_global_f32: fn (&mut f32, f32) -> f32,
-    add_shared_i32: fn (&mut addrspace(3)i32, i32) -> i32,
-    add_shared_f32: fn (&mut addrspace(3)f32, f32) -> f32
-}
-
-fn @gpu_make_null_atomics() = Atomics {
-    add_global_i32 = @ |_, _| 0,
-    add_global_f32 = @ |_, _| 0,
-    add_shared_i32 = @ |_, _| 0,
-    add_shared_f32 = @ |_, _| 0,
-};
-
 fn @gpu_get_film_data(dev_id: i32) -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
@@ -52,14 +38,6 @@ fn @gpu_get_aov_image(id: i32, dev_id: i32, atomics: Atomics, spp: i32) -> AOVIm
 
     // Specialize such that ptr is not captured in a kernel
     $getImage(ptr)
-}
-
-fn @gpu_exec_1d(acc: Accelerator, dim: i32, block_size: i32, body: fn (WorkItem) -> ()) {
-    // Helper function that deduces the appropriate grid size that is at least larger
-    // or equal to `dim`x1x1, and that is a multiple of the block size.
-    let grid  = (round_up(dim, block_size), 1, 1);
-    let block = (block_size, 1, 1);
-    acc.exec(body)(grid, block);
 }
 
 fn @gpu_traverse_primary(primary: PrimaryStream, acc: Accelerator, min_max: MinMax, scene: SceneGeometry) -> () {
