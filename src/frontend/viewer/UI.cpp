@@ -85,10 +85,10 @@ public:
     bool ToneMapping_Automatic = true;
     float ToneMapping_Exposure = 1.0f;
     float ToneMapping_Offset   = 0.0f;
-    bool Running               = true;
+    bool ToneMappingGamma      = true;
 
-    bool ToneMappingGamma = false;
-    bool ShowDebugMode    = false;
+    bool Running       = true;
+    bool ShowDebugMode = false;
 
     IG::PoseManager PoseManager;
     CameraPose LastCameraPose;
