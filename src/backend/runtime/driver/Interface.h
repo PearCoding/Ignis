@@ -39,13 +39,14 @@ struct DriverRenderSettings {
     IG::uint32 debug_mode; // Only useful for debug integrator
 };
 
-using DriverRenderFunction           = void (*)(const DriverRenderSettings*, IG::uint32);
-using DriverShutdownFunction         = void (*)();
-using DriverSetupFunction            = void (*)(const DriverSetupSettings*);
-using DriverSetShaderSet             = void (*)(const IG::TechniqueVariantShaderSet& shaderSet);
-using DriverGetFramebufferFunction   = const float* (*)(int);
-using DriverClearFramebufferFunction = void (*)(int);
-using DriverGetStatisticsFunction    = const IG::Statistics* (*)();
+using DriverRenderFunction            = void (*)(const DriverRenderSettings*, IG::uint32);
+using DriverShutdownFunction          = void (*)();
+using DriverSetupFunction             = void (*)(const DriverSetupSettings*);
+using DriverSetShaderSet              = void (*)(const IG::TechniqueVariantShaderSet& shaderSet);
+using DriverResizeFramebufferFunction = void (*)(size_t, size_t);
+using DriverGetFramebufferFunction    = const float* (*)(int);
+using DriverClearFramebufferFunction  = void (*)(int);
+using DriverGetStatisticsFunction     = const IG::Statistics* (*)();
 
 using DriverTonemapFunction   = void (*)(int, uint32_t*, const IG::TonemapSettings&);
 using DriverImageInfoFunction = void (*)(int, const IG::ImageInfoSettings&, IG::ImageInfoOutput&);
@@ -59,6 +60,7 @@ struct DriverInterface {
     DriverShutdownFunction ShutdownFunction;
     DriverRenderFunction RenderFunction;
     DriverSetShaderSet SetShaderSetFunction;
+    DriverResizeFramebufferFunction ResizeFramebufferFunction;
     DriverGetFramebufferFunction GetFramebufferFunction;
     DriverClearFramebufferFunction ClearFramebufferFunction;
     DriverGetStatisticsFunction GetStatisticsFunction;

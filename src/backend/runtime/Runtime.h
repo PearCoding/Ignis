@@ -58,6 +58,8 @@ public:
     /// A utility function to speed up utility information from the image
     void imageinfo(const ImageInfoSettings& settings, ImageInfoOutput& output);
 
+    /// Will resize the framebuffer, clear it and reset rendering
+    void resizeFramebuffer(size_t width, size_t height);
     const float* getFramebuffer(int aov = 0) const;
     // aov<0 will clear all aovs
     void clearFramebuffer(int aov = -1);

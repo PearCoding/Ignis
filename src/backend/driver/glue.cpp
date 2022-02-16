@@ -169,7 +169,6 @@ struct Interface {
 
     inline Interface(const DriverSetupSettings& setup)
         : aovs(setup.aov_count)
-        , host_pixels(setup.framebuffer_width * setup.framebuffer_height * 3)
         , database(setup.database)
         , film_width(setup.framebuffer_width)
         , film_height(setup.framebuffer_height)
@@ -178,12 +177,30 @@ struct Interface {
         // Due to the DLL interface, we do have multiple instances of the logger. Make sure they are the same
         IG_LOGGER = *setup.logger;
 
-        for (auto& arr : aovs)
-            arr = std::move(anydsl::Array<float>(film_width * film_height * 3));
+        setupFramebuffer();
     }
 
     inline ~Interface()
     {
+    }
+
+    inline void setupFramebuffer()
+    {
+        host_pixels = std::move(anydsl::Array<float>(film_width * film_height * 3));
+        for (auto& arr : aovs)
+            arr = std::move(anydsl::Array<float>(film_width * film_height * 3));
+    }
+
+    inline void resizeFramebuffer(size_t width, size_t height)
+    {
+        IG_ASSERT(width > 0 && height > 0, "Expected given width & height to be greater than 0");
+
+        if (film_width == width && film_height == height)
+            return;
+
+        film_width  = width;
+        film_height = height;
+        setupFramebuffer();
     }
 
     inline void setShaderSet(const IG::TechniqueVariantShaderSet& shader_set)
@@ -592,7 +609,7 @@ struct Interface {
     {
         if (dev != 0) {
             auto& device = devices[dev];
-            if (!device.film_pixels.size()) {
+            if (device.film_pixels.size() != host_pixels.size()) {
                 auto film_size     = film_width * film_height * 3;
                 auto film_data     = reinterpret_cast<float*>(anydsl_alloc(dev, sizeof(float) * film_size));
                 device.film_pixels = std::move(anydsl::Array<float>(dev, film_data, film_size));
@@ -617,7 +634,7 @@ struct Interface {
             if (device.aovs.size() != aovs.size())
                 device.aovs.resize(aovs.size());
 
-            if (!device.aovs[index].size()) {
+            if (device.aovs[index].size() != aovs[index].size()) {
                 auto film_size     = film_width * film_height * 3;
                 auto film_data     = reinterpret_cast<float*>(anydsl_alloc(dev, sizeof(float) * film_size));
                 device.aovs[index] = std::move(anydsl::Array<float>(dev, film_data, film_size));
@@ -633,7 +650,7 @@ struct Interface {
     inline uint32_t* getTonemapImage(int32_t dev)
     {
         auto& device = devices[dev];
-        if (!device.tonemap_pixels.size()) {
+        if (device.tonemap_pixels.size() != host_pixels.size()) {
             auto film_size        = film_width * film_height;
             auto film_data        = reinterpret_cast<uint32_t*>(anydsl_alloc(dev, sizeof(uint32_t) * film_size));
             device.tonemap_pixels = std::move(anydsl::Array<uint32_t>(dev, film_data, film_size));
@@ -657,7 +674,7 @@ struct Interface {
             std::memset(host_pixels.data(), 0, sizeof(float) * host_pixels.size());
             for (auto& pair : devices) {
                 auto& device_pixels = devices[pair.first].film_pixels;
-                if (device_pixels.size())
+                if (device_pixels.size() == host_pixels.size())
                     anydsl::copy(host_pixels, device_pixels);
             }
         }
@@ -670,7 +687,7 @@ struct Interface {
                     if (devices[pair.first].aovs.empty())
                         continue;
                     auto& device_pixels = devices[pair.first].aovs[id];
-                    if (device_pixels.size())
+                    if (device_pixels.size() == buffer.size())
                         anydsl::copy(buffer, device_pixels);
                 }
             }
@@ -749,6 +766,11 @@ void glue_shutdown()
     sInterface.reset();
 }
 
+void glue_resizeFramebuffer(size_t width, size_t height)
+{
+    sInterface->resizeFramebuffer(width, height);
+}
+
 const float* glue_getFramebuffer(int aov)
 {
     if (aov <= 0 || (size_t)aov > sInterface->aovs.size())
@@ -816,7 +838,7 @@ void glue_imageinfo(int device, const IG::ImageInfoSettings& driver_settings, IG
 #endif
     float* in_pixels = sInterface->getAOVImage(dev_id, driver_settings.AOV);
 #else
-    float* in_pixels = sInterface->getAOVImage(0, driver_settings.AOV);
+    float* in_pixels            = sInterface->getAOVImage(0, driver_settings.AOV);
 #endif
 
     ImageInfoSettings settings;
@@ -902,15 +924,16 @@ IG_EXPORT DriverInterface ig_get_interface()
 #error No device selected!
 #endif
 
-    interface.SetupFunction            = glue_setup;
-    interface.ShutdownFunction         = glue_shutdown;
-    interface.RenderFunction           = glue_render;
-    interface.SetShaderSetFunction     = glue_setShaderSet;
-    interface.GetFramebufferFunction   = glue_getFramebuffer;
-    interface.ClearFramebufferFunction = glue_clearFramebuffer;
-    interface.GetStatisticsFunction    = glue_getStatistics;
-    interface.TonemapFunction          = glue_tonemap;
-    interface.ImageInfoFunction        = glue_imageinfo;
+    interface.SetupFunction             = glue_setup;
+    interface.ShutdownFunction          = glue_shutdown;
+    interface.RenderFunction            = glue_render;
+    interface.SetShaderSetFunction      = glue_setShaderSet;
+    interface.ResizeFramebufferFunction = glue_resizeFramebuffer;
+    interface.GetFramebufferFunction    = glue_getFramebuffer;
+    interface.ClearFramebufferFunction  = glue_clearFramebuffer;
+    interface.GetStatisticsFunction     = glue_getStatistics;
+    interface.TonemapFunction           = glue_tonemap;
+    interface.ImageInfoFunction         = glue_imageinfo;
 
     return interface;
 }

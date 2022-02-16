@@ -75,6 +75,7 @@ fn @reinhard_modified(L : f32) -> f32 {
     safe_div(L * (1.0 + L / (WhitePoint * WhitePoint)), 1.0 + L)
 }
 
+// Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
 fn @aces(L: f32) -> f32 {
     let a = 2.51 : f32;
     let b = 0.03 : f32;

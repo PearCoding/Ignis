@@ -46,11 +46,11 @@ struct LuminanceInfo {
 
 class UIInternal {
 public:
-    IG::Runtime* Runtime;
-    UI* Parent;
-    SDL_Window* Window;
-    SDL_Renderer* Renderer;
-    SDL_Texture* Texture;
+    IG::Runtime* Runtime   = nullptr;
+    UI* Parent             = nullptr;
+    SDL_Window* Window     = nullptr;
+    SDL_Renderer* Renderer = nullptr;
+    SDL_Texture* Texture   = nullptr;
     std::vector<uint32_t> Buffer;
 
     int PoseRequest       = -1;
@@ -81,6 +81,22 @@ public:
 
     float CurrentTravelSpeed = 1.0f;
 
+    // Buffer stuff
+    bool setupTextureBuffer(size_t width, size_t height)
+    {
+        if (Texture)
+            SDL_DestroyTexture(Texture);
+
+        Texture = SDL_CreateTexture(Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, (int)width, (int)height);
+        if (!Texture) {
+            IG_LOG(L_FATAL) << "Cannot create SDL texture: " << SDL_GetError() << std::endl;
+            return false;
+        }
+
+        Buffer.resize(width * height);
+        return true;
+    }
+
     // Events
     void handlePoseInput(size_t posenmbr, bool capture, const Camera& cam)
     {
@@ -90,6 +106,23 @@ public:
             PoseManager.setPose(posenmbr, CameraPose(cam));
             IG_LOG(L_INFO) << "Captured pose for " << posenmbr + 1 << std::endl;
         }
+    }
+
+    void handleFramebufferResize(int width, int height)
+    {
+        // Expect a useful minimum!
+        if (width <= 5 || height <= 5)
+            return;
+
+        IG_LOG(L_INFO) << "Resizing to " << width << "x" << height << std::endl;
+
+        Runtime->resizeFramebuffer((size_t)width, (size_t)height);
+        Width  = width;
+        Height = height;
+        setupTextureBuffer((size_t)width, (size_t)height);
+
+        ImGuiSDL::Deinitialize();
+        ImGuiSDL::Initialize(Renderer, width, height);
     }
 
     // Events
@@ -339,6 +372,16 @@ public:
                 break;
             case SDL_QUIT:
                 return true;
+            case SDL_WINDOWEVENT: {
+                switch (event.window.event) {
+                case SDL_WINDOWEVENT_RESIZED:
+                    handleFramebufferResize(event.window.data1, event.window.data2);
+                    iter = 0;
+                    break;
+                default:
+                    break;
+                }
+            }
             default:
                 break;
             }
@@ -663,10 +706,9 @@ public:
 
 ////////////////////////////////////////////////////////////////
 
-UI::UI(Runtime* runtime, int width, int height, const std::vector<const float*>& aovs, const std::vector<std::string>& aov_names, bool showDebug)
+UI::UI(Runtime* runtime, int width, int height, const std::vector<std::string>& aov_names, bool showDebug)
     : mWidth(width)
     , mHeight(height)
-    , mAOVs(aovs)
     , mAOVNames(aov_names)
     , mCurrentAOV(0)
     , mDebugMode(DebugMode::Normal)
@@ -690,12 +732,13 @@ UI::UI(Runtime* runtime, int width, int height, const std::vector<const float*>&
         SDL_WINDOWPOS_UNDEFINED,
         width,
         height,
-        0);
+        SDL_WINDOW_RESIZABLE);
 
     if (!mInternal->Window) {
         IG_LOG(L_FATAL) << "Cannot create SDL window: " << SDL_GetError() << std::endl;
         throw std::runtime_error("Could not setup UI");
     }
+    SDL_SetWindowMinimumSize(mInternal->Window, 64, 64);
 
     mInternal->Renderer = SDL_CreateRenderer(mInternal->Window, -1, 0);
     if (!mInternal->Renderer) {
@@ -703,13 +746,9 @@ UI::UI(Runtime* runtime, int width, int height, const std::vector<const float*>&
         throw std::runtime_error("Could not setup UI");
     }
 
-    mInternal->Texture = SDL_CreateTexture(mInternal->Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
-    if (!mInternal->Texture) {
-        IG_LOG(L_FATAL) << "Cannot create SDL texture: " << SDL_GetError() << std::endl;
+    if (!mInternal->setupTextureBuffer((size_t)width, (size_t)height))
         throw std::runtime_error("Could not setup UI");
-    }
 
-    mInternal->Buffer.resize(width * height);
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -737,6 +776,11 @@ UI::~UI()
     SDL_Quit();
 
     mInternal->Buffer.clear();
+}
+
+const float* UI::currentPixels() const
+{
+    return mInternal->Runtime->getFramebuffer(mCurrentAOV);
 }
 
 void UI::setTitle(const char* str)

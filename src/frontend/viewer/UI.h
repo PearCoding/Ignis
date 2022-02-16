@@ -16,7 +16,7 @@ enum class ToneMappingMethod {
 class Runtime;
 class UI {
 public:
-    UI(Runtime* runtime, int width, int height, const std::vector<const float*>& aovs, const std::vector<std::string>& aov_names, bool showDebug);
+    UI(Runtime* runtime, int width, int height, const std::vector<std::string>& aov_names, bool showDebug);
     ~UI();
 
     void setTitle(const char* str);
@@ -31,7 +31,7 @@ public:
 
 private:
     void changeAOV(int delta_aov);
-    inline const float* currentPixels() const { return mAOVs[mCurrentAOV]; }
+    const float* currentPixels() const;
 
     int mWidth;
     int mHeight;

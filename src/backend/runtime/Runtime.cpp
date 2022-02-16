@@ -287,6 +287,12 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
     std::memcpy(data.data(), data_ptr, sizeof(float) * rays.size() * 3);
 }
 
+void Runtime::resizeFramebuffer(size_t width, size_t height)
+{
+    mLoadedInterface.ResizeFramebufferFunction(width, height);
+    reset();
+}
+
 const float* Runtime::getFramebuffer(int aov) const
 {
     return mLoadedInterface.GetFramebufferFunction(aov);
