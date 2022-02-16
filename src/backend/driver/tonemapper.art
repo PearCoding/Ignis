@@ -1,53 +1,3 @@
-fn @xyz_to_srgb(c : Color) -> Color {
-    make_color( 3.2404542 * c.r - 1.5371385 * c.g - 0.4985314 * c.b,
-               -0.9692660 * c.r + 1.8760108 * c.g + 0.0415560 * c.b,
-                0.0556434 * c.r - 0.2040259 * c.g + 1.0572252 * c.b,
-                c.a)
-}
-
-fn @srgb_to_xyz(c : Color) -> Color {
-    make_color(0.4124564 * c.r + 0.3575761 * c.g + 0.1804375 * c.b,
-               0.2126729 * c.r + 0.7151522 * c.g + 0.0721750 * c.b,
-               0.0193339 * c.r + 0.1191920 * c.g + 0.9503041 * c.b,
-               c.a)
-}
-
-fn @xyY_to_srgb(c : Color) -> Color {
-    if c.g <= flt_eps { black } else { xyz_to_srgb(make_color(c.r * c.b / c.g, c.b, (1 - c.r - c.g) * c.b / c.g, c.a)) }
-}
-
-fn @srgb_to_xyY(c : Color) -> Color {
-    let s = srgb_to_xyz(c);
-    let n = s.r + s.g + s.b;
-    if n <= flt_eps { black } else { make_color(s.r / n, s.g / n, s.g, 1) }
-}
-
-fn @reinhard(L : f32) -> f32 {
-    safe_div(L, 1.0 + L)
-}
-
-fn @reinhard_modified(L : f32) -> f32 {
-    let WhitePoint = 4 : f32;
-    safe_div(L * (1.0 + L / (WhitePoint * WhitePoint)), 1.0 + L)
-}
-
-fn @aces(L: f32) -> f32 {
-    let a = 2.51 : f32;
-    let b = 0.03 : f32;
-    let c = 2.43 : f32;
-    let d = 0.59 : f32;
-    let e = 0.14 : f32;
-    safe_div(L * (a * L + b), L * (c * L + d) + e)
-}
-
-fn @srgb_gamma(x : f32) -> f32 {
-    if x <= 0.0031308 {
-        12.92 * x
-    } else {
-        1.055 * math_builtins::pow[f32](x, 0.416666667) - 0.055
-    }
-}
-
 fn @make_byte_color(c : Color) = make_packed_color(
     (clampf(c.r, 0, 1) * 255) as u8,
     (clampf(c.g, 0, 1) * 255) as u8,
@@ -77,7 +27,7 @@ fn ig_utility_imageinfo(device_id: i32, in_pixels: &[f32], width: i32, height: i
     global_data.store_i32_host(2, 0);
 
     // Window based percentile setup (which is just approximative)
-    let query_size = (width - 2) * (height - 2);
+    let median_factor = safe_div(1, ((width - 2) * (height - 2)) as f32);
     for (x, y) in device.parallel_range_2d(1, width - 1, 1, height - 1) {
         // First get the window information
         let mut window : [f32 * 9];
@@ -104,7 +54,7 @@ fn ig_utility_imageinfo(device_id: i32, in_pixels: &[f32], width: i32, height: i
 
         if soft_min >= 0 { global_data.min_atomic_i32(0, bitcast[i32](soft_min)); }
         if soft_max >= 0 { global_data.max_atomic_i32(1, bitcast[i32](soft_max)); }
-        if median   >= 0 { global_data.add_atomic_f32(2, median / query_size as f32); }
+        if median   >= 0 { global_data.add_atomic_f32(2, median * median_factor); }
     }
     device.sync();
 
@@ -115,9 +65,9 @@ fn ig_utility_imageinfo(device_id: i32, in_pixels: &[f32], width: i32, height: i
     // Setup histogram
     let histogram_start     = output.soft_min;
     let histogram_end       = output.soft_max;
-    let histogram_size      = histogram_end - histogram_start;
+    let histogram_range     = histogram_end - histogram_start;
     let histogram_bin_count = settings.bins;
-    let histogram_factor    = safe_div(histogram_bin_count as f32, histogram_size);
+    let histogram_factor    = safe_div(histogram_bin_count as f32, histogram_range);
 
     let dev_hist_size = round_up(histogram_bin_count, 4);
     let dev_histogram = device.request_buffer("__imageinfo_histogram", sizeof[i32]() as i32 * dev_hist_size, 0);
@@ -148,46 +98,56 @@ fn ig_utility_tonemap(device_id: i32, in_pixels: &[f32], out_pixels: &mut [u32],
     let buffer_in  = device.make_buffer(in_pixels as &[u8],  width * height * 3);
     let buffer_out = device.make_buffer(out_pixels as &[u8], width * height);
 
-    let method          = settings.method;
     let use_gamma       = settings.use_gamma;
     let scale           = settings.scale;
     let exposure_factor = settings.exposure_factor;
     let exposure_offset = settings.exposure_offset;
 
-    for ind in device.parallel_range(0, width * height) {
-        // TODO: It would be more load friendly if the image buffer was actually 4 units per component, instead of 3
-        let rgb = color_mulf(make_color(buffer_in.load_f32(ind * 3 + 0), buffer_in.load_f32(ind * 3 + 1), buffer_in.load_f32(ind * 3 + 2), 1), scale);
-        let xyY = srgb_to_xyY(rgb);
-
-        if math_builtins::isnan(xyY.b) {
-            buffer_out.store_i32(ind, bitcast[i32](make_packed_color(0, 255, 255, 255))); // Cyan
-        } else if !math_builtins::isfinite(xyY.b) {
-            buffer_out.store_i32(ind, bitcast[i32](make_packed_color(255, 0, 150, 255))); // Pink
-        } else if xyY.r < 0.0 || xyY.g < 0.0 || xyY.b < 0.0 {
-            buffer_out.store_i32(ind, bitcast[i32](make_packed_color(255, 255, 0, 255))); // Orange
-        } else {
-            let L = exposure_factor * xyY.b + exposure_offset;
-
-            let nL = match method {
-                0 => L,
-                1 => reinhard(L),
-                2 => reinhard_modified(L),
-                _ => aces(L)
-            };
-
-            let color = xyY_to_srgb(make_color(xyY.r, xyY.g, nL, 1));
-            let out_color = if use_gamma {
-                make_color(srgb_gamma(color.r),
-                           srgb_gamma(color.g),
-                           srgb_gamma(color.b),
-                           color.a)
-            } else { 
-                color
-            };
-
-            buffer_out.store_i32(ind, bitcast[i32](make_byte_color(out_color)));
+    fn @tonemap(method: i32) -> () {
+        for ind in device.parallel_range(0, width * height) {
+            // TODO: It would be more load friendly if the image buffer was actually 4 units per component, instead of 3
+            let rgb = color_mulf(make_color(buffer_in.load_f32(ind * 3 + 0), buffer_in.load_f32(ind * 3 + 1), buffer_in.load_f32(ind * 3 + 2), 1), scale);
+            let xyY = srgb_to_xyY(rgb);
+    
+            if math_builtins::isnan(xyY.b) {
+                buffer_out.store_i32(ind, bitcast[i32](make_packed_color(0, 255, 255, 255))); // Cyan
+            } else if !math_builtins::isfinite(xyY.b) {
+                buffer_out.store_i32(ind, bitcast[i32](make_packed_color(255, 0, 150, 255))); // Pink
+            } else if xyY.r < 0.0 || xyY.g < 0.0 || xyY.b < 0.0 {
+                buffer_out.store_i32(ind, bitcast[i32](make_packed_color(255, 255, 0, 255))); // Orange
+            } else {
+                let L = exposure_factor * xyY.b + exposure_offset;
+    
+                let nL = match method {
+                    0 => L,
+                    1 => reinhard(L),
+                    2 => reinhard_modified(L),
+                    _ => aces(L)
+                };
+    
+                let color = xyY_to_srgb(make_color(xyY.r, xyY.g, nL, 1));
+                let out_color = if use_gamma {
+                    make_color(srgb_gamma(color.r),
+                               srgb_gamma(color.g),
+                               srgb_gamma(color.b),
+                               color.a)
+                } else { 
+                    color
+                };
+    
+                buffer_out.store_i32(ind, bitcast[i32](make_byte_color(out_color)));
+            }
         }
     }
+
+    // Force expansion of the actual methods
+    match settings.method {
+        0 => tonemap(0),
+        1 => tonemap(1),
+        2 => tonemap(2),
+        _ => tonemap(3)
+    };
+    
 
     device.sync();
 }
