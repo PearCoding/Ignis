@@ -3,6 +3,10 @@
 #[import(cc = "C")] fn clock_us() -> i64;
 
 fn @cpu_atomic_add_i64(a: &mut i64, b: i64) -> i64 = atomic[i64](1, a, b, 7, "");
+fn @cpu_atomic_add_i32(a: &mut i32, b: i32) -> i32 = cpu_atomic_add(a, b);
+fn @cpu_atomic_min_i32(a: &mut i32, b: i32) -> i32 = cpu_atomic_min(a, b);
+fn @cpu_atomic_max_i32(a: &mut i32, b: i32) -> i32 = cpu_atomic_max(a, b);
+fn @cpu_atomic_add_f32(a: &mut f32, b: f32) -> f32 = atomic[f32](11, a, b, 7, "");
 
 static cpu_profiling_enabled = false;
 static cpu_profiling_serial  = false;

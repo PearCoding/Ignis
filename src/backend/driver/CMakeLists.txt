@@ -191,20 +191,13 @@ set(_targets )
 foreach(var ${VARIANTS})
     var_to_name(var_name ${var})
     message(VERBOSE "Driver: ${var_name} = ${var}")
-    set(out_file_tracer "${CMAKE_CURRENT_BINARY_DIR}/driver_${var_name}_tracer.art")
-    set(out_file_tonemapper "${CMAKE_CURRENT_BINARY_DIR}/driver_${var_name}_tonemapper.art")
+    set(out_file "${CMAKE_CURRENT_BINARY_DIR}/driver_${var_name}.art")
     separate_arguments(args UNIX_COMMAND ${var})
     add_custom_command(
-        OUTPUT "${out_file_tracer}"
-        COMMAND $<TARGET_FILE:stpp> ${args} ${CMAKE_CURRENT_SOURCE_DIR}/tracer.artpp > ${out_file_tracer}
-        MAIN_DEPENDENCY tracer.artpp
-        COMMENT "Generating variant tracer file: ${out_file_tracer}" 
-        VERBATIM)
-    add_custom_command(
-        OUTPUT "${out_file_tonemapper}"
-        COMMAND $<TARGET_FILE:stpp> ${args} ${CMAKE_CURRENT_SOURCE_DIR}/tonemapper.artpp > ${out_file_tonemapper}
-        MAIN_DEPENDENCY tonemapper.artpp
-        COMMENT "Generating variant tonemapper file: ${out_file_tonemapper}" 
+        OUTPUT "${out_file}"
+        COMMAND $<TARGET_FILE:stpp> ${args} ${CMAKE_CURRENT_SOURCE_DIR}/device.artpp > ${out_file}
+        MAIN_DEPENDENCY device.artpp
+        COMMENT "Generating variant file: ${out_file}" 
         VERBATIM)
     set(_objs ) # Reset list
     set(_interface_name driver_interface_${var_name})
@@ -213,7 +206,7 @@ foreach(var ${VARIANTS})
         FRONTEND "artic"
         CLANG_FLAGS ${IG_ARTIC_CLANG_FLAGS}
         ARTIC_FLAGS ${IG_ARTIC_FLAGS} --log-level info -Wall
-        FILES ${ARTIC_MAIN_SRC} ${out_file_tracer} ${out_file_tonemapper})
+        FILES ${ARTIC_MAIN_SRC} ${out_file} tonemapper.art tracer.art)
     set(_target_name ig_driver_${var_name})
     add_library(${_target_name} MODULE ${_objs} glue.cpp ShallowArray.h)
     set_target_properties(${_target_name} PROPERTIES PREFIX "")

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RuntimeStructs.h"
 #include "Target.h"
 #include "loader/TechniqueVariant.h"
 #include <vector>
@@ -46,7 +47,8 @@ using DriverGetFramebufferFunction   = const float* (*)(int);
 using DriverClearFramebufferFunction = void (*)(int);
 using DriverGetStatisticsFunction    = const IG::Statistics* (*)();
 
-using DriverTonemapFunction = void (*)(int, int, uint32_t*, int, float, float, float);
+using DriverTonemapFunction   = void (*)(int, uint32_t*, const IG::TonemapSettings&);
+using DriverImageInfoFunction = void (*)(int, const IG::ImageInfoSettings&, IG::ImageInfoOutput&);
 
 struct DriverInterface {
     IG::uint32 MajorVersion;
@@ -61,4 +63,5 @@ struct DriverInterface {
     DriverClearFramebufferFunction ClearFramebufferFunction;
     DriverGetStatisticsFunction GetStatisticsFunction;
     DriverTonemapFunction TonemapFunction;
+    DriverImageInfoFunction ImageInfoFunction;
 };

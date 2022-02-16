@@ -1,6 +1,8 @@
 struct Atomics {
     add_global_i32: fn (&mut i32, i32) -> i32,
     add_global_f32: fn (&mut f32, f32) -> f32,
+    min_global_i32: fn (&mut i32, i32) -> i32,
+    max_global_i32: fn (&mut i32, i32) -> i32,
     add_shared_i32: fn (&mut addrspace(3)i32, i32) -> i32,
     add_shared_f32: fn (&mut addrspace(3)f32, f32) -> f32
 }
@@ -8,6 +10,8 @@ struct Atomics {
 fn @gpu_make_null_atomics() = Atomics {
     add_global_i32 = @ |_, _| 0,
     add_global_f32 = @ |_, _| 0,
+    min_global_i32 = @ |_, _| 0,
+    max_global_i32 = @ |_, _| 0,
     add_shared_i32 = @ |_, _| 0,
     add_shared_f32 = @ |_, _| 0,
 };

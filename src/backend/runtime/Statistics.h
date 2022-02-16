@@ -13,7 +13,8 @@ enum class ShaderType {
     Miss,
     AdvancedShadowHit,
     AdvancedShadowMiss,
-    Tonemap
+    Tonemap,
+    ImageInfo
 };
 
 class Statistics {
@@ -45,6 +46,7 @@ private:
     std::map<size_t, ShaderStats> mHitStats;
     ShaderStats mAdvancedShadowHitStats;
     ShaderStats mAdvancedShadowMissStats;
+    ShaderStats mImageInfoStats;
     ShaderStats mTonemapStats;
 };
 } // namespace IG

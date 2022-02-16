@@ -29,6 +29,8 @@ void Statistics::add(const Statistics& other)
         addStats(mHitStats[pair.first], pair.second);
     addStats(mAdvancedShadowHitStats, other.mAdvancedShadowHitStats);
     addStats(mAdvancedShadowMissStats, other.mAdvancedShadowMissStats);
+    addStats(mTonemapStats, other.mTonemapStats);
+    addStats(mImageInfoStats, other.mImageInfoStats);
 }
 
 std::string Statistics::dump(size_t iter, bool verbose) const
@@ -73,6 +75,9 @@ std::string Statistics::dump(size_t iter, bool verbose) const
                << "      Hits> " << dumpStats(mAdvancedShadowHitStats) << std::endl;
     }
 
+    if (mImageInfoStats.count > 0)
+        stream << "    ImageInfo>     " << dumpStats(mImageInfoStats) << std::endl;
+
     if (mTonemapStats.count > 0)
         stream << "    Tonemap>       " << dumpStats(mTonemapStats) << std::endl;
 
@@ -97,6 +102,8 @@ Statistics::ShaderStats* Statistics::getStats(ShaderType type, size_t id)
         return &mAdvancedShadowMissStats;
     case ShaderType::Tonemap:
         return &mTonemapStats;
+    case ShaderType::ImageInfo:
+        return &mImageInfoStats;
     }
 }
 } // namespace IG

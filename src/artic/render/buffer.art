@@ -3,8 +3,15 @@
 // Without a _host suffix the function can only be used in the device environment
 struct DeviceBuffer {
     add_atomic_i32: fn (i32, i32) -> i32,
-    load_i32_host:  fn (i32) -> i32,      // Load from device to host
-    store_i32_host: fn (i32, i32) -> (),  // Store from host to device
+    add_atomic_f32: fn (i32, f32) -> f32,
+    min_atomic_i32: fn (i32, i32) -> i32,
+    max_atomic_i32: fn (i32, i32) -> i32,
+
+    load_i32_host:  fn (i32) -> i32,     // Load from device to host
+    store_i32_host: fn (i32, i32) -> (), // Store from host to device
+
+    copy_from_host: fn (i32, i32, &[i32]) -> (),     // Copy from device (s, e) to host (0, e-s)
+    copy_to_host:   fn (i32, i32, &mut [i32]) -> (), // Copy from host (0, e-s) to device (s, e)
 
     load_i32:       fn (i32) -> i32,
     load_f32:       fn (i32) -> f32,

@@ -403,6 +403,15 @@ void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
     if (!mInit)
         setup();
 
-    mLoadedInterface.TonemapFunction(mDevice, settings.AOV, out_pixels, settings.Flags, settings.Scale, settings.ExposureFactor, settings.ExposureOffset);
+    mLoadedInterface.TonemapFunction(mDevice, out_pixels, settings);
 }
+
+void Runtime::imageinfo(const ImageInfoSettings& settings, ImageInfoOutput& output)
+{
+    if (!mInit)
+        setup();
+
+    mLoadedInterface.ImageInfoFunction(mDevice, settings, output);
+}
+
 } // namespace IG

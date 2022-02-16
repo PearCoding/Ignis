@@ -16,17 +16,7 @@
 #include "Logger.h"
 #include "ToneMapping.h"
 
-#include <atomic>
-#include <exception>
-#include <iomanip>
-
-#ifndef IG_NO_EXECUTION_H
-#include <execution>
-#endif
-
 namespace IG {
-
-#define USE_MEDIAN_FOR_LUMINANCE_ESTIMATION
 
 constexpr size_t HISTOGRAM_SIZE               = 100;
 static const char* ToneMappingMethodOptions[] = {
@@ -43,19 +33,15 @@ static const char* DebugModeOptions[] = {
 constexpr char POSE_FILE[] = "poses.lst";
 
 struct LuminanceInfo {
-    std::atomic<float> Min = FltInf;
-    std::atomic<float> Max = 0.0f;
-    float Avg              = 0.0f;
-    float Est              = 0.000001f;
+    float Min     = FltInf;
+    float Max     = 0.0f;
+    float Avg     = 0.0f;
+    float SoftMin = FltInf;
+    float SoftMax = 0.0f;
+    float Med     = 0.0f;
+    float Est     = 1e-5f;
 
-    inline LuminanceInfo& operator=(const LuminanceInfo& other)
-    {
-        Min = other.Min.load();
-        Max = other.Max.load();
-        Avg = other.Avg;
-        Est = other.Est;
-        return *this;
-    }
+    LuminanceInfo& operator=(const LuminanceInfo& other) = default;
 };
 
 class UIInternal {
@@ -79,7 +65,7 @@ public:
 
     // Stats
     LuminanceInfo LastLum;
-    std::array<std::atomic<uint32>, HISTOGRAM_SIZE> Histogram;
+    std::array<int, HISTOGRAM_SIZE> Histogram;
     std::array<float, HISTOGRAM_SIZE> HistogramF;
 
     bool ToneMapping_Automatic = true;
@@ -425,106 +411,24 @@ public:
 
     void analzeLuminance(size_t width, size_t height, uint32_t iter)
     {
-        const float* film     = Parent->currentPixels(); // sRGB
-        auto inv_iter         = 1.0f / iter;
+        ImageInfoSettings settings{ Parent->currentAOV(),
+                                    Histogram.data(), (int)Histogram.size(),
+                                    1.0f / iter };
+        ImageInfoOutput output;
+        Runtime->imageinfo(settings, output);
+
+        LastLum         = LuminanceInfo();
+        LastLum.Avg     = output.Average;
+        LastLum.Max     = output.Max;
+        LastLum.Min     = output.Min;
+        LastLum.Med     = output.Median;
+        LastLum.SoftMax = output.SoftMax;
+        LastLum.SoftMin = output.SoftMin;
+        LastLum.Est     = output.SoftMax;
+
         const float avgFactor = 1.0f / (width * height);
-        LastLum               = LuminanceInfo();
-
-        const RangeS imageRange(0, width * height);
-
-        const auto getL = [&](size_t ind) -> float {
-            auto r = film[ind * 3 + 0];
-            auto g = film[ind * 3 + 1];
-            auto b = film[ind * 3 + 2];
-
-            return srgb_to_xyY(RGB(r, g, b)).b * inv_iter;
-        };
-
-        // Extract basic information
-        const auto updateRange = [&](size_t ind) {
-            const auto L = getL(ind);
-
-            updateMaximum(LastLum.Max, L);
-            updateMinimum(LastLum.Min, L);
-        };
-
-#ifndef IG_NO_EXECUTION_H
-        std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), updateRange);
-#else
-        for (size_t i : imageRange)
-            updateRange(i);
-#endif
-
-        const auto lumFactor = [&](size_t ind) { return getL(ind) * avgFactor; };
-#ifndef IG_NO_EXECUTION_H
-        LastLum.Avg = std::transform_reduce(std::execution::par_unseq, imageRange.begin(), imageRange.end(), 0.0f, std::plus<>(),
-                                            lumFactor);
-#else
-        LastLum.Avg = 0;
-        for (size_t i : imageRange)
-            LastLum.Avg += lumFactor(i);
-
-#endif
-
-        // Setup histogram
-        for (auto& a : Histogram)
-            a = 0;
-
-        const float histogram_factor = HISTOGRAM_SIZE / std::max(LastLum.Max.load(), 1.0f);
-        const auto updateHistogram   = [&](size_t ind) {
-            const auto L  = getL(ind);
-            const int idx = std::max(0, std::min<int>(L * histogram_factor, HISTOGRAM_SIZE - 1));
-            Histogram[idx]++;
-        };
-
-#ifndef IG_NO_EXECUTION_H
-        std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), updateHistogram);
-#else
-        for (size_t i : imageRange)
-            updateHistogram(i);
-#endif
-
         for (size_t i = 0; i < Histogram.size(); ++i)
             HistogramF[i] = Histogram[i] * avgFactor;
-
-#ifdef USE_MEDIAN_FOR_LUMINANCE_ESTIMATION
-        if (!ToneMapping_Automatic) {
-            LastLum.Est = LastLum.Max;
-            return;
-        }
-
-        // Estimate for reinhard
-        // TODO: Parallel?
-        constexpr size_t WINDOW_S = 3;
-        constexpr size_t EDGE_S   = WINDOW_S / 2;
-        std::array<float, WINDOW_S * WINDOW_S> window;
-
-        for (size_t y = EDGE_S; y < height - EDGE_S; ++y) {
-            for (size_t x = EDGE_S; x < width - EDGE_S; ++x) {
-
-                size_t i = 0;
-                for (size_t wy = 0; wy < WINDOW_S; ++wy) {
-                    for (size_t wx = 0; wx < WINDOW_S; ++wx) {
-                        const auto ix = x + wx - EDGE_S;
-                        const auto iy = y + wy - EDGE_S;
-
-                        auto r = film[(iy * width + ix) * 3 + 0];
-                        auto g = film[(iy * width + ix) * 3 + 1];
-                        auto b = film[(iy * width + ix) * 3 + 2];
-
-                        window[i] = srgb_to_xyY(RGB(r, g, b)).b;
-                        ++i;
-                    }
-                }
-
-                std::sort(window.begin(), window.end());
-                const auto L = window[window.size() / 2];
-                LastLum.Est  = std::max(LastLum.Est, L * inv_iter);
-            }
-        }
-#else
-        LastLum.Est = LastLum.Max;
-#endif
     }
 
     void updateSurface(uint32_t iter)
@@ -532,31 +436,11 @@ public:
         if (iter == 0)
             iter = 1;
 
-        // TODO: Would be great if we could put this also on the device
         analzeLuminance(Width, Height, iter);
-
-        int flags = 0;
-        if (ToneMapping_Automatic)
-            flags |= 0x1;
-        if (ToneMappingGamma)
-            flags |= 0x2;
-
-        switch (Parent->mToneMappingMethod) {
-        default:
-        case ToneMappingMethod::Reinhard:
-            flags |= (1 << 2);
-            break;
-        case ToneMappingMethod::ModifiedReinhard:
-            flags |= (2 << 2);
-            break;
-        case ToneMappingMethod::ACES:
-            flags |= (3 << 2);
-            break;
-        }
 
         // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
         uint32* buf = Buffer.data();
-        Runtime->tonemap(buf, TonemapSettings{ Parent->currentAOV(), flags,
+        Runtime->tonemap(buf, TonemapSettings{ Parent->currentAOV(), (int)Parent->mToneMappingMethod, ToneMappingGamma,
                                                1.0f / iter,
                                                ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                                                ToneMapping_Automatic ? 0 : ToneMapping_Offset });
@@ -678,9 +562,9 @@ public:
             ImGui::Text("Iter %i", iter);
             ImGui::Text("SPP  %i", iter * samplesPerIteration);
             ImGui::Text("Cursor  (%f, %f, %f)", rgb.r, rgb.g, rgb.b);
-            ImGui::Text("Max Lum %f", LastLum.Max.load());
-            ImGui::Text("Min Lum %f", LastLum.Min.load());
-            ImGui::Text("Avg Lum %f", LastLum.Avg);
+            ImGui::Text("Lum Max %8.3f | 95%% %8.3f", LastLum.Max, LastLum.SoftMax);
+            ImGui::Text("Lum Min %8.3f |  5%% %8.3f", LastLum.Min, LastLum.SoftMin);
+            ImGui::Text("Lum Avg %8.3f | Med %8.3f", LastLum.Avg, LastLum.Med);
             ImGui::Text("Cam Eye (%f, %f, %f)", LastCameraPose.Eye(0), LastCameraPose.Eye(1), LastCameraPose.Eye(2));
             ImGui::Text("Cam Dir (%f, %f, %f)", LastCameraPose.Dir(0), LastCameraPose.Dir(1), LastCameraPose.Dir(2));
             ImGui::Text("Cam Up  (%f, %f, %f)", LastCameraPose.Up(0), LastCameraPose.Up(1), LastCameraPose.Up(2));

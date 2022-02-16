@@ -2,23 +2,7 @@ static RayPayloadComponents = MaxRayPayloadComponents;
 
 #[export]
 fn ig_render(settings: &Settings) -> () {
-#if DEVICE_AVX
-    let device = make_avx_device();
-#elif DEVICE_AVX2
-    let device = make_avx2_device();
-#elif DEVICE_AVX512
-    let device = make_avx512_device();
-#elif DEVICE_SSE42
-    let device = make_sse42_device();
-#elif DEVICE_ASIMD
-    let device = make_asimd_device();
-#elif DEVICE_NVVM
-    let device = make_nvvm_device(settings.device);
-#elif DEVICE_AMDGPU
-    let device = make_amdgpu_device(settings.device);
-#else
-    let device = make_cpu_default_device();
-#endif
+    let device = @get_device(settings.device);
 
     let dtb  = device.load_scene_database();
     let acc  = TraceAccessor {

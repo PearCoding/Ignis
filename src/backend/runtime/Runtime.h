@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DebugMode.h"
+#include "RuntimeStructs.h"
 #include "Statistics.h"
 #include "driver/DriverManager.h"
 #include "loader/Loader.h"
@@ -41,14 +42,6 @@ struct Ray {
     Vector2f Range;
 };
 
-struct TonemapSettings {
-    int AOV;
-    int Flags; // 0x1 - Automatic tonemapping, 0x2 - Apply srgb gamma, 0x4-... Tonemapping method
-    float Scale;
-    float ExposureFactor;
-    float ExposureOffset;
-};
-
 class Runtime {
 public:
     Runtime(const std::filesystem::path& path, const RuntimeOptions& opts);
@@ -62,6 +55,8 @@ public:
     /// A utility function to speed up tonemapping
     /// out_pixels should be of size width*height!
     void tonemap(uint32* out_pixels, const TonemapSettings& settings);
+    /// A utility function to speed up utility information from the image
+    void imageinfo(const ImageInfoSettings& settings, ImageInfoOutput& output);
 
     const float* getFramebuffer(int aov = 0) const;
     // aov<0 will clear all aovs

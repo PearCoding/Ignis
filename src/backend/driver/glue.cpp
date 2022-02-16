@@ -767,7 +767,7 @@ const IG::Statistics* glue_getStatistics()
     return sInterface->getFullStats();
 }
 
-void glue_tonemap(int device, int aov, uint32_t* out_pixels, int flags, float scale, float exposure_factor, float exposure_offset)
+void glue_tonemap(int device, uint32_t* out_pixels, const IG::TonemapSettings& driver_settings)
 {
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Tonemap, {});
@@ -778,14 +778,21 @@ void glue_tonemap(int device, int aov, uint32_t* out_pixels, int flags, float sc
 #elif defined(DEVICE_AMD)
     int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, device);
 #endif
-    float* in_pixels            = sInterface->getAOVImage(dev_id, aov);
+    float* in_pixels            = sInterface->getAOVImage(dev_id, driver_settings.AOV);
     uint32_t* device_out_pixels = sInterface->getTonemapImage(dev_id);
 #else
-    float* in_pixels            = sInterface->getAOVImage(0, aov);
+    float* in_pixels            = sInterface->getAOVImage(0, driver_settings.AOV);
     uint32_t* device_out_pixels = out_pixels;
 #endif
 
-    ig_tonemap(device, in_pixels, device_out_pixels, sInterface->film_width, sInterface->film_height, flags, scale, exposure_factor, exposure_offset);
+    TonemapSettings settings;
+    settings.method          = driver_settings.Method;
+    settings.use_gamma       = driver_settings.UseGamma;
+    settings.scale           = driver_settings.Scale;
+    settings.exposure_factor = driver_settings.ExposureFactor;
+    settings.exposure_offset = driver_settings.ExposureOffset;
+
+    ig_utility_tonemap(device, in_pixels, device_out_pixels, sInterface->film_width, sInterface->film_height, &settings);
 
 #ifdef DEVICE_GPU
     int size = sInterface->film_width * sInterface->film_height;
@@ -794,6 +801,41 @@ void glue_tonemap(int device, int aov, uint32_t* out_pixels, int flags, float sc
 
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.endShaderLaunch(IG::ShaderType::Tonemap, {});
+}
+
+void glue_imageinfo(int device, const IG::ImageInfoSettings& driver_settings, IG::ImageInfoOutput& driver_output)
+{
+    if (sInterface->setup.acquire_stats)
+        sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::ImageInfo, {});
+
+#ifdef DEVICE_GPU
+#if defined(DEVICE_NVVM)
+    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, device);
+#elif defined(DEVICE_AMD)
+    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, device);
+#endif
+    float* in_pixels = sInterface->getAOVImage(dev_id, driver_settings.AOV);
+#else
+    float* in_pixels = sInterface->getAOVImage(0, driver_settings.AOV);
+#endif
+
+    ImageInfoSettings settings;
+    settings.scale     = driver_settings.Scale;
+    settings.histogram = driver_settings.Histogram;
+    settings.bins      = driver_settings.Bins;
+
+    ImageInfoOutput output;
+    ig_utility_imageinfo(device, in_pixels, sInterface->film_width, sInterface->film_height, &settings, &output);
+
+    driver_output.Min     = output.min;
+    driver_output.Max     = output.max;
+    driver_output.Average = output.avg;
+    driver_output.SoftMin = output.soft_min;
+    driver_output.SoftMax = output.soft_max;
+    driver_output.Median  = output.median;
+
+    if (sInterface->setup.acquire_stats)
+        sInterface->getThreadData()->stats.endShaderLaunch(IG::ShaderType::ImageInfo, {});
 }
 
 inline void get_ray_stream(RayStream& rays, float* ptr, size_t capacity)
@@ -843,7 +885,7 @@ IG_EXPORT DriverInterface ig_get_interface()
 #if defined(DEVICE_DEFAULT)
     interface.Target = IG::Target::GENERIC;
 #elif defined(DEVICE_AVX)
-    interface.Target = IG::Target::AVX;
+    interface.Target            = IG::Target::AVX;
 #elif defined(DEVICE_AVX2)
     interface.Target = IG::Target::AVX2;
 #elif defined(DEVICE_AVX512)
@@ -868,6 +910,7 @@ IG_EXPORT DriverInterface ig_get_interface()
     interface.ClearFramebufferFunction = glue_clearFramebuffer;
     interface.GetStatisticsFunction    = glue_getStatistics;
     interface.TonemapFunction          = glue_tonemap;
+    interface.ImageInfoFunction        = glue_imageinfo;
 
     return interface;
 }

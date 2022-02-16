@@ -13,6 +13,8 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/aov.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/bsdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/buffer.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/buffer_cpu.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/buffer_gpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/camera.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/data.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/device.art
@@ -31,6 +33,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/surface_element.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/technique.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/texture.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/tonemap.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/bvh.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/intersection.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/mapping_cpu.art
