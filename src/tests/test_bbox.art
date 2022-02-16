@@ -1,0 +1,37 @@
+fn test_bbox_empty() -> bool {
+    let bbox = make_empty_bbox();
+    $bbox_is_empty(bbox)
+}
+
+fn test_bbox_center() -> bool {
+    let bbox   = make_bbox(make_vec3(-1,-4,-2), make_vec3(1,2,4));
+    let center = bbox_center(bbox);
+    center.x == 0 && center.y == -1 && center.z == 1 
+}
+
+fn test_bbox_radius() -> bool {
+    let bbox    = make_bbox(make_vec3(0,0,0), make_vec3(2,4,8));
+    let radius2 = bbox_radius2(bbox);
+    radius2 == 21
+}
+
+fn test_bbox() -> i32 { 
+    let mut err = 0;
+
+    if !test_bbox_empty() {
+        ++err;
+        ignis_test_fail("Expected bbox to be empty, but it was not!");
+    }
+
+    if !test_bbox_center() {
+        ++err;
+        ignis_test_fail("Got a wrong bbox center.");
+    }
+
+    if !test_bbox_radius() {
+        ++err;
+        ignis_test_fail("Got a wrong bbox radius.");
+    }
+
+    err
+}

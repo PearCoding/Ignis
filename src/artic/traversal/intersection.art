@@ -1,82 +1,17 @@
-
-// Bottom level SBVH
-struct PrimBvh {
-    node:     fn (i32) -> Node, // Access to one node of the BVH
-    prim:     fn (i32) -> Prim, // Access to one (possibly packed) primitive
-    prefetch: fn (i32) -> (),   // Prefetches a leaf or inner node
-    arity:    i32,              // Arity of the BVH (number of children per node)
-}
-
-type BVHTable = fn (i32) -> PrimBvh;
-
-// Top level BVH
-struct SceneBvh {
-    node:     fn (i32) -> Node,       // Access to one node of the BVH
-    ent:      fn (i32) -> EntityLeaf, // Access to one EntityLeaf
-    prefetch: fn (i32) -> (),         // Prefetches a leaf or inner node
-    arity:    i32,                    // Arity of the BVH (number of children per node)
-}
-
-struct Node {
-    bbox:         fn (i32) -> BBox,             // Loads the bounding box of one child node
-    ordered_bbox: fn (i32, RayOctant) -> BBox,  // Loads the bounding box of one child with the given octant order (mapping specific)
-    child:        fn (i32) -> i32               // Gets the index of one child node
-}
-
-struct Prim {
-    intersect: fn (i32, Ray) -> Option[Hit],    // Intersects a primitive in the packet
-    is_valid:  fn (i32) -> bool,                            // Returns true if the primitive in the packet is valid
-    is_last:   bool,                                        // True if this is the last primitive packet in the leaf
-    size:      i32                                          // Number of primitives in the packet (must be a constant)
-}
-
-// Ray structure used for data from host
-struct StreamRay {
-    org: Vec3,     // Origin of the ray
-    dir: Vec3,     // Direction of the ray
-    tmin: f32,     // Minimum distance from the origin
-    tmax: f32      // Maximum distance from the origin
-}
-
-struct Ray {
-    org: Vec3,     // Origin of the ray
-    dir: Vec3,     // Direction of the ray
-    inv_dir: Vec3, // Inverse of the direction
-    inv_org: Vec3, // Origin multiplied by the inverse of the direction
-    tmin: f32,     // Minimum distance from the origin
-    tmax: f32      // Maximum distance from the origin
-}
-
 struct Hit {
-    distance:    f32,    // Distance to the intersection point
-    prim_coords: Vec2,   // Surface coordinates
-    prim_id:     i32,    // Primitive identifier, or -1 (no intersection found)
-    ent_id:      i32     // Entity identifier, or -1 (no intersection found)
+    distance:    f32,  // Distance to the intersection point
+    prim_coords: Vec2, // Surface coordinates
+    prim_id:     i32,  // Primitive identifier, or -1 (no intersection found)
+    ent_id:      i32   // Entity identifier, or -1 (no intersection found)
 }
 
 struct Tri {
-    v0: Vec3,          // First vertex
-    v1: Vec3,          // Second vertex
-    v2: Vec3,          // Third vertex
-    e1: Vec3,          // First edge (= v0 - v1)
-    e2: Vec3,          // Second edge (= v2 - v0)
-    n:  Vec3           // Geometric normal (= cross(e1, e2))
-}
-
-struct EntityLeaf {
-    bbox      : BBox,   // Bounding box
-    entity_id : i32, // Entity ID
-    shape_id  : i32, // Shape ID
-    local     : Mat3x4 // Matrix to local system
-}
-
-// Used as storage
-struct EntityLeaf1 {
-    min       : [f32 * 3], // Minimum corner
-    entity_id : i32,       // Entity ID
-    max       : [f32 * 3], // Maximum corner
-    shape_id  : i32,       // Shape/BVH ID
-    local     : Mat3x4     // Matrix to local system
+    v0: Vec3, // First vertex
+    v1: Vec3, // Second vertex
+    v2: Vec3, // Third vertex
+    e1: Vec3, // First edge (= v0 - v1)
+    e2: Vec3, // Second edge (= v2 - v0)
+    n:  Vec3  // Geometric normal (= cross(e1, e2))
 }
 
 // Min/max functions required to perform the ray-box test
@@ -89,8 +24,6 @@ struct MinMax {
     fminf:      fn (f32, f32) -> f32,
     is_integer: bool
 }
-
-type RayOctant = i32;
 
 // Constructs a set of comparators from min and max functions.
 // May not be the optimal intrinsics if the hardware provides a combined min/max instruction.
@@ -114,31 +47,6 @@ fn @make_default_min_max() -> MinMax {
     make_min_max(fminf, fmaxf, false)
 }
 
-fn @make_ray(org: Vec3, dir: Vec3, tmin: f32, tmax: f32) -> Ray {
-    let inv_dir = make_vec3(safe_rcp(dir.x), safe_rcp(dir.y), safe_rcp(dir.z));
-    let inv_org = vec3_neg(vec3_mul(org, inv_dir));
-    Ray {
-        org = org,
-        dir = dir,
-        inv_dir = inv_dir,
-        inv_org = inv_org,
-        tmin = tmin,
-        tmax = tmax
-    }
-}
-
-// Transforms ray. The direction is not normalized
-fn @transform_ray(ray: Ray, m: Mat3x4) = make_ray(
-    mat3x4_transform_point(m, ray.org),
-    mat3x4_transform_direction(m, ray.dir),
-    ray.tmin, ray.tmax);
-
-// Transforms ray. The direction is normalized
-fn @transform_norm_ray(ray: Ray, m: Mat3x4) = make_ray(
-    mat3x4_transform_point(m, ray.org),
-    vec3_normalize(mat3x4_transform_direction(m, ray.dir)),
-    ray.tmin, ray.tmax);
-
 fn @make_hit(ent_id: i32, prim_id: i32, t: f32, uv: Vec2) = Hit {
     distance    = t,
     prim_coords = uv,
@@ -154,19 +62,6 @@ fn @make_tri(v0: Vec3, e1: Vec3, e2: Vec3, n: Vec3) = Tri {
     e2 = e2,
     n  = n
 };
-
-fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, local: Mat3x4) = EntityLeaf {
-    bbox      = bbox,
-    entity_id = entity_id,
-    shape_id  = shape_id,
-    local     = local
-};
-
-fn @ray_octant(ray: Ray) -> RayOctant {
-    select(ray.dir.x > 0, 1, 0) |
-    select(ray.dir.y > 0, 2, 0) |
-    select(ray.dir.z > 0, 4, 0)
-}
 
 fn @empty_hit(tmax: f32) = make_hit(-1, -1, tmax, undef[Vec2]());
 
@@ -253,7 +148,7 @@ fn @intersect_ray_tri_bw(_backface_culling: bool, ray: Ray, tri: Tri) -> Option[
 fn @intersect_ray_tri(backface_culling: bool, ray: Ray, tri: Tri) = intersect_ray_tri_mt(backface_culling, ray, tri);
 
 fn @intersect_ray_box(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> (f32, f32) {
-    if is_bbox_empty(bbox) { return((1,-1)) }
+    if bbox_is_empty(bbox) { return((1,-1)) }
 
     let t0 = vec3_add(vec3_mul(ray.inv_dir, bbox.min), ray.inv_org);
     let t1 = vec3_add(vec3_mul(ray.inv_dir, bbox.max), ray.inv_org);

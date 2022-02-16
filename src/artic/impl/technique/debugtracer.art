@@ -24,8 +24,8 @@ fn @color_map(i: i32) = [
         make_color(0.112500, 0.317935, 0.450000, 1)
     ](i%23);
 
-fn @make_debug_renderer(debug_mode: i32) -> PathTracer {
-    PathTracer {
+fn @make_debug_renderer(debug_mode: i32) -> Technique {
+    Technique {
         on_hit    = @ |ray, _, hit, _, surf, mat| {
             match debug_mode {
                 1 => { // DEBUG_TANGENT

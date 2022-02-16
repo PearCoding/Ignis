@@ -1,7 +1,7 @@
-fn @make_ao_renderer() -> PathTracer {
+fn @make_ao_renderer() -> Technique {
     let offset:f32 = 0.001;
 
-    PathTracer {
+    Technique {
         on_hit    = @ |_, _, _, _, _, _| Option[(Color)]::None,
         on_miss   = @ |_, _, _| Option[(Color)]::None,
         on_shadow = @ |ray, _, _, rnd, _, surf, _| {

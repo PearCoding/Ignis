@@ -42,7 +42,7 @@ fn unrap_ptraypayload(payload: RayPayload) = PTRayPayload {
     eta     = payload.components(5),
 };
 
-fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, aovs: AOVTable) -> PathTracer {
+fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, aovs: AOVTable) -> Technique {
     let offset : f32  = 0.001;
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
 
@@ -241,7 +241,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         make_option(color)
     }
 
-    PathTracer {
+    Technique {
         on_hit         = on_hit,
         on_miss        = on_miss,
         on_shadow      = on_shadow,

@@ -1,31 +1,4 @@
 // Trace function ------------------------------------------------------------------
-fn @cpu_parallel_tiles(body: fn (i32, i32, i32, i32) -> ()) =
-    @|width: i32, height: i32, tile_width: i32, tile_height: i32, num_cores: i32| {
-    if cpu_profiling_enabled && cpu_profiling_serial {
-        for ymin in range_step(0, height, tile_height) {
-            for xmin in range_step(0, width, tile_width) {
-                let xmax = if xmin + tile_width  < width  { xmin + tile_width  } else { width  };
-                let ymax = if ymin + tile_height < height { ymin + tile_height } else { height };
-                @body(xmin, ymin, xmax, ymax)
-            }
-        }
-    } else {
-        let num_tiles_x = round_up(width , tile_width)  / tile_width;
-        let num_tiles_y = round_up(height, tile_height) / tile_height;
-        let num_tiles = num_tiles_x * num_tiles_y;
-        let tiles_div = make_fast_div(num_tiles_x as u32);
-        for i in parallel(num_cores, 0, num_tiles) {
-            let y = fast_div(tiles_div, i as u32) as i32;
-            let x = i - num_tiles_x * y;
-            let xmin = x * tile_width;
-            let ymin = y * tile_height;
-            let xmax = min(xmin + tile_width,  width);
-            let ymax = min(ymin + tile_height, height);
-            @body(xmin, ymin, xmax, ymax)
-        }
-    }
-};
-
 fn @cpu_sort_primary(primary: &PrimaryStream, ray_ends: &mut[i32], num_geometries: i32) -> i32 {
     // Count the number of rays per shader
     for i in range(0, num_geometries + 1) {
@@ -324,7 +297,7 @@ fn @cpu_traverse_secondary(scene: SceneGeometry, min_max: MinMax, secondary: &Se
     $cpu_traverse_secondary_specialized(scene, secondary);
 }
 
-fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: Shader, scene: Scene, path_tracer: PathTracer, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: Shader, scene: Scene, path_tracer: Technique, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_shade_specialized(entity_id2: i32, primary2: &PrimaryStream, secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -397,7 +370,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
     $cpu_shade_specialized(entity_id, primary, secondary, begin, end);
 }
 
-fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tracer: PathTracer, begin: i32, end: i32, spp: i32, use_framebuffer: bool, vector_width: i32) -> () {
+fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tracer: Technique, begin: i32, end: i32, spp: i32, use_framebuffer: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut primary : PrimaryStream;
@@ -409,7 +382,7 @@ fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tra
     cpu_hit_shade(entity_id, primary, secondary, shader, scene, path_tracer, accumulator, begin, end, vector_width);
 }
 
-fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: Technique, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_miss_shade_specialized(primary2: &PrimaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -445,7 +418,7 @@ fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: PathTracer, accumulate:
     $cpu_miss_shade_specialized(primary, begin, end);
 }
 
-fn @cpu_miss_shade_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i32, use_framebuffer: bool, vector_width: i32) -> () {
+fn @cpu_miss_shade_handler(path_tracer: Technique, begin: i32, end: i32, spp: i32, use_framebuffer: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut primary : PrimaryStream;
@@ -455,7 +428,7 @@ fn @cpu_miss_shade_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i
     cpu_miss_shade(primary, path_tracer, accumulator, begin, end, vector_width);
 }
 
-fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: PathTracer, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: Technique, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_advanced_shadow_specialized(secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -492,7 +465,7 @@ fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: 
     $cpu_advanced_shadow_specialized(secondary, begin, end);
 }
 
-fn @cpu_advanced_shadow_handler(path_tracer: PathTracer, begin: i32, end: i32, spp: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
+fn @cpu_advanced_shadow_handler(path_tracer: Technique, begin: i32, end: i32, spp: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut secondary : SecondaryStream;
@@ -618,7 +591,7 @@ fn @cpu_trace( scene: SceneGeometry
                     cpu_profile(if is_first { &mut primary_counter } else { &mut bounces_counter }, || {
                         cpu_traverse_primary(scene, min_max, primary, single, vector_width);
                     });
-                    atomic(1:u32, &mut total_rays, primary.size as i64, 7:u32, "");
+                    cpu_atomic_add_i64(&mut total_rays, primary.size as i64);
 
                     // Sort hits by shader id, and filter invalid hits
                     let mut ray_ends : [i32 * 1024];
@@ -717,7 +690,7 @@ fn @cpu_load_vec4(p: &[f32], elem: i32) {
 }
 
 fn @make_cpu_buffer(p: &[u8], count: i32) = DeviceBuffer {
-    add_atomic_i32 = @ |i, v| atomic[i32](1:u32, (&(p as &[i32])(i) as &mut i32), v, 7:u32, ""),
+    add_atomic_i32 = @ |i, v| cpu_atomic_add(&(p as &[i32])(i) as &mut i32, v),
     load_i32_host  = @ |i| (p as &[i32])(i),
     store_i32_host = @ |i, v| { (p as &mut [i32])(i) = v; },
 
@@ -841,6 +814,8 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             }
         }
     },
+    parallel_reduce_i32 = @|n, elem, op| cpu_reduce[i32](n, elem, op),
+    parallel_reduce_f32 = @|n, elem, op| cpu_reduce[f32](n, elem, op),
     load_scene_bvh = @ || {
         if vector_width == 8 {
             let mut nodes: &[Node8];

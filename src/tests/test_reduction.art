@@ -1,0 +1,89 @@
+fn @get_accelerator() = nvvm_accelerator(0); // TODO: Maybe allow AMD?
+
+fn test_add_reduction_gpu() -> bool {
+    let acc = get_accelerator();
+    let tmp = acc.alloc(sizeof[i64]());
+
+    let N = 100000000;
+    gpu_reduce[i64](acc, N, 512,
+        @|i| i as i64,
+        @|a, b| a + b,
+        @|v| (tmp.data as &mut addrspace(1)[i64])(0) = v
+    );
+    acc.sync();
+
+    let mut value: i64;
+    runtime_copy(tmp.device, tmp.data as &[i8], 0, 0 /* Host */, &mut value as &mut [i8], 0, sizeof[i64]());
+    release(tmp);
+
+    let result = (N as i64  - 1) * N as i64 / 2;
+    value == result
+}
+
+fn test_max_reduction_gpu() -> bool {
+    let acc = get_accelerator();
+    let tmp = acc.alloc(sizeof[f32]());
+
+    let N = 100000;
+    gpu_reduce[f32](acc, N, 64,
+        @|i| i as f32,
+        @|a, b| math_builtins::fmax(a, b),
+        @|v| (tmp.data as &mut addrspace(1)[f32])(0) = v
+    );
+    acc.sync();
+
+    let mut value: f32;
+    runtime_copy(tmp.device, tmp.data as &[i8], 0, 0 /* Host */, &mut value as &mut [i8], 0, sizeof[f32]());
+    release(tmp);
+
+    let result = (N-1) as f32;
+    value == result
+}
+
+fn test_add_reduction_cpu() -> bool {
+    let N = 100000000;
+    let value = cpu_reduce[i64](N, 
+        @|i| i as i64,
+        @|a, b| a + b
+    );
+
+    let result = (N as i64  - 1) * N as i64 / 2;
+    value == result
+}
+
+fn test_max_reduction_cpu() -> bool {
+    let N = 100000;
+    let value = cpu_reduce[f32](N, 
+        @|i| i as f32,
+        @|a, b| math_builtins::fmax(a, b),
+    );
+
+    let result = (N-1) as f32;
+    value == result
+}
+
+fn test_reduction() -> i32 { 
+    let mut err = 0;
+
+    if !test_add_reduction_gpu() {
+        ++err;
+        ignis_test_fail("GPU based reduction with the add operator fails!");
+    }
+
+    if !test_max_reduction_gpu() {
+        ++err;
+        ignis_test_fail("GPU based reduction with the max operator fails!");
+    }
+
+    if !test_add_reduction_cpu() {
+        ++err;
+        ignis_test_fail("CPU based reduction with the add operator fails!");
+    }
+
+    if !test_max_reduction_cpu() {
+        ++err;
+        ignis_test_fail("CPU based reduction with the max operator fails!");
+    }
+
+    err
+}

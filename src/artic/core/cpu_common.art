@@ -2,6 +2,8 @@
 
 #[import(cc = "C")] fn clock_us() -> i64;
 
+fn @cpu_atomic_add_i64(a: &mut i64, b: i64) -> i64 = atomic[i64](1, a, b, 7, "");
+
 static cpu_profiling_enabled = false;
 static cpu_profiling_serial  = false;
 
@@ -14,7 +16,7 @@ fn @cpu_profile(counter: &mut i64, body: fn () -> ()) -> () {
         if cpu_profiling_serial {
             *counter += end - start;
         } else {
-            atomic(1:u32, counter, end - start, 7:u32, "");
+            cpu_atomic_add_i64(counter, end - start);
         }
     } else {
         @body()
@@ -35,10 +37,10 @@ fn @cpu_one_bits(body: fn (i32) -> ()) {
 }
 
 // Performs a horizontal reduction over vector lanes
-fn @(?n) cpu_reduce(value: f32, n: i32, op: fn (f32, f32) -> f32) -> f32 {
+fn @(?n) cpu_vector_reduce(value: f32, n: i32, op: fn (f32, f32) -> f32) -> f32 {
     if n >= 2 {
         let m = n / 2;
-        cpu_reduce(op(value, rv_shuffle(value, m)), m, op)
+        cpu_vector_reduce(op(value, rv_shuffle(value, m)), m, op)
     } else {
         value
     }
@@ -69,6 +71,69 @@ fn @vectorized_range(body: fn (i32, i32) -> ()) = @|vector_width: i32, a: i32, b
         }
         for i in range(a + n_vec, b) {
             @body(i, 1)
+        }
+    }
+};
+
+/// Will reduce based on the given operator
+fn @cpu_reduce[T](n: i32, elem: fn (i32) -> T, op: fn (T, T) -> T) -> T {
+    if n <= 0 { return(undef[T]()) }
+    if n <= 1 { return(elem(0)) }
+
+    if n < 10000 {
+        let mut sum = @elem(0);
+        for i in safe_unroll(1, n) {
+            sum = @op(sum, @elem(i));
+        }
+        sum
+    } else {
+        // Hardcoded 8 threads
+        let mut lane : [T * 8];
+        let dn = round_up(n, 8) / 8;
+        for i in parallel(8, 0, 8) {
+            let s = i       * dn;
+            let e = (i + 1) * dn;
+            
+            // Maybe vectorize as well?
+            let mut isum = @elem(s);
+            for j in safe_unroll(s + 1, e) {
+                isum = @op(isum, @elem(j));
+            }
+            
+            lane(i) = isum;
+        }
+
+        let mut sum = lane(0);
+        for i in safe_unroll(1, 8) {
+            sum = @op(sum, lane(i));
+        }
+        sum
+    }
+}
+
+fn @cpu_parallel_tiles(body: fn (i32, i32, i32, i32) -> ()) =
+    @|width: i32, height: i32, tile_width: i32, tile_height: i32, num_cores: i32| {
+    if cpu_profiling_enabled && cpu_profiling_serial {
+        for ymin in range_step(0, height, tile_height) {
+            for xmin in range_step(0, width, tile_width) {
+                let xmax = if xmin + tile_width  < width  { xmin + tile_width  } else { width  };
+                let ymax = if ymin + tile_height < height { ymin + tile_height } else { height };
+                @body(xmin, ymin, xmax, ymax)
+            }
+        }
+    } else {
+        let num_tiles_x = round_up(width , tile_width)  / tile_width;
+        let num_tiles_y = round_up(height, tile_height) / tile_height;
+        let num_tiles = num_tiles_x * num_tiles_y;
+        let tiles_div = make_fast_div(num_tiles_x as u32);
+        for i in parallel(num_cores, 0, num_tiles) {
+            let y = fast_div(tiles_div, i as u32) as i32;
+            let x = i - num_tiles_x * y;
+            let xmin = x * tile_width;
+            let ymin = y * tile_height;
+            let xmax = min(xmin + tile_width,  width);
+            let ymax = min(ymin + tile_height, height);
+            @body(xmin, ymin, xmax, ymax)
         }
     }
 };

@@ -1,10 +1,12 @@
 set(ARTIC_TEST_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/dummy_test.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_bbox.art
     ${CMAKE_CURRENT_SOURCE_DIR}/test_common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/test_intersection.art
     ${CMAKE_CURRENT_SOURCE_DIR}/test_main.art
     ${CMAKE_CURRENT_SOURCE_DIR}/test_matrix.art
     ${CMAKE_CURRENT_SOURCE_DIR}/test_microfacet.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_reduction.art
 )
 
 # Compile artic stuff
