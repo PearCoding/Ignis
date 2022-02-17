@@ -50,6 +50,9 @@ static inline void usage()
         << "   -q      --quiet                Do not print messages into console" << std::endl
         << "   -v      --verbose              Print detailed information" << std::endl
         << "           --no-color             Do not use decorations to make console output better" << std::endl
+#ifndef WITH_UI
+        << "           --no-progress          Do not show progress information" << std::endl
+#endif
         << "           --width     pixels     Sets the viewport horizontal dimension (in pixels)" << std::endl
         << "           --height    pixels     Sets the viewport vertical dimension (in pixels)" << std::endl
         << "           --eye       x y z      Sets the position of the camera" << std::endl
@@ -68,6 +71,7 @@ static inline void usage()
 #ifdef WITH_UI
         << "           --spp-mode  spp_mode   Sets the current spp mode (default: fixed)" << std::endl
 #endif
+        << "           --spi       spi        Number of samples per iteration. This is only considered a hint for the underlying technique" << std::endl
         << "           --stats                Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session" << std::endl
         << "           --full-stats           Acquire all stats alongside rendering. Will be dumped at the end of the rendering session" << std::endl
         << "   -o      --output    image.exr  Writes the output image to a file" << std::endl
@@ -121,6 +125,10 @@ int main(int argc, char** argv)
     std::optional<Vector2f> trange;
     bool prettyConsole = true;
     bool quiet         = false;
+
+#ifndef WITH_UI
+    bool noProgress = false;
+#endif
 
     RuntimeOptions opts;
     bool all_stats = false;
@@ -208,6 +216,9 @@ int main(int argc, char** argv)
                     IG_LOG(L_ERROR) << "Unknown spp mode '" << argv[i] << "'. Aborting." << std::endl;
                     return EXIT_FAILURE;
                 }
+#else
+            } else if (!strcmp(argv[i], "--no-progress")) {
+                noProgress = true;
 #endif
             } else if (!strcmp(argv[i], "-o")) {
                 check_arg(argc, argv, i, 1);
@@ -368,7 +379,8 @@ int main(int argc, char** argv)
             iter = 0;
         }
 #else
-        observer.update(iter * SPI);
+        if (!noProgress)
+            observer.update(iter * SPI);
 #endif
 
         if (running) {
@@ -446,7 +458,8 @@ int main(int argc, char** argv)
 #ifdef WITH_UI
     ui.reset();
 #else
-    observer.end();
+    if (!noProgress)
+        observer.end();
 #endif
 
     SectionTimer timer_saving;

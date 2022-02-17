@@ -34,6 +34,9 @@ struct TriMesh {
     void makeTexCoordsZero();
     void setupFaceNormalsAsVertexNormals();
 
+    /// Returns true if the given mesh can be approximated as a plane
+    bool isAPlane() const;
+
     static TriMesh MakeSphere(const Vector3f& center, float radius, uint32 stacks, uint32 slices);
     static TriMesh MakeDisk(const Vector3f& center, const Vector3f& normal, float radius, uint32 sections);
     static TriMesh MakePlane(const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis);

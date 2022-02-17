@@ -183,6 +183,59 @@ void TriMesh::setupFaceNormalsAsVertexNormals()
     }
 }
 
+bool TriMesh::isAPlane() const
+{
+    constexpr float PlaneEPS = 1e-5f;
+
+    // A plane is given by two triangles
+    if (faceCount() != 2)
+        return false;
+
+    // We only allow planes given by four points
+    if (vertices.size() != 4) {
+        // Further check, maybe the points are not handled as unique
+        if (vertices.size() > 4 && vertices.size() <= 6) {
+            std::vector<Vector3f> uniques;
+            for (const auto& v : vertices) {
+                bool found = false;
+                for (const auto& u : uniques) {
+                    found = v.isApprox(u, PlaneEPS);
+                    if (found)
+                        break;
+                }
+                if (!found)
+                    uniques.push_back(v);
+            }
+            if (uniques.size() != 4)
+                return false;
+        } else {
+            return false;
+        }
+    }
+
+    // If the two triangles are facing differently, its not a plane
+    if (!face_normals[0].isApprox(face_normals[1], PlaneEPS))
+        return false;
+
+    // Check each edge. The second triangle has to have the same edges (but order might be different)
+    float e1 = (vertices[indices[0]] - vertices[indices[1]]).squaredNorm();
+    float e2 = (vertices[indices[1]] - vertices[indices[2]]).squaredNorm();
+    float e3 = (vertices[indices[2]] - vertices[indices[0]]).squaredNorm();
+    float e4 = (vertices[indices[4 + 0]] - vertices[indices[4 + 1]]).squaredNorm();
+    float e5 = (vertices[indices[4 + 1]] - vertices[indices[4 + 2]]).squaredNorm();
+    float e6 = (vertices[indices[4 + 2]] - vertices[indices[4 + 0]]).squaredNorm();
+
+    auto safeCheck = [](float a, float b) { return std::abs(a - b) <= PlaneEPS; };
+    if (!safeCheck(e1, e4) && !safeCheck(e2, e4) && !safeCheck(e3, e4))
+        return false;
+    if (!safeCheck(e1, e5) && !safeCheck(e2, e5) && !safeCheck(e3, e5))
+        return false;
+    if (!safeCheck(e1, e6) && !safeCheck(e2, e6) && !safeCheck(e3, e6))
+        return false;
+
+    return true;
+}
+
 inline static void addTriangle(TriMesh& mesh, const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis, uint32 off)
 {
     constexpr uint32 M = 0;
