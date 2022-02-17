@@ -238,10 +238,10 @@ int main(int argc, char** argv)
 
     // Extract data
     if (out_file.empty()) {
-        write_output(std::cout, accum_data.data(), rays.size(), runtime->currentIterationCountForFramebuffer());
+        write_output(std::cout, accum_data.data(), rays.size(), runtime->currentIterationCount());
     } else {
         std::ofstream stream(out_file);
-        write_output(stream, accum_data.data(), rays.size(), runtime->currentIterationCountForFramebuffer());
+        write_output(stream, accum_data.data(), rays.size(), runtime->currentIterationCount());
     }
 
     return EXIT_SUCCESS;

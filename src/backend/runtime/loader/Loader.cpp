@@ -48,10 +48,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         auto& variant               = result.TechniqueVariants[i];
         const auto& info            = ctx.TechniqueInfo.Variants[i];
         ctx.CurrentTechniqueVariant = i;
-
-        variant.Width           = info.OverrideWidth;
-        variant.Height          = info.OverrideHeight;
-        variant.LockFramebuffer = info.LockFramebuffer;
+        ctx.SamplesPerIteration     = info.GetSPI(opts.SamplesPerIteration);
 
         // Generate Ray Generation Shader
         if (info.OverrideCameraGenerator)
@@ -88,8 +85,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
     result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;
     result.Database.SceneBBox   = ctx.Environment.SceneBBox;
-    result.AOVs                 = ctx.TechniqueInfo.EnabledAOVs;
-    result.VariantSelector      = ctx.TechniqueInfo.VariantSelector;
+    result.TechniqueInfo        = ctx.TechniqueInfo;
 
     IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 

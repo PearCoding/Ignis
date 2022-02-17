@@ -237,9 +237,8 @@ static AOV_PPM_MERGING = 2;
 fn @ppm_compute_radius(max_radius: f32, iter: i32) -> f32 {
     let contract_ratio = 0.8:f32;
 
-    let pass       = iter / 2;
     let mut radius = max_radius;
-    for i in range(0, pass) {
+    for i in range(0, iter) {
         radius *= (i as f32 + 1 + contract_ratio) / (i + 2) as f32;
     }
 

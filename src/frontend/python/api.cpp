@@ -84,6 +84,6 @@ PYBIND11_MODULE(pyignis, m)
         })
         .def("clearFramebuffer", &Runtime::clearFramebuffer)
         .def_property_readonly("iterationCount", &Runtime::currentIterationCount)
-        .def_property_readonly("iterationCountForFramebuffer", &Runtime::currentIterationCountForFramebuffer)
+        .def_property_readonly("sampleCount", &Runtime::currentSampleCount)
         .def_property_readonly("loadedRenderSettings", &Runtime::loadedRenderSettings);
 }

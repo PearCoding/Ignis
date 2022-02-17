@@ -167,14 +167,11 @@ static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Pars
     info.Variants[0].CallbackGenerators[(int)CallbackType::BeforeIteration] = ppm_before_iteration_generator; // Reset light cache
     info.Variants[1].CallbackGenerators[(int)CallbackType::BeforeIteration] = ppm_before_iteration_generator; // Construct query structure
 
-    // The standard approach is first LT, then PT, repeat
-    static auto variantSelector = [](uint32 iter) { return iter % 2; };
-    info.VariantSelector        = variantSelector;
-
     // The LT works independent of the framebuffer and requires a different work size
     const int max_photons           = technique ? technique->property("photons").getInteger(1000000) : 1000000;
     info.Variants[0].OverrideWidth  = max_photons; // Photon count
     info.Variants[0].OverrideHeight = 1;
+    info.Variants[0].OverrideSPI    = 1; // The light tracer variant is always just one spi (Could be improved in the future though)
 
     info.Variants[0].LockFramebuffer = true; // We do not change the framebuffer
 
@@ -193,7 +190,7 @@ static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Pars
 static void ppm_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
 {
     const int max_depth = technique ? technique->property("max_depth").getInteger(8) : 8;
-    const float radius  = technique ? technique->property("radius").getNumber(0.01f) : 0.01f; // It is better to base it on some automatic metric
+    const float radius  = technique ? technique->property("radius").getNumber(0.01f) : 0.01f;
     bool is_lighttracer = ctx.CurrentTechniqueVariant == 0;
 
     if (is_lighttracer) {
@@ -235,15 +232,14 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
         stream << "  let technique = make_ppm_path_renderer(" << max_depth << ", num_lights, lights, ppm_radius, aovs, light_cache);" << std::endl;
 }
 
-static void ppm_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
+static void ppm_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
 {
-    constexpr int C                   = 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */ + 1 /* Light/Radius */;
-    const size_t max_photons          = std::max(100, technique ? technique->property("photons").getInteger(1000000) : 1000000);
-    const size_t max_photons_per_iter = max_photons * ctx.SamplesPerIteration; // This can be very large
+    constexpr int C          = 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */ + 1 /* Light/Radius */;
+    const size_t max_photons = std::max(100, technique ? technique->property("photons").getInteger(1000000) : 1000000);
 
     stream << "static RayPayloadComponents = " << C << ";" << std::endl
            << "fn init_raypayload() = wrap_ppmraypayload(PPMRayPayload { contrib = white, depth = 1, eta = 1, radius_or_light = 0 });" << std::endl
-           << "static PPMPhotonCount = " << max_photons_per_iter << ":i32;" << std::endl;
+           << "static PPMPhotonCount = " << max_photons << ":i32;" << std::endl;
 }
 
 // Will return information about the enabled AOVs

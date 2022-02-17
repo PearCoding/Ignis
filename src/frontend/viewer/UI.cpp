@@ -587,7 +587,7 @@ public:
         delete[] rgba;
     }
 
-    void handleImgui(uint32_t iter, uint32_t samplesPerIteration)
+    void handleImgui(uint32_t iter, uint32_t samples)
     {
         constexpr size_t UI_W = 300;
         constexpr size_t UI_H = 440;
@@ -603,7 +603,7 @@ public:
         ImGui::Begin("Control");
         if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Text("Iter %i", iter);
-            ImGui::Text("SPP  %i", iter * samplesPerIteration);
+            ImGui::Text("SPP  %i", samples);
             ImGui::Text("Cursor  (%f, %f, %f)", rgb.r, rgb.g, rgb.b);
             ImGui::Text("Lum Max %8.3f | 95%% %8.3f", LastLum.Max, LastLum.SoftMax);
             ImGui::Text("Lum Min %8.3f |  5%% %8.3f", LastLum.Min, LastLum.SoftMin);
@@ -861,7 +861,7 @@ static void handleHelp()
     ImGui::End();
 }
 
-void UI::update(uint32_t iter, uint32_t samplesPerIteration)
+void UI::update(uint32_t iter, uint32_t samples)
 {
     mInternal->updateSurface(iter);
     switch (mInternal->ScreenshotRequest) {
@@ -882,7 +882,7 @@ void UI::update(uint32_t iter, uint32_t samplesPerIteration)
     if (mInternal->ShowUI || mInternal->ShowHelp) {
         ImGui::NewFrame();
         if (mInternal->ShowUI)
-            mInternal->handleImgui(iter, samplesPerIteration);
+            mInternal->handleImgui(iter, samples);
         if (mInternal->ShowHelp)
             handleHelp();
         ImGui::Render();

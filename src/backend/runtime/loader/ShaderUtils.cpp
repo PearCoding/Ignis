@@ -42,8 +42,8 @@ std::string ShaderUtils::generateDatabase()
 {
     std::stringstream stream;
     stream << "  let dtb      = device.load_scene_database();" << std::endl
-           << "  let shapes   = device.load_shape_table(dtb.shapes);" << std::endl
-           << "  let entities = device.load_entity_table(dtb.entities);" << std::endl;
+           << "  let shapes   = device.load_shape_table(dtb.shapes); maybe_unused(shapes);" << std::endl
+           << "  let entities = device.load_entity_table(dtb.entities); maybe_unused(entities);" << std::endl;
     return stream.str();
 }
 

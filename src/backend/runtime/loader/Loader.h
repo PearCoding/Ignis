@@ -2,7 +2,7 @@
 
 #include "Parser.h"
 #include "Target.h"
-#include "TechniqueVariant.h"
+#include "TechniqueInfo.h"
 #include "table/SceneDatabase.h"
 
 namespace IG {
@@ -14,15 +14,13 @@ struct LoaderOptions {
     IG::Target Target;
     std::string CameraType;
     std::string TechniqueType;
-    size_t SamplesPerIteration;
+    size_t SamplesPerIteration; // Only a recommendation!
 };
 
 struct LoaderResult {
     SceneDatabase Database;
-    std::vector<std::string> AOVs;
-
     std::vector<TechniqueVariant> TechniqueVariants;
-    TechniqueVariantSelector VariantSelector;
+    IG::TechniqueInfo TechniqueInfo;
 };
 
 class Loader {

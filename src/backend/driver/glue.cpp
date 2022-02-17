@@ -42,36 +42,33 @@ static inline size_t roundUp(size_t num, size_t multiple)
     return num + multiple - remainder;
 }
 
-enum class BufferRequestFlags {
-    Clear       = 0x1, // Will clear the buffer (setting it bytewise to 0) on each call to requestBuffer
-    ClearOnInit = 0x2  // Will clear the buffer (setting it bytewise to 0) only the first time this specific buffer was requested
-};
-
-template <typename T>
-void clearArray(anydsl::Array<T>& array)
+static Settings convert_settings(const DriverRenderSettings& settings, IG::uint32 iter)
 {
-    if (array.size() == 0)
-        return;
+    // TODO: Get rid of this
+    Settings renderSettings;
+    renderSettings.device  = settings.device;
+    renderSettings.spi     = settings.spi;
+    renderSettings.width   = settings.width;
+    renderSettings.height  = settings.height;
+    renderSettings.eye.x   = settings.eye[0];
+    renderSettings.eye.y   = settings.eye[1];
+    renderSettings.eye.z   = settings.eye[2];
+    renderSettings.dir.x   = settings.dir[0];
+    renderSettings.dir.y   = settings.dir[1];
+    renderSettings.dir.z   = settings.dir[2];
+    renderSettings.up.x    = settings.up[0];
+    renderSettings.up.y    = settings.up[1];
+    renderSettings.up.z    = settings.up[2];
+    renderSettings.right.x = settings.right[0];
+    renderSettings.right.y = settings.right[1];
+    renderSettings.right.z = settings.right[2];
+    renderSettings.tmin    = settings.tmin;
+    renderSettings.tmax    = settings.tmax;
+    renderSettings.iter    = (int)iter;
 
-    if (array.device() == 0) { // CPU
-        std::memset(array.data(), 0, array.size() * sizeof(T));
-    } else {
-        // FIXME: This is bad behaviour. We need a memset function in the anydsl_runtime
-        // or add more utility functions to artic
-        thread_local std::vector<uint8_t> clear_buffer;
+    renderSettings.debug_mode = settings.debug_mode;
 
-        size_t dst_size = array.size() * sizeof(T);
-        if (clear_buffer.size() < dst_size) {
-            size_t off = clear_buffer.size();
-            size_t len = dst_size - clear_buffer.size();
-            clear_buffer.resize(dst_size);
-            std::memset(clear_buffer.data() + off, 0, len);
-        }
-
-        anydsl_copy(0 /*Host*/, (void*)clear_buffer.data(), 0,
-                    array.device(), (void*)array.data(), 0,
-                    dst_size);
-    }
+    return renderSettings;
 }
 
 // TODO: It would be great to get the number below automatically
@@ -158,10 +155,8 @@ struct Interface {
     size_t film_height;
 
     IG::uint32 current_iteration;
-    Settings current_settings;
 
-    const IG::Ray* ray_list = nullptr; // film_width contains number of rays
-
+    DriverRenderSettings current_settings;
     DriverSetupSettings setup;
     IG::TechniqueVariantShaderSet shader_set;
 
@@ -201,11 +196,6 @@ struct Interface {
         film_width  = width;
         film_height = height;
         setupFramebuffer();
-    }
-
-    inline void setShaderSet(const IG::TechniqueVariantShaderSet& shader_set)
-    {
-        this->shader_set = shader_set;
     }
 
     template <typename T>
@@ -326,11 +316,13 @@ struct Interface {
         if (device.ray_list.size() == (int64_t)film_width)
             return device.ray_list;
 
+        IG_ASSERT(current_settings.rays != nullptr, "Expected list of rays to be available");
+
         std::vector<StreamRay> rays;
         rays.reserve(film_width);
 
         for (size_t i = 0; i < film_width; ++i) {
-            const IG::Ray dRay = ray_list[i];
+            const IG::Ray dRay = current_settings.rays[i];
 
             float norm = dRay.Direction.norm();
             if (norm < std::numeric_limits<float>::epsilon()) {
@@ -484,6 +476,8 @@ struct Interface {
 
     inline DeviceBuffer& requestBuffer(int32_t dev, const std::string& name, int32_t size, int32_t flags)
     {
+        IG_UNUSED(flags); // We do not make use of it yet
+
         std::lock_guard<std::mutex> _guard(thread_mutex);
 
         IG_ASSERT(size > 0, "Expected buffer size to be larger then zero");
@@ -494,8 +488,6 @@ struct Interface {
         auto& buffers = devices[dev].buffers;
         auto it       = buffers.find(name);
         if (it != buffers.end() && std::get<1>(it->second) >= size) {
-            if (flags & (int)BufferRequestFlags::Clear)
-                clearArray(std::get<0>(it->second));
             return it->second;
         }
 
@@ -503,9 +495,6 @@ struct Interface {
         buffers[name] = std::move(DeviceBuffer(
             std::move(anydsl::Array<uint8_t>(dev, reinterpret_cast<uint8_t*>(anydsl_alloc(dev, size)), size)),
             size));
-
-        if ((flags & (int)BufferRequestFlags::ClearOnInit) || (flags & (int)BufferRequestFlags::Clear))
-            clearArray(std::get<0>(buffers[name]));
 
         return buffers[name];
     }
@@ -518,7 +507,8 @@ struct Interface {
         using Callback = decltype(ig_ray_generation_shader);
         IG_ASSERT(shader_set.RayGenerationShader != nullptr, "Expected ray generation shader to be valid");
         auto callback = (Callback*)shader_set.RayGenerationShader;
-        const int ret = callback(&current_settings, current_iteration, id, size, xmin, ymin, xmax, ymax);
+        auto settings = convert_settings(current_settings, current_iteration);
+        const int ret = callback(&settings, current_iteration, id, size, xmin, ymin, xmax, ymax);
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::RayGeneration, {});
@@ -533,7 +523,8 @@ struct Interface {
         using Callback = decltype(ig_miss_shader);
         IG_ASSERT(shader_set.MissShader != nullptr, "Expected miss shader to be valid");
         auto callback = (Callback*)shader_set.MissShader;
-        callback(&current_settings, first, last);
+        auto settings = convert_settings(current_settings, current_iteration);
+        callback(&settings, first, last);
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::Miss, {});
@@ -549,7 +540,8 @@ struct Interface {
         void* hit_shader = shader_set.HitShaders[entity_id];
         IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
         auto callback = (Callback*)hit_shader;
-        callback(&current_settings, entity_id, first, last);
+        auto settings = convert_settings(current_settings, current_iteration);
+        callback(&settings, entity_id, first, last);
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::Hit, entity_id);
@@ -562,7 +554,7 @@ struct Interface {
 
     inline bool isFramebufferLocked()
     {
-        return shader_set.LockFramebuffer;
+        return current_settings.framebuffer_locked;
     }
 
     inline void runAdvancedShadowShader(int first, int last, bool is_hit)
@@ -576,7 +568,8 @@ struct Interface {
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(shader_set.AdvancedShadowHitShader != nullptr, "Expected miss shader to be valid");
             auto callback = (Callback*)shader_set.AdvancedShadowHitShader;
-            callback(&current_settings, first, last);
+            auto settings = convert_settings(current_settings, current_iteration);
+            callback(&settings, first, last);
 
             if (setup.acquire_stats)
                 getThreadData()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowHit, {});
@@ -587,7 +580,8 @@ struct Interface {
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(shader_set.AdvancedShadowMissShader != nullptr, "Expected miss shader to be valid");
             auto callback = (Callback*)shader_set.AdvancedShadowMissShader;
-            callback(&current_settings, first, last);
+            auto settings = convert_settings(current_settings, current_iteration);
+            callback(&settings, first, last);
 
             if (setup.acquire_stats)
                 getThreadData()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowMiss, {});
@@ -601,7 +595,8 @@ struct Interface {
         if (shader_set.CallbackShaders[type] != nullptr) {
             using Callback = decltype(ig_callback_shader);
             auto callback  = (Callback*)shader_set.CallbackShaders[type];
-            callback(&current_settings, current_iteration);
+            auto settings  = convert_settings(current_settings, current_iteration);
+            callback(&settings, current_iteration);
         }
     }
 
@@ -706,59 +701,25 @@ struct Interface {
 
 static std::unique_ptr<Interface> sInterface;
 
-static Settings convert_settings(const DriverRenderSettings* settings, IG::uint32 iter)
+void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRenderSettings& settings, IG::uint32 iter)
 {
-    Settings renderSettings;
-    renderSettings.device  = settings->device;
-    renderSettings.spi     = settings->spi;
-    renderSettings.width   = settings->width;
-    renderSettings.height  = settings->height;
-    renderSettings.eye.x   = settings->eye[0];
-    renderSettings.eye.y   = settings->eye[1];
-    renderSettings.eye.z   = settings->eye[2];
-    renderSettings.dir.x   = settings->dir[0];
-    renderSettings.dir.y   = settings->dir[1];
-    renderSettings.dir.z   = settings->dir[2];
-    renderSettings.up.x    = settings->up[0];
-    renderSettings.up.y    = settings->up[1];
-    renderSettings.up.z    = settings->up[2];
-    renderSettings.right.x = settings->right[0];
-    renderSettings.right.y = settings->right[1];
-    renderSettings.right.z = settings->right[2];
-    renderSettings.tmin    = settings->tmin;
-    renderSettings.tmax    = settings->tmax;
-    renderSettings.iter    = (int)iter;
-
-    renderSettings.debug_mode = settings->debug_mode;
-
-    return renderSettings;
-}
-
-void glue_render(const DriverRenderSettings* settings, IG::uint32 iter)
-{
-    Settings renderSettings = convert_settings(settings, iter);
-
-    sInterface->ray_list          = settings->rays;
+    sInterface->shader_set        = shaderSet;
     sInterface->current_iteration = iter;
-    sInterface->current_settings  = renderSettings;
+    sInterface->current_settings  = settings;
 
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Device, {});
 
+    Settings renderSettings = convert_settings(settings, iter);
     ig_render(&renderSettings);
 
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.endShaderLaunch(IG::ShaderType::Device, {});
 }
 
-void glue_setup(const DriverSetupSettings* settings)
+void glue_setup(const DriverSetupSettings& settings)
 {
-    sInterface = std::make_unique<Interface>(*settings);
-}
-
-void glue_setShaderSet(const IG::TechniqueVariantShaderSet& shaderSet)
-{
-    sInterface->setShaderSet(shaderSet);
+    sInterface = std::make_unique<Interface>(settings);
 }
 
 void glue_shutdown()
@@ -927,7 +888,6 @@ IG_EXPORT DriverInterface ig_get_interface()
     interface.SetupFunction             = glue_setup;
     interface.ShutdownFunction          = glue_shutdown;
     interface.RenderFunction            = glue_render;
-    interface.SetShaderSetFunction      = glue_setShaderSet;
     interface.ResizeFramebufferFunction = glue_resizeFramebuffer;
     interface.GetFramebufferFunction    = glue_getFramebuffer;
     interface.ClearFramebufferFunction  = glue_clearFramebuffer;
@@ -952,9 +912,9 @@ void ignis_get_aov_image(int dev, int id, float** aov_pixels)
 
 void ignis_get_work_info(int* width, int* height)
 {
-    if (sInterface->shader_set.Width > 0 && sInterface->shader_set.Height > 0) {
-        *width  = sInterface->shader_set.Width;
-        *height = sInterface->shader_set.Height;
+    if (sInterface->current_settings.work_width > 0 && sInterface->current_settings.work_height > 0) {
+        *width  = sInterface->current_settings.work_width;
+        *height = sInterface->current_settings.work_height;
     } else {
         *width  = sInterface->film_width;
         *height = sInterface->film_height;

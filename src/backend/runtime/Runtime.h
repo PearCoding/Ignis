@@ -63,11 +63,10 @@ public:
     const float* getFramebuffer(int aov = 0) const;
     // aov<0 will clear all aovs
     void clearFramebuffer(int aov = -1);
-    inline const std::vector<std::string> aovs() const { return mAOVs; }
+    inline const std::vector<std::string> aovs() const { return mTechniqueInfo.EnabledAOVs; }
 
-    inline uint32 currentTechniqueVariant() const { return mCurrentTechniqueVariant; }
     inline uint32 currentIterationCount() const { return mCurrentIteration; }
-    inline uint32 currentIterationCountForFramebuffer() const { return mCurrentIterationFramebuffer; }
+    inline uint32 currentSampleCount() const { return mCurrentSampleCount; }
 
     const Statistics* getStatistics() const;
 
@@ -79,14 +78,15 @@ public:
     inline bool isTrace() const { return mIsTrace; }
 
     inline Target target() const { return mTarget; }
-    inline size_t samplesPerIteration() const { return mSamplesPerIteration; }
+    inline size_t samplesPerIteration() const { return mTechniqueInfo.ComputeSPI(0 /* TODO: Not always the best choice */, mSamplesPerIteration); }
 
     inline const BoundingBox& sceneBoundingBox() const { return mDatabase.SceneBBox; }
 
 private:
     void shutdown();
     void compileShaders();
-    void handleTechniqueVariants(uint32 nextIteration);
+    void stepVariant(const Camera& camera, int variant);
+    void traceVariant(const std::vector<Ray>& rays, int variant);
 
     bool mInit;
 
@@ -102,16 +102,14 @@ private:
     Target mTarget;
 
     uint32 mCurrentIteration;
-    uint32 mCurrentIterationFramebuffer;
-    uint32 mCurrentTechniqueVariant;
+    uint32 mCurrentSampleCount;
 
     bool mIsTrace;
     bool mIsDebug;
     DebugMode mDebugMode;
     bool mAcquireStats;
-    std::vector<std::string> mAOVs;
+    TechniqueInfo mTechniqueInfo;
 
-    TechniqueVariantSelector mTechniqueVariantSelector;
     std::vector<TechniqueVariant> mTechniqueVariants;
     std::vector<TechniqueVariantShaderSet> mTechniqueVariantShaderSets; // Compiled shaders
 };

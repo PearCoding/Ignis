@@ -347,7 +347,7 @@ int main(int argc, char** argv)
 
     runtime->setDebugMode(ui->currentDebugMode());
 #else
-    StatusObserver observer(prettyConsole, 2, desired_iter * SPI);
+    StatusObserver observer(prettyConsole, 2, desired_iter * SPI /* Approx */);
     observer.begin();
 #endif
 
@@ -357,7 +357,6 @@ int main(int argc, char** argv)
     bool done       = false;
     uint64_t timing = 0;
     uint32_t frames = 0;
-    uint32_t iter   = 0;
     std::vector<double> samples_sec;
 
 #ifdef WITH_UI
@@ -371,26 +370,26 @@ int main(int argc, char** argv)
         bool prevRun = running;
 
         timer_input.start();
-        done = ui->handleInput(iter, running, camera);
+        uint32 iter = runtime->currentIterationCount();
+        done     = ui->handleInput(iter, running, camera);
         timer_input.stop();
 
         if (runtime->currentDebugMode() != ui->currentDebugMode()) {
             runtime->setDebugMode(ui->currentDebugMode());
-            iter = 0;
+            runtime->reset();
+        } else if (iter != runtime->currentIterationCount()) {
+            runtime->reset();
         }
 #else
         if (!noProgress)
-            observer.update(iter * SPI);
+            observer.update(runtime->currentSampleCount());
 #endif
 
         if (running) {
-            if (spp_mode != SPPMode::Capped || iter < desired_iter) {
-                if (spp_mode == SPPMode::Continous && iter >= desired_iter) {
-                    iter = 0;
-                }
-
-                if (iter == 0)
+            if (spp_mode != SPPMode::Capped || runtime->currentIterationCount() < desired_iter) {
+                if (spp_mode == SPPMode::Continous && runtime->currentIterationCount() >= desired_iter) {
                     runtime->reset();
+                }
 
                 auto ticks = std::chrono::high_resolution_clock::now();
 
@@ -398,7 +397,6 @@ int main(int argc, char** argv)
                 runtime->step(camera);
                 timer_render.stop();
 
-                iter++;
                 auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
                 if (spp_mode == SPPMode::Fixed && desired_iter != 0) {
@@ -411,13 +409,14 @@ int main(int argc, char** argv)
                 timing += elapsed_ms;
                 if (frames > 10 || timing >= 2000) {
 #ifdef WITH_UI
-                    const double frames_sec = double(frames) * 1000.0 / double(timing);
+                    const double frames_sec  = double(frames) * 1000.0 / double(timing);
+                    const double samples_sec = (runtime->currentIterationCount() == 0) ? 0.0 : frames_sec * runtime->currentSampleCount() / (float)runtime->currentIterationCount();
 
                     std::ostringstream os;
                     os << "Ignis [" << frames_sec << " FPS, "
-                       << frames_sec * SPI << " SPS, "
-                       << iter * SPI << " "
-                       << "sample" << (iter * SPI > 1 ? "s" : "") << "]";
+                       << samples_sec << " SPS, "
+                       << runtime->currentSampleCount() << " "
+                       << "sample" << (runtime->currentSampleCount() > 1 ? "s" : "") << "]";
                     ui->setTitle(os.str().c_str());
 #endif
                     frames = 0;
@@ -427,8 +426,8 @@ int main(int argc, char** argv)
 #ifdef WITH_UI
                 std::ostringstream os;
                 os << "Ignis [Capped, "
-                   << iter * SPI << " "
-                   << "sample" << (iter * SPI > 1 ? "s" : "") << "]";
+                   << runtime->currentSampleCount() << " "
+                   << "sample" << (runtime->currentSampleCount() > 1 ? "s" : "") << "]";
                 ui->setTitle(os.str().c_str());
 #endif
             }
@@ -439,8 +438,8 @@ int main(int argc, char** argv)
             if (prevRun != running || frames > 100) {
                 std::ostringstream os;
                 os << "Ignis [Paused, "
-                   << iter * SPI << " "
-                   << "sample" << (iter * SPI > 1 ? "s" : "") << "]";
+                   << runtime->currentSampleCount() << " "
+                   << "sample" << (runtime->currentSampleCount() > 1 ? "s" : "") << "]";
                 ui->setTitle(os.str().c_str());
                 frames = 0;
                 timing = 0;
@@ -450,7 +449,7 @@ int main(int argc, char** argv)
 
 #ifdef WITH_UI
         timer_ui.start();
-        ui->update(runtime->currentIterationCountForFramebuffer(), SPI);
+        ui->update(runtime->currentIterationCount(), runtime->currentSampleCount());
         timer_ui.stop();
 #endif
     }
@@ -477,9 +476,9 @@ int main(int argc, char** argv)
     auto stats = runtime->getStatistics();
     if (stats) {
         IG_LOG(L_INFO)
-            << stats->dump(iter, all_stats)
-            << "  Iterations: " << iter << std::endl
-            << "  SPP: " << iter * SPI << std::endl
+            << stats->dump(runtime->currentIterationCount(), all_stats)
+            << "  Iterations: " << runtime->currentIterationCount() << std::endl
+            << "  SPP: " << runtime->currentSampleCount() << std::endl
             << "  SPI: " << SPI << std::endl
             << "  Time: " << timer_all.duration_ms << "ms" << std::endl
             << "    Loading> " << timer_loading.duration_ms << "ms" << std::endl

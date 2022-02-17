@@ -21,7 +21,7 @@ public:
 
     void setTitle(const char* str);
     bool handleInput(uint32_t& iter, bool& run, Camera& cam);
-    void update(uint32_t iter, uint32_t samplesPerIteration);
+    void update(uint32_t iter, uint32_t samples);
 
     inline DebugMode currentDebugMode() const { return mDebugMode; }
     inline ToneMappingMethod currentToneMappingMethod() const { return mToneMappingMethod; }

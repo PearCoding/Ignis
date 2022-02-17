@@ -105,8 +105,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     , mOptions(opts)
     , mDevice(opts.Device)
     , mCurrentIteration(0)
-    , mCurrentIterationFramebuffer(0)
-    , mCurrentTechniqueVariant(0)
+    , mCurrentSampleCount(0)
     , mIsTrace(false)
     , mIsDebug(false)
     , mDebugMode(DebugMode::Normal)
@@ -169,7 +168,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
 
     lopts.Target              = mTarget;
     lopts.SamplesPerIteration = mSamplesPerIteration;
-    IG_LOG(L_DEBUG) << "Samples per iteration = " << mSamplesPerIteration << std::endl;
+    IG_LOG(L_DEBUG) << "Recommended samples per iteration = " << mSamplesPerIteration << std::endl;
 
     IG_LOG(L_DEBUG) << "Loading scene" << std::endl;
     LoaderResult result;
@@ -180,12 +179,11 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     // Pickup initial camera view
     setup_camera_view(mLoadedRenderSettings, lopts, mDatabase.SceneBBox);
 
-    mIsDebug = lopts.TechniqueType == "debug";
-    mIsTrace = lopts.CameraType == "list";
-    mAOVs    = std::move(result.AOVs);
+    mIsDebug       = lopts.TechniqueType == "debug";
+    mIsTrace       = lopts.CameraType == "list";
+    mTechniqueInfo = result.TechniqueInfo;
 
-    mTechniqueVariants        = std::move(result.TechniqueVariants);
-    mTechniqueVariantSelector = result.VariantSelector;
+    mTechniqueVariants = std::move(result.TechniqueVariants);
 
     if (opts.DumpShader) {
         for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
@@ -232,7 +230,24 @@ void Runtime::step(const Camera& camera)
         return;
     }
 
-    handleTechniqueVariants(mCurrentIteration);
+    if (mTechniqueInfo.VariantSelector) {
+        const auto& active = mTechniqueInfo.VariantSelector(mCurrentIteration);
+        for (const auto& ind : active)
+            stepVariant(camera, ind);
+    } else {
+        for (size_t i = 0; i < mTechniqueVariants.size(); ++i)
+            stepVariant(camera, (int)i);
+    }
+
+    ++mCurrentIteration;
+}
+
+void Runtime::stepVariant(const Camera& camera, int variant)
+{
+    IG_ASSERT(variant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
+    const auto& info = mTechniqueInfo.Variants[variant];
+
+    // IG_LOG(L_DEBUG) << "Rendering iteration " << mCurrentIteration << ", variant " << variant << std::endl;
 
     DriverRenderSettings settings;
     for (int i = 0; i < 3; ++i)
@@ -243,18 +258,22 @@ void Runtime::step(const Camera& camera)
         settings.up[i] = camera.Up(i);
     for (int i = 0; i < 3; ++i)
         settings.right[i] = camera.Right(i);
-    settings.width      = camera.SensorWidth;
-    settings.height     = camera.SensorHeight;
-    settings.tmin       = camera.TMin;
-    settings.tmax       = camera.TMax;
-    settings.rays       = nullptr; // No artifical ray streams
-    settings.device     = mDevice;
-    settings.spi        = mSamplesPerIteration;
-    settings.debug_mode = (uint32)mDebugMode;
+    settings.width              = camera.SensorWidth;
+    settings.height             = camera.SensorHeight;
+    settings.tmin               = camera.TMin;
+    settings.tmax               = camera.TMax;
+    settings.rays               = nullptr; // No artifical ray streams
+    settings.device             = mDevice;
+    settings.spi                = info.GetSPI(mSamplesPerIteration);
+    settings.work_width         = info.GetWidth(mLoadedRenderSettings.FilmWidth);
+    settings.work_height        = info.GetHeight(mLoadedRenderSettings.FilmHeight);
+    settings.framebuffer_locked = info.LockFramebuffer;
+    settings.debug_mode         = (uint32)mDebugMode;
 
-    mLoadedInterface.RenderFunction(&settings, mCurrentIteration++);
-    if (!mTechniqueVariants[mCurrentTechniqueVariant].LockFramebuffer)
-        ++mCurrentIterationFramebuffer;
+    mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, mCurrentIteration);
+
+    if (!info.LockFramebuffer)
+        mCurrentSampleCount += settings.spi;
 }
 
 void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
@@ -267,24 +286,44 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
         return;
     }
 
-    handleTechniqueVariants(mCurrentIteration);
+    if (mTechniqueInfo.VariantSelector) {
+        const auto& active = mTechniqueInfo.VariantSelector(mCurrentIteration);
+        for (const auto& ind : active)
+            traceVariant(rays, ind);
+    } else {
+        for (size_t i = 0; i < mTechniqueVariants.size(); ++i)
+            traceVariant(rays, (int)i);
+    }
 
-    DriverRenderSettings settings;
-    settings.width  = rays.size();
-    settings.height = 1;
-    settings.rays   = rays.data();
-    settings.device = mDevice;
-    settings.spi    = mSamplesPerIteration;
-
-    mLoadedInterface.RenderFunction(&settings, mCurrentIteration++);
-
-    if (!mTechniqueVariants[mCurrentTechniqueVariant].LockFramebuffer)
-        ++mCurrentIterationFramebuffer;
+    ++mCurrentIteration;
 
     // Get result
     const float* data_ptr = getFramebuffer(0);
     data.resize(rays.size() * 3);
     std::memcpy(data.data(), data_ptr, sizeof(float) * rays.size() * 3);
+}
+
+void Runtime::traceVariant(const std::vector<Ray>& rays, int variant)
+{
+    IG_ASSERT(variant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
+    const auto& info = mTechniqueInfo.Variants[variant];
+
+    // IG_LOG(L_DEBUG) << "Tracing iteration " << mCurrentIteration << ", variant " << variant << std::endl;
+
+    DriverRenderSettings settings;
+    settings.width              = rays.size();
+    settings.height             = 1;
+    settings.rays               = rays.data();
+    settings.device             = mDevice;
+    settings.spi                = info.GetSPI(mSamplesPerIteration);
+    settings.work_width         = rays.size();
+    settings.work_height        = 1;
+    settings.framebuffer_locked = info.LockFramebuffer;
+
+    mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, mCurrentIteration);
+
+    if (!info.LockFramebuffer)
+        mCurrentSampleCount += settings.spi;
 }
 
 void Runtime::resizeFramebuffer(size_t width, size_t height)
@@ -306,8 +345,8 @@ void Runtime::clearFramebuffer(int aov)
 void Runtime::reset()
 {
     clearFramebuffer();
-    mCurrentIteration            = 0;
-    mCurrentIterationFramebuffer = 0;
+    mCurrentIteration   = 0;
+    mCurrentSampleCount = 0;
 }
 
 const Statistics* Runtime::getStatistics() const
@@ -322,13 +361,13 @@ void Runtime::setup()
     settings.framebuffer_width  = std::max(1u, mLoadedRenderSettings.FilmWidth);
     settings.framebuffer_height = std::max(1u, mLoadedRenderSettings.FilmHeight);
     settings.acquire_stats      = mAcquireStats;
-    settings.aov_count          = mAOVs.size();
+    settings.aov_count          = mTechniqueInfo.EnabledAOVs.size();
 
     settings.logger = &IG_LOGGER;
 
     IG_LOG(L_DEBUG) << "Init JIT compiling" << std::endl;
     ig_init_jit(mManager.getPath(mTarget).generic_u8string());
-    mLoadedInterface.SetupFunction(&settings);
+    mLoadedInterface.SetupFunction(settings);
 
     compileShaders();
     mInit = true;
@@ -347,10 +386,6 @@ void Runtime::compileShaders()
     for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
         const auto& variant = mTechniqueVariants[i];
         auto& shaders       = mTechniqueVariantShaderSets[i];
-
-        shaders.Width           = variant.Width;
-        shaders.Height          = variant.Height;
-        shaders.LockFramebuffer = variant.LockFramebuffer;
 
         IG_LOG(L_DEBUG) << "Handling technique variant " << i << std::endl;
         IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
@@ -392,16 +427,6 @@ void Runtime::compileShaders()
             }
         }
     }
-}
-
-void Runtime::handleTechniqueVariants(uint32 nextIteration)
-{
-    if (mTechniqueVariantSelector)
-        mCurrentTechniqueVariant = mTechniqueVariantSelector(nextIteration);
-
-    IG_ASSERT(mCurrentTechniqueVariant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
-
-    mLoadedInterface.SetShaderSetFunction(mTechniqueVariantShaderSets[mCurrentTechniqueVariant]);
 }
 
 void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
