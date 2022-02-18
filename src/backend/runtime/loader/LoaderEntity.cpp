@@ -75,9 +75,27 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         // Extend scene box
         ctx.Environment.SceneBBox.extend(entityBox);
 
-        // Register name for lights to assosciate with
-        ctx.Environment.EntityIDs[pair.first] = ctx.Environment.Entities.size();
-        ctx.Environment.Entities.push_back({ transform, pair.first, shapeName, bsdfName });
+        // Register name for lights to associate with
+        uint32 materialID = 0;
+        if (ctx.Environment.AreaLightsMap.count(pair.first) > 0) {
+            ctx.Environment.EmissiveEntities.insert({ pair.first, Entity{ transform, pair.first, shapeName, bsdfName } });
+
+            // It is a unique material
+            materialID = (uint32)ctx.Environment.Materials.size();
+            ctx.Environment.Materials.push_back(Material{ bsdfName, pair.first });
+        } else {
+            Material mat{ bsdfName, {} };
+            auto it = std::find(ctx.Environment.Materials.begin(), ctx.Environment.Materials.end(), mat);
+            if (it == ctx.Environment.Materials.end()) {
+                materialID = (uint32)ctx.Environment.Materials.size();
+                ctx.Environment.Materials.push_back(mat);
+            } else {
+                materialID = (uint32)std::distance(ctx.Environment.Materials.begin(), it);
+            }
+        }
+
+        // Remember the entity to material
+        result.Database.EntityToMaterial.push_back(materialID);
 
         // Write data to dyntable
         auto& entityData = result.Database.EntityTable.addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
@@ -97,7 +115,8 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
     IG_LOG(L_DEBUG) << "Storing Entities took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
-    if (ctx.Environment.Entities.empty()) {
+    ctx.EntityCount = in_objs.size();
+    if (in_objs.empty()) {
         ctx.Environment.SceneDiameter = 0;
         return true;
     }

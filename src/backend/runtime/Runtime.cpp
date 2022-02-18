@@ -171,10 +171,12 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     IG_LOG(L_DEBUG) << "Recommended samples per iteration = " << mSamplesPerIteration << std::endl;
 
     IG_LOG(L_DEBUG) << "Loading scene" << std::endl;
+    const auto startLoader = std::chrono::high_resolution_clock::now();
     LoaderResult result;
     if (!Loader::load(lopts, result))
         throw std::runtime_error("Could not load scene!");
     mDatabase = std::move(result.Database);
+    IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startLoader).count() / 1000.0f << " seconds" << std::endl;
 
     // Pickup initial camera view
     setup_camera_view(mLoadedRenderSettings, lopts, mDatabase.SceneBBox);
@@ -222,10 +224,10 @@ Runtime::~Runtime()
 
 void Runtime::step(const Camera& camera)
 {
-    if (!mInit)
+    if (IG_UNLIKELY(!mInit))
         setup();
 
-    if (mIsTrace) {
+    if (IG_UNLIKELY(mIsTrace)) {
         IG_LOG(L_ERROR) << "Trying to use step() in a trace driver!" << std::endl;
         return;
     }
@@ -244,7 +246,7 @@ void Runtime::step(const Camera& camera)
 
 void Runtime::stepVariant(const Camera& camera, int variant)
 {
-    IG_ASSERT(variant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
+    IG_ASSERT(variant < (int)mTechniqueVariants.size(), "Expected technique variant to be well selected");
     const auto& info = mTechniqueInfo.Variants[variant];
 
     // IG_LOG(L_DEBUG) << "Rendering iteration " << mCurrentIteration << ", variant " << variant << std::endl;
@@ -278,10 +280,10 @@ void Runtime::stepVariant(const Camera& camera, int variant)
 
 void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
 {
-    if (!mInit)
+    if (IG_UNLIKELY(!mInit))
         setup();
 
-    if (!mIsTrace) {
+    if (IG_UNLIKELY(!mIsTrace)) {
         IG_LOG(L_ERROR) << "Trying to use trace() in a camera driver!" << std::endl;
         return;
     }
@@ -305,7 +307,7 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
 
 void Runtime::traceVariant(const std::vector<Ray>& rays, int variant)
 {
-    IG_ASSERT(variant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
+    IG_ASSERT(variant < (int)mTechniqueVariants.size(), "Expected technique variant to be well selected");
     const auto& info = mTechniqueInfo.Variants[variant];
 
     // IG_LOG(L_DEBUG) << "Tracing iteration " << mCurrentIteration << ", variant " << variant << std::endl;
@@ -384,6 +386,7 @@ void Runtime::shutdown()
 
 void Runtime::compileShaders()
 {
+    const auto startJIT = std::chrono::high_resolution_clock::now();
     mTechniqueVariantShaderSets.resize(mTechniqueVariants.size());
     for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
         const auto& variant = mTechniqueVariants[i];
@@ -429,11 +432,12 @@ void Runtime::compileShaders()
             }
         }
     }
+    IG_LOG(L_DEBUG) << "Compiling shaders took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startJIT).count() / 1000.0f << " seconds" << std::endl;
 }
 
 void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
 {
-    if (!mInit)
+    if (IG_UNLIKELY(!mInit))
         setup();
 
     mLoadedInterface.TonemapFunction(mDevice, out_pixels, settings);
@@ -441,7 +445,7 @@ void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
 
 void Runtime::imageinfo(const ImageInfoSettings& settings, ImageInfoOutput& output)
 {
-    if (!mInit)
+    if (IG_UNLIKELY(!mInit))
         setup();
 
     mLoadedInterface.ImageInfoFunction(mDevice, settings, output);

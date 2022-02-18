@@ -142,13 +142,14 @@ static void light_area(std::ostream& stream, const std::string& name, const std:
     // Not exposed in the documentation, but used internally until we have proper shading nodes
     tree.addColor("radiance_scale", *light, Vector3f::Constant(1.0f), true, ShadingTree::IM_Light);
 
-    uint32 entity_id = 0;
-    if (!tree.context().Environment.EntityIDs.count(entityName))
+    Entity entity;
+    if (!tree.context().Environment.EmissiveEntities.count(entityName)) {
         IG_LOG(L_ERROR) << "No entity named '" << entityName << "' exists for area light" << std::endl;
-    else
-        entity_id = tree.context().Environment.EntityIDs.at(entityName);
+        return;
+    } else {
+        entity = tree.context().Environment.EmissiveEntities.at(entityName);
+    }
 
-    const auto entity   = tree.context().Environment.Entities[entity_id];
     uint32 shape_id     = tree.context().Environment.ShapeIDs.at(entity.Shape);
     const auto shape    = tree.context().Environment.Shapes[shape_id];
     size_t shape_offset = tree.context().Database->ShapeTable.lookups()[shape_id].Offset;
@@ -223,7 +224,7 @@ static void light_cie_env(std::ostream& stream, const std::string& name, const s
     tree.addColor("ground", *light, Vector3f::Ones(), true, ShadingTree::IM_Light);
     tree.addNumber("ground_brightness", *light, 0.2f, true, ShadingTree::IM_Light);
 
-    const Matrix3f trans = light->property("transform").getTransform().linear().transpose().inverse();
+    const Matrix3f trans  = light->property("transform").getTransform().linear().transpose().inverse();
     const bool has_ground = light->property("has_ground").getBool(true);
 
     bool cloudy = (light->pluginType() == "cie_cloudy" || light->pluginType() == "ciecloudy");
@@ -301,7 +302,7 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
         const auto tex             = tree.context().Scene.texture(tex_name);
         if (!tex) {
             IG_LOG(L_ERROR) << "Unknown texture '" << tex_name << "'" << std::endl;
-            return; //TODO
+            return; // TODO
         }
 
         const std::string tex_path = LoaderTexture::getFilename(*tex, tree.context());

@@ -55,6 +55,7 @@ option(IG_WITH_TRACER        "Build tracing frontend igtrace" ON)
 option(IG_WITH_PYTHON_API    "Build python API" ON)
 option(IG_WITH_TOOLS         "Build tools" ON)
 option(IG_WITH_DOCUMENTATION "Build the documentation if Sphinx is available on the system" ON)
+option(IG_WITH_ASSERTS       "Build with asserts even in release. It is always enabled on debug" OFF)
 
 # Setup artic clang flags
 set(IG_ARTIC_CLANG_FLAGS -march=native -ffast-math CACHE STRING "Additional artic clang compilation options")

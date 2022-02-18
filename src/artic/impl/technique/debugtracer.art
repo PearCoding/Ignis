@@ -68,16 +68,23 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                 11 => { // DEBUG_ENTITY_ID
                     make_option(color_map(hit.ent_id))
                 },
-                12 => { // DEBUG_EMISSIVE
+                12 => { // DEBUG_MATERIAL_ID_RAW
+                    let v = mat.id as f32;
+                    make_option(make_gray_color(v))
+                },
+                13 => { // DEBUG_MATERAIL_ID
+                    make_option(color_map(mat.id))
+                },
+                14 => { // DEBUG_EMISSIVE
                     make_option(if mat.is_emissive { green } else { red })
                 },
-                13 => { // DEBUG_SPECULAR
+                15 => { // DEBUG_SPECULAR
                     make_option(if mat.bsdf.is_specular {green } else { red })
                 },
-                14 => { // DEBUG_ENTERING
+                16 => { // DEBUG_ENTERING
                     make_option(if surf.is_entering { green } else { red })
                 },
-                15 => { // DEBUG_CHECK_BSDF
+                17 => { // DEBUG_CHECK_BSDF
                     if mat.bsdf.is_specular {
                         make_option(green)
                     } else {
@@ -102,7 +109,7 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                         }
                     }
                 },
-                16 => { // DEBUG_ALBEDO
+                18 => { // DEBUG_ALBEDO
                     if mat.bsdf.is_specular {
                         make_option(black)
                     } else {

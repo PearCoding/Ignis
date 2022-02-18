@@ -14,6 +14,8 @@ enum class DebugMode {
     PrimID,
     EntityIDRaw,
     EntityID,
+    MaterialIDRaw,
+    MaterialID,
     IsEmissive,
     IsSpecular,
     IsEntering,

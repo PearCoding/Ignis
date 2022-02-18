@@ -115,7 +115,7 @@ inline void build_scene_bvh(std::vector<typename BvhNEnt<N>::Node, Allocator<typ
 
     bvh::LeafCollapser leaf_optimizer(bvh);
     leaf_optimizer.collapse();
-    
+
     bvh::NodeLayoutOptimizer layout_optimizer(bvh);
     layout_optimizer.optimize();
 

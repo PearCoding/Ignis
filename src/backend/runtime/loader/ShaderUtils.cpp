@@ -50,7 +50,7 @@ std::string ShaderUtils::generateDatabase()
 std::string ShaderUtils::inlineSceneInfo(const LoaderContext& ctx)
 {
     std::stringstream stream;
-    stream << "SceneInfo { num_entities = " << ctx.Environment.EntityIDs.size() << " }";
+    stream << "SceneInfo { num_entities = " << ctx.EntityCount << ", num_materials = " << ctx.Environment.Materials.size() << " }";
     return stream.str();
 }
 

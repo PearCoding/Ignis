@@ -25,7 +25,7 @@ static const char* ToneMappingMethodOptions[] = {
 
 static const char* DebugModeOptions[] = {
     "Normal", "Tangent", "Bitangent", "Geometric Normal", "Texture Coords", "Prim Coords", "Point", "Hit Distance",
-    "Raw Prim ID", "Prim ID", "Raw Entity ID", "Entity ID",
+    "Raw Prim ID", "Prim ID", "Raw Entity ID", "Entity ID", "Raw Material ID", "Material ID",
     "Is Emissive", "Is Specular", "Is Entering", "Check BSDF", "Albedo"
 };
 

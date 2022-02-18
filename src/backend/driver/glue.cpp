@@ -162,6 +162,8 @@ struct Interface {
 
     IG::Statistics main_stats;
 
+    Settings driver_settings;
+
     inline Interface(const DriverSetupSettings& setup)
         : aovs(setup.aov_count)
         , database(setup.database)
@@ -413,9 +415,8 @@ struct Interface {
     {
         IG_UNUSED(dev);
 
-        SceneInfo info;
-        info.num_entities = database->EntityTable.entryCount();
-        return info;
+        return SceneInfo{ (int)database->EntityTable.entryCount(),
+                          (int)database->MaterialCount };
     }
 
     inline const DeviceImage& loadImage(int32_t dev, const std::string& filename)
@@ -507,8 +508,7 @@ struct Interface {
         using Callback = decltype(ig_ray_generation_shader);
         IG_ASSERT(shader_set.RayGenerationShader != nullptr, "Expected ray generation shader to be valid");
         auto callback = (Callback*)shader_set.RayGenerationShader;
-        auto settings = convert_settings(current_settings, current_iteration);
-        const int ret = callback(&settings, current_iteration, id, size, xmin, ymin, xmax, ymax);
+        const int ret = callback(&driver_settings, current_iteration, id, size, xmin, ymin, xmax, ymax);
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::RayGeneration, {});
@@ -523,8 +523,7 @@ struct Interface {
         using Callback = decltype(ig_miss_shader);
         IG_ASSERT(shader_set.MissShader != nullptr, "Expected miss shader to be valid");
         auto callback = (Callback*)shader_set.MissShader;
-        auto settings = convert_settings(current_settings, current_iteration);
-        callback(&settings, first, last);
+        callback(&driver_settings, first, last);
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::Miss, {});
@@ -532,19 +531,20 @@ struct Interface {
 
     inline void runHitShader(int entity_id, int first, int last)
     {
+        const int material_id = database->EntityToMaterial.at(entity_id);
+
         if (setup.acquire_stats)
-            getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Hit, entity_id);
+            getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Hit, material_id);
 
         using Callback = decltype(ig_hit_shader);
-        IG_ASSERT(entity_id >= 0 && entity_id < (int)shader_set.HitShaders.size(), "Expected entity id for hit shaders to be valid");
-        void* hit_shader = shader_set.HitShaders[entity_id];
+        IG_ASSERT(material_id >= 0 && material_id < (int)shader_set.HitShaders.size(), "Expected material id for hit shaders to be valid");
+        const void* hit_shader = shader_set.HitShaders.at(material_id);
         IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
-        auto callback = (Callback*)hit_shader;
-        auto settings = convert_settings(current_settings, current_iteration);
-        callback(&settings, entity_id, first, last);
+        const auto callback = (Callback*)hit_shader;
+        callback(&driver_settings, entity_id, first, last);
 
         if (setup.acquire_stats)
-            getThreadData()->stats.endShaderLaunch(IG::ShaderType::Hit, entity_id);
+            getThreadData()->stats.endShaderLaunch(IG::ShaderType::Hit, material_id);
     }
 
     inline bool useAdvancedShadowHandling()
@@ -568,8 +568,7 @@ struct Interface {
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(shader_set.AdvancedShadowHitShader != nullptr, "Expected miss shader to be valid");
             auto callback = (Callback*)shader_set.AdvancedShadowHitShader;
-            auto settings = convert_settings(current_settings, current_iteration);
-            callback(&settings, first, last);
+            callback(&driver_settings, first, last);
 
             if (setup.acquire_stats)
                 getThreadData()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowHit, {});
@@ -580,8 +579,7 @@ struct Interface {
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(shader_set.AdvancedShadowMissShader != nullptr, "Expected miss shader to be valid");
             auto callback = (Callback*)shader_set.AdvancedShadowMissShader;
-            auto settings = convert_settings(current_settings, current_iteration);
-            callback(&settings, first, last);
+            callback(&driver_settings, first, last);
 
             if (setup.acquire_stats)
                 getThreadData()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowMiss, {});
@@ -595,8 +593,7 @@ struct Interface {
         if (shader_set.CallbackShaders[type] != nullptr) {
             using Callback = decltype(ig_callback_shader);
             auto callback  = (Callback*)shader_set.CallbackShaders[type];
-            auto settings  = convert_settings(current_settings, current_iteration);
-            callback(&settings, current_iteration);
+            callback(&driver_settings, current_iteration);
         }
     }
 
@@ -622,7 +619,7 @@ struct Interface {
             return getFilmImage(dev);
 
         int32_t index = id - 1;
-        IG_ASSERT(index < aovs.size(), "AOV index out of bounds!");
+        IG_ASSERT(index < (int32_t)aovs.size(), "AOV index out of bounds!");
 
         if (dev != 0) {
             auto& device = devices[dev];
@@ -706,12 +703,12 @@ void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRen
     sInterface->shader_set        = shaderSet;
     sInterface->current_iteration = iter;
     sInterface->current_settings  = settings;
+    sInterface->driver_settings   = convert_settings(settings, iter);
 
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Device, {});
 
-    Settings renderSettings = convert_settings(settings, iter);
-    ig_render(&renderSettings);
+    ig_render(&sInterface->driver_settings);
 
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.endShaderLaunch(IG::ShaderType::Device, {});

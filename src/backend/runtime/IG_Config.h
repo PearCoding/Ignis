@@ -73,7 +73,7 @@
 
 #define IG_RESTRICT __restrict
 
-#if !defined(IG_NO_ASSERTS) && defined(IG_DEBUG)
+#if defined(IG_WITH_ASSERTS) || (!defined(IG_NO_ASSERTS) && defined(IG_DEBUG))
 #include <assert.h>
 #define _IG_ASSERT_MSG(msg)                                 \
     std::cerr << "[IGNIS] ASSERT | " << __FILE__            \

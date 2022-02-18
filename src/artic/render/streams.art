@@ -11,21 +11,21 @@ struct RayStream {
     tmax:  &mut [f32],
 }
 
-// 6+8+9=?
+// 9+6+8=23
 struct PrimaryStream {
-    rays:       RayStream,
-    ent_id:     &mut [i32],
-    prim_id:    &mut [i32],
-    t:          &mut [f32],
-    u:          &mut [f32],
-    v:          &mut [f32],
-    rnd:        &mut [RndState],
-    user:       [&mut [f32] * 8], // User defined stuff
-    size:       i32,
-    //_pad:       i32
+    rays:    RayStream,
+    ent_id:  &mut [i32],
+    prim_id: &mut [i32],
+    t:       &mut [f32],
+    u:       &mut [f32],
+    v:       &mut [f32],
+    rnd:     &mut [RndState],
+    user:    [&mut [f32] * 8], // User defined stuff
+    size:    i32,
+    pad:     i32 // TODO: Needed for AMDGPU backend
 }
 
-// 6+9=15
+// 9+6=15
 struct SecondaryStream {
     rays:    RayStream,
     prim_id: &mut [i32],
@@ -81,10 +81,11 @@ fn @make_primary_stream_hit_reader(primary: PrimaryStream, vector_width: i32) ->
     }
 }
 
-fn @make_primary_stream_hit_writer(primary: PrimaryStream, vector_width: i32, invalid_ent_id: i32) -> fn (i32, i32, Hit) -> () {
+fn @make_primary_stream_hit_writer(primary: PrimaryStream, vector_width: i32, invalid_id: i32) -> fn (i32, i32, Hit) -> () {
     @ |i, j, hit| {
+        let no_hit = hit.ent_id == -1 /* || hit.prim_id == -1*/;
         let k = i * vector_width + j;
-        primary.ent_id(k)  = if hit.ent_id == -1 || hit.prim_id == -1 { invalid_ent_id } else { hit.ent_id };
+        primary.ent_id(k)  = if no_hit { invalid_id } else { hit.ent_id };
         primary.prim_id(k) = hit.prim_id;
         primary.t(k)       = hit.distance;
         primary.u(k)       = hit.prim_coords.x;

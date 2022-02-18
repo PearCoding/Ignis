@@ -1,6 +1,7 @@
 // Scene data
 struct SceneInfo {
-    num_entities: i32
+    num_entities:  i32,
+    num_materials: i32
 }
 
 struct Scene {

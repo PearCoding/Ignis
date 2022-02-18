@@ -49,6 +49,8 @@ struct LoaderContext {
     LoaderEnvironment Environment;
     SceneDatabase* Database = nullptr;
 
+    size_t EntityCount;
+
     std::filesystem::path handlePath(const std::filesystem::path& path, const Parser::Object& obj) const;
 
     Vector3f extractColor(const Parser::Object& obj, const std::string& propname, const Vector3f& def = Vector3f::Ones()) const;

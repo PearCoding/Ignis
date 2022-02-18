@@ -23,12 +23,24 @@ struct Entity {
     std::string BSDF;
 };
 
+/// A material is a combination of bsdf & entity (if the entity is emissive)
+struct Material {
+    std::string BSDF;
+    std::string Entity; // Empty if not emissive
+    inline bool hasEmission() const { return !Entity.empty(); }
+};
+
+inline bool operator==(const Material& a, const Material& b)
+{
+    return a.BSDF == b.BSDF && a.Entity == b.Entity;
+}
+
 struct LoaderEnvironment {
     std::vector<Shape> Shapes;
-    std::vector<Entity> Entities;                      // TODO: This can be large... maybe change?
-    std::unordered_map<std::string, uint32> EntityIDs; // TODO: This can be large... maybe change?
     std::unordered_map<std::string, uint32> ShapeIDs;
+    std::unordered_map<std::string, Entity> EmissiveEntities;
     std::unordered_map<std::string, std::string> AreaLightsMap; // Map from Entity -> Light
+    std::vector<Material> Materials;
 
     BoundingBox SceneBBox;
     float SceneDiameter = 0.0f;

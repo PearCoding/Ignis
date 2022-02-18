@@ -15,8 +15,6 @@
 namespace IG {
 bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 {
-    const auto start1 = std::chrono::high_resolution_clock::now();
-
     LoaderContext ctx;
     ctx.FilePath            = opts.FilePath;
     ctx.Target              = opts.Target;
@@ -26,12 +24,17 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.TechniqueType       = opts.TechniqueType;
     ctx.SamplesPerIteration = opts.SamplesPerIteration;
 
+    LoaderLight::setupAreaLights(ctx);
+
     // Load content
     if (!LoaderShape::load(ctx, result))
         return false;
 
     if (!LoaderEntity::load(ctx, result))
         return false;
+
+    IG_LOG(L_DEBUG) << "Got " << ctx.Environment.Materials.size() << " unique materials" << std::endl;
+    result.Database.MaterialCount = ctx.Environment.Materials.size();
 
     ctx.Database      = &result.Database;
     ctx.TechniqueInfo = LoaderTechnique::getInfo(ctx);
@@ -40,8 +43,6 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         IG_LOG(L_ERROR) << "Invalid technique with no variants" << std::endl;
         return false;
     }
-
-    LoaderLight::setupAreaLights(ctx);
 
     result.TechniqueVariants.resize(ctx.TechniqueInfo.Variants.size());
     for (size_t i = 0; i < ctx.TechniqueInfo.Variants.size(); ++i) {
@@ -64,7 +65,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
             return false;
 
         // Generate Hit Shader
-        for (size_t i = 0; i < result.Database.EntityTable.entryCount(); ++i) {
+        for (size_t i = 0; i < ctx.Environment.Materials.size(); ++i) {
             std::string shader = HitShader::setup(i, ctx);
             if (shader.empty())
                 return false;
@@ -86,8 +87,6 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;
     result.Database.SceneBBox   = ctx.Environment.SceneBBox;
     result.TechniqueInfo        = ctx.TechniqueInfo;
-
-    IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
     return true;
 }

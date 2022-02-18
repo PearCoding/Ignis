@@ -14,7 +14,7 @@ static_assert(sizeof(StVector2f) == sizeof(float) * 2, "Expected storage vector 
 
 struct TriMesh {
     std::vector<StVector3f> vertices;
-    std::vector<uint32> indices; // A triangle is based as [i0,i1,i2,m] with m = Material
+    std::vector<uint32> indices; // A triangle is based as [i0,i1,i2,0] 
     std::vector<StVector3f> normals;
     std::vector<StVector3f> face_normals;
     std::vector<float> face_inv_area;
