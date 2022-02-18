@@ -328,6 +328,8 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, int variant)
 
 void Runtime::resizeFramebuffer(size_t width, size_t height)
 {
+    mLoadedRenderSettings.FilmWidth  = width;
+    mLoadedRenderSettings.FilmHeight = height;
     mLoadedInterface.ResizeFramebufferFunction(width, height);
     reset();
 }
