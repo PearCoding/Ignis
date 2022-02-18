@@ -20,7 +20,7 @@ fn @make_conductor_bsdf(surf: SurfaceElement, ior: f32, k: f32, ks: Color) = Bsd
         let f = conductor_factor(ior, k, cos_i);
 
         let color = color_mulf(ks, f);
-        make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, color, 1,  false)
+        make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, color, 1, false)
     },
     is_specular = true
 };
@@ -63,7 +63,7 @@ fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, f
             eval   = eval,
             pdf    = @ |in_dir, out_dir| {
                 let H       = vec3_halfway(in_dir, out_dir);
-                let cos_h_o = positive_cos(out_dir, H);
+                let cos_h_o = absolute_cos(out_dir, H);
                 let jacob   = safe_div(1, 4 * cos_h_o); // Jacobian of the half-direction mapping
                 micro.pdf(in_dir, out_dir, H) * jacob
             },
@@ -87,7 +87,12 @@ fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, f
 
                 let pdf   = s.pdf * jacob;
                 let color = color_mulf(eval(in_dir, out_dir), safe_div(1, pdf));
-                make_bsdf_sample(surf, in_dir, pdf, color, 1, false)
+                make_option(BsdfSample {
+                    in_dir = in_dir,
+                    pdf    = pdf,
+                    color  = color,
+                    eta    = 1
+                })
             },
             is_specular = false
         }
