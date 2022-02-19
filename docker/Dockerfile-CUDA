@@ -1,16 +1,32 @@
-FROM pearcoding/anydsl:latest-cuda-jit
+FROM pearcoding/anydsl:latest-cuda-jit as build
 
 LABEL maintainer="Ömercan Yazici" \
-      description="Ignis Raytracer with AVX2 & CUDA backend" \
+      description="Ignis Raytracer with AVX2 and CUDA backend" \
       version="0.2.0"
 
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update && apt-get install -y libeigen3-dev libtbb-dev libsdl2-dev && rm -rf /var/lib/apt/lists/* 
 
+ENV LD_LIBRARY_PATH="/usr/local/cuda/compat:${LD_LIBRARY_PATH}"
 COPY . /ignis
 WORKDIR /ignis
 RUN ./docker/compile.sh
-ENV LD_LIBRARY_PATH="/anydsl/runtime/build/lib:${LD_LIBRARY_PATH}"
 
-ENTRYPOINT [ "igview", "/ignis/scenes/diamond_scene.json" ]
+FROM nvidia/cuda:11.6.0-runtime-ubuntu20.04 as runtime
+
+LABEL maintainer="Ömercan Yazici" \
+      description="Ignis Raytracer with AVX2 and CUDA backend" \
+      version="0.2.0"
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# Unfortunatly, this file has to be copied manually... as we can not change the path to it :/
+COPY --from=build /ignis/build/src/backend/driver/driver_nvvm.nvvm /ignis/build/src/backend/driver/
+COPY --from=build /ignis-install/ /usr/
+COPY --from=build /usr/local/cuda/nvvm/ /usr/local/cuda/nvvm/
+COPY --from=build /anydsl/artic/build/lib/libartic.so /anydsl/impala/build/lib/libimpala.so /anydsl/thorin/build/lib/libthorin.so /anydsl/runtime/build/lib/libruntime.so /anydsl/runtime/build/lib/libruntime_jit_artic.so /anydsl/llvm_install/lib/libLLVM-12.so /usr/lib/
+
+RUN apt-get update && apt-get install -y libtbb2 libsdl2-2.0-0 libgomp1 libxml2 && rm -rf /var/lib/apt/lists/* 
+
+ENTRYPOINT [ "igcli" ]
