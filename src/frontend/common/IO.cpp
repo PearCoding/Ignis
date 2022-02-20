@@ -1,13 +1,11 @@
 #include "IO.h"
 #include "Image.h"
 #include "ImageIO.h"
-#include "Range.h"
 
 #include "Runtime.h"
 
-#ifndef IG_NO_EXECUTION_H
-#include <execution>
-#endif
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
 
 namespace IG {
 bool saveImageRGB(const std::filesystem::path& path, const float* rgb, size_t width, size_t height, float scale)
@@ -16,8 +14,6 @@ bool saveImageRGB(const std::filesystem::path& path, const float* rgb, size_t wi
     img.width  = width;
     img.height = height;
     img.pixels.reset(new float[width * height * 4]);
-
-    const RangeS imageRange(0, width * height);
 
     const auto pixelF = [&](size_t ind) {
         auto r = rgb[ind * 3 + 0];
@@ -30,12 +26,11 @@ bool saveImageRGB(const std::filesystem::path& path, const float* rgb, size_t wi
         img.pixels[4 * ind + 3] = 1.0f;
     };
 
-#ifndef IG_NO_EXECUTION_H
-    std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), pixelF);
-#else
-    for (size_t i : imageRange)
-        pixelF(i);
-#endif
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, width * height),
+                      [&](tbb::blocked_range<size_t> r) {
+                          for (size_t i = r.begin(); i < r.end(); ++i)
+                              pixelF(i);
+                      });
 
     return img.save(path);
 }
@@ -47,7 +42,6 @@ bool saveImageRGBA(const std::filesystem::path& path, const float* rgb, size_t w
     img.height = height;
     img.pixels.reset(new float[width * height * 4]);
 
-    const RangeS imageRange(0, width * height);
     const auto pixelF = [&](size_t ind) {
         auto r = rgb[ind * 4 + 0];
         auto g = rgb[ind * 4 + 1];
@@ -60,12 +54,11 @@ bool saveImageRGBA(const std::filesystem::path& path, const float* rgb, size_t w
         img.pixels[4 * ind + 3] = a * scale;
     };
 
-#ifndef IG_NO_EXECUTION_H
-    std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), pixelF);
-#else
-    for (size_t i : imageRange)
-        pixelF(i);
-#endif
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, width * height),
+                      [&](tbb::blocked_range<size_t> r) {
+                          for (size_t i = r.begin(); i < r.end(); ++i)
+                              pixelF(i);
+                      });
 
     return img.save(path);
 }
@@ -80,7 +73,6 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime)
 
     size_t aov_count = runtime.aovs().size() + 1;
 
-    const RangeS imageRange(0, width * height);
     std::vector<float> images(width * height * 3 * aov_count);
 
     // Copy data
@@ -100,12 +92,11 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime)
             dst_b[ind] = b * scale;
         };
 
-#ifndef IG_NO_EXECUTION_H
-        std::for_each(std::execution::par_unseq, imageRange.begin(), imageRange.end(), pixelF);
-#else
-        for (size_t i : imageRange)
-            pixelF(i);
-#endif
+        tbb::parallel_for(tbb::blocked_range<size_t>(0, width * height),
+                          [&](tbb::blocked_range<size_t> r) {
+                              for (size_t i = r.begin(); i < r.end(); ++i)
+                                  pixelF(i);
+                          });
     }
 
     std::vector<const float*> image_ptrs(3 * aov_count);

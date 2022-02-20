@@ -1,7 +1,6 @@
 #include "UI.h"
 #include "IO.h"
 #include "Pose.h"
-#include "Range.h"
 #include "Runtime.h"
 
 #include <SDL.h>
