@@ -2,6 +2,9 @@
 
 #include "imgui.h"
 
+#include <Eigen/Core>
+#include <array>
+#include <numeric>
 #include <tuple>
 
 // ImGUI based image inspector inspired by
@@ -31,11 +34,20 @@ static inline uint32_t get_texel(int px, int py, size_t width, size_t /*height*/
     return IM_COL32((raw & 0x00FF0000) >> 16, (raw & 0x0000FF00) >> 8, (raw & 0x000000FF), 0xFF);
 }
 
-void ui_inspect_image(int px, int py, size_t width, size_t height, const uint32_t* rgb)
+static inline Eigen::Vector3f get_pixel(int px, int py, size_t width, size_t /*height*/, const float* values)
+{
+    return Eigen::Vector3f(
+        values[py * width * 3 + px * 3 + 0],
+        values[py * width * 3 + px * 3 + 1],
+        values[py * width * 3 + px * 3 + 2]);
+}
+
+void ui_inspect_image(int px, int py, size_t width, size_t height, const float* values, const uint32_t* rgb)
 {
     constexpr int ZoomSize             = 4;
     constexpr float ZoomRectangleWidth = 200;
     constexpr float QuadWidth          = ZoomRectangleWidth / (ZoomSize * 2 + 1);
+    static std::array<float, (2 * ZoomSize + 1) * (2 * ZoomSize + 1)> lums;
 
     ImGui::BeginTooltip();
     ImGui::BeginGroup();
@@ -56,9 +68,22 @@ void ui_inspect_image(int px, int py, size_t width, size_t height, const uint32_
             const uint32_t texel = get_texel(x + basex, y + basey, width, height, rgb);
             ImVec2 pos           = rectMin + ImVec2(float(x + ZoomSize), float(y + ZoomSize)) * quadSize;
             draw_list->AddRectFilled(pos, pos + quadSize, texel);
+
+            int ind          = (y + ZoomSize) * (2 * ZoomSize + 1) + x + ZoomSize;
+            const auto pixel = get_pixel(x + basex, y + basey, width, height, values);
+            lums[ind]        = pixel.x() * 0.2126f + pixel.y() * 0.7152f + pixel.z() * 0.0722f; // Luminance
         }
     }
     ImGui::SameLine();
+
+    std::sort(lums.begin(), lums.end());
+    float mean = std::accumulate(lums.begin(), lums.end(), 0) / (float)lums.size();
+    float max  = std::reduce(lums.begin(), lums.end(), 0, [](float a, float b) { return std::max(a, b); });
+    float min  = std::reduce(lums.begin(), lums.end(), std::numeric_limits<float>::infinity(), [](float a, float b) { return std::min(a, b); });
+
+    float median  = lums[lums.size() / 2];
+    float softMax = lums[lums.size() - 2];
+    float softMin = lums[1];
 
     // center quad
     const ImVec2 pos = rectMin + ImVec2(float(ZoomSize), float(ZoomSize)) * quadSize;
@@ -70,16 +95,21 @@ void ui_inspect_image(int px, int py, size_t width, size_t height, const uint32_
     ImVec4 color = ImColor(get_texel(px, py, width, height, rgb));
     ImVec4 colHSV;
     ImGui::ColorConvertRGBtoHSV(color.x, color.y, color.z, colHSV.x, colHSV.y, colHSV.z);
+    const auto pixel = get_pixel(px, py, width, height, values);
     ImGui::Text("Coord %d %d", px, py);
     ImGui::Separator();
+    ImGui::Text("Raw");
+    ImGui::Text("R %1.3f G %1.3f B %1.3f", pixel.x(), pixel.y(), pixel.z());
+    ImGui::Text("Max  %1.3f, 95%%    %1.3f", max, softMax);
+    ImGui::Text("Min  %1.3f,  5%%    %1.3f", min, softMin);
+    ImGui::Text("Mean %1.3f, Median %1.3f", mean, median);
+    ImGui::Separator();
+    ImGui::Text("Mapped");
     ImGui::Text("R 0x%02x  G 0x%02x  B 0x%02x", int(color.x * 255.f), int(color.y * 255.f), int(color.z * 255.f));
     ImGui::Text("R %1.3f G %1.3f B %1.3f", color.x, color.y, color.z);
-    ImGui::Separator();
     ImGui::Text(
         "H 0x%02x  S 0x%02x  V 0x%02x", int(colHSV.x * 255.f), int(colHSV.y * 255.f), int(colHSV.z * 255.f));
     ImGui::Text("H %1.3f S %1.3f V %1.3f", colHSV.x, colHSV.y, colHSV.z);
-    ImGui::Separator();
-    ImGui::Text("Size %d, %d", (int)width, (int)height);
     ImGui::EndGroup();
     ImGui::EndTooltip();
 }

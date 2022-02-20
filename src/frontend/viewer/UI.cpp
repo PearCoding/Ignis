@@ -594,113 +594,114 @@ public:
         int mouse_x, mouse_y;
         SDL_GetMouseState(&mouse_x, &mouse_y);
 
-        RGB rgb{ 0, 0, 0 };
-        if (mouse_x >= 0 && mouse_x < Width && mouse_y >= 0 && mouse_y < Height)
-            rgb = getFilmData(Width, Height, iter, mouse_x, mouse_y);
+        if (ShowUI) {
+            RGB rgb{ 0, 0, 0 };
+            if (mouse_x >= 0 && mouse_x < Width && mouse_y >= 0 && mouse_y < Height)
+                rgb = getFilmData(Width, Height, iter, mouse_x, mouse_y);
 
-        ImGui::SetNextWindowPos(ImVec2(5, 5), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(UI_W, UI_H), ImGuiCond_Once);
-        ImGui::Begin("Control");
-        if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Iter %i", iter);
-            ImGui::Text("SPP  %i", samples);
-            ImGui::Text("Cursor  (%f, %f, %f)", rgb.r, rgb.g, rgb.b);
-            ImGui::Text("Lum Max %8.3f | 95%% %8.3f", LastLum.Max, LastLum.SoftMax);
-            ImGui::Text("Lum Min %8.3f |  5%% %8.3f", LastLum.Min, LastLum.SoftMin);
-            ImGui::Text("Lum Avg %8.3f | Med %8.3f", LastLum.Avg, LastLum.Med);
-            ImGui::Text("Cam Eye (%f, %f, %f)", LastCameraPose.Eye(0), LastCameraPose.Eye(1), LastCameraPose.Eye(2));
-            ImGui::Text("Cam Dir (%f, %f, %f)", LastCameraPose.Dir(0), LastCameraPose.Dir(1), LastCameraPose.Dir(2));
-            ImGui::Text("Cam Up  (%f, %f, %f)", LastCameraPose.Up(0), LastCameraPose.Up(1), LastCameraPose.Up(2));
+            ImGui::SetNextWindowPos(ImVec2(5, 5), ImGuiCond_Once);
+            ImGui::SetNextWindowSize(ImVec2(UI_W, UI_H), ImGuiCond_Once);
+            ImGui::Begin("Control");
+            if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Text("Iter %i", iter);
+                ImGui::Text("SPP  %i", samples);
+                ImGui::Text("Cursor  (%f, %f, %f)", rgb.r, rgb.g, rgb.b);
+                ImGui::Text("Lum Max %8.3f | 95%% %8.3f", LastLum.Max, LastLum.SoftMax);
+                ImGui::Text("Lum Min %8.3f |  5%% %8.3f", LastLum.Min, LastLum.SoftMin);
+                ImGui::Text("Lum Avg %8.3f | Med %8.3f", LastLum.Avg, LastLum.Med);
+                ImGui::Text("Cam Eye (%f, %f, %f)", LastCameraPose.Eye(0), LastCameraPose.Eye(1), LastCameraPose.Eye(2));
+                ImGui::Text("Cam Dir (%f, %f, %f)", LastCameraPose.Dir(0), LastCameraPose.Dir(1), LastCameraPose.Dir(2));
+                ImGui::Text("Cam Up  (%f, %f, %f)", LastCameraPose.Up(0), LastCameraPose.Up(1), LastCameraPose.Up(2));
 
-            ImGui::PushItemWidth(-1);
-            ImGui::PlotHistogram("", HistogramF.data(), HISTOGRAM_SIZE, 0, nullptr, 0.0f, 1.0f, ImVec2(0, 60));
-            ImGui::PopItemWidth();
-        }
+                ImGui::PushItemWidth(-1);
+                ImGui::PlotHistogram("", HistogramF.data(), HISTOGRAM_SIZE, 0, nullptr, 0.0f, 1.0f, ImVec2(0, 60));
+                ImGui::PopItemWidth();
+            }
 
-        if (Parent->mAOVs.size() > 1) {
-            if (ImGui::CollapsingHeader("AOV", ImGuiTreeNodeFlags_DefaultOpen)) {
-                const char* current_aov = Parent->mAOVNames[Parent->mCurrentAOV].c_str();
-                if (ImGui::BeginCombo("Display", current_aov)) {
-                    for (size_t i = 0; i < Parent->mAOVs.size(); ++i) {
-                        bool is_selected = ((int)i == Parent->mCurrentAOV);
-                        if (ImGui::Selectable(Parent->mAOVNames[i].c_str(), is_selected) && Running) {
-                            Parent->mCurrentAOV = (int)i;
+            if (Parent->mAOVs.size() > 1) {
+                if (ImGui::CollapsingHeader("AOV", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    const char* current_aov = Parent->mAOVNames[Parent->mCurrentAOV].c_str();
+                    if (ImGui::BeginCombo("Display", current_aov)) {
+                        for (size_t i = 0; i < Parent->mAOVs.size(); ++i) {
+                            bool is_selected = ((int)i == Parent->mCurrentAOV);
+                            if (ImGui::Selectable(Parent->mAOVNames[i].c_str(), is_selected) && Running) {
+                                Parent->mCurrentAOV = (int)i;
+                            }
+                            if (is_selected && Running)
+                                ImGui::SetItemDefaultFocus();
                         }
-                        if (is_selected && Running)
+
+                        ImGui::EndCombo();
+                    }
+                }
+            }
+
+            if (ShowDebugMode) {
+                if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    const char* current_method = DebugModeOptions[(int)Parent->mDebugMode];
+                    if (ImGui::BeginCombo("Mode", current_method)) {
+                        for (int i = 0; i < IM_ARRAYSIZE(DebugModeOptions); ++i) {
+                            bool is_selected = (current_method == DebugModeOptions[i]);
+                            if (ImGui::Selectable(DebugModeOptions[i], is_selected) && Running) {
+                                Parent->mDebugMode = (DebugMode)i;
+                            }
+                            if (is_selected && Running)
+                                ImGui::SetItemDefaultFocus();
+                        }
+
+                        ImGui::EndCombo();
+                    }
+                }
+            }
+
+            if (ImGui::CollapsingHeader("ToneMapping", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Checkbox("Automatic", &ToneMapping_Automatic);
+                if (!ToneMapping_Automatic) {
+                    ImGui::SliderFloat("Exposure", &ToneMapping_Exposure, -10.0f, 10.0f);
+                    ImGui::SliderFloat("Offset", &ToneMapping_Offset, -10.0f, 10.0f);
+                }
+
+                const char* current_method = ToneMappingMethodOptions[(int)Parent->mToneMappingMethod];
+                if (ImGui::BeginCombo("Method", current_method)) {
+                    for (int i = 0; i < IM_ARRAYSIZE(ToneMappingMethodOptions); ++i) {
+                        bool is_selected = (current_method == ToneMappingMethodOptions[i]);
+                        if (ImGui::Selectable(ToneMappingMethodOptions[i], is_selected))
+                            Parent->mToneMappingMethod = (ToneMappingMethod)i;
+                        if (is_selected)
                             ImGui::SetItemDefaultFocus();
                     }
 
                     ImGui::EndCombo();
                 }
+                ImGui::Checkbox("Gamma", &ToneMappingGamma);
             }
-        }
 
-        if (ShowDebugMode) {
-            if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
-                const char* current_method = DebugModeOptions[(int)Parent->mDebugMode];
-                if (ImGui::BeginCombo("Mode", current_method)) {
-                    for (int i = 0; i < IM_ARRAYSIZE(DebugModeOptions); ++i) {
-                        bool is_selected = (current_method == DebugModeOptions[i]);
-                        if (ImGui::Selectable(DebugModeOptions[i], is_selected) && Running) {
-                            Parent->mDebugMode = (DebugMode)i;
-                        }
-                        if (is_selected && Running)
-                            ImGui::SetItemDefaultFocus();
-                    }
-
-                    ImGui::EndCombo();
+            if (ImGui::CollapsingHeader("Poses")) {
+                if (ImGui::Button("Reload")) {
+                    PoseManager.load(POSE_FILE);
+                    IG_LOG(L_INFO) << "Poses loaed from '" << POSE_FILE << "'" << std::endl;
                 }
-            }
-        }
-
-        if (ImGui::CollapsingHeader("ToneMapping", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Checkbox("Automatic", &ToneMapping_Automatic);
-            if (!ToneMapping_Automatic) {
-                ImGui::SliderFloat("Exposure", &ToneMapping_Exposure, -10.0f, 10.0f);
-                ImGui::SliderFloat("Offset", &ToneMapping_Offset, -10.0f, 10.0f);
-            }
-
-            const char* current_method = ToneMappingMethodOptions[(int)Parent->mToneMappingMethod];
-            if (ImGui::BeginCombo("Method", current_method)) {
-                for (int i = 0; i < IM_ARRAYSIZE(ToneMappingMethodOptions); ++i) {
-                    bool is_selected = (current_method == ToneMappingMethodOptions[i]);
-                    if (ImGui::Selectable(ToneMappingMethodOptions[i], is_selected))
-                        Parent->mToneMappingMethod = (ToneMappingMethod)i;
-                    if (is_selected)
-                        ImGui::SetItemDefaultFocus();
+                ImGui::SameLine();
+                if (ImGui::Button("Save")) {
+                    PoseManager.save(POSE_FILE);
+                    IG_LOG(L_INFO) << "Poses saved to '" << POSE_FILE << "'" << std::endl;
                 }
 
-                ImGui::EndCombo();
+                bool f = false;
+                for (size_t i = 0; i < PoseManager.poseCount(); ++i) {
+                    const auto pose = PoseManager.pose(i);
+                    std::stringstream sstream;
+                    sstream << i + 1 << " | " << pose.Eye(0) << " " << pose.Eye(1) << " " << pose.Eye(2);
+                    if (ImGui::Selectable(sstream.str().c_str(), &f))
+                        PoseRequest = (int)i;
+                }
             }
-            ImGui::Checkbox("Gamma", &ToneMappingGamma);
+            ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "Press F1 for help...");
+            ImGui::End();
         }
 
-        if (ImGui::CollapsingHeader("Poses")) {
-            if (ImGui::Button("Reload")) {
-                PoseManager.load(POSE_FILE);
-                IG_LOG(L_INFO) << "Poses loaed from '" << POSE_FILE << "'" << std::endl;
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Save")) {
-                PoseManager.save(POSE_FILE);
-                IG_LOG(L_INFO) << "Poses saved to '" << POSE_FILE << "'" << std::endl;
-            }
-
-            bool f = false;
-            for (size_t i = 0; i < PoseManager.poseCount(); ++i) {
-                const auto pose = PoseManager.pose(i);
-                std::stringstream sstream;
-                sstream << i + 1 << " | " << pose.Eye(0) << " " << pose.Eye(1) << " " << pose.Eye(2);
-                if (ImGui::Selectable(sstream.str().c_str(), &f))
-                    PoseRequest = (int)i;
-            }
-        }
-        ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "Press F1 for help...");
-        ImGui::End();
-
-        if (ShowInspector) {
-            ui_inspect_image(mouse_x, mouse_y, Width, Height, Buffer.data());
-        }
+        if (ShowInspector)
+            ui_inspect_image(mouse_x, mouse_y, Width, Height, Parent->currentPixels(), Buffer.data());
     }
 };
 
@@ -879,10 +880,9 @@ void UI::update(uint32_t iter, uint32_t samples)
     SDL_RenderClear(mInternal->Renderer);
     SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr);
 
-    if (mInternal->ShowUI || mInternal->ShowHelp) {
+    if (mInternal->ShowUI || mInternal->ShowInspector ||mInternal->ShowHelp) {
         ImGui::NewFrame();
-        if (mInternal->ShowUI)
-            mInternal->handleImgui(iter, samples);
+        mInternal->handleImgui(iter, samples);
         if (mInternal->ShowHelp)
             handleHelp();
         ImGui::Render();
