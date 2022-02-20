@@ -14,7 +14,6 @@
 
 #include "Color.h"
 #include "Logger.h"
-#include "ToneMapping.h"
 
 namespace IG {
 

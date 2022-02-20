@@ -23,11 +23,7 @@ static inline void check_arg(int argc, char** argv, int arg, int n)
         IG_LOG(L_ERROR) << "Option '" << argv[arg] << "' expects " << n << " arguments, got " << (argc - arg) << std::endl;
 }
 
-#ifdef WITH_UI
-static const char* PROGRAM_NAME = "igview";
-#else
 static const char* PROGRAM_NAME = "igcli";
-#endif
 
 static inline void version()
 {
@@ -36,61 +32,43 @@ static inline void version()
 
 static inline void usage()
 {
-    std::cout
-#ifdef WITH_UI
-        << PROGRAM_NAME << " - Ignis Viewer" << std::endl
-#else
-        << PROGRAM_NAME << " - Ignis Command Line Renderer" << std::endl
-#endif
-        << Build::getCopyrightString() << std::endl
-        << "Usage: " << PROGRAM_NAME << " [options] file" << std::endl
-        << "Available options:" << std::endl
-        << "   -h      --help                 Shows this message" << std::endl
-        << "           --version              Show version and exit" << std::endl
-        << "   -q      --quiet                Do not print messages into console" << std::endl
-        << "   -v      --verbose              Print detailed information" << std::endl
-        << "           --no-color             Do not use decorations to make console output better" << std::endl
-#ifndef WITH_UI
-        << "           --no-progress          Do not show progress information" << std::endl
-#endif
-        << "           --width     pixels     Sets the viewport horizontal dimension (in pixels)" << std::endl
-        << "           --height    pixels     Sets the viewport vertical dimension (in pixels)" << std::endl
-        << "           --eye       x y z      Sets the position of the camera" << std::endl
-        << "           --dir       x y z      Sets the direction vector of the camera" << std::endl
-        << "           --up        x y z      Sets the up vector of the camera" << std::endl
-        << "           --fov       degrees    Sets the horizontal field of view (in degrees)" << std::endl
-        << "           --range     tmin tmax  Sets near and far clip range in world units" << std::endl
-        << "           --camera    cam_type   Override camera type" << std::endl
-        << "           --technique tech_type  Override technique/integrator type" << std::endl
-        << "   -t      --target    target     Sets the target platform (default: autodetect CPU)" << std::endl
-        << "   -d      --device    device     Sets the device to use on the selected platform (default: 0)" << std::endl
-        << "           --cpu                  Use autodetected CPU target" << std::endl
-        << "           --gpu                  Use autodetected GPU target" << std::endl
-        << "           --debug                Same as --technique debug" << std::endl
-        << "           --spp       spp        Enables benchmarking mode and sets the number of iterations based on the given spp" << std::endl
-#ifdef WITH_UI
-        << "           --spp-mode  spp_mode   Sets the current spp mode (default: fixed)" << std::endl
-#endif
-        << "           --spi       spi        Number of samples per iteration. This is only considered a hint for the underlying technique" << std::endl
-        << "           --stats                Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session" << std::endl
-        << "           --full-stats           Acquire all stats alongside rendering. Will be dumped at the end of the rendering session" << std::endl
-        << "   -o      --output    image.exr  Writes the output image to a file" << std::endl
-        << "           --dump-shader          Dump produced shaders to files in the current working directory" << std::endl
-        << "           --dump-shader-full     Dump produced shaders with standard library to files in the current working directory" << std::endl
-        << "Available targets:" << std::endl
-        << "    generic, sse42, avx, avx2, avx512, asimd," << std::endl
-        << "    nvvm, amdgpu" << std::endl
-        << "Available cameras:" << std::endl
-        << "    perspective, orthogonal, fishlens" << std::endl
-        << "Available techniques:" << std::endl
-        << "    path, debug, ao" << std::endl
-#ifdef WITH_UI
-        << "Available spp modes:" << std::endl
-        << "    fixed      Finish after reaching the given spp. This will close the program after the desired spp has been reached" << std::endl
-        << "    capped     Do not render any further than the given spp for the current view. This will freeze the FPS" << std::endl
-        << "    continous  Rerender view after given spp is reached. This simulates real-time raytracing habbits. Can be flickering quite a lot!" << std::endl
-#endif
-        ;
+    std::cout << PROGRAM_NAME << " - Ignis Command Line Renderer" << std::endl
+              << Build::getCopyrightString() << std::endl
+              << "Usage: " << PROGRAM_NAME << " [options] file" << std::endl
+              << "Available options:" << std::endl
+              << "   -h      --help                 Shows this message" << std::endl
+              << "           --version              Show version and exit" << std::endl
+              << "   -q      --quiet                Do not print messages into console" << std::endl
+              << "   -v      --verbose              Print detailed information" << std::endl
+              << "           --no-color             Do not use decorations to make console output better" << std::endl
+              << "           --no-progress          Do not show progress information" << std::endl
+              << "           --width     pixels     Sets the viewport horizontal dimension (in pixels)" << std::endl
+              << "           --height    pixels     Sets the viewport vertical dimension (in pixels)" << std::endl
+              << "           --eye       x y z      Sets the position of the camera" << std::endl
+              << "           --dir       x y z      Sets the direction vector of the camera" << std::endl
+              << "           --up        x y z      Sets the up vector of the camera" << std::endl
+              << "           --range     tmin tmax  Sets near and far clip range in world units" << std::endl
+              << "           --camera    cam_type   Override camera type" << std::endl
+              << "           --technique tech_type  Override technique/integrator type" << std::endl
+              << "   -t      --target    target     Sets the target platform (default: autodetect CPU)" << std::endl
+              << "   -d      --device    device     Sets the device to use on the selected platform (default: 0)" << std::endl
+              << "           --cpu                  Use autodetected CPU target" << std::endl
+              << "           --gpu                  Use autodetected GPU target" << std::endl
+              << "           --debug                Same as --technique debug" << std::endl
+              << "           --spp       spp        Enables benchmarking mode and sets the number of iterations based on the given spp" << std::endl
+              << "           --spi       spi        Number of samples per iteration. This is only considered a hint for the underlying technique" << std::endl
+              << "           --stats                Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session" << std::endl
+              << "           --full-stats           Acquire all stats alongside rendering. Will be dumped at the end of the rendering session" << std::endl
+              << "   -o      --output    image.exr  Writes the output image to a file" << std::endl
+              << "           --dump-shader          Dump produced shaders to files in the current working directory" << std::endl
+              << "           --dump-shader-full     Dump produced shaders with standard library to files in the current working directory" << std::endl
+              << "Available targets:" << std::endl
+              << "    generic, sse42, avx, avx2, avx512, asimd," << std::endl
+              << "    nvvm, amdgpu" << std::endl
+              << "Available cameras:" << std::endl
+              << "    perspective, orthogonal, fishlens" << std::endl
+              << "Available techniques:" << std::endl
+              << "    path, debug, ao" << std::endl;
 }
 
 struct SectionTimer {
@@ -99,12 +77,6 @@ struct SectionTimer {
 
     inline void start() { timer.start(); }
     inline void stop() { duration_ms += timer.stopMS(); }
-};
-
-enum class SPPMode {
-    Fixed,
-    Capped,
-    Continous
 };
 
 int main(int argc, char** argv)
@@ -117,18 +89,13 @@ int main(int argc, char** argv)
     std::string in_file;
     std::string out_file;
     size_t desired_spp = 0;
-    SPPMode spp_mode   = SPPMode::Fixed;
     std::optional<Vector3f> eye;
     std::optional<Vector3f> dir;
     std::optional<Vector3f> up;
-    std::optional<float> fov;
     std::optional<Vector2f> trange;
     bool prettyConsole = true;
     bool quiet         = false;
-
-#ifndef WITH_UI
-    bool noProgress = false;
-#endif
+    bool noProgress    = false;
 
     RuntimeOptions opts;
     bool all_stats = false;
@@ -159,10 +126,6 @@ int main(int argc, char** argv)
                 check_arg(argc, argv, i, 2);
                 trange = { Vector2f(strtof(argv[i + 1], nullptr), strtof(argv[i + 2], nullptr)) };
                 i += 2;
-            } else if (!strcmp(argv[i], "--fov")) {
-                check_arg(argc, argv, i, 1);
-                fov = strtof(argv[i + 1], nullptr);
-                ++i;
             } else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--target")) {
                 check_arg(argc, argv, i, 1);
                 ++i;
@@ -202,24 +165,8 @@ int main(int argc, char** argv)
             } else if (!strcmp(argv[i], "--spi")) {
                 check_arg(argc, argv, i, 1);
                 opts.SPI = (size_t)strtoul(argv[++i], nullptr, 10);
-#ifdef WITH_UI
-            } else if (!strcmp(argv[i], "--spp-mode")) {
-                check_arg(argc, argv, i, 1);
-                ++i;
-                if (!strcmp(argv[i], "fixed"))
-                    spp_mode = SPPMode::Fixed;
-                else if (!strcmp(argv[i], "capped"))
-                    spp_mode = SPPMode::Capped;
-                else if (!strcmp(argv[i], "continous"))
-                    spp_mode = SPPMode::Continous;
-                else {
-                    IG_LOG(L_ERROR) << "Unknown spp mode '" << argv[i] << "'. Aborting." << std::endl;
-                    return EXIT_FAILURE;
-                }
-#else
             } else if (!strcmp(argv[i], "--no-progress")) {
                 noProgress = true;
-#endif
             } else if (!strcmp(argv[i], "-o")) {
                 check_arg(argc, argv, i, 1);
                 ++i;
@@ -271,6 +218,8 @@ int main(int argc, char** argv)
         }
     }
 
+    IG_LOGGER.enableAnsiTerminal(prettyConsole);
+
     if (!quiet)
         std::cout << Build::getCopyrightString() << std::endl;
 
@@ -279,21 +228,15 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-#ifdef WITH_UI
-    if (spp_mode != SPPMode::Fixed && desired_spp <= 0) {
-        IG_LOG(L_ERROR) << "No valid spp count given. Required by the capped or continous spp mode" << std::endl;
-        return EXIT_FAILURE;
-    }
-#else
     if (desired_spp <= 0) {
         IG_LOG(L_ERROR) << "No valid spp count given" << std::endl;
         return EXIT_FAILURE;
     }
+
     if (out_file.empty()) {
         IG_LOG(L_ERROR) << "No output file given" << std::endl;
         return EXIT_FAILURE;
     }
-#endif
 
     SectionTimer timer_all;
     SectionTimer timer_loading;
@@ -312,7 +255,7 @@ int main(int argc, char** argv)
     const auto def  = runtime->loadedRenderSettings();
     const auto clip = trange.value_or(Vector2f(def.TMin, def.TMax));
     Camera camera(eye.value_or(def.CameraEye), dir.value_or(def.CameraDir), up.value_or(def.CameraUp),
-                  fov.value_or(def.FOV), (float)def.FilmWidth / (float)def.FilmHeight,
+                  def.FOV, (float)def.FilmWidth / (float)def.FilmHeight,
                   clip(0), clip(1));
     runtime->setup();
 
@@ -322,144 +265,33 @@ int main(int argc, char** argv)
     if (desired_spp > 0 && (desired_spp % SPI) != 0)
         IG_LOG(L_WARNING) << "Given spp " << desired_spp << " is not a multiple of the spi " << SPI << ". Using spp " << desired_iter * SPI << " instead" << std::endl;
 
-#ifdef WITH_UI
-    IG_UNUSED(prettyConsole);
-
-    std::unique_ptr<UI> ui;
-    try {
-        size_t aov_count = runtime->aovs().size() + 1;
-        std::vector<std::string> aov_names(aov_count);
-        for (size_t i = 0; i < aov_count; ++i) {
-            if (i == 0)
-                aov_names[0] = "Color";
-            else
-                aov_names[i] = runtime->aovs()[i - 1];
-        }
-        ui = std::make_unique<UI>(runtime.get(), def.FilmWidth, def.FilmHeight, aov_names, runtime->isDebug());
-
-        // Setup initial travelspeed
-        BoundingBox bbox = runtime->sceneBoundingBox();
-        bbox.extend(camera.Eye);
-        ui->setTravelSpeed(bbox.diameter().maxCoeff() / 50);
-    } catch (...) {
-        return EXIT_FAILURE;
-    }
-
-    runtime->setDebugMode(ui->currentDebugMode());
-#else
     StatusObserver observer(prettyConsole, 2, desired_iter * SPI /* Approx */);
     observer.begin();
-#endif
 
     IG_LOG(L_INFO) << "Started rendering..." << std::endl;
 
-    bool running    = true;
-    bool done       = false;
-    uint64_t timing = 0;
-    uint32_t frames = 0;
     std::vector<double> samples_sec;
 
-#ifdef WITH_UI
-    SectionTimer timer_input;
-    SectionTimer timer_ui;
-#endif
-
     SectionTimer timer_render;
-    while (!done) {
-#ifdef WITH_UI
-        bool prevRun = running;
-
-        timer_input.start();
-        uint32 iter = runtime->currentIterationCount();
-        done     = ui->handleInput(iter, running, camera);
-        timer_input.stop();
-
-        if (runtime->currentDebugMode() != ui->currentDebugMode()) {
-            runtime->setDebugMode(ui->currentDebugMode());
-            runtime->reset();
-        } else if (iter != runtime->currentIterationCount()) {
-            runtime->reset();
-        }
-#else
+    while (true) {
         if (!noProgress)
             observer.update(runtime->currentSampleCount());
-#endif
 
-        if (running) {
-            if (spp_mode != SPPMode::Capped || runtime->currentIterationCount() < desired_iter) {
-                if (spp_mode == SPPMode::Continous && runtime->currentIterationCount() >= desired_iter) {
-                    runtime->reset();
-                }
+        auto ticks = std::chrono::high_resolution_clock::now();
 
-                auto ticks = std::chrono::high_resolution_clock::now();
+        timer_render.start();
+        runtime->step(camera);
+        timer_render.stop();
 
-                timer_render.start();
-                runtime->step(camera);
-                timer_render.stop();
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
-                auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
-
-                if (spp_mode == SPPMode::Fixed && desired_iter != 0) {
-                    samples_sec.emplace_back(1000.0 * double(SPI * def.FilmWidth * def.FilmHeight) / double(elapsed_ms));
-                    if (samples_sec.size() == desired_iter)
-                        break;
-                }
-
-                frames++;
-                timing += elapsed_ms;
-                if (frames > 10 || timing >= 2000) {
-#ifdef WITH_UI
-                    const double frames_sec  = double(frames) * 1000.0 / double(timing);
-                    const double samples_sec = (runtime->currentIterationCount() == 0) ? 0.0 : frames_sec * runtime->currentSampleCount() / (float)runtime->currentIterationCount();
-
-                    std::ostringstream os;
-                    os << "Ignis [" << frames_sec << " FPS, "
-                       << samples_sec << " SPS, "
-                       << runtime->currentSampleCount() << " "
-                       << "sample" << (runtime->currentSampleCount() > 1 ? "s" : "") << "]";
-                    ui->setTitle(os.str().c_str());
-#endif
-                    frames = 0;
-                    timing = 0;
-                }
-            } else {
-#ifdef WITH_UI
-                std::ostringstream os;
-                os << "Ignis [Capped, "
-                   << runtime->currentSampleCount() << " "
-                   << "sample" << (runtime->currentSampleCount() > 1 ? "s" : "") << "]";
-                ui->setTitle(os.str().c_str());
-#endif
-            }
-        } else {
-            frames++;
-
-#ifdef WITH_UI
-            if (prevRun != running || frames > 100) {
-                std::ostringstream os;
-                os << "Ignis [Paused, "
-                   << runtime->currentSampleCount() << " "
-                   << "sample" << (runtime->currentSampleCount() > 1 ? "s" : "") << "]";
-                ui->setTitle(os.str().c_str());
-                frames = 0;
-                timing = 0;
-            }
-#endif
-        }
-
-#ifdef WITH_UI
-        timer_ui.start();
-        ui->update(runtime->currentIterationCount(), runtime->currentSampleCount());
-        timer_ui.stop();
-#endif
+        samples_sec.emplace_back(1000.0 * double(SPI * def.FilmWidth * def.FilmHeight) / double(elapsed_ms));
+        if (samples_sec.size() == desired_iter)
+            break;
     }
 
-#ifdef WITH_UI
-    ui.reset();
-#else
     if (!noProgress)
         observer.end();
-#endif
 
     SectionTimer timer_saving;
     timer_saving.start();
@@ -482,10 +314,6 @@ int main(int argc, char** argv)
             << "  SPI: " << SPI << std::endl
             << "  Time: " << timer_all.duration_ms << "ms" << std::endl
             << "    Loading> " << timer_loading.duration_ms << "ms" << std::endl
-#ifdef WITH_UI
-            << "    Input>   " << timer_input.duration_ms << "ms" << std::endl
-            << "    UI>      " << timer_ui.duration_ms << "ms" << std::endl
-#endif
             << "    Render>  " << timer_render.duration_ms << "ms" << std::endl
             << "    Saving>  " << timer_saving.duration_ms << "ms" << std::endl;
     }
