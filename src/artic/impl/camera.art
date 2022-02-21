@@ -1,36 +1,47 @@
 // Creates a perspective camera
-fn @make_perspective_camera(eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
-    let dir   = view.col(2);
-    let right = view.col(0);
-    let up    = view.col(1);
+fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, fov: f32, tmin: f32, tmax: f32) -> Camera {
+    let right = vec3_normalize(vec3_cross(dir, up));
+    let view  = make_mat3x3(right, up, dir);
+    let sh    = math_builtins::tan(fov / 2);
+    let sw    = sh * w / h;
 
     Camera {
-        generate_ray = @ |x, y| {
-            let d = vec3_normalize(
-                vec3_add(
-                    vec3_add(vec3_mulf(right, w * x),
-                             vec3_mulf(up, h * y)),
-                    dir
-                )
-            );
+        generate_ray = @ |_, x, y| {
+            let d = vec3_normalize(mat3x3_mul(view, make_vec3(sw * x, sh * y, 1)));
             make_ray(eye, d, tmin, tmax)
         }
     }
 }
 
-// Creates an orthogonal camera
-fn @make_orthogonal_camera(eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
-    let dir   = view.col(2);
-    let right = view.col(0);
-    let up    = view.col(1);
+// Creates a perspective camera with depth of field
+fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, fov: f32, aperture_radius: f32, focal_length: f32, tmin: f32, tmax: f32) -> Camera {
+    let right = vec3_normalize(vec3_cross(dir, up));
+    let view  = make_mat3x3(right, up, dir);
+    let sh    = math_builtins::tan(fov / 2);
+    let sw    = sh * w / h;
 
     Camera {
-        generate_ray = @ |x, y| {
-            let pos = vec3_add(
-                            vec3_add(vec3_mulf(right, w * x),
-                                    vec3_mulf(up, h * y)),
-                            eye
-                      );
+        generate_ray = @ |rnd, x, y| {
+            let global_dir = vec3_normalize(mat3x3_mul(view, make_vec3(sw * x, sh * y, 1)));
+            let focus_pos  = vec3_mulf(global_dir, focal_length);
+
+            let aperature_coord = vec2_mulf(square_to_concentric_disk(make_vec2(randf(rnd), randf(rnd))), aperture_radius);
+            let aperature_pos   = mat3x3_mul(view, make_vec3(aperature_coord.x, aperature_coord.y, 0));
+            let d               = vec3_normalize(vec3_sub(focus_pos, aperature_pos));
+
+            make_ray(vec3_add(eye, aperature_pos), d, tmin, tmax)
+        }
+    }
+}
+
+// Creates an orthogonal camera
+fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
+    let right = vec3_normalize(vec3_cross(dir, up));
+    let view  = make_mat3x3(right, up, dir);
+
+    Camera {
+        generate_ray = @ |_, x, y| {
+            let pos = vec3_add(mat3x3_mul(view, make_vec3(w * x, h * y, 0)), eye);
             make_ray(pos, dir, tmin, tmax)
         }
     }
@@ -43,11 +54,11 @@ enum FisheyeAspectMode {
 }
 
 // Creates a fishlens camera
-fn @make_fishlens_camera(eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
-    let fov = flt_pi;
-    let asp = w / h;
-    
-    let mode = FisheyeAspectMode::Circular;
+fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, mode: FisheyeAspectMode, tmin: f32, tmax: f32) -> Camera {
+    let right = vec3_normalize(vec3_cross(dir, up));
+    let view  = make_mat3x3(right, up, dir);
+    let fov   = flt_pi;
+    let asp   = w / h;
 
     // Select aspect ratio mode
     let (xasp, yasp) = match(mode) {
@@ -72,7 +83,7 @@ fn @make_fishlens_camera(eye: Vec3, view: Mat3x3, w: f32, h: f32, tmin: f32, tma
     };
 
     Camera {
-        generate_ray = @ |x, y| {
+        generate_ray = @ |_, x, y| {
             let nx    = x * xasp;
             let ny    = y * yasp;
             let r	  = math_builtins::sqrt(nx * nx + ny * ny);

@@ -47,7 +47,6 @@ static inline void usage()
               << "           --eye       x y z      Sets the position of the camera" << std::endl
               << "           --dir       x y z      Sets the direction vector of the camera" << std::endl
               << "           --up        x y z      Sets the up vector of the camera" << std::endl
-              << "           --range     tmin tmax  Sets near and far clip range in world units" << std::endl
               << "           --camera    cam_type   Override camera type" << std::endl
               << "           --technique tech_type  Override technique/integrator type" << std::endl
               << "   -t      --target    target     Sets the target platform (default: autodetect CPU)" << std::endl
@@ -252,12 +251,11 @@ int main(int argc, char** argv)
     }
     timer_loading.stop();
 
-    const auto def  = runtime->loadedRenderSettings();
-    const auto clip = trange.value_or(Vector2f(def.TMin, def.TMax));
-    Camera camera(eye.value_or(def.CameraEye), dir.value_or(def.CameraDir), up.value_or(def.CameraUp),
-                  def.FOV, (float)def.FilmWidth / (float)def.FilmHeight,
-                  clip(0), clip(1));
+    const auto def = runtime->initialCameraOrientation();
     runtime->setup();
+    runtime->setParameter("__camera_eye", eye.value_or(def.Eye));
+    runtime->setParameter("__camera_dir", dir.value_or(def.Dir));
+    runtime->setParameter("__camera_up", up.value_or(def.Up));
 
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(desired_spp / (float)SPI));
@@ -280,12 +278,12 @@ int main(int argc, char** argv)
         auto ticks = std::chrono::high_resolution_clock::now();
 
         timer_render.start();
-        runtime->step(camera);
+        runtime->step();
         timer_render.stop();
 
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
-        samples_sec.emplace_back(1000.0 * double(SPI * def.FilmWidth * def.FilmHeight) / double(elapsed_ms));
+        samples_sec.emplace_back(1000.0 * double(SPI * runtime->framebufferWidth() * runtime->framebufferHeight()) / double(elapsed_ms));
         if (samples_sec.size() == desired_iter)
             break;
     }

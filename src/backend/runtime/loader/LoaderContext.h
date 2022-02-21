@@ -40,6 +40,8 @@ struct LoaderContext {
     std::string TechniqueType;
     IG::TechniqueInfo TechniqueInfo;
 
+    bool IsTracer = false;
+
     uint32 CurrentTechniqueVariant;
     inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return TechniqueInfo.Variants[CurrentTechniqueVariant]; }
 
@@ -50,6 +52,10 @@ struct LoaderContext {
     SceneDatabase* Database = nullptr;
 
     size_t EntityCount;
+
+    // The width & height while loading. This might change in the actual rendering
+    size_t FilmWidth  = 800;
+    size_t FilmHeight = 600;
 
     std::filesystem::path handlePath(const std::filesystem::path& path, const Parser::Object& obj) const;
 

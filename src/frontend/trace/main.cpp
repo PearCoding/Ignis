@@ -115,8 +115,6 @@ int main(int argc, char** argv)
     RuntimeOptions opts;
     bool quiet = false;
 
-    opts.OverrideCamera = "list";
-
     for (int i = 1; i < argc; ++i) {
         if (argv[i][0] == '-') {
             if (!strcmp(argv[i], "-n") || !strcmp(argv[i], "--count")) {
@@ -191,7 +189,8 @@ int main(int argc, char** argv)
     }
 
     // Fix samples per iteration to 1
-    opts.SPI = 1;
+    opts.SPI      = 1;
+    opts.IsTracer = true;
 
     if (!quiet)
         std::cout << Build::getCopyrightString() << std::endl;

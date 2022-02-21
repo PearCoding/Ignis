@@ -1,6 +1,5 @@
 #pragma once
 
-#include "DebugMode.h"
 #include "RuntimeStructs.h"
 #include "Statistics.h"
 #include "driver/DriverManager.h"
@@ -8,10 +7,10 @@
 #include "table/SceneDatabase.h"
 
 namespace IG {
-class Camera;
 struct LoaderOptions;
 
 struct RuntimeOptions {
+    bool IsTracer        = false;
     bool DumpShader      = false;
     bool DumpShaderFull  = false;
     bool AcquireStats    = false;
@@ -26,14 +25,8 @@ struct RuntimeOptions {
 };
 
 struct RuntimeRenderSettings {
-    uint32 FilmWidth   = 800;
-    uint32 FilmHeight  = 600;
-    Vector3f CameraEye = Vector3f::Zero();
-    Vector3f CameraDir = Vector3f::UnitZ();
-    Vector3f CameraUp  = Vector3f::UnitY();
-    float FOV          = 60;
-    float TMin         = 0;
-    float TMax         = FltMax;
+    uint32 FilmWidth  = 800;
+    uint32 FilmHeight = 600;
 };
 
 struct Ray {
@@ -48,7 +41,7 @@ public:
     ~Runtime();
 
     void setup();
-    void step(const Camera& camera);
+    void step();
     void trace(const std::vector<Ray>& rays, std::vector<float>& data);
     void reset();
 
@@ -70,10 +63,6 @@ public:
 
     const Statistics* getStatistics() const;
 
-    inline const RuntimeRenderSettings& loadedRenderSettings() const { return mLoadedRenderSettings; }
-
-    inline DebugMode currentDebugMode() const { return mDebugMode; }
-    inline void setDebugMode(DebugMode mode) { mDebugMode = mode; }
     inline bool isDebug() const { return mIsDebug; }
     inline bool isTrace() const { return mIsTrace; }
 
@@ -82,10 +71,20 @@ public:
 
     inline const BoundingBox& sceneBoundingBox() const { return mDatabase.SceneBBox; }
 
+    void setParameter(const std::string& name, int value);
+    void setParameter(const std::string& name, float value);
+    void setParameter(const std::string& name, const Vector3f& value);
+    void setParameter(const std::string& name, const Vector4f& value);
+
+    inline size_t framebufferWidth() const { return mFilmWidth; }
+    inline size_t framebufferHeight() const { return mFilmHeight; }
+
+    inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
+
 private:
     void shutdown();
     void compileShaders();
-    void stepVariant(const Camera& camera, int variant);
+    void stepVariant(int variant);
     void traceVariant(const std::vector<Ray>& rays, int variant);
 
     bool mInit;
@@ -93,9 +92,9 @@ private:
     const RuntimeOptions mOptions;
 
     SceneDatabase mDatabase;
-    RuntimeRenderSettings mLoadedRenderSettings;
     DriverInterface mLoadedInterface;
     DriverManager mManager;
+    ParameterSet mParameterSet;
 
     size_t mDevice;
     size_t mSamplesPerIteration;
@@ -104,9 +103,13 @@ private:
     uint32 mCurrentIteration;
     uint32 mCurrentSampleCount;
 
+    size_t mFilmWidth;
+    size_t mFilmHeight;
+
+    CameraOrientation mInitialCameraOrientation;
+
     bool mIsTrace;
     bool mIsDebug;
-    DebugMode mDebugMode;
     bool mAcquireStats;
     TechniqueInfo mTechniqueInfo;
 

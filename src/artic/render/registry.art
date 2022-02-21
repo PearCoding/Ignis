@@ -1,0 +1,29 @@
+// Module to get additional settings from the runtime
+mod registry {
+    use super as all;
+
+    fn get_parameter_i32(name: &[u8], def: i32) -> i32 {
+        super::ignis_get_parameter_i32(name, def)
+    }
+
+    fn get_parameter_f32(name: &[u8], def: f32) -> f32 {
+        super::ignis_get_parameter_f32(name, def)
+    }
+
+    fn get_parameter_vec3(name: &[u8], def: all::Vec3) -> all::Vec3 {
+        let mut x: f32;
+        let mut y: f32;
+        let mut z: f32;
+        super::ignis_get_parameter_vector(name, def.x, def.y, def.z, &mut x, &mut y, &mut z);
+        super::make_vec3(x, y, z)
+    }
+
+    fn get_parameter_color(name: &[u8], def: all::Color) -> all::Color {
+        let mut r: f32;
+        let mut g: f32;
+        let mut b: f32;
+        let mut a: f32;
+        super::ignis_get_parameter_color(name, def.r, def.g, def.b, def.a, &mut r, &mut g, &mut b, &mut a);
+        super::make_color(r, g, b, a)
+    }
+}

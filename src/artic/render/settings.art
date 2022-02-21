@@ -1,15 +1,8 @@
 // General-purpose render settings
 struct Settings {
-    eye:        Vec3, // TODO: Remove
-    dir:        Vec3, // TODO: Remove
-    up:         Vec3, // TODO: Remove
-    right:      Vec3, // TODO: Remove
-    tmin:       f32,  // TODO: Remove
-    tmax:       f32,  // TODO: Remove
-    width:      f32,  // TODO: Remove
-    height:     f32,  // TODO: Remove
-    device:     i32,
-    spi:        i32,
-    debug_mode: i32,  // TODO: Remove
-    iter:       i32
+    device: i32,
+    spi:    i32,
+    iter:   i32,
+    width:  i32,
+    height: i32
 }

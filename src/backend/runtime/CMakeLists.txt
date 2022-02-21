@@ -1,10 +1,9 @@
 set(SRC 
     IG_Config.h
-    Camera.h
+    CameraOrientation.h 
     CDF.cpp
     CDF.h
     Color.h 
-    DebugMode.h
     Image.cpp
     Image.h
     ImageIO.cpp
@@ -43,6 +42,8 @@ set(SRC
     loader/Loader.h
     loader/LoaderBSDF.cpp
     loader/LoaderBSDF.h
+    loader/LoaderCamera.cpp
+    loader/LoaderCamera.h
     loader/LoaderContext.cpp
     loader/LoaderContext.h
     loader/LoaderEntity.cpp

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CameraOrientation.h"
 #include "Parser.h"
 #include "Target.h"
 #include "TechniqueInfo.h"
@@ -14,13 +15,17 @@ struct LoaderOptions {
     IG::Target Target;
     std::string CameraType;
     std::string TechniqueType;
+    size_t FilmWidth;
+    size_t FilmHeight;
     size_t SamplesPerIteration; // Only a recommendation!
+    bool IsTracer;
 };
 
 struct LoaderResult {
     SceneDatabase Database;
     std::vector<TechniqueVariant> TechniqueVariants;
     IG::TechniqueInfo TechniqueInfo;
+    IG::CameraOrientation CameraOrientation;
 };
 
 class Loader {

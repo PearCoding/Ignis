@@ -1,0 +1,56 @@
+{
+	"technique": {
+		"type": "path",
+		"max_depth": 8
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 60,
+		"near_clip": 0.1,
+		"far_clip": 100,
+		"transform": {"translate": [5,-5,0], "rotate": [ 90, -125, 0]},
+		"aperture_radius": 0.1,
+		"focal_length": 7
+	},
+	"film": {
+		"size": [1000, 1000]
+	},
+	"textures": [
+		{
+			"type": "checkerboard",
+			"name": "check",
+			"scale_x": 100,
+			"scale_y": 100,
+			"color0": [0.3,0.3,0.3],
+			"color1": [1,1,1]
+		},
+		{
+			"type": "image",
+			"name": "env",
+			"filename": "textures/environment/phalzer_forest_01_4k.exr"
+		}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name": "mat-Ground", "reflectance":"check"},
+		{"type":"diffuse", "name": "mat-Sphere1", "reflectance":[1,0,0]},
+		{"type":"diffuse", "name": "mat-Sphere2", "reflectance":[0,1,0]},
+		{"type":"diffuse", "name": "mat-Sphere3", "reflectance":[0,0,1]},
+		{"type":"diffuse", "name": "mat-Sphere4", "reflectance":[0,1,1]},
+		{"type":"diffuse", "name": "mat-Sphere5", "reflectance":[1,1,0]}
+	],
+	"shapes": [
+		{"type":"rectangle", "name":"Ground", "width":100, "height":100},
+		{"type":"sphere", "name":"Sphere"}
+	],
+	"entities": [
+		{"name":"Ground","shape":"Ground", "bsdf":"mat-Ground", "transform":{"translate":[0,0,-1]}},
+		{"name":"Sphere1","shape":"Sphere", "bsdf":"mat-Sphere1", "transform":{"translate":[0,4,0]}},
+		{"name":"Sphere2","shape":"Sphere", "bsdf":"mat-Sphere2", "transform":{"translate":[0,2,0]}},
+		{"name":"Sphere3","shape":"Sphere", "bsdf":"mat-Sphere3", "transform":{"translate":[0,0,0]}},
+		{"name":"Sphere4","shape":"Sphere", "bsdf":"mat-Sphere4", "transform":{"translate":[0,-2,0]}},
+		{"name":"Sphere5","shape":"Sphere", "bsdf":"mat-Sphere5", "transform":{"translate":[0,-4,0]}}
+	],
+	"lights": [
+		{"type":"env", "name":"Environment", "radiance":"env"}
+	]
+}

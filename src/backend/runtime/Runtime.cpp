@@ -1,5 +1,4 @@
 #include "Runtime.h"
-#include "Camera.h"
 #include "Logger.h"
 #include "jit.h"
 #include "loader/Parser.h"
@@ -24,15 +23,18 @@ static inline void setup_technique(LoaderOptions& lopts, const RuntimeOptions& o
     lopts.TechniqueType = tech_type;
 }
 
-static inline void setup_film(RuntimeRenderSettings& settings, const LoaderOptions& lopts, const RuntimeOptions& opts)
+static inline void setup_film(LoaderOptions& lopts, const RuntimeOptions& opts)
 {
-    Vector2f filmSize = Vector2f(settings.FilmWidth, settings.FilmHeight);
+    Vector2f filmSize = Vector2f(800, 600);
     const auto film   = lopts.Scene.film();
     if (film)
         filmSize = film->property("size").getVector2(filmSize);
 
-    settings.FilmWidth  = opts.OverrideFilmSize.first > 0 ? opts.OverrideFilmSize.first : filmSize.x();
-    settings.FilmHeight = opts.OverrideFilmSize.second > 0 ? opts.OverrideFilmSize.second : filmSize.y();
+    lopts.FilmWidth  = opts.OverrideFilmSize.first > 0 ? (int)opts.OverrideFilmSize.first : (int)filmSize.x();
+    lopts.FilmHeight = opts.OverrideFilmSize.second > 0 ? (int)opts.OverrideFilmSize.second : (int)filmSize.y();
+
+    lopts.FilmWidth  = std::max<size_t>(1, lopts.FilmWidth);
+    lopts.FilmHeight = std::max<size_t>(1, lopts.FilmHeight);
 }
 
 static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts)
@@ -48,42 +50,6 @@ static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts
     }
 
     lopts.CameraType = camera_type;
-}
-
-static inline void setup_camera_view(RuntimeRenderSettings& settings, const LoaderOptions& lopts, const BoundingBox& sceneBBox)
-{
-    if (!lopts.Scene.camera()) {
-        // If no camera information is given whatsoever, try to setup a view over the whole scene
-        const float aspect_ratio = settings.FilmWidth / settings.FilmHeight;
-        const float a            = sceneBBox.diameter().x() / 2;
-        const float b            = sceneBBox.diameter().y() / (2 * aspect_ratio);
-        const float s            = std::sin(settings.FOV * Deg2Rad / 2);
-        const float d            = std::max(a, b) * std::sqrt(1 / (s * s) - 1);
-
-        settings.CameraDir = -Vector3f::UnitZ();
-        settings.CameraUp  = Vector3f::UnitY();
-        settings.CameraEye = Vector3f::UnitX() * sceneBBox.center().x()
-                             + Vector3f::UnitY() * sceneBBox.center().y()
-                             + Vector3f::UnitZ() * (sceneBBox.max.z() + d);
-    } else {
-        // Get initial location
-        Transformf cameraTransform = Transformf::Identity();
-        const auto camera          = lopts.Scene.camera();
-        if (camera) {
-            cameraTransform = camera->property("transform").getTransform();
-            settings.FOV    = camera->property("fov").getNumber(settings.FOV);
-
-            settings.TMin = camera->property("near_clip").getNumber(settings.TMin);
-            settings.TMax = camera->property("far_clip").getNumber(settings.TMax);
-        }
-
-        settings.CameraEye = cameraTransform * Vector3f::Zero();
-        settings.CameraDir = cameraTransform.linear().col(2);
-        settings.CameraUp  = cameraTransform.linear().col(1);
-
-        if (settings.TMax < settings.TMin)
-            std::swap(settings.TMin, settings.TMax);
-    }
 }
 
 static inline size_t recommendSPI(Target target)
@@ -106,9 +72,8 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     , mDevice(opts.Device)
     , mCurrentIteration(0)
     , mCurrentSampleCount(0)
-    , mIsTrace(false)
+    , mIsTrace(opts.IsTracer)
     , mIsDebug(false)
-    , mDebugMode(DebugMode::Normal)
     , mAcquireStats(opts.AcquireStats)
 {
     if (!mManager.init())
@@ -128,6 +93,7 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     LoaderOptions lopts;
     lopts.FilePath = path;
     lopts.Target   = target;
+    lopts.IsTracer = opts.IsTracer;
 
     // Parse scene file
     IG_LOG(L_DEBUG) << "Parsing scene" << std::endl;
@@ -143,7 +109,9 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     setup_technique(lopts, opts);
 
     // Extract film
-    setup_film(mLoadedRenderSettings, lopts, opts);
+    setup_film(lopts, opts);
+    mFilmWidth  = lopts.FilmWidth;
+    mFilmHeight = lopts.FilmHeight;
 
     // Extract camera
     setup_camera(lopts, opts);
@@ -178,12 +146,9 @@ Runtime::Runtime(const std::filesystem::path& path, const RuntimeOptions& opts)
     mDatabase = std::move(result.Database);
     IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startLoader).count() / 1000.0f << " seconds" << std::endl;
 
-    // Pickup initial camera view
-    setup_camera_view(mLoadedRenderSettings, lopts, mDatabase.SceneBBox);
-
-    mIsDebug       = lopts.TechniqueType == "debug";
-    mIsTrace       = lopts.CameraType == "list";
-    mTechniqueInfo = result.TechniqueInfo;
+    mIsDebug                  = lopts.TechniqueType == "debug";
+    mTechniqueInfo            = result.TechniqueInfo;
+    mInitialCameraOrientation = result.CameraOrientation;
 
     mTechniqueVariants = std::move(result.TechniqueVariants);
 
@@ -222,7 +187,7 @@ Runtime::~Runtime()
         shutdown();
 }
 
-void Runtime::step(const Camera& camera)
+void Runtime::step()
 {
     if (IG_UNLIKELY(!mInit))
         setup();
@@ -235,16 +200,16 @@ void Runtime::step(const Camera& camera)
     if (mTechniqueInfo.VariantSelector) {
         const auto& active = mTechniqueInfo.VariantSelector(mCurrentIteration);
         for (const auto& ind : active)
-            stepVariant(camera, ind);
+            stepVariant(ind);
     } else {
         for (size_t i = 0; i < mTechniqueVariants.size(); ++i)
-            stepVariant(camera, (int)i);
+            stepVariant((int)i);
     }
 
     ++mCurrentIteration;
 }
 
-void Runtime::stepVariant(const Camera& camera, int variant)
+void Runtime::stepVariant(int variant)
 {
     IG_ASSERT(variant < (int)mTechniqueVariants.size(), "Expected technique variant to be well selected");
     const auto& info = mTechniqueInfo.Variants[variant];
@@ -252,27 +217,14 @@ void Runtime::stepVariant(const Camera& camera, int variant)
     // IG_LOG(L_DEBUG) << "Rendering iteration " << mCurrentIteration << ", variant " << variant << std::endl;
 
     DriverRenderSettings settings;
-    for (int i = 0; i < 3; ++i)
-        settings.eye[i] = camera.Eye(i);
-    for (int i = 0; i < 3; ++i)
-        settings.dir[i] = camera.Direction(i);
-    for (int i = 0; i < 3; ++i)
-        settings.up[i] = camera.Up(i);
-    for (int i = 0; i < 3; ++i)
-        settings.right[i] = camera.Right(i);
-    settings.width              = camera.SensorWidth;
-    settings.height             = camera.SensorHeight;
-    settings.tmin               = camera.TMin;
-    settings.tmax               = camera.TMax;
     settings.rays               = nullptr; // No artifical ray streams
     settings.device             = mDevice;
     settings.spi                = info.GetSPI(mSamplesPerIteration);
-    settings.work_width         = info.GetWidth(mLoadedRenderSettings.FilmWidth);
-    settings.work_height        = info.GetHeight(mLoadedRenderSettings.FilmHeight);
+    settings.work_width         = info.GetWidth(mFilmWidth);
+    settings.work_height        = info.GetHeight(mFilmHeight);
     settings.framebuffer_locked = info.LockFramebuffer;
-    settings.debug_mode         = (uint32)mDebugMode;
 
-    mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, mCurrentIteration);
+    mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, &mParameterSet, mCurrentIteration);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -313,8 +265,6 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, int variant)
     // IG_LOG(L_DEBUG) << "Tracing iteration " << mCurrentIteration << ", variant " << variant << std::endl;
 
     DriverRenderSettings settings;
-    settings.width              = rays.size();
-    settings.height             = 1;
     settings.rays               = rays.data();
     settings.device             = mDevice;
     settings.spi                = info.GetSPI(mSamplesPerIteration);
@@ -322,7 +272,7 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, int variant)
     settings.work_height        = 1;
     settings.framebuffer_locked = info.LockFramebuffer;
 
-    mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, mCurrentIteration);
+    mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, &mParameterSet, mCurrentIteration);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -330,8 +280,8 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, int variant)
 
 void Runtime::resizeFramebuffer(size_t width, size_t height)
 {
-    mLoadedRenderSettings.FilmWidth  = width;
-    mLoadedRenderSettings.FilmHeight = height;
+    mFilmWidth  = width;
+    mFilmHeight = height;
     mLoadedInterface.ResizeFramebufferFunction(width, height);
     reset();
 }
@@ -362,8 +312,8 @@ void Runtime::setup()
 {
     DriverSetupSettings settings;
     settings.database           = &mDatabase;
-    settings.framebuffer_width  = std::max(1u, mLoadedRenderSettings.FilmWidth);
-    settings.framebuffer_height = std::max(1u, mLoadedRenderSettings.FilmHeight);
+    settings.framebuffer_width  = mFilmWidth;
+    settings.framebuffer_height = mFilmHeight;
     settings.acquire_stats      = mAcquireStats;
     settings.aov_count          = mTechniqueInfo.EnabledAOVs.size();
 
@@ -449,6 +399,26 @@ void Runtime::imageinfo(const ImageInfoSettings& settings, ImageInfoOutput& outp
         setup();
 
     mLoadedInterface.ImageInfoFunction(mDevice, settings, output);
+}
+
+void Runtime::setParameter(const std::string& name, int value)
+{
+    mParameterSet.IntParameters[name] = value;
+}
+
+void Runtime::setParameter(const std::string& name, float value)
+{
+    mParameterSet.FloatParameters[name] = value;
+}
+
+void Runtime::setParameter(const std::string& name, const Vector3f& value)
+{
+    mParameterSet.VectorParameters[name] = value;
+}
+
+void Runtime::setParameter(const std::string& name, const Vector4f& value)
+{
+    mParameterSet.ColorParameters[name] = value;
 }
 
 } // namespace IG

@@ -65,9 +65,9 @@ bool saveImageRGBA(const std::filesystem::path& path, const float* rgb, size_t w
 
 bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime)
 {
-    size_t width  = runtime.loadedRenderSettings().FilmWidth;
-    size_t height = runtime.loadedRenderSettings().FilmHeight;
-    float scale   = 1.0f / runtime.currentIterationCount();
+    const size_t width  = runtime.framebufferWidth();
+    const size_t height = runtime.framebufferHeight();
+    float scale         = 1.0f / runtime.currentIterationCount();
     if (runtime.currentIterationCount() == 0)
         scale = 0;
 

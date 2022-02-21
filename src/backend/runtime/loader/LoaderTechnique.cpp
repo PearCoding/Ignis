@@ -28,7 +28,9 @@ static void ao_body_loader(std::ostream& stream, const std::string&, const std::
 
 static void debug_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
-    stream << "  let technique = make_debug_renderer(settings.debug_mode);" << std::endl;
+    // TODO: Maybe add a changeable default mode?
+    stream << "  let debug_mode = registry::get_parameter_i32(\"__debug_mode\", 0);" << std::endl
+           << "  let technique  = make_debug_renderer(debug_mode);" << std::endl;
 }
 
 static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)

@@ -3,7 +3,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "Camera.h"
 #include "Runtime.h"
 
 #define STRINGIFY(x) #x
@@ -36,15 +35,6 @@ PYBIND11_MODULE(pyignis, m)
         .def_readwrite("FilmWidth", &RuntimeRenderSettings::FilmWidth)
         .def_readwrite("FilmHeight", &RuntimeRenderSettings::FilmHeight);
 
-    py::class_<Camera>(m, "Camera")
-        .def(py::init([](const Vector3f& e, const Vector3f& d, const Vector3f& u, float fov, float ratio, float tmin, float tmax) { return Camera(e, d, u, fov, ratio, tmin, tmax); }))
-        .def_readwrite("Eye", &Camera::Eye)
-        .def_readwrite("Direction", &Camera::Direction)
-        .def_readwrite("Right", &Camera::Right)
-        .def_readwrite("Up", &Camera::Up)
-        .def_readwrite("SensorWidth", &Camera::SensorWidth)
-        .def_readwrite("SensorHeight", &Camera::SensorHeight);
-
     py::class_<Ray>(m, "Ray")
         .def(py::init([](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, 1) }; }))
         .def(py::init([](const Vector3f& org, const Vector3f& dir, float tmin, float tmax) { return Ray{ org, dir, Vector2f(tmin, tmax) }; }))
@@ -74,8 +64,8 @@ PYBIND11_MODULE(pyignis, m)
         })
         .def("reset", &Runtime::reset)
         .def("getFramebuffer", [](const Runtime& r, uint32 aov) {
-            const size_t width  = r.loadedRenderSettings().FilmWidth;
-            const size_t height = r.loadedRenderSettings().FilmHeight;
+            const size_t width  = r.framebufferWidth();
+            const size_t height = r.framebufferHeight();
             return py::memoryview::from_buffer(
                 r.getFramebuffer(aov),                                          // buffer pointer
                 { height, width, 3ul },                                         // shape (rows, cols)
@@ -85,5 +75,6 @@ PYBIND11_MODULE(pyignis, m)
         .def("clearFramebuffer", &Runtime::clearFramebuffer)
         .def_property_readonly("iterationCount", &Runtime::currentIterationCount)
         .def_property_readonly("sampleCount", &Runtime::currentSampleCount)
-        .def_property_readonly("loadedRenderSettings", &Runtime::loadedRenderSettings);
+        .def_property_readonly("framebufferWidth", &Runtime::framebufferWidth)
+        .def_property_readonly("framebufferHeight", &Runtime::framebufferHeight);
 }

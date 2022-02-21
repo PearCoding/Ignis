@@ -1,5 +1,6 @@
 #include "Loader.h"
 #include "LoaderBSDF.h"
+#include "LoaderCamera.h"
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
 #include "LoaderShape.h"
@@ -23,8 +24,12 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.CameraType          = opts.CameraType;
     ctx.TechniqueType       = opts.TechniqueType;
     ctx.SamplesPerIteration = opts.SamplesPerIteration;
+    ctx.IsTracer            = opts.IsTracer;
+    ctx.FilmWidth           = opts.FilmWidth;
+    ctx.FilmHeight          = opts.FilmHeight;
 
     LoaderLight::setupAreaLights(ctx);
+    LoaderCamera::setupInitialOrientation(ctx, result);
 
     // Load content
     if (!LoaderShape::load(ctx, result))

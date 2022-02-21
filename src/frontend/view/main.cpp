@@ -274,11 +274,8 @@ int main(int argc, char** argv)
     }
     timer_loading.stop();
 
-    const auto def  = runtime->loadedRenderSettings();
-    const auto clip = trange.value_or(Vector2f(def.TMin, def.TMax));
-    Camera camera(eye.value_or(def.CameraEye), dir.value_or(def.CameraDir), up.value_or(def.CameraUp),
-                  fov.value_or(def.FOV), (float)def.FilmWidth / (float)def.FilmHeight,
-                  clip(0), clip(1));
+    const auto def = runtime->initialCameraOrientation();
+    Camera camera(eye.value_or(def.Eye), dir.value_or(def.Dir), up.value_or(def.Up));
     runtime->setup();
 
     const size_t SPI          = runtime->samplesPerIteration();
@@ -297,7 +294,7 @@ int main(int argc, char** argv)
             else
                 aov_names[i] = runtime->aovs()[i - 1];
         }
-        ui = std::make_unique<UI>(runtime.get(), def.FilmWidth, def.FilmHeight, aov_names, runtime->isDebug());
+        ui = std::make_unique<UI>(runtime.get(), runtime->framebufferWidth(), runtime->framebufferHeight(), aov_names, runtime->isDebug());
 
         // Setup initial travelspeed
         BoundingBox bbox = runtime->sceneBoundingBox();
@@ -307,7 +304,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    runtime->setDebugMode(ui->currentDebugMode());
+    auto lastDebugMode = ui->currentDebugMode();
 
     IG_LOG(L_INFO) << "Started rendering..." << std::endl;
 
@@ -328,10 +325,14 @@ int main(int argc, char** argv)
         done        = ui->handleInput(iter, running, camera);
         timer_input.stop();
 
-        if (runtime->currentDebugMode() != ui->currentDebugMode()) {
-            runtime->setDebugMode(ui->currentDebugMode());
+        if (lastDebugMode != ui->currentDebugMode()) {
+            runtime->setParameter("__debug_mode", (int)ui->currentDebugMode());
             runtime->reset();
+            lastDebugMode = ui->currentDebugMode();
         } else if (iter != runtime->currentIterationCount()) {
+            runtime->setParameter("__camera_eye", camera.Eye);
+            runtime->setParameter("__camera_dir", camera.Direction);
+            runtime->setParameter("__camera_up", camera.Up);
             runtime->reset();
         }
 
@@ -344,13 +345,13 @@ int main(int argc, char** argv)
                 auto ticks = std::chrono::high_resolution_clock::now();
 
                 timer_render.start();
-                runtime->step(camera);
+                runtime->step();
                 timer_render.stop();
 
                 auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
                 if (spp_mode == SPPMode::Fixed && desired_iter != 0) {
-                    samples_sec.emplace_back(1000.0 * double(SPI * def.FilmWidth * def.FilmHeight) / double(elapsed_ms));
+                    samples_sec.emplace_back(1000.0 * double(SPI * runtime->framebufferWidth() * runtime->framebufferHeight()) / double(elapsed_ms));
                     if (samples_sec.size() == desired_iter)
                         break;
                 }

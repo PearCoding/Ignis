@@ -44,29 +44,12 @@ static inline size_t roundUp(size_t num, size_t multiple)
 
 static Settings convert_settings(const DriverRenderSettings& settings, IG::uint32 iter)
 {
-    // TODO: Get rid of this
     Settings renderSettings;
-    renderSettings.device  = settings.device;
-    renderSettings.spi     = settings.spi;
-    renderSettings.width   = settings.width;
-    renderSettings.height  = settings.height;
-    renderSettings.eye.x   = settings.eye[0];
-    renderSettings.eye.y   = settings.eye[1];
-    renderSettings.eye.z   = settings.eye[2];
-    renderSettings.dir.x   = settings.dir[0];
-    renderSettings.dir.y   = settings.dir[1];
-    renderSettings.dir.z   = settings.dir[2];
-    renderSettings.up.x    = settings.up[0];
-    renderSettings.up.y    = settings.up[1];
-    renderSettings.up.z    = settings.up[2];
-    renderSettings.right.x = settings.right[0];
-    renderSettings.right.y = settings.right[1];
-    renderSettings.right.z = settings.right[2];
-    renderSettings.tmin    = settings.tmin;
-    renderSettings.tmax    = settings.tmax;
-    renderSettings.iter    = (int)iter;
-
-    renderSettings.debug_mode = settings.debug_mode;
+    renderSettings.device = settings.device;
+    renderSettings.spi    = settings.spi;
+    renderSettings.iter   = (int)iter;
+    renderSettings.width  = settings.work_width;
+    renderSettings.height = settings.work_height;
 
     return renderSettings;
 }
@@ -158,6 +141,7 @@ struct Interface {
 
     DriverRenderSettings current_settings;
     DriverSetupSettings setup;
+    const IG::ParameterSet* current_parameters = nullptr;
     IG::TechniqueVariantShaderSet shader_set;
 
     IG::Statistics main_stats;
@@ -694,16 +678,68 @@ struct Interface {
 
         return &main_stats;
     }
+
+    // Access parameters
+    int getParameterInt(const char* name, int def)
+    {
+        IG_ASSERT(current_parameters != nullptr, "No parameters available!");
+        if (current_parameters->IntParameters.count(name) > 0)
+            return current_parameters->IntParameters.at(name);
+        else
+            return def;
+    }
+
+    float getParameterFloat(const char* name, float def)
+    {
+        IG_ASSERT(current_parameters != nullptr, "No parameters available!");
+        if (current_parameters->FloatParameters.count(name) > 0)
+            return current_parameters->FloatParameters.at(name);
+        else
+            return def;
+    }
+
+    void getParameterVector(const char* name, float defX, float defY, float defZ, float& outX, float& outY, float& outZ)
+    {
+        IG_ASSERT(current_parameters != nullptr, "No parameters available!");
+        if (current_parameters->VectorParameters.count(name) > 0) {
+            IG::Vector3f param = current_parameters->VectorParameters.at(name);
+            outX               = param.x();
+            outY               = param.y();
+            outZ               = param.z();
+        } else {
+            outX = defX;
+            outY = defY;
+            outZ = defZ;
+        }
+    }
+
+    void getParameterColor(const char* name, float defR, float defG, float defB, float defA, float& outR, float& outG, float& outB, float& outA)
+    {
+        IG_ASSERT(current_parameters != nullptr, "No parameters available!");
+        if (current_parameters->ColorParameters.count(name) > 0) {
+            IG::Vector4f param = current_parameters->ColorParameters.at(name);
+            outR               = param.x();
+            outG               = param.y();
+            outB               = param.z();
+            outA               = param.w();
+        } else {
+            outR = defR;
+            outG = defG;
+            outB = defB;
+            outA = defA;
+        }
+    }
 };
 
 static std::unique_ptr<Interface> sInterface;
 
-void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRenderSettings& settings, IG::uint32 iter)
+void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRenderSettings& settings, const IG::ParameterSet* parameterSet, IG::uint32 iter)
 {
-    sInterface->shader_set        = shaderSet;
-    sInterface->current_iteration = iter;
-    sInterface->current_settings  = settings;
-    sInterface->driver_settings   = convert_settings(settings, iter);
+    sInterface->shader_set         = shaderSet;
+    sInterface->current_iteration  = iter;
+    sInterface->current_settings   = settings;
+    sInterface->current_parameters = parameterSet;
+    sInterface->driver_settings    = convert_settings(settings, iter);
 
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Device, {});
@@ -1115,6 +1151,26 @@ bool ignis_use_advanced_shadow_handling()
 bool ignis_is_framebuffer_locked()
 {
     return sInterface->isFramebufferLocked();
+}
+
+int ignis_get_parameter_i32(const char* name, int def)
+{
+    return sInterface->getParameterInt(name, def);
+}
+
+float ignis_get_parameter_f32(const char* name, float def)
+{
+    return sInterface->getParameterFloat(name, def);
+}
+
+void ignis_get_parameter_vector(const char* name, float defX, float defY, float defZ, float* x, float* y, float* z)
+{
+    sInterface->getParameterVector(name, defX, defY, defZ, *x, *y, *z);
+}
+
+void ignis_get_parameter_color(const char* name, float defR, float defG, float defB, float defA, float* r, float* g, float* b, float* a)
+{
+    sInterface->getParameterColor(name, defR, defG, defB, defA, *r, *g, *b, *a);
 }
 
 void ignis_present(int dev)

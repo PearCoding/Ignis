@@ -26,6 +26,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_gpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/material.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pipeline.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/registry.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/scene.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/settings.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/shape.art

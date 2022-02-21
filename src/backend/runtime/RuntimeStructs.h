@@ -27,4 +27,11 @@ struct ImageInfoOutput {
     float SoftMax;
     float Median;
 };
+
+struct ParameterSet {
+    std::unordered_map<std::string, int> IntParameters;
+    std::unordered_map<std::string, float> FloatParameters;
+    std::unordered_map<std::string, Vector3f> VectorParameters;
+    std::unordered_map<std::string, Vector4f> ColorParameters;
+};
 } // namespace IG

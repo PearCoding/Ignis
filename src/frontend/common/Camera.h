@@ -8,19 +8,11 @@ struct Camera {
     Vector3f Direction;
     Vector3f Right;
     Vector3f Up;
-    float SensorWidth, SensorHeight;
-    float TMin, TMax;
 
-    inline Camera(const Vector3f& e, const Vector3f& d, const Vector3f& u, float fov, float ratio, float tmin, float tmax)
+    inline Camera(const Vector3f& e, const Vector3f& d, const Vector3f& u)
     {
         Eye = e;
         update_dir(d.normalized(), u.normalized());
-
-        SensorWidth  = std::tan(fov * Deg2Rad / 2);
-        SensorHeight = SensorWidth / ratio;
-
-        TMin = tmin;
-        TMax = tmax;
     }
 
     inline void rotate(float yaw, float pitch)
