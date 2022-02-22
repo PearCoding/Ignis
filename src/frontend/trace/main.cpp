@@ -1,4 +1,5 @@
 #include "Logger.h"
+#include "ProgramOptions.h"
 #include "Runtime.h"
 #include "config/Build.h"
 
@@ -7,38 +8,6 @@
 #include <sstream>
 
 using namespace IG;
-
-static inline void check_arg(int argc, char** argv, int arg, int n)
-{
-    if (arg + n >= argc)
-        IG_LOG(L_ERROR) << "Option '" << argv[arg] << "' expects " << n << " arguments, got " << (argc - arg) << std::endl;
-}
-
-static inline void version()
-{
-    std::cout << "igtrace " << Build::getVersionString() << std::endl;
-}
-
-static inline void usage()
-{
-    std::cout
-        << "igtrace - Ignis Command Line Tracer" << std::endl
-        << Build::getCopyrightString() << std::endl
-        << "Usage: igtrace [options] file" << std::endl
-        << "Available options:" << std::endl
-        << "   -h      --help                   Shows this message" << std::endl
-        << "           --version                Show version and exit" << std::endl
-        << "   -q      --quiet                  Do not print messages into console" << std::endl
-        << "   -v      --verbose                Print detailed information" << std::endl
-        << "           --no-color               Do not use decorations to make console output better" << std::endl
-        << "   -t      --target   target        Sets the target platform (default: autodetect CPU)" << std::endl
-        << "   -d      --device   device        Sets the device to use on the selected platform (default: 0)" << std::endl
-        << "           --cpu                    Use autodetected CPU target" << std::endl
-        << "           --gpu                    Use autodetected GPU target" << std::endl
-        << "   -n      --count    count         Samples per ray. Default is 1" << std::endl
-        << "   -i      --input    list.txt      Read list of rays from file instead of the standard input" << std::endl
-        << "   -o      --output   radiance.txt  Write radiance for each ray into file instead of standard output" << std::endl;
-}
 
 static inline float safe_rcp(float x)
 {
@@ -103,103 +72,25 @@ static void write_output(std::ostream& is, const float* data, size_t count, uint
 
 int main(int argc, char** argv)
 {
-    if (argc <= 1) {
-        usage();
+    ProgramOptions cmd(argc, argv, ApplicationType::Trace, "Command Line Tracer");
+    if (cmd.ShouldExit)
         return EXIT_SUCCESS;
-    }
 
-    std::string scene_file;
-    uint32 sample_count = 1;
-    std::string ray_file;
-    std::string out_file;
     RuntimeOptions opts;
-    bool quiet = false;
-
-    for (int i = 1; i < argc; ++i) {
-        if (argv[i][0] == '-') {
-            if (!strcmp(argv[i], "-n") || !strcmp(argv[i], "--count")) {
-                check_arg(argc, argv, i, 1);
-                sample_count = strtoul(argv[++i], nullptr, 10);
-            } else if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--output")) {
-                check_arg(argc, argv, i, 1);
-                ++i;
-                out_file = argv[i];
-            } else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "--input")) {
-                check_arg(argc, argv, i, 1);
-                ++i;
-                ray_file = argv[i];
-            } else if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet")) {
-                quiet = true;
-                IG_LOGGER.setQuiet(true);
-            } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--verbose")) {
-                IG_LOGGER.setVerbosity(L_DEBUG);
-            } else if (!strcmp(argv[i], "--no-color")) {
-                IG_LOGGER.enableAnsiTerminal(false);
-            } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
-                usage();
-                return EXIT_SUCCESS;
-            } else if (!strcmp(argv[i], "--version")) {
-                version();
-                return EXIT_SUCCESS;
-            } else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--target")) {
-                check_arg(argc, argv, i, 1);
-                ++i;
-                if (!strcmp(argv[i], "sse42"))
-                    opts.DesiredTarget = Target::SSE42;
-                else if (!strcmp(argv[i], "avx"))
-                    opts.DesiredTarget = Target::AVX;
-                else if (!strcmp(argv[i], "avx2"))
-                    opts.DesiredTarget = Target::AVX2;
-                else if (!strcmp(argv[i], "avx512"))
-                    opts.DesiredTarget = Target::AVX512;
-                else if (!strcmp(argv[i], "asimd"))
-                    opts.DesiredTarget = Target::ASIMD;
-                else if (!strcmp(argv[i], "nvvm"))
-                    opts.DesiredTarget = Target::NVVM;
-                else if (!strcmp(argv[i], "amdgpu"))
-                    opts.DesiredTarget = Target::AMDGPU;
-                else if (!strcmp(argv[i], "generic"))
-                    opts.DesiredTarget = Target::GENERIC;
-                else {
-                    IG_LOG(L_ERROR) << "Unknown target '" << argv[i] << "'. Aborting." << std::endl;
-                    return EXIT_FAILURE;
-                }
-            } else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--device")) {
-                check_arg(argc, argv, i, 1);
-                ++i;
-                opts.Device = strtoul(argv[i], nullptr, 10);
-            } else if (!strcmp(argv[i], "--cpu")) {
-                opts.RecommendCPU = true;
-                opts.RecommendGPU = false;
-            } else if (!strcmp(argv[i], "--gpu")) {
-                opts.RecommendCPU = false;
-                opts.RecommendGPU = true;
-            } else {
-                IG_LOG(L_ERROR) << "Unknown option '" << argv[i] << "'" << std::endl;
-                return EXIT_FAILURE;
-            }
-        } else {
-            if (scene_file.empty()) {
-                scene_file = argv[i];
-            } else {
-                IG_LOG(L_ERROR) << "Unexpected argument '" << argv[i] << "'" << std::endl;
-                return EXIT_FAILURE;
-            }
-        }
-    }
+    cmd.populate(opts);
 
     // Fix samples per iteration to 1
     opts.SPI      = 1;
     opts.IsTracer = true;
 
-    if (!quiet)
+    if (!cmd.Quiet)
         std::cout << Build::getCopyrightString() << std::endl;
 
     std::vector<Ray> rays;
-    if (ray_file.empty()) {
+    if (cmd.InputRay.empty()) {
         rays = read_input(std::cin, false);
     } else {
-        std::ifstream stream(ray_file);
+        std::ifstream stream(cmd.InputRay);
         rays = read_input(stream, true);
     }
 
@@ -211,7 +102,7 @@ int main(int argc, char** argv)
     opts.OverrideFilmSize = { (uint32)rays.size(), 1 };
     std::unique_ptr<Runtime> runtime;
     try {
-        runtime = std::make_unique<Runtime>(scene_file, opts);
+        runtime = std::make_unique<Runtime>(cmd.InputScene, opts);
     } catch (const std::exception& e) {
         IG_LOG(L_ERROR) << e.what() << std::endl;
         return EXIT_FAILURE;
@@ -219,8 +110,8 @@ int main(int argc, char** argv)
 
     runtime->setup();
 
-    const size_t SPP = runtime->samplesPerIteration();
-    sample_count     = static_cast<size_t>(std::ceil(sample_count / (float)SPP));
+    const size_t SPI    = runtime->samplesPerIteration();
+    size_t sample_count = static_cast<size_t>(std::ceil(cmd.SPP.value_or(0) / (float)SPI));
 
     std::vector<float> accum_data;
     std::vector<float> iter_data;
@@ -236,10 +127,10 @@ int main(int argc, char** argv)
     }
 
     // Extract data
-    if (out_file.empty()) {
+    if (cmd.Output.empty()) {
         write_output(std::cout, accum_data.data(), rays.size(), runtime->currentIterationCount());
     } else {
-        std::ofstream stream(out_file);
+        std::ofstream stream(cmd.Output);
         write_output(stream, accum_data.data(), rays.size(), runtime->currentIterationCount());
     }
 

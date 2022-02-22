@@ -4,5 +4,5 @@ SET(CMD_FILES
 
 add_executable(igtrace ${CMD_FILES})
 add_dependencies(igtrace ignis_drivers)
-target_link_libraries(igtrace PRIVATE ig_lib_runtime)
+target_link_libraries(igtrace PRIVATE ig_lib_common)
 install(TARGETS igtrace COMPONENT runtime)
