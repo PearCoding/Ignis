@@ -63,8 +63,11 @@ int main(int argc, char** argv)
     timer_loading.stop();
 
     const auto def = runtime->initialCameraOrientation();
-    Camera camera(cmd.Eye.value_or(def.Eye), cmd.Dir.value_or(def.Dir), cmd.Up.value_or(def.Up));
+    Camera camera(cmd.EyeVector().value_or(def.Eye), cmd.DirVector().value_or(def.Dir), cmd.UpVector().value_or(def.Up));
     runtime->setup();
+    runtime->setParameter("__camera_eye", camera.Eye);
+    runtime->setParameter("__camera_dir", camera.Direction);
+    runtime->setParameter("__camera_up", camera.Up);
 
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(cmd.SPP.value_or(0) / (float)SPI));

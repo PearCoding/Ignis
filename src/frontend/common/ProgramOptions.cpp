@@ -1,5 +1,4 @@
 #include "ProgramOptions.h"
-#include "Logger.h"
 #include "Runtime.h"
 #include "config/Build.h"
 
@@ -100,17 +99,15 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         app.add_flag("--no-progress", NoProgress, "Do not show progress information");
 
     if (type != ApplicationType::Trace) {
-        app.add_option("--width", Width, "Set the viewport horizontal dimension (in pixels)");
-        app.add_option("--height", Height, "Set the viewport vertical dimension (in pixels)");
+        const auto width  = app.add_option("--width", Width, "Set the viewport horizontal dimension (in pixels)");
+        const auto height = app.add_option("--height", Height, "Set the viewport vertical dimension (in pixels)");
 
-        std::array<float, 3> eye;
-        app.add_option("--eye", eye, "Set the position of the camera");
+        width->needs(height);
+        height->needs(width);
 
-        std::array<float, 3> dir;
-        app.add_option("--dir", dir, "Set the direction vector of the camera");
-
-        std::array<float, 3> up;
-        app.add_option("--up", up, "Set the up vector of the camera");
+        app.add_option("--eye", Eye, "Set the position of the camera");
+        app.add_option("--dir", Dir, "Set the direction vector of the camera");
+        app.add_option("--up", Up, "Set the up vector of the camera");
 
         app.add_option("--camera", CameraType, "Override camera type")->check(CLI::IsMember(CameraTypes, CLI::ignore_case));
     }

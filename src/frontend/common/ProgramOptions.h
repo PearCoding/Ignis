@@ -3,6 +3,9 @@
 #include "Logger.h"
 #include "Target.h"
 
+#include <array>
+#include <optional>
+
 namespace IG {
 enum class SPPMode {
     Fixed,
@@ -15,7 +18,6 @@ enum class ApplicationType {
     CLI,
     Trace
 };
-
 
 class RuntimeOptions;
 class ProgramOptions {
@@ -33,9 +35,18 @@ public:
 
     std::optional<int> Width;
     std::optional<int> Height;
-    std::optional<Vector3f> Eye;
-    std::optional<Vector3f> Dir;
-    std::optional<Vector3f> Up;
+    std::optional<std::array<float, 3>> Eye;
+    std::optional<std::array<float, 3>> Dir;
+    std::optional<std::array<float, 3>> Up;
+
+    inline std::optional<Vector3f> ToVector(const std::optional<std::array<float, 3>>& arr) const
+    {
+        return arr.has_value() ? std::optional<Vector3f>{ Vector3f(arr.value()[0], arr.value()[1], arr.value()[2]) } : std::optional<Vector3f>{};
+    }
+
+    inline std::optional<Vector3f> EyeVector() const { return ToVector(Eye); }
+    inline std::optional<Vector3f> DirVector() const { return ToVector(Dir); }
+    inline std::optional<Vector3f> UpVector() const { return ToVector(Up); }
 
     std::string CameraType;
     std::string TechniqueType;
