@@ -222,11 +222,11 @@ fn @make_ppm_light_renderer(max_path_len: i32, _aovs: AOVTable, light_cache: Lig
 
     Technique {
         on_hit         = on_hit,
-        on_miss        = @ |_, _, _| Option[Color]::None,
-        on_shadow      = @ |_, _, _, _, _, _, _| Option[(Ray, Color)]::None,
+        on_miss        = TechniqueNoMissFunction,
+        on_shadow      = TechniqueNoShadowFunction,
         on_bounce      = on_bounce,
-        on_shadow_hit  = @ |_, _, _| Option[(Color)]::None,
-        on_shadow_miss = @ |_, _, _| Option[Color]::None,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = TechniqueNoShadowMissFunction,
     }
 }
 
@@ -384,10 +384,10 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
     Technique {
         on_hit         = on_hit,
         on_miss        = on_miss,
-        on_shadow      = @ |_, _, _, _, _, _, _| Option[(Ray, Color)]::None,
+        on_shadow      = TechniqueNoShadowFunction,
         on_bounce      = on_bounce,
-        on_shadow_hit  = @ |_, _, _| Option[Color]::None,
-        on_shadow_miss = @ |_, _, _| Option[Color]::None,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = TechniqueNoShadowMissFunction,
     }
 }
 

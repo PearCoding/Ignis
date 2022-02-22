@@ -127,10 +127,10 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                 }
             }
         },
-        on_miss        = @ |_, _, _| Option[(Color)]::None,
-        on_shadow      = @ |_, _, _, _, _, _, _| Option[(Ray, Color)]::None,
-        on_bounce      = @ |_, _, _, _, _, _, _| Option[(Ray, RayPayload)]::None,
-        on_shadow_hit  = @ |_, _, _| Option[(Color)]::None,
-        on_shadow_miss = @ |_, _, _| Option[(Color)]::None,
+        on_miss        = TechniqueNoMissFunction,
+        on_shadow      = TechniqueNoShadowFunction,
+        on_bounce      = TechniqueNoBounceFunction,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = TechniqueNoShadowMissFunction,
     }
 }

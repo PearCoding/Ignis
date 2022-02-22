@@ -9,7 +9,7 @@ static std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "err
 static std::map<std::string, Target> TargetMap{ { "generic", Target::GENERIC }, { "asimd", Target::ASIMD }, { "sse42", Target::SSE42 }, { "avx", Target::AVX }, { "avx2", Target::AVX2 }, { "avx512", Target::AVX512 }, { "amdgpu", Target::AMDGPU }, { "nvvm", Target::NVVM } };
 static std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continous", SPPMode::Continous } };
 static std::set<std::string> CameraTypes{ "perspective", "orthogonal", "fishlens" };
-static std::set<std::string> TechniqueTypes{ "path", "photonmapper", "ao", "debug" };
+static std::set<std::string> TechniqueTypes{ "path", "photonmapper", "ao", "debug", "wireframe" };
 
 class MyTransformer : public CLI::Validator {
 public:

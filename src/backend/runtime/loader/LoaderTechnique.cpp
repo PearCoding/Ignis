@@ -33,6 +33,18 @@ static void debug_body_loader(std::ostream& stream, const std::string&, const st
            << "  let technique  = make_debug_renderer(debug_mode);" << std::endl;
 }
 
+static void wireframe_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+{
+    stream << "  let technique = make_wireframe_renderer();" << std::endl;
+}
+
+static void wireframe_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+{
+    constexpr int C = 1 /* Depth */ + 1 /* Distance */;
+    stream << "static RayPayloadComponents = " << C << ";" << std::endl
+           << "fn init_raypayload() = wrap_wireframeraypayload(WireframeRayPayload { depth = 1, distance = 0 });" << std::endl;
+}
+
 static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
 {
     TechniqueInfo info;
@@ -264,6 +276,7 @@ static struct TechniqueEntry {
     { "debug", technique_empty_get_info, debug_body_loader, technique_empty_header_loader },
     { "ppm", ppm_get_info, ppm_body_loader, ppm_header_loader },
     { "photonmapper", ppm_get_info, ppm_body_loader, ppm_header_loader },
+    { "wireframe", technique_empty_get_info, wireframe_body_loader, wireframe_header_loader },
     { "", nullptr, nullptr, nullptr }
 };
 

@@ -246,7 +246,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         on_miss        = on_miss,
         on_shadow      = on_shadow,
         on_bounce      = on_bounce,
-        on_shadow_hit  = @ |_, _, _| Option[(Color)]::None,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
         on_shadow_miss = on_shadow_miss,
     }
 }

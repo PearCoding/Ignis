@@ -1,0 +1,74 @@
+struct WireframeRayPayload {
+    depth:    i32,
+    distance: f32
+}
+
+fn wrap_wireframeraypayload(payload: WireframeRayPayload) -> RayPayload {
+    let mut r : RayPayload;
+    r.components(0) = payload.depth as f32;
+    r.components(1) = payload.distance;
+    r
+}
+
+fn unrap_wireframeraypayload(payload: RayPayload) = WireframeRayPayload {
+    depth    = payload.components(0) as i32,
+    distance = payload.components(1),
+};
+
+fn @make_wireframe_renderer() -> Technique {
+    let offset:f32 = 0.001;
+
+    fn is_edge_hit(hit: Hit, add_distance: f32) -> (bool, f32) {
+        let t = vec3_min_value(make_vec3(hit.prim_coords.x, hit.prim_coords.y, 1 - hit.prim_coords.x - hit.prim_coords.y));
+        let footprint = (hit.distance + add_distance) * 0.017455064; // math_builtins::tan(1 * flt_pi / 180);
+        // TODO: This has to be normalized by the area of the prim hit (but we do not carry this information)
+        (t <= 0.1 * footprint, t)
+    }
+
+    fn @on_hit( _ray: Ray
+        , _pixel: i32
+        , hit: Hit
+        , payload: RayPayload
+        , _surf: SurfaceElement
+        , _mat: Material
+        ) -> Option[Color] {
+        let (is_edge, t) = is_edge_hit(hit, unrap_wireframeraypayload(payload).distance);
+        if is_edge { 
+            make_option(color_lerp(white, black, t))
+        } else {
+            Option[Color]::None
+        }
+    }
+
+    fn @on_bounce( ray: Ray
+        , _pixel: i32
+        , hit: Hit
+        , _rnd: &mut RndState
+        , payload: RayPayload
+        , surf: SurfaceElement
+        , _mat: Material
+        ) -> Option[(Ray, RayPayload)] {
+        let wpt = unrap_wireframeraypayload(payload);
+        let (is_edge, _) = is_edge_hit(hit, wpt.distance);
+        if !is_edge { 
+            make_option(
+                make_ray(surf.point, ray.dir, offset, flt_max),
+                wrap_wireframeraypayload(WireframeRayPayload{
+                    depth    = wpt.depth + 1,
+                    distance = wpt.distance + hit.distance,
+                })
+            )
+        } else {
+            Option[(Ray, RayPayload)]::None
+        }
+    }
+
+    Technique {
+        on_hit         = on_hit,
+        on_miss        = TechniqueNoMissFunction,
+        on_shadow      = TechniqueNoShadowFunction,
+        on_bounce      = on_bounce,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = TechniqueNoShadowMissFunction,
+    }
+}

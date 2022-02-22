@@ -7,6 +7,13 @@ struct Technique {
     on_shadow_miss:      fn (Ray, i32, Color) -> Option[Color], // Will only be called if renderer makes use of advanced_shadows
 }
 
+fn @TechniqueNoHitFunction       (_: Ray, _: i32, _: Hit, _: RayPayload, _: SurfaceElement, _: Material)                   = Option[Color]::None;
+fn @TechniqueNoMissFunction      (_: Ray, _: i32, _: RayPayload)                                                           = Option[Color]::None;
+fn @TechniqueNoShadowFunction    (_: Ray, _: i32, _: Hit, _: &mut RndState, _: RayPayload, _: SurfaceElement, _: Material) = Option[(Ray, Color)]::None;
+fn @TechniqueNoBounceFunction    (_: Ray, _: i32, _: Hit, _: &mut RndState, _: RayPayload, _: SurfaceElement, _: Material) = Option[(Ray, RayPayload)]::None;
+fn @TechniqueNoShadowHitFunction (_: Ray, _: i32, _: Color)                                                                = Option[Color]::None;
+fn @TechniqueNoShadowMissFunction(_: Ray, _: i32, _: Color)                                                                = Option[Color]::None;
+
 type RayEmitter = fn (i32, i32, i32, i32, i32) -> (Ray, RndState, RayPayload);
 
 static MaxRayPayloadComponents = 8;
