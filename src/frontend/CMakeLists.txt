@@ -3,7 +3,6 @@ add_subdirectory(common)
 add_subdirectory(cli)
 
 if(IG_HAS_UI)
-    add_subdirectory(ui)
     add_subdirectory(view)
 endif()
 

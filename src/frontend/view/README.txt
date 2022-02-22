@@ -1,0 +1,1 @@
+imgui_sdl.h is based on https://github.com/Tyyppi77/imgui_sdl

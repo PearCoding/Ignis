@@ -1,4 +1,4 @@
-#include "inspector.h"
+#include "Inspector.h"
 
 #include "imgui.h"
 

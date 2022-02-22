@@ -9,7 +9,7 @@
 #include "imgui_markdown.h"
 #include "imgui_sdl.h"
 
-#include "inspector.h"
+#include "Inspector.h"
 
 #include "Color.h"
 #include "Logger.h"

@@ -1,20 +1,11 @@
 #include "Camera.h"
 #include "IO.h"
-
-#ifdef WITH_UI
-#include "UI.h"
-#else
-#include "StatusObserver.h"
-#endif
-
 #include "Logger.h"
 #include "ProgramOptions.h"
 #include "Runtime.h"
-#include "config/Build.h"
-
+#include "StatusObserver.h"
 #include "Timer.h"
-
-#include <optional>
+#include "config/Build.h"
 
 using namespace IG;
 
