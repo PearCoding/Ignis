@@ -37,7 +37,8 @@ struct TriMesh {
     /// Returns true if the given mesh can be approximated as a plane
     bool isAPlane() const;
 
-    static TriMesh MakeSphere(const Vector3f& center, float radius, uint32 stacks, uint32 slices);
+    static TriMesh MakeUVSphere(const Vector3f& center, float radius, uint32 stacks, uint32 slices);
+    static TriMesh MakeIcoSphere(const Vector3f& center, float radius, uint32 subdivisions);
     static TriMesh MakeDisk(const Vector3f& center, const Vector3f& normal, float radius, uint32 sections);
     static TriMesh MakePlane(const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis);
     static TriMesh MakeTriangle(const Vector3f& p0, const Vector3f& p1, const Vector3f& p2);

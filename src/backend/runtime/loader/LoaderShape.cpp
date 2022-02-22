@@ -80,13 +80,21 @@ inline TriMesh setup_mesh_cube(const Object& elem)
     return TriMesh::MakeBox(origin, Vector3f::UnitX() * width, Vector3f::UnitY() * height, Vector3f::UnitZ() * depth);
 }
 
-inline TriMesh setup_mesh_sphere(const Object& elem)
+inline TriMesh setup_mesh_ico_sphere(const Object& elem)
+{
+    const Vector3f center     = elem.property("center").getVector3();
+    const float radius        = elem.property("radius").getNumber(1.0f);
+    const uint32 subdivisions = elem.property("subdivisions").getInteger(4);
+    return TriMesh::MakeIcoSphere(center, radius, subdivisions);
+}
+
+inline TriMesh setup_mesh_uv_sphere(const Object& elem)
 {
     const Vector3f center = elem.property("center").getVector3();
     const float radius    = elem.property("radius").getNumber(1.0f);
     const uint32 stacks   = elem.property("stacks").getInteger(32);
     const uint32 slices   = elem.property("slices").getInteger(16);
-    return TriMesh::MakeSphere(center, radius, stacks, slices);
+    return TriMesh::MakeUVSphere(center, radius, stacks, slices);
 }
 
 inline TriMesh setup_mesh_cylinder(const Object& elem)
@@ -244,8 +252,10 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
             mesh = setup_mesh_rectangle(*child);
         } else if (child->pluginType() == "cube" || child->pluginType() == "box") {
             mesh = setup_mesh_cube(*child);
-        } else if (child->pluginType() == "sphere") {
-            mesh = setup_mesh_sphere(*child);
+        } else if (child->pluginType() == "sphere" || child->pluginType() == "icosphere") {
+            mesh = setup_mesh_ico_sphere(*child);
+        } else if (child->pluginType() == "uvsphere") {
+            mesh = setup_mesh_uv_sphere(*child);
         } else if (child->pluginType() == "cylinder") {
             mesh = setup_mesh_cylinder(*child);
         } else if (child->pluginType() == "cone") {
