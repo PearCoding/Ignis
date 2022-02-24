@@ -27,7 +27,7 @@
 		{"type":"ply", "name":"Left", "filename":"meshes/Left.ply"},
 		{"type":"ply", "name":"Right", "filename":"meshes/Right.ply"},
 		{"type":"ply", "name":"Back", "filename":"meshes/Back.ply"},
-		{"type":"ply", "name":"dobj", "filename":"meshes/dobj.ply"}
+		{"type":"ply", "name":"Diamond", "filename":"meshes/Diamond.ply"}
 	],
 	"entities": [
 		{"name":"AreaLight", "shape":"AreaLight", "bsdf":"mat-Light"},
@@ -36,9 +36,9 @@
 		{"name":"Left","shape":"Left", "bsdf":"mat-GrayWall"},
 		{"name":"Right","shape":"Right", "bsdf":"mat-GrayWall"},
 		{"name":"Back","shape":"Back", "bsdf":"mat-GrayWall"},
-		{"name":"dobj1","shape":"dobj", "bsdf":"mat-GrayWall"},
-		{"name":"dobj2","shape":"dobj", "bsdf":"mat-GrayWall", "transform":{"translate":[0.6,0,0]}},
-		{"name":"dobj3","shape":"dobj", "bsdf":"mat-GrayWall", "transform":{"translate":[-0.6,0,0]}}
+		{"name":"Diamond1","shape":"Diamond", "bsdf":"mat-GrayWall"},
+		{"name":"Diamond2","shape":"Diamond", "bsdf":"mat-GrayWall", "transform":{"translate":[0.6,0,0]}},
+		{"name":"Diamond3","shape":"Diamond", "bsdf":"mat-GrayWall", "transform":{"translate":[-0.6,0,0]}}
 	],
 	"lights": [
 		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[62,62,62]}
