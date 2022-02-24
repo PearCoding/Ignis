@@ -650,6 +650,7 @@ public:
 
             if (ShowDebugMode) {
                 if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    ImGui::BeginDisabled(!Running);
                     const char* current_method = DebugModeOptions[(int)Parent->mDebugMode];
                     if (ImGui::BeginCombo("Mode", current_method)) {
                         for (int i = 0; i < IM_ARRAYSIZE(DebugModeOptions); ++i) {
@@ -663,6 +664,7 @@ public:
 
                         ImGui::EndCombo();
                     }
+                    ImGui::EndDisabled();
                 }
             }
 
