@@ -68,15 +68,7 @@ int main(int argc, char** argv)
 
     std::unique_ptr<UI> ui;
     try {
-        size_t aov_count = runtime->aovs().size() + 1;
-        std::vector<std::string> aov_names(aov_count);
-        for (size_t i = 0; i < aov_count; ++i) {
-            if (i == 0)
-                aov_names[0] = "Color";
-            else
-                aov_names[i] = runtime->aovs()[i - 1];
-        }
-        ui = std::make_unique<UI>(runtime.get(), runtime->framebufferWidth(), runtime->framebufferHeight(), aov_names, runtime->isDebug());
+        ui = std::make_unique<UI>(runtime.get(), runtime->framebufferWidth(), runtime->framebufferHeight(), runtime->isDebug());
 
         // Setup initial travelspeed
         BoundingBox bbox = runtime->sceneBoundingBox();

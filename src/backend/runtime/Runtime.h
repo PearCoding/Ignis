@@ -56,7 +56,7 @@ public:
     const float* getFramebuffer(int aov = 0) const;
     // aov<0 will clear all aovs
     void clearFramebuffer(int aov = -1);
-    inline const std::vector<std::string> aovs() const { return mTechniqueInfo.EnabledAOVs; }
+    inline const std::vector<std::string>& aovs() const { return mTechniqueInfo.EnabledAOVs; }
 
     inline uint32 currentIterationCount() const { return mCurrentIteration; }
     inline uint32 currentSampleCount() const { return mCurrentSampleCount; }

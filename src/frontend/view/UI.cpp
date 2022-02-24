@@ -66,10 +66,13 @@ public:
     std::array<int, HISTOGRAM_SIZE> Histogram;
     std::array<float, HISTOGRAM_SIZE> HistogramF;
 
-    bool ToneMapping_Automatic = true;
-    float ToneMapping_Exposure = 1.0f;
-    float ToneMapping_Offset   = 0.0f;
-    bool ToneMappingGamma      = true;
+    bool ToneMapping_Automatic              = true;
+    float ToneMapping_Exposure              = 1.0f;
+    float ToneMapping_Offset                = 0.0f;
+    bool ToneMappingGamma                   = true;
+    IG::ToneMappingMethod ToneMappingMethod = ToneMappingMethod::ACES;
+
+    int CurrentAOV = 0;
 
     bool Running       = true;
     bool ShowDebugMode = false;
@@ -121,6 +124,16 @@ public:
 
         ImGuiSDL::Deinitialize();
         ImGuiSDL::Initialize(Renderer, width, height);
+    }
+
+    const float* currentPixels() const
+    {
+        return Runtime->getFramebuffer(CurrentAOV);
+    }
+
+    void changeAOV(int delta_aov)
+    {
+        CurrentAOV = (CurrentAOV + delta_aov) % (Runtime->aovs().size() + 1);
     }
 
     // Events
@@ -306,10 +319,10 @@ public:
                         run = !run;
                         break;
                     case SDLK_n:
-                        Parent->changeAOV(-1);
+                        changeAOV(-1);
                         break;
                     case SDLK_m:
-                        Parent->changeAOV(1);
+                        changeAOV(1);
                         break;
                     case SDLK_i:
                         ShowInspector = !ShowInspector;
@@ -452,7 +465,7 @@ public:
 
     void analzeLuminance(size_t width, size_t height, uint32_t iter)
     {
-        ImageInfoSettings settings{ Parent->currentAOV(),
+        ImageInfoSettings settings{ CurrentAOV,
                                     Histogram.data(), (int)Histogram.size(),
                                     1.0f / iter };
         ImageInfoOutput output;
@@ -481,7 +494,7 @@ public:
 
         // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
         uint32* buf = Buffer.data();
-        Runtime->tonemap(buf, TonemapSettings{ Parent->currentAOV(), (int)Parent->mToneMappingMethod, ToneMappingGamma,
+        Runtime->tonemap(buf, TonemapSettings{ CurrentAOV, (int)ToneMappingMethod, ToneMappingGamma,
                                                1.0f / iter,
                                                ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                                                ToneMapping_Automatic ? 0 : ToneMapping_Offset });
@@ -493,7 +506,7 @@ public:
     {
         IG_UNUSED(height);
 
-        const float* film    = Parent->currentPixels();
+        const float* film    = currentPixels();
         const float inv_iter = 1.0f / iter;
         const uint32_t ind   = y * width + x;
 
@@ -511,7 +524,7 @@ public:
         auto in_time_t = std::chrono::system_clock::to_time_t(now);
         out_file << "screenshot_" << std::put_time(std::localtime(&in_time_t), "%Y_%m_%d_%H_%M_%S") << ".exr";
 
-        if (!saveImageRGB(out_file.str(), Parent->currentPixels(), width, height, 1.0f / iter))
+        if (!saveImageRGB(out_file.str(), currentPixels(), width, height, 1.0f / iter))
             IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "'" << std::endl;
         else
             IG_LOG(L_INFO) << "Screenshot saved to '" << out_file.str() << "'" << std::endl;
@@ -616,14 +629,15 @@ public:
                 ImGui::PopItemWidth();
             }
 
-            if (Parent->mAOVs.size() > 1) {
+            if (!Runtime->aovs().empty()) {
                 if (ImGui::CollapsingHeader("AOV", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    const char* current_aov = Parent->mAOVNames[Parent->mCurrentAOV].c_str();
+                    const char* current_aov = CurrentAOV == 0 ? "Color" : Runtime->aovs().at(CurrentAOV - 1).c_str();
                     if (ImGui::BeginCombo("Display", current_aov)) {
-                        for (size_t i = 0; i < Parent->mAOVs.size(); ++i) {
-                            bool is_selected = ((int)i == Parent->mCurrentAOV);
-                            if (ImGui::Selectable(Parent->mAOVNames[i].c_str(), is_selected) && Running) {
-                                Parent->mCurrentAOV = (int)i;
+                        for (size_t i = 0; i < Runtime->aovs().size() + 1; ++i) {
+                            bool is_selected = ((int)i == CurrentAOV);
+                            const char* name = i == 0 ? "Color" : Runtime->aovs().at(i - 1).c_str();
+                            if (ImGui::Selectable(name, is_selected) && Running) {
+                                CurrentAOV = (int)i;
                             }
                             if (is_selected && Running)
                                 ImGui::SetItemDefaultFocus();
@@ -659,12 +673,12 @@ public:
                     ImGui::SliderFloat("Offset", &ToneMapping_Offset, -10.0f, 10.0f);
                 }
 
-                const char* current_method = ToneMappingMethodOptions[(int)Parent->mToneMappingMethod];
+                const char* current_method = ToneMappingMethodOptions[(int)ToneMappingMethod];
                 if (ImGui::BeginCombo("Method", current_method)) {
                     for (int i = 0; i < IM_ARRAYSIZE(ToneMappingMethodOptions); ++i) {
                         bool is_selected = (current_method == ToneMappingMethodOptions[i]);
                         if (ImGui::Selectable(ToneMappingMethodOptions[i], is_selected))
-                            Parent->mToneMappingMethod = (ToneMappingMethod)i;
+                            ToneMappingMethod = (IG::ToneMappingMethod)i;
                         if (is_selected)
                             ImGui::SetItemDefaultFocus();
                     }
@@ -699,19 +713,16 @@ public:
         }
 
         if (ShowInspector)
-            ui_inspect_image(mouse_x, mouse_y, Width, Height, Parent->currentPixels(), Buffer.data());
+            ui_inspect_image(mouse_x, mouse_y, Width, Height, currentPixels(), Buffer.data());
     }
 };
 
 ////////////////////////////////////////////////////////////////
 
-UI::UI(Runtime* runtime, int width, int height, const std::vector<std::string>& aov_names, bool showDebug)
+UI::UI(Runtime* runtime, int width, int height, bool showDebug)
     : mWidth(width)
     , mHeight(height)
-    , mAOVNames(aov_names)
-    , mCurrentAOV(0)
     , mDebugMode(DebugMode::Normal)
-    , mToneMappingMethod(ToneMappingMethod::ACES)
     , mInternal(std::make_unique<UIInternal>())
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
@@ -775,11 +786,6 @@ UI::~UI()
     SDL_Quit();
 
     mInternal->Buffer.clear();
-}
-
-const float* UI::currentPixels() const
-{
-    return mInternal->Runtime->getFramebuffer(mCurrentAOV);
 }
 
 void UI::setTitle(const char* str)
@@ -878,7 +884,7 @@ void UI::update(uint32_t iter, uint32_t samples)
     SDL_RenderClear(mInternal->Renderer);
     SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr);
 
-    if (mInternal->ShowUI || mInternal->ShowInspector ||mInternal->ShowHelp) {
+    if (mInternal->ShowUI || mInternal->ShowInspector || mInternal->ShowHelp) {
         ImGui::NewFrame();
         mInternal->handleImgui(iter, samples);
         if (mInternal->ShowHelp)
@@ -888,11 +894,6 @@ void UI::update(uint32_t iter, uint32_t samples)
     }
 
     SDL_RenderPresent(mInternal->Renderer);
-}
-
-void UI::changeAOV(int delta_aov)
-{
-    mCurrentAOV = (mCurrentAOV + delta_aov) % mAOVs.size();
 }
 
 void UI::setTravelSpeed(float v)
