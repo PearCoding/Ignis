@@ -1,4 +1,5 @@
 #include "Inspector.h"
+#include "IG_Config.h"
 
 #include "imgui.h"
 
@@ -27,23 +28,35 @@ static inline ImVec2 operator*(const ImVec2& a, float b)
     return ImVec2(a.x * b, a.y * b);
 }
 
-static inline uint32_t get_texel(int px, int py, size_t width, size_t /*height*/, const uint32_t* rgb)
+static inline uint32_t get_texel(int px, int py, size_t width, size_t height, const uint32_t* rgb)
 {
+    if (px < 0 || px >= (int)width || py < 0 || py >= (int)height)
+        return IM_COL32(0, 0, 0, 0xFF);
+
     // We have a different storage then imgui expects
     uint32_t raw = rgb[py * width + px];
     return IM_COL32((raw & 0x00FF0000) >> 16, (raw & 0x0000FF00) >> 8, (raw & 0x000000FF), 0xFF);
 }
 
-static inline Eigen::Vector3f get_pixel(int px, int py, size_t width, size_t /*height*/, const float* values)
+static inline Eigen::Vector3f get_pixel(int px, int py, size_t width, size_t height, const float* values)
 {
-    return Eigen::Vector3f(
-        values[py * width * 3 + px * 3 + 0],
-        values[py * width * 3 + px * 3 + 1],
-        values[py * width * 3 + px * 3 + 2]);
+    if (px < 0 || px >= (int)width || py < 0 || py >= (int)height)
+        return Eigen::Vector3f::Zero();
+    else
+        return Eigen::Vector3f(
+            values[py * width * 3 + px * 3 + 0],
+            values[py * width * 3 + px * 3 + 1],
+            values[py * width * 3 + px * 3 + 2]);
 }
 
 void ui_inspect_image(int px, int py, size_t width, size_t height, float scale, const float* values, const uint32_t* rgb)
 {
+    if (px < 0 || px >= (int)width || py < 0 || py >= (int)height)
+        return;
+
+    IG_ASSERT(values != nullptr, "Expected valid framebuffer");
+    IG_ASSERT(rgb != nullptr, "Expected valid rgb framebuffer");
+
     constexpr int ZoomSize             = 4;
     constexpr float ZoomRectangleWidth = 200;
     constexpr float QuadWidth          = ZoomRectangleWidth / (ZoomSize * 2 + 1);
@@ -78,8 +91,8 @@ void ui_inspect_image(int px, int py, size_t width, size_t height, float scale, 
     ImGui::SameLine();
 
     std::sort(lums.begin(), lums.end());
-    float mean = std::accumulate(lums.begin(), lums.end(), 0) / (float)lums.size();
-    float max  = std::reduce(lums.begin(), lums.end(), 0, [](float a, float b) { return std::max(a, b); });
+    float mean = std::accumulate(lums.begin(), lums.end(), 0.0f) / (float)lums.size();
+    float max  = std::reduce(lums.begin(), lums.end(), 0.0f, [](float a, float b) { return std::max(a, b); });
     float min  = std::reduce(lums.begin(), lums.end(), std::numeric_limits<float>::infinity(), [](float a, float b) { return std::min(a, b); });
 
     float median  = lums[lums.size() / 2];
