@@ -15,7 +15,7 @@
 	},
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Light", "reflectance":[0,0,0]},
-		{"type":"diffuse", "name": "mat-GrayWall", "reflectance":[1,1,1]},
+		{"type":"diffuse", "name": "mat-GrayWall", "reflectance":[0.8,0.8,0.8]},
 		{"type":"diffuse", "name": "mat-ColoredWall", "reflectance":[0.106039, 0.195687, 0.800000]},
 		{"type":"roughdielectric", "name": "mat-Diamond", "alpha": 0.0025, "int_ior": 2.3, "specular_transmittance":[1,1,1]}
 	],
