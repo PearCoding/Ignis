@@ -636,10 +636,10 @@ public:
                         for (size_t i = 0; i < Runtime->aovs().size() + 1; ++i) {
                             bool is_selected = ((int)i == CurrentAOV);
                             const char* name = i == 0 ? "Color" : Runtime->aovs().at(i - 1).c_str();
-                            if (ImGui::Selectable(name, is_selected) && Running) {
+                            if (ImGui::Selectable(name, is_selected)) {
                                 CurrentAOV = (int)i;
                             }
-                            if (is_selected && Running)
+                            if (is_selected)
                                 ImGui::SetItemDefaultFocus();
                         }
 
@@ -713,7 +713,7 @@ public:
         }
 
         if (ShowInspector)
-            ui_inspect_image(mouse_x, mouse_y, Width, Height, currentPixels(), Buffer.data());
+            ui_inspect_image(mouse_x, mouse_y, Width, Height, iter == 0 ? 1 : 1.0f / iter, currentPixels(), Buffer.data());
     }
 };
 

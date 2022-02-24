@@ -42,7 +42,7 @@ static inline Eigen::Vector3f get_pixel(int px, int py, size_t width, size_t /*h
         values[py * width * 3 + px * 3 + 2]);
 }
 
-void ui_inspect_image(int px, int py, size_t width, size_t height, const float* values, const uint32_t* rgb)
+void ui_inspect_image(int px, int py, size_t width, size_t height, float scale, const float* values, const uint32_t* rgb)
 {
     constexpr int ZoomSize             = 4;
     constexpr float ZoomRectangleWidth = 200;
@@ -69,9 +69,10 @@ void ui_inspect_image(int px, int py, size_t width, size_t height, const float* 
             ImVec2 pos           = rectMin + ImVec2(float(x + ZoomSize), float(y + ZoomSize)) * quadSize;
             draw_list->AddRectFilled(pos, pos + quadSize, texel);
 
-            int ind          = (y + ZoomSize) * (2 * ZoomSize + 1) + x + ZoomSize;
-            const auto pixel = get_pixel(x + basex, y + basey, width, height, values);
-            lums[ind]        = pixel.x() * 0.2126f + pixel.y() * 0.7152f + pixel.z() * 0.0722f; // Luminance
+            const Eigen::Vector3f pixel = get_pixel(x + basex, y + basey, width, height, values) * scale;
+
+            int ind   = (y + ZoomSize) * (2 * ZoomSize + 1) + x + ZoomSize;
+            lums[ind] = pixel.x() * 0.2126f + pixel.y() * 0.7152f + pixel.z() * 0.0722f; // Luminance
         }
     }
     ImGui::SameLine();
@@ -95,7 +96,7 @@ void ui_inspect_image(int px, int py, size_t width, size_t height, const float* 
     ImVec4 color = ImColor(get_texel(px, py, width, height, rgb));
     ImVec4 colHSV;
     ImGui::ColorConvertRGBtoHSV(color.x, color.y, color.z, colHSV.x, colHSV.y, colHSV.z);
-    const auto pixel = get_pixel(px, py, width, height, values);
+    const Eigen::Vector3f pixel = get_pixel(px, py, width, height, values) * scale;
     ImGui::Text("Coord %d %d", px, py);
     ImGui::Separator();
     ImGui::Text("Raw");
