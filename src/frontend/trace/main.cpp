@@ -102,13 +102,16 @@ int main(int argc, char** argv)
     opts.OverrideFilmSize = { (uint32)rays.size(), 1 };
     std::unique_ptr<Runtime> runtime;
     try {
-        runtime = std::make_unique<Runtime>(cmd.InputScene, opts);
+        runtime = std::make_unique<Runtime>(opts);
     } catch (const std::exception& e) {
         IG_LOG(L_ERROR) << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 
-    runtime->setup();
+    if (!runtime->loadFromFile(cmd.InputScene)) {
+        IG_LOG(L_ERROR) << "Failed loading" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     const size_t SPI    = runtime->samplesPerIteration();
     size_t sample_count = static_cast<size_t>(std::ceil(cmd.SPP.value_or(0) / (float)SPI));

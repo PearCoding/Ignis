@@ -62,19 +62,25 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
             variant.RayGenerationShader = info.OverrideCameraGenerator(ctx);
         else
             variant.RayGenerationShader = RayGenerationShader::setup(ctx);
-        if (variant.RayGenerationShader.empty())
+        if (variant.RayGenerationShader.empty()) {
+            IG_LOG(L_ERROR) << "Constructed empty ray generation shader." << std::endl;
             return false;
+        }
 
         // Generate Miss Shader
         variant.MissShader = MissShader::setup(ctx);
-        if (variant.MissShader.empty())
+        if (variant.MissShader.empty()) {
+            IG_LOG(L_ERROR) << "Constructed empty miss shader." << std::endl;
             return false;
+        }
 
         // Generate Hit Shader
         for (size_t i = 0; i < ctx.Environment.Materials.size(); ++i) {
             std::string shader = HitShader::setup(i, ctx);
-            if (shader.empty())
+            if (shader.empty()) {
+                IG_LOG(L_ERROR) << "Constructed empty hit shader." << std::endl;
                 return false;
+            }
             variant.HitShaders.push_back(shader);
         }
 

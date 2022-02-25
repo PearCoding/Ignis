@@ -7,6 +7,10 @@
 #include "table/SceneDatabase.h"
 
 namespace IG {
+namespace Parser {
+    class Scene;
+}
+
 struct LoaderOptions;
 
 struct RuntimeOptions {
@@ -22,6 +26,8 @@ struct RuntimeOptions {
     std::string OverrideTechnique;
     std::string OverrideCamera;
     std::pair<uint32, uint32> OverrideFilmSize = { 0, 0 };
+
+    std::filesystem::path ModulePath = std::filesystem::current_path(); // Optional path to modules
 };
 
 struct RuntimeRenderSettings {
@@ -36,11 +42,15 @@ struct Ray {
 };
 
 class Runtime {
+    IG_CLASS_NON_COPYABLE(Runtime);
+    IG_CLASS_NON_MOVEABLE(Runtime);
 public:
-    Runtime(const std::filesystem::path& path, const RuntimeOptions& opts);
+    Runtime(const RuntimeOptions& opts);
     ~Runtime();
 
-    void setup();
+    bool loadFromFile(const std::filesystem::path& path);
+    bool loadFromString(const std::string& str);
+
     void step();
     void trace(const std::vector<Ray>& rays, std::vector<float>& data);
     void reset();
@@ -82,12 +92,12 @@ public:
     inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
 
 private:
+    bool load(const std::filesystem::path& path, Parser::Scene&& scene);
+    bool setup();
     void shutdown();
-    void compileShaders();
+    bool compileShaders();
     void stepVariant(int variant);
     void traceVariant(const std::vector<Ray>& rays, int variant);
-
-    bool mInit;
 
     const RuntimeOptions mOptions;
 

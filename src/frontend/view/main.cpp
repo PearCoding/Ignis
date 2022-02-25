@@ -46,16 +46,21 @@ int main(int argc, char** argv)
 
     std::unique_ptr<Runtime> runtime;
     try {
-        runtime = std::make_unique<Runtime>(cmd.InputScene, opts);
+        runtime = std::make_unique<Runtime>(opts);
     } catch (const std::exception& e) {
         IG_LOG(L_ERROR) << e.what() << std::endl;
         return EXIT_FAILURE;
     }
+
+    if (!runtime->loadFromFile(cmd.InputScene)) {
+        IG_LOG(L_ERROR) << "Failed loading" << std::endl;
+        return EXIT_FAILURE;
+    }
+
     timer_loading.stop();
 
     const auto def = runtime->initialCameraOrientation();
     Camera camera(cmd.EyeVector().value_or(def.Eye), cmd.DirVector().value_or(def.Dir), cmd.UpVector().value_or(def.Up));
-    runtime->setup();
     runtime->setParameter("__camera_eye", camera.Eye);
     runtime->setParameter("__camera_dir", camera.Direction);
     runtime->setParameter("__camera_up", camera.Up);

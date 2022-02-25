@@ -109,13 +109,11 @@ private:                         \
 #define IG_CLASS_NON_COPYABLE(C)     \
 private:                             \
     C(const C&) = delete;            \
-    C& operator=(const C&) = delete; \
-    IG_CLASS_NON_MOVEABLE(C)
+    C& operator=(const C&) = delete
 
 #define IG_CLASS_NON_CONSTRUCTABLE(C) \
 private:                              \
-    C() = delete;                     \
-    IG_CLASS_NON_COPYABLE(C)
+    C() = delete
 
 #define IG_CLASS_STACK_ONLY(C)                     \
 private:                                           \

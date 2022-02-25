@@ -23,12 +23,22 @@ PYBIND11_MODULE(pyignis, m)
 
     m.attr("__version__") = MACRO_STRINGIFY(IGNIS_VERSION);
 
+    // Logger IO stuff
+    m.def("flush_log", []() { std::cout.flush(); std::cerr.flush(); });
+
     py::class_<RuntimeOptions>(m, "RuntimeOptions")
         .def(py::init([]() { return RuntimeOptions(); }))
         .def_readwrite("DesiredTarget", &RuntimeOptions::DesiredTarget)
+        .def_readwrite("RecommendCPU", &RuntimeOptions::RecommendCPU)
+        .def_readwrite("RecommendGPU", &RuntimeOptions::RecommendGPU)
+        .def_readwrite("DumpShader", &RuntimeOptions::DumpShader)
+        .def_readwrite("DumpShaderFull", &RuntimeOptions::DumpShaderFull)
+        .def_readwrite("AcquireStats", &RuntimeOptions::AcquireStats)
         .def_readwrite("Device", &RuntimeOptions::Device)
         .def_readwrite("OverrideCamera", &RuntimeOptions::OverrideCamera)
-        .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique);
+        .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique)
+        .def_property(
+            "ModulePath", [](const RuntimeOptions& opts) { return opts.ModulePath.generic_u8string(); }, [](RuntimeOptions& opts, const std::string& val) { opts.ModulePath = val; });
 
     py::class_<RuntimeRenderSettings>(m, "RuntimeRenderSettings")
         .def(py::init([]() { return RuntimeRenderSettings(); }))
@@ -53,9 +63,10 @@ PYBIND11_MODULE(pyignis, m)
         .value("AMDGPU", Target::AMDGPU);
 
     py::class_<Runtime>(m, "Runtime")
-        .def(py::init([](const std::string& path) { return std::make_unique<Runtime>(path, RuntimeOptions()); }))
-        .def(py::init([](const std::string& path, const RuntimeOptions& opts) { return std::make_unique<Runtime>(path, opts); }))
-        .def("setup", &Runtime::setup)
+        .def(py::init([]() { return std::make_unique<Runtime>(RuntimeOptions()); }))
+        .def(py::init([](const RuntimeOptions& opts) { return std::make_unique<Runtime>(opts); }))
+        .def("loadFromFile", [](Runtime& runtime, const std::string& path) { return runtime.loadFromFile(path); })
+        .def("loadFromString", &Runtime::loadFromString)
         .def("step", &Runtime::step)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
             std::vector<float> data;
