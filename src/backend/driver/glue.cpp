@@ -197,18 +197,11 @@ struct Interface {
 
     inline CPUData* getThreadData()
     {
-        // FIXME: This prevents the driver to be used multiple times over the lifetime of the application
-        // It works fine if the settings are the same and/or the exact same threads are not used again
-        thread_local CPUData* dataptr = nullptr;
-        if (!dataptr) {
-            thread_mutex.lock();
-            if (!thread_data.count(std::this_thread::get_id()))
-                thread_data[std::this_thread::get_id()] = std::make_unique<CPUData>();
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+        if (!thread_data.count(std::this_thread::get_id()))
+            thread_data[std::this_thread::get_id()] = std::make_unique<CPUData>();
 
-            dataptr = thread_data[std::this_thread::get_id()].get();
-            thread_mutex.unlock();
-        }
-        return dataptr;
+        return thread_data.at(std::this_thread::get_id()).get();
     }
 
     inline anydsl::Array<float>& getCPUPrimaryStream(size_t size)
@@ -752,6 +745,7 @@ void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRen
 
 void glue_setup(const DriverSetupSettings& settings)
 {
+    IG_ASSERT(sInterface == nullptr, "Only a single instance allowed!");
     sInterface = std::make_unique<Interface>(settings);
 }
 
