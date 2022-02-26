@@ -56,6 +56,7 @@ option(IG_WITH_PYTHON_API    "Build python API" ON)
 option(IG_WITH_TOOLS         "Build tools" ON)
 option(IG_WITH_DOCUMENTATION "Build the documentation if Sphinx is available on the system" ON)
 option(IG_WITH_ASSERTS       "Build with asserts even in release. It is always enabled on debug" OFF)
+option(IG_USE_LTO 			 "Use linked time optimization if available in release" ON)
 
 # Setup artic clang flags
 set(IG_ARTIC_CLANG_FLAGS -march=native -ffast-math CACHE STRING "Additional artic clang compilation options")
@@ -63,6 +64,7 @@ set(IG_ARTIC_FLAGS CACHE STRING "Additional artic compilation options")
 mark_as_advanced(IG_ARTIC_CLANG_FLAGS IG_ARTIC_FLAGS)
 
 # Setup CPM
+include(cmake/LTO.cmake)
 include(cmake/SetupCPM.cmake)
 
 # Locate AnyDSL runtime
