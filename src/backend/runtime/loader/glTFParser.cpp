@@ -275,14 +275,14 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
     if (node.matrix.size() == 16)
         transform *= Eigen::Map<Eigen::Matrix4d>(const_cast<double*>(node.matrix.data())).cast<float>();
 
-    if (node.scale.size() == 3)
-        transform.scale(Vector3f(node.scale[0], node.scale[1], node.scale[2]));
+    if (node.translation.size() == 3)
+        transform.translate(Vector3f(node.translation[0], node.translation[1], node.translation[2]));
 
     if (node.rotation.size() == 4)
         transform.rotate(Quaternionf(node.rotation[3], node.rotation[0], node.rotation[1], node.rotation[2]));
 
-    if (node.translation.size() == 3)
-        transform.translate(Vector3f(node.translation[0], node.translation[1], node.translation[2]));
+    if (node.scale.size() == 3)
+        transform.scale(Vector3f(node.scale[0], node.scale[1], node.scale[2]));
 
     if (node.mesh >= 0) {
         size_t primCount           = 0;
