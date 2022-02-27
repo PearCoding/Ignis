@@ -1,0 +1,17 @@
+{
+	"externals": [
+		{"filename":"diamond_scene_uniform.json"}
+	],
+	"camera": {
+		"type": "fishlens",
+		"fov": 40,
+		"near_clip": 0.1,
+		"far_clip": 100
+	},
+	"bsdfs": [
+		{"type":"diffuse", "name": "mat-GrayWall", "reflectance":[1,1,1]} // Override
+	],
+	"entities": [
+		{"name":"Front","shape":"Back", "bsdf":"mat-GrayWall", "transform":{"translate":[0,0,2]}}
+	]
+}

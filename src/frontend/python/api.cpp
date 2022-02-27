@@ -11,6 +11,51 @@
 namespace py = pybind11;
 using namespace IG;
 
+static void flush_io()
+{
+    std::cout.flush();
+    std::cerr.flush();
+}
+
+class RuntimeWrap {
+    std::unique_ptr<Runtime> mInstance;
+
+    RuntimeOptions mOptions;
+    std::string mSource;
+    std::string mPath;
+
+public:
+    RuntimeWrap(const RuntimeOptions& opts, const std::string& source, const std::string& path)
+        : mOptions(opts)
+        , mSource(source)
+        , mPath(path)
+    {
+        IG_ASSERT(source.empty() ^ path.empty(), "Only source or a path is allowed");
+    }
+
+    Runtime* enter()
+    {
+        mInstance = std::make_unique<Runtime>(mOptions);
+
+        if (mSource.empty()) {
+            if (!mInstance->loadFromFile(mPath))
+                return nullptr;
+        } else {
+            if (!mInstance->loadFromString(mSource))
+                return nullptr;
+        }
+
+        return mInstance.get();
+    }
+
+    bool exit(const py::object&, const py::object&, const py::object&)
+    {
+        mInstance.reset();
+        flush_io();
+        return true; // TODO: Be more sensitive?
+    }
+};
+
 PYBIND11_MODULE(pyignis, m)
 {
     m.doc() = R"pbdoc(
@@ -24,7 +69,7 @@ PYBIND11_MODULE(pyignis, m)
     m.attr("__version__") = MACRO_STRINGIFY(IGNIS_VERSION);
 
     // Logger IO stuff
-    m.def("flush_log", []() { std::cout.flush(); std::cerr.flush(); });
+    m.def("flush_log", flush_io);
 
     py::class_<RuntimeOptions>(m, "RuntimeOptions")
         .def(py::init([]() { return RuntimeOptions(); }))
@@ -63,10 +108,6 @@ PYBIND11_MODULE(pyignis, m)
         .value("AMDGPU", Target::AMDGPU);
 
     py::class_<Runtime>(m, "Runtime")
-        .def(py::init([]() { return std::make_unique<Runtime>(RuntimeOptions()); }))
-        .def(py::init([](const RuntimeOptions& opts) { return std::make_unique<Runtime>(opts); }))
-        .def("loadFromFile", [](Runtime& runtime, const std::string& path) { return runtime.loadFromFile(path); })
-        .def("loadFromString", &Runtime::loadFromString)
         .def("step", &Runtime::step)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
             std::vector<float> data;
@@ -88,4 +129,13 @@ PYBIND11_MODULE(pyignis, m)
         .def_property_readonly("sampleCount", &Runtime::currentSampleCount)
         .def_property_readonly("framebufferWidth", &Runtime::framebufferWidth)
         .def_property_readonly("framebufferHeight", &Runtime::framebufferHeight);
+
+    py::class_<RuntimeWrap>(m, "RuntimeWrap")
+        .def("__enter__", &RuntimeWrap::enter, py::return_value_policy::reference)
+        .def("__exit__", &RuntimeWrap::exit);
+
+    m.def("loadFromFile", [](const std::string& path) { return std::make_unique<RuntimeWrap>(RuntimeOptions(), std::string{}, path); });
+    m.def("loadFromFile", [](const std::string& path, const RuntimeOptions& opts) { return std::make_unique<RuntimeWrap>(opts, std::string{}, path); });
+    m.def("loadFromString", [](const std::string& str) { return std::make_unique<RuntimeWrap>(RuntimeOptions(), str, std::string{}); });
+    m.def("loadFromString", [](const std::string& str, const RuntimeOptions& opts) { return std::make_unique<RuntimeWrap>(opts, str, std::string{}); });
 }
