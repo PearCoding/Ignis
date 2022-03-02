@@ -41,6 +41,6 @@
 		{"name":"Diamond3","shape":"Diamond", "bsdf":"mat-GrayWall", "transform":{"translate":[-0.6,0,0]}}
 	],
 	"lights": [
-		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[62,62,62]}
+		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[1,1,1]}
 	]
 }

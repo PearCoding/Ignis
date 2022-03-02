@@ -580,10 +580,11 @@ public:
                 uint8 r, g, b, a;
                 SDL_GetRGBA(pixel, sshot->format, &r, &g, &b, &a);
 
-                dst[x * 4 + 0] = r / 255.0f;
-                dst[x * 4 + 1] = g / 255.0f;
-                dst[x * 4 + 2] = b / 255.0f;
-                dst[x * 4 + 3] = a / 255.0f;
+                // EXR is linear, so remove gamma part
+                dst[x * 4 + 0] = std::pow(r / 255.0f, 2.2f);
+                dst[x * 4 + 1] = std::pow(g / 255.0f, 2.2f);
+                dst[x * 4 + 2] = std::pow(b / 255.0f, 2.2f);
+                dst[x * 4 + 3] = a / 255.0f; // Do not map alpha channel (which should be 1 99% of the time)
             }
         }
 
