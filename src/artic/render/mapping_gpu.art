@@ -148,14 +148,24 @@ fn @gpu_hit_shade( acc: Accelerator
         }
 
         let on_shadow = path_tracer.on_shadow;
-        if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
-            write_secondary_ray(ray_id, 0, new_ray);
-            secondary.color_r(ray_id) = color.r;
-            secondary.color_g(ray_id) = color.g;
-            secondary.color_b(ray_id) = color.b;
-            secondary.rays.id(ray_id) = pixel;
-        } else {
-            secondary.rays.id(ray_id) = -1;
+        match @on_shadow(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
+            ShadowRay::Simple(new_ray, color) => {
+                write_secondary_ray(ray_id, 0, new_ray);
+                secondary.color_r(ray_id) = color.r;
+                secondary.color_g(ray_id) = color.g;
+                secondary.color_b(ray_id) = color.b;
+                secondary.rays.id(ray_id) = pixel;
+            },
+            ShadowRay::Advanced(new_ray, color, _ /*TODO*/) => {
+                write_secondary_ray(ray_id, 0, new_ray);
+                secondary.color_r(ray_id) = color.r;
+                secondary.color_g(ray_id) = color.g;
+                secondary.color_b(ray_id) = color.b;
+                secondary.rays.id(ray_id) = pixel;
+            },
+            _ => { /* None */
+                secondary.rays.id(ray_id) = -1;
+            }
         }
 
         let on_bounce = path_tracer.on_bounce;

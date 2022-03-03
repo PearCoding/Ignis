@@ -9,12 +9,12 @@ fn @make_ao_renderer() -> Technique {
             let out_dir = vec3_neg(ray.dir);
 
             if let Option[BsdfSample]::Some(sample) = bsdf.sample(rnd, out_dir, false) {
-                make_option(
+                make_simple_shadow_ray(
                     make_ray(surf.point, sample.in_dir, offset, flt_max),
                     sample.color
                 )
             } else {
-                Option[(Ray, Color)]::None
+                ShadowRay::None
             }
         },
         on_bounce      = TechniqueNoBounceFunction,

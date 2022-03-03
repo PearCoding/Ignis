@@ -347,14 +347,24 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             }
 
             // Compute shadow rays
-            if let Option[(Ray, Color)]::Some(new_ray, color) = @on_shadow(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
-                write_secondary_ray(i, 0, new_ray);
-                secondary2.color_r(i) = color.r;
-                secondary2.color_g(i) = color.g;
-                secondary2.color_b(i) = color.b;
-                secondary2.rays.id(i) = ray_id;
-            } else {
-                secondary2.rays.id(i) = -1;
+            match @on_shadow(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
+                ShadowRay::Simple(new_ray, color) => {
+                    write_secondary_ray(i, 0, new_ray);
+                    secondary2.color_r(i) = color.r;
+                    secondary2.color_g(i) = color.g;
+                    secondary2.color_b(i) = color.b;
+                    secondary2.rays.id(i) = ray_id;
+                },
+                ShadowRay::Advanced(new_ray, color, _/*TODO*/) => {
+                    write_secondary_ray(i, 0, new_ray);
+                    secondary2.color_r(i) = color.r;
+                    secondary2.color_g(i) = color.g;
+                    secondary2.color_b(i) = color.b;
+                    secondary2.rays.id(i) = ray_id;
+                },
+                _ => { /* None */
+                    secondary2.rays.id(i) = -1;
+                }
             }
 
             // Sample new rays

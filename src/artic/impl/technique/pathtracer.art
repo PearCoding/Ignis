@@ -58,14 +58,14 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                  , payload: RayPayload
                  , surf: SurfaceElement
                  , mat: Material
-                 ) -> Option[(Ray, Color)] {
+                 ) -> ShadowRay {
         // No shadow rays for specular materials
         if mat.bsdf.is_specular || num_lights == 0 {
-            return(Option[(Ray, Color)]::None)
+            return(ShadowRay::None)
         }
         
         if unrap_ptraypayload(payload).depth + 1 > max_path_len {
-            return(Option[(Ray, Color)]::None)
+            return(ShadowRay::None)
         }
 
         // Note: randi() returns random integers, but we only want positive integers here
@@ -76,7 +76,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
 
         if light.infinite {
             if light_sample.pdf_dir <= flt_eps {
-                return(Option[(Ray, Color)]::None)
+                return(ShadowRay::None)
             }
 
             let light_dir = light_sample.posdir; // Infinite lights return a direction instead of a position
@@ -94,14 +94,14 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
 
                 let contrib = color_mul(light_sample.intensity, color_mul(unrap_ptraypayload(payload).contrib, mat.bsdf.eval(in_dir, out_dir)));
 
-                return(make_option(
+                return(make_simple_shadow_ray(
                     make_ray(surf.point, light_dir, offset, flt_max),
                     color_mulf(contrib, mis * inv_pdf_l)
                 ))
             }
         }  else {
             if light_sample.pdf_area <= flt_eps {
-                return(Option[(Ray, Color)]::None)
+                return(ShadowRay::None)
             }
 
             let light_dir = vec3_sub(light_sample.posdir, surf.point);
@@ -123,13 +123,13 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
 
                 let contrib = color_mul(light_sample.intensity, color_mul(unrap_ptraypayload(payload).contrib, mat.bsdf.eval(in_dir, out_dir)));
 
-                return(make_option(
+                return(make_simple_shadow_ray(
                     make_ray(surf.point, light_dir, offset, 1 - offset),
                     color_mulf(contrib, geom_factor * mis)
                 ))
             }
         }
-        Option[(Ray, Color)]::None
+        ShadowRay::None
     }
 
     fn @on_hit( ray: Ray
