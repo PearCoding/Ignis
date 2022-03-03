@@ -10,7 +10,7 @@ class Object;
 class Property;
 } // namespace Parser
 
-class LoaderContext;
+struct LoaderContext;
 class ShadingTree {
 private:
     struct Closure {

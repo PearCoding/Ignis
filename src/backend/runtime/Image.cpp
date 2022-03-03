@@ -46,7 +46,7 @@ inline bool ends_with(std::string const& value, std::string const& ending)
 
 ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 {
-    std::string ext = path.extension();
+    std::string ext = path.extension().generic_u8string();
     bool useExr     = ends_with(ext, ".exr");
 
     ImageRgba32 img;
@@ -56,7 +56,6 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
         int ret = ParseEXRVersionFromFile(&exr_version, path.generic_u8string().c_str());
         if (ret != 0) {
             throw ImageLoadException("Could not extract exr version information", path);
-            return {};
         }
 
         EXRHeader exr_header;
@@ -65,9 +64,9 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
         const char* err = nullptr;
         ret             = ParseEXRHeaderFromFile(&exr_header, &exr_version, path.generic_u8string().c_str(), &err);
         if (ret != 0) {
-            throw ImageLoadException(err, path);
+            std::string _err = err;
             FreeEXRErrorMessage(err);
-            return {};
+            throw ImageLoadException(err, path);
         }
 
         // Make sure exr loads full floating point
@@ -80,10 +79,10 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
         InitEXRImage(&exr_image);
         ret = LoadEXRImageFromFile(&exr_image, &exr_header, path.generic_u8string().c_str(), &err);
         if (ret != TINYEXR_SUCCESS) {
-            throw ImageLoadException(err, path);
+            std::string _err = err;
             FreeEXRErrorMessage(err);
             FreeEXRHeader(&exr_header);
-            return {};
+            throw ImageLoadException(_err, path);
         }
 
         img.width  = exr_image.width;
@@ -98,8 +97,7 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 
         int channels = 0;
         for (int c = 0; c < exr_header.num_channels; ++c) {
-            std::string name = std::string(exr_header.channels[c].name);
-            std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+            const std::string name = to_lowercase(std::string(exr_header.channels[c].name));
 
             if (name == "a" || name == "default.a")
                 idxA = c;
@@ -154,7 +152,6 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 
         if (data == nullptr) {
             throw ImageLoadException("Could not load image", path);
-            return {};
         }
 
         img.width  = width;
@@ -207,7 +204,7 @@ bool ImageRgba32::save(const std::filesystem::path& path)
 
 bool ImageRgba32::save(const std::filesystem::path& path, const float* rgba, size_t width, size_t height, bool skip_alpha)
 {
-    std::string ext = path.extension();
+    std::string ext = path.extension().generic_u8string();
     bool useExr     = ends_with(ext, ".exr");
 
     // We only support .exr output

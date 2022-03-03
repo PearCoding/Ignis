@@ -14,34 +14,34 @@ class Logger;
 
 // Not in namespace IG
 struct DriverSetupSettings {
-    IG::uint32 framebuffer_width  = 0;
-    IG::uint32 framebuffer_height = 0;
-    IG::SceneDatabase* database   = nullptr;
-    bool acquire_stats            = false;
-    size_t aov_count              = false;
+    size_t framebuffer_width    = 0;
+    size_t framebuffer_height   = 0;
+    IG::SceneDatabase* database = nullptr;
+    bool acquire_stats          = false;
+    size_t aov_count            = false;
 
     IG::Logger* logger = nullptr;
 };
 
 struct DriverRenderSettings {
     const IG::Ray* rays     = nullptr; // If non-null, width contains the number of rays and height is set to 1
-    IG::uint32 device       = 0;
-    IG::uint32 spi          = 8;
+    size_t device           = 0;
+    size_t spi              = 8;
     size_t work_width       = 0;
     size_t work_height      = 0;
     bool framebuffer_locked = false;
 };
 
-using DriverRenderFunction            = void (*)(const IG::TechniqueVariantShaderSet&, const DriverRenderSettings&, const IG::ParameterSet*, IG::uint32);
+using DriverRenderFunction            = void (*)(const IG::TechniqueVariantShaderSet&, const DriverRenderSettings&, const IG::ParameterSet*, size_t);
 using DriverShutdownFunction          = void (*)();
 using DriverSetupFunction             = void (*)(const DriverSetupSettings&);
 using DriverResizeFramebufferFunction = void (*)(size_t, size_t);
-using DriverGetFramebufferFunction    = const float* (*)(int);
+using DriverGetFramebufferFunction    = const float* (*)(size_t);
 using DriverClearFramebufferFunction  = void (*)(int);
 using DriverGetStatisticsFunction     = const IG::Statistics* (*)();
 
-using DriverTonemapFunction   = void (*)(int, uint32_t*, const IG::TonemapSettings&);
-using DriverImageInfoFunction = void (*)(int, const IG::ImageInfoSettings&, IG::ImageInfoOutput&);
+using DriverTonemapFunction   = void (*)(size_t, uint32_t*, const IG::TonemapSettings&);
+using DriverImageInfoFunction = void (*)(size_t, const IG::ImageInfoSettings&, IG::ImageInfoOutput&);
 
 struct DriverInterface {
     IG::uint32 MajorVersion;

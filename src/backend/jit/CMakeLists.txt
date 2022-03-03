@@ -13,7 +13,7 @@ set(ARTIC_RUNTIME_FILES
 
 set(API_SRC_FILE ${CMAKE_CURRENT_BINARY_DIR}/api.cpp)
 add_custom_command(
-        OUTPUT "${API_SRC_FILE}"
+        OUTPUT ${API_SRC_FILE}
         COMMAND $<TARGET_FILE:ig_api_collector> ${ARTIC_RUNTIME_FILES} ${ARTIC_EXTRA_SRC} ${API_SRC_FILE}
         DEPENDS ${ARTIC_EXTRA_SRC}
         COMMENT "Embedding API: ${API_SRC_FILE}" 

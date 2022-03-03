@@ -102,7 +102,7 @@ std::streambuf::int_type Logger::StreamBuf::overflow(std::streambuf::int_type c)
         return 0;
 
     for (const auto& listener : mLogger.mListener)
-        listener->writeEntry(c);
+        listener->writeEntry((char)c);
 
     return 0;
 }

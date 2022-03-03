@@ -55,7 +55,7 @@ static std::string setup_sky(const std::string& name, const std::shared_ptr<Pars
 
 static std::tuple<std::string, size_t, size_t> setup_cdf(const std::string& filename)
 {
-    std::string name = std::filesystem::path(filename).stem();
+    std::string name = std::filesystem::path(filename).stem().generic_u8string();
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/cdf_" + ShaderUtils::escapeIdentifier(name) + ".bin";
@@ -305,7 +305,7 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
             return; // TODO
         }
 
-        const std::string tex_path = LoaderTexture::getFilename(*tex, tree.context());
+        const std::string tex_path = LoaderTexture::getFilename(*tex, tree.context()).generic_u8string();
         if (tex_path.empty()) {
             stream << LoaderTexture::generate(tex_name, *tex, tree)
                    << "  let light_" << id << " = make_environment_light_textured_naive(" << ShaderUtils::inlineSceneBBox(tree.context())

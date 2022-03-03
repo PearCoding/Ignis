@@ -106,7 +106,7 @@ void extractMeshVertices(TriMesh& trimesh, CompressedStream& cin, uint32_t flags
         cin.read(&x);
         cin.read(&y);
         cin.read(&z);
-        trimesh.vertices[i] = Vector3f(x, y, z);
+        trimesh.vertices[i] = Vector3f((float)x, (float)y, (float)z);
     }
 
     // Normals
@@ -116,7 +116,7 @@ void extractMeshVertices(TriMesh& trimesh, CompressedStream& cin, uint32_t flags
             cin.read(&x);
             cin.read(&y);
             cin.read(&z);
-            trimesh.normals[i] = Vector3f(x, y, z);
+            trimesh.normals[i] = Vector3f((float)x, (float)y, (float)z);
         }
     }
 
@@ -126,7 +126,7 @@ void extractMeshVertices(TriMesh& trimesh, CompressedStream& cin, uint32_t flags
             T x, y;
             cin.read(&x);
             cin.read(&y);
-            trimesh.texcoords[i] = Vector2f(x, y);
+            trimesh.texcoords[i] = Vector2f((float)x, (float)y);
         }
     }
 
@@ -149,9 +149,9 @@ void extractMeshIndices(TriMesh& trimesh, CompressedStream& cin)
         cin.read(&x);
         cin.read(&y);
         cin.read(&z);
-        trimesh.indices[i * 4 + 0] = x;
-        trimesh.indices[i * 4 + 1] = y;
-        trimesh.indices[i * 4 + 2] = z;
+        trimesh.indices[i * 4 + 0] = (uint32)x;
+        trimesh.indices[i * 4 + 1] = (uint32)y;
+        trimesh.indices[i * 4 + 2] = (uint32)z;
         trimesh.indices[i * 4 + 3] = 0;
     }
 }
@@ -230,7 +230,7 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
         // Extract mesh file end position
         if (shapeIndex == shapeCount - 1) {
             stream.seekg(-std::streamoff(sizeof(shapeCount)), std::ios::end);
-            _shapeFileEnd = stream.tellg();
+            _shapeFileEnd = (uint32_t)stream.tellg();
         } else {
             stream.seekg(-std::streamoff(sizeof(shapeCount) + sizeof(_shapeFileEnd) * (shapeCount - shapeIndex + 1)), std::ios::end);
             stream.read(reinterpret_cast<char*>(&_shapeFileEnd), sizeof(_shapeFileEnd));

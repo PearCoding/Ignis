@@ -52,9 +52,9 @@ void TriMesh::mergeFrom(const TriMesh& src)
 
     indices.resize(idx_offset + src.indices.size());
     for (size_t i = 0; i < src.indices.size(); i += 4) {
-        indices[idx_offset + i + 0] = src.indices[i + 0] + vtx_offset;
-        indices[idx_offset + i + 1] = src.indices[i + 1] + vtx_offset;
-        indices[idx_offset + i + 2] = src.indices[i + 2] + vtx_offset;
+        indices[idx_offset + i + 0] = src.indices[i + 0] + (uint32)vtx_offset;
+        indices[idx_offset + i + 1] = src.indices[i + 1] + (uint32)vtx_offset;
+        indices[idx_offset + i + 2] = src.indices[i + 2] + (uint32)vtx_offset;
         indices[idx_offset + i + 3] = src.indices[i + 3]; // ID
     }
 }
@@ -176,7 +176,7 @@ void TriMesh::setupFaceNormalsAsVertexNormals()
     }
 
     // Setup new indexing list
-    for (size_t f = 0; f < faceCount(); ++f) {
+    for (uint32 f = 0; f < (uint32)faceCount(); ++f) {
         indices[4 * f + 0] = 3 * f + 0;
         indices[4 * f + 1] = 3 * f + 1;
         indices[4 * f + 2] = 3 * f + 2;
@@ -225,7 +225,7 @@ bool TriMesh::isAPlane() const
     float e5 = (vertices[indices[4 + 1]] - vertices[indices[4 + 2]]).squaredNorm();
     float e6 = (vertices[indices[4 + 2]] - vertices[indices[4 + 0]]).squaredNorm();
 
-    auto safeCheck = [](float a, float b) { return std::abs(a - b) <= PlaneEPS; };
+    const auto safeCheck = [=](float a, float b) -> float { return std::abs(a - b) <= PlaneEPS; };
     if (!safeCheck(e1, e4) && !safeCheck(e2, e4) && !safeCheck(e3, e4))
         return false;
     if (!safeCheck(e1, e5) && !safeCheck(e2, e5) && !safeCheck(e3, e5))
@@ -377,7 +377,7 @@ TriMesh TriMesh::MakeIcoSphere(const Vector3f& center, float radius, uint32 subd
             for (int s2 = -1; s2 <= +1; s2 += 2) {
                 StVector3f vec   = StVector3f::Zero();
                 vec[(d + 1) % 3] = GoldenRatio * s1;
-                vec[(d + 2) % 3] = 1 * s2;
+                vec[(d + 2) % 3] = 1.0f * s2;
                 mesh.vertices.push_back(vec.normalized());
             }
         }
@@ -414,7 +414,7 @@ TriMesh TriMesh::MakeIcoSphere(const Vector3f& center, float radius, uint32 subd
     for (uint32 i = 0; i < subdivisions; ++i) {
         // Place new vertices at centers of spherical edges between existing vertices
         std::unordered_map<uint32, uint32> edgeVertexMap;
-        const size_t prev_size = mesh.vertices.size();
+        const uint32 prev_size = (uint32)mesh.vertices.size();
         for (auto tri = mesh.indices.begin(); tri != mesh.indices.end(); tri += 4) {
             for (auto j = 0; j < 3; j++) {
                 uint32 i1 = tri[j];
@@ -423,7 +423,7 @@ TriMesh TriMesh::MakeIcoSphere(const Vector3f& center, float radius, uint32 subd
                     continue; // avoid adding the same edge vertex twice (once from X to Y and once from Y and X)
                 uint32 undirectedEdgeId = i1 * prev_size + i2;
 
-                edgeVertexMap[undirectedEdgeId] = mesh.vertices.size();
+                edgeVertexMap[undirectedEdgeId] = (uint32)mesh.vertices.size();
                 mesh.vertices.push_back((mesh.vertices[i1] + mesh.vertices[i2]).normalized());
             }
         }
@@ -527,7 +527,7 @@ TriMesh TriMesh::MakeCone(const Vector3f& baseCenter, float baseRadius, const Ve
     mesh.texcoords.push_back(Vector2f::Zero());
 
     const uint32 start = fill_cap ? 1 : 0; // Skip disk origin
-    const uint32 tP    = mesh.vertices.size() - 1;
+    const uint32 tP    = (uint32)mesh.vertices.size() - 1;
     for (uint32 i = 0; i < sections; ++i) {
         uint32 C  = i + start;
         uint32 NC = (i + 1 < sections ? i + 1 : 0) + start;

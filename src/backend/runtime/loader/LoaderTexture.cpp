@@ -9,7 +9,7 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
 {
     tree.beginClosure();
 
-    const std::string filename    = tree.context().handlePath(tex.property("filename").getString(), tex);
+    const std::string filename    = tree.context().handlePath(tex.property("filename").getString(), tex).generic_u8string();
     const std::string filter_type = tex.property("filter_type").getString("bilinear");
     const bool flip_x             = tex.property("flip_x").getBool(false);
     const bool flip_y             = tex.property("flip_y").getBool(false);
@@ -96,7 +96,7 @@ std::string LoaderTexture::generate(const std::string& name, const Parser::Objec
     return stream.str();
 }
 
-std::string LoaderTexture::getFilename(const Parser::Object& obj, const LoaderContext& ctx)
+std::filesystem::path LoaderTexture::getFilename(const Parser::Object& obj, const LoaderContext& ctx)
 {
     for (size_t i = 0; _generators[i].Loader; ++i) {
         if (_generators[i].Name == obj.pluginType()) {

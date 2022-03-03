@@ -62,7 +62,7 @@ public:
         } else if (!exact && mType == PT_INTEGER) {
             if (ok)
                 *ok = true;
-            return mInteger;
+            return static_cast<Number>(mInteger);
         } else {
             if (ok)
                 *ok = false;

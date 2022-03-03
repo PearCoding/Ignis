@@ -107,7 +107,7 @@ inline static Matrix3f getMatrix3f(const rapidjson::Value& obj)
     Matrix3f mat;
     for (size_t i = 0; i < 3; ++i)
         for (size_t j = 0; j < 3; ++j)
-            mat(i, j) = array[i * 3 + j].GetFloat();
+            mat(i, j) = array[rapidjson::SizeType(i * 3 + j)].GetFloat();
     return mat;
 }
 
@@ -124,7 +124,7 @@ inline static Matrix4f getMatrix4f(const rapidjson::Value& obj)
     Matrix4f mat = Matrix4f::Identity();
     for (size_t i = 0; i < rows; ++i)
         for (size_t j = 0; j < 4; ++j)
-            mat(i, j) = array[i * 4 + j].GetFloat();
+            mat(i, j) = array[rapidjson::SizeType(i * 4 + j)].GetFloat();
     return mat;
 }
 
@@ -335,9 +335,7 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const std::f
     if (!obj.HasMember("filename"))
         throw std::runtime_error("Expected a path for externals");
 
-    std::string pluginType = obj.HasMember("type") ? getString(obj["type"]) : "ignis";
-    std::transform(pluginType.begin(), pluginType.end(), pluginType.begin(), ::tolower);
-
+    const std::string pluginType     = obj.HasMember("type") ? to_lowercase(getString(obj["type"])) : "ignis";
     const std::string inc_path       = getString(obj["filename"]);
     const std::filesystem::path path = std::filesystem::canonical(resolvePath(inc_path, baseDir, loader.lookupPaths()));
     if (path.empty())

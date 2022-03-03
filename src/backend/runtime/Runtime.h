@@ -48,11 +48,16 @@ public:
     Runtime(const RuntimeOptions& opts);
     ~Runtime();
 
+    /// Load from file and initialize
     bool loadFromFile(const std::filesystem::path& path);
+    /// Load from string and initialize
     bool loadFromString(const std::string& str);
 
+    /// Do a single iteration in non-tracing mode
     void step();
+    /// Do a single iteration in tracing mode
     void trace(const std::vector<Ray>& rays, std::vector<float>& data);
+    /// Reset internal counters etc. This should be used if data (like camera orientation) has changed
     void reset();
 
     /// A utility function to speed up tonemapping
@@ -63,32 +68,53 @@ public:
 
     /// Will resize the framebuffer, clear it and reset rendering
     void resizeFramebuffer(size_t width, size_t height);
-    const float* getFramebuffer(int aov = 0) const;
-    // aov<0 will clear all aovs
-    void clearFramebuffer(int aov = -1);
+    /// Return pointer to framebuffer
+    const float* getFramebuffer(size_t aov = 0) const;
+    /// Will clear all framebuffers 
+    void clearFramebuffer();
+    /// Will clear specific framebuffer
+    void clearFramebuffer(size_t aov);
+
+    /// Return all names of the enabled AOVs
     inline const std::vector<std::string>& aovs() const { return mTechniqueInfo.EnabledAOVs; }
 
-    inline uint32 currentIterationCount() const { return mCurrentIteration; }
-    inline uint32 currentSampleCount() const { return mCurrentSampleCount; }
+    /// Return number of iterations rendered so far
+    inline size_t currentIterationCount() const { return mCurrentIteration; }
+    /// Return number of samples rendered so far
+    inline size_t currentSampleCount() const { return mCurrentSampleCount; }
 
+    /// Return pointer to structure containing statistics
     const Statistics* getStatistics() const;
 
+    /// Return true if the special debug technique is used (TODO: This might be deleted in the future)
     inline bool isDebug() const { return mIsDebug; }
+    /// Return true if the runtime is used in tracing mode
     inline bool isTrace() const { return mIsTrace; }
 
+    /// The target the runtime is using
     inline Target target() const { return mTarget; }
+
+    /// Computes (approximative) number of samples per iteration. This might be off due to the internal computing of techniques
     inline size_t samplesPerIteration() const { return mTechniqueInfo.ComputeSPI(0 /* TODO: Not always the best choice */, mSamplesPerIteration); }
 
+    /// The bounding box of the loaded scene
     inline const BoundingBox& sceneBoundingBox() const { return mDatabase.SceneBBox; }
 
+    /// Set integer parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, int value);
+    /// Set number parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, float value);
+    /// Set 3d vector parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, const Vector3f& value);
+    /// Set 4d vector parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, const Vector4f& value);
 
+    /// The current framebuffer width
     inline size_t framebufferWidth() const { return mFilmWidth; }
+    /// The current framebuffer height
     inline size_t framebufferHeight() const { return mFilmHeight; }
 
+    /// The initial camera orientation the scene was loaded with. Can be used to reset in later iterations
     inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
 
 private:
@@ -96,8 +122,8 @@ private:
     bool setup();
     void shutdown();
     bool compileShaders();
-    void stepVariant(int variant);
-    void traceVariant(const std::vector<Ray>& rays, int variant);
+    void stepVariant(size_t variant);
+    void traceVariant(const std::vector<Ray>& rays, size_t variant);
 
     const RuntimeOptions mOptions;
 
@@ -110,8 +136,8 @@ private:
     size_t mSamplesPerIteration;
     Target mTarget;
 
-    uint32 mCurrentIteration;
-    uint32 mCurrentSampleCount;
+    size_t mCurrentIteration;
+    size_t mCurrentSampleCount;
 
     size_t mFilmWidth;
     size_t mFilmHeight;

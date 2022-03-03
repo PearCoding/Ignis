@@ -83,9 +83,9 @@ static inline void dumpShader(const std::vector<TechniqueVariant>& variants)
             dumpShader("v" + std::to_string(i) + "_advancedShadowMiss.art", variant.AdvancedShadowMissShader);
         }
 
-        for (size_t i = 0; i < variant.CallbackShaders.size(); ++i) {
-            if (!variant.CallbackShaders[i].empty())
-                dumpShader("v" + std::to_string(i) + "_callback" + std::to_string(i) + ".art", variant.CallbackShaders[i]);
+        for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {
+            if (!variant.CallbackShaders[j].empty())
+                dumpShader("v" + std::to_string(i) + "_callback" + std::to_string(j) + ".art", variant.CallbackShaders[j]);
         }
     }
 }
@@ -240,9 +240,9 @@ void Runtime::step()
     ++mCurrentIteration;
 }
 
-void Runtime::stepVariant(int variant)
+void Runtime::stepVariant(size_t variant)
 {
-    IG_ASSERT(variant < (int)mTechniqueVariants.size(), "Expected technique variant to be well selected");
+    IG_ASSERT(variant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
     const auto& info = mTechniqueInfo.Variants[variant];
 
     // IG_LOG(L_DEBUG) << "Rendering iteration " << mCurrentIteration << ", variant " << variant << std::endl;
@@ -279,7 +279,7 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
             traceVariant(rays, ind);
     } else {
         for (size_t i = 0; i < mTechniqueVariants.size(); ++i)
-            traceVariant(rays, (int)i);
+            traceVariant(rays, i);
     }
 
     ++mCurrentIteration;
@@ -290,9 +290,9 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
     std::memcpy(data.data(), data_ptr, sizeof(float) * rays.size() * 3);
 }
 
-void Runtime::traceVariant(const std::vector<Ray>& rays, int variant)
+void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
 {
-    IG_ASSERT(variant < (int)mTechniqueVariants.size(), "Expected technique variant to be well selected");
+    IG_ASSERT(variant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
     const auto& info = mTechniqueInfo.Variants[variant];
 
     // IG_LOG(L_DEBUG) << "Tracing iteration " << mCurrentIteration << ", variant " << variant << std::endl;
@@ -319,14 +319,19 @@ void Runtime::resizeFramebuffer(size_t width, size_t height)
     reset();
 }
 
-const float* Runtime::getFramebuffer(int aov) const
+const float* Runtime::getFramebuffer(size_t aov) const
 {
     return mLoadedInterface.GetFramebufferFunction(aov);
 }
 
-void Runtime::clearFramebuffer(int aov)
+void Runtime::clearFramebuffer()
 {
-    return mLoadedInterface.ClearFramebufferFunction(aov);
+    return mLoadedInterface.ClearFramebufferFunction(-1);
+}
+
+void Runtime::clearFramebuffer(size_t aov)
+{
+    return mLoadedInterface.ClearFramebufferFunction((int)aov);
 }
 
 void Runtime::reset()
@@ -345,8 +350,8 @@ bool Runtime::setup()
 {
     DriverSetupSettings settings;
     settings.database           = &mDatabase;
-    settings.framebuffer_width  = mFilmWidth;
-    settings.framebuffer_height = mFilmHeight;
+    settings.framebuffer_width  = (uint32)mFilmWidth;
+    settings.framebuffer_height = (uint32)mFilmHeight;
     settings.acquire_stats      = mAcquireStats;
     settings.aov_count          = mTechniqueInfo.EnabledAOVs.size();
 
@@ -454,7 +459,7 @@ void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
         return;
     }
 
-    mLoadedInterface.TonemapFunction(mDevice, out_pixels, settings);
+    mLoadedInterface.TonemapFunction((int)mDevice, out_pixels, settings);
 }
 
 void Runtime::imageinfo(const ImageInfoSettings& settings, ImageInfoOutput& output)
@@ -464,7 +469,7 @@ void Runtime::imageinfo(const ImageInfoSettings& settings, ImageInfoOutput& outp
         return;
     }
 
-    mLoadedInterface.ImageInfoFunction(mDevice, settings, output);
+    mLoadedInterface.ImageInfoFunction((int)mDevice, settings, output);
 }
 
 void Runtime::setParameter(const std::string& name, int value)

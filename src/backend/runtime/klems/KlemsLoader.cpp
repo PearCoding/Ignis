@@ -11,7 +11,7 @@ struct KlemsThetaBasis {
     float CenterTheta;
     float LowerTheta;
     float UpperTheta;
-    uint32_t PhiCount;
+    uint32 PhiCount;
 
     inline bool isValid() const
     {
@@ -36,7 +36,7 @@ public:
                   [](const KlemsThetaBasis& a, const KlemsThetaBasis& b) { return a.UpperTheta < b.UpperTheta; });
 
         mThetaLinearOffset.resize(mThetaBasis.size());
-        uint32_t off = 0;
+        uint32 off = 0;
         for (size_t i = 0; i < mThetaBasis.size(); ++i) {
             mThetaLinearOffset[i] = off;
             off += mThetaBasis[i].PhiCount;
@@ -45,42 +45,42 @@ public:
         mEntryCount = off;
     }
 
-    inline uint32_t entryCount() const { return mEntryCount; }
+    inline uint32 entryCount() const { return mEntryCount; }
 
     inline void write(std::ostream& os)
     {
-        uint32_t theta_count = mThetaBasis.size();
+        uint32 theta_count = static_cast<uint32>(mThetaBasis.size());
         std::sort(mThetaBasis.begin(), mThetaBasis.end(),
                   [](const KlemsThetaBasis& a, const KlemsThetaBasis& b) { return a.UpperTheta < b.UpperTheta; });
 
-        std::vector<uint32_t> offsets(mThetaBasis.size());
-        uint32_t off = 0;
+        std::vector<uint32> offsets(mThetaBasis.size());
+        uint32 off = 0;
         for (size_t i = 0; i < mThetaBasis.size(); ++i) {
             offsets[i] = off;
             off += mThetaBasis[i].PhiCount;
         }
 
-        os.write(reinterpret_cast<const char*>(&theta_count), sizeof(uint32_t));
-        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32_t));
-        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32_t)); // Pad
-        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32_t)); // Pad
+        os.write(reinterpret_cast<const char*>(&theta_count), sizeof(uint32));
+        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32));
+        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32)); // Pad
+        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32)); // Pad
         for (auto& basis : mThetaBasis) {
             os.write(reinterpret_cast<const char*>(&basis.CenterTheta), sizeof(float));
             os.write(reinterpret_cast<const char*>(&basis.LowerTheta), sizeof(float));
             os.write(reinterpret_cast<const char*>(&basis.UpperTheta), sizeof(float));
-            os.write(reinterpret_cast<const char*>(&basis.PhiCount), sizeof(uint32_t));
+            os.write(reinterpret_cast<const char*>(&basis.PhiCount), sizeof(uint32));
         }
 
-        os.write(reinterpret_cast<const char*>(offsets.data()), offsets.size() * sizeof(uint32_t));
+        os.write(reinterpret_cast<const char*>(offsets.data()), offsets.size() * sizeof(uint32));
     }
 
     inline const std::vector<KlemsThetaBasis>& thetaBasis() const { return mThetaBasis; }
-    inline const std::vector<uint32_t>& thetaLinearOffset() const { return mThetaLinearOffset; }
+    inline const std::vector<uint32>& thetaLinearOffset() const { return mThetaLinearOffset; }
 
 private:
     std::vector<KlemsThetaBasis> mThetaBasis;
-    std::vector<uint32_t> mThetaLinearOffset;
-    uint32_t mEntryCount = 0;
+    std::vector<uint32> mThetaLinearOffset;
+    uint32 mEntryCount = 0;
 };
 
 using KlemsMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>;
@@ -206,8 +206,8 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
     std::shared_ptr<KlemsComponent> transmissionBack;
     // Extract wavelengths
     for (const auto& data : layer.children("WavelengthData")) {
-        const char* type = data.child_value("Wavelength");
-        if (!type || strcmp(type, "Visible") != 0) // Skip entries for non-visible wavelengths
+        const char* wvl_type = data.child_value("Wavelength");
+        if (!wvl_type || strcmp(wvl_type, "Visible") != 0) // Skip entries for non-visible wavelengths
             continue;
 
         const auto block = data.child("WavelengthDataBlock");

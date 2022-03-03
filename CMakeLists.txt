@@ -67,6 +67,14 @@ mark_as_advanced(IG_ARTIC_CLANG_FLAGS IG_ARTIC_FLAGS)
 include(cmake/LTO.cmake)
 include(cmake/SetupCPM.cmake)
 
+# Locate stuff for windows
+# On Linux this is properly propagated
+# So it needs a fixing in AnyDSL
+if(WIN32)
+	find_package(CUDAToolkit)
+	find_package(OpenCL)
+endif()
+
 # Locate AnyDSL runtime
 find_package(AnyDSL_runtime REQUIRED)
 include_directories(${AnyDSL_runtime_INCLUDE_DIRS})

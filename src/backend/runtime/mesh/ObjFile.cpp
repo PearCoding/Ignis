@@ -16,7 +16,7 @@ TriMesh load(const std::filesystem::path& path)
     std::string warn;
     std::string err;
 
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str());
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.generic_u8string().c_str());
 
     if (!warn.empty())
         IG_LOG(L_WARNING) << "ObjFile " << path << ": " << warn << std::endl;

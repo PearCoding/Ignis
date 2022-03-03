@@ -45,7 +45,7 @@ float LoaderContext::extractIOR(const Parser::Object& obj, const std::string& pr
     if (prop.isValid()) {
         switch (prop.type()) {
         case PT_INTEGER:
-            return prop.getInteger();
+            return static_cast<float>(prop.getInteger());
         case PT_NUMBER:
             return prop.getNumber();
         case PT_VECTOR3:

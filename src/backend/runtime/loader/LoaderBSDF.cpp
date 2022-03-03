@@ -244,7 +244,7 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
     tree.addNumber("sheen_tint", *bsdf, 0);
     tree.addNumber("clearcoat", *bsdf, 0);
     tree.addNumber("clearcoat_gloss", *bsdf, 0);
-    tree.addNumber("clearcoat_roughness", *bsdf, 0.1);
+    tree.addNumber("clearcoat_roughness", *bsdf, 0.1f);
 
     bool is_thin = bsdf->property("thin").getBool(false);
 

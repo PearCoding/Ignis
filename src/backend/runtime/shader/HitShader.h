@@ -4,6 +4,6 @@
 
 namespace IG {
 struct HitShader {
-    static std::string setup(int mat_id, LoaderContext& ctx);
+    static std::string setup(size_t mat_id, LoaderContext& ctx);
 };
 } // namespace IG
