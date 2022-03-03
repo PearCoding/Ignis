@@ -11,9 +11,9 @@ extern const char* ig_api_paths[];
 
 // TODO: Really fixed at compile time?
 #ifdef IG_DEBUG
-constexpr int OPT_LEVEL = 0;
+constexpr uint32_t OPT_LEVEL = 0;
 #else
-constexpr int OPT_LEVEL = 3;
+constexpr uint32_t OPT_LEVEL = 3;
 #endif
 
 namespace IG {
@@ -38,7 +38,7 @@ void* ig_compile_source(const std::string& src, const std::string& function, con
         stream << source_str;
     }
 
-    int ret = anydsl_compile(source_str.c_str(), source_str.size(), OPT_LEVEL);
+    int ret = anydsl_compile(source_str.c_str(), (uint32_t)source_str.size(), OPT_LEVEL);
     if (ret < 0)
         return nullptr;
 

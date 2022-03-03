@@ -5,14 +5,16 @@
 #include "math/Triangle.h"
 #include "mesh/TriMesh.h"
 
-#include "bvh/bvh.hpp"
-#include "bvh/leaf_collapser.hpp"
-#include "bvh/locally_ordered_clustering_builder.hpp"
-#include "bvh/node_layout_optimizer.hpp"
-#include "bvh/parallel_reinsertion_optimizer.hpp"
-#include "bvh/spatial_split_bvh_builder.hpp"
-#include "bvh/sweep_sah_builder.hpp"
-#include "bvh/triangle.hpp"
+IG_BEGIN_IGNORE_WARNINGS
+#include <bvh/bvh.hpp>
+#include <bvh/leaf_collapser.hpp>
+#include <bvh/locally_ordered_clustering_builder.hpp>
+#include <bvh/node_layout_optimizer.hpp>
+#include <bvh/parallel_reinsertion_optimizer.hpp>
+#include <bvh/spatial_split_bvh_builder.hpp>
+#include <bvh/sweep_sah_builder.hpp>
+#include <bvh/triangle.hpp>
+IG_END_IGNORE_WARNINGS
 
 // Contains implementation for NodeN and TriN
 #include "generated_interface.h"
@@ -71,7 +73,7 @@ protected:
     {
         IG_ASSERT(node.is_leaf(), "Expected a leaf");
 
-        this->nodes[parent].child.e[child] = ~tris.size();
+        this->nodes[parent].child.e[child] = ~static_cast<int>(tris.size());
 
         const size_t ref_count = this->primitive_count_of_node(node);
 
@@ -82,7 +84,7 @@ protected:
             Tri tri;
             std::memset(&tri, 0, sizeof(Tri));
             for (size_t j = 0; j < c; ++j) {
-                const int id       = bvh.primitive_indices[node.first_child_or_primitive + i + j];
+                const int id       = (int)bvh.primitive_indices[node.first_child_or_primitive + i + j];
                 const auto& in_tri = primitives[id];
 
                 tri.v0.e[0].e[j] = in_tri.p0[0];
@@ -139,10 +141,10 @@ protected:
     {
         IG_ASSERT(node.is_leaf(), "Expected a leaf");
 
-        this->nodes[parent].child.e[child] = ~tris.size();
+        this->nodes[parent].child.e[child] = ~static_cast<int>(tris.size());
 
         for (size_t i = 0; i < this->primitive_count_of_node(node); ++i) {
-            const int id = bvh.primitive_indices[node.first_child_or_primitive + i];
+            const int id = (int)bvh.primitive_indices[node.first_child_or_primitive + i];
             auto& in_tri = primitives[id];
             tris.emplace_back(Tri1{
                 { in_tri.p0[0], in_tri.p0[1], in_tri.p0[2] },
@@ -163,7 +165,7 @@ inline void build_bvh(const TriMesh& tri_mesh,
                       std::vector<typename BvhNTriM<N, M>::Node, Allocator<typename BvhNTriM<N, M>::Node>>& nodes,
                       std::vector<typename BvhNTriM<N, M>::Tri, Allocator<typename BvhNTriM<N, M>::Tri>>& tris)
 {
-    using Bvh = bvh::Bvh<float>;
+    using Bvh        = bvh::Bvh<float>;
     using BvhBuilder = bvh::SpatialSplitBvhBuilder<Bvh, TriangleProxy, 64>;
     // using BvhBuilder = bvh::LocallyOrderedClusteringBuilder<Bvh, uint32>;
     // using BvhBuilder = bvh::SweepSahBuilder<Bvh>;
@@ -176,7 +178,7 @@ inline void build_bvh(const TriMesh& tri_mesh,
         auto& v2      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 2]];
         primitives[i] = TriangleProxy(v0, v1, v2);
 
-        primitives[i].prim_id = i;
+        primitives[i].prim_id = (int)i;
     }
 
     auto [bboxes, centers] = bvh::compute_bounding_boxes_and_centers(primitives.data(), primitives.size());

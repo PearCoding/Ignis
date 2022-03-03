@@ -91,9 +91,6 @@ find_package(TBB REQUIRED)
 # ZLib is used in the generator
 find_package(ZLIB REQUIRED)
 
-# Make use of OpenMP if available
-find_package(OpenMP)
-
 include(cmake/GetDependencies.cmake)
 include(cmake/Install.cmake)
 
@@ -141,7 +138,7 @@ configure_file(src/backend/runtime/config/Version.h.in ${CMAKE_CURRENT_BINARY_DI
 
 # Add warnings per default
 if(MSVC)
-  add_compile_options(/W4 /WX)
+  add_compile_options(/W4)
 else()
   add_compile_options(-Wall -Wextra -pedantic)
 endif()

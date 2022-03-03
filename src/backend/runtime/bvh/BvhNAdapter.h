@@ -1,7 +1,6 @@
 #pragma once
 
 #include "NArityBvh.h"
-#include "bvh/bvh.hpp"
 
 namespace IG {
 template <size_t N, typename Node, typename LeafObject, template <typename> typename Allocator>
@@ -44,7 +43,7 @@ protected:
 
         const size_t node_id = nodes.size();
         if (parent >= 0)
-            nodes[parent].child.e[child] = node_id + 1; // The id is shifted by one
+            nodes[parent].child.e[child] = (int)node_id + 1; // The id is shifted by one
         nodes.emplace_back();
 
         for (size_t i = 0; i < (size_t)node.primitive_or_child_count; ++i) {
@@ -53,9 +52,9 @@ protected:
                 nodes[node_id].bounds.e[k].e[i] = src_node.bounds[k];
 
             if (src_node.is_leaf())
-                write_leaf(primitives, bvh, src_node, node_id, i);
+                write_leaf(primitives, bvh, src_node, (int)node_id, i);
             else
-                write_node(primitives, bvh, src_node, node_id, i);
+                write_node(primitives, bvh, src_node, (int)node_id, i);
         }
 
         for (size_t i = (size_t)node.primitive_or_child_count; i < N; ++i) {
@@ -119,7 +118,7 @@ protected:
 
         const size_t node_id = nodes.size();
         if (parent >= 0)
-            nodes[parent].child.e[child] = node_id + 1; // The id is shifted by one
+            nodes[parent].child.e[child] = (int)node_id + 1; // The id is shifted by one
         nodes.emplace_back();
 
         for (size_t i = 0; i < 2; ++i) {
@@ -130,9 +129,9 @@ protected:
                     nodes[node_id].bounds.e[k + i * 6] = src_node.bounds[k];
 
                 if (src_node.is_leaf())
-                    write_leaf(primitives, bvh, src_node, node_id, i);
+                    write_leaf(primitives, bvh, src_node, (int)node_id, i);
                 else
-                    write_node(primitives, bvh, src_node, node_id, i);
+                    write_node(primitives, bvh, src_node, (int)node_id, i);
             } else {
                 // For some reason the child is cut out, make it invalid
                 auto& dst = nodes[node_id];

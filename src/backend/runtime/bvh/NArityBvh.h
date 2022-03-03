@@ -1,6 +1,10 @@
 #pragma once
 
-#include "bvh/bvh.hpp"
+#include "IG_Config.h"
+
+IG_BEGIN_IGNORE_WARNINGS
+#include <bvh/bvh.hpp>
+IG_END_IGNORE_WARNINGS
 
 namespace IG {
 template <size_t N>
@@ -60,7 +64,7 @@ inline constexpr int uint32_log2(uint32_t n)
 template <size_t N>
 inline void convert_to_narity_node(const bvh::Bvh<float>& original, const bvh::Bvh<float>::Node& node, NArityBvh<N>& bvh, uint32 cur_id)
 {
-    constexpr size_t MaxIter = 1 << (uint32_log2(N) - 1);
+    constexpr size_t MaxIter = (size_t)1 << (uint32_log2(N) - 1);
 
     if (!node.is_leaf()) {
         std::queue<bvh::Bvh<float>::Node> queue;
@@ -86,14 +90,14 @@ inline void convert_to_narity_node(const bvh::Bvh<float>& original, const bvh::B
         }
 
         // Setup new indices
-        bvh.nodes[cur_id].primitive_or_child_count = children.size();
-        bvh.nodes[cur_id].first_child_or_primitive = bvh.nodes.size();
+        bvh.nodes[cur_id].primitive_or_child_count = (int)children.size();
+        bvh.nodes[cur_id].first_child_or_primitive = (uint32)bvh.nodes.size();
         for (auto& child : children)
             bvh.nodes.push_back(clone_node<N>(child));
 
         // Take care of potential children children
         for (size_t i = 0; i < children.size(); ++i) {
-            convert_to_narity_node(original, children[i], bvh, bvh.nodes[cur_id].first_child_or_primitive + i);
+            convert_to_narity_node(original, children[i], bvh, bvh.nodes[cur_id].first_child_or_primitive + (uint32)i);
         }
     }
 }

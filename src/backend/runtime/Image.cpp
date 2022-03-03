@@ -2,15 +2,17 @@
 #include "ImageIO.h"
 #include "Logger.h"
 
+IG_BEGIN_IGNORE_WARNINGS
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include <stb_image.h>
 
 // We already make use of zlib, so use it here aswell
-#include "zlib.h"
+#include <zlib.h>
 #define TINYEXR_USE_THREAD (1)
 #define TINYEXR_USE_MINIZ (0)
 // #define TINYEXR_IMPLEMENTATION // Alreay included in ImageIO.cpp
-#include "tinyexr.h"
+#include <tinyexr.h>
+IG_END_IGNORE_WARNINGS
 
 namespace IG {
 void ImageRgba32::applyGammaCorrection()

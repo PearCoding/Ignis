@@ -54,6 +54,8 @@
 #pragma warning Ignis requires C++ 17 to compile successfully
 #endif
 
+#define IG_PRAGMA(x) _Pragma(#x)
+
 // clang-format off
 #define IG_UNUSED(expr) do { (void)(expr); } while (false)
 #define IG_NOOP do {} while(false)
@@ -62,9 +64,13 @@
 #ifdef IG_CC_MSC
 #define IG_DEBUG_BREAK() __debugbreak()
 #define IG_FUNCTION_NAME __FUNCSIG__
+#define IG_BEGIN_IGNORE_WARNINGS IG_PRAGMA(warning(push, 0))
+#define IG_END_IGNORE_WARNINGS IG_PRAGMA(warning(pop))
 #else // FIXME: Really use cpu dependent assembler?
 #define IG_DEBUG_BREAK() __asm__ __volatile__("int $0x03")
 #define IG_FUNCTION_NAME __PRETTY_FUNCTION__
+#define IG_BEGIN_IGNORE_WARNINGS 
+#define IG_END_IGNORE_WARNINGS 
 #endif
 
 #if defined(IG_CC_GNU) || defined(IG_CC_CLANG)
