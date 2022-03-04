@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     bool done       = false;
     uint64_t timing = 0;
     uint32_t frames = 0;
-    std::vector<double> samples_sec;
+    std::vector<double> samples_stats;
 
     SectionTimer timer_input;
     SectionTimer timer_ui;
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
         bool prevRun = running;
 
         timer_input.start();
-        uint32 iter = runtime->currentIterationCount();
+        size_t iter = runtime->currentIterationCount();
         done        = ui->handleInput(iter, running, camera);
         timer_input.stop();
 
@@ -130,8 +130,8 @@ int main(int argc, char** argv)
                 auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
                 if (cmd.SPPMode == SPPMode::Fixed && desired_iter != 0) {
-                    samples_sec.emplace_back(1000.0 * double(SPI * runtime->framebufferWidth() * runtime->framebufferHeight()) / double(elapsed_ms));
-                    if (samples_sec.size() == desired_iter)
+                    samples_stats.emplace_back(1000.0 * double(SPI * runtime->framebufferWidth() * runtime->framebufferHeight()) / double(elapsed_ms));
+                    if (samples_stats.size() == desired_iter)
                         break;
                 }
 
@@ -208,12 +208,12 @@ int main(int argc, char** argv)
 
     runtime.reset();
 
-    if (!samples_sec.empty()) {
+    if (!samples_stats.empty()) {
         auto inv = 1.0e-6;
-        std::sort(samples_sec.begin(), samples_sec.end());
-        IG_LOG(L_INFO) << "# " << samples_sec.front() * inv
-                       << "/" << samples_sec[samples_sec.size() / 2] * inv
-                       << "/" << samples_sec.back() * inv
+        std::sort(samples_stats.begin(), samples_stats.end());
+        IG_LOG(L_INFO) << "# " << samples_stats.front() * inv
+                       << "/" << samples_stats[samples_stats.size() / 2] * inv
+                       << "/" << samples_stats.back() * inv
                        << " (min/med/max Msamples/s)" << std::endl;
     }
 

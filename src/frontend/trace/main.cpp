@@ -63,7 +63,7 @@ static std::vector<Ray> read_input(std::istream& is, bool file)
     return rays;
 }
 
-static void write_output(std::ostream& is, const float* data, size_t count, uint32 spp)
+static void write_output(std::ostream& is, const float* data, size_t count, size_t spp)
 {
     for (size_t i = 0; i < count; ++i) {
         is << data[3 * i + 0] / spp << " " << data[3 * i + 1] / spp << " " << data[3 * i + 2] / spp << std::endl;

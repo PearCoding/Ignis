@@ -119,12 +119,13 @@ PYBIND11_MODULE(pyignis, m)
             const size_t width  = r.framebufferWidth();
             const size_t height = r.framebufferHeight();
             return py::memoryview::from_buffer(
-                r.getFramebuffer(aov),                                          // buffer pointer
-                { height, width, 3ul },                                         // shape (rows, cols)
-                { sizeof(float) * width * 3, sizeof(float) * 3, sizeof(float) } // strides in bytes
+                r.getFramebuffer(aov),                                                             // buffer pointer
+                std::vector<size_t>{ height, width, 3ul },                                         // shape (rows, cols)
+                std::vector<size_t>{ sizeof(float) * width * 3, sizeof(float) * 3, sizeof(float) } // strides in bytes
             );
         })
-        .def("clearFramebuffer", &Runtime::clearFramebuffer)
+        .def("clearFramebuffer", py::overload_cast<>(&Runtime::clearFramebuffer))
+        .def("clearFramebuffer", py::overload_cast<size_t>(&Runtime::clearFramebuffer))
         .def_property_readonly("iterationCount", &Runtime::currentIterationCount)
         .def_property_readonly("sampleCount", &Runtime::currentSampleCount)
         .def_property_readonly("framebufferWidth", &Runtime::framebufferWidth)

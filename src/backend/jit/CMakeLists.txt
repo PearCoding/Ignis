@@ -22,6 +22,7 @@ add_custom_command(
 add_library(ig_lib_jit STATIC ${SRC} ${API_SRC_FILE})
 target_link_libraries(ig_lib_jit PUBLIC std::filesystem ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES})
 target_include_directories(ig_lib_jit PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
+target_include_directories(ig_lib_jit PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS})
 target_compile_definitions(ig_lib_jit PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
 target_compile_features(ig_lib_jit PUBLIC cxx_std_17)
 set_target_properties(ig_lib_jit PROPERTIES POSITION_INDEPENDENT_CODE ON)

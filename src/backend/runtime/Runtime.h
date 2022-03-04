@@ -30,17 +30,6 @@ struct RuntimeOptions {
     std::filesystem::path ModulePath = std::filesystem::current_path(); // Optional path to modules
 };
 
-struct RuntimeRenderSettings {
-    uint32 FilmWidth  = 800;
-    uint32 FilmHeight = 600;
-};
-
-struct Ray {
-    Vector3f Origin;
-    Vector3f Direction;
-    Vector2f Range;
-};
-
 class Runtime {
     IG_CLASS_NON_COPYABLE(Runtime);
     IG_CLASS_NON_MOVEABLE(Runtime);

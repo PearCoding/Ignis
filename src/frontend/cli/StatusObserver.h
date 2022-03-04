@@ -77,10 +77,10 @@ public:
                 }
 
                 if (mTargetSamples != 0)
-                    drawProgressbar(currentSamples / double(mTargetSamples));
+                    drawProgressbar(currentSamples / float(mTargetSamples));
             }
             if (mTargetSamples != 0) {
-                const double percentage = 100 * (currentSamples / double(mTargetSamples));
+                const float percentage = 100 * (currentSamples / float(mTargetSamples));
                 std::cout << std::setw(PERC_OUTPUT_FIELD_SIZE) << std::setprecision(4) << std::fixed << percentage << "% | ";
             }
 
@@ -88,9 +88,9 @@ public:
                       << " | RT: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count());
 
             if (mTargetSamples != 0) {
-                const double percentage = 100 * (currentSamples / double(mTargetSamples));
-                const float etaFactor   = percentage > FltEps ? (100 - percentage) / percentage : 100.0f /* Just something high*/;
-                std::cout << " ETA: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count() * etaFactor);
+                const float percentage = 100 * (currentSamples / float(mTargetSamples));
+                const float etaFactor  = percentage > FltEps ? (100 - percentage) / percentage : 100.0f /* Just something high*/;
+                std::cout << " ETA: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(static_cast<uint64>(fullDuration.count() * etaFactor));
             }
 
             if (!mBeautify)

@@ -41,7 +41,7 @@ int main(int argc, char** argv)
             data[i * 3 + 1] = static_cast<uint8>(std::max(0.0f, std::min(255.0f, gamma(image.pixels[i * 4 + 1]) * 255)));
             data[i * 3 + 2] = static_cast<uint8>(std::max(0.0f, std::min(255.0f, gamma(image.pixels[i * 4 + 2]) * 255)));
         }
-        int ret = stbi_write_png(output.c_str(), image.width, image.height, 3, data.data(), sizeof(uint8) * 3 * image.width);
+        int ret = stbi_write_png(output.c_str(), (int)image.width, (int)image.height, 3, data.data(), static_cast<int>(sizeof(uint8) * 3 * image.width));
         if (ret <= 0)
             return EXIT_FAILURE;
     } catch (const std::exception& e) {

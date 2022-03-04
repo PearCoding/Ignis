@@ -34,4 +34,15 @@ struct ParameterSet {
     std::unordered_map<std::string, Vector3f> VectorParameters;
     std::unordered_map<std::string, Vector4f> ColorParameters;
 };
+
+struct RuntimeRenderSettings {
+    uint32 FilmWidth  = 800;
+    uint32 FilmHeight = 600;
+};
+
+struct Ray {
+    Vector3f Origin;
+    Vector3f Direction;
+    Vector2f Range;
+};
 } // namespace IG

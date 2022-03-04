@@ -1,6 +1,6 @@
 #include "Image.h"
 #include "Logger.h"
-#include "Runtime.h"
+#include "RuntimeStructs.h"
 #include "Statistics.h"
 #include "config/Version.h"
 #include "driver/Interface.h"
@@ -13,7 +13,11 @@
 #include <anydsl_runtime.hpp>
 
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+#ifdef IG_CC_MSC
+#include <intrin.h>
+#else
 #include <x86intrin.h>
+#endif
 #endif
 
 #include <atomic>
@@ -35,21 +39,21 @@ static inline size_t roundUp(size_t num, size_t multiple)
     if (multiple == 0)
         return num;
 
-    int remainder = num % multiple;
+    size_t remainder = num % multiple;
     if (remainder == 0)
         return num;
 
     return num + multiple - remainder;
 }
 
-static Settings convert_settings(const DriverRenderSettings& settings, IG::uint32 iter)
+static Settings convert_settings(const DriverRenderSettings& settings, size_t iter)
 {
     Settings renderSettings;
-    renderSettings.device = settings.device;
-    renderSettings.spi    = settings.spi;
+    renderSettings.device = (int)settings.device;
+    renderSettings.spi    = (int)settings.spi;
     renderSettings.iter   = (int)iter;
-    renderSettings.width  = settings.work_width;
-    renderSettings.height = settings.work_height;
+    renderSettings.width  = (int)settings.work_width;
+    renderSettings.height = (int)settings.work_height;
 
     return renderSettings;
 }
@@ -86,13 +90,13 @@ struct SceneDatabaseProxy {
 
 constexpr size_t GPUStreamBufferCount = 2;
 struct Interface {
-    using DeviceImage  = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
-    using DeviceBuffer = std::tuple<anydsl::Array<uint8_t>, int32_t>;
+    using DeviceImage  = std::tuple<anydsl::Array<float>, size_t, size_t>;
+    using DeviceBuffer = std::tuple<anydsl::Array<uint8_t>, size_t>;
 
     struct DeviceData {
-        std::atomic_flag scene_loaded;
+        std::atomic_flag scene_loaded = ATOMIC_FLAG_INIT;
         BvhVariant bvh_ent;
-        std::atomic_flag database_loaded;
+        std::atomic_flag database_loaded = ATOMIC_FLAG_INIT;
         SceneDatabaseProxy database;
         anydsl::Array<int32_t> tmp_buffer;
         anydsl::Array<int32_t> ray_begins_buffer; // On the host
@@ -110,8 +114,6 @@ struct Interface {
         anydsl::Array<uint32_t> tonemap_pixels;
 
         inline DeviceData()
-            : scene_loaded(ATOMIC_FLAG_INIT)
-            , database_loaded(ATOMIC_FLAG_INIT)
         {
             for (size_t i = 0; i < primary.size(); ++i)
                 current_primary[i] = &primary[i];
@@ -137,7 +139,7 @@ struct Interface {
     size_t film_width;
     size_t film_height;
 
-    IG::uint32 current_iteration;
+    size_t current_iteration;
 
     DriverRenderSettings current_settings;
     DriverSetupSettings setup;
@@ -301,7 +303,7 @@ struct Interface {
         rays.reserve(film_width);
 
         for (size_t i = 0; i < film_width; ++i) {
-            const IG::Ray dRay = current_settings.rays[i];
+            const auto dRay = current_settings.rays[i];
 
             float norm = dRay.Direction.norm();
             if (norm < std::numeric_limits<float>::epsilon()) {
@@ -461,7 +463,7 @@ struct Interface {
         IG_ASSERT(size > 0, "Expected buffer size to be larger then zero");
 
         // Make sure the buffer is properly sized
-        size = roundUp(size, 32);
+        size = (int32_t)roundUp(size, 32);
 
         auto& buffers = devices[dev].buffers;
         auto it       = buffers.find(name);
@@ -485,7 +487,7 @@ struct Interface {
         using Callback = decltype(ig_ray_generation_shader);
         IG_ASSERT(shader_set.RayGenerationShader != nullptr, "Expected ray generation shader to be valid");
         auto callback = (Callback*)shader_set.RayGenerationShader;
-        const int ret = callback(&driver_settings, current_iteration, id, size, xmin, ymin, xmax, ymax);
+        const int ret = callback(&driver_settings, (int)current_iteration, id, size, xmin, ymin, xmax, ymax);
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::RayGeneration, {});
@@ -570,7 +572,7 @@ struct Interface {
         if (shader_set.CallbackShaders[type] != nullptr) {
             using Callback = decltype(ig_callback_shader);
             auto callback  = (Callback*)shader_set.CallbackShaders[type];
-            callback(&driver_settings, current_iteration);
+            callback(&driver_settings, (int)current_iteration);
         }
     }
 
@@ -726,7 +728,7 @@ struct Interface {
 
 static std::unique_ptr<Interface> sInterface;
 
-void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRenderSettings& settings, const IG::ParameterSet* parameterSet, IG::uint32 iter)
+void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRenderSettings& settings, const IG::ParameterSet* parameterSet, size_t iter)
 {
     sInterface->shader_set         = shaderSet;
     sInterface->current_iteration  = iter;
@@ -759,7 +761,7 @@ void glue_resizeFramebuffer(size_t width, size_t height)
     sInterface->resizeFramebuffer(width, height);
 }
 
-const float* glue_getFramebuffer(int aov)
+const float* glue_getFramebuffer(size_t aov)
 {
     if (aov <= 0 || (size_t)aov > sInterface->aovs.size())
         return sInterface->host_pixels.data();
@@ -777,16 +779,16 @@ const IG::Statistics* glue_getStatistics()
     return sInterface->getFullStats();
 }
 
-void glue_tonemap(int device, uint32_t* out_pixels, const IG::TonemapSettings& driver_settings)
+void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings& driver_settings)
 {
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Tonemap, {});
 
 #ifdef DEVICE_GPU
 #if defined(DEVICE_NVVM)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, device);
+    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
 #elif defined(DEVICE_AMD)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, device);
+    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
 #endif
     float* in_pixels            = sInterface->getAOVImage(dev_id, driver_settings.AOV);
     uint32_t* device_out_pixels = sInterface->getTonemapImage(dev_id);
@@ -802,10 +804,10 @@ void glue_tonemap(int device, uint32_t* out_pixels, const IG::TonemapSettings& d
     settings.exposure_factor = driver_settings.ExposureFactor;
     settings.exposure_offset = driver_settings.ExposureOffset;
 
-    ig_utility_tonemap(device, in_pixels, device_out_pixels, sInterface->film_width, sInterface->film_height, &settings);
+    ig_utility_tonemap((int)device, in_pixels, device_out_pixels, (int)sInterface->film_width, (int)sInterface->film_height, &settings);
 
 #ifdef DEVICE_GPU
-    int size = sInterface->film_width * sInterface->film_height;
+    size_t size = sInterface->film_width * sInterface->film_height;
     anydsl_copy(dev_id, device_out_pixels, 0, 0 /* Host */, out_pixels, 0, sizeof(uint32_t) * size);
 #endif
 
@@ -813,16 +815,16 @@ void glue_tonemap(int device, uint32_t* out_pixels, const IG::TonemapSettings& d
         sInterface->getThreadData()->stats.endShaderLaunch(IG::ShaderType::Tonemap, {});
 }
 
-void glue_imageinfo(int device, const IG::ImageInfoSettings& driver_settings, IG::ImageInfoOutput& driver_output)
+void glue_imageinfo(size_t device, const IG::ImageInfoSettings& driver_settings, IG::ImageInfoOutput& driver_output)
 {
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::ImageInfo, {});
 
 #ifdef DEVICE_GPU
 #if defined(DEVICE_NVVM)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, device);
+    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
 #elif defined(DEVICE_AMD)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, device);
+    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
 #endif
     float* in_pixels = sInterface->getAOVImage(dev_id, driver_settings.AOV);
 #else
@@ -835,7 +837,7 @@ void glue_imageinfo(int device, const IG::ImageInfoSettings& driver_settings, IG
     settings.bins      = driver_settings.Bins;
 
     ImageInfoOutput output;
-    ig_utility_imageinfo(device, in_pixels, sInterface->film_width, sInterface->film_height, &settings, &output);
+    ig_utility_imageinfo((int)device, in_pixels, (int)sInterface->film_width, (int)sInterface->film_height, &settings, &output);
 
     driver_output.Min     = output.min;
     driver_output.Max     = output.max;
@@ -928,8 +930,8 @@ IG_EXPORT DriverInterface ig_get_interface()
 void ignis_get_film_data(int dev, float** pixels, int* width, int* height)
 {
     *pixels = sInterface->getFilmImage(dev);
-    *width  = sInterface->film_width;
-    *height = sInterface->film_height;
+    *width  = (int)sInterface->film_width;
+    *height = (int)sInterface->film_height;
 }
 
 void ignis_get_aov_image(int dev, int id, float** aov_pixels)
@@ -940,11 +942,11 @@ void ignis_get_aov_image(int dev, int id, float** aov_pixels)
 void ignis_get_work_info(int* width, int* height)
 {
     if (sInterface->current_settings.work_width > 0 && sInterface->current_settings.work_height > 0) {
-        *width  = sInterface->current_settings.work_width;
-        *height = sInterface->current_settings.work_height;
+        *width  = (int)sInterface->current_settings.work_width;
+        *height = (int)sInterface->current_settings.work_height;
     } else {
-        *width  = sInterface->film_width;
-        *height = sInterface->film_height;
+        *width  = (int)sInterface->film_width;
+        *height = (int)sInterface->film_height;
     }
 }
 
@@ -1001,15 +1003,15 @@ void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* wi
 {
     auto& img = sInterface->loadImage(dev, file);
     *pixels   = const_cast<float*>(std::get<0>(img).data());
-    *width    = std::get<1>(img);
-    *height   = std::get<2>(img);
+    *width    = (int)std::get<1>(img);
+    *height   = (int)std::get<2>(img);
 }
 
 void ignis_load_buffer(int32_t dev, const char* file, uint8_t** data, int32_t* size)
 {
     auto& img = sInterface->loadBuffer(dev, file);
     *data     = const_cast<uint8_t*>(std::get<0>(img).data());
-    *size     = std::get<1>(img);
+    *size     = (int)std::get<1>(img);
 }
 
 void ignis_request_buffer(int32_t dev, const char* name, uint8_t** data, int size, int flags)
@@ -1198,7 +1200,7 @@ void ig_host_print_p(const char* ptr)
 
 int64_t clock_us()
 {
-#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+#if !defined(IG_CC_MSC) && (defined(__x86_64__) || defined(__amd64__) || defined(_M_X64))
 #define CPU_FREQ 4e9
     __asm__ __volatile__("xorl %%eax,%%eax \n    cpuid" ::
                              : "%rax", "%rbx", "%rcx", "%rdx");

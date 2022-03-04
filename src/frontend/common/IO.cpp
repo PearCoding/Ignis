@@ -1,11 +1,12 @@
 #include "IO.h"
 #include "Image.h"
 #include "ImageIO.h"
-
 #include "Runtime.h"
 
+IG_BEGIN_IGNORE_WARNINGS
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_for.h>
+IG_END_IGNORE_WARNINGS
 
 namespace IG {
 bool saveImageRGB(const std::filesystem::path& path, const float* rgb, size_t width, size_t height, float scale)

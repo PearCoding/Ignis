@@ -194,8 +194,8 @@ foreach(var ${VARIANTS})
     set(out_file "${CMAKE_CURRENT_BINARY_DIR}/driver_${var_name}.art")
     separate_arguments(args UNIX_COMMAND ${var})
     add_custom_command(
-        OUTPUT "${out_file}"
-        COMMAND $<TARGET_FILE:stpp> ${args} ${CMAKE_CURRENT_SOURCE_DIR}/device.artpp > ${out_file}
+        OUTPUT ${out_file}
+        COMMAND $<TARGET_FILE:stpp> ${args} ${CMAKE_CURRENT_SOURCE_DIR}/device.artpp ${out_file}
         MAIN_DEPENDENCY device.artpp
         COMMENT "Generating variant file: ${out_file}" 
         VERBATIM)
@@ -212,7 +212,8 @@ foreach(var ${VARIANTS})
     set_target_properties(${_target_name} PROPERTIES PREFIX "")
     target_compile_definitions(${_target_name} PRIVATE ${args})
     target_link_libraries(${_target_name} PRIVATE ${AnyDSL_runtime_LIBRARIES} ig_lib_runtime)
-    target_include_directories(${_target_name} PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
+    target_include_directories(${_target_name} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+    target_include_directories(${_target_name} PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS})
     add_dependencies(${_target_name} artic_c_interface)
     install(TARGETS ${_target_name} COMPONENT runtime LIBRARY DESTINATION lib/)
 

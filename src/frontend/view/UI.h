@@ -20,8 +20,8 @@ public:
     ~UI();
 
     void setTitle(const char* str);
-    bool handleInput(uint32_t& iter, bool& run, Camera& cam);
-    void update(uint32_t iter, uint32_t samples);
+    bool handleInput(size_t& iter, bool& run, Camera& cam);
+    void update(size_t iter, size_t samples);
 
     inline DebugMode currentDebugMode() const { return mDebugMode; }
 

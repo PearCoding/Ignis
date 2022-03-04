@@ -32,7 +32,7 @@ int main(int argc, char** argv)
             data[i * 3 + 1] = image.pixels[i * 4 + 1];
             data[i * 3 + 2] = image.pixels[i * 4 + 2];
         }
-        int ret = stbi_write_hdr(output.c_str(), image.width, image.height, 3, data.data());
+        int ret = stbi_write_hdr(output.c_str(), (int)image.width, (int)image.height, 3, data.data());
         if (ret <= 0)
             return EXIT_FAILURE;
     } catch (const std::exception& e) {
