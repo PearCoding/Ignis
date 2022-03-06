@@ -10,6 +10,7 @@
 
 #include "ShallowArray.h"
 
+#include <anydsl_jit.h>
 #include <anydsl_runtime.hpp>
 
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
@@ -749,6 +750,9 @@ void glue_setup(const DriverSetupSettings& settings)
 {
     IG_ASSERT(sInterface == nullptr, "Only a single instance allowed!");
     sInterface = std::make_unique<Interface>(settings);
+
+    // Make sure the functions exposed are available in the linking process
+    anydsl_link(settings.driver_filename);
 }
 
 void glue_shutdown()
@@ -885,6 +889,39 @@ inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t 
     secondary.size = 0;
 }
 
+// Will be added from the api_collector
+extern const char* ig_api[];
+extern const char* ig_api_paths[];
+
+// TODO: Really fixed at compile time?
+#ifdef IG_DEBUG
+constexpr uint32_t OPT_LEVEL = 0;
+#else
+constexpr uint32_t OPT_LEVEL = 3;
+#endif
+
+void* glue_compileSource(const char* src, const char* function, const char* dump_file)
+{
+    std::stringstream source;
+
+    for (int i = 0; ig_api[i]; ++i)
+        source << ig_api[i];
+
+    source << std::endl;
+    source << src;
+
+    const std::string source_str = source.str();
+    if (dump_file != nullptr) {
+        std::ofstream(dump_file, std::ios::out) << source_str;
+    }
+
+    int ret = anydsl_compile(source_str.c_str(), (uint32_t)source_str.size(), OPT_LEVEL);
+    if (ret < 0)
+        return nullptr;
+
+    return anydsl_lookup_function(ret, function);
+}
+
 extern "C" {
 IG_EXPORT DriverInterface ig_get_interface()
 {
@@ -897,7 +934,7 @@ IG_EXPORT DriverInterface ig_get_interface()
 #if defined(DEVICE_DEFAULT)
     interface.Target = IG::Target::GENERIC;
 #elif defined(DEVICE_AVX)
-    interface.Target            = IG::Target::AVX;
+    interface.Target = IG::Target::AVX;
 #elif defined(DEVICE_AVX2)
     interface.Target = IG::Target::AVX2;
 #elif defined(DEVICE_AVX512)
@@ -923,23 +960,24 @@ IG_EXPORT DriverInterface ig_get_interface()
     interface.GetStatisticsFunction     = glue_getStatistics;
     interface.TonemapFunction           = glue_tonemap;
     interface.ImageInfoFunction         = glue_imageinfo;
+    interface.CompileSourceFunction     = glue_compileSource;
 
     return interface;
 }
 
-void ignis_get_film_data(int dev, float** pixels, int* width, int* height)
+IG_EXPORT void ignis_get_film_data(int dev, float** pixels, int* width, int* height)
 {
     *pixels = sInterface->getFilmImage(dev);
     *width  = (int)sInterface->film_width;
     *height = (int)sInterface->film_height;
 }
 
-void ignis_get_aov_image(int dev, int id, float** aov_pixels)
+IG_EXPORT void ignis_get_aov_image(int dev, int id, float** aov_pixels)
 {
     *aov_pixels = sInterface->getAOVImage(dev, id);
 }
 
-void ignis_get_work_info(int* width, int* height)
+IG_EXPORT void ignis_get_work_info(int* width, int* height)
 {
     if (sInterface->current_settings.work_width > 0 && sInterface->current_settings.work_height > 0) {
         *width  = (int)sInterface->current_settings.work_width;
@@ -950,28 +988,28 @@ void ignis_get_work_info(int* width, int* height)
     }
 }
 
-void ignis_load_bvh2_ent(int dev, Node2** nodes, EntityLeaf1** objs)
+IG_EXPORT void ignis_load_bvh2_ent(int dev, Node2** nodes, EntityLeaf1** objs)
 {
     auto& bvh = sInterface->loadEntityBVH<Bvh2Ent, Node2>(dev);
     *nodes    = const_cast<Node2*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
-void ignis_load_bvh4_ent(int dev, Node4** nodes, EntityLeaf1** objs)
+IG_EXPORT void ignis_load_bvh4_ent(int dev, Node4** nodes, EntityLeaf1** objs)
 {
     auto& bvh = sInterface->loadEntityBVH<Bvh4Ent, Node4>(dev);
     *nodes    = const_cast<Node4*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
-void ignis_load_bvh8_ent(int dev, Node8** nodes, EntityLeaf1** objs)
+IG_EXPORT void ignis_load_bvh8_ent(int dev, Node8** nodes, EntityLeaf1** objs)
 {
     auto& bvh = sInterface->loadEntityBVH<Bvh8Ent, Node8>(dev);
     *nodes    = const_cast<Node8*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
-void ignis_load_scene(int dev, SceneDatabase* dtb)
+IG_EXPORT void ignis_load_scene(int dev, SceneDatabase* dtb)
 {
     auto assign = [&](const DynTableProxy& tbl) {
         DynTable devtbl;
@@ -989,17 +1027,17 @@ void ignis_load_scene(int dev, SceneDatabase* dtb)
     dtb->bvhs     = assign(proxy.BVHs);
 }
 
-void ignis_load_scene_info(int dev, SceneInfo* info)
+IG_EXPORT void ignis_load_scene_info(int dev, SceneInfo* info)
 {
     *info = sInterface->loadSceneInfo(dev);
 }
 
-void ignis_load_rays(int dev, StreamRay** list)
+IG_EXPORT void ignis_load_rays(int dev, StreamRay** list)
 {
     *list = const_cast<StreamRay*>(sInterface->loadRayList(dev).data());
 }
 
-void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height)
+IG_EXPORT void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height)
 {
     auto& img = sInterface->loadImage(dev, file);
     *pixels   = const_cast<float*>(std::get<0>(img).data());
@@ -1007,190 +1045,190 @@ void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* wi
     *height   = (int)std::get<2>(img);
 }
 
-void ignis_load_buffer(int32_t dev, const char* file, uint8_t** data, int32_t* size)
+IG_EXPORT void ignis_load_buffer(int32_t dev, const char* file, uint8_t** data, int32_t* size)
 {
     auto& img = sInterface->loadBuffer(dev, file);
     *data     = const_cast<uint8_t*>(std::get<0>(img).data());
     *size     = (int)std::get<1>(img);
 }
 
-void ignis_request_buffer(int32_t dev, const char* name, uint8_t** data, int size, int flags)
+IG_EXPORT void ignis_request_buffer(int32_t dev, const char* name, uint8_t** data, int size, int flags)
 {
     auto& buffer = sInterface->requestBuffer(dev, name, size, flags);
     *data        = const_cast<uint8_t*>(std::get<0>(buffer).data());
 }
 
-void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)
+IG_EXPORT void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)
 {
     auto& array = sInterface->getCPUPrimaryStream(size);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_cpu_get_primary_stream_const(PrimaryStream* primary)
+IG_EXPORT void ignis_cpu_get_primary_stream_const(PrimaryStream* primary)
 {
     auto& array = sInterface->getCPUPrimaryStream();
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_cpu_get_secondary_stream(SecondaryStream* secondary, int size)
+IG_EXPORT void ignis_cpu_get_secondary_stream(SecondaryStream* secondary, int size)
 {
     auto& array = sInterface->getCPUSecondaryStream(size);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_cpu_get_secondary_stream_const(SecondaryStream* secondary)
+IG_EXPORT void ignis_cpu_get_secondary_stream_const(SecondaryStream* secondary)
 {
     auto& array = sInterface->getCPUSecondaryStream();
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_get_tmp_buffer(int dev, int** buf)
+IG_EXPORT void ignis_gpu_get_tmp_buffer(int dev, int** buf)
 {
     *buf = sInterface->getGPUTemporaryBuffer(dev).data();
 }
 
-void ignis_gpu_get_ray_begin_end_buffers(int dev, int** ray_begins, int** ray_ends)
+IG_EXPORT void ignis_gpu_get_ray_begin_end_buffers(int dev, int** ray_begins, int** ray_ends)
 {
     auto tuple  = sInterface->getGPURayBeginEndBuffers(dev);
     *ray_begins = std::get<0>(tuple).data();
     *ray_ends   = std::get<1>(tuple).data();
 }
 
-void ignis_gpu_get_first_primary_stream(int dev, PrimaryStream* primary, int size)
+IG_EXPORT void ignis_gpu_get_first_primary_stream(int dev, PrimaryStream* primary, int size)
 {
     auto& array = sInterface->getGPUPrimaryStream(dev, 0, size);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_gpu_get_first_primary_stream_const(int dev, PrimaryStream* primary)
+IG_EXPORT void ignis_gpu_get_first_primary_stream_const(int dev, PrimaryStream* primary)
 {
     auto& array = sInterface->getGPUPrimaryStream(dev, 0);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_gpu_get_second_primary_stream(int dev, PrimaryStream* primary, int size)
+IG_EXPORT void ignis_gpu_get_second_primary_stream(int dev, PrimaryStream* primary, int size)
 {
     auto& array = sInterface->getGPUPrimaryStream(dev, 1, size);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_gpu_get_second_primary_stream_const(int dev, PrimaryStream* primary)
+IG_EXPORT void ignis_gpu_get_second_primary_stream_const(int dev, PrimaryStream* primary)
 {
     auto& array = sInterface->getGPUPrimaryStream(dev, 1);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_gpu_get_first_secondary_stream(int dev, SecondaryStream* secondary, int size)
+IG_EXPORT void ignis_gpu_get_first_secondary_stream(int dev, SecondaryStream* secondary, int size)
 {
     auto& array = sInterface->getGPUSecondaryStream(dev, 0, size);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_get_first_secondary_stream_const(int dev, SecondaryStream* secondary)
+IG_EXPORT void ignis_gpu_get_first_secondary_stream_const(int dev, SecondaryStream* secondary)
 {
     auto& array = sInterface->getGPUSecondaryStream(dev, 0);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_get_second_secondary_stream(int dev, SecondaryStream* secondary, int size)
+IG_EXPORT void ignis_gpu_get_second_secondary_stream(int dev, SecondaryStream* secondary, int size)
 {
     auto& array = sInterface->getGPUSecondaryStream(dev, 1, size);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_get_second_secondary_stream_const(int dev, SecondaryStream* secondary)
+IG_EXPORT void ignis_gpu_get_second_secondary_stream_const(int dev, SecondaryStream* secondary)
 {
     auto& array = sInterface->getGPUSecondaryStream(dev, 1);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_swap_primary_streams(int dev)
+IG_EXPORT void ignis_gpu_swap_primary_streams(int dev)
 {
     sInterface->swapGPUPrimaryStreams(dev);
 }
 
-void ignis_gpu_swap_secondary_streams(int dev)
+IG_EXPORT void ignis_gpu_swap_secondary_streams(int dev)
 {
     sInterface->swapGPUSecondaryStreams(dev);
 }
 
-int ignis_handle_ray_generation(int* id, int size, int xmin, int ymin, int xmax, int ymax)
+IG_EXPORT int ignis_handle_ray_generation(int* id, int size, int xmin, int ymin, int xmax, int ymax)
 {
     return sInterface->runRayGenerationShader(id, size, xmin, ymin, xmax, ymax);
 }
 
-void ignis_handle_miss_shader(int first, int last)
+IG_EXPORT void ignis_handle_miss_shader(int first, int last)
 {
     sInterface->runMissShader(first, last);
 }
 
-void ignis_handle_hit_shader(int entity_id, int first, int last)
+IG_EXPORT void ignis_handle_hit_shader(int entity_id, int first, int last)
 {
     sInterface->runHitShader(entity_id, first, last);
 }
 
-void ignis_handle_advanced_shadow_shader(int first, int last, bool is_hit)
+IG_EXPORT void ignis_handle_advanced_shadow_shader(int first, int last, bool is_hit)
 {
     sInterface->runAdvancedShadowShader(first, last, is_hit);
 }
 
-void ignis_handle_callback_shader(int type)
+IG_EXPORT void ignis_handle_callback_shader(int type)
 {
     sInterface->runCallbackShader(type);
 }
 
-bool ignis_use_advanced_shadow_handling()
+IG_EXPORT bool ignis_use_advanced_shadow_handling()
 {
     return sInterface->useAdvancedShadowHandling();
 }
 
-bool ignis_is_framebuffer_locked()
+IG_EXPORT bool ignis_is_framebuffer_locked()
 {
     return sInterface->isFramebufferLocked();
 }
 
-int ignis_get_parameter_i32(const char* name, int def)
+IG_EXPORT int ignis_get_parameter_i32(const char* name, int def)
 {
     return sInterface->getParameterInt(name, def);
 }
 
-float ignis_get_parameter_f32(const char* name, float def)
+IG_EXPORT float ignis_get_parameter_f32(const char* name, float def)
 {
     return sInterface->getParameterFloat(name, def);
 }
 
-void ignis_get_parameter_vector(const char* name, float defX, float defY, float defZ, float* x, float* y, float* z)
+IG_EXPORT void ignis_get_parameter_vector(const char* name, float defX, float defY, float defZ, float* x, float* y, float* z)
 {
     sInterface->getParameterVector(name, defX, defY, defZ, *x, *y, *z);
 }
 
-void ignis_get_parameter_color(const char* name, float defR, float defG, float defB, float defA, float* r, float* g, float* b, float* a)
+IG_EXPORT void ignis_get_parameter_color(const char* name, float defR, float defG, float defB, float defA, float* r, float* g, float* b, float* a)
 {
     sInterface->getParameterColor(name, defR, defG, defB, defA, *r, *g, *b, *a);
 }
 
-void ignis_present(int dev)
+IG_EXPORT void ignis_present(int dev)
 {
     if (dev != 0)
         sInterface->present(dev);
 }
 
-void ig_host_print(const char* str)
+IG_EXPORT void ig_host_print(const char* str)
 {
     std::cout << str << std::flush;
 }
 
-void ig_host_print_i(int64_t number)
+IG_EXPORT void ig_host_print_i(int64_t number)
 {
     std::cout << number << std::flush;
 }
 
-void ig_host_print_f(double number)
+IG_EXPORT void ig_host_print_f(double number)
 {
     std::cout << number << std::flush;
 }
 
-void ig_host_print_p(const char* ptr)
+IG_EXPORT void ig_host_print_p(const char* ptr)
 {
     std::cout << std::internal << std::hex << std::setw(sizeof(ptr) * 2 + 2) << std::setfill('0')
               << (const void*)ptr
@@ -1198,7 +1236,7 @@ void ig_host_print_p(const char* ptr)
               << std::flush;
 }
 
-int64_t clock_us()
+IG_EXPORT int64_t clock_us()
 {
 #if !defined(IG_CC_MSC) && (defined(__x86_64__) || defined(__amd64__) || defined(_M_X64))
 #define CPU_FREQ 4e9

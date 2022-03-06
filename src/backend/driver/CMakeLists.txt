@@ -185,12 +185,32 @@ if(NOT VARIANTS)
 endif()
 
 ###########################################################
+# We could drop some sources from ARTIC_EXTRA_SRC and let it adapt to the actual shading system we jit,
+# but that is not worth the effort currently
+
+# Grapped from AnyDSL runtime, as it was missing while jit compiling (BUG)
+set(ARTIC_RUNTIME_FILES
+    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics_math.impala
+)
+
+set(API_SRC_FILE ${CMAKE_CURRENT_BINARY_DIR}/api.cpp)
+add_custom_command(
+        OUTPUT ${API_SRC_FILE}
+        COMMAND $<TARGET_FILE:ig_api_collector> ${ARTIC_RUNTIME_FILES} ${ARTIC_EXTRA_SRC} ${API_SRC_FILE}
+        DEPENDS ${ARTIC_EXTRA_SRC}
+        COMMENT "Embedding API: ${API_SRC_FILE}" 
+        VERBATIM)
+
+        message(STATUS "${AnyDSL_runtime_LIBRARIES}")
+###########################################################
 option(IG_BUILD_DRIVER_PARALLEL "Build driver files in parallel. Not recommended" OFF)
 
 set(_targets )
 foreach(var ${VARIANTS})
     var_to_name(var_name ${var})
     message(VERBOSE "Driver: ${var_name} = ${var}")
+
+    # Create driver specific code
     set(out_file "${CMAKE_CURRENT_BINARY_DIR}/driver_${var_name}.art")
     separate_arguments(args UNIX_COMMAND ${var})
     add_custom_command(
@@ -199,6 +219,8 @@ foreach(var ${VARIANTS})
         MAIN_DEPENDENCY device.artpp
         COMMENT "Generating variant file: ${out_file}" 
         VERBATIM)
+
+    # Compile with artic
     set(_objs ) # Reset list
     set(_interface_name driver_interface_${var_name})
     anydsl_runtime_wrap(_objs
@@ -207,11 +229,13 @@ foreach(var ${VARIANTS})
         CLANG_FLAGS ${IG_ARTIC_CLANG_FLAGS}
         ARTIC_FLAGS ${IG_ARTIC_FLAGS} --log-level info -Wall
         FILES ${ARTIC_MAIN_SRC} ${out_file} tonemapper.art tracer.art)
+
+    # Construct shared library for runtime loading
     set(_target_name ig_driver_${var_name})
-    add_library(${_target_name} MODULE ${_objs} glue.cpp ShallowArray.h)
+    add_library(${_target_name} MODULE ${_objs} ${API_SRC_FILE} glue.cpp ShallowArray.h)
     set_target_properties(${_target_name} PROPERTIES PREFIX "")
     target_compile_definitions(${_target_name} PRIVATE ${args})
-    target_link_libraries(${_target_name} PRIVATE ${AnyDSL_runtime_LIBRARIES} ig_lib_runtime)
+    target_link_libraries(${_target_name} PRIVATE ${AnyDSL_runtime_LIBRARIES} ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES} ig_lib_runtime)
     target_include_directories(${_target_name} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
     target_include_directories(${_target_name} PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS})
     add_dependencies(${_target_name} artic_c_interface)

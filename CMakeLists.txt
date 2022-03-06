@@ -77,7 +77,6 @@ endif()
 
 # Locate AnyDSL runtime
 find_package(AnyDSL_runtime REQUIRED)
-include_directories(${AnyDSL_runtime_INCLUDE_DIRS})
 
 # Make sure the filesystem library is available
 find_package(Filesystem REQUIRED)

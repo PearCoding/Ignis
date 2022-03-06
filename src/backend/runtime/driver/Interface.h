@@ -14,6 +14,7 @@ class Logger;
 
 // Not in namespace IG
 struct DriverSetupSettings {
+    const char* driver_filename = nullptr;
     size_t framebuffer_width    = 0;
     size_t framebuffer_height   = 0;
     IG::SceneDatabase* database = nullptr;
@@ -43,6 +44,8 @@ using DriverGetStatisticsFunction     = const IG::Statistics* (*)();
 using DriverTonemapFunction   = void (*)(size_t, uint32_t*, const IG::TonemapSettings&);
 using DriverImageInfoFunction = void (*)(size_t, const IG::ImageInfoSettings&, IG::ImageInfoOutput&);
 
+using DriverCompileSourceFunction = void* (*)(const char*, const char*, const char*);
+
 struct DriverInterface {
     IG::uint32 MajorVersion;
     IG::uint32 MinorVersion;
@@ -57,4 +60,5 @@ struct DriverInterface {
     DriverGetStatisticsFunction GetStatisticsFunction;
     DriverTonemapFunction TonemapFunction;
     DriverImageInfoFunction ImageInfoFunction;
+    DriverCompileSourceFunction CompileSourceFunction;
 };
