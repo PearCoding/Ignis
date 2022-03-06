@@ -57,7 +57,7 @@ public:
 
             bool single = node.Values.size() == 1;
             if (single) {
-                mValues.emplace_back(std::copysign(node.Values.front(), -1));
+                mValues.emplace_back((float)std::copysign(node.Values.front(), -1));
             } else {
                 IG_ASSERT(node.Values.size() == mMaxValuesPerNode, "Expected valid number of values in a leaf");
                 mValues.insert(mValues.end(), node.Values.begin(), node.Values.end());
@@ -82,7 +82,7 @@ public:
     inline void makeBlack()
     {
         mNodes  = std::vector<NodeValue>(mMaxValuesPerNode, 0);
-        mValues = std::vector<float>(1, std::copysign(0, -1));
+        mValues = std::vector<float>(1, static_cast<float>(std::copysign(0, -1)));
 
         for (size_t i = 0; i < mNodes.size(); ++i)
             mNodes[i] = -1;
@@ -90,8 +90,8 @@ public:
 
     inline void write(std::ostream& os)
     {
-        uint32_t node_count  = mNodes.size();
-        uint32_t value_count = mValues.size();
+        uint32 node_count  = static_cast<uint32>(mNodes.size());
+        uint32 value_count = static_cast<uint32>(mValues.size());
 
         // We do not make use of this header, but it might get handy in other applications
         os.write(reinterpret_cast<const char*>(&mNDim), sizeof(mNDim));
@@ -151,8 +151,8 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
     std::shared_ptr<TensorTreeComponent> transmissionBack;
     // Extract wavelengths
     for (const auto& data : layer.children("WavelengthData")) {
-        const char* type = data.child_value("Wavelength");
-        if (!type || strcmp(type, "Visible") != 0) // Skip entries for non-visible wavelengths
+        const char* wvl_type = data.child_value("Wavelength");
+        if (!wvl_type || strcmp(wvl_type, "Visible") != 0) // Skip entries for non-visible wavelengths
             continue;
 
         const auto block = data.child("WavelengthDataBlock");

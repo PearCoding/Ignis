@@ -1,4 +1,5 @@
-build/*
+build/
+CMakeSettings.json
 
 # Compiled Object files
 *.slo

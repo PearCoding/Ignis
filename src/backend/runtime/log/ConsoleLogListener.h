@@ -10,7 +10,7 @@ public:
     virtual ~ConsoleLogListener();
 
     virtual void startEntry(LogLevel level) override;
-    virtual void writeEntry(int c) override;
+    virtual void writeEntry(char c) override;
 
     inline void enableAnsi(bool b = true) { mUseAnsi = b; }
     inline bool isUsingAnsi() const { return mUseAnsi; }

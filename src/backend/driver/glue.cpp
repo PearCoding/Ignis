@@ -1,6 +1,6 @@
 #include "Image.h"
 #include "Logger.h"
-#include "Runtime.h"
+#include "RuntimeStructs.h"
 #include "Statistics.h"
 #include "config/Version.h"
 #include "driver/Interface.h"
@@ -10,10 +10,15 @@
 
 #include "ShallowArray.h"
 
+#include <anydsl_jit.h>
 #include <anydsl_runtime.hpp>
 
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+#ifdef IG_CC_MSC
+#include <intrin.h>
+#else
 #include <x86intrin.h>
+#endif
 #endif
 
 #include <atomic>
@@ -35,21 +40,21 @@ static inline size_t roundUp(size_t num, size_t multiple)
     if (multiple == 0)
         return num;
 
-    int remainder = num % multiple;
+    size_t remainder = num % multiple;
     if (remainder == 0)
         return num;
 
     return num + multiple - remainder;
 }
 
-static Settings convert_settings(const DriverRenderSettings& settings, IG::uint32 iter)
+static Settings convert_settings(const DriverRenderSettings& settings, size_t iter)
 {
     Settings renderSettings;
-    renderSettings.device = settings.device;
-    renderSettings.spi    = settings.spi;
+    renderSettings.device = (int)settings.device;
+    renderSettings.spi    = (int)settings.spi;
     renderSettings.iter   = (int)iter;
-    renderSettings.width  = settings.work_width;
-    renderSettings.height = settings.work_height;
+    renderSettings.width  = (int)settings.work_width;
+    renderSettings.height = (int)settings.work_height;
 
     return renderSettings;
 }
@@ -86,13 +91,13 @@ struct SceneDatabaseProxy {
 
 constexpr size_t GPUStreamBufferCount = 2;
 struct Interface {
-    using DeviceImage  = std::tuple<anydsl::Array<float>, int32_t, int32_t>;
-    using DeviceBuffer = std::tuple<anydsl::Array<uint8_t>, int32_t>;
+    using DeviceImage  = std::tuple<anydsl::Array<float>, size_t, size_t>;
+    using DeviceBuffer = std::tuple<anydsl::Array<uint8_t>, size_t>;
 
     struct DeviceData {
-        std::atomic_flag scene_loaded;
+        std::atomic_flag scene_loaded = ATOMIC_FLAG_INIT;
         BvhVariant bvh_ent;
-        std::atomic_flag database_loaded;
+        std::atomic_flag database_loaded = ATOMIC_FLAG_INIT;
         SceneDatabaseProxy database;
         anydsl::Array<int32_t> tmp_buffer;
         anydsl::Array<int32_t> ray_begins_buffer; // On the host
@@ -110,8 +115,6 @@ struct Interface {
         anydsl::Array<uint32_t> tonemap_pixels;
 
         inline DeviceData()
-            : scene_loaded(ATOMIC_FLAG_INIT)
-            , database_loaded(ATOMIC_FLAG_INIT)
         {
             for (size_t i = 0; i < primary.size(); ++i)
                 current_primary[i] = &primary[i];
@@ -137,7 +140,7 @@ struct Interface {
     size_t film_width;
     size_t film_height;
 
-    IG::uint32 current_iteration;
+    size_t current_iteration;
 
     DriverRenderSettings current_settings;
     DriverSetupSettings setup;
@@ -301,7 +304,7 @@ struct Interface {
         rays.reserve(film_width);
 
         for (size_t i = 0; i < film_width; ++i) {
-            const IG::Ray dRay = current_settings.rays[i];
+            const auto dRay = current_settings.rays[i];
 
             float norm = dRay.Direction.norm();
             if (norm < std::numeric_limits<float>::epsilon()) {
@@ -461,7 +464,7 @@ struct Interface {
         IG_ASSERT(size > 0, "Expected buffer size to be larger then zero");
 
         // Make sure the buffer is properly sized
-        size = roundUp(size, 32);
+        size = (int32_t)roundUp(size, 32);
 
         auto& buffers = devices[dev].buffers;
         auto it       = buffers.find(name);
@@ -485,7 +488,7 @@ struct Interface {
         using Callback = decltype(ig_ray_generation_shader);
         IG_ASSERT(shader_set.RayGenerationShader != nullptr, "Expected ray generation shader to be valid");
         auto callback = (Callback*)shader_set.RayGenerationShader;
-        const int ret = callback(&driver_settings, current_iteration, id, size, xmin, ymin, xmax, ymax);
+        const int ret = callback(&driver_settings, (int)current_iteration, id, size, xmin, ymin, xmax, ymax);
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::RayGeneration, {});
@@ -570,7 +573,7 @@ struct Interface {
         if (shader_set.CallbackShaders[type] != nullptr) {
             using Callback = decltype(ig_callback_shader);
             auto callback  = (Callback*)shader_set.CallbackShaders[type];
-            callback(&driver_settings, current_iteration);
+            callback(&driver_settings, (int)current_iteration);
         }
     }
 
@@ -726,7 +729,7 @@ struct Interface {
 
 static std::unique_ptr<Interface> sInterface;
 
-void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRenderSettings& settings, const IG::ParameterSet* parameterSet, IG::uint32 iter)
+void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRenderSettings& settings, const IG::ParameterSet* parameterSet, size_t iter)
 {
     sInterface->shader_set         = shaderSet;
     sInterface->current_iteration  = iter;
@@ -747,6 +750,9 @@ void glue_setup(const DriverSetupSettings& settings)
 {
     IG_ASSERT(sInterface == nullptr, "Only a single instance allowed!");
     sInterface = std::make_unique<Interface>(settings);
+
+    // Make sure the functions exposed are available in the linking process
+    anydsl_link(settings.driver_filename);
 }
 
 void glue_shutdown()
@@ -759,7 +765,7 @@ void glue_resizeFramebuffer(size_t width, size_t height)
     sInterface->resizeFramebuffer(width, height);
 }
 
-const float* glue_getFramebuffer(int aov)
+const float* glue_getFramebuffer(size_t aov)
 {
     if (aov <= 0 || (size_t)aov > sInterface->aovs.size())
         return sInterface->host_pixels.data();
@@ -777,16 +783,16 @@ const IG::Statistics* glue_getStatistics()
     return sInterface->getFullStats();
 }
 
-void glue_tonemap(int device, uint32_t* out_pixels, const IG::TonemapSettings& driver_settings)
+void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings& driver_settings)
 {
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Tonemap, {});
 
 #ifdef DEVICE_GPU
 #if defined(DEVICE_NVVM)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, device);
+    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
 #elif defined(DEVICE_AMD)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, device);
+    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
 #endif
     float* in_pixels            = sInterface->getAOVImage(dev_id, driver_settings.AOV);
     uint32_t* device_out_pixels = sInterface->getTonemapImage(dev_id);
@@ -802,10 +808,10 @@ void glue_tonemap(int device, uint32_t* out_pixels, const IG::TonemapSettings& d
     settings.exposure_factor = driver_settings.ExposureFactor;
     settings.exposure_offset = driver_settings.ExposureOffset;
 
-    ig_utility_tonemap(device, in_pixels, device_out_pixels, sInterface->film_width, sInterface->film_height, &settings);
+    ig_utility_tonemap((int)device, in_pixels, device_out_pixels, (int)sInterface->film_width, (int)sInterface->film_height, &settings);
 
 #ifdef DEVICE_GPU
-    int size = sInterface->film_width * sInterface->film_height;
+    size_t size = sInterface->film_width * sInterface->film_height;
     anydsl_copy(dev_id, device_out_pixels, 0, 0 /* Host */, out_pixels, 0, sizeof(uint32_t) * size);
 #endif
 
@@ -813,16 +819,16 @@ void glue_tonemap(int device, uint32_t* out_pixels, const IG::TonemapSettings& d
         sInterface->getThreadData()->stats.endShaderLaunch(IG::ShaderType::Tonemap, {});
 }
 
-void glue_imageinfo(int device, const IG::ImageInfoSettings& driver_settings, IG::ImageInfoOutput& driver_output)
+void glue_imageinfo(size_t device, const IG::ImageInfoSettings& driver_settings, IG::ImageInfoOutput& driver_output)
 {
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::ImageInfo, {});
 
 #ifdef DEVICE_GPU
 #if defined(DEVICE_NVVM)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, device);
+    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
 #elif defined(DEVICE_AMD)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, device);
+    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
 #endif
     float* in_pixels = sInterface->getAOVImage(dev_id, driver_settings.AOV);
 #else
@@ -835,7 +841,7 @@ void glue_imageinfo(int device, const IG::ImageInfoSettings& driver_settings, IG
     settings.bins      = driver_settings.Bins;
 
     ImageInfoOutput output;
-    ig_utility_imageinfo(device, in_pixels, sInterface->film_width, sInterface->film_height, &settings, &output);
+    ig_utility_imageinfo((int)device, in_pixels, (int)sInterface->film_width, (int)sInterface->film_height, &settings, &output);
 
     driver_output.Min     = output.min;
     driver_output.Max     = output.max;
@@ -883,6 +889,39 @@ inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t 
     secondary.size = 0;
 }
 
+// Will be added from the api_collector
+extern const char* ig_api[];
+extern const char* ig_api_paths[];
+
+// TODO: Really fixed at compile time?
+#ifdef IG_DEBUG
+constexpr uint32_t OPT_LEVEL = 0;
+#else
+constexpr uint32_t OPT_LEVEL = 3;
+#endif
+
+void* glue_compileSource(const char* src, const char* function, const char* dump_file)
+{
+    std::stringstream source;
+
+    for (int i = 0; ig_api[i]; ++i)
+        source << ig_api[i];
+
+    source << std::endl;
+    source << src;
+
+    const std::string source_str = source.str();
+    if (dump_file != nullptr) {
+        std::ofstream(dump_file, std::ios::out) << source_str;
+    }
+
+    int ret = anydsl_compile(source_str.c_str(), (uint32_t)source_str.size(), OPT_LEVEL);
+    if (ret < 0)
+        return nullptr;
+
+    return anydsl_lookup_function(ret, function);
+}
+
 extern "C" {
 IG_EXPORT DriverInterface ig_get_interface()
 {
@@ -895,7 +934,7 @@ IG_EXPORT DriverInterface ig_get_interface()
 #if defined(DEVICE_DEFAULT)
     interface.Target = IG::Target::GENERIC;
 #elif defined(DEVICE_AVX)
-    interface.Target            = IG::Target::AVX;
+    interface.Target = IG::Target::AVX;
 #elif defined(DEVICE_AVX2)
     interface.Target = IG::Target::AVX2;
 #elif defined(DEVICE_AVX512)
@@ -921,55 +960,56 @@ IG_EXPORT DriverInterface ig_get_interface()
     interface.GetStatisticsFunction     = glue_getStatistics;
     interface.TonemapFunction           = glue_tonemap;
     interface.ImageInfoFunction         = glue_imageinfo;
+    interface.CompileSourceFunction     = glue_compileSource;
 
     return interface;
 }
 
-void ignis_get_film_data(int dev, float** pixels, int* width, int* height)
+IG_EXPORT void ignis_get_film_data(int dev, float** pixels, int* width, int* height)
 {
     *pixels = sInterface->getFilmImage(dev);
-    *width  = sInterface->film_width;
-    *height = sInterface->film_height;
+    *width  = (int)sInterface->film_width;
+    *height = (int)sInterface->film_height;
 }
 
-void ignis_get_aov_image(int dev, int id, float** aov_pixels)
+IG_EXPORT void ignis_get_aov_image(int dev, int id, float** aov_pixels)
 {
     *aov_pixels = sInterface->getAOVImage(dev, id);
 }
 
-void ignis_get_work_info(int* width, int* height)
+IG_EXPORT void ignis_get_work_info(int* width, int* height)
 {
     if (sInterface->current_settings.work_width > 0 && sInterface->current_settings.work_height > 0) {
-        *width  = sInterface->current_settings.work_width;
-        *height = sInterface->current_settings.work_height;
+        *width  = (int)sInterface->current_settings.work_width;
+        *height = (int)sInterface->current_settings.work_height;
     } else {
-        *width  = sInterface->film_width;
-        *height = sInterface->film_height;
+        *width  = (int)sInterface->film_width;
+        *height = (int)sInterface->film_height;
     }
 }
 
-void ignis_load_bvh2_ent(int dev, Node2** nodes, EntityLeaf1** objs)
+IG_EXPORT void ignis_load_bvh2_ent(int dev, Node2** nodes, EntityLeaf1** objs)
 {
     auto& bvh = sInterface->loadEntityBVH<Bvh2Ent, Node2>(dev);
     *nodes    = const_cast<Node2*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
-void ignis_load_bvh4_ent(int dev, Node4** nodes, EntityLeaf1** objs)
+IG_EXPORT void ignis_load_bvh4_ent(int dev, Node4** nodes, EntityLeaf1** objs)
 {
     auto& bvh = sInterface->loadEntityBVH<Bvh4Ent, Node4>(dev);
     *nodes    = const_cast<Node4*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
-void ignis_load_bvh8_ent(int dev, Node8** nodes, EntityLeaf1** objs)
+IG_EXPORT void ignis_load_bvh8_ent(int dev, Node8** nodes, EntityLeaf1** objs)
 {
     auto& bvh = sInterface->loadEntityBVH<Bvh8Ent, Node8>(dev);
     *nodes    = const_cast<Node8*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
-void ignis_load_scene(int dev, SceneDatabase* dtb)
+IG_EXPORT void ignis_load_scene(int dev, SceneDatabase* dtb)
 {
     auto assign = [&](const DynTableProxy& tbl) {
         DynTable devtbl;
@@ -987,208 +1027,208 @@ void ignis_load_scene(int dev, SceneDatabase* dtb)
     dtb->bvhs     = assign(proxy.BVHs);
 }
 
-void ignis_load_scene_info(int dev, SceneInfo* info)
+IG_EXPORT void ignis_load_scene_info(int dev, SceneInfo* info)
 {
     *info = sInterface->loadSceneInfo(dev);
 }
 
-void ignis_load_rays(int dev, StreamRay** list)
+IG_EXPORT void ignis_load_rays(int dev, StreamRay** list)
 {
     *list = const_cast<StreamRay*>(sInterface->loadRayList(dev).data());
 }
 
-void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height)
+IG_EXPORT void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height)
 {
     auto& img = sInterface->loadImage(dev, file);
     *pixels   = const_cast<float*>(std::get<0>(img).data());
-    *width    = std::get<1>(img);
-    *height   = std::get<2>(img);
+    *width    = (int)std::get<1>(img);
+    *height   = (int)std::get<2>(img);
 }
 
-void ignis_load_buffer(int32_t dev, const char* file, uint8_t** data, int32_t* size)
+IG_EXPORT void ignis_load_buffer(int32_t dev, const char* file, uint8_t** data, int32_t* size)
 {
     auto& img = sInterface->loadBuffer(dev, file);
     *data     = const_cast<uint8_t*>(std::get<0>(img).data());
-    *size     = std::get<1>(img);
+    *size     = (int)std::get<1>(img);
 }
 
-void ignis_request_buffer(int32_t dev, const char* name, uint8_t** data, int size, int flags)
+IG_EXPORT void ignis_request_buffer(int32_t dev, const char* name, uint8_t** data, int size, int flags)
 {
     auto& buffer = sInterface->requestBuffer(dev, name, size, flags);
     *data        = const_cast<uint8_t*>(std::get<0>(buffer).data());
 }
 
-void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)
+IG_EXPORT void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)
 {
     auto& array = sInterface->getCPUPrimaryStream(size);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_cpu_get_primary_stream_const(PrimaryStream* primary)
+IG_EXPORT void ignis_cpu_get_primary_stream_const(PrimaryStream* primary)
 {
     auto& array = sInterface->getCPUPrimaryStream();
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_cpu_get_secondary_stream(SecondaryStream* secondary, int size)
+IG_EXPORT void ignis_cpu_get_secondary_stream(SecondaryStream* secondary, int size)
 {
     auto& array = sInterface->getCPUSecondaryStream(size);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_cpu_get_secondary_stream_const(SecondaryStream* secondary)
+IG_EXPORT void ignis_cpu_get_secondary_stream_const(SecondaryStream* secondary)
 {
     auto& array = sInterface->getCPUSecondaryStream();
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_get_tmp_buffer(int dev, int** buf)
+IG_EXPORT void ignis_gpu_get_tmp_buffer(int dev, int** buf)
 {
     *buf = sInterface->getGPUTemporaryBuffer(dev).data();
 }
 
-void ignis_gpu_get_ray_begin_end_buffers(int dev, int** ray_begins, int** ray_ends)
+IG_EXPORT void ignis_gpu_get_ray_begin_end_buffers(int dev, int** ray_begins, int** ray_ends)
 {
     auto tuple  = sInterface->getGPURayBeginEndBuffers(dev);
     *ray_begins = std::get<0>(tuple).data();
     *ray_ends   = std::get<1>(tuple).data();
 }
 
-void ignis_gpu_get_first_primary_stream(int dev, PrimaryStream* primary, int size)
+IG_EXPORT void ignis_gpu_get_first_primary_stream(int dev, PrimaryStream* primary, int size)
 {
     auto& array = sInterface->getGPUPrimaryStream(dev, 0, size);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_gpu_get_first_primary_stream_const(int dev, PrimaryStream* primary)
+IG_EXPORT void ignis_gpu_get_first_primary_stream_const(int dev, PrimaryStream* primary)
 {
     auto& array = sInterface->getGPUPrimaryStream(dev, 0);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_gpu_get_second_primary_stream(int dev, PrimaryStream* primary, int size)
+IG_EXPORT void ignis_gpu_get_second_primary_stream(int dev, PrimaryStream* primary, int size)
 {
     auto& array = sInterface->getGPUPrimaryStream(dev, 1, size);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_gpu_get_second_primary_stream_const(int dev, PrimaryStream* primary)
+IG_EXPORT void ignis_gpu_get_second_primary_stream_const(int dev, PrimaryStream* primary)
 {
     auto& array = sInterface->getGPUPrimaryStream(dev, 1);
     get_primary_stream(*primary, array.data(), array.size() / PrimaryStreamSize, PrimaryStreamSize);
 }
 
-void ignis_gpu_get_first_secondary_stream(int dev, SecondaryStream* secondary, int size)
+IG_EXPORT void ignis_gpu_get_first_secondary_stream(int dev, SecondaryStream* secondary, int size)
 {
     auto& array = sInterface->getGPUSecondaryStream(dev, 0, size);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_get_first_secondary_stream_const(int dev, SecondaryStream* secondary)
+IG_EXPORT void ignis_gpu_get_first_secondary_stream_const(int dev, SecondaryStream* secondary)
 {
     auto& array = sInterface->getGPUSecondaryStream(dev, 0);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_get_second_secondary_stream(int dev, SecondaryStream* secondary, int size)
+IG_EXPORT void ignis_gpu_get_second_secondary_stream(int dev, SecondaryStream* secondary, int size)
 {
     auto& array = sInterface->getGPUSecondaryStream(dev, 1, size);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_get_second_secondary_stream_const(int dev, SecondaryStream* secondary)
+IG_EXPORT void ignis_gpu_get_second_secondary_stream_const(int dev, SecondaryStream* secondary)
 {
     auto& array = sInterface->getGPUSecondaryStream(dev, 1);
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
-void ignis_gpu_swap_primary_streams(int dev)
+IG_EXPORT void ignis_gpu_swap_primary_streams(int dev)
 {
     sInterface->swapGPUPrimaryStreams(dev);
 }
 
-void ignis_gpu_swap_secondary_streams(int dev)
+IG_EXPORT void ignis_gpu_swap_secondary_streams(int dev)
 {
     sInterface->swapGPUSecondaryStreams(dev);
 }
 
-int ignis_handle_ray_generation(int* id, int size, int xmin, int ymin, int xmax, int ymax)
+IG_EXPORT int ignis_handle_ray_generation(int* id, int size, int xmin, int ymin, int xmax, int ymax)
 {
     return sInterface->runRayGenerationShader(id, size, xmin, ymin, xmax, ymax);
 }
 
-void ignis_handle_miss_shader(int first, int last)
+IG_EXPORT void ignis_handle_miss_shader(int first, int last)
 {
     sInterface->runMissShader(first, last);
 }
 
-void ignis_handle_hit_shader(int entity_id, int first, int last)
+IG_EXPORT void ignis_handle_hit_shader(int entity_id, int first, int last)
 {
     sInterface->runHitShader(entity_id, first, last);
 }
 
-void ignis_handle_advanced_shadow_shader(int first, int last, bool is_hit)
+IG_EXPORT void ignis_handle_advanced_shadow_shader(int first, int last, bool is_hit)
 {
     sInterface->runAdvancedShadowShader(first, last, is_hit);
 }
 
-void ignis_handle_callback_shader(int type)
+IG_EXPORT void ignis_handle_callback_shader(int type)
 {
     sInterface->runCallbackShader(type);
 }
 
-bool ignis_use_advanced_shadow_handling()
+IG_EXPORT bool ignis_use_advanced_shadow_handling()
 {
     return sInterface->useAdvancedShadowHandling();
 }
 
-bool ignis_is_framebuffer_locked()
+IG_EXPORT bool ignis_is_framebuffer_locked()
 {
     return sInterface->isFramebufferLocked();
 }
 
-int ignis_get_parameter_i32(const char* name, int def)
+IG_EXPORT int ignis_get_parameter_i32(const char* name, int def)
 {
     return sInterface->getParameterInt(name, def);
 }
 
-float ignis_get_parameter_f32(const char* name, float def)
+IG_EXPORT float ignis_get_parameter_f32(const char* name, float def)
 {
     return sInterface->getParameterFloat(name, def);
 }
 
-void ignis_get_parameter_vector(const char* name, float defX, float defY, float defZ, float* x, float* y, float* z)
+IG_EXPORT void ignis_get_parameter_vector(const char* name, float defX, float defY, float defZ, float* x, float* y, float* z)
 {
     sInterface->getParameterVector(name, defX, defY, defZ, *x, *y, *z);
 }
 
-void ignis_get_parameter_color(const char* name, float defR, float defG, float defB, float defA, float* r, float* g, float* b, float* a)
+IG_EXPORT void ignis_get_parameter_color(const char* name, float defR, float defG, float defB, float defA, float* r, float* g, float* b, float* a)
 {
     sInterface->getParameterColor(name, defR, defG, defB, defA, *r, *g, *b, *a);
 }
 
-void ignis_present(int dev)
+IG_EXPORT void ignis_present(int dev)
 {
     if (dev != 0)
         sInterface->present(dev);
 }
 
-void ig_host_print(const char* str)
+IG_EXPORT void ig_host_print(const char* str)
 {
     std::cout << str << std::flush;
 }
 
-void ig_host_print_i(int64_t number)
+IG_EXPORT void ig_host_print_i(int64_t number)
 {
     std::cout << number << std::flush;
 }
 
-void ig_host_print_f(double number)
+IG_EXPORT void ig_host_print_f(double number)
 {
     std::cout << number << std::flush;
 }
 
-void ig_host_print_p(const char* ptr)
+IG_EXPORT void ig_host_print_p(const char* ptr)
 {
     std::cout << std::internal << std::hex << std::setw(sizeof(ptr) * 2 + 2) << std::setfill('0')
               << (const void*)ptr
@@ -1196,9 +1236,9 @@ void ig_host_print_p(const char* ptr)
               << std::flush;
 }
 
-int64_t clock_us()
+IG_EXPORT int64_t clock_us()
 {
-#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+#if !defined(IG_CC_MSC) && (defined(__x86_64__) || defined(__amd64__) || defined(_M_X64))
 #define CPU_FREQ 4e9
     __asm__ __volatile__("xorl %%eax,%%eax \n    cpuid" ::
                              : "%rax", "%rbx", "%rcx", "%rdx");

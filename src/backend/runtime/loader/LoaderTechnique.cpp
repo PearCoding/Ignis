@@ -282,10 +282,9 @@ static struct TechniqueEntry {
 
 static TechniqueEntry* getTechniqueEntry(const std::string& name)
 {
-    std::string tmp = name;
-    std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+    const std::string lower_name = to_lowercase(name);
     for (size_t i = 0; _generators[i].HeaderLoader; ++i) {
-        if (_generators[i].Name == tmp)
+        if (_generators[i].Name == lower_name)
             return &_generators[i];
     }
     IG_LOG(L_ERROR) << "No technique type '" << name << "' available" << std::endl;

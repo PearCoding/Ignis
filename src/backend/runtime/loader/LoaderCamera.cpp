@@ -21,7 +21,7 @@ static CameraOrientation camera_perspective_orientation(const std::string&, cons
         float fov            = camera ? camera->property("fov").getNumber(60) : 60;
         const auto sceneBBox = ctx.Environment.SceneBBox;
         // Try to setup a view over the whole scene
-        const float aspect_ratio = ctx.FilmWidth / ctx.FilmHeight;
+        const float aspect_ratio = ctx.FilmWidth / static_cast<float>(ctx.FilmHeight);
         const float a            = sceneBBox.diameter().x() / 2;
         const float b            = sceneBBox.diameter().y() / (2 * aspect_ratio);
         const float s            = std::sin(fov * Deg2Rad / 2);
@@ -162,10 +162,9 @@ static struct CameraEntry {
 
 static const CameraEntry* getCameraEntry(const std::string& name)
 {
-    std::string tmp = name;
-    std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+    const std::string lower_name = to_lowercase(name);
     for (size_t i = 0; _generators[i].Loader; ++i) {
-        if (_generators[i].Name == tmp)
+        if (_generators[i].Name == lower_name)
             return &_generators[i];
     }
     IG_LOG(L_ERROR) << "No camera type '" << name << "' available" << std::endl;

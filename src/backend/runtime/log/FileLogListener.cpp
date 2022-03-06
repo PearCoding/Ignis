@@ -41,7 +41,7 @@ void FileLogListener::startEntry(LogLevel level)
             << Logger::levelString(level) << "] ";
 }
 
-void FileLogListener::writeEntry(int c)
+void FileLogListener::writeEntry(char c)
 {
     mStream.put(c);
 }

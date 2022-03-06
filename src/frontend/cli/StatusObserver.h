@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "IG_Config.h"
 
@@ -77,10 +77,10 @@ public:
                 }
 
                 if (mTargetSamples != 0)
-                    drawProgressbar(currentSamples / double(mTargetSamples));
+                    drawProgressbar(currentSamples / float(mTargetSamples));
             }
             if (mTargetSamples != 0) {
-                const double percentage = 100 * (currentSamples / double(mTargetSamples));
+                const float percentage = 100 * (currentSamples / float(mTargetSamples));
                 std::cout << std::setw(PERC_OUTPUT_FIELD_SIZE) << std::setprecision(4) << std::fixed << percentage << "% | ";
             }
 
@@ -88,9 +88,9 @@ public:
                       << " | RT: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count());
 
             if (mTargetSamples != 0) {
-                const double percentage = 100 * (currentSamples / double(mTargetSamples));
-                const float etaFactor   = percentage > FltEps ? (100 - percentage) / percentage : 100.0f /* Just something high*/;
-                std::cout << " ETA: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count() * etaFactor);
+                const float percentage = 100 * (currentSamples / float(mTargetSamples));
+                const float etaFactor  = percentage > FltEps ? (100 - percentage) / percentage : 100.0f /* Just something high*/;
+                std::cout << " ETA: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(static_cast<uint64>(fullDuration.count() * etaFactor));
             }
 
             if (!mBeautify)
@@ -108,12 +108,21 @@ private:
         constexpr size_t LENGTH = 20;
         size_t full_count       = (size_t)std::floor(LENGTH * perc);
 
+#ifdef IG_CC_MSC
+        std::cout << "{";
+        for (size_t i = 0; i < full_count; ++i)
+            std::cout << "#";
+        for (size_t i = full_count; i < LENGTH; ++i)
+            std::cout << " ";
+        std::cout << "}  ";
+#else
         std::cout << "\u2563";
         for (size_t i = 0; i < full_count; ++i)
             std::cout << "\u2588";
         for (size_t i = full_count; i < LENGTH; ++i)
             std::cout << "\u2591";
         std::cout << "\u2560 ";
+#endif
     }
 
     const bool mBeautify;

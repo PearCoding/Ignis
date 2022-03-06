@@ -29,7 +29,7 @@ SkyModel::SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, floa
 
                 float cosGamma = ct * sun_ce + st * sun_se * std::cos(azimuth - sunEA.Azimuth);
                 float gamma    = std::acos(std::min(1.0f, std::max(-1.0f, cosGamma)));
-                float radiance = arhosek_tristim_skymodel_radiance(state, theta, gamma, k);
+                float radiance = (float)arhosek_tristim_skymodel_radiance(state, theta, gamma, (int)k);
 
                 mData[y * mAzimuthCount * 4 + x * 4 + k] = std::max(0.0f, radiance);
             }

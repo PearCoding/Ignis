@@ -2,7 +2,11 @@
 #include <iostream>
 
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
 #include <x86intrin.h>
+#endif
 #endif
 
 #include "generated_test_interface.h"

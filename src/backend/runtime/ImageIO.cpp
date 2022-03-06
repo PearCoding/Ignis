@@ -1,12 +1,14 @@
 #include "ImageIO.h"
 #include "Image.h"
 
+IG_BEGIN_IGNORE_WARNINGS
 // We already make use of zlib, so use it here aswell
-#include "zlib.h"
+#include <zlib.h>
 #define TINYEXR_USE_THREAD (1)
 #define TINYEXR_USE_MINIZ (0)
 #define TINYEXR_IMPLEMENTATION
-#include "tinyexr.h"
+#include <tinyexr.h>
+IG_END_IGNORE_WARNINGS
 
 namespace IG {
 
@@ -27,10 +29,10 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
     EXRImage image;
     InitEXRImage(&image);
 
-    image.num_channels = layer_ptrs.size();
+    image.num_channels = (int)layer_ptrs.size();
     image.images       = (unsigned char**)layer_ptrs.data();
-    image.width        = width;
-    image.height       = height;
+    image.width        = (int)width;
+    image.height       = (int)height;
 
     header.num_channels = image.num_channels;
     header.channels     = new EXRChannelInfo[header.num_channels];

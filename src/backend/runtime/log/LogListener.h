@@ -10,6 +10,6 @@ public:
     virtual ~LogListener() = default;
 
     virtual void startEntry(LogLevel level) = 0;
-    virtual void writeEntry(int c)          = 0;
+    virtual void writeEntry(char c)         = 0;
 };
 } // namespace IG

@@ -234,7 +234,7 @@ static void exportMeshPrimitive(const std::filesystem::path& path, const tinyglt
             out.write(reinterpret_cast<const char*>(&i2), sizeof(i2));
         }
     } else {
-        for (size_t i = 0; i < triangleCount; ++i) {
+        for (int i = 0; i < static_cast<int>(triangleCount); ++i) {
             int i0      = 3 * i + 0;
             int i1      = 3 * i + 1;
             int i2      = 3 * i + 2;
@@ -276,13 +276,13 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
         transform *= Eigen::Map<Eigen::Matrix4d>(const_cast<double*>(node.matrix.data())).cast<float>();
 
     if (node.translation.size() == 3)
-        transform.translate(Vector3f(node.translation[0], node.translation[1], node.translation[2]));
+        transform.translate(Vector3f((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]));
 
     if (node.rotation.size() == 4)
-        transform.rotate(Quaternionf(node.rotation[3], node.rotation[0], node.rotation[1], node.rotation[2]));
+        transform.rotate(Quaternionf((float)node.rotation[3], (float)node.rotation[0], (float)node.rotation[1], (float)node.rotation[2]));
 
     if (node.scale.size() == 3)
-        transform.scale(Vector3f(node.scale[0], node.scale[1], node.scale[2]));
+        transform.scale(Vector3f((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]));
 
     if (node.mesh >= 0) {
         size_t primCount           = 0;
@@ -316,16 +316,16 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
                 if (material->extensions.count("KHR_materials_emissive_strength")) {
                     const auto& ext = material->extensions.at("KHR_materials_emissive_strength");
                     if (ext.Has("emissiveStrength") && ext.Get("emissiveStrength").IsNumber()) {
-                        strength = ext.Get("emissiveStrength").GetNumberAsDouble();
+                        strength = static_cast<float>(ext.Get("emissiveStrength").GetNumberAsDouble());
                     }
                 }
 
                 if (material->emissiveTexture.index >= 0) {
                     const tinygltf::Texture& tex = model.textures[material->emissiveTexture.index];
                     light->setProperty("radiance", Property::fromString(getTextureName(tex)));
-                    light->setProperty("radiance_scale", Property::fromVector3(Vector3f(material->emissiveFactor[0], material->emissiveFactor[1], material->emissiveFactor[2]) * strength));
+                    light->setProperty("radiance_scale", Property::fromVector3(Vector3f((float)material->emissiveFactor[0], (float)material->emissiveFactor[1], (float)material->emissiveFactor[2]) * strength));
                 } else {
-                    light->setProperty("radiance", Property::fromVector3(Vector3f(material->emissiveFactor[0], material->emissiveFactor[1], material->emissiveFactor[2]) * strength));
+                    light->setProperty("radiance", Property::fromVector3(Vector3f((float)material->emissiveFactor[0], (float)material->emissiveFactor[1], (float)material->emissiveFactor[2]) * strength));
                 }
 
                 scene.addLight("_light_" + entity_name, light);
@@ -351,16 +351,16 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
             if (camera.type == "orthographic") {
                 auto obj = std::make_shared<Object>(OT_CAMERA, "orthographic", baseDir);
                 obj->setProperty("transform", Property::fromTransform(cameraTransform));
-                obj->setProperty("near_clip", Property::fromNumber(camera.orthographic.znear));
-                obj->setProperty("far_clip", Property::fromNumber(camera.orthographic.zfar));
+                obj->setProperty("near_clip", Property::fromNumber((float)camera.orthographic.znear));
+                obj->setProperty("far_clip", Property::fromNumber((float)camera.orthographic.zfar));
                 // TODO: xmag, ymag
                 scene.setCamera(obj);
             } else {
                 auto obj = std::make_shared<Object>(OT_CAMERA, "perspective", baseDir);
                 obj->setProperty("transform", Property::fromTransform(cameraTransform));
-                obj->setProperty("fov", Property::fromNumber(camera.perspective.yfov));
-                obj->setProperty("near_clip", Property::fromNumber(camera.perspective.znear));
-                obj->setProperty("far_clip", Property::fromNumber(camera.perspective.zfar));
+                obj->setProperty("fov", Property::fromNumber((float)camera.perspective.yfov));
+                obj->setProperty("near_clip", Property::fromNumber((float)camera.perspective.znear));
+                obj->setProperty("far_clip", Property::fromNumber((float)camera.perspective.zfar));
                 // TODO: aspect ratio
                 scene.setCamera(obj);
             }
@@ -377,7 +377,7 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
 
                 Vector3f color = Vector3f::Ones() * light.intensity;
                 if (light.color.size() == 3)
-                    color = Vector3f(light.color[0], light.color[1], light.color[2]) * light.intensity;
+                    color = Vector3f((float)light.color[0], (float)light.color[1], (float)light.color[2]) * (float)light.intensity;
 
                 std::string type;
                 if (light.type == "point" || light.type == "spot") {
@@ -406,7 +406,7 @@ inline int getTextureIndex(const tinygltf::Value& val, const std::string& name)
     if (val.Has(name) && val.Get(name).IsObject()) {
         const auto& info = val.Get(name);
         if (info.Has("index") && info.Get("index").IsInt())
-            return info.Get("index").GetNumberAsDouble();
+            return info.Get("index").GetNumberAsInt();
     }
     return -1;
 }
@@ -518,27 +518,27 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
         if (mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
             const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
             bsdf->setProperty("base_color", Property::fromString(getTextureName(tex)));
-            bsdf->setProperty("base_color_scale", Property::fromVector3(Vector3f(mat.pbrMetallicRoughness.baseColorFactor[0], mat.pbrMetallicRoughness.baseColorFactor[1], mat.pbrMetallicRoughness.baseColorFactor[2])));
+            bsdf->setProperty("base_color_scale", Property::fromVector3(Vector3f((float)mat.pbrMetallicRoughness.baseColorFactor[0], (float)mat.pbrMetallicRoughness.baseColorFactor[1], (float)mat.pbrMetallicRoughness.baseColorFactor[2])));
         } else {
-            bsdf->setProperty("base_color", Property::fromVector3(Vector3f(mat.pbrMetallicRoughness.baseColorFactor[0], mat.pbrMetallicRoughness.baseColorFactor[1], mat.pbrMetallicRoughness.baseColorFactor[2])));
+            bsdf->setProperty("base_color", Property::fromVector3(Vector3f((float)mat.pbrMetallicRoughness.baseColorFactor[0], (float)mat.pbrMetallicRoughness.baseColorFactor[1], (float)mat.pbrMetallicRoughness.baseColorFactor[2])));
         }
 
         if (mat.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0) {
             const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.metallicRoughnessTexture.index];
             bsdf->setProperty("metallic", Property::fromString(getTextureName(tex) + ".b"));
             bsdf->setProperty("roughness", Property::fromString(getTextureName(tex) + ".g"));
-            bsdf->setProperty("metallic_scale", Property::fromNumber(mat.pbrMetallicRoughness.metallicFactor));
-            bsdf->setProperty("roughness_scale", Property::fromNumber(mat.pbrMetallicRoughness.roughnessFactor));
+            bsdf->setProperty("metallic_scale", Property::fromNumber((float)mat.pbrMetallicRoughness.metallicFactor));
+            bsdf->setProperty("roughness_scale", Property::fromNumber((float)mat.pbrMetallicRoughness.roughnessFactor));
         } else {
-            bsdf->setProperty("metallic", Property::fromNumber(mat.pbrMetallicRoughness.metallicFactor));
-            bsdf->setProperty("roughness", Property::fromNumber(mat.pbrMetallicRoughness.roughnessFactor));
+            bsdf->setProperty("metallic", Property::fromNumber((float)mat.pbrMetallicRoughness.metallicFactor));
+            bsdf->setProperty("roughness", Property::fromNumber((float)mat.pbrMetallicRoughness.roughnessFactor));
         }
 
         // Extensions
         if (mat.extensions.count("KHR_materials_ior") > 0) {
             const auto& ext = mat.extensions.at("KHR_materials_ior");
             if (ext.Has("ior") && ext.Get("ior").IsNumber()) {
-                bsdf->setProperty("ior", Property::fromNumber(ext.Get("ior").GetNumberAsDouble()));
+                bsdf->setProperty("ior", Property::fromNumber((float)ext.Get("ior").GetNumberAsDouble()));
             }
         }
 
@@ -548,7 +548,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
             float factor = 0;
             if (ext.Has("sheenColorFactor") && ext.Get("sheenColorFactor").IsNumber())
-                factor = ext.Get("sheenColorFactor").GetNumberAsInt();
+                factor = static_cast<float>(ext.Get("sheenColorFactor").GetNumberAsDouble());
 
             // No support for colored sheen
             if (texID >= 0) {
@@ -567,7 +567,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
             float factor = 0;
             if (ext.Has("transmissionFactor") && ext.Get("transmissionFactor").IsNumber())
-                factor = ext.Get("transmissionFactor").GetNumberAsDouble();
+                factor = static_cast<float>(ext.Get("transmissionFactor").GetNumberAsDouble());
 
             if (texID >= 0) {
                 const tinygltf::Texture& tex = model.textures[texID];
@@ -584,7 +584,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
                 // TODO: No support for textures
                 float thickness = 0;
                 if (ext2.Has("thicknessFactor") && ext2.Get("thicknessFactor").IsNumber())
-                    thickness = ext2.Get("thicknessFactor").GetNumberAsDouble();
+                    thickness = static_cast<float>(ext2.Get("thicknessFactor").GetNumberAsDouble());
                 is_thin = thickness <= FltEps;
             }
 
@@ -598,7 +598,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
             float factor = 0;
             if (ext.Has("translucencyFactor") && ext.Get("translucencyFactor").IsNumber())
-                factor = ext.Get("translucencyFactor").GetNumberAsDouble();
+                factor = static_cast<float>(ext.Get("translucencyFactor").GetNumberAsDouble());
 
             if (texID >= 0) {
                 const tinygltf::Texture& tex = model.textures[texID];
@@ -616,7 +616,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
             float factor = 0;
             if (ext.Has("clearcoatFactor") && ext.Get("clearcoatFactor").IsNumber())
-                factor = ext.Get("clearcoatFactor").GetNumberAsDouble();
+                factor = static_cast<float>(ext.Get("clearcoatFactor").GetNumberAsDouble());
 
             if (texID >= 0) {
                 const tinygltf::Texture& tex = model.textures[texID];
@@ -629,7 +629,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             const int rTexID = getTextureIndex(ext, "clearcoatRoughnessTexture");
             float rfactor    = 0;
             if (ext.Has("clearcoatRoughnessFactor") && ext.Get("clearcoatRoughnessFactor").IsNumber())
-                rfactor = ext.Get("clearcoatRoughnessFactor").GetNumberAsDouble();
+                rfactor = static_cast<float>(ext.Get("clearcoatRoughnessFactor").GetNumberAsDouble());
 
             if (rTexID >= 0) {
                 const tinygltf::Texture& tex = model.textures[rTexID];
@@ -656,14 +656,14 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             bsdf->setProperty("bsdf", Property::fromString(name + "_blend_inner"));
             bsdf->setProperty("inverted", Property::fromBool(true));
 
-            float factor = mat.pbrMetallicRoughness.baseColorFactor[3];
+            float factor = static_cast<float>(mat.pbrMetallicRoughness.baseColorFactor[3]);
             if (factor > 0 && mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
                 const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
                 bsdf->setProperty("weight", Property::fromString(getTextureName(tex) + ".a"));
-                bsdf->setProperty("cutoff", Property::fromNumber(mat.alphaCutoff / factor));
+                bsdf->setProperty("cutoff", Property::fromNumber((float)mat.alphaCutoff / factor));
             } else {
                 bsdf->setProperty("weight", Property::fromNumber(factor));
-                bsdf->setProperty("cutoff", Property::fromNumber(mat.alphaCutoff));
+                bsdf->setProperty("cutoff", Property::fromNumber((float)mat.alphaCutoff));
             }
         } else if (mat.alphaMode == "BLEND") {
             scene.addBSDF(name + "_blend_inner", bsdf);
@@ -672,7 +672,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             bsdf->setProperty("bsdf", Property::fromString(name + "_blend_inner"));
             bsdf->setProperty("inverted", Property::fromBool(true));
 
-            float factor = mat.pbrMetallicRoughness.baseColorFactor[3];
+            float factor = static_cast<float>(mat.pbrMetallicRoughness.baseColorFactor[3]);
             if (factor > 0 && mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
                 const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
                 bsdf->setProperty("weight", Property::fromString(getTextureName(tex) + ".a"));

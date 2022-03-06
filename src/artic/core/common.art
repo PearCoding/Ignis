@@ -183,3 +183,7 @@ fn @safe_unroll(body: fn(i32) -> ()) {
 }
 
 #[import(cc = "device", name = "llvm.fma.f32")] fn fmaf(f32, f32, f32) -> f32;
+
+// The following stuff is only for development purposes and should never ever be in production code
+#[import(cc = "device", name = "llvm.debugtrap")] fn ig_trap() -> ();
+#[import(cc = "device", name = "llvm.ubsantrap")] fn ig_trap_annotated(u8) -> ();

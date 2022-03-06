@@ -2,7 +2,9 @@
 #include "Image.h"
 #include "serialization/FileSerializer.h"
 
+IG_BEGIN_IGNORE_WARNINGS
 #include <tbb/parallel_for.h>
+IG_END_IGNORE_WARNINGS
 
 namespace IG {
 void CDF::computeForImage(const std::filesystem::path& in, const std::filesystem::path& out,

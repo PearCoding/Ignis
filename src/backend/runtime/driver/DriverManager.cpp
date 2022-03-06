@@ -25,8 +25,8 @@ inline static void split_env(const std::string& str, path_set& data)
 {
     constexpr char _IG_ENV_DELIMITER = ':';
 
-    auto start = 0U;
-    auto end   = str.find(_IG_ENV_DELIMITER);
+    size_t start = 0;
+    size_t end   = str.find(_IG_ENV_DELIMITER);
     while (end != std::string::npos) {
         data.insert(std::filesystem::canonical(str.substr(start, end - start)));
         start = end + 1;

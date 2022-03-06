@@ -75,10 +75,10 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         }
 
         // Generate Hit Shader
-        for (size_t i = 0; i < ctx.Environment.Materials.size(); ++i) {
-            std::string shader = HitShader::setup(i, ctx);
+        for (size_t j = 0; j < ctx.Environment.Materials.size(); ++j) {
+            std::string shader = HitShader::setup(j, ctx);
             if (shader.empty()) {
-                IG_LOG(L_ERROR) << "Constructed empty hit shader." << std::endl;
+                IG_LOG(L_ERROR) << "Constructed empty hit shader for material " << j << "." << std::endl;
                 return false;
             }
             variant.HitShaders.push_back(shader);
@@ -90,9 +90,9 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
             variant.AdvancedShadowMissShader = AdvancedShadowShader::setup(false, ctx);
         }
 
-        for (size_t i = 0; i < info.CallbackGenerators.size(); ++i) {
-            if (info.CallbackGenerators[i] != nullptr)
-                variant.CallbackShaders[i] = info.CallbackGenerators[i](ctx);
+        for (size_t j = 0; j < info.CallbackGenerators.size(); ++j) {
+            if (info.CallbackGenerators[j] != nullptr)
+                variant.CallbackShaders[j] = info.CallbackGenerators[j](ctx);
         }
     }
 

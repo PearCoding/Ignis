@@ -137,7 +137,7 @@ public:
     }
 
     // Events
-    bool handleEvents(uint32_t& iter, bool& run, Camera& cam)
+    bool handleEvents(size_t& iter, bool& run, Camera& cam)
     {
         static bool first_call = true;
         if (first_call) {
@@ -801,7 +801,7 @@ void UI::setTitle(const char* str)
         SDL_SetWindowTitle(mInternal->Window, str);
 }
 
-bool UI::handleInput(uint32_t& iter, bool& run, Camera& cam)
+bool UI::handleInput(size_t& iter, bool& run, Camera& cam)
 {
     return mInternal->handleEvents(iter, run, cam);
 }
@@ -869,7 +869,7 @@ static void handleHelp()
     ImGui::End();
 }
 
-void UI::update(uint32_t iter, uint32_t samples)
+void UI::update(size_t iter, size_t samples)
 {
     mInternal->updateSurface(iter);
     switch (mInternal->ScreenshotRequest) {

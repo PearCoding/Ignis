@@ -4,14 +4,16 @@
 #include "Target.h"
 #include "math/BoundingBox.h"
 
-#include "bvh/bvh.hpp"
-#include "bvh/leaf_collapser.hpp"
-#include "bvh/locally_ordered_clustering_builder.hpp"
-#include "bvh/node_layout_optimizer.hpp"
-#include "bvh/parallel_reinsertion_optimizer.hpp"
-#include "bvh/spatial_split_bvh_builder.hpp"
-#include "bvh/sweep_sah_builder.hpp"
-#include "bvh/triangle.hpp"
+IG_BEGIN_IGNORE_WARNINGS
+#include <bvh/bvh.hpp>
+#include <bvh/leaf_collapser.hpp>
+#include <bvh/locally_ordered_clustering_builder.hpp>
+#include <bvh/node_layout_optimizer.hpp>
+#include <bvh/parallel_reinsertion_optimizer.hpp>
+#include <bvh/spatial_split_bvh_builder.hpp>
+#include <bvh/sweep_sah_builder.hpp>
+#include <bvh/triangle.hpp>
+IG_END_IGNORE_WARNINGS
 
 // Contains implementation for NodeN
 #include "generated_interface.h"
@@ -72,10 +74,10 @@ protected:
     {
         IG_ASSERT(node.is_leaf(), "Expected a leaf");
 
-        this->nodes[parent].child.e[child] = ~objects.size();
+        this->nodes[parent].child.e[child] = ~static_cast<int>(objects.size());
 
         for (size_t i = 0; i < this->primitive_count_of_node(node); ++i) {
-            const int id       = bvh.primitive_indices[node.first_child_or_primitive + i];
+            const int id       = (int)bvh.primitive_indices[node.first_child_or_primitive + i];
             const auto& in_obj = primitives[id];
 
             objects.emplace_back(EntityLeaf1{

@@ -12,7 +12,7 @@ public:
     void open(const std::string& file);
 
     virtual void startEntry(LogLevel level) override;
-    virtual void writeEntry(int c) override;
+    virtual void writeEntry(char c) override;
 
 private:
     std::fstream mStream;

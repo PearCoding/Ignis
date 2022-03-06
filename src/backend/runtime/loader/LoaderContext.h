@@ -42,7 +42,7 @@ struct LoaderContext {
 
     bool IsTracer = false;
 
-    uint32 CurrentTechniqueVariant;
+    size_t CurrentTechniqueVariant;
     inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return TechniqueInfo.Variants[CurrentTechniqueVariant]; }
 
     std::unordered_map<std::string, uint32> TextureBuffer; // Texture to Buffer/Image, used only in workaround

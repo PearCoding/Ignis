@@ -17,8 +17,8 @@ public:
 
     inline RGB radiance(const ElevationAzimuth& ea) const
     {
-        int az_in = std::max(0, std::min<int>(mAzimuthCount - 1, int(ea.Azimuth / AZIMUTH_RANGE * mAzimuthCount)));
-        int el_in = std::max(0, std::min<int>(mElevationCount - 1, int(ea.Elevation / ELEVATION_RANGE * mElevationCount)));
+        int az_in = std::max(0, std::min<int>(static_cast<int>(mAzimuthCount) - 1, static_cast<int>(ea.Azimuth / AZIMUTH_RANGE * static_cast<float>(mAzimuthCount))));
+        int el_in = std::max(0, std::min<int>(static_cast<int>(mElevationCount) - 1, static_cast<int>(ea.Elevation / ELEVATION_RANGE * static_cast<float>(mElevationCount))));
 
         return RGB{
             mData[el_in * mAzimuthCount * 4 + az_in * 4 + 0],

@@ -286,12 +286,12 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 
         TransformCache transform = TransformCache(child->property("transform").getTransform());
         if (!transform.TransformMatrix.isIdentity()) {
-            for (size_t i = 0; i < mesh.vertices.size(); ++i)
-                mesh.vertices[i] = transform.applyTransform(mesh.vertices[i]);
-            for (size_t i = 0; i < mesh.normals.size(); ++i)
-                mesh.normals[i] = transform.applyNormal(mesh.normals[i]);
-            for (size_t i = 0; i < mesh.face_normals.size(); ++i)
-                mesh.face_normals[i] = transform.applyNormal(mesh.face_normals[i]);
+            for (size_t j = 0; j < mesh.vertices.size(); ++j)
+                mesh.vertices[j] = transform.applyTransform(mesh.vertices[j]);
+            for (size_t j = 0; j < mesh.normals.size(); ++j)
+                mesh.normals[j] = transform.applyNormal(mesh.normals[j]);
+            for (size_t j = 0; j < mesh.face_normals.size(); ++j)
+                mesh.face_normals[j] = transform.applyNormal(mesh.face_normals[j]);
         }
 
         // Build bounding box
@@ -333,7 +333,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
         shape.FaceCount   = mesh.faceCount();
         shape.BoundingBox = boxes.at(id);
 
-        const uint32 shapeID = ctx.Environment.Shapes.size();
+        const uint32 shapeID = (uint32)ctx.Environment.Shapes.size();
         ctx.Environment.Shapes.push_back(shape);
         ctx.Environment.ShapeIDs[pair.first] = shapeID;
 
