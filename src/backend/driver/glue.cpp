@@ -468,7 +468,7 @@ struct Interface {
 
         auto& buffers = devices[dev].buffers;
         auto it       = buffers.find(name);
-        if (it != buffers.end() && std::get<1>(it->second) >= size) {
+        if (it != buffers.end() && std::get<1>(it->second) >= (size_t)size) {
             return it->second;
         }
 
