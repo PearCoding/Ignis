@@ -68,7 +68,7 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
         if (ret != 0) {
             std::string _err = err;
             FreeEXRErrorMessage(err);
-            throw ImageLoadException(err, path);
+            throw ImageLoadException(_err, path);
         }
 
         // Make sure exr loads full floating point
