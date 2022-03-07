@@ -73,7 +73,7 @@ int main(int argc, char** argv)
 
     std::unique_ptr<UI> ui;
     try {
-        ui = std::make_unique<UI>(runtime.get(), runtime->framebufferWidth(), runtime->framebufferHeight(), runtime->isDebug());
+        ui = std::make_unique<UI>(runtime.get(), runtime->framebufferWidth(), runtime->framebufferHeight(), runtime->technique() == "debug");
 
         // Setup initial travelspeed
         BoundingBox bbox = runtime->sceneBoundingBox();

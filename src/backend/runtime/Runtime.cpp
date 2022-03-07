@@ -95,7 +95,6 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mCurrentIteration(0)
     , mCurrentSampleCount(0)
     , mIsTrace(opts.IsTracer)
-    , mIsDebug(false)
     , mAcquireStats(opts.AcquireStats)
 {
     if (!mManager.init(opts.ModulePath))
@@ -203,7 +202,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     mDatabase = std::move(result.Database);
     IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startLoader).count() / 1000.0f << " seconds" << std::endl;
 
-    mIsDebug                  = lopts.TechniqueType == "debug";
+    mTechniqueName            = lopts.TechniqueType;
     mTechniqueInfo            = result.TechniqueInfo;
     mInitialCameraOrientation = result.CameraOrientation;
 

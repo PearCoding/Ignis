@@ -75,8 +75,9 @@ public:
     /// Return pointer to structure containing statistics
     const Statistics* getStatistics() const;
 
-    /// Return true if the special debug technique is used (TODO: This might be deleted in the future)
-    inline bool isDebug() const { return mIsDebug; }
+    /// Returns the name of the loaded technique
+    inline const std::string& technique() const { return mTechniqueName; }
+
     /// Return true if the runtime is used in tracing mode
     inline bool isTrace() const { return mIsTrace; }
 
@@ -134,8 +135,9 @@ private:
     CameraOrientation mInitialCameraOrientation;
 
     bool mIsTrace;
-    bool mIsDebug;
     bool mAcquireStats;
+
+    std::string mTechniqueName;
     TechniqueInfo mTechniqueInfo;
 
     std::vector<TechniqueVariant> mTechniqueVariants;
