@@ -51,12 +51,12 @@ static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts
     lopts.CameraType = camera_type;
 }
 
-static inline size_t recommendSPI(Target target)
+static inline size_t recommendSPI(Target target, size_t width, size_t height)
 {
-    if (isCPU(target))
-        return 2;
-    else
-        return 8;
+    // The "best" case was measured with a 1000 x 1000. It does dependent on the scene content though, but thats ignored here
+    const size_t spi_f = isCPU(target) ? 2 : 8;
+    const size_t spi   = (size_t)std::ceil(spi_f / ((width / 1000.0f) * (height / 1000.0f)));
+    return std::max<size_t>(1, std::min<size_t>(64, spi));
 }
 
 static inline void dumpShader(const std::string& filename, const std::string& shader)
@@ -188,7 +188,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     setup_camera(lopts, mOptions);
 
     if (mOptions.SPI == 0)
-        mSamplesPerIteration = recommendSPI(mTarget);
+        mSamplesPerIteration = recommendSPI(mTarget, mFilmWidth, mFilmHeight);
     else
         mSamplesPerIteration = mOptions.SPI;
 
