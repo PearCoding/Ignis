@@ -569,6 +569,8 @@ fn @cpu_trace( scene: SceneGeometry
     let is_framebuffer_locked = ignis_is_framebuffer_locked();
 
     for xmin, ymin, xmax, ymax in cpu_parallel_tiles(work_width, work_height, tile_size, tile_size, num_cores) {
+        ignis_register_thread();
+        
         // Get ray streams/states from the CPU driver
         let mut primary   : PrimaryStream;
         let mut secondary : SecondaryStream;

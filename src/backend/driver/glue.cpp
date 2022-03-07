@@ -23,6 +23,8 @@
 #include <type_traits>
 #include <variant>
 
+#include <tbb/concurrent_vector.h>
+
 #if defined(DEVICE_NVVM) || defined(DEVICE_AMD)
 #define DEVICE_GPU
 #endif
@@ -81,6 +83,9 @@ struct SceneDatabaseProxy {
     DynTableProxy BVHs;
 };
 
+constexpr size_t InvalidThreadID = (size_t)-1;
+thread_local size_t sThreadID    = InvalidThreadID;
+
 constexpr size_t GPUStreamBufferCount = 2;
 struct Interface {
     using DeviceImage  = std::tuple<anydsl::Array<float>, size_t, size_t>;
@@ -124,7 +129,7 @@ struct Interface {
         IG::Statistics stats;
     };
     std::mutex thread_mutex;
-    std::unordered_map<std::thread::id, std::unique_ptr<CPUData>> thread_data;
+    tbb::concurrent_vector<std::unique_ptr<CPUData>> thread_data;
 
     std::vector<anydsl::Array<float>> aovs;
     anydsl::Array<float> host_pixels;
@@ -190,13 +195,21 @@ struct Interface {
         return array;
     }
 
+    inline void registerThread()
+    {
+        if (sThreadID != InvalidThreadID)
+            return;
+
+        const auto it = thread_data.emplace_back(std::make_unique<CPUData>());
+        sThreadID     = std::distance(thread_data.begin(), it);
+
+        IG_LOG(IG::L_DEBUG) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " with id 0x" << std::hex << sThreadID << std::endl;
+    }
+
     inline CPUData* getThreadData()
     {
-        std::lock_guard<std::mutex> _guard(thread_mutex);
-        if (!thread_data.count(std::this_thread::get_id()))
-            thread_data[std::this_thread::get_id()] = std::make_unique<CPUData>();
-
-        return thread_data.at(std::this_thread::get_id()).get();
+        IG_ASSERT(sThreadID != InvalidThreadID, "Thread not registered");
+        return thread_data.at(sThreadID).get();
     }
 
     inline anydsl::Array<float>& getCPUPrimaryStream(size_t size)
@@ -661,8 +674,8 @@ struct Interface {
     inline IG::Statistics* getFullStats()
     {
         main_stats.reset();
-        for (const auto& pair : thread_data)
-            main_stats.add(pair.second->stats);
+        for (size_t i = 0; i < thread_data.size(); ++i)
+            main_stats.add(thread_data[i]->stats);
 
         return &main_stats;
     }
@@ -723,6 +736,9 @@ static std::unique_ptr<Interface> sInterface;
 
 void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRenderSettings& settings, const IG::ParameterSet* parameterSet, size_t iter)
 {
+    // Register host thread
+    sInterface->registerThread();
+
     sInterface->shader_set         = shaderSet;
     sInterface->current_iteration  = iter;
     sInterface->current_settings   = settings;
@@ -881,7 +897,7 @@ inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t 
     secondary.size = 0;
 }
 
-// Will be added from the api_collector
+// Will be populated by api_collector
 extern const char* ig_api[];
 extern const char* ig_api_paths[];
 
@@ -1142,6 +1158,11 @@ IG_EXPORT void ignis_gpu_swap_primary_streams(int dev)
 IG_EXPORT void ignis_gpu_swap_secondary_streams(int dev)
 {
     sInterface->swapGPUSecondaryStreams(dev);
+}
+
+IG_EXPORT void ignis_register_thread()
+{
+    sInterface->registerThread();
 }
 
 IG_EXPORT int ignis_handle_ray_generation(int* id, int size, int xmin, int ymin, int xmax, int ymax)

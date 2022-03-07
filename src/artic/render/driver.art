@@ -30,6 +30,8 @@
 #[import(cc = "C")] fn ignis_request_buffer(i32, &[u8], &mut &[u8], i32, i32) -> ();
 #[import(cc = "C")] fn ignis_present(i32) -> ();
 
+#[import(cc = "C")] fn ignis_register_thread() -> ();
+
 #[import(cc = "C")] fn ignis_use_advanced_shadow_handling() -> bool;
 #[import(cc = "C")] fn ignis_is_framebuffer_locked() -> bool;
 
