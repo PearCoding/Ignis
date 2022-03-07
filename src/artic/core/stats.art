@@ -1,0 +1,41 @@
+// These functions only work on CPU host code
+
+#[import(cc = "C")] fn ignis_stats_begin_section(i32) -> ();
+#[import(cc = "C")] fn ignis_stats_end_section(i32) -> ();
+#[import(cc = "C")] fn ignis_stats_add(i32, i32) -> ();
+
+
+mod stats {
+
+enum Section {
+    TODO
+}
+
+enum Quantity {
+    CameraRayCount,
+    ShadowRayCount,
+    BounceRayCount
+}
+
+fn @begin_section(_sec: Section) -> () {
+    // TODO
+} 
+
+fn @end_section(_sec: Section) -> () {
+    // TODO
+} 
+
+fn @section(sec: Section, func: fn () -> ()) {
+    begin_section(sec);
+    func();
+    end_section(sec);
+}
+
+fn @add_quantity(q: Quantity, value: i32) -> () {
+    match q {
+        Quantity::CameraRayCount => super::ignis_stats_add(0, value),
+        Quantity::ShadowRayCount  => super::ignis_stats_add(1, value),
+        Quantity::BounceRayCount  => super::ignis_stats_add(2, value)
+    }
+}
+}

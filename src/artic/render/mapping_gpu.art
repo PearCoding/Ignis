@@ -587,7 +587,9 @@ fn @gpu_trace( dev_id: i32
     while id < num_rays || primary.size > 0 {
         // Regenerate rays
         if primary.size < GPUStreamCapacity && id < num_rays {
+            let before_s = primary.size;
             primary.size = pipeline.on_generate(&mut id, primary.size, 0, 0, work_width, work_height);
+            stats::add_quantity(stats::Quantity::CameraRayCount, primary.size - before_s);
         }
 
         // Special case: No entities to intersect
@@ -647,10 +649,12 @@ fn @gpu_trace( dev_id: i32
             } else {
                 gpu_traverse_secondary(secondary, acc, atomics, min_max, scene, film_pixels, spp, false, is_framebuffer_locked);
             }
+            stats::add_quantity(stats::Quantity::ShadowRayCount, secondary.size);
 
             // Compact primary rays
             other_primary.size = gpu_compact_primary(primary, other_primary, dev_id, acc, atomics, gpu_tmp);
             gpu_swap_primary_streams(dev_id, &mut primary, &mut other_primary);
+            stats::add_quantity(stats::Quantity::BounceRayCount, primary.size);
         }
     }
 }

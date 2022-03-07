@@ -1,5 +1,7 @@
 #pragma once
 
+#include "IG_Config.h"
+
 #include <chrono>
 
 namespace IG {

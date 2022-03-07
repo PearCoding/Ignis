@@ -109,7 +109,7 @@ int main(int argc, char** argv)
     }
 
     if (!runtime->loadFromFile(cmd.InputScene)) {
-        IG_LOG(L_ERROR) << "Failed loading" << std::endl;
+        IG_LOG(L_ERROR) << "Could not load " << cmd.InputScene << std::endl;
         return EXIT_FAILURE;
     }
 

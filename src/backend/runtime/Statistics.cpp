@@ -2,6 +2,12 @@
 #include <sstream>
 
 namespace IG {
+Statistics::Statistics()
+{
+    for (auto& v : mQuantities)
+        v = 0;
+}
+
 void Statistics::beginShaderLaunch(ShaderType type, size_t id)
 {
     ShaderStats* stats = getStats(type, id);
@@ -31,9 +37,12 @@ void Statistics::add(const Statistics& other)
     addStats(mAdvancedShadowMissStats, other.mAdvancedShadowMissStats);
     addStats(mTonemapStats, other.mTonemapStats);
     addStats(mImageInfoStats, other.mImageInfoStats);
+
+    for (size_t i = 0; i < other.mQuantities.size(); ++i)
+        mQuantities[i] += other.mQuantities[i];
 }
 
-std::string Statistics::dump(size_t iter, bool verbose) const
+std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
 {
     const auto dumpInline = [=](size_t count, size_t elapsedMS) {
         std::stringstream bstream;
@@ -45,6 +54,12 @@ std::string Statistics::dump(size_t iter, bool verbose) const
 
     const auto dumpStats = [=](const ShaderStats& stats) {
         return dumpInline(stats.count, stats.elapsedMS);
+    };
+
+    const auto dumpQuantity = [=](size_t count) {
+        std::stringstream bstream;
+        bstream << count / totalMS << " per ms [" << count << "]";
+        return bstream.str();
     };
 
     // Get all hits information
@@ -80,6 +95,13 @@ std::string Statistics::dump(size_t iter, bool verbose) const
 
     if (mTonemapStats.count > 0)
         stream << "    Tonemap>       " << dumpStats(mTonemapStats) << std::endl;
+
+    stream << "  Quantities:" << std::endl
+           << "    CameraRays>  " << dumpQuantity(mQuantities[(size_t)Quantity::CameraRayCount]) << std::endl
+           << "    ShadowRays>  " << dumpQuantity(mQuantities[(size_t)Quantity::ShadowRayCount]) << std::endl
+           << "    BounceRays>  " << dumpQuantity(mQuantities[(size_t)Quantity::BounceRayCount]) << std::endl
+           << "    PrimaryRays> " << dumpQuantity(mQuantities[(size_t)Quantity::CameraRayCount] + mQuantities[(size_t)Quantity::BounceRayCount]) << std::endl
+           << "    TotalRays>   " << dumpQuantity(mQuantities[(size_t)Quantity::CameraRayCount] + mQuantities[(size_t)Quantity::BounceRayCount] + mQuantities[(size_t)Quantity::ShadowRayCount]) << std::endl;
 
     return stream.str();
 }

@@ -13,14 +13,6 @@
 #include <anydsl_jit.h>
 #include <anydsl_runtime.hpp>
 
-#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-#ifdef IG_CC_MSC
-#include <intrin.h>
-#else
-#include <x86intrin.h>
-#endif
-#endif
-
 #include <atomic>
 #include <cstring>
 #include <fstream>
@@ -1187,6 +1179,14 @@ IG_EXPORT bool ignis_is_framebuffer_locked()
     return sInterface->isFramebufferLocked();
 }
 
+IG_EXPORT void ignis_present(int dev)
+{
+    if (dev != 0)
+        sInterface->present(dev);
+}
+
+// Registry stuff
+
 IG_EXPORT int ignis_get_parameter_i32(const char* name, int def)
 {
     return sInterface->getParameterInt(name, def);
@@ -1207,44 +1207,30 @@ IG_EXPORT void ignis_get_parameter_color(const char* name, float defR, float def
     sInterface->getParameterColor(name, defR, defG, defB, defA, *r, *g, *b, *a);
 }
 
-IG_EXPORT void ignis_present(int dev)
+// Stats
+IG_EXPORT void ignis_stats_begin_section(int id)
 {
-    if (dev != 0)
-        sInterface->present(dev);
+    if (!sInterface->setup.acquire_stats)
+        return;
+
+    // TODO
+    IG_UNUSED(id);
 }
 
-IG_EXPORT void ig_host_print(const char* str)
+IG_EXPORT void ignis_stats_end_section(int id)
 {
-    std::cout << str << std::flush;
+    if (!sInterface->setup.acquire_stats)
+        return;
+
+    // TODO
+    IG_UNUSED(id);
 }
 
-IG_EXPORT void ig_host_print_i(int64_t number)
+IG_EXPORT void ignis_stats_add(int id, int value)
 {
-    std::cout << number << std::flush;
-}
+    if (!sInterface->setup.acquire_stats)
+        return;
 
-IG_EXPORT void ig_host_print_f(double number)
-{
-    std::cout << number << std::flush;
-}
-
-IG_EXPORT void ig_host_print_p(const char* ptr)
-{
-    std::cout << std::internal << std::hex << std::setw(sizeof(ptr) * 2 + 2) << std::setfill('0')
-              << (const void*)ptr
-              << std::resetiosflags(std::ios::internal) << std::resetiosflags(std::ios::hex)
-              << std::flush;
-}
-
-IG_EXPORT int64_t clock_us()
-{
-#if !defined(IG_CC_MSC) && (defined(__x86_64__) || defined(__amd64__) || defined(_M_X64))
-#define CPU_FREQ 4e9
-    __asm__ __volatile__("xorl %%eax,%%eax \n    cpuid" ::
-                             : "%rax", "%rbx", "%rcx", "%rdx");
-    return __rdtsc() * int64_t(1000000) / int64_t(CPU_FREQ);
-#else
-    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-#endif
+    sInterface->getThreadData()->stats.increase((IG::Quantity)id, static_cast<uint64_t>(value));
 }
 }

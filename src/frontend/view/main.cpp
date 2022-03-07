@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     }
 
     if (!runtime->loadFromFile(cmd.InputScene)) {
-        IG_LOG(L_ERROR) << "Failed loading" << std::endl;
+        IG_LOG(L_ERROR) << "Could not load " << cmd.InputScene << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -183,9 +183,9 @@ int main(int argc, char** argv)
     timer_saving.start();
     if (!cmd.Output.empty()) {
         if (!saveImageOutput(cmd.Output, *runtime))
-            IG_LOG(L_ERROR) << "Failed to save EXR file '" << cmd.Output << "'" << std::endl;
+            IG_LOG(L_ERROR) << "Failed to save EXR file " << cmd.Output << std::endl;
         else
-            IG_LOG(L_INFO) << "Result saved to '" << cmd.Output << "'" << std::endl;
+            IG_LOG(L_INFO) << "Result saved to " << cmd.Output << std::endl;
     }
     timer_saving.stop();
 
@@ -194,7 +194,7 @@ int main(int argc, char** argv)
     auto stats = runtime->getStatistics();
     if (stats) {
         IG_LOG(L_INFO)
-            << stats->dump(runtime->currentIterationCount(), cmd.AcquireFullStats)
+            << stats->dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats)
             << "  Iterations: " << runtime->currentIterationCount() << std::endl
             << "  SPP: " << runtime->currentSampleCount() << std::endl
             << "  SPI: " << SPI << std::endl
