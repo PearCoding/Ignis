@@ -30,7 +30,15 @@ static void debug_body_loader(std::ostream& stream, const std::string&, const st
 {
     // TODO: Maybe add a changeable default mode?
     stream << "  let debug_mode = registry::get_parameter_i32(\"__debug_mode\", 0);" << std::endl
+           << "  maybe_unused(num_lights); maybe_unused(lights);" << std::endl
            << "  let technique  = make_debug_renderer(debug_mode);" << std::endl;
+}
+
+static TechniqueInfo debug_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+{
+    TechniqueInfo info;
+    info.Variants[0].UsesLights = true; // We make use of the emissive information!
+    return info;
 }
 
 static void wireframe_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
@@ -273,7 +281,7 @@ static struct TechniqueEntry {
 } _generators[] = {
     { "ao", technique_empty_get_info, ao_body_loader, technique_empty_header_loader },
     { "path", path_get_info, path_body_loader, path_header_loader },
-    { "debug", technique_empty_get_info, debug_body_loader, technique_empty_header_loader },
+    { "debug", debug_get_info, debug_body_loader, technique_empty_header_loader },
     { "ppm", ppm_get_info, ppm_body_loader, ppm_header_loader },
     { "photonmapper", ppm_get_info, ppm_body_loader, ppm_header_loader },
     { "wireframe", technique_empty_get_info, wireframe_body_loader, wireframe_header_loader },
