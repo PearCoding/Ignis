@@ -2,6 +2,7 @@
 
 #include "IG_Config.h"
 
+#include <mutex>
 #include <streambuf>
 #include <vector>
 
@@ -31,6 +32,37 @@ public:
     private:
         Logger& mLogger;
         bool mIgnore;
+    };
+
+    // A closure used to make calls threadsafe. Never capture the ostream, else threadsafety is not guaranteed
+    class LogClosure {
+    public:
+        inline LogClosure(Logger& logger)
+            : mLogger(logger)
+            , mStarted(false)
+        {
+        }
+
+        inline ~LogClosure()
+        {
+            if (mStarted)
+                mLogger.mMutex.unlock();
+        }
+
+        inline std::ostream& log(LogLevel level)
+        {
+            if((int)level >= (int)mLogger.verbosity()) {
+                // Only lock if verbosity is high enough,
+                // else nothing will be output anyway
+                mStarted = true;
+                mLogger.mMutex.lock();
+            }
+            return mLogger.startEntry(level);
+        }
+
+    private:
+        Logger& mLogger;
+        bool mStarted;
     };
 
     Logger();
@@ -65,6 +97,11 @@ public:
         return instance().startEntry(level);
     }
 
+    static inline LogClosure threadsafe()
+    {
+        return LogClosure(instance());
+    }
+
 private:
     std::vector<std::shared_ptr<LogListener>> mListener;
     std::shared_ptr<ConsoleLogListener> mConsoleLogListener;
@@ -77,8 +114,10 @@ private:
 
     StreamBuf mStreamBuf;
     std::ostream mStream;
+    std::mutex mMutex;
 };
 } // namespace IG
 
 #define IG_LOGGER (IG::Logger::instance())
-#define IG_LOG(l) (IG::Logger::log((l)))
+#define IG_LOG_UNSAFE(l) (IG::Logger::log((l)))
+#define IG_LOG(l) (IG::Logger::threadsafe().log((l)))
