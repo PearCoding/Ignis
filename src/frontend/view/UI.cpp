@@ -102,7 +102,7 @@ public:
     void handlePoseInput(size_t posenmbr, bool capture, const Camera& cam)
     {
         if (!capture) {
-            PoseRequest = posenmbr;
+            PoseRequest = (int)posenmbr;
         } else {
             PoseManager.setPose(posenmbr, CameraPose(cam));
             IG_LOG(L_INFO) << "Captured pose for " << posenmbr + 1 << std::endl;
@@ -463,7 +463,7 @@ public:
         return false;
     }
 
-    void analzeLuminance(size_t width, size_t height, uint32_t iter)
+    void analzeLuminance(size_t width, size_t height, size_t iter)
     {
         ImageInfoSettings settings{ CurrentAOV,
                                     Histogram.data(), (int)Histogram.size(),
@@ -485,7 +485,7 @@ public:
             HistogramF[i] = Histogram[i] * avgFactor;
     }
 
-    void updateSurface(uint32_t iter)
+    void updateSurface(size_t iter)
     {
         if (iter == 0)
             iter = 1;
@@ -502,13 +502,13 @@ public:
         SDL_UpdateTexture(Texture, nullptr, buf, Width * sizeof(uint32_t));
     }
 
-    RGB getFilmData(size_t width, size_t height, uint32_t iter, uint32_t x, uint32_t y)
+    RGB getFilmData(size_t width, size_t height, size_t iter, uint32_t x, uint32_t y)
     {
         IG_UNUSED(height);
 
         const float* film    = currentPixels();
         const float inv_iter = 1.0f / iter;
-        const uint32_t ind   = y * width + x;
+        const size_t ind     = y * width + x;
 
         return RGB{
             film[ind * 3 + 0] * inv_iter,
@@ -517,7 +517,7 @@ public:
         };
     }
 
-    void makeScreenshot(size_t width, size_t height, uint32_t iter)
+    void makeScreenshot(size_t width, size_t height, size_t iter)
     {
         std::stringstream out_file;
         auto now       = std::chrono::system_clock::now();
@@ -599,7 +599,7 @@ public:
         delete[] rgba;
     }
 
-    void handleImgui(uint32_t iter, uint32_t samples)
+    void handleImgui(size_t iter, size_t samples)
     {
         constexpr size_t UI_W = 300;
         constexpr size_t UI_H = 440;
@@ -609,7 +609,7 @@ public:
         if (ShowUI) {
             RGB rgb{ 0, 0, 0 };
             if (mouse_x >= 0 && mouse_x < Width && mouse_y >= 0 && mouse_y < Height)
-                rgb = getFilmData(Width, Height, iter, mouse_x, mouse_y);
+                rgb = getFilmData(Width, Height, iter, (uint32)mouse_x, (uint32)mouse_y);
 
             ImGui::SetNextWindowPos(ImVec2(5, 5), ImGuiCond_Once);
             ImGui::SetNextWindowSize(ImVec2(UI_W, UI_H), ImGuiCond_Once);

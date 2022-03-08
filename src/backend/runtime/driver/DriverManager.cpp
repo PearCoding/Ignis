@@ -103,7 +103,7 @@ bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
         }
     }
 
-    if (mLoadedDrivers.empty()) {
+    if (mRegistredDrivers.empty()) {
         IG_LOG(L_ERROR) << "No driver could been found!" << std::endl;
         return false;
     }
@@ -114,7 +114,7 @@ bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
 Target DriverManager::resolveTarget(Target target) const
 {
 #define CHECK_RET(c)                   \
-    if (mLoadedDrivers.count((c)) > 0) \
+    if (mRegistredDrivers.count((c)) > 0) \
     return c
 
     CHECK_RET(target);
@@ -129,14 +129,15 @@ Target DriverManager::resolveTarget(Target target) const
 #undef CHECK_RET
 }
 
-bool DriverManager::load(Target target, DriverInterface& interface) const
+bool DriverManager::load(Target target, DriverInterface& interface)
 {
     target = resolveTarget(target);
-    if (!mLoadedDrivers.count(target)) {
+    if (!mRegistredDrivers.count(target)) {
         IG_LOG(L_ERROR) << "No driver available!" << std::endl;
         return false; // No driver available!
     }
 
+    mLoadedDrivers[target]       = SharedLibrary(mRegistredDrivers.at(target));
     const SharedLibrary& library = mLoadedDrivers.at(target);
 
     GetInterfaceFunction func = (GetInterfaceFunction)library.symbol("ig_get_interface");
@@ -152,11 +153,10 @@ bool DriverManager::load(Target target, DriverInterface& interface) const
 std::filesystem::path DriverManager::getPath(Target target) const
 {
     target = resolveTarget(target);
-    if (!mLoadedDrivers.count(target))
+    if (!mRegistredDrivers.count(target))
         return {}; // No driver available!
 
-    const SharedLibrary& library = mLoadedDrivers.at(target);
-    return library.path();
+    return mRegistredDrivers.at(target);
 }
 
 bool DriverManager::addModule(const std::filesystem::path& path)
@@ -178,8 +178,11 @@ bool DriverManager::addModule(const std::filesystem::path& path)
             return false;
         }
 
-        // Silently replace
-        mLoadedDrivers[interface.Target] = std::move(library);
+        if (mRegistredDrivers.count(interface.Target) > 0) {
+            IG_LOG(L_WARNING) << "Module " << path << " is replacing another module for present target " << targetToString(interface.Target) << std::endl;
+        }
+
+        mRegistredDrivers[interface.Target] = path;
     } catch (const std::exception& e) {
         IG_LOG(L_ERROR) << "Loading error for module " << path << ": " << e.what() << std::endl;
         return false;
@@ -189,7 +192,7 @@ bool DriverManager::addModule(const std::filesystem::path& path)
 
 bool DriverManager::hasCPU() const
 {
-    for (const auto& pair : mLoadedDrivers) {
+    for (const auto& pair : mRegistredDrivers) {
         if (isCPU(pair.first))
             return true;
     }
@@ -198,7 +201,7 @@ bool DriverManager::hasCPU() const
 
 bool DriverManager::hasGPU() const
 {
-    for (const auto& pair : mLoadedDrivers) {
+    for (const auto& pair : mRegistredDrivers) {
         if (!isCPU(pair.first))
             return true;
     }
@@ -234,7 +237,7 @@ Target DriverManager::recommendCPUTarget() const
 {
     Target recommendation = Target::GENERIC;
 
-    for (const auto& pair : mLoadedDrivers) {
+    for (const auto& pair : mRegistredDrivers) {
         if (isCPU(pair.first) && costFunction(pair.first) < costFunction(recommendation))
             recommendation = pair.first;
     }
@@ -246,7 +249,7 @@ Target DriverManager::recommendGPUTarget() const
 {
     Target recommendation = Target::GENERIC;
 
-    for (const auto& pair : mLoadedDrivers) {
+    for (const auto& pair : mRegistredDrivers) {
         if (!isCPU(pair.first) && costFunction(pair.first) < costFunction(recommendation))
             recommendation = pair.first;
     }
@@ -258,7 +261,7 @@ Target DriverManager::recommendTarget() const
 {
     Target recommendation = Target::GENERIC;
 
-    for (const auto& pair : mLoadedDrivers) {
+    for (const auto& pair : mRegistredDrivers) {
         if (costFunction(pair.first) < costFunction(recommendation))
             recommendation = pair.first;
     }

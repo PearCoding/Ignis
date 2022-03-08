@@ -12,7 +12,7 @@ class DriverManager {
 public:
     bool init(const std::filesystem::path& dir = std::filesystem::current_path(), bool ignoreEnv = false);
     Target resolveTarget(Target target) const;
-    bool load(Target target, DriverInterface& interface) const;
+    bool load(Target target, DriverInterface& interface);
     std::filesystem::path getPath(Target target) const;
 
     bool hasCPU() const;
@@ -24,6 +24,7 @@ public:
 
 private:
     bool addModule(const std::filesystem::path& path);
+    std::unordered_map<Target, std::filesystem::path> mRegistredDrivers;
     std::unordered_map<Target, SharedLibrary> mLoadedDrivers;
 };
 } // namespace IG

@@ -60,8 +60,9 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
     delete[] header.requested_pixel_types;
 
     if (ret != TINYEXR_SUCCESS) {
-        throw ImageSaveException(err, path);
+        std::string _err = err;
         FreeEXRErrorMessage(err); // free's buffer for an error message
+        throw ImageSaveException(_err, path);
         return false;
     }
 

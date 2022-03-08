@@ -200,6 +200,8 @@ struct Interface {
         if (sThreadID != InvalidThreadID)
             return;
 
+        // FIXME: This does not work well on Windows. New threads are generated continously...
+        // This polutes the array which will get out of memory for extreme work loads
         const auto it = thread_data.emplace_back(std::make_unique<CPUData>());
         sThreadID     = std::distance(thread_data.begin(), it);
 
