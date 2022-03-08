@@ -712,7 +712,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     parallel_reduce_i32 = @|n, elem, op| cpu_reduce[i32](n, elem, op),
     parallel_reduce_f32 = @|n, elem, op| cpu_reduce[f32](n, elem, op),
     load_scene_bvh = @ || {
-        if vector_width == 8 {
+        if vector_width >= 8 {
             let mut nodes: &[Node8];
             let mut objs: &[EntityLeaf1];
             ignis_load_bvh8_ent(0, &mut nodes, &mut objs);
@@ -739,7 +739,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             let header = get_table_entry(entry.offset, dtb, @|ptr| make_cpu_buffer(ptr, 0));
             let leaf_offset = header.load_i32(0) as u64;
     
-            if vector_width == 8 {
+            if vector_width >= 8 {
                 let nodes = get_table_ptr(entry.offset + 16 , dtb) as &[Node8];
                 let tris  = get_table_ptr(entry.offset + 16 + leaf_offset * (sizeof[Node8]() as u64), dtb) as &[Tri4];
                 make_cpu_bvh8_tri4(nodes, tris)

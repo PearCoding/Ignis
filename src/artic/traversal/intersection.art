@@ -153,16 +153,13 @@ fn @intersect_ray_box(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> (
     let t0 = vec3_add(vec3_mul(ray.inv_dir, bbox.min), ray.inv_org);
     let t1 = vec3_add(vec3_mul(ray.inv_dir, bbox.max), ray.inv_org);
 
-    let (tentry, texit) =
-        if ordered {
-            (min_max.fmaxmaxf(t0.x, t0.y, min_max.fmaxf(t0.z, ray.tmin)),
-             min_max.fminminf(t1.x, t1.y, min_max.fminf(t1.z, ray.tmax)))
-        } else {
-            (min_max.fmaxmaxf(min_max.fminf(t0.x, t1.x), min_max.fminf(t0.y, t1.y), min_max.fminmaxf(t0.z, t1.z, ray.tmin)),
-             min_max.fminminf(min_max.fmaxf(t0.x, t1.x), min_max.fmaxf(t0.y, t1.y), min_max.fmaxminf(t0.z, t1.z, ray.tmax)))
-        };
-
-    (tentry, texit)
+    if ordered {
+        (min_max.fmaxmaxf(t0.x, t0.y, min_max.fmaxf(t0.z, ray.tmin)),
+         min_max.fminminf(t1.x, t1.y, min_max.fminf(t1.z, ray.tmax)))
+    } else {
+        (min_max.fmaxmaxf(min_max.fminf(t0.x, t1.x), min_max.fminf(t0.y, t1.y), min_max.fminmaxf(t0.z, t1.z, ray.tmin)),
+         min_max.fminminf(min_max.fmaxf(t0.x, t1.x), min_max.fmaxf(t0.y, t1.y), min_max.fmaxminf(t0.z, t1.z, ray.tmax)))
+    }
 }
 
 fn @intersect_ray_box_single(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> Option[f32] {

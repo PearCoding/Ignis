@@ -26,23 +26,29 @@ fn @make_cpu_node4(j: i32, nodes: &[Node4]) = Node {
                   make_vec3(nodes(j).bounds(1)(i), nodes(j).bounds(3)(i), nodes(j).bounds(5)(i)))
     },
     ordered_bbox = @ |i, octant| {
-        let ptr = &nodes(j).bounds as &[f32];
-        let align_ptr = @ |k: i32| rv_align(&ptr(k) as &i8, 16) as &[f32];
-        let ox = (octant & 1) << 2;
-        let oy = (octant & 2) << 1;
-        let oz = (octant & 4);
-        make_bbox(
-            make_vec3(
-                align_ptr(4  - ox)(i),
-                align_ptr(12 - oy)(i),
-                align_ptr(20 - oz)(i)
-            ),
-            make_vec3(
-                align_ptr(0  + ox)(i),
-                align_ptr(8  + oy)(i),
-                align_ptr(16 + oz)(i)
-            )
-        )
+        let ox = (octant & 1);
+        let oy = (octant & 2) >> 1;
+        let oz = (octant & 4) >> 2;
+        make_bbox(make_vec3(nodes(j).bounds(1 - ox)(i), nodes(j).bounds(3 - oy)(i), nodes(j).bounds(5 - oz)(i)),
+                  make_vec3(nodes(j).bounds(0 + ox)(i), nodes(j).bounds(2 + oy)(i), nodes(j).bounds(4 + oz)(i)))
+        // let ptr = &nodes(j).bounds as &[f32];
+        // let align_ptr = @ |k: i32| rv_align(&ptr(k/4) as &i8, 16) as &[f32];
+        // let get_f = @ |k: i32| ptr(k/4)
+        // let ox = (octant & 1) << 2;
+        // let oy = (octant & 2) << 1;
+        // let oz = (octant & 4);
+        // make_bbox(
+        //     make_vec3(
+        //         get_f(4  - ox)(i),
+        //         get_f(12 - oy)(i),
+        //         get_f(20 - oz)(i)
+        //     ),
+        //     make_vec3(
+        //         get_f(0  + ox)(i),
+        //         get_f(8  + oy)(i),
+        //         get_f(16 + oz)(i)
+        //     )
+        // )
     },
     child = @ |i| nodes(j).child(i)
 };
@@ -53,23 +59,28 @@ fn @make_cpu_node8(j: i32, nodes: &[Node8]) = Node {
                   make_vec3(nodes(j).bounds(1)(i), nodes(j).bounds(3)(i), nodes(j).bounds(5)(i)))
     },
     ordered_bbox = @ |i, octant| {
-        let ptr = &nodes(j).bounds as &[f32];
-        let align_ptr = @ |k: i32| rv_align(&ptr(k) as &i8, 32 /*FIXME: AVX code works with 16?*/) as &[f32];
-        let ox = (octant & 1) << 3;
-        let oy = (octant & 2) << 2;
-        let oz = (octant & 4) << 1;
-        make_bbox(
-            make_vec3(
-                align_ptr(8  - ox)(i),
-                align_ptr(24 - oy)(i),
-                align_ptr(40 - oz)(i)
-            ),
-            make_vec3(
-                align_ptr(0  + ox)(i),
-                align_ptr(16 + oy)(i),
-                align_ptr(32 + oz)(i)
-            )
-        )
+        let ox = (octant & 1);
+        let oy = (octant & 2) >> 1;
+        let oz = (octant & 4) >> 2;
+        make_bbox(make_vec3(nodes(j).bounds(1 - ox)(i), nodes(j).bounds(3 - oy)(i), nodes(j).bounds(5 - oz)(i)),
+                  make_vec3(nodes(j).bounds(0 + ox)(i), nodes(j).bounds(2 + oy)(i), nodes(j).bounds(4 + oz)(i)))
+        // let ptr = &nodes(j).bounds as &[f32];
+        // let align_ptr = @ |k: i32| rv_align(&ptr(k) as &i8, 32 /*FIXME: AVX code works with 16?*/) as &[f32];
+        // let ox = (octant & 1) << 3;
+        // let oy = (octant & 2) << 2;
+        // let oz = (octant & 4) << 1;
+        // make_bbox(
+        //     make_vec3(
+        //         align_ptr(8  - ox)(i),
+        //         align_ptr(24 - oy)(i),
+        //         align_ptr(40 - oz)(i)
+        //     ),
+        //     make_vec3(
+        //         align_ptr(0  + ox)(i),
+        //         align_ptr(16 + oy)(i),
+        //         align_ptr(32 + oz)(i)
+        //     )
+        // )
     },
     child = @ |i| nodes(j).child(i)
 };
@@ -191,9 +202,9 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
     stack.push(root, ray.tmin);
 
     let extract_hit = @ |hit2: Hit, lane: i32| Hit {
-        ent_id    = -1, // Not used here, will be replaced in the top level BVH
-        prim_id   = bitcast[i32](rv_extract(bitcast[f32](hit2.prim_id), lane)),
-        distance  = rv_extract(hit2.distance, lane),
+        ent_id      = -1, // Not used here, will be replaced in the top level BVH
+        prim_id     = bitcast[i32](rv_extract(bitcast[f32](hit2.prim_id), lane)),
+        distance    = rv_extract(hit2.distance, lane),
         prim_coords = make_vec2(rv_extract(hit2.prim_coords.x, lane), rv_extract(hit2.prim_coords.y, lane))
     };
 
@@ -215,18 +226,21 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
                 let node = bvh.node(stack.pop().node - 1);
 
                 // Intersect children
-                let (tentry, texit) = intersect_ray_box(min_max, true /*ordered*/, ray, node.ordered_bbox(i, octant));
+                // let (tentry, texit) = intersect_ray_box(min_max, true /*ordered*/, ray, node.ordered_bbox(i, octant)); // FIXME: There is a bug here
+                maybe_unused(octant);
+                let (tentry, texit) = intersect_ray_box(min_max, false /*ordered*/, ray, node.bbox(i));
                 let mask = if min_max.is_integer {
                     // Special case when integer comparisons are faster than floating point comparisons
                     !rv_ballot(bitcast[i32](texit) < bitcast[i32](tentry)) & ((1 << bvh.arity) - 1)
                 } else {
                     rv_ballot(tentry <= texit)
                 };
+                
                 // Restart the loop when no intersection is found to trigger culling
                 if likely(mask == 0) {
                     if any_hit { continue() } else { restart() }
                 }
-
+                
                 // Push intersected nodes on the stack, prefetch those
                 // that are closer than the node currently on top of the stack
                 let mut num_intrs = 0;
@@ -262,7 +276,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
             let mut terminated = false;
             while true {
                 let prim = bvh.prim(prim_id++);
-              
+                
                 // Intersect primitives
                 vectorize(prim.size, |j| {
                     if !prim.is_valid(j) { return() }
@@ -285,7 +299,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
                 // Sentinel test
                 if prim.is_last { break() }
             }
-
+            
             // Early exit test delayed until exit primitive intersection loop
             if any_hit && terminated { exit() }
         }
@@ -298,26 +312,26 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                             , vector_width: i32
                             , min_max: MinMax
                             , bvh: PrimBvh
-                            , _single: bool // TODO: This path produces and introduces some nasty bugs!
+                            , single: bool
                             , any_hit: bool
                             , root: i32
                             ) -> Hit {
 
-    /*let switch_threshold = match vector_width {
+    let switch_threshold = match vector_width {
         4  => 3,
         8  => if bvh.arity == 4 { 4 } else { 6 },
         16 => 7,
         _  => vector_width / 2
-    };*/
+    };
 
     let mut hit = empty_hit(ray.tmax);
     let mut terminated = false;
     let stack = alloc_stack();
     stack.push(root, ray.tmin);
 
-    //let octant = ray_octant(ray);
+    let octant = ray_octant(ray);
 
-    /*let load_ray = @ |ray_ptr: &Ray, lane: i32| Ray {
+    let load_ray = @ |ray_ptr: &Ray, lane: i32| Ray {
         org = make_vec3(rv_load(&ray_ptr.org.x, lane), rv_load(&ray_ptr.org.y, lane), rv_load(&ray_ptr.org.z, lane)),
         dir = make_vec3(rv_load(&ray_ptr.dir.x, lane), rv_load(&ray_ptr.dir.y, lane), rv_load(&ray_ptr.dir.z, lane)),
         inv_org = make_vec3(rv_load(&ray_ptr.inv_org.x, lane), rv_load(&ray_ptr.inv_org.y, lane), rv_load(&ray_ptr.inv_org.z, lane)),
@@ -331,8 +345,8 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
         rv_store(&mut hit_ptr.prim_coords.x, lane, hit2.prim_coords.x);
         rv_store(&mut hit_ptr.prim_coords.y, lane, hit2.prim_coords.y);
         rv_store(bitcast[&mut f32](&mut hit_ptr.prim_id), lane, bitcast[f32](hit2.prim_id));
-        //rv_store(bitcast[&mut f32](&mut hit_ptr.ent_id), lane, bitcast[f32](hit2.ent_id)); // Optimization: No need for the ent id in prim BVH
-    };*/
+        // rv_store(bitcast[&mut f32](&mut hit_ptr.ent_id), lane, bitcast[f32](hit2.ent_id)); // Optimization: No need for the ent id in prim BVH
+    };
 
     while true {
         let exit = break;
@@ -344,8 +358,7 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
             let active = (stack.top().tmin <= ray.tmax) & !terminated;
             let mask = rv_ballot(active);
             if likely(mask != 0) {
-                // FIXME: There is a bug below
-                /*if single && cpu_popcount32(mask) <= switch_threshold {
+                if single && cpu_popcount32(mask) <= switch_threshold {
                     for lane in cpu_one_bits(mask) {
                         let lane_ray = load_ray(&ray, lane);
                         let lane_octant = bitcast[RayOctant](rv_extract(bitcast[f32](octant), lane));
@@ -356,9 +369,9 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                         }
                     }
                     if any_hit { terminated = hit.prim_id >= 0; }
-                } else {*/
+                } else {
                     break()
-                //}
+                }
             }
             stack.pop();
         }

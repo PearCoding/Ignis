@@ -44,7 +44,7 @@ fn @transform_norm_ray(ray: Ray, m: Mat3x4) = make_ray(
 
 // Return the respective octant representation of the given ray
 fn @ray_octant(ray: Ray) -> RayOctant {
-    select(ray.dir.x > 0, 1, 0) |
-    select(ray.dir.y > 0, 2, 0) |
-    select(ray.dir.z > 0, 4, 0)
+    select(math_builtins::signbit(ray.dir.x), 0, 1) |
+    select(math_builtins::signbit(ray.dir.y), 0, 2) |
+    select(math_builtins::signbit(ray.dir.z), 0, 4)
 }
