@@ -500,12 +500,9 @@ fn @cpu_traverse_helper( mut ray: Ray
             while true {
                 let leaf = bvh.ent(ref_id++);
 
-                if let Option[(f32,f32)]::Some((tmin, tmax)) = intersect_ray_box_single_section(min_max, false, ray, leaf.bbox) {
+                if let Option[(f32,f32)]::Some((tmin, _tmax)) = intersect_ray_box_single_section(min_max, false, ray, leaf.bbox) {
                     if tmin <= hit.distance {
-                        let mut local_ray = transform_ray(ray, leaf.local);
-                        local_ray.tmin    = min_max.fmaxf(tmin, local_ray.tmin);
-                        local_ray.tmax    = min_max.fminminf(tmax, local_ray.tmax, hit.distance);
-
+                        let local_ray = transform_ray(ray, leaf.local);
                         let shape_bvh = @prim_bvhs(leaf.shape_id);
                         let local_hit = cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
                         
