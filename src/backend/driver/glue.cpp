@@ -485,6 +485,28 @@ struct Interface {
         return buffers[name];
     }
 
+    inline void dumpBuffer(int32_t dev, const std::string& name, const std::string& filename)
+    {
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+
+        auto& buffers = devices[dev].buffers;
+        auto it       = buffers.find(name);
+        if (it != buffers.end()) {
+            const size_t size = std::get<1>(it->second);
+
+            // Copy data to host
+            std::vector<uint8_t> host_data(size);
+            anydsl_copy(dev, std::get<0>(it->second).data(), 0, 0 /* Host */, host_data.data(), 0, host_data.size());
+
+            // Dump data as binary glob
+            std::ofstream out(filename);
+            out.write(reinterpret_cast<const char*>(host_data.data()), host_data.size());
+            out.close();
+        } else {
+            IG_LOG(IG::L_WARNING) << "Buffer " << name << " can not be dumped as it does not exists" << std::endl;
+        }
+    }
+
     inline int runRayGenerationShader(int* id, int size, int xmin, int ymin, int xmax, int ymax)
     {
         if (setup.acquire_stats)
@@ -1064,6 +1086,11 @@ IG_EXPORT void ignis_request_buffer(int32_t dev, const char* name, uint8_t** dat
 {
     auto& buffer = sInterface->requestBuffer(dev, name, size, flags);
     *data        = const_cast<uint8_t*>(std::get<0>(buffer).data());
+}
+
+IG_EXPORT void ignis_dbg_dump_buffer(int32_t dev, const char* name, const char* filename)
+{
+    sInterface->dumpBuffer(dev, name, filename);
 }
 
 IG_EXPORT void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)

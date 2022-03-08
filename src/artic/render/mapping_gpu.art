@@ -816,7 +816,8 @@ fn @make_gpu_device( dev_id: i32
         ignis_request_buffer(dev_id, name, &mut ptr, size * sizeof[i32]() as i32, flags);
         make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm)
     },
-    make_buffer = @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm)
+    make_buffer = @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm),
+    dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(dev_id, id, filename)
 };
 
 fn @make_nvvm_device(dev: i32) -> Device {
