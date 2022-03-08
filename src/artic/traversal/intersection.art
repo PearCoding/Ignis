@@ -148,8 +148,6 @@ fn @intersect_ray_tri_bw(_backface_culling: bool, ray: Ray, tri: Tri) -> Option[
 fn @intersect_ray_tri(backface_culling: bool, ray: Ray, tri: Tri) = intersect_ray_tri_mt(backface_culling, ray, tri);
 
 fn @intersect_ray_box(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> (f32, f32) {
-    if bbox_is_empty(bbox) { return((1,-1)) }
-
     let t0 = vec3_add(vec3_mul(ray.inv_dir, bbox.min), ray.inv_org);
     let t1 = vec3_add(vec3_mul(ray.inv_dir, bbox.max), ray.inv_org);
 
@@ -173,13 +171,13 @@ fn @intersect_ray_box_single(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBo
     }
 }
 
-fn @intersect_ray_box_single_min(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> Option[f32] {
+fn @intersect_ray_box_single_section(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> Option[(f32, f32)] {
     let (entry, exit) = intersect_ray_box(min_max, ordered, ray, bbox);
     let mask = (entry <= exit) & (exit >= 0);
 
     if mask {
-        make_option(entry)
+        make_option((entry, exit))
     } else {
-        Option[f32]::None
+        Option[(f32, f32)]::None
     }
 }

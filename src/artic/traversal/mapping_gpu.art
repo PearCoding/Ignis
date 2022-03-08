@@ -133,10 +133,13 @@ fn @gpu_traverse_single_helper_prim( min_max: MinMax
         let mut mask = 0;
         let small_stack = make_small_stack(bvh.arity);
         for k in unroll(0, bvh.arity) {
-            let (t0, t1) = intersect_ray_box(min_max, false, ray, node.bbox(k)); 
-            if t0 <= t1 {
-                mask |= 1 << k;
-                small_stack.write(k, (node.child(k), t0));
+            let bbox = node.bbox(k);
+            if likely(!bbox_is_empty(bbox)) {
+                let (t0, t1) = intersect_ray_box(min_max, false, ray, bbox); 
+                if t0 <= t1 {
+                    mask |= 1 << k;
+                    small_stack.write(k, (node.child(k), t0));
+                }
             }
         }
 
@@ -222,10 +225,13 @@ fn @gpu_traverse_single_helper( min_max: MinMax
         let mut mask = 0;
         let small_stack = make_small_stack(bvh.arity);
         for k in unroll(0, bvh.arity) {
-            let (t0, t1) = intersect_ray_box(min_max, false, ray, node.bbox(k));
-            if t0 <= t1 {
-                mask |= 1 << k;
-                small_stack.write(k, (node.child(k), t0));
+            let bbox = node.bbox(k);
+            if likely(!bbox_is_empty(bbox)) {
+                let (t0, t1) = intersect_ray_box(min_max, false, ray, bbox);
+                if t0 <= t1 {
+                    mask |= 1 << k;
+                    small_stack.write(k, (node.child(k), t0));
+                }
             }
         }
 
@@ -271,10 +277,13 @@ fn @gpu_traverse_single_helper( min_max: MinMax
             while true {
                 let leaf = bvh.ent(ref_id++);
 
-                if let Option[f32]::Some(t) = intersect_ray_box_single_min(min_max, false, ray, leaf.bbox) {
-                    if t <= hit.distance {
+                if let Option[(f32,f32)]::Some((tmin, tmax)) = intersect_ray_box_single_section(min_max, false, ray, leaf.bbox) {
+                    if tmin <= hit.distance {
+                        let mut local_ray = transform_ray(ray, leaf.local);
+                        local_ray.tmin    = min_max.fmaxf(tmin, local_ray.tmin);
+                        local_ray.tmax    = min_max.fminminf(tmax, local_ray.tmax, hit.distance);
+
                         let shape_bvh = @prim_bvhs(leaf.shape_id);
-                        let local_ray = transform_ray(ray, leaf.local);
                         let local_hit = gpu_traverse_single_helper_prim(min_max, local_ray, shape_bvh, any_hit, 1);
 
                         if local_hit.prim_id != -1 {

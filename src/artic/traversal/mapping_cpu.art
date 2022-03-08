@@ -226,9 +226,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
                 let node = bvh.node(stack.pop().node - 1);
 
                 // Intersect children
-                // let (tentry, texit) = intersect_ray_box(min_max, true /*ordered*/, ray, node.ordered_bbox(i, octant)); // FIXME: There is a bug here
-                maybe_unused(octant);
-                let (tentry, texit) = intersect_ray_box(min_max, false /*ordered*/, ray, node.bbox(i));
+                let (tentry, texit) = intersect_ray_box(min_max, true /*ordered*/, ray, node.ordered_bbox(i, octant));
                 let mask = if min_max.is_integer {
                     // Special case when integer comparisons are faster than floating point comparisons
                     !rv_ballot(bitcast[i32](texit) < bitcast[i32](tentry)) & ((1 << bvh.arity) - 1)
@@ -502,10 +500,13 @@ fn @cpu_traverse_helper( mut ray: Ray
             while true {
                 let leaf = bvh.ent(ref_id++);
 
-                if let Option[f32]::Some(t) = intersect_ray_box_single_min(min_max, false, ray, leaf.bbox) {
-                    if t <= hit.distance {
+                if let Option[(f32,f32)]::Some((tmin, tmax)) = intersect_ray_box_single_section(min_max, false, ray, leaf.bbox) {
+                    if tmin <= hit.distance {
+                        let mut local_ray = transform_ray(ray, leaf.local);
+                        local_ray.tmin    = min_max.fmaxf(tmin, local_ray.tmin);
+                        local_ray.tmax    = min_max.fminminf(tmax, local_ray.tmax, hit.distance);
+
                         let shape_bvh = @prim_bvhs(leaf.shape_id);
-                        let local_ray = transform_ray(ray, leaf.local);
                         let local_hit = cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
                         
                         if active {

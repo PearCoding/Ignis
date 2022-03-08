@@ -31,16 +31,23 @@ fn @make_ray(org: Vec3, dir: Vec3, tmin: f32, tmax: f32) -> Ray {
 }
 
 // Transforms ray. The direction is not normalized
+// The near and far distances are still given in global space
+// Multiplying with the magnitude of the direction vector would give the local distances
 fn @transform_ray(ray: Ray, m: Mat3x4) = make_ray(
     mat3x4_transform_point(m, ray.org),
     mat3x4_transform_direction(m, ray.dir),
     ray.tmin, ray.tmax);
 
 // Transforms ray. The direction is normalized
-fn @transform_norm_ray(ray: Ray, m: Mat3x4) = make_ray(
-    mat3x4_transform_point(m, ray.org),
-    vec3_normalize(mat3x4_transform_direction(m, ray.dir)),
-    ray.tmin, ray.tmax);
+fn @transform_norm_ray(ray: Ray, m: Mat3x4) -> Ray {
+    let d  = mat3x4_transform_direction(m, ray.dir);
+    let ln = vec3_len(d);
+    make_ray(
+        mat3x4_transform_point(m, ray.org),
+        vec3_mulf(d, safe_div(1, ln)),
+        ray.tmin * ln,
+        ray.tmax * ln)
+}
 
 // Return the respective octant representation of the given ray
 fn @ray_octant(ray: Ray) -> RayOctant {
