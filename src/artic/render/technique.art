@@ -10,7 +10,7 @@ enum ShadowRay {
 fn @make_simple_shadow_ray(ray: Ray, color: Color) = ShadowRay::Simple(ray, color);
 fn @make_advanced_shadow_ray(ray: Ray, color: Color, material: i32) = ShadowRay::Advanced(ray, color, material);
 
-// A technique is combination of functions run on a single variant per iteration
+// A technique is a combination of functions run on a single variant per iteration
 struct Technique {
     on_hit:              fn (Ray, i32, Hit, RayPayload, SurfaceElement, Material) -> Option[Color],
     on_miss:             fn (Ray, i32, RayPayload) -> Option[Color],

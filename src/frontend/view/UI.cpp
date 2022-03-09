@@ -615,8 +615,8 @@ public:
             ImGui::SetNextWindowSize(ImVec2(UI_W, UI_H), ImGuiCond_Once);
             ImGui::Begin("Control");
             if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::Text("Iter %i", iter);
-                ImGui::Text("SPP  %i", samples);
+                ImGui::Text("Iter %zu", iter);
+                ImGui::Text("SPP  %zu", samples);
                 ImGui::Text("Cursor  (%f, %f, %f)", rgb.r, rgb.g, rgb.b);
                 ImGui::Text("Lum Max %8.3f | 95%% %8.3f", LastLum.Max, LastLum.SoftMax);
                 ImGui::Text("Lum Min %8.3f |  5%% %8.3f", LastLum.Min, LastLum.SoftMin);
