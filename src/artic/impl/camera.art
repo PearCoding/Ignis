@@ -2,8 +2,8 @@
 fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, fov: f32, tmin: f32, tmax: f32) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
     let view  = make_mat3x3(right, up, dir);
-    let sh    = math_builtins::tan(fov / 2);
-    let sw    = sh * w / h;
+    let sw    = math_builtins::tan(fov / 2);
+    let sh    = sw * h / w;
 
     Camera {
         generate_ray = @ |_, x, y| {
@@ -17,8 +17,8 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, fov:
 fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, fov: f32, aperture_radius: f32, focal_length: f32, tmin: f32, tmax: f32) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
     let view  = make_mat3x3(right, up, dir);
-    let sh    = math_builtins::tan(fov / 2);
-    let sw    = sh * w / h;
+    let sw    = math_builtins::tan(fov / 2);
+    let sh    = sw * h / w;
 
     Camera {
         generate_ray = @ |rnd, x, y| {
