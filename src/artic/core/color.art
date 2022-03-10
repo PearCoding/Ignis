@@ -20,6 +20,8 @@ fn @color_lerp(a: Color, b: Color, t: f32) = make_color(
     (1 - t) * a.b + t * b.b,
     (1 - t) * a.a + t * b.a);
 
+fn @color_saturate(a: Color, f: f32) = make_color(math_builtins::fmin[f32](a.r, f), math_builtins::fmin[f32](a.g, f), math_builtins::fmin[f32](a.b, f), math_builtins::fmin[f32](a.a, f));
+
 fn @color_average(c: Color)       = (c.r + c.g + c.b) / 3;
 fn @color_luminance(c: Color)     = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
 fn @color_max_component(c: Color) = math_builtins::fmax[f32](c.r, math_builtins::fmax[f32](c.g, c.b));

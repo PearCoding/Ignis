@@ -49,6 +49,22 @@ fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: 
 //--------------------------------------
 // Creates a rough glass BSDF
 fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color, micro: MicrofacetDistribution) -> Bsdf {
+    let cos_eps = 1e-5 : f32; // Epsilon for cosine
+    let pdf_eps = if micro.is_delta { 
+        flt_eps
+    } else {
+        // Epsilon for microfacet model pdf
+        // These values are carefully choosen...
+        let alpha = if micro.alpha_u < micro.alpha_v { micro.alpha_u } else { micro.alpha_v };
+        if ?alpha && alpha <= 0.01 {
+            1e-3 : f32
+        } else if ?alpha && alpha <= 0.1 {
+            1e-4 : f32
+        } else {
+            // If the alpha value is not constant (e.g., a texture) or quite large, stick to a "safe" value
+            1e-5 : f32
+        }
+    }; 
     let eta = if surf.is_entering { n1 / n2 } else { n2 / n1 };
     let N   = surf.local.col(2);
 
@@ -57,12 +73,16 @@ fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt:
         let cos_i = vec3_dot(N, in_dir);
         let cos_o = vec3_dot(N, out_dir);
 
-        let is_transmission = cos_i * cos_o < 0;
+        if math_builtins::fabs(cos_i * cos_o) <= cos_eps { return(black) }
+
+        let is_transmission = math_builtins::signbit(cos_i * cos_o);
 
         let H = if is_transmission { vec3_halfway_refractive(in_dir, out_dir, eta) } else { vec3_halfway(in_dir, out_dir) };
         
         let cos_h_i = vec3_dot(H, in_dir);
         let cos_h_o = vec3_dot(H, out_dir);
+
+        if math_builtins::fabs(cos_h_i * cos_h_o) <= cos_eps { return(black) }
 
         let fterm = fresnel(eta, math_builtins::fabs(cos_h_o));
         if micro.is_delta { return(if is_transmission { color_mulf(kt, 1-fterm.factor) } else { color_mulf(ks, fterm.factor) }) }
@@ -86,19 +106,27 @@ fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt:
         let cos_i = vec3_dot(N, in_dir);
         let cos_o = vec3_dot(N, out_dir);
 
-        let is_transmission = cos_i * cos_o < 0;
+        if math_builtins::fabs(cos_i * cos_o) <= cos_eps { return(0) }
+
+        let is_transmission = math_builtins::signbit(cos_i * cos_o);
 
         let H = if is_transmission { vec3_halfway_refractive(in_dir, out_dir, eta) } else { vec3_halfway(in_dir, out_dir) };
 
         let cos_h_i = vec3_dot(H, in_dir);
         let cos_h_o = vec3_dot(H, out_dir);
 
+        if math_builtins::fabs(cos_h_i * cos_h_o) <= cos_eps { return(0) }
+
         let fterm = fresnel(eta, math_builtins::fabs(cos_h_o));
 
-        if !is_transmission {
-            fterm.factor * micro.pdf(in_dir, out_dir, H) * math_builtins::fabs(shading::halfway_reflective_jacobian(cos_h_o))
+        let mpdf = micro.pdf(in_dir, out_dir, H);
+
+        if mpdf <= pdf_eps {
+            0
+        } else if !is_transmission {
+            fterm.factor * mpdf * math_builtins::fabs(shading::halfway_reflective_jacobian(cos_h_o))
         } else {
-            (1 - fterm.factor) * micro.pdf(in_dir, out_dir, H) * math_builtins::fabs(shading::halfway_refractive_jacobian(eta, cos_h_i, cos_h_o))
+            (1 - fterm.factor) * mpdf * math_builtins::fabs(shading::halfway_refractive_jacobian(eta, cos_h_i, cos_h_o))
         }
     };
 
@@ -107,14 +135,16 @@ fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt:
         pdf    = pdf,
         sample = @ |rnd, out_dir, adjoint| {
             let cos_o = vec3_dot(N, out_dir);
+            if math_builtins::fabs(cos_o) <= cos_eps { return(reject_bsdf_sample()) }
 
             let s = micro.sample(rnd, out_dir);
-            if vec3_len2(s.normal) <= flt_eps || s.pdf <= flt_eps { return(reject_bsdf_sample()) };
+            if vec3_len2(s.normal) <= flt_eps || s.pdf <= pdf_eps { return(reject_bsdf_sample()) };
 
             let oH = vec3_normalize(s.normal);
             let H  = if vec3_dot(oH, out_dir) < 0 { vec3_neg(oH) } else { oH };
 
             let cos_h_o = vec3_dot(H, out_dir);
+            if unlikely(math_builtins::fabs(cos_h_o) <= cos_eps) { return(reject_bsdf_sample()) }
 
             let fterm = fresnel(eta, cos_h_o);
 
@@ -131,12 +161,13 @@ fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt:
             };
 
             let cos_i = vec3_dot(N, in_dir);
-            let is_transmission = cos_i * cos_o < 0;
-            let adjoint_term = if is_transmission && adjoint { 1 / (eta * eta) } else { 1 };
+            let f_pdf = s.pdf * sel_pdf;
+            let is_transmission = math_builtins::signbit(cos_i * cos_o);
+            let adjoint_term    = if is_transmission && adjoint { 1 / (eta * eta) } else { 1 };
             make_option(BsdfSample {
                 in_dir = in_dir,
-                pdf    = s.pdf * sel_pdf,
-                color  = color_mulf(eval(in_dir, out_dir), safe_div(adjoint_term, s.pdf * sel_pdf)),
+                pdf    = f_pdf,
+                color  = color_mulf(eval(in_dir, out_dir), safe_div(adjoint_term, f_pdf)),
                 eta    = if !is_transmission { 1 } else { eta }
             })
         },
