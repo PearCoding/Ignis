@@ -17,6 +17,37 @@ struct SectionTimer {
     inline void stop() { duration_ms += timer.stopMS(); }
 };
 
+static std::string beautiful_time(uint64 ms)
+{
+    uint64_t pms = ms % 1000;
+    ms /= 1000;
+    uint64_t ps = ms % 60;
+    ms /= 60;
+    uint64_t pm = ms % 60;
+    ms /= 60;
+    uint64_t ph = ms % 24;
+    ms /= 24;
+    uint64_t pd = ms;
+
+    std::stringstream stream;
+    if (pd > 0)
+        stream << pd << "d ";
+
+    if (ph > 0)
+        stream << ph << "h ";
+
+    if (pm > 0)
+        stream << pm << "m ";
+
+    if (pm > 0 || ps > 0)
+        stream << ps << "s ";
+
+    if (pms > 0)
+        stream << pms << "ms";
+
+    return stream.str();
+}
+
 int main(int argc, char** argv)
 {
     ProgramOptions cmd(argc, argv, ApplicationType::View, "Interactive viewer");
@@ -198,15 +229,18 @@ int main(int argc, char** argv)
             << "  Iterations: " << runtime->currentIterationCount() << std::endl
             << "  SPP: " << runtime->currentSampleCount() << std::endl
             << "  SPI: " << SPI << std::endl
-            << "  Time: " << timer_all.duration_ms << "ms" << std::endl
-            << "    Loading> " << timer_loading.duration_ms << "ms" << std::endl
-            << "    Input>   " << timer_input.duration_ms << "ms" << std::endl
-            << "    UI>      " << timer_ui.duration_ms << "ms" << std::endl
-            << "    Render>  " << timer_render.duration_ms << "ms" << std::endl
-            << "    Saving>  " << timer_saving.duration_ms << "ms" << std::endl;
+            << "  Time: " << beautiful_time(timer_all.duration_ms) << std::endl
+            << "    Loading> " << beautiful_time(timer_loading.duration_ms) << std::endl
+            << "    Input>   " << beautiful_time(timer_input.duration_ms) << std::endl
+            << "    UI>      " << beautiful_time(timer_ui.duration_ms) << std::endl
+            << "    Render>  " << beautiful_time(timer_render.duration_ms) << std::endl
+            << "    Saving>  " << beautiful_time(timer_saving.duration_ms) << std::endl;
     }
 
     runtime.reset();
+
+    if (!samples_stats.empty())
+        IG_LOG(L_INFO) << "Rendering took " << beautiful_time(timer_all.duration_ms) << std::endl;
 
     if (!samples_stats.empty()) {
         auto inv = 1.0e-6;

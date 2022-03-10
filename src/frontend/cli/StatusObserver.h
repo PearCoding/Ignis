@@ -52,7 +52,7 @@ public:
 
     inline void end()
     {
-        if (mBeautify)
+        if (mBeautify && !mFirstTime)
             std::cout << REMOVE_LAST_LINE;
         std::cout << "Done" << std::setw(120) << " " << std::endl;
     }
