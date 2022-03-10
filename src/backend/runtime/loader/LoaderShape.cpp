@@ -269,12 +269,17 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
         } else if (child->pluginType() == "mitsuba") {
             mesh = setup_mesh_mitsuba(name, *child, ctx);
         } else {
-            IG_LOG(L_WARNING) << "Shape '" << name << "': Can not load shape type '" << child->pluginType() << "'" << std::endl;
+            IG_LOG(L_ERROR) << "Shape '" << name << "': Can not load shape type '" << child->pluginType() << "'" << std::endl;
             return;
         }
 
         if (mesh.vertices.empty()) {
-            IG_LOG(L_WARNING) << "Shape '" << name << "': While loading shape type '" << child->pluginType() << "' no vertices were generated" << std::endl;
+            IG_LOG(L_ERROR) << "Shape '" << name << "': While loading shape type '" << child->pluginType() << "' no vertices were generated" << std::endl;
+            return;
+        }
+
+        if (mesh.faceCount() == 0) {
+            IG_LOG(L_ERROR) << "Shape '" << name << "': While loading shape type '" << child->pluginType() << "' no indices were generated" << std::endl;
             return;
         }
 

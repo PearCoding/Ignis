@@ -68,8 +68,12 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         Transformf transform = child->property("transform").getTransform();
         transform.makeAffine();
 
+        const auto& shape = ctx.Environment.Shapes[shapeID];
+        if (shape.VertexCount == 0 || shape.FaceCount == 0)
+            continue; // No need to trigger a warning/error as this should have been done earlier
+
         const Transformf invTransform = transform.inverse();
-        const BoundingBox& shapeBox   = ctx.Environment.Shapes[shapeID].BoundingBox;
+        const BoundingBox& shapeBox   = shape.BoundingBox;
         const BoundingBox entityBox   = shapeBox.transformed(transform);
 
         // Extend scene box

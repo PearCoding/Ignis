@@ -66,11 +66,17 @@ TriMesh load(const std::filesystem::path& path)
     for (size_t v = 0; v < attrib.vertices.size() / 3; ++v)
         tri_mesh.vertices.emplace_back(attrib.vertices[3 * v + 0], attrib.vertices[3 * v + 1], attrib.vertices[3 * v + 2]);
 
+    // Cleanup
+    // TODO: This does not work due to fp precision problems
+    // const size_t removedBadAreas = tri_mesh.removeZeroAreaTriangles();
+    // if (removedBadAreas != 0)
+    //     IG_LOG(L_WARNING) << "ObjFile " << path << ": Removed " << removedBadAreas << " triangles with zero area" << std::endl;
+
     // Normals
     bool hasBadAreas = false;
     tri_mesh.computeFaceNormals(&hasBadAreas);
-    if (hasBadAreas)
-        IG_LOG(L_WARNING) << "ObjFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
+    // if (hasBadAreas)
+    //     IG_LOG(L_WARNING) << "ObjFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
 
     if (hasNorms) {
         tri_mesh.normals.reserve(attrib.normals.size() / 3);

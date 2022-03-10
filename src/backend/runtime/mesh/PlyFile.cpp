@@ -356,10 +356,17 @@ TriMesh load(const std::filesystem::path& path)
     if (trimesh.vertices.empty())
         return trimesh;
 
+    // Cleanup
+    // TODO: This does not work due to fp precision problems
+    // const size_t removedBadAreas = trimesh.removeZeroAreaTriangles();
+    // if (removedBadAreas != 0)
+    //     IG_LOG(L_WARNING) << "PlyFile " << path << ": Removed " << removedBadAreas << " triangles with zero area" << std::endl;
+
+    // Normals
     bool hasBadAreas = false;
     trimesh.computeFaceNormals(&hasBadAreas);
-    if (hasBadAreas)
-        IG_LOG(L_WARNING) << "PlyFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
+    // if (hasBadAreas)
+    //     IG_LOG(L_WARNING) << "PlyFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
 
     if (trimesh.normals.empty()) {
         IG_LOG(L_WARNING) << "PlyFile " << path << ": No normals are present, computing smooth approximation." << std::endl;

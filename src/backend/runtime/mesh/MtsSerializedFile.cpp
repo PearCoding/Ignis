@@ -291,10 +291,17 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
     else
         extractMeshIndices<uint32_t>(trimesh, cin);
 
+    // Cleanup
+    // TODO: This does not work due to fp precision problems
+    // const size_t removedBadAreas = trimesh.removeZeroAreaTriangles();
+    // if (removedBadAreas != 0)
+    //     IG_LOG(L_WARNING) << "MtsFile " << path << ": Removed " << removedBadAreas << " triangles with zero area" << std::endl;
+
+    // Normals
     bool hasBadAreas = false;
     trimesh.computeFaceNormals(&hasBadAreas);
-    if (hasBadAreas)
-        IG_LOG(L_WARNING) << "MtsFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
+    // if (hasBadAreas) // Should always be zero
+    //     IG_LOG(L_WARNING) << "MtsFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
 
     if (!(mesh_flags & MF_VERTEXNORMALS)) {
         IG_LOG(L_WARNING) << "MtsFile " << path << ": No normals are present, computing smooth approximation." << std::endl;

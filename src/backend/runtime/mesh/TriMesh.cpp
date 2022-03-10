@@ -34,58 +34,89 @@ void TriMesh::scale(float scale)
         v *= scale;
 }
 
-void TriMesh::mergeFrom(const TriMesh& src)
+size_t TriMesh::removeZeroAreaTriangles()
 {
-    size_t idx_offset = indices.size();
-    size_t vtx_offset = vertices.size();
+    const auto checkGood = [&](size_t i) {
+        const Vector3f v0 = vertices[indices[i + 0]];
+        const Vector3f v1 = vertices[indices[i + 1]];
+        const Vector3f v2 = vertices[indices[i + 2]];
+        const Vector3f N  = (v1 - v0).cross(v2 - v0);
+        return N.squaredNorm() > FltEps;
+    };
 
-    if (idx_offset == 0) {
-        *this = src;
-        return;
-    }
-
-    vertices.insert(vertices.end(), src.vertices.begin(), src.vertices.end());
-    normals.insert(normals.end(), src.normals.begin(), src.normals.end());
-    texcoords.insert(texcoords.end(), src.texcoords.begin(), src.texcoords.end());
-    face_normals.insert(face_normals.end(), src.face_normals.begin(), src.face_normals.end());
-    face_inv_area.insert(face_inv_area.end(), src.face_inv_area.begin(), src.face_inv_area.end());
-
-    indices.resize(idx_offset + src.indices.size());
-    for (size_t i = 0; i < src.indices.size(); i += 4) {
-        indices[idx_offset + i + 0] = src.indices[i + 0] + (uint32)vtx_offset;
-        indices[idx_offset + i + 1] = src.indices[i + 1] + (uint32)vtx_offset;
-        indices[idx_offset + i + 2] = src.indices[i + 2] + (uint32)vtx_offset;
-        indices[idx_offset + i + 3] = src.indices[i + 3]; // ID
-    }
-}
-
-void TriMesh::replaceID(uint32 m_idx)
-{
-    for (size_t i = 0; i < indices.size(); i += 4)
-        indices[i + 3] = m_idx; // ID
-}
-
-void TriMesh::computeFaceAreaOnly(bool* hasBadAreas)
-{
-    bool bad = false;
-    face_inv_area.resize(faceCount());
+    // Count how many triangles are bad
+    size_t badAreaCount = 0;
 
     const size_t inds = indices.size();
     for (size_t i = 0; i < inds; i += 4) {
-        const auto& v0 = vertices[indices[i + 0]];
-        const auto& v1 = vertices[indices[i + 1]];
-        const auto& v2 = vertices[indices[i + 2]];
-        Vector3f N     = (v1 - v0).cross(v2 - v0);
-        float lN       = N.norm();
-        if (lN < 1e-5f) {
-            lN  = 1.0f;
-            N   = Vector3f::UnitZ();
-            bad = true;
-        }
-        face_inv_area[i / 4] = 1 / (0.5f * lN);
+        if (!checkGood(i))
+            ++badAreaCount;
     }
-    if (hasBadAreas)
-        *hasBadAreas = bad;
+
+    // If no triangle is bad, our job is done
+    if (badAreaCount == 0)
+        return 0;
+
+    // Compute new indices
+    std::vector<uint32> new_indices;
+    new_indices.reserve(indices.size() - badAreaCount * 4);
+
+    for (size_t i = 0; i < inds; i += 4) {
+        if (checkGood(i)) {
+            new_indices.push_back(indices[i + 0]);
+            new_indices.push_back(indices[i + 1]);
+            new_indices.push_back(indices[i + 2]);
+            new_indices.push_back(indices[i + 3]);
+        }
+    }
+
+    // Make sure at least a single triangle is always available
+    if (new_indices.empty()) {
+        badAreaCount--;
+        new_indices.push_back(indices[0 + 0]);
+        new_indices.push_back(indices[0 + 1]);
+        new_indices.push_back(indices[0 + 2]);
+        new_indices.push_back(indices[0 + 3]);
+    }
+
+    // Update face normals if necessary
+    if (!face_normals.empty()) {
+        std::vector<StVector3f> new_face_normals;
+        new_face_normals.reserve(new_indices.size() / 4);
+
+        for (size_t i = 0; i < inds; i += 4) {
+            if (checkGood(i))
+                new_face_normals.push_back(face_normals[i / 4]);
+        }
+
+        // Make sure at least a single triangle is always available
+        if (new_face_normals.empty())
+            new_face_normals.push_back(face_normals[0]);
+
+        face_normals = std::move(new_face_normals);
+    }
+
+    // Update face area if necessary
+    if (!face_inv_area.empty()) {
+        std::vector<float> new_face_area;
+        new_face_area.reserve(new_indices.size() / 4);
+
+        for (size_t i = 0; i < inds; i += 4) {
+            if (checkGood(i))
+                new_face_area.push_back(face_inv_area[i / 4]);
+        }
+
+        // Make sure at least a single triangle is always available
+        if (new_face_area.empty())
+            new_face_area.push_back(face_inv_area[0]);
+
+        face_inv_area = std::move(new_face_area);
+    }
+
+    // Finally update indices
+    indices = std::move(new_indices);
+
+    return badAreaCount;
 }
 
 void TriMesh::computeFaceNormals(bool* hasBadAreas)
@@ -109,6 +140,7 @@ void TriMesh::computeFaceNormals(bool* hasBadAreas)
         face_normals[i / 4]  = N / lN;
         face_inv_area[i / 4] = 1 / (0.5f * lN);
     }
+
     if (hasBadAreas)
         *hasBadAreas = bad;
 }
