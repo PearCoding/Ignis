@@ -42,7 +42,7 @@ fn unrap_ptraypayload(payload: RayPayload) = PTRayPayload {
     eta     = payload.components(5),
 };
 
-fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, aovs: AOVTable) -> Technique {
+fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, aovs: AOVTable, clamp_value: f32) -> Technique {
     let offset : f32  = 0.001;
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
 
@@ -50,6 +50,12 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
     let aov_di     = @aovs(AOV_PATH_DIRECT);
     let aov_nee    = @aovs(AOV_PATH_NEE);
     //let aov_stats  = @aovs(AOV_PATH_STATS);
+
+    let handle_color = if clamp_value > 0 {
+        @|c: Color| color_saturate(c, clamp_value)
+    } else {
+        @|c: Color| c
+    };
 
     fn @on_shadow( ray: Ray
                  , _pixel: i32
@@ -96,7 +102,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
 
                 return(make_simple_shadow_ray(
                     make_ray(surf.point, light_dir, offset, flt_max),
-                    color_mulf(contrib, mis * inv_pdf_l)
+                    handle_color(color_mulf(contrib, mis * inv_pdf_l))
                 ))
             }
         }  else {
@@ -125,7 +131,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
 
                 return(make_simple_shadow_ray(
                     make_ray(surf.point, light_dir, offset, 1 - offset),
-                    color_mulf(contrib, geom_factor * mis)
+                    handle_color(color_mulf(contrib, geom_factor * mis))
                 ))
             }
         }
@@ -155,7 +161,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 let emit     = mat.emission(out_dir);
                 let next_mis = pt.mis * hit.distance * hit.distance / dot;
                 let mis      = 1 / (1 + next_mis * pdf_lightpick * emit.pdf_area);
-                let contrib  = color_mulf(color_mul(pt.contrib, emit.intensity), mis);
+                let contrib  = handle_color(color_mulf(color_mul(pt.contrib, emit.intensity), mis));
                 
                 aov_di.splat(pixel, contrib);
 
@@ -184,7 +190,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 let out_dir = vec3_neg(ray.dir);
                 let emit    = light.emission(out_dir, make_invalid_surface_element());
                 let mis     = 1 / (1 + pt.mis * pdf_lightpick * emit.pdf_dir);
-                color = color_add(color, color_mulf(color_mul(pt.contrib, emit.intensity), mis));
+                color       = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit.intensity), mis)));
             }
         }
 

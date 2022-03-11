@@ -82,6 +82,7 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
 static void path_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
 {
     const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
+    const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
     const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
     const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
     const bool hasStatsAOV  = technique ? technique->property("aov_stats").getBool(false) : false;
@@ -118,7 +119,7 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
            << "    }" << std::endl
            << "  };" << std::endl;
 
-    stream << "  let technique = make_path_renderer(" << max_depth << ", num_lights, lights, aovs);" << std::endl;
+    stream << "  let technique = make_path_renderer(" << max_depth << ", num_lights, lights, aovs, " << clamp_value << ");" << std::endl;
 }
 
 static void path_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
