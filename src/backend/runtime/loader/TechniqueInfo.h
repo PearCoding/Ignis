@@ -70,17 +70,17 @@ struct TechniqueInfo {
     /// Callback to select the active variants for a specific iteration. If nullptr, all variants will be called sequentially
     TechniqueVariantSelector VariantSelector = nullptr;
 
-    inline size_t ComputeSPI(size_t iter, size_t hintSPI) const
+    [[nodiscard]] inline size_t ComputeSPI(size_t iter, size_t hintSPI) const
     {
         if (VariantSelector) {
             const auto activeVariants = VariantSelector(iter);
-            return std::accumulate(activeVariants.begin(), activeVariants.end(), 0,
+            return std::accumulate(activeVariants.begin(), activeVariants.end(), size_t(0),
                                    [&](size_t cur, size_t ind) {
                                        const auto& var = Variants[ind];
                                        return !var.LockFramebuffer ? (cur + var.GetSPI(hintSPI)) : cur;
                                    });
         } else {
-            return std::accumulate(Variants.begin(), Variants.end(), 0,
+            return std::accumulate(Variants.begin(), Variants.end(), size_t(0),
                                    [&](size_t cur, const TechniqueVariantInfo& var) {
                                        return !var.LockFramebuffer ? (cur + var.GetSPI(hintSPI)) : cur;
                                    });

@@ -16,7 +16,7 @@ enum class ToneMappingMethod {
 class Runtime;
 class UI {
 public:
-    UI(Runtime* runtime, int width, int height, bool showDebug);
+    UI(Runtime* runtime, size_t width, size_t height, bool showDebug);
     ~UI();
 
     void setTitle(const char* str);
@@ -28,8 +28,8 @@ public:
     void setTravelSpeed(float v);
 
 private:
-    int mWidth;
-    int mHeight;
+    size_t mWidth;
+    size_t mHeight;
 
     DebugMode mDebugMode;
 

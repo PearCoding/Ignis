@@ -47,7 +47,7 @@ int main(int argc, char** argv)
     for (const auto& input : inputs) {
         std::string name = get_name(input);
 
-        stream << "const char* s_" << name << " =" << std::endl;
+        stream << "static const char* const s_" << name << " =" << std::endl;
 
         std::ifstream infile(input.generic_u8string());
         std::string line;

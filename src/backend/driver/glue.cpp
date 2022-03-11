@@ -528,7 +528,7 @@ public:
 
         using Callback = decltype(ig_ray_generation_shader);
         IG_ASSERT(shader_set.RayGenerationShader != nullptr, "Expected ray generation shader to be valid");
-        auto callback = reinterpret_cast<const Callback*>(shader_set.RayGenerationShader);
+        auto callback = reinterpret_cast<Callback*>(shader_set.RayGenerationShader);
         const int ret = callback(&driver_settings, (int)current_iteration, id, size, xmin, ymin, xmax, ymax);
 
         if (setup.acquire_stats)
@@ -543,7 +543,7 @@ public:
 
         using Callback = decltype(ig_miss_shader);
         IG_ASSERT(shader_set.MissShader != nullptr, "Expected miss shader to be valid");
-        auto callback = reinterpret_cast<const Callback*>(shader_set.MissShader);
+        auto callback = reinterpret_cast<Callback*>(shader_set.MissShader);
         callback(&driver_settings, first, last);
 
         if (setup.acquire_stats)
@@ -561,7 +561,7 @@ public:
         IG_ASSERT(material_id >= 0 && material_id < (int)shader_set.HitShaders.size(), "Expected material id for hit shaders to be valid");
         void* hit_shader = shader_set.HitShaders.at(material_id);
         IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
-        auto callback = reinterpret_cast<const Callback*>(hit_shader);
+        auto callback = reinterpret_cast<Callback*>(hit_shader);
         callback(&driver_settings, entity_id, first, last);
 
         if (setup.acquire_stats)
@@ -588,7 +588,7 @@ public:
 
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(shader_set.AdvancedShadowHitShader != nullptr, "Expected miss shader to be valid");
-            auto callback = reinterpret_cast<const Callback*>(shader_set.AdvancedShadowHitShader);
+            auto callback = reinterpret_cast<Callback*>(shader_set.AdvancedShadowHitShader);
             callback(&driver_settings, first, last);
 
             if (setup.acquire_stats)
@@ -599,7 +599,7 @@ public:
 
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(shader_set.AdvancedShadowMissShader != nullptr, "Expected miss shader to be valid");
-            auto callback = reinterpret_cast<const Callback*>(shader_set.AdvancedShadowMissShader);
+            auto callback = reinterpret_cast<Callback*>(shader_set.AdvancedShadowMissShader);
             callback(&driver_settings, first, last);
 
             if (setup.acquire_stats)
@@ -613,7 +613,7 @@ public:
 
         if (shader_set.CallbackShaders[type] != nullptr) {
             using Callback = decltype(ig_callback_shader);
-            auto callback  = reinterpret_cast<const Callback*>(shader_set.CallbackShaders[type]);
+            auto callback  = reinterpret_cast<Callback*>(shader_set.CallbackShaders[type]);
             callback(&driver_settings, (int)current_iteration);
         }
     }
@@ -838,15 +838,15 @@ void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings
 #elif defined(DEVICE_AMD)
     int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
 #endif
-    float* in_pixels            = sInterface->getAOVImage(dev_id, driver_settings.AOV);
+    float* in_pixels            = sInterface->getAOVImage(dev_id, (int)driver_settings.AOV);
     uint32_t* device_out_pixels = sInterface->getTonemapImage(dev_id);
 #else
-    float* in_pixels            = sInterface->getAOVImage(0, driver_settings.AOV);
+    float* in_pixels            = sInterface->getAOVImage(0, (int)driver_settings.AOV);
     uint32_t* device_out_pixels = out_pixels;
 #endif
 
     TonemapSettings settings;
-    settings.method          = driver_settings.Method;
+    settings.method          = (int)driver_settings.Method;
     settings.use_gamma       = driver_settings.UseGamma;
     settings.scale           = driver_settings.Scale;
     settings.exposure_factor = driver_settings.ExposureFactor;
@@ -874,15 +874,15 @@ void glue_imageinfo(size_t device, const IG::ImageInfoSettings& driver_settings,
 #elif defined(DEVICE_AMD)
     int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
 #endif
-    float* in_pixels = sInterface->getAOVImage(dev_id, driver_settings.AOV);
+    float* in_pixels = sInterface->getAOVImage(dev_id, (int)driver_settings.AOV);
 #else
-    float* in_pixels            = sInterface->getAOVImage(0, driver_settings.AOV);
+    float* in_pixels            = sInterface->getAOVImage(0, (int)driver_settings.AOV);
 #endif
 
     ImageInfoSettings settings;
     settings.scale     = driver_settings.Scale;
     settings.histogram = driver_settings.Histogram;
-    settings.bins      = driver_settings.Bins;
+    settings.bins      = (int)driver_settings.Bins;
 
     ImageInfoOutput output;
     ig_utility_imageinfo((int)device, in_pixels, (int)sInterface->film_width, (int)sInterface->film_height, &settings, &output);
@@ -934,8 +934,8 @@ inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t 
 }
 
 // Will be populated by api_collector
-extern const char* const ig_api[];
-extern const char* const ig_api_paths[];
+extern const char* ig_api[];
+extern const char* ig_api_paths[];
 
 // TODO: Really fixed at compile time?
 #ifdef IG_DEBUG

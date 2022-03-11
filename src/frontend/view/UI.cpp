@@ -53,15 +53,15 @@ public:
     SDL_Texture* Texture   = nullptr;
     std::vector<uint32_t> Buffer;
 
-    int PoseRequest       = -1;
-    bool PoseResetRequest = false;
-    int ScreenshotRequest = 0; // 0-Nothing, 1-Screenshot, 2-Full screenshot
-    bool ShowHelp         = false;
-    bool ShowUI           = true;
-    bool ShowInspector    = false;
-    bool LockInteraction  = false;
+    int PoseRequest          = -1;
+    bool PoseResetRequest    = false;
+    size_t ScreenshotRequest = 0; // 0-Nothing, 1-Screenshot, 2-Full screenshot
+    bool ShowHelp            = false;
+    bool ShowUI              = true;
+    bool ShowInspector       = false;
+    bool LockInteraction     = false;
 
-    int Width = 0, Height = 0;
+    size_t Width = 0, Height = 0;
 
     // Stats
     LuminanceInfo LastLum;
@@ -74,7 +74,7 @@ public:
     bool ToneMappingGamma                   = true;
     IG::ToneMappingMethod ToneMappingMethod = ToneMappingMethod::ACES;
 
-    int CurrentAOV = 0;
+    size_t CurrentAOV = 0;
 
     bool Running       = true;
     bool ShowDebugMode = false;
@@ -465,7 +465,7 @@ public:
     void analzeLuminance(size_t width, size_t height, size_t iter)
     {
         ImageInfoSettings settings{ CurrentAOV,
-                                    Histogram.data(), (int)Histogram.size(),
+                                    Histogram.data(), Histogram.size(),
                                     1.0f / iter };
         ImageInfoOutput output;
         Runtime->imageinfo(settings, output);
@@ -493,12 +493,12 @@ public:
 
         // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
         uint32* buf = Buffer.data();
-        Runtime->tonemap(buf, TonemapSettings{ CurrentAOV, (int)ToneMappingMethod, ToneMappingGamma,
+        Runtime->tonemap(buf, TonemapSettings{ CurrentAOV, (size_t)ToneMappingMethod, ToneMappingGamma,
                                                1.0f / iter,
                                                ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                                                ToneMapping_Automatic ? 0 : ToneMapping_Offset });
 
-        SDL_UpdateTexture(Texture, nullptr, buf, Width * sizeof(uint32_t));
+        SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
     }
 
     [[nodiscard]] inline RGB getFilmData(size_t width, size_t height, size_t iter, uint32_t x, uint32_t y)
@@ -548,7 +548,7 @@ public:
         Uint32 amask = 0xff000000;
 #endif
 
-        SDL_Surface* sshot = SDL_CreateRGBSurface(0, Width, Height, 32,
+        SDL_Surface* sshot = SDL_CreateRGBSurface(0, (int)Width, (int)Height, 32,
                                                   rmask, gmask, bmask, amask);
 
         if (!sshot) {
@@ -570,7 +570,7 @@ public:
         }
 
         float* rgba = new float[Width * Height * 4];
-        for (int y = 0; y < Height; ++y) {
+        for (size_t y = 0; y < Height; ++y) {
             const uint8* src = reinterpret_cast<const uint8*>(sshot->pixels) + y * sshot->pitch;
             float* dst       = rgba + y * Width * 4;
             for (int x = 0; x < Width; ++x) {
@@ -721,7 +721,7 @@ public:
 
 ////////////////////////////////////////////////////////////////
 
-UI::UI(Runtime* runtime, int width, int height, bool showDebug)
+UI::UI(Runtime* runtime, size_t width, size_t height, bool showDebug)
     : mWidth(width)
     , mHeight(height)
     , mDebugMode(DebugMode::Normal)
@@ -742,8 +742,8 @@ UI::UI(Runtime* runtime, int width, int height, bool showDebug)
         "Ignis",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        width,
-        height,
+        (int)width,
+        (int)height,
         SDL_WINDOW_RESIZABLE);
 
     if (!mInternal->Window) {
@@ -758,7 +758,7 @@ UI::UI(Runtime* runtime, int width, int height, bool showDebug)
         throw std::runtime_error("Could not setup UI");
     }
 
-    if (!mInternal->setupTextureBuffer((size_t)width, (size_t)height))
+    if (!mInternal->setupTextureBuffer(width, height))
         throw std::runtime_error("Could not setup UI");
 
     IMGUI_CHECKVERSION();
@@ -768,7 +768,7 @@ UI::UI(Runtime* runtime, int width, int height, bool showDebug)
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // if enabled -> ImGuiKey_Space has to be mapped
     ImGui::StyleColorsDark();
 
-    ImGuiSDL::Initialize(mInternal->Renderer, width, height);
+    ImGuiSDL::Initialize(mInternal->Renderer, (int)width, (int)height);
 
     mInternal->PoseManager.load(POSE_FILE);
 

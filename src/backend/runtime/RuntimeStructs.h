@@ -4,8 +4,8 @@
 
 namespace IG {
 struct TonemapSettings {
-    int AOV;
-    int Method;
+    size_t AOV;
+    size_t Method;
     bool UseGamma;
     float Scale;
     float ExposureFactor;
@@ -13,9 +13,9 @@ struct TonemapSettings {
 };
 
 struct ImageInfoSettings {
-    int AOV;
+    size_t AOV;
     int* Histogram;
-    int Bins;
+    size_t Bins;
     float Scale;
 };
 
@@ -36,8 +36,8 @@ struct ParameterSet {
 };
 
 struct RuntimeRenderSettings {
-    uint32 FilmWidth  = 800;
-    uint32 FilmHeight = 600;
+    size_t FilmWidth  = 800;
+    size_t FilmHeight = 600;
 };
 
 struct Ray {

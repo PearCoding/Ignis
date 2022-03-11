@@ -17,6 +17,6 @@ public:
 
 private:
     std::filesystem::path mPath;
-    std::shared_ptr<struct SharedLibraryInternal> mInternal;
+    std::shared_ptr<class SharedLibraryInternal> mInternal;
 };
 } // namespace IG
