@@ -10,8 +10,8 @@ struct Camera {
     Vector3f Up;
 
     inline Camera(const Vector3f& e, const Vector3f& d, const Vector3f& u)
+        : Eye(e)
     {
-        Eye = e;
         update_dir(d.normalized(), u.normalized());
     }
 

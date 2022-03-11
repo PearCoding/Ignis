@@ -9,7 +9,7 @@ struct RGB {
     float r, g, b;
 
     inline RGB() {}
-    inline RGB(const Vector3f& rgb)
+    inline explicit RGB(const Vector3f& rgb)
         : r(rgb(0))
         , g(rgb(1))
         , b(rgb(2))
@@ -67,7 +67,7 @@ struct RGBA {
     float r, g, b, a;
 
     inline RGBA() {}
-    inline RGBA(const Vector4f& rgba)
+    inline explicit RGBA(const Vector4f& rgba)
         : r(rgba(0))
         , g(rgba(1))
         , b(rgba(2))

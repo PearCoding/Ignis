@@ -9,6 +9,7 @@
 
 #include "serialization/VectorSerializer.h"
 
+#include <algorithm>
 #include <chrono>
 #include <sstream>
 
@@ -25,13 +26,13 @@ namespace IG {
 using namespace Parser;
 
 struct TransformCache {
-    Matrix4f TransformMatrix;
-    Matrix3f NormalMatrix;
+    const Matrix4f TransformMatrix;
+    const Matrix3f NormalMatrix;
 
-    TransformCache(const Transformf& t)
+    inline explicit TransformCache(const Transformf& t)
+        : TransformMatrix(t.matrix())
+        , NormalMatrix(TransformMatrix.block<3, 3>(0, 0).transpose().inverse())
     {
-        TransformMatrix = t.matrix();
-        NormalMatrix    = TransformMatrix.block<3, 3>(0, 0).transpose().inverse();
     }
 
     inline Vector3f applyTransform(const Vector3f& v) const
@@ -228,10 +229,11 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 {
     // To make use of parallelization and workaround the map restrictions
     // we do have to construct a map
-    std::vector<std::string_view> ids;
-    ids.reserve(ctx.Scene.shapes().size());
-    for (const auto& pair : ctx.Scene.shapes())
-        ids.push_back(pair.first);
+    std::vector<std::string> ids(ctx.Scene.shapes().size());
+    std::transform(ctx.Scene.shapes().begin(), ctx.Scene.shapes().end(), ids.begin(),
+                   [](const std::pair<std::string, std::shared_ptr<Object>>& pair) {
+                       return pair.first;
+                   });
 
     // Preallocate mesh storage
     std::vector<TriMesh> meshes;
@@ -242,7 +244,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
     // Load meshes in parallel
     // This is not always useful as the bottleneck is provably the IO, but better trying...
     const auto load_mesh = [&](size_t i) {
-        const std::string name = std::string(ids.at(i));
+        const std::string name = ids.at(i);
         const auto child       = ctx.Scene.shape(name);
 
         TriMesh& mesh = meshes[i];

@@ -26,8 +26,8 @@ void CDF::computeForImage(const std::filesystem::path& in, const std::filesystem
         tbb::blocked_range<size_t>(0, image.height),
         [&](const tbb::blocked_range<size_t>& range) {
             for (size_t y = range.begin(); y < range.end(); ++y) {
-                float* p    = &image.pixels[y * image.width * 4];
-                float* cond = &conditional[y * image.width];
+                const float* p = &image.pixels[y * image.width * 4];
+                float* cond    = &conditional[y * image.width];
 
                 // Compute one dimensional cdf per row
                 cond[0] = (p[0] + p[1] + p[2]) / 3;

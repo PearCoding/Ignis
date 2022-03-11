@@ -6,7 +6,7 @@ namespace IG {
 class BufferSerializer : public Serializer {
 public:
     BufferSerializer();
-    BufferSerializer(Serializer* source, size_t bufferSize = 1024);
+    explicit BufferSerializer(Serializer* source, size_t bufferSize = 1024);
     virtual ~BufferSerializer();
 
     void resize(size_t newSize);

@@ -224,10 +224,9 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
     } else {
         const bool hasAOV = technique ? technique->property("aov").getBool(false) : false;
 
-        size_t counter = 1;
         if (hasAOV) {
-            stream << "  let aov_di   = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
-            stream << "  let aov_merg = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
+            stream << "  let aov_di   = device.load_aov_image(1, spp);" << std::endl;
+            stream << "  let aov_merg = device.load_aov_image(2, spp);" << std::endl;
         }
 
         stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl

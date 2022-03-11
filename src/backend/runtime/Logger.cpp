@@ -5,10 +5,17 @@
 
 namespace IG {
 Logger::Logger()
-#ifdef IG_DEBUG
-    : mVerbosity(L_DEBUG)
+    : mConsoleLogListener(std::make_shared<ConsoleLogListener>(
+#ifdef IG_OS_LINUX
+        true
 #else
-    : mVerbosity(L_INFO)
+        false
+#endif
+        ))
+#ifdef IG_DEBUG
+    , mVerbosity(L_DEBUG)
+#else
+    , mVerbosity(L_INFO)
 #endif
     , mQuiet(false)
     , mEmptyStreamBuf(*this, true)
@@ -16,14 +23,6 @@ Logger::Logger()
     , mStreamBuf(*this, false)
     , mStream(&mStreamBuf)
 {
-    mConsoleLogListener = std::make_shared<ConsoleLogListener>(
-#ifdef IG_OS_LINUX
-        true
-#else
-        false
-#endif
-    );
-
     addListener(mConsoleLogListener);
 }
 

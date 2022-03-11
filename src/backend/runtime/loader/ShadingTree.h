@@ -23,7 +23,7 @@ public:
         IM_Light,
     };
 
-    ShadingTree(LoaderContext& ctx, const std::string& prefix = "");
+    explicit ShadingTree(LoaderContext& ctx, const std::string& prefix = "");
 
     void beginClosure();
     void endClosure();

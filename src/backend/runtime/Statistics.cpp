@@ -4,8 +4,7 @@
 namespace IG {
 Statistics::Statistics()
 {
-    for (auto& v : mQuantities)
-        v = 0;
+    std::fill(mQuantities.begin(), mQuantities.end(), 0);
 }
 
 void Statistics::beginShaderLaunch(ShaderType type, size_t id)

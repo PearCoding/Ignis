@@ -240,6 +240,7 @@ foreach(var ${VARIANTS})
     target_include_directories(${_target_name} PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS})
     add_dependencies(${_target_name} artic_c_interface)
     add_lto(${_target_name})
+    add_checks(${_target_name})
     install(TARGETS ${_target_name} COMPONENT runtime LIBRARY DESTINATION lib/)
 
     # Some of the compilation process requires a lot of memory.

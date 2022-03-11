@@ -3,6 +3,8 @@
 #include "RuntimeInfo.h"
 #include "config/Version.h"
 
+#include <algorithm>
+#include <numeric>
 #include <unordered_set>
 
 #define _IG_DRIVER_ENV_PATH_NAME "IG_DRIVER_PATH"
@@ -113,7 +115,7 @@ bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
 
 Target DriverManager::resolveTarget(Target target) const
 {
-#define CHECK_RET(c)                   \
+#define CHECK_RET(c)                      \
     if (mRegistredDrivers.count((c)) > 0) \
     return c
 
@@ -192,20 +194,14 @@ bool DriverManager::addModule(const std::filesystem::path& path)
 
 bool DriverManager::hasCPU() const
 {
-    for (const auto& pair : mRegistredDrivers) {
-        if (isCPU(pair.first))
-            return true;
-    }
-    return false;
+    return std::any_of(mRegistredDrivers.begin(), mRegistredDrivers.end(),
+                       [](const std::pair<Target, std::filesystem::path>& p) { return isCPU(p.first); });
 }
 
 bool DriverManager::hasGPU() const
 {
-    for (const auto& pair : mRegistredDrivers) {
-        if (!isCPU(pair.first))
-            return true;
-    }
-    return false;
+    return std::any_of(mRegistredDrivers.begin(), mRegistredDrivers.end(),
+                       [](const std::pair<Target, std::filesystem::path>& p) { return !isCPU(p.first); });
 }
 
 static int costFunction(Target target)
@@ -235,38 +231,29 @@ static int costFunction(Target target)
 
 Target DriverManager::recommendCPUTarget() const
 {
-    Target recommendation = Target::GENERIC;
-
-    for (const auto& pair : mRegistredDrivers) {
-        if (isCPU(pair.first) && costFunction(pair.first) < costFunction(recommendation))
-            recommendation = pair.first;
-    }
-
-    return recommendation;
+    return std::accumulate(mRegistredDrivers.begin(), mRegistredDrivers.end(),
+                           Target::GENERIC,
+                           [](const Target& a, const std::pair<Target, std::filesystem::path>& b) {
+                               return (isCPU(b.first) && costFunction(b.first) < costFunction(a)) ? b.first : a;
+                           });
 }
 
 Target DriverManager::recommendGPUTarget() const
 {
-    Target recommendation = Target::GENERIC;
-
-    for (const auto& pair : mRegistredDrivers) {
-        if (!isCPU(pair.first) && costFunction(pair.first) < costFunction(recommendation))
-            recommendation = pair.first;
-    }
-
-    return recommendation;
+    return std::accumulate(mRegistredDrivers.begin(), mRegistredDrivers.end(),
+                           Target::GENERIC,
+                           [](const Target& a, const std::pair<Target, std::filesystem::path>& b) {
+                               return (!isCPU(b.first) && costFunction(b.first) < costFunction(a)) ? b.first : a;
+                           });
 }
 
 Target DriverManager::recommendTarget() const
 {
-    Target recommendation = Target::GENERIC;
-
-    for (const auto& pair : mRegistredDrivers) {
-        if (costFunction(pair.first) < costFunction(recommendation))
-            recommendation = pair.first;
-    }
-
-    return recommendation;
+    return std::accumulate(mRegistredDrivers.begin(), mRegistredDrivers.end(),
+                           Target::GENERIC,
+                           [](const Target& a, const std::pair<Target, std::filesystem::path>& b) {
+                               return (costFunction(b.first) < costFunction(a)) ? b.first : a;
+                           });
 }
 
 } // namespace IG

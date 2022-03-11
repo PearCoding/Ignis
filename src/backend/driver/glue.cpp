@@ -111,7 +111,8 @@ struct Interface {
 
         anydsl::Array<uint32_t> tonemap_pixels;
 
-        inline DeviceData()
+        inline DeviceData() :
+        database()
         {
             for (size_t i = 0; i < primary.size(); ++i)
                 current_primary[i] = &primary[i];
@@ -148,11 +149,12 @@ struct Interface {
 
     Settings driver_settings;
 
-    inline Interface(const DriverSetupSettings& setup)
+    inline explicit Interface(const DriverSetupSettings& setup)
         : aovs(setup.aov_count)
         , database(setup.database)
         , film_width(setup.framebuffer_width)
         , film_height(setup.framebuffer_height)
+        , current_iteration(0)
         , setup(setup)
     {
         // Due to the DLL interface, we do have multiple instances of the logger. Make sure they are the same
@@ -516,7 +518,7 @@ struct Interface {
 
         using Callback = decltype(ig_ray_generation_shader);
         IG_ASSERT(shader_set.RayGenerationShader != nullptr, "Expected ray generation shader to be valid");
-        auto callback = (Callback*)shader_set.RayGenerationShader;
+        auto callback = reinterpret_cast<const Callback*>(shader_set.RayGenerationShader);
         const int ret = callback(&driver_settings, (int)current_iteration, id, size, xmin, ymin, xmax, ymax);
 
         if (setup.acquire_stats)
@@ -531,7 +533,7 @@ struct Interface {
 
         using Callback = decltype(ig_miss_shader);
         IG_ASSERT(shader_set.MissShader != nullptr, "Expected miss shader to be valid");
-        auto callback = (Callback*)shader_set.MissShader;
+        auto callback = reinterpret_cast<const Callback*>(shader_set.MissShader);
         callback(&driver_settings, first, last);
 
         if (setup.acquire_stats)
@@ -549,7 +551,7 @@ struct Interface {
         IG_ASSERT(material_id >= 0 && material_id < (int)shader_set.HitShaders.size(), "Expected material id for hit shaders to be valid");
         const void* hit_shader = shader_set.HitShaders.at(material_id);
         IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
-        const auto callback = (Callback*)hit_shader;
+        const auto callback = reinterpret_cast<const Callback*>(hit_shader);
         callback(&driver_settings, entity_id, first, last);
 
         if (setup.acquire_stats)
@@ -576,7 +578,7 @@ struct Interface {
 
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(shader_set.AdvancedShadowHitShader != nullptr, "Expected miss shader to be valid");
-            auto callback = (Callback*)shader_set.AdvancedShadowHitShader;
+            auto callback = reinterpret_cast<const Callback*>(shader_set.AdvancedShadowHitShader);
             callback(&driver_settings, first, last);
 
             if (setup.acquire_stats)
@@ -587,7 +589,7 @@ struct Interface {
 
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(shader_set.AdvancedShadowMissShader != nullptr, "Expected miss shader to be valid");
-            auto callback = (Callback*)shader_set.AdvancedShadowMissShader;
+            auto callback = reinterpret_cast<const Callback*>(shader_set.AdvancedShadowMissShader);
             callback(&driver_settings, first, last);
 
             if (setup.acquire_stats)
@@ -601,7 +603,7 @@ struct Interface {
 
         if (shader_set.CallbackShaders[type] != nullptr) {
             using Callback = decltype(ig_callback_shader);
-            auto callback  = (Callback*)shader_set.CallbackShaders[type];
+            auto callback  = reinterpret_cast<const Callback*>(shader_set.CallbackShaders[type]);
             callback(&driver_settings, (int)current_iteration);
         }
     }
@@ -799,7 +801,7 @@ void glue_resizeFramebuffer(size_t width, size_t height)
 
 const float* glue_getFramebuffer(size_t aov)
 {
-    if (aov <= 0 || (size_t)aov > sInterface->aovs.size())
+    if (aov == 0 || (size_t)aov > sInterface->aovs.size())
         return sInterface->host_pixels.data();
     else
         return sInterface->aovs[aov - 1].data();
@@ -961,7 +963,6 @@ IG_EXPORT DriverInterface ig_get_interface()
     interface.MajorVersion = IG_VERSION_MAJOR;
     interface.MinorVersion = IG_VERSION_MINOR;
 
-    interface.Target = IG::Target::INVALID;
 // Expose Target
 #if defined(DEVICE_DEFAULT)
     interface.Target = IG::Target::GENERIC;

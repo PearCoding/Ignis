@@ -6,7 +6,7 @@ namespace IG {
 class SharedLibrary {
 public:
     SharedLibrary();
-    SharedLibrary(const std::filesystem::path& file);
+    explicit SharedLibrary(const std::filesystem::path& file);
     ~SharedLibrary();
 
     void* symbol(const std::string& name) const;

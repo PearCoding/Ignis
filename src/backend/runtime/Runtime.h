@@ -34,7 +34,7 @@ class Runtime {
     IG_CLASS_NON_COPYABLE(Runtime);
     IG_CLASS_NON_MOVEABLE(Runtime);
 public:
-    Runtime(const RuntimeOptions& opts);
+    explicit Runtime(const RuntimeOptions& opts);
     ~Runtime();
 
     /// Load from file and initialize

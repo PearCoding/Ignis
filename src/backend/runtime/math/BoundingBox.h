@@ -9,7 +9,7 @@ struct BoundingBox {
     Vector3f max = Vector3f::Zero();
 
     inline BoundingBox() = default;
-    inline BoundingBox(const Vector3f& f)
+    inline explicit BoundingBox(const Vector3f& f)
         : min(f)
         , max(f)
     {

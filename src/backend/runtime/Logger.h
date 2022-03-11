@@ -37,7 +37,7 @@ public:
     // A closure used to make calls threadsafe. Never capture the ostream, else threadsafety is not guaranteed
     class LogClosure {
     public:
-        inline LogClosure(Logger& logger)
+        inline explicit LogClosure(Logger& logger)
             : mLogger(logger)
             , mStarted(false)
         {
@@ -88,8 +88,8 @@ public:
 
     static inline Logger& instance()
     {
-        static Logger log;
-        return log;
+        static Logger this_log;
+        return this_log;
     }
 
     static inline std::ostream& log(LogLevel level)

@@ -18,3 +18,4 @@ add_custom_command(TARGET pyignis POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E make_directory "${OUTPUT_DIR}"
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ignis "${OUTPUT_DIR}/ignis"
                    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:pyignis> "${OUTPUT_DIR}/ignis")
+add_checks(pyignis)

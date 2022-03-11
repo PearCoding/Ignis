@@ -14,6 +14,8 @@
 #include "Color.h"
 #include "Logger.h"
 
+#include <algorithm>
+
 namespace IG {
 
 constexpr size_t HISTOGRAM_SIZE               = 100;
@@ -409,11 +411,8 @@ public:
 
         if (run) {
             if (!LockInteraction) {
-                for (bool b : arrows) {
-                    if (b) {
-                        iter = 0;
-                        break;
-                    }
+                if (std::any_of(arrows.begin(), arrows.end(), [](bool b) { return b; })) {
+                    iter = 0;
                 }
 
                 const float drspeed = 10 * RSPEED;
@@ -774,7 +773,7 @@ UI::UI(Runtime* runtime, int width, int height, bool showDebug)
     mInternal->PoseManager.load(POSE_FILE);
 
     if (width < 350 || height < 500) {
-        IG_LOG(L_WARNING) << "Window too small to show UI. Hiding it by default." << std::endl;
+        IG_LOG(L_WARNING) << "Window too small to show UI. Hiding it by default. Press F2 to show it" << std::endl;
         mInternal->ShowUI = false;
     }
 }

@@ -28,7 +28,7 @@ T swap_endian(T u)
 
 namespace ply {
 static std::vector<uint32_t> triangulatePly(const std::filesystem::path& path,
-                                            const std::vector<Vector3f>& vertices, const std::vector<uint32_t> glb_indices,
+                                            const std::vector<Vector3f>& vertices, const std::vector<uint32_t>& glb_indices,
                                             bool& warned)
 {
     if (vertices.size() < 3) {

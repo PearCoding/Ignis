@@ -1,5 +1,6 @@
 #include "Pose.h"
 
+#include <algorithm>
 #include <fstream>
 
 namespace IG {
@@ -27,8 +28,7 @@ static void write_pose(const CameraPose& pose, std::ostream& out)
 void PoseManager::load(const std::filesystem::path& file)
 {
     // Reset poses
-    for (auto& pose : mPoses)
-        pose = CameraPose();
+    std::generate(mPoses.begin(), mPoses.end(), []() { return CameraPose(); });
 
     // Check if pose exists
     if (!std::filesystem::exists(file))

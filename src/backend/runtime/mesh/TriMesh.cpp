@@ -1,6 +1,8 @@
 #include "TriMesh.h"
 #include "Tangent.h"
 
+#include <algorithm>
+
 namespace IG {
 
 void TriMesh::fixNormals(bool* hasBadNormals)
@@ -22,16 +24,17 @@ void TriMesh::fixNormals(bool* hasBadNormals)
 
 void TriMesh::flipNormals()
 {
-    for (auto& n : face_normals)
-        n = -n;
-    for (auto& n : normals)
-        n = -n;
+    std::transform(face_normals.begin(), face_normals.end(), face_normals.begin(),
+                   [](const StVector3f& n) { return -n; });
+
+    std::transform(normals.begin(), normals.end(), normals.begin(),
+                   [](const StVector3f& n) { return -n; });
 }
 
 void TriMesh::scale(float scale)
 {
-    for (auto& v : vertices)
-        v *= scale;
+    std::transform(vertices.begin(), vertices.end(), vertices.begin(),
+                   [=](const StVector3f& v) { return v * scale; });
 }
 
 size_t TriMesh::removeZeroAreaTriangles()
@@ -487,8 +490,10 @@ TriMesh TriMesh::MakeIcoSphere(const Vector3f& center, float radius, uint32 subd
     mesh.makeTexCoordsZero(); // TODO
 
     // Apply transformation
-    for (auto& vertex : mesh.vertices)
-        vertex = center + vertex * radius;
+    std::transform(mesh.vertices.begin(), mesh.vertices.end(), mesh.vertices.begin(),
+                   [=](const StVector3f& vertex) {
+                       return center + vertex * radius;
+                   });
 
     return mesh;
 }

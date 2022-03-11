@@ -24,9 +24,9 @@ struct ElevationAzimuth {
 
     inline static ElevationAzimuth fromDirection(const Vector3f& direction)
     {
-        float theta = std::acos(direction(1)); // Y
-        float phi   = std::atan2(direction(2), direction(0));
-        return fromThetaPhi(theta, phi);
+        const float theta_dir = std::acos(direction(1)); // Y
+        const float phi_dir   = std::atan2(direction(2), direction(0));
+        return fromThetaPhi(theta_dir, phi_dir);
     }
 
     inline Vector2f toThetaPhi() const
@@ -36,9 +36,9 @@ struct ElevationAzimuth {
 
     inline Vector3f toDirection() const
     {
-        Vector2f tp = toThetaPhi();
-        float sinT  = std::sin(tp(0));
-        float cosT  = std::cos(tp(0));
+        const Vector2f tp = toThetaPhi();
+        const float sinT  = std::sin(tp(0));
+        const float cosT  = std::cos(tp(0));
 
         return Vector3f(sinT * std::cos(tp(1)), cosT, sinT * std::sin(tp(1)));
     }

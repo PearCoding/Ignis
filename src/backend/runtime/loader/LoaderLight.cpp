@@ -48,7 +48,7 @@ static std::string setup_sky(const std::string& name, const std::shared_ptr<Pars
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/skytex_" + ShaderUtils::escapeIdentifier(name) + ".exr";
-    SkyModel model(ground, ea, turbidity);
+    SkyModel model(RGB(ground), ea, turbidity);
     model.save(path);
     return path;
 }

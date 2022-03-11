@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TechniqueVariant.h"
+#include <numeric>
 
 namespace IG {
 struct LoaderContext;
@@ -73,21 +74,16 @@ struct TechniqueInfo {
     {
         if (VariantSelector) {
             const auto activeVariants = VariantSelector(iter);
-            size_t count              = 0;
-            for (const auto& ind : activeVariants) {
-                const auto& var = Variants[ind];
-                if (!var.LockFramebuffer)
-                    count += var.GetSPI(hintSPI);
-            }
-            return count;
+            return std::accumulate(activeVariants.begin(), activeVariants.end(), 0,
+                                   [&](size_t cur, size_t ind) {
+                                       const auto& var = Variants[ind];
+                                       return !var.LockFramebuffer ? (cur + var.GetSPI(hintSPI)) : cur;
+                                   });
         } else {
-            size_t count = 0;
-            for (const auto& var : Variants) {
-                if (!var.LockFramebuffer)
-                    count += var.GetSPI(hintSPI);
-            }
-
-            return count;
+            return std::accumulate(Variants.begin(), Variants.end(), 0,
+                                   [&](size_t cur, const TechniqueVariantInfo& var) {
+                                       return !var.LockFramebuffer ? (cur + var.GetSPI(hintSPI)) : cur;
+                                   });
         }
     }
 };
