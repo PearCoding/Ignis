@@ -4,8 +4,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-namespace IG {
-namespace obj {
+namespace IG::obj {
 // Only partial Wavefront support -> No normal or texcoords indices supported
 TriMesh load(const std::filesystem::path& path)
 {
@@ -39,24 +38,24 @@ TriMesh load(const std::filesystem::path& path)
     const bool hasCoords = (attrib.texcoords.size() / 2 == attrib.vertices.size() / 3);
 
     size_t indices_count = 0;
-    for (size_t sh = 0; sh < shapes.size(); ++sh)
-        indices_count += shapes[sh].mesh.indices.size();
+    for (const auto& shape : shapes)
+        indices_count += shape.mesh.indices.size();
 
     TriMesh tri_mesh;
 
     // Indices
     tri_mesh.indices.reserve(indices_count * 4);
-    for (size_t s = 0; s < shapes.size(); s++) {
+    for (const auto& shape : shapes) {
         // Loop over faces(polygon)
         size_t index_offset = 0;
-        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
-            int fv = shapes[s].mesh.num_face_vertices[f];
+        for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+            int fv = shape.mesh.num_face_vertices[f];
             IG_ASSERT(fv == 3, "Expected tinyobjloader generating triangular data!");
 
-            tri_mesh.indices.push_back(shapes[s].mesh.indices[index_offset + 0].vertex_index);
-            tri_mesh.indices.push_back(shapes[s].mesh.indices[index_offset + 1].vertex_index);
-            tri_mesh.indices.push_back(shapes[s].mesh.indices[index_offset + 2].vertex_index);
-            tri_mesh.indices.push_back(shapes[s].mesh.material_ids[f]); // Last entry is material index
+            tri_mesh.indices.push_back(shape.mesh.indices[index_offset + 0].vertex_index);
+            tri_mesh.indices.push_back(shape.mesh.indices[index_offset + 1].vertex_index);
+            tri_mesh.indices.push_back(shape.mesh.indices[index_offset + 2].vertex_index);
+            tri_mesh.indices.push_back(shape.mesh.material_ids[f]); // Last entry is material index
             index_offset += fv;
         }
     }
@@ -104,5 +103,4 @@ TriMesh load(const std::filesystem::path& path)
 
     return tri_mesh;
 }
-} // namespace obj
-} // namespace IG
+} // namespace IG::obj

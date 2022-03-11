@@ -5,11 +5,11 @@
 #include <CLI/CLI.hpp>
 
 namespace IG {
-static std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };
-static std::map<std::string, Target> TargetMap{ { "generic", Target::GENERIC }, { "asimd", Target::ASIMD }, { "sse42", Target::SSE42 }, { "avx", Target::AVX }, { "avx2", Target::AVX2 }, { "avx512", Target::AVX512 }, { "amdgpu", Target::AMDGPU }, { "nvvm", Target::NVVM } };
-static std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continous", SPPMode::Continous } };
-static std::set<std::string> CameraTypes{ "perspective", "orthogonal", "fishlens" };
-static std::set<std::string> TechniqueTypes{ "path", "photonmapper", "ao", "debug", "wireframe" };
+static const std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };
+static const std::map<std::string, Target> TargetMap{ { "generic", Target::GENERIC }, { "asimd", Target::ASIMD }, { "sse42", Target::SSE42 }, { "avx", Target::AVX }, { "avx2", Target::AVX2 }, { "avx512", Target::AVX512 }, { "amdgpu", Target::AMDGPU }, { "nvvm", Target::NVVM } };
+static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continous", SPPMode::Continous } };
+static const std::set<std::string> CameraTypes{ "perspective", "orthogonal", "fishlens" };
+static const std::set<std::string> TechniqueTypes{ "path", "photonmapper", "ao", "debug", "wireframe" };
 
 class MyTransformer : public CLI::Validator {
 public:

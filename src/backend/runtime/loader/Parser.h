@@ -7,8 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace IG {
-namespace Parser {
+namespace IG::Parser {
 // --------------- Enums
 enum ObjectType {
     OT_BSDF = 0,
@@ -349,5 +348,4 @@ private:
     std::vector<std::filesystem::path> mLookupPaths;
     std::unordered_map<std::string, std::string> mArguments;
 };
-} // namespace Parser
 } // namespace IG

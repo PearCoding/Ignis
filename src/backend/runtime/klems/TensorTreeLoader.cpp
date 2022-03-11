@@ -1,6 +1,7 @@
 #include "TensorTreeLoader.h"
 #include "Logger.h"
 
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 
@@ -84,14 +85,13 @@ public:
         mNodes  = std::vector<NodeValue>(mMaxValuesPerNode, 0);
         mValues = std::vector<float>(1, static_cast<float>(std::copysign(0, -1)));
 
-        for (size_t i = 0; i < mNodes.size(); ++i)
-            mNodes[i] = -1;
+        std::fill(mNodes.begin(), mNodes.end(), -1);
     }
 
     inline void write(std::ostream& os)
     {
-        uint32 node_count  = static_cast<uint32>(mNodes.size());
-        uint32 value_count = static_cast<uint32>(mValues.size());
+        auto node_count  = static_cast<uint32>(mNodes.size());
+        auto value_count = static_cast<uint32>(mValues.size());
 
         // We do not make use of this header, but it might get handy in other applications
         os.write(reinterpret_cast<const char*>(&mNDim), sizeof(mNDim));
@@ -103,8 +103,8 @@ public:
         os.write(reinterpret_cast<const char*>(mValues.data()), mValues.size() * sizeof(float));
     }
 
-    inline size_t nodeCount() const { return mNodes.size(); }
-    inline size_t valueCount() const { return mValues.size(); }
+    [[nodiscard]] inline size_t nodeCount() const { return mNodes.size(); }
+    [[nodiscard]] inline size_t valueCount() const { return mValues.size(); }
 
 private:
     uint32 mNDim;
@@ -213,7 +213,7 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
                     } else if (c2 == ',' || std::isspace(c2)) {
                         stream.ignore();
                     } else {
-                        float val;
+                        float val = 0;
                         stream >> val;
                         if (std::signbit(val) && !did_warn_sign) {
                             IG_LOG(L_WARNING) << "Data contains negative values in " << in_xml << ": Use absolute value instead" << std::endl;

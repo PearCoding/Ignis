@@ -69,7 +69,7 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
 }
 
 using TextureLoader = void (*)(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree);
-static struct {
+static const struct {
     const char* Name;
     TextureLoader Loader;
 } _generators[] = {

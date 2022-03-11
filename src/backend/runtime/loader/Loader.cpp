@@ -91,8 +91,8 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         }
 
         for (size_t j = 0; j < info.CallbackGenerators.size(); ++j) {
-            if (info.CallbackGenerators[j] != nullptr)
-                variant.CallbackShaders[j] = info.CallbackGenerators[j](ctx);
+            if (info.CallbackGenerators.at(j) != nullptr)
+                variant.CallbackShaders[j] = info.CallbackGenerators.at(j)(ctx);
         }
     }
 

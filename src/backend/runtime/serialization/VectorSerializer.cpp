@@ -8,10 +8,6 @@ VectorSerializer::VectorSerializer(std::vector<uint8>& data, bool readmode)
 {
 }
 
-VectorSerializer::~VectorSerializer()
-{
-}
-
 void VectorSerializer::ensureAlignment(size_t alignment)
 {
     if (alignment == 0)

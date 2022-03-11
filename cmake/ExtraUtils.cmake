@@ -37,8 +37,29 @@ if(CMAKE_VERSION VERSION_GREATER 3.6)
             DOC "Path to clang-tidy executable"
         )
 
+        set(CLANG_TIDY_STYLE -*)
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},clang-analyzer-cplusplus*)
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},performance-*)
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},portability-*)
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},modernize-*)
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},cppcoreguidelines-*)
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},bugprone-*)
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},concurrency-*)
+
+        
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},-cppcoreguidelines-owning-memory)                     # smart pointers are nice, but deps not always use them
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},-modernize-use-trailing-return-type)                  # never argue about style
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},-cppcoreguidelines-pro-bounds-pointer-arithmetic)     # we are close to hardware and need pointer magic
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},-cppcoreguidelines-pro-type-reinterpret-cast)         # reinterpret_cast is necessary
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},-cppcoreguidelines-pro-type-const-cast)               # const_cast is useful
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},-cppcoreguidelines-pro-bounds-array-to-pointer-decay) # this is just annoying
+        set(CLANG_TIDY_STYLE ${CLANG_TIDY_STYLE},-cppcoreguidelines-avoid-magic-numbers)               # we take care of magic numbers in our way
+
         if(CLANG_TIDY_EXECUTABLE)
             message(STATUS "Using Clang-Tidy ${CLANG_TIDY_EXECUTABLE}")
+            set(CLANG_TIDY_ARGS 
+                "--checks=${CLANG_TIDY_STYLE}"
+                "--quiet")
         endif()
     endif()
 endif()
@@ -108,16 +129,16 @@ if(CMAKE_VERSION VERSION_GREATER 3.10)
 endif()
 
 function(add_checks TARGET)
-    if(IWYU_EXECUTABLE)
+    if(IG_USE_IWYU AND IWYU_EXECUTABLE)
         set_property(TARGET ${TARGET} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_EXECUTABLE} ${IWYU_ARGS})
     endif()
-    if(CLANG_TIDY_EXECUTABLE)
-        set_property(TARGET ${TARGET} PROPERTY CXX_CLANG_TIDY ${CLANG_TIDY_EXECUTABLE})
+    if(IG_USE_CLANG_TIDY AND CLANG_TIDY_EXECUTABLE)
+        set_property(TARGET ${TARGET} PROPERTY CXX_CLANG_TIDY ${CLANG_TIDY_EXECUTABLE} ${CLANG_TIDY_ARGS})
     endif()
-    if(CPPLINT_EXECUTABLE)
+    if(IG_USE_CPPLINT AND CPPLINT_EXECUTABLE)
         set_property(TARGET ${TARGET} PROPERTY CXX_CPPLINT ${CPPLINT_EXECUTABLE} ${CPPLINT_ARGS})
     endif()
-    if(CPPCHECK_EXECUTABLE)
+    if(IG_USE_CPPCHECK AND CPPCHECK_EXECUTABLE)
         set_property(TARGET ${TARGET} PROPERTY CXX_CPPCHECK ${CPPCHECK_EXECUTABLE} ${CPPCHECK_ARGS})
     endif()
 endfunction()

@@ -10,7 +10,11 @@
 #endif
 
 namespace IG {
-struct SharedLibraryInternal {
+class SharedLibraryInternal {
+    IG_CLASS_NON_COPYABLE(SharedLibraryInternal);
+    IG_CLASS_NON_MOVEABLE(SharedLibraryInternal);
+
+public:
 #ifdef IG_OS_LINUX
     void* Handle;
 #elif defined(IG_OS_WINDOWS)
@@ -43,8 +47,6 @@ struct SharedLibraryInternal {
     }
 };
 
-SharedLibrary::SharedLibrary() {}
-
 SharedLibrary::SharedLibrary(const std::filesystem::path& file)
     : mPath(file)
 {
@@ -64,8 +66,6 @@ SharedLibrary::SharedLibrary(const std::filesystem::path& file)
     }
 #endif
 }
-
-SharedLibrary::~SharedLibrary() {}
 
 void* SharedLibrary::symbol(const std::string& name) const
 {

@@ -6,10 +6,12 @@
 
 #include <zlib.h>
 
-namespace IG {
-namespace mts {
+namespace IG::mts {
 constexpr size_t BUFFER_SIZE = 32768;
 class CompressedStream {
+    IG_CLASS_NON_COPYABLE(CompressedStream);
+    IG_CLASS_NON_MOVEABLE(CompressedStream);
+
 public:
     inline CompressedStream(std::istream& in, size_t size)
         : mIn(in)
@@ -42,11 +44,11 @@ public:
         while (size > 0) {
             if (mStream.avail_in == 0) {
                 size_t remaining = mSize - mPos;
-                mStream.next_in  = mBuffer;
-                mStream.avail_in = (uInt)std::min(remaining, sizeof(mBuffer));
+                mStream.next_in  = mBuffer.data();
+                mStream.avail_in = (uInt)std::min(remaining, mBuffer.size());
                 if (mStream.avail_in == 0)
                     IG_LOG(L_ERROR) << "Read less data than expected (" << size << " more bytes required)" << std::endl;
-                mIn.read(reinterpret_cast<char*>(mBuffer), mStream.avail_in);
+                mIn.read(reinterpret_cast<char*>(mBuffer.data()), mStream.avail_in);
 
                 if (!mIn.good())
                     IG_LOG(L_ERROR) << "Could not read " << mStream.avail_in << " bytes" << std::endl;
@@ -87,7 +89,7 @@ private:
     size_t mSize;
     size_t mPos;
     z_stream mStream;
-    uint8_t mBuffer[BUFFER_SIZE];
+    std::array<uint8_t, BUFFER_SIZE> mBuffer;
 };
 
 enum MeshFlags {
@@ -103,32 +105,32 @@ template <typename T>
 void extractMeshVertices(TriMesh& trimesh, CompressedStream& cin, uint32_t flags)
 {
     // Vertex Positions
-    for (size_t i = 0; i < trimesh.vertices.size(); ++i) {
+    for (auto& v : trimesh.vertices) {
         T x, y, z;
         cin.read(&x);
         cin.read(&y);
         cin.read(&z);
-        trimesh.vertices[i] = Vector3f((float)x, (float)y, (float)z);
+        v = Vector3f((float)x, (float)y, (float)z);
     }
 
     // Normals
     if (flags & MF_VERTEXNORMALS) {
-        for (size_t i = 0; i < trimesh.normals.size(); ++i) {
+        for (auto& n : trimesh.normals) {
             T x, y, z;
             cin.read(&x);
             cin.read(&y);
             cin.read(&z);
-            trimesh.normals[i] = Vector3f((float)x, (float)y, (float)z);
+            n = Vector3f((float)x, (float)y, (float)z);
         }
     }
 
     // UV
     if (flags & MF_TEXCOORDS) {
-        for (size_t i = 0; i < trimesh.texcoords.size(); ++i) {
+        for (auto& uv : trimesh.texcoords) {
             T x, y;
             cin.read(&x);
             cin.read(&y);
-            trimesh.texcoords[i] = Vector2f((float)x, (float)y);
+            uv = Vector2f((float)x, (float)y);
         }
     }
 
@@ -167,8 +169,8 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
     }
 
     // Check header
-    uint16_t fileIdent;
-    uint16_t fileVersion;
+    uint16_t fileIdent   = 0;
+    uint16_t fileVersion = 0;
     stream.read(reinterpret_cast<char*>(&fileIdent), sizeof(fileIdent));
 
     if (fileIdent != 0x041C) {
@@ -182,7 +184,7 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
     }
 
     // Extract amount of shapes inside the file
-    uint32_t shapeCount;
+    uint32_t shapeCount = 0;
     stream.seekg(-std::streamoff(sizeof(shapeCount)), std::ios::end);
     stream.read(reinterpret_cast<char*>(&shapeCount), sizeof(shapeCount));
 
@@ -197,8 +199,8 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
     }
 
     // Extract mesh file start position
-    uint64_t shapeFileStart;
-    uint64_t shapeFileEnd;
+    uint64_t shapeFileStart = 0;
+    uint64_t shapeFileEnd   = 0;
 
     if (fileVersion >= 4) {
         stream.seekg(-std::streamoff(sizeof(shapeCount) + sizeof(shapeFileStart) * (shapeCount - shapeIndex)), std::ios::end);
@@ -218,8 +220,8 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
             stream.read(reinterpret_cast<char*>(&shapeFileEnd), sizeof(shapeFileEnd));
         }
     } else { /* Version 3 uses uint32_t instead of uint64_t */
-        uint32_t _shapeFileStart;
-        uint32_t _shapeFileEnd;
+        uint32_t _shapeFileStart = 0;
+        uint32_t _shapeFileEnd   = 0;
 
         stream.seekg(-std::streamoff(sizeof(shapeCount) + sizeof(_shapeFileStart) * (shapeCount - shapeIndex)), std::ios::end);
         stream.read(reinterpret_cast<char*>(&_shapeFileStart), sizeof(_shapeFileStart));
@@ -255,18 +257,18 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
     // Inflate with zlib
     CompressedStream cin(stream, maxContentSize);
 
-    uint32_t mesh_flags;
+    uint32_t mesh_flags = 0;
     cin.read(&mesh_flags);
 
     if (fileVersion >= 4) {
-        uint8_t utf8Char;
+        uint8_t utf8Char = 0;
         do {
             cin.read(&utf8Char);
         } while (utf8Char != 0); // Ignore shape name
     }
 
-    uint64_t vertexCount;
-    uint64_t triCount;
+    uint64_t vertexCount = 0;
+    uint64_t triCount    = 0;
     cin.read(&vertexCount);
     cin.read(&triCount);
 
@@ -322,5 +324,4 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
 
     return trimesh;
 }
-} // namespace mts
-} // namespace IG
+} // namespace IG::mts

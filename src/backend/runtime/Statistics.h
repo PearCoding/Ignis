@@ -45,7 +45,7 @@ public:
 
     void add(const Statistics& other);
 
-    std::string dump(size_t totalMS, size_t iter, bool verbose) const;
+    [[nodiscard]] std::string dump(size_t totalMS, size_t iter, bool verbose) const;
 
 private:
     struct ShaderStats {
@@ -54,7 +54,7 @@ private:
         size_t count     = 0;
     };
 
-    ShaderStats* getStats(ShaderType type, size_t id);
+    [[nodiscard]] ShaderStats* getStats(ShaderType type, size_t id);
 
     ShaderStats mDeviceStats;
     ShaderStats mRayGenerationStats;

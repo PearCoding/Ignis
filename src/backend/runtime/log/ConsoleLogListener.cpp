@@ -1,33 +1,28 @@
 #include "ConsoleLogListener.h"
 
-// clang-format off
-#define ANSI_BLACK 			"\u001b[0;30m"
-#define ANSI_RED 			"\u001b[0;31m"
-#define ANSI_GREEN 			"\u001b[0;32m"
-#define ANSI_BROWN 			"\u001b[0;33m"
-#define ANSI_BLUE 			"\u001b[0;34m"
-#define ANSI_MAGENTA 		"\u001b[0;35m"
-#define ANSI_CYAN 			"\u001b[0;36m"
-#define ANSI_GRAY 			"\u001b[0;37m"
-#define ANSI_DARK_GRAY 		"\u001b[1;30m"
-#define ANSI_LIGHT_RED 		"\u001b[1;31m"
-#define ANSI_LIGHT_GREEN 	"\u001b[1;32m"
-#define ANSI_YELLOW 		"\u001b[1;33m"
-#define ANSI_LIGHT_BLUE 	"\u001b[1;34m"
-#define ANSI_LIGHT_MAGENTA 	"\u001b[1;35m"
-#define ANSI_LIGHT_CYAN 	"\u001b[1;36m"
-#define ANSI_WHITE 			"\u001b[1;37m"
-#define ANSI_RESET 			"\u001b[0m"
-// clang-format on
-
 namespace IG {
+
+constexpr const char* const ANSI_BLACK         = "\u001b[0;30m";
+constexpr const char* const ANSI_RED           = "\u001b[0;31m";
+constexpr const char* const ANSI_GREEN         = "\u001b[0;32m";
+constexpr const char* const ANSI_BROWN         = "\u001b[0;33m";
+constexpr const char* const ANSI_BLUE          = "\u001b[0;34m";
+constexpr const char* const ANSI_MAGENTA       = "\u001b[0;35m";
+constexpr const char* const ANSI_CYAN          = "\u001b[0;36m";
+constexpr const char* const ANSI_GRAY          = "\u001b[0;37m";
+constexpr const char* const ANSI_DARK_GRAY     = "\u001b[1;30m";
+constexpr const char* const ANSI_LIGHT_RED     = "\u001b[1;31m";
+constexpr const char* const ANSI_LIGHT_GREEN   = "\u001b[1;32m";
+constexpr const char* const ANSI_YELLOW        = "\u001b[1;33m";
+constexpr const char* const ANSI_LIGHT_BLUE    = "\u001b[1;34m";
+constexpr const char* const ANSI_LIGHT_MAGENTA = "\u001b[1;35m";
+constexpr const char* const ANSI_LIGHT_CYAN    = "\u001b[1;36m";
+constexpr const char* const ANSI_WHITE         = "\u001b[1;37m";
+constexpr const char* const ANSI_RESET         = "\u001b[0m";
+
 ConsoleLogListener::ConsoleLogListener(bool useAnsi)
     : LogListener()
     , mUseAnsi(useAnsi)
-{
-}
-
-ConsoleLogListener::~ConsoleLogListener()
 {
 }
 

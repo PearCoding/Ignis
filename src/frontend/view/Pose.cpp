@@ -44,8 +44,8 @@ void PoseManager::load(const std::filesystem::path& file)
 void PoseManager::save(const std::filesystem::path& file) const
 {
     std::ofstream stream(file);
-    for (size_t i = 0; i < mPoses.size(); ++i) {
-        write_pose(mPoses[i], stream);
+    for (const auto& pose : mPoses) {
+        write_pose(pose, stream);
         stream << std::endl;
     }
 }

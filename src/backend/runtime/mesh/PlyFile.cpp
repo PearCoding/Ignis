@@ -82,16 +82,16 @@ struct Header {
     int IndElem           = -1;
     bool SwitchEndianness = false;
 
-    inline bool hasVertices() const { return XElem >= 0 && YElem >= 0 && ZElem >= 0; }
-    inline bool hasNormals() const { return NXElem >= 0 && NYElem >= 0 && NZElem >= 0; }
-    inline bool hasUVs() const { return UElem >= 0 && VElem >= 0; }
-    inline bool hasIndices() const { return IndElem >= 0; }
+    [[nodiscard]] inline bool hasVertices() const { return XElem >= 0 && YElem >= 0 && ZElem >= 0; }
+    [[nodiscard]] inline bool hasNormals() const { return NXElem >= 0 && NYElem >= 0 && NZElem >= 0; }
+    [[nodiscard]] inline bool hasUVs() const { return UElem >= 0 && VElem >= 0; }
+    [[nodiscard]] inline bool hasIndices() const { return IndElem >= 0; }
 };
 
 static TriMesh read(const std::filesystem::path& path, std::istream& stream, const Header& header, bool ascii)
 {
     const auto readFloat = [&]() {
-        float val;
+        float val = 0;
         stream.read(reinterpret_cast<char*>(&val), sizeof(val));
         if (header.SwitchEndianness)
             val = swap_endian<float>(val);
@@ -99,7 +99,7 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
     };
 
     const auto readIdx = [&]() {
-        uint32_t val;
+        uint32_t val = 0;
         stream.read(reinterpret_cast<char*>(&val), sizeof(val));
         if (header.SwitchEndianness)
             val = swap_endian<uint32_t>(val);
@@ -129,7 +129,7 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
             std::stringstream sstream(line);
             int elem = 0;
             while (sstream) {
-                float val;
+                float val = 0;
                 sstream >> val;
 
                 if (header.XElem == elem)
@@ -175,7 +175,7 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
         trimesh.vertices.emplace_back(x, y, z);
 
         if (header.hasNormals()) {
-            float norm = sqrt(nx * nx + ny * ny + nz * nz);
+            float norm = std::sqrt(nx * nx + ny * ny + nz * nz);
             if (norm == 0.0f)
                 norm = 1.0f;
             trimesh.normals.emplace_back(nx / norm, ny / norm, nz / norm);
@@ -209,13 +209,13 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
 
             std::stringstream sstream(line);
 
-            uint32_t elems;
+            uint32_t elems = 0;
             sstream >> elems;
             tmp_indices.resize(elems);
             tmp_vertices.resize(elems);
 
             for (uint32_t elem = 0; elem < elems; ++elem) {
-                uint32_t index;
+                uint32_t index = 0;
                 sstream >> index;
                 tmp_indices[elem]  = index;
                 tmp_vertices[elem] = trimesh.vertices[index];
@@ -229,7 +229,7 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
         }
     } else {
         for (int i = 0; i < header.FaceCount; ++i) {
-            uint8_t elems;
+            uint8_t elems = 0;
             stream.read(reinterpret_cast<char*>(&elems), sizeof(elems));
 
             tmp_indices.resize(elems);

@@ -19,8 +19,7 @@
 #define TINYGLTF_IMPLEMENTATION
 #include "tiny_gltf.h"
 
-namespace IG {
-namespace Parser {
+namespace IG::Parser {
 static bool imageLoader(tinygltf::Image* img, const int, std::string*,
                         std::string*, int, int,
                         const unsigned char* ptr, int size, void*)
@@ -190,9 +189,7 @@ static void exportMeshPrimitive(const std::filesystem::path& path, const tinyglt
             const uint8* p_i1 = indexData + byteStride * (3 * i + 1);
             const uint8* p_i2 = indexData + byteStride * (3 * i + 2);
 
-            int i0;
-            int i1;
-            int i2;
+            int i0 = 0, i1 = 0, i2 = 0;
             switch (indices->componentType) {
             case TINYGLTF_COMPONENT_TYPE_BYTE:
                 i0 = *reinterpret_cast<const int8*>(p_i0);
@@ -656,7 +653,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             bsdf->setProperty("bsdf", Property::fromString(name + "_blend_inner"));
             bsdf->setProperty("inverted", Property::fromBool(true));
 
-            float factor = static_cast<float>(mat.pbrMetallicRoughness.baseColorFactor[3]);
+            auto factor = static_cast<float>(mat.pbrMetallicRoughness.baseColorFactor[3]);
             if (factor > 0 && mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
                 const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
                 bsdf->setProperty("weight", Property::fromString(getTextureName(tex) + ".a"));
@@ -672,7 +669,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             bsdf->setProperty("bsdf", Property::fromString(name + "_blend_inner"));
             bsdf->setProperty("inverted", Property::fromBool(true));
 
-            float factor = static_cast<float>(mat.pbrMetallicRoughness.baseColorFactor[3]);
+            auto factor = static_cast<float>(mat.pbrMetallicRoughness.baseColorFactor[3]);
             if (factor > 0 && mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
                 const tinygltf::Texture& tex = model.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
                 bsdf->setProperty("weight", Property::fromString(getTextureName(tex) + ".a"));
@@ -708,5 +705,4 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
     return scene;
 }
-} // namespace Parser
-} // namespace IG
+} // namespace IG::Parser

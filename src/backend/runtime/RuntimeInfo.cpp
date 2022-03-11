@@ -1,7 +1,7 @@
 #include "RuntimeInfo.h"
 
 #ifdef IG_OS_LINUX
-#include <limits.h>
+#include <climits>
 #include <unistd.h>
 #elif defined(IG_OS_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
@@ -14,9 +14,9 @@ namespace IG {
 std::filesystem::path RuntimeInfo::executablePath()
 {
 #ifdef IG_OS_LINUX
-#define _PROC_LINK "/proc/self/exe"
-    char linkname[PATH_MAX];
-    ssize_t r = readlink(_PROC_LINK, linkname, PATH_MAX);
+    constexpr const char* const PROC_LINK = "/proc/self/exe";
+    std::array<char, PATH_MAX> linkname{};
+    ssize_t r = readlink(PROC_LINK, linkname.data(), linkname.size());
 
     if (r < 0) {
         perror("readlink");
@@ -27,7 +27,7 @@ std::filesystem::path RuntimeInfo::executablePath()
         return {};
     }
 
-    return std::string(linkname, r);
+    return std::string(linkname.data(), r);
 
 #elif defined(IG_OS_WINDOWS)
     wchar_t path[MAX_PATH] = { 0 };

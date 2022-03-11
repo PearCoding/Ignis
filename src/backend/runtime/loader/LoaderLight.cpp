@@ -60,8 +60,8 @@ static std::tuple<std::string, size_t, size_t> setup_cdf(const std::string& file
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/cdf_" + ShaderUtils::escapeIdentifier(name) + ".bin";
 
-    size_t slice_conditional;
-    size_t slice_marginal;
+    size_t slice_conditional = 0;
+    size_t slice_marginal    = 0;
     CDF::computeForImage(filename, path, slice_conditional, slice_marginal, true);
 
     return { path, slice_conditional, slice_marginal };
@@ -330,7 +330,7 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
 }
 
 using LightLoader = void (*)(std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, ShadingTree&);
-static struct {
+static const struct {
     const char* Name;
     LightLoader Loader;
 } _generators[] = {

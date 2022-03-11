@@ -149,7 +149,7 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
     } else {
         stbi_set_unpremultiply_on_load(1);
 
-        int width, height, channels;
+        int width = 0, height = 0, channels = 0;
         float* data = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 0);
 
         if (data == nullptr) {

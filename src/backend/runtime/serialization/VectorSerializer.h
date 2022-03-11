@@ -6,7 +6,7 @@ namespace IG {
 class VectorSerializer : public Serializer {
 public:
     VectorSerializer(std::vector<uint8>& data, bool readmode);
-    virtual ~VectorSerializer();
+    virtual ~VectorSerializer() = default;
 
     void ensureAlignment(size_t alignment);
 

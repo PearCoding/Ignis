@@ -72,7 +72,7 @@ using Bvh8Ent = BvhProxy<Node8, EntityLeaf1>;
 using BvhVariant = std::variant<Bvh2Ent, Bvh4Ent, Bvh8Ent>;
 
 struct DynTableProxy {
-    size_t EntryCount;
+    size_t EntryCount = 0;
     ShallowArray<LookupEntry> LookupEntries;
     ShallowArray<uint8_t> Data;
 };
@@ -87,11 +87,19 @@ constexpr size_t InvalidThreadID = (size_t)-1;
 thread_local size_t sThreadID    = InvalidThreadID;
 
 constexpr size_t GPUStreamBufferCount = 2;
-struct Interface {
+class Interface {
+    IG_CLASS_NON_COPYABLE(Interface);
+    IG_CLASS_NON_MOVEABLE(Interface);
+
+public:
     using DeviceImage  = std::tuple<anydsl::Array<float>, size_t, size_t>;
     using DeviceBuffer = std::tuple<anydsl::Array<uint8_t>, size_t>;
 
-    struct DeviceData {
+    class DeviceData {
+        IG_CLASS_NON_COPYABLE(DeviceData);
+        IG_CLASS_NON_MOVEABLE(DeviceData);
+
+    public:
         std::atomic_flag scene_loaded = ATOMIC_FLAG_INIT;
         BvhVariant bvh_ent;
         std::atomic_flag database_loaded = ATOMIC_FLAG_INIT;
@@ -111,8 +119,10 @@ struct Interface {
 
         anydsl::Array<uint32_t> tonemap_pixels;
 
-        inline DeviceData() :
-        database()
+        inline DeviceData()
+            : database()
+            , current_primary()
+            , current_secondary()
         {
             for (size_t i = 0; i < primary.size(); ++i)
                 current_primary[i] = &primary[i];
@@ -156,6 +166,8 @@ struct Interface {
         , film_height(setup.framebuffer_height)
         , current_iteration(0)
         , setup(setup)
+        , main_stats()
+        , driver_settings()
     {
         // Due to the DLL interface, we do have multiple instances of the logger. Make sure they are the same
         IG_LOGGER = *setup.logger;
@@ -163,9 +175,7 @@ struct Interface {
         setupFramebuffer();
     }
 
-    inline ~Interface()
-    {
-    }
+    inline ~Interface() = default;
 
     inline void setupFramebuffer()
     {
@@ -240,24 +250,24 @@ struct Interface {
 
     inline anydsl::Array<float>& getGPUPrimaryStream(int32_t dev, size_t buffer, size_t size)
     {
-        return resizeArray(dev, *devices[dev].current_primary[buffer], size, PrimaryStreamSize);
+        return resizeArray(dev, *devices[dev].current_primary.at(buffer), size, PrimaryStreamSize);
     }
 
     inline anydsl::Array<float>& getGPUPrimaryStream(int32_t dev, size_t buffer)
     {
-        IG_ASSERT(devices[dev].current_primary[buffer]->size() > 0, "Expected gpu primary stream to be initialized");
-        return *devices[dev].current_primary[buffer];
+        IG_ASSERT(devices[dev].current_primary.at(buffer)->size() > 0, "Expected gpu primary stream to be initialized");
+        return *devices[dev].current_primary.at(buffer);
     }
 
     inline anydsl::Array<float>& getGPUSecondaryStream(int32_t dev, size_t buffer, size_t size)
     {
-        return resizeArray(dev, *devices[dev].current_secondary[buffer], size, SecondaryStreamSize);
+        return resizeArray(dev, *devices[dev].current_secondary.at(buffer), size, SecondaryStreamSize);
     }
 
     inline anydsl::Array<float>& getGPUSecondaryStream(int32_t dev, size_t buffer)
     {
-        IG_ASSERT(devices[dev].current_secondary[buffer]->size() > 0, "Expected gpu secondary stream to be initialized");
-        return *devices[dev].current_secondary[buffer];
+        IG_ASSERT(devices[dev].current_secondary.at(buffer)->size() > 0, "Expected gpu secondary stream to be initialized");
+        return *devices[dev].current_secondary.at(buffer);
     }
 
     inline size_t getGPUTemporaryBufferSize() const
@@ -549,9 +559,9 @@ struct Interface {
 
         using Callback = decltype(ig_hit_shader);
         IG_ASSERT(material_id >= 0 && material_id < (int)shader_set.HitShaders.size(), "Expected material id for hit shaders to be valid");
-        const void* hit_shader = shader_set.HitShaders.at(material_id);
+        void* hit_shader = shader_set.HitShaders.at(material_id);
         IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
-        const auto callback = reinterpret_cast<const Callback*>(hit_shader);
+        auto callback = reinterpret_cast<const Callback*>(hit_shader);
         callback(&driver_settings, entity_id, first, last);
 
         if (setup.acquire_stats)
@@ -700,8 +710,8 @@ struct Interface {
     inline IG::Statistics* getFullStats()
     {
         main_stats.reset();
-        for (size_t i = 0; i < thread_data.size(); ++i)
-            main_stats.add(thread_data[i]->stats);
+        for (const auto& data : thread_data)
+            main_stats.add(data->stats);
 
         return &main_stats;
     }
@@ -892,7 +902,7 @@ inline void get_ray_stream(RayStream& rays, float* ptr, size_t capacity)
 {
     static_assert(std::is_pod<RayStream>::value, "Expected RayStream to be plain old data");
 
-    float** r_ptr = reinterpret_cast<float**>(&rays);
+    auto r_ptr = reinterpret_cast<float**>(&rays);
     for (size_t i = 0; i < RayStreamSize; ++i)
         r_ptr[i] = ptr + i * capacity;
 }
@@ -903,7 +913,7 @@ inline void get_primary_stream(PrimaryStream& primary, float* ptr, size_t capaci
 
     get_ray_stream(primary.rays, ptr, capacity);
 
-    float** r_ptr = reinterpret_cast<float**>(&primary);
+    auto r_ptr = reinterpret_cast<float**>(&primary);
     for (size_t i = RayStreamSize; i < components; ++i)
         r_ptr[i] = ptr + i * capacity;
 
@@ -916,7 +926,7 @@ inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t 
 
     get_ray_stream(secondary.rays, ptr, capacity);
 
-    float** r_ptr = reinterpret_cast<float**>(&secondary);
+    auto r_ptr = reinterpret_cast<float**>(&secondary);
     for (size_t i = RayStreamSize; i < SecondaryStreamSize; ++i)
         r_ptr[i] = ptr + i * capacity;
 
@@ -924,8 +934,8 @@ inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t 
 }
 
 // Will be populated by api_collector
-extern const char* ig_api[];
-extern const char* ig_api_paths[];
+extern const char* const ig_api[];
+extern const char* const ig_api_paths[];
 
 // TODO: Really fixed at compile time?
 #ifdef IG_DEBUG
@@ -959,7 +969,8 @@ void* glue_compileSource(const char* src, const char* function, const char* dump
 extern "C" {
 IG_EXPORT DriverInterface ig_get_interface()
 {
-    DriverInterface interface;
+    DriverInterface interface {
+    };
     interface.MajorVersion = IG_VERSION_MAJOR;
     interface.MinorVersion = IG_VERSION_MINOR;
 

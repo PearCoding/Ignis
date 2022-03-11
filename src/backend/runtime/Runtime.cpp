@@ -83,8 +83,8 @@ static inline void dumpShader(const std::vector<TechniqueVariant>& variants)
         }
 
         for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {
-            if (!variant.CallbackShaders[j].empty())
-                dumpShader("v" + std::to_string(i) + "_callback" + std::to_string(j) + ".art", variant.CallbackShaders[j]);
+            if (!variant.CallbackShaders.at(j).empty())
+                dumpShader("v" + std::to_string(i) + "_callback" + std::to_string(j) + ".art", variant.CallbackShaders.at(j));
         }
     }
 }
@@ -447,14 +447,14 @@ bool Runtime::compileShaders()
         }
 
         for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {
-            if (variant.CallbackShaders[j].empty()) {
+            if (variant.CallbackShaders.at(j).empty()) {
                 shaders.CallbackShaders[j] = nullptr;
             } else {
                 IG_LOG(L_DEBUG) << "Compiling callback shader [" << i << "]" << std::endl;
                 const std::filesystem::path asm_ = " v" + std::to_string(i) + "_callbackFull" + std::to_string(j) + ".art";
-                shaders.CallbackShaders[j]       = mLoadedInterface.CompileSourceFunction(variant.CallbackShaders[j].c_str(), "ig_callback_shader",
+                shaders.CallbackShaders[j]       = mLoadedInterface.CompileSourceFunction(variant.CallbackShaders.at(j).c_str(), "ig_callback_shader",
                                                                                     mOptions.DumpShaderFull ? asm_.generic_u8string().c_str() : nullptr);
-                if (shaders.CallbackShaders[j] == nullptr) {
+                if (shaders.CallbackShaders.at(j) == nullptr) {
                     IG_LOG(L_ERROR) << "Failed to compile callback " << j << " shader in variant " << i << "." << std::endl;
                     return false;
                 }

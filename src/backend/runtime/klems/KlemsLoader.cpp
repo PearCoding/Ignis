@@ -13,7 +13,7 @@ struct KlemsThetaBasis {
     float UpperTheta;
     uint32 PhiCount;
 
-    inline bool isValid() const
+    [[nodiscard]] inline bool isValid() const
     {
         return PhiCount > 0 && LowerTheta < UpperTheta;
     }
@@ -45,11 +45,11 @@ public:
         mEntryCount = off;
     }
 
-    inline uint32 entryCount() const { return mEntryCount; }
+    [[nodiscard]] inline uint32 entryCount() const { return mEntryCount; }
 
     inline void write(std::ostream& os)
     {
-        uint32 theta_count = static_cast<uint32>(mThetaBasis.size());
+        auto theta_count = static_cast<uint32>(mThetaBasis.size());
         std::sort(mThetaBasis.begin(), mThetaBasis.end(),
                   [](const KlemsThetaBasis& a, const KlemsThetaBasis& b) { return a.UpperTheta < b.UpperTheta; });
 
@@ -74,8 +74,8 @@ public:
         os.write(reinterpret_cast<const char*>(offsets.data()), offsets.size() * sizeof(uint32));
     }
 
-    inline const std::vector<KlemsThetaBasis>& thetaBasis() const { return mThetaBasis; }
-    inline const std::vector<uint32>& thetaLinearOffset() const { return mThetaLinearOffset; }
+    [[nodiscard]] inline const std::vector<KlemsThetaBasis>& thetaBasis() const { return mThetaBasis; }
+    [[nodiscard]] inline const std::vector<uint32>& thetaLinearOffset() const { return mThetaLinearOffset; }
 
 private:
     std::vector<KlemsThetaBasis> mThetaBasis;
@@ -93,8 +93,8 @@ public:
     {
     }
 
-    inline KlemsMatrix& matrix() { return mMatrix; }
-    inline size_t size() const { return mMatrix.size(); }
+    [[nodiscard]] inline KlemsMatrix& matrix() { return mMatrix; }
+    [[nodiscard]] inline size_t size() const { return mMatrix.size(); }
 
     inline void makeBlack()
     {
@@ -113,8 +113,8 @@ public:
         //TODO
     }
 
-    inline std::shared_ptr<KlemsBasis> row() const { return mRowBasis; }
-    inline std::shared_ptr<KlemsBasis> column() const { return mColumnBasis; }
+    [[nodiscard]] inline std::shared_ptr<KlemsBasis> row() const { return mRowBasis; }
+    [[nodiscard]] inline std::shared_ptr<KlemsBasis> column() const { return mColumnBasis; }
 
     inline void write(std::ostream& os)
     {
@@ -171,7 +171,7 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         // Extract basis information
         std::shared_ptr<KlemsBasis> fullbasis = std::make_shared<KlemsBasis>();
         for (const auto& child : anglebasis.children("AngleBasisBlock")) {
-            KlemsThetaBasis basis;
+            KlemsThetaBasis basis{};
 
             const auto bounds = child.child("ThetaBounds");
             basis.LowerTheta  = Deg2Rad * bounds.child("LowerTheta").text().as_float(0);

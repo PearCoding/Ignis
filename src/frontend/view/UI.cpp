@@ -18,19 +18,19 @@
 
 namespace IG {
 
-constexpr size_t HISTOGRAM_SIZE               = 100;
-static const char* ToneMappingMethodOptions[] = {
+constexpr size_t HISTOGRAM_SIZE                     = 100;
+static const char* const ToneMappingMethodOptions[] = {
     "None", "Reinhard", "Mod. Reinhard", "ACES"
 };
 
-static const char* DebugModeOptions[] = {
+static const char* const DebugModeOptions[] = {
     "Normal", "Tangent", "Bitangent", "Geometric Normal", "Texture Coords", "Prim Coords", "Point", "Hit Distance",
     "Raw Prim ID", "Prim ID", "Raw Entity ID", "Entity ID", "Raw Material ID", "Material ID",
     "Is Emissive", "Is Specular", "Is Entering", "Check BSDF", "Albedo"
 };
 
 // Pose IO
-constexpr char POSE_FILE[] = "poses.lst";
+constexpr const char* const POSE_FILE = "poses.lst";
 
 struct LuminanceInfo {
     float Min     = FltInf;
@@ -61,7 +61,7 @@ public:
     bool ShowInspector    = false;
     bool LockInteraction  = false;
 
-    int Width, Height;
+    int Width = 0, Height = 0;
 
     // Stats
     LuminanceInfo LastLum;
@@ -128,7 +128,7 @@ public:
         ImGuiSDL::Initialize(Renderer, width, height);
     }
 
-    const float* currentPixels() const
+    [[nodiscard]] inline const float* currentPixels() const
     {
         return Runtime->getFramebuffer(CurrentAOV);
     }
@@ -501,7 +501,7 @@ public:
         SDL_UpdateTexture(Texture, nullptr, buf, Width * sizeof(uint32_t));
     }
 
-    RGB getFilmData(size_t width, size_t height, size_t iter, uint32_t x, uint32_t y)
+    [[nodiscard]] inline RGB getFilmData(size_t width, size_t height, size_t iter, uint32_t x, uint32_t y)
     {
         IG_UNUSED(height);
 

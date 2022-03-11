@@ -19,7 +19,7 @@ using is_trivial_serializable = std::integral_constant<
 class Serializer {
 public:
     explicit Serializer(bool readmode);
-    virtual ~Serializer();
+    virtual ~Serializer() = default;
 
     inline bool isReadMode() const;
 

@@ -148,7 +148,7 @@ static void camera_fishlens(std::ostream& stream, const std::string& name, const
 
 using CameraLoader           = void (*)(std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
 using CameraSetupOrientation = CameraOrientation (*)(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
-static struct CameraEntry {
+static const struct CameraEntry {
     const char* Name;
     CameraLoader Loader;
     CameraSetupOrientation SetupOrientation;

@@ -314,7 +314,7 @@ static std::pair<std::string, TensorTreeSpecification> setup_tensortree(const st
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/tt_" + ShaderUtils::escapeIdentifier(name) + ".bin";
 
-    TensorTreeSpecification spec;
+    TensorTreeSpecification spec{};
     TensorTreeLoader::prepare(filename, path, spec);
     return { path, spec };
 }
@@ -517,7 +517,7 @@ static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const st
 }
 
 using BSDFLoader = void (*)(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree);
-static struct {
+static const struct {
     const char* Name;
     BSDFLoader Loader;
 } _generators[] = {

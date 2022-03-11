@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 
     // Get parameters
     for (int i = 1; i < argc - 1; ++i)
-        inputs.push_back(argv[i]);
+        inputs.emplace_back(argv[i]);
 
     output = argv[argc - 1];
 

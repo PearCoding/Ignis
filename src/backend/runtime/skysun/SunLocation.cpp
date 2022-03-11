@@ -12,12 +12,12 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
     constexpr double ASTRONOMICAL_UNIT = 149597890; // In km
 
     // Auxiliary variables
-    double dY;
-    double dX;
+    double dY = 0;
+    double dX = 0;
 
     /* Calculate difference in days between the current Julian Day
        and JD 2451545.0, which is noon 1 January 2000 Universal Time */
-    double elapsedJulianDays, decHours;
+    double elapsedJulianDays = 0, decHours = 0;
     {
         // Calculate time of the day in UT decimal hours
         decHours = timepoint.Hour - location.Timezone + (timepoint.Minute + timepoint.Seconds / 60.0) / 60.0;
@@ -37,7 +37,7 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
     /* Calculate ecliptic coordinates (ecliptic longitude and obliquity of the
        ecliptic in radians but without limiting the angle to be less than 2*Pi
        (i.e., the result may be greater than 2*Pi) */
-    double eclipticLongitude, eclipticObliquity;
+    double eclipticLongitude = 0, eclipticObliquity = 0;
     {
         double omega         = 2.1429 - 0.0010394594 * elapsedJulianDays;
         double meanLongitude = 4.8950630 + 0.017202791698 * elapsedJulianDays; // Radians
@@ -54,7 +54,7 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
     /* Calculate celestial coordinates ( right ascension and declination ) in radians
        but without limiting the angle to be less than 2*Pi (i.e., the result may be
        greater than 2*Pi) */
-    double rightAscension, declination;
+    double rightAscension = 0, declination = 0;
     {
         double sinEclipticLongitude = std::sin(eclipticLongitude);
         dY                          = std::cos(eclipticObliquity) * sinEclipticLongitude;
@@ -66,7 +66,7 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
     }
 
     // Calculate local coordinates (azimuth and zenith angle) in degrees
-    double elevation, azimuth;
+    double elevation = 0, azimuth = 0;
     {
         double greenwichMeanSiderealTime = 6.6974243242
                                            + 0.0657098283 * elapsedJulianDays + decHours;

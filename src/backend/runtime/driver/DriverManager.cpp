@@ -7,11 +7,11 @@
 #include <numeric>
 #include <unordered_set>
 
-#define _IG_DRIVER_ENV_PATH_NAME "IG_DRIVER_PATH"
-#define _IG_DRIVER_ENV_SKIP_SYSTEM_PATH "IG_DRIVER_SKIP_SYSTEM_PATH"
-#define _IG_DRIVER_LIB_PREFIX "ig_driver_"
-
 namespace IG {
+constexpr const char* const DRIVER_ENV_PATH_NAME        = "IG_DRIVER_PATH";
+constexpr const char* const DRIVER_ENV_SKIP_SYSTEM_PATH = "IG_DRIVER_SKIP_SYSTEM_PATH";
+constexpr const char* const DRIVER_LIB_PREFIX           = "ig_driver_";
+
 using GetInterfaceFunction = DriverInterface (*)();
 
 struct path_hash {
@@ -25,14 +25,14 @@ using path_set = std::unordered_set<std::filesystem::path, path_hash>;
 
 inline static void split_env(const std::string& str, path_set& data)
 {
-    constexpr char _IG_ENV_DELIMITER = ':';
+    constexpr char ENV_DELIMITER = ':';
 
     size_t start = 0;
-    size_t end   = str.find(_IG_ENV_DELIMITER);
+    size_t end   = str.find(ENV_DELIMITER);
     while (end != std::string::npos) {
         data.insert(std::filesystem::canonical(str.substr(start, end - start)));
         start = end + 1;
-        end   = str.find(_IG_ENV_DELIMITER, start);
+        end   = str.find(ENV_DELIMITER, start);
     }
 
     if (end != start)
@@ -66,7 +66,7 @@ static path_set getDriversFromPath(const std::filesystem::path& path)
 #else
             && !endsWith(entry.path().stem().string(), "_d")
 #endif
-            && startsWith(entry.path().stem().string(), _IG_DRIVER_LIB_PREFIX))
+            && startsWith(entry.path().stem().string(), DRIVER_LIB_PREFIX))
             drivers.insert(entry.path());
     }
 
@@ -79,11 +79,11 @@ bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
 
     bool skipSystem = false; // Skip the system search path
     if (!ignoreEnv) {
-        const char* envPaths = std::getenv(_IG_DRIVER_ENV_PATH_NAME);
+        const char* envPaths = std::getenv(DRIVER_ENV_PATH_NAME);
         if (envPaths)
             split_env(envPaths, paths);
 
-        if (std::getenv(_IG_DRIVER_ENV_SKIP_SYSTEM_PATH))
+        if (std::getenv(DRIVER_ENV_SKIP_SYSTEM_PATH))
             skipSystem = true;
     }
 
@@ -115,20 +115,20 @@ bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
 
 Target DriverManager::resolveTarget(Target target) const
 {
-#define CHECK_RET(c)                      \
-    if (mRegistredDrivers.count((c)) > 0) \
-    return c
-
-    CHECK_RET(target);
-
-    CHECK_RET(Target::AVX512);
-    CHECK_RET(Target::AVX2);
-    CHECK_RET(Target::AVX);
-    CHECK_RET(Target::SSE42);
-    CHECK_RET(Target::ASIMD);
-
-    return Target::GENERIC;
-#undef CHECK_RET
+    if (mRegistredDrivers.count(target) > 0)
+        return target;
+    else if (mRegistredDrivers.count(Target::AVX512) > 0)
+        return Target::AVX512;
+    else if (mRegistredDrivers.count(Target::AVX2) > 0)
+        return Target::AVX2;
+    else if (mRegistredDrivers.count(Target::AVX) > 0)
+        return Target::AVX;
+    else if (mRegistredDrivers.count(Target::SSE42) > 0)
+        return Target::SSE42;
+    else if (mRegistredDrivers.count(Target::ASIMD) > 0)
+        return Target::ASIMD;
+    else
+        return Target::GENERIC;
 }
 
 bool DriverManager::load(Target target, DriverInterface& interface)
@@ -142,7 +142,7 @@ bool DriverManager::load(Target target, DriverInterface& interface)
     mLoadedDrivers[target]       = SharedLibrary(mRegistredDrivers.at(target));
     const SharedLibrary& library = mLoadedDrivers.at(target);
 
-    GetInterfaceFunction func = (GetInterfaceFunction)library.symbol("ig_get_interface");
+    auto func = reinterpret_cast<GetInterfaceFunction>(library.symbol("ig_get_interface"));
     if (!func) {
         IG_LOG(L_FATAL) << "Could not find interface symbol for module after initialization!" << std::endl;
         return false;
@@ -166,7 +166,7 @@ bool DriverManager::addModule(const std::filesystem::path& path)
     try {
         SharedLibrary library(path);
 
-        GetInterfaceFunction func = (GetInterfaceFunction)library.symbol("ig_get_interface");
+        auto func = reinterpret_cast<GetInterfaceFunction>(library.symbol("ig_get_interface"));
         if (!func) {
             IG_LOG(L_ERROR) << "Could not find interface symbol for module " << path << std::endl;
             return false;

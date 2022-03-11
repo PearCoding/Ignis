@@ -35,14 +35,14 @@ struct TransformCache {
     {
     }
 
-    inline Vector3f applyTransform(const Vector3f& v) const
+    [[nodiscard]] inline Vector3f applyTransform(const Vector3f& v) const
     {
         Vector4f w = TransformMatrix * Vector4f(v(0), v(1), v(2), 1.0f);
         w /= w(3);
         return Vector3f(w(0), w(1), w(2));
     }
 
-    inline Vector3f applyNormal(const Vector3f& n) const
+    [[nodiscard]] inline Vector3f applyNormal(const Vector3f& n) const
     {
         return (NormalMatrix * n).normalized();
     }
@@ -105,8 +105,8 @@ inline TriMesh setup_mesh_cylinder(const Object& elem)
     const uint32 sections     = elem.property("sections").getInteger(32);
     const bool filled         = elem.property("filled").getBool(true);
 
-    float baseRadius;
-    float tipRadius;
+    float baseRadius = 0;
+    float tipRadius  = 0;
     if (elem.properties().count("radius") != 0) {
         baseRadius = elem.property("radius").getNumber(1.0f);
         tipRadius  = baseRadius;
@@ -293,12 +293,12 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 
         TransformCache transform = TransformCache(child->property("transform").getTransform());
         if (!transform.TransformMatrix.isIdentity()) {
-            for (size_t j = 0; j < mesh.vertices.size(); ++j)
-                mesh.vertices[j] = transform.applyTransform(mesh.vertices[j]);
-            for (size_t j = 0; j < mesh.normals.size(); ++j)
-                mesh.normals[j] = transform.applyNormal(mesh.normals[j]);
-            for (size_t j = 0; j < mesh.face_normals.size(); ++j)
-                mesh.face_normals[j] = transform.applyNormal(mesh.face_normals[j]);
+            for (auto& v : mesh.vertices)
+                v = transform.applyTransform(v);
+            for (auto& n : mesh.normals)
+                n = transform.applyNormal(n);
+            for (auto& n : mesh.face_normals)
+                n = transform.applyNormal(n);
         }
 
         // Build bounding box

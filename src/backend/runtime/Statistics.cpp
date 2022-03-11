@@ -3,6 +3,7 @@
 
 namespace IG {
 Statistics::Statistics()
+    : mQuantities()
 {
     std::fill(mQuantities.begin(), mQuantities.end(), 0);
 }

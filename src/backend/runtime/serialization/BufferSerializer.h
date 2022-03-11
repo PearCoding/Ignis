@@ -7,7 +7,7 @@ class BufferSerializer : public Serializer {
 public:
     BufferSerializer();
     explicit BufferSerializer(Serializer* source, size_t bufferSize = 1024);
-    virtual ~BufferSerializer();
+    virtual ~BufferSerializer() = default;
 
     void resize(size_t newSize);
     inline size_t maxSize() const { return mBuffer.size(); }

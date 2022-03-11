@@ -51,7 +51,7 @@ public:
 
         inline std::ostream& log(LogLevel level)
         {
-            if((int)level >= (int)mLogger.verbosity()) {
+            if ((int)level >= (int)mLogger.verbosity()) {
                 // Only lock if verbosity is high enough,
                 // else nothing will be output anyway
                 mStarted = true;
@@ -66,7 +66,7 @@ public:
     };
 
     Logger();
-    ~Logger();
+    ~Logger() = default;
 
     Logger& operator=(const Logger&);
 

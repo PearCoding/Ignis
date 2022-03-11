@@ -239,7 +239,7 @@ bool TriMesh::isAPlane() const
                         break;
                 }
                 if (!found)
-                    uniques.push_back(v);
+                    uniques.emplace_back(v);
             }
             if (uniques.size() != 4)
                 return false;
@@ -260,7 +260,7 @@ bool TriMesh::isAPlane() const
     float e5 = (vertices[indices[4 + 1]] - vertices[indices[4 + 2]]).squaredNorm();
     float e6 = (vertices[indices[4 + 2]] - vertices[indices[4 + 0]]).squaredNorm();
 
-    const auto safeCheck = [=](float a, float b) -> float { return std::abs(a - b) <= PlaneEPS; };
+    const auto safeCheck = [=](float a, float b) -> bool { return std::abs(a - b) <= PlaneEPS; };
     if (!safeCheck(e1, e4) && !safeCheck(e2, e4) && !safeCheck(e3, e4))
         return false;
     if (!safeCheck(e1, e5) && !safeCheck(e2, e5) && !safeCheck(e3, e5))
@@ -357,13 +357,13 @@ TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stack
     // Vertices
     for (uint32 i = 0; i <= stacks; ++i) {
         float rho  = (float)i * drho;
-        float srho = (float)(sin(rho));
-        float crho = (float)(cos(rho));
+        float srho = std::sin(rho);
+        float crho = std::cos(rho);
 
         for (uint32 j = 0; j < slices; ++j) {
             float theta  = (j == slices) ? 0.0f : j * dtheta;
-            float stheta = (float)(-sin(theta));
-            float ctheta = (float)(cos(theta));
+            float stheta = -std::sin(theta);
+            float ctheta = std::cos(theta);
 
             float x = stheta * srho;
             float y = ctheta * srho;
@@ -371,9 +371,9 @@ TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stack
 
             const Vector3f N = Vector3f(x, y, z);
 
-            mesh.vertices.push_back(N * radius + center);
-            mesh.normals.push_back(N);
-            mesh.texcoords.push_back(Vector2f(0.5 * theta / Pi, rho / Pi));
+            mesh.vertices.emplace_back(N * radius + center);
+            mesh.normals.emplace_back(N);
+            mesh.texcoords.emplace_back(0.5 * theta / Pi, rho / Pi);
 
             mesh.face_normals.insert(mesh.face_normals.end(), { N, N });
             mesh.face_inv_area.insert(mesh.face_inv_area.end(), { inv_area, inv_area });
@@ -413,7 +413,7 @@ TriMesh TriMesh::MakeIcoSphere(const Vector3f& center, float radius, uint32 subd
                 StVector3f vec   = StVector3f::Zero();
                 vec[(d + 1) % 3] = GoldenRatio * s1;
                 vec[(d + 2) % 3] = 1.0f * s2;
-                mesh.vertices.push_back(vec.normalized());
+                mesh.vertices.emplace_back(vec.normalized());
             }
         }
     }
@@ -459,7 +459,7 @@ TriMesh TriMesh::MakeIcoSphere(const Vector3f& center, float radius, uint32 subd
                 uint32 undirectedEdgeId = i1 * prev_size + i2;
 
                 edgeVertexMap[undirectedEdgeId] = (uint32)mesh.vertices.size();
-                mesh.vertices.push_back((mesh.vertices[i1] + mesh.vertices[i2]).normalized());
+                mesh.vertices.emplace_back((mesh.vertices[i1] + mesh.vertices[i2]).normalized());
             }
         }
 
@@ -467,7 +467,7 @@ TriMesh TriMesh::MakeIcoSphere(const Vector3f& center, float radius, uint32 subd
         std::vector<uint32> refinedIndices;
         for (auto tri = mesh.indices.begin(); tri != mesh.indices.end(); tri += 4) {
             // Find vertices at the center of each of the triangle's edges
-            uint32 edgeCenterVertices[3];
+            std::array<uint32, 3> edgeCenterVertices;
             for (auto j = 0; j < 3; j++) {
                 uint32 i1               = tri[j];
                 uint32 i2               = tri[(j + 1) % 3];
@@ -479,7 +479,7 @@ TriMesh TriMesh::MakeIcoSphere(const Vector3f& center, float radius, uint32 subd
             refinedIndices.insert(refinedIndices.end(), { edgeCenterVertices[0], edgeCenterVertices[1], edgeCenterVertices[2], M });
             // Create a triangle for each corner of the existing triangle
             for (auto j = 0; j < 3; j++)
-                refinedIndices.insert(refinedIndices.end(), { tri[j], edgeCenterVertices[(j + 0) % 3], edgeCenterVertices[(j + 2) % 3], M });
+                refinedIndices.insert(refinedIndices.end(), { tri[j], edgeCenterVertices.at((j + 0) % 3), edgeCenterVertices.at((j + 2) % 3), M });
         }
 
         mesh.indices = std::move(refinedIndices);
@@ -559,9 +559,9 @@ TriMesh TriMesh::MakeCone(const Vector3f& baseCenter, float baseRadius, const Ve
     TriMesh mesh;
     addDisk(mesh, baseCenter, H, Nx, Ny, baseRadius, sections, 0, fill_cap);
 
-    mesh.vertices.push_back(tipPos);
-    mesh.normals.push_back(H);
-    mesh.texcoords.push_back(Vector2f::Zero());
+    mesh.vertices.emplace_back(tipPos);
+    mesh.normals.emplace_back(H);
+    mesh.texcoords.emplace_back(Vector2f::Zero());
 
     const uint32 start = fill_cap ? 1 : 0; // Skip disk origin
     const uint32 tP    = (uint32)mesh.vertices.size() - 1;

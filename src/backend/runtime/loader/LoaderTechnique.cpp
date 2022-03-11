@@ -61,16 +61,16 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
     // It is totally fine to only define the type by other means then the scene config
     if (technique) {
         if (technique->property("aov_normals").getBool(false))
-            info.EnabledAOVs.push_back("Normals");
+            info.EnabledAOVs.emplace_back("Normals");
 
         if (technique->property("aov_mis").getBool(false)) {
-            info.EnabledAOVs.push_back("Direct Weights");
-            info.EnabledAOVs.push_back("NEE Weights");
+            info.EnabledAOVs.emplace_back("Direct Weights");
+            info.EnabledAOVs.emplace_back("NEE Weights");
             info.Variants[0].UseAdvancedShadowHandling = true;
         }
 
         if (technique->property("aov_stats").getBool(false)) {
-            info.EnabledAOVs.push_back("Stats");
+            info.EnabledAOVs.emplace_back("Stats");
         }
     }
 
@@ -202,8 +202,8 @@ static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Pars
     // It is totally fine to only define the type by other means then the scene config
     if (technique) {
         if (technique->property("aov").getBool(false)) {
-            info.EnabledAOVs.push_back("Direct Weights");
-            info.EnabledAOVs.push_back("Merging Weights");
+            info.EnabledAOVs.emplace_back("Direct Weights");
+            info.EnabledAOVs.emplace_back("Merging Weights");
         }
     }
 
@@ -273,7 +273,7 @@ using TechniqueBodyLoader = void (*)(std::ostream&, const std::string&, const st
 // Every header loader has to define 'RayPayloadComponents' and 'init_raypayload()'
 using TechniqueHeaderLoader = void (*)(std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
 
-static struct TechniqueEntry {
+static const struct TechniqueEntry {
     const char* Name;
     TechniqueGetInfo GetInfo;
     TechniqueBodyLoader BodyLoader;
@@ -288,7 +288,7 @@ static struct TechniqueEntry {
     { "", nullptr, nullptr, nullptr }
 };
 
-static TechniqueEntry* getTechniqueEntry(const std::string& name)
+static const TechniqueEntry* getTechniqueEntry(const std::string& name)
 {
     const std::string lower_name = to_lowercase(name);
     for (size_t i = 0; _generators[i].HeaderLoader; ++i) {

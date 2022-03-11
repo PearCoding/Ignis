@@ -25,7 +25,7 @@ std::vector<int> Triangulation::triangulate(const std::vector<Vector3f>& vertice
     vertices2d.reserve(vertices.size());
     for (const Vector3f& v : vertices) {
         Vector3f pv = Tangent::toTangentSpace(N, Nx, Ny, v);
-        vertices2d.push_back(Vector2f(pv(0), pv(1))); // Drop z component
+        vertices2d.emplace_back(pv(0), pv(1)); // Drop z component
     }
 
     return triangulate(vertices2d);

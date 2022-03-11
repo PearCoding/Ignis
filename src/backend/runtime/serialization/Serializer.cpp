@@ -6,8 +6,4 @@ Serializer::Serializer(bool readmode)
 {
 }
 
-Serializer::~Serializer()
-{
-}
-
 } // namespace IG

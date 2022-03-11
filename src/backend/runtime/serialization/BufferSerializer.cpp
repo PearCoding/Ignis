@@ -17,13 +17,7 @@ BufferSerializer::BufferSerializer(Serializer* source, size_t bufferSize)
     , mIt(0)
     , mAvailableIt(0)
 {
-}
-
-BufferSerializer::~BufferSerializer()
-{
-}
-
-void BufferSerializer::resize(size_t newSize)
+}void BufferSerializer::resize(size_t newSize)
 {
     mBuffer.resize(newSize);
     mIt          = 0;

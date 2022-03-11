@@ -13,8 +13,7 @@
 
 #include "glTFParser.h"
 
-namespace IG {
-namespace Parser {
+namespace IG::Parser {
 // TODO: (Re)Add arguments!
 
 using LookupPaths = std::vector<std::filesystem::path>;
@@ -160,8 +159,8 @@ Eigen::Matrix<typename Derived1::Scalar, 3, 4> lookAt(const Eigen::MatrixBase<De
                                                       const Eigen::MatrixBase<Derived2>& center,
                                                       const Eigen::MatrixBase<Derived3>& up)
 {
-    typedef Eigen::Matrix<typename Derived1::Scalar, 3, 1> Vector3;
-    typedef Eigen::Matrix<typename Derived1::Scalar, 3, 4> Matrix34;
+    using Vector3  = Eigen::Matrix<typename Derived1::Scalar, 3, 1>;
+    using Matrix34 = Eigen::Matrix<typename Derived1::Scalar, 3, 4>;
 
     Vector3 f = (center - eye).normalized();
     if (f.squaredNorm() <= FltEps)
@@ -539,5 +538,4 @@ Scene SceneParser::loadFromString(const char* str, size_t max_len, bool& ok)
     ok = true;
     return InternalSceneParser::loadFromJSON(*this, "", doc);
 }
-} // namespace Parser
-} // namespace IG
+} // namespace IG::Parser
