@@ -44,6 +44,12 @@ struct LuminanceInfo {
     LuminanceInfo& operator=(const LuminanceInfo& other) = default;
 };
 
+enum class ScreenshotRequestMode {
+    Nothing,
+    Framebuffer,
+    Full
+};
+
 class UIInternal {
 public:
     IG::Runtime* Runtime   = nullptr;
@@ -53,13 +59,13 @@ public:
     SDL_Texture* Texture   = nullptr;
     std::vector<uint32_t> Buffer;
 
-    int PoseRequest          = -1;
-    bool PoseResetRequest    = false;
-    size_t ScreenshotRequest = 0; // 0-Nothing, 1-Screenshot, 2-Full screenshot
-    bool ShowHelp            = false;
-    bool ShowUI              = true;
-    bool ShowInspector       = false;
-    bool LockInteraction     = false;
+    int PoseRequest                         = -1;
+    bool PoseResetRequest                   = false;
+    ScreenshotRequestMode ScreenshotRequest = ScreenshotRequestMode::Nothing;
+    bool ShowHelp                           = false;
+    bool ShowUI                             = true;
+    bool ShowInspector                      = false;
+    bool LockInteraction                    = false;
 
     size_t Width = 0, Height = 0;
 
@@ -340,9 +346,9 @@ public:
                         break;
                     case SDLK_F11:
                         if (io.KeyCtrl)
-                            ScreenshotRequest = 2;
+                            ScreenshotRequest = ScreenshotRequestMode::Full;
                         else
-                            ScreenshotRequest = 1;
+                            ScreenshotRequest = ScreenshotRequestMode::Framebuffer;
                         break;
                     }
                 }
@@ -573,7 +579,7 @@ public:
         for (size_t y = 0; y < Height; ++y) {
             const uint8* src = reinterpret_cast<const uint8*>(sshot->pixels) + y * sshot->pitch;
             float* dst       = rgba + y * Width * 4;
-            for (int x = 0; x < Width; ++x) {
+            for (size_t x = 0; x < Width; ++x) {
                 uint32 pixel = *reinterpret_cast<const uint32*>(&src[x * sshot->format->BytesPerPixel]);
 
                 uint8 r, g, b, a;
@@ -607,7 +613,7 @@ public:
 
         if (ShowUI) {
             RGB rgb{ 0, 0, 0 };
-            if (mouse_x >= 0 && mouse_x < Width && mouse_y >= 0 && mouse_y < Height)
+            if (mouse_x >= 0 && mouse_x < (int)Width && mouse_y >= 0 && mouse_y < (int)Height)
                 rgb = getFilmData(Width, Height, iter, (uint32)mouse_x, (uint32)mouse_y);
 
             ImGui::SetNextWindowPos(ImVec2(5, 5), ImGuiCond_Once);
@@ -634,11 +640,10 @@ public:
                     const char* current_aov = CurrentAOV == 0 ? "Color" : Runtime->aovs().at(CurrentAOV - 1).c_str();
                     if (ImGui::BeginCombo("Display", current_aov)) {
                         for (size_t i = 0; i < Runtime->aovs().size() + 1; ++i) {
-                            bool is_selected = ((int)i == CurrentAOV);
+                            bool is_selected = (i == CurrentAOV);
                             const char* name = i == 0 ? "Color" : Runtime->aovs().at(i - 1).c_str();
-                            if (ImGui::Selectable(name, is_selected)) {
+                            if (ImGui::Selectable(name, is_selected))
                                 CurrentAOV = (int)i;
-                            }
                             if (is_selected)
                                 ImGui::SetItemDefaultFocus();
                         }
@@ -655,9 +660,8 @@ public:
                     if (ImGui::BeginCombo("Mode", current_method)) {
                         for (int i = 0; i < IM_ARRAYSIZE(DebugModeOptions); ++i) {
                             bool is_selected = (current_method == DebugModeOptions[i]);
-                            if (ImGui::Selectable(DebugModeOptions[i], is_selected) && Running) {
+                            if (ImGui::Selectable(DebugModeOptions[i], is_selected) && Running)
                                 Parent->mDebugMode = (DebugMode)i;
-                            }
                             if (is_selected && Running)
                                 ImGui::SetItemDefaultFocus();
                         }
@@ -796,8 +800,9 @@ void UI::setTitle(const char* str)
         std::stringstream sstream;
         sstream << str << " [Locked]";
         SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());
-    } else
+    } else {
         SDL_SetWindowTitle(mInternal->Window, str);
+    }
 }
 
 bool UI::handleInput(size_t& iter, bool& run, Camera& cam)
@@ -872,13 +877,13 @@ void UI::update(size_t iter, size_t samples)
 {
     mInternal->updateSurface(iter);
     switch (mInternal->ScreenshotRequest) {
-    case 1:
+    case ScreenshotRequestMode::Framebuffer:
         mInternal->makeScreenshot(mWidth, mHeight, iter);
-        mInternal->ScreenshotRequest = 0;
+        mInternal->ScreenshotRequest = ScreenshotRequestMode::Nothing;
         break;
-    case 2:
+    case ScreenshotRequestMode::Full:
         mInternal->makeFullScreenshot();
-        mInternal->ScreenshotRequest = 0;
+        mInternal->ScreenshotRequest = ScreenshotRequestMode::Nothing;
         break;
     default:
         break;
