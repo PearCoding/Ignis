@@ -138,4 +138,4 @@ The Ignis client has an optional UI and multiple ways to interact with the scene
  - `Numpad 7` to switch to top view.
  - `Numpad 9` to look behind you.
  - `Numpad 2468` to rotate the camera.
- - Mouse to rotate the camera. `Shift` will move slower, `Strg/Ctrl` will move faster. Use with `Alt` to enable first person camera behaviour. 
+ - Use with `Strg/Ctrl` to rotate the camera around the center of the scene. Use with `Alt` to enable first person camera behaviour. 

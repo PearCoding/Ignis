@@ -147,6 +147,8 @@ public:
     // Events
     bool handleEvents(size_t& iter, bool& run, Camera& cam)
     {
+        const Vector3f sceneCenter = Runtime->sceneBoundingBox().center();
+
         static bool first_call = true;
         if (first_call) {
             PoseManager.setInitalPose(CameraPose(cam));
@@ -159,10 +161,17 @@ public:
         static std::array<bool, 12> arrows = { false, false, false, false, false, false, false, false, false, false, false, false };
         static bool speed[2]               = { false, false };
         constexpr float RSPEED             = 0.005f;
-        constexpr float SLOW_FACTOR        = 0.1f;
-        constexpr float FAST_FACTOR        = 1.5f;
 
         const bool canInteract = !LockInteraction && run;
+
+        const auto handleRotation = [&](float xmotion, float ymotion) {
+            if (io.KeyAlt)
+                cam.rotate_fixroll(xmotion, ymotion);
+            else if (io.KeyCtrl)
+                cam.rotate_around(sceneCenter, xmotion, ymotion);
+            else
+                cam.rotate(xmotion, ymotion);
+        };
 
         SDL_Event event;
         const bool hover = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
@@ -369,13 +378,10 @@ public:
                 break;
             case SDL_MOUSEMOTION:
                 if (camera_on && !hover && canInteract) {
-                    const float aspeed  = RSPEED * (io.KeyCtrl ? FAST_FACTOR : (io.KeyShift ? SLOW_FACTOR : 1.0f));
+                    const float aspeed  = RSPEED;
                     const float xmotion = event.motion.xrel * aspeed;
                     const float ymotion = event.motion.yrel * aspeed;
-                    if (io.KeyAlt)
-                        cam.rotate_fixroll(xmotion, ymotion);
-                    else
-                        cam.rotate(xmotion, ymotion);
+                    handleRotation(xmotion, ymotion);
                     iter = 0;
                 }
                 break;
@@ -421,7 +427,7 @@ public:
                     iter = 0;
                 }
 
-                const float drspeed = 10 * RSPEED;
+                constexpr float KRSPEED = 10 * RSPEED;
                 if (arrows[0])
                     cam.move(0, 0, CurrentTravelSpeed);
                 if (arrows[1])
@@ -431,21 +437,21 @@ public:
                 if (arrows[3])
                     cam.move(CurrentTravelSpeed, 0, 0);
                 if (arrows[4])
-                    cam.roll(drspeed);
+                    cam.roll(KRSPEED);
                 if (arrows[5])
-                    cam.roll(-drspeed);
+                    cam.roll(-KRSPEED);
                 if (arrows[6])
                     cam.move(0, CurrentTravelSpeed, 0);
                 if (arrows[7])
                     cam.move(0, -CurrentTravelSpeed, 0);
                 if (arrows[8])
-                    cam.rotate(0, drspeed);
+                    handleRotation(0, KRSPEED);
                 if (arrows[9])
-                    cam.rotate(0, -drspeed);
+                    handleRotation(0, -KRSPEED);
                 if (arrows[10])
-                    cam.rotate(-drspeed, 0);
+                    handleRotation(-KRSPEED, 0);
                 if (arrows[11])
-                    cam.rotate(drspeed, 0);
+                    handleRotation(KRSPEED, 0);
                 if (speed[0])
                     CurrentTravelSpeed *= 1.1f;
                 if (speed[1])
@@ -859,7 +865,7 @@ static void handleHelp()
 - *Numpad 9* look behind you.
 - *Numpad 2468* to rotate the camera.
 - Mouse to rotate the camera. 
-  *Shift* will move slower, *Strg/Ctrl* will move faster.
+  Use with *Strg/Ctrl* to rotate the camera around the center of the scene.
   Use with *Alt* to enable first person camera behaviour.
 )";
 

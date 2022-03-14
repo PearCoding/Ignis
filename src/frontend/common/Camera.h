@@ -36,6 +36,16 @@ struct Camera {
         Up                    = q2 * Up;
     }
 
+    inline void rotate_around(const Vector3f& center, float yaw, float pitch)
+    {
+        // The center does not necessarily have to be on the correct direction, so select a new virtual point instead
+        const Vector3f pointOnPlane = Eye - (Eye - center).dot(Direction) * Direction;
+        const Quaternionf rotation  = Eigen::AngleAxisf(-yaw, Up) * Eigen::AngleAxisf(-pitch, Right);
+
+        Eye = rotation * (Eye - pointOnPlane) + pointOnPlane;
+        update_dir(rotation * Direction, rotation * Up);
+    }
+
     inline void roll(float angle)
     {
         Right = Eigen::AngleAxisf(angle, Direction) * Right;

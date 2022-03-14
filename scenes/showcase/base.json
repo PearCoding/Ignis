@@ -1,7 +1,8 @@
 {
 	"technique": {
 		"type": "path",
-		"max_depth": 8
+		"max_depth": 8,
+		"clamp": 100
 	},
 	"camera": {
 		"type": "perspective",
@@ -38,7 +39,7 @@
 	"shapes": [
 		{"type":"rectangle", "name":"Ground", "width":10, "height":10},
 		{"type":"ply", "name":"Sphere", "filename":"../meshes/IgnisSphere.ply"},
-		{"type":"ply", "name":"Socket", "filename":"../meshes/IgnisSocket.ply"}
+		{"type":"ply", "name":"Socket", "filename":"../meshes/IgnisSocket.ply", "flip_normals": true}
 	],
 	"entities": [
 		{"name":"Ground","shape":"Ground", "bsdf":"mat-Ground"},
