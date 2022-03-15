@@ -23,6 +23,6 @@
 		{"name":"Window4","shape":"Window", "bsdf":"windowBR", "transform": {"translate": [0, 2.25, 2.25]} }
 	],
 	"lights": [
-		{"type":"constant", "name":"Sky", "has_ground": false, "ground_brightness": 0.2, "transform": {"rotate": [90, 0, 0]}}
+		{"type":"constant", "name":"Sky"}
 	]
 }
