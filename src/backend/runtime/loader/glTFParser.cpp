@@ -344,6 +344,8 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
             Transformf cameraTransform;
             cameraTransform.fromPositionOrientationScale(trans, rot, Vector3f::Ones());
 
+            cameraTransform.scale(Vector3f(1, 1, -1)); // Flip -z to z
+
             const tinygltf::Camera& camera = model.cameras[node.camera];
             if (camera.type == "orthographic") {
                 auto obj = std::make_shared<Object>(OT_CAMERA, "orthographic", baseDir);
@@ -355,7 +357,7 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
             } else {
                 auto obj = std::make_shared<Object>(OT_CAMERA, "perspective", baseDir);
                 obj->setProperty("transform", Property::fromTransform(cameraTransform));
-                obj->setProperty("fov", Property::fromNumber((float)camera.perspective.yfov));
+                obj->setProperty("fov", Property::fromNumber((float)camera.perspective.yfov * Rad2Deg));
                 obj->setProperty("near_clip", Property::fromNumber((float)camera.perspective.znear));
                 obj->setProperty("far_clip", Property::fromNumber((float)camera.perspective.zfar));
                 // TODO: aspect ratio

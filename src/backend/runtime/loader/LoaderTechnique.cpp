@@ -68,10 +68,6 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
             info.EnabledAOVs.emplace_back("NEE Weights");
             info.Variants[0].UseAdvancedShadowHandling = true;
         }
-
-        if (technique->property("aov_stats").getBool(false)) {
-            info.EnabledAOVs.emplace_back("Stats");
-        }
     }
 
     info.Variants[0].UsesLights = true;
@@ -85,7 +81,6 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
     const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
     const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
-    const bool hasStatsAOV  = technique ? technique->property("aov_stats").getBool(false) : false;
 
     size_t counter = 1;
     if (hasNormalAOV)
@@ -95,9 +90,6 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
         stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
         stream << "  let aov_nee = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
     }
-
-    if (hasStatsAOV)
-        stream << "  let aov_stats = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
 
     stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
            << "    match(id) {" << std::endl;
@@ -111,9 +103,6 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
         stream << "      2 => aov_di," << std::endl
                << "      3 => aov_nee," << std::endl;
     }
-
-    if (hasStatsAOV)
-        stream << "      4 => aov_stats," << std::endl;
 
     stream << "      _ => make_empty_aov_image()" << std::endl
            << "    }" << std::endl

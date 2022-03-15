@@ -135,7 +135,7 @@ fn @gpu_hit_shade( acc: Accelerator
 
         let entity    = @entities(ent_id);
         let shape     = @shapes(entity.shape_id);
-        let local_ray = transform_norm_ray(ray, entity.local_mat);
+        let local_ray = transform_ray(ray, entity.local_mat);
 
         let hit      = read_primary_hit(ray_id, 0);
         let lcl_surf = shape.surface_element(local_ray, hit);

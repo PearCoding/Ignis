@@ -478,15 +478,9 @@ Scene SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
         // Load gltf directly
         Scene scene = glTFSceneParser::loadFromFile(path, ok);
         if (ok) {
-            bool hasEnv = false;
-            for (const auto& light : scene.lights()) {
-                if (light.second->pluginType() != "area" && light.second->pluginType() != "point") {
-                    hasEnv = true;
-                    break;
-                }
-            }
-
-            if (!hasEnv) {
+            // Add light to the scene if no light is available (preview style)
+            if (scene.lights().empty()) {
+                IG_LOG(L_WARNING) << "No lights available in '" << path << "'. Adding default environment light" << std::endl;
                 auto env = std::make_shared<Object>(OT_LIGHT, "constant", path.parent_path());
                 env->setProperty("radiance", Property::fromNumber(InvPi));
                 scene.addLight("__env", env);

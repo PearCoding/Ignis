@@ -22,7 +22,6 @@ struct PTRayPayload {
 static AOV_PATH_NORMAL = 1;
 static AOV_PATH_DIRECT = 2;
 static AOV_PATH_NEE    = 3;
-static AOV_PATH_STATS  = 4;
 
 fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     let mut r : RayPayload;
@@ -49,7 +48,6 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
     let aov_normal = @aovs(AOV_PATH_NORMAL);
     let aov_di     = @aovs(AOV_PATH_DIRECT);
     let aov_nee    = @aovs(AOV_PATH_NEE);
-    //let aov_stats  = @aovs(AOV_PATH_STATS);
 
     let handle_color = if clamp_value > 0 {
         @|c: Color| color_saturate(c, clamp_value)
@@ -105,7 +103,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                     handle_color(color_mulf(contrib, mis * inv_pdf_l))
                 ))
             }
-        }  else {
+        } else {
             if light_sample.pdf_area <= flt_eps {
                 return(ShadowRay::None)
             }
@@ -124,8 +122,8 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 let pdf_l     = light_sample.pdf_area * pdf_lightpick;
                 let inv_pdf_l = 1 / pdf_l;
 
-                let mis = 1 / (1 + pdf_e * inv_pdf_l);
-                let geom_factor = cos_l * inv_d2 * inv_pdf_l;
+                let mis         = 1 / (1 + pdf_e * inv_pdf_l);
+                let geom_factor = inv_pdf_l * cos_l * inv_d2;
 
                 let contrib = color_mul(light_sample.intensity, color_mul(unrap_ptraypayload(payload).contrib, mat.bsdf.eval(in_dir, out_dir)));
 
@@ -177,8 +175,6 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         let mut inflights = 0;
         let mut color     = black;
 
-        // Due to the renderer design, this will only iterate through
-        // infinite lights, as a miss shader does not contain area lights
         for light_id in unroll(0, num_lights) {
             let light = @lights(light_id);
             // Do not include delta lights or finite lights
@@ -211,8 +207,6 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                  , mat: Material
                  ) -> Option[(Ray, RayPayload)] {
         let pt = unrap_ptraypayload(payload);
-
-        // aov_stats.splat(pixel, make_color(if pt.depth == 1 { 2 } else { 1 }, 0, 0));
 
         // Bounce
         let out_dir = vec3_neg(ray.dir);
