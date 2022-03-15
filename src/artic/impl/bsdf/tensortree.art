@@ -38,7 +38,7 @@ fn @tt_lookup_grid(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
     let mut spos: [f32*4];
     let mut n    = 0:i32;
     for i in unroll(0, component.specification.ndim) {
-        spos(i) = 2 * vec4_at(pos, i);
+        spos(i) = 2 * vec4_at(pos, 3-i);
         let t = if spos(i) >= 1 { 1 } else { 0 };
         n |= t << i;
         spos(i) -= t as f32;
@@ -47,12 +47,12 @@ fn @tt_lookup_grid(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
     (n, make_vec4(spos(0), spos(1), spos(2), spos(3)))
 }
 
-// Returns first leaf value (leaf)
+// Returns first leaf node and the remaining position
 fn @tt_climb_tree(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
     let mut pos2 = pos;
     let mut n    = 0:i32;
     let mut node = 0:i32;
-    while true {
+    while true { // TODO: We can precompute the maximal depth and unroll the loop
         let (n2, pos3) = tt_lookup_grid(pos2, component);
         n    = n2;
         pos2 = pos3;
@@ -63,6 +63,7 @@ fn @tt_climb_tree(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
     (tt_leaf_offset(node), pos2)
 }
 
+// Evaluates whole component and returns corresponding leaf value
 fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) {
     let in_pos  = concentric_disk_to_square(vec3_to_2(in_dir));
     let out_pos = concentric_disk_to_square(vec3_to_2(out_dir));
@@ -71,7 +72,7 @@ fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponen
 
     // Climb the tree
     let (leaf, pos) = tt_climb_tree(make_vec4(in_pos.x, in_pos.y, out_pos.x, out_pos.y), component);
-    let leaf_value = component.value(leaf);
+    let leaf_value  = component.value(leaf);
     if tt_is_leaf_single_value(leaf_value) {
         -leaf_value
     } else {
@@ -80,12 +81,18 @@ fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponen
     }
 }
 
-fn @make_tensortree_component(spec: TensorTreeComponentSpecification, buffer: DeviceBuffer, off: i32) -> (TensorTreeComponent, i32) {
-    // let ndim        = buffer_host.load_i32(off);
-    // let max_val_per_node = buffer_host.load_i32(off + 1);
-    // let node_count  = buffer_host.load_i32(off + 2);
-    // let value_count = buffer_host.load_i32(off + 3);
+fn @tt_dbg_get_node_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) {
+    let in_pos  = concentric_disk_to_square(vec3_to_2(in_dir));
+    let out_pos = concentric_disk_to_square(vec3_to_2(out_dir));
 
+    // TODO: Handle ndim==3!
+
+    // Climb the tree
+    let (leaf, _) = tt_climb_tree(make_vec4(in_pos.x, in_pos.y, out_pos.x, out_pos.y), component);
+    tt_color_map(leaf)
+}
+
+fn @make_tensortree_component(spec: TensorTreeComponentSpecification, buffer: DeviceBuffer, off: i32) -> (TensorTreeComponent, i32) {
     let node_count  = spec.node_count;
     let value_count = spec.value_count;
     let tree = TensorTreeComponent {
@@ -112,11 +119,38 @@ fn @make_tensortree_model(buffer: DeviceBuffer, specification: TensorTreeSpecifi
     }
 }
 
+// Debug stuff
+fn @tt_color_map(i: i32) = [ 
+        make_color(0.450000, 0.376630, 0.112500, 1),
+        make_color(0.112500, 0.450000, 0.405978, 1),
+        make_color(0.112500, 0.450000, 0.229891, 1),
+        make_color(0.450000, 0.112500, 0.376630, 1),
+        make_color(0.435326, 0.450000, 0.112500, 1),
+        make_color(0.112500, 0.141848, 0.450000, 1),
+        make_color(0.435326, 0.112500, 0.450000, 1),
+        make_color(0.112500, 0.450000, 0.141848, 1),
+        make_color(0.347283, 0.450000, 0.112500, 1),
+        make_color(0.450000, 0.112500, 0.200543, 1),
+        make_color(0.112500, 0.229891, 0.450000, 1),
+        make_color(0.450000, 0.288587, 0.112500, 1),
+        make_color(0.347283, 0.112500, 0.450000, 1),
+        make_color(0.450000, 0.112500, 0.288587, 1),
+        make_color(0.450000, 0.112500, 0.112500, 1),
+        make_color(0.450000, 0.200543, 0.112500, 1),
+        make_color(0.171196, 0.450000, 0.112500, 1),
+        make_color(0.112500, 0.450000, 0.317935, 1),
+        make_color(0.259239, 0.450000, 0.112500, 1),
+        make_color(0.259239, 0.112500, 0.450000, 1),
+        make_color(0.112500, 0.405978, 0.450000, 1),
+        make_color(0.171196, 0.112500, 0.450000, 1),
+        make_color(0.112500, 0.317935, 0.450000, 1)
+    ](i%23);
+
 // TODO: Add proper sampling!
 fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeModel) -> Bsdf {
-    let has_refl   = tree.specification.has_reflection;
-    let refl_prob  = if has_refl { 0.5:f32 } else { 0:f32 };
-    let N          = surf.local.col(2);
+    let has_refl  = tree.specification.has_reflection;
+    let refl_prob = if has_refl { 0.5:f32 } else { 0:f32 };
+    let N         = surf.local.col(2);
 
     let local_eval = |wi : Vec3, wo : Vec3| -> Color {
         // Be sure to get side without the (possible) flip from the surface interaction
@@ -135,31 +169,42 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
         };
 
         color_mulf(color, factor * shading::abs_cos_theta(wi))
+
+        // let factor = match (inFront, outFront) {
+        //     (true, true)   => if has_refl { tt_dbg_get_node_component(k_fi(wi), k_fo(wo), tree.front_reflection) } else { black },
+        //     (true, false)  => tt_dbg_get_node_component(k_bi(wi), k_fo(wo), tree.front_transmission),
+        //     (false, true)  => tt_dbg_get_node_component(k_fi(wi), k_bo(wo), tree.back_transmission),
+        //     (false, false) => if has_refl { tt_dbg_get_node_component(k_bi(wi), k_bo(wo), tree.back_reflection) } else { black }
+        // };
+
+        // color_mul(color, color_mulf(factor, flt_inv_pi * shading::abs_cos_theta(wi)))
     };
 
     Bsdf {
         eval   = @ |in_dir, out_dir| {
+            if true { return(black) } // See note below about NEE
+
             let wo = shading::to_local(surf.local, out_dir);
             let wi = shading::to_local(surf.local, in_dir);
             local_eval(wi, wo)
         },
         pdf    = @ |in_dir, out_dir| {
+            if true { return(0) } // See note below about NEE
+
             let cos_i = vec3_dot(N, in_dir);
             let cos_o = vec3_dot(N, out_dir);
 
-            let is_transmission = cos_i * cos_o < 0;
+            let is_transmission = math_builtins::signbit(cos_i * cos_o);
             if is_transmission || has_refl { cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))) } else { 0 }
         },
         sample = @ |rnd, out_dir, _| {
-            let wo = shading::to_local(surf.local, out_dir);
-            let u = randf(rnd);
-            let v = randf(rnd);
-            let sample = sample_cosine_hemisphere(u, v);
+            let wo     = shading::to_local(surf.local, out_dir);
+            let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
             
             if sample.pdf <= flt_eps {
                 reject_bsdf_sample()
             } else {
-                let (wi, prob) = if randf(rnd) < refl_prob {
+                let (wi, prob) = if refl_prob > 0 && randf(rnd) < refl_prob {
                     (shading::make_same_hemisphere(wo, sample.dir), refl_prob)
                 } else { 
                     (vec3_neg(shading::make_same_hemisphere(wo, sample.dir)), 1 - refl_prob)

@@ -27,11 +27,11 @@ struct KlemsModel {
     back_transmission:  KlemsComponent
 }
 
-// Our sampling space flips implicitly to the inside configuration and has to be considered when working with the Klems basis
-fn @k_fo(v: Vec3) = make_vec3(v.x, -v.y, v.z);
-fn @k_fi(v: Vec3) = v;
-fn @k_bo(v: Vec3) = vec3_neg(k_fi(v));
-fn @k_bi(v: Vec3) = vec3_neg(k_fo(v));
+// Our sampling space flips implicitly to the inside configuration and has to be considered when working with the Klems & Tensor basis
+fn @k_fi(v: Vec3) = make_vec3(v.x, v.y, v.z);
+fn @k_fo(v: Vec3) = make_vec3(-v.x, -v.y, -v.z);
+fn @k_bi(v: Vec3) = make_vec3(v.x, -v.y, v.z);
+fn @k_bo(v: Vec3) = make_vec3(-v.x, v.y, -v.z);
 
 fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) = min(basis.phi_count - 1, max(0, (phi * (basis.phi_count as f32) * flt_inv_pi / 2) as i32));
 fn @k_multi_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> (i32, i32) {

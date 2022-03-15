@@ -4,8 +4,9 @@ materials=materials.rad
 scene=scene.rad sky.rad
 
 view=-vta -vp 0 1.15 1.15 -vd 1 0 0 -vu 0 0 -1 -vh 180 -vv 180 -vo 0 -va 0 -vs 0 -vl 0
+view=-vta -vp 0.174 0.677 0.849 -vd 0.824 0.479 0.301 -vu 0.343 -0.000 -0.939 -vh 180 -vv 180 -vo 0 -va 0 -vs 0 -vl 0
 
-render=-av 0 0 0 -aw 0 -aa 0 -ar 0 -pt 0
+render=-av 0 0 0 -aw 0 -aa 0 -ar 0 -pt 0 -ss 0
 RESOLUTION=256 256 0
 INDIRECT=4
 QUALITY=MEDIUM

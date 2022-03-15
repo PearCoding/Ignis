@@ -48,8 +48,9 @@ inline bool ends_with(std::string const& value, std::string const& ending)
 
 ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 {
-    std::string ext = path.extension().generic_u8string();
-    bool useExr     = ends_with(ext, ".exr");
+    std::string ext   = path.extension().generic_u8string();
+    const bool useExr = ends_with(ext, ".exr");
+    const bool useHdr = ends_with(ext, ".hdr");
 
     ImageRgba32 img;
 
@@ -195,7 +196,9 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
         stbi_image_free(data);
     }
 
-    img.flipY(); // Images loaded seem to tend to be flipped!
+    // Do not flip hdr images (which are fixed to -Y N +X M resolution by stb)
+    if (!useHdr)
+        img.flipY();
     return img;
 }
 

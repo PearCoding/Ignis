@@ -1,19 +1,19 @@
-window_bsdf_bl mesh window_bl
+window_bsdf_tl mesh window_tl
 1 room_window.rtm
 0
 0
 
-window_bsdf_br mesh window_br
+window_bsdf_tr mesh window_tr
 5 room_window.rtm -t 0 2.25 0
 0
 0
 
-window_bsdf_tl mesh window_tl
+window_bsdf_bl mesh window_bl
 5 room_window.rtm -t 0 0 2.25
 0
 0
 
-window_bsdf_tr mesh window_tr
+window_bsdf_br mesh window_br
 5 room_window.rtm -t 0 2.25 2.25
 0
 0
