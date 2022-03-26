@@ -116,10 +116,31 @@ set(SRC
     shader/MissShader.h
     shader/RayGenerationShader.cpp
     shader/RayGenerationShader.h
+    shader/ScriptPreprocessor.cpp
+    shader/ScriptPreprocessor.h
     table/DynTable.h
     table/SceneDatabase.h
 )
 
+###########################################################
+# We could drop some sources from ARTIC_EXTRA_SRC and let it adapt to the actual shading system we jit,
+# but that is not worth the effort currently
+
+# Grapped from AnyDSL runtime, as it was missing while jit compiling (BUG)
+# This has to be the first entry!!
+set(ARTIC_RUNTIME_FILES
+    ${AnyDSL_runtime_ROOT_DIR}/platforms/artic/intrinsics_math.impala
+)
+
+set(API_SRC_FILE ${CMAKE_CURRENT_BINARY_DIR}/api.cpp)
+add_custom_command(
+        OUTPUT ${API_SRC_FILE}
+        COMMAND $<TARGET_FILE:ig_api_collector> ${ARTIC_RUNTIME_FILES} ${ARTIC_EXTRA_SRC} ${API_SRC_FILE}
+        DEPENDS ${ARTIC_EXTRA_SRC}
+        COMMENT "Embedding API: ${API_SRC_FILE}" 
+        VERBATIM)
+
+###########################################################
 set(HW_HEADER "${CMAKE_BINARY_DIR}/HW_Features.h")
 add_custom_command(
   OUTPUT "${HW_HEADER}"
@@ -127,7 +148,8 @@ add_custom_command(
   COMMENT "Generating hardware feature information: ${HW_HEADER}" 
   VERBATIM)
   
-add_library(ig_lib_runtime STATIC ${SRC} ${HW_HEADER})
+###########################################################
+add_library(ig_lib_runtime STATIC ${SRC} ${HW_HEADER} ${API_SRC_FILE})
 if(NOT WIN32)
     find_package(Threads REQUIRED)
     target_link_libraries(ig_lib_runtime PUBLIC Threads::Threads)

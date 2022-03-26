@@ -132,6 +132,8 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_flag("--dump-shader", DumpShader, "Dump produced shaders to files in the current working directory");
     app.add_flag("--dump-shader-full", DumpFullShader, "Dump produced shaders with standard library to files in the current working directory");
 
+    app.add_option("--script-dir", ScriptDir, "Override internal script standard library by '.art' files from the given directory");
+
     if (type == ApplicationType::Trace) {
         app.add_option("-i,--input", InputRay, "Read list of rays from file instead of the standard input");
         app.add_option("-o,--output", Output, "Write radiance for each ray into file instead of standard output");
@@ -165,6 +167,8 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.OverrideCamera    = CameraType;
     if (Width.has_value() && Height.has_value())
         options.OverrideFilmSize = { Width.value(), Height.value() };
+
+    options.ScriptDir = ScriptDir;
 }
 
 } // namespace IG

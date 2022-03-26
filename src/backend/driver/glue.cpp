@@ -933,10 +933,6 @@ inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t 
     secondary.size = 0;
 }
 
-// Will be populated by api_collector
-extern const char* ig_api[];
-extern const char* ig_api_paths[];
-
 // TODO: Really fixed at compile time?
 #ifdef IG_DEBUG
 constexpr uint32_t OPT_LEVEL = 0;
@@ -944,22 +940,10 @@ constexpr uint32_t OPT_LEVEL = 0;
 constexpr uint32_t OPT_LEVEL = 3;
 #endif
 
-void* glue_compileSource(const char* src, const char* function, const char* dump_file)
+void* glue_compileSource(const char* src, const char* function)
 {
-    std::stringstream source;
-
-    for (int i = 0; ig_api[i]; ++i)
-        source << ig_api[i];
-
-    source << std::endl;
-    source << src;
-
-    const std::string source_str = source.str();
-    if (dump_file != nullptr) {
-        std::ofstream(dump_file, std::ios::out) << source_str;
-    }
-
-    int ret = anydsl_compile(source_str.c_str(), (uint32_t)source_str.size(), OPT_LEVEL);
+    size_t len = std::strlen(src);
+    int ret    = anydsl_compile(src, (uint32_t)len, OPT_LEVEL);
     if (ret < 0)
         return nullptr;
 

@@ -65,30 +65,6 @@ static inline void dumpShader(const std::string& filename, const std::string& sh
     stream << shader;
 }
 
-static inline void dumpShader(const std::vector<TechniqueVariant>& variants)
-{
-    for (size_t i = 0; i < variants.size(); ++i) {
-        const auto& variant = variants[i];
-        dumpShader("v" + std::to_string(i) + "_rayGeneration.art", variant.RayGenerationShader);
-        dumpShader("v" + std::to_string(i) + "_missShader.art", variant.MissShader);
-
-        int counter = 0;
-        for (const auto& shader : variant.HitShaders) {
-            dumpShader("v" + std::to_string(i) + "_hitShader" + std::to_string(counter++) + ".art", shader);
-        }
-
-        if (!variant.AdvancedShadowHitShader.empty()) {
-            dumpShader("v" + std::to_string(i) + "_advancedShadowHit.art", variant.AdvancedShadowHitShader);
-            dumpShader("v" + std::to_string(i) + "_advancedShadowMiss.art", variant.AdvancedShadowMissShader);
-        }
-
-        for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {
-            if (!variant.CallbackShaders.at(j).empty())
-                dumpShader("v" + std::to_string(i) + "_callback" + std::to_string(j) + ".art", variant.CallbackShaders.at(j));
-        }
-    }
-}
-
 Runtime::Runtime(const RuntimeOptions& opts)
     : mOptions(opts)
     , mDatabase()
@@ -138,7 +114,13 @@ Runtime::Runtime(const RuntimeOptions& opts)
     if (!mManager.load(mTarget, mLoadedInterface))
         throw std::runtime_error("Error loading interface!");
 
-        // Force flush to zero mode for denormals
+    // Load standard library if necessary
+    if (!mOptions.ScriptDir.empty()) {
+        IG_LOG(L_INFO) << "Loading standard library from " << mOptions.ScriptDir << std::endl;
+        mScriptPreprocessor.loadStdLibFromDirectory(mOptions.ScriptDir);
+    }
+
+    // Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
     _mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
 #endif
@@ -218,11 +200,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     mTechniqueName            = lopts.TechniqueType;
     mTechniqueInfo            = result.TechniqueInfo;
     mInitialCameraOrientation = result.CameraOrientation;
-
-    mTechniqueVariants = std::move(result.TechniqueVariants);
-
-    if (mOptions.DumpShader)
-        dumpShader(mTechniqueVariants);
+    mTechniqueVariants        = std::move(result.TechniqueVariants);
 
     return setup();
 }
@@ -396,18 +374,14 @@ bool Runtime::compileShaders()
 
         IG_LOG(L_DEBUG) << "Handling technique variant " << i << std::endl;
         IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
-        const std::filesystem::path rgp = "v" + std::to_string(i) + "_rayGenerationFull.art";
-        shaders.RayGenerationShader     = mLoadedInterface.CompileSourceFunction(variant.RayGenerationShader.c_str(), "ig_ray_generation_shader",
-                                                                             mOptions.DumpShaderFull ? rgp.generic_u8string().c_str() : nullptr);
+        shaders.RayGenerationShader = compileShader(variant.RayGenerationShader, "ig_ray_generation_shader", "v" + std::to_string(i) + "_rayGeneration");
         if (shaders.RayGenerationShader == nullptr) {
             IG_LOG(L_ERROR) << "Failed to compile ray generation shader in variant " << i << "." << std::endl;
             return false;
         }
 
         IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
-        const std::filesystem::path mp = "v" + std::to_string(i) + "_missShaderFull.art";
-        shaders.MissShader             = mLoadedInterface.CompileSourceFunction(variant.MissShader.c_str(), "ig_miss_shader",
-                                                                    mOptions.DumpShaderFull ? mp.generic_u8string().c_str() : nullptr);
+        shaders.MissShader = compileShader(variant.MissShader, "ig_miss_shader", "v" + std::to_string(i) + "_missShader");
         if (shaders.MissShader == nullptr) {
             IG_LOG(L_ERROR) << "Failed to compile miss shader in variant " << i << "." << std::endl;
             return false;
@@ -416,9 +390,7 @@ bool Runtime::compileShaders()
         IG_LOG(L_DEBUG) << "Compiling hit shaders" << std::endl;
         for (size_t j = 0; j < variant.HitShaders.size(); ++j) {
             IG_LOG(L_DEBUG) << "Hit shader [" << j << "]" << std::endl;
-            const std::filesystem::path hp = "v" + std::to_string(i) + "_hitShaderFull" + std::to_string(j) + ".art";
-            shaders.HitShaders.push_back(mLoadedInterface.CompileSourceFunction(variant.HitShaders[j].c_str(), "ig_hit_shader",
-                                                                                mOptions.DumpShaderFull ? hp.generic_u8string().c_str() : nullptr));
+            shaders.HitShaders.push_back(compileShader(variant.HitShaders[j].c_str(), "ig_hit_shader", "v" + std::to_string(i) + "_hitShader"));
             if (shaders.HitShaders[j] == nullptr) {
                 IG_LOG(L_ERROR) << "Failed to compile hit shader " << j << " in variant " << i << "." << std::endl;
                 return false;
@@ -427,18 +399,14 @@ bool Runtime::compileShaders()
 
         if (!variant.AdvancedShadowHitShader.empty()) {
             IG_LOG(L_DEBUG) << "Compiling advanced shadow shaders" << std::endl;
-            const std::filesystem::path ash = "v" + std::to_string(i) + "_advancedShadowHitFull.art";
-            shaders.AdvancedShadowHitShader = mLoadedInterface.CompileSourceFunction(variant.AdvancedShadowHitShader.c_str(), "ig_advanced_shadow_shader",
-                                                                                     mOptions.DumpShaderFull ? ash.generic_u8string().c_str() : nullptr);
+            shaders.AdvancedShadowHitShader = compileShader(variant.AdvancedShadowHitShader.c_str(), "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowHit");
 
             if (shaders.AdvancedShadowHitShader == nullptr) {
                 IG_LOG(L_ERROR) << "Failed to compile advanced shadow hit shader in variant " << i << "." << std::endl;
                 return false;
             }
 
-            const std::filesystem::path asm_ = "v" + std::to_string(i) + "_advancedShadowMissFull.art";
-            shaders.AdvancedShadowMissShader = mLoadedInterface.CompileSourceFunction(variant.AdvancedShadowMissShader.c_str(), "ig_advanced_shadow_shader",
-                                                                                      mOptions.DumpShaderFull ? asm_.generic_u8string().c_str() : nullptr);
+            shaders.AdvancedShadowMissShader = compileShader(variant.AdvancedShadowMissShader.c_str(), "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowMiss");
 
             if (shaders.AdvancedShadowMissShader == nullptr) {
                 IG_LOG(L_ERROR) << "Failed to compile advanced shadow miss shader in variant " << i << "." << std::endl;
@@ -451,9 +419,7 @@ bool Runtime::compileShaders()
                 shaders.CallbackShaders[j] = nullptr;
             } else {
                 IG_LOG(L_DEBUG) << "Compiling callback shader [" << i << "]" << std::endl;
-                const std::filesystem::path asm_ = " v" + std::to_string(i) + "_callbackFull" + std::to_string(j) + ".art";
-                shaders.CallbackShaders[j]       = mLoadedInterface.CompileSourceFunction(variant.CallbackShaders.at(j).c_str(), "ig_callback_shader",
-                                                                                    mOptions.DumpShaderFull ? asm_.generic_u8string().c_str() : nullptr);
+                shaders.CallbackShaders[j] = compileShader(variant.CallbackShaders.at(j), "ig_callback_shader", "v" + std::to_string(i) + "_callback" + std::to_string(j));
                 if (shaders.CallbackShaders.at(j) == nullptr) {
                     IG_LOG(L_ERROR) << "Failed to compile callback " << j << " shader in variant " << i << "." << std::endl;
                     return false;
@@ -464,6 +430,19 @@ bool Runtime::compileShaders()
     IG_LOG(L_DEBUG) << "Compiling shaders took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startJIT).count() / 1000.0f << " seconds" << std::endl;
 
     return true;
+}
+
+void* Runtime::compileShader(const std::string& src, const std::string& func, const std::string& name)
+{
+    if (mOptions.DumpShader)
+        dumpShader(name + ".art", src);
+
+    const std::string full_shader = mScriptPreprocessor.prepare(src);
+
+    if (mOptions.DumpShaderFull)
+        dumpShader(name + "_full.art", full_shader);
+
+    return mLoadedInterface.CompileSourceFunction(full_shader.c_str(), func.c_str());
 }
 
 void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)

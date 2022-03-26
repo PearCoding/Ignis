@@ -4,11 +4,12 @@
 #include "Statistics.h"
 #include "driver/DriverManager.h"
 #include "loader/Loader.h"
+#include "shader/ScriptPreprocessor.h"
 #include "table/SceneDatabase.h"
 
 namespace IG {
 namespace Parser {
-    class Scene;
+class Scene;
 }
 
 struct LoaderOptions;
@@ -28,11 +29,13 @@ struct RuntimeOptions {
     std::pair<uint32, uint32> OverrideFilmSize = { 0, 0 };
 
     std::filesystem::path ModulePath = std::filesystem::current_path(); // Optional path to modules
+    std::filesystem::path ScriptDir  = {};                              // Path to a new script directory, replacing the internal standard library
 };
 
 class Runtime {
     IG_CLASS_NON_COPYABLE(Runtime);
     IG_CLASS_NON_MOVEABLE(Runtime);
+
 public:
     explicit Runtime(const RuntimeOptions& opts);
     ~Runtime();
@@ -59,7 +62,7 @@ public:
     void resizeFramebuffer(size_t width, size_t height);
     /// Return pointer to framebuffer
     const float* getFramebuffer(size_t aov = 0) const;
-    /// Will clear all framebuffers 
+    /// Will clear all framebuffers
     void clearFramebuffer();
     /// Will clear specific framebuffer
     void clearFramebuffer(size_t aov);
@@ -112,6 +115,7 @@ private:
     bool setup();
     void shutdown();
     bool compileShaders();
+    void* compileShader(const std::string& src, const std::string& func, const std::string& name);
     void stepVariant(size_t variant);
     void traceVariant(const std::vector<Ray>& rays, size_t variant);
 
@@ -121,6 +125,7 @@ private:
     DriverInterface mLoadedInterface;
     DriverManager mManager;
     ParameterSet mParameterSet;
+    ScriptPreprocessor mScriptPreprocessor;
 
     size_t mDevice;
     size_t mSamplesPerIteration;

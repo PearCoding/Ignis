@@ -70,6 +70,8 @@ public:
     std::filesystem::path InputScene;
     std::filesystem::path InputRay;
 
+    std::filesystem::path ScriptDir;
+
     void populate(RuntimeOptions& options) const;
 };
 } // namespace IG
