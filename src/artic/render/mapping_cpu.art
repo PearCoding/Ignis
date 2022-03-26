@@ -331,7 +331,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
             let mat       = @shader(ray, hit, glb_surf);
-            let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, payload, glb_surf, mat) { color } else { black };
+            let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, payload, glb_surf, mat) { color } else { color_builtins::black };
             
             for lane in unroll(0, r_vector_width) {
                 let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
@@ -407,7 +407,7 @@ fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: Technique, accumulate: 
             let pixel   = ray_id;
 
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
-            let hit_color = if let Option[Color]::Some(color) = @on_miss(ray, pixel, payload) { color } else { black };
+            let hit_color = if let Option[Color]::Some(color) = @on_miss(ray, pixel, payload) { color } else { color_builtins::black };
 
             for lane in unroll(0, r_vector_width) {
                 let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
@@ -521,7 +521,7 @@ fn @cpu_get_aov_image(id: i32, spp: i32) -> AOVImage {
         },
         get = @|pixel| -> Color {
             // TODO: Make sure this is correct
-            let mut color = black;
+            let mut color = color_builtins::black;
             for lane in unroll(0, rv_num_lanes()) {
                 let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
                 color.r = rv_insert(color.r, lane, ptr(j * 3 + 0));

@@ -25,7 +25,7 @@ fn @make_bsdf_sample(surf: SurfaceElement, in_dir: Vec3, pdf: f32, color: Color,
     make_option(BsdfSample {
         in_dir = in_dir,
         pdf    = if valid { pdf } else { 1 },
-        color  = if valid { color } else { black },
+        color  = if valid { color } else { color_builtins::black },
         eta    = if valid { eta } else { 1 }
     })
 }

@@ -34,16 +34,18 @@ fn @vec4_to_color(v: Vec4)  = make_color(v.x, v.y, v.z, v.w);
 fn @color_to_vec3(c: Color) = make_vec3(c.r, c.g, c.b);
 fn @color_to_vec4(c: Color) = make_vec4(c.r, c.g, c.b, c.a);
 
-static black   = Color { r = 0, g = 0, b = 0, a = 1 };
-static white   = Color { r = 1, g = 1, b = 1, a = 1 };
-static pink    = Color { r = 1, g = 0, b = 1, a = 1 }; 
-static red     = Color { r = 1, g = 0, b = 0, a = 1 }; 
-static green   = Color { r = 0, g = 1, b = 0, a = 1 }; 
-static blue    = Color { r = 0, g = 0, b = 1, a = 1 }; 
-static yellow  = Color { r = 1, g = 1, b = 0, a = 1 }; 
-static magenta = Color { r = 1, g = 0, b = 1, a = 1 };
-static cyan    = Color { r = 0, g = 1, b = 1, a = 1 };  
-static orange  = Color { r = 1, g = 0.5, b = 0, a = 1 }; 
+mod color_builtins {
+static black   = super::Color { r = 0, g = 0, b = 0, a = 1 };
+static white   = super::Color { r = 1, g = 1, b = 1, a = 1 };
+static pink    = super::Color { r = 1, g = 0, b = 1, a = 1 }; 
+static red     = super::Color { r = 1, g = 0, b = 0, a = 1 }; 
+static green   = super::Color { r = 0, g = 1, b = 0, a = 1 }; 
+static blue    = super::Color { r = 0, g = 0, b = 1, a = 1 }; 
+static yellow  = super::Color { r = 1, g = 1, b = 0, a = 1 }; 
+static magenta = super::Color { r = 1, g = 0, b = 1, a = 1 };
+static cyan    = super::Color { r = 0, g = 1, b = 1, a = 1 };  
+static orange  = super::Color { r = 1, g = 0.5, b = 0, a = 1 }; 
+}
 
 fn @xyz_to_srgb(c : Color) -> Color {
     make_color( 3.2404542 * c.r - 1.5371385 * c.g - 0.4985314 * c.b,
@@ -60,13 +62,13 @@ fn @srgb_to_xyz(c : Color) -> Color {
 }
 
 fn @xyY_to_srgb(c : Color) -> Color {
-    if c.g <= flt_eps { black } else { xyz_to_srgb(make_color(c.r * c.b / c.g, c.b, (1 - c.r - c.g) * c.b / c.g, c.a)) }
+    if c.g <= flt_eps { color_builtins::black } else { xyz_to_srgb(make_color(c.r * c.b / c.g, c.b, (1 - c.r - c.g) * c.b / c.g, c.a)) }
 }
 
 fn @srgb_to_xyY(c : Color) -> Color {
     let s = srgb_to_xyz(c);
     let n = s.r + s.g + s.b;
-    if n <= flt_eps { black } else { make_color(s.r / n, s.g / n, s.g, 1) }
+    if n <= flt_eps { color_builtins::black } else { make_color(s.r / n, s.g / n, s.g, 1) }
 }
 
 fn @reinhard(L : f32) -> f32 {

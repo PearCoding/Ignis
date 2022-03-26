@@ -115,7 +115,7 @@ static void path_header_loader(std::ostream& stream, const std::string&, const s
 {
     constexpr int C = 1 /* MIS */ + 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */;
     stream << "static RayPayloadComponents = " << C << ";" << std::endl
-           << "fn init_raypayload() = wrap_ptraypayload(PTRayPayload { mis = 0, contrib = white, depth = 1, eta = 1 });" << std::endl;
+           << "fn init_raypayload() = wrap_ptraypayload(PTRayPayload { mis = 0, contrib = color_builtins::white, depth = 1, eta = 1 });" << std::endl;
 }
 
 /////////////////////////////////

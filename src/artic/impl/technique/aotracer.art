@@ -5,7 +5,7 @@ fn @make_ao_renderer() -> Technique {
         on_hit    = TechniqueNoHitFunction,
         on_miss   = TechniqueNoMissFunction,
         on_shadow = @ |ray, _, _, rnd, _, surf, _| {
-            let bsdf    = make_diffuse_bsdf(surf, white);
+            let bsdf    = make_diffuse_bsdf(surf, color_builtins::white);
             let out_dir = vec3_neg(ray.dir);
 
             if let Option[BsdfSample]::Some(sample) = bsdf.sample(rnd, out_dir, false) {

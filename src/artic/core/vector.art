@@ -59,9 +59,9 @@ fn @vec2_mulf(v: Vec2, t: f32) = vec2_mul(v, make_vec2(t, t));
 fn @vec3_mulf(v: Vec3, t: f32) = vec3_mul(v, make_vec3(t, t, t));
 fn @vec4_mulf(v: Vec4, t: f32) = vec4_mul(v, make_vec4(t, t, t, t));
 
-fn @vec2_dot(a: Vec2, b: Vec2) = a.x * b.x + a.y * b.y;
-fn @vec3_dot(a: Vec3, b: Vec3) = a.x * b.x + a.y * b.y + a.z * b.z;
-fn @vec4_dot(a: Vec4, b: Vec4) = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+fn @vec2_dot(a: Vec2, b: Vec2) = fmaf(a.x, b.x, a.y * b.y);
+fn @vec3_dot(a: Vec3, b: Vec3) = fmaf(a.x, b.x, fmaf(a.y, b.y, a.z * b.z));
+fn @vec4_dot(a: Vec4, b: Vec4) = fmaf(a.x, b.x, fmaf(a.y, b.y, fmaf(a.z, b.z, a.w * b.w)));
 
 fn @vec3_cross(a: Vec3, b: Vec3) = make_vec3(
     a.y * b.z - a.z * b.y,

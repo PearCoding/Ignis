@@ -1,6 +1,9 @@
 build/
 CMakeSettings.json
 
+# Visual Studio stuff
+.vs/
+
 # Compiled Object files
 *.slo
 *.lo

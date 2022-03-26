@@ -1,6 +1,6 @@
 // Creates a perfect glass BSDF
 fn @make_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
-    eval   = @ |_, _| black,
+    eval   = @ |_, _| color_builtins::black,
     pdf    = @ |_, _| 0,
     sample = @ |rnd, out_dir, adjoint| {
         let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
@@ -25,7 +25,7 @@ fn @make_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color
 //--------------------------------------
 // Creates a perfect glass BSDF with thin interface approximation
 fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
-    eval   = @ |_, _| black,
+    eval   = @ |_, _| color_builtins::black,
     pdf    = @ |_, _| 0,
     sample = @ |rnd, out_dir, _| {
         let k = if surf.is_entering { n1 / n2 } else { n2 / n1 };
@@ -73,7 +73,7 @@ fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt:
         let cos_i = vec3_dot(N, in_dir);
         let cos_o = vec3_dot(N, out_dir);
 
-        if math_builtins::fabs(cos_i * cos_o) <= cos_eps { return(black) }
+        if math_builtins::fabs(cos_i * cos_o) <= cos_eps { return(color_builtins::black) }
 
         let is_transmission = math_builtins::signbit(cos_i * cos_o);
 
@@ -82,7 +82,7 @@ fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt:
         let cos_h_i = vec3_dot(H, in_dir);
         let cos_h_o = vec3_dot(H, out_dir);
 
-        if math_builtins::fabs(cos_h_i * cos_h_o) <= cos_eps { return(black) }
+        if math_builtins::fabs(cos_h_i * cos_h_o) <= cos_eps { return(color_builtins::black) }
 
         let fterm = fresnel(eta, math_builtins::fabs(cos_h_o));
         if micro.is_delta { return(if is_transmission { color_mulf(kt, 1-fterm.factor) } else { color_mulf(ks, fterm.factor) }) }

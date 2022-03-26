@@ -35,9 +35,9 @@ fn @make_channel_texture(tex: Texture, channel: i32) -> Texture {
 }
 
 fn @make_black_texture() -> Texture {
-    @ |_uv| { black }
+    @ |_uv| { color_builtins::black }
 }
 
 fn @make_invalid_texture() -> Texture {
-    @ |_uv| { pink }
+    @ |_uv| { color_builtins::pink }
 }

@@ -2,7 +2,7 @@
 fn @make_cie_sky_light(scene_bbox: BBox, zenith: Color, ground: Color, groundBrightness: f32, cloudy: bool, has_ground: bool, transform: Mat3x3) =
     make_environment_light_function(scene_bbox, @|dir|{
         let cos_theta = dir.z;
-        if !has_ground && cos_theta < 0 { return(black) }
+        if !has_ground && cos_theta < 0 { return(color_builtins::black) }
 
         let a     = math_builtins::pow[f32](cos_theta + 1.01, 10);
         let b	  = 1 / a;

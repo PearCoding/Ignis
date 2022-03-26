@@ -115,9 +115,7 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
     let N         = surf.local.col(2);
 
     let local_eval = |wi : Vec3, wo : Vec3| -> Color {
-        if shading::abs_cos_theta(wi) <= flt_eps || shading::abs_cos_theta(wo) <= flt_eps {
-            return(black)
-        }
+        if shading::abs_cos_theta(wi) <= flt_eps || shading::abs_cos_theta(wo) <= flt_eps { return(color_builtins::black) }
 
         // Be sure to get side without the (possible) flip from the surface interaction
 		let inFront	 = !(surf.is_entering ^ shading::is_positive_hemisphere(wi));
@@ -135,7 +133,7 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
 
     Bsdf {
         eval   = @ |in_dir, out_dir| {
-            if true { return(black) } // See note below about NEE
+            if true { return(color_builtins::black) } // See note below about NEE
 
             let wo = shading::to_local(surf.local, out_dir);
             let wi = shading::to_local(surf.local, in_dir);

@@ -55,7 +55,7 @@ fn @make_ppm_lightcache(device: Device, photon_count: i32, scene_bbox: BBox) -> 
             store_ppm_photon(photon, id, light_cache_buffer)
         },
         query = @ |pos, radius, body| -> Color {
-            if radius <= flt_eps || actual_photon_count == 0 { return(black) }
+            if radius <= flt_eps || actual_photon_count == 0 { return(color_builtins::black) }
 
             let radius2 = radius * radius;
             let (minx, miny, minz) = grid_scene_pos(vec3_sub(pos, make_vec3(radius, radius, radius)), scene_bbox);
@@ -64,11 +64,11 @@ fn @make_ppm_lightcache(device: Device, photon_count: i32, scene_bbox: BBox) -> 
             let query = @ |ix: i32, iy: i32, iz: i32| -> Color {
                 let lin_id = morton_3d(ix, iy, iz);
                 let count = count_buffer.load_i32(lin_id);
-                if count == 0 { return(black) }
+                if count == 0 { return(color_builtins::black) }
 
                 let offset = offset_buffer.load_i32(lin_id);
 
-                let mut contrib = black;
+                let mut contrib = color_builtins::black;
                 for i in range(offset, offset + count) {
                     let photon = load_ppm_photon(i, light_cache_buffer);
 
@@ -81,7 +81,7 @@ fn @make_ppm_lightcache(device: Device, photon_count: i32, scene_bbox: BBox) -> 
                 contrib
             };
 
-            let mut contrib = black;
+            let mut contrib = color_builtins::black;
             for iz in range(minz, maxz + 1) {
                 for iy in range(miny, maxy + 1) {
                     for ix in range(minx, maxx + 1) {
@@ -302,7 +302,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
                             let photon_contrib = color_mulf(color_mul(photon.radiance, mat_contrib), kernel_f);
                             photon_contrib
                         } else {
-                            black
+                            color_builtins::black
                         }
                     } );
 
@@ -323,7 +323,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
         if pt.depth != 1 { return(Option[Color]::None) }
 
         let mut inflights = 0;
-        let mut color     = black;
+        let mut color     = color_builtins::black;
 
         // Due to the renderer design, this will only iterate through
         // infinite lights, as a miss shader does not contain area lights

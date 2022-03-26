@@ -10,6 +10,7 @@
 mod principled {
 use super as all;
 use super::math_builtins;
+use super::color_builtins;
 use super::shading;
 
 type SurfaceElement = all::SurfaceElement;
@@ -47,12 +48,12 @@ struct EvalClosure {
 fn @tint_color(color: Color) -> Color {
     let lum = super::color_luminance(color);
     if lum <= super::flt_eps {
-        super::white
+        color_builtins::white
     } else {
         super::color_mulf(color, 1/lum)
     }
 }
-fn @sheen_tint_color(color: Color, tint: f32) = super::color_lerp(super::white, tint_color(color), tint);
+fn @sheen_tint_color(color: Color, tint: f32) = super::color_lerp(color_builtins::white, tint_color(color), tint);
 
 fn @getMicro(closure: Closure, roughness: f32, _is_refl: bool) -> all::MicrofacetDistribution {
     let aspect = if closure.anisotropic == 0 { 1 } else { math_builtins::sqrt[f32](1 - closure.anisotropic * 0.9) };
@@ -79,9 +80,9 @@ fn @evalDisneyFresnelTerm(closure: EvalClosure) -> Color {
     let f1 = super::make_gray_color(super::fresnel(closure.general.eta, HdV).factor);
 
     let color = tint_color(closure.general.base_color);
-    let a  = super::color_lerp(super::white, color, closure.general.specular_tint);
+    let a  = super::color_lerp(color_builtins::white, color, closure.general.specular_tint);
     let r0 = super::color_lerp(super::color_mulf(a, super::schlick_r0(closure.general.eta)), closure.general.base_color, closure.general.metallic);
-    let f2 = super::schlick(r0, super::white, HdL);
+    let f2 = super::schlick(r0, color_builtins::white, HdL);
 
     super::color_lerp(f1, f2, closure.general.metallic)
 }
@@ -259,10 +260,10 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         let upper_hemisphere = !(surf.is_entering ^ shading::is_positive_hemisphere(wi)) && !(surf.is_entering ^ shading::is_positive_hemisphere(wo));
         
         let aNdL = shading::abs_cos_theta(wi);
-        if aNdL <= flt_eps { return(black) }
+        if aNdL <= flt_eps { return(color_builtins::black) }
 
-        let mut contrib = black;
-        //  if true { return(white) }
+        let mut contrib = color_builtins::black;
+        //  if true { return(color_builtins::white) }
 
         // Diffuse part
         if !is_transmission {

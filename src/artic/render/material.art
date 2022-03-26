@@ -9,7 +9,7 @@ struct Material {
 fn @make_material(id: i32, bsdf: Bsdf) = Material {
     id          = id,
     bsdf        = bsdf,
-    emission    = @ |_| make_emission_value(black, 1, 1),
+    emission    = @ |_| make_emission_value(color_builtins::black, 1, 1),
     is_emissive = false
 };
 

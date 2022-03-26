@@ -34,7 +34,7 @@ fn @make_wireframe_renderer() -> Technique {
         ) -> Option[Color] {
         let (is_edge, t) = is_edge_hit(hit, unrap_wireframeraypayload(payload).distance);
         if is_edge { 
-            make_option(color_lerp(white, black, t))
+            make_option(color_lerp(color_builtins::white, color_builtins::black, t))
         } else {
             Option[Color]::None
         }

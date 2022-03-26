@@ -248,7 +248,7 @@ std::string ShadingTree::lookupTexture(const std::string& name, InlineMode mode,
         const auto tex = mContext.Scene.texture(name);
         if (!tex) {
             IG_LOG(L_ERROR) << "Unknown texture '" << name << "'" << std::endl;
-            return "pink";
+            return "color_builtins::pink";
         }
 
         mHeaderLines.push_back(LoaderTexture::generate(mPrefix + name, *tex, *this));

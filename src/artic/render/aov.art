@@ -10,5 +10,5 @@ type AOVTable = fn (i32) -> AOVImage;
 
 fn @make_empty_aov_image() = AOVImage {
     splat = @|_, _| -> () {},
-    get   = @|_| -> Color { black }
+    get   = @|_| -> Color { color_builtins::black }
 };
