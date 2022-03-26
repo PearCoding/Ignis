@@ -256,7 +256,7 @@ fn @make_principled_bsdf(surf: SurfaceElement,
             general = closure
         };
         
-        let upper_hemisphere = (surf.is_entering ^ shading::is_positive_hemisphere(wi)) && ( surf.is_entering ^ shading::is_positive_hemisphere(wo));
+        let upper_hemisphere = !(surf.is_entering ^ shading::is_positive_hemisphere(wi)) && !(surf.is_entering ^ shading::is_positive_hemisphere(wo));
         
         let aNdL = shading::abs_cos_theta(wi);
         if aNdL <= flt_eps { return(black) }

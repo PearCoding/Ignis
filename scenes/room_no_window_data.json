@@ -23,6 +23,6 @@
 		{"name":"Room","shape":"Room", "bsdf":"room"}
 	],
 	"lights": [
-		{"type":"cieuniform", "name":"Sky", "has_ground": false, "ground_brightness": 0.2}
+		{"type":"constant", "name":"Sky"}
 	]
 }

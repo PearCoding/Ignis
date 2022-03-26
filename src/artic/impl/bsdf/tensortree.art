@@ -38,7 +38,7 @@ fn @tt_lookup_grid(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
     let mut spos: [f32*4];
     let mut n    = 0:i32;
     for i in unroll(0, component.specification.ndim) {
-        spos(i) = 2 * vec4_at(pos, 3-i);
+        spos(i) = 2 * vec4_at(pos, /*3-i*/ i);
         let t = if spos(i) >= 1 { 1 } else { 0 };
         n |= t << i;
         spos(i) -= t as f32;
@@ -81,17 +81,6 @@ fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponen
     }
 }
 
-fn @tt_dbg_get_node_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) {
-    let in_pos  = concentric_disk_to_square(vec3_to_2(in_dir));
-    let out_pos = concentric_disk_to_square(vec3_to_2(out_dir));
-
-    // TODO: Handle ndim==3!
-
-    // Climb the tree
-    let (leaf, _) = tt_climb_tree(make_vec4(in_pos.x, in_pos.y, out_pos.x, out_pos.y), component);
-    tt_color_map(leaf)
-}
-
 fn @make_tensortree_component(spec: TensorTreeComponentSpecification, buffer: DeviceBuffer, off: i32) -> (TensorTreeComponent, i32) {
     let node_count  = spec.node_count;
     let value_count = spec.value_count;
@@ -119,33 +108,6 @@ fn @make_tensortree_model(buffer: DeviceBuffer, specification: TensorTreeSpecifi
     }
 }
 
-// Debug stuff
-fn @tt_color_map(i: i32) = [ 
-        make_color(0.450000, 0.376630, 0.112500, 1),
-        make_color(0.112500, 0.450000, 0.405978, 1),
-        make_color(0.112500, 0.450000, 0.229891, 1),
-        make_color(0.450000, 0.112500, 0.376630, 1),
-        make_color(0.435326, 0.450000, 0.112500, 1),
-        make_color(0.112500, 0.141848, 0.450000, 1),
-        make_color(0.435326, 0.112500, 0.450000, 1),
-        make_color(0.112500, 0.450000, 0.141848, 1),
-        make_color(0.347283, 0.450000, 0.112500, 1),
-        make_color(0.450000, 0.112500, 0.200543, 1),
-        make_color(0.112500, 0.229891, 0.450000, 1),
-        make_color(0.450000, 0.288587, 0.112500, 1),
-        make_color(0.347283, 0.112500, 0.450000, 1),
-        make_color(0.450000, 0.112500, 0.288587, 1),
-        make_color(0.450000, 0.112500, 0.112500, 1),
-        make_color(0.450000, 0.200543, 0.112500, 1),
-        make_color(0.171196, 0.450000, 0.112500, 1),
-        make_color(0.112500, 0.450000, 0.317935, 1),
-        make_color(0.259239, 0.450000, 0.112500, 1),
-        make_color(0.259239, 0.112500, 0.450000, 1),
-        make_color(0.112500, 0.405978, 0.450000, 1),
-        make_color(0.171196, 0.112500, 0.450000, 1),
-        make_color(0.112500, 0.317935, 0.450000, 1)
-    ](i%23);
-
 // TODO: Add proper sampling!
 fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeModel) -> Bsdf {
     let has_refl  = tree.specification.has_reflection;
@@ -153,31 +115,22 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
     let N         = surf.local.col(2);
 
     let local_eval = |wi : Vec3, wo : Vec3| -> Color {
-        // Be sure to get side without the (possible) flip from the surface interaction
-		let inFront	 = surf.is_entering ^ shading::is_positive_hemisphere(wi);
-        let outFront = surf.is_entering ^ shading::is_positive_hemisphere(wo);
-
         if shading::abs_cos_theta(wi) <= flt_eps || shading::abs_cos_theta(wo) <= flt_eps {
             return(black)
         }
 
+        // Be sure to get side without the (possible) flip from the surface interaction
+		let inFront	 = !(surf.is_entering ^ shading::is_positive_hemisphere(wi));
+        let outFront = !(surf.is_entering ^ shading::is_positive_hemisphere(wo));
+
         let factor = match (inFront, outFront) {
-            (true, true)   => if has_refl { tt_eval_component(k_fi(wi), k_fo(wo), tree.front_reflection) } else { 0 },
-            (true, false)  => tt_eval_component(k_bi(wi), k_fo(wo), tree.front_transmission),
-            (false, true)  => tt_eval_component(k_fi(wi), k_bo(wo), tree.back_transmission),
-            (false, false) => if has_refl { tt_eval_component(k_bi(wi), k_bo(wo), tree.back_reflection) } else { 0 }
+            (true, true)   => if has_refl { tt_eval_component(k_fi(wi), k_fo(wo), tree.front_reflection) } else { 0:f32 },
+            (true, false)  => tt_eval_component(k_fi(wi), k_bo(wo), tree.front_transmission),
+            (false, true)  => tt_eval_component(k_bi(wi), k_fo(wo), tree.back_transmission),
+            (false, false) => if has_refl { tt_eval_component(k_bi(wi), k_bo(wo), tree.back_reflection) } else { 0:f32 }
         };
 
         color_mulf(color, factor * shading::abs_cos_theta(wi))
-
-        // let factor = match (inFront, outFront) {
-        //     (true, true)   => if has_refl { tt_dbg_get_node_component(k_fi(wi), k_fo(wo), tree.front_reflection) } else { black },
-        //     (true, false)  => tt_dbg_get_node_component(k_bi(wi), k_fo(wo), tree.front_transmission),
-        //     (false, true)  => tt_dbg_get_node_component(k_fi(wi), k_bo(wo), tree.back_transmission),
-        //     (false, false) => if has_refl { tt_dbg_get_node_component(k_bi(wi), k_bo(wo), tree.back_reflection) } else { black }
-        // };
-
-        // color_mul(color, color_mulf(factor, flt_inv_pi * shading::abs_cos_theta(wi)))
     };
 
     Bsdf {

@@ -46,6 +46,21 @@
 			</ScatteringData>
 		</WavelengthDataBlock>
 	</WavelengthData>
+	<WavelengthData>
+		<LayerNumber>System</LayerNumber>
+		<Wavelength unit="Integral">Visible</Wavelength>
+		<SourceSpectrum>CIE Illuminant D65 1nm.ssp</SourceSpectrum>
+		<DetectorSpectrum>ASTM E308 1931 Y.dsp</DetectorSpectrum>
+		<WavelengthDataBlock>
+			<WavelengthDataDirection>Reflection Back</WavelengthDataDirection>
+			<AngleBasis>LBNL/Shirley-Chiu</AngleBasis>
+			<ScatteringDataType>BTDF</ScatteringDataType>
+            <!-- Value is 0.8 / pi -->
+			<ScatteringData>
+{ 0 0 0 0 0 0 0 0.254647909 0 0 0 0 0.254647909 0 0 0 }
+			</ScatteringData>
+		</WavelengthDataBlock>
+	</WavelengthData>
 </Layer>
 </Optical>
 </WindowElement>

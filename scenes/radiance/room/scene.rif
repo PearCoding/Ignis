@@ -6,7 +6,7 @@ scene=scene.rad sky.rad
 
 view=-vta -vp 0 0 0 -vd 1 0 0 -vu 0 0 -1 -vh 180 -vv 180 -vo 0 -va 0 -vs 0 -vl 0
 
-render=-av 0 0 0 -aw 0 -pt 0
+render=-av 0 0 0 -aw 0 -pt 0 -ss 0
 RESOLUTION=256 256 0
 INDIRECT=4
 QUALITY=MEDIUM
