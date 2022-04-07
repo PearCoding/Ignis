@@ -1,18 +1,13 @@
 #pragma once
 
 #include "Logger.h"
+#include "SPPMode.h"
 #include "Target.h"
 
 #include <array>
 #include <optional>
 
 namespace IG {
-enum class SPPMode {
-    Fixed,
-    Capped,
-    Continous
-};
-
 enum class ApplicationType {
     View,
     CLI,

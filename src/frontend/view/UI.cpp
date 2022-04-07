@@ -765,9 +765,10 @@ public:
 
 ////////////////////////////////////////////////////////////////
 
-UI::UI(Runtime* runtime, size_t width, size_t height, bool showDebug)
+UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool showDebug)
     : mWidth(width)
     , mHeight(height)
+    , mSPPMode(sppmode)
     , mDebugMode(DebugMode::Normal)
     , mInternal(std::make_unique<UIInternal>())
 {
@@ -836,13 +837,24 @@ UI::~UI()
 
 void UI::setTitle(const char* str)
 {
-    if (mInternal->LockInteraction) {
-        std::stringstream sstream;
-        sstream << str << " [Locked]";
-        SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());
-    } else {
-        SDL_SetWindowTitle(mInternal->Window, str);
+    std::stringstream sstream;
+
+    sstream << str;
+    if (mInternal->LockInteraction)
+        sstream << " [Locked]";
+
+    switch (mSPPMode) {
+    default:
+    case SPPMode::Fixed:
+        break;
+    case SPPMode::Capped:
+        sstream << " [Capped]";
+        break;
+    case SPPMode::Continous:
+        sstream << " [Continous]";
+        break;
     }
+    SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());
 }
 
 bool UI::handleInput(size_t& iter, bool& run, Camera& cam)

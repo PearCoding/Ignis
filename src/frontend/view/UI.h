@@ -2,6 +2,7 @@
 
 #include "Camera.h"
 #include "DebugMode.h"
+#include "SPPMode.h"
 
 #include <memory>
 
@@ -16,7 +17,7 @@ enum class ToneMappingMethod {
 class Runtime;
 class UI {
 public:
-    UI(Runtime* runtime, size_t width, size_t height, bool showDebug);
+    UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool showDebug);
     ~UI();
 
     void setTitle(const char* str);
@@ -31,6 +32,7 @@ private:
     size_t mWidth;
     size_t mHeight;
 
+    const SPPMode mSPPMode;
     DebugMode mDebugMode;
 
     friend class UIInternal;
