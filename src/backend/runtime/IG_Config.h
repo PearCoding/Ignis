@@ -13,6 +13,8 @@
 #else
 #define IG_OS_WINDOWS_64
 #endif
+#elif defined(__APPLE__)
+#define IG_OS_APPLE
 #else
 #error Your operating system is currently not supported
 #endif

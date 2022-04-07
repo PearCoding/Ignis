@@ -1,6 +1,7 @@
 #include "SharedLibrary.h"
 
-#ifdef IG_OS_LINUX
+#if defined(IG_OS_LINUX) || defined(IG_OS_APPLE)
+#define USE_DLOPEN
 #include <dlfcn.h>
 #elif defined(IG_OS_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
@@ -15,13 +16,13 @@ class SharedLibraryInternal {
     IG_CLASS_NON_MOVEABLE(SharedLibraryInternal);
 
 public:
-#ifdef IG_OS_LINUX
+#ifdef USE_DLOPEN
     void* Handle;
 #elif defined(IG_OS_WINDOWS)
     HINSTANCE Handle;
 #endif
 
-#ifdef IG_OS_LINUX
+#ifdef USE_DLOPEN
     explicit SharedLibraryInternal(const std::string& path)
         : Handle(dlopen(path.c_str(), RTLD_LAZY))
     {
@@ -39,7 +40,7 @@ public:
 
     ~SharedLibraryInternal()
     {
-#ifdef IG_OS_LINUX
+#ifdef USE_DLOPEN
         dlclose(Handle);
 #elif defined(IG_OS_WINDOWS)
         FreeLibrary(Handle);
@@ -52,7 +53,7 @@ SharedLibrary::SharedLibrary(const std::filesystem::path& file)
 {
     const std::string u8 = file.u8string();
 
-#ifdef IG_OS_LINUX
+#ifdef USE_DLOPEN
     try {
         mInternal.reset(new SharedLibraryInternal(u8 + ".so"));
     } catch (...) {
@@ -72,7 +73,7 @@ void* SharedLibrary::symbol(const std::string& name) const
     if (!mInternal)
         return nullptr;
 
-#ifdef IG_OS_LINUX
+#ifdef USE_DLOPEN
     return dlsym(mInternal->Handle, name.c_str());
 #elif defined(IG_OS_WINDOWS)
     return GetProcAddress(mInternal->Handle, name.c_str());
