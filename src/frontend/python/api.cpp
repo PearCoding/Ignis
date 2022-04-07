@@ -105,7 +105,8 @@ PYBIND11_MODULE(pyignis, m)
         .value("AVX2", Target::AVX2)
         .value("AVX512", Target::AVX512)
         .value("NVVM", Target::NVVM)
-        .value("AMDGPU", Target::AMDGPU);
+        .value("AMDGPU", Target::AMDGPU)
+        .value("OPENCL", Target::OPENCL);
 
     py::class_<Runtime>(m, "Runtime")
         .def("step", &Runtime::step)

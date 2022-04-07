@@ -365,7 +365,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
     }
     IG_LOG(L_DEBUG) << "Storing of shapes took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start2).count() / 1000.0f << " seconds" << std::endl;
 
-    if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
+    if (!isCPU(ctx.Target)) {
         setup_bvhs<2, 1>(meshes, result);
     } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
         setup_bvhs<4, 4>(meshes, result);

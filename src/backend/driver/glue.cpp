@@ -25,7 +25,7 @@
 
 #include <tbb/concurrent_vector.h>
 
-#if defined(DEVICE_NVVM) || defined(DEVICE_AMD)
+#if defined(DEVICE_NVVM) || defined(DEVICE_AMD) || defined(DEVICE_OPENCL)
 #define DEVICE_GPU
 #endif
 
@@ -834,6 +834,8 @@ void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings
     int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
 #elif defined(DEVICE_AMD)
     int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
+#elif defined(DEVICE_OPENCL)
+    int dev_id = ANYDSL_DEVICE(ANYDSL_OPENCL, (int)device);
 #endif
     float* in_pixels            = sInterface->getAOVImage(dev_id, (int)driver_settings.AOV);
     uint32_t* device_out_pixels = sInterface->getTonemapImage(dev_id);
@@ -870,6 +872,8 @@ void glue_imageinfo(size_t device, const IG::ImageInfoSettings& driver_settings,
     int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
 #elif defined(DEVICE_AMD)
     int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
+#elif defined(DEVICE_OPENCL)
+    int dev_id = ANYDSL_DEVICE(ANYDSL_OPENCL, (int)device);
 #endif
     float* in_pixels = sInterface->getAOVImage(dev_id, (int)driver_settings.AOV);
 #else
@@ -971,6 +975,8 @@ IG_EXPORT DriverInterface ig_get_interface()
     interface.Target = IG::Target::NVVM;
 #elif defined(DEVICE_AMD)
     interface.Target = IG::Target::AMDGPU;
+#elif defined(DEVICE_OPENCL)
+    interface.Target = IG::Target::OPENCL;
 #else
 #error No device selected!
 #endif

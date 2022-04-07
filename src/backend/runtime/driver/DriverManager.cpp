@@ -223,6 +223,8 @@ static int costFunction(Target target)
         return 5;
     case Target::AVX512:
         return 3;
+    case Target::OPENCL:
+        return 2;
     case Target::AMDGPU:
     case Target::NVVM:
         return 1;

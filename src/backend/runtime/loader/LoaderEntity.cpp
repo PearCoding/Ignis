@@ -130,7 +130,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
     // Build bvh (keep in mind that this BVH has no pre-padding as in the case for shape BVHs)
     IG_LOG(L_DEBUG) << "Generating BVH for scene" << std::endl;
     const auto start2 = std::chrono::high_resolution_clock::now();
-    if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
+    if (!isCPU(ctx.Target)) {
         setup_bvh<2>(in_objs, result);
     } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
         setup_bvh<4>(in_objs, result);

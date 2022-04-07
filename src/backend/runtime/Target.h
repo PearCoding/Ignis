@@ -12,6 +12,7 @@ enum class Target : uint32 {
     ASIMD,
     NVVM,
     AMDGPU,
+    OPENCL, // OpenCL is also available for the CPU, but we use it only for GPU
     INVALID
 };
 
@@ -22,6 +23,7 @@ inline bool doesTargetRequirePadding(Target target)
         return false;
     case Target::NVVM:
     case Target::AMDGPU:
+    case Target::OPENCL:
         return true;
     }
 }
@@ -33,6 +35,7 @@ inline bool isCPU(Target target)
         return true;
     case Target::NVVM:
     case Target::AMDGPU:
+    case Target::OPENCL:
         return false;
     }
 }
@@ -56,6 +59,8 @@ inline const char* targetToString(Target target)
         return "NVVM";
     case Target::AMDGPU:
         return "AMDGPU";
+    case Target::OPENCL:
+        return "OPENCL";
     case Target::INVALID:
         return "Invalid";
     default:

@@ -859,3 +859,50 @@ fn @make_amdgpu_device(dev: i32) -> Device {
         false
     )
 }
+
+// Should be in intrinsics_opencl.impala
+#[import(cc = "device", name = "atomic_max")]     fn ig_opencl_atomic_max_global(&mut addrspace(1)i32, i32) -> i32;
+#[import(cc = "device", name = "atomic_cmpxchg")] fn ig_opencl_atomic_cmpxchg_global(&mut addrspace(1)i32, i32, i32) -> i32;
+#[import(cc = "device", name = "atomic_cmpxchg")] fn ig_opencl_atomic_cmpxchg_shared(&mut addrspace(3)i32, i32, i32) -> i32;
+
+// Not deterministic :/
+// https://stackoverflow.com/questions/57729249/why-does-the-opencl-atomic-add-implementation-for-float-produce-a-non-determinis
+fn opencl_atomic_add_global_f32(p: &mut addrspace(1)f32, val: f32) -> f32 {
+    let mut old = *p;
+    let mut sum = old + val;
+    while ig_opencl_atomic_cmpxchg_global(p as &mut addrspace(1)i32, bitcast[i32](old), bitcast[i32](sum)) != bitcast[i32](old) {
+        old = *p;
+        sum = old + val;
+    }
+    old
+}
+
+fn opencl_atomic_add_shared_f32(p: &mut addrspace(3)f32, val: f32) -> f32 {
+    let mut old = *p;
+    let mut sum = old + val;
+    while ig_opencl_atomic_cmpxchg_shared(p as &mut addrspace(3)i32, bitcast[i32](old), bitcast[i32](sum)) != bitcast[i32](old) {
+        old = *p;
+        sum = old + val;
+    }
+    old
+}
+
+fn @make_opencl_device(dev: i32) -> Device {
+    let dev_id  = runtime_device(2, dev);
+    let atomics = Atomics {
+        add_global_i32 = @ |p, i| opencl_atomic_add_global(p as &mut addrspace(1)i32, i),
+        add_global_f32 = @ |p, i| atomic_p1(11:u32, p as &mut addrspace(1)f32, i, 2:u32, ""),//opencl_atomic_add_global_f32(p as &mut addrspace(1)f32, i),
+        min_global_i32 = @ |p, i| opencl_atomic_min_global(p as &mut addrspace(1)i32, i),
+        max_global_i32 = @ |p, i| ig_opencl_atomic_max_global(p as &mut addrspace(1)i32, i),
+        add_shared_i32 = @ |p, i| opencl_atomic_add_shared(p, i),
+        add_shared_f32 = @ |p, i| atomic_p3(11:u32, p, i, 2:u32, ""),//opencl_atomic_add_shared_f32(p, i)
+    };
+    make_gpu_device(
+        dev_id,
+        opencl_accelerator(dev),
+        make_default_min_max(),
+        @ |ptr| make_gpu_buffer(dev, ptr as &addrspace(1)[u8], 0, atomics, false),
+        atomics,
+        false
+    )
+}
