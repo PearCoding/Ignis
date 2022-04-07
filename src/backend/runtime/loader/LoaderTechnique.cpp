@@ -249,7 +249,7 @@ static void ppm_header_loader(std::ostream& stream, const std::string&, const st
     const size_t max_photons = std::max(100, technique ? technique->property("photons").getInteger(1000000) : 1000000);
 
     stream << "static RayPayloadComponents = " << C << ";" << std::endl
-           << "fn init_raypayload() = wrap_ppmraypayload(PPMRayPayload { contrib = white, depth = 1, eta = 1, radius_or_light = 0 });" << std::endl
+           << "fn init_raypayload() = wrap_ppmraypayload(PPMRayPayload { contrib = color_builtins::white, depth = 1, eta = 1, radius_or_light = 0 });" << std::endl
            << "static PPMPhotonCount = " << max_photons << ":i32;" << std::endl;
 }
 

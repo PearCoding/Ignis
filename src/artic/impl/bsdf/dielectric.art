@@ -69,7 +69,7 @@ fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt:
     let N   = surf.local.col(2);
 
     let eval = @ |in_dir: Vec3, out_dir: Vec3| -> Color {
-        // if true { return(white) }
+        // if true { return(color_builtins::white) }
         let cos_i = vec3_dot(N, in_dir);
         let cos_o = vec3_dot(N, out_dir);
 

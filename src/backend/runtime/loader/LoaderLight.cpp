@@ -192,7 +192,7 @@ static void light_sun(std::ostream& stream, const std::string& name, const std::
            << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_sun_light(" << ShaderUtils::inlineVector(dir)
            << ", " << ShaderUtils::inlineSceneBBox(tree.context())
            << ", " << sun_radius
-           << ", color_mulf(white, " << power << "));" << std::endl;
+           << ", color_mulf(color_builtins::white, " << power << "));" << std::endl;
 
     tree.endClosure();
 }
