@@ -248,9 +248,9 @@ public:
     inline Property operator[](const std::string& key) const { return property(key); }
 
 private:
-    const ObjectType mType;
-    const std::string mPluginType;
-    const std::filesystem::path mBaseDir;
+    ObjectType mType;
+    std::string mPluginType;
+    std::filesystem::path mBaseDir;
     std::unordered_map<std::string, Property> mProperties;
 };
 
@@ -348,4 +348,4 @@ private:
     std::vector<std::filesystem::path> mLookupPaths;
     std::unordered_map<std::string, std::string> mArguments;
 };
-} // namespace IG
+} // namespace IG::Parser

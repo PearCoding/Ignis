@@ -179,9 +179,9 @@ public:
 
     inline void setupFramebuffer()
     {
-        host_pixels = std::move(anydsl::Array<float>(film_width * film_height * 3));
+        host_pixels = anydsl::Array<float>(film_width * film_height * 3);
         for (auto& arr : aovs)
-            arr = std::move(anydsl::Array<float>(film_width * film_height * 3));
+            arr = anydsl::Array<float>(film_width * film_height * 3);
     }
 
     inline void resizeFramebuffer(size_t width, size_t height)
@@ -347,7 +347,7 @@ public:
             rays.push_back(ray);
         }
 
-        return device.ray_list = std::move(copyToDevice(dev, rays));
+        return device.ray_list = copyToDevice(dev, rays);
     }
 
     template <typename T>
@@ -389,8 +389,8 @@ public:
 
         DynTableProxy proxy;
         proxy.EntryCount    = tbl.entryCount();
-        proxy.LookupEntries = std::move(ShallowArray<LookupEntry>(dev, (LookupEntry*)tbl.lookups().data(), tbl.lookups().size()));
-        proxy.Data          = std::move(ShallowArray<uint8_t>(dev, tbl.data().data(), tbl.data().size()));
+        proxy.LookupEntries = ShallowArray<LookupEntry>(dev, (LookupEntry*)tbl.lookups().data(), tbl.lookups().size());
+        proxy.Data          = ShallowArray<uint8_t>(dev, tbl.data().data(), tbl.data().size());
         return proxy;
     }
 
@@ -403,9 +403,9 @@ public:
 
         SceneDatabaseProxy& proxy = device.database;
 
-        proxy.Entities = std::move(loadDyntable(dev, database->EntityTable));
-        proxy.Shapes   = std::move(loadDyntable(dev, database->ShapeTable));
-        proxy.BVHs     = std::move(loadDyntable(dev, database->BVHTable));
+        proxy.Entities = loadDyntable(dev, database->EntityTable);
+        proxy.Shapes   = loadDyntable(dev, database->ShapeTable);
+        proxy.BVHs     = loadDyntable(dev, database->BVHTable);
 
         return proxy;
     }
@@ -429,10 +429,10 @@ public:
 
         IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
         try {
-            return images[filename] = std::move(copyToDevice(dev, IG::ImageRgba32::load(filename)));
+            return images[filename] = copyToDevice(dev, IG::ImageRgba32::load(filename));
         } catch (const IG::ImageLoadException& e) {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;
-            return images[filename] = std::move(copyToDevice(dev, IG::ImageRgba32()));
+            return images[filename] = copyToDevice(dev, IG::ImageRgba32());
         }
     }
 
@@ -470,8 +470,7 @@ public:
         if ((vec.size() % sizeof(int32_t)) != 0)
             IG_LOG(IG::L_WARNING) << "Buffer " << filename << " is not properly sized!" << std::endl;
 
-        return buffers[filename] = std::move(DeviceBuffer(
-                   std::move(copyToDevice(dev, vec)), vec.size()));
+        return buffers[filename] = DeviceBuffer(copyToDevice(dev, vec), vec.size());
     }
 
     inline DeviceBuffer& requestBuffer(int32_t dev, const std::string& name, int32_t size, int32_t flags)
@@ -492,9 +491,7 @@ public:
         }
 
         IG_LOG(IG::L_DEBUG) << "Requested buffer " << name << " with " << size << " bytes" << std::endl;
-        buffers[name] = std::move(DeviceBuffer(
-            std::move(anydsl::Array<uint8_t>(dev, reinterpret_cast<uint8_t*>(anydsl_alloc(dev, size)), size)),
-            size));
+        buffers[name] = DeviceBuffer(anydsl::Array<uint8_t>(dev, reinterpret_cast<uint8_t*>(anydsl_alloc(dev, size)), size), size);
 
         return buffers[name];
     }
@@ -625,7 +622,7 @@ public:
             if (device.film_pixels.size() != host_pixels.size()) {
                 auto film_size     = film_width * film_height * 3;
                 auto film_data     = reinterpret_cast<float*>(anydsl_alloc(dev, sizeof(float) * film_size));
-                device.film_pixels = std::move(anydsl::Array<float>(dev, film_data, film_size));
+                device.film_pixels = anydsl::Array<float>(dev, film_data, film_size);
                 anydsl::copy(host_pixels, device.film_pixels);
             }
             return device.film_pixels.data();
@@ -650,7 +647,7 @@ public:
             if (device.aovs[index].size() != aovs[index].size()) {
                 auto film_size     = film_width * film_height * 3;
                 auto film_data     = reinterpret_cast<float*>(anydsl_alloc(dev, sizeof(float) * film_size));
-                device.aovs[index] = std::move(anydsl::Array<float>(dev, film_data, film_size));
+                device.aovs[index] = anydsl::Array<float>(dev, film_data, film_size);
                 anydsl::copy(aovs[index], device.aovs[index]);
             }
             return device.aovs[index].data();
@@ -666,7 +663,7 @@ public:
         if (device.tonemap_pixels.size() != host_pixels.size()) {
             auto film_size        = film_width * film_height;
             auto film_data        = reinterpret_cast<uint32_t*>(anydsl_alloc(dev, sizeof(uint32_t) * film_size));
-            device.tonemap_pixels = std::move(anydsl::Array<uint32_t>(dev, film_data, film_size));
+            device.tonemap_pixels = anydsl::Array<uint32_t>(dev, film_data, film_size);
         }
         return device.tonemap_pixels.data();
     }
@@ -953,8 +950,7 @@ void* glue_compileSource(const char* src, const char* function)
 extern "C" {
 IG_EXPORT DriverInterface ig_get_interface()
 {
-    DriverInterface interface {
-    };
+    DriverInterface interface{};
     interface.MajorVersion = IG_VERSION_MAJOR;
     interface.MinorVersion = IG_VERSION_MINOR;
 

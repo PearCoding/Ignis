@@ -23,11 +23,6 @@ static inline ImVec2 operator*(const ImVec2& a, const ImVec2& b)
     return ImVec2(a.x * b.x, a.y * b.y);
 }
 
-static inline ImVec2 operator*(const ImVec2& a, float b)
-{
-    return ImVec2(a.x * b, a.y * b);
-}
-
 static inline uint32_t get_texel(int px, int py, size_t width, size_t height, const uint32_t* rgb)
 {
     if (px < 0 || px >= (int)width || py < 0 || py >= (int)height)

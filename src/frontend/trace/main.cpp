@@ -9,16 +9,6 @@
 
 using namespace IG;
 
-static inline float safe_rcp(float x)
-{
-    constexpr float min_rcp = 1e-8f;
-    if ((x > 0 ? x : -x) < min_rcp) {
-        return std::signbit(x) ? -std::numeric_limits<float>::max() : std::numeric_limits<float>::max();
-    } else {
-        return 1 / x;
-    }
-}
-
 static std::vector<Ray> read_input(std::istream& is, bool file)
 {
     std::vector<Ray> rays;
