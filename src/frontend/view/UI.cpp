@@ -144,6 +144,12 @@ public:
         CurrentAOV = (CurrentAOV + delta_aov) % (Runtime->aovs().size() + 1);
     }
 
+    enum MouseMode {
+        MM_None,
+        MM_Look,
+        MM_Pan
+    };
+
     // Events
     bool handleEvents(size_t& iter, bool& run, Camera& cam)
     {
@@ -157,7 +163,7 @@ public:
 
         ImGuiIO& io = ImGui::GetIO();
 
-        static bool camera_on              = false;
+        static MouseMode mouse_mode        = MM_None;
         static std::array<bool, 12> arrows = { false, false, false, false, false, false, false, false, false, false, false, false };
         static bool speed[2]               = { false, false };
         constexpr float RSPEED             = 0.005f;
@@ -363,26 +369,47 @@ public:
                 }
             } break;
             case SDL_MOUSEBUTTONDOWN:
-                if (event.button.button == SDL_BUTTON_LEFT && !hover && canInteract) {
+                if (!hover && canInteract) {
+                    if (event.button.button == SDL_BUTTON_LEFT) {
 #ifndef IG_DEBUG
-                    SDL_SetRelativeMouseMode(SDL_TRUE);
+                        SDL_SetRelativeMouseMode(SDL_TRUE);
 #endif
-                    camera_on = true;
+                        mouse_mode = MM_Look;
+                    } else if (event.button.button == SDL_BUTTON_RIGHT) {
+#ifndef IG_DEBUG
+                        SDL_SetRelativeMouseMode(SDL_TRUE);
+#endif
+                        mouse_mode = MM_Pan;
+                    }
                 }
                 break;
             case SDL_MOUSEBUTTONUP:
 #ifndef IG_DEBUG
                 SDL_SetRelativeMouseMode(SDL_FALSE);
 #endif
-                camera_on = false;
+                mouse_mode = MM_None;
                 break;
             case SDL_MOUSEMOTION:
-                if (camera_on && !hover && canInteract) {
-                    const float aspeed  = RSPEED;
-                    const float xmotion = event.motion.xrel * aspeed;
-                    const float ymotion = event.motion.yrel * aspeed;
-                    handleRotation(xmotion, ymotion);
-                    iter = 0;
+                if (!hover && canInteract) {
+                    switch (mouse_mode) {
+                    default:
+                    case MM_None:
+                        break;
+                    case MM_Look: {
+                        const float aspeed  = RSPEED;
+                        const float xmotion = event.motion.xrel * aspeed;
+                        const float ymotion = event.motion.yrel * aspeed;
+                        handleRotation(xmotion, ymotion);
+                        iter = 0;
+                    } break;
+                    case MM_Pan: {
+                        const float aspeed  = CurrentTravelSpeed / 2;
+                        const float xmotion = event.motion.xrel * aspeed;
+                        const float ymotion = -event.motion.yrel * aspeed;
+                        cam.move(xmotion, ymotion, 0);
+                        iter = 0;
+                    } break;
+                    }
                 }
                 break;
             case SDL_MOUSEWHEEL:
@@ -394,6 +421,13 @@ public:
                     io.MouseWheel += 1;
                 if (event.wheel.y < 0)
                     io.MouseWheel -= 1;
+
+                if (!hover && canInteract) {
+                    if (event.wheel.y != 0) {
+                        cam.move(0, 0, event.wheel.y * CurrentTravelSpeed);
+                        iter = 0;
+                    }
+                }
                 break;
             case SDL_QUIT:
                 return true;
