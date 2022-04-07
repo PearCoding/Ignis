@@ -71,8 +71,8 @@
 #else // FIXME: Really use cpu dependent assembler?
 #define IG_DEBUG_BREAK() __asm__ __volatile__("int $0x03")
 #define IG_FUNCTION_NAME __PRETTY_FUNCTION__
-#define IG_BEGIN_IGNORE_WARNINGS 
-#define IG_END_IGNORE_WARNINGS 
+#define IG_BEGIN_IGNORE_WARNINGS
+#define IG_END_IGNORE_WARNINGS
 #endif
 
 #if defined(IG_CC_GNU) || defined(IG_CC_CLANG)
@@ -165,6 +165,8 @@ private:                                           \
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <unordered_map>
+#include <vector>
 
 // Eigen3 Library
 #include <Eigen/Dense>

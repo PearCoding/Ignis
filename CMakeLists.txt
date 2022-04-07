@@ -59,7 +59,12 @@ option(IG_WITH_ASSERTS       "Build with asserts even in release. It is always e
 option(IG_USE_LTO 			 "Use linked time optimization if available in release" ON)
 
 # Setup artic clang flags
-set(IG_ARTIC_CLANG_FLAGS -march=native -ffast-math CACHE STRING "Additional artic clang compilation options")
+if(APPLE)
+	set(IG_ARTIC_CLANG_FLAGS_DEFAULT -ffast-math)
+else()
+	set(IG_ARTIC_CLANG_FLAGS_DEFAULT -march=native -ffast-math)
+endif()
+set(IG_ARTIC_CLANG_FLAGS ${IG_ARTIC_CLANG_FLAGS_DEFAULT} CACHE STRING "Additional artic clang compilation options")
 set(IG_ARTIC_FLAGS CACHE STRING "Additional artic compilation options")
 mark_as_advanced(IG_ARTIC_CLANG_FLAGS IG_ARTIC_FLAGS)
 
