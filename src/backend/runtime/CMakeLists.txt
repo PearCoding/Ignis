@@ -139,17 +139,9 @@ add_custom_command(
         DEPENDS ${ARTIC_EXTRA_SRC}
         COMMENT "Embedding API: ${API_SRC_FILE}" 
         VERBATIM)
-
-###########################################################
-set(HW_HEADER "${CMAKE_BINARY_DIR}/HW_Features.h")
-add_custom_command(
-  OUTPUT "${HW_HEADER}"
-  COMMAND $<TARGET_FILE:hwinfo> --header --prefix IG > ${HW_HEADER}
-  COMMENT "Generating hardware feature information: ${HW_HEADER}" 
-  VERBATIM)
   
 ###########################################################
-add_library(ig_lib_runtime STATIC ${SRC} ${HW_HEADER} ${API_SRC_FILE})
+add_library(ig_lib_runtime STATIC ${SRC} ${API_SRC_FILE})
 if(NOT WIN32)
     find_package(Threads REQUIRED)
     target_link_libraries(ig_lib_runtime PUBLIC Threads::Threads)

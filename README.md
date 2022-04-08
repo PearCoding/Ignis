@@ -30,7 +30,6 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
  - imgui-markdown <https://github.com/juliettef/imgui_markdown>
  - pugixml <https://github.com/zeux/pugixml>
  - RapidJSON <https://rapidjson.org/>
- - Simple Hardware Feature Extractor <https://github.com/PearCoding/hwinfo>
  - Simple Tag Preprocessor <https://github.com/PearCoding/stpp>
  - stb <https://github.com/nothings/stb>
  - tinyexr <https://github.com/syoyo/tinyexr>
