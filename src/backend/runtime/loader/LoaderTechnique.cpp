@@ -126,7 +126,7 @@ static void path_header_loader(std::ostream& stream, const std::string&, const s
 
 /////////////////////////
 
-static TechniqueInfo volpath_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
+static TechniqueInfo volpath_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
     TechniqueInfo info;
     info.Variants[0].UsesLights = true;

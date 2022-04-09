@@ -1,14 +1,40 @@
-fn @make_homogeneous_medium(id: i32, sigma_t: Color, phase: PhaseFunction) = Medium {
-    id             = id,
-    phase          = phase,
-    eval           = @|p_start, p_end| {
-        let dir_u = vec3_sub(p_end, p_start);
-        let dist  = vec3_len(dir_u);
-        let dir   = vec3_mulf(dir_u, 1 / dist);
+fn @make_homogeneous_medium(sigma_a: Color, sigma_s: Color, phase: PhaseFunction) -> Medium {
+    let eps       = 1e-3 : f32;
+    let sigma_t   = color_add(sigma_a, sigma_s);
+    let sigma_ind = vec3_min_index(color_to_vec3(sigma_t));
+    let sigma_t_p = color_at(sigma_t, sigma_ind);
 
-        let f = make_color(math_builtins::exp(-sigma_t.r * dist), math_builtins::exp(-sigma_t.g * dist), math_builtins::exp(-sigma_t.b * dist), sigma_t.a);
-        color_mul(phase.eval(vec3_neg(dir), dir), f)
-    },
-    eval_inf       = @|_, _| color_builtins::black, // Special case: sigma_t = 0 ??
-    is_homogeneous = true
-};
+    let eval_tr = @|t:f32| make_color(math_builtins::exp(-sigma_t.r * t), math_builtins::exp(-sigma_t.g * t), math_builtins::exp(-sigma_t.b * t), sigma_t.a);
+    Medium {
+        phase = @|_| phase,
+        eval  = @|p_start, p_end| {
+            let dir_u = vec3_sub(p_end, p_start);
+            let dist  = vec3_len(dir_u);
+            eval_tr(dist)
+        },
+        eval_inf = @|_, _| color_builtins::black, // Special case: sigma_t = 0 ??
+        sample   = @|rnd, p_start, p_end| {
+            let dir_u = vec3_sub(p_end, p_start);
+            let dist  = vec3_len(dir_u);
+
+            let ndist = math_builtins::fmin[f32](dist, -math_builtins::log(1 - randf(rnd) * 0.99999) / sigma_t_p);
+
+            if math_builtins::fabs(dist - ndist) <= eps { return(reject_medium_sample()) }
+
+            let dir = vec3_mulf(dir_u, safe_div(1, dist));
+            let pos = vec3_add(p_start, vec3_mulf(dir, ndist));
+            let tr  = eval_tr(ndist);
+
+            let pdf = color_at(tr, sigma_ind) * sigma_t_p;
+            make_medium_sample(pos, pdf, color_mulf(tr, 1 / pdf))
+        },
+        pdf = @|p_start, p_end, p| {
+            let dir_u = vec3_sub(p, p_start);
+            let dist  = vec3_len(dir_u);
+
+            let on_surf = vec3_len2(vec3_sub(p_end, p)) <= eps;
+            math_builtins::exp(-sigma_t_p * dist) * if !on_surf { sigma_t_p } else { 1 }
+        },
+        is_homogeneous = true
+    }
+}

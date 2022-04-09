@@ -10,13 +10,14 @@ static void medium_homogeneous(std::ostream& stream, const std::string& name, co
 {
     tree.beginClosure();
 
-    tree.addColor("sigma_t", *medium, Vector3f::Zero(), true, ShadingTree::IM_Light);
+    tree.addColor("sigma_a", *medium, Vector3f::Zero(), true, ShadingTree::IM_Light);
+    tree.addColor("sigma_s", *medium, Vector3f::Zero(), true, ShadingTree::IM_Light);
     tree.addNumber("g", *medium, 0, true, ShadingTree::IM_Light);
     tree.addColor("color", *medium, Vector3f::Ones(), true, ShadingTree::IM_Light);
 
     stream << tree.pullHeader()
-           << "  let medium_" << ShaderUtils::escapeIdentifier(name) << " = make_homogeneous_medium(0" // TODO
-           << ", " << tree.getInline("sigma_t")
+           << "  let medium_" << ShaderUtils::escapeIdentifier(name) << " = make_homogeneous_medium(" << tree.getInline("sigma_a")
+           << ", " << tree.getInline("sigma_s")
            << ", make_henyeygreenstein_phase(" << tree.getInline("color")
            << ", " << tree.getInline("g") << "));" << std::endl;
 
@@ -68,7 +69,7 @@ std::string LoaderMedium::generate(ShadingTree& tree)
         ++counter2;
     }
 
-    stream << "    _ => make_vacuum_medium(-1)" << std::endl;
+    stream << "    _ => make_vacuum_medium()" << std::endl;
 
     stream << "    }" << std::endl
            << "  };" << std::endl;

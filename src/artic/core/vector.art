@@ -76,6 +76,14 @@ fn @vec3_max_index(a: Vec3) -> i32 {
     }
 }
 
+fn @vec3_min_index(a: Vec3) -> i32 {
+    if a.x < a.y && a.x < a.z {
+        0
+    } else {
+        if a.y < a.z { 1 } else { 2 }
+    }
+}
+
 fn @vec2_min_value(a: Vec2) = math_builtins::fmin(a.x, a.y);
 fn @vec3_min_value(a: Vec3) = math_builtins::fmin(a.x, math_builtins::fmin(a.y, a.z));
 fn @vec2_max_value(a: Vec2) = math_builtins::fmax(a.x, a.y);

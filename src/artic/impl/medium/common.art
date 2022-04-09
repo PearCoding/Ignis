@@ -1,7 +1,10 @@
-fn @make_vacuum_medium(id: i32) = Medium {
-    id             = id,
-    phase          = make_uniform_phase(color_builtins::white),
-    eval           = @|_, _| color_builtins::white,
-    eval_inf       = @|_, _| color_builtins::white,
-    is_homogeneous = true
-};
+fn @make_vacuum_medium()-> Medium {
+    Medium {
+        phase          = @|_| make_delta_phase(color_builtins::white),
+        eval           = @|_, _| color_builtins::white,
+        eval_inf       = @|_, _| color_builtins::white,
+        sample         = @|_, _, _| reject_medium_sample(),
+        pdf            = @|_, _, _| 0,
+        is_homogeneous = true
+    }
+}

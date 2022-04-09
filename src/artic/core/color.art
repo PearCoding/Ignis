@@ -34,6 +34,8 @@ fn @vec4_to_color(v: Vec4)  = make_color(v.x, v.y, v.z, v.w);
 fn @color_to_vec3(c: Color) = make_vec3(c.r, c.g, c.b);
 fn @color_to_vec4(c: Color) = make_vec4(c.r, c.g, c.b, c.a);
 
+fn @color_at(a: Color, i: i32) = vec4_at(color_to_vec4(a), i);
+
 mod color_builtins {
 static black   = super::Color { r = 0, g = 0, b = 0, a = 1 };
 static white   = super::Color { r = 1, g = 1, b = 1, a = 1 };

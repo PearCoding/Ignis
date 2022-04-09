@@ -1,5 +1,11 @@
+fn @make_delta_phase(color: Color) = PhaseFunction {
+    eval   = @ |_, _| color,
+    pdf    = @ |_, _| 0,
+    sample = @ |_, out_dir| make_phase_sample(vec3_neg(out_dir), 1, color)
+};
+
 // Creates a fully absorbing phase function that behaves like a black body
-fn @make_black_phase() = make_uniform_phase(color_builtins::black);
+fn @make_black_phase() = make_delta_phase(color_builtins::black);
 
 // Error
-fn @make_error_phase() = make_uniform_phase(color_builtins::pink);
+fn @make_error_phase() = make_delta_phase(color_builtins::pink);

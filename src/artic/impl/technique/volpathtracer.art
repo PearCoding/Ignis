@@ -19,7 +19,7 @@ fn wrap_vptraypayload(payload: VPTRayPayload) -> RayPayload {
     r
 }
 
-fn unrap_vptraypayload(payload: RayPayload) = VPTRayPayload {
+fn unwrap_vptraypayload(payload: RayPayload) = VPTRayPayload {
     mis     = payload.components(0),
     contrib = make_color(payload.components(1), payload.components(2), payload.components(3), 1),
     depth   = payload.components(4) as i32,
@@ -50,7 +50,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
             return(ShadowRay::None)
         }
         
-        if unrap_vptraypayload(payload).depth + 1 > max_path_len {
+        if unwrap_vptraypayload(payload).depth + 1 > max_path_len {
             return(ShadowRay::None)
         }
 
@@ -60,7 +60,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         let sample_direct = light.sample_direct;
         let light_sample  = @sample_direct(rnd, surf);
         
-        let pt     = unrap_vptraypayload(payload);
+        let pt     = unwrap_vptraypayload(payload);
         let medium = @media(pt.medium);
         
         let hitvol = medium.eval(ray.org, surf.point);
@@ -83,8 +83,9 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 
                 let mis = 1 / (1 + pdf_e * inv_pdf_l);
                 
+                // TODO: Maybe sample volume pos?
                 // FIXME: We assume no transmission with medium change. That is just wrong
-                let vol     = color_mul(hitvol, medium.eval_inf(surf.point, in_dir));
+                let vol     = color_mul(hitvol, color_mul(medium.eval_inf(surf.point, in_dir), medium.phase(surf.point).eval(out_dir, in_dir)));
                 let contrib = color_mul(light_sample.intensity, color_mul(pt.contrib, color_mul(mat.bsdf.eval(in_dir, out_dir), vol)));
 
                 return(make_simple_shadow_ray(
@@ -114,8 +115,9 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 let mis         = 1 / (1 + pdf_e * inv_pdf_l);
                 let geom_factor = inv_pdf_l * cos_l * inv_d2;
                 
+                // TODO: Maybe sample volume pos?
                 // FIXME: We assume no transmission with medium change. That is just wrong
-                let vol     = color_mul(hitvol, medium.eval(surf.point, light_sample.posdir));
+                let vol     = color_mul(hitvol, color_mul(medium.eval(surf.point, light_sample.posdir), medium.phase(surf.point).eval(out_dir, in_dir)));
                 let contrib = color_mul(light_sample.intensity, color_mul(pt.contrib, color_mul(mat.bsdf.eval(in_dir, out_dir), vol)));
                 
                 return(make_simple_shadow_ray(
@@ -134,7 +136,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
               , surf: SurfaceElement
               , mat: Material
               ) -> Option[Color] {
-        let pt = unrap_vptraypayload(payload);
+        let pt = unwrap_vptraypayload(payload);
 
         // Hits on a light source
         if mat.is_emissive && surf.is_entering {
@@ -160,7 +162,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         let mut inflights = 0;
         let mut color     = color_builtins::black;
         
-        let pt     = unrap_vptraypayload(payload);
+        let pt     = unwrap_vptraypayload(payload);
         let medium = @media(pt.medium);
 
         for light_id in unroll(0, num_lights) {
@@ -193,37 +195,60 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                  , surf: SurfaceElement
                  , mat: Material
                  ) -> Option[(Ray, RayPayload)] {
-        let pt = unrap_vptraypayload(payload);
-
-        // Bounce
+        let pt      = unwrap_vptraypayload(payload);
+        let medium  = @media(pt.medium);
         let out_dir = vec3_neg(ray.dir);
-        if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
-            let medium      = @media(pt.medium);
-            let vol         = medium.eval(ray.org, surf.point);
-            let vol_contrib = color_mul(vol, pt.contrib);
-            let rr_prob = russian_roulette_pbrt(color_mulf(vol_contrib, pt.eta * pt.eta), 0.95);
+
+        // Try sampling the medium
+        if let Option[MediumSample]::Some(medium_sample) = medium.sample(rnd, ray.org, surf.point) {
+            let phase_sample = medium.phase(medium_sample.pos).sample(rnd, out_dir);
+            let contrib      = color_mul(pt.contrib, color_mul(medium_sample.color, phase_sample.color)/* Pdf already applied!*/);
+            let rr_prob      = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
+
             if pt.depth + 1 > max_path_len || randf(rnd) >= rr_prob {
-                return(Option[(Ray, RayPayload)]::None)
+                Option[(Ray, RayPayload)]::None
+            } else {
+                let new_contrib = color_mulf(contrib, 1 / rr_prob);
+                make_option(
+                    make_ray(medium_sample.pos, phase_sample.in_dir, 0, flt_max),
+                    wrap_vptraypayload(VPTRayPayload {
+                        mis     = pt.mis, // TODO: Check this?
+                        contrib = new_contrib,
+                        depth   = pt.depth + 1,
+                        eta     = pt.eta,
+                        medium  = pt.medium
+                    })
+                )
             }
-            
-            let contrib     = color_mul(vol_contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
-            let mis         = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
-            let new_contrib = color_mulf(contrib, 1 / rr_prob);
-            
-            let is_transmission = math_builtins::signbit(vec3_dot(surf.local.col(2), mat_sample.in_dir));
-            let new_medium      = if is_transmission { mat.interface.pick(surf.is_entering) } else { pt.medium };
-            make_option(
-                make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
-                wrap_vptraypayload(VPTRayPayload {
-                    mis     = mis,
-                    contrib = new_contrib,
-                    depth   = pt.depth + 1,
-                    eta     = pt.eta * mat_sample.eta,
-                    medium  = new_medium
-                })
-            )
         } else {
-            Option[(Ray, RayPayload)]::None
+            // Bounce on surface
+            if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
+                let vol         = medium.eval(ray.org, surf.point);
+                let vol_contrib = color_mul(vol, pt.contrib);
+                let rr_prob = russian_roulette_pbrt(color_mulf(vol_contrib, pt.eta * pt.eta), 0.95);
+                if pt.depth + 1 > max_path_len || randf(rnd) >= rr_prob {
+                    return(Option[(Ray, RayPayload)]::None)
+                }
+                
+                let contrib     = color_mul(vol_contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+                let mis         = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
+                let new_contrib = color_mulf(contrib, 1 / rr_prob);
+                
+                let is_transmission = math_builtins::signbit(vec3_dot(surf.local.col(2), mat_sample.in_dir));
+                let new_medium      = if is_transmission { mat.interface.pick(surf.is_entering) } else { pt.medium };
+                make_option(
+                    make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
+                    wrap_vptraypayload(VPTRayPayload {
+                        mis     = mis,
+                        contrib = new_contrib,
+                        depth   = pt.depth + 1,
+                        eta     = pt.eta * mat_sample.eta,
+                        medium  = new_medium
+                    })
+                )
+            } else {
+                Option[(Ray, RayPayload)]::None
+            }
         }
     }
 

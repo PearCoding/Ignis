@@ -34,7 +34,7 @@ fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     r
 }
 
-fn unrap_ptraypayload(payload: RayPayload) = PTRayPayload {
+fn unwrap_ptraypayload(payload: RayPayload) = PTRayPayload {
     mis     = payload.components(0),
     contrib = make_color(payload.components(1), payload.components(2), payload.components(3), 1),
     depth   = payload.components(4) as i32,
@@ -68,7 +68,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
             return(ShadowRay::None)
         }
         
-        if unrap_ptraypayload(payload).depth + 1 > max_path_len {
+        if unwrap_ptraypayload(payload).depth + 1 > max_path_len {
             return(ShadowRay::None)
         }
 
@@ -96,7 +96,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 
                 let mis = 1 / (1 + pdf_e * inv_pdf_l);
 
-                let contrib = color_mul(light_sample.intensity, color_mul(unrap_ptraypayload(payload).contrib, mat.bsdf.eval(in_dir, out_dir)));
+                let contrib = color_mul(light_sample.intensity, color_mul(unwrap_ptraypayload(payload).contrib, mat.bsdf.eval(in_dir, out_dir)));
 
                 return(make_simple_shadow_ray(
                     make_ray(surf.point, light_dir, offset, flt_max),
@@ -125,7 +125,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 let mis         = 1 / (1 + pdf_e * inv_pdf_l);
                 let geom_factor = inv_pdf_l * cos_l * inv_d2;
 
-                let contrib = color_mul(light_sample.intensity, color_mul(unrap_ptraypayload(payload).contrib, mat.bsdf.eval(in_dir, out_dir)));
+                let contrib = color_mul(light_sample.intensity, color_mul(unwrap_ptraypayload(payload).contrib, mat.bsdf.eval(in_dir, out_dir)));
 
                 return(make_simple_shadow_ray(
                     make_ray(surf.point, light_dir, offset, 1 - offset),
@@ -143,7 +143,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
               , surf: SurfaceElement
               , mat: Material
               ) -> Option[Color] {
-        let pt = unrap_ptraypayload(payload);
+        let pt = unwrap_ptraypayload(payload);
         if pt.depth == 1 {
             aov_normal.splat(pixel, make_color(math_builtins::fabs(surf.local.col(2).x),
                                                math_builtins::fabs(surf.local.col(2).y),
@@ -179,7 +179,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
             let light = @lights(light_id);
             // Do not include delta lights or finite lights
             if light.infinite && !light.delta {
-                let pt = unrap_ptraypayload(payload);
+                let pt = unwrap_ptraypayload(payload);
 
                 inflights += 1;
 
@@ -206,7 +206,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                  , surf: SurfaceElement
                  , mat: Material
                  ) -> Option[(Ray, RayPayload)] {
-        let pt = unrap_ptraypayload(payload);
+        let pt = unwrap_ptraypayload(payload);
 
         // Bounce
         let out_dir = vec3_neg(ray.dir);
