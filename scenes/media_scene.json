@@ -17,7 +17,7 @@
 		{"type":"diffuse", "name": "mat-Light", "reflectance":[0,0,0]},
 		{"type":"diffuse", "name": "mat-GrayWall", "reflectance":[0.8,0.8,0.8]},
 		{"type":"diffuse", "name": "mat-ColoredWall", "reflectance":[0.106039, 0.195687, 0.800000]},
-		{"type":"passthrough", "name": "mat-Pillar"}
+		{"type":"passthrough", "name": "mat-Object"}
 	],
 	"shapes": [
 		{"type":"rectangle", "name":"AreaLight", "flip_normals":true, "transform": [0, 0.084366, -0.053688, -0.7, 0, 0.053688, 0.084366, 0.1, 0.1, 0, 0, 0, 0, 0, 0, 1]},
@@ -26,7 +26,7 @@
 		{"type":"ply", "name":"Left", "filename":"meshes/Left.ply"},
 		{"type":"ply", "name":"Right", "filename":"meshes/Right.ply"},
 		{"type":"ply", "name":"Back", "filename":"meshes/Back.ply"},
-		{"type":"ply", "name":"Pillar", "filename":"meshes/Pillar.ply", "transform": {"scale": 0.2, "translate": [0,-5,0]} }
+		{"type":"obj", "name":"Object", "filename":"meshes/CubeInCube.obj", "face_normals": true, "transform": {"scale": 0.4, "translate": [0,-1.4,0]} }
 	],
 	"entities": [
 		{"name":"AreaLight", "shape":"AreaLight", "bsdf":"mat-Light"},
@@ -35,13 +35,14 @@
 		{"name":"Left","shape":"Left", "bsdf":"mat-ColoredWall"},
 		{"name":"Right","shape":"Right", "bsdf":"mat-ColoredWall"},
 		{"name":"Back","shape":"Back", "bsdf":"mat-GrayWall"},
-		{"name":"Pillar","shape":"Pillar", "bsdf":"mat-Pillar", "inner_medium": "Milk"}
+		{"name":"Object","shape":"Object", "bsdf":"mat-Object", "inner_medium": "Medium"}
 	],
 	"lights": [
 		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[1,1,1]}
 	],
 	"media": [
-		{"type": "homogeneous", "name": "Milk", "sigma_a": [0.0015333, 0.0046, 0.019933], "sigma_s": [4.5513, 5.8294, 7.136], "g": 1}
-		// {"type": "homogeneous", "name": "Milk", "sigma_a": [0,0,0], "sigma_s": [0,0,0], "g": 0}
+		// {"type": "homogeneous", "name": "Medium", "sigma_a": [0.0015333, 0.0046, 0.019933], "sigma_s": [4.5513, 5.8294, 7.136], "g": 1}
+		// {"type": "homogeneous", "name": "Medium", "sigma_a": [0,0,0], "sigma_s": [0,0,0], "g": 0}
+		{"type": "homogeneous", "name": "Medium", "sigma_a": [0.2,0.6,0.8], "sigma_s": [0.8,0.4,0.2], "g": 0}
 	]
 }
