@@ -1,0 +1,46 @@
+{
+	"technique": {
+		"type": "volpath",
+		"max_depth": 64
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 40,
+		"near_clip": 0.1,
+		"far_clip": 100,
+		"transform": [ -1,0,0,0, 0,1,0,0, 0,0,-1,3.85, 0,0,0,1 ]
+	},
+	"film": {
+		"size": [1000, 1000]
+	},
+	"bsdfs": [
+		{"type":"diffuse", "name": "mat-Light", "reflectance":[0,0,0]},
+		{"type":"diffuse", "name": "mat-GrayWall", "reflectance":[0.8,0.8,0.8]},
+		{"type":"diffuse", "name": "mat-ColoredWall", "reflectance":[0.106039, 0.195687, 0.800000]},
+		{"type":"passthrough", "name": "mat-Pillar"}
+	],
+	"shapes": [
+		{"type":"rectangle", "name":"AreaLight", "flip_normals":true, "transform": [0, 0.084366, -0.053688, -0.7, 0, 0.053688, 0.084366, 0.1, 0.1, 0, 0, 0, 0, 0, 0, 1]},
+		{"type":"ply", "name":"Bottom", "filename":"meshes/Bottom.ply"},
+		{"type":"ply", "name":"Top", "filename":"meshes/Top.ply"},
+		{"type":"ply", "name":"Left", "filename":"meshes/Left.ply"},
+		{"type":"ply", "name":"Right", "filename":"meshes/Right.ply"},
+		{"type":"ply", "name":"Back", "filename":"meshes/Back.ply"},
+		{"type":"ply", "name":"Pillar", "filename":"meshes/Pillar.ply", "transform": {"scale": 0.2, "translate": [0,-5,0]} }
+	],
+	"entities": [
+		{"name":"AreaLight", "shape":"AreaLight", "bsdf":"mat-Light"},
+		{"name":"Bottom","shape":"Bottom", "bsdf":"mat-GrayWall"},
+		{"name":"Top","shape":"Top", "bsdf":"mat-GrayWall"},
+		{"name":"Left","shape":"Left", "bsdf":"mat-ColoredWall"},
+		{"name":"Right","shape":"Right", "bsdf":"mat-ColoredWall"},
+		{"name":"Back","shape":"Back", "bsdf":"mat-GrayWall"},
+		{"name":"Pillar","shape":"Pillar", "bsdf":"mat-Pillar", "inner_medium": "Milk"}
+	],
+	"lights": [
+		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[1,1,1]}
+	],
+	"media": [
+		{"type": "homogeneous", "name": "Milk", "sigma_t": [4.5528333, 5.834, 7.155933]}
+	]
+}

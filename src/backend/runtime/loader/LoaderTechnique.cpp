@@ -26,6 +26,8 @@ static void ao_body_loader(std::ostream& stream, const std::string&, const std::
     stream << "  let technique = make_ao_renderer();" << std::endl;
 }
 
+/////////////////////////
+
 static void debug_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
     // TODO: Maybe add a changeable default mode?
@@ -41,6 +43,8 @@ static TechniqueInfo debug_get_info(const std::string&, const std::shared_ptr<Pa
     return info;
 }
 
+/////////////////////////
+
 static void wireframe_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
     stream << "  let technique = make_wireframe_renderer();" << std::endl;
@@ -52,6 +56,8 @@ static void wireframe_header_loader(std::ostream& stream, const std::string&, co
     stream << "static RayPayloadComponents = " << C << ";" << std::endl
            << "fn init_raypayload() = wrap_wireframeraypayload(WireframeRayPayload { depth = 1, distance = 0 });" << std::endl;
 }
+
+/////////////////////////
 
 static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
 {
@@ -116,6 +122,34 @@ static void path_header_loader(std::ostream& stream, const std::string&, const s
     constexpr int C = 1 /* MIS */ + 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */;
     stream << "static RayPayloadComponents = " << C << ";" << std::endl
            << "fn init_raypayload() = wrap_ptraypayload(PTRayPayload { mis = 0, contrib = color_builtins::white, depth = 1, eta = 1 });" << std::endl;
+}
+
+/////////////////////////
+
+static TechniqueInfo volpath_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
+{
+    TechniqueInfo info;
+    info.Variants[0].UsesLights = true;
+    info.Variants[0].UsesMedia  = true;
+
+    return info;
+}
+
+static void volpath_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
+{
+    const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
+    const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
+
+
+    stream << "  let aovs = @|_id:i32| make_empty_aov_image();" << std::endl;
+    stream << "  let technique = make_volume_path_renderer(" << max_depth << ", num_lights, lights, media, aovs, " << clamp_value << ");" << std::endl;
+}
+
+static void volpath_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+{
+    constexpr int C = 1 /* MIS */ + 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */ + 1 /* Medium */;
+    stream << "static RayPayloadComponents = " << C << ";" << std::endl
+           << "fn init_raypayload() = wrap_vptraypayload(VPTRayPayload { mis = 0, contrib = color_builtins::white, depth = 1, eta = 1, medium = -1 });" << std::endl;
 }
 
 /////////////////////////////////
@@ -253,6 +287,8 @@ static void ppm_header_loader(std::ostream& stream, const std::string&, const st
            << "static PPMPhotonCount = " << max_photons << ":i32;" << std::endl;
 }
 
+/////////////////////////////////
+
 // Will return information about the enabled AOVs
 using TechniqueGetInfo = TechniqueInfo (*)(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
 
@@ -270,6 +306,7 @@ static const struct TechniqueEntry {
 } _generators[] = {
     { "ao", technique_empty_get_info, ao_body_loader, technique_empty_header_loader },
     { "path", path_get_info, path_body_loader, path_header_loader },
+    { "volpath", volpath_get_info, volpath_body_loader, volpath_header_loader },
     { "debug", debug_get_info, debug_body_loader, technique_empty_header_loader },
     { "ppm", ppm_get_info, ppm_body_loader, ppm_header_loader },
     { "photonmapper", ppm_get_info, ppm_body_loader, ppm_header_loader },

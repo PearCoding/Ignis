@@ -317,6 +317,9 @@ static void handleNamedObject(Scene& scene, ObjectType type, const std::filesyst
     case OT_LIGHT:
         scene.addLight(name, ptr);
         break;
+    case OT_MEDIUM:
+        scene.addMedium(name, ptr);
+        break;
     case OT_ENTITY:
         scene.addEntity(name, ptr);
         break;
@@ -371,6 +374,8 @@ void Scene::addFrom(const Scene& other)
         addBSDF(bsdf.first, bsdf.second);
     for (const auto& light : other.lights())
         addLight(light.first, light.second);
+    for (const auto& medium : other.media())
+        addLight(medium.first, medium.second);
     for (const auto& shape : other.shapes())
         addShape(shape.first, shape.second);
     for (const auto& ent : other.entities())
@@ -453,6 +458,16 @@ public:
                 if (!light.IsObject())
                     throw std::runtime_error("Expected light element to be an object");
                 handleNamedObject(scene, OT_LIGHT, baseDir, light);
+            }
+        }
+
+        if (doc.HasMember("media")) {
+            if (!doc["media"].IsArray())
+                throw std::runtime_error("Expected lights element to be an array");
+            for (const auto& medium : doc["media"].GetArray()) {
+                if (!medium.IsObject())
+                    throw std::runtime_error("Expected medium element to be an object");
+                handleNamedObject(scene, OT_MEDIUM, baseDir, medium);
             }
         }
 

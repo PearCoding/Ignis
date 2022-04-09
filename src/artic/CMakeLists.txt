@@ -25,6 +25,8 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_cpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_gpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/material.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/medium.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/phase.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pipeline.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/registry.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/scene.art
@@ -62,10 +64,16 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/env.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/mix.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/sun.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/medium/common.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/medium/homogeneous.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/phase/common.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/phase/henyeygreenstein.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/phase/uniform.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/aotracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/debugtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/pathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/photonmapper.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/volpathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/wireframe.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/cdf.art

@@ -52,6 +52,8 @@ set(SRC
     loader/LoaderEnvironment.h
     loader/LoaderLight.cpp
     loader/LoaderLight.h
+    loader/LoaderMedium.cpp
+    loader/LoaderMedium.h
     loader/LoaderShape.cpp
     loader/LoaderShape.h
     loader/LoaderTechnique.cpp

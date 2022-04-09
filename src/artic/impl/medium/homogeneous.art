@@ -1,0 +1,14 @@
+fn @make_homogeneous_medium(id: i32, sigma_t: Color, phase: PhaseFunction) = Medium {
+    id             = id,
+    phase          = phase,
+    eval           = @|p_start, p_end| {
+        let dir_u = vec3_sub(p_end, p_start);
+        let dist  = vec3_len(dir_u);
+        let dir   = vec3_mulf(dir_u, 1 / dist);
+
+        let f = make_color(math_builtins::exp(-sigma_t.r * dist), math_builtins::exp(-sigma_t.g * dist), math_builtins::exp(-sigma_t.b * dist), sigma_t.a);
+        color_mul(phase.eval(vec3_neg(dir), dir), f)
+    },
+    eval_inf       = @|_, _| color_builtins::black, // Special case: sigma_t = 0 ??
+    is_homogeneous = true
+};

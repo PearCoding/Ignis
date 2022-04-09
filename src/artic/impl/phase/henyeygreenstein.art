@@ -1,0 +1,15 @@
+fn @make_henyeygreenstein_phase(color: Color, g: f32) -> PhaseFunction {
+    let hg = @|cosTheta : f32| {
+        let denom = 1 + g * g + 2 * g * cosTheta;
+        safe_div(flt_inv_pi * (1 - g * g), 4 * denom * math_builtins::sqrt(denom))
+    };
+
+    PhaseFunction {
+        eval   = @ |in_dir, out_dir| color_mulf(color, hg(absolute_cos(in_dir, out_dir))),
+        pdf    = @ |_, _| uniform_sphere_pdf(),
+        sample = @ |rnd, out_dir| {
+            let sample = sample_uniform_sphere(randf(rnd), randf(rnd));
+            make_phase_sample(sample.dir, sample.pdf, color_mulf(color_mulf(color, hg(absolute_cos(sample.dir, out_dir))), 1/sample.pdf))
+        }
+    }
+}

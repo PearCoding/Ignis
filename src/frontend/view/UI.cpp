@@ -26,7 +26,7 @@ static const char* const ToneMappingMethodOptions[] = {
 static const char* const DebugModeOptions[] = {
     "Normal", "Tangent", "Bitangent", "Geometric Normal", "Texture Coords", "Prim Coords", "Point", "Hit Distance",
     "Raw Prim ID", "Prim ID", "Raw Entity ID", "Entity ID", "Raw Material ID", "Material ID",
-    "Is Emissive", "Is Specular", "Is Entering", "Check BSDF", "Albedo"
+    "Is Emissive", "Is Specular", "Is Entering", "Check BSDF", "Albedo", "Medium Inner", "Medium Outer"
 };
 
 // Pose IO

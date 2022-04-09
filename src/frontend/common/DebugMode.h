@@ -20,6 +20,8 @@ enum class DebugMode {
     IsSpecular,
     IsEntering,
     CheckBSDF,
-    Albedo
+    Albedo,
+    MediumInner,
+    MediumOuter
 };
 }

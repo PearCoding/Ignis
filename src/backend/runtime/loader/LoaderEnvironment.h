@@ -26,13 +26,16 @@ struct Entity {
 /// A material is a combination of bsdf & entity (if the entity is emissive)
 struct Material {
     std::string BSDF;
+    int MediumInner = -1;
+    int MediumOuter = -1;
     std::string Entity; // Empty if not emissive
     inline bool hasEmission() const { return !Entity.empty(); }
+    inline bool hasMediumInterface() const { return MediumInner >= 0 || MediumOuter >= 0; }
 };
 
 inline bool operator==(const Material& a, const Material& b)
 {
-    return a.BSDF == b.BSDF && a.Entity == b.Entity;
+    return a.BSDF == b.BSDF && a.MediumInner == b.MediumInner && a.MediumOuter == b.MediumOuter && a.Entity == b.Entity;
 }
 
 struct LoaderEnvironment {

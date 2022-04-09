@@ -64,6 +64,33 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
             continue;
         }
 
+        // Query medium interface
+        const std::string mediumInnerName = child->property("inner_medium").getString();
+        int mediumInner                   = -1;
+
+        if (!mediumInnerName.empty()) {
+            if (!ctx.Scene.medium(mediumInnerName)) {
+                IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown medium " << mediumInnerName << std::endl;
+                continue;
+            } else {
+                const auto it = ctx.Scene.media().find(mediumInnerName);
+                mediumInner   = (int)std::distance(ctx.Scene.media().begin(), it);
+            }
+        }
+
+        const std::string mediumOuterName = child->property("outer_medium").getString();
+        int mediumOuter                   = -1;
+
+        if (!mediumOuterName.empty()) {
+            if (!ctx.Scene.medium(mediumOuterName)) {
+                IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown medium " << mediumOuterName << std::endl;
+                continue;
+            } else {
+                const auto it = ctx.Scene.media().find(mediumOuterName);
+                mediumOuter   = (int)std::distance(ctx.Scene.media().begin(), it);
+            }
+        }
+
         // Extract entity information
         Transformf transform = child->property("transform").getTransform();
         transform.makeAffine();
@@ -86,9 +113,9 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
             // It is a unique material
             materialID = (uint32)ctx.Environment.Materials.size();
-            ctx.Environment.Materials.push_back(Material{ bsdfName, pair.first });
+            ctx.Environment.Materials.push_back(Material{ bsdfName, mediumInner, mediumOuter, pair.first });
         } else {
-            Material mat{ bsdfName, {} };
+            Material mat{ bsdfName, mediumInner, mediumOuter, {} };
             auto it = std::find(ctx.Environment.Materials.begin(), ctx.Environment.Materials.end(), mat);
             if (it == ctx.Environment.Materials.end()) {
                 materialID = (uint32)ctx.Environment.Materials.size();

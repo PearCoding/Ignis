@@ -18,6 +18,9 @@ struct TechniqueVariantInfo {
     /// The variant makes use of lights
     bool UsesLights = false;
 
+    /// The variant makes use of participated media
+    bool UsesMedia = false;
+
     /// The variant requires all lights (especially area lights) in the miss shader
     bool UsesAllLightsInMiss = false;
 

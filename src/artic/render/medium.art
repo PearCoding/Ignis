@@ -1,0 +1,29 @@
+struct Medium {
+    id:             i32,
+    phase:          PhaseFunction,
+    eval:           fn(Vec3, Vec3) -> Color, // Evaluate from position A to B
+    eval_inf:       fn(Vec3, Vec3) -> Color, // Evaluate from position A with direction B towards infinity (most of the time its zero)
+    is_homogeneous: bool
+    // TODO
+}
+
+type MediaTable = fn (i32) -> Medium;
+
+struct MediumInterface {
+    inner: i32,
+    outer: i32,
+
+    pick: fn (bool) -> i32,
+}
+
+fn @make_medium_interface(inner: i32, outer: i32) = MediumInterface {
+    inner = inner,
+    outer = outer,
+    pick  = @|is_entering| { if is_entering { inner } else { outer } }
+};
+
+fn @no_medium_interface() = MediumInterface {
+    inner = -1,
+    outer = -1,
+    pick  = @|_| -1
+};

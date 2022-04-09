@@ -1,0 +1,5 @@
+// Creates a fully absorbing phase function that behaves like a black body
+fn @make_black_phase() = make_uniform_phase(color_builtins::black);
+
+// Error
+fn @make_error_phase() = make_uniform_phase(color_builtins::pink);

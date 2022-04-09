@@ -121,6 +121,12 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                         make_option(evl)
                     }
                 },
+                19 => { // DEBUG_MEDIUM_INNER
+                    make_option(if mat.interface.inner < 0 { color_builtins::black } else { color_map(mat.interface.inner) })
+                },
+                20 => { // DEBUG_MEDIUM_OUTER
+                    make_option(if mat.interface.outer < 0 { color_builtins::black } else { color_map(mat.interface.outer) })
+                },
                 _ => { // DEBUG_NORMAL 
                     let n = surf.local.col(2);
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
