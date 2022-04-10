@@ -295,11 +295,16 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
                 mat_id   = (size_t)prim.material;
             }
 
-            const std::string name = mesh.name + "_" + std::to_string(node.mesh) + "_" + std::to_string(primCount);
+            const std::string name     = mesh.name + "_" + std::to_string(node.mesh) + "_" + std::to_string(primCount);
+            const std::string bsdfName = getMaterialName(*material, mat_id);
+
+            const bool hasMedium = material->extensions.count("KHR_materials_volume") > 0; // TODO: Check if distance > 0
 
             auto obj = std::make_shared<Object>(OT_ENTITY, "", baseDir);
             obj->setProperty("shape", Property::fromString(name));
-            obj->setProperty("bsdf", Property::fromString(getMaterialName(*material, mat_id)));
+            obj->setProperty("bsdf", Property::fromString(bsdfName));
+            if (hasMedium)
+                obj->setProperty("inner_medium", Property::fromString(bsdfName)); // Shares the same name as the bsdf
             obj->setProperty("transform", Property::fromTransform(transform));
 
             const std::string entity_name = node.name + std::to_string(scene.entities().size()) + "_" + name;
@@ -605,6 +610,32 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
                 bsdf->setProperty("diffuse_transmission_scale", Property::fromNumber(factor));
             } else {
                 bsdf->setProperty("diffuse_transmission", Property::fromNumber(factor));
+            }
+        }
+
+        // No support for thickness (yet)
+        if (mat.extensions.count("KHR_materials_volume") > 0) {
+            const auto& ext = mat.extensions.at("KHR_materials_volume");
+
+            float thickness = 0;
+            if (ext.Has("thicknessFactor") && ext.Get("thicknessFactor").IsNumber())
+                thickness = static_cast<float>(ext.Get("thicknessFactor").GetNumberAsDouble());
+
+            float distance = std::numeric_limits<float>::infinity();
+            if (ext.Has("attenuationDistance") && ext.Get("attenuationDistance").IsNumber())
+                distance = static_cast<float>(ext.Get("attenuationDistance").GetNumberAsDouble());
+
+            if (distance > FltEps && thickness > FltEps) {
+                Vector3f color = Vector3f::Ones();
+                if (ext.Has("attenuationColor") && ext.Get("attenuationColor").IsArray() && ext.Get("attenuationColor").ArrayLen() == 3)
+                    color = Vector3f(static_cast<float>(ext.Get("attenuationColor").Get(0).GetNumberAsDouble()), static_cast<float>(ext.Get("attenuationColor").Get(1).GetNumberAsDouble()), static_cast<float>(ext.Get("attenuationColor").Get(2).GetNumberAsDouble()));
+
+                Vector3f sigma_t = -color.array().log() / distance;
+                auto medium      = std::make_shared<Object>(OT_MEDIUM, "homogeneous", directory);
+                medium->setProperty("sigma_s", Property::fromVector3(Vector3f::Zero()));
+                medium->setProperty("sigma_a", Property::fromVector3(sigma_t));
+
+                scene.addMedium(name, medium);
             }
         }
 

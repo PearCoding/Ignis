@@ -493,6 +493,11 @@ Scene SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
         // Load gltf directly
         Scene scene = glTFSceneParser::loadFromFile(path, ok);
         if (ok) {
+            // Scene is using volumes, switch to the volpath technique
+            if (!scene.media().empty()) {
+                scene.setTechnique(std::make_shared<Object>(OT_TECHNIQUE, "volpath", path.parent_path()));
+            }
+
             // Add light to the scene if no light is available (preview style)
             if (scene.lights().empty()) {
                 IG_LOG(L_WARNING) << "No lights available in '" << path << "'. Adding default environment light" << std::endl;
