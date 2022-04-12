@@ -8,7 +8,7 @@ public:
     ScriptPreprocessor()  = default;
     ~ScriptPreprocessor() = default;
 
-    std::string prepare(const std::string& script);
+    std::string prepare(const std::string& script) const;
     void loadStdLibFromDirectory(const std::filesystem::path& dir);
 
 private:
