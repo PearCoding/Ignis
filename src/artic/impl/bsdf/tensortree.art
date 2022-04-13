@@ -28,6 +28,26 @@ struct TensorTreeModel {
     back_transmission:  TensorTreeComponent
 }
 
+// Same implementation as in Radiance (except last line) to reconstruct exact same behaviour
+fn @tt_disk2square(pos: Vec2) -> Vec2 {
+    let pi4  = flt_pi / 4;
+    let r    = vec2_len(pos);
+    let aphi = math_builtins::atan2(pos.y, pos.x);
+    let phi  = if aphi < -pi4 { aphi + 2*flt_pi } else { aphi };
+
+    let (a, b) = if phi < pi4 { // Region 1
+        (r, phi * r / pi4)
+    } else if phi < 3 * pi4 {   // Region 2
+        (-(phi - 2 * pi4) * r / pi4, r)
+    } else if phi < 5 * pi4 {   // Region 3
+        (-r, -(phi - flt_pi) * r / pi4)
+    } else {                    // Region 4
+        ((phi - 6 * pi4) * r / pi4, -r)
+    };
+
+    make_vec2(a / 2 + 0.5, b / 2 + 0.5)
+}
+
 fn @tt_is_leaf(node_val: i32)     = node_val < 0;
 fn @tt_leaf_offset(node_val: i32) = (-node_val - 1);
 
@@ -37,14 +57,29 @@ fn @tt_is_leaf_single_value(leaf_val: f32) = math_builtins::signbit(leaf_val);
 fn @tt_lookup_grid(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
     let mut spos: [f32*4];
     let mut n    = 0:i32;
-    for i in unroll(0, component.specification.ndim) {
-        spos(i) = 2 * vec4_at(pos, /*3-i*/ i);
-        let t = if spos(i) >= 1 { 1 } else { 0 };
-        n |= t << i;
-        spos(i) -= t as f32;
+    for i in unroll_rev(component.specification.ndim, 0) {
+        let p = 2 * vec4_at(pos, i - 1);
+        let t = if p >= 1 { 1 } else { 0 };
+        n |= t << (i - 1);
+        spos(i - 1) = p - t as f32;
     }
 
     (n, make_vec4(spos(0), spos(1), spos(2), spos(3)))
+}
+
+// Returns local leaf offset
+fn @tt_lookup_leaf(pos: Vec4, component: TensorTreeComponent) -> i32 {
+    let log2gr = component.specification.ndim; // The special case with single value is already handled
+    let numLN  = 1 << log2gr;                  // Number of values in the leaf
+
+    let mut n = 0:i32;
+    let mut t = 0:i32;
+    for i in unroll_rev(component.specification.ndim, 0) {
+        n += (numLN as f32 * vec4_at(pos, i - 1)) as i32 << t;
+        t += log2gr;
+    }
+
+    n
 }
 
 // Returns first leaf node and the remaining position
@@ -65,8 +100,8 @@ fn @tt_climb_tree(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
 
 // Evaluates whole component and returns corresponding leaf value
 fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) {
-    let in_pos  = concentric_disk_to_square(vec3_to_2(in_dir));
-    let out_pos = concentric_disk_to_square(vec3_to_2(out_dir));
+    let in_pos  = tt_disk2square(vec2_neg(vec3_to_2(in_dir)));
+    let out_pos = tt_disk2square(vec3_to_2(out_dir));
 
     // TODO: Handle ndim==3!
 
@@ -76,7 +111,7 @@ fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponen
     if tt_is_leaf_single_value(leaf_value) {
         -leaf_value
     } else {
-        let (n, _) = tt_lookup_grid(pos, component);
+        let n = tt_lookup_leaf(pos, component);
         component.value(leaf + n)
     }
 }
@@ -114,18 +149,22 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
     let refl_prob = if has_refl { 0.5:f32 } else { 0:f32 };
     let N         = surf.local.col(2);
 
-    let local_eval = |wi : Vec3, wo : Vec3| -> Color {
+    let local_eval = @ |wi : Vec3, wo : Vec3| -> Color {
         if shading::abs_cos_theta(wi) <= flt_eps || shading::abs_cos_theta(wo) <= flt_eps { return(color_builtins::black) }
 
         // Be sure to get side without the (possible) flip from the surface interaction
-		let inFront	 = !(surf.is_entering ^ shading::is_positive_hemisphere(wi));
-        let outFront = !(surf.is_entering ^ shading::is_positive_hemisphere(wo));
+		let inFront	 = surf.is_entering == shading::is_positive_hemisphere(wi);
+        let outFront = surf.is_entering == shading::is_positive_hemisphere(wo);
+
+        // Map to a standard coordinate system
+        let positive = shading::make_positive_hemisphere;
+        let negative = @|v:Vec3| vec3_neg(positive(v));
 
         let factor = match (inFront, outFront) {
-            (true, true)   => if has_refl { tt_eval_component(k_fi(wi), k_fo(wo), tree.front_reflection) } else { 0:f32 },
-            (true, false)  => tt_eval_component(k_fi(wi), k_bo(wo), tree.front_transmission),
-            (false, true)  => tt_eval_component(k_bi(wi), k_fo(wo), tree.back_transmission),
-            (false, false) => if has_refl { tt_eval_component(k_bi(wi), k_bo(wo), tree.back_reflection) } else { 0:f32 }
+            (true, true)   => if has_refl { tt_eval_component(positive(wi), positive(wo), tree.front_reflection) } else { 0:f32 },
+            (true, false)  =>               tt_eval_component(positive(wo), negative(wi), tree.front_transmission),
+            (false, true)  =>               tt_eval_component(negative(wo), positive(wi), tree.back_transmission),
+            (false, false) => if has_refl { tt_eval_component(negative(wi), negative(wo), tree.back_reflection) } else { 0:f32 }
         };
 
         color_mulf(color, factor * shading::abs_cos_theta(wi))
