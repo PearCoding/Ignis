@@ -43,7 +43,7 @@ using NodeValue = int32_t;
 static_assert(sizeof(NodeValue) == sizeof(float), "Node and Leaf value elements have to have the same size");
 class TensorTreeComponent {
 public:
-    inline TensorTreeComponent(uint32 ndim)
+    inline explicit TensorTreeComponent(uint32 ndim)
         : mNDim(ndim)
         , mMaxValuesPerNode(1 << ndim)
     {

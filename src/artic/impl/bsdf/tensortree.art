@@ -69,13 +69,13 @@ fn @tt_lookup_grid(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
 
 // Returns local leaf offset
 fn @tt_lookup_leaf(pos: Vec4, component: TensorTreeComponent) -> i32 {
-    let log2gr = 1;           // 0 -> Single value leaf, 1 -> full ndim leaf. We do not simply, thats why we only have these two options. But single leaf values are already handled
-    let numLN  = 1 << log2gr; // Number of values in the leaf
+    let log2gr = 1;           // 0 -> Single value leaf, 1 -> full ndim leaf. We do no simplify, thats why we only have these two options. But single leaf values are already handled
+    let scale  = 1;//1 << log2gr; // = 2
 
     let mut n = 0:i32;
     let mut t = 0:i32;
     for i in unroll_rev(component.specification.ndim, 0) {
-        n += (numLN as f32 * vec4_at(pos, i - 1)) as i32 << t;
+        n += (scale as f32 * vec4_at(pos, i - 1)) as i32 << t;
         t += log2gr;
     }
 
@@ -162,9 +162,9 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
 
         let factor = match (inFront, outFront) {
             (true, true)   => if has_refl { tt_eval_component(positive(wi), positive(wo), tree.front_reflection) } else { 0:f32 },
-            (true, false)  => 0:f32,//              tt_eval_component(positive(wo), negative(wi), tree.front_transmission),
-            (false, true)  => 0:f32,//              tt_eval_component(negative(wo), positive(wi), tree.back_transmission),
-            (false, false) => 0:f32,// if has_refl { tt_eval_component(negative(wi), negative(wo), tree.back_reflection) } else { 0:f32 }
+            (true, false)  =>               tt_eval_component(positive(wo), negative(wi), tree.front_transmission),
+            (false, true)  =>               tt_eval_component(negative(wo), positive(wi), tree.back_transmission),
+            (false, false) => if has_refl { tt_eval_component(negative(wi), negative(wo), tree.back_reflection) } else { 0:f32 }
         };
 
         color_mulf(color, factor * shading::abs_cos_theta(wi))
@@ -206,7 +206,7 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
                 } else {
                     make_option(BsdfSample {
                         in_dir = shading::to_world(surf.local, wi),
-                        pdf    = sample.pdf,
+                        pdf    = 1/*sample.pdf*/,
                         color  = color_mulf(local_eval(wi, wo), 1 / e_pdf),
                         eta    = 1
                     })

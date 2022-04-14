@@ -105,8 +105,8 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, klems: KlemsModel) -> Bs
     let refl_prob  = 0.5:f32;
     let local_eval = |wi : Vec3, wo : Vec3| {
         // Be sure to get side without the (possible) flip from the surface interaction
-		let inFront	 = !(surf.is_entering ^ shading::is_positive_hemisphere(wi));
-        let outFront = !(surf.is_entering ^ shading::is_positive_hemisphere(wo));
+		let inFront	 = surf.is_entering == shading::is_positive_hemisphere(wi);
+        let outFront = surf.is_entering == shading::is_positive_hemisphere(wo);
 
         let factor = match (inFront, outFront) {
             (true, true)   => k_eval_component(k_fi(wi), k_fo(wo), klems.front_reflection),
