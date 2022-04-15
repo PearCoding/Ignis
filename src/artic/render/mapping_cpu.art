@@ -773,6 +773,10 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     make_buffer = @ |ptr, size| make_cpu_buffer(ptr, size),
     dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(0, id, filename),
     request_debug_output = @|| {
+        if vector_width != 1 {
+            print_string("WARNING: There are issues with debug output and CPU vectorization. Use generic target instead!\n");
+        }
+
         let mut ptr : &[u8];
         let size = 4096;
         ignis_request_buffer(0, "__dbg_output", &mut ptr, size * sizeof[i32]() as i32, 0);

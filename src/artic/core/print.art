@@ -1,17 +1,22 @@
 // Allows prints inside device functions
 // FIXME: Currently does not work within vectorized regions. Use generic target if on the CPU.
 struct DebugOutput {
-    buffer:     DeviceBuffer,
-    print:      fn (&[u8]) -> (),
-    print_i32:  fn (i32) -> (),
-    print_f32:  fn (f32) -> (),
+    rnd:       fn (f32) -> f32,
+    print:     fn (&[u8]) -> (),
+    print_i32: fn (i32) -> (),
+    print_f32: fn (f32) -> (),
 }
 
 fn @make_debug_output(buffer: DeviceBuffer) -> DebugOutput {
-    let max = buffer.count - 1;
+    let max     = buffer.count - 1;
     DebugOutput {
-        buffer = buffer,
-        print  = @|str: &[u8]| -> (){
+        rnd   = @|random_garbage: f32| -> f32 {
+            // This is a very low quality random generator and depends on the input random garbage.
+            let mut rnd = fnv_init(); 
+            rnd = fnv_hash(rnd, bitcast[u32](random_garbage)); // Let it be random
+            randf(&mut rnd)
+        },
+        print = @|str: &[u8]| -> (){
             // Compute length
             let mut len = 0;
             while true {
@@ -71,3 +76,10 @@ fn @make_debug_output(buffer: DeviceBuffer) -> DebugOutput {
         }
     }
 }
+
+fn @make_null_debug_output() = DebugOutput {
+    rnd       = @|_| -> f32 { 0 },
+    print     = @|_| -> () {},
+    print_i32 = @|_| -> () {},
+    print_f32 = @|_| -> () {}
+};
