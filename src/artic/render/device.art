@@ -84,8 +84,11 @@ struct Device {
 
     // Handle given pointer as a device buffer.
     // This should only be used in very specific cases. No memory management is done from the runtime
-    make_buffer:    fn (&[u8] /* Pointer to data! */, i32 /* Size in units!! */) -> DeviceBuffer,
+    make_buffer: fn (&[u8] /* Pointer to data! */, i32 /* Size in units!! */) -> DeviceBuffer,
 
     // Dump buffer given by the string identifier to a file. Should only be used for debug purposes
     dump_buffer: fn (&[u8] /* String identifier */, &[u8] /* Filename */) -> (),
+
+    // Special structure to allow print functions within devices. Should only be used for debug purposes
+    request_debug_output: fn () -> DebugOutput,
 }

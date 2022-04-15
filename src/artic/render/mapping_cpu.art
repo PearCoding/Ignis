@@ -771,7 +771,14 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         make_cpu_buffer(ptr, size)
     },
     make_buffer = @ |ptr, size| make_cpu_buffer(ptr, size),
-    dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(0, id, filename)
+    dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(0, id, filename),
+    request_debug_output = @|| {
+        let mut ptr : &[u8];
+        let size = 4096;
+        ignis_request_buffer(0, "__dbg_output", &mut ptr, size * sizeof[i32]() as i32, 0);
+        let buffer = make_cpu_buffer(ptr, size);
+        make_debug_output(buffer)
+    }
 };
 
 fn @make_avx512_device()      = make_cpu_device( true,  true, make_cpu_int_min_max(),16, 0, 32); // Not tested

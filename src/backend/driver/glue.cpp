@@ -518,6 +518,68 @@ public:
         }
     }
 
+    inline void dumpDebugBuffer(int32_t dev, DeviceBuffer& buffer)
+    {
+        // Copy data to host
+        std::vector<uint8_t> host_data(std::get<1>(buffer));
+        anydsl_copy(dev, std::get<0>(buffer).data(), 0, 0 /* Host */, host_data.data(), 0, host_data.size());
+
+        // Parse data
+        int32_t* ptr  = reinterpret_cast<int32_t*>(host_data.data());
+        int32_t occup = std::min(ptr[0], static_cast<int32_t>(host_data.size() / sizeof(int32_t)));
+
+        if (occup <= 0)
+            return;
+
+        for (int32_t k = 0; k < occup; ++k) {
+            int32_t op = ptr[k + 1];
+
+            if (op == 1) { // Print string
+                ++k;
+                const char* sptr = reinterpret_cast<const char*>(ptr);
+                bool atEnd       = false;
+                while (true) {
+                    for (int i = 0; i < 4; ++i) {
+                        const char c = sptr[4 * (k + 1) + i];
+                        if (c == 0) {
+                            atEnd = true;
+                            break;
+                        } else {
+                            std::cout << c;
+                        }
+                    }
+                    if (atEnd)
+                        break;
+                    ++k;
+                }
+            } else if (op == 2) { // Print i32
+                ++k;
+                std::cout << ptr[k + 1];
+            } else if (op == 3) { // Print f32
+                ++k;
+                std::cout << reinterpret_cast<const float*>(ptr)[k + 1];
+            } else {
+                break;
+            }
+        }
+
+        std::cout << std::flush;
+
+        // Reset data
+        ptr[0] = 0;
+
+        // Copy back to device
+        anydsl_copy(0 /* Host */, host_data.data(), 0, dev, std::get<0>(buffer).data(), 0, sizeof(int32_t));
+    }
+
+    inline void checkDebugOutput()
+    {
+        for (auto& dev : devices) {
+            if (dev.second.buffers.count("__dbg_output"))
+                dumpDebugBuffer(dev.first, dev.second.buffers["__dbg_output"]);
+        }
+    }
+
     inline int runRayGenerationShader(int* id, int size, int xmin, int ymin, int xmax, int ymax)
     {
         if (setup.acquire_stats)
@@ -527,6 +589,8 @@ public:
         IG_ASSERT(shader_set.RayGenerationShader != nullptr, "Expected ray generation shader to be valid");
         auto callback = reinterpret_cast<Callback*>(shader_set.RayGenerationShader);
         const int ret = callback(&driver_settings, (int)current_iteration, id, size, xmin, ymin, xmax, ymax);
+
+        checkDebugOutput();
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::RayGeneration, {});
@@ -542,6 +606,8 @@ public:
         IG_ASSERT(shader_set.MissShader != nullptr, "Expected miss shader to be valid");
         auto callback = reinterpret_cast<Callback*>(shader_set.MissShader);
         callback(&driver_settings, first, last);
+
+        checkDebugOutput();
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::Miss, {});
@@ -560,6 +626,8 @@ public:
         IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
         auto callback = reinterpret_cast<Callback*>(hit_shader);
         callback(&driver_settings, entity_id, first, last);
+
+        checkDebugOutput();
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::Hit, material_id);
@@ -588,6 +656,8 @@ public:
             auto callback = reinterpret_cast<Callback*>(shader_set.AdvancedShadowHitShader);
             callback(&driver_settings, first, last);
 
+            checkDebugOutput();
+
             if (setup.acquire_stats)
                 getThreadData()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowHit, {});
         } else {
@@ -598,6 +668,8 @@ public:
             IG_ASSERT(shader_set.AdvancedShadowMissShader != nullptr, "Expected miss shader to be valid");
             auto callback = reinterpret_cast<Callback*>(shader_set.AdvancedShadowMissShader);
             callback(&driver_settings, first, last);
+
+            checkDebugOutput();
 
             if (setup.acquire_stats)
                 getThreadData()->stats.endShaderLaunch(IG::ShaderType::AdvancedShadowMiss, {});
@@ -612,6 +684,8 @@ public:
             using Callback = decltype(ig_callback_shader);
             auto callback  = reinterpret_cast<Callback*>(shader_set.CallbackShaders[type]);
             callback(&driver_settings, (int)current_iteration);
+
+            checkDebugOutput();
         }
     }
 
@@ -950,7 +1024,8 @@ void* glue_compileSource(const char* src, const char* function)
 extern "C" {
 IG_EXPORT DriverInterface ig_get_interface()
 {
-    DriverInterface interface{};
+    DriverInterface interface {
+    };
     interface.MajorVersion = IG_VERSION_MAJOR;
     interface.MinorVersion = IG_VERSION_MINOR;
 
