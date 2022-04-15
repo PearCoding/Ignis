@@ -520,56 +520,71 @@ public:
 
     inline void dumpDebugBuffer(int32_t dev, DeviceBuffer& buffer)
     {
-        // Copy data to host
-        std::vector<uint8_t> host_data(std::get<1>(buffer));
-        anydsl_copy(dev, std::get<0>(buffer).data(), 0, 0 /* Host */, host_data.data(), 0, host_data.size());
+        const auto& handleDebug = [](int32_t* ptr, int32_t occup) {
+            for (int32_t k = 0; k < occup; ++k) {
+                int32_t op = ptr[k + 1];
 
-        // Parse data
-        int32_t* ptr  = reinterpret_cast<int32_t*>(host_data.data());
-        int32_t occup = std::min(ptr[0], static_cast<int32_t>(host_data.size() / sizeof(int32_t)));
-
-        if (occup <= 0)
-            return;
-
-        for (int32_t k = 0; k < occup; ++k) {
-            int32_t op = ptr[k + 1];
-
-            if (op == 1) { // Print string
-                ++k;
-                const char* sptr = reinterpret_cast<const char*>(ptr);
-                bool atEnd       = false;
-                while (true) {
-                    for (int i = 0; i < 4; ++i) {
-                        const char c = sptr[4 * (k + 1) + i];
-                        if (c == 0) {
-                            atEnd = true;
-                            break;
-                        } else {
-                            std::cout << c;
-                        }
-                    }
-                    if (atEnd)
-                        break;
+                if (op == 1) { // Print string
                     ++k;
+                    const char* sptr = reinterpret_cast<const char*>(ptr);
+                    bool atEnd       = false;
+                    while (true) {
+                        for (int i = 0; i < 4; ++i) {
+                            const char c = sptr[4 * (k + 1) + i];
+                            if (c == 0) {
+                                atEnd = true;
+                                break;
+                            } else {
+                                std::cout << c;
+                            }
+                        }
+                        if (atEnd)
+                            break;
+                        ++k;
+                    }
+                } else if (op == 2) { // Print i32
+                    ++k;
+                    std::cout << ptr[k + 1];
+                } else if (op == 3) { // Print f32
+                    ++k;
+                    std::cout << reinterpret_cast<const float*>(ptr)[k + 1];
+                } else {
+                    break;
                 }
-            } else if (op == 2) { // Print i32
-                ++k;
-                std::cout << ptr[k + 1];
-            } else if (op == 3) { // Print f32
-                ++k;
-                std::cout << reinterpret_cast<const float*>(ptr)[k + 1];
-            } else {
-                break;
             }
+
+            std::cout << std::flush;
+
+            // Reset data
+            ptr[0] = 0;
+        };
+
+        if (dev != 0) {
+            // Copy data to host
+            std::vector<uint8_t> host_data(std::get<1>(buffer));
+            anydsl_copy(dev, std::get<0>(buffer).data(), 0, 0 /* Host */, host_data.data(), 0, host_data.size());
+
+            // Parse data
+            int32_t* ptr  = reinterpret_cast<int32_t*>(host_data.data());
+            int32_t occup = std::min(ptr[0], static_cast<int32_t>(host_data.size() / sizeof(int32_t)));
+
+            if (occup <= 0)
+                return;
+
+            handleDebug(ptr, occup);
+
+            // Copy back to device
+            anydsl_copy(0 /* Host */, host_data.data(), 0, dev, std::get<0>(buffer).data(), 0, sizeof(int32_t));
+        } else {
+            // Already on the host
+            int32_t* ptr  = reinterpret_cast<int32_t*>(std::get<0>(buffer).data());
+            int32_t occup = std::min(ptr[0], static_cast<int32_t>(std::get<1>(buffer) / sizeof(int32_t)));
+
+            if (occup <= 0)
+                return;
+
+            handleDebug(ptr, occup);
         }
-
-        std::cout << std::flush;
-
-        // Reset data
-        ptr[0] = 0;
-
-        // Copy back to device
-        anydsl_copy(0 /* Host */, host_data.data(), 0, dev, std::get<0>(buffer).data(), 0, sizeof(int32_t));
     }
 
     inline void checkDebugOutput()
