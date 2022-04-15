@@ -1,3 +1,5 @@
+// Allows prints inside device functions
+// FIXME: Currently does not work within vectorized regions. Use generic target if on the CPU.
 struct DebugOutput {
     buffer:     DeviceBuffer,
     print:      fn (&[u8]) -> (),
