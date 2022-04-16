@@ -25,7 +25,8 @@ struct TensorTreeModel {
     front_reflection:   TensorTreeComponent,
     back_reflection:    TensorTreeComponent,
     front_transmission: TensorTreeComponent,
-    back_transmission:  TensorTreeComponent
+    back_transmission:  TensorTreeComponent,
+    eval:               fn (SurfaceElement, Vec3, Vec3) -> f32
 }
 
 // Same implementation as in Radiance (except last line) to reconstruct exact same behaviour
@@ -70,7 +71,7 @@ fn @tt_lookup_grid(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
 // Returns local leaf offset
 fn @tt_lookup_leaf(pos: Vec4, component: TensorTreeComponent) -> i32 {
     let log2gr = 1;           // 0 -> Single value leaf, 1 -> full ndim leaf. We do no simplify, thats why we only have these two options. But single leaf values are already handled
-    let scale  = 1;//1 << log2gr; // = 2
+    let scale  = 1 << log2gr; // = 2
 
     let mut n = 0:i32;
     let mut t = 0:i32;
@@ -99,21 +100,53 @@ fn @tt_climb_tree(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
 }
 
 // Evaluates whole component and returns corresponding leaf value
-fn @tt_eval_component(in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) {
+fn @tt_eval_component(dbg: DebugOutput, in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) -> f32 {
     let in_pos  = tt_disk2square(vec2_neg(vec3_to_2(in_dir)));
-    let out_pos = tt_disk2square(vec3_to_2(out_dir));
+    let out_pos = tt_disk2square((vec3_to_2(out_dir)));
 
     // TODO: Handle ndim==3!
 
     // Climb the tree
     let (leaf, pos) = tt_climb_tree(make_vec4(in_pos.x, in_pos.y, out_pos.x, out_pos.y), component);
     let leaf_value  = component.value(leaf);
-    if tt_is_leaf_single_value(leaf_value) {
+    let res = if tt_is_leaf_single_value(leaf_value) {
         -leaf_value
     } else {
         let n = tt_lookup_leaf(pos, component);
         component.value(leaf + n)
+    };
+
+    if dbg.rnd(in_dir.x+in_dir.y+in_dir.z+out_dir.x+out_dir.y+out_dir.z) < 1e-6 {
+        dbg.print("TT ");
+        dbg.print_f32(in_dir.x);
+        dbg.print(" ");
+        dbg.print_f32(in_dir.y);
+        dbg.print(" ");
+        dbg.print_f32(in_dir.z);
+        dbg.print("#");
+        dbg.print_f32(out_dir.x);
+        dbg.print(" ");
+        dbg.print_f32(out_dir.y);
+        dbg.print(" ");
+        dbg.print_f32(out_dir.z);
+        dbg.print("->");
+        dbg.print_f32(in_pos.x);
+        dbg.print(" ");
+        dbg.print_f32(in_pos.y);
+        dbg.print("#");
+        dbg.print_f32(out_pos.x);
+        dbg.print(" ");
+        dbg.print_f32(out_pos.y);
+        dbg.print("->");
+        dbg.print_f32(res);
+        dbg.print(">>");
+        dbg.print_i32(leaf);
+        dbg.print(">>");
+        dbg.print_f32(leaf_value);
+        dbg.print("\n");
     }
+
+    res
 }
 
 fn @make_tensortree_component(spec: TensorTreeComponentSpecification, buffer: DeviceBuffer, off: i32) -> (TensorTreeComponent, i32) {
@@ -127,19 +160,49 @@ fn @make_tensortree_component(spec: TensorTreeComponentSpecification, buffer: De
 
     (tree, 4 + node_count + value_count)
 }
-
-fn @make_tensortree_model(buffer: DeviceBuffer, specification: TensorTreeSpecification) -> TensorTreeModel {
+// TODO: d2 not working
+fn @make_tensortree_model(dbg: DebugOutput, buffer: DeviceBuffer, specification: TensorTreeSpecification) -> TensorTreeModel {
     let (front_reflection,   front_reflection_off)   = make_tensortree_component(specification.front_reflection, buffer, 0);
     let (front_transmission, front_transmission_off) = make_tensortree_component(specification.front_transmission, buffer, front_reflection_off);
     let (back_reflection,    back_reflection_off)    = make_tensortree_component(specification.back_reflection, buffer, front_reflection_off + front_transmission_off);
     let (back_transmission,  _)                      = make_tensortree_component(specification.back_transmission, buffer, front_reflection_off + front_transmission_off + back_reflection_off);
    
+    let has_refl = specification.has_reflection;
+
     TensorTreeModel {
         specification      = specification,
         front_reflection   = front_reflection,
         front_transmission = front_transmission,
         back_reflection    = back_reflection,
-        back_transmission  = back_transmission
+        back_transmission  = back_transmission,
+
+        eval = @ |surf: SurfaceElement, wi : Vec3, wo : Vec3| -> f32 {
+            if shading::abs_cos_theta(wi) <= flt_eps || shading::abs_cos_theta(wo) <= flt_eps { return(0) }
+    
+            // Be sure to get side without the (possible) flip from the surface interaction
+            let inFront	 = surf.is_entering == shading::is_positive_hemisphere(wi);
+            let outFront = surf.is_entering == shading::is_positive_hemisphere(wo);
+    
+            if dbg.rnd(wi.x+wi.y+wi.z+wo.x+wo.y+wo.z) < 1e-6 {
+                dbg.print("FF ");
+                dbg.print_i32(if inFront {1} else {0} );
+                dbg.print_i32(if outFront {1} else {0} );
+                dbg.print("\n");
+            }
+
+            // Map to a standard coordinate system
+            let positive = shading::make_positive_hemisphere;
+            let negative = @|v:Vec3| vec3_neg(positive(v));
+    
+            let factor = match (inFront, outFront) {
+                (true, true)   => if has_refl { tt_eval_component(dbg, positive(wi), positive(wo), front_reflection) } else { 0:f32 },
+                (true, false)  =>               tt_eval_component(dbg, positive(wo), positive(wi), front_transmission),
+                (false, true)  =>               tt_eval_component(dbg, negative(wo), negative(wi), back_transmission),
+                (false, false) => if has_refl { tt_eval_component(dbg, positive(wi), positive(wo), back_reflection) } else { 0:f32 }
+            };
+    
+            factor * shading::abs_cos_theta(wi)
+        }
     }
 }
 
@@ -149,34 +212,13 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
     let refl_prob = if has_refl { 0.5:f32 } else { 0:f32 };
     let N         = surf.local.col(2);
 
-    let local_eval = @ |wi : Vec3, wo : Vec3| -> Color {
-        if shading::abs_cos_theta(wi) <= flt_eps || shading::abs_cos_theta(wo) <= flt_eps { return(color_builtins::black) }
-
-        // Be sure to get side without the (possible) flip from the surface interaction
-		let inFront	 = surf.is_entering == shading::is_positive_hemisphere(wi);
-        let outFront = surf.is_entering == shading::is_positive_hemisphere(wo);
-
-        // Map to a standard coordinate system
-        let positive = shading::make_positive_hemisphere;
-        let negative = @|v:Vec3| vec3_neg(positive(v));
-
-        let factor = match (inFront, outFront) {
-            (true, true)   => if has_refl { tt_eval_component(positive(wi), positive(wo), tree.front_reflection) } else { 0:f32 },
-            (true, false)  =>               tt_eval_component(positive(wo), negative(wi), tree.front_transmission),
-            (false, true)  =>               tt_eval_component(negative(wo), positive(wi), tree.back_transmission),
-            (false, false) => if has_refl { tt_eval_component(negative(wi), negative(wo), tree.back_reflection) } else { 0:f32 }
-        };
-
-        color_mulf(color, factor * shading::abs_cos_theta(wi))
-    };
-
     Bsdf {
         eval   = @ |in_dir, out_dir| {
             if true { return(color_builtins::black) } // See note below about NEE
 
             let wo = shading::to_local(surf.local, out_dir);
             let wi = shading::to_local(surf.local, in_dir);
-            local_eval(wi, wo)
+            color_mulf(color, tree.eval(surf, wi, wo))
         },
         pdf    = @ |in_dir, out_dir| {
             if true { return(0) } // See note below about NEE
@@ -207,7 +249,7 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
                     make_option(BsdfSample {
                         in_dir = shading::to_world(surf.local, wi),
                         pdf    = 1/*sample.pdf*/,
-                        color  = color_mulf(local_eval(wi, wo), 1 / e_pdf),
+                        color  = color_mulf(color, tree.eval(surf, wi, wo) / e_pdf),
                         eta    = 1
                     })
                 }

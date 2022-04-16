@@ -354,7 +354,7 @@ static void bsdf_tensortree(std::ostream& stream, const std::string& name, const
     const TensorTreeSpecification spec = std::get<1>(data);
 
     stream << tree.pullHeader()
-           << "  let tt_" << id << " = make_tensortree_model(device.load_buffer(\"" << buffer_path << "\"), "
+           << "  let tt_" << id << " = make_tensortree_model(device.request_debug_output(), device.load_buffer(\"" << buffer_path << "\"), "
            << dump_tt_specification(spec) << ");" << std::endl
            << "  let bsdf_" << id << " : BSDFShader = @|_ray, _hit, surf| make_tensortree_bsdf(surf, "
            << tree.getInline("base_color") << ", "

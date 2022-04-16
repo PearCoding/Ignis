@@ -260,15 +260,16 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
         component->addNode(*root, nullptr);
 
         // Select correct component
+        // The window definition flips the front & back
         const std::string direction = block.child_value("WavelengthDataDirection");
         if (direction == "Transmission Front")
-            transmissionFront = component;
-        else if (direction == "Scattering Back")
-            reflectionBack = component;
-        else if (direction == "Transmission Back")
             transmissionBack = component;
-        else
+        else if (direction == "Scattering Back" || direction == "Reflection Back")
             reflectionFront = component;
+        else if (direction == "Transmission Back")
+            transmissionFront = component;
+        else
+            reflectionBack = component;
     }
 
     spec.has_reflection = reflectionFront || reflectionBack;
