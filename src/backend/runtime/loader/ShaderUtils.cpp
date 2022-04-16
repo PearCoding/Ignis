@@ -79,6 +79,22 @@ std::string ShaderUtils::escapeIdentifier(const std::string& name)
     return copy;
 }
 
+std::string ShaderUtils::inlineTransformAs2d(const Transformf& t)
+{
+    return inlineMatrix2d(t.affine().block<2, 2>(0, 0));
+}
+
+std::string ShaderUtils::inlineMatrix2d(const Matrix2f& mat)
+{
+    if (mat.isIdentity()) {
+        return "mat2x2_identity()";
+    } else {
+        std::stringstream stream;
+        stream << "make_mat2x2(" << inlineVector2d(mat.col(0)) << ", " << inlineVector2d(mat.col(1)) << ")";
+        return stream.str();
+    }
+}
+
 std::string ShaderUtils::inlineMatrix(const Matrix3f& mat)
 {
     if (mat.isIdentity()) {
@@ -88,6 +104,13 @@ std::string ShaderUtils::inlineMatrix(const Matrix3f& mat)
         stream << "make_mat3x3(" << inlineVector(mat.col(0)) << ", " << inlineVector(mat.col(1)) << ", " << inlineVector(mat.col(2)) << ")";
         return stream.str();
     }
+}
+
+std::string ShaderUtils::inlineVector2d(const Vector2f& pos)
+{
+    std::stringstream stream;
+    stream << "make_vec2(" << pos.x() << ", " << pos.y() << ")";
+    return stream.str();
 }
 
 std::string ShaderUtils::inlineVector(const Vector3f& pos)

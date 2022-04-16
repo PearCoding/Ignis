@@ -1,17 +1,17 @@
-fn @make_image_texture(border: BorderHandling, filter: ImageFilter, image: Image, flip_x: bool, flip_y: bool) -> Texture {
+fn @make_image_texture(border: BorderHandling, filter: ImageFilter, image: Image, transform: Mat2x2) -> Texture {
     @ |uv| {
-        let u = border.horz(uv.x);
-        let v = border.vert(uv.y);
+        let uv2 = mat2x2_mul(transform, uv);
+        let u   = border.horz(uv2.x);
+        let v   = border.vert(uv2.y);
 
-        let u2 = if flip_x { 1 - u } else { u };
-        let v2 = if flip_y { 1 - v } else { v };
-        filter(image, make_vec2(u2, v2))
+        filter(image, make_vec2(u, v))
     }
 }
 
-fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color) -> Texture {
+fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color, transform: Mat2x2) -> Texture {
     @ |uv| { 
-        let suv = vec2_mul(uv, scale);
+        let uv2 = mat2x2_mul(transform, uv);
+        let suv = vec2_mul(uv2, scale);
         let parity_x = ((suv.x as i32) % 2) == 0;
         let parity_y = ((suv.y as i32) % 2) == 0;
 
