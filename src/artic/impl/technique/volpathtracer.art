@@ -6,7 +6,6 @@ struct VPTRayPayload {
     medium:  i32,
 }
 
-
 fn wrap_vptraypayload(payload: VPTRayPayload) -> RayPayload {
     let mut r : RayPayload;
     r.components(0) = payload.mis;
@@ -27,6 +26,7 @@ fn unwrap_vptraypayload(payload: RayPayload) = VPTRayPayload {
     medium  = payload.components(6) as i32,
 };
 
+// TODO: Fix MIS
 fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, media: MediaTable, _aovs: AOVTable, clamp_value: f32) -> Technique {
     let offset : f32  = 0.001;
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
@@ -209,10 +209,11 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 Option[(Ray, RayPayload)]::None
             } else {
                 let new_contrib = color_mulf(contrib, 1 / rr_prob);
+                //let mis         = 1 / (medium_sample.pdf * phase_sample.pdf);
                 make_option(
                     make_ray(medium_sample.pos, phase_sample.in_dir, 0, flt_max),
                     wrap_vptraypayload(VPTRayPayload {
-                        mis     = pt.mis, // TODO: Check this?
+                        mis     = 0/*mis*/,
                         contrib = new_contrib,
                         depth   = pt.depth + 1,
                         eta     = pt.eta,
@@ -223,9 +224,9 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         } else {
             // Bounce on surface
             if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
-                let vol         = medium.eval(ray.org, surf.point);
+                let vol         = color_mul(medium.eval(ray.org, surf.point), medium.phase(surf.point).eval(out_dir, mat_sample.in_dir));
                 let vol_contrib = color_mul(vol, pt.contrib);
-                let rr_prob = russian_roulette_pbrt(color_mulf(vol_contrib, pt.eta * pt.eta), 0.95);
+                let rr_prob     = russian_roulette_pbrt(color_mulf(vol_contrib, pt.eta * pt.eta), 0.95);
                 if pt.depth + 1 > max_path_len || randf(rnd) >= rr_prob {
                     return(Option[(Ray, RayPayload)]::None)
                 }

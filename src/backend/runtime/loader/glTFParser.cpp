@@ -582,8 +582,8 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             }
 
             bool is_thin = true;
-            if (mat.extensions.count("KHR_materials_volume")) {
-                const auto& ext2 = mat.extensions.at("KHR_materials_transmission");
+            if (mat.extensions.count("KHR_materials_volume") > 0) {
+                const auto& ext2 = mat.extensions.at("KHR_materials_volume");
 
                 // TODO: No support for textures
                 float thickness = 0;

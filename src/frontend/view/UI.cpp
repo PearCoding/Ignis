@@ -403,7 +403,7 @@ public:
                         iter = 0;
                     } break;
                     case MM_Pan: {
-                        const float aspeed  = CurrentTravelSpeed / 2;
+                        const float aspeed  = CurrentTravelSpeed / 10;
                         const float xmotion = event.motion.xrel * aspeed;
                         const float ymotion = -event.motion.yrel * aspeed;
                         cam.move(xmotion, ymotion, 0);
