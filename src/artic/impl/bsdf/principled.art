@@ -50,7 +50,7 @@ fn @tint_color(color: Color) -> Color {
     if lum <= super::flt_eps {
         color_builtins::white
     } else {
-        super::color_mulf(color, 1/lum)
+        super::color_divf(color, lum)
     }
 }
 fn @sheen_tint_color(color: Color, tint: f32) = super::color_lerp(color_builtins::white, tint_color(color), tint);
