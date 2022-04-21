@@ -207,7 +207,7 @@ static void light_sky(std::ostream& stream, const std::string& name, const std::
     const Matrix3f trans = light->property("transform").getTransform().linear().transpose().inverse();
 
     stream << tree.pullHeader()
-           << "  let tex_" << id << "   = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image(\"" << path << "\"), mat2x2_identity());" << std::endl
+           << "  let tex_" << id << "   = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image(\"" << path << "\"), mat3x3_identity());" << std::endl // TODO: Refactor this out
            << "  let cdf_" << id << "   = cdf::make_cdf_2d(device.load_buffer(\"" << std::get<0>(cdf) << "\"), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
            << "  let light_" << id << " = make_environment_light_textured(" << ShaderUtils::inlineSceneBBox(tree.context())
            << ", tex_" << id << ", cdf_" << id
