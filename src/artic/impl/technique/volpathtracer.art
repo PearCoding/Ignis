@@ -26,7 +26,7 @@ fn unwrap_vptraypayload(payload: RayPayload) = VPTRayPayload {
     medium  = payload.components(6) as i32,
 };
 
-// TODO: Fix MIS
+// TODO: Add luminaire sampling (aka NEE within participating media)
 fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, media: MediaTable, _aovs: AOVTable, clamp_value: f32) -> Technique {
     let offset : f32  = 0.001;
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
@@ -54,7 +54,6 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
             return(ShadowRay::None)
         }
 
-        // Note: randi() returns random integers, but we only want positive integers here
         let light_id      = pick_light(rnd, num_lights);
         let light         = @lights(light_id);
         let sample_direct = light.sample_direct;
@@ -65,6 +64,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         
         let hitvol = medium.eval(ray.org, surf.point);
 
+        // TODO: Secondary rays do not take "just" media into account. Would be useful to add transmittance into account...
         if light.infinite {
             if light_sample.pdf_dir <= flt_eps {
                 return(ShadowRay::None)
@@ -83,9 +83,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 
                 let mis = 1 / (1 + pdf_e * inv_pdf_l);
                 
-                // TODO: Maybe sample volume pos?
-                // FIXME: We assume no transmission with medium change. That is just wrong
-                let vol     = color_mul(hitvol, color_mul(medium.eval_inf(surf.point, in_dir), medium.phase(surf.point).eval(out_dir, in_dir)));
+                let vol     = color_mul(hitvol, medium.eval_inf(surf.point, in_dir));
                 let contrib = color_mul(light_sample.intensity, color_mul(pt.contrib, color_mul(mat.bsdf.eval(in_dir, out_dir), vol)));
 
                 return(make_simple_shadow_ray(
@@ -115,9 +113,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 let mis         = 1 / (1 + pdf_e * inv_pdf_l);
                 let geom_factor = inv_pdf_l * cos_l * inv_d2;
                 
-                // TODO: Maybe sample volume pos?
-                // FIXME: We assume no transmission with medium change. That is just wrong
-                let vol     = color_mul(hitvol, color_mul(medium.eval(surf.point, light_sample.posdir), medium.phase(surf.point).eval(out_dir, in_dir)));
+                let vol     = color_mul(hitvol, medium.eval(surf.point, light_sample.posdir));
                 let contrib = color_mul(light_sample.intensity, color_mul(pt.contrib, color_mul(mat.bsdf.eval(in_dir, out_dir), vol)));
                 
                 return(make_simple_shadow_ray(
@@ -202,7 +198,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         // Try sampling the medium
         if let Option[MediumSample]::Some(medium_sample) = medium.sample(rnd, ray.org, surf.point) {
             let phase_sample = medium.phase(medium_sample.pos).sample(rnd, out_dir);
-            let contrib      = color_mul(pt.contrib, color_mul(medium_sample.color, phase_sample.color)/* Pdf already applied!*/);
+            let contrib      = color_mul(pt.contrib, color_mulf(medium_sample.color, phase_sample.weight)/* Pdf already applied!*/);
             let rr_prob      = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
 
             if pt.depth + 1 > max_path_len || randf(rnd) >= rr_prob {
@@ -224,7 +220,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         } else {
             // Bounce on surface
             if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
-                let vol         = color_mul(medium.eval(ray.org, surf.point), medium.phase(surf.point).eval(out_dir, mat_sample.in_dir));
+                let vol         = medium.eval(ray.org, surf.point);
                 let vol_contrib = color_mul(vol, pt.contrib);
                 let rr_prob     = russian_roulette_pbrt(color_mulf(vol_contrib, pt.eta * pt.eta), 0.95);
                 if pt.depth + 1 > max_path_len || randf(rnd) >= rr_prob {

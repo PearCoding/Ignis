@@ -1,11 +1,11 @@
-fn @make_henyeygreenstein_phase(color: Color, g: f32) -> PhaseFunction {
+fn @make_henyeygreenstein_phase(g: f32) -> PhaseFunction {
     let hg = @|cosTheta : f32| {
         let denom = 1 + g * g + 2 * g * cosTheta;
         safe_div(flt_inv_pi * (1 - g * g), 4 * denom * math_builtins::sqrt(denom))
     };
 
     PhaseFunction {
-        eval   = @ |in_dir, out_dir| color_mulf(color, hg(absolute_cos(in_dir, out_dir))),
+        eval   = @ |in_dir, out_dir| hg(absolute_cos(in_dir, out_dir)),
         pdf    = @ |in_dir, out_dir| {
             if g <= 1e-3 {
                 // Isotropic
@@ -19,7 +19,7 @@ fn @make_henyeygreenstein_phase(color: Color, g: f32) -> PhaseFunction {
             if g <= 1e-3 {
                 // Isotropic
                 let sample = sample_uniform_sphere(randf(rnd), randf(rnd));
-                make_phase_sample(sample.dir, sample.pdf, color_mulf(color_mulf(color, hg(absolute_cos(sample.dir, out_dir))), 1/sample.pdf))
+                make_phase_sample(sample.dir, sample.pdf, hg(absolute_cos(sample.dir, out_dir)) / sample.pdf)
             } else {
                 // Anisotropic
                 let sqrTerm  = (1 - g * g) / (1 + g - 2 * g * randf(rnd));
@@ -31,7 +31,7 @@ fn @make_henyeygreenstein_phase(color: Color, g: f32) -> PhaseFunction {
                                     sinTheta * math_builtins::sin(phi),
                                     cosTheta);
 
-                make_phase_sample(dir, hg(absolute_cos(dir, out_dir)), color)
+                make_phase_sample(dir, hg(absolute_cos(dir, out_dir)), 1)
             }
         }
     }

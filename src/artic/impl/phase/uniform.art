@@ -1,8 +1,8 @@
-fn @make_uniform_phase(color: Color) = PhaseFunction {
-    eval   = @ |_, _| color_mulf(color, flt_inv_pi / 4),
+fn @make_uniform_phase() = PhaseFunction {
+    eval   = @ |_, _| flt_inv_pi / 4,
     pdf    = @ |_, _| uniform_sphere_pdf(),
     sample = @ |rnd, _| {
         let sample = sample_uniform_sphere(randf(rnd), randf(rnd));
-        make_phase_sample(sample.dir, sample.pdf, color)
+        make_phase_sample(sample.dir, sample.pdf, 1)
     }
 };

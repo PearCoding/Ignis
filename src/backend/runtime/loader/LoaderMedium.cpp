@@ -13,13 +13,22 @@ static void medium_homogeneous(std::ostream& stream, const std::string& name, co
     tree.addColor("sigma_a", *medium, Vector3f::Zero(), true, ShadingTree::IM_Light);
     tree.addColor("sigma_s", *medium, Vector3f::Zero(), true, ShadingTree::IM_Light);
     tree.addNumber("g", *medium, 0, true, ShadingTree::IM_Light);
-    tree.addColor("color", *medium, Vector3f::Ones(), true, ShadingTree::IM_Light);
 
     stream << tree.pullHeader()
            << "  let medium_" << ShaderUtils::escapeIdentifier(name) << " = make_homogeneous_medium(" << tree.getInline("sigma_a")
            << ", " << tree.getInline("sigma_s")
-           << ", make_henyeygreenstein_phase(" << tree.getInline("color")
-           << ", " << tree.getInline("g") << "));" << std::endl;
+           << ", make_henyeygreenstein_phase(" << tree.getInline("g") << "));" << std::endl;
+
+    tree.endClosure();
+}
+
+// It is recommended to not define the medium, instead of using vacuum
+static void medium_vacuum(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>&, ShadingTree& tree)
+{
+    tree.beginClosure();
+
+    stream << tree.pullHeader()
+           << "  let medium_" << ShaderUtils::escapeIdentifier(name) << " = make_vacuum_medium();" << std::endl;
 
     tree.endClosure();
 }
@@ -31,6 +40,7 @@ static const struct {
 } _generators[] = {
     { "homogeneous", medium_homogeneous },
     { "constant", medium_homogeneous },
+    { "vacuum", medium_vacuum },
     { "", nullptr }
 };
 

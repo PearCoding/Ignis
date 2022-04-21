@@ -28,6 +28,10 @@ fn @color_luminance(c: Color)     = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
 fn @color_max_component(c: Color) = math_builtins::fmax[f32](c.r, math_builtins::fmax[f32](c.g, c.b));
 
 fn @is_black(c: Color) = (c.r == 0 && c.g == 0 && c.b == 0);
+fn @is_black_eps(c: Color, eps: f32) -> bool {
+    let diff = color_abs(c);
+    diff.r <= eps && diff.g <= eps && diff.b <= eps
+}
 
 fn @vec3_to_color(v: Vec3)  = make_color(v.x, v.y, v.z, 1);
 fn @vec4_to_color(v: Vec4)  = make_color(v.x, v.y, v.z, v.w);
