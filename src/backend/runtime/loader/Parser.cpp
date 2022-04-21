@@ -70,10 +70,15 @@ inline static Vector2f getVector2f(const rapidjson::Value& obj)
     return Vector2f(array[0].GetFloat(), array[1].GetFloat());
 }
 
-inline static Vector3f getVector3f(const rapidjson::Value& obj)
+inline static Vector3f getVector3f(const rapidjson::Value& obj, bool allow2d = false)
 {
     const auto& array = obj.GetArray();
     const size_t len  = array.Size();
+    if (allow2d && len == 2) {
+        const Vector2f var = getVector2f(obj);
+        return Vector3f(var.x(), var.y(), 0);
+    }
+
     if (len != 3)
         throw std::runtime_error("Expected vector of length 3");
     if (!checkArrayIsAllNumber(array))
@@ -199,17 +204,17 @@ inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson:
                 // From left to right. The last entry will be applied first to a potential point A1*A2*A3*...*An*p
                 for (auto val = itr->value.MemberBegin(); val != itr->value.MemberEnd(); ++val) {
                     if (val->name == "translate") {
-                        const Vector3f pos = getVector3f(val->value);
+                        const Vector3f pos = getVector3f(val->value, true);
                         transform.translate(pos);
                     } else if (val->name == "scale") {
                         if (val->value.IsNumber()) {
                             transform.scale(val->value.GetFloat());
                         } else {
-                            const Vector3f s = getVector3f(val->value);
+                            const Vector3f s = getVector3f(val->value, true);
                             transform.scale(s);
                         }
                     } else if (val->name == "rotate") { // [Rotation around X, Rotation around Y, Rotation around Z] all in degrees
-                        const Vector3f angles = getVector3f(val->value);
+                        const Vector3f angles = getVector3f(val->value, true);
                         transform *= Eigen::AngleAxisf(Deg2Rad * angles(0), Vector3f::UnitX())
                                      * Eigen::AngleAxisf(Deg2Rad * angles(1), Vector3f::UnitY())
                                      * Eigen::AngleAxisf(Deg2Rad * angles(2), Vector3f::UnitZ());
@@ -392,6 +397,15 @@ void Scene::addFrom(const Scene& other)
         mFilm = other.mFilm;
 }
 
+void Scene::addConstantEnvLight()
+{
+    if (mLights.count("__env") == 0) {
+        auto env = std::make_shared<Object>(OT_LIGHT, "constant", std::filesystem::path{});
+        env->setProperty("radiance", Property::fromNumber(InvPi));
+        addLight("__env", env);
+    }
+}
+
 class InternalSceneParser {
 public:
     static Scene loadFromJSON(SceneParser& loader, const std::filesystem::path& baseDir, const rapidjson::Document& doc)
@@ -500,10 +514,8 @@ Scene SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
             // Add light to the scene if no light is available (preview style)
             if (scene.lights().empty()) {
-                IG_LOG(L_WARNING) << "No lights available in '" << path << "'. Adding default environment light" << std::endl;
-                auto env = std::make_shared<Object>(OT_LIGHT, "constant", path.parent_path());
-                env->setProperty("radiance", Property::fromNumber(InvPi));
-                scene.addLight("__env", env);
+                IG_LOG(L_WARNING) << "No lights available in " << path << ". Adding default environment light" << std::endl;
+                scene.addConstantEnvLight();
             }
         }
         return scene;

@@ -43,7 +43,7 @@ using NodeValue = int32_t;
 static_assert(sizeof(NodeValue) == sizeof(float), "Node and Leaf value elements have to have the same size");
 class TensorTreeComponent {
 public:
-    inline TensorTreeComponent(uint32 ndim)
+    inline explicit TensorTreeComponent(uint32 ndim)
         : mNDim(ndim)
         , mMaxValuesPerNode(1 << ndim)
     {
@@ -260,15 +260,16 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
         component->addNode(*root, nullptr);
 
         // Select correct component
+        // The window definition flips the front & back
         const std::string direction = block.child_value("WavelengthDataDirection");
         if (direction == "Transmission Front")
-            transmissionFront = component;
-        else if (direction == "Scattering Back")
-            reflectionBack = component;
-        else if (direction == "Transmission Back")
             transmissionBack = component;
-        else
+        else if (direction == "Scattering Back" || direction == "Reflection Back")
             reflectionFront = component;
+        else if (direction == "Transmission Back")
+            transmissionFront = component;
+        else
+            reflectionBack = component;
     }
 
     spec.has_reflection = reflectionFront || reflectionBack;

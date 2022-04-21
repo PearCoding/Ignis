@@ -301,6 +301,7 @@ public:
     // Add all information from other to this scene, except technique, film and camera information
     void addFrom(const Scene& other);
 
+    void addConstantEnvLight();
 private:
     std::shared_ptr<Object> mTechnique;
     std::shared_ptr<Object> mCamera;

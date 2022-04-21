@@ -1,0 +1,85 @@
+// Allows prints inside device functions
+// FIXME: Currently does not work within vectorized regions. Use generic target if on the CPU.
+struct DebugOutput {
+    rnd:       fn (f32) -> f32,
+    print:     fn (&[u8]) -> (),
+    print_i32: fn (i32) -> (),
+    print_f32: fn (f32) -> (),
+}
+
+fn @make_debug_output(buffer: DeviceBuffer) -> DebugOutput {
+    let max     = buffer.count - 1;
+    DebugOutput {
+        rnd   = @|random_garbage: f32| -> f32 {
+            // This is a very low quality random generator and depends on the input random garbage.
+            let mut rnd = fnv_init(); 
+            rnd = fnv_hash(rnd, bitcast[u32](random_garbage)); // Let it be random
+            randf(&mut rnd)
+        },
+        print = @|str: &[u8]| -> (){
+            // Compute length
+            let mut len = 0;
+            while true {
+                if str(len) == 0 {
+                    break()
+                } else {
+                    len++;
+                }
+            }
+
+            // Check how much space we got left
+            let occup = buffer.add_atomic_i32(0, round_up(len + 1, 4) / 4 + 1 /* Header */); // Does not matter if counter > max
+            let spaceLeft = max * 4 - occup * 4;
+            if spaceLeft <= 4 /* Only header */ { return() }
+
+            len = min(spaceLeft, len);
+
+            // Entry header
+            buffer.store_i32(occup + 1, 1 /* String */);
+
+            // Entry body
+            for i in range(0, round_up(len + 1, 4) / 4) {
+                // Pack four characters into one double word
+                let mut entry = 0 : i32;
+                for j in unroll(0, 4) {
+                    if i * 4 + j < len {
+                        let c = str(i * 4 + j) as i32;
+                        entry |= c << (8 * j);
+                    }
+                }
+                buffer.store_i32(i + occup + 2, entry);
+            }
+        },
+        print_i32 = @|v: i32| -> () {
+            // Check how much space we got left
+            let occup = buffer.add_atomic_i32(0, 1 /* Value */ + 1 /* Header */); // Does not matter if counter > max
+            let spaceLeft = max - occup;
+            if spaceLeft <= 1 { return() }
+
+            // Entry header
+            buffer.store_i32(occup + 1, 2 /* Int */);
+
+            // Entry body
+            buffer.store_i32(occup + 2, v);
+        },
+        print_f32 = @|v: f32| -> () {
+            // Check how much space we got left
+            let occup = buffer.add_atomic_i32(0, 1 /* Value */ + 1 /* Header */); // Does not matter if counter > max
+            let spaceLeft = max - occup;
+            if spaceLeft <= 1 { return() }
+
+            // Entry header
+            buffer.store_i32(occup + 1, 3 /* Float */);
+
+            // Entry body
+            buffer.store_f32(occup + 2, v);
+        }
+    }
+}
+
+fn @make_null_debug_output() = DebugOutput {
+    rnd       = @|_| -> f32 { 0 },
+    print     = @|_| -> () {},
+    print_i32 = @|_| -> () {},
+    print_f32 = @|_| -> () {}
+};

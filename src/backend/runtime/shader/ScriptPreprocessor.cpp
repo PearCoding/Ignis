@@ -7,7 +7,7 @@ extern const char* ig_api[];
 extern const char* ig_api_paths[];
 
 namespace IG {
-std::string ScriptPreprocessor::prepare(const std::string& script)
+std::string ScriptPreprocessor::prepare(const std::string& script) const
 {
     std::stringstream source;
 

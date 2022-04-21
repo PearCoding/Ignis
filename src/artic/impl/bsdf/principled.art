@@ -50,7 +50,7 @@ fn @tint_color(color: Color) -> Color {
     if lum <= super::flt_eps {
         color_builtins::white
     } else {
-        super::color_mulf(color, 1/lum)
+        super::color_divf(color, lum)
     }
 }
 fn @sheen_tint_color(color: Color, tint: f32) = super::color_lerp(color_builtins::white, tint_color(color), tint);
@@ -257,7 +257,9 @@ fn @make_principled_bsdf(surf: SurfaceElement,
             general = closure
         };
         
-        let upper_hemisphere = !(surf.is_entering ^ shading::is_positive_hemisphere(wi)) && !(surf.is_entering ^ shading::is_positive_hemisphere(wo));
+		let inFront	 = surf.is_entering == shading::is_positive_hemisphere(wi);
+        let outFront = surf.is_entering == shading::is_positive_hemisphere(wo);
+        let upper_hemisphere = inFront && outFront;
         
         let aNdL = shading::abs_cos_theta(wi);
         if aNdL <= flt_eps { return(color_builtins::black) }

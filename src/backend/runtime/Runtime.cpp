@@ -53,7 +53,7 @@ static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts
 
 static inline size_t recommendSPI(Target target, size_t width, size_t height)
 {
-    // The "best" case was measured with a 1000 x 1000. It does dependent on the scene content though, but thats ignored here
+    // The "best" case was measured with a 1000 x 1000. It does depend on the scene content though, but thats ignored here
     const size_t spi_f = isCPU(target) ? 2 : 8;
     const size_t spi   = (size_t)std::ceil(spi_f / ((width / 1000.0f) * (height / 1000.0f)));
     return std::max<size_t>(1, std::min<size_t>(64, spi));
@@ -144,6 +144,9 @@ bool Runtime::loadFromFile(const std::filesystem::path& path)
     if (!ok)
         return false;
 
+    if (mOptions.AddExtraEnvLight)
+        scene.addConstantEnvLight();
+
     return load(path, std::move(scene));
 }
 
@@ -158,6 +161,9 @@ bool Runtime::loadFromString(const std::string& str)
     IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
     if (!ok)
         return false;
+
+    if (mOptions.AddExtraEnvLight)
+        scene.addConstantEnvLight();
 
     return load({}, std::move(scene));
 }
@@ -390,7 +396,7 @@ bool Runtime::compileShaders()
         IG_LOG(L_DEBUG) << "Compiling hit shaders" << std::endl;
         for (size_t j = 0; j < variant.HitShaders.size(); ++j) {
             IG_LOG(L_DEBUG) << "Hit shader [" << j << "]" << std::endl;
-            shaders.HitShaders.push_back(compileShader(variant.HitShaders[j].c_str(), "ig_hit_shader", "v" + std::to_string(i) + "_hitShader"));
+            shaders.HitShaders.push_back(compileShader(variant.HitShaders[j].c_str(), "ig_hit_shader", "v" + std::to_string(i) + "_hitShader" + std::to_string(j)));
             if (shaders.HitShaders[j] == nullptr) {
                 IG_LOG(L_ERROR) << "Failed to compile hit shader " << j << " in variant " << i << "." << std::endl;
                 return false;

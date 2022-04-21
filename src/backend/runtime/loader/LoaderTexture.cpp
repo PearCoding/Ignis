@@ -11,8 +11,7 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
 
     const std::string filename    = tree.context().handlePath(tex.property("filename").getString(), tex).generic_u8string();
     const std::string filter_type = tex.property("filter_type").getString("bilinear");
-    const bool flip_x             = tex.property("flip_x").getBool(false);
-    const bool flip_y             = tex.property("flip_y").getBool(false);
+    const Transformf transform    = tex.property("transform").getTransform();
 
     std::string filter = "make_bilinear_filter()";
     if (filter_type == "nearest")
@@ -44,8 +43,7 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
            << wrap << ", "
            << filter << ", "
            << "img_" << ShaderUtils::escapeIdentifier(name) << ", "
-           << (flip_x ? "true" : "false") << ", "
-           << (flip_y ? "true" : "false") << ");" << std::endl;
+           << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
 
     tree.endClosure();
 }
@@ -59,11 +57,29 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
     tree.addNumber("scale_x", tex, 1.0f);
     tree.addNumber("scale_y", tex, 1.0f);
 
+    const Transformf transform = tex.property("transform").getTransform();
+
     stream << tree.pullHeader()
            << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_checkerboard_texture("
            << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
            << tree.getInline("color0") << ", "
-           << tree.getInline("color1") << ");" << std::endl;
+           << tree.getInline("color1") << ", "
+           << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
+
+    tree.endClosure();
+}
+
+static void tex_transform(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+{
+    tree.beginClosure();
+    tree.addTexture("texture", tex, true, ShadingTree::IM_Light);
+
+    const Transformf transform = tex.property("transform").getTransform();
+
+    stream << tree.pullHeader()
+           << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_transform_texture("
+           << tree.getInline("texture") << ", "
+           << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
 
     tree.endClosure();
 }
@@ -76,6 +92,7 @@ static const struct {
     { "image", tex_image },
     { "bitmap", tex_image },
     { "checkerboard", tex_checkerboard },
+    { "transform", tex_transform },
     { "", nullptr }
 };
 

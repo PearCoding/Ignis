@@ -211,6 +211,7 @@ using Vector4f = Eigen::Vector4f;
 using Vector4i = Eigen::Vector4i;
 
 /* Precise matrix types */
+using Matrix2f = Eigen::Matrix2f;
 using Matrix3f = Eigen::Matrix3f;
 using Matrix4f = Eigen::Matrix4f;
 
