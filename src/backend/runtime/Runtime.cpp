@@ -144,6 +144,9 @@ bool Runtime::loadFromFile(const std::filesystem::path& path)
     if (!ok)
         return false;
 
+    if (mOptions.AddExtraEnvLight)
+        scene.addConstantEnvLight();
+
     return load(path, std::move(scene));
 }
 
@@ -158,6 +161,9 @@ bool Runtime::loadFromString(const std::string& str)
     IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
     if (!ok)
         return false;
+
+    if (mOptions.AddExtraEnvLight)
+        scene.addConstantEnvLight();
 
     return load({}, std::move(scene));
 }

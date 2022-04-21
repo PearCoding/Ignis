@@ -631,6 +631,8 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
             if (ext.Has("ior") && ext.Get("ior").IsNumber()) {
                 bsdf->setProperty("ior", Property::fromNumber((float)ext.Get("ior").GetNumberAsDouble()));
             }
+        } else {
+            bsdf->setProperty("ior", Property::fromNumber(1.5));
         }
 
         if (mat.extensions.count("KHR_materials_sheen") > 0) {
@@ -763,6 +765,12 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
             } else {
                 bsdf->setProperty("weight", Property::fromNumber(factor));
             }
+        }
+
+        if (mat.doubleSided) {
+            scene.addBSDF(name + "_ds_inner", bsdf);
+            bsdf = std::make_shared<Object>(OT_BSDF, "doublesided", directory);
+            bsdf->setProperty("bsdf", Property::fromString(name + "_ds_inner"));
         }
 
         scene.addBSDF(name, bsdf);

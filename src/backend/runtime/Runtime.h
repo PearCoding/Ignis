@@ -28,6 +28,7 @@ struct RuntimeOptions {
     std::string OverrideCamera;
     std::pair<uint32, uint32> OverrideFilmSize = { 0, 0 };
 
+    bool AddExtraEnvLight            = false;                           // User option to add a constant environment light (just to see something)
     std::filesystem::path ModulePath = std::filesystem::current_path(); // Optional path to modules
     std::filesystem::path ScriptDir  = {};                              // Path to a new script directory, replacing the internal standard library
 };

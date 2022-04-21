@@ -516,6 +516,24 @@ static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const st
     tree.endClosure();
 }
 
+static void bsdf_doublesided(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+{
+    const std::string inner = bsdf->property("bsdf").getString();
+    tree.beginClosure();
+
+    if (inner.empty()) {
+        IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
+        stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+    } else {
+        stream << LoaderBSDF::generate(inner, tree);
+
+        stream << tree.pullHeader()
+               << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_doublesided_bsdf(surf, "
+               << "@|surf2| -> Bsdf {  bsdf_" << ShaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) });" << std::endl;
+    }
+    tree.endClosure();
+}
+
 using BSDFLoader = void (*)(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree);
 static const struct {
     const char* Name;
@@ -545,6 +563,7 @@ static const struct {
     { "null", bsdf_passthrough },
     { "bumpmap", bsdf_bumpmap },
     { "normalmap", bsdf_normalmap },
+    { "doublesided", bsdf_doublesided },
     { "", nullptr }
 };
 

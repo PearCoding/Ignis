@@ -392,6 +392,15 @@ void Scene::addFrom(const Scene& other)
         mFilm = other.mFilm;
 }
 
+void Scene::addConstantEnvLight()
+{
+    if (mLights.count("__env") == 0) {
+        auto env = std::make_shared<Object>(OT_LIGHT, "constant", std::filesystem::path{});
+        env->setProperty("radiance", Property::fromNumber(InvPi));
+        addLight("__env", env);
+    }
+}
+
 class InternalSceneParser {
 public:
     static Scene loadFromJSON(SceneParser& loader, const std::filesystem::path& baseDir, const rapidjson::Document& doc)
@@ -486,9 +495,7 @@ Scene SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             // Add light to the scene if no light is available (preview style)
             if (scene.lights().empty()) {
                 IG_LOG(L_WARNING) << "No lights available in " << path << ". Adding default environment light" << std::endl;
-                auto env = std::make_shared<Object>(OT_LIGHT, "constant", path.parent_path());
-                env->setProperty("radiance", Property::fromNumber(InvPi));
-                scene.addLight("__env", env);
+                scene.addConstantEnvLight();
             }
         }
         return scene;

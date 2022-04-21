@@ -21,3 +21,26 @@ fn @make_passthrough_bsdf(surf: SurfaceElement) = Bsdf {
     sample      = @ |_, out_dir, _| make_bsdf_sample(surf, vec3_neg(out_dir), 1, color_builtins::white, 1, true),
     is_specular = true
 };
+
+// Allows some bsdfs to be handled as double-sided thin objects. 
+// Most stuff does not need it! Support of this should better be integrated in the BSDF itself.
+// Currently only principled BSDF with glTF makes use of it.
+fn @make_doublesided_bsdf(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf) -> Bsdf {
+    if surf.is_entering { 
+        @bsdf_factory(surf)
+    } else {
+        let bsdf = @bsdf_factory(invert_surface_element(surf));
+        Bsdf {
+            eval   = @ |in_dir, out_dir| bsdf.eval(vec3_neg(in_dir), vec3_neg(out_dir)),
+            pdf    = @ |in_dir, out_dir| bsdf.pdf(vec3_neg(in_dir), vec3_neg(out_dir)),
+            sample = @ |rnd, out_dir, adjoint| {
+                if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, vec3_neg(out_dir), adjoint) {
+                    make_option(BsdfSample { in_dir = vec3_neg(s.in_dir), pdf = s.pdf, color = s.color, eta = s.eta })
+                } else {
+                    Option[BsdfSample]::None
+                }
+            },
+            is_specular = bsdf.is_specular
+        }
+    }
+}
