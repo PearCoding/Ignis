@@ -485,7 +485,7 @@ Scene SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
         if (ok) {
             // Add light to the scene if no light is available (preview style)
             if (scene.lights().empty()) {
-                IG_LOG(L_WARNING) << "No lights available in '" << path << "'. Adding default environment light" << std::endl;
+                IG_LOG(L_WARNING) << "No lights available in " << path << ". Adding default environment light" << std::endl;
                 auto env = std::make_shared<Object>(OT_LIGHT, "constant", path.parent_path());
                 env->setProperty("radiance", Property::fromNumber(InvPi));
                 scene.addLight("__env", env);

@@ -69,6 +69,21 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
     tree.endClosure();
 }
 
+static void tex_transform(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+{
+    tree.beginClosure();
+    tree.addTexture("texture", tex, true, ShadingTree::IM_Light);
+
+    const Transformf transform = tex.property("transform").getTransform();
+
+    stream << tree.pullHeader()
+           << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_transform_texture("
+           << tree.getInline("texture") << ", "
+           << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
+
+    tree.endClosure();
+}
+
 using TextureLoader = void (*)(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree);
 static const struct {
     const char* Name;
@@ -77,6 +92,7 @@ static const struct {
     { "image", tex_image },
     { "bitmap", tex_image },
     { "checkerboard", tex_checkerboard },
+    { "transform", tex_transform },
     { "", nullptr }
 };
 

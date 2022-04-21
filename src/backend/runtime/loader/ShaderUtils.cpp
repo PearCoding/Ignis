@@ -81,7 +81,10 @@ std::string ShaderUtils::escapeIdentifier(const std::string& name)
 
 std::string ShaderUtils::inlineTransformAs2d(const Transformf& t)
 {
-    return inlineMatrix2d(t.affine().block<2, 2>(0, 0));
+    Matrix3f mat          = Matrix3f::Identity();
+    mat.block<2, 2>(0, 0) = t.affine().block<2, 2>(0, 0);
+    mat.block<2, 1>(0, 2) = t.translation().block<2, 1>(0, 0);
+    return inlineMatrix(mat);
 }
 
 std::string ShaderUtils::inlineMatrix2d(const Matrix2f& mat)

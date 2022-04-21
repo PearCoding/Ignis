@@ -216,11 +216,25 @@ fn @mat4x4_invert(a: Mat4x4) -> Mat4x4 {
     m
 }
 
+fn @mat3x3_transform_point(a: Mat3x3, v: Vec2) -> Vec2 {
+    let res   = mat3x3_mul(a, make_vec3(v.x, v.y, 1));
+    let inv_w = 1/res.z;
+    make_vec2(res.x*inv_w, res.y*inv_w)
+}
+fn @mat3x3_transform_point_affine(a: Mat3x3, v: Vec2)-> Vec2 {
+    let res = mat3x3_mul(a, make_vec3(v.x, v.y, 1));
+    make_vec2(res.x, res.y)
+}
+fn @mat3x3_transform_direction(a: Mat3x3, v: Vec2) -> Vec2 {
+    let res = mat3x3_mul(a, make_vec3(v.x, v.y, 0));
+    make_vec2(res.x, res.y)
+}
+
 fn @mat3x4_transform_point(a: Mat3x4, v: Vec3)     = mat3x4_mul(a, make_vec4(v.x, v.y, v.z, 1));
 fn @mat3x4_transform_direction(a: Mat3x4, v: Vec3) = mat3x4_mul(a, make_vec4(v.x, v.y, v.z, 0));
 
 fn @mat4x4_transform_point(a: Mat4x4, v: Vec3) -> Vec3 {
-    let res = mat4x4_mul(a, make_vec4(v.x, v.y, v.z, 1));
+    let res   = mat4x4_mul(a, make_vec4(v.x, v.y, v.z, 1));
     let inv_w = 1/res.w;
     make_vec3(res.x*inv_w, res.y*inv_w, res.z*inv_w)
 }

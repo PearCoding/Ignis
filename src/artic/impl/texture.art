@@ -1,6 +1,6 @@
-fn @make_image_texture(border: BorderHandling, filter: ImageFilter, image: Image, transform: Mat2x2) -> Texture {
+fn @make_image_texture(border: BorderHandling, filter: ImageFilter, image: Image, transform: Mat3x3) -> Texture {
     @ |uv| {
-        let uv2 = mat2x2_mul(transform, uv);
+        let uv2 = mat3x3_transform_point_affine(transform, uv);
         let u   = border.horz(uv2.x);
         let v   = border.vert(uv2.y);
 
@@ -8,9 +8,9 @@ fn @make_image_texture(border: BorderHandling, filter: ImageFilter, image: Image
     }
 }
 
-fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color, transform: Mat2x2) -> Texture {
+fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color, transform: Mat3x3) -> Texture {
     @ |uv| { 
-        let uv2 = mat2x2_mul(transform, uv);
+        let uv2 = mat3x3_transform_point_affine(transform, uv);
         let suv = vec2_mul(uv2, scale);
         let parity_x = ((suv.x as i32) % 2) == 0;
         let parity_y = ((suv.y as i32) % 2) == 0;
@@ -32,6 +32,10 @@ fn @make_channel_texture(tex: Texture, channel: i32) -> Texture {
             _ => make_gray_color(color.b),
         }
     }
+}
+
+fn @make_transform_texture(tex: Texture, transform: Mat3x3) -> Texture {
+    @ |uv| { tex(mat3x3_transform_point_affine(transform, uv)) }
 }
 
 fn @make_black_texture() -> Texture {
