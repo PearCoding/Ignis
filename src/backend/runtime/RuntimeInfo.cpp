@@ -35,7 +35,7 @@ std::filesystem::path RuntimeInfo::executablePath()
 #elif defined(IG_OS_APPLE)
     std::array<char, PATH_MAX> linkname{};
     uint32_t size = (uint32_t)linkname.size();
-    ssize_t r     = _NSGetExecutablePath(linkname.data(), size);
+    ssize_t r     = _NSGetExecutablePath(linkname.data(), &size);
 
     if (r < 0) {
         return {};
