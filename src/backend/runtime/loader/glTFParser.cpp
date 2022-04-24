@@ -2,6 +2,7 @@
 #include "ImageIO.h"
 #include "Logger.h"
 
+#include <string_view>
 #include <unordered_set>
 
 #include <rapidjson/document.h>
@@ -19,6 +20,16 @@
 #define TINYGLTF_IMPLEMENTATION
 #include "tiny_gltf.h"
 
+constexpr std::string_view KHR_lights_punctual             = "KHR_lights_punctual";
+constexpr std::string_view KHR_materials_clearcoat         = "KHR_materials_clearcoat";
+constexpr std::string_view KHR_materials_emissive_strength = "KHR_materials_emissive_strength";
+constexpr std::string_view KHR_materials_ior               = "KHR_materials_ior";
+constexpr std::string_view KHR_materials_sheen             = "KHR_materials_sheen";
+constexpr std::string_view KHR_materials_translucency      = "KHR_materials_translucency";
+constexpr std::string_view KHR_materials_transmission      = "KHR_materials_transmission";
+constexpr std::string_view KHR_materials_volume            = "KHR_materials_volume";
+constexpr std::string_view KHR_texture_transform           = "KHR_texture_transform";
+
 namespace IG::Parser {
 static bool imageLoader(tinygltf::Image* img, const int, std::string*,
                         std::string*, int, int,
@@ -30,6 +41,22 @@ static bool imageLoader(tinygltf::Image* img, const int, std::string*,
     std::memcpy(img->image.data(), ptr, size);
 
     return true;
+}
+
+inline void findAndReplaceAll(std::string& data, const std::string_view& toSearch, const std::string_view& replaceStr)
+{
+    size_t pos = data.find(toSearch);
+    while (pos != std::string::npos) {
+        data.replace(pos, toSearch.size(), replaceStr);
+        pos = data.find(toSearch, pos + replaceStr.size());
+    }
+}
+
+inline std::string handleURI(const std::string& uri)
+{
+    std::string new_uri = uri;
+    findAndReplaceAll(new_uri, "%20", " ");
+    return new_uri;
 }
 
 static std::filesystem::path exportImage(const tinygltf::Image& img, const tinygltf::Model& model, int id, const std::filesystem::path& dir)
@@ -54,7 +81,7 @@ static std::filesystem::path exportImage(const tinygltf::Image& img, const tinyg
 
         return path;
     } else {
-        return img.uri;
+        return handleURI(img.uri);
     }
 }
 
@@ -330,8 +357,8 @@ inline Transformf getTextureTransform(const tinygltf::Value& parent, const std::
         const auto& info = parent.Get(name);
         if (info.Has("extensions") && info.Get("extensions").IsObject()) {
             const auto& exts = info.Get("extensions");
-            if (exts.Has("KHR_texture_transform") && exts.Get("KHR_texture_transform").IsObject()) {
-                const auto& t_ext = exts.Get("KHR_texture_transform");
+            if (exts.Has(KHR_texture_transform.data()) && exts.Get(KHR_texture_transform.data()).IsObject()) {
+                const auto& t_ext = exts.Get(KHR_texture_transform.data());
                 hasOne            = true;
                 return getTextureTransformExts(t_ext);
             }
@@ -344,9 +371,9 @@ inline Transformf getTextureTransform(const tinygltf::Value& parent, const std::
 
 inline Transformf getTextureTransform(const tinygltf::TextureInfo& info, bool& hasOne)
 {
-    if (info.extensions.count("KHR_texture_transform")) {
+    if (info.extensions.count(KHR_texture_transform.data())) {
         hasOne = true;
-        return getTextureTransformExts(info.extensions.at("KHR_texture_transform"));
+        return getTextureTransformExts(info.extensions.at(KHR_texture_transform.data()));
     } else {
         hasOne = false;
         return Transformf::Identity();
@@ -433,7 +460,7 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
             const std::string name     = mesh.name + "_" + std::to_string(node.mesh) + "_" + std::to_string(primCount);
             const std::string bsdfName = getMaterialName(*material, mat_id);
 
-            const bool hasMedium = material->extensions.count("KHR_materials_volume") > 0; // TODO: Check if distance > 0
+            const bool hasMedium = material->extensions.count(KHR_materials_volume.data()) > 0; // TODO: Check if distance > 0
 
             auto obj = std::make_shared<Object>(OT_ENTITY, "", baseDir);
             obj->setProperty("shape", Property::fromString(name));
@@ -450,8 +477,8 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
                 light->setProperty("entity", Property::fromString(entity_name));
 
                 float strength = 1;
-                if (material->extensions.count("KHR_materials_emissive_strength")) {
-                    const auto& ext = material->extensions.at("KHR_materials_emissive_strength");
+                if (material->extensions.count(KHR_materials_emissive_strength.data())) {
+                    const auto& ext = material->extensions.at(KHR_materials_emissive_strength.data());
                     if (ext.Has("emissiveStrength") && ext.Get("emissiveStrength").IsNumber()) {
                         strength = static_cast<float>(ext.Get("emissiveStrength").GetNumberAsDouble());
                     }
@@ -505,8 +532,8 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
         }
     }
 
-    if (node.extensions.count("KHR_lights_punctual") > 0) {
-        const auto& ext = node.extensions.at("KHR_lights_punctual");
+    if (node.extensions.count(KHR_lights_punctual.data()) > 0) {
+        const auto& ext = node.extensions.at(KHR_lights_punctual.data());
         if (ext.Has("light") && ext.Get("light").IsInt()) {
             int lightID = ext.Get("light").GetNumberAsInt();
 
@@ -631,8 +658,8 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
         }
 
         // Extensions
-        if (mat.extensions.count("KHR_materials_ior") > 0) {
-            const auto& ext = mat.extensions.at("KHR_materials_ior");
+        if (mat.extensions.count(KHR_materials_ior.data()) > 0) {
+            const auto& ext = mat.extensions.at(KHR_materials_ior.data());
             if (ext.Has("ior") && ext.Get("ior").IsNumber()) {
                 bsdf->setProperty("ior", Property::fromNumber((float)ext.Get("ior").GetNumberAsDouble()));
             }
@@ -640,8 +667,8 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
             bsdf->setProperty("ior", Property::fromNumber(1.5));
         }
 
-        if (mat.extensions.count("KHR_materials_sheen") > 0) {
-            const auto& ext       = mat.extensions.at("KHR_materials_sheen");
+        if (mat.extensions.count(KHR_materials_sheen.data()) > 0) {
+            const auto& ext       = mat.extensions.at(KHR_materials_sheen.data());
             const std::string tex = handleTexture(ext, "sheenColorTexture", scene, model, directory);
 
             float factor = 0;
@@ -658,8 +685,8 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
         }
 
         // Only support for transmissionFactor & transmissionTexture
-        if (mat.extensions.count("KHR_materials_transmission") > 0) {
-            const auto& ext       = mat.extensions.at("KHR_materials_transmission");
+        if (mat.extensions.count(KHR_materials_transmission.data()) > 0) {
+            const auto& ext       = mat.extensions.at(KHR_materials_transmission.data());
             const std::string tex = handleTexture(ext, "transmissionTexture", scene, model, directory);
 
             float factor = 0;
@@ -674,8 +701,8 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
             }
 
             bool is_thin = true;
-            if (mat.extensions.count("KHR_materials_volume") > 0) {
-                const auto& ext2 = mat.extensions.at("KHR_materials_volume");
+            if (mat.extensions.count(KHR_materials_volume.data()) > 0) {
+                const auto& ext2 = mat.extensions.at(KHR_materials_volume.data());
 
                 // TODO: No support for textures
                 float thickness = 0;
@@ -688,8 +715,8 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
         }
 
         // Not ratified yet, but who cares
-        if (mat.extensions.count("KHR_materials_translucency") > 0) {
-            const auto& ext       = mat.extensions.at("KHR_materials_translucency");
+        if (mat.extensions.count(KHR_materials_translucency.data()) > 0) {
+            const auto& ext       = mat.extensions.at(KHR_materials_translucency.data());
             const std::string tex = handleTexture(ext, "translucencyTexture", scene, model, directory);
 
             float factor = 0;
@@ -704,9 +731,9 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
             }
         }
 
-        // No support for thickness (yet)
-        if (mat.extensions.count("KHR_materials_volume") > 0) {
-            const auto& ext = mat.extensions.at("KHR_materials_volume");
+        // No support for thickness as this is a raytracer
+        if (mat.extensions.count(KHR_materials_volume.data()) > 0) {
+            const auto& ext = mat.extensions.at(KHR_materials_volume.data());
 
             float thickness = 0;
             if (ext.Has("thicknessFactor") && ext.Get("thicknessFactor").IsNumber())
@@ -717,22 +744,19 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
                 distance = static_cast<float>(ext.Get("attenuationDistance").GetNumberAsDouble());
 
             if (distance > FltEps && thickness > FltEps) {
-                Vector3f color = Vector3f::Ones();
-                if (ext.Has("attenuationColor") && ext.Get("attenuationColor").IsArray() && ext.Get("attenuationColor").ArrayLen() == 3)
-                    color = Vector3f(static_cast<float>(ext.Get("attenuationColor").Get(0).GetNumberAsDouble()), static_cast<float>(ext.Get("attenuationColor").Get(1).GetNumberAsDouble()), static_cast<float>(ext.Get("attenuationColor").Get(2).GetNumberAsDouble()));
-
-                Vector3f sigma_t = -color.array().log() / distance;
+                Vector3f color   = extractVector<3>(ext, "attenuationColor", Vector3f::Ones());
+                Vector3f sigma_a = -color.array().log() / distance;
                 auto medium      = std::make_shared<Object>(OT_MEDIUM, "homogeneous", directory);
                 medium->setProperty("sigma_s", Property::fromVector3(Vector3f::Zero()));
-                medium->setProperty("sigma_a", Property::fromVector3(sigma_t));
+                medium->setProperty("sigma_a", Property::fromVector3(sigma_a));
 
                 scene.addMedium(name, medium);
             }
         }
 
         // No support for clearcoatNormalTexture
-        if (mat.extensions.count("KHR_materials_clearcoat") > 0) {
-            const auto& ext       = mat.extensions.at("KHR_materials_clearcoat");
+        if (mat.extensions.count(KHR_materials_clearcoat.data()) > 0) {
+            const auto& ext       = mat.extensions.at(KHR_materials_clearcoat.data());
             const std::string tex = handleTexture(ext, "clearcoatTexture", scene, model, directory);
 
             float factor = 0;

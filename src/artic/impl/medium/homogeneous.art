@@ -8,7 +8,6 @@ fn @make_homogeneous_medium(sigma_a: Color, sigma_s: Color, phase: PhaseFunction
         Medium {
             phase = @|_| phase,
             eval  = @|p_start, p_end| -> Color{
-                if true { return(color_builtins::white) }
                 let dir_u = vec3_sub(p_end, p_start);
                 let dist  = vec3_len(dir_u);
                 eval_tr(dist)
@@ -30,6 +29,13 @@ fn @make_homogeneous_medium(sigma_a: Color, sigma_s: Color, phase: PhaseFunction
                 eval_tr(dist)
             },
             eval_inf = @|_, _| color_builtins::black,
+            pdf = @|p_start, p_end, p| {
+                let dir_u = vec3_sub(p, p_start);
+                let dist  = vec3_len(dir_u);
+
+                let on_surf = vec3_len2(vec3_sub(p_end, p)) <= eps;
+                math_builtins::exp(-sigma_t_p * dist) * if !on_surf { sigma_t_p } else { 1 }
+            },
             sample   = @|rnd, p_start, p_end| {
                 let dir_u = vec3_sub(p_end, p_start);
                 let dist  = vec3_len(dir_u);
@@ -43,14 +49,7 @@ fn @make_homogeneous_medium(sigma_a: Color, sigma_s: Color, phase: PhaseFunction
                 let tr  = eval_tr(ndist);
 
                 let pdf = color_at(tr, sigma_ind) * sigma_t_p;
-                make_medium_sample(pos, pdf, color_mulf(tr, 1 / pdf))
-            },
-            pdf = @|p_start, p_end, p| {
-                let dir_u = vec3_sub(p, p_start);
-                let dist  = vec3_len(dir_u);
-
-                let on_surf = vec3_len2(vec3_sub(p_end, p)) <= eps;
-                math_builtins::exp(-sigma_t_p * dist) * if !on_surf { sigma_t_p } else { 1 }
+                make_medium_sample(pos, pdf, color_divf(tr, pdf))
             },
             is_homogeneous = true
         }

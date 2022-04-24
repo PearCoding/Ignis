@@ -26,7 +26,7 @@ fn unwrap_vptraypayload(payload: RayPayload) = VPTRayPayload {
     medium  = payload.components(6) as i32,
 };
 
-// TODO: Add luminaire sampling (aka NEE within participating media)
+// TODO: Add NEE for volumes
 fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, media: MediaTable, _aovs: AOVTable, clamp_value: f32) -> Technique {
     let offset : f32  = 0.001;
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
