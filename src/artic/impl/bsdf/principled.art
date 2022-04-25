@@ -164,7 +164,7 @@ fn @evalRefractionTerm(closure: EvalClosure) -> Color {
 fn @evalClearcoatTerm(closure: EvalClosure) -> Color {
     let F0 = 0.04 : f32; // sqr((eta-1)/(eta+1)) IOR 1.5
     let R  = 0.25 : f32;
-    let R2 = closure.general.clearcoat_roughness * (1 - closure.general.clearcoat_gloss) + 0.01 * closure.general.clearcoat_gloss;
+    let R2 = math_builtins::fmax[f32](0.001, closure.general.clearcoat_roughness * (1 - closure.general.clearcoat_gloss) + 0.01 * closure.general.clearcoat_gloss);
 
     let aHdL = super::absolute_cos(closure.wi, closure.h);
 
@@ -173,7 +173,7 @@ fn @evalClearcoatTerm(closure: EvalClosure) -> Color {
     let g = super::g_1_smith(super::mat3x3_identity(), closure.wi, closure.h, R, R) * super::g_1_smith(super::mat3x3_identity(), closure.wo, closure.h, R, R);
 
     let jacob = shading::halfway_reflective_jacobian(shading::cos_theta(closure.wo));
-    super::make_gray_color(R * d * f * g * math_builtins::fabs(jacob))
+    super::make_gray_color(math_builtins::fabs(R * d * f * g * jacob))
 }
 
 struct LobeDistribution {
