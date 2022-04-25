@@ -1,7 +1,7 @@
 // Creates a BSDF that interpolates between two other BSDFs based on a variadic mix function
 fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bsdf {
     let eval = @|in_dir: Vec3, out_dir: Vec3| -> Color {
-        let k = mix_f(out_dir);
+        let k = @mix_f(out_dir);
         if ?k && k <= 0 {
             mat1.eval(in_dir, out_dir)
         } else if ?k && k >= 1 {
@@ -14,7 +14,7 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bs
     };
 
     let pdf = @|in_dir: Vec3, out_dir: Vec3| -> f32 {
-        let k = mix_f(out_dir);
+        let k = @mix_f(out_dir);
         if ?k && k <= 0 {
             mat1.pdf(in_dir, out_dir)
         } else if ?k && k >= 1 {
@@ -38,21 +38,21 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bs
                             make_option(s)
                         } else {
                             let p = lerp(s.pdf, mat_second.pdf(s.in_dir, out_dir), t);
-                            let c = color_lerp(s.color, mat_second.eval(s.in_dir, out_dir), t);
-                            make_option(BsdfSample { in_dir = s.in_dir, pdf = p, color = c, eta = s.eta })
+                            let c = color_lerp(color_mulf(s.color, s.pdf), mat_second.eval(s.in_dir, out_dir), t);
+                            make_option(BsdfSample { in_dir = s.in_dir, pdf = p, color = color_divf(c, p), eta = s.eta })
                         }
                     },
                     _ => opt
                 }
             }
 
-            let k = mix_f(out_dir);
+            let k = @mix_f(out_dir);
             if k <= 0 {
                 mat1.sample(rnd, out_dir, adjoint)
             } else if k >= 1 {
                 mat2.sample(rnd, out_dir, adjoint)
             } else {
-                if randf(rnd) >= k {
+                if randf(rnd) < 1 - k {
                     if let Option[BsdfSample]::Some(s) = sample_mat(mat1, mat2, k) {
                         make_option(s)
                     } else {
