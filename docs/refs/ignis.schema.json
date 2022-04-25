@@ -27,6 +27,12 @@
             "items": { "$ref": "#/definitions/BSDF" },
             "uniqueItems": true
         },
+        "media": {
+            "description": "List of volumes",
+            "type": "array",
+            "items": { "$ref": "#/definitions/Medium" },
+            "uniqueItems": true
+        },
         "shapes": {
             "description": "List of shapes",
             "type": "array",
@@ -107,6 +113,16 @@
             },
             "additionalProperties": true
         },
+        "Medium": {
+            "description": "Medium/Volume properties",
+            "type": "object",
+            "required": ["type", "name"],
+            "properties": { 
+                "type": { "type":"string"},
+                "name": { "type":"string"}
+            },
+            "additionalProperties": true
+        },
         "Shape": {
             "description": "Shape properties",
             "type": "object",
@@ -127,7 +143,9 @@
                 "name": { "type":"string"},
                 "transform": { "$ref":"#/definitions/Transform" },
                 "bsdf": { "type":"string" },
-                "shape": { "type":"string" }
+                "shape": { "type":"string" },
+                "inner_medium": { "type":"string" },
+                "outer_medium": { "type":"string" }
             },
             "additionalProperties": true
         },

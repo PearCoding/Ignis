@@ -94,7 +94,7 @@ from the `build/` folder.
 ## Scene description
 
 Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is planned. Image and procedural texture support is available.
-A schema is available at [refs/ignis.schema.json](refs/ignis.schema.json)
+A schema is available at [docs/refs/ignis.schema.json](docs/refs/ignis.schema.json)
 
 You might use the `mts2ig` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.
 
