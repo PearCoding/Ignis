@@ -76,6 +76,7 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mTarget(Target::INVALID)
     , mCurrentIteration(0)
     , mCurrentSampleCount(0)
+    , mCurrentFrame(0)
     , mFilmWidth(0)
     , mFilmHeight(0)
     , mInitialCameraOrientation()
@@ -250,7 +251,7 @@ void Runtime::stepVariant(size_t variant)
     settings.work_height        = info.GetHeight(mFilmHeight);
     settings.framebuffer_locked = info.LockFramebuffer;
 
-    mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, &mParameterSet, mCurrentIteration);
+    mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, &mParameterSet, mCurrentIteration, mCurrentFrame);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -300,7 +301,7 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
     settings.work_height        = 1;
     settings.framebuffer_locked = info.LockFramebuffer;
 
-    mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, &mParameterSet, mCurrentIteration);
+    mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, &mParameterSet, mCurrentIteration, mCurrentFrame);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -334,6 +335,7 @@ void Runtime::reset()
     clearFramebuffer();
     mCurrentIteration   = 0;
     mCurrentSampleCount = 0;
+    // No mCurrentFrameCount
 }
 
 const Statistics* Runtime::getStatistics() const

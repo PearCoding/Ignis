@@ -50,7 +50,7 @@ public:
     void step();
     /// Do a single iteration in tracing mode
     void trace(const std::vector<Ray>& rays, std::vector<float>& data);
-    /// Reset internal counters etc. This should be used if data (like camera orientation) has changed
+    /// Reset internal counters etc. This should be used if data (like camera orientation) has changed. Frame counter will NOT be reset
     void reset();
 
     /// A utility function to speed up tonemapping
@@ -111,6 +111,9 @@ public:
     /// The initial camera orientation the scene was loaded with. Can be used to reset in later iterations
     inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
 
+    /// Increase frame count (only used in interactive sessions)
+    inline void incFrameCount() { mCurrentFrame++; }
+
 private:
     bool load(const std::filesystem::path& path, Parser::Scene&& scene);
     bool setup();
@@ -134,6 +137,7 @@ private:
 
     size_t mCurrentIteration;
     size_t mCurrentSampleCount;
+    size_t mCurrentFrame;
 
     size_t mFilmWidth;
     size_t mFilmHeight;

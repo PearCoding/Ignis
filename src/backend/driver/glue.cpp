@@ -41,11 +41,12 @@ static inline size_t roundUp(size_t num, size_t multiple)
     return num + multiple - remainder;
 }
 
-static Settings convert_settings(const DriverRenderSettings& settings, size_t iter)
+static Settings convert_settings(const DriverRenderSettings& settings, size_t iter, size_t frame)
 {
     Settings renderSettings;
     renderSettings.device = (int)settings.device;
     renderSettings.spi    = (int)settings.spi;
+    renderSettings.frame  = (int)frame;
     renderSettings.iter   = (int)iter;
     renderSettings.width  = (int)settings.work_width;
     renderSettings.height = (int)settings.work_height;
@@ -856,7 +857,7 @@ public:
 
 static std::unique_ptr<Interface> sInterface;
 
-void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRenderSettings& settings, const IG::ParameterSet* parameterSet, size_t iter)
+void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRenderSettings& settings, const IG::ParameterSet* parameterSet, size_t iter, size_t frame)
 {
     // Register host thread
     sInterface->registerThread();
@@ -865,7 +866,7 @@ void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRen
     sInterface->current_iteration  = iter;
     sInterface->current_settings   = settings;
     sInterface->current_parameters = parameterSet;
-    sInterface->driver_settings    = convert_settings(settings, iter);
+    sInterface->driver_settings    = convert_settings(settings, iter, frame);
 
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Device, {});

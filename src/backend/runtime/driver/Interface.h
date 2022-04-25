@@ -33,7 +33,7 @@ struct DriverRenderSettings {
     bool framebuffer_locked = false;
 };
 
-using DriverRenderFunction            = void (*)(const IG::TechniqueVariantShaderSet&, const DriverRenderSettings&, const IG::ParameterSet*, size_t);
+using DriverRenderFunction            = void (*)(const IG::TechniqueVariantShaderSet&, const DriverRenderSettings&, const IG::ParameterSet*, size_t, size_t);
 using DriverShutdownFunction          = void (*)();
 using DriverSetupFunction             = void (*)(const DriverSetupSettings&);
 using DriverResizeFramebufferFunction = void (*)(size_t, size_t);
