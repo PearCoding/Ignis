@@ -1,16 +1,24 @@
+// Surface that emits light
+struct AreaEmitter {
+    sample: fn (Vec2) -> (Vec3, Vec3, Vec2, f32),
+    normal: fn (Vec2) -> Vec3,
+    pdf:    fn (Vec2) -> f32,
+    scale:  f32
+}
+
 fn @make_area_light(area: AreaEmitter, color_f: fn (Vec2) -> Color) = Light {
     sample_direct = @ |rnd, from_surf| {
         let (pos, n, coords, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
         let dir = vec3_sub(from_surf.point, pos);
         let cos = vec3_dot(dir, n) / vec3_len(dir);
-        make_direct_sample(pos, color_f(coords), area_pdf, cosine_hemisphere_pdf(cos), cos)
+        make_direct_sample(pos, color_divf(color_f(coords), area.scale), area_pdf, cosine_hemisphere_pdf(cos), cos)
     },
     sample_emission = @ |rnd| {
         let (pos, n, coords, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
         let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
-        make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color_f(coords), area_pdf, sample.pdf, sample.dir.z)
+        make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color_divf(color_f(coords), area.scale), area_pdf, sample.pdf, sample.dir.z)
     },
-    emission = @ |dir, surf| make_emission_value(color_f(surf.tex_coords), area.pdf(surf.prim_coords), cosine_hemisphere_pdf(vec3_dot(area.normal(surf.prim_coords), dir))),
+    emission = @ |dir, surf| make_emission_value(color_divf(color_f(surf.tex_coords), area.scale), area.pdf(surf.prim_coords), cosine_hemisphere_pdf(vec3_dot(area.normal(surf.prim_coords), dir))),
     delta    = false,
     infinite = false
 };
@@ -35,7 +43,7 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
             (mat3x4_transform_point(entity.global_mat, vec3_lerp2(v0, v1, v2, u, v)),
              vec3_normalize(mat3x3_mul(entity.normal_mat, n)),
              vec2_lerp2(t0, t1, t2, u, v),
-             inv_area / (mesh.num_tris as f32))
+             inv_area / (entity.scale * mesh.num_tris as f32))
         },
         normal = @ |uv| {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
@@ -43,8 +51,9 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
         },
         pdf = @ |uv| {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
-            mesh.face_inv_area(f) / (mesh.num_tris as f32)
-        }
+            mesh.face_inv_area(f) / (entity.scale * mesh.num_tris as f32)
+        },
+        scale = 1//entity.scale
     }
 }
 
@@ -64,7 +73,8 @@ fn @load_simple_area_lights(device: Device, shapes: ShapeTable) -> LightTable {
             local_mat  = local_mat,
             global_mat = global_mat,
             normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
-            shape_id   = bitcast[i32](m.col(3).x)
+            shape_id   = bitcast[i32](m.col(3).x),
+            scale      = m.col(3).y
         };
 
         let shape    = shapes(entity.shape_id);

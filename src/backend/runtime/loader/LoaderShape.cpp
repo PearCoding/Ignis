@@ -25,29 +25,6 @@ namespace IG {
 
 using namespace Parser;
 
-struct TransformCache {
-    const Matrix4f TransformMatrix;
-    const Matrix3f NormalMatrix;
-
-    inline explicit TransformCache(const Transformf& t)
-        : TransformMatrix(t.matrix())
-        , NormalMatrix(TransformMatrix.block<3, 3>(0, 0).transpose().inverse())
-    {
-    }
-
-    [[nodiscard]] inline Vector3f applyTransform(const Vector3f& v) const
-    {
-        Vector4f w = TransformMatrix * Vector4f(v(0), v(1), v(2), 1.0f);
-        w /= w(3);
-        return Vector3f(w(0), w(1), w(2));
-    }
-
-    [[nodiscard]] inline Vector3f applyNormal(const Vector3f& n) const
-    {
-        return (NormalMatrix * n).normalized();
-    }
-};
-
 inline TriMesh setup_mesh_triangle(const Object& elem)
 {
     const Vector3f p0 = elem.property("p0").getVector3(Vector3f(0, 0, 0));
@@ -291,15 +268,8 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
         if (child->property("face_normals").getBool())
             mesh.setupFaceNormalsAsVertexNormals();
 
-        TransformCache transform = TransformCache(child->property("transform").getTransform());
-        if (!transform.TransformMatrix.isIdentity()) {
-            for (auto& v : mesh.vertices)
-                v = transform.applyTransform(v);
-            for (auto& n : mesh.normals)
-                n = transform.applyNormal(n);
-            for (auto& n : mesh.face_normals)
-                n = transform.applyNormal(n);
-        }
+        if (!child->property("transform").getTransform().matrix().isIdentity())
+            mesh.transform(child->property("transform").getTransform());
 
         // Build bounding box
         BoundingBox& bbox = boxes[i];

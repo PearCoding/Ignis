@@ -40,6 +40,8 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     LoaderCamera::setupInitialOrientation(ctx, result);
 
     IG_LOG(L_DEBUG) << "Got " << ctx.Environment.Materials.size() << " unique materials" << std::endl;
+    IG_LOG(L_DEBUG) << "Got " << ctx.Environment.AreaLightsMap.size() << " unique area lights" << std::endl;
+
     result.Database.MaterialCount = ctx.Environment.Materials.size();
 
     ctx.Database      = &result.Database;

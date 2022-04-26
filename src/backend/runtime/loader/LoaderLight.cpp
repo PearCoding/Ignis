@@ -128,6 +128,7 @@ static std::string inline_entity(const Entity& entity, uint32 shapeID)
     stream << "Entity{ local_mat = " << inline_mat34(localMat)
            << ", global_mat = " << inline_mat34(globalMat)
            << ", normal_mat = " << inline_mat3(normalMat)
+           << ", scale = " << std::abs(normalMat.determinant())
            << ", shape_id = " << shapeID << " }";
     return stream.str();
 }
@@ -170,19 +171,19 @@ inline static void exportSimpleAreaLights(const LoaderContext& ctx)
 
         const Eigen::Matrix<float, 3, 4> localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
         const Eigen::Matrix<float, 3, 4> globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
-        const Matrix3f normalMat                   = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
+        const Matrix3f normalMat                   = entity.Transform.matrix().block<3, 3>(0, 0).inverse().transpose(); // To Global [Normal]
         uint32 shape_id                            = ctx.Environment.ShapeIDs.at(entity.Shape);
         size_t shape_offset                        = ctx.Database->ShapeTable.lookups()[shape_id].Offset;
 
         auto& lightData = ctx.Database->CustomTables["SimpleArea"].addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
         VectorSerializer lightSerializer(lightData, false);
-        lightSerializer.write(localMat, true);        // +3x4 = 12
-        lightSerializer.write(globalMat, true);       // +3x4 = 24
-        lightSerializer.write(normalMat, true);       // +3x3 = 33
-        lightSerializer.write((uint32)shape_id);      // +1   = 34
-        lightSerializer.write((uint32)shape_offset);  // +1   = 35
-        lightSerializer.write((uint32)0 /*Padding*/); // +1   = 36
-        lightSerializer.write(radiance);              // +3   = 39
+        lightSerializer.write(localMat, true);                           // +3x4 = 12
+        lightSerializer.write(globalMat, true);                          // +3x4 = 24
+        lightSerializer.write(normalMat, true);                          // +3x3 = 33
+        lightSerializer.write((uint32)shape_id);                         // +1   = 34
+        lightSerializer.write((float)std::abs(normalMat.determinant())); // +1   = 35
+        lightSerializer.write((uint32)0 /*Padding*/);                    // +1   = 36
+        lightSerializer.write(radiance);                                 // +3   = 39
     }
 }
 

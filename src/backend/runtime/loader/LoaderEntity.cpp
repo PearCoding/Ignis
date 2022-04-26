@@ -120,13 +120,19 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         // Remember the entity to material
         result.Database.EntityToMaterial.push_back(materialID);
 
+        const Eigen::Matrix<float, 3, 4> toLocal        = invTransform.matrix().block<3, 4>(0, 0);
+        const Eigen::Matrix<float, 3, 4> toGlobal       = transform.matrix().block<3, 4>(0, 0);
+        const Eigen::Matrix<float, 3, 3> toGlobalNormal = toGlobal.block<3, 3>(0, 0).inverse().transpose();
+        const float scaleFactor                         = std::abs(toGlobalNormal.determinant());
+
         // Write data to dyntable
         auto& entityData = result.Database.EntityTable.addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
         VectorSerializer entitySerializer(entityData, false);
-        entitySerializer.write(invTransform.matrix().block<3, 4>(0, 0), true);                    // To Local
-        entitySerializer.write(transform.matrix().block<3, 4>(0, 0), true);                       // To Global
-        entitySerializer.write(transform.matrix().block<3, 3>(0, 0).transpose().inverse(), true); // To Global [Normal]
+        entitySerializer.write(toLocal, true);        // To Local
+        entitySerializer.write(toGlobal, true);       // To Global
+        entitySerializer.write(toGlobalNormal, true); // To Global [Normal]
         entitySerializer.write((uint32)shapeID);
+        entitySerializer.write(scaleFactor);
 
         // Extract information for BVH building
         EntityObject obj;

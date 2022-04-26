@@ -3,14 +3,16 @@ struct EntityData {
     global_mat: [f32 * 12],
     normal_mat: [f32 * 9],
     shape_id:   i32,
-    _pad:       [f32 * 2]   // No bsdf or light assosciation as these information is implicit in other shaders
+    scale:      f32,
+    _pad:       f32         // No bsdf or light assosciation as these information is implicit in other shaders
 }
 
 struct Entity {
     shape_id:   i32,
     local_mat:  Mat3x4,
     global_mat: Mat3x4,
-    normal_mat: Mat3x3
+    normal_mat: Mat3x3,
+    scale:      f32
 }
 
 type EntityTable = fn (i32) -> Entity;
@@ -28,7 +30,8 @@ fn @make_entity_table(dtb: DynTable, acc: DeviceBufferAccessor) -> EntityTable {
             local_mat  = local_mat,
             global_mat = global_mat,
             normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
-            shape_id   = bitcast[i32](m.col(3).x)
+            shape_id   = bitcast[i32](m.col(3).x),
+            scale      = m.col(3).y
         }
     } 
 }

@@ -31,12 +31,6 @@ void TriMesh::flipNormals()
                    [](const StVector3f& n) { return -n; });
 }
 
-void TriMesh::scale(float scale)
-{
-    std::transform(vertices.begin(), vertices.end(), vertices.begin(),
-                   [=](const StVector3f& v) { return v * scale; });
-}
-
 size_t TriMesh::removeZeroAreaTriangles()
 {
     const auto checkGood = [&](size_t i) {
@@ -218,6 +212,49 @@ void TriMesh::setupFaceNormalsAsVertexNormals()
     }
 }
 
+struct TransformCache {
+    const Matrix4f TransformMatrix;
+    const Matrix3f NormalMatrix;
+    const float ScaleFactor;
+
+    inline explicit TransformCache(const Transformf& t)
+        : TransformMatrix(t.matrix())
+        , NormalMatrix(TransformMatrix.block<3, 3>(0, 0).transpose().inverse())
+        , ScaleFactor(std::abs(NormalMatrix.determinant()))
+    {
+    }
+
+    [[nodiscard]] inline Vector3f applyTransform(const Vector3f& v) const
+    {
+        Vector4f w = TransformMatrix * Vector4f(v(0), v(1), v(2), 1.0f);
+        w /= w(3);
+        return Vector3f(w(0), w(1), w(2));
+    }
+
+    [[nodiscard]] inline Vector3f applyNormal(const Vector3f& n) const
+    {
+        return (NormalMatrix * n).normalized();
+    }
+};
+
+void TriMesh::transform(const Transformf& t)
+{
+    TransformCache transform = TransformCache(t);
+    if (transform.TransformMatrix.isIdentity())
+        return;
+
+    for (auto& v : vertices)
+        v = transform.applyTransform(v);
+    for (auto& n : normals)
+        n = transform.applyNormal(n);
+    for (auto& n : face_normals)
+        n = transform.applyNormal(n);
+
+    const float inv_sf = transform.ScaleFactor;
+    for (auto& s : face_inv_area)
+        s *= inv_sf;
+}
+
 bool TriMesh::isAPlane() const
 {
     constexpr float PlaneEPS = 1e-5f;
@@ -276,7 +313,7 @@ inline static void addTriangle(TriMesh& mesh, const Vector3f& origin, const Vect
     constexpr uint32 M = 0;
     const Vector3f lN  = xAxis.cross(yAxis);
     const float area   = lN.norm() / 2;
-    const Vector3f N   = lN / area;
+    const Vector3f N   = lN / (2 * area);
 
     mesh.vertices.insert(mesh.vertices.end(), { origin, origin + xAxis, origin + yAxis });
     mesh.normals.insert(mesh.normals.end(), { N, N, N });
@@ -291,7 +328,7 @@ inline static void addPlane(TriMesh& mesh, const Vector3f& origin, const Vector3
     constexpr uint32 M = 0;
     const Vector3f lN  = xAxis.cross(yAxis);
     const float area   = lN.norm() / 2;
-    const Vector3f N   = lN / area;
+    const Vector3f N   = lN / (2 * area);
 
     mesh.vertices.insert(mesh.vertices.end(), { origin, origin + xAxis, origin + xAxis + yAxis, origin + yAxis });
     mesh.normals.insert(mesh.normals.end(), { N, N, N, N });

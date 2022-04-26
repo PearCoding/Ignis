@@ -18,21 +18,21 @@ fn unrap_wireframeraypayload(payload: RayPayload) = WireframeRayPayload {
 fn @make_wireframe_renderer() -> Technique {
     let offset:f32 = 0.001;
 
-    fn is_edge_hit(hit: Hit, add_distance: f32) -> (bool, f32) {
-        let t = vec3_min_value(make_vec3(hit.prim_coords.x, hit.prim_coords.y, 1 - hit.prim_coords.x - hit.prim_coords.y));
+    fn is_edge_hit(hit: Hit, surf: SurfaceElement, add_distance: f32) -> (bool, f32) {
+        let t = vec3_min_value(make_vec3(hit.prim_coords.x, hit.prim_coords.y, clampf(0, 1, 1 - hit.prim_coords.x - hit.prim_coords.y)));
         let footprint = (hit.distance + add_distance) * 0.017455064; // math_builtins::tan(1 * flt_pi / 180);
-        // TODO: This has to be normalized by the area of the prim hit (but we do not carry this information)
-        (t <= 0.1 * footprint, t)
+        let c = footprint * math_builtins::sqrt(surf.inv_area);
+        (t <= c, t)
     }
 
     fn @on_hit( _ray: Ray
         , _pixel: i32
         , hit: Hit
         , payload: RayPayload
-        , _surf: SurfaceElement
+        , surf: SurfaceElement
         , _mat: Material
         ) -> Option[Color] {
-        let (is_edge, t) = is_edge_hit(hit, unrap_wireframeraypayload(payload).distance);
+        let (is_edge, t) = is_edge_hit(hit, surf, unrap_wireframeraypayload(payload).distance);
         if is_edge { 
             make_option(color_lerp(color_builtins::white, color_builtins::black, t))
         } else {
@@ -49,7 +49,7 @@ fn @make_wireframe_renderer() -> Technique {
         , _mat: Material
         ) -> Option[(Ray, RayPayload)] {
         let wpt = unrap_wireframeraypayload(payload);
-        let (is_edge, _) = is_edge_hit(hit, wpt.distance);
+        let (is_edge, _) = is_edge_hit(hit, surf, wpt.distance);
         if !is_edge { 
             make_option(
                 make_ray(surf.point, ray.dir, offset, flt_max),

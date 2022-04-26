@@ -10,6 +10,7 @@ enum class DebugMode {
     PrimCoords,
     Point,
     HitDistance,
+    Area,
     PrimIDRaw,
     PrimID,
     EntityIDRaw,

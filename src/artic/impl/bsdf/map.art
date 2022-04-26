@@ -15,6 +15,7 @@ fn @make_normalmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bs
         is_entering = surf.is_entering,
         point       = surf.point,
         face_normal = surf.face_normal,
+        inv_area    = surf.inv_area,
         prim_coords = surf.prim_coords,
         tex_coords  = surf.tex_coords,
         local       = make_orthonormal_mat3x3(N)
@@ -47,6 +48,7 @@ fn @make_bumpmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf
         is_entering = surf.is_entering,
         point       = surf.point,
         face_normal = surf.face_normal,
+        inv_area    = surf.inv_area,
         prim_coords = surf.prim_coords,
         tex_coords  = surf.tex_coords,
         local       = make_orthonormal_mat3x3(N)

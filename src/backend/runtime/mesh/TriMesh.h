@@ -24,7 +24,6 @@ struct TriMesh {
 
     void fixNormals(bool* hasBadNormals = nullptr);
     void flipNormals();
-    void scale(float scale);
 
     // Remove all triangles with zero area. Will return number of triangles removed
     size_t removeZeroAreaTriangles();
@@ -33,6 +32,8 @@ struct TriMesh {
     void computeVertexNormals();
     void makeTexCoordsZero();
     void setupFaceNormalsAsVertexNormals();
+
+    void transform(const Transformf& t);
 
     /// Returns true if the given mesh can be approximated as a plane
     bool isAPlane() const;

@@ -24,13 +24,6 @@ struct EmissionValue {
     pdf_dir:   f32    // Probability to sample the direction using emission sampling
 }
 
-// Surface that emits light
-struct AreaEmitter {
-    sample: fn (Vec2) -> (Vec3, Vec3, Vec2, f32),
-    normal: fn (Vec2) -> Vec3,
-    pdf:    fn (Vec2) -> f32
-}
-
 // Opaque light structure
 struct Light {
     // Samples direct illumination from this light source at the given point on a surface

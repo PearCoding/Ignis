@@ -52,39 +52,42 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     make_option(vec3_to_color(surf.point))
                 },
                 7 => { // DEBUG_HIT_DISTANCE
-                    make_option(make_color(hit.distance, hit.distance, hit.distance, 1))
+                    make_option(make_gray_color(hit.distance))
                 },
-                8 => { // DEBUG_PRIM_ID_RAW
+                8 => { // DEBUG_AREA
+                    make_option(make_gray_color(safe_div(1, surf.inv_area)))
+                },
+                9 => { // DEBUG_PRIM_ID_RAW
                     let v = hit.prim_id as f32;
                     make_option(make_gray_color(v))
                 },
-                9 => { // DEBUG_PRIM_ID
+                10 => { // DEBUG_PRIM_ID
                     make_option(color_map(hit.prim_id))
                 },
-                10 => { // DEBUG_ENTITY_ID_RAW
+                11 => { // DEBUG_ENTITY_ID_RAW
                     let v = hit.ent_id as f32;
                     make_option(make_gray_color(v))
                 },
-                11 => { // DEBUG_ENTITY_ID
+                12 => { // DEBUG_ENTITY_ID
                     make_option(color_map(hit.ent_id))
                 },
-                12 => { // DEBUG_MATERIAL_ID_RAW
+                13 => { // DEBUG_MATERIAL_ID_RAW
                     let v = mat.id as f32;
                     make_option(make_gray_color(v))
                 },
-                13 => { // DEBUG_MATERAIL_ID
+                14 => { // DEBUG_MATERAIL_ID
                     make_option(color_map(mat.id))
                 },
-                14 => { // DEBUG_EMISSIVE
+                15 => { // DEBUG_EMISSIVE
                     make_option(if mat.is_emissive { color_builtins::green } else { color_builtins::red })
                 },
-                15 => { // DEBUG_SPECULAR
+                16 => { // DEBUG_SPECULAR
                     make_option(if mat.bsdf.is_specular { color_builtins::green } else { color_builtins::red })
                 },
-                16 => { // DEBUG_ENTERING
+                17 => { // DEBUG_ENTERING
                     make_option(if surf.is_entering { color_builtins::green } else { color_builtins::red })
                 },
-                17 => { // DEBUG_CHECK_BSDF
+                18 => { // DEBUG_CHECK_BSDF
                     if mat.bsdf.is_specular {
                         make_option(color_builtins::green)
                     } else {
@@ -109,7 +112,7 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                         }
                     }
                 },
-                18 => { // DEBUG_ALBEDO
+                19 => { // DEBUG_ALBEDO
                     if mat.bsdf.is_specular {
                         make_option(color_builtins::black)
                     } else {
@@ -121,10 +124,10 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                         make_option(evl)
                     }
                 },
-                19 => { // DEBUG_MEDIUM_INNER
+                20 => { // DEBUG_MEDIUM_INNER
                     make_option(if mat.interface.inner < 0 { color_builtins::black } else { color_map(mat.interface.inner) })
                 },
-                20 => { // DEBUG_MEDIUM_OUTER
+                21 => { // DEBUG_MEDIUM_OUTER
                     make_option(if mat.interface.outer < 0 { color_builtins::black } else { color_map(mat.interface.outer) })
                 },
                 _ => { // DEBUG_NORMAL 
