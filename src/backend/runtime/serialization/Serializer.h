@@ -47,8 +47,10 @@ public:
     write(const std::vector<T, Alloc>& vec, bool naked = false);
     template <typename T1, typename T2>
     inline void write(const std::unordered_map<T1, T2>& map);
-    template <typename Scalar, int Rows, int Cols, int Options>
-    inline void write(const Eigen::Matrix<Scalar, Rows, Cols, Options>& v);
+
+    // Write out in row-major (or col-major)
+    template <typename Derived>
+    inline void write(const Eigen::MatrixBase<Derived>& v, bool colMajor = false);
 
     template <typename T, typename Alloc>
     void writeAligned(const std::vector<T, Alloc>& vec, size_t padding, bool naked = false);
@@ -76,8 +78,10 @@ public:
     read(std::vector<T, Alloc>& vec);
     template <typename T1, typename T2>
     inline void read(std::unordered_map<T1, T2>& map);
-    template <typename Scalar, int Rows, int Cols, int Options>
-    inline void read(Eigen::Matrix<Scalar, Rows, Cols, Options>& v);
+
+    // Write out in row-major (or col-major)
+    template <typename Derived>
+    inline void read(Eigen::MatrixBase<Derived>& v, bool colMajor = false);
 
     // Interface
     virtual bool isValid() const                            = 0;

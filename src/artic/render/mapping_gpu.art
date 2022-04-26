@@ -756,6 +756,7 @@ fn @make_gpu_device( dev_id: i32
     },
     parallel_reduce_i32 = @|n, elem, op| gpu_handle_device_reduce[i32](dev_id, acc, n, elem, op),
     parallel_reduce_f32 = @|n, elem, op| gpu_handle_device_reduce[f32](dev_id, acc, n, elem, op),
+    get_device_buffer_accessor = @|| accb,
     load_scene_bvh = @|| {
         let mut nodes: &[Node2];
         let mut objs:  &[EntityLeaf1];
@@ -775,6 +776,11 @@ fn @make_gpu_device( dev_id: i32
     load_entity_table   = @ |dtb| make_entity_table(dtb, accb),
     load_shape_table    = @ |dtb| make_shape_table(dtb, accb),
     load_specific_shape = @ |num_face, num_vert, num_norm, num_tex, off, dtb| load_specific_shape_from_table(num_face, num_vert, num_norm, num_tex, off, dtb, accb),
+    load_custom_dyntable  = @ |name| -> DynTable {
+        let mut table: DynTable;
+        ignis_load_custom_dyntable(dev_id, name, &mut table);
+        table
+    },
     load_bvh_table      = @ |dtb| -> BVHTable {
         @ |id| {
             let entry  = get_lookup_entry(id as u64, dtb, accb); 

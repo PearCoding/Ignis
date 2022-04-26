@@ -47,3 +47,29 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
         }
     }
 }
+
+fn @load_simple_area_lights(device: Device, shapes: ShapeTable) -> LightTable {
+    let tbl = device.load_custom_dyntable("SimpleArea");
+    let acc = device.get_device_buffer_accessor();
+
+    let elem_s = 40 * sizeof[f32]() as u64; // See LoaderLight.cpp:exportSimpleAreaLights (with padding/alignment included)
+    @ |id| {
+        //let entry = get_lookup_entry(id as u64, tbl); // No need as we have only one type!
+        let data = get_table_entry(elem_s * (id as u64), tbl, acc);
+
+        let local_mat  = data.load_mat3x4(0);
+        let global_mat = data.load_mat3x4(12);
+        let m          = data.load_mat3x4(24); // This is faster due to aligned loading instructions
+        let entity     = Entity {
+            local_mat  = local_mat,
+            global_mat = global_mat,
+            normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
+            shape_id   = bitcast[i32](m.col(3).x)
+        };
+
+        let shape    = shapes(entity.shape_id);
+        let radiance = data.load_vec3(36);
+
+        make_area_light(make_shape_area_emitter(entity, shape), @|_| vec3_to_color(radiance))
+    } 
+}

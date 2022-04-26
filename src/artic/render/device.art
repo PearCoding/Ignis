@@ -39,6 +39,9 @@ struct Device {
     // Parallel reduce function for generic operator on the device
     parallel_reduce_f32: fn (i32 /* size */, fn (i32) -> f32 /* accessor */, fn (f32, f32) -> f32 /* operator */) -> f32,
 
+    // Returns a callback function to create a virtual device buffer by providing a pointer on device memory
+    get_device_buffer_accessor: fn () -> DeviceBufferAccessor,
+
     //////////////// Geometry
     // [Internal] Load the full scene bvh
     load_scene_bvh: fn () -> SceneBvh,
@@ -59,6 +62,9 @@ struct Device {
 
     // [Internal] Load a specific shape given by precomputed properties and an offset within the dynamic table
     load_specific_shape: fn (i32 /* num_face */, i32 /* num_vert */, i32 /* num_norm */, i32 /* num_tex */, i32 /* off */, DynTable) -> Shape,
+
+    // [Internal] Load a specific dyntable constructed in the loading process
+    load_custom_dyntable: fn (&[u8] /* Filename */) -> DynTable,
 
     // [Internal] Load the whole shape bvh table from a dynamic table
     load_bvh_table: fn (DynTable) -> BVHTable,

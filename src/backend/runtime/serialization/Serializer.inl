@@ -106,12 +106,18 @@ inline void Serializer::write(const std::unordered_map<T1, T2>& map)
     }
 }
 
-template <typename Scalar, int Rows, int Cols, int Options>
-inline void Serializer::write(const Eigen::Matrix<Scalar, Rows, Cols, Options>& v)
+template <typename Derived>
+inline void Serializer::write(const Eigen::MatrixBase<Derived>& v, bool colMajor)
 {
-    for (int r = 0; r < Rows; ++r)
-        for (int c = 0; c < Cols; ++c)
-            write(v(r, c));
+    if (!colMajor) {
+        for (int r = 0; r < v.rows(); ++r)
+            for (int c = 0; c < v.cols(); ++c)
+                write(v(r, c));
+    } else {
+        for (int c = 0; c < v.cols(); ++c)
+            for (int r = 0; r < v.rows(); ++r)
+                write(v(r, c));
+    }
 }
 
 inline void Serializer::write(const ISerializable& v)
@@ -297,17 +303,18 @@ inline void Serializer::read(std::unordered_map<T1, T2>& map)
     PR_ASSERT(map.size() == size, "Given size is not same as produced one!");
 }
 
-template <typename Scalar, int Rows, int Cols, int Options>
-inline void Serializer::read(Eigen::Matrix<Scalar, Rows, Cols, Options>& v)
+template <typename Derived>
+inline void Serializer::read(Eigen::MatrixBase<Derived>& v, bool colMajor)
 {
-    Scalar tmp[Rows * Cols];
-    for (int r = 0; r < Rows; ++r)
-        for (int c = 0; c < Cols; ++c)
-            read(tmp[r * Cols + c]);
-
-    for (int r = 0; r < Rows; ++r)
-        for (int c = 0; c < Cols; ++c)
-            v(r, c) = tmp[r * Cols + c];
+    if (!colMajor) {
+        for (int r = 0; r < v.rows(); ++r)
+            for (int c = 0; c < v.cols(); ++c)
+                read(v(r, c));
+    } else {
+        for (int c = 0; c < v.cols(); ++c)
+            for (int r = 0; r < v.rows(); ++r)
+                read(v(r, c));
+    }
 }
 
 ////////////////////////////////////////////////////

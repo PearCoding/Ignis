@@ -117,6 +117,7 @@ public:
         std::array<anydsl::Array<float>*, GPUStreamBufferCount> current_secondary;
         std::unordered_map<std::string, DeviceImage> images;
         std::unordered_map<std::string, DeviceBuffer> buffers;
+        std::unordered_map<std::string, DynTableProxy> custom_dyntables;
 
         anydsl::Array<uint32_t> tonemap_pixels;
 
@@ -417,6 +418,18 @@ public:
 
         return SceneInfo{ (int)database->EntityTable.entryCount(),
                           (int)database->MaterialCount };
+    }
+
+    inline const DynTableProxy& loadCustomDyntable(int32_t dev, const char* name)
+    {
+        auto& tables = devices[dev].custom_dyntables;
+        auto it      = tables.find(name);
+        if (it != tables.end())
+            return it->second;
+
+        IG_LOG(IG::L_DEBUG) << "Loading custom dyntable " << name << std::endl;
+
+        return tables[name] = loadDyntable(dev, database->CustomTables.at(name));
     }
 
     inline const DeviceImage& loadImage(int32_t dev, const std::string& filename)
@@ -1145,6 +1158,22 @@ IG_EXPORT void ignis_load_scene(int dev, SceneDatabase* dtb)
 IG_EXPORT void ignis_load_scene_info(int dev, SceneInfo* info)
 {
     *info = sInterface->loadSceneInfo(dev);
+}
+
+IG_EXPORT void ignis_load_custom_dyntable(int dev, const char* name, DynTable* dtb)
+{
+    auto assign = [&](const DynTableProxy& tbl) {
+        DynTable devtbl;
+        devtbl.count  = tbl.EntryCount;
+        devtbl.header = const_cast<LookupEntry*>(tbl.LookupEntries.ptr());
+        uint64_t size = tbl.Data.size();
+        devtbl.size   = size;
+        devtbl.start  = const_cast<uint8_t*>(tbl.Data.ptr());
+        return devtbl;
+    };
+
+    auto& proxy = sInterface->loadCustomDyntable(dev, name);
+    *dtb        = assign(proxy);
 }
 
 IG_EXPORT void ignis_load_rays(int dev, StreamRay** list)

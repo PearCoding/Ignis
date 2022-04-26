@@ -59,9 +59,9 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
         stream << "  let medium_interface = no_medium_interface();" << std::endl;
 
     if (isLight && requireLights) {
-        const std::string light_name = ctx.Environment.AreaLightsMap.at(material.Entity);
+        const uint32 light_id = ctx.Environment.AreaLightsMap.at(material.Entity);
         stream << "  let shader : Shader = @|ray, hit, surf| make_emissive_material(" << mat_id << ", surf, bsdf_" << ShaderUtils::escapeIdentifier(material.BSDF) << "(ray, hit, surf), medium_interface,"
-               << "light_" << ShaderUtils::escapeIdentifier(light_name) << ");" << std::endl
+               << " @lights(" << light_id << "));" << std::endl
                << std::endl;
     } else {
         stream << "  let shader : Shader = @|ray, hit, surf| make_material(" << mat_id << ", bsdf_" << ShaderUtils::escapeIdentifier(material.BSDF) << "(ray, hit, surf), medium_interface);" << std::endl

@@ -9,14 +9,6 @@
 namespace IG {
 using namespace Parser;
 
-template <typename Derived>
-inline void writeMatrix(Serializer& serializer, const Eigen::MatrixBase<Derived>& m)
-{
-    for (int j = 0; j < m.cols(); ++j)
-        for (int i = 0; i < m.rows(); ++i)
-            serializer.write((float)m(i, j));
-}
-
 template <size_t N>
 inline static void setup_bvh(std::vector<EntityObject>& input, LoaderResult& result)
 {
@@ -131,9 +123,9 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         // Write data to dyntable
         auto& entityData = result.Database.EntityTable.addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
         VectorSerializer entitySerializer(entityData, false);
-        writeMatrix(entitySerializer, invTransform.matrix().block<3, 4>(0, 0));                    // To Local
-        writeMatrix(entitySerializer, transform.matrix().block<3, 4>(0, 0));                       // To Global
-        writeMatrix(entitySerializer, transform.matrix().block<3, 3>(0, 0).transpose().inverse()); // To Global [Normal]
+        entitySerializer.write(invTransform.matrix().block<3, 4>(0, 0), true);                    // To Local
+        entitySerializer.write(transform.matrix().block<3, 4>(0, 0), true);                       // To Global
+        entitySerializer.write(transform.matrix().block<3, 3>(0, 0).transpose().inverse(), true); // To Global [Normal]
         entitySerializer.write((uint32)shapeID);
 
         // Extract information for BVH building

@@ -52,6 +52,7 @@ public:
 
     inline PropertyType type() const { return mType; }
     inline bool isValid() const { return mType != PT_NONE; }
+    inline bool canBeNumber() const { return mType == PT_NUMBER || mType == PT_INTEGER; }
 
     inline Number getNumber(Number def = Number(0), bool* ok = nullptr, bool exact = false) const
     {
@@ -302,6 +303,7 @@ public:
     void addFrom(const Scene& other);
 
     void addConstantEnvLight();
+
 private:
     std::shared_ptr<Object> mTechnique;
     std::shared_ptr<Object> mCamera;

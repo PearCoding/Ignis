@@ -13,6 +13,7 @@ struct SceneDatabase {
     DynTable EntityTable;
     DynTable ShapeTable;
     DynTable BVHTable;
+    std::unordered_map<std::string, DynTable> CustomTables;
 
     IG::SceneBVH SceneBVH;
     float SceneRadius;

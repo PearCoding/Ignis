@@ -132,6 +132,60 @@ static std::string inline_entity(const Entity& entity, uint32 shapeID)
     return stream.str();
 }
 
+inline static bool is_simple_area_light(const std::shared_ptr<Parser::Object>& light)
+{
+    return light->pluginType() == "area"
+           && (!light->property("radiance").isValid() || light->property("radiance").canBeNumber() || light->property("radiance").type() == Parser::PT_VECTOR3)
+           && (!light->property("radiance_scale").isValid() || light->property("radiance_scale").canBeNumber() || light->property("radiance_scale").type() == Parser::PT_VECTOR3);
+}
+
+inline static Vector3f get_property_color(const Parser::Property& prop, const Vector3f& def)
+{
+    if (prop.canBeNumber()) {
+        return Vector3f::Constant(prop.getNumber());
+    } else {
+        return prop.getVector3(def);
+    }
+}
+
+inline static void exportSimpleAreaLights(const LoaderContext& ctx)
+{
+    // Check if already loaded
+    if (ctx.Database->CustomTables.count("SimpleArea") > 0)
+        return;
+
+    IG_LOG(L_DEBUG) << "Embedding simple area lights" << std::endl;
+    for (const auto& pair : ctx.Scene.lights()) {
+        const auto light             = pair.second;
+        const std::string entityName = light->property("entity").getString();
+        const Vector3f radiance      = get_property_color(light->property("radiance"), Vector3f::Zero()).cwiseProduct(get_property_color(light->property("radiance_scale"), Vector3f::Ones()));
+
+        Entity entity;
+        if (!ctx.Environment.EmissiveEntities.count(entityName)) {
+            IG_LOG(L_ERROR) << "No entity named '" << entityName << "' exists for area light" << std::endl;
+            continue;
+        } else {
+            entity = ctx.Environment.EmissiveEntities.at(entityName);
+        }
+
+        const Eigen::Matrix<float, 3, 4> localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
+        const Eigen::Matrix<float, 3, 4> globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
+        const Matrix3f normalMat                   = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
+        uint32 shape_id                            = ctx.Environment.ShapeIDs.at(entity.Shape);
+        size_t shape_offset                        = ctx.Database->ShapeTable.lookups()[shape_id].Offset;
+
+        auto& lightData = ctx.Database->CustomTables["SimpleArea"].addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
+        VectorSerializer lightSerializer(lightData, false);
+        lightSerializer.write(localMat, true);        // +3x4 = 12
+        lightSerializer.write(globalMat, true);       // +3x4 = 24
+        lightSerializer.write(normalMat, true);       // +3x3 = 33
+        lightSerializer.write((uint32)shape_id);      // +1   = 34
+        lightSerializer.write((uint32)shape_offset);  // +1   = 35
+        lightSerializer.write((uint32)0 /*Padding*/); // +1   = 36
+        lightSerializer.write(radiance);              // +3   = 39
+    }
+}
+
 static void light_area(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
@@ -355,16 +409,34 @@ static const struct {
 
 std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
 {
+    constexpr size_t MaxSimpleInlineAreaLights = 10;
+
+    size_t simpleAreaLightCounter = 0;
+    if (!skipArea) {
+        for (const auto& pair : tree.context().Scene.lights()) {
+            const auto light = pair.second;
+
+            if (is_simple_area_light(light))
+                ++simpleAreaLightCounter;
+        }
+    }
+
+    const bool embedSimpleAreaLights = simpleAreaLightCounter > MaxSimpleInlineAreaLights;
+
+    // Export simple area lights
+    if (embedSimpleAreaLights)
+        exportSimpleAreaLights(tree.context());
+
     // This will be used for now
-    auto skip = [&](const std::string& type) { return (skipArea && type == "area"); };
+    auto skip = [&](const std::shared_ptr<Parser::Object>& light) { return skipArea && light->pluginType() == "area"; };
 
     std::stringstream stream;
 
-    size_t counter = 0;
+    size_t counter = embedSimpleAreaLights ? simpleAreaLightCounter : 0;
     for (const auto& pair : tree.context().Scene.lights()) {
         const auto light = pair.second;
 
-        if (skip(light->pluginType()))
+        if (skip(light) || (embedSimpleAreaLights && is_simple_area_light(light)))
             continue;
 
         bool found = false;
@@ -383,15 +455,27 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
     if (counter != 0)
         stream << std::endl;
 
+    if (embedSimpleAreaLights) {
+        stream << "  let simple_area_lights = load_simple_area_lights(device, shapes);" << std::endl;
+
+        // Special case: Nothing except embedded simple area lights
+        if (counter > 0 && counter == simpleAreaLightCounter) {
+            stream << "  let num_lights = " << counter << ";" << std::endl
+                   << "  let lights = simple_area_lights;" << std::endl;
+            return stream.str();
+        }
+    }
+
     stream << "  let num_lights = " << counter << ";" << std::endl
            << "  let lights = @|id:i32| {" << std::endl
            << "    match(id) {" << std::endl;
 
-    size_t counter2 = 0;
+    size_t counter2          = 0;
+    size_t simpleAreaCounter = 0;
     for (const auto& pair : tree.context().Scene.lights()) {
         const auto light = pair.second;
 
-        if (skip(light->pluginType()))
+        if (skip(light))
             continue;
 
         if (counter2 < counter - 1)
@@ -399,12 +483,17 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
         else
             stream << "      _";
 
-        stream << " => light_" << ShaderUtils::escapeIdentifier(pair.first)
-               << "," << std::endl;
+        if (embedSimpleAreaLights && is_simple_area_light(light)) {
+            stream << " => simple_area_lights(" << simpleAreaCounter << ")," << std::endl;
+            ++simpleAreaCounter;
+        } else {
+            stream << " => light_" << ShaderUtils::escapeIdentifier(pair.first)
+                   << "," << std::endl;
+        }
         ++counter2;
     }
 
-    if (counter == 0) {
+    if (counter2 == 0) {
         if (!skipArea) // Don't trigger a warning if we skip areas
             IG_LOG(L_WARNING) << "Scene does not contain lights" << std::endl;
         stream << "    _ => make_null_light()" << std::endl;
@@ -418,14 +507,16 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
 
 void LoaderLight::setupAreaLights(LoaderContext& ctx)
 {
+    uint32 counter = 0;
     for (const auto& pair : ctx.Scene.lights()) {
         const auto light = pair.second;
 
-        if (light->pluginType() != "area")
-            continue;
+        if (light->pluginType() == "area") {
+            const std::string entity              = light->property("entity").getString();
+            ctx.Environment.AreaLightsMap[entity] = counter;
+        }
 
-        const std::string entity              = light->property("entity").getString();
-        ctx.Environment.AreaLightsMap[entity] = pair.first;
+        ++counter;
     }
 }
 

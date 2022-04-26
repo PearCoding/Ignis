@@ -23,7 +23,7 @@ struct Entity {
     std::string BSDF;
 };
 
-/// A material is a combination of bsdf & entity (if the entity is emissive)
+/// A material is a combination of bsdf, entity (if the entity is emissive) and volume/medium interface
 struct Material {
     std::string BSDF;
     int MediumInner = -1;
@@ -42,7 +42,7 @@ struct LoaderEnvironment {
     std::vector<Shape> Shapes;
     std::unordered_map<std::string, uint32> ShapeIDs;
     std::unordered_map<std::string, Entity> EmissiveEntities;
-    std::unordered_map<std::string, std::string> AreaLightsMap; // Map from Entity -> Light
+    std::unordered_map<std::string, uint32> AreaLightsMap; // Map from Entity -> Light ID
     std::vector<Material> Materials;
 
     BoundingBox SceneBBox;
