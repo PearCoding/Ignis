@@ -26,4 +26,6 @@ $executable ${args} -o ${output_dir}/plane${spp}-cpu-d1.exr ${scene_dir}/plane-d
 
 $executable ${args} -o ${output_dir}/room${spp}-d4.exr ${scene_dir}/room.json --gpu
 
+$executable ${args} -o ${output_dir}/plane-scale${spp}-d4.exr ${scene_dir}/plane-scale.json --gpu
+
 python3 ${script} ${output}

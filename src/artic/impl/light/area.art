@@ -16,9 +16,9 @@ fn @make_area_light(area: AreaEmitter, color_f: fn (Vec2) -> Color) = Light {
     sample_emission = @ |rnd| {
         let (pos, n, coords, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
         let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
-        make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color_divf(color_f(coords), area.scale), area_pdf, sample.pdf, sample.dir.z)
+        make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color_f(coords), area_pdf, sample.pdf, sample.dir.z)
     },
-    emission = @ |dir, surf| make_emission_value(color_divf(color_f(surf.tex_coords), area.scale), area.pdf(surf.prim_coords), cosine_hemisphere_pdf(vec3_dot(area.normal(surf.prim_coords), dir))),
+    emission = @ |dir, surf| make_emission_value(color_f(surf.tex_coords), area.pdf(surf.prim_coords), cosine_hemisphere_pdf(vec3_dot(area.normal(surf.prim_coords), dir))),
     delta    = false,
     infinite = false
 };
@@ -53,7 +53,7 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
             mesh.face_inv_area(f) / (entity.scale * mesh.num_tris as f32)
         },
-        scale = 1//entity.scale
+        scale = entity.scale
     }
 }
 

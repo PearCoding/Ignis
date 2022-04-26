@@ -39,6 +39,7 @@ if __name__ == "__main__":
         ("cbox", 1),
         ("cbox", 6),
         ("room", 4),
+        ("plane-scale", 4),
     ]
 
     image_names = [f"{scene}4096-d{depth}" for (scene, depth) in scenes]
@@ -75,6 +76,8 @@ if __name__ == "__main__":
     rows = []
     rows.append([title])
     rows.append([grid])
+
+    print("Writing output to Evaluation.pdf")
 
     # Generate the figure with the pdflatex backend and default settings
     figuregen.figure(rows, width_cm=10, filename="Evaluation.pdf")

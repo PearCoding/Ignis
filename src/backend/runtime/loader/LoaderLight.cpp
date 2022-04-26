@@ -173,7 +173,6 @@ inline static void exportSimpleAreaLights(const LoaderContext& ctx)
         const Eigen::Matrix<float, 3, 4> globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
         const Matrix3f normalMat                   = entity.Transform.matrix().block<3, 3>(0, 0).inverse().transpose(); // To Global [Normal]
         uint32 shape_id                            = ctx.Environment.ShapeIDs.at(entity.Shape);
-        size_t shape_offset                        = ctx.Database->ShapeTable.lookups()[shape_id].Offset;
 
         auto& lightData = ctx.Database->CustomTables["SimpleArea"].addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
         VectorSerializer lightSerializer(lightData, false);

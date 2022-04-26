@@ -1,0 +1,53 @@
+<scene version="2.0.0">
+    <default name="spp" value="4096"/>
+    <default name="res" value="256"/>
+    <default name="max_depth" value="4"/>
+
+    <integrator type="path">
+        <integer name="max_depth" value="$max_depth"/>
+    </integrator>
+
+    <sensor type="perspective">
+        <float name="near_clip" value="0.00001"/>
+        <float name="far_clip" value="100"/>
+        <float name="fov" value="90"/>
+        <transform name="to_world">
+            <lookat origin="0,0,-2"
+                    target="0,0,0"
+                    up    ="0,1,0"/>
+        </transform>
+        <sampler type="independent">  <!-- ldsampler -->
+            <integer name="sample_count" value="$spp"/>
+        </sampler>
+        <film type="hdrfilm">
+            <integer name="width" value="$res"/>
+            <integer name="height" value="$res"/>
+            <rfilter type="box"/>
+            <string name="pixel_format" value="rgb"/>
+        </film>
+    </sensor>
+    
+    <bsdf type="diffuse" id="Bottom">
+        <rgb name="reflectance" value="0.885809, 0.698859, 0.666422"/>
+    </bsdf>
+    
+    <bsdf type="diffuse" id="Black">
+        <rgb name="reflectance" value="0, 0, 0"/>
+    </bsdf>
+    
+    <shape type="ply">
+        <string name="filename" value="../meshes/Bottom.ply"/>
+        <ref id="Bottom"/>
+    </shape>
+    
+    <shape type="ply">
+        <string name="filename" value="../meshes/Top.ply"/>
+        <transform name="to_world">
+            <scale value="0.5"/>
+        </transform>
+        <ref id="Black"/>
+        <emitter type="area">
+            <spectrum name="radiance" value="1"/>
+        </emitter>
+    </shape>
+</scene>
