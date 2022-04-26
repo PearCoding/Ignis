@@ -27,8 +27,12 @@ constexpr std::string_view KHR_materials_ior               = "KHR_materials_ior"
 constexpr std::string_view KHR_materials_sheen             = "KHR_materials_sheen";
 constexpr std::string_view KHR_materials_translucency      = "KHR_materials_translucency";
 constexpr std::string_view KHR_materials_transmission      = "KHR_materials_transmission";
+constexpr std::string_view KHR_materials_unlit             = "KHR_materials_unlit";
 constexpr std::string_view KHR_materials_volume            = "KHR_materials_volume";
 constexpr std::string_view KHR_texture_transform           = "KHR_texture_transform";
+
+// Uncomment this to map unlit materials to area lights. This can explode shading complexity and is therefore not really recommended
+// #define IG_GLTF_MAP_UNLIT_AS_LIGHT
 
 namespace IG::Parser {
 static bool imageLoader(tinygltf::Image* img, const int, std::string*,
@@ -285,6 +289,13 @@ inline static bool isMaterialEmissive(const tinygltf::Material& mat)
            || (mat.emissiveFactor.size() == 3 && (mat.emissiveFactor[0] > 0 || mat.emissiveFactor[1] > 0 || mat.emissiveFactor[2] > 0));
 }
 
+#ifdef IG_GLTF_MAP_UNLIT_AS_LIGHT
+inline static bool isMaterialUnlit(const tinygltf::Material& mat)
+{
+    return mat.extensions.count(KHR_materials_unlit.data()) > 0;
+}
+#endif
+
 static std::string getTextureName(const tinygltf::Texture& tex)
 {
     std::string name = "_tex" + std::to_string(tex.source);
@@ -493,6 +504,22 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
 
                 scene.addLight("_light_" + entity_name, light);
             }
+#ifdef IG_GLTF_MAP_UNLIT_AS_LIGHT
+            else if (isMaterialUnlit(*material)) {
+                // Approximative unlit (which lits other parts)
+                auto light = std::make_shared<Object>(OT_LIGHT, "area", baseDir);
+                light->setProperty("entity", Property::fromString(entity_name));
+
+                if (material->pbrMetallicRoughness.baseColorTexture.index >= 0) {
+                    light->setProperty("radiance", Property::fromString(handleTexture(material->pbrMetallicRoughness.baseColorTexture, scene, model, baseDir)));
+                    light->setProperty("radiance_scale", Property::fromVector3(Vector3f((float)material->pbrMetallicRoughness.baseColorFactor[0], (float)material->pbrMetallicRoughness.baseColorFactor[1], (float)material->pbrMetallicRoughness.baseColorFactor[2])));
+                } else {
+                    light->setProperty("radiance", Property::fromVector3(Vector3f((float)material->pbrMetallicRoughness.baseColorFactor[0], (float)material->pbrMetallicRoughness.baseColorFactor[1], (float)material->pbrMetallicRoughness.baseColorFactor[2])));
+                }
+
+                scene.addLight("_light_" + entity_name, light);
+            }
+#endif
 
             ++primCount;
         }

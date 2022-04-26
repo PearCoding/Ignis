@@ -470,23 +470,21 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
            << "  let lights = @|id:i32| {" << std::endl
            << "    match(id) {" << std::endl;
 
-    size_t counter2          = 0;
-    size_t simpleAreaCounter = 0;
+    // If embedding simple area light, we collect them all at the "else" case
+    // If not embedding, the last entry will be the "else" case
+    size_t counter2 = 0;
     for (const auto& pair : tree.context().Scene.lights()) {
         const auto light = pair.second;
 
         if (skip(light))
             continue;
 
-        if (counter2 < counter - 1)
-            stream << "      " << counter2;
-        else
-            stream << "      _";
+        if (!embedSimpleAreaLights || !is_simple_area_light(light)) {
+            if (embedSimpleAreaLights || counter2 < counter - 1)
+                stream << "      " << counter2;
+            else
+                stream << "      _";
 
-        if (embedSimpleAreaLights && is_simple_area_light(light)) {
-            stream << " => simple_area_lights(" << simpleAreaCounter << ")," << std::endl;
-            ++simpleAreaCounter;
-        } else {
             stream << " => light_" << ShaderUtils::escapeIdentifier(pair.first)
                    << "," << std::endl;
         }
@@ -496,7 +494,9 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
     if (counter2 == 0) {
         if (!skipArea) // Don't trigger a warning if we skip areas
             IG_LOG(L_WARNING) << "Scene does not contain lights" << std::endl;
-        stream << "    _ => make_null_light()" << std::endl;
+        stream << "      _ => make_null_light()" << std::endl;
+    } else if (embedSimpleAreaLights) {
+        stream << "      _ => simple_area_lights(id)" << std::endl;
     }
 
     stream << "    }" << std::endl
