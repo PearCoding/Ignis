@@ -2,8 +2,7 @@
 struct AreaEmitter {
     sample: fn (Vec2) -> (Vec3, Vec3, Vec2, f32),
     normal: fn (Vec2) -> Vec3,
-    pdf:    fn (Vec2) -> f32,
-    scale:  f32
+    pdf:    fn (Vec2) -> f32
 }
 
 fn @make_area_light(area: AreaEmitter, color_f: fn (Vec2) -> Color) = Light {
@@ -11,7 +10,7 @@ fn @make_area_light(area: AreaEmitter, color_f: fn (Vec2) -> Color) = Light {
         let (pos, n, coords, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
         let dir = vec3_sub(from_surf.point, pos);
         let cos = vec3_dot(dir, n) / vec3_len(dir);
-        make_direct_sample(pos, color_divf(color_f(coords), area.scale), area_pdf, cosine_hemisphere_pdf(cos), cos)
+        make_direct_sample(pos, color_f(coords), area_pdf, cosine_hemisphere_pdf(cos), cos)
     },
     sample_emission = @ |rnd| {
         let (pos, n, coords, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
@@ -31,19 +30,20 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
             let f   = ux as i32;
             let uv2 = make_vec2(ux - (f as f32), uv.y);
             let (i0, i1, i2) = mesh.triangles(f);
-            let v0  = mesh.vertices(i0);
-            let v1  = mesh.vertices(i1);
-            let v2  = mesh.vertices(i2);
-            let t0  = mesh.tex_coords(i0);
-            let t1  = mesh.tex_coords(i1);
-            let t2  = mesh.tex_coords(i2);
-            let n   = mesh.face_normals(f);
+            let v0   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i0));
+            let v1   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i1));
+            let v2   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i2));
+            let t0   = mesh.tex_coords(i0);
+            let t1   = mesh.tex_coords(i1);
+            let t2   = mesh.tex_coords(i2);
+            let area = 0.5 * vec3_len(vec3_cross(vec3_sub(v1, v0), vec3_sub(v2, v0)));
+            let n    = vec3_normalize(mat3x3_mul(entity.normal_mat, mesh.face_normals(f))); // TODO: Maybe use face normal based on orientation
             let (u, v) = sample_triangle(uv2.x, uv2.y);
-            let inv_area = mesh.face_inv_area(f);
-            (mat3x4_transform_point(entity.global_mat, vec3_lerp2(v0, v1, v2, u, v)),
-             vec3_normalize(mat3x3_mul(entity.normal_mat, n)),
+            
+            (vec3_lerp2(v0, v1, v2, u, v),
+             n,
              vec2_lerp2(t0, t1, t2, u, v),
-             inv_area / (entity.scale * mesh.num_tris as f32))
+             1 / (area * mesh.num_tris as f32))
         },
         normal = @ |uv| {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
@@ -51,9 +51,13 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
         },
         pdf = @ |uv| {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
-            mesh.face_inv_area(f) / (entity.scale * mesh.num_tris as f32)
-        },
-        scale = entity.scale
+            let (i0, i1, i2) = mesh.triangles(f);
+            let v0   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i0));
+            let v1   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i1));
+            let v2   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i2));
+            let area = 0.5 * vec3_len(vec3_cross(vec3_sub(v1, v0), vec3_sub(v2, v0)));
+            1 / (area * mesh.num_tris as f32)
+        }
     }
 }
 
