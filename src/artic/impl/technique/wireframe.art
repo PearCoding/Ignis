@@ -15,24 +15,26 @@ fn unrap_wireframeraypayload(payload: RayPayload) = WireframeRayPayload {
     distance = payload.components(1),
 };
 
-fn @make_wireframe_renderer() -> Technique {
+fn @make_wireframe_renderer(camera: Camera) -> Technique {
     let offset:f32 = 0.001;
 
-    fn is_edge_hit(hit: Hit, surf: SurfaceElement, add_distance: f32) -> (bool, f32) {
-        let t = vec3_min_value(make_vec3(hit.prim_coords.x, hit.prim_coords.y, clampf(0, 1, 1 - hit.prim_coords.x - hit.prim_coords.y)));
-        let footprint = (hit.distance + add_distance) * 0.017455064; // math_builtins::tan(1 * flt_pi / 180);
-        let c = footprint * math_builtins::sqrt(surf.inv_area);
-        (t <= c, t)
+    fn is_edge_hit(pixel: i32, hit: Hit, surf: SurfaceElement, add_distance: f32) -> (bool, f32) {
+        let (dx, dy)    = camera.differential(pixel);
+        let footprint_u = vec3_len(vec3_cross(dx, dy));
+        let edge_t      = vec3_min_value(make_vec3(hit.prim_coords.x, hit.prim_coords.y, clampf(0, 1, 1 - hit.prim_coords.x - hit.prim_coords.y)));
+        let footprint   = (hit.distance + add_distance) * footprint_u;
+        let cond        = 0.01 * footprint * math_builtins::sqrt(surf.inv_area);
+        (edge_t <= cond, edge_t)
     }
 
     fn @on_hit( _ray: Ray
-        , _pixel: i32
+        , pixel: i32
         , hit: Hit
         , payload: RayPayload
         , surf: SurfaceElement
         , _mat: Material
         ) -> Option[Color] {
-        let (is_edge, t) = is_edge_hit(hit, surf, unrap_wireframeraypayload(payload).distance);
+        let (is_edge, t) = is_edge_hit(pixel, hit, surf, unrap_wireframeraypayload(payload).distance);
         if is_edge { 
             make_option(color_lerp(color_builtins::white, color_builtins::black, t))
         } else {
@@ -41,7 +43,7 @@ fn @make_wireframe_renderer() -> Technique {
     }
 
     fn @on_bounce( ray: Ray
-        , _pixel: i32
+        , pixel: i32
         , hit: Hit
         , _rnd: &mut RndState
         , payload: RayPayload
@@ -49,7 +51,7 @@ fn @make_wireframe_renderer() -> Technique {
         , _mat: Material
         ) -> Option[(Ray, RayPayload)] {
         let wpt = unrap_wireframeraypayload(payload);
-        let (is_edge, _) = is_edge_hit(hit, surf, wpt.distance);
+        let (is_edge, _) = is_edge_hit(pixel, hit, surf, wpt.distance);
         if !is_edge { 
             make_option(
                 make_ray(surf.point, ray.dir, offset, flt_max),

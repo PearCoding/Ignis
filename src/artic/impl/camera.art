@@ -1,3 +1,9 @@
+// Special camera to satisfy issues when using tracing mode
+fn @make_null_camera() = Camera {
+    generate_ray = @ |_, _, _| make_ray(make_vec3(0,0,0), make_vec3(0,0,1), 0, flt_max),
+    differential = @ |_| ( make_vec3(0,0,0), make_vec3(0,0,0) )
+};
+
 // Creates a perspective camera
 fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, fov: f32, tmin: f32, tmax: f32) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
@@ -9,6 +15,12 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, fov:
         generate_ray = @ |_, x, y| {
             let d = vec3_normalize(mat3x3_mul(view, make_vec3(sw * x, sh * y, 1)));
             make_ray(eye, d, tmin, tmax)
+        },
+        differential = @ |_| {
+            (
+                mat3x3_mul(view, make_vec3(sw, 0, 0)),
+                mat3x3_mul(view, make_vec3(0, sh, 0))
+            )
         }
     }
 }
@@ -30,6 +42,13 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, 
             let d               = vec3_normalize(vec3_sub(focus_pos, aperature_pos));
 
             make_ray(vec3_add(eye, aperature_pos), d, tmin, tmax)
+        },
+        differential = @ |_| {
+            (
+                // TODO: We ignore the lens effect here
+                mat3x3_mul(view, make_vec3(sw, 0, 0)),
+                mat3x3_mul(view, make_vec3(0, sh, 0))
+            )
         }
     }
 }
@@ -43,6 +62,12 @@ fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, tmin:
         generate_ray = @ |_, x, y| {
             let pos = vec3_add(mat3x3_mul(view, make_vec3(w * x, h * y, 0)), eye);
             make_ray(pos, dir, tmin, tmax)
+        },
+        differential = @ |_| {
+            (
+                mat3x3_mul(view, make_vec3(1, 0, 0)),
+                mat3x3_mul(view, make_vec3(0, 1, 0))
+            )
         }
     }
 }
@@ -82,20 +107,36 @@ fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, mode: F
         }
     };
 
+    fn compute_d(x:f32,y:f32) -> Vec3 {
+        let nx    = x * xasp;
+        let ny    = y * yasp;
+        let r	  = math_builtins::sqrt(nx * nx + ny * ny);
+		let theta = r * fov / 2;
+
+		let sT = math_builtins::sin(theta);
+        let cT = math_builtins::cos(theta);
+        let sP = if r < flt_eps { 0 } else { ny / r };
+        let cP = if r < flt_eps { 0 } else { nx / r };
+        let nd = make_vec3(sT*cP, sT*sP, cT);
+        vec3_normalize(mat3x3_mul(view, nd))
+    }
+
     Camera {
         generate_ray = @ |_, x, y| {
-            let nx    = x * xasp;
-            let ny    = y * yasp;
-            let r	  = math_builtins::sqrt(nx * nx + ny * ny);
-		    let theta = r * fov / 2;
+            make_ray(eye, compute_d(x,y), tmin, tmax)
+        },
+        differential = @ |pixel| {
+            let x = (pixel % w as i32) as f32 / w;
+            let y = (pixel / w as i32) as f32 / h;
 
-		    let sT = math_builtins::sin(theta);
-            let cT = math_builtins::cos(theta);
-            let sP = if r < flt_eps { 0 } else { ny / r };
-            let cP = if r < flt_eps { 0 } else { nx / r };
-            let nd = make_vec3(sT*cP, sT*sP, cT);
-            let d  = vec3_normalize(mat3x3_mul(view, nd));
-            make_ray(eye, d, tmin, tmax)
+            let d0  = compute_d(x, y);
+            let d1x = compute_d(x + 1 / w, y);
+            let d1y = compute_d(x, y + 1 / h);
+            
+            (
+                vec3_mulf(vec3_sub(d1x, d0), w),
+                vec3_mulf(vec3_sub(d1y, d0), h)
+            )
         }
     }
 }

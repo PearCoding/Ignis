@@ -173,6 +173,9 @@ static const CameraEntry* getCameraEntry(const std::string& name)
 
 std::string LoaderCamera::generate(const LoaderContext& ctx)
 {
+    if (ctx.IsTracer)
+        return "  let camera = make_null_camera(); maybe_unused(camera);";
+
     const auto entry = getCameraEntry(ctx.CameraType);
     if (!entry)
         return {};
@@ -181,6 +184,8 @@ std::string LoaderCamera::generate(const LoaderContext& ctx)
 
     std::stringstream stream;
     entry->Loader(stream, ctx.CameraType, camera, ctx);
+
+    stream << "  maybe_unused(camera);" << std::endl;
 
     return stream.str();
 }

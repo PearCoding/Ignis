@@ -47,7 +47,8 @@ static TechniqueInfo debug_get_info(const std::string&, const std::shared_ptr<Pa
 
 static void wireframe_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
-    stream << "  let technique = make_wireframe_renderer();" << std::endl;
+    // Camera was defined by RequiresExplicitCamera flag
+    stream << "  let technique = make_wireframe_renderer(camera);" << std::endl;
 }
 
 static void wireframe_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
@@ -55,6 +56,13 @@ static void wireframe_header_loader(std::ostream& stream, const std::string&, co
     constexpr int C = 1 /* Depth */ + 1 /* Distance */;
     stream << "static RayPayloadComponents = " << C << ";" << std::endl
            << "fn init_raypayload() = wrap_wireframeraypayload(WireframeRayPayload { depth = 1, distance = 0 });" << std::endl;
+}
+
+static TechniqueInfo wireframe_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+{
+    TechniqueInfo info;
+    info.Variants[0].RequiresExplicitCamera = true; // We make use of the camera differential!
+    return info;
 }
 
 /////////////////////////
@@ -310,7 +318,7 @@ static const struct TechniqueEntry {
     { "debug", debug_get_info, debug_body_loader, technique_empty_header_loader },
     { "ppm", ppm_get_info, ppm_body_loader, ppm_header_loader },
     { "photonmapper", ppm_get_info, ppm_body_loader, ppm_header_loader },
-    { "wireframe", technique_empty_get_info, wireframe_body_loader, wireframe_header_loader },
+    { "wireframe", wireframe_get_info, wireframe_body_loader, wireframe_header_loader },
     { "", nullptr, nullptr, nullptr }
 };
 

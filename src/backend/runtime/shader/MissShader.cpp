@@ -1,6 +1,7 @@
 #include "MissShader.h"
 #include "Logger.h"
 #include "loader/Loader.h"
+#include "loader/LoaderCamera.h"
 #include "loader/LoaderLight.h"
 #include "loader/LoaderMedium.h"
 #include "loader/LoaderTechnique.h"
@@ -34,6 +35,10 @@ std::string MissShader::setup(LoaderContext& ctx)
 
     if (ctx.CurrentTechniqueVariantInfo().UsesMedia)
         stream << LoaderMedium::generate(tree) << std::endl;
+
+    // Include camera if necessary
+    if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
+        stream << LoaderCamera::generate(ctx) << std::endl;
 
     stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
 

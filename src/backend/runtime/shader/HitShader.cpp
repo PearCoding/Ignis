@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include "loader/Loader.h"
 #include "loader/LoaderBSDF.h"
+#include "loader/LoaderCamera.h"
 #include "loader/LoaderLight.h"
 #include "loader/LoaderMedium.h"
 #include "loader/LoaderTechnique.h"
@@ -67,6 +68,10 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
         stream << "  let shader : Shader = @|ray, hit, surf| make_material(" << mat_id << ", bsdf_" << ShaderUtils::escapeIdentifier(material.BSDF) << "(ray, hit, surf), medium_interface);" << std::endl
                << std::endl;
     }
+
+    // Include camera if necessary
+    if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
+        stream << LoaderCamera::generate(ctx) << std::endl;
 
     stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
 
