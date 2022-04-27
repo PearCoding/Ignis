@@ -533,7 +533,7 @@ TriMesh TriMesh::MakeIcoSphere(const Vector3f& center, float radius, uint32 subd
         const auto& N = mesh.normals[i];
 
         float theta = std::acos(N.z());
-        float phi   = std::atan2(N.y(), N.x());
+        float phi   = std::atan2(-N.x(), N.y());
 
         if (phi < 0)
             phi += 2 * Pi;
