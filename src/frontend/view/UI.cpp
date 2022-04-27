@@ -311,6 +311,10 @@ public:
                         case SDLK_0:
                             handlePoseInput(9, capture, cam);
                             break;
+                        case SDLK_o:
+                            cam.snap_up();
+                            iter = 0;
+                            break;
                         case SDLK_r:
                             PoseResetRequest = true;
                             break;
@@ -891,6 +895,7 @@ static void handleHelp()
   The image will be saved in the current working directory.
 - *I* to toggle the inspector tool.
 - *R* to reset to initial view.
+- *O* to snap the up direction to the closest unit axis.
 - *P* to pause current rendering. Also implies an interaction lock.
 - *T* to toggle automatic tonemapping.
 - *G* to reset tonemapping properties.

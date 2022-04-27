@@ -63,5 +63,26 @@ struct Camera {
     {
         Eye += Right * x + Up * y + Direction * z;
     }
+
+    // Snap up such that it is in some unit direction
+    inline void snap_up()
+    {
+        Vector3f::Index index = 0;
+        Up.cwiseAbs().maxCoeff(&index);
+        float sign = std::copysignf(1, Up[index]);
+
+        switch (index) {
+        case 0:
+            update_dir(Direction, sign * Vector3f::UnitX());
+            break;
+        case 1:
+            update_dir(Direction, sign * Vector3f::UnitY());
+            break;
+        default:
+        case 2:
+            update_dir(Direction, sign * Vector3f::UnitZ());
+            break;
+        }
+    }
 };
 } // namespace IG
