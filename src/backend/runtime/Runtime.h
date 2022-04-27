@@ -16,6 +16,7 @@ struct LoaderOptions;
 
 struct RuntimeOptions {
     bool IsTracer        = false;
+    bool IsInteractive   = false;
     bool DumpShader      = false;
     bool DumpShaderFull  = false;
     bool AcquireStats    = false;
@@ -83,7 +84,7 @@ public:
     inline const std::string& technique() const { return mTechniqueName; }
 
     /// Return true if the runtime is used in tracing mode
-    inline bool isTrace() const { return mIsTrace; }
+    inline bool isTrace() const { return mOptions.IsTracer; }
 
     /// The target the runtime is using
     inline Target target() const { return mTarget; }
@@ -144,7 +145,6 @@ private:
 
     CameraOrientation mInitialCameraOrientation;
 
-    bool mIsTrace;
     bool mAcquireStats;
 
     std::string mTechniqueName;

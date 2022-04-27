@@ -19,6 +19,8 @@ class ProgramOptions {
 public:
     ProgramOptions(int argc, char** argv, ApplicationType type, const std::string& desc);
 
+    ApplicationType Type;
+
     // If true, program options already handled standard stuff. Just exit the application
     bool ShouldExit = false;
 

@@ -80,6 +80,8 @@ public:
 
 ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, const std::string& desc)
 {
+    Type = type;
+
     CLI::App app{ desc, argc >= 1 ? argv[0] : "unknown" };
 
     app.positionals_at_end(false);
@@ -155,6 +157,9 @@ void ProgramOptions::populate(RuntimeOptions& options) const
 {
     IG_LOGGER.setVerbosity(VerbosityLevel);
     IG_LOGGER.enableAnsiTerminal(!NoColor);
+
+    options.IsTracer      = Type == ApplicationType::Trace;
+    options.IsInteractive = Type == ApplicationType::View;
 
     options.DesiredTarget  = Target;
     options.RecommendCPU   = AutodetectCPU;

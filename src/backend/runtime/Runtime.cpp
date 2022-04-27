@@ -51,11 +51,13 @@ static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts
     lopts.CameraType = camera_type;
 }
 
-static inline size_t recommendSPI(Target target, size_t width, size_t height)
+static inline size_t recommendSPI(Target target, size_t width, size_t height, bool interactive)
 {
     // The "best" case was measured with a 1000 x 1000. It does depend on the scene content though, but thats ignored here
-    const size_t spi_f = isCPU(target) ? 2 : 8;
-    const size_t spi   = (size_t)std::ceil(spi_f / ((width / 1000.0f) * (height / 1000.0f)));
+    size_t spi_f = isCPU(target) ? 2 : 8;
+    if (interactive)
+        spi_f /= 2;
+    const size_t spi = (size_t)std::ceil(spi_f / ((width / 1000.0f) * (height / 1000.0f)));
     return std::max<size_t>(1, std::min<size_t>(64, spi));
 }
 
@@ -80,7 +82,6 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mFilmWidth(0)
     , mFilmHeight(0)
     , mInitialCameraOrientation()
-    , mIsTrace(opts.IsTracer)
     , mAcquireStats(opts.AcquireStats)
     , mTechniqueName()
     , mTechniqueInfo()
@@ -174,7 +175,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     LoaderOptions lopts;
     lopts.FilePath = path;
     lopts.Target   = mTarget;
-    lopts.IsTracer = mIsTrace;
+    lopts.IsTracer = mOptions.IsTracer;
     lopts.Scene    = std::move(scene);
 
     // Extract technique
@@ -189,7 +190,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     setup_camera(lopts, mOptions);
 
     if (mOptions.SPI == 0)
-        mSamplesPerIteration = recommendSPI(mTarget, mFilmWidth, mFilmHeight);
+        mSamplesPerIteration = recommendSPI(mTarget, mFilmWidth, mFilmHeight, mOptions.IsInteractive);
     else
         mSamplesPerIteration = mOptions.SPI;
 
@@ -214,7 +215,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
 
 void Runtime::step()
 {
-    if (IG_UNLIKELY(mIsTrace)) {
+    if (IG_UNLIKELY(mOptions.IsTracer)) {
         IG_LOG(L_ERROR) << "Trying to use step() in a trace driver!" << std::endl;
         return;
     }
@@ -259,7 +260,7 @@ void Runtime::stepVariant(size_t variant)
 
 void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
 {
-    if (IG_UNLIKELY(!mIsTrace)) {
+    if (IG_UNLIKELY(!mOptions.IsTracer)) {
         IG_LOG(L_ERROR) << "Trying to use trace() in a camera driver!" << std::endl;
         return;
     }
