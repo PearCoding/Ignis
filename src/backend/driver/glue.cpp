@@ -219,7 +219,7 @@ public:
         const auto it = thread_data.emplace_back(std::make_unique<CPUData>());
         sThreadID     = std::distance(thread_data.begin(), it);
 
-        IG_LOG(IG::L_DEBUG) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " with id 0x" << std::hex << sThreadID << std::endl;
+        IG_LOG(IG::L_DEBUG) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " with id 0x" << std::hex << sThreadID << std::dec << std::endl;
     }
 
     inline CPUData* getThreadData()
