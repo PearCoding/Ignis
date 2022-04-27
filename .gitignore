@@ -1,8 +1,14 @@
 build/
+build1/
 CMakeSettings.json
 
 # Visual Studio stuff
+.vscode/
 .vs/
+**/.vscode/
+
+# Apple stuff
+.DS_Store
 
 # Compiled Object files
 *.slo

@@ -25,6 +25,7 @@ set(_def_search_paths
   /opt/csw # Blastwave
   /opt
   /usr
+  # /usr/local/Cellar
   "${CMAKE_LIBRARY_PATH}"
   "${TBB_DIR}"
 )
@@ -37,13 +38,17 @@ find_path(TBB_INCLUDE_DIR tbb/tbb_stddef.h
   PATHS ${_def_search_paths}
 )
 
-if(NOT TBB_INCLUDE_DIR)
+message(STATUS "FIRST SEARCH" ${TBB_INCLUDE_DIR})
+
+if(TBB_INCLUDE_DIR)
   find_path(TBB_INCLUDE_DIR oneapi/tbb/version.h
     HINTS
       ENV TBB_HOME
     PATH_SUFFIXES include/ local/include/
     PATHS ${_def_search_paths}
   )
+
+message(STATUS "SECOND SEARCH" ${TBB_INCLUDE_DIR})
 
   if(TBB_INCLUDE_DIR)
     set(TBB_ONEAPI TRUE)
@@ -64,7 +69,6 @@ get_filename_component(_TBB_ROOT_DIR ${TBB_INCLUDE_DIR} DIRECTORY)
 # Extract the version
 if(TBB_INCLUDE_DIR)
   set(TBB_INCLUDE_DIRS "${TBB_INCLUDE_DIR}")
-
   file(READ "${TBB_VERSION_FILE}" _tbb_version_file)
   string(REGEX REPLACE ".*#define TBB_VERSION_MAJOR ([0-9]+).*" "\\1"
       TBB_VERSION_MAJOR "${_tbb_version_file}")

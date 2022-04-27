@@ -128,9 +128,10 @@ if(IG_HAS_UI)
 endif()
 
 if(IG_WITH_PYTHON_API)
-	find_package (Python3 COMPONENTS Development)
+	find_package (Python COMPONENTS Interpreter Development)
 	if(Python3_FOUND)
 		set(IG_HAS_PYTHON_API ON)
+		message(STATUS "Found python3")
 	endif()
 endif()
 
@@ -147,8 +148,11 @@ if(MSVC)
 else()
   add_compile_options(-Wall -Wextra -pedantic)
 endif()
+
+
+message(STATUS ${CMAKE_CURRENT_BINARY_DIR})
 # Traverse to underlying directories
-add_subdirectory(src)
+add_subdirectory(src) 
 
 if(IG_WITH_DOCUMENTATION)
 	add_subdirectory(docs)
