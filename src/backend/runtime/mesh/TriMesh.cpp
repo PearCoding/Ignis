@@ -24,6 +24,11 @@ void TriMesh::fixNormals(bool* hasBadNormals)
 
 void TriMesh::flipNormals()
 {
+    // Change orientation of triangle
+    const size_t inds = indices.size();
+    for (size_t i = 0; i < inds; i += 4)
+        std::swap(indices[i + 1], indices[i + 2]);
+
     std::transform(face_normals.begin(), face_normals.end(), face_normals.begin(),
                    [](const StVector3f& n) { return -n; });
 
@@ -158,9 +163,8 @@ void TriMesh::computeVertexNormals()
         n2 += n;
     }
 
-    for (auto& n : normals) {
+    for (auto& n : normals)
         n.normalize();
-    }
 }
 
 void TriMesh::makeTexCoordsZero()
@@ -215,12 +219,10 @@ void TriMesh::setupFaceNormalsAsVertexNormals()
 struct TransformCache {
     const Matrix4f TransformMatrix;
     const Matrix3f NormalMatrix;
-    const float ScaleFactor;
 
     inline explicit TransformCache(const Transformf& t)
         : TransformMatrix(t.matrix())
         , NormalMatrix(TransformMatrix.block<3, 3>(0, 0).transpose().inverse())
-        , ScaleFactor(std::abs(NormalMatrix.determinant()))
     {
     }
 
@@ -239,7 +241,7 @@ struct TransformCache {
 
 void TriMesh::transform(const Transformf& t)
 {
-    TransformCache transform = TransformCache(t);
+    const TransformCache transform = TransformCache(t);
     if (transform.TransformMatrix.isIdentity())
         return;
 
@@ -247,12 +249,8 @@ void TriMesh::transform(const Transformf& t)
         v = transform.applyTransform(v);
     for (auto& n : normals)
         n = transform.applyNormal(n);
-    for (auto& n : face_normals)
-        n = transform.applyNormal(n);
 
-    const float inv_sf = transform.ScaleFactor;
-    for (auto& s : face_inv_area)
-        s *= inv_sf;
+    computeFaceNormals();
 }
 
 bool TriMesh::isAPlane() const
@@ -523,14 +521,36 @@ TriMesh TriMesh::MakeIcoSphere(const Vector3f& center, float radius, uint32 subd
     }
 
     mesh.computeFaceNormals();
-    mesh.computeVertexNormals();
-    mesh.makeTexCoordsZero(); // TODO
+
+    // Vertices are layed out in spherical orientation, use this for the normals
+    mesh.normals.resize(mesh.vertices.size());
+    for (size_t i = 0; i < mesh.vertices.size(); ++i)
+        mesh.normals[i] = mesh.vertices[i].normalized();
+
+    // Compute tex coords based on spherical mapping
+    mesh.texcoords.resize(mesh.normals.size());
+    for (size_t i = 0; i < mesh.normals.size(); ++i) {
+        const auto& N = mesh.normals[i];
+
+        float theta = std::acos(N.z());
+        float phi   = std::atan2(N.y(), N.x());
+
+        if (phi < 0)
+            phi += 2 * Pi;
+
+        float u = phi / (2 * Pi);
+        float v = theta / Pi;
+
+        mesh.texcoords[i] = StVector2f(u, v);
+    }
 
     // Apply transformation
-    std::transform(mesh.vertices.begin(), mesh.vertices.end(), mesh.vertices.begin(),
-                   [=](const StVector3f& vertex) {
-                       return center + vertex * radius;
-                   });
+    Transformf transform = Transformf::Identity();
+    if (!center.isZero())
+        transform.translate(center);
+    if (radius != 1)
+        transform.scale(radius);
+    mesh.transform(transform);
 
     return mesh;
 }

@@ -37,6 +37,11 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         @|c: Color| c
     };
 
+    // Only partially evaluate if number of lights is reasonable
+    fn @(num_lights < 10) get_light(id : i32) -> Light {
+        @lights(id)
+    }
+
     fn @on_shadow( ray: Ray
                  , _pixel: i32
                  , _hit: Hit
@@ -54,8 +59,8 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
             return(ShadowRay::None)
         }
 
-        let light_id      = pick_light(rnd, num_lights);
-        let light         = @lights(light_id);
+        let light_id      = pick_light_id(rnd, num_lights);
+        let light         = get_light(light_id);
         let sample_direct = light.sample_direct;
         let light_sample  = @sample_direct(rnd, surf);
         
