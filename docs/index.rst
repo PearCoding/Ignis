@@ -1,7 +1,7 @@
 Welcome to Ignis's documentation!
 =================================
 
-.. image:: screenshot.jpg
+.. image:: screenshot.jpeg
     :alt: Screenshot of the Ignis frontend `igview`.
     :width: 50%
     :align: center
