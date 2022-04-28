@@ -141,7 +141,7 @@ Rough dielectric (:monosp:`roughdielectric`)
 
 .. subfigstart::
 
-.. figure::  images/mat_rough_dielectric.jpg
+.. figure::  images/mat_roughdielectric.jpg
   :width: 90%
   :align: center
   
