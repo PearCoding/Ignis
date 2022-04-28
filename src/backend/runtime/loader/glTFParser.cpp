@@ -604,9 +604,6 @@ static void loadTextures(Scene& scene, const tinygltf::Model& model, const std::
             const tinygltf::Image& img = model.images[tex.source];
             img_path                   = exportImage(img, model, tex.source, cache_dir / "images");
 
-            if (img_path.is_relative())
-                img_path = directory / img_path;
-
             loaded_images[tex.source] = img_path;
         }
 

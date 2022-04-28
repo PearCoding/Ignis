@@ -11,6 +11,10 @@ Some scenes rendered with Ignis. Acquired from https://benedikt-bitterli.me/reso
 
 ![Livingroom scene by Jay-Artist](docs/gallery2.jpeg)
 
+A sample scene from https://github.com/KhronosGroup/glTF-Sample-Models directly rendered within `igview`.
+
+![DragonAttenuation scene by Stanford Scan and Morgan McGuire's Computer Graphics Archive](docs/gallery3.jpeg)
+
 ## Dependencies
 
  - AnyDSL <https://github.com/AnyDSL/anydsl>
