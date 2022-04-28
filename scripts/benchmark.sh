@@ -3,14 +3,11 @@
 REGEX="\# ([0-9.]+)\/([0-9.]+)\/([0-9.]+)"
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
-BUILD_DIR=${SCRIPT_DIR}/../build/Release
-if [ ! -d "$BUILD_DIR" ]; then
-    BUILD_DIR=${SCRIPT_DIR}/../build
-fi
+
+source $SCRIPT_DIR/../source.sh
 
 quiet=false
 scene=${SCRIPT_DIR}/../scenes/diamond_scene.json
-executable=${BUILD_DIR}/bin/igcli
 spp=64
 num_iterations=10
 warmup_iterations=2
@@ -57,7 +54,7 @@ for ((i = 0; i < $warmup_iterations; i++)); do
     if [ "$quiet" = false ]; then
         echo $(expr $i + 1)
     fi
-    $executable ${args} >/dev/null
+    igcli ${args} >/dev/null
 done
 
 # Setup counters
@@ -69,11 +66,12 @@ max=0
 if [ "$quiet" = false ]; then
     echo "Benchmark..."
 fi
+
 for ((i = 0; i < $num_iterations; i++)); do
     if [ "$quiet" = false ]; then
         echo $(expr $i + 1)
     fi
-    output=$($executable ${args})
+    output=$(igcli ${args})
     output=$(echo "${output}" | grep -Po "$REGEX")
     output=${output:2}
     matches=(${output//\// })

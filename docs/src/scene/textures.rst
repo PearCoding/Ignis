@@ -27,16 +27,18 @@ Image texture (:monosp:`image`)
    - |string|
    - *None*
    - Path to a valid image file.
-
  * - filter_type
    - |string|
    - "bilinear"
    - The filter type to be used. Has to be one of the following: ["bilinear", "nearest"].
-
  * - wrap_mode
    - |string|
    - "repeat"
    - The wrap method to be used. Has to be one of the following: ["repeat", "mirror", "clamp"].
+ * - transform
+   - |transform|
+   - Identity
+   - Optional 2d transformation applied to texture coordinates.
 
 Checkerboard (:monosp:`checkerboard`)
 ---------------------------------------------
@@ -47,8 +49,25 @@ Checkerboard (:monosp:`checkerboard`)
    - |color|
    - (0,0,0), (1,1,1)
    - The colors to use in the checkerboard.
-
  * - scale_x, scale_y
    - |number|
    - 1, 1
    - Numbers of grids in a normalized frame [0,0]x[1,1].
+ * - transform
+   - |transform|
+   - Identity
+   - Optional 2d transformation applied to texture coordinates.
+
+Texture transform (:monosp:`transform`)
+---------------------------------------------
+
+.. objectparameters::
+
+ * - texture
+   - |color|
+   - None
+   - The texture the transform is applied to.
+ * - transform
+   - |transform|
+   - Identity
+   - 2d transformation applied to texture coordinates.

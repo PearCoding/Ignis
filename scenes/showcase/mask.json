@@ -1,0 +1,12 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"textures": [
+		{"type":"checkerboard", "name":"weight", "scale_x":32, "scale_y":16, "color0":0.1, "color1":0.9}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name":"first"},
+		{"type":"mask", "name": "mat-Sphere", "bsdf": "first", "weight":"weight.r"}
+	]
+}

@@ -538,7 +538,8 @@ Scene SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
         return Scene();
     }
 
-    return InternalSceneParser::loadFromJSON(*this, std::filesystem::canonical(path.parent_path()), doc);
+    const std::filesystem::path parent = path.has_parent_path() ? std::filesystem::canonical(path.parent_path()) : std::filesystem::path{};
+    return InternalSceneParser::loadFromJSON(*this, parent, doc);
 }
 
 Scene SceneParser::loadFromString(const char* str, bool& ok)
