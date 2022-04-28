@@ -18,8 +18,8 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, fov:
         },
         differential = @ |_| {
             (
-                mat3x3_mul(view, make_vec3(sw, 0, 0)),
-                mat3x3_mul(view, make_vec3(0, sh, 0))
+                vec3_mulf(right, sw),
+                vec3_mulf(up, sh)
             )
         }
     }
@@ -46,27 +46,28 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, 
         differential = @ |_| {
             (
                 // TODO: We ignore the lens effect here
-                mat3x3_mul(view, make_vec3(sw, 0, 0)),
-                mat3x3_mul(view, make_vec3(0, sh, 0))
+                vec3_mulf(right, sw),
+                vec3_mulf(up, sh)
             )
         }
     }
 }
 
 // Creates an orthogonal camera
-fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, tmin: f32, tmax: f32) -> Camera {
+fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, scale: f32, tmin: f32, tmax: f32) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
-    let view  = make_mat3x3(right, up, dir);
+    let sw    = scale;
+    let sh    = sw * h / w;
 
     Camera {
         generate_ray = @ |_, x, y| {
-            let pos = vec3_add(mat3x3_mul(view, make_vec3(w * x, h * y, 0)), eye);
+            let pos = vec3_add(vec3_add(vec3_mulf(right, sw * x), vec3_mulf(up, sh * y)), eye);
             make_ray(pos, dir, tmin, tmax)
         },
         differential = @ |_| {
             (
-                mat3x3_mul(view, make_vec3(1, 0, 0)),
-                mat3x3_mul(view, make_vec3(0, 1, 0))
+                right,
+                up
             )
         }
     }

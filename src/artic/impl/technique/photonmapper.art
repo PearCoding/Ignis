@@ -259,8 +259,14 @@ fn @ppm_compute_radius(max_radius: f32, iter: i32) -> f32 {
     math_builtins::fmax(radius, 1e-5:f32)
 }
 
-fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, radius: f32, aovs: AOVTable, light_cache: LightCache) -> Technique {
+fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, radius: f32, aovs: AOVTable, clamp_value: f32, light_cache: LightCache) -> Technique {
     let offset : f32  = 0.001;
+
+    let handle_color = if clamp_value > 0 {
+        @|c: Color| color_saturate(c, clamp_value)
+    } else {
+        @|c: Color| c
+    };
 
     let aov_di      = @aovs(AOV_PPM_DIRECT);
     let aov_merging = @aovs(AOV_PPM_MERGING);
@@ -293,7 +299,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
                 let contrib = color_mul(pt.contrib, emit.intensity);
                 
                 aov_di.splat(pixel, contrib);
-                return(make_option(contrib))
+                return(make_option(handle_color(contrib)))
             }
         }
 
@@ -322,7 +328,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
 
                 let contrib = color_mul(pt.contrib, color_divf(gather_contrib, light_cache.max_count as f32));
                 aov_merging.splat(pixel, contrib);
-                return(make_option(contrib))
+                return(make_option(handle_color(contrib)))
             }
         }
 
@@ -355,7 +361,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
 
         if inflights > 0 {
             aov_di.splat(pixel, color);
-            make_option(color)
+            make_option(handle_color(color))
         } else {
             Option[Color]::None
         }

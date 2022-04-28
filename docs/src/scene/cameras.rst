@@ -5,8 +5,6 @@ Ignis contains several useful camera models. Only one camera can be specified pe
 The camera is specified in the :monosp:`camera` block with a :monosp:`type` listed in this section below.
 The actual image size is specified in the :monosp:`film` block.
 
-.. NOTE:: Currently there is no way to specifiy type-specific parameters for camera models and film types.
-
 .. code-block:: javascript
     
     {
@@ -25,16 +23,58 @@ The actual image size is specified in the :monosp:`film` block.
     }
 
 Perspective Camera (:monosp:`perspective`)
----------------------------------------------
+------------------------------------------
 
-// TODO
+.. objectparameters::
+
+ * - fov
+   - |number|
+   - 60
+   - Field of view given in degrees.
+
+ * - near_clip, far_clip
+   - |number|
+   - 0, inf
+   - Near and far clip of the camera.
+
+ * - focal_length
+   - |number|
+   - 1
+   - Focal length given in scene units. Only useful if aperture_radius != 0.
+
+ * - aperture_radius
+   - |number|
+   - 0
+   - Aperture radius in scene units. 0 disables depth of field.
+   
 
 Orthogonal Camera (:monosp:`orthogonal`)
----------------------------------------------
+----------------------------------------
 
-// TODO
+.. objectparameters::
 
-Fisheye Camera (:monosp:`fisheye`)
----------------------------------------------
+ * - near_clip, far_clip
+   - |number|
+   - 0, inf
+   - Near and far clip of the camera.
 
-// TODO
+ * - scale
+   - |number|
+   - 1
+   - Scale factor given in scene units.
+
+
+Fisheye Camera (:monosp:`fisheye`, :monosp:`fishlens`)
+------------------------------------------------------
+
+.. objectparameters::
+
+ * - near_clip, far_clip
+   - |number|
+   - 0, inf
+   - Near and far clip of the camera.
+
+ * - mode
+   - |string|
+   - "circular"
+   - Clipping mode. Must be one of "circular", "cropped" or "full".

@@ -114,10 +114,47 @@ Box (:monosp:`box`)
    - Identity
    - Apply given transformation to shape.
 
-.. _shape-sphere:
+.. _shape-icosphere:
 
-Sphere (:monosp:`sphere`)
--------------------------
+Ico-Sphere (:monosp:`icosphere`, :monosp:`sphere`)
+--------------------------------------------------
+
+.. objectparameters::
+
+ * - radius
+   - |number|
+   - 1
+   - Radius of the sphere.
+
+ * - center
+   - |vector|
+   - (0,0,0)
+   - The origin of the box.
+
+ * - subdivions
+   - |int|
+   - 4
+   - Number of subdivions used.
+
+ * - flip_normals
+   - |bool|
+   - false
+   - Flip the normals.
+
+ * - face_normals
+   - |bool|
+   - false
+   - Use normals from triangles as vertex normals. This will let the object look *hard*.
+
+ * - transform
+   - |transform|
+   - Identity
+   - Apply given transformation to shape.
+
+.. _shape-uvsphere:
+
+UV-Sphere (:monosp:`uvsphere`)
+------------------------------
 
 .. objectparameters::
 

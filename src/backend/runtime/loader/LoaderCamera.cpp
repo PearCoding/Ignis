@@ -56,7 +56,7 @@ static void camera_perspective(std::ostream& stream, const std::string& name, co
            << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << ShaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
            << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << ShaderUtils::inlineVector(orientation.Up) << ");" << std::endl;
 
-    if (std::abs(focal_length - 1) <= FltEps && aperture_radius <= FltEps) {
+    if (aperture_radius <= FltEps) {
         stream << "  let camera = make_perspective_camera(camera_eye, " << std::endl
                << "    camera_dir, " << std::endl
                << "    camera_up, " << std::endl
@@ -93,8 +93,9 @@ static CameraOrientation camera_orthogonal_orientation(const std::string&, const
 
 static void camera_orthogonal(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& camera, const LoaderContext& ctx)
 {
-    float tmin = camera ? camera->property("near_clip").getNumber(0) : 0;
-    float tmax = camera ? camera->property("far_clip").getNumber(std::numeric_limits<float>::max()) : std::numeric_limits<float>::max();
+    float tmin  = camera ? camera->property("near_clip").getNumber(0) : 0;
+    float tmax  = camera ? camera->property("far_clip").getNumber(std::numeric_limits<float>::max()) : std::numeric_limits<float>::max();
+    float scale = camera ? camera->property("scale").getNumber(1) : 1;
 
     if (tmax < tmin)
         std::swap(tmin, tmax);
@@ -110,6 +111,7 @@ static void camera_orthogonal(std::ostream& stream, const std::string& name, con
            << "    camera_up, " << std::endl
            << "    settings.width as f32, " << std::endl
            << "    settings.height as f32, " << std::endl
+           << "    " << scale << ", " << std::endl
            << "    " << tmin << ", " << std::endl
            << "    " << tmax << ");" << std::endl;
 }
@@ -155,8 +157,8 @@ static const struct CameraEntry {
 } _generators[] = {
     { "perspective", camera_perspective, camera_perspective_orientation },
     { "orthogonal", camera_orthogonal, camera_orthogonal_orientation },
-    { "fishlens", camera_fishlens, camera_orthogonal_orientation /* For now */ },
-    { "fisheye", camera_fishlens, camera_orthogonal_orientation /* For now */ },
+    { "fishlens", camera_fishlens, camera_perspective_orientation /* For now */ },
+    { "fisheye", camera_fishlens, camera_perspective_orientation /* For now */ },
     { "", nullptr, nullptr }
 };
 

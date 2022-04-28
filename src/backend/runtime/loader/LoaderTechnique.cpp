@@ -148,7 +148,6 @@ static void volpath_body_loader(std::ostream& stream, const std::string&, const 
     const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
 
-
     stream << "  let aovs = @|_id:i32| make_empty_aov_image();" << std::endl;
     stream << "  let technique = make_volume_path_renderer(" << max_depth << ", num_lights, lights, media, aovs, " << clamp_value << ");" << std::endl;
 }
@@ -243,9 +242,10 @@ static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Pars
 
 static void ppm_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
 {
-    const int max_depth = technique ? technique->property("max_depth").getInteger(8) : 8;
-    const float radius  = technique ? technique->property("radius").getNumber(0.01f) : 0.01f;
-    bool is_lighttracer = ctx.CurrentTechniqueVariant == 0;
+    const int max_depth     = technique ? technique->property("max_depth").getInteger(8) : 8;
+    const float radius      = technique ? technique->property("radius").getNumber(0.01f) : 0.01f;
+    const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
+    bool is_lighttracer     = ctx.CurrentTechniqueVariant == 0;
 
     if (is_lighttracer) {
         stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
@@ -282,7 +282,7 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
     if (is_lighttracer)
         stream << "  let technique = make_ppm_light_renderer(" << max_depth << ", aovs, light_cache);" << std::endl;
     else
-        stream << "  let technique = make_ppm_path_renderer(" << max_depth << ", num_lights, lights, ppm_radius, aovs, light_cache);" << std::endl;
+        stream << "  let technique = make_ppm_path_renderer(" << max_depth << ", num_lights, lights, ppm_radius, aovs, " << clamp_value << ", light_cache);" << std::endl;
 }
 
 static void ppm_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)

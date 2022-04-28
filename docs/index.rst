@@ -30,6 +30,7 @@ Table of Contents:
    src/scene/shapes
    src/scene/entities
    src/scene/bsdfs
+   src/scene/media
    src/scene/lights
    src/scene/textures
    src/scene/cameras
