@@ -212,16 +212,20 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                  , mat: Material
                  ) -> Option[(Ray, RayPayload)] {
         let pt = unwrap_ptraypayload(payload);
+        
+        if pt.depth + 1 > max_path_len {
+            return(Option[(Ray, RayPayload)]::None)
+        }
 
         // Bounce
         let out_dir = vec3_neg(ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
-            let rr_prob = russian_roulette_pbrt(color_mulf(pt.contrib, pt.eta * pt.eta), 0.95);
-            if pt.depth + 1 > max_path_len || randf(rnd) >= rr_prob {
+            let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+            let rr_prob = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
+            if randf(rnd) >= rr_prob {
                 return(Option[(Ray, RayPayload)]::None)
             }
 
-            let contrib     = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
             let mis         = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
             let new_contrib = color_mulf(contrib, 1 / rr_prob);
 

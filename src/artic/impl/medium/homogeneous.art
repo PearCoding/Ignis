@@ -33,7 +33,7 @@ fn @make_homogeneous_medium(sigma_a: Color, sigma_s: Color, phase: PhaseFunction
                 let dir_u = vec3_sub(p, p_start);
                 let dist  = vec3_len(dir_u);
 
-                let on_surf = vec3_len2(vec3_sub(p_end, p)) <= eps;
+                let on_surf = vec3_len2(vec3_sub(p_end, p)) <= eps * eps;
                 math_builtins::exp(-sigma_t_p * dist) * if !on_surf { sigma_t_p } else { 1 }
             },
             sample   = @|rnd, p_start, p_end| {

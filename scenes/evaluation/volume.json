@@ -1,0 +1,34 @@
+{
+	"technique": {
+		"type": "volpath",
+		"max_depth": 24
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 60,
+		"near_clip": 0.01,
+		"far_clip": 100,
+		"transform": { "lookat": {"origin":[2, 0, 0], "direction": [-1,0,0], "up":[0,0,-1]} }
+	},
+	"film": {
+		"size": [256, 256]
+	},
+	"bsdfs": [
+		{"type":"diffuse", "name": "room", "reflectance":[0.95, 0.95, 0.95]},
+		{"type":"passthrough", "name": "null"}
+	],
+	"media": [
+		{"type":"constant", "name": "volume", "sigma_a": [0.65, 1, 0.75], "sigma_s": 0, "g": 0}
+	],
+	"shapes": [
+		{"type":"obj", "name":"Room", "filename":"../meshes/Room.obj"},
+		{"type":"ply", "name":"Volume", "filename":"../meshes/SphereTri.ply"}
+	],
+	"entities": [
+		{"name":"Room","shape":"Room", "bsdf":"room"},
+		{"name":"Volume","shape":"Volume", "bsdf":"null", "inner_medium":"volume", "transform":{"scale":0.5}}
+	],
+	"lights": [
+		{"type":"constant", "name":"Sky", "radiance": [1,1,1]}
+	]
+}

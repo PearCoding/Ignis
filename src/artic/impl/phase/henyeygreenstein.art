@@ -1,4 +1,6 @@
 fn @make_henyeygreenstein_phase(g: f32) -> PhaseFunction {
+    let is_iso = ?g && math_builtins::fabs(g) <= 1e-3;
+
     let hg = @|cosTheta : f32| {
         let denom = 1 + g * g + 2 * g * cosTheta;
         safe_div(flt_inv_pi * (1 - g * g), 4 * denom * math_builtins::sqrt(denom))
@@ -7,7 +9,7 @@ fn @make_henyeygreenstein_phase(g: f32) -> PhaseFunction {
     PhaseFunction {
         eval   = @ |in_dir, out_dir| hg(absolute_cos(in_dir, out_dir)),
         pdf    = @ |in_dir, out_dir| {
-            if g <= 1e-3 {
+            if is_iso {
                 // Isotropic
                 uniform_sphere_pdf()
             } else {
@@ -16,10 +18,10 @@ fn @make_henyeygreenstein_phase(g: f32) -> PhaseFunction {
             }
         },
         sample = @ |rnd, out_dir| {
-            if g <= 1e-3 {
+            if is_iso {
                 // Isotropic
                 let sample = sample_uniform_sphere(randf(rnd), randf(rnd));
-                make_phase_sample(sample.dir, sample.pdf, hg(absolute_cos(sample.dir, out_dir)) / sample.pdf)
+                make_phase_sample(sample.dir, sample.pdf, 1)
             } else {
                 // Anisotropic
                 let sqrTerm  = (1 - g * g) / (1 + g - 2 * g * randf(rnd));
