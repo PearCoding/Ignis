@@ -287,11 +287,11 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
 
 static void ppm_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
 {
-    constexpr int C          = 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */ + 1 /* Light/Radius */;
+    constexpr int C          = 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */ + 1 /* Light/Radius */ + 1 /* PathType */;
     const size_t max_photons = std::max(100, technique ? technique->property("photons").getInteger(1000000) : 1000000);
 
     stream << "static RayPayloadComponents = " << C << ";" << std::endl
-           << "fn init_raypayload() = wrap_ppmraypayload(PPMRayPayload { contrib = color_builtins::white, depth = 1, eta = 1, radius_or_light = 0 });" << std::endl
+           << "fn init_raypayload() = init_ppm_raypayload();" << std::endl
            << "static PPMPhotonCount = " << max_photons << ":i32;" << std::endl;
 }
 
