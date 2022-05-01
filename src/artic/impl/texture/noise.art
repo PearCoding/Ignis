@@ -1,0 +1,108 @@
+fn @cellnoise1(u: f32, seed: f32) -> f32 {
+    let ix = u as i32;
+    
+    let mut tmp = fnv_hash(fnv_hash(fnv_init(), bitcast[u32](seed)), bitcast[u32](ix));
+    randf(&mut tmp)
+}
+
+fn @noise1(u: f32, seed: f32) -> f32 {
+    let ix = u as i32;
+    let kx = u - (ix as f32);
+
+    let non_randf = @|a: i32| {
+        let mut tmp = fnv_hash(fnv_hash(fnv_init(), bitcast[u32](seed)), bitcast[u32](a));
+        randf(&mut tmp)
+    };
+
+    let p0 = non_randf(ix  );
+    let p1 = non_randf(ix+1);
+
+    lerp(p0, p1, kx)
+}
+
+fn @cellnoise2(uv: Vec2, seed: f32) -> f32 {
+    let ix = uv.x as i32;
+    let iy = uv.y as i32;
+    
+    let mut tmp = fnv_hash(fnv_hash(fnv_hash(fnv_init(), bitcast[u32](seed)), bitcast[u32](ix)), bitcast[u32](iy));
+    randf(&mut tmp)
+}
+
+fn @noise2(uv: Vec2, seed: f32) -> f32 {
+    let ix = uv.x as i32;
+    let iy = uv.y as i32;
+    let kx = uv.x - (ix as f32);
+    let ky = uv.y - (iy as f32);
+
+    let non_randf = @|a: i32, b: i32| {
+        let mut tmp = fnv_hash(fnv_hash(fnv_hash(fnv_init(), bitcast[u32](seed)), bitcast[u32](a)), bitcast[u32](b));
+        randf(&mut tmp)
+    };
+
+    let p00 = non_randf(ix  , iy  );
+    let p10 = non_randf(ix+1, iy  );
+    let p01 = non_randf(ix  , iy+1);
+    let p11 = non_randf(ix+1, iy+1);
+
+    lerp(lerp(p00, p10, kx), lerp(p01, p11, kx), ky)
+}
+
+fn @cellnoise3(uvw: Vec3, seed: f32) -> f32 {
+    let ix = uvw.x as i32;
+    let iy = uvw.y as i32;
+    let iz = uvw.z as i32;
+
+    let mut tmp = fnv_hash(fnv_hash(fnv_hash(fnv_hash(fnv_init(), bitcast[u32](seed)), bitcast[u32](ix)), bitcast[u32](iy)), bitcast[u32](iz));
+    randf(&mut tmp)
+}
+
+fn @noise3(uvw: Vec3, seed: f32) -> f32 {
+    let ix = uvw.x as i32;
+    let iy = uvw.y as i32;
+    let iz = uvw.z as i32;
+    let kx = uvw.x - (ix as f32);
+    let ky = uvw.y - (iy as f32);
+    let kz = uvw.z - (iz as f32);
+
+    let non_randf = @|a: i32, b: i32, c: i32| {
+        let mut tmp = fnv_hash(fnv_hash(fnv_hash(fnv_hash(fnv_init(), bitcast[u32](seed)), bitcast[u32](a)), bitcast[u32](b)), bitcast[u32](c));
+        randf(&mut tmp)
+    };
+
+    let p000 = non_randf(ix  , iy  , iz  );
+    let p100 = non_randf(ix+1, iy  , iz  );
+    let p010 = non_randf(ix  , iy+1, iz  );
+    let p110 = non_randf(ix+1, iy+1, iz  );
+    let p001 = non_randf(ix  , iy  , iz+1);
+    let p101 = non_randf(ix+1, iy  , iz+1);
+    let p011 = non_randf(ix  , iy+1, iz+1);
+    let p111 = non_randf(ix+1, iy+1, iz+1);
+
+    let a0 = lerp(lerp(p000, p100, kx), lerp(p010, p110, kx), ky);
+    let a1 = lerp(lerp(p001, p101, kx), lerp(p011, p111, kx), ky);
+    lerp(a0, a1, kz)
+}
+
+static DEFAULT_NOISE_SEED = 42419421304:f32;
+fn @noise1_def(u: f32)        = noise1(u,   DEFAULT_NOISE_SEED);
+fn @noise2_def(uv: Vec2)      = noise2(uv,  DEFAULT_NOISE_SEED);
+fn @noise3_def(uvw: Vec3)     = noise3(uvw, DEFAULT_NOISE_SEED);
+fn @cellnoise1_def(u: f32)    = cellnoise1(u,   DEFAULT_NOISE_SEED);
+fn @cellnoise2_def(uv: Vec2)  = cellnoise2(uv,  DEFAULT_NOISE_SEED);
+fn @cellnoise3_def(uvw: Vec3) = cellnoise3(uvw, DEFAULT_NOISE_SEED);
+
+fn @make_noise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3) -> Texture {
+    @ |uv| {
+        let uv2 = mat3x3_transform_point_affine(transform, uv); 
+        let suv = vec2_mul(uv2, scale);       
+        color_mulf(color, noise2(suv, seed))
+    }
+}
+
+fn @make_cellnoise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3) -> Texture {
+    @ |uv| {
+        let uv2 = mat3x3_transform_point_affine(transform, uv); 
+        let suv = vec2_mul(uv2, scale);       
+        color_mulf(color, cellnoise2(suv, seed))
+    }
+}

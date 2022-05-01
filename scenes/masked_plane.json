@@ -35,16 +35,19 @@
 	],
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Fallback"},
-		{"type":"diffuse", "name": "mat-Floor", "reflectance":"check(uv*2*sin(uv.x*4*Pi) + P.xy*avg(uv) - vec2(Eps, E)) * select(uv.x > 0.5, color(1,0.5,0), color(0,0.5,1))"},
+		{"type":"diffuse", "name": "mat-Back", "reflectance":"mix(cellnoise(uv*40), noise(uv*60), 0.25)"},
+		{"type":"diffuse", "name": "mat-Floor", "reflectance":"check(uv*2*sin(uv.x*4*Pi) + P.xy*avg(uv) - vec2(Eps, E)) * select(uv.x > hash(sum(uv)), color(1,0.5,0), color(0,0.5,1))"},
 		{"type":"diffuse", "name": "mat-PlaneSurface", "reflectance":[0, 0.552, 0.721]},
 		{"type":"mask", "name": "mat-Plane", "bsdf": "mat-PlaneSurface", "weight":"mask"}
 	],
 	"shapes": [
 		{"type":"rectangle", "name":"Floor", "width": 10, "height": 10},
+		{"type":"rectangle", "name":"Back", "width": 10, "height": 5},
 		{"type":"box", "name":"Plane", "width": 4, "height": 4, "depth": 0.1}
 	],
 	"entities": [
 		{"name":"Floor","shape":"Floor", "bsdf":"mat-Floor"},
+		{"name":"Back","shape":"Back", "bsdf":"mat-Back", "transform": {"rotate": [90,0,0], "translate": [0,0,-5]}},
 		{"name":"Plane","shape":"Plane", "bsdf":"mat-Plane", "transform": {"rotate": [0,0,45], "translate": [0,0,2]}}
 	],
 	"lights": [

@@ -1,0 +1,10 @@
+fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color, transform: Mat3x3) -> Texture {
+    @ |uv| { 
+        let uv2 = mat3x3_transform_point_affine(transform, uv);
+        let suv = vec2_mul(uv2, scale);
+        let parity_x = ((suv.x as i32) % 2) == 0;
+        let parity_y = ((suv.y as i32) % 2) == 0;
+
+        if parity_x ^ parity_y { color0 } else { color1 }
+    }
+}

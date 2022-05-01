@@ -12,6 +12,13 @@ fn @randf(rnd: &mut RndState) -> f32 {
     bitcast[f32]((x & 0x7FFFFF) | 0x3F800000) - 1
 }
 
+// Function will return a random number based on the given seed.
+// As long as the seed does not change the return value will not change either.
+fn @hash_rndf(seed: f32) -> f32 {
+    let mut rnd = fnv_hash(fnv_init(), bitcast[u32](seed)); // Let it be random
+    randf(&mut rnd)
+}
+
 // MWC64X: http://cas.ee.ic.ac.uk/people/dt10/research/rngs-gpu-mwc64x.html
 fn @mwc64x(seed: &mut u64) -> i32 {
     let c = *seed >> 32;

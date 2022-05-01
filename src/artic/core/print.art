@@ -12,9 +12,7 @@ fn @make_debug_output(buffer: DeviceBuffer) -> DebugOutput {
     DebugOutput {
         rnd   = @|random_garbage: f32| -> f32 {
             // This is a very low quality random generator and depends on the input random garbage.
-            let mut rnd = fnv_init(); 
-            rnd = fnv_hash(rnd, bitcast[u32](random_garbage)); // Let it be random
-            randf(&mut rnd)
+            hash_rndf(random_garbage)
         },
         print = @|str: &[u8]| -> (){
             // Compute length

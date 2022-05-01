@@ -54,8 +54,8 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
 
     tree.addColor("color0", tex, Vector3f::Zero());
     tree.addColor("color1", tex, Vector3f::Ones());
-    tree.addNumber("scale_x", tex, 1.0f);
-    tree.addNumber("scale_y", tex, 1.0f);
+    tree.addNumber("scale_x", tex, 2.0f);
+    tree.addNumber("scale_y", tex, 2.0f);
 
     const Transformf transform = tex.property("transform").getTransform();
 
@@ -64,6 +64,28 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
            << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
            << tree.getInline("color0") << ", "
            << tree.getInline("color1") << ", "
+           << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
+
+    tree.endClosure();
+}
+
+static void tex_noise(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+{
+    constexpr float DefaultSeed = 42123456;
+
+    tree.beginClosure();
+
+    tree.addColor("color", tex, Vector3f::Ones());
+    tree.addNumber("seed", tex, DefaultSeed);
+    tree.addNumber("scale_x", tex, 10.0f);
+    tree.addNumber("scale_y", tex, 10.0f);
+    const Transformf transform = tex.property("transform").getTransform();
+
+    stream << tree.pullHeader()
+           << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_noise_texture("
+           << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
+           << tree.getInline("color") << ", "
+           << tree.getInline("seed") << ", "
            << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
 
     tree.endClosure();
@@ -92,6 +114,7 @@ static const struct {
     { "image", tex_image },
     { "bitmap", tex_image },
     { "checkerboard", tex_checkerboard },
+    { "noise", tex_noise },
     { "transform", tex_transform },
     { "", nullptr }
 };

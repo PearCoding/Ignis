@@ -59,6 +59,10 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/plastic.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/principled.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/tensortree.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera/common.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera/fishlens.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera/orthogonal.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera/perspective.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/area.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/cie.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/common.art
@@ -76,7 +80,10 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/photonmapper.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/volpathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/wireframe.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture/common.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture/checkerboard.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture/image.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture/noise.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/cdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/emitter.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/fresnel.art
@@ -84,7 +91,6 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/microfacet.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/pixel_sampler.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/shading.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture.art
 )
 
 set(ARTIC_MAIN_SRC ${ARTIC_MAIN_SRC} PARENT_SCOPE)

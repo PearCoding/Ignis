@@ -129,6 +129,9 @@ fn @lerp2(a: f32, b: f32, c: f32, k1: f32, k2: f32) -> f32 {
     (1 - k1 - k2) * a + k1 * b + k2 * c
 }
 
+fn @smoothstep(x: f32)   = x * x * (3 - 2 * x);
+fn @smootherstep(x: f32) = x * x * x * (x * (x * 6 - 15) + 10);
+
 // a*b - c*d
 fn @diff_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
     let cd   = c * d;

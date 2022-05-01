@@ -1,0 +1,48 @@
+// Creates a perspective camera
+fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, fov: f32, tmin: f32, tmax: f32) -> Camera {
+    let right = vec3_normalize(vec3_cross(dir, up));
+    let view  = make_mat3x3(right, up, dir);
+    let sw    = math_builtins::tan(fov / 2);
+    let sh    = sw * h / w;
+
+    Camera {
+        generate_ray = @ |_, x, y| {
+            let d = vec3_normalize(mat3x3_mul(view, make_vec3(sw * x, sh * y, 1)));
+            make_ray(eye, d, tmin, tmax)
+        },
+        differential = @ |_| {
+            (
+                vec3_mulf(right, sw),
+                vec3_mulf(up, sh)
+            )
+        }
+    }
+}
+
+// Creates a perspective camera with depth of field
+fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, fov: f32, aperture_radius: f32, focal_length: f32, tmin: f32, tmax: f32) -> Camera {
+    let right = vec3_normalize(vec3_cross(dir, up));
+    let view  = make_mat3x3(right, up, dir);
+    let sw    = math_builtins::tan(fov / 2);
+    let sh    = sw * h / w;
+
+    Camera {
+        generate_ray = @ |rnd, x, y| {
+            let global_dir = vec3_normalize(mat3x3_mul(view, make_vec3(sw * x, sh * y, 1)));
+            let focus_pos  = vec3_mulf(global_dir, focal_length);
+
+            let aperature_coord = vec2_mulf(square_to_concentric_disk(make_vec2(randf(rnd), randf(rnd))), aperture_radius);
+            let aperature_pos   = mat3x3_mul(view, make_vec3(aperature_coord.x, aperature_coord.y, 0));
+            let d               = vec3_normalize(vec3_sub(focus_pos, aperature_pos));
+
+            make_ray(vec3_add(eye, aperature_pos), d, tmin, tmax)
+        },
+        differential = @ |_| {
+            (
+                // TODO: We ignore the lens effect here
+                vec3_mulf(right, sw),
+                vec3_mulf(up, sh)
+            )
+        }
+    }
+}

@@ -51,8 +51,44 @@ Checkerboard (:monosp:`checkerboard`)
    - The colors to use in the checkerboard.
  * - scale_x, scale_y
    - |number|
-   - 1, 1
+   - 2, 2
    - Numbers of grids in a normalized frame [0,0]x[1,1].
+ * - transform
+   - |transform|
+   - Identity
+   - Optional 2d transformation applied to texture coordinates.
+
+2D Noise (:monosp:`noise`)
+--------------------------
+
+.. objectparameters::
+
+ * - color
+   - |color|
+   - (1,1,1)
+   - Tint
+ * - scale_x, scale_y
+   - |number|
+   - 20, 20
+   - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
+ * - transform
+   - |transform|
+   - Identity
+   - Optional 2d transformation applied to texture coordinates.
+
+2D Cell Noise (:monosp:`cellnoise`)
+-----------------------------------
+
+.. objectparameters::
+
+ * - color
+   - |color|
+   - (1,1,1)
+   - Tint
+ * - scale_x, scale_y
+   - |number|
+   - 20, 20
+   - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
  * - transform
    - |transform|
    - Identity
