@@ -136,8 +136,7 @@ static std::string inline_entity(const Entity& entity, uint32 shapeID)
 inline static bool is_simple_area_light(const std::shared_ptr<Parser::Object>& light)
 {
     return light->pluginType() == "area"
-           && (!light->property("radiance").isValid() || light->property("radiance").canBeNumber() || light->property("radiance").type() == Parser::PT_VECTOR3)
-           && (!light->property("radiance_scale").isValid() || light->property("radiance_scale").canBeNumber() || light->property("radiance_scale").type() == Parser::PT_VECTOR3);
+           && (!light->property("radiance").isValid() || light->property("radiance").canBeNumber() || light->property("radiance").type() == Parser::PT_VECTOR3);
 }
 
 inline static Vector3f get_property_color(const Parser::Property& prop, const Vector3f& def)
@@ -159,7 +158,7 @@ inline static void exportSimpleAreaLights(const LoaderContext& ctx)
     for (const auto& pair : ctx.Scene.lights()) {
         const auto light             = pair.second;
         const std::string entityName = light->property("entity").getString();
-        const Vector3f radiance      = get_property_color(light->property("radiance"), Vector3f::Zero()).cwiseProduct(get_property_color(light->property("radiance_scale"), Vector3f::Ones()));
+        const Vector3f radiance      = get_property_color(light->property("radiance"), Vector3f::Zero());
 
         Entity entity;
         if (!ctx.Environment.EmissiveEntities.count(entityName)) {
@@ -193,9 +192,6 @@ static void light_area(std::ostream& stream, const std::string& name, const std:
     const std::string entityName = light->property("entity").getString();
     tree.addColor("radiance", *light, Vector3f::Constant(1.0f), true, ShadingTree::IM_Bare);
 
-    // Not exposed in the documentation, but used internally until we have proper shading nodes
-    tree.addColor("radiance_scale", *light, Vector3f::Constant(1.0f), true, ShadingTree::IM_Bare);
-
     Entity entity;
     if (!tree.context().Environment.EmissiveEntities.count(entityName)) {
         IG_LOG(L_ERROR) << "No entity named '" << entityName << "' exists for area light" << std::endl;
@@ -212,7 +208,7 @@ static void light_area(std::ostream& stream, const std::string& name, const std:
            << "  let ae_" << ShaderUtils::escapeIdentifier(name) << " = make_shape_area_emitter(" << inline_entity(entity, shape_id)
            << ", device.load_specific_shape(" << shape.FaceCount << ", " << shape.VertexCount << ", " << shape.NormalCount << ", " << shape.TexCount << ", " << shape_offset << ", dtb.shapes));" << std::endl
            << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_area_light(ae_" << ShaderUtils::escapeIdentifier(name) << ", "
-           << " @|tex_coords| { maybe_unused(tex_coords); color_mul(" << tree.getInline("radiance_scale") << ", " << tree.getInline("radiance") << ") });" << std::endl;
+           << " @|tex_coords| { maybe_unused(tex_coords); " << tree.getInline("radiance") << " });" << std::endl;
 
     tree.endClosure();
 }

@@ -22,21 +22,10 @@ static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, Shadin
     tree.addNumber("alpha_u", *bsdf, 0.1f, false);
     tree.addNumber("alpha_v", *bsdf, 0.1f, false);
     tree.addNumber("alpha", *bsdf, 0.1f);
-
-    // Not exposed in the documentation, but used internally
-    tree.addNumber("alpha_scale", *bsdf, 1.0f);
 }
 
-static std::string inline_microfacet(const std::string& name, const ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf, bool square)
+static std::string inline_microfacet(const std::string& name, const ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf)
 {
-    const auto inlineIt = [&](const std::string& prop) {
-        std::stringstream stream2;
-        stream2 << tree.getInline("alpha_scale") << " * (" << tree.getInline(prop) << ")";
-        if (square)
-            stream2 << " * (" << tree.getInline(prop) << ")";
-        return stream2.str();
-    };
-
     std::string distribution = "make_vndf_ggx_distribution";
     if (bsdf->property("distribution").type() == Parser::PT_STRING) {
         std::string type = bsdf->property("distribution").getString();
@@ -50,12 +39,12 @@ static std::string inline_microfacet(const std::string& name, const ShadingTree&
     std::stringstream stream;
     if (tree.hasParameter("alpha_u")) {
         stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf.local, "
-               << inlineIt("alpha_u") << ", "
-               << inlineIt("alpha_v") << ");" << std::endl;
+               << tree.getInline("alpha_u") << ", "
+               << tree.getInline("alpha_v") << ");" << std::endl;
     } else {
         stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf.local, "
-               << inlineIt("alpha") << ", "
-               << inlineIt("alpha") << ");" << std::endl;
+               << tree.getInline("alpha") << ", "
+               << tree.getInline("alpha") << ");" << std::endl;
     }
     return stream.str();
 }
@@ -116,7 +105,7 @@ static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name,
 
     setup_microfacet(bsdf, tree);
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree, bsdf, false)
+           << inline_microfacet(name, tree, bsdf)
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_glass_bsdf(surf, "
            << tree.getInline("ext_ior") << ", "
            << tree.getInline("int_ior") << ", "
@@ -164,7 +153,7 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
 
     setup_microfacet(bsdf, tree);
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree, bsdf, false)
+           << inline_microfacet(name, tree, bsdf)
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_conductor_bsdf(surf, "
            << tree.getInline("eta") << ", "
            << tree.getInline("k") << ", "
@@ -202,7 +191,7 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
 
     setup_microfacet(bsdf, tree);
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree, bsdf, false)
+           << inline_microfacet(name, tree, bsdf)
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
            << tree.getInline("ext_ior") << ", "
            << tree.getInline("int_ior") << ", "
@@ -248,31 +237,22 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
 
     bool is_thin = bsdf->property("thin").getBool(false);
 
-    // Not exposed in the documentation, but used internally until we have proper shading nodes
-    tree.addColor("base_color_scale", *bsdf, Vector3f::Ones());
-    tree.addNumber("metallic_scale", *bsdf, 1);
-    tree.addNumber("roughness_scale", *bsdf, 1);
-    tree.addNumber("specular_transmission_scale", *bsdf, 1);
-    tree.addNumber("diffuse_transmission_scale", *bsdf, 1);
-    tree.addNumber("clearcoat_scale", *bsdf, 1);
-    tree.addNumber("clearcoat_roughness_scale", *bsdf, 1);
-
     stream << tree.pullHeader()
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_principled_bsdf(surf, "
-           << "color_mul(" << tree.getInline("base_color_scale") << ", " << tree.getInline("base_color") << "), "
+           << tree.getInline("base_color") << ", "
            << tree.getInline("ior") << ", "
-           << tree.getInline("diffuse_transmission_scale") << " * " << tree.getInline("diffuse_transmission") << ", "
-           << tree.getInline("specular_transmission_scale") << " * " << tree.getInline("specular_transmission") << ", "
+           << tree.getInline("diffuse_transmission") << ", "
+           << tree.getInline("specular_transmission") << ", "
            << tree.getInline("specular_tint") << ", "
-           << tree.getInline("roughness_scale") << " * " << tree.getInline("roughness") << ", "
+           << tree.getInline("roughness") << ", "
            << tree.getInline("anisotropic") << ", "
            << tree.getInline("flatness") << ", "
-           << tree.getInline("metallic_scale") << " * " << tree.getInline("metallic") << ", "
+           << tree.getInline("metallic") << ", "
            << tree.getInline("sheen") << ", "
            << tree.getInline("sheen_tint") << ", "
-           << tree.getInline("clearcoat_scale") << " * " << tree.getInline("clearcoat") << ", "
+           << tree.getInline("clearcoat") << ", "
            << tree.getInline("clearcoat_gloss") << ", "
-           << tree.getInline("clearcoat_roughness_scale") << " * " << tree.getInline("clearcoat_roughness") << ", "
+           << tree.getInline("clearcoat_roughness") << ", "
            << (is_thin ? "true" : "false") << ");" << std::endl;
 
     tree.endClosure();
