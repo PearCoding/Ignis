@@ -35,7 +35,7 @@
 	],
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Fallback"},
-		{"type":"diffuse", "name": "mat-Floor", "reflectance":"check(uv*2)"},
+		{"type":"diffuse", "name": "mat-Floor", "reflectance":"check(uv*2*sin(uv.x*4*pi))"},
 		{"type":"diffuse", "name": "mat-PlaneSurface", "reflectance":[0, 0.552, 0.721]},
 		{"type":"mask", "name": "mat-Plane", "bsdf": "mat-PlaneSurface", "weight":"mask"}
 	],
