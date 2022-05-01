@@ -43,7 +43,7 @@ private:
     inline const Closure& currentClosure() const { return mClosures.back(); }
     inline Closure& currentClosure() { return mClosures.back(); }
 
-    std::string handleTexture(const std::string& name, const std::string& uv_access, bool needColor);
+    std::string handleTexture(const std::string& name, const std::string& uv_access, bool needColor, bool hasSurfaceInfo);
     void registerTexture(const std::string& name);
 
     LoaderContext& mContext;

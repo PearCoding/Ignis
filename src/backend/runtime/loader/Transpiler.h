@@ -17,7 +17,7 @@ public:
         std::unordered_set<std::string> Textures;
         bool ScalarOutput; // Else it is a color
     };
-    std::optional<Result> transpile(const std::string& expr, const std::string& uv_access) const;
+    std::optional<Result> transpile(const std::string& expr, const std::string& uv_access, bool hasSurfaceInfo) const;
 
     inline const LoaderContext& context() const { return mContext; }
 

@@ -30,6 +30,9 @@ fn @vec4_to_2(v: Vec4)                 = make_vec2(v.x, v.y);
 fn @vec2_map(v: Vec2, f: fn (f32) -> f32) = make_vec2(@f(v.x), @f(v.y));
 fn @vec3_map(v: Vec3, f: fn (f32) -> f32) = make_vec3(@f(v.x), @f(v.y), @f(v.z));
 fn @vec4_map(v: Vec4, f: fn (f32) -> f32) = make_vec4(@f(v.x), @f(v.y), @f(v.z), @f(v.w));
+fn @vec2_reduce(v: Vec2, f: fn (f32, f32) -> f32) = @f(v.x, v.y);
+fn @vec3_reduce(v: Vec3, f: fn (f32, f32) -> f32) = @f(v.x, @f(v.y, v.z));
+fn @vec4_reduce(v: Vec4, f: fn (f32, f32) -> f32) = @f(v.x, @f(v.y, @f(v.z, v.w)));
 fn @vec2_zip(a: Vec2, b: Vec2, f: fn (f32, f32) -> f32) = make_vec2(@f(a.x, b.x), @f(a.y, b.y));
 fn @vec3_zip(a: Vec3, b: Vec3, f: fn (f32, f32) -> f32) = make_vec3(@f(a.x, b.x), @f(a.y, b.y), @f(a.z, b.z));
 fn @vec4_zip(a: Vec4, b: Vec4, f: fn (f32, f32) -> f32) = make_vec4(@f(a.x, b.x), @f(a.y, b.y), @f(a.z, b.z), @f(a.w, b.w));
@@ -55,6 +58,14 @@ fn @vec2_abs(v: Vec2) = vec2_map(v, |x| math_builtins::fabs(x));
 fn @vec3_abs(v: Vec3) = vec3_map(v, |x| math_builtins::fabs(x));
 fn @vec4_abs(v: Vec4) = vec4_map(v, |x| math_builtins::fabs(x));
 
+fn @vec2_sum(v: Vec2) = vec2_reduce(v, |x, y| x + y);
+fn @vec3_sum(v: Vec3) = vec3_reduce(v, |x, y| x + y);
+fn @vec4_sum(v: Vec4) = vec4_reduce(v, |x, y| x + y);
+
+fn @vec2_avg(v: Vec2) = vec2_sum(v) / 2;
+fn @vec3_avg(v: Vec3) = vec3_sum(v) / 3;
+fn @vec4_avg(v: Vec4) = vec4_sum(v) / 4;
+
 fn @vec2_mulf(v: Vec2, t: f32) = vec2_mul(v, make_vec2(t, t));
 fn @vec3_mulf(v: Vec3, t: f32) = vec3_mul(v, make_vec3(t, t, t));
 fn @vec4_mulf(v: Vec4, t: f32) = vec4_mul(v, make_vec4(t, t, t, t));
@@ -70,6 +81,10 @@ fn @vec4_powf(v: Vec4, t: f32) = vec4_map(v, |x| math_builtins::pow(x, t));
 fn @vec2_dot(a: Vec2, b: Vec2) = fmaf(a.x, b.x, a.y * b.y);
 fn @vec3_dot(a: Vec3, b: Vec3) = fmaf(a.x, b.x, fmaf(a.y, b.y, a.z * b.z));
 fn @vec4_dot(a: Vec4, b: Vec4) = fmaf(a.x, b.x, fmaf(a.y, b.y, fmaf(a.z, b.z, a.w * b.w)));
+
+fn @vec2_angle(a: Vec2, b: Vec2) = math_builtins::acos(vec2_dot(vec2_normalize(a), vec2_normalize(b)));
+fn @vec3_angle(a: Vec3, b: Vec3) = math_builtins::acos(vec3_dot(vec3_normalize(a), vec3_normalize(b)));
+fn @vec4_angle(a: Vec4, b: Vec4) = math_builtins::acos(vec4_dot(vec4_normalize(a), vec4_normalize(b)));
 
 fn @vec3_cross(a: Vec3, b: Vec3) = make_vec3(
     a.y * b.z - a.z * b.y,
@@ -92,10 +107,12 @@ fn @vec3_min_index(a: Vec3) -> i32 {
     }
 }
 
-fn @vec2_min_value(a: Vec2) = math_builtins::fmin(a.x, a.y);
-fn @vec3_min_value(a: Vec3) = math_builtins::fmin(a.x, math_builtins::fmin(a.y, a.z));
-fn @vec2_max_value(a: Vec2) = math_builtins::fmax(a.x, a.y);
-fn @vec3_max_value(a: Vec3) = math_builtins::fmax(a.x, math_builtins::fmax(a.y, a.z));
+fn @vec2_min_value(a: Vec2) = vec2_reduce(a, |x, y| math_builtins::fmin(x, y));
+fn @vec3_min_value(a: Vec3) = vec3_reduce(a, |x, y| math_builtins::fmin(x, y));
+fn @vec4_min_value(a: Vec4) = vec4_reduce(a, |x, y| math_builtins::fmin(x, y));
+fn @vec2_max_value(a: Vec2) = vec2_reduce(a, |x, y| math_builtins::fmax(x, y));
+fn @vec3_max_value(a: Vec3) = vec3_reduce(a, |x, y| math_builtins::fmax(x, y));
+fn @vec4_max_value(a: Vec4) = vec4_reduce(a, |x, y| math_builtins::fmax(x, y));
         
 fn @vec2_len2(v: Vec2) = vec2_dot(v, v);
 fn @vec3_len2(v: Vec3) = vec3_dot(v, v);
@@ -110,6 +127,10 @@ fn @vec3_refract(v: Vec3, n: Vec3, eta: f32, cos_i: f32, cos_t: f32) = vec3_sub(
 fn @vec2_len(v: Vec2) = math_builtins::sqrt(vec2_len2(v));
 fn @vec3_len(v: Vec3) = math_builtins::sqrt(vec3_len2(v));
 fn @vec4_len(v: Vec4) = math_builtins::sqrt(vec4_len2(v));
+
+fn @vec2_dist(a: Vec2, b: Vec2) = vec2_len(vec2_sub(b, a));
+fn @vec3_dist(a: Vec3, b: Vec3) = vec3_len(vec3_sub(b, a));
+fn @vec4_dist(a: Vec4, b: Vec4) = vec4_len(vec4_sub(b, a));
 
 fn @vec2_normalize(v: Vec2) = vec2_mulf(v, 1 / vec2_len(v));
 fn @vec3_normalize(v: Vec3) = vec3_mulf(v, 1 / vec3_len(v));

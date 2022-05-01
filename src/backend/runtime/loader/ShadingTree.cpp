@@ -38,7 +38,7 @@ void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, 
         inline_str = std::to_string(prop.getVector3().mean());
         break;
     case Parser::PT_STRING:
-        inline_str = handleTexture(prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", false);
+        inline_str = handleTexture(prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", false, mode == IM_Surface);
         break;
     }
 
@@ -71,7 +71,7 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
         inline_str     = "make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1)";
     } break;
     case Parser::PT_STRING:
-        inline_str = handleTexture(prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", true);
+        inline_str = handleTexture(prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", true, mode == IM_Surface);
         break;
     }
 
@@ -106,7 +106,7 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
         inline_str     = "make_constant_texture(make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1))";
     } break;
     case Parser::PT_STRING: {
-        std::string tex_func = handleTexture(prop.getString(), "uv", true);
+        std::string tex_func = handleTexture(prop.getString(), "uv", true, false /*TODO: Not always*/);
         inline_str           = "@|uv:Vec2|->Color{" + tex_func + "}";
     } break;
     }
@@ -156,10 +156,10 @@ void ShadingTree::registerTexture(const std::string& name)
     }
 }
 
-std::string ShadingTree::handleTexture(const std::string& expr, const std::string& uv_access, bool needColor)
+std::string ShadingTree::handleTexture(const std::string& expr, const std::string& uv_access, bool needColor, bool hasSurfaceInfo)
 {
     Transpiler transpiler(mContext);
-    auto res = transpiler.transpile(expr, uv_access);
+    auto res = transpiler.transpile(expr, uv_access, hasSurfaceInfo);
 
     if (!res.has_value()) {
         if (needColor)

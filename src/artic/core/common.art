@@ -8,6 +8,12 @@ static flt_pi     = 3.14159265359:f32;
 static flt_inv_pi = 0.31830988618379067154:f32;
 static flt_sqrt2  = 1.41421356237:f32;
 static flt_sqrt3  = 1.73205080757:f32;
+static flt_e      = 2.71828182845904523536:f32;
+
+// Convert from radians to degree
+fn deg(v: f32) = v * 180 * flt_inv_pi;
+// Convert from degree to radians
+fn rad(v: f32) = v / 180 * flt_pi;
 
 // Option --------------------------------------------------------------------------
 
