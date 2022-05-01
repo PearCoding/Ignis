@@ -55,3 +55,10 @@ CPMAddPackage(
     GIT_TAG master
     DOWNLOAD_ONLY YES
 )
+
+CPMAddPackage(
+    NAME pexpr
+    GITHUB_REPOSITORY PearCoding/PExpr 
+    GIT_TAG master
+    EXCLUDE_FROM_ALL
+)

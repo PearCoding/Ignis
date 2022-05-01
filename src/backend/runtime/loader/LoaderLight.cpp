@@ -71,7 +71,7 @@ static void light_point(std::ostream& stream, const std::string& name, const std
 {
     tree.beginClosure();
     auto pos = light->property("position").getVector3(); // Has to be fixed
-    tree.addColor("intensity", *light, Vector3f::Ones(), true, ShadingTree::IM_Light);
+    tree.addColor("intensity", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
 
     stream << tree.pullHeader()
            << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_point_light(" << ShaderUtils::inlineVector(pos)
@@ -191,10 +191,10 @@ static void light_area(std::ostream& stream, const std::string& name, const std:
     tree.beginClosure();
 
     const std::string entityName = light->property("entity").getString();
-    tree.addColor("radiance", *light, Vector3f::Constant(1.0f), true, ShadingTree::IM_Light);
+    tree.addColor("radiance", *light, Vector3f::Constant(1.0f), true, ShadingTree::IM_Bare);
 
     // Not exposed in the documentation, but used internally until we have proper shading nodes
-    tree.addColor("radiance_scale", *light, Vector3f::Constant(1.0f), true, ShadingTree::IM_Light);
+    tree.addColor("radiance_scale", *light, Vector3f::Constant(1.0f), true, ShadingTree::IM_Bare);
 
     Entity entity;
     if (!tree.context().Environment.EmissiveEntities.count(entityName)) {
@@ -223,7 +223,7 @@ static void light_directional(std::ostream& stream, const std::string& name, con
 
     auto ea      = extractEA(light);
     Vector3f dir = ea.toDirection();
-    tree.addColor("irradiance", *light, Vector3f::Ones(), true, ShadingTree::IM_Light);
+    tree.addColor("irradiance", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
 
     stream << tree.pullHeader()
            << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_directional_light(" << ShaderUtils::inlineVector(dir)
@@ -274,9 +274,9 @@ static void light_cie_env(std::ostream& stream, const std::string& name, const s
 {
     tree.beginClosure();
 
-    tree.addColor("zenith", *light, Vector3f::Ones(), true, ShadingTree::IM_Light);
-    tree.addColor("ground", *light, Vector3f::Ones(), true, ShadingTree::IM_Light);
-    tree.addNumber("ground_brightness", *light, 0.2f, true, ShadingTree::IM_Light);
+    tree.addColor("zenith", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addColor("ground", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addNumber("ground_brightness", *light, 0.2f, true, ShadingTree::IM_Bare);
 
     const Matrix3f trans  = light->property("transform").getTransform().linear().transpose().inverse();
     const bool has_ground = light->property("has_ground").getBool(true);

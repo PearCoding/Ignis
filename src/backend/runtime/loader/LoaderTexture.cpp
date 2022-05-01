@@ -72,7 +72,7 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
 static void tex_transform(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
 {
     tree.beginClosure();
-    tree.addTexture("texture", tex, true, ShadingTree::IM_Light);
+    tree.addTexture("texture", tex, true);
 
     const Transformf transform = tex.property("transform").getTransform();
 

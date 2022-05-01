@@ -59,6 +59,14 @@ fn @vec2_mulf(v: Vec2, t: f32) = vec2_mul(v, make_vec2(t, t));
 fn @vec3_mulf(v: Vec3, t: f32) = vec3_mul(v, make_vec3(t, t, t));
 fn @vec4_mulf(v: Vec4, t: f32) = vec4_mul(v, make_vec4(t, t, t, t));
 
+fn @vec2_divf(v: Vec2, t: f32) = vec2_mulf(v, 1 / t);
+fn @vec3_divf(v: Vec3, t: f32) = vec3_mulf(v, 1 / t);
+fn @vec4_divf(v: Vec4, t: f32) = vec4_mulf(v, 1 / t);
+
+fn @vec2_powf(v: Vec2, t: f32) = vec2_map(v, |x| math_builtins::pow(x, t));
+fn @vec3_powf(v: Vec3, t: f32) = vec3_map(v, |x| math_builtins::pow(x, t));
+fn @vec4_powf(v: Vec4, t: f32) = vec4_map(v, |x| math_builtins::pow(x, t));
+
 fn @vec2_dot(a: Vec2, b: Vec2) = fmaf(a.x, b.x, a.y * b.y);
 fn @vec3_dot(a: Vec3, b: Vec3) = fmaf(a.x, b.x, fmaf(a.y, b.y, a.z * b.z));
 fn @vec4_dot(a: Vec4, b: Vec4) = fmaf(a.x, b.x, fmaf(a.y, b.y, fmaf(a.z, b.z, a.w * b.w)));
@@ -159,3 +167,7 @@ fn @vec4_at(a: Vec4, i: i32) = match(i) {
 fn @vec2_permute(a: Vec2, ix: i32, iy: i32)                   = make_vec2(vec2_at(a, ix), vec2_at(a, iy));
 fn @vec3_permute(a: Vec3, ix: i32, iy: i32, iz: i32)          = make_vec3(vec3_at(a, ix), vec3_at(a, iy), vec3_at(a, iz));
 fn @vec4_permute(a: Vec4, ix: i32, iy: i32, iz: i32, iw: i32) = make_vec4(vec4_at(a, ix), vec4_at(a, iy), vec4_at(a, iz), vec4_at(a, iw));
+
+fn @vec2_eq(a: Vec2, b: Vec2) = a.x == b.x && a.y == b.y;
+fn @vec3_eq(a: Vec3, b: Vec3) = a.x == b.x && a.y == b.y && a.z == b.z;
+fn @vec4_eq(a: Vec4, b: Vec4) = a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
