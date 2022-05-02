@@ -301,19 +301,24 @@ static std::unordered_map<std::string, InternalDynFunction2> sInternalDynNoiseFu
     { "pnoise", { nullptr, genFunction2("pnoise1"), genFunction2("pnoise2"), genFunction2("pnoise3"), nullptr } },
     { "cellnoise", { nullptr, genFunction2("cellnoise1"), genFunction2("cellnoise2"), genFunction2("cellnoise3"), nullptr } },
     { "perlin", { nullptr, nullptr, genFunction2("perlin2"), nullptr /*TODO*/, nullptr } },
-    { "sperlin", { nullptr, nullptr, genFunction2("sperlin2"), nullptr /*TODO*/, nullptr } }
+    { "sperlin", { nullptr, nullptr, genFunction2("sperlin2"), nullptr /*TODO*/, nullptr } },
+    { "voronoi", { nullptr, nullptr, genFunction2("voronoi2"), nullptr, nullptr } },
+    { "fbm", { nullptr, nullptr, genFunction2("fbm2"), nullptr, nullptr } }
 };
 static std::unordered_map<std::string, InternalDynFunction1> sInternalDynColoredNoiseFunctions1 = {
     { "cnoise", { nullptr, genFunction1Color("cnoise1_def"), genFunction1Color("cnoise2_def"), genFunction1Color("cnoise3_def"), nullptr } },
     { "cpnoise", { nullptr, genFunction1Color("cpnoise1_def"), genFunction1Color("cpnoise2_def"), genFunction1Color("cpnoise3_def"), nullptr } },
     { "ccellnoise", { nullptr, genFunction1Color("ccellnoise1_def"), genFunction1Color("ccellnoise2_def"), genFunction1Color("ccellnoise3_def"), nullptr } },
-    { "cperlin", { nullptr, nullptr, genFunction1Color("cperlin2_def"), nullptr /*TODO*/, nullptr } }
+    { "cperlin", { nullptr, nullptr, genFunction1Color("cperlin2_def"), nullptr /*TODO*/, nullptr } },
+    { "cvoronoi", { nullptr, nullptr, genFunction1Color("cvoronoi2_def"), nullptr, nullptr } },
+    { "cfbm", { nullptr, nullptr, genFunction1Color("cfbm2_def"), nullptr, nullptr } }
 };
 static std::unordered_map<std::string, InternalDynFunction2> sInternalDynColoredNoiseFunctions2 = {
     { "cnoise", { nullptr, genFunction2Color("cnoise1"), genFunction2Color("cnoise2"), genFunction2Color("cnoise3"), nullptr } },
     { "cpnoise", { nullptr, genFunction2Color("cpnoise1"), genFunction2Color("cpnoise2"), genFunction2Color("cpnoise3"), nullptr } },
     { "ccellnoise", { nullptr, genFunction2Color("ccellnoise1"), genFunction2Color("ccellnoise2"), genFunction2Color("ccellnoise3"), nullptr } },
-    { "cperlin", { nullptr, nullptr, genFunction2Color("cperlin2"), nullptr /* TODO */, nullptr } }
+    { "cvoronoi", { nullptr, nullptr, genFunction2Color("cvoronoi2"), nullptr, nullptr } },
+    { "cfbm", { nullptr, nullptr, genFunction2Color("cfbm2"), nullptr, nullptr } }
 };
 
 static std::unordered_map<std::string, InternalDynFunction3> sInternalDynFunctions3 = {
@@ -332,7 +337,9 @@ static std::unordered_map<std::string, InternalDynFunction1> sInternalDynReduceF
     { "pnoise", { nullptr, genFunction1("pnoise1_def"), genFunction1("pnoise2_def"), genFunction1("pnoise3_def"), nullptr } },
     { "cellnoise", { nullptr, genFunction1("cellnoise1_def"), genFunction1("cellnoise2_def"), genFunction1("cellnoise3_def"), nullptr } },
     { "perlin", { nullptr, nullptr, genFunction1("perlin2_def"), nullptr /* TODO: 3D Version */, nullptr } },
-    { "sperlin", { nullptr, nullptr, genFunction1("sperlin2_def"), nullptr /* TODO: 3D Version */, nullptr } }
+    { "sperlin", { nullptr, nullptr, genFunction1("sperlin2_def"), nullptr /* TODO: 3D Version */, nullptr } },
+    { "voronoi", { nullptr, nullptr, genFunction1("voronoi2_def"), nullptr, nullptr } },
+    { "fbm", { nullptr, nullptr, genFunction1("fbm2_def"), nullptr, nullptr } }
 };
 static std::unordered_map<std::string, InternalDynFunction2> sInternalDynReduceFunctions2 = {
     { "angle", genDynArrayFunction2("angle") },
