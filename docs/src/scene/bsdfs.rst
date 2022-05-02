@@ -61,7 +61,7 @@ Rough diffuse (:monosp:`roughdiffuse`)
 
 .. subfigstart::
 
-.. figure::  images/mat_rough_diffuse.jpg
+.. figure::  images/mat_roughdiffuse.jpg
   :width: 90%
   :align: center
   
@@ -226,7 +226,7 @@ Rough conductor (:monosp:`roughconductor`)
    
 .. subfigstart::
 
-.. figure::  images/mat_rough_conductor.jpg
+.. figure::  images/mat_roughconductor.jpg
   :width: 90%
   :align: center
   
@@ -294,7 +294,7 @@ Rough plastic (:monosp:`roughplastic`)
 
 .. subfigstart::
 
-.. figure::  images/mat_rough_plastic.jpg
+.. figure::  images/mat_roughplastic.jpg
   :width: 90%
   :align: center
   
@@ -404,7 +404,7 @@ Disney *Principled* (:monosp:`principled`)
 
 .. subfigstart::
 
-.. figure::  images/mat_disney.jpg
+.. figure::  images/mat_principled.jpg
   :width: 90%
   :align: center
   
