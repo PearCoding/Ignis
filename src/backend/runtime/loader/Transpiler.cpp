@@ -8,6 +8,8 @@
 #include <unordered_map>
 
 namespace IG {
+using PExprType = PExpr::ElementaryType;
+
 inline std::string tex_name(const std::string& name)
 {
     return "tex_" + ShaderUtils::escapeIdentifier(name);
@@ -16,24 +18,24 @@ inline std::string tex_name(const std::string& name)
 // Internal Variables
 struct InternalVariable {
     std::string Map;
-    PExpr::ElementaryType Type;
+    PExprType Type;
     bool IsColor;
 
     inline std::string access() const
     {
-        if (IsColor && Type == PExpr::ElementaryType::Vec4)
+        if (IsColor && Type == PExprType::Vec4)
             return "color_to_vec4(" + Map + ")";
         else
             return Map;
     }
 };
 static std::unordered_map<std::string, InternalVariable> sInternalVariables = {
-    { "Pi", { "flt_pi", PExpr::ElementaryType::Number, false } },
-    { "E", { "flt_e", PExpr::ElementaryType::Number, false } },
-    { "Eps", { "flt_eps", PExpr::ElementaryType::Number, false } },
-    { "NumMax", { "flt_max", PExpr::ElementaryType::Number, false } },
-    { "NumMin", { "flt_min", PExpr::ElementaryType::Number, false } },
-    { "Inf", { "flt_inf", PExpr::ElementaryType::Number, false } }
+    { "Pi", { "flt_pi", PExprType::Number, false } },
+    { "E", { "flt_e", PExprType::Number, false } },
+    { "Eps", { "flt_eps", PExprType::Number, false } },
+    { "NumMax", { "flt_max", PExprType::Number, false } },
+    { "NumMin", { "flt_min", PExprType::Number, false } },
+    { "Inf", { "flt_inf", PExprType::Number, false } }
 };
 
 // Dyn Functions
@@ -47,26 +49,26 @@ struct InternalDynFunction {
 };
 
 template <typename MapF, typename... Args>
-inline static std::string callDynFunction(const InternalDynFunction<MapF>& df, PExpr::ElementaryType type, const Args&... args)
+inline static std::string callDynFunction(const InternalDynFunction<MapF>& df, PExprType type, const Args&... args)
 {
     switch (type) {
-    case PExpr::ElementaryType::Integer:
+    case PExprType::Integer:
         if (df.MapInt)
             return df.MapInt(args...);
         break;
-    case PExpr::ElementaryType::Number:
+    case PExprType::Number:
         if (df.MapNum)
             return df.MapNum(args...);
         break;
-    case PExpr::ElementaryType::Vec2:
+    case PExprType::Vec2:
         if (df.MapVec2)
             return df.MapVec2(args...);
         break;
-    case PExpr::ElementaryType::Vec3:
+    case PExprType::Vec3:
         if (df.MapVec3)
             return df.MapVec3(args...);
         break;
-    case PExpr::ElementaryType::Vec4:
+    case PExprType::Vec4:
         if (df.MapVec4)
             return df.MapVec4(args...);
         break;
@@ -78,41 +80,41 @@ inline static std::string callDynFunction(const InternalDynFunction<MapF>& df, P
 
 template <typename MapF, typename... Args>
 inline void addDynFunction(PExpr::Environment& env, const std::string& name, const InternalDynFunction<MapF>& df,
-                           const std::optional<PExpr::ElementaryType>& retType, bool fixI, const std::optional<Args>&... params)
+                           const std::optional<PExprType>& retType, bool fixI, const std::optional<Args>&... params)
 {
     if (df.MapInt)
-        env.registerDef(PExpr::FunctionDef(name, fixI ? PExpr::ElementaryType::Integer : retType.value_or(PExpr::ElementaryType::Integer), { params.value_or(PExpr::ElementaryType::Integer)... }));
+        env.registerDef(PExpr::FunctionDef(name, fixI ? PExprType::Integer : retType.value_or(PExprType::Integer), { params.value_or(PExprType::Integer)... }));
     if (df.MapNum)
-        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExpr::ElementaryType::Number), { params.value_or(PExpr::ElementaryType::Number)... }));
+        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExprType::Number), { params.value_or(PExprType::Number)... }));
     if (df.MapVec2)
-        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExpr::ElementaryType::Vec2), { params.value_or(PExpr::ElementaryType::Vec2)... }));
+        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExprType::Vec2), { params.value_or(PExprType::Vec2)... }));
     if (df.MapVec3)
-        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExpr::ElementaryType::Vec3), { params.value_or(PExpr::ElementaryType::Vec3)... }));
+        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExprType::Vec3), { params.value_or(PExprType::Vec3)... }));
     if (df.MapVec4)
-        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExpr::ElementaryType::Vec4), { params.value_or(PExpr::ElementaryType::Vec4)... }));
+        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExprType::Vec4), { params.value_or(PExprType::Vec4)... }));
 }
 
 // Dyn Functions 1
 using MapFunction1 = std::function<std::string(const std::string&)>;
-inline static MapFunction1 genMapFunction1(const char* func, PExpr::ElementaryType type)
+inline static MapFunction1 genMapFunction1(const char* func, PExprType type)
 {
     switch (type) {
     default:
         return {};
-    case PExpr::ElementaryType::Integer:
-    case PExpr::ElementaryType::Number:
+    case PExprType::Integer:
+    case PExprType::Number:
         return [=](const std::string& a) { return std::string(func) + "(" + a + ")"; };
-    case PExpr::ElementaryType::Vec2:
+    case PExprType::Vec2:
         return [=](const std::string& a) { return "vec2_map(" + a + ", |x:f32| " + std::string(func) + "(x))"; };
-    case PExpr::ElementaryType::Vec3:
+    case PExprType::Vec3:
         return [=](const std::string& a) { return "vec3_map(" + a + ", |x:f32| " + std::string(func) + "(x))"; };
-    case PExpr::ElementaryType::Vec4:
+    case PExprType::Vec4:
         return [=](const std::string& a) { return "vec4_map(" + a + ", |x:f32| " + std::string(func) + "(x))"; };
     }
 };
-inline static MapFunction1 genMapFunction1(const char* func, const char* funcI, PExpr::ElementaryType type)
+inline static MapFunction1 genMapFunction1(const char* func, const char* funcI, PExprType type)
 {
-    if (type == PExpr::ElementaryType::Integer)
+    if (type == PExprType::Integer)
         return [=](const std::string& a) { return std::string(funcI) + "(" + a + ")"; };
     else
         return genMapFunction1(func, type);
@@ -121,16 +123,20 @@ inline static MapFunction1 genFunction1(const char* func)
 {
     return [=](const std::string& a) { return std::string(func) + "(" + a + ")"; };
 };
-inline static MapFunction1 genArrayFunction1(const char* func, PExpr::ElementaryType type)
+inline static MapFunction1 genFunction1Color(const char* func)
+{
+    return [=](const std::string& a) { return "color_to_vec4(" + std::string(func) + "(" + a + "))"; };
+};
+inline static MapFunction1 genArrayFunction1(const char* func, PExprType type)
 {
     switch (type) {
     default:
         return {};
-    case PExpr::ElementaryType::Vec2:
+    case PExprType::Vec2:
         return [=](const std::string& a) { return "vec2_" + std::string(func) + "(" + a + ")"; };
-    case PExpr::ElementaryType::Vec3:
+    case PExprType::Vec3:
         return [=](const std::string& a) { return "vec3_" + std::string(func) + "(" + a + ")"; };
-    case PExpr::ElementaryType::Vec4:
+    case PExprType::Vec4:
         return [=](const std::string& a) { return "vec4_" + std::string(func) + "(" + a + ")"; };
     }
 };
@@ -138,11 +144,11 @@ using InternalDynFunction1 = InternalDynFunction<MapFunction1>;
 inline static InternalDynFunction1 genDynMapFunction1(const char* func, const char* funcI)
 {
     return {
-        funcI ? genMapFunction1(func, funcI, PExpr::ElementaryType::Integer) : nullptr,
-        genMapFunction1(func, PExpr::ElementaryType::Number),
-        genMapFunction1(func, PExpr::ElementaryType::Vec2),
-        genMapFunction1(func, PExpr::ElementaryType::Vec3),
-        genMapFunction1(func, PExpr::ElementaryType::Vec4)
+        funcI ? genMapFunction1(func, funcI, PExprType::Integer) : nullptr,
+        genMapFunction1(func, PExprType::Number),
+        genMapFunction1(func, PExprType::Vec2),
+        genMapFunction1(func, PExprType::Vec3),
+        genMapFunction1(func, PExprType::Vec4)
     };
 };
 inline static InternalDynFunction1 genDynArrayFunction1(const char* func)
@@ -150,11 +156,112 @@ inline static InternalDynFunction1 genDynArrayFunction1(const char* func)
     return {
         nullptr,
         nullptr,
-        genArrayFunction1(func, PExpr::ElementaryType::Vec2),
-        genArrayFunction1(func, PExpr::ElementaryType::Vec3),
-        genArrayFunction1(func, PExpr::ElementaryType::Vec4)
+        genArrayFunction1(func, PExprType::Vec2),
+        genArrayFunction1(func, PExprType::Vec3),
+        genArrayFunction1(func, PExprType::Vec4)
     };
 };
+
+// Dyn Functions 2
+using MapFunction2         = std::function<std::string(const std::string&, const std::string&)>;
+using InternalDynFunction2 = InternalDynFunction<MapFunction2>;
+inline static MapFunction2 genMapFunction2(const char* func, PExprType type)
+{
+    switch (type) {
+    default:
+        return {};
+    case PExprType::Integer:
+    case PExprType::Number:
+        return [=](const std::string& a, const std::string& b) { return std::string(func) + "(" + a + ", " + b + ")"; };
+    case PExprType::Vec2:
+        return [=](const std::string& a, const std::string& b) { return "vec2_zip(" + a + ", " + b + ", |x:f32, y:f32| " + std::string(func) + "(x, y))"; };
+    case PExprType::Vec3:
+        return [=](const std::string& a, const std::string& b) { return "vec3_zip(" + a + ", " + b + ", |x:f32, y:f32| " + std::string(func) + "(x, y))"; };
+    case PExprType::Vec4:
+        return [=](const std::string& a, const std::string& b) { return "vec4_zip(" + a + ", " + b + ", |x:f32, y:f32| " + std::string(func) + "(x, y))"; };
+    }
+};
+inline static MapFunction2 genMapFunction2(const char* func, const char* funcI, PExprType type)
+{
+    if (type == PExprType::Integer)
+        return [=](const std::string& a, const std::string& b) { return std::string(funcI) + "(" + a + ", " + b + ")"; };
+    else
+        return genMapFunction2(func, type);
+};
+inline static MapFunction2 genArrayFunction2(const char* func, PExprType type)
+{
+    switch (type) {
+    default:
+        return {};
+    case PExprType::Vec2:
+        return [=](const std::string& a, const std::string& b) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ")"; };
+    case PExprType::Vec3:
+        return [=](const std::string& a, const std::string& b) { return "vec3_" + std::string(func) + "(" + a + ", " + b + ")"; };
+    case PExprType::Vec4:
+        return [=](const std::string& a, const std::string& b) { return "vec4_" + std::string(func) + "(" + a + ", " + b + ")"; };
+    }
+};
+inline static MapFunction2 genFunction2(const char* func)
+{
+    return [=](const std::string& a, const std::string& b) { return std::string(func) + "(" + a + ", " + b + ")"; };
+};
+inline static MapFunction2 genFunction2Color(const char* func)
+{
+    return [=](const std::string& a, const std::string& b) { return "color_to_vec4(" + std::string(func) + "(" + a + ", " + b + "))"; };
+};
+inline static InternalDynFunction2 genDynMapFunction2(const char* func, const char* funcI)
+{
+    return {
+        funcI ? genMapFunction2(func, funcI, PExprType::Integer) : nullptr,
+        genMapFunction2(func, PExprType::Number),
+        genMapFunction2(func, PExprType::Vec2),
+        genMapFunction2(func, PExprType::Vec3),
+        genMapFunction2(func, PExprType::Vec4)
+    };
+};
+inline static InternalDynFunction2 genDynArrayFunction2(const char* func)
+{
+    return {
+        nullptr,
+        nullptr,
+        genArrayFunction2(func, PExprType::Vec2),
+        genArrayFunction2(func, PExprType::Vec3),
+        genArrayFunction2(func, PExprType::Vec4)
+    };
+};
+
+// Dyn Functions 3
+using MapFunction3         = std::function<std::string(const std::string&, const std::string&, const std::string&)>;
+using InternalDynFunction3 = InternalDynFunction<MapFunction3>;
+inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
+{
+    switch (type) {
+    default:
+        return {};
+    case PExprType::Integer:
+    case PExprType::Number:
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+    case PExprType::Vec2:
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+    case PExprType::Vec3:
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+    case PExprType::Vec4:
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+    }
+};
+// Type A func (A, A, num)
+inline static InternalDynFunction3 genDynLerpFunction3(const char* func)
+{
+    return {
+        nullptr,
+        genMapFunction3(func, PExprType::Number),
+        genMapFunction3(func, PExprType::Vec2),
+        genMapFunction3(func, PExprType::Vec3),
+        genMapFunction3(func, PExprType::Vec4)
+    };
+};
+
+// Defs
 static std::unordered_map<std::string, InternalDynFunction1> sInternalDynFunctions1 = {
     { "sin", genDynMapFunction1("math_builtins::sin", nullptr) },
     { "cos", genDynMapFunction1("math_builtins::cos", nullptr) },
@@ -177,130 +284,55 @@ static std::unordered_map<std::string, InternalDynFunction1> sInternalDynFunctio
     { "rad", genDynMapFunction1("rad", nullptr) },
     { "deg", genDynMapFunction1("deg", nullptr) },
     { "norm", genDynArrayFunction1("normalize") },
-    { "hash", { nullptr, genMapFunction1("hash_rndf", PExpr::ElementaryType::Number), nullptr, nullptr, nullptr } },
-    { "smoothstep", { nullptr, genMapFunction1("smoothstep", PExpr::ElementaryType::Number), nullptr, nullptr, nullptr } },
-    { "smootherstep", { nullptr, genMapFunction1("smootherstep", PExpr::ElementaryType::Number), nullptr, nullptr, nullptr } }
-};
-
-// Dyn Functions 2
-using MapFunction2         = std::function<std::string(const std::string&, const std::string&)>;
-using InternalDynFunction2 = InternalDynFunction<MapFunction2>;
-inline static MapFunction2 genMapFunction2(const char* func, PExpr::ElementaryType type)
-{
-    switch (type) {
-    default:
-        return {};
-    case PExpr::ElementaryType::Integer:
-    case PExpr::ElementaryType::Number:
-        return [=](const std::string& a, const std::string& b) { return std::string(func) + "(" + a + ", " + b + ")"; };
-    case PExpr::ElementaryType::Vec2:
-        return [=](const std::string& a, const std::string& b) { return "vec2_zip(" + a + ", " + b + ", |x:f32, y:f32| " + std::string(func) + "(x, y))"; };
-    case PExpr::ElementaryType::Vec3:
-        return [=](const std::string& a, const std::string& b) { return "vec3_zip(" + a + ", " + b + ", |x:f32, y:f32| " + std::string(func) + "(x, y))"; };
-    case PExpr::ElementaryType::Vec4:
-        return [=](const std::string& a, const std::string& b) { return "vec4_zip(" + a + ", " + b + ", |x:f32, y:f32| " + std::string(func) + "(x, y))"; };
-    }
-};
-inline static MapFunction2 genMapFunction2(const char* func, const char* funcI, PExpr::ElementaryType type)
-{
-    if (type == PExpr::ElementaryType::Integer)
-        return [=](const std::string& a, const std::string& b) { return std::string(funcI) + "(" + a + ", " + b + ")"; };
-    else
-        return genMapFunction2(func, type);
-};
-inline static MapFunction2 genArrayFunction2(const char* func, PExpr::ElementaryType type)
-{
-    switch (type) {
-    default:
-        return {};
-    case PExpr::ElementaryType::Vec2:
-        return [=](const std::string& a, const std::string& b) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ")"; };
-    case PExpr::ElementaryType::Vec3:
-        return [=](const std::string& a, const std::string& b) { return "vec3_" + std::string(func) + "(" + a + ", " + b + ")"; };
-    case PExpr::ElementaryType::Vec4:
-        return [=](const std::string& a, const std::string& b) { return "vec4_" + std::string(func) + "(" + a + ", " + b + ")"; };
-    }
-};
-inline static MapFunction2 genFunction2(const char* func)
-{
-    return [=](const std::string& a, const std::string& b) { return std::string(func) + "(" + a + ", " + b + ")"; };
-};
-inline static InternalDynFunction2 genDynMapFunction2(const char* func, const char* funcI)
-{
-    return {
-        funcI ? genMapFunction2(func, funcI, PExpr::ElementaryType::Integer) : nullptr,
-        genMapFunction2(func, PExpr::ElementaryType::Number),
-        genMapFunction2(func, PExpr::ElementaryType::Vec2),
-        genMapFunction2(func, PExpr::ElementaryType::Vec3),
-        genMapFunction2(func, PExpr::ElementaryType::Vec4)
-    };
-};
-inline static InternalDynFunction2 genDynArrayFunction2(const char* func)
-{
-    return {
-        nullptr,
-        nullptr,
-        genArrayFunction2(func, PExpr::ElementaryType::Vec2),
-        genArrayFunction2(func, PExpr::ElementaryType::Vec3),
-        genArrayFunction2(func, PExpr::ElementaryType::Vec4)
-    };
+    { "hash", { nullptr, genMapFunction1("hash_rndf", PExprType::Number), nullptr, nullptr, nullptr } },
+    { "smoothstep", { nullptr, genMapFunction1("smoothstep", PExprType::Number), nullptr, nullptr, nullptr } },
+    { "smootherstep", { nullptr, genMapFunction1("smootherstep", PExprType::Number), nullptr, nullptr, nullptr } }
 };
 
 static std::unordered_map<std::string, InternalDynFunction2> sInternalDynFunctions2 = {
     { "min", genDynMapFunction2("math_builtins::fmax", "min") },
     { "max", genDynMapFunction2("math_builtins::fmin", "max") },
     { "atan2", genDynMapFunction2("math_builtins::atan2", nullptr) },
-    { "cross", { nullptr, nullptr, nullptr, genArrayFunction2("cross", PExpr::ElementaryType::Vec3), nullptr } }
+    { "cross", { nullptr, nullptr, nullptr, genArrayFunction2("cross", PExprType::Vec3), nullptr } }
 };
 static std::unordered_map<std::string, InternalDynFunction2> sInternalDynNoiseFunctions2 = {
-    { "noise", { nullptr, genFunction2("noise1"), genFunction2("noise2"), genFunction2("noise3"), nullptr } },
-    { "cellnoise", { nullptr, genFunction2("cellnoise1"), genFunction2("cellnoise2"), genFunction2("cellnoise3"), nullptr } }
+    { "noise", { nullptr, genFunction2("noise1"), genFunction2("noise2_v"), genFunction2("noise3_v"), nullptr } },
+    { "snoise", { nullptr, genFunction2("snoise1"), genFunction2("snoise2"), genFunction2("snoise3"), nullptr } },
+    { "pnoise", { nullptr, genFunction2("pnoise1"), genFunction2("pnoise2"), genFunction2("pnoise3"), nullptr } },
+    { "cellnoise", { nullptr, genFunction2("cellnoise1"), genFunction2("cellnoise2"), genFunction2("cellnoise3"), nullptr } },
+    { "perlin", { nullptr, nullptr, genFunction2("perlin2"), nullptr /*TODO*/, nullptr } },
+    { "sperlin", { nullptr, nullptr, genFunction2("sperlin2"), nullptr /*TODO*/, nullptr } }
+};
+static std::unordered_map<std::string, InternalDynFunction1> sInternalDynColoredNoiseFunctions1 = {
+    { "cnoise", { nullptr, genFunction1Color("cnoise1_def"), genFunction1Color("cnoise2_def"), genFunction1Color("cnoise3_def"), nullptr } },
+    { "cpnoise", { nullptr, genFunction1Color("cpnoise1_def"), genFunction1Color("cpnoise2_def"), genFunction1Color("cpnoise3_def"), nullptr } },
+    { "ccellnoise", { nullptr, genFunction1Color("ccellnoise1_def"), genFunction1Color("ccellnoise2_def"), genFunction1Color("ccellnoise3_def"), nullptr } },
+    { "cperlin", { nullptr, nullptr, genFunction1Color("cperlin2_def"), nullptr /*TODO*/, nullptr } }
+};
+static std::unordered_map<std::string, InternalDynFunction2> sInternalDynColoredNoiseFunctions2 = {
+    { "cnoise", { nullptr, genFunction2Color("cnoise1"), genFunction2Color("cnoise2"), genFunction2Color("cnoise3"), nullptr } },
+    { "cpnoise", { nullptr, genFunction2Color("cpnoise1"), genFunction2Color("cpnoise2"), genFunction2Color("cpnoise3"), nullptr } },
+    { "ccellnoise", { nullptr, genFunction2Color("ccellnoise1"), genFunction2Color("ccellnoise2"), genFunction2Color("ccellnoise3"), nullptr } },
+    { "cperlin", { nullptr, nullptr, genFunction2Color("cperlin2"), nullptr /* TODO */, nullptr } }
 };
 
-// Dyn Functions 3
-using MapFunction3         = std::function<std::string(const std::string&, const std::string&, const std::string&)>;
-using InternalDynFunction3 = InternalDynFunction<MapFunction3>;
-inline static MapFunction3 genMapFunction3(const char* func, PExpr::ElementaryType type)
-{
-    switch (type) {
-    default:
-        return {};
-    case PExpr::ElementaryType::Integer:
-    case PExpr::ElementaryType::Number:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
-    case PExpr::ElementaryType::Vec2:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
-    case PExpr::ElementaryType::Vec3:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
-    case PExpr::ElementaryType::Vec4:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
-    }
-};
-// Type A func (A, A, num)
-inline static InternalDynFunction3 genDynLerpFunction3(const char* func)
-{
-    return {
-        nullptr,
-        genMapFunction3(func, PExpr::ElementaryType::Number),
-        genMapFunction3(func, PExpr::ElementaryType::Vec2),
-        genMapFunction3(func, PExpr::ElementaryType::Vec3),
-        genMapFunction3(func, PExpr::ElementaryType::Vec4)
-    };
-};
 static std::unordered_map<std::string, InternalDynFunction3> sInternalDynFunctions3 = {
-    { "clamp", { genMapFunction3("clamp", PExpr::ElementaryType::Integer), genMapFunction3("clampf", PExpr::ElementaryType::Number), nullptr, nullptr, nullptr } }
+    { "clamp", { genMapFunction3("clamp", PExprType::Integer), genMapFunction3("clampf", PExprType::Number), nullptr, nullptr, nullptr } }
 };
 static std::unordered_map<std::string, InternalDynFunction3> sInternalDynLerpFunctions3 = {
     { "mix", genDynLerpFunction3("lerp") }
 };
 
-// Reduce functions
 static std::unordered_map<std::string, InternalDynFunction1> sInternalDynReduceFunctions1 = {
     { "length", genDynArrayFunction1("len") },
     { "sum", genDynArrayFunction1("sum") },
     { "avg", genDynArrayFunction1("avg") },
     { "noise", { nullptr, genFunction1("noise1_def"), genFunction1("noise2_def"), genFunction1("noise3_def"), nullptr } },
-    { "cellnoise", { nullptr, genFunction1("cellnoise1_def"), genFunction1("cellnoise2_def"), genFunction1("cellnoise3_def"), nullptr } }
+    { "snoise", { nullptr, genFunction1("snoise1_def"), genFunction1("snoise2_def"), genFunction1("snoise3_def"), nullptr } },
+    { "pnoise", { nullptr, genFunction1("pnoise1_def"), genFunction1("pnoise2_def"), genFunction1("pnoise3_def"), nullptr } },
+    { "cellnoise", { nullptr, genFunction1("cellnoise1_def"), genFunction1("cellnoise2_def"), genFunction1("cellnoise3_def"), nullptr } },
+    { "perlin", { nullptr, nullptr, genFunction1("perlin2_def"), nullptr /* TODO: 3D Version */, nullptr } },
+    { "sperlin", { nullptr, nullptr, genFunction1("sperlin2_def"), nullptr /* TODO: 3D Version */, nullptr } }
 };
 static std::unordered_map<std::string, InternalDynFunction2> sInternalDynReduceFunctions2 = {
     { "angle", genDynArrayFunction2("angle") },
@@ -309,16 +341,16 @@ static std::unordered_map<std::string, InternalDynFunction2> sInternalDynReduceF
 };
 
 // Other stuff
-inline std::string binaryCwise(const std::string& A, const std::string& B, PExpr::ElementaryType arithType, const std::string& op, const std::string& func)
+inline std::string binaryCwise(const std::string& A, const std::string& B, PExprType arithType, const std::string& op, const std::string& func)
 {
     switch (arithType) {
     default:
         return "(" + A + ") " + op + " (" + B + ")";
-    case PExpr::ElementaryType::Vec2:
+    case PExprType::Vec2:
         return "vec2_" + func + "(" + A + ", " + B + ")";
-    case PExpr::ElementaryType::Vec3:
+    case PExprType::Vec3:
         return "vec3_" + func + "(" + A + ", " + B + ")";
-    case PExpr::ElementaryType::Vec4:
+    case PExprType::Vec4:
         return "vec4_" + func + "(" + A + ", " + B + ")";
     }
 }
@@ -340,7 +372,7 @@ public:
 
     inline std::unordered_set<std::string>& usedTextures() { return mUsedTextures; }
 
-    std::string onVariable(const std::string& name, PExpr::ElementaryType) override
+    std::string onVariable(const std::string& name, PExprType) override
     {
         if (name == "uv")
             return mUVAccess;
@@ -367,13 +399,13 @@ public:
     std::string onString(const std::string& v) override { return "\"" + v + "\""; }
 
     /// Implicit casts. Currently only int -> num
-    std::string onCast(const std::string& v, PExpr::ElementaryType, PExpr::ElementaryType) override
+    std::string onCast(const std::string& v, PExprType, PExprType) override
     {
         return "((" + v + ") as f32)";
     }
 
     /// +a, -a. Only called for arithmetic types
-    std::string onPosNeg(bool isNeg, PExpr::ElementaryType arithType, const std::string& v) override
+    std::string onPosNeg(bool isNeg, PExprType arithType, const std::string& v) override
     {
         if (!isNeg)
             return v;
@@ -381,11 +413,11 @@ public:
         switch (arithType) {
         default:
             return "(-(" + v + "))";
-        case PExpr::ElementaryType::Vec2:
+        case PExprType::Vec2:
             return "vec2_neg(" + v + ")";
-        case PExpr::ElementaryType::Vec3:
+        case PExprType::Vec3:
             return "vec3_neg(" + v + ")";
-        case PExpr::ElementaryType::Vec4:
+        case PExprType::Vec4:
             return "vec4_neg(" + v + ")";
         }
     }
@@ -397,7 +429,7 @@ public:
     }
 
     /// a+b, a-b. Only called for arithmetic types. Both types are the same! Vectorized types should apply component wise
-    std::string onAddSub(bool isSub, PExpr::ElementaryType arithType, const std::string& a, const std::string& b) override
+    std::string onAddSub(bool isSub, PExprType arithType, const std::string& a, const std::string& b) override
     {
         if (isSub)
             return binaryCwise(a, b, arithType, "-", "sub");
@@ -406,7 +438,7 @@ public:
     }
 
     /// a*b, a/b. Only called for arithmetic types. Both types are the same! Vectorized types should apply component wise
-    std::string onMulDiv(bool isDiv, PExpr::ElementaryType arithType, const std::string& a, const std::string& b) override
+    std::string onMulDiv(bool isDiv, PExprType arithType, const std::string& a, const std::string& b) override
     {
         if (isDiv)
             return binaryCwise(a, b, arithType, "/", "div");
@@ -415,7 +447,7 @@ public:
     }
 
     /// a*f, f*a, a/f. A is an arithmetic type, f is 'num', except when a is 'int' then f is 'int' as well. Order of a*f or f*a does not matter
-    std::string onScale(bool isDiv, PExpr::ElementaryType aType, const std::string& a, const std::string& f) override
+    std::string onScale(bool isDiv, PExprType aType, const std::string& a, const std::string& f) override
     {
         if (isDiv)
             return binaryCwise(a, f, aType, "/", "divf");
@@ -424,11 +456,11 @@ public:
     }
 
     /// a^f A is an arithmetic type, f is 'num', except when a is 'int' then f is 'int' as well. Vectorized types should apply component wise
-    std::string onPow(PExpr::ElementaryType aType, const std::string& a, const std::string& f) override
+    std::string onPow(PExprType aType, const std::string& a, const std::string& f) override
     {
-        if (aType == PExpr::ElementaryType::Integer)
+        if (aType == PExprType::Integer)
             return "(math_builtins::pow(" + a + " as f32, " + f + " as f32) as i32)";
-        else if (aType == PExpr::ElementaryType::Number)
+        else if (aType == PExprType::Number)
             return "math_builtins::pow(" + a + ", " + f + ")";
         else
             return binaryCwise(a, f, aType, "", "powf");
@@ -450,7 +482,7 @@ public:
     }
 
     /// a < b... Boolean operation. a & b are of the same type. Only called for scalar arithmetic types (int, num)
-    std::string onRelOp(PExpr::RelationalOp op, PExpr::ElementaryType, const std::string& a, const std::string& b) override
+    std::string onRelOp(PExpr::RelationalOp op, PExprType, const std::string& a, const std::string& b) override
     {
         switch (op) {
         case PExpr::RelationalOp::Less:
@@ -468,7 +500,7 @@ public:
     }
 
     /// a==b, a!=b. For vectorized types it should check that all equal componont wise. The negation a!=b should behave as !(a==b)
-    std::string onEqual(bool isNeg, PExpr::ElementaryType type, const std::string& a, const std::string& b) override
+    std::string onEqual(bool isNeg, PExprType type, const std::string& a, const std::string& b) override
     {
         std::string res = binaryCwise(a, b, type, "==", "eq");
         return isNeg ? "!" + res : res;
@@ -476,7 +508,7 @@ public:
 
     /// name(...). Call to a function. Necessary casts are already handled.
     std::string onFunctionCall(const std::string& name,
-                               PExpr::ElementaryType, const std::vector<PExpr::ElementaryType>& argumentTypes,
+                               PExprType, const std::vector<PExprType>& argumentTypes,
                                const std::vector<std::string>& argumentPayloads) override
     {
         if (argumentPayloads.size() == 1) {
@@ -490,6 +522,13 @@ public:
             auto drf1 = sInternalDynReduceFunctions1.find(name);
             if (drf1 != sInternalDynReduceFunctions1.end()) {
                 std::string call = callDynFunction(drf1->second, argumentTypes[0], argumentPayloads[0]);
+                if (!call.empty())
+                    return call;
+            }
+
+            auto dcnf1 = sInternalDynColoredNoiseFunctions1.find(name);
+            if (dcnf1 != sInternalDynColoredNoiseFunctions1.end()) {
+                std::string call = callDynFunction(dcnf1->second, argumentTypes[0], argumentPayloads[0]);
                 if (!call.empty())
                     return call;
             }
@@ -520,6 +559,13 @@ public:
             auto dnf2 = sInternalDynNoiseFunctions2.find(name);
             if (dnf2 != sInternalDynNoiseFunctions2.end()) {
                 std::string call = callDynFunction(dnf2->second, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
+                if (!call.empty())
+                    return call;
+            }
+
+            auto dcnf2 = sInternalDynColoredNoiseFunctions2.find(name);
+            if (dcnf2 != sInternalDynColoredNoiseFunctions2.end()) {
+                std::string call = callDynFunction(dcnf2->second, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
                 if (!call.empty())
                     return call;
             }
@@ -556,6 +602,7 @@ public:
 
         // Must be a texture
         IG_ASSERT(argumentPayloads.size() == 1, "Expected a valid texture access");
+        IG_ASSERT(mContext.Scene.texture(name) != nullptr, "Expected a valid texture name");
         mUsedTextures.insert(name);
         return "color_to_vec4(" + tex_name(name) + "(" + argumentPayloads[0] + "))";
     }
@@ -616,10 +663,10 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr,
     PExpr::Environment env;
 
     // Add internal variables to the variable table
-    env.registerDef(PExpr::VariableDef("uv", PExpr::ElementaryType::Vec2));
+    env.registerDef(PExpr::VariableDef("uv", PExprType::Vec2));
     if (hasSurfaceInfo) {
-        env.registerDef(PExpr::VariableDef("P", PExpr::ElementaryType::Vec3));
-        env.registerDef(PExpr::VariableDef("N", PExpr::ElementaryType::Vec3));
+        env.registerDef(PExpr::VariableDef("P", PExprType::Vec3));
+        env.registerDef(PExpr::VariableDef("N", PExprType::Vec3));
     }
 
     for (const auto& var : sInternalVariables)
@@ -630,62 +677,74 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr,
         if (sInternalVariables.count(tex.first) > 0)
             IG_LOG(L_WARNING) << "Ignoring texture '" << tex.first << "' as it conflicts with internal variable name" << std::endl;
         else
-            env.registerDef(PExpr::VariableDef(tex.first, PExpr::ElementaryType::Vec4));
+            env.registerDef(PExpr::VariableDef(tex.first, PExprType::Vec4));
     }
 
     // Add some internal functions
     // TODO: We could optimize the loading process via a definition block
-    env.registerDef(PExpr::FunctionDef("vec2", PExpr::ElementaryType::Vec2, { PExpr::ElementaryType::Number }));
-    env.registerDef(PExpr::FunctionDef("vec2", PExpr::ElementaryType::Vec2, { PExpr::ElementaryType::Number, PExpr::ElementaryType::Number }));
-    env.registerDef(PExpr::FunctionDef("vec3", PExpr::ElementaryType::Vec3, { PExpr::ElementaryType::Number }));
-    env.registerDef(PExpr::FunctionDef("vec3", PExpr::ElementaryType::Vec3, { PExpr::ElementaryType::Number, PExpr::ElementaryType::Number, PExpr::ElementaryType::Number }));
-    env.registerDef(PExpr::FunctionDef("vec4", PExpr::ElementaryType::Vec4, { PExpr::ElementaryType::Number }));
-    env.registerDef(PExpr::FunctionDef("vec4", PExpr::ElementaryType::Vec4, { PExpr::ElementaryType::Number, PExpr::ElementaryType::Number, PExpr::ElementaryType::Number, PExpr::ElementaryType::Number }));
-    env.registerDef(PExpr::FunctionDef("color", PExpr::ElementaryType::Vec4, { PExpr::ElementaryType::Number }));
-    env.registerDef(PExpr::FunctionDef("color", PExpr::ElementaryType::Vec4, { PExpr::ElementaryType::Number, PExpr::ElementaryType::Number, PExpr::ElementaryType::Number }));
-    env.registerDef(PExpr::FunctionDef("color", PExpr::ElementaryType::Vec4, { PExpr::ElementaryType::Number, PExpr::ElementaryType::Number, PExpr::ElementaryType::Number, PExpr::ElementaryType::Number }));
+    env.registerDef(PExpr::FunctionDef("vec2", PExprType::Vec2, { PExprType::Number }));
+    env.registerDef(PExpr::FunctionDef("vec2", PExprType::Vec2, { PExprType::Number, PExprType::Number }));
+    env.registerDef(PExpr::FunctionDef("vec3", PExprType::Vec3, { PExprType::Number }));
+    env.registerDef(PExpr::FunctionDef("vec3", PExprType::Vec3, { PExprType::Number, PExprType::Number, PExprType::Number }));
+    env.registerDef(PExpr::FunctionDef("vec4", PExprType::Vec4, { PExprType::Number }));
+    env.registerDef(PExpr::FunctionDef("vec4", PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number }));
+    env.registerDef(PExpr::FunctionDef("color", PExprType::Vec4, { PExprType::Number }));
+    env.registerDef(PExpr::FunctionDef("color", PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number }));
+    env.registerDef(PExpr::FunctionDef("color", PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number }));
+
+    using OpParam = std::optional<PExprType>;
 
     for (const auto& df : sInternalDynFunctions1)
         addDynFunction(env, df.first, df.second, {}, false,
-                       std::optional<PExpr::ElementaryType>{});
+                       OpParam{});
 
     for (const auto& df : sInternalDynReduceFunctions1)
-        addDynFunction(env, df.first, df.second, PExpr::ElementaryType::Number, true,
-                       std::optional<PExpr::ElementaryType>{});
+        addDynFunction(env, df.first, df.second, PExprType::Number, true,
+                       OpParam{});
 
     for (const auto& df : sInternalDynFunctions2)
         addDynFunction(env, df.first, df.second, {}, false,
-                       std::optional<PExpr::ElementaryType>{}, std::optional<PExpr::ElementaryType>{});
+                       OpParam{}, OpParam{});
 
     // Always num foo(A, num), with A can be num, vec2 or vec3
     for (const auto& df : sInternalDynNoiseFunctions2)
-        addDynFunction(env, df.first, df.second, PExpr::ElementaryType::Number, true,
-                       std::optional<PExpr::ElementaryType>{}, std::optional<PExpr::ElementaryType>{ PExpr::ElementaryType::Number });
+        addDynFunction(env, df.first, df.second, PExprType::Number, true,
+                       OpParam{}, OpParam{ PExprType::Number });
+
+    // Always vec4 foo(A), with A can be num, vec2 or vec3
+    for (const auto& df : sInternalDynColoredNoiseFunctions1)
+        addDynFunction(env, df.first, df.second, PExprType::Vec4, true,
+                       OpParam{});
+
+    // Always vec4 foo(A, num), with A can be num, vec2 or vec3
+    for (const auto& df : sInternalDynColoredNoiseFunctions2)
+        addDynFunction(env, df.first, df.second, PExprType::Vec4, true,
+                       OpParam{}, OpParam{ PExprType::Number });
 
     for (const auto& df : sInternalDynReduceFunctions2)
-        addDynFunction(env, df.first, df.second, PExpr::ElementaryType::Number, true,
-                       std::optional<PExpr::ElementaryType>{}, std::optional<PExpr::ElementaryType>{});
+        addDynFunction(env, df.first, df.second, PExprType::Number, true,
+                       OpParam{}, OpParam{});
 
     for (const auto& df : sInternalDynFunctions3)
         addDynFunction(env, df.first, df.second, {}, false,
-                       std::optional<PExpr::ElementaryType>{}, std::optional<PExpr::ElementaryType>{}, std::optional<PExpr::ElementaryType>{});
+                       OpParam{}, OpParam{}, OpParam{});
 
     for (const auto& df : sInternalDynLerpFunctions3)
         addDynFunction(env, df.first, df.second, {}, false,
-                       std::optional<PExpr::ElementaryType>{}, std::optional<PExpr::ElementaryType>{}, std::optional<PExpr::ElementaryType>{ PExpr::ElementaryType::Number });
+                       OpParam{}, OpParam{}, OpParam{ PExprType::Number });
 
     // Select funciton
-    env.registerDef(PExpr::FunctionDef("select", PExpr::ElementaryType::Boolean, { PExpr::ElementaryType::Boolean, PExpr::ElementaryType::Boolean, PExpr::ElementaryType::Boolean }));
-    env.registerDef(PExpr::FunctionDef("select", PExpr::ElementaryType::String, { PExpr::ElementaryType::Boolean, PExpr::ElementaryType::String, PExpr::ElementaryType::String }));
-    env.registerDef(PExpr::FunctionDef("select", PExpr::ElementaryType::Integer, { PExpr::ElementaryType::Boolean, PExpr::ElementaryType::Integer, PExpr::ElementaryType::Integer }));
-    env.registerDef(PExpr::FunctionDef("select", PExpr::ElementaryType::Number, { PExpr::ElementaryType::Boolean, PExpr::ElementaryType::Number, PExpr::ElementaryType::Number }));
-    env.registerDef(PExpr::FunctionDef("select", PExpr::ElementaryType::Vec2, { PExpr::ElementaryType::Boolean, PExpr::ElementaryType::Vec2, PExpr::ElementaryType::Vec2 }));
-    env.registerDef(PExpr::FunctionDef("select", PExpr::ElementaryType::Vec3, { PExpr::ElementaryType::Boolean, PExpr::ElementaryType::Vec3, PExpr::ElementaryType::Vec3 }));
-    env.registerDef(PExpr::FunctionDef("select", PExpr::ElementaryType::Vec4, { PExpr::ElementaryType::Boolean, PExpr::ElementaryType::Vec4, PExpr::ElementaryType::Vec4 }));
+    env.registerDef(PExpr::FunctionDef("select", PExprType::Boolean, { PExprType::Boolean, PExprType::Boolean, PExprType::Boolean }));
+    env.registerDef(PExpr::FunctionDef("select", PExprType::String, { PExprType::Boolean, PExprType::String, PExprType::String }));
+    env.registerDef(PExpr::FunctionDef("select", PExprType::Integer, { PExprType::Boolean, PExprType::Integer, PExprType::Integer }));
+    env.registerDef(PExpr::FunctionDef("select", PExprType::Number, { PExprType::Boolean, PExprType::Number, PExprType::Number }));
+    env.registerDef(PExpr::FunctionDef("select", PExprType::Vec2, { PExprType::Boolean, PExprType::Vec2, PExprType::Vec2 }));
+    env.registerDef(PExpr::FunctionDef("select", PExprType::Vec3, { PExprType::Boolean, PExprType::Vec3, PExprType::Vec3 }));
+    env.registerDef(PExpr::FunctionDef("select", PExprType::Vec4, { PExprType::Boolean, PExprType::Vec4, PExprType::Vec4 }));
 
     // Add all texture/nodes to the function table as well, such that the uv can be changed directly
     for (const auto& tex : mContext.Scene.textures())
-        env.registerDef(PExpr::FunctionDef(tex.first, PExpr::ElementaryType::Vec4, { PExpr::ElementaryType::Vec2 }));
+        env.registerDef(PExpr::FunctionDef(tex.first, PExprType::Vec4, { PExprType::Vec2 }));
 
     // Parse
     auto ast = env.parse(expr);
@@ -699,14 +758,14 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr,
     // Patch output
     bool scalar_output = false;
     switch (ast->returnType()) {
-    case PExpr::ElementaryType::Number:
+    case PExprType::Number:
         scalar_output = true;
         break;
-    case PExpr::ElementaryType::Integer:
+    case PExprType::Integer:
         scalar_output = true;
         res           = res + " as f32";
         break;
-    case PExpr::ElementaryType::Vec4:
+    case PExprType::Vec4:
         res = "vec4_to_color(" + res + ")";
         break;
     default:

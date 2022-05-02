@@ -20,6 +20,10 @@ fn @make_vec2(x: f32, y: f32) = Vec2 { x = x, y = y };
 fn @make_vec3(x: f32, y: f32, z: f32) = Vec3 { x = x, y = y, z = z };
 fn @make_vec4(x: f32, y: f32, z: f32, w: f32) = Vec4 { x = x, y = y, z = z, w = w };
 
+fn @vec2_expand(x: f32) = make_vec2(x, x);
+fn @vec3_expand(x: f32) = make_vec3(x, x, x);
+fn @vec4_expand(x: f32) = make_vec4(x, x, x, x);
+
 fn @vec2_to_3(v: Vec2, z: f32)         = make_vec3(v.x, v.y, z);
 fn @vec2_to_4(v: Vec2, z: f32, w: f32) = make_vec4(v.x, v.y, z, w);
 fn @vec3_to_2(v: Vec3)                 = make_vec2(v.x, v.y);
@@ -57,6 +61,14 @@ fn @vec4_neg(v: Vec4) = vec4_map(v, |x| -x);
 fn @vec2_abs(v: Vec2) = vec2_map(v, |x| math_builtins::fabs(x));
 fn @vec3_abs(v: Vec3) = vec3_map(v, |x| math_builtins::fabs(x));
 fn @vec4_abs(v: Vec4) = vec4_map(v, |x| math_builtins::fabs(x));
+
+fn @vec2_floor(v: Vec2) = vec2_map(v, |x| math_builtins::floor(x));
+fn @vec3_floor(v: Vec3) = vec3_map(v, |x| math_builtins::floor(x));
+fn @vec4_floor(v: Vec4) = vec4_map(v, |x| math_builtins::floor(x));
+
+fn @vec2_ceil(v: Vec2) = vec2_map(v, |x| math_builtins::ceil(x));
+fn @vec3_ceil(v: Vec3) = vec3_map(v, |x| math_builtins::ceil(x));
+fn @vec4_ceil(v: Vec4) = vec4_map(v, |x| math_builtins::ceil(x));
 
 fn @vec2_sum(v: Vec2) = vec2_reduce(v, |x, y| x + y);
 fn @vec3_sum(v: Vec3) = vec3_reduce(v, |x, y| x + y);
