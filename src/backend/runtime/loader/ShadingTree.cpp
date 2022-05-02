@@ -114,9 +114,18 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
     currentClosure().Parameters[name] = inline_str;
 }
 
-void ShadingTree::beginClosure()
+bool ShadingTree::beginClosure(const std::string& texName)
 {
-    mClosures.emplace_back();
+    if (!texName.empty()) {
+        for (const auto& closure : mClosures) {
+            if (closure.TexName == texName) {
+                IG_LOG(L_ERROR) << "Texture '" << texName << "' calls itself, resulting in a cycle!" << std::endl;
+                return false;
+            }
+        }
+    }
+    mClosures.emplace_back(Closure{ texName, {} });
+    return true;
 }
 
 void ShadingTree::endClosure()
@@ -150,7 +159,10 @@ void ShadingTree::registerTexture(const std::string& name)
             IG_LOG(L_ERROR) << "Unknown texture '" << name << "'" << std::endl;
             mHeaderLines.push_back("tex_" + ShaderUtils::escapeIdentifier(name) + " = make_invalid_texture();");
         } else {
-            mHeaderLines.push_back(LoaderTexture::generate(name, *tex, *this));
+            const std::string res = LoaderTexture::generate(name, *tex, *this);
+            if (res.empty()) // Due to some error this might happen
+                return;
+            mHeaderLines.push_back(res);
         }
         mLoadedTextures.insert(name);
     }

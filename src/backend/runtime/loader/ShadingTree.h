@@ -14,6 +14,7 @@ struct LoaderContext;
 class ShadingTree {
 private:
     struct Closure {
+        std::string TexName;
         std::unordered_map<std::string, std::string> Parameters;
     };
 
@@ -25,7 +26,8 @@ public:
 
     explicit ShadingTree(LoaderContext& ctx);
 
-    void beginClosure();
+    /// Register new closure, can be empty if not a texture
+    bool beginClosure(const std::string& texName = {});
     void endClosure();
 
     void addNumber(const std::string& name, const Parser::Object& obj, float def = 0, bool hasDef = true, InlineMode mode = IM_Surface);

@@ -7,7 +7,8 @@
 namespace IG {
 static void tex_image(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
 {
-    tree.beginClosure();
+    if (!tree.beginClosure(name))
+        return;
 
     const std::string filename    = tree.context().handlePath(tex.property("filename").getString(), tex).generic_u8string();
     const std::string filter_type = tex.property("filter_type").getString("bilinear");
@@ -50,12 +51,13 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
 
 static void tex_checkerboard(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
 {
-    tree.beginClosure();
+    if (!tree.beginClosure(name))
+        return;
 
-    tree.addColor("color0", tex, Vector3f::Zero());
-    tree.addColor("color1", tex, Vector3f::Ones());
-    tree.addNumber("scale_x", tex, 2.0f);
-    tree.addNumber("scale_y", tex, 2.0f);
+    tree.addColor("color0", tex, Vector3f::Zero(), true, ShadingTree::IM_Bare);
+    tree.addColor("color1", tex, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addNumber("scale_x", tex, 2.0f, true, ShadingTree::IM_Bare);
+    tree.addNumber("scale_y", tex, 2.0f, true, ShadingTree::IM_Bare);
 
     const Transformf transform = tex.property("transform").getTransform();
 
@@ -73,12 +75,13 @@ static void tex_gen_noise(const std::string& func, std::ostream& stream, const s
 {
     constexpr float DefaultSeed = 36326639;
 
-    tree.beginClosure();
+    if (!tree.beginClosure(name))
+        return;
 
-    tree.addColor("color", tex, Vector3f::Ones());
-    tree.addNumber("seed", tex, DefaultSeed);
-    tree.addNumber("scale_x", tex, 10.0f);
-    tree.addNumber("scale_y", tex, 10.0f);
+    tree.addColor("color", tex, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addNumber("seed", tex, DefaultSeed, true, ShadingTree::IM_Bare);
+    tree.addNumber("scale_x", tex, 10.0f, true, ShadingTree::IM_Bare);
+    tree.addNumber("scale_y", tex, 10.0f, true, ShadingTree::IM_Bare);
     const Transformf transform = tex.property("transform").getTransform();
 
     std::string afunc = tex.property("colored").getBool() ? "c" + func : func;
@@ -121,7 +124,9 @@ static void tex_fbm(std::ostream& stream, const std::string& name, const Parser:
 
 static void tex_transform(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
 {
-    tree.beginClosure();
+    if (!tree.beginClosure(name))
+        return;
+
     tree.addTexture("texture", tex, true);
 
     const Transformf transform = tex.property("transform").getTransform();
