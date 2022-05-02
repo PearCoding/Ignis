@@ -151,7 +151,7 @@ std::string ShadingTree::getInline(const std::string& name) const
     return "";
 }
 
-void ShadingTree::registerTexture(const std::string& name)
+void ShadingTree::registerTextureUsage(const std::string& name)
 {
     if (mLoadedTextures.count(name) == 0) {
         const auto tex = mContext.Scene.texture(name);
@@ -180,7 +180,7 @@ std::string ShadingTree::handleTexture(const std::string& expr, const std::strin
             return "0:f32/*Error*/";
     } else {
         for (const auto& tex : res.value().Textures)
-            registerTexture(tex);
+            registerTextureUsage(tex);
 
         if (needColor) {
             if (res.value().ScalarOutput)

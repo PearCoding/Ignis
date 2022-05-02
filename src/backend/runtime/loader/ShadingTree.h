@@ -34,6 +34,7 @@ public:
     void addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, InlineMode mode = IM_Surface);
     void addTexture(const std::string& name, const Parser::Object& obj, bool hasDef = true);
 
+    void registerTextureUsage(const std::string& name);
     std::string pullHeader();
     std::string getInline(const std::string& name) const;
     inline bool hasParameter(const std::string& name) const { return currentClosure().Parameters.count(name) > 0; }
@@ -46,7 +47,6 @@ private:
     inline Closure& currentClosure() { return mClosures.back(); }
 
     std::string handleTexture(const std::string& name, const std::string& uv_access, bool needColor, bool hasSurfaceInfo);
-    void registerTexture(const std::string& name);
 
     LoaderContext& mContext;
 

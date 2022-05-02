@@ -3,6 +3,7 @@
 #include "Logger.h"
 #include "ShaderUtils.h"
 #include "ShadingTree.h"
+#include "Transpiler.h"
 
 namespace IG {
 static void tex_image(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
@@ -122,6 +123,81 @@ static void tex_fbm(std::ostream& stream, const std::string& name, const Parser:
     return tex_gen_noise("fbm", stream, name, tex, tree);
 }
 
+inline static bool startsWith(std::string_view str, std::string_view prefix)
+{
+    return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
+}
+
+static void tex_expr(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+{
+    if (!tree.beginClosure(name))
+        return;
+
+    const std::string expr = tex.property("expr").getString();
+    if (expr.empty()) {
+        IG_LOG(L_ERROR) << "Texture '" << name << "' requires an expression" << std::endl;
+        return;
+    }
+
+    // Register on the shading tree first
+    for (const auto& pair : tex.properties()) {
+        if (startsWith(pair.first, "num_"))
+            tree.addNumber(pair.first, tex, 0.0f, true, ShadingTree::IM_Bare);
+        else if (startsWith(pair.first, "color_"))
+            tree.addColor(pair.first, tex, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    }
+
+    // Register available variables to transpiler as well
+    Transpiler transpiler(tree.context());
+    for (const auto& pair : tex.properties()) {
+        if (startsWith(pair.first, "num_"))
+            transpiler.registerCustomVariableNumber(pair.first.substr(4));
+        else if (startsWith(pair.first, "color_"))
+            transpiler.registerCustomVariableColor(pair.first.substr(6));
+        else if (startsWith(pair.first, "vec_"))
+            transpiler.registerCustomVariableVector(pair.first.substr(4));
+        else if (startsWith(pair.first, "bool_"))
+            transpiler.registerCustomVariableBool(pair.first.substr(5));
+    }
+
+    // Transpile
+    const auto res = transpiler.transpile(expr, "uv", false);
+    if (!res.has_value())
+        return;
+
+    // Patch output to color
+    std::string output;
+    if (res.value().ScalarOutput)
+        output = "make_gray_color(" + res.value().Expr + ")";
+    else
+        output = res.value().Expr;
+
+    // Make sure all texture is loaded
+    for (const auto& tex : res.value().Textures)
+        tree.registerTextureUsage(tex);
+
+    // Pull texture usage
+    stream << tree.pullHeader()
+           << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = @|uv: Vec2| -> Color{" << std::endl;
+
+    // Inline custom variables
+    for (const auto& pair : tex.properties()) {
+        if (startsWith(pair.first, "num_"))
+            stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(4)) << " = " << tree.getInline(pair.first) << ";" << std::endl;
+        else if (startsWith(pair.first, "color_"))
+            stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(6)) << " = " << tree.getInline(pair.first) << ";" << std::endl;
+        else if (startsWith(pair.first, "vec_"))
+            stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(4)) << " = " << ShaderUtils::inlineVector(pair.second.getVector3()) << ";" << std::endl;
+        else if (startsWith(pair.first, "bool_"))
+            stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(5)) << " = " << (pair.second.getBool() ? "true" : "false") << ";" << std::endl;
+    }
+
+    // End output
+    stream << "    " << output << " };" << std::endl;
+
+    tree.endClosure();
+}
+
 static void tex_transform(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
 {
     if (!tree.beginClosure(name))
@@ -153,6 +229,7 @@ static const struct {
     { "perlin", tex_perlin },
     { "voronoi", tex_voronoi },
     { "fbm", tex_fbm },
+    { "expr", tex_expr },
     { "transform", tex_transform },
     { "", nullptr }
 };

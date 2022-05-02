@@ -14,6 +14,10 @@ inline std::string tex_name(const std::string& name)
 {
     return "tex_" + ShaderUtils::escapeIdentifier(name);
 }
+inline std::string var_name(const std::string& name)
+{
+    return "var_tex_" + ShaderUtils::escapeIdentifier(name);
+}
 
 // Internal Variables
 struct InternalVariable {
@@ -379,7 +383,7 @@ public:
 
     inline std::unordered_set<std::string>& usedTextures() { return mUsedTextures; }
 
-    std::string onVariable(const std::string& name, PExprType) override
+    std::string onVariable(const std::string& name, PExprType expectedType) override
     {
         if (name == "uv")
             return mUVAccess;
@@ -395,9 +399,15 @@ public:
         if (var != sInternalVariables.end())
             return var->second.access();
 
-        // Must be a texture
-        mUsedTextures.insert(name);
-        return "color_to_vec4(" + tex_name(name) + "(" + mUVAccess + "))";
+        if (expectedType == PExprType::Vec4 && mContext.Scene.texture(name) != nullptr) {
+            mUsedTextures.insert(name);
+            return "color_to_vec4(" + tex_name(name) + "(" + mUVAccess + "))";
+        } else {
+            if (expectedType == PExprType::Vec4)
+                return "color_to_vec4(" + var_name(name) + ")";
+            else
+                return var_name(name);
+        }
     }
 
     std::string onInteger(PExpr::Integer v) override { return std::to_string(v) + ":i32"; }
@@ -678,6 +688,16 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr,
 
     for (const auto& var : sInternalVariables)
         env.registerDef(PExpr::VariableDef(var.first, var.second.Type));
+
+    // Add custom variables to the variable table
+    for (const auto& var : mCustomVariableBool)
+        env.registerDef(PExpr::VariableDef(var, PExprType::Boolean));
+    for (const auto& var : mCustomVariableNumber)
+        env.registerDef(PExpr::VariableDef(var, PExprType::Number));
+    for (const auto& var : mCustomVariableVector)
+        env.registerDef(PExpr::VariableDef(var, PExprType::Vec3));
+    for (const auto& var : mCustomVariableColor)
+        env.registerDef(PExpr::VariableDef(var, PExprType::Vec4));
 
     // Add all textures/nodes to the variable table
     for (const auto& tex : mContext.Scene.textures()) {
