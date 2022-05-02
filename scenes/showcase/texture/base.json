@@ -1,0 +1,36 @@
+{
+	"technique": {
+		"type": "path",
+		"max_depth": 2,
+		"clamp": 100
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 40,
+		"near_clip": 0.1,
+		"far_clip": 100,
+		"transform": {"lookat": { "origin": [ 0,-6,11 ], "target": [0,1,0] } }
+	},
+	"film": {
+		"size": [1000, 1000]
+	},
+	"textures": [
+		{
+			"type": "image",
+			"name": "env",
+			"filename": "../../textures/environment/phalzer_forest_01_4k.exr"
+		}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name": "mat-Plane", "reflectance":[0.8,0.8,0.8]}
+	],
+	"shapes": [
+		{"type":"rectangle", "name":"Plane", "width":6, "height":6}
+	],
+	"entities": [
+		{"name":"Plane","shape":"Plane", "bsdf":"mat-Plane", "transform":{"translate":[0,0,2]}}
+	],
+	"lights": [
+		{"type":"env", "name":"Environment", "radiance":"env"}
+	]
+}

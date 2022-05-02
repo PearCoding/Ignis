@@ -2,8 +2,7 @@ Media
 =====
 
 This section contains a list of media supported by the Ignis renderer.
-All number and color parameters can be connected to a texture by referencing it via its name.
-If only a channel of the texture is desired, the expression :monosp:`id.channel` can be used, with :monosp:`channel` being r, g or b respectively.
+All number and color parameters can be connected to a shading network or texture via :ref:`PExpr <PExpr>`.
 
 A medium is specified in the :monosp:`media` block with a :monosp:`name` and a :monosp:`type`.
 The type has to be one of the media listed at this section below.

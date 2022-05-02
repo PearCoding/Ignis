@@ -2,6 +2,7 @@ Lights
 ======
 
 Several light and sky models are contained inside the Ignis rendering framework.
+Most number and color parameters can be connected to a shading network or texture via :ref:`PExpr <PExpr>`.
 
 A light is specified in the :monosp:`lights` block with a :monosp:`name` and a :monosp:`type`.
 The type has to be one of the lights listed at this section below.

@@ -197,7 +197,7 @@ fn @cpnoise3(uvw: Vec3, seed: f32)    = make_color_noise_fn(pnoise3, uvw, seed);
 
 fn @cperlin2(uv: Vec2, seed: f32) {
     let color = cnoise2(uv, seed);
-    color_mulf(color, perlin2(uv, seed))
+    color_mulf(color, perlin2(uv, seed) / vec3_max_value(color_to_vec3(color)))
 }
 
 // fn @cperlin3(uvw: Vec3, seed: f32)    = make_color_noise_fn(perlin3, uvw, seed);

@@ -26,7 +26,7 @@
 		{
 			"type": "image",
 			"name": "env",
-			"filename": "../textures/environment/phalzer_forest_01_4k.exr"
+			"filename": "../../textures/environment/phalzer_forest_01_4k.exr"
 		}
 	],
 	"bsdfs": [
@@ -35,8 +35,8 @@
 	],
 	"shapes": [
 		{"type":"rectangle", "name":"Ground", "width":10, "height":10},
-		{"type":"ply", "name":"Sphere", "filename":"../meshes/IgnisSphere.ply"},
-		{"type":"ply", "name":"Socket", "filename":"../meshes/IgnisSocket.ply", "flip_normals": true}
+		{"type":"ply", "name":"Sphere", "filename":"../../meshes/IgnisSphere.ply"},
+		{"type":"ply", "name":"Socket", "filename":"../../meshes/IgnisSocket.ply", "flip_normals": true}
 	],
 	"entities": [
 		{"name":"Ground","shape":"Ground", "bsdf":"mat-Ground"},

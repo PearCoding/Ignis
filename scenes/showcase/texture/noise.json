@@ -1,0 +1,11 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"textures": [
+		{"type":"noise", "name":"tex", "colored": true}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name":"mat-Plane", "reflectance": "tex"}
+	]
+}

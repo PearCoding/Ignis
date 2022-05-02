@@ -3,7 +3,7 @@
         {"filename":"base.json"}
     ],
 	"textures": [
-		{"type":"image", "name":"weight", "filename":"../textures/grid_weight.png"}
+		{"type":"image", "name":"weight", "filename":"../../textures/grid_weight.png"}
 	],
 	"bsdfs": [
 		{"type":"diffuse", "name":"first"},

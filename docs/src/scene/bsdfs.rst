@@ -2,8 +2,7 @@ BSDFs
 =====
 
 This section contains a list of bsdfs supported by the Ignis renderer.
-All number and color parameters can be connected to a texture by referencing it via its name.
-If only a channel of the texture is desired, the expression :monosp:`id.channel` can be used, with :monosp:`channel` being r, g or b respectively.
+All number and color parameters can be connected to a shading network or texture via :ref:`PExpr <PExpr>`.
 
 A bsdf is specified in the :monosp:`bsdfs` block with a :monosp:`name` and a :monosp:`type`.
 The type has to be one of the bsdfs listed at this section below.
