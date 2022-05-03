@@ -7,13 +7,17 @@
 #include <iterator>
 #include <sstream>
 
+#ifndef IG_OS_WINDOWS
+#include <unistd.h>
+#endif
+
 using namespace IG;
 
-static std::vector<Ray> read_input(std::istream& is, bool file)
+static std::vector<Ray> read_input(std::istream& is, bool print_prefix)
 {
     std::vector<Ray> rays;
     while (true) {
-        if (!file)
+        if (print_prefix)
             std::cout << ">> ";
 
         std::string line;
@@ -48,6 +52,9 @@ static std::vector<Ray> read_input(std::istream& is, bool file)
             ray.Range(1) = std::numeric_limits<float>::max();
 
         rays.push_back(ray);
+
+        if (is.eof())
+            break;
     }
 
     return rays;
@@ -55,9 +62,8 @@ static std::vector<Ray> read_input(std::istream& is, bool file)
 
 static void write_output(std::ostream& is, const float* data, size_t count, size_t spp)
 {
-    for (size_t i = 0; i < count; ++i) {
-        is << data[3 * i + 0] / spp << " " << data[3 * i + 1] / spp << " " << data[3 * i + 2] / spp << std::endl;
-    }
+    for (size_t i = 0; i < count; ++i)
+        is << std::scientific << data[3 * i + 0] / spp << "\t" << data[3 * i + 1] / spp << "\t" << data[3 * i + 2] / spp << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -76,16 +82,21 @@ int main(int argc, char** argv)
     if (!cmd.Quiet)
         std::cout << Build::getCopyrightString() << std::endl;
 
+#ifndef IG_OS_WINDOWS
+    const bool isAtty = isatty(fileno(stdin));
+#else
+    const bool isAtty = true; // Just assume it
+#endif
     const bool isInteractive = cmd.InputRay.empty();
     bool firstRound          = true;
 
     while (true) {
         std::vector<Ray> rays;
         if (isInteractive) {
-            rays = read_input(std::cin, false);
+            rays = read_input(std::cin, isAtty);
         } else {
             std::ifstream stream(cmd.InputRay);
-            rays = read_input(stream, true);
+            rays = read_input(stream, false);
         }
 
         if (rays.empty()) {
@@ -139,7 +150,7 @@ int main(int argc, char** argv)
         }
 
         firstRound = false;
-        if (!isInteractive)
+        if (!isInteractive || !isAtty)
             break;
     }
 

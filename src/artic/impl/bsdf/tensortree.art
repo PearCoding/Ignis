@@ -60,7 +60,7 @@ fn @tt_lookup_grid(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
     let mut n    = 0:i32;
     for i in unroll_rev(component.specification.ndim, 0) {
         let p = 2 * vec4_at(pos, i - 1);
-        let t = if p >= 1 { 1 } else { 0 };
+        let t = select(p >= 1, 1:i32, 0:i32);
         n |= t << (i - 1);
         spos(i - 1) = p - t as f32;
     }
@@ -101,8 +101,8 @@ fn @tt_climb_tree(pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) {
 
 // Evaluates whole component and returns corresponding leaf value
 fn @tt_eval_component(dbg: DebugOutput, in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) -> f32 {
-    let in_pos  = tt_disk2square(vec2_neg(vec3_to_2(in_dir)));
-    let out_pos = tt_disk2square((vec3_to_2(out_dir)));
+    let in_pos  = concentric_disk_to_square(vec2_neg(vec3_to_2(in_dir)));
+    let out_pos = concentric_disk_to_square((vec3_to_2(out_dir)));
 
     // TODO: Handle ndim==3!
 
@@ -248,7 +248,7 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
                 } else {
                     make_option(BsdfSample {
                         in_dir = shading::to_world(surf.local, wi),
-                        pdf    = 1/*sample.pdf*/,
+                        pdf    = sample.pdf,
                         color  = color_mulf(color, tree.eval(surf, wi, wo) / e_pdf),
                         eta    = 1
                     })

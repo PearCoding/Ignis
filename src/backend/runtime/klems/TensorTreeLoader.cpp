@@ -36,6 +36,21 @@ struct TensorTreeNode {
 
         Values.clear();
     }
+
+    inline void dump(std::ostream& stream) const
+    {
+        if (Children.empty()) {
+            stream << "[ ";
+            for (const auto& c : Values)
+                stream << c << " ";
+            stream << "]";
+        } else {
+            stream << "{ ";
+            for (const auto& c : Children)
+                c->dump(stream);
+            stream << " }";
+        }
+    }
 };
 
 using NodeValue = int32_t;
@@ -49,12 +64,12 @@ public:
     {
     }
 
-    inline void addNode(const TensorTreeNode& node, NodeValue* parentValue)
+    inline void addNode(const TensorTreeNode& node, std::optional<size_t> parentOffsetValue)
     {
         if (node.Children.empty()) {
-            IG_ASSERT(parentValue != nullptr, "Root can not be a leaf!");
-            size_t off   = mValues.size();
-            *parentValue = -(static_cast<NodeValue>(off) + 1);
+            IG_ASSERT(parentOffsetValue.has_value(), "Root can not be a leaf!");
+            size_t off                        = mValues.size();
+            mNodes[parentOffsetValue.value()] = -(static_cast<NodeValue>(off) + 1);
 
             bool single = node.Values.size() == 1;
             if (single) {
@@ -67,8 +82,8 @@ public:
             IG_ASSERT(node.Children.size() == mMaxValuesPerNode, "Expected valid number of children in a node");
 
             size_t off = mNodes.size();
-            if (parentValue)
-                *parentValue = static_cast<NodeValue>(off);
+            if (parentOffsetValue.has_value())
+                mNodes[parentOffsetValue.value()] = static_cast<NodeValue>(off);
 
             // First create the entries to linearize access
             for (size_t i = 0; i < node.Children.size(); ++i)
@@ -76,7 +91,7 @@ public:
 
             // Recursively add nodes
             for (size_t i = 0; i < node.Children.size(); ++i)
-                addNode(*node.Children[i], &mNodes[off + i]);
+                addNode(*node.Children[i], off + i);
         }
     }
 
@@ -88,7 +103,7 @@ public:
         std::fill(mNodes.begin(), mNodes.end(), -1);
     }
 
-    inline void write(std::ostream& os)
+    inline void write(std::ostream& os) const
     {
         auto node_count  = static_cast<uint32>(mNodes.size());
         auto value_count = static_cast<uint32>(mValues.size());
@@ -255,9 +270,12 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
             }
         }
 
+        // root->dump(std::cout);
+        // std::cout << std::endl;
+
         // Setup component
         std::shared_ptr<TensorTreeComponent> component = std::make_shared<TensorTreeComponent>(dim4 ? 4 : 3);
-        component->addNode(*root, nullptr);
+        component->addNode(*root, {});
 
         // Select correct component
         // The window definition flips the front & back
