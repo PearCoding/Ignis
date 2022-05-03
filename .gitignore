@@ -1,0 +1,55 @@
+build/
+CMakeSettings.json
+
+# Visual Studio stuff
+.vs/
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Configuration file
+*.conf
+
+# Float buffers
+*.fbuf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Python cache
+__pycache__/
+
+# glTF cache
+_ignis_cache*/
+
+# Other outputs
+out/
+data/
+
+# Some radiance output
+scenes/radiance/*/*.hdr
+scenes/radiance/*/*.exr
+scenes/radiance/*/*.unf
+scenes/radiance/*/*.oct
