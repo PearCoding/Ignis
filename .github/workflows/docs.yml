@@ -31,9 +31,11 @@ jobs:
       run: |
         cd docs
         rsync -avu --delete html/ docs
+        touch docs/.nojekyll
         rm -r html/
     - name: Apply changes
       run: |
+        cd docs
         git config user.email github-actions@github.com
         git config user.name github-actions
         git add .
