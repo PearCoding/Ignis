@@ -30,8 +30,9 @@ jobs:
     - name: Apply changes
       run: |
         cd docs
+        mv html/ docs/
         git config user.email github-actions@github.com
         git config user.name github-actions
-        git add docs/
+        git add .
         git commit -m "Updated docs" -a
         git push
