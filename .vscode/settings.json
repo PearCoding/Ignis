@@ -137,5 +137,5 @@
         "semaphore": "cpp"
     },
     "cmake.configureOnOpen": false,
-    "cmake.buildDirectory": "${workspaceRoot}/build/${buildType}",
+    "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
 }

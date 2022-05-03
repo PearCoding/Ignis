@@ -155,6 +155,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
 
 void ProgramOptions::populate(RuntimeOptions& options) const
 {
+    IG_LOGGER.setQuiet(Quiet);
     IG_LOGGER.setVerbosity(VerbosityLevel);
     IG_LOGGER.enableAnsiTerminal(!NoColor);
 
