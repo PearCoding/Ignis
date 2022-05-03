@@ -22,7 +22,9 @@ jobs:
         ref: docs
         path: docs
     - name: Install sphinx
-      run: python3 -m pip install -U sphinx
+      run: | 
+        python3 -m pip install -U sphinx
+        python3 -m pip install -r ./master/docs/Requirements.txt
     - name: Run sphinx
       run: sphinx-build -M html ./master/docs ./docs/docs
     - name: Apply changes
