@@ -1,0 +1,425 @@
+
+
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>File Format &mdash; Ignis  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../_static/css/theme.min.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/custom.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.min.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="PExpr" href="pexpr.html" />
+    <link rel="prev" title="Evalglare Tutorial" href="../getting_started/tutorials/evalglare.html" /> 
+
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <a class="site-nav-toggle hidden-lg-up"><i class="icon-menu"></i></a>
+            <a class="site-title" href="../../index.html">
+                Ignis
+            </a>
+        </div>
+    </header>
+
+
+<div class="breadcrumbs-outer hidden-xs-down">
+    <div class="container">
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a></li>
+        
+      <li>File Format</li>
+    
+    
+      <li class="breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+</div>
+    </div>
+</div>
+    <div class="main-outer">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 col-lg-3 site-nav">
+                    
+<div role="search">
+    <form class="search" action="../../search.html" method="get">
+        <div class="icon-input">
+            <input type="text" name="q" placeholder="Search" />
+            <span class="icon-search"></span>
+        </div>
+        <input type="submit" value="Go" class="d-hidden" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+                    <div class="site-nav-tree">
+                        
+                            
+                            
+                                <p class="caption" role="heading"><span class="caption-text">Getting Started:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/start.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/start.html#backends">Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/start.html#frontends">Frontends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/start.html#running">Running</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/start.html#tiny-tools">Tiny tools</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/compiling.html">Compiling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/compiling.html#linux">Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/tutorials/index.html">Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/tutorials/evalglare.html">Evalglare Tutorial</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Scene reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">File Format</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#transformation">Transformation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pexpr.html">PExpr</a></li>
+<li class="toctree-l1"><a class="reference internal" href="externals.html">Externals</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="externals.html#ignis-resource-file-ignis">Ignis resource file (<span class="monosp">ignis</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="externals.html#graphics-language-transmission-format-gltf-resource-file-gltf">Graphics Language Transmission Format “glTF” resource file (<span class="monosp">gltf</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="shapes.html">Shapes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#triangle-triangle">Triangle (<span class="monosp">triangle</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#rectangle-rectangle">Rectangle (<span class="monosp">rectangle</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#box-box">Box (<span class="monosp">box</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#ico-sphere-icosphere-sphere">Ico-Sphere (<span class="monosp">icosphere</span>, <span class="monosp">sphere</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#uv-sphere-uvsphere">UV-Sphere (<span class="monosp">uvsphere</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#cylinder-cylinder">Cylinder (<span class="monosp">cylinder</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#cone-cone">Cone (<span class="monosp">cone</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#disk-disk">Disk (<span class="monosp">disk</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#wavefront-object-format-obj">Wavefront Object Format (<span class="monosp">obj</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#polygon-file-format-ply">Polygon File Format (<span class="monosp">ply</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#mitsuba-serialized-format-mitsuba">Mitsuba Serialized Format (<span class="monosp">mitsuba</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="entities.html">Entities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bsdfs.html">BSDFs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#smooth-diffuse-diffuse">Smooth diffuse (<span class="monosp">diffuse</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#rough-diffuse-roughdiffuse">Rough diffuse (<span class="monosp">roughdiffuse</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#smooth-dielectric-dielectric">Smooth dielectric (<span class="monosp">dielectric</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#rough-dielectric-roughdielectric">Rough dielectric (<span class="monosp">roughdielectric</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#perfect-smooth-mirror-mirror">Perfect smooth mirror (<span class="monosp">mirror</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#smooth-conductor-conductor">Smooth conductor (<span class="monosp">conductor</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#rough-conductor-roughconductor">Rough conductor (<span class="monosp">roughconductor</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#smooth-plastic-plastic">Smooth plastic (<span class="monosp">plastic</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#rough-plastic-roughplastic">Rough plastic (<span class="monosp">roughplastic</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#phong-phong">Phong (<span class="monosp">phong</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#disney-principled-principled">Disney <em>Principled</em> (<span class="monosp">principled</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#blend-blend">Blend (<span class="monosp">blend</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#mask-mask">Mask (<span class="monosp">mask</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#cutoff-cutoff">Cutoff (<span class="monosp">cutoff</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#passthrough-passthrough">Passthrough (<span class="monosp">passthrough</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#normal-mapping-normalmap">Normal mapping (<span class="monosp">normalmap</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#bump-mapping-bumpmap">Bump mapping (<span class="monosp">bumpmap</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#klems-klems">Klems (<span class="monosp">klems</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bsdfs.html#tensortree-tensortree">TensorTree (<span class="monosp">tensortree</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="media.html">Media</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="media.html#homogeneous-homogeneous-constant">Homogeneous (<span class="monosp">homogeneous</span>, <span class="monosp">constant</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="lights.html">Lights</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="lights.html#point-light-point">Point Light (<span class="monosp">point</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lights.html#directional-light-directional">Directional Light (<span class="monosp">directional</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lights.html#area-light-area">Area Light (<span class="monosp">area</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lights.html#sun-light-sun">Sun Light (<span class="monosp">sun</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lights.html#sky-light-sky">Sky Light (<span class="monosp">sky</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lights.html#cie-uniform-sky-model-cie-uniform">CIE Uniform Sky Model (<span class="monosp">cie_uniform</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lights.html#cie-cloudy-sky-model-cie-cloudy">CIE Cloudy Sky Model (<span class="monosp">cie_cloudy</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lights.html#perez-sky-model-perez">Perez Sky Model (<span class="monosp">perez</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lights.html#environment-light-env">Environment Light (<span class="monosp">env</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="textures.html">Textures</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="textures.html#image-texture-image">Image texture (<span class="monosp">image</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="textures.html#checkerboard-checkerboard">Checkerboard (<span class="monosp">checkerboard</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="textures.html#noise-noise">Noise (<span class="monosp">noise</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="textures.html#pnoise-pnoise">PNoise (<span class="monosp">pnoise</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="textures.html#cell-noise-cellnoise">Cell Noise (<span class="monosp">cellnoise</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="textures.html#perlin-noise-perlin">Perlin Noise (<span class="monosp">perlin</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="textures.html#voronoi-noise-voronoi">Voronoi Noise (<span class="monosp">voronoi</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="textures.html#fractional-brownian-motion-fbm">Fractional Brownian Motion (<span class="monosp">fbm</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="textures.html#expression-expr">Expression (<span class="monosp">expr</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="textures.html#texture-transform-transform">Texture transform (<span class="monosp">transform</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cameras.html">Cameras</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="cameras.html#perspective-camera-perspective">Perspective Camera (<span class="monosp">perspective</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cameras.html#orthogonal-camera-orthogonal">Orthogonal Camera (<span class="monosp">orthogonal</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cameras.html#fisheye-camera-fisheye-fishlens">Fisheye Camera (<span class="monosp">fisheye</span>, <span class="monosp">fishlens</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="techniques.html">Techniques</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="techniques.html#path-tracer-path">Path Tracer (<span class="monosp">path</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="techniques.html#volume-path-tracer-volpath">Volume Path Tracer (<span class="monosp">volpath</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="techniques.html#photonmapper-photonmapper">Photonmapper (<span class="monosp">photonmapper</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="techniques.html#ambient-occlusion-ao">Ambient Occlusion (<span class="monosp">ao</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="techniques.html#wireframe-wireframe">Wireframe (<span class="monosp">wireframe</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="techniques.html#debug-debug">Debug (<span class="monosp">debug</span>)</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Python API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../python/overview.html">Overview</a></li>
+</ul>
+
+                            
+                        
+                    </div>
+                </div>
+                <div class="col-12 col-lg-9">
+                    <div class="document">
+                        
+                            
+  <section id="file-format">
+<h1>File Format<a class="headerlink" href="#file-format" title="Permalink to this headline">¶</a></h1>
+<p>Ignis uses a flat hierachy of entities specified in a single JSON file.
+Future extensions might introduce linked data and transform hierachies to allow more complex scenes.
+The JSON format is not strict and allows comments in the style of // and <cite>/* */</cite>.
+Also trailing commas are allowed to ease automatic generation of scene files.</p>
+<p>Below is a complete scene usable with Ignis as an example.</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">diamond_scene.json</span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;technique&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;max_depth&quot;</span><span class="o">:</span> <span class="mi">64</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;camera&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;perspective&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;fov&quot;</span><span class="o">:</span> <span class="mf">39.597755</span><span class="p">,</span>
+        <span class="s2">&quot;near_clip&quot;</span><span class="o">:</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="s2">&quot;far_clip&quot;</span><span class="o">:</span> <span class="mi">100</span><span class="p">,</span>
+        <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mf">3.849529</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span> <span class="p">]</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;film&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;size&quot;</span><span class="o">:</span> <span class="p">[</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">]</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;externals&quot;</span><span class="o">:</span> <span class="p">[],</span>
+    <span class="s2">&quot;textures&quot;</span><span class="o">:</span> <span class="p">[],</span>
+    <span class="s2">&quot;bsdfs&quot;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;diffuse&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;mat-Light&quot;</span><span class="p">,</span> <span class="s2">&quot;reflectance&quot;</span><span class="o">:</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]},</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;diffuse&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;mat-GrayWall&quot;</span><span class="p">,</span> <span class="s2">&quot;reflectance&quot;</span><span class="o">:</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]},</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;diffuse&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;mat-ColoredWall&quot;</span><span class="p">,</span> <span class="s2">&quot;reflectance&quot;</span><span class="o">:</span><span class="p">[</span><span class="mf">0.106039</span><span class="p">,</span> <span class="mf">0.195687</span><span class="p">,</span> <span class="mf">0.800000</span><span class="p">]},</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;roughdielectric&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="s2">&quot;mat-Diamond&quot;</span><span class="p">,</span> <span class="s2">&quot;alpha&quot;</span><span class="o">:</span> <span class="mf">0.0025</span><span class="p">,</span> <span class="s2">&quot;int_ior&quot;</span><span class="o">:</span> <span class="mf">2.3</span><span class="p">,</span> <span class="s2">&quot;specular_transmittance&quot;</span><span class="o">:</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]}</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;shapes&quot;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;rectangle&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;AreaLight&quot;</span><span class="p">,</span> <span class="s2">&quot;flip_normals&quot;</span><span class="o">:</span><span class="kc">true</span><span class="p">,</span> <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.084366</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.053688</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.7</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.053688</span><span class="p">,</span> <span class="mf">0.084366</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]},</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;ply&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;Bottom&quot;</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="o">:</span><span class="s2">&quot;meshes/Bottom.ply&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;ply&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;Top&quot;</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="o">:</span><span class="s2">&quot;meshes/Top.ply&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;ply&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;Left&quot;</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="o">:</span><span class="s2">&quot;meshes/Left.ply&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;ply&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;Right&quot;</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="o">:</span><span class="s2">&quot;meshes/Right.ply&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;ply&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;Back&quot;</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="o">:</span><span class="s2">&quot;meshes/Back.ply&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;ply&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;dobj&quot;</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="o">:</span><span class="s2">&quot;meshes/dobj.ply&quot;</span><span class="p">}</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;entities&quot;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;AreaLight&quot;</span><span class="p">,</span> <span class="s2">&quot;shape&quot;</span><span class="o">:</span><span class="s2">&quot;AreaLight&quot;</span><span class="p">,</span> <span class="s2">&quot;bsdf&quot;</span><span class="o">:</span><span class="s2">&quot;mat-Light&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;Bottom&quot;</span><span class="p">,</span><span class="s2">&quot;shape&quot;</span><span class="o">:</span><span class="s2">&quot;Bottom&quot;</span><span class="p">,</span> <span class="s2">&quot;bsdf&quot;</span><span class="o">:</span><span class="s2">&quot;mat-GrayWall&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;Top&quot;</span><span class="p">,</span><span class="s2">&quot;shape&quot;</span><span class="o">:</span><span class="s2">&quot;Top&quot;</span><span class="p">,</span> <span class="s2">&quot;bsdf&quot;</span><span class="o">:</span><span class="s2">&quot;mat-GrayWall&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;Left&quot;</span><span class="p">,</span><span class="s2">&quot;shape&quot;</span><span class="o">:</span><span class="s2">&quot;Left&quot;</span><span class="p">,</span> <span class="s2">&quot;bsdf&quot;</span><span class="o">:</span><span class="s2">&quot;mat-ColoredWall&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;Right&quot;</span><span class="p">,</span><span class="s2">&quot;shape&quot;</span><span class="o">:</span><span class="s2">&quot;Right&quot;</span><span class="p">,</span> <span class="s2">&quot;bsdf&quot;</span><span class="o">:</span><span class="s2">&quot;mat-ColoredWall&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;Back&quot;</span><span class="p">,</span><span class="s2">&quot;shape&quot;</span><span class="o">:</span><span class="s2">&quot;Back&quot;</span><span class="p">,</span> <span class="s2">&quot;bsdf&quot;</span><span class="o">:</span><span class="s2">&quot;mat-GrayWall&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;dobj1&quot;</span><span class="p">,</span><span class="s2">&quot;shape&quot;</span><span class="o">:</span><span class="s2">&quot;dobj&quot;</span><span class="p">,</span> <span class="s2">&quot;bsdf&quot;</span><span class="o">:</span><span class="s2">&quot;mat-Diamond&quot;</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;dobj2&quot;</span><span class="p">,</span><span class="s2">&quot;shape&quot;</span><span class="o">:</span><span class="s2">&quot;dobj&quot;</span><span class="p">,</span> <span class="s2">&quot;bsdf&quot;</span><span class="o">:</span><span class="s2">&quot;mat-Diamond&quot;</span><span class="p">,</span> <span class="s2">&quot;transform&quot;</span><span class="o">:</span><span class="p">{</span><span class="s2">&quot;translate&quot;</span><span class="o">:</span><span class="p">[</span><span class="mf">0.6</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]}},</span>
+        <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;dobj3&quot;</span><span class="p">,</span><span class="s2">&quot;shape&quot;</span><span class="o">:</span><span class="s2">&quot;dobj&quot;</span><span class="p">,</span> <span class="s2">&quot;bsdf&quot;</span><span class="o">:</span><span class="s2">&quot;mat-Diamond&quot;</span><span class="p">,</span> <span class="s2">&quot;transform&quot;</span><span class="o">:</span><span class="p">{</span><span class="s2">&quot;translate&quot;</span><span class="o">:</span><span class="p">[</span><span class="o">-</span><span class="mf">0.6</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]}}</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;lights&quot;</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;area&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;AreaLight&quot;</span><span class="p">,</span> <span class="s2">&quot;entity&quot;</span><span class="o">:</span><span class="s2">&quot;AreaLight&quot;</span><span class="p">,</span> <span class="s2">&quot;radiance&quot;</span><span class="o">:</span><span class="p">[</span><span class="mi">62</span><span class="p">,</span><span class="mi">62</span><span class="p">,</span><span class="mi">62</span><span class="p">]}</span>
+    <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<section id="transformation">
+<h2>Transformation<a class="headerlink" href="#transformation" title="Permalink to this headline">¶</a></h2>
+<p>A transformation can be specified for many objects in the scene.</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="nx">TRANSFORM</span><span class="p">,</span>
+    <span class="c1">//</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The transformation can be specified as a 4x4 matrix:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="nx">m00</span><span class="p">,</span> <span class="nx">m01</span><span class="p">,</span> <span class="nx">m02</span><span class="p">,</span> <span class="cm">/* ... */</span><span class="p">,</span> <span class="nx">m31</span><span class="p">,</span> <span class="nx">m32</span><span class="p">,</span> <span class="nx">m33</span><span class="p">],</span>
+    <span class="c1">//</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>as a 3x4 matrix with last row set to (0, 0, 0, 1) and a 3x3 matrix with also sets the last column (the translation) to (0, 0, 0).</p>
+<p>Another way to describe transformation is by using simple operators. The operators will be applied at the order of their appearance.</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="s2">&quot;translate&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">X</span><span class="p">,</span><span class="nx">Y</span><span class="p">,</span><span class="nx">Z</span><span class="p">],</span> <span class="s2">&quot;rotate&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">RX</span><span class="p">,</span><span class="nx">RY</span><span class="p">,</span><span class="nx">RZ</span><span class="p">],</span> <span class="s2">&quot;scale&quot;</span><span class="o">:</span><span class="p">[</span><span class="nx">SX</span><span class="p">,</span><span class="nx">SY</span><span class="p">,</span><span class="nx">SZ</span><span class="p">],</span> <span class="cm">/* AND MORE */</span>  <span class="p">},</span>
+    <span class="c1">//</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The available operators are listed below.</p>
+<section id="translate-translate">
+<h3>Translate (<span class="monosp">translate</span>)<a class="headerlink" href="#translate-translate" title="Permalink to this headline">¶</a></h3>
+<p>Specified with an array of three numbers.</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="s2">&quot;translate&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">X</span><span class="p">,</span><span class="nx">Y</span><span class="p">,</span><span class="nx">Z</span><span class="p">]</span> <span class="p">},</span>
+    <span class="c1">//</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="rotate-rotate">
+<h3>Rotate (<span class="monosp">rotate</span>)<a class="headerlink" href="#rotate-rotate" title="Permalink to this headline">¶</a></h3>
+<p>Specified with an array of three numbers given in degrees rotating around the respective euler axis.</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="s2">&quot;rotate&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">RX</span><span class="p">,</span><span class="nx">RY</span><span class="p">,</span><span class="nx">RZ</span><span class="p">]</span> <span class="p">},</span>
+    <span class="c1">//</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="rotate-using-a-quaternion-qrotate">
+<h3>Rotate using a quaternion (<span class="monosp">qrotate</span>)<a class="headerlink" href="#rotate-using-a-quaternion-qrotate" title="Permalink to this headline">¶</a></h3>
+<p>Specified with an array of four numbers representing a quaterion given as [w, x, y, z].
+Have a look at your favourite math book to understand what that means.</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="s2">&quot;qrotate&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">RW</span><span class="p">,</span><span class="nx">RX</span><span class="p">,</span><span class="nx">RY</span><span class="p">,</span><span class="nx">RZ</span><span class="p">]</span> <span class="p">},</span>
+    <span class="c1">//</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="scale-scale">
+<h3>Scale (<span class="monosp">scale</span>)<a class="headerlink" href="#scale-scale" title="Permalink to this headline">¶</a></h3>
+<p>Specified with an array of three numbers scaling the respective euler axis or as a single number scaling uniformly.</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="s2">&quot;scale&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">SX</span><span class="p">,</span><span class="nx">SY</span><span class="p">,</span><span class="nx">SZ</span><span class="p">],</span> <span class="s2">&quot;scale&quot;</span><span class="o">:</span> <span class="nx">S</span> <span class="p">},</span>
+    <span class="c1">//</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="lookat-lookat">
+<h3>Lookat (<span class="monosp">lookat</span>)<a class="headerlink" href="#lookat-lookat" title="Permalink to this headline">¶</a></h3>
+<p>Specified with multiple parameters.
+You are able to specify a <span class="monosp">direction</span> instead of a explicit <span class="monosp">target</span> location.</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="s2">&quot;lookat&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="s2">&quot;origin&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">OX</span><span class="p">,</span><span class="nx">OY</span><span class="p">,</span><span class="nx">OZ</span><span class="p">],</span> <span class="s2">&quot;target&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">TX</span><span class="p">,</span><span class="nx">TY</span><span class="p">,</span><span class="nx">TZ</span><span class="p">],</span> <span class="s2">&quot;up&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">UX</span><span class="p">,</span><span class="nx">UY</span><span class="p">,</span><span class="nx">UZ</span><span class="p">],</span> <span class="cm">/* or */</span> <span class="s2">&quot;direction&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">DX</span><span class="p">,</span><span class="nx">DY</span><span class="p">,</span><span class="nx">DZ</span><span class="p">]</span> <span class="p">}</span> <span class="p">},</span>
+    <span class="c1">//</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="matrix-matrix">
+<h3>Matrix (<span class="monosp">matrix</span>)<a class="headerlink" href="#matrix-matrix" title="Permalink to this headline">¶</a></h3>
+<p>Explicitly specify a matrix of the size 4x4, 3x4 or 3x3 to be applied to the full transformation.</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="p">{</span> <span class="s2">&quot;matrix&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">m00</span><span class="p">,</span><span class="cm">/*...*/</span><span class="p">,</span><span class="nx">m33</span><span class="p">]</span> <span class="p">},</span>
+    <span class="c1">//</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>    
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+    <div class="footer" role="contentinfo">
+        <div class="container">
+            &#169; Copyright 2020-2022, Ignis-Project.
+        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.5.0.
+        </div>
+    </div>  
+
+</body>
+</html>

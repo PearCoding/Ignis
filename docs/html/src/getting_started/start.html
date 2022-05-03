@@ -1,0 +1,333 @@
+
+
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Overview &mdash; Ignis  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../_static/css/theme.min.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/custom.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.min.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Compiling" href="compiling.html" />
+    <link rel="prev" title="Welcome to Ignis’s documentation!" href="../../index.html" /> 
+
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <a class="site-nav-toggle hidden-lg-up"><i class="icon-menu"></i></a>
+            <a class="site-title" href="../../index.html">
+                Ignis
+            </a>
+        </div>
+    </header>
+
+
+<div class="breadcrumbs-outer hidden-xs-down">
+    <div class="container">
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a></li>
+        
+      <li>Overview</li>
+    
+    
+      <li class="breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+</div>
+    </div>
+</div>
+    <div class="main-outer">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 col-lg-3 site-nav">
+                    
+<div role="search">
+    <form class="search" action="../../search.html" method="get">
+        <div class="icon-input">
+            <input type="text" name="q" placeholder="Search" />
+            <span class="icon-search"></span>
+        </div>
+        <input type="submit" value="Go" class="d-hidden" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+                    <div class="site-nav-tree">
+                        
+                            
+                            
+                                <p class="caption" role="heading"><span class="caption-text">Getting Started:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#backends">Backends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#frontends">Frontends</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running">Running</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tiny-tools">Tiny tools</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="compiling.html">Compiling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="compiling.html#linux">Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/index.html">Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/evalglare.html">Evalglare Tutorial</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Scene reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../scene/file_format.html">File Format</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../scene/file_format.html#transformation">Transformation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../scene/pexpr.html">PExpr</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scene/externals.html">Externals</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../scene/externals.html#ignis-resource-file-ignis">Ignis resource file (<span class="monosp">ignis</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/externals.html#graphics-language-transmission-format-gltf-resource-file-gltf">Graphics Language Transmission Format “glTF” resource file (<span class="monosp">gltf</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../scene/shapes.html">Shapes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../scene/shapes.html#triangle-triangle">Triangle (<span class="monosp">triangle</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/shapes.html#rectangle-rectangle">Rectangle (<span class="monosp">rectangle</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/shapes.html#box-box">Box (<span class="monosp">box</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/shapes.html#ico-sphere-icosphere-sphere">Ico-Sphere (<span class="monosp">icosphere</span>, <span class="monosp">sphere</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/shapes.html#uv-sphere-uvsphere">UV-Sphere (<span class="monosp">uvsphere</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/shapes.html#cylinder-cylinder">Cylinder (<span class="monosp">cylinder</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/shapes.html#cone-cone">Cone (<span class="monosp">cone</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/shapes.html#disk-disk">Disk (<span class="monosp">disk</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/shapes.html#wavefront-object-format-obj">Wavefront Object Format (<span class="monosp">obj</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/shapes.html#polygon-file-format-ply">Polygon File Format (<span class="monosp">ply</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/shapes.html#mitsuba-serialized-format-mitsuba">Mitsuba Serialized Format (<span class="monosp">mitsuba</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../scene/entities.html">Entities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../scene/bsdfs.html">BSDFs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#smooth-diffuse-diffuse">Smooth diffuse (<span class="monosp">diffuse</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#rough-diffuse-roughdiffuse">Rough diffuse (<span class="monosp">roughdiffuse</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#smooth-dielectric-dielectric">Smooth dielectric (<span class="monosp">dielectric</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#rough-dielectric-roughdielectric">Rough dielectric (<span class="monosp">roughdielectric</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#perfect-smooth-mirror-mirror">Perfect smooth mirror (<span class="monosp">mirror</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#smooth-conductor-conductor">Smooth conductor (<span class="monosp">conductor</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#rough-conductor-roughconductor">Rough conductor (<span class="monosp">roughconductor</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#smooth-plastic-plastic">Smooth plastic (<span class="monosp">plastic</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#rough-plastic-roughplastic">Rough plastic (<span class="monosp">roughplastic</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#phong-phong">Phong (<span class="monosp">phong</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#disney-principled-principled">Disney <em>Principled</em> (<span class="monosp">principled</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#blend-blend">Blend (<span class="monosp">blend</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#mask-mask">Mask (<span class="monosp">mask</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#cutoff-cutoff">Cutoff (<span class="monosp">cutoff</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#passthrough-passthrough">Passthrough (<span class="monosp">passthrough</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#normal-mapping-normalmap">Normal mapping (<span class="monosp">normalmap</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#bump-mapping-bumpmap">Bump mapping (<span class="monosp">bumpmap</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#klems-klems">Klems (<span class="monosp">klems</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#tensortree-tensortree">TensorTree (<span class="monosp">tensortree</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../scene/media.html">Media</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../scene/media.html#homogeneous-homogeneous-constant">Homogeneous (<span class="monosp">homogeneous</span>, <span class="monosp">constant</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../scene/lights.html">Lights</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../scene/lights.html#point-light-point">Point Light (<span class="monosp">point</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/lights.html#directional-light-directional">Directional Light (<span class="monosp">directional</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/lights.html#area-light-area">Area Light (<span class="monosp">area</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/lights.html#sun-light-sun">Sun Light (<span class="monosp">sun</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/lights.html#sky-light-sky">Sky Light (<span class="monosp">sky</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/lights.html#cie-uniform-sky-model-cie-uniform">CIE Uniform Sky Model (<span class="monosp">cie_uniform</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/lights.html#cie-cloudy-sky-model-cie-cloudy">CIE Cloudy Sky Model (<span class="monosp">cie_cloudy</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/lights.html#perez-sky-model-perez">Perez Sky Model (<span class="monosp">perez</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/lights.html#environment-light-env">Environment Light (<span class="monosp">env</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../scene/textures.html">Textures</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../scene/textures.html#image-texture-image">Image texture (<span class="monosp">image</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/textures.html#checkerboard-checkerboard">Checkerboard (<span class="monosp">checkerboard</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/textures.html#noise-noise">Noise (<span class="monosp">noise</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/textures.html#pnoise-pnoise">PNoise (<span class="monosp">pnoise</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/textures.html#cell-noise-cellnoise">Cell Noise (<span class="monosp">cellnoise</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/textures.html#perlin-noise-perlin">Perlin Noise (<span class="monosp">perlin</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/textures.html#voronoi-noise-voronoi">Voronoi Noise (<span class="monosp">voronoi</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/textures.html#fractional-brownian-motion-fbm">Fractional Brownian Motion (<span class="monosp">fbm</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/textures.html#expression-expr">Expression (<span class="monosp">expr</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/textures.html#texture-transform-transform">Texture transform (<span class="monosp">transform</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../scene/cameras.html">Cameras</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../scene/cameras.html#perspective-camera-perspective">Perspective Camera (<span class="monosp">perspective</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/cameras.html#orthogonal-camera-orthogonal">Orthogonal Camera (<span class="monosp">orthogonal</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/cameras.html#fisheye-camera-fisheye-fishlens">Fisheye Camera (<span class="monosp">fisheye</span>, <span class="monosp">fishlens</span>)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../scene/techniques.html">Techniques</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../scene/techniques.html#path-tracer-path">Path Tracer (<span class="monosp">path</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/techniques.html#volume-path-tracer-volpath">Volume Path Tracer (<span class="monosp">volpath</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/techniques.html#photonmapper-photonmapper">Photonmapper (<span class="monosp">photonmapper</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/techniques.html#ambient-occlusion-ao">Ambient Occlusion (<span class="monosp">ao</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/techniques.html#wireframe-wireframe">Wireframe (<span class="monosp">wireframe</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/techniques.html#debug-debug">Debug (<span class="monosp">debug</span>)</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Python API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../python/overview.html">Overview</a></li>
+</ul>
+
+                            
+                        
+                    </div>
+                </div>
+                <div class="col-12 col-lg-9">
+                    <div class="document">
+                        
+                            
+  <section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
+<p>This section gives an overview of the Ignis rendering framework.</p>
+<section id="backends">
+<h2>Backends<a class="headerlink" href="#backends" title="Permalink to this headline">¶</a></h2>
+<p>The raytracer as multiple backends available to make sure the best optimized kernel is used for certain tasks.
+Therefore, multiple device and feature specific modules, so-called drivers, have to be compiled.</p>
+<p>The compilation process might take a while depending on your hardware and feature selection.
+Parallel compilation of the drivers is disabled by default.
+Multithreading might freeze your operating system due to the high memory and cpu use.
+You can use the CMake option <code class="docutils literal notranslate"><span class="pre">IG_BUILD_DRIVER_PARALLEL</span></code> to enable it if you are sure your system can handle it.</p>
+</section>
+<section id="frontends">
+<h2>Frontends<a class="headerlink" href="#frontends" title="Permalink to this headline">¶</a></h2>
+<p>The frontends of the raytracer communicate with the user and one, optimal selected, backend.
+Currently, four frontends are available:</p>
+<section id="igview">
+<h3><code class="docutils literal notranslate"><span class="pre">igview</span></code><a class="headerlink" href="#igview" title="Permalink to this headline">¶</a></h3>
+<p>This is the standard UI interface which displays the scene getting progressively rendered.</p>
+<p>This frontend is very good to get a first impression of the rendered scene and fly around to pick the one best camera position.
+Keep in mind that some power of your underlying hardware is used to render the UI and the tonemapping algorithms.
+Switching to the UI-less frontend <code class="docutils literal notranslate"><span class="pre">igcli</span></code> might be a good idea if no preview is necessary.</p>
+<p>Note, <code class="docutils literal notranslate"><span class="pre">igview</span></code> will be only available if the UI feature is enabled and SDL2 is available on your system.
+Disable this frontend by setting the CMake option <code class="docutils literal notranslate"><span class="pre">IG_WITH_VIEWER</span></code> to <code class="docutils literal notranslate"><span class="pre">Off</span></code>.</p>
+</section>
+<section id="igcli">
+<h3><code class="docutils literal notranslate"><span class="pre">igcli</span></code><a class="headerlink" href="#igcli" title="Permalink to this headline">¶</a></h3>
+<p>The commandline only frontend is the same as <code class="docutils literal notranslate"><span class="pre">igview</span></code> but without any UI specific features and no interactive controls.</p>
+<p>In contrary to <code class="docutils literal notranslate"><span class="pre">igview</span></code>, <code class="docutils literal notranslate"><span class="pre">igcli</span></code> requires a maximum iteration or time budget to be specified by the user.
+Progressive rendering is not that useful without a preview.
+(We might add progressive rendering back, but I need a convincing argument for that…)</p>
+</section>
+<section id="igtrace">
+<h3><code class="docutils literal notranslate"><span class="pre">igtrace</span></code><a class="headerlink" href="#igtrace" title="Permalink to this headline">¶</a></h3>
+<p>This commandline only frontend ignores camera specific information and expects a list of rays from the user.
+It returns the contribution back to the user for each ray initially specified.</p>
+</section>
+<section id="python-api">
+<h3>Python API<a class="headerlink" href="#python-api" title="Permalink to this headline">¶</a></h3>
+<p>This simple python API allows to communicate with the runtime and allows you to work with the raytracer in interactive notebooks and more.</p>
+<p>The API is only available if Python3 was found in the system.
+You might disable the API by setting the CMake option <code class="docutils literal notranslate"><span class="pre">IG_WITH_PYTHON_API</span></code> to <code class="docutils literal notranslate"><span class="pre">Off</span></code>.</p>
+<p>More about the Python API can be found at the following section <a class="reference internal" href="../python/overview.html"><span class="doc">Overview</span></a>.</p>
+</section>
+</section>
+<section id="running">
+<h2>Running<a class="headerlink" href="#running" title="Permalink to this headline">¶</a></h2>
+<p>Each frontend requires the exact location of the backends to run.
+An automatic search procedure will find detect them in the system.
+In some rare cases the automatic search procedure might fail to find all the backends.
+In that case the environment variable <code class="docutils literal notranslate"><span class="pre">IG_DRIVER_PATH</span></code> can be used to point to the directories containing driver modules.
+The environment variable is similar to the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> variable used in Linux environments and should contain absolute paths only, separated by ‘:’ if multiple paths are provided.
+Setting <code class="docutils literal notranslate"><span class="pre">IG_DRIVER_SKIP_SYSTEM_PATH</span></code> will prevent the automatic search and only depend on <code class="docutils literal notranslate"><span class="pre">IG_DRIVER_PATH</span></code>.</p>
+<p>Run a frontend of your choice like this:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>igview scene/diamond_scene.json
+</pre></div>
+</div>
+</section>
+<section id="tiny-tools">
+<h2>Tiny tools<a class="headerlink" href="#tiny-tools" title="Permalink to this headline">¶</a></h2>
+<p>Two tiny tools <code class="docutils literal notranslate"><span class="pre">exr2hdr</span></code> and <code class="docutils literal notranslate"><span class="pre">hdr2exr</span></code> are available to convert between the Radiance favorite image format HDR to the advanced OpenEXR format and vice versa.</p>
+<p>This is useful to ease the transfer from Radiance to our raytracer, but you can disable them by setting the CMake option <code class="docutils literal notranslate"><span class="pre">IG_WITH_TOOLS</span></code> to <code class="docutils literal notranslate"><span class="pre">Off</span></code>.</p>
+<p>Actually, the tool might convert from any format the <code class="docutils literal notranslate"><span class="pre">stb_image</span></code> framework supports to the second format.</p>
+</section>
+</section>
+
+
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>    
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+    <div class="footer" role="contentinfo">
+        <div class="container">
+            &#169; Copyright 2020-2022, Ignis-Project.
+        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.5.0.
+        </div>
+    </div>  
+
+</body>
+</html>
