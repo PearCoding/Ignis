@@ -26,7 +26,7 @@ jobs:
         python3 -m pip install -U sphinx
         python3 -m pip install -r ./master/docs/Requirements.txt
     - name: Run sphinx
-      run: sphinx-build -M html ./master/docs ./docs/docs
+      run: sphinx-build -M html ./master/docs ./docs
     - name: Apply changes
       run: |
         cd docs
