@@ -1,5 +1,6 @@
 build/
 CMakeSettings.json
+doctree/
 
 # Visual Studio stuff
 .vs/
