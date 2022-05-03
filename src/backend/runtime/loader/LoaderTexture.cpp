@@ -72,6 +72,31 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
     tree.endClosure();
 }
 
+static void tex_brick(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+{
+    if (!tree.beginClosure(name))
+        return;
+
+    tree.addColor("color0", tex, Vector3f::Zero(), true, ShadingTree::IM_Bare);
+    tree.addColor("color1", tex, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addNumber("scale_x", tex, 3.0f, true, ShadingTree::IM_Bare);
+    tree.addNumber("scale_y", tex, 6.0f, true, ShadingTree::IM_Bare);
+    tree.addNumber("gap_x", tex, 0.05f, true, ShadingTree::IM_Bare);
+    tree.addNumber("gap_y", tex, 0.1f, true, ShadingTree::IM_Bare);
+
+    const Transformf transform = tex.property("transform").getTransform();
+
+    stream << tree.pullHeader()
+           << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_brick_texture("
+           << tree.getInline("color0") << ", "
+           << tree.getInline("color1") << ", "
+           << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
+           << "make_vec2(" << tree.getInline("gap_x") << ", " << tree.getInline("gap_y") << "), "
+           << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
+
+    tree.endClosure();
+}
+
 static void tex_gen_noise(const std::string& func, std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
 {
     constexpr float DefaultSeed = 36326639;
@@ -222,6 +247,7 @@ static const struct {
 } _generators[] = {
     { "image", tex_image },
     { "bitmap", tex_image },
+    { "brick", tex_brick },
     { "checkerboard", tex_checkerboard },
     { "noise", tex_noise },
     { "cellnoise", tex_cellnoise },

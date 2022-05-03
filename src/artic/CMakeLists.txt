@@ -80,6 +80,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/photonmapper.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/volpathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/wireframe.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture/brick.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture/checkerboard.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture/image.art
