@@ -26,13 +26,11 @@ jobs:
         python3 -m pip install -U sphinx
         python3 -m pip install -r ./master/docs/Requirements.txt
     - name: Run sphinx
-      run: sphinx-build -a -E -b html ./master/docs ./docs
+      run: sphinx-build -a -E -b html ./master/docs ./docs/docs
     - name: Patch changes
       run: |
         cd docs
-        rsync -avu --delete html/ docs
         touch docs/.nojekyll
-        rm -r html/
     - name: Apply changes
       run: |
         cd docs
