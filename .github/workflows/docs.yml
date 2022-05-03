@@ -1,0 +1,35 @@
+name: Docs
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout master
+      uses: actions/checkout@v3
+      with:
+        path: master
+    - name: Checkout docs
+      uses: actions/checkout@v3
+      with:
+        ref: docs
+        path: docs
+    - name: Install sphinx
+      run: sudo apt-get install -y python3-sphinx
+    - name: Run sphinx
+      run: sphinx-build -M html ./master/docs ./docs/docs
+    - name: Apply changes
+      run: |
+        cd docs
+        git config user.email github-actions@github.com
+        git config user.name github-actions
+        git add docs/
+        git commit -m "Updated docs" -a
+        git push
