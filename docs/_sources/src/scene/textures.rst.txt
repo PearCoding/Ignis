@@ -52,6 +52,40 @@ Image texture (:monosp:`image`)
   :width: 0.6
   :label: fig-image
 
+Brick (:monosp:`brick`)
+-------------------------------------
+
+.. objectparameters::
+
+ * - color0, color1
+   - |color|
+   - (0,0,0), (1,1,1)
+   - The colors to used for the brick. color0 is the mortar, color1 is the actual brick.
+ * - scale_x, scale_y
+   - |number|
+   - 6, 3
+   - Numbers of grids in a normalized frame [0,0]x[1,1].
+ * - gap_x, gap_y
+   - |number|
+   - 0.05, 0.1
+   - Normalized gap size.
+ * - transform
+   - |transform|
+   - Identity
+   - Optional 2d transformation applied to texture coordinates.
+
+.. subfigstart::
+
+.. figure::  images/tex_brick.jpg
+  :width: 90%
+  :align: center
+  
+  Brick texture
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-brick
+
 Checkerboard (:monosp:`checkerboard`)
 -------------------------------------
 
@@ -102,7 +136,7 @@ Noise (:monosp:`noise`)
   :width: 90%
   :align: center
   
-  Noise texture
+  Noise texture, a slight color noise is visible
 
 .. subfigend::
   :width: 0.6

@@ -188,6 +188,7 @@
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Textures</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#image-texture-image">Image texture (<span class="monosp">image</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#brick-brick">Brick (<span class="monosp">brick</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#checkerboard-checkerboard">Checkerboard (<span class="monosp">checkerboard</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#noise-noise">Noise (<span class="monosp">noise</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pnoise-pnoise">PNoise (<span class="monosp">pnoise</span>)</a></li>
@@ -291,8 +292,55 @@ The type has to be one of the textures listed at this section below.</p>
 </figcaption>
 </figure>
 </div></section>
+<section id="brick-brick">
+<span id="fig-image"></span><h2>Brick (<span class="monosp">brick</span>)<a class="headerlink" href="#brick-brick" title="Permalink to this headline">¶</a></h2>
+<table class="paramstable docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="paramtype">color0, color1</span></p></td>
+<td><p><span class="paramtype">color</span></p></td>
+<td><p>(0,0,0), (1,1,1)</p></td>
+<td><p>The colors to used for the brick. color0 is the mortar, color1 is the actual brick.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">scale_x, scale_y</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>6, 3</p></td>
+<td><p>Numbers of grids in a normalized frame [0,0]x[1,1].</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">gap_x, gap_y</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>0.05, 0.1</p></td>
+<td><p>Normalized gap size.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
+<td><p><span class="paramtype">transform</span></p></td>
+<td><p>Identity</p></td>
+<td><p>Optional 2d transformation applied to texture coordinates.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="figure compound align-center" id="fig-brick">
+<figure class="align-center" id="id2">
+<a class="reference internal image-reference" href="../../_images/tex_brick.jpg"><img alt="../../_images/tex_brick.jpg" src="../../_images/tex_brick.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Brick texture</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="checkerboard-checkerboard">
-<span id="fig-image"></span><h2>Checkerboard (<span class="monosp">checkerboard</span>)<a class="headerlink" href="#checkerboard-checkerboard" title="Permalink to this headline">¶</a></h2>
+<span id="fig-brick"></span><h2>Checkerboard (<span class="monosp">checkerboard</span>)<a class="headerlink" href="#checkerboard-checkerboard" title="Permalink to this headline">¶</a></h2>
 <table class="paramstable docutils align-default">
 <colgroup>
 <col style="width: 17%" />
@@ -326,10 +374,10 @@ The type has to be one of the textures listed at this section below.</p>
 </tbody>
 </table>
 <div class="figure compound align-center" id="fig-checkerboard">
-<figure class="align-center" id="id2">
+<figure class="align-center" id="id3">
 <a class="reference internal image-reference" href="../../_images/tex_checkerboard.jpg"><img alt="../../_images/tex_checkerboard.jpg" src="../../_images/tex_checkerboard.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="caption-text">Checkerboard texture</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">Checkerboard texture</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -363,10 +411,10 @@ The type has to be one of the textures listed at this section below.</p>
 </tbody>
 </table>
 <div class="figure compound align-center" id="fig-noise">
-<figure class="align-center" id="id3">
+<figure class="align-center" id="id4">
 <a class="reference internal image-reference" href="../../_images/tex_noise.jpg"><img alt="../../_images/tex_noise.jpg" src="../../_images/tex_noise.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="caption-text">Noise texture</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">Noise texture, a slight color noise is visible</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -411,10 +459,10 @@ The type has to be one of the textures listed at this section below.</p>
 </tbody>
 </table>
 <div class="figure compound align-center" id="fig-pnoise">
-<figure class="align-center" id="id4">
+<figure class="align-center" id="id5">
 <a class="reference internal image-reference" href="../../_images/tex_pnoise.jpg"><img alt="../../_images/tex_pnoise.jpg" src="../../_images/tex_pnoise.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="caption-text">PNoise texture</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">PNoise texture</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -458,10 +506,10 @@ The type has to be one of the textures listed at this section below.</p>
 </tbody>
 </table>
 <div class="figure compound align-center" id="fig-cellnoise">
-<figure class="align-center" id="id5">
+<figure class="align-center" id="id6">
 <a class="reference internal image-reference" href="../../_images/tex_cellnoise.jpg"><img alt="../../_images/tex_cellnoise.jpg" src="../../_images/tex_cellnoise.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="caption-text">Cell noise texture</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">Cell noise texture</span><a class="headerlink" href="#id6" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -505,10 +553,10 @@ The type has to be one of the textures listed at this section below.</p>
 </tbody>
 </table>
 <div class="figure compound align-center" id="fig-perlin">
-<figure class="align-center" id="id6">
+<figure class="align-center" id="id7">
 <a class="reference internal image-reference" href="../../_images/tex_perlin.jpg"><img alt="../../_images/tex_perlin.jpg" src="../../_images/tex_perlin.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="caption-text">Perlin noise texture</span><a class="headerlink" href="#id6" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">Perlin noise texture</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -552,10 +600,10 @@ The type has to be one of the textures listed at this section below.</p>
 </tbody>
 </table>
 <div class="figure compound align-center" id="fig-voronoi">
-<figure class="align-center" id="id7">
+<figure class="align-center" id="id8">
 <a class="reference internal image-reference" href="../../_images/tex_voronoi.jpg"><img alt="../../_images/tex_voronoi.jpg" src="../../_images/tex_voronoi.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="caption-text">Voronoi texture</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">Voronoi texture</span><a class="headerlink" href="#id8" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -599,10 +647,10 @@ The type has to be one of the textures listed at this section below.</p>
 </tbody>
 </table>
 <div class="figure compound align-center" id="fig-fbm">
-<figure class="align-center" id="id8">
+<figure class="align-center" id="id9">
 <a class="reference internal image-reference" href="../../_images/tex_fbm.jpg"><img alt="../../_images/tex_fbm.jpg" src="../../_images/tex_fbm.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="caption-text">FBM texture</span><a class="headerlink" href="#id8" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">FBM texture</span><a class="headerlink" href="#id9" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -635,10 +683,10 @@ E.g., <cite>color_tint</cite> will be called <cite>tint</cite> inside the expres
 </tbody>
 </table>
 <div class="figure compound align-center" id="fig-expr">
-<figure class="align-center" id="id9">
+<figure class="align-center" id="id10">
 <a class="reference internal image-reference" href="../../_images/tex_expr.jpg"><img alt="../../_images/tex_expr.jpg" src="../../_images/tex_expr.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="caption-text">Custom texture generated by an expression</span><a class="headerlink" href="#id9" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">Custom texture generated by an expression</span><a class="headerlink" href="#id10" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -672,10 +720,10 @@ E.g., <cite>color_tint</cite> will be called <cite>tint</cite> inside the expres
 </tbody>
 </table>
 <div class="figure compound align-center" id="fig-expr">
-<figure class="align-center" id="id10">
+<figure class="align-center" id="id11">
 <a class="reference internal image-reference" href="../../_images/tex_transform.jpg"><img alt="../../_images/tex_transform.jpg" src="../../_images/tex_transform.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="caption-text">Transformed texture as a texture</span><a class="headerlink" href="#id10" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">Transformed texture as a texture</span><a class="headerlink" href="#id11" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 <span class="target" id="fig-expr"></span></div></section>
