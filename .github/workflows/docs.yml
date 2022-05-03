@@ -27,10 +27,13 @@ jobs:
         python3 -m pip install -r ./master/docs/Requirements.txt
     - name: Run sphinx
       run: sphinx-build -M html ./master/docs ./docs
-    - name: Apply changes
+    - name: Patch changes
       run: |
         cd docs
-        mv html/ docs/
+        rsync -avu --delete html/ docs
+        rm -r html/
+    - name: Apply changes
+      run: |
         git config user.email github-actions@github.com
         git config user.name github-actions
         git add .
