@@ -608,6 +608,10 @@ Klems (:monosp:`klems`)
    - |color|
    - 1
    - Tint.
+ * - up
+   - |vector|
+   - (0, 0, 1)
+   - Up vector
 
 .. NOTE:: The :monosp:`klems` bsdf is still experimental.
 
@@ -626,5 +630,9 @@ TensorTree (:monosp:`tensortree`)
    - |color|
    - 1
    - Tint.
+ * - up
+   - |vector|
+   - (0, 0, 1)
+   - Up vector
 
 .. NOTE:: The :monosp:`tensortree` bsdf is still experimental.
