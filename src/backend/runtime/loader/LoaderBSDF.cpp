@@ -4,8 +4,8 @@
 #include "ShaderUtils.h"
 #include "ShadingTree.h"
 
-#include "klems/KlemsLoader.h"
-#include "klems/TensorTreeLoader.h"
+#include "measured/KlemsLoader.h"
+#include "measured/TensorTreeLoader.h"
 
 #include <chrono>
 

@@ -32,10 +32,6 @@ set(SRC
     driver/DriverManager.cpp
     driver/DriverManager.h
     driver/Interface.h
-    klems/KlemsLoader.cpp
-    klems/KlemsLoader.h
-    klems/TensorTreeLoader.cpp
-    klems/TensorTreeLoader.h
     loader/glTFParser.cpp
     loader/glTFParser.h
     loader/Loader.cpp
@@ -78,6 +74,10 @@ set(SRC
     math/BoundingBox.h
     math/Tangent.h
     math/Triangle.h
+    measured/KlemsLoader.cpp
+    measured/KlemsLoader.h
+    measured/TensorTreeLoader.cpp
+    measured/TensorTreeLoader.h
     mesh/MtsSerializedFile.cpp
     mesh/MtsSerializedFile.h
     mesh/ObjFile.cpp
