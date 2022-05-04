@@ -6,10 +6,10 @@ namespace IG {
 struct TensorTreeComponentSpecification {
     size_t node_count;
     size_t value_count;
+    float total;
 };
 struct TensorTreeSpecification {
     size_t ndim;
-    bool has_reflection;
     TensorTreeComponentSpecification front_reflection;
     TensorTreeComponentSpecification back_reflection;
     TensorTreeComponentSpecification front_transmission;

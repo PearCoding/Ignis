@@ -305,6 +305,7 @@ static inline std::string dump_tt_specification(const TensorTreeSpecification& p
     stream << "TensorTreeComponentSpecification{ ndim=" << parent.ndim
            << ", node_count=" << spec.node_count
            << ", value_count=" << spec.value_count
+           << ", total=" << spec.total
            << "}";
     return stream.str();
 }
@@ -313,7 +314,6 @@ static inline std::string dump_tt_specification(const TensorTreeSpecification& s
 {
     std::stringstream stream;
     stream << "TensorTreeSpecification{ ndim=" << spec.ndim
-           << ", has_reflection=" << (spec.has_reflection ? "true" : "false")
            << ", front_reflection=" << dump_tt_specification(spec, spec.front_reflection)
            << ", back_reflection=" << dump_tt_specification(spec, spec.back_reflection)
            << ", front_transmission=" << dump_tt_specification(spec, spec.front_transmission)

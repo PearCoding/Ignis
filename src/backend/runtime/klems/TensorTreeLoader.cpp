@@ -13,6 +13,8 @@ struct TensorTreeNode {
     std::vector<std::unique_ptr<TensorTreeNode>> Children;
     std::vector<float> Values;
 
+    inline bool isLeaf() const { return Children.empty(); }
+
     // The root is the only node with one child. Get rid of this special case
     inline void eat()
     {
@@ -35,6 +37,24 @@ struct TensorTreeNode {
         }
 
         Values.clear();
+    }
+
+    inline float computeTotal(size_t depth) const
+    {
+        if (!isLeaf()) {
+            float total = 0;
+            for (const auto& child : Children)
+                total += child->computeTotal(depth + 1);
+            return total;
+        } else {
+            const float area = 1 / (depth * Values.size());
+
+            float total = 0;
+            for (const auto& val : Values)
+                total += val;
+
+            return Pi * total * area;
+        }
     }
 
     inline void dump(std::ostream& stream) const
@@ -61,6 +81,7 @@ public:
     inline explicit TensorTreeComponent(uint32 ndim)
         : mNDim(ndim)
         , mMaxValuesPerNode(1 << ndim)
+        , mTotal(0)
     {
     }
 
@@ -99,6 +120,7 @@ public:
     {
         mNodes  = std::vector<NodeValue>(mMaxValuesPerNode, 0);
         mValues = std::vector<float>(1, static_cast<float>(std::copysign(0, -1)));
+        mTotal  = 0;
 
         std::fill(mNodes.begin(), mNodes.end(), -1);
     }
@@ -121,11 +143,15 @@ public:
     [[nodiscard]] inline size_t nodeCount() const { return mNodes.size(); }
     [[nodiscard]] inline size_t valueCount() const { return mValues.size(); }
 
+    inline void setTotal(float f) { mTotal = f; }
+    [[nodiscard]] inline float total() const { return mTotal; }
+
 private:
     uint32 mNDim;
     uint32 mMaxValuesPerNode;
     std::vector<NodeValue> mNodes;
     std::vector<float> mValues;
+    float mTotal;
 };
 
 bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data, TensorTreeSpecification& spec)
@@ -276,6 +302,7 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
         // Setup component
         std::shared_ptr<TensorTreeComponent> component = std::make_shared<TensorTreeComponent>(dim4 ? 4 : 3);
         component->addNode(*root, {});
+        component->setTotal(root->computeTotal(0));
 
         // Select correct component
         // The window definition flips the front & back
@@ -289,8 +316,6 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
         else
             reflectionBack = component;
     }
-
-    spec.has_reflection = reflectionFront || reflectionBack;
 
     // If reflection components are not given, make them black
     // See docs/notes/BSDFdirections.txt in Radiance for more information
@@ -326,14 +351,21 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
     transmissionBack->write(stream);
 
     // Fill missing parts in the specification
-    spec.front_reflection.node_count    = reflectionFront->nodeCount();
-    spec.front_reflection.value_count   = reflectionFront->valueCount();
-    spec.back_reflection.node_count     = reflectionBack->nodeCount();
-    spec.back_reflection.value_count    = reflectionBack->valueCount();
+    spec.front_reflection.node_count  = reflectionFront->nodeCount();
+    spec.front_reflection.value_count = reflectionFront->valueCount();
+    spec.front_reflection.total       = reflectionFront->total();
+
+    spec.back_reflection.node_count  = reflectionBack->nodeCount();
+    spec.back_reflection.value_count = reflectionBack->valueCount();
+    spec.back_reflection.total       = reflectionBack->total();
+
     spec.front_transmission.node_count  = transmissionFront->nodeCount();
     spec.front_transmission.value_count = transmissionFront->valueCount();
-    spec.back_transmission.node_count   = transmissionBack->nodeCount();
-    spec.back_transmission.value_count  = transmissionBack->valueCount();
+    spec.front_transmission.total       = transmissionFront->total();
+
+    spec.back_transmission.node_count  = transmissionBack->nodeCount();
+    spec.back_transmission.value_count = transmissionBack->valueCount();
+    spec.back_transmission.total       = transmissionBack->total();
 
     return true;
 }
