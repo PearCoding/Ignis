@@ -198,7 +198,7 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
            << tree.getInline("ext_ior") << ", "
            << tree.getInline("int_ior") << ", "
            << tree.getInline("diffuse_reflectance") << ", "
-           << "make_rough_conductor_bsdf(surf, 0, 1, "
+           << "make_rough_conductor_bsdf(surf, color_builtins::black, color_builtins::white, "
            << tree.getInline("specular_reflectance") << ", "
            << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf)));" << std::endl;
 

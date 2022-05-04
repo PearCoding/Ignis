@@ -235,6 +235,8 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, tree: TensorTreeMod
                 } else { 
                     (vec3_neg(shading::make_same_hemisphere(wo, sample.dir)), 1 - refl_prob)
                 };
+
+                // TODO: Handle peak extraction (ABSDF)
                 
                 let e_pdf = prob * sample.pdf;
                 if e_pdf <= flt_eps {
