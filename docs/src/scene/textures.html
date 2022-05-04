@@ -191,7 +191,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#brick-brick">Brick (<span class="monosp">brick</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#checkerboard-checkerboard">Checkerboard (<span class="monosp">checkerboard</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#noise-noise">Noise (<span class="monosp">noise</span>)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pnoise-pnoise">PNoise (<span class="monosp">pnoise</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interpolated-noise-pnoise">Interpolated Noise (<span class="monosp">pnoise</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#cell-noise-cellnoise">Cell Noise (<span class="monosp">cellnoise</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#perlin-noise-perlin">Perlin Noise (<span class="monosp">perlin</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#voronoi-noise-voronoi">Voronoi Noise (<span class="monosp">voronoi</span>)</a></li>
@@ -418,8 +418,8 @@ The type has to be one of the textures listed at this section below.</p>
 </figcaption>
 </figure>
 </div></section>
-<section id="pnoise-pnoise">
-<span id="fig-noise"></span><h2>PNoise (<span class="monosp">pnoise</span>)<a class="headerlink" href="#pnoise-pnoise" title="Permalink to this headline">¶</a></h2>
+<section id="interpolated-noise-pnoise">
+<span id="fig-noise"></span><h2>Interpolated Noise (<span class="monosp">pnoise</span>)<a class="headerlink" href="#interpolated-noise-pnoise" title="Permalink to this headline">¶</a></h2>
 <p>Original noise used in legacy perlin implementation.</p>
 <table class="paramstable docutils align-default">
 <colgroup>
@@ -677,7 +677,7 @@ E.g., <cite>color_tint</cite> will be called <cite>tint</cite> inside the expres
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">expr</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
-<td><p>None</p></td>
+<td><p><em>None</em></p></td>
 <td><p>A <a class="reference internal" href="pexpr.html#pexpr"><span class="std std-ref">PExpr</span></a> based expression</p></td>
 </tr>
 </tbody>
@@ -709,7 +709,7 @@ E.g., <cite>color_tint</cite> will be called <cite>tint</cite> inside the expres
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">texture</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>None</p></td>
+<td><p><em>None</em></p></td>
 <td><p>The texture the transform is applied to.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>

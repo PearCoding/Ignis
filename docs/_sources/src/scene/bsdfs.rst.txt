@@ -182,8 +182,8 @@ Smooth conductor (:monosp:`conductor`)
 .. objectparameters::
 
  * - eta, k
-   - |number|
-   - none
+   - |color|
+   - ~ Gold
    - Real and imaginary components of the material's index of refraction.
  * - specular_reflectance
    - |color|
@@ -197,7 +197,7 @@ Smooth conductor (:monosp:`conductor`)
   :width: 90%
   :align: center
   
-  Conductor
+  Gold conductor
 
 .. subfigend::
   :width: 0.6
@@ -211,8 +211,8 @@ Rough conductor (:monosp:`roughconductor`)
 .. objectparameters::
 
  * - eta, k
-   - |number|
-   - none
+   - |color|
+   - ~ Gold
    - Real and imaginary components of the material's index of refraction.
  * - specular_reflectance
    - |color|
@@ -230,7 +230,7 @@ Rough conductor (:monosp:`roughconductor`)
   :width: 90%
   :align: center
   
-  Rough conductor
+  Rough gold conductor
 
 .. subfigend::
   :width: 0.6
@@ -332,7 +332,7 @@ Phong (:monosp:`phong`)
   :width: 0.6
   :label: fig-phong
 
-.. NOTE:: We do not recommend to use this bsdf for new projects as it disregards some PBR principles
+.. NOTE:: It is not recommended to use this bsdf for new projects as it disregards some PBR principles and is only included for legacy purposes.
 
 .. _bsdf-principled:
 
@@ -423,7 +423,7 @@ Blend (:monosp:`blend`)
 
  * - first, second
    - |bsdf|
-   - None
+   - *None*
    - TODO
  * - weight
    - |number|
@@ -451,7 +451,7 @@ Mask (:monosp:`mask`)
 
  * - bsdf
    - |bsdf|
-   - None
+   - *None*
    - TODO
  * - weight
    - |number|
@@ -483,7 +483,7 @@ Cutoff (:monosp:`cutoff`)
 
  * - bsdf
    - |bsdf|
-   - None
+   - *None*
    - TODO
  * - weight
    - |number|
@@ -538,7 +538,7 @@ Normal mapping (:monosp:`normalmap`)
 
  * - bsdf
    - |bsdf|
-   - None
+   - *None*
    - TODO
  * - map
    - |color|
@@ -570,11 +570,11 @@ Bump mapping (:monosp:`bumpmap`)
 
  * - bsdf
    - |bsdf|
-   - None
+   - *None*
    - TODO
  * - map
    - |texture|
-   - None
+   - *None*
    - A grayscale texture used for texture mapping.
  * - strength
    - |number|
@@ -602,7 +602,7 @@ Klems (:monosp:`klems`)
 
  * - filename
    - |string|
-   - None
+   - *None*
    - Path to a valid windows xml specifying a klems bsdf.
  * - base_color
    - |color|
@@ -620,7 +620,7 @@ TensorTree (:monosp:`tensortree`)
 
  * - filename
    - |string|
-   - None
+   - *None*
    - Path to a valid windows xml specifying a tensortree bsdf.
  * - base_color
    - |color|
