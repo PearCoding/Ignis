@@ -33,9 +33,9 @@ fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: 
         let cos_o = absolute_cos(out_dir, N);
 
         let fterm = fresnel(k, cos_o);
-        let F = /*if fterm.factor < 1.0 {*/ fterm.factor + (1 - fterm.factor) * fterm.factor / (fterm.factor + 1) /*} else { 1.0 }*/;
+        let F     = fterm.factor + (1 - fterm.factor) * fterm.factor / (fterm.factor + 1);
 
-        if randf(rnd) > F {
+        if fterm.total /* Ignore total */ || randf(rnd) > F {
             // Refraction
             make_bsdf_sample(surf, vec3_neg(out_dir), 1, kt, 1 /* It is thin*/, true)
         } else {

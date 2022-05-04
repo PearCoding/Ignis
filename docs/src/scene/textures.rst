@@ -142,7 +142,7 @@ Noise (:monosp:`noise`)
   :width: 0.6
   :label: fig-noise
 
-PNoise (:monosp:`pnoise`)
+Interpolated Noise (:monosp:`pnoise`)
 -------------------------
 
 Original noise used in legacy perlin implementation.
@@ -327,7 +327,7 @@ E.g., `color_tint` will be called `tint` inside the expression.
 
  * - expr
    - |string|
-   - None
+   - *None*
    - A :ref:`PExpr <PExpr>` based expression
 
 .. subfigstart::
@@ -349,7 +349,7 @@ Texture transform (:monosp:`transform`)
 
  * - texture
    - |color|
-   - None
+   - *None*
    - The texture the transform is applied to.
  * - transform
    - |transform|

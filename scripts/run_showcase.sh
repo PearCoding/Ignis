@@ -16,6 +16,7 @@ for scene in $mat_scenes; do
         continue
     fi
     igcli ${ARGS} -o $OUT/mat_${scene%.json}.exr $SCENE_DIR/bsdf/$scene
+    exr2jpg $OUT/mat_${scene%.json}.exr
 done
 
 for scene in $tex_scenes; do
@@ -23,6 +24,5 @@ for scene in $tex_scenes; do
         continue
     fi
     igcli ${ARGS} -o $OUT/tex_${scene%.json}.exr $SCENE_DIR/texture/$scene
+    exr2jpg $OUT/tex_${scene%.json}.exr
 done
-
-find $OUT -name '*.exr' -exec exr2jpg {} \;

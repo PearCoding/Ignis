@@ -11,11 +11,13 @@
 
 namespace IG {
 
-constexpr float AIR_IOR            = 1.000277f;
-constexpr float GLASS_IOR          = 1.55f;
-constexpr float RUBBER_IOR         = 1.49f;
-constexpr float ETA_DEFAULT        = 0.63660f;
-constexpr float ABSORPTION_DEFAULT = 2.7834f;
+constexpr float AIR_IOR    = 1.000277f;
+constexpr float GLASS_IOR  = 1.55f;
+constexpr float RUBBER_IOR = 1.49f;
+
+// Gold from https://chris.hindefjord.se/resources/rgb-ior-metals/
+constexpr float ETA_DEFAULT[]        = { 0.18299f, 0.42108f, 1.37340f };
+constexpr float ABSORPTION_DEFAULT[] = { 3.4242f, 2.34590f, 1.77040f };
 
 static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
@@ -132,8 +134,8 @@ static void bsdf_conductor(std::ostream& stream, const std::string& name, const 
 {
     tree.beginClosure();
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
-    tree.addNumber("eta", *bsdf, ETA_DEFAULT);
-    tree.addNumber("k", *bsdf, ABSORPTION_DEFAULT);
+    tree.addColor("eta", *bsdf, Vector3f(ETA_DEFAULT[0], ETA_DEFAULT[1], ETA_DEFAULT[2]));
+    tree.addColor("k", *bsdf, Vector3f(ABSORPTION_DEFAULT[0], ABSORPTION_DEFAULT[1], ABSORPTION_DEFAULT[2]));
 
     stream << tree.pullHeader()
            << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_conductor_bsdf(surf, "
@@ -148,8 +150,8 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
 {
     tree.beginClosure();
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
-    tree.addNumber("eta", *bsdf, ETA_DEFAULT);
-    tree.addNumber("k", *bsdf, ABSORPTION_DEFAULT);
+    tree.addColor("eta", *bsdf, Vector3f(ETA_DEFAULT[0], ETA_DEFAULT[1], ETA_DEFAULT[2]));
+    tree.addColor("k", *bsdf, Vector3f(ABSORPTION_DEFAULT[0], ABSORPTION_DEFAULT[1], ABSORPTION_DEFAULT[2]));
 
     setup_microfacet(bsdf, tree);
     stream << tree.pullHeader()

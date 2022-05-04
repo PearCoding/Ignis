@@ -32,6 +32,7 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
 
  - imgui <https://github.com/ocornut/imgui>
  - imgui-markdown <https://github.com/juliettef/imgui_markdown>
+ - PExpr <https://github.com/PearCoding/PExpr>
  - pugixml <https://github.com/zeux/pugixml>
  - RapidJSON <https://rapidjson.org/>
  - Simple Tag Preprocessor <https://github.com/PearCoding/stpp>
@@ -94,6 +95,8 @@ All available components are documented in the `docs/` folder. A documentation c
     cmake --build . -t ig_documentation
 
 from the `build/` folder.
+
+A quite recent version of the above documentation is available at: https://pearcoding.github.io/Ignis/ 
 
 ## Scene description
 
