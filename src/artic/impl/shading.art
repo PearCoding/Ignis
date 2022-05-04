@@ -59,8 +59,8 @@ fn @phi(v: Vec3) -> f32 {
     if a < 0 { a + 2 * super::flt_pi } else { a }
 }
 
-fn @is_same_hemisphere(a: Vec3, b: Vec3) = cos_theta(a) * cos_theta(b) >= 0;
 fn @is_positive_hemisphere(v: Vec3)      = cos_theta(v) >= 0;
+fn @is_same_hemisphere(a: Vec3, b: Vec3) = is_positive_hemisphere(a) && is_positive_hemisphere(b);
 
 fn @make_same_hemisphere(a: Vec3, b: Vec3) = if is_same_hemisphere(a, b) { b } else { all::vec3_neg(b) };
 fn @make_positive_hemisphere(v: Vec3)      = if is_positive_hemisphere(v) { v } else { all::vec3_neg(v) };

@@ -143,7 +143,7 @@ Noise (:monosp:`noise`)
   :label: fig-noise
 
 Interpolated Noise (:monosp:`pnoise`)
--------------------------
+-------------------------------------
 
 Original noise used in legacy perlin implementation.
 

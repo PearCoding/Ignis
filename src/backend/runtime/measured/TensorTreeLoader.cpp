@@ -24,42 +24,23 @@ struct TensorTreeNode {
         std::swap(Children[0]->Children, Children);
     }
 
-    // Will expand the node such that it has children instead of values
-    // This is actually only used in a special case on the root
-    inline void expand(size_t ndim)
-    {
-        IG_ASSERT(!Values.empty() && Children.empty(), "Invalid call to expand");
-
-        Children.resize(ndim);
-        for (size_t i = 0; i < Children.size(); ++i) {
-            Children[i]         = std::make_unique<TensorTreeNode>();
-            Children[i]->Values = std::vector<float>{ Values[Values.size() == 1 ? 0 : i] };
-        }
-
-        Values.clear();
-    }
-
     inline float computeTotal(size_t depth) const
     {
-        if (!isLeaf()) {
-            float total = 0;
-            for (const auto& child : Children)
-                total += child->computeTotal(depth + 1);
-            return total;
-        } else {
-            const float area = 1 / (depth * Values.size());
+        const float area = 1.0f / (depth * (Values.size() + Children.size()));
 
-            float total = 0;
-            for (const auto& val : Values)
-                total += val;
+        float total = 0;
+        for (const auto& child : Children)
+            total += child->computeTotal(depth + 1);
 
-            return Pi * total * area;
-        }
+        for (float val : Values)
+            total += Pi * val * area;
+
+        return total;
     }
 
     inline void dump(std::ostream& stream) const
     {
-        if (Children.empty()) {
+        if (isLeaf()) {
             stream << "[ ";
             for (const auto& c : Values)
                 stream << c << " ";
@@ -82,15 +63,18 @@ public:
         : mNDim(ndim)
         , mMaxValuesPerNode(1 << ndim)
         , mTotal(0)
+        , mRootIsLeaf(false)
     {
     }
 
     inline void addNode(const TensorTreeNode& node, std::optional<size_t> parentOffsetValue)
     {
-        if (node.Children.empty()) {
-            IG_ASSERT(parentOffsetValue.has_value(), "Root can not be a leaf!");
-            size_t off                        = mValues.size();
-            mNodes[parentOffsetValue.value()] = -(static_cast<NodeValue>(off) + 1);
+        if (node.isLeaf()) {
+            size_t off = mValues.size();
+            if (parentOffsetValue.has_value())
+                mNodes[parentOffsetValue.value()] = -(static_cast<NodeValue>(off) + 1);
+            else
+                mRootIsLeaf = true;
 
             bool single = node.Values.size() == 1;
             if (single) {
@@ -145,6 +129,7 @@ public:
 
     inline void setTotal(float f) { mTotal = f; }
     [[nodiscard]] inline float total() const { return mTotal; }
+    [[nodiscard]] inline float isRootLeaf() const { return mRootIsLeaf; }
 
 private:
     uint32 mNDim;
@@ -152,6 +137,7 @@ private:
     std::vector<NodeValue> mNodes;
     std::vector<float> mValues;
     float mTotal;
+    bool mRootIsLeaf;
 };
 
 bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data, TensorTreeSpecification& spec)
@@ -257,7 +243,7 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
                         float val = 0;
                         stream >> val;
                         if (std::signbit(val) && !did_warn_sign) {
-                            IG_LOG(L_WARNING) << "Data contains negative values in " << in_xml << ": Use absolute value instead" << std::endl;
+                            IG_LOG(L_WARNING) << "Data contains negative values in " << in_xml << ": Using absolute value instead" << std::endl;
                             did_warn_sign = true;
                         }
                         node->Values.emplace_back(std::abs(val));
@@ -286,14 +272,11 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
             return false;
         } else {
             root->eat(); // Eat the only node we have
-            if (root->Children.empty()) {
-                if (root->Values.empty()) {
-                    IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Root of scatter data has no data" << std::endl;
-                    return false;
-                } else {
-                    root->expand(max_values_per_node);
-                }
-            }
+        }
+
+        if (root->Children.empty() && root->Values.empty()) {
+            IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": No data given" << std::endl;
+            return false;
         }
 
         // root->dump(std::cout);
@@ -302,7 +285,7 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
         // Setup component
         std::shared_ptr<TensorTreeComponent> component = std::make_shared<TensorTreeComponent>(dim4 ? 4 : 3);
         component->addNode(*root, {});
-        component->setTotal(root->computeTotal(0));
+        component->setTotal(root->computeTotal(1));
 
         // Select correct component
         // The window definition flips the front & back
@@ -351,21 +334,17 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
     transmissionBack->write(stream);
 
     // Fill missing parts in the specification
-    spec.front_reflection.node_count  = reflectionFront->nodeCount();
-    spec.front_reflection.value_count = reflectionFront->valueCount();
-    spec.front_reflection.total       = reflectionFront->total();
+    const auto assignSpec = [](TensorTreeComponentSpecification& spec, const TensorTreeComponent& comp) {
+        spec.node_count   = comp.nodeCount();
+        spec.value_count  = comp.valueCount();
+        spec.total        = comp.total();
+        spec.root_is_leaf = comp.isRootLeaf();
+    };
 
-    spec.back_reflection.node_count  = reflectionBack->nodeCount();
-    spec.back_reflection.value_count = reflectionBack->valueCount();
-    spec.back_reflection.total       = reflectionBack->total();
-
-    spec.front_transmission.node_count  = transmissionFront->nodeCount();
-    spec.front_transmission.value_count = transmissionFront->valueCount();
-    spec.front_transmission.total       = transmissionFront->total();
-
-    spec.back_transmission.node_count  = transmissionBack->nodeCount();
-    spec.back_transmission.value_count = transmissionBack->valueCount();
-    spec.back_transmission.total       = transmissionBack->total();
+    assignSpec(spec.front_reflection, *reflectionFront);
+    assignSpec(spec.back_reflection, *reflectionBack);
+    assignSpec(spec.front_transmission, *transmissionFront);
+    assignSpec(spec.back_transmission, *transmissionBack);
 
     return true;
 }

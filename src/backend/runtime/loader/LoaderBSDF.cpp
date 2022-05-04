@@ -308,6 +308,7 @@ static inline std::string dump_tt_specification(const TensorTreeSpecification& p
            << ", node_count=" << spec.node_count
            << ", value_count=" << spec.value_count
            << ", total=" << spec.total
+           << ", root_is_leaf=" << (spec.root_is_leaf ? "true" : "false")
            << "}";
     return stream.str();
 }
@@ -329,6 +330,8 @@ static void bsdf_tensortree(std::ostream& stream, const std::string& name, const
     tree.beginClosure();
     tree.addColor("base_color", *bsdf, Vector3f::Ones());
 
+    const Vector3f upVector = bsdf->property("up").getVector3(Vector3f::UnitZ()).normalized();
+
     const std::string id = ShaderUtils::escapeIdentifier(name);
     const auto data      = setup_tensortree(name, bsdf, tree.context());
 
@@ -340,6 +343,7 @@ static void bsdf_tensortree(std::ostream& stream, const std::string& name, const
            << dump_tt_specification(spec) << ");" << std::endl
            << "  let bsdf_" << id << " : BSDFShader = @|_ray, _hit, surf| make_tensortree_bsdf(surf, "
            << tree.getInline("base_color") << ", "
+           << ShaderUtils::inlineVector(upVector) << ", "
            << "tt_" << id << ");" << std::endl;
 
     tree.endClosure();

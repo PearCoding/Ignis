@@ -91,11 +91,14 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     if mat.bsdf.is_specular {
                         make_option(color_builtins::green)
                     } else {
-                        let mut tmp : RndState = 0xdeadbeef;
+                        let mut tmp = fnv_hash(fnv_hash(fnv_hash(fnv_init(),
+                                                    bitcast[u32](hit.distance)),
+                                                bitcast[u32](hit.prim_coords.x)),
+                                            bitcast[u32](hit.prim_coords.y));
                         let out_dir = vec3_neg(ray.dir);
                         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(&mut tmp, out_dir, false) {    
                             let pdf = mat.bsdf.pdf(mat_sample.in_dir, out_dir);
-                            let evl = color_mulf(mat.bsdf.eval(mat_sample.in_dir, out_dir), 1/pdf);
+                            let evl = color_mulf(mat.bsdf.eval(mat_sample.in_dir, out_dir), safe_div(1, pdf));
 
                             let pdf_diff = math_builtins::fabs(mat_sample.pdf - pdf);
                             let w_diff   = math_builtins::fabs(mat_sample.color.r - evl.r)
