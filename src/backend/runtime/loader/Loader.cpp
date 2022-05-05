@@ -102,6 +102,6 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     result.Database.SceneBBox   = ctx.Environment.SceneBBox;
     result.TechniqueInfo        = ctx.TechniqueInfo;
 
-    return true;
+    return !ctx.HasError;
 }
 } // namespace IG

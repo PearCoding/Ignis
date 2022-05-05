@@ -36,11 +36,14 @@ public:
 
     void registerTextureUsage(const std::string& name);
     std::string pullHeader();
-    std::string getInline(const std::string& name) const;
+    std::string getInline(const std::string& name);
     inline bool hasParameter(const std::string& name) const { return currentClosure().Parameters.count(name) > 0; }
 
     inline LoaderContext& context() { return mContext; }
     inline const LoaderContext& context() const { return mContext; }
+
+    /// Use this function to mark the loading process as failed if it can not be saved in other means
+    void signalError();
 
 private:
     inline const Closure& currentClosure() const { return mClosures.back(); }

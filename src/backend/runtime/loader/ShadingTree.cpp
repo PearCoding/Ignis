@@ -12,10 +12,17 @@ ShadingTree::ShadingTree(LoaderContext& ctx)
     beginClosure();
 }
 
+void ShadingTree::signalError()
+{
+    mContext.signalError();
+}
+
 void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, float def, bool hasDef, InlineMode mode)
 {
-    if (hasParameter(name))
+    if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
+        signalError();
+    }
 
     const auto prop = obj.property(name);
 
@@ -47,8 +54,10 @@ void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, 
 
 void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, InlineMode mode)
 {
-    if (hasParameter(name))
+    if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
+        signalError();
+    }
 
     const auto prop = obj.property(name);
 
@@ -81,8 +90,10 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
 // Only use this if no basic color information suffices
 void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj, bool hasDef)
 {
-    if (hasParameter(name))
+    if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
+        signalError();
+    }
 
     const auto prop = obj.property(name);
 
@@ -120,6 +131,7 @@ bool ShadingTree::beginClosure(const std::string& texName)
         for (const auto& closure : mClosures) {
             if (closure.TexName == texName) {
                 IG_LOG(L_ERROR) << "Texture '" << texName << "' calls itself, resulting in a cycle!" << std::endl;
+                signalError();
                 return false;
             }
         }
@@ -143,11 +155,12 @@ std::string ShadingTree::pullHeader()
     return stream.str();
 }
 
-std::string ShadingTree::getInline(const std::string& name) const
+std::string ShadingTree::getInline(const std::string& name)
 {
     if (hasParameter(name))
         return currentClosure().Parameters.at(name);
     IG_LOG(L_ERROR) << "Trying to access unknown parameter '" << name << "'" << std::endl;
+    signalError();
     return "";
 }
 

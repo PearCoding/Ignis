@@ -12,6 +12,7 @@ struct KlemsThetaBasis {
     float LowerTheta;
     float UpperTheta;
     uint32 PhiCount;
+    float PhiSolidAngle; // Per phi solid angle
 
     [[nodiscard]] inline bool isValid() const
     {
@@ -46,6 +47,7 @@ public:
     }
 
     [[nodiscard]] inline uint32 entryCount() const { return mEntryCount; }
+    [[nodiscard]] inline size_t thetaCount() const { return mThetaBasis.size(); }
 
     inline void write(std::ostream& os)
     {
@@ -110,11 +112,12 @@ public:
 
     inline void buildCDF()
     {
-        //TODO
+        // TODO
     }
 
     [[nodiscard]] inline std::shared_ptr<KlemsBasis> row() const { return mRowBasis; }
     [[nodiscard]] inline std::shared_ptr<KlemsBasis> column() const { return mColumnBasis; }
+    [[nodiscard]] inline float total() const { return mMatrix.sum(); /* Not really the total of some physical value, but enough for lobe selection */ }
 
     inline void write(std::ostream& os)
     {
@@ -130,7 +133,14 @@ private:
     KlemsMatrix mMatrix;
 };
 
-bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data)
+static inline void assignSpecification(const KlemsComponent& component, KlemsComponentSpecification& spec)
+{
+    spec.total       = component.total();
+    spec.theta_count = { component.row()->thetaCount(), component.column()->thetaCount() };
+    spec.entry_count = { component.row()->entryCount(), component.column()->entryCount() };
+}
+
+bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data, KlemsSpecification& spec)
 {
     // Read Radiance based klems BSDF xml document
     pugi::xml_document doc;
@@ -173,10 +183,11 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         for (const auto& child : anglebasis.children("AngleBasisBlock")) {
             KlemsThetaBasis basis{};
 
-            const auto bounds = child.child("ThetaBounds");
-            basis.LowerTheta  = Deg2Rad * bounds.child("LowerTheta").text().as_float(0);
-            basis.UpperTheta  = Deg2Rad * bounds.child("UpperTheta").text().as_float(0);
-            basis.PhiCount    = child.child("nPhis").text().as_uint(0);
+            const auto bounds   = child.child("ThetaBounds");
+            basis.LowerTheta    = Deg2Rad * bounds.child("LowerTheta").text().as_float(0);
+            basis.UpperTheta    = Deg2Rad * bounds.child("UpperTheta").text().as_float(0);
+            basis.PhiCount      = child.child("nPhis").text().as_uint(0);
+            basis.PhiSolidAngle = Pi * (std::pow(std::cos(basis.LowerTheta), 2) - std::pow(std::cos(basis.UpperTheta), 2)) / basis.PhiCount;
 
             const auto theta = child.child("Theta");
             if (theta)
@@ -248,8 +259,8 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
                 scat_str = scat_str + 1; // Skip entry
                 continue;
             }
-            const Eigen::Index row = ind / columnBasis->entryCount(); //Outgoing direction
-            const Eigen::Index col = ind % columnBasis->entryCount(); //Incoming direction
+            const Eigen::Index row = ind / columnBasis->entryCount(); // Outgoing direction
+            const Eigen::Index col = ind % columnBasis->entryCount(); // Incoming direction
 
             component->matrix()(row, col) = value;
             ++ind;
@@ -289,7 +300,7 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         reflectionBack->makeBlack();
     }
     if (!reflectionFront) {
-        auto basis     = allbasis.begin()->second;
+        auto basis      = allbasis.begin()->second;
         reflectionFront = std::make_shared<KlemsComponent>(basis, basis);
         reflectionFront->makeBlack();
     }
@@ -309,6 +320,11 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Incomplete data found" << std::endl;
         return false;
     }
+
+    assignSpecification(*reflectionFront, spec.front_reflection);
+    assignSpecification(*transmissionFront, spec.front_transmission);
+    assignSpecification(*reflectionBack, spec.back_reflection);
+    assignSpecification(*transmissionBack, spec.back_transmission);
 
     std::ofstream stream(out_data, std::ios::binary);
     reflectionFront->write(stream);

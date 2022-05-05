@@ -61,6 +61,14 @@ struct LoaderContext {
 
     Vector3f extractColor(const Parser::Object& obj, const std::string& propname, const Vector3f& def = Vector3f::Ones()) const;
     float extractIOR(const Parser::Object& obj, const std::string& propname, float def = 1.55f) const;
+
+    bool HasError = false;
+
+    /// Use this function to mark the loading process as failed
+    inline void signalError()
+    {
+        HasError = true;
+    }
 };
 
 } // namespace IG

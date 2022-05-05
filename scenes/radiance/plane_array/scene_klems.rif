@@ -1,6 +1,6 @@
-OCTREE=scene.oct
+OCTREE=scene_klems.oct
 
-materials=materials.rad
+materials=materials_klems.rad
 scene=scene.rad sky.rad
 
 view=-vta -vp 0 1.15 1.15 -vd 1 0 0 -vu 0 0 -1 -vh 180 -vv 180 -vo 0 -va 0 -vs 0 -vl 0
@@ -15,7 +15,7 @@ DETAIL=MEDIUM
 VARIABILITY=MEDIUM
 EXPOSURE=1
 
-RAWFILE=output_raw
-PICTURE=output
+RAWFILE=output_klems_raw
+PICTURE=output_klems
 
 REPORT=0.1

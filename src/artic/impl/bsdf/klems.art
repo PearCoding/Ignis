@@ -1,4 +1,16 @@
 // TODO: The Klems sample process is not optimized at all...
+struct KlemsComponentSpecification {
+    total:       f32,
+    theta_count: [i32*2],
+    entry_count: [i32*2],
+}
+
+struct KlemsSpecification {
+    front_reflection:   KlemsComponentSpecification,
+    back_reflection:    KlemsComponentSpecification,
+    front_transmission: KlemsComponentSpecification,
+    back_transmission:  KlemsComponentSpecification
+}
 
 struct KlemsThetaBasis {
     center:    f32,
@@ -8,16 +20,17 @@ struct KlemsThetaBasis {
 }
 
 struct KlemsBasis {
-    theta_count: i32,
-    entry_count: i32,
+    theta_count:         i32,
+    entry_count:         i32,
     theta_basis:         fn (i32) -> KlemsThetaBasis,
     theta_linear_offset: fn (i32) -> i32
 }
 
 struct KlemsComponent {
-    row_basis:    KlemsBasis,
-    column_basis: KlemsBasis,
-    matrix:       fn (i32) -> f32
+    specification: KlemsComponentSpecification,
+    row_basis:     KlemsBasis,
+    column_basis:  KlemsBasis,
+    matrix:        fn (i32) -> f32
 }
 
 struct KlemsModel {
@@ -27,11 +40,12 @@ struct KlemsModel {
     back_transmission:  KlemsComponent
 }
 
+
 // Our sampling space flips implicitly to the inside configuration and has to be considered when working with the Klems & Tensor basis
-fn @k_fi(v: Vec3) = make_vec3(v.x, v.y, v.z);
-fn @k_fo(v: Vec3) = vec3_neg(k_fi(v));//make_vec3(-v.x, -v.y, -v.z);
-fn @k_bi(v: Vec3) = make_vec3(v.x, v.y, v.z);
-fn @k_bo(v: Vec3) = vec3_neg(k_bi(v));
+fn @k_fo(v: Vec3) = v;
+fn @k_fi(v: Vec3) = k_fo(make_vec3(-v.x, -v.y, v.z));
+fn @k_bo(v: Vec3) = k_fo(make_vec3(v.x, v.y, -v.z));
+fn @k_bi(v: Vec3) = k_fo(vec3_neg(v));
 
 fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) = min(basis.phi_count - 1, max(0, (phi * (basis.phi_count as f32) * flt_inv_pi / 2) as i32));
 fn @k_multi_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> (i32, i32) {
@@ -55,9 +69,9 @@ fn @k_eval_component(in_dir: Vec3, out_dir: Vec3, component: KlemsComponent) {
     k_eval_component_index(row, col, component)
 }
 
-fn @make_klems_basis(buffer: DeviceBuffer, buffer_host: DeviceBuffer, off: i32) -> (KlemsBasis, i32) {
-    let theta_count = buffer_host.load_i32(off);
-    let entry_count = buffer_host.load_i32(off+1);
+fn @make_klems_basis(specification: KlemsComponentSpecification, buffer: DeviceBuffer, off: i32, axis: i32) -> (KlemsBasis, i32) {
+    let theta_count = specification.theta_count(axis);
+    let entry_count = specification.entry_count(axis);
     let base_off    = 4 + off;
     let lin_off     = (theta_count+1) * 4 + off;
 
@@ -65,32 +79,33 @@ fn @make_klems_basis(buffer: DeviceBuffer, buffer_host: DeviceBuffer, off: i32) 
         theta_count = theta_count,
         entry_count = entry_count,
         theta_basis = @ |i| KlemsThetaBasis {
-            center    = buffer.load_f32(base_off+i*4+0),
-            lower     = buffer.load_f32(base_off+i*4+1),
-            upper     = buffer.load_f32(base_off+i*4+2),
-            phi_count = buffer.load_i32(base_off+i*4+3),
+            center    = buffer.load_f32(base_off + i*4 + 0),
+            lower     = buffer.load_f32(base_off + i*4 + 1),
+            upper     = buffer.load_f32(base_off + i*4 + 2),
+            phi_count = buffer.load_i32(base_off + i*4 + 3),
         },
         theta_linear_offset = @ |i| buffer.load_i32(lin_off + i)
     }, (theta_count+1)*4+theta_count)
 }
 
-fn @make_klems_component(buffer: DeviceBuffer, buffer_host: DeviceBuffer, off: i32) -> (KlemsComponent, i32) {
-    let (row_basis, row_off) = make_klems_basis(buffer, buffer_host, off);
-    let (col_basis, col_off) = make_klems_basis(buffer, buffer_host, off + row_off);
+fn @make_klems_component(specification: KlemsComponentSpecification, buffer: DeviceBuffer, off: i32) -> (KlemsComponent, i32) {
+    let (row_basis, row_off) = make_klems_basis(specification, buffer, off,           0);
+    let (col_basis, col_off) = make_klems_basis(specification, buffer, off + row_off, 1);
 
     let mat_size = row_basis.entry_count * col_basis.entry_count;
     (KlemsComponent {
-        row_basis    = row_basis,
-        column_basis = col_basis,
-        matrix       = @ |i| buffer.load_f32(off + row_off + col_off + i)
+        specification = specification,
+        row_basis     = row_basis,
+        column_basis  = col_basis,
+        matrix        = @ |i| buffer.load_f32(off + row_off + col_off + i)
     }, row_off + col_off + mat_size)
 }
 
-fn @make_klems_model(buffer: DeviceBuffer, buffer_host: DeviceBuffer) -> KlemsModel {
-    let (front_reflection,   front_reflection_off)   = make_klems_component(buffer, buffer_host, 0);
-    let (front_transmission, front_transmission_off) = make_klems_component(buffer, buffer_host, front_reflection_off);
-    let (back_reflection,    back_reflection_off)    = make_klems_component(buffer, buffer_host, front_reflection_off + front_transmission_off);
-    let (back_transmission,  _)                      = make_klems_component(buffer, buffer_host, front_reflection_off + front_transmission_off + back_reflection_off);
+fn @make_klems_model(buffer: DeviceBuffer, specification: KlemsSpecification) -> KlemsModel {
+    let (front_reflection,   front_reflection_off)   = make_klems_component(specification.front_reflection,   buffer, 0);
+    let (front_transmission, front_transmission_off) = make_klems_component(specification.front_transmission, buffer, front_reflection_off);
+    let (back_reflection,    back_reflection_off)    = make_klems_component(specification.back_reflection,    buffer, front_reflection_off + front_transmission_off);
+    let (back_transmission,  _)                      = make_klems_component(specification.back_transmission,  buffer, front_reflection_off + front_transmission_off + back_reflection_off);
    
     KlemsModel {
         front_reflection   = front_reflection,
@@ -101,18 +116,40 @@ fn @make_klems_model(buffer: DeviceBuffer, buffer_host: DeviceBuffer) -> KlemsMo
 }
 
 // TODO: Add proper sampling!
-fn @make_klems_bsdf(surf: SurfaceElement, color: Color, klems: KlemsModel) -> Bsdf {
-    let refl_prob  = 0.5:f32;
+fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsModel) -> Bsdf {
+    let front_refl_total = klems.front_reflection.specification.total;
+    let front_tran_total = klems.front_transmission.specification.total;
+    let back_refl_total  = klems.back_reflection.specification.total;
+    let back_tran_total  = klems.back_transmission.specification.total;
+
+    let front_refl_prob = safe_div(front_refl_total, front_refl_total + back_tran_total );
+    let back_refl_prob  = safe_div(back_refl_total,  back_refl_total  + front_tran_total);
+    fn @get_refl_prob(wo: Vec3) {
+        let outFront = shading::is_positive_hemisphere(wo);
+        if outFront { front_refl_prob } else { back_refl_prob }
+    }
+
+    // Only optimize components away if they are given at compile time!
+    let has_front_refl = !?front_refl_total || front_refl_total > 0;
+    let has_front_tran = !?front_tran_total || front_tran_total > 0;
+    let has_back_refl  = !?back_refl_total  || back_refl_total  > 0;
+    let has_back_tran  = !?back_tran_total  || back_tran_total  > 0;
+
+    // Radiance uses a custom world transformation (making sure the flip of the normal is not propagated)
+    let transform = tt_transform_matrix(if surf.is_entering { surf.local.col(2) } else { vec3_neg(surf.local.col(2)) }, up);
+    let to_local  = @|v:Vec3| shading::to_local(transform, v);
+    let to_global = @|v:Vec3| shading::to_world(transform, v);
+
     let local_eval = |wi : Vec3, wo : Vec3| {
         // Be sure to get side without the (possible) flip from the surface interaction
-		let inFront	 = surf.is_entering == shading::is_positive_hemisphere(wi);
-        let outFront = surf.is_entering == shading::is_positive_hemisphere(wo);
+		let inFront	 = shading::is_positive_hemisphere(wi);
+        let outFront = shading::is_positive_hemisphere(wo);
 
         let factor = match (inFront, outFront) {
-            (true, true)   => k_eval_component(k_fi(wi), k_fo(wo), klems.front_reflection),
-            (true, false)  => k_eval_component(k_fi(wi), k_bo(wo), klems.front_transmission),
-            (false, true)  => k_eval_component(k_bi(wi), k_bo(wo), klems.back_transmission),
-            (false, false) => k_eval_component(k_bi(wi), k_fo(wo), klems.back_reflection)
+            (true, true)   => if has_front_refl { k_eval_component(k_fi(wi), k_fo(wo), klems.front_reflection)   } else { 0:f32 },
+            (true, false)  => if has_front_tran { k_eval_component(k_fi(wi), k_bo(wo), klems.front_transmission) } else { 0:f32 },
+            (false, true)  => if has_back_tran  { k_eval_component(k_bi(wi), k_fo(wo), klems.back_transmission)  } else { 0:f32 },
+            (false, false) => if has_back_refl  { k_eval_component(k_bi(wi), k_bo(wo), klems.back_reflection)    } else { 0:f32 }
         };
 
         color_mulf(color, factor * shading::abs_cos_theta(wi))
@@ -120,29 +157,50 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, klems: KlemsModel) -> Bs
 
     Bsdf {
         eval   = @ |in_dir, out_dir| {
-            let wo = shading::to_local(surf.local, out_dir);
-            let wi = shading::to_local(surf.local, in_dir);
+            if true { return(color_builtins::black) } // See note below about NEE
+
+            let wo = to_local(out_dir);
+            let wi = to_local(in_dir);
             local_eval(wi, wo)
         },
-        pdf    = @ |in_dir, _| cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))),
+        pdf    = @ |in_dir, out_dir| {
+            if true { return(0) } // See note below about NEE
+
+            let wo        = to_local(out_dir);
+            let wi        = to_local(in_dir);
+            let refl_prob = get_refl_prob(wo);
+
+            let prob = if shading::is_same_hemisphere(out_dir, in_dir) { refl_prob } else { 1 - refl_prob };
+
+            prob * cosine_hemisphere_pdf(shading::abs_cos_theta(wi))
+        },
         sample = @ |rnd, out_dir, _| {
-            let wo = shading::to_local(surf.local, out_dir);
-            let u = randf(rnd);
-            let v = randf(rnd);
-            let sample = sample_cosine_hemisphere(u, v);
+            let wo     = to_local(out_dir);
+            let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
             
             if sample.pdf <= flt_eps {
                 reject_bsdf_sample()
             } else {
-                let wi = if randf(rnd) < refl_prob { shading::make_same_hemisphere(wo, sample.dir) } else { vec3_neg(shading::make_same_hemisphere(wo, sample.dir)) };
-                make_option(BsdfSample {
-                    in_dir = shading::to_world(surf.local, wi),
-                    pdf    = sample.pdf,
-                    color  = color_mulf(local_eval(wi, wo), safe_div(1, refl_prob * sample.pdf)),
-                    eta    = 1
-                })
+                let refl_prob  = get_refl_prob(wo);
+                let (wi, prob) = if refl_prob > 0 && randf(rnd) < refl_prob {
+                    (shading::make_same_hemisphere(wo, sample.dir), refl_prob)
+                } else { 
+                    (vec3_neg(shading::make_same_hemisphere(wo, sample.dir)), 1 - refl_prob)
+                };
+                
+                let e_pdf = prob * sample.pdf;
+                if e_pdf <= flt_eps {
+                    reject_bsdf_sample()
+                } else {
+                    make_option(BsdfSample {
+                        in_dir = to_global(wi),
+                        pdf    = e_pdf,
+                        color  = color_mulf(local_eval(wi, wo), 1 / e_pdf),
+                        eta    = 1
+                    })
+                }
             }
         },
-        is_specular = false
+        is_specular = true // FIXME: The bsdf does not work properly together with NEE. Figure out why!
     }
 }

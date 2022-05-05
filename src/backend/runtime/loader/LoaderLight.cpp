@@ -345,6 +345,7 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
 
     const std::string id = ShaderUtils::escapeIdentifier(name);
 
+    // TODO: Make this work with PExpr and other custom textures!
     if (light->property("radiance").type() == Parser::PT_STRING) {
         const Matrix3f trans = light->property("transform").getTransform().linear().transpose().inverse();
 
@@ -352,6 +353,7 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
         const auto tex             = tree.context().Scene.texture(tex_name);
         if (!tex) {
             IG_LOG(L_ERROR) << "Unknown texture '" << tex_name << "'" << std::endl;
+            tree.signalError();
             return; // TODO
         }
 

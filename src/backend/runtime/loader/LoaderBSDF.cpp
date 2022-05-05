@@ -26,7 +26,7 @@ static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, Shadin
     tree.addNumber("alpha", *bsdf, 0.1f);
 }
 
-static std::string inline_microfacet(const std::string& name, const ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf)
+static std::string inline_microfacet(const std::string& name, ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf)
 {
     std::string distribution = "make_vndf_ggx_distribution";
     if (bsdf->property("distribution").type() == Parser::PT_STRING) {
@@ -260,15 +260,40 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
     tree.endClosure();
 }
 
-static std::string setup_klems(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
+static std::pair<std::string, KlemsSpecification> setup_klems(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx)
 {
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/klems_" + ShaderUtils::escapeIdentifier(name) + ".bin";
 
-    KlemsLoader::prepare(filename, path);
-    return path;
+    KlemsSpecification spec{};
+    if (!KlemsLoader::prepare(filename, path, spec))
+        ctx.signalError();
+
+    return { path, spec };
+}
+
+static inline std::string dump_klems_specification(const KlemsComponentSpecification& spec)
+{
+    std::stringstream stream;
+    stream << "KlemsComponentSpecification{ total=" << spec.total
+           << ", theta_count=[" << spec.theta_count.first << ", " << spec.theta_count.second << "]"
+           << ", entry_count=[" << spec.entry_count.first << ", " << spec.entry_count.second << "]"
+           << "}";
+    return stream.str();
+}
+
+static inline std::string dump_klems_specification(const KlemsSpecification& spec)
+{
+    std::stringstream stream;
+    stream << "KlemsSpecification{"
+           << "  front_reflection=" << dump_klems_specification(spec.front_reflection)
+           << ", back_reflection=" << dump_klems_specification(spec.back_reflection)
+           << ", front_transmission=" << dump_klems_specification(spec.front_transmission)
+           << ", back_transmission=" << dump_klems_specification(spec.back_transmission)
+           << "}";
+    return stream.str();
 }
 
 static void bsdf_klems(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
@@ -276,20 +301,26 @@ static void bsdf_klems(std::ostream& stream, const std::string& name, const std:
     tree.beginClosure();
     tree.addColor("base_color", *bsdf, Vector3f::Ones());
 
-    const std::string id         = ShaderUtils::escapeIdentifier(name);
-    const std::string klems_path = setup_klems(name, bsdf, tree.context());
+    const Vector3f upVector = bsdf->property("up").getVector3(Vector3f::UnitZ()).normalized();
+
+    const std::string id = ShaderUtils::escapeIdentifier(name);
+    const auto data      = setup_klems(name, bsdf, tree.context());
+
+    const std::string buffer_path = std::get<0>(data);
+    const KlemsSpecification spec = std::get<1>(data);
 
     stream << tree.pullHeader()
-           << "  let klems_" << id << " = make_klems_model(device.load_buffer(\"" << klems_path << "\"), "
-           << "device.load_host_buffer(\"" << klems_path << "\"));" << std::endl
+           << "  let klems_" << id << " = make_klems_model(device.load_buffer(\"" << buffer_path << "\"), "
+           << dump_klems_specification(spec) << ");" << std::endl
            << "  let bsdf_" << id << " : BSDFShader = @|_ray, _hit, surf| make_klems_bsdf(surf, "
            << tree.getInline("base_color") << ", "
+           << ShaderUtils::inlineVector(upVector) << ", "
            << "klems_" << id << ");" << std::endl;
 
     tree.endClosure();
 }
 
-static std::pair<std::string, TensorTreeSpecification> setup_tensortree(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, const LoaderContext& ctx)
+static std::pair<std::string, TensorTreeSpecification> setup_tensortree(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx)
 {
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
 
@@ -297,7 +328,8 @@ static std::pair<std::string, TensorTreeSpecification> setup_tensortree(const st
     std::string path = "data/tt_" + ShaderUtils::escapeIdentifier(name) + ".bin";
 
     TensorTreeSpecification spec{};
-    TensorTreeLoader::prepare(filename, path, spec);
+    if (!TensorTreeLoader::prepare(filename, path, spec))
+        ctx.signalError();
     return { path, spec };
 }
 
@@ -580,9 +612,8 @@ std::string LoaderBSDF::generate(const std::string& name, ShadingTree& tree)
         }
     }
 
-    if (error) {
+    if (error)
         stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
-    }
 
     return stream.str();
 }

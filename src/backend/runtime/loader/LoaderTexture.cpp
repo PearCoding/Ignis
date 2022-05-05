@@ -158,10 +158,10 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
     if (!tree.beginClosure(name))
         return;
 
-    const std::string expr = tex.property("expr").getString();
+    std::string expr = tex.property("expr").getString();
     if (expr.empty()) {
         IG_LOG(L_ERROR) << "Texture '" << name << "' requires an expression" << std::endl;
-        return;
+        expr = "vec4(1, 0, 1, 1)"; // ~ Pink -> Mark as error
     }
 
     // Register on the shading tree first
@@ -186,9 +186,12 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
     }
 
     // Transpile
-    const auto res = transpiler.transpile(expr, "uv", false);
-    if (!res.has_value())
-        return;
+    auto res    = transpiler.transpile(expr, "uv", false);
+    bool failed = !res.has_value();
+    if (failed) {
+        // Mark as failed output
+        res = Transpiler::Result{ "color_builtins::pink", {}, false };
+    }
 
     // Patch output to color
     std::string output;
@@ -205,16 +208,18 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
     stream << tree.pullHeader()
            << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = @|uv: Vec2| -> Color{" << std::endl;
 
-    // Inline custom variables
-    for (const auto& pair : tex.properties()) {
-        if (startsWith(pair.first, "num_"))
-            stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(4)) << " = " << tree.getInline(pair.first) << ";" << std::endl;
-        else if (startsWith(pair.first, "color_"))
-            stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(6)) << " = " << tree.getInline(pair.first) << ";" << std::endl;
-        else if (startsWith(pair.first, "vec_"))
-            stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(4)) << " = " << ShaderUtils::inlineVector(pair.second.getVector3()) << ";" << std::endl;
-        else if (startsWith(pair.first, "bool_"))
-            stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(5)) << " = " << (pair.second.getBool() ? "true" : "false") << ";" << std::endl;
+    if (!failed) {
+        // Inline custom variables
+        for (const auto& pair : tex.properties()) {
+            if (startsWith(pair.first, "num_"))
+                stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(4)) << " = " << tree.getInline(pair.first) << ";" << std::endl;
+            else if (startsWith(pair.first, "color_"))
+                stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(6)) << " = " << tree.getInline(pair.first) << ";" << std::endl;
+            else if (startsWith(pair.first, "vec_"))
+                stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(4)) << " = " << ShaderUtils::inlineVector(pair.second.getVector3()) << ";" << std::endl;
+            else if (startsWith(pair.first, "bool_"))
+                stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(5)) << " = " << (pair.second.getBool() ? "true" : "false") << ";" << std::endl;
+        }
     }
 
     // End output
