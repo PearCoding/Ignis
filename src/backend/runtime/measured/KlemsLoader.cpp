@@ -1,7 +1,7 @@
 #include "KlemsLoader.h"
 #include "Logger.h"
+#include "serialization/FileSerializer.h"
 
-#include <fstream>
 #include <numeric>
 #include <sstream>
 
@@ -70,16 +70,16 @@ public:
     [[nodiscard]] inline uint32 entryCount() const { return mEntryCount; }
     [[nodiscard]] inline size_t thetaCount() const { return mThetaBasis.size(); }
 
-    inline void write(std::ostream& os)
+    inline void write(Serializer& os)
     {
         for (auto& basis : mThetaBasis) {
-            os.write(reinterpret_cast<const char*>(&basis.CenterTheta), sizeof(float));
-            os.write(reinterpret_cast<const char*>(&basis.LowerTheta), sizeof(float));
-            os.write(reinterpret_cast<const char*>(&basis.UpperTheta), sizeof(float));
-            os.write(reinterpret_cast<const char*>(&basis.PhiCount), sizeof(uint32));
+            os.write(basis.CenterTheta);
+            os.write(basis.LowerTheta);
+            os.write(basis.UpperTheta);
+            os.write(basis.PhiCount);
         }
 
-        os.write(reinterpret_cast<const char*>(mThetaLinearOffset.data()), mThetaLinearOffset.size() * sizeof(uint32));
+        os.write(mThetaLinearOffset, true);
     }
 
     [[nodiscard]] inline const std::vector<Eigen::Index>& permutation() const { return mPermutation; }
@@ -100,47 +100,136 @@ public:
         : mRowBasis(row)
         , mColumnBasis(column)
         , mMatrix(row->entryCount(), column->entryCount())
+        , mCDFMatrix(row->entryCount(), column->entryCount())
     {
         makeBlack();
     }
 
     [[nodiscard]] inline KlemsMatrix& matrix() { return mMatrix; }
     [[nodiscard]] inline size_t size() const { return mMatrix.size(); }
+    [[nodiscard]] inline KlemsMatrix& cdfmatrix() { return mCDFMatrix; }
 
     inline void makeBlack()
     {
         mMatrix.fill(0);
     }
 
-    inline void buildCDF()
+    inline void buildCDF_Rowwise()
     {
-        // TODO: Build a cdf matrix with each row or column being a single (standard) cdf
-        // While rendering we just have to pick the correct row or column based on the outgoing direction
-        // and sample an incoming direction based on the given cdf for that row or column.
-        // This requires a mechanism to map indexes back to theta & phi.
+        const auto& thetas = mColumnBasis->thetaBasis();
+        for (Eigen::Index row = 0; row < mMatrix.rows(); ++row) {
+            Eigen::Index col = 0;
+            for (size_t i = 0; i < thetas.size(); ++i) {
+                const float solid  = thetas[i].PhiSolidAngle;
+                const uint32 count = thetas[i].PhiCount;
+                for (size_t j = 0; j < count; ++j) {
+                    const float value    = mMatrix(row, col);
+                    mCDFMatrix(row, col) = (col != 0 ? mCDFMatrix(row, col - 1) : 0) + value * solid;
+                    ++col;
+                }
+            }
+
+            IG_ASSERT(col == mMatrix.cols(), "Expected valid cdf loop generation");
+
+            float mag = mCDFMatrix(row, col - 1); // Last entry
+            if (mag <= std::numeric_limits<float>::epsilon())
+                mag = 1;
+
+            const float norm = 1 / mag;
+            for (col = 0; col < mMatrix.cols(); ++col)
+                mCDFMatrix(row, col) *= norm;
+
+            mCDFMatrix(row, col - 1) = 1; // Force last entry to 1 for precision
+        }
+    }
+
+    inline void buildCDF_Colwise()
+    {
+        const auto& thetas = mRowBasis->thetaBasis();
+        for (Eigen::Index col = 0; col < mMatrix.cols(); ++col) {
+            Eigen::Index row = 0;
+            for (size_t i = 0; i < thetas.size(); ++i) {
+                const float solid  = thetas[i].PhiSolidAngle;
+                const uint32 count = thetas[i].PhiCount;
+                for (size_t j = 0; j < count; ++j) {
+                    const float value    = mMatrix(row, col);
+                    mCDFMatrix(row, col) = (row != 0 ? mCDFMatrix(row - 1, col) : 0) + value * solid;
+                    ++row;
+                }
+            }
+
+            IG_ASSERT(row == mMatrix.rows(), "Expected valid cdf loop generation");
+
+            float mag = mCDFMatrix(row - 1, col); // Last entry
+            if (mag <= std::numeric_limits<float>::epsilon())
+                mag = 1;
+
+            const float norm = 1 / mag;
+            for (row = 0; row < mMatrix.rows(); ++row)
+                mCDFMatrix(row, col) *= norm;
+
+            mCDFMatrix(row - 1, col) = 1; // Force last entry to 1 for precision
+        }
+
+        mCDFMatrix.transposeInPlace(); // For better memory alignment, we transpose the matrix
     }
 
     [[nodiscard]] inline std::shared_ptr<KlemsBasis> row() const { return mRowBasis; }
     [[nodiscard]] inline std::shared_ptr<KlemsBasis> column() const { return mColumnBasis; }
-    [[nodiscard]] inline float total() const { return mMatrix.sum(); /* Not really the total of some physical value, but enough for lobe selection */ }
-
-    inline void write(std::ostream& os)
+    [[nodiscard]] inline float computeTotal() const
     {
-        mRowBasis->write(os);
-        mColumnBasis->write(os);
+        float sum = 0;
 
-        os.write(reinterpret_cast<const char*>(mMatrix.data()), sizeof(float) * mMatrix.size());
+        const auto& rowThetas = mRowBasis->thetaBasis();
+        const auto& colThetas = mColumnBasis->thetaBasis();
+
+        Eigen::Index row = 0;
+        for (size_t i = 0; i < rowThetas.size(); ++i) {
+            const float rowScale     = rowThetas[i].PhiSolidAngle;
+            const uint32 rowPhiCount = rowThetas[i].PhiCount;
+            for (size_t ip = 0; ip < rowPhiCount; ++ip) {
+
+                Eigen::Index col = 0;
+                for (size_t j = 0; j < colThetas.size(); ++j) {
+                    const float colScale     = colThetas[i].PhiSolidAngle;
+                    const uint32 colPhiCount = colThetas[i].PhiCount;
+                    for (size_t jp = 0; jp < colPhiCount; ++jp) {
+                        const float value = mMatrix(row, col);
+                        sum += value * rowScale * colScale;
+                        ++col;
+                    }
+                }
+                ++row;
+            }
+        }
+
+        return sum;
+    }
+
+    inline void write(Serializer& os)
+    {
+        constexpr size_t DefaultAlignment = 4 * sizeof(float);
+
+        mRowBasis->write(os);
+        os.writeAlignmentPad(DefaultAlignment);
+        mColumnBasis->write(os);
+        os.writeAlignmentPad(DefaultAlignment);
+
+        os.write(mMatrix);
+        os.write(mCDFMatrix);
+        os.writeAlignmentPad(DefaultAlignment);
     }
 
 private:
     std::shared_ptr<KlemsBasis> mRowBasis;
     std::shared_ptr<KlemsBasis> mColumnBasis;
     KlemsMatrix mMatrix;
+    KlemsMatrix mCDFMatrix;
 };
 
 static inline void assignSpecification(const KlemsComponent& component, KlemsComponentSpecification& spec)
 {
-    spec.total       = component.total();
+    spec.total       = component.computeTotal();
     spec.theta_count = { component.row()->thetaCount(), component.column()->thetaCount() };
     spec.entry_count = { component.row()->entryCount(), component.column()->entryCount() };
 }
@@ -296,7 +385,7 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
             return false;
         }
 
-        component->buildCDF();
+        component->buildCDF_Colwise();
 
         // Select correct component
         // The window definition flips the front & back
@@ -330,6 +419,9 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
     if (!transmissionFront)
         transmissionFront = transmissionBack;
 
+    // TODO: Weird behaviour in Radiance: Radiance expects reciprocity and keeps both transmission sides the same
+    // Maybe we should do the same?
+
     if (!transmissionFront && !transmissionBack) {
         IG_LOG(L_ERROR) << "While parsing " << in_xml << ": No transmission data found" << std::endl;
         return false;
@@ -345,11 +437,11 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
     assignSpecification(*reflectionBack, spec.back_reflection);
     assignSpecification(*transmissionBack, spec.back_transmission);
 
-    std::ofstream stream(out_data, std::ios::binary);
-    reflectionFront->write(stream);
-    transmissionFront->write(stream);
-    reflectionBack->write(stream);
-    transmissionBack->write(stream);
+    FileSerializer serializer(out_data, false);
+    reflectionFront->write(serializer);
+    transmissionFront->write(serializer);
+    reflectionBack->write(serializer);
+    transmissionBack->write(serializer);
 
     return true;
 }

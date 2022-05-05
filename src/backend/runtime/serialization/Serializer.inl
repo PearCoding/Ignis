@@ -154,6 +154,15 @@ void Serializer::writeAligned(const std::vector<T, Alloc>& vec, size_t alignment
     }
 }
 
+inline void Serializer::writeAlignmentPad(size_t alignment)
+{
+    const size_t defect = alignment - (currentSize() % alignment);
+
+    uint8_t _tmp = 0;
+    for (size_t i = 0; i < defect; ++i)
+        write(_tmp);
+}
+
 //////////////////////////////////////////////////////////
 
 inline void Serializer::readRawLooped(uint8* data, size_t size)

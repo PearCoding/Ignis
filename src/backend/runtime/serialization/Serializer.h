@@ -55,6 +55,8 @@ public:
     template <typename T, typename Alloc>
     void writeAligned(const std::vector<T, Alloc>& vec, size_t padding, bool naked = false);
 
+    void writeAlignmentPad(size_t alignment);
+
     // Read
     inline void read(bool& v);
     inline void read(int8& v);
@@ -87,6 +89,7 @@ public:
     virtual bool isValid() const                            = 0;
     virtual size_t writeRaw(const uint8* data, size_t size) = 0;
     virtual size_t readRaw(uint8* data, size_t size)        = 0;
+    virtual size_t currentSize() const                      = 0;
 
 protected:
     inline void setReadMode(bool b) { mReadMode = b; };

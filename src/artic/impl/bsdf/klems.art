@@ -1,4 +1,3 @@
-// TODO: The Klems sample process is not optimized at all...
 struct KlemsComponentSpecification {
     total:       f32,
     theta_count: [i32*2],
@@ -30,7 +29,8 @@ struct KlemsComponent {
     specification: KlemsComponentSpecification,
     row_basis:     KlemsBasis,
     column_basis:  KlemsBasis,
-    matrix:        fn (i32) -> f32
+    matrix:        fn (i32) -> f32,
+    cdf:           fn (i32) -> cdf::CDF1D // The cdf data is transposed in memory
 }
 
 struct KlemsModel {
@@ -40,8 +40,7 @@ struct KlemsModel {
     back_transmission:  KlemsComponent
 }
 
-
-// Our sampling space flips implicitly to the inside configuration and has to be considered when working with the Klems & Tensor basis
+// Coordinate transforms used to map to correct orientations
 fn @k_fo(v: Vec3) = v;
 fn @k_fi(v: Vec3) = k_fo(make_vec3(-v.x, -v.y, v.z));
 fn @k_bo(v: Vec3) = k_fo(make_vec3(v.x, v.y, -v.z));
@@ -49,11 +48,6 @@ fn @k_bi(v: Vec3) = k_fo(vec3_neg(v));
 
 fn @k_theta_index(theta: f32, basis: KlemsBasis) {
     interval::binary_search(basis.theta_count, @|k| basis.theta_basis(k).lower <= theta)
-    // let mut i = 1:i32;
-    // while i < basis.theta_count && basis.theta_basis(i).lower <= theta {
-    //     i++;
-    // }
-    // i - 1
 }
 
 fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) {
@@ -74,6 +68,10 @@ fn @k_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> i32 {
 
 fn @k_eval_component_index(row: i32, col: i32, component: KlemsComponent) = component.matrix(row * component.column_basis.entry_count + col);
 
+fn @k_sample_component_index(u: f32, row: i32, component: KlemsComponent) {
+    cdf::sample_cdf_1d_rem(u, component.cdf(row))
+}
+
 fn @k_eval_component(in_dir: Vec3, out_dir: Vec3, component: KlemsComponent) {
     let (in_theta, in_phi)   = spherical_from_dir(in_dir);
     let (out_theta, out_phi) = spherical_from_dir(out_dir);
@@ -81,6 +79,44 @@ fn @k_eval_component(in_dir: Vec3, out_dir: Vec3, component: KlemsComponent) {
     let out_idx = k_index_of(out_theta, out_phi, component.row_basis);
     k_eval_component_index(out_idx, in_idx, component)
 }
+
+fn @k_get_theta_basis(lin_idx: i32, basis: KlemsBasis) {
+    let theta_i = interval::binary_search(basis.theta_count, @|k| basis.theta_linear_offset(k) <= lin_idx);
+    (basis.theta_basis(theta_i), lin_idx - theta_i)
+}
+
+fn @k_sample_theta_basis(u: f32, v: f32, basis: KlemsThetaBasis, phi_i: i32) -> (Vec3, f32) {
+    let lower_sa  = math_builtins::cos(basis.lower);
+    let upper_sa  = math_builtins::cos(basis.upper);
+    let lower_sa2 = lower_sa * lower_sa;
+    let upper_sa2 = upper_sa * upper_sa;
+
+    let cosTheta2 = lerp(lower_sa2, upper_sa2, u);
+    let cosTheta  = math_builtins::sqrt(cosTheta2);
+    let sinTheta  = math_builtins::sqrt(1 - cosTheta2);
+
+    let phi = 2 * flt_pi * (phi_i as f32 + v - 0.5) / basis.phi_count as f32;
+
+    // Ignis normaly uses a different phi direction
+    let vec = make_vec3(math_builtins::cos(phi) * sinTheta, math_builtins::sin(phi) * sinTheta, cosTheta);
+
+    let pdf = (lower_sa2 - upper_sa2) * flt_pi / basis.phi_count as f32;
+
+    (vec, pdf)
+}
+
+fn @k_sample_component(rnd: &mut RndState, in_dir: Vec3, component: KlemsComponent) -> (Vec3, f32) {
+    let (in_theta, in_phi) = spherical_from_dir(in_dir);
+    let in_idx             = k_index_of(in_theta, in_phi, component.column_basis);
+    let (sample, out_idx)  = k_sample_component_index(randf(rnd), in_idx, component);
+
+    let (theta_basis, out_phi_idx) = k_get_theta_basis(out_idx, component.row_basis);
+    let (out_dir, tb_pdf)          = k_sample_theta_basis(randf(rnd), randf(rnd), theta_basis, out_phi_idx);
+
+    (out_dir, sample.pdf * tb_pdf)
+}
+
+fn @k_align(off: i32) = off + 4 - off % 4;
 
 fn @make_klems_basis(specification: KlemsComponentSpecification, buffer: DeviceBuffer, off: i32, axis: i32) -> (KlemsBasis, i32) {
     let theta_count = specification.theta_count(axis);
@@ -100,7 +136,7 @@ fn @make_klems_basis(specification: KlemsComponentSpecification, buffer: DeviceB
             }
         },
         theta_linear_offset = @ |i| buffer.load_i32(lin_off + i)
-    }, theta_count * 4 + theta_count)
+    }, k_align(theta_count * 4 + theta_count))
 }
 
 fn @make_klems_component(specification: KlemsComponentSpecification, buffer: DeviceBuffer, off: i32) -> (KlemsComponent, i32) {
@@ -112,8 +148,9 @@ fn @make_klems_component(specification: KlemsComponentSpecification, buffer: Dev
         specification = specification,
         row_basis     = row_basis,
         column_basis  = col_basis,
-        matrix        = @ |i| buffer.load_f32(off + row_off + col_off + i)
-    }, row_off + col_off + mat_size)
+        matrix        = @ |i| buffer.load_f32(off + row_off + col_off + i),
+        cdf           = @ |col| cdf::make_cdf_1d(buffer, col_basis.entry_count, off + row_off + col_off + mat_size + col * col_basis.entry_count) 
+    }, k_align(row_off + col_off + 2 * mat_size))
 }
 
 fn @make_klems_model(buffer: DeviceBuffer, specification: KlemsSpecification) -> KlemsModel {
@@ -162,8 +199,8 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsMo
 
         let factor = match (inFront, outFront) {
             (true, true)   => if has_front_refl { k_eval_component(k_fi(wo), k_fo(wi), klems.front_reflection)   } else { 0:f32 },
-            (true, false)  => if has_front_tran { k_eval_component(k_fi(wo), k_bo(wi), klems.front_transmission) } else { 0:f32 },
-            (false, true)  => if has_back_tran  { k_eval_component(k_bi(wo), k_fo(wi), klems.back_transmission)  } else { 0:f32 },
+            (true, false)  => if has_front_tran { k_eval_component(k_fo(wi), k_bi(wo), klems.front_transmission) } else { 0:f32 },
+            (false, true)  => if has_back_tran  { k_eval_component(k_bi(wi), k_fo(wo), klems.back_transmission)  } else { 0:f32 },
             (false, false) => if has_back_refl  { k_eval_component(k_bi(wo), k_bo(wi), klems.back_reflection)    } else { 0:f32 }
         };
 
@@ -190,6 +227,43 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsMo
             prob * cosine_hemisphere_pdf(shading::abs_cos_theta(wi))
         },
         sample = @ |rnd, out_dir, _| {
+            // FIXME: This one below needs some fixing...
+            // let wo        = to_local(out_dir);
+            // let refl_prob = get_refl_prob(wo);
+            // let is_refl   = refl_prob > 0 && randf(rnd) < refl_prob;
+            // let outFront  = shading::is_positive_hemisphere(wo);
+
+            // let (wi, pdf) = match (outFront, is_refl) {
+            //     (true, true)   => {
+            //         let (vec, pdf) = k_sample_component(rnd, k_fi(wo), klems.front_reflection);
+            //         (k_fo(vec), refl_prob * pdf)
+            //     },
+            //     (true, false)  => {
+            //         let (vec, pdf) = k_sample_component(rnd, k_fi(wo), klems.front_transmission);
+            //         (k_bo(vec), (1 - refl_prob) * pdf)
+            //     },
+            //     (false, true)  => {
+            //         let (vec, pdf) = k_sample_component(rnd, k_bi(wo), klems.back_transmission);
+            //         (k_fo(vec), (1 - refl_prob) * pdf)
+            //     },
+            //     (false, false) => {
+            //         let (vec, pdf) = k_sample_component(rnd, k_bi(wo), klems.back_reflection);
+            //         (k_bo(vec), refl_prob * pdf)
+            //     }
+            // }; 
+                
+            // if pdf <= flt_eps {
+            //     reject_bsdf_sample()
+            // } else {
+            //     make_option(BsdfSample {
+            //         in_dir = to_global(wi),
+            //         pdf    = pdf,
+            //         color  = color_mulf(local_eval(wi, wo), 1 / pdf),
+            //         eta    = 1
+            //     })
+            // }
+
+            // Old, non optimized sampler
             let wo     = to_local(out_dir);
             let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
             

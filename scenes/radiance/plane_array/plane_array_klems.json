@@ -3,9 +3,9 @@
 		{"filename": "../../plane_array_data.json"}
 	],
 	"bsdfs": [
-		{"type":"klems", "name": "windowBL", "up":[0,1,0], "filename":"../simple_klems_spot_trans.xml"},
-		{"type":"klems", "name": "windowBR", "up":[0,1,0], "filename":"../simple_klems_spot_trans.xml"},
-		{"type":"klems", "name": "windowTL", "up":[0,1,0], "filename":"../simple_klems_spot_trans.xml"},
-		{"type":"klems", "name": "windowTR", "up":[0,1,0], "filename":"../simple_klems_spot_trans.xml"}
+		{"type":"klems", "name": "windowBL", "up":[0,1,0], "filename":"../simple_klems_through_front_trans.xml"},
+		{"type":"klems", "name": "windowBR", "up":[0,1,0], "filename":"../simple_klems_through_front_trans.xml"},
+		{"type":"klems", "name": "windowTL", "up":[0,1,0], "filename":"../simple_klems_through_front_trans.xml"},
+		{"type":"klems", "name": "windowTR", "up":[0,1,0], "filename":"../simple_klems_through_front_trans.xml"}
 	]
 }

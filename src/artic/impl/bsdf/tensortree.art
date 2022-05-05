@@ -1,4 +1,3 @@
-// TODO: The Tensortree sample process is not optimized at all...
 struct TensorTreeComponentSpecification {
     ndim:         i32, 
     node_count:   i32,

@@ -20,6 +20,7 @@ public:
     virtual bool isValid() const override;
     virtual size_t writeRaw(const uint8* data, size_t size) override;
     virtual size_t readRaw(uint8* data, size_t size) override;
+    virtual size_t currentSize() const override;
 
 private:
     std::unique_ptr<struct FileSerializerInternal> mInternal;

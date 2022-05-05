@@ -57,6 +57,11 @@ bool FileSerializer::isValid() const
     return mInternal && mInternal->File.is_open();
 }
 
+size_t FileSerializer::currentSize() const
+{
+    return mInternal->MemoryFootprint;
+}
+
 size_t FileSerializer::writeRaw(const uint8* data, size_t size)
 {
     IG_ASSERT(isValid(), "Trying to write into a close buffer!");

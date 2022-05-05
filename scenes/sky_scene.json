@@ -41,7 +41,7 @@
 	],
 	"shapes": [
 		{"type":"ply", "name":"Bottom", "filename":"meshes/Bottom.ply"},
-		{"type":"ply", "name":"dobj", "filename":"meshes/dobj.ply"}
+		{"type":"ply", "name":"dobj", "filename":"meshes/Diamond.ply"}
 	],
 	"entities": [
 		{"name":"Bottom","shape":"Bottom", "bsdf":"mat-GrayWall"},

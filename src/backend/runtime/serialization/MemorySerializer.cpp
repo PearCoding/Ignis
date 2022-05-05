@@ -46,6 +46,11 @@ bool MemorySerializer::isValid() const
     return mBuffer;
 }
 
+size_t MemorySerializer::currentSize() const
+{
+    return mSize;
+}
+
 size_t MemorySerializer::writeRaw(const uint8* data, size_t size)
 {
     IG_ASSERT(isValid(), "Trying to write into a close buffer!");

@@ -46,14 +46,26 @@ fn test_interval_multiple() {
     }
 }
 
-fn test_interval_greater() {
-    let arr = [0, 1, 2, 4, 5, 8];
-    let res = interval::binary_search(6, @|i| arr(i) > 4);
+fn test_interval_multiple2() {
+    let arr = [0, 1, 2, 4, 4, 4, 5, 8];
+    let res = interval::binary_search(8, @|i| arr(i) < 4);
+
+    if (res == 2) {
+        0
+    } else {
+        ignis_test_fail("Interval Multiple2: Expected 2 but got a different index");
+        1
+    }
+}
+
+fn test_interval_multiple3() {
+    let arr = [0, 1, 2, 2, 2, 4, 5, 8];
+    let res = interval::binary_search(8, @|i| arr(i) <= 3);
 
     if (res == 4) {
         0
     } else {
-        ignis_test_fail("Interval Greater: Expected 4 but got a different index");
+        ignis_test_fail("Interval Multiple3: Expected 4 but got a different index");
         1
     }
 }
@@ -65,6 +77,8 @@ fn test_interval() -> i32 {
     err += test_interval_lower();
     err += test_interval_upper();
     err += test_interval_multiple();
+    err += test_interval_multiple2();
+    err += test_interval_multiple3();
 
     err
  }

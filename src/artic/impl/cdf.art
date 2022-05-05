@@ -6,9 +6,7 @@ use super::interval;
 type DeviceBuffer = all::DeviceBuffer;
 type Vec2 = all::Vec2;
 
-// This implementation of CDF omits the first 0 entry and only contains [x1, x2, ..., xn-1, 1]
 struct CDF1D {
-    data: DeviceBuffer,
     size: i32, // This is the full cdf size, therefore e.g., if data has size = s, cdf has size = s + 1
     off:  i32, // Offset in the device buffer
     get:  fn (i32) -> f32
@@ -19,19 +17,16 @@ struct Sample1d {
     pdf: f32
 }
 
+// This underlying buffer of the CDF omits the first 0 entry and only contains [x1, x2, ..., xn-1, 1] as data.
+// The CDF itself handles [0, x1, x2, ..., xn-1, 1].
 fn @make_cdf_1d(data: DeviceBuffer, size: i32, off: i32) = CDF1D {
-    data = data,
     size = size,
     off  = off,
     get  = @|i| if i == 0 { 0 } else { data.load_f32(i - 1 + off) },
 };
 
 fn @sample_cdf_1d_rem(u: f32, cdf: CDF1D) -> (Sample1d, i32) {
-    let mut off = interval::binary_search(cdf.size, @|i:i32| cdf.get(i) <= u);
-    while off > 0 && cdf.get(off) >= u {
-        --off;
-    }
-
+    let off = interval::binary_search(cdf.size, @|i:i32| cdf.get(i) < u); // Will return the left most entry
     let rem = u - cdf.get(off);
     let pdf = cdf.get(off + 1) - cdf.get(off);
 
@@ -49,13 +44,7 @@ fn @sample_cdf_1d(u: f32, cdf: CDF1D) -> Sample1d {
 
 fn @pdf_cdf_1d_rem(x: f32, cdf: CDF1D) -> (f32, i32) {
     let off = all::clamp((x * (cdf.size as f32 - 1)) as i32, 0, cdf.size - 2);
-    // TODO: Could be optimized better
-    let a = cdf.get(off + 1);
-    let mut start = off;
-    while start > 0 && cdf.get(start) >= a {
-        --start;
-    }
-    (a - cdf.get(start), off)
+    (cdf.get(off + 1) - cdf.get(off), off)
 }
 
 fn @pdf_cdf_1d(x: f32, cdf: CDF1D) -> f32 {

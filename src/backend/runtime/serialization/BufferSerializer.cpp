@@ -17,7 +17,9 @@ BufferSerializer::BufferSerializer(Serializer* source, size_t bufferSize)
     , mIt(0)
     , mAvailableIt(0)
 {
-}void BufferSerializer::resize(size_t newSize)
+}
+
+void BufferSerializer::resize(size_t newSize)
 {
     mBuffer.resize(newSize);
     mIt          = 0;
@@ -34,6 +36,12 @@ void BufferSerializer::reset(Serializer* source, size_t bufferSize)
 bool BufferSerializer::isValid() const
 {
     return mSource != nullptr && mSource->isValid();
+}
+
+size_t BufferSerializer::currentSize() const
+{
+    // TODO: Really?
+    return mSource->currentSize();
 }
 
 void BufferSerializer::flush()

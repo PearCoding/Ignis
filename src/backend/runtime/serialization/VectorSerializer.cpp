@@ -23,6 +23,11 @@ bool VectorSerializer::isValid() const
     return isReadMode() ? mIt < mData.size() : mIt == mData.size();
 }
 
+size_t VectorSerializer::currentSize() const
+{
+    return mData.size();
+}
+
 size_t VectorSerializer::writeRaw(const uint8* data, size_t size)
 {
     IG_ASSERT(isValid(), "Trying to write into an invalid serializer!");
