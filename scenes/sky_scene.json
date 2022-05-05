@@ -15,29 +15,7 @@
 	},
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-GrayWall", "reflectance":[1,1,1]},
-		{"type":"dielectric", "name": "mat-Diamond", "alpha": 0.0025, "int_ior": 2.3, "specular_transmittance":[1,1,1]},
-        {
-			"type": "roughconductor",
-            "name": "material_29",
-            "alpha": 0.1,
-            "distribution": "ggx",
-            "ext_eta": 1.0,
-            "specular_reflectance": [
-                0.751534,
-                0.751534,
-                0.751534
-            ],
-            "eta": [
-                1.65746,
-                0.880369,
-                0.521229
-            ],
-            "k": [
-                9.22387,
-                6.26952,
-                4.837
-            ]
-        }
+		{"type":"dielectric", "name": "mat-Diamond", "alpha": 0.0025, "int_ior": 2.3, "specular_transmittance":[1,1,1]}
 	],
 	"shapes": [
 		{"type":"ply", "name":"Bottom", "filename":"meshes/Bottom.ply"},

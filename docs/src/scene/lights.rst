@@ -242,3 +242,7 @@ Environment Light (:monosp:`env`)
    - |color|
    - (1,1,1)
    - Radiance of the sky model. This can also be a texture.
+ * - scale
+   - |color|
+   - (1,1,1)
+   - Scale factor multiplied to the radiance. Only really useful in combination with a texture.

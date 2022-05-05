@@ -343,6 +343,8 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
 {
     tree.beginClosure();
 
+    tree.addColor("scale", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+
     const std::string id = ShaderUtils::escapeIdentifier(name);
 
     // TODO: Make this work with PExpr and other custom textures!
@@ -359,22 +361,28 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
 
         const std::string tex_path = LoaderTexture::getFilename(*tex, tree.context()).generic_u8string();
         if (tex_path.empty()) {
-            stream << LoaderTexture::generate(tex_name, *tex, tree)
+            stream << tree.pullHeader()
+                   << LoaderTexture::generate(tex_name, *tex, tree)
                    << "  let light_" << id << " = make_environment_light_textured_naive(" << ShaderUtils::inlineSceneBBox(tree.context())
+                   << ", " << tree.getInline("scale")
                    << ", tex_" << ShaderUtils::escapeIdentifier(tex_name)
                    << ", " << ShaderUtils::inlineMatrix(trans) << ");" << std::endl;
         } else {
             const auto cdf = setup_cdf(tex_path);
-            stream << LoaderTexture::generate(tex_name, *tex, tree)
+            stream << tree.pullHeader()
+                   << LoaderTexture::generate(tex_name, *tex, tree)
                    << "  let cdf_" << id << "   = cdf::make_cdf_2d(device.load_buffer(\"" << std::get<0>(cdf) << "\"), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
                    << "  let light_" << id << " = make_environment_light_textured(" << ShaderUtils::inlineSceneBBox(tree.context())
+                   << ", " << tree.getInline("scale")
                    << ", tex_" << ShaderUtils::escapeIdentifier(tex_name)
                    << ", cdf_" << id
                    << ", " << ShaderUtils::inlineMatrix(trans) << ");" << std::endl;
         }
     } else {
         const Vector3f color = tree.context().extractColor(*light, "radiance");
-        stream << "  let light_" << id << " = make_environment_light(" << ShaderUtils::inlineSceneBBox(tree.context())
+        stream << tree.pullHeader()
+               << "  let light_" << id << " = make_environment_light(" << ShaderUtils::inlineSceneBBox(tree.context())
+               << ", " << tree.getInline("scale")
                << ", " << ShaderUtils::inlineColor(color) << ");" << std::endl;
     }
 
