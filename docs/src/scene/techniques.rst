@@ -77,8 +77,6 @@ Photonmapper (:monosp:`photonmapper`)
    - false
    - Enable aovs displaying internal weights.
 
-This technique calculates the ambient occlusion in the scene. Currently no parameters are available to tinkle around.
-
 Ambient Occlusion (:monosp:`ao`)
 ---------------------------------------------
 

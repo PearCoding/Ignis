@@ -2,6 +2,7 @@
 #include "Logger.h"
 
 #include <fstream>
+#include <numeric>
 #include <sstream>
 
 #include <pugixml.hpp>
@@ -33,9 +34,18 @@ public:
 
     inline void setup()
     {
+        // First create a permutation vector
+        // We need it later to sort the actual matrix
+        std::vector<Eigen::Index> perm(mThetaBasis.size());
+        std::iota(perm.begin(), perm.end(), 0);
+        std::sort(perm.begin(), perm.end(),
+                  [&](size_t a, size_t b) { return mThetaBasis[a].UpperTheta < mThetaBasis[b].UpperTheta; });
+
+        // Sort the actual basis
         std::sort(mThetaBasis.begin(), mThetaBasis.end(),
                   [](const KlemsThetaBasis& a, const KlemsThetaBasis& b) { return a.UpperTheta < b.UpperTheta; });
 
+        // Construct linear offsets
         mThetaLinearOffset.resize(mThetaBasis.size());
         uint32 off = 0;
         for (size_t i = 0; i < mThetaBasis.size(); ++i) {
@@ -44,6 +54,17 @@ public:
         }
 
         mEntryCount = off;
+
+        // Enlarge for faster access
+        mPermutation.resize(mEntryCount);
+        size_t k = 0;
+        for (size_t i = 0; i < mThetaBasis.size(); ++i) {
+            size_t ri    = perm[i];
+            size_t count = mThetaBasis[ri].PhiCount;
+            size_t l     = mThetaLinearOffset[ri];
+            for (size_t j = 0; j < count; ++j)
+                mPermutation[k++] = l + j;
+        }
     }
 
     [[nodiscard]] inline uint32 entryCount() const { return mEntryCount; }
@@ -51,21 +72,6 @@ public:
 
     inline void write(std::ostream& os)
     {
-        auto theta_count = static_cast<uint32>(mThetaBasis.size());
-        std::sort(mThetaBasis.begin(), mThetaBasis.end(),
-                  [](const KlemsThetaBasis& a, const KlemsThetaBasis& b) { return a.UpperTheta < b.UpperTheta; });
-
-        std::vector<uint32> offsets(mThetaBasis.size());
-        uint32 off = 0;
-        for (size_t i = 0; i < mThetaBasis.size(); ++i) {
-            offsets[i] = off;
-            off += mThetaBasis[i].PhiCount;
-        }
-
-        os.write(reinterpret_cast<const char*>(&theta_count), sizeof(uint32));
-        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32));
-        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32)); // Pad
-        os.write(reinterpret_cast<const char*>(&off), sizeof(uint32)); // Pad
         for (auto& basis : mThetaBasis) {
             os.write(reinterpret_cast<const char*>(&basis.CenterTheta), sizeof(float));
             os.write(reinterpret_cast<const char*>(&basis.LowerTheta), sizeof(float));
@@ -73,13 +79,15 @@ public:
             os.write(reinterpret_cast<const char*>(&basis.PhiCount), sizeof(uint32));
         }
 
-        os.write(reinterpret_cast<const char*>(offsets.data()), offsets.size() * sizeof(uint32));
+        os.write(reinterpret_cast<const char*>(mThetaLinearOffset.data()), mThetaLinearOffset.size() * sizeof(uint32));
     }
 
+    [[nodiscard]] inline const std::vector<Eigen::Index>& permutation() const { return mPermutation; }
     [[nodiscard]] inline const std::vector<KlemsThetaBasis>& thetaBasis() const { return mThetaBasis; }
     [[nodiscard]] inline const std::vector<uint32>& thetaLinearOffset() const { return mThetaLinearOffset; }
 
 private:
+    std::vector<Eigen::Index> mPermutation;
     std::vector<KlemsThetaBasis> mThetaBasis;
     std::vector<uint32> mThetaLinearOffset;
     uint32 mEntryCount = 0;
@@ -93,6 +101,7 @@ public:
         , mColumnBasis(column)
         , mMatrix(row->entryCount(), column->entryCount())
     {
+        makeBlack();
     }
 
     [[nodiscard]] inline KlemsMatrix& matrix() { return mMatrix; }
@@ -103,16 +112,12 @@ public:
         mMatrix.fill(0);
     }
 
-    inline void transpose()
-    {
-        mMatrix.transposeInPlace();
-        std::swap(mRowBasis, mColumnBasis);
-        buildCDF();
-    }
-
     inline void buildCDF()
     {
-        // TODO
+        // TODO: Build a cdf matrix with each row or column being a single (standard) cdf
+        // While rendering we just have to pick the correct row or column based on the outgoing direction
+        // and sample an incoming direction based on the given cdf for that row or column.
+        // This requires a mechanism to map indexes back to theta & phi.
     }
 
     [[nodiscard]] inline std::shared_ptr<KlemsBasis> row() const { return mRowBasis; }
@@ -199,9 +204,9 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
                 IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Invalid AngleBasisBlock given" << std::endl;
                 return false;
             }
-
             fullbasis->addBasis(basis);
         }
+
         fullbasis->setup();
         allbasis[name] = std::move(fullbasis);
     }
@@ -228,8 +233,8 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         }
 
         // Connect angle basis
-        const char* columnBasisName = block.child_value("ColumnAngleBasis");
-        const char* rowBasisName    = block.child_value("RowAngleBasis");
+        const char* columnBasisName = block.child_value("ColumnAngleBasis"); // Incoming direction
+        const char* rowBasisName    = block.child_value("RowAngleBasis");    // Outgoing direction
         if (!columnBasisName || !rowBasisName) {
             IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": WavelengthDataBlock has no column or row basis given" << std::endl;
             return false;
@@ -249,20 +254,37 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         // Setup component
         std::shared_ptr<KlemsComponent> component = std::make_shared<KlemsComponent>(rowBasis, columnBasis);
 
+        // Load with the permutation in mind
+        const auto& rowPerm = rowBasis->permutation();
+        const auto& colPerm = columnBasis->permutation();
+
         // Parse list of floats
         const char* scat_str = block.child_value("ScatteringData");
         char* end            = nullptr;
         Eigen::Index ind     = 0;
+        bool did_warn_sign   = false;
         while (ind < component->matrix().size() && *scat_str) {
             const float value = std::strtof(scat_str, &end);
             if (scat_str == end && value == 0) {
                 scat_str = scat_str + 1; // Skip entry
                 continue;
             }
-            const Eigen::Index row = ind / columnBasis->entryCount(); // Outgoing direction
-            const Eigen::Index col = ind % columnBasis->entryCount(); // Incoming direction
 
-            component->matrix()(row, col) = value;
+            if (std::signbit(value) && !did_warn_sign) {
+                IG_LOG(L_WARNING) << "Data contains negative values in " << in_xml << ": Using absolute value instead" << std::endl;
+                did_warn_sign = true;
+            }
+
+            Eigen::Index row, col;
+            if (rowBased) {
+                row = ind % columnBasis->entryCount();
+                col = ind / columnBasis->entryCount();
+            } else {
+                row = ind / columnBasis->entryCount();
+                col = ind % columnBasis->entryCount();
+            }
+
+            component->matrix()(rowPerm.at(row), colPerm.at(col)) = std::abs(value);
             ++ind;
             if (scat_str == end)
                 break;
@@ -273,9 +295,6 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
             IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Given scattered data is not of length " << component->matrix().size() << std::endl;
             return false;
         }
-
-        if (rowBased)
-            component->transpose();
 
         component->buildCDF();
 

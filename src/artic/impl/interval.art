@@ -1,8 +1,8 @@
 mod interval {
     // Will return index to the greatest entry smaller then the predicate
-    // If predicate equals the actual number, the right most entry of the equal valued entries
+    // If predicate equals the actual number, the left most entry of the equal valued entries
     // will be returned.
-    // E.g., [0,1,3,5,6,6,7] for v <= 4 will return idx=2, for v <= 6 will return idx=5 (and not 4!)
+    // E.g., [0,1,3,5,6,6,7] for v <= 4 will return idx=2, for v <= 6 will return idx=4 (and not 5!)
     fn @binary_search(size : i32, pred: fn (i32) -> bool) -> i32 {
         let mut first = 0 : i32;
     	let mut len   = size;
@@ -18,6 +18,6 @@ mod interval {
             }
         }
 
-        super::clamp(first-1, 0, size-2)
+        super::clamp(first - 1, 0, size - 1)
     }
 }

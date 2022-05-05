@@ -78,8 +78,8 @@ fn @make_pos_sample(pos: Vec3, pdf: f32) = PosSample {
 // Z+ Up
 fn @spherical_from_dir(dir: Vec3) -> (f32, f32) {
     let theta = math_builtins::acos(dir.z);
-    let phi = math_builtins::atan2(dir.y, dir.x);
-    (theta, phi)
+    let phi   = math_builtins::atan2(dir.y, dir.x);
+    (theta, select(phi < 0, phi + 2 * flt_pi, phi))
 }
 
 fn @dir_from_spherical(theta: f32, phi: f32) -> Vec3 {

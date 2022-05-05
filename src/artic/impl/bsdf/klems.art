@@ -47,9 +47,22 @@ fn @k_fi(v: Vec3) = k_fo(make_vec3(-v.x, -v.y, v.z));
 fn @k_bo(v: Vec3) = k_fo(make_vec3(v.x, v.y, -v.z));
 fn @k_bi(v: Vec3) = k_fo(vec3_neg(v));
 
-fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) = min(basis.phi_count - 1, max(0, (phi * (basis.phi_count as f32) * flt_inv_pi / 2) as i32));
+fn @k_theta_index(theta: f32, basis: KlemsBasis) {
+    interval::binary_search(basis.theta_count, @|k| basis.theta_basis(k).lower <= theta)
+    // let mut i = 1:i32;
+    // while i < basis.theta_count && basis.theta_basis(i).lower <= theta {
+    //     i++;
+    // }
+    // i - 1
+}
+
+fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) {
+    let idx = max(0, (phi * (basis.phi_count as f32) * flt_inv_pi / 2 + 0.5) as i32);
+    select(idx > basis.phi_count - 1, 0, idx)
+}
+
 fn @k_multi_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> (i32, i32) {
-    let i = interval::binary_search(basis.theta_count, @|k| basis.theta_basis(k).lower <= theta);
+    let i = k_theta_index(theta, basis);
     let j = k_phi_index(phi, basis.theta_basis(i));
     (i, j)
 }
@@ -64,28 +77,30 @@ fn @k_eval_component_index(row: i32, col: i32, component: KlemsComponent) = comp
 fn @k_eval_component(in_dir: Vec3, out_dir: Vec3, component: KlemsComponent) {
     let (in_theta, in_phi)   = spherical_from_dir(in_dir);
     let (out_theta, out_phi) = spherical_from_dir(out_dir);
-    let row = k_index_of(in_theta, in_phi, component.row_basis);
-    let col = k_index_of(out_theta, out_phi, component.column_basis);
-    k_eval_component_index(row, col, component)
+    let in_idx  = k_index_of(in_theta,  in_phi,  component.column_basis);
+    let out_idx = k_index_of(out_theta, out_phi, component.row_basis);
+    k_eval_component_index(out_idx, in_idx, component)
 }
 
 fn @make_klems_basis(specification: KlemsComponentSpecification, buffer: DeviceBuffer, off: i32, axis: i32) -> (KlemsBasis, i32) {
     let theta_count = specification.theta_count(axis);
     let entry_count = specification.entry_count(axis);
-    let base_off    = 4 + off;
-    let lin_off     = (theta_count+1) * 4 + off;
+    let lin_off     = theta_count * 4 + off;
 
     (KlemsBasis {
         theta_count = theta_count,
         entry_count = entry_count,
-        theta_basis = @ |i| KlemsThetaBasis {
-            center    = buffer.load_f32(base_off + i*4 + 0),
-            lower     = buffer.load_f32(base_off + i*4 + 1),
-            upper     = buffer.load_f32(base_off + i*4 + 2),
-            phi_count = buffer.load_i32(base_off + i*4 + 3),
+        theta_basis = @ |i| {
+            let vec = buffer.load_vec4(off + i * 4);
+            KlemsThetaBasis {
+                center    = vec.x,
+                lower     = vec.y,
+                upper     = vec.z,
+                phi_count = bitcast[i32](vec.w),
+            }
         },
         theta_linear_offset = @ |i| buffer.load_i32(lin_off + i)
-    }, (theta_count+1)*4+theta_count)
+    }, theta_count * 4 + theta_count)
 }
 
 fn @make_klems_component(specification: KlemsComponentSpecification, buffer: DeviceBuffer, off: i32) -> (KlemsComponent, i32) {
@@ -146,10 +161,10 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsMo
         let outFront = shading::is_positive_hemisphere(wo);
 
         let factor = match (inFront, outFront) {
-            (true, true)   => if has_front_refl { k_eval_component(k_fi(wi), k_fo(wo), klems.front_reflection)   } else { 0:f32 },
-            (true, false)  => if has_front_tran { k_eval_component(k_fi(wi), k_bo(wo), klems.front_transmission) } else { 0:f32 },
-            (false, true)  => if has_back_tran  { k_eval_component(k_bi(wi), k_fo(wo), klems.back_transmission)  } else { 0:f32 },
-            (false, false) => if has_back_refl  { k_eval_component(k_bi(wi), k_bo(wo), klems.back_reflection)    } else { 0:f32 }
+            (true, true)   => if has_front_refl { k_eval_component(k_fi(wo), k_fo(wi), klems.front_reflection)   } else { 0:f32 },
+            (true, false)  => if has_front_tran { k_eval_component(k_fi(wo), k_bo(wi), klems.front_transmission) } else { 0:f32 },
+            (false, true)  => if has_back_tran  { k_eval_component(k_bi(wo), k_fo(wi), klems.back_transmission)  } else { 0:f32 },
+            (false, false) => if has_back_refl  { k_eval_component(k_bi(wo), k_bo(wi), klems.back_reflection)    } else { 0:f32 }
         };
 
         color_mulf(color, factor * shading::abs_cos_theta(wi))
@@ -170,7 +185,7 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsMo
             let wi        = to_local(in_dir);
             let refl_prob = get_refl_prob(wo);
 
-            let prob = if shading::is_same_hemisphere(out_dir, in_dir) { refl_prob } else { 1 - refl_prob };
+            let prob = if shading::is_same_hemisphere(wo, wi) { refl_prob } else { 1 - refl_prob };
 
             prob * cosine_hemisphere_pdf(shading::abs_cos_theta(wi))
         },
