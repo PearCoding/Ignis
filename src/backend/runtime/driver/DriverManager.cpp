@@ -25,7 +25,11 @@ using path_set = std::unordered_set<std::filesystem::path, path_hash>;
 
 inline static void split_env(const std::string& str, path_set& data)
 {
+#ifndef IG_OS_WINDOWS
     constexpr char ENV_DELIMITER = ':';
+#else
+    constexpr char ENV_DELIMITER = ';';
+#endif
 
     size_t start = 0;
     size_t end   = str.find(ENV_DELIMITER);

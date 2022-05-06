@@ -33,7 +33,7 @@ struct InternalVariable {
             return Map;
     }
 };
-static std::unordered_map<std::string, InternalVariable> sInternalVariables = {
+static const std::unordered_map<std::string, InternalVariable> sInternalVariables = {
     { "Pi", { "flt_pi", PExprType::Number, false } },
     { "E", { "flt_e", PExprType::Number, false } },
     { "Eps", { "flt_eps", PExprType::Number, false } },
@@ -266,7 +266,7 @@ inline static InternalDynFunction3 genDynLerpFunction3(const char* func)
 };
 
 // Defs
-static std::unordered_map<std::string, InternalDynFunction1> sInternalDynFunctions1 = {
+static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynFunctions1 = {
     { "sin", genDynMapFunction1("math_builtins::sin", nullptr) },
     { "cos", genDynMapFunction1("math_builtins::cos", nullptr) },
     { "tan", genDynMapFunction1("math_builtins::tan", nullptr) },
@@ -293,13 +293,13 @@ static std::unordered_map<std::string, InternalDynFunction1> sInternalDynFunctio
     { "smootherstep", { nullptr, genMapFunction1("smootherstep", PExprType::Number), nullptr, nullptr, nullptr } }
 };
 
-static std::unordered_map<std::string, InternalDynFunction2> sInternalDynFunctions2 = {
+static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynFunctions2 = {
     { "min", genDynMapFunction2("math_builtins::fmax", "min") },
     { "max", genDynMapFunction2("math_builtins::fmin", "max") },
     { "atan2", genDynMapFunction2("math_builtins::atan2", nullptr) },
     { "cross", { nullptr, nullptr, nullptr, genArrayFunction2("cross", PExprType::Vec3), nullptr } }
 };
-static std::unordered_map<std::string, InternalDynFunction2> sInternalDynNoiseFunctions2 = {
+static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynNoiseFunctions2 = {
     { "noise", { nullptr, genFunction2("noise1"), genFunction2("noise2_v"), genFunction2("noise3_v"), nullptr } },
     { "snoise", { nullptr, genFunction2("snoise1"), genFunction2("snoise2"), genFunction2("snoise3"), nullptr } },
     { "pnoise", { nullptr, genFunction2("pnoise1"), genFunction2("pnoise2"), genFunction2("pnoise3"), nullptr } },
@@ -309,7 +309,7 @@ static std::unordered_map<std::string, InternalDynFunction2> sInternalDynNoiseFu
     { "voronoi", { nullptr, nullptr, genFunction2("voronoi2"), nullptr, nullptr } },
     { "fbm", { nullptr, nullptr, genFunction2("fbm2"), nullptr, nullptr } }
 };
-static std::unordered_map<std::string, InternalDynFunction1> sInternalDynColoredNoiseFunctions1 = {
+static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynColoredNoiseFunctions1 = {
     { "cnoise", { nullptr, genFunction1Color("cnoise1_def"), genFunction1Color("cnoise2_def"), genFunction1Color("cnoise3_def"), nullptr } },
     { "cpnoise", { nullptr, genFunction1Color("cpnoise1_def"), genFunction1Color("cpnoise2_def"), genFunction1Color("cpnoise3_def"), nullptr } },
     { "ccellnoise", { nullptr, genFunction1Color("ccellnoise1_def"), genFunction1Color("ccellnoise2_def"), genFunction1Color("ccellnoise3_def"), nullptr } },
@@ -317,7 +317,7 @@ static std::unordered_map<std::string, InternalDynFunction1> sInternalDynColored
     { "cvoronoi", { nullptr, nullptr, genFunction1Color("cvoronoi2_def"), nullptr, nullptr } },
     { "cfbm", { nullptr, nullptr, genFunction1Color("cfbm2_def"), nullptr, nullptr } }
 };
-static std::unordered_map<std::string, InternalDynFunction2> sInternalDynColoredNoiseFunctions2 = {
+static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynColoredNoiseFunctions2 = {
     { "cnoise", { nullptr, genFunction2Color("cnoise1"), genFunction2Color("cnoise2"), genFunction2Color("cnoise3"), nullptr } },
     { "cpnoise", { nullptr, genFunction2Color("cpnoise1"), genFunction2Color("cpnoise2"), genFunction2Color("cpnoise3"), nullptr } },
     { "ccellnoise", { nullptr, genFunction2Color("ccellnoise1"), genFunction2Color("ccellnoise2"), genFunction2Color("ccellnoise3"), nullptr } },
@@ -325,14 +325,14 @@ static std::unordered_map<std::string, InternalDynFunction2> sInternalDynColored
     { "cfbm", { nullptr, nullptr, genFunction2Color("cfbm2"), nullptr, nullptr } }
 };
 
-static std::unordered_map<std::string, InternalDynFunction3> sInternalDynFunctions3 = {
+static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynFunctions3 = {
     { "clamp", { genMapFunction3("clamp", PExprType::Integer), genMapFunction3("clampf", PExprType::Number), nullptr, nullptr, nullptr } }
 };
-static std::unordered_map<std::string, InternalDynFunction3> sInternalDynLerpFunctions3 = {
+static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynLerpFunctions3 = {
     { "mix", genDynLerpFunction3("lerp") }
 };
 
-static std::unordered_map<std::string, InternalDynFunction1> sInternalDynReduceFunctions1 = {
+static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynReduceFunctions1 = {
     { "length", genDynArrayFunction1("len") },
     { "sum", genDynArrayFunction1("sum") },
     { "avg", genDynArrayFunction1("avg") },
@@ -345,7 +345,7 @@ static std::unordered_map<std::string, InternalDynFunction1> sInternalDynReduceF
     { "voronoi", { nullptr, nullptr, genFunction1("voronoi2_def"), nullptr, nullptr } },
     { "fbm", { nullptr, nullptr, genFunction1("fbm2_def"), nullptr, nullptr } }
 };
-static std::unordered_map<std::string, InternalDynFunction2> sInternalDynReduceFunctions2 = {
+static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynReduceFunctions2 = {
     { "angle", genDynArrayFunction2("angle") },
     { "dot", genDynArrayFunction2("dot") },
     { "dist", genDynArrayFunction2("dist") }
@@ -722,42 +722,42 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr,
     using OpParam = std::optional<PExprType>;
 
     for (const auto& df : sInternalDynFunctions1)
-        addDynFunction(env, df.first, df.second, {}, false,
+        addDynFunction(env, df.first, df.second, OpParam{}, false,
                        OpParam{});
 
     for (const auto& df : sInternalDynReduceFunctions1)
-        addDynFunction(env, df.first, df.second, PExprType::Number, true,
+        addDynFunction(env, df.first, df.second, OpParam{ PExprType::Number }, true,
+                       OpParam{});
+
+    // Always vec4 foo(A), with A can be num, vec2 or vec3
+    for (const auto& df : sInternalDynColoredNoiseFunctions1)
+        addDynFunction(env, df.first, df.second, OpParam{ PExprType::Vec4 }, true,
                        OpParam{});
 
     for (const auto& df : sInternalDynFunctions2)
-        addDynFunction(env, df.first, df.second, {}, false,
+        addDynFunction(env, df.first, df.second, OpParam{}, false,
                        OpParam{}, OpParam{});
 
     // Always num foo(A, num), with A can be num, vec2 or vec3
     for (const auto& df : sInternalDynNoiseFunctions2)
-        addDynFunction(env, df.first, df.second, PExprType::Number, true,
+        addDynFunction(env, df.first, df.second, OpParam{ PExprType::Number }, true,
                        OpParam{}, OpParam{ PExprType::Number });
-
-    // Always vec4 foo(A), with A can be num, vec2 or vec3
-    for (const auto& df : sInternalDynColoredNoiseFunctions1)
-        addDynFunction(env, df.first, df.second, PExprType::Vec4, true,
-                       OpParam{});
 
     // Always vec4 foo(A, num), with A can be num, vec2 or vec3
     for (const auto& df : sInternalDynColoredNoiseFunctions2)
-        addDynFunction(env, df.first, df.second, PExprType::Vec4, true,
+        addDynFunction(env, df.first, df.second, OpParam{ PExprType::Vec4 }, true,
                        OpParam{}, OpParam{ PExprType::Number });
 
     for (const auto& df : sInternalDynReduceFunctions2)
-        addDynFunction(env, df.first, df.second, PExprType::Number, true,
+        addDynFunction(env, df.first, df.second, OpParam{ PExprType::Number }, true,
                        OpParam{}, OpParam{});
 
     for (const auto& df : sInternalDynFunctions3)
-        addDynFunction(env, df.first, df.second, {}, false,
+        addDynFunction(env, df.first, df.second, OpParam{}, false,
                        OpParam{}, OpParam{}, OpParam{});
 
     for (const auto& df : sInternalDynLerpFunctions3)
-        addDynFunction(env, df.first, df.second, {}, false,
+        addDynFunction(env, df.first, df.second, OpParam{}, false,
                        OpParam{}, OpParam{}, OpParam{ PExprType::Number });
 
     // Select funciton
