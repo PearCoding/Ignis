@@ -180,9 +180,8 @@ bool DriverManager::addModule(const std::filesystem::path& path)
             return false;
         }
 
-        if (mRegistredDrivers.count(interface.Target) > 0) {
+        if (mRegistredDrivers.count(interface.Target) > 0)
             IG_LOG(L_WARNING) << "Module " << path << " is replacing another module for present target " << targetToString(interface.Target) << std::endl;
-        }
 
         mRegistredDrivers[interface.Target] = path;
     } catch (const std::exception& e) {

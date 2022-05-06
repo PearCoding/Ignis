@@ -9,7 +9,7 @@ public:
     explicit SharedLibrary(const std::filesystem::path& file);
     ~SharedLibrary() = default;
 
-    void* symbol(const std::string& name) const;
+    void* symbol(const std::string_view& name) const;
     void unload();
 
     inline operator bool() const { return mInternal != nullptr; }

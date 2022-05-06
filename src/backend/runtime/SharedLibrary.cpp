@@ -77,15 +77,15 @@ SharedLibrary::SharedLibrary(const std::filesystem::path& file)
 {
 }
 
-void* SharedLibrary::symbol(const std::string& name) const
+void* SharedLibrary::symbol(const std::string_view& name) const
 {
     if (!mInternal)
         return nullptr;
 
 #ifdef USE_DLOPEN
-    return dlsym(mInternal->Handle, name.c_str());
+    return dlsym(mInternal->Handle, name.data());
 #elif defined(IG_OS_WINDOWS)
-    return GetProcAddress(mInternal->Handle, name.c_str());
+    return GetProcAddress(mInternal->Handle, name.data());
 #endif
 }
 
