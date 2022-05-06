@@ -277,11 +277,14 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         for (const auto& child : anglebasis.children("AngleBasisBlock")) {
             KlemsThetaBasis basis{};
 
-            const auto bounds   = child.child("ThetaBounds");
-            basis.LowerTheta    = Deg2Rad * bounds.child("LowerTheta").text().as_float(0);
-            basis.UpperTheta    = Deg2Rad * bounds.child("UpperTheta").text().as_float(0);
-            basis.PhiCount      = child.child("nPhis").text().as_uint(0);
-            basis.PhiSolidAngle = Pi * (std::pow(std::cos(basis.LowerTheta), 2) - std::pow(std::cos(basis.UpperTheta), 2)) / basis.PhiCount;
+            const auto bounds = child.child("ThetaBounds");
+            basis.LowerTheta  = Deg2Rad * bounds.child("LowerTheta").text().as_float(0);
+            basis.UpperTheta  = Deg2Rad * bounds.child("UpperTheta").text().as_float(0);
+            basis.PhiCount    = child.child("nPhis").text().as_uint(0);
+
+            const float solidA  = std::cos(basis.LowerTheta);
+            const float solidB  = std::cos(basis.UpperTheta);
+            basis.PhiSolidAngle = Pi * (solidA * solidA - solidB * solidB) / basis.PhiCount;
 
             const auto theta = child.child("Theta");
             if (theta)

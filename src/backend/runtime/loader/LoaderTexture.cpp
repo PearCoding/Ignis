@@ -99,7 +99,7 @@ static void tex_brick(std::ostream& stream, const std::string& name, const Parse
 
 static void tex_gen_noise(const std::string& func, std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
 {
-    constexpr float DefaultSeed = 36326639;
+    constexpr float DefaultSeed = 36326639.0f;
 
     if (!tree.beginClosure(name))
         return;
@@ -201,8 +201,8 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
         output = res.value().Expr;
 
     // Make sure all texture is loaded
-    for (const auto& tex : res.value().Textures)
-        tree.registerTextureUsage(tex);
+    for (const auto& used_tex : res.value().Textures)
+        tree.registerTextureUsage(used_tex);
 
     // Pull texture usage
     stream << tree.pullHeader()
