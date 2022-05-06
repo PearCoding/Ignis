@@ -82,9 +82,10 @@ inline static std::string callDynFunction(const InternalDynFunction<MapF>& df, P
     return {};
 }
 
+using OpParam = std::optional<PExprType>;
 template <typename MapF, typename... Args>
 inline void addDynFunction(PExpr::Environment& env, const std::string& name, const InternalDynFunction<MapF>& df,
-                           const std::optional<PExprType>& retType, bool fixI, const std::optional<Args>&... params)
+                           const OpParam& retType, bool fixI, const std::optional<Args>&... params)
 {
     if (df.MapInt)
         env.registerDef(PExpr::FunctionDef(name, fixI ? PExprType::Integer : retType.value_or(PExprType::Integer), { params.value_or(PExprType::Integer)... }));
@@ -677,6 +678,8 @@ public:
 
 std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr, const std::string& uv_access, bool hasSurfaceInfo) const
 {
+    // FIXME: On Windows some real weird behaviour is happening... switch to a callback style variable & function definition to solve all problems
+
     PExpr::Environment env;
 
     // Add internal variables to the variable table
@@ -718,8 +721,6 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr,
     env.registerDef(PExpr::FunctionDef("color", PExprType::Vec4, { PExprType::Number }));
     env.registerDef(PExpr::FunctionDef("color", PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number }));
     env.registerDef(PExpr::FunctionDef("color", PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number }));
-
-    using OpParam = std::optional<PExprType>;
 
     for (const auto& df : sInternalDynFunctions1)
         addDynFunction(env, df.first, df.second, OpParam{}, false,
