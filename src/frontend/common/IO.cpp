@@ -11,7 +11,7 @@ IG_END_IGNORE_WARNINGS
 namespace IG {
 bool saveImageRGB(const std::filesystem::path& path, const float* rgb, size_t width, size_t height, float scale)
 {
-    ImageRgba32 img;
+    Image img;
     img.width  = width;
     img.height = height;
     img.pixels.reset(new float[width * height * 4]);
@@ -38,7 +38,7 @@ bool saveImageRGB(const std::filesystem::path& path, const float* rgb, size_t wi
 
 bool saveImageRGBA(const std::filesystem::path& path, const float* rgb, size_t width, size_t height, float scale)
 {
-    ImageRgba32 img;
+    Image img;
     img.width  = width;
     img.height = height;
     img.pixels.reset(new float[width * height * 4]);

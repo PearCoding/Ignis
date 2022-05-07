@@ -35,16 +35,32 @@ private:
 };
 using ImageSaveException = ImageLoadException;
 
-struct ImageRgba32 {
+/// Linear RGBA Image with pixels in format [R, G, B, A] x Width x Height
+struct Image {
     std::unique_ptr<float[]> pixels;
     size_t width, height;
 
     inline bool isValid() const { return pixels != nullptr; }
-    void applyGammaCorrection();
+
+    /// Apply (inverse) gamma correction.
+    /// Depending on the sRGB flag, can be 2.2 gamma or the sRGB gamma function
+    void applyGammaCorrection(bool inverse = false, bool sRGB = false);
+
+    /// Flip image in y-axis
     void flipY();
 
-    static ImageRgba32 load(const std::filesystem::path& path);
+    /// Loads a image in linear RGBA
+    /// Supports EXR, HDR, PNG, JPEG and many other formats supported by the stbi library
+    static Image load(const std::filesystem::path& path);
+
+    /// Save a image in linear RGBA in EXR format
+    /// No other format is supported, except EXR. The file should end with .exr
     bool save(const std::filesystem::path& path);
+
+    /// Save a image in linear RGBA in EXR format
+    /// No other format is supported, except EXR. The file should end with .exr
+    /// Given pointer should be linear in memory and should be in format [R, G, B, A] x width x height,
+    /// With height being the major axis. If alpha channel is omitted as requested, the apointed format still is [R, G, B, A] x width x height
     static bool save(const std::filesystem::path& path, const float* rgba, size_t width, size_t height, bool skip_alpha = false);
 };
 } // namespace IG

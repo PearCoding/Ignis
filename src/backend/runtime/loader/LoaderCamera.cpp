@@ -124,14 +124,14 @@ static void camera_fishlens(std::ostream& stream, const std::string& name, const
     if (tmax < tmin)
         std::swap(tmin, tmax);
 
-    CameraOrientation orientation = camera_orthogonal_orientation(name, camera, ctx);
+    CameraOrientation orientation = camera_perspective_orientation(name, camera, ctx);
 
     std::string mode_str = camera ? camera->property("mode").getString("") : "";
 
     std::string mode = "FisheyeAspectMode::Circular";
-    if (mode == "cropped")
+    if (mode_str == "cropped")
         mode = "FisheyeAspectMode::Cropped";
-    else if (mode == "full")
+    else if (mode_str == "full")
         mode = "FisheyeAspectMode::Full";
 
     // Dump camera control (above is just defaults)

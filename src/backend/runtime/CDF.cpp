@@ -13,7 +13,7 @@ void CDF::computeForImage(const std::filesystem::path& in, const std::filesystem
 {
     constexpr float MinEps = 1e-5f;
 
-    ImageRgba32 image = ImageRgba32::load(in);
+    Image image = Image::load(in);
 
     std::vector<float> marginal(image.height);
     std::vector<float> conditional(image.width * image.height);
@@ -37,7 +37,7 @@ void CDF::computeForImage(const std::filesystem::path& in, const std::filesystem
 
                 // Set as marginal
                 if (premultiplySin)
-                    marginal[y] = sum * std::sin(Pi * (y + 0.5f) / float(image.height - 1));
+                    marginal[y] = sum * std::sin(Pi * (y + 0.5f) / float(image.height));
                 else
                     marginal[y] = sum;
 
@@ -46,6 +46,10 @@ void CDF::computeForImage(const std::filesystem::path& in, const std::filesystem
                     float n = 1.0f / sum;
                     for (size_t x = 0; x < image.width; ++x)
                         cond[x] *= n;
+                } else {
+                    float n = 1.0f / (image.width - 1);
+                    for (size_t x = 0; x < image.width; ++x)
+                        cond[x] = x * n;
                 }
 
                 // Force 1 to make it numerically stable
@@ -58,9 +62,15 @@ void CDF::computeForImage(const std::filesystem::path& in, const std::filesystem
         marginal[y] += marginal[y - 1];
 
     // Normalize marginal
-    float n = 1.0f / marginal[image.height - 1];
-    for (float& e : marginal)
-        e *= n;
+    if (marginal[image.height - 1] > MinEps) {
+        const float n = 1.0f / marginal[image.height - 1];
+        for (float& e : marginal)
+            e *= n;
+    } else {
+        const float n = 1.0f / (image.height - 1);
+        for (size_t y = 0; y < image.height; ++y)
+            marginal[y] = y * n;
+    }
 
     // Force 1 to make it numerically stable
     marginal[image.height - 1] = 1;

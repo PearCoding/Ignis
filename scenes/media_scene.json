@@ -38,7 +38,7 @@
 		{"name":"Object","shape":"Object", "bsdf":"mat-Object", "inner_medium": "Medium"}
 	],
 	"lights": [
-		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[1,1,1]}
+		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[100,100,100]}
 	],
 	"media": [
 		// {"type": "homogeneous", "name": "Medium", "sigma_a": [0.0015333, 0.0046, 0.019933], "sigma_s": [4.5513, 5.8294, 7.136], "g": -0.6}

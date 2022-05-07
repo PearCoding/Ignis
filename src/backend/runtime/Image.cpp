@@ -15,20 +15,55 @@ IG_BEGIN_IGNORE_WARNINGS
 IG_END_IGNORE_WARNINGS
 
 namespace IG {
-void ImageRgba32::applyGammaCorrection()
+
+static inline float srgb_gamma(float c)
+{
+    if (c <= 0.0031308f) {
+        return 12.92f * c;
+    } else {
+        return 1.055f * std::pow(c, 1 / 2.4f) - 0.055f;
+    }
+}
+
+static inline float srgb_invgamma(float c)
+{
+    if (c <= 1 / 2.4f) {
+        return c / 12.92f;
+    } else {
+        return std::pow((c + 0.055f) / 1.055f, 2.4f);
+    }
+}
+
+void Image::applyGammaCorrection(bool inverse, bool sRGB)
 {
     IG_ASSERT(isValid(), "Expected valid image");
 
-    for (size_t y = 0; y < height; ++y) {
-        for (size_t x = 0; x < width; ++x) {
-            auto* pix = &pixels[4 * (y * width + x)];
+    if (!sRGB) {
+        const float factor = inverse ? 1 / 2.2f : 2.2f;
+
+        for (size_t k = 0; k < height * width; ++k) {
+            auto* pix = &pixels[4 * k];
             for (int i = 0; i < 3; ++i)
-                pix[i] = std::pow(pix[i], 2.2f);
+                pix[i] = std::pow(pix[i], factor);
+        }
+    } else {
+        if (!inverse) {
+            for (size_t k = 0; k < height * width; ++k) {
+                auto* pix = &pixels[4 * k];
+                for (int i = 0; i < 3; ++i)
+                    pix[i] = srgb_gamma(pix[i]);
+            }
+        } else {
+            for (size_t k = 0; k < height * width; ++k) {
+                auto* pix = &pixels[4 * k];
+                for (int i = 0; i < 3; ++i)
+                    pix[i] = srgb_invgamma(pix[i]);
+            }
         }
     }
 }
 
-void ImageRgba32::flipY()
+void Image::flipY()
 {
     const size_t slice = 4 * width;
     for (size_t y = 0; y < height / 2; ++y) {
@@ -46,20 +81,19 @@ inline bool ends_with(std::string const& value, std::string const& ending)
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
 
-ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
+Image Image::load(const std::filesystem::path& path)
 {
     std::string ext   = path.extension().generic_u8string();
     const bool useExr = ends_with(ext, ".exr");
     const bool useHdr = ends_with(ext, ".hdr");
 
-    ImageRgba32 img;
+    Image img;
 
     if (useExr) {
         EXRVersion exr_version;
         int ret = ParseEXRVersionFromFile(&exr_version, path.generic_u8string().c_str());
-        if (ret != 0) {
+        if (ret != 0)
             throw ImageLoadException("Could not extract exr version information", path);
-        }
 
         EXRHeader exr_header;
         InitEXRHeader(&exr_header);
@@ -153,9 +187,8 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
         int width = 0, height = 0, channels = 0;
         float* data = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 0);
 
-        if (data == nullptr) {
+        if (data == nullptr)
             throw ImageLoadException("Could not load image", path);
-        }
 
         img.width  = width;
         img.height = height;
@@ -163,7 +196,7 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
 
         switch (channels) {
         case 0:
-            return ImageRgba32();
+            return Image();
         case 1: // Gray
             for (size_t i = 0; i < img.width * img.height; ++i) {
                 float g               = data[i];
@@ -194,6 +227,8 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
             break;
         }
         stbi_image_free(data);
+
+        // Linearize data
     }
 
     // Do not flip hdr images (which are fixed to -Y N +X M resolution by stb)
@@ -202,19 +237,21 @@ ImageRgba32 ImageRgba32::load(const std::filesystem::path& path)
     return img;
 }
 
-bool ImageRgba32::save(const std::filesystem::path& path)
+bool Image::save(const std::filesystem::path& path)
 {
     return save(path, pixels.get(), width, height);
 }
 
-bool ImageRgba32::save(const std::filesystem::path& path, const float* rgba, size_t width, size_t height, bool skip_alpha)
+bool Image::save(const std::filesystem::path& path, const float* rgba, size_t width, size_t height, bool skip_alpha)
 {
     std::string ext = path.extension().generic_u8string();
     bool useExr     = ends_with(ext, ".exr");
 
     // We only support .exr output
-    if (!useExr)
+    if (!useExr) {
+        IG_LOG(L_ERROR) << "Ignis only supports EXR format as output!" << std::endl;
         return false;
+    }
 
     size_t channels = skip_alpha ? 3 : 4;
     std::vector<std::vector<float>> images(channels);

@@ -44,6 +44,6 @@
 		{"name":"Sphere","shape":"Sphere", "bsdf":"mat-Sphere"}
 	],
 	"lights": [
-		{"type":"env", "name":"Environment", "radiance":"env"}
+		{"type":"env", "name":"Environment", "radiance":"env", "transform": [0,-1,0, 0,0,1, 1,0,0]}
 	]
 }

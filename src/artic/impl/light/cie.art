@@ -1,7 +1,7 @@
 // Note: groundBrightness is the same as gensky ... -b (x/0.2) in gensky as gensky makes use of the constant gprefl=0.2!
 fn @make_cie_sky_light(scene_bbox: BBox, zenith: Color, ground: Color, groundBrightness: f32, cloudy: bool, has_ground: bool, transform: Mat3x3) =
     make_environment_light_function(scene_bbox, @|dir|{
-        let cos_theta = dir.z;
+        let cos_theta = dir.y; // In contrary to other places, environment maps use Y as up
         if !has_ground && cos_theta < 0 { return(color_builtins::black) }
 
         let a     = math_builtins::pow[f32](cos_theta + 1.01, 10);
@@ -13,14 +13,15 @@ fn @make_cie_sky_light(scene_bbox: BBox, zenith: Color, ground: Color, groundBri
 }, transform, !has_ground);
 
 //-------------------------------------------
-fn @make_perez_light(scene_bbox: BBox, f32, sun_dir: Vec3, lum: Color, a: f32, b: f32, c: f32, d: f32, e: f32, transform: Mat3x3)  =
+fn @make_perez_light(scene_bbox: BBox, sun_dir: Vec3, lum: Color, a: f32, b: f32, c: f32, d: f32, e: f32, transform: Mat3x3)  =
     make_environment_light_function(scene_bbox, @|dir|{
-        let cos_theta = dir.z;                      // Cosine between zenith and direction
-        let sun_c     = vec3_dot(dir, sun_dir);     // Cosine between sun and direction
-        let sun_a     = math_builtins::acos(sun_c); // Angle between sun and direction
+        let cos_theta = dir.y; // Cosine between zenith and direction
+        if cos_theta < 0 { return(color_builtins::black) }
 
-        let A      = if math_builtins::fabs(cos_theta) <= flt_eps { 1 } else { 1 + a * math_builtins::exp(b / cos_theta) };
-        let B      = 1 + c * math_builtins::exp(d * sun_a) + e * sun_c * sun_c;
-        let factor = A * B;
-        color_mulf(lum, factor)
+        let sun_c = vec3_dot(dir, sun_dir);                    // Cosine between sun and direction
+        let sun_a = math_builtins::acos(clampf(sun_c, -1, 1)); // Angle between sun and direction
+
+        let A = 1 + a * math_builtins::exp(-b / math_builtins::fmax[f32](0.01, cos_theta));
+        let B = 1 + c * math_builtins::exp(d * sun_a) + e * sun_c * sun_c;
+        color_mulf(lum, A * B)
 }, transform, false);

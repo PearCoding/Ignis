@@ -69,7 +69,7 @@ fn @k_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> i32 {
 fn @k_eval_component_index(row: i32, col: i32, component: KlemsComponent) = component.matrix(row * component.column_basis.entry_count + col);
 
 fn @k_sample_component_index(u: f32, row: i32, component: KlemsComponent) {
-    cdf::sample_cdf_1d_rem(u, component.cdf(row))
+    component.cdf(row).sample_discrete(u)
 }
 
 fn @k_eval_component(in_dir: Vec3, out_dir: Vec3, component: KlemsComponent) {
@@ -108,9 +108,9 @@ fn @k_sample_theta_basis(u: f32, v: f32, basis: KlemsThetaBasis, phi_i: i32) -> 
 fn @k_sample_component(rnd: &mut RndState, in_dir: Vec3, component: KlemsComponent) -> (Vec3, f32) {
     let (in_theta, in_phi) = spherical_from_dir(in_dir);
     let in_idx             = k_index_of(in_theta, in_phi, component.column_basis);
-    let (sample, out_idx)  = k_sample_component_index(randf(rnd), in_idx, component);
+    let sample             = k_sample_component_index(randf(rnd), in_idx, component);
 
-    let (theta_basis, out_phi_idx) = k_get_theta_basis(out_idx, component.row_basis);
+    let (theta_basis, out_phi_idx) = k_get_theta_basis(sample.off, component.row_basis);
     let (out_dir, tb_pdf)          = k_sample_theta_basis(randf(rnd), randf(rnd), theta_basis, out_phi_idx);
 
     (out_dir, sample.pdf * tb_pdf)
@@ -149,7 +149,7 @@ fn @make_klems_component(specification: KlemsComponentSpecification, buffer: Dev
         row_basis     = row_basis,
         column_basis  = col_basis,
         matrix        = @ |i| buffer.load_f32(off + row_off + col_off + i),
-        cdf           = @ |col| cdf::make_cdf_1d(buffer, col_basis.entry_count, off + row_off + col_off + mat_size + col * col_basis.entry_count) 
+        cdf           = @ |col| cdf::make_cdf_1d_from_buffer(buffer, col_basis.entry_count, off + row_off + col_off + mat_size + col * col_basis.entry_count) 
     }, k_align(row_off + col_off + 2 * mat_size))
 }
 

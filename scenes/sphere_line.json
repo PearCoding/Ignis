@@ -51,6 +51,6 @@
 		{"name":"Sphere5","shape":"Sphere", "bsdf":"mat-Sphere5", "transform":{"translate":[0,-4,0]}}
 	],
 	"lights": [
-		{"type":"env", "name":"Environment", "radiance":"env"}
+		{"type":"env", "name":"Environment", "radiance":"env", "transform": [1,0,0, 0,0,1, 0,1,0]}
 	]
 }

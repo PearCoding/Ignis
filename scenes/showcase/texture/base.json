@@ -31,6 +31,6 @@
 		{"name":"Plane","shape":"Plane", "bsdf":"mat-Plane", "transform":{"translate":[0,0,2]}}
 	],
 	"lights": [
-		{"type":"env", "name":"Environment", "radiance":"env"}
+		{"type":"env", "name":"Environment", "radiance":"env", "transform": [0,-1,0, 0,0,1, 1,0,0]}
 	]
 }

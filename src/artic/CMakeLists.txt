@@ -10,7 +10,6 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/sort.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/stats.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/warp.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/aov.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/bsdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/buffer.art
@@ -91,7 +90,9 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/interval.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/microfacet.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/pixel_sampler.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/sampling.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/shading.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/warp.art
 )
 
 set(ARTIC_MAIN_SRC ${ARTIC_MAIN_SRC} PARENT_SCOPE)

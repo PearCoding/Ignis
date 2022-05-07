@@ -1,0 +1,125 @@
+// See http://psgraphics.blogspot.com/2011/01/improved-code-for-concentric-map.html
+fn @square_to_concentric_disk(p: Vec2) -> Vec2 {
+    let a = 2 * p.x - 1;
+    let b = 2 * p.y - 1;
+
+    if (a == 0 && b == 0) {
+        make_vec2(0, 0)
+    } else if (a * a > b * b) { 
+        // Uses squares instead of absolute values
+        // Top half
+        let phi = (flt_pi/4) * safe_div(b, a);
+        let x = math_builtins::cos(phi) * a;
+        let y = math_builtins::sin(phi) * a;
+        make_vec2(x, y)
+    } else {
+        // Bottom half
+        let phi = (flt_pi/2) - (flt_pi/4) * safe_div(a, b);
+        let x = math_builtins::cos(phi) * b;
+        let y = math_builtins::sin(phi) * b;
+        make_vec2(x, y)
+    }
+}
+
+fn @concentric_disk_to_square(p: Vec2) -> Vec2 {
+    let quadrant = math_builtins::fabs(p.x) > math_builtins::fabs(p.y);
+    let r_sign   = select(quadrant, p.x, p.y); // If quadrant 0 or 2
+    let r        = math_builtins::copysign(vec2_len(p), r_sign);
+
+    let phi = math_builtins::atan2(
+        prodsign(p.y, r_sign),
+        prodsign(p.x, r_sign));
+
+    let c = 4 * phi / flt_pi;
+    let t = select(quadrant, c, 2 - c) * r;
+
+    let a = select(quadrant, r, t);
+    let b = select(quadrant, t, r);
+
+    make_vec2((a + 1) * 0.5, (b + 1) * 0.5)
+}
+
+// ----------------------------------------------
+// Z+ Up
+fn @spherical_from_dir(dir: Vec3) -> (f32, f32) {
+    let theta = math_builtins::acos(dir.z);
+    let phi   = math_builtins::atan2(dir.y, dir.x);
+    (theta, select(phi < 0, phi + 2 * flt_pi, phi))
+}
+
+fn @dir_from_spherical(theta: f32, phi: f32) -> Vec3 {
+    let s = math_builtins::sin(theta);
+    let c = math_builtins::cos(theta);
+    let x = s * math_builtins::cos(phi);
+    let y = s * math_builtins::sin(phi);
+    let z = c;
+    make_vec3(x, y, z)
+}
+
+// ----------------------------------------------
+// Clarberg: Fast Equal-Area Mapping of the (Hemi)Sphere using SIMD
+// The implementation for equal area maps from (0.5, 0.5) -> UnitZ
+// incontrary to the spherical map with (0,0) -> UnitZ 
+fn @equal_area_square_to_sphere(p: Vec2) -> Vec3 {
+    let u = 2 * p.x - 1;
+    let v = 2 * p.y - 1;
+    
+    let au = math_builtins::fabs(u);
+    let av = math_builtins::fabs(v);
+
+    // Compute radius r as signed distance from diagonal
+    let signedDistance = 1 - (au + av);
+    let d = math_builtins::fabs(signedDistance);
+    let r = 1 - d;
+
+    // Compute angle phi for square to sphere mapping
+    let phi = select(r == 0, 1:f32, (av - au) / r + 1) * flt_pi / 4;
+
+    // Find z coordinate for spherical direction
+    let cosTheta = math_builtins::copysign(1 - r*r, signedDistance);
+    let sinTheta = safe_sqrt(2 - r*r) * r;
+
+    // Compute cos phi and sin phi
+    let cosPhi = math_builtins::copysign(math_builtins::cos(phi), u);
+    let sinPhi = math_builtins::copysign(math_builtins::sin(phi), v);
+    
+    // Return standard orientation
+    make_vec3(
+        cosPhi * sinTheta,
+        sinPhi * sinTheta,
+        cosTheta)
+}
+
+fn @equal_area_sphere_to_square(d: Vec3) -> Vec2 {
+    let ad = vec3_abs(d);
+
+    // Compute the radius r
+    let r = safe_sqrt(1 - ad.z);
+
+    // Compute the argument to atan
+    let a  = math_builtins::fmax(ad.x, ad.y); // TODO: Some devices have fast maxmin operations, maybe make use of it as in the intersection routines?
+    let b_ = math_builtins::fmin(ad.x, ad.y);
+    let b  = safe_div(b_, a);
+
+    // This is approximative in other implementations, except ours
+    let phi_ = math_builtins::atan(b) * 2 * flt_inv_pi;
+    let phi  = select(ad.x < ad.y, 1 - phi_, phi_);
+
+    // Find (u,v) based on (r,phi)
+    let v_ = phi * r;
+    let u_ = r - v_;
+
+    // If southern hemisphere -> mirror u,v
+    let u = select(d.z < 0, 1 - v_, u_);
+    let v = select(d.z < 0, 1 - u_, v_);
+
+    // Move (u,v) to the correct quadrant based on the signs of (x,y)
+    let cu = math_builtins::copysign(u, d.x);
+    let cv = math_builtins::copysign(v, d.y);
+
+    // Transform (u,v) from [-1,1] to [0,1]
+    make_vec2(
+        0.5 * (cu + 1),
+        0.5 * (cv + 1)
+    )
+}

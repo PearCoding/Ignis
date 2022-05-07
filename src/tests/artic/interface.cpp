@@ -8,7 +8,7 @@ int ignis_test_expect_eq_f32(float a, float b)
     constexpr float EPS = 1.5f;
     const bool s        = std::abs(a - b) <= EPS;
     if (!s) {
-        std::cout << "Expression failed: Expected " << b << " but got " << a << " instead" << std::endl;
+        std::cout << "Expression failed: Expected " << a << " but got " << b << " instead" << std::endl;
         return 1;
     } else {
         return 0;

@@ -1,7 +1,7 @@
 {
 	"technique": {
 		"type": "path",
-		"max_depth": 64
+		"max_depth": 1
 	},
 	"camera": {
 		"type": "fishlens",
@@ -13,14 +13,7 @@
 	"film": {
 		"size": [1000, 1000]
 	},
-	"textures": [
-		{
-			"type": "image",
-			"name": "env",
-			"filename": "textures/environment/phalzer_forest_01_4k.exr"
-		}
-	],
 	"lights": [
-		{"type":"env", "name":"Environment", "radiance":"env"}
+		{"type":"perez", "name":"Sky"}
 	]
 }

@@ -15,32 +15,38 @@ SkyModel::SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, floa
     const float sun_se = std::sin(solar_elevation);
     const float sun_ce = std::cos(solar_elevation);
 
+    std::array<ArHosekSkyModelState*, AR_COLOR_BANDS> states;
+    for (size_t k = 0; k < AR_COLOR_BANDS; ++k)
+        states[k] = arhosek_rgb_skymodelstate_alloc_init(atmospheric_turbidity, ground_albedo[k], solar_elevation);
+
     mData.resize(mElevationCount * mAzimuthCount * 4);
-    for (size_t k = 0; k < AR_COLOR_BANDS; ++k) {
-        const float albedo = ground_albedo[k];
 
-        auto* state = arhosek_rgb_skymodelstate_alloc_init(atmospheric_turbidity, albedo, solar_elevation);
-        for (size_t y = 0; y < mElevationCount; ++y) {
-            const float theta = std::max(0.001f, ELEVATION_RANGE * y / (float)mElevationCount) - Pi2;
-            const float st    = std::sin(theta);
-            const float ct    = std::cos(theta);
-            for (size_t x = 0; x < mAzimuthCount; ++x) {
-                const float azimuth = AZIMUTH_RANGE * x / (float)mAzimuthCount;
+    for (size_t y = 0; y < mElevationCount; ++y) {
+        const float theta = ELEVATION_RANGE * y / (float)mElevationCount;
+        const float st    = std::sin(theta);
+        const float ct    = std::cos(theta);
+        for (size_t x = 0; x < mAzimuthCount; ++x) {
+            float azimuth = AZIMUTH_RANGE * x / (float)mAzimuthCount - Pi4;
+            if (azimuth < 0)
+                azimuth += 2 * Pi;
 
-                float cosGamma = ct * sun_ce + st * sun_se * std::cos(azimuth - sunEA.Azimuth);
-                float gamma    = std::acos(std::min(1.0f, std::max(-1.0f, cosGamma)));
-                float radiance = (float)arhosek_tristim_skymodel_radiance(state, theta, gamma, (int)k);
+            const float cosGamma = ct * sun_ce + st * sun_se * std::cos(azimuth - sunEA.Azimuth);
+            const float gamma    = std::acos(std::min(1.0f, std::max(-1.0f, cosGamma)));
+
+            for (size_t k = 0; k < AR_COLOR_BANDS; ++k) {
+                const float radiance = (float)arhosek_tristim_skymodel_radiance(states[k], theta, gamma, (int)k);
 
                 mData[y * mAzimuthCount * 4 + x * 4 + k] = std::max(0.0f, radiance);
             }
         }
-
-        arhosekskymodelstate_free(state);
     }
+
+    for (const auto& state : states)
+        arhosekskymodelstate_free(state);
 }
 
 void SkyModel::save(const std::filesystem::path& path) const
 {
-    ImageRgba32::save(path, mData.data(), mAzimuthCount, mElevationCount, true);
+    Image::save(path, mData.data(), mAzimuthCount, mElevationCount, true);
 }
 } // namespace IG

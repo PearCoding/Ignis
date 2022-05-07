@@ -369,7 +369,7 @@ public:
         return copyToDevice(dev, host.data(), host.size());
     }
 
-    inline DeviceImage copyToDevice(int32_t dev, const IG::ImageRgba32& image)
+    inline DeviceImage copyToDevice(int32_t dev, const IG::Image& image)
     {
         return DeviceImage(copyToDevice(dev, image.pixels.get(), image.width * image.height * 4), image.width, image.height);
     }
@@ -443,10 +443,10 @@ public:
 
         IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
         try {
-            return images[filename] = copyToDevice(dev, IG::ImageRgba32::load(filename));
+            return images[filename] = copyToDevice(dev, IG::Image::load(filename));
         } catch (const IG::ImageLoadException& e) {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;
-            return images[filename] = copyToDevice(dev, IG::ImageRgba32());
+            return images[filename] = copyToDevice(dev, IG::Image());
         }
     }
 

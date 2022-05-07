@@ -1,0 +1,61 @@
+fn test_warp_equal_area_sphere_f(a: f32, b: f32) {
+    let vec  = make_vec2(a, b);
+    let dir  = equal_area_square_to_sphere(vec);
+    let vec2 = equal_area_sphere_to_square(dir);
+
+    if eq_vec2(vec, vec2) {
+        0
+    } else {
+        ignis_test_fail("Warp Equal Area Sphere: Mapping is not bijective");
+        1
+    }
+}
+
+fn test_warp_concentric_disk_f(a: f32, b: f32) {
+    let vec  = make_vec2(a, b);
+    let dir  = square_to_concentric_disk(vec);
+    let vec2 = concentric_disk_to_square(dir);
+
+    if eq_vec2(vec, vec2) {
+        0
+    } else {
+        ignis_test_fail("Warp Concentric Disk: Mapping is not bijective");
+        1
+    }
+}
+
+fn test_warp_spherical_dir_f(theta: f32, phi: f32) {
+    let dir      = dir_from_spherical(theta, phi);
+    let (t2, p2) = spherical_from_dir(dir);
+
+    if eq_f32(theta, t2) && eq_f32(phi, p2) {
+        0
+    } else {
+        ignis_test_fail("Warp Spherical Dir: Mapping is not bijective");
+        1
+    }
+}
+
+fn test_warp() -> i32 { 
+    let mut err = 0;
+
+    err += test_warp_equal_area_sphere_f(0.2, 0.8);
+    err += test_warp_equal_area_sphere_f(0, 0.2);
+    err += test_warp_equal_area_sphere_f(0.9, 0.4);
+    err += test_warp_equal_area_sphere_f(1, 0);
+    err += test_warp_equal_area_sphere_f(0.2, 1);
+
+    err += test_warp_concentric_disk_f(0.2, 0.8);
+    err += test_warp_concentric_disk_f(0, 0.2);
+    err += test_warp_concentric_disk_f(0.9, 0.4);
+    err += test_warp_concentric_disk_f(1, 0);
+    err += test_warp_concentric_disk_f(0.2, 1);
+
+    err += test_warp_spherical_dir_f(0, flt_pi);
+    err += test_warp_spherical_dir_f(flt_pi/2, flt_pi);
+    err += test_warp_spherical_dir_f(flt_pi/2, 0);
+    err += test_warp_spherical_dir_f(0, 0);
+    err += test_warp_spherical_dir_f(0, flt_pi/4);
+
+    err
+ }
