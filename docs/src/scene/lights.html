@@ -448,6 +448,11 @@ The type has to be one of the lights listed at this section below.</p>
 <td><p>2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2</p></td>
 <td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun.</p></td>
 </tr>
+<tr class="row-even"><td><p><span class="paramtype">scale</span></p></td>
+<td><p><span class="paramtype">color</span></p></td>
+<td><p>(1,1,1)</p></td>
+<td><p>Scale factor multiplied to the radiance.</p></td>
+</tr>
 </tbody>
 </table>
 <p>This sky model is based on the paper “An Analytic Model for Full Spectral Sky-Dome Radiance”
@@ -605,6 +610,11 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 <td><p><span class="paramtype">color</span></p></td>
 <td><p>(1,1,1)</p></td>
 <td><p>Scale factor multiplied to the radiance. Only really useful in combination with a texture.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">cdf</span></p></td>
+<td><p><span class="paramtype">boolean</span></p></td>
+<td><p>true</p></td>
+<td><p>Construct a 2d cdf for sampling purposes. Will only be considered if parameter <cite>radiance</cite> is an <span class="monosp">image</span> texture (without PExpr and other terms)</p></td>
 </tr>
 </tbody>
 </table>

@@ -123,31 +123,30 @@ Sky Light (:monosp:`sky`)
    - |color|
    - (1,1,1)
    - Ground color of the sky model.
-
  * - turbidity
    - |number|
    - 3
    - Turbidity factor of the sky model.
-
  * - direction
    - |vector|
    - (0,0,1)
    - Direction of the incoming sun.
-   
  * - theta, phi
    - |number|
    - 0, 0
-   - Instead of :monosp:`direction` theta and phi given in degrees can be used.
-   
+   - Instead of :monosp:`direction` theta and phi given in degrees can be used. 
  * - elevation, azimuth
    - |number|
    - 0, 0
    - Instead of :monosp:`direction` the elevation and azimuth of a celestial object given in degrees can be used.
-   
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
    - 2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2
    - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun.
+ * - scale
+   - |color|
+   - (1,1,1)
+   - Scale factor multiplied to the radiance.
    
 This sky model is based on the paper "An Analytic Model for Full Spectral Sky-Dome Radiance"
 and the 2013 IEEE CG&A paper "Adding a Solar Radiance Function to the Hosek Skylight Model" both by 
@@ -246,3 +245,7 @@ Environment Light (:monosp:`env`)
    - |color|
    - (1,1,1)
    - Scale factor multiplied to the radiance. Only really useful in combination with a texture.
+ * - cdf
+   - |bool|
+   - true
+   - Construct a 2d cdf for sampling purposes. Will only be considered if parameter `radiance` is an :monosp:`image` texture (without PExpr and other terms)
