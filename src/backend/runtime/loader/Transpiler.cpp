@@ -34,6 +34,9 @@ struct InternalVariable {
     }
 };
 static const std::unordered_map<std::string, InternalVariable> sInternalVariables = {
+    { "uv", { "", PExprType::Vec2, false } }, // Special
+    { "P", { "", PExprType::Vec3, false } },  // Special
+    { "N", { "", PExprType::Vec3, false } },  // Special
     { "Pi", { "flt_pi", PExprType::Number, false } },
     { "E", { "flt_e", PExprType::Number, false } },
     { "Eps", { "flt_eps", PExprType::Number, false } },
@@ -81,22 +84,30 @@ inline static std::string callDynFunction(const InternalDynFunction<MapF>& df, P
     }
     return {};
 }
+std::optional<PExpr::FunctionDef> matchFuncRet(const PExpr::FunctionLookup& lkp, PExprType retType, const std::vector<PExprType>& params)
+{
+    if (lkp.matchParameter(params))
+        return PExpr::FunctionDef(lkp.name(), retType, params);
+    return {};
+}
 
 using OpParam = std::optional<PExprType>;
 template <typename MapF, typename... Args>
-inline void addDynFunction(PExpr::Environment& env, const std::string& name, const InternalDynFunction<MapF>& df,
-                           const OpParam& retType, bool fixI, const std::optional<Args>&... params)
+inline std::optional<PExpr::FunctionDef> checkDynFunction(const PExpr::FunctionLookup& lkp, const InternalDynFunction<MapF>& df,
+                                                          const OpParam& retType, bool fixI, const std::optional<Args>&... params)
 {
-    if (df.MapInt)
-        env.registerDef(PExpr::FunctionDef(name, fixI ? PExprType::Integer : retType.value_or(PExprType::Integer), { params.value_or(PExprType::Integer)... }));
-    if (df.MapNum)
-        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExprType::Number), { params.value_or(PExprType::Number)... }));
-    if (df.MapVec2)
-        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExprType::Vec2), { params.value_or(PExprType::Vec2)... }));
-    if (df.MapVec3)
-        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExprType::Vec3), { params.value_or(PExprType::Vec3)... }));
-    if (df.MapVec4)
-        env.registerDef(PExpr::FunctionDef(name, retType.value_or(PExprType::Vec4), { params.value_or(PExprType::Vec4)... }));
+    if (df.MapInt && lkp.matchParameter({ params.value_or(PExprType::Integer)... }, true))
+        return PExpr::FunctionDef(lkp.name(), fixI ? PExprType::Integer : retType.value_or(PExprType::Integer), { params.value_or(PExprType::Integer)... });
+    if (df.MapNum && lkp.matchParameter({ params.value_or(PExprType::Number)... }, false))
+        return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Number), { params.value_or(PExprType::Number)... });
+    if (df.MapVec2 && lkp.matchParameter({ params.value_or(PExprType::Vec2)... }, true))
+        return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec2), { params.value_or(PExprType::Vec2)... });
+    if (df.MapVec3 && lkp.matchParameter({ params.value_or(PExprType::Vec3)... }, true))
+        return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec3), { params.value_or(PExprType::Vec3)... });
+    if (df.MapVec4 && lkp.matchParameter({ params.value_or(PExprType::Vec4)... }, true))
+        return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec4), { params.value_or(PExprType::Vec4)... });
+
+    return {};
 }
 
 // Dyn Functions 1
@@ -676,112 +687,206 @@ public:
     }
 };
 
+class TranspilerInternal {
+public:
+    PExpr::Environment Environment;
+    Transpiler* Parent;
+
+    TranspilerInternal(Transpiler* transpiler)
+        : Parent(transpiler)
+    {
+        Environment.registerVariableLookupFunction(std::bind(&TranspilerInternal::variableLookup, this, std::placeholders::_1));
+        Environment.registerFunctionLookupFunction(std::bind(&TranspilerInternal::functionLookup, this, std::placeholders::_1));
+    }
+
+    std::optional<PExpr::VariableDef> variableLookup(const PExpr::VariableLookup& lkp)
+    {
+        // First check for internal variables
+        if (sInternalVariables.count(lkp.name()))
+            return PExpr::VariableDef(lkp.name(), sInternalVariables.at(lkp.name()).Type);
+
+        // Check for custom variables
+        if (Parent->mCustomVariableBool.count(lkp.name()))
+            return PExpr::VariableDef(lkp.name(), PExprType::Boolean);
+        if (Parent->mCustomVariableNumber.count(lkp.name()))
+            return PExpr::VariableDef(lkp.name(), PExprType::Number);
+        if (Parent->mCustomVariableVector.count(lkp.name()))
+            return PExpr::VariableDef(lkp.name(), PExprType::Vec3);
+        if (Parent->mCustomVariableColor.count(lkp.name()))
+            return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
+
+        // Check for textures/nodes to the variable table
+        if (Parent->mContext.Scene.texture(lkp.name()))
+            return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
+
+        return {};
+    }
+
+    std::optional<PExpr::FunctionDef> functionLookup(const PExpr::FunctionLookup& lkp)
+    {
+        // Add some internal functions
+        if (lkp.name() == "vec2") {
+            auto var = matchFuncRet(lkp, PExprType::Vec2, { PExprType::Number });
+            if (var.has_value())
+                return var;
+
+            var = matchFuncRet(lkp, PExprType::Vec2, { PExprType::Number, PExprType::Number });
+            if (var.has_value())
+                return var;
+        }
+
+        if (lkp.name() == "vec3") {
+            auto var = matchFuncRet(lkp, PExprType::Vec3, { PExprType::Number });
+            if (var.has_value())
+                return var;
+
+            var = matchFuncRet(lkp, PExprType::Vec3, { PExprType::Number, PExprType::Number, PExprType::Number });
+            if (var.has_value())
+                return var;
+        }
+
+        if (lkp.name() == "vec4" || lkp.name() == "color") {
+            auto var = matchFuncRet(lkp, PExprType::Vec4, { PExprType::Number });
+            if (var.has_value())
+                return var;
+
+            var = matchFuncRet(lkp, PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number });
+            if (var.has_value())
+                return var;
+
+            if (lkp.name() == "color") {
+                var = matchFuncRet(lkp, PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number });
+                if (var.has_value())
+                    return var;
+            }
+        }
+
+        if (sInternalDynFunctions1.count(lkp.name())) {
+            auto var = checkDynFunction(lkp, sInternalDynFunctions1.at(lkp.name()), OpParam{}, false,
+                                        OpParam{});
+            if (var.has_value())
+                return var;
+        }
+
+        if (sInternalDynFunctions2.count(lkp.name())) {
+            auto var = checkDynFunction(lkp, sInternalDynFunctions2.at(lkp.name()), OpParam{}, false,
+                                        OpParam{}, OpParam{});
+            if (var.has_value())
+                return var;
+        }
+
+        if (sInternalDynFunctions3.count(lkp.name())) {
+            auto var = checkDynFunction(lkp, sInternalDynFunctions3.at(lkp.name()), OpParam{}, false,
+                                        OpParam{}, OpParam{}, OpParam{});
+            if (var.has_value())
+                return var;
+        }
+
+        // Reduce functions
+        if (sInternalDynReduceFunctions1.count(lkp.name())) {
+            auto var = checkDynFunction(lkp, sInternalDynReduceFunctions1.at(lkp.name()), PExprType::Number, true,
+                                        OpParam{});
+            if (var.has_value())
+                return var;
+        }
+
+        if (sInternalDynReduceFunctions2.count(lkp.name())) {
+            auto var = checkDynFunction(lkp, sInternalDynReduceFunctions2.at(lkp.name()), PExprType::Number, true,
+                                        OpParam{}, OpParam{});
+            if (var.has_value())
+                return var;
+        }
+
+        // Always vec4 foo(A), with A can be num, vec2 or vec3
+        if (sInternalDynColoredNoiseFunctions1.count(lkp.name())) {
+            auto var = checkDynFunction(lkp, sInternalDynColoredNoiseFunctions1.at(lkp.name()), PExprType::Vec4, true,
+                                        OpParam{});
+            if (var.has_value())
+                return var;
+        }
+
+        // Always num foo(A, num), with A can be num, vec2 or vec3
+        if (sInternalDynColoredNoiseFunctions1.count(lkp.name())) {
+            auto var = checkDynFunction(lkp, sInternalDynColoredNoiseFunctions1.at(lkp.name()), PExprType::Number, true,
+                                        OpParam{}, OpParam{ PExprType::Number });
+            if (var.has_value())
+                return var;
+        }
+
+        // Always vec4 foo(A, num), with A can be num, vec2 or vec3
+        if (sInternalDynColoredNoiseFunctions2.count(lkp.name())) {
+            auto var = checkDynFunction(lkp, sInternalDynColoredNoiseFunctions2.at(lkp.name()), PExprType::Vec4, true,
+                                        OpParam{}, OpParam{ PExprType::Number });
+            if (var.has_value())
+                return var;
+        }
+
+        if (sInternalDynLerpFunctions3.count(lkp.name())) {
+            auto var = checkDynFunction(lkp, sInternalDynLerpFunctions3.at(lkp.name()), OpParam{}, true,
+                                        OpParam{}, OpParam{}, OpParam{ PExprType::Number });
+            if (var.has_value())
+                return var;
+        }
+
+        // Select function
+        if (lkp.name() == "select" && lkp.parameters().size() == 3) {
+            auto var = matchFuncRet(lkp, PExprType::Boolean, { PExprType::Boolean, PExprType::Boolean, PExprType::Boolean });
+            if (var.has_value())
+                return var;
+
+            var = matchFuncRet(lkp, PExprType::String, { PExprType::Boolean, PExprType::String, PExprType::String });
+            if (var.has_value())
+                return var;
+
+            var = matchFuncRet(lkp, PExprType::Integer, { PExprType::Boolean, PExprType::Integer, PExprType::Integer });
+            if (var.has_value())
+                return var;
+
+            var = matchFuncRet(lkp, PExprType::Number, { PExprType::Boolean, PExprType::Number, PExprType::Number });
+            if (var.has_value())
+                return var;
+
+            var = matchFuncRet(lkp, PExprType::Vec2, { PExprType::Boolean, PExprType::Vec2, PExprType::Vec2 });
+            if (var.has_value())
+                return var;
+
+            var = matchFuncRet(lkp, PExprType::Vec3, { PExprType::Boolean, PExprType::Vec3, PExprType::Vec3 });
+            if (var.has_value())
+                return var;
+
+            var = matchFuncRet(lkp, PExprType::Vec4, { PExprType::Boolean, PExprType::Vec4, PExprType::Vec4 });
+            if (var.has_value())
+                return var;
+        }
+
+        // Add all texture/nodes to the function table as well, such that the uv can be changed directly
+        if (Parent->mContext.Scene.texture(lkp.name()) && lkp.matchParameter({ PExprType::Vec2 }))
+            return PExpr::FunctionDef(lkp.name(), PExprType::Vec4, { PExprType::Vec2 });
+
+        return {};
+    }
+};
+
+Transpiler::Transpiler(const LoaderContext& ctx)
+    : mContext(ctx)
+    , mInternal(std::make_unique<TranspilerInternal>(this))
+{
+}
+
+Transpiler::~Transpiler()
+{
+}
+
 std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr, const std::string& uv_access, bool hasSurfaceInfo) const
 {
-    // FIXME: On Windows some real weird behaviour is happening... switch to a callback style variable & function definition to solve all problems
-
-    PExpr::Environment env;
-
-    // Add internal variables to the variable table
-    env.registerDef(PExpr::VariableDef("uv", PExprType::Vec2));
-    if (hasSurfaceInfo) {
-        env.registerDef(PExpr::VariableDef("P", PExprType::Vec3));
-        env.registerDef(PExpr::VariableDef("N", PExprType::Vec3));
-    }
-
-    for (const auto& var : sInternalVariables)
-        env.registerDef(PExpr::VariableDef(var.first, var.second.Type));
-
-    // Add custom variables to the variable table
-    for (const auto& var : mCustomVariableBool)
-        env.registerDef(PExpr::VariableDef(var, PExprType::Boolean));
-    for (const auto& var : mCustomVariableNumber)
-        env.registerDef(PExpr::VariableDef(var, PExprType::Number));
-    for (const auto& var : mCustomVariableVector)
-        env.registerDef(PExpr::VariableDef(var, PExprType::Vec3));
-    for (const auto& var : mCustomVariableColor)
-        env.registerDef(PExpr::VariableDef(var, PExprType::Vec4));
-
-    // Add all textures/nodes to the variable table
-    for (const auto& tex : mContext.Scene.textures()) {
-        if (sInternalVariables.count(tex.first) > 0)
-            IG_LOG(L_WARNING) << "Ignoring texture '" << tex.first << "' as it conflicts with internal variable name" << std::endl;
-        else
-            env.registerDef(PExpr::VariableDef(tex.first, PExprType::Vec4));
-    }
-
-    // Add some internal functions
-    // TODO: We could optimize the loading process via a definition block
-    env.registerDef(PExpr::FunctionDef("vec2", PExprType::Vec2, { PExprType::Number }));
-    env.registerDef(PExpr::FunctionDef("vec2", PExprType::Vec2, { PExprType::Number, PExprType::Number }));
-    env.registerDef(PExpr::FunctionDef("vec3", PExprType::Vec3, { PExprType::Number }));
-    env.registerDef(PExpr::FunctionDef("vec3", PExprType::Vec3, { PExprType::Number, PExprType::Number, PExprType::Number }));
-    env.registerDef(PExpr::FunctionDef("vec4", PExprType::Vec4, { PExprType::Number }));
-    env.registerDef(PExpr::FunctionDef("vec4", PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number }));
-    env.registerDef(PExpr::FunctionDef("color", PExprType::Vec4, { PExprType::Number }));
-    env.registerDef(PExpr::FunctionDef("color", PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number }));
-    env.registerDef(PExpr::FunctionDef("color", PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number }));
-
-    for (const auto& df : sInternalDynFunctions1)
-        addDynFunction(env, df.first, df.second, OpParam{}, false,
-                       OpParam{});
-
-    for (const auto& df : sInternalDynReduceFunctions1)
-        addDynFunction(env, df.first, df.second, OpParam{ PExprType::Number }, true,
-                       OpParam{});
-
-    // Always vec4 foo(A), with A can be num, vec2 or vec3
-    for (const auto& df : sInternalDynColoredNoiseFunctions1)
-        addDynFunction(env, df.first, df.second, OpParam{ PExprType::Vec4 }, true,
-                       OpParam{});
-
-    for (const auto& df : sInternalDynFunctions2)
-        addDynFunction(env, df.first, df.second, OpParam{}, false,
-                       OpParam{}, OpParam{});
-
-    // Always num foo(A, num), with A can be num, vec2 or vec3
-    for (const auto& df : sInternalDynNoiseFunctions2)
-        addDynFunction(env, df.first, df.second, OpParam{ PExprType::Number }, true,
-                       OpParam{}, OpParam{ PExprType::Number });
-
-    // Always vec4 foo(A, num), with A can be num, vec2 or vec3
-    for (const auto& df : sInternalDynColoredNoiseFunctions2)
-        addDynFunction(env, df.first, df.second, OpParam{ PExprType::Vec4 }, true,
-                       OpParam{}, OpParam{ PExprType::Number });
-
-    for (const auto& df : sInternalDynReduceFunctions2)
-        addDynFunction(env, df.first, df.second, OpParam{ PExprType::Number }, true,
-                       OpParam{}, OpParam{});
-
-    for (const auto& df : sInternalDynFunctions3)
-        addDynFunction(env, df.first, df.second, OpParam{}, false,
-                       OpParam{}, OpParam{}, OpParam{});
-
-    for (const auto& df : sInternalDynLerpFunctions3)
-        addDynFunction(env, df.first, df.second, OpParam{}, false,
-                       OpParam{}, OpParam{}, OpParam{ PExprType::Number });
-
-    // Select funciton
-    env.registerDef(PExpr::FunctionDef("select", PExprType::Boolean, { PExprType::Boolean, PExprType::Boolean, PExprType::Boolean }));
-    env.registerDef(PExpr::FunctionDef("select", PExprType::String, { PExprType::Boolean, PExprType::String, PExprType::String }));
-    env.registerDef(PExpr::FunctionDef("select", PExprType::Integer, { PExprType::Boolean, PExprType::Integer, PExprType::Integer }));
-    env.registerDef(PExpr::FunctionDef("select", PExprType::Number, { PExprType::Boolean, PExprType::Number, PExprType::Number }));
-    env.registerDef(PExpr::FunctionDef("select", PExprType::Vec2, { PExprType::Boolean, PExprType::Vec2, PExprType::Vec2 }));
-    env.registerDef(PExpr::FunctionDef("select", PExprType::Vec3, { PExprType::Boolean, PExprType::Vec3, PExprType::Vec3 }));
-    env.registerDef(PExpr::FunctionDef("select", PExprType::Vec4, { PExprType::Boolean, PExprType::Vec4, PExprType::Vec4 }));
-
-    // Add all texture/nodes to the function table as well, such that the uv can be changed directly
-    for (const auto& tex : mContext.Scene.textures())
-        env.registerDef(PExpr::FunctionDef(tex.first, PExprType::Vec4, { PExprType::Vec2 }));
-
     // Parse
-    auto ast = env.parse(expr);
+    auto ast = mInternal->Environment.parse(expr);
     if (ast == nullptr)
         return {};
 
     // Transpile
     ArticVisitor visitor(mContext, uv_access, hasSurfaceInfo);
-    std::string res = env.transpile(ast, &visitor);
+    std::string res = mInternal->Environment.transpile(ast, &visitor);
 
     // Patch output
     bool scalar_output = false;

@@ -6,17 +6,18 @@
 namespace IG {
 struct LoaderContext;
 class Transpiler {
+    friend class TranspilerInternal;
 public:
-    inline explicit Transpiler(const LoaderContext& ctx)
-        : mContext(ctx)
-    {
-    }
+    explicit Transpiler(const LoaderContext& ctx);
+    ~Transpiler();
 
     struct Result {
         std::string Expr;
         std::unordered_set<std::string> Textures;
         bool ScalarOutput; // Else it is a color
     };
+
+    /// Transpile the given expression to artic code. 
     std::optional<Result> transpile(const std::string& expr, const std::string& uv_access, bool hasSurfaceInfo) const;
 
     inline const LoaderContext& context() const { return mContext; }
@@ -32,5 +33,7 @@ private:
     std::unordered_set<std::string> mCustomVariableNumber;
     std::unordered_set<std::string> mCustomVariableVector;
     std::unordered_set<std::string> mCustomVariableColor;
+
+    std::unique_ptr<class TranspilerInternal> mInternal;
 };
 } // namespace IG

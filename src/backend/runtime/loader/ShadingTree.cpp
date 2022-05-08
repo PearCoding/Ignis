@@ -3,11 +3,11 @@
 #include "LoaderTexture.h"
 #include "Logger.h"
 #include "ShaderUtils.h"
-#include "Transpiler.h"
 
 namespace IG {
 ShadingTree::ShadingTree(LoaderContext& ctx)
     : mContext(ctx)
+    , mTranspiler(ctx)
 {
     beginClosure();
 }
@@ -183,8 +183,7 @@ void ShadingTree::registerTextureUsage(const std::string& name)
 
 std::string ShadingTree::handleTexture(const std::string& expr, const std::string& uv_access, bool needColor, bool hasSurfaceInfo)
 {
-    Transpiler transpiler(mContext);
-    auto res = transpiler.transpile(expr, uv_access, hasSurfaceInfo);
+    auto res = mTranspiler.transpile(expr, uv_access, hasSurfaceInfo);
 
     if (!res.has_value()) {
         if (needColor)

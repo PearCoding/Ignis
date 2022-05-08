@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IG_Config.h"
+#include "Transpiler.h"
 #include <unordered_map>
 #include <unordered_set>
 
@@ -57,5 +57,7 @@ private:
     std::unordered_set<std::string> mLoadedTextures;
 
     std::vector<Closure> mClosures;
+
+    Transpiler mTranspiler;
 };
 } // namespace IG
