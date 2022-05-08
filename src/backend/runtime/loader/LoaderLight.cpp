@@ -70,7 +70,7 @@ static std::tuple<std::string, size_t, size_t> setup_cdf(const std::string& file
 static void light_point(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
-    auto pos = light->property("position").getVector3(); // Has to be fixed
+    auto pos = light->property("position").getVector3(); // FIXME: Has to be fixed (WHY?)
     tree.addColor("intensity", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
 
     stream << tree.pullHeader()
@@ -225,6 +225,28 @@ static void light_directional(std::ostream& stream, const std::string& name, con
            << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_directional_light(" << ShaderUtils::inlineVector(dir)
            << ", " << ShaderUtils::inlineSceneBBox(tree.context())
            << ", " << tree.getInline("irradiance") << ");" << std::endl;
+
+    tree.endClosure();
+}
+
+static void light_spot(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+{
+    tree.beginClosure();
+
+    auto ea      = extractEA(light);
+    Vector3f dir = ea.toDirection();
+    auto pos     = light->property("position").getVector3(); // FIXME: Has to be fixed (WHY?)
+
+    tree.addColor("intensity", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addNumber("cutoff", *light, 30, true, ShadingTree::IM_Bare);
+    tree.addNumber("falloff", *light, 20, true, ShadingTree::IM_Bare);
+
+    stream << tree.pullHeader()
+           << "  let light_" << ShaderUtils::escapeIdentifier(name) << " = make_spot_light(" << ShaderUtils::inlineVector(pos)
+           << ", " << ShaderUtils::inlineVector(dir)
+           << ", rad(" << tree.getInline("cutoff") << ")"
+           << ", rad(" << tree.getInline("falloff") << ")"
+           << ", " << tree.getInline("intensity") << ");" << std::endl;
 
     tree.endClosure();
 }
@@ -402,6 +424,7 @@ static const struct {
     { "directional", light_directional },
     { "direction", light_directional },
     { "distant", light_directional },
+    { "spot", light_spot },
     { "sun", light_sun },
     { "sky", light_sky },
     { "cie_uniform", light_cie_env },

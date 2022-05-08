@@ -1,0 +1,37 @@
+fn @make_spot_light(pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_angle: f32, color: Color) -> Light {
+    let frame           = make_orthonormal_mat3x3(dir);
+    let cosCutoffAngle  = math_builtins::cos(cutoff_angle);
+    let cosFalloffAngle = math_builtins::cos(falloff_angle);
+    let cutoffRadius    = math_builtins::tan(cutoff_angle);
+    let cutoffArea      = math_builtins::fmax[f32](0.001, 2 * flt_pi * (1 - cosCutoffAngle));
+
+    fn @to_world(vec: Vec3) = mat3x3_mul(frame, vec);
+
+    fn @eval_dir(out_dir: Vec3) {
+        let cos_angle = vec3_dot(out_dir, dir);
+        if cos_angle >= cosCutoffAngle {
+            let factor    = select(cos_angle >= cosFalloffAngle, 1:f32, (cos_angle - cosCutoffAngle) / (cosFalloffAngle - cosCutoffAngle));
+            let intensity = color_mulf(color, factor / cutoffArea);
+            ( intensity, uniform_disk_pdf(cutoffRadius) )
+        } else {
+            ( color_builtins::black, 0:f32)
+        }
+    }
+
+    Light{
+        sample_direct = @ |_, from_surf| {
+            let out_dir              = vec3_normalize(vec3_sub(from_surf.point, pos));
+            let (intensity, dir_pdf) = eval_dir(out_dir);
+            make_direct_sample(pos, intensity, 1, dir_pdf, 1)
+        },
+        sample_emission = @ |rnd| {
+            let sample  = sample_uniform_disk(randf(rnd), randf(rnd), cutoffRadius);
+            let out_dir = vec3_normalize(to_world(vec3_add(sample.pos, make_vec3(0,0,1))));
+            let (intensity, _) = eval_dir(out_dir);
+            make_emission_sample(pos, out_dir, intensity, 1, sample.pdf, 1)
+        },
+        emission = @ |_, _| make_emission_value(color_builtins::black, 1, 1), // Is delta light
+        delta    = true,
+        infinite = false
+    }
+}

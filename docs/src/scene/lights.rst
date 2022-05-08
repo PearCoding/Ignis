@@ -33,6 +33,44 @@ Point Light (:monosp:`point`)
    - |color|
    - (1,1,1)
    - Intensity of the point light.
+
+Spot Light (:monosp:`spot`)
+---------------------------------------------
+
+.. objectparameters::
+
+ * - cutoff
+   - |number|
+   - 30
+   - Cutoff angle in degree. Greater angles will be completly black.
+ * - falloff
+   - |number|
+   - 20
+   - Falloff angle in degree. Greater angles will linearly falloff towards the cutoff angle. Falloff angle should be less or equal to the cutoff angle.
+ * - position
+   - |vector|
+   - (0,0,0)
+   - Position of the light.
+ * - direction
+   - |vector|
+   - (0,0,1)
+   - Direction of the light towards the scene.
+ * - theta, phi
+   - |number|
+   - 0, 0
+   - Instead of :monosp:`direction` theta and phi given in degrees can be used.
+ * - elevation, azimuth
+   - |number|
+   - 0, 0
+   - Instead of :monosp:`direction` the elevation and azimuth of a celestial object given in degrees can be used.
+ * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
+   - |number|
+   - 2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2
+   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun.
+ * - intensity
+   - |color|
+   - (1,1,1)
+   - Intensity of the light.
    
 Directional Light (:monosp:`directional`)
 ---------------------------------------------
@@ -42,7 +80,7 @@ Directional Light (:monosp:`directional`)
  * - direction
    - |vector|
    - (0,0,1)
-   - Direction of the directional light.
+   - Direction of the light towards the scene.
    
  * - theta, phi
    - |number|
@@ -87,7 +125,7 @@ Sun Light (:monosp:`sun`)
  * - direction
    - |vector|
    - (0,0,1)
-   - Direction of the incoming sun.
+   - Direction of the incoming sun towards the scene.
    
  * - theta, phi
    - |number|
@@ -130,7 +168,7 @@ Sky Light (:monosp:`sky`)
  * - direction
    - |vector|
    - (0,0,1)
-   - Direction of the incoming sun.
+   - Direction of the incoming sun towards the scene.
  * - theta, phi
    - |number|
    - 0, 0
@@ -200,7 +238,7 @@ Perez Sky Model (:monosp:`perez`)
  * - direction
    - |vector|
    - (0,0,1)
-   - Direction light.
+   - Direction of the light towards the scene.
    
  * - theta, phi
    - |number|
