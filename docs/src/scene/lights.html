@@ -176,6 +176,7 @@
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Lights</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#point-light-point">Point Light (<span class="monosp">point</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#spot-light-spot">Spot Light (<span class="monosp">spot</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#directional-light-directional">Directional Light (<span class="monosp">directional</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#area-light-area">Area Light (<span class="monosp">area</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#sun-light-sun">Sun Light (<span class="monosp">sun</span>)</a></li>
@@ -246,6 +247,10 @@ The type has to be one of the lights listed at this section below.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The interface with PExpr is still experimental and will be further improved in the future.</p>
+</div>
 <section id="point-light-point">
 <h2>Point Light (<span class="monosp">point</span>)<a class="headerlink" href="#point-light-point" title="Permalink to this headline">¶</a></h2>
 <table class="paramstable docutils align-default">
@@ -275,9 +280,83 @@ The type has to be one of the lights listed at this section below.</p>
 </tr>
 </tbody>
 </table>
-</section>
+<div class="figure compound align-center" id="fig-point-light">
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="../../_images/lig_point.jpg"><img alt="../../_images/lig_point.jpg" src="../../_images/lig_point.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Point light</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
+<section id="spot-light-spot">
+<span id="fig-point-light"></span><h2>Spot Light (<span class="monosp">spot</span>)<a class="headerlink" href="#spot-light-spot" title="Permalink to this headline">¶</a></h2>
+<table class="paramstable docutils align-default">
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="paramtype">cutoff</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>30</p></td>
+<td><p>Cutoff angle in degree. Greater angles will be completly black.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">falloff</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>20</p></td>
+<td><p>Falloff angle in degree. Greater angles will linearly falloff towards the cutoff angle. Falloff angle should be less or equal to the cutoff angle.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">position</span></p></td>
+<td><p><span class="paramtype">vector</span></p></td>
+<td><p>(0,0,0)</p></td>
+<td><p>Position of the light.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">direction</span></p></td>
+<td><p><span class="paramtype">vector</span></p></td>
+<td><p>(0,0,1)</p></td>
+<td><p>Direction of the light towards the scene.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">theta, phi</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>0, 0</p></td>
+<td><p>Instead of <span class="monosp">direction</span> theta and phi given in degrees can be used.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>0, 0</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the elevation and azimuth of a celestial object given in degrees can be used.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">intensity</span></p></td>
+<td><p><span class="paramtype">color</span></p></td>
+<td><p>(1,1,1)</p></td>
+<td><p>Intensity of the light.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="figure compound align-center" id="fig-spot-light">
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../../_images/lig_spot.jpg"><img alt="../../_images/lig_spot.jpg" src="../../_images/lig_spot.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Spot light</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="directional-light-directional">
-<h2>Directional Light (<span class="monosp">directional</span>)<a class="headerlink" href="#directional-light-directional" title="Permalink to this headline">¶</a></h2>
+<span id="fig-spot-light"></span><h2>Directional Light (<span class="monosp">directional</span>)<a class="headerlink" href="#directional-light-directional" title="Permalink to this headline">¶</a></h2>
 <table class="paramstable docutils align-default">
 <colgroup>
 <col style="width: 17%" />
@@ -296,7 +375,7 @@ The type has to be one of the lights listed at this section below.</p>
 <tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
 <td><p>(0,0,1)</p></td>
-<td><p>Direction of the directional light.</p></td>
+<td><p>Direction of the light towards the scene.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">theta, phi</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
@@ -320,9 +399,16 @@ The type has to be one of the lights listed at this section below.</p>
 </tr>
 </tbody>
 </table>
-</section>
+<div class="figure compound align-center" id="fig-directional-light">
+<figure class="align-default" id="id3">
+<a class="reference internal image-reference" href="../../_images/lig_directional.jpg"><img alt="../../_images/lig_directional.jpg" src="../../_images/lig_directional.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Directional light infinitly away from the scene</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="area-light-area">
-<h2>Area Light (<span class="monosp">area</span>)<a class="headerlink" href="#area-light-area" title="Permalink to this headline">¶</a></h2>
+<span id="fig-directional-light"></span><h2>Area Light (<span class="monosp">area</span>)<a class="headerlink" href="#area-light-area" title="Permalink to this headline">¶</a></h2>
 <table class="paramstable docutils align-default">
 <colgroup>
 <col style="width: 17%" />
@@ -350,9 +436,16 @@ The type has to be one of the lights listed at this section below.</p>
 </tr>
 </tbody>
 </table>
-</section>
+<div class="figure compound align-center" id="fig-area-light">
+<figure class="align-default" id="id4">
+<a class="reference internal image-reference" href="../../_images/lig_area.jpg"><img alt="../../_images/lig_area.jpg" src="../../_images/lig_area.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Area light</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="sun-light-sun">
-<h2>Sun Light (<span class="monosp">sun</span>)<a class="headerlink" href="#sun-light-sun" title="Permalink to this headline">¶</a></h2>
+<span id="fig-area-light"></span><h2>Sun Light (<span class="monosp">sun</span>)<a class="headerlink" href="#sun-light-sun" title="Permalink to this headline">¶</a></h2>
 <table class="paramstable docutils align-default">
 <colgroup>
 <col style="width: 17%" />
@@ -371,7 +464,7 @@ The type has to be one of the lights listed at this section below.</p>
 <tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
 <td><p>(0,0,1)</p></td>
-<td><p>Direction of the incoming sun.</p></td>
+<td><p>Direction of the incoming sun towards the scene.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">theta, phi</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
@@ -400,9 +493,16 @@ The type has to be one of the lights listed at this section below.</p>
 </tr>
 </tbody>
 </table>
-</section>
+<div class="figure compound align-center" id="fig-sun-light">
+<figure class="align-default" id="id5">
+<a class="reference internal image-reference" href="../../_images/lig_sun.jpg"><img alt="../../_images/lig_sun.jpg" src="../../_images/lig_sun.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Sun light infinitly away from the scene. In contrary to the directional light, the sun casts smooth shadows depending on the scale of the sun radius.</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="sky-light-sky">
-<h2>Sky Light (<span class="monosp">sky</span>)<a class="headerlink" href="#sky-light-sky" title="Permalink to this headline">¶</a></h2>
+<span id="fig-sun-light"></span><h2>Sky Light (<span class="monosp">sky</span>)<a class="headerlink" href="#sky-light-sky" title="Permalink to this headline">¶</a></h2>
 <table class="paramstable docutils align-default">
 <colgroup>
 <col style="width: 17%" />
@@ -431,7 +531,7 @@ The type has to be one of the lights listed at this section below.</p>
 <tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
 <td><p>(0,0,1)</p></td>
-<td><p>Direction of the incoming sun.</p></td>
+<td><p>Direction of the incoming sun towards the scene.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">theta, phi</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
@@ -458,9 +558,16 @@ The type has to be one of the lights listed at this section below.</p>
 <p>This sky model is based on the paper “An Analytic Model for Full Spectral Sky-Dome Radiance”
 and the 2013 IEEE CG&amp;A paper “Adding a Solar Radiance Function to the Hosek Skylight Model” both by
 Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Republic at that time.</p>
-</section>
+<div class="figure compound align-center" id="fig-sky-light">
+<figure class="align-default" id="id6">
+<a class="reference internal image-reference" href="../../_images/lig_sky.jpg"><img alt="../../_images/lig_sky.jpg" src="../../_images/lig_sky.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Sky light with default settings.</span><a class="headerlink" href="#id6" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="cie-uniform-sky-model-cie-uniform">
-<h2>CIE Uniform Sky Model (<span class="monosp">cie_uniform</span>)<a class="headerlink" href="#cie-uniform-sky-model-cie-uniform" title="Permalink to this headline">¶</a></h2>
+<span id="fig-sky-light"></span><h2>CIE Uniform Sky Model (<span class="monosp">cie_uniform</span>)<a class="headerlink" href="#cie-uniform-sky-model-cie-uniform" title="Permalink to this headline">¶</a></h2>
 <table class="paramstable docutils align-default">
 <colgroup>
 <col style="width: 17%" />
@@ -493,9 +600,16 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 </tr>
 </tbody>
 </table>
-</section>
+<div class="figure compound align-center" id="fig-cie_uniform-light">
+<figure class="align-default" id="id7">
+<a class="reference internal image-reference" href="../../_images/lig_cie_uniform.jpg"><img alt="../../_images/lig_cie_uniform.jpg" src="../../_images/lig_cie_uniform.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">CIE uniform sky model.</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="cie-cloudy-sky-model-cie-cloudy">
-<h2>CIE Cloudy Sky Model (<span class="monosp">cie_cloudy</span>)<a class="headerlink" href="#cie-cloudy-sky-model-cie-cloudy" title="Permalink to this headline">¶</a></h2>
+<span id="fig-cie_uniform-light"></span><h2>CIE Cloudy Sky Model (<span class="monosp">cie_cloudy</span>)<a class="headerlink" href="#cie-cloudy-sky-model-cie-cloudy" title="Permalink to this headline">¶</a></h2>
 <table class="paramstable docutils align-default">
 <colgroup>
 <col style="width: 17%" />
@@ -528,9 +642,16 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 </tr>
 </tbody>
 </table>
-</section>
+<div class="figure compound align-center" id="fig-cie_cloudy-light">
+<figure class="align-default" id="id8">
+<a class="reference internal image-reference" href="../../_images/lig_cie_cloudy.jpg"><img alt="../../_images/lig_cie_cloudy.jpg" src="../../_images/lig_cie_cloudy.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">CIE cloudy sky model.</span><a class="headerlink" href="#id8" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="perez-sky-model-perez">
-<h2>Perez Sky Model (<span class="monosp">perez</span>)<a class="headerlink" href="#perez-sky-model-perez" title="Permalink to this headline">¶</a></h2>
+<span id="fig-cie_cloudy-light"></span><h2>Perez Sky Model (<span class="monosp">perez</span>)<a class="headerlink" href="#perez-sky-model-perez" title="Permalink to this headline">¶</a></h2>
 <table class="paramstable docutils align-default">
 <colgroup>
 <col style="width: 17%" />
@@ -549,7 +670,7 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 <tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
 <td><p>(0,0,1)</p></td>
-<td><p>Direction light.</p></td>
+<td><p>Direction of the light towards the scene.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">theta, phi</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
@@ -583,9 +704,16 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 </tr>
 </tbody>
 </table>
-</section>
+<div class="figure compound align-center" id="fig-perez-light">
+<figure class="align-default" id="id9">
+<a class="reference internal image-reference" href="../../_images/lig_perez.jpg"><img alt="../../_images/lig_perez.jpg" src="../../_images/lig_perez.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Perez sky model with default settings. The sky model has no ground term, therefore everything below the horizon is displayed in black.</span><a class="headerlink" href="#id9" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="environment-light-env">
-<h2>Environment Light (<span class="monosp">env</span>)<a class="headerlink" href="#environment-light-env" title="Permalink to this headline">¶</a></h2>
+<span id="fig-perez-light"></span><h2>Environment Light (<span class="monosp">env</span>)<a class="headerlink" href="#environment-light-env" title="Permalink to this headline">¶</a></h2>
 <table class="paramstable docutils align-default">
 <colgroup>
 <col style="width: 17%" />
@@ -618,7 +746,14 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 </tr>
 </tbody>
 </table>
-</section>
+<div class="figure compound align-center" id="fig-env-light">
+<figure class="align-default" id="id10">
+<a class="reference internal image-reference" href="../../_images/lig_env.jpg"><img alt="../../_images/lig_env.jpg" src="../../_images/lig_env.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Environment light with EXR environment map used throughout the documentation.</span><a class="headerlink" href="#id10" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<span class="target" id="fig-env-light"></span></div></section>
 </section>
 
 
