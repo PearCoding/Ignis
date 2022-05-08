@@ -18,7 +18,7 @@ Table of Contents:
    :caption: Getting Started:
    
    src/getting_started/start
-   src/getting_started/compiling
+   src/getting_started/building
    src/getting_started/tutorials/index.rst
 
 .. toctree::
