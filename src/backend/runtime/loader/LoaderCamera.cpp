@@ -202,4 +202,15 @@ void LoaderCamera::setupInitialOrientation(const LoaderContext& ctx, LoaderResul
     result.CameraOrientation = entry->SetupOrientation(ctx.CameraType, camera, ctx);
 }
 
+std::vector<std::string> LoaderCamera::getAvailableTypes()
+{
+    std::vector<std::string> array;
+
+    for (size_t i = 0; _generators[i].Loader; ++i)
+        array.emplace_back(_generators[i].Name);
+
+    std::sort(array.begin(), array.end());
+
+    return array;
+}
 } // namespace IG

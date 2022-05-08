@@ -115,6 +115,12 @@ public:
     /// Increase frame count (only used in interactive sessions)
     inline void incFrameCount() { mCurrentFrame++; }
 
+    /// Get a list of all available techniques
+    static std::vector<std::string> getAvailableTechniqueTypes();
+
+    /// Get a list of all available cameras
+    static std::vector<std::string> getAvailableCameraTypes();
+
 private:
     bool load(const std::filesystem::path& path, Parser::Scene&& scene);
     bool setup();

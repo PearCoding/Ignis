@@ -8,5 +8,7 @@ struct LoaderTechnique {
     static TechniqueInfo getInfo(const LoaderContext& ctx);
     static std::string generate(const LoaderContext& ctx);
     static std::string generateHeader(const LoaderContext& ctx, bool isRayGeneration = false);
+
+    static std::vector<std::string> getAvailableTypes();
 };
 } // namespace IG

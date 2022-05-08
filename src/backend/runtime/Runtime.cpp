@@ -494,4 +494,13 @@ void Runtime::setParameter(const std::string& name, const Vector4f& value)
     mParameterSet.ColorParameters[name] = value;
 }
 
+std::vector<std::string> Runtime::getAvailableTechniqueTypes()
+{
+    return Loader::getAvailableTechniqueTypes();
+}
+
+std::vector<std::string> Runtime::getAvailableCameraTypes()
+{
+    return Loader::getAvailableCameraTypes();
+}
 } // namespace IG

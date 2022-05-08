@@ -104,4 +104,14 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
     return !ctx.HasError;
 }
+
+std::vector<std::string> Loader::getAvailableTechniqueTypes()
+{
+    return LoaderTechnique::getAvailableTypes();
+}
+
+std::vector<std::string> Loader::getAvailableCameraTypes()
+{
+    return LoaderCamera::getAvailableTypes();
+}
 } // namespace IG

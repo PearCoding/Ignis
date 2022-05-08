@@ -8,8 +8,6 @@ namespace IG {
 static const std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };
 static const std::map<std::string, Target> TargetMap{ { "generic", Target::GENERIC }, { "asimd", Target::ASIMD }, { "sse42", Target::SSE42 }, { "avx", Target::AVX }, { "avx2", Target::AVX2 }, { "avx512", Target::AVX512 }, { "amdgpu", Target::AMDGPU }, { "nvvm", Target::NVVM } };
 static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continous", SPPMode::Continous } };
-static const std::set<std::string> CameraTypes{ "perspective", "orthogonal", "fishlens" };
-static const std::set<std::string> TechniqueTypes{ "path", "photonmapper", "ao", "debug", "wireframe", "volpath" };
 
 class MyTransformer : public CLI::Validator {
 public:
@@ -111,10 +109,10 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         app.add_option("--dir", Dir, "Set the direction vector of the camera");
         app.add_option("--up", Up, "Set the up vector of the camera");
 
-        app.add_option("--camera", CameraType, "Override camera type")->check(CLI::IsMember(CameraTypes, CLI::ignore_case));
+        app.add_option("--camera", CameraType, "Override camera type")->check(CLI::IsMember(Runtime::getAvailableCameraTypes(), CLI::ignore_case));
     }
 
-    app.add_option("--technique", TechniqueType, "Override technique type")->check(CLI::IsMember(TechniqueTypes, CLI::ignore_case));
+    app.add_option("--technique", TechniqueType, "Override technique type")->check(CLI::IsMember(Runtime::getAvailableTechniqueTypes(), CLI::ignore_case));
     app.add_flag_callback(
         "--debug", [&]() { TechniqueType = "debug"; }, "Same as --technique debug");
 

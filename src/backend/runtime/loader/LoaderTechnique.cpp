@@ -373,4 +373,15 @@ std::string LoaderTechnique::generateHeader(const LoaderContext& ctx, bool isRay
 
     return stream.str();
 }
+
+std::vector<std::string> LoaderTechnique::getAvailableTypes()
+{
+    std::vector<std::string> array;
+
+    for (size_t i = 0; _generators[i].HeaderLoader; ++i)
+        array.emplace_back(_generators[i].Name);
+
+    std::sort(array.begin(), array.end());
+    return array;
+}
 } // namespace IG
