@@ -128,7 +128,12 @@
 <li class="toctree-l2"><a class="reference internal" href="file_format.html#transformation">Transformation</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="pexpr.html">PExpr</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pexpr.html">PExpr</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pexpr.html#types">Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pexpr.html#variables">Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pexpr.html#functions">Functions</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="externals.html">Externals</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="externals.html#ignis-resource-file-ignis">Ignis resource file (<span class="monosp">ignis</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="externals.html#graphics-language-transmission-format-gltf-resource-file-gltf">Graphics Language Transmission Format “glTF” resource file (<span class="monosp">gltf</span>)</a></li>
@@ -233,6 +238,7 @@
                             
   <section id="textures">
 <h1>Textures<a class="headerlink" href="#textures" title="Permalink to this headline">¶</a></h1>
+<p>Textures in Ignis are patterns, nodes or other building blocks for shading networks.</p>
 <p>All number and color parameters can be connected to a shading network or texture via <a class="reference internal" href="pexpr.html#pexpr"><span class="std std-ref">PExpr</span></a> to build an actual tree. Cycles are prohibited.</p>
 <p>A texture is specified in the <span class="monosp">textures</span> block with a <span class="monosp">name</span> and a <span class="monosp">type</span>.
 The type has to be one of the textures listed at this section below.</p>
@@ -659,9 +665,9 @@ The type has to be one of the textures listed at this section below.</p>
 <section id="expression-expr">
 <span id="fig-fbm"></span><h2>Expression (<span class="monosp">expr</span>)<a class="headerlink" href="#expression-expr" title="Permalink to this headline">¶</a></h2>
 <p>A custom <a class="reference internal" href="pexpr.html#pexpr"><span class="std std-ref">PExpr</span></a> expression with optional parameters.</p>
-<p>Available are color (vec4), vector (vec3), number (num) and bool variables.
-The parameters used inside the expression have to be prefixed with <cite>color_</cite>, <cite>vec_</cite>, <cite>num_</cite> and <cite>bool_</cite> respectively.
-E.g., <cite>color_tint</cite> will be called <cite>tint</cite> inside the expression.</p>
+<p>Available are color (<code class="docutils literal notranslate"><span class="pre">vec4</span></code>), vector (<code class="docutils literal notranslate"><span class="pre">vec3</span></code>), number (<code class="docutils literal notranslate"><span class="pre">num</span></code>) and <code class="docutils literal notranslate"><span class="pre">bool</span></code> variables.
+The parameters used inside the expression have to be prefixed with <code class="docutils literal notranslate"><span class="pre">color_</span></code>, <code class="docutils literal notranslate"><span class="pre">vec_</span></code>, <code class="docutils literal notranslate"><span class="pre">num_</span></code> and <code class="docutils literal notranslate"><span class="pre">bool_</span></code> respectively.</p>
+<p>E.g., <code class="docutils literal notranslate"><span class="pre">color_tint</span></code> will be called <code class="docutils literal notranslate"><span class="pre">tint</span></code> inside the expression.</p>
 <table class="paramstable docutils align-default">
 <colgroup>
 <col style="width: 17%" />

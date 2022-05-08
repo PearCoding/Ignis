@@ -1,6 +1,8 @@
 Textures
 ========
 
+Textures in Ignis are patterns, nodes or other building blocks for shading networks.
+
 All number and color parameters can be connected to a shading network or texture via :ref:`PExpr <PExpr>` to build an actual tree. Cycles are prohibited.
 
 A texture is specified in the :monosp:`textures` block with a :monosp:`name` and a :monosp:`type`.
@@ -319,9 +321,10 @@ Expression (:monosp:`expr`)
 
 A custom :ref:`PExpr <PExpr>` expression with optional parameters.
 
-Available are color (vec4), vector (vec3), number (num) and bool variables. 
-The parameters used inside the expression have to be prefixed with `color\_`, `vec\_`, `num\_` and `bool\_` respectively.
-E.g., `color_tint` will be called `tint` inside the expression.
+Available are color (``vec4``), vector (``vec3``), number (``num``) and ``bool`` variables. 
+The parameters used inside the expression have to be prefixed with ``color_``, ``vec_``, ``num_`` and ``bool_`` respectively.
+
+E.g., ``color_tint`` will be called ``tint`` inside the expression.
 
 .. objectparameters::
 
