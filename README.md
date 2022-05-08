@@ -61,6 +61,8 @@ Next step would be to configure and finally build the framework. You might use y
 
 If `Ninja` is not available, skip the `-G Ninja` parameter. You can also set `FETCHCONTENT_UPDATES_DISCONNECTED` to `ON` to speed up the cmake steps after the initial cmake configuration.  
 
+More information about building Ignis on other systems are available at the documentation [online](https://pearcoding.github.io/Ignis/src/getting_started/compiling.html) or in the offline version of the documentation in `docs/`
+
 ## Backends
 
 The raytracer has multiple backends available to make sure the best optimized kernel is used for certain tasks. Therefore, multiple device and feature specific modules, so-called drivers, have to be compiled.
