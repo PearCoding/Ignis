@@ -234,7 +234,7 @@
   <section id="building">
 <h1>Building<a class="headerlink" href="#building" title="Permalink to this headline">¶</a></h1>
 <p>The active development is done on a linux operating system (Ubuntu in particular).
-The raytracer is platform independent to a large extend and works for Linux, Windows and Mac OS operating systems.</p>
+The raytracer is platform independent to a large extend and works on Linux, Windows and Mac OS operating systems.</p>
 <section id="linux-mac-os">
 <h2>Linux &amp; Mac OS<a class="headerlink" href="#linux-mac-os" title="Permalink to this headline">¶</a></h2>
 <p>A quick and dirty tutorial to show how to setup AnyDSL and Ignis on a typical Linux OS.
@@ -270,9 +270,8 @@ The following will need <code class="docutils literal notranslate"><span class="
 <p>This mini tutorial is expecting some basic knowledge about CMake and the Windows build system based on Visual Studio. I highly recommend using the CMake Ninja generator in favour of the Visual Studio ones, as Visual Studio as an IDE itself has support for both.</p>
 <ol class="arabic">
 <li><p>Clone AnyDSL from <a class="reference external" href="https://github.com/AnyDSL/anydsl">https://github.com/AnyDSL/anydsl</a>. You have to use the <code class="docutils literal notranslate"><span class="pre">cmake-based-setup</span></code> branch.</p>
-<ol class="arabic simple">
-<li><p>Patch the repo according to the <a class="reference external" href="https://github.com/PearCoding/Ignis/blob/master/docs/AnyDSLWindows.patch">AnyDSLWindows.patch</a>:</p></li>
-</ol>
+<ol class="arabic">
+<li><p>Patch the repo according to the <a class="reference external" href="https://github.com/PearCoding/Ignis/blob/master/docs/AnyDSLWindows.patch">AnyDSLWindows.patch</a>:</p>
 <div class="highlight-diff notranslate"><div class="highlight"><pre><span></span><span class="gh">diff --git a/cmake/llvm-package.cmake b/cmake/llvm-package.cmake</span>
 <span class="gh">index 958b914..3026bf3 100644</span>
 <span class="gd">--- a/cmake/llvm-package.cmake</span>
@@ -288,12 +287,12 @@ The following will need <code class="docutils literal notranslate"><span class="
  set(AnyDSL_PKG_RV_URL &quot;https://github.com/cdl-saarland/rv&quot; CACHE STRING &quot;where to clone RV&quot;)
 </pre></div>
 </div>
-<ol class="arabic simple" start="2">
+</li>
 <li><p>Make sure all the necessary dependencies are installed. Especially zlib and potentially CUDA.</p></li>
 <li><p>Create a new directory named <code class="docutils literal notranslate"><span class="pre">build</span></code></p></li>
 <li><p>Open the command line interface in the newly created directory. Make sure the recent VC environment is available.</p></li>
-<li><p>Use CMake and the following command line to configure the project. It is very likely that you have to change some paths. Also make sure that the following snippet is written in a single line.</p></li>
-</ol>
+<li><p>Use CMake and the following command line to configure the project. It is very likely that you have to change some paths.</p>
+<p>Also make sure that the following snippet is written in a single line:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cmake</span>
 <span class="go">    -DRUNTIME_JIT=ON</span>
 <span class="go">    -DBUILD_SHARED_LIBS=ON</span>
@@ -311,8 +310,8 @@ The following will need <code class="docutils literal notranslate"><span class="
 <span class="go">    ..</span>
 </pre></div>
 </div>
-<ol class="arabic simple" start="6">
-<li><p>If you are using the Visual Studio generator, you can now use the generated <code class="docutils literal notranslate"><span class="pre">.sln</span></code> to compile the project. This will take some time. Make sure that you use the <cite>Release</cite> configuration.</p></li>
+</li>
+<li><p>If you are using the Visual Studio generator, you can now use the generated <code class="docutils literal notranslate"><span class="pre">.sln</span></code> to compile the project. This will take some time. Make sure that you use the <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration.</p></li>
 <li><p>For other IDEs use <code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">--build</span> <span class="pre">..</span></code></p></li>
 </ol>
 </li>
