@@ -5,6 +5,7 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
 ## AnyDSL
 
 - First get AnyDSL from the [Github repository](https://github.com/AnyDSL/anydsl). You have to use the `cmake-based-setup` branch.
+- Patch the repo according to the `AnyDSLWindows.patch`.
 - Make sure all the necessary dependencies are installed. Especially zlib and potentially CUDA.
 - Create a new directory named `build`
 - Open the command line interface in the newly created directory. Make sure the recent VC environment is available.
