@@ -2,7 +2,7 @@ Building
 ========
 
 The active development is done on a linux operating system (Ubuntu in particular).
-The raytracer is platform independent to a large extend and works for Linux, Windows and Mac OS operating systems.
+The raytracer is platform independent to a large extend and works on Linux, Windows and Mac OS operating systems.
 
 Linux & Mac OS
 --------------
@@ -39,33 +39,35 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
 
     1.  Patch the repo according to the `AnyDSLWindows.patch <https://github.com/PearCoding/Ignis/blob/master/docs/AnyDSLWindows.patch>`_:
     
-    .. literalinclude:: ../../AnyDSLWindows.patch
-        :language: diff
+        .. literalinclude:: ../../AnyDSLWindows.patch
+            :language: diff
 
     2.  Make sure all the necessary dependencies are installed. Especially zlib and potentially CUDA.
     3.  Create a new directory named ``build``
     4.  Open the command line interface in the newly created directory. Make sure the recent VC environment is available.
-    5.  Use CMake and the following command line to configure the project. It is very likely that you have to change some paths. Also make sure that the following snippet is written in a single line.
+    5.  Use CMake and the following command line to configure the project. It is very likely that you have to change some paths. 
+    
+        Also make sure that the following snippet is written in a single line:
 
-    .. code-block:: console
+        .. code-block:: console
 
-        cmake 
-            -DRUNTIME_JIT=ON
-            -DBUILD_SHARED_LIBS=ON
-            -DCMAKE_BUILD_TYPE="Release"
-            -DAnyDSL_runtime_BUILD_SHARED=ON
-            -DAnyDSL_PKG_LLVM_AUTOBUILD=ON
-            -DAnyDSL_PKG_LLVM_VERSION="12.0.0"
-            -DAnyDSL_PKG_RV_TAG="origin/release/12.x"
-            -DAnyDSL_PKG_LLVM_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.0/llvm-project-12.0.0.src.tar.xz"
-            -DTHORIN_PROFILE=OFF
-            -DBUILD_SHARED_LIBS=OFF
-            -DCUDAToolkit_NVVM_LIBRARY="C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.6\nvvm\lib\x64\nvvm.lib"
-            -DZLIB_LIBRARY="C:\Development\Dependencies\zlib\lib\zlib.lib"
-            -DZLIB_INCLUDE_DIR="C:\Development\Dependencies\zlib\include"
-            ..
+            cmake 
+                -DRUNTIME_JIT=ON
+                -DBUILD_SHARED_LIBS=ON
+                -DCMAKE_BUILD_TYPE="Release"
+                -DAnyDSL_runtime_BUILD_SHARED=ON
+                -DAnyDSL_PKG_LLVM_AUTOBUILD=ON
+                -DAnyDSL_PKG_LLVM_VERSION="12.0.0"
+                -DAnyDSL_PKG_RV_TAG="origin/release/12.x"
+                -DAnyDSL_PKG_LLVM_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.0/llvm-project-12.0.0.src.tar.xz"
+                -DTHORIN_PROFILE=OFF
+                -DBUILD_SHARED_LIBS=OFF
+                -DCUDAToolkit_NVVM_LIBRARY="C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.6\nvvm\lib\x64\nvvm.lib"
+                -DZLIB_LIBRARY="C:\Development\Dependencies\zlib\lib\zlib.lib"
+                -DZLIB_INCLUDE_DIR="C:\Development\Dependencies\zlib\include"
+                ..
 
-    6.  If you are using the Visual Studio generator, you can now use the generated ``.sln`` to compile the project. This will take some time. Make sure that you use the `Release` configuration.
+    6.  If you are using the Visual Studio generator, you can now use the generated ``.sln`` to compile the project. This will take some time. Make sure that you use the ``Release`` configuration.
     7.  For other IDEs use ``cmake --build ..``
 
 2.  Clone Ignis from https://github.com/PearCoding/Ignis. This time the ``master`` branch is fine.
