@@ -102,7 +102,7 @@ A quite recent version of the above documentation is available at: https://pearc
 
 ## Scene description
 
-Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is planned. Image and procedural texture support is available.
+Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is available via PExpr, image and procedural textures.
 A schema is available at [docs/refs/ignis.schema.json](docs/refs/ignis.schema.json)
 
 You might use the `mts2ig` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.
