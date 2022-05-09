@@ -1,4 +1,6 @@
 type PixelSampler = fn (&mut RndState, i32) -> (f32, f32);
+
+// --------------------------
 fn @make_uniform_pixel_sampler() -> PixelSampler {
     @|rnd, _| {
 		let rx = randf(rnd);
@@ -7,6 +9,7 @@ fn @make_uniform_pixel_sampler() -> PixelSampler {
     }
 }
 
+// --------------------------
 fn @mjitt_permute(i: u32, l: u32, p: u32) -> u32
 {
 	let mut w = l - 1;
@@ -65,15 +68,14 @@ fn @mjitt_permute(i: u32, l: u32, p: u32) -> u32
 	}
 }
 
-// FIXME: There is a bug somewhere inside this function, making the output jiggly
+// FIXME: There is a bug somewhere making the output blur
 fn @make_mjitt_pixel_sampler(bin_x: u32, bin_y: u32) -> PixelSampler {
-    let SEED : u32 = 14512081;
-    let FH   : u32 = 0x51633e2d;
-	let F1   : u32 = 0x68bc21eb;
-	let F2   : u32 = 0x02e5be93;
+    let SEED : u32 = 8744221777;
+	let F1   : u32 = 0xa511e9b3;
+	let F2   : u32 = 0x63d83595;
 
     @|rnd, index| {
-		let index2 = mjitt_permute(index as u32, 1, SEED * FH);
+		let index2 = index as u32;
 		let sx     = mjitt_permute(index2 % bin_x, bin_x, SEED * F1);
 		let sy     = mjitt_permute(index2 / bin_x, bin_y, SEED * F2);
 
@@ -85,6 +87,42 @@ fn @make_mjitt_pixel_sampler(bin_x: u32, bin_y: u32) -> PixelSampler {
         let rx = ((index2 % bin_x) as f32 + (sy as f32 + jx) / bin_yf) / bin_xf;
         let ry = ((index2 / bin_x) as f32 + (sx as f32 + jy) / bin_xf) / bin_yf;
         
+        (rx, ry)
+    }
+}
+
+// --------------------------
+fn @halton(index: i32, base: i32) {
+    // TODO: Saving this state would make it waaay faster
+    let mut n = 0 : i32;
+    let mut d = 1 : i32;
+    
+    for _i in range(0, index) {
+        let x = d - n;
+        if x == 1 {
+            n = 1;
+            d *= base;
+        } else {
+            let mut y = d / base;
+            while x <= y {
+                y /= base;
+            }
+            n = (base + 1) * y - x;
+        }
+    }
+    
+    n as f32 / d as f32    
+}
+
+// FIXME: Can not be used in progressive rendering due to the bad iteration scheme
+fn @make_halton_pixel_sampler() -> PixelSampler {
+	let Base1  : i32 = 13;
+	let Base2  : i32 = 47;
+    let Burnin : i32 = Base2;
+
+    @|_rnd, index| {
+		let rx = halton(index + Burnin, Base1);
+		let ry = halton(index + Burnin, Base2);
         (rx, ry)
     }
 }
