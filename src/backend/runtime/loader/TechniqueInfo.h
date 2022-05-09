@@ -8,8 +8,8 @@ struct LoaderContext;
 using TechniqueCallbackGenerator = std::string (*)(LoaderContext&);
 using TechniqueCameraGenerator   = TechniqueCallbackGenerator;
 
-/// Callback returning a list of variants
-using TechniqueVariantSelector = std::vector<size_t> (*)(size_t);
+/// Callback returning a list of variants which will be called one after another for the given current iteration 
+using TechniqueVariantSelector = std::vector<size_t> (*)(/* currentIteration */ size_t);
 
 struct TechniqueVariantInfo {
     /// The variant makes uses of ShadowHit and ShadowMiss shaders. Reduces performance
@@ -21,7 +21,7 @@ struct TechniqueVariantInfo {
     /// The variant makes use of participated media
     bool UsesMedia = false;
 
-    /// The variant requires all lights (especially area lights) in the miss shader
+    /// The variant requires all lights (especially area lights) in the miss shader, else only infinite lights will be exposed in the miss shader
     bool UsesAllLightsInMiss = false;
 
     /// The variant requires all materials to be present at all times. Reduces performance significantly [TODO]
@@ -30,7 +30,7 @@ struct TechniqueVariantInfo {
     /// The variant overrides the default camera shader
     TechniqueCameraGenerator OverrideCameraGenerator = nullptr;
 
-    /// The variant requires the camera definition in the miss, hit shader and advanced shadow shaders
+    /// The variant requires the camera definition in the miss, hit and advanced shadow shaders
     bool RequiresExplicitCamera = false;
 
     /// Specialized shader generators for special parts of the pipeline
@@ -80,6 +80,8 @@ struct TechniqueInfo {
     {
         if (VariantSelector) {
             const auto activeVariants = VariantSelector(iter);
+            IG_ASSERT(activeVariants.size() > 0, "Expected some variants to be returned by the technique variant selector");
+
             return std::accumulate(activeVariants.begin(), activeVariants.end(), size_t(0),
                                    [&](size_t cur, size_t ind) {
                                        const auto& var = Variants[ind];

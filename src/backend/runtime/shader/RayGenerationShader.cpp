@@ -22,13 +22,18 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
            << std::endl
            << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
 
-    std::string pixel_sampler = "make_uniform_pixel_sampler()"; // TODO: Make it configurable?
-
     if (ctx.IsTracer) {
         stream << "  let emitter = make_list_emitter(device.load_rays(), iter, init_raypayload);" << std::endl;
     } else {
-        stream << LoaderCamera::generate(ctx) << std::endl // Will set `camera`
-               << "  let emitter = make_camera_emitter(camera, iter, spp, " << pixel_sampler << ", init_raypayload);" << std::endl;
+        stream << LoaderCamera::generate(ctx) << std::endl; // Will set `camera`
+
+        std::string pixel_sampler = "make_uniform_pixel_sampler()";
+        if (ctx.PixelSamplerType == "halton") {
+            stream << "  let halton_setup = setup_halton_pixel_sampler(device, settings.width, settings.height, iter, xmin, ymin, xmax, ymax);" << std::endl;
+            pixel_sampler = "make_halton_pixel_sampler(halton_setup)";
+        }
+
+        stream << "  let emitter = make_camera_emitter(camera, iter, spp, " << pixel_sampler << ", init_raypayload);" << std::endl;
     }
 
     stream << "  device.generate_rays(emitter, id, size, xmin, ymin, xmax, ymax, spp)" << std::endl

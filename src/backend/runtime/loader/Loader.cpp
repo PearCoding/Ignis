@@ -23,6 +23,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.Scene               = opts.Scene;
     ctx.CameraType          = opts.CameraType;
     ctx.TechniqueType       = opts.TechniqueType;
+    ctx.PixelSamplerType    = "independent"; // TODO
     ctx.SamplesPerIteration = opts.SamplesPerIteration;
     ctx.IsTracer            = opts.IsTracer;
     ctx.FilmWidth           = opts.FilmWidth;

@@ -226,7 +226,10 @@ void Runtime::step()
     }
 
     if (mTechniqueInfo.VariantSelector) {
-        const auto& active = mTechniqueInfo.VariantSelector(mCurrentIteration);
+        const auto active = mTechniqueInfo.VariantSelector(mCurrentIteration);
+
+        IG_ASSERT(active.size() > 0, "Expected some variants to be returned by the technique variant selector");
+
         for (const auto& ind : active)
             stepVariant(ind);
     } else {

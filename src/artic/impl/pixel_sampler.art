@@ -1,8 +1,8 @@
-type PixelSampler = fn (&mut RndState, i32) -> (f32, f32);
+type PixelSampler = fn (&mut RndState, i32, i32, i32) -> (f32, f32);
 
 // --------------------------
 fn @make_uniform_pixel_sampler() -> PixelSampler {
-    @|rnd, _| {
+    @|rnd, _, _, _| {
 		let rx = randf(rnd);
 		let ry = randf(rnd);
         (rx, ry)
@@ -74,7 +74,7 @@ fn @make_mjitt_pixel_sampler(bin_x: u32, bin_y: u32) -> PixelSampler {
 	let F1   : u32 = 0xa511e9b3;
 	let F2   : u32 = 0x63d83595;
 
-    @|rnd, index| {
+    @|rnd, index, _, _| {
 		let index2 = index as u32;
 		let sx     = mjitt_permute(index2 % bin_x, bin_x, SEED * F1);
 		let sy     = mjitt_permute(index2 / bin_x, bin_y, SEED * F2);
@@ -92,37 +92,138 @@ fn @make_mjitt_pixel_sampler(bin_x: u32, bin_y: u32) -> PixelSampler {
 }
 
 // --------------------------
-fn @halton(index: i32, base: i32) {
-    // TODO: Saving this state would make it waaay faster
-    let mut n = 0 : i32;
-    let mut d = 1 : i32;
+fn @radical_inverse(mut index: u32, base: u32) {
+	let limit = 0xFFFFFFFF / base - base;
+
+    let invBase = 1:f32 / base as f32;
+	
+	let mut invBaseN       = 1:f32;
+    let mut reversedDigits = 0:u32;
     
-    for _i in range(0, index) {
-        let x = d - n;
-        if x == 1 {
-            n = 1;
-            d *= base;
-        } else {
-            let mut y = d / base;
-            while x <= y {
-                y /= base;
-            }
-            n = (base + 1) * y - x;
-        }
+	while index != 0 && reversedDigits < limit {
+        let next  = index / base;
+        let digit = index - next * base;
+        reversedDigits = reversedDigits * base + digit;
+        invBaseN *= invBase;
+        index = next;
     }
-    
-    n as f32 / d as f32    
+
+    math_builtins::fmin(reversedDigits as f32 * invBaseN, 1 - flt_eps)
 }
 
-// FIXME: Can not be used in progressive rendering due to the bad iteration scheme
-fn @make_halton_pixel_sampler() -> PixelSampler {
-	let Base1  : i32 = 13;
-	let Base2  : i32 = 47;
-    let Burnin : i32 = Base2;
+fn @inverse_radical_inverse(mut inv: u32, base: u32, digits: u32) {
+	let mut index = 0:u32;
+    for _i in range(0, digits as i32) {
+        let digit = inv % base;
+        inv      /= base;
+        index     = index * base + digit;
+    }
+    index
+}
 
-    @|_rnd, index| {
-		let rx = halton(index + Burnin, Base1);
-		let ry = halton(index + Burnin, Base2);
+fn @compute_halton_base_info(dim: u32, base: u32) {
+	let mut scale = 1:u32;
+	let mut exp   = 0:u32;
+	while scale < dim {
+		scale *= base;
+		++exp;
+	}
+
+	(scale, exp)
+}
+
+fn extended_gcd(a: u32, b: u32) -> (i32, i32) {
+	if (b == 0) {
+		(1, 0)
+	} else {
+		let d      = (a / b) as i32;
+		let (x, y) = extended_gcd(b, a % b);
+		(y, x - (d * y))
+	}
+}
+
+fn @multiplicative_inverse(a: u32, n: u32) {
+	let (x, _) = extended_gcd(a, n);
+	x % n as i32
+}
+
+struct HaltonSetup {
+	width:         i32,
+	height:        i32,
+	base:          (u32, u32),
+	base_scale:    (u32, u32),
+	base_exponent: (u32, u32),
+	offset_buffer: DeviceBuffer
+}
+
+fn @setup_halton_pixel_sampler(device: Device, width: i32, height: i32,
+							  iter: i32, xmin: i32, ymin: i32, xmax: i32, ymax: i32) {
+	let Base1 = 2 : u32 /*13*/;
+	let Base2 = 3 : u32 /*47*/;
+
+	let buffer = device.request_buffer("__halton_offset", width * height, 0);
+
+	let (base_scale_x, base_exponent_x) = compute_halton_base_info(width as u32,  Base1); 
+	let (base_scale_y, base_exponent_y) = compute_halton_base_info(height as u32, Base2);
+
+	let mul_inv_x = multiplicative_inverse(base_scale_x, base_scale_y);
+	let mul_inv_y = multiplicative_inverse(base_scale_y, base_scale_x);
+
+	// Init buffer only once
+	if iter == 0 {
+		// print_i32(base_scale_x as i32);
+		// print_string(" ");
+		// print_i32(base_scale_y as i32);
+		// print_string(" ");
+		// print_i32(base_exponent_x as i32);
+		// print_string(" ");
+		// print_i32(base_exponent_y as i32);
+		// print_string(" ");
+		// print_i32(mul_inv_x);
+		// print_string(" ");
+		// print_i32(mul_inv_y);
+		// print_string("\n");
+
+		let index_stride = base_scale_x * base_scale_y;
+
+		if index_stride > 1 {
+			for (x, y) in device.parallel_range_2d(xmin, xmax, ymin, ymax) {
+				let dim_off_x = inverse_radical_inverse(x as u32, Base1, base_exponent_x); 
+				let dim_off_y = inverse_radical_inverse(y as u32, Base2, base_exponent_y);
+				let hindex    = ((dim_off_x * (index_stride / base_scale_x)) as i32 * mul_inv_x
+				 			   + (dim_off_y * (index_stride / base_scale_y)) as i32 * mul_inv_y
+							    ) % index_stride as i32;
+				buffer.store_i32(y * width + x, hindex);
+			}
+		} else {
+			for (x, y) in device.parallel_range_2d(xmin, xmax, ymin, ymax) {
+				buffer.store_i32(y * width + x, 0);
+			}
+		}
+	}
+
+	HaltonSetup {
+		width         = width,
+		height        = height,
+		base          = (Base1, Base2),
+		base_scale    = (base_scale_x, base_scale_y),
+		base_exponent = (base_exponent_x, base_exponent_y),
+		offset_buffer = buffer
+	}
+}
+
+fn @make_halton_pixel_sampler(setup: HaltonSetup) -> PixelSampler {
+	let offset_buffer = setup.offset_buffer;
+	let base          = setup.base;
+	let base_scale    = setup.base_scale;
+	let base_exponent = setup.base_exponent;
+	let width         = setup.width;
+
+	let index_stride = base_scale.0 * base_scale.1;
+    @|_rnd, index, x, y| {
+		let hindex = (offset_buffer.load_i32(y * width + x) + index * index_stride as i32) as u32;
+		let rx     = radical_inverse(hindex >> base_exponent.0, base.0);
+		let ry     = radical_inverse(hindex / base_scale.1, base.1);
         (rx, ry)
     }
 }

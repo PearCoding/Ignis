@@ -38,6 +38,7 @@ struct LoaderContext {
 
     std::string CameraType;
     std::string TechniqueType;
+    std::string PixelSamplerType;
     IG::TechniqueInfo TechniqueInfo;
 
     bool IsTracer = false;
