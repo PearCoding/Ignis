@@ -297,7 +297,7 @@ The following will need <code class="docutils literal notranslate"><span class="
 <li><p>Create a new directory named <code class="docutils literal notranslate"><span class="pre">build</span></code></p></li>
 <li><p>Open the command line interface in the newly created directory. Make sure the recent VC environment is available.</p></li>
 <li><p>Use CMake and the following command line to configure the project. It is very likely that you have to change some paths.</p>
-<p>Also make sure that the following snippet is written in a single line:</p>
+<p>Also make sure that the following snippet is written in a single line and, if necessary, the <code class="docutils literal notranslate"><span class="pre">\</span></code> in paths is properly escaped:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cmake</span>
 <span class="go">    -DRUNTIME_JIT=ON</span>
 <span class="go">    -DBUILD_SHARED_LIBS=ON</span>
@@ -309,12 +309,23 @@ The following will need <code class="docutils literal notranslate"><span class="
 <span class="go">    -DAnyDSL_PKG_LLVM_URL=&quot;https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.0/llvm-project-12.0.0.src.tar.xz&quot;</span>
 <span class="go">    -DTHORIN_PROFILE=OFF</span>
 <span class="go">    -DBUILD_SHARED_LIBS=OFF</span>
-<span class="go">    -DCUDAToolkit_NVVM_LIBRARY=&quot;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.6\nvvm\lib\x64\nvvm.lib&quot;</span>
-<span class="go">    -DZLIB_LIBRARY=&quot;C:\Development\Dependencies\zlib\lib\zlib.lib&quot;</span>
-<span class="go">    -DZLIB_INCLUDE_DIR=&quot;C:\Development\Dependencies\zlib\include&quot;</span>
+<span class="go">    -DCUDAToolkit_NVVM_LIBRARY=&quot;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.6\\nvvm\\lib\\x64\\nvvm.lib&quot;</span>
+<span class="go">    -DZLIB_LIBRARY=&quot;C:\\Development\\Dependencies\\zlib\\lib\\zlib.lib&quot;</span>
+<span class="go">    -DZLIB_INCLUDE_DIR=&quot;C:\\Development\\Dependencies\\zlib\\include&quot;</span>
 <span class="go">    ..</span>
 </pre></div>
 </div>
+</li>
+<li><p>If you get a similar cmake error like the following:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">CMake Error in build/_deps/rv-src/src/CMakeLists.txt:</span>
+<span class="go">  Target &quot;RV&quot; INTERFACE_INCLUDE_DIRECTORIES property contains path:</span>
+
+<span class="go">    &quot;C:/Development/Projects/AnyDSL/build/_deps/rv-src/include&quot;</span>
+
+<span class="go">  which is prefixed in the build directory.</span>
+</pre></div>
+</div>
+<p>Just ignore it. A file named <code class="docutils literal notranslate"><span class="pre">AnyDSL.sln</span></code> should still be created in the build folder. This might only be relevant for cmake configs with Visual Studio generators, however.</p>
 </li>
 <li><p>If you are using the Visual Studio generator, you can now use the generated <code class="docutils literal notranslate"><span class="pre">.sln</span></code> to compile the project. This will take some time. Make sure that you use the <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration.</p></li>
 <li><p>For other IDEs use <code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">--build</span> <span class="pre">..</span></code></p></li>
@@ -332,20 +343,20 @@ The following will need <code class="docutils literal notranslate"><span class="
 </div>
 </li>
 <li><p>Use CMake and the following command line to configure the project. Make sure you use the <code class="docutils literal notranslate"><span class="pre">Makefile</span></code> or <code class="docutils literal notranslate"><span class="pre">Ninja</span></code> generator, as the Visual Studio one is not working. It is very likely that you have to change some paths. Especially, adapt it to your AnyDSL setup.</p>
-<p>Also make sure that the following snippet is written in a single line:</p>
+<p>Also make sure that the following snippet is written in a single line and, if necessary, the <code class="docutils literal notranslate"><span class="pre">\</span></code> in paths is properly escaped:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cmake</span>
 <span class="go">    -DCMAKE_BUILD_TYPE=&quot;Release&quot;</span>
-<span class="go">    -DClang_BIN=&quot;C:\Development\Projects\AnyDSL\build\_deps\llvm-build\Release\bin\clang.exe&quot;</span>
-<span class="go">    -DAnyDSL_runtime_DIR=&quot;C:\Development\Projects\AnyDSL\build\share\anydsl\cmake&quot;</span>
-<span class="go">    -DArtic_BINARY_DIR=&quot;C:\Development\Projects\AnyDSL\build\bin\Release&quot;</span>
-<span class="go">    -DArtic_BIN=&quot;C:\Development\Projects\AnyDSL\build\bin\Release\artic.exe&quot;</span>
-<span class="go">    -DTBB_tbb_LIBRARY_RELEASE=&quot;C:\Program Files (x86)\Intel\oneAPI\tbb\2021.1.1\lib\intel64\vc_mt\tbb12.lib&quot;</span>
-<span class="go">    -DTBB_tbbmalloc_LIBRARY_RELEASE=&quot;C:\Program Files (x86)\Intel\oneAPI\tbb\2021.1.1\lib\intel64\vc_mt\tbbmalloc.lib&quot;</span>
-<span class="go">    -DTBB_INCLUDE_DIR=&quot;C:\Program Files (x86)\Intel\oneAPI\tbb\2021.1.1\include&quot;</span>
-<span class="go">    -DZLIB_LIBRARY_RELEASE=&quot;C:\Development\Dependencies\zlib\lib\zlib.lib&quot;</span>
-<span class="go">    -DZLIB_INCLUDE_DIR=&quot;C:\Development\Dependencies\zlib\include&quot;</span>
-<span class="go">    -DSDL2_LIBRARY=&quot;C:\Development\Dependencies\SDL2\lib\x64\SDL2.lib&quot;</span>
-<span class="go">    -DSDL2_INCLUDE_DIR=&quot;C:\Development\Dependencies\SDL2\include&quot;</span>
+<span class="go">    -DClang_BIN=&quot;C:\\Development\\Projects\\AnyDSL\\build\\_deps\\llvm-build\\Release\\bin\\clang.exe&quot;</span>
+<span class="go">    -DAnyDSL_runtime_DIR=&quot;C:\\Development\\Projects\\AnyDSL\\build\\share\\anydsl\\cmake&quot;</span>
+<span class="go">    -DArtic_BINARY_DIR=&quot;C:\\Development\\Projects\\AnyDSL\\build\\bin\\Release&quot;</span>
+<span class="go">    -DArtic_BIN=&quot;C:\\Development\\Projects\\AnyDSL\\build\\bin\\Release\\artic.exe&quot;</span>
+<span class="go">    -DTBB_tbb_LIBRARY_RELEASE=&quot;C:\\Program Files (x86)\\Intel\\oneAPI\\tbb\\2021.1.1\\lib\\intel64\\vc_mt\\tbb12.lib&quot;</span>
+<span class="go">    -DTBB_tbbmalloc_LIBRARY_RELEASE=&quot;C:\\Program Files (x86)\\Intel\\oneAPI\\tbb\\2021.1.1\\lib\\intel64\\vc_mt\\tbbmalloc.lib&quot;</span>
+<span class="go">    -DTBB_INCLUDE_DIR=&quot;C:\\Program Files (x86)\\Intel\\oneAPI\\tbb\\2021.1.1\\include&quot;</span>
+<span class="go">    -DZLIB_LIBRARY_RELEASE=&quot;C:\\Development\\Dependencies\\zlib\\lib\\zlib.lib&quot;</span>
+<span class="go">    -DZLIB_INCLUDE_DIR=&quot;C:\\Development\\Dependencies\\zlib\\include&quot;</span>
+<span class="go">    -DSDL2_LIBRARY=&quot;C:\\Development\\Dependencies\\SDL2\\lib\\x64\\SDL2.lib&quot;</span>
+<span class="go">    -DSDL2_INCLUDE_DIR=&quot;C:\\Development\\Dependencies\\SDL2\\include&quot;</span>
 <span class="go">    ..</span>
 </pre></div>
 </div>

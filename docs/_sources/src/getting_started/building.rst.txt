@@ -47,7 +47,7 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
     4.  Open the command line interface in the newly created directory. Make sure the recent VC environment is available.
     5.  Use CMake and the following command line to configure the project. It is very likely that you have to change some paths. 
     
-        Also make sure that the following snippet is written in a single line:
+        Also make sure that the following snippet is written in a single line and, if necessary, the ``\`` in paths is properly escaped:
 
         .. code-block:: console
 
@@ -62,13 +62,25 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
                 -DAnyDSL_PKG_LLVM_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.0/llvm-project-12.0.0.src.tar.xz"
                 -DTHORIN_PROFILE=OFF
                 -DBUILD_SHARED_LIBS=OFF
-                -DCUDAToolkit_NVVM_LIBRARY="C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.6\nvvm\lib\x64\nvvm.lib"
-                -DZLIB_LIBRARY="C:\Development\Dependencies\zlib\lib\zlib.lib"
-                -DZLIB_INCLUDE_DIR="C:\Development\Dependencies\zlib\include"
+                -DCUDAToolkit_NVVM_LIBRARY="C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.6\\nvvm\\lib\\x64\\nvvm.lib"
+                -DZLIB_LIBRARY="C:\\Development\\Dependencies\\zlib\\lib\\zlib.lib"
+                -DZLIB_INCLUDE_DIR="C:\\Development\\Dependencies\\zlib\\include"
                 ..
 
-    6.  If you are using the Visual Studio generator, you can now use the generated ``.sln`` to compile the project. This will take some time. Make sure that you use the ``Release`` configuration.
-    7.  For other IDEs use ``cmake --build ..``
+    6.  If you get a similar cmake error like the following:
+        
+        .. code-block:: console
+
+            CMake Error in build/_deps/rv-src/src/CMakeLists.txt:
+              Target "RV" INTERFACE_INCLUDE_DIRECTORIES property contains path:
+
+                "C:/Development/Projects/AnyDSL/build/_deps/rv-src/include"
+
+              which is prefixed in the build directory.
+
+        Just ignore it. A file named ``AnyDSL.sln`` should still be created in the build folder. This might only be relevant for cmake configs with Visual Studio generators, however.
+    7.  If you are using the Visual Studio generator, you can now use the generated ``.sln`` to compile the project. This will take some time. Make sure that you use the ``Release`` configuration.
+    8.  For other IDEs use ``cmake --build ..``
 
 2.  Clone Ignis from https://github.com/PearCoding/Ignis. This time the ``master`` branch is fine.
 
@@ -83,23 +95,23 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
             set PATH=%PATH%;C:\Development\Projects\AnyDSL\build\_deps\llvm-build\Release\bin
     6.  Use CMake and the following command line to configure the project. Make sure you use the ``Makefile`` or ``Ninja`` generator, as the Visual Studio one is not working. It is very likely that you have to change some paths. Especially, adapt it to your AnyDSL setup. 
         
-        Also make sure that the following snippet is written in a single line:
+        Also make sure that the following snippet is written in a single line and, if necessary, the ``\`` in paths is properly escaped:
         
         .. code-block:: console
 
             cmake 
                 -DCMAKE_BUILD_TYPE="Release"
-                -DClang_BIN="C:\Development\Projects\AnyDSL\build\_deps\llvm-build\Release\bin\clang.exe" 
-                -DAnyDSL_runtime_DIR="C:\Development\Projects\AnyDSL\build\share\anydsl\cmake" 
-                -DArtic_BINARY_DIR="C:\Development\Projects\AnyDSL\build\bin\Release" 
-                -DArtic_BIN="C:\Development\Projects\AnyDSL\build\bin\Release\artic.exe"
-                -DTBB_tbb_LIBRARY_RELEASE="C:\Program Files (x86)\Intel\oneAPI\tbb\2021.1.1\lib\intel64\vc_mt\tbb12.lib"
-                -DTBB_tbbmalloc_LIBRARY_RELEASE="C:\Program Files (x86)\Intel\oneAPI\tbb\2021.1.1\lib\intel64\vc_mt\tbbmalloc.lib" 
-                -DTBB_INCLUDE_DIR="C:\Program Files (x86)\Intel\oneAPI\tbb\2021.1.1\include" 
-                -DZLIB_LIBRARY_RELEASE="C:\Development\Dependencies\zlib\lib\zlib.lib" 
-                -DZLIB_INCLUDE_DIR="C:\Development\Dependencies\zlib\include" 
-                -DSDL2_LIBRARY="C:\Development\Dependencies\SDL2\lib\x64\SDL2.lib" 
-                -DSDL2_INCLUDE_DIR="C:\Development\Dependencies\SDL2\include"
+                -DClang_BIN="C:\\Development\\Projects\\AnyDSL\\build\\_deps\\llvm-build\\Release\\bin\\clang.exe" 
+                -DAnyDSL_runtime_DIR="C:\\Development\\Projects\\AnyDSL\\build\\share\\anydsl\\cmake" 
+                -DArtic_BINARY_DIR="C:\\Development\\Projects\\AnyDSL\\build\\bin\\Release" 
+                -DArtic_BIN="C:\\Development\\Projects\\AnyDSL\\build\\bin\\Release\\artic.exe"
+                -DTBB_tbb_LIBRARY_RELEASE="C:\\Program Files (x86)\\Intel\\oneAPI\\tbb\\2021.1.1\\lib\\intel64\\vc_mt\\tbb12.lib"
+                -DTBB_tbbmalloc_LIBRARY_RELEASE="C:\\Program Files (x86)\\Intel\\oneAPI\\tbb\\2021.1.1\\lib\\intel64\\vc_mt\\tbbmalloc.lib" 
+                -DTBB_INCLUDE_DIR="C:\\Program Files (x86)\\Intel\\oneAPI\\tbb\\2021.1.1\\include" 
+                -DZLIB_LIBRARY_RELEASE="C:\\Development\\Dependencies\\zlib\\lib\\zlib.lib" 
+                -DZLIB_INCLUDE_DIR="C:\\Development\\Dependencies\\zlib\\include" 
+                -DSDL2_LIBRARY="C:\\Development\\Dependencies\\SDL2\\lib\\x64\\SDL2.lib" 
+                -DSDL2_INCLUDE_DIR="C:\\Development\\Dependencies\\SDL2\\include"
                 ..
     
         You can ignore the ``SDL2`` entries if you decide not to use ``igview``. You can change the build type to ``Debug`` if necessary.
