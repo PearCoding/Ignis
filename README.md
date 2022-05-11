@@ -79,7 +79,7 @@ Currently, four frontends are available:
  - `igtrace` This commandline only frontend ignores camera specific information and expects a list of rays from the user. It returns the contribution back to the user for each ray initially specified.
  - `Python API` This simple python API allows to communicate with the runtime and allows you to work with the raytracer in interactive notebooks and more. The API is only available if Python3 was found in the system. You might disable the API by setting the CMake option `IG_WITH_PYTHON_API` to Off.
 
-Use the `--help` argument on each of the executables to get information of possible arguments for each frontend. Also have a look at the Wiki(TODO) and Website(TODO) for more in-depth information.
+Use the `--help` argument on each of the executables to get information of possible arguments for each frontend.
 
 ## Running
 
