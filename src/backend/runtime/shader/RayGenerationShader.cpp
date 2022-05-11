@@ -31,6 +31,8 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
         if (ctx.PixelSamplerType == "halton") {
             stream << "  let halton_setup = setup_halton_pixel_sampler(device, settings.width, settings.height, iter, xmin, ymin, xmax, ymax);" << std::endl;
             pixel_sampler = "make_halton_pixel_sampler(halton_setup)";
+        } else if (ctx.PixelSamplerType == "mjitt") {
+            pixel_sampler = "make_mjitt_pixel_sampler(4, 4)";
         }
 
         stream << "  let emitter = make_camera_emitter(camera, iter, spp, " << pixel_sampler << ", init_raypayload);" << std::endl;

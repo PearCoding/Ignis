@@ -34,6 +34,10 @@ static inline void setup_film(LoaderOptions& lopts, const RuntimeOptions& opts)
 
     lopts.FilmWidth  = std::max<size_t>(1, lopts.FilmWidth);
     lopts.FilmHeight = std::max<size_t>(1, lopts.FilmHeight);
+
+    lopts.PixelSamplerType = "independent";
+    if (film)
+        lopts.PixelSamplerType = to_lowercase(film->property("sampler").getString(lopts.PixelSamplerType));
 }
 
 static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts)

@@ -15,6 +15,7 @@ struct LoaderOptions {
     IG::Target Target;
     std::string CameraType;
     std::string TechniqueType;
+    std::string PixelSamplerType;
     size_t FilmWidth;
     size_t FilmHeight;
     size_t SamplesPerIteration; // Only a recommendation!

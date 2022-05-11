@@ -27,6 +27,10 @@ fn @color_average(c: Color)       = (c.r + c.g + c.b) / 3;
 fn @color_luminance(c: Color)     = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
 fn @color_max_component(c: Color) = math_builtins::fmax[f32](c.r, math_builtins::fmax[f32](c.g, c.b));
 
+// Will normalize such that one of the r,g,b components is 1. Ignores the alpha channel
+fn @color_normalize(c: Color)         = color_replace_a(color_mulf(c, safe_div(1, color_max_component(c))), c.a);
+fn @color_replace_a(c: Color, a: f32) = make_color(c.r, c.g, c.b, a);
+
 fn @is_black(c: Color) = (c.r == 0 && c.g == 0 && c.b == 0);
 fn @is_black_eps(c: Color, eps: f32) -> bool {
     let diff = color_abs(c);

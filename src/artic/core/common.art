@@ -178,7 +178,7 @@ fn @clamp(v: i32, l: i32, u: i32) = min(u, max(l, v));
 fn @clampf(v: f32, l: f32, u: f32) = math_builtins::fmin[f32](u, math_builtins::fmax[f32](l, v));
 
 fn @safe_div(a: f32, b: f32) = if math_builtins::fabs(b) <= flt_eps { 0:f32 } else { a / b };
-fn @safe_sqrt(a: f32) = if a < 0 { 0:f32 } else { math_builtins::sqrt(a) };
+fn @safe_sqrt(a: f32)        = math_builtins::sqrt(math_builtins::fmax(0:f32, a));
 
 /// A safe, (but less extreme) unroll function... making sure the stack aint exploding
 fn @safe_unroll(body: fn(i32) -> ()) {
@@ -189,6 +189,43 @@ fn @safe_unroll(body: fn(i32) -> ()) {
         }
     }
     loop
+}
+
+fn @permute_element(mut i: u32, l: u32, seed: u32) -> u32 {
+	let mut w = l - 1;
+
+	if w == 0 {
+		0
+	} else {
+		w |= w >> 1;
+		w |= w >> 2;
+		w |= w >> 4;
+		w |= w >> 8;
+		w |= w >> 16;
+		while true {
+			i ^= seed;
+			i *= 0xe170893d;
+			i ^= seed >> 16;
+			i ^= (i & w) >> 4;
+			i ^= seed >> 8;
+			i *= 0x0929eb3f;
+			i ^= seed >> 23;
+			i ^= (i & w) >> 1;
+			i *= 1 | seed >> 27;
+			i *= 0x6935fa69;
+			i ^= (i & w) >> 11;
+			i *= 0x74dcb303;
+			i ^= (i & w) >> 2;
+			i *= 0x9e501cc3;
+			i ^= (i & w) >> 2;
+			i *= 0xc860a3df;
+			i &= w;
+			i ^= i >> 5;
+            if i < l { break() }
+		}
+
+		(i + seed) % l
+	}
 }
 
 #[import(cc = "device", name = "llvm.fma.f32")] fn fmaf(f32, f32, f32) -> f32;
