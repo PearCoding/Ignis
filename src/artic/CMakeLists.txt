@@ -86,6 +86,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture/image.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/texture/noise.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/cdf.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/color.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/emitter.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/fresnel.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/interval.art

@@ -23,13 +23,14 @@ fn @color_lerp(a: Color, b: Color, t: f32) = make_color(
 fn @color_abs(a: Color)              = make_color(math_builtins::fabs(a.r), math_builtins::fabs(a.g), math_builtins::fabs(a.b), math_builtins::fabs(a.a));
 fn @color_saturate(a: Color, f: f32) = make_color(math_builtins::fmin[f32](a.r, f), math_builtins::fmin[f32](a.g, f), math_builtins::fmin[f32](a.b, f), math_builtins::fmin[f32](a.a, f));
 
-fn @color_average(c: Color)       = (c.r + c.g + c.b) / 3;
-fn @color_luminance(c: Color)     = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
-fn @color_max_component(c: Color) = math_builtins::fmax[f32](c.r, math_builtins::fmax[f32](c.g, c.b));
+fn @color_average(c: Color)   = (c.r + c.g + c.b) / 3;
+fn @color_luminance(c: Color) = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
 
-// Will normalize such that one of the r,g,b components is 1. Ignores the alpha channel
-fn @color_normalize(c: Color)         = color_replace_a(color_mulf(c, safe_div(1, color_max_component(c))), c.a);
-fn @color_replace_a(c: Color, a: f32) = make_color(c.r, c.g, c.b, a);
+// The following functions ignore the alpha component
+fn @color_max_component(c: Color) = vec3_max_value(color_to_vec3(c));
+fn @color_max_index(c: Color)     = vec3_max_index(color_to_vec3(c));
+fn @color_min_component(c: Color) = vec3_min_value(color_to_vec3(c));
+fn @color_min_index(c: Color)     = vec3_min_index(color_to_vec3(c));
 
 fn @is_black(c: Color) = (c.r == 0 && c.g == 0 && c.b == 0);
 fn @is_black_eps(c: Color, eps: f32) -> bool {

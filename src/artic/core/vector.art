@@ -103,21 +103,8 @@ fn @vec3_cross(a: Vec3, b: Vec3) = make_vec3(
     a.z * b.x - a.x * b.z,
     a.x * b.y - a.y * b.x);
 
-fn @vec3_max_index(a: Vec3) -> i32 {
-    if a.x > a.y && a.x > a.z {
-        0
-    } else {
-        if a.y > a.z { 1 } else { 2 }
-    }
-}
-
-fn @vec3_min_index(a: Vec3) -> i32 {
-    if a.x < a.y && a.x < a.z {
-        0
-    } else {
-        if a.y < a.z { 1 } else { 2 }
-    }
-}
+fn @vec3_max_index(a: Vec3) = select(a.x > a.y, select(a.x > a.z, 0:i32, 2:i32), select(a.y > a.z, 1:i32, 2:i32));
+fn @vec3_min_index(a: Vec3) = select(a.x < a.y, select(a.x < a.z, 0:i32, 2:i32), select(a.y < a.z, 1:i32, 2:i32));
 
 fn @vec2_min_value(a: Vec2) = vec2_reduce(a, |x, y| math_builtins::fmin(x, y));
 fn @vec3_min_value(a: Vec3) = vec3_reduce(a, |x, y| math_builtins::fmin(x, y));

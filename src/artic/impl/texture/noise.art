@@ -6,7 +6,7 @@ fn @noise1[T](u: T, seed: f32) -> f32 {
 
 fn @snoise1(u: f32, seed: f32)     = noise1(u, seed: f32) * 2 - 1;
 fn @vec3_noise1(u: f32, seed: f32) = make_vec3(snoise1(u, seed), snoise1(u, seed + 1234), snoise1(u, seed + 5678));
-fn @cnoise1(u: f32, seed: f32)     = color_normalize(make_color(noise1(u, seed), noise1(u, seed + 1234), noise1(u, seed + 5678), 1));
+fn @cnoise1(u: f32, seed: f32)     = make_color(noise1(u, seed), noise1(u, seed + 1234), noise1(u, seed + 5678), 1);
 fn @cellnoise1(u: f32, seed: f32)  = noise1(u as i32, seed);
 fn @ccellnoise1(u: f32, seed: f32) = cnoise1(u as i32 as f32, seed);
 
@@ -40,7 +40,7 @@ fn @noise2[T](u: T, v: T, seed: f32) -> f32 {
 fn @noise2_v(uv: Vec2, seed: f32)    = noise2(uv.x, uv.y, seed);
 fn @snoise2(uv: Vec2, seed: f32)     = noise2_v(uv, seed: f32) * 2 - 1;
 fn @vec3_noise2(uv: Vec2, seed: f32) = make_vec3(snoise2(uv, seed), snoise2(uv, seed + 1234), snoise2(uv, seed + 5678));
-fn @cnoise2(uv: Vec2, seed: f32)     = color_normalize(make_color(noise2_v(uv, seed), noise2_v(uv, seed + 1234), noise2_v(uv, seed + 5678), 1));
+fn @cnoise2(uv: Vec2, seed: f32)     = make_color(noise2_v(uv, seed), noise2_v(uv, seed + 1234), noise2_v(uv, seed + 5678), 1);
 fn @cellnoise2(uv: Vec2, seed: f32)  = noise2(uv.x as i32, uv.y as i32, seed);
 fn @ccellnoise2(uv: Vec2, seed: f32) = cnoise2(make_vec2(uv.x as i32 as f32, uv.y as i32 as f32), seed);
 
@@ -187,7 +187,7 @@ fn @noise3[T](u: T, v: T, w: T, seed: f32) -> f32 {
 fn @noise3_v(uvw: Vec3, seed: f32)    = noise3(uvw.x, uvw.y, uvw.z, seed);
 fn @snoise3(uvw: Vec3, seed: f32)     = noise3_v(uvw, seed: f32) * 2 - 1;
 fn @vec3_noise3(uvw: Vec3, seed: f32) = make_vec3(snoise3(uvw, seed), snoise3(uvw, seed + 1234), snoise3(uvw, seed + 5678));
-fn @cnoise3(uvw: Vec3, seed: f32)     = color_normalize(make_color(noise3_v(uvw, seed), noise3_v(uvw, seed + 1234), noise3_v(uvw, seed + 5678), 1));
+fn @cnoise3(uvw: Vec3, seed: f32)     = make_color(noise3_v(uvw, seed), noise3_v(uvw, seed + 1234), noise3_v(uvw, seed + 5678), 1);
 fn @cellnoise3(uvw: Vec3, seed: f32)  = noise3(uvw.x as i32, uvw.y as i32, uvw.z as i32, seed);
 fn @ccellnoise3(uvw: Vec3, seed: f32) = cnoise3(make_vec3(uvw.x as i32 as f32, uvw.y as i32 as f32, uvw.z as i32 as f32), seed);
 

@@ -143,6 +143,10 @@ inline static MapFunction1 genFunction1Color(const char* func)
 {
     return [=](const std::string& a) { return "color_to_vec4(" + std::string(func) + "(" + a + "))"; };
 };
+inline static MapFunction1 genFunction1ColorIO(const char* func)
+{
+    return [=](const std::string& a) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + a + ")))"; };
+};
 inline static MapFunction1 genArrayFunction1(const char* func, PExprType type)
 {
     switch (type) {
@@ -302,7 +306,13 @@ static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynF
     { "norm", genDynArrayFunction1("normalize") },
     { "hash", { nullptr, genMapFunction1("hash_rndf", PExprType::Number), nullptr, nullptr, nullptr } },
     { "smoothstep", { nullptr, genMapFunction1("smoothstep", PExprType::Number), nullptr, nullptr, nullptr } },
-    { "smootherstep", { nullptr, genMapFunction1("smootherstep", PExprType::Number), nullptr, nullptr, nullptr } }
+    { "smootherstep", { nullptr, genMapFunction1("smootherstep", PExprType::Number), nullptr, nullptr, nullptr } },
+    { "rgbtoxyz", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("srgb_to_xyz") } },
+    { "xyztorgb", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("xyz_to_srgb") } },
+    { "rgbtohsv", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("srgb_to_hsv") } },
+    { "hsvtorgb", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("hsv_to_srgb") } },
+    { "rgbtohsl", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("srgb_to_hsl") } },
+    { "hsltorgb", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("hsl_to_srgb") } }
 };
 
 static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynFunctions2 = {
