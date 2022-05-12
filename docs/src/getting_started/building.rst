@@ -114,9 +114,9 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
                 -DSDL2_INCLUDE_DIR="C:\\Development\\Dependencies\\SDL2\\include"
                 ..
     
-        You can ignore the ``SDL2`` entries if you decide not to use ``igview``. You can change the build type to ``Debug`` if necessary.
+        You can ignore the ``SDL2`` entries if you decide not to use ``igview`` or change the build type to ``Debug`` if necessary.
 
-    7.  In contrary to the AnyDSL setup you can **not** use the newly generated ``.sln`` file directly. Use ``cmake --build ..`` or use Visual Studio with the CMake interface.
+    7.  In contrary to the AnyDSL setup you can **not** use the newly generated ``.sln`` file directly. Use ``cmake --build . --config Release`` or use Visual Studio with the CMake interface.
     8.  To run the frontends you might have to add multiple shared libraries (``*.dlls``) to the ``PATH`` environment variable or copy it next to the executables.
         Currently the shared libraries ``runtime.dll``, ``runtime_jit_artic.dll``, ``nvvm64.dll``, ``tbb.dll``, ``tbb_malloc.dll``, ``SDL2.dll``, ``zlib.dll`` are known to be required.
         The list is not exhaustive however, as the final list of dependencies depends on the system, current state of development and other external factors.
