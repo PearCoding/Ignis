@@ -1040,10 +1040,11 @@ constexpr uint32_t OPT_LEVEL = 0;
 constexpr uint32_t OPT_LEVEL = 3;
 #endif
 
-void* glue_compileSource(const char* src, const char* function)
+void* glue_compileSource(const char* src, const char* function, bool /*isVerbose*/)
 {
     size_t len = std::strlen(src);
     int ret    = anydsl_compile(src, (uint32_t)len, OPT_LEVEL);
+    // int ret    = anydsl_compile2(src, (uint32_t)len, OPT_LEVEL, isVerbose ? 3 : 0);
     if (ret < 0)
         return nullptr;
 

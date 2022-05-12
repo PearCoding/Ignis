@@ -44,7 +44,7 @@ using DriverGetStatisticsFunction     = const IG::Statistics* (*)();
 using DriverTonemapFunction   = void (*)(size_t, uint32_t*, const IG::TonemapSettings&);
 using DriverImageInfoFunction = void (*)(size_t, const IG::ImageInfoSettings&, IG::ImageInfoOutput&);
 
-using DriverCompileSourceFunction = void* (*)(const char*, const char*);
+using DriverCompileSourceFunction = void* (*)(const char*, const char*, bool);
 
 struct DriverInterface {
     IG::uint32 MajorVersion;

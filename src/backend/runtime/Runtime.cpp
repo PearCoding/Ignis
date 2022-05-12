@@ -458,7 +458,7 @@ void* Runtime::compileShader(const std::string& src, const std::string& func, co
     if (mOptions.DumpShaderFull)
         dumpShader(name + "_full.art", full_shader);
 
-    return mLoadedInterface.CompileSourceFunction(full_shader.c_str(), func.c_str());
+    return mLoadedInterface.CompileSourceFunction(full_shader.c_str(), func.c_str(), IG_LOGGER.verbosity() == L_DEBUG);
 }
 
 void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
