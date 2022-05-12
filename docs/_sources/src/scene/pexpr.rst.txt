@@ -55,7 +55,7 @@ All available types are:
 -   ``vec4`` Four-dimensional vector. Is used also as a color.
 -   ``str`` String.
 
-Vectorized types like ``vec2``, ``vec3`` and ``vec4`` can be cast or extended to eachother by the access/swizzle operation like:
+Vectorized types like ``vec2``, ``vec3`` and ``vec4`` can be cast or extended to each other by the access/swizzle operation like:
 
 .. code-block:: maxima
 

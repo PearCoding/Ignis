@@ -55,7 +55,7 @@ Spot Light (:monosp:`spot`)
  * - cutoff
    - |number|
    - 30
-   - Cutoff angle in degree. Greater angles will be completly black.
+   - Cutoff angle in degree. Greater angles will be completely black.
  * - falloff
    - |number|
    - 20
@@ -131,7 +131,7 @@ Directional Light (:monosp:`directional`)
 .. figure:: images/lig_directional.jpg
   :width: 90%
 
-  Directional light infinitly away from the scene 
+  Directional light infinitely away from the scene 
 
 .. subfigend::
   :width: 0.6
@@ -203,7 +203,7 @@ Sun Light (:monosp:`sun`)
 .. figure:: images/lig_sun.jpg
   :width: 90%
 
-  Sun light infinitly away from the scene. In contrary to the directional light, the sun casts smooth shadows depending on the scale of the sun radius.
+  Sun light infinitely away from the scene. In contrary to the directional light, the sun casts smooth shadows depending on the scale of the sun radius.
 
 .. subfigend::
   :width: 0.6
