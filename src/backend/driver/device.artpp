@@ -15,6 +15,8 @@ fn @get_device(device_id: i32) -> Device {
     make_nvvm_device(device_id)
 #elif DEVICE_AMDGPU
     make_amdgpu_device(device_id)
+#elif DEVICE_SINGLE
+    make_cpu_singlethreaded_device()
 #else
     make_cpu_default_device()
 #endif

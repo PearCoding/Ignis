@@ -209,11 +209,13 @@ bool DriverManager::hasGPU() const
 
 static int costFunction(Target target)
 {
-    // Note: The cost numbers are arbitary choosen...
+    // Note: The cost numbers are arbitrary choosen...
     switch (target) {
     case Target::INVALID:
         return 10000000;
     default:
+    case Target::SINGLE:
+        return 10000;
     case Target::GENERIC:
         return 100;
     case Target::ASIMD:

@@ -157,7 +157,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
     const auto start2 = std::chrono::high_resolution_clock::now();
     if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
         setup_bvh<2>(in_objs, result);
-    } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
+    } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::SINGLE || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
         setup_bvh<4>(in_objs, result);
     } else {
         setup_bvh<8>(in_objs, result);

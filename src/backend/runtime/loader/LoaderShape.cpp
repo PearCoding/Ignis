@@ -337,7 +337,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 
     if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
         setup_bvhs<2, 1>(meshes, result);
-    } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
+    } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::SINGLE || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
         setup_bvhs<4, 4>(meshes, result);
     } else {
         setup_bvhs<8, 4>(meshes, result);

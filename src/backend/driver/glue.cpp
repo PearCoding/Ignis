@@ -1062,6 +1062,8 @@ IG_EXPORT DriverInterface ig_get_interface()
 // Expose Target
 #if defined(DEVICE_DEFAULT)
     interface.Target = IG::Target::GENERIC;
+#elif defined(DEVICE_SINGLE)
+    interface.Target = IG::Target::SINGLE;
 #elif defined(DEVICE_AVX)
     interface.Target = IG::Target::AVX;
 #elif defined(DEVICE_AVX2)

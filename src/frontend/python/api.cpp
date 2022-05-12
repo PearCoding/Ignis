@@ -99,6 +99,7 @@ PYBIND11_MODULE(pyignis, m)
 
     py::enum_<Target>(m, "Target")
         .value("GENERIC", Target::GENERIC)
+        .value("SINGLE", Target::SINGLE)
         .value("ASIMD", Target::ASIMD)
         .value("SSE42", Target::SSE42)
         .value("AVX", Target::AVX)

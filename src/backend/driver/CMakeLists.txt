@@ -48,6 +48,8 @@ cmake_dependent_option(IG_WITH_DEVICE_CPU_AVX512         "Force AVX 512 driver" 
 cmake_dependent_option(IG_WITH_DEVICE_CPU_BEST           "Select the best instruction set"     ON   "IG_WITH_DEVICE_CPU_SIMD" OFF)
 cmake_dependent_option(IG_WITH_DEVICE_CPU_GENERIC_ALWAYS "Always build the generic CPU driver" OFF  "IG_WITH_DEVICE_CPU"      OFF)
 
+cmake_dependent_option(IG_WITH_DEVICE_CPU_ST_GENERIC "Enable the single threaded generic CPU driver. This is only useful for debug purposes" OFF  "IG_WITH_DEVICE_CPU" OFF)
+
 set(DEVICE_SELECTION )
 
 if(IG_WITH_DEVICE_CPU)
@@ -117,6 +119,10 @@ if(IG_WITH_DEVICE_CPU)
 
     if(IG_WITH_DEVICE_CPU_GENERIC_ALWAYS AND IG_WITH_DEVICE_CPU_SIMD)
         list(APPEND DEVICE_SELECTION "DEFAULT")
+    endif()
+
+    if(IG_WITH_DEVICE_CPU_ST_GENERIC)
+        list(APPEND DEVICE_SELECTION "SINGLE")
     endif()
 endif()
 

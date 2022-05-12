@@ -5,6 +5,7 @@
 namespace IG {
 enum class Target : uint32 {
     GENERIC = 0,
+    SINGLE, // Debug target on CPU with single thread usage
     AVX512,
     AVX2,
     AVX,
@@ -42,6 +43,8 @@ inline const char* targetToString(Target target)
     switch (target) {
     case Target::GENERIC:
         return "Generic";
+    case Target::SINGLE:
+        return "SingleThreaded";
     case Target::AVX512:
         return "AVX512";
     case Target::AVX2:
