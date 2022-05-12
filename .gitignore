@@ -53,3 +53,6 @@ scenes/radiance/*/*.hdr
 scenes/radiance/*/*.exr
 scenes/radiance/*/*.unf
 scenes/radiance/*/*.oct
+
+# Do not add backup files
+*.blend1

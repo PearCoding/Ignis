@@ -138,4 +138,12 @@
     },
     "cmake.configureOnOpen": false,
     "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
+    "cSpell.words": [
+        "bsdf",
+        "bsdfs",
+        "klems",
+        "raytracer",
+        "tensortree",
+        "wireframe"
+    ],
 }

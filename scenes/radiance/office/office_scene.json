@@ -1,0 +1,33 @@
+{
+	"technique": {
+		"type": "path",
+		"max_depth": 6
+	},
+	"camera": {
+		"type": "fishlens",
+		"fov": 60,
+		"near_clip": 0.1,
+		"far_clip": 1000,
+		"transform": {"translate": [18.5, 2, -6], /*"rotate": [80,0,-120]*/"qrotate": [ 0.383022278547287, 0.32139381766319275, 0.6634140014648438, -0.5566704273223877], "qrotate": [0.7071067690849304, -0.7071067690849304, 0, 0], "scale": [1,1,-1]}
+	},
+	"film": {
+		"size": [256, 256]
+	},
+	"bsdfs": [
+		{"type":"diffuse", "name": "wall", "reflectance": 0.95},
+		{"type":"passthrough", "name": "window", "ext_ior": 1, "int_ior": 1.52, "specular_transmittance": 0.98 /*Sqrt(0.96)*/, "thin":true}
+	],
+	"shapes": [
+		{"type":"obj", "name":"building", "filename":"../../meshes/OfficeBuilding.obj"},
+		{"type":"obj", "name":"window", "filename":"../../meshes/OfficeWindow.obj"},
+		{"type":"obj", "name":"door", "filename":"../../meshes/OfficeDoor.obj"}
+	],
+	"entities": [
+		{"name":"building","shape":"building", "bsdf":"wall"},
+		{"name":"window","shape":"window", "bsdf":"window"},
+		{"name":"door","shape":"door", "bsdf":"wall"}
+	],
+	"lights": [
+		{"type":"env", "name":"sky", "radiance":[1,1,1]}
+	]
+}

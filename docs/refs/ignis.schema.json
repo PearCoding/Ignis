@@ -1,8 +1,8 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "ignis.schema.json",
-    "title": "Ignis Rodent",
-    "description": "Ignis rodent scene description language",
+    "title": "Ignis Scene Description",
+    "description": "Ignis scene description language",
     "type": "object",
     "required": ["camera", "film"],
     "properties": {
@@ -68,8 +68,7 @@
             "type": "object",
             "required": ["type"],
             "properties": { 
-                "type": { "type":"string"},
-                "max_depth": { "type":"integer", "minimum":0 }
+                "type": { "type":"string"}
             },
             "additionalProperties": true
         },
@@ -79,7 +78,6 @@
             "required": [],
             "properties": { 
                 "type": { "type":"string"},
-                "fov": { "type":"number", "minimum":0 },
                 "transform": { "$ref":"#/definitions/Transform" }
             },
             "additionalProperties": true
@@ -89,7 +87,8 @@
             "type": "object",
             "required": ["size"],
             "properties": { 
-                "size": { "$ref":"#/definitions/Size" }
+                "size": { "$ref":"#/definitions/Size" },
+                "sampler": { "type":"string" }
             },
             "additionalProperties": true
         },
@@ -137,7 +136,7 @@
         "Entity": {
             "description": "Entity properties",
             "type": "object",
-            "required": ["type", "name"],
+            "required": ["type", "name", "shape"],
             "properties": { 
                 "type": { "type":"string"},
                 "name": { "type":"string"},
@@ -175,9 +174,22 @@
                 "matrix": { 
                     "oneOf":[
                         {"$ref":"#/definitions/Matrix3"},
+                        {"$ref":"#/definitions/Matrix34"},
                         {"$ref":"#/definitions/Matrix4"}
                     ]
-                }
+                },
+                "lookat": { "$ref":"#/definitions/Lookat" }
+            }
+        },
+        "Lookat": {
+            "description": "Lookat properties",
+            "type": "object",
+            "required": [],
+            "properties": { 
+                "origin": { "$ref":"#/definitions/Vector3" },
+                "up": { "$ref":"#/definitions/Vector3" },
+                "target": { "$ref":"#/definitions/Vector3" },
+                "direction": { "$ref":"#/definitions/Vector3" }
             }
         },
         "Size": {
@@ -202,6 +214,12 @@
             "type":"array",
             "minItems": 9,
             "maxItems": 9,
+            "items": { "type": "number" }
+        },
+        "Matrix34": {
+            "type":"array",
+            "minItems": 12,
+            "maxItems": 12,
             "items": { "type": "number" }
         },
         "Matrix4": {

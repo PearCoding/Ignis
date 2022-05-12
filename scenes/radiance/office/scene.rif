@@ -1,0 +1,20 @@
+OCTREE=scene.oct
+ZONE=I  -1.00001   1.00001  -1.00001   1.00001  -1.00001   1.00001
+
+materials=materials.rad
+scene=scene.rad sky.rad
+
+view=-vta -vp 18.5 2 -6 -vd -0.853 -0.174 0.492 -vu -0.150 0.985 0.087 -vh 180 -vv 180 -vo 0 -va 0 -vs 0 -vl 0
+
+render=-av 0 0 0 -aw 0 -pt 0 -ss 0
+RESOLUTION=256 256 0
+INDIRECT=16
+QUALITY=MEDIUM
+DETAIL=MEDIUM
+VARIABILITY=MEDIUM
+EXPOSURE=1
+
+RAWFILE=output_raw
+PICTURE=output
+
+REPORT=0.1
