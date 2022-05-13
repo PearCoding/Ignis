@@ -12,7 +12,7 @@ using TechniqueCameraGenerator   = TechniqueCallbackGenerator;
 using TechniqueVariantSelector = std::vector<size_t> (*)(size_t /* currentIteration */);
 
 enum class ShadowHandlingMode {
-    Simple,               // No advanced shadow handling
+    Simple,               // No advanced shadow handling, given color will be splat directly if ray 'misses'.
     Advanced,             // Advanced shadow handling without specialization. Reduces performance
     AdvancedWithMaterials // Advanced shadow handling with specialization. Reduces performance more
 };

@@ -1,13 +1,14 @@
 // A simple shadow ray only has a color associated with the ray,
 // a advanced shadow ray however replaces the current material id for the upcoming ShadowHit or ShadowMiss function.
-// Using advanced shadow rays only work when advanced_shadows is used, else it is the same as a simple shadow ray
+// Make sure the material id is always positive and in valid range of the given materials. No bounding checks are applied.
+// Using advanced shadow rays only work when ShadowHandlingMode=AdvancedWithMaterials is used, else it is the same as a simple shadow ray
 enum ShadowRay {
     Simple((Ray, Color)),
     Advanced((Ray, Color, i32)),
     None
 }
 
-fn @make_simple_shadow_ray(ray: Ray, color: Color) = ShadowRay::Simple(ray, color);
+fn @make_simple_shadow_ray(ray: Ray, color: Color)                  = ShadowRay::Simple(ray, color);
 fn @make_advanced_shadow_ray(ray: Ray, color: Color, material: i32) = ShadowRay::Advanced(ray, color, material);
 
 // A technique is a combination of functions run on a single variant per iteration
@@ -16,16 +17,16 @@ struct Technique {
     on_miss:             fn (Ray, i32, RayPayload) -> Option[Color],
     on_shadow:           fn (Ray, i32, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> ShadowRay,
     on_bounce:           fn (Ray, i32, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[(Ray, RayPayload)],
-    on_shadow_hit:       fn (Ray, i32, Shader, Color) -> Option[Color], // Will only be called if renderer makes use of advanced_shadows
-    on_shadow_miss:      fn (Ray, i32, Shader, Color) -> Option[Color], // Will only be called if renderer makes use of advanced_shadows
+    on_shadow_hit:       fn (Ray, i32, Shader, Color) -> Option[Color], // Will only be called if renderer makes use of ShadowHandlingMode!=Simple
+    on_shadow_miss:      fn (Ray, i32, Shader, Color) -> Option[Color], // Will only be called if renderer makes use of ShadowHandlingMode!=Simple
 }
 
 fn @TechniqueNoHitFunction       (_: Ray, _: i32, _: Hit, _: RayPayload, _: SurfaceElement, _: Material)                   = Option[Color]::None;
 fn @TechniqueNoMissFunction      (_: Ray, _: i32, _: RayPayload)                                                           = Option[Color]::None;
 fn @TechniqueNoShadowFunction    (_: Ray, _: i32, _: Hit, _: &mut RndState, _: RayPayload, _: SurfaceElement, _: Material) = ShadowRay::None;
 fn @TechniqueNoBounceFunction    (_: Ray, _: i32, _: Hit, _: &mut RndState, _: RayPayload, _: SurfaceElement, _: Material) = Option[(Ray, RayPayload)]::None;
-fn @TechniqueNoShadowHitFunction (_: Ray, _: i32, _: Shader, _: Color)                                                                = Option[Color]::None;
-fn @TechniqueNoShadowMissFunction(_: Ray, _: i32, _: Shader, _: Color)                                                                = Option[Color]::None;
+fn @TechniqueNoShadowHitFunction (_: Ray, _: i32, _: Shader, _: Color)                                                     = Option[Color]::None;
+fn @TechniqueNoShadowMissFunction(_: Ray, _: i32, _: Shader, _: Color)                                                     = Option[Color]::None;
 
 type RayEmitter = fn (i32, i32, i32, i32, i32) -> (Ray, RndState, RayPayload);
 
