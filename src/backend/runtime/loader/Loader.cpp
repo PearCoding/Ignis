@@ -88,9 +88,24 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         }
 
         // Generate Advanced Shadow Shaders if requested
-        if (info.UseAdvancedShadowHandling) {
-            variant.AdvancedShadowHitShader  = AdvancedShadowShader::setup(true, ctx);
-            variant.AdvancedShadowMissShader = AdvancedShadowShader::setup(false, ctx);
+        if (info.ShadowHandlingMode != ShadowHandlingMode::Simple) {
+            const size_t max_materials = info.ShadowHandlingMode == ShadowHandlingMode::Advanced ? 1 : ctx.Environment.Materials.size();
+            for (size_t j = 0; j < max_materials; ++j) {
+                std::string shader = AdvancedShadowShader::setup(true, j, ctx);
+                if (shader.empty()) {
+                    IG_LOG(L_ERROR) << "Constructed empty advanced shadow hit shader for material " << j << "." << std::endl;
+                    return false;
+                }
+                variant.AdvancedShadowHitShaders.push_back(shader);
+            }
+            for (size_t j = 0; j < max_materials; ++j) {
+                std::string shader = AdvancedShadowShader::setup(false, j, ctx);
+                if (shader.empty()) {
+                    IG_LOG(L_ERROR) << "Constructed empty advanced shadow miss shader for material " << j << "." << std::endl;
+                    return false;
+                }
+                variant.AdvancedShadowMissShaders.push_back(shader);
+            }
         }
 
         for (size_t j = 0; j < info.CallbackGenerators.size(); ++j) {

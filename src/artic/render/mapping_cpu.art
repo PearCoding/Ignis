@@ -255,12 +255,12 @@ fn @cpu_generate_rays_handler(size: i32
                             , ymax: i32
                             , spp: i32
                             , vector_width: i32) -> i32 {
-    let (work_width, work_height) = get_work_info();
+    let work_info = get_work_info();
 
     let mut primary : PrimaryStream;
     ignis_cpu_get_primary_stream(&mut primary, capacity);
     primary.size = size;
-    cpu_generate_rays(primary, capacity, emitter, id, xmin, ymin, xmax, ymax, work_width, work_height, spp, vector_width)
+    cpu_generate_rays(primary, capacity, emitter, id, xmin, ymin, xmax, ymax, work_info.width, work_info.height, spp, vector_width)
 }
 
 fn @cpu_traverse_primary(scene: SceneGeometry, min_max: MinMax, primary: &PrimaryStream, single: bool, vector_width: i32) -> () {
@@ -437,7 +437,7 @@ fn @cpu_miss_shade_handler(path_tracer: Technique, begin: i32, end: i32, spp: i3
     cpu_miss_shade(primary, path_tracer, accumulator, begin, end, vector_width);
 }
 
-fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: Technique, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_advanced_shadow(is_hit: bool, shader: Shader, secondary: &SecondaryStream, path_tracer: Technique, accumulate: CPUAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_advanced_shadow_specialized(secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -455,7 +455,7 @@ fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: 
             let pixel = secondary2.rays.id(i);
 
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
-            if let Option[Color]::Some(new_color) = @callback(ray, pixel, color) { 
+            if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, color) { 
                 for lane in unroll(0, r_vector_width) {
                     let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
                     accumulate(j,
@@ -473,14 +473,14 @@ fn @cpu_advanced_shadow(is_hit: bool, secondary: &SecondaryStream, path_tracer: 
     $cpu_advanced_shadow_specialized(secondary, begin, end);
 }
 
-fn @cpu_advanced_shadow_handler(path_tracer: Technique, begin: i32, end: i32, spp: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
+fn @cpu_advanced_shadow_handler(shader: Shader, path_tracer: Technique, begin: i32, end: i32, spp: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut secondary : SecondaryStream;
     ignis_cpu_get_secondary_stream_const(&mut secondary);
 
     let accumulator = if !use_framebuffer { cpu_make_null_accumulator() } else { cpu_make_accumulator(film_pixels, spp) };
-    cpu_advanced_shadow(is_hit, secondary, path_tracer, accumulator, begin, end, vector_width);
+    cpu_advanced_shadow(is_hit, shader, secondary, path_tracer, accumulator, begin, end, vector_width);
 }
 
 fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
@@ -489,13 +489,6 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     let mut film_height : i32;
     ignis_get_film_data(0, &mut film_pixels, &mut film_width, &mut film_height);
     (film_pixels, film_width, film_height)
-}
-
-fn @get_work_info() -> (i32, i32) {
-    let mut work_width  : i32;
-    let mut work_height : i32;
-    ignis_get_work_info(&mut work_width, &mut work_height);
-    (work_width, work_height)
 }
 
 fn @cpu_get_aov_image(id: i32, spp: i32) -> AOVImage {
@@ -559,14 +552,11 @@ fn @cpu_trace( scene: SceneGeometry
              , vector_compact: bool
              ) -> () {
     let (film_pixels, _film_width, _film_height) = cpu_get_film_data();
-    let (work_width, work_height)                = get_work_info();
 
+    let work_info  = get_work_info();
     let accumulate = cpu_make_accumulator(film_pixels, spp);
 
-    let has_advanced_shadow   = ignis_use_advanced_shadow_handling();
-    let is_framebuffer_locked = ignis_is_framebuffer_locked();
-
-    for xmin, ymin, xmax, ymax in cpu_parallel_tiles(work_width, work_height, tile_size, tile_size, num_cores) {
+    for xmin, ymin, xmax, ymax in cpu_parallel_tiles(work_info.width, work_info.height, tile_size, tile_size, num_cores) {
         ignis_register_thread();
         
         // Get ray streams/states from the CPU driver
@@ -628,19 +618,19 @@ fn @cpu_trace( scene: SceneGeometry
                 }
 
                 // Add the contribution for secondary rays to the frame buffer
-                if has_advanced_shadow {
+                if work_info.advanced_shadows {
                     let hit_start = cpu_sort_secondary(secondary);
                     if hit_start != 0 {
                         // Call valids (miss)
-                        pipeline.on_advanced_shadow(0, hit_start, false);
+                        pipeline.on_advanced_shadow(0, 0, hit_start, false);
                     }
 
                     if hit_start < secondary.size {
                         // Call invalids (hits)
-                        pipeline.on_advanced_shadow(hit_start, secondary.size, true);
+                        pipeline.on_advanced_shadow(0, hit_start, secondary.size, true);
                     }
                 } else {
-                    if !is_framebuffer_locked {    
+                    if !work_info.framebuffer_locked {    
                         for i in range(0, secondary.size) {
                             if secondary.mat_id(i) < 0 {
                                 let j = secondary.rays.id(i);
@@ -686,8 +676,8 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     handle_hit_shader = @ | entity_id, shader, scene, path_tracer, first, last, spp, use_framebuffer | {
         cpu_hit_shade_handler(entity_id, shader, scene, path_tracer, first, last, spp, use_framebuffer, vector_width);
     },
-    handle_advanced_shadow_shader = @ | path_tracer, first, last, spp, use_framebuffer, is_hit | {
-        cpu_advanced_shadow_handler(path_tracer, first, last, spp, use_framebuffer, is_hit, vector_width);
+    handle_advanced_shadow_shader = @ | shader, path_tracer, first, last, spp, use_framebuffer, is_hit | {
+        cpu_advanced_shadow_handler(shader, path_tracer, first, last, spp, use_framebuffer, is_hit, vector_width);
     },
     present = @ || ignis_present(0),
     sync    = @ || {},

@@ -252,12 +252,12 @@ void Runtime::stepVariant(size_t variant)
     // IG_LOG(L_DEBUG) << "Rendering iteration " << mCurrentIteration << ", variant " << variant << std::endl;
 
     DriverRenderSettings settings;
-    settings.rays               = nullptr; // No artifical ray streams
-    settings.device             = mDevice;
-    settings.spi                = info.GetSPI(mSamplesPerIteration);
-    settings.work_width         = info.GetWidth(mFilmWidth);
-    settings.work_height        = info.GetHeight(mFilmHeight);
-    settings.framebuffer_locked = info.LockFramebuffer;
+    settings.rays        = nullptr; // No artifical ray streams
+    settings.device      = mDevice;
+    settings.spi         = info.GetSPI(mSamplesPerIteration);
+    settings.work_width  = info.GetWidth(mFilmWidth);
+    settings.work_height = info.GetHeight(mFilmHeight);
+    settings.info        = info;
 
     mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, &mParameterSet, mCurrentIteration, mCurrentFrame);
 
@@ -302,12 +302,12 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
     // IG_LOG(L_DEBUG) << "Tracing iteration " << mCurrentIteration << ", variant " << variant << std::endl;
 
     DriverRenderSettings settings;
-    settings.rays               = rays.data();
-    settings.device             = mDevice;
-    settings.spi                = info.GetSPI(mSamplesPerIteration);
-    settings.work_width         = rays.size();
-    settings.work_height        = 1;
-    settings.framebuffer_locked = info.LockFramebuffer;
+    settings.rays        = rays.data();
+    settings.device      = mDevice;
+    settings.spi         = info.GetSPI(mSamplesPerIteration);
+    settings.work_width  = rays.size();
+    settings.work_height = 1;
+    settings.info        = info;
 
     mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, &mParameterSet, mCurrentIteration, mCurrentFrame);
 
@@ -413,24 +413,28 @@ bool Runtime::compileShaders()
             }
         }
 
-        if (!variant.AdvancedShadowHitShader.empty()) {
+        if (!variant.AdvancedShadowHitShaders.empty()) {
             IG_LOG(L_DEBUG) << "Compiling advanced shadow shaders" << std::endl;
-            shaders.AdvancedShadowHitShader = compileShader(variant.AdvancedShadowHitShader.c_str(), "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowHit");
 
-            if (shaders.AdvancedShadowHitShader == nullptr) {
-                IG_LOG(L_ERROR) << "Failed to compile advanced shadow hit shader in variant " << i << "." << std::endl;
-                return false;
+            for (size_t j = 0; j < variant.AdvancedShadowHitShaders.size(); ++j) {
+                IG_LOG(L_DEBUG) << "Advanced Shadow Hit shader [" << j << "]" << std::endl;
+                shaders.AdvancedShadowHitShaders.push_back(compileShader(variant.AdvancedShadowHitShaders[j].c_str(), "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowHit" + std::to_string(j)));
+
+                if (shaders.AdvancedShadowHitShaders[j] == nullptr) {
+                    IG_LOG(L_ERROR) << "Failed to compile advanced shadow hit shader " << j << " in variant " << i << "." << std::endl;
+                    return false;
+                }
             }
 
-            shaders.AdvancedShadowMissShader = compileShader(variant.AdvancedShadowMissShader.c_str(), "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowMiss");
+            for (size_t j = 0; j < variant.AdvancedShadowMissShaders.size(); ++j) {
+                IG_LOG(L_DEBUG) << "Advanced Shadow Miss shader [" << j << "]" << std::endl;
+                shaders.AdvancedShadowMissShaders.push_back(compileShader(variant.AdvancedShadowMissShaders[j].c_str(), "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowMiss" + std::to_string(j)));
 
-            if (shaders.AdvancedShadowMissShader == nullptr) {
-                IG_LOG(L_ERROR) << "Failed to compile advanced shadow miss shader in variant " << i << "." << std::endl;
-                return false;
+                if (shaders.AdvancedShadowMissShaders[j] == nullptr) {
+                    IG_LOG(L_ERROR) << "Failed to compile advanced shadow miss shader " << j << " in variant " << i << "." << std::endl;
+                    return false;
+                }
             }
-        } else {
-            shaders.AdvancedShadowHitShader  = nullptr;
-            shaders.AdvancedShadowMissShader = nullptr;
         }
 
         for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {

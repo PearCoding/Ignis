@@ -255,6 +255,7 @@ fn @gpu_miss_shade_handler(dev_id: i32
 fn @gpu_advanced_shadow(is_hit: bool
                       , acc: Accelerator
                       , atomics: Atomics
+                      , shader: Shader
                       , path_tracer: Technique
                       , film_pixels: &mut [f32]
                       , spp: i32
@@ -278,7 +279,7 @@ fn @gpu_advanced_shadow(is_hit: bool
         let ray   = read_secondary_ray(ray_id, 0);
         let pixel = secondary.rays.id(ray_id);
 
-        if let Option[Color]::Some(new_color) = @callback(ray, pixel, color) {
+        if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, color) {
             if use_framebuffer { gpu_accumulate(atomics, film_pixels, pixel, new_color, spp) };
         }
     });
@@ -287,6 +288,7 @@ fn @gpu_advanced_shadow(is_hit: bool
 fn @gpu_advanced_shadow_handler(dev_id: i32
                               , acc: Accelerator
                               , atomics: Atomics
+                              , shader: Shader
                               , path_tracer: Technique
                               , begin: i32
                               , end: i32
@@ -298,7 +300,7 @@ fn @gpu_advanced_shadow_handler(dev_id: i32
     let mut secondary: SecondaryStream;
     ignis_gpu_get_first_secondary_stream_const(dev_id, &mut secondary);
 
-    gpu_advanced_shadow(is_hit, acc, atomics, path_tracer, film_pixels, spp, use_framebuffer, secondary, begin, end);
+    gpu_advanced_shadow(is_hit, acc, atomics, shader, path_tracer, film_pixels, spp, use_framebuffer, secondary, begin, end);
 }
 
 fn @gpu_copy_ray( rays: RayStream
@@ -503,13 +505,13 @@ fn @gpu_generate_rays_handler(dev_id: i32
                             , id: &mut i32
                             , spp: i32
                             ) -> i32 {
-    let (work_width, work_height) = get_work_info();
+    let work_info = get_work_info();
 
     let mut primary: PrimaryStream;
     ignis_gpu_get_first_primary_stream(dev_id, &mut primary, capacity);
     primary.size = size;
 
-    gpu_generate_rays(primary, capacity, acc, emitter, id, work_width, work_height, spp)
+    gpu_generate_rays(primary, capacity, acc, emitter, id, work_info.width, work_info.height, spp)
 }
 
 fn @gpu_compact_primary( primary: PrimaryStream
@@ -562,7 +564,7 @@ fn @gpu_trace( dev_id: i32
              , spp: i32
              ) -> () {
     let (film_pixels, _film_width, _film_height) = gpu_get_film_data(dev_id);
-    let (work_width, work_height)                = get_work_info();
+    let work_info                                = get_work_info();
 
     let mut primary:         PrimaryStream;
     let mut other_primary:   PrimaryStream;
@@ -580,16 +582,13 @@ fn @gpu_trace( dev_id: i32
     let mut temp : TemporaryStorageHost;
     ignis_get_temporary_storage(dev_id, &mut temp);
 
-    let has_advanced_shadow   = ignis_use_advanced_shadow_handling();
-    let is_framebuffer_locked = ignis_is_framebuffer_locked();
-
     let mut id = 0;
-    let num_rays = spp * work_width * work_height;
+    let num_rays = spp * work_info.width * work_info.height;
     while id < num_rays || primary.size > 0 {
         // Regenerate rays
         if primary.size < GPUStreamCapacity && id < num_rays {
             let before_s = primary.size;
-            primary.size = pipeline.on_generate(&mut id, primary.size, 0, 0, work_width, work_height);
+            primary.size = pipeline.on_generate(&mut id, primary.size, 0, 0, work_info.width, work_info.height);
             stats::add_quantity(stats::Quantity::CameraRayCount, primary.size - before_s);
         }
 
@@ -631,24 +630,24 @@ fn @gpu_trace( dev_id: i32
 
         if likely(first > 0) {
             // Trace secondary rays
-            if has_advanced_shadow {
-                gpu_traverse_secondary(secondary, acc, atomics, min_max, scene, film_pixels, spp, true, is_framebuffer_locked);
+            if work_info.advanced_shadows {
+                gpu_traverse_secondary(secondary, acc, atomics, min_max, scene, film_pixels, spp, true, work_info.framebuffer_locked);
                 // Secondary stream is modified, sort it to have valid shadows first, invalids last
                 let (valid_count, count) = gpu_sort_secondary(secondary, other_secondary, dev_id, acc, atomics, gpu_tmp);
                 gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
 
                 if valid_count != 0 {
                     // Call valids (miss)
-                    pipeline.on_advanced_shadow(0, valid_count, false);
+                    pipeline.on_advanced_shadow(0, 0, valid_count, false);
                 }
 
                 if valid_count < count {
                     // Call invalids (hits)
-                    pipeline.on_advanced_shadow(valid_count, count, true);
+                    pipeline.on_advanced_shadow(0, valid_count, count, true);
                 }
                 acc.sync();
             } else {
-                gpu_traverse_secondary(secondary, acc, atomics, min_max, scene, film_pixels, spp, false, is_framebuffer_locked);
+                gpu_traverse_secondary(secondary, acc, atomics, min_max, scene, film_pixels, spp, false, work_info.framebuffer_locked);
             }
             stats::add_quantity(stats::Quantity::ShadowRayCount, secondary.size);
 
@@ -720,8 +719,8 @@ fn @make_gpu_device( dev_id: i32
     handle_hit_shader = @ | entity_id, shader, scene, path_tracer, first, last, spp, use_framebuffer | {
         gpu_hit_shade_handler(dev_id, acc, atomics, entity_id, shader, scene, path_tracer, first, last, spp, use_framebuffer);
     },
-    handle_advanced_shadow_shader = @ | path_tracer, first, last, spp, use_framebuffer, is_hit | {
-        gpu_advanced_shadow_handler(dev_id, acc, atomics, path_tracer, first, last, spp, use_framebuffer, is_hit);
+    handle_advanced_shadow_shader = @ | shader, path_tracer, first, last, spp, use_framebuffer, is_hit | {
+        gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, path_tracer, first, last, spp, use_framebuffer, is_hit);
     },
     present = @ || ignis_present(dev_id),
     sync    = @ || acc.sync(),

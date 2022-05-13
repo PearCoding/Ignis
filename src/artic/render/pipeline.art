@@ -6,5 +6,5 @@ struct Pipeline {
 
     on_miss_shade:      fn (i32, i32) -> (),
     on_hit_shade:       fn (i32, i32, i32) -> (),
-    on_advanced_shadow: fn (i32, i32, bool) -> (), // Only used if advanced shadow handling is used
+    on_advanced_shadow: fn (i32, i32, i32, bool) -> (), // Only used if advanced shadow handling is used
 }

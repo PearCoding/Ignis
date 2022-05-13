@@ -2,6 +2,7 @@
 
 #include "RuntimeStructs.h"
 #include "Target.h"
+#include "loader/TechniqueInfo.h"
 #include "loader/TechniqueVariant.h"
 #include <vector>
 
@@ -25,12 +26,12 @@ struct DriverSetupSettings {
 };
 
 struct DriverRenderSettings {
-    const IG::Ray* rays     = nullptr; // If non-null, width contains the number of rays and height is set to 1
-    size_t device           = 0;
-    size_t spi              = 8;
-    size_t work_width       = 0;
-    size_t work_height      = 0;
-    bool framebuffer_locked = false;
+    const IG::Ray* rays = nullptr; // If non-null, width contains the number of rays and height is set to 1
+    size_t device       = 0;
+    size_t spi          = 8;
+    size_t work_width   = 0;
+    size_t work_height  = 0;
+    IG::TechniqueVariantInfo info;
 };
 
 using DriverRenderFunction            = void (*)(const IG::TechniqueVariantShaderSet&, const DriverRenderSettings&, const IG::ParameterSet*, size_t, size_t);

@@ -14,8 +14,8 @@ struct TechniqueVariantBase {
     T RayGenerationShader;
     T MissShader;
     std::vector<T> HitShaders;
-    T AdvancedShadowHitShader;
-    T AdvancedShadowMissShader;
+    std::vector<T> AdvancedShadowHitShaders;
+    std::vector<T> AdvancedShadowMissShaders;
     std::array<T, (size_t)CallbackType::_COUNT> CallbackShaders{};
 };
 

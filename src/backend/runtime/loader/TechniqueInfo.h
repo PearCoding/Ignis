@@ -8,12 +8,17 @@ struct LoaderContext;
 using TechniqueCallbackGenerator = std::string (*)(LoaderContext&);
 using TechniqueCameraGenerator   = TechniqueCallbackGenerator;
 
-/// Callback returning a list of variants which will be called one after another for the given current iteration 
-using TechniqueVariantSelector = std::vector<size_t> (*)(/* currentIteration */ size_t);
+/// Callback returning a list of variants which will be called one after another for the given current iteration
+using TechniqueVariantSelector = std::vector<size_t> (*)(size_t /* currentIteration */);
 
+enum class ShadowHandlingMode {
+    Simple,               // No advanced shadow handling
+    Advanced,             // Advanced shadow handling without specialization. Reduces performance
+    AdvancedWithMaterials // Advanced shadow handling with specialization. Reduces performance more
+};
 struct TechniqueVariantInfo {
-    /// The variant makes uses of ShadowHit and ShadowMiss shaders. Reduces performance
-    bool UseAdvancedShadowHandling = false;
+    /// The variant shadow handling
+    IG::ShadowHandlingMode ShadowHandlingMode = ShadowHandlingMode::Simple;
 
     /// The variant makes use of lights
     bool UsesLights = false;
@@ -23,9 +28,6 @@ struct TechniqueVariantInfo {
 
     /// The variant requires all lights (especially area lights) in the miss shader, else only infinite lights will be exposed in the miss shader
     bool UsesAllLightsInMiss = false;
-
-    /// The variant requires all materials to be present at all times. Reduces performance significantly [TODO]
-    bool RequiresGlobalMaterials = false;
 
     /// The variant overrides the default camera shader
     TechniqueCameraGenerator OverrideCameraGenerator = nullptr;

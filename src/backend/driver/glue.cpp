@@ -678,15 +678,10 @@ public:
 
     inline bool useAdvancedShadowHandling()
     {
-        return shader_set.AdvancedShadowHitShader != nullptr && shader_set.AdvancedShadowMissShader != nullptr;
+        return !shader_set.AdvancedShadowHitShaders.empty() && !shader_set.AdvancedShadowMissShaders.empty();
     }
 
-    inline bool isFramebufferLocked()
-    {
-        return current_settings.framebuffer_locked;
-    }
-
-    inline void runAdvancedShadowShader(int first, int last, bool is_hit)
+    inline void runAdvancedShadowShader(int material_id, int first, int last, bool is_hit)
     {
         IG_ASSERT(useAdvancedShadowHandling(), "Expected advanced shadow shader only be called if it is enabled!");
 
@@ -695,8 +690,10 @@ public:
                 getThreadData()->stats.beginShaderLaunch(IG::ShaderType::AdvancedShadowHit, {});
 
             using Callback = decltype(ig_advanced_shadow_shader);
-            IG_ASSERT(shader_set.AdvancedShadowHitShader != nullptr, "Expected miss shader to be valid");
-            auto callback = reinterpret_cast<Callback*>(shader_set.AdvancedShadowHitShader);
+            IG_ASSERT(material_id >= 0 && material_id < (int)shader_set.AdvancedShadowHitShaders.size(), "Expected material id for advanced shadow hit shaders to be valid");
+            void* shader = shader_set.AdvancedShadowHitShaders.at(material_id);
+            IG_ASSERT(shader != nullptr, "Expected advanced shadow hit shader to be valid");
+            auto callback = reinterpret_cast<Callback*>(shader);
             callback(&driver_settings, first, last);
 
             checkDebugOutput();
@@ -708,8 +705,10 @@ public:
                 getThreadData()->stats.beginShaderLaunch(IG::ShaderType::AdvancedShadowMiss, {});
 
             using Callback = decltype(ig_advanced_shadow_shader);
-            IG_ASSERT(shader_set.AdvancedShadowMissShader != nullptr, "Expected miss shader to be valid");
-            auto callback = reinterpret_cast<Callback*>(shader_set.AdvancedShadowMissShader);
+            IG_ASSERT(material_id >= 0 && material_id < (int)shader_set.AdvancedShadowMissShaders.size(), "Expected material id for advanced shadow miss shaders to be valid");
+            void* shader = shader_set.AdvancedShadowMissShaders.at(material_id);
+            IG_ASSERT(shader != nullptr, "Expected advanced shadow miss shader to be valid");
+            auto callback = reinterpret_cast<Callback*>(shader);
             callback(&driver_settings, first, last);
 
             checkDebugOutput();
@@ -1127,15 +1126,19 @@ IG_EXPORT void ignis_get_aov_image(int dev, int id, float** aov_pixels)
     *aov_pixels = sInterface->getAOVImage(dev, id);
 }
 
-IG_EXPORT void ignis_get_work_info(int* width, int* height)
+IG_EXPORT void ignis_get_work_info(WorkInfo* info)
 {
     if (sInterface->current_settings.work_width > 0 && sInterface->current_settings.work_height > 0) {
-        *width  = (int)sInterface->current_settings.work_width;
-        *height = (int)sInterface->current_settings.work_height;
+        info->width  = (int)sInterface->current_settings.work_width;
+        info->height = (int)sInterface->current_settings.work_height;
     } else {
-        *width  = (int)sInterface->film_width;
-        *height = (int)sInterface->film_height;
+        info->width  = (int)sInterface->film_width;
+        info->height = (int)sInterface->film_height;
     }
+
+    info->advanced_shadows                = sInterface->useAdvancedShadowHandling() && sInterface->current_settings.info.ShadowHandlingMode == IG::ShadowHandlingMode::Advanced;
+    info->advanced_shadows_with_materials = sInterface->useAdvancedShadowHandling() && sInterface->current_settings.info.ShadowHandlingMode == IG::ShadowHandlingMode::AdvancedWithMaterials;
+    info->framebuffer_locked              = sInterface->current_settings.info.LockFramebuffer;
 }
 
 IG_EXPORT void ignis_load_bvh2_ent(int dev, Node2** nodes, EntityLeaf1** objs)
@@ -1343,24 +1346,17 @@ IG_EXPORT void ignis_handle_hit_shader(int entity_id, int first, int last)
     sInterface->runHitShader(entity_id, first, last);
 }
 
-IG_EXPORT void ignis_handle_advanced_shadow_shader(int first, int last, bool is_hit)
+IG_EXPORT void ignis_handle_advanced_shadow_shader(int material_id, int first, int last, bool is_hit)
 {
-    sInterface->runAdvancedShadowShader(first, last, is_hit);
+    if (sInterface->current_settings.info.ShadowHandlingMode == IG::ShadowHandlingMode::Advanced)
+        sInterface->runAdvancedShadowShader(0 /* Fix to 0 */, first, last, is_hit);
+    else
+        sInterface->runAdvancedShadowShader(material_id, first, last, is_hit);
 }
 
 IG_EXPORT void ignis_handle_callback_shader(int type)
 {
     sInterface->runCallbackShader(type);
-}
-
-IG_EXPORT bool ignis_use_advanced_shadow_handling()
-{
-    return sInterface->useAdvancedShadowHandling();
-}
-
-IG_EXPORT bool ignis_is_framebuffer_locked()
-{
-    return sInterface->isFramebufferLocked();
 }
 
 IG_EXPORT void ignis_present(int dev)

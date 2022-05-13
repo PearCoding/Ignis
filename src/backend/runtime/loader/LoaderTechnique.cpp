@@ -80,7 +80,7 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
         if (technique->property("aov_mis").getBool(false)) {
             info.EnabledAOVs.emplace_back("Direct Weights");
             info.EnabledAOVs.emplace_back("NEE Weights");
-            info.Variants[0].UseAdvancedShadowHandling = true;
+            info.Variants[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
         }
     }
 
