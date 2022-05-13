@@ -13,6 +13,9 @@ fn ig_render(_settings: &Settings) -> () {
     ignis_cpu_get_primary_stream(&mut primary, 0);
     ignis_cpu_get_secondary_stream(&mut secondary, 0);
 
+    let mut temp : TemporaryStorageHost;
+    ignis_get_temporary_storage(0, &mut temp);
+
     // Force the export of BVH types
     let mut node2 : &[Node2];
     let mut node4 : &[Node4];

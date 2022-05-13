@@ -575,9 +575,8 @@ fn @gpu_trace( dev_id: i32
     ignis_gpu_get_tmp_buffer(dev_id, &mut gpu_tmp);
 
     // These two buffers are on the host only
-    let mut ray_begins: &mut [i32];
-    let mut ray_ends: &mut [i32];
-    ignis_gpu_get_ray_begin_end_buffers(dev_id, &mut ray_begins, &mut ray_ends);
+    let mut temp : TemporaryStorageHost;
+    ignis_get_temporary_storage(dev_id, &mut temp);
 
     let has_advanced_shadow   = ignis_use_advanced_shadow_handling();
     let is_framebuffer_locked = ignis_is_framebuffer_locked();
@@ -604,13 +603,13 @@ fn @gpu_trace( dev_id: i32
         gpu_traverse_primary(primary, acc, min_max, scene);
 
         // Sort rays by entity
-        gpu_sort_primary(primary, other_primary, dev_id, acc, atomics, scene, gpu_tmp, ray_begins, ray_ends);
+        gpu_sort_primary(primary, other_primary, dev_id, acc, atomics, scene, gpu_tmp, temp.ray_begins, temp.ray_ends);
         gpu_swap_primary_streams(dev_id, &mut primary, &mut other_primary);
 
         // Shade rays
         let mut first = 0;
         for ent_id in range(0, scene.info.num_entities) {
-            let last = ray_ends(ent_id);
+            let last = temp.ray_ends(ent_id);
             if first < last {
                 pipeline.on_hit_shade(ent_id, first, last);
                 first = last;
@@ -618,7 +617,7 @@ fn @gpu_trace( dev_id: i32
         }
 
         // Shade non-hits as well
-        let last = ray_ends(scene.info.num_entities);
+        let last = temp.ray_ends(scene.info.num_entities);
         if first < last {
             pipeline.on_miss_shade(first, last);
             // Do not set first as last (to make sure they drop out)

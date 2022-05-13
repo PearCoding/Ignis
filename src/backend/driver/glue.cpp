@@ -84,6 +84,11 @@ struct SceneDatabaseProxy {
     DynTableProxy BVHs;
 };
 
+struct TemporaryStorageHostProxy {
+    anydsl::Array<int32_t> ray_begins;
+    anydsl::Array<int32_t> ray_ends;
+};
+
 constexpr size_t InvalidThreadID = (size_t)-1;
 thread_local size_t sThreadID    = InvalidThreadID;
 
@@ -106,8 +111,7 @@ public:
         std::atomic_flag database_loaded = ATOMIC_FLAG_INIT;
         SceneDatabaseProxy database;
         anydsl::Array<int32_t> tmp_buffer;
-        anydsl::Array<int32_t> ray_begins_buffer; // On the host
-        anydsl::Array<int32_t> ray_ends_buffer;   // On the host
+        TemporaryStorageHostProxy temporary_storage_host;
         std::array<anydsl::Array<float>, GPUStreamBufferCount> primary;
         std::array<anydsl::Array<float>, GPUStreamBufferCount> secondary;
         std::vector<anydsl::Array<float>> aovs;
@@ -139,6 +143,7 @@ public:
     struct CPUData {
         anydsl::Array<float> cpu_primary;
         anydsl::Array<float> cpu_secondary;
+        TemporaryStorageHostProxy temporary_storage_host;
         IG::Statistics stats;
     };
     std::mutex thread_mutex;
@@ -272,24 +277,9 @@ public:
         return *devices[dev].current_secondary.at(buffer);
     }
 
-    inline size_t getGPUTemporaryBufferSize() const
-    {
-        // Upper bound extracted from "mapping_gpu.art"
-        return std::max<size_t>(32, database->EntityTable.entryCount() + 1);
-    }
-
     inline anydsl::Array<int32_t>& getGPUTemporaryBuffer(int32_t dev)
     {
-        return resizeArray(dev, devices[dev].tmp_buffer, getGPUTemporaryBufferSize(), 1);
-    }
-
-    inline auto getGPURayBeginEndBuffers(int32_t dev)
-    {
-        // Even while the ray begins & ends are on the CPU only the GPU backend makes use of it
-        const size_t size = getGPUTemporaryBufferSize();
-        return std::forward_as_tuple(
-            resizeArray(0 /*Host*/, devices[dev].ray_begins_buffer, size, 1),
-            resizeArray(0 /*Host*/, devices[dev].ray_ends_buffer, size, 1));
+        return resizeArray(dev, devices[dev].tmp_buffer, getTemporaryBufferSize(), 1);
     }
 
     inline void swapGPUPrimaryStreams(int32_t dev)
@@ -302,6 +292,30 @@ public:
     {
         auto& device = devices[dev];
         std::swap(device.current_secondary[0], device.current_secondary[1]);
+    }
+
+    inline size_t getTemporaryBufferSize() const
+    {
+        // Upper bound extracted from "mapping_*.art"
+        return std::max<size_t>(32, std::max(database->EntityTable.entryCount() + 1, database->MaterialCount * 2));
+    }
+
+    inline const auto& getTemporaryStorageHost(int32_t dev)
+    {
+        const size_t size = getTemporaryBufferSize();
+        if (dev == 0) {
+            auto thread = getThreadData();
+
+            return thread->temporary_storage_host = std::move(TemporaryStorageHostProxy{
+                       std::move(resizeArray(0 /*Host*/, thread->temporary_storage_host.ray_begins, size, 1)),
+                       std::move(resizeArray(0 /*Host*/, thread->temporary_storage_host.ray_ends, size, 1)) });
+        } else {
+            auto& device = devices[dev];
+
+            return device.temporary_storage_host = std::move(TemporaryStorageHostProxy{
+                       std::move(resizeArray(0 /*Host*/, device.temporary_storage_host.ray_begins, size, 1)),
+                       std::move(resizeArray(0 /*Host*/, device.temporary_storage_host.ray_ends, size, 1)) });
+        }
     }
 
     template <typename Bvh, typename Node>
@@ -1239,16 +1253,16 @@ IG_EXPORT void ignis_cpu_get_secondary_stream_const(SecondaryStream* secondary)
     get_secondary_stream(*secondary, array.data(), array.size() / SecondaryStreamSize);
 }
 
+IG_EXPORT void ignis_get_temporary_storage(int dev, TemporaryStorageHost* temp)
+{
+    const auto& data = sInterface->getTemporaryStorageHost(dev);
+    temp->ray_begins = const_cast<int32_t*>(data.ray_begins.data());
+    temp->ray_ends   = const_cast<int32_t*>(data.ray_ends.data());
+}
+
 IG_EXPORT void ignis_gpu_get_tmp_buffer(int dev, int** buf)
 {
     *buf = sInterface->getGPUTemporaryBuffer(dev).data();
-}
-
-IG_EXPORT void ignis_gpu_get_ray_begin_end_buffers(int dev, int** ray_begins, int** ray_ends)
-{
-    auto tuple  = sInterface->getGPURayBeginEndBuffers(dev);
-    *ray_begins = std::get<0>(tuple).data();
-    *ray_ends   = std::get<1>(tuple).data();
 }
 
 IG_EXPORT void ignis_gpu_get_first_primary_stream(int dev, PrimaryStream* primary, int size)
