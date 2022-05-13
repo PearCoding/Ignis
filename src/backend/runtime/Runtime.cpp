@@ -428,6 +428,9 @@ bool Runtime::compileShaders()
                 IG_LOG(L_ERROR) << "Failed to compile advanced shadow miss shader in variant " << i << "." << std::endl;
                 return false;
             }
+        } else {
+            shaders.AdvancedShadowHitShader  = nullptr;
+            shaders.AdvancedShadowMissShader = nullptr;
         }
 
         for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {
