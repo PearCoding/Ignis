@@ -151,13 +151,15 @@ fn @gpu_hit_shade( acc: Accelerator
         match @on_shadow(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
             ShadowRay::Simple(new_ray, color) => {
                 write_secondary_ray(ray_id, 0, new_ray);
+                secondary.mat_id(ray_id)  = mat.id + 1;
                 secondary.color_r(ray_id) = color.r;
                 secondary.color_g(ray_id) = color.g;
                 secondary.color_b(ray_id) = color.b;
                 secondary.rays.id(ray_id) = pixel;
             },
-            ShadowRay::Advanced(new_ray, color, _ /*TODO*/) => {
+            ShadowRay::Advanced(new_ray, color, mat_id) => {
                 write_secondary_ray(ray_id, 0, new_ray);
+                secondary.mat_id(ray_id)  = mat_id + 1;
                 secondary.color_r(ray_id) = color.r;
                 secondary.color_g(ray_id) = color.g;
                 secondary.color_b(ray_id) = color.b;
@@ -343,7 +345,7 @@ fn @gpu_copy_secondary_ray( secondary: SecondaryStream
                     , dst_id: i32
                     ) -> () {
     gpu_copy_ray(secondary.rays, other_secondary.rays, src_id, dst_id);
-    other_secondary.prim_id(dst_id) = secondary.prim_id(src_id);
+    other_secondary.mat_id(dst_id)  = secondary.mat_id(src_id);
     other_secondary.color_r(dst_id) = secondary.color_r(src_id);
     other_secondary.color_g(dst_id) = secondary.color_g(src_id);
     other_secondary.color_b(dst_id) = secondary.color_b(src_id);
@@ -419,7 +421,7 @@ fn @gpu_sort_secondary(secondary: SecondaryStream
         if src_id >= secondary.size { return() }
         if secondary.rays.id(src_id) < 0 { return() } // Skip entries which no shadow ray requested
 
-        if secondary.prim_id(src_id) < 0 {
+        if secondary.mat_id(src_id) < 0 {
             atomics.add_global_i32(&mut gpu_tmp(1), 1);
         }
     });
@@ -431,7 +433,7 @@ fn @gpu_sort_secondary(secondary: SecondaryStream
         if src_id >= secondary.size { return() }
         if secondary.rays.id(src_id) < 0 { return() } // Skip entries which no shadow ray requested
 
-        let dst_id = if secondary.prim_id(src_id) < 0 {
+        let dst_id = if secondary.mat_id(src_id) < 0 {
             atomics.add_global_i32(&mut gpu_tmp(0), 1)
         } else {
             atomics.add_global_i32(&mut gpu_tmp(1), 1)

@@ -56,7 +56,7 @@ fn @cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut[i32], ray_ends: &
 }
 
 fn @cpu_sort_secondary(secondary: &SecondaryStream) -> i32 {
-    fn @map_id(i:i32) = select(secondary.prim_id(i) < 0, 0:i32, 1:i32);
+    fn @map_id(i:i32) = select(secondary.mat_id(i) < 0, 0:i32, 1:i32);
 
     // Get number of hits
     let mut count = 0;
@@ -89,7 +89,7 @@ fn @cpu_sort_secondary(secondary: &SecondaryStream) -> i32 {
                 swap(&mut secondary.color_r(g),    &mut secondary.color_r(j));
                 swap(&mut secondary.color_g(g),    &mut secondary.color_g(j));
                 swap(&mut secondary.color_b(g),    &mut secondary.color_b(j));
-                swap(&mut secondary.prim_id(g),    &mut secondary.prim_id(j));
+                swap(&mut secondary.mat_id(g),     &mut secondary.mat_id(j));
             } else {
                 j++;
             }
@@ -176,7 +176,7 @@ fn @cpu_compact_secondary(secondary: &SecondaryStream, vector_width: i32, vector
 
                     cpu_compact_ray_stream(secondary2.rays, k + j, i + j, mask);
 
-                    secondary2.prim_id(k + j) = bitcast[i32](rv_compact(bitcast[f32](secondary2.prim_id(i + j)), mask));
+                    secondary2.mat_id(k + j)  = bitcast[i32](rv_compact(bitcast[f32](secondary2.mat_id(i + j)), mask));
                     secondary2.color_r(k + j) = rv_compact(secondary2.color_r(i + j), mask);
                     secondary2.color_g(k + j) = rv_compact(secondary2.color_g(i + j), mask);
                     secondary2.color_b(k + j) = rv_compact(secondary2.color_b(i + j), mask);
@@ -190,7 +190,7 @@ fn @cpu_compact_secondary(secondary: &SecondaryStream, vector_width: i32, vector
                 if id >= 0 {
                     secondary2.rays.id(k) = id;
                     cpu_move_ray_stream(secondary2.rays, k, i);
-                    secondary2.prim_id(k) = secondary2.prim_id(i);
+                    secondary2.mat_id(k)  = secondary2.mat_id(i);
                     secondary2.color_r(k) = secondary2.color_r(i);
                     secondary2.color_g(k) = secondary2.color_g(i);
                     secondary2.color_b(k) = secondary2.color_b(i);
@@ -347,13 +347,15 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             match @on_shadow(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
                 ShadowRay::Simple(new_ray, color) => {
                     write_secondary_ray(i, 0, new_ray);
+                    secondary2.mat_id(i)  = mat.id + 1;
                     secondary2.color_r(i) = color.r;
                     secondary2.color_g(i) = color.g;
                     secondary2.color_b(i) = color.b;
                     secondary2.rays.id(i) = ray_id;
                 },
-                ShadowRay::Advanced(new_ray, color, _/*TODO*/) => {
+                ShadowRay::Advanced(new_ray, color, mat_id) => {
                     write_secondary_ray(i, 0, new_ray);
+                    secondary2.mat_id(i)  = mat_id + 1;
                     secondary2.color_r(i) = color.r;
                     secondary2.color_g(i) = color.g;
                     secondary2.color_b(i) = color.b;
@@ -640,7 +642,7 @@ fn @cpu_trace( scene: SceneGeometry
                 } else {
                     if !is_framebuffer_locked {    
                         for i in range(0, secondary.size) {
-                            if secondary.prim_id(i) < 0 {
+                            if secondary.mat_id(i) < 0 {
                                 let j = secondary.rays.id(i);
                                 accumulate(j,
                                     make_color(
