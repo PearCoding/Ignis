@@ -100,6 +100,69 @@ fn @cpu_sort_secondary(secondary: &SecondaryStream) -> i32 {
     count
 }
 
+fn @cpu_sort_secondary_with_materials(secondary: &SecondaryStream, ray_begins: &mut[i32], ray_ends: &mut[i32], num_materials: i32) -> i32 {
+    fn @map_id(i:i32) -> i32 {
+        let id = secondary.mat_id(i); // Is +1
+        select(id < 0, -id, num_materials + id) - 1
+    }
+
+    // Reset
+    for i in range(0, 2 * num_materials) {
+        ray_ends(i) = 0;
+    }
+
+    // Count the number of rays per shader
+    for i in range(0, secondary.size) {
+        ray_ends(map_id(i))++;
+    }
+
+    // Compute scan over shader bins
+    let mut n = 0;
+    for i in range(0, num_materials) {
+        ray_begins(i) = n;
+        n += ray_ends(i);
+        ray_ends(i) = n;
+    }
+
+    let count = n;
+    for i in range(num_materials, 2 * num_materials) {
+        ray_begins(i) = n;
+        n += ray_ends(i);
+        ray_ends(i) = n;
+    }
+
+    // Sort by shader
+    for i in range(0, 2 * num_materials) {
+        let (begin, end) = (ray_begins(i), ray_ends(i));
+        let mut j = begin;
+        while j < end {
+            let id = map_id(j);
+            if id != i {
+                let g = ray_begins(id)++;
+
+                swap(&mut secondary.rays.id(g),    &mut secondary.rays.id(j));
+                swap(&mut secondary.rays.org_x(g), &mut secondary.rays.org_x(j));
+                swap(&mut secondary.rays.org_y(g), &mut secondary.rays.org_y(j));
+                swap(&mut secondary.rays.org_z(g), &mut secondary.rays.org_z(j));
+                swap(&mut secondary.rays.dir_x(g), &mut secondary.rays.dir_x(j));
+                swap(&mut secondary.rays.dir_y(g), &mut secondary.rays.dir_y(j));
+                swap(&mut secondary.rays.dir_z(g), &mut secondary.rays.dir_z(j));
+                swap(&mut secondary.rays.tmin(g),  &mut secondary.rays.tmin(j));
+                swap(&mut secondary.rays.tmax(g),  &mut secondary.rays.tmax(j));
+                swap(&mut secondary.color_r(g),    &mut secondary.color_r(j));
+                swap(&mut secondary.color_g(g),    &mut secondary.color_g(j));
+                swap(&mut secondary.color_b(g),    &mut secondary.color_b(j));
+                swap(&mut secondary.mat_id(g),     &mut secondary.mat_id(j));
+            } else {
+                j++;
+            }
+        }
+    }
+
+    // Kill rays that have intersected something
+    count
+}
+
 fn @cpu_compact_ray_stream(rays: RayStream, i: i32, j: i32, mask: bool) -> () {
     rays.org_x(i) = rv_compact(rays.org_x(j), mask);
     rays.org_y(i) = rv_compact(rays.org_y(j), mask);
@@ -628,6 +691,31 @@ fn @cpu_trace( scene: SceneGeometry
                     if hit_start < secondary.size {
                         // Call invalids (hits)
                         pipeline.on_advanced_shadow(0, hit_start, secondary.size, true);
+                    }
+                } else if work_info.advanced_shadows_with_materials {
+                    let hit_start = cpu_sort_secondary_with_materials(secondary, temp.ray_begins, temp.ray_ends, scene.info.num_materials);
+
+                    let mut sbegin = 0;
+                    if hit_start != 0 {
+                        // Call valids (miss)
+                        for mat_id in range(0, scene.info.num_materials) {
+                            let end = temp.ray_ends(mat_id);
+                            if sbegin < end {
+                                pipeline.on_advanced_shadow(mat_id, sbegin, end, false);
+                            }
+                            sbegin = end;
+                        }
+                    }
+
+                    if hit_start < secondary.size {
+                        // Call invalids (hits)
+                        for mat_id in range(0, scene.info.num_materials) {
+                            let end = temp.ray_ends(mat_id + scene.info.num_materials);
+                            if sbegin < end {
+                                pipeline.on_advanced_shadow(mat_id, sbegin, end, true);
+                            }
+                            sbegin = end;
+                        }
                     }
                 } else {
                     if !work_info.framebuffer_locked {    

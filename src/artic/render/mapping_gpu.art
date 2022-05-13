@@ -453,6 +453,73 @@ fn @gpu_sort_secondary(secondary: SecondaryStream
     (valid_entries, entries)
 }
 
+
+fn @gpu_sort_secondary_with_materials( secondary: SecondaryStream
+                                     , other_secondary: SecondaryStream
+                                     , dev_id: i32
+                                     , acc: Accelerator
+                                     , atomics: Atomics
+                                     , scene: SceneGeometry
+                                     , gpu_tmp:  &mut [i32]
+                                     , ray_begins: &mut [i32]
+                                     , ray_ends: &mut [i32]
+                                     ) -> (i32, i32) {
+    let block_size    = 64;
+    let num_materials = scene.info.num_materials;
+    let limit         = num_materials * 2;
+
+    fn @map_id(i:i32) -> i32 {
+        let id = secondary.mat_id(i); // Is +1
+        select(id < 0, -id, num_materials + id) - 1
+    }
+
+    // Fill temporary buffer with 0s
+    gpu_exec_1d(acc, limit, block_size, |work_item| {
+        let mat_id = work_item.gidx();
+        if mat_id > limit { return() }
+        gpu_tmp(mat_id) = 0;
+    });
+    acc.sync();
+
+    // Count number of rays for each geometry
+    gpu_exec_1d(acc, secondary.size, block_size, |work_item| {
+        let ray_id = work_item.gidx();
+        if ray_id >= secondary.size { return() }
+
+        atomics.add_global_i32(&mut gpu_tmp(map_id(ray_id)), 1);
+    });
+    acc.sync();
+
+    // Perform a scan on the CPU (there are very few elements to scan)
+    runtime_copy(dev_id, gpu_tmp as &[i8], 0, 0, ray_ends as &mut [i8], 0, sizeof[i32]() * limit as i64);
+    let mut n = 0;
+    for i in range(0, num_materials) {
+        ray_begins(i) = n;
+        n += ray_ends(i);
+        ray_ends(i) = n;
+    }
+    let count = n;
+    for i in range(num_materials, limit) {
+        ray_begins(i) = n;
+        n += ray_ends(i);
+        ray_ends(i) = n;
+    }
+
+    runtime_copy(0, ray_begins as &[i8], 0, dev_id, gpu_tmp as &mut [i8], 0, sizeof[i32]() * limit as i64);
+
+    // Sort rays
+    gpu_exec_1d(acc, secondary.size, block_size, |work_item| {
+        let src_id = work_item.gidx();
+        if src_id >= secondary.size { return() }
+
+        let dst_id = atomics.add_global_i32(&mut gpu_tmp(map_id(src_id)), 1);
+        gpu_copy_secondary_ray(secondary, other_secondary, src_id, dst_id);
+    });
+    acc.sync();
+
+    (count, n)
+}
+
 fn @gpu_generate_rays( primary: PrimaryStream
                      , capacity: i32
                      , acc: Accelerator
@@ -632,6 +699,7 @@ fn @gpu_trace( dev_id: i32
             // Trace secondary rays
             if work_info.advanced_shadows {
                 gpu_traverse_secondary(secondary, acc, atomics, min_max, scene, film_pixels, spp, true, work_info.framebuffer_locked);
+                
                 // Secondary stream is modified, sort it to have valid shadows first, invalids last
                 let (valid_count, count) = gpu_sort_secondary(secondary, other_secondary, dev_id, acc, atomics, gpu_tmp);
                 gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
@@ -644,6 +712,36 @@ fn @gpu_trace( dev_id: i32
                 if valid_count < count {
                     // Call invalids (hits)
                     pipeline.on_advanced_shadow(0, valid_count, count, true);
+                }
+                acc.sync();
+            } else if work_info.advanced_shadows {
+                gpu_traverse_secondary(secondary, acc, atomics, min_max, scene, film_pixels, spp, true, work_info.framebuffer_locked);
+                
+                // Secondary stream is modified, sort it to have valid shadows first, invalids last
+                let (valid_count, count) = gpu_sort_secondary_with_materials(secondary, other_secondary, dev_id, acc, atomics, scene, gpu_tmp, temp.ray_begins, temp.ray_ends);
+                gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
+
+                let mut sfirst = 0;
+                if valid_count != 0 {
+                    // Call valids (miss)
+                    for mat_id in range(0, scene.info.num_materials) {
+                        let slast = temp.ray_ends(mat_id);
+                        if sfirst < slast {
+                            pipeline.on_advanced_shadow(mat_id, sfirst, slast, false);
+                            sfirst = slast;
+                        }
+                    }
+                }
+
+                if valid_count < count {
+                    // Call invalids (hits)
+                    for mat_id in range(0, scene.info.num_materials) {
+                        let slast = temp.ray_ends(scene.info.num_materials + mat_id);
+                        if sfirst < slast {
+                            pipeline.on_advanced_shadow(mat_id, sfirst, slast, true);
+                            sfirst = slast;
+                        }
+                    }
                 }
                 acc.sync();
             } else {
