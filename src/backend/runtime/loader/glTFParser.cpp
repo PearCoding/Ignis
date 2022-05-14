@@ -20,16 +20,16 @@
 #define TINYGLTF_IMPLEMENTATION
 #include "tiny_gltf.h"
 
-constexpr std::string_view KHR_lights_punctual             = "KHR_lights_punctual";
-constexpr std::string_view KHR_materials_clearcoat         = "KHR_materials_clearcoat";
-constexpr std::string_view KHR_materials_emissive_strength = "KHR_materials_emissive_strength";
-constexpr std::string_view KHR_materials_ior               = "KHR_materials_ior";
-constexpr std::string_view KHR_materials_sheen             = "KHR_materials_sheen";
-constexpr std::string_view KHR_materials_translucency      = "KHR_materials_translucency";
-constexpr std::string_view KHR_materials_transmission      = "KHR_materials_transmission";
-constexpr std::string_view KHR_materials_unlit             = "KHR_materials_unlit";
-constexpr std::string_view KHR_materials_volume            = "KHR_materials_volume";
-constexpr std::string_view KHR_texture_transform           = "KHR_texture_transform";
+[[maybe_unused]] constexpr std::string_view KHR_lights_punctual             = "KHR_lights_punctual";
+[[maybe_unused]] constexpr std::string_view KHR_materials_clearcoat         = "KHR_materials_clearcoat";
+[[maybe_unused]] constexpr std::string_view KHR_materials_emissive_strength = "KHR_materials_emissive_strength";
+[[maybe_unused]] constexpr std::string_view KHR_materials_ior               = "KHR_materials_ior";
+[[maybe_unused]] constexpr std::string_view KHR_materials_sheen             = "KHR_materials_sheen";
+[[maybe_unused]] constexpr std::string_view KHR_materials_translucency      = "KHR_materials_translucency";
+[[maybe_unused]] constexpr std::string_view KHR_materials_transmission      = "KHR_materials_transmission";
+[[maybe_unused]] constexpr std::string_view KHR_materials_unlit             = "KHR_materials_unlit";
+[[maybe_unused]] constexpr std::string_view KHR_materials_volume            = "KHR_materials_volume";
+[[maybe_unused]] constexpr std::string_view KHR_texture_transform           = "KHR_texture_transform";
 
 // Uncomment this to map unlit materials to area lights. This can explode shading complexity and is therefore not really recommended
 // #define IG_GLTF_MAP_UNLIT_AS_LIGHT

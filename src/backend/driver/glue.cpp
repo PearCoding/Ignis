@@ -306,15 +306,17 @@ public:
         if (dev == 0) {
             auto thread = getThreadData();
 
-            return thread->temporary_storage_host = std::move(TemporaryStorageHostProxy{
-                       std::move(resizeArray(0 /*Host*/, thread->temporary_storage_host.ray_begins, size, 1)),
-                       std::move(resizeArray(0 /*Host*/, thread->temporary_storage_host.ray_ends, size, 1)) });
+            return thread->temporary_storage_host = TemporaryStorageHostProxy{
+                std::move(resizeArray(0 /*Host*/, thread->temporary_storage_host.ray_begins, size, 1)),
+                std::move(resizeArray(0 /*Host*/, thread->temporary_storage_host.ray_ends, size, 1))
+            };
         } else {
             auto& device = devices[dev];
 
-            return device.temporary_storage_host = std::move(TemporaryStorageHostProxy{
-                       std::move(resizeArray(0 /*Host*/, device.temporary_storage_host.ray_begins, size, 1)),
-                       std::move(resizeArray(0 /*Host*/, device.temporary_storage_host.ray_ends, size, 1)) });
+            return device.temporary_storage_host = TemporaryStorageHostProxy{
+                std::move(resizeArray(0 /*Host*/, device.temporary_storage_host.ray_begins, size, 1)),
+                std::move(resizeArray(0 /*Host*/, device.temporary_storage_host.ray_ends, size, 1))
+            };
         }
     }
 
