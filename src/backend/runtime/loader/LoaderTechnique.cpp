@@ -1,10 +1,12 @@
 #include "LoaderTechnique.h"
 #include "Loader.h"
 #include "LoaderLight.h"
+#include "LoaderUtils.h"
 #include "Logger.h"
-#include "ShaderUtils.h"
 #include "ShadingTree.h"
 #include "serialization/VectorSerializer.h"
+#include "shader/RayGenerationShader.h"
+#include "shader/ShaderUtils.h"
 
 namespace IG {
 
@@ -165,12 +167,7 @@ static std::string ppm_light_camera_generator(LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    stream << LoaderTechnique::generateHeader(ctx, true) << std::endl;
-
-    stream << "#[export] fn ig_ray_generation_shader(settings: &Settings, iter: i32, id: &mut i32, size: i32, xmin: i32, ymin: i32, xmax: i32, ymax: i32) -> i32 {" << std::endl
-           << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
-           << std::endl;
+    stream << RayGenerationShader::begin(ctx) << std::endl;
 
     stream << ShaderUtils::generateDatabase() << std::endl;
 
@@ -180,8 +177,7 @@ static std::string ppm_light_camera_generator(LoaderContext& ctx)
     stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
     stream << "  let emitter = make_ppm_light_emitter(num_lights, lights, iter);" << std::endl;
 
-    stream << "  device.generate_rays(emitter, id, size, xmin, ymin, xmax, ymax, spp)" << std::endl
-           << "}" << std::endl;
+    stream << RayGenerationShader::end();
 
     return stream.str();
 }
@@ -190,16 +186,10 @@ static std::string ppm_before_iteration_generator(LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    stream << LoaderTechnique::generateHeader(ctx, true) << std::endl;
-
-    stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
-           << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
-           << std::endl;
-
-    stream << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
+    stream << ShaderUtils::beginCallback(ctx) << std::endl
+           << "  let scene_bbox = " << LoaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
            << "  ppm_handle_before_iteration(device, iter, " << ctx.CurrentTechniqueVariant << ", PPMPhotonCount, scene_bbox);" << std::endl
-           << "}" << std::endl;
+           << ShaderUtils::endCallback() << std::endl;
 
     return stream.str();
 }
@@ -276,7 +266,7 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
         stream << "  let ppm_radius = ppm_compute_radius(" << radius << ", settings.iter);" << std::endl;
     }
 
-    stream << "  let scene_bbox  = " << ShaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
+    stream << "  let scene_bbox  = " << LoaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
            << "  let light_cache = make_ppm_lightcache(device, PPMPhotonCount, scene_bbox);" << std::endl;
 
     if (is_lighttracer)

@@ -1,13 +1,10 @@
 #pragma once
 
 #include "LoaderContext.h"
-#include "Target.h"
 
 namespace IG {
-class ShaderUtils {
+class LoaderUtils {
 public:
-    static std::string constructDevice(Target target);
-    static std::string generateDatabase();
     static std::string inlineSceneInfo(const LoaderContext& ctx);
     static std::string inlineSceneBBox(const LoaderContext& ctx);
 

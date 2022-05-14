@@ -1,7 +1,7 @@
 #include "Transpiler.h"
 #include "LoaderContext.h"
+#include "LoaderUtils.h"
 #include "Logger.h"
-#include "ShaderUtils.h"
 
 #include "PExpr.h"
 
@@ -12,11 +12,11 @@ using PExprType = PExpr::ElementaryType;
 
 inline std::string tex_name(const std::string& name)
 {
-    return "tex_" + ShaderUtils::escapeIdentifier(name);
+    return "tex_" + LoaderUtils::escapeIdentifier(name);
 }
 inline std::string var_name(const std::string& name)
 {
-    return "var_tex_" + ShaderUtils::escapeIdentifier(name);
+    return "var_tex_" + LoaderUtils::escapeIdentifier(name);
 }
 
 // Internal Variables

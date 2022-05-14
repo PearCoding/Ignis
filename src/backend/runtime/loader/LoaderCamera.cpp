@@ -1,7 +1,7 @@
 #include "LoaderCamera.h"
 #include "Loader.h"
+#include "LoaderUtils.h"
 #include "Logger.h"
-#include "ShaderUtils.h"
 
 #include <chrono>
 
@@ -52,9 +52,9 @@ static void camera_perspective(std::ostream& stream, const std::string& name, co
     CameraOrientation orientation = camera_perspective_orientation(name, camera, ctx);
 
     // Dump camera control (above is just defaults)
-    stream << "  let camera_eye = registry::get_parameter_vec3(\"__camera_eye\", " << ShaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
-           << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << ShaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
-           << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << ShaderUtils::inlineVector(orientation.Up) << ");" << std::endl;
+    stream << "  let camera_eye = registry::get_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
+           << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
+           << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl;
 
     if (aperture_radius <= FltEps) {
         stream << "  let camera = make_perspective_camera(camera_eye, " << std::endl
@@ -103,9 +103,9 @@ static void camera_orthogonal(std::ostream& stream, const std::string& name, con
     CameraOrientation orientation = camera_orthogonal_orientation(name, camera, ctx);
 
     // Dump camera control (above is just defaults)
-    stream << "  let camera_eye = registry::get_parameter_vec3(\"__camera_eye\", " << ShaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
-           << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << ShaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
-           << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << ShaderUtils::inlineVector(orientation.Up) << ");" << std::endl
+    stream << "  let camera_eye = registry::get_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
+           << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
+           << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl
            << "  let camera = make_orthogonal_camera(camera_eye, " << std::endl
            << "    camera_dir, " << std::endl
            << "    camera_up, " << std::endl
@@ -135,9 +135,9 @@ static void camera_fishlens(std::ostream& stream, const std::string& name, const
         mode = "FisheyeAspectMode::Full";
 
     // Dump camera control (above is just defaults)
-    stream << "  let camera_eye = registry::get_parameter_vec3(\"__camera_eye\", " << ShaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
-           << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << ShaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
-           << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << ShaderUtils::inlineVector(orientation.Up) << ");" << std::endl
+    stream << "  let camera_eye = registry::get_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
+           << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
+           << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl
            << "  let camera = make_fishlens_camera(camera_eye, " << std::endl
            << "    camera_dir, " << std::endl
            << "    camera_up, " << std::endl

@@ -1,8 +1,8 @@
 #include "ShadingTree.h"
 #include "Loader.h"
 #include "LoaderTexture.h"
+#include "LoaderUtils.h"
 #include "Logger.h"
-#include "ShaderUtils.h"
 
 namespace IG {
 ShadingTree::ShadingTree(LoaderContext& ctx)
@@ -170,7 +170,7 @@ void ShadingTree::registerTextureUsage(const std::string& name)
         const auto tex = mContext.Scene.texture(name);
         if (!tex) {
             IG_LOG(L_ERROR) << "Unknown texture '" << name << "'" << std::endl;
-            mHeaderLines.push_back("tex_" + ShaderUtils::escapeIdentifier(name) + " = make_invalid_texture();");
+            mHeaderLines.push_back("tex_" + LoaderUtils::escapeIdentifier(name) + " = make_invalid_texture();");
         } else {
             const std::string res = LoaderTexture::generate(name, *tex, *this);
             if (res.empty()) // Due to some error this might happen

@@ -1,7 +1,7 @@
 #include "LoaderMedium.h"
 #include "Loader.h"
+#include "LoaderUtils.h"
 #include "Logger.h"
-#include "ShaderUtils.h"
 #include "ShadingTree.h"
 
 namespace IG {
@@ -15,7 +15,7 @@ static void medium_homogeneous(std::ostream& stream, const std::string& name, co
     tree.addNumber("g", *medium, 0, true, ShadingTree::IM_Bare);
 
     stream << tree.pullHeader()
-           << "  let medium_" << ShaderUtils::escapeIdentifier(name) << " = make_homogeneous_medium(" << tree.getInline("sigma_a")
+           << "  let medium_" << LoaderUtils::escapeIdentifier(name) << " = make_homogeneous_medium(" << tree.getInline("sigma_a")
            << ", " << tree.getInline("sigma_s")
            << ", make_henyeygreenstein_phase(" << tree.getInline("g") << "));" << std::endl;
 
@@ -28,7 +28,7 @@ static void medium_vacuum(std::ostream& stream, const std::string& name, const s
     tree.beginClosure();
 
     stream << tree.pullHeader()
-           << "  let medium_" << ShaderUtils::escapeIdentifier(name) << " = make_vacuum_medium();" << std::endl;
+           << "  let medium_" << LoaderUtils::escapeIdentifier(name) << " = make_vacuum_medium();" << std::endl;
 
     tree.endClosure();
 }
@@ -74,7 +74,7 @@ std::string LoaderMedium::generate(ShadingTree& tree)
     size_t counter2 = 0;
     for (const auto& pair : tree.context().Scene.media()) {
         const auto medium = pair.second;
-        stream << "      " << counter2 << " => medium_" << ShaderUtils::escapeIdentifier(pair.first)
+        stream << "      " << counter2 << " => medium_" << LoaderUtils::escapeIdentifier(pair.first)
                << "," << std::endl;
         ++counter2;
     }

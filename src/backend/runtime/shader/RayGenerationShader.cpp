@@ -1,16 +1,17 @@
 #include "RayGenerationShader.h"
 #include "Logger.h"
+#include "ShaderUtils.h"
 #include "loader/Loader.h"
 #include "loader/LoaderCamera.h"
 #include "loader/LoaderTechnique.h"
-#include "loader/ShaderUtils.h"
+#include "loader/LoaderUtils.h"
 
 #include <sstream>
 
 namespace IG {
 using namespace Parser;
 
-std::string RayGenerationShader::setup(LoaderContext& ctx)
+std::string RayGenerationShader::begin(const LoaderContext& ctx)
 {
     std::stringstream stream;
 
@@ -18,7 +19,28 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
 
     stream << "#[export] fn ig_ray_generation_shader(settings: &Settings, iter: i32, id: &mut i32, size: i32, xmin: i32, ymin: i32, xmax: i32, ymax: i32) -> i32 {" << std::endl
            << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl;
+
+    return stream.str();
+}
+
+std::string RayGenerationShader::end(const std::string_view emitterName, const std::string_view sppName, bool skipReturn)
+{
+    std::stringstream stream;
+
+    if (!skipReturn)
+        stream << "  device.generate_rays(" << emitterName << ", id, size, xmin, ymin, xmax, ymax, " << sppName << ")" << std::endl;
+
+    stream << "}" << std::endl;
+
+    return stream.str();
+}
+
+std::string RayGenerationShader::setup(LoaderContext& ctx)
+{
+    std::stringstream stream;
+
+    stream << begin(ctx) << std::endl
            << std::endl
            << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
 
@@ -38,8 +60,7 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
         stream << "  let emitter = make_camera_emitter(camera, iter, spp, " << pixel_sampler << ", init_raypayload);" << std::endl;
     }
 
-    stream << "  device.generate_rays(emitter, id, size, xmin, ymin, xmax, ymax, spp)" << std::endl
-           << "}" << std::endl;
+    stream << end();
 
     return stream.str();
 }

@@ -1,7 +1,7 @@
 #include "LoaderBSDF.h"
 #include "Loader.h"
+#include "LoaderUtils.h"
 #include "Logger.h"
-#include "ShaderUtils.h"
 #include "ShadingTree.h"
 
 #include "measured/KlemsLoader.h"
@@ -40,11 +40,11 @@ static std::string inline_microfacet(const std::string& name, ShadingTree& tree,
 
     std::stringstream stream;
     if (tree.hasParameter("alpha_u")) {
-        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf.local, "
+        stream << "  let md_" << LoaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf.local, "
                << tree.getInline("alpha_u") << ", "
                << tree.getInline("alpha_v") << ");" << std::endl;
     } else {
-        stream << "  let md_" << ShaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf.local, "
+        stream << "  let md_" << LoaderUtils::escapeIdentifier(name) << " = @|surf : SurfaceElement| " << distribution << "(surf.local, "
                << tree.getInline("alpha") << ", "
                << tree.getInline("alpha") << ");" << std::endl;
     }
@@ -57,7 +57,7 @@ static void bsdf_diffuse(std::ostream& stream, const std::string& name, const st
     tree.addColor("reflectance", *bsdf, Vector3f::Constant(0.5f));
 
     stream << tree.pullHeader()
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_diffuse_bsdf(surf, "
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_diffuse_bsdf(surf, "
            << tree.getInline("reflectance") << ");" << std::endl;
 
     tree.endClosure();
@@ -70,7 +70,7 @@ static void bsdf_orennayar(std::ostream& stream, const std::string& name, const 
     tree.addColor("reflectance", *bsdf, Vector3f::Constant(0.5f));
 
     stream << tree.pullHeader()
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_orennayar_bsdf(surf, "
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_orennayar_bsdf(surf, "
            << tree.getInline("alpha") << ", "
            << tree.getInline("reflectance") << ");" << std::endl;
 
@@ -87,7 +87,7 @@ static void bsdf_dielectric(std::ostream& stream, const std::string& name, const
     bool thin = bsdf->property("thin").getBool(bsdf->pluginType() == "thindielectric");
 
     stream << tree.pullHeader()
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| "
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| "
            << (thin ? "make_thin_glass_bsdf" : "make_glass_bsdf") << "(surf, "
            << tree.getInline("ext_ior") << ", "
            << tree.getInline("int_ior") << ", "
@@ -108,12 +108,12 @@ static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name,
     setup_microfacet(bsdf, tree);
     stream << tree.pullHeader()
            << inline_microfacet(name, tree, bsdf)
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_glass_bsdf(surf, "
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_glass_bsdf(surf, "
            << tree.getInline("ext_ior") << ", "
            << tree.getInline("int_ior") << ", "
            << tree.getInline("specular_reflectance") << ", "
            << tree.getInline("specular_transmittance") << ", "
-           << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
+           << "md_" << LoaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
 
     tree.endClosure();
 }
@@ -124,7 +124,7 @@ static void bsdf_mirror(std::ostream& stream, const std::string& name, const std
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
 
     stream << tree.pullHeader()
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_mirror_bsdf(surf, "
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_mirror_bsdf(surf, "
            << tree.getInline("specular_reflectance") << ");" << std::endl;
 
     tree.endClosure();
@@ -138,7 +138,7 @@ static void bsdf_conductor(std::ostream& stream, const std::string& name, const 
     tree.addColor("k", *bsdf, Vector3f(ABSORPTION_DEFAULT[0], ABSORPTION_DEFAULT[1], ABSORPTION_DEFAULT[2]));
 
     stream << tree.pullHeader()
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_conductor_bsdf(surf, "
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_conductor_bsdf(surf, "
            << tree.getInline("eta") << ", "
            << tree.getInline("k") << ", "
            << tree.getInline("specular_reflectance") << ");" << std::endl;
@@ -156,11 +156,11 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
     setup_microfacet(bsdf, tree);
     stream << tree.pullHeader()
            << inline_microfacet(name, tree, bsdf)
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_conductor_bsdf(surf, "
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_conductor_bsdf(surf, "
            << tree.getInline("eta") << ", "
            << tree.getInline("k") << ", "
            << tree.getInline("specular_reflectance") << ", "
-           << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
+           << "md_" << LoaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
 
     tree.endClosure();
 }
@@ -174,7 +174,7 @@ static void bsdf_plastic(std::ostream& stream, const std::string& name, const st
     tree.addNumber("int_ior", *bsdf, RUBBER_IOR);
 
     stream << tree.pullHeader()
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
            << tree.getInline("ext_ior") << ", "
            << tree.getInline("int_ior") << ", "
            << tree.getInline("diffuse_reflectance") << ", "
@@ -194,13 +194,13 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
     setup_microfacet(bsdf, tree);
     stream << tree.pullHeader()
            << inline_microfacet(name, tree, bsdf)
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
            << tree.getInline("ext_ior") << ", "
            << tree.getInline("int_ior") << ", "
            << tree.getInline("diffuse_reflectance") << ", "
            << "make_rough_conductor_bsdf(surf, color_builtins::black, color_builtins::white, "
            << tree.getInline("specular_reflectance") << ", "
-           << "md_" << ShaderUtils::escapeIdentifier(name) << "(surf)));" << std::endl;
+           << "md_" << LoaderUtils::escapeIdentifier(name) << "(surf)));" << std::endl;
 
     tree.endClosure();
 }
@@ -212,7 +212,7 @@ static void bsdf_phong(std::ostream& stream, const std::string& name, const std:
     tree.addNumber("exponent", *bsdf, 30);
 
     stream << tree.pullHeader()
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_phong_bsdf(surf, "
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_phong_bsdf(surf, "
            << tree.getInline("specular_reflectance") << ", "
            << tree.getInline("exponent") << ");" << std::endl;
 
@@ -240,7 +240,7 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
     bool is_thin = bsdf->property("thin").getBool(false);
 
     stream << tree.pullHeader()
-           << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_principled_bsdf(surf, "
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_principled_bsdf(surf, "
            << tree.getInline("base_color") << ", "
            << tree.getInline("ior") << ", "
            << tree.getInline("diffuse_transmission") << ", "
@@ -265,7 +265,7 @@ static std::pair<std::string, KlemsSpecification> setup_klems(const std::string&
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
-    std::string path = "data/klems_" + ShaderUtils::escapeIdentifier(name) + ".bin";
+    std::string path = "data/klems_" + LoaderUtils::escapeIdentifier(name) + ".bin";
 
     KlemsSpecification spec{};
     if (!KlemsLoader::prepare(filename, path, spec))
@@ -303,7 +303,7 @@ static void bsdf_klems(std::ostream& stream, const std::string& name, const std:
 
     const Vector3f upVector = bsdf->property("up").getVector3(Vector3f::UnitZ()).normalized();
 
-    const std::string id = ShaderUtils::escapeIdentifier(name);
+    const std::string id = LoaderUtils::escapeIdentifier(name);
     const auto data      = setup_klems(name, bsdf, tree.context());
 
     const std::string buffer_path = std::get<0>(data);
@@ -314,7 +314,7 @@ static void bsdf_klems(std::ostream& stream, const std::string& name, const std:
            << dump_klems_specification(spec) << ");" << std::endl
            << "  let bsdf_" << id << " : BSDFShader = @|_ray, _hit, surf| make_klems_bsdf(surf, "
            << tree.getInline("base_color") << ", "
-           << ShaderUtils::inlineVector(upVector) << ", "
+           << LoaderUtils::inlineVector(upVector) << ", "
            << "klems_" << id << ");" << std::endl;
 
     tree.endClosure();
@@ -325,7 +325,7 @@ static std::pair<std::string, TensorTreeSpecification> setup_tensortree(const st
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
-    std::string path = "data/tt_" + ShaderUtils::escapeIdentifier(name) + ".bin";
+    std::string path = "data/tt_" + LoaderUtils::escapeIdentifier(name) + ".bin";
 
     TensorTreeSpecification spec{};
     if (!TensorTreeLoader::prepare(filename, path, spec))
@@ -364,7 +364,7 @@ static void bsdf_tensortree(std::ostream& stream, const std::string& name, const
 
     const Vector3f upVector = bsdf->property("up").getVector3(Vector3f::UnitZ()).normalized();
 
-    const std::string id = ShaderUtils::escapeIdentifier(name);
+    const std::string id = LoaderUtils::escapeIdentifier(name);
     const auto data      = setup_tensortree(name, bsdf, tree.context());
 
     const std::string buffer_path      = std::get<0>(data);
@@ -375,7 +375,7 @@ static void bsdf_tensortree(std::ostream& stream, const std::string& name, const
            << dump_tt_specification(spec) << ");" << std::endl
            << "  let bsdf_" << id << " : BSDFShader = @|_ray, _hit, surf| make_tensortree_bsdf(surf, "
            << tree.getInline("base_color") << ", "
-           << ShaderUtils::inlineVector(upVector) << ", "
+           << LoaderUtils::inlineVector(upVector) << ", "
            << "tt_" << id << ");" << std::endl;
 
     tree.endClosure();
@@ -386,13 +386,13 @@ static void bsdf_twosided(std::ostream& stream, const std::string& name, const s
     // Ignore
     const std::string other = bsdf->property("bsdf").getString();
     stream << LoaderBSDF::generate(other, tree);
-    stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = bsdf_" << ShaderUtils::escapeIdentifier(other) << ";" << std::endl;
+    stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " = bsdf_" << LoaderUtils::escapeIdentifier(other) << ";" << std::endl;
 }
 
 static void bsdf_passthrough(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>&, ShadingTree& tree)
 {
     IG_UNUSED(tree);
-    stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_passthrough_bsdf(surf);" << std::endl;
+    stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_passthrough_bsdf(surf);" << std::endl;
 }
 
 static void bsdf_blend(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
@@ -402,11 +402,11 @@ static void bsdf_blend(std::ostream& stream, const std::string& name, const std:
 
     if (first.empty() || second.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdfs given" << std::endl;
-        stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
     } else if (first == second) {
         // Ignore it
         stream << LoaderBSDF::generate(first, tree);
-        stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " = bsdf_" << ShaderUtils::escapeIdentifier(first) << ";" << std::endl;
+        stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " = bsdf_" << LoaderUtils::escapeIdentifier(first) << ";" << std::endl;
     } else {
         tree.beginClosure();
         tree.addNumber("weight", *bsdf, 0.5f);
@@ -415,9 +415,9 @@ static void bsdf_blend(std::ostream& stream, const std::string& name, const std:
         stream << LoaderBSDF::generate(second, tree);
 
         stream << tree.pullHeader()
-               << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf("
-               << "bsdf_" << ShaderUtils::escapeIdentifier(first) << "(ray, hit, surf), "
-               << "bsdf_" << ShaderUtils::escapeIdentifier(second) << "(ray, hit, surf), "
+               << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf("
+               << "bsdf_" << LoaderUtils::escapeIdentifier(first) << "(ray, hit, surf), "
+               << "bsdf_" << LoaderUtils::escapeIdentifier(second) << "(ray, hit, surf), "
                << tree.getInline("weight") << ");" << std::endl;
 
         tree.endClosure();
@@ -431,7 +431,7 @@ static void bsdf_mask(std::ostream& stream, const std::string& name, const std::
 
     if (masked.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
     } else {
         tree.beginClosure();
         tree.addNumber("weight", *bsdf, 0.5f);
@@ -439,14 +439,14 @@ static void bsdf_mask(std::ostream& stream, const std::string& name, const std::
         stream << LoaderBSDF::generate(masked, tree);
 
         stream << tree.pullHeader()
-               << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf(";
+               << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf(";
         if (inverted) {
             stream
                 << "make_passthrough_bsdf(surf), "
-                << "bsdf_" << ShaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), ";
+                << "bsdf_" << LoaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), ";
         } else {
             stream
-                << "bsdf_" << ShaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), "
+                << "bsdf_" << LoaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), "
                 << "make_passthrough_bsdf(surf), ";
         }
         stream << tree.getInline("weight") << ");" << std::endl;
@@ -462,7 +462,7 @@ static void bsdf_cutoff(std::ostream& stream, const std::string& name, const std
 
     if (masked.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
     } else {
         tree.beginClosure();
         tree.addNumber("weight", *bsdf, 0.5f); // Only useful with textures or other patterns
@@ -471,15 +471,15 @@ static void bsdf_cutoff(std::ostream& stream, const std::string& name, const std
         stream << LoaderBSDF::generate(masked, tree);
 
         stream << tree.pullHeader()
-               << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf(";
+               << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf(";
 
         if (inverted) {
             stream
                 << "make_passthrough_bsdf(surf), "
-                << "bsdf_" << ShaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), ";
+                << "bsdf_" << LoaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), ";
         } else {
             stream
-                << "bsdf_" << ShaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), "
+                << "bsdf_" << LoaderUtils::escapeIdentifier(masked) << "(ray, hit, surf), "
                 << "make_passthrough_bsdf(surf), ";
         }
 
@@ -498,13 +498,13 @@ static void bsdf_normalmap(std::ostream& stream, const std::string& name, const 
 
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
     } else {
         stream << LoaderBSDF::generate(inner, tree);
 
         stream << tree.pullHeader()
-               << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_normalmap(surf, @|surf2| -> Bsdf { "
-               << " bsdf_" << ShaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) }, "
+               << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_normalmap(surf, @|surf2| -> Bsdf { "
+               << " bsdf_" << LoaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) }, "
                << tree.getInline("map") << ","
                << tree.getInline("strength") << ");" << std::endl;
     }
@@ -520,13 +520,13 @@ static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const st
 
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
     } else {
         stream << LoaderBSDF::generate(inner, tree);
 
         stream << tree.pullHeader()
-               << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_bumpmap(surf, "
-               << "@|surf2| -> Bsdf {  bsdf_" << ShaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) }, "
+               << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_bumpmap(surf, "
+               << "@|surf2| -> Bsdf {  bsdf_" << LoaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) }, "
                << "texture_dx(" << tree.getInline("map") << ", surf.tex_coords).r, "
                << "texture_dy(" << tree.getInline("map") << ", surf.tex_coords).r, "
                << tree.getInline("strength") << ");" << std::endl;
@@ -541,13 +541,13 @@ static void bsdf_doublesided(std::ostream& stream, const std::string& name, cons
 
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
     } else {
         stream << LoaderBSDF::generate(inner, tree);
 
         stream << tree.pullHeader()
-               << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_doublesided_bsdf(surf, "
-               << "@|surf2| -> Bsdf {  bsdf_" << ShaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) });" << std::endl;
+               << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_doublesided_bsdf(surf, "
+               << "@|surf2| -> Bsdf {  bsdf_" << LoaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) });" << std::endl;
     }
     tree.endClosure();
 }
@@ -613,7 +613,7 @@ std::string LoaderBSDF::generate(const std::string& name, ShadingTree& tree)
     }
 
     if (error)
-        stream << "  let bsdf_" << ShaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
 
     return stream.str();
 }

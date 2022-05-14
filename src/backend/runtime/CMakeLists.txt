@@ -56,10 +56,10 @@ set(SRC
     loader/LoaderTechnique.h
     loader/LoaderTexture.cpp
     loader/LoaderTexture.h
+    loader/LoaderUtils.cpp
+    loader/LoaderUtils.h
     loader/Parser.cpp
     loader/Parser.h
-    loader/ShaderUtils.cpp
-    loader/ShaderUtils.h
     loader/ShadingTree.cpp
     loader/ShadingTree.h
     loader/TechniqueInfo.h
@@ -122,6 +122,8 @@ set(SRC
     shader/RayGenerationShader.h
     shader/ScriptPreprocessor.cpp
     shader/ScriptPreprocessor.h
+    shader/ShaderUtils.cpp
+    shader/ShaderUtils.h
     table/DynTable.h
     table/SceneDatabase.h
 )

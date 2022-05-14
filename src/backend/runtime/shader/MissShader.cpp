@@ -1,11 +1,12 @@
 #include "MissShader.h"
 #include "Logger.h"
+#include "ShaderUtils.h"
 #include "loader/Loader.h"
 #include "loader/LoaderCamera.h"
 #include "loader/LoaderLight.h"
 #include "loader/LoaderMedium.h"
 #include "loader/LoaderTechnique.h"
-#include "loader/ShaderUtils.h"
+#include "loader/LoaderUtils.h"
 #include "loader/ShadingTree.h"
 
 #include <sstream>

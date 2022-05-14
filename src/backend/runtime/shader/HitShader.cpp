@@ -1,12 +1,13 @@
 #include "HitShader.h"
 #include "Logger.h"
+#include "ShaderUtils.h"
 #include "loader/Loader.h"
 #include "loader/LoaderBSDF.h"
 #include "loader/LoaderCamera.h"
 #include "loader/LoaderLight.h"
 #include "loader/LoaderMedium.h"
 #include "loader/LoaderTechnique.h"
-#include "loader/ShaderUtils.h"
+#include "loader/LoaderUtils.h"
 #include "loader/ShadingTree.h"
 
 #include <sstream>
@@ -37,7 +38,7 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
         stream << LoaderMedium::generate(tree) << std::endl;
 
     stream << "  let acc  = SceneAccessor {" << std::endl
-           << "    info     = " << ShaderUtils::inlineSceneInfo(ctx) << "," << std::endl
+           << "    info     = " << LoaderUtils::inlineSceneInfo(ctx) << "," << std::endl
            << "    shapes   = shapes," << std::endl
            << "    entities = entities," << std::endl
            << "  };" << std::endl
@@ -49,25 +50,7 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
            << "  };" << std::endl
            << std::endl;
 
-    const Material material = ctx.Environment.Materials.at(mat_id);
-    stream << LoaderBSDF::generate(material.BSDF, tree);
-
-    const bool isLight = material.hasEmission() && ctx.Environment.AreaLightsMap.count(material.Entity) > 0;
-
-    if (material.hasMediumInterface())
-        stream << "  let medium_interface = make_medium_interface(" << material.MediumInner << ", " << material.MediumOuter << ");" << std::endl;
-    else
-        stream << "  let medium_interface = no_medium_interface();" << std::endl;
-
-    if (isLight && requireLights) {
-        const uint32 light_id = ctx.Environment.AreaLightsMap.at(material.Entity);
-        stream << "  let shader : Shader = @|ray, hit, surf| make_emissive_material(" << mat_id << ", surf, bsdf_" << ShaderUtils::escapeIdentifier(material.BSDF) << "(ray, hit, surf), medium_interface,"
-               << " @lights(" << light_id << "));" << std::endl
-               << std::endl;
-    } else {
-        stream << "  let shader : Shader = @|ray, hit, surf| make_material(" << mat_id << ", bsdf_" << ShaderUtils::escapeIdentifier(material.BSDF) << "(ray, hit, surf), medium_interface);" << std::endl
-               << std::endl;
-    }
+    stream << ShaderUtils::generateMaterialShader(tree, mat_id, requireLights, "shader") << std::endl;
 
     // Include camera if necessary
     if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)

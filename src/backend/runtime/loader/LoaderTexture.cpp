@@ -1,7 +1,7 @@
 #include "LoaderTexture.h"
 #include "Loader.h"
+#include "LoaderUtils.h"
 #include "Logger.h"
-#include "ShaderUtils.h"
 #include "ShadingTree.h"
 #include "Transpiler.h"
 
@@ -40,12 +40,12 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
         wrap = getWrapMode(tex.property("wrap_mode").getString("repeat"));
     }
 
-    stream << "  let img_" << ShaderUtils::escapeIdentifier(name) << " = device.load_image(\"" << filename << "\");" << std::endl
-           << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_image_texture("
+    stream << "  let img_" << LoaderUtils::escapeIdentifier(name) << " = device.load_image(\"" << filename << "\");" << std::endl
+           << "  let tex_" << LoaderUtils::escapeIdentifier(name) << " : Texture = make_image_texture("
            << wrap << ", "
            << filter << ", "
-           << "img_" << ShaderUtils::escapeIdentifier(name) << ", "
-           << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
+           << "img_" << LoaderUtils::escapeIdentifier(name) << ", "
+           << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
 
     tree.endClosure();
 }
@@ -63,11 +63,11 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
     const Transformf transform = tex.property("transform").getTransform();
 
     stream << tree.pullHeader()
-           << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_checkerboard_texture("
+           << "  let tex_" << LoaderUtils::escapeIdentifier(name) << " : Texture = make_checkerboard_texture("
            << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
            << tree.getInline("color0") << ", "
            << tree.getInline("color1") << ", "
-           << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
+           << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
 
     tree.endClosure();
 }
@@ -87,12 +87,12 @@ static void tex_brick(std::ostream& stream, const std::string& name, const Parse
     const Transformf transform = tex.property("transform").getTransform();
 
     stream << tree.pullHeader()
-           << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_brick_texture("
+           << "  let tex_" << LoaderUtils::escapeIdentifier(name) << " : Texture = make_brick_texture("
            << tree.getInline("color0") << ", "
            << tree.getInline("color1") << ", "
            << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
            << "make_vec2(" << tree.getInline("gap_x") << ", " << tree.getInline("gap_y") << "), "
-           << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
+           << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
 
     tree.endClosure();
 }
@@ -113,11 +113,11 @@ static void tex_gen_noise(const std::string& func, std::ostream& stream, const s
     std::string afunc = tex.property("colored").getBool() ? "c" + func : func;
 
     stream << tree.pullHeader()
-           << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_" << afunc << "_texture("
+           << "  let tex_" << LoaderUtils::escapeIdentifier(name) << " : Texture = make_" << afunc << "_texture("
            << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
            << tree.getInline("color") << ", "
            << tree.getInline("seed") << ", "
-           << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
+           << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
 
     tree.endClosure();
 }
@@ -206,19 +206,19 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
 
     // Pull texture usage
     stream << tree.pullHeader()
-           << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = @|uv: Vec2| -> Color{" << std::endl;
+           << "  let tex_" << LoaderUtils::escapeIdentifier(name) << " : Texture = @|uv: Vec2| -> Color{" << std::endl;
 
     if (!failed) {
         // Inline custom variables
         for (const auto& pair : tex.properties()) {
             if (startsWith(pair.first, "num_"))
-                stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(4)) << " = " << tree.getInline(pair.first) << ";" << std::endl;
+                stream << "    let var_tex_" << LoaderUtils::escapeIdentifier(pair.first.substr(4)) << " = " << tree.getInline(pair.first) << ";" << std::endl;
             else if (startsWith(pair.first, "color_"))
-                stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(6)) << " = " << tree.getInline(pair.first) << ";" << std::endl;
+                stream << "    let var_tex_" << LoaderUtils::escapeIdentifier(pair.first.substr(6)) << " = " << tree.getInline(pair.first) << ";" << std::endl;
             else if (startsWith(pair.first, "vec_"))
-                stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(4)) << " = " << ShaderUtils::inlineVector(pair.second.getVector3()) << ";" << std::endl;
+                stream << "    let var_tex_" << LoaderUtils::escapeIdentifier(pair.first.substr(4)) << " = " << LoaderUtils::inlineVector(pair.second.getVector3()) << ";" << std::endl;
             else if (startsWith(pair.first, "bool_"))
-                stream << "    let var_tex_" << ShaderUtils::escapeIdentifier(pair.first.substr(5)) << " = " << (pair.second.getBool() ? "true" : "false") << ";" << std::endl;
+                stream << "    let var_tex_" << LoaderUtils::escapeIdentifier(pair.first.substr(5)) << " = " << (pair.second.getBool() ? "true" : "false") << ";" << std::endl;
         }
     }
 
@@ -238,9 +238,9 @@ static void tex_transform(std::ostream& stream, const std::string& name, const P
     const Transformf transform = tex.property("transform").getTransform();
 
     stream << tree.pullHeader()
-           << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_transform_texture("
+           << "  let tex_" << LoaderUtils::escapeIdentifier(name) << " : Texture = make_transform_texture("
            << tree.getInline("texture") << ", "
-           << ShaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
+           << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
 
     tree.endClosure();
 }
@@ -278,7 +278,7 @@ std::string LoaderTexture::generate(const std::string& name, const Parser::Objec
     IG_LOG(L_ERROR) << "No texture type '" << obj.pluginType() << "' available" << std::endl;
 
     std::stringstream stream;
-    stream << "  let tex_" << ShaderUtils::escapeIdentifier(name) << " : Texture = make_invalid_texture();" << std::endl;
+    stream << "  let tex_" << LoaderUtils::escapeIdentifier(name) << " : Texture = make_invalid_texture();" << std::endl;
     return stream.str();
 }
 
