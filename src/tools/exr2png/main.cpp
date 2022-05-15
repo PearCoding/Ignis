@@ -3,8 +3,10 @@
 
 #include "Image.h"
 
+IG_BEGIN_IGNORE_WARNINGS
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+IG_END_IGNORE_WARNINGS
 
 using namespace IG;
 inline float gamma(float c)

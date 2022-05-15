@@ -71,8 +71,22 @@
 #else // FIXME: Really use cpu dependent assembler?
 #define IG_DEBUG_BREAK() __asm__ __volatile__("int $0x03")
 #define IG_FUNCTION_NAME __PRETTY_FUNCTION__
+#if defined(IG_CC_GNU)
+#define IG_BEGIN_IGNORE_WARNINGS                          \
+    IG_PRAGMA(GCC diagnostic push)                        \
+    IG_PRAGMA(GCC diagnostic ignored "-Wunused-variable") \
+    IG_PRAGMA(GCC diagnostic ignored "-Wmissing-field-initializers")
+#define IG_END_IGNORE_WARNINGS IG_PRAGMA(GCC diagnostic pop)
+#elif defined(IG_CC_CLANG)
+#define IG_BEGIN_IGNORE_WARNINGS                            \
+    IG_PRAGMA(clang diagnostic push)                        \
+    IG_PRAGMA(clang diagnostic ignored "-Wunused-variable") \
+    IG_PRAGMA(clang diagnostic ignored "-Wmissing-field-initializers")
+#define IG_END_IGNORE_WARNINGS IG_PRAGMA(clang diagnostic pop)
+#else
 #define IG_BEGIN_IGNORE_WARNINGS
 #define IG_END_IGNORE_WARNINGS
+#endif
 #endif
 
 #if defined(IG_CC_GNU) || defined(IG_CC_CLANG)

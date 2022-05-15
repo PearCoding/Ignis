@@ -159,6 +159,11 @@ target_compile_definitions(ig_lib_runtime PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
 if(IG_WITH_ASSERTS)
   target_compile_definitions(ig_lib_runtime PUBLIC "IG_WITH_ASSERTS")
 endif()
+if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  # Get rid of annoying pragma warnings 
+  # Normally we would handle this via diagnostics, but https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
+  target_compile_options(ig_lib_runtime PRIVATE -Wno-unknown-pragmas)
+endif()
 target_compile_features(ig_lib_runtime PUBLIC cxx_std_17)
 add_checks(ig_lib_runtime)
 set_target_properties(ig_lib_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
