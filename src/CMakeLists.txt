@@ -8,4 +8,6 @@ if(IG_WITH_TOOLS)
 add_subdirectory(tools)
 endif()
 
+if(BUILD_TESTING)
 add_subdirectory(tests)
+endif()

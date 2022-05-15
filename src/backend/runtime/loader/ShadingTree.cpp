@@ -203,7 +203,7 @@ std::string ShadingTree::handleTexture(const std::string& expr, const std::strin
             if (res.value().ScalarOutput) {
                 return res.value().Expr;
             } else {
-                IG_LOG(L_WARNING) << "Expected expression '" << expr << "' to return a number but a color was returned instead. Using average instead" << std::endl;
+                IG_LOG(L_WARNING) << "Expected expression '" << expr << "' to return a number but a color was returned. Using average instead" << std::endl;
                 return "color_average(" + res.value().Expr + ")";
             }
         }
