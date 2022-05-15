@@ -16,7 +16,7 @@
 #elif defined(__APPLE__)
 #define IG_OS_APPLE
 #else
-#error Your operating system is currently not supported
+#warning Your operating system is currently not supported
 #endif
 
 // Compiler
@@ -68,8 +68,12 @@
 #define IG_FUNCTION_NAME __FUNCSIG__
 #define IG_BEGIN_IGNORE_WARNINGS IG_PRAGMA(warning(push, 0))
 #define IG_END_IGNORE_WARNINGS IG_PRAGMA(warning(pop))
-#else // FIXME: Really use cpu dependent assembler?
+#else
+#if defined(__x86_64__) || defined(__i386__)
 #define IG_DEBUG_BREAK() __asm__ __volatile__("int $0x03")
+#else
+#define IG_DEBUG_BREAK() IG_NOOP
+#endif
 #define IG_FUNCTION_NAME __PRETTY_FUNCTION__
 #if defined(IG_CC_GNU)
 #define IG_BEGIN_IGNORE_WARNINGS                          \
@@ -92,14 +96,10 @@
 #if defined(IG_CC_GNU) || defined(IG_CC_CLANG)
 #define IG_LIKELY(x) __builtin_expect(!!(x), 1)
 #define IG_UNLIKELY(x) __builtin_expect(!!(x), 0)
-#define IG_MAYBE_UNUSED __attribute__((unused))
 #else
 #define IG_LIKELY(x) (x)
 #define IG_UNLIKELY(x) (x)
-#define IG_MAYBE_UNUSED
 #endif
-
-#define IG_RESTRICT __restrict
 
 #if defined(IG_WITH_ASSERTS) || (!defined(IG_NO_ASSERTS) && defined(IG_DEBUG))
 #include <assert.h>
@@ -142,23 +142,6 @@ private:                         \
 #define IG_CLASS_NON_CONSTRUCTABLE(C) \
 private:                              \
     C() = delete
-
-#define IG_CLASS_STACK_ONLY(C)                     \
-private:                                           \
-    static void* operator new(size_t)    = delete; \
-    static void* operator new[](size_t)  = delete; \
-    static void operator delete(void*)   = delete; \
-    static void operator delete[](void*) = delete
-
-#if defined(IG_CC_GNU) || defined(IG_CC_CLANG)
-#define IG_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
-#define IG_NO_SANITIZE_THREAD __attribute__((no_sanitize_thread))
-#define IG_NO_SANITIZE_UNDEFINED __attribute__((no_sanitize_undefined))
-#else
-#define IG_NO_SANITIZE_ADDRESS
-#define IG_NO_SANITIZE_THREAD
-#define IG_NO_SANITIZE_UNDEFINED
-#endif
 
 #if defined(IG_CC_MSC)
 #define IG_EXPORT __declspec(dllexport)

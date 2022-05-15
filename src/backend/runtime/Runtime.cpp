@@ -219,7 +219,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
 
 void Runtime::step()
 {
-    if (IG_UNLIKELY(mOptions.IsTracer)) {
+    if (mOptions.IsTracer) {
         IG_LOG(L_ERROR) << "Trying to use step() in a trace driver!" << std::endl;
         return;
     }
@@ -267,7 +267,7 @@ void Runtime::stepVariant(size_t variant)
 
 void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
 {
-    if (IG_UNLIKELY(!mOptions.IsTracer)) {
+    if (!mOptions.IsTracer) {
         IG_LOG(L_ERROR) << "Trying to use trace() in a camera driver!" << std::endl;
         return;
     }
