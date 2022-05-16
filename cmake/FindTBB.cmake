@@ -13,10 +13,10 @@ if(TBB_FOUND)
   return()
 endif()
 
-SET(TBB_FOUND FALSE)
-SET(TBB_INCLUDE_DIRS)
-SET(TBB_LIBRARIES)
-SET(TBB_ONEAPI FALSE)
+set(TBB_FOUND FALSE)
+set(TBB_INCLUDE_DIRS)
+set(TBB_LIBRARIES)
+set(TBB_ONEAPI FALSE)
 
 set(_def_search_paths
   ~/Library/Frameworks
@@ -69,7 +69,7 @@ if(TBB_VERSION_FILE)
   string(REGEX REPLACE ".*#define TBB_VERSION_PATCH[ \t\r\n]+([0-9]+).*" "\\1"
       TBB_VERSION_PATCH "${_tbb_version_file}")
   
-  if(NOT TBB_VERSION_PATCH)
+  if(NOT CMAKE_MATCH_1 STREQUAL TBB_VERSION_PATCH)
     string(REGEX REPLACE ".*#define TBB_INTERFACE_VERSION[ \t\r\n]+([0-9]+).*" "\\1"
       TBB_VERSION_PATCH "${_tbb_version_file}")
   endif()
@@ -164,7 +164,7 @@ foreach(component ${TBB_FIND_COMPONENTS})
   endif()
 endforeach(component)
 
-if (TBB_INCLUDE_DIRS AND TBB_LIBRARIES)
+if(TBB_INCLUDE_DIRS AND TBB_LIBRARIES)
 	set(TBB_FOUND TRUE)
 endif()
 
