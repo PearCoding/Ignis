@@ -45,10 +45,6 @@ void ScriptPreprocessor::loadStdLibFromDirectory(const std::filesystem::path& di
 {
     std::stringstream lib;
 
-    // Fixme: This should not be handled here
-    // Add only the first file from the (internal api) as it contains runtime specific stuff (which should be in the AnyDSL runtime library)
-    lib << ig_api[0];
-
     // Iterate through given directory in search for *.art files. Files with a starting . are ignored
     for (const auto& dirEntry : std::filesystem::recursive_directory_iterator(dir, std::filesystem::directory_options::skip_permission_denied)) {
         if (dirEntry.is_regular_file()) {
