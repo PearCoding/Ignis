@@ -23,7 +23,7 @@
 #include <type_traits>
 #include <variant>
 
-#include <tbb/concurrent_vector.h>
+#include <tbb/concurrent_queue.h>
 
 #if defined(DEVICE_NVVM) || defined(DEVICE_AMD)
 #define DEVICE_GPU
@@ -89,8 +89,13 @@ struct TemporaryStorageHostProxy {
     anydsl::Array<int32_t> ray_ends;
 };
 
-constexpr size_t InvalidThreadID = (size_t)-1;
-thread_local size_t sThreadID    = InvalidThreadID;
+struct CPUData {
+    anydsl::Array<float> cpu_primary;
+    anydsl::Array<float> cpu_secondary;
+    TemporaryStorageHostProxy temporary_storage_host;
+    IG::Statistics stats;
+};
+thread_local CPUData* sThreadData = nullptr;
 
 constexpr size_t GPUStreamBufferCount = 2;
 class Interface {
@@ -140,14 +145,9 @@ public:
     };
     std::unordered_map<int32_t, DeviceData> devices;
 
-    struct CPUData {
-        anydsl::Array<float> cpu_primary;
-        anydsl::Array<float> cpu_secondary;
-        TemporaryStorageHostProxy temporary_storage_host;
-        IG::Statistics stats;
-    };
     std::mutex thread_mutex;
-    tbb::concurrent_vector<std::unique_ptr<CPUData>> thread_data;
+    std::vector<std::unique_ptr<CPUData>> thread_data;
+    tbb::concurrent_bounded_queue<CPUData*> available_thread_data;
 
     std::vector<anydsl::Array<float>> aovs;
     anydsl::Array<float> host_pixels;
@@ -180,6 +180,7 @@ public:
         IG_LOGGER = *setup.logger;
 
         setupFramebuffer();
+        setupThreadData();
     }
 
     inline ~Interface() = default;
@@ -214,23 +215,50 @@ public:
         return array;
     }
 
+    inline void setupThreadData()
+    {
+#ifdef DEVICE_GPU
+        const static size_t max_threads = 1;
+#else
+        const static size_t max_threads = std::thread::hardware_concurrency() + 1;
+#endif
+
+        available_thread_data.set_capacity(max_threads);
+
+        for (size_t t = 0; t < max_threads; ++t) {
+            CPUData* ptr = thread_data.emplace_back(std::make_unique<CPUData>()).get();
+            available_thread_data.push(ptr);
+        }
+    }
+
     inline void registerThread()
     {
-        if (sThreadID != InvalidThreadID)
+        if (sThreadData != nullptr)
             return;
 
-        // FIXME: This does not work well on Windows. New threads are generated continously...
-        // This polutes the array which will get out of memory for extreme work loads
-        const auto it = thread_data.emplace_back(std::make_unique<CPUData>());
-        sThreadID     = std::distance(thread_data.begin(), it);
+        CPUData* ptr = nullptr;
+        while (!available_thread_data.pop(ptr))
+            std::this_thread::yield();
 
-        IG_LOG(IG::L_DEBUG) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " with id 0x" << std::hex << sThreadID << std::dec << std::endl;
+        if (ptr == nullptr)
+            IG_LOG(IG::L_FATAL) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " failed!" << std::endl;
+        else
+            sThreadData = ptr;
+    }
+
+    inline void unregisterThread()
+    {
+        if (sThreadData == nullptr)
+            return;
+
+        available_thread_data.push(sThreadData);
+        sThreadData = nullptr;
     }
 
     inline CPUData* getThreadData()
     {
-        IG_ASSERT(sThreadID != InvalidThreadID, "Thread not registered");
-        return thread_data.at(sThreadID).get();
+        IG_ASSERT(sThreadData != nullptr, "Thread not registered");
+        return sThreadData;
     }
 
     inline anydsl::Array<float>& getCPUPrimaryStream(size_t size)
@@ -903,6 +931,8 @@ void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRen
 
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.endShaderLaunch(IG::ShaderType::Device, {});
+
+    sInterface->unregisterThread();
 }
 
 void glue_setup(const DriverSetupSettings& settings)
@@ -956,7 +986,7 @@ void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings
     float* in_pixels            = sInterface->getAOVImage(dev_id, (int)driver_settings.AOV);
     uint32_t* device_out_pixels = sInterface->getTonemapImage(dev_id);
 #else
-    float* in_pixels            = sInterface->getAOVImage(0, (int)driver_settings.AOV);
+    float* in_pixels = sInterface->getAOVImage(0, (int)driver_settings.AOV);
     uint32_t* device_out_pixels = out_pixels;
 #endif
 
@@ -991,7 +1021,7 @@ void glue_imageinfo(size_t device, const IG::ImageInfoSettings& driver_settings,
 #endif
     float* in_pixels = sInterface->getAOVImage(dev_id, (int)driver_settings.AOV);
 #else
-    float* in_pixels            = sInterface->getAOVImage(0, (int)driver_settings.AOV);
+    float* in_pixels = sInterface->getAOVImage(0, (int)driver_settings.AOV);
 #endif
 
     ImageInfoSettings settings;
@@ -1331,6 +1361,11 @@ IG_EXPORT void ignis_gpu_swap_secondary_streams(int dev)
 IG_EXPORT void ignis_register_thread()
 {
     sInterface->registerThread();
+}
+
+IG_EXPORT void ignis_unregister_thread()
+{
+    sInterface->unregisterThread();
 }
 
 IG_EXPORT int ignis_handle_ray_generation(int* id, int size, int xmin, int ymin, int xmax, int ymax)

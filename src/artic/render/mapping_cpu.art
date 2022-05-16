@@ -736,6 +736,8 @@ fn @cpu_trace( scene: SceneGeometry
                 }
             }
         }
+
+        ignis_unregister_thread();
     }
 }
 
