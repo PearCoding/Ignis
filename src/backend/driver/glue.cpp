@@ -147,7 +147,10 @@ public:
 
     std::mutex thread_mutex;
     std::vector<std::unique_ptr<CPUData>> thread_data;
-    tbb::concurrent_bounded_queue<CPUData*> available_thread_data;
+
+#ifndef DEVICE_GPU
+    tbb::concurrent_queue<CPUData*> available_thread_data;
+#endif
 
     std::vector<anydsl::Array<float>> aovs;
     anydsl::Array<float> host_pixels;
@@ -218,41 +221,43 @@ public:
     inline void setupThreadData()
     {
 #ifdef DEVICE_GPU
-        const static size_t max_threads = 1;
+        sThreadData = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
 #else
         const static size_t max_threads = std::thread::hardware_concurrency() + 1;
-#endif
-
-        available_thread_data.set_capacity(max_threads);
 
         for (size_t t = 0; t < max_threads; ++t) {
             CPUData* ptr = thread_data.emplace_back(std::make_unique<CPUData>()).get();
             available_thread_data.push(ptr);
         }
+#endif
     }
 
     inline void registerThread()
     {
+#ifndef DEVICE_GPU
         if (sThreadData != nullptr)
             return;
 
         CPUData* ptr = nullptr;
-        while (!available_thread_data.pop(ptr))
+        while (!available_thread_data.try_pop(ptr))
             std::this_thread::yield();
 
         if (ptr == nullptr)
             IG_LOG(IG::L_FATAL) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " failed!" << std::endl;
         else
             sThreadData = ptr;
+#endif
     }
 
     inline void unregisterThread()
     {
+#ifndef DEVICE_GPU
         if (sThreadData == nullptr)
             return;
 
         available_thread_data.push(sThreadData);
         sThreadData = nullptr;
+#endif
     }
 
     inline CPUData* getThreadData()
