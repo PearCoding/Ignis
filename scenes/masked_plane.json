@@ -39,7 +39,7 @@
 		{"type":"bumpmap", "name": "mat-Back", "bsdf":"mat-BackInner", "map":"perlin(20*uv)*voronoi(15*uv)*0.02"},
 		{"type":"diffuse", "name": "mat-Floor", "reflectance":"check(uv*2*sin(uv.x*4*Pi) + P.xy*avg(uv) - vec2(Eps, E)) * select(uv.x > noise(sum(uv)), color(1,0.5,0), color(0,0.5,1))"},
 		{"type":"diffuse", "name": "mat-PlaneSurface", "reflectance":[0, 0.552, 0.721]},
-		{"type":"mask", "name": "mat-Plane", "bsdf": "mat-PlaneSurface", "weight":"mask"}
+		{"type":"mask", "name": "mat-Plane", "bsdf": "mat-PlaneSurface", "weight":"mask.r"}
 	],
 	"shapes": [
 		{"type":"rectangle", "name":"Floor", "width": 10, "height": 10},

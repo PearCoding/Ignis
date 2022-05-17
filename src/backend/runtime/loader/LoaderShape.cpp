@@ -115,9 +115,10 @@ inline TriMesh setup_mesh_disk(const Object& elem)
 
 inline TriMesh setup_mesh_obj(const std::string& name, const Object& elem, const LoaderContext& ctx)
 {
+    int shape_index     = elem.property("shape_index").getInteger(-1);
     const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load obj file " << filename << std::endl;
-    auto trimesh = obj::load(filename);
+    auto trimesh = obj::load(filename, shape_index < 0 ? std::nullopt : std::make_optional(shape_index));
     if (trimesh.vertices.empty()) {
         IG_LOG(L_WARNING) << "Shape '" << name << "': Can not load shape given by file " << filename << std::endl;
         return TriMesh();

@@ -19,11 +19,11 @@
 	],
 	"shapes": [
 		{"type":"ply", "name":"Bottom", "filename":"meshes/Bottom.ply"},
-		{"type":"ply", "name":"dobj", "filename":"meshes/Diamond.ply"}
+		{"type":"ply", "name":"Diamond", "filename":"meshes/Diamond.ply"}
 	],
 	"entities": [
 		{"name":"Bottom","shape":"Bottom", "bsdf":"mat-GrayWall"},
-		{"name":"dobj1","shape":"dobj", "bsdf":"mat-Diamond"}
+		{"name":"Diamond","shape":"Diamond", "bsdf":"mat-Diamond"}
 	],
 	"lights": [
 		{"type":"sky", "name":"Sky"},
