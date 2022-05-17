@@ -11,7 +11,7 @@ namespace IG::obj {
 
 using ObjIndex = std::tuple<uint32, uint32, uint32>;
 
-struct ObjIndexHash : public std::unary_function<ObjIndex, std::size_t> {
+struct ObjIndexHash {
     std::size_t operator()(const ObjIndex& k) const
     {
         const size_t h0 = std::hash<uint32>{}(std::get<0>(k));
@@ -125,7 +125,7 @@ TriMesh load(const std::filesystem::path& path, const std::optional<size_t>& sha
 
         const auto it = index_map.find(t);
         if (it == index_map.end()) {
-            uint32 id    = index_map.size();
+            uint32 id    = static_cast<uint32>(index_map.size());
             index_map[t] = id;
             return std::make_tuple(true, id);
         } else {
@@ -141,14 +141,14 @@ TriMesh load(const std::filesystem::path& path, const std::optional<size_t>& sha
             if (IG_LIKELY(ni >= 0))
                 tri_mesh.normals.emplace_back(attrib.normals[3 * ni + 0], attrib.normals[3 * ni + 1], attrib.normals[3 * ni + 2]);
             else
-                tri_mesh.normals.emplace_back(0, 0, 1); // TODO: Maybe fix with a follow-up pass?
+                tri_mesh.normals.emplace_back(0.0f, 0.0f, 1.0f); // TODO: Maybe fix with a follow-up pass?
         }
 
         if (has_tex) {
             if (IG_LIKELY(ti >= 0))
                 tri_mesh.texcoords.emplace_back(attrib.texcoords[2 * ti + 0], attrib.texcoords[2 * ti + 1]);
             else
-                tri_mesh.texcoords.emplace_back(0, 0);
+                tri_mesh.texcoords.emplace_back(0.0f, 0.0f);
         }
     };
 
