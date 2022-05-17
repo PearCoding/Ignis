@@ -331,6 +331,11 @@ Wavefront Object Format (:monosp:`obj`)
    - *None*
    - Path to a valid .obj file.
 
+ * - shape_index
+   - |int|
+   - -1
+   - If greater or equal 0 a specific shape given by the index will be loaded, else all shapes will be merged to one.
+
  * - flip_normals
    - |bool|
    - false

@@ -679,17 +679,22 @@ The type has to be one of the shape listed at this section below.</p>
 <td><p><em>None</em></p></td>
 <td><p>Path to a valid .obj file.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">flip_normals</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">shape_index</span></p></td>
+<td><p><span class="paramtype">integer</span></p></td>
+<td><p>-1</p></td>
+<td><p>If greater or equal 0 a specific shape given by the index will be loaded, else all shapes will be merged to one.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
 <td><p>false</p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">face_normals</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
 <td><p>false</p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">transform</span></p></td>
 <td><p><span class="paramtype">transform</span></p></td>
 <td><p>Identity</p></td>
 <td><p>Apply given transformation to shape.</p></td>
