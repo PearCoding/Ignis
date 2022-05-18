@@ -163,8 +163,8 @@
             "type": "object",
             "required": [],
             "properties": { 
-                "position": { "$ref":"#/definitions/Vector3" },
-                "rotation": { "$ref":"#/definitions/Vector4" },
+                "translate": { "$ref":"#/definitions/Vector3" },
+                "rotate": { "$ref":"#/definitions/Vector4" },
                 "scale": { 
                     "oneOf":[
                         {"$ref":"#/definitions/Vector3"},

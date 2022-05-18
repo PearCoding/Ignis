@@ -16,8 +16,7 @@ CPMAddPackage(
 
 SET(SRC_FILES 
     main.cpp
-    imgui_sdl.cpp
-    imgui_sdl.h
+    imgui_impl.cpp
     Inspector.cpp
     Inspector.h
     Pose.cpp

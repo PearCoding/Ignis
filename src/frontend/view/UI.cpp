@@ -7,7 +7,9 @@
 
 #include "imgui.h"
 #include "imgui_markdown.h"
-#include "imgui_sdl.h"
+
+#include "backends/imgui_impl_sdl.h"
+#include "backends/imgui_impl_sdlrenderer.h"
 
 #include "Inspector.h"
 
@@ -129,9 +131,6 @@ public:
         Width  = width;
         Height = height;
         setupTextureBuffer((size_t)width, (size_t)height);
-
-        ImGuiSDL::Deinitialize();
-        ImGuiSDL::Initialize(Renderer, width, height);
     }
 
     [[nodiscard]] inline const float* currentPixels() const
@@ -182,6 +181,8 @@ public:
         SDL_Event event;
         const bool hover = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
         while (SDL_PollEvent(&event)) {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+
             bool key_down = event.type == SDL_KEYDOWN;
             switch (event.type) {
             case SDL_TEXTINPUT:
@@ -793,7 +794,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
         SDL_WINDOWPOS_UNDEFINED,
         (int)width,
         (int)height,
-        SDL_WINDOW_RESIZABLE);
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
     if (!mInternal->Window) {
         IG_LOG(L_FATAL) << "Cannot create SDL window: " << SDL_GetError() << std::endl;
@@ -801,7 +802,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
     }
     SDL_SetWindowMinimumSize(mInternal->Window, 64, 64);
 
-    mInternal->Renderer = SDL_CreateRenderer(mInternal->Window, -1, 0);
+    mInternal->Renderer = SDL_CreateRenderer(mInternal->Window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
     if (!mInternal->Renderer) {
         IG_LOG(L_FATAL) << "Cannot create SDL renderer: " << SDL_GetError() << std::endl;
         throw std::runtime_error("Could not setup UI");
@@ -814,10 +815,10 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
-    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // if enabled -> ImGuiKey_Space has to be mapped
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     ImGui::StyleColorsDark();
-
-    ImGuiSDL::Initialize(mInternal->Renderer, (int)width, (int)height);
+    ImGui_ImplSDL2_InitForSDLRenderer(mInternal->Window, mInternal->Renderer);
+    ImGui_ImplSDLRenderer_Init(mInternal->Renderer);
 
     mInternal->PoseManager.load(POSE_FILE);
 
@@ -829,8 +830,8 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
 
 UI::~UI()
 {
-    ImGuiSDL::Deinitialize();
-
+    ImGui_ImplSDLRenderer_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
     SDL_DestroyTexture(mInternal->Texture);
     SDL_DestroyRenderer(mInternal->Renderer);
     SDL_DestroyWindow(mInternal->Window);
@@ -949,12 +950,14 @@ void UI::update(size_t iter, size_t samples)
     SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr);
 
     if (mInternal->ShowUI || mInternal->ShowInspector || mInternal->ShowHelp) {
+        ImGui_ImplSDLRenderer_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
         mInternal->handleImgui(iter, samples);
         if (mInternal->ShowHelp)
             handleHelp();
         ImGui::Render();
-        ImGuiSDL::Render(ImGui::GetDrawData());
+        ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     }
 
     SDL_RenderPresent(mInternal->Renderer);
