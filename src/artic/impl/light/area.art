@@ -9,7 +9,7 @@ fn @make_area_light(area: AreaEmitter, color_f: Texture) = Light {
     sample_direct = @ |rnd, from_surf| {
         let (pos, n, coords, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
         let dir = vec3_sub(from_surf.point, pos);
-        let cos = vec3_dot(dir, n) / vec3_len(dir);
+        let cos = safe_div(vec3_dot(dir, n), vec3_len(dir));
         make_direct_sample(pos, color_f(coords), area_pdf, cosine_hemisphere_pdf(cos), cos)
     },
     sample_emission = @ |rnd| {

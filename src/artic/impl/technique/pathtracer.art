@@ -180,7 +180,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         let mut inflights = 0;
         let mut color     = color_builtins::black;
 
-        for light_id in unroll(0, num_lights) {
+        for light_id in safe_unroll(0, num_lights) {
             let light = @lights(light_id);
             // Do not include delta lights or finite lights
             if light.infinite && !light.delta {

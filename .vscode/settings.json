@@ -142,6 +142,7 @@
         "bsdf",
         "bsdfs",
         "klems",
+        "pathtracer",
         "raytracer",
         "tensortree",
         "wireframe"

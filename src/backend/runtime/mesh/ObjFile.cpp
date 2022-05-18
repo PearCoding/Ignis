@@ -195,13 +195,13 @@ TriMesh load(const std::filesystem::path& path, const std::optional<size_t>& sha
     //     IG_LOG(L_WARNING) << "ObjFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
 
     if (!has_norms) {
-        IG_LOG(L_WARNING) << "ObjFile " << path << ": No valid normals given. Recalculating " << std::endl;
+        IG_LOG(L_INFO) << "ObjFile " << path << ": No valid normals given. Recalculating " << std::endl;
         tri_mesh.computeVertexNormals();
     }
 
     // Texcoords
     if (!has_tex) {
-        IG_LOG(L_WARNING) << "ObjFile " << path << ": No texture coordinates are present, using default value." << std::endl;
+        IG_LOG(L_INFO) << "ObjFile " << path << ": No texture coordinates are present, using default value." << std::endl;
         tri_mesh.makeTexCoordsZero();
     }
 

@@ -1,9 +1,0 @@
-{
-	"technique": {
-		"type": "photonmapper",
-		"max_depth": 64
-	},
-	"externals": [
-		{"filename":"diamond_scene.json"}
-	]
-}

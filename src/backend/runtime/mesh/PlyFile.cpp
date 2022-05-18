@@ -369,7 +369,7 @@ TriMesh load(const std::filesystem::path& path)
     //     IG_LOG(L_WARNING) << "PlyFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
 
     if (trimesh.normals.empty()) {
-        IG_LOG(L_WARNING) << "PlyFile " << path << ": No normals are present, computing smooth approximation." << std::endl;
+        IG_LOG(L_INFO) << "PlyFile " << path << ": No normals are present, computing smooth approximation." << std::endl;
         trimesh.computeVertexNormals();
     } else {
         bool hasBadNormals = false;
@@ -379,7 +379,7 @@ TriMesh load(const std::filesystem::path& path)
     }
 
     if (trimesh.texcoords.empty()) {
-        IG_LOG(L_WARNING) << "PlyFile " << path << ": No texture coordinates are present, using default value." << std::endl;
+        IG_LOG(L_INFO) << "PlyFile " << path << ": No texture coordinates are present, using default value." << std::endl;
         trimesh.makeTexCoordsZero();
     }
 

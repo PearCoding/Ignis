@@ -263,7 +263,7 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
                << "    }" << std::endl
                << "  };" << std::endl;
 
-        stream << "  let ppm_radius = ppm_compute_radius(" << radius << ", settings.iter);" << std::endl;
+        stream << "  let ppm_radius = ppm_compute_radius(" << radius * ctx.Environment.SceneDiameter << ", settings.iter);" << std::endl;
     }
 
     stream << "  let scene_bbox  = " << LoaderUtils::inlineSceneBBox(ctx) << ";" << std::endl

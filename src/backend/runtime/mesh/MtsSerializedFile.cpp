@@ -308,7 +308,7 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
     //     IG_LOG(L_WARNING) << "MtsFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
 
     if (!(mesh_flags & MF_VERTEXNORMALS)) {
-        IG_LOG(L_WARNING) << "MtsFile " << path << ": No normals are present, computing smooth approximation." << std::endl;
+        IG_LOG(L_INFO) << "MtsFile " << path << ": No normals are present, computing smooth approximation." << std::endl;
         trimesh.computeVertexNormals();
     } else {
         bool hasBadNormals = false;
@@ -318,7 +318,7 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
     }
 
     if (!(mesh_flags & MF_TEXCOORDS)) {
-        IG_LOG(L_WARNING) << "MtsFile " << path << ": No texture coordinates are present, using default value." << std::endl;
+        IG_LOG(L_INFO) << "MtsFile " << path << ": No texture coordinates are present, using default value." << std::endl;
         std::fill(trimesh.texcoords.begin(), trimesh.texcoords.end(), Vector2f::Zero());
     }
 

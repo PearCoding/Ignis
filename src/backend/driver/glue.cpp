@@ -14,6 +14,7 @@
 #include <anydsl_runtime.hpp>
 
 #include <atomic>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
@@ -212,8 +213,13 @@ public:
     {
         const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
         if (array.size() < (int64_t)capacity) {
-            auto n = capacity * multiplier;
-            array  = std::move(anydsl::Array<T>(dev, reinterpret_cast<T*>(anydsl_alloc(dev, sizeof(T) * n)), n));
+            size_t n  = capacity * multiplier;
+            void* ptr = anydsl_alloc(dev, sizeof(T) * n);
+            if (ptr == nullptr) {
+                IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
+                std::abort();
+            }
+            array = std::move(anydsl::Array<T>(dev, reinterpret_cast<T*>(ptr), n));
         }
         return array;
     }
@@ -378,7 +384,7 @@ public:
 
             float norm = dRay.Direction.norm();
             if (norm < std::numeric_limits<float>::epsilon()) {
-                std::cerr << "Invalid ray given: Ray has zero direction!" << std::endl;
+                IG_LOG(IG::L_ERROR) << "Invalid ray given: Ray has zero direction!" << std::endl;
                 norm = 1;
             }
 
@@ -407,7 +413,14 @@ public:
         if (n == 0)
             return anydsl::Array<T>();
 
-        anydsl::Array<T> array(dev, reinterpret_cast<T*>(anydsl_alloc(dev, n * sizeof(T))), n);
+        void* ptr = anydsl_alloc(dev, sizeof(T) * n);
+        if (ptr == nullptr) {
+            IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
+            std::abort();
+            return anydsl::Array<T>();
+        }
+
+        anydsl::Array<T> array(dev, reinterpret_cast<T*>(ptr), n);
         anydsl_copy(0, data, 0, dev, array.data(), 0, sizeof(T) * n);
         return array;
     }
@@ -554,7 +567,14 @@ public:
         }
 
         IG_LOG(IG::L_DEBUG) << "Requested buffer " << name << " with " << size << " bytes" << std::endl;
-        buffers[name] = DeviceBuffer(anydsl::Array<uint8_t>(dev, reinterpret_cast<uint8_t*>(anydsl_alloc(dev, size)), size), size);
+
+        void* ptr = anydsl_alloc(dev, size);
+        if (ptr == nullptr) {
+            IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
+            std::abort();
+        }
+
+        buffers[name] = DeviceBuffer(anydsl::Array<uint8_t>(dev, reinterpret_cast<uint8_t*>(ptr), size), size);
 
         return buffers[name];
     }
@@ -771,8 +791,15 @@ public:
         if (dev != 0) {
             auto& device = devices[dev];
             if (device.film_pixels.size() != host_pixels.size()) {
-                auto film_size     = film_width * film_height * 3;
-                auto film_data     = reinterpret_cast<float*>(anydsl_alloc(dev, sizeof(float) * film_size));
+                auto film_size = film_width * film_height * 3;
+                void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
+                if (ptr == nullptr) {
+                    IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
+                    std::abort();
+                    return nullptr;
+                }
+
+                auto film_data     = reinterpret_cast<float*>(ptr);
                 device.film_pixels = anydsl::Array<float>(dev, film_data, film_size);
                 anydsl::copy(host_pixels, device.film_pixels);
             }
@@ -796,8 +823,15 @@ public:
                 device.aovs.resize(aovs.size());
 
             if (device.aovs[index].size() != aovs[index].size()) {
-                auto film_size     = film_width * film_height * 3;
-                auto film_data     = reinterpret_cast<float*>(anydsl_alloc(dev, sizeof(float) * film_size));
+                auto film_size = film_width * film_height * 3;
+                void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
+                if (ptr == nullptr) {
+                    IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
+                    std::abort();
+                    return nullptr;
+                }
+
+                auto film_data     = reinterpret_cast<float*>(ptr);
                 device.aovs[index] = anydsl::Array<float>(dev, film_data, film_size);
                 anydsl::copy(aovs[index], device.aovs[index]);
             }
@@ -812,8 +846,14 @@ public:
     {
         auto& device = devices[dev];
         if (device.tonemap_pixels.size() != host_pixels.size()) {
-            auto film_size        = film_width * film_height;
-            auto film_data        = reinterpret_cast<uint32_t*>(anydsl_alloc(dev, sizeof(uint32_t) * film_size));
+            auto film_size = film_width * film_height;
+            void* ptr      = anydsl_alloc(dev, sizeof(uint32_t) * film_size);
+            if (ptr == nullptr) {
+                IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
+                std::abort();
+                return nullptr;
+            }
+            auto film_data        = reinterpret_cast<uint32_t*>(ptr);
             device.tonemap_pixels = anydsl::Array<uint32_t>(dev, film_data, film_size);
         }
         return device.tonemap_pixels.data();
