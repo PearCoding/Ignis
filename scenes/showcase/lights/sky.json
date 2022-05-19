@@ -3,6 +3,6 @@
         {"filename":"base.json"}
     ],
 	"lights": [
-		{"type":"sky", "name":"Light", "scale": 0.01}
+		{"type":"sky", "name":"Light"}
 	]
 }
