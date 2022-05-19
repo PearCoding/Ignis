@@ -304,7 +304,6 @@ fn @gpu_traverse_single_helper( min_max: MinMax
 }
 
 // Wrapper  ------------------------------------------------------------------------
-
 fn @gpu_traverse_single( acc: Accelerator
                        , min_max: MinMax
                        , scene: SceneGeometry
