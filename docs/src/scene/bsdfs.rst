@@ -183,8 +183,12 @@ Smooth conductor (:monosp:`conductor`)
 
  * - eta, k
    - |color|
-   - ~ Gold
+   - ~ Perfect mirror
    - Real and imaginary components of the material's index of refraction.
+ * - material
+   - |string|
+   - "none"
+   - Instead of eta, k a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
  * - specular_reflectance
    - |color|
    - 1.0
@@ -214,6 +218,10 @@ Rough conductor (:monosp:`roughconductor`)
    - |color|
    - ~ Gold
    - Real and imaginary components of the material's index of refraction.
+ * - material
+   - |string|
+   - "none"
+   - Instead of eta, k a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
  * - specular_reflectance
    - |color|
    - 1.0
@@ -613,7 +621,7 @@ Klems (:monosp:`klems`)
    - (0, 0, 1)
    - Up vector
 
-.. NOTE:: The :monosp:`klems` bsdf is still experimental.
+.. WARNING:: The :monosp:`klems` bsdf is still experimental.
 
 .. _bsdf-tensortree:
 
@@ -635,4 +643,23 @@ TensorTree (:monosp:`tensortree`)
    - (0, 0, 1)
    - Up vector
 
-.. NOTE:: The :monosp:`tensortree` bsdf is still experimental.
+.. WARNING:: The :monosp:`tensortree` bsdf is still experimental.
+
+.. _bsdf-conductor-list:
+
+List of preset conductors
+-------------------------
+
+Currently the following materials are available as presets:
+
+* aluminum
+* brass
+* copper
+* gold
+* iron
+* lead
+* mercury
+* platinum
+* silver
+* titanium
+* none `~ a perfect mirror`

@@ -15,9 +15,38 @@ constexpr float AIR_IOR    = 1.000277f;
 constexpr float GLASS_IOR  = 1.55f;
 constexpr float RUBBER_IOR = 1.49f;
 
-// Gold from https://chris.hindefjord.se/resources/rgb-ior-metals/
-constexpr float ETA_DEFAULT[]        = { 0.18299f, 0.42108f, 1.37340f };
-constexpr float ABSORPTION_DEFAULT[] = { 3.4242f, 2.34590f, 1.77040f };
+struct ConductorSpec {
+    Vector3f Eta;
+    Vector3f Kappa;
+};
+
+// Materials from https://chris.hindefjord.se/resources/rgb-ior-metals/
+const static std::unordered_map<std::string_view, ConductorSpec> Conductors = {
+    { "aluminum", { { 1.34560f, 0.96521f, 0.61722f }, { 7.47460f, 6.39950f, 5.30310f } } },
+    { "brass", { { 0.44400f, 0.52700f, 1.09400f }, { 3.69500f, 2.76500f, 1.82900f } } },
+    { "copper", { { 0.27105f, 0.67693f, 1.31640f }, { 3.60920f, 2.62480f, 2.29210f } } },
+    { "gold", { { 0.18299f, 0.42108f, 1.37340f }, { 3.4242f, 2.34590f, 1.77040f } } },
+    { "iron", { { 2.91140f, 2.94970f, 2.58450f }, { 3.08930f, 2.93180f, 2.76700f } } },
+    { "lead", { { 1.91000f, 1.83000f, 1.44000f }, { 3.51000f, 3.40000f, 3.18000f } } },
+    { "mercury", { { 2.07330f, 1.55230f, 1.06060f }, { 5.33830f, 4.65100f, 3.86280f } } },
+    { "platinum", { { 2.37570f, 2.08470f, 1.84530f }, { 4.26550f, 3.71530f, 3.13650f } } },
+    { "silver", { { 0.15943f, 0.14512f, 0.13547f }, { 3.92910f, 3.19000f, 2.38080f } } },
+    { "titanium", { { 2.74070f, 2.54180f, 2.26700f }, { 3.81430f, 3.43450f, 3.03850f } } },
+    { "none", { { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } } }
+};
+const static auto& DefaultConductor = Conductors.at("none");
+
+std::optional<ConductorSpec> lookupConductor(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf)
+{
+    if (bsdf->property("material").type() == Parser::PT_STRING) {
+        const std::string material = to_lowercase(bsdf->property("material").getString());
+        if (Conductors.count(material) > 0)
+            return Conductors.at(material);
+        else
+            IG_LOG(L_ERROR) << "Bsdf '" << name << "' has unknown material name '" << material << "' given" << std::endl;
+    }
+    return {};
+}
 
 static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
@@ -132,15 +161,18 @@ static void bsdf_mirror(std::ostream& stream, const std::string& name, const std
 
 static void bsdf_conductor(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
+
     tree.beginClosure();
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
-    tree.addColor("eta", *bsdf, Vector3f(ETA_DEFAULT[0], ETA_DEFAULT[1], ETA_DEFAULT[2]));
-    tree.addColor("k", *bsdf, Vector3f(ABSORPTION_DEFAULT[0], ABSORPTION_DEFAULT[1], ABSORPTION_DEFAULT[2]));
+    tree.addColor("eta", *bsdf, DefaultConductor.Eta);
+    tree.addColor("k", *bsdf, DefaultConductor.Kappa);
+
+    const auto spec = lookupConductor(name, bsdf);
 
     stream << tree.pullHeader()
            << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_conductor_bsdf(surf, "
-           << tree.getInline("eta") << ", "
-           << tree.getInline("k") << ", "
+           << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Eta) : tree.getInline("eta")) << ", "
+           << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Kappa) : tree.getInline("k")) << ", "
            << tree.getInline("specular_reflectance") << ");" << std::endl;
 
     tree.endClosure();
@@ -150,15 +182,17 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
 {
     tree.beginClosure();
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
-    tree.addColor("eta", *bsdf, Vector3f(ETA_DEFAULT[0], ETA_DEFAULT[1], ETA_DEFAULT[2]));
-    tree.addColor("k", *bsdf, Vector3f(ABSORPTION_DEFAULT[0], ABSORPTION_DEFAULT[1], ABSORPTION_DEFAULT[2]));
+    tree.addColor("eta", *bsdf, DefaultConductor.Eta);
+    tree.addColor("k", *bsdf, DefaultConductor.Kappa);
+
+    const auto spec = lookupConductor(name, bsdf);
 
     setup_microfacet(bsdf, tree);
     stream << tree.pullHeader()
            << inline_microfacet(name, tree, bsdf)
            << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_conductor_bsdf(surf, "
-           << tree.getInline("eta") << ", "
-           << tree.getInline("k") << ", "
+           << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Eta) : tree.getInline("eta")) << ", "
+           << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Kappa) : tree.getInline("k")) << ", "
            << tree.getInline("specular_reflectance") << ", "
            << "md_" << LoaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
 
