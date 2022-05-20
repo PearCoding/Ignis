@@ -444,6 +444,164 @@ std::string handleTexture(const tinygltf::Value& parent, const std::string& name
     }
 }
 
+static void addNodeMesh(Scene& scene, const tinygltf::Material& defaultMaterial, const std::filesystem::path& baseDir, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& transform)
+{
+    size_t primCount           = 0;
+    const tinygltf::Mesh& mesh = model.meshes[node.mesh];
+    for (const auto& prim : mesh.primitives) {
+        const tinygltf::Material* material = nullptr;
+        size_t mat_id                      = 0;
+        if (prim.material < 0 || prim.material >= (int)model.materials.size()) {
+            material = &defaultMaterial;
+            mat_id   = model.materials.size() - 1; // Was appended to the end
+        } else {
+            material = &model.materials[prim.material];
+            mat_id   = (size_t)prim.material;
+        }
+
+        const std::string name     = mesh.name + "_" + std::to_string(node.mesh) + "_" + std::to_string(primCount);
+        const std::string bsdfName = getMaterialName(*material, mat_id);
+
+        const bool hasMedium = material->extensions.count(KHR_materials_volume.data()) > 0; // TODO: Check if distance > 0
+
+        auto obj = std::make_shared<Object>(OT_ENTITY, "", baseDir);
+        obj->setProperty("shape", Property::fromString(name));
+        obj->setProperty("bsdf", Property::fromString(bsdfName));
+        if (hasMedium)
+            obj->setProperty("inner_medium", Property::fromString(bsdfName)); // Shares the same name as the bsdf
+        obj->setProperty("transform", Property::fromTransform(transform));
+
+        const std::string entity_name = node.name + std::to_string(scene.entities().size()) + "_" + name;
+        scene.addEntity(entity_name, obj);
+
+        if (isMaterialEmissive(*material)) {
+            auto light = std::make_shared<Object>(OT_LIGHT, "area", baseDir);
+            light->setProperty("entity", Property::fromString(entity_name));
+
+            float strength = 1;
+            if (material->extensions.count(KHR_materials_emissive_strength.data())) {
+                const auto& ext = material->extensions.at(KHR_materials_emissive_strength.data());
+                if (ext.Has("emissiveStrength") && ext.Get("emissiveStrength").IsNumber()) {
+                    strength = static_cast<float>(ext.Get("emissiveStrength").GetNumberAsDouble());
+                }
+            }
+
+            if (material->emissiveTexture.index >= 0) {
+                const std::string tex = handleTexture(material->emissiveTexture, scene, model, baseDir);
+                light->setProperty("radiance", Property::fromString(tex + "*color("
+                                                                    + std::to_string((float)material->emissiveFactor[0])
+                                                                    + ", " + std::to_string((float)material->emissiveFactor[1])
+                                                                    + ", " + std::to_string((float)material->emissiveFactor[2]) + ")"));
+            } else {
+                light->setProperty("radiance", Property::fromVector3(Vector3f((float)material->emissiveFactor[0], (float)material->emissiveFactor[1], (float)material->emissiveFactor[2]) * strength));
+            }
+
+            scene.addLight("_light_" + entity_name, light);
+        }
+#ifdef IG_GLTF_MAP_UNLIT_AS_LIGHT
+        else if (isMaterialUnlit(*material)) {
+            // Approximative unlit (which lits other parts)
+            auto light = std::make_shared<Object>(OT_LIGHT, "area", baseDir);
+            light->setProperty("entity", Property::fromString(entity_name));
+
+            if (material->pbrMetallicRoughness.baseColorTexture.index >= 0) {
+                const std::string tex = handleTexture(mat.pbrMetallicRoughness.baseColorTexture, scene, model, directory);
+                bsdf->setProperty("radiance", Property::fromString(tex + "*color("
+                                                                   + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[0])
+                                                                   + ", " + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[1])
+                                                                   + ", " + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[2]) + ")"));
+            } else {
+                light->setProperty("radiance", Property::fromVector3(Vector3f((float)material->pbrMetallicRoughness.baseColorFactor[0], (float)material->pbrMetallicRoughness.baseColorFactor[1], (float)material->pbrMetallicRoughness.baseColorFactor[2])));
+            }
+
+            scene.addLight("_light_" + entity_name, light);
+        }
+#endif
+
+        ++primCount;
+    }
+}
+
+static void addNodeCamera(Scene& scene, const std::filesystem::path& baseDir, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& transform)
+{
+    if (scene.camera()) {
+        IG_LOG(L_WARNING) << "glTF: No support for multiple cameras. Using first one" << std::endl;
+        return;
+    }
+
+    Matrix3f rot;
+    Matrix3f scale; // Ignore scale
+    transform.computeRotationScaling(&rot, &scale);
+    Vector3f trans = transform.translation();
+
+    Transformf cameraTransform;
+    cameraTransform.fromPositionOrientationScale(trans, rot, Vector3f::Ones());
+
+    cameraTransform.scale(Vector3f(1, 1, -1)); // Flip -z to z
+
+    const tinygltf::Camera& camera = model.cameras[node.camera];
+    if (camera.type == "orthographic") {
+        auto obj = std::make_shared<Object>(OT_CAMERA, "orthographic", baseDir);
+        obj->setProperty("transform", Property::fromTransform(cameraTransform));
+        obj->setProperty("near_clip", Property::fromNumber((float)camera.orthographic.znear));
+        if (camera.orthographic.zfar > 0)
+            obj->setProperty("far_clip", Property::fromNumber((float)camera.orthographic.zfar));
+        // TODO: xmag, ymag
+        scene.setCamera(obj);
+    } else {
+        auto obj = std::make_shared<Object>(OT_CAMERA, "perspective", baseDir);
+        obj->setProperty("transform", Property::fromTransform(cameraTransform));
+        obj->setProperty("fov", Property::fromNumber((float)camera.perspective.yfov * Rad2Deg));
+        obj->setProperty("near_clip", Property::fromNumber((float)camera.perspective.znear));
+        if (camera.perspective.zfar > 0)
+            obj->setProperty("far_clip", Property::fromNumber((float)camera.perspective.zfar));
+        // TODO: aspect ratio
+        scene.setCamera(obj);
+    }
+}
+
+static void addNodePunctualLight(Scene& scene, const std::filesystem::path& baseDir, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& transform)
+{
+    const auto& ext = node.extensions.at(KHR_lights_punctual.data());
+    if (!ext.Has("light") || !ext.Get("light").IsInt())
+        return;
+
+    int lightID = ext.Get("light").GetNumberAsInt();
+    if (lightID < 0 || lightID >= (int)model.lights.size())
+        return;
+
+    const auto& light = model.lights[lightID];
+
+    Vector3f color = Vector3f::Ones() * light.intensity;
+    if (light.color.size() == 3)
+        color = Vector3f((float)light.color[0], (float)light.color[1], (float)light.color[2]) * (float)light.intensity;
+
+    std::string type;
+    if (light.type == "point") {
+        auto obj = std::make_shared<Object>(OT_LIGHT, "point", baseDir);
+        obj->setProperty("position", Property::fromVector3(transform * Vector3f::Zero()));
+        obj->setProperty("intensity", Property::fromVector3(color));
+        scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
+    } else if (light.type == "spot") {
+        Vector3f dir = (transform.linear().inverse().transpose() * Vector3f(0.0f, 0.0f, -1.0f)).normalized();
+        auto obj     = std::make_shared<Object>(OT_LIGHT, "spot", baseDir);
+        obj->setProperty("position", Property::fromVector3(transform * Vector3f::Zero()));
+        obj->setProperty("direction", Property::fromVector3(dir));
+        obj->setProperty("intensity", Property::fromVector3(color));
+        obj->setProperty("cutoff", Property::fromNumber(light.spot.outerConeAngle * Rad2Deg));
+        obj->setProperty("falloff", Property::fromNumber(light.spot.innerConeAngle * Rad2Deg));
+        scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
+    } else if (light.type == "directional") {
+        Vector3f dir = (transform.linear().inverse().transpose() * Vector3f(0.0f, 0.0f, -1.0f)).normalized();
+        auto obj     = std::make_shared<Object>(OT_LIGHT, "directional", baseDir);
+        obj->setProperty("direction", Property::fromVector3(dir));
+        obj->setProperty("irradiance", Property::fromVector3(color));
+        scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
+    } else {
+        IG_LOG(L_ERROR) << "Unknown glTF punctual light type '" << light.type << "'" << std::endl;
+    }
+}
+
 static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, const std::filesystem::path& baseDir, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& parent)
 {
     Transformf transform = parent;
@@ -459,146 +617,14 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
     if (node.scale.size() == 3)
         transform.scale(Vector3f((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]));
 
-    if (node.mesh >= 0) {
-        size_t primCount           = 0;
-        const tinygltf::Mesh& mesh = model.meshes[node.mesh];
-        for (const auto& prim : mesh.primitives) {
-            const tinygltf::Material* material = nullptr;
-            size_t mat_id                      = 0;
-            if (prim.material < 0 || prim.material >= (int)model.materials.size()) {
-                material = &defaultMaterial;
-                mat_id   = model.materials.size() - 1; // Was appended to the end
-            } else {
-                material = &model.materials[prim.material];
-                mat_id   = (size_t)prim.material;
-            }
+    if (node.mesh >= 0)
+        addNodeMesh(scene, defaultMaterial, baseDir, model, node, transform);
 
-            const std::string name     = mesh.name + "_" + std::to_string(node.mesh) + "_" + std::to_string(primCount);
-            const std::string bsdfName = getMaterialName(*material, mat_id);
+    if (node.camera >= 0)
+        addNodeCamera(scene, baseDir, model, node, transform);
 
-            const bool hasMedium = material->extensions.count(KHR_materials_volume.data()) > 0; // TODO: Check if distance > 0
-
-            auto obj = std::make_shared<Object>(OT_ENTITY, "", baseDir);
-            obj->setProperty("shape", Property::fromString(name));
-            obj->setProperty("bsdf", Property::fromString(bsdfName));
-            if (hasMedium)
-                obj->setProperty("inner_medium", Property::fromString(bsdfName)); // Shares the same name as the bsdf
-            obj->setProperty("transform", Property::fromTransform(transform));
-
-            const std::string entity_name = node.name + std::to_string(scene.entities().size()) + "_" + name;
-            scene.addEntity(entity_name, obj);
-
-            if (isMaterialEmissive(*material)) {
-                auto light = std::make_shared<Object>(OT_LIGHT, "area", baseDir);
-                light->setProperty("entity", Property::fromString(entity_name));
-
-                float strength = 1;
-                if (material->extensions.count(KHR_materials_emissive_strength.data())) {
-                    const auto& ext = material->extensions.at(KHR_materials_emissive_strength.data());
-                    if (ext.Has("emissiveStrength") && ext.Get("emissiveStrength").IsNumber()) {
-                        strength = static_cast<float>(ext.Get("emissiveStrength").GetNumberAsDouble());
-                    }
-                }
-
-                if (material->emissiveTexture.index >= 0) {
-                    const std::string tex = handleTexture(material->emissiveTexture, scene, model, baseDir);
-                    light->setProperty("radiance", Property::fromString(tex + "*color("
-                                                                        + std::to_string((float)material->emissiveFactor[0])
-                                                                        + ", " + std::to_string((float)material->emissiveFactor[1])
-                                                                        + ", " + std::to_string((float)material->emissiveFactor[2]) + ")"));
-                } else {
-                    light->setProperty("radiance", Property::fromVector3(Vector3f((float)material->emissiveFactor[0], (float)material->emissiveFactor[1], (float)material->emissiveFactor[2]) * strength));
-                }
-
-                scene.addLight("_light_" + entity_name, light);
-            }
-#ifdef IG_GLTF_MAP_UNLIT_AS_LIGHT
-            else if (isMaterialUnlit(*material)) {
-                // Approximative unlit (which lits other parts)
-                auto light = std::make_shared<Object>(OT_LIGHT, "area", baseDir);
-                light->setProperty("entity", Property::fromString(entity_name));
-
-                if (material->pbrMetallicRoughness.baseColorTexture.index >= 0) {
-                    const std::string tex = handleTexture(mat.pbrMetallicRoughness.baseColorTexture, scene, model, directory);
-                    bsdf->setProperty("radiance", Property::fromString(tex + "*color("
-                                                                       + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[0])
-                                                                       + ", " + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[1])
-                                                                       + ", " + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[2]) + ")"));
-                } else {
-                    light->setProperty("radiance", Property::fromVector3(Vector3f((float)material->pbrMetallicRoughness.baseColorFactor[0], (float)material->pbrMetallicRoughness.baseColorFactor[1], (float)material->pbrMetallicRoughness.baseColorFactor[2])));
-                }
-
-                scene.addLight("_light_" + entity_name, light);
-            }
-#endif
-
-            ++primCount;
-        }
-    }
-
-    if (node.camera >= 0) {
-        if (scene.camera()) {
-            IG_LOG(L_WARNING) << "glTF: No support for multiple cameras. Using first one" << std::endl;
-        } else {
-            Matrix3f rot;
-            Matrix3f scale; // Ignore scale
-            transform.computeRotationScaling(&rot, &scale);
-            Vector3f trans = transform.translation();
-
-            Transformf cameraTransform;
-            cameraTransform.fromPositionOrientationScale(trans, rot, Vector3f::Ones());
-
-            cameraTransform.scale(Vector3f(1, 1, -1)); // Flip -z to z
-
-            const tinygltf::Camera& camera = model.cameras[node.camera];
-            if (camera.type == "orthographic") {
-                auto obj = std::make_shared<Object>(OT_CAMERA, "orthographic", baseDir);
-                obj->setProperty("transform", Property::fromTransform(cameraTransform));
-                obj->setProperty("near_clip", Property::fromNumber((float)camera.orthographic.znear));
-                obj->setProperty("far_clip", Property::fromNumber((float)camera.orthographic.zfar));
-                // TODO: xmag, ymag
-                scene.setCamera(obj);
-            } else {
-                auto obj = std::make_shared<Object>(OT_CAMERA, "perspective", baseDir);
-                obj->setProperty("transform", Property::fromTransform(cameraTransform));
-                obj->setProperty("fov", Property::fromNumber((float)camera.perspective.yfov * Rad2Deg));
-                obj->setProperty("near_clip", Property::fromNumber((float)camera.perspective.znear));
-                obj->setProperty("far_clip", Property::fromNumber((float)camera.perspective.zfar));
-                // TODO: aspect ratio
-                scene.setCamera(obj);
-            }
-        }
-    }
-
-    if (node.extensions.count(KHR_lights_punctual.data()) > 0) {
-        const auto& ext = node.extensions.at(KHR_lights_punctual.data());
-        if (ext.Has("light") && ext.Get("light").IsInt()) {
-            int lightID = ext.Get("light").GetNumberAsInt();
-
-            if (lightID >= 0 && lightID < (int)model.lights.size()) {
-                const auto& light = model.lights[lightID];
-
-                Vector3f color = Vector3f::Ones() * light.intensity;
-                if (light.color.size() == 3)
-                    color = Vector3f((float)light.color[0], (float)light.color[1], (float)light.color[2]) * (float)light.intensity;
-
-                std::string type;
-                if (light.type == "point" || light.type == "spot") {
-                    // No support for spot lights
-                    auto obj = std::make_shared<Object>(OT_LIGHT, "point", baseDir);
-                    obj->setProperty("position", Property::fromVector3(transform * Vector3f::Zero()));
-                    obj->setProperty("intensity", Property::fromVector3(color));
-                    scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
-                } else {
-                    Vector3f dir = (transform.linear().inverse().transpose() * Vector3f(0.0f, 0.0f, -1.0f)).normalized();
-                    auto obj     = std::make_shared<Object>(OT_LIGHT, "directional", baseDir);
-                    obj->setProperty("direction", Property::fromVector3(dir));
-                    obj->setProperty("irradiance", Property::fromVector3(color));
-                    scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
-                }
-            }
-        }
-    }
+    if (node.extensions.count(KHR_lights_punctual.data()) > 0)
+        addNodePunctualLight(scene, baseDir, model, node, transform);
 
     for (int child : node.children)
         addNode(scene, defaultMaterial, baseDir, model, model.nodes[child], transform);
