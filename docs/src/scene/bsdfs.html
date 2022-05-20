@@ -174,6 +174,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#bump-mapping-bumpmap">Bump mapping (<span class="monosp">bumpmap</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#klems-klems">Klems (<span class="monosp">klems</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#tensortree-tensortree">TensorTree (<span class="monosp">tensortree</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#list-of-preset-conductors">List of preset conductors</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="media.html">Media</a><ul>
@@ -473,10 +474,15 @@ The type has to be one of the bsdfs listed at this section below.</p>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">eta, k</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>~ Gold</p></td>
+<td><p>~ Perfect mirror</p></td>
 <td><p>Real and imaginary components of the material’s index of refraction.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">specular_reflectance</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">material</span></p></td>
+<td><p><span class="paramtype">string</span></p></td>
+<td><p>“none”</p></td>
+<td><p>Instead of eta, k a material name can be specified. Available presets are listed <a class="reference internal" href="#bsdf-conductor-list"><span class="std std-ref">here</span></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">specular_reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
 <td><p>1.0</p></td>
 <td><p>Optional factor that can be used to modulate the specular reflection component.
@@ -514,13 +520,18 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <td><p>~ Gold</p></td>
 <td><p>Real and imaginary components of the material’s index of refraction.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">specular_reflectance</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">material</span></p></td>
+<td><p><span class="paramtype">string</span></p></td>
+<td><p>“none”</p></td>
+<td><p>Instead of eta, k a material name can be specified. Available presets are listed <a class="reference internal" href="#bsdf-conductor-list"><span class="std std-ref">here</span></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">specular_reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
 <td><p>1.0</p></td>
 <td><p>Optional factor that can be used to modulate the specular reflection component.
 Note that for physical realism, this parameter should never be touched.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">alpha_u, alpha_v</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">alpha_u, alpha_v</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>0.1, 0.1</p></td>
 <td><p>Roughness terms. Can be specified isotropically with just <cite>alpha</cite> as well.</p></td>
@@ -1025,8 +1036,8 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </tr>
 </tbody>
 </table>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
 <p>The <span class="monosp">klems</span> bsdf is still experimental.</p>
 </div>
 </section>
@@ -1064,10 +1075,27 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </tr>
 </tbody>
 </table>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
 <p>The <span class="monosp">tensortree</span> bsdf is still experimental.</p>
 </div>
+</section>
+<section id="list-of-preset-conductors">
+<span id="bsdf-conductor-list"></span><h2>List of preset conductors<a class="headerlink" href="#list-of-preset-conductors" title="Permalink to this headline">¶</a></h2>
+<p>Currently the following materials are available as presets:</p>
+<ul class="simple">
+<li><p>aluminum</p></li>
+<li><p>brass</p></li>
+<li><p>copper</p></li>
+<li><p>gold</p></li>
+<li><p>iron</p></li>
+<li><p>lead</p></li>
+<li><p>mercury</p></li>
+<li><p>platinum</p></li>
+<li><p>silver</p></li>
+<li><p>titanium</p></li>
+<li><p>none <cite>~ a perfect mirror</cite></p></li>
+</ul>
 </section>
 </section>
 
