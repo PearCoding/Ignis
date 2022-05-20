@@ -68,6 +68,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/env.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/mix.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/point.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/spot.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/sun.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/medium/common.art

@@ -14,6 +14,15 @@
 // TODO: Make use of the ShadingTree!!
 namespace IG {
 
+inline static Vector3f get_property_color(const Parser::Property& prop, const Vector3f& def)
+{
+    if (prop.canBeNumber()) {
+        return Vector3f::Constant(prop.getNumber());
+    } else {
+        return prop.getVector3(def);
+    }
+}
+
 static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
 {
     if (obj->property("direction").isValid()) {
@@ -65,6 +74,34 @@ static std::tuple<std::string, size_t, size_t> setup_cdf(const std::string& file
     CDF::computeForImage(filename, path, slice_conditional, slice_marginal, true);
 
     return { path, slice_conditional, slice_marginal };
+}
+
+inline static bool is_simple_point_light(const std::shared_ptr<Parser::Object>& light)
+{
+    return light->pluginType() == "point"
+           && (!light->property("position").isValid() || light->property("position").type() == Parser::PT_VECTOR3)
+           && (!light->property("intensity").isValid() || light->property("intensity").canBeNumber() || light->property("intensity").type() == Parser::PT_VECTOR3);
+}
+
+inline static void exportSimplePointLights(const LoaderContext& ctx)
+{
+    // Check if already loaded
+    if (ctx.Database->CustomTables.count("SimplePoint") > 0)
+        return;
+
+    IG_LOG(L_DEBUG) << "Embedding simple point lights" << std::endl;
+    for (const auto& pair : ctx.Scene.lights()) {
+        const auto light        = pair.second;
+        const Vector3f position = light->property("position").getVector3();
+        const Vector3f radiance = get_property_color(light->property("intensity"), Vector3f::Zero());
+
+        auto& lightData = ctx.Database->CustomTables["SimplePoint"].addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
+        VectorSerializer lightSerializer(lightData, false);
+        lightSerializer.write(position);              // +3   = 3
+        lightSerializer.write((uint32)0 /*Padding*/); // +1   = 4
+        lightSerializer.write(radiance);              // +3   = 7
+        lightSerializer.write((uint32)0 /*Padding*/); // +1   = 8
+    }
 }
 
 static void light_point(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
@@ -137,15 +174,6 @@ inline static bool is_simple_area_light(const std::shared_ptr<Parser::Object>& l
 {
     return light->pluginType() == "area"
            && (!light->property("radiance").isValid() || light->property("radiance").canBeNumber() || light->property("radiance").type() == Parser::PT_VECTOR3);
-}
-
-inline static Vector3f get_property_color(const Parser::Property& prop, const Vector3f& def)
-{
-    if (prop.canBeNumber()) {
-        return Vector3f::Constant(prop.getNumber());
-    } else {
-        return prop.getVector3(def);
-    }
 }
 
 inline static void exportSimpleAreaLights(const LoaderContext& ctx)
@@ -439,36 +467,54 @@ static const struct {
     { "", nullptr }
 };
 
+// TODO: Refactor this function... its horrible
 std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
 {
-    constexpr size_t MaxSimpleInlineAreaLights = 10;
+    constexpr size_t MaxSimpleInlineLights = 10;
 
-    size_t simpleAreaLightCounter = 0;
+    size_t simplePointLightCounter = 0;
+    size_t simpleAreaLightCounter  = 0;
     if (!skipArea) {
         for (const auto& pair : tree.context().Scene.lights()) {
             const auto light = pair.second;
 
-            if (is_simple_area_light(light))
+            if (is_simple_point_light(light))
+                ++simplePointLightCounter;
+            else if (is_simple_area_light(light))
                 ++simpleAreaLightCounter;
         }
     }
 
-    const bool embedSimpleAreaLights = simpleAreaLightCounter > MaxSimpleInlineAreaLights;
+    const size_t simpleLightCounter   = simplePointLightCounter + simpleAreaLightCounter;
+    const bool embedSimpleLights      = simpleLightCounter > MaxSimpleInlineLights;
+    const bool embedSimplePointLights = simplePointLightCounter > 0 && embedSimpleLights;
+    const bool embedSimpleAreaLights  = simpleAreaLightCounter > 0 && embedSimpleLights;
+
+    // Export simple point lights
+    if (embedSimplePointLights)
+        exportSimplePointLights(tree.context());
+    else
+        simplePointLightCounter = 0;
 
     // Export simple area lights
     if (embedSimpleAreaLights)
         exportSimpleAreaLights(tree.context());
+    else
+        simpleAreaLightCounter = 0;
 
     // This will be used for now
     auto skip = [&](const std::shared_ptr<Parser::Object>& light) { return skipArea && light->pluginType() == "area"; };
 
     std::stringstream stream;
 
-    size_t counter = embedSimpleAreaLights ? simpleAreaLightCounter : 0;
+    // Write all non-embedded lights to shader
+    size_t counter = embedSimpleLights ? simpleLightCounter : 0;
     for (const auto& pair : tree.context().Scene.lights()) {
         const auto light = pair.second;
 
-        if (skip(light) || (embedSimpleAreaLights && is_simple_area_light(light)))
+        if (skip(light)
+            || (embedSimplePointLights && is_simple_point_light(light))
+            || (embedSimpleAreaLights && is_simple_area_light(light)))
             continue;
 
         bool found = false;
@@ -484,9 +530,23 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
             IG_LOG(L_ERROR) << "No light type '" << light->pluginType() << "' available" << std::endl;
     }
 
+    // Add a new line for cosmetics if necessary :P
     if (counter != 0)
         stream << std::endl;
 
+    // Load embedded point lights if necessary
+    if (embedSimplePointLights) {
+        stream << "  let simple_point_lights = load_simple_point_lights(device);" << std::endl;
+
+        // Special case: Nothing except embedded simple point lights
+        if (counter > 0 && counter == simplePointLightCounter) {
+            stream << "  let num_lights = " << counter << ";" << std::endl
+                   << "  let lights = simple_point_lights;" << std::endl;
+            return stream.str();
+        }
+    }
+
+    // Load embedded area lights if necessary
     if (embedSimpleAreaLights) {
         stream << "  let simple_area_lights = load_simple_area_lights(device, shapes);" << std::endl;
 
@@ -498,38 +558,62 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
         }
     }
 
+    // Write out basic information and start light table
     stream << "  let num_lights = " << counter << ";" << std::endl
-           << "  let lights = @|id:i32| {" << std::endl
-           << "    match(id) {" << std::endl;
+           << "  let lights = @|id:i32| {" << std::endl;
 
-    // If embedding simple area light, we collect them all at the "else" case
+    if (embedSimplePointLights) {
+        stream << "    if id < " << simplePointLightCounter << " {" << std::endl
+               << "      simple_point_lights(id)" << std::endl
+               << "    }" << std::endl;
+    }
+
+    if (embedSimpleAreaLights) {
+        if (embedSimplePointLights)
+            stream << "    else if ";
+        else
+            stream << "    if ";
+
+        stream << "id < " << simpleAreaLightCounter + simplePointLightCounter << " {" << std::endl
+               << "      simple_area_lights(id - " << simplePointLightCounter << ")" << std::endl
+               << "    }" << std::endl;
+    }
+
+    if (embedSimpleLights)
+        stream << "    else {" << std::endl;
+    stream << "    match(id) {" << std::endl;
+
+    // If embedding simple area lights or (exclusively) simple point lights, we collect them all in the "else" case
     // If not embedding, the last entry will be the "else" case
-    size_t counter2 = 0;
+    size_t counter2 = simplePointLightCounter + simpleAreaLightCounter;
     for (const auto& pair : tree.context().Scene.lights()) {
         const auto light = pair.second;
 
         if (skip(light))
             continue;
 
-        if (!embedSimpleAreaLights || !is_simple_area_light(light)) {
-            if (embedSimpleAreaLights || counter2 < counter - 1)
+        const bool isSPL = embedSimplePointLights && is_simple_point_light(light);
+        const bool isSAL = embedSimpleAreaLights && is_simple_area_light(light);
+        if (!isSPL && !isSAL) {
+            if (counter2 < counter - 1)
                 stream << "      " << counter2;
             else
                 stream << "      _";
 
             stream << " => light_" << LoaderUtils::escapeIdentifier(pair.first)
                    << "," << std::endl;
+            ++counter2;
         }
-        ++counter2;
     }
 
     if (counter2 == 0) {
         if (!skipArea) // Don't trigger a warning if we skip areas
             IG_LOG(L_WARNING) << "Scene does not contain lights" << std::endl;
         stream << "      _ => make_null_light()" << std::endl;
-    } else if (embedSimpleAreaLights) {
-        stream << "      _ => simple_area_lights(id)" << std::endl;
     }
+
+    if (embedSimpleLights)
+        stream << "    }" << std::endl;
 
     stream << "    }" << std::endl
            << "  };" << std::endl;

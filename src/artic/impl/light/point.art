@@ -1,0 +1,30 @@
+fn @make_point_light(pos: Vec3, color: Color) = Light {
+    sample_direct = @ |_, _| {
+        let intensity = color_mulf(color, 1 / (4 * flt_pi));
+        make_direct_sample(pos, intensity, 1, uniform_sphere_pdf(), 1)
+    },
+    sample_emission = @ |rnd| {
+        let sample    = sample_uniform_sphere(randf(rnd), randf(rnd));
+        let intensity = color_mulf(color, 1 / (4 * flt_pi));
+        make_emission_sample(pos, sample.dir, intensity, 1, sample.pdf, 1)
+    },
+    emission = @ |_, _| make_emission_value(color_builtins::black, 1, 1),
+    delta    = true,
+    infinite = false
+};
+
+fn @load_simple_point_lights(device: Device) -> LightTable {
+    let tbl = device.load_custom_dyntable("SimplePoint");
+    let acc = device.get_device_buffer_accessor();
+
+    let elem_s = 8 * sizeof[f32]() as u64; // See LoaderLight.cpp:exportSimplePointLights (with padding/alignment included)
+    @ |id| {
+        //let entry = get_lookup_entry(id as u64, tbl); // No need as we have only one type!
+        let data = get_table_entry(elem_s * (id as u64), tbl, acc);
+
+        let position  = data.load_vec4(0);
+        let intensity = data.load_vec4(4);
+        
+        make_point_light(vec4_to_3(position), vec3_to_color(vec4_to_3(intensity)))
+    } 
+}
