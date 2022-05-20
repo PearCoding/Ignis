@@ -1,0 +1,34 @@
+// The film accumulator splats the given color to a given pixel on a framebuffer or aov
+type FilmAccumulator = fn (i32, Color) -> ();
+
+fn @make_atomic_accumulator(atomics: Atomics, film_pixels: &mut [f32], spi: i32) -> FilmAccumulator {
+    if ?spi && spi == 1 {
+        @|pixel: i32, color: Color| -> () {
+            let ptr = &film_pixels(pixel * 3) as &mut [f32];
+            ptr(0) += color.r;
+            ptr(1) += color.g;
+            ptr(2) += color.b;
+        }
+    } else {
+        let inv = 1 / (spi as f32);
+        @|pixel: i32, color: Color| -> () {
+            let ptr = &film_pixels(pixel * 3) as &mut [f32];
+            atomics.add_global_f32(&mut ptr(0), color.r * inv);
+            atomics.add_global_f32(&mut ptr(1), color.g * inv);
+            atomics.add_global_f32(&mut ptr(2), color.b * inv);
+        }
+    }
+}
+
+fn @make_standard_accumulator(film_pixels: &mut [f32], spi: i32) -> FilmAccumulator {
+    let inv = 1 / (spi as f32);
+    @|pixel: i32, color: Color| -> () {
+        film_pixels(pixel * 3 + 0) += color.r * inv;
+        film_pixels(pixel * 3 + 1) += color.g * inv;
+        film_pixels(pixel * 3 + 2) += color.b * inv;
+    }
+}
+
+fn @make_null_accumulator() -> FilmAccumulator {
+    @|_pixel: i32, _color: Color| -> () { }
+}

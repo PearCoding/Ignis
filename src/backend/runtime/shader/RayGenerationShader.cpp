@@ -24,12 +24,12 @@ std::string RayGenerationShader::begin(const LoaderContext& ctx)
     return stream.str();
 }
 
-std::string RayGenerationShader::end(const std::string_view emitterName, const std::string_view sppName, bool skipReturn)
+std::string RayGenerationShader::end(const std::string_view emitterName, const std::string_view spiName, bool skipReturn)
 {
     std::stringstream stream;
 
     if (!skipReturn)
-        stream << "  device.generate_rays(" << emitterName << ", id, size, xmin, ymin, xmax, ymax, " << sppName << ")" << std::endl;
+        stream << "  device.generate_rays(" << emitterName << ", id, size, xmin, ymin, xmax, ymax, " << spiName << ")" << std::endl;
 
     stream << "}" << std::endl;
 
@@ -42,7 +42,7 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
 
     stream << begin(ctx) << std::endl
            << std::endl
-           << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
+           << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
 
     if (ctx.IsTracer) {
         stream << "  let emitter = make_list_emitter(device.load_rays(), iter, init_raypayload);" << std::endl;
@@ -57,7 +57,7 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
             pixel_sampler = "make_mjitt_pixel_sampler(4, 4)";
         }
 
-        stream << "  let emitter = make_camera_emitter(camera, iter, spp, " << pixel_sampler << ", init_raypayload);" << std::endl;
+        stream << "  let emitter = make_camera_emitter(camera, iter, 2, " << pixel_sampler << ", init_raypayload);" << std::endl;
     }
 
     stream << end();

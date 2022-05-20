@@ -41,14 +41,14 @@ std::string MissShader::setup(LoaderContext& ctx)
     if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
         stream << LoaderCamera::generate(ctx) << std::endl;
 
-    stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
+    stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
 
     // Will define technique
     stream << LoaderTechnique::generate(ctx) << std::endl
            << std::endl;
 
     stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_miss_shader(technique, first, last, spp, use_framebuffer)" << std::endl
+           << "  device.handle_miss_shader(technique, first, last, spi, use_framebuffer)" << std::endl
            << "}" << std::endl;
 
     return stream.str();

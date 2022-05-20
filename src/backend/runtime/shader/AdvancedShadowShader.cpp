@@ -51,7 +51,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
     if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
         stream << LoaderCamera::generate(ctx) << std::endl;
 
-    stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
+    stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
 
     // Will define technique
     stream << LoaderTechnique::generate(ctx) << std::endl
@@ -59,7 +59,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
 
     stream << "  let is_hit = " << (is_hit ? "true" : "false") << ";" << std::endl
            << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_advanced_shadow_shader(shader, technique, first, last, spp, use_framebuffer, is_hit)" << std::endl
+           << "  device.handle_advanced_shadow_shader(shader, technique, first, last, spi, use_framebuffer, is_hit)" << std::endl
            << "}" << std::endl;
 
     return stream.str();

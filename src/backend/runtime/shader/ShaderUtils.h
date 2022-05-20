@@ -13,5 +13,7 @@ public:
     /// Will generate technique predefinition, function specification and device
     static std::string beginCallback(const LoaderContext& ctx);
     static std::string endCallback();
+
+    static std::string inlineSPI(const LoaderContext& ctx);
 };
 } // namespace IG

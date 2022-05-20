@@ -11,6 +11,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/stats.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/aov.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/accumulator.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/bsdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/buffer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/buffer_cpu.art

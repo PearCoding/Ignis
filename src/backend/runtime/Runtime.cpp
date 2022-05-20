@@ -259,6 +259,7 @@ void Runtime::stepVariant(size_t variant)
     settings.work_height = info.GetHeight(mFilmHeight);
     settings.info        = info;
 
+    setParameter("__spi", (int)settings.spi);
     mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, &mParameterSet, mCurrentIteration, mCurrentFrame);
 
     if (!info.LockFramebuffer)
@@ -309,6 +310,7 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
     settings.work_height = 1;
     settings.info        = info;
 
+    setParameter("__spi", (int)settings.spi);
     mLoadedInterface.RenderFunction(mTechniqueVariantShaderSets[variant], settings, &mParameterSet, mCurrentIteration, mCurrentFrame);
 
     if (!info.LockFramebuffer)

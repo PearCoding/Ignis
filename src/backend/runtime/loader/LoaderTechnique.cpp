@@ -100,11 +100,11 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
 
     size_t counter = 1;
     if (hasNormalAOV)
-        stream << "  let aov_normals = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
+        stream << "  let aov_normals = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
 
     if (hasMISAOV) {
-        stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
-        stream << "  let aov_nee = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
+        stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
+        stream << "  let aov_nee = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
     }
 
     stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
@@ -174,7 +174,7 @@ static std::string ppm_light_camera_generator(LoaderContext& ctx)
     ShadingTree tree(ctx);
     stream << LoaderLight::generate(tree, false) << std::endl;
 
-    stream << "  let spp = " << ctx.SamplesPerIteration << " : i32;" << std::endl;
+    stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
     stream << "  let emitter = make_ppm_light_emitter(num_lights, lights, iter);" << std::endl;
 
     stream << RayGenerationShader::end();
@@ -247,8 +247,8 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
         const bool hasAOV = technique ? technique->property("aov").getBool(false) : false;
 
         if (hasAOV) {
-            stream << "  let aov_di   = device.load_aov_image(1, spp);" << std::endl;
-            stream << "  let aov_merg = device.load_aov_image(2, spp);" << std::endl;
+            stream << "  let aov_di   = device.load_aov_image(1, spi);" << std::endl;
+            stream << "  let aov_merg = device.load_aov_image(2, spi);" << std::endl;
         }
 
         stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
