@@ -11,9 +11,34 @@
 
 namespace IG {
 
-constexpr float AIR_IOR    = 1.000277f;
-constexpr float GLASS_IOR  = 1.55f;
-constexpr float RUBBER_IOR = 1.49f;
+const static std::unordered_map<std::string_view, float> Dielectrics = {
+    { "vacuum", 1.0f },
+    { "bk7", 1.5046f },
+    { "glass", 1.5046f },
+    { "helium", 1.00004f },
+    { "hydrogen", 1.00013f },
+    { "air", 1.000277f },
+    { "water", 1.333f },
+    { "ethanol", 1.361f },
+    { "diamond", 2.419f },
+    { "polypropylene", 1.49f }
+};
+
+const static float DefaultDielectricInterior = Dielectrics.at("bk7");
+const static float DefaultDielectricExterior = Dielectrics.at("vacuum");
+const static float DefaultPlastic            = Dielectrics.at("polypropylene");
+
+std::optional<float> lookupDielectric(const std::string& prop, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf)
+{
+    if (bsdf->property(prop).type() == Parser::PT_STRING) {
+        const std::string material = to_lowercase(bsdf->property(prop).getString());
+        if (Dielectrics.count(material) > 0)
+            return Dielectrics.at(material);
+        else
+            IG_LOG(L_ERROR) << "Bsdf '" << name << "' has unknown " << prop << " name '" << material << "' given" << std::endl;
+    }
+    return {};
+}
 
 struct ConductorSpec {
     Vector3f Eta;
@@ -111,15 +136,19 @@ static void bsdf_dielectric(std::ostream& stream, const std::string& name, const
     tree.beginClosure();
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
     tree.addColor("specular_transmittance", *bsdf, Vector3f::Ones());
-    tree.addNumber("ext_ior", *bsdf, AIR_IOR);
-    tree.addNumber("int_ior", *bsdf, GLASS_IOR);
+    tree.addNumber("ext_ior", *bsdf, DefaultDielectricExterior);
+    tree.addNumber("int_ior", *bsdf, DefaultDielectricInterior);
+
+    const auto ext_spec = lookupDielectric("ext_ior_material", name, bsdf);
+    const auto int_spec = lookupDielectric("int_ior_material", name, bsdf);
+
     bool thin = bsdf->property("thin").getBool(bsdf->pluginType() == "thindielectric");
 
     stream << tree.pullHeader()
            << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| "
            << (thin ? "make_thin_glass_bsdf" : "make_glass_bsdf") << "(surf, "
-           << tree.getInline("ext_ior") << ", "
-           << tree.getInline("int_ior") << ", "
+           << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
+           << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "
            << tree.getInline("specular_reflectance") << ", "
            << tree.getInline("specular_transmittance") << ");" << std::endl;
 
@@ -131,15 +160,18 @@ static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name,
     tree.beginClosure();
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
     tree.addColor("specular_transmittance", *bsdf, Vector3f::Ones());
-    tree.addNumber("ext_ior", *bsdf, AIR_IOR);
-    tree.addNumber("int_ior", *bsdf, GLASS_IOR);
+    tree.addNumber("ext_ior", *bsdf, DefaultDielectricExterior);
+    tree.addNumber("int_ior", *bsdf, DefaultDielectricInterior);
+
+    const auto ext_spec = lookupDielectric("ext_ior_material", name, bsdf);
+    const auto int_spec = lookupDielectric("int_ior_material", name, bsdf);
 
     setup_microfacet(bsdf, tree);
     stream << tree.pullHeader()
            << inline_microfacet(name, tree, bsdf)
            << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_rough_glass_bsdf(surf, "
-           << tree.getInline("ext_ior") << ", "
-           << tree.getInline("int_ior") << ", "
+           << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
+           << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "
            << tree.getInline("specular_reflectance") << ", "
            << tree.getInline("specular_transmittance") << ", "
            << "md_" << LoaderUtils::escapeIdentifier(name) << "(surf));" << std::endl;
@@ -204,13 +236,16 @@ static void bsdf_plastic(std::ostream& stream, const std::string& name, const st
     tree.beginClosure();
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
     tree.addColor("diffuse_reflectance", *bsdf, Vector3f::Constant(0.5f));
-    tree.addNumber("ext_ior", *bsdf, AIR_IOR);
-    tree.addNumber("int_ior", *bsdf, RUBBER_IOR);
+    tree.addNumber("ext_ior", *bsdf, DefaultDielectricExterior);
+    tree.addNumber("int_ior", *bsdf, DefaultPlastic);
+
+    const auto ext_spec = lookupDielectric("ext_ior_material", name, bsdf);
+    const auto int_spec = lookupDielectric("int_ior_material", name, bsdf);
 
     stream << tree.pullHeader()
            << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
-           << tree.getInline("ext_ior") << ", "
-           << tree.getInline("int_ior") << ", "
+           << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
+           << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "
            << tree.getInline("diffuse_reflectance") << ", "
            << "make_mirror_bsdf(surf, " << tree.getInline("specular_reflectance") << "));" << std::endl;
 
@@ -222,15 +257,18 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
     tree.beginClosure();
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
     tree.addColor("diffuse_reflectance", *bsdf, Vector3f::Constant(0.5f));
-    tree.addNumber("ext_ior", *bsdf, AIR_IOR);
-    tree.addNumber("int_ior", *bsdf, RUBBER_IOR);
+    tree.addNumber("ext_ior", *bsdf, DefaultDielectricExterior);
+    tree.addNumber("int_ior", *bsdf, DefaultPlastic);
+
+    const auto ext_spec = lookupDielectric("ext_ior_material", name, bsdf);
+    const auto int_spec = lookupDielectric("int_ior_material", name, bsdf);
 
     setup_microfacet(bsdf, tree);
     stream << tree.pullHeader()
            << inline_microfacet(name, tree, bsdf)
            << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
-           << tree.getInline("ext_ior") << ", "
-           << tree.getInline("int_ior") << ", "
+           << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
+           << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "
            << tree.getInline("diffuse_reflectance") << ", "
            << "make_rough_conductor_bsdf(surf, color_builtins::black, color_builtins::white, "
            << tree.getInline("specular_reflectance") << ", "
@@ -257,7 +295,7 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
 {
     tree.beginClosure();
     tree.addColor("base_color", *bsdf, Vector3f::Constant(0.8f));
-    tree.addNumber("ior", *bsdf, GLASS_IOR);
+    tree.addNumber("ior", *bsdf, DefaultDielectricInterior);
     tree.addNumber("diffuse_transmission", *bsdf, 0);
     tree.addNumber("specular_transmission", *bsdf, 0);
     tree.addNumber("specular_tint", *bsdf, 0);
@@ -271,12 +309,14 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
     tree.addNumber("clearcoat_gloss", *bsdf, 0);
     tree.addNumber("clearcoat_roughness", *bsdf, 0.1f);
 
+    const auto ior_spec = lookupDielectric("ior_material", name, bsdf);
+
     bool is_thin = bsdf->property("thin").getBool(false);
 
     stream << tree.pullHeader()
            << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_principled_bsdf(surf, "
            << tree.getInline("base_color") << ", "
-           << tree.getInline("ior") << ", "
+           << (ior_spec.has_value() ? std::to_string(ior_spec.value()) : tree.getInline("ior")) << ", "
            << tree.getInline("diffuse_transmission") << ", "
            << tree.getInline("specular_transmission") << ", "
            << tree.getInline("specular_tint") << ", "

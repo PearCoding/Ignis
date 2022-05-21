@@ -88,8 +88,12 @@ Smooth dielectric (:monosp:`dielectric`)
    - TODO
  * - ext_ior, int_ior
    - |number|
-   - 1.00027, 1.55
-   - TODO
+   - vacuum, bk7
+   - Specifies exterior and interior index of refraction.
+ * - ext_ior_material, int_ior_material
+   - |string|
+   - *None*, *None*
+   - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
  * - thin
    - |bool|
    - false
@@ -131,8 +135,12 @@ Rough dielectric (:monosp:`roughdielectric`)
    - TODO
  * - ext_ior, int_ior
    - |number|
-   - 1.00027, 1.55
-   - TODO
+   - vacuum, bk7   
+   - Specifies exterior and interior index of refraction.
+ * - ext_ior_material, int_ior_material
+   - |string|
+   - *None*, *None*
+   - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
  * - alpha_u, alpha_v
    - |number|
    - 0.1, 0.1
@@ -261,8 +269,12 @@ Smooth plastic (:monosp:`plastic`)
    - TODO
  * - ext_ior, int_ior
    - |number|
-   - 1.00027, 1.55
-   - TODO
+   - vacuum, bk7   
+   - Specifies exterior and interior index of refraction.
+ * - ext_ior_material, int_ior_material
+   - |string|
+   - *None*, *None*
+   - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
 
 .. subfigstart::
 
@@ -292,9 +304,13 @@ Rough plastic (:monosp:`roughplastic`)
    - 0.5
    - TODO
  * - ext_ior, int_ior
-   - |number|
-   - 1.00027, 1.55
-   - TODO
+   - |number| 
+   - vacuum, bk7   
+   - Specifies exterior and interior index of refraction.
+ * - ext_ior_material, int_ior_material
+   - |string|
+   - *None*, *None*
+   - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
  * - alpha_u, alpha_v
    - |number|
    - 0.1, 0.1
@@ -367,8 +383,12 @@ Disney *Principled* (:monosp:`principled`)
    - TODO
  * - ior
    - |number|
-   - 1.55
-   - TODO
+   - bk7   
+   - Specifies index of refraction.
+ * - ior_material
+   - |string|
+   - *None*
+   - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
  * - thin
    - |bool|
    - false
@@ -535,7 +555,7 @@ Passthrough (:monosp:`passthrough`)
   :width: 0.6
   :label: fig-passthrough
 
-.. NOTE:: The :monosp:`passthrough` bsdf should be used carefully, as simple techniques like Next-Event Estimation still see the object geometry.
+.. WARNING:: The :monosp:`passthrough` bsdf should be used carefully, as simple techniques like Next-Event Estimation still see the object geometry.
 
 .. _bsdf-normalmap:
 
@@ -645,6 +665,24 @@ TensorTree (:monosp:`tensortree`)
 
 .. WARNING:: The :monosp:`tensortree` bsdf is still experimental.
 
+.. _bsdf-dielectric-list:
+
+List of preset index of refractions
+-----------------------------------
+
+Currently the following materials are available as presets:
+
+* **vacuum**
+* **bk7**
+* **glass** `same as bk7`
+* **helium**
+* **hydrogen**
+* **air**
+* **water**
+* **ethanol**
+* **diamond**
+* **polypropylene**
+
 .. _bsdf-conductor-list:
 
 List of preset conductors
@@ -652,14 +690,14 @@ List of preset conductors
 
 Currently the following materials are available as presets:
 
-* aluminum
-* brass
-* copper
-* gold
-* iron
-* lead
-* mercury
-* platinum
-* silver
-* titanium
-* none `~ a perfect mirror`
+* **aluminum**
+* **brass**
+* **copper**
+* **gold**
+* **iron**
+* **lead**
+* **mercury**
+* **platinum**
+* **silver**
+* **titanium**
+* **none** `~ a perfect mirror`
