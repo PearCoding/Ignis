@@ -43,7 +43,7 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
     }
 
     if (!force_unpacked && Image::isPacked(filename))
-        stream << "  let img_" << LoaderUtils::escapeIdentifier(name) << " = device.load_packed_image(\"" << filename << "\");" << std::endl;
+        stream << "  let img_" << LoaderUtils::escapeIdentifier(name) << " = device.load_packed_image(\"" << filename << "\", " << (Image::hasAlphaChannel(filename) ? "false" : "true") << ");" << std::endl;
     else
         stream << "  let img_" << LoaderUtils::escapeIdentifier(name) << " = device.load_image(\"" << filename << "\");" << std::endl;
 

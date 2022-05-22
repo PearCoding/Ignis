@@ -130,6 +130,16 @@ bool Image::isPacked(const std::filesystem::path& path)
     return !useExr && !useHdr;
 }
 
+bool Image::hasAlphaChannel(const std::filesystem::path& path)
+{
+    if (isPacked(path))
+        return true; // Just assume they have
+
+    int width = 0, height = 0, channels = 0;
+    stbi_info(path.generic_u8string().c_str(), &width, &height, &channels);
+    return channels == 4;
+}
+
 Image Image::load(const std::filesystem::path& path)
 {
     std::string ext   = path.extension().generic_u8string();

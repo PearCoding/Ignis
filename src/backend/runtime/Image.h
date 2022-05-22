@@ -56,6 +56,9 @@ struct Image {
     /// Will be true if the image in path is not in float format
     static bool isPacked(const std::filesystem::path& path);
 
+    /// Will be true if the image has an alpha channel
+    static bool hasAlphaChannel(const std::filesystem::path& path);
+
     /// Loads a image in linear RGBA
     /// Supports EXR, HDR, PNG, JPEG and many other formats supported by the stbi library
     static Image load(const std::filesystem::path& path);
