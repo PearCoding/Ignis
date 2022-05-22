@@ -105,8 +105,8 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                                          + math_builtins::fabs(mat_sample.color.g - evl.g)
                                          + math_builtins::fabs(mat_sample.color.b - evl.b);
 
-                            let pdf_good = if pdf_diff <= 0.001:f32 { 1 } else { 0 };
-                            let w_good   = if w_diff   <= 0.001:f32 { 1 } else { 0 };
+                            let pdf_good = select(pdf_diff <= 0.001:f32, 1:i32, 0:i32);
+                            let w_good   = select(w_diff   <= 0.001:f32, 1:i32, 0:i32);
                             let index    = (w_good << 1) | pdf_good;
                             let color    = [color_builtins::red, color_builtins::orange, color_builtins::yellow, color_builtins::green](index);
                             make_option(color)

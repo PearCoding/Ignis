@@ -141,9 +141,12 @@
     "cSpell.words": [
         "bsdf",
         "bsdfs",
+        "Clearcoat",
         "klems",
+        "microfacet",
         "pathtracer",
         "raytracer",
+        "signbit",
         "tensortree",
         "wireframe"
     ],

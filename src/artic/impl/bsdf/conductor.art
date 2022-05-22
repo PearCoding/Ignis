@@ -79,7 +79,7 @@ fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, f
                 if vec3_len2(s.normal) <= flt_eps { return(reject_bsdf_sample()) };
 
                 let oH = vec3_normalize(s.normal);
-                let H  = if vec3_dot(oH, out_dir) < 0 { vec3_neg(oH) } else { oH };
+                let H  = select(math_builtins::signbit(vec3_dot(oH, out_dir)), vec3_neg(oH), oH);
 
                 let in_dir = vec3_reflect(out_dir, H);
 
