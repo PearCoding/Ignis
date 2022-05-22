@@ -104,8 +104,9 @@ class Interface {
     IG_CLASS_NON_MOVEABLE(Interface);
 
 public:
-    using DeviceImage  = std::tuple<anydsl::Array<float>, size_t, size_t>;
-    using DeviceBuffer = std::tuple<anydsl::Array<uint8_t>, size_t>;
+    using DeviceImage       = std::tuple<anydsl::Array<float>, size_t, size_t>;
+    using DevicePackedImage = std::tuple<anydsl::Array<uint32_t>, size_t, size_t>; // Packed RGBA
+    using DeviceBuffer      = std::tuple<anydsl::Array<uint8_t>, size_t>;
 
     class DeviceData {
         IG_CLASS_NON_COPYABLE(DeviceData);
@@ -126,6 +127,7 @@ public:
         std::array<anydsl::Array<float>*, GPUStreamBufferCount> current_primary;
         std::array<anydsl::Array<float>*, GPUStreamBufferCount> current_secondary;
         std::unordered_map<std::string, DeviceImage> images;
+        std::unordered_map<std::string, DevicePackedImage> packed_images;
         std::unordered_map<std::string, DeviceBuffer> buffers;
         std::unordered_map<std::string, DynTableProxy> custom_dyntables;
 
@@ -436,6 +438,13 @@ public:
         return DeviceImage(copyToDevice(dev, image.pixels.get(), image.width * image.height * 4), image.width, image.height);
     }
 
+    inline DevicePackedImage copyToDevicePacked(int32_t dev, const IG::Image& image)
+    {
+        std::vector<uint32_t> packed;
+        image.copyToPackedFormat(packed);
+        return DevicePackedImage(copyToDevice(dev, packed.data(), image.width * image.height), image.width, image.height);
+    }
+
     template <typename Node>
     inline BvhProxy<Node, EntityLeaf1> loadSceneBVH(int32_t dev)
     {
@@ -509,6 +518,27 @@ public:
         } catch (const IG::ImageLoadException& e) {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;
             return images[filename] = copyToDevice(dev, IG::Image());
+        }
+    }
+
+    inline const DevicePackedImage& loadPackedImage(int32_t dev, const std::string& filename)
+    {
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+
+        auto& images = devices[dev].packed_images;
+        auto it      = images.find(filename);
+        if (it != images.end())
+            return it->second;
+
+        IG_LOG(IG::L_DEBUG) << "Loading (packed) image " << filename << std::endl;
+        try {
+            std::vector<uint32_t> packed;
+            size_t width, height;
+            IG::Image::loadAsPacked(filename, packed, width, height);
+            return images[filename] = DevicePackedImage(copyToDevice(dev, packed), width, height);
+        } catch (const IG::ImageLoadException& e) {
+            IG_LOG(IG::L_ERROR) << e.what() << std::endl;
+            return images[filename] = DevicePackedImage(copyToDevice(dev, std::vector<uint32_t>{}), 0, 0);
         }
     }
 
@@ -1287,6 +1317,14 @@ IG_EXPORT void ignis_load_image(int32_t dev, const char* file, float** pixels, i
 {
     auto& img = sInterface->loadImage(dev, file);
     *pixels   = const_cast<float*>(std::get<0>(img).data());
+    *width    = (int)std::get<1>(img);
+    *height   = (int)std::get<2>(img);
+}
+
+IG_EXPORT void ignis_load_packed_image(int32_t dev, const char* file, uint32_t** pixels, int32_t* width, int32_t* height)
+{
+    auto& img = sInterface->loadPackedImage(dev, file);
+    *pixels   = const_cast<uint32_t*>(std::get<0>(img).data());
     *width    = (int)std::get<1>(img);
     *height   = (int)std::get<2>(img);
 }

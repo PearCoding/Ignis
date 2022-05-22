@@ -5,6 +5,13 @@ struct Image {
     height: i32
 }
 
+// Packed imagesare always RGBA
+fn @image_rgba_unpack(packed: u32) =
+    make_vec4( (packed & 0x000000FF)        as f32 / 255,
+              ((packed & 0x0000FF00) >> 8)  as f32 / 255,
+              ((packed & 0x00FF0000) >> 16) as f32 / 255,
+              ((packed & 0xFF000000) >> 24) as f32 / 255);
+
 fn @make_image_rgba32(pixels: fn (i32, i32) -> Vec4, width: i32, height: i32) = Image {
     pixels = @ |x, y| {
         let pixel = pixels(x, y);

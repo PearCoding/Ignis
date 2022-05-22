@@ -883,6 +883,18 @@ fn @make_gpu_device( dev_id: i32
                            else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) }
                          , width, height)
     },
+    load_packed_image = @ |filename| {
+        let mut pixel_data : &[u32];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_packed_image(dev_id, filename, &mut pixel_data, &mut width, &mut height);
+
+        let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
+        let q = pixel_data as &addrspace(1)[i32];
+        make_image_rgba32(if is_nvvm { @ |x, y| image_rgba_unpack(bitcast[u32](nvvm_ldg_i32(&(q(y * stride + x))))) }
+                          else { @ |x, y| image_rgba_unpack(bitcast[u32](q(y * stride + x))) },
+                          width, height)
+    },
     load_aov_image = @ |id, spi| gpu_get_aov_image(id, dev_id, atomics, spi),
     load_rays = @ || {
         let mut rays: &[StreamRay]; // TODO: Alignment?

@@ -830,6 +830,14 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         make_image_rgba32(@ |x, y| cpu_load_vec4(pixel_data, y * width + x),
                           width, height)
     },
+    load_packed_image = @ |filename| {
+        let mut pixel_data : &[u32];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_packed_image(0, filename, &mut pixel_data, &mut width, &mut height);
+        make_image_rgba32(@ |x, y| image_rgba_unpack(pixel_data(y * width + x)),
+                          width, height)
+    },
     load_aov_image = @|id, spi| { @cpu_get_aov_image(id, spi) },
     load_rays = @ || {
         let mut rays: &[StreamRay];

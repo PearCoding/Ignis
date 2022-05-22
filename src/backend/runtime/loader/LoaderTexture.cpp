@@ -1,4 +1,5 @@
 #include "LoaderTexture.h"
+#include "Image.h"
 #include "Loader.h"
 #include "LoaderUtils.h"
 #include "Logger.h"
@@ -14,6 +15,7 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
     const std::string filename    = tree.context().handlePath(tex.property("filename").getString(), tex).generic_u8string();
     const std::string filter_type = tex.property("filter_type").getString("bilinear");
     const Transformf transform    = tex.property("transform").getTransform();
+    const bool force_unpacked     = tex.property("force_unpacked").getBool(false); // Force the use of unpacked (float) images
 
     std::string filter = "make_bilinear_filter()";
     if (filter_type == "nearest")
@@ -40,8 +42,12 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
         wrap = getWrapMode(tex.property("wrap_mode").getString("repeat"));
     }
 
-    stream << "  let img_" << LoaderUtils::escapeIdentifier(name) << " = device.load_image(\"" << filename << "\");" << std::endl
-           << "  let tex_" << LoaderUtils::escapeIdentifier(name) << " : Texture = make_image_texture("
+    if (!force_unpacked && Image::isPacked(filename))
+        stream << "  let img_" << LoaderUtils::escapeIdentifier(name) << " = device.load_packed_image(\"" << filename << "\");" << std::endl;
+    else
+        stream << "  let img_" << LoaderUtils::escapeIdentifier(name) << " = device.load_image(\"" << filename << "\");" << std::endl;
+
+    stream << "  let tex_" << LoaderUtils::escapeIdentifier(name) << " : Texture = make_image_texture("
            << wrap << ", "
            << filter << ", "
            << "img_" << LoaderUtils::escapeIdentifier(name) << ", "

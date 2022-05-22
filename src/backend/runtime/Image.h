@@ -49,9 +49,21 @@ struct Image {
     /// Flip image in y-axis
     void flipY();
 
+    /// Will format to packed format (RGBA, 8bit each)
+    /// Use this only for byte formats, else image quality will be lost
+    void copyToPackedFormat(std::vector<uint32>& dst) const; 
+
+    /// Will be true if the image in path is not in float format
+    static bool isPacked(const std::filesystem::path& path);
+
     /// Loads a image in linear RGBA
     /// Supports EXR, HDR, PNG, JPEG and many other formats supported by the stbi library
     static Image load(const std::filesystem::path& path);
+
+    /// Loads image and directly uploads to buffer in packed format
+    /// Supports PNG, JPEG and many other formats supported by the stbi library
+    /// Will not load EXR or HDR files, as they are not given in packed format
+    static void loadAsPacked(const std::filesystem::path& path, std::vector<uint32>& dst, size_t& width, size_t& height);
 
     /// Save a image in linear RGBA in EXR format
     /// No other format is supported, except EXR. The file should end with .exr

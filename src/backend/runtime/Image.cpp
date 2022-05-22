@@ -6,32 +6,38 @@ IG_BEGIN_IGNORE_WARNINGS
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-// We already make use of zlib, so use it here aswell
+// We already make use of zlib, so use it here as well
 #include <zlib.h>
 #define TINYEXR_USE_THREAD (1)
 #define TINYEXR_USE_MINIZ (0)
-// #define TINYEXR_IMPLEMENTATION // Alreay included in ImageIO.cpp
+// #define TINYEXR_IMPLEMENTATION // Already included in ImageIO.cpp
 #include <tinyexr.h>
+
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
 IG_END_IGNORE_WARNINGS
 
 namespace IG {
 
 static inline float srgb_gamma(float c)
 {
-    if (c <= 0.0031308f) {
+    if (c <= 0.0031308f)
         return 12.92f * c;
-    } else {
+    else
         return 1.055f * std::pow(c, 1 / 2.4f) - 0.055f;
-    }
 }
 
 static inline float srgb_invgamma(float c)
 {
-    if (c <= 1 / 2.4f) {
+    if (c <= 0.04045f)
         return c / 12.92f;
-    } else {
+    else
         return std::pow((c + 0.055f) / 1.055f, 2.4f);
-    }
+}
+
+static inline uint8 byte_color_to_linear(uint8 c)
+{
+    return static_cast<uint8>(std::min<uint16>(255, static_cast<uint16>(std::floor(srgb_invgamma(c / 255.0f) * 255))));
 }
 
 void Image::applyGammaCorrection(bool inverse, bool sRGB)
@@ -39,26 +45,38 @@ void Image::applyGammaCorrection(bool inverse, bool sRGB)
     IG_ASSERT(isValid(), "Expected valid image");
 
     if (!sRGB) {
-        const float factor = inverse ? 1 / 2.2f : 2.2f;
+        const float factor = !inverse ? 1 / 2.2f : 2.2f;
 
-        for (size_t k = 0; k < height * width; ++k) {
-            auto* pix = &pixels[4 * k];
-            for (int i = 0; i < 3; ++i)
-                pix[i] = std::pow(pix[i], factor);
-        }
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, width * height),
+            [&](tbb::blocked_range<size_t> r) {
+                for (size_t k = r.begin(); k < r.end(); ++k) {
+                    auto* pix = &pixels[4 * k];
+                    for (int i = 0; i < 3; ++i)
+                        pix[i] = std::pow(pix[i], factor);
+                }
+            });
     } else {
         if (!inverse) {
-            for (size_t k = 0; k < height * width; ++k) {
-                auto* pix = &pixels[4 * k];
-                for (int i = 0; i < 3; ++i)
-                    pix[i] = srgb_gamma(pix[i]);
-            }
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, width * height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t k = r.begin(); k < r.end(); ++k) {
+                        auto* pix = &pixels[4 * k];
+                        for (int i = 0; i < 3; ++i)
+                            pix[i] = srgb_gamma(pix[i]);
+                    }
+                });
         } else {
-            for (size_t k = 0; k < height * width; ++k) {
-                auto* pix = &pixels[4 * k];
-                for (int i = 0; i < 3; ++i)
-                    pix[i] = srgb_invgamma(pix[i]);
-            }
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, width * height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t k = r.begin(); k < r.end(); ++k) {
+                        auto* pix = &pixels[4 * k];
+                        for (int i = 0; i < 3; ++i)
+                            pix[i] = srgb_invgamma(pix[i]);
+                    }
+                });
         }
     }
 }
@@ -74,11 +92,42 @@ void Image::flipY()
     }
 }
 
+static inline uint32 pack(uint8 r, uint8 g, uint8 b, uint8 a)
+{
+    return uint32(r) | (uint32(g) << 8) | (uint32(b) << 16) | (uint32(a) << 24);
+}
+
+void Image::copyToPackedFormat(std::vector<uint32>& dst) const
+{
+    dst.resize(width * height);
+
+    tbb::parallel_for(
+        tbb::blocked_range<size_t>(0, width * height),
+        [&](tbb::blocked_range<size_t> r) {
+            for (size_t k = r.begin(); k < r.end(); ++k) {
+                uint8 r = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 0] * 255) & 0xFF);
+                uint8 g = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 1] * 255) & 0xFF);
+                uint8 b = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 2] * 255) & 0xFF);
+                uint8 a = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 3] * 255) & 0xFF);
+                dst[k]  = pack(r, g, b, a);
+            }
+        });
+}
+
 inline bool ends_with(std::string const& value, std::string const& ending)
 {
     if (ending.size() > value.size())
         return false;
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
+bool Image::isPacked(const std::filesystem::path& path)
+{
+    std::string ext   = path.extension().generic_u8string();
+    const bool useExr = ends_with(ext, ".exr");
+    const bool useHdr = ends_with(ext, ".hdr");
+
+    return !useExr && !useHdr;
 }
 
 Image Image::load(const std::filesystem::path& path)
@@ -168,21 +217,26 @@ Image Image::load(const std::filesystem::path& path)
                 return {}; // TODO: Error message
             }
 
-            for (size_t i = 0; i < img.width * img.height; ++i) {
-                img.pixels[4 * i + 0] = reinterpret_cast<float**>(exr_image.images)[idxR][i];
-                img.pixels[4 * i + 1] = reinterpret_cast<float**>(exr_image.images)[idxG][i];
-                img.pixels[4 * i + 2] = reinterpret_cast<float**>(exr_image.images)[idxB][i];
-                if (idxA != -1)
-                    img.pixels[4 * i + 3] = reinterpret_cast<float**>(exr_image.images)[idxA][i];
-                else
-                    img.pixels[4 * i + 3] = 1;
-            }
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, img.width * img.height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t i = r.begin(); i < r.end(); ++i) {
+                        img.pixels[4 * i + 0] = reinterpret_cast<float**>(exr_image.images)[idxR][i];
+                        img.pixels[4 * i + 1] = reinterpret_cast<float**>(exr_image.images)[idxG][i];
+                        img.pixels[4 * i + 2] = reinterpret_cast<float**>(exr_image.images)[idxB][i];
+                        if (idxA != -1)
+                            img.pixels[4 * i + 3] = reinterpret_cast<float**>(exr_image.images)[idxA][i];
+                        else
+                            img.pixels[4 * i + 3] = 1;
+                    }
+                });
         }
 
         FreeEXRHeader(&exr_header);
         FreeEXRImage(&exr_image);
     } else {
         stbi_set_unpremultiply_on_load(1);
+        stbi_set_flip_vertically_on_load(0);
 
         int width = 0, height = 0, channels = 0;
         float* data = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 0);
@@ -198,32 +252,44 @@ Image Image::load(const std::filesystem::path& path)
         case 0:
             return Image();
         case 1: // Gray
-            for (size_t i = 0; i < img.width * img.height; ++i) {
-                float g               = data[i];
-                img.pixels[i * 4 + 0] = g;
-                img.pixels[i * 4 + 1] = g;
-                img.pixels[i * 4 + 2] = g;
-                img.pixels[i * 4 + 3] = 1;
-            }
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, img.width * img.height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t i = r.begin(); i < r.end(); ++i) {
+                        float g               = data[i];
+                        img.pixels[i * 4 + 0] = g;
+                        img.pixels[i * 4 + 1] = g;
+                        img.pixels[i * 4 + 2] = g;
+                        img.pixels[i * 4 + 3] = 1;
+                    }
+                });
             break;
         case 3: // RGB
-            for (size_t i = 0; i < img.width * img.height; ++i) {
-                img.pixels[i * 4 + 0] = data[i * 3 + 0];
-                img.pixels[i * 4 + 1] = data[i * 3 + 1];
-                img.pixels[i * 4 + 2] = data[i * 3 + 2];
-                img.pixels[i * 4 + 3] = 1;
-            }
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, img.width * img.height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t i = r.begin(); i < r.end(); ++i) {
+                        img.pixels[i * 4 + 0] = data[i * 3 + 0];
+                        img.pixels[i * 4 + 1] = data[i * 3 + 1];
+                        img.pixels[i * 4 + 2] = data[i * 3 + 2];
+                        img.pixels[i * 4 + 3] = 1;
+                    }
+                });
             break;
         case 4: // RGBA
             std::memcpy(img.pixels.get(), data, sizeof(float) * 4 * img.width * img.height);
             break;
         default:
-            for (size_t i = 0; i < img.width * img.height; ++i) {
-                img.pixels[i * 4 + 0] = data[i * channels + 1];
-                img.pixels[i * 4 + 1] = data[i * channels + 2];
-                img.pixels[i * 4 + 2] = data[i * channels + 3];
-                img.pixels[i * 4 + 3] = data[i * channels + 0];
-            }
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, img.width * img.height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t i = r.begin(); i < r.end(); ++i) {
+                        img.pixels[i * 4 + 0] = data[i * channels + 1];
+                        img.pixels[i * 4 + 1] = data[i * channels + 2];
+                        img.pixels[i * 4 + 2] = data[i * channels + 3];
+                        img.pixels[i * 4 + 3] = data[i * channels + 0];
+                    }
+                });
             break;
         }
         stbi_image_free(data);
@@ -235,6 +301,41 @@ Image Image::load(const std::filesystem::path& path)
     if (!useHdr)
         img.flipY();
     return img;
+}
+
+void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint32>& dst, size_t& width, size_t& height)
+{
+    std::string ext   = path.extension().generic_u8string();
+    const bool useExr = ends_with(ext, ".exr");
+    const bool useHdr = ends_with(ext, ".hdr");
+
+    if (useExr || useHdr)
+        throw ImageLoadException("Can not load EXR or HDR as packed", path);
+
+    stbi_set_unpremultiply_on_load(1);
+    stbi_set_flip_vertically_on_load(1);
+
+    int width2 = 0, height2 = 0, channels = 0;
+    stbi_uc* data = stbi_load(path.generic_u8string().c_str(), &width2, &height2, &channels, 4);
+
+    width  = static_cast<size_t>(width2);
+    height = static_cast<size_t>(height2);
+
+    if (data == nullptr)
+        throw ImageLoadException("Could not load image", path);
+
+    dst.resize(width * height);
+
+    // Pack data and map to linear space
+    tbb::parallel_for(
+        tbb::blocked_range<size_t>(0, width * height),
+        [&](tbb::blocked_range<size_t> r) {
+            for (size_t i = r.begin(); i < r.end(); ++i) {
+                dst[i] = pack(byte_color_to_linear(data[i * 4 + 0]), byte_color_to_linear(data[i * 4 + 1]), byte_color_to_linear(data[i * 4 + 2]), data[i * 4 + 3]);
+            }
+        });
+
+    stbi_image_free(data);
 }
 
 bool Image::save(const std::filesystem::path& path)
@@ -259,10 +360,14 @@ bool Image::save(const std::filesystem::path& path, const float* rgba, size_t wi
         images[i].resize(width * height);
 
     // Split into layers
-    for (size_t i = 0; i < width * height; ++i) {
-        for (size_t j = 0; j < channels; ++j)
-            images[j][i] = rgba[4 * i + j];
-    }
+    tbb::parallel_for(
+        tbb::blocked_range<size_t>(0, width * height),
+        [&](tbb::blocked_range<size_t> r) {
+            for (size_t i = r.begin(); i < r.end(); ++i) {
+                for (size_t j = 0; j < channels; ++j)
+                    images[j][i] = rgba[4 * i + j];
+            }
+        });
 
     std::vector<const float*> image_ptrs(channels);
     for (size_t i = 0; i < channels; ++i)

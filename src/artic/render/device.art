@@ -75,6 +75,9 @@ struct Device {
     //////////////// Resources
     // Load RGBA image from a file
     load_image: fn (&[u8] /* Filename */) -> Image,
+    
+    // Load (binary) RGBA image from a file
+    load_packed_image: fn (&[u8] /* Filename */) -> Image,
 
     // Load aov given by its id and the current spi
     load_aov_image: fn (i32 /* id */, i32 /* spi */) -> AOVImage,

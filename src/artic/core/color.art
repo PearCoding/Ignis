@@ -108,3 +108,11 @@ fn @srgb_gamma(x : f32) -> f32 {
         1.055 * math_builtins::pow[f32](x, 0.416666667) - 0.055
     }
 }
+
+fn @srgb_invgamma(x : f32) -> f32 {
+    if x <= 0.04045 {
+        x / 12.92
+    } else {
+        (math_builtins::pow[f32](x, 2.4) + 0.055) / 1.055
+    }
+}
