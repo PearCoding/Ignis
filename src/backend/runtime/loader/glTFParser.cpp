@@ -546,16 +546,18 @@ static void addNodeCamera(Scene& scene, const std::filesystem::path& baseDir, co
         obj->setProperty("near_clip", Property::fromNumber((float)camera.orthographic.znear));
         if (camera.orthographic.zfar > 0)
             obj->setProperty("far_clip", Property::fromNumber((float)camera.orthographic.zfar));
-        // TODO: xmag, ymag
+        obj->setProperty("scale", Property::fromNumber((float)camera.orthographic.xmag));
+        obj->setProperty("aspect_ratio", Property::fromNumber(static_cast<float>(camera.orthographic.ymag / camera.orthographic.xmag)));
         scene.setCamera(obj);
     } else {
         auto obj = std::make_shared<Object>(OT_CAMERA, "perspective", baseDir);
         obj->setProperty("transform", Property::fromTransform(cameraTransform));
-        obj->setProperty("fov", Property::fromNumber((float)camera.perspective.yfov * Rad2Deg));
+        obj->setProperty("vfov", Property::fromNumber((float)camera.perspective.yfov * Rad2Deg));
         obj->setProperty("near_clip", Property::fromNumber((float)camera.perspective.znear));
         if (camera.perspective.zfar > 0)
             obj->setProperty("far_clip", Property::fromNumber((float)camera.perspective.zfar));
-        // TODO: aspect ratio
+        if (camera.perspective.aspectRatio > 0)
+            obj->setProperty("aspect_ratio", Property::fromNumber((float)camera.perspective.aspectRatio));
         scene.setCamera(obj);
     }
 }

@@ -334,9 +334,16 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
     tree.endClosure();
 }
 
-static std::pair<std::string, KlemsSpecification> setup_klems(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx)
+using KlemsExportedData = std::pair<std::string, KlemsSpecification>;
+static KlemsExportedData setup_klems(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx)
 {
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
+
+    const std::string exported_id = "_klems_" + filename.u8string();
+
+    const auto data = ctx.ExportedData.find(exported_id);
+    if (data != ctx.ExportedData.end())
+        return std::any_cast<KlemsExportedData>(data->second);
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/klems_" + LoaderUtils::escapeIdentifier(name) + ".bin";
@@ -345,7 +352,9 @@ static std::pair<std::string, KlemsSpecification> setup_klems(const std::string&
     if (!KlemsLoader::prepare(filename, path, spec))
         ctx.signalError();
 
-    return { path, spec };
+    const KlemsExportedData res = { path, spec };
+    ctx.ExportedData[exported_id] = res;
+    return res;
 }
 
 static inline std::string dump_klems_specification(const KlemsComponentSpecification& spec)
@@ -394,9 +403,16 @@ static void bsdf_klems(std::ostream& stream, const std::string& name, const std:
     tree.endClosure();
 }
 
-static std::pair<std::string, TensorTreeSpecification> setup_tensortree(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx)
+using TTExportedData = std::pair<std::string, TensorTreeSpecification>;
+static TTExportedData setup_tensortree(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx)
 {
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
+
+    const std::string exported_id = "_tt_" + filename.u8string();
+
+    const auto data = ctx.ExportedData.find(exported_id);
+    if (data != ctx.ExportedData.end())
+        return std::any_cast<TTExportedData>(data->second);
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/tt_" + LoaderUtils::escapeIdentifier(name) + ".bin";
@@ -404,7 +420,10 @@ static std::pair<std::string, TensorTreeSpecification> setup_tensortree(const st
     TensorTreeSpecification spec{};
     if (!TensorTreeLoader::prepare(filename, path, spec))
         ctx.signalError();
-    return { path, spec };
+
+    const TTExportedData res      = { path, spec };
+    ctx.ExportedData[exported_id] = res;
+    return res;
 }
 
 static inline std::string dump_tt_specification(const TensorTreeSpecification& parent, const TensorTreeComponentSpecification& spec)

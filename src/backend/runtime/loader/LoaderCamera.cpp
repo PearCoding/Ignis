@@ -9,6 +9,22 @@ namespace IG {
 
 // TODO: Sometimes we have to "fix" the registry and width & height of the image buffer. Make this an option
 
+// Extract fov parameter. We allow specifying the horizontal (default) or vertical field of view
+static inline std::pair<bool /* Vertical */, float> extract_fov(const std::shared_ptr<Parser::Object>& camera)
+{
+    constexpr float DefaultFOV = 60.0f;
+
+    if (!camera)
+        return { false, DefaultFOV };
+
+    if (camera->property("vfov").canBeNumber())
+        return { true, camera->property("vfov").getNumber(DefaultFOV) };
+    else if (camera->property("hfov").canBeNumber())
+        return { false, camera->property("hfov").getNumber(DefaultFOV) };
+    else
+        return { false, camera->property("fov").getNumber(DefaultFOV) };
+}
+
 static CameraOrientation camera_perspective_orientation(const std::string&, const std::shared_ptr<Parser::Object>& camera, const LoaderContext& ctx)
 {
     CameraOrientation orientation;
@@ -18,13 +34,13 @@ static CameraOrientation camera_perspective_orientation(const std::string&, cons
         orientation.Dir            = cameraTransform.linear().col(2);
         orientation.Up             = cameraTransform.linear().col(1);
     } else {
-        float fov            = camera ? camera->property("fov").getNumber(60) : 60;
+        const auto fov       = extract_fov(camera);
         const auto sceneBBox = ctx.Environment.SceneBBox;
         // Try to setup a view over the whole scene
-        const float aspect_ratio = ctx.FilmWidth / static_cast<float>(ctx.FilmHeight);
-        const float a            = sceneBBox.diameter().x() / 2;
-        const float b            = sceneBBox.diameter().y() / (2 * aspect_ratio);
-        const float s            = std::sin(fov * Deg2Rad / 2);
+        const float aspect_ratio = camera ? camera->property("aspect_ratio").getNumber(1) : ctx.FilmWidth / static_cast<float>(ctx.FilmHeight);
+        const float a            = sceneBBox.diameter().x() / (2 * (fov.first ? aspect_ratio : 1)); // TODO: Really?
+        const float b            = sceneBBox.diameter().y() / (2 * (!fov.first ? aspect_ratio : 1));
+        const float s            = std::sin(fov.second * Deg2Rad / 2);
         const float d            = std::max(a, b) * std::sqrt(1 / (s * s) - 1);
 
         orientation.Dir = -Vector3f::UnitZ();
@@ -39,9 +55,9 @@ static CameraOrientation camera_perspective_orientation(const std::string&, cons
 
 static void camera_perspective(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& camera, const LoaderContext& ctx)
 {
-    float fov  = camera ? camera->property("fov").getNumber(60) : 60;
-    float tmin = camera ? camera->property("near_clip").getNumber(0) : 0;
-    float tmax = camera ? camera->property("far_clip").getNumber(std::numeric_limits<float>::max()) : std::numeric_limits<float>::max();
+    const auto fov = extract_fov(camera);
+    float tmin     = camera ? camera->property("near_clip").getNumber(0) : 0;
+    float tmax     = camera ? camera->property("far_clip").getNumber(std::numeric_limits<float>::max()) : std::numeric_limits<float>::max();
 
     float focal_length    = camera ? camera->property("focal_length").getNumber(1) : 1;
     float aperture_radius = camera ? camera->property("aperture_radius").getNumber(0) : 0;
@@ -56,22 +72,24 @@ static void camera_perspective(std::ostream& stream, const std::string& name, co
            << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
            << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl;
 
+    std::string aspect_ratio = "settings.width as f32 / settings.height as f32";
+    if (camera && camera->property("aspect_ratio").canBeNumber())
+        aspect_ratio = std::to_string(camera->property("aspect_ratio").getNumber(1));
+
+    const std::string fov_gen = fov.first ? "compute_scale_from_vfov" : "compute_scale_from_hfov";
+
     if (aperture_radius <= FltEps) {
         stream << "  let camera = make_perspective_camera(camera_eye, " << std::endl
                << "    camera_dir, " << std::endl
                << "    camera_up, " << std::endl
-               << "    settings.width as f32, " << std::endl
-               << "    settings.height as f32, " << std::endl
-               << "    " << fov * Deg2Rad << ", " << std::endl
+               << "    " << fov_gen << "(" << (fov.second * Deg2Rad) << ", " << aspect_ratio << "), " << std::endl
                << "    " << tmin << ", " << std::endl
                << "    " << tmax << ");" << std::endl;
     } else {
         stream << "  let camera = make_perspective_dof_camera(camera_eye, " << std::endl
                << "    camera_dir, " << std::endl
                << "    camera_up, " << std::endl
-               << "    settings.width as f32, " << std::endl
-               << "    settings.height as f32, " << std::endl
-               << "    " << fov * Deg2Rad << ", " << std::endl
+               << "    " << fov_gen << "(" << (fov.second * Deg2Rad) << ", " << aspect_ratio << "), " << std::endl
                << "    " << aperture_radius << ", " << std::endl
                << "    " << focal_length << ", " << std::endl
                << "    " << tmin << ", " << std::endl
@@ -102,6 +120,10 @@ static void camera_orthogonal(std::ostream& stream, const std::string& name, con
 
     CameraOrientation orientation = camera_orthogonal_orientation(name, camera, ctx);
 
+    std::string aspect_ratio = "(settings.width as f32 / settings.height as f32)";
+    if (camera && camera->property("aspect_ratio").canBeNumber())
+        aspect_ratio = std::to_string(camera->property("aspect_ratio").getNumber(1));
+
     // Dump camera control (above is just defaults)
     stream << "  let camera_eye = registry::get_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
            << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
@@ -109,9 +131,7 @@ static void camera_orthogonal(std::ostream& stream, const std::string& name, con
            << "  let camera = make_orthogonal_camera(camera_eye, " << std::endl
            << "    camera_dir, " << std::endl
            << "    camera_up, " << std::endl
-           << "    settings.width as f32, " << std::endl
-           << "    settings.height as f32, " << std::endl
-           << "    " << scale << ", " << std::endl
+           << "    make_vec2(" << scale << ", " << scale << " / " << aspect_ratio << "), " << std::endl
            << "    " << tmin << ", " << std::endl
            << "    " << tmax << ");" << std::endl;
 }
