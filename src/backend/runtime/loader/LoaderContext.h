@@ -4,28 +4,12 @@
 #include "Target.h"
 #include "TechniqueInfo.h"
 
+#include <any>
 #include <filesystem>
-#include <variant>
 
 namespace IG {
 
 struct SceneDatabase;
-
-using TextureColorVariant = std::variant<uint32, Vector3f>;
-inline bool isTexture(const TextureColorVariant& var)
-{
-    return std::holds_alternative<uint32>(var);
-}
-
-inline uint32 extractTexture(const TextureColorVariant& var)
-{
-    return std::get<uint32>(var);
-}
-
-inline Vector3f extractColor(const TextureColorVariant& var)
-{
-    return std::get<Vector3f>(var);
-}
 
 struct LoaderContext {
     Parser::Scene Scene;
@@ -46,8 +30,7 @@ struct LoaderContext {
     size_t CurrentTechniqueVariant;
     inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return TechniqueInfo.Variants[CurrentTechniqueVariant]; }
 
-    std::unordered_map<std::string, uint32> TextureBuffer; // Texture to Buffer/Image, used only in workaround
-    std::vector<Vector3f> TextureAverages;                 // Workaround for now
+    std::unordered_map<std::string, std::any> ExportedData; // Cache with already exported data and auxillary info
 
     LoaderEnvironment Environment;
     SceneDatabase* Database = nullptr;
@@ -59,9 +42,6 @@ struct LoaderContext {
     size_t FilmHeight = 600;
 
     std::filesystem::path handlePath(const std::filesystem::path& path, const Parser::Object& obj) const;
-
-    Vector3f extractColor(const Parser::Object& obj, const std::string& propname, const Vector3f& def = Vector3f::Ones()) const;
-    float extractIOR(const Parser::Object& obj, const std::string& propname, float def = 1.55f) const;
 
     bool HasError = false;
 

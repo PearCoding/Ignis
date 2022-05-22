@@ -407,7 +407,7 @@ bool Runtime::compileShaders()
 
         IG_LOG(L_DEBUG) << "Compiling hit shaders" << std::endl;
         for (size_t j = 0; j < variant.HitShaders.size(); ++j) {
-            IG_LOG(L_DEBUG) << "Hit shader [" << j << "]" << std::endl;
+            IG_LOG(L_DEBUG) << "Compiling Hit shader [" << j << "]" << std::endl;
             shaders.HitShaders.push_back(compileShader(variant.HitShaders[j].c_str(), "ig_hit_shader", "v" + std::to_string(i) + "_hitShader" + std::to_string(j)));
             if (shaders.HitShaders[j] == nullptr) {
                 IG_LOG(L_ERROR) << "Failed to compile hit shader " << j << " in variant " << i << "." << std::endl;
@@ -419,7 +419,7 @@ bool Runtime::compileShaders()
             IG_LOG(L_DEBUG) << "Compiling advanced shadow shaders" << std::endl;
 
             for (size_t j = 0; j < variant.AdvancedShadowHitShaders.size(); ++j) {
-                IG_LOG(L_DEBUG) << "Advanced Shadow Hit shader [" << j << "]" << std::endl;
+                IG_LOG(L_DEBUG) << "Compiling Advanced Shadow Hit shader [" << j << "]" << std::endl;
                 shaders.AdvancedShadowHitShaders.push_back(compileShader(variant.AdvancedShadowHitShaders[j].c_str(), "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowHit" + std::to_string(j)));
 
                 if (shaders.AdvancedShadowHitShaders[j] == nullptr) {
@@ -429,7 +429,7 @@ bool Runtime::compileShaders()
             }
 
             for (size_t j = 0; j < variant.AdvancedShadowMissShaders.size(); ++j) {
-                IG_LOG(L_DEBUG) << "Advanced Shadow Miss shader [" << j << "]" << std::endl;
+                IG_LOG(L_DEBUG) << "Compiling Advanced Shadow Miss shader [" << j << "]" << std::endl;
                 shaders.AdvancedShadowMissShaders.push_back(compileShader(variant.AdvancedShadowMissShaders[j].c_str(), "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowMiss" + std::to_string(j)));
 
                 if (shaders.AdvancedShadowMissShaders[j] == nullptr) {

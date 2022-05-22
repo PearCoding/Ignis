@@ -53,6 +53,11 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         return false;
     }
 
+    if (ctx.TechniqueInfo.Variants.size() == 1)
+        IG_LOG(L_DEBUG) << "Generating shaders for a single variant" << std::endl;
+    else
+        IG_LOG(L_DEBUG) << "Generating shaders for " << ctx.TechniqueInfo.Variants.size() << " variants" << std::endl;
+
     result.TechniqueVariants.resize(ctx.TechniqueInfo.Variants.size());
     for (size_t i = 0; i < ctx.TechniqueInfo.Variants.size(); ++i) {
         auto& variant               = result.TechniqueVariants[i];
@@ -61,6 +66,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         ctx.SamplesPerIteration     = info.GetSPI(opts.SamplesPerIteration);
 
         // Generate Ray Generation Shader
+        IG_LOG(L_DEBUG) << "Generating ray generation shader for variant " << i << std::endl;
         if (info.OverrideCameraGenerator)
             variant.RayGenerationShader = info.OverrideCameraGenerator(ctx);
         else
@@ -71,6 +77,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         }
 
         // Generate Miss Shader
+        IG_LOG(L_DEBUG) << "Generating miss shader for variant " << i << std::endl;
         variant.MissShader = MissShader::setup(ctx);
         if (variant.MissShader.empty()) {
             IG_LOG(L_ERROR) << "Constructed empty miss shader." << std::endl;
@@ -79,6 +86,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
         // Generate Hit Shader
         for (size_t j = 0; j < ctx.Environment.Materials.size(); ++j) {
+            IG_LOG(L_DEBUG) << "Generating hit shader " << j << " for variant " << i << std::endl;
             std::string shader = HitShader::setup(j, ctx);
             if (shader.empty()) {
                 IG_LOG(L_ERROR) << "Constructed empty hit shader for material " << j << "." << std::endl;
@@ -91,6 +99,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         if (info.ShadowHandlingMode != ShadowHandlingMode::Simple) {
             const size_t max_materials = info.ShadowHandlingMode == ShadowHandlingMode::Advanced ? 1 : ctx.Environment.Materials.size();
             for (size_t j = 0; j < max_materials; ++j) {
+                IG_LOG(L_DEBUG) << "Generating advanced shadow hit shader " << j << " for variant " << i << std::endl;
                 std::string shader = AdvancedShadowShader::setup(true, j, ctx);
                 if (shader.empty()) {
                     IG_LOG(L_ERROR) << "Constructed empty advanced shadow hit shader for material " << j << "." << std::endl;
@@ -99,6 +108,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
                 variant.AdvancedShadowHitShaders.push_back(shader);
             }
             for (size_t j = 0; j < max_materials; ++j) {
+                IG_LOG(L_DEBUG) << "Generating advanced shadow miss shader " << j << " for variant " << i << std::endl;
                 std::string shader = AdvancedShadowShader::setup(false, j, ctx);
                 if (shader.empty()) {
                     IG_LOG(L_ERROR) << "Constructed empty advanced shadow miss shader for material " << j << "." << std::endl;
@@ -109,6 +119,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         }
 
         for (size_t j = 0; j < info.CallbackGenerators.size(); ++j) {
+            IG_LOG(L_DEBUG) << "Generating callback shader " << j << " for variant " << i << std::endl;
             if (info.CallbackGenerators.at(j) != nullptr)
                 variant.CallbackShaders[j] = info.CallbackGenerators.at(j)(ctx);
         }
