@@ -241,8 +241,9 @@
   <section id="cameras">
 <h1>Cameras<a class="headerlink" href="#cameras" title="Permalink to this headline">¶</a></h1>
 <p>Ignis contains several useful camera models. Only one camera can be specified per scene.
-The camera is specified in the <span class="monosp">camera</span> block with a <span class="monosp">type</span> listed in this section below.
-The actual image size is specified in the <span class="monosp">film</span> block.</p>
+The camera is specified in the <span class="monosp">camera</span> block with a <span class="monosp">type</span> listed in this section below.</p>
+<p>The actual image (or viewport) size is specified in the <span class="monosp">film</span> block with an optional sample strategy in <span class="monosp">sampler</span>.
+The sample strategy has to be one of “independent” (default), “mjitt” or “halton”.</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="c1">// ...</span>
    <span class="s2">&quot;camera&quot;</span><span class="o">:</span> <span class="p">{</span>
@@ -253,7 +254,8 @@ The actual image size is specified in the <span class="monosp">film</span> block
         <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="nx">TRANSFORM</span>
     <span class="p">},</span>
     <span class="s2">&quot;film&quot;</span><span class="o">:</span> <span class="p">{</span>
-        <span class="s2">&quot;size&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">SX</span><span class="p">,</span> <span class="nx">SZ</span><span class="p">]</span>
+        <span class="s2">&quot;size&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">SX</span><span class="p">,</span> <span class="nx">SZ</span><span class="p">],</span>
+        <span class="s2">&quot;sampler&quot;</span><span class="o">:</span> <span class="s2">&quot;independent&quot;</span>
     <span class="p">}</span>
     <span class="c1">// ...</span>
 <span class="p">}</span>
@@ -279,7 +281,17 @@ The actual image size is specified in the <span class="monosp">film</span> block
 <tr class="row-even"><td><p><span class="paramtype">fov</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>60</p></td>
-<td><p>Field of view given in degrees.</p></td>
+<td><p>Horizontal field of view given in degrees. Can be also given via the name <span class="monosp">hfov</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">vfov</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p><em>None</em></p></td>
+<td><p>Vertical field of view given in degrees. Can not be defined together with <span class="monosp">fov</span> or <span class="monosp">hfov</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">aspect_ratio</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p><em>None</em></p></td>
+<td><p>Aspect ratio (width over height). If not specified the current viewport will be used.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">near_clip, far_clip</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
@@ -289,7 +301,7 @@ The actual image size is specified in the <span class="monosp">film</span> block
 <tr class="row-even"><td><p><span class="paramtype">focal_length</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>1</p></td>
-<td><p>Focal length given in scene units. Only useful if aperture_radius != 0.</p></td>
+<td><p>Focal length given in scene units. Only used if aperture_radius != 0.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">aperture_radius</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
@@ -324,7 +336,12 @@ The actual image size is specified in the <span class="monosp">film</span> block
 <tr class="row-odd"><td><p><span class="paramtype">scale</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>1</p></td>
-<td><p>Scale factor given in scene units.</p></td>
+<td><p>Horizontal scale factor given in scene units.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">aspect_ratio</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p><em>None</em></p></td>
+<td><p>Aspect ratio (width over height). If not specified the current viewport will be used.</p></td>
 </tr>
 </tbody>
 </table>
