@@ -590,8 +590,8 @@ static void addNodePunctualLight(Scene& scene, const std::filesystem::path& base
         obj->setProperty("position", Property::fromVector3(transform * Vector3f::Zero()));
         obj->setProperty("direction", Property::fromVector3(dir));
         obj->setProperty("intensity", Property::fromVector3(color));
-        obj->setProperty("cutoff", Property::fromNumber(light.spot.outerConeAngle * Rad2Deg));
-        obj->setProperty("falloff", Property::fromNumber(light.spot.innerConeAngle * Rad2Deg));
+        obj->setProperty("cutoff", Property::fromNumber((float)light.spot.outerConeAngle * Rad2Deg));
+        obj->setProperty("falloff", Property::fromNumber((float)light.spot.innerConeAngle * Rad2Deg));
         scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
     } else if (light.type == "directional") {
         Vector3f dir = (transform.linear().inverse().transpose() * Vector3f(0.0f, 0.0f, -1.0f)).normalized();

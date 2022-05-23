@@ -103,8 +103,8 @@ void Image::copyToPackedFormat(std::vector<uint32>& dst) const
 
     tbb::parallel_for(
         tbb::blocked_range<size_t>(0, width * height),
-        [&](tbb::blocked_range<size_t> r) {
-            for (size_t k = r.begin(); k < r.end(); ++k) {
+        [&](tbb::blocked_range<size_t> range) {
+            for (size_t k = range.begin(); k < range.end(); ++k) {
                 uint8 r = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 0] * 255) & 0xFF);
                 uint8 g = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 1] * 255) & 0xFF);
                 uint8 b = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 2] * 255) & 0xFF);
