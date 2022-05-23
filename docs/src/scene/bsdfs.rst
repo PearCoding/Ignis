@@ -421,6 +421,10 @@ Disney *Principled* (:monosp:`principled`)
    - |number|
    - 0.0
    - TODO
+ * - clearcoat_top_only
+   - |bool|
+   - true
+   - True if clearcoat should only be applied to the front side of the surface only.
  * - clearcoat_roughness
    - |number|
    - 0.1

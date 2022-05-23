@@ -170,12 +170,16 @@ public:
         const bool canInteract = !LockInteraction && run;
 
         const auto handleRotation = [&](float xmotion, float ymotion) {
-            if (io.KeyAlt)
-                cam.rotate_fixroll(xmotion, ymotion);
-            else if (io.KeyCtrl)
+            if (io.KeyCtrl && io.KeyAlt) {
                 cam.rotate_around(sceneCenter, xmotion, ymotion);
-            else
+                cam.snap_up();
+            } else if (io.KeyAlt) {
+                cam.rotate_fixroll(xmotion, ymotion);
+            } else if (io.KeyCtrl) {
+                cam.rotate_around(sceneCenter, xmotion, ymotion);
+            } else {
                 cam.rotate(xmotion, ymotion);
+            }
         };
 
         SDL_Event event;
@@ -919,6 +923,7 @@ static void handleHelp()
 - Mouse to rotate the camera. 
   Use with *Strg/Ctrl* to rotate the camera around the center of the scene.
   Use with *Alt* to enable first person camera behaviour.
+  Use with *Strg/Ctrl* + *Alt* to rotate the camera around the center of the scene and subsequently snap the up direction.
 )";
 
     ImGui::MarkdownConfig config;

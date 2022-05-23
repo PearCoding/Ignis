@@ -311,7 +311,8 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
 
     const auto ior_spec = lookupDielectric("ior_material", name, bsdf);
 
-    bool is_thin = bsdf->property("thin").getBool(false);
+    bool is_thin            = bsdf->property("thin").getBool(false);
+    bool clearcoat_top_only = bsdf->property("clearcoat_top_only").getBool(true);
 
     stream << tree.pullHeader()
            << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_principled_bsdf(surf, "
@@ -329,7 +330,8 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
            << tree.getInline("clearcoat") << ", "
            << tree.getInline("clearcoat_gloss") << ", "
            << tree.getInline("clearcoat_roughness") << ", "
-           << (is_thin ? "true" : "false") << ");" << std::endl;
+           << (is_thin ? "true" : "false") << ", "
+           << (clearcoat_top_only ? "true" : "false") << ");" << std::endl;
 
     tree.endClosure();
 }
@@ -352,7 +354,7 @@ static KlemsExportedData setup_klems(const std::string& name, const std::shared_
     if (!KlemsLoader::prepare(filename, path, spec))
         ctx.signalError();
 
-    const KlemsExportedData res = { path, spec };
+    const KlemsExportedData res   = { path, spec };
     ctx.ExportedData[exported_id] = res;
     return res;
 }

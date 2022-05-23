@@ -222,7 +222,7 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                      ior: f32, diffuse_transmission: f32, specular_transmission: f32, specular_tint: f32,
                      roughness: f32, anisotropic: f32, flatness: f32, metallic: f32, 
                      sheen: f32, sheen_tint: f32, clearcoat: f32, clearcoat_gloss: f32, clearcoat_roughness: f32,
-                     thin: bool) -> Bsdf {
+                     thin: bool, clearcoat_top_only: bool) -> Bsdf {
     let micro_eps = 1e-5:f32; // Pdf epsilon for microfacet samples
     fn @bound_spec_pdf(v: f32) = select(v <= micro_eps, 0:f32, v);
 
@@ -303,7 +303,7 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         }
 
         // Clearcoat
-        if upper_hemisphere {
+        if !is_transmission && (!clearcoat_top_only || upper_hemisphere) {
             if !?clearcoat || (?clearcoat && clearcoat > 0) {
                 contrib = color_add(contrib, color_mulf(principled::evalClearcoatTerm(eval_closure), clearcoat * aNdL));
             }

@@ -723,9 +723,8 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
         // Extensions
         if (mat.extensions.count(KHR_materials_ior.data()) > 0) {
             const auto& ext = mat.extensions.at(KHR_materials_ior.data());
-            if (ext.Has("ior") && ext.Get("ior").IsNumber()) {
+            if (ext.Has("ior") && ext.Get("ior").IsNumber())
                 bsdf->setProperty("ior", Property::fromNumber((float)ext.Get("ior").GetNumberAsDouble()));
-            }
         } else {
             bsdf->setProperty("ior", Property::fromNumber(1.5));
         }
@@ -834,6 +833,9 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
                 bsdf->setProperty("clearcoat_roughness", Property::fromString(rtex + ".g*" + std::to_string(rfactor)));
             else
                 bsdf->setProperty("clearcoat_roughness", Property::fromNumber(rfactor));
+
+            bsdf->setProperty("clearcoat_top_only", Property::fromBool(!mat.doubleSided));
+            // TODO: Apply factor to emission for "darkening" by the cosine term
         }
 
         if (mat.normalTexture.index >= 0) {
@@ -873,12 +875,6 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
             } else {
                 bsdf->setProperty("weight", Property::fromNumber(factor));
             }
-        }
-
-        if (mat.doubleSided) {
-            scene.addBSDF(name + "_ds_inner", bsdf);
-            bsdf = std::make_shared<Object>(OT_BSDF, "doublesided", directory);
-            bsdf->setProperty("bsdf", Property::fromString(name + "_ds_inner"));
         }
 
         scene.addBSDF(name, bsdf);
