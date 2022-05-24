@@ -12,7 +12,7 @@ COPY . /ignis
 WORKDIR /ignis
 RUN ./docker/compile.sh
 
-FROM gcc:11 as runtime
+FROM gcc:12 as runtime
 
 LABEL maintainer="Ömercan Yazici" \
       description="Ignis Raytracer with AVX2 backend" \
