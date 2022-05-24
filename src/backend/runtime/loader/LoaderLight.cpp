@@ -114,7 +114,7 @@ inline static void exportSimplePointLights(const LoaderContext& ctx)
         const Vector3f position = light->property("position").getVector3();
         const Vector3f radiance = get_property_color(light->property("intensity"), Vector3f::Zero());
 
-        auto& lightData = ctx.Database->CustomTables["SimplePoint"].addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
+        auto& lightData = ctx.Database->CustomTables["SimplePoint"].addLookup(0, 0, 0); // We do not make use of the typeid
         VectorSerializer lightSerializer(lightData, false);
         lightSerializer.write(position);              // +3   = 3
         lightSerializer.write((uint32)0 /*Padding*/); // +1   = 4
