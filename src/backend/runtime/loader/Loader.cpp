@@ -45,8 +45,12 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
     result.Database.MaterialCount = ctx.Environment.Materials.size();
 
+    auto tech_info = LoaderTechnique::getInfo(ctx);
+    if (!tech_info.has_value())
+        return false;
+
     ctx.Database      = &result.Database;
-    ctx.TechniqueInfo = LoaderTechnique::getInfo(ctx);
+    ctx.TechniqueInfo = tech_info.value();
 
     if (ctx.TechniqueInfo.Variants.empty()) {
         IG_LOG(L_ERROR) << "Invalid technique with no variants" << std::endl;

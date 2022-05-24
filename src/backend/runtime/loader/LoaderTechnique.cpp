@@ -323,7 +323,7 @@ static const TechniqueEntry* getTechniqueEntry(const std::string& name)
     return nullptr;
 }
 
-TechniqueInfo LoaderTechnique::getInfo(const LoaderContext& ctx)
+std::optional<TechniqueInfo> LoaderTechnique::getInfo(const LoaderContext& ctx)
 {
     const auto* entry = getTechniqueEntry(ctx.TechniqueType);
     if (!entry)

@@ -127,26 +127,26 @@ inline static MapFunction1 genMapFunction1(const char* func, PExprType type)
     case PExprType::Vec4:
         return [=](const std::string& a) { return "vec4_map(" + a + ", |x:f32| " + std::string(func) + "(x))"; };
     }
-};
+}
 inline static MapFunction1 genMapFunction1(const char* func, const char* funcI, PExprType type)
 {
     if (type == PExprType::Integer)
         return [=](const std::string& a) { return std::string(funcI) + "(" + a + ")"; };
     else
         return genMapFunction1(func, type);
-};
+}
 inline static MapFunction1 genFunction1(const char* func)
 {
     return [=](const std::string& a) { return std::string(func) + "(" + a + ")"; };
-};
+}
 inline static MapFunction1 genFunction1Color(const char* func)
 {
     return [=](const std::string& a) { return "color_to_vec4(" + std::string(func) + "(" + a + "))"; };
-};
+}
 inline static MapFunction1 genFunction1ColorIO(const char* func)
 {
     return [=](const std::string& a) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + a + ")))"; };
-};
+}
 inline static MapFunction1 genArrayFunction1(const char* func, PExprType type)
 {
     switch (type) {
@@ -159,7 +159,7 @@ inline static MapFunction1 genArrayFunction1(const char* func, PExprType type)
     case PExprType::Vec4:
         return [=](const std::string& a) { return "vec4_" + std::string(func) + "(" + a + ")"; };
     }
-};
+}
 using InternalDynFunction1 = InternalDynFunction<MapFunction1>;
 inline static InternalDynFunction1 genDynMapFunction1(const char* func, const char* funcI)
 {
@@ -170,7 +170,7 @@ inline static InternalDynFunction1 genDynMapFunction1(const char* func, const ch
         genMapFunction1(func, PExprType::Vec3),
         genMapFunction1(func, PExprType::Vec4)
     };
-};
+}
 inline static InternalDynFunction1 genDynArrayFunction1(const char* func)
 {
     return {
@@ -180,7 +180,7 @@ inline static InternalDynFunction1 genDynArrayFunction1(const char* func)
         genArrayFunction1(func, PExprType::Vec3),
         genArrayFunction1(func, PExprType::Vec4)
     };
-};
+}
 
 // Dyn Functions 2
 using MapFunction2         = std::function<std::string(const std::string&, const std::string&)>;
@@ -200,14 +200,14 @@ inline static MapFunction2 genMapFunction2(const char* func, PExprType type)
     case PExprType::Vec4:
         return [=](const std::string& a, const std::string& b) { return "vec4_zip(" + a + ", " + b + ", |x:f32, y:f32| " + std::string(func) + "(x, y))"; };
     }
-};
+}
 inline static MapFunction2 genMapFunction2(const char* func, const char* funcI, PExprType type)
 {
     if (type == PExprType::Integer)
         return [=](const std::string& a, const std::string& b) { return std::string(funcI) + "(" + a + ", " + b + ")"; };
     else
         return genMapFunction2(func, type);
-};
+}
 inline static MapFunction2 genArrayFunction2(const char* func, PExprType type)
 {
     switch (type) {
@@ -220,15 +220,15 @@ inline static MapFunction2 genArrayFunction2(const char* func, PExprType type)
     case PExprType::Vec4:
         return [=](const std::string& a, const std::string& b) { return "vec4_" + std::string(func) + "(" + a + ", " + b + ")"; };
     }
-};
+}
 inline static MapFunction2 genFunction2(const char* func)
 {
     return [=](const std::string& a, const std::string& b) { return std::string(func) + "(" + a + ", " + b + ")"; };
-};
+}
 inline static MapFunction2 genFunction2Color(const char* func)
 {
     return [=](const std::string& a, const std::string& b) { return "color_to_vec4(" + std::string(func) + "(" + a + ", " + b + "))"; };
-};
+}
 inline static InternalDynFunction2 genDynMapFunction2(const char* func, const char* funcI)
 {
     return {
@@ -238,7 +238,7 @@ inline static InternalDynFunction2 genDynMapFunction2(const char* func, const ch
         genMapFunction2(func, PExprType::Vec3),
         genMapFunction2(func, PExprType::Vec4)
     };
-};
+}
 inline static InternalDynFunction2 genDynArrayFunction2(const char* func)
 {
     return {
@@ -248,7 +248,7 @@ inline static InternalDynFunction2 genDynArrayFunction2(const char* func)
         genArrayFunction2(func, PExprType::Vec3),
         genArrayFunction2(func, PExprType::Vec4)
     };
-};
+}
 
 // Dyn Functions 3
 using MapFunction3         = std::function<std::string(const std::string&, const std::string&, const std::string&)>;
@@ -268,7 +268,7 @@ inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
     case PExprType::Vec4:
         return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
     }
-};
+}
 // Type A func (A, A, num)
 inline static InternalDynFunction3 genDynLerpFunction3(const char* func)
 {
@@ -279,7 +279,7 @@ inline static InternalDynFunction3 genDynLerpFunction3(const char* func)
         genMapFunction3(func, PExprType::Vec3),
         genMapFunction3(func, PExprType::Vec4)
     };
-};
+}
 
 // Defs
 static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynFunctions1 = {
