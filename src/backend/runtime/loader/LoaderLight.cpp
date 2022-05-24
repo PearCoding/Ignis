@@ -404,7 +404,7 @@ static void light_perez(std::ostream& stream, const std::string& name, const std
                << ", " << tree.getInline("e")
                << "))";
     }
-    
+
     stream << ", " << tree.getInline("a")
            << ", " << tree.getInline("b")
            << ", " << tree.getInline("c")
@@ -463,6 +463,11 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
     }
 
     tree.endClosure();
+}
+
+static void light_error(std::ostream& stream, const std::string& name)
+{
+    stream << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_null_light() /* Error */;" << std::endl;
 }
 
 using LightLoader = void (*)(std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, ShadingTree&);
@@ -551,8 +556,10 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
                 break;
             }
         }
-        if (!found)
+        if (!found) {
             IG_LOG(L_ERROR) << "No light type '" << light->pluginType() << "' available" << std::endl;
+            light_error(stream, pair.first);
+        }
     }
 
     // Add a new line for cosmetics if necessary :P
@@ -629,7 +636,7 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
         }
     }
 
-    if (counter2 == 0) {
+    if (counter == 0 || counter2 == 0) {
         if (!skipArea) // Don't trigger a warning if we skip areas
             IG_LOG(L_WARNING) << "Scene does not contain lights" << std::endl;
         stream << "      _ => make_null_light()" << std::endl;
