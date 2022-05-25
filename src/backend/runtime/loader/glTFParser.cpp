@@ -489,9 +489,9 @@ static void addNodeMesh(Scene& scene, const tinygltf::Material& defaultMaterial,
             if (material->emissiveTexture.index >= 0) {
                 const std::string tex = handleTexture(material->emissiveTexture, scene, model, baseDir);
                 light->setProperty("radiance", Property::fromString(tex + "*color("
-                                                                    + std::to_string((float)material->emissiveFactor[0])
-                                                                    + ", " + std::to_string((float)material->emissiveFactor[1])
-                                                                    + ", " + std::to_string((float)material->emissiveFactor[2]) + ")"));
+                                                                    + std::to_string((float)material->emissiveFactor[0] * strength)
+                                                                    + ", " + std::to_string((float)material->emissiveFactor[1] * strength)
+                                                                    + ", " + std::to_string((float)material->emissiveFactor[2] * strength) + ")"));
             } else {
                 light->setProperty("radiance", Property::fromVector3(Vector3f((float)material->emissiveFactor[0], (float)material->emissiveFactor[1], (float)material->emissiveFactor[2]) * strength));
             }

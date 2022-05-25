@@ -110,7 +110,10 @@ inline static void exportSimplePointLights(const LoaderContext& ctx)
 
     IG_LOG(L_DEBUG) << "Embedding simple point lights" << std::endl;
     for (const auto& pair : ctx.Scene.lights()) {
-        const auto light        = pair.second;
+        const auto light = pair.second;
+        if (light->pluginType() != "point")
+            continue;
+
         const Vector3f position = light->property("position").getVector3();
         const Vector3f radiance = get_property_color(light->property("intensity"), Vector3f::Zero());
 
@@ -204,7 +207,10 @@ inline static void exportSimpleAreaLights(const LoaderContext& ctx)
 
     IG_LOG(L_DEBUG) << "Embedding simple area lights" << std::endl;
     for (const auto& pair : ctx.Scene.lights()) {
-        const auto light             = pair.second;
+        const auto light = pair.second;
+        if (light->pluginType() != "area")
+            continue;
+
         const std::string entityName = light->property("entity").getString();
         const Vector3f radiance      = get_property_color(light->property("radiance"), Vector3f::Zero());
 
