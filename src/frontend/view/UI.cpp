@@ -571,14 +571,14 @@ public:
         };
     }
 
-    void makeScreenshot(size_t width, size_t height, size_t iter)
+    void makeScreenshot()
     {
         std::stringstream out_file;
         auto now       = std::chrono::system_clock::now();
         auto in_time_t = std::chrono::system_clock::to_time_t(now);
         out_file << "screenshot_" << std::put_time(std::localtime(&in_time_t), "%Y_%m_%d_%H_%M_%S") << ".exr";
 
-        if (!saveImageRGB(out_file.str(), currentPixels(), width, height, 1.0f / iter))
+        if (!saveImageOutput(out_file.str(), *Runtime))
             IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "'" << std::endl;
         else
             IG_LOG(L_INFO) << "Screenshot saved to '" << out_file.str() << "'" << std::endl;
@@ -941,7 +941,7 @@ void UI::update(size_t iter, size_t samples)
     mInternal->updateSurface(iter);
     switch (mInternal->ScreenshotRequest) {
     case ScreenshotRequestMode::Framebuffer:
-        mInternal->makeScreenshot(mWidth, mHeight, iter);
+        mInternal->makeScreenshot();
         mInternal->ScreenshotRequest = ScreenshotRequestMode::Nothing;
         break;
     case ScreenshotRequestMode::Full:
