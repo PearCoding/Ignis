@@ -109,7 +109,7 @@ int main(int argc, char** argv)
         // Setup initial travelspeed
         BoundingBox bbox = runtime->sceneBoundingBox();
         bbox.extend(camera.Eye);
-        ui->setTravelSpeed(bbox.diameter().maxCoeff() / 50);
+        ui->setTravelSpeed(std::max(1e-4f, bbox.diameter().maxCoeff() / 50));
     } catch (...) {
         return EXIT_FAILURE;
     }

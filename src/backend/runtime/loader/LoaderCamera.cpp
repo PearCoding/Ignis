@@ -36,12 +36,21 @@ static CameraOrientation camera_perspective_orientation(const std::string&, cons
     } else {
         const auto fov       = extract_fov(camera);
         const auto sceneBBox = ctx.Environment.SceneBBox;
+
+        // Special case when the scene is completely empty
+        if (sceneBBox.isEmpty()) {
+            orientation.Dir = -Vector3f::UnitZ();
+            orientation.Up  = Vector3f::UnitY();
+            orientation.Eye = Vector3f::Zero();
+            return orientation;
+        }
+
         // Try to setup a view over the whole scene
         const float aspect_ratio = camera ? camera->property("aspect_ratio").getNumber(1) : ctx.FilmWidth / static_cast<float>(ctx.FilmHeight);
         const float a            = sceneBBox.diameter().x() / (2 * (fov.first ? aspect_ratio : 1)); // TODO: Really?
         const float b            = sceneBBox.diameter().y() / (2 * (!fov.first ? aspect_ratio : 1));
         const float s            = std::sin(fov.second * Deg2Rad / 2);
-        const float d            = std::max(a, b) * std::sqrt(1 / (s * s) - 1);
+        const float d            = std::abs(s) <= FltEps ? 0 : std::max(a, b) * std::sqrt(1 / (s * s) - 1);
 
         orientation.Dir = -Vector3f::UnitZ();
         orientation.Up  = Vector3f::UnitY();
