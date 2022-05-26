@@ -1,0 +1,71 @@
+// Additional math functions
+
+mod math {
+use super as all;
+use super::math_builtins;
+
+fn @erf(x: f32) -> f32  {
+    let a1 =  0.254829592:f32;
+    let a2 = -0.284496736:f32;
+    let a3 =  1.421413741:f32;
+    let a4 = -1.453152027:f32;
+    let a5 =  1.061405429:f32;
+    let p  =  0.327591100:f32;
+ 
+    let sign = math_builtins::copysign(1:f32, x);
+    let ax   = math_builtins::fabs(x);
+ 
+    // A&S formula 7.1.26
+    let t = 1 / (1 + p * ax);
+    let y = 1 - (((((a5*t + a4) * t) + a3)*t + a2)*t + a1) * t * math_builtins::exp(-x*x);
+ 
+    sign*y
+}
+
+fn @erfinv(x: f32) -> f32  {
+    let mut w = -math_builtins::log((1 - x)*(1 + x));
+    let mut p = all::undef[f32]();
+
+    if w < 5 {
+        w = w - 2.5;
+        p =  2.81022636e-08;
+        p =  3.43273939e-07 + p*w;
+        p = -3.52338770e-06 + p*w;
+        p = -4.39150654e-06 + p*w;
+        p =  0.000218580870 + p*w;
+        p = -0.001253725030 + p*w;
+        p = -0.004177681640 + p*w;
+        p =  0.246640727000 + p*w;
+        p =  1.501409410000 + p*w;
+    } else {
+        w = math_builtins::sqrt(w) - 3;
+        p = -0.000200214257;
+        p =  0.000100950558 + p*w;
+        p =  0.001349343220 + p*w;
+        p = -0.003673428440 + p*w;
+        p =  0.005739507730 + p*w;
+        p = -0.007622461300 + p*w;
+        p =  0.009438870470 + p*w;
+        p =  1.001674060000 + p*w;
+        p =  2.832976820000 + p*w;
+    }
+    p*x
+}
+
+fn @abgam(x: f32) -> f32 {
+    let gam0 = 0.083333333:f32;
+    let gam1 = 0.033333333:f32;
+    let gam2 = 0.252380952:f32;
+    let gam3 = 0.525606469:f32;
+    let gam4 = 1.011523068:f32;
+    let gam5 = 1.517473649:f32;
+    let gam6 = 2.269488974:f32;
+
+    0.5 * math_builtins::log(2*all::flt_pi) - x + (x - 0.5) * math_builtins::log(x)
+        + gam0/(x + gam1/(x + gam2/(x + gam3/(x + gam4 /
+        (x + gam5/(x + gam6/x))))))
+}
+
+fn @gamma(x: f32)        = math_builtins::exp(abgam(x + 5)) / (x*(x + 1)*(x + 2)*(x + 3)*(x + 4));
+fn @beta(m: f32, n: f32) = gamma(m) * gamma(n) / gamma(m + n);
+}

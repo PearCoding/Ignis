@@ -31,7 +31,7 @@ fn @make_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Color) =
 
 //--------------------------------------
 // Creates a microfacet conductor BSDF with specific fresnel term
-fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, fresnelTerm: fn (f32) -> Color, micro: MicrofacetDistribution) -> Bsdf {
+fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, fresnelTerm: fn (f32) -> Color, micro: microfacet::MicrofacetDistribution) -> Bsdf {
     let N = surf.local.col(2);
 
     if micro.is_delta {
@@ -104,7 +104,7 @@ fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, f
 }
 
 // Creates a microfacet conductor BSDF. This is the two-sided version
-fn @make_rough_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Color, micro: MicrofacetDistribution) -> Bsdf {
+fn @make_rough_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Color, micro: microfacet::MicrofacetDistribution) -> Bsdf {
     let fresnelTerm = @|cosTheta : f32| make_color(
         conductor_factor(ior.r, k.r, cosTheta),
         conductor_factor(ior.g, k.g, cosTheta),

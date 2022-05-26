@@ -82,13 +82,13 @@ static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, Shadin
 
 static std::string inline_microfacet(const std::string& name, ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf)
 {
-    std::string distribution = "make_vndf_ggx_distribution";
+    std::string distribution = "microfacet::make_vndf_ggx_distribution";
     if (bsdf->property("distribution").type() == Parser::PT_STRING) {
         std::string type = bsdf->property("distribution").getString();
         if (type == "ggx") {
-            distribution = "make_ggx_distribution";
+            distribution = "microfacet::make_ggx_distribution";
         } else if (type == "beckmann") {
-            distribution = "make_beckmann_distribution";
+            distribution = "microfacet::make_beckmann_distribution";
         }
     }
 

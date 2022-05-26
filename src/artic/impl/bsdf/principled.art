@@ -12,6 +12,7 @@ use super as all;
 use super::math_builtins;
 use super::color_builtins;
 use super::shading;
+use super::microfacet;
 
 type SurfaceElement = all::SurfaceElement;
 type Color = all::Color;
@@ -55,16 +56,16 @@ fn @tint_color(color: Color) -> Color {
 }
 fn @sheen_tint_color(color: Color, tint: f32) = super::color_lerp(color_builtins::white, tint_color(color), tint);
 
-fn @getMicro(closure: Closure, roughness: f32, _is_refl: bool) -> all::MicrofacetDistribution {
+fn @getMicro(closure: Closure, roughness: f32, _is_refl: bool) -> microfacet::MicrofacetDistribution {
     let aspect = if closure.anisotropic == 0 { 1 } else { math_builtins::sqrt[f32](1 - closure.anisotropic * 0.9) };
     let ax	   = math_builtins::fmax[f32](1e-3, roughness * roughness / aspect);
     let ay	   = math_builtins::fmax[f32](1e-3, roughness * roughness * aspect);
 
-    super::make_vndf_ggx_distribution(super::mat3x3_identity(), ax, ay)
+    microfacet::make_vndf_ggx_distribution(super::mat3x3_identity(), ax, ay)
 }
 
 fn @getReflectionMicro(closure: Closure) = getMicro(closure, closure.roughness, true);
-fn @getRefractionMicro(closure: Closure) -> all::MicrofacetDistribution {
+fn @getRefractionMicro(closure: Closure) -> microfacet::MicrofacetDistribution {
     let roughness = if closure.thin { 
         super::clampf((0.65 * closure.ior - 0.35) * closure.roughness, 0, 1)
     } else { 
@@ -168,9 +169,9 @@ fn @evalClearcoatTerm(closure: EvalClosure) -> Color {
 
     let aHdL = super::absolute_cos(closure.wi, closure.h);
 
-    let d = super::ndf_ggx(super::mat3x3_identity(), closure.h, R2, R2);
+    let d = microfacet::ndf_ggx(super::mat3x3_identity(), closure.h, R2, R2);
     let f = super::schlick_f(F0, 1, aHdL);
-    let g = super::g_1_smith(super::mat3x3_identity(), closure.wi, closure.h, R, R) * super::g_1_smith(super::mat3x3_identity(), closure.wo, closure.h, R, R);
+    let g = microfacet::g_1_smith(super::mat3x3_identity(), closure.wi, closure.h, R, R) * microfacet::g_1_smith(super::mat3x3_identity(), closure.wo, closure.h, R, R);
 
     let jacob = shading::halfway_reflective_jacobian(shading::cos_theta(closure.wo));
     super::make_gray_color(math_builtins::fabs(R * d * f * g * jacob))

@@ -48,7 +48,7 @@ fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: 
 
 //--------------------------------------
 // Creates a rough glass BSDF
-fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color, micro: MicrofacetDistribution) -> Bsdf {
+fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color, micro: microfacet::MicrofacetDistribution) -> Bsdf {
     let cos_eps = 1e-5 : f32; // Epsilon for cosine
     let pdf_eps = if micro.is_delta { 
         flt_eps
