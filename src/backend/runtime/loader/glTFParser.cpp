@@ -2,6 +2,7 @@
 #include "ImageIO.h"
 #include "Logger.h"
 
+#include <algorithm>
 #include <string_view>
 #include <unordered_set>
 
@@ -30,6 +31,16 @@
 [[maybe_unused]] constexpr std::string_view KHR_materials_unlit             = "KHR_materials_unlit";
 [[maybe_unused]] constexpr std::string_view KHR_materials_volume            = "KHR_materials_volume";
 [[maybe_unused]] constexpr std::string_view KHR_texture_transform           = "KHR_texture_transform";
+// [[maybe_unused]] constexpr std::string_view MSFT_packing_occlusionRoughnessMetallic = "MSFT_packing_occlusionRoughnessMetallic"; // TODO: This is simple to add
+// [[maybe_unused]] constexpr std::string_view MSFT_packing_normalRoughnessMetallic    = "MSFT_packing_normalRoughnessMetallic";    // TODO: This is simple to add
+// [[maybe_unused]] constexpr std::string_view ADOBE_materials_thin_transparency       = "ADOBE_materials_thin_transparency";       // TODO: We basically do this already
+static const std::vector<std::string_view> gltf_supported_extensions = {
+    KHR_lights_punctual, KHR_materials_clearcoat,
+    KHR_materials_emissive_strength, KHR_materials_ior,
+    KHR_materials_sheen, KHR_materials_translucency,
+    KHR_materials_transmission, KHR_materials_unlit,
+    KHR_materials_volume, KHR_texture_transform
+};
 
 // Uncomment this to map unlit materials to area lights. This can explode shading complexity and is therefore not really recommended
 // #define IG_GLTF_MAP_UNLIT_AS_LIGHT
@@ -505,11 +516,11 @@ static void addNodeMesh(Scene& scene, const tinygltf::Material& defaultMaterial,
             light->setProperty("entity", Property::fromString(entity_name));
 
             if (material->pbrMetallicRoughness.baseColorTexture.index >= 0) {
-                const std::string tex = handleTexture(mat.pbrMetallicRoughness.baseColorTexture, scene, model, directory);
-                bsdf->setProperty("radiance", Property::fromString(tex + "*color("
-                                                                   + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[0])
-                                                                   + ", " + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[1])
-                                                                   + ", " + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[2]) + ")"));
+                const std::string tex = handleTexture(material->pbrMetallicRoughness.baseColorTexture, scene, model, baseDir);
+                light->setProperty("radiance", Property::fromString(tex + "*color("
+                                                                    + std::to_string((float)material->pbrMetallicRoughness.baseColorFactor[0])
+                                                                    + ", " + std::to_string((float)material->pbrMetallicRoughness.baseColorFactor[1])
+                                                                    + ", " + std::to_string((float)material->pbrMetallicRoughness.baseColorFactor[2]) + ")"));
             } else {
                 light->setProperty("radiance", Property::fromVector3(Vector3f((float)material->pbrMetallicRoughness.baseColorFactor[0], (float)material->pbrMetallicRoughness.baseColorFactor[1], (float)material->pbrMetallicRoughness.baseColorFactor[2])));
             }
@@ -915,6 +926,13 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
     if (!ok)
         return {};
+
+    // Check required extensions (but carryon nevertheless)
+    for (const auto& ext : model.extensionsRequired) {
+        const auto it = std::find(gltf_supported_extensions.begin(), gltf_supported_extensions.end(), ext);
+        if (it == gltf_supported_extensions.end())
+            IG_LOG(L_WARNING) << "glTF '" << path << "': Required extension '" << ext << "' is yet not supported." << std::endl;
+    }
 
     Scene scene;
     loadTextures(scene, model, directory, cache_dir);

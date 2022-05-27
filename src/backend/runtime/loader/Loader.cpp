@@ -123,9 +123,10 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         }
 
         for (size_t j = 0; j < info.CallbackGenerators.size(); ++j) {
-            IG_LOG(L_DEBUG) << "Generating callback shader " << j << " for variant " << i << std::endl;
-            if (info.CallbackGenerators.at(j) != nullptr)
+            if (info.CallbackGenerators.at(j) != nullptr) {
+                IG_LOG(L_DEBUG) << "Generating callback shader " << j << " for variant " << i << std::endl;
                 variant.CallbackShaders[j] = info.CallbackGenerators.at(j)(ctx);
+            }
         }
     }
 
