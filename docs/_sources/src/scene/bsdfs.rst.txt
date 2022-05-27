@@ -97,7 +97,7 @@ Smooth dielectric (:monosp:`dielectric`)
  * - thin
    - |bool|
    - false
-   - Thin
+   - True if the glass should be treated as a thin interface. :monosp:`int_ior` will be always the inside of the thin surface, regardless of the direction of the surface normal.
 
 
 .. subfigstart::
