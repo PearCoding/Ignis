@@ -95,6 +95,7 @@ struct CPUData {
     anydsl::Array<float> cpu_secondary;
     TemporaryStorageHostProxy temporary_storage_host;
     IG::Statistics stats;
+    void* current_shader = nullptr;
 };
 thread_local CPUData* sThreadData = nullptr;
 
@@ -107,6 +108,15 @@ public:
     using DeviceImage       = std::tuple<anydsl::Array<float>, size_t, size_t>;
     using DevicePackedImage = std::tuple<anydsl::Array<uint32_t>, size_t, size_t>; // Packed RGBA
     using DeviceBuffer      = std::tuple<anydsl::Array<uint8_t>, size_t>;
+
+    struct Resource {
+        size_t counter; // Number of uses
+        size_t memory_usage;
+    };
+    struct ResourceInfo {
+        std::unordered_map<std::string, Resource> images;
+        std::unordered_map<std::string, Resource> packed_images;
+    };
 
     class DeviceData {
         IG_CLASS_NON_COPYABLE(DeviceData);
@@ -133,6 +143,10 @@ public:
 
         anydsl::Array<uint32_t> tonemap_pixels;
 
+#ifdef DEVICE_GPU
+        void* current_shader = nullptr;
+#endif
+
         inline DeviceData()
             : database()
             , current_primary()
@@ -154,6 +168,7 @@ public:
 #ifndef DEVICE_GPU
     tbb::concurrent_queue<CPUData*> available_thread_data;
 #endif
+    std::unordered_map<void*, ResourceInfo> resource_infos;
 
     std::vector<anydsl::Array<float>> aovs;
     anydsl::Array<float> host_pixels;
@@ -240,6 +255,23 @@ public:
 #endif
     }
 
+    inline void setupShaderSet(const IG::TechniqueVariantShaderSet& shaderSet)
+    {
+        shader_set = shaderSet;
+
+        // Prepare cache data
+        resource_infos[shader_set.RayGenerationShader] = {};
+        resource_infos[shader_set.MissShader]          = {};
+        for (const auto& clb : shader_set.HitShaders)
+            resource_infos[clb] = {};
+        for (const auto& clb : shader_set.AdvancedShadowHitShaders)
+            resource_infos[clb] = {};
+        for (const auto& clb : shader_set.AdvancedShadowMissShaders)
+            resource_infos[clb] = {};
+        for (const auto& clb : shader_set.CallbackShaders)
+            resource_infos[clb] = {};
+    }
+
     inline void registerThread()
     {
 #ifndef DEVICE_GPU
@@ -272,6 +304,26 @@ public:
     {
         IG_ASSERT(sThreadData != nullptr, "Thread not registered");
         return sThreadData;
+    }
+
+    inline void setCurrentShader(int32_t dev, void* shader)
+    {
+#ifdef DEVICE_GPU
+        devices[dev].current_shader = shader;
+#else
+        IG_UNUSED(dev);
+        getThreadData()->current_shader = shader;
+#endif
+    }
+
+    inline ResourceInfo& getCurrentResourceInfo(int32_t dev)
+    {
+#ifdef DEVICE_GPU
+        return resource_infos[devices[dev].current_shader];
+#else
+        IG_UNUSED(dev);
+        return resource_infos[getThreadData()->current_shader];
+#endif
     }
 
     inline anydsl::Array<float>& getCPUPrimaryStream(size_t size)
@@ -514,7 +566,11 @@ public:
 
         IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
         try {
-            return images[filename] = copyToDevice(dev, IG::Image::load(filename));
+            const auto img = IG::Image::load(filename);
+            auto& res      = getCurrentResourceInfo(dev).images[filename];
+            res.counter++;
+            res.memory_usage        = img.width * img.height * 4 * sizeof(float);
+            return images[filename] = copyToDevice(dev, img);
         } catch (const IG::ImageLoadException& e) {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;
             return images[filename] = copyToDevice(dev, IG::Image());
@@ -535,6 +591,10 @@ public:
             std::vector<uint32_t> packed;
             size_t width, height;
             IG::Image::loadAsPacked(filename, packed, width, height);
+
+            auto& res = getCurrentResourceInfo(dev).packed_images[filename];
+            res.counter++;
+            res.memory_usage        = packed.size() * sizeof(uint32_t);
             return images[filename] = DevicePackedImage(copyToDevice(dev, packed), width, height);
         } catch (const IG::ImageLoadException& e) {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;
@@ -708,7 +768,7 @@ public:
         }
     }
 
-    inline int runRayGenerationShader(int* id, int size, int xmin, int ymin, int xmax, int ymax)
+    inline int runRayGenerationShader(int32_t dev, int* id, int size, int xmin, int ymin, int xmax, int ymax)
     {
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(IG::ShaderType::RayGeneration, {});
@@ -716,6 +776,7 @@ public:
         using Callback = decltype(ig_ray_generation_shader);
         IG_ASSERT(shader_set.RayGenerationShader != nullptr, "Expected ray generation shader to be valid");
         auto callback = reinterpret_cast<Callback*>(shader_set.RayGenerationShader);
+        setCurrentShader(dev, (void*)callback);
         const int ret = callback(&driver_settings, (int)current_iteration, id, size, xmin, ymin, xmax, ymax);
 
         checkDebugOutput();
@@ -725,7 +786,7 @@ public:
         return ret;
     }
 
-    inline void runMissShader(int first, int last)
+    inline void runMissShader(int32_t dev, int first, int last)
     {
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Miss, {});
@@ -733,6 +794,7 @@ public:
         using Callback = decltype(ig_miss_shader);
         IG_ASSERT(shader_set.MissShader != nullptr, "Expected miss shader to be valid");
         auto callback = reinterpret_cast<Callback*>(shader_set.MissShader);
+        setCurrentShader(dev, (void*)callback);
         callback(&driver_settings, first, last);
 
         checkDebugOutput();
@@ -741,7 +803,7 @@ public:
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::Miss, {});
     }
 
-    inline void runHitShader(int entity_id, int first, int last)
+    inline void runHitShader(int32_t dev, int entity_id, int first, int last)
     {
         const int material_id = database->EntityToMaterial.at(entity_id);
 
@@ -753,6 +815,7 @@ public:
         void* hit_shader = shader_set.HitShaders.at(material_id);
         IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
         auto callback = reinterpret_cast<Callback*>(hit_shader);
+        setCurrentShader(dev, (void*)callback);
         callback(&driver_settings, entity_id, first, last);
 
         checkDebugOutput();
@@ -766,7 +829,7 @@ public:
         return !shader_set.AdvancedShadowHitShaders.empty() && !shader_set.AdvancedShadowMissShaders.empty();
     }
 
-    inline void runAdvancedShadowShader(int material_id, int first, int last, bool is_hit)
+    inline void runAdvancedShadowShader(int32_t dev, int material_id, int first, int last, bool is_hit)
     {
         IG_ASSERT(useAdvancedShadowHandling(), "Expected advanced shadow shader only be called if it is enabled!");
 
@@ -779,6 +842,7 @@ public:
             void* shader = shader_set.AdvancedShadowHitShaders.at(material_id);
             IG_ASSERT(shader != nullptr, "Expected advanced shadow hit shader to be valid");
             auto callback = reinterpret_cast<Callback*>(shader);
+            setCurrentShader(dev, (void*)callback);
             callback(&driver_settings, first, last);
 
             checkDebugOutput();
@@ -794,6 +858,7 @@ public:
             void* shader = shader_set.AdvancedShadowMissShaders.at(material_id);
             IG_ASSERT(shader != nullptr, "Expected advanced shadow miss shader to be valid");
             auto callback = reinterpret_cast<Callback*>(shader);
+            setCurrentShader(dev, (void*)callback);
             callback(&driver_settings, first, last);
 
             checkDebugOutput();
@@ -803,13 +868,15 @@ public:
         }
     }
 
-    inline void runCallbackShader(int type)
+    inline void runCallbackShader(int32_t dev, int type)
     {
         IG_ASSERT(type >= 0 && type < (int)IG::CallbackType::_COUNT, "Expected callback shader type to be well formed!");
 
         if (shader_set.CallbackShaders[type] != nullptr) {
+
             using Callback = decltype(ig_callback_shader);
             auto callback  = reinterpret_cast<Callback*>(shader_set.CallbackShaders[type]);
+            setCurrentShader(dev, (void*)callback);
             callback(&driver_settings, (int)current_iteration);
 
             checkDebugOutput();
@@ -993,7 +1060,7 @@ void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRen
     // Register host thread
     sInterface->registerThread();
 
-    sInterface->shader_set         = shaderSet;
+    sInterface->setupShaderSet(shaderSet);
     sInterface->current_iteration  = iter;
     sInterface->current_settings   = settings;
     sInterface->current_parameters = parameterSet;
@@ -1451,32 +1518,32 @@ IG_EXPORT void ignis_unregister_thread()
     sInterface->unregisterThread();
 }
 
-IG_EXPORT int ignis_handle_ray_generation(int* id, int size, int xmin, int ymin, int xmax, int ymax)
+IG_EXPORT int ignis_handle_ray_generation(int dev, int* id, int size, int xmin, int ymin, int xmax, int ymax)
 {
-    return sInterface->runRayGenerationShader(id, size, xmin, ymin, xmax, ymax);
+    return sInterface->runRayGenerationShader(dev, id, size, xmin, ymin, xmax, ymax);
 }
 
-IG_EXPORT void ignis_handle_miss_shader(int first, int last)
+IG_EXPORT void ignis_handle_miss_shader(int dev, int first, int last)
 {
-    sInterface->runMissShader(first, last);
+    sInterface->runMissShader(dev, first, last);
 }
 
-IG_EXPORT void ignis_handle_hit_shader(int entity_id, int first, int last)
+IG_EXPORT void ignis_handle_hit_shader(int dev, int entity_id, int first, int last)
 {
-    sInterface->runHitShader(entity_id, first, last);
+    sInterface->runHitShader(dev, entity_id, first, last);
 }
 
-IG_EXPORT void ignis_handle_advanced_shadow_shader(int material_id, int first, int last, bool is_hit)
+IG_EXPORT void ignis_handle_advanced_shadow_shader(int dev, int material_id, int first, int last, bool is_hit)
 {
     if (sInterface->current_settings.info.ShadowHandlingMode == IG::ShadowHandlingMode::Advanced)
-        sInterface->runAdvancedShadowShader(0 /* Fix to 0 */, first, last, is_hit);
+        sInterface->runAdvancedShadowShader(dev, 0 /* Fix to 0 */, first, last, is_hit);
     else
-        sInterface->runAdvancedShadowShader(material_id, first, last, is_hit);
+        sInterface->runAdvancedShadowShader(dev, material_id, first, last, is_hit);
 }
 
-IG_EXPORT void ignis_handle_callback_shader(int type)
+IG_EXPORT void ignis_handle_callback_shader(int dev, int type)
 {
-    sInterface->runCallbackShader(type);
+    sInterface->runCallbackShader(dev, type);
 }
 
 IG_EXPORT void ignis_present(int dev)

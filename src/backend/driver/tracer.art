@@ -20,21 +20,21 @@ fn ig_render(settings: &Settings) -> () {
 
     let pipeline = Pipeline {
         on_generate   = @ | id, size, xmin, ymin, xmax, ymax | -> i32 {
-            ignis_handle_ray_generation(id, size, xmin, ymin, xmax, ymax)
+            ignis_handle_ray_generation(device.id, id, size, xmin, ymin, xmax, ymax)
         },
         on_miss_shade = @ | first, last | {
-            ignis_handle_miss_shader(first, last);
+            ignis_handle_miss_shader(device.id, first, last);
         },
         on_hit_shade  = @ | entity_id, first, last| {
-            ignis_handle_hit_shader(entity_id, first, last);
+            ignis_handle_hit_shader(device.id, entity_id, first, last);
         },
         on_advanced_shadow = @ | mat_id, first, last, is_hit | {
-            ignis_handle_advanced_shadow_shader(mat_id, first, last, is_hit);
+            ignis_handle_advanced_shadow_shader(device.id, mat_id, first, last, is_hit);
         }
     };
 
-    ignis_handle_callback_shader(0/*BeforeIteration*/);
+    ignis_handle_callback_shader(device.id, 0/*BeforeIteration*/);
     device.trace(scene, pipeline, settings.spi);
-    ignis_handle_callback_shader(1/*AfterIteration*/);
+    ignis_handle_callback_shader(device.id, 1/*AfterIteration*/);
     device.present();
 }
