@@ -77,7 +77,7 @@ fn @tt_climb_tree(mut pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) 
 }
 
 // Evaluates whole component and returns corresponding leaf value
-fn @tt_eval_component(dbg: DebugOutput, in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) -> f32 {
+fn @tt_eval_component(_dbg: DebugOutput, in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) -> f32 {
     // TODO: Handle ndim==3!
     let in_pos  = concentric_disk_to_square(vec2_neg(vec3_to_2(in_dir)));
     let out_pos = concentric_disk_to_square(vec3_to_2(out_dir));
@@ -106,31 +106,31 @@ fn @tt_eval_component(dbg: DebugOutput, in_dir: Vec3, out_dir: Vec3, component: 
         }
     };
 
-    if dbg.rnd(in_dir.x+in_dir.y+in_dir.z+out_dir.x+out_dir.y+out_dir.z) < 1e-6 {
-        dbg.print("TT ");
-        dbg.print_f32(in_dir.x);
-        dbg.print(" ");
-        dbg.print_f32(in_dir.y);
-        dbg.print(" ");
-        dbg.print_f32(in_dir.z);
-        dbg.print("#");
-        dbg.print_f32(out_dir.x);
-        dbg.print(" ");
-        dbg.print_f32(out_dir.y);
-        dbg.print(" ");
-        dbg.print_f32(out_dir.z);
-        dbg.print("->");
-        dbg.print_f32(in_pos.x);
-        dbg.print(" ");
-        dbg.print_f32(in_pos.y);
-        dbg.print("#");
-        dbg.print_f32(out_pos.x);
-        dbg.print(" ");
-        dbg.print_f32(out_pos.y);
-        dbg.print("->");
-        dbg.print_f32(res);
-        dbg.print("\n");
-    }
+    // if dbg.rnd(in_dir.x+in_dir.y+in_dir.z+out_dir.x+out_dir.y+out_dir.z) < 1e-6 {
+    //     dbg.print("TT ");
+    //     dbg.print_f32(in_dir.x);
+    //     dbg.print(" ");
+    //     dbg.print_f32(in_dir.y);
+    //     dbg.print(" ");
+    //     dbg.print_f32(in_dir.z);
+    //     dbg.print("#");
+    //     dbg.print_f32(out_dir.x);
+    //     dbg.print(" ");
+    //     dbg.print_f32(out_dir.y);
+    //     dbg.print(" ");
+    //     dbg.print_f32(out_dir.z);
+    //     dbg.print("->");
+    //     dbg.print_f32(in_pos.x);
+    //     dbg.print(" ");
+    //     dbg.print_f32(in_pos.y);
+    //     dbg.print("#");
+    //     dbg.print_f32(out_pos.x);
+    //     dbg.print(" ");
+    //     dbg.print_f32(out_pos.y);
+    //     dbg.print("->");
+    //     dbg.print_f32(res);
+    //     dbg.print("\n");
+    // }
 
     res
 }

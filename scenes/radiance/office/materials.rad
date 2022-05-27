@@ -1,9 +1,24 @@
 void plastic wall
 0
 0
-5 .95 .95 .95 0 0
+5 .8 .8 .8 0 0
 
-void glass window
+void glass inner_glass
 0
 0
 3 0.96 0.96 0.96
+
+void brightfunc glass_fresnel
+2 refl fresnel.cal
+0
+1 1.52
+
+glass_fresnel mirror window
+1 inner_glass
+0
+3 1 1 1
+
+# void BSDF window
+# 6 0 ../simple_tensor_d2_trans.xml 0 1 0 .
+# 0
+# 0

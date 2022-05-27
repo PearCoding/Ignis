@@ -8,7 +8,7 @@ wall mesh door
 0
 0
 
-# window mesh window
-# 1 window.rtm
-# 0
-# 0
+window mesh window
+1 window.rtm
+0
+0
