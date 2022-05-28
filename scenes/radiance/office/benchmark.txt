@@ -1,0 +1,10 @@
+Running Ignis on GPU with 16384 spp takes 0m56,428s
+Running Radiance with "QUALITY" on MEDIUM takes 2m1,138s, but has a slight bias
+Running Radiance with "QUALITY" on HIGH takes 40m7,983s, with less bias. Very similar results compared to Ignis.
+
+-> Ignis is more noisy, but no bias
+
+Test System>
+OS:  Ubuntu 22.04 LTS
+CPU: Intel® Core™ i9-10885H CPU @ 2.40GHz × 16
+GPU: NVIDIA Corporation Quadro T2000 Mobile / Max-Q
