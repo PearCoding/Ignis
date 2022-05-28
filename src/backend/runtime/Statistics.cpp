@@ -195,9 +195,18 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
         ShaderStats totalAdvMiss = sumMap(mAdvancedShadowMissStats);
 
         table.addRow({ "  |-AdvancedShadow" });
+
         dumpStats("  ||-Miss", totalAdvHits);
+        if (verbose) {
+            for (const auto& pair : mAdvancedShadowMissStats)
+                dumpStatsDetail("  |||-@" + std::to_string(pair.first), pair.second, totalHits.workload);
+        }
+
         dumpStats("  ||-Hits", totalAdvMiss);
-        // TODO: Maybe add verbose?
+        if (verbose) {
+            for (const auto& pair : mAdvancedShadowHitStats)
+                dumpStatsDetail("  |||-@" + std::to_string(pair.first), pair.second, totalHits.workload);
+        }
     }
 
     if (!mCallbackStats.empty()) {
