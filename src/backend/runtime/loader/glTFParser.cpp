@@ -587,7 +587,7 @@ static void addNodePunctualLight(Scene& scene, const std::filesystem::path& base
 
     // Some weird scenes set intensity to 0 assuming color will be used only. Why?? Looking at you new Sponza scene :/
     // As setting intensity to 0 makes no sense we assume its 1.
-    const float intensity = light.intensity <= 0 ? 1 : light.intensity;
+    const double intensity = light.intensity <= 0 ? 1 : light.intensity;
 
     Vector3f color = Vector3f::Ones() * intensity;
     if (light.color.size() == 3)
