@@ -8,3 +8,15 @@ Test System>
 OS:  Ubuntu 22.04 LTS
 CPU: Intel® Core™ i9-10885H CPU @ 2.40GHz × 16
 GPU: NVIDIA Corporation Quadro T2000 Mobile / Max-Q
+
+------------------------------------------------------------------------------------------------------------------------
+Running Ignis on GPU with 16384 spp takes 0m16,706s
+Running Radiance with "QUALITY" on MEDIUM takes 1m43,174s, but has a slight bias
+Running Radiance with "QUALITY" on HIGH takes 36m33,303s, with less bias. Very similar results compared to Ignis.
+
+-> Ignis is more noisy, but no bias
+
+Test System>
+OS:  Ubuntu 22.04 LTS
+CPU: AMD Ryzen 9 3950X 16-Core Processor
+GPU: NVIDIA Corporation GeForce RTX 3080 12GB
