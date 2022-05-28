@@ -29,6 +29,6 @@
 		{"name":"door","shape":"door", "bsdf":"wall"}
 	],
 	"lights": [
-		{"type":"env", "name":"sky", "radiance":[1,1,1]}
+		{"type":"env", "name":"sky", "radiance":[100,100,100]}
 	]
 }
