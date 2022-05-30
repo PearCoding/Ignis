@@ -140,6 +140,6 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime, 
     metaData.CameraUp  = orientation.Up;
     metaData.CameraDir = orientation.Dir;
 
-    return ImageIO::save(path, width, height, image_ptrs, image_names);
+    return ImageIO::save(path, width, height, image_ptrs, image_names, metaData);
 }
 } // namespace IG

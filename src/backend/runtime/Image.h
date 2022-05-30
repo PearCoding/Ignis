@@ -35,6 +35,7 @@ private:
 };
 using ImageSaveException = ImageLoadException;
 
+struct ImageMetaData;
 /// Linear RGBA Image with pixels in format [R, G, B, A] x Width x Height
 struct Image {
     std::unique_ptr<float[]> pixels;
@@ -61,7 +62,7 @@ struct Image {
 
     /// Loads a image in linear RGBA
     /// Supports EXR, HDR, PNG, JPEG and many other formats supported by the stbi library
-    static Image load(const std::filesystem::path& path);
+    static Image load(const std::filesystem::path& path, ImageMetaData* metaData = nullptr);
 
     /// Loads image and directly uploads to buffer in packed format
     /// Supports PNG, JPEG and many other formats supported by the stbi library

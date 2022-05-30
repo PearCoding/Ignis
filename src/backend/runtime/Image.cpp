@@ -140,7 +140,31 @@ bool Image::hasAlphaChannel(const std::filesystem::path& path)
     return channels == 4;
 }
 
-Image Image::load(const std::filesystem::path& path)
+static inline std::string getStringAttribute(const EXRAttribute& attr)
+{
+    int len;
+    memcpy(&len, attr.value, sizeof(len));
+
+    std::string str;
+    str.resize(len);
+    memcpy(str.data(), attr.value + sizeof(len), len);
+
+    return str;
+}
+
+static inline Vector3f getVec3Attribute(const EXRAttribute& attr)
+{
+    float xyz[3];
+    memcpy(xyz, attr.value, 3 * sizeof(float));
+    return Vector3f(xyz[0], xyz[1], xyz[2]);
+}
+
+static inline int getIntAttribute(const EXRAttribute& attr)
+{
+    return *reinterpret_cast<const int*>(attr.value);
+}
+
+Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
 {
     std::string ext   = path.extension().generic_u8string();
     const bool useExr = ends_with(ext, ".exr");
@@ -163,6 +187,25 @@ Image Image::load(const std::filesystem::path& path)
             std::string _err = err;
             FreeEXRErrorMessage(err);
             throw ImageLoadException(_err, path);
+        }
+
+        // Load meta data if necessary
+        if (metaData) {
+            for (int i = 0; i < exr_header.num_custom_attributes; ++i) {
+                const auto& attr = exr_header.custom_attributes[i];
+                if (strcmp(attr.name, "igCameraType") == 0 && strcmp(attr.type, "string") == 0)
+                    metaData->CameraType = getStringAttribute(attr);
+                else if (strcmp(attr.name, "igTechniqueType") == 0 && strcmp(attr.type, "string") == 0)
+                    metaData->TechniqueType = getStringAttribute(attr);
+                else if (strcmp(attr.name, "igCameraEye") == 0 && strcmp(attr.type, "v3f") == 0)
+                    metaData->CameraEye = getVec3Attribute(attr);
+                else if (strcmp(attr.name, "igCameraUp") == 0 && strcmp(attr.type, "v3f") == 0)
+                    metaData->CameraUp = getVec3Attribute(attr);
+                else if (strcmp(attr.name, "igCameraDir") == 0 && strcmp(attr.type, "v3f") == 0)
+                    metaData->CameraDir = getVec3Attribute(attr);
+                else if (strcmp(attr.name, "igSPP") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->SamplePerPixel = getIntAttribute(attr);
+            }
         }
 
         // Make sure exr loads full floating point
