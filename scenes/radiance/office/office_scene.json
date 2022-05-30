@@ -1,7 +1,7 @@
 {
 	"technique": {
 		"type": "path",
-		"max_depth": 64
+		"max_depth": 8
 	},
 	"camera": {
 		"type": "fishlens",

@@ -1,4 +1,44 @@
-// Trace function ------------------------------------------------------------------
+// Swap functions ------------------------------------------------------------------
+fn @cpu_swap_primary_entry(primary: &PrimaryStream, a: i32, b: i32) -> () {
+    swap(&mut primary.rays.id(a),    &mut primary.rays.id(b));
+    swap(&mut primary.rays.org_x(a), &mut primary.rays.org_x(b));
+    swap(&mut primary.rays.org_y(a), &mut primary.rays.org_y(b));
+    swap(&mut primary.rays.org_z(a), &mut primary.rays.org_z(b));
+    swap(&mut primary.rays.dir_x(a), &mut primary.rays.dir_x(b));
+    swap(&mut primary.rays.dir_y(a), &mut primary.rays.dir_y(b));
+    swap(&mut primary.rays.dir_z(a), &mut primary.rays.dir_z(b));
+    swap(&mut primary.rays.tmin(a),  &mut primary.rays.tmin(b));
+    swap(&mut primary.rays.tmax(a),  &mut primary.rays.tmax(b));
+
+    swap(&mut primary.ent_id(a),    &mut primary.ent_id(b));
+    swap(&mut primary.prim_id(a),   &mut primary.prim_id(b));
+    swap(&mut primary.t(a),         &mut primary.t(b));
+    swap(&mut primary.u(a),         &mut primary.u(b));
+    swap(&mut primary.v(a),         &mut primary.v(b));
+    swap(&mut primary.rnd(a),       &mut primary.rnd(b));
+
+    for c in unroll(0, MaxRayPayloadComponents) {
+        swap(&mut primary.user(c)(a), &mut primary.user(c)(b));
+    }
+}
+
+fn @cpu_swap_secondary_entry(secondary: &SecondaryStream, a: i32, b: i32) -> () {
+    swap(&mut secondary.rays.id(a),    &mut secondary.rays.id(b));
+    swap(&mut secondary.rays.org_x(a), &mut secondary.rays.org_x(b));
+    swap(&mut secondary.rays.org_y(a), &mut secondary.rays.org_y(b));
+    swap(&mut secondary.rays.org_z(a), &mut secondary.rays.org_z(b));
+    swap(&mut secondary.rays.dir_x(a), &mut secondary.rays.dir_x(b));
+    swap(&mut secondary.rays.dir_y(a), &mut secondary.rays.dir_y(b));
+    swap(&mut secondary.rays.dir_z(a), &mut secondary.rays.dir_z(b));
+    swap(&mut secondary.rays.tmin(a),  &mut secondary.rays.tmin(b));
+    swap(&mut secondary.rays.tmax(a),  &mut secondary.rays.tmax(b));
+    swap(&mut secondary.color_r(a),    &mut secondary.color_r(b));
+    swap(&mut secondary.color_g(a),    &mut secondary.color_g(b));
+    swap(&mut secondary.color_b(a),    &mut secondary.color_b(b));
+    swap(&mut secondary.mat_id(a),     &mut secondary.mat_id(b));
+}
+
+// Sort functions ------------------------------------------------------------------
 fn @cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut[i32], ray_ends: &mut[i32], num_geometries: i32) -> i32 {
     // Count the number of rays per shader
     for i in range(0, num_geometries + 1) {
@@ -24,27 +64,7 @@ fn @cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut[i32], ray_ends: &
             let ent_id = primary.ent_id(j);
             if ent_id != i {
                 let k = ray_begins(ent_id)++;
-
-                swap(&mut primary.rays.id(k),    &mut primary.rays.id(j));
-                swap(&mut primary.rays.org_x(k), &mut primary.rays.org_x(j));
-                swap(&mut primary.rays.org_y(k), &mut primary.rays.org_y(j));
-                swap(&mut primary.rays.org_z(k), &mut primary.rays.org_z(j));
-                swap(&mut primary.rays.dir_x(k), &mut primary.rays.dir_x(j));
-                swap(&mut primary.rays.dir_y(k), &mut primary.rays.dir_y(j));
-                swap(&mut primary.rays.dir_z(k), &mut primary.rays.dir_z(j));
-                swap(&mut primary.rays.tmin(k),  &mut primary.rays.tmin(j));
-                swap(&mut primary.rays.tmax(k),  &mut primary.rays.tmax(j));
-
-                swap(&mut primary.ent_id(k),    &mut primary.ent_id(j));
-                swap(&mut primary.prim_id(k),   &mut primary.prim_id(j));
-                swap(&mut primary.t(k),         &mut primary.t(j));
-                swap(&mut primary.u(k),         &mut primary.u(j));
-                swap(&mut primary.v(k),         &mut primary.v(j));
-                swap(&mut primary.rnd(k),       &mut primary.rnd(j));
-
-                for c in unroll(0, MaxRayPayloadComponents) {
-                    swap(&mut primary.user(c)(k), &mut primary.user(c)(j));
-                }
+                cpu_swap_primary_entry(primary, k, j);
             } else {
                 j++;
             }
@@ -76,27 +96,14 @@ fn @cpu_sort_secondary(secondary: &SecondaryStream) -> i32 {
             let id = map_id(j);
             if id != i {
                 let g = counters(id)++;
-
-                swap(&mut secondary.rays.id(g),    &mut secondary.rays.id(j));
-                swap(&mut secondary.rays.org_x(g), &mut secondary.rays.org_x(j));
-                swap(&mut secondary.rays.org_y(g), &mut secondary.rays.org_y(j));
-                swap(&mut secondary.rays.org_z(g), &mut secondary.rays.org_z(j));
-                swap(&mut secondary.rays.dir_x(g), &mut secondary.rays.dir_x(j));
-                swap(&mut secondary.rays.dir_y(g), &mut secondary.rays.dir_y(j));
-                swap(&mut secondary.rays.dir_z(g), &mut secondary.rays.dir_z(j));
-                swap(&mut secondary.rays.tmin(g),  &mut secondary.rays.tmin(j));
-                swap(&mut secondary.rays.tmax(g),  &mut secondary.rays.tmax(j));
-                swap(&mut secondary.color_r(g),    &mut secondary.color_r(j));
-                swap(&mut secondary.color_g(g),    &mut secondary.color_g(j));
-                swap(&mut secondary.color_b(g),    &mut secondary.color_b(j));
-                swap(&mut secondary.mat_id(g),     &mut secondary.mat_id(j));
+                cpu_swap_secondary_entry(secondary, g, j);
             } else {
                 j++;
             }
         }
     }
 
-    // Kill rays that have intersected something
+    // Number of entries not hitting something
     count
 }
 
@@ -118,14 +125,7 @@ fn @cpu_sort_secondary_with_materials(secondary: &SecondaryStream, ray_begins: &
 
     // Compute scan over shader bins
     let mut n = 0;
-    for i in range(0, num_materials) {
-        ray_begins(i) = n;
-        n += ray_ends(i);
-        ray_ends(i) = n;
-    }
-
-    let count = n;
-    for i in range(num_materials, 2 * num_materials) {
+    for i in range(0, 2 * num_materials) {
         ray_begins(i) = n;
         n += ray_ends(i);
         ray_ends(i) = n;
@@ -139,30 +139,18 @@ fn @cpu_sort_secondary_with_materials(secondary: &SecondaryStream, ray_begins: &
             let id = map_id(j);
             if id != i {
                 let g = ray_begins(id)++;
-
-                swap(&mut secondary.rays.id(g),    &mut secondary.rays.id(j));
-                swap(&mut secondary.rays.org_x(g), &mut secondary.rays.org_x(j));
-                swap(&mut secondary.rays.org_y(g), &mut secondary.rays.org_y(j));
-                swap(&mut secondary.rays.org_z(g), &mut secondary.rays.org_z(j));
-                swap(&mut secondary.rays.dir_x(g), &mut secondary.rays.dir_x(j));
-                swap(&mut secondary.rays.dir_y(g), &mut secondary.rays.dir_y(j));
-                swap(&mut secondary.rays.dir_z(g), &mut secondary.rays.dir_z(j));
-                swap(&mut secondary.rays.tmin(g),  &mut secondary.rays.tmin(j));
-                swap(&mut secondary.rays.tmax(g),  &mut secondary.rays.tmax(j));
-                swap(&mut secondary.color_r(g),    &mut secondary.color_r(j));
-                swap(&mut secondary.color_g(g),    &mut secondary.color_g(j));
-                swap(&mut secondary.color_b(g),    &mut secondary.color_b(j));
-                swap(&mut secondary.mat_id(g),     &mut secondary.mat_id(j));
+                cpu_swap_secondary_entry(secondary, g, j);
             } else {
                 j++;
             }
         }
     }
 
-    // Kill rays that have intersected something
-    count
+    // Number of entries not hitting something
+    ray_ends(num_materials-1)
 }
 
+// Compact functions ------------------------------------------------------------------
 fn @cpu_compact_ray_stream(rays: RayStream, i: i32, j: i32, mask: bool) -> () {
     rays.org_x(i) = rv_compact(rays.org_x(j), mask);
     rays.org_y(i) = rv_compact(rays.org_y(j), mask);
@@ -266,6 +254,7 @@ fn @cpu_compact_secondary(secondary: &SecondaryStream, vector_width: i32, vector
     $cpu_compact_secondary_specialized(secondary)
 }
 
+// Ray generator ------------------------------------------------------------------
 fn @cpu_generate_rays( primary: PrimaryStream
                      , capacity: i32
                      , emitter: RayEmitter
@@ -326,6 +315,7 @@ fn @cpu_generate_rays_handler(size: i32
     cpu_generate_rays(primary, capacity, emitter, id, xmin, ymin, xmax, ymax, work_info.width, work_info.height, spi, vector_width)
 }
 
+// Traverse functions ------------------------------------------------------------------
 fn @cpu_traverse_primary(scene: SceneGeometry, min_max: MinMax, primary: &PrimaryStream, single: bool, vector_width: i32) -> () {
     fn cpu_traverse_primary_specialized(scene2: SceneGeometry, primary2: &PrimaryStream) -> () {
         cpu_traverse(
@@ -358,6 +348,7 @@ fn @cpu_traverse_secondary(scene: SceneGeometry, min_max: MinMax, secondary: &Se
     $cpu_traverse_secondary_specialized(scene, secondary);
 }
 
+// Hit shader ------------------------------------------------------------------
 fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: Shader, scene: Scene, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_shade_specialized(entity_id2: i32, primary2: &PrimaryStream, secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
@@ -454,6 +445,7 @@ fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tra
     cpu_hit_shade(entity_id, primary, secondary, shader, scene, path_tracer, accumulator, begin, end, vector_width);
 }
 
+// Miss shader ------------------------------------------------------------------
 fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_miss_shade_specialized(primary2: &PrimaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
@@ -500,6 +492,7 @@ fn @cpu_miss_shade_handler(path_tracer: Technique, begin: i32, end: i32, spi: i3
     cpu_miss_shade(primary, path_tracer, accumulator, begin, end, vector_width);
 }
 
+// Advanced shadow shader ------------------------------------------------------------------
 fn @cpu_advanced_shadow(is_hit: bool, shader: Shader, secondary: &SecondaryStream, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_advanced_shadow_specialized(secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
@@ -546,6 +539,7 @@ fn @cpu_advanced_shadow_handler(shader: Shader, path_tracer: Technique, begin: i
     cpu_advanced_shadow(is_hit, shader, secondary, path_tracer, accumulator, begin, end, vector_width);
 }
 
+// Framebuffer & AOVs ------------------------------------------------------------------
 fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
@@ -588,6 +582,7 @@ fn @cpu_get_aov_image(id: i32, spi: i32) -> AOVImage {
     }
 }
 
+// Main shader ------------------------------------------------------------------
 fn @cpu_get_stream_capacity(spi: i32, tile_size: i32) = spi * tile_size * tile_size;
 
 fn @cpu_trace( scene: SceneGeometry
@@ -664,47 +659,45 @@ fn @cpu_trace( scene: SceneGeometry
                 if likely(secondary.size > 0) {
                     cpu_traverse_secondary(scene, min_max, secondary, single, vector_width);
                     stats::add_quantity(stats::Quantity::ShadowRayCount, secondary.size);
-                }
 
-                // Add the contribution for secondary rays to the frame buffer
-                if work_info.advanced_shadows {
-                    let hit_start = cpu_sort_secondary(secondary);
-                    if hit_start != 0 {
-                        // Call valids (miss)
-                        pipeline.on_advanced_shadow(0, 0, hit_start, false);
-                    }
-
-                    if hit_start < secondary.size {
-                        // Call invalids (hits)
-                        pipeline.on_advanced_shadow(0, hit_start, secondary.size, true);
-                    }
-                } else if work_info.advanced_shadows_with_materials {
-                    let hit_start = cpu_sort_secondary_with_materials(secondary, temp.ray_begins, temp.ray_ends, scene.info.num_materials);
-
-                    let mut sbegin = 0;
-                    if hit_start != 0 {
-                        // Call valids (miss)
-                        for mat_id in range(0, scene.info.num_materials) {
-                            let end = temp.ray_ends(mat_id);
-                            if sbegin < end {
-                                pipeline.on_advanced_shadow(mat_id, sbegin, end, false);
-                            }
-                            sbegin = end;
+                    // Add the contribution for secondary rays to the frame buffer
+                    if work_info.advanced_shadows {
+                        let hit_start = cpu_sort_secondary(secondary);
+                        if hit_start != 0 {
+                            // Call valids (miss)
+                            pipeline.on_advanced_shadow(0, 0, hit_start, false);
                         }
-                    }
 
-                    if hit_start < secondary.size {
-                        // Call invalids (hits)
-                        for mat_id in range(0, scene.info.num_materials) {
-                            let end = temp.ray_ends(mat_id + scene.info.num_materials);
-                            if sbegin < end {
-                                pipeline.on_advanced_shadow(mat_id, sbegin, end, true);
-                            }
-                            sbegin = end;
+                        if hit_start < secondary.size {
+                            // Call invalids (hits)
+                            pipeline.on_advanced_shadow(0, hit_start, secondary.size, true);
                         }
-                    }
-                } else {
-                    if !work_info.framebuffer_locked {    
+                    } else if work_info.advanced_shadows_with_materials {
+                        let hit_start = cpu_sort_secondary_with_materials(secondary, temp.ray_begins, temp.ray_ends, scene.info.num_materials);
+
+                        let mut sbegin = 0;
+                        if hit_start != 0 {
+                            // Call valids (miss)
+                            for mat_id in range(0, scene.info.num_materials) {
+                                let end = temp.ray_ends(mat_id);
+                                if sbegin < end {
+                                    pipeline.on_advanced_shadow(mat_id, sbegin, end, false);
+                                }
+                                sbegin = end;
+                            }
+                        }
+
+                        if hit_start < secondary.size {
+                            // Call invalids (hits)
+                            for mat_id in range(0, scene.info.num_materials) {
+                                let end = temp.ray_ends(mat_id + scene.info.num_materials);
+                                if sbegin < end {
+                                    pipeline.on_advanced_shadow(mat_id, sbegin, end, true);
+                                }
+                                sbegin = end;
+                            }
+                        }
+                    } else if !work_info.framebuffer_locked {    
                         for i in range(0, secondary.size) {
                             if secondary.mat_id(i) < 0 {
                                 let j = secondary.rays.id(i);
@@ -796,7 +789,11 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         ignis_load_scene(0, &mut database);
         database
     },
-    load_scene_info       = cpu_get_scene_info,
+    load_scene_info       = @ || {
+        let mut info: SceneInfo;
+        ignis_load_scene_info(0, &mut info);
+        info
+    },
     load_entity_table     = @ |dtb| make_entity_table(dtb, @|ptr| make_cpu_buffer(ptr, 0)),
     load_shape_table      = @ |dtb| make_shape_table(dtb, @|ptr| make_cpu_buffer(ptr, 0)),
     load_specific_shape   = @ |num_face, num_vert, num_norm, num_tex, off, dtb| load_specific_shape_from_table(num_face, num_vert, num_norm, num_tex, off, dtb, @|ptr| make_cpu_buffer(ptr, 0)),
@@ -855,14 +852,15 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(0, id, filename),
     request_debug_output = @|| {
         if vector_width != 1 {
-            print_string("WARNING: There are issues with debug output and CPU vectorization. Use generic target instead!\n");
+            // FIXME: Fix this for vectorized systems!
+            make_fallback_debug_output()
+        } else {
+            let mut ptr : &[u8];
+            let size = 4096;
+            ignis_request_buffer(0, "__dbg_output", &mut ptr, size * sizeof[i32]() as i32, 0);
+            let buffer = make_cpu_buffer(ptr, size);
+            make_debug_output(buffer)
         }
-
-        let mut ptr : &[u8];
-        let size = 4096;
-        ignis_request_buffer(0, "__dbg_output", &mut ptr, size * sizeof[i32]() as i32, 0);
-        let buffer = make_cpu_buffer(ptr, size);
-        make_debug_output(buffer)
     }
 };
 
@@ -873,9 +871,3 @@ fn @make_sse42_device()              = make_cpu_device(false,  true, make_cpu_in
 fn @make_asimd_device()              = make_cpu_device(false, false, make_cpu_int_min_max(), 4, 0, 16);
 fn @make_cpu_default_device()        = make_cpu_device(false, false, make_default_min_max(), 1, 0, 16);
 fn @make_cpu_singlethreaded_device() = make_cpu_device(false, false, make_default_min_max(), 1, 1, 16);
-
-fn @cpu_get_scene_info() -> SceneInfo {
-    let mut info : SceneInfo;
-    ignis_load_scene_info(0, &mut info);
-    info
-}

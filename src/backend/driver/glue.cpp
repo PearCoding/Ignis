@@ -252,7 +252,7 @@ public:
 #ifdef DEVICE_GPU
         sThreadData = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
 #else
-        const static size_t max_threads = std::thread::hardware_concurrency() + 1;
+        const static size_t max_threads = std::thread::hardware_concurrency() + 1 /* Host */;
 
         for (size_t t = 0; t < max_threads; ++t) {
             CPUData* ptr = thread_data.emplace_back(std::make_unique<CPUData>()).get();
