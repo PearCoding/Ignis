@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
@@ -239,7 +239,7 @@
                         
                             
   <section id="file-format">
-<h1>File Format<a class="headerlink" href="#file-format" title="Permalink to this headline">¶</a></h1>
+<h1>File Format<a class="headerlink" href="#file-format" title="Permalink to this heading">¶</a></h1>
 <p>Ignis uses a flat hierarchy of entities specified in a single JSON file.
 You can include other supported formats within the <span class="monosp">externals</span> block.
 The JSON format is not strict and allows comments in the style of <code class="docutils literal notranslate"><span class="pre">//</span></code> and <code class="docutils literal notranslate"><span class="pre">/*</span> <span class="pre">*/</span></code>.
@@ -295,7 +295,7 @@ Trailing commas are allowed to ease automatic generation of scene files as well.
 </div>
 </div>
 <section id="transformation">
-<h2>Transformation<a class="headerlink" href="#transformation" title="Permalink to this headline">¶</a></h2>
+<h2>Transformation<a class="headerlink" href="#transformation" title="Permalink to this heading">¶</a></h2>
 <p>A transformation can be specified for many objects in the scene.</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="c1">// ...</span>
@@ -325,7 +325,7 @@ In contrary to other parts of the scene description, you may define multiple ent
 </div>
 <p>The available operators are listed below.</p>
 <section id="translate-translate">
-<h3>Translate (<span class="monosp">translate</span>)<a class="headerlink" href="#translate-translate" title="Permalink to this headline">¶</a></h3>
+<h3>Translate (<span class="monosp">translate</span>)<a class="headerlink" href="#translate-translate" title="Permalink to this heading">¶</a></h3>
 <p>Specified with an array of three numbers.</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="c1">// ...</span>
@@ -336,7 +336,7 @@ In contrary to other parts of the scene description, you may define multiple ent
 </div>
 </section>
 <section id="rotate-rotate">
-<h3>Rotate (<span class="monosp">rotate</span>)<a class="headerlink" href="#rotate-rotate" title="Permalink to this headline">¶</a></h3>
+<h3>Rotate (<span class="monosp">rotate</span>)<a class="headerlink" href="#rotate-rotate" title="Permalink to this heading">¶</a></h3>
 <p>Specified with an array of three numbers given in degrees rotating around the respective euler axis.</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="c1">// ...</span>
@@ -355,7 +355,7 @@ In contrary to other parts of the scene description, you may define multiple ent
 </div>
 </section>
 <section id="rotate-using-a-quaternion-qrotate">
-<h3>Rotate using a quaternion (<span class="monosp">qrotate</span>)<a class="headerlink" href="#rotate-using-a-quaternion-qrotate" title="Permalink to this headline">¶</a></h3>
+<h3>Rotate using a quaternion (<span class="monosp">qrotate</span>)<a class="headerlink" href="#rotate-using-a-quaternion-qrotate" title="Permalink to this heading">¶</a></h3>
 <p>Specified with an array of four numbers representing a quaternion given as [w, x, y, z].
 Have a look at your favorite math book to understand what that means.</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
@@ -367,7 +367,7 @@ Have a look at your favorite math book to understand what that means.</p>
 </div>
 </section>
 <section id="scale-scale">
-<h3>Scale (<span class="monosp">scale</span>)<a class="headerlink" href="#scale-scale" title="Permalink to this headline">¶</a></h3>
+<h3>Scale (<span class="monosp">scale</span>)<a class="headerlink" href="#scale-scale" title="Permalink to this heading">¶</a></h3>
 <p>Specified with an array of three numbers scaling the respective euler axis or as a single number scaling uniformly.</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="c1">// ...</span>
@@ -378,7 +378,7 @@ Have a look at your favorite math book to understand what that means.</p>
 </div>
 </section>
 <section id="lookat-lookat">
-<h3>Lookat (<span class="monosp">lookat</span>)<a class="headerlink" href="#lookat-lookat" title="Permalink to this headline">¶</a></h3>
+<h3>Lookat (<span class="monosp">lookat</span>)<a class="headerlink" href="#lookat-lookat" title="Permalink to this heading">¶</a></h3>
 <p>Specified with multiple parameters.
 You are able to specify a <span class="monosp">direction</span> instead of an explicit <span class="monosp">target</span> location.</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
@@ -390,7 +390,7 @@ You are able to specify a <span class="monosp">direction</span> instead of an ex
 </div>
 </section>
 <section id="matrix-matrix">
-<h3>Matrix (<span class="monosp">matrix</span>)<a class="headerlink" href="#matrix-matrix" title="Permalink to this headline">¶</a></h3>
+<h3>Matrix (<span class="monosp">matrix</span>)<a class="headerlink" href="#matrix-matrix" title="Permalink to this heading">¶</a></h3>
 <p>Specifies a matrix of the size 4x4, 3x4 or 3x3 to be applied to the full transformation.</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="c1">// ...</span>
@@ -418,7 +418,7 @@ You are able to specify a <span class="monosp">direction</span> instead of an ex
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
             VERSION:'',
-            LANGUAGE:'None',
+            LANGUAGE:'en',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -428,13 +428,14 @@ You are able to specify a <span class="monosp">direction</span> instead of an ex
     <script type="text/javascript" src="../../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
   
     <div class="footer" role="contentinfo">
         <div class="container">
             &#169; Copyright 2020-2022, Ignis-Project.
-        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.5.0.
+        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.0.0.
         </div>
     </div>  
 

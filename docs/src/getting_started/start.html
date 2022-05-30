@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
@@ -239,10 +239,10 @@
                         
                             
   <section id="overview">
-<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
+<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h1>
 <p>This section gives an overview of the Ignis rendering framework.</p>
 <section id="backends">
-<h2>Backends<a class="headerlink" href="#backends" title="Permalink to this headline">¶</a></h2>
+<h2>Backends<a class="headerlink" href="#backends" title="Permalink to this heading">¶</a></h2>
 <p>The raytracer as multiple backends available to make sure the best optimized kernel is used for certain tasks.
 Therefore, multiple device and feature specific modules, so-called drivers, have to be compiled.</p>
 <p>The compilation process might take a while depending on your hardware and feature selection.
@@ -251,11 +251,11 @@ Multithreading might freeze your operating system due to the high memory and cpu
 You can use the CMake option <code class="docutils literal notranslate"><span class="pre">IG_BUILD_DRIVER_PARALLEL</span></code> to enable it if you are sure your system can handle it.</p>
 </section>
 <section id="frontends">
-<h2>Frontends<a class="headerlink" href="#frontends" title="Permalink to this headline">¶</a></h2>
+<h2>Frontends<a class="headerlink" href="#frontends" title="Permalink to this heading">¶</a></h2>
 <p>The frontends of the raytracer communicate with the user and one, optimal selected, backend.
 Currently, four frontends are available:</p>
 <section id="igview">
-<h3><code class="docutils literal notranslate"><span class="pre">igview</span></code><a class="headerlink" href="#igview" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">igview</span></code><a class="headerlink" href="#igview" title="Permalink to this heading">¶</a></h3>
 <p>This is the standard UI interface which displays the scene getting progressively rendered.</p>
 <p>This frontend is very good to get a first impression of the rendered scene and fly around to pick the one best camera position.
 Keep in mind that some power of your underlying hardware is used to render the UI and the tonemapping algorithms.
@@ -264,19 +264,19 @@ Switching to the UI-less frontend <code class="docutils literal notranslate"><sp
 Disable this frontend by setting the CMake option <code class="docutils literal notranslate"><span class="pre">IG_WITH_VIEWER</span></code> to <code class="docutils literal notranslate"><span class="pre">Off</span></code>.</p>
 </section>
 <section id="igcli">
-<h3><code class="docutils literal notranslate"><span class="pre">igcli</span></code><a class="headerlink" href="#igcli" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">igcli</span></code><a class="headerlink" href="#igcli" title="Permalink to this heading">¶</a></h3>
 <p>The commandline only frontend is the same as <code class="docutils literal notranslate"><span class="pre">igview</span></code> but without any UI specific features and no interactive controls.</p>
 <p>In contrary to <code class="docutils literal notranslate"><span class="pre">igview</span></code>, <code class="docutils literal notranslate"><span class="pre">igcli</span></code> requires a maximum iteration or time budget to be specified by the user.
 Progressive rendering is not that useful without a preview.
 (We might add progressive rendering back, but I need a convincing argument for that…)</p>
 </section>
 <section id="igtrace">
-<h3><code class="docutils literal notranslate"><span class="pre">igtrace</span></code><a class="headerlink" href="#igtrace" title="Permalink to this headline">¶</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">igtrace</span></code><a class="headerlink" href="#igtrace" title="Permalink to this heading">¶</a></h3>
 <p>This commandline only frontend ignores camera specific information and expects a list of rays from the user.
 It returns the contribution back to the user for each ray initially specified.</p>
 </section>
 <section id="python-api">
-<h3>Python API<a class="headerlink" href="#python-api" title="Permalink to this headline">¶</a></h3>
+<h3>Python API<a class="headerlink" href="#python-api" title="Permalink to this heading">¶</a></h3>
 <p>This simple python API allows to communicate with the runtime and allows you to work with the raytracer in interactive notebooks and more.</p>
 <p>The API is only available if Python3 was found in the system.
 You might disable the API by setting the CMake option <code class="docutils literal notranslate"><span class="pre">IG_WITH_PYTHON_API</span></code> to <code class="docutils literal notranslate"><span class="pre">Off</span></code>.</p>
@@ -284,7 +284,7 @@ You might disable the API by setting the CMake option <code class="docutils lite
 </section>
 </section>
 <section id="running">
-<h2>Running<a class="headerlink" href="#running" title="Permalink to this headline">¶</a></h2>
+<h2>Running<a class="headerlink" href="#running" title="Permalink to this heading">¶</a></h2>
 <p>Each frontend requires the exact location of the backends to run.
 An automatic search procedure will find detect them in the system.
 In some rare cases the automatic search procedure might fail to find all the backends.
@@ -297,7 +297,7 @@ Setting <code class="docutils literal notranslate"><span class="pre">IG_DRIVER_S
 </div>
 </section>
 <section id="tiny-tools">
-<h2>Tiny tools<a class="headerlink" href="#tiny-tools" title="Permalink to this headline">¶</a></h2>
+<h2>Tiny tools<a class="headerlink" href="#tiny-tools" title="Permalink to this heading">¶</a></h2>
 <p>Two tiny tools <code class="docutils literal notranslate"><span class="pre">exr2hdr</span></code> and <code class="docutils literal notranslate"><span class="pre">hdr2exr</span></code> are available to convert between the Radiance favorite image format HDR to the advanced OpenEXR format and vice versa.</p>
 <p>This is useful to ease the transfer from Radiance to our raytracer, but you can disable them by setting the CMake option <code class="docutils literal notranslate"><span class="pre">IG_WITH_TOOLS</span></code> to <code class="docutils literal notranslate"><span class="pre">Off</span></code>.</p>
 <p>Actually, the tool might convert from any format the <code class="docutils literal notranslate"><span class="pre">stb_image</span></code> framework supports to the second format.</p>
@@ -319,7 +319,7 @@ Setting <code class="docutils literal notranslate"><span class="pre">IG_DRIVER_S
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
             VERSION:'',
-            LANGUAGE:'None',
+            LANGUAGE:'en',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -329,13 +329,14 @@ Setting <code class="docutils literal notranslate"><span class="pre">IG_DRIVER_S
     <script type="text/javascript" src="../../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
   
     <div class="footer" role="contentinfo">
         <div class="container">
             &#169; Copyright 2020-2022, Ignis-Project.
-        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 4.5.0.
+        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.0.0.
         </div>
     </div>  
 
