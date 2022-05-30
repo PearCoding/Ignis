@@ -214,7 +214,11 @@ int main(int argc, char** argv)
     SectionTimer timer_saving;
     timer_saving.start();
     if (!cmd.Output.empty()) {
-        if (!saveImageOutput(cmd.Output, *runtime))
+        CameraOrientation orientation;
+        orientation.Eye = camera.Eye;
+        orientation.Up  = camera.Up;
+        orientation.Dir = camera.Direction;
+        if (!saveImageOutput(cmd.Output, *runtime, &orientation))
             IG_LOG(L_ERROR) << "Failed to save EXR file " << cmd.Output << std::endl;
         else
             IG_LOG(L_INFO) << "Result saved to " << cmd.Output << std::endl;

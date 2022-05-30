@@ -51,7 +51,7 @@ struct Image {
 
     /// Will format to packed format (RGBA, 8bit each)
     /// Use this only for byte formats, else image quality will be lost
-    void copyToPackedFormat(std::vector<uint32>& dst) const; 
+    void copyToPackedFormat(std::vector<uint32>& dst) const;
 
     /// Will be true if the image in path is not in float format
     static bool isPacked(const std::filesystem::path& path);

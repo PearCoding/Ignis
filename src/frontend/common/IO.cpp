@@ -64,7 +64,7 @@ bool saveImageRGBA(const std::filesystem::path& path, const float* rgb, size_t w
     return img.save(path);
 }
 
-bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime)
+bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime, const CameraOrientation* currentOrientation)
 {
     const size_t width  = runtime.framebufferWidth();
     const size_t height = runtime.framebufferHeight();
@@ -127,6 +127,18 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime)
             image_names[3 * aov + 2] = name + ".R";
         }
     }
+
+    // Populate meta data information
+    ImageMetaData metaData;
+    metaData.CameraType     = runtime.camera();
+    metaData.TechniqueType  = runtime.technique();
+    metaData.SamplePerPixel = runtime.currentSampleCount();
+
+    const CameraOrientation orientation = currentOrientation ? *currentOrientation : runtime.initialCameraOrientation();
+
+    metaData.CameraEye = orientation.Eye;
+    metaData.CameraUp  = orientation.Up;
+    metaData.CameraDir = orientation.Dir;
 
     return ImageIO::save(path, width, height, image_ptrs, image_names);
 }

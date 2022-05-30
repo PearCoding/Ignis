@@ -85,6 +85,7 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mCurrentFrame(0)
     , mFilmWidth(0)
     , mFilmHeight(0)
+    , mCameraName()
     , mInitialCameraOrientation()
     , mAcquireStats(opts.AcquireStats)
     , mTechniqueName()
@@ -209,6 +210,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     mDatabase = std::move(result.Database);
     IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startLoader).count() / 1000.0f << " seconds" << std::endl;
 
+    mCameraName               = lopts.CameraType;
     mTechniqueName            = lopts.TechniqueType;
     mTechniqueInfo            = result.TechniqueInfo;
     mInitialCameraOrientation = result.CameraOrientation;

@@ -83,6 +83,9 @@ public:
     /// Returns the name of the loaded technique
     inline const std::string& technique() const { return mTechniqueName; }
 
+    /// Returns the name of the loaded camera
+    inline const std::string& camera() const { return mCameraName; }
+
     /// Return true if the runtime is used in tracing mode
     inline bool isTrace() const { return mOptions.IsTracer; }
 
@@ -149,6 +152,7 @@ private:
     size_t mFilmWidth;
     size_t mFilmHeight;
 
+    std::string mCameraName;
     CameraOrientation mInitialCameraOrientation;
 
     bool mAcquireStats;
