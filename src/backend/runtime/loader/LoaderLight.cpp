@@ -369,6 +369,63 @@ static void light_cie_env(std::ostream& stream, const std::string& name, const s
     tree.endClosure();
 }
 
+inline float skylight_normalisation_factor(float altitude, bool clear)
+{
+    constexpr std::array<float, 5> ClearApprox  = { 2.766521f, 0.547665f, -0.369832f, 0.009237f, 0.059229f };
+    constexpr std::array<float, 5> IntermApprox = { 3.5556f, -2.7152f, -1.3081f, 1.0660f, 0.60227f };
+
+    const float x   = (altitude - Pi4) / Pi4;
+    const auto& arr = clear ? ClearApprox : IntermApprox;
+    float f         = arr[4];
+    for (int i = 3; i >= 0; --i)
+        f = f * x + arr[i];
+    return f;
+}
+
+static void light_cie_sunny_env(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+{
+    const bool clear = (light->pluginType() == "cie_clear" || light->pluginType() == "cieclear");
+
+    tree.beginClosure();
+
+    auto ea      = extractEA(light);
+    Vector3f dir = ea.toDirection();
+
+    if (ea.Elevation > 87 * Deg2Rad) {
+        IG_LOG(L_WARNING) << " Sun too close to zenith, reducing elavation to 87 degrees" << std::endl;
+        ea.Elevation = 87 * Deg2Rad;
+    }
+
+    float factor = 0;
+    if (clear)
+        factor = 0.274f * (0.91f + 10 * std::exp(-3 * (Inv2Pi - ea.Elevation)) + 0.45 * dir.y() * dir.y());
+    else
+        factor = (2.739f + 0.9891f * std::sin(0.3119 + 2.6f * ea.Elevation)) * std::exp(-(Inv2Pi - ea.Elevation) * (0.4441f + 1.48f * ea.Elevation));
+
+    const float norm_factor = skylight_normalisation_factor(ea.Elevation, clear) * InvPi / factor;
+
+    tree.addColor("zenith", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addColor("ground", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addNumber("ground_brightness", *light, 0.2f, true, ShadingTree::IM_Bare);
+
+    const Matrix3f trans  = light->property("transform").getTransform().linear().transpose().inverse();
+    const bool has_ground = light->property("has_ground").getBool(true);
+
+    stream << tree.pullHeader()
+           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_cie_sunny_light(" << LoaderUtils::inlineSceneBBox(tree.context())
+           << ", " << tree.getInline("zenith")
+           << ", " << tree.getInline("ground")
+           << ", " << tree.getInline("ground_brightness")
+           << ", " << (clear ? "true" : "false")
+           << ", " << (has_ground ? "true" : "false")
+           << ", " << LoaderUtils::inlineVector(dir)
+           << ", " << factor
+           << ", " << norm_factor
+           << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
+
+    tree.endClosure();
+}
+
 static void light_perez(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
@@ -493,6 +550,10 @@ static const struct {
     { "cieuniform", light_cie_env },
     { "cie_cloudy", light_cie_env },
     { "ciecloudy", light_cie_env },
+    { "cie_clear", light_cie_sunny_env },
+    { "cieclear", light_cie_sunny_env },
+    { "cie_intermediate", light_cie_sunny_env },
+    { "cieintermediate", light_cie_sunny_env },
     { "perez", light_perez },
     { "uniform", light_env },
     { "env", light_env },
