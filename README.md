@@ -24,7 +24,7 @@ A sample scene from https://github.com/KhronosGroup/glTF-Sample-Models directly 
 
 ### Optional
 
- - SDL2 <https://www.libsdl.org/> (min. 2.0.17)
+ - SDL2 <https://www.libsdl.org/>
 
 ### Integrated
 The following dependencies will be downloaded and compiled automatically.

@@ -8,8 +8,14 @@
 #include "imgui.h"
 #include "imgui_markdown.h"
 
+#if SDL_VERSION_ATLEAST(2, 0, 17)
 #include "backends/imgui_impl_sdl.h"
 #include "backends/imgui_impl_sdlrenderer.h"
+#else
+#define USE_OLD_SDL
+// The following implementation is deprecated and only available for old SDL versions
+#include "imgui_old_sdl.h"
+#endif
 
 #include "Inspector.h"
 
@@ -131,6 +137,11 @@ public:
         Width  = width;
         Height = height;
         setupTextureBuffer((size_t)width, (size_t)height);
+
+#ifdef USE_OLD_SDL
+        ImGuiSDL::Deinitialize();
+        ImGuiSDL::Initialize(Renderer, width, height);
+#endif
     }
 
     [[nodiscard]] inline const float* currentPixels() const
@@ -185,7 +196,9 @@ public:
         SDL_Event event;
         const bool hover = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
         while (SDL_PollEvent(&event)) {
+#ifndef USE_OLD_SDL
             ImGui_ImplSDL2_ProcessEvent(&event);
+#endif
 
             bool key_down = event.type == SDL_KEYDOWN;
             switch (event.type) {
@@ -821,12 +834,18 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
+#ifndef USE_OLD_SDL
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    ImGui::StyleColorsDark();
+
     ImGui_ImplSDL2_InitForSDLRenderer(mInternal->Window, mInternal->Renderer);
     ImGui_ImplSDLRenderer_Init(mInternal->Renderer);
+#else
+    ImGuiSDL::Initialize(mInternal->Renderer, (int)width, (int)height);
+#endif
 
     mInternal->PoseManager.load(POSE_FILE);
 
@@ -838,8 +857,13 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
 
 UI::~UI()
 {
+#ifndef USE_OLD_SDL
     ImGui_ImplSDLRenderer_Shutdown();
     ImGui_ImplSDL2_Shutdown();
+#else
+    ImGuiSDL::Deinitialize();
+#endif
+
     SDL_DestroyTexture(mInternal->Texture);
     SDL_DestroyRenderer(mInternal->Renderer);
     SDL_DestroyWindow(mInternal->Window);
@@ -959,14 +983,21 @@ void UI::update(size_t iter, size_t samples)
     SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr);
 
     if (mInternal->ShowUI || mInternal->ShowInspector || mInternal->ShowHelp) {
+#ifndef USE_OLD_SDL
         ImGui_ImplSDLRenderer_NewFrame();
         ImGui_ImplSDL2_NewFrame();
+#endif
+
         ImGui::NewFrame();
         mInternal->handleImgui(iter, samples);
         if (mInternal->ShowHelp)
             handleHelp();
         ImGui::Render();
+#ifndef USE_OLD_SDL
         ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+#else
+        ImGuiSDL::Render(ImGui::GetDrawData());
+#endif
     }
 
     SDL_RenderPresent(mInternal->Renderer);
