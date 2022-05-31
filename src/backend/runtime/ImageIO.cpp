@@ -113,7 +113,7 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
     if (metaData.CameraDir.has_value())
         attributes.emplace_back(makeVec3Attribute("igCameraDir", metaData.CameraDir.value()));
     if (metaData.SamplePerPixel.has_value())
-        attributes.emplace_back(makeIntAttribute("igSPP", metaData.SamplePerPixel.value()));
+        attributes.emplace_back(makeIntAttribute("igSPP", (int)metaData.SamplePerPixel.value()));
 
     if (!attributes.empty()) {
         header.custom_attributes     = attributes.data();

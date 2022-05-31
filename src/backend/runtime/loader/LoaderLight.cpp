@@ -398,9 +398,9 @@ static void light_cie_sunny_env(std::ostream& stream, const std::string& name, c
 
     float factor = 0;
     if (clear)
-        factor = 0.274f * (0.91f + 10 * std::exp(-3 * (Inv2Pi - ea.Elevation)) + 0.45 * dir.y() * dir.y());
+        factor = 0.274f * (0.91f + 10 * std::exp(-3 * (Inv2Pi - ea.Elevation)) + 0.45f * dir.y() * dir.y());
     else
-        factor = (2.739f + 0.9891f * std::sin(0.3119 + 2.6f * ea.Elevation)) * std::exp(-(Inv2Pi - ea.Elevation) * (0.4441f + 1.48f * ea.Elevation));
+        factor = (2.739f + 0.9891f * std::sin(0.3119f + 2.6f * ea.Elevation)) * std::exp(-(Inv2Pi - ea.Elevation) * (0.4441f + 1.48f * ea.Elevation));
 
     const float norm_factor = skylight_normalisation_factor(ea.Elevation, clear) * InvPi / factor;
 
