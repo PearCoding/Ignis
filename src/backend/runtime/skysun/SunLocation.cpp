@@ -20,7 +20,7 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
     double elapsedJulianDays = 0, decHours = 0;
     {
         // Calculate time of the day in UT decimal hours
-        decHours = timepoint.Hour - location.Timezone + (timepoint.Minute + timepoint.Seconds / 60.0) / 60.0;
+        decHours = timepoint.Hour + location.Timezone + (timepoint.Minute + timepoint.Seconds / 60.0) / 60.0;
 
         // Calculate current Julian Day
         int liAux1 = (timepoint.Month - 14) / 12;
@@ -71,7 +71,7 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
         double greenwichMeanSiderealTime = 6.6974243242
                                            + 0.0657098283 * elapsedJulianDays + decHours;
 
-        double localMeanSiderealTime = Deg2Rad * ((float)((greenwichMeanSiderealTime * 15 + location.Longitude)));
+        double localMeanSiderealTime = Deg2Rad * ((float)((greenwichMeanSiderealTime * 15 - location.Longitude)));
 
         double latitudeInRadians = Deg2Rad * location.Latitude;
         double cosLatitude       = std::cos(latitudeInRadians);
@@ -95,6 +95,6 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
         zenith += (EARTH_MEAN_RADIUS / ASTRONOMICAL_UNIT) * std::sin(zenith);
     }
 
-    return ElevationAzimuth{ Pi2 - (float)zenith, 2 * Pi - (float)azimuth /* The original azimuth is given in east of north, we want west of south */ };
+    return ElevationAzimuth{ Pi2 - (float)zenith, std::fmod((float)azimuth + Pi, 2 * Pi) /* The original azimuth is given in east of north, we want west of south */ };
 }
 } // namespace IG

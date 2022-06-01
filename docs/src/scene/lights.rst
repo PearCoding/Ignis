@@ -74,8 +74,8 @@ Spot Light (:monosp:`spot`)
    - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
-   - 2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun.
+   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
+   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
  * - intensity
    - |color|
    - (1,1,1)
@@ -109,8 +109,8 @@ Directional Light (:monosp:`directional`)
    
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
-   - 2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun.
+   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
+   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
 
  * - irradiance
    - |color|
@@ -171,8 +171,8 @@ Sun Light (:monosp:`sun`)
    
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
-   - 2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun.
+   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
+   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
 
  * - sun_scale
    - |number|
@@ -218,8 +218,8 @@ Sky Light (:monosp:`sky`)
    - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
-   - 2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun.
+   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, 2
+   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west.
  * - scale
    - |color|
    - (1,1,1)
@@ -319,8 +319,8 @@ Perez Sky Model (:monosp:`perez`)
    
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
-   - 2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun.
+   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
+   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
 
  * - luminance
    - |color|

@@ -5,7 +5,7 @@
 namespace IG {
 
 // Default is Saarbruecken 2020.05.06 12:00:00 (midday)
-// which results in Elevation: 52.87 Azimuth: 143.27
+// which results in Elevation: 52.87 Azimuth: 323.271 (west of south)
 struct TimePoint {
     int Year      = 2020;
     int Month     = 5;
@@ -16,9 +16,9 @@ struct TimePoint {
 };
 
 struct MapLocation {
-    float Longitude = 6.9965744f;
-    float Latitude  = 49.235422f;
-    float Timezone  = 2;
+    float Longitude = -6.9965744f; // Degrees west
+    float Latitude  = 49.235422f;  // Degrees north
+    float Timezone  = -2;          // Offset to UTC
 };
 
 ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& location);
