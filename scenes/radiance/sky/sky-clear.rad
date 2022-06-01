@@ -1,4 +1,5 @@
-!gensky 5 6 12:00 -s -b 1
+!gensky -ang 52.8552 143.271 -s -b 1
+# 5 6 12:00CEST -s -b 1 -a -49.235422 -o 6.9965744
 
 skyfunc glow skyglow
 0

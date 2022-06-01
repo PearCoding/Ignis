@@ -10,4 +10,4 @@ OUT=.
 # igcli ${ARGS} -o $OUT/ignis_uniform.exr $SCRIPT_DIR/uniform.json
 # igcli ${ARGS} -o $OUT/ignis_cloudy.exr $SCRIPT_DIR/cloudy.json
 igcli ${ARGS} -o $OUT/ignis_clear.exr $SCRIPT_DIR/clear.json
-igcli ${ARGS} -o $OUT/ignis_intermediate.exr $SCRIPT_DIR/intermediate.json
+# igcli ${ARGS} -o $OUT/ignis_intermediate.exr $SCRIPT_DIR/intermediate.json

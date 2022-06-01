@@ -65,8 +65,8 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
         declination = std::asin(std::sin(eclipticObliquity) * sinEclipticLongitude);
     }
 
-    // Calculate local coordinates (azimuth and zenith angle) in degrees
-    double elevation = 0, azimuth = 0;
+    // Calculate local zenith and azimuth angles
+    double zenith = 0, azimuth = 0;
     {
         double greenwichMeanSiderealTime = 6.6974243242
                                            + 0.0657098283 * elapsedJulianDays + decHours;
@@ -80,9 +80,9 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
         double hourAngle    = localMeanSiderealTime - rightAscension;
         double cosHourAngle = std::cos(hourAngle);
 
-        elevation = std::acos(cosLatitude * cosHourAngle
-                                  * std::cos(declination)
-                              + std::sin(declination) * sinLatitude);
+        zenith = std::acos(cosLatitude * cosHourAngle
+                               * std::cos(declination)
+                           + std::sin(declination) * sinLatitude);
 
         dY = -std::sin(hourAngle);
         dX = std::tan(declination) * cosLatitude - sinLatitude * cosHourAngle;
@@ -92,9 +92,9 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
             azimuth += 2 * Pi;
 
         // Parallax Correction
-        elevation += (EARTH_MEAN_RADIUS / ASTRONOMICAL_UNIT) * std::sin(elevation);
+        zenith += (EARTH_MEAN_RADIUS / ASTRONOMICAL_UNIT) * std::sin(zenith);
     }
 
-    return ElevationAzimuth{ Pi2 - (float)elevation, (float)azimuth };
+    return ElevationAzimuth{ Pi2 - (float)zenith, 2 * Pi - (float)azimuth /* The original azimuth is given in east of north, we want west of south */ };
 }
 } // namespace IG

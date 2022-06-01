@@ -29,8 +29,6 @@ static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
         return ElevationAzimuth::fromDirection(obj->property("direction").getVector3(Vector3f(0, 0, 1)).normalized());
     } else if (obj->property("sun_direction").isValid()) {
         return ElevationAzimuth::fromDirection(obj->property("sun_direction").getVector3(Vector3f(0, 0, 1)).normalized());
-    } else if (obj->property("theta").isValid() || obj->property("phi").isValid()) {
-        return ElevationAzimuth::fromThetaPhi(obj->property("theta").getNumber(0), obj->property("phi").getNumber(0));
     } else if (obj->property("elevation").isValid() || obj->property("azimuth").isValid()) {
         return ElevationAzimuth{ obj->property("elevation").getNumber(0), obj->property("azimuth").getNumber(0) };
     } else {

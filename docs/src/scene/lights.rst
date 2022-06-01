@@ -68,14 +68,10 @@ Spot Light (:monosp:`spot`)
    - |vector|
    - (0,0,1)
    - Direction of the light towards the scene.
- * - theta, phi
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` theta and phi given in degrees can be used.
  * - elevation, azimuth
    - |number|
    - 0, 0
-   - Instead of :monosp:`direction` the elevation and azimuth of a celestial object given in degrees can be used.
+   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
    - 2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2
@@ -106,15 +102,10 @@ Directional Light (:monosp:`directional`)
    - (0,0,1)
    - Direction of the light towards the scene.
    
- * - theta, phi
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` theta and phi given in degrees can be used.
-   
  * - elevation, azimuth
    - |number|
    - 0, 0
-   - Instead of :monosp:`direction` the elevation and azimuth of a celestial object given in degrees can be used.
+   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
    
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
@@ -173,15 +164,10 @@ Sun Light (:monosp:`sun`)
    - (0,0,1)
    - Direction of the incoming sun towards the scene.
    
- * - theta, phi
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` theta and phi given in degrees can be used.
-   
  * - elevation, azimuth
    - |number|
    - 0, 0
-   - Instead of :monosp:`direction` the elevation and azimuth of a celestial object given in degrees can be used.
+   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
    
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
@@ -226,14 +212,10 @@ Sky Light (:monosp:`sky`)
    - |vector|
    - (0,0,1)
    - Direction of the incoming sun towards the scene.
- * - theta, phi
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` theta and phi given in degrees can be used. 
  * - elevation, azimuth
    - |number|
    - 0, 0
-   - Instead of :monosp:`direction` the elevation and azimuth of a celestial object given in degrees can be used.
+   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
    - 2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2
@@ -330,15 +312,10 @@ Perez Sky Model (:monosp:`perez`)
    - (0,0,1)
    - Direction of the light towards the scene.
    
- * - theta, phi
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` theta and phi given in degrees can be used.
-   
  * - elevation, azimuth
    - |number|
    - 0, 0
-   - Instead of :monosp:`direction` the elevation and azimuth of a celestial object given in degrees can be used.
+   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
    
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
