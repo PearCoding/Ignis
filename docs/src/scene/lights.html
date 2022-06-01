@@ -191,6 +191,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#sky-light-sky">Sky Light (<span class="monosp">sky</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#cie-uniform-sky-model-cie-uniform">CIE Uniform Sky Model (<span class="monosp">cie_uniform</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#cie-cloudy-sky-model-cie-cloudy">CIE Cloudy Sky Model (<span class="monosp">cie_cloudy</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cie-clear-sky-model-cie-clear">CIE Clear Sky Model (<span class="monosp">cie_clear</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cie-intermediate-sky-model-cie-intermediate">CIE Intermediate Sky Model (<span class="monosp">cie_intermediate</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#perez-sky-model-perez">Perez Sky Model (<span class="monosp">perez</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#environment-light-env">Environment Light (<span class="monosp">env</span>)</a></li>
 </ul>
@@ -321,22 +323,17 @@ The type has to be one of the lights listed at this section below.</p>
 <td><p>(0,0,1)</p></td>
 <td><p>Direction of the light towards the scene.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">theta, phi</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>0, 0</p></td>
-<td><p>Instead of <span class="monosp">direction</span> theta and phi given in degrees can be used.</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
-<td><p>Instead of <span class="monosp">direction</span> the elevation and azimuth of a celestial object given in degrees can be used.</p></td>
+<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
-<td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2</p></td>
-<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun.</p></td>
-</tr>
-<tr class="row-odd"><td><p><span class="paramtype">intensity</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">intensity</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
 <td><p>(1,1,1)</p></td>
 <td><p>Intensity of the light.</p></td>
@@ -367,22 +364,17 @@ The type has to be one of the lights listed at this section below.</p>
 <td><p>(0,0,1)</p></td>
 <td><p>Direction of the light towards the scene.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">theta, phi</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>0, 0</p></td>
-<td><p>Instead of <span class="monosp">direction</span> theta and phi given in degrees can be used.</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
-<td><p>Instead of <span class="monosp">direction</span> the elevation and azimuth of a celestial object given in degrees can be used.</p></td>
+<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
-<td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2</p></td>
-<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun.</p></td>
-</tr>
-<tr class="row-even"><td><p><span class="paramtype">irradiance</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">irradiance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
 <td><p>(1,1,1)</p></td>
 <td><p>Output of the directional light.</p></td>
@@ -444,27 +436,22 @@ The type has to be one of the lights listed at this section below.</p>
 <td><p>(0,0,1)</p></td>
 <td><p>Direction of the incoming sun towards the scene.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">theta, phi</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>0, 0</p></td>
-<td><p>Instead of <span class="monosp">direction</span> theta and phi given in degrees can be used.</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
-<td><p>Instead of <span class="monosp">direction</span> the elevation and azimuth of a celestial object given in degrees can be used.</p></td>
+<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
-<td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2</p></td>
-<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun.</p></td>
-</tr>
-<tr class="row-even"><td><p><span class="paramtype">sun_scale</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">sun_scale</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>1</p></td>
 <td><p>Scale of the sun power in the sky.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">sun_radius_scale</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">sun_radius_scale</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>1</p></td>
 <td><p>Scale of the sun radius in the sky.</p></td>
@@ -505,22 +492,17 @@ The type has to be one of the lights listed at this section below.</p>
 <td><p>(0,0,1)</p></td>
 <td><p>Direction of the incoming sun towards the scene.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">theta, phi</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>0, 0</p></td>
-<td><p>Instead of <span class="monosp">direction</span> theta and phi given in degrees can be used.</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
-<td><p>Instead of <span class="monosp">direction</span> the elevation and azimuth of a celestial object given in degrees can be used.</p></td>
+<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
-<td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2</p></td>
-<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun.</p></td>
-</tr>
-<tr class="row-even"><td><p><span class="paramtype">scale</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">scale</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
 <td><p>(1,1,1)</p></td>
 <td><p>Scale factor multiplied to the radiance.</p></td>
@@ -610,8 +592,130 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 </figcaption>
 </figure>
 </div></section>
+<section id="cie-clear-sky-model-cie-clear">
+<span id="fig-cie_cloudy-light"></span><h2>CIE Clear Sky Model (<span class="monosp">cie_clear</span>)<a class="headerlink" href="#cie-clear-sky-model-cie-clear" title="Permalink to this heading">¶</a></h2>
+<table class="paramstable docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="paramtype">zenith</span></p></td>
+<td><p><span class="paramtype">color</span></p></td>
+<td><p>(1,1,1)</p></td>
+<td><p>Zenith tint of the sky model.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">ground</span></p></td>
+<td><p><span class="paramtype">color</span></p></td>
+<td><p>(1,1,1)</p></td>
+<td><p>Ground tint of the sky model.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">ground_brightness</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>0.2</p></td>
+<td><p>Brightness of the ground.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">turbidity</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>2.45</p></td>
+<td><p>Turbidity factor of sky model. This parameter can not be an expression (yet).</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
+<td><p><span class="paramtype">vector</span></p></td>
+<td><p>(0,0,1)</p></td>
+<td><p>Direction of the incoming sun towards the scene.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>0, 0</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">scale</span></p></td>
+<td><p><span class="paramtype">color</span></p></td>
+<td><p>(1,1,1)</p></td>
+<td><p>Scale factor multiplied to the radiance.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="figure compound align-center" id="fig-cie_clear-light">
+<figure class="align-default" id="id9">
+<a class="reference internal image-reference" href="../../_images/lig_cie_clear.jpg"><img alt="../../_images/lig_cie_clear.jpg" src="../../_images/lig_cie_clear.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">CIE clear sky model.</span><a class="headerlink" href="#id9" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
+<section id="cie-intermediate-sky-model-cie-intermediate">
+<span id="fig-cie_clear-light"></span><h2>CIE Intermediate Sky Model (<span class="monosp">cie_intermediate</span>)<a class="headerlink" href="#cie-intermediate-sky-model-cie-intermediate" title="Permalink to this heading">¶</a></h2>
+<table class="paramstable docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="paramtype">zenith</span></p></td>
+<td><p><span class="paramtype">color</span></p></td>
+<td><p>(1,1,1)</p></td>
+<td><p>Zenith tint of the sky model.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">ground</span></p></td>
+<td><p><span class="paramtype">color</span></p></td>
+<td><p>(1,1,1)</p></td>
+<td><p>Ground tint of the sky model.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">ground_brightness</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>0.2</p></td>
+<td><p>Brightness of the ground.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">turbidity</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>2.45</p></td>
+<td><p>Turbidity factor of sky model. This parameter can not be an expression (yet).</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
+<td><p><span class="paramtype">vector</span></p></td>
+<td><p>(0,0,1)</p></td>
+<td><p>Direction of the incoming sun towards the scene.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>0, 0</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">scale</span></p></td>
+<td><p><span class="paramtype">color</span></p></td>
+<td><p>(1,1,1)</p></td>
+<td><p>Scale factor multiplied to the radiance.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="figure compound align-center" id="fig-cie_intermediate-light">
+<figure class="align-default" id="id10">
+<a class="reference internal image-reference" href="../../_images/lig_cie_intermediate.jpg"><img alt="../../_images/lig_cie_intermediate.jpg" src="../../_images/lig_cie_intermediate.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">CIE intermediate sky model.</span><a class="headerlink" href="#id10" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="perez-sky-model-perez">
-<span id="fig-cie_cloudy-light"></span><h2>Perez Sky Model (<span class="monosp">perez</span>)<a class="headerlink" href="#perez-sky-model-perez" title="Permalink to this heading">¶</a></h2>
+<span id="fig-cie_intermediate-light"></span><h2>Perez Sky Model (<span class="monosp">perez</span>)<a class="headerlink" href="#perez-sky-model-perez" title="Permalink to this heading">¶</a></h2>
 <table class="paramstable docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
@@ -626,32 +730,27 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 <td><p>(0,0,1)</p></td>
 <td><p>Direction of the light towards the scene.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">theta, phi</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>0, 0</p></td>
-<td><p>Instead of <span class="monosp">direction</span> theta and phi given in degrees can be used.</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
-<td><p>Instead of <span class="monosp">direction</span> the elevation and azimuth of a celestial object given in degrees can be used.</p></td>
+<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
-<td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 6.9965744, 49.235422, 2</p></td>
-<td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun.</p></td>
-</tr>
-<tr class="row-even"><td><p><span class="paramtype">luminance</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">luminance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
 <td><p>(1,1,1)</p></td>
 <td><p>Luminance of the sky model.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">zenith</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">zenith</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
 <td><p>(1,1,1)</p></td>
 <td><p>Zenith color of the sky model. This can not be used together with <span class="monosp">luminance</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">a, b, c, d, e</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">a, b, c, d, e</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p>1,1,1,1,1</p></td>
 <td><p>Perez specific parameters.</p></td>
@@ -659,10 +758,10 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 </tbody>
 </table>
 <div class="figure compound align-center" id="fig-perez-light">
-<figure class="align-default" id="id9">
+<figure class="align-default" id="id11">
 <a class="reference internal image-reference" href="../../_images/lig_perez.jpg"><img alt="../../_images/lig_perez.jpg" src="../../_images/lig_perez.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="caption-text">Perez sky model with default settings. The sky model has no ground term, therefore everything below the horizon is displayed in black.</span><a class="headerlink" href="#id9" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">Perez sky model with default settings. The sky model has no ground term, therefore everything below the horizon is displayed in black.</span><a class="headerlink" href="#id11" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -695,10 +794,10 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 </tbody>
 </table>
 <div class="figure compound align-center" id="fig-env-light">
-<figure class="align-default" id="id10">
+<figure class="align-default" id="id12">
 <a class="reference internal image-reference" href="../../_images/lig_env.jpg"><img alt="../../_images/lig_env.jpg" src="../../_images/lig_env.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="caption-text">Environment light with EXR environment map used throughout the documentation.</span><a class="headerlink" href="#id10" title="Permalink to this image">¶</a></p>
+<p><span class="caption-text">Environment light with EXR environment map used throughout the documentation.</span><a class="headerlink" href="#id12" title="Permalink to this image">¶</a></p>
 </figcaption>
 </figure>
 <span class="target" id="fig-env-light"></span></div></section>
