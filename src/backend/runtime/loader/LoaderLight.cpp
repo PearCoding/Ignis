@@ -367,7 +367,7 @@ static void light_cie_env(std::ostream& stream, const std::string& name, const s
     tree.endClosure();
 }
 
-inline float skylight_normalisation_factor(float altitude, bool clear)
+inline float skylight_normalization_factor(float altitude, bool clear)
 {
     constexpr std::array<float, 5> ClearApprox  = { 2.766521f, 0.547665f, -0.369832f, 0.009237f, 0.059229f };
     constexpr std::array<float, 5> IntermApprox = { 3.5556f, -2.7152f, -1.3081f, 1.0660f, 0.60227f };
@@ -390,18 +390,33 @@ static void light_cie_sunny_env(std::ostream& stream, const std::string& name, c
     Vector3f dir = ea.toDirection();
 
     if (ea.Elevation > 87 * Deg2Rad) {
-        IG_LOG(L_WARNING) << " Sun too close to zenith, reducing elavation to 87 degrees" << std::endl;
+        IG_LOG(L_WARNING) << " Sun too close to zenith, reducing elevation to 87 degrees" << std::endl;
         ea.Elevation = 87 * Deg2Rad;
     }
 
+    const float turbidity = light->property("turbidity").getNumber(2.45f);
+
+    constexpr float SkyIllum = 203;
+    float zenithbrightness   = (1.376f * turbidity - 1.81) * std::tan(ea.Elevation) + 0.38f;
+    if (!clear)
+        zenithbrightness = (zenithbrightness + 8.6f * dir.y() + 0.123) / 2;
+    zenithbrightness = std::max(0.0f, zenithbrightness * 1000 / SkyIllum);
+
     float factor = 0;
     if (clear)
-        factor = 0.274f * (0.91f + 10 * std::exp(-3 * (Inv2Pi - ea.Elevation)) + 0.45f * dir.y() * dir.y());
+        factor = 0.274f * (0.91f + 10 * std::exp(-3 * (Pi2 - ea.Elevation)) + 0.45f * dir.y() * dir.y());
     else
-        factor = (2.739f + 0.9891f * std::sin(0.3119f + 2.6f * ea.Elevation)) * std::exp(-(Inv2Pi - ea.Elevation) * (0.4441f + 1.48f * ea.Elevation));
+        factor = (2.739f + 0.9891f * std::sin(0.3119f + 2.6f * ea.Elevation)) * std::exp(-(Pi2 - ea.Elevation) * (0.4441f + 1.48f * ea.Elevation));
 
-    const float norm_factor = skylight_normalisation_factor(ea.Elevation, clear) * InvPi / factor;
+    const float norm_factor = skylight_normalization_factor(ea.Elevation, clear) * InvPi / factor;
 
+    constexpr float SunIllum    = 208;
+    const float solarbrightness = 1.5e9f / SunIllum * (1.147f - 0.147f / std::max(dir.y(), 0.16f));
+    const float additive_factor = 6e-5f * InvPi * solarbrightness * dir.y() * (clear ? 1 : 0.15f /* Fudge factor */);
+
+    const float c2 = zenithbrightness * norm_factor + additive_factor;
+
+    tree.addColor("scale", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
     tree.addColor("zenith", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
     tree.addColor("ground", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
     tree.addNumber("ground_brightness", *light, 0.2f, true, ShadingTree::IM_Bare);
@@ -411,14 +426,16 @@ static void light_cie_sunny_env(std::ostream& stream, const std::string& name, c
 
     stream << tree.pullHeader()
            << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_cie_sunny_light(" << LoaderUtils::inlineSceneBBox(tree.context())
+           << ", " << tree.getInline("scale")
            << ", " << tree.getInline("zenith")
+           << ", " << zenithbrightness
            << ", " << tree.getInline("ground")
            << ", " << tree.getInline("ground_brightness")
            << ", " << (clear ? "true" : "false")
            << ", " << (has_ground ? "true" : "false")
            << ", " << LoaderUtils::inlineVector(dir)
            << ", " << factor
-           << ", " << norm_factor
+           << ", " << c2
            << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
 
     tree.endClosure();

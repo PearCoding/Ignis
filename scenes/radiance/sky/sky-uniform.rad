@@ -1,4 +1,4 @@
-!gensky 5 6 12:00 -u -b 1
+!gensky 5 6 12:00CEST -u -b 1 -a +49.235422 -o -6.9965744 -m -2
 
 skyfunc glow skyglow
 0

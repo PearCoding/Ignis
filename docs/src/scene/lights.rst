@@ -218,8 +218,8 @@ Sky Light (:monosp:`sky`)
    - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
    - |number|
-   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, 2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west.
+   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
+   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
  * - scale
    - |color|
    - (1,1,1)
@@ -301,6 +301,104 @@ CIE Cloudy Sky Model (:monosp:`cie_cloudy`)
 .. subfigend::
   :width: 0.6
   :label: fig-cie_cloudy-light
+
+CIE Clear Sky Model (:monosp:`cie_clear`)
+---------------------------------------------
+
+.. objectparameters::
+
+ * - zenith
+   - |color|
+   - (1,1,1)
+   - Zenith tint of the sky model.
+ * - ground
+   - |color|
+   - (1,1,1)
+   - Ground tint of the sky model.
+ * - ground_brightness
+   - |number|
+   - 0.2
+   - Brightness of the ground.
+ * - turbidity
+   - |number|
+   - 2.45
+   - Turbidity factor of sky model. This parameter can not be an expression (yet).
+ * - direction
+   - |vector|
+   - (0,0,1)
+   - Direction of the incoming sun towards the scene.
+ * - elevation, azimuth
+   - |number|
+   - 0, 0
+   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
+ * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
+   - |number|
+   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
+   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
+ * - scale
+   - |color|
+   - (1,1,1)
+   - Scale factor multiplied to the radiance.
+   
+.. subfigstart::
+  
+.. figure:: images/lig_cie_clear.jpg
+  :width: 90%
+
+  CIE clear sky model.
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-cie_clear-light
+
+CIE Intermediate Sky Model (:monosp:`cie_intermediate`)
+-------------------------------------------------------
+
+.. objectparameters::
+
+ * - zenith
+   - |color|
+   - (1,1,1)
+   - Zenith tint of the sky model.
+ * - ground
+   - |color|
+   - (1,1,1)
+   - Ground tint of the sky model.
+ * - ground_brightness
+   - |number|
+   - 0.2
+   - Brightness of the ground.
+ * - turbidity
+   - |number|
+   - 2.45
+   - Turbidity factor of sky model. This parameter can not be an expression (yet).
+ * - direction
+   - |vector|
+   - (0,0,1)
+   - Direction of the incoming sun towards the scene.
+ * - elevation, azimuth
+   - |number|
+   - 0, 0
+   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
+ * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
+   - |number|
+   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
+   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
+ * - scale
+   - |color|
+   - (1,1,1)
+   - Scale factor multiplied to the radiance.
+   
+.. subfigstart::
+  
+.. figure:: images/lig_cie_intermediate.jpg
+  :width: 90%
+
+  CIE intermediate sky model.
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-cie_intermediate-light
 
 Perez Sky Model (:monosp:`perez`)
 ---------------------------------------------
