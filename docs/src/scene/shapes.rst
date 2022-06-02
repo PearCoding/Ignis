@@ -388,7 +388,7 @@ Mitsuba Serialized Format (:monosp:`mitsuba`)
  * - filename
    - |string|
    - *None*
-   - Path to a valid .serialized file.
+   - Path to a valid .serialized or .mts file.
 
  * - shape_index
    - |int|
@@ -409,3 +409,17 @@ Mitsuba Serialized Format (:monosp:`mitsuba`)
    - |transform|
    - Identity
    - Apply given transformation to shape.
+
+.. _shape-external:
+
+External File (:monosp:`external`)
+----------------------------------
+
+.. objectparameters::
+
+ * - filename
+   - |string|
+   - *None*
+   - Path to a valid file with a known file extension.
+
+This type of shape will load a obj (.obj), ply (.ply) or mitsuba serialized mesh (.mts or .serialized) depending on the extension of the filename. Additional properties will be forwarded to the actual shape type.

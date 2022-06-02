@@ -120,7 +120,7 @@ inline TriMesh setup_mesh_obj(const std::string& name, const Object& elem, const
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load obj file " << filename << std::endl;
     auto trimesh = obj::load(filename, shape_index < 0 ? std::nullopt : std::make_optional(shape_index));
     if (trimesh.vertices.empty()) {
-        IG_LOG(L_WARNING) << "Shape '" << name << "': Can not load shape given by file " << filename << std::endl;
+        IG_LOG(L_ERROR) << "Shape '" << name << "': Can not load shape given by file " << filename << std::endl;
         return TriMesh();
     }
 
@@ -133,7 +133,7 @@ inline TriMesh setup_mesh_ply(const std::string& name, const Object& elem, const
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load ply file " << filename << std::endl;
     auto trimesh = ply::load(filename);
     if (trimesh.vertices.empty()) {
-        IG_LOG(L_WARNING) << "Shape '" << name << "': Can not load shape given by file " << filename << std::endl;
+        IG_LOG(L_ERROR) << "Shape '" << name << "': Can not load shape given by file " << filename << std::endl;
         return TriMesh();
     }
     return trimesh;
@@ -146,10 +146,29 @@ inline TriMesh setup_mesh_mitsuba(const std::string& name, const Object& elem, c
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load serialized mitsuba file " << filename << std::endl;
     auto trimesh = mts::load(filename, shape_index);
     if (trimesh.vertices.empty()) {
-        IG_LOG(L_WARNING) << "Shape '" << name << "': Can not load shape given by file " << filename << std::endl;
+        IG_LOG(L_ERROR) << "Shape '" << name << "': Can not load shape given by file " << filename << std::endl;
         return TriMesh();
     }
     return trimesh;
+}
+
+inline TriMesh setup_mesh_external(const std::string& name, const Object& elem, const LoaderContext& ctx)
+{
+    const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
+    if (filename.empty()) {
+        IG_LOG(L_ERROR) << "Shape '" << name << "': No filename given" << std::endl;
+        return {};
+    }
+
+    if (to_lowercase(filename.extension().u8string()) == ".obj")
+        return setup_mesh_obj(name, elem, ctx);
+    else if (to_lowercase(filename.extension().u8string()) == ".ply")
+        return setup_mesh_ply(name, elem, ctx);
+    else if (to_lowercase(filename.extension().u8string()) == ".mts" || to_lowercase(filename.extension().u8string()) == ".serialized")
+        return setup_mesh_mitsuba(name, elem, ctx);
+    else
+        IG_LOG(L_ERROR) << "Shape '" << name << "': Can not determine type of external mesh for given " << filename << std::endl;
+    return {};
 }
 
 template <size_t N, size_t T>
@@ -248,6 +267,8 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
             mesh = setup_mesh_ply(name, *child, ctx);
         } else if (child->pluginType() == "mitsuba") {
             mesh = setup_mesh_mitsuba(name, *child, ctx);
+        } else if (child->pluginType() == "external") {
+            mesh = setup_mesh_external(name, *child, ctx);
         } else {
             IG_LOG(L_ERROR) << "Shape '" << name << "': Can not load shape type '" << child->pluginType() << "'" << std::endl;
             return;

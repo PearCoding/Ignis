@@ -342,11 +342,21 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const std::f
     if (!obj.HasMember("filename"))
         throw std::runtime_error("Expected a path for externals");
 
-    const std::string pluginType     = obj.HasMember("type") ? to_lowercase(getString(obj["type"])) : "ignis";
+    std::string pluginType           = obj.HasMember("type") ? to_lowercase(getString(obj["type"])) : "";
     const std::string inc_path       = getString(obj["filename"]);
     const std::filesystem::path path = std::filesystem::canonical(resolvePath(inc_path, baseDir, loader.lookupPaths()));
     if (path.empty())
         throw std::runtime_error("Could not find path '" + inc_path + "'");
+
+    // If type is empty, determine type by file extension
+    if (pluginType.empty()) {
+        if (to_lowercase(path.extension().u8string()) == ".json")
+            pluginType = "ignis";
+        else if (to_lowercase(path.extension().u8string()) == ".gltf" || to_lowercase(path.extension().u8string()) == ".glb")
+            pluginType = "gltf";
+        else
+            throw std::runtime_error("Could not determine external type by filename '" + path.u8string() + "'");
+    }
 
     if (pluginType == "ignis") {
         // Include ignis file
