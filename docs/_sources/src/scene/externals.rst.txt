@@ -5,8 +5,7 @@ Ignis allows to embed external scene files.
 
 An external resource is specified in the :monosp:`externals` block with a :monosp:`type`.
 The type has to be one of the externals listed at this section below.
-In contrary to other blocks, an external block has the default type :monosp:`ignis`.
-Therefore, if not specified explicitly, an external ignis json file will be included.
+In contrary to other blocks, the type parameter is optional. If none is specified the actual type will be determined by the filename extension.
 
 .. code-block:: javascript
     

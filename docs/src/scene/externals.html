@@ -151,6 +151,7 @@
 <li class="toctree-l2"><a class="reference internal" href="shapes.html#wavefront-object-format-obj">Wavefront Object Format (<span class="monosp">obj</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="shapes.html#polygon-file-format-ply">Polygon File Format (<span class="monosp">ply</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="shapes.html#mitsuba-serialized-format-mitsuba">Mitsuba Serialized Format (<span class="monosp">mitsuba</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shapes.html#external-file-external">External File (<span class="monosp">external</span>)</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="entities.html">Entities</a></li>
@@ -245,8 +246,7 @@
 <p>Ignis allows to embed external scene files.</p>
 <p>An external resource is specified in the <span class="monosp">externals</span> block with a <span class="monosp">type</span>.
 The type has to be one of the externals listed at this section below.
-In contrary to other blocks, an external block has the default type <span class="monosp">ignis</span>.
-Therefore, if not specified explicitly, an external ignis json file will be included.</p>
+In contrary to other blocks, the type parameter is optional. If none is specified the actual type will be determined by the filename extension.</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="c1">// ...</span>
     <span class="s2">&quot;externals&quot;</span><span class="o">:</span> <span class="p">[</span>
