@@ -29,9 +29,6 @@ public:
     void setTravelSpeed(float v);
 
 private:
-    size_t mWidth;
-    size_t mHeight;
-
     const SPPMode mSPPMode;
     DebugMode mDebugMode;
 

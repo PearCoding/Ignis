@@ -792,9 +792,7 @@ public:
 ////////////////////////////////////////////////////////////////
 
 UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool showDebug)
-    : mWidth(width)
-    , mHeight(height)
-    , mSPPMode(sppmode)
+    : mSPPMode(sppmode)
     , mDebugMode(DebugMode::Normal)
     , mInternal(std::make_unique<UIInternal>())
 {
