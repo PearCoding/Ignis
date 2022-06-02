@@ -1,0 +1,19 @@
+CPMAddPackage("gh:catchorg/Catch2@3.0.1")
+    
+macro(push_test name files)
+	set(options NO_ADD)
+	set(oneValueArgs)
+	set(multiValueArgs)
+	cmake_parse_arguments(__args "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
+	set(TARGET ig_test_${name})
+	add_executable(${TARGET} ${files})
+	target_link_libraries(${TARGET} PRIVATE ig_lib_runtime Catch2WithMain)
+    add_lto(${TARGET})
+    add_checks(${TARGET})
+	if(NOT __args_NO_ADD)
+		add_test(NAME ${name} COMMAND ${TARGET})
+	endif()
+endmacro(push_test)
+
+push_test(elevation_azimuth elevation_azimuth.cpp)

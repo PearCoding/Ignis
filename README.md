@@ -30,6 +30,7 @@ A sample scene from https://github.com/KhronosGroup/glTF-Sample-Models directly 
 The following dependencies will be downloaded and compiled automatically.
 Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more information. 
 
+ - Catch2 <https://github.com/catchorg/Catch2>
  - imgui <https://github.com/ocornut/imgui>
  - imgui-markdown <https://github.com/juliettef/imgui_markdown>
  - PExpr <https://github.com/PearCoding/PExpr>
