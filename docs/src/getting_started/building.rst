@@ -122,3 +122,10 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
         The list is not exhaustive however, as the final list of dependencies depends on the system, current state of development and other external factors.
         If a module (e.g., ``ig_driver_avx2.dll``) can not been found, but exists on the filesystem, a reason for the error might be a missing shared library.
         Use one of the many dll dependency viewers available on Windows to find the exact missing dll and copy it next to the build executable or add it to the ``PATH`` environment variable.
+
+Known Issues
+------------
+
+-  If you get a `CommandLine Error: Option 'help-list' registred more than once!`, you are loading the AnyDSL LLVM library and system LLVM library with exposed symbols at the same time, most likely.
+   A known reason is that `igview` and SDL are using a graphic driver which is loading the system LLVM library in the background.
+   Setting the environment variable `SDL_RENDER_DRIVER=software` should be a good workaround. This will not prevent you of using the GPU for rendering however, only the UI will be software rendered.
