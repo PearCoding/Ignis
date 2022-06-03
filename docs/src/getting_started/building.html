@@ -115,6 +115,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Building</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#linux-mac-os">Linux &amp; Mac OS</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#windows">Windows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#known-issues">Known Issues</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tutorials/index.html">Tutorials</a><ul>
@@ -377,6 +378,14 @@ Use one of the many dll dependency viewers available on Windows to find the exac
 </li>
 </ol>
 </section>
+<section id="known-issues">
+<h2>Known Issues<a class="headerlink" href="#known-issues" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>If you get a <cite>CommandLine Error: Option ‘help-list’ registred more than once!</cite>, you are loading the AnyDSL LLVM library and system LLVM library with exposed symbols at the same time, most likely.
+A known reason is that <cite>igview</cite> and SDL are using a graphic driver which is loading the system LLVM library in the background.
+Setting the environment variable <cite>SDL_RENDER_DRIVER=software</cite> should be a good workaround. This will not prevent you of using the GPU for rendering however, only the UI will be software rendered.</p></li>
+</ul>
+</section>
 </section>
 
 
@@ -411,7 +420,7 @@ Use one of the many dll dependency viewers available on Windows to find the exac
     <div class="footer" role="contentinfo">
         <div class="container">
             &#169; Copyright 2020-2022, Ignis-Project.
-        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.0.0.
+        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.0.1.
         </div>
     </div>  
 
