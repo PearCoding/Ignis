@@ -2,6 +2,7 @@
 
 #include "Parser.h"
 #include "math/BoundingBox.h"
+#include "mesh/PlaneShape.h"
 
 #include <unordered_set>
 #include <vector>
@@ -21,6 +22,19 @@ struct Entity {
     std::string Name;
     std::string Shape;
     std::string BSDF;
+
+    inline Eigen::Matrix<float, 3, 4> computeLocalMatrix() const
+    {
+        return Transform.inverse().matrix().block<3, 4>(0, 0);
+    }
+    inline Eigen::Matrix<float, 3, 4> computeGlobalMatrix() const
+    {
+        return Transform.matrix().block<3, 4>(0, 0);
+    }
+    inline Eigen::Matrix<float, 3, 3> computeGlobalNormalMatrix() const
+    {
+        return Transform.matrix().block<3, 3>(0, 0).inverse().transpose();
+    }
 };
 
 /// A material is a combination of bsdf, entity (if the entity is emissive) and volume/medium interface
@@ -44,6 +58,7 @@ struct LoaderEnvironment {
     std::unordered_map<std::string, Entity> EmissiveEntities;
     std::unordered_map<std::string, uint32> AreaLightsMap; // Map from Entity -> Light ID
     std::vector<Material> Materials;
+    std::unordered_map<uint32, PlaneShape> PlaneShapes; // Used for special optimization
 
     BoundingBox SceneBBox;
     float SceneDiameter = 0.0f;

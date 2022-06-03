@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <mutex>
 #include <sstream>
 
 #include <tbb/parallel_for.h>
@@ -238,6 +239,8 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
     std::vector<BoundingBox> boxes;
     boxes.resize(ctx.Scene.shapes().size());
 
+    std::mutex plane_shape_mutex;
+
     // Load meshes in parallel
     // This is not always useful as the bottleneck is provably the IO, but better trying...
     const auto load_mesh = [&](size_t i) {
@@ -292,6 +295,14 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 
         if (!child->property("transform").getTransform().matrix().isIdentity())
             mesh.transform(child->property("transform").getTransform());
+
+        // Check if shape is actually just a simple plane
+        auto plane = mesh.getAsPlane();
+        if (plane.has_value()) {
+            plane_shape_mutex.lock();
+            ctx.Environment.PlaneShapes[i] = plane.value();
+            plane_shape_mutex.unlock();
+        }
 
         // Build bounding box
         BoundingBox& bbox = boxes[i];

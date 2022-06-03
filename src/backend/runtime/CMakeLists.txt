@@ -82,6 +82,7 @@ set(SRC
     mesh/MtsSerializedFile.h
     mesh/ObjFile.cpp
     mesh/ObjFile.h
+    mesh/PlaneShape.h
     mesh/PlyFile.cpp
     mesh/PlyFile.h
     mesh/Tangent.h

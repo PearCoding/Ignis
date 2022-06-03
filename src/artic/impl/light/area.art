@@ -1,55 +1,59 @@
 // Surface that emits light
 struct AreaEmitter {
-    sample: fn (Vec2) -> (Vec3, Vec3, Vec2, f32),
-    normal: fn (Vec2) -> Vec3,
-    pdf:    fn (Vec2) -> f32
+    sample_direct:   fn (Vec2, Vec3) -> (Vec3, Vec3, Vec2, f32),
+    sample_emission: fn (Vec2)       -> (Vec3, Vec3, Vec2, f32),
+    normal:          fn (Vec2)       -> Vec3,
+    pdf:             fn (Vec2, Vec3) -> f32
 }
 
 fn @make_area_light(area: AreaEmitter, color_f: Texture) = Light {
     sample_direct = @ |rnd, from_surf| {
-        let (pos, n, coords, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
+        let (pos, n, coords, area_pdf) = area.sample_direct(make_vec2(randf(rnd), randf(rnd)), from_surf.point);
         let dir = vec3_sub(from_surf.point, pos);
         let cos = safe_div(vec3_dot(dir, n), vec3_len(dir));
         make_direct_sample(pos, color_f(coords), area_pdf, cosine_hemisphere_pdf(cos), cos)
     },
     sample_emission = @ |rnd| {
-        let (pos, n, coords, area_pdf) = area.sample(make_vec2(randf(rnd), randf(rnd)));
+        let (pos, n, coords, area_pdf) = area.sample_emission(make_vec2(randf(rnd), randf(rnd)));
         let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
         make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color_f(coords), area_pdf, sample.pdf, sample.dir.z)
     },
-    emission = @ |dir, surf| make_emission_value(color_f(surf.tex_coords), area.pdf(surf.prim_coords), cosine_hemisphere_pdf(vec3_dot(area.normal(surf.prim_coords), dir))),
+    emission = @ |ray, surf| make_emission_value(color_f(surf.tex_coords), area.pdf(surf.prim_coords, ray.org), cosine_hemisphere_pdf(-vec3_dot(area.normal(surf.prim_coords), ray.dir))),
     delta    = false,
     infinite = false
 };
 
 fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
     let mesh = shape.mesh;
+    fn @sample(uv: Vec2) {
+        let ux  = uv.x * (mesh.num_tris as f32);
+        let f   = ux as i32;
+        let uv2 = make_vec2(ux - (f as f32), uv.y);
+        let (i0, i1, i2) = mesh.triangles(f);
+        let v0   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i0));
+        let v1   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i1));
+        let v2   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i2));
+        let t0   = mesh.tex_coords(i0);
+        let t1   = mesh.tex_coords(i1);
+        let t2   = mesh.tex_coords(i2);
+        let area = 0.5 * vec3_len(vec3_cross(vec3_sub(v1, v0), vec3_sub(v2, v0)));
+        let n    = vec3_normalize(mat3x3_mul(entity.normal_mat, mesh.face_normals(f))); // TODO: Maybe use face normal based on orientation
+        let (u, v) = sample_triangle(uv2.x, uv2.y);
+        
+        (vec3_lerp2(v0, v1, v2, u, v),
+         n,
+         vec2_lerp2(t0, t1, t2, u, v),
+         1 / (area * mesh.num_tris as f32))
+    }
+
     AreaEmitter {
-        sample = @ |uv| {
-            let ux  = uv.x * (mesh.num_tris as f32);
-            let f   = ux as i32;
-            let uv2 = make_vec2(ux - (f as f32), uv.y);
-            let (i0, i1, i2) = mesh.triangles(f);
-            let v0   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i0));
-            let v1   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i1));
-            let v2   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i2));
-            let t0   = mesh.tex_coords(i0);
-            let t1   = mesh.tex_coords(i1);
-            let t2   = mesh.tex_coords(i2);
-            let area = 0.5 * vec3_len(vec3_cross(vec3_sub(v1, v0), vec3_sub(v2, v0)));
-            let n    = vec3_normalize(mat3x3_mul(entity.normal_mat, mesh.face_normals(f))); // TODO: Maybe use face normal based on orientation
-            let (u, v) = sample_triangle(uv2.x, uv2.y);
-            
-            (vec3_lerp2(v0, v1, v2, u, v),
-             n,
-             vec2_lerp2(t0, t1, t2, u, v),
-             1 / (area * mesh.num_tris as f32))
-        },
+        sample_direct   = @|uv, _| sample(uv),
+        sample_emission = @|uv|    sample(uv),
         normal = @ |uv| {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
             vec3_normalize(mat3x3_mul(entity.normal_mat, mesh.face_normals(f)))
         },
-        pdf = @ |uv| {
+        pdf = @ |uv, _| {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
             let (i0, i1, i2) = mesh.triangles(f);
             let v0   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i0));
@@ -58,6 +62,140 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
             let area = 0.5 * vec3_len(vec3_cross(vec3_sub(v1, v0), vec3_sub(v2, v0)));
             1 / (area * mesh.num_tris as f32)
         }
+    }
+}
+
+// Ureña, C., Fajardo, M. and King, A. (2013),
+// An Area‐Preserving Parametrization for Spherical Rectangles.
+// Computer Graphics Forum, 32: 59-66. doi:10.1111/cgf.12151
+struct SQ {
+    o:  Vec3,
+    n:  Vec3,
+    x0: f32,
+    y0: f32,
+    z0: f32,
+    x1: f32,
+    y1: f32,
+    b0: f32,
+    b1: f32,
+    k:  f32,
+    s:  f32
+}
+
+fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
+                            normal: Vec3, area: f32,
+                            t0: Vec2, t1: Vec2, t2: Vec2, t3: Vec2) -> AreaEmitter {
+    let inv_area = 1 / area;
+    let width    = vec3_len(x_axis);
+    let height   = vec3_len(y_axis);
+    let ex       = vec3_mulf(x_axis, 1 / width);
+    let ey       = vec3_mulf(y_axis, 1 / height);
+
+    fn @compute_sq(from_point: Vec3) -> SQ {
+        let d   = vec3_sub(origin, from_point);
+		let x0  = vec3_dot(d, ex);
+		let y0  = vec3_dot(d, ey);
+		let z0_ = vec3_dot(d, normal);
+		let x1  = x0 + width;
+		let y1  = y0 + height;
+
+        let z0 = select(!math_builtins::signbit(z0_), -z0_, z0_);
+        let n  = select(!math_builtins::signbit(z0_), vec3_neg(normal), normal);
+
+		// Optimization used in Blender Cycles
+	    let diff = vec4_sub(make_vec4(x0, y1, x1, y0), make_vec4(x1, y0, x0, y1));
+		let nz_  = vec4_mul(make_vec4(y0, x1, y1, x0), diff);
+		let nz   = vec4_div(nz_, vec4_map(vec4_add(vec4_mulf(vec4_mul(diff, diff), z0 * z0), vec4_mul(nz_, nz_)), |x| math_builtins::sqrt(x)));
+
+		// compute internal angles (gamma_i)
+        fn safe_acos(a: f32) = math_builtins::acos(clampf(a, -1, 1));
+
+		let g0 = safe_acos(-nz.x * nz.y);
+		let g1 = safe_acos(-nz.y * nz.z);
+		let g2 = safe_acos(-nz.z * nz.w);
+		let g3 = safe_acos(-nz.w * nz.x);
+
+		// compute predefined constants
+		let b0 = nz.x;
+		let b1 = nz.z;
+		let k  = 2 * flt_pi - g2 - g3;
+		let s  = g0 + g1 - k;
+
+        SQ {
+            o  = from_point,
+            n  = n,
+            x0 = x0,
+            y0 = y0,
+            z0 = z0,
+            x1 = x1,
+            y1 = y1,
+            b0 = b0,
+            b1 = b1,
+            k  = k,
+            s  = s
+        }
+    }
+
+    fn @sample_direct(uv: Vec2, from_point: Vec3) {
+		let sq = compute_sq(from_point);
+
+        // 1. compute ’cu’
+		let au = fmaf(uv.x, sq.s, sq.k);
+		let fu = fmaf(math_builtins::cos(au), sq.b0, -sq.b1) / math_builtins::sin(au);
+		let cu = clampf(math_builtins::copysign[f32](1.0, fu) / math_builtins::sqrt(sum_of_prod(fu, fu, sq.b0, sq.b0)), -1, 1);
+
+		// 2. compute ’xu’
+		let xu = clampf(-(cu * sq.z0) / math_builtins::fmax[f32](1e-7, math_builtins::sqrt(fmaf(-cu, cu, 1.0))), sq.x0, sq.x1);
+
+		// 3. compute ’yv’
+		let dir = math_builtins::sqrt(sum_of_prod(xu, xu, sq.z0, sq.z0));
+		let h0  = sq.y0 / math_builtins::sqrt(sum_of_prod(dir, dir, sq.y0, sq.y0));
+		let h1  = sq.y1 / math_builtins::sqrt(sum_of_prod(dir, dir, sq.y1, sq.y1));
+		let hv  = fmaf(uv.y, h1 - h0, h0);
+		let hv2 = hv * hv;
+		let yv  = select(hv2 < 1.0 - flt_eps, (hv * dir) / math_builtins::sqrt(1.0 - hv2), sq.y1);
+
+		// 4. transform (xu,yv,z0) to entity local coords
+		let p = vec3_add(from_point, vec3_add(vec3_mulf(ex, xu), vec3_add(vec3_mulf(ey, yv), vec3_mulf(sq.n, sq.z0))));
+
+		// 5. Transform pdf_s to pdf_a
+		let pdf_s = safe_div(1, sq.s);
+		let L     = vec3_sub(p, from_point);
+		let dist2 = vec3_len2(L);
+		let ndotv = math_builtins::fabs(vec3_dot(L, normal) / math_builtins::sqrt(dist2));
+		let pdf_a = select(ndotv <= flt_eps, 0:f32, pdf_s * ndotv / dist2);
+
+        // TODO: Wrong tex coords?
+        let c0 = vec2_lerp(t0, t1, uv.x);
+        let c1 = vec2_lerp(t2, t3, uv.x);
+        let t  = vec2_lerp(c0, c1, uv.y);
+        (p, normal, t, pdf_a)
+    }
+
+    fn @pdf(uv: Vec2, from_point: Vec3) {
+        let p     = vec3_add(vec3_add(vec3_mulf(x_axis, uv.x), vec3_mulf(y_axis, uv.y)), origin);
+		let sq    = compute_sq(from_point);
+        let pdf_s = safe_div(1, sq.s);
+		let L     = vec3_sub(p, from_point);
+		let dist2 = vec3_len2(L);
+		let ndotv = math_builtins::fabs(vec3_dot(L, normal) / math_builtins::sqrt(dist2));
+		select(ndotv <= flt_eps, 0:f32, pdf_s * ndotv / dist2)
+    }
+
+    fn @sample(uv: Vec2) {
+        let p = vec3_add(vec3_add(vec3_mulf(x_axis, uv.x), vec3_mulf(y_axis, uv.y)), origin);
+        
+        let c0 = vec2_lerp(t0, t1, uv.x);
+        let c1 = vec2_lerp(t2, t3, uv.x);
+        let t  = vec2_lerp(c0, c1, uv.y);
+        (p, normal, t, inv_area)
+    }
+
+    AreaEmitter {
+        sample_direct   = @|uv, from_point| sample_direct(uv, from_point),
+        sample_emission = @|uv| sample(uv),
+        normal = @ |_| normal,
+        pdf    = pdf
     }
 }
 
@@ -85,5 +223,31 @@ fn @load_simple_area_lights(device: Device, shapes: ShapeTable) -> LightTable {
         let radiance = data.load_vec3(36);
 
         make_area_light(make_shape_area_emitter(entity, shape), @|_| vec3_to_color(radiance))
+    } 
+}
+
+fn @load_simple_area_plane_lights(device: Device) -> LightTable {
+    let tbl = device.load_custom_dyntable("SimpleAreaPlane");
+    let acc = device.get_device_buffer_accessor();
+
+    let elem_s = 24 * sizeof[f32]() as u64; // See LoaderLight.cpp:exportSimpleAreaPlaneLights (with padding/alignment included)
+    @ |id| {
+        //let entry = get_lookup_entry(id as u64, tbl); // No need as we have only one type!
+        let data = get_table_entry(elem_s * (id as u64), tbl, acc);
+
+        let origin   = data.load_vec4(0);
+        let x_axis   = data.load_vec4(4);
+        let y_axis   = data.load_vec4(8);
+        let t01      = data.load_vec4(12);
+        let t23      = data.load_vec4(16);
+        let radiance = data.load_vec4(20);
+
+        let normal = make_vec3(origin.w, x_axis.w, y_axis.w);
+        let area   = radiance.w;
+
+        make_area_light(make_plane_area_emitter(vec4_to_3(origin), vec4_to_3(x_axis), vec4_to_3(y_axis),
+                                                normal, area,
+                                                make_vec2(t01.x, t01.y), make_vec2(t01.z, t01.w), make_vec2(t23.x, t23.y), make_vec2(t23.z, t23.w)), 
+                        @|_| vec3_to_color(vec4_to_3(radiance)))
     } 
 }

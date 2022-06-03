@@ -145,7 +145,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
             let out_dir = vec3_neg(ray.dir);
             let dot     = vec3_dot(out_dir, surf.local.col(2));
             if dot > flt_eps { // Only contribute proper aligned directions
-                let emit     = mat.emission(out_dir);
+                let emit     = mat.emission(ray);
                 let next_mis = math_builtins::fmax[f32](0/*Ignore medium interactions*/, pt.mis) * hit.distance * hit.distance / dot;
                 let mis      = 1 / (1 + next_mis * pdf_lightpick * emit.pdf_area);
                 let vol      = medium.eval(ray.org, surf.point);
@@ -172,11 +172,10 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
             if light.infinite && !light.delta {
                 inflights += 1;
 
-                let out_dir = vec3_neg(ray.dir);
-                let emit    = light.emission(out_dir, make_invalid_surface_element());
-                let mis     = 1 / (1 + math_builtins::fmax[f32](0/*Ignore medium interactions*/, pt.mis) * pdf_lightpick * emit.pdf_dir);
-                let vol     = medium.eval_inf(ray.org, ray.dir);
-                color       = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, color_mul(emit.intensity, vol)), mis)));
+                let emit = light.emission(ray, make_invalid_surface_element());
+                let mis  = 1 / (1 + math_builtins::fmax[f32](0/*Ignore medium interactions*/, pt.mis) * pdf_lightpick * emit.pdf_dir);
+                let vol  = medium.eval_inf(ray.org, ray.dir);
+                color    = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, color_mul(emit.intensity, vol)), mis)));
             }
         }
 

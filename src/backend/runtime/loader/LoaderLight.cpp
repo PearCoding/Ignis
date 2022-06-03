@@ -220,9 +220,9 @@ inline static void exportSimpleAreaLights(const LoaderContext& ctx)
             entity = ctx.Environment.EmissiveEntities.at(entityName);
         }
 
-        const Eigen::Matrix<float, 3, 4> localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
-        const Eigen::Matrix<float, 3, 4> globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
-        const Matrix3f normalMat                   = entity.Transform.matrix().block<3, 3>(0, 0).inverse().transpose(); // To Global [Normal]
+        const Eigen::Matrix<float, 3, 4> localMat  = entity.computeLocalMatrix();        // To Local
+        const Eigen::Matrix<float, 3, 4> globalMat = entity.computeGlobalMatrix();       // To Global
+        const Matrix3f normalMat                   = entity.computeGlobalNormalMatrix(); // To Global [Normal]
         uint32 shape_id                            = ctx.Environment.ShapeIDs.at(entity.Shape);
 
         auto& lightData = ctx.Database->CustomTables["SimpleArea"].addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
@@ -252,14 +252,39 @@ static void light_area(std::ostream& stream, const std::string& name, const std:
         entity = tree.context().Environment.EmissiveEntities.at(entityName);
     }
 
-    uint32 shape_id     = tree.context().Environment.ShapeIDs.at(entity.Shape);
-    const auto shape    = tree.context().Environment.Shapes[shape_id];
-    size_t shape_offset = tree.context().Database->ShapeTable.lookups()[shape_id].Offset;
+    stream << tree.pullHeader();
 
-    stream << tree.pullHeader()
-           << "  let ae_" << LoaderUtils::escapeIdentifier(name) << " = make_shape_area_emitter(" << inline_entity(entity, shape_id)
-           << ", device.load_specific_shape(" << shape.FaceCount << ", " << shape.VertexCount << ", " << shape.NormalCount << ", " << shape.TexCount << ", " << shape_offset << ", dtb.shapes));" << std::endl
-           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_area_light(ae_" << LoaderUtils::escapeIdentifier(name) << ", "
+    const bool opt = light->property("optimize").getBool(true);
+
+    uint32 shape_id = tree.context().Environment.ShapeIDs.at(entity.Shape);
+    if (opt && tree.context().Environment.PlaneShapes.count(shape_id) > 0) {
+        // Use more specialized area light
+        const auto& shape = tree.context().Environment.PlaneShapes.at(shape_id);
+        Vector3f origin   = entity.Transform * shape.Origin;
+        Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;
+        Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
+        Vector3f normal   = x_axis.cross(y_axis).normalized();
+        float area        = x_axis.cross(y_axis).norm();
+
+        stream << "  let ae_" << LoaderUtils::escapeIdentifier(name) << " = make_plane_area_emitter(" << LoaderUtils::inlineVector(origin)
+               << ", " << LoaderUtils::inlineVector(x_axis)
+               << ", " << LoaderUtils::inlineVector(y_axis)
+               << ", " << LoaderUtils::inlineVector(normal)
+               << ", " << area
+               << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[0])
+               << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[1])
+               << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[2])
+               << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[3])
+               << ");" << std::endl;
+    } else {
+        const auto shape    = tree.context().Environment.Shapes[shape_id];
+        size_t shape_offset = tree.context().Database->ShapeTable.lookups()[shape_id].Offset;
+
+        stream << "  let ae_" << LoaderUtils::escapeIdentifier(name) << " = make_shape_area_emitter(" << inline_entity(entity, shape_id)
+               << ", device.load_specific_shape(" << shape.FaceCount << ", " << shape.VertexCount << ", " << shape.NormalCount << ", " << shape.TexCount << ", " << shape_offset << ", dtb.shapes));" << std::endl;
+    }
+
+    stream << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_area_light(ae_" << LoaderUtils::escapeIdentifier(name) << ", "
            << " @|tex_coords| { maybe_unused(tex_coords); " << tree.getInline("radiance") << " });" << std::endl;
 
     tree.endClosure();
@@ -309,14 +334,14 @@ static void light_sun(std::ostream& stream, const std::string& name, const std::
     auto ea      = extractEA(light);
     Vector3f dir = ea.toDirection();
 
-    auto power      = light->property("sun_scale").getNumber(1.0f);
-    auto sun_radius = light->property("sun_radius_scale").getNumber(1.0f);
+    tree.addNumber("sun_scale", *light, 1, true, ShadingTree::IM_Bare);
+    tree.addNumber("sun_radius_scale", *light, 1, true, ShadingTree::IM_Bare);
 
     stream << tree.pullHeader()
            << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_sun_light(" << LoaderUtils::inlineVector(dir)
            << ", " << LoaderUtils::inlineSceneBBox(tree.context())
-           << ", " << sun_radius
-           << ", color_mulf(color_builtins::white, " << power << "));" << std::endl;
+           << ", " << tree.getInline("sun_radius_scale")
+           << ", color_mulf(color_builtins::white, " << tree.getInline("sun_scale") << "));" << std::endl;
 
     tree.endClosure();
 }

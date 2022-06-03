@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IG_Config.h"
+#include "PlaneShape.h"
 
 namespace IG {
 
@@ -35,8 +35,8 @@ struct TriMesh {
 
     void transform(const Transformf& t);
 
-    /// Returns true if the given mesh can be approximated as a plane
-    bool isAPlane() const;
+    /// Returns PlaneShape if the given mesh can be approximated as a plane
+    std::optional<PlaneShape> getAsPlane() const;
 
     static TriMesh MakeUVSphere(const Vector3f& center, float radius, uint32 stacks, uint32 slices);
     static TriMesh MakeIcoSphere(const Vector3f& center, float radius, uint32 subdivisions);

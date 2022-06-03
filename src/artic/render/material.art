@@ -2,7 +2,7 @@ struct Material {
     id:          i32,
     bsdf:        Bsdf,
     interface:   MediumInterface,
-    emission:    fn (Vec3) -> EmissionValue,
+    emission:    fn (Ray) -> EmissionValue,
     is_emissive: bool
 }
 
@@ -20,6 +20,6 @@ fn @make_emissive_material(id: i32, surf: SurfaceElement, bsdf: Bsdf, interface:
     id          = id,
     bsdf        = bsdf,
     interface   = interface,
-    emission    = @ |in_dir| light.emission(in_dir, surf),
+    emission    = @ |ray| light.emission(ray, surf),
     is_emissive = true
 };

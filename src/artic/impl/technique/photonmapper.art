@@ -300,7 +300,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
             let out_dir = vec3_neg(ray.dir);
             let dot     = vec3_dot(out_dir, surf.local.col(2));
             if dot > flt_eps { // Only contribute proper aligned directions
-                let emit    = mat.emission(out_dir);
+                let emit    = mat.emission(ray);
                 let contrib = color_mul(pt.contrib, emit.intensity);
                 
                 aov_di.splat(pixel, contrib);
@@ -359,9 +359,8 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
             if light.infinite && !light.delta {
                 inflights += 1;
 
-                let out_dir = vec3_neg(ray.dir);
-                let emit    = light.emission(out_dir, make_invalid_surface_element());
-                color       = color_add(color, color_mul(pt.contrib, emit.intensity));
+                let emit = light.emission(ray, make_invalid_surface_element());
+                color    = color_add(color, color_mul(pt.contrib, emit.intensity));
             }
         }
 

@@ -253,39 +253,53 @@ void TriMesh::transform(const Transformf& t)
     computeFaceNormals();
 }
 
-bool TriMesh::isAPlane() const
+std::optional<PlaneShape> TriMesh::getAsPlane() const
 {
     constexpr float PlaneEPS = 1e-5f;
 
     // A plane is given by two triangles
     if (faceCount() != 2)
-        return false;
+        return std::nullopt;
 
     // We only allow planes given by four points
+    std::array<Vector3f, 4> unique_verts;
+    std::array<uint32, 4> unique_ids;
     if (vertices.size() != 4) {
         // Further check, maybe the points are not handled as unique
         if (vertices.size() > 4 && vertices.size() <= 6) {
-            std::vector<Vector3f> uniques;
+            size_t i  = 0;
+            uint32 id = 0;
             for (const auto& v : vertices) {
                 bool found = false;
-                for (const auto& u : uniques) {
+                for (const auto& u : unique_verts) {
                     found = v.isApprox(u, PlaneEPS);
                     if (found)
                         break;
                 }
-                if (!found)
-                    uniques.emplace_back(v);
+                if (!found) {
+                    if (i >= 3)
+                        return std::nullopt;
+                    unique_ids[i + 1]   = id;
+                    unique_verts[i + 1] = v;
+                    ++i;
+                }
+                ++id;
             }
-            if (uniques.size() != 4)
-                return false;
+            if (i != 4)
+                return std::nullopt;
         } else {
-            return false;
+            return std::nullopt;
+        }
+    } else {
+        for (size_t i = 0; i < unique_verts.size(); ++i) {
+            unique_verts[i] = vertices[i];
+            unique_ids[i]   = (uint32)i;
         }
     }
 
     // If the two triangles are facing differently, its not a plane
     if (!face_normals[0].isApprox(face_normals[1], PlaneEPS))
-        return false;
+        return std::nullopt;
 
     // Check each edge. The second triangle has to have the same edges (but order might be different)
     float e1 = (vertices[indices[0]] - vertices[indices[1]]).squaredNorm();
@@ -297,13 +311,60 @@ bool TriMesh::isAPlane() const
 
     const auto safeCheck = [=](float a, float b) -> bool { return std::abs(a - b) <= PlaneEPS; };
     if (!safeCheck(e1, e4) && !safeCheck(e2, e4) && !safeCheck(e3, e4))
-        return false;
+        return std::nullopt;
     if (!safeCheck(e1, e5) && !safeCheck(e2, e5) && !safeCheck(e3, e5))
-        return false;
+        return std::nullopt;
     if (!safeCheck(e1, e6) && !safeCheck(e2, e6) && !safeCheck(e3, e6))
-        return false;
+        return std::nullopt;
 
-    return true;
+    // Find the opposite vertex to origin
+    const Vector3f origin = unique_verts[0];
+    auto computeAngle     = [&](size_t start) {
+        Vector3f x_axis = (unique_verts[(start + 0) % 3 + 1] - origin).normalized();
+        Vector3f y_axis = (unique_verts[(start + 1) % 3 + 1] - origin).normalized();
+        return std::acos(x_axis.dot(y_axis));
+    };
+
+    float angle_12 = std::abs(computeAngle(0));
+    float angle_23 = std::abs(computeAngle(1));
+    float angle_31 = std::abs(computeAngle(2));
+
+    int sel = 0;
+    if (angle_12 >= angle_23 && angle_12 >= angle_31)
+        sel = 0;
+    else if (angle_23 >= angle_31 && angle_23 >= angle_12)
+        sel = 1;
+    else
+        sel = 2;
+
+    // Populate shape
+    PlaneShape shape;
+    shape.Origin = origin;
+    shape.XAxis  = (unique_verts[(sel + 0) % 3 + 1] - origin);
+    shape.YAxis  = (unique_verts[(sel + 1) % 3 + 1] - origin);
+
+    // Check if the sign is flipped
+    Vector3f normal = shape.computeNormal();
+    if (face_normals[0].dot(normal) < 0) {
+        std::swap(shape.XAxis, shape.YAxis);
+        std::swap(unique_verts[1], unique_verts[2]);
+        std::swap(unique_ids[1], unique_ids[2]);
+    }
+
+    // Populate texture coordinates
+    if (!texcoords.empty()) {
+        shape.TexCoords[0]                 = texcoords[unique_ids[0]];
+        shape.TexCoords[(0 + sel) % 3 + 1] = texcoords[unique_ids[1]];
+        shape.TexCoords[(1 + sel) % 3 + 1] = texcoords[unique_ids[2]];
+        shape.TexCoords[(2 + sel) % 3 + 1] = texcoords[unique_ids[3]];
+    } else {
+        shape.TexCoords[0] = Vector2f(0, 0);
+        shape.TexCoords[1] = Vector2f(1, 0);
+        shape.TexCoords[2] = Vector2f(0, 1);
+        shape.TexCoords[3] = Vector2f(1, 1);
+    }
+
+    return shape;
 }
 
 inline static void addTriangle(TriMesh& mesh, const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis, uint32 off)
