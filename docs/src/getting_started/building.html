@@ -381,9 +381,9 @@ Use one of the many dll dependency viewers available on Windows to find the exac
 <section id="known-issues">
 <h2>Known Issues<a class="headerlink" href="#known-issues" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
-<li><p>If you get a <cite>CommandLine Error: Option ‘help-list’ registred more than once!</cite>, you are loading the AnyDSL LLVM library and system LLVM library with exposed symbols at the same time, most likely.
-A known reason is that <cite>igview</cite> and SDL are using a graphic driver which is loading the system LLVM library in the background.
-Setting the environment variable <cite>SDL_RENDER_DRIVER=software</cite> should be a good workaround. This will not prevent you of using the GPU for rendering however, only the UI will be software rendered.</p></li>
+<li><p>If you get a <code class="docutils literal notranslate"><span class="pre">CommandLine</span> <span class="pre">Error:</span> <span class="pre">Option</span> <span class="pre">'help-list'</span> <span class="pre">registred</span> <span class="pre">more</span> <span class="pre">than</span> <span class="pre">once!</span></code>, most likely the AnyDSL LLVM library and system LLVM library with exposed symbols are loaded at the same time.
+A known cause is that <code class="docutils literal notranslate"><span class="pre">igview</span></code> and SDL are using a graphic driver which is loading the system LLVM library in the background.
+Setting the environment variable <code class="docutils literal notranslate"><span class="pre">SDL_RENDER_DRIVER=software</span></code> should be a good workaround. This will not prevent you of using the GPU for raytracing however, only the UI will be software rendered.</p></li>
 </ul>
 </section>
 </section>
