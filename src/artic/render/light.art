@@ -12,16 +12,20 @@ struct EmissionSample {
 struct DirectLightSample {
     posdir:    Vec3,  // Position on the light source (or direction if infinite)
     intensity: Color, // Intensity along the direction
-    pdf_area:  f32,   // Probability to sample the point on the light
-    pdf_dir:   f32,   // Probability to sample the direction using emission sampling
+    pdf:       f32,   // Probability to sample the light. The pdf will be respective to the area if NOT infinite, else respective to solid angle 
     cos:       f32    // Cosine between the direction and the light source geometry
 }
 
-// Emission properties of a light source
-struct EmissionValue {
+// Pdf properties of a light source
+struct PdfValue {
+    pdf_area: f32, // Probability to sample the point on the light
+    pdf_dir:  f32  // Probability to sample the direction on the light, conditioned on the point on the light source
+}
+
+// Emission properties of a light source for direct illumination
+struct DirectEmissionValue {
     intensity: Color, // Intensity along the direction
-    pdf_area:  f32,   // Probability to sample the point on the light
-    pdf_dir:   f32    // Probability to sample the direction using emission sampling
+    pdf_area:  f32,   // Probability to sample the point on the light, given respective to area measure
 }
 
 // Opaque light structure
@@ -31,7 +35,14 @@ struct Light {
     // Samples the emitting surface of the light
     sample_emission: fn (&mut RndState) -> EmissionSample,
     // Returns the emission properties of the light at a given point on its surface. The SurfaceElement is only valid if delta & infinite is false
-    emission: fn (Ray, SurfaceElement) -> EmissionValue,
+    emission: fn (Ray, SurfaceElement) -> Color,
+    // Returns the pdf properties of the light at a given point on its surface for direct illumination. 
+    // In contrary to sample_direct, the surface element is on the light source. 
+    // The SurfaceElement is only valid if delta & infinite is false
+    // The pdf will be respective to the area if NOT infinite, else respective to solid angle 
+    pdf_direct: fn (Ray, SurfaceElement) -> f32,
+    // Returns the pdf properties of the light at a given point on its surface for emission. The SurfaceElement is only valid if delta & infinite is false
+    pdf_emission: fn (Ray, SurfaceElement) -> PdfValue,
     // true if the light is a delta light (can not be hit by a ray)
     delta: bool,
     // true if the light is infinite
@@ -47,18 +58,21 @@ fn @make_emission_sample(pos: Vec3, dir: Vec3, intensity: Color, pdf_area: f32, 
     cos       = cos
 };
 
-fn @make_direct_sample(posdir: Vec3, intensity: Color, pdf_area: f32, pdf_dir: f32, cos: f32) = DirectLightSample {
+fn @make_direct_sample(posdir: Vec3, intensity: Color, pdf: f32, cos: f32) = DirectLightSample {
     posdir    = posdir,
     intensity = intensity,
-    pdf_area  = pdf_area,
-    pdf_dir   = pdf_dir,
+    pdf       = pdf,
     cos       = cos
 };
 
-fn @make_emission_value(intensity: Color, pdf_area: f32, pdf_dir: f32) = EmissionValue {
-    intensity = intensity,
+fn @make_pdf_value(pdf_area: f32, pdf_dir: f32) = PdfValue {
     pdf_area  = pdf_area,
     pdf_dir   = pdf_dir
+};
+
+fn @make_direct_emission_value(intensity: Color, pdf_area: f32) = DirectEmissionValue {
+    intensity = intensity,
+    pdf_area  = pdf_area
 };
 
 type LightTable = fn (i32) -> Light;

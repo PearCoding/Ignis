@@ -1,14 +1,16 @@
 fn @make_point_light(pos: Vec3, color: Color) = Light {
     sample_direct = @ |_, _| {
         let intensity = color_mulf(color, 1 / (4 * flt_pi));
-        make_direct_sample(pos, intensity, 1, uniform_sphere_pdf(), 1)
+        make_direct_sample(pos, intensity, 1, 1)
     },
     sample_emission = @ |rnd| {
         let sample    = sample_uniform_sphere(randf(rnd), randf(rnd));
         let intensity = color_mulf(color, 1 / (4 * flt_pi));
         make_emission_sample(pos, sample.dir, intensity, 1, sample.pdf, 1)
     },
-    emission = @ |_, _| make_emission_value(color_builtins::black, 1, 1),
+    emission     = @ |_, _| color_builtins::black,
+    pdf_direct   = @ |_, _| 1:f32,
+    pdf_emission = @ |_, _| make_pdf_value(1, uniform_sphere_pdf()),
     delta    = true,
     infinite = false
 };

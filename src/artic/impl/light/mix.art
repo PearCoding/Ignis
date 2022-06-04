@@ -5,10 +5,10 @@ fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
         let u = randf(rnd);
         if u < probability {
             make_direct_sample(A.posdir, A.intensity,
-                 A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, A.cos)
+                lerp(A.pdf, B.pdf, probability), A.cos)
         } else {
             make_direct_sample(B.posdir, B.intensity,
-                 A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, B.cos)
+                lerp(A.pdf, B.pdf, probability), B.cos)
         }
     },
     sample_emission = @ |rnd| {
@@ -19,10 +19,10 @@ fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
 
             if u < probability {
                 make_emission_sample(A.pos, A.dir, A.intensity,
-                     A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, A.cos)
+                    lerp(A.pdf_area, B.pdf_area, probability), lerp(A.pdf_dir, B.pdf_dir, probability), A.cos)
             } else {
                 make_emission_sample(B.pos, B.dir, B.intensity,
-                     A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability, B.cos)
+                    lerp(A.pdf_area, B.pdf_area, probability), lerp(A.pdf_dir, B.pdf_dir, probability), B.cos)
             }
         } else if lightA.delta && !lightB.delta {
             lightB.sample_emission(rnd)
@@ -34,13 +34,35 @@ fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
         if !lightA.delta && !lightB.delta {
             let A = lightA.emission(dir, prim_coords);
             let B = lightB.emission(dir, prim_coords); 
-            make_emission_value(color_lerp(A.intensity,B.intensity, probability), A.pdf_area*(1-probability)+B.pdf_area*probability, A.pdf_dir*(1-probability)+B.pdf_dir*probability) 
+            color_lerp(A, B, probability)
         } else if lightA.delta && !lightB.delta {
             lightB.emission(dir, prim_coords)
         } else {
             lightA.emission(dir, prim_coords)
         }
     },
-    delta = (lightA.delta && lightB.delta),
+    pdf_direct = @ |dir, prim_coords| {
+        if !lightA.delta && !lightB.delta {
+            let A = lightA.pdf_direct(dir, prim_coords);
+            let B = lightB.pdf_direct(dir, prim_coords); 
+            lerp(A, B, probability)
+        } else if lightA.delta && !lightB.delta {
+            lightB.pdf_direct(dir, prim_coords)
+        } else {
+            lightA.pdf_direct(dir, prim_coords)
+        }
+    },
+    pdf_emission = @ |dir, prim_coords| {
+        if !lightA.delta && !lightB.delta {
+            let A = lightA.pdf_emission(dir, prim_coords);
+            let B = lightB.pdf_emission(dir, prim_coords); 
+            make_pdf_value(lerp(A.pdf_area, B.pdf_area, probability), lerp(A.pdf_dir, B.pdf_dir, probability)) 
+        } else if lightA.delta && !lightB.delta {
+            lightB.pdf_emission(dir, prim_coords)
+        } else {
+            lightA.pdf_emission(dir, prim_coords)
+        }
+    },
+    delta    = (lightA.delta && lightB.delta),
     infinite = (lightA.infinite || lightB.infinite)
 };

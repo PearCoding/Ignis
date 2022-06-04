@@ -83,11 +83,11 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         let sample_direct = light.sample_direct;
         let light_sample  = @sample_direct(rnd, surf);
 
-        if light.infinite {
-            if light_sample.pdf_dir <= flt_eps {
-                return(ShadowRay::None)
-            }
+        if light_sample.pdf <= flt_eps {
+            return(ShadowRay::None)
+        }
 
+        if light.infinite {
             let light_dir = light_sample.posdir; // Infinite lights return a direction instead of a position
             let vis       = vec3_dot(light_dir, surf.local.col(2));
 
@@ -96,7 +96,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 let out_dir = vec3_neg(ray.dir);
 
                 let pdf_e     = if light.delta { 0 } else { mat.bsdf.pdf(in_dir, out_dir) }; // Pdf to sample the "infinite" light based on bsdf
-                let pdf_l     = light_sample.pdf_dir * pdf_lightpick;                        // Pdf to sample the light based on NEE
+                let pdf_l     = light_sample.pdf * pdf_lightpick;                        // Pdf to sample the light based on NEE
                 let inv_pdf_l = 1 / pdf_l;
                 
                 let mis = 1 / (1 + pdf_e * inv_pdf_l);
@@ -109,10 +109,6 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 ))
             }
         } else {
-            if light_sample.pdf_area <= flt_eps {
-                return(ShadowRay::None)
-            }
-
             let light_dir = vec3_sub(light_sample.posdir, surf.point);
             let vis       = vec3_dot(light_dir, surf.local.col(2));
 
@@ -124,7 +120,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 let cos_l   = light_sample.cos;
 
                 let pdf_e     = if light.delta { 0 } else { mat.bsdf.pdf(in_dir, out_dir) * cos_l * inv_d2 };
-                let pdf_l     = light_sample.pdf_area * pdf_lightpick;
+                let pdf_l     = light_sample.pdf * pdf_lightpick;
                 let inv_pdf_l = 1 / pdf_l;
 
                 let mis         = 1 / (1 + pdf_e * inv_pdf_l);
@@ -189,8 +185,9 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 inflights += 1;
 
                 let emit = light.emission(ray, make_invalid_surface_element());
-                let mis  = 1 / (1 + pt.mis * pdf_lightpick * emit.pdf_dir);
-                color    = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit.intensity), mis)));
+                let pdf  = light.pdf_direct(ray, make_invalid_surface_element());
+                let mis  = 1 / (1 + pt.mis * pdf_lightpick * pdf);
+                color    = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit), mis)));
             }
         }
 

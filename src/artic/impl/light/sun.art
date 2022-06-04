@@ -4,7 +4,7 @@ fn @make_sun_light(dir: Vec3, scene_bbox: BBox, sun_radius: f32, color: Color) -
         sample_direct = @ |rnd, _| {
             let sample = sample_uniform_disk(randf(rnd), randf(rnd), sun_radius);
             let ndir   = vec3_normalize(mat3x3_mul(make_orthonormal_mat3x3(dir), vec3_add(sample.pos, make_vec3(0,0,1))));
-            make_direct_sample(vec3_neg(ndir), color, 1.0, sample.pdf, 1.0)
+            make_direct_sample(vec3_neg(ndir), color, sample.pdf, 1.0)
         },
         sample_emission = @ |rnd| {
             let sample         = sample_uniform_disk(randf(rnd), randf(rnd), sun_radius);
@@ -12,7 +12,9 @@ fn @make_sun_light(dir: Vec3, scene_bbox: BBox, sun_radius: f32, color: Color) -
             let (pos, pos_pdf) = env_sample_pos(rnd, vec3_neg(ndir), bbox_center(scene_bbox), scene_radius);
             make_emission_sample(pos, ndir, color, pos_pdf, sample.pdf, 1.0)
         },
-        emission = @ |_, _| make_emission_value(color_builtins::black, 1, 1),
+        emission     = @ |_, _| color_builtins::black,
+        pdf_direct   = @ |_, _| uniform_disk_pdf(sun_radius),
+        pdf_emission = @ |_, _| make_pdf_value(env_sample_pos_pdf(scene_radius), uniform_disk_pdf(sun_radius)),
         delta    = true,
         infinite = true
     }

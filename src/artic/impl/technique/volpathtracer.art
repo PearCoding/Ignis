@@ -69,12 +69,12 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         let medium = @media(pt.medium);
         let hitvol = medium.eval(ray.org, surf.point); // Volume transmittance from ray origin to this hit point
 
+        if light_sample.pdf <= flt_eps {
+            return(ShadowRay::None)
+        }
+
         // TODO: Secondary rays do not take "passthrough" surface + media into account. Would be useful to add transmittance into account...
         if light.infinite {
-            if light_sample.pdf_dir <= flt_eps {
-                return(ShadowRay::None)
-            }
-
             let light_dir = light_sample.posdir; // Infinite lights return a direction instead of a position
             let vis       = vec3_dot(light_dir, surf.local.col(2));
 
@@ -83,7 +83,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 let out_dir = vec3_neg(ray.dir);
 
                 let pdf_e     = if light.delta || was_medium_interaction { 0 } else { mat.bsdf.pdf(in_dir, out_dir) }; // Pdf to sample the "infinite" light based on bsdf
-                let pdf_l     = light_sample.pdf_dir * pdf_lightpick;                        // Pdf to sample the light based on NEE
+                let pdf_l     = light_sample.pdf * pdf_lightpick;                        // Pdf to sample the light based on NEE
                 let inv_pdf_l = 1 / pdf_l;
                 
                 let mis = 1 / (1 + pdf_e * inv_pdf_l);
@@ -97,10 +97,6 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 ))
             }
         } else {
-            if light_sample.pdf_area <= flt_eps {
-                return(ShadowRay::None)
-            }
-
             let light_dir = vec3_sub(light_sample.posdir, surf.point);
             let vis       = vec3_dot(light_dir, surf.local.col(2));
 
@@ -112,7 +108,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 let cos_l   = light_sample.cos;
 
                 let pdf_e     = if light.delta || was_medium_interaction { 0 } else { mat.bsdf.pdf(in_dir, out_dir) * cos_l * inv_d2 };
-                let pdf_l     = light_sample.pdf_area * pdf_lightpick;
+                let pdf_l     = light_sample.pdf * pdf_lightpick;
                 let inv_pdf_l = 1 / pdf_l;
 
                 let mis         = 1 / (1 + pdf_e * inv_pdf_l);
@@ -173,9 +169,10 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 inflights += 1;
 
                 let emit = light.emission(ray, make_invalid_surface_element());
-                let mis  = 1 / (1 + math_builtins::fmax[f32](0/*Ignore medium interactions*/, pt.mis) * pdf_lightpick * emit.pdf_dir);
+                let pdf  = light.pdf_direct(ray, make_invalid_surface_element());
+                let mis  = 1 / (1 + math_builtins::fmax[f32](0/*Ignore medium interactions*/, pt.mis) * pdf_lightpick * pdf);
                 let vol  = medium.eval_inf(ray.org, ray.dir);
-                color    = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, color_mul(emit.intensity, vol)), mis)));
+                color    = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, color_mul(emit, vol)), mis)));
             }
         }
 

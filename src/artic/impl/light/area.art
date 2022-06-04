@@ -3,7 +3,8 @@ struct AreaEmitter {
     sample_direct:   fn (Vec2, Vec3) -> (Vec3, Vec3, Vec2, f32),
     sample_emission: fn (Vec2)       -> (Vec3, Vec3, Vec2, f32),
     normal:          fn (Vec2)       -> Vec3,
-    pdf:             fn (Vec2, Vec3) -> f32
+    pdf_direct:      fn (Vec2, Vec3) -> f32,
+    pdf_emission:    fn (Vec2, Vec3) -> f32
 }
 
 fn @make_area_light(area: AreaEmitter, color_f: Texture) = Light {
@@ -11,14 +12,16 @@ fn @make_area_light(area: AreaEmitter, color_f: Texture) = Light {
         let (pos, n, coords, area_pdf) = area.sample_direct(make_vec2(randf(rnd), randf(rnd)), from_surf.point);
         let dir = vec3_sub(from_surf.point, pos);
         let cos = safe_div(vec3_dot(dir, n), vec3_len(dir));
-        make_direct_sample(pos, color_f(coords), area_pdf, cosine_hemisphere_pdf(cos), cos)
+        make_direct_sample(pos, color_f(coords), area_pdf, cos)
     },
     sample_emission = @ |rnd| {
         let (pos, n, coords, area_pdf) = area.sample_emission(make_vec2(randf(rnd), randf(rnd)));
         let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
         make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color_f(coords), area_pdf, sample.pdf, sample.dir.z)
     },
-    emission = @ |ray, surf| make_emission_value(color_f(surf.tex_coords), area.pdf(surf.prim_coords, ray.org), cosine_hemisphere_pdf(-vec3_dot(area.normal(surf.prim_coords), ray.dir))),
+    emission     = @ |_, surf|   color_f(surf.tex_coords),
+    pdf_direct   = @ |ray, surf| area.pdf_direct(surf.prim_coords, ray.org),
+    pdf_emission = @ |ray, surf| make_pdf_value(area.pdf_emission(surf.prim_coords, ray.org), cosine_hemisphere_pdf(-vec3_dot(area.normal(surf.prim_coords), ray.dir))),
     delta    = false,
     infinite = false
 };
@@ -46,6 +49,16 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
          1 / (area * mesh.num_tris as f32))
     }
 
+    fn pdf(uv: Vec2) {
+        let f = (uv.x * (mesh.num_tris as f32)) as i32;
+        let (i0, i1, i2) = mesh.triangles(f);
+        let v0   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i0));
+        let v1   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i1));
+        let v2   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i2));
+        let area = 0.5 * vec3_len(vec3_cross(vec3_sub(v1, v0), vec3_sub(v2, v0)));
+        1 / (area * mesh.num_tris as f32)
+    }
+
     AreaEmitter {
         sample_direct   = @|uv, _| sample(uv),
         sample_emission = @|uv|    sample(uv),
@@ -53,15 +66,8 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
             vec3_normalize(mat3x3_mul(entity.normal_mat, mesh.face_normals(f)))
         },
-        pdf = @ |uv, _| {
-            let f = (uv.x * (mesh.num_tris as f32)) as i32;
-            let (i0, i1, i2) = mesh.triangles(f);
-            let v0   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i0));
-            let v1   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i1));
-            let v2   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i2));
-            let area = 0.5 * vec3_len(vec3_cross(vec3_sub(v1, v0), vec3_sub(v2, v0)));
-            1 / (area * mesh.num_tris as f32)
-        }
+        pdf_direct   = @ |uv, _| pdf(uv),
+        pdf_emission = @ |uv, _| pdf(uv)
     }
 }
 
@@ -172,7 +178,7 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
         (p, normal, t, pdf_a)
     }
 
-    fn @pdf(uv: Vec2, from_point: Vec3) {
+    fn @pdf_direct(uv: Vec2, from_point: Vec3) {
         let p     = vec3_add(vec3_add(vec3_mulf(x_axis, uv.x), vec3_mulf(y_axis, uv.y)), origin);
 		let sq    = compute_sq(from_point);
         let pdf_s = safe_div(1, sq.s);
@@ -194,8 +200,9 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
     AreaEmitter {
         sample_direct   = @|uv, from_point| sample_direct(uv, from_point),
         sample_emission = @|uv| sample(uv),
-        normal = @ |_| normal,
-        pdf    = pdf
+        normal          = @ |_| normal,
+        pdf_direct      = pdf_direct,
+        pdf_emission    = @ |_,_| inv_area
     }
 }
 

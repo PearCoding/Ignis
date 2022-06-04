@@ -360,7 +360,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
                 inflights += 1;
 
                 let emit = light.emission(ray, make_invalid_surface_element());
-                color    = color_add(color, color_mul(pt.contrib, emit.intensity));
+                color    = color_add(color, color_mul(pt.contrib, emit));
             }
         }
 

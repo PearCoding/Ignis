@@ -20,9 +20,9 @@ fn @make_spot_light(pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_angle: f32,
 
     Light{
         sample_direct = @ |_, from_surf| {
-            let out_dir              = vec3_normalize(vec3_sub(from_surf.point, pos));
-            let (intensity, dir_pdf) = eval_dir(out_dir);
-            make_direct_sample(pos, intensity, 1, dir_pdf, 1)
+            let out_dir        = vec3_normalize(vec3_sub(from_surf.point, pos));
+            let (intensity, _) = eval_dir(out_dir);
+            make_direct_sample(pos, intensity, 1, 1)
         },
         sample_emission = @ |rnd| {
             let sample  = sample_uniform_disk(randf(rnd), randf(rnd), cutoffRadius);
@@ -30,7 +30,9 @@ fn @make_spot_light(pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_angle: f32,
             let (intensity, _) = eval_dir(out_dir);
             make_emission_sample(pos, out_dir, intensity, 1, sample.pdf, 1)
         },
-        emission = @ |_, _| make_emission_value(color_builtins::black, 1, 1), // Is delta light
+        emission     = @ |_, _| color_builtins::black,
+        pdf_direct   = @ |_, _| 1:f32,
+        pdf_emission = @ |_, _| make_pdf_value(1, uniform_disk_pdf(cutoffRadius)),
         delta    = true,
         infinite = false
     }
