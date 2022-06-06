@@ -15,6 +15,7 @@ struct Shape {
     size_t TexCount;
     size_t FaceCount;
     IG::BoundingBox BoundingBox;
+    float Area;
 };
 
 struct Entity {
@@ -56,7 +57,7 @@ struct LoaderEnvironment {
     std::vector<Shape> Shapes;
     std::unordered_map<std::string, uint32> ShapeIDs;
     std::unordered_map<std::string, Entity> EmissiveEntities;
-    std::unordered_map<std::string, uint32> AreaLightsMap; // Map from Entity -> Light ID
+    std::unordered_map<std::string, uint32> AreaLightsMap; // Map from Entity -> Light ID (This id is only temporal and might be different to the ones inside shaders)
     std::vector<Material> Materials;
     std::unordered_map<uint32, PlaneShape> PlaneShapes; // Used for special optimization
 

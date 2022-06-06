@@ -341,6 +341,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
         shape.NormalCount = mesh.normals.size();
         shape.TexCount    = mesh.texcoords.size();
         shape.FaceCount   = mesh.faceCount();
+        shape.Area        = mesh.computeArea();
         shape.BoundingBox = boxes.at(id);
 
         const uint32 shapeID = (uint32)ctx.Environment.Shapes.size();

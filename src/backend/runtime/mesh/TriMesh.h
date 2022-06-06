@@ -32,6 +32,7 @@ struct TriMesh {
     void computeVertexNormals();
     void makeTexCoordsZero();
     void setupFaceNormalsAsVertexNormals();
+    float computeArea() const;
 
     void transform(const Transformf& t);
 

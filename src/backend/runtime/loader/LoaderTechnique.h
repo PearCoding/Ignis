@@ -6,7 +6,7 @@
 namespace IG {
 struct LoaderTechnique {
     static std::optional<TechniqueInfo> getInfo(const LoaderContext& ctx);
-    static std::string generate(const LoaderContext& ctx);
+    static std::string generate(LoaderContext& ctx);
     static std::string generateHeader(const LoaderContext& ctx, bool isRayGeneration = false);
 
     static std::vector<std::string> getAvailableTypes();

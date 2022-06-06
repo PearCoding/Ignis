@@ -1,0 +1,37 @@
+// Result of sampling a direction
+struct LightSelector {
+    count:  i32,
+    sample: fn (&mut RndState) -> (i32, f32),
+    pdf:    fn (i32) -> f32
+}
+
+fn @make_null_light_selector() = LightSelector {
+    count  = 0,
+    sample = @|_| (0, 1),
+    pdf    = @|_| 1
+};
+
+fn @pick_light_id(rnd: &mut RndState, num_lights: i32) {
+    if ?num_lights && num_lights == 1 {
+        0
+    } else {
+        // Note: randi() returns random integers, but we only want positive integers here
+        (randi(rnd) & 0x7FFFFFFF) % num_lights
+    }
+}
+
+fn @make_uniform_light_selector(num_lights: i32) -> LightSelector {
+    let pdf_lights = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
+
+    LightSelector {
+        count  = num_lights,
+        sample = @|rnd| (pick_light_id(rnd, num_lights), pdf_lights),
+        pdf    = @|_|   pdf_lights
+    }
+}
+
+fn @make_cdf_light_selector(sampler: cdf::CDF1D) = LightSelector {
+    count  = sampler.func_size,
+    sample = @|rnd| { let s = sampler.sample_discrete(randf(rnd)); (s.off, s.pdf) },
+    pdf    = @|id|  sampler.pdf_discrete(id).pdf
+};

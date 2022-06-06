@@ -23,14 +23,14 @@ static TechniqueInfo technique_empty_get_info(const std::string&, const std::sha
 
 /////////////////////////
 
-static void ao_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+static void ao_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&)
 {
     stream << "  let technique = make_ao_renderer();" << std::endl;
 }
 
 /////////////////////////
 
-static void debug_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+static void debug_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&)
 {
     // TODO: Maybe add a changeable default mode?
     stream << "  let debug_mode = registry::get_parameter_i32(\"__debug_mode\", 0);" << std::endl
@@ -47,7 +47,7 @@ static TechniqueInfo debug_get_info(const std::string&, const std::shared_ptr<Pa
 
 /////////////////////////
 
-static void wireframe_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+static void wireframe_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&)
 {
     // Camera was defined by RequiresExplicitCamera flag
     stream << "  let technique = make_wireframe_renderer(camera);" << std::endl;
@@ -91,10 +91,11 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
     return info;
 }
 
-static void path_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
+static void path_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
 {
     const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
+    const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(false) : false;
     const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
     const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
 
@@ -124,7 +125,19 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
            << "    }" << std::endl
            << "  };" << std::endl;
 
-    stream << "  let technique = make_path_renderer(" << max_depth << ", num_lights, lights, aovs, " << clamp_value << ");" << std::endl;
+    if (useUniformLS || ctx.Scene.lights().size() <= 1) {
+        stream << "  let light_selector = make_uniform_light_selector(num_lights);" << std::endl;
+    } else {
+        auto light_cdf = LoaderLight::generateLightSelectionCDF(ctx);
+        if (light_cdf.empty()) {
+            stream << "  let light_selector = make_null_light_selector();" << std::endl;
+        } else {
+            stream << "  let light_cdf = cdf::make_cdf_1d_from_buffer(device.load_buffer(\"" << light_cdf.u8string() << "\"), num_lights, 0);" << std::endl
+                   << "  let light_selector = make_cdf_light_selector(light_cdf);" << std::endl;
+        }
+    }
+
+    stream << "  let technique = make_path_renderer(" << max_depth << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
 }
 
 static void path_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
@@ -145,13 +158,26 @@ static TechniqueInfo volpath_get_info(const std::string&, const std::shared_ptr<
     return info;
 }
 
-static void volpath_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
+static void volpath_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
 {
     const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
+    const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(false) : false;
+
+    if (useUniformLS || ctx.Scene.lights().size() <= 1) {
+        stream << "  let light_selector = make_uniform_light_selector(num_lights);" << std::endl;
+    } else {
+        auto light_cdf = LoaderLight::generateLightSelectionCDF(ctx);
+        if (light_cdf.empty()) {
+            stream << "  let light_selector = make_null_light_selector();" << std::endl;
+        } else {
+            stream << "  let light_cdf = cdf::make_cdf_1d_from_buffer(device.load_buffer(\"" << light_cdf.u8string() << "\"), num_lights, 0);" << std::endl
+                   << "  let light_selector = make_cdf_light_selector(light_cdf);" << std::endl;
+        }
+    }
 
     stream << "  let aovs = @|_id:i32| make_empty_aov_image();" << std::endl;
-    stream << "  let technique = make_volume_path_renderer(" << max_depth << ", num_lights, lights, media, aovs, " << clamp_value << ");" << std::endl;
+    stream << "  let technique = make_volume_path_renderer(" << max_depth << ", num_lights, lights, light_selector, media, aovs, " << clamp_value << ");" << std::endl;
 }
 
 static void volpath_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
@@ -230,7 +256,7 @@ static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Pars
     return info;
 }
 
-static void ppm_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
+static void ppm_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
 {
     const int max_depth     = technique ? technique->property("max_depth").getInteger(8) : 8;
     const float radius      = technique ? technique->property("radius").getNumber(0.01f) : 0.01f;
@@ -291,7 +317,7 @@ static void ppm_header_loader(std::ostream& stream, const std::string&, const st
 using TechniqueGetInfo = TechniqueInfo (*)(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
 
 // Every body loader has to define 'technique'
-using TechniqueBodyLoader = void (*)(std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
+using TechniqueBodyLoader = void (*)(std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&);
 
 // Every header loader has to define 'RayPayloadComponents' and 'init_raypayload()'
 using TechniqueHeaderLoader = void (*)(std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
@@ -334,7 +360,7 @@ std::optional<TechniqueInfo> LoaderTechnique::getInfo(const LoaderContext& ctx)
     return entry->GetInfo(ctx.TechniqueType, technique, ctx);
 }
 
-std::string LoaderTechnique::generate(const LoaderContext& ctx)
+std::string LoaderTechnique::generate(LoaderContext& ctx)
 {
     const auto* entry = getTechniqueEntry(ctx.TechniqueType);
     if (!entry)

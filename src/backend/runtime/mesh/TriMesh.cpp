@@ -216,6 +216,14 @@ void TriMesh::setupFaceNormalsAsVertexNormals()
     }
 }
 
+float TriMesh::computeArea() const
+{
+    float area = 0;
+    for (float v : face_inv_area)
+        area += 1 / v;
+    return area;
+}
+
 struct TransformCache {
     const Matrix4f TransformMatrix;
     const Matrix3f NormalMatrix;

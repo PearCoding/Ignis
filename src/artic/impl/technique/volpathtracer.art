@@ -27,9 +27,8 @@ fn unwrap_vptraypayload(payload: RayPayload) = VPTRayPayload {
 };
 
 // TODO: Implement "A null-scattering path integral formulation of light transport", (Miller et. al, 2019)
-fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, media: MediaTable, _aovs: AOVTable, clamp_value: f32) -> Technique {
-    let offset : f32  = 0.001;
-    let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
+fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, media: MediaTable, _aovs: AOVTable, clamp_value: f32) -> Technique {
+    let offset : f32 = 0.001;
 
     let handle_color = if clamp_value > 0 {
         @|c: Color| color_saturate(c, clamp_value)
@@ -60,7 +59,8 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
             return(ShadowRay::None)
         }
 
-        let light_id      = pick_light_id(rnd, num_lights);
+        let (light_id, light_select_pdf) = light_selector.sample(rnd);
+        
         let light         = get_light(light_id);
         let sample_direct = light.sample_direct;
         let light_sample  = @sample_direct(rnd, surf);
@@ -83,7 +83,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 let out_dir = vec3_neg(ray.dir);
 
                 let pdf_e     = if light.delta || was_medium_interaction { 0 } else { mat.bsdf.pdf(in_dir, out_dir) }; // Pdf to sample the "infinite" light based on bsdf
-                let pdf_l     = light_sample.pdf * pdf_lightpick;                        // Pdf to sample the light based on NEE
+                let pdf_l     = light_sample.pdf * light_select_pdf;                                                   // Pdf to sample the light based on NEE
                 let inv_pdf_l = 1 / pdf_l;
                 
                 let mis = 1 / (1 + pdf_e * inv_pdf_l);
@@ -108,7 +108,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 let cos_l   = light_sample.cos;
 
                 let pdf_e     = if light.delta || was_medium_interaction { 0 } else { mat.bsdf.pdf(in_dir, out_dir) * cos_l * inv_d2 };
-                let pdf_l     = light_sample.pdf * pdf_lightpick;
+                let pdf_l     = light_sample.pdf * light_select_pdf;
                 let inv_pdf_l = 1 / pdf_l;
 
                 let mis         = 1 / (1 + pdf_e * inv_pdf_l);
@@ -143,7 +143,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
             if dot > flt_eps { // Only contribute proper aligned directions
                 let emit     = mat.emission(ray);
                 let next_mis = math_builtins::fmax[f32](0/*Ignore medium interactions*/, pt.mis) * hit.distance * hit.distance / dot;
-                let mis      = 1 / (1 + next_mis * pdf_lightpick * emit.pdf_area);
+                let mis      = 1 / (1 + next_mis * light_selector.pdf(emit.light_id) * emit.pdf_area);
                 let vol      = medium.eval(ray.org, surf.point);
                 let contrib  = handle_color(color_mulf(color_mul(pt.contrib, color_mul(emit.intensity, vol)), mis));
                 
@@ -170,7 +170,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
 
                 let emit = light.emission(ray, make_invalid_surface_element());
                 let pdf  = light.pdf_direct(ray, make_invalid_surface_element());
-                let mis  = 1 / (1 + math_builtins::fmax[f32](0/*Ignore medium interactions*/, pt.mis) * pdf_lightpick * pdf);
+                let mis  = 1 / (1 + math_builtins::fmax[f32](0/*Ignore medium interactions*/, pt.mis) * light_selector.pdf(light.id) * pdf);
                 let vol  = medium.eval_inf(ray.org, ray.dir);
                 color    = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, color_mul(emit, vol)), mis)));
             }

@@ -1,4 +1,5 @@
-fn @make_point_light(pos: Vec3, color: Color) = Light {
+fn @make_point_light(id: i32, pos: Vec3, color: Color) = Light {
+    id = id,
     sample_direct = @ |_, _| {
         let intensity = color_mulf(color, 1 / (4 * flt_pi));
         make_direct_sample(pos, intensity, 1, 1)
@@ -15,7 +16,7 @@ fn @make_point_light(pos: Vec3, color: Color) = Light {
     infinite = false
 };
 
-fn @load_simple_point_lights(device: Device) -> LightTable {
+fn @load_simple_point_lights(id_off: i32, device: Device) -> LightTable {
     let tbl = device.load_custom_dyntable("SimplePoint");
     let acc = device.get_device_buffer_accessor();
 
@@ -27,6 +28,6 @@ fn @load_simple_point_lights(device: Device) -> LightTable {
         let position  = data.load_vec4(0);
         let intensity = data.load_vec4(4);
         
-        make_point_light(vec4_to_3(position), vec3_to_color(vec4_to_3(intensity)))
+        make_point_light(id + id_off, vec4_to_3(position), vec3_to_color(vec4_to_3(intensity)))
     } 
 }

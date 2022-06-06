@@ -1,4 +1,4 @@
-fn @make_spot_light(pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_angle: f32, color: Color) -> Light {
+fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_angle: f32, color: Color) -> Light {
     let frame           = make_orthonormal_mat3x3(dir);
     let cosCutoffAngle  = math_builtins::cos(cutoff_angle);
     let cosFalloffAngle = math_builtins::cos(falloff_angle);
@@ -19,6 +19,7 @@ fn @make_spot_light(pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_angle: f32,
     }
 
     Light{
+        id = id,
         sample_direct = @ |_, from_surf| {
             let out_dir        = vec3_normalize(vec3_sub(from_surf.point, pos));
             let (intensity, _) = eval_dir(out_dir);

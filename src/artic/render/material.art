@@ -11,7 +11,7 @@ fn @make_material(id: i32, bsdf: Bsdf, interface: MediumInterface) = Material {
     id          = id,
     bsdf        = bsdf,
     interface   = interface,
-    emission    = @ |_| make_direct_emission_value(color_builtins::black, 1),
+    emission    = @ |_| make_direct_emission_value(0, color_builtins::black, 1),
     is_emissive = false,
 };
 
@@ -20,6 +20,6 @@ fn @make_emissive_material(id: i32, surf: SurfaceElement, bsdf: Bsdf, interface:
     id          = id,
     bsdf        = bsdf,
     interface   = interface,
-    emission    = @ |ray| make_direct_emission_value(light.emission(ray, surf), light.pdf_direct(ray, surf)),
+    emission    = @ |ray| make_direct_emission_value(light.id, light.emission(ray, surf), light.pdf_direct(ray, surf)),
     is_emissive = true
 };

@@ -13,14 +13,19 @@
 
 // TODO: Make use of the ShadingTree!!
 namespace IG {
-
-inline static Vector3f get_property_color(const Parser::Property& prop, const Vector3f& def)
+inline static Vector3f getPropertyColor(const Parser::Property& prop, const Vector3f& def)
 {
     if (prop.canBeNumber()) {
         return Vector3f::Constant(prop.getNumber());
     } else {
         return prop.getVector3(def);
     }
+}
+
+inline static float estimatePower(const Parser::Property& prop, const Vector3f& def)
+{
+    const Vector3f color = getPropertyColor(prop, def);
+    return color.mean(); // Do not use the luminance, as we do not know if this is perceptional important
 }
 
 static ElevationAzimuth extractEA(const std::shared_ptr<Parser::Object>& obj)
@@ -113,7 +118,7 @@ inline static void exportSimplePointLights(const LoaderContext& ctx)
             continue;
 
         const Vector3f position = light->property("position").getVector3();
-        const Vector3f radiance = get_property_color(light->property("intensity"), Vector3f::Zero());
+        const Vector3f radiance = getPropertyColor(light->property("intensity"), Vector3f::Zero());
 
         auto& lightData = ctx.Database->CustomTables["SimplePoint"].addLookup(0, 0, 0); // We do not make use of the typeid
         VectorSerializer lightSerializer(lightData, false);
@@ -124,17 +129,23 @@ inline static void exportSimplePointLights(const LoaderContext& ctx)
     }
 }
 
-static void light_point(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+static void light_point(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
     auto pos = light->property("position").getVector3(); // FIXME: Has to be fixed (WHY?)
     tree.addColor("intensity", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
 
     stream << tree.pullHeader()
-           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_point_light(" << LoaderUtils::inlineVector(pos)
+           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_point_light(" << id
+           << ", " << LoaderUtils::inlineVector(pos)
            << ", " << tree.getInline("intensity") << ");" << std::endl;
 
     tree.endClosure();
+}
+
+static float light_point_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext&)
+{
+    return estimatePower(light->property("intensity"), Vector3f::Ones()) * 4 * Pi;
 }
 
 static std::string inline_mat34(const Eigen::Matrix<float, 3, 4>& mat)
@@ -210,7 +221,7 @@ inline static void exportSimpleAreaLights(const LoaderContext& ctx)
             continue;
 
         const std::string entityName = light->property("entity").getString();
-        const Vector3f radiance      = get_property_color(light->property("radiance"), Vector3f::Zero());
+        const Vector3f radiance      = getPropertyColor(light->property("radiance"), Vector3f::Zero());
 
         Entity entity;
         if (!ctx.Environment.EmissiveEntities.count(entityName)) {
@@ -237,7 +248,7 @@ inline static void exportSimpleAreaLights(const LoaderContext& ctx)
     }
 }
 
-static void light_area(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+static void light_area(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
 
@@ -284,13 +295,34 @@ static void light_area(std::ostream& stream, const std::string& name, const std:
                << ", device.load_specific_shape(" << shape.FaceCount << ", " << shape.VertexCount << ", " << shape.NormalCount << ", " << shape.TexCount << ", " << shape_offset << ", dtb.shapes));" << std::endl;
     }
 
-    stream << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_area_light(ae_" << LoaderUtils::escapeIdentifier(name) << ", "
-           << " @|tex_coords| { maybe_unused(tex_coords); " << tree.getInline("radiance") << " });" << std::endl;
+    stream << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_area_light(" << id
+           << ", ae_" << LoaderUtils::escapeIdentifier(name)
+           << ", @|tex_coords| { maybe_unused(tex_coords); " << tree.getInline("radiance") << " });" << std::endl;
 
     tree.endClosure();
 }
 
-static void light_directional(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+static float light_area_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+{
+    const float power = estimatePower(light->property("radiance"), Vector3f::Ones());
+
+    const std::string entityName = light->property("entity").getString();
+    Entity entity;
+    if (!ctx.Environment.EmissiveEntities.count(entityName)) {
+        IG_LOG(L_ERROR) << "No entity named '" << entityName << "' exists for area light" << std::endl;
+        return 0;
+    } else {
+        entity = ctx.Environment.EmissiveEntities.at(entityName);
+    }
+
+    uint32 shape_id  = ctx.Environment.ShapeIDs.at(entity.Shape);
+    const auto shape = ctx.Environment.Shapes[shape_id];
+
+    const float approx_area = shape.Area * std::abs(entity.computeGlobalMatrix().block<3, 3>(0, 0).determinant());
+    return power * approx_area;
+}
+
+static void light_directional(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
 
@@ -299,14 +331,21 @@ static void light_directional(std::ostream& stream, const std::string& name, con
     tree.addColor("irradiance", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
 
     stream << tree.pullHeader()
-           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_directional_light(" << LoaderUtils::inlineVector(dir)
+           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_directional_light(" << id
+           << ", " << LoaderUtils::inlineVector(dir)
            << ", " << LoaderUtils::inlineSceneBBox(tree.context())
            << ", " << tree.getInline("irradiance") << ");" << std::endl;
 
     tree.endClosure();
 }
 
-static void light_spot(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+static float light_directional_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+{
+    const float power = estimatePower(light->property("irradiance"), Vector3f::Ones());
+    return power * Pi * std::pow(ctx.Environment.SceneDiameter / 2, 2);
+}
+
+static void light_spot(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
 
@@ -319,7 +358,8 @@ static void light_spot(std::ostream& stream, const std::string& name, const std:
     tree.addNumber("falloff", *light, 20, true, ShadingTree::IM_Bare);
 
     stream << tree.pullHeader()
-           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_spot_light(" << LoaderUtils::inlineVector(pos)
+           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_spot_light(" << id
+           << ", " << LoaderUtils::inlineVector(pos)
            << ", " << LoaderUtils::inlineVector(dir)
            << ", rad(" << tree.getInline("cutoff") << ")"
            << ", rad(" << tree.getInline("falloff") << ")"
@@ -328,7 +368,15 @@ static void light_spot(std::ostream& stream, const std::string& name, const std:
     tree.endClosure();
 }
 
-static void light_sun(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+static float light_spot_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext&)
+{
+    const float power   = estimatePower(light->property("intensity"), Vector3f::Ones());
+    const float cutoff  = light->property("cutoff").getNumber(30) * Deg2Rad;
+    const float falloff = light->property("falloff").getNumber(20) * Deg2Rad;
+    return power * 2 * Pi * (1 - 0.5f * (std::cos(cutoff) + std::cos(falloff)));
+}
+
+static void light_sun(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
     auto ea      = extractEA(light);
@@ -338,7 +386,8 @@ static void light_sun(std::ostream& stream, const std::string& name, const std::
     tree.addNumber("sun_radius_scale", *light, 1, true, ShadingTree::IM_Bare);
 
     stream << tree.pullHeader()
-           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_sun_light(" << LoaderUtils::inlineVector(dir)
+           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_sun_light(" << id
+           << ", " << LoaderUtils::inlineVector(dir)
            << ", " << LoaderUtils::inlineSceneBBox(tree.context())
            << ", " << tree.getInline("sun_radius_scale")
            << ", color_mulf(color_builtins::white, " << tree.getInline("sun_scale") << "));" << std::endl;
@@ -346,29 +395,44 @@ static void light_sun(std::ostream& stream, const std::string& name, const std::
     tree.endClosure();
 }
 
-static void light_sky(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+static float light_sun_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext&)
+{
+    const float sun_scale        = light->property("sun_scale").getNumber(1);
+    const float sun_radius_scale = light->property("sun_radius_scale").getNumber(1);
+    return sun_scale * Pi * sun_radius_scale;
+}
+
+static void light_sky(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
     tree.addColor("scale", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
 
-    const std::string path = setup_sky(tree.context(), name, light);
-    const auto cdf         = setup_cdf(tree.context(), path);
-    const std::string id   = LoaderUtils::escapeIdentifier(name);
+    const std::string path    = setup_sky(tree.context(), name, light);
+    const auto cdf            = setup_cdf(tree.context(), path);
+    const std::string name_id = LoaderUtils::escapeIdentifier(name);
 
     const Matrix3f trans = light->property("transform").getTransform().linear().transpose().inverse();
 
     stream << tree.pullHeader()
-           << "  let sky_tex_" << id << " = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image(\"" << path << "\"), mat3x3_identity());" << std::endl // TODO: Refactor this out
-           << "  let sky_cdf_" << id << " = cdf::make_cdf_2d_from_buffer(device.load_buffer(\"" << std::get<0>(cdf) << "\"), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
-           << "  let light_" << id << "   = make_environment_light_textured(" << LoaderUtils::inlineSceneBBox(tree.context())
+           << "  let sky_tex_" << name_id << " = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image(\"" << path << "\"), mat3x3_identity());" << std::endl // TODO: Refactor this out
+           << "  let sky_cdf_" << name_id << " = cdf::make_cdf_2d_from_buffer(device.load_buffer(\"" << std::get<0>(cdf) << "\"), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
+           << "  let light_" << name_id << "   = make_environment_light_textured(" << id
+           << ", " << LoaderUtils::inlineSceneBBox(tree.context())
            << ", " << tree.getInline("scale")
-           << ", sky_tex_" << id << ", sky_cdf_" << id
+           << ", sky_tex_" << name_id << ", sky_cdf_" << name_id
            << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
 
     tree.endClosure();
 }
 
-static void light_cie_env(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+static float light_sky_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+{
+    // TODO: Better approximation?
+    const float scale = estimatePower(light->property("scale"), Vector3f::Ones());
+    return scale * Pi * std::pow(ctx.Environment.SceneDiameter / 2, 2);
+}
+
+static void light_cie_env(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
 
@@ -381,7 +445,8 @@ static void light_cie_env(std::ostream& stream, const std::string& name, const s
 
     bool cloudy = (light->pluginType() == "cie_cloudy" || light->pluginType() == "ciecloudy");
     stream << tree.pullHeader()
-           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_cie_sky_light(" << LoaderUtils::inlineSceneBBox(tree.context())
+           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_cie_sky_light(" << id
+           << ", " << LoaderUtils::inlineSceneBBox(tree.context())
            << ", " << tree.getInline("zenith")
            << ", " << tree.getInline("ground")
            << ", " << tree.getInline("ground_brightness")
@@ -390,6 +455,13 @@ static void light_cie_env(std::ostream& stream, const std::string& name, const s
            << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
 
     tree.endClosure();
+}
+
+static float light_cie_env_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+{
+    // TODO: Better approximation?
+    const float zenith = estimatePower(light->property("zenith"), Vector3f::Ones());
+    return zenith * Pi * std::pow(ctx.Environment.SceneDiameter / 2, 2);
 }
 
 inline float skylight_normalization_factor(float altitude, bool clear)
@@ -405,7 +477,7 @@ inline float skylight_normalization_factor(float altitude, bool clear)
     return f;
 }
 
-static void light_cie_sunny_env(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+static void light_cie_sunny_env(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     const bool clear = (light->pluginType() == "cie_clear" || light->pluginType() == "cieclear");
 
@@ -450,7 +522,8 @@ static void light_cie_sunny_env(std::ostream& stream, const std::string& name, c
     const bool has_ground = light->property("has_ground").getBool(true);
 
     stream << tree.pullHeader()
-           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_cie_sunny_light(" << LoaderUtils::inlineSceneBBox(tree.context())
+           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_cie_sunny_light(" << id
+           << ", " << LoaderUtils::inlineSceneBBox(tree.context())
            << ", " << tree.getInline("scale")
            << ", " << tree.getInline("zenith")
            << ", " << zenithbrightness
@@ -466,7 +539,7 @@ static void light_cie_sunny_env(std::ostream& stream, const std::string& name, c
     tree.endClosure();
 }
 
-static void light_perez(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+static void light_perez(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
 
@@ -491,8 +564,8 @@ static void light_perez(std::ostream& stream, const std::string& name, const std
     }
 
     stream << tree.pullHeader()
-           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_perez_light("
-           << LoaderUtils::inlineSceneBBox(tree.context())
+           << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_perez_light(" << id
+           << ", " << LoaderUtils::inlineSceneBBox(tree.context())
            << ", " << LoaderUtils::inlineVector(dir);
 
     if (usesLuminance) {
@@ -518,13 +591,13 @@ static void light_perez(std::ostream& stream, const std::string& name, const std
     tree.endClosure();
 }
 
-static void light_env(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
+static void light_env(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
     tree.addColor("scale", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
 
-    const std::string id = LoaderUtils::escapeIdentifier(name);
-    const bool useCDF    = light->property("cdf").getBool(true);
+    const std::string name_id = LoaderUtils::escapeIdentifier(name);
+    const bool useCDF         = light->property("cdf").getBool(true);
 
     // TODO: Make this work with PExpr and other custom textures!
     if (light->property("radiance").type() == Parser::PT_STRING) {
@@ -542,7 +615,8 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
         if (!useCDF || tex_path.empty()) {
             stream << tree.pullHeader()
                    << LoaderTexture::generate(tex_name, *tex, tree)
-                   << "  let light_" << id << " = make_environment_light_textured_naive(" << LoaderUtils::inlineSceneBBox(tree.context())
+                   << "  let light_" << name_id << " = make_environment_light_textured_naive(" << id
+                   << ", " << LoaderUtils::inlineSceneBBox(tree.context())
                    << ", " << tree.getInline("scale")
                    << ", tex_" << LoaderUtils::escapeIdentifier(tex_name)
                    << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
@@ -550,17 +624,19 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
             const auto cdf = setup_cdf(tree.context(), tex_path);
             stream << tree.pullHeader()
                    << LoaderTexture::generate(tex_name, *tex, tree)
-                   << "  let cdf_" << id << "   = cdf::make_cdf_2d_from_buffer(device.load_buffer(\"" << std::get<0>(cdf) << "\"), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
-                   << "  let light_" << id << " = make_environment_light_textured(" << LoaderUtils::inlineSceneBBox(tree.context())
+                   << "  let cdf_" << name_id << "   = cdf::make_cdf_2d_from_buffer(device.load_buffer(\"" << std::get<0>(cdf) << "\"), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
+                   << "  let light_" << name_id << " = make_environment_light_textured(" << id
+                   << ", " << LoaderUtils::inlineSceneBBox(tree.context())
                    << ", " << tree.getInline("scale")
                    << ", tex_" << LoaderUtils::escapeIdentifier(tex_name)
-                   << ", cdf_" << id
+                   << ", cdf_" << name_id
                    << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
         }
     } else {
         tree.addColor("radiance", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
         stream << tree.pullHeader()
-               << "  let light_" << id << " = make_environment_light(" << LoaderUtils::inlineSceneBBox(tree.context())
+               << "  let light_" << name_id << " = make_environment_light(" << id
+               << ", " << LoaderUtils::inlineSceneBBox(tree.context())
                << ", " << tree.getInline("scale")
                << ", " << tree.getInline("radiance") << ");" << std::endl;
     }
@@ -568,38 +644,48 @@ static void light_env(std::ostream& stream, const std::string& name, const std::
     tree.endClosure();
 }
 
-static void light_error(std::ostream& stream, const std::string& name)
+static float light_env_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
-    stream << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_null_light() /* Error */;" << std::endl;
+    // TODO: Better approximation?
+    const float scale    = estimatePower(light->property("scale"), Vector3f::Ones());
+    const float radiance = estimatePower(light->property("radiance"), Vector3f::Ones());
+    return scale * radiance * Pi * std::pow(ctx.Environment.SceneDiameter / 2, 2);
 }
 
-using LightLoader = void (*)(std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, ShadingTree&);
+static void light_error(std::ostream& stream, const std::string& name)
+{
+    stream << "  let light_" << LoaderUtils::escapeIdentifier(name) << " = make_null_light(-1) /* Error */;" << std::endl;
+}
+
+using LightLoader   = void (*)(size_t id, std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, ShadingTree&);
+using EstimatePower = float (*)(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
 static const struct {
     const char* Name;
     LightLoader Loader;
+    EstimatePower Power;
 } _generators[] = {
-    { "point", light_point },
-    { "area", light_area },
-    { "directional", light_directional },
-    { "direction", light_directional },
-    { "distant", light_directional },
-    { "spot", light_spot },
-    { "sun", light_sun },
-    { "sky", light_sky },
-    { "cie_uniform", light_cie_env },
-    { "cieuniform", light_cie_env },
-    { "cie_cloudy", light_cie_env },
-    { "ciecloudy", light_cie_env },
-    { "cie_clear", light_cie_sunny_env },
-    { "cieclear", light_cie_sunny_env },
-    { "cie_intermediate", light_cie_sunny_env },
-    { "cieintermediate", light_cie_sunny_env },
-    { "perez", light_perez },
-    { "uniform", light_env },
-    { "env", light_env },
-    { "envmap", light_env },
-    { "constant", light_env },
-    { "", nullptr }
+    { "point", light_point, light_point_power },
+    { "area", light_area, light_area_power },
+    { "directional", light_directional, light_directional_power },
+    { "direction", light_directional, light_directional_power },
+    { "distant", light_directional, light_directional_power },
+    { "spot", light_spot, light_spot_power },
+    { "sun", light_sun, light_sun_power },
+    { "sky", light_sky, light_sky_power },
+    { "cie_uniform", light_cie_env, light_cie_env_power },
+    { "cieuniform", light_cie_env, light_cie_env_power },
+    { "cie_cloudy", light_cie_env, light_cie_env_power },
+    { "ciecloudy", light_cie_env, light_cie_env_power },
+    { "cie_clear", light_cie_sunny_env, light_cie_env_power },
+    { "cieclear", light_cie_sunny_env, light_cie_env_power },
+    { "cie_intermediate", light_cie_sunny_env, light_cie_env_power },
+    { "cieintermediate", light_cie_sunny_env, light_cie_env_power },
+    { "perez", light_perez, light_cie_env_power },
+    { "uniform", light_env, light_env_power },
+    { "env", light_env, light_env_power },
+    { "envmap", light_env, light_env_power },
+    { "constant", light_env, light_env_power },
+    { "", nullptr, nullptr }
 };
 
 // TODO: Refactor this function... its horrible
@@ -617,7 +703,7 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
 
             if (is_simple_point_light(light))
                 ++simplePointLightCounter;
-            else if (!skipArea && is_simple_area_light(light))
+            else if (is_simple_area_light(light))
                 ++simpleAreaLightCounter;
         }
     }
@@ -649,15 +735,15 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
     for (const auto& pair : lights) {
         const auto light = pair.second;
 
-        if (skip(light)
-            || (embedSimplePointLights && is_simple_point_light(light))
+        if ((embedSimplePointLights && is_simple_point_light(light))
             || (embedSimpleAreaLights && is_simple_area_light(light)))
             continue;
 
         bool found = false;
         for (size_t i = 0; _generators[i].Loader; ++i) {
             if (_generators[i].Name == light->pluginType()) {
-                _generators[i].Loader(stream, pair.first, light, tree);
+                if (!skip(light))
+                    _generators[i].Loader(counter, stream, pair.first, light, tree);
                 ++counter;
                 found = true;
                 break;
@@ -675,7 +761,7 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
 
     // Load embedded point lights if necessary
     if (embedSimplePointLights) {
-        stream << "  let simple_point_lights = load_simple_point_lights(device);" << std::endl;
+        stream << "  let simple_point_lights = load_simple_point_lights(0, device);" << std::endl;
 
         // Special case: Nothing except embedded simple point lights
         if (counter > 0 && counter == simplePointLightCounter) {
@@ -686,8 +772,8 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
     }
 
     // Load embedded area lights if necessary
-    if (embedSimpleAreaLights) {
-        stream << "  let simple_area_lights = load_simple_area_lights(device, shapes);" << std::endl;
+    if (!skipArea && embedSimpleAreaLights) {
+        stream << "  let simple_area_lights = load_simple_area_lights(" << simplePointLightCounter << ", device, shapes);" << std::endl;
 
         // Special case: Nothing except embedded simple area lights
         if (counter > 0 && counter == simpleAreaLightCounter) {
@@ -707,7 +793,7 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
                << "    }" << std::endl;
     }
 
-    if (embedSimpleAreaLights) {
+    if (!skipArea && embedSimpleAreaLights) {
         if (embedSimplePointLights)
             stream << "    else if ";
         else
@@ -732,10 +818,7 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
         const bool isSPL = embedSimplePointLights && is_simple_point_light(light);
         const bool isSAL = embedSimpleAreaLights && is_simple_area_light(light);
         if (!isSPL && !isSAL) {
-            if (counter2 < counter - 1)
-                stream << "      " << counter2;
-            else
-                stream << "      _";
+            stream << "      " << counter2;
 
             stream << " => light_" << LoaderUtils::escapeIdentifier(pair.first)
                    << "," << std::endl;
@@ -743,11 +826,7 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
         }
     }
 
-    if (counter == 0 || counter2 == 0) {
-        if (!skipArea) // Don't trigger a warning if we skip areas
-            IG_LOG(L_WARNING) << "Scene does not contain lights" << std::endl;
-        stream << "      _ => make_null_light()" << std::endl;
-    }
+    stream << "      _ => make_null_light(id)" << std::endl;
 
     if (embedSimpleLights)
         stream << "    }" << std::endl;
@@ -776,5 +855,44 @@ void LoaderLight::setupAreaLights(LoaderContext& ctx)
 bool LoaderLight::hasAreaLights(const LoaderContext& ctx)
 {
     return !ctx.Environment.AreaLightsMap.empty();
+}
+
+std::filesystem::path LoaderLight::generateLightSelectionCDF(LoaderContext& ctx)
+{
+    const std::string exported_id = "_light_cdf_";
+
+    const auto data = ctx.ExportedData.find(exported_id);
+    if (data != ctx.ExportedData.end())
+        return std::any_cast<std::string>(data->second);
+
+    if (ctx.Scene.lights().empty())
+        return {}; // Fallback to null light selector
+
+    std::filesystem::create_directories("data/"); // Make sure this directory exists
+    std::string path = "data/light_cdf.bin";
+
+    std::vector<float> estimated_powers;
+    estimated_powers.reserve(ctx.Scene.lights().size());
+    for (const auto& pair : ctx.Scene.lights()) {
+        const auto light = pair.second;
+
+        bool found = false;
+        for (size_t i = 0; _generators[i].Loader; ++i) {
+            if (_generators[i].Name == light->pluginType()) {
+                float power = _generators[i].Power(pair.first, light, ctx);
+                estimated_powers.push_back(power);
+                // std::cout << power << std::endl;
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            estimated_powers.push_back(0);
+    }
+
+    CDF::computeForArray(estimated_powers, path);
+
+    ctx.ExportedData[exported_id] = path;
+    return path;
 }
 } // namespace IG

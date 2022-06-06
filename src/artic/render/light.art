@@ -24,12 +24,15 @@ struct PdfValue {
 
 // Emission properties of a light source for direct illumination
 struct DirectEmissionValue {
+    light_id:  i32,   // Id of the light
     intensity: Color, // Intensity along the direction
     pdf_area:  f32,   // Probability to sample the point on the light, given respective to area measure
 }
 
 // Opaque light structure
 struct Light {
+    // ID of the light given by the system
+    id: i32,
     // Samples direct illumination from this light source at the given point on a surface
     sample_direct: fn (&mut RndState, SurfaceElement) -> DirectLightSample,
     // Samples the emitting surface of the light
@@ -70,7 +73,8 @@ fn @make_pdf_value(pdf_area: f32, pdf_dir: f32) = PdfValue {
     pdf_dir   = pdf_dir
 };
 
-fn @make_direct_emission_value(intensity: Color, pdf_area: f32) = DirectEmissionValue {
+fn @make_direct_emission_value(id: i32, intensity: Color, pdf_area: f32) = DirectEmissionValue {
+    light_id  = id,
     intensity = intensity,
     pdf_area  = pdf_area
 };

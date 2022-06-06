@@ -1,4 +1,5 @@
-fn @make_mix_light(lightA : Light, lightB : Light, probability : f32) = Light {
+fn @make_mix_light(id: i32, lightA : Light, lightB : Light, probability : f32) = Light {
+    id = id,
     sample_direct = @ |rnd, from| {
         let A = lightA.sample_direct(rnd, from);
         let B = lightB.sample_direct(rnd, from);

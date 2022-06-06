@@ -1,0 +1,57 @@
+{
+	"technique": {
+		"type": "path",
+		"max_depth": 64,
+		"use_uniform_light_selector": false
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 40,
+		"near_clip": 0.1,
+		"far_clip": 100,
+		"transform": [ -1,0,0,0, 0,1,0,0, 0,0,-1,3.849529, 0,0,0,1 ]
+	},
+	"film": {
+		"size": [1000, 1000]
+	},
+	"textures": [
+		{
+			"type": "bitmap",
+			"name": "tex",
+			"filename": "textures/bumpmap.png",
+			"filter_type": "trilinear"
+		},
+		{
+			"type": "checkerboard",
+			"name": "check",
+			"scale_x": 10,
+			"scale_y": 10,
+			"color0": [0.3,0.3,0.3],
+			"color1": [1,1,1]
+		}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name": "mat-Ground", "reflectance":"check"},
+		{"type":"roughconductor", "name": "mat-Inner", "reflectance":[1,1,1], "alpha":0.16},
+		{"type":"bumpmap", "name": "mat-Pillar", "bsdf":"mat-Inner", "map":"tex", "strength":0.2}
+	],
+	"shapes": [
+		{"type":"ply", "name":"Bottom", "filename":"meshes/Bottom.ply"},
+		{"type":"ply", "name":"Pillar", "filename":"meshes/Pillar.ply"}
+	],
+	"entities": [
+		{"name":"Bottom","shape":"Bottom", "bsdf":"mat-Ground"},
+		{"name":"Pillar","shape":"Pillar", "bsdf":"mat-Pillar", "transform": [ 0.25,0,0,0, 0,0.5,0,-1, 0,0,0.25,0, 0,0,0,1 ]}
+	],
+	"lights": [
+		{"type":"point", "name":"L1", "intensity": [1.0, 1.0, 1.0], "position": [1, 1, 1]},
+		{"type":"point", "name":"L2", "intensity": [1.0, 0.0, 1.0], "position": [-1, 1, 1]},
+		{"type":"point", "name":"L3", "intensity": [1.0, 1.0, 0.0], "position": [1, -1, 1]},
+		{"type":"point", "name":"L4", "intensity": [0.0, 1.0, 1.0], "position": [-1, -1, 1]},
+		{"type":"point", "name":"L5", "intensity": [1.0, 0.0, 0.0], "position": [1, 0, 1]},
+		{"type":"point", "name":"L6", "intensity": [0.0, 1.0, 0.0], "position": [0, 1, 1]},
+		{"type":"point", "name":"L7", "intensity": [0.0, 0.0, 1.0], "position": [0, 0, 1]},
+		{"type":"point", "name":"L8", "intensity": [0.5, 1.0, 0.5], "position": [1, 1, 2]},
+		{"type":"sky", "name":"Sky"}
+	]
+}
