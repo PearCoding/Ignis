@@ -16,17 +16,18 @@ Path Tracer (:monosp:`path`)
    - |int|
    - 64
    - Maximum depth of rays to be traced.
-
  * - clamp
    - |number|
    - 0
    - Value to clamp contributions to. This introduces bias in favour of omitting outlier. 0 disables clamping.
-
+ * - use_uniform_light_selector
+   - |bool|
+   - false
+   - Use uniform light selection technique. The default adaptive technique is better in most cases, use with caution.
  * - aov_normals
    - |bool|
    - false
    - Enable normal output as aov.
-
  * - aov_mis
    - |bool|
    - false
@@ -44,11 +45,14 @@ Volume Path Tracer (:monosp:`volpath`)
    - |int|
    - 64
    - Maximum depth of rays to be traced.
-
  * - clamp
    - |number|
    - 0
    - Value to clamp contributions to. This introduces bias in favour of omitting outlier. 0 disables clamping.
+ * - use_uniform_light_selector
+   - |bool|
+   - false
+   - Use uniform light selection technique. The default adaptive technique is better in most cases, use with caution.
 
 A simple volumetric path tracer. It calculates the full global illumination in the scene.
 
@@ -61,17 +65,14 @@ Photonmapper (:monosp:`photonmapper`)
    - |int|
    - 8
    - Maximum depth of rays to be traced.
-
  * - radius
    - |number|
    - 0.01
    - Initial merging radius.
-
  * - clamp
    - |number|
    - 0
    - Value to clamp contributions to. This introduces bias in favour of omitting outlier. 0 disables clamping.
-
  * - aov
    - |bool|
    - false
