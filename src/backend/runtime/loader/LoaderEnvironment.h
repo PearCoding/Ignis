@@ -53,11 +53,11 @@ inline bool operator==(const Material& a, const Material& b)
     return a.BSDF == b.BSDF && a.MediumInner == b.MediumInner && a.MediumOuter == b.MediumOuter && a.Entity == b.Entity;
 }
 
+// TODO: Refactor this to the actual loading classes
 struct LoaderEnvironment {
     std::vector<Shape> Shapes;
     std::unordered_map<std::string, uint32> ShapeIDs;
     std::unordered_map<std::string, Entity> EmissiveEntities;
-    std::unordered_map<std::string, uint32> AreaLightsMap; // Map from Entity -> Light ID (This id is only temporal and might be different to the ones inside shaders)
     std::vector<Material> Materials;
     std::unordered_map<uint32, PlaneShape> PlaneShapes; // Used for special optimization
 

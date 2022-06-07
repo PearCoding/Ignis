@@ -30,7 +30,7 @@ std::string MissShader::setup(LoaderContext& ctx)
         if (ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss)
             stream << ShaderUtils::generateDatabase() << std::endl;
 
-        stream << LoaderLight::generate(tree, !ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss)
+        stream << ctx.Lights->generate(tree, !ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss)
                << std::endl;
     }
 

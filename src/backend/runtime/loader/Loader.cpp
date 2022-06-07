@@ -17,6 +17,7 @@ namespace IG {
 bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 {
     LoaderContext ctx;
+    ctx.Database            = &result.Database;
     ctx.FilePath            = opts.FilePath;
     ctx.Target              = opts.Target;
     ctx.EnablePadding       = doesTargetRequirePadding(ctx.Target);
@@ -28,8 +29,9 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.IsTracer            = opts.IsTracer;
     ctx.FilmWidth           = opts.FilmWidth;
     ctx.FilmHeight          = opts.FilmHeight;
+    ctx.Lights              = std::make_unique<LoaderLight>();
 
-    LoaderLight::setupAreaLights(ctx);
+    ctx.Lights->prepare(ctx);
 
     // Load content
     if (!LoaderShape::load(ctx, result))
@@ -41,7 +43,9 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     LoaderCamera::setupInitialOrientation(ctx, result);
 
     IG_LOG(L_DEBUG) << "Got " << ctx.Environment.Materials.size() << " unique materials" << std::endl;
-    IG_LOG(L_DEBUG) << "Got " << ctx.Environment.AreaLightsMap.size() << " unique area lights" << std::endl;
+    IG_LOG(L_DEBUG) << "Got " << ctx.Lights->lightCount() << " lights" << std::endl;
+    IG_LOG(L_DEBUG) << "Got " << ctx.Lights->embeddedLightCount() << " embedded lights" << std::endl;
+    IG_LOG(L_DEBUG) << "Got " << ctx.Lights->areaLightCount() << " area lights" << std::endl;
 
     result.Database.MaterialCount = ctx.Environment.Materials.size();
 
@@ -49,7 +53,6 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     if (!tech_info.has_value())
         return false;
 
-    ctx.Database      = &result.Database;
     ctx.TechniqueInfo = tech_info.value();
 
     if (ctx.TechniqueInfo.Variants.empty()) {

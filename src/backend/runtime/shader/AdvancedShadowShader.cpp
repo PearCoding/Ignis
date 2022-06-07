@@ -33,7 +33,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
         if (requireAreaLight)
             stream << ShaderUtils::generateDatabase() << std::endl;
 
-        stream << LoaderLight::generate(tree, !requireAreaLight)
+        stream << ctx.Lights->generate(tree, !requireAreaLight)
                << std::endl;
     }
 
