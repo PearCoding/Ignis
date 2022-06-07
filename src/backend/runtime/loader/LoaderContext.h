@@ -14,6 +14,8 @@ struct SceneDatabase;
 struct LoaderContext {
     Parser::Scene Scene;
 
+    std::unique_ptr<class LoaderLight> Lights;
+
     std::filesystem::path FilePath;
     IG::Target Target;
     bool EnablePadding;

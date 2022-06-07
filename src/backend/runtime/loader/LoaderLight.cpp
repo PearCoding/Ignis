@@ -9,6 +9,7 @@
 #include "skysun/SkyModel.h"
 #include "skysun/SunLocation.h"
 
+#include <algorithm>
 #include <chrono>
 
 // TODO: Make use of the ShadingTree!!
@@ -143,7 +144,7 @@ static void light_point(size_t id, std::ostream& stream, const std::string& name
     tree.endClosure();
 }
 
-static float light_point_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext&)
+static float light_point_power(const std::shared_ptr<Parser::Object>& light, const LoaderContext&)
 {
     return estimatePower(light->property("intensity"), Vector3f::Ones()) * 4 * Pi;
 }
@@ -302,7 +303,7 @@ static void light_area(size_t id, std::ostream& stream, const std::string& name,
     tree.endClosure();
 }
 
-static float light_area_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static float light_area_power(const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
     const float power = estimatePower(light->property("radiance"), Vector3f::Ones());
 
@@ -339,7 +340,7 @@ static void light_directional(size_t id, std::ostream& stream, const std::string
     tree.endClosure();
 }
 
-static float light_directional_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static float light_directional_power(const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
     const float power = estimatePower(light->property("irradiance"), Vector3f::Ones());
     return power * Pi * std::pow(ctx.Environment.SceneDiameter / 2, 2);
@@ -368,7 +369,7 @@ static void light_spot(size_t id, std::ostream& stream, const std::string& name,
     tree.endClosure();
 }
 
-static float light_spot_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext&)
+static float light_spot_power(const std::shared_ptr<Parser::Object>& light, const LoaderContext&)
 {
     const float power   = estimatePower(light->property("intensity"), Vector3f::Ones());
     const float cutoff  = light->property("cutoff").getNumber(30) * Deg2Rad;
@@ -395,7 +396,7 @@ static void light_sun(size_t id, std::ostream& stream, const std::string& name, 
     tree.endClosure();
 }
 
-static float light_sun_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext&)
+static float light_sun_power(const std::shared_ptr<Parser::Object>& light, const LoaderContext&)
 {
     const float sun_scale        = light->property("sun_scale").getNumber(1);
     const float sun_radius_scale = light->property("sun_radius_scale").getNumber(1);
@@ -425,7 +426,7 @@ static void light_sky(size_t id, std::ostream& stream, const std::string& name, 
     tree.endClosure();
 }
 
-static float light_sky_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static float light_sky_power(const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
     // TODO: Better approximation?
     const float scale = estimatePower(light->property("scale"), Vector3f::Ones());
@@ -457,7 +458,7 @@ static void light_cie_env(size_t id, std::ostream& stream, const std::string& na
     tree.endClosure();
 }
 
-static float light_cie_env_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static float light_cie_env_power(const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
     // TODO: Better approximation?
     const float zenith = estimatePower(light->property("zenith"), Vector3f::Ones());
@@ -644,7 +645,7 @@ static void light_env(size_t id, std::ostream& stream, const std::string& name, 
     tree.endClosure();
 }
 
-static float light_env_power(const std::string&, const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
+static float light_env_power(const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
     // TODO: Better approximation?
     const float scale    = estimatePower(light->property("scale"), Vector3f::Ones());
@@ -658,7 +659,7 @@ static void light_error(std::ostream& stream, const std::string& name)
 }
 
 using LightLoader   = void (*)(size_t id, std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, ShadingTree&);
-using EstimatePower = float (*)(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&);
+using EstimatePower = float (*)(const std::shared_ptr<Parser::Object>&, const LoaderContext&);
 static const struct {
     const char* Name;
     LightLoader Loader;
@@ -688,42 +689,14 @@ static const struct {
     { "", nullptr, nullptr }
 };
 
-// TODO: Refactor this function... its horrible
 std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
 {
-    constexpr size_t MaxSimpleInlineLights = 10;
+    // Embed lights if necessary. This is cached for multiple calls
+    embedLights(tree.context());
 
-    const auto& lights = tree.context().Scene.lights();
-
-    size_t simplePointLightCounter = 0;
-    size_t simpleAreaLightCounter  = 0;
-    if (lights.size() >= MaxSimpleInlineLights) {
-        for (const auto& pair : lights) {
-            const auto light = pair.second;
-
-            if (is_simple_point_light(light))
-                ++simplePointLightCounter;
-            else if (is_simple_area_light(light))
-                ++simpleAreaLightCounter;
-        }
-    }
-
-    const size_t simpleLightCounter   = simplePointLightCounter + simpleAreaLightCounter;
-    const bool embedSimpleLights      = simpleLightCounter > MaxSimpleInlineLights;
-    const bool embedSimplePointLights = simplePointLightCounter > 0 && embedSimpleLights;
-    const bool embedSimpleAreaLights  = simpleAreaLightCounter > 0 && embedSimpleLights;
-
-    // Export simple point lights
-    if (embedSimplePointLights)
-        exportSimplePointLights(tree.context());
-    else
-        simplePointLightCounter = 0;
-
-    // Export simple area lights
-    if (embedSimpleAreaLights)
-        exportSimpleAreaLights(tree.context());
-    else
-        simpleAreaLightCounter = 0;
+    const bool embedSimplePointLights = mSimplePointLightCounter > 0;
+    const bool embedSimpleAreaLights  = mSimpleAreaLightCounter > 0;
+    const bool embedSimpleLights      = embedSimplePointLights || embedSimpleAreaLights;
 
     // This will be used for now
     auto skip = [&](const std::shared_ptr<Parser::Object>& light) { return skipArea && light->pluginType() == "area"; };
@@ -731,32 +704,29 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
     std::stringstream stream;
 
     // Write all non-embedded lights to shader
-    size_t counter = embedSimpleLights ? simpleLightCounter : 0;
-    for (const auto& pair : lights) {
-        const auto light = pair.second;
-
-        if ((embedSimplePointLights && is_simple_point_light(light))
-            || (embedSimpleAreaLights && is_simple_area_light(light)))
-            continue;
+    const auto non_e_it = mOrderedLights.begin() + (mSimplePointLightCounter + mSimpleAreaLightCounter);
+    size_t counter      = mSimplePointLightCounter + mSimpleAreaLightCounter;
+    for (auto it = non_e_it; it != mOrderedLights.end(); ++it, ++counter) {
+        const auto light = it->second;
 
         bool found = false;
         for (size_t i = 0; _generators[i].Loader; ++i) {
             if (_generators[i].Name == light->pluginType()) {
                 if (!skip(light))
-                    _generators[i].Loader(counter, stream, pair.first, light, tree);
-                ++counter;
+                    _generators[i].Loader(counter, stream, it->first, light, tree);
                 found = true;
                 break;
             }
         }
+
         if (!found) {
             IG_LOG(L_ERROR) << "No light type '" << light->pluginType() << "' available" << std::endl;
-            light_error(stream, pair.first);
+            light_error(stream, it->first);
         }
     }
 
     // Add a new line for cosmetics if necessary :P
-    if (counter != 0)
+    if (!mOrderedLights.empty())
         stream << std::endl;
 
     // Load embedded point lights if necessary
@@ -764,8 +734,8 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
         stream << "  let simple_point_lights = load_simple_point_lights(0, device);" << std::endl;
 
         // Special case: Nothing except embedded simple point lights
-        if (counter > 0 && counter == simplePointLightCounter) {
-            stream << "  let num_lights = " << counter << ";" << std::endl
+        if (mOrderedLights.size() == mSimplePointLightCounter) {
+            stream << "  let num_lights = " << mOrderedLights.size() << ";" << std::endl
                    << "  let lights = simple_point_lights;" << std::endl;
             return stream.str();
         }
@@ -773,22 +743,22 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
 
     // Load embedded area lights if necessary
     if (!skipArea && embedSimpleAreaLights) {
-        stream << "  let simple_area_lights = load_simple_area_lights(" << simplePointLightCounter << ", device, shapes);" << std::endl;
+        stream << "  let simple_area_lights = load_simple_area_lights(" << mSimplePointLightCounter << ", device, shapes);" << std::endl;
 
         // Special case: Nothing except embedded simple area lights
-        if (counter > 0 && counter == simpleAreaLightCounter) {
-            stream << "  let num_lights = " << counter << ";" << std::endl
+        if (mOrderedLights.size() == mSimpleAreaLightCounter) {
+            stream << "  let num_lights = " << mOrderedLights.size() << ";" << std::endl
                    << "  let lights = simple_area_lights;" << std::endl;
             return stream.str();
         }
     }
 
     // Write out basic information and start light table
-    stream << "  let num_lights = " << counter << ";" << std::endl
+    stream << "  let num_lights = " << mOrderedLights.size() << ";" << std::endl
            << "  let lights = @|id:i32| {" << std::endl;
 
     if (embedSimplePointLights) {
-        stream << "    if id < " << simplePointLightCounter << " {" << std::endl
+        stream << "    if id < " << mSimplePointLightCounter << " {" << std::endl
                << "      simple_point_lights(id)" << std::endl
                << "    }" << std::endl;
     }
@@ -799,8 +769,8 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
         else
             stream << "    if ";
 
-        stream << "id < " << simpleAreaLightCounter + simplePointLightCounter << " {" << std::endl
-               << "      simple_area_lights(id - " << simplePointLightCounter << ")" << std::endl
+        stream << "id < " << mSimpleAreaLightCounter + mSimplePointLightCounter << " {" << std::endl
+               << "      simple_area_lights(id - " << mSimplePointLightCounter << ")" << std::endl
                << "    }" << std::endl;
     }
 
@@ -808,22 +778,14 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
         stream << "    else {" << std::endl;
     stream << "    match(id) {" << std::endl;
 
-    size_t counter2 = simplePointLightCounter + simpleAreaLightCounter;
-    for (const auto& pair : lights) {
-        const auto light = pair.second;
+    counter = mSimplePointLightCounter + mSimpleAreaLightCounter;
+    for (auto it = non_e_it; it != mOrderedLights.end(); ++it, ++counter) {
+        const auto light = it->second;
 
         if (skip(light))
             continue;
 
-        const bool isSPL = embedSimplePointLights && is_simple_point_light(light);
-        const bool isSAL = embedSimpleAreaLights && is_simple_area_light(light);
-        if (!isSPL && !isSAL) {
-            stream << "      " << counter2;
-
-            stream << " => light_" << LoaderUtils::escapeIdentifier(pair.first)
-                   << "," << std::endl;
-            ++counter2;
-        }
+        stream << "      " << counter << " => light_" << LoaderUtils::escapeIdentifier(it->first) << "," << std::endl;
     }
 
     stream << "      _ => make_null_light(id)" << std::endl;
@@ -837,24 +799,61 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
     return stream.str();
 }
 
-void LoaderLight::setupAreaLights(LoaderContext& ctx)
+void LoaderLight::prepare(LoaderContext& ctx)
 {
-    uint32 counter = 0;
-    for (const auto& pair : ctx.Scene.lights()) {
-        const auto light = pair.second;
+    IG_LOG(L_DEBUG) << "Prepare lights" << std::endl;
+    sortLights(ctx);
 
+    // Setup area light registration
+    setupAreaLights();
+}
+
+void LoaderLight::sortLights(LoaderContext& ctx)
+{
+    const auto& lights = ctx.Scene.lights();
+    mOrderedLights.reserve(lights.size());
+    for (const auto& p : lights)
+        mOrderedLights.emplace_back(p);
+
+    // Partition based on types
+    auto spl_it = std::partition(mOrderedLights.begin(), mOrderedLights.end(), [](const auto& p) { return is_simple_point_light(p.second); });
+    auto sal_it = std::partition(spl_it, mOrderedLights.end(), [](const auto& p) { return is_simple_area_light(p.second); });
+
+    mSimplePointLightCounter = std::distance(mOrderedLights.begin(), spl_it);
+    mSimpleAreaLightCounter  = std::distance(spl_it, sal_it);
+}
+
+void LoaderLight::setupAreaLights()
+{
+    for (size_t id = 0; id < mOrderedLights.size(); ++id) {
+        const auto& light = mOrderedLights[id].second;
         if (light->pluginType() == "area") {
-            const std::string entity              = light->property("entity").getString();
-            ctx.Environment.AreaLightsMap[entity] = counter;
+            const std::string entity = light->property("entity").getString();
+            mAreaLights[entity]      = id;
         }
-
-        ++counter;
     }
 }
 
-bool LoaderLight::hasAreaLights(const LoaderContext& ctx)
+void LoaderLight::embedLights(LoaderContext& ctx)
 {
-    return !ctx.Environment.AreaLightsMap.empty();
+    constexpr size_t MaxSimpleInlineLights = 10;
+
+    const size_t simpleLightCounter   = mSimplePointLightCounter + mSimpleAreaLightCounter;
+    const bool embedSimpleLights      = simpleLightCounter > MaxSimpleInlineLights;
+    const bool embedSimplePointLights = mSimplePointLightCounter > 0 && embedSimpleLights;
+    const bool embedSimpleAreaLights  = mSimpleAreaLightCounter > 0 && embedSimpleLights;
+
+    // Export simple point lights
+    if (embedSimplePointLights)
+        exportSimplePointLights(ctx);
+    else
+        mSimplePointLightCounter = 0;
+
+    // Export simple area lights
+    if (embedSimpleAreaLights)
+        exportSimpleAreaLights(ctx);
+    else
+        mSimpleAreaLightCounter = 0;
 }
 
 std::filesystem::path LoaderLight::generateLightSelectionCDF(LoaderContext& ctx)
@@ -865,21 +864,19 @@ std::filesystem::path LoaderLight::generateLightSelectionCDF(LoaderContext& ctx)
     if (data != ctx.ExportedData.end())
         return std::any_cast<std::string>(data->second);
 
-    if (ctx.Scene.lights().empty())
+    if (mOrderedLights.empty())
         return {}; // Fallback to null light selector
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/light_cdf.bin";
 
     std::vector<float> estimated_powers;
-    estimated_powers.reserve(ctx.Scene.lights().size());
-    for (const auto& pair : ctx.Scene.lights()) {
-        const auto light = pair.second;
-
+    estimated_powers.reserve(mOrderedLights.size());
+    for (const auto& pair : mOrderedLights) {
         bool found = false;
         for (size_t i = 0; _generators[i].Loader; ++i) {
-            if (_generators[i].Name == light->pluginType()) {
-                float power = _generators[i].Power(pair.first, light, ctx);
+            if (_generators[i].Name == pair.second->pluginType()) {
+                float power = _generators[i].Power(pair.second, ctx);
                 estimated_powers.push_back(power);
                 // std::cout << power << std::endl;
                 found = true;

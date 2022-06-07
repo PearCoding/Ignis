@@ -128,7 +128,7 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     if (useUniformLS || ctx.Scene.lights().size() <= 1) {
         stream << "  let light_selector = make_uniform_light_selector(num_lights);" << std::endl;
     } else {
-        auto light_cdf = LoaderLight::generateLightSelectionCDF(ctx);
+        auto light_cdf = ctx.Lights->generateLightSelectionCDF(ctx);
         if (light_cdf.empty()) {
             stream << "  let light_selector = make_null_light_selector();" << std::endl;
         } else {
@@ -167,7 +167,7 @@ static void volpath_body_loader(std::ostream& stream, const std::string&, const 
     if (useUniformLS || ctx.Scene.lights().size() <= 1) {
         stream << "  let light_selector = make_uniform_light_selector(num_lights);" << std::endl;
     } else {
-        auto light_cdf = LoaderLight::generateLightSelectionCDF(ctx);
+        auto light_cdf = ctx.Lights->generateLightSelectionCDF(ctx);
         if (light_cdf.empty()) {
             stream << "  let light_selector = make_null_light_selector();" << std::endl;
         } else {
@@ -198,7 +198,7 @@ static std::string ppm_light_camera_generator(LoaderContext& ctx)
     stream << ShaderUtils::generateDatabase() << std::endl;
 
     ShadingTree tree(ctx);
-    stream << LoaderLight::generate(tree, false) << std::endl;
+    stream << ctx.Lights->generate(tree, false) << std::endl;
 
     stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
     stream << "  let emitter = make_ppm_light_emitter(num_lights, lights, iter);" << std::endl;

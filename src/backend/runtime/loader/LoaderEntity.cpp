@@ -1,5 +1,6 @@
 #include "LoaderEntity.h"
 #include "Loader.h"
+#include "LoaderLight.h"
 #include "Logger.h"
 #include "bvh/SceneBVHAdapter.h"
 #include "serialization/VectorSerializer.h"
@@ -100,7 +101,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
         // Register name for lights to associate with
         uint32 materialID = 0;
-        if (ctx.Environment.AreaLightsMap.count(pair.first) > 0) {
+        if (ctx.Lights->isAreaLight(pair.first) > 0) {
             ctx.Environment.EmissiveEntities.insert({ pair.first, Entity{ transform, pair.first, shapeName, bsdfName } });
 
             // It is a unique material
