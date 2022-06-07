@@ -696,7 +696,6 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
 
     const bool embedSimplePointLights = mSimplePointLightCounter > 0;
     const bool embedSimpleAreaLights  = mSimpleAreaLightCounter > 0;
-    const bool embedSimpleLights      = embedSimplePointLights || embedSimpleAreaLights;
 
     // This will be used for now
     auto skip = [&](const std::shared_ptr<Parser::Object>& light) { return skipArea && light->pluginType() == "area"; };
@@ -757,10 +756,13 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
     stream << "  let num_lights = " << mOrderedLights.size() << ";" << std::endl
            << "  let lights = @|id:i32| {" << std::endl;
 
+    bool embedded = false;
     if (embedSimplePointLights) {
         stream << "    if id < " << mSimplePointLightCounter << " {" << std::endl
                << "      simple_point_lights(id)" << std::endl
                << "    }" << std::endl;
+
+        embedded = true;
     }
 
     if (!skipArea && embedSimpleAreaLights) {
@@ -772,9 +774,11 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
         stream << "id < " << mSimpleAreaLightCounter + mSimplePointLightCounter << " {" << std::endl
                << "      simple_area_lights(id - " << mSimplePointLightCounter << ")" << std::endl
                << "    }" << std::endl;
+
+        embedded = true;
     }
 
-    if (embedSimpleLights)
+    if (embedded)
         stream << "    else {" << std::endl;
     stream << "    match(id) {" << std::endl;
 
@@ -790,7 +794,7 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
 
     stream << "      _ => make_null_light(id)" << std::endl;
 
-    if (embedSimpleLights)
+    if (embedded)
         stream << "    }" << std::endl;
 
     stream << "    }" << std::endl
