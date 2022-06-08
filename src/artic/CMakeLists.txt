@@ -27,6 +27,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_gpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/material.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/medium.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/pdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/phase.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pipeline.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/registry.art
@@ -67,7 +68,6 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/cie.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/env.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/mix.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/point.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/spot.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/sun.art

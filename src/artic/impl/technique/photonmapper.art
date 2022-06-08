@@ -5,20 +5,24 @@ struct Photon {
     eta:      f32,   // The eta at this point
     radiance: Color, // The carried power
     depth:    i32,   // The depth, with 0 = on the light
-} // size = 12
+    // norm:     Vec3,  // The position in world space
+}
+static photon_size = 12:i32;//16:i32;
 
 struct LightCache {
     max_count: i32,
     count:     i32,
     splat:     fn (Photon) -> (),
+    get  :     fn (i32) -> Photon,
     query:     fn (Vec3, f32, fn (Photon) -> Color) -> Color
 }
 
 fn @load_ppm_photon(off: i32, buffer: DeviceBuffer) -> Photon {
-    let idx = 4 /* Header */ + off * 12;
+    let idx = 4 /* Header */ + off * photon_size;
     let a1  = buffer.load_vec4(idx + 0);
     let a2  = buffer.load_vec4(idx + 4);
     let a3  = buffer.load_vec4(idx + 8);
+    // let a4  = buffer.load_vec4(idx + 12);
 
     Photon {
         in_dir   = make_vec3(a1.x, a1.y, a1.z),
@@ -26,15 +30,17 @@ fn @load_ppm_photon(off: i32, buffer: DeviceBuffer) -> Photon {
         pos      = make_vec3(a2.x, a2.y, a2.z),
         eta      = a2.w,
         radiance = make_color(a3.x, a3.y, a3.z, 1),
-        depth    = bitcast[i32](a3.w)
+        depth    = bitcast[i32](a3.w),
+        // norm     = make_vec3(a4.x, a4.y, a4.z)
     }
 }
 
 fn @store_ppm_photon(photon: Photon, off: i32, buffer: DeviceBuffer) -> () {
-    let idx = 4 /* Header */ + off * 12;
+    let idx = 4 /* Header */ + off * photon_size;
     buffer.store_vec4(idx + 0, make_vec4(photon.in_dir.x, photon.in_dir.y, photon.in_dir.z, bitcast[f32](photon.light)));
     buffer.store_vec4(idx + 4, make_vec4(photon.pos.x, photon.pos.y, photon.pos.z, photon.eta));
     buffer.store_vec4(idx + 8, make_vec4(photon.radiance.r, photon.radiance.g, photon.radiance.b, bitcast[f32](photon.depth)));
+    // buffer.store_vec4(idx + 12, make_vec4(photon.norm.x, photon.norm.y, photon.norm.z, 0));
 }
 
 // Epanechnikov kernel
@@ -60,6 +66,7 @@ fn @make_ppm_lightcache(device: Device, photon_count: i32, scene_bbox: BBox) -> 
             let id = light_cache_buffer.add_atomic_i32(0, 1);
             store_ppm_photon(photon, id, light_cache_buffer)
         },
+        get = @ |id| load_ppm_photon(id, light_cache_buffer),
         query = @ |pos, radius, body| -> Color {
             if radius <= flt_eps || actual_photon_count == 0 { return(color_builtins::black) }
 
@@ -156,9 +163,7 @@ fn @make_ppm_light_emitter(num_lights: i32, lights: LightTable, iter: i32) -> Ra
         let light_sample    = @sample_emission(rnd);
         
         let ray      = make_ray(light_sample.pos, light_sample.dir, select(light.infinite, 0:f32, offset), flt_max);
-        let pdf      = pdf_lightpick * light_sample.pdf_area * light_sample.pdf_dir;
-        let cos_term = math_builtins::fabs(light_sample.cos); // TODO: Maybe this is something for the actual emitter?
-        let radiance = color_mulf(light_sample.intensity, safe_div(cos_term, pdf));
+        let radiance = color_mulf(light_sample.intensity, safe_div(math_builtins::fabs(light_sample.cos), pdf_lightpick));
         
         let payload = wrap_ppmraypayload(PPMRayPayload {
             contrib         = radiance,
@@ -197,7 +202,8 @@ fn @make_ppm_light_renderer(max_path_len: i32, _aovs: AOVTable, light_cache: Lig
                         pos      = surf.point, 
                         eta      = pt.eta,   
                         radiance = pt.contrib,
-                        depth    = pt.depth
+                        depth    = pt.depth,
+                        // norm     = surf.local.col(2)
                     });
             }
         }
@@ -272,7 +278,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
     } else {
         @|c: Color| c
     };
-
+    
     let aov_di      = @aovs(AOV_PPM_DIRECT);
     let aov_merging = @aovs(AOV_PPM_MERGING);
 
@@ -415,7 +421,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
     Technique {
         on_hit         = on_hit,
         on_miss        = on_miss,
-        on_shadow      = TechniqueNoShadowFunction,
+        on_shadow      = TechniqueNoShadowFunction, //on_shadow,
         on_bounce      = on_bounce,
         on_shadow_hit  = TechniqueNoShadowHitFunction,
         on_shadow_miss = TechniqueNoShadowMissFunction,
@@ -436,8 +442,8 @@ fn @ppm_handle_before_iteration(device: Device, iter: i32, variant: i32, photon_
 // We could use a LBVH instead of this simple voxel grid,
 // it is more complex to implement however and kept as an exercise for the reader :P
 static PPM_GRID_SIZE = 128:i32;
-fn @ppm_get_light_cache_buffer(device: Device, photon_count: i32)  = device.request_buffer("__ppm_light_cache",  4 /* Header */ + photon_count * 12, 0);
-fn @ppm_get_light_cache_buffer2(device: Device, photon_count: i32) = device.request_buffer("__ppm_light_cache2", 4 /* Header */ + photon_count * 12, 0);
+fn @ppm_get_light_cache_buffer(device: Device, photon_count: i32)  = device.request_buffer("__ppm_light_cache",  4 /* Header */ + photon_count * photon_size, 0);
+fn @ppm_get_light_cache_buffer2(device: Device, photon_count: i32) = device.request_buffer("__ppm_light_cache2", 4 /* Header */ + photon_count * photon_size, 0);
 fn @ppm_get_grid_cache_count_buffer(device: Device)                = device.request_buffer("__ppm_grid_cache_count",   PPM_GRID_SIZE * PPM_GRID_SIZE * PPM_GRID_SIZE, 0);
 fn @ppm_get_grid_cache_offset_buffer(device: Device)               = device.request_buffer("__ppm_grid_cache_offset",  PPM_GRID_SIZE * PPM_GRID_SIZE * PPM_GRID_SIZE, 0);
 fn @ppm_get_grid_cache_offset_buffer2(device: Device)              = device.request_buffer("__ppm_grid_cache_offset2", PPM_GRID_SIZE * PPM_GRID_SIZE * PPM_GRID_SIZE, 0);

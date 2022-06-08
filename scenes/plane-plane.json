@@ -1,0 +1,53 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 6
+  },
+  "camera": {
+    "type": "perspective",
+    "transform": {"lookat": {"direction":[0,0,1], "origin": [0,0,-2], "up": [0,1,0]}},
+    "fov": 40
+  },
+  "film": {
+    "size": [1024, 1024]
+  },
+  "textures": [],
+  "bsdfs": [
+    {
+      "name": "white",
+      "type": "diffuse",
+      "reflectance": [1,1,1]
+    }
+  ],
+  "shapes": [
+		{"type":"rectangle", "name":"plane", "width":1, "height":1, "transform": {"rotate": [90,0,0]}}
+  ],
+  "entities": [
+    {
+      "name": "bottom",
+      "shape": "plane",
+      "bsdf": "white",
+      "transform": {"translate": [0,-0.5,0], "rotate": [180,0,0]}
+    },
+    {
+      "name": "top",
+      "shape": "plane",
+      "bsdf": "white",
+      "transform": {"translate": [0,0.5,0]}
+    },
+    {
+      "name": "back",
+      "shape": "plane",
+      "bsdf": "white",
+      "transform": {"translate": [0,0,0.5], "rotate": [90,0,0]}
+    }
+  ],
+  "lights": [
+    {
+      "name": "light",
+      "type": "area",
+      "entity": "top",
+      "radiance": [1,1,1]
+    }
+  ]
+}

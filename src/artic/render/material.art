@@ -11,7 +11,7 @@ fn @make_material(id: i32, bsdf: Bsdf, interface: MediumInterface) = Material {
     id          = id,
     bsdf        = bsdf,
     interface   = interface,
-    emission    = @ |_| make_direct_emission_value(0, color_builtins::black, 1),
+    emission    = @ |_| make_direct_emission_value(0, color_builtins::black, make_area_pdf(1)),
     is_emissive = false,
 };
 

@@ -1,28 +1,31 @@
 // Surface that emits light
 struct AreaEmitter {
-    sample_direct:   fn (Vec2, Vec3) -> (Vec3, Vec3, Vec2, f32),
+    sample_direct:   fn (Vec2, Vec3) -> (Vec3, Vec3, Vec2, Pdf, f32),
     sample_emission: fn (Vec2)       -> (Vec3, Vec3, Vec2, f32),
     normal:          fn (Vec2)       -> Vec3,
-    pdf_direct:      fn (Vec2, Vec3) -> f32,
+    pdf_direct:      fn (Vec2, Vec3) -> Pdf,
     pdf_emission:    fn (Vec2, Vec3) -> f32
 }
 
 fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
     id = id,
     sample_direct = @ |rnd, from_surf| {
-        let (pos, n, coords, area_pdf) = area.sample_direct(make_vec2(randf(rnd), randf(rnd)), from_surf.point);
-        let dir = vec3_sub(from_surf.point, pos);
-        let cos = safe_div(vec3_dot(dir, n), vec3_len(dir));
-        make_direct_sample(pos, color_f(coords), area_pdf, cos)
+        let (pos, n, coords, pdf, weight) = area.sample_direct(make_vec2(randf(rnd), randf(rnd)), from_surf.point);
+        let dir_ = vec3_sub(pos, from_surf.point);
+        let dist = vec3_len(dir_);
+        let dir  = vec3_mulf(dir_, safe_div(1, dist));
+        let cos  = -vec3_dot(dir, n);
+        make_direct_sample(pos, dir, color_mulf(color_f(coords), weight), pdf, cos, dist)
     },
     sample_emission = @ |rnd| {
         let (pos, n, coords, area_pdf) = area.sample_emission(make_vec2(randf(rnd), randf(rnd)));
         let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
-        make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color_f(coords), area_pdf, sample.pdf, sample.dir.z)
+        let weight = safe_div(1, area_pdf * sample.pdf);
+        make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color_mulf(color_f(coords), weight), area_pdf, sample.pdf, sample.dir.z)
     },
     emission     = @ |_, surf|   color_f(surf.tex_coords),
     pdf_direct   = @ |ray, surf| area.pdf_direct(surf.prim_coords, ray.org),
-    pdf_emission = @ |ray, surf| make_pdf_value(area.pdf_emission(surf.prim_coords, ray.org), cosine_hemisphere_pdf(-vec3_dot(area.normal(surf.prim_coords), ray.dir))),
+    pdf_emission = @ |ray, surf| make_emissive_pdf(area.pdf_emission(surf.prim_coords, ray.org), cosine_hemisphere_pdf(-vec3_dot(area.normal(surf.prim_coords), ray.dir))),
     delta    = false,
     infinite = false
 };
@@ -61,13 +64,16 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
     }
 
     AreaEmitter {
-        sample_direct   = @|uv, _| sample(uv),
-        sample_emission = @|uv|    sample(uv),
+        sample_direct   = @|uv, _| {
+            let s = sample(uv);
+            (s.0, s.1, s.2, make_area_pdf(s.3), safe_div(1, s.3))
+        },
+        sample_emission = @|uv| sample(uv),
         normal = @ |uv| {
             let f = (uv.x * (mesh.num_tris as f32)) as i32;
             vec3_normalize(mat3x3_mul(entity.normal_mat, mesh.face_normals(f)))
         },
-        pdf_direct   = @ |uv, _| pdf(uv),
+        pdf_direct   = @ |uv, _| make_area_pdf(pdf(uv)),
         pdf_emission = @ |uv, _| pdf(uv)
     }
 }
@@ -160,33 +166,27 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
 		let h1  = sq.y1 / math_builtins::sqrt(sum_of_prod(dir, dir, sq.y1, sq.y1));
 		let hv  = fmaf(uv.y, h1 - h0, h0);
 		let hv2 = hv * hv;
-		let yv  = select(hv2 < 1.0 - flt_eps, (hv * dir) / math_builtins::sqrt(1.0 - hv2), sq.y1);
+		let yv  = select(hv2 < 1 - 1e-6, (hv * dir) / math_builtins::sqrt(1 - hv2), sq.y1);
 
 		// 4. transform (xu,yv,z0) to entity local coords
 		let p = vec3_add(from_point, vec3_add(vec3_mulf(ex, xu), vec3_add(vec3_mulf(ey, yv), vec3_mulf(sq.n, sq.z0))));
 
-		// 5. Transform pdf_s to pdf_a
+		// 5. Get pdf
 		let pdf_s = safe_div(1, sq.s);
-		let L     = vec3_sub(p, from_point);
-		let dist2 = vec3_len2(L);
-		let ndotv = math_builtins::fabs(vec3_dot(L, normal) / math_builtins::sqrt(dist2));
-		let pdf_a = select(ndotv <= flt_eps, 0:f32, pdf_s * ndotv / dist2);
 
-        // TODO: Wrong tex coords?
-        let c0 = vec2_lerp(t0, t1, uv.x);
-        let c1 = vec2_lerp(t2, t3, uv.x);
-        let t  = vec2_lerp(c0, c1, uv.y);
-        (p, normal, t, pdf_a)
+        // Compute texture coordinates
+        let tx = vec3_dot(vec3_sub(p, origin), ex) / width;
+        let ty = vec3_dot(vec3_sub(p, origin), ey) / height;
+        let c0 = vec2_lerp(t0, t1, tx);
+        let c1 = vec2_lerp(t2, t3, tx);
+        let t  = vec2_lerp(c0, c1, ty);
+        (p, normal, t, make_solid_pdf(pdf_s), sq.s)
     }
 
-    fn @pdf_direct(uv: Vec2, from_point: Vec3) {
-        let p     = vec3_add(vec3_add(vec3_mulf(x_axis, uv.x), vec3_mulf(y_axis, uv.y)), origin);
+    fn @pdf_direct(_: Vec2, from_point: Vec3) {
 		let sq    = compute_sq(from_point);
         let pdf_s = safe_div(1, sq.s);
-		let L     = vec3_sub(p, from_point);
-		let dist2 = vec3_len2(L);
-		let ndotv = math_builtins::fabs(vec3_dot(L, normal) / math_builtins::sqrt(dist2));
-		select(ndotv <= flt_eps, 0:f32, pdf_s * ndotv / dist2)
+		make_solid_pdf(pdf_s)
     }
 
     fn @sample(uv: Vec2) {

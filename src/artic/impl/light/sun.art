@@ -1,21 +1,22 @@
 fn @make_sun_light(id: i32, dir: Vec3, scene_bbox: BBox, sun_radius: f32, color: Color) -> Light {
     let scene_radius = bbox_radius(scene_bbox) * 1.01;
+    let frame        = make_orthonormal_mat3x3(dir);
     Light {
         id = id,
-        sample_direct = @ |rnd, _| {
+        sample_direct = @ |rnd, from_surf| {
             let sample = sample_uniform_disk(randf(rnd), randf(rnd), sun_radius);
-            let ndir   = vec3_normalize(mat3x3_mul(make_orthonormal_mat3x3(dir), vec3_add(sample.pos, make_vec3(0,0,1))));
-            make_direct_sample(vec3_neg(ndir), color, sample.pdf, 1.0)
+            let ndir   = vec3_normalize(mat3x3_mul(frame, vec3_add(sample.pos, make_vec3(0,0,1))));
+            make_direct_sample(vec3_add(from_surf.point, vec3_mulf(ndir, -scene_radius)), vec3_neg(ndir), color_mulf(color, 1 / sample.pdf), make_solid_pdf(sample.pdf), 1, scene_radius)
         },
         sample_emission = @ |rnd| {
             let sample         = sample_uniform_disk(randf(rnd), randf(rnd), sun_radius);
-            let ndir           = vec3_normalize(mat3x3_mul(make_orthonormal_mat3x3(dir), vec3_add(sample.pos, make_vec3(0,0,1))));
+            let ndir           = vec3_normalize(mat3x3_mul(frame, vec3_add(sample.pos, make_vec3(0,0,1))));
             let (pos, pos_pdf) = env_sample_pos(rnd, vec3_neg(ndir), bbox_center(scene_bbox), scene_radius);
-            make_emission_sample(pos, ndir, color, pos_pdf, sample.pdf, 1.0)
+            make_emission_sample(pos, ndir, color_mulf(color, safe_div(1, pos_pdf * sample.pdf)), pos_pdf, sample.pdf, 1)
         },
         emission     = @ |_, _| color_builtins::black,
-        pdf_direct   = @ |_, _| uniform_disk_pdf(sun_radius),
-        pdf_emission = @ |_, _| make_pdf_value(env_sample_pos_pdf(scene_radius), uniform_disk_pdf(sun_radius)),
+        pdf_direct   = @ |_, _| make_solid_pdf(uniform_disk_pdf(sun_radius)),
+        pdf_emission = @ |_, _| make_emissive_pdf(env_sample_pos_pdf(scene_radius), uniform_disk_pdf(sun_radius)),
         delta    = true,
         infinite = true
     }
