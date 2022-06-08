@@ -144,7 +144,7 @@ static void path_header_loader(std::ostream& stream, const std::string&, const s
 {
     constexpr int C = 1 /* MIS */ + 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */;
     stream << "static RayPayloadComponents = " << C << ";" << std::endl
-           << "fn init_raypayload() = wrap_ptraypayload(init_ptraypayload());" << std::endl;
+           << "fn init_raypayload() = init_pt_raypayload();" << std::endl;
 }
 
 /////////////////////////
@@ -184,7 +184,7 @@ static void volpath_header_loader(std::ostream& stream, const std::string&, cons
 {
     constexpr int C = 1 /* MIS */ + 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */ + 1 /* Medium */;
     stream << "static RayPayloadComponents = " << C << ";" << std::endl
-           << "fn init_raypayload() = wrap_vptraypayload(init_vptraypayload());" << std::endl;
+           << "fn init_raypayload() = init_vpt_raypayload();" << std::endl;
 }
 
 /////////////////////////////////

@@ -117,7 +117,7 @@ struct PPMRayPayload {
     path_type:       i32, // 0 -> delta, 1 -> single diffuse bounce, 2+ -> multiple diffuse bounces
 }
 
-fn wrap_ppmraypayload(payload: PPMRayPayload) -> RayPayload {
+fn @wrap_ppmraypayload(payload: PPMRayPayload) -> RayPayload {
     let mut r : RayPayload;
     r.components(0) = payload.contrib.r;
     r.components(1) = payload.contrib.g;
@@ -129,7 +129,7 @@ fn wrap_ppmraypayload(payload: PPMRayPayload) -> RayPayload {
     r
 }
 
-fn unwrap_ppmraypayload(payload: RayPayload) = PPMRayPayload {
+fn @unwrap_ppmraypayload(payload: RayPayload) = PPMRayPayload {
     contrib         = make_color(payload.components(0), payload.components(1), payload.components(2), 1),
     depth           = payload.components(3) as i32,
     eta             = payload.components(4),

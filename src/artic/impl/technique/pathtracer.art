@@ -15,7 +15,7 @@ static AOV_PATH_NORMAL = 1;
 static AOV_PATH_DIRECT = 2;
 static AOV_PATH_NEE    = 3;
 
-fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
+fn @wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     let mut r : RayPayload;
     r.components(0) = payload.inv_pdf;
     r.components(1) = payload.contrib.r;
@@ -26,19 +26,19 @@ fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     r
 }
 
-fn unwrap_ptraypayload(payload: RayPayload) = PTRayPayload {
+fn @unwrap_ptraypayload(payload: RayPayload) = PTRayPayload {
     inv_pdf = payload.components(0),
     contrib = make_color(payload.components(1), payload.components(2), payload.components(3), 1),
     depth   = payload.components(4) as i32,
     eta     = payload.components(5),
 };
 
-fn @init_ptraypayload() = PTRayPayload {
+fn @init_pt_raypayload() = wrap_ptraypayload(PTRayPayload {
     inv_pdf = 0,
     contrib = color_builtins::white,
     depth   = 1,
     eta     = 1
-};
+});
 
 fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, aovs: AOVTable, clamp_value: f32) -> Technique {
     let offset : f32  = 0.001;

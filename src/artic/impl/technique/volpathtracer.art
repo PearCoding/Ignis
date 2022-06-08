@@ -6,7 +6,7 @@ struct VPTRayPayload {
     medium:  i32,
 }
 
-fn wrap_vptraypayload(payload: VPTRayPayload) -> RayPayload {
+fn @wrap_vptraypayload(payload: VPTRayPayload) -> RayPayload {
     let mut r : RayPayload;
     r.components(0) = payload.inv_pdf;
     r.components(1) = payload.contrib.r;
@@ -18,7 +18,7 @@ fn wrap_vptraypayload(payload: VPTRayPayload) -> RayPayload {
     r
 }
 
-fn unwrap_vptraypayload(payload: RayPayload) = VPTRayPayload {
+fn @unwrap_vptraypayload(payload: RayPayload) = VPTRayPayload {
     inv_pdf = payload.components(0),
     contrib = make_color(payload.components(1), payload.components(2), payload.components(3), 1),
     depth   = payload.components(4) as i32,
@@ -26,13 +26,13 @@ fn unwrap_vptraypayload(payload: RayPayload) = VPTRayPayload {
     medium  = payload.components(6) as i32,
 };
 
-fn @init_vptraypayload() = VPTRayPayload {
+fn @init_vpt_raypayload() = wrap_vptraypayload(VPTRayPayload {
     inv_pdf = 0,
     contrib = color_builtins::white,
     depth   = 1,
     eta     = 1,
     medium  = -1
-};
+});
 
 // TODO: Implement "A null-scattering path integral formulation of light transport", (Miller et. al, 2019)
 fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, media: MediaTable, _aovs: AOVTable, clamp_value: f32) -> Technique {
