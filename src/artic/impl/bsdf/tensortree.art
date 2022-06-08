@@ -256,12 +256,7 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, up: Vec3, tree: Ten
                 if e_pdf <= flt_eps {
                     reject_bsdf_sample()
                 } else {
-                    make_option(BsdfSample {
-                        in_dir = to_global(wi),
-                        pdf    = e_pdf,
-                        color  = color_mulf(color, tree.eval(surf, wi, wo) / e_pdf),
-                        eta    = 1
-                    })
+                    make_bsdf_sample(to_global(wi), e_pdf, color_mulf(color, tree.eval(surf, wi, wo) / e_pdf), 1)
                 }
             }
         },

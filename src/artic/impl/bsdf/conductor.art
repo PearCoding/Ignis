@@ -3,7 +3,7 @@ fn @make_mirror_bsdf(surf: SurfaceElement, ks: Color) = Bsdf {
     eval   = @ |_, _| color_builtins::black,
     pdf    = @ |_, _| 0,
     sample = @ |_, out_dir, _| {
-        make_bsdf_sample(surf, vec3_reflect(out_dir, surf.local.col(2)), 1, ks, 1, false)
+        make_bsdf_sample(vec3_reflect(out_dir, surf.local.col(2)), 1, ks, 1)
     },
     is_specular = true
 };
@@ -24,7 +24,7 @@ fn @make_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Color) =
             1);
 
         let color = color_mul(ks, f);
-        make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, color, 1, false)
+        make_bsdf_sample(vec3_reflect(out_dir, n), 1, color, 1)
     },
     is_specular = true
 };
@@ -44,7 +44,7 @@ fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, f
                 let IF    = color_sub(color_builtins::white, F);
         
                 let color = color_add(color_mul(kd, IF), color_mul(ks, F));
-                make_bsdf_sample(surf, vec3_reflect(out_dir, N), 1, color, 1, false)
+                make_bsdf_sample(vec3_reflect(out_dir, N), 1, color, 1)
             },
             is_specular = true
         }
@@ -91,12 +91,7 @@ fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, f
 
                 let pdf   = s.pdf * jacob;
                 let color = color_mulf(eval(in_dir, out_dir), safe_div(1, pdf));
-                make_option(BsdfSample {
-                    in_dir = in_dir,
-                    pdf    = pdf,
-                    color  = color,
-                    eta    = 1
-                })
+                make_bsdf_sample(in_dir, pdf, color, 1)
             },
             is_specular = false
         }

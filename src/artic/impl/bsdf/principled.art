@@ -442,12 +442,7 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                 if lay_pdf <= flt_eps {
                     reject_bsdf_sample()
                 } else {
-                    make_option(BsdfSample {
-                        in_dir = in_dir,
-                        pdf    = lay_pdf,
-                        color  = color_mulf(eval(in_dir, out_dir), spread / lay_pdf),
-                        eta    = s_eta
-                    })
+                    make_bsdf_sample(in_dir, lay_pdf, color_mulf(eval(in_dir, out_dir), spread / lay_pdf), s_eta)
                 }
             }
         },

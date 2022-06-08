@@ -255,12 +255,7 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsMo
             // if pdf <= flt_eps {
             //     reject_bsdf_sample()
             // } else {
-            //     make_option(BsdfSample {
-            //         in_dir = to_global(wi),
-            //         pdf    = pdf,
-            //         color  = color_mulf(local_eval(wi, wo), 1 / pdf),
-            //         eta    = 1
-            //     })
+            //     make_bsdf_sample(to_global(wi), pdf, color_mulf(local_eval(wi, wo), 1 / pdf), 1)
             // }
 
             // Old, non optimized sampler
@@ -281,12 +276,7 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsMo
                 if e_pdf <= flt_eps {
                     reject_bsdf_sample()
                 } else {
-                    make_option(BsdfSample {
-                        in_dir = to_global(wi),
-                        pdf    = e_pdf,
-                        color  = color_mulf(local_eval(wi, wo), 1 / e_pdf),
-                        eta    = 1
-                    })
+                    make_bsdf_sample(to_global(wi), e_pdf, color_mulf(local_eval(wi, wo), 1 / e_pdf), 1)
                 }
             }
         },

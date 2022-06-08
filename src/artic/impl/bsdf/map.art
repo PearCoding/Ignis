@@ -28,12 +28,12 @@ fn @make_normalmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bs
             if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, out_dir, adjoint) {
                 if adjoint {
                     let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
-                    make_option(BsdfSample { in_dir = s.in_dir, pdf = s.pdf, color = color_mulf(s.color, fac), eta = s.eta })
+                    make_bsdf_sample(s.in_dir, s.pdf, color_mulf(s.color, fac), s.eta)
                 } else {
                     make_option(s)
                 }
             } else {
-                Option[BsdfSample]::None
+                reject_bsdf_sample()
             }
         },
         is_specular = bsdf.is_specular
@@ -61,12 +61,12 @@ fn @make_bumpmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf
             if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, out_dir, adjoint) {
                 if adjoint {
                     let fac = shading_normal_adjoint(s.in_dir, out_dir, N, surf.local.col(2));
-                    make_option(BsdfSample { in_dir = s.in_dir, pdf = s.pdf, color = color_mulf(s.color, fac), eta = s.eta })
+                    make_bsdf_sample(s.in_dir, s.pdf, color_mulf(s.color, fac), s.eta)
                 } else {
                     make_option(s)
                 }
             } else {
-                Option[BsdfSample]::None
+                reject_bsdf_sample()
             }
         },
         is_specular = bsdf.is_specular

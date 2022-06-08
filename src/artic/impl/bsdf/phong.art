@@ -15,7 +15,7 @@ fn @make_phong_bsdf(surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
         let in_dir      = mat3x3_mul(make_orthonormal_mat3x3(reflect_out), sample.dir);
         let cos         = positive_cos(in_dir, surf.local.col(2));
         let color       = color_mulf(ks, cos * (ns + 2) / (ns + 1)); // TODO: Really cos?
-        make_bsdf_sample(surf, in_dir, sample.pdf, color, 1, false)
+        make_bsdf_sample(in_dir, sample.pdf, color, 1)
     },
     is_specular = false
 };

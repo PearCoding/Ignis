@@ -9,14 +9,14 @@ fn @make_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color
 
         let fterm = fresnel(k, cos_o);
 
-        if (randf(rnd) > fterm.factor) {
+        if randf(rnd) > fterm.factor {
             // Refraction
             let t = vec3_refract(out_dir, n, k, cos_o, fterm.cos_t);
             let adjoint_term = if adjoint { k * k } else { 1 };
-            return(make_bsdf_sample(surf, t, 1, color_mulf(kt, adjoint_term), k, true))
+            make_bsdf_sample(t, 1, color_mulf(kt, adjoint_term), k)
         } else {
             // Reflection
-            make_bsdf_sample(surf, vec3_reflect(out_dir, n), 1, ks, 1, false)
+            make_bsdf_sample(vec3_reflect(out_dir, n), 1, ks, 1)
         }
     },
     is_specular = true
@@ -37,10 +37,10 @@ fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: 
 
         if fterm.total /* Ignore total */ || randf(rnd) > F {
             // Refraction
-            make_bsdf_sample(surf, vec3_neg(out_dir), 1, kt, 1 /* It is thin*/, true)
+            make_bsdf_sample(vec3_neg(out_dir), 1, kt, 1 /* It is thin*/)
         } else {
             // Reflection
-            make_bsdf_sample(surf, vec3_normalize(vec3_reflect(out_dir, N)), 1, ks, 1, false)
+            make_bsdf_sample(vec3_normalize(vec3_reflect(out_dir, N)), 1, ks, 1)
         }
     },
     is_specular = true
@@ -164,12 +164,12 @@ fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt:
             let f_pdf = s.pdf * sel_pdf;
             let is_transmission = math_builtins::signbit(cos_i * cos_o);
             let adjoint_term    = if is_transmission && adjoint { 1 / (eta * eta) } else { 1 };
-            make_option(BsdfSample {
-                in_dir = in_dir,
-                pdf    = f_pdf,
-                color  = color_mulf(eval(in_dir, out_dir), safe_div(adjoint_term, f_pdf)),
-                eta    = if !is_transmission { 1 } else { eta }
-            })
+            make_bsdf_sample(
+                in_dir,
+                f_pdf,
+                color_mulf(eval(in_dir, out_dir), safe_div(adjoint_term, f_pdf)),
+                if !is_transmission { 1 } else { eta }
+            )
         },
         is_specular = micro.is_delta,
     }
