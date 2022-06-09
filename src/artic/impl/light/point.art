@@ -2,7 +2,7 @@ fn @make_point_light(id: i32, pos: Vec3, color: Color) = Light {
     id = id,
     sample_direct = @ |_, from_surf| {
         let intensity = color_mulf(color, 1 / (4 * flt_pi));
-        let dir_ = vec3_sub(from_surf.point, pos);
+        let dir_ = vec3_sub(pos, from_surf.point);
         let dist = vec3_len(dir_);
         let dir  = vec3_mulf(dir_, safe_div(1, dist));
         make_direct_sample(pos, dir, intensity, make_area_pdf(1), 1, dist)

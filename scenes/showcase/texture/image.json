@@ -3,7 +3,7 @@
         {"filename":"base.json"}
     ],
 	"textures": [
-		{"type":"image", "name":"tex", "filename": "../../textures/Ignis.png"}
+		{"type":"image", "name":"tex", "filename": "../../textures/boats.jpg"}
 	],
 	"bsdfs": [
 		{"type":"diffuse", "name":"mat-Plane", "reflectance": "tex"}
