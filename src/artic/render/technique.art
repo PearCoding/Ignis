@@ -11,28 +11,43 @@ enum ShadowRay {
 fn @make_simple_shadow_ray(ray: Ray, color: Color)                  = ShadowRay::Simple(ray, color);
 fn @make_advanced_shadow_ray(ray: Ray, color: Color, material: i32) = ShadowRay::Advanced(ray, color, material);
 
+struct RayPayload {
+    from_camera: bool,
+    buffer:      DeviceBuffer
+}
+
+fn @make_ray_payload(is_from_camera: bool, buffer: DeviceBuffer) = RayPayload {
+    from_camera = is_from_camera,
+    buffer      = buffer
+};
+
+fn @compute_ray_payload_buffer_size(requested: i32) = round_up(requested, 4);
+
 // A technique is a combination of functions run on a single variant per iteration
 struct Technique {
-    on_hit:              fn (Ray, i32, Hit, RayPayload, SurfaceElement, Material) -> Option[Color],
-    on_miss:             fn (Ray, i32, RayPayload) -> Option[Color],
-    on_shadow:           fn (Ray, i32, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> ShadowRay,
-    on_bounce:           fn (Ray, i32, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[(Ray, RayPayload)],
-    on_shadow_hit:       fn (Ray, i32, Shader, Color) -> Option[Color], // Will only be called if renderer makes use of ShadowHandlingMode!=Simple
-    on_shadow_miss:      fn (Ray, i32, Shader, Color) -> Option[Color], // Will only be called if renderer makes use of ShadowHandlingMode!=Simple
+    on_hit:            fn (Ray, i32, Hit, RayPayload, SurfaceElement, Material) -> Option[Color],
+    on_miss:           fn (Ray, i32, RayPayload) -> Option[Color],
+    on_shadow:         fn (Ray, i32, Hit, &mut RndState, RayPayload, RayPayload, SurfaceElement, Material) -> ShadowRay,
+    on_bounce:         fn (Ray, i32, Hit, &mut RndState, RayPayload, SurfaceElement, Material) -> Option[Ray],
+    on_shadow_hit:     fn (Ray, i32, Shader, RayPayload, Color) -> Option[Color], // Will only be called if renderer makes use of ShadowHandlingMode!=Simple
+    on_shadow_miss:    fn (Ray, i32, Shader, RayPayload, Color) -> Option[Color], // Will only be called if renderer makes use of ShadowHandlingMode!=Simple
+    primary_payload:   i32, // Number of payload entries for primary rays   (hit, miss, shadow, bounce)
+    secondary_payload: i32  // Number of payload entries for secondary rays (shadow, shadow_hit, shadow_miss)
 }
 
-fn @TechniqueNoHitFunction       (_: Ray, _: i32, _: Hit, _: RayPayload, _: SurfaceElement, _: Material)                   = Option[Color]::None;
-fn @TechniqueNoMissFunction      (_: Ray, _: i32, _: RayPayload)                                                           = Option[Color]::None;
-fn @TechniqueNoShadowFunction    (_: Ray, _: i32, _: Hit, _: &mut RndState, _: RayPayload, _: SurfaceElement, _: Material) = ShadowRay::None;
-fn @TechniqueNoBounceFunction    (_: Ray, _: i32, _: Hit, _: &mut RndState, _: RayPayload, _: SurfaceElement, _: Material) = Option[(Ray, RayPayload)]::None;
-fn @TechniqueNoShadowHitFunction (_: Ray, _: i32, _: Shader, _: Color)                                                     = Option[Color]::None;
-fn @TechniqueNoShadowMissFunction(_: Ray, _: i32, _: Shader, _: Color)                                                     = Option[Color]::None;
+fn @TechniqueNoHitFunction       (_: Ray, _: i32, _: Hit, _: RayPayload, _: SurfaceElement, _: Material)                                  = Option[Color]::None;
+fn @TechniqueNoMissFunction      (_: Ray, _: i32, _: RayPayload)                                                                          = Option[Color]::None;
+fn @TechniqueNoShadowFunction    (_: Ray, _: i32, _: Hit, _: &mut RndState, _: RayPayload, _: RayPayload, _: SurfaceElement, _: Material) = ShadowRay::None;
+fn @TechniqueNoBounceFunction    (_: Ray, _: i32, _: Hit, _: &mut RndState, _: RayPayload, _: SurfaceElement, _: Material)                = Option[Ray]::None;
+fn @TechniqueNoShadowHitFunction (_: Ray, _: i32, _: Shader, _: RayPayload, _: Color)                                                     = Option[Color]::None;
+fn @TechniqueNoShadowMissFunction(_: Ray, _: i32, _: Shader, _: RayPayload, _: Color)                                                     = Option[Color]::None;
 
-type RayEmitter = fn (i32, i32, i32, i32, i32) -> (Ray, RndState, RayPayload);
-
-static MaxRayPayloadComponents = 8;
-struct RayPayload {
-    components: [f32 * 8]
+struct RayEmitter {
+    generate: fn (i32, i32, i32, i32, i32, RayPayload) -> (Ray, RndState),
+    payload:  i32 // Should be zero or the same number as in the technique for primary rays
 }
 
-fn make_empty_payload() = undef[RayPayload]();
+fn @make_ray_emitter(func: fn (i32, i32, i32, i32, i32, RayPayload) -> (Ray, RndState), payload: i32) = RayEmitter {
+    generate = func,
+    payload  = payload
+};

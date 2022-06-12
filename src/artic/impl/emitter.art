@@ -1,37 +1,41 @@
 
-type RayStateInitializer = fn () -> RayPayload;
-
-fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, sampler: PixelSampler, initState: RayStateInitializer) -> RayEmitter {
-    @ |sample, x, y, width, height| {
-        let mut hash = fnv_init();
-        hash = fnv_hash(hash, sample as u32);
-        hash = fnv_hash(hash, iter as u32);
-        hash = fnv_hash(hash, x as u32);
-        hash = fnv_hash(hash, y as u32);
-        let mut rnd = hash /*as RndState*/;
-        let (rx, ry) = sampler(&mut rnd, iter * spi + sample, x, y);
-        let kx = 2 * (x as f32 + rx) / (width as f32) - 1;
-        let ky = 1 - 2 * (y as f32 + ry) / (height as f32);
-        let ray = camera.generate_ray(&mut rnd, kx, ky);
-        
-        (ray, rnd, initState())
+fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, sampler: PixelSampler) -> RayEmitter {
+    RayEmitter {
+        generate = @ |sample, x, y, width, height, _payload| {
+            let mut hash = fnv_init();
+            hash = fnv_hash(hash, sample as u32);
+            hash = fnv_hash(hash, iter as u32);
+            hash = fnv_hash(hash, x as u32);
+            hash = fnv_hash(hash, y as u32);
+            let mut rnd = hash /*as RndState*/;
+            let (rx, ry) = sampler(&mut rnd, iter * spi + sample, x, y);
+            let kx = 2 * (x as f32 + rx) / (width as f32) - 1;
+            let ky = 1 - 2 * (y as f32 + ry) / (height as f32);
+            let ray = camera.generate_ray(&mut rnd, kx, ky);
+            
+            (ray, rnd)
+        },
+        payload = 0
     }
 }
 
-fn @make_list_emitter(rays: &[StreamRay], iter: i32, initState: RayStateInitializer) -> RayEmitter {
-    @ |sample, x, y, width, _height| {
-        let mut hash = fnv_init();
-        hash = fnv_hash(hash, sample as u32);
-        hash = fnv_hash(hash, iter as u32);
-        hash = fnv_hash(hash, x as u32);
-        hash = fnv_hash(hash, y as u32);
-        let rnd = hash /*as RndState*/;
-        let id  = y*width + x;
-        
-        let stream_ray = if id < width { rays(id) } else { StreamRay{org=make_vec3(0,0,0), dir=make_vec3(0,0,1), tmin=0, tmax=0}};
-        
-        let ray = make_ray(stream_ray.org, stream_ray.dir, stream_ray.tmin, stream_ray.tmax);
-        
-        (ray, rnd, initState())
+fn @make_list_emitter(rays: &[StreamRay], iter: i32) -> RayEmitter {
+    RayEmitter {
+        generate = @ |sample, x, y, width, _height, _payload| {
+            let mut hash = fnv_init();
+            hash = fnv_hash(hash, sample as u32);
+            hash = fnv_hash(hash, iter as u32);
+            hash = fnv_hash(hash, x as u32);
+            hash = fnv_hash(hash, y as u32);
+            let rnd = hash /*as RndState*/;
+            let id  = y*width + x;
+            
+            let stream_ray = if id < width { rays(id) } else { StreamRay{org=make_vec3(0,0,0), dir=make_vec3(0,0,1), tmin=0, tmax=0}};
+            
+            let ray = make_ray(stream_ray.org, stream_ray.dir, stream_ray.tmin, stream_ray.tmax);
+            
+            (ray, rnd)
+        },
+        payload = 0
     }
 }

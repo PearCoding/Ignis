@@ -21,8 +21,6 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
 
     ShadingTree tree(ctx);
 
-    stream << LoaderTechnique::generateHeader(ctx) << std::endl;
-
     stream << "#[export] fn ig_advanced_shadow_shader(settings: &Settings, first: i32, last: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl

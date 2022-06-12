@@ -16,10 +16,7 @@ fn @cpu_swap_primary_entry(primary: &PrimaryStream, a: i32, b: i32) -> () {
     swap(&mut primary.u(a),         &mut primary.u(b));
     swap(&mut primary.v(a),         &mut primary.v(b));
     swap(&mut primary.rnd(a),       &mut primary.rnd(b));
-
-    for c in unroll(0, MaxRayPayloadComponents) {
-        swap(&mut primary.user(c)(a), &mut primary.user(c)(b));
-    }
+    swap(&mut primary.flags(a),     &mut primary.flags(b));
 }
 
 fn @cpu_swap_secondary_entry(secondary: &SecondaryStream, a: i32, b: i32) -> () {
@@ -186,11 +183,8 @@ fn @cpu_compact_primary(primary: &PrimaryStream, vector_width: i32, vector_compa
 
                     cpu_compact_ray_stream(primary2.rays, k + j, i + j, mask);
 
-                    primary2.rnd(k + j) = bitcast[u32](rv_compact(bitcast[f32](primary2.rnd(i + j)), mask));
-                    for c in unroll(0, MaxRayPayloadComponents) {
-                        primary2.user(c)(k + j) = rv_compact(primary2.user(c)(i + j), mask);
-                    }
-
+                    primary2.rnd(k + j)   = bitcast[u32](rv_compact(bitcast[f32](primary2.rnd(i + j)), mask));
+                    primary2.flags(k + j) = bitcast[i32](rv_compact(bitcast[f32](primary2.flags(i + j)), mask));
                     k += cpu_popcount32(rv_ballot(mask));
                 });
             }
@@ -200,11 +194,8 @@ fn @cpu_compact_primary(primary: &PrimaryStream, vector_width: i32, vector_compa
                 if id >= 0 {
                     primary2.rays.id(k) = id;
                     cpu_move_ray_stream(primary2.rays, k, i);
-                    primary2.rnd(k) = primary2.rnd(i);
-
-                    for c in unroll(0, MaxRayPayloadComponents) {
-                        primary2.user(c)(k) = primary2.user(c)(i);
-                    }
+                    primary2.rnd(k)   = primary2.rnd(i);
+                    primary2.flags(k) = primary2.flags(i);
                     k++;
                 }
             } 
@@ -258,6 +249,7 @@ fn @cpu_compact_secondary(secondary: &SecondaryStream, vector_width: i32, vector
 fn @cpu_generate_rays( primary: PrimaryStream
                      , capacity: i32
                      , emitter: RayEmitter
+                     , primary_payloads: DeviceBuffer
                      , id: &mut i32
                      , xmin: i32
                      , ymin: i32
@@ -268,29 +260,33 @@ fn @cpu_generate_rays( primary: PrimaryStream
                      , spi: i32
                      , vector_width: i32
                      ) -> i32 {
-    let write_ray = make_ray_stream_writer(primary.rays, 1);
-    let write_rnd = make_primary_stream_rnd_state_writer(primary, 1);
-    let write_payload = make_primary_stream_payload_writer(primary, 1);
-    let first_id = *id;
+    let write_ray   = make_ray_stream_writer(primary.rays, 1);
+    let write_state = make_primary_stream_ray_state_writer(primary, 1);
+    let first_id    = *id;
     let (tile_width, tile_height) = (xmax - xmin, ymax - ymin);
     let num_rays = cpu_intrinsics.min(spi * tile_width * tile_height - first_id, capacity - primary.size);
     let tile_div = make_fast_div(tile_width as u32);
+
+    let primary_payload_slice = compute_ray_payload_buffer_size(emitter.payload);
+
     for i, _ in vectorized_range(vector_width, 0, num_rays) {
         let in_tile_id = first_id + i;
 
         // Compute x, y of ray within tile
-        let sample = in_tile_id % spi;
+        let sample        = in_tile_id % spi;
         let in_tile_pixel = in_tile_id / spi;
         let in_tile_y = fast_div(tile_div, in_tile_pixel as u32) as i32;
         let in_tile_x = in_tile_pixel - in_tile_y * tile_width;
         let x = xmin + in_tile_x;
         let y = ymin + in_tile_y;
         let cur_ray = primary.size + i;
-        let (ray, rnd, payload) = @emitter(sample, x, y, film_width, film_height);
+        let ray_id  = y * film_width + x + film_width * film_height * sample;
+
+        let primary_payload = make_ray_payload(true, shift_device_buffer(ray_id * primary_payload_slice, primary_payload_slice, primary_payloads));
+        let (ray, rnd)      = emitter.generate(sample, x, y, film_width, film_height, primary_payload);
         write_ray(cur_ray, 0, ray);
-        write_rnd(cur_ray, 0, rnd);
-        write_payload(cur_ray, 0, payload);
-        primary.rays.id(cur_ray) = y * film_width + x;
+        write_state(cur_ray, 0, RayState{ rnd = rnd, flags = 0 });
+        primary.rays.id(cur_ray) = ray_id;
     }
     
     *id = first_id + num_rays;
@@ -312,7 +308,11 @@ fn @cpu_generate_rays_handler(size: i32
     let mut primary : PrimaryStream;
     ignis_cpu_get_primary_stream(&mut primary, capacity);
     primary.size = size;
-    cpu_generate_rays(primary, capacity, emitter, id, xmin, ymin, xmax, ymax, work_info.width, work_info.height, spi, vector_width)
+
+    let primary_payload_slice = compute_ray_payload_buffer_size(emitter.payload);
+    let primary_payloads      = request_cpu_buffer("__primary_payloads", primary_payload_slice * work_info.width * work_info.height * spi, 0);
+
+    cpu_generate_rays(primary, capacity, emitter, primary_payloads, id, xmin, ymin, xmax, ymax, work_info.width, work_info.height, spi, vector_width)
 }
 
 // Traverse functions ------------------------------------------------------------------
@@ -349,33 +349,40 @@ fn @cpu_traverse_secondary(scene: SceneGeometry, min_max: MinMax, secondary: &Se
 }
 
 // Hit shader ------------------------------------------------------------------
-fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: Shader, scene: Scene, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream,
+                  shader: Shader, scene: Scene, technique: Technique, accumulate: FilmAccumulator, spi: i32,
+                  primary_payloads: DeviceBuffer, secondary_payloads: DeviceBuffer,
+                  begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_shade_specialized(entity_id2: i32, primary2: &PrimaryStream, secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
         let read_primary_ray        = make_ray_stream_reader(primary2.rays, 1);
         let read_primary_hit        = make_primary_stream_hit_reader(*primary2, 1);
-        let read_primary_rnd_state  = make_primary_stream_rnd_state_reader(*primary2, 1);
-        let read_primary_payload    = make_primary_stream_payload_reader(*primary2, 1);
+        let read_primary_ray_state  = make_primary_stream_ray_state_reader(*primary2, 1);
         let write_primary_ray       = make_ray_stream_writer(primary2.rays, 1);
         let write_secondary_ray     = make_ray_stream_writer(secondary2.rays, 1);
-        let write_primary_rnd_state = make_primary_stream_rnd_state_writer(*primary2, 1);
-        let write_primary_payload   = make_primary_stream_payload_writer(*primary2, 1);
+        let write_primary_ray_state = make_primary_stream_ray_state_writer(*primary2, 1);
         
+        let primary_payload_slice   = compute_ray_payload_buffer_size(technique.primary_payload);
+        let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload);
+
         let entities  = scene.database.entities;
         let shapes    = scene.database.shapes;
-        let on_hit    = path_tracer.on_hit;
-        let on_shadow = path_tracer.on_shadow;
-        let on_bounce = path_tracer.on_bounce;
+        let on_hit    = technique.on_hit;
+        let on_shadow = technique.on_shadow;
+        let on_bounce = technique.on_bounce;
         let entity    = entities(entity_id2);
         let shape     = shapes(entity.shape_id);
         for i, r_vector_width in vectorized_range(vector_width, begin2, end2) {
             let ray     = read_primary_ray(i, 0);
             let hit     = read_primary_hit(i, 0);
-            let mut rnd = read_primary_rnd_state(i, 0);
-            let payload = read_primary_payload(i, 0);
+            let state   = read_primary_ray_state(i, 0);
             let ray_id  = primary2.rays.id(i);
-            let pixel   = ray_id;
+            let pixel   = ray_id / spi;
+            let mut rnd = state.rnd;
+
+            let primary_payload   = make_ray_payload((state.flags & 0x1) == 0, shift_device_buffer(ray_id * primary_payload_slice, primary_payload_slice, primary_payloads));
+            let secondary_payload = make_ray_payload(false, shift_device_buffer(ray_id * secondary_payload_slice, secondary_payload_slice, secondary_payloads));
 
             let local_ray = transform_ray(ray, entity.local_mat);
             let lcl_surf  = shape.surface_element(local_ray, hit);
@@ -383,7 +390,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
             let mat       = @shader(ray, hit, glb_surf);
-            let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, payload, glb_surf, mat) { color } else { color_builtins::black };
+            let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, primary_payload, glb_surf, mat) { color } else { color_builtins::black };
             
             for lane in unroll(0, r_vector_width) {
                 let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
@@ -398,7 +405,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             }
 
             // Compute shadow rays
-            match @on_shadow(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
+            match @on_shadow(ray, pixel, hit, &mut rnd, primary_payload, secondary_payload, glb_surf, mat) {
                 ShadowRay::Simple(new_ray, color) => {
                     write_secondary_ray(i, 0, new_ray);
                     secondary2.mat_id(i)  = mat.id + 1;
@@ -421,10 +428,9 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             }
 
             // Sample new rays
-            if let Option[(Ray, RayPayload)]::Some(new_ray, new_payload) = @on_bounce(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
+            if let Option[Ray]::Some(new_ray) = @on_bounce(ray, pixel, hit, &mut rnd, primary_payload, glb_surf, mat) {
                 write_primary_ray(i, 0, new_ray);
-                write_primary_rnd_state(i, 0, rnd);
-                write_primary_payload(i, 0, new_payload);
+                write_primary_ray_state(i, 0, RayState{rnd=rnd, flags=0x1});
             } else {
                 primary2.rays.id(i) = -1;
             }
@@ -433,7 +439,19 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
     $cpu_shade_specialized(entity_id, primary, secondary, begin, end);
 }
 
-fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tracer: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, vector_width: i32) -> () {
+fn @cpu_request_payload_buffers(technique: Technique, spi: i32) {
+    let work_info = get_work_info();
+
+    let primary_payload_slice   = compute_ray_payload_buffer_size(technique.primary_payload);
+    let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload);
+
+    let primary_payloads   = request_cpu_buffer("__primary_payloads", primary_payload_slice * work_info.width * work_info.height * spi, 0);
+    let secondary_payloads = request_cpu_buffer("__secondary_payloads", secondary_payload_slice * work_info.width * work_info.height * spi, 0);
+
+    (primary_payloads, secondary_payloads)
+}
+
+fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, technique: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut primary : PrimaryStream;
@@ -441,25 +459,33 @@ fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tra
     let mut secondary : SecondaryStream;
     ignis_cpu_get_secondary_stream_const(&mut secondary);
 
+    let (primary_payloads, secondary_payloads) = cpu_request_payload_buffers(technique, spi);
+
     let accumulator = if !use_framebuffer { make_null_accumulator() } else { make_standard_accumulator(film_pixels, spi) };
-    cpu_hit_shade(entity_id, primary, secondary, shader, scene, path_tracer, accumulator, begin, end, vector_width);
+    cpu_hit_shade(entity_id, primary, secondary, shader, scene, technique, accumulator, spi, primary_payloads, secondary_payloads, begin, end, vector_width);
 }
 
 // Miss shader ------------------------------------------------------------------
-fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_miss_shade(primary: &PrimaryStream, technique: Technique, accumulate: FilmAccumulator, spi: i32,
+                   primary_payloads: DeviceBuffer,
+                   begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_miss_shade_specialized(primary2: &PrimaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
-        let read_primary_ray     = make_ray_stream_reader(primary2.rays, 1);
-        let read_primary_payload = make_primary_stream_payload_reader(*primary2, 1);
+        let read_primary_ray       = make_ray_stream_reader(primary2.rays, 1);
+        let read_primary_ray_state = make_primary_stream_ray_state_reader(*primary2, 1);
+
+        let primary_payload_slice = compute_ray_payload_buffer_size(technique.primary_payload);
         
-        let on_miss = path_tracer.on_miss;
+        let on_miss = technique.on_miss;
 
         for i, r_vector_width in vectorized_range(vector_width, begin2, end2) {
-            let ray     = read_primary_ray(i, 0);
-            let payload = read_primary_payload(i, 0);
-            let ray_id  = primary2.rays.id(i);
-            let pixel   = ray_id;
+            let ray    = read_primary_ray(i, 0);
+            let state  = read_primary_ray_state(i, 0);
+            let ray_id = primary2.rays.id(i);
+            let pixel  = ray_id / spi;
+
+            let payload = make_ray_payload((state.flags & 0x1) == 0, shift_device_buffer(ray_id * primary_payload_slice, primary_payload_slice, primary_payloads));
 
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
             let hit_color = if let Option[Color]::Some(color) = @on_miss(ray, pixel, payload) { color } else { color_builtins::black };
@@ -482,36 +508,45 @@ fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: Technique, accumulate: 
     $cpu_miss_shade_specialized(primary, begin, end);
 }
 
-fn @cpu_miss_shade_handler(path_tracer: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, vector_width: i32) -> () {
+fn @cpu_miss_shade_handler(technique: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut primary : PrimaryStream;
     ignis_cpu_get_primary_stream_const(&mut primary);
 
+    let (primary_payloads, _) = cpu_request_payload_buffers(technique, spi);
+
     let accumulator = if !use_framebuffer { make_null_accumulator() } else { make_standard_accumulator(film_pixels, spi) };
-    cpu_miss_shade(primary, path_tracer, accumulator, begin, end, vector_width);
+    cpu_miss_shade(primary, technique, accumulator, spi, primary_payloads, begin, end, vector_width);
 }
 
 // Advanced shadow shader ------------------------------------------------------------------
-fn @cpu_advanced_shadow(is_hit: bool, shader: Shader, secondary: &SecondaryStream, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_advanced_shadow(is_hit: bool, shader: Shader, secondary: &SecondaryStream, technique: Technique,
+                        accumulate: FilmAccumulator, spi: i32, secondary_payloads: DeviceBuffer,
+                        begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_advanced_shadow_specialized(secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
         let read_secondary_ray   = make_ray_stream_reader(secondary2.rays, 1);
         let read_secondary_color = make_secondary_stream_color_reader(*secondary2, 1);
         
-        let on_hit  = path_tracer.on_shadow_hit;
-        let on_miss = path_tracer.on_shadow_miss;
+        let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload);
+
+        let on_hit  = technique.on_shadow_hit;
+        let on_miss = technique.on_shadow_miss;
 
         let callback = if is_hit { on_hit } else { on_miss };
 
         for i, r_vector_width in vectorized_range(vector_width, begin2, end2) {
             let ray   = read_secondary_ray(i, 0);
             let color = read_secondary_color(i, 0);
-            let pixel = secondary2.rays.id(i);
+            let id    = secondary2.rays.id(i);
+            let pixel = id / spi;
+
+            let payload = make_ray_payload(false, shift_device_buffer(id * secondary_payload_slice, secondary_payload_slice, secondary_payloads));
 
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
-            if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, color) { 
+            if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, payload, color) { 
                 for lane in unroll(0, r_vector_width) {
                     let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
                     accumulate(j,
@@ -529,14 +564,16 @@ fn @cpu_advanced_shadow(is_hit: bool, shader: Shader, secondary: &SecondaryStrea
     $cpu_advanced_shadow_specialized(secondary, begin, end);
 }
 
-fn @cpu_advanced_shadow_handler(shader: Shader, path_tracer: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
+fn @cpu_advanced_shadow_handler(shader: Shader, technique: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut secondary : SecondaryStream;
     ignis_cpu_get_secondary_stream_const(&mut secondary);
 
+    let (_, secondary_payloads) = cpu_request_payload_buffers(technique, spi);
+
     let accumulator = if !use_framebuffer { make_null_accumulator() } else { make_standard_accumulator(film_pixels, spi) };
-    cpu_advanced_shadow(is_hit, shader, secondary, path_tracer, accumulator, begin, end, vector_width);
+    cpu_advanced_shadow(is_hit, shader, secondary, technique, accumulator, spi, secondary_payloads, begin, end, vector_width);
 }
 
 // Framebuffer & AOVs ------------------------------------------------------------------
@@ -720,6 +757,16 @@ fn @cpu_trace( scene: SceneGeometry
     }
 }
 
+fn @request_cpu_buffer(name: &[u8], size: i32, flags: i32) -> DeviceBuffer {
+    if ?size && size == 0 { // Only catch zero if the given size is zero and a constant expression
+        make_null_device_buffer()
+    } else {
+        let mut ptr : &[u8];
+        ignis_request_buffer(0, name, &mut ptr, size * sizeof[i32]() as i32, flags);
+        make_cpu_buffer(ptr, size)
+    }
+}
+
 // CPU device ----------------------------------------------------------------------
 fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_width: i32, num_cores: i32, tile_size: i32) = Device {
     id    = 0,
@@ -843,11 +890,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     },
     load_host_buffer = load_cpu_buffer,
     load_buffer = load_cpu_buffer,
-    request_buffer = @ |name, size, flags| {
-        let mut ptr : &[u8];
-        ignis_request_buffer(0, name, &mut ptr, size * sizeof[i32]() as i32, flags);
-        make_cpu_buffer(ptr, size)
-    },
+    request_buffer = request_cpu_buffer,
     make_buffer = @ |ptr, size| make_cpu_buffer(ptr, size),
     dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(0, id, filename),
     request_debug_output = @|| {

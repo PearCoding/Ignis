@@ -7,12 +7,12 @@ struct StreamRay {
 }
 
 struct Ray {
-    org: Vec3,     // Origin of the ray
-    dir: Vec3,     // Direction of the ray
+    org:     Vec3, // Origin of the ray
+    dir:     Vec3, // Direction of the ray
     inv_dir: Vec3, // Inverse of the direction
     inv_org: Vec3, // Origin multiplied by the inverse of the direction
-    tmin: f32,     // Minimum distance from the origin
-    tmax: f32      // Maximum distance from the origin
+    tmin:    f32,  // Minimum distance from the origin
+    tmax:    f32   // Maximum distance from the origin
 }
 
 type RayOctant = i32;

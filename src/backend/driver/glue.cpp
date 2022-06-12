@@ -57,10 +57,9 @@ static Settings convert_settings(const DriverRenderSettings& settings, size_t it
 
 // TODO: This can be improved in the future with a c++ reflection system
 // We assume only pointers will be added to the struct below, else the calculation has to be modified.
-constexpr size_t MaxRayPayloadComponents = sizeof(decltype(PrimaryStream::user)::e) / sizeof(decltype(PrimaryStream::user)::e[0]);
-constexpr size_t RayStreamSize           = sizeof(RayStream) / sizeof(RayStream::id);
-constexpr size_t PrimaryStreamSize       = RayStreamSize + MaxRayPayloadComponents + (sizeof(PrimaryStream) - sizeof(PrimaryStream::pad) - sizeof(PrimaryStream::size) - sizeof(PrimaryStream::rays) - sizeof(PrimaryStream::user)) / sizeof(PrimaryStream::ent_id);
-constexpr size_t SecondaryStreamSize     = RayStreamSize + (sizeof(SecondaryStream) - sizeof(SecondaryStream::pad) - sizeof(SecondaryStream::size) - sizeof(SecondaryStream::rays)) / sizeof(SecondaryStream::mat_id);
+constexpr size_t RayStreamSize       = sizeof(RayStream) / sizeof(RayStream::id);
+constexpr size_t PrimaryStreamSize   = RayStreamSize + (sizeof(PrimaryStream) - sizeof(PrimaryStream::pad) - sizeof(PrimaryStream::size) - sizeof(PrimaryStream::rays)) / sizeof(PrimaryStream::ent_id);
+constexpr size_t SecondaryStreamSize = RayStreamSize + (sizeof(SecondaryStream) - sizeof(SecondaryStream::pad) - sizeof(SecondaryStream::size) - sizeof(SecondaryStream::rays)) / sizeof(SecondaryStream::mat_id);
 
 template <typename Node, typename Object>
 struct BvhProxy {

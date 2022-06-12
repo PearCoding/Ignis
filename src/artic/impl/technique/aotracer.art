@@ -4,7 +4,7 @@ fn @make_ao_renderer() -> Technique {
     Technique {
         on_hit    = TechniqueNoHitFunction,
         on_miss   = TechniqueNoMissFunction,
-        on_shadow = @ |ray, _, _, rnd, _, surf, _| {
+        on_shadow = @ |ray, _, _, rnd, _, _, surf, _| {
             let bsdf    = make_diffuse_bsdf(surf, color_builtins::white);
             let out_dir = vec3_neg(ray.dir);
 
@@ -20,5 +20,7 @@ fn @make_ao_renderer() -> Technique {
         on_bounce      = TechniqueNoBounceFunction,
         on_shadow_hit  = TechniqueNoShadowHitFunction,
         on_shadow_miss = TechniqueNoShadowMissFunction,
+        primary_payload   = 0,
+        secondary_payload = 0,
     }
 }

@@ -1,5 +1,3 @@
-static RayPayloadComponents = MaxRayPayloadComponents;
-
 #[export]
 fn ig_render(settings: &Settings) -> () {
     let device = @get_device(settings.device);

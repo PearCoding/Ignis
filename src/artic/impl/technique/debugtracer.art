@@ -144,5 +144,7 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
         on_bounce      = TechniqueNoBounceFunction,
         on_shadow_hit  = TechniqueNoShadowHitFunction,
         on_shadow_miss = TechniqueNoShadowMissFunction,
+        primary_payload   = 0,
+        secondary_payload = 0,
     }
 }

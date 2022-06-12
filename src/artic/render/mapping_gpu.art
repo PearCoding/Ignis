@@ -26,6 +26,28 @@ fn @gpu_get_aov_image(id: i32, dev_id: i32, atomics: Atomics, spi: i32) -> AOVIm
     $getImage(ptr)
 }
 
+fn @request_gpu_buffer(dev_id: i32, name: &[u8], size: i32, flags: i32, atomics: Atomics, is_nvvm: bool) {
+    if ?size && size == 0 { // Only catch zero if the given size is zero and a constant expression
+        make_null_device_buffer()
+    } else {
+        let mut ptr : &[u8];
+        ignis_request_buffer(dev_id, name, &mut ptr, size * sizeof[i32]() as i32, flags);
+        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm)
+    }
+}
+
+fn @gpu_request_payload_buffers(dev_id: i32, technique: Technique, spi: i32, atomics: Atomics, is_nvvm: bool) {
+    let work_info = get_work_info();
+
+    let primary_payload_slice   = compute_ray_payload_buffer_size(technique.primary_payload);
+    let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload);
+
+    let primary_payloads   = request_gpu_buffer(dev_id, "__primary_payloads", primary_payload_slice * work_info.width * work_info.height * spi, 0, atomics, is_nvvm);
+    let secondary_payloads = request_gpu_buffer(dev_id, "__secondary_payloads", secondary_payload_slice * work_info.width * work_info.height * spi, 0, atomics, is_nvvm);
+
+    (primary_payloads, secondary_payloads)
+}
+
 fn @gpu_traverse_primary(primary: PrimaryStream, acc: Accelerator, min_max: MinMax, scene: SceneGeometry) -> () {
     gpu_traverse_single(
         acc,
@@ -82,10 +104,13 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
 fn @gpu_hit_shade( acc: Accelerator
              , shader: Shader
              , scene: Scene
-             , path_tracer: Technique
+             , technique: Technique
              , accumulate: FilmAccumulator
+             , spi: i32
              , primary: PrimaryStream
+             , primary_payloads: DeviceBuffer
              , secondary: SecondaryStream
+             , secondary_payloads: DeviceBuffer
              , first: i32, last: i32, ent_id: i32) -> () {
     let n = last - first;
 
@@ -94,12 +119,13 @@ fn @gpu_hit_shade( acc: Accelerator
     
     let read_primary_ray        = make_ray_stream_reader(primary.rays, 1);
     let read_primary_hit        = make_primary_stream_hit_reader(primary, 1);
-    let read_primary_rnd_state  = make_primary_stream_rnd_state_reader(primary, 1);
-    let read_primary_payload    = make_primary_stream_payload_reader(primary, 1);
+    let read_primary_ray_state  = make_primary_stream_ray_state_reader(primary, 1);
     let write_primary_ray       = make_ray_stream_writer(primary.rays, 1);
     let write_secondary_ray     = make_ray_stream_writer(secondary.rays, 1);
-    let write_primary_rnd_state = make_primary_stream_rnd_state_writer(primary, 1);
-    let write_primary_payload   = make_primary_stream_payload_writer(primary, 1);
+    let write_primary_ray_state = make_primary_stream_ray_state_writer(primary, 1);
+
+    let primary_payload_slice   = compute_ray_payload_buffer_size(technique.primary_payload);
+    let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload);
 
     gpu_exec_1d(acc, n, 64 /*block_size*/, |work_item| {
         let ray_id = first + work_item.gidx();
@@ -107,10 +133,14 @@ fn @gpu_hit_shade( acc: Accelerator
             return()
         }
 
-        let payload = read_primary_payload(ray_id, 0);
         let ray     = read_primary_ray(ray_id, 0);
-        let mut rnd = read_primary_rnd_state(ray_id, 0);
-        let pixel   = primary.rays.id(ray_id);
+        let state   = read_primary_ray_state(ray_id, 0);
+        let id      = primary.rays.id(ray_id);
+        let pixel   = id / spi;
+        let mut rnd = state.rnd;
+
+        let primary_payload   = make_ray_payload((state.flags & 0x1) == 0, shift_device_buffer(id * primary_payload_slice, primary_payload_slice, primary_payloads));
+        let secondary_payload = make_ray_payload(false, shift_device_buffer(id * secondary_payload_slice, secondary_payload_slice, secondary_payloads));
 
         let entity    = @entities(ent_id);
         let shape     = @shapes(entity.shape_id);
@@ -121,13 +151,13 @@ fn @gpu_hit_shade( acc: Accelerator
         let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
         
         let mat    = @shader(ray, hit, glb_surf);
-        let on_hit = path_tracer.on_hit;
-        if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, payload, glb_surf, mat) {
+        let on_hit = technique.on_hit;
+        if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, primary_payload, glb_surf, mat) {
             accumulate(pixel, color);
         }
 
-        let on_shadow = path_tracer.on_shadow;
-        match @on_shadow(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
+        let on_shadow = technique.on_shadow;
+        match @on_shadow(ray, pixel, hit, &mut rnd, primary_payload, secondary_payload, glb_surf, mat) {
             ShadowRay::Simple(new_ray, color) => {
                 write_secondary_ray(ray_id, 0, new_ray);
                 secondary.mat_id(ray_id)  = mat.id + 1;
@@ -149,11 +179,10 @@ fn @gpu_hit_shade( acc: Accelerator
             }
         }
 
-        let on_bounce = path_tracer.on_bounce;
-        if let Option[(Ray, RayPayload)]::Some(new_ray, new_payload) = @on_bounce(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
+        let on_bounce = technique.on_bounce;
+        if let Option[Ray]::Some(new_ray) = @on_bounce(ray, pixel, hit, &mut rnd, primary_payload, glb_surf, mat) {
             write_primary_ray(ray_id, 0, new_ray);
-            write_primary_rnd_state(ray_id, 0, rnd);
-            write_primary_payload(ray_id, 0, new_payload);
+            write_primary_ray_state(ray_id, 0, RayState{rnd = rnd, flags = 0x1});
         } else {
             primary.rays.id(ray_id) = -1;
         }
@@ -166,11 +195,12 @@ fn @gpu_hit_shade_handler(dev_id: i32
                         , entity_id: i32
                         , shader: Shader
                         , scene: Scene
-                        , path_tracer: Technique
+                        , technique: Technique
                         , begin: i32
                         , end: i32
                         , spi: i32
-                        , use_framebuffer: bool) -> () {
+                        , use_framebuffer: bool
+                        , is_nvvm: bool) -> () {
     let (film_pixels, _, _) = gpu_get_film_data(dev_id);
     
     let mut primary : PrimaryStream;
@@ -178,31 +208,39 @@ fn @gpu_hit_shade_handler(dev_id: i32
     let mut secondary : SecondaryStream;
     ignis_gpu_get_first_secondary_stream_const(dev_id, &mut secondary);
 
+    let (primary_payloads, secondary_payloads) = gpu_request_payload_buffers(dev_id, technique, spi, atomics, is_nvvm);
+
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_hit_shade(acc, shader, scene, path_tracer, accumulate, primary, secondary, begin, end, entity_id);
+    gpu_hit_shade(acc, shader, scene, technique, accumulate, spi, primary, primary_payloads, secondary, secondary_payloads, begin, end, entity_id);
 }
 
 // Shade nonhits
 fn @gpu_miss_shade( acc: Accelerator
-                , path_tracer: Technique
+                , technique: Technique
                 , accumulate: FilmAccumulator
+                , spi: i32
                 , primary: PrimaryStream
+                , primary_payloads: DeviceBuffer
                 , first: i32, last: i32) -> () {
     let n = last - first;
     
-    let read_primary_ray     = make_ray_stream_reader(primary.rays, 1);
-    let read_primary_payload = make_primary_stream_payload_reader(primary, 1);
+    let read_primary_ray       = make_ray_stream_reader(primary.rays, 1);
+    let read_primary_ray_state = make_primary_stream_ray_state_reader(primary, 1);
+    let primary_payload_slice  = compute_ray_payload_buffer_size(technique.primary_payload);
 
-    let on_miss = path_tracer.on_miss;
+    let on_miss = technique.on_miss;
     gpu_exec_1d(acc, n, 64, |work_item| {
         let ray_id = first + work_item.gidx();
         if ray_id >= last {
             return()
         }
 
-        let payload = read_primary_payload(ray_id, 0);
-        let ray     = read_primary_ray(ray_id, 0);
-        let pixel   = primary.rays.id(ray_id);
+        let ray   = read_primary_ray(ray_id, 0);
+        let state = read_primary_ray_state(ray_id, 0);
+        let id    = primary.rays.id(ray_id);
+        let pixel = id / spi;
+
+        let payload = make_ray_payload((state.flags & 0x1) == 0, shift_device_buffer(id * primary_payload_slice, primary_payload_slice, primary_payloads));
 
         if let Option[Color]::Some(color) = @on_miss(ray, pixel, payload) {
             accumulate(pixel, color);
@@ -215,35 +253,41 @@ fn @gpu_miss_shade( acc: Accelerator
 fn @gpu_miss_shade_handler(dev_id: i32
                          , acc: Accelerator
                          , atomics: Atomics
-                         , path_tracer: Technique
+                         , technique: Technique
                          , begin: i32
                          , end: i32
                          , spi: i32
-                         , use_framebuffer: bool) -> () {
+                         , use_framebuffer: bool
+                         , is_nvvm: bool) -> () {
     let (film_pixels, _, _) = gpu_get_film_data(dev_id);
 
     let mut primary: PrimaryStream;
     ignis_gpu_get_first_primary_stream_const(dev_id, &mut primary);
 
+    let (primary_payloads, _) = gpu_request_payload_buffers(dev_id, technique, spi, atomics, is_nvvm);
+
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_miss_shade(acc, path_tracer, accumulate, primary, begin, end);
+    gpu_miss_shade(acc, technique, accumulate, spi, primary, primary_payloads, begin, end);
 }
 
 // Handle advanced shadows
 fn @gpu_advanced_shadow(is_hit: bool
                       , acc: Accelerator
                       , shader: Shader
-                      , path_tracer: Technique
+                      , technique: Technique
                       , accumulate: FilmAccumulator
+                      , spi: i32
                       , secondary: SecondaryStream
+                      , secondary_payloads: DeviceBuffer
                       , first: i32, last: i32) -> () {
     let n = last - first;
 
-    let read_secondary_ray   = make_ray_stream_reader(secondary.rays, 1);
-    let read_secondary_color = make_secondary_stream_color_reader(secondary, 1);
+    let read_secondary_ray      = make_ray_stream_reader(secondary.rays, 1);
+    let read_secondary_color    = make_secondary_stream_color_reader(secondary, 1);
+    let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload);
 
-    let on_miss  = path_tracer.on_shadow_miss;
-    let on_hit   = path_tracer.on_shadow_hit;
+    let on_miss  = technique.on_shadow_miss;
+    let on_hit   = technique.on_shadow_hit;
     let callback = if is_hit { on_hit } else { on_miss };
 
     gpu_exec_1d(acc, n, 64, |work_item| {
@@ -252,9 +296,12 @@ fn @gpu_advanced_shadow(is_hit: bool
 
         let color = read_secondary_color(ray_id, 0);
         let ray   = read_secondary_ray(ray_id, 0);
-        let pixel = secondary.rays.id(ray_id);
+        let id    = secondary.rays.id(ray_id);
+        let pixel = id / spi;
 
-        if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, color) {
+        let payload = make_ray_payload(false, shift_device_buffer(id * secondary_payload_slice, secondary_payload_slice, secondary_payloads));
+
+        if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, payload, color) {
             accumulate(pixel, new_color);
         }
     });
@@ -264,19 +311,22 @@ fn @gpu_advanced_shadow_handler(dev_id: i32
                               , acc: Accelerator
                               , atomics: Atomics
                               , shader: Shader
-                              , path_tracer: Technique
+                              , technique: Technique
                               , begin: i32
                               , end: i32
                               , spi: i32
                               , use_framebuffer: bool
-                              , is_hit: bool) -> () {
+                              , is_hit: bool
+                              , is_nvvm: bool) -> () {
     let (film_pixels, _, _) = gpu_get_film_data(dev_id);
 
     let mut secondary: SecondaryStream;
     ignis_gpu_get_first_secondary_stream_const(dev_id, &mut secondary);
 
+    let (_, secondary_payloads) = gpu_request_payload_buffers(dev_id, technique, spi, atomics, is_nvvm);
+
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_advanced_shadow(is_hit, acc, shader, path_tracer, accumulate, secondary, begin, end);
+    gpu_advanced_shadow(is_hit, acc, shader, technique, accumulate, spi, secondary, secondary_payloads, begin, end);
 }
 
 fn @gpu_copy_ray( rays: RayStream
@@ -310,11 +360,7 @@ fn @gpu_copy_primary_ray( primary: PrimaryStream
         other_primary.v(dst_id)       = primary.v(src_id);
     }
     other_primary.rnd(dst_id) = primary.rnd(src_id);
-
-    // TODO: Fix slow loads/stores
-    for c in unroll(0, MaxRayPayloadComponents) {
-        other_primary.user(c)(dst_id) = primary.user(c)(src_id);
-    }
+    other_primary.flags(dst_id) = primary.flags(src_id);
 }
 
 fn @gpu_copy_secondary_ray( secondary: SecondaryStream
@@ -500,6 +546,7 @@ fn @gpu_generate_rays( primary: PrimaryStream
                      , capacity: i32
                      , acc: Accelerator
                      , emitter: RayEmitter
+                     , primary_payloads: DeviceBuffer
                      , id: &mut i32
                      , film_width: i32
                      , film_height: i32
@@ -511,11 +558,12 @@ fn @gpu_generate_rays( primary: PrimaryStream
     let num_rays     = cpu_intrinsics.min(spi * film_size - first_ray_id, capacity - first_dst_id);
     let film_div     = make_fast_div(film_width as u32);
 
-    let ray_ids       = primary.rays.id;
-    let write_ray     = make_ray_stream_writer(primary.rays, 1);
-    let write_rnd     = make_primary_stream_rnd_state_writer(primary, 1);
-    let write_payload = make_primary_stream_payload_writer(primary, 1);
-    let write_id      = @ |i: i32, _: i32, id2: i32| ray_ids(i) = id2;
+    let ray_ids     = primary.rays.id;
+    let write_ray   = make_ray_stream_writer(primary.rays, 1);
+    let write_state = make_primary_stream_ray_state_writer(primary, 1);
+    let write_id    = @ |i: i32, _: i32, id2: i32| ray_ids(i) = id2;
+
+    let primary_payload_slice = compute_ray_payload_buffer_size(emitter.payload);
 
     if num_rays <= 0 { /* TODO: Add error message! */ return(0) }
 
@@ -531,11 +579,13 @@ fn @gpu_generate_rays( primary: PrimaryStream
         let pixel  = ray_id / spi;
         let y = fast_div(film_div, pixel as u32) as i32;
         let x = pixel - y * film_width;
-        let (ray, rnd, payload) = @emitter(sample, x, y, film_width, film_height);
+
+        let payload = make_ray_payload(true, shift_device_buffer(ray_id * primary_payload_slice, primary_payload_slice, primary_payloads));
+
+        let (ray, rnd) = emitter.generate(sample, x, y, film_width, film_height, payload);
+        write_id(dst_id, 0, ray_id);
         write_ray(dst_id, 0, ray);
-        write_rnd(dst_id, 0, rnd);
-        write_payload(dst_id, 0, payload);
-        write_id(dst_id, 0, pixel);
+        write_state(dst_id, 0, RayState{rnd = rnd, flags = 0});
     });
     acc.sync();
 
@@ -546,10 +596,12 @@ fn @gpu_generate_rays( primary: PrimaryStream
 fn @gpu_generate_rays_handler(dev_id: i32
                             , size: i32
                             , capacity: i32
+                            , atomics: Atomics
                             , acc: Accelerator
                             , emitter: RayEmitter
                             , id: &mut i32
                             , spi: i32
+                            , is_nvvm: bool
                             ) -> i32 {
     let work_info = get_work_info();
 
@@ -557,7 +609,10 @@ fn @gpu_generate_rays_handler(dev_id: i32
     ignis_gpu_get_first_primary_stream(dev_id, &mut primary, capacity);
     primary.size = size;
 
-    gpu_generate_rays(primary, capacity, acc, emitter, id, work_info.width, work_info.height, spi)
+    let primary_payload_slice = compute_ray_payload_buffer_size(emitter.payload);
+    let primary_payloads      = request_gpu_buffer(dev_id, "__primary_payloads", primary_payload_slice * work_info.width * work_info.height * spi, 0, atomics, is_nvvm);
+
+    gpu_generate_rays(primary, capacity, acc, emitter,primary_payloads, id, work_info.width, work_info.height, spi)
 }
 
 fn @gpu_compact_primary( primary: PrimaryStream
@@ -790,16 +845,16 @@ fn @make_gpu_device( dev_id: i32
         )
     },
     generate_rays = @ | emitter, id, size, _xmin, _ymin, _xmax, _ymax, spi | -> i32 {
-        gpu_generate_rays_handler(dev_id, size, GPUStreamCapacity, acc, emitter, id, spi)
+        gpu_generate_rays_handler(dev_id, size, GPUStreamCapacity, atomics, acc, emitter, id, spi, is_nvvm)
     },
     handle_miss_shader = @ | path_tracer, first, last, spi, use_framebuffer | {
-        gpu_miss_shade_handler(dev_id, acc, atomics, path_tracer, first, last, spi, use_framebuffer);
+        gpu_miss_shade_handler(dev_id, acc, atomics, path_tracer, first, last, spi, use_framebuffer, is_nvvm);
     },
     handle_hit_shader = @ | entity_id, shader, scene, path_tracer, first, last, spi, use_framebuffer | {
-        gpu_hit_shade_handler(dev_id, acc, atomics, entity_id, shader, scene, path_tracer, first, last, spi, use_framebuffer);
+        gpu_hit_shade_handler(dev_id, acc, atomics, entity_id, shader, scene, path_tracer, first, last, spi, use_framebuffer, is_nvvm);
     },
     handle_advanced_shadow_shader = @ | shader, path_tracer, first, last, spi, use_framebuffer, is_hit | {
-        gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, path_tracer, first, last, spi, use_framebuffer, is_hit);
+        gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, path_tracer, first, last, spi, use_framebuffer, is_hit, is_nvvm);
     },
     present = @ || ignis_present(dev_id),
     sync    = @ || acc.sync(),
@@ -908,11 +963,7 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_buffer(dev_id, filename, &mut ptr, &mut bytesize);
         make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
     },
-    request_buffer = @ |name, size, flags| {
-        let mut ptr : &[u8];
-        ignis_request_buffer(dev_id, name, &mut ptr, size * sizeof[i32]() as i32, flags);
-        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm)
-    },
+    request_buffer = @ |name, size, flags| request_gpu_buffer(dev_id, name, size, flags, atomics, is_nvvm),
     make_buffer = @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm),
     dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(dev_id, id, filename),
     request_debug_output = @|| {

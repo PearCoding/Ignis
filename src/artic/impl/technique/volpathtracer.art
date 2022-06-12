@@ -6,33 +6,33 @@ struct VPTRayPayload {
     medium:  i32,
 }
 
-fn @wrap_vptraypayload(payload: VPTRayPayload) -> RayPayload {
-    let mut r : RayPayload;
-    r.components(0) = payload.inv_pdf;
-    r.components(1) = payload.contrib.r;
-    r.components(2) = payload.contrib.g;
-    r.components(3) = payload.contrib.b;
-    r.components(4) = payload.depth as f32;
-    r.components(5) = payload.eta;
-    r.components(6) = payload.medium as f32;
-    r
+fn @write_vptraypayload(payload: RayPayload, pt: VPTRayPayload) {
+    payload.buffer.store_vec4(0, make_vec4(pt.inv_pdf, pt.contrib.r, pt.contrib.g, pt.contrib.b));
+    payload.buffer.store_vec4(4, make_vec4(pt.depth as f32, pt.eta, pt.medium as f32, 0));
 }
 
-fn @unwrap_vptraypayload(payload: RayPayload) = VPTRayPayload {
-    inv_pdf = payload.components(0),
-    contrib = make_color(payload.components(1), payload.components(2), payload.components(3), 1),
-    depth   = payload.components(4) as i32,
-    eta     = payload.components(5),
-    medium  = payload.components(6) as i32,
-};
+fn @unwrap_vptraypayload(payload: RayPayload) -> VPTRayPayload {
+    if !payload.from_camera {
+        let c0 = payload.buffer.load_vec4(0);
+        let c1 = payload.buffer.load_vec4(4);
 
-fn @init_vpt_raypayload() = wrap_vptraypayload(VPTRayPayload {
-    inv_pdf = 0,
-    contrib = color_builtins::white,
-    depth   = 1,
-    eta     = 1,
-    medium  = -1
-});
+        VPTRayPayload {
+            inv_pdf = c0.x,
+            contrib = make_color(c0.y, c0.z, c0.w, 1),
+            depth   = c1.x as i32,
+            eta     = c1.y,
+            medium  = c1.z as i32
+        }
+    } else {
+        VPTRayPayload {
+            inv_pdf = 0,
+            contrib = color_builtins::white,
+            depth   = 1,
+            eta     = 1,
+            medium  = -1
+        }
+    }
+}
 
 // TODO: Implement "A null-scattering path integral formulation of light transport", (Miller et. al, 2019)
 fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, media: MediaTable, _aovs: AOVTable, clamp_value: f32) -> Technique {
@@ -54,6 +54,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                  , _hit: Hit
                  , rnd: &mut RndState
                  , payload: RayPayload
+                 , _secondary_payload: RayPayload
                  , surf: SurfaceElement
                  , mat: Material
                  ) -> ShadowRay {
@@ -184,13 +185,13 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                  , payload: RayPayload
                  , surf: SurfaceElement
                  , mat: Material
-                 ) -> Option[(Ray, RayPayload)] {
+                 ) -> Option[Ray] {
         let pt      = unwrap_vptraypayload(payload);
         let medium  = @media(pt.medium);
         let out_dir = vec3_neg(ray.dir);
 
         if pt.depth + 1 > max_path_len {
-            return(Option[(Ray, RayPayload)]::None)
+            return(Option[Ray]::None)
         }
 
         // Try sampling the medium
@@ -200,21 +201,19 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
             let rr_prob      = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
 
             if randf(rnd) >= rr_prob {
-                Option[(Ray, RayPayload)]::None
+                Option[Ray]::None
             } else {
                 let new_contrib = color_mulf(contrib, 1 / rr_prob);
                 // Notify other parts that the last interaction was a medium
                 let inv_pdf     = -1:f32; // 1 / (medium_sample.pdf * phase_sample.pdf); // TODO
-                make_option(
-                    make_ray(medium_sample.pos, phase_sample.in_dir, 0, flt_max),
-                    wrap_vptraypayload(VPTRayPayload {
-                        inv_pdf = inv_pdf,
-                        contrib = new_contrib,
-                        depth   = pt.depth + 1,
-                        eta     = pt.eta,
-                        medium  = pt.medium
-                    })
-                )
+                write_vptraypayload(payload, VPTRayPayload {
+                    inv_pdf = inv_pdf,
+                    contrib = new_contrib,
+                    depth   = pt.depth + 1,
+                    eta     = pt.eta,
+                    medium  = pt.medium
+                });
+                make_option(make_ray(medium_sample.pos, phase_sample.in_dir, 0, flt_max))
             }
         } else {
             // Bounce on surface
@@ -225,26 +224,24 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 let rr_prob     = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
                 
                 if randf(rnd) >= rr_prob {
-                    Option[(Ray, RayPayload)]::None
+                    Option[Ray]::None
                 } else {
                     let inv_pdf     = if mat.bsdf.is_specular { 0 } else { 1 / bsdf_sample.pdf };
                     let new_contrib = color_mulf(contrib, 1 / rr_prob);
                     
                     let is_transmission = math_builtins::signbit(vec3_dot(surf.local.col(2), bsdf_sample.in_dir));
                     let new_medium      = if is_transmission { mat.interface.pick(surf.is_entering) } else { pt.medium };
-                    make_option(
-                        make_ray(surf.point, bsdf_sample.in_dir, offset, flt_max),
-                        wrap_vptraypayload(VPTRayPayload {
-                            inv_pdf = inv_pdf,
-                            contrib = new_contrib,
-                            depth   = pt.depth + 1,
-                            eta     = pt.eta * bsdf_sample.eta,
-                            medium  = new_medium
-                        })
-                    )
+                    write_vptraypayload(payload, VPTRayPayload {
+                        inv_pdf = inv_pdf,
+                        contrib = new_contrib,
+                        depth   = pt.depth + 1,
+                        eta     = pt.eta * bsdf_sample.eta,
+                        medium  = new_medium
+                    });
+                    make_option(make_ray(surf.point, bsdf_sample.in_dir, offset, flt_max))
                 }
             } else {
-                Option[(Ray, RayPayload)]::None
+                Option[Ray]::None
             }
         }
     }
@@ -256,5 +253,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         on_bounce      = on_bounce,
         on_shadow_hit  = TechniqueNoShadowHitFunction,
         on_shadow_miss = TechniqueNoShadowMissFunction,
+        primary_payload   = 7,
+        secondary_payload = 0,
     }
 }
