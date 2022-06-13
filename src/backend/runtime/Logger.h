@@ -116,6 +116,51 @@ private:
     std::ostream mStream;
     std::mutex mMutex;
 };
+
+template <typename T>
+class FormatMemory {
+public:
+    inline explicit FormatMemory(const T& value)
+        : mValue(value)
+    {
+    }
+
+    inline const T& value() const { return mValue; }
+
+private:
+    T mValue;
+};
+
+template<typename T>
+inline std::ostream& operator<<(std::ostream& stream, const FormatMemory<T>& mem)
+{
+    T value = mem.value();
+    if(value <= T(1)) {
+        stream << value << " byte";
+        return stream;
+    }
+    else if(value < T(1024)) {
+        stream << value << " bytes";
+        return stream;
+    }
+
+    value /= T(1024);
+    if(value < T(1024)) {
+        stream << value << " kb";
+        return stream;
+    }
+
+    value /= T(1024);
+    if(value < T(1024)) {
+        stream << value << " Mb";
+        return stream;
+    }
+
+    value /= T(1024);
+    stream << value << " Gb";
+
+    return stream;
+}
 } // namespace IG
 
 #define IG_LOGGER (IG::Logger::instance())

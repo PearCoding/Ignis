@@ -47,11 +47,11 @@ public:
                 mStream.next_in  = mBuffer.data();
                 mStream.avail_in = (uInt)std::min(remaining, mBuffer.size());
                 if (mStream.avail_in == 0)
-                    IG_LOG(L_ERROR) << "Read less data than expected (" << size << " more bytes required)" << std::endl;
+                    IG_LOG(L_ERROR) << "Read less data than expected (" << FormatMemory(size) << " missing)" << std::endl;
                 mIn.read(reinterpret_cast<char*>(mBuffer.data()), mStream.avail_in);
 
                 if (!mIn.good())
-                    IG_LOG(L_ERROR) << "Could not read " << mStream.avail_in << " bytes" << std::endl;
+                    IG_LOG(L_ERROR) << "Could not read " << FormatMemory(mStream.avail_in) << std::endl;
 
                 mPos += mStream.avail_in;
             }

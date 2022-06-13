@@ -667,7 +667,7 @@ public:
             return it->second;
         }
 
-        IG_LOG(IG::L_DEBUG) << "Requested buffer " << name << " with " << size << " bytes" << std::endl;
+        IG_LOG(IG::L_DEBUG) << "Requested buffer " << name << " with " << IG::FormatMemory(size) << std::endl;
 
         void* ptr = anydsl_alloc(dev, size);
         if (ptr == nullptr) {
