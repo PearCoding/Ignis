@@ -7,32 +7,33 @@ struct VPTRayPayload {
 }
 
 fn @write_vptraypayload(payload: RayPayload, pt: VPTRayPayload) {
-    payload.buffer.store_vec4(0, make_vec4(pt.inv_pdf, pt.contrib.r, pt.contrib.g, pt.contrib.b));
-    payload.buffer.store_vec4(4, make_vec4(pt.depth as f32, pt.eta, pt.medium as f32, 0));
+    payload.store_vec4(0, make_vec4(pt.inv_pdf, pt.contrib.r, pt.contrib.g, pt.contrib.b));
+    payload.store_vec3(4, make_vec3(pt.depth as f32, pt.eta, pt.medium as f32));
 }
 
 fn @unwrap_vptraypayload(payload: RayPayload) -> VPTRayPayload {
-    if !payload.from_camera {
-        let c0 = payload.buffer.load_vec4(0);
-        let c1 = payload.buffer.load_vec4(4);
+    let c0 = payload.load_vec4(0);
+    let c1 = payload.load_vec3(4);
 
-        VPTRayPayload {
-            inv_pdf = c0.x,
-            contrib = make_color(c0.y, c0.z, c0.w, 1),
-            depth   = c1.x as i32,
-            eta     = c1.y,
-            medium  = c1.z as i32
-        }
-    } else {
-        VPTRayPayload {
-            inv_pdf = 0,
-            contrib = color_builtins::white,
-            depth   = 1,
-            eta     = 1,
-            medium  = -1
-        }
+    VPTRayPayload {
+        inv_pdf = c0.x,
+        contrib = make_color(c0.y, c0.z, c0.w, 1),
+        depth   = c1.x as i32,
+        eta     = c1.y,
+        medium  = c1.z as i32
     }
 }
+
+fn @init_vptraypayload(payload: RayPayload, _: i32, _:i32, _:i32) = write_vptraypayload(payload,
+    VPTRayPayload {
+        inv_pdf = 0,
+        contrib = color_builtins::white,
+        depth   = 1,
+        eta     = 1,
+        medium  = -1
+    });
+
+fn @make_vpt_emitter_payload_initializer() = EmitterPayloadInitializer{ init = init_vptraypayload, count = 7 };
 
 // TODO: Implement "A null-scattering path integral formulation of light transport", (Miller et. al, 2019)
 fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, media: MediaTable, _aovs: AOVTable, clamp_value: f32) -> Technique {
@@ -253,7 +254,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         on_bounce      = on_bounce,
         on_shadow_hit  = TechniqueNoShadowHitFunction,
         on_shadow_miss = TechniqueNoShadowMissFunction,
-        primary_payload   = 7,
-        secondary_payload = 0,
+        primary_payload_count   = 7,
+        secondary_payload_count = 0,
     }
 }

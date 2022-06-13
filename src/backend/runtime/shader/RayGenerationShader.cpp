@@ -43,7 +43,7 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
            << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
 
     if (ctx.IsTracer) {
-        stream << "  let emitter = make_list_emitter(device.load_rays(), iter);" << std::endl;
+        stream << "  let emitter = make_list_emitter(device.load_rays(), iter, " << ctx.CurrentTechniqueVariantInfo().GetEmitterPayloadInitializer() << "());" << std::endl;
     } else {
         stream << LoaderCamera::generate(ctx) << std::endl; // Will set `camera`
 
@@ -55,7 +55,7 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
             pixel_sampler = "make_mjitt_pixel_sampler(4, 4)";
         }
 
-        stream << "  let emitter = make_camera_emitter(camera, iter, 2, " << pixel_sampler << ");" << std::endl;
+        stream << "  let emitter = make_camera_emitter(camera, iter, spi, " << pixel_sampler << ", " << ctx.CurrentTechniqueVariantInfo().GetEmitterPayloadInitializer() << "());" << std::endl;
     }
 
     stream << end();

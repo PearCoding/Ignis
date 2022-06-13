@@ -16,30 +16,31 @@ static AOV_PATH_DIRECT = 2;
 static AOV_PATH_NEE    = 3;
 
 fn @write_ptraypayload(payload: RayPayload, pt: PTRayPayload) {
-    payload.buffer.store_vec4(0, make_vec4(pt.inv_pdf, pt.contrib.r, pt.contrib.g, pt.contrib.b));
-    payload.buffer.store_vec4(4, make_vec4(pt.depth as f32, pt.eta, 0, 0));
+    payload.store_vec4(0, make_vec4(pt.inv_pdf, pt.contrib.r, pt.contrib.g, pt.contrib.b));
+    payload.store_vec2(4, make_vec2(pt.depth as f32, pt.eta));
 }
 
 fn @unwrap_ptraypayload(payload: RayPayload) -> PTRayPayload {
-    if !payload.from_camera {
-        let c0 = payload.buffer.load_vec4(0);
-        let c1 = payload.buffer.load_vec4(4);
+    let c0 = payload.load_vec4(0);
+    let c1 = payload.load_vec2(4);
 
-        PTRayPayload {
-            inv_pdf = c0.x,
-            contrib = make_color(c0.y, c0.z, c0.w, 1),
-            depth   = c1.x as i32,
-            eta     = c1.y
-        }
-    } else {
-        PTRayPayload {
-            inv_pdf = 0,
-            contrib = color_builtins::white,
-            depth   = 1,
-            eta     = 1
-        }
+    PTRayPayload {
+        inv_pdf = c0.x,
+        contrib = make_color(c0.y, c0.z, c0.w, 1),
+        depth   = c1.x as i32,
+        eta     = c1.y
     }
 }
+
+fn @init_ptraypayload(payload: RayPayload, _: i32, _:i32, _:i32) = write_ptraypayload(payload,
+    PTRayPayload {
+        inv_pdf = 0,
+        contrib = color_builtins::white,
+        depth   = 1,
+        eta     = 1
+    });
+
+fn @make_pt_emitter_payload_initializer() = EmitterPayloadInitializer{ init = init_ptraypayload, count = 6 };
 
 fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, aovs: AOVTable, clamp_value: f32) -> Technique {
     let offset : f32  = 0.001;
@@ -238,7 +239,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
         on_bounce      = on_bounce,
         on_shadow_hit  = TechniqueNoShadowHitFunction,
         on_shadow_miss = on_shadow_miss,
-        primary_payload   = 6,
-        secondary_payload = 0,
+        primary_payload_count   = 6,
+        secondary_payload_count = 0,
     }
 }

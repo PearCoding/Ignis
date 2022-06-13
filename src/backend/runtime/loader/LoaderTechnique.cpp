@@ -50,7 +50,8 @@ static void wireframe_body_loader(std::ostream& stream, const std::string&, cons
 static TechniqueInfo wireframe_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
     TechniqueInfo info;
-    info.Variants[0].RequiresExplicitCamera = true; // We make use of the camera differential!
+    info.Variants[0].RequiresExplicitCamera    = true; // We make use of the camera differential!
+    info.Variants[0].EmitterPayloadInitializer = "make_wireframe_emitter_payload_initializer";
     return info;
 }
 
@@ -73,7 +74,8 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
         }
     }
 
-    info.Variants[0].UsesLights = true;
+    info.Variants[0].UsesLights                = true;
+    info.Variants[0].EmitterPayloadInitializer = "make_pt_emitter_payload_initializer";
 
     return info;
 }
@@ -132,8 +134,9 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
 static TechniqueInfo volpath_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
     TechniqueInfo info;
-    info.Variants[0].UsesLights = true;
-    info.Variants[0].UsesMedia  = true;
+    info.Variants[0].UsesLights                = true;
+    info.Variants[0].UsesMedia                 = true;
+    info.Variants[0].EmitterPayloadInitializer = "make_vpt_emitter_payload_initializer";
 
     return info;
 }
@@ -217,6 +220,9 @@ static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Pars
 
     info.Variants[0].LockFramebuffer = true; // We do not change the framebuffer
 
+    // info.Variants[0].EmitterPayloadInitializer = "make_ppm_emitter_payload_initializer"; // Not needed
+    info.Variants[1].EmitterPayloadInitializer = "make_ppm_emitter_payload_initializer";
+
     // Check if we have a proper defined technique
     // It is totally fine to only define the type by other means then the scene config
     if (technique) {
@@ -231,11 +237,10 @@ static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Pars
 
 static void ppm_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
 {
-    const int max_depth      = technique ? technique->property("max_depth").getInteger(8) : 8;
-    const float radius       = technique ? technique->property("radius").getNumber(0.01f) : 0.01f;
-    const float clamp_value  = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
-    const size_t max_photons = std::max(100, technique ? technique->property("photons").getInteger(1000000) : 1000000);
-    bool is_lighttracer      = ctx.CurrentTechniqueVariant == 0;
+    const int max_depth     = technique ? technique->property("max_depth").getInteger(8) : 8;
+    const float radius      = technique ? technique->property("radius").getNumber(0.01f) : 0.01f;
+    const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
+    bool is_lighttracer     = ctx.CurrentTechniqueVariant == 0;
 
     if (is_lighttracer) {
         stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
@@ -270,9 +275,9 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
            << "  let light_cache = make_ppm_lightcache(device, PPMPhotonCount, scene_bbox);" << std::endl;
 
     if (is_lighttracer)
-        stream << "  let technique = make_ppm_light_renderer(" << max_depth << ", " << max_photons << ", aovs, light_cache);" << std::endl;
+        stream << "  let technique = make_ppm_light_renderer(" << max_depth << ", aovs, light_cache);" << std::endl;
     else
-        stream << "  let technique = make_ppm_path_renderer(" << max_depth << ", " << max_photons << ", num_lights, lights, ppm_radius, aovs, " << clamp_value << ", light_cache);" << std::endl;
+        stream << "  let technique = make_ppm_path_renderer(" << max_depth << ", num_lights, lights, ppm_radius, aovs, " << clamp_value << ", light_cache);" << std::endl;
 }
 
 /////////////////////////////////

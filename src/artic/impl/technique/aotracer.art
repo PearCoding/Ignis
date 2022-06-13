@@ -20,7 +20,7 @@ fn @make_ao_renderer() -> Technique {
         on_bounce      = TechniqueNoBounceFunction,
         on_shadow_hit  = TechniqueNoShadowHitFunction,
         on_shadow_miss = TechniqueNoShadowMissFunction,
-        primary_payload   = 0,
-        secondary_payload = 0,
+        primary_payload_count   = 0,
+        secondary_payload_count = 0,
     }
 }

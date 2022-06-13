@@ -20,7 +20,6 @@ struct PrimaryStream {
     u:       &mut [f32],
     v:       &mut [f32],
     rnd:     &mut [RndState],
-    flags:   &mut [i32],
     size:    i32,
     pad:     i32 // TODO: Needed for AMDGPU backend
 }
@@ -109,16 +108,14 @@ fn @make_secondary_stream_hit_writer(secondary: SecondaryStream, vector_width: i
 
 //////////// RndState
 struct RayState {
-    rnd:   RndState,
-    flags: i32 // 0x1 | Bounce Ray
+    rnd: RndState
 }
 
 fn @make_primary_stream_ray_state_reader(primary: PrimaryStream, vector_width: i32) -> fn (i32, i32) -> RayState {
     @ |i, j| {
         let k = i * vector_width + j;
         RayState {
-            rnd   = primary.rnd(k),
-            flags = primary.flags(k)
+            rnd = primary.rnd(k)
         }
     }
 }
@@ -126,8 +123,7 @@ fn @make_primary_stream_ray_state_reader(primary: PrimaryStream, vector_width: i
 fn @make_primary_stream_ray_state_writer(primary: PrimaryStream, vector_width: i32) -> fn (i32, i32, RayState) -> () {
     @ |i, j, state| {
         let k = i * vector_width + j;
-        primary.rnd(k)   = state.rnd;
-        primary.flags(k) = state.flags;
+        primary.rnd(k) = state.rnd;
     }
 }
 

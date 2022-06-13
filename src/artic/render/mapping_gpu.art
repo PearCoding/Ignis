@@ -39,8 +39,8 @@ fn @request_gpu_buffer(dev_id: i32, name: &[u8], size: i32, flags: i32, atomics:
 fn @gpu_request_payload_buffers(dev_id: i32, technique: Technique, spi: i32, atomics: Atomics, is_nvvm: bool) {
     let work_info = get_work_info();
 
-    let primary_payload_slice   = compute_ray_payload_buffer_size(technique.primary_payload);
-    let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload);
+    let primary_payload_slice   = compute_ray_payload_buffer_size(technique.primary_payload_count);
+    let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload_count);
 
     let primary_payloads   = request_gpu_buffer(dev_id, "__primary_payloads", primary_payload_slice * work_info.width * work_info.height * spi, 0, atomics, is_nvvm);
     let secondary_payloads = request_gpu_buffer(dev_id, "__secondary_payloads", secondary_payload_slice * work_info.width * work_info.height * spi, 0, atomics, is_nvvm);
@@ -124,9 +124,14 @@ fn @gpu_hit_shade( acc: Accelerator
     let write_secondary_ray     = make_ray_stream_writer(secondary.rays, 1);
     let write_primary_ray_state = make_primary_stream_ray_state_writer(primary, 1);
 
-    let primary_payload_slice   = compute_ray_payload_buffer_size(technique.primary_payload);
-    let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload);
+    let primary_payload_slice   = compute_ray_payload_buffer_size(technique.primary_payload_count);
+    let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload_count);
 
+    let spi_div = make_fast_div(spi as u32);
+
+    let on_hit    = technique.on_hit;
+    let on_shadow = technique.on_shadow;
+    let on_bounce = technique.on_bounce;
     gpu_exec_1d(acc, n, 64 /*block_size*/, |work_item| {
         let ray_id = first + work_item.gidx();
         if ray_id >= last {
@@ -136,11 +141,11 @@ fn @gpu_hit_shade( acc: Accelerator
         let ray     = read_primary_ray(ray_id, 0);
         let state   = read_primary_ray_state(ray_id, 0);
         let id      = primary.rays.id(ray_id);
-        let pixel   = id / spi;
+        let pixel   = fast_div(spi_div, id as u32) as i32;
         let mut rnd = state.rnd;
 
-        let primary_payload   = make_ray_payload((state.flags & 0x1) == 0, shift_device_buffer(id * primary_payload_slice, primary_payload_slice, primary_payloads));
-        let secondary_payload = make_ray_payload(false, shift_device_buffer(id * secondary_payload_slice, secondary_payload_slice, secondary_payloads));
+        let primary_payload   = make_ray_payload(shift_device_buffer(id * primary_payload_slice, primary_payload_slice, primary_payloads));
+        let secondary_payload = make_ray_payload(shift_device_buffer(id * secondary_payload_slice, secondary_payload_slice, secondary_payloads));
 
         let entity    = @entities(ent_id);
         let shape     = @shapes(entity.shape_id);
@@ -150,13 +155,11 @@ fn @gpu_hit_shade( acc: Accelerator
         let lcl_surf = shape.surface_element(local_ray, hit);
         let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
         
-        let mat    = @shader(ray, hit, glb_surf);
-        let on_hit = technique.on_hit;
+        let mat = @shader(ray, hit, glb_surf);
         if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, primary_payload, glb_surf, mat) {
             accumulate(pixel, color);
         }
 
-        let on_shadow = technique.on_shadow;
         match @on_shadow(ray, pixel, hit, &mut rnd, primary_payload, secondary_payload, glb_surf, mat) {
             ShadowRay::Simple(new_ray, color) => {
                 write_secondary_ray(ray_id, 0, new_ray);
@@ -179,10 +182,9 @@ fn @gpu_hit_shade( acc: Accelerator
             }
         }
 
-        let on_bounce = technique.on_bounce;
         if let Option[Ray]::Some(new_ray) = @on_bounce(ray, pixel, hit, &mut rnd, primary_payload, glb_surf, mat) {
             write_primary_ray(ray_id, 0, new_ray);
-            write_primary_ray_state(ray_id, 0, RayState{rnd = rnd, flags = 0x1});
+            write_primary_ray_state(ray_id, 0, RayState{ rnd = rnd });
         } else {
             primary.rays.id(ray_id) = -1;
         }
@@ -224,9 +226,10 @@ fn @gpu_miss_shade( acc: Accelerator
                 , first: i32, last: i32) -> () {
     let n = last - first;
     
-    let read_primary_ray       = make_ray_stream_reader(primary.rays, 1);
-    let read_primary_ray_state = make_primary_stream_ray_state_reader(primary, 1);
-    let primary_payload_slice  = compute_ray_payload_buffer_size(technique.primary_payload);
+    let read_primary_ray      = make_ray_stream_reader(primary.rays, 1);
+    let primary_payload_slice = compute_ray_payload_buffer_size(technique.primary_payload_count);
+
+    let spi_div = make_fast_div(spi as u32);
 
     let on_miss = technique.on_miss;
     gpu_exec_1d(acc, n, 64, |work_item| {
@@ -236,11 +239,10 @@ fn @gpu_miss_shade( acc: Accelerator
         }
 
         let ray   = read_primary_ray(ray_id, 0);
-        let state = read_primary_ray_state(ray_id, 0);
         let id    = primary.rays.id(ray_id);
-        let pixel = id / spi;
+        let pixel = fast_div(spi_div, id as u32) as i32;
 
-        let payload = make_ray_payload((state.flags & 0x1) == 0, shift_device_buffer(id * primary_payload_slice, primary_payload_slice, primary_payloads));
+        let payload = make_ray_payload(shift_device_buffer(id * primary_payload_slice, primary_payload_slice, primary_payloads));
 
         if let Option[Color]::Some(color) = @on_miss(ray, pixel, payload) {
             accumulate(pixel, color);
@@ -284,11 +286,13 @@ fn @gpu_advanced_shadow(is_hit: bool
 
     let read_secondary_ray      = make_ray_stream_reader(secondary.rays, 1);
     let read_secondary_color    = make_secondary_stream_color_reader(secondary, 1);
-    let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload);
+    let secondary_payload_slice = compute_ray_payload_buffer_size(technique.secondary_payload_count);
 
     let on_miss  = technique.on_shadow_miss;
     let on_hit   = technique.on_shadow_hit;
     let callback = if is_hit { on_hit } else { on_miss };
+
+    let spi_div = make_fast_div(spi as u32);
 
     gpu_exec_1d(acc, n, 64, |work_item| {
         let ray_id = first + work_item.gidx();
@@ -297,9 +301,9 @@ fn @gpu_advanced_shadow(is_hit: bool
         let color = read_secondary_color(ray_id, 0);
         let ray   = read_secondary_ray(ray_id, 0);
         let id    = secondary.rays.id(ray_id);
-        let pixel = id / spi;
+        let pixel = fast_div(spi_div, id as u32) as i32;
 
-        let payload = make_ray_payload(false, shift_device_buffer(id * secondary_payload_slice, secondary_payload_slice, secondary_payloads));
+        let payload = make_ray_payload(shift_device_buffer(id * secondary_payload_slice, secondary_payload_slice, secondary_payloads));
 
         if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, payload, color) {
             accumulate(pixel, new_color);
@@ -360,7 +364,6 @@ fn @gpu_copy_primary_ray( primary: PrimaryStream
         other_primary.v(dst_id)       = primary.v(src_id);
     }
     other_primary.rnd(dst_id) = primary.rnd(src_id);
-    other_primary.flags(dst_id) = primary.flags(src_id);
 }
 
 fn @gpu_copy_secondary_ray( secondary: SecondaryStream
@@ -563,10 +566,11 @@ fn @gpu_generate_rays( primary: PrimaryStream
     let write_state = make_primary_stream_ray_state_writer(primary, 1);
     let write_id    = @ |i: i32, _: i32, id2: i32| ray_ids(i) = id2;
 
-    let primary_payload_slice = compute_ray_payload_buffer_size(emitter.payload);
+    let primary_payload_slice = compute_ray_payload_buffer_size(emitter.payload_count);
 
     if num_rays <= 0 { /* TODO: Add error message! */ return(0) }
 
+    let generate = emitter.generate;
     gpu_exec_1d(acc, num_rays, 64 /*block_size*/, |work_item| {
         let gid = work_item.gidx();
         if gid >= num_rays {
@@ -580,12 +584,12 @@ fn @gpu_generate_rays( primary: PrimaryStream
         let y = fast_div(film_div, pixel as u32) as i32;
         let x = pixel - y * film_width;
 
-        let payload = make_ray_payload(true, shift_device_buffer(ray_id * primary_payload_slice, primary_payload_slice, primary_payloads));
+        let payload = make_ray_payload(shift_device_buffer(ray_id * primary_payload_slice, primary_payload_slice, primary_payloads));
 
-        let (ray, rnd) = emitter.generate(sample, x, y, film_width, film_height, payload);
+        let (ray, rnd) = @generate(sample, x, y, film_width, film_height, payload);
         write_id(dst_id, 0, ray_id);
         write_ray(dst_id, 0, ray);
-        write_state(dst_id, 0, RayState{rnd = rnd, flags = 0});
+        write_state(dst_id, 0, RayState{ rnd = rnd });
     });
     acc.sync();
 
@@ -609,7 +613,7 @@ fn @gpu_generate_rays_handler(dev_id: i32
     ignis_gpu_get_first_primary_stream(dev_id, &mut primary, capacity);
     primary.size = size;
 
-    let primary_payload_slice = compute_ray_payload_buffer_size(emitter.payload);
+    let primary_payload_slice = compute_ray_payload_buffer_size(emitter.payload_count);
     let primary_payloads      = request_gpu_buffer(dev_id, "__primary_payloads", primary_payload_slice * work_info.width * work_info.height * spi, 0, atomics, is_nvvm);
 
     gpu_generate_rays(primary, capacity, acc, emitter,primary_payloads, id, work_info.width, work_info.height, spi)

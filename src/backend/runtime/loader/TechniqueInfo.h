@@ -32,6 +32,9 @@ struct TechniqueVariantInfo {
     /// The variant overrides the default camera shader
     TechniqueCameraGenerator OverrideCameraGenerator = nullptr;
 
+    /// Name of the EmitterPayloadInitializer generator. If not set, 'make_null_emitter_payload_initializer' will be used. Will be ignored if default camera generator is overriden
+    std::string EmitterPayloadInitializer = {};
+
     /// The variant requires the camera definition in the miss, hit and advanced shadow shaders
     bool RequiresExplicitCamera = false;
 
@@ -52,19 +55,27 @@ struct TechniqueVariantInfo {
     /// Override the recommended spi
     std::optional<size_t> OverrideSPI;
 
-    inline size_t GetWidth(size_t hint) const
+    [[nodiscard]] inline size_t GetWidth(size_t hint) const
     {
         return OverrideWidth.value_or(hint);
     }
 
-    inline size_t GetHeight(size_t hint) const
+    [[nodiscard]] inline size_t GetHeight(size_t hint) const
     {
         return OverrideHeight.value_or(hint);
     }
 
-    inline size_t GetSPI(size_t hint) const
+    [[nodiscard]] inline size_t GetSPI(size_t hint) const
     {
         return OverrideSPI.value_or(hint);
+    }
+
+    [[nodiscard]] inline std::string GetEmitterPayloadInitializer() const
+    {
+        if (EmitterPayloadInitializer.empty())
+            return "make_null_emitter_payload_initializer";
+        else
+            return EmitterPayloadInitializer;
     }
 };
 

@@ -4,23 +4,24 @@ struct WireframeRayPayload {
 }
 
 fn write_wireframeraypayload(payload: RayPayload, wrp: WireframeRayPayload) {
-    payload.buffer.store_vec2(0, make_vec2(wrp.depth as f32, wrp.distance));
+    payload.store_vec2(0, make_vec2(wrp.depth as f32, wrp.distance));
 }
 
 fn unrap_wireframeraypayload(payload: RayPayload) -> WireframeRayPayload {
-    if payload.from_camera {
-        WireframeRayPayload {
-            depth = 1,
-            distance = 0
-        }
-    } else {
-        let c0 = payload.buffer.load_vec2(0);
-        WireframeRayPayload {
-            depth    = c0.x as i32,
-            distance = c0.y,
-        }
+    let c0 = payload.load_vec2(0);
+    WireframeRayPayload {
+        depth    = c0.x as i32,
+        distance = c0.y,
     }
 }
+
+fn @init_wireframeraypayload(payload: RayPayload, _: i32, _:i32, _:i32) = write_wireframeraypayload(payload,
+    WireframeRayPayload {
+        depth = 1,
+        distance = 0
+    });
+
+fn @make_wireframe_emitter_payload_initializer() = EmitterPayloadInitializer{ init = init_wireframeraypayload, count = 2 };
 
 fn @make_wireframe_renderer(camera: Camera) -> Technique {
     let offset:f32 = 0.001;
@@ -77,7 +78,7 @@ fn @make_wireframe_renderer(camera: Camera) -> Technique {
         on_bounce      = on_bounce,
         on_shadow_hit  = TechniqueNoShadowHitFunction,
         on_shadow_miss = TechniqueNoShadowMissFunction,
-        primary_payload   = 2,
-        secondary_payload = 0,
+        primary_payload_count   = 2,
+        secondary_payload_count = 0,
     }
 }

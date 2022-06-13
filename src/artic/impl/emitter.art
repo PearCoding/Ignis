@@ -1,7 +1,17 @@
+struct EmitterPayloadInitializer {
+    init:  fn (/*payload:*/ RayPayload, /*sample:*/ i32, /*x:*/ i32, /*y:*/ i32) -> (),
+    count: i32
+}
 
-fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, sampler: PixelSampler) -> RayEmitter {
+fn @make_null_emitter_payload_initializer() = EmitterPayloadInitializer {
+    init  = @|_,_,_,_| {},
+    count = 0
+};
+
+fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, sampler: PixelSampler, payloadInitializer: EmitterPayloadInitializer) -> RayEmitter {
+    let init = payloadInitializer.init;
     RayEmitter {
-        generate = @ |sample, x, y, width, height, _payload| {
+        generate = @ |sample, x, y, width, height, payload| {
             let mut hash = fnv_init();
             hash = fnv_hash(hash, sample as u32);
             hash = fnv_hash(hash, iter as u32);
@@ -13,15 +23,17 @@ fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, sampler: PixelSampl
             let ky = 1 - 2 * (y as f32 + ry) / (height as f32);
             let ray = camera.generate_ray(&mut rnd, kx, ky);
             
+            @init(payload, sample, x, y);
             (ray, rnd)
         },
-        payload = 0
+        payload_count = payloadInitializer.count
     }
 }
 
-fn @make_list_emitter(rays: &[StreamRay], iter: i32) -> RayEmitter {
+fn @make_list_emitter(rays: &[StreamRay], iter: i32, payloadInitializer: EmitterPayloadInitializer) -> RayEmitter {
+    let init = payloadInitializer.init;
     RayEmitter {
-        generate = @ |sample, x, y, width, _height, _payload| {
+        generate = @ |sample, x, y, width, _height, payload| {
             let mut hash = fnv_init();
             hash = fnv_hash(hash, sample as u32);
             hash = fnv_hash(hash, iter as u32);
@@ -34,8 +46,9 @@ fn @make_list_emitter(rays: &[StreamRay], iter: i32) -> RayEmitter {
             
             let ray = make_ray(stream_ray.org, stream_ray.dir, stream_ray.tmin, stream_ray.tmax);
             
+            @init(payload, sample, x, y);
             (ray, rnd)
         },
-        payload = 0
+        payload_count = payloadInitializer.count
     }
 }
