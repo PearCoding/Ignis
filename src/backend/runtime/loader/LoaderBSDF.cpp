@@ -105,6 +105,22 @@ static std::string inline_microfacet(const std::string& name, ShadingTree& tree,
     return stream.str();
 }
 
+static void bsdf_djmeasured(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree) 
+{
+    tree.beginClosure();
+
+    std::string bsdf_name = bsdf->property("filename").getString();
+
+    std::string buffer_name = "buffer_" + bsdf_name;
+
+    stream << tree.pullHeader()
+           << "  let " << buffer_name << " : DeviceBuffer = device.load_buffer(\"../../brdf/" << bsdf_name << ".bsdf\");"
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_djmeasured_bsdf(surf, "
+           << buffer_name << ");" << std::endl;
+
+    tree.endClosure();
+}
+
 static void bsdf_diffuse(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure();
@@ -652,6 +668,7 @@ static const struct {
     const char* Name;
     BSDFLoader Loader;
 } _generators[] = {
+    { "djmeasured", bsdf_djmeasured },
     { "diffuse", bsdf_diffuse },
     { "roughdiffuse", bsdf_orennayar },
     { "glass", bsdf_dielectric },
