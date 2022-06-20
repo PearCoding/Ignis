@@ -183,10 +183,15 @@ def export_all(filepath, result):
 
 
 def export_background(result, out_dir, scene):
-    if scene.world.ignis.hdr:
+    tree = scene.world.node_tree
+
+    if "Environment Texture" in tree.nodes:
         # Export the background as texture and add it as environmental light
-        tex = map_texture(scene.world.ignis.hdr, out_dir, result, True)
+        tex = map_texture(scene.world.node_tree.nodes["Environment Texture"].image, out_dir, result, True)
         result["lights"].append({"type": "env", "name": tex, "radiance": tex, "scale":[0.5,0.5,0.5]})
+    elif "RGB" in tree.nodes:
+        color = scene.world.node_tree.nodes["RGB"].outputs[0].default_value
+        result["lights"].append({"type": "env", "name": "rgb", "radiance": [color[0], color[1], color[2]]})
 
 def export_camera(result, scene):
     camera = scene.camera
