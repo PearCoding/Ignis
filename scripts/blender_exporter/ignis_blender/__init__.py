@@ -8,6 +8,8 @@ bl_info = {
     "blender": (2, 92, 0),
     "location": "File > Import-Export",
     "category": "Import-Export",
+    "tracker_url": "https://github.com/PearCoding/Ignis/issues/new",
+    "support": "COMMUNITY",
 }
 
 

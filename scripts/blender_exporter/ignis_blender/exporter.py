@@ -1,24 +1,30 @@
 import os
 import json
-from math import degrees, atan, tan
+from math import degrees, atan
+
 from .material import convert_material
 
 import mathutils
 
 import bpy
 
+from io_mesh_ply.export_ply import save_mesh as ply_save
+
 
 def flat_matrix(matrix):
-    # Spread the matrix out to a list of elements
-    xss = [list(row) for row in matrix]
-    return [x for xs in xss for x in xs]
+    return [x for row in matrix for x in row]
+
+
+def orient_y_up_z_forward(matrix, skip_scale=False):
+    loc, rot, sca = matrix.decompose()
+    return mathutils.Matrix.LocRotScale(loc, rot @ mathutils.Quaternion((0, 0, 1, 0)), mathutils.Vector.Fill(3, 1) if skip_scale else sca)
 
 
 def map_rgb(rgb):
     return [rgb[0], rgb[1], rgb[2]]
 
 
-def map_texture(texture, out_dir, result, background, global_matrix):
+def map_texture(texture, out_dir, result):
     path = texture.filepath_raw.replace('//', '')
     if path == '':
         path = texture.name + ".exr"
@@ -39,25 +45,13 @@ def map_texture(texture, out_dir, result, background, global_matrix):
     finally:  # Never break the scene!
         texture.filepath_raw = old
 
-    # Incase we are exporting a background, rotate it according to the global matrix
-    if(background):
-        rotation = global_matrix.to_quaternion()
-        result["textures"].append(
-            {
-                "type": "image",
-                "name": name[:-4],
-                "filename": "Meshes/Textures/"+name,
-                "transform": {"qrotate": [rotation.w, rotation.x, rotation.y, rotation.z]}
-            }
-        )
-    else:
-        result["textures"].append(
-            {
-                "type": "image",
-                "name": name[:-4],
-                "filename": "Meshes/Textures/"+name,
-            }
-        )
+    result["textures"].append(
+        {
+            "type": "image",
+            "name": name[:-4],
+            "filename": "Meshes/Textures/"+name,
+        }
+    )
 
     return name[:-4]
 
@@ -66,7 +60,7 @@ def material_to_json(material, mat_name, out_dir, result):
     # Create a principled material out of any type of material by calculating its properties.
 
     if material.base_texture:
-        base_color = map_texture(material.base_texture, out_dir, result, False)
+        base_color = map_texture(material.base_texture, out_dir, result)
     else:
         base_color = map_rgb(material.base_color)
 
@@ -92,126 +86,57 @@ def export_technique(result):
     }
 
 
-def export_all(filepath, result, context, scene, depsgraph, use_selection, use_modifiers, global_matrix):
-    # TODO: use_modifiers
+def export_shape(result, obj, meshpath):
+    import bmesh
 
-    # Update materials
-    for material in list(bpy.data.materials):
-        if material.node_tree is None:
-            continue
-        convert_material(material)
+    bm = bmesh.new()
 
-    result["shapes"] = []
-    result["bsdfs"] = []
-    result["entities"] = []
-    result["lights"] = []
-    result["textures"] = []
+    try:
+        me = obj.to_mesh()
+    except RuntimeError:
+        return
 
-    # Save selection
-    selection = context.selected_objects
+    bm.from_mesh(me)
+    obj.to_mesh_clear()
 
-    # Iterate through selected objects or all
-    if use_selection:
-        objects = selection
-    else:
-        objects = scene.objects
+    bm.normal_update()
 
-    # Export all given objects
-    for i in list(objects):
-        objType = i.type
-        if(objType != "CAMERA" and objType != "LIGHT"):
-            # Deselect all objects -> select the one we want to export -> export it as ply and add it as a shape -> add its materials as bsdfs -> connect the shapes and bsdfs as entities.
+    ply_save(filepath=os.path.join(meshpath, obj.data.name+".ply"),
+             bm=bm,
+             use_ascii=False,
+             use_normals=True,
+             use_uv=True,
+             use_color=False,
+             )
 
-            bpy.ops.object.select_all(action='DESELECT')
-            i.select_set(True)
-            bpy.ops.export_mesh.ply(filepath=os.path.join(
-                filepath, i.data.name+".ply"), check_existing=False, axis_forward='Y', axis_up='Z', use_selection=True, use_mesh_modifiers=True, use_normals=True, use_uv_coords=True, use_colors=False)
-            result["shapes"].append(
-                {"type": "ply", "name": i.name,
-                    "filename": "Meshes/" + i.name + ".ply"},
-            )
+    bm.free()
 
-            if(len(i.material_slots) > 0):
-                material = i.material_slots[0].material.ignis
-                mat_name = i.material_slots[0].material.name
-
-                result["bsdfs"].append(material_to_json(
-                    material, mat_name, filepath, result))
-                result["entities"].append(
-                    {"name": i.name, "shape": i.name, "bsdf": mat_name,
-                     "transform": flat_matrix(global_matrix)}
-                )
-
-        elif(objType == "LIGHT"):
-            l = i.data
-            if(l.type == "POINT"):
-                result["lights"].append(
-                    {"type": "point", "name": i.name, "transform": {"translate": [
-                        i.location.x, i.location.y, i.location.z]}, "intensity": [l.energy, l.energy, l.energy]}
-                )
-
-            elif(l.type == "SPOT"):
-                result["lights"].append(
-                    {"type": "spot", "name": i.name, "transform": {"translate": [i.location.x, i.location.y, i.location.z]}, "direction": [degrees(
-                        i.rotation_euler.x), degrees(i.rotation_euler.z) + 180, degrees(i.rotation_euler.y)], "intensity": [l.energy, l.energy, l.energy]}
-                )
-
-            elif(l.type == "SUN"):
-                result["lights"].append(
-                    {"type": "sun", "name": i.name, "transform": {"translate": [i.location.x, i.location.y, i.location.z]}, "direction": [
-                        degrees(i.rotation_euler.x), degrees(i.rotation_euler.z) + 180, degrees(i.rotation_euler.y)], "sun_scale": l.energy}
-                )
-
-            elif(l.type == "AREA"):
-                # We need to construct a world matrix that factors in 180 degree rotation around y and scaling proportional to light size (we apply similar process to the camera):
-
-                # Decompose the world matrix of the object which contains info about the location, rotation and scale
-                loc, rot, sca = i.matrix_world.decompose()
-
-                # Construct loction matrix without applying any changes to the loction
-                mat_loc = mathutils.Matrix.Translation(loc)
-
-                # Construct scale matrix and multiply it with size of l divided by 2 to account for the light size
-                mat_sca = mathutils.Matrix.Identity(4)
-                mat_sca[0][0] = sca[0]
-                mat_sca[1][1] = sca[1]
-                mat_sca[2][2] = sca[2]
-                mat_sca[3][3] = 1
-                mat_sca *= (l.size/2)
-
-                # We apply 180 degree rotation around the y axis to the original rotation matrix since blender uses -Z as forward direction while Ignis uses Z.
-                # This is done by multiplying the quaternion with (0,1,0,0) which effectively is done by exchanging elements and negating some of them.
-                new_rot = [-rot[2], -rot[3], rot[0], rot[1]]
-                mat_rot = mathutils.Quaternion(new_rot).to_matrix().to_4x4()
-
-                # Construnction final 4X4 matrix
-                mat_out = mat_loc @ mat_rot @ mat_sca
-
-                result["shapes"].append(
-                    {"type": "rectangle", "name": i.name +
-                        "-shape", "transform": flat_matrix(mat_out)}
-                )
-                result["bsdfs"].append(
-                    {"type": "diffuse", "name": i.name +
-                        "-bsdf", "reflectance": [0, 0, 0]}
-                )
-                result["entities"].append(
-                    {"name": i.name, "shape": i.name +
-                        "-shape", "bsdf": i.name+"-bsdf"}
-                )
-                result["lights"].append(
-                    {"type": "area", "name": i.name, "entity": i.name,
-                        "radiance": [l.energy, l.energy, l.energy]}
-                )
-
-    # Restore selection
-    bpy.ops.object.select_all(action='DESELECT')
-    for obj in selection:
-        obj.select_set(True)
+    result["shapes"].append(
+        {"type": "ply", "name": obj.data.name,
+            "filename": "Meshes/" + obj.data.name + ".ply"},
+    )
 
 
-def export_background(result, out_dir, scene, camera_matrix):
+def export_entity(result, inst, filepath):
+    if(len(inst.object.material_slots) > 0):
+        material = inst.object.material_slots[0].material.ignis
+        mat_name = inst.object.material_slots[0].material.name
+
+        matrix = inst.matrix_world
+        result["bsdfs"].append(material_to_json(
+            material, mat_name, filepath, result))
+        result["entities"].append(
+            {"name": inst.object.name, "shape": inst.object.data.name,
+                "bsdf": mat_name, "transform": flat_matrix(matrix)}
+        )
+
+
+def export_background(result, out_dir, scene):
+    if "Background" not in scene.world.node_tree.nodes:
+        return
+
     tree = scene.world.node_tree.nodes["Background"]
+
     if tree.type == "BACKGROUND":
         # TODO: Add strength parameter
         input = tree.inputs["Color"]
@@ -220,7 +145,7 @@ def export_background(result, out_dir, scene, camera_matrix):
             # Export the background as texture and add it as environmental light
             tex_node = input.links[0].from_node
             if tex_node.image is not None:
-                tex = map_texture(tex_node.image, out_dir, result, True)
+                tex = map_texture(tex_node.image, out_dir, result)
                 result["lights"].append(
                     {"type": "env", "name": tex, "radiance": tex, "scale": [0.5, 0.5, 0.5]})
         elif input.type == "RGB" or input.type == "RGBA":
@@ -230,12 +155,12 @@ def export_background(result, out_dir, scene, camera_matrix):
                     {"type": "env", "name": "__scene_world", "radiance": map_rgb(color)})
 
 
-def export_camera(result, scene, camera_matrix):
+def export_camera(result, scene):
     camera = scene.camera
-    aspect_ratio = scene.render.resolution_y / scene.render.resolution_x
+    if camera is None:
+        return
 
-    # Construnction final 4X4 matrix
-    matrix = camera_matrix @ camera.matrix_world
+    matrix = orient_y_up_z_forward(camera.matrix_world, skip_scale=True)
 
     result["camera"] = {
         "type": "perspective",
@@ -250,8 +175,90 @@ def export_camera(result, scene, camera_matrix):
     result["film"] = {"size": [res_x, res_y]}
 
 
-def export_scene(filepath, context, use_selection, use_modifiers, global_matrix, camera_matrix):
-    scene = context.scene
+def export_light(result, inst):
+    light = inst.object
+    l = light.data
+    power = [l.color[0] * l.energy, l.color[1]
+             * l.energy, l.color[2] * l.energy]
+    if l.type == "POINT":
+        result["lights"].append(
+            {"type": "point", "name": light.name, "position": [
+                light.location.x, light.location.y, light.location.z], "intensity": map_rgb(power)}
+        )
+    elif l.type == "SPOT":
+        result["lights"].append(
+            {"type": "spot", "name": light.name, "position": [light.location.x, light.location.y, light.location.z], "direction": [degrees(
+                light.rotation_euler.x), degrees(light.rotation_euler.z) + 180, degrees(light.rotation_euler.y)], "intensity": map_rgb(power)}
+        )
+    elif l.type == "SUN":
+        result["lights"].append(
+            {"type": "direction", "name": light.name, "direction": [
+                degrees(light.rotation_euler.x), degrees(light.rotation_euler.z) + 180, degrees(light.rotation_euler.y)], "irradiance": map_rgb(power)}
+        )
+    elif l.type == "AREA":
+        size_x = l.size
+        if l.shape == 'SQUARE':
+            size_y = l.size
+        else:
+            size_y = l.size_y
+
+        result["shapes"].append(
+            {"type": "rectangle", "name": light.name +
+                "-shape", "width": size_x, "height": size_y}
+        )
+        result["bsdfs"].append(
+            {"type": "diffuse", "name": light.name +
+                "-bsdf", "reflectance": [0, 0, 0]}
+        )
+        result["entities"].append(
+            {"name": light.name, "shape": light.name +
+                "-shape", "bsdf": light.name+"-bsdf", "transform": flat_matrix(inst.matrix_world)}
+        )
+        result["lights"].append(
+            {"type": "area", "name": light.name, "entity": light.name,
+                "radiance": map_rgb(power)}
+        )
+
+
+def export_all(filepath, result, depsgraph, use_selection):
+    # TODO: use_modifiers
+
+    # Update materials
+    for material in bpy.data.materials:
+        if material.node_tree is None:
+            continue
+        convert_material(material)
+
+    result["shapes"] = []
+    result["bsdfs"] = []
+    result["entities"] = []
+    result["lights"] = []
+    result["textures"] = []
+
+    # Export all given objects
+    exported_shapes = set()
+
+    for inst in depsgraph.object_instances:
+        object_eval = inst.object
+        if use_selection and not object_eval.original.select_get():
+            continue
+        if not use_selection and not inst.show_self:
+            continue
+
+        objType = object_eval.type
+        if objType == "MESH":
+            shape_name = object_eval.data.name
+            if shape_name not in exported_shapes:
+                export_shape(result, object_eval, filepath)
+                exported_shapes.add(shape_name)
+
+            export_entity(result, inst, filepath)
+        elif objType == "LIGHT":
+            export_light(
+                result, inst)
+
+
+def export_scene(filepath, context, use_selection):
     depsgraph = context.evaluated_depsgraph_get()
 
     # Write all materials and cameras to a dict with the layout of our json file
@@ -261,18 +268,21 @@ def export_scene(filepath, context, use_selection, use_modifiers, global_matrix,
     export_technique(result)
 
     # Export camera
-    export_camera(result, scene, camera_matrix)
+    export_camera(result, depsgraph.scene)
 
     # Create a path for meshes
     meshPath = os.path.join(os.path.dirname(filepath), 'Meshes')
     os.makedirs(meshPath, exist_ok=True)
 
     # Export all objects, materials, textures and lights
-    export_all(meshPath, result, context, scene, depsgraph,
-               use_selection, use_modifiers, global_matrix)
+    export_all(meshPath, result, depsgraph, use_selection)
 
     # Export background/environmental light
-    export_background(result, meshPath, scene, global_matrix)
+    export_background(result, meshPath, depsgraph.scene)
+
+    # Cleanup
+    result = {key: value for key, value in result.items(
+    ) if not isinstance(value, list) or len(value) > 0}
 
     # Write the result into the .json
     with open(filepath, 'w') as fp:
