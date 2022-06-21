@@ -2,21 +2,23 @@ import os
 import json
 from math import degrees, atan, tan
 from .material import convert_material
+
 import mathutils
 
-from numpy import append
 import bpy
-from bpy_extras.io_utils import ExportHelper
-from bpy.props import StringProperty, BoolProperty
-from bpy.types import Operator
-from io_scene_fbx.export_fbx_bin import save_single
+
+
+def flat_matrix(matrix):
+    # Spread the matrix out to a list of elements
+    xss = [list(row) for row in matrix]
+    return [x for xs in xss for x in xs]
 
 
 def map_rgb(rgb):
     return [rgb[0], rgb[1], rgb[2]]
 
 
-def map_texture(texture, out_dir, result, background):
+def map_texture(texture, out_dir, result, background, global_matrix):
     path = texture.filepath_raw.replace('//', '')
     if path == '':
         path = texture.name + ".exr"
@@ -37,14 +39,15 @@ def map_texture(texture, out_dir, result, background):
     finally:  # Never break the scene!
         texture.filepath_raw = old
 
-    # Incase we are exporting a background, rotate it 180 degrees around the y axis to match the result in blender
+    # Incase we are exporting a background, rotate it according to the global matrix
     if(background):
+        rotation = global_matrix.to_quaternion()
         result["textures"].append(
             {
                 "type": "image",
                 "name": name[:-4],
                 "filename": "Meshes/Textures/"+name,
-                "transform": {"rotate": [0, 180]}
+                "transform": {"qrotate": [rotation.w, rotation.x, rotation.y, rotation.z]}
             }
         )
     else:
@@ -83,14 +86,14 @@ def material_to_json(material, mat_name, out_dir, result):
 
 
 def export_technique(result):
-
     result["technique"] = {
         "type": "path",
         "max_depth": 64
     }
 
 
-def export_all(filepath, result):
+def export_all(filepath, result, context, scene, depsgraph, use_selection, use_modifiers, global_matrix):
+    # TODO: use_modifiers
 
     # Update materials
     for material in list(bpy.data.materials):
@@ -104,7 +107,17 @@ def export_all(filepath, result):
     result["lights"] = []
     result["textures"] = []
 
-    for i in list(bpy.context.scene.objects):
+    # Save selection
+    selection = context.selected_objects
+
+    # Iterate through selected objects or all
+    if use_selection:
+        objects = selection
+    else:
+        objects = scene.objects
+
+    # Export all given objects
+    for i in list(objects):
         objType = i.type
         if(objType != "CAMERA" and objType != "LIGHT"):
             # Deselect all objects -> select the one we want to export -> export it as ply and add it as a shape -> add its materials as bsdfs -> connect the shapes and bsdfs as entities.
@@ -112,7 +125,7 @@ def export_all(filepath, result):
             bpy.ops.object.select_all(action='DESELECT')
             i.select_set(True)
             bpy.ops.export_mesh.ply(filepath=os.path.join(
-                filepath, i.data.name+".ply"), axis_forward='Y', axis_up='Z', use_selection=True)
+                filepath, i.data.name+".ply"), check_existing=False, axis_forward='Y', axis_up='Z', use_selection=True, use_mesh_modifiers=True, use_normals=True, use_uv_coords=True, use_colors=False)
             result["shapes"].append(
                 {"type": "ply", "name": i.name,
                     "filename": "Meshes/" + i.name + ".ply"},
@@ -125,7 +138,8 @@ def export_all(filepath, result):
                 result["bsdfs"].append(material_to_json(
                     material, mat_name, filepath, result))
                 result["entities"].append(
-                    {"name": i.name, "shape": i.name, "bsdf": mat_name}
+                    {"name": i.name, "shape": i.name, "bsdf": mat_name,
+                     "transform": flat_matrix(global_matrix)}
                 )
 
         elif(objType == "LIGHT"):
@@ -173,13 +187,9 @@ def export_all(filepath, result):
                 # Construnction final 4X4 matrix
                 mat_out = mat_loc @ mat_rot @ mat_sca
 
-                # Spread the matrix out to a list of elements
-                xss = [list(row) for row in mat_out]
-                flat_matrix = [x for xs in xss for x in xs]
-
                 result["shapes"].append(
                     {"type": "rectangle", "name": i.name +
-                        "-shape", "transform": flat_matrix}
+                        "-shape", "transform": flat_matrix(mat_out)}
                 )
                 result["bsdfs"].append(
                     {"type": "diffuse", "name": i.name +
@@ -194,8 +204,13 @@ def export_all(filepath, result):
                         "radiance": [l.energy, l.energy, l.energy]}
                 )
 
+    # Restore selection
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in selection:
+        obj.select_set(True)
 
-def export_background(result, out_dir, scene):
+
+def export_background(result, out_dir, scene, camera_matrix):
     tree = scene.world.node_tree.nodes["Background"]
     if tree.type == "BACKGROUND":
         # TODO: Add strength parameter
@@ -211,44 +226,23 @@ def export_background(result, out_dir, scene):
         elif input.type == "RGB" or input.type == "RGBA":
             color = input.default_value
             if color[0] > 0 or color[1] > 0 or color[2] > 0:
-                result["lights"].append({"type": "env", "name": "__scene_world", "radiance": map_rgb(color)})
+                result["lights"].append(
+                    {"type": "env", "name": "__scene_world", "radiance": map_rgb(color)})
 
 
-def export_camera(result, scene):
+def export_camera(result, scene, camera_matrix):
     camera = scene.camera
     aspect_ratio = scene.render.resolution_y / scene.render.resolution_x
 
-    # We need to construct a world matrix that factors in 180 degree rotation around y (we apply similar process to the area light):
-
-    # Decompose the world matrix of the object which contains info about the location, rotation and scale
-    loc, rot, sca = camera.matrix_world.decompose()
-
-    # Construct loction matrix without applying any changes to the loction
-    mat_loc = mathutils.Matrix.Translation(loc)
-
-    # Construct scale matrix without applying any changes to the scale
-    mat_sca = mathutils.Matrix.Identity(4)
-    mat_sca[3][3] = 1
-
-    # We apply 180 degree rotation around the y axis to the original rotation matrix since blender uses -Z as forward direction while Ignis uses Z.
-    # This is done by multiplying the quaternion with (0,1,0,0) which effectively is done by exchanging elements and negating some of them.
-    new_rot = [-rot[2], -rot[3], rot[0], rot[1]]
-    mat_rot = mathutils.Quaternion(new_rot).to_matrix().to_4x4()
-
     # Construnction final 4X4 matrix
-    mat_out = mat_loc @ mat_rot @ mat_sca
-
-    # Spread the matrix out to a list of elements
-    xss = [list(row) for row in mat_out]
-    flat_matrix = [x for xs in xss for x in xs]
+    matrix = camera_matrix @ camera.matrix_world
 
     result["camera"] = {
         "type": "perspective",
         "fov": degrees(2 * atan(camera.data.sensor_width / (2 * camera.data.lens))),
         "near_clip": camera.data.clip_start,
         "far_clip": camera.data.clip_end,
-        "transform": flat_matrix
-
+        "transform": flat_matrix(matrix)
     }
 
     res_x = scene.render.resolution_x * scene.render.resolution_percentage * 0.01
@@ -256,7 +250,9 @@ def export_camera(result, scene):
     result["film"] = {"size": [res_x, res_y]}
 
 
-def export_scene(filepath, scene, depsgraph):
+def export_scene(filepath, context, use_selection, use_modifiers, global_matrix, camera_matrix):
+    scene = context.scene
+    depsgraph = context.evaluated_depsgraph_get()
 
     # Write all materials and cameras to a dict with the layout of our json file
     result = {}
@@ -265,72 +261,19 @@ def export_scene(filepath, scene, depsgraph):
     export_technique(result)
 
     # Export camera
-    export_camera(result, scene)
+    export_camera(result, scene, camera_matrix)
 
     # Create a path for meshes
-    objPath = os.path.join(os.path.dirname(filepath), 'Meshes')
-    os.makedirs(objPath, exist_ok=True)
+    meshPath = os.path.join(os.path.dirname(filepath), 'Meshes')
+    os.makedirs(meshPath, exist_ok=True)
 
     # Export all objects, materials, textures and lights
-    export_all(objPath, result)
+    export_all(meshPath, result, context, scene, depsgraph,
+               use_selection, use_modifiers, global_matrix)
 
     # Export background/environmental light
-    export_background(result, objPath, scene)
+    export_background(result, meshPath, scene, global_matrix)
 
     # Write the result into the .json
     with open(filepath, 'w') as fp:
         json.dump(result, fp, indent=2)
-
-
-class IgnisExport(Operator, ExportHelper):
-    """Ignis scene exporter"""
-    bl_idname = "export.to_ignis"
-    bl_label = "Ignis Scene Exporter"
-
-    # ExportHelper mixin class uses this
-    filename_ext = ".json"
-
-    filter_glob: StringProperty(
-        default="*.json",
-        options={'HIDDEN'},
-        maxlen=255,  # Max internal buffer length, longer would be clamped.
-    )
-
-    animations: BoolProperty(
-        name="Export Animations",
-        description="If true, writes .json and .obj files for each frame in the animation.",
-        default=False,
-    )
-
-    def execute(self, context):
-        if self.animations is True:
-            for frame in range(context.scene.frame_start, context.scene.frame_end+1):
-                context.scene.frame_set(frame)
-                depsgraph = context.evaluated_depsgraph_get()
-                export_scene(self.filepath.replace(
-                    '.json', f'{frame:04}.json'), context.scene, depsgraph)
-        else:
-            depsgraph = context.evaluated_depsgraph_get()
-            export_scene(self.filepath, context.scene, depsgraph)
-        return {'FINISHED'}
-
-
-def menu_func_export(self, context):
-    self.layout.operator(IgnisExport.bl_idname, text="Ignis Export")
-
-
-def register():
-    bpy.utils.register_class(IgnisExport)
-    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
-
-
-def unregister():
-    bpy.utils.unregister_class(IgnisExport)
-    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
-
-
-if __name__ == "__main__":
-    register()
-
-    # test call
-    bpy.ops.export.to_ignis('INVOKE_DEFAULT')
