@@ -1,6 +1,7 @@
 #!/bin/sh
 
-zip -r see_blender see_blender
+NAME=ignis_blender
+zip -qr ${NAME} ${NAME}
 
 echo "Blender plugin built. Open Blender and go to 'Edit - Preferences - Addons - Install...'"
-echo "Browse to the 'see_blender.zip' file in this directory and install it."
+echo "Browse to the '${NAME}.zip' file in this directory and install it."

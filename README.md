@@ -112,7 +112,7 @@ You can also use `rad2json` to convert geometry used in the Radiance framework t
 
 Ignis is able to understand glTF files. You can embed glTF files in Ignis's own scene description file or directly use the glTF file as an input to the multiple frontends.
 
-A Blender plugin is planned for the future.
+A Blender plugin is available in `scripts/blender_exporter/`.
 
 ## Tiny tools
 
