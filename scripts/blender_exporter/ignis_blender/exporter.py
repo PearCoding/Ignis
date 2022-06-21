@@ -2,7 +2,6 @@ import os
 import json
 from math import degrees, atan, tan
 from .material import convert_material
-import math
 import mathutils
 
 from numpy import append
@@ -14,7 +13,8 @@ from io_scene_fbx.export_fbx_bin import save_single
 
 
 def map_rgb(rgb):
-    return { "type": "rgb", "value": [ rgb[0], rgb[1], rgb[2] ] }
+    return [rgb[0], rgb[1], rgb[2]]
+
 
 def map_texture(texture, out_dir, result, background):
     path = texture.filepath_raw.replace('//', '')
@@ -26,15 +26,15 @@ def map_texture(texture, out_dir, result, background):
     if not texture.has_data:
         texture.pixels[0]
 
-    os.makedirs(f"{out_dir}/Textures", exist_ok=True)
+    os.makedirs(os.path.join(out_dir, "Textures"), exist_ok=True)
 
     # Export the texture and store its path
     name = os.path.basename(path)
     old = texture.filepath_raw
     try:
-        texture.filepath_raw = f"{out_dir}/Textures/{name}"
+        texture.filepath_raw = os.path.join(out_dir, "Textures", name)
         texture.save()
-    finally: # Never break the scene!
+    finally:  # Never break the scene!
         texture.filepath_raw = old
 
     # Incase we are exporting a background, rotate it 180 degrees around the y axis to match the result in blender
@@ -44,7 +44,7 @@ def map_texture(texture, out_dir, result, background):
                 "type": "image",
                 "name": name[:-4],
                 "filename": "Meshes/Textures/"+name,
-                "transform": {"rotate":[0,180]}
+                "transform": {"rotate": [0, 180]}
             }
         )
     else:
@@ -55,9 +55,9 @@ def map_texture(texture, out_dir, result, background):
                 "filename": "Meshes/Textures/"+name,
             }
         )
-    
 
-    return  name[:-4]
+    return name[:-4]
+
 
 def material_to_json(material, mat_name, out_dir, result):
     # Create a principled material out of any type of material by calculating its properties.
@@ -81,19 +81,22 @@ def material_to_json(material, mat_name, out_dir, result):
         "thin": material.thin,
     }
 
+
 def export_technique(result):
 
     result["technique"] = {
-            "type": "path",
-            "max_depth": 64
-        }
+        "type": "path",
+        "max_depth": 64
+    }
+
 
 def export_all(filepath, result):
 
-    #Update materials
+    # Update materials
     for material in list(bpy.data.materials):
-            if material.node_tree is None: continue
-            convert_material(material)
+        if material.node_tree is None:
+            continue
+        convert_material(material)
 
     result["shapes"] = []
     result["bsdfs"] = []
@@ -108,36 +111,42 @@ def export_all(filepath, result):
 
             bpy.ops.object.select_all(action='DESELECT')
             i.select_set(True)
-            bpy.ops.export_mesh.ply(filepath=filepath+i.data.name+".ply", axis_forward='Y', axis_up='Z', use_selection=True)
+            bpy.ops.export_mesh.ply(filepath=os.path.join(
+                filepath, i.data.name+".ply"), axis_forward='Y', axis_up='Z', use_selection=True)
             result["shapes"].append(
-                {"type":"ply", "name": i.name, "filename" : "Meshes/" + i.name + ".ply"},
+                {"type": "ply", "name": i.name,
+                    "filename": "Meshes/" + i.name + ".ply"},
             )
 
             if(len(i.material_slots) > 0):
                 material = i.material_slots[0].material.ignis
                 mat_name = i.material_slots[0].material.name
-                
-                result["bsdfs"].append(material_to_json(material, mat_name, filepath, result))
+
+                result["bsdfs"].append(material_to_json(
+                    material, mat_name, filepath, result))
                 result["entities"].append(
-                    {"name":i.name, "shape":i.name, "bsdf": mat_name}
-                )        
+                    {"name": i.name, "shape": i.name, "bsdf": mat_name}
+                )
 
         elif(objType == "LIGHT"):
             l = i.data
             if(l.type == "POINT"):
                 result["lights"].append(
-                    {"type": "point", "name":i.name, "transform":{"translate":[i.location.x, i.location.y, i.location.z]}, "intensity": [l.energy, l.energy, l.energy]}
-                    )
+                    {"type": "point", "name": i.name, "transform": {"translate": [
+                        i.location.x, i.location.y, i.location.z]}, "intensity": [l.energy, l.energy, l.energy]}
+                )
 
             elif(l.type == "SPOT"):
                 result["lights"].append(
-                    {"type": "spot", "name":i.name, "transform":{"translate":[i.location.x, i.location.y, i.location.z]}, "direction": [degrees(i.rotation_euler.x), degrees(i.rotation_euler.z) + 180, degrees(i.rotation_euler.y)], "intensity": [l.energy, l.energy, l.energy]}
-                    )
+                    {"type": "spot", "name": i.name, "transform": {"translate": [i.location.x, i.location.y, i.location.z]}, "direction": [degrees(
+                        i.rotation_euler.x), degrees(i.rotation_euler.z) + 180, degrees(i.rotation_euler.y)], "intensity": [l.energy, l.energy, l.energy]}
+                )
 
             elif(l.type == "SUN"):
                 result["lights"].append(
-                    {"type": "sun", "name":i.name, "transform":{"translate":[i.location.x, i.location.y, i.location.z]}, "direction": [degrees(i.rotation_euler.x), degrees(i.rotation_euler.z) + 180, degrees(i.rotation_euler.y)], "sun_scale": l.energy}
-                    )
+                    {"type": "sun", "name": i.name, "transform": {"translate": [i.location.x, i.location.y, i.location.z]}, "direction": [
+                        degrees(i.rotation_euler.x), degrees(i.rotation_euler.z) + 180, degrees(i.rotation_euler.y)], "sun_scale": l.energy}
+                )
 
             elif(l.type == "AREA"):
                 # We need to construct a world matrix that factors in 180 degree rotation around y and scaling proportional to light size (we apply similar process to the camera):
@@ -149,7 +158,7 @@ def export_all(filepath, result):
                 mat_loc = mathutils.Matrix.Translation(loc)
 
                 # Construct scale matrix and multiply it with size of l divided by 2 to account for the light size
-                mat_sca = mathutils.Matrix.Identity(4) 
+                mat_sca = mathutils.Matrix.Identity(4)
                 mat_sca[0][0] = sca[0]
                 mat_sca[1][1] = sca[1]
                 mat_sca[2][2] = sca[2]
@@ -169,29 +178,41 @@ def export_all(filepath, result):
                 flat_matrix = [x for xs in xss for x in xs]
 
                 result["shapes"].append(
-                    {"type": "rectangle", "name": i.name+"-shape", "transform":flat_matrix}
-                    )
+                    {"type": "rectangle", "name": i.name +
+                        "-shape", "transform": flat_matrix}
+                )
                 result["bsdfs"].append(
-                    {"type": "diffuse", "name": i.name+"-bsdf", "reflectance": [0,0,0]}
-                    )
+                    {"type": "diffuse", "name": i.name +
+                        "-bsdf", "reflectance": [0, 0, 0]}
+                )
                 result["entities"].append(
-                    {"name":i.name, "shape": i.name+"-shape", "bsdf": i.name+"-bsdf"}
-                    )
+                    {"name": i.name, "shape": i.name +
+                        "-shape", "bsdf": i.name+"-bsdf"}
+                )
                 result["lights"].append(
-                    {"type": "area", "name":i.name, "entity": i.name, "radiance":[l.energy, l.energy, l.energy]}
-                    )
+                    {"type": "area", "name": i.name, "entity": i.name,
+                        "radiance": [l.energy, l.energy, l.energy]}
+                )
 
 
 def export_background(result, out_dir, scene):
-    tree = scene.world.node_tree
+    tree = scene.world.node_tree.nodes["Background"]
+    if tree.type == "BACKGROUND":
+        # TODO: Add strength parameter
+        input = tree.inputs["Color"]
 
-    if "Environment Texture" in tree.nodes:
-        # Export the background as texture and add it as environmental light
-        tex = map_texture(scene.world.node_tree.nodes["Environment Texture"].image, out_dir, result, True)
-        result["lights"].append({"type": "env", "name": tex, "radiance": tex, "scale":[0.5,0.5,0.5]})
-    elif "RGB" in tree.nodes:
-        color = scene.world.node_tree.nodes["RGB"].outputs[0].default_value
-        result["lights"].append({"type": "env", "name": "rgb", "radiance": [color[0], color[1], color[2]]})
+        if input.is_linked:
+            # Export the background as texture and add it as environmental light
+            tex_node = input.links[0].from_node
+            if tex_node.image is not None:
+                tex = map_texture(tex_node.image, out_dir, result, True)
+                result["lights"].append(
+                    {"type": "env", "name": tex, "radiance": tex, "scale": [0.5, 0.5, 0.5]})
+        elif input.type == "RGB" or input.type == "RGBA":
+            color = input.default_value
+            if color[0] > 0 or color[1] > 0 or color[2] > 0:
+                result["lights"].append({"type": "env", "name": "__scene_world", "radiance": map_rgb(color)})
+
 
 def export_camera(result, scene):
     camera = scene.camera
@@ -222,16 +243,18 @@ def export_camera(result, scene):
     flat_matrix = [x for xs in xss for x in xs]
 
     result["camera"] = {
-            "type": "perspective",
-            "fov" : degrees(2 * atan(camera.data.sensor_width / (2 * camera.data.lens))),
-            "near_clip" : 0.1,
-            "far_clip" : 100,
-            "transform": flat_matrix
-            
-        }
+        "type": "perspective",
+        "fov": degrees(2 * atan(camera.data.sensor_width / (2 * camera.data.lens))),
+        "near_clip": camera.data.clip_start,
+        "far_clip": camera.data.clip_end,
+        "transform": flat_matrix
 
-    result["film"] = {"size" : [scene.render.resolution_x, scene.render.resolution_y]}
-    
+    }
+
+    res_x = scene.render.resolution_x * scene.render.resolution_percentage * 0.01
+    res_y = scene.render.resolution_y * scene.render.resolution_percentage * 0.01
+    result["film"] = {"size": [res_x, res_y]}
+
 
 def export_scene(filepath, scene, depsgraph):
 
@@ -245,18 +268,19 @@ def export_scene(filepath, scene, depsgraph):
     export_camera(result, scene)
 
     # Create a path for meshes
-    objPath = filepath[:filepath.rindex('\\')+1] + 'Meshes'
-    os.mkdir(objPath)
+    objPath = os.path.join(os.path.dirname(filepath), 'Meshes')
+    os.makedirs(objPath, exist_ok=True)
 
     # Export all objects, materials, textures and lights
-    export_all(objPath + '\\', result)
-    
+    export_all(objPath, result)
+
     # Export background/environmental light
-    export_background(result, objPath + '\\', scene)
+    export_background(result, objPath, scene)
 
     # Write the result into the .json
     with open(filepath, 'w') as fp:
         json.dump(result, fp, indent=2)
+
 
 class IgnisExport(Operator, ExportHelper):
     """Ignis scene exporter"""
@@ -283,22 +307,27 @@ class IgnisExport(Operator, ExportHelper):
             for frame in range(context.scene.frame_start, context.scene.frame_end+1):
                 context.scene.frame_set(frame)
                 depsgraph = context.evaluated_depsgraph_get()
-                export_scene(self.filepath.replace('.json', f'{frame:04}.json'), context.scene, depsgraph)
+                export_scene(self.filepath.replace(
+                    '.json', f'{frame:04}.json'), context.scene, depsgraph)
         else:
             depsgraph = context.evaluated_depsgraph_get()
             export_scene(self.filepath, context.scene, depsgraph)
         return {'FINISHED'}
 
+
 def menu_func_export(self, context):
     self.layout.operator(IgnisExport.bl_idname, text="Ignis Export")
+
 
 def register():
     bpy.utils.register_class(IgnisExport)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
+
 def unregister():
     bpy.utils.unregister_class(IgnisExport)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
+
 
 if __name__ == "__main__":
     register()

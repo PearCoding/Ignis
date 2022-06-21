@@ -3,11 +3,12 @@ import bpy
 from bpy.props import *
 from math import sqrt
 
+
 class IgnisMaterial(bpy.types.PropertyGroup):
     base_color: FloatVectorProperty(
         name="BaseColor",
         description="Material base color",
-        default=(1,1,1),
+        default=(1, 1, 1),
         min=0, max=1,
         subtype="COLOR")
 
@@ -68,7 +69,7 @@ class IgnisMaterial(bpy.types.PropertyGroup):
     emission_color: FloatVectorProperty(
         name="Emission color",
         description="Emission color",
-        default=(1,1,1),
+        default=(1, 1, 1),
         min=0, max=1,
         subtype="COLOR")
 
@@ -90,6 +91,7 @@ class IgnisMaterial(bpy.types.PropertyGroup):
     def unregister(cls):
         del bpy.types.Material.ignis
 
+
 def map_texture(node):
     try:
         tex_out = node.links[0].from_node.image
@@ -98,13 +100,15 @@ def map_texture(node):
         pass
     return None
 
+
 def map_principled(shader, ignis):
     node = shader.inputs['Base Color']
     tex = map_texture(node)
     if tex:
         ignis.base_texture = tex
     else:
-        ignis.base_color = (node.default_value[0], node.default_value[1], node.default_value[2])
+        ignis.base_color = (
+            node.default_value[0], node.default_value[1], node.default_value[2])
 
     ignis.roughness = shader.inputs["Roughness"].default_value
     ignis.anisotropic = shader.inputs["Anisotropic"].default_value
@@ -127,16 +131,19 @@ def map_principled(shader, ignis):
     ignis.emission_color = (clr[0], clr[1], clr[2])
     ignis.emission_strength = shader.inputs["Emission Strength"].default_value
 
+
 def map_diffuse(shader, ignis):
     node = shader.inputs['Color']
     tex = map_texture(node)
     if tex:
         ignis.base_texture = tex
     else:
-        ignis.base_color = (node.default_value[0], node.default_value[1], node.default_value[2])
+        ignis.base_color = (
+            node.default_value[0], node.default_value[1], node.default_value[2])
 
     ignis.roughness = 1
     ignis.indexOfRefraction = 1
+
 
 def map_glossy(shader, ignis):
     node = shader.inputs['Color']
@@ -144,11 +151,13 @@ def map_glossy(shader, ignis):
     if tex:
         ignis.base_texture = tex
     else:
-        ignis.base_color = (node.default_value[0], node.default_value[1], node.default_value[2])
+        ignis.base_color = (
+            node.default_value[0], node.default_value[1], node.default_value[2])
 
     ignis.roughness = math.sqrt(shader.inputs["Roughness"].default_value)
     ignis.indexOfRefraction = 1
     ignis.metallic = 1
+
 
 def map_translucent(shader, ignis):
     tex, clr = map_texture(shader.inputs['Color']),
@@ -162,12 +171,14 @@ def map_translucent(shader, ignis):
     ignis.diffuseTransmittance = 1
     ignis.indexOfRefraction = 1
 
+
 def map_view_shader(material, ignis):
     clr = material.diffuse_color
     ignis.base_color = (clr[0], clr[1], clr[2])
     ignis.roughness = material.roughness
     ignis.metallic = material.metallic
     ignis.indexOfRefraction = 1
+
 
 def map_emission(shader, ignis):
     strength = shader.inputs['Strength'].default_value
@@ -178,18 +189,21 @@ def map_emission(shader, ignis):
     ignis.base_color = (0, 0, 0)
     ignis.indexOfRefraction = 1
 
+
 def map_glass(shader, ignis):
     clr_node = shader.inputs['Color']
     tex = map_texture(clr_node)
     if tex:
         ignis.base_texture = tex
     else:
-        ignis.base_color = (clr_node.default_value[0], clr_node.default_value[1], clr_node.default_value[2])
+        ignis.base_color = (
+            clr_node.default_value[0], clr_node.default_value[1], clr_node.default_value[2])
 
     ignis.roughness = shader.inputs['Roughness'].default_value
     ignis.indexOfRefraction = shader.inputs['IOR'].default_value
     ignis.specularTransmittance = 1
     ignis.specularTint = 1
+
 
 shader_matcher = {
     "Principled BSDF": map_principled,
@@ -200,12 +214,14 @@ shader_matcher = {
     "Glass BSDF": map_glass
 }
 
+
 def convert_material(material):
     last_shader = material.node_tree.nodes['Material Output'].inputs['Surface'].links[0].from_node
     if last_shader.name in shader_matcher:
         return shader_matcher[last_shader.name](last_shader, material.ignis)
     else:
         return map_view_shader(material, material.ignis)
+
 
 class ConvertOperator(bpy.types.Operator):
     bl_idname = "ignis.convert_material"
@@ -219,7 +235,8 @@ class ConvertOperator(bpy.types.Operator):
 
     def execute(self, context):
         convert_material(context.material)
-        return { "FINISHED" }
+        return {"FINISHED"}
+
 
 class ConvertAllOperator(bpy.types.Operator):
     bl_idname = "ignis.convert_all_materials"
@@ -229,19 +246,24 @@ class ConvertAllOperator(bpy.types.Operator):
 
     def execute(self, context):
         for material in list(bpy.data.materials):
-            if material.node_tree is None: continue
+            if material.node_tree is None:
+                continue
             convert_material(material)
-        return { "FINISHED" }
+        return {"FINISHED"}
+
 
 def menu_func(self, context):
     self.layout.operator_context = 'INVOKE_DEFAULT'
-    self.layout.operator(ConvertAllOperator.bl_idname, text="Convert all materials to ignis")
+    self.layout.operator(ConvertAllOperator.bl_idname,
+                         text="Convert all materials to ignis")
+
 
 def register():
     bpy.utils.register_class(IgnisMaterial)
     bpy.utils.register_class(ConvertOperator)
     bpy.utils.register_class(ConvertAllOperator)
     bpy.types.TOPBAR_MT_file_import.append(menu_func)
+
 
 def unregister():
     bpy.utils.unregister_class(IgnisMaterial)
