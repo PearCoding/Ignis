@@ -7,6 +7,8 @@
 #include "measured/KlemsLoader.h"
 #include "measured/TensorTreeLoader.h"
 
+#include "measured/djmeasured.h"
+
 #include <chrono>
 
 namespace IG {
@@ -107,14 +109,19 @@ static std::string inline_microfacet(const std::string& name, ShadingTree& tree,
 
 static void bsdf_djmeasured(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree) 
 {
-    tree.beginClosure();
 
     std::string bsdf_name = bsdf->property("filename").getString();
-
+    std::string bsdf_path = "../brdf/" + bsdf_name + "_rgb.bsdf";
+    std::string out_path = "../brdf/" + bsdf_name + ".bin";
     std::string buffer_name = "buffer_" + bsdf_name;
 
+    BRDFData* data = load_brdf_data(bsdf_path);
+    write_brdf_data(data, out_path);
+
+    tree.beginClosure();
+
     stream << tree.pullHeader()
-           << "  let " << buffer_name << " : DeviceBuffer = device.load_buffer(\"../../brdf/" << bsdf_name << ".bsdf\");"
+           << "  let " << buffer_name << " : DeviceBuffer = device.load_buffer(\"" << out_path << "\");"
            << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_djmeasured_bsdf(surf, "
            << buffer_name << ");" << std::endl;
 

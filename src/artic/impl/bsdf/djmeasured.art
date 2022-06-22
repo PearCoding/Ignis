@@ -716,21 +716,121 @@ fn @ sample_brdf(sampler: BRDFData, u : Vec2, incoming : Vec3) -> MeasuredBRDFSa
     }
 } 
 
+fn @delinearize_warp(buffer : DeviceBuffer, start : i32) {
+    let mut offset = 0;
+    let sizes = [
+        buffer.load_f32(start + offset + 0) as i32,
+        buffer.load_f32(start + offset + 1) as i32,
+        buffer.load_f32(start + offset + 2) as i32,
+        buffer.load_f32(start + offset + 3) as i32,
+        buffer.load_f32(start + offset + 4) as i32,
+        buffer.load_f32(start + offset + 5) as i32,
+        ];
+    //warp.array_sizes = sizes;
+    offset += 6;
+
+    let size = Vec2i{ 
+        x = buffer.load_f32(start + offset) as i32,
+        y = buffer.load_f32(start + offset + 1) as i32
+    };
+    offset += 2;
+
+    let patch_size = make_vec2(buffer.load_f32(start + offset), buffer.load_f32(start + offset + 1));
+    offset += 2;
+
+    let inv_patch_size = make_vec2(buffer.load_f32(start + offset), buffer.load_f32(start + offset + 1));
+    offset += 2;
+
+    let param_values_offset = buffer.load_f32(start+offset) as i32;
+    offset += 1;
+
+    // auto param_size = new unsigned int[warp.array_sizes[0]];
+    // for (int i = 0; i < warp.array_sizes[0]; i++) {param_size[i] = *reinterpret_cast<unsigned int*>(&data[offset + i]);}
+    // offset += warp.array_sizes[0];
+    // warp.param_size = param_size;
+
+    // auto param_strides = new unsigned int[warp.array_sizes[1]];
+    // for (int i = 0; i < warp.array_sizes[1]; i++) {param_strides[i] = *reinterpret_cast<unsigned int*>(&data[offset + i]);}
+    // offset += warp.array_sizes[1];
+    // warp.param_strides = param_strides;
+
+    // auto param_values = new float[warp.array_sizes[2]];
+    // for (int i = 0; i < warp.array_sizes[2]; i++) {param_values[i] = data[offset + i];}
+    // offset += warp.array_sizes[2];
+    // warp.param_values = param_values;
+
+    // auto w_data = new float[warp.array_sizes[3]];
+    // for (int i = 0; i < warp.array_sizes[3]; i++) {w_data[i] = data[offset + i];}
+    // offset += warp.array_sizes[3];
+    // warp.data = w_data;
+
+    // auto marginal_cdf = new float[warp.array_sizes[4]];
+    // for (int i = 0; i < warp.array_sizes[4]; i++) {marginal_cdf[i] = data[offset + i];}
+    // offset += warp.array_sizes[4];
+    // warp.marginal_cdf = marginal_cdf;
+
+    // auto conditional_cdf = new float[warp.array_sizes[5]];
+    // for (int i = 0; i < warp.array_sizes[5]; i++) {conditional_cdf[i] = data[offset + i];}
+    // offset += warp.array_sizes[5];
+    // warp.conditional_cdf = conditional_cdf;
+
+    // return warp;
+
+    Warp {
+        size = size,
+        patch_size = patch_size,
+        inv_patch_size = inv_patch_size,
+        param_values_offset = param_values_offset,
+        param_size = 0 as &[u32],
+        param_strides = 0 as &[u32],
+        param_values = 0 as &[f32],
+        data = 0 as &[f32],
+        marginal_cdf = 0 as &[f32],
+        conditional_cdf = 0 as &[f32],
+        array_sizes = 0 as &[u32]
+    }
+}
+
 // Creates a measured BRDF (Dupuy & Jakob 2018)
-fn @make_djmeasured_bsdf(surf: SurfaceElement, buffer : DeviceBuffer) = Bsdf {
-    eval = @ |in_dir, out_dir| {
-        make_color(1,0,0,1)
-    },
-    pdf = @ |in_dir, out_dir| {
-        1.0
-    },
-    sample = @ |rnd, out_dir, _| {
-        let reflect_out = vec3_reflect(out_dir, surf.local.col(2));
-        let sample      = sample_cosine_power_hemisphere(0.5, randf(rnd), randf(rnd));
-        let in_dir      = mat3x3_mul(make_orthonormal_mat3x3(reflect_out), sample.dir);
-        let cos         = positive_cos(in_dir, surf.local.col(2));
-        let color       = make_color(0,0,0,1);
-        make_bsdf_sample(surf, in_dir, sample.pdf, color, 1, false)
-    },
-    is_specular = false
-};
+fn @make_djmeasured_bsdf(surf: SurfaceElement, buffer : DeviceBuffer) {
+
+    let size_ndf = buffer.load_f32(2) as i32;
+    let size_vndf = buffer.load_f32(3) as i32;
+    let size_sigma = buffer.load_f32(4) as i32;
+    let size_luminance = buffer.load_f32(5) as i32;
+    let size_rgb = buffer.load_f32(6) as i32;
+
+    let start_ndf = 7;
+    let start_vndf = start_ndf + size_ndf;
+    let start_sigma = start_vndf + size_vndf;
+    let start_luminance = start_sigma + size_sigma;
+    let start_rgb = start_luminance + size_luminance;
+
+    let brdf_data = BRDFData {
+        ndf = delinearize_warp(buffer, start_ndf),
+        sigma = delinearize_warp(buffer, start_sigma),
+        vndf = delinearize_warp(buffer, start_vndf),
+        luminance = delinearize_warp(buffer, start_luminance),
+        rgb = delinearize_warp(buffer, start_rgb),
+        isotropic = buffer.load_f32(0) == 1,
+        jacobian = buffer.load_f32(1) == 1
+    };
+
+    Bsdf {
+        eval = @ |in_dir, out_dir| {
+            evaluate_brdf(brdf_data, in_dir, out_dir)
+        },
+        pdf = @ |in_dir, out_dir| {
+            1.0
+        },
+        sample = @ |rnd, out_dir, _| {
+            let reflect_out = vec3_reflect(out_dir, surf.local.col(2));
+            let sample      = sample_cosine_power_hemisphere(0.5, randf(rnd), randf(rnd));
+            let in_dir      = mat3x3_mul(make_orthonormal_mat3x3(reflect_out), sample.dir);
+            let cos         = positive_cos(in_dir, surf.local.col(2));
+            let color       = make_color(0,0,0,1);
+            make_bsdf_sample(surf, in_dir, sample.pdf, color, 1, false)
+        },
+        is_specular = false
+    }
+}

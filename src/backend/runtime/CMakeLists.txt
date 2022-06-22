@@ -78,6 +78,10 @@ set(SRC
     measured/KlemsLoader.h
     measured/TensorTreeLoader.cpp
     measured/TensorTreeLoader.h
+    measured/powitacq_rgb.inl
+    measured/powitacq_rgb.h
+    measured/djmeasured.cpp
+    measured/djmeasured.h
     mesh/MtsSerializedFile.cpp
     mesh/MtsSerializedFile.h
     mesh/ObjFile.cpp
