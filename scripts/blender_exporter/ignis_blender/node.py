@@ -1,4 +1,3 @@
-from numpy import isin
 import bpy
 import os
 
@@ -131,12 +130,12 @@ def _export_scalar_math(result, node, path):
 
 
 def _export_rgb_value(result, node, path):
-    return map_rgb(node.outputs[0].default_value)
+    default_value = node.outputs[0].default_value
+    return f"color({default_value[0]}, {default_value[1]}, {default_value[2]}, {default_value[3]})"
 
 
 def _export_rgb_math(result, node, path):
     # See https://docs.gimp.org/en/gimp-concepts-layer-modes.html
-    # TODO: HUE, SATURATION, COLOR, VALUE
 
     fac = export_node(result, node.inputs[0], path)
     col1 = export_node(result, node.inputs[1], path)  # Background (I)
@@ -144,40 +143,45 @@ def _export_rgb_math(result, node, path):
 
     ops = ""
     if node.blend_type == "MIX":
-        ops = col2
-    elif node.blend_type == "BURN":  # Only valid if between 0 1
-        ops = f"burn({col1}, {col2})"
+        ops = f"mix({col1}, {col2}, {fac})"
+    elif node.blend_type == "BURN":
+        ops = f"mix_burn({col1}, {col2}, {fac})"
     elif node.blend_type == "DARKEN":
-        ops = f"min({col1}, {col2})"
+        ops = f"mix({col1}, min({col1}, {col2}), {fac})"
     elif node.blend_type == "LIGHTEN":
-        ops = f"max({col1}, {col2})"
-    elif node.blend_type == "SCREEN":  # Only valid if between 0 1
-        ops = f"screen({col1}, {col2})"
-    elif node.blend_type == "DODGE":  # Only valid if between 0 1
-        ops = f"dodge({col1}, {col2})"
-    elif node.blend_type == "OVERLAY":   # Only valid if between 0 1
-        ops = f"overlay({col1}, {col2})"
-    elif node.blend_type == "SOFT_LIGHT":   # Only valid if between 0 1
-        ops = f"softlight({col1}, {col2})"
-    elif node.blend_type == "LINEAR_LIGHT":  # Only valid if between 0 1
-        ops = f"hardlight({col1}, {col2})"
+        ops = f"mix({col1}, max({col1}, {col2}), {fac})"
+    elif node.blend_type == "SCREEN":
+        ops = f"mix_screen({col1}, {col2}, {fac})"
+    elif node.blend_type == "DODGE":
+        ops = f"mix_dodge({col1}, {col2}, {fac})"
+    elif node.blend_type == "OVERLAY":
+        ops = f"mix_overlay({col1}, {col2}, {fac})"
+    elif node.blend_type == "SOFT_LIGHT":
+        ops = f"mix_soft({col1}, {col2}, {fac})"
+    elif node.blend_type == "LINEAR_LIGHT":
+        ops = f"mix_linear({col1}, {col2}, {fac})"
+    elif node.blend_type == "HUE":
+        ops = f"mix_hue({col1}, {col2}, {fac})"
+    elif node.blend_type == "SATURATION":
+        ops = f"mix_saturation({col1}, {col2}, {fac})"
+    elif node.blend_type == "VALUE":
+        ops = f"mix_value({col1}, {col2}, {fac})"
+    elif node.blend_type == "COLOR":
+        ops = f"mix_color({col1}, {col2}, {fac})"
     elif node.blend_type == "DIFFERENCE":
-        ops = f"max(0, {col1} - {col2})"
+        ops = f"mix({col1}, abs({col1} - {col2}), {fac})"
     elif node.blend_type == "ADD":
-        ops = f"({col1} + {col2})"
+        ops = f"mix({col1}, {col1} + {col2}, {fac})"
     elif node.blend_type == "SUBTRACT":
-        ops = f"({col1} - {col2})"
+        ops = f"mix({col1}, {col1} - {col2}, {fac})"
     elif node.blend_type == "MULTIPLY":
-        ops = f"({col1} * {col2})"
+        ops = f"mix({col1}, {col1} * {col2}, {fac})"
     elif node.blend_type == "DIVIDE":
-        ops = f"({col1} / ({col2} + color(1)))"
+        ops = f"mix({col1}, {col1} / ({col2} + color(1)), {fac})"
     else:
         print(
             f"Not supported rgb math operation type {node.operation} for node {node.name}")
         return "color(0)"
-
-    if node.inputs[0].is_linked or node.inputs[0].default_value != 1:  # TODO: Prevent copying?
-        ops = f"mix({col1}, {ops}, {fac})"
 
     if node.use_clamp:
         return f"clamp({ops}, 0, 1)"
@@ -285,7 +289,7 @@ def _export_val_to_rgb(result, node, path):
 
 def _export_rgb_to_bw(result, node, path):
     color = export_node(result, node.inputs["Color"], path)
-    return f"avg({color})"  # Not luminance?
+    return f"luminance({color})"
 
 
 # TRS
@@ -295,26 +299,26 @@ def _export_vector_mapping(result, node, path):
     else:
         vec = 'vec3(0)'
 
-    ignore_location = node.vector_type == 'VECTOR' or node.vector_type == 'NORMAL'
-    normalize = node.vector_type == 'NORMAL'
-    drop_z = node.vector_type == 'TEXTURE'
-
     sca = export_node(result, node.inputs["Scale"], path)
-    out = f"({vec} * {sca})"
+    rot = export_node(result, node.inputs["Rotation"], path)
 
-    # TODO: Add rotation!
-
-    if not ignore_location:
+    if node.vector_type == 'POINT':
         loc = export_node(result, node.inputs["Location"], path)
-        out = f"({out} + {loc})"
-
-    if normalize:
-        out = f"norm({out})"
-
-    if drop_z:
-        return f"{out}.xyy"
+        out = f"({vec} * {sca})"
+        out = f"rotate_euler({out}, {rot})"
+        return f"({out} + {loc})"
+    elif node.vector_type == 'TEXTURE':
+        loc = export_node(result, node.inputs["Location"], path)
+        out = f"({vec} - {loc})"
+        out = f"rotate_euler_inverse({out}, {rot})"
+        return f"({out} / {sca})"
+    elif node.vector_type == 'NORMAL':
+        out = f"({vec} / {sca})"
+        out = f"rotate_euler({out}, {rot})"
+        return f"norm({out})"
     else:
-        return out
+        out = f"({vec} * {sca})"
+        return f"rotate_euler({out}, {rot})"
 
 
 def _export_checkerboard(result, node, path, output_name):

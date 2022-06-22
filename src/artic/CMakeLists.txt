@@ -98,6 +98,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/pixel_sampler.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/sampling.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/shading.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/vector.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/warp.art
 )
 

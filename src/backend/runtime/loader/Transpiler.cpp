@@ -143,6 +143,10 @@ inline static MapFunction1 genFunction1Color(const char* func)
 {
     return [=](const std::string& a) { return "color_to_vec4(" + std::string(func) + "(" + a + "))"; };
 }
+inline static MapFunction1 genFunction1ColorO(const char* func)
+{
+    return [=](const std::string& a) { return std::string(func) + "(vec4_to_color(" + a + "))"; };
+}
 inline static MapFunction1 genFunction1ColorIO(const char* func)
 {
     return [=](const std::string& a) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + a + ")))"; };
@@ -280,6 +284,16 @@ inline static InternalDynFunction3 genDynLerpFunction3(const char* func)
         genMapFunction3(func, PExprType::Vec4)
     };
 }
+inline static InternalDynFunction3 genDynColorLerpFunction3(const char* func)
+{
+    return {
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        genMapFunction3(func, PExprType::Vec4)
+    };
+}
 
 // Defs
 static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynFunctions1 = {
@@ -319,7 +333,9 @@ static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynF
     { "min", genDynMapFunction2("math_builtins::fmax", "min") },
     { "max", genDynMapFunction2("math_builtins::fmin", "max") },
     { "atan2", genDynMapFunction2("math_builtins::atan2", nullptr) },
-    { "cross", { nullptr, nullptr, nullptr, genArrayFunction2("cross", PExprType::Vec3), nullptr } }
+    { "cross", { nullptr, nullptr, nullptr, genArrayFunction2("cross", PExprType::Vec3), nullptr } },
+    { "rotate_euler", { nullptr, nullptr, nullptr, genArrayFunction2("vec3_rotate_euler", PExprType::Vec3), nullptr } },
+    { "rotate_euler_inverse", { nullptr, nullptr, nullptr, genArrayFunction2("vec3_rotate_euler_inverse", PExprType::Vec3), nullptr } }
 };
 static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynNoiseFunctions2 = {
     { "noise", { nullptr, genFunction2("noise1"), genFunction2("noise2_v"), genFunction2("noise3_v"), nullptr } },
@@ -351,13 +367,24 @@ static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynF
     { "clamp", { genMapFunction3("clamp", PExprType::Integer), genMapFunction3("clampf", PExprType::Number), nullptr, nullptr, nullptr } }
 };
 static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynLerpFunctions3 = {
-    { "mix", genDynLerpFunction3("lerp") }
+    { "mix", genDynLerpFunction3("lerp") },
+    { "mix_screen", genDynColorLerpFunction3("color_mix_screen") },
+    { "mix_overlay", genDynLerpFunction3("color_mix_overlay") },
+    { "mix_dodge", genDynLerpFunction3("color_mix_dodge") },
+    { "mix_burn", genDynLerpFunction3("color_mix_burn") },
+    { "mix_soft", genDynLerpFunction3("color_mix_soft") },
+    { "mix_linear", genDynLerpFunction3("color_mix_linear") },
+    { "mix_hue", genDynLerpFunction3("color_mix_hue") },
+    { "mix_saturation", genDynLerpFunction3("color_mix_saturation") },
+    { "mix_value", genDynLerpFunction3("color_mix_value") },
+    { "mix_color", genDynLerpFunction3("color_mix_color") }
 };
 
 static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynReduceFunctions1 = {
     { "length", genDynArrayFunction1("len") },
     { "sum", genDynArrayFunction1("sum") },
     { "avg", genDynArrayFunction1("avg") },
+    { "luminance", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorO("color_luminance") } },
     { "checkerboard", { nullptr, nullptr, genFunction1("node_checkerboard"), nullptr, nullptr } },
     { "noise", { nullptr, genFunction1("noise1_def"), genFunction1("noise2_def"), genFunction1("noise3_def"), nullptr } },
     { "snoise", { nullptr, genFunction1("snoise1_def"), genFunction1("snoise2_def"), genFunction1("snoise3_def"), nullptr } },

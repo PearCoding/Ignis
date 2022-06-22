@@ -1,0 +1,17 @@
+// In contrary to the core/vector.art this file contains color utility functions used by textures, and not tonemapping
+
+fn @euler_to_mat3x3(euler: Vec3) {
+    let cx = math_builtins::cos(euler.x);
+    let cy = math_builtins::cos(euler.y);
+    let cz = math_builtins::cos(euler.z);
+    let sx = math_builtins::sin(euler.x);
+    let sy = math_builtins::sin(euler.y);
+    let sz = math_builtins::sin(euler.z);
+  
+    make_mat3x3(make_vec3(cy * cz, sy * sx * cz - cx * sz, sy * cx * cz + sx * sz),
+                make_vec3(cy * sz, sy * sx * sz + cx * cz, sy * cx * sz - sx * cz),
+                make_vec3(    -sy,                cy * sx,                cy * cx))
+}
+
+fn @vec3_rotate_euler(p: Vec3, euler: Vec3)         = mat3x3_mul(euler_to_mat3x3(euler), p);
+fn @vec3_rotate_euler_inverse(p: Vec3, euler: Vec3) = mat3x3_left_mul(euler_to_mat3x3(euler), p);
