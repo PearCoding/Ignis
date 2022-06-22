@@ -103,7 +103,7 @@ class IGNIS_PT_export_include(bpy.types.Panel):
 
         layout.separator()
 
-        layout.prop(operator, 'animation')
+        layout.prop(operator, 'animations')
 
 
 def menu_func_export(self, context):
