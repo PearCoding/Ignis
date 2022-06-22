@@ -37,6 +37,7 @@ public:
     void registerTextureUsage(const std::string& name);
     std::string pullHeader();
     std::string getInline(const std::string& name);
+    bool isPureTexture(const std::string& name);
     inline bool hasParameter(const std::string& name) const { return currentClosure().Parameters.count(name) > 0; }
 
     inline LoaderContext& context() { return mContext; }
@@ -49,12 +50,14 @@ private:
     inline const Closure& currentClosure() const { return mClosures.back(); }
     inline Closure& currentClosure() { return mClosures.back(); }
 
-    std::string handleTexture(const std::string& name, const std::string& uv_access, bool needColor, bool hasSurfaceInfo);
+    std::string handleTexture(const std::string& prop_name, const std::string& expr, const std::string& uv_access, bool needColor, bool hasSurfaceInfo);
 
     LoaderContext& mContext;
 
     std::vector<std::string> mHeaderLines; // The order matters
     std::unordered_set<std::string> mLoadedTextures;
+    std::unordered_set<std::string> mPureTextures;
+
 
     std::vector<Closure> mClosures;
 

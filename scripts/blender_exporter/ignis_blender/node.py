@@ -5,15 +5,22 @@ import os
 from .utils import *
 
 
-def _export_default(result, socket, factor=1, asLight=False):
+def _export_default(socket):
     default_value = getattr(socket, "default_value")
     if default_value is None:
         print(f"Socket {socket.name} has no default value")
-        return 0
+        if socket.type == 'VECTOR':
+            return "vec3(0)"
+        elif socket.type == 'RGBA':
+            return "color(0)"
+        else:
+            return 0
     else:
-        try:  # Try color
-            return map_rgb(default_value)
-        except Exception:
+        if socket.type == 'VECTOR':
+            return f"vec3({default_value[0]}, {default_value[1]}, {default_value[2]})"
+        elif socket.type == 'RGBA':
+            return f"color({default_value[0]}, {default_value[1]}, {default_value[2]}, {default_value[3]})"
+        else:
             return default_value
 
 
@@ -22,8 +29,6 @@ def _export_scalar_value(result, node, path):
 
 
 def _export_scalar_clamp(result, node, path):
-    clamp_type = node.clamp_type  # TODO: ???
-
     val = export_node(result, node.inputs[0], path)
     minv = export_node(result, node.inputs[1], path)
     maxv = export_node(result, node.inputs[2], path)
@@ -165,14 +170,14 @@ def _export_rgb_math(result, node, path):
     elif node.blend_type == "MULTIPLY":
         ops = f"({col1} * {col2})"
     elif node.blend_type == "DIVIDE":
-        ops = f"({col1} / ({col2} + 1))"
+        ops = f"({col1} / ({col2} + color(1)))"
     else:
         print(
             f"Not supported rgb math operation type {node.operation} for node {node.name}")
-        return 0
+        return "color(0)"
 
     if node.inputs[0].is_linked or node.inputs[0].default_value != 1:  # TODO: Prevent copying?
-        ops = f"lerp({fac}, {col1}, {ops})"
+        ops = f"mix({col1}, {ops}, {fac})"
 
     if node.use_clamp:
         return f"clamp({ops}, 0, 1)"
@@ -191,8 +196,8 @@ def _export_rgb_brightcontrast(result, node, path):
     color_node = export_node(result, node.inputs[0], path)
     bright_node = export_node(result, node.inputs[1], path)
     contrast_node = export_node(result, node.inputs[2], path)
-
-    return 0
+    print("brightcontrast currently not supported")
+    return "color(0)"
 
 
 def _export_rgb_invert(result, node, path):
@@ -201,11 +206,66 @@ def _export_rgb_invert(result, node, path):
     fac = export_node(result, node.inputs[0], path)
     col1 = export_node(result, node.inputs[1], path)
 
-    ops = f"(1-{col1})"
+    ops = f"(color(1) - {col1})"
     if node.inputs[0].is_linked or node.inputs[0].default_value != 1:
-        return f"lerp({fac}, {col1}, {ops})"
+        return f"mix({col1}, {ops}, {fac})"
     else:
         return ops
+
+
+def _export_combine_hsv(result, node, path):
+    hue = export_node(result, node.inputs["H"], path)
+    sat = export_node(result, node.inputs["S"], path)
+    val = export_node(result, node.inputs["V"], path)
+
+    return f"hsvtorgb(color({hue}, {sat}, {val}))"
+
+
+def _export_combine_rgb(result, node, path):
+    r = export_node(result, node.inputs["R"], path)
+    g = export_node(result, node.inputs["G"], path)
+    b = export_node(result, node.inputs["B"], path)
+
+    return f"color({r}, {g}, {b})"
+
+
+def _export_combine_xyz(result, node, path):
+    x = export_node(result, node.inputs["X"], path)
+    y = export_node(result, node.inputs["Y"], path)
+    z = export_node(result, node.inputs["Z"], path)
+
+    return f"vec3({x}, {y}, {z})"
+
+
+def _export_separate_hsv(result, node, path, output_name):
+    color = export_node(result, node.inputs["Color"], path)
+    ops = f"rgbtohsv({color})"
+    if output_name == "H":
+        return f"{ops}.r"
+    elif output_name == "S":
+        return f"{ops}.g"
+    else:
+        return f"{ops}.b"
+
+
+def _export_separate_rgb(result, node, path, output_name):
+    color = export_node(result, node.inputs["Color"], path)
+    if output_name == "R":
+        return f"{color}.r"
+    elif output_name == "G":
+        return f"{color}.g"
+    else:
+        return f"{color}.b"
+
+
+def _export_separate_xyz(result, node, path, output_name):
+    vec = export_node(result, node.inputs["Vector"], path)
+    if output_name == "X":
+        return f"{vec}.x"
+    elif output_name == "Y":
+        return f"{vec}.y"
+    else:
+        return f"{vec}.z"
 
 
 def _export_hsv(result, node, path):
@@ -215,26 +275,63 @@ def _export_hsv(result, node, path):
     fac = export_node(result, node.inputs[3], path)
     col = export_node(result, node.inputs[4], path)
 
-    # TODO
-    return 0
+    return f"hsvtorgb(mix(rgbtohsv({col}), color({hue}, {sat}, {val}), {fac}))"
 
 
-def _export_rgb(result, node, path):
-    # TODO
-    return [0, 0, 0]
+def _export_val_to_rgb(result, node, path):
+    val = export_node(result, node.inputs[0], path)
+    return f"color({val})"
 
 
-def _export_blackbody(result, node, path):
-    # TODO
-    return 0
+def _export_rgb_to_bw(result, node, path):
+    color = export_node(result, node.inputs["Color"], path)
+    return f"avg({color})"  # Not luminance?
 
 
-def _export_checkerboard(result, node, path):
-    color1 = export_node(result, node.inputs["Color1"], path)
-    color2 = export_node(result, node.inputs["Color2"], path)
+# TRS
+def _export_vector_mapping(result, node, path):
+    if node.inputs["Vector"].is_linked:
+        vec = export_node(result, node.inputs["Vector"], path)
+    else:
+        vec = 'vec3(0)'
+
+    ignore_location = node.vector_type == 'VECTOR' or node.vector_type == 'NORMAL'
+    normalize = node.vector_type == 'NORMAL'
+    drop_z = node.vector_type == 'TEXTURE'
+
+    sca = export_node(result, node.inputs["Scale"], path)
+    out = f"({vec} * {sca})"
+
+    # TODO: Add rotation!
+
+    if not ignore_location:
+        loc = export_node(result, node.inputs["Location"], path)
+        out = f"({out} + {loc})"
+
+    if normalize:
+        out = f"norm({out})"
+
+    if drop_z:
+        return f"{out}.xyy"
+    else:
+        return out
+
+
+def _export_checkerboard(result, node, path, output_name):
     scale = export_node(result, node.inputs["Scale"], path)
-    # TODO
-    return 0
+
+    if node.inputs["Vector"].is_linked:
+        uv = export_node(result, node.inputs["Vector"], path)
+    else:
+        uv = "uv"
+
+    raw = f"checkerboard(({uv} * {scale}).xy)"
+    if output_name == "Color":
+        color1 = export_node(result, node.inputs["Color1"], path)
+        color2 = export_node(result, node.inputs["Color2"], path)
+        return f"select({raw} == 0, {color1}, {color2})"
+    else:
+        return raw
 
 
 def _export_image_texture(result, node, path):
@@ -288,18 +385,58 @@ def _export_image_texture(result, node, path):
         }
     )
 
-    # TODO: Add uv mapping!
-    if img.channels == 1:
-        return f"{tex_name}.r"
+    if node.inputs["Vector"].is_linked:
+        uv = export_node(result, node.inputs["Vector"], path)
+        tex_access = f"{tex_name}(({uv}).xy)"
     else:
-        return tex_name
+        tex_access = tex_name
+
+    return tex_access
 
 
-def _export_node(result, socket, node, path):
+def _export_surface_attributes(result, node, path, output_name):
+    if output_name == "Position":
+        return "P"
+    elif output_name == "Normal":
+        return "N"
+    else:
+        print(
+            f"Given geometry attribute '{output_name}' not supported")
+        return "N"
+
+
+def _export_tex_coordinate(result, node, path, output_name):
+    # Currently no other support planned. `Generated` might be added in the future
+    return "uv.xyy"  # Extend 2d vector to 3d, as VECTOR is always 3d
+
+
+def _export_node(result, node, path, output_name):
+    # Missing:
+    # ShaderNodeAttribute, ShaderNodeBlackbody, ShaderNodeBevel, ShaderNodeBump, ShaderNodeCameraData,
+    # ShaderNodeCustomGroup, ShaderNodeFloatCurve, ShaderNodeFresnel, ShaderNodeGroup,
+    # ShaderNodeHairInfo, ShaderNodeLayerWeight, ShaderNodeLightFalloff,
+    # ShaderNodeMapRange, ShaderNodeNormal,
+    # ShaderNodeNormalMap, ShaderNodeObjectInfo, ShaderNodeRGBCurve, ShaderNodeScript,
+    # ShaderNodeShaderToRGB, ShaderNodeSubsurfaceScattering, ShaderNodeTangent,
+    # ShaderNodeTexBrick, ShaderNodeTexEnvironment,
+    # ShaderNodeTexGradient, ShaderNodeTexIES, ShaderNodeTexMagic,
+    # ShaderNodeTexMusgrave, ShaderNodeTexNoise, ShaderNodeTexPointDensity, ShaderNodeTexSky,
+    # ShaderNodeTexVoronoi, ShaderNodeTexWave, ShaderNodeTexWhiteNoise, ShaderNodeUVAlongStroke,
+    # ShaderNodeUVMap, ShaderNodeVectorCurve,
+    # ShaderNodeVectorDisplacement, ShaderNodeVectorMath, ShaderNodeVectorRotate, ShaderNodeVectorTransform,
+    # ShaderNodeVertexColor, ShaderNodeWavelength, ShaderNodeWireframe
+
+    # No support planned: ShaderNodeAmbientOcclusion, ShaderNodeLightPath, ShaderNodeOutputAOV,
+    # ShaderNodeParticleInfo, ShaderNodeOutputLineStyle, ShaderNodePointInfo, ShaderNodeHoldout
+
     if isinstance(node, bpy.types.ShaderNodeTexImage):
         return _export_image_texture(result, node, path)
     elif isinstance(node, bpy.types.ShaderNodeTexChecker):
-        return _export_checkerboard(result, node, path)
+        return _export_checkerboard(result, node, path, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeTexCoord):
+        return _export_tex_coordinate(result, node, path, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeNewGeometry):
+        return _export_surface_attributes(result, node, path, output_name)
     elif isinstance(node, bpy.types.ShaderNodeMath):
         return _export_scalar_math(result, node, path)
     elif isinstance(node, bpy.types.ShaderNodeValue):
@@ -312,26 +449,56 @@ def _export_node(result, socket, node, path):
         return _export_rgb_math(result, node, path)
     elif isinstance(node, bpy.types.ShaderNodeInvert):
         return _export_rgb_invert(result, node, path)
-    elif isinstance(node, bpy.types.ShaderNodeRGB):
-        return _export_rgb_value(result, node, path)
     elif isinstance(node, bpy.types.ShaderNodeGamma):
         return _export_rgb_gamma(result, node, path)
     elif isinstance(node, bpy.types.ShaderNodeBrightContrast):
         return _export_rgb_brightcontrast(result, node, path)
-    elif isinstance(node, bpy.types.ShaderNodeBlackbody):
-        return _export_blackbody(result, node, path)
     elif isinstance(node, bpy.types.ShaderNodeHueSaturation):
         return _export_hsv(result, node, path)
+    elif isinstance(node, bpy.types.ShaderNodeRGB):
+        return _export_rgb_value(result, node, path)
     elif isinstance(node, bpy.types.ShaderNodeValToRGB):
-        return _export_rgb(result, node, path)
+        return _export_val_to_rgb(result, node, path)
+    elif isinstance(node, bpy.types.ShaderNodeRGBToBW):
+        return _export_rgb_to_bw(result, node, path)
+    elif isinstance(node, bpy.types.ShaderNodeCombineHSV):
+        return _export_combine_hsv(result, node, path)
+    elif isinstance(node, bpy.types.ShaderNodeCombineRGB):
+        return _export_combine_rgb(result, node, path)
+    elif isinstance(node, bpy.types.ShaderNodeCombineXYZ):
+        return _export_combine_xyz(result, node, path)
+    elif isinstance(node, bpy.types.ShaderNodeSeparateHSV):
+        return _export_separate_hsv(result, node, path, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeSeparateRGB):
+        return _export_separate_rgb(result, node, path, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeSeparateXYZ):
+        return _export_separate_xyz(result, node, path, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeMapping):
+        return _export_vector_mapping(result, node, path)
     else:
         print(
             f"Shader node {node.name} of type {type(node).__name__} is not supported")
-        return ""
+        return None
 
 
 def export_node(result, socket, path):
     if socket.is_linked:
-        return _export_node(result, socket, socket.links[0].from_node, path)
+        expr = _export_node(
+            result, socket.links[0].from_node, path, socket.links[0].from_socket.name)
+        if expr is None:
+            return _export_default(socket)
+
+        to_type = socket.type
+        from_type = socket.links[0].from_socket.type
+        if to_type == from_type:
+            return expr
+        elif (from_type == 'VALUE' or from_type == 'INT') and to_type == 'RGBA':
+            return f"color({expr})"
+        elif from_type == 'RGBA' and (to_type == 'VALUE' or to_type == 'INT'):
+            return f"avg({expr})"
+        else:
+            print(
+                f"Socket connection from {socket.links[0].from_socket.name} to {socket.name} requires cast from {from_type} to {to_type} which is not supported")
+            return expr
     else:
-        return _export_default(result, socket, path)
+        return _export_default(socket)

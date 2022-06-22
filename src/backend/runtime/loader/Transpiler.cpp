@@ -264,9 +264,9 @@ inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
     case PExprType::Vec2:
         return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
     case PExprType::Vec3:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec3_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
     case PExprType::Vec4:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec4_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
     }
 }
 // Type A func (A, A, num)
@@ -358,6 +358,7 @@ static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynR
     { "length", genDynArrayFunction1("len") },
     { "sum", genDynArrayFunction1("sum") },
     { "avg", genDynArrayFunction1("avg") },
+    { "checkerboard", { nullptr, nullptr, genFunction1("node_checkerboard"), nullptr, nullptr } },
     { "noise", { nullptr, genFunction1("noise1_def"), genFunction1("noise2_def"), genFunction1("noise3_def"), nullptr } },
     { "snoise", { nullptr, genFunction1("snoise1_def"), genFunction1("snoise2_def"), genFunction1("snoise3_def"), nullptr } },
     { "pnoise", { nullptr, genFunction1("pnoise1_def"), genFunction1("pnoise2_def"), genFunction1("pnoise3_def"), nullptr } },
@@ -640,10 +641,9 @@ public:
         }
 
         // Must be a texture
-        IG_ASSERT(argumentPayloads.size() == 1, "Expected a valid texture access");
         IG_ASSERT(mContext.Scene.texture(name) != nullptr, "Expected a valid texture name");
         mUsedTextures.insert(name);
-        return "color_to_vec4(" + tex_name(name) + "(" + argumentPayloads[0] + "))";
+        return "color_to_vec4(" + tex_name(name) + "(" + (argumentPayloads.empty() ? mUVAccess : argumentPayloads[0]) + "))";
     }
 
     /// a.xyz Access operator for vector types

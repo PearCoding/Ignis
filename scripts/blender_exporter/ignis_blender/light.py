@@ -21,7 +21,7 @@ def export_background(result, out_dir, scene):
         has_emission = try_extract_node_value(strength, default=1) > 0
         if not has_emission:
             return
-        
+
         has_emission = try_extract_node_value(radiance, default=1) > 0
         if not has_emission:
             return
@@ -33,7 +33,7 @@ def export_background(result, out_dir, scene):
 
         if not has_emission:
             return
-        
+
         result["lights"].append(
             {"type": "env", "name": "__scene_world", "radiance": radiance, "scale": strength, "transform": ENVIRONMENT_MAP_TRANSFORM})
 

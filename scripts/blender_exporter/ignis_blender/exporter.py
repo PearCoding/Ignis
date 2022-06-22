@@ -4,7 +4,7 @@ import json
 from .light import export_light, export_background
 from .shape import export_shape
 from .camera import export_camera
-from .bsdf import export_material, export_error_material
+from .bsdf import export_material, export_error_material, export_black_material, get_material_emission
 from .utils import *
 
 import bpy
@@ -17,22 +17,41 @@ def export_technique(result):
     }
 
 
-def export_entity(result, inst):
+BSDF_ERROR_NAME = "__bsdf_error"
+
+
+def export_entity(result, inst, filepath, exported_materials):
     if(len(inst.object.material_slots) == 1):
         mat_name = inst.object.material_slots[0].material.name
+        emission = get_material_emission(
+            result, inst.object.material_slots[0].material, filepath)
     elif(len(inst.object.material_slots) > 1):
-        print(f"Entity {inst.object.name} has multiple materials associated, but only one is supported. Using first entry")
+        print(
+            f"Entity {inst.object.name} has multiple materials associated, but only one is supported. Using first entry")
         mat_name = inst.object.material_slots[0].material.name
+        emission = get_material_emission(
+            result, inst.object.material_slots[0].material, filepath)
     else:
         print(f"Entity {inst.object.name} has no material")
-        mat_name = f"{inst.object.name}_bsdf_error"
-        export_error_material(result, mat_name)
+        mat_name = f"{inst.object.name}_bsdf_black"
+        result["bsdfs"].append(export_black_material(mat_name))
+        exported_materials.add(mat_name)
+        emission = None
+
+    if mat_name not in exported_materials:
+        mat_name = BSDF_ERROR_NAME
 
     matrix = inst.matrix_world
     result["entities"].append(
         {"name": inst.object.name, "shape": inst.object.data.name,
             "bsdf": mat_name, "transform": flat_matrix(matrix)}
     )
+
+    if emission != None:
+        result["lights"].append(
+            {"type": "area", "name": inst.object.name, "entity": inst.object.name,
+                "radiance": emission}
+        )
 
 
 def export_all(filepath, result, depsgraph, use_selection):
@@ -44,11 +63,20 @@ def export_all(filepath, result, depsgraph, use_selection):
 
     # Export all given objects
     exported_shapes = set()
+    exported_materials = set()
 
+    has_mat_error = False
     for material in bpy.data.materials:
         if material.node_tree is None:
             continue
-        export_material(result, material, filepath)
+        mat = export_material(result, material, filepath)
+        if mat is not None:
+            result["bsdfs"].append(mat)
+            exported_materials.add(material.name)
+        elif not has_mat_error:
+            result["bsdfs"].append(export_error_material(BSDF_ERROR_NAME))
+            exported_materials.add(BSDF_ERROR_NAME)
+            has_mat_error = True
 
     for inst in depsgraph.object_instances:
         object_eval = inst.object
@@ -64,7 +92,7 @@ def export_all(filepath, result, depsgraph, use_selection):
                 export_shape(result, object_eval, filepath)
                 exported_shapes.add(shape_name)
 
-            export_entity(result, inst)
+            export_entity(result, inst, filepath, exported_materials)
         elif objType == "LIGHT":
             export_light(
                 result, inst)

@@ -490,6 +490,33 @@ static void bsdf_passthrough(std::ostream& stream, const std::string& name, cons
     stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_passthrough_bsdf(surf);" << std::endl;
 }
 
+static void bsdf_add(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+{
+    const std::string first  = bsdf->property("first").getString();
+    const std::string second = bsdf->property("second").getString();
+
+    if (first.empty() || second.empty()) {
+        IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdfs given" << std::endl;
+        stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+    } else if (first == second) {
+        // Ignore it
+        stream << LoaderBSDF::generate(first, tree);
+        stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " = bsdf_" << LoaderUtils::escapeIdentifier(first) << ";" << std::endl;
+    } else {
+        tree.beginClosure();
+
+        stream << LoaderBSDF::generate(first, tree);
+        stream << LoaderBSDF::generate(second, tree);
+
+        stream << tree.pullHeader()
+               << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_add_bsdf("
+               << "bsdf_" << LoaderUtils::escapeIdentifier(first) << "(ray, hit, surf), "
+               << "bsdf_" << LoaderUtils::escapeIdentifier(second) << "(ray, hit, surf));" << std::endl;
+
+        tree.endClosure();
+    }
+}
+
 static void bsdf_blend(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
     const std::string first  = bsdf->property("first").getString();
@@ -668,6 +695,7 @@ static const struct {
     { "roughplastic", bsdf_rough_plastic },
     { "klems", bsdf_klems },
     { "tensortree", bsdf_tensortree },
+    { "add", bsdf_add },
     { "blend", bsdf_blend },
     { "mask", bsdf_mask },
     { "cutoff", bsdf_cutoff },

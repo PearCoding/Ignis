@@ -596,14 +596,13 @@ static void light_env(size_t id, std::ostream& stream, const std::string& name, 
 {
     tree.beginClosure();
     tree.addColor("scale", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addTexture("radiance", *light, true);
+    const Matrix3f trans = light->property("transform").getTransform().linear().transpose().inverse();
 
     const std::string name_id = LoaderUtils::escapeIdentifier(name);
     const bool useCDF         = light->property("cdf").getBool(true);
 
-    // TODO: Make this work with PExpr and other custom textures!
-    if (light->property("radiance").type() == Parser::PT_STRING) {
-        const Matrix3f trans = light->property("transform").getTransform().linear().transpose().inverse();
-
+    if (tree.isPureTexture("radiance")) {
         const std::string tex_name = light->property("radiance").getString();
         const auto tex             = tree.context().Scene.texture(tex_name);
         if (!tex) {
@@ -615,8 +614,7 @@ static void light_env(size_t id, std::ostream& stream, const std::string& name, 
         const std::string tex_path = LoaderTexture::getFilename(*tex, tree.context()).generic_u8string();
         if (!useCDF || tex_path.empty()) {
             stream << tree.pullHeader()
-                   << LoaderTexture::generate(tex_name, *tex, tree)
-                   << "  let light_" << name_id << " = make_environment_light_textured_naive(" << id
+                   << "  let light_" << name_id << " = make_environment_light(" << id
                    << ", " << LoaderUtils::inlineSceneBBox(tree.context())
                    << ", " << tree.getInline("scale")
                    << ", tex_" << LoaderUtils::escapeIdentifier(tex_name)
@@ -624,7 +622,6 @@ static void light_env(size_t id, std::ostream& stream, const std::string& name, 
         } else {
             const auto cdf = setup_cdf(tree.context(), tex_path);
             stream << tree.pullHeader()
-                   << LoaderTexture::generate(tex_name, *tex, tree)
                    << "  let cdf_" << name_id << "   = cdf::make_cdf_2d_from_buffer(device.load_buffer(\"" << std::get<0>(cdf) << "\"), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
                    << "  let light_" << name_id << " = make_environment_light_textured(" << id
                    << ", " << LoaderUtils::inlineSceneBBox(tree.context())
@@ -634,12 +631,12 @@ static void light_env(size_t id, std::ostream& stream, const std::string& name, 
                    << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
         }
     } else {
-        tree.addColor("radiance", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
         stream << tree.pullHeader()
                << "  let light_" << name_id << " = make_environment_light(" << id
                << ", " << LoaderUtils::inlineSceneBBox(tree.context())
                << ", " << tree.getInline("scale")
-               << ", " << tree.getInline("radiance") << ");" << std::endl;
+               << ", " << tree.getInline("radiance")
+               << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
     }
 
     tree.endClosure();
@@ -882,7 +879,6 @@ std::filesystem::path LoaderLight::generateLightSelectionCDF(LoaderContext& ctx)
             if (_generators[i].Name == pair.second->pluginType()) {
                 float power = _generators[i].Power(pair.second, ctx);
                 estimated_powers.push_back(power);
-                // std::cout << power << std::endl;
                 found = true;
                 break;
             }

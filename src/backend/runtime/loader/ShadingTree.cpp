@@ -45,7 +45,7 @@ void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, 
         inline_str = std::to_string(prop.getVector3().mean());
         break;
     case Parser::PT_STRING:
-        inline_str = handleTexture(prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", false, mode == IM_Surface);
+        inline_str = handleTexture(name, prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", false, mode == IM_Surface);
         break;
     }
 
@@ -80,7 +80,7 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
         inline_str     = "make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1)";
     } break;
     case Parser::PT_STRING:
-        inline_str = handleTexture(prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", true, mode == IM_Surface);
+        inline_str = handleTexture(name, prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", true, mode == IM_Surface);
         break;
     }
 
@@ -117,8 +117,8 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
         inline_str     = "make_constant_texture(make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1))";
     } break;
     case Parser::PT_STRING: {
-        std::string tex_func = handleTexture(prop.getString(), "uv", true, false /*TODO: Not always*/);
-        inline_str           = "@|uv:Vec2|->Color{" + tex_func + "}";
+        std::string tex_func = handleTexture(name, prop.getString(), "uv", true, false /*TODO: Not always*/);
+        inline_str           = "@|uv:Vec2|->Color{maybe_unused(uv); " + tex_func + "}";
     } break;
     }
 
@@ -164,6 +164,15 @@ std::string ShadingTree::getInline(const std::string& name)
     return "";
 }
 
+bool ShadingTree::isPureTexture(const std::string& name)
+{
+    if (hasParameter(name))
+        return mPureTextures.count(name) > 0;
+    IG_LOG(L_ERROR) << "Trying to access unknown parameter '" << name << "'" << std::endl;
+    signalError();
+    return "";
+}
+
 void ShadingTree::registerTextureUsage(const std::string& name)
 {
     if (mLoadedTextures.count(name) == 0) {
@@ -181,7 +190,7 @@ void ShadingTree::registerTextureUsage(const std::string& name)
     }
 }
 
-std::string ShadingTree::handleTexture(const std::string& expr, const std::string& uv_access, bool needColor, bool hasSurfaceInfo)
+std::string ShadingTree::handleTexture(const std::string& prop_name, const std::string& expr, const std::string& uv_access, bool needColor, bool hasSurfaceInfo)
 {
     auto res = mTranspiler.transpile(expr, uv_access, hasSurfaceInfo);
 
@@ -193,6 +202,12 @@ std::string ShadingTree::handleTexture(const std::string& expr, const std::strin
     } else {
         for (const auto& tex : res.value().Textures)
             registerTextureUsage(tex);
+
+        // Check if the call is just a pure texture (without uv or other modifications)
+        if (res.value().Textures.size() == 1) {
+            if (*res.value().Textures.begin() == expr)
+                mPureTextures.insert(prop_name);
+        }
 
         if (needColor) {
             if (res.value().ScalarOutput)

@@ -4,9 +4,12 @@ from .node import export_node
 from .utils import *
 
 
-def export_error_material(result, mat_name):
-    result["bsdfs"].append(
-        {"type": "diffuse", "name": mat_name, "reflectance": [1, 0.75, 0.8]})
+def export_error_material(mat_name):
+    return {"type": "diffuse", "name": mat_name, "reflectance": [1, 0.75, 0.8]}
+
+
+def export_black_material(mat_name):
+    return {"type": "diffuse", "name": mat_name, "reflectance": 0}
 
 
 def _export_diffuse_bsdf(result, bsdf, export_name, path):
@@ -16,11 +19,11 @@ def _export_diffuse_bsdf(result, bsdf, export_name, path):
     has_roughness = try_extract_node_value(roughness, default=1) > 0
 
     if has_roughness:
-        result["bsdfs"].append({"type": "roughdiffuse", "name": export_name,
-                                "reflectance": reflectance, "roughness": roughness})
+        return {"type": "roughdiffuse", "name": export_name,
+                "reflectance": reflectance, "roughness": roughness}
     else:
-        result["bsdfs"].append({"type": "diffuse", "name": export_name,
-                                "reflectance": reflectance})
+        return {"type": "diffuse", "name": export_name,
+                "reflectance": reflectance}
 
 
 def _export_glass_bsdf(result, bsdf, export_name, path):
@@ -30,12 +33,18 @@ def _export_glass_bsdf(result, bsdf, export_name, path):
 
     has_roughness = try_extract_node_value(roughness, default=1) > 0
 
-    if has_roughness:
-        result["bsdfs"].append({"type": "dielectric", "name": export_name,
-                                "specular_reflectance": reflectance, "specular_transmittance": reflectance, "ext_ior": ior})
+    if not has_roughness:
+        return {"type": "dielectric", "name": export_name,
+                "specular_reflectance": reflectance, "specular_transmittance": reflectance, "ext_ior": ior}
     else:
-        result["bsdfs"].append({"type": "roughdielectric", "name": export_name,
-                                "specular_reflectance": reflectance, "specular_transmittance": reflectance, "roughness": roughness, "ext_ior": ior})
+        return {"type": "roughdielectric", "name": export_name,
+                "specular_reflectance": reflectance, "specular_transmittance": reflectance, "roughness": roughness, "ext_ior": ior}
+
+
+def _export_transparent_bsdf(result, bsdf, export_name, path):
+    reflectance = export_node(result, bsdf.inputs["Color"], path)
+    return {"type": "dielectric", "name": export_name,
+            "specular_reflectance": reflectance, "specular_transmittance": reflectance, "ext_ior": 1, "int_ior": 1}
 
 
 def _export_glossy_bsdf(result, bsdf, export_name, path):
@@ -43,8 +52,8 @@ def _export_glossy_bsdf(result, bsdf, export_name, path):
     base_color = export_node(result, bsdf.inputs["Color"], path)
     roughness = export_node(result, bsdf.inputs["Roughness"], path)
 
-    result["bsdfs"].append({"type": "principled", "name": export_name,
-                           "base_color": base_color, "roughness": roughness})
+    return {"type": "principled", "name": export_name,
+            "base_color": base_color, "roughness": roughness}
 
 
 def _export_principled_bsdf(result, bsdf, export_name, path):
@@ -70,10 +79,10 @@ def _export_principled_bsdf(result, bsdf, export_name, path):
         # Map specular variable to our IOR interpretation
         ior = f"((1 + sqrt(0.08*{specular})) / max(0.001, 1 - sqrt(0.08*{specular})))"
 
-    result["bsdfs"].append({"type": "principled", "name": export_name, "base_color": base_color, "metallic": metallic,
-                            "roughness": roughness, "anisotropic": anisotropic, "sheen": sheen, "sheen_tint": sheen_tint,
-                            "clearcoat": clearcoat, "clearcoat_roughness": clearcoat_roughness, "flatness": subsurface,
-                            "specular_transmission": transmission, "specular_tint": specular_tint, "ior": ior})
+    return {"type": "principled", "name": export_name, "base_color": base_color, "metallic": metallic,
+            "roughness": roughness, "anisotropic": anisotropic, "sheen": sheen, "sheen_tint": sheen_tint,
+            "clearcoat": clearcoat, "clearcoat_roughness": clearcoat_roughness, "flatness": subsurface,
+            "specular_transmission": transmission, "specular_tint": specular_tint, "ior": ior}
 
 
 def _export_add_bsdf(result, bsdf, export_name, path):
@@ -84,52 +93,67 @@ def _export_add_bsdf(result, bsdf, export_name, path):
 
     if mat1 is None or mat2 is None:
         print(f"Mix BSDF {export_name} has no valid bsdf input")
-        return
+        return None
 
-    result["bsdfs"].append({"type": "add", "name": export_name,
-                           "first": export_name + "__1", "second": export_name + "__2"})
+    result["bsdfs"].append(mat1)
+    result["bsdfs"].append(mat2)
+    return {"type": "add", "name": export_name,
+                           "first": export_name + "__1", "second": export_name + "__2"}
 
 
 def _export_mix_bsdf(result, bsdf, export_name, path):
     mat1 = _export_bsdf_inline(
-        result, bsdf.inputs[0], export_name + "__1", path)
+        result, bsdf.inputs[1], export_name + "__1", path)
     mat2 = _export_bsdf_inline(
-        result, bsdf.inputs[1], export_name + "__2", path)
+        result, bsdf.inputs[2], export_name + "__2", path)
     factor = export_node(result, bsdf.inputs["Fac"], path)
 
     if mat1 is None or mat2 is None:
         print(f"Mix BSDF {export_name} has no valid bsdf input")
-        return
+        return None
 
-    result["bsdfs"].append({"type": "blend", "name": export_name,
-                           "first": export_name + "__1", "second": export_name + "__2", "weight": factor})
+    result["bsdfs"].append(mat1)
+    result["bsdfs"].append(mat2)
+    return {"type": "blend", "name": export_name,
+            "first": export_name + "__1", "second": export_name + "__2", "weight": factor}
+
+
+def _export_emission_bsdf(result, bsdf, export_name, path):
+    # Emission is handled separately
+    return {"type": "diffuse", "name": export_name, "reflectance": 0}
 
 
 def _export_bsdf(result, bsdf, name, path):
     if bsdf is None:
         print(f"Material {name} has no valid bsdf")
-        export_error_material(result, name)
+        return None
     elif isinstance(bsdf, bpy.types.ShaderNodeBsdfDiffuse):
-        _export_diffuse_bsdf(result, bsdf, name, path)
+        return _export_diffuse_bsdf(result, bsdf, name, path)
     elif isinstance(bsdf, bpy.types.ShaderNodeBsdfGlass):
-        _export_glass_bsdf(result, bsdf, name, path)
+        return _export_glass_bsdf(result, bsdf, name, path)
+    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfTransparent):
+        return _export_transparent_bsdf(result, bsdf, name, path)
     elif isinstance(bsdf, bpy.types.ShaderNodeBsdfGlossy):
-        _export_glossy_bsdf(result, bsdf, name, path)
+        return _export_glossy_bsdf(result, bsdf, name, path)
     elif isinstance(bsdf, bpy.types.ShaderNodeBsdfPrincipled):
-        _export_principled_bsdf(result, bsdf, name, path)
+        return _export_principled_bsdf(result, bsdf, name, path)
     elif isinstance(bsdf, bpy.types.ShaderNodeMixShader):
-        _export_mix_bsdf(result, bsdf, name, path)
+        return _export_mix_bsdf(result, bsdf, name, path)
     elif isinstance(bsdf, bpy.types.ShaderNodeAddShader):
-        _export_add_bsdf(result, bsdf, name, path)
+        return _export_add_bsdf(result, bsdf, name, path)
+    elif isinstance(bsdf, bpy.types.ShaderNodeEmission):
+        return _export_emission_bsdf(result, bsdf, name, path)
     else:
-        print(f"Material {name} has a bsdf of type {type(bsdf).__name__}  which is not supported")
+        print(
+            f"Material {name} has a bsdf of type {type(bsdf).__name__}  which is not supported")
+        return None
 
 
 def _export_bsdf_inline(result, socket, name, path):
     if not socket.is_linked:
         return None
 
-    _export_bsdf(result, socket.links[0].from_node, name, path)
+    return _export_bsdf(result, socket.links[0].from_node, name, path)
 
 
 def _get_bsdf(material):
@@ -151,4 +175,62 @@ def export_material(result, material, filepath):
     if not material:
         return
 
-    _export_bsdf(result, _get_bsdf(material), material.name, filepath)
+    return _export_bsdf(result, _get_bsdf(material), material.name, filepath)
+
+
+################################
+def _get_emission_mix(result, bsdf, path):
+    mat1 = _get_emission(
+        result, bsdf.inputs[0], path)
+    mat2 = _get_emission(
+        result, bsdf.inputs[1], path)
+    factor = export_node(result, bsdf.inputs["Fac"], path)
+
+    if mat1 is None and mat2 is None:
+        return None
+
+    if mat1 is None:
+        mat1 = "color(0,0,0)"
+    if mat2 is None:
+        mat2 = "color(0,0,0)"
+
+    return f"mix({factor}, {mat1}, {mat2})"
+
+
+def _get_emission_add(result, bsdf, path):
+    mat1 = _get_emission(
+        result, bsdf.inputs[0], path)
+    mat2 = _get_emission(
+        result, bsdf.inputs[1], path)
+
+    if mat1 is None:
+        return mat2
+    if mat2 is None:
+        return mat1
+
+    return f"({mat1} + {mat2})"
+
+
+def _get_emission_pure(result, bsdf, path):
+    color = export_node(result, bsdf.inputs["Color"], path)
+    strength = export_node(result, bsdf.inputs["Strength"], path)
+
+    return f"({color} * {strength})"
+
+
+def _get_emission(result, bsdf, path):
+    if isinstance(bsdf, bpy.types.ShaderNodeMixShader):
+        return _get_emission_mix(result, bsdf, path)
+    elif isinstance(bsdf, bpy.types.ShaderNodeAddShader):
+        return _get_emission_add(result, bsdf, path)
+    elif isinstance(bsdf, bpy.types.ShaderNodeEmission):
+        return _get_emission_pure(result, bsdf, path)
+    else:
+        return None
+
+
+def get_material_emission(result, material, filepath):
+    if not material:
+        return
+
+    return _get_emission(result, _get_bsdf(material), filepath)
