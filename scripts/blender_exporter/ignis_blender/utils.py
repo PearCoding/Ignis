@@ -1,4 +1,9 @@
 import mathutils
+import re
+
+
+def escape_identifier(name):
+    return re.sub('[^a-zA-Z0-9_]', '_', name)
 
 
 def flat_matrix(matrix):
@@ -18,33 +23,8 @@ def map_vector(vec):
     return [vec.x, vec.y, vec.z]
 
 
-def map_texture(texture, out_dir, result):
-    path = texture.filepath_raw.replace('//', '')
-    if path == '':
-        path = texture.name + ".exr"
-        texture.file_format = "OPEN_EXR"
-
-    # Make sure the image is loaded to memory, so we can write it out
-    if not texture.has_data:
-        texture.pixels[0]
-
-    os.makedirs(os.path.join(out_dir, "Textures"), exist_ok=True)
-
-    # Export the texture and store its path
-    name = os.path.basename(path)
-    old = texture.filepath_raw
-    try:
-        texture.filepath_raw = os.path.join(out_dir, "Textures", name)
-        texture.save()
-    finally:  # Never break the scene!
-        texture.filepath_raw = old
-
-    result["textures"].append(
-        {
-            "type": "image",
-            "name": name[:-4],
-            "filename": "Meshes/Textures/"+name,
-        }
-    )
-
-    return name[:-4]
+def try_extract_node_value(value, default=0):
+    if type(value) == int or type(value) == float:
+        return value
+    else:
+        return default

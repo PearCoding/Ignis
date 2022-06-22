@@ -1,36 +1,13 @@
 import os
 import json
 
-from .material import convert_material
 from .light import export_light, export_background
 from .shape import export_shape
 from .camera import export_camera
+from .bsdf import export_material, export_error_material
 from .utils import *
 
 import bpy
-
-
-def material_to_json(material, mat_name, out_dir, result):
-    # Create a principled material out of any type of material by calculating its properties.
-
-    if material.base_texture:
-        base_color = map_texture(material.base_texture, out_dir, result)
-    else:
-        base_color = map_rgb(material.base_color)
-
-    return {
-        "name": mat_name,
-        "type": "principled",
-        "base_color":  base_color,
-        "roughness": material.roughness,
-        "anisotropic": material.anisotropic,
-        "diffuse_transmittance": material.diffuseTransmittance,
-        "ior": material.indexOfRefraction,
-        "metallic": material.metallic,
-        "specular_tint": material.specularTintStrength,
-        "specular_transmission": material.specularTransmittance,
-        "thin": material.thin,
-    }
 
 
 def export_technique(result):
@@ -40,29 +17,25 @@ def export_technique(result):
     }
 
 
-def export_entity(result, inst, filepath):
-    if(len(inst.object.material_slots) > 0):
-        material = inst.object.material_slots[0].material.ignis
+def export_entity(result, inst):
+    if(len(inst.object.material_slots) == 1):
         mat_name = inst.object.material_slots[0].material.name
+    elif(len(inst.object.material_slots) > 1):
+        print(f"Entity {inst.object.name} has multiple materials associated, but only one is supported. Using first entry")
+        mat_name = inst.object.material_slots[0].material.name
+    else:
+        print(f"Entity {inst.object.name} has no material")
+        mat_name = f"{inst.object.name}_bsdf_error"
+        export_error_material(result, mat_name)
 
-        matrix = inst.matrix_world
-        result["bsdfs"].append(material_to_json(
-            material, mat_name, filepath, result))
-        result["entities"].append(
-            {"name": inst.object.name, "shape": inst.object.data.name,
-                "bsdf": mat_name, "transform": flat_matrix(matrix)}
-        )
+    matrix = inst.matrix_world
+    result["entities"].append(
+        {"name": inst.object.name, "shape": inst.object.data.name,
+            "bsdf": mat_name, "transform": flat_matrix(matrix)}
+    )
 
 
 def export_all(filepath, result, depsgraph, use_selection):
-    # TODO: use_modifiers
-
-    # Update materials
-    for material in bpy.data.materials:
-        if material.node_tree is None:
-            continue
-        convert_material(material)
-
     result["shapes"] = []
     result["bsdfs"] = []
     result["entities"] = []
@@ -71,6 +44,11 @@ def export_all(filepath, result, depsgraph, use_selection):
 
     # Export all given objects
     exported_shapes = set()
+
+    for material in bpy.data.materials:
+        if material.node_tree is None:
+            continue
+        export_material(result, material, filepath)
 
     for inst in depsgraph.object_instances:
         object_eval = inst.object
@@ -86,7 +64,7 @@ def export_all(filepath, result, depsgraph, use_selection):
                 export_shape(result, object_eval, filepath)
                 exported_shapes.add(shape_name)
 
-            export_entity(result, inst, filepath)
+            export_entity(result, inst)
         elif objType == "LIGHT":
             export_light(
                 result, inst)

@@ -1,6 +1,7 @@
 import mathutils
 import math
 from .utils import *
+from .node import export_node
 
 # Make sure the Z axis is handled as up, instead of Y
 ENVIRONMENT_MAP_TRANSFORM = [0, 1, 0, 0, 0, 1, 1, 0, 0]
@@ -13,21 +14,28 @@ def export_background(result, out_dir, scene):
     tree = scene.world.node_tree.nodes["Background"]
 
     if tree.type == "BACKGROUND":
-        # TODO: Add strength parameter
-        input = tree.inputs["Color"]
+        strength = export_node(result, tree.inputs["Strength"], out_dir)
+        radiance = export_node(result, tree.inputs["Color"], out_dir)
 
-        if input.is_linked:
-            # Export the background as texture and add it as environmental light
-            tex_node = input.links[0].from_node
-            if tex_node.image is not None:
-                tex = map_texture(tex_node.image, out_dir, result)
-                result["lights"].append(
-                    {"type": "env", "name": tex, "radiance": tex, "scale": 0.5, "transform": ENVIRONMENT_MAP_TRANSFORM})
-        elif input.type == "RGB" or input.type == "RGBA":
-            color = input.default_value
-            if color[0] > 0 or color[1] > 0 or color[2] > 0:
-                result["lights"].append(
-                    {"type": "env", "name": "__scene_world", "radiance": map_rgb(color)})
+        # Check if there is any emission (if we can detect it)
+        has_emission = try_extract_node_value(strength, default=1) > 0
+        if not has_emission:
+            return
+        
+        has_emission = try_extract_node_value(radiance, default=1) > 0
+        if not has_emission:
+            return
+
+        try:
+            has_emission = radiance[0] > 0 or radiance[1] > 0 or radiance[2] > 0
+        except Exception:
+            pass
+
+        if not has_emission:
+            return
+        
+        result["lights"].append(
+            {"type": "env", "name": "__scene_world", "radiance": radiance, "scale": strength, "transform": ENVIRONMENT_MAP_TRANSFORM})
 
 
 def export_light(result, inst):
@@ -60,10 +68,23 @@ def export_light(result, inst):
         else:
             size_y = l.size_y
 
-        result["shapes"].append(
-            {"type": "rectangle", "name": light.name +
-                "-shape", "width": size_x, "height": size_y, "flip_normals": True}
-        )
+        if l.shape == "DISK":
+            result["shapes"].append(
+                {"type": "disk", "name": light.name +
+                    "-shape", "radius": size_x/2, "flip_normals": True}
+            )
+        elif l.shape == "ELLIPSE":
+            # Approximate by non-uniformly scaling the uniform disk
+            size_y = l.size_y
+            result["shapes"].append(
+                {"type": "disk", "name": light.name +
+                    "-shape", "radius": 1, "flip_normals": True, "transform": [size_x/2, 0, 0, 0, size_y/2, 0, 0, 0, 1]}
+            )
+        else:
+            result["shapes"].append(
+                {"type": "rectangle", "name": light.name +
+                    "-shape", "width": size_x, "height": size_y, "flip_normals": True}
+            )
         result["bsdfs"].append(
             {"type": "diffuse", "name": light.name +
                 "-bsdf", "reflectance": [0, 0, 0]}
