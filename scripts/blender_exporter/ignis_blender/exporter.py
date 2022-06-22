@@ -1,6 +1,6 @@
 import os
 import json
-from math import degrees, atan
+import math
 
 from .material import convert_material
 
@@ -20,8 +20,12 @@ def orient_y_up_z_forward(matrix, skip_scale=False):
     return mathutils.Matrix.LocRotScale(loc, rot @ mathutils.Quaternion((0, 0, 1, 0)), mathutils.Vector.Fill(3, 1) if skip_scale else sca)
 
 
-def map_rgb(rgb):
-    return [rgb[0], rgb[1], rgb[2]]
+def map_rgb(rgb, scale=1):
+    return [rgb[0]*scale, rgb[1]*scale, rgb[2]*scale]
+
+
+def map_vector(vec):
+    return [vec.x, vec.y, vec.z]
 
 
 def map_texture(texture, out_dir, result):
@@ -131,6 +135,10 @@ def export_entity(result, inst, filepath):
         )
 
 
+# Make sure the Z axis is handled as up, instead of Y
+ENVIRONMENT_MAP_TRANSFORM = [0, 1, 0, 0, 0, 1, 1, 0, 0]
+
+
 def export_background(result, out_dir, scene):
     if "Background" not in scene.world.node_tree.nodes:
         return
@@ -147,7 +155,7 @@ def export_background(result, out_dir, scene):
             if tex_node.image is not None:
                 tex = map_texture(tex_node.image, out_dir, result)
                 result["lights"].append(
-                    {"type": "env", "name": tex, "radiance": tex, "scale": [0.5, 0.5, 0.5]})
+                    {"type": "env", "name": tex, "radiance": tex, "scale": 0.5, "transform": ENVIRONMENT_MAP_TRANSFORM})
         elif input.type == "RGB" or input.type == "RGBA":
             color = input.default_value
             if color[0] > 0 or color[1] > 0 or color[2] > 0:
@@ -164,7 +172,7 @@ def export_camera(result, scene):
 
     result["camera"] = {
         "type": "perspective",
-        "fov": degrees(2 * atan(camera.data.sensor_width / (2 * camera.data.lens))),
+        "fov": math.degrees(2 * math.atan(camera.data.sensor_width / (2 * camera.data.lens))),
         "near_clip": camera.data.clip_start,
         "far_clip": camera.data.clip_end,
         "transform": flat_matrix(matrix)
@@ -180,20 +188,23 @@ def export_light(result, inst):
     l = light.data
     power = [l.color[0] * l.energy, l.color[1]
              * l.energy, l.color[2] * l.energy]
+    position = inst.matrix_world @ mathutils.Vector((0, 0, 0, 1))
+    direction = inst.matrix_world @ mathutils.Vector((0, 0, 1, 0))
+
     if l.type == "POINT":
         result["lights"].append(
-            {"type": "point", "name": light.name, "position": [
-                light.location.x, light.location.y, light.location.z], "intensity": map_rgb(power)}
+            {"type": "point", "name": light.name, "position": map_vector(
+                position), "intensity": map_rgb(power)}
         )
     elif l.type == "SPOT":
         result["lights"].append(
-            {"type": "spot", "name": light.name, "position": [light.location.x, light.location.y, light.location.z], "direction": [degrees(
-                light.rotation_euler.x), degrees(light.rotation_euler.z) + 180, degrees(light.rotation_euler.y)], "intensity": map_rgb(power)}
+            {"type": "spot", "name": light.name, "position": map_vector(position), "direction": map_vector(direction.normalized(
+            )), "intensity": map_rgb(power), "cutoff": math.degrees(l.spot_size/2), "falloff": math.degrees(l.spot_size/2)*(1 - l.spot_blend)}
         )
     elif l.type == "SUN":
         result["lights"].append(
-            {"type": "direction", "name": light.name, "direction": [
-                degrees(light.rotation_euler.x), degrees(light.rotation_euler.z) + 180, degrees(light.rotation_euler.y)], "irradiance": map_rgb(power)}
+            {"type": "direction", "name": light.name, "direction": map_vector(
+                -direction.normalized()), "irradiance": map_rgb(power)}
         )
     elif l.type == "AREA":
         size_x = l.size
@@ -204,7 +215,7 @@ def export_light(result, inst):
 
         result["shapes"].append(
             {"type": "rectangle", "name": light.name +
-                "-shape", "width": size_x, "height": size_y}
+                "-shape", "width": size_x, "height": size_y, "flip_normals": True}
         )
         result["bsdfs"].append(
             {"type": "diffuse", "name": light.name +
