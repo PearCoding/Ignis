@@ -4,6 +4,10 @@ import os
 from .utils import *
 
 
+# Extend 2d vector to 3d, as VECTOR is always 3d
+TEXCOORD_UV = "vec3(uv.x, uv.y, 0)"
+
+
 def _export_default(socket):
     default_value = getattr(socket, "default_value")
     if default_value is None:
@@ -43,16 +47,21 @@ def _export_scalar_maprange(result, node, path):
     to_max = export_node(result, node.inputs[4], path)
 
     ops = ""
+    from_range = f"{from_max} - {from_min})"
+    to_range = f"{to_max} - {to_min})"
+    to_unit = f"({val} - {from_min}) / ({from_range})"
     if node.interpolation_type == "LINEAR":
-        from_range = f"{from_max} - {from_min})"
-        to_range = f"{to_max} - {to_min})"
-        to_unit = f"({val} - {from_min}) / ({from_range})"
-        ops = f"((({to_unit}) * {to_range}) + {to_min})"
+        interp = to_unit
+    elif node.interpolation_type == "SMOOTHSTEP":
+        interp = f"smoothstep({to_unit})"
+    elif node.interpolation_type == "SMOOTHERSTEP":
+        interp = f"smootherstep({to_unit})"
     else:
         print(
             f"Not supported interpolation type {node.interpolation_type} for node {node.name}")
         return 0
 
+    ops = f"((({interp}) * {to_range}) + {to_min})"
     if node.clamp:
         return f"clamp({ops}, {to_min}, {to_max})"
     else:
@@ -60,7 +69,7 @@ def _export_scalar_maprange(result, node, path):
 
 
 def _export_scalar_math(result, node, path):
-    # TODO: LESS_THAN, GREATER_THAN, SIGN, COMPARE, SMOOTH_MIN, SMOOTH_MAX, TRUNC, FRACT, MODULO, WRAP, SNAP, PINGPONG
+    # TODO: SMOOTH_MIN, SMOOTH_MAX, WRAP, SNAP, PINGPONG
     ops = ""
     if node.operation == "ADD":
         ops = f"({export_node(result, node.inputs[0], path)} + {export_node(result, node.inputs[1], path)})"
@@ -73,7 +82,7 @@ def _export_scalar_math(result, node, path):
     elif node.operation == "MULTIPLY_ADD":
         ops = f"(({export_node(result, node.inputs[0], path)} * {export_node(result, node.inputs[1], path)}) + {export_node(result, node.inputs[2], path)})"
     elif node.operation == "POWER":
-        ops = f"pow({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        ops = f"(({export_node(result, node.inputs[0], path)})^({export_node(result, node.inputs[1], path)}))"
     elif node.operation == "LOGARITHM":
         ops = f"log({export_node(result, node.inputs[0], path)})"
     elif node.operation == "SQRT":
@@ -88,12 +97,27 @@ def _export_scalar_math(result, node, path):
         ops = f"min({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
     elif node.operation == "MAXIMUM":
         ops = f"max({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "LESS_THAN":
+        ops = f"select({export_node(result, node.inputs[0], path)} < {export_node(result, node.inputs[1], path)}, 1, 0)"
+    elif node.operation == "GREATER_THAN":
+        ops = f"select({export_node(result, node.inputs[0], path)} > {export_node(result, node.inputs[1], path)}, 1, 0)"
+    elif node.operation == "SIGN":
+        # TODO: If value is zero, zero should be returned!
+        ops = f"select({export_node(result, node.inputs[0], path)} < 0, -1, 1)"
+    elif node.operation == "COMPARE":
+        ops = f"select(abs({export_node(result, node.inputs[0], path)} - {export_node(result, node.inputs[1], path)}) <= Eps, 1, 0)"
     elif node.operation == "ROUND":
         ops = f"round({export_node(result, node.inputs[0], path)})"
     elif node.operation == "FLOOR":
         ops = f"floor({export_node(result, node.inputs[0], path)})"
     elif node.operation == "CEIL":
         ops = f"ceil({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "TRUNC":
+        ops = f"trunc({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "FRACTION":
+        ops = f"fract({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "MODULO":
+        ops = f"fmod({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
     elif node.operation == "SINE":
         ops = f"sin({export_node(result, node.inputs[0], path)})"
     elif node.operation == "COSINE":
@@ -192,16 +216,15 @@ def _export_rgb_math(result, node, path):
 def _export_rgb_gamma(result, node, path):
     color_node = export_node(result, node.inputs[0], path)
     gamma_node = export_node(result, node.inputs[1], path)
-    return f"({color_node} * exp({gamma_node}))"
+    return f"(({color_node})^({gamma_node}))"
 
 
 def _export_rgb_brightcontrast(result, node, path):
-    # TODO
-    color_node = export_node(result, node.inputs[0], path)
-    bright_node = export_node(result, node.inputs[1], path)
-    contrast_node = export_node(result, node.inputs[2], path)
-    print("brightcontrast currently not supported")
-    return "color(0)"
+    color = export_node(result, node.inputs["Color"], path)
+    bright = export_node(result, node.inputs["Bright"], path)
+    contrast = export_node(result, node.inputs["Contrast"], path)
+
+    return f"max(color(0), (1+{contrast})*{color} + color({bright}-{contrast}*0.5))"
 
 
 def _export_rgb_invert(result, node, path):
@@ -211,6 +234,7 @@ def _export_rgb_invert(result, node, path):
     col1 = export_node(result, node.inputs[1], path)
 
     ops = f"(color(1) - {col1})"
+
     if node.inputs[0].is_linked or node.inputs[0].default_value != 1:
         return f"mix({col1}, {ops}, {fac})"
     else:
@@ -321,19 +345,100 @@ def _export_vector_mapping(result, node, path):
         return f"rotate_euler({out}, {rot})"
 
 
+def _export_vector_math(result, node, path):
+    # TODO: WRAP, SNAP
+    if node.operation == "ADD":
+        return f"({export_node(result, node.inputs[0], path)} + {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "SUBTRACT":
+        return f"({export_node(result, node.inputs[0], path)} - {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "MULTIPLY":
+        return f"({export_node(result, node.inputs[0], path)} * {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "SCALE":
+        return f"({export_node(result, node.inputs[0], path)} * {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "DIVIDE":
+        return f"({export_node(result, node.inputs[0], path)} / {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "MULTIPLY_ADD":
+        return f"(({export_node(result, node.inputs[0], path)} * {export_node(result, node.inputs[1], path)}) + {export_node(result, node.inputs[2], path)})"
+    elif node.operation == "CROSS_PRODUCT":
+        return f"cross({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "PROJECT":
+        return f"project({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "REFLECT":
+        return f"reflect({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "REFRACT":
+        return f"refract({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)})"
+    elif node.operation == "FACEFORWARD":
+        A = export_node(result, node.inputs[0], path)
+        return f"select(dot({export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)}) < 0, {A}, -{A})"
+    elif node.operation == "DOT_PRODUCT":
+        return f"dot({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "DISTANCE":
+        return f"dist({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "LENGTH":
+        return f"length({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "NORMALIZE":
+        return f"norm({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "ABSOLUTE":
+        return f"abs({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "EXPONENT":
+        return f"exp({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "MINIMUM":
+        return f"min({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "MAXIMUM":
+        return f"max({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "ROUND":
+        return f"round({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "FLOOR":
+        return f"floor({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "CEIL":
+        return f"ceil({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "FRACTION":
+        return f"fract({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "MODULO":
+        return f"fmod({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "SINE":
+        return f"sin({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "COSINE":
+        return f"cos({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "TANGENT":
+        return f"tan({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "ARCSINE":
+        return f"asin({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "ARCCOSINE":
+        return f"acos({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "ARCTANGENT":
+        return f"atan({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "SINH":
+        return f"sinh({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "COSH":
+        return f"cosh({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "TANH":
+        return f"tanh({export_node(result, node.inputs[0], path)})"
+    elif node.operation == "ARCTAN2":
+        return f"atan2({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "RADIANS":
+        return f"({export_node(result, node.inputs[0], path)} * Pi / 180)"
+    elif node.operation == "DEGREES":
+        return f"({export_node(result, node.inputs[0], path)} * 180 / Pi)"
+    else:
+        print(
+            f"Not supported vector math operation type {node.operation} for node {node.name}")
+        return "vec3(0)"
+
+
 def _export_checkerboard(result, node, path, output_name):
     scale = export_node(result, node.inputs["Scale"], path)
 
     if node.inputs["Vector"].is_linked:
         uv = export_node(result, node.inputs["Vector"], path)
     else:
-        uv = "uv"
+        uv = TEXCOORD_UV
 
-    raw = f"checkerboard(({uv} * {scale}).xy)"
+    raw = f"checkerboard({uv} * {scale})"
     if output_name == "Color":
         color1 = export_node(result, node.inputs["Color1"], path)
         color2 = export_node(result, node.inputs["Color2"], path)
-        return f"select({raw} == 0, {color1}, {color2})"
+        return f"select({raw} == 1, {color1}, {color2})"
     else:
         return raw
 
@@ -398,20 +503,145 @@ def _export_image_texture(result, node, path):
     return tex_access
 
 
+def _get_noise_vector(result, node, path):
+    if node.inputs["Vector"].is_linked:
+        uv = export_node(result, node.inputs["Vector"], path)
+    else:
+        uv = TEXCOORD_UV
+
+    if node.noise_dimensions == '1D':
+        w = export_node(result, node.inputs["W"], path)
+        return f"{w}"
+    elif node.noise_dimensions == '2D':
+        return f"{uv}.xy"
+    elif node.noise_dimensions == '3D':
+        return f"{uv}"
+    else:
+        print(f"Four dimensional noise is not supported")
+        return f"{uv}"
+
+
+def _export_white_noise(result, node, path, output_name):
+    ops = _get_noise_vector(result, node, path)
+
+    if output_name == "Color":
+        return f"cnoise({ops})"
+    else:
+        return f"noise({ops})"
+
+
+def _export_noise(result, node, path, output_name):
+    # TODO: Missing Detail, Roughness and Distortion
+    ops = _get_noise_vector(result, node, path)
+    scale = export_node(result, node.inputs["Scale"], path)
+
+    if output_name == "Color":
+        return f"cpnoise(abs({ops}*{scale}))"
+    else:
+        return f"pnoise(abs({ops}*{scale}))"
+
+
+def _export_voronoi(result, node, path, output_name):
+    # TODO: Missing a lot of parameters
+    if node.inputs["Vector"].is_linked:
+        uv = export_node(result, node.inputs["Vector"], path)
+    else:
+        uv = TEXCOORD_UV
+
+    ops = f"{uv}.xy"
+    if node.voronoi_dimensions != '2D':
+        print(f"Voronoi currently only supports 2d vectors")
+        return f"{uv}"
+
+    scale = export_node(result, node.inputs["Scale"], path)
+
+    if output_name == "Color":
+        return f"cvoronoi(abs({ops}*{scale}))"
+    elif output_name == "Position":
+        # TODO
+        return f"vec3(voronoi(abs({ops}*{scale})))"
+    else:
+        return f"voronoi(abs({ops}*{scale}))"
+
+
+def _export_musgrave(result, node, path, output_name):
+    # TODO: Missing a lot of parameters and only supports fbm
+    if node.inputs["Vector"].is_linked:
+        uv = export_node(result, node.inputs["Vector"], path)
+    else:
+        uv = TEXCOORD_UV
+
+    ops = f"{uv}.xy"
+    if node.musgrave_dimensions != '2D':
+        print(f"Musgrave currently only supports 2d vectors")
+        return f"{uv}"
+
+    scale = export_node(result, node.inputs["Scale"], path)
+
+    return f"fbm(abs({ops}*{scale}))"
+
+
+def _export_wave(result, node, path, output_name):
+    # TODO: Add distortion
+    if node.inputs["Vector"].is_linked:
+        uv = export_node(result, node.inputs["Vector"], path)
+    else:
+        uv = TEXCOORD_UV
+
+    scale = export_node(result, node.inputs["Scale"], path)
+    uv = f"({uv}*{scale})"
+
+    if node.wave_type == "BANDS":
+        if node.bands_direction == "X":
+            coord = f"{uv}.x*20"
+        elif node.bands_direction == "Y":
+            coord = f"{uv}.y*20"
+        elif node.bands_direction == "Z":
+            coord = f"{uv}.z*20"
+        else:  # DIAGONAL
+            coord = f"sum({uv})*10"
+    else:  # RINGS
+        if node.bands_direction == "X":
+            coord = f"length({uv}.yz)*20"
+        elif node.bands_direction == "Y":
+            coord = f"length({uv}.xz)*20"
+        elif node.bands_direction == "Z":
+            coord = f"length({uv}.xy)*20"
+        else:  # DIAGONAL
+            coord = f"length({uv})*20"
+
+    phase = export_node(result, node.inputs["Phase Offset"], path)
+    coord = f"({coord} + {phase})"
+
+    if node.wave_profile == "SIN":
+        ops = f"(0.5 + 0.5 * sin({coord} - Pi/2))"
+    elif node.wave_profile == "SAW":
+        ops = f"fract(0.5*{coord}/Pi)"
+    else:  # TRI
+        ops = f"2*abs(0.5*{coord}/Pi - floor(0.5*{coord}/Pi + 0.5))"
+
+    if output_name == "Color":
+        return f"color({ops})"
+    else:
+        return ops
+
+
 def _export_surface_attributes(result, node, path, output_name):
     if output_name == "Position":
         return "P"
     elif output_name == "Normal":
         return "N"
     else:
-        print(
-            f"Given geometry attribute '{output_name}' not supported")
+        print(f"Given geometry attribute '{output_name}' not supported")
         return "N"
 
 
 def _export_tex_coordinate(result, node, path, output_name):
-    # Currently no other support planned. `Generated` might be added in the future
-    return "uv.xyy"  # Extend 2d vector to 3d, as VECTOR is always 3d
+    # Currently no other type of output is supported
+    if output_name != 'UV':
+        print(
+            f"Given texture coordinate output '{output_name}' is not supported")
+    return TEXCOORD_UV
 
 
 def _export_node(result, node, path, output_name):
@@ -424,13 +654,13 @@ def _export_node(result, node, path, output_name):
     # ShaderNodeShaderToRGB, ShaderNodeSubsurfaceScattering, ShaderNodeTangent,
     # ShaderNodeTexBrick, ShaderNodeTexEnvironment,
     # ShaderNodeTexGradient, ShaderNodeTexIES, ShaderNodeTexMagic,
-    # ShaderNodeTexMusgrave, ShaderNodeTexNoise, ShaderNodeTexPointDensity, ShaderNodeTexSky,
-    # ShaderNodeTexVoronoi, ShaderNodeTexWave, ShaderNodeTexWhiteNoise, ShaderNodeUVAlongStroke,
+    # ShaderNodeTexPointDensity, ShaderNodeTexSky, ShaderNodeUVAlongStroke,
     # ShaderNodeUVMap, ShaderNodeVectorCurve,
-    # ShaderNodeVectorDisplacement, ShaderNodeVectorMath, ShaderNodeVectorRotate, ShaderNodeVectorTransform,
+    # ShaderNodeVectorDisplacement, ShaderNodeVectorRotate, ShaderNodeVectorTransform,
     # ShaderNodeVertexColor, ShaderNodeWavelength, ShaderNodeWireframe
 
-    # No support planned: ShaderNodeAmbientOcclusion, ShaderNodeLightPath, ShaderNodeOutputAOV,
+    # No support planned:
+    # ShaderNodeAmbientOcclusion, ShaderNodeLightPath, ShaderNodeOutputAOV,
     # ShaderNodeParticleInfo, ShaderNodeOutputLineStyle, ShaderNodePointInfo, ShaderNodeHoldout
 
     if isinstance(node, bpy.types.ShaderNodeTexImage):
@@ -439,6 +669,16 @@ def _export_node(result, node, path, output_name):
         return _export_checkerboard(result, node, path, output_name)
     elif isinstance(node, bpy.types.ShaderNodeTexCoord):
         return _export_tex_coordinate(result, node, path, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeTexNoise):
+        return _export_noise(result, node, path, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeTexWhiteNoise):
+        return _export_white_noise(result, node, path, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeTexVoronoi):
+        return _export_voronoi(result, node, path, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeTexMusgrave):
+        return _export_musgrave(result, node, path, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeTexWave):
+        return _export_wave(result, node, path, output_name)
     elif isinstance(node, bpy.types.ShaderNodeNewGeometry):
         return _export_surface_attributes(result, node, path, output_name)
     elif isinstance(node, bpy.types.ShaderNodeMath):
@@ -479,6 +719,8 @@ def _export_node(result, node, path, output_name):
         return _export_separate_xyz(result, node, path, output_name)
     elif isinstance(node, bpy.types.ShaderNodeMapping):
         return _export_vector_mapping(result, node, path)
+    elif isinstance(node, bpy.types.ShaderNodeVectorMath):
+        return _export_vector_math(result, node, path)
     else:
         print(
             f"Shader node {node.name} of type {type(node).__name__} is not supported")
@@ -492,6 +734,7 @@ def export_node(result, socket, path):
         if expr is None:
             return _export_default(socket)
 
+        # Casts are implicitly handled with ShaderNodeValToRGB and ShaderNodeRGBToBW but we still want to make sure ;)
         to_type = socket.type
         from_type = socket.links[0].from_socket.type
         if to_type == from_type:
@@ -499,7 +742,7 @@ def export_node(result, socket, path):
         elif (from_type == 'VALUE' or from_type == 'INT') and to_type == 'RGBA':
             return f"color({expr})"
         elif from_type == 'RGBA' and (to_type == 'VALUE' or to_type == 'INT'):
-            return f"avg({expr})"
+            return f"luminance({expr})"
         else:
             print(
                 f"Socket connection from {socket.links[0].from_socket.name} to {socket.name} requires cast from {from_type} to {to_type} which is not supported")

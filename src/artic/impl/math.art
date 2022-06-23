@@ -68,4 +68,10 @@ fn @abgam(x: f32) -> f32 {
 
 fn @gamma(x: f32)        = math_builtins::exp(abgam(x + 5)) / (x*(x + 1)*(x + 2)*(x + 3)*(x + 4));
 fn @beta(m: f32, n: f32) = gamma(m) * gamma(n) / gamma(m + n);
+
+fn @trunc(x: f32) = (x as i32) as f32;
+fn @fract(x: f32)  = x - math_builtins::floor(x);
+
+// It would be great to have this as a builtin in math_builtins
+fn @fmod(x: f32, n: f32) = x - trunc(x / n) * n;
 }

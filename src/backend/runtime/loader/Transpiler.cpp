@@ -34,9 +34,14 @@ struct InternalVariable {
     }
 };
 static const std::unordered_map<std::string, InternalVariable> sInternalVariables = {
-    { "uv", { "", PExprType::Vec2, false } }, // Special
-    { "P", { "", PExprType::Vec3, false } },  // Special
-    { "N", { "", PExprType::Vec3, false } },  // Special
+    { "uv", { "", PExprType::Vec2, false } },           // Special
+    { "frontside", { "", PExprType::Boolean, false } }, // Special
+    { "prim_coords", { "", PExprType::Vec2, false } },  // Special
+    { "P", { "", PExprType::Vec3, false } },            // Special
+    { "N", { "", PExprType::Vec3, false } },            // Special
+    { "Ng", { "", PExprType::Vec3, false } },           // Special
+    { "Nx", { "", PExprType::Vec3, false } },           // Special
+    { "Ny", { "", PExprType::Vec3, false } },           // Special
     { "Pi", { "flt_pi", PExprType::Number, false } },
     { "E", { "flt_e", PExprType::Number, false } },
     { "Eps", { "flt_eps", PExprType::Number, false } },
@@ -121,11 +126,11 @@ inline static MapFunction1 genMapFunction1(const char* func, PExprType type)
     case PExprType::Number:
         return [=](const std::string& a) { return std::string(func) + "(" + a + ")"; };
     case PExprType::Vec2:
-        return [=](const std::string& a) { return "vec2_map(" + a + ", |x:f32| " + std::string(func) + "(x))"; };
+        return [=](const std::string& a) { return "vec2_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
     case PExprType::Vec3:
-        return [=](const std::string& a) { return "vec3_map(" + a + ", |x:f32| " + std::string(func) + "(x))"; };
+        return [=](const std::string& a) { return "vec3_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
     case PExprType::Vec4:
-        return [=](const std::string& a) { return "vec4_map(" + a + ", |x:f32| " + std::string(func) + "(x))"; };
+        return [=](const std::string& a) { return "vec4_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
     }
 }
 inline static MapFunction1 genMapFunction1(const char* func, const char* funcI, PExprType type)
@@ -198,11 +203,11 @@ inline static MapFunction2 genMapFunction2(const char* func, PExprType type)
     case PExprType::Number:
         return [=](const std::string& a, const std::string& b) { return std::string(func) + "(" + a + ", " + b + ")"; };
     case PExprType::Vec2:
-        return [=](const std::string& a, const std::string& b) { return "vec2_zip(" + a + ", " + b + ", |x:f32, y:f32| " + std::string(func) + "(x, y))"; };
+        return [=](const std::string& a, const std::string& b) { return "vec2_zip(" + a + ", " + b + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; };
     case PExprType::Vec3:
-        return [=](const std::string& a, const std::string& b) { return "vec3_zip(" + a + ", " + b + ", |x:f32, y:f32| " + std::string(func) + "(x, y))"; };
+        return [=](const std::string& a, const std::string& b) { return "vec3_zip(" + a + ", " + b + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; };
     case PExprType::Vec4:
-        return [=](const std::string& a, const std::string& b) { return "vec4_zip(" + a + ", " + b + ", |x:f32, y:f32| " + std::string(func) + "(x, y))"; };
+        return [=](const std::string& a, const std::string& b) { return "vec4_zip(" + a + ", " + b + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; };
     }
 }
 inline static MapFunction2 genMapFunction2(const char* func, const char* funcI, PExprType type)
@@ -257,7 +262,7 @@ inline static InternalDynFunction2 genDynArrayFunction2(const char* func)
 // Dyn Functions 3
 using MapFunction3         = std::function<std::string(const std::string&, const std::string&, const std::string&)>;
 using InternalDynFunction3 = InternalDynFunction<MapFunction3>;
-inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
+inline static MapFunction3 genMapFunction3(const char* func, PExprType type, bool no_suffix = false)
 {
     switch (type) {
     default:
@@ -266,11 +271,11 @@ inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
     case PExprType::Number:
         return [=](const std::string& a, const std::string& b, const std::string& c) { return std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
     case PExprType::Vec2:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return (no_suffix ? "" : "vec2_") + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
     case PExprType::Vec3:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec3_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return (no_suffix ? "" : "vec3_") + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
     case PExprType::Vec4:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec4_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return (no_suffix ? "" : "vec4_") + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
     }
 }
 // Type A func (A, A, num)
@@ -284,6 +289,10 @@ inline static InternalDynFunction3 genDynLerpFunction3(const char* func)
         genMapFunction3(func, PExprType::Vec4)
     };
 }
+inline static MapFunction3 genMapColorLerpFunction3(const char* func)
+{
+    return [=](const std::string& a, const std::string& b, const std::string& c) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + a + "), vec4_to_color(" + b + "), " + c + "))"; };
+}
 inline static InternalDynFunction3 genDynColorLerpFunction3(const char* func)
 {
     return {
@@ -291,7 +300,7 @@ inline static InternalDynFunction3 genDynColorLerpFunction3(const char* func)
         nullptr,
         nullptr,
         nullptr,
-        genMapFunction3(func, PExprType::Vec4)
+        genMapColorLerpFunction3(func)
     };
 }
 
@@ -312,6 +321,8 @@ static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynF
     { "floor", genDynMapFunction1("math_builtins::floor", nullptr) },
     { "ceil", genDynMapFunction1("math_builtins::ceil", nullptr) },
     { "round", genDynMapFunction1("math_builtins::round", nullptr) },
+    { "fract", genDynMapFunction1("math::fract", nullptr) },
+    { "trunc", genDynMapFunction1("math::trunc", nullptr) },
     { "sqrt", genDynMapFunction1("math_builtins::sqrt", nullptr) },
     { "cbrt", genDynMapFunction1("math_builtins::cbrt", nullptr) },
     { "abs", genDynMapFunction1("math_builtins::fabs", "abs") },
@@ -330,12 +341,13 @@ static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynF
 };
 
 static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynFunctions2 = {
-    { "min", genDynMapFunction2("math_builtins::fmax", "min") },
-    { "max", genDynMapFunction2("math_builtins::fmin", "max") },
+    { "min", genDynMapFunction2("math_builtins::fmin", "min") },
+    { "max", genDynMapFunction2("math_builtins::fmax", "max") },
     { "atan2", genDynMapFunction2("math_builtins::atan2", nullptr) },
+    { "fmod", genDynMapFunction2("math::fmod", nullptr) },
     { "cross", { nullptr, nullptr, nullptr, genArrayFunction2("cross", PExprType::Vec3), nullptr } },
-    { "rotate_euler", { nullptr, nullptr, nullptr, genArrayFunction2("vec3_rotate_euler", PExprType::Vec3), nullptr } },
-    { "rotate_euler_inverse", { nullptr, nullptr, nullptr, genArrayFunction2("vec3_rotate_euler_inverse", PExprType::Vec3), nullptr } }
+    { "rotate_euler", { nullptr, nullptr, nullptr, genArrayFunction2("rotate_euler", PExprType::Vec3), nullptr } },
+    { "rotate_euler_inverse", { nullptr, nullptr, nullptr, genArrayFunction2("rotate_euler_inverse", PExprType::Vec3), nullptr } }
 };
 static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynNoiseFunctions2 = {
     { "noise", { nullptr, genFunction2("noise1"), genFunction2("noise2_v"), genFunction2("noise3_v"), nullptr } },
@@ -369,15 +381,15 @@ static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynF
 static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynLerpFunctions3 = {
     { "mix", genDynLerpFunction3("lerp") },
     { "mix_screen", genDynColorLerpFunction3("color_mix_screen") },
-    { "mix_overlay", genDynLerpFunction3("color_mix_overlay") },
-    { "mix_dodge", genDynLerpFunction3("color_mix_dodge") },
-    { "mix_burn", genDynLerpFunction3("color_mix_burn") },
-    { "mix_soft", genDynLerpFunction3("color_mix_soft") },
-    { "mix_linear", genDynLerpFunction3("color_mix_linear") },
-    { "mix_hue", genDynLerpFunction3("color_mix_hue") },
-    { "mix_saturation", genDynLerpFunction3("color_mix_saturation") },
-    { "mix_value", genDynLerpFunction3("color_mix_value") },
-    { "mix_color", genDynLerpFunction3("color_mix_color") }
+    { "mix_overlay", genDynColorLerpFunction3("color_mix_overlay") },
+    { "mix_dodge", genDynColorLerpFunction3("color_mix_dodge") },
+    { "mix_burn", genDynColorLerpFunction3("color_mix_burn") },
+    { "mix_soft", genDynColorLerpFunction3("color_mix_soft") },
+    { "mix_linear", genDynColorLerpFunction3("color_mix_linear") },
+    { "mix_hue", genDynColorLerpFunction3("color_mix_hue") },
+    { "mix_saturation", genDynColorLerpFunction3("color_mix_saturation") },
+    { "mix_value", genDynColorLerpFunction3("color_mix_value") },
+    { "mix_color", genDynColorLerpFunction3("color_mix_color") }
 };
 
 static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynReduceFunctions1 = {
@@ -385,7 +397,7 @@ static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynR
     { "sum", genDynArrayFunction1("sum") },
     { "avg", genDynArrayFunction1("avg") },
     { "luminance", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorO("color_luminance") } },
-    { "checkerboard", { nullptr, nullptr, genFunction1("node_checkerboard"), nullptr, nullptr } },
+    { "checkerboard", { nullptr, nullptr, genFunction1("node_checkerboard2"), genFunction1("node_checkerboard3"), nullptr } },
     { "noise", { nullptr, genFunction1("noise1_def"), genFunction1("noise2_def"), genFunction1("noise3_def"), nullptr } },
     { "snoise", { nullptr, genFunction1("snoise1_def"), genFunction1("snoise2_def"), genFunction1("snoise3_def"), nullptr } },
     { "pnoise", { nullptr, genFunction1("pnoise1_def"), genFunction1("pnoise2_def"), genFunction1("pnoise3_def"), nullptr } },
@@ -438,12 +450,20 @@ public:
         if (name == "uv")
             return mUVAccess;
 
-        if (mHasSurfaceInfo) {
-            if (name == "P")
-                return "surf.point";
-            if (name == "N")
-                return "surf.local.col(2)";
-        }
+        if (name == "P")
+            return mHasSurfaceInfo ? "surf.point" : "make_vec3(0,0,0)";
+        if (name == "prim_coords")
+            return mHasSurfaceInfo ? "surf.prim_coords" : "make_vec2(0,0)";
+        if (name == "frontside")
+            return mHasSurfaceInfo ? "surf.is_entering" : "false";
+        if (name == "N")
+            return mHasSurfaceInfo ? "surf.local.col(2)" : "make_vec3(0,0,0)";
+        if (name == "Ng")
+            return mHasSurfaceInfo ? "surf.face_normal" : "make_vec3(0,0,0)";
+        if (name == "Nx")
+            return mHasSurfaceInfo ? "surf.local.col(0)" : "make_vec3(0,0,0)";
+        if (name == "Ny")
+            return mHasSurfaceInfo ? "surf.local.col(1)" : "make_vec3(0,0,0)";
 
         auto var = sInternalVariables.find(name);
         if (var != sInternalVariables.end())
@@ -661,9 +681,7 @@ public:
             if (name == "select")
                 return "select(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + ")";
         } else if (argumentPayloads.size() == 4) {
-            if (name == "vec4")
-                return "make_vec4(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + "," + argumentPayloads[3] + ")";
-            if (name == "color")
+            if (name == "vec4" || name == "color")
                 return "make_vec4(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + "," + argumentPayloads[3] + ")";
         }
 

@@ -9,6 +9,7 @@ bl_info = {
     "location": "File > Import-Export",
     "category": "Import-Export",
     "tracker_url": "https://github.com/PearCoding/Ignis/issues/new",
+    "doc_url": "https://pearcoding.github.io/Ignis/",
     "support": "COMMUNITY",
 }
 

@@ -12,8 +12,8 @@ fn @ccellnoise1(u: f32, seed: f32) = cnoise1(u as i32 as f32, seed);
 
 // Similar to Ken Perlin's original noise function
 fn @pnoise1(u: f32, seed: f32) -> f32 {
-    let ix = u as i32;
-    let kx = smoothstep(u - (ix as f32));
+    let ix = math::trunc(u);
+    let kx = math_builtins::fabs(smoothstep(u - ix));
 
     let p0 = noise1(ix  , seed);
     let p1 = noise1(ix+1, seed);
@@ -22,8 +22,8 @@ fn @pnoise1(u: f32, seed: f32) -> f32 {
 }
 
 fn @cpnoise1(u: f32, seed: f32) -> Color {
-    let ix = u as i32 as f32;
-    let kx = smoothstep(u - ix);
+    let ix = math::trunc(u);
+    let kx = math_builtins::fabs(smoothstep(u - ix));
 
     let p0 = cnoise1(ix  , seed);
     let p1 = cnoise1(ix+1, seed);
@@ -45,10 +45,10 @@ fn @cellnoise2(uv: Vec2, seed: f32)  = noise2(uv.x as i32, uv.y as i32, seed);
 fn @ccellnoise2(uv: Vec2, seed: f32) = cnoise2(make_vec2(uv.x as i32 as f32, uv.y as i32 as f32), seed);
 
 fn @pnoise2(uv: Vec2, seed: f32) -> f32 {
-    let ix = uv.x as i32;
-    let iy = uv.y as i32;
-    let kx = smoothstep(uv.x - (ix as f32));
-    let ky = smoothstep(uv.y - (iy as f32));
+    let ix = math::trunc(uv.x);
+    let iy = math::trunc(uv.y);
+    let kx = math_builtins::fabs(smoothstep(uv.x - ix));
+    let ky = math_builtins::fabs(smoothstep(uv.y - iy));
 
     let p00 = noise2(ix  , iy  , seed);
     let p10 = noise2(ix+1, iy  , seed);
@@ -59,10 +59,10 @@ fn @pnoise2(uv: Vec2, seed: f32) -> f32 {
 }
 
 fn @cpnoise2(uv: Vec2, seed: f32) -> Color {
-    let ix = uv.x as i32 as f32;
-    let iy = uv.y as i32 as f32;
-    let kx = smoothstep(uv.x - ix);
-    let ky = smoothstep(uv.y - iy);
+    let ix = math::trunc(uv.x);
+    let iy = math::trunc(uv.y);
+    let kx = math_builtins::fabs(smoothstep(uv.x - ix));
+    let ky = math_builtins::fabs(smoothstep(uv.y - iy));
 
     let p00 = cnoise2(make_vec2(ix  , iy  ), seed);
     let p10 = cnoise2(make_vec2(ix+1, iy  ), seed);
@@ -78,7 +78,7 @@ fn @sperlin2(uv: Vec2, seed: f32) -> f32 {
     fn mod289(x: f32)    = x - math_builtins::floor(x / 289.0) * 289;
     fn mod289_v(v: Vec4) = vec4_map(v, mod289);
     fn permute(v: Vec4)  = mod289_v(vec4_add(vec4_mul(vec4_mulf(v, 34), v), v));
-    fn fract_v(v: Vec4)  = vec4_map(v, @|x| x - math_builtins::floor(x));
+    fn fract_v(v: Vec4)  = vec4_map(v, @|x| math::fract(x));
 
     let p = vec2_add(uv, vec2_expand(noise1(1234, seed)));
 
@@ -132,7 +132,7 @@ fn @perlin2(uv: Vec2, seed: f32) = (sperlin2(uv, seed) + 1) / 2;
 // As in https://www.shadertoy.com/view/lsjGWD
 fn @voronoi2_gen(uv: Vec2, seed: f32, dist_f: fn(Vec2, Vec2)->f32) -> (f32, Color) {
     let ip = vec2_floor(uv);
-    let fp = vec2_map(uv, |x| x - math_builtins::floor(x));
+    let fp = vec2_map(uv, |x| math::fract(x));
 
 	let mut factor = 8.0 : f32;
     let mut color  = color_builtins::black;
@@ -192,12 +192,12 @@ fn @cellnoise3(uvw: Vec3, seed: f32)  = noise3(uvw.x as i32, uvw.y as i32, uvw.z
 fn @ccellnoise3(uvw: Vec3, seed: f32) = cnoise3(make_vec3(uvw.x as i32 as f32, uvw.y as i32 as f32, uvw.z as i32 as f32), seed);
 
 fn @pnoise3(uvw: Vec3, seed: f32) -> f32 {
-    let ix = uvw.x as i32;
-    let iy = uvw.y as i32;
-    let iz = uvw.z as i32;
-    let kx = smoothstep(uvw.x - (ix as f32));
-    let ky = smoothstep(uvw.y - (iy as f32));
-    let kz = smoothstep(uvw.z - (iz as f32));
+    let ix = math::trunc(uvw.x);
+    let iy = math::trunc(uvw.y);
+    let iz = math::trunc(uvw.z);
+    let kx = math_builtins::fabs(smoothstep(uvw.x - ix));
+    let ky = math_builtins::fabs(smoothstep(uvw.y - iy));
+    let kz = math_builtins::fabs(smoothstep(uvw.z - iz));
 
     let p000 = noise3(ix  , iy  , iz  , seed);
     let p100 = noise3(ix+1, iy  , iz  , seed);
@@ -214,12 +214,12 @@ fn @pnoise3(uvw: Vec3, seed: f32) -> f32 {
 }
 
 fn @cpnoise3(uvw: Vec3, seed: f32) -> Color {
-    let ix = uvw.x as i32 as f32;
-    let iy = uvw.y as i32 as f32;
-    let iz = uvw.z as i32 as f32;
-    let kx = smoothstep(uvw.x - ix);
-    let ky = smoothstep(uvw.y - iy);
-    let kz = smoothstep(uvw.z - iz);
+    let ix = math::trunc(uvw.x);
+    let iy = math::trunc(uvw.y);
+    let iz = math::trunc(uvw.z);
+    let kx = math_builtins::fabs(smoothstep(uvw.x - ix));
+    let ky = math_builtins::fabs(smoothstep(uvw.y - iy));
+    let kz = math_builtins::fabs(smoothstep(uvw.z - iz));
 
     let p000 = cnoise3(make_vec3(ix  , iy  , iz  ), seed);
     let p100 = cnoise3(make_vec3(ix+1, iy  , iz  ), seed);

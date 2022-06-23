@@ -8,9 +8,9 @@ fn @euler_to_mat3x3(euler: Vec3) {
     let sy = math_builtins::sin(euler.y);
     let sz = math_builtins::sin(euler.z);
   
-    make_mat3x3(make_vec3(cy * cz, sy * sx * cz - cx * sz, sy * cx * cz + sx * sz),
-                make_vec3(cy * sz, sy * sx * sz + cx * cz, sy * cx * sz - sx * cz),
-                make_vec3(    -sy,                cy * sx,                cy * cx))
+    make_mat3x3(make_vec3(cy * cz,                cy * sz,               -sy),
+                make_vec3(sy * sx * cz - cx * sz, sy * sx * sz + cx * cz, cy * sx),
+                make_vec3(sy * cx * cz + sx * sz, sy * cx * sz - sx * cz, cy * cx))
 }
 
 fn @vec3_rotate_euler(p: Vec3, euler: Vec3)         = mat3x3_mul(euler_to_mat3x3(euler), p);
