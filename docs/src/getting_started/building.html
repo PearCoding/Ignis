@@ -383,7 +383,8 @@ Use one of the many dll dependency viewers available on Windows to find the exac
 <ul class="simple">
 <li><p>If you get a <code class="docutils literal notranslate"><span class="pre">CommandLine</span> <span class="pre">Error:</span> <span class="pre">Option</span> <span class="pre">'help-list'</span> <span class="pre">registred</span> <span class="pre">more</span> <span class="pre">than</span> <span class="pre">once!</span></code>, most likely the AnyDSL LLVM library and system LLVM library with exposed symbols are loaded at the same time.
 A known cause is that <code class="docutils literal notranslate"><span class="pre">igview</span></code> and SDL are using a graphic driver which is loading the system LLVM library in the background.
-Setting the environment variable <code class="docutils literal notranslate"><span class="pre">SDL_RENDER_DRIVER=software</span></code> should be a good workaround. This will not prevent you of using the GPU for raytracing however, only the UI will be software rendered.</p></li>
+On Linux, using accelerated rendering load the X11 drivers, which in return load the system LLVM, which in return clash with the custom LLVM.
+Setting the environment variable <code class="docutils literal notranslate"><span class="pre">SDL_RENDER_DRIVER=software</span></code> and <code class="docutils literal notranslate"><span class="pre">SDL_FRAMEBUFFER_ACCELERATION=0</span></code> should be a good workaround. This will not prevent you of using the GPU for raytracing however, only the UI will be software rendered.</p></li>
 </ul>
 </section>
 </section>
