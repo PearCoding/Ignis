@@ -126,6 +126,7 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
 Known Issues
 ------------
 
--  If you get a ``CommandLine Error: Option 'help-list' registred more than once!``, most likely the AnyDSL LLVM library and system LLVM library with exposed symbols are loaded at the same time.
-   A known cause is that ``igview`` and SDL are using a graphic driver which is loading the system LLVM library in the background.
-   Setting the environment variable ``SDL_RENDER_DRIVER=software`` should be a good workaround. This will not prevent you of using the GPU for raytracing however, only the UI will be software rendered.
+-   If you get a ``CommandLine Error: Option 'help-list' registred more than once!``, most likely the AnyDSL LLVM library and system LLVM library with exposed symbols are loaded at the same time.
+    A known cause is that ``igview`` and SDL are using a graphic driver which is loading the system LLVM library in the background.
+    On Linux, using accelerated rendering load the X11 drivers, which in return load the system LLVM, which in return clash with the custom LLVM.
+    Setting the environment variable ``SDL_RENDER_DRIVER=software`` and ``SDL_FRAMEBUFFER_ACCELERATION=0`` should be a good workaround. This will not prevent you of using the GPU for raytracing however, only the UI will be software rendered.

@@ -3,13 +3,18 @@ import os
 from io_mesh_ply.export_ply import save_mesh as ply_save
 
 
-def export_shape(result, obj, meshpath):
+def get_shape_name(obj):
+    return obj.original.data.name  # We use the original mesh name!
+
+
+def export_shape(result, obj, depsgraph, meshpath):
     import bmesh
 
+    name = get_shape_name(obj)
     bm = bmesh.new()
 
     try:
-        me = obj.to_mesh()
+        me = obj.to_mesh(preserve_all_data_layers=False, depsgraph=depsgraph)
     except RuntimeError:
         return
 
@@ -18,7 +23,7 @@ def export_shape(result, obj, meshpath):
 
     bm.normal_update()
 
-    ply_save(filepath=os.path.join(meshpath, obj.data.name+".ply"),
+    ply_save(filepath=os.path.join(meshpath, name+".ply"),
              bm=bm,
              use_ascii=False,
              use_normals=True,
@@ -29,6 +34,6 @@ def export_shape(result, obj, meshpath):
     bm.free()
 
     result["shapes"].append(
-        {"type": "ply", "name": obj.data.name,
-            "filename": "Meshes/" + obj.data.name + ".ply"},
+        {"type": "ply", "name": name,
+            "filename": f"Meshes/{name}.ply"},
     )

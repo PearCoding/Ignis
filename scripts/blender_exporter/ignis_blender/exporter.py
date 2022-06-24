@@ -2,7 +2,7 @@ import os
 import json
 
 from .light import export_light, export_background
-from .shape import export_shape
+from .shape import export_shape, get_shape_name
 from .camera import export_camera
 from .bsdf import export_material, export_error_material, export_black_material, get_material_emission
 from .utils import *
@@ -42,7 +42,7 @@ def export_entity(result, inst, filepath, export_materials, export_lights, expor
     # Export actual entity
     matrix = inst.matrix_world
     result["entities"].append(
-        {"name": inst.object.name, "shape": inst.object.data.name,
+        {"name": inst.object.name, "shape": get_shape_name(inst.object),
             "bsdf": mat_name, "transform": flat_matrix(matrix)}
     )
 
@@ -91,10 +91,10 @@ def export_all(filepath, result, depsgraph, use_selection, export_materials, exp
             continue
 
         objType = object_eval.type
-        if objType == "MESH":
-            shape_name = object_eval.data.name
+        if objType == "MESH" or objType == "CURVE" or objType == "SURFACE":
+            shape_name = get_shape_name(object_eval)
             if shape_name not in exported_shapes:
-                export_shape(result, object_eval, filepath)
+                export_shape(result, object_eval, depsgraph, filepath)
                 exported_shapes.add(shape_name)
 
             export_entity(result, inst, filepath,
