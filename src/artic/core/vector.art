@@ -40,39 +40,42 @@ fn @vec4_reduce(v: Vec4, f: fn (f32, f32) -> f32) = @f(v.x, @f(v.y, @f(v.z, v.w)
 fn @vec2_zip(a: Vec2, b: Vec2, f: fn (f32, f32) -> f32) = make_vec2(@f(a.x, b.x), @f(a.y, b.y));
 fn @vec3_zip(a: Vec3, b: Vec3, f: fn (f32, f32) -> f32) = make_vec3(@f(a.x, b.x), @f(a.y, b.y), @f(a.z, b.z));
 fn @vec4_zip(a: Vec4, b: Vec4, f: fn (f32, f32) -> f32) = make_vec4(@f(a.x, b.x), @f(a.y, b.y), @f(a.z, b.z), @f(a.w, b.w));
+fn @vec2_zip3(a: Vec2, b: Vec2, c: Vec2, f: fn (f32, f32, f32) -> f32) = make_vec2(@f(a.x, b.x, c.x), @f(a.y, b.y, c.y));
+fn @vec3_zip3(a: Vec3, b: Vec3, c: Vec3, f: fn (f32, f32, f32) -> f32) = make_vec3(@f(a.x, b.x, c.x), @f(a.y, b.y, c.y), @f(a.z, b.z, c.z));
+fn @vec4_zip3(a: Vec4, b: Vec4, c: Vec4, f: fn (f32, f32, f32) -> f32) = make_vec4(@f(a.x, b.x, c.x), @f(a.y, b.y, c.y), @f(a.z, b.z, c.z), @f(a.w, b.w, c.w));
 
-fn @vec2_add(a: Vec2, b: Vec2) = vec2_zip(a, b, |x, y| x + y);
-fn @vec3_add(a: Vec3, b: Vec3) = vec3_zip(a, b, |x, y| x + y);
-fn @vec4_add(a: Vec4, b: Vec4) = vec4_zip(a, b, |x, y| x + y);
-fn @vec2_sub(a: Vec2, b: Vec2) = vec2_zip(a, b, |x, y| x - y);
-fn @vec3_sub(a: Vec3, b: Vec3) = vec3_zip(a, b, |x, y| x - y);
-fn @vec4_sub(a: Vec4, b: Vec4) = vec4_zip(a, b, |x, y| x - y);
-fn @vec2_mul(a: Vec2, b: Vec2) = vec2_zip(a, b, |x, y| x * y);
-fn @vec3_mul(a: Vec3, b: Vec3) = vec3_zip(a, b, |x, y| x * y);
-fn @vec4_mul(a: Vec4, b: Vec4) = vec4_zip(a, b, |x, y| x * y);
-fn @vec2_div(a: Vec2, b: Vec2) = vec2_zip(a, b, |x, y| x / y);
-fn @vec3_div(a: Vec3, b: Vec3) = vec3_zip(a, b, |x, y| x / y);
-fn @vec4_div(a: Vec4, b: Vec4) = vec4_zip(a, b, |x, y| x / y);
+fn @vec2_add(a: Vec2, b: Vec2) = vec2_zip(a, b, @|x, y| x + y);
+fn @vec3_add(a: Vec3, b: Vec3) = vec3_zip(a, b, @|x, y| x + y);
+fn @vec4_add(a: Vec4, b: Vec4) = vec4_zip(a, b, @|x, y| x + y);
+fn @vec2_sub(a: Vec2, b: Vec2) = vec2_zip(a, b, @|x, y| x - y);
+fn @vec3_sub(a: Vec3, b: Vec3) = vec3_zip(a, b, @|x, y| x - y);
+fn @vec4_sub(a: Vec4, b: Vec4) = vec4_zip(a, b, @|x, y| x - y);
+fn @vec2_mul(a: Vec2, b: Vec2) = vec2_zip(a, b, @|x, y| x * y);
+fn @vec3_mul(a: Vec3, b: Vec3) = vec3_zip(a, b, @|x, y| x * y);
+fn @vec4_mul(a: Vec4, b: Vec4) = vec4_zip(a, b, @|x, y| x * y);
+fn @vec2_div(a: Vec2, b: Vec2) = vec2_zip(a, b, @|x, y| x / y);
+fn @vec3_div(a: Vec3, b: Vec3) = vec3_zip(a, b, @|x, y| x / y);
+fn @vec4_div(a: Vec4, b: Vec4) = vec4_zip(a, b, @|x, y| x / y);
 
-fn @vec2_neg(v: Vec2) = vec2_map(v, |x| -x);
-fn @vec3_neg(v: Vec3) = vec3_map(v, |x| -x);
-fn @vec4_neg(v: Vec4) = vec4_map(v, |x| -x);
+fn @vec2_neg(v: Vec2) = vec2_map(v, @|x| -x);
+fn @vec3_neg(v: Vec3) = vec3_map(v, @|x| -x);
+fn @vec4_neg(v: Vec4) = vec4_map(v, @|x| -x);
 
-fn @vec2_abs(v: Vec2) = vec2_map(v, |x| math_builtins::fabs(x));
-fn @vec3_abs(v: Vec3) = vec3_map(v, |x| math_builtins::fabs(x));
-fn @vec4_abs(v: Vec4) = vec4_map(v, |x| math_builtins::fabs(x));
+fn @vec2_abs(v: Vec2) = vec2_map(v, @|x| math_builtins::fabs(x));
+fn @vec3_abs(v: Vec3) = vec3_map(v, @|x| math_builtins::fabs(x));
+fn @vec4_abs(v: Vec4) = vec4_map(v, @|x| math_builtins::fabs(x));
 
-fn @vec2_floor(v: Vec2) = vec2_map(v, |x| math_builtins::floor(x));
-fn @vec3_floor(v: Vec3) = vec3_map(v, |x| math_builtins::floor(x));
-fn @vec4_floor(v: Vec4) = vec4_map(v, |x| math_builtins::floor(x));
+fn @vec2_floor(v: Vec2) = vec2_map(v, @|x| math_builtins::floor(x));
+fn @vec3_floor(v: Vec3) = vec3_map(v, @|x| math_builtins::floor(x));
+fn @vec4_floor(v: Vec4) = vec4_map(v, @|x| math_builtins::floor(x));
 
 fn @vec2_ceil(v: Vec2) = vec2_map(v, |x| math_builtins::ceil(x));
 fn @vec3_ceil(v: Vec3) = vec3_map(v, |x| math_builtins::ceil(x));
 fn @vec4_ceil(v: Vec4) = vec4_map(v, |x| math_builtins::ceil(x));
 
-fn @vec2_sum(v: Vec2) = vec2_reduce(v, |x, y| x + y);
-fn @vec3_sum(v: Vec3) = vec3_reduce(v, |x, y| x + y);
-fn @vec4_sum(v: Vec4) = vec4_reduce(v, |x, y| x + y);
+fn @vec2_sum(v: Vec2) = vec2_reduce(v, @|x, y| x + y);
+fn @vec3_sum(v: Vec3) = vec3_reduce(v, @|x, y| x + y);
+fn @vec4_sum(v: Vec4) = vec4_reduce(v, @|x, y| x + y);
 
 fn @vec2_avg(v: Vec2) = vec2_sum(v) / 2;
 fn @vec3_avg(v: Vec3) = vec3_sum(v) / 3;
@@ -86,9 +89,9 @@ fn @vec2_divf(v: Vec2, t: f32) = vec2_mulf(v, 1 / t);
 fn @vec3_divf(v: Vec3, t: f32) = vec3_mulf(v, 1 / t);
 fn @vec4_divf(v: Vec4, t: f32) = vec4_mulf(v, 1 / t);
 
-fn @vec2_powf(v: Vec2, t: f32) = vec2_map(v, |x| math_builtins::pow(x, t));
-fn @vec3_powf(v: Vec3, t: f32) = vec3_map(v, |x| math_builtins::pow(x, t));
-fn @vec4_powf(v: Vec4, t: f32) = vec4_map(v, |x| math_builtins::pow(x, t));
+fn @vec2_powf(v: Vec2, t: f32) = vec2_map(v, @|x| math_builtins::pow(x, t));
+fn @vec3_powf(v: Vec3, t: f32) = vec3_map(v, @|x| math_builtins::pow(x, t));
+fn @vec4_powf(v: Vec4, t: f32) = vec4_map(v, @|x| math_builtins::pow(x, t));
 
 fn @vec2_dot(a: Vec2, b: Vec2) = fmaf(a.x, b.x, a.y * b.y);
 fn @vec3_dot(a: Vec3, b: Vec3) = fmaf(a.x, b.x, fmaf(a.y, b.y, a.z * b.z));
@@ -106,12 +109,12 @@ fn @vec3_cross(a: Vec3, b: Vec3) = make_vec3(
 fn @vec3_max_index(a: Vec3) = select(a.x > a.y, select(a.x > a.z, 0:i32, 2:i32), select(a.y > a.z, 1:i32, 2:i32));
 fn @vec3_min_index(a: Vec3) = select(a.x < a.y, select(a.x < a.z, 0:i32, 2:i32), select(a.y < a.z, 1:i32, 2:i32));
 
-fn @vec2_min_value(a: Vec2) = vec2_reduce(a, |x, y| math_builtins::fmin(x, y));
-fn @vec3_min_value(a: Vec3) = vec3_reduce(a, |x, y| math_builtins::fmin(x, y));
-fn @vec4_min_value(a: Vec4) = vec4_reduce(a, |x, y| math_builtins::fmin(x, y));
-fn @vec2_max_value(a: Vec2) = vec2_reduce(a, |x, y| math_builtins::fmax(x, y));
-fn @vec3_max_value(a: Vec3) = vec3_reduce(a, |x, y| math_builtins::fmax(x, y));
-fn @vec4_max_value(a: Vec4) = vec4_reduce(a, |x, y| math_builtins::fmax(x, y));
+fn @vec2_min_value(a: Vec2) = vec2_reduce(a, @|x, y| math_builtins::fmin(x, y));
+fn @vec3_min_value(a: Vec3) = vec3_reduce(a, @|x, y| math_builtins::fmin(x, y));
+fn @vec4_min_value(a: Vec4) = vec4_reduce(a, @|x, y| math_builtins::fmin(x, y));
+fn @vec2_max_value(a: Vec2) = vec2_reduce(a, @|x, y| math_builtins::fmax(x, y));
+fn @vec3_max_value(a: Vec3) = vec3_reduce(a, @|x, y| math_builtins::fmax(x, y));
+fn @vec4_max_value(a: Vec4) = vec4_reduce(a, @|x, y| math_builtins::fmax(x, y));
         
 fn @vec2_len2(v: Vec2) = vec2_dot(v, v);
 fn @vec3_len2(v: Vec3) = vec3_dot(v, v);
@@ -138,9 +141,9 @@ fn @vec4_normalize(v: Vec4) = vec4_mulf(v, 1 / vec4_len(v));
 fn @vec3_halfway(a: Vec3, b: Vec3) = vec3_normalize(vec3_add(a, b));
 fn @vec3_halfway_refractive(a: Vec3, b: Vec3, eta: f32) = vec3_normalize(vec3_add(a, vec3_mulf(b, eta)));
 
-fn @vec2_lerp(a: Vec2, b: Vec2, k: f32) = vec2_zip(a, b, |x, y| lerp(x, y, k));
-fn @vec3_lerp(a: Vec3, b: Vec3, k: f32) = vec3_zip(a, b, |x, y| lerp(x, y, k));
-fn @vec4_lerp(a: Vec4, b: Vec4, k: f32) = vec4_zip(a, b, |x, y| lerp(x, y, k));
+fn @vec2_lerp(a: Vec2, b: Vec2, k: f32) = vec2_zip(a, b, @|x, y| lerp(x, y, k));
+fn @vec3_lerp(a: Vec3, b: Vec3, k: f32) = vec3_zip(a, b, @|x, y| lerp(x, y, k));
+fn @vec4_lerp(a: Vec4, b: Vec4, k: f32) = vec4_zip(a, b, @|x, y| lerp(x, y, k));
 
 fn @vec2_lerp2(a: Vec2, b: Vec2, c: Vec2, u: f32, v: f32) = Vec2 {
     x = lerp2(a.x, b.x, c.x, u, v),
@@ -158,13 +161,13 @@ fn @vec4_lerp2(a: Vec4, b: Vec4, c: Vec4, u: f32, v: f32) = Vec4 {
     w = lerp2(a.w, b.w, c.w, u, v)
 };
 
-fn @vec2_min(a: Vec2, b: Vec2) = vec2_zip(a, b, |x, y| select(x < y, x, y));
-fn @vec3_min(a: Vec3, b: Vec3) = vec3_zip(a, b, |x, y| select(x < y, x, y));
-fn @vec4_min(a: Vec4, b: Vec4) = vec4_zip(a, b, |x, y| select(x < y, x, y));
+fn @vec2_min(a: Vec2, b: Vec2) = vec2_zip(a, b, @|x, y| select(x < y, x, y));
+fn @vec3_min(a: Vec3, b: Vec3) = vec3_zip(a, b, @|x, y| select(x < y, x, y));
+fn @vec4_min(a: Vec4, b: Vec4) = vec4_zip(a, b, @|x, y| select(x < y, x, y));
 
-fn @vec2_max(a: Vec2, b: Vec2) = vec2_zip(a, b, |x, y| select(x > y, x, y));
-fn @vec3_max(a: Vec3, b: Vec3) = vec3_zip(a, b, |x, y| select(x > y, x, y));
-fn @vec4_max(a: Vec4, b: Vec4) = vec4_zip(a, b, |x, y| select(x > y, x, y));
+fn @vec2_max(a: Vec2, b: Vec2) = vec2_zip(a, b, @|x, y| select(x > y, x, y));
+fn @vec3_max(a: Vec3, b: Vec3) = vec3_zip(a, b, @|x, y| select(x > y, x, y));
+fn @vec4_max(a: Vec4, b: Vec4) = vec4_zip(a, b, @|x, y| select(x > y, x, y));
 
 fn @vec2_at(a: Vec2, i: i32) = match(i) {
     0 => a.x,

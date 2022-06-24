@@ -210,13 +210,6 @@ inline static MapFunction2 genMapFunction2(const char* func, PExprType type)
         return [=](const std::string& a, const std::string& b) { return "vec4_zip(" + a + ", " + b + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; };
     }
 }
-inline static MapFunction2 genMapFunction2(const char* func, const char* funcI, PExprType type)
-{
-    if (type == PExprType::Integer)
-        return [=](const std::string& a, const std::string& b) { return std::string(funcI) + "(" + a + ", " + b + ")"; };
-    else
-        return genMapFunction2(func, type);
-}
 inline static MapFunction2 genArrayFunction2(const char* func, PExprType type)
 {
     switch (type) {
@@ -241,7 +234,7 @@ inline static MapFunction2 genFunction2Color(const char* func)
 inline static InternalDynFunction2 genDynMapFunction2(const char* func, const char* funcI)
 {
     return {
-        funcI ? genMapFunction2(func, funcI, PExprType::Integer) : nullptr,
+        funcI ? genMapFunction2(funcI, PExprType::Integer) : nullptr,
         genMapFunction2(func, PExprType::Number),
         genMapFunction2(func, PExprType::Vec2),
         genMapFunction2(func, PExprType::Vec3),
@@ -271,12 +264,22 @@ inline static MapFunction3 genMapFunction3(const char* func, PExprType type, boo
     case PExprType::Number:
         return [=](const std::string& a, const std::string& b, const std::string& c) { return std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
     case PExprType::Vec2:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return (no_suffix ? "" : "vec2_") + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_zip3(" + a + ", " + b + ", " + c + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; };
     case PExprType::Vec3:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return (no_suffix ? "" : "vec3_") + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec3_zip3(" + a + ", " + b + ", " + c + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; };
     case PExprType::Vec4:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return (no_suffix ? "" : "vec4_") + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec4_zip3(" + a + ", " + b + ", " + c + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; };
     }
+}
+inline static InternalDynFunction3 genDynMapFunction3(const char* func, const char* funcI)
+{
+    return {
+        funcI ? genMapFunction3(funcI, PExprType::Integer) : nullptr,
+        genMapFunction3(func, PExprType::Number),
+        genMapFunction3(func, PExprType::Vec2),
+        genMapFunction3(func, PExprType::Vec3),
+        genMapFunction3(func, PExprType::Vec4)
+    };
 }
 // Type A func (A, A, num)
 inline static InternalDynFunction3 genDynLerpFunction3(const char* func)
@@ -284,14 +287,10 @@ inline static InternalDynFunction3 genDynLerpFunction3(const char* func)
     return {
         nullptr,
         genMapFunction3(func, PExprType::Number),
-        genMapFunction3(func, PExprType::Vec2),
-        genMapFunction3(func, PExprType::Vec3),
-        genMapFunction3(func, PExprType::Vec4)
+        [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; },
+        [=](const std::string& a, const std::string& b, const std::string& c) { return "vec3_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; },
+        [=](const std::string& a, const std::string& b, const std::string& c) { return "vec4_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; }
     };
-}
-inline static MapFunction3 genMapColorLerpFunction3(const char* func)
-{
-    return [=](const std::string& a, const std::string& b, const std::string& c) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + a + "), vec4_to_color(" + b + "), " + c + "))"; };
 }
 inline static InternalDynFunction3 genDynColorLerpFunction3(const char* func)
 {
@@ -300,7 +299,7 @@ inline static InternalDynFunction3 genDynColorLerpFunction3(const char* func)
         nullptr,
         nullptr,
         nullptr,
-        genMapColorLerpFunction3(func)
+        [=](const std::string& a, const std::string& b, const std::string& c) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + a + "), vec4_to_color(" + b + "), " + c + "))"; }
     };
 }
 
@@ -343,6 +342,8 @@ static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynF
 static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynFunctions2 = {
     { "min", genDynMapFunction2("math_builtins::fmin", "min") },
     { "max", genDynMapFunction2("math_builtins::fmax", "max") },
+    { "snap", genDynMapFunction2("math::snap", nullptr) },
+    { "pingpong", genDynMapFunction2("math::pingpong", nullptr) },
     { "atan2", genDynMapFunction2("math_builtins::atan2", nullptr) },
     { "fmod", genDynMapFunction2("math::fmod", nullptr) },
     { "cross", { nullptr, nullptr, nullptr, genArrayFunction2("cross", PExprType::Vec3), nullptr } },
@@ -376,7 +377,10 @@ static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynC
 };
 
 static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynFunctions3 = {
-    { "clamp", { genMapFunction3("clamp", PExprType::Integer), genMapFunction3("clampf", PExprType::Number), nullptr, nullptr, nullptr } }
+    { "clamp", genDynMapFunction3("clampf", "clamp") },
+    { "smin", genDynMapFunction3("math::smoothmin", nullptr) },
+    { "smax", genDynMapFunction3("math::smoothmax", nullptr) },
+    { "wrap", genDynMapFunction3("math::wrap", nullptr) }
 };
 static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynLerpFunctions3 = {
     { "mix", genDynLerpFunction3("lerp") },

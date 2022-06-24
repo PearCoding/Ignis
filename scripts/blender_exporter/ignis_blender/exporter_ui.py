@@ -38,8 +38,20 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
 
     animations: BoolProperty(
         name="Export Animations",
-        description="If true, writes .json and .obj files for each frame in the animation.",
+        description="If true, writes .json for each frame in the animation.",
         default=False,
+    )
+
+    export_materials: BoolProperty(
+        name="Export Materials",
+        description="If true, materials will be exported, else a single diffuse material will be used.",
+        default=True,
+    )
+
+    export_lights: BoolProperty(
+        name="Export Lights",
+        description="If true, lights will be exported.",
+        default=True,
     )
 
     check_extension = True
@@ -102,8 +114,10 @@ class IGNIS_PT_export_include(bpy.types.Panel):
         col.prop(operator, 'use_selection')
 
         layout.separator()
-
+        
         layout.prop(operator, 'animations')
+        layout.prop(operator, 'export_materials')
+        layout.prop(operator, 'export_lights')
 
 
 def menu_func_export(self, context):

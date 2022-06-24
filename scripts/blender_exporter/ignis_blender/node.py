@@ -69,7 +69,6 @@ def _export_scalar_maprange(result, node, path):
 
 
 def _export_scalar_math(result, node, path):
-    # TODO: SMOOTH_MIN, SMOOTH_MAX, WRAP, SNAP, PINGPONG
     ops = ""
     if node.operation == "ADD":
         ops = f"({export_node(result, node.inputs[0], path)} + {export_node(result, node.inputs[1], path)})"
@@ -118,6 +117,16 @@ def _export_scalar_math(result, node, path):
         ops = f"fract({export_node(result, node.inputs[0], path)})"
     elif node.operation == "MODULO":
         ops = f"fmod({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "SMOOTH_MIN":
+        ops = f"smin({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)})"
+    elif node.operation == "SMOOTH_MAX":
+        ops = f"smax({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)})"
+    elif node.operation == "WRAP":
+        ops = f"wrap({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)})"
+    elif node.operation == "SNAP":
+        ops = f"snap({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "PINGPONG":
+        ops = f"pingpong({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
     elif node.operation == "SINE":
         ops = f"sin({export_node(result, node.inputs[0], path)})"
     elif node.operation == "COSINE":
@@ -346,7 +355,6 @@ def _export_vector_mapping(result, node, path):
 
 
 def _export_vector_math(result, node, path):
-    # TODO: WRAP, SNAP
     if node.operation == "ADD":
         return f"({export_node(result, node.inputs[0], path)} + {export_node(result, node.inputs[1], path)})"
     elif node.operation == "SUBTRACT":
@@ -386,6 +394,10 @@ def _export_vector_math(result, node, path):
         return f"min({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
     elif node.operation == "MAXIMUM":
         return f"max({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+    elif node.operation == "WRAP":
+        return f"wrap({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)})"
+    elif node.operation == "SNAP":
+        return f"snap({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
     elif node.operation == "ROUND":
         return f"round({export_node(result, node.inputs[0], path)})"
     elif node.operation == "FLOOR":

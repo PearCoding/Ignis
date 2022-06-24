@@ -3,8 +3,7 @@ import math
 from .utils import *
 from .node import export_node
 
-# Make sure the Z axis is handled as up, instead of Y
-ENVIRONMENT_MAP_TRANSFORM = [0, 1, 0, 0, 0, 1, 1, 0, 0]
+from .defaults import *
 
 
 def export_background(result, out_dir, scene):
@@ -85,13 +84,10 @@ def export_light(result, inst):
                 {"type": "rectangle", "name": light.name +
                     "-shape", "width": size_x, "height": size_y, "flip_normals": True}
             )
-        result["bsdfs"].append(
-            {"type": "diffuse", "name": light.name +
-                "-bsdf", "reflectance": [0, 0, 0]}
-        )
+
         result["entities"].append(
             {"name": light.name, "shape": light.name +
-                "-shape", "bsdf": light.name+"-bsdf", "transform": flat_matrix(inst.matrix_world)}
+                "-shape", "bsdf": BSDF_BLACK_NAME, "transform": flat_matrix(inst.matrix_world)}
         )
         result["lights"].append(
             {"type": "area", "name": light.name, "entity": light.name,

@@ -74,4 +74,19 @@ fn @fract(x: f32)  = x - math_builtins::floor(x);
 
 // It would be great to have this as a builtin in math_builtins
 fn @fmod(x: f32, n: f32) = x - trunc(x / n) * n;
+
+// https://iquilezles.org/articles/smin/
+fn @smoothmin(x: f32, y: f32, k: f32) {
+    let h = all::safe_div(math_builtins::fmax[f32](k - math_builtins::fabs(x - y), 0), k);
+    math_builtins::fmin(x, y) - h*h*h*k/6
+}
+fn @smoothmax(x: f32, y: f32, k: f32) = -smoothmin(-x, -y, k);
+
+fn @wrap(v: f32, min: f32, max: f32) {
+    let range = max - min;
+    all::select(range <= all::flt_eps, min, v - (range * math_builtins::floor((v - min)/range)))
+}
+
+fn @snap(x: f32, y: f32)     = math_builtins::floor(all::safe_div(x, y)) * y;
+fn @pingpong(x: f32, y: f32) = all::select(math_builtins::fabs(y) <= all::flt_pi, 0:f32, math_builtins::fabs(fract((x - y) / (y * 2)) * y * 2 - y));
 }
