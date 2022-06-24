@@ -8,6 +8,13 @@ from .utils import *
 TEXCOORD_UV = "vec3(uv.x, uv.y, 0)"
 
 
+class NodeContext:
+    def __init__(self, result, path):
+        self.result = result
+        self.path = path
+        self.stack = []
+
+
 def _export_default(socket):
     default_value = getattr(socket, "default_value")
     if default_value is None:
@@ -27,24 +34,24 @@ def _export_default(socket):
             return default_value
 
 
-def _export_scalar_value(result, node, path):
+def _export_scalar_value(ctx, node):
     return node.outputs[0].default_value
 
 
-def _export_scalar_clamp(result, node, path):
-    val = export_node(result, node.inputs[0], path)
-    minv = export_node(result, node.inputs[1], path)
-    maxv = export_node(result, node.inputs[2], path)
+def _export_scalar_clamp(ctx, node):
+    val = export_node(ctx, node.inputs[0])
+    minv = export_node(ctx, node.inputs[1])
+    maxv = export_node(ctx, node.inputs[2])
 
     return f"clamp({val}, {minv}, {maxv})"
 
 
-def _export_scalar_maprange(result, node, path):
-    val = export_node(result, node.inputs[0], path)
-    from_min = export_node(result, node.inputs[1], path)
-    from_max = export_node(result, node.inputs[2], path)
-    to_min = export_node(result, node.inputs[3], path)
-    to_max = export_node(result, node.inputs[4], path)
+def _export_scalar_maprange(ctx, node):
+    val = export_node(ctx, node.inputs[0])
+    from_min = export_node(ctx, node.inputs[1])
+    from_max = export_node(ctx, node.inputs[2])
+    to_min = export_node(ctx, node.inputs[3])
+    to_max = export_node(ctx, node.inputs[4])
 
     ops = ""
     from_range = f"{from_max} - {from_min})"
@@ -68,89 +75,89 @@ def _export_scalar_maprange(result, node, path):
         return ops
 
 
-def _export_scalar_math(result, node, path):
+def _export_scalar_math(ctx, node):
     ops = ""
     if node.operation == "ADD":
-        ops = f"({export_node(result, node.inputs[0], path)} + {export_node(result, node.inputs[1], path)})"
+        ops = f"({export_node(ctx, node.inputs[0])} + {export_node(ctx, node.inputs[1])})"
     elif node.operation == "SUBTRACT":
-        ops = f"({export_node(result, node.inputs[0], path)} - {export_node(result, node.inputs[1], path)})"
+        ops = f"({export_node(ctx, node.inputs[0])} - {export_node(ctx, node.inputs[1])})"
     elif node.operation == "MULTIPLY":
-        ops = f"({export_node(result, node.inputs[0], path)} * {export_node(result, node.inputs[1], path)})"
+        ops = f"({export_node(ctx, node.inputs[0])} * {export_node(ctx, node.inputs[1])})"
     elif node.operation == "DIVIDE":
-        ops = f"({export_node(result, node.inputs[0], path)} / {export_node(result, node.inputs[1], path)})"
+        ops = f"({export_node(ctx, node.inputs[0])} / {export_node(ctx, node.inputs[1])})"
     elif node.operation == "MULTIPLY_ADD":
-        ops = f"(({export_node(result, node.inputs[0], path)} * {export_node(result, node.inputs[1], path)}) + {export_node(result, node.inputs[2], path)})"
+        ops = f"(({export_node(ctx, node.inputs[0])} * {export_node(ctx, node.inputs[1])}) + {export_node(ctx, node.inputs[2])})"
     elif node.operation == "POWER":
-        ops = f"(({export_node(result, node.inputs[0], path)})^({export_node(result, node.inputs[1], path)}))"
+        ops = f"(({export_node(ctx, node.inputs[0])})^({export_node(ctx, node.inputs[1])}))"
     elif node.operation == "LOGARITHM":
-        ops = f"log({export_node(result, node.inputs[0], path)})"
+        ops = f"log({export_node(ctx, node.inputs[0])})"
     elif node.operation == "SQRT":
-        ops = f"sqrt({export_node(result, node.inputs[0], path)})"
+        ops = f"sqrt({export_node(ctx, node.inputs[0])})"
     elif node.operation == "INVERSE_SQRT":
-        ops = f"(1/sqrt({export_node(result, node.inputs[0], path)}))"
+        ops = f"(1/sqrt({export_node(ctx, node.inputs[0])}))"
     elif node.operation == "ABSOLUTE":
-        ops = f"abs({export_node(result, node.inputs[0], path)})"
+        ops = f"abs({export_node(ctx, node.inputs[0])})"
     elif node.operation == "EXPONENT":
-        ops = f"exp({export_node(result, node.inputs[0], path)})"
+        ops = f"exp({export_node(ctx, node.inputs[0])})"
     elif node.operation == "MINIMUM":
-        ops = f"min({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        ops = f"min({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "MAXIMUM":
-        ops = f"max({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        ops = f"max({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "LESS_THAN":
-        ops = f"select({export_node(result, node.inputs[0], path)} < {export_node(result, node.inputs[1], path)}, 1, 0)"
+        ops = f"select({export_node(ctx, node.inputs[0])} < {export_node(ctx, node.inputs[1])}, 1, 0)"
     elif node.operation == "GREATER_THAN":
-        ops = f"select({export_node(result, node.inputs[0], path)} > {export_node(result, node.inputs[1], path)}, 1, 0)"
+        ops = f"select({export_node(ctx, node.inputs[0])} > {export_node(ctx, node.inputs[1])}, 1, 0)"
     elif node.operation == "SIGN":
         # TODO: If value is zero, zero should be returned!
-        ops = f"select({export_node(result, node.inputs[0], path)} < 0, -1, 1)"
+        ops = f"select({export_node(ctx, node.inputs[0])} < 0, -1, 1)"
     elif node.operation == "COMPARE":
-        ops = f"select(abs({export_node(result, node.inputs[0], path)} - {export_node(result, node.inputs[1], path)}) <= Eps, 1, 0)"
+        ops = f"select(abs({export_node(ctx, node.inputs[0])} - {export_node(ctx, node.inputs[1])}) <= Eps, 1, 0)"
     elif node.operation == "ROUND":
-        ops = f"round({export_node(result, node.inputs[0], path)})"
+        ops = f"round({export_node(ctx, node.inputs[0])})"
     elif node.operation == "FLOOR":
-        ops = f"floor({export_node(result, node.inputs[0], path)})"
+        ops = f"floor({export_node(ctx, node.inputs[0])})"
     elif node.operation == "CEIL":
-        ops = f"ceil({export_node(result, node.inputs[0], path)})"
+        ops = f"ceil({export_node(ctx, node.inputs[0])})"
     elif node.operation == "TRUNC":
-        ops = f"trunc({export_node(result, node.inputs[0], path)})"
+        ops = f"trunc({export_node(ctx, node.inputs[0])})"
     elif node.operation == "FRACTION":
-        ops = f"fract({export_node(result, node.inputs[0], path)})"
+        ops = f"fract({export_node(ctx, node.inputs[0])})"
     elif node.operation == "MODULO":
-        ops = f"fmod({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        ops = f"fmod({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "SMOOTH_MIN":
-        ops = f"smin({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)})"
+        ops = f"smin({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])}, {export_node(ctx, node.inputs[2])})"
     elif node.operation == "SMOOTH_MAX":
-        ops = f"smax({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)})"
+        ops = f"smax({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])}, {export_node(ctx, node.inputs[2])})"
     elif node.operation == "WRAP":
-        ops = f"wrap({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)})"
+        ops = f"wrap({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])}, {export_node(ctx, node.inputs[2])})"
     elif node.operation == "SNAP":
-        ops = f"snap({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        ops = f"snap({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "PINGPONG":
-        ops = f"pingpong({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        ops = f"pingpong({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "SINE":
-        ops = f"sin({export_node(result, node.inputs[0], path)})"
+        ops = f"sin({export_node(ctx, node.inputs[0])})"
     elif node.operation == "COSINE":
-        ops = f"cos({export_node(result, node.inputs[0], path)})"
+        ops = f"cos({export_node(ctx, node.inputs[0])})"
     elif node.operation == "TANGENT":
-        ops = f"tan({export_node(result, node.inputs[0], path)})"
+        ops = f"tan({export_node(ctx, node.inputs[0])})"
     elif node.operation == "ARCSINE":
-        ops = f"asin({export_node(result, node.inputs[0], path)})"
+        ops = f"asin({export_node(ctx, node.inputs[0])})"
     elif node.operation == "ARCCOSINE":
-        ops = f"acos({export_node(result, node.inputs[0], path)})"
+        ops = f"acos({export_node(ctx, node.inputs[0])})"
     elif node.operation == "ARCTANGENT":
-        ops = f"atan({export_node(result, node.inputs[0], path)})"
+        ops = f"atan({export_node(ctx, node.inputs[0])})"
     elif node.operation == "SINH":
-        ops = f"sinh({export_node(result, node.inputs[0], path)})"
+        ops = f"sinh({export_node(ctx, node.inputs[0])})"
     elif node.operation == "COSH":
-        ops = f"cosh({export_node(result, node.inputs[0], path)})"
+        ops = f"cosh({export_node(ctx, node.inputs[0])})"
     elif node.operation == "TANH":
-        ops = f"tanh({export_node(result, node.inputs[0], path)})"
+        ops = f"tanh({export_node(ctx, node.inputs[0])})"
     elif node.operation == "ARCTAN2":
-        ops = f"atan2({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        ops = f"atan2({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "RADIANS":
-        ops = f"({export_node(result, node.inputs[0], path)} * Pi / 180)"
+        ops = f"({export_node(ctx, node.inputs[0])} * Pi / 180)"
     elif node.operation == "DEGREES":
-        ops = f"({export_node(result, node.inputs[0], path)} * 180 / Pi)"
+        ops = f"({export_node(ctx, node.inputs[0])} * 180 / Pi)"
     else:
         print(
             f"Not supported math operation type {node.operation} for node {node.name}")
@@ -162,17 +169,17 @@ def _export_scalar_math(result, node, path):
         return ops
 
 
-def _export_rgb_value(result, node, path):
+def _export_rgb_value(ctx, node):
     default_value = node.outputs[0].default_value
     return f"color({default_value[0]}, {default_value[1]}, {default_value[2]}, {default_value[3]})"
 
 
-def _export_rgb_math(result, node, path):
+def _export_rgb_math(ctx, node):
     # See https://docs.gimp.org/en/gimp-concepts-layer-modes.html
 
-    fac = export_node(result, node.inputs[0], path)
-    col1 = export_node(result, node.inputs[1], path)  # Background (I)
-    col2 = export_node(result, node.inputs[2], path)  # Foreground (M)
+    fac = export_node(ctx, node.inputs[0])
+    col1 = export_node(ctx, node.inputs[1])  # Background (I)
+    col2 = export_node(ctx, node.inputs[2])  # Foreground (M)
 
     ops = ""
     if node.blend_type == "MIX":
@@ -222,25 +229,25 @@ def _export_rgb_math(result, node, path):
         return ops
 
 
-def _export_rgb_gamma(result, node, path):
-    color_node = export_node(result, node.inputs[0], path)
-    gamma_node = export_node(result, node.inputs[1], path)
+def _export_rgb_gamma(ctx, node):
+    color_node = export_node(ctx, node.inputs[0])
+    gamma_node = export_node(ctx, node.inputs[1])
     return f"(({color_node})^({gamma_node}))"
 
 
-def _export_rgb_brightcontrast(result, node, path):
-    color = export_node(result, node.inputs["Color"], path)
-    bright = export_node(result, node.inputs["Bright"], path)
-    contrast = export_node(result, node.inputs["Contrast"], path)
+def _export_rgb_brightcontrast(ctx, node):
+    color = export_node(ctx, node.inputs["Color"])
+    bright = export_node(ctx, node.inputs["Bright"])
+    contrast = export_node(ctx, node.inputs["Contrast"])
 
     return f"max(color(0), (1+{contrast})*{color} + color({bright}-{contrast}*0.5))"
 
 
-def _export_rgb_invert(result, node, path):
+def _export_rgb_invert(ctx, node):
     # Only valid if values between 0 and 1
 
-    fac = export_node(result, node.inputs[0], path)
-    col1 = export_node(result, node.inputs[1], path)
+    fac = export_node(ctx, node.inputs[0])
+    col1 = export_node(ctx, node.inputs[1])
 
     ops = f"(color(1) - {col1})"
 
@@ -250,32 +257,32 @@ def _export_rgb_invert(result, node, path):
         return ops
 
 
-def _export_combine_hsv(result, node, path):
-    hue = export_node(result, node.inputs["H"], path)
-    sat = export_node(result, node.inputs["S"], path)
-    val = export_node(result, node.inputs["V"], path)
+def _export_combine_hsv(ctx, node):
+    hue = export_node(ctx, node.inputs["H"])
+    sat = export_node(ctx, node.inputs["S"])
+    val = export_node(ctx, node.inputs["V"])
 
     return f"hsvtorgb(color({hue}, {sat}, {val}))"
 
 
-def _export_combine_rgb(result, node, path):
-    r = export_node(result, node.inputs["R"], path)
-    g = export_node(result, node.inputs["G"], path)
-    b = export_node(result, node.inputs["B"], path)
+def _export_combine_rgb(ctx, node):
+    r = export_node(ctx, node.inputs["R"])
+    g = export_node(ctx, node.inputs["G"])
+    b = export_node(ctx, node.inputs["B"])
 
     return f"color({r}, {g}, {b})"
 
 
-def _export_combine_xyz(result, node, path):
-    x = export_node(result, node.inputs["X"], path)
-    y = export_node(result, node.inputs["Y"], path)
-    z = export_node(result, node.inputs["Z"], path)
+def _export_combine_xyz(ctx, node):
+    x = export_node(ctx, node.inputs["X"])
+    y = export_node(ctx, node.inputs["Y"])
+    z = export_node(ctx, node.inputs["Z"])
 
     return f"vec3({x}, {y}, {z})"
 
 
-def _export_separate_hsv(result, node, path, output_name):
-    color = export_node(result, node.inputs["Color"], path)
+def _export_separate_hsv(ctx, node, output_name):
+    color = export_node(ctx, node.inputs[0])
     ops = f"rgbtohsv({color})"
     if output_name == "H":
         return f"{ops}.r"
@@ -285,8 +292,8 @@ def _export_separate_hsv(result, node, path, output_name):
         return f"{ops}.b"
 
 
-def _export_separate_rgb(result, node, path, output_name):
-    color = export_node(result, node.inputs["Color"], path)
+def _export_separate_rgb(ctx, node, output_name):
+    color = export_node(ctx, node.inputs[0])
     if output_name == "R":
         return f"{color}.r"
     elif output_name == "G":
@@ -295,8 +302,8 @@ def _export_separate_rgb(result, node, path, output_name):
         return f"{color}.b"
 
 
-def _export_separate_xyz(result, node, path, output_name):
-    vec = export_node(result, node.inputs["Vector"], path)
+def _export_separate_xyz(ctx, node, output_name):
+    vec = export_node(ctx, node.inputs[0])
     if output_name == "X":
         return f"{vec}.x"
     elif output_name == "Y":
@@ -305,43 +312,43 @@ def _export_separate_xyz(result, node, path, output_name):
         return f"{vec}.z"
 
 
-def _export_hsv(result, node, path):
-    hue = export_node(result, node.inputs[0], path)
-    sat = export_node(result, node.inputs[1], path)
-    val = export_node(result, node.inputs[2], path)
-    fac = export_node(result, node.inputs[3], path)
-    col = export_node(result, node.inputs[4], path)
+def _export_hsv(ctx, node):
+    hue = export_node(ctx, node.inputs[0])
+    sat = export_node(ctx, node.inputs[1])
+    val = export_node(ctx, node.inputs[2])
+    fac = export_node(ctx, node.inputs[3])
+    col = export_node(ctx, node.inputs[4])
 
     return f"hsvtorgb(mix(rgbtohsv({col}), color({hue}, {sat}, {val}), {fac}))"
 
 
-def _export_val_to_rgb(result, node, path):
-    val = export_node(result, node.inputs[0], path)
+def _export_val_to_rgb(ctx, node):
+    val = export_node(ctx, node.inputs[0])
     return f"color({val})"
 
 
-def _export_rgb_to_bw(result, node, path):
-    color = export_node(result, node.inputs["Color"], path)
+def _export_rgb_to_bw(ctx, node):
+    color = export_node(ctx, node.inputs["Color"])
     return f"luminance({color})"
 
 
 # TRS
-def _export_vector_mapping(result, node, path):
+def _export_vector_mapping(ctx, node):
     if node.inputs["Vector"].is_linked:
-        vec = export_node(result, node.inputs["Vector"], path)
+        vec = export_node(ctx, node.inputs["Vector"])
     else:
         vec = 'vec3(0)'
 
-    sca = export_node(result, node.inputs["Scale"], path)
-    rot = export_node(result, node.inputs["Rotation"], path)
+    sca = export_node(ctx, node.inputs["Scale"])
+    rot = export_node(ctx, node.inputs["Rotation"])
 
     if node.vector_type == 'POINT':
-        loc = export_node(result, node.inputs["Location"], path)
+        loc = export_node(ctx, node.inputs["Location"])
         out = f"({vec} * {sca})"
         out = f"rotate_euler({out}, {rot})"
         return f"({out} + {loc})"
     elif node.vector_type == 'TEXTURE':
-        loc = export_node(result, node.inputs["Location"], path)
+        loc = export_node(ctx, node.inputs["Location"])
         out = f"({vec} - {loc})"
         out = f"rotate_euler_inverse({out}, {rot})"
         return f"({out} / {sca})"
@@ -354,135 +361,171 @@ def _export_vector_mapping(result, node, path):
         return f"rotate_euler({out}, {rot})"
 
 
-def _export_vector_math(result, node, path):
+def _export_vector_math(ctx, node):
     if node.operation == "ADD":
-        return f"({export_node(result, node.inputs[0], path)} + {export_node(result, node.inputs[1], path)})"
+        return f"({export_node(ctx, node.inputs[0])} + {export_node(ctx, node.inputs[1])})"
     elif node.operation == "SUBTRACT":
-        return f"({export_node(result, node.inputs[0], path)} - {export_node(result, node.inputs[1], path)})"
+        return f"({export_node(ctx, node.inputs[0])} - {export_node(ctx, node.inputs[1])})"
     elif node.operation == "MULTIPLY":
-        return f"({export_node(result, node.inputs[0], path)} * {export_node(result, node.inputs[1], path)})"
+        return f"({export_node(ctx, node.inputs[0])} * {export_node(ctx, node.inputs[1])})"
     elif node.operation == "SCALE":
-        return f"({export_node(result, node.inputs[0], path)} * {export_node(result, node.inputs[1], path)})"
+        return f"({export_node(ctx, node.inputs[0])} * {export_node(ctx, node.inputs[1])})"
     elif node.operation == "DIVIDE":
-        return f"({export_node(result, node.inputs[0], path)} / {export_node(result, node.inputs[1], path)})"
+        return f"({export_node(ctx, node.inputs[0])} / {export_node(ctx, node.inputs[1])})"
     elif node.operation == "MULTIPLY_ADD":
-        return f"(({export_node(result, node.inputs[0], path)} * {export_node(result, node.inputs[1], path)}) + {export_node(result, node.inputs[2], path)})"
+        return f"(({export_node(ctx, node.inputs[0])} * {export_node(ctx, node.inputs[1])}) + {export_node(ctx, node.inputs[2])})"
     elif node.operation == "CROSS_PRODUCT":
-        return f"cross({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        return f"cross({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "PROJECT":
-        return f"project({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        return f"project({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "REFLECT":
-        return f"reflect({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        return f"reflect({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "REFRACT":
-        return f"refract({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)})"
+        return f"refract({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])}, {export_node(ctx, node.inputs[2])})"
     elif node.operation == "FACEFORWARD":
-        A = export_node(result, node.inputs[0], path)
-        return f"select(dot({export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)}) < 0, {A}, -{A})"
+        A = export_node(ctx, node.inputs[0])
+        return f"select(dot({export_node(ctx, node.inputs[1])}, {export_node(ctx, node.inputs[2])}) < 0, {A}, -{A})"
     elif node.operation == "DOT_PRODUCT":
-        return f"dot({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        return f"dot({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "DISTANCE":
-        return f"dist({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        return f"dist({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "LENGTH":
-        return f"length({export_node(result, node.inputs[0], path)})"
+        return f"length({export_node(ctx, node.inputs[0])})"
     elif node.operation == "NORMALIZE":
-        return f"norm({export_node(result, node.inputs[0], path)})"
+        return f"norm({export_node(ctx, node.inputs[0])})"
     elif node.operation == "ABSOLUTE":
-        return f"abs({export_node(result, node.inputs[0], path)})"
+        return f"abs({export_node(ctx, node.inputs[0])})"
     elif node.operation == "EXPONENT":
-        return f"exp({export_node(result, node.inputs[0], path)})"
+        return f"exp({export_node(ctx, node.inputs[0])})"
     elif node.operation == "MINIMUM":
-        return f"min({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        return f"min({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "MAXIMUM":
-        return f"max({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        return f"max({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "WRAP":
-        return f"wrap({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)}, {export_node(result, node.inputs[2], path)})"
+        return f"wrap({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])}, {export_node(ctx, node.inputs[2])})"
     elif node.operation == "SNAP":
-        return f"snap({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        return f"snap({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "ROUND":
-        return f"round({export_node(result, node.inputs[0], path)})"
+        return f"round({export_node(ctx, node.inputs[0])})"
     elif node.operation == "FLOOR":
-        return f"floor({export_node(result, node.inputs[0], path)})"
+        return f"floor({export_node(ctx, node.inputs[0])})"
     elif node.operation == "CEIL":
-        return f"ceil({export_node(result, node.inputs[0], path)})"
+        return f"ceil({export_node(ctx, node.inputs[0])})"
     elif node.operation == "FRACTION":
-        return f"fract({export_node(result, node.inputs[0], path)})"
+        return f"fract({export_node(ctx, node.inputs[0])})"
     elif node.operation == "MODULO":
-        return f"fmod({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        return f"fmod({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "SINE":
-        return f"sin({export_node(result, node.inputs[0], path)})"
+        return f"sin({export_node(ctx, node.inputs[0])})"
     elif node.operation == "COSINE":
-        return f"cos({export_node(result, node.inputs[0], path)})"
+        return f"cos({export_node(ctx, node.inputs[0])})"
     elif node.operation == "TANGENT":
-        return f"tan({export_node(result, node.inputs[0], path)})"
+        return f"tan({export_node(ctx, node.inputs[0])})"
     elif node.operation == "ARCSINE":
-        return f"asin({export_node(result, node.inputs[0], path)})"
+        return f"asin({export_node(ctx, node.inputs[0])})"
     elif node.operation == "ARCCOSINE":
-        return f"acos({export_node(result, node.inputs[0], path)})"
+        return f"acos({export_node(ctx, node.inputs[0])})"
     elif node.operation == "ARCTANGENT":
-        return f"atan({export_node(result, node.inputs[0], path)})"
+        return f"atan({export_node(ctx, node.inputs[0])})"
     elif node.operation == "SINH":
-        return f"sinh({export_node(result, node.inputs[0], path)})"
+        return f"sinh({export_node(ctx, node.inputs[0])})"
     elif node.operation == "COSH":
-        return f"cosh({export_node(result, node.inputs[0], path)})"
+        return f"cosh({export_node(ctx, node.inputs[0])})"
     elif node.operation == "TANH":
-        return f"tanh({export_node(result, node.inputs[0], path)})"
+        return f"tanh({export_node(ctx, node.inputs[0])})"
     elif node.operation == "ARCTAN2":
-        return f"atan2({export_node(result, node.inputs[0], path)}, {export_node(result, node.inputs[1], path)})"
+        return f"atan2({export_node(ctx, node.inputs[0])}, {export_node(ctx, node.inputs[1])})"
     elif node.operation == "RADIANS":
-        return f"({export_node(result, node.inputs[0], path)} * Pi / 180)"
+        return f"({export_node(ctx, node.inputs[0])} * Pi / 180)"
     elif node.operation == "DEGREES":
-        return f"({export_node(result, node.inputs[0], path)} * 180 / Pi)"
+        return f"({export_node(ctx, node.inputs[0])} * 180 / Pi)"
     else:
         print(
             f"Not supported vector math operation type {node.operation} for node {node.name}")
         return "vec3(0)"
 
 
-def _export_checkerboard(result, node, path, output_name):
-    scale = export_node(result, node.inputs["Scale"], path)
+def _export_normal(ctx, node, output_name):
+    out_norm = _export_default(node.outputs[0])
+    if output_name == "Normal":
+        return out_norm
+
+    normal = export_node(ctx, node.inputs[0])
+    return f"dot({out_norm}, {normal})"
+
+
+def _export_normalmap(ctx, node):
+    # Only supporting tangent space
+    if node.space != 'TANGENT':
+        print(
+            f"Only tangent space normal mapping supported")
+
+    color = export_node(ctx, node.inputs["Color"])
+    strength = export_node(ctx, node.inputs["Strength"])
+
+    ln = f"(2*{color}-color(1)).xyz"
+    dn = f"vec3(dot(Nx, {ln}), dot(Ny, {ln}), dot(N, {ln}))"
+    return f"norm(({dn} - N)*{strength} + N)"
+
+
+def _export_checkerboard(ctx, node, output_name):
+    scale = export_node(ctx, node.inputs["Scale"])
 
     if node.inputs["Vector"].is_linked:
-        uv = export_node(result, node.inputs["Vector"], path)
+        uv = export_node(ctx, node.inputs["Vector"])
     else:
         uv = TEXCOORD_UV
 
     raw = f"checkerboard({uv} * {scale})"
     if output_name == "Color":
-        color1 = export_node(result, node.inputs["Color1"], path)
-        color2 = export_node(result, node.inputs["Color2"], path)
+        color1 = export_node(ctx, node.inputs["Color1"])
+        color2 = export_node(ctx, node.inputs["Color2"])
         return f"select({raw} == 1, {color1}, {color2})"
     else:
         return raw
 
 
-def _export_image_texture(result, node, path):
-    tex_name = f"_tex_{escape_identifier(node.name)}"
-
-    # Check if texture is already loaded
-    for e in result["textures"]:
-        if e["name"] == tex_name:
-            return tex_name
-
-    img = node.image
-    img_path = img.filepath_raw.replace('//', '')
+def _handle_image(ctx, image):
+    img_path = image.filepath_raw.replace('//', '')
     if img_path == '':
-        img_path = img.name + ".exr"
-        img.file_format = "OPEN_EXR"
+        img_path = image.name + ".exr"
+        image.file_format = "OPEN_EXR"
 
-    # Make sure the image is loaded to memory, so we can write it out
-    if not img.has_data:
-        img.pixels[0]
-
-    os.makedirs(os.path.join(path, "Textures"), exist_ok=True)
-
-    # Export the texture and store its path
     img_name = os.path.basename(img_path)
-    old = img.filepath_raw
-    try:
-        img.filepath_raw = os.path.join(path, "Textures", img_name)
-        img.save()
-    finally:  # Never break the scene!
-        img.filepath_raw = old
+
+    if img_name not in ctx.result["_images"]:
+        # Export the texture and store its path
+        old = image.filepath_raw
+
+        # Make sure the image is loaded to memory, so we can write it out
+        if not image.has_data:
+            image.pixels[0]
+            old = image.filepath_raw
+
+        os.makedirs(os.path.join(ctx.path, "Textures"), exist_ok=True)
+
+        try:
+            image.filepath_raw = os.path.join(ctx.path, "Textures", img_name)
+            image.save()
+        except Exception as e:
+            print(e)
+        finally:  # Never break the scene!
+            image.filepath_raw = old
+
+        ctx.result["_images"].add(img_name)
+
+    return img_name
+
+
+def _export_image_texture(ctx, node):
+    id = len(ctx.result["textures"])
+    tex_name = f"_tex_{id}"
+
+    if not node.image:
+        print(f"Image node {node.name} has no image")
+        return "color(0)"
+
+    img_name = _handle_image(ctx, node.image)
 
     if node.extension == "EXTEND":
         wrap_mode = "clamp"
@@ -496,7 +539,7 @@ def _export_image_texture(result, node, path):
     else:
         filter_type = "bilinear"
 
-    result["textures"].append(
+    ctx.result["textures"].append(
         {
             "type": "image",
             "name": tex_name,
@@ -507,7 +550,7 @@ def _export_image_texture(result, node, path):
     )
 
     if node.inputs["Vector"].is_linked:
-        uv = export_node(result, node.inputs["Vector"], path)
+        uv = export_node(ctx, node.inputs["Vector"])
         tex_access = f"{tex_name}(({uv}).xy)"
     else:
         tex_access = tex_name
@@ -515,14 +558,14 @@ def _export_image_texture(result, node, path):
     return tex_access
 
 
-def _get_noise_vector(result, node, path):
+def _get_noise_vector(ctx, node):
     if node.inputs["Vector"].is_linked:
-        uv = export_node(result, node.inputs["Vector"], path)
+        uv = export_node(ctx, node.inputs["Vector"])
     else:
         uv = TEXCOORD_UV
 
     if node.noise_dimensions == '1D':
-        w = export_node(result, node.inputs["W"], path)
+        w = export_node(ctx, node.inputs["W"])
         return f"{w}"
     elif node.noise_dimensions == '2D':
         return f"{uv}.xy"
@@ -533,8 +576,8 @@ def _get_noise_vector(result, node, path):
         return f"{uv}"
 
 
-def _export_white_noise(result, node, path, output_name):
-    ops = _get_noise_vector(result, node, path)
+def _export_white_noise(ctx, node, output_name):
+    ops = _get_noise_vector(ctx, node)
 
     if output_name == "Color":
         return f"cnoise({ops})"
@@ -542,10 +585,10 @@ def _export_white_noise(result, node, path, output_name):
         return f"noise({ops})"
 
 
-def _export_noise(result, node, path, output_name):
+def _export_noise(ctx, node, output_name):
     # TODO: Missing Detail, Roughness and Distortion
-    ops = _get_noise_vector(result, node, path)
-    scale = export_node(result, node.inputs["Scale"], path)
+    ops = _get_noise_vector(ctx, node)
+    scale = export_node(ctx, node.inputs["Scale"])
 
     if output_name == "Color":
         return f"cpnoise(abs({ops}*{scale}))"
@@ -553,10 +596,10 @@ def _export_noise(result, node, path, output_name):
         return f"pnoise(abs({ops}*{scale}))"
 
 
-def _export_voronoi(result, node, path, output_name):
+def _export_voronoi(ctx, node, output_name):
     # TODO: Missing a lot of parameters
     if node.inputs["Vector"].is_linked:
-        uv = export_node(result, node.inputs["Vector"], path)
+        uv = export_node(ctx, node.inputs["Vector"])
     else:
         uv = TEXCOORD_UV
 
@@ -565,7 +608,7 @@ def _export_voronoi(result, node, path, output_name):
         print(f"Voronoi currently only supports 2d vectors")
         return f"{uv}"
 
-    scale = export_node(result, node.inputs["Scale"], path)
+    scale = export_node(ctx, node.inputs["Scale"])
 
     if output_name == "Color":
         return f"cvoronoi(abs({ops}*{scale}))"
@@ -576,10 +619,10 @@ def _export_voronoi(result, node, path, output_name):
         return f"voronoi(abs({ops}*{scale}))"
 
 
-def _export_musgrave(result, node, path, output_name):
+def _export_musgrave(ctx, node, output_name):
     # TODO: Missing a lot of parameters and only supports fbm
     if node.inputs["Vector"].is_linked:
-        uv = export_node(result, node.inputs["Vector"], path)
+        uv = export_node(ctx, node.inputs["Vector"])
     else:
         uv = TEXCOORD_UV
 
@@ -588,19 +631,19 @@ def _export_musgrave(result, node, path, output_name):
         print(f"Musgrave currently only supports 2d vectors")
         return f"{uv}"
 
-    scale = export_node(result, node.inputs["Scale"], path)
+    scale = export_node(ctx, node.inputs["Scale"])
 
     return f"fbm(abs({ops}*{scale}))"
 
 
-def _export_wave(result, node, path, output_name):
+def _export_wave(ctx, node, output_name):
     # TODO: Add distortion
     if node.inputs["Vector"].is_linked:
-        uv = export_node(result, node.inputs["Vector"], path)
+        uv = export_node(ctx, node.inputs["Vector"])
     else:
         uv = TEXCOORD_UV
 
-    scale = export_node(result, node.inputs["Scale"], path)
+    scale = export_node(ctx, node.inputs["Scale"])
     uv = f"({uv}*{scale})"
 
     if node.wave_type == "BANDS":
@@ -622,7 +665,7 @@ def _export_wave(result, node, path, output_name):
         else:  # DIAGONAL
             coord = f"length({uv})*20"
 
-    phase = export_node(result, node.inputs["Phase Offset"], path)
+    phase = export_node(ctx, node.inputs["Phase Offset"])
     coord = f"({coord} + {phase})"
 
     if node.wave_profile == "SIN":
@@ -638,7 +681,44 @@ def _export_wave(result, node, path, output_name):
         return ops
 
 
-def _export_surface_attributes(result, node, path, output_name):
+def _export_environment(ctx, node):
+    # TODO: Currently no support for projection mode
+    id = len(ctx.result["textures"])
+    tex_name = f"_tex_{id}"
+
+    if not node.image:
+        print(f"Image node {node.name} has no image")
+        return "color(0)"
+
+    img_name = _handle_image(ctx, node.image)
+
+    wrap_mode = "clamp"
+
+    if node.interpolation == "Closest":
+        filter_type = "nearest"
+    else:
+        filter_type = "bilinear"
+
+    ctx.result["textures"].append(
+        {
+            "type": "image",
+            "name": tex_name,
+            "filename": "Meshes/Textures/"+img_name,
+            "wrap_mode": wrap_mode,
+            "filter_type": filter_type
+        }
+    )
+
+    if node.inputs["Vector"].is_linked:
+        uv = export_node(ctx, node.inputs["Vector"])
+        tex_access = f"{tex_name}(({uv}).xy)"
+    else:
+        tex_access = tex_name
+
+    return tex_access
+
+
+def _export_surface_attributes(ctx, node, output_name):
     if output_name == "Position":
         return "P"
     elif output_name == "Normal":
@@ -648,7 +728,7 @@ def _export_surface_attributes(result, node, path, output_name):
         return "N"
 
 
-def _export_tex_coordinate(result, node, path, output_name):
+def _export_tex_coordinate(ctx, node, output_name):
     # Currently no other type of output is supported
     if output_name != 'UV':
         print(
@@ -656,16 +736,45 @@ def _export_tex_coordinate(result, node, path, output_name):
     return TEXCOORD_UV
 
 
-def _export_node(result, node, path, output_name):
+def _export_group_begin(ctx, node, output_name):
+    if node.node_tree is None:
+        print(
+            f"Invalid group '{node.name}'")
+        return None
+
+    output = node.node_tree.nodes.get("Group Output")
+    if output is None:
+        print(
+            f"Invalid group '{node.name}'")
+        return None
+
+    ctx.stack.append(node)
+    out = export_node(ctx, output.inputs[output_name])
+    ctx.stack.pop()
+    return out
+
+
+def _export_group_end(ctx, node, output_name):
+    grp = ctx.stack[-1]
+    if output_name in grp.inputs:
+        return export_node(ctx, grp.inputs[output_name])
+    else:
+        print(f"Expected {output_name} to be a valid group input")
+        return None
+
+
+def _export_reroute(ctx, node):
+    return export_node(ctx, node.inputs[0])
+
+
+def _export_node(ctx, node, output_name):
     # Missing:
     # ShaderNodeAttribute, ShaderNodeBlackbody, ShaderNodeBevel, ShaderNodeBump, ShaderNodeCameraData,
     # ShaderNodeCustomGroup, ShaderNodeFloatCurve, ShaderNodeFresnel, ShaderNodeGroup,
     # ShaderNodeHairInfo, ShaderNodeLayerWeight, ShaderNodeLightFalloff,
-    # ShaderNodeMapRange, ShaderNodeNormal,
-    # ShaderNodeNormalMap, ShaderNodeObjectInfo, ShaderNodeRGBCurve, ShaderNodeScript,
+    # ShaderNodeMapRange, ShaderNodeObjectInfo, ShaderNodeRGBCurve, ShaderNodeScript,
     # ShaderNodeShaderToRGB, ShaderNodeSubsurfaceScattering, ShaderNodeTangent,
-    # ShaderNodeTexBrick, ShaderNodeTexEnvironment,
-    # ShaderNodeTexGradient, ShaderNodeTexIES, ShaderNodeTexMagic,
+    # ShaderNodeTexBrick, ShaderNodeTexGradient, ShaderNodeTexIES, ShaderNodeTexMagic,
     # ShaderNodeTexPointDensity, ShaderNodeTexSky, ShaderNodeUVAlongStroke,
     # ShaderNodeUVMap, ShaderNodeVectorCurve,
     # ShaderNodeVectorDisplacement, ShaderNodeVectorRotate, ShaderNodeVectorTransform,
@@ -676,73 +785,85 @@ def _export_node(result, node, path, output_name):
     # ShaderNodeParticleInfo, ShaderNodeOutputLineStyle, ShaderNodePointInfo, ShaderNodeHoldout
 
     if isinstance(node, bpy.types.ShaderNodeTexImage):
-        return _export_image_texture(result, node, path)
+        return _export_image_texture(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeTexChecker):
-        return _export_checkerboard(result, node, path, output_name)
+        return _export_checkerboard(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeTexCoord):
-        return _export_tex_coordinate(result, node, path, output_name)
+        return _export_tex_coordinate(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeTexNoise):
-        return _export_noise(result, node, path, output_name)
+        return _export_noise(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeTexWhiteNoise):
-        return _export_white_noise(result, node, path, output_name)
+        return _export_white_noise(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeTexVoronoi):
-        return _export_voronoi(result, node, path, output_name)
+        return _export_voronoi(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeTexMusgrave):
-        return _export_musgrave(result, node, path, output_name)
+        return _export_musgrave(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeTexWave):
-        return _export_wave(result, node, path, output_name)
+        return _export_wave(ctx, node, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeTexEnvironment):
+        return _export_environment(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeNewGeometry):
-        return _export_surface_attributes(result, node, path, output_name)
+        return _export_surface_attributes(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeMath):
-        return _export_scalar_math(result, node, path)
+        return _export_scalar_math(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeValue):
-        return _export_scalar_value(result, node, path)
+        return _export_scalar_value(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeClamp):
-        return _export_scalar_clamp(result, node, path)
+        return _export_scalar_clamp(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeMapRange):
-        return _export_scalar_maprange(result, node, path)
+        return _export_scalar_maprange(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeMixRGB):
-        return _export_rgb_math(result, node, path)
+        return _export_rgb_math(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeInvert):
-        return _export_rgb_invert(result, node, path)
+        return _export_rgb_invert(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeGamma):
-        return _export_rgb_gamma(result, node, path)
+        return _export_rgb_gamma(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeBrightContrast):
-        return _export_rgb_brightcontrast(result, node, path)
+        return _export_rgb_brightcontrast(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeHueSaturation):
-        return _export_hsv(result, node, path)
+        return _export_hsv(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeRGB):
-        return _export_rgb_value(result, node, path)
+        return _export_rgb_value(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeValToRGB):
-        return _export_val_to_rgb(result, node, path)
+        return _export_val_to_rgb(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeRGBToBW):
-        return _export_rgb_to_bw(result, node, path)
+        return _export_rgb_to_bw(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeCombineHSV):
-        return _export_combine_hsv(result, node, path)
+        return _export_combine_hsv(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeCombineRGB):
-        return _export_combine_rgb(result, node, path)
+        return _export_combine_rgb(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeCombineXYZ):
-        return _export_combine_xyz(result, node, path)
+        return _export_combine_xyz(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeSeparateHSV):
-        return _export_separate_hsv(result, node, path, output_name)
+        return _export_separate_hsv(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeSeparateRGB):
-        return _export_separate_rgb(result, node, path, output_name)
+        return _export_separate_rgb(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeSeparateXYZ):
-        return _export_separate_xyz(result, node, path, output_name)
+        return _export_separate_xyz(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeMapping):
-        return _export_vector_mapping(result, node, path)
+        return _export_vector_mapping(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeVectorMath):
-        return _export_vector_math(result, node, path)
+        return _export_vector_math(ctx, node)
+    elif isinstance(node, bpy.types.ShaderNodeNormal):
+        return _export_normal(ctx, node, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeNormalMap):
+        return _export_normalmap(ctx, node)
+    elif isinstance(node, bpy.types.ShaderNodeGroup):
+        return _export_group_begin(ctx, node, output_name)
+    elif isinstance(node, bpy.types.NodeGroupInput):
+        return _export_group_end(ctx, node, output_name)
+    elif isinstance(node, bpy.types.NodeReroute):
+        return _export_reroute(ctx, node)
     else:
         print(
             f"Shader node {node.name} of type {type(node).__name__} is not supported")
         return None
 
 
-def export_node(result, socket, path):
+def export_node(ctx, socket):
     if socket.is_linked:
         expr = _export_node(
-            result, socket.links[0].from_node, path, socket.links[0].from_socket.name)
+            ctx, socket.links[0].from_node, socket.links[0].from_socket.name)
         if expr is None:
             return _export_default(socket)
 

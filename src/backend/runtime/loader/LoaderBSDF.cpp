@@ -656,6 +656,35 @@ static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const st
     tree.endClosure();
 }
 
+static void bsdf_transform(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+{
+    const std::string inner = bsdf->property("bsdf").getString();
+    tree.beginClosure();
+    tree.addVector("normal", *bsdf, Vector3f::UnitZ());
+
+    if (inner.empty()) {
+        IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
+        stream << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+    } else {
+        stream << LoaderBSDF::generate(inner, tree);
+
+        if (bsdf->property("tangent").isValid()) {
+            tree.addVector("tangent", *bsdf, Vector3f::UnitX());
+            stream << tree.pullHeader()
+                   << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_normal_tangent_set(surf, "
+                   << "@|surf2| -> Bsdf {  bsdf_" << LoaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) }, "
+                   << tree.getInline("normal")
+                   << ", " << tree.getInline("tangent") << ");" << std::endl;
+        } else {
+            stream << tree.pullHeader()
+                   << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|ray, hit, surf| make_normal_set(surf, "
+                   << "@|surf2| -> Bsdf {  bsdf_" << LoaderUtils::escapeIdentifier(inner) << "(ray, hit, surf2) }, "
+                   << tree.getInline("normal") << ");" << std::endl;
+        }
+    }
+    tree.endClosure();
+}
+
 static void bsdf_doublesided(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
     const std::string inner = bsdf->property("bsdf").getString();
@@ -704,6 +733,7 @@ static const struct {
     { "null", bsdf_passthrough },
     { "bumpmap", bsdf_bumpmap },
     { "normalmap", bsdf_normalmap },
+    { "transform", bsdf_transform },
     { "doublesided", bsdf_doublesided },
     { "", nullptr }
 };

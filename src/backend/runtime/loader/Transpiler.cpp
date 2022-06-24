@@ -255,7 +255,7 @@ inline static InternalDynFunction2 genDynArrayFunction2(const char* func)
 // Dyn Functions 3
 using MapFunction3         = std::function<std::string(const std::string&, const std::string&, const std::string&)>;
 using InternalDynFunction3 = InternalDynFunction<MapFunction3>;
-inline static MapFunction3 genMapFunction3(const char* func, PExprType type, bool no_suffix = false)
+inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
 {
     switch (type) {
     default:
@@ -956,6 +956,9 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr,
     case PExprType::Integer:
         scalar_output = true;
         res           = res + " as f32";
+        break;
+    case PExprType::Vec3:
+        res = "vec3_to_color(" + res + ")";
         break;
     case PExprType::Vec4:
         res = "vec4_to_color(" + res + ")";

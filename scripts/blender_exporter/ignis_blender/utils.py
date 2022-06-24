@@ -28,3 +28,21 @@ def try_extract_node_value(value, default=0):
         return value
     else:
         return default
+
+
+def check_socket_if_constant(socket, value):
+    if socket.is_linked:
+        return False
+
+    if socket.type == "RGBA":
+        return socket.default_value[0] == value and socket.default_value[1] == value and socket.default_value[2] == value
+    else:
+        return socket.default_value == value
+
+
+def check_socket_if_black(socket):
+    return check_socket_if_constant(socket, value=0)
+
+
+def check_socket_if_white(socket):
+    return check_socket_if_constant(socket, value=1)

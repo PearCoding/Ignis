@@ -32,6 +32,7 @@ public:
 
     void addNumber(const std::string& name, const Parser::Object& obj, float def = 0, bool hasDef = true, InlineMode mode = IM_Surface);
     void addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, InlineMode mode = IM_Surface);
+    void addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, InlineMode mode = IM_Surface);
     void addTexture(const std::string& name, const Parser::Object& obj, bool hasDef = true);
 
     void registerTextureUsage(const std::string& name);

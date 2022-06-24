@@ -5,6 +5,7 @@ from .light import export_light, export_background
 from .shape import export_shape, get_shape_name
 from .camera import export_camera
 from .bsdf import export_material, export_error_material, export_black_material, get_material_emission
+from .node import NodeContext
 from .utils import *
 from .defaults import *
 
@@ -25,8 +26,8 @@ def export_entity(result, inst, filepath, export_materials, export_lights, expor
                 print(
                     f"Entity {inst.object.name} has multiple materials associated, but only one is supported. Using first entry")
             mat_name = inst.object.material_slots[0].material.name
-            emission = get_material_emission(
-                result, inst.object.material_slots[0].material, filepath)
+            emission = get_material_emission(NodeContext(
+                result, filepath), inst.object.material_slots[0].material)
         else:
             print(f"Entity {inst.object.name} has no material")
             mat_name = BSDF_BLACK_NAME
@@ -76,7 +77,7 @@ def export_all(filepath, result, depsgraph, use_selection, export_materials, exp
         for material in bpy.data.materials:
             if material.node_tree is None:
                 continue
-            mat = export_material(result, material, filepath)
+            mat = export_material(NodeContext(result, filepath), material)
             if mat is not None:
                 result["bsdfs"].append(mat)
                 exported_materials.add(material.name)
@@ -109,6 +110,8 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
 
     # Write all materials and cameras to a dict with the layout of our json file
     result = {}
+    # This will not be exported, but removed later on
+    result["_images"] = set()
 
     # Export technique (set to default path tracing with 64 rays)
     export_technique(result)
@@ -129,6 +132,7 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
         export_background(result, meshPath, depsgraph.scene)
 
     # Cleanup
+    result["_images"] = None
     result = {key: value for key, value in result.items(
     ) if not isinstance(value, list) or len(value) > 0}
 

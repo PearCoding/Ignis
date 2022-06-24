@@ -1,7 +1,7 @@
 import mathutils
 import math
 from .utils import *
-from .node import export_node
+from .node import export_node, NodeContext
 
 from .defaults import *
 
@@ -13,8 +13,8 @@ def export_background(result, out_dir, scene):
     tree = scene.world.node_tree.nodes["Background"]
 
     if tree.type == "BACKGROUND":
-        strength = export_node(result, tree.inputs["Strength"], out_dir)
-        radiance = export_node(result, tree.inputs["Color"], out_dir)
+        strength = export_node(NodeContext(result, out_dir), tree.inputs["Strength"])
+        radiance = export_node(NodeContext(result, out_dir), tree.inputs["Color"])
 
         # Check if there is any emission (if we can detect it)
         has_emission = try_extract_node_value(strength, default=1) > 0

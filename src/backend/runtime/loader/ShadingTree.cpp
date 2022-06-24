@@ -87,6 +87,41 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
     currentClosure().Parameters[name] = inline_str;
 }
 
+void ShadingTree::addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, InlineMode mode)
+{
+    if (hasParameter(name)) {
+        IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
+        signalError();
+    }
+
+    const auto prop = obj.property(name);
+
+    std::string inline_str;
+    switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        [[fallthrough]];
+    case Parser::PT_NONE:
+        if (!hasDef)
+            return;
+        inline_str = "make_vec3(" + std::to_string(def.x()) + ", " + std::to_string(def.y()) + ", " + std::to_string(def.z()) + ")";
+        break;
+    case Parser::PT_INTEGER:
+    case Parser::PT_NUMBER:
+        inline_str = "vec3_expand(" + std::to_string(prop.getNumber()) + ")";
+        break;
+    case Parser::PT_VECTOR3: {
+        Vector3f color = prop.getVector3();
+        inline_str     = "make_vec3(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ")";
+    } break;
+    case Parser::PT_STRING:
+        inline_str = "color_to_vec3(" + handleTexture(name, prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", true, mode == IM_Surface) + ")";
+        break;
+    }
+
+    currentClosure().Parameters[name] = inline_str;
+}
+
 // Only use this if no basic color information suffices
 void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj, bool hasDef)
 {
