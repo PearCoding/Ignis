@@ -322,6 +322,11 @@ def _export_hsv(ctx, node):
     return f"hsvtorgb(mix(rgbtohsv({col}), color({hue}, {sat}, {val}), {fac}))"
 
 
+def _export_blackbody(ctx, node):
+    temp = export_node(ctx, node.inputs[0])
+    return f"blackbody({temp})"
+
+
 def _export_val_to_rgb(ctx, node):
     t = export_node(ctx, node.inputs[0])
     cr = node.color_ramp
@@ -982,6 +987,8 @@ def _export_node(ctx, node, output_name):
         return _export_rgb_brightcontrast(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeHueSaturation):
         return _export_hsv(ctx, node)
+    elif isinstance(node, bpy.types.ShaderNodeBlackbody):
+        return _export_blackbody(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeRGB):
         return _export_rgb_value(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeValToRGB):

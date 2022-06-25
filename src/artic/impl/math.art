@@ -117,4 +117,54 @@ fn @lookup_curve(count: i32, t: f32, x: fn (i32)->f32, y: fn (i32)->f32, interpo
 // Simple function used in nodes
 fn @fresnel_dielectric(eta: f32, cos_i: f32)     = all::fresnel(eta, cos_i).factor;
 fn @fresnel_conductor(n: f32, k:f32, cos_i: f32) = all::conductor_factor(n, k, cos_i);
+
+// An approximative blackbody function returning a color tone
+// Only valid between [1000, 20000] kelvin
+fn @blackbody(temp: f32) -> all::Color {
+    let TS =  1000:f32;
+    let TM =  6500:f32;
+    let TE = 20000:f32;
+    let temp2 = all::clampf(temp, TS, TE);
+
+    // Based on two optimization processes specified for sRGB with D65 as white point
+    if temp2 <= TM {
+        let t = (temp2-TS)/(TM-TS);
+
+        let a_r = -6.43983699:f32;
+        let b_r =  0.75651596:f32;
+        let c_r =  0.79760204:f32;
+        let d_r = -2.04782763:f32;
+        let e_r =  2.33744911:f32;
+        let r = math_builtins::exp(a_r*t+b_r) + all::fmaf(all::fmaf(c_r, t, d_r), t, e_r);
+
+        let a_b =  0.24888616:f32;
+        let b_b =  1.39095510:f32;
+        let c_b = -4.17216437:f32;
+        let b = math_builtins::exp(a_b*t+b_b) + c_b;
+
+        // Normalize based on luminance
+        let g = (1 - r * 0.2126 - b * 0.0722) / 0.7152;
+
+        all::make_color(r, g, b, 1)
+    } else {
+        let t = (temp2-TM)/(TE-TM);
+
+        let a_r = -5.08603402:f32;
+        let b_r = -1.68935495:f32;
+        let c_r =  0.07954146:f32;
+        let d_r = -0.23566459:f32;
+        let e_r =  0.85280697:f32;
+        let r   = math_builtins::exp(a_r*t+b_r) + all::fmaf(all::fmaf(c_r, t, d_r), t, e_r);
+
+        let a_b = -2.25659290:f32;
+        let b_b =  2.11298599:f32;
+        let c_b =  1.02683036:f32;
+        let b   = all::fmaf(all::fmaf(t + a_b, t, b_b), t, c_b);
+
+        // Normalize based on luminance
+        let g = (1 - r * 0.2126 - b * 0.0722) / 0.7152;
+        
+        all::make_color(r, g, b, 1)
+    }
+}
 }

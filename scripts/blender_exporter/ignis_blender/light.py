@@ -7,14 +7,23 @@ from .defaults import *
 
 
 def export_background(result, out_dir, scene):
+    # Export basic world if no shading nodes are given
+    if not scene.world.node_tree:
+        if scene.world.color[0] > 0 and scene.world.color[1] > 0 and scene.world.color[2] > 0:
+            result["lights"].append(
+                {"type": "env", "name": "__scene_world", "radiance": map_rgb(scene.world.color), "scale": 0.5, "transform": ENVIRONMENT_MAP_TRANSFORM})
+        return
+
     if "Background" not in scene.world.node_tree.nodes:
         return
 
     tree = scene.world.node_tree.nodes["Background"]
 
     if tree.type == "BACKGROUND":
-        strength = export_node(NodeContext(result, out_dir), tree.inputs["Strength"])
-        radiance = export_node(NodeContext(result, out_dir), tree.inputs["Color"])
+        strength = export_node(NodeContext(
+            result, out_dir), tree.inputs["Strength"])
+        radiance = export_node(NodeContext(
+            result, out_dir), tree.inputs["Color"])
 
         # Check if there is any emission (if we can detect it)
         has_emission = try_extract_node_value(strength, default=1) > 0

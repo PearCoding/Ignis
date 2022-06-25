@@ -399,6 +399,10 @@ static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynF
     { "hsltorgb", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("hsl_to_srgb") } }
 };
 
+static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynConstructFunctions1 = {
+    { "blackbody", { nullptr, genFunction1Color("math::blackbody"), nullptr, nullptr, nullptr } }
+};
+
 static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynFunctions2 = {
     { "min", genDynMapFunction2("math_builtins::fmin", "min") },
     { "max", genDynMapFunction2("math_builtins::fmax", "max") },
@@ -730,6 +734,13 @@ public:
                     return call;
             }
 
+            auto dcf1 = sInternalDynConstructFunctions1.find(name);
+            if (dcf1 != sInternalDynConstructFunctions1.end()) {
+                std::string call = callDynFunction(dcf1->second, argumentTypes[0], argumentPayloads[0]);
+                if (!call.empty())
+                    return call;
+            }
+
             auto drf1 = sInternalDynReduceFunctions1.find(name);
             if (drf1 != sInternalDynReduceFunctions1.end()) {
                 std::string call = callDynFunction(drf1->second, argumentTypes[0], argumentPayloads[0]);
@@ -1008,6 +1019,13 @@ public:
         if (sInternalDynReduceFunctions1.count(lkp.name())) {
             auto var = checkDynFunction(lkp, sInternalDynReduceFunctions1.at(lkp.name()), PExprType::Number, true,
                                         OpParam{});
+            if (var.has_value())
+                return var;
+        }
+
+        if (sInternalDynConstructFunctions1.count(lkp.name())) {
+            auto var = checkDynFunction(lkp, sInternalDynConstructFunctions1.at(lkp.name()), PExprType::Vec4, true,
+                                        OpParam{ });
             if (var.has_value())
                 return var;
         }

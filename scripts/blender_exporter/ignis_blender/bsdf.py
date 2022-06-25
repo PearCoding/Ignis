@@ -99,6 +99,10 @@ def _export_glossy_bsdf(ctx, bsdf, export_name):
                            "metallic": 1})
 
 
+def _map_specular_to_ior(specular):
+    return f"((1 + sqrt(0.08*{specular})) / max(0.001, 1 - sqrt(0.08*{specular})))"
+
+
 def _export_principled_bsdf(ctx, bsdf, export_name):
     base_color = export_node(ctx, bsdf.inputs["Base Color"])
     roughness = export_node(ctx, bsdf.inputs["Roughness"])
@@ -120,7 +124,7 @@ def _export_principled_bsdf(ctx, bsdf, export_name):
 
     if not has_transmission:
         # Map specular variable to our IOR interpretation
-        ior = f"((1 + sqrt(0.08*{specular})) / max(0.001, 1 - sqrt(0.08*{specular})))"
+        ior = _map_specular_to_ior(specular)
 
     return _handle_normal(ctx, bsdf,
                           {"type": "principled", "name": export_name, "base_color": base_color, "metallic": metallic,
@@ -255,9 +259,21 @@ def _get_bsdf_link(material):
     return surface.links[0]
 
 
+# Will export basic material without node support
+def _export_basic_material(material):
+    # Map specular variable to our IOR interpretation
+    ior = _map_specular_to_ior(material.specular_intensity)
+
+    return {"type": "principled", "name": material.name, "base_color": map_rgb(material.diffuse_color), "metallic": material.metallic,
+            "roughness": material.roughness, "ior": ior}
+
+
 def export_material(ctx, material):
     if not material:
         return None
+
+    if not material.node_tree:
+        return _export_basic_material(material)
 
     link = _get_bsdf_link(material)
     if not link:
@@ -384,6 +400,9 @@ def _get_emission_inline(ctx, socket):
 
 def get_material_emission(ctx, material):
     if not material:
+        return None
+
+    if not material.node_tree:
         return None
 
     link = _get_bsdf_link(material)
