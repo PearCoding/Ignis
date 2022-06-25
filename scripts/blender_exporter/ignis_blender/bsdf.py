@@ -187,11 +187,7 @@ def _export_group_begin(ctx, node, export_name, output_name):
 
 def _export_group_end(ctx, node, export_name, output_name):
     grp = ctx.stack[-1]
-    if output_name in grp.inputs:
-        return _export_bsdf_inline(ctx, grp.inputs[output_name], export_name)
-    else:
-        print(f"Expected {output_name} to be a valid group input")
-        return None
+    return _export_bsdf_inline(ctx, grp.inputs[output_name], export_name)
 
 
 def _export_reroute(ctx, node, export_name):
@@ -353,11 +349,7 @@ def _get_group_begin(ctx, node, output_name):
 
 def _get_group_end(ctx, node, output_name):
     grp = ctx.stack[-1]
-    if output_name in grp.inputs:
-        return _get_emission_inline(ctx, grp.inputs[output_name])
-    else:
-        print(f"Expected {output_name} to be a valid group input")
-        return None
+    return _get_emission_inline(ctx, grp.inputs[output_name])
 
 
 def _get_reroute(ctx, node):

@@ -46,7 +46,7 @@ def _export_scalar_clamp(ctx, node):
     return f"clamp({val}, {minv}, {maxv})"
 
 
-def _export_scalar_maprange(ctx, node):
+def _export_maprange(ctx, node):
     val = export_node(ctx, node.inputs[0])
     from_min = export_node(ctx, node.inputs[1])
     from_max = export_node(ctx, node.inputs[2])
@@ -323,8 +323,43 @@ def _export_hsv(ctx, node):
 
 
 def _export_val_to_rgb(ctx, node):
-    val = export_node(ctx, node.inputs[0])
-    return f"color({val})"
+    t = export_node(ctx, node.inputs[0])
+    cr = node.color_ramp
+
+    # Check if it is just the default one which we can skip
+    if cr.interpolation == "LINEAR" and len(cr.elements) == 2:
+        if cr.elements[0].position == 0 and cr.elements[0].color[0] == 0 and cr.elements[0].color[1] == 0 and cr.elements[0].color[2] == 0 and cr.elements[0].color[3] == 1 \
+                and cr.elements[1].position == 1 and cr.elements[1].color[0] == 1 and cr.elements[1].color[1] == 1 and cr.elements[1].color[2] == 1 and cr.elements[1].color[3] == 1:
+            return f"color({t})"
+
+    # TODO: Add more interpolation methods
+    # TODO: Add hue_interpolation
+    if cr.interpolation == "CONSTANT":
+        func = "lookup_constant"
+    else:
+        func = "lookup_linear"
+
+    def check_constant(idx):
+        a = cr.elements[0].color[idx]
+        for p in cr.elements:
+            if p.color[idx] != a:
+                return False
+        return True
+
+    def gen_c(idx):
+        if check_constant(idx):
+            return cr.elements[0].color[idx]
+        else:
+            args = ", ".join(
+                [f"{p.position}, {p.color[idx]}" for p in cr.elements])
+            return f"{func}({t}, {args})"
+
+    r_func = gen_c(0)
+    g_func = gen_c(1)
+    b_func = gen_c(2)
+    a_func = gen_c(3)
+
+    return f"color({r_func}, {g_func}, {b_func}, {a_func})"
 
 
 def _export_rgb_to_bw(ctx, node):
@@ -332,8 +367,100 @@ def _export_rgb_to_bw(ctx, node):
     return f"luminance({color})"
 
 
-# TRS
-def _export_vector_mapping(ctx, node):
+def _curve_lookup(curve, t, interpolate, extrapolate):
+    # Check if it is just the default one which we can skip
+    if len(curve.points) == 2:
+        if curve.points[0].location[0] == 0 and curve.points[0].location[1] == 0 and curve.points[1].location[0] == 1 and curve.points[1].location[1] == 1:
+            return t
+
+    if interpolate:
+        if extrapolate:
+            func = "lookup_linear_extrapolate"
+        else:
+            func = "lookup_linear"
+    else:
+        func = "lookup_constant"
+
+    args = ", ".join(
+        [f"{p.location[0]}, {p.location[1]}" for p in curve.points])
+
+    return f"{func}({t}, {args})"
+
+
+def _export_float_curve(ctx, node):
+    mapping = node.mapping
+
+    fac = export_node(ctx, node.inputs["Fac"])
+    value = export_node(ctx, node.inputs["Value"])
+
+    V = mapping.curves[0]
+
+    lV = _curve_lookup(V, value, True, mapping.extend)
+
+    e_f = try_extract_node_value(fac, default=-1)
+    if e_f == 1:
+        return lV
+    elif e_f == 0:
+        return value
+    else:
+        return f"mix({value}, {lV}, {fac})"
+
+
+def _export_rgb_curve(ctx, node):
+    mapping = node.mapping
+
+    fac = export_node(ctx, node.inputs["Fac"])
+    color = export_node(ctx, node.inputs["Color"])
+
+    C = mapping.curves[3]
+    R = mapping.curves[0]
+    G = mapping.curves[1]
+    B = mapping.curves[2]
+
+    lCR = _curve_lookup(C, f"{color}.r", True, mapping.extend)
+    lR = _curve_lookup(R, lCR, True, mapping.extend)
+    lCG = _curve_lookup(C, f"{color}.g", True, mapping.extend)
+    lG = _curve_lookup(G, lCG, True, mapping.extend)
+    lCB = _curve_lookup(C, f"{color}.b", True, mapping.extend)
+    lB = _curve_lookup(B, lCB, True, mapping.extend)
+
+    ops = f"color({lR}, {lG}, {lB})"
+
+    e_f = try_extract_node_value(fac, default=-1)
+    if e_f == 1:
+        return ops
+    elif e_f == 0:
+        return color
+    else:
+        return f"mix({color}, {ops}, {fac})"
+
+
+def _export_vector_curve(ctx, node):
+    mapping = node.mapping
+
+    fac = export_node(ctx, node.inputs["Fac"])
+    vector = export_node(ctx, node.inputs["Vector"])
+
+    X = mapping.curves[0]
+    Y = mapping.curves[1]
+    Z = mapping.curves[2]
+
+    lX = _curve_lookup(X, f"{vector}.x", True, mapping.extend)
+    lY = _curve_lookup(Y, f"{vector}.y", True, mapping.extend)
+    lZ = _curve_lookup(Z, f"{vector}.z", True, mapping.extend)
+
+    ops = f"vec3({lX}, {lY}, {lZ})"
+
+    e_f = try_extract_node_value(fac, default=-1)
+    if e_f == 1:
+        return ops
+    elif e_f == 0:
+        return vector
+    else:
+        return f"mix({vector}, {ops}, {fac})"
+
+
+def _export_vector_mapping(ctx, node):  # TRS
     if node.inputs["Vector"].is_linked:
         vec = export_node(ctx, node.inputs["Vector"])
     else:
@@ -718,6 +845,35 @@ def _export_environment(ctx, node):
     return tex_access
 
 
+def _export_gradient(ctx, node, output_name):
+    if node.inputs["Vector"].is_linked:
+        uv = export_node(ctx, node.inputs["Vector"])
+    else:
+        uv = TEXCOORD_UV
+
+    if node.gradient_type == "LINEAR":
+        fac = f"{uv}.x"
+    elif node.gradient_type == "QUADRATIC":
+        fac = f"(max(0, {uv}.x)^2)"
+    elif node.gradient_type == "EASING":
+        t = f"clamp({uv}.x,0,1)"
+        fac = f"(3*{t}^2 - 2*{t}^3)"
+    elif node.gradient_type == "DIAGONAL":
+        fac = f"avg({uv}.xy)"
+    elif node.gradient_type == "SPHERICAL":
+        fac = f"max(0, 1-length({uv}))"
+    elif node.gradient_type == "QUADRATIC_SPHERE":
+        fac = f"(max(0, 1-length({uv}))^2)"
+    else:  # RADIAL
+        fac = f"(0.5*atan2({uv}.y, {uv}.x) / Pi + 0.5)"
+
+    fac = f"clamp({fac}, 0, 1)"
+    if output_name == "Color":
+        return f"color({fac})"
+    else:
+        return fac
+
+
 def _export_surface_attributes(ctx, node, output_name):
     if output_name == "Position":
         return "P"
@@ -733,6 +889,13 @@ def _export_tex_coordinate(ctx, node, output_name):
     if output_name != 'UV':
         print(
             f"Given texture coordinate output '{output_name}' is not supported")
+    return TEXCOORD_UV
+
+
+def _export_uvmap(ctx, node):
+    # TODO: Maybe support this with texture lookups?
+    if node.uv_map != "":
+        print(f"Additional UV Maps are not supported, default to first one")
     return TEXCOORD_UV
 
 
@@ -756,11 +919,7 @@ def _export_group_begin(ctx, node, output_name):
 
 def _export_group_end(ctx, node, output_name):
     grp = ctx.stack[-1]
-    if output_name in grp.inputs:
-        return export_node(ctx, grp.inputs[output_name])
-    else:
-        print(f"Expected {output_name} to be a valid group input")
-        return None
+    return export_node(ctx, grp.inputs[output_name])
 
 
 def _export_reroute(ctx, node):
@@ -770,13 +929,12 @@ def _export_reroute(ctx, node):
 def _export_node(ctx, node, output_name):
     # Missing:
     # ShaderNodeAttribute, ShaderNodeBlackbody, ShaderNodeBevel, ShaderNodeBump, ShaderNodeCameraData,
-    # ShaderNodeCustomGroup, ShaderNodeFloatCurve, ShaderNodeFresnel, ShaderNodeGroup,
+    # ShaderNodeCustomGroup, ShaderNodeFloatCurve, ShaderNodeFresnel,
     # ShaderNodeHairInfo, ShaderNodeLayerWeight, ShaderNodeLightFalloff,
-    # ShaderNodeMapRange, ShaderNodeObjectInfo, ShaderNodeRGBCurve, ShaderNodeScript,
+    # ShaderNodeObjectInfo, ShaderNodeScript,
     # ShaderNodeShaderToRGB, ShaderNodeSubsurfaceScattering, ShaderNodeTangent,
-    # ShaderNodeTexBrick, ShaderNodeTexGradient, ShaderNodeTexIES, ShaderNodeTexMagic,
+    # ShaderNodeTexBrick, ShaderNodeTexIES, ShaderNodeTexMagic,
     # ShaderNodeTexPointDensity, ShaderNodeTexSky, ShaderNodeUVAlongStroke,
-    # ShaderNodeUVMap, ShaderNodeVectorCurve,
     # ShaderNodeVectorDisplacement, ShaderNodeVectorRotate, ShaderNodeVectorTransform,
     # ShaderNodeVertexColor, ShaderNodeWavelength, ShaderNodeWireframe
 
@@ -802,6 +960,8 @@ def _export_node(ctx, node, output_name):
         return _export_wave(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeTexEnvironment):
         return _export_environment(ctx, node)
+    elif isinstance(node, bpy.types.ShaderNodeTexGradient):
+        return _export_gradient(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeNewGeometry):
         return _export_surface_attributes(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeMath):
@@ -811,7 +971,7 @@ def _export_node(ctx, node, output_name):
     elif isinstance(node, bpy.types.ShaderNodeClamp):
         return _export_scalar_clamp(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeMapRange):
-        return _export_scalar_maprange(ctx, node)
+        return _export_maprange(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeMixRGB):
         return _export_rgb_math(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeInvert):
@@ -840,6 +1000,12 @@ def _export_node(ctx, node, output_name):
         return _export_separate_rgb(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeSeparateXYZ):
         return _export_separate_xyz(ctx, node, output_name)
+    elif isinstance(node, bpy.types.ShaderNodeFloatCurve):
+        return _export_float_curve(ctx, node)
+    elif isinstance(node, bpy.types.ShaderNodeRGBCurve):
+        return _export_rgb_curve(ctx, node)
+    elif isinstance(node, bpy.types.ShaderNodeVectorCurve):
+        return _export_vector_curve(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeMapping):
         return _export_vector_mapping(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeVectorMath):
@@ -848,6 +1014,8 @@ def _export_node(ctx, node, output_name):
         return _export_normal(ctx, node, output_name)
     elif isinstance(node, bpy.types.ShaderNodeNormalMap):
         return _export_normalmap(ctx, node)
+    elif isinstance(node, bpy.types.ShaderNodeUVMap):
+        return _export_uvmap(ctx, node)
     elif isinstance(node, bpy.types.ShaderNodeGroup):
         return _export_group_begin(ctx, node, output_name)
     elif isinstance(node, bpy.types.NodeGroupInput):
@@ -876,6 +1044,14 @@ def export_node(ctx, socket):
             return f"color({expr})"
         elif from_type == 'RGBA' and (to_type == 'VALUE' or to_type == 'INT'):
             return f"luminance({expr})"
+        elif (from_type == 'VALUE' or from_type == 'INT') and to_type == 'VECTOR':
+            return f"vec3({expr})"
+        elif from_type == 'VECTOR' and (to_type == 'VALUE' or to_type == 'INT'):
+            return f"avg({expr})"
+        elif from_type == 'RGBA' and to_type == 'VECTOR':
+            return f"({expr}).rgb"
+        elif from_type == 'VECTOR' and to_type == 'RGBA':
+            return f"color({expr}.x, {expr}.y, {expr}.z, 1)"
         else:
             print(
                 f"Socket connection from {socket.links[0].from_socket.name} to {socket.name} requires cast from {from_type} to {to_type} which is not supported")

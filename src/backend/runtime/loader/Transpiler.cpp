@@ -255,6 +255,10 @@ inline static InternalDynFunction2 genDynArrayFunction2(const char* func)
 // Dyn Functions 3
 using MapFunction3         = std::function<std::string(const std::string&, const std::string&, const std::string&)>;
 using InternalDynFunction3 = InternalDynFunction<MapFunction3>;
+inline static MapFunction3 genFunction3(const char* func)
+{
+    return [=](const std::string& a, const std::string& b, const std::string& c) { return std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+}
 inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
 {
     switch (type) {
@@ -262,7 +266,7 @@ inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
         return {};
     case PExprType::Integer:
     case PExprType::Number:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+        return genFunction3(func);
     case PExprType::Vec2:
         return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_zip3(" + a + ", " + b + ", " + c + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; };
     case PExprType::Vec3:
@@ -348,7 +352,8 @@ static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynF
     { "fmod", genDynMapFunction2("math::fmod", nullptr) },
     { "cross", { nullptr, nullptr, nullptr, genArrayFunction2("cross", PExprType::Vec3), nullptr } },
     { "rotate_euler", { nullptr, nullptr, nullptr, genArrayFunction2("rotate_euler", PExprType::Vec3), nullptr } },
-    { "rotate_euler_inverse", { nullptr, nullptr, nullptr, genArrayFunction2("rotate_euler_inverse", PExprType::Vec3), nullptr } }
+    { "rotate_euler_inverse", { nullptr, nullptr, nullptr, genArrayFunction2("rotate_euler_inverse", PExprType::Vec3), nullptr } },
+    { "fresnel_dielectric", { nullptr, genFunction2("math::fresnel_dielectric"), nullptr, nullptr, nullptr } }
 };
 static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynNoiseFunctions2 = {
     { "noise", { nullptr, genFunction2("noise1"), genFunction2("noise2_v"), genFunction2("noise3_v"), nullptr } },
@@ -380,7 +385,8 @@ static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynF
     { "clamp", genDynMapFunction3("clampf", "clamp") },
     { "smin", genDynMapFunction3("math::smoothmin", nullptr) },
     { "smax", genDynMapFunction3("math::smoothmax", nullptr) },
-    { "wrap", genDynMapFunction3("math::wrap", nullptr) }
+    { "wrap", genDynMapFunction3("math::wrap", nullptr) },
+    { "fresnel_conductor", { nullptr, genFunction3("math::fresnel_conductor"), nullptr, nullptr, nullptr } }
 };
 static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynLerpFunctions3 = {
     { "mix", genDynLerpFunction3("lerp") },
@@ -602,6 +608,27 @@ public:
                                PExprType, const std::vector<PExprType>& argumentTypes,
                                const std::vector<std::string>& argumentPayloads) override
     {
+        // Special lookup function with variadic number of parameters
+        if (argumentPayloads.size() >= 3 && (argumentPayloads.size() % 2) == 1 && (name == "lookup_linear" || name == "lookup_constant" || name == "lookup_linear_extrapolate")) {
+            const size_t args = (argumentPayloads.size() - 1) / 2;
+
+            std::stringstream x_values;
+            x_values << "@|i:i32| [";
+            for (size_t i = 0; i < args; ++i)
+                x_values << argumentPayloads[2 * i + 1] << ", ";
+            x_values << "](i)";
+
+            std::stringstream y_values;
+            y_values << "@|i:i32| [";
+            for (size_t i = 0; i < args; ++i)
+                y_values << argumentPayloads[2 * i + 2] << ", ";
+            y_values << "](i)";
+
+            std::string interpolate = (name == "lookup_linear" || name == "lookup_linear_extrapolate") ? "true" : "false";
+            std::string extrapolate = (name == "lookup_linear_extrapolate") ? "true" : "false";
+            return "math::lookup_curve(" + std::to_string(args) + ", " + argumentPayloads[0] + ", " + x_values.str() + ", " + y_values.str() + ", " + interpolate + ", " + extrapolate + ")";
+        }
+
         if (argumentPayloads.size() == 1) {
             auto df1 = sInternalDynFunctions1.find(name);
             if (df1 != sInternalDynFunctions1.end()) {
@@ -783,6 +810,20 @@ public:
 
     std::optional<PExpr::FunctionDef> functionLookup(const PExpr::FunctionLookup& lkp)
     {
+        // Special lookup function with variadic number of parameters
+        if (lkp.parameters().size() >= 3 && (lkp.parameters().size() % 2) == 1 && (lkp.name() == "lookup_linear" || lkp.name() == "lookup_constant" || lkp.name() == "lookup_linear_extrapolate")) {
+            bool allNumber = true;
+            for (const auto& params : lkp.parameters()) {
+                if (params != PExprType::Number) {
+                    allNumber = false;
+                    break;
+                }
+            }
+
+            if (allNumber)
+                return PExpr::FunctionDef(lkp.name(), PExprType::Number, lkp.parameters());
+        }
+
         // Add some internal functions
         if (lkp.name() == "vec2") {
             auto var = matchFuncRet(lkp, PExprType::Vec2, { PExprType::Number });

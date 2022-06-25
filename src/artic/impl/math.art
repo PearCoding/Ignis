@@ -3,6 +3,7 @@
 mod math {
 use super as all;
 use super::math_builtins;
+use super::interval;
 
 fn @erf(x: f32) -> f32  {
     let a1 =  0.254829592:f32;
@@ -89,4 +90,31 @@ fn @wrap(v: f32, min: f32, max: f32) {
 
 fn @snap(x: f32, y: f32)     = math_builtins::floor(all::safe_div(x, y)) * y;
 fn @pingpong(x: f32, y: f32) = all::select(math_builtins::fabs(y) <= all::flt_pi, 0:f32, math_builtins::fabs(fract((x - y) / (y * 2)) * y * 2 - y));
+
+fn @lookup_curve(count: i32, t: f32, x: fn (i32)->f32, y: fn (i32)->f32, interpolate: bool, extrapolate: bool) {
+    if t < 0 || t > 1 {
+        if extrapolate {
+            let (y0, dy, f0) = if t < 0 {
+                (y(0), y(0) - y(1), -t)
+            } else {
+                (y(count-1), y(count-1) - y(count-2), t-1)
+            };
+            y0 + dy * f0 * (count - 1) as f32
+        } else {
+            all::select(t < 0, y(0), y(count-1))
+        }
+    } else {
+        let i = all::min(count-1, interval::binary_search(count, @|k| x(k) <= t));
+        if interpolate {
+            let t0 = all::clampf((t - x(i)) / (x(i+1) - x(i)), 0, 1);
+            all::lerp(y(i), y(i+1), t0)
+        } else {
+            y(i)
+        }
+    }
+}
+
+// Simple function used in nodes
+fn @fresnel_dielectric(eta: f32, cos_i: f32)     = all::fresnel(eta, cos_i).factor;
+fn @fresnel_conductor(n: f32, k:f32, cos_i: f32) = all::conductor_factor(n, k, cos_i);
 }
