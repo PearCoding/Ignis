@@ -19,6 +19,40 @@ inline std::string var_name(const std::string& name)
     return "var_tex_" + LoaderUtils::escapeIdentifier(name);
 }
 
+// We assume function state and return value to depend only on the parameters!
+template <typename Func>
+inline static std::string collapseFunction(Func func, const std::vector<std::string>& args)
+{
+    if (args.size() <= 1)
+        return func(args);
+
+    static size_t uuid_counter = 0;
+    std::unordered_map<std::string, std::string> set;
+    for (const auto& arg : args) {
+        if (set.count(arg) == 0)
+            set[arg] = "a" + std::to_string(uuid_counter++);
+    }
+
+    if (set.size() == args.size()) {
+        return func(args);
+    } else {
+        std::vector<std::string> new_args;
+        new_args.reserve(args.size());
+        for (const auto& arg : args)
+            new_args.emplace_back(set.at(arg));
+
+        std::stringstream stream;
+        stream << "(@|| { ";
+
+        for (const auto& p : set)
+            stream << "let " << p.second << " = " << p.first << ";";
+
+        stream << func(new_args)
+               << "})()";
+        return stream.str();
+    }
+}
+
 // Internal Variables
 struct InternalVariable {
     std::string Map;
@@ -201,14 +235,30 @@ inline static MapFunction2 genMapFunction2(const char* func, PExprType type)
         return {};
     case PExprType::Integer:
     case PExprType::Number:
-        return [=](const std::string& a, const std::string& b) { return std::string(func) + "(" + a + ", " + b + ")"; };
+        return [=](const std::string& a, const std::string& b) { return collapseFunction(
+                                                                     [func](const std::vector<std::string>& args) {
+                                                                         return std::string(func) + "(" + args[0] + ", " + args[0] + ")";
+                                                                     },
+                                                                     std::vector<std::string>{ a, b }); };
     case PExprType::Vec2:
-        return [=](const std::string& a, const std::string& b) { return "vec2_zip(" + a + ", " + b + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; };
+        return [=](const std::string& a, const std::string& b) { return collapseFunction(
+                                                                     [func](const std::vector<std::string>& args) { return "vec2_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
+                                                                     std::vector<std::string>{ a, b }); };
     case PExprType::Vec3:
-        return [=](const std::string& a, const std::string& b) { return "vec3_zip(" + a + ", " + b + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; };
+        return [=](const std::string& a, const std::string& b) { return collapseFunction(
+                                                                     [func](const std::vector<std::string>& args) { return "vec3_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
+                                                                     std::vector<std::string>{ a, b }); };
     case PExprType::Vec4:
-        return [=](const std::string& a, const std::string& b) { return "vec4_zip(" + a + ", " + b + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; };
+        return [=](const std::string& a, const std::string& b) { return collapseFunction(
+                                                                     [func](const std::vector<std::string>& args) { return "vec4_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
+                                                                     std::vector<std::string>{ a, b }); };
     }
+}
+inline static MapFunction2 genFunction2(const std::string& prefix, const std::string& suffix = "")
+{
+    return [=](const std::string& a, const std::string& b) { return collapseFunction(
+                                                                 [prefix, suffix](const std::vector<std::string>& args) { return prefix + "(" + args[0] + ", " + args[1] + ")" + suffix; },
+                                                                 std::vector<std::string>{ a, b }); };
 }
 inline static MapFunction2 genArrayFunction2(const char* func, PExprType type)
 {
@@ -216,20 +266,16 @@ inline static MapFunction2 genArrayFunction2(const char* func, PExprType type)
     default:
         return {};
     case PExprType::Vec2:
-        return [=](const std::string& a, const std::string& b) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ")"; };
+        return genFunction2("vec2_" + std::string(func));
     case PExprType::Vec3:
-        return [=](const std::string& a, const std::string& b) { return "vec3_" + std::string(func) + "(" + a + ", " + b + ")"; };
+        return genFunction2("vec3_" + std::string(func));
     case PExprType::Vec4:
-        return [=](const std::string& a, const std::string& b) { return "vec4_" + std::string(func) + "(" + a + ", " + b + ")"; };
+        return genFunction2("vec4_" + std::string(func));
     }
-}
-inline static MapFunction2 genFunction2(const char* func)
-{
-    return [=](const std::string& a, const std::string& b) { return std::string(func) + "(" + a + ", " + b + ")"; };
 }
 inline static MapFunction2 genFunction2Color(const char* func)
 {
-    return [=](const std::string& a, const std::string& b) { return "color_to_vec4(" + std::string(func) + "(" + a + ", " + b + "))"; };
+    return genFunction2("color_to_vec4(" + std::string(func), ")");
 }
 inline static InternalDynFunction2 genDynMapFunction2(const char* func, const char* funcI)
 {
@@ -255,9 +301,11 @@ inline static InternalDynFunction2 genDynArrayFunction2(const char* func)
 // Dyn Functions 3
 using MapFunction3         = std::function<std::string(const std::string&, const std::string&, const std::string&)>;
 using InternalDynFunction3 = InternalDynFunction<MapFunction3>;
-inline static MapFunction3 genFunction3(const char* func)
+inline static MapFunction3 genFunction3(const std::string& prefix, const std::string& suffix = "")
 {
-    return [=](const std::string& a, const std::string& b, const std::string& c) { return std::string(func) + "(" + a + ", " + b + ", " + c + ")"; };
+    return [=](const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
+                                                                                       [prefix, suffix](const std::vector<std::string>& args) { return prefix + "(" + args[0] + ", " + args[1] + ", " + args[2] + ")" + suffix; },
+                                                                                       std::vector<std::string>{ a, b, c }); };
 }
 inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
 {
@@ -268,11 +316,17 @@ inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
     case PExprType::Number:
         return genFunction3(func);
     case PExprType::Vec2:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_zip3(" + a + ", " + b + ", " + c + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; };
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
+                                                                                           [func](const std::vector<std::string>& args) { return "vec2_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
+                                                                                           std::vector<std::string>{ a, b, c }); };
     case PExprType::Vec3:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec3_zip3(" + a + ", " + b + ", " + c + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; };
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
+                                                                                           [func](const std::vector<std::string>& args) { return "vec3_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
+                                                                                           std::vector<std::string>{ a, b, c }); };
     case PExprType::Vec4:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return "vec4_zip3(" + a + ", " + b + ", " + c + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; };
+        return [=](const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
+                                                                                           [func](const std::vector<std::string>& args) { return "vec4_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
+                                                                                           std::vector<std::string>{ a, b, c }); };
     }
 }
 inline static InternalDynFunction3 genDynMapFunction3(const char* func, const char* funcI)
@@ -291,9 +345,9 @@ inline static InternalDynFunction3 genDynLerpFunction3(const char* func)
     return {
         nullptr,
         genMapFunction3(func, PExprType::Number),
-        [=](const std::string& a, const std::string& b, const std::string& c) { return "vec2_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; },
-        [=](const std::string& a, const std::string& b, const std::string& c) { return "vec3_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; },
-        [=](const std::string& a, const std::string& b, const std::string& c) { return "vec4_" + std::string(func) + "(" + a + ", " + b + ", " + c + ")"; }
+        genFunction3("vec2_" + std::string(func)),
+        genFunction3("vec3_" + std::string(func)),
+        genFunction3("vec4_" + std::string(func))
     };
 }
 inline static InternalDynFunction3 genDynColorLerpFunction3(const char* func)
@@ -303,7 +357,9 @@ inline static InternalDynFunction3 genDynColorLerpFunction3(const char* func)
         nullptr,
         nullptr,
         nullptr,
-        [=](const std::string& a, const std::string& b, const std::string& c) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + a + "), vec4_to_color(" + b + "), " + c + "))"; }
+        [=](const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
+                                                                                    [func](const std::vector<std::string>& args) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + args[0] + "), vec4_to_color(" + args[1] + "), " + args[2] + "))"; },
+                                                                                    std::vector<std::string>{ a, b, c }); }
     };
 }
 
@@ -438,6 +494,23 @@ inline std::string binaryCwise(const std::string& A, const std::string& B, PExpr
     }
 }
 
+inline std::string typeConstant(float f, PExprType arithType)
+{
+    switch (arithType) {
+    default:
+    case PExprType::Number:
+        return std::to_string(f);
+    case PExprType::Integer:
+        return std::to_string((int)f);
+    case PExprType::Vec2:
+        return "vec2_expand(" + std::to_string(f) + ")";
+    case PExprType::Vec3:
+        return "vec3_expand(" + std::to_string(f) + ")";
+    case PExprType::Vec4:
+        return "vec4_expand(" + std::to_string(f) + ")";
+    }
+}
+
 class ArticVisitor : public PExpr::TranspileVisitor<std::string> {
 private:
     const LoaderContext& mContext;
@@ -461,19 +534,19 @@ public:
             return mUVAccess;
 
         if (name == "P")
-            return mHasSurfaceInfo ? "surf.point" : "make_vec3(0,0,0)";
+            return mHasSurfaceInfo ? "surf.point" : "vec3_expand(0)";
         if (name == "prim_coords")
-            return mHasSurfaceInfo ? "surf.prim_coords" : "make_vec2(0,0)";
+            return mHasSurfaceInfo ? "surf.prim_coords" : "vec2_expand(0)";
         if (name == "frontside")
             return mHasSurfaceInfo ? "surf.is_entering" : "false";
         if (name == "N")
-            return mHasSurfaceInfo ? "surf.local.col(2)" : "make_vec3(0,0,0)";
+            return mHasSurfaceInfo ? "surf.local.col(2)" : "vec3_expand(0)";
         if (name == "Ng")
-            return mHasSurfaceInfo ? "surf.face_normal" : "make_vec3(0,0,0)";
+            return mHasSurfaceInfo ? "surf.face_normal" : "vec3_expand(0)";
         if (name == "Nx")
-            return mHasSurfaceInfo ? "surf.local.col(0)" : "make_vec3(0,0,0)";
+            return mHasSurfaceInfo ? "surf.local.col(0)" : "vec3_expand(0)";
         if (name == "Ny")
-            return mHasSurfaceInfo ? "surf.local.col(1)" : "make_vec3(0,0,0)";
+            return mHasSurfaceInfo ? "surf.local.col(1)" : "vec3_expand(0)";
 
         auto var = sInternalVariables.find(name);
         if (var != sInternalVariables.end())
@@ -528,19 +601,33 @@ public:
     /// a+b, a-b. Only called for arithmetic types. Both types are the same! Vectorized types should apply component wise
     std::string onAddSub(bool isSub, PExprType arithType, const std::string& a, const std::string& b) override
     {
-        if (isSub)
-            return binaryCwise(a, b, arithType, "-", "sub");
-        else
-            return binaryCwise(a, b, arithType, "+", "add");
+        if (isSub) {
+            if (a == b)
+                return typeConstant(0, arithType);
+            else
+                return binaryCwise(a, b, arithType, "-", "sub");
+        } else {
+            if (a == b)
+                return binaryCwise(a, typeConstant(2, arithType), arithType, "*", "mul");
+            else
+                return binaryCwise(a, b, arithType, "+", "add");
+        }
     }
 
     /// a*b, a/b. Only called for arithmetic types. Both types are the same! Vectorized types should apply component wise
     std::string onMulDiv(bool isDiv, PExprType arithType, const std::string& a, const std::string& b) override
     {
-        if (isDiv)
-            return binaryCwise(a, b, arithType, "/", "div");
-        else
-            return binaryCwise(a, b, arithType, "*", "mul");
+        if (isDiv) {
+            if (a == b) // Ignoring 0/0 here!
+                return typeConstant(1, arithType);
+            else
+                return binaryCwise(a, b, arithType, "/", "div");
+        } else {
+            if (a == b)
+                return onPow(arithType, a, typeConstant(2, PExprType::Number));
+            else
+                return binaryCwise(a, b, arithType, "*", "mul");
+        }
     }
 
     /// a*f, f*a, a/f. A is an arithmetic type, f is 'num', except when a is 'int' then f is 'int' as well. Order of a*f or f*a does not matter
@@ -572,6 +659,9 @@ public:
     // a&&b, a||b. Only called for bool types
     std::string onAndOr(bool isOr, const std::string& a, const std::string& b) override
     {
+        if (a == b)
+            return a;
+
         if (isOr)
             return "((" + a + ") || (" + b + "))";
         else
@@ -610,23 +700,26 @@ public:
     {
         // Special lookup function with variadic number of parameters
         if (argumentPayloads.size() >= 3 && (argumentPayloads.size() % 2) == 1 && (name == "lookup_linear" || name == "lookup_constant" || name == "lookup_linear_extrapolate")) {
-            const size_t args = (argumentPayloads.size() - 1) / 2;
+            return collapseFunction(
+                [name](const std::vector<std::string>& args) {
+                    const size_t arg_count = (args.size() - 1) / 2;
+                    std::stringstream x_values;
+                    x_values << "@|i:i32| [";
+                    for (size_t i = 0; i < arg_count; ++i)
+                        x_values << args[2 * i + 1] << ", ";
+                    x_values << "](i)";
 
-            std::stringstream x_values;
-            x_values << "@|i:i32| [";
-            for (size_t i = 0; i < args; ++i)
-                x_values << argumentPayloads[2 * i + 1] << ", ";
-            x_values << "](i)";
+                    std::stringstream y_values;
+                    y_values << "@|i:i32| [";
+                    for (size_t i = 0; i < arg_count; ++i)
+                        y_values << args[2 * i + 2] << ", ";
+                    y_values << "](i)";
 
-            std::stringstream y_values;
-            y_values << "@|i:i32| [";
-            for (size_t i = 0; i < args; ++i)
-                y_values << argumentPayloads[2 * i + 2] << ", ";
-            y_values << "](i)";
-
-            std::string interpolate = (name == "lookup_linear" || name == "lookup_linear_extrapolate") ? "true" : "false";
-            std::string extrapolate = (name == "lookup_linear_extrapolate") ? "true" : "false";
-            return "math::lookup_curve(" + std::to_string(args) + ", " + argumentPayloads[0] + ", " + x_values.str() + ", " + y_values.str() + ", " + interpolate + ", " + extrapolate + ")";
+                    std::string interpolate = (name == "lookup_linear" || name == "lookup_linear_extrapolate") ? "true" : "false";
+                    std::string extrapolate = (name == "lookup_linear_extrapolate") ? "true" : "false";
+                    return "math::lookup_curve(" + std::to_string(arg_count) + ", " + args[0] + ", " + x_values.str() + ", " + y_values.str() + ", " + interpolate + ", " + extrapolate + ")";
+                },
+                argumentPayloads);
         }
 
         if (argumentPayloads.size() == 1) {
@@ -652,11 +745,11 @@ public:
             }
 
             if (name == "vec2")
-                return "make_vec2(" + argumentPayloads[0] + "," + argumentPayloads[0] + ")";
+                return "vec2_expand(" + argumentPayloads[0] + ")";
             if (name == "vec3")
-                return "make_vec3(" + argumentPayloads[0] + "," + argumentPayloads[0] + "," + argumentPayloads[0] + ")";
+                return "vec3_expand(" + argumentPayloads[0] + ")";
             if (name == "vec4")
-                return "make_vec4(" + argumentPayloads[0] + "," + argumentPayloads[0] + "," + argumentPayloads[0] + "," + argumentPayloads[0] + ")";
+                return "vec4_expand(" + argumentPayloads[0] + ")";
             if (name == "color")
                 return "make_vec4(" + argumentPayloads[0] + "," + argumentPayloads[0] + "," + argumentPayloads[0] + ", 1)";
         } else if (argumentPayloads.size() == 2) {
@@ -688,8 +781,12 @@ public:
                     return call;
             }
 
-            if (name == "vec2")
-                return "make_vec2(" + argumentPayloads[0] + "," + argumentPayloads[1] + ")";
+            if (name == "vec2") {
+                if (argumentPayloads[0] == argumentPayloads[1])
+                    return "vec2_expand(" + argumentPayloads[0] + ")";
+                else
+                    return "make_vec2(" + argumentPayloads[0] + "," + argumentPayloads[1] + ")";
+            }
         } else if (argumentPayloads.size() == 3) {
             auto df3 = sInternalDynFunctions3.find(name);
             if (df3 != sInternalDynFunctions3.end()) {
@@ -705,15 +802,40 @@ public:
                     return call;
             }
 
-            if (name == "vec3")
-                return "make_vec3(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + ")";
-            if (name == "color")
-                return "make_vec4(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + ", 1)";
-            if (name == "select")
-                return "select(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + ")";
+            if (name == "vec3") {
+                if (argumentPayloads[0] == argumentPayloads[1] && argumentPayloads[1] == argumentPayloads[2])
+                    return "vec3_expand(" + argumentPayloads[0] + ")";
+                else
+                    return collapseFunction(
+                        [](const std::vector<std::string>& args) {
+                            return "make_vec3(" + args[0] + "," + args[1] + "," + args[2] + ")";
+                        },
+                        argumentPayloads);
+            }
+            if (name == "color") {
+                return collapseFunction(
+                    [](const std::vector<std::string>& args) {
+                        return "make_vec4(" + args[0] + "," + args[1] + "," + args[2] + ", 1)";
+                    },
+                    argumentPayloads);
+            }
+            if (name == "select") {
+                if (argumentPayloads[1] == argumentPayloads[2])
+                    return argumentPayloads[1];
+                else
+                    return "select(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + ")";
+            }
         } else if (argumentPayloads.size() == 4) {
-            if (name == "vec4" || name == "color")
-                return "make_vec4(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + "," + argumentPayloads[3] + ")";
+            if (name == "vec4" || name == "color") {
+                if (argumentPayloads[0] == argumentPayloads[1] && argumentPayloads[1] == argumentPayloads[2] && argumentPayloads[2] == argumentPayloads[3])
+                    return "vec4_expand(" + argumentPayloads[0] + ")";
+                else
+                    return collapseFunction(
+                        [](const std::vector<std::string>& args) {
+                            return "make_vec4(" + args[0] + "," + args[1] + "," + args[2] + "," + args[3] + ")";
+                        },
+                        argumentPayloads);
+            }
         }
 
         // Must be a texture
