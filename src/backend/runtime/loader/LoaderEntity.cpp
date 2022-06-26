@@ -101,7 +101,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
         // Register name for lights to associate with
         uint32 materialID = 0;
-        if (ctx.Lights->isAreaLight(pair.first) > 0) {
+        if (ctx.Lights->isAreaLight(pair.first)) {
             ctx.Environment.EmissiveEntities.insert({ pair.first, Entity{ transform, pair.first, shapeName, bsdfName } });
 
             // It is a unique material

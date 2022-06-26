@@ -58,7 +58,7 @@ std::string ShaderUtils::generateMaterialShader(ShadingTree& tree, size_t mat_id
     const Material material = tree.context().Environment.Materials.at(mat_id);
     stream << LoaderBSDF::generate(material.BSDF, tree);
 
-    const bool isLight = material.hasEmission() && tree.context().Lights->isAreaLight(material.Entity) > 0;
+    const bool isLight = material.hasEmission() && tree.context().Lights->isAreaLight(material.Entity);
 
     if (material.hasMediumInterface())
         stream << "  let medium_interface = make_medium_interface(" << material.MediumInner << ", " << material.MediumOuter << ");" << std::endl;
@@ -66,7 +66,7 @@ std::string ShaderUtils::generateMaterialShader(ShadingTree& tree, size_t mat_id
         stream << "  let medium_interface = no_medium_interface();" << std::endl;
 
     if (isLight && requireLights) {
-        const uint32 light_id = tree.context().Lights->getAreaLightID(material.Entity);
+        const size_t light_id = tree.context().Lights->getAreaLightID(material.Entity);
         stream << "  let " << output_var << " : Shader = @|ray, hit, surf| make_emissive_material(" << mat_id << ", surf, bsdf_" << LoaderUtils::escapeIdentifier(material.BSDF) << "(ray, hit, surf), medium_interface,"
                << " @lights(" << light_id << "));" << std::endl
                << std::endl;

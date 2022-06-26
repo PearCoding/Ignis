@@ -343,7 +343,7 @@ static void light_directional(size_t id, std::ostream& stream, const std::string
 static float light_directional_power(const std::shared_ptr<Parser::Object>& light, const LoaderContext& ctx)
 {
     const float power = estimatePower(light->property("irradiance"), Vector3f::Ones());
-    return power * Pi * std::pow(ctx.Environment.SceneDiameter / 2, 2);
+    return power * Pi * ctx.Environment.SceneDiameter * ctx.Environment.SceneDiameter / 4;
 }
 
 static void light_spot(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
@@ -430,7 +430,7 @@ static float light_sky_power(const std::shared_ptr<Parser::Object>& light, const
 {
     // TODO: Better approximation?
     const float scale = estimatePower(light->property("scale"), Vector3f::Ones());
-    return scale * Pi * std::pow(ctx.Environment.SceneDiameter / 2, 2);
+    return scale * Pi * ctx.Environment.SceneDiameter * ctx.Environment.SceneDiameter / 4;
 }
 
 static void light_cie_env(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
@@ -462,7 +462,7 @@ static float light_cie_env_power(const std::shared_ptr<Parser::Object>& light, c
 {
     // TODO: Better approximation?
     const float zenith = estimatePower(light->property("zenith"), Vector3f::Ones());
-    return zenith * Pi * std::pow(ctx.Environment.SceneDiameter / 2, 2);
+    return zenith * Pi * ctx.Environment.SceneDiameter * ctx.Environment.SceneDiameter / 4;
 }
 
 inline float skylight_normalization_factor(float altitude, bool clear)
@@ -495,9 +495,9 @@ static void light_cie_sunny_env(size_t id, std::ostream& stream, const std::stri
     const float turbidity = light->property("turbidity").getNumber(2.45f);
 
     constexpr float SkyIllum = 203;
-    float zenithbrightness   = (1.376f * turbidity - 1.81) * std::tan(ea.Elevation) + 0.38f;
+    float zenithbrightness   = (1.376f * turbidity - 1.81f) * std::tan(ea.Elevation) + 0.38f;
     if (!clear)
-        zenithbrightness = (zenithbrightness + 8.6f * dir.y() + 0.123) / 2;
+        zenithbrightness = (zenithbrightness + 8.6f * dir.y() + 0.123f) / 2;
     zenithbrightness = std::max(0.0f, zenithbrightness * 1000 / SkyIllum);
 
     float factor = 0;
@@ -647,7 +647,7 @@ static float light_env_power(const std::shared_ptr<Parser::Object>& light, const
     // TODO: Better approximation?
     const float scale    = estimatePower(light->property("scale"), Vector3f::Ones());
     const float radiance = estimatePower(light->property("radiance"), Vector3f::Ones());
-    return scale * radiance * Pi * std::pow(ctx.Environment.SceneDiameter / 2, 2);
+    return scale * radiance * Pi * ctx.Environment.SceneDiameter * ctx.Environment.SceneDiameter / 4;
 }
 
 static void light_error(std::ostream& stream, const std::string& name)
