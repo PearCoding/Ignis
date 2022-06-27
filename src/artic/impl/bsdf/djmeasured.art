@@ -2,14 +2,14 @@ struct Warp {
     size : Vec2i,
     patch_size : Vec2,
     inv_patch_size : Vec2,
-    param_size : &[u32],
-    param_strides : &[u32],
-    param_values : &[f32],
     param_values_offset : i32,
-    data : &[f32],
-    marginal_cdf : &[f32],
-    conditional_cdf : &[f32],
-    array_sizes : &[u32]
+    param_size : fn(i32) -> u32,
+    param_strides : fn(i32) -> u32,
+    param_values : fn(i32) -> f32,
+    data : fn(i32) -> f32,
+    marginal_cdf : fn(i32) -> f32,
+    conditional_cdf : fn(i32) -> f32,
+    array_sizes : [i32 * 6]
 }
 
 struct BRDFData {
@@ -36,22 +36,6 @@ struct MeasuredBRDFSampleData {
     res : Vec3,
     out : Vec3,
     pdf : f32
-}
-
-fn @ make_warp() -> Warp {
-    Warp {
-        size = Vec2i {x= 0, y= 0},
-        patch_size = Vec2 {x= 0.0, y= 0.0},
-        inv_patch_size = Vec2 {x= 0.0, y= 0.0},
-        param_size = 0 as &[u32],
-        param_strides = 0 as &[u32],
-        param_values = 0 as &[f32],
-        param_values_offset = 0,
-        data = 0 as &[f32],
-        marginal_cdf = 0 as &[f32],
-        conditional_cdf = 0 as &[f32],
-        array_sizes = 0 as &[u32]
-    }
 }
 
 fn @ elevation(v : Vec3) -> f32 {
@@ -221,12 +205,12 @@ fn @ fetch_marginal_warp2D2(warp : Warp, offset : i32, idx : i32, param_weight :
 
 fn @ fetch_conditional_warp2D2(warp : Warp, offset : i32, idx : i32, slice_size : i32, sample : Vec2, param_weight : &[f32]) -> f32 {
     let v0 = lookup_warp(warp, 2, warp.conditional_cdf, offset + idx, slice_size, param_weight);
-    let v1 = lookup_warp(warp, 2, &warp.conditional_cdf(warp.size.x) as &[f32], offset + idx, slice_size, param_weight);
+    let v1 = lookup_warp(warp, 2, |i|warp.conditional_cdf(i+warp.size.x), offset + idx, slice_size, param_weight);
 
     (1.0 - sample.y) * v0 + sample.y * v1
 }
 
-fn @(?dim)lookup_warp(warp : Warp, dim: i32, data : &[f32], i0 : i32, size : i32, param_weight : &[f32]) -> f32 {
+fn @(?dim)lookup_warp(warp : Warp, dim: i32, data : fn(i32) -> f32, i0 : i32, size : i32, param_weight : &[f32]) -> f32 {
     if dim == 0 {
         /* print_pointer(data as &());
         print_float(data(i0)); */
@@ -265,9 +249,9 @@ fn @ eval_warp2D0(warp: Warp, pos : Vec2) -> f32 {
     index += slice_offset * size;
     
     let v00 = lookup_warp(warp, 0, warp.data, index, size, param_weight);
-    let v10 = lookup_warp(warp, 0, &warp.data(1) as &[f32], index, size, param_weight);
-    let v01 = lookup_warp(warp, 0, &warp.data(warp.size.x) as &[f32], index, size, param_weight);
-    let v11 = lookup_warp(warp, 0, &warp.data(warp.size.x + 1) as &[f32], index, size, param_weight);
+    let v10 = lookup_warp(warp, 0, |i|warp.data(i+1), index, size, param_weight);
+    let v01 = lookup_warp(warp, 0, |i|warp.data(i+warp.size.x), index, size, param_weight);
+    let v11 = lookup_warp(warp, 0, |i|warp.data(i+warp.size.x + 1), index, size, param_weight);
 
     let hprod = warp.inv_patch_size.x * warp.inv_patch_size.y;
     (w0.y * ((w0.x * v00) + (w1.x * v10)) + w1.y * ((w0.x * v01) + (w1.x * v11))) * hprod
@@ -319,9 +303,9 @@ fn @ eval_warp2D2(warp: Warp, pos : Vec2, phi_i : f32, theta_i : f32) -> f32 {
     index += slice_offset * size;
     
     let v00 = lookup_warp(warp, 2, warp.data, index, size, param_weight);
-    let v10 = lookup_warp(warp, 2, &warp.data(1) as &[f32], index, size, param_weight);
-    let v01 = lookup_warp(warp, 2, &warp.data(warp.size.x) as &[f32], index, size, param_weight);
-    let v11 = lookup_warp(warp, 2, &warp.data(warp.size.x + 1) as &[f32], index, size, param_weight);
+    let v10 = lookup_warp(warp, 2, |i|warp.data(i+1), index, size, param_weight);
+    let v01 = lookup_warp(warp, 2, |i|warp.data(i+warp.size.x), index, size, param_weight);
+    let v11 = lookup_warp(warp, 2, |i|warp.data(i+warp.size.x + 1), index, size, param_weight);
 
     let hprod = warp.inv_patch_size.x * warp.inv_patch_size.y;
     (w0.y * ((w0.x * v00) + (w1.x * v10)) + w1.y * ((w0.x * v01) + (w1.x * v11))) * hprod
@@ -374,9 +358,9 @@ fn @ eval_warp2D3(warp: Warp, pos : Vec2, phi_i : f32, theta_i : f32, channel : 
     index += slice_offset * size;
     
     let v00 = lookup_warp(warp, 3, warp.data, index, size, param_weight);
-    let v10 = lookup_warp(warp, 3, &warp.data(1) as &[f32], index, size, param_weight);
-    let v01 = lookup_warp(warp, 3, &warp.data(warp.size.x) as &[f32], index, size, param_weight);
-    let v11 = lookup_warp(warp, 3, &warp.data(warp.size.x + 1) as &[f32], index, size, param_weight);
+    let v10 = lookup_warp(warp, 3, |i|warp.data(i+1), index, size, param_weight);
+    let v01 = lookup_warp(warp, 3, |i|warp.data(i+warp.size.x), index, size, param_weight);
+    let v11 = lookup_warp(warp, 3, |i|warp.data(i+warp.size.x + 1), index, size, param_weight);
 
     let hprod = warp.inv_patch_size.x * warp.inv_patch_size.y;
     (w0.y * ((w0.x * v00) + (w1.x * v10)) + w1.y * ((w0.x * v01) + (w1.x * v11))) * hprod
@@ -429,9 +413,9 @@ fn @ invert_warp2D2(warp: Warp, sample : Vec2, phi_i : f32, theta_i : f32) -> In
     offset = offset + slice_offset * slice_size;
 
     let v00 = lookup_warp(warp, 2, warp.data, offset, slice_size, param_weight);
-    let v10 = lookup_warp(warp, 2, &warp.data(1) as &[f32], offset, slice_size, param_weight);
-    let v01 = lookup_warp(warp, 2, &warp.data(warp.size.x) as &[f32], offset, slice_size, param_weight);
-    let v11 = lookup_warp(warp, 2, &warp.data(warp.size.x + 1) as &[f32], offset, slice_size, param_weight);
+    let v10 = lookup_warp(warp, 2, |i|warp.data(i+1), offset, slice_size, param_weight);
+    let v01 = lookup_warp(warp, 2, |i|warp.data(i+warp.size.x), offset, slice_size, param_weight);
+    let v11 = lookup_warp(warp, 2, |i|warp.data(i+warp.size.x + 1), offset, slice_size, param_weight);
 
     let w1 = sample_n;
     let w0 = vec2_sub(make_vec2(1.0,1.0), w1);
@@ -443,7 +427,7 @@ fn @ invert_warp2D2(warp: Warp, sample : Vec2, phi_i : f32, theta_i : f32) -> In
     sample_n.x *= c0 + 0.5 * sample_n.x * (c1 - c0);
 
     let v0 = lookup_warp(warp, 2, warp.conditional_cdf, offset, slice_size, param_weight);
-    let v1 = lookup_warp(warp, 2, &warp.conditional_cdf(warp.size.x) as &[f32], offset, slice_size, param_weight);
+    let v1 = lookup_warp(warp, 2, |i|warp.conditional_cdf(i+warp.size.x), offset, slice_size, param_weight);
 
     sample_n.x += (1.0 - sample_n.y) * v0 + sample_n.y * v1;
 
@@ -539,9 +523,9 @@ fn @ sample_warp2D2(warp : Warp, sample : Vec2, phi_i : f32, theta_i : f32) -> S
     offset = offset + col;
 
     let v00 = lookup_warp(warp, 2, warp.data, offset, slice_size, &param_weight);
-    let v10 = lookup_warp(warp, 2, &warp.data(1) as &[f32] , offset, slice_size, &param_weight);
-    let v01 = lookup_warp(warp, 2, &warp.data(warp.size.x) as &[f32], offset, slice_size, &param_weight);
-    let v11 = lookup_warp(warp, 2, &warp.data(warp.size.x + 1) as &[f32], offset, slice_size, &param_weight);
+    let v10 = lookup_warp(warp, 2, |i| warp.data(i+1), offset, slice_size, &param_weight);
+    let v01 = lookup_warp(warp, 2, |i| warp.data(i+warp.size.x), offset, slice_size, &param_weight);
+    let v11 = lookup_warp(warp, 2, |i| warp.data(i+warp.size.x + 1), offset, slice_size, &param_weight);
 
     let c0 = fma((1.0 - n_sample.y), v00, n_sample.y * v01);
     let c1 = fma((1.0 - n_sample.y), v10, n_sample.y * v11);
@@ -718,6 +702,7 @@ fn @ sample_brdf(sampler: BRDFData, u : Vec2, incoming : Vec3) -> MeasuredBRDFSa
 
 fn @delinearize_warp(buffer : DeviceBuffer, start : i32) {
     let mut offset = 0;
+
     let sizes = [
         buffer.load_f32(start + offset + 0) as i32,
         buffer.load_f32(start + offset + 1) as i32,
@@ -725,8 +710,8 @@ fn @delinearize_warp(buffer : DeviceBuffer, start : i32) {
         buffer.load_f32(start + offset + 3) as i32,
         buffer.load_f32(start + offset + 4) as i32,
         buffer.load_f32(start + offset + 5) as i32,
-        ];
-    //warp.array_sizes = sizes;
+    ];
+
     offset += 6;
 
     let size = Vec2i{ 
@@ -741,53 +726,45 @@ fn @delinearize_warp(buffer : DeviceBuffer, start : i32) {
     let inv_patch_size = make_vec2(buffer.load_f32(start + offset), buffer.load_f32(start + offset + 1));
     offset += 2;
 
-    let param_values_offset = buffer.load_f32(start+offset) as i32;
+    let param_values_off = buffer.load_f32(start+offset) as i32;
     offset += 1;
 
-    // auto param_size = new unsigned int[warp.array_sizes[0]];
-    // for (int i = 0; i < warp.array_sizes[0]; i++) {param_size[i] = *reinterpret_cast<unsigned int*>(&data[offset + i]);}
-    // offset += warp.array_sizes[0];
-    // warp.param_size = param_size;
+    //let mut param_size = [0 * sizes(0)] as &[u32];
+    let param_size_offset = offset;
+    offset += sizes(0);
 
-    // auto param_strides = new unsigned int[warp.array_sizes[1]];
-    // for (int i = 0; i < warp.array_sizes[1]; i++) {param_strides[i] = *reinterpret_cast<unsigned int*>(&data[offset + i]);}
-    // offset += warp.array_sizes[1];
-    // warp.param_strides = param_strides;
+    //let mut param_strides = [0 * sizes(1)] as &[u32];
+    let param_strides_offset = offset;
+    offset += sizes(1);
 
-    // auto param_values = new float[warp.array_sizes[2]];
-    // for (int i = 0; i < warp.array_sizes[2]; i++) {param_values[i] = data[offset + i];}
-    // offset += warp.array_sizes[2];
-    // warp.param_values = param_values;
+    //let mut param_values = [0 * sizes(2)] as &[f32];
+    let param_values_offset = offset;
+    offset += sizes(2);
 
-    // auto w_data = new float[warp.array_sizes[3]];
-    // for (int i = 0; i < warp.array_sizes[3]; i++) {w_data[i] = data[offset + i];}
-    // offset += warp.array_sizes[3];
-    // warp.data = w_data;
+    //let mut data = [0 * sizes(3)] as &[f32];
+    let data_offset = offset;
+    offset += sizes(3);
 
-    // auto marginal_cdf = new float[warp.array_sizes[4]];
-    // for (int i = 0; i < warp.array_sizes[4]; i++) {marginal_cdf[i] = data[offset + i];}
-    // offset += warp.array_sizes[4];
-    // warp.marginal_cdf = marginal_cdf;
+    //let mut marginal_cdf = [0 * sizes(4)] as &[f32];
+    let marginal_cdf_offset = offset;
+    offset += sizes(4);
 
-    // auto conditional_cdf = new float[warp.array_sizes[5]];
-    // for (int i = 0; i < warp.array_sizes[5]; i++) {conditional_cdf[i] = data[offset + i];}
-    // offset += warp.array_sizes[5];
-    // warp.conditional_cdf = conditional_cdf;
-
-    // return warp;
+    //let mut conditional_cdf = [0 * sizes(5)] as &[f32];
+    let conditional_cdf_offset = offset;
+    offset += sizes(5);
 
     Warp {
         size = size,
         patch_size = patch_size,
         inv_patch_size = inv_patch_size,
-        param_values_offset = param_values_offset,
-        param_size = 0 as &[u32],
-        param_strides = 0 as &[u32],
-        param_values = 0 as &[f32],
-        data = 0 as &[f32],
-        marginal_cdf = 0 as &[f32],
-        conditional_cdf = 0 as &[f32],
-        array_sizes = 0 as &[u32]
+        param_values_offset = param_values_off,
+        param_size = |i| buffer.load_f32(start + param_size_offset + i) as u32,
+        param_strides = |i| buffer.load_f32(start + param_strides_offset + i) as u32,
+        param_values = |i| buffer.load_f32(start + param_values_offset + i),
+        data = |i| buffer.load_f32(start + data_offset + i),
+        marginal_cdf = |i| buffer.load_f32(start + marginal_cdf_offset + i),
+        conditional_cdf = |i| buffer.load_f32(start + param_size_offset + i),
+        array_sizes = sizes
     }
 }
 
