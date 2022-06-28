@@ -884,6 +884,8 @@ def _export_surface_attributes(ctx, node, output_name):
         return "P"
     elif output_name == "Normal":
         return "N"
+    elif output_name == "Backfacing":
+        return "select(frontside, 0, 1)"
     else:
         print(f"Given geometry attribute '{output_name}' not supported")
         return "N"

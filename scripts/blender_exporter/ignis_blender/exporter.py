@@ -2,7 +2,7 @@ import os
 import json
 
 from .light import export_light, export_background
-from .shape import export_shape, get_shape_name
+from .shape import export_shape, get_shape_name_base
 from .camera import export_camera
 from .bsdf import export_material, export_error_material, export_black_material, get_material_emission
 from .node import NodeContext
@@ -19,15 +19,12 @@ def export_technique(result):
     }
 
 
-def export_entity(result, inst, filepath, export_materials, export_lights, exported_materials):
+def export_entity(result, inst, filepath, shape_name, mat_i, export_materials, export_lights, exported_materials):
     if export_materials:
-        if(len(inst.object.material_slots) >= 1):
-            if(len(inst.object.material_slots) > 1):
-                print(
-                    f"Entity {inst.object.name} has multiple materials associated, but only one is supported. Using first entry")
-            mat_name = inst.object.material_slots[0].material.name
+        if(len(inst.object.material_slots) >= mat_i):
+            mat_name = inst.object.material_slots[mat_i].material.name
             emission = get_material_emission(NodeContext(
-                result, filepath), inst.object.material_slots[0].material)
+                result, filepath), inst.object.material_slots[mat_i].material)
         else:
             print(f"Entity {inst.object.name} has no material")
             mat_name = BSDF_BLACK_NAME
@@ -42,15 +39,16 @@ def export_entity(result, inst, filepath, export_materials, export_lights, expor
 
     # Export actual entity
     matrix = inst.matrix_world
+    entity_name = f"{inst.object.name}-{shape_name}"
     result["entities"].append(
-        {"name": inst.object.name, "shape": get_shape_name(inst.object),
+        {"name": entity_name, "shape": shape_name,
             "bsdf": mat_name, "transform": flat_matrix(matrix)}
     )
 
     # Export entity as area light if necessary
     if (emission is not None) and export_lights:
         result["lights"].append(
-            {"type": "area", "name": inst.object.name, "entity": inst.object.name,
+            {"type": "area", "name": entity_name, "entity": entity_name,
                 "radiance": emission}
         )
 
@@ -63,7 +61,7 @@ def export_all(filepath, result, depsgraph, use_selection, export_materials, exp
     result["textures"] = []
 
     # Export all given objects
-    exported_shapes = set()
+    exported_shapes = {}
     exported_materials = set()
 
     # Export default materials
@@ -93,13 +91,16 @@ def export_all(filepath, result, depsgraph, use_selection, export_materials, exp
 
         objType = object_eval.type
         if objType == "MESH" or objType == "CURVE" or objType == "SURFACE":
-            shape_name = get_shape_name(object_eval)
-            if shape_name not in exported_shapes:
-                export_shape(result, object_eval, depsgraph, filepath)
-                exported_shapes.add(shape_name)
+            name = get_shape_name_base(object_eval)
+            if name in exported_shapes:
+                shapes = exported_shapes[name]
+            else:
+                shapes = export_shape(result, object_eval, depsgraph, filepath)
+                exported_shapes[name] = shapes
 
-            export_entity(result, inst, filepath,
-                          export_materials, export_lights, exported_materials)
+            for shape in shapes:
+                export_entity(result, inst, filepath, shape[0], shape[1],
+                              export_materials, export_lights, exported_materials)
         elif objType == "LIGHT" and export_lights:
             export_light(
                 result, inst)
