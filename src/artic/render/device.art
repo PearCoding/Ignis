@@ -77,7 +77,7 @@ struct Device {
     load_image: fn (&[u8] /* Filename */) -> Image,
 
     // Load (binary) RGBA image from a file, with hint that the given image is fully opaque
-    load_packed_image: fn (&[u8] /* Filename */, bool) -> Image,
+    load_packed_image: fn (&[u8] /* Filename */, bool, bool) -> Image,
 
     // Load aov given by its id and the current spi
     load_aov_image: fn (i32 /* id */, i32 /* spi */) -> AOVImage,

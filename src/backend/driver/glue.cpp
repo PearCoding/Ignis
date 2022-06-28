@@ -589,7 +589,7 @@ public:
         }
     }
 
-    inline const DevicePackedImage& loadPackedImage(int32_t dev, const std::string& filename)
+    inline const DevicePackedImage& loadPackedImage(int32_t dev, const std::string& filename, bool linear)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
 
@@ -602,7 +602,7 @@ public:
         try {
             std::vector<uint32_t> packed;
             size_t width, height;
-            IG::Image::loadAsPacked(filename, packed, width, height);
+            IG::Image::loadAsPacked(filename, packed, width, height, linear);
 
             auto& res = getCurrentShaderInfo(dev).packed_images[filename];
             res.counter++;
@@ -1418,9 +1418,9 @@ IG_EXPORT void ignis_load_image(int32_t dev, const char* file, float** pixels, i
     *height   = (int)std::get<2>(img);
 }
 
-IG_EXPORT void ignis_load_packed_image(int32_t dev, const char* file, uint32_t** pixels, int32_t* width, int32_t* height)
+IG_EXPORT void ignis_load_packed_image(int32_t dev, const char* file, uint32_t** pixels, int32_t* width, int32_t* height, bool linear)
 {
-    auto& img = sInterface->loadPackedImage(dev, file);
+    auto& img = sInterface->loadPackedImage(dev, file, linear);
     *pixels   = const_cast<uint32_t*>(std::get<0>(img).data());
     *width    = (int)std::get<1>(img);
     *height   = (int)std::get<2>(img);

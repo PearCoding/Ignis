@@ -356,7 +356,7 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
     return img;
 }
 
-void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint32>& dst, size_t& width, size_t& height)
+void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint32>& dst, size_t& width, size_t& height, bool linear)
 {
     std::string ext   = path.extension().generic_u8string();
     const bool useExr = ends_with(ext, ".exr");
@@ -379,14 +379,23 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint32>&
 
     dst.resize(width * height);
 
-    // Pack data and map to linear space
-    tbb::parallel_for(
-        tbb::blocked_range<size_t>(0, width * height),
-        [&](tbb::blocked_range<size_t> r) {
-            for (size_t i = r.begin(); i < r.end(); ++i) {
-                dst[i] = pack(byte_color_to_linear(data[i * 4 + 0]), byte_color_to_linear(data[i * 4 + 1]), byte_color_to_linear(data[i * 4 + 2]), data[i * 4 + 3]);
-            }
-        });
+    if (linear) {
+        // Pack data
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, width * height),
+            [&](tbb::blocked_range<size_t> r) {
+                for (size_t i = r.begin(); i < r.end(); ++i)
+                    dst[i] = pack(data[i * 4 + 0], data[i * 4 + 1], data[i * 4 + 2], data[i * 4 + 3]);
+            });
+    } else {
+        // Pack data and map to linear space
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, width * height),
+            [&](tbb::blocked_range<size_t> r) {
+                for (size_t i = r.begin(); i < r.end(); ++i)
+                    dst[i] = pack(byte_color_to_linear(data[i * 4 + 0]), byte_color_to_linear(data[i * 4 + 1]), byte_color_to_linear(data[i * 4 + 2]), data[i * 4 + 3]);
+            });
+    }
 
     stbi_image_free(data);
 }

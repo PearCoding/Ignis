@@ -41,6 +41,10 @@ Image texture (:monosp:`image`)
    - |transform|
    - Identity
    - Optional 2d transformation applied to texture coordinates.
+ * - linear
+   - |bool|
+   - false
+   - The given image file is already in linear space and inverse gamma mapping can be skipped. Ignored for EXR and HDR images as it is expected that they are always in linear space.
 
 .. subfigstart::
 

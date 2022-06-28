@@ -883,11 +883,11 @@ fn @make_gpu_device( dev_id: i32
                            else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) }
                          , width, height)
     },
-    load_packed_image = @ |filename, hint_opaque| {
+    load_packed_image = @ |filename, hint_opaque, is_linear| {
         let mut pixel_data : &[u32];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_packed_image(dev_id, filename, &mut pixel_data, &mut width, &mut height);
+        ignis_load_packed_image(dev_id, filename, &mut pixel_data, &mut width, &mut height, is_linear);
 
         let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
         let q = pixel_data as &addrspace(1)[i32];

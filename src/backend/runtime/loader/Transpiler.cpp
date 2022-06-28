@@ -237,7 +237,7 @@ inline static MapFunction2 genMapFunction2(const char* func, PExprType type)
     case PExprType::Number:
         return [=](const std::string& a, const std::string& b) { return collapseFunction(
                                                                      [func](const std::vector<std::string>& args) {
-                                                                         return std::string(func) + "(" + args[0] + ", " + args[0] + ")";
+                                                                         return std::string(func) + "(" + args[0] + ", " + args[1] + ")";
                                                                      },
                                                                      std::vector<std::string>{ a, b }); };
     case PExprType::Vec2:

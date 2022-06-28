@@ -54,6 +54,24 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
+    enable_background: BoolProperty(
+        name="Export Background",
+        description="If true, background will be exported as a light.",
+        default=True,
+    )
+
+    enable_camera: BoolProperty(
+        name="Export Camera",
+        description="If true, active camera will be exported.",
+        default=True,
+    )
+
+    enable_technique: BoolProperty(
+        name="Export Technique",
+        description="If true, current integration technique will be mapped to Ignis.",
+        default=True,
+    )
+
     check_extension = True
 
     def execute(self, context):
@@ -114,10 +132,14 @@ class IGNIS_PT_export_include(bpy.types.Panel):
         col.prop(operator, 'use_selection')
 
         layout.separator()
-        
-        layout.prop(operator, 'animations')
-        layout.prop(operator, 'export_materials')
-        layout.prop(operator, 'export_lights')
+
+        col = layout.column(heading="Export")
+        col.prop(operator, 'animations', text="Animations")
+        col.prop(operator, 'export_materials', text="Materials")
+        col.prop(operator, 'export_lights', text="Lights")
+        col.prop(operator, 'enable_background', text="Background")
+        col.prop(operator, 'enable_camera', text="Camera")
+        col.prop(operator, 'enable_technique', text="Technique")
 
 
 def menu_func_export(self, context):

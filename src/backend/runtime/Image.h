@@ -67,7 +67,7 @@ struct Image {
     /// Loads image and directly uploads to buffer in packed format
     /// Supports PNG, JPEG and many other formats supported by the stbi library
     /// Will not load EXR or HDR files, as they are not given in packed format
-    static void loadAsPacked(const std::filesystem::path& path, std::vector<uint32>& dst, size_t& width, size_t& height);
+    static void loadAsPacked(const std::filesystem::path& path, std::vector<uint32>& dst, size_t& width, size_t& height, bool linear);
 
     /// Save a image in linear RGBA in EXR format
     /// No other format is supported, except EXR. The file should end with .exr

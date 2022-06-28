@@ -144,7 +144,6 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
         break;
     case Parser::PT_INTEGER:
     case Parser::PT_NUMBER:
-        IG_LOG(L_WARNING) << "Parameter '" << name << "' expects texture but only a number was given" << std::endl;
         inline_str = "make_constant_texture(make_gray_color(" + std::to_string(prop.getNumber()) + "))";
         break;
     case Parser::PT_VECTOR3: {

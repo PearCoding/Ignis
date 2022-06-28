@@ -671,13 +671,23 @@ def _export_image_texture(ctx, node):
     else:
         filter_type = "bilinear"
 
+    cs = node.image.colorspace_settings.name
+    if cs == "Linear" or cs == "Non-Color" or cs == "Raw":
+        linear = True
+    elif cs == "sRGB":
+        linear = False
+    else:
+        print(f"Not supported image color space {cs}")
+        linear = False
+
     ctx.result["textures"].append(
         {
             "type": "image",
             "name": tex_name,
             "filename": "Meshes/Textures/"+img_name,
             "wrap_mode": wrap_mode,
-            "filter_type": filter_type
+            "filter_type": filter_type,
+            "linear": linear
         }
     )
 

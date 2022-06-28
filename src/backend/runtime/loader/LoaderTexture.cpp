@@ -16,6 +16,7 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
     const std::string filter_type = tex.property("filter_type").getString("bilinear");
     const Transformf transform    = tex.property("transform").getTransform();
     const bool force_unpacked     = tex.property("force_unpacked").getBool(false); // Force the use of unpacked (float) images
+    const bool linear             = tex.property("linear").getBool(false); // Hint that the image is already in linear. Only important if image type is not EXR or HDR, as they are always given in linear
 
     std::string filter = "make_bilinear_filter()";
     if (filter_type == "nearest")
@@ -43,7 +44,7 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
     }
 
     if (!force_unpacked && Image::isPacked(filename))
-        stream << "  let img_" << LoaderUtils::escapeIdentifier(name) << " = device.load_packed_image(\"" << filename << "\", " << (Image::hasAlphaChannel(filename) ? "false" : "true") << ");" << std::endl;
+        stream << "  let img_" << LoaderUtils::escapeIdentifier(name) << " = device.load_packed_image(\"" << filename << "\", " << (Image::hasAlphaChannel(filename) ? "false" : "true") << ", " << (linear ? "false" : "true") << ");" << std::endl;
     else
         stream << "  let img_" << LoaderUtils::escapeIdentifier(name) << " = device.load_image(\"" << filename << "\");" << std::endl;
 

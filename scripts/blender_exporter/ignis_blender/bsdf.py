@@ -1,4 +1,5 @@
 import bpy
+import math
 
 from .node import export_node
 from .utils import *
@@ -100,7 +101,11 @@ def _export_glossy_bsdf(ctx, bsdf, export_name):
 
 
 def _map_specular_to_ior(specular):
-    return f"((1 + sqrt(0.08*{specular})) / max(0.001, 1 - sqrt(0.08*{specular})))"
+    value = try_extract_node_value(specular, default=None)
+    if not value:
+        return f"((1 + sqrt(0.08*{specular})) / max(0.001, 1 - sqrt(0.08*{specular})))"
+    else:  # Compute actual value to simplify code generation
+        return (1 + math.sqrt(0.08*value)) / max(0.001, 1 - math.sqrt(0.08*value))
 
 
 def _export_principled_bsdf(ctx, bsdf, export_name):
