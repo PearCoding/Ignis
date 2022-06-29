@@ -7,7 +7,7 @@
 namespace IG {
 ShadingTree::ShadingTree(LoaderContext& ctx)
     : mContext(ctx)
-    , mTranspiler(ctx)
+    , mTranspiler(*this)
 {
     beginClosure();
 }
@@ -213,7 +213,7 @@ void ShadingTree::registerTextureUsage(const std::string& name)
         const auto tex = mContext.Scene.texture(name);
         if (!tex) {
             IG_LOG(L_ERROR) << "Unknown texture '" << name << "'" << std::endl;
-            mHeaderLines.push_back("tex_" + LoaderUtils::escapeIdentifier(name) + " = make_invalid_texture();");
+            mHeaderLines.push_back("tex_" + generateUniqueID(name) + " = make_invalid_texture();");
         } else {
             const std::string res = LoaderTexture::generate(name, *tex, *this);
             if (res.empty()) // Due to some error this might happen
@@ -257,5 +257,16 @@ std::string ShadingTree::handleTexture(const std::string& prop_name, const std::
             }
         }
     }
+}
+
+std::string ShadingTree::generateUniqueID(const std::string& name)
+{
+    auto it = mIDMap.find(name);
+    if (it != mIDMap.end())
+        return std::to_string(it->second);
+
+    size_t id    = mIDMap.size();
+    mIDMap[name] = id;
+    return std::to_string(id);
 }
 } // namespace IG

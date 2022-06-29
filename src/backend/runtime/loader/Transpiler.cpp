@@ -1,7 +1,7 @@
 #include "Transpiler.h"
-#include "LoaderContext.h"
 #include "LoaderUtils.h"
 #include "Logger.h"
+#include "ShadingTree.h"
 
 #include "PExpr.h"
 
@@ -12,11 +12,11 @@ using PExprType = PExpr::ElementaryType;
 
 inline std::string tex_name(const std::string& name)
 {
-    return "tex_" + LoaderUtils::escapeIdentifier(name);
+    return "tex_" + name;
 }
 inline std::string var_name(const std::string& name)
 {
-    return "var_tex_" + LoaderUtils::escapeIdentifier(name);
+    return "var_tex_" + name;
 }
 
 // We assume function state and return value to depend only on the parameters!
@@ -517,14 +517,14 @@ inline std::string typeConstant(float f, PExprType arithType)
 
 class ArticVisitor : public PExpr::TranspileVisitor<std::string> {
 private:
-    const LoaderContext& mContext;
+    ShadingTree& mTree;
     const std::string mUVAccess;
     const bool mHasSurfaceInfo;
     std::unordered_set<std::string> mUsedTextures;
 
 public:
-    inline explicit ArticVisitor(const LoaderContext& ctx, const std::string& uv_access, bool hasSurfaceInfo)
-        : mContext(ctx)
+    inline explicit ArticVisitor(ShadingTree& tree, const std::string& uv_access, bool hasSurfaceInfo)
+        : mTree(tree)
         , mUVAccess(uv_access)
         , mHasSurfaceInfo(hasSurfaceInfo)
     {
@@ -556,14 +556,14 @@ public:
         if (var != sInternalVariables.end())
             return var->second.access();
 
-        if (expectedType == PExprType::Vec4 && mContext.Scene.texture(name) != nullptr) {
+        if (expectedType == PExprType::Vec4 && mTree.context().Scene.texture(name) != nullptr) {
             mUsedTextures.insert(name);
-            return "color_to_vec4(" + tex_name(name) + "(" + mUVAccess + "))";
+            return "color_to_vec4(" + tex_name(mTree.generateUniqueID(name)) + "(" + mUVAccess + "))";
         } else {
             if (expectedType == PExprType::Vec4)
-                return "color_to_vec4(" + var_name(name) + ")";
+                return "color_to_vec4(" + var_name(mTree.generateUniqueID(name)) + ")";
             else
-                return var_name(name);
+                return var_name(mTree.generateUniqueID(name));
         }
     }
 
@@ -853,9 +853,9 @@ public:
         }
 
         // Must be a texture
-        IG_ASSERT(mContext.Scene.texture(name) != nullptr, "Expected a valid texture name");
+        IG_ASSERT(mTree.context().Scene.texture(name) != nullptr, "Expected a valid texture name");
         mUsedTextures.insert(name);
-        return "color_to_vec4(" + tex_name(name) + "(" + (argumentPayloads.empty() ? mUVAccess : argumentPayloads[0]) + "))";
+        return "color_to_vec4(" + tex_name(mTree.generateUniqueID(name)) + "(" + (argumentPayloads.empty() ? mUVAccess : argumentPayloads[0]) + "))";
     }
 
     /// a.xyz Access operator for vector types
@@ -938,7 +938,7 @@ public:
             return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
 
         // Check for textures/nodes to the variable table
-        if (Parent->mContext.Scene.texture(lkp.name()))
+        if (Parent->mTree.context().Scene.texture(lkp.name()))
             return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
 
         return {};
@@ -1110,15 +1110,15 @@ public:
         }
 
         // Add all texture/nodes to the function table as well, such that the uv can be changed directly
-        if (Parent->mContext.Scene.texture(lkp.name()) && lkp.matchParameter({ PExprType::Vec2 }))
+        if (Parent->mTree.context().Scene.texture(lkp.name()) && lkp.matchParameter({ PExprType::Vec2 }))
             return PExpr::FunctionDef(lkp.name(), PExprType::Vec4, { PExprType::Vec2 });
 
         return {};
     }
 };
 
-Transpiler::Transpiler(const LoaderContext& ctx)
-    : mContext(ctx)
+Transpiler::Transpiler(ShadingTree& tree)
+    : mTree(tree)
     , mInternal(std::make_unique<TranspilerInternal>(this))
 {
 }
@@ -1135,7 +1135,7 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr,
         return {};
 
     // Transpile
-    ArticVisitor visitor(mContext, uv_access, hasSurfaceInfo);
+    ArticVisitor visitor(mTree, uv_access, hasSurfaceInfo);
     std::string res = mInternal->Environment.transpile(ast, &visitor);
 
     // Patch output

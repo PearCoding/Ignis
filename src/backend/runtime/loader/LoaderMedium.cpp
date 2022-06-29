@@ -14,8 +14,9 @@ static void medium_homogeneous(std::ostream& stream, const std::string& name, co
     tree.addColor("sigma_s", *medium, Vector3f::Zero(), true, ShadingTree::IM_Bare);
     tree.addNumber("g", *medium, 0, true, ShadingTree::IM_Bare);
 
+    const std::string media_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
-           << "  let medium_" << LoaderUtils::escapeIdentifier(name) << " = make_homogeneous_medium(" << tree.getInline("sigma_a")
+           << "  let medium_" << media_id << " = make_homogeneous_medium(" << tree.getInline("sigma_a")
            << ", " << tree.getInline("sigma_s")
            << ", make_henyeygreenstein_phase(" << tree.getInline("g") << "));" << std::endl;
 
@@ -27,8 +28,9 @@ static void medium_vacuum(std::ostream& stream, const std::string& name, const s
 {
     tree.beginClosure();
 
+    const std::string media_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
-           << "  let medium_" << LoaderUtils::escapeIdentifier(name) << " = make_vacuum_medium();" << std::endl;
+           << "  let medium_" << media_id << " = make_vacuum_medium();" << std::endl;
 
     tree.endClosure();
 }
@@ -73,8 +75,9 @@ std::string LoaderMedium::generate(ShadingTree& tree)
 
     size_t counter2 = 0;
     for (const auto& pair : tree.context().Scene.media()) {
-        const auto medium = pair.second;
-        stream << "      " << counter2 << " => medium_" << LoaderUtils::escapeIdentifier(pair.first)
+        const auto medium          = pair.second;
+        const std::string media_id = tree.generateUniqueID(pair.first);
+        stream << "      " << counter2 << " => medium_" << media_id
                << "," << std::endl;
         ++counter2;
     }

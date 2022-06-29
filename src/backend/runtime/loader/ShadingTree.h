@@ -35,6 +35,8 @@ public:
     void addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, InlineMode mode = IM_Surface);
     void addTexture(const std::string& name, const Parser::Object& obj, bool hasDef = true);
 
+    std::string generateUniqueID(const std::string& name);
+
     void registerTextureUsage(const std::string& name);
     std::string pullHeader();
     std::string getInline(const std::string& name);
@@ -59,9 +61,9 @@ private:
     std::unordered_set<std::string> mLoadedTextures;
     std::unordered_set<std::string> mPureTextures;
 
-
     std::vector<Closure> mClosures;
 
     Transpiler mTranspiler;
+    std::unordered_map<std::string, size_t> mIDMap; // Used to anonymize names for better caching
 };
 } // namespace IG

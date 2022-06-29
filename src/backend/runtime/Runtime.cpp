@@ -225,6 +225,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     mTechniqueInfo            = result.TechniqueInfo;
     mInitialCameraOrientation = result.CameraOrientation;
     mTechniqueVariants        = std::move(result.TechniqueVariants);
+    mResourceMap              = std::move(result.ResourceMap);
 
     return setup();
 }
@@ -382,6 +383,16 @@ bool Runtime::setup()
 
     IG_LOG(L_DEBUG) << "Init driver" << std::endl;
     mLoadedInterface.SetupFunction(settings);
+
+    if (IG_LOGGER.verbosity() <= L_DEBUG) {
+        if (mResourceMap.empty()) {
+            IG_LOG(L_DEBUG) << "Registered resources: None" << std::endl;
+        } else {
+            IG_LOG(L_DEBUG) << "Registered resources:" << std::endl;
+            for (const auto& resource : mResourceMap)
+                IG_LOG(L_DEBUG) << " -> " << resource << std::endl;
+        }
+    }
 
     if (!compileShaders())
         return false;

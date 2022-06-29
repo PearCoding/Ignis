@@ -4,11 +4,12 @@
 #include <unordered_set>
 
 namespace IG {
-struct LoaderContext;
+class ShadingTree;
 class Transpiler {
     friend class TranspilerInternal;
+
 public:
-    explicit Transpiler(const LoaderContext& ctx);
+    explicit Transpiler(ShadingTree& tree);
     ~Transpiler();
 
     struct Result {
@@ -17,10 +18,10 @@ public:
         bool ScalarOutput; // Else it is a color
     };
 
-    /// Transpile the given expression to artic code. 
+    /// Transpile the given expression to artic code.
     std::optional<Result> transpile(const std::string& expr, const std::string& uv_access, bool hasSurfaceInfo) const;
 
-    inline const LoaderContext& context() const { return mContext; }
+    inline const ShadingTree& tree() const { return mTree; }
 
     inline void registerCustomVariableBool(const std::string& name) { mCustomVariableBool.insert(name); }
     inline void registerCustomVariableNumber(const std::string& name) { mCustomVariableNumber.insert(name); }
@@ -28,7 +29,7 @@ public:
     inline void registerCustomVariableColor(const std::string& name) { mCustomVariableColor.insert(name); }
 
 private:
-    const LoaderContext& mContext;
+    ShadingTree& mTree;
     std::unordered_set<std::string> mCustomVariableBool;
     std::unordered_set<std::string> mCustomVariableNumber;
     std::unordered_set<std::string> mCustomVariableVector;
