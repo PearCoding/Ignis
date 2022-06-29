@@ -921,7 +921,11 @@ fn @make_gpu_device( dev_id: i32
         ignis_request_buffer(dev_id, "__dbg_output", &mut ptr, size * sizeof[i32]() as i32, 0);
         let buffer = make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm);
         make_debug_output(buffer)
-    }
+    },
+    get_local_parameter_i32   = @|name, def| registry::get_local_parameter_i32(  dev_id, name, def),
+    get_local_parameter_f32   = @|name, def| registry::get_local_parameter_f32(  dev_id, name, def),
+    get_local_parameter_vec3  = @|name, def| registry::get_local_parameter_vec3( dev_id, name, def),
+    get_local_parameter_color = @|name, def| registry::get_local_parameter_color(dev_id, name, def)
 };
 
 fn @make_nvvm_device(dev: i32) -> Device {

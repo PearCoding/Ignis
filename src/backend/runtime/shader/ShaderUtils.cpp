@@ -102,7 +102,7 @@ std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
     if (ctx.SamplesPerIteration == 1) // Hardcode this case as some optimizations might apply
         stream << ctx.SamplesPerIteration << " : i32";
     else // Fallback to dynamic spi
-        stream << "registry::get_parameter_i32(\"__spi\", 1)";
+        stream << "registry::get_global_parameter_i32(\"__spi\", 1)";
 
     // We do not hardcode the spi as default to prevent recompilations if spi != 1
     return stream.str();

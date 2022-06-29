@@ -14,6 +14,8 @@ set(SRC
     Runtime.h
     RuntimeInfo.cpp
     RuntimeInfo.h
+    SHA256.cpp
+    SHA256.h
     SharedLibrary.cpp
     SharedLibrary.h
     Statistics.cpp

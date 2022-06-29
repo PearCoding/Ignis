@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IG_Config.h"
+#include "RuntimeStructs.h"
 
 namespace IG {
 enum class CallbackType {
@@ -10,13 +10,19 @@ enum class CallbackType {
 };
 
 template <typename T>
+struct ShaderOutput {
+    T Exec;
+    ParameterSet LocalRegistry;
+};
+
+template <typename T>
 struct TechniqueVariantBase {
-    T RayGenerationShader;
-    T MissShader;
-    std::vector<T> HitShaders;
-    std::vector<T> AdvancedShadowHitShaders;
-    std::vector<T> AdvancedShadowMissShaders;
-    std::array<T, (size_t)CallbackType::_COUNT> CallbackShaders{};
+    ShaderOutput<T> RayGenerationShader;
+    ShaderOutput<T> MissShader;
+    std::vector<ShaderOutput<T>> HitShaders;
+    std::vector<ShaderOutput<T>> AdvancedShadowHitShaders;
+    std::vector<ShaderOutput<T>> AdvancedShadowMissShaders;
+    std::array<ShaderOutput<T>, (size_t)CallbackType::_COUNT> CallbackShaders{};
 };
 
 using TechniqueVariant          = TechniqueVariantBase<std::string>;

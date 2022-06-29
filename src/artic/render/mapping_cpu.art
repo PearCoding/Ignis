@@ -861,7 +861,11 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             let buffer = make_cpu_buffer(ptr, size);
             make_debug_output(buffer)
         }
-    }
+    },
+    get_local_parameter_i32   = @|name, def| registry::get_local_parameter_i32(  0, name, def),
+    get_local_parameter_f32   = @|name, def| registry::get_local_parameter_f32(  0, name, def),
+    get_local_parameter_vec3  = @|name, def| registry::get_local_parameter_vec3( 0, name, def),
+    get_local_parameter_color = @|name, def| registry::get_local_parameter_color(0, name, def)
 };
 
 fn @make_avx512_device()             = make_cpu_device( true,  true, make_cpu_int_min_max(),16, 0, 32); // Not tested

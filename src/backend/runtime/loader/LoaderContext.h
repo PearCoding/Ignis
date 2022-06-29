@@ -32,6 +32,12 @@ struct LoaderContext {
     size_t CurrentTechniqueVariant;
     inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return TechniqueInfo.Variants[CurrentTechniqueVariant]; }
 
+    ParameterSet LocalRegistry; // Current local registry for given shader
+    inline void resetRegistry()
+    {
+        LocalRegistry = ParameterSet();
+    }
+
     std::unordered_map<std::string, std::any> ExportedData; // Cache with already exported data and auxillary info
 
     LoaderEnvironment Environment;
@@ -44,6 +50,18 @@ struct LoaderContext {
     size_t FilmHeight = 600;
 
     std::filesystem::path handlePath(const std::filesystem::path& path, const Parser::Object& obj) const;
+
+    std::unordered_map<std::string, size_t> RegisteredResources;
+    inline size_t registerExternalResource(const std::filesystem::path& path)
+    {
+        // TODO: Ensure canonical paths?
+        auto it = RegisteredResources.find(path.generic_u8string());
+        if (it != RegisteredResources.end())
+            return it->second;
+        const size_t id = RegisteredResources.size();
+
+        return RegisteredResources[path] = id;
+    }
 
     bool HasError = false;
 
