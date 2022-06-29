@@ -21,6 +21,7 @@ struct DriverSetupSettings {
     IG::SceneDatabase* database = nullptr;
     bool acquire_stats          = false;
     size_t aov_count            = false;
+    const std::vector<std::string>* resource_map = nullptr;
 
     IG::Logger* logger = nullptr;
 };

@@ -827,11 +827,27 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         make_image_rgba32(@ |x, y| cpu_load_vec4(pixel_data, y * width + x),
                           width, height)
     },
+    load_image_by_id = @ |id| {
+        let mut pixel_data : &[f32];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_image_by_id(0, id, &mut pixel_data, &mut width, &mut height);
+        make_image_rgba32(@ |x, y| cpu_load_vec4(pixel_data, y * width + x),
+                          width, height)
+    },
     load_packed_image = @ |filename, hint_opaque, is_linear| {
         let mut pixel_data : &[u32];
         let mut width      : i32;
         let mut height     : i32;
         ignis_load_packed_image(0, filename, &mut pixel_data, &mut width, &mut height, is_linear);
+        make_image_rgba32(@ |x, y| image_rgba_unpack(pixel_data(y * width + x), hint_opaque),
+                          width, height)
+    },
+    load_packed_image_by_id = @ |id, hint_opaque, is_linear| {
+        let mut pixel_data : &[u32];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_packed_image_by_id(0, id, &mut pixel_data, &mut width, &mut height, is_linear);
         make_image_rgba32(@ |x, y| image_rgba_unpack(pixel_data(y * width + x), hint_opaque),
                           width, height)
     },
@@ -841,8 +857,10 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         ignis_load_rays(0, &mut rays);
         rays
     },
-    load_host_buffer = load_cpu_buffer,
-    load_buffer = load_cpu_buffer,
+    load_host_buffer       = load_cpu_buffer,
+    load_host_buffer_by_id = load_cpu_buffer_by_id,
+    load_buffer       = load_cpu_buffer,
+    load_buffer_by_id = load_cpu_buffer_by_id,
     request_buffer = @ |name, size, flags| {
         let mut ptr : &[u8];
         ignis_request_buffer(0, name, &mut ptr, size * sizeof[i32]() as i32, flags);

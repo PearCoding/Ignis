@@ -376,6 +376,7 @@ bool Runtime::setup()
     settings.framebuffer_height = (uint32)mFilmHeight;
     settings.acquire_stats      = mAcquireStats;
     settings.aov_count          = mTechniqueInfo.EnabledAOVs.size();
+    settings.resource_map       = &mResourceMap;
 
     settings.logger = &IG_LOGGER;
 

@@ -73,19 +73,27 @@ struct Device {
     load_rays: fn () -> &[StreamRay],
 
     //------------------------------------- Resources
-    // Load RGBA image from a file
+    // Load (float) RGBA image from a file
     load_image: fn (&[u8] /* Filename */) -> Image,
+    // Load (float) RGBA image from a preregistered resource 
+    load_image_by_id: fn (i32 /* Resource id */) -> Image,
 
     // Load (binary) RGBA image from a file, with hint that the given image is fully opaque
     load_packed_image: fn (&[u8] /* Filename */, bool, bool) -> Image,
+    // Load (binary) RGBA image from a preregistered resource, with hint that the given image is fully opaque
+    load_packed_image_by_id: fn (i32 /* Resource id */, bool, bool) -> Image,
 
     // Load aov given by its id and the current spi
     load_aov_image: fn (i32 /* id */, i32 /* spi */) -> AOVImage,
 
     // Load buffer from a file and make it accessible for the host only
     load_host_buffer: fn (&[u8] /* Filename */) -> DeviceBuffer,
+    // Load buffer from a preregistered resource and make it accessible for the host only
+    load_host_buffer_by_id: fn (i32 /* Resource id */) -> DeviceBuffer,
     // Load buffer from a file and make it accessible for the device only
     load_buffer: fn (&[u8] /* Filename */) -> DeviceBuffer,
+    // Load buffer from a preregistered resource and make it accessible for the device only
+    load_buffer_by_id: fn (i32 /* Resource id */) -> DeviceBuffer,
 
     // Request a buffer given by the string identifier with a minimum size and accessible by the device only
     // Keep in mind that size is given in units of i32. This means the actual byte size is size * 4 on most machines

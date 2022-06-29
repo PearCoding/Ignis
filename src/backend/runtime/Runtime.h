@@ -160,6 +160,8 @@ private:
     std::string mTechniqueName;
     TechniqueInfo mTechniqueInfo;
 
+    std::vector<std::string> mResourceMap;
+
     std::vector<TechniqueVariant> mTechniqueVariants;
     std::vector<TechniqueVariantShaderSet> mTechniqueVariantShaderSets; // Compiled shaders
 };

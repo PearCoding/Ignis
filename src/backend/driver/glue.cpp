@@ -214,6 +214,11 @@ public:
 
     inline ~Interface() = default;
 
+    inline const std::string& lookupResource(int32_t id) const
+    {
+        return setup.resource_map->at(id);
+    }
+
     inline void setupFramebuffer()
     {
         host_pixels = anydsl::Array<float>(film_width * film_height * 3);
@@ -1438,6 +1443,11 @@ IG_EXPORT void ignis_load_image(int32_t dev, const char* file, float** pixels, i
     *height   = (int)std::get<2>(img);
 }
 
+IG_EXPORT void ignis_load_image_by_id(int32_t dev, int32_t id, float** pixels, int32_t* width, int32_t* height)
+{
+    return ignis_load_image(dev, sInterface->lookupResource(id).c_str(), pixels, width, height);
+}
+
 IG_EXPORT void ignis_load_packed_image(int32_t dev, const char* file, uint32_t** pixels, int32_t* width, int32_t* height, bool linear)
 {
     auto& img = sInterface->loadPackedImage(dev, file, linear);
@@ -1446,11 +1456,21 @@ IG_EXPORT void ignis_load_packed_image(int32_t dev, const char* file, uint32_t**
     *height   = (int)std::get<2>(img);
 }
 
+IG_EXPORT void ignis_load_packed_image_by_id(int32_t dev, int32_t id, uint32_t** pixels, int32_t* width, int32_t* height, bool linear)
+{
+    return ignis_load_packed_image(dev, sInterface->lookupResource(id).c_str(), pixels, width, height, linear);
+}
+
 IG_EXPORT void ignis_load_buffer(int32_t dev, const char* file, uint8_t** data, int32_t* size)
 {
     auto& img = sInterface->loadBuffer(dev, file);
     *data     = const_cast<uint8_t*>(std::get<0>(img).data());
     *size     = (int)std::get<1>(img);
+}
+
+IG_EXPORT void ignis_load_buffer_by_id(int32_t dev, int32_t id, uint8_t** data, int32_t* size)
+{
+    return ignis_load_buffer(dev, sInterface->lookupResource(id).c_str(), data, size);
 }
 
 IG_EXPORT void ignis_request_buffer(int32_t dev, const char* name, uint8_t** data, int size, int flags)

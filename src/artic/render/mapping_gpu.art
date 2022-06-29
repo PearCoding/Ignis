@@ -883,11 +883,35 @@ fn @make_gpu_device( dev_id: i32
                            else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) }
                          , width, height)
     },
+    load_image_by_id = @ |id| {
+        let mut pixel_data : &[f32];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_image_by_id(dev_id, id, &mut pixel_data, &mut width, &mut height);
+
+        let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
+        let q = pixel_data as &addrspace(1)[f32];
+        make_image_rgba32( if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
+                           else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) }
+                         , width, height)
+    },
     load_packed_image = @ |filename, hint_opaque, is_linear| {
         let mut pixel_data : &[u32];
         let mut width      : i32;
         let mut height     : i32;
         ignis_load_packed_image(dev_id, filename, &mut pixel_data, &mut width, &mut height, is_linear);
+
+        let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
+        let q = pixel_data as &addrspace(1)[i32];
+        make_image_rgba32(if is_nvvm { @ |x, y| image_rgba_unpack(bitcast[u32](nvvm_ldg_i32(&(q(y * stride + x)))), hint_opaque) }
+                          else { @ |x, y| image_rgba_unpack(bitcast[u32](q(y * stride + x)), hint_opaque) },
+                          width, height)
+    },
+    load_packed_image_by_id = @ |id, hint_opaque, is_linear| {
+        let mut pixel_data : &[u32];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_packed_image_by_id(dev_id, id, &mut pixel_data, &mut width, &mut height, is_linear);
 
         let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
         let q = pixel_data as &addrspace(1)[i32];
@@ -901,11 +925,18 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_rays(dev_id, &mut rays);
         rays
     },
-    load_host_buffer = load_cpu_buffer,
+    load_host_buffer       = load_cpu_buffer,
+    load_host_buffer_by_id = load_cpu_buffer_by_id,
     load_buffer = @ |filename| {
         let mut ptr      : &[u8];
         let mut bytesize : i32;
         ignis_load_buffer(dev_id, filename, &mut ptr, &mut bytesize);
+        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
+    },
+    load_buffer_by_id = @ |id| {
+        let mut ptr      : &[u8];
+        let mut bytesize : i32;
+        ignis_load_buffer_by_id(dev_id, id, &mut ptr, &mut bytesize);
         make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
     },
     request_buffer = @ |name, size, flags| {

@@ -63,6 +63,16 @@ struct LoaderContext {
         return RegisteredResources[path] = id;
     }
 
+    inline std::vector<std::string> generateResourceMap() const
+    {
+        std::vector<std::string> map(RegisteredResources.size());
+        for (const auto& p : RegisteredResources) {
+            IG_ASSERT(p.second < map.size(), "Access should be always in bound");
+            map[p.second] = p.first;
+        }
+        return map;
+    }
+
     bool HasError = false;
 
     /// Use this function to mark the loading process as failed

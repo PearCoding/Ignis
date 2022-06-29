@@ -145,6 +145,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;
     result.Database.SceneBBox   = ctx.Environment.SceneBBox;
     result.TechniqueInfo        = ctx.TechniqueInfo;
+    result.ResourceMap          = ctx.generateResourceMap();
 
     return !ctx.HasError;
 }
