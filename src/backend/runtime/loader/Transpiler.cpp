@@ -813,6 +813,9 @@ public:
                     return call;
             }
 
+            if (name == "rotate_axis")
+                return "vec3_rotate_axis(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + ")";
+
             if (name == "vec3") {
                 if (argumentPayloads[0] == argumentPayloads[1] && argumentPayloads[1] == argumentPayloads[2])
                     return "vec3_expand(" + argumentPayloads[0] + ")";
@@ -1025,7 +1028,7 @@ public:
 
         if (sInternalDynConstructFunctions1.count(lkp.name())) {
             auto var = checkDynFunction(lkp, sInternalDynConstructFunctions1.at(lkp.name()), PExprType::Vec4, true,
-                                        OpParam{ });
+                                        OpParam{});
             if (var.has_value())
                 return var;
         }
@@ -1064,6 +1067,13 @@ public:
         if (sInternalDynLerpFunctions3.count(lkp.name())) {
             auto var = checkDynFunction(lkp, sInternalDynLerpFunctions3.at(lkp.name()), OpParam{}, true,
                                         OpParam{}, OpParam{}, OpParam{ PExprType::Number });
+            if (var.has_value())
+                return var;
+        }
+
+        // Function with a "weird" specification
+        if (lkp.name() == "rotate_axis" && lkp.parameters().size() == 3) {
+            auto var = matchFuncRet(lkp, PExprType::Vec3, { PExprType::Vec3, PExprType::Number, PExprType::Vec3 });
             if (var.has_value())
                 return var;
         }

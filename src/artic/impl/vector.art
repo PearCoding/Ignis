@@ -15,3 +15,17 @@ fn @euler_to_mat3x3(euler: Vec3) {
 
 fn @vec3_rotate_euler(p: Vec3, euler: Vec3)         = mat3x3_mul(euler_to_mat3x3(euler), p);
 fn @vec3_rotate_euler_inverse(p: Vec3, euler: Vec3) = mat3x3_left_mul(euler_to_mat3x3(euler), p);
+
+fn @vec3_rotate_axis(p: Vec3, angle: f32, axis: Vec3) -> Vec3 {
+    let s = math_builtins::sin(angle);
+    let c = math_builtins::cos(angle);
+    
+    let c1 = 1 - c;
+    let x  = axis.x;
+    let y  = axis.y;
+    let z  = axis.z;
+    let m  = make_mat3x3(make_vec3(x * x + (1.0 - x * x) * c, x * y * c1 + z * s,        x * z * c1 - y * s),
+                         make_vec3(x * y * c1 - z * s,        y * y + (1.0 - y * y) * c, y * z * c1 + x * s),
+                         make_vec3(x * z * c1 + y * s,        y * z * c1 - x * s,        z * z + (1.0 - z * z) * c));
+    mat3x3_mul(m, p)
+}
