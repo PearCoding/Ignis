@@ -349,7 +349,7 @@ fn @cpu_traverse_secondary(scene: SceneGeometry, min_max: MinMax, secondary: &Se
 }
 
 // Hit shader ------------------------------------------------------------------
-fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: Shader, scene: Scene, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: MaterialShader, scene: Scene, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_shade_specialized(entity_id2: i32, primary2: &PrimaryStream, secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -382,7 +382,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             let glb_surf  = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
             
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
-            let mat       = @shader(ray, hit, glb_surf);
+            let mat       = @shader(make_surface_shading_context(ray, hit, glb_surf));
             let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, payload, glb_surf, mat) { color } else { color_builtins::black };
             
             for lane in unroll(0, r_vector_width) {
@@ -433,7 +433,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
     $cpu_shade_specialized(entity_id, primary, secondary, begin, end);
 }
 
-fn @cpu_hit_shade_handler(entity_id: i32, shader: Shader, scene: Scene, path_tracer: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, vector_width: i32) -> () {
+fn @cpu_hit_shade_handler(entity_id: i32, shader: MaterialShader, scene: Scene, path_tracer: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut primary : PrimaryStream;
@@ -493,7 +493,7 @@ fn @cpu_miss_shade_handler(path_tracer: Technique, begin: i32, end: i32, spi: i3
 }
 
 // Advanced shadow shader ------------------------------------------------------------------
-fn @cpu_advanced_shadow(is_hit: bool, shader: Shader, secondary: &SecondaryStream, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_advanced_shadow(is_hit: bool, shader: MaterialShader, secondary: &SecondaryStream, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_advanced_shadow_specialized(secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -529,7 +529,7 @@ fn @cpu_advanced_shadow(is_hit: bool, shader: Shader, secondary: &SecondaryStrea
     $cpu_advanced_shadow_specialized(secondary, begin, end);
 }
 
-fn @cpu_advanced_shadow_handler(shader: Shader, path_tracer: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
+fn @cpu_advanced_shadow_handler(shader: MaterialShader, path_tracer: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut secondary : SecondaryStream;

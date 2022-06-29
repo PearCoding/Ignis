@@ -19,7 +19,7 @@ public:
     };
 
     /// Transpile the given expression to artic code.
-    std::optional<Result> transpile(const std::string& expr, const std::string& uv_access, bool hasSurfaceInfo) const;
+    std::optional<Result> transpile(const std::string& expr) const;
 
     inline const ShadingTree& tree() const { return mTree; }
 

@@ -12,8 +12,8 @@ fn @node_brick(uv: Vec2, gap_size: Vec2) -> f32 {
 }
 
 fn @make_brick_texture(color0: Color, color1: Color, scale: Vec2, gap_size: Vec2, transform: Mat3x3) -> Texture {
-    @ |uv| {
-        let uv2 = mat3x3_transform_point_affine(transform, uv); 
+    @ |ctx| {
+        let uv2 = mat3x3_transform_point_affine(transform, vec3_to_2(ctx.uvw));
         let suv = vec2_mul(uv2, scale); 
         
         color_lerp(color0, color1, node_brick(suv, gap_size))

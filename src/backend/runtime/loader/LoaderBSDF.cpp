@@ -95,11 +95,11 @@ static std::string inline_microfacet(const std::string& name, ShadingTree& tree,
     const std::string md_id = tree.generateUniqueID(name);
     std::stringstream stream;
     if (tree.hasParameter("alpha_u")) {
-        stream << "  let md_" << md_id << " = @|surf : SurfaceElement| " << distribution << "(surf.local, "
+        stream << "  let md_" << md_id << " = @|ctx : ShadingContext| " << distribution << "(ctx.surf.local, "
                << tree.getInline("alpha_u") << ", "
                << tree.getInline("alpha_v") << ");" << std::endl;
     } else {
-        stream << "  let md_" << md_id << " = @|surf : SurfaceElement| " << distribution << "(surf.local, "
+        stream << "  let md_" << md_id << " = @|ctx : ShadingContext| " << distribution << "(ctx.surf.local, "
                << tree.getInline("alpha") << ", "
                << tree.getInline("alpha") << ");" << std::endl;
     }
@@ -113,7 +113,7 @@ static void bsdf_diffuse(std::ostream& stream, const std::string& name, const st
 
     const std::string bsdf_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_diffuse_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_diffuse_bsdf(ctx.surf, "
            << tree.getInline("reflectance") << ");" << std::endl;
 
     tree.endClosure();
@@ -127,7 +127,7 @@ static void bsdf_orennayar(std::ostream& stream, const std::string& name, const 
 
     const std::string bsdf_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_orennayar_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_orennayar_bsdf(ctx.surf, "
            << tree.getInline("alpha") << ", "
            << tree.getInline("reflectance") << ");" << std::endl;
 
@@ -149,8 +149,8 @@ static void bsdf_dielectric(std::ostream& stream, const std::string& name, const
 
     const std::string bsdf_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| "
-           << (thin ? "make_thin_glass_bsdf" : "make_glass_bsdf") << "(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| "
+           << (thin ? "make_thin_glass_bsdf" : "make_glass_bsdf") << "(ctx.surf, "
            << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
            << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "
            << tree.getInline("specular_reflectance") << ", "
@@ -175,12 +175,12 @@ static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name,
     const std::string bsdf_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
            << inline_microfacet(name, tree, bsdf)
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_rough_glass_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_rough_glass_bsdf(ctx.surf, "
            << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
            << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "
            << tree.getInline("specular_reflectance") << ", "
            << tree.getInline("specular_transmittance") << ", "
-           << "md_" << bsdf_id << "(surf));" << std::endl;
+           << "md_" << bsdf_id << "(ctx));" << std::endl;
 
     tree.endClosure();
 }
@@ -192,7 +192,7 @@ static void bsdf_mirror(std::ostream& stream, const std::string& name, const std
 
     const std::string bsdf_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_mirror_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_mirror_bsdf(ctx.surf, "
            << tree.getInline("specular_reflectance") << ");" << std::endl;
 
     tree.endClosure();
@@ -210,7 +210,7 @@ static void bsdf_conductor(std::ostream& stream, const std::string& name, const 
 
     const std::string bsdf_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_conductor_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_conductor_bsdf(ctx.surf, "
            << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Eta) : tree.getInline("eta")) << ", "
            << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Kappa) : tree.getInline("k")) << ", "
            << tree.getInline("specular_reflectance") << ");" << std::endl;
@@ -232,11 +232,11 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
     const std::string bsdf_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
            << inline_microfacet(name, tree, bsdf)
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_rough_conductor_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_rough_conductor_bsdf(ctx.surf, "
            << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Eta) : tree.getInline("eta")) << ", "
            << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Kappa) : tree.getInline("k")) << ", "
            << tree.getInline("specular_reflectance") << ", "
-           << "md_" << bsdf_id << "(surf));" << std::endl;
+           << "md_" << bsdf_id << "(ctx));" << std::endl;
 
     tree.endClosure();
 }
@@ -254,11 +254,11 @@ static void bsdf_plastic(std::ostream& stream, const std::string& name, const st
 
     const std::string bsdf_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_plastic_bsdf(ctx.surf, "
            << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
            << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "
            << tree.getInline("diffuse_reflectance") << ", "
-           << "make_mirror_bsdf(surf, " << tree.getInline("specular_reflectance") << "));" << std::endl;
+           << "make_mirror_bsdf(ctx.surf, " << tree.getInline("specular_reflectance") << "));" << std::endl;
 
     tree.endClosure();
 }
@@ -279,13 +279,13 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
     const std::string bsdf_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
            << inline_microfacet(name, tree, bsdf)
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_plastic_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_plastic_bsdf(ctx.surf, "
            << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
            << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "
            << tree.getInline("diffuse_reflectance") << ", "
-           << "make_rough_conductor_bsdf(surf, color_builtins::black, color_builtins::white, "
+           << "make_rough_conductor_bsdf(ctx.surf, color_builtins::black, color_builtins::white, "
            << tree.getInline("specular_reflectance") << ", "
-           << "md_" << bsdf_id << "(surf)));" << std::endl;
+           << "md_" << bsdf_id << "(ctx)));" << std::endl;
 
     tree.endClosure();
 }
@@ -298,7 +298,7 @@ static void bsdf_phong(std::ostream& stream, const std::string& name, const std:
 
     const std::string bsdf_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_phong_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_phong_bsdf(ctx.surf, "
            << tree.getInline("specular_reflectance") << ", "
            << tree.getInline("exponent") << ");" << std::endl;
 
@@ -330,7 +330,7 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
 
     const std::string bsdf_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_principled_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_principled_bsdf(ctx.surf, "
            << tree.getInline("base_color") << ", "
            << (ior_spec.has_value() ? std::to_string(ior_spec.value()) : tree.getInline("ior")) << ", "
            << tree.getInline("diffuse_transmission") << ", "
@@ -413,7 +413,7 @@ static void bsdf_klems(std::ostream& stream, const std::string& name, const std:
     stream << tree.pullHeader()
            << "  let klems_" << bsdf_id << " = make_klems_model(device.load_buffer_by_id(" << res_id << "), "
            << dump_klems_specification(spec) << ");" << std::endl
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_klems_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_klems_bsdf(ctx.surf, "
            << tree.getInline("base_color") << ", "
            << LoaderUtils::inlineVector(upVector) << ", "
            << "klems_" << bsdf_id << ");" << std::endl;
@@ -485,7 +485,7 @@ static void bsdf_tensortree(std::ostream& stream, const std::string& name, const
     stream << tree.pullHeader()
            << "  let tt_" << bsdf_id << " = make_tensortree_model(device.request_debug_output(), device.load_buffer_by_id(" << res_id << "), "
            << dump_tt_specification(spec) << ");" << std::endl
-           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_tensortree_bsdf(surf, "
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_tensortree_bsdf(ctx.surf, "
            << tree.getInline("base_color") << ", "
            << LoaderUtils::inlineVector(upVector) << ", "
            << "tt_" << bsdf_id << ");" << std::endl;
@@ -506,7 +506,7 @@ static void bsdf_passthrough(std::ostream& stream, const std::string& name, cons
 {
     IG_UNUSED(tree);
     const std::string bsdf_id = tree.generateUniqueID(name);
-    stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_passthrough_bsdf(surf);" << std::endl;
+    stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_passthrough_bsdf(ctx.surf);" << std::endl;
 }
 
 static void bsdf_add(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
@@ -517,7 +517,7 @@ static void bsdf_add(std::ostream& stream, const std::string& name, const std::s
     const std::string bsdf_id = tree.generateUniqueID(name);
     if (first.empty() || second.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdfs given" << std::endl;
-        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
     } else if (first == second) {
         // Ignore it
         stream << LoaderBSDF::generate(first, tree);
@@ -529,9 +529,9 @@ static void bsdf_add(std::ostream& stream, const std::string& name, const std::s
         stream << LoaderBSDF::generate(second, tree);
 
         stream << tree.pullHeader()
-               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ray, hit, surf| make_add_bsdf("
-               << "bsdf_" << tree.generateUniqueID(first) << "(ray, hit, surf), "
-               << "bsdf_" << tree.generateUniqueID(second) << "(ray, hit, surf));" << std::endl;
+               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_add_bsdf("
+               << "bsdf_" << tree.generateUniqueID(first) << "(ctx), "
+               << "bsdf_" << tree.generateUniqueID(second) << "(ctx));" << std::endl;
 
         tree.endClosure();
     }
@@ -545,7 +545,7 @@ static void bsdf_blend(std::ostream& stream, const std::string& name, const std:
     const std::string bsdf_id = tree.generateUniqueID(name);
     if (first.empty() || second.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdfs given" << std::endl;
-        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
     } else if (first == second) {
         // Ignore it
         stream << LoaderBSDF::generate(first, tree);
@@ -558,9 +558,9 @@ static void bsdf_blend(std::ostream& stream, const std::string& name, const std:
         stream << LoaderBSDF::generate(second, tree);
 
         stream << tree.pullHeader()
-               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf("
-               << "bsdf_" << tree.generateUniqueID(first) << "(ray, hit, surf), "
-               << "bsdf_" << tree.generateUniqueID(second) << "(ray, hit, surf), "
+               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_mix_bsdf("
+               << "bsdf_" << tree.generateUniqueID(first) << "(ctx), "
+               << "bsdf_" << tree.generateUniqueID(second) << "(ctx), "
                << tree.getInline("weight") << ");" << std::endl;
 
         tree.endClosure();
@@ -575,7 +575,7 @@ static void bsdf_mask(std::ostream& stream, const std::string& name, const std::
     const std::string bsdf_id = tree.generateUniqueID(name);
     if (masked.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
     } else {
         tree.beginClosure();
         tree.addNumber("weight", *bsdf, 0.5f);
@@ -585,15 +585,15 @@ static void bsdf_mask(std::ostream& stream, const std::string& name, const std::
         stream << LoaderBSDF::generate(masked, tree);
 
         stream << tree.pullHeader()
-               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf(";
+               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_mix_bsdf(";
         if (inverted) {
             stream
-                << "make_passthrough_bsdf(surf), "
-                << "bsdf_" << masked_id << "(ray, hit, surf), ";
+                << "make_passthrough_bsdf(ctx.surf), "
+                << "bsdf_" << masked_id << "(ctx), ";
         } else {
             stream
-                << "bsdf_" << masked_id << "(ray, hit, surf), "
-                << "make_passthrough_bsdf(surf), ";
+                << "bsdf_" << masked_id << "(ctx), "
+                << "make_passthrough_bsdf(ctx.surf), ";
         }
         stream << tree.getInline("weight") << ");" << std::endl;
 
@@ -609,7 +609,7 @@ static void bsdf_cutoff(std::ostream& stream, const std::string& name, const std
     const std::string bsdf_id = tree.generateUniqueID(name);
     if (masked.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
     } else {
         tree.beginClosure();
         tree.addNumber("weight", *bsdf, 0.5f); // Only useful with textures or other patterns
@@ -619,16 +619,16 @@ static void bsdf_cutoff(std::ostream& stream, const std::string& name, const std
         stream << LoaderBSDF::generate(masked, tree);
 
         stream << tree.pullHeader()
-               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ray, hit, surf| make_mix_bsdf(";
+               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_mix_bsdf(";
 
         if (inverted) {
             stream
-                << "make_passthrough_bsdf(surf), "
-                << "bsdf_" << masked_id << "(ray, hit, surf), ";
+                << "make_passthrough_bsdf(ctx.surf), "
+                << "bsdf_" << masked_id << "(ctx), ";
         } else {
             stream
-                << "bsdf_" << masked_id << "(ray, hit, surf), "
-                << "make_passthrough_bsdf(surf), ";
+                << "bsdf_" << masked_id << "(ctx), "
+                << "make_passthrough_bsdf(ctx.surf), ";
         }
 
         stream << "if " << tree.getInline("weight") << " < " << tree.getInline("cutoff") << " { 0:f32 } else { 1:f32 } );" << std::endl;
@@ -647,14 +647,14 @@ static void bsdf_normalmap(std::ostream& stream, const std::string& name, const 
     const std::string bsdf_id = tree.generateUniqueID(name);
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
     } else {
         stream << LoaderBSDF::generate(inner, tree);
 
         const std::string inner_id = tree.generateUniqueID(inner);
         stream << tree.pullHeader()
-               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ray, hit, surf| make_normalmap(surf, @|surf2| -> Bsdf { "
-               << " bsdf_" << inner_id << "(ray, hit, surf2) }, "
+               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normalmap(ctx.surf, @|surf2| -> Bsdf { "
+               << " bsdf_" << inner_id << "(ctx.{surf=surf2}) }, "
                << tree.getInline("map") << ","
                << tree.getInline("strength") << ");" << std::endl;
     }
@@ -671,16 +671,16 @@ static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const st
     const std::string bsdf_id = tree.generateUniqueID(name);
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
     } else {
         stream << LoaderBSDF::generate(inner, tree);
 
         const std::string inner_id = tree.generateUniqueID(inner);
         stream << tree.pullHeader()
-               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ray, hit, surf| make_bumpmap(surf, "
-               << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ray, hit, surf2) }, "
-               << "texture_dx(" << tree.getInline("map") << ", surf.tex_coords).r, "
-               << "texture_dy(" << tree.getInline("map") << ", surf.tex_coords).r, "
+               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_bumpmap(ctx.surf, "
+               << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctxctx.{surf=surf2}) }, "
+               << "texture_dx(" << tree.getInline("map") << ", ctx).r, "
+               << "texture_dy(" << tree.getInline("map") << ", ctx).r, "
                << tree.getInline("strength") << ");" << std::endl;
     }
     tree.endClosure();
@@ -695,7 +695,7 @@ static void bsdf_transform(std::ostream& stream, const std::string& name, const 
     const std::string bsdf_id = tree.generateUniqueID(name);
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
     } else {
         stream << LoaderBSDF::generate(inner, tree);
 
@@ -703,14 +703,14 @@ static void bsdf_transform(std::ostream& stream, const std::string& name, const 
         if (bsdf->property("tangent").isValid()) {
             tree.addVector("tangent", *bsdf, Vector3f::UnitX());
             stream << tree.pullHeader()
-                   << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ray, hit, surf| make_normal_tangent_set(surf, "
-                   << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ray, hit, surf2) }, "
+                   << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normal_tangent_set(ctx.surf, "
+                   << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2}) }, "
                    << tree.getInline("normal")
                    << ", " << tree.getInline("tangent") << ");" << std::endl;
         } else {
             stream << tree.pullHeader()
-                   << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ray, hit, surf| make_normal_set(surf, "
-                   << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ray, hit, surf2) }, "
+                   << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normal_set(ctx.surf, "
+                   << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2})) }, "
                    << tree.getInline("normal") << ");" << std::endl;
         }
     }
@@ -725,14 +725,14 @@ static void bsdf_doublesided(std::ostream& stream, const std::string& name, cons
     const std::string bsdf_id = tree.generateUniqueID(name);
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
     } else {
         stream << LoaderBSDF::generate(inner, tree);
 
         const std::string inner_id = tree.generateUniqueID(inner);
         stream << tree.pullHeader()
-               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ray, hit, surf| make_doublesided_bsdf(surf, "
-               << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ray, hit, surf2) });" << std::endl;
+               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_doublesided_bsdf(ctx.surf, "
+               << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2}) });" << std::endl;
     }
     tree.endClosure();
 }
@@ -800,7 +800,7 @@ std::string LoaderBSDF::generate(const std::string& name, ShadingTree& tree)
     }
 
     if (error)
-        stream << "  let bsdf_" << tree.generateUniqueID(name) << " : BSDFShader = @|_ray, _hit, surf| make_error_bsdf(surf);" << std::endl;
+        stream << "  let bsdf_" << tree.generateUniqueID(name) << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
 
     return stream.str();
 }

@@ -17,7 +17,7 @@ void ShadingTree::signalError()
     mContext.signalError();
 }
 
-void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, float def, bool hasDef, InlineMode mode)
+void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, float def, bool hasDef)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -45,14 +45,14 @@ void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, 
         inline_str = std::to_string(prop.getVector3().mean());
         break;
     case Parser::PT_STRING:
-        inline_str = handleTexture(name, prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", false, mode == IM_Surface);
+        inline_str = handleTexture(name, prop.getString(), false);
         break;
     }
 
     currentClosure().Parameters[name] = inline_str;
 }
 
-void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, InlineMode mode)
+void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -80,14 +80,14 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
         inline_str     = "make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1)";
     } break;
     case Parser::PT_STRING:
-        inline_str = handleTexture(name, prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", true, mode == IM_Surface);
+        inline_str = handleTexture(name, prop.getString(), true);
         break;
     }
 
     currentClosure().Parameters[name] = inline_str;
 }
 
-void ShadingTree::addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, InlineMode mode)
+void ShadingTree::addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -115,7 +115,7 @@ void ShadingTree::addVector(const std::string& name, const Parser::Object& obj, 
         inline_str     = "make_vec3(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ")";
     } break;
     case Parser::PT_STRING:
-        inline_str = "color_to_vec3(" + handleTexture(name, prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", true, mode == IM_Surface) + ")";
+        inline_str = "color_to_vec3(" + handleTexture(name, prop.getString(), true) + ")";
         break;
     }
 
@@ -151,8 +151,8 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
         inline_str     = "make_constant_texture(make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1))";
     } break;
     case Parser::PT_STRING: {
-        std::string tex_func = handleTexture(name, prop.getString(), "uv", true, false /*TODO: Not always*/);
-        inline_str           = "@|uv:Vec2|->Color{maybe_unused(uv); " + tex_func + "}";
+        std::string tex_func = handleTexture(name, prop.getString(), true);
+        inline_str           = "@|ctx:ShadingContext|->Color{maybe_unused(ctx); " + tex_func + "}";
     } break;
     }
 
@@ -224,9 +224,9 @@ void ShadingTree::registerTextureUsage(const std::string& name)
     }
 }
 
-std::string ShadingTree::handleTexture(const std::string& prop_name, const std::string& expr, const std::string& uv_access, bool needColor, bool hasSurfaceInfo)
+std::string ShadingTree::handleTexture(const std::string& prop_name, const std::string& expr, bool needColor)
 {
-    auto res = mTranspiler.transpile(expr, uv_access, hasSurfaceInfo);
+    auto res = mTranspiler.transpile(expr);
 
     if (!res.has_value()) {
         if (needColor)

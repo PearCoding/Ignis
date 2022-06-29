@@ -2,8 +2,8 @@ fn @node_checkerboard2(p: Vec2) = select( (abs(p.x as i32) % 2) == (abs(p.y as i
 fn @node_checkerboard3(p: Vec3) = select(((abs(p.x as i32) % 2) == (abs(p.y as i32) % 2)) == ((abs(p.z as i32) % 2) == 1), 1, 0);
 
 fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color, transform: Mat3x3) -> Texture {
-    @ |uv| { 
-        let uv2 = mat3x3_transform_point_affine(transform, uv);
+    @ |ctx| { 
+        let uv2 = mat3x3_transform_point_affine(transform, vec3_to_2(ctx.uvw));
         let suv = vec2_mul(uv2, scale);
         let parity_x = ((suv.x as i32) % 2) == 0;
         let parity_y = ((suv.y as i32) % 2) == 0;

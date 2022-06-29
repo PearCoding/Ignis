@@ -134,7 +134,7 @@ static void light_point(size_t id, std::ostream& stream, const std::string& name
 {
     tree.beginClosure();
     auto pos = light->property("position").getVector3(); // FIXME: Has to be fixed (WHY?)
-    tree.addColor("intensity", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addColor("intensity", *light, Vector3f::Ones(), true);
 
     const std::string light_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
@@ -255,7 +255,7 @@ static void light_area(size_t id, std::ostream& stream, const std::string& name,
     tree.beginClosure();
 
     const std::string entityName = light->property("entity").getString();
-    tree.addColor("radiance", *light, Vector3f::Constant(1.0f), true, ShadingTree::IM_Bare);
+    tree.addColor("radiance", *light, Vector3f::Constant(1.0f), true);
 
     Entity entity;
     if (!tree.context().Environment.EmissiveEntities.count(entityName)) {
@@ -331,7 +331,7 @@ static void light_directional(size_t id, std::ostream& stream, const std::string
 
     auto ea      = extractEA(light);
     Vector3f dir = ea.toDirection();
-    tree.addColor("irradiance", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addColor("irradiance", *light, Vector3f::Ones(), true);
 
     const std::string light_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
@@ -357,9 +357,9 @@ static void light_spot(size_t id, std::ostream& stream, const std::string& name,
     Vector3f dir = ea.toDirection();
     auto pos     = light->property("position").getVector3(); // FIXME: Has to be fixed (WHY?)
 
-    tree.addColor("intensity", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
-    tree.addNumber("cutoff", *light, 30, true, ShadingTree::IM_Bare);
-    tree.addNumber("falloff", *light, 20, true, ShadingTree::IM_Bare);
+    tree.addColor("intensity", *light, Vector3f::Ones(), true);
+    tree.addNumber("cutoff", *light, 30, true);
+    tree.addNumber("falloff", *light, 20, true);
 
     const std::string light_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
@@ -387,8 +387,8 @@ static void light_sun(size_t id, std::ostream& stream, const std::string& name, 
     auto ea      = extractEA(light);
     Vector3f dir = ea.toDirection();
 
-    tree.addNumber("sun_scale", *light, 1, true, ShadingTree::IM_Bare);
-    tree.addNumber("sun_radius_scale", *light, 1, true, ShadingTree::IM_Bare);
+    tree.addNumber("sun_scale", *light, 1, true);
+    tree.addNumber("sun_radius_scale", *light, 1, true);
 
     const std::string light_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
@@ -411,7 +411,7 @@ static float light_sun_power(const std::shared_ptr<Parser::Object>& light, const
 static void light_sky(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
-    tree.addColor("scale", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addColor("scale", *light, Vector3f::Ones(), true);
 
     const std::string path = setup_sky(tree.context(), name, light);
     const auto cdf         = setup_cdf(tree.context(), path);
@@ -444,9 +444,9 @@ static void light_cie_env(size_t id, std::ostream& stream, const std::string& na
 {
     tree.beginClosure();
 
-    tree.addColor("zenith", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
-    tree.addColor("ground", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
-    tree.addNumber("ground_brightness", *light, 0.2f, true, ShadingTree::IM_Bare);
+    tree.addColor("zenith", *light, Vector3f::Ones(), true);
+    tree.addColor("ground", *light, Vector3f::Ones(), true);
+    tree.addNumber("ground_brightness", *light, 0.2f, true);
 
     const Matrix3f trans  = light->property("transform").getTransform().linear().transpose().inverse();
     const bool has_ground = light->property("has_ground").getBool(true);
@@ -523,10 +523,10 @@ static void light_cie_sunny_env(size_t id, std::ostream& stream, const std::stri
 
     const float c2 = zenithbrightness * norm_factor + additive_factor;
 
-    tree.addColor("scale", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
-    tree.addColor("zenith", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
-    tree.addColor("ground", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
-    tree.addNumber("ground_brightness", *light, 0.2f, true, ShadingTree::IM_Bare);
+    tree.addColor("scale", *light, Vector3f::Ones(), true);
+    tree.addColor("zenith", *light, Vector3f::Ones(), true);
+    tree.addColor("ground", *light, Vector3f::Ones(), true);
+    tree.addNumber("ground_brightness", *light, 0.2f, true);
 
     const Matrix3f trans  = light->property("transform").getTransform().linear().transpose().inverse();
     const bool has_ground = light->property("has_ground").getBool(true);
@@ -557,20 +557,20 @@ static void light_perez(size_t id, std::ostream& stream, const std::string& name
     auto ea      = extractEA(light);
     Vector3f dir = ea.toDirection();
 
-    tree.addNumber("a", *light, 1.0f, true, ShadingTree::IM_Bare);
-    tree.addNumber("b", *light, 1.0f, true, ShadingTree::IM_Bare);
-    tree.addNumber("c", *light, 1.0f, true, ShadingTree::IM_Bare);
-    tree.addNumber("d", *light, 1.0f, true, ShadingTree::IM_Bare);
-    tree.addNumber("e", *light, 1.0f, true, ShadingTree::IM_Bare);
+    tree.addNumber("a", *light, 1.0f, true);
+    tree.addNumber("b", *light, 1.0f, true);
+    tree.addNumber("c", *light, 1.0f, true);
+    tree.addNumber("d", *light, 1.0f, true);
+    tree.addNumber("e", *light, 1.0f, true);
 
     const Matrix3f trans = light->property("transform").getTransform().linear().transpose().inverse();
 
     bool usesLuminance = false;
     if (light->properties().count("luminance")) {
-        tree.addColor("luminance", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+        tree.addColor("luminance", *light, Vector3f::Ones(), true);
         usesLuminance = true;
     } else {
-        tree.addColor("zenith", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+        tree.addColor("zenith", *light, Vector3f::Ones(), true);
         usesLuminance = false;
     }
 
@@ -606,7 +606,7 @@ static void light_perez(size_t id, std::ostream& stream, const std::string& name
 static void light_env(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
     tree.beginClosure();
-    tree.addColor("scale", *light, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+    tree.addColor("scale", *light, Vector3f::Ones(), true);
     tree.addTexture("radiance", *light, true);
     const Matrix3f trans = light->property("transform").getTransform().linear().transpose().inverse();
 

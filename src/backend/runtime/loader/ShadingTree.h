@@ -19,20 +19,15 @@ private:
     };
 
 public:
-    enum InlineMode {
-        IM_Surface = 0, // The surface 'surf' structure is available
-        IM_Bare,        // Only the 'tex_coords' coordinate is available
-    };
-
     explicit ShadingTree(LoaderContext& ctx);
 
     /// Register new closure, can be empty if not a texture
     bool beginClosure(const std::string& texName = {});
     void endClosure();
 
-    void addNumber(const std::string& name, const Parser::Object& obj, float def = 0, bool hasDef = true, InlineMode mode = IM_Surface);
-    void addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, InlineMode mode = IM_Surface);
-    void addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, InlineMode mode = IM_Surface);
+    void addNumber(const std::string& name, const Parser::Object& obj, float def = 0, bool hasDef = true);
+    void addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true);
+    void addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true);
     void addTexture(const std::string& name, const Parser::Object& obj, bool hasDef = true);
 
     std::string generateUniqueID(const std::string& name);
@@ -53,7 +48,7 @@ private:
     inline const Closure& currentClosure() const { return mClosures.back(); }
     inline Closure& currentClosure() { return mClosures.back(); }
 
-    std::string handleTexture(const std::string& prop_name, const std::string& expr, const std::string& uv_access, bool needColor, bool hasSurfaceInfo);
+    std::string handleTexture(const std::string& prop_name, const std::string& expr, bool needColor);
 
     LoaderContext& mContext;
 

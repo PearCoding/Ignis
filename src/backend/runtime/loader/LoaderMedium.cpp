@@ -8,11 +8,12 @@ namespace IG {
 
 static void medium_homogeneous(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& medium, ShadingTree& tree)
 {
+    // FIXME: The shading context is not available here! Texture & PExpr will produce errors
     tree.beginClosure();
 
-    tree.addColor("sigma_a", *medium, Vector3f::Zero(), true, ShadingTree::IM_Bare);
-    tree.addColor("sigma_s", *medium, Vector3f::Zero(), true, ShadingTree::IM_Bare);
-    tree.addNumber("g", *medium, 0, true, ShadingTree::IM_Bare);
+    tree.addColor("sigma_a", *medium, Vector3f::Zero(), true);
+    tree.addColor("sigma_s", *medium, Vector3f::Zero(), true);
+    tree.addNumber("g", *medium, 0, true);
 
     const std::string media_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()

@@ -80,7 +80,7 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
 }
 
 fn @gpu_hit_shade( acc: Accelerator
-             , shader: Shader
+             , shader: MaterialShader
              , scene: Scene
              , path_tracer: Technique
              , accumulate: FilmAccumulator
@@ -120,7 +120,7 @@ fn @gpu_hit_shade( acc: Accelerator
         let lcl_surf = shape.surface_element(local_ray, hit);
         let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
         
-        let mat    = @shader(ray, hit, glb_surf);
+        let mat    = @shader(make_surface_shading_context(ray, hit, glb_surf));
         let on_hit = path_tracer.on_hit;
         if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, payload, glb_surf, mat) {
             accumulate(pixel, color);
@@ -164,7 +164,7 @@ fn @gpu_hit_shade_handler(dev_id: i32
                         , acc: Accelerator
                         , atomics: Atomics
                         , entity_id: i32
-                        , shader: Shader
+                        , shader: MaterialShader
                         , scene: Scene
                         , path_tracer: Technique
                         , begin: i32
@@ -232,7 +232,7 @@ fn @gpu_miss_shade_handler(dev_id: i32
 // Handle advanced shadows
 fn @gpu_advanced_shadow(is_hit: bool
                       , acc: Accelerator
-                      , shader: Shader
+                      , shader: MaterialShader
                       , path_tracer: Technique
                       , accumulate: FilmAccumulator
                       , secondary: SecondaryStream
@@ -263,7 +263,7 @@ fn @gpu_advanced_shadow(is_hit: bool
 fn @gpu_advanced_shadow_handler(dev_id: i32
                               , acc: Accelerator
                               , atomics: Atomics
-                              , shader: Shader
+                              , shader: MaterialShader
                               , path_tracer: Technique
                               , begin: i32
                               , end: i32

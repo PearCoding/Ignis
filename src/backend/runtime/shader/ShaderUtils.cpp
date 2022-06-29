@@ -68,11 +68,11 @@ std::string ShaderUtils::generateMaterialShader(ShadingTree& tree, size_t mat_id
 
     if (isLight && requireLights) {
         const size_t light_id = tree.context().Lights->getAreaLightID(material.Entity);
-        stream << "  let " << output_var << " : Shader = @|ray, hit, surf| make_emissive_material(" << mat_id << ", surf, bsdf_" << bsdf_id << "(ray, hit, surf), medium_interface,"
+        stream << "  let " << output_var << " : MaterialShader = @|ctx| make_emissive_material(" << mat_id << ", ctx.surf, bsdf_" << bsdf_id << "(ctx), medium_interface,"
                << " @lights(" << light_id << "));" << std::endl
                << std::endl;
     } else {
-        stream << "  let " << output_var << " : Shader = @|ray, hit, surf| make_material(" << mat_id << ", bsdf_" << bsdf_id << "(ray, hit, surf), medium_interface);" << std::endl
+        stream << "  let " << output_var << " : MaterialShader = @|ctx| make_material(" << mat_id << ", bsdf_" << bsdf_id << "(ctx), medium_interface);" << std::endl
                << std::endl;
     }
 

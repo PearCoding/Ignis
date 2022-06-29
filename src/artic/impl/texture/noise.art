@@ -279,8 +279,8 @@ fn @cfbm2_def(uv: Vec2)        = cfbm2(uv,        DEFAULT_NOISE_SEED);
 
 // ---------------------- Textures
 fn @make_gen_noise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3, func: fn (Vec2, f32) -> f32) -> Texture {
-    @ |uv| {
-        let uv2 = mat3x3_transform_point_affine(transform, uv); 
+    @ |ctx| {
+        let uv2 = mat3x3_transform_point_affine(transform, vec3_to_2(ctx.uvw)); 
         let suv = vec2_mul(uv2, scale);       
         color_mulf(color, func(suv, seed))
     }
@@ -295,8 +295,8 @@ fn @make_fbm_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3)   
 
 // ---------------------- Textures (Colored)
 fn @make_gen_colored_noise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3, func: fn (Vec2, f32) -> Color) -> Texture {
-    @ |uv| {
-        let uv2 = mat3x3_transform_point_affine(transform, uv); 
+    @ |ctx| {
+        let uv2 = mat3x3_transform_point_affine(transform, vec3_to_2(ctx.uvw)); 
         let suv = vec2_mul(uv2, scale);
         color_mul(color, func(suv, seed))
     }

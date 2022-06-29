@@ -21,10 +21,10 @@ struct Device {
     handle_miss_shader: fn (Technique, i32, i32, i32, bool) -> (), 
 
     // [Internal] Handle a hit shader
-    handle_hit_shader: fn (i32, Shader, Scene, Technique, i32, i32, i32, bool) -> (),
+    handle_hit_shader: fn (i32, MaterialShader, Scene, Technique, i32, i32, i32, bool) -> (),
 
     // [Internal] Handle an advanced shadow shader (can be hit or miss)
-    handle_advanced_shadow_shader: fn (Shader, Technique, i32, i32, i32, bool, bool) -> (), 
+    handle_advanced_shadow_shader: fn (MaterialShader, Technique, i32, i32, i32, bool, bool) -> (), 
     
     //------------------------------------- Utilities
     // Parallel one-dimensional range on the device

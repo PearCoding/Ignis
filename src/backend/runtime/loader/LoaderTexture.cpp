@@ -65,10 +65,10 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
     if (!tree.beginClosure(name))
         return;
 
-    tree.addColor("color0", tex, Vector3f::Zero(), true, ShadingTree::IM_Bare);
-    tree.addColor("color1", tex, Vector3f::Ones(), true, ShadingTree::IM_Bare);
-    tree.addNumber("scale_x", tex, 2.0f, true, ShadingTree::IM_Bare);
-    tree.addNumber("scale_y", tex, 2.0f, true, ShadingTree::IM_Bare);
+    tree.addColor("color0", tex, Vector3f::Zero(), true);
+    tree.addColor("color1", tex, Vector3f::Ones(), true);
+    tree.addNumber("scale_x", tex, 2.0f, true);
+    tree.addNumber("scale_y", tex, 2.0f, true);
 
     const Transformf transform = tex.property("transform").getTransform();
 
@@ -88,12 +88,12 @@ static void tex_brick(std::ostream& stream, const std::string& name, const Parse
     if (!tree.beginClosure(name))
         return;
 
-    tree.addColor("color0", tex, Vector3f::Zero(), true, ShadingTree::IM_Bare);
-    tree.addColor("color1", tex, Vector3f::Ones(), true, ShadingTree::IM_Bare);
-    tree.addNumber("scale_x", tex, 3.0f, true, ShadingTree::IM_Bare);
-    tree.addNumber("scale_y", tex, 6.0f, true, ShadingTree::IM_Bare);
-    tree.addNumber("gap_x", tex, 0.05f, true, ShadingTree::IM_Bare);
-    tree.addNumber("gap_y", tex, 0.1f, true, ShadingTree::IM_Bare);
+    tree.addColor("color0", tex, Vector3f::Zero(), true);
+    tree.addColor("color1", tex, Vector3f::Ones(), true);
+    tree.addNumber("scale_x", tex, 3.0f, true);
+    tree.addNumber("scale_y", tex, 6.0f, true);
+    tree.addNumber("gap_x", tex, 0.05f, true);
+    tree.addNumber("gap_y", tex, 0.1f, true);
 
     const Transformf transform = tex.property("transform").getTransform();
 
@@ -116,10 +116,10 @@ static void tex_gen_noise(const std::string& func, std::ostream& stream, const s
     if (!tree.beginClosure(name))
         return;
 
-    tree.addColor("color", tex, Vector3f::Ones(), true, ShadingTree::IM_Bare);
-    tree.addNumber("seed", tex, DefaultSeed, true, ShadingTree::IM_Bare);
-    tree.addNumber("scale_x", tex, 10.0f, true, ShadingTree::IM_Bare);
-    tree.addNumber("scale_y", tex, 10.0f, true, ShadingTree::IM_Bare);
+    tree.addColor("color", tex, Vector3f::Ones(), true);
+    tree.addNumber("seed", tex, DefaultSeed, true);
+    tree.addNumber("scale_x", tex, 10.0f, true);
+    tree.addNumber("scale_y", tex, 10.0f, true);
     const Transformf transform = tex.property("transform").getTransform();
 
     std::string afunc = tex.property("colored").getBool() ? "c" + func : func;
@@ -180,9 +180,9 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
     // Register on the shading tree first
     for (const auto& pair : tex.properties()) {
         if (startsWith(pair.first, "num_"))
-            tree.addNumber(pair.first, tex, 0.0f, true, ShadingTree::IM_Bare);
+            tree.addNumber(pair.first, tex, 0.0f, true);
         else if (startsWith(pair.first, "color_"))
-            tree.addColor(pair.first, tex, Vector3f::Ones(), true, ShadingTree::IM_Bare);
+            tree.addColor(pair.first, tex, Vector3f::Ones(), true);
     }
 
     // Register available variables to transpiler as well
@@ -199,7 +199,7 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
     }
 
     // Transpile
-    auto res    = transpiler.transpile(expr, "uv", false);
+    auto res    = transpiler.transpile(expr);
     bool failed = !res.has_value();
     if (failed) {
         // Mark as failed output
@@ -220,7 +220,7 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
     // Pull texture usage
     const std::string tex_id = tree.generateUniqueID(name);
     stream << tree.pullHeader()
-           << "  let tex_" << tex_id << " : Texture = @|uv: Vec2| -> Color{" << std::endl;
+           << "  let tex_" << tex_id << " : Texture = @|ctx| -> Color {" << std::endl;
 
     if (!failed) {
         // Inline custom variables

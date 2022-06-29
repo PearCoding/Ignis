@@ -72,6 +72,7 @@ static const std::unordered_map<std::string, InternalVariable> sInternalVariable
     { "frontside", { "", PExprType::Boolean, false } }, // Special
     { "prim_coords", { "", PExprType::Vec2, false } },  // Special
     { "P", { "", PExprType::Vec3, false } },            // Special
+    { "V", { "", PExprType::Vec3, false } },            // Special
     { "N", { "", PExprType::Vec3, false } },            // Special
     { "Ng", { "", PExprType::Vec3, false } },           // Special
     { "Nx", { "", PExprType::Vec3, false } },           // Special
@@ -518,15 +519,11 @@ inline std::string typeConstant(float f, PExprType arithType)
 class ArticVisitor : public PExpr::TranspileVisitor<std::string> {
 private:
     ShadingTree& mTree;
-    const std::string mUVAccess;
-    const bool mHasSurfaceInfo;
     std::unordered_set<std::string> mUsedTextures;
 
 public:
-    inline explicit ArticVisitor(ShadingTree& tree, const std::string& uv_access, bool hasSurfaceInfo)
+    inline explicit ArticVisitor(ShadingTree& tree)
         : mTree(tree)
-        , mUVAccess(uv_access)
-        , mHasSurfaceInfo(hasSurfaceInfo)
     {
     }
 
@@ -535,22 +532,24 @@ public:
     std::string onVariable(const std::string& name, PExprType expectedType) override
     {
         if (name == "uv")
-            return mUVAccess;
+            return "vec3_to_2(ctx.uvw)";
+        if (name == "V")
+            return "vec3_neg(ctx.ray.dir)";
 
         if (name == "P")
-            return mHasSurfaceInfo ? "surf.point" : "vec3_expand(0)";
+            return "ctx.surf.point";
         if (name == "prim_coords")
-            return mHasSurfaceInfo ? "surf.prim_coords" : "vec2_expand(0)";
+            return "ctx.surf.prim_coords";
         if (name == "frontside")
-            return mHasSurfaceInfo ? "surf.is_entering" : "false";
+            return "ctx.surf.is_entering";
         if (name == "N")
-            return mHasSurfaceInfo ? "surf.local.col(2)" : "vec3_expand(0)";
+            return "ctx.surf.local.col(2)";
         if (name == "Ng")
-            return mHasSurfaceInfo ? "surf.face_normal" : "vec3_expand(0)";
+            return "ctx.surf.face_normal";
         if (name == "Nx")
-            return mHasSurfaceInfo ? "surf.local.col(0)" : "vec3_expand(0)";
+            return "ctx.surf.local.col(0)";
         if (name == "Ny")
-            return mHasSurfaceInfo ? "surf.local.col(1)" : "vec3_expand(0)";
+            return "ctx.surf.local.col(1)";
 
         auto var = sInternalVariables.find(name);
         if (var != sInternalVariables.end())
@@ -558,7 +557,7 @@ public:
 
         if (expectedType == PExprType::Vec4 && mTree.context().Scene.texture(name) != nullptr) {
             mUsedTextures.insert(name);
-            return "color_to_vec4(" + tex_name(mTree.generateUniqueID(name)) + "(" + mUVAccess + "))";
+            return "color_to_vec4(" + tex_name(mTree.generateUniqueID(name)) + "(ctx))";
         } else {
             if (expectedType == PExprType::Vec4)
                 return "color_to_vec4(" + var_name(mTree.generateUniqueID(name)) + ")";
@@ -855,7 +854,7 @@ public:
         // Must be a texture
         IG_ASSERT(mTree.context().Scene.texture(name) != nullptr, "Expected a valid texture name");
         mUsedTextures.insert(name);
-        return "color_to_vec4(" + tex_name(mTree.generateUniqueID(name)) + "(" + (argumentPayloads.empty() ? mUVAccess : argumentPayloads[0]) + "))";
+        return "color_to_vec4(" + tex_name(mTree.generateUniqueID(name)) + "(" + (argumentPayloads.empty() ? std::string("ctx") : ("ctx.{uvw=vec2_to_3(" + argumentPayloads[0] + ", 0)}")) + "))";
     }
 
     /// a.xyz Access operator for vector types
@@ -1127,7 +1126,7 @@ Transpiler::~Transpiler()
 {
 }
 
-std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr, const std::string& uv_access, bool hasSurfaceInfo) const
+std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr) const
 {
     // Parse
     auto ast = mInternal->Environment.parse(expr);
@@ -1135,7 +1134,7 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr,
         return {};
 
     // Transpile
-    ArticVisitor visitor(mTree, uv_access, hasSurfaceInfo);
+    ArticVisitor visitor(mTree);
     std::string res = mInternal->Environment.transpile(ast, &visitor);
 
     // Patch output

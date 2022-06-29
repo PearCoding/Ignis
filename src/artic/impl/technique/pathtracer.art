@@ -224,7 +224,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
 
     fn @on_shadow_miss( _ray: Ray
                       , pixel: i32
-                      , _shader: Shader
+                      , _shader: MaterialShader
                       , color: Color) -> Option[Color] {
         aov_nee.splat(pixel, color);
         make_option(color)

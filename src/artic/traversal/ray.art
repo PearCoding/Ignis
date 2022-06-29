@@ -30,6 +30,15 @@ fn @make_ray(org: Vec3, dir: Vec3, tmin: f32, tmax: f32) -> Ray {
     }
 }
 
+fn @make_zero_ray() = Ray {
+    org = vec3_expand(0),
+    dir = vec3_expand(0),
+    inv_dir = vec3_expand(0),
+    inv_org = vec3_expand(0),
+    tmin = 0,
+    tmax = flt_max
+};
+
 // Transforms ray. The direction is not normalized
 // The near and far distances are still given in global space
 // Multiplying with the magnitude of the direction vector would give the local distances
