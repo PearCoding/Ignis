@@ -625,6 +625,38 @@ Bump mapping (:monosp:`bumpmap`)
   :width: 0.6
   :label: fig-bumpmap
 
+.. _bsdf-transform:
+
+Transform (:monosp:`transform`)
+-------------------------------
+
+.. objectparameters::
+
+ * - bsdf
+   - |bsdf|
+   - *None*
+   - Bsdf the normal transformation will be applied to.
+ * - normal
+   - |vector|
+   - (0,0,1)
+   - Normal to use instead of the callee normal (e.g., surface normal).
+ * - tangent
+   - |vector|
+   - *None*
+   - Tangent to use instead of the callee tangent (e.g., surface tangent). Will be calculated from the normal parameter if not set.
+
+.. subfigstart::
+
+.. figure::  images/mat_transform.jpg
+  :width: 90%
+  :align: center
+  
+  Normal transformed by a PExpr to mimic a normal map
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-transform
+
 .. _bsdf-klems:
 
 Klems (:monosp:`klems`)

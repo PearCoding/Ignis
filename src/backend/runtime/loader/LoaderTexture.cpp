@@ -20,7 +20,6 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
 
     size_t res_id = tree.context().registerExternalResource(filename);
 
-    std::cout << res_id << std::endl;
     std::string filter = "make_bilinear_filter()";
     if (filter_type == "nearest")
         filter = "make_nearest_filter()";

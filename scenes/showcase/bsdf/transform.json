@@ -1,0 +1,12 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"textures": [
+		{"type":"checkerboard", "name":"weight", "scale_x":32, "scale_y":16, "color0":[0.8,0.2,0], "color1":[0.2, 0.8, 0]}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name":"first"},
+		{"type":"transform", "name": "mat-Sphere", "bsdf": "first", "normal":"norm(vec3(weight.r, weight.g,0))"}
+	]
+}
