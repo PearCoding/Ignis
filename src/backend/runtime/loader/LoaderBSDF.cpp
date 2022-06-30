@@ -75,9 +75,9 @@ std::optional<ConductorSpec> lookupConductor(const std::string& name, const std:
 
 static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.addNumber("alpha_u", *bsdf, 0.1f, false);
-    tree.addNumber("alpha_v", *bsdf, 0.1f, false);
-    tree.addNumber("alpha", *bsdf, 0.1f);
+    tree.addNumber("alpha_u", *bsdf, 0.1f, false, ShadingTree::NumberOptions::Zero());
+    tree.addNumber("alpha_v", *bsdf, 0.1f, false, ShadingTree::NumberOptions::Zero());
+    tree.addNumber("alpha", *bsdf, 0.1f, true, ShadingTree::NumberOptions::Zero());
 }
 
 static std::string inline_microfacet(ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf)
@@ -676,7 +676,7 @@ static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const st
         const std::string inner_id = tree.generateUniqueID(inner);
         stream << tree.pullHeader()
                << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_bumpmap(ctx.surf, "
-               << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctxctx.{surf=surf2}) }, "
+               << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2}) }, "
                << "texture_dx(" << tree.getInline("map") << ", ctx).r, "
                << "texture_dy(" << tree.getInline("map") << ", ctx).r, "
                << tree.getInline("strength") << ");" << std::endl;

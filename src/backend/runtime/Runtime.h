@@ -33,7 +33,7 @@ struct RuntimeOptions {
     std::filesystem::path ModulePath = std::filesystem::current_path(); // Optional path to modules
     std::filesystem::path ScriptDir  = {};                              // Path to a new script directory, replacing the internal standard library
 
-    bool ForceLocalRegistryUsage = false; // Enforce default parameters to be integrated into the local registry instead of being potentially embedded into the source code.
+    bool ForceSpecialization = false; // Enforce specialization of generated shader for all parameters. This will increase compile time
 };
 
 class Runtime {

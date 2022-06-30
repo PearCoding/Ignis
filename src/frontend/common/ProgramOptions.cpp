@@ -135,9 +135,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_option("--script-dir", ScriptDir, "Override internal script standard library by '.art' files from the given directory");
 
     app.add_flag("--add-env-light", AddExtraEnvLight, "Add additional constant environment light. This is automatically done for glTF scenes without any lights");
-
-    // In the future we might do all this automatically
-    app.add_flag("--force-local-registry", ForceLocalRegistryUsage, "Enforce local registry usage for parameters. This will trade drastic improvement of compile time over potential runtime optimization");
+    app.add_flag("--force-specialization", ForceSpecialization, "Enforce specialization for parameters in shading tree. This will increase compile time drastically for potential runtime optimization");
 
     if (type == ApplicationType::Trace) {
         app.add_option("-i,--input", InputRay, "Read list of rays from file instead of the standard input");
@@ -177,8 +175,8 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     if (Width.has_value() && Height.has_value())
         options.OverrideFilmSize = { Width.value(), Height.value() };
 
-    options.AddExtraEnvLight        = AddExtraEnvLight;
-    options.ForceLocalRegistryUsage = ForceLocalRegistryUsage;
+    options.AddExtraEnvLight    = AddExtraEnvLight;
+    options.ForceSpecialization = ForceSpecialization;
 
     options.ScriptDir = ScriptDir;
 }

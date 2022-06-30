@@ -188,10 +188,11 @@ bool Runtime::loadFromString(const std::string& str)
 bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
 {
     LoaderOptions lopts;
-    lopts.FilePath = path;
-    lopts.Target   = mTarget;
-    lopts.IsTracer = mOptions.IsTracer;
-    lopts.Scene    = std::move(scene);
+    lopts.FilePath            = path;
+    lopts.Target              = mTarget;
+    lopts.IsTracer            = mOptions.IsTracer;
+    lopts.Scene               = std::move(scene);
+    lopts.ForceSpecialization = mOptions.ForceSpecialization;
 
     // Extract technique
     setup_technique(lopts, mOptions);

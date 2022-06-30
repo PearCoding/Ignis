@@ -31,7 +31,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.FilmHeight          = opts.FilmHeight;
     ctx.Lights              = std::make_unique<LoaderLight>();
 
-    ctx.ForceLocalRegistryUsageForShadingTrees = opts.ForceLocalRegistryUsage;
+    ctx.ForceShadingTreeSpecialization = opts.ForceSpecialization;
 
     ctx.Lights->prepare(ctx);
 
