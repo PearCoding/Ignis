@@ -653,8 +653,8 @@ static void bsdf_normalmap(std::ostream& stream, const std::string& name, const 
 
         const std::string inner_id = tree.generateUniqueID(inner);
         stream << tree.pullHeader()
-               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normalmap(ctx.surf, @|surf2| -> Bsdf { "
-               << " bsdf_" << inner_id << "(ctx.{surf=surf2}) }, "
+               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normalmap(ctx.surf, @|surf2| "
+               << "bsdf_" << inner_id << "(ctx.{surf=surf2}), "
                << tree.getInline("map") << ","
                << tree.getInline("strength") << ");" << std::endl;
     }
@@ -710,7 +710,7 @@ static void bsdf_transform(std::ostream& stream, const std::string& name, const 
         } else {
             stream << tree.pullHeader()
                    << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normal_set(ctx.surf, "
-                   << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2})) }, "
+                   << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2}) }, "
                    << tree.getInline("normal") << ");" << std::endl;
         }
     }

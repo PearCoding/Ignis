@@ -300,7 +300,7 @@ static void light_area(size_t id, std::ostream& stream, const std::string& name,
 
     stream << "  let light_" << light_id << " = make_area_light(" << id
            << ", ae_" << light_id
-           << ", @|tex_coords| { maybe_unused(tex_coords); " << tree.getInline("radiance") << " });" << std::endl;
+           << ", @|ctx| { maybe_unused(ctx); " << tree.getInline("radiance") << " });" << std::endl;
 
     tree.endClosure();
 }
