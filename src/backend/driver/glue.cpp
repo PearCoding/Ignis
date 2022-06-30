@@ -847,7 +847,7 @@ public:
         auto callback      = reinterpret_cast<Callback*>(output.Exec);
         IG_ASSERT(callback != nullptr, "Expected hit shader to be valid");
         setCurrentShader(dev, last - first, output);
-        callback(&driver_settings, entity_id, first, last);
+        callback(&driver_settings, entity_id, material_id, first, last);
 
         checkDebugOutput();
 
@@ -874,7 +874,7 @@ public:
             auto callback      = reinterpret_cast<Callback*>(output.Exec);
             IG_ASSERT(callback != nullptr, "Expected advanced shadow hit shader to be valid");
             setCurrentShader(dev, last - first, output);
-            callback(&driver_settings, first, last);
+            callback(&driver_settings, material_id, first, last);
 
             checkDebugOutput();
 
@@ -890,7 +890,7 @@ public:
             auto callback      = reinterpret_cast<Callback*>(output.Exec);
             IG_ASSERT(callback != nullptr, "Expected advanced shadow miss shader to be valid");
             setCurrentShader(dev, last - first, output);
-            callback(&driver_settings, first, last);
+            callback(&driver_settings, material_id, first, last);
 
             checkDebugOutput();
 
