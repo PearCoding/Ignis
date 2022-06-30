@@ -24,6 +24,8 @@ if __name__ == "__main__":
         exit(-1)
 
     img = sio.read(sys.argv[1])
+    print("Min: %f" % np.amin(img))
+    print("Max: %f" % np.amax(img))
     sio.write(sys.argv[2], colormap(
         np.clip(np.average(sio.exposure(img, -6), axis=2), 0, 1)))
 
