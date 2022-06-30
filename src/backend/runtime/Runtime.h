@@ -32,6 +32,8 @@ struct RuntimeOptions {
     bool AddExtraEnvLight            = false;                           // User option to add a constant environment light (just to see something)
     std::filesystem::path ModulePath = std::filesystem::current_path(); // Optional path to modules
     std::filesystem::path ScriptDir  = {};                              // Path to a new script directory, replacing the internal standard library
+
+    bool ForceLocalRegistryUsage = false; // Enforce default parameters to be integrated into the local registry instead of being potentially embedded into the source code.
 };
 
 class Runtime {

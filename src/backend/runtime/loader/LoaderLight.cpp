@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <chrono>
 
-// TODO: Make use of the ShadingTree!!
 namespace IG {
 inline static Vector3f getPropertyColor(const Parser::Property& prop, const Vector3f& def)
 {
@@ -132,11 +131,11 @@ inline static void exportSimplePointLights(const LoaderContext& ctx)
 
 static void light_point(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     auto pos = light->property("position").getVector3(); // FIXME: Has to be fixed (WHY?)
     tree.addColor("intensity", *light, Vector3f::Ones(), true);
 
-    const std::string light_id = tree.generateUniqueID(name);
+    const std::string light_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let light_" << light_id << " = make_point_light(" << id
            << ", " << LoaderUtils::inlineVector(pos)
@@ -252,7 +251,7 @@ inline static void exportSimpleAreaLights(const LoaderContext& ctx)
 
 static void light_area(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
 
     const std::string entityName = light->property("entity").getString();
     tree.addColor("radiance", *light, Vector3f::Constant(1.0f), true);
@@ -265,7 +264,7 @@ static void light_area(size_t id, std::ostream& stream, const std::string& name,
         entity = tree.context().Environment.EmissiveEntities.at(entityName);
     }
 
-    const std::string light_id = tree.generateUniqueID(name);
+    const std::string light_id = tree.currentClosureID();
     stream << tree.pullHeader();
 
     const bool opt = light->property("optimize").getBool(true);
@@ -327,13 +326,13 @@ static float light_area_power(const std::shared_ptr<Parser::Object>& light, cons
 
 static void light_directional(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
 
     auto ea      = extractEA(light);
     Vector3f dir = ea.toDirection();
     tree.addColor("irradiance", *light, Vector3f::Ones(), true);
 
-    const std::string light_id = tree.generateUniqueID(name);
+    const std::string light_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let light_" << light_id << " = make_directional_light(" << id
            << ", " << LoaderUtils::inlineVector(dir)
@@ -351,7 +350,7 @@ static float light_directional_power(const std::shared_ptr<Parser::Object>& ligh
 
 static void light_spot(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
 
     auto ea      = extractEA(light);
     Vector3f dir = ea.toDirection();
@@ -361,7 +360,7 @@ static void light_spot(size_t id, std::ostream& stream, const std::string& name,
     tree.addNumber("cutoff", *light, 30, true);
     tree.addNumber("falloff", *light, 20, true);
 
-    const std::string light_id = tree.generateUniqueID(name);
+    const std::string light_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let light_" << light_id << " = make_spot_light(" << id
            << ", " << LoaderUtils::inlineVector(pos)
@@ -383,14 +382,14 @@ static float light_spot_power(const std::shared_ptr<Parser::Object>& light, cons
 
 static void light_sun(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     auto ea      = extractEA(light);
     Vector3f dir = ea.toDirection();
 
     tree.addNumber("sun_scale", *light, 1, true);
     tree.addNumber("sun_radius_scale", *light, 1, true);
 
-    const std::string light_id = tree.generateUniqueID(name);
+    const std::string light_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let light_" << light_id << " = make_sun_light(" << id
            << ", " << LoaderUtils::inlineVector(dir)
@@ -410,7 +409,7 @@ static float light_sun_power(const std::shared_ptr<Parser::Object>& light, const
 
 static void light_sky(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("scale", *light, Vector3f::Ones(), true);
 
     const std::string path = setup_sky(tree.context(), name, light);
@@ -420,7 +419,7 @@ static void light_sky(size_t id, std::ostream& stream, const std::string& name, 
 
     size_t res_img_id          = tree.context().registerExternalResource(path);
     size_t res_cdf_id          = tree.context().registerExternalResource(std::get<0>(cdf));
-    const std::string light_id = tree.generateUniqueID(name);
+    const std::string light_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let sky_tex_" << light_id << " = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image_by_id(" << res_img_id << "), mat3x3_identity());" << std::endl // TODO: Refactor this out
            << "  let sky_cdf_" << light_id << " = cdf::make_cdf_2d_from_buffer(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
@@ -442,7 +441,7 @@ static float light_sky_power(const std::shared_ptr<Parser::Object>& light, const
 
 static void light_cie_env(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
 
     tree.addColor("zenith", *light, Vector3f::Ones(), true);
     tree.addColor("ground", *light, Vector3f::Ones(), true);
@@ -453,7 +452,7 @@ static void light_cie_env(size_t id, std::ostream& stream, const std::string& na
 
     bool cloudy = (light->pluginType() == "cie_cloudy" || light->pluginType() == "ciecloudy");
 
-    const std::string light_id = tree.generateUniqueID(name);
+    const std::string light_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let light_" << light_id << " = make_cie_sky_light(" << id
            << ", " << LoaderUtils::inlineSceneBBox(tree.context())
@@ -491,7 +490,7 @@ static void light_cie_sunny_env(size_t id, std::ostream& stream, const std::stri
 {
     const bool clear = (light->pluginType() == "cie_clear" || light->pluginType() == "cieclear");
 
-    tree.beginClosure();
+    tree.beginClosure(name);
 
     auto ea      = extractEA(light);
     Vector3f dir = ea.toDirection();
@@ -531,7 +530,7 @@ static void light_cie_sunny_env(size_t id, std::ostream& stream, const std::stri
     const Matrix3f trans  = light->property("transform").getTransform().linear().transpose().inverse();
     const bool has_ground = light->property("has_ground").getBool(true);
 
-    const std::string light_id = tree.generateUniqueID(name);
+    const std::string light_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let light_" << light_id << " = make_cie_sunny_light(" << id
            << ", " << LoaderUtils::inlineSceneBBox(tree.context())
@@ -552,7 +551,7 @@ static void light_cie_sunny_env(size_t id, std::ostream& stream, const std::stri
 
 static void light_perez(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
 
     auto ea      = extractEA(light);
     Vector3f dir = ea.toDirection();
@@ -574,7 +573,7 @@ static void light_perez(size_t id, std::ostream& stream, const std::string& name
         usesLuminance = false;
     }
 
-    const std::string light_id = tree.generateUniqueID(name);
+    const std::string light_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let light_" << light_id << " = make_perez_light(" << id
            << ", " << LoaderUtils::inlineSceneBBox(tree.context())
@@ -605,14 +604,14 @@ static void light_perez(size_t id, std::ostream& stream, const std::string& name
 
 static void light_env(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("scale", *light, Vector3f::Ones(), true);
     tree.addTexture("radiance", *light, true);
     const Matrix3f trans = light->property("transform").getTransform().linear().transpose().inverse();
 
     const bool useCDF = light->property("cdf").getBool(true);
 
-    const std::string light_id = tree.generateUniqueID(name);
+    const std::string light_id = tree.currentClosureID();
     if (tree.isPureTexture("radiance")) {
         const std::string tex_name = light->property("radiance").getString();
         const auto tex             = tree.context().Scene.texture(tex_name);
@@ -664,8 +663,10 @@ static float light_env_power(const std::shared_ptr<Parser::Object>& light, const
 
 static void light_error(std::ostream& stream, const std::string& name, ShadingTree& tree)
 {
-    const std::string light_id = tree.generateUniqueID(name);
+    tree.beginClosure(name);
+    const std::string light_id = tree.currentClosureID();
     stream << "  let light_" << light_id << " = make_null_light(-1) /* Error */;" << std::endl;
+    tree.endClosure();
 }
 
 using LightLoader   = void (*)(size_t id, std::ostream&, const std::string&, const std::shared_ptr<Parser::Object>&, ShadingTree&);

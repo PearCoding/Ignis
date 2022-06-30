@@ -9,13 +9,13 @@ namespace IG {
 static void medium_homogeneous(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& medium, ShadingTree& tree)
 {
     // FIXME: The shading context is not available here! Texture & PExpr will produce errors
-    tree.beginClosure();
+    tree.beginClosure(name);
 
     tree.addColor("sigma_a", *medium, Vector3f::Zero(), true);
     tree.addColor("sigma_s", *medium, Vector3f::Zero(), true);
     tree.addNumber("g", *medium, 0, true);
 
-    const std::string media_id = tree.generateUniqueID(name);
+    const std::string media_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let medium_" << media_id << " = make_homogeneous_medium(" << tree.getInline("sigma_a")
            << ", " << tree.getInline("sigma_s")
@@ -27,9 +27,9 @@ static void medium_homogeneous(std::ostream& stream, const std::string& name, co
 // It is recommended to not define the medium, instead of using vacuum
 static void medium_vacuum(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>&, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
 
-    const std::string media_id = tree.generateUniqueID(name);
+    const std::string media_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let medium_" << media_id << " = make_vacuum_medium();" << std::endl;
 

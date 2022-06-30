@@ -32,6 +32,7 @@ struct LoaderContext {
     size_t CurrentTechniqueVariant;
     inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return TechniqueInfo.Variants[CurrentTechniqueVariant]; }
 
+    bool ForceLocalRegistryUsageForShadingTrees = false;
     ParameterSet LocalRegistry; // Current local registry for given shader
     inline void resetRegistry()
     {

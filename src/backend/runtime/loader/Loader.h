@@ -20,6 +20,7 @@ struct LoaderOptions {
     size_t FilmHeight;
     size_t SamplesPerIteration; // Only a recommendation!
     bool IsTracer;
+    bool ForceLocalRegistryUsage;
 };
 
 struct LoaderResult {

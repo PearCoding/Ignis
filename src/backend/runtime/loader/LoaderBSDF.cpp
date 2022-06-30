@@ -80,7 +80,7 @@ static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, Shadin
     tree.addNumber("alpha", *bsdf, 0.1f);
 }
 
-static std::string inline_microfacet(const std::string& name, ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf)
+static std::string inline_microfacet(ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf)
 {
     std::string distribution = "microfacet::make_vndf_ggx_distribution";
     if (bsdf->property("distribution").type() == Parser::PT_STRING) {
@@ -92,7 +92,7 @@ static std::string inline_microfacet(const std::string& name, ShadingTree& tree,
         }
     }
 
-    const std::string md_id = tree.generateUniqueID(name);
+    const std::string md_id = tree.currentClosureID();
     std::stringstream stream;
     if (tree.hasParameter("alpha_u")) {
         stream << "  let md_" << md_id << " = @|ctx : ShadingContext| " << distribution << "(ctx.surf.local, "
@@ -108,10 +108,10 @@ static std::string inline_microfacet(const std::string& name, ShadingTree& tree,
 
 static void bsdf_diffuse(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("reflectance", *bsdf, Vector3f::Constant(0.5f));
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_diffuse_bsdf(ctx.surf, "
            << tree.getInline("reflectance") << ");" << std::endl;
@@ -121,11 +121,11 @@ static void bsdf_diffuse(std::ostream& stream, const std::string& name, const st
 
 static void bsdf_orennayar(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addNumber("alpha", *bsdf, 0.0f);
     tree.addColor("reflectance", *bsdf, Vector3f::Constant(0.5f));
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_orennayar_bsdf(ctx.surf, "
            << tree.getInline("alpha") << ", "
@@ -136,7 +136,7 @@ static void bsdf_orennayar(std::ostream& stream, const std::string& name, const 
 
 static void bsdf_dielectric(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
     tree.addColor("specular_transmittance", *bsdf, Vector3f::Ones());
     tree.addNumber("ext_ior", *bsdf, DefaultDielectricExterior);
@@ -147,7 +147,7 @@ static void bsdf_dielectric(std::ostream& stream, const std::string& name, const
 
     bool thin = bsdf->property("thin").getBool(bsdf->pluginType() == "thindielectric");
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| "
            << (thin ? "make_thin_glass_bsdf" : "make_glass_bsdf") << "(ctx.surf, "
@@ -161,7 +161,7 @@ static void bsdf_dielectric(std::ostream& stream, const std::string& name, const
 
 static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
     tree.addColor("specular_transmittance", *bsdf, Vector3f::Ones());
     tree.addNumber("ext_ior", *bsdf, DefaultDielectricExterior);
@@ -172,9 +172,9 @@ static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name,
 
     setup_microfacet(bsdf, tree);
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree, bsdf)
+           << inline_microfacet(tree, bsdf)
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_rough_glass_bsdf(ctx.surf, "
            << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
            << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "
@@ -187,10 +187,10 @@ static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name,
 
 static void bsdf_mirror(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_mirror_bsdf(ctx.surf, "
            << tree.getInline("specular_reflectance") << ");" << std::endl;
@@ -201,14 +201,14 @@ static void bsdf_mirror(std::ostream& stream, const std::string& name, const std
 static void bsdf_conductor(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
 
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
     tree.addColor("eta", *bsdf, DefaultConductor.Eta);
     tree.addColor("k", *bsdf, DefaultConductor.Kappa);
 
     const auto spec = lookupConductor(name, bsdf);
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_conductor_bsdf(ctx.surf, "
            << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Eta) : tree.getInline("eta")) << ", "
@@ -220,7 +220,7 @@ static void bsdf_conductor(std::ostream& stream, const std::string& name, const 
 
 static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
     tree.addColor("eta", *bsdf, DefaultConductor.Eta);
     tree.addColor("k", *bsdf, DefaultConductor.Kappa);
@@ -229,9 +229,9 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
 
     setup_microfacet(bsdf, tree);
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree, bsdf)
+           << inline_microfacet(tree, bsdf)
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_rough_conductor_bsdf(ctx.surf, "
            << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Eta) : tree.getInline("eta")) << ", "
            << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Kappa) : tree.getInline("k")) << ", "
@@ -243,7 +243,7 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
 
 static void bsdf_plastic(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
     tree.addColor("diffuse_reflectance", *bsdf, Vector3f::Constant(0.5f));
     tree.addNumber("ext_ior", *bsdf, DefaultDielectricExterior);
@@ -252,7 +252,7 @@ static void bsdf_plastic(std::ostream& stream, const std::string& name, const st
     const auto ext_spec = lookupDielectric("ext_ior_material", name, bsdf);
     const auto int_spec = lookupDielectric("int_ior_material", name, bsdf);
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_plastic_bsdf(ctx.surf, "
            << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
@@ -265,7 +265,7 @@ static void bsdf_plastic(std::ostream& stream, const std::string& name, const st
 
 static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
     tree.addColor("diffuse_reflectance", *bsdf, Vector3f::Constant(0.5f));
     tree.addNumber("ext_ior", *bsdf, DefaultDielectricExterior);
@@ -276,9 +276,9 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
 
     setup_microfacet(bsdf, tree);
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
-           << inline_microfacet(name, tree, bsdf)
+           << inline_microfacet(tree, bsdf)
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_plastic_bsdf(ctx.surf, "
            << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
            << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "
@@ -292,11 +292,11 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
 
 static void bsdf_phong(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
     tree.addNumber("exponent", *bsdf, 30);
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_phong_bsdf(ctx.surf, "
            << tree.getInline("specular_reflectance") << ", "
@@ -307,7 +307,7 @@ static void bsdf_phong(std::ostream& stream, const std::string& name, const std:
 
 static void bsdf_principled(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("base_color", *bsdf, Vector3f::Constant(0.8f));
     tree.addNumber("ior", *bsdf, DefaultDielectricInterior);
     tree.addNumber("diffuse_transmission", *bsdf, 0);
@@ -328,7 +328,7 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
     bool is_thin            = bsdf->property("thin").getBool(false);
     bool clearcoat_top_only = bsdf->property("clearcoat_top_only").getBool(true);
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_principled_bsdf(ctx.surf, "
            << tree.getInline("base_color") << ", "
@@ -398,7 +398,7 @@ static inline std::string dump_klems_specification(const KlemsSpecification& spe
 
 static void bsdf_klems(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("base_color", *bsdf, Vector3f::Ones());
 
     const Vector3f upVector = bsdf->property("up").getVector3(Vector3f::UnitZ()).normalized();
@@ -409,7 +409,7 @@ static void bsdf_klems(std::ostream& stream, const std::string& name, const std:
     const KlemsSpecification spec = std::get<1>(data);
 
     size_t res_id             = tree.context().registerExternalResource(buffer_path);
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let klems_" << bsdf_id << " = make_klems_model(device.load_buffer_by_id(" << res_id << "), "
            << dump_klems_specification(spec) << ");" << std::endl
@@ -470,7 +470,7 @@ static inline std::string dump_tt_specification(const TensorTreeSpecification& s
 
 static void bsdf_tensortree(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
     tree.addColor("base_color", *bsdf, Vector3f::Ones());
 
     const Vector3f upVector = bsdf->property("up").getVector3(Vector3f::UnitZ()).normalized();
@@ -481,7 +481,7 @@ static void bsdf_tensortree(std::ostream& stream, const std::string& name, const
     const TensorTreeSpecification spec = std::get<1>(data);
 
     size_t res_id             = tree.context().registerExternalResource(buffer_path);
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let tt_" << bsdf_id << " = make_tensortree_model(device.request_debug_output(), device.load_buffer_by_id(" << res_id << "), "
            << dump_tt_specification(spec) << ");" << std::endl
@@ -496,25 +496,29 @@ static void bsdf_tensortree(std::ostream& stream, const std::string& name, const
 static void bsdf_twosided(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
     // Ignore
+    tree.beginClosure(name);
     const std::string other   = bsdf->property("bsdf").getString();
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << LoaderBSDF::generate(other, tree);
     stream << "  let bsdf_" << bsdf_id << " = bsdf_" << tree.generateUniqueID(other) << ";" << std::endl;
+    tree.endClosure();
 }
 
 static void bsdf_passthrough(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>&, ShadingTree& tree)
 {
-    IG_UNUSED(tree);
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    tree.beginClosure(name);
+    const std::string bsdf_id = tree.currentClosureID();
     stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_passthrough_bsdf(ctx.surf);" << std::endl;
+    tree.endClosure();
 }
 
 static void bsdf_add(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
+    tree.beginClosure(name);
     const std::string first  = bsdf->property("first").getString();
     const std::string second = bsdf->property("second").getString();
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     if (first.empty() || second.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdfs given" << std::endl;
         stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
@@ -523,8 +527,6 @@ static void bsdf_add(std::ostream& stream, const std::string& name, const std::s
         stream << LoaderBSDF::generate(first, tree);
         stream << "  let bsdf_" << bsdf_id << " = bsdf_" << tree.generateUniqueID(first) << ";" << std::endl;
     } else {
-        tree.beginClosure();
-
         stream << LoaderBSDF::generate(first, tree);
         stream << LoaderBSDF::generate(second, tree);
 
@@ -532,17 +534,17 @@ static void bsdf_add(std::ostream& stream, const std::string& name, const std::s
                << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_add_bsdf("
                << "bsdf_" << tree.generateUniqueID(first) << "(ctx), "
                << "bsdf_" << tree.generateUniqueID(second) << "(ctx));" << std::endl;
-
-        tree.endClosure();
     }
+    tree.endClosure();
 }
 
 static void bsdf_blend(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
+    tree.beginClosure(name);
     const std::string first  = bsdf->property("first").getString();
     const std::string second = bsdf->property("second").getString();
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     if (first.empty() || second.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdfs given" << std::endl;
         stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
@@ -551,7 +553,6 @@ static void bsdf_blend(std::ostream& stream, const std::string& name, const std:
         stream << LoaderBSDF::generate(first, tree);
         stream << "  let bsdf_" << bsdf_id << " = bsdf_" << tree.generateUniqueID(first) << ";" << std::endl;
     } else {
-        tree.beginClosure();
         tree.addNumber("weight", *bsdf, 0.5f);
 
         stream << LoaderBSDF::generate(first, tree);
@@ -562,22 +563,21 @@ static void bsdf_blend(std::ostream& stream, const std::string& name, const std:
                << "bsdf_" << tree.generateUniqueID(first) << "(ctx), "
                << "bsdf_" << tree.generateUniqueID(second) << "(ctx), "
                << tree.getInline("weight") << ");" << std::endl;
-
-        tree.endClosure();
     }
+    tree.endClosure();
 }
 
 static void bsdf_mask(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
+    tree.beginClosure(name);
     const std::string masked = bsdf->property("bsdf").getString();
     const bool inverted      = bsdf->property("inverted").getBool();
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     if (masked.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
         stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
     } else {
-        tree.beginClosure();
         tree.addNumber("weight", *bsdf, 0.5f);
 
         const std::string masked_id = tree.generateUniqueID(masked);
@@ -596,22 +596,21 @@ static void bsdf_mask(std::ostream& stream, const std::string& name, const std::
                 << "make_passthrough_bsdf(ctx.surf), ";
         }
         stream << tree.getInline("weight") << ");" << std::endl;
-
-        tree.endClosure();
     }
+    tree.endClosure();
 }
 
 static void bsdf_cutoff(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
+    tree.beginClosure(name);
     const std::string masked = bsdf->property("bsdf").getString();
     const bool inverted      = bsdf->property("inverted").getBool();
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     if (masked.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
         stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
     } else {
-        tree.beginClosure();
         tree.addNumber("weight", *bsdf, 0.5f); // Only useful with textures or other patterns
         tree.addNumber("cutoff", *bsdf, 0.5f);
 
@@ -632,19 +631,18 @@ static void bsdf_cutoff(std::ostream& stream, const std::string& name, const std
         }
 
         stream << "if " << tree.getInline("weight") << " < " << tree.getInline("cutoff") << " { 0:f32 } else { 1:f32 } );" << std::endl;
-
-        tree.endClosure();
     }
+    tree.endClosure();
 }
 
 static void bsdf_normalmap(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
+    tree.beginClosure(name);
     const std::string inner = bsdf->property("bsdf").getString();
-    tree.beginClosure();
     tree.addColor("map", *bsdf, Vector3f::Constant(1.0f));
     tree.addNumber("strength", *bsdf, 1.0f);
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
         stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
@@ -663,12 +661,12 @@ static void bsdf_normalmap(std::ostream& stream, const std::string& name, const 
 
 static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
+    tree.beginClosure(name);
     const std::string inner = bsdf->property("bsdf").getString();
-    tree.beginClosure();
     tree.addTexture("map", *bsdf); // Better use some node system with explicit gradients...
     tree.addNumber("strength", *bsdf, 1.0f);
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
         stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
@@ -688,11 +686,11 @@ static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const st
 
 static void bsdf_transform(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
+    tree.beginClosure(name);
     const std::string inner = bsdf->property("bsdf").getString();
-    tree.beginClosure();
     tree.addVector("normal", *bsdf, Vector3f::UnitZ());
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
         stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
@@ -719,10 +717,10 @@ static void bsdf_transform(std::ostream& stream, const std::string& name, const 
 
 static void bsdf_doublesided(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
+    tree.beginClosure(name);
     const std::string inner = bsdf->property("bsdf").getString();
-    tree.beginClosure();
 
-    const std::string bsdf_id = tree.generateUniqueID(name);
+    const std::string bsdf_id = tree.currentClosureID();
     if (inner.empty()) {
         IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
         stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
