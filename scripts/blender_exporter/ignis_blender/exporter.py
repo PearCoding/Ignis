@@ -9,8 +9,6 @@ from .node import NodeContext
 from .utils import *
 from .defaults import *
 
-import bpy
-
 
 def export_technique(result):
     result["technique"] = {
@@ -21,7 +19,7 @@ def export_technique(result):
 
 def export_entity(result, inst, filepath, shape_name, mat_i, export_materials, export_lights):
     if export_materials:
-        if(len(inst.object.material_slots) >= mat_i):
+        if(len(inst.object.material_slots) > mat_i):
             result["_materials"].add(
                 inst.object.material_slots[mat_i].material)
             mat_name = inst.object.material_slots[mat_i].material.name
@@ -81,6 +79,10 @@ def export_all(filepath, result, depsgraph, use_selection, export_materials, exp
             else:
                 shapes = export_shape(result, object_eval, depsgraph, filepath)
                 exported_shapes[name] = shapes
+
+            if len(shapes) == 0:
+                print(
+                    f"Entity {object_eval.name} has no material or shape and will be ignored")
 
             for shape in shapes:
                 export_entity(result, inst, filepath, shape[0], shape[1],

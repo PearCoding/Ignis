@@ -1,7 +1,7 @@
 import bpy
 import math
 
-from .node import export_node
+from .node import export_node, handle_node_group_begin, handle_node_group_end, handle_node_reroute
 from .utils import *
 
 
@@ -176,33 +176,6 @@ def _export_emission_bsdf(ctx, bsdf, export_name):
     return {"type": "diffuse", "name": export_name, "reflectance": 0}
 
 
-def _export_group_begin(ctx, node, export_name, output_name):
-    if node.node_tree is None:
-        print(
-            f"Invalid group '{node.name}'")
-        return None
-
-    output = node.node_tree.nodes.get("Group Output")
-    if output is None:
-        print(
-            f"Invalid group '{node.name}'")
-        return None
-
-    ctx.stack.append(node)
-    out = _export_bsdf_inline(ctx, output.inputs[output_name], export_name)
-    ctx.stack.pop()
-    return out
-
-
-def _export_group_end(ctx, node, export_name, output_name):
-    grp = ctx.stack[-1]
-    return _export_bsdf_inline(ctx, grp.inputs[output_name], export_name)
-
-
-def _export_reroute(ctx, node, export_name):
-    return _export_bsdf_inline(ctx, node.inputs[0], export_name)
-
-
 def _export_bsdf(ctx, bsdf, name, output_name):
     if bsdf is None:
         print(f"Material {name} has no valid bsdf")
@@ -228,11 +201,11 @@ def _export_bsdf(ctx, bsdf, name, output_name):
     elif isinstance(bsdf, bpy.types.ShaderNodeEmission):
         return _export_emission_bsdf(ctx, bsdf, name)
     elif isinstance(bsdf, bpy.types.ShaderNodeGroup):
-        return _export_group_begin(ctx, bsdf, name, output_name)
+        return handle_node_group_begin(ctx, bsdf, output_name, lambda ctx2, socket: _export_bsdf_inline(ctx2, socket, name))
     elif isinstance(bsdf, bpy.types.NodeGroupInput):
-        return _export_group_end(ctx, bsdf, name, output_name)
+        return handle_node_group_end(ctx, bsdf, output_name, lambda ctx2, socket: _export_bsdf_inline(ctx2, socket, name))
     elif isinstance(bsdf, bpy.types.NodeReroute):
-        return _export_reroute(ctx, bsdf, name)
+        return handle_node_reroute(ctx, bsdf, lambda ctx2, socket: _export_bsdf_inline(ctx2, socket, name))
     else:
         print(
             f"Material {name} has a bsdf of type {type(bsdf).__name__}  which is not supported")
@@ -350,33 +323,6 @@ def _get_emission_pure(ctx, bsdf):
     return f"({color} * {strength})"
 
 
-def _get_group_begin(ctx, node, output_name):
-    if node.node_tree is None:
-        print(
-            f"Invalid group '{node.name}'")
-        return None
-
-    output = node.node_tree.nodes.get("Group Output")
-    if output is None:
-        print(
-            f"Invalid group '{node.name}'")
-        return None
-
-    ctx.stack.append(node)
-    out = _get_emission_inline(ctx, output.inputs[output_name])
-    ctx.stack.pop()
-    return out
-
-
-def _get_group_end(ctx, node, output_name):
-    grp = ctx.stack[-1]
-    return _get_emission_inline(ctx, grp.inputs[output_name])
-
-
-def _get_reroute(ctx, node):
-    return _get_emission_inline(ctx, node.inputs[0])
-
-
 def _get_emission(ctx, bsdf, output_name):
     if isinstance(bsdf, bpy.types.ShaderNodeMixShader):
         return _get_emission_mix(ctx, bsdf)
@@ -387,11 +333,11 @@ def _get_emission(ctx, bsdf, output_name):
     elif isinstance(bsdf, bpy.types.ShaderNodeEmission):
         return _get_emission_pure(ctx, bsdf)
     elif isinstance(bsdf, bpy.types.ShaderNodeGroup):
-        return _get_group_begin(ctx, bsdf, output_name)
+        return handle_node_group_begin(ctx, bsdf, output_name, _get_emission_inline)
     elif isinstance(bsdf, bpy.types.NodeGroupInput):
-        return _get_group_end(ctx, bsdf, output_name)
+        return handle_node_group_end(ctx, bsdf, output_name, _get_emission_inline)
     elif isinstance(bsdf, bpy.types.NodeReroute):
-        return _get_reroute(ctx, bsdf)
+        return handle_node_reroute(ctx, bsdf, _get_emission_inline)
     else:
         return None
 

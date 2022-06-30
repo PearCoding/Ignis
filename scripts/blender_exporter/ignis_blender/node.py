@@ -12,7 +12,28 @@ class NodeContext:
     def __init__(self, result, path):
         self.result = result
         self.path = path
-        self.stack = []
+        self.cache = {}
+
+        self._stack = []
+        self._cur = 0
+
+    def push(self, node):
+        self._stack.insert(self._cur, node)
+        self._cur += 1
+
+    def pop(self):
+        del self._stack[self._cur-1]
+        self._cur -= 1
+
+    @property
+    def current(self):
+        return self._stack[self._cur-1]
+
+    def goIn(self):
+        self._cur -= 1
+
+    def goOut(self):
+        self._cur += 1
 
 
 def _export_default(socket):
@@ -73,6 +94,36 @@ def _export_maprange(ctx, node):
         return f"clamp({ops}, {to_min}, {to_max})"
     else:
         return ops
+
+
+def _export_fresnel(ctx, node):
+    ior = export_node(ctx, node.inputs["IOR"])
+    if node.inputs["Normal"].is_linked:
+        normal = export_node(ctx, node.inputs["Normal"])
+    else:
+        normal = 'N'
+
+    return f"fresnel_dielectric(select(frontside, 1/max(1e-5,{ior}), {ior}), dot({normal},V))"
+
+
+def _export_layer_weight(ctx, node, output_name):
+    blend = export_node(ctx, node.inputs["Blend"])
+    if node.inputs["Normal"].is_linked:
+        normal = export_node(ctx, node.inputs["Normal"])
+    else:
+        normal = 'N'
+
+    cos_i = f"dot({normal},V)"
+
+    if output_name == "Fresnel":
+        eta = f"select(frontside, 1-{blend}, 1/max(1e-5,1-{blend}))"
+        return f"fresnel_dielectric({eta}, {cos_i})"
+    else:
+        if try_extract_node_value(blend) == 0.5:
+            return f"(1-abs({cos_i}))"
+        else:
+            blend_p = f"select({blend} < 0.5, 2*{blend}, 0.5/max(1e-5,1-{blend}))"
+            return f"(1-abs({cos_i})^{blend_p})"
 
 
 def _export_scalar_math(ctx, node):
@@ -224,7 +275,7 @@ def _export_rgb_math(ctx, node):
         return "color(0)"
 
     if node.use_clamp:
-        return f"clamp({ops}, 0, 1)"
+        return f"clamp({ops}, color(0), color(1))"
     else:
         return ops
 
@@ -373,6 +424,14 @@ def _export_rgb_to_bw(ctx, node):
 
 
 def _curve_lookup(curve, t, interpolate, extrapolate):
+    # No points given, return zero
+    if len(curve.points) == 0:
+        return 0
+
+    # Just a constant curve
+    if len(curve.points) == 1:
+        return curve.points[0].location[1]
+
     # Check if it is just the default one which we can skip
     if len(curve.points) == 2:
         if curve.points[0].location[0] == 0 and curve.points[0].location[1] == 0 and curve.points[1].location[0] == 1 and curve.points[1].location[1] == 1:
@@ -577,6 +636,40 @@ def _export_vector_math(ctx, node):
         return "vec3(0)"
 
 
+def _export_vector_rotate(ctx, node):
+    vec = export_node(ctx, node.inputs["Vector"])
+    center = export_node(ctx, node.inputs["Center"])
+
+    if node.rotation_type == "EULER_XYZ":
+        rot = export_node(ctx, node.inputs["Rotation"])
+        method = f"rotate_euler_inverse" if node.invert else f"rotate_euler"
+
+        return f"({method}({vec}-{center}, {rot})+{center})"
+    else:
+        angle = export_node(ctx, node.inputs["Angle"])
+        angle = f"-{angle}" if node.invert else angle
+
+        if node.rotation_type == "AXIS_ANGLE":
+            axis = export_node(ctx, node.inputs["Axis"])
+        elif node.rotation_type == "X_AXIS":
+            axis = "vec3(1,0,0)"
+        elif node.rotation_type == "Y_AXIS":
+            axis = "vec3(0,1,0)"
+        elif node.rotation_type == "Z_AXIS":
+            axis = "vec3(0,0,1)"
+
+        return f"(rotate_axis({vec}-{center}, {angle}, {axis})+{center})"
+
+
+def _export_vector_transform(ctx, node):
+    # TODO: Maybe support it?
+    vec = export_node(ctx, node.inputs["Vector"])
+    if node.convert_from != node.convert_to:
+        print(
+            f"Transforming from {node.convert_from} to {node.convert_to} not supported")
+    return vec
+
+
 def _export_normal(ctx, node, output_name):
     out_norm = _export_default(node.outputs[0])
     if output_name == "Normal":
@@ -618,12 +711,12 @@ def _export_checkerboard(ctx, node, output_name):
 
 
 def _handle_image(ctx, image):
-    img_path = image.filepath_raw.replace('//', '')
+    img_path = bpy.path.resolve_ncase(image.filepath_raw)
     if img_path == '':
         img_path = image.name + ".exr"
         image.file_format = "OPEN_EXR"
 
-    img_name = os.path.basename(img_path)
+    img_name = bpy.path.basename(img_path)
 
     if img_name not in ctx.result["_images"]:
         # Export the texture and store its path
@@ -916,141 +1009,191 @@ def _export_uvmap(ctx, node):
     return TEXCOORD_UV
 
 
-def _export_group_begin(ctx, node, output_name):
+def _export_light_path(ctx, node, output_name):
+    print(f"Light path output is not supported, returning default values")
+    # No light paths supported, so just return some default values
+    # This will work 90% of the time, but most likely will fail in some cases
+    if output_name == "Is Camera Ray":
+        return 1
+    elif output_name == "Is Shadow Ray":
+        return 0  # Shadow Rays usually do not get feedback from the surface they hit
+    elif output_name == "Is Diffuse Ray":
+        return 1
+    elif output_name == "Is Glossy Ray":
+        return 1
+    elif output_name == "Is Singular Ray":
+        return 0  # Dielectrics & Conductors with roughness=0 are singular, but we ignore them
+    elif output_name == "Is Reflection Ray":
+        return 1  # Everything is a reflection
+    elif output_name == "Is Transmission Ray":
+        return 1  # Everything is a transmission
+    elif output_name == "Ray Length":
+        return 1
+    elif output_name == "Ray Depth":
+        return 1
+    elif output_name == "Diffuse Depth":
+        return 1
+    elif output_name == "Glossy Depth":
+        return 1
+    elif output_name == "Transparent Depth":
+        return 0
+    elif output_name == "Transmission Depth":
+        return 0
+    else:
+        print(f"Unknown light path output {output_name}")
+        return 0
+
+
+def handle_node_group_begin(ctx, node, output_name, func):
     if node.node_tree is None:
         print(
-            f"Invalid group '{node.name}'")
+            f"Invalid group node '{node.name}'")
         return None
 
     output = node.node_tree.nodes.get("Group Output")
     if output is None:
         print(
-            f"Invalid group '{node.name}'")
+            f"Invalid group '{node.node_tree.name}'")
         return None
 
-    ctx.stack.append(node)
-    out = export_node(ctx, output.inputs[output_name])
-    ctx.stack.pop()
+    # print(f"Begin group {node.node_tree.name} via {output_name}")
+    ctx.push(node)
+    out = func(ctx, output.inputs[output_name])
+    ctx.pop()
     return out
 
 
-def _export_group_end(ctx, node, output_name):
-    grp = ctx.stack[-1]
-    return export_node(ctx, grp.inputs[output_name])
+def handle_node_group_end(ctx, node, output_name, func):
+    grp = ctx.current
+    # print(f"End group {grp.node_tree.name} via {output_name}")
+    ctx.goIn()
+    out = func(ctx, grp.inputs[output_name])
+    ctx.goOut()
+    return out
 
 
-def _export_reroute(ctx, node):
-    return export_node(ctx, node.inputs[0])
+def handle_node_reroute(ctx, node, func):
+    return func(ctx, node.inputs[0])
 
 
-def _export_node(ctx, node, output_name):
+def export_node(ctx, socket):
     # Missing:
-    # ShaderNodeAttribute, ShaderNodeBlackbody, ShaderNodeBevel, ShaderNodeBump, ShaderNodeCameraData,
-    # ShaderNodeCustomGroup, ShaderNodeFloatCurve, ShaderNodeFresnel,
-    # ShaderNodeHairInfo, ShaderNodeLayerWeight, ShaderNodeLightFalloff,
+    # ShaderNodeAttribute, ShaderNodeBevel, ShaderNodeBump, ShaderNodeCameraData,
+    # ShaderNodeCustomGroup, ShaderNodeHairInfo, ShaderNodeLightFalloff,
     # ShaderNodeObjectInfo, ShaderNodeScript,
     # ShaderNodeShaderToRGB, ShaderNodeSubsurfaceScattering, ShaderNodeTangent,
     # ShaderNodeTexBrick, ShaderNodeTexIES, ShaderNodeTexMagic,
     # ShaderNodeTexPointDensity, ShaderNodeTexSky, ShaderNodeUVAlongStroke,
-    # ShaderNodeVectorDisplacement, ShaderNodeVectorRotate, ShaderNodeVectorTransform,
-    # ShaderNodeVertexColor, ShaderNodeWavelength, ShaderNodeWireframe
+    # ShaderNodeVectorDisplacement, ShaderNodeVertexColor, ShaderNodeWavelength, ShaderNodeWireframe
 
     # No support planned:
     # ShaderNodeAmbientOcclusion, ShaderNodeLightPath, ShaderNodeOutputAOV,
     # ShaderNodeParticleInfo, ShaderNodeOutputLineStyle, ShaderNodePointInfo, ShaderNodeHoldout
 
-    if isinstance(node, bpy.types.ShaderNodeTexImage):
-        return _export_image_texture(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeTexChecker):
-        return _export_checkerboard(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeTexCoord):
-        return _export_tex_coordinate(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeTexNoise):
-        return _export_noise(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeTexWhiteNoise):
-        return _export_white_noise(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeTexVoronoi):
-        return _export_voronoi(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeTexMusgrave):
-        return _export_musgrave(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeTexWave):
-        return _export_wave(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeTexEnvironment):
-        return _export_environment(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeTexGradient):
-        return _export_gradient(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeNewGeometry):
-        return _export_surface_attributes(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeMath):
-        return _export_scalar_math(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeValue):
-        return _export_scalar_value(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeClamp):
-        return _export_scalar_clamp(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeMapRange):
-        return _export_maprange(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeMixRGB):
-        return _export_rgb_math(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeInvert):
-        return _export_rgb_invert(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeGamma):
-        return _export_rgb_gamma(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeBrightContrast):
-        return _export_rgb_brightcontrast(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeHueSaturation):
-        return _export_hsv(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeBlackbody):
-        return _export_blackbody(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeRGB):
-        return _export_rgb_value(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeValToRGB):
-        return _export_val_to_rgb(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeRGBToBW):
-        return _export_rgb_to_bw(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeCombineHSV):
-        return _export_combine_hsv(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeCombineRGB):
-        return _export_combine_rgb(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeCombineXYZ):
-        return _export_combine_xyz(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeSeparateHSV):
-        return _export_separate_hsv(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeSeparateRGB):
-        return _export_separate_rgb(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeSeparateXYZ):
-        return _export_separate_xyz(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeFloatCurve):
-        return _export_float_curve(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeRGBCurve):
-        return _export_rgb_curve(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeVectorCurve):
-        return _export_vector_curve(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeMapping):
-        return _export_vector_mapping(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeVectorMath):
-        return _export_vector_math(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeNormal):
-        return _export_normal(ctx, node, output_name)
-    elif isinstance(node, bpy.types.ShaderNodeNormalMap):
-        return _export_normalmap(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeUVMap):
-        return _export_uvmap(ctx, node)
-    elif isinstance(node, bpy.types.ShaderNodeGroup):
-        return _export_group_begin(ctx, node, output_name)
-    elif isinstance(node, bpy.types.NodeGroupInput):
-        return _export_group_end(ctx, node, output_name)
-    elif isinstance(node, bpy.types.NodeReroute):
-        return _export_reroute(ctx, node)
-    else:
-        print(
-            f"Shader node {node.name} of type {type(node).__name__} is not supported")
-        return None
-
-
-def export_node(ctx, socket):
     if socket.is_linked:
-        expr = _export_node(
-            ctx, socket.links[0].from_node, socket.links[0].from_socket.name)
+        if socket in ctx.cache:
+            return ctx.cache[socket]
+
+        node = socket.links[0].from_node
+        output_name = socket.links[0].from_socket.name
+
+        if isinstance(node, bpy.types.ShaderNodeTexImage):
+            expr = _export_image_texture(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeTexChecker):
+            expr = _export_checkerboard(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeTexCoord):
+            expr = _export_tex_coordinate(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeTexNoise):
+            expr = _export_noise(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeTexWhiteNoise):
+            expr = _export_white_noise(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeTexVoronoi):
+            expr = _export_voronoi(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeTexMusgrave):
+            expr = _export_musgrave(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeTexWave):
+            expr = _export_wave(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeTexEnvironment):
+            expr = _export_environment(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeTexGradient):
+            expr = _export_gradient(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeNewGeometry):
+            expr = _export_surface_attributes(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeFresnel):
+            expr = _export_fresnel(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeLayerWeight):
+            expr = _export_layer_weight(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeMath):
+            expr = _export_scalar_math(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeValue):
+            expr = _export_scalar_value(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeClamp):
+            expr = _export_scalar_clamp(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeMapRange):
+            expr = _export_maprange(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeMixRGB):
+            expr = _export_rgb_math(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeInvert):
+            expr = _export_rgb_invert(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeGamma):
+            expr = _export_rgb_gamma(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeBrightContrast):
+            expr = _export_rgb_brightcontrast(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeHueSaturation):
+            expr = _export_hsv(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeBlackbody):
+            expr = _export_blackbody(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeRGB):
+            expr = _export_rgb_value(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeValToRGB):
+            expr = _export_val_to_rgb(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeRGBToBW):
+            expr = _export_rgb_to_bw(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeCombineHSV):
+            expr = _export_combine_hsv(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeCombineRGB):
+            expr = _export_combine_rgb(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeCombineXYZ):
+            expr = _export_combine_xyz(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeSeparateHSV):
+            expr = _export_separate_hsv(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeSeparateRGB):
+            expr = _export_separate_rgb(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeSeparateXYZ):
+            expr = _export_separate_xyz(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeFloatCurve):
+            expr = _export_float_curve(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeRGBCurve):
+            expr = _export_rgb_curve(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeVectorCurve):
+            expr = _export_vector_curve(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeMapping):
+            expr = _export_vector_mapping(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeVectorMath):
+            expr = _export_vector_math(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeVectorRotate):
+            expr = _export_vector_rotate(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeVectorTransform):
+            expr = _export_vector_transform(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeNormal):
+            expr = _export_normal(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeNormalMap):
+            expr = _export_normalmap(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeUVMap):
+            expr = _export_uvmap(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeLightPath):
+            expr = _export_light_path(ctx, node, output_name)
+        elif isinstance(node, bpy.types.ShaderNodeGroup):
+            expr = handle_node_group_begin(ctx, node, output_name, export_node)
+        elif isinstance(node, bpy.types.NodeGroupInput):
+            expr = handle_node_group_end(ctx, node, output_name, export_node)
+        elif isinstance(node, bpy.types.NodeReroute):
+            expr = handle_node_reroute(ctx, node, export_node)
+        else:
+            print(
+                f"Shader node {node.name} of type {type(node).__name__} is not supported")
+            expr = None
+
         if expr is None:
             return _export_default(socket)
 
@@ -1058,22 +1201,25 @@ def export_node(ctx, socket):
         to_type = socket.type
         from_type = socket.links[0].from_socket.type
         if to_type == from_type:
-            return expr
+            full_expr = expr
         elif (from_type == 'VALUE' or from_type == 'INT') and to_type == 'RGBA':
-            return f"color({expr})"
+            full_expr = f"color({expr})"
         elif from_type == 'RGBA' and (to_type == 'VALUE' or to_type == 'INT'):
-            return f"luminance({expr})"
+            full_expr = f"luminance({expr})"
         elif (from_type == 'VALUE' or from_type == 'INT') and to_type == 'VECTOR':
-            return f"vec3({expr})"
+            full_expr = f"vec3({expr})"
         elif from_type == 'VECTOR' and (to_type == 'VALUE' or to_type == 'INT'):
-            return f"avg({expr})"
+            full_expr = f"avg({expr})"
         elif from_type == 'RGBA' and to_type == 'VECTOR':
-            return f"({expr}).rgb"
+            full_expr = f"({expr}).rgb"
         elif from_type == 'VECTOR' and to_type == 'RGBA':
-            return f"color({expr}.x, {expr}.y, {expr}.z, 1)"
+            full_expr = f"color({expr}.x, {expr}.y, {expr}.z, 1)"
         else:
             print(
                 f"Socket connection from {socket.links[0].from_socket.name} to {socket.name} requires cast from {from_type} to {to_type} which is not supported")
-            return expr
+            full_expr = expr
+
+        ctx.cache[socket] = full_expr
+        return full_expr
     else:
         return _export_default(socket)
