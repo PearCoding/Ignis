@@ -34,6 +34,9 @@ std::string ShaderUtils::constructDevice(Target target)
     case Target::AMDGPU:
         stream << "let device = make_amdgpu_device(settings.device);";
         break;
+    case Target::SINGLE:
+        stream << "let device = make_cpu_singlethreaded_device();";
+        break;
     default:
         stream << "let device = make_cpu_default_device();";
         break;
