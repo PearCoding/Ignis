@@ -61,7 +61,7 @@ struct LoaderContext {
             return it->second;
         const size_t id = RegisteredResources.size();
 
-        return RegisteredResources[path] = id;
+        return RegisteredResources[path.generic_u8string()] = id;
     }
 
     inline std::vector<std::string> generateResourceMap() const

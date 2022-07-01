@@ -48,7 +48,7 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
     const std::string tex_id = tree.getClosureID(name);
 
     // Anonymize lookup by using the local registry
-    tree.context().LocalRegistry.IntParameters["img_" + tex_id] = res_id;
+    tree.context().LocalRegistry.IntParameters["img_" + tex_id] = (int32)res_id;
 
     stream << "  let img_" << tex_id << "_res_id = device.get_local_parameter_i32(\"img_" << tex_id << "\", 0);" << std::endl;
     if (!force_unpacked && Image::isPacked(filename))
