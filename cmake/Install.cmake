@@ -37,7 +37,7 @@ if(IG_INSTALL_RUNTIME_DEPENDENCIES)
     if(WIN32)
         set(exclude_regexes "msvc.*" "api.*" "ext.*")
     else()
-        # TODO: Maybe filter out system libraries if possible??
+        set(exclude_regexes "libX.*" "libxkb.*" "libwayland.*" "libvorbis.*" "libexpat.*" "libFLAC.*" "libpulse.*" "libasound.*" )
     endif()
     install(RUNTIME_DEPENDENCY_SET ignis_runtime_set
             PRE_EXCLUDE_REGEXES ${exclude_regexes}
