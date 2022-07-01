@@ -1,7 +1,7 @@
 {
   "camera": {
     "type": "perspective",
-    "transform": [1, 0, 0, 278, 0, 1, 0, 273, 0, 0, 1, -800, 0, 0, 0, 1],
+    "transform": [1, 0, 0, 278, 0, 1, 0, 273, 0, 0, 1, -750, 0, 0, 0, 1],
     "fov": 39.3077,
     "far_clip": 2800,
     "focus_distance": 1000,

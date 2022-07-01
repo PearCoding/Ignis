@@ -578,7 +578,15 @@ fn @cpu_get_aov_image(id: i32, spi: i32) -> AOVImage {
                 color.b = rv_insert(color.b, lane, ptr(j * 3 + 2));
             }
             color
-        }
+        },
+        set = @|pixel, color| -> () { 
+            for lane in unroll(0, rv_num_lanes()) {
+                let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
+                ptr(j * 3 + 0) = color.r;
+                ptr(j * 3 + 1) = color.g;
+                ptr(j * 3 + 2) = color.b;
+            }
+        },
     }
 }
 

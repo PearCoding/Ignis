@@ -23,6 +23,133 @@ static TechniqueInfo technique_empty_get_info(const std::string&, const std::sha
 
 /////////////////////////
 
+static std::string restir_clear_framebuffer_generator(LoaderContext& ctx)
+{
+    std::stringstream stream;
+
+    stream << LoaderTechnique::generateHeader(ctx, true) << std::endl;
+
+    stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
+           << "  maybe_unused(settings);" << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << std::endl;
+
+    stream << "  clear_framebuffer(device, iter," << ctx.SamplesPerIteration << ");" << std::endl
+           << "}" << std::endl;
+
+    return stream.str();
+}
+
+static std::string restir_resampling_generator(LoaderContext& ctx)
+{
+    std::stringstream stream;
+
+    stream << LoaderTechnique::generateHeader(ctx, true) << std::endl;
+
+    stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
+           << "  maybe_unused(settings);" << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << std::endl;
+
+    stream << "  resampling_pass(device, iter," << ctx.SamplesPerIteration << ");" << std::endl
+           << "}" << std::endl;
+
+    return stream.str();
+}
+
+static TechniqueInfo restir_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
+{
+    TechniqueInfo info;
+
+    // make use of post-iteration setup
+    info.Variants[0].CallbackGenerators[(int)CallbackType::BeforeIteration] = restir_clear_framebuffer_generator;
+    info.Variants[0].CallbackGenerators[(int)CallbackType::AfterIteration] = restir_resampling_generator; 
+
+    // Check if we have a proper defined technique
+    // It is totally fine to only define the type by other means then the scene config
+    if (technique) {
+        //if (technique->property("aov_normals").getBool(false))
+            info.EnabledAOVs.emplace_back("Normals");
+
+        if (technique->property("aov_mis").getBool(false)) {
+            info.EnabledAOVs.emplace_back("Direct Weights");
+            info.EnabledAOVs.emplace_back("NEE Weights");
+        }
+    }
+
+    info.Variants[0].UsesLights = true;
+
+    return info;
+}
+
+static void restir_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
+{
+    const int max_depth     = technique ? technique->property("max_depth").getInteger(4) : 4;
+    const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
+    const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(false) : false;
+    const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
+    const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
+    //const bool hasRadianceAOV = technique ? technique->property("aov_sample_point_radiance").getBool(true) : true;
+    //const bool hasReStirAOV = technique ? technique->property("aov_restir").getBool(true) : true;
+
+    size_t counter = 1;
+    //if (hasNormalAOV)
+        stream << "  let aov_normals = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
+
+    if (hasMISAOV) {
+        stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
+        stream << "  let aov_nee = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
+    }
+
+    //  if (hasReStirAOV) {
+    //      stream << "  let aov_restir = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
+    //  }
+
+    stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
+           << "    match(id) {" << std::endl;
+
+    // TODO: We do not support constants in match (or any other useful location)!!!!!!!!!
+    // This is completely unnecessary... we have to fix artic for that......
+    //if (hasNormalAOV)
+        stream << "      1 => aov_normals," << std::endl;
+
+    if (hasMISAOV) {
+        stream << "      2 => aov_di," << std::endl
+               << "      3 => aov_nee," << std::endl;
+    }
+    // if (hasReStirAOV) {
+    //     stream << "      4 => aov_restir," << std::endl;
+    // }
+
+    stream << "      _ => make_empty_aov_image()" << std::endl
+           << "    }" << std::endl
+           << "  };" << std::endl;
+
+           
+    if (useUniformLS || ctx.Scene.lights().size() <= 1) {
+        stream << "  let light_selector = make_uniform_light_selector(num_lights);" << std::endl;
+    } else {
+        auto light_cdf = ctx.Lights->generateLightSelectionCDF(ctx);
+        if (light_cdf.empty()) {
+            stream << "  let light_selector = make_null_light_selector();" << std::endl;
+        } else {
+            stream << "  let light_cdf = cdf::make_cdf_1d_from_buffer(device.load_buffer(\"" << light_cdf.u8string() << "\"), num_lights, 0);" << std::endl
+                   << "  let light_selector = make_cdf_light_selector(light_cdf);" << std::endl;
+        }
+    }
+
+    stream << "  let technique = make_restir_renderer(device," << max_depth << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
+}
+
+static void restir_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+{
+    constexpr int C = 1 /* INV_PDF */ + 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */;
+    stream << "static RayPayloadComponents = " << C << ";" << std::endl
+           << "fn init_raypayload() = init_rs_raypayload();" << std::endl;
+}
+
+/////////////////////////
+
 static void ao_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&)
 {
     stream << "  let technique = make_ao_renderer();" << std::endl;
@@ -335,6 +462,7 @@ static const struct TechniqueEntry {
     { "ppm", ppm_get_info, ppm_body_loader, ppm_header_loader },
     { "photonmapper", ppm_get_info, ppm_body_loader, ppm_header_loader },
     { "wireframe", wireframe_get_info, wireframe_body_loader, wireframe_header_loader },
+    { "restir", restir_get_info, restir_body_loader, restir_header_loader },
     { "", nullptr, nullptr, nullptr }
 };
 

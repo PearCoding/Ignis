@@ -18,7 +18,12 @@ fn @gpu_get_aov_image(id: i32, dev_id: i32, atomics: Atomics, spi: i32) -> AOVIm
             get   = @|pixel| -> Color     {
                 let ptr2 = &pixels(pixel * 3) as &[f32];
                 make_color(ptr2(0), ptr2(1), ptr2(2), 1)
-            }
+            },
+            set = @|pixel, color| -> () { 
+                    pixels(pixel * 3) = color.r;
+                    pixels(pixel * 3 + 1) = color.g;
+                    pixels(pixel * 3 + 2) = color.b;
+                }
         }
     }
 
