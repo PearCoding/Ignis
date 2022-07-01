@@ -34,6 +34,12 @@ cpack_add_component(tools GROUP tools)
 cpack_add_component(documentation GROUP documentation)
 
 if(IG_INSTALL_RUNTIME_DEPENDENCIES)
-    # TODO: Maybe filter out system libraries if possible??
-    install(RUNTIME_DEPENDENCY_SET ignis_runtime_set)
+    if(WIN32)
+        set(exclude_regexes "msvc.*" "api.*" "ext.*")
+    else()
+        # TODO: Maybe filter out system libraries if possible??
+    endif()
+    install(RUNTIME_DEPENDENCY_SET ignis_runtime_set
+            PRE_EXCLUDE_REGEXES ${exclude_regexes}
+        )
 endif()
