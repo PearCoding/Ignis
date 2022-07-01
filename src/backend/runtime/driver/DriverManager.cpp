@@ -14,35 +14,6 @@ constexpr const char* const DRIVER_LIB_PREFIX           = "ig_driver_";
 
 using GetInterfaceFunction = DriverInterface (*)();
 
-struct path_hash {
-    std::size_t operator()(const std::filesystem::path& path) const
-    {
-        return std::filesystem::hash_value(path);
-    }
-};
-
-using path_set = std::unordered_set<std::filesystem::path, path_hash>;
-
-inline static void split_env(const std::string& str, path_set& data)
-{
-#ifndef IG_OS_WINDOWS
-    constexpr char ENV_DELIMITER = ':';
-#else
-    constexpr char ENV_DELIMITER = ';';
-#endif
-
-    size_t start = 0;
-    size_t end   = str.find(ENV_DELIMITER);
-    while (end != std::string::npos) {
-        data.insert(std::filesystem::canonical(str.substr(start, end - start)));
-        start = end + 1;
-        end   = str.find(ENV_DELIMITER, start);
-    }
-
-    if (end != start)
-        data.insert(std::filesystem::canonical(str.substr(start, end)));
-}
-
 inline static bool isSharedLibrary(const std::filesystem::path& path)
 {
     return path.extension() == ".so" || path.extension() == ".dll";
@@ -58,9 +29,9 @@ inline static bool startsWith(std::string_view str, std::string_view prefix)
     return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
 }
 
-static path_set getDriversFromPath(const std::filesystem::path& path)
+static std::vector<std::filesystem::path> getDriversFromPath(const std::filesystem::path& path)
 {
-    path_set drivers;
+    std::vector<std::filesystem::path> drivers;
     for (const auto& entry : std::filesystem::directory_iterator(path)) {
         if (!entry.is_regular_file())
             continue;
@@ -71,7 +42,7 @@ static path_set getDriversFromPath(const std::filesystem::path& path)
             && !endsWith(entry.path().stem().string(), "_d")
 #endif
             && startsWith(entry.path().stem().string(), DRIVER_LIB_PREFIX))
-            drivers.insert(entry.path());
+            drivers.push_back(entry.path());
     }
 
     return drivers;
@@ -79,13 +50,13 @@ static path_set getDriversFromPath(const std::filesystem::path& path)
 
 bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
 {
-    path_set paths;
+    std::vector<std::filesystem::path> paths;
 
     bool skipSystem = false; // Skip the system search path
     if (!ignoreEnv) {
         const char* envPaths = std::getenv(DRIVER_ENV_PATH_NAME);
         if (envPaths)
-            split_env(envPaths, paths);
+            paths = RuntimeInfo::splitEnvPaths(envPaths);
 
         if (std::getenv(DRIVER_ENV_SKIP_SYSTEM_PATH))
             skipSystem = true;
@@ -94,11 +65,11 @@ bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
     if (!skipSystem) {
         const auto exePath = RuntimeInfo::executablePath();
         const auto libPath = exePath.parent_path().parent_path() / "lib";
-        paths.insert(libPath);
+        paths.push_back(libPath);
     }
 
     if (!dir.empty())
-        paths.insert(std::filesystem::canonical(dir));
+        paths.push_back(std::filesystem::canonical(dir));
 
     for (auto& path : paths) {
         IG_LOG(L_DEBUG) << "Searching for drivers in " << path << std::endl;

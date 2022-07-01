@@ -41,6 +41,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 set(CMAKE_DEBUG_POSTFIX  "_d")
 
 set(Ignis_VENDOR "Ignis project 2020-2022")
+set(Ignis_DESCRIPTION "Device agnostic raytracing framework with shared codebase for offline and realtime rendering and for CPU and GPU")
+set(Ignis_URL "https://github.com/PearCoding/Ignis")
 include(Git)
 
 message(STATUS "Building Ignis Rodent ${Ignis_VERSION}")
@@ -57,6 +59,20 @@ option(IG_WITH_TOOLS         "Build tools" ON)
 option(IG_WITH_DOCUMENTATION "Build the documentation if Sphinx is available on the system" ON)
 option(IG_WITH_ASSERTS       "Build with asserts even in release. It is always enabled on debug" OFF)
 option(IG_USE_LTO 			 "Use linked time optimization if available in release" ON)
+
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.21)
+	if(WIN32 OR (NOT CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT))
+		set(_default ON)
+	else()
+		set(_default OFF)
+	endif()
+	option(IG_INSTALL_RUNTIME_DEPENDENCIES "Install runtime libraries together with Ignis" ${_default})
+endif()
+
+if(IG_INSTALL_RUNTIME_DEPENDENCIES)
+	set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+	set(_IG_RUNTIME_SET RUNTIME_DEPENDENCY_SET ignis_runtime_set)
+endif()
 
 # Setup artic clang flags
 if(APPLE)

@@ -24,7 +24,7 @@ public:
 
 #ifdef USE_DLOPEN
     explicit SharedLibraryInternal(const std::filesystem::path& path)
-        : Handle(dlopen(path.u8string().c_str(), RTLD_LAZY))
+        : Handle(dlopen(path.u8string().c_str(), RTLD_LAZY | RTLD_LOCAL))
     {
         if (!Handle)
             throw std::runtime_error(dlerror());

@@ -25,7 +25,7 @@ CPMAddPackage(
     NAME pugixml
     GITHUB_REPOSITORY zeux/pugixml 
     GIT_TAG master
-    EXCLUDE_FROM_ALL
+    EXCLUDE_FROM_ALL YES
 )
 
 CPMAddPackage(
@@ -46,7 +46,7 @@ CPMAddPackage(
     NAME stpp
     GITHUB_REPOSITORY PearCoding/stpp 
     GIT_TAG main
-    EXCLUDE_FROM_ALL
+    EXCLUDE_FROM_ALL YES
 )
 
 CPMAddPackage(
@@ -60,5 +60,5 @@ CPMAddPackage(
     NAME pexpr
     GITHUB_REPOSITORY PearCoding/PExpr 
     GIT_TAG master
-    EXCLUDE_FROM_ALL
+    EXCLUDE_FROM_ALL YES
 )

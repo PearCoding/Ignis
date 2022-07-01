@@ -2,7 +2,7 @@ CPMAddPackage(
     NAME pybind11
     GITHUB_REPOSITORY pybind/pybind11 
     GIT_TAG stable
-    EXCLUDE_FROM_ALL
+    EXCLUDE_FROM_ALL YES
 )
 
 set(OUTPUT_DIR "${CMAKE_BINARY_DIR}/api")
@@ -19,3 +19,9 @@ add_custom_command(TARGET pyignis POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ignis "${OUTPUT_DIR}/ignis"
                    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:pyignis> "${OUTPUT_DIR}/ignis")
 add_checks(pyignis)
+
+set(SETUP_PY ${CMAKE_CURRENT_BINARY_DIR}/setup.py)
+set(TIMESTAMP ${CMAKE_CURRENT_BINARY_DIR}/build/timestamp)
+configure_file(setup.py.in ${SETUP_PY})
+
+install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install --prefix ${CMAKE_INSTALL_PREFIX})" COMPONENT frontends)
