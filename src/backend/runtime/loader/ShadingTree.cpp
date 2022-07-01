@@ -254,7 +254,7 @@ bool ShadingTree::beginClosure(const std::string& name)
         }
     }
 
-    mClosures.emplace_back(Closure{ name, generateUniqueID(name), {} });
+    mClosures.emplace_back(Closure{ name, getClosureID(name), {} });
     return true;
 }
 
@@ -297,7 +297,7 @@ void ShadingTree::registerTextureUsage(const std::string& name)
         const auto tex = mContext.Scene.texture(name);
         if (!tex) {
             IG_LOG(L_ERROR) << "Unknown texture '" << name << "'" << std::endl;
-            mHeaderLines.push_back("  let tex_" + generateUniqueID(name) + " = make_invalid_texture();\n");
+            mHeaderLines.push_back("  let tex_" + getClosureID(name) + " = make_invalid_texture();\n");
         } else {
             const std::string res = LoaderTexture::generate(name, *tex, *this);
             if (res.empty()) // Due to some error this might happen
@@ -445,7 +445,7 @@ std::string ShadingTree::acquireVector(const std::string& prop_name, const Vecto
     }
 }
 
-std::string ShadingTree::generateUniqueID(const std::string& name)
+std::string ShadingTree::getClosureID(const std::string& name)
 {
     auto it = mIDMap.find(name);
     if (it != mIDMap.end())

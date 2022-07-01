@@ -21,12 +21,11 @@ inline std::string var_name(const std::string& name)
 
 // We assume function state and return value to depend only on the parameters!
 template <typename Func>
-inline static std::string collapseFunction(Func func, const std::vector<std::string>& args)
+inline static std::string collapseFunction(size_t& uuid_counter, Func func, const std::vector<std::string>& args)
 {
     if (args.size() <= 1)
         return func(args);
 
-    static size_t uuid_counter = 0;
     std::unordered_map<std::string, std::string> set;
     for (const auto& arg : args) {
         if (set.count(arg) == 0)
@@ -96,28 +95,28 @@ struct InternalDynFunction {
 };
 
 template <typename MapF, typename... Args>
-inline static std::string callDynFunction(const InternalDynFunction<MapF>& df, PExprType type, const Args&... args)
+inline static std::string callDynFunction(const InternalDynFunction<MapF>& df, size_t& uuidCounter, PExprType type, const Args&... args)
 {
     switch (type) {
     case PExprType::Integer:
         if (df.MapInt)
-            return df.MapInt(args...);
+            return df.MapInt(uuidCounter, args...);
         break;
     case PExprType::Number:
         if (df.MapNum)
-            return df.MapNum(args...);
+            return df.MapNum(uuidCounter, args...);
         break;
     case PExprType::Vec2:
         if (df.MapVec2)
-            return df.MapVec2(args...);
+            return df.MapVec2(uuidCounter, args...);
         break;
     case PExprType::Vec3:
         if (df.MapVec3)
-            return df.MapVec3(args...);
+            return df.MapVec3(uuidCounter, args...);
         break;
     case PExprType::Vec4:
         if (df.MapVec4)
-            return df.MapVec4(args...);
+            return df.MapVec4(uuidCounter, args...);
         break;
     default:
         break;
@@ -151,7 +150,7 @@ inline std::optional<PExpr::FunctionDef> checkDynFunction(const PExpr::FunctionL
 }
 
 // Dyn Functions 1
-using MapFunction1 = std::function<std::string(const std::string&)>;
+using MapFunction1 = std::function<std::string(size_t&, const std::string&)>;
 inline static MapFunction1 genMapFunction1(const char* func, PExprType type)
 {
     switch (type) {
@@ -159,37 +158,37 @@ inline static MapFunction1 genMapFunction1(const char* func, PExprType type)
         return {};
     case PExprType::Integer:
     case PExprType::Number:
-        return [=](const std::string& a) { return std::string(func) + "(" + a + ")"; };
+        return [=](size_t&, const std::string& a) { return std::string(func) + "(" + a + ")"; };
     case PExprType::Vec2:
-        return [=](const std::string& a) { return "vec2_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
+        return [=](size_t&, const std::string& a) { return "vec2_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
     case PExprType::Vec3:
-        return [=](const std::string& a) { return "vec3_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
+        return [=](size_t&, const std::string& a) { return "vec3_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
     case PExprType::Vec4:
-        return [=](const std::string& a) { return "vec4_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
+        return [=](size_t&, const std::string& a) { return "vec4_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
     }
 }
 inline static MapFunction1 genMapFunction1(const char* func, const char* funcI, PExprType type)
 {
     if (type == PExprType::Integer)
-        return [=](const std::string& a) { return std::string(funcI) + "(" + a + ")"; };
+        return [=](size_t&, const std::string& a) { return std::string(funcI) + "(" + a + ")"; };
     else
         return genMapFunction1(func, type);
 }
 inline static MapFunction1 genFunction1(const char* func)
 {
-    return [=](const std::string& a) { return std::string(func) + "(" + a + ")"; };
+    return [=](size_t&, const std::string& a) { return std::string(func) + "(" + a + ")"; };
 }
 inline static MapFunction1 genFunction1Color(const char* func)
 {
-    return [=](const std::string& a) { return "color_to_vec4(" + std::string(func) + "(" + a + "))"; };
+    return [=](size_t&, const std::string& a) { return "color_to_vec4(" + std::string(func) + "(" + a + "))"; };
 }
 inline static MapFunction1 genFunction1ColorO(const char* func)
 {
-    return [=](const std::string& a) { return std::string(func) + "(vec4_to_color(" + a + "))"; };
+    return [=](size_t&, const std::string& a) { return std::string(func) + "(vec4_to_color(" + a + "))"; };
 }
 inline static MapFunction1 genFunction1ColorIO(const char* func)
 {
-    return [=](const std::string& a) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + a + ")))"; };
+    return [=](size_t&, const std::string& a) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + a + ")))"; };
 }
 inline static MapFunction1 genArrayFunction1(const char* func, PExprType type)
 {
@@ -197,11 +196,11 @@ inline static MapFunction1 genArrayFunction1(const char* func, PExprType type)
     default:
         return {};
     case PExprType::Vec2:
-        return [=](const std::string& a) { return "vec2_" + std::string(func) + "(" + a + ")"; };
+        return [=](size_t&, const std::string& a) { return "vec2_" + std::string(func) + "(" + a + ")"; };
     case PExprType::Vec3:
-        return [=](const std::string& a) { return "vec3_" + std::string(func) + "(" + a + ")"; };
+        return [=](size_t&, const std::string& a) { return "vec3_" + std::string(func) + "(" + a + ")"; };
     case PExprType::Vec4:
-        return [=](const std::string& a) { return "vec4_" + std::string(func) + "(" + a + ")"; };
+        return [=](size_t&, const std::string& a) { return "vec4_" + std::string(func) + "(" + a + ")"; };
     }
 }
 using InternalDynFunction1 = InternalDynFunction<MapFunction1>;
@@ -227,7 +226,7 @@ inline static InternalDynFunction1 genDynArrayFunction1(const char* func)
 }
 
 // Dyn Functions 2
-using MapFunction2         = std::function<std::string(const std::string&, const std::string&)>;
+using MapFunction2         = std::function<std::string(size_t&, const std::string&, const std::string&)>;
 using InternalDynFunction2 = InternalDynFunction<MapFunction2>;
 inline static MapFunction2 genMapFunction2(const char* func, PExprType type)
 {
@@ -236,30 +235,35 @@ inline static MapFunction2 genMapFunction2(const char* func, PExprType type)
         return {};
     case PExprType::Integer:
     case PExprType::Number:
-        return [=](const std::string& a, const std::string& b) { return collapseFunction(
-                                                                     [func](const std::vector<std::string>& args) {
-                                                                         return std::string(func) + "(" + args[0] + ", " + args[1] + ")";
-                                                                     },
-                                                                     std::vector<std::string>{ a, b }); };
+        return [=](size_t& uuid_counter, const std::string& a, const std::string& b) { return collapseFunction(
+                                                                                           uuid_counter,
+                                                                                           [func](const std::vector<std::string>& args) {
+                                                                                               return std::string(func) + "(" + args[0] + ", " + args[1] + ")";
+                                                                                           },
+                                                                                           std::vector<std::string>{ a, b }); };
     case PExprType::Vec2:
-        return [=](const std::string& a, const std::string& b) { return collapseFunction(
-                                                                     [func](const std::vector<std::string>& args) { return "vec2_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
-                                                                     std::vector<std::string>{ a, b }); };
+        return [=](size_t& uuid_counter, const std::string& a, const std::string& b) { return collapseFunction(
+                                                                                           uuid_counter,
+                                                                                           [func](const std::vector<std::string>& args) { return "vec2_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
+                                                                                           std::vector<std::string>{ a, b }); };
     case PExprType::Vec3:
-        return [=](const std::string& a, const std::string& b) { return collapseFunction(
-                                                                     [func](const std::vector<std::string>& args) { return "vec3_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
-                                                                     std::vector<std::string>{ a, b }); };
+        return [=](size_t& uuid_counter, const std::string& a, const std::string& b) { return collapseFunction(
+                                                                                           uuid_counter,
+                                                                                           [func](const std::vector<std::string>& args) { return "vec3_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
+                                                                                           std::vector<std::string>{ a, b }); };
     case PExprType::Vec4:
-        return [=](const std::string& a, const std::string& b) { return collapseFunction(
-                                                                     [func](const std::vector<std::string>& args) { return "vec4_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
-                                                                     std::vector<std::string>{ a, b }); };
+        return [=](size_t& uuid_counter, const std::string& a, const std::string& b) { return collapseFunction(
+                                                                                           uuid_counter,
+                                                                                           [func](const std::vector<std::string>& args) { return "vec4_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
+                                                                                           std::vector<std::string>{ a, b }); };
     }
 }
 inline static MapFunction2 genFunction2(const std::string& prefix, const std::string& suffix = "")
 {
-    return [=](const std::string& a, const std::string& b) { return collapseFunction(
-                                                                 [prefix, suffix](const std::vector<std::string>& args) { return prefix + "(" + args[0] + ", " + args[1] + ")" + suffix; },
-                                                                 std::vector<std::string>{ a, b }); };
+    return [=](size_t& uuid_counter, const std::string& a, const std::string& b) { return collapseFunction(
+                                                                                       uuid_counter,
+                                                                                       [prefix, suffix](const std::vector<std::string>& args) { return prefix + "(" + args[0] + ", " + args[1] + ")" + suffix; },
+                                                                                       std::vector<std::string>{ a, b }); };
 }
 inline static MapFunction2 genArrayFunction2(const char* func, PExprType type)
 {
@@ -300,13 +304,14 @@ inline static InternalDynFunction2 genDynArrayFunction2(const char* func)
 }
 
 // Dyn Functions 3
-using MapFunction3         = std::function<std::string(const std::string&, const std::string&, const std::string&)>;
+using MapFunction3         = std::function<std::string(size_t&, const std::string&, const std::string&, const std::string&)>;
 using InternalDynFunction3 = InternalDynFunction<MapFunction3>;
 inline static MapFunction3 genFunction3(const std::string& prefix, const std::string& suffix = "")
 {
-    return [=](const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
-                                                                                       [prefix, suffix](const std::vector<std::string>& args) { return prefix + "(" + args[0] + ", " + args[1] + ", " + args[2] + ")" + suffix; },
-                                                                                       std::vector<std::string>{ a, b, c }); };
+    return [=](size_t& uuid_counter, const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
+                                                                                                             uuid_counter,
+                                                                                                             [prefix, suffix](const std::vector<std::string>& args) { return prefix + "(" + args[0] + ", " + args[1] + ", " + args[2] + ")" + suffix; },
+                                                                                                             std::vector<std::string>{ a, b, c }); };
 }
 inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
 {
@@ -317,17 +322,20 @@ inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
     case PExprType::Number:
         return genFunction3(func);
     case PExprType::Vec2:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
-                                                                                           [func](const std::vector<std::string>& args) { return "vec2_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
-                                                                                           std::vector<std::string>{ a, b, c }); };
+        return [=](size_t& uuid_counter, const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
+                                                                                                                 uuid_counter,
+                                                                                                                 [func](const std::vector<std::string>& args) { return "vec2_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
+                                                                                                                 std::vector<std::string>{ a, b, c }); };
     case PExprType::Vec3:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
-                                                                                           [func](const std::vector<std::string>& args) { return "vec3_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
-                                                                                           std::vector<std::string>{ a, b, c }); };
+        return [=](size_t& uuid_counter, const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
+                                                                                                                 uuid_counter,
+                                                                                                                 [func](const std::vector<std::string>& args) { return "vec3_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
+                                                                                                                 std::vector<std::string>{ a, b, c }); };
     case PExprType::Vec4:
-        return [=](const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
-                                                                                           [func](const std::vector<std::string>& args) { return "vec4_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
-                                                                                           std::vector<std::string>{ a, b, c }); };
+        return [=](size_t& uuid_counter, const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
+                                                                                                                 uuid_counter,
+                                                                                                                 [func](const std::vector<std::string>& args) { return "vec4_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
+                                                                                                                 std::vector<std::string>{ a, b, c }); };
     }
 }
 inline static InternalDynFunction3 genDynMapFunction3(const char* func, const char* funcI)
@@ -358,9 +366,10 @@ inline static InternalDynFunction3 genDynColorLerpFunction3(const char* func)
         nullptr,
         nullptr,
         nullptr,
-        [=](const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
-                                                                                    [func](const std::vector<std::string>& args) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + args[0] + "), vec4_to_color(" + args[1] + "), " + args[2] + "))"; },
-                                                                                    std::vector<std::string>{ a, b, c }); }
+        [=](size_t& uuid_counter, const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
+                                                                                                          uuid_counter,
+                                                                                                          [func](const std::vector<std::string>& args) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + args[0] + "), vec4_to_color(" + args[1] + "), " + args[2] + "))"; },
+                                                                                                          std::vector<std::string>{ a, b, c }); }
     };
 }
 
@@ -520,10 +529,12 @@ class ArticVisitor : public PExpr::TranspileVisitor<std::string> {
 private:
     ShadingTree& mTree;
     std::unordered_set<std::string> mUsedTextures;
+    size_t mUUIDCounter;
 
 public:
     inline explicit ArticVisitor(ShadingTree& tree)
         : mTree(tree)
+        , mUUIDCounter(0)
     {
     }
 
@@ -557,12 +568,12 @@ public:
 
         if (expectedType == PExprType::Vec4 && mTree.context().Scene.texture(name) != nullptr) {
             mUsedTextures.insert(name);
-            return "color_to_vec4(" + tex_name(mTree.generateUniqueID(name)) + "(ctx))";
+            return "color_to_vec4(" + tex_name(mTree.getClosureID(name)) + "(ctx))";
         } else {
             if (expectedType == PExprType::Vec4)
-                return "color_to_vec4(" + var_name(mTree.generateUniqueID(name)) + ")";
+                return "color_to_vec4(" + var_name(mTree.getClosureID(name)) + ")";
             else
-                return var_name(mTree.generateUniqueID(name));
+                return var_name(mTree.getClosureID(name));
         }
     }
 
@@ -704,6 +715,7 @@ public:
         // Special lookup function with variadic number of parameters
         if (argumentPayloads.size() >= 3 && (argumentPayloads.size() % 2) == 1 && (name == "lookup_linear" || name == "lookup_constant" || name == "lookup_linear_extrapolate")) {
             return collapseFunction(
+                mUUIDCounter,
                 [name](const std::vector<std::string>& args) {
                     const size_t arg_count = (args.size() - 1) / 2;
                     std::stringstream x_values;
@@ -728,28 +740,28 @@ public:
         if (argumentPayloads.size() == 1) {
             auto df1 = sInternalDynFunctions1.find(name);
             if (df1 != sInternalDynFunctions1.end()) {
-                std::string call = callDynFunction(df1->second, argumentTypes[0], argumentPayloads[0]);
+                std::string call = callDynFunction(df1->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0]);
                 if (!call.empty())
                     return call;
             }
 
             auto dcf1 = sInternalDynConstructFunctions1.find(name);
             if (dcf1 != sInternalDynConstructFunctions1.end()) {
-                std::string call = callDynFunction(dcf1->second, argumentTypes[0], argumentPayloads[0]);
+                std::string call = callDynFunction(dcf1->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0]);
                 if (!call.empty())
                     return call;
             }
 
             auto drf1 = sInternalDynReduceFunctions1.find(name);
             if (drf1 != sInternalDynReduceFunctions1.end()) {
-                std::string call = callDynFunction(drf1->second, argumentTypes[0], argumentPayloads[0]);
+                std::string call = callDynFunction(drf1->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0]);
                 if (!call.empty())
                     return call;
             }
 
             auto dcnf1 = sInternalDynColoredNoiseFunctions1.find(name);
             if (dcnf1 != sInternalDynColoredNoiseFunctions1.end()) {
-                std::string call = callDynFunction(dcnf1->second, argumentTypes[0], argumentPayloads[0]);
+                std::string call = callDynFunction(dcnf1->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0]);
                 if (!call.empty())
                     return call;
             }
@@ -765,28 +777,28 @@ public:
         } else if (argumentPayloads.size() == 2) {
             auto df2 = sInternalDynFunctions2.find(name);
             if (df2 != sInternalDynFunctions2.end()) {
-                std::string call = callDynFunction(df2->second, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
+                std::string call = callDynFunction(df2->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
                 if (!call.empty())
                     return call;
             }
 
             auto drf2 = sInternalDynReduceFunctions2.find(name);
             if (drf2 != sInternalDynReduceFunctions2.end()) {
-                std::string call = callDynFunction(drf2->second, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
+                std::string call = callDynFunction(drf2->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
                 if (!call.empty())
                     return call;
             }
 
             auto dnf2 = sInternalDynNoiseFunctions2.find(name);
             if (dnf2 != sInternalDynNoiseFunctions2.end()) {
-                std::string call = callDynFunction(dnf2->second, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
+                std::string call = callDynFunction(dnf2->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
                 if (!call.empty())
                     return call;
             }
 
             auto dcnf2 = sInternalDynColoredNoiseFunctions2.find(name);
             if (dcnf2 != sInternalDynColoredNoiseFunctions2.end()) {
-                std::string call = callDynFunction(dcnf2->second, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
+                std::string call = callDynFunction(dcnf2->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
                 if (!call.empty())
                     return call;
             }
@@ -800,14 +812,14 @@ public:
         } else if (argumentPayloads.size() == 3) {
             auto df3 = sInternalDynFunctions3.find(name);
             if (df3 != sInternalDynFunctions3.end()) {
-                std::string call = callDynFunction(df3->second, argumentTypes[0], argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
+                std::string call = callDynFunction(df3->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
                 if (!call.empty())
                     return call;
             }
 
             auto dlf3 = sInternalDynLerpFunctions3.find(name);
             if (dlf3 != sInternalDynLerpFunctions3.end()) {
-                std::string call = callDynFunction(dlf3->second, argumentTypes[0], argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
+                std::string call = callDynFunction(dlf3->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
                 if (!call.empty())
                     return call;
             }
@@ -820,6 +832,7 @@ public:
                     return "vec3_expand(" + argumentPayloads[0] + ")";
                 else
                     return collapseFunction(
+                        mUUIDCounter,
                         [](const std::vector<std::string>& args) {
                             return "make_vec3(" + args[0] + "," + args[1] + "," + args[2] + ")";
                         },
@@ -827,6 +840,7 @@ public:
             }
             if (name == "color") {
                 return collapseFunction(
+                    mUUIDCounter,
                     [](const std::vector<std::string>& args) {
                         return "make_vec4(" + args[0] + "," + args[1] + "," + args[2] + ", 1)";
                     },
@@ -844,6 +858,7 @@ public:
                     return "vec4_expand(" + argumentPayloads[0] + ")";
                 else
                     return collapseFunction(
+                        mUUIDCounter,
                         [](const std::vector<std::string>& args) {
                             return "make_vec4(" + args[0] + "," + args[1] + "," + args[2] + "," + args[3] + ")";
                         },
@@ -854,7 +869,7 @@ public:
         // Must be a texture
         IG_ASSERT(mTree.context().Scene.texture(name) != nullptr, "Expected a valid texture name");
         mUsedTextures.insert(name);
-        return "color_to_vec4(" + tex_name(mTree.generateUniqueID(name)) + "(" + (argumentPayloads.empty() ? std::string("ctx") : ("ctx.{uvw=vec2_to_3(" + argumentPayloads[0] + ", 0)}")) + "))";
+        return "color_to_vec4(" + tex_name(mTree.getClosureID(name)) + "(" + (argumentPayloads.empty() ? std::string("ctx") : ("ctx.{uvw=vec2_to_3(" + argumentPayloads[0] + ", 0)}")) + "))";
     }
 
     /// a.xyz Access operator for vector types

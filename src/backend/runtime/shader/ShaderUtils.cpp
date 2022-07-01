@@ -58,7 +58,7 @@ std::string ShaderUtils::generateMaterialShader(ShadingTree& tree, size_t mat_id
     const Material material = tree.context().Environment.Materials.at(mat_id);
     stream << LoaderBSDF::generate(material.BSDF, tree);
 
-    std::string bsdf_id = tree.generateUniqueID(material.BSDF);
+    std::string bsdf_id = tree.getClosureID(material.BSDF);
     const bool isLight  = material.hasEmission() && tree.context().Lights->isAreaLight(material.Entity);
 
     if (material.hasMediumInterface())

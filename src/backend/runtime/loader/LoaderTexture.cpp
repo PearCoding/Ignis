@@ -45,7 +45,7 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
         wrap = getWrapMode(tex.property("wrap_mode").getString("repeat"));
     }
 
-    const std::string tex_id = tree.generateUniqueID(name);
+    const std::string tex_id = tree.getClosureID(name);
 
     // Anonymize lookup by using the local registry
     tree.context().LocalRegistry.IntParameters["img_" + tex_id] = res_id;
@@ -77,7 +77,7 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
 
     const Transformf transform = tex.property("transform").getTransform();
 
-    const std::string tex_id = tree.generateUniqueID(name);
+    const std::string tex_id = tree.getClosureID(name);
     stream << tree.pullHeader()
            << "  let tex_" << tex_id << " : Texture = make_checkerboard_texture("
            << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
@@ -102,7 +102,7 @@ static void tex_brick(std::ostream& stream, const std::string& name, const Parse
 
     const Transformf transform = tex.property("transform").getTransform();
 
-    const std::string tex_id = tree.generateUniqueID(name);
+    const std::string tex_id = tree.getClosureID(name);
     stream << tree.pullHeader()
            << "  let tex_" << tex_id << " : Texture = make_brick_texture("
            << tree.getInline("color0") << ", "
@@ -129,7 +129,7 @@ static void tex_gen_noise(const std::string& func, std::ostream& stream, const s
 
     std::string afunc = tex.property("colored").getBool() ? "c" + func : func;
 
-    const std::string tex_id = tree.generateUniqueID(name);
+    const std::string tex_id = tree.getClosureID(name);
     stream << tree.pullHeader()
            << "  let tex_" << tex_id << " : Texture = make_" << afunc << "_texture("
            << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
@@ -223,7 +223,7 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
         tree.registerTextureUsage(used_tex);
 
     // Pull texture usage
-    const std::string tex_id = tree.generateUniqueID(name);
+    const std::string tex_id = tree.getClosureID(name);
     stream << tree.pullHeader()
            << "  let tex_" << tex_id << " : Texture = @|ctx| -> Color {" << std::endl;
 
@@ -231,16 +231,16 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
         // Inline custom variables
         for (const auto& pair : tex.properties()) {
             if (startsWith(pair.first, "num_")) {
-                const std::string var_id = tree.generateUniqueID(pair.first.substr(4));
+                const std::string var_id = tree.getClosureID(pair.first.substr(4));
                 stream << "    let var_tex_" << var_id << " = " << tree.getInline(pair.first) << ";" << std::endl;
             } else if (startsWith(pair.first, "color_")) {
-                const std::string var_id = tree.generateUniqueID(pair.first.substr(6));
+                const std::string var_id = tree.getClosureID(pair.first.substr(6));
                 stream << "    let var_tex_" << var_id << " = " << tree.getInline(pair.first) << ";" << std::endl;
             } else if (startsWith(pair.first, "vec_")) {
-                const std::string var_id = tree.generateUniqueID(pair.first.substr(4));
+                const std::string var_id = tree.getClosureID(pair.first.substr(4));
                 stream << "    let var_tex_" << var_id << " = " << LoaderUtils::inlineVector(pair.second.getVector3()) << ";" << std::endl;
             } else if (startsWith(pair.first, "bool_")) {
-                const std::string var_id = tree.generateUniqueID(pair.first.substr(5));
+                const std::string var_id = tree.getClosureID(pair.first.substr(5));
                 stream << "    let var_tex_" << var_id << " = " << (pair.second.getBool() ? "true" : "false") << ";" << std::endl;
             }
         }
@@ -261,7 +261,7 @@ static void tex_transform(std::ostream& stream, const std::string& name, const P
 
     const Transformf transform = tex.property("transform").getTransform();
 
-    const std::string tex_id = tree.generateUniqueID(name);
+    const std::string tex_id = tree.getClosureID(name);
     stream << tree.pullHeader()
            << "  let tex_" << tex_id << " : Texture = make_transform_texture("
            << tree.getInline("texture") << ", "
@@ -303,7 +303,7 @@ std::string LoaderTexture::generate(const std::string& name, const Parser::Objec
     IG_LOG(L_ERROR) << "No texture type '" << obj.pluginType() << "' available" << std::endl;
 
     std::stringstream stream;
-    stream << "  let tex_" << tree.generateUniqueID(name) << " : Texture = make_invalid_texture();" << std::endl;
+    stream << "  let tex_" << tree.getClosureID(name) << " : Texture = make_invalid_texture();" << std::endl;
     return stream.str();
 }
 

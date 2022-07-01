@@ -90,7 +90,7 @@ public:
     void addTexture(const std::string& name, const Parser::Object& obj, bool hasDef = true, const TextureOptions& options = TextureOptions::Default());
 
     inline std::string currentClosureID() const { return currentClosure().ID; }
-    std::string generateUniqueID(const std::string& name);
+    std::string getClosureID(const std::string& name);
 
     void registerTextureUsage(const std::string& name);
     std::string pullHeader();

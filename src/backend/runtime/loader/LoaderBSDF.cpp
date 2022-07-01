@@ -500,7 +500,7 @@ static void bsdf_twosided(std::ostream& stream, const std::string& name, const s
     const std::string other   = bsdf->property("bsdf").getString();
     const std::string bsdf_id = tree.currentClosureID();
     stream << LoaderBSDF::generate(other, tree);
-    stream << "  let bsdf_" << bsdf_id << " = bsdf_" << tree.generateUniqueID(other) << ";" << std::endl;
+    stream << "  let bsdf_" << bsdf_id << " = bsdf_" << tree.getClosureID(other) << ";" << std::endl;
     tree.endClosure();
 }
 
@@ -525,15 +525,15 @@ static void bsdf_add(std::ostream& stream, const std::string& name, const std::s
     } else if (first == second) {
         // Ignore it
         stream << LoaderBSDF::generate(first, tree);
-        stream << "  let bsdf_" << bsdf_id << " = bsdf_" << tree.generateUniqueID(first) << ";" << std::endl;
+        stream << "  let bsdf_" << bsdf_id << " = bsdf_" << tree.getClosureID(first) << ";" << std::endl;
     } else {
         stream << LoaderBSDF::generate(first, tree);
         stream << LoaderBSDF::generate(second, tree);
 
         stream << tree.pullHeader()
                << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_add_bsdf("
-               << "bsdf_" << tree.generateUniqueID(first) << "(ctx), "
-               << "bsdf_" << tree.generateUniqueID(second) << "(ctx));" << std::endl;
+               << "bsdf_" << tree.getClosureID(first) << "(ctx), "
+               << "bsdf_" << tree.getClosureID(second) << "(ctx));" << std::endl;
     }
     tree.endClosure();
 }
@@ -551,7 +551,7 @@ static void bsdf_blend(std::ostream& stream, const std::string& name, const std:
     } else if (first == second) {
         // Ignore it
         stream << LoaderBSDF::generate(first, tree);
-        stream << "  let bsdf_" << bsdf_id << " = bsdf_" << tree.generateUniqueID(first) << ";" << std::endl;
+        stream << "  let bsdf_" << bsdf_id << " = bsdf_" << tree.getClosureID(first) << ";" << std::endl;
     } else {
         tree.addNumber("weight", *bsdf, 0.5f);
 
@@ -560,8 +560,8 @@ static void bsdf_blend(std::ostream& stream, const std::string& name, const std:
 
         stream << tree.pullHeader()
                << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_mix_bsdf("
-               << "bsdf_" << tree.generateUniqueID(first) << "(ctx), "
-               << "bsdf_" << tree.generateUniqueID(second) << "(ctx), "
+               << "bsdf_" << tree.getClosureID(first) << "(ctx), "
+               << "bsdf_" << tree.getClosureID(second) << "(ctx), "
                << tree.getInline("weight") << ");" << std::endl;
     }
     tree.endClosure();
@@ -580,7 +580,7 @@ static void bsdf_mask(std::ostream& stream, const std::string& name, const std::
     } else {
         tree.addNumber("weight", *bsdf, 0.5f);
 
-        const std::string masked_id = tree.generateUniqueID(masked);
+        const std::string masked_id = tree.getClosureID(masked);
 
         stream << LoaderBSDF::generate(masked, tree);
 
@@ -614,7 +614,7 @@ static void bsdf_cutoff(std::ostream& stream, const std::string& name, const std
         tree.addNumber("weight", *bsdf, 0.5f); // Only useful with textures or other patterns
         tree.addNumber("cutoff", *bsdf, 0.5f);
 
-        const std::string masked_id = tree.generateUniqueID(masked);
+        const std::string masked_id = tree.getClosureID(masked);
         stream << LoaderBSDF::generate(masked, tree);
 
         stream << tree.pullHeader()
@@ -649,7 +649,7 @@ static void bsdf_normalmap(std::ostream& stream, const std::string& name, const 
     } else {
         stream << LoaderBSDF::generate(inner, tree);
 
-        const std::string inner_id = tree.generateUniqueID(inner);
+        const std::string inner_id = tree.getClosureID(inner);
         stream << tree.pullHeader()
                << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normalmap(ctx.surf, @|surf2| "
                << "bsdf_" << inner_id << "(ctx.{surf=surf2}), "
@@ -673,7 +673,7 @@ static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const st
     } else {
         stream << LoaderBSDF::generate(inner, tree);
 
-        const std::string inner_id = tree.generateUniqueID(inner);
+        const std::string inner_id = tree.getClosureID(inner);
         stream << tree.pullHeader()
                << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_bumpmap(ctx.surf, "
                << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2}) }, "
@@ -697,7 +697,7 @@ static void bsdf_transform(std::ostream& stream, const std::string& name, const 
     } else {
         stream << LoaderBSDF::generate(inner, tree);
 
-        const std::string inner_id = tree.generateUniqueID(inner);
+        const std::string inner_id = tree.getClosureID(inner);
         if (bsdf->property("tangent").isValid()) {
             tree.addVector("tangent", *bsdf, Vector3f::UnitX());
             stream << tree.pullHeader()
@@ -727,7 +727,7 @@ static void bsdf_doublesided(std::ostream& stream, const std::string& name, cons
     } else {
         stream << LoaderBSDF::generate(inner, tree);
 
-        const std::string inner_id = tree.generateUniqueID(inner);
+        const std::string inner_id = tree.getClosureID(inner);
         stream << tree.pullHeader()
                << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_doublesided_bsdf(ctx.surf, "
                << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2}) });" << std::endl;
@@ -798,7 +798,7 @@ std::string LoaderBSDF::generate(const std::string& name, ShadingTree& tree)
     }
 
     if (error)
-        stream << "  let bsdf_" << tree.generateUniqueID(name) << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
+        stream << "  let bsdf_" << tree.getClosureID(name) << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
 
     return stream.str();
 }

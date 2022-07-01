@@ -627,7 +627,7 @@ static void light_env(size_t id, std::ostream& stream, const std::string& name, 
                    << "  let light_" << light_id << " = make_environment_light(" << id
                    << ", " << LoaderUtils::inlineSceneBBox(tree.context())
                    << ", " << tree.getInline("scale")
-                   << ", tex_" << tree.generateUniqueID(tex_name)
+                   << ", tex_" << tree.getClosureID(tex_name)
                    << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
         } else {
             const auto cdf          = setup_cdf(tree.context(), tex_path);
@@ -637,7 +637,7 @@ static void light_env(size_t id, std::ostream& stream, const std::string& name, 
                    << "  let light_" << light_id << " = make_environment_light_textured(" << id
                    << ", " << LoaderUtils::inlineSceneBBox(tree.context())
                    << ", " << tree.getInline("scale")
-                   << ", tex_" << tree.generateUniqueID(tex_name)
+                   << ", tex_" << tree.getClosureID(tex_name)
                    << ", cdf_" << light_id
                    << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
         }
@@ -800,7 +800,7 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipArea)
         if (skip(light))
             continue;
 
-        stream << "      " << counter << " => light_" << tree.generateUniqueID(it->first) << "," << std::endl;
+        stream << "      " << counter << " => light_" << tree.getClosureID(it->first) << "," << std::endl;
     }
 
     stream << "      _ => make_null_light(id)" << std::endl;
