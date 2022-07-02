@@ -144,7 +144,7 @@ if(IG_HAS_UI)
 endif()
 
 if(IG_WITH_PYTHON_API)
-	find_package (Python3 COMPONENTS Development)
+	find_package (Python3 COMPONENTS Development Interpreter)
 	if(Python3_FOUND)
 		set(IG_HAS_PYTHON_API ON)
 	endif()

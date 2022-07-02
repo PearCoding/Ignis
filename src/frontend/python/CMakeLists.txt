@@ -3,6 +3,8 @@ CPMAddPackage(
     GITHUB_REPOSITORY pybind/pybind11 
     GIT_TAG stable
     EXCLUDE_FROM_ALL YES
+    OPTIONS
+        "PYBIND11_FINDPYTHON ON"
 )
 
 set(OUTPUT_DIR "${CMAKE_BINARY_DIR}/api")
@@ -17,11 +19,24 @@ set_target_properties(pyignis PROPERTIES
 add_custom_command(TARGET pyignis POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E make_directory "${OUTPUT_DIR}"
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ignis "${OUTPUT_DIR}/ignis"
-                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:pyignis> "${OUTPUT_DIR}/ignis")
+                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:pyignis> "${OUTPUT_DIR}/ignis"
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/pyproject.toml "${OUTPUT_DIR}/pyproject.toml"
+                   COMMAND ${CMAKE_COMMAND} -E copy ${Ignis_SOURCE_DIR}/README.md "${OUTPUT_DIR}/README.md")
 add_checks(pyignis)
 
-set(SETUP_PY ${CMAKE_CURRENT_BINARY_DIR}/setup.py)
-set(TIMESTAMP ${CMAKE_CURRENT_BINARY_DIR}/build/timestamp)
-configure_file(setup.py.in ${SETUP_PY})
+set(SETUP_CFG ${OUTPUT_DIR}/setup.cfg)
+configure_file(setup.cfg.in ${SETUP_CFG})
 
-install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install --prefix ${CMAKE_INSTALL_PREFIX})" COMPONENT frontends)
+if(Python3_FOUND)
+  set(_Python Python3)
+else()
+  set(_Python Python)
+endif()
+
+add_custom_target(pyignis-package
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/pyproject.toml "${OUTPUT_DIR}/pyproject.toml"
+    COMMAND ${CMAKE_COMMAND} -E copy ${Ignis_SOURCE_DIR}/README.md "${OUTPUT_DIR}/README.md"
+    COMMAND ${${_Python}_EXECUTABLE} -m build
+    DEPENDS ${SETUP_CFG} pyignis
+    WORKING_DIRECTORY ${OUTPUT_DIR}
+)
