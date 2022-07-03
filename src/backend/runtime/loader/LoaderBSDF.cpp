@@ -651,7 +651,7 @@ static void bsdf_normalmap(std::ostream& stream, const std::string& name, const 
 
         const std::string inner_id = tree.getClosureID(inner);
         stream << tree.pullHeader()
-               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normalmap(ctx.surf, @|surf2| "
+               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normalmap(ctx, @|surf2| "
                << "bsdf_" << inner_id << "(ctx.{surf=surf2}), "
                << tree.getInline("map") << ","
                << tree.getInline("strength") << ");" << std::endl;
@@ -675,7 +675,7 @@ static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const st
 
         const std::string inner_id = tree.getClosureID(inner);
         stream << tree.pullHeader()
-               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_bumpmap(ctx.surf, "
+               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_bumpmap(ctx, "
                << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2}) }, "
                << "texture_dx(" << tree.getInline("map") << ", ctx).r, "
                << "texture_dy(" << tree.getInline("map") << ", ctx).r, "
@@ -701,13 +701,13 @@ static void bsdf_transform(std::ostream& stream, const std::string& name, const 
         if (bsdf->property("tangent").isValid()) {
             tree.addVector("tangent", *bsdf, Vector3f::UnitX());
             stream << tree.pullHeader()
-                   << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normal_tangent_set(ctx.surf, "
+                   << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normal_tangent_set(ctx, "
                    << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2}) }, "
                    << tree.getInline("normal")
                    << ", " << tree.getInline("tangent") << ");" << std::endl;
         } else {
             stream << tree.pullHeader()
-                   << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normal_set(ctx.surf, "
+                   << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_normal_set(ctx, "
                    << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2}) }, "
                    << tree.getInline("normal") << ");" << std::endl;
         }

@@ -145,7 +145,7 @@ def _export_add_bsdf(ctx, bsdf, export_name):
         ctx, bsdf.inputs[1], export_name + "__2")
 
     if mat1 is None or mat2 is None:
-        print(f"Mix BSDF {export_name} has no valid bsdf input")
+        print(f"Add BSDF {export_name} has no valid bsdf input")
         return None
 
     ctx.result["bsdfs"].append(mat1)

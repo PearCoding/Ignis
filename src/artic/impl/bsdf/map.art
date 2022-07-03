@@ -30,47 +30,48 @@ fn @transform_surf_bsdf(old_surf: SurfaceElement, new_surf: SurfaceElement, bsdf
 
 //--------------------------------------
 // Special bsdf replacing the normal orientation
-fn @make_normal_set(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Vec3) -> Bsdf {
+fn @make_normal_set(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Vec3) -> Bsdf {
     let new_surf = SurfaceElement{
-        is_entering = surf.is_entering,
-        point       = surf.point,
-        face_normal = surf.face_normal,
-        inv_area    = surf.inv_area,
-        prim_coords = surf.prim_coords,
-        tex_coords  = surf.tex_coords,
-        local       = make_orthonormal_mat3x3(normal)
+        is_entering = ctx.surf.is_entering,
+        point       = ctx.surf.point,
+        face_normal = ctx.surf.face_normal,
+        inv_area    = ctx.surf.inv_area,
+        prim_coords = ctx.surf.prim_coords,
+        tex_coords  = ctx.surf.tex_coords,
+        local       = make_orthonormal_mat3x3(ensure_valid_reflection(ctx.surf.face_normal, vec3_neg(ctx.ray.dir), normal))
     };
-    transform_surf_bsdf(surf, new_surf, bsdf_factory)
+    transform_surf_bsdf(ctx.surf, new_surf, bsdf_factory)
 }
 
 //--------------------------------------
 // Special bsdf replacing the normal and tangent orientation
-fn @make_normal_tangent_set(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Vec3, tangent: Vec3) -> Bsdf {
+fn @make_normal_tangent_set(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Vec3, tangent: Vec3) -> Bsdf {
+    let n = ensure_valid_reflection(ctx.surf.face_normal, vec3_neg(ctx.ray.dir), normal);
     let new_surf = SurfaceElement{
-        is_entering = surf.is_entering,
-        point       = surf.point,
-        face_normal = surf.face_normal,
-        inv_area    = surf.inv_area,
-        prim_coords = surf.prim_coords,
-        tex_coords  = surf.tex_coords,
-        local       = make_mat3x3(tangent, vec3_cross(tangent, normal), normal)
+        is_entering = ctx.surf.is_entering,
+        point       = ctx.surf.point,
+        face_normal = ctx.surf.face_normal,
+        inv_area    = ctx.surf.inv_area,
+        prim_coords = ctx.surf.prim_coords,
+        tex_coords  = ctx.surf.tex_coords,
+        local       = make_mat3x3(tangent, vec3_cross(tangent, n), n)
     };
-    transform_surf_bsdf(surf, new_surf, bsdf_factory)
+    transform_surf_bsdf(ctx.surf, new_surf, bsdf_factory)
 }
 
 //--------------------------------------
 // Normal Mapping
 // Normal given in [0, 1] RGB fashion
-fn @make_normalmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color, strength: f32) -> Bsdf {
-    let oN = vec3_normalize(mat3x3_left_mul(surf.local, vec3_normalize(make_vec3(2 * normal.r - 1, 2 * normal.g - 1, 2 * normal.b - 1))));
-    let N  = if strength != 1 { vec3_normalize(vec3_add(surf.local.col(2), vec3_mulf(vec3_sub(oN, surf.local.col(2)), strength))) } else { oN };
-    make_normal_set(surf, bsdf_factory, N)
+fn @make_normalmap(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color, strength: f32) -> Bsdf {
+    let oN = vec3_normalize(mat3x3_left_mul(ctx.surf.local, vec3_normalize(make_vec3(2 * normal.r - 1, 2 * normal.g - 1, 2 * normal.b - 1))));
+    let N  = if !?strength || strength != 1 { vec3_normalize(vec3_add(ctx.surf.local.col(2), vec3_mulf(vec3_sub(oN, ctx.surf.local.col(2)), strength))) } else { oN };
+    make_normal_set(ctx, bsdf_factory, N)
 }
 
 //--------------------------------------
 // Bump Mapping
-fn @make_bumpmap(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf, dx: f32, dy: f32, strength: f32) -> Bsdf {
-    let N = vec3_normalize(vec3_sub(surf.local.col(2), vec3_mulf(vec3_add(vec3_mulf(surf.local.col(0), dx), vec3_mulf(surf.local.col(1), dy)), strength)));
-    make_normal_set(surf, bsdf_factory, N)
+fn @make_bumpmap(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bsdf, dx: f32, dy: f32, strength: f32) -> Bsdf {
+    let N = vec3_normalize(vec3_sub(ctx.surf.local.col(2), vec3_mulf(vec3_add(vec3_mulf(ctx.surf.local.col(0), dx), vec3_mulf(ctx.surf.local.col(1), dy)), strength)));
+    make_normal_set(ctx, bsdf_factory, N)
 }
 
