@@ -5,6 +5,8 @@
 #include "math/Triangle.h"
 #include "mesh/TriMesh.h"
 
+#include "Image.h"
+
 IG_BEGIN_IGNORE_WARNINGS
 #include <bvh/bvh.hpp>
 #include <bvh/leaf_collapser.hpp>
@@ -160,6 +162,11 @@ protected:
     }
 };
 
+float disp(float x) {
+    if (x > 0.5) return 1;
+    return 0;
+}
+
 template <size_t N, size_t M, template <typename> typename Allocator>
 inline void build_bvh(const TriMesh& tri_mesh,
                       std::vector<typename BvhNTriM<N, M>::Node, Allocator<typename BvhNTriM<N, M>::Node>>& nodes,
@@ -170,12 +177,30 @@ inline void build_bvh(const TriMesh& tri_mesh,
     // using BvhBuilder = bvh::LocallyOrderedClusteringBuilder<Bvh, uint32>;
     // using BvhBuilder = bvh::SweepSahBuilder<Bvh>;
 
+    Image disp_tex = Image::load("../scenes/textures/bumpmap.png");
+
     const size_t num_tris = tri_mesh.indices.size() / 4;
     std::vector<TriangleProxy> primitives(num_tris);
     for (size_t i = 0; i < num_tris; ++i) {
-        auto& v0      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 0]];
-        auto& v1      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 1]];
-        auto& v2      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 2]];
+        auto& n0      = tri_mesh.normals[tri_mesh.indices[i * 4 + 0]];
+        auto& n1      = tri_mesh.normals[tri_mesh.indices[i * 4 + 1]];
+        auto& n2      = tri_mesh.normals[tri_mesh.indices[i * 4 + 2]];
+
+        auto& c0      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 0]];
+        auto& c1      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 1]];
+        auto& c2      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 2]];
+
+        int id0 = (int)floor(c0[0] * disp_tex.width * disp_tex.height + c0[1] * disp_tex.height) * 4;   
+        int id1 = (int)floor(c1[0] * disp_tex.width * disp_tex.height + c1[1] * disp_tex.height) * 4; 
+        int id2 = (int)floor(c2[0] * disp_tex.width * disp_tex.height + c2[1] * disp_tex.height) * 4; 
+
+        float d0 = disp_tex.pixels[id0] * 2;
+        float d1 = disp_tex.pixels[id1] * 2;
+        float d2 = disp_tex.pixels[id2] * 2;
+
+        auto& v0      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 0]] + n0 * d0;
+        auto& v1      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 1]] + n1 * d1;
+        auto& v2      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 2]] + n2 * d2;
         primitives[i] = TriangleProxy(v0, v1, v2);
 
         primitives[i].prim_id = (int)i;
