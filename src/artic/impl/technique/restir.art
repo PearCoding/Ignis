@@ -246,14 +246,6 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
     let temporal_reservoir_buffer = request_temporal_reservoir_buffer(device, work_info.height * work_info.width);
     let spatial_reservoir_buffer = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
 
-    //initialize empty reservoirs in buffer
-    //for j in device.parallel_range(0, work_info.height * work_info.width) {
-        //store_reservoir(temporal_reservoir_buffer, j, create_empty_reservoir());
-        //let debug = device.request_debug_output();
-        //debug.print_f32(temporal_reservoir_buffer.load_f32(j));
-        //store_reservoir(spatial_reservoir_buffer, j, create_empty_reservoir());
-    //}
-
     let handle_color = if clamp_value > 0 {
         @|c: Color| color_saturate(c, clamp_value)
     } else {
@@ -276,9 +268,9 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                      let pt = unwrap_rsraypayload(payload);
 
                     //dont do anything if not yet arrived at the sample point
-                      if pt.depth < 2 {
-                        return(ShadowRay::None)
-                      }  
+                       if pt.depth < 2 {
+                         return(ShadowRay::None)
+                       }  
 
                     // No shadow rays for specular materials
                     if mat.bsdf.is_specular || num_lights == 0 {
@@ -412,12 +404,16 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                  ) -> Option[(Ray, RayPayload)] {
         let pt = unwrap_rsraypayload(payload);
         let newRnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
+
         
          if pt.depth + 1 > max_path_len {
                  return(Option[(Ray, RayPayload)]::None)
                 }
 
         // Bounce
+        //test with hemisphere
+        
+
         let out_dir = vec3_neg(ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(newRnd, out_dir, false) {
             let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
@@ -438,10 +434,6 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                   //store information about visible point
                   sample_buffer.store_vec3(sample_idx, surf.point);
                   sample_buffer.store_vec3(sample_idx + 3, surf.face_normal);
-
-                  //store bsdf of visible point and pdf
-                  sample_buffer.store_f32(sample_idx + 15, mat_sample.pdf);
-                  sample_buffer.store_vec3(sample_idx + 16, color_to_vec3(mat.bsdf.eval(ray.dir, mat_sample.in_dir)));
                   
                   //dont change raypayload at first bounce
                   return(make_option(
@@ -460,6 +452,10 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                   //store information about sample point
                   sample_buffer.store_vec3(sample_idx + 6, surf.point);
                   sample_buffer.store_vec3(sample_idx + 9, surf.face_normal);
+
+                   //store bsdf of sample point and pdf
+                   sample_buffer.store_f32(sample_idx + 15, mat_sample.pdf);
+                   sample_buffer.store_vec3(sample_idx + 16, color_to_vec3(mat.bsdf.eval(ray.dir, mat_sample.in_dir)));
               }
             }
 

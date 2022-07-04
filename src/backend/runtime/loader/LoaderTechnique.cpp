@@ -69,7 +69,7 @@ static TechniqueInfo restir_get_info(const std::string&, const std::shared_ptr<P
     // It is totally fine to only define the type by other means then the scene config
     if (technique) {
         //if (technique->property("aov_normals").getBool(false))
-            info.EnabledAOVs.emplace_back("Normals");
+            info.EnabledAOVs.emplace_back("ReSTIR");
 
         if (technique->property("aov_mis").getBool(false)) {
             info.EnabledAOVs.emplace_back("Direct Weights");
@@ -220,7 +220,7 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
 
 static void path_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
 {
-    const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
+    const int max_depth     = technique ? technique->property("max_depth").getInteger(4) : 4;
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
     const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(false) : false;
     const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
@@ -264,7 +264,7 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
         }
     }
 
-    stream << "  let technique = make_path_renderer(" << max_depth << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
+    stream << "  let technique = make_path_renderer(" << 4 << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
 }
 
 static void path_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)

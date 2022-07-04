@@ -13,7 +13,11 @@
 		"size": [256, 256]
 	},
 	"bsdfs": [
-		{"type":"diffuse", "name": "wall", "reflectance": 0.8},
+		{
+			"type": "diffuse",
+			"name": "wall",
+			"reflectance": [0.8, 0.8, 0.8] 
+		},
 		{"type":"dielectric", "name": "window", "ext_ior": 1, "int_ior": 1.52, "specular_transmittance": 0.96 /*Sqrt(0.96)*/, "thin":true}
 		// {"type":"tensortree", "name": "window", "up": [0, 1, 0], "filename": "../simple_tensor_d2_trans.xml"}
 	],
@@ -28,6 +32,6 @@
 		{"name":"door","shape":"door", "bsdf":"wall"}
 	],
 	"lights": [
-		{"type":"env", "name":"sky", "radiance":[10,10,10]}
+		{"type":"env", "name":"sky", "radiance":[100,100,100]}
 	]
 }
