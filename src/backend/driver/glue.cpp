@@ -118,6 +118,7 @@ public:
         std::unordered_map<std::string, DeviceBuffer> buffers;
 
         anydsl::Array<uint32_t> tonemap_pixels;
+        anydsl::Array<uint32_t> filter_pixels;
 
         inline DeviceData()
             : database()
@@ -756,6 +757,17 @@ public:
         }
         return device.tonemap_pixels.data();
     }
+
+    inline uint32_t* getFilterImage(int32_t dev)
+    {
+        auto& device = devices[dev];
+        if (device.filter_pixels.size() != host_pixels.size()) {
+            auto film_size        = film_width * film_height;
+            auto film_data        = reinterpret_cast<uint32_t*>(anydsl_alloc(dev, sizeof(uint32_t) * film_size));
+            device.filter_pixels = anydsl::Array<uint32_t>(dev, film_data, film_size);
+        }
+        return device.filter_pixels.data();
+    }
 #endif
 
     inline void present(int32_t dev)
@@ -911,6 +923,29 @@ void glue_clearFramebuffer(int aov)
 const IG::Statistics* glue_getStatistics()
 {
     return sInterface->getFullStats();
+}
+
+void glue_filter(size_t device){
+    // if (sInterface->setup.acquire_stats)
+    //     sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Tonemap, {});
+
+// #ifdef DEVICE_GPU
+// #if defined(DEVICE_NVVM)
+//     int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
+// #elif defined(DEVICE_AMD)
+//     int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
+// #endif
+//     float* in_pixels = sInterface->getAOVImage(dev_id, 0);
+//     uint32_t* device_out_pixels = getFilterImage(dev_id);
+// #endif
+// // #else
+//     float* in_pixels            = sInterface->getAOVImage(0, 0);
+//     uint32_t* device_out_pixels = out_pixels;
+
+float* in_pixels = sInterface->getAOVImage(0,0); //framebuffer pixels
+
+    ig_utility_filter((int)device, in_pixels, (int)sInterface->film_width, (int)sInterface->film_height);
+
 }
 
 void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings& driver_settings)
@@ -1072,6 +1107,7 @@ IG_EXPORT DriverInterface ig_get_interface()
     interface.GetFramebufferFunction    = glue_getFramebuffer;
     interface.ClearFramebufferFunction  = glue_clearFramebuffer;
     interface.GetStatisticsFunction     = glue_getStatistics;
+    interface.FilterFunction            = glue_filter;  // filter linking
     interface.TonemapFunction           = glue_tonemap;
     interface.ImageInfoFunction         = glue_imageinfo;
     interface.CompileSourceFunction     = glue_compileSource;
@@ -1366,3 +1402,4 @@ IG_EXPORT void ignis_stats_add(int id, int value)
     sInterface->getThreadData()->stats.increase((IG::Quantity)id, static_cast<uint64_t>(value));
 }
 }
+

@@ -1,5 +1,6 @@
 build/
 build1/
+build_works
 CMakeSettings.json
 
 # Visual Studio stuff

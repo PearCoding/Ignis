@@ -539,10 +539,11 @@ public:
 
         // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
         uint32* buf = Buffer.data();
-        Runtime->tonemap(buf, TonemapSettings{ CurrentAOV, (size_t)ToneMappingMethod, ToneMappingGamma,
+        auto tone_settings = TonemapSettings{ CurrentAOV, (size_t)ToneMappingMethod, ToneMappingGamma,
                                                1.0f / iter,
                                                ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
-                                               ToneMapping_Automatic ? 0 : ToneMapping_Offset });
+                                               ToneMapping_Automatic ? 0 : ToneMapping_Offset };
+        Runtime->tonemap(buf, tone_settings);
 
         SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
     }

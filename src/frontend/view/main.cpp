@@ -129,6 +129,7 @@ int main(int argc, char** argv)
     SectionTimer timer_render;
     while (!done) {
         bool prevRun = running;
+        // printf("Starting frames"); // this file runs. need to modfiy here?
 
         timer_input.start();
         size_t iter = runtime->currentIterationCount();
@@ -156,6 +157,7 @@ int main(int argc, char** argv)
 
                 timer_render.start();
                 runtime->step();
+                runtime->filter();
                 timer_render.stop();
 
                 auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();

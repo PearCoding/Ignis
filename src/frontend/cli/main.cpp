@@ -113,6 +113,20 @@ int main(int argc, char** argv)
 
     std::vector<double> samples_sec;
 
+    // std::vector<uint32_t> filter_Buffer;
+    // std::vector<uint32_t> Buffer;
+    
+
+    // auto width = runtime->framebufferWidth();
+    // auto height = runtime->framebufferHeight();
+    // Buffer.resize(width * height);
+    // filter_Buffer.resize(width * height);
+    // std::cout << Buffer.size();
+    // IG_LOG(L_INFO) << "Size " << Buffer.size() << std::endl;
+    
+    // init framebuffer variable
+    // uint32* filter_buf = filter_Buffer.data();
+    
     SectionTimer timer_render;
     while (true) {
         if (!cmd.NoProgress)
@@ -122,7 +136,14 @@ int main(int argc, char** argv)
 
         timer_render.start();
         runtime->step();
+        //Add filter here 100 percent sure hehehehe
+        // runtime->getFramebuffer()
+        runtime->filter();
+
+        // SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
+
         timer_render.stop();
+        
 
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 

@@ -283,6 +283,7 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
     const float* data_ptr = getFramebuffer(0);
     data.resize(rays.size() * 3);
     std::memcpy(data.data(), data_ptr, sizeof(float) * rays.size() * 3);
+    
 }
 
 void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
@@ -449,6 +450,16 @@ void* Runtime::compileShader(const std::string& src, const std::string& func, co
         dumpShader(name + "_full.art", full_shader);
 
     return mLoadedInterface.CompileSourceFunction(full_shader.c_str(), func.c_str());
+}
+
+void Runtime::filter()
+{
+    if (mTechniqueVariants.empty()) {
+        IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
+        return;
+    }
+
+    mLoadedInterface.FilterFunction((int)mDevice);
 }
 
 void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)

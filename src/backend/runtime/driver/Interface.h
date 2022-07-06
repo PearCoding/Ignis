@@ -41,6 +41,7 @@ using DriverGetFramebufferFunction    = const float* (*)(size_t);
 using DriverClearFramebufferFunction  = void (*)(int);
 using DriverGetStatisticsFunction     = const IG::Statistics* (*)();
 
+using DriverFilterFunction    = void (*)(size_t);
 using DriverTonemapFunction   = void (*)(size_t, uint32_t*, const IG::TonemapSettings&);
 using DriverImageInfoFunction = void (*)(size_t, const IG::ImageInfoSettings&, IG::ImageInfoOutput&);
 
@@ -57,6 +58,7 @@ struct DriverInterface {
     DriverGetFramebufferFunction GetFramebufferFunction;
     DriverClearFramebufferFunction ClearFramebufferFunction;
     DriverGetStatisticsFunction GetStatisticsFunction;
+    DriverFilterFunction FilterFunction;
     DriverTonemapFunction TonemapFunction;
     DriverImageInfoFunction ImageInfoFunction;
     DriverCompileSourceFunction CompileSourceFunction;

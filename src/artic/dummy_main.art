@@ -76,3 +76,7 @@ fn ig_utility_imageinfo(_device_id: i32, _in_pixels: &[f32], _width: i32, _heigh
 #[export]
 fn ig_utility_tonemap(_device_id: i32, _in_pixels: &[f32], _out_pixels: &mut [u32], _width: i32, _height: i32, _settings: &TonemapSettings) -> () {
 }
+
+#[export]
+fn ig_utility_filter(_device_id: i32, _in_pixels: &[f32], _width: i32, _height: i32) -> (){
+}
