@@ -777,7 +777,7 @@ def _export_image_texture(ctx, node):
         {
             "type": "image",
             "name": tex_name,
-            "filename": "Meshes/Textures/"+img_name,
+            "filename": "Textures/"+img_name,
             "wrap_mode": wrap_mode,
             "filter_type": filter_type,
             "linear": linear
@@ -938,7 +938,7 @@ def _export_environment(ctx, node):
         {
             "type": "image",
             "name": tex_name,
-            "filename": "Meshes/Textures/"+img_name,
+            "filename": "Textures/"+img_name,
             "wrap_mode": wrap_mode,
             "filter_type": filter_type
         }

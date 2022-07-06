@@ -121,16 +121,17 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
         export_camera(result, depsgraph.scene)
 
     # Create a path for meshes
-    meshPath = os.path.join(os.path.dirname(filepath), 'Meshes')
-    os.makedirs(meshPath, exist_ok=True)
+    rootPath = os.path.dirname(filepath) 
+    os.makedirs(os.path.join(rootPath, 'Meshes'), exist_ok=True)
+    os.makedirs(os.path.join(rootPath, 'Textures'), exist_ok=True)
 
     # Export all objects, materials, textures and lights
-    export_all(meshPath, result, depsgraph, use_selection,
+    export_all(rootPath, result, depsgraph, use_selection,
                export_materials, export_lights)
 
     if enable_background:
         # Export background/environmental light
-        export_background(result, meshPath, depsgraph.scene)
+        export_background(result, rootPath, depsgraph.scene)
 
     # Cleanup
     result["_materials"] = None
