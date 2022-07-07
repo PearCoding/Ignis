@@ -23,23 +23,6 @@ static TechniqueInfo technique_empty_get_info(const std::string&, const std::sha
 
 /////////////////////////
 
-static std::string restir_clear_framebuffer_generator(LoaderContext& ctx)
-{
-    std::stringstream stream;
-
-    stream << LoaderTechnique::generateHeader(ctx, true) << std::endl;
-
-    stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
-           << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
-           << std::endl;
-
-    stream << "  clear_framebuffer(device, iter," << ctx.SamplesPerIteration << ");" << std::endl
-           << "}" << std::endl;
-
-    return stream.str();
-}
-
 static std::string restir_resampling_generator(LoaderContext& ctx)
 {
     std::stringstream stream;
@@ -61,8 +44,9 @@ static TechniqueInfo restir_get_info(const std::string&, const std::shared_ptr<P
 {
     TechniqueInfo info;
 
+     info.Variants[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
+
     // make use of post-iteration setup
-    info.Variants[0].CallbackGenerators[(int)CallbackType::BeforeIteration] = restir_clear_framebuffer_generator;
     info.Variants[0].CallbackGenerators[(int)CallbackType::AfterIteration] = restir_resampling_generator; 
 
     // Check if we have a proper defined technique
@@ -70,6 +54,8 @@ static TechniqueInfo restir_get_info(const std::string&, const std::shared_ptr<P
     if (technique) {
         //if (technique->property("aov_normals").getBool(false))
             info.EnabledAOVs.emplace_back("ReSTIR");
+            info.EnabledAOVs.emplace_back("Direct Light");
+            info.EnabledAOVs.emplace_back("Depth Info");
 
         if (technique->property("aov_mis").getBool(false)) {
             info.EnabledAOVs.emplace_back("Direct Weights");
@@ -94,16 +80,14 @@ static void restir_body_loader(std::ostream& stream, const std::string&, const s
 
     size_t counter = 1;
     //if (hasNormalAOV)
-        stream << "  let aov_normals = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
+        stream << "  let aov_restir = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
+        stream << "  let aov_direct_light = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
+        stream << "  let aov_depth_info = device.load_aov_image(" << counter++ << ", 1);" << std::endl;
 
     if (hasMISAOV) {
         stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
         stream << "  let aov_nee = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
     }
-
-    //  if (hasReStirAOV) {
-    //      stream << "  let aov_restir = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
-    //  }
 
     stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
            << "    match(id) {" << std::endl;
@@ -111,7 +95,9 @@ static void restir_body_loader(std::ostream& stream, const std::string&, const s
     // TODO: We do not support constants in match (or any other useful location)!!!!!!!!!
     // This is completely unnecessary... we have to fix artic for that......
     //if (hasNormalAOV)
-        stream << "      1 => aov_normals," << std::endl;
+        stream << "      1 => aov_restir," << std::endl;
+        stream << "      2 => aov_direct_light," << std::endl;
+        stream << "      3 => aov_depth_info," << std::endl;
 
     if (hasMISAOV) {
         stream << "      2 => aov_di," << std::endl
@@ -220,7 +206,7 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
 
 static void path_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
 {
-    const int max_depth     = technique ? technique->property("max_depth").getInteger(4) : 4;
+    const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
     const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(false) : false;
     const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
@@ -264,7 +250,7 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
         }
     }
 
-    stream << "  let technique = make_path_renderer(" << 4 << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
+    stream << "  let technique = make_path_renderer(" << max_depth << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
 }
 
 static void path_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)

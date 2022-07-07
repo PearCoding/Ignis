@@ -235,7 +235,6 @@ fn @request_spatial_reservoir_buffer(device: Device, image_size: i32) -> DeviceB
 }
 
 
-
 fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, aovs: AOVTable, clamp_value: f32) -> Technique {
     let offset : f32  = 0.001;
     let work_info = get_work_info();
@@ -245,6 +244,10 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
     let sample_buffer = request_initial_sample_buffer(device, work_info.height * work_info.width);
     let temporal_reservoir_buffer = request_temporal_reservoir_buffer(device, work_info.height * work_info.width);
     let spatial_reservoir_buffer = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
+
+    //load aov for direct ligthing
+    let aov_direct_light = @aovs(2);
+    let aov_depth_info = @aovs(3);
 
     let handle_color = if clamp_value > 0 {
         @|c: Color| color_saturate(c, clamp_value)
@@ -258,7 +261,7 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
     }
 
     fn @on_shadow( ray: Ray
-                 , _pixel: i32
+                 , pixel: i32
                  , _hit: Hit
                  , rnd: &mut RndState
                  , payload: RayPayload
@@ -267,10 +270,18 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                  ) -> ShadowRay {
                      let pt = unwrap_rsraypayload(payload);
 
+                      if(pt.depth == 1) 
+                             {
+                                 aov_depth_info.splat(pixel, make_color(1.0, 1.0, 1.0, 1.0));
+                             } else 
+                             {
+                                aov_depth_info.splat(pixel, make_color(-1.0, -1.0, -1.0, -1.0));
+                             }
+
                     //dont do anything if not yet arrived at the sample point
-                       if pt.depth < 2 {
-                         return(ShadowRay::None)
-                       }  
+                        //  if pt.depth < 2 {
+                        //    return(ShadowRay::None)
+                        //  }  
 
                     // No shadow rays for specular materials
                     if mat.bsdf.is_specular || num_lights == 0 {
@@ -321,7 +332,7 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                                 contrib
                             ))
                         }
-                    }
+                        }
                     ShadowRay::None 
     }
 
@@ -334,14 +345,6 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
               ) -> Option[Color] {
             
         let pt = unwrap_rsraypayload(payload);
-        //  if pt.depth < 2 {
-        //      // aov_normal.splat(pixel, make_color(math_builtins::fabs(surf.local.col(2).x),
-        //      //                                    math_builtins::fabs(surf.local.col(2).y),
-        //      //                                    math_builtins::fabs(surf.local.col(2).z),
-        //      //                                    1));
-        //      return(Option[Color]::None)
-        //  }
-    
             // Hits on a light source
         if mat.is_emissive && surf.is_entering {
             let dot = -vec3_dot(ray.dir, surf.local.col(2));
@@ -365,11 +368,6 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
         let mut inflights = 0;
         let mut color     = color_builtins::black;
         let pt = unwrap_rsraypayload(payload);
-
-        //dont do anything if not yet arrived at the sample point
-        //   if pt.depth < 2 {
-        //       return(Option[Color]::None)
-        //   }
 
         for light_id in safe_unroll(0, num_lights) {
             let light = @lights(light_id);
@@ -409,10 +407,6 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
          if pt.depth + 1 > max_path_len {
                  return(Option[(Ray, RayPayload)]::None)
                 }
-
-        // Bounce
-        //test with hemisphere
-        
 
         let out_dir = vec3_neg(ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(newRnd, out_dir, false) {
@@ -478,9 +472,15 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                       , pixel: i32
                       , _shader: Shader
                      , color: Color) -> Option[Color] {
-        //aov_nee.splat(pixel, color);
+          if (color_average(aov_depth_info.get(pixel)) == 1.0) 
+          {
+              aov_direct_light.splat(pixel, color);
+              return(Option[Color]::None)
+          }
         make_option(color)
     }
+
+    
 
     Technique {
         on_hit         = on_hit,
@@ -494,79 +494,72 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
 
 fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 {
-     let work_info = get_work_info();
+      let work_info = get_work_info();
     
-     //request needed buffers again
-     let sample_buffer = request_initial_sample_buffer(device, work_info.height * work_info.width);
-     let temporal_reservoir_buffer = request_temporal_reservoir_buffer(device, work_info.height * work_info.width);
-     let spatial_reservoir_buffer = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
+      //request needed buffers again
+      let sample_buffer = request_initial_sample_buffer(device, work_info.height * work_info.width);
+      let temporal_reservoir_buffer = request_temporal_reservoir_buffer(device, work_info.height * work_info.width);
+      let spatial_reservoir_buffer = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
 
-     let aov_restir = device.load_aov_image(1, spi);
+      let aov_restir = device.load_aov_image(1, spi);
+      let aov_depth_info = device.load_aov_image(3, 1);
      
-     //load image with outgoing radiances at sample point
-     let aov_radiance = device.load_aov_image(0, spi);
+      //load image with outgoing radiances at sample point
+      let aov_radiance = device.load_aov_image(0, spi);
      
-     //main loop for temporal and spatial resampling
-    for j in device.parallel_range(0, work_info.height * work_info.width) {
+      //main loop for temporal and spatial resampling
+      for j in device.parallel_range(0, work_info.height * work_info.width) {
 
-         ////start with temporal resampling
+          ////start with temporal resampling
 
-         //store outgoing radiance at sample
-         sample_buffer.store_vec3((j * 19) + 12, color_to_vec3(aov_radiance.get(j)));
+          //store outgoing radiance at sample
+          sample_buffer.store_vec3((j * 19) + 12, color_to_vec3(aov_radiance.get(j)));
 
-         //take out sample from initial sample buffer
-         let mut sample = load_sample_from_sample_buffer(j, sample_buffer);
+          //take out sample from initial sample buffer
+          let mut sample = load_sample_from_sample_buffer(j, sample_buffer);
 
-         //take out reservoir from temporal reservoir buffer
-         let mut temporal_reservoir = load_reservoir(j, temporal_reservoir_buffer);
+          //take out reservoir from temporal reservoir buffer
+          let mut temporal_reservoir = load_reservoir(j, temporal_reservoir_buffer);
 
-         let averaged_radiance = color_average(sample.radiance); 
+          let averaged_radiance = color_average(sample.radiance); 
 
-        //if sample.pdf is 0 then continue (otherwise division by 0)
-        let mut w_new = 0.0;
-        if(sample.pdf == 0.0) 
-        {
-            w_new = 0.0;
-        } else {
-            let w = averaged_radiance / sample.pdf; 
-            w_new = w as f64;
-        }
-
-         let mut rnd = generate_rnd_state(sample.vis_point.x, w_new as f32, (j * 22));
-
-         update(temporal_reservoir, sample, w_new as f32, (j * 22), temporal_reservoir_buffer, rnd);
-
-         //update reservoirs W
-         let rad = color_average(temporal_reservoir.sample.radiance);
-
-         //if averaged radiance is 0 then set the reservoirs weight to 0 (otherwise division by 0)
-         if(rad == 0.0) {
-            temporal_reservoir.weight = 0;
+         //if sample.pdf is 0 then continue (otherwise division by 0)
+         let mut w_new = 0.0;
+         if(sample.pdf == 0.0) 
+         {
+             w_new = 0.0;
          } else {
-             temporal_reservoir.weight = temporal_reservoir.w / (temporal_reservoir.sample_count * rad);
+             let w = averaged_radiance / sample.pdf; 
+             w_new = w as f64;
          }
 
+          let mut rnd = generate_rnd_state(sample.vis_point.x, w_new as f32, (j * 22));
 
-         //store updated reservoir again
-         store_reservoir(temporal_reservoir_buffer, j, temporal_reservoir);
-         ////
-         let debug = device.request_debug_output();
+          update(temporal_reservoir, sample, w_new as f32, (j * 22), temporal_reservoir_buffer, rnd);
+
+          //update reservoirs W
+          let rad = color_average(temporal_reservoir.sample.radiance);
+
+          //if averaged radiance is 0 then set the reservoirs weight to 0 (otherwise division by 0)
+          if(rad == 0.0) {
+             temporal_reservoir.weight = 0;
+          } else {
+              temporal_reservoir.weight = temporal_reservoir.w / (temporal_reservoir.sample_count * rad);
+          }
+
+
+          //store updated reservoir again
+          store_reservoir(temporal_reservoir_buffer, j, temporal_reservoir);
+          ////
+          let debug = device.request_debug_output();
         
-         //calculate final pixel value 
-         let res = color_mulf(temporal_reservoir.sample.bsdf, temporal_reservoir.weight);
-         aov_restir.set(j, color_mul(res, temporal_reservoir.sample.radiance));
+          //calculate final pixel value 
+          let res = color_mulf(temporal_reservoir.sample.bsdf, temporal_reservoir.weight);
+          aov_restir.set(j, color_mul(res, temporal_reservoir.sample.radiance));
 
-     }
-     device.sync();
-}
+          //reset depth info
+          aov_depth_info.splat(j, make_color(-1.0, -1.0, -1.0, -1.0));
 
-fn @clear_framebuffer(device: Device, iter: i32, spi: i32)
-{
-    //let framebuffer = device.load_aov_image(0, spi);
-    //let work_info = get_work_info();
-
-    //for j in device.parallel_range(0, work_info.height * work_info.width) {
-        //let color = framebuffer.get(j);
-        //framebuffer.splat(j, make_color(-color.r * (spi as f32), -color.g * (spi as f32), -color.b * (spi as f32), -color.a * (spi as f32)));
-    //}
+      }
+      device.sync();
 }
