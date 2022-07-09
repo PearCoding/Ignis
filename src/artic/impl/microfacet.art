@@ -386,7 +386,7 @@ fn @make_vndf_ggx_distribution(local: Mat3x3, alpha_u: f32, alpha_v: f32) -> Mic
             sample = @ |rnd, wo|   {
                 let m   = sample_vndf_ggx(rnd, local, wo, alpha_u, alpha_v);
                 let pdf = pdf_vndf_ggx(local, wo, m, alpha_u, alpha_v);
-                MicrofacetSample { normal = m, pdf = pdf }
+                MicrofacetSample { normal = all::ensure_valid_reflection(local.col(2), wo, m), pdf = pdf }
             },
             alpha_u  = alpha_u,
             alpha_v  = alpha_v,

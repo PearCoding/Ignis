@@ -38,7 +38,7 @@ fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
 
             let face_normal = @f_fn(hit.prim_id);
             let inv_area    = @f_fia(hit.prim_id);
-            let normal      = ensure_valid_reflection(face_normal, vec3_neg(local_ray.dir), vec3_normalize(vec3_lerp2(@f_n(i0), @f_n(i1), @f_n(i2), hit.prim_coords.x, hit.prim_coords.y)));
+            let normal      = vec3_normalize(vec3_lerp2(@f_n(i0), @f_n(i1), @f_n(i2), hit.prim_coords.x, hit.prim_coords.y));
             let is_entering = vec3_dot(local_ray.dir, face_normal) <= 0;
             let tex_coords  = vec2_lerp2(@f_tx(i0), @f_tx(i1), @f_tx(i2), hit.prim_coords.x, hit.prim_coords.y);
 
