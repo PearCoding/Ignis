@@ -11,14 +11,15 @@ from .utils import *
 from .defaults import *
 
 
-def export_technique(result):
+def export_technique(result, scene):
+    max_depth = scene.cycles.max_bounces if scene.cycles is not None else 8
     result["technique"] = {
         "type": "path",
-        "max_depth": 64
+        "max_depth": max_depth
     }
 
 
-def export_entity(result, inst, filepath, shape_name, mat_i, export_materials, export_lights):
+def export_entity(result, depsgraph, inst, filepath, shape_name, mat_i, export_materials, export_lights, copy_images):
     shadow_visibility = True
     if export_materials:
         if(len(inst.object.material_slots) > mat_i):
@@ -26,7 +27,7 @@ def export_entity(result, inst, filepath, shape_name, mat_i, export_materials, e
                 inst.object.material_slots[mat_i].material)
             mat_name = inst.object.material_slots[mat_i].material.name
             emission = get_material_emission(NodeContext(
-                result, filepath), inst.object.material_slots[mat_i].material)
+                result, filepath, depsgraph, copy_images), inst.object.material_slots[mat_i].material)
             if bpy.context.engine == "EEVEE":
                 shadow_visibility = inst.object.material_slots[mat_i].material.shadow_method != "NONE"
         else:
@@ -54,7 +55,7 @@ def export_entity(result, inst, filepath, shape_name, mat_i, export_materials, e
         )
 
 
-def export_all(filepath, result, depsgraph, use_selection, export_materials, export_lights):
+def export_all(filepath, result, depsgraph, use_selection, export_materials, export_lights, copy_images):
     result["shapes"] = []
     result["bsdfs"] = []
     result["entities"] = []
@@ -90,8 +91,8 @@ def export_all(filepath, result, depsgraph, use_selection, export_materials, exp
                     f"Entity {object_eval.name} has no material or shape and will be ignored")
 
             for shape in shapes:
-                export_entity(result, inst, filepath, shape[0], shape[1],
-                              export_materials, export_lights)
+                export_entity(result, depsgraph, inst, filepath, shape[0], shape[1],
+                              export_materials, export_lights, copy_images)
         elif objType == "LIGHT" and export_lights:
             export_light(
                 result, inst)
@@ -99,7 +100,7 @@ def export_all(filepath, result, depsgraph, use_selection, export_materials, exp
     # Export materials
     if export_materials:
         for material in result["_materials"]:
-            mat = export_material(NodeContext(result, filepath), material)
+            mat = export_material(NodeContext(result, filepath, depsgraph, copy_images), material)
             if mat is not None:
                 result["bsdfs"].append(mat)
             else:
@@ -108,7 +109,29 @@ def export_all(filepath, result, depsgraph, use_selection, export_materials, exp
         result["bsdfs"].append({"type": "diffuse", "name": BSDF_DEFAULT_NAME})
 
 
-def export_scene(filepath, context, use_selection, export_materials, export_lights, enable_background, enable_camera, enable_technique):
+def delete_none(_dict):
+    """Delete None values and empty sets recursively from all of the dictionaries, tuples, lists, sets"""
+    if isinstance(_dict, dict):
+        for key, value in list(_dict.items()):
+            if isinstance(value, (list, dict, tuple, set)):
+                val = delete_none(value)
+                if val is not None:
+                    _dict[key] = val
+                else:
+                    del _dict[key]
+            elif value is None or key is None:
+                del _dict[key]
+
+    elif isinstance(_dict, (list, set, tuple)):
+        _dict = type(_dict)(delete_none(item)
+                            for item in _dict if item is not None)
+        if len(_dict) == 0:
+            _dict = None
+
+    return _dict
+
+
+def export_scene(filepath, context, use_selection, export_materials, export_lights, enable_background, enable_camera, enable_technique, copy_images):
     depsgraph = context.evaluated_depsgraph_get()
 
     # Write all materials and cameras to a dict with the layout of our json file
@@ -119,7 +142,7 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
 
     # Export technique (set to default path tracing with 64 rays)
     if enable_technique:
-        export_technique(result)
+        export_technique(result, depsgraph.scene)
 
     # Export camera
     if enable_camera:
@@ -132,17 +155,16 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
 
     # Export all objects, materials, textures and lights
     export_all(rootPath, result, depsgraph, use_selection,
-               export_materials, export_lights)
+               export_materials, export_lights, copy_images)
 
     if enable_background:
         # Export background/environmental light
-        export_background(result, rootPath, depsgraph.scene)
+        export_background(result, rootPath, depsgraph, copy_images)
 
     # Cleanup
-    result["_materials"] = None
-    result["_images"] = None
-    result = {key: value for key, value in result.items(
-    ) if not isinstance(value, list) or len(value) > 0}
+    del result["_images"]
+    del result["_materials"]
+    result = delete_none(result)
 
     # Write the result into the .json
     with open(filepath, 'w') as fp:

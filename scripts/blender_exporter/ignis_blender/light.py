@@ -6,7 +6,9 @@ from .node import export_node, NodeContext
 from .defaults import *
 
 
-def export_background(result, out_dir, scene):
+def export_background(result, out_dir, depsgraph, copy_images):
+    scene = depsgraph.scene
+
     # Export basic world if no shading nodes are given
     if not scene.world.node_tree:
         if scene.world.color[0] > 0 and scene.world.color[1] > 0 and scene.world.color[2] > 0:
@@ -21,9 +23,9 @@ def export_background(result, out_dir, scene):
 
     if tree.type == "BACKGROUND":
         strength = export_node(NodeContext(
-            result, out_dir), tree.inputs["Strength"])
+            result, out_dir, depsgraph, copy_images), tree.inputs["Strength"])
         radiance = export_node(NodeContext(
-            result, out_dir), tree.inputs["Color"])
+            result, out_dir, depsgraph, copy_images), tree.inputs["Color"])
 
         # Check if there is any emission (if we can detect it)
         has_emission = try_extract_node_value(strength, default=1) > 0

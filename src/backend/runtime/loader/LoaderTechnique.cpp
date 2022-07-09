@@ -33,7 +33,7 @@ static void ao_body_loader(std::ostream& stream, const std::string&, const std::
 static void debug_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&)
 {
     // TODO: Maybe add a changeable default mode?
-    stream << "  let debug_mode = registry::get_parameter_i32(\"__debug_mode\", 0);" << std::endl
+    stream << "  let debug_mode = registry::get_global_parameter_i32(\"__debug_mode\", 0);" << std::endl
            << "  maybe_unused(num_lights); maybe_unused(lights);" << std::endl
            << "  let technique  = make_debug_renderer(debug_mode);" << std::endl;
 }

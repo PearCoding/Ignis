@@ -9,9 +9,11 @@ TEXCOORD_UV = "vec3(uv.x, uv.y, 0)"
 
 
 class NodeContext:
-    def __init__(self, result, path):
+    def __init__(self, result, path, depsgraph, always_copy_images):
         self.result = result
         self.path = path
+        self.depsgraph = depsgraph
+        self.always_copy_images = always_copy_images
         self.cache = {}
 
         self._stack = []
@@ -35,6 +37,9 @@ class NodeContext:
     def goOut(self):
         self._cur += 1
 
+    @property
+    def scene(self):
+        return self.depsgraph.scene
 
 def _export_default(socket):
     default_value = getattr(socket, "default_value")
@@ -533,23 +538,55 @@ def _export_vector_mapping(ctx, node):  # TRS
     sca = export_node(ctx, node.inputs["Scale"])
     rot = export_node(ctx, node.inputs["Rotation"])
 
+    skip_sca = check_socket_if_constant(node.inputs["Scale"], value=1)
+    skip_rot = check_socket_if_constant(node.inputs["Rotation"], value=0)
+    skip_loc = check_socket_if_constant(node.inputs["Location"], value=0)
+
     if node.vector_type == 'POINT':
         loc = export_node(ctx, node.inputs["Location"])
-        out = f"({vec} * {sca})"
-        out = f"rotate_euler({out}, {rot})"
-        return f"({out} + {loc})"
+        if not skip_sca:
+            out = f"({vec} * {sca})"
+        else:
+            out = vec
+
+        if not skip_rot:
+            out = f"rotate_euler({out}, {rot})"
+
+        if not skip_loc:
+            return f"({out} + {loc})"
+        else:
+            return out
     elif node.vector_type == 'TEXTURE':
         loc = export_node(ctx, node.inputs["Location"])
-        out = f"({vec} - {loc})"
-        out = f"rotate_euler_inverse({out}, {rot})"
-        return f"({out} / {sca})"
+        if not skip_loc:
+            out = f"({vec} - {loc})"
+        else:
+            out = vec
+
+        if not skip_rot:
+            out = f"rotate_euler_inverse({out}, {rot})"
+
+        if not skip_sca:
+            return f"({out} / {sca})"
+        else:
+            return out
     elif node.vector_type == 'NORMAL':
-        out = f"({vec} / {sca})"
-        out = f"rotate_euler({out}, {rot})"
+        if not skip_sca:
+            out = f"({vec} / {sca})"
+        else:
+            out = vec
+        if not skip_rot:
+            out = f"rotate_euler({out}, {rot})"
         return f"norm({out})"
     else:
-        out = f"({vec} * {sca})"
-        return f"rotate_euler({out}, {rot})"
+        if not skip_sca:
+            out = f"({vec} * {sca})"
+        else:
+            out = vec
+        if not skip_rot:
+            return f"rotate_euler({out}, {rot})"
+        else:
+            return out
 
 
 def _export_vector_math(ctx, node):
@@ -711,35 +748,41 @@ def _export_checkerboard(ctx, node, output_name):
 
 
 def _handle_image(ctx, image):
-    img_path = bpy.path.resolve_ncase(image.filepath_raw)
-    if img_path == '':
-        img_path = image.name + ".exr"
-        image.file_format = "OPEN_EXR"
+    os.makedirs(os.path.join(ctx.path, "Textures"), exist_ok=True)            
 
-    img_name = bpy.path.basename(img_path)
+    if image.source == 'GENERATED':
+        img_name = image.name + (".png" if not image.use_generated_float else ".exr")
+        img_path = os.path.join("Textures", img_name)
+        if img_name not in ctx.result["_images"]:
+            image.save_render(os.path.join(ctx.path, img_path), scene=ctx.scene)
+            ctx.result["_images"].add(img_name)
+        return img_path
+    elif image.source == 'FILE':
+        img_path = bpy.path.relpath(bpy.path.abspath(bpy.path.resolve_ncase(image.filepath_raw)), start=ctx.path).replace("\\", "/")
+        if img_path.startswith("//"):
+            img_path = img_path[2:]
+ 
+        export_image = image.packed_file or ctx.always_copy_images or img_path == ''
 
-    if img_name not in ctx.result["_images"]:
-        # Export the texture and store its path
-        old = image.filepath_raw
+        if export_image:
+            img_name = bpy.path.basename(img_path)
+            if img_name == '':
+                if image.file_format in ["OPEN_EXR", "OPEN_EXR_MULTILAYER", "HDR"]:
+                    extension = ".exr"
+                else:
+                    extension = ".png" 
+                img_path = os.path.join("Textures", image.name + extension)
+            else:
+                img_path = os.path.join("Textures", img_name)
+            
+            if img_name not in ctx.result["_images"]:
+                image.save_render(os.path.join(ctx.path, img_path), scene=ctx.scene)
+                ctx.result["_images"].add(img_name)
 
-        # Make sure the image is loaded to memory, so we can write it out
-        if not image.has_data:
-            image.pixels[0]
-            old = image.filepath_raw
-
-        os.makedirs(os.path.join(ctx.path, "Textures"), exist_ok=True)
-
-        try:
-            image.filepath_raw = os.path.join(ctx.path, "Textures", img_name)
-            image.save()
-        except Exception as e:
-            print(e)
-        finally:  # Never break the scene!
-            image.filepath_raw = old
-
-        ctx.result["_images"].add(img_name)
-
-    return img_name
+        return img_path
+    else:
+        print(f"Image type {image.source} not supported")
+        return None
 
 
 def _export_image_texture(ctx, node):
@@ -750,7 +793,7 @@ def _export_image_texture(ctx, node):
         print(f"Image node {node.name} has no image")
         return "color(0)"
 
-    img_name = _handle_image(ctx, node.image)
+    img_path = _handle_image(ctx, node.image)
 
     if node.extension == "EXTEND":
         wrap_mode = "clamp"
@@ -777,7 +820,7 @@ def _export_image_texture(ctx, node):
         {
             "type": "image",
             "name": tex_name,
-            "filename": "Textures/"+img_name,
+            "filename": img_path,
             "wrap_mode": wrap_mode,
             "filter_type": filter_type,
             "linear": linear
@@ -925,7 +968,7 @@ def _export_environment(ctx, node):
         print(f"Image node {node.name} has no image")
         return "color(0)"
 
-    img_name = _handle_image(ctx, node.image)
+    img_path = _handle_image(ctx, node.image)
 
     wrap_mode = "clamp"
 
@@ -938,7 +981,7 @@ def _export_environment(ctx, node):
         {
             "type": "image",
             "name": tex_name,
-            "filename": "Textures/"+img_name,
+            "filename": img_path,
             "wrap_mode": wrap_mode,
             "filter_type": filter_type
         }

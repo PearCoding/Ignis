@@ -72,6 +72,12 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
+    copy_images: BoolProperty(
+        name="Copy all Images",
+        description="If true, copy all images to Textures/, not only Generated or Packed images.",
+        default=False,
+    )
+
     check_extension = True
 
     def execute(self, context):
@@ -132,7 +138,6 @@ class IGNIS_PT_export_include(bpy.types.Panel):
         col.prop(operator, 'use_selection')
 
         layout.separator()
-
         col = layout.column(heading="Export")
         col.prop(operator, 'animations', text="Animations")
         col.prop(operator, 'export_materials', text="Materials")
@@ -140,6 +145,10 @@ class IGNIS_PT_export_include(bpy.types.Panel):
         col.prop(operator, 'enable_background', text="Background")
         col.prop(operator, 'enable_camera', text="Camera")
         col.prop(operator, 'enable_technique', text="Technique")
+
+        layout.separator()
+        col = layout.column(heading="Images")
+        col.prop(operator, 'copy_images')
 
 
 def menu_func_export(self, context):
