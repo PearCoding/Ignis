@@ -74,14 +74,14 @@ struct Device {
 
     //------------------------------------- Resources
     // Load (float) RGBA image from a file
-    load_image: fn (&[u8] /* Filename */) -> Image,
+    load_image: fn (&[u8] /* Filename */, i32 /* Expected channel count */) -> Image,
     // Load (float) RGBA image from a preregistered resource 
-    load_image_by_id: fn (i32 /* Resource id */) -> Image,
+    load_image_by_id: fn (i32 /* Resource id */, i32 /* Expected channel count */) -> Image,
 
-    // Load (binary) RGBA image from a file, with hint that the given image is fully opaque
-    load_packed_image: fn (&[u8] /* Filename */, bool, bool) -> Image,
-    // Load (binary) RGBA image from a preregistered resource, with hint that the given image is fully opaque
-    load_packed_image_by_id: fn (i32 /* Resource id */, bool, bool) -> Image,
+    // Load (binary) RGBA image from a file, with expected channel count and linearity
+    load_packed_image: fn (&[u8] /* Filename */, i32 /* Expected channel count */, bool /* linear */) -> Image,
+    // Load (binary) RGBA image from a preregistered resource, with expected channel count and linearity
+    load_packed_image_by_id: fn (i32 /* Resource id */, i32 /* Expected channel count */, bool /* linear */) -> Image,
 
     // Load aov given by its id and the current spi
     load_aov_image: fn (i32 /* id */, i32 /* spi */) -> AOVImage,

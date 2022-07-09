@@ -50,11 +50,13 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
     // Anonymize lookup by using the local registry
     tree.context().LocalRegistry.IntParameters["img_" + tex_id] = (int32)res_id;
 
+    const size_t channel_count = Image::extractChannelCount(filename);
+
     stream << "  let img_" << tex_id << "_res_id = device.get_local_parameter_i32(\"img_" << tex_id << "\", 0);" << std::endl;
     if (!force_unpacked && Image::isPacked(filename))
-        stream << "  let img_" << tex_id << " = device.load_packed_image_by_id(img_" << tex_id << "_res_id, " << (Image::hasAlphaChannel(filename) ? "false" : "true") << ", " << (linear ? "false" : "true") << ");" << std::endl;
+        stream << "  let img_" << tex_id << " = device.load_packed_image_by_id(img_" << tex_id << "_res_id, " << channel_count << ", " << (linear ? "false" : "true") << ");" << std::endl;
     else
-        stream << "  let img_" << tex_id << " = device.load_image_by_id(img_" << tex_id << "_res_id);" << std::endl;
+        stream << "  let img_" << tex_id << " = device.load_image_by_id(img_" << tex_id << "_res_id, " << channel_count << ");" << std::endl;
 
     stream << "  let tex_" << tex_id << " : Texture = make_image_texture("
            << wrap << ", "

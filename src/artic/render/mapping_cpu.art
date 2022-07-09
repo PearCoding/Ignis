@@ -819,37 +819,51 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             }
         } 
     },
-    load_image = @ |filename| {
+    load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_image(0, filename, &mut pixel_data, &mut width, &mut height);
-        make_image_rgba32(@ |x, y| cpu_load_vec4(pixel_data, y * width + x),
-                          width, height)
+        ignis_load_image(0, filename, &mut pixel_data, &mut width, &mut height, channel_count);
+        if channel_count == 1 {
+            make_image_mono(@ |x, y| pixel_data(y * width + x), width, height)
+        } else {
+            make_image_rgba32(@ |x, y| cpu_load_vec4(pixel_data, y * width + x), width, height)
+        }
     },
-    load_image_by_id = @ |id| {
+    load_image_by_id = @ |id, channel_count| {
         let mut pixel_data : &[f32];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_image_by_id(0, id, &mut pixel_data, &mut width, &mut height);
-        make_image_rgba32(@ |x, y| cpu_load_vec4(pixel_data, y * width + x),
-                          width, height)
+        ignis_load_image_by_id(0, id, &mut pixel_data, &mut width, &mut height, channel_count);
+        if channel_count == 1 {
+            make_image_mono(@ |x, y| pixel_data(y * width + x), width, height)
+        } else {
+            make_image_rgba32(@ |x, y| cpu_load_vec4(pixel_data, y * width + x), width, height)
+        }
     },
-    load_packed_image = @ |filename, hint_opaque, is_linear| {
-        let mut pixel_data : &[u32];
+    load_packed_image = @ |filename, channel_count, is_linear| {
+        let mut pixel_data : &[u8];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_packed_image(0, filename, &mut pixel_data, &mut width, &mut height, is_linear);
-        make_image_rgba32(@ |x, y| image_rgba_unpack(pixel_data(y * width + x), hint_opaque),
-                          width, height)
+        ignis_load_packed_image(0, filename, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
+        if channel_count == 1 {
+            make_image_mono(@ |x, y| image_mono_unpack(pixel_data(y * width + x)), width, height)
+        } else {
+            let q = pixel_data as &[u32];
+            make_image_rgba32(@ |x, y| image_rgba_unpack(q(y * width + x), channel_count == 3), width, height)
+        }
     },
-    load_packed_image_by_id = @ |id, hint_opaque, is_linear| {
-        let mut pixel_data : &[u32];
+    load_packed_image_by_id = @ |id, channel_count, is_linear| {
+        let mut pixel_data : &[u8];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_packed_image_by_id(0, id, &mut pixel_data, &mut width, &mut height, is_linear);
-        make_image_rgba32(@ |x, y| image_rgba_unpack(pixel_data(y * width + x), hint_opaque),
-                          width, height)
+        ignis_load_packed_image_by_id(0, id, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
+        if channel_count == 1 {
+            make_image_mono(@ |x, y| image_mono_unpack(pixel_data(y * width + x)), width, height)
+        } else {
+            let q = pixel_data as &[u32];
+            make_image_rgba32(@ |x, y| image_rgba_unpack(q(y * width + x), channel_count == 3), width, height)
+        }
     },
     load_aov_image = @|id, spi| { @cpu_get_aov_image(id, spi) },
     load_rays = @ || {

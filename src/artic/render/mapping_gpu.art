@@ -872,53 +872,81 @@ fn @make_gpu_device( dev_id: i32
             make_gpu_bvh2_tri1(nodes, tris, is_nvvm)
         } 
     },
-    load_image = @ |filename| {
+    load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_image(dev_id, filename, &mut pixel_data, &mut width, &mut height);
+        ignis_load_image(dev_id, filename, &mut pixel_data, &mut width, &mut height, channel_count);
 
-        let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
+        let stride = width; // Drop mutable attribute
         let q = pixel_data as &addrspace(1)[f32];
-        make_image_rgba32( if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
-                           else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) }
-                         , width, height)
+        if channel_count == 1 {
+            make_image_mono(if is_nvvm { @ |x, y| nvvm_ldg_f32(&q(y * stride + x)) } 
+                            else { @ |x, y| q(y * stride + x) },
+                            width, height)
+        } else {
+            make_image_rgba32(if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
+                              else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) },
+                              width, height)
+        }
     },
-    load_image_by_id = @ |id| {
+    load_image_by_id = @ |id, channel_count| {
         let mut pixel_data : &[f32];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_image_by_id(dev_id, id, &mut pixel_data, &mut width, &mut height);
+        ignis_load_image_by_id(dev_id, id, &mut pixel_data, &mut width, &mut height, channel_count);
 
-        let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
+        let stride = width; // Drop mutable attribute
         let q = pixel_data as &addrspace(1)[f32];
-        make_image_rgba32( if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
-                           else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) }
-                         , width, height)
+        if channel_count == 1 {
+            make_image_mono(if is_nvvm { @ |x, y| nvvm_ldg_f32(&q(y * stride + x)) } 
+                            else { @ |x, y| q(y * stride + x) },
+                            width, height)
+        } else {
+            make_image_rgba32(if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
+                              else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) },
+                              width, height)
+        }
     },
-    load_packed_image = @ |filename, hint_opaque, is_linear| {
-        let mut pixel_data : &[u32];
+    load_packed_image = @ |filename, channel_count, is_linear| {
+        let mut pixel_data : &[u8];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_packed_image(dev_id, filename, &mut pixel_data, &mut width, &mut height, is_linear);
+        ignis_load_packed_image(dev_id, filename, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
 
-        let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
-        let q = pixel_data as &addrspace(1)[i32];
-        make_image_rgba32(if is_nvvm { @ |x, y| image_rgba_unpack(bitcast[u32](nvvm_ldg_i32(&(q(y * stride + x)))), hint_opaque) }
-                          else { @ |x, y| image_rgba_unpack(bitcast[u32](q(y * stride + x)), hint_opaque) },
-                          width, height)
+        let stride = width; // Drop mutable attribute
+        if channel_count == 1 {
+            let q = pixel_data as &addrspace(1)[u8];
+            make_image_mono(if is_nvvm { @ |x, y| image_mono_unpack(nvvm_ldg_u8(&(q(y * stride + x)))) }
+                            else { @ |x, y| image_mono_unpack(q(y * stride + x)) },
+                            width, height)
+        } else {
+            let hint_opaque = channel_count == 3;
+            let q = pixel_data as &addrspace(1)[i32];
+            make_image_rgba32(if is_nvvm { @ |x, y| image_rgba_unpack(bitcast[u32](nvvm_ldg_i32(&(q(y * stride + x)))), hint_opaque) }
+                              else { @ |x, y| image_rgba_unpack(bitcast[u32](q(y * stride + x)), hint_opaque) },
+                              width, height)
+        }
     },
-    load_packed_image_by_id = @ |id, hint_opaque, is_linear| {
-        let mut pixel_data : &[u32];
+    load_packed_image_by_id = @ |id, channel_count, is_linear| {
+        let mut pixel_data : &[u8];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_packed_image_by_id(dev_id, id, &mut pixel_data, &mut width, &mut height, is_linear);
+        ignis_load_packed_image_by_id(dev_id, id, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
 
-        let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
-        let q = pixel_data as &addrspace(1)[i32];
-        make_image_rgba32(if is_nvvm { @ |x, y| image_rgba_unpack(bitcast[u32](nvvm_ldg_i32(&(q(y * stride + x)))), hint_opaque) }
-                          else { @ |x, y| image_rgba_unpack(bitcast[u32](q(y * stride + x)), hint_opaque) },
-                          width, height)
+        let stride = width; // Drop mutable attribute
+        if channel_count == 1 {
+            let q = pixel_data as &addrspace(1)[u8];
+            make_image_mono(if is_nvvm { @ |x, y| image_mono_unpack(nvvm_ldg_u8(&(q(y * stride + x)))) }
+                            else { @ |x, y| image_mono_unpack(q(y * stride + x)) },
+                            width, height)
+        } else {
+            let hint_opaque = channel_count == 3;
+            let q = pixel_data as &addrspace(1)[i32];
+            make_image_rgba32(if is_nvvm { @ |x, y| image_rgba_unpack(bitcast[u32](nvvm_ldg_i32(&(q(y * stride + x)))), hint_opaque) }
+                              else { @ |x, y| image_rgba_unpack(bitcast[u32](q(y * stride + x)), hint_opaque) },
+                              width, height)
+        }
     },
     load_aov_image = @ |id, spi| gpu_get_aov_image(id, dev_id, atomics, spi),
     load_rays = @ || {

@@ -122,7 +122,7 @@ class Interface {
 
 public:
     using DeviceImage       = std::tuple<anydsl::Array<float>, size_t, size_t>;
-    using DevicePackedImage = std::tuple<anydsl::Array<uint32_t>, size_t, size_t>; // Packed RGBA
+    using DevicePackedImage = std::tuple<anydsl::Array<uint8_t>, size_t, size_t>; // Packed RGBA
     using DeviceBuffer      = std::tuple<anydsl::Array<uint8_t>, size_t>;
 
     class DeviceData {
@@ -523,9 +523,9 @@ public:
 
     inline DevicePackedImage copyToDevicePacked(int32_t dev, const IG::Image& image)
     {
-        std::vector<uint32_t> packed;
+        std::vector<uint8_t> packed;
         image.copyToPackedFormat(packed);
-        return DevicePackedImage(copyToDevice(dev, packed.data(), image.width * image.height), image.width, image.height);
+        return DevicePackedImage(copyToDevice(dev, packed), image.width, image.height);
     }
 
     template <typename Node>
@@ -586,7 +586,7 @@ public:
         return tables[name] = loadDyntable(dev, database->CustomTables.at(name));
     }
 
-    inline const DeviceImage& loadImage(int32_t dev, const std::string& filename)
+    inline const DeviceImage& loadImage(int32_t dev, const std::string& filename, int32_t expected_channels)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
 
@@ -595,10 +595,15 @@ public:
         if (it != images.end())
             return it->second;
 
-        IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
+        IG_LOG(IG::L_DEBUG) << "Loading image " << filename << " (C=" << expected_channels << ")" << std::endl;
         try {
             const auto img = IG::Image::load(filename);
-            auto& res      = getCurrentShaderInfo(dev).images[filename];
+            if (expected_channels != (int32_t)img.channels) {
+                IG_LOG(IG::L_ERROR) << "Image '" << filename << "' is has unexpected channel count" << std::endl;
+                return images[filename] = copyToDevice(dev, IG::Image());
+            }
+
+            auto& res = getCurrentShaderInfo(dev).images[filename];
             res.counter++;
             res.memory_usage        = img.width * img.height * 4 * sizeof(float);
             return images[filename] = copyToDevice(dev, img);
@@ -608,7 +613,7 @@ public:
         }
     }
 
-    inline const DevicePackedImage& loadPackedImage(int32_t dev, const std::string& filename, bool linear)
+    inline const DevicePackedImage& loadPackedImage(int32_t dev, const std::string& filename, int32_t expected_channels, bool linear)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
 
@@ -617,11 +622,16 @@ public:
         if (it != images.end())
             return it->second;
 
-        IG_LOG(IG::L_DEBUG) << "Loading (packed) image " << filename << std::endl;
+        IG_LOG(IG::L_DEBUG) << "Loading (packed) image " << filename << " (C=" << expected_channels << ")" << std::endl;
         try {
-            std::vector<uint32_t> packed;
-            size_t width, height;
-            IG::Image::loadAsPacked(filename, packed, width, height, linear);
+            std::vector<uint8_t> packed;
+            size_t width, height, channels;
+            IG::Image::loadAsPacked(filename, packed, width, height, channels, linear);
+
+            if (expected_channels != (int32_t)channels) {
+                IG_LOG(IG::L_ERROR) << "Packed image '" << filename << "' is has unexpected channel count" << std::endl;
+                return images[filename] = DevicePackedImage(copyToDevice(dev, std::vector<uint8_t>{}), 0, 0);
+            }
 
             auto& res = getCurrentShaderInfo(dev).packed_images[filename];
             res.counter++;
@@ -629,7 +639,7 @@ public:
             return images[filename] = DevicePackedImage(copyToDevice(dev, packed), width, height);
         } catch (const IG::ImageLoadException& e) {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;
-            return images[filename] = DevicePackedImage(copyToDevice(dev, std::vector<uint32_t>{}), 0, 0);
+            return images[filename] = DevicePackedImage(copyToDevice(dev, std::vector<uint8_t>{}), 0, 0);
         }
     }
 
@@ -1435,30 +1445,30 @@ IG_EXPORT void ignis_load_rays(int dev, StreamRay** list)
     *list = const_cast<StreamRay*>(sInterface->loadRayList(dev).data());
 }
 
-IG_EXPORT void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height)
+IG_EXPORT void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height, int32_t expected_channels)
 {
-    auto& img = sInterface->loadImage(dev, file);
+    auto& img = sInterface->loadImage(dev, file, expected_channels);
     *pixels   = const_cast<float*>(std::get<0>(img).data());
     *width    = (int)std::get<1>(img);
     *height   = (int)std::get<2>(img);
 }
 
-IG_EXPORT void ignis_load_image_by_id(int32_t dev, int32_t id, float** pixels, int32_t* width, int32_t* height)
+IG_EXPORT void ignis_load_image_by_id(int32_t dev, int32_t id, float** pixels, int32_t* width, int32_t* height, int32_t expected_channels)
 {
-    return ignis_load_image(dev, sInterface->lookupResource(id).c_str(), pixels, width, height);
+    return ignis_load_image(dev, sInterface->lookupResource(id).c_str(), pixels, width, height, expected_channels);
 }
 
-IG_EXPORT void ignis_load_packed_image(int32_t dev, const char* file, uint32_t** pixels, int32_t* width, int32_t* height, bool linear)
+IG_EXPORT void ignis_load_packed_image(int32_t dev, const char* file, uint8_t** pixels, int32_t* width, int32_t* height, int32_t expected_channels, bool linear)
 {
-    auto& img = sInterface->loadPackedImage(dev, file, linear);
-    *pixels   = const_cast<uint32_t*>(std::get<0>(img).data());
+    auto& img = sInterface->loadPackedImage(dev, file, expected_channels, linear);
+    *pixels   = const_cast<uint8_t*>(std::get<0>(img).data());
     *width    = (int)std::get<1>(img);
     *height   = (int)std::get<2>(img);
 }
 
-IG_EXPORT void ignis_load_packed_image_by_id(int32_t dev, int32_t id, uint32_t** pixels, int32_t* width, int32_t* height, bool linear)
+IG_EXPORT void ignis_load_packed_image_by_id(int32_t dev, int32_t id, uint8_t** pixels, int32_t* width, int32_t* height, int32_t expected_channels, bool linear)
 {
-    return ignis_load_packed_image(dev, sInterface->lookupResource(id).c_str(), pixels, width, height, linear);
+    return ignis_load_packed_image(dev, sInterface->lookupResource(id).c_str(), pixels, width, height, expected_channels, linear);
 }
 
 IG_EXPORT void ignis_load_buffer(int32_t dev, const char* file, uint8_t** data, int32_t* size)
