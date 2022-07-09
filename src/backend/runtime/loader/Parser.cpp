@@ -411,7 +411,7 @@ void Scene::addConstantEnvLight()
 {
     if (mLights.count("__env") == 0) {
         auto env = std::make_shared<Object>(OT_LIGHT, "constant", std::filesystem::path{});
-        env->setProperty("radiance", Property::fromNumber(InvPi));
+        env->setProperty("radiance", Property::fromNumber(1));
         addLight("__env", env);
     }
 }
