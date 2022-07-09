@@ -293,6 +293,7 @@ fn @gpu_copy_ray( rays: RayStream
     other_rays.dir_z(dst_id) = rays.dir_z(src_id);
     other_rays.tmin(dst_id)  = rays.tmin(src_id);
     other_rays.tmax(dst_id)  = rays.tmax(src_id);
+    other_rays.flags(dst_id) = rays.flags(src_id);
 }
 
 fn @gpu_copy_primary_ray( primary: PrimaryStream

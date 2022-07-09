@@ -104,14 +104,14 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
             if light.infinite {
                 let vol = color_mul(hitvol, medium.eval_inf(surf.point, in_dir));
                 return(make_simple_shadow_ray(
-                    make_ray(surf.point, in_dir, offset, flt_max),
+                    make_ray(surf.point, in_dir, offset, flt_max, ray_flag_shadow),
                     color_mul(contrib, vol)
                 ))
             } else {
                 let ld  = vec3_sub(light_sample.pos, surf.point);
                 let vol = color_mul(hitvol, medium.eval(surf.point, ld));
                 return(make_simple_shadow_ray(
-                    make_ray(surf.point, ld, offset, 1 - offset),
+                    make_ray(surf.point, ld, offset, 1 - offset, ray_flag_shadow),
                     color_mul(contrib, vol)
                 ))
             }
@@ -206,7 +206,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 // Notify other parts that the last interaction was a medium
                 let inv_pdf     = -1:f32; // 1 / (medium_sample.pdf * phase_sample.pdf); // TODO
                 make_option(
-                    make_ray(medium_sample.pos, phase_sample.in_dir, 0, flt_max),
+                    make_ray(medium_sample.pos, phase_sample.in_dir, 0, flt_max, ray_flag_bounce),
                     wrap_vptraypayload(VPTRayPayload {
                         inv_pdf = inv_pdf,
                         contrib = new_contrib,
@@ -233,7 +233,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                     let is_transmission = math_builtins::signbit(vec3_dot(surf.local.col(2), bsdf_sample.in_dir));
                     let new_medium      = if is_transmission { mat.interface.pick(surf.is_entering) } else { pt.medium };
                     make_option(
-                        make_ray(surf.point, bsdf_sample.in_dir, offset, flt_max),
+                        make_ray(surf.point, bsdf_sample.in_dir, offset, flt_max, ray_flag_bounce),
                         wrap_vptraypayload(VPTRayPayload {
                             inv_pdf = inv_pdf,
                             contrib = new_contrib,

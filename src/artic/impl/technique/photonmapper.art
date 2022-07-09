@@ -162,7 +162,7 @@ fn @make_ppm_light_emitter(num_lights: i32, lights: LightTable, iter: i32) -> Ra
         let sample_emission = light.sample_emission;
         let light_sample    = @sample_emission(rnd);
         
-        let ray      = make_ray(light_sample.pos, light_sample.dir, select(light.infinite, 0:f32, offset), flt_max);
+        let ray      = make_ray(light_sample.pos, light_sample.dir, select(light.infinite, 0:f32, offset), flt_max, ray_flag_light);
         let radiance = color_mulf(light_sample.intensity, safe_div(math_builtins::fabs(light_sample.cos), pdf_lightpick));
         
         let payload = wrap_ppmraypayload(PPMRayPayload {
@@ -229,7 +229,7 @@ fn @make_ppm_light_renderer(max_path_len: i32, _aovs: AOVTable, light_cache: Lig
                 let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
                 if color_average(contrib) > flt_eps {
                     return(make_option(
-                        make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
+                        make_ray(surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce),
                         wrap_ppmraypayload(PPMRayPayload {
                             contrib         = contrib,
                             depth           = pt.depth + 1,
@@ -404,7 +404,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
             let new_contrib = color_mulf(contrib, 1 / rr_prob);
 
             make_option(
-                make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
+                make_ray(surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce),
                 wrap_ppmraypayload(PPMRayPayload {
                     contrib         = new_contrib,
                     depth           = pt.depth + 1,

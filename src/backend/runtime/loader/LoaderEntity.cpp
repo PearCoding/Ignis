@@ -84,6 +84,17 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
             }
         }
 
+        // Populate flags
+        uint32 entity_flags = 0;
+        if (child->property("camera_visible").getBool(true))
+            entity_flags |= 0x1;
+        if (child->property("light_visible").getBool(true))
+            entity_flags |= 0x2;
+        if (child->property("bounce_visible").getBool(true))
+            entity_flags |= 0x4;
+        if (child->property("shadow_visible").getBool(true))
+            entity_flags |= 0x8;
+
         // Extract entity information
         Transformf transform = child->property("transform").getTransform();
         transform.makeAffine();
@@ -140,6 +151,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         obj.BBox    = entityBox;
         obj.Local   = invTransform.matrix();
         obj.ShapeID = shapeID;
+        obj.Flags   = entity_flags; // Only added to bvh
         in_objs.emplace_back(obj);
     }
 

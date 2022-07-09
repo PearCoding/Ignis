@@ -95,8 +95,11 @@ def export_light(result, inst):
             )
 
         result["entities"].append(
-            {"name": light.name, "shape": light.name +
-                "-shape", "bsdf": BSDF_BLACK_NAME, "transform": flat_matrix(inst.matrix_world)}
+            {"name": light.name,
+             "shape": light.name + "-shape",
+             "bsdf": BSDF_BLACK_NAME,
+             "transform": flat_matrix(inst.matrix_world),
+             "camera_visible": False}
         )
         result["lights"].append(
             {"type": "area", "name": light.name, "entity": light.name,

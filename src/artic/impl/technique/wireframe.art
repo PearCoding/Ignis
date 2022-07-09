@@ -54,7 +54,7 @@ fn @make_wireframe_renderer(camera: Camera) -> Technique {
         let (is_edge, _) = is_edge_hit(pixel, hit, surf, wpt.distance);
         if !is_edge { 
             make_option(
-                make_ray(surf.point, ray.dir, offset, flt_max),
+                make_ray(surf.point, ray.dir, offset, flt_max, ray_flag_bounce),
                 wrap_wireframeraypayload(WireframeRayPayload{
                     depth    = wpt.depth + 1,
                     distance = wpt.distance + hit.distance,

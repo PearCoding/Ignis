@@ -107,12 +107,12 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
 
             if light.infinite {
                 return(make_simple_shadow_ray(
-                    make_ray(surf.point, in_dir, offset, flt_max),
+                    make_ray(surf.point, in_dir, offset, flt_max, ray_flag_shadow),
                     contrib
                 ))
             } else {
                 return(make_simple_shadow_ray(
-                    make_ray(surf.point, vec3_sub(light_sample.pos, surf.point), offset, 1 - offset),
+                    make_ray(surf.point, vec3_sub(light_sample.pos, surf.point), offset, 1 - offset, ray_flag_shadow),
                     contrib
                 ))
             }
@@ -209,7 +209,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
             let new_contrib = color_mulf(contrib, 1 / rr_prob);
 
             make_option(
-                make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
+                make_ray(surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce),
                 wrap_ptraypayload(PTRayPayload {
                     inv_pdf = inv_pdf,
                     contrib = new_contrib,

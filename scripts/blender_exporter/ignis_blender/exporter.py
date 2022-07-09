@@ -1,3 +1,4 @@
+import bpy
 import os
 import json
 
@@ -18,6 +19,7 @@ def export_technique(result):
 
 
 def export_entity(result, inst, filepath, shape_name, mat_i, export_materials, export_lights):
+    shadow_visibility = True
     if export_materials:
         if(len(inst.object.material_slots) > mat_i):
             result["_materials"].add(
@@ -25,6 +27,8 @@ def export_entity(result, inst, filepath, shape_name, mat_i, export_materials, e
             mat_name = inst.object.material_slots[mat_i].material.name
             emission = get_material_emission(NodeContext(
                 result, filepath), inst.object.material_slots[mat_i].material)
+            if bpy.context.engine == "EEVEE":
+                shadow_visibility = inst.object.material_slots[mat_i].material.shadow_method != "NONE"
         else:
             print(f"Entity {inst.object.name} has no material")
             mat_name = BSDF_BLACK_NAME
@@ -38,7 +42,8 @@ def export_entity(result, inst, filepath, shape_name, mat_i, export_materials, e
     entity_name = f"{inst.object.name}-{shape_name}"
     result["entities"].append(
         {"name": entity_name, "shape": shape_name,
-            "bsdf": mat_name, "transform": flat_matrix(matrix)}
+            "bsdf": mat_name, "transform": flat_matrix(matrix),
+            "shadow_visible": shadow_visibility}
     )
 
     # Export entity as area light if necessary
@@ -121,7 +126,7 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
         export_camera(result, depsgraph.scene)
 
     # Create a path for meshes
-    rootPath = os.path.dirname(filepath) 
+    rootPath = os.path.dirname(filepath)
     os.makedirs(os.path.join(rootPath, 'Meshes'), exist_ok=True)
     os.makedirs(os.path.join(rootPath, 'Textures'), exist_ok=True)
 

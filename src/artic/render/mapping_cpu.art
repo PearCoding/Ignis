@@ -1,21 +1,26 @@
 // Swap functions ------------------------------------------------------------------
-fn @cpu_swap_primary_entry(primary: &PrimaryStream, a: i32, b: i32) -> () {
-    swap(&mut primary.rays.id(a),    &mut primary.rays.id(b));
-    swap(&mut primary.rays.org_x(a), &mut primary.rays.org_x(b));
-    swap(&mut primary.rays.org_y(a), &mut primary.rays.org_y(b));
-    swap(&mut primary.rays.org_z(a), &mut primary.rays.org_z(b));
-    swap(&mut primary.rays.dir_x(a), &mut primary.rays.dir_x(b));
-    swap(&mut primary.rays.dir_y(a), &mut primary.rays.dir_y(b));
-    swap(&mut primary.rays.dir_z(a), &mut primary.rays.dir_z(b));
-    swap(&mut primary.rays.tmin(a),  &mut primary.rays.tmin(b));
-    swap(&mut primary.rays.tmax(a),  &mut primary.rays.tmax(b));
+fn @cpu_swap_ray_entry(rays: &RayStream, a: i32, b: i32) -> () {
+    swap(&mut rays.id(a),    &mut rays.id(b));
+    swap(&mut rays.org_x(a), &mut rays.org_x(b));
+    swap(&mut rays.org_y(a), &mut rays.org_y(b));
+    swap(&mut rays.org_z(a), &mut rays.org_z(b));
+    swap(&mut rays.dir_x(a), &mut rays.dir_x(b));
+    swap(&mut rays.dir_y(a), &mut rays.dir_y(b));
+    swap(&mut rays.dir_z(a), &mut rays.dir_z(b));
+    swap(&mut rays.tmin(a),  &mut rays.tmin(b));
+    swap(&mut rays.tmax(a),  &mut rays.tmax(b));
+    swap(&mut rays.flags(a), &mut rays.flags(b));
+}
 
-    swap(&mut primary.ent_id(a),    &mut primary.ent_id(b));
-    swap(&mut primary.prim_id(a),   &mut primary.prim_id(b));
-    swap(&mut primary.t(a),         &mut primary.t(b));
-    swap(&mut primary.u(a),         &mut primary.u(b));
-    swap(&mut primary.v(a),         &mut primary.v(b));
-    swap(&mut primary.rnd(a),       &mut primary.rnd(b));
+fn @cpu_swap_primary_entry(primary: &PrimaryStream, a: i32, b: i32) -> () {
+    cpu_swap_ray_entry(primary.rays, a, b);
+
+    swap(&mut primary.ent_id(a),  &mut primary.ent_id(b));
+    swap(&mut primary.prim_id(a), &mut primary.prim_id(b));
+    swap(&mut primary.t(a),       &mut primary.t(b));
+    swap(&mut primary.u(a),       &mut primary.u(b));
+    swap(&mut primary.v(a),       &mut primary.v(b));
+    swap(&mut primary.rnd(a),     &mut primary.rnd(b));
 
     for c in unroll(0, MaxRayPayloadComponents) {
         swap(&mut primary.user(c)(a), &mut primary.user(c)(b));
@@ -23,19 +28,12 @@ fn @cpu_swap_primary_entry(primary: &PrimaryStream, a: i32, b: i32) -> () {
 }
 
 fn @cpu_swap_secondary_entry(secondary: &SecondaryStream, a: i32, b: i32) -> () {
-    swap(&mut secondary.rays.id(a),    &mut secondary.rays.id(b));
-    swap(&mut secondary.rays.org_x(a), &mut secondary.rays.org_x(b));
-    swap(&mut secondary.rays.org_y(a), &mut secondary.rays.org_y(b));
-    swap(&mut secondary.rays.org_z(a), &mut secondary.rays.org_z(b));
-    swap(&mut secondary.rays.dir_x(a), &mut secondary.rays.dir_x(b));
-    swap(&mut secondary.rays.dir_y(a), &mut secondary.rays.dir_y(b));
-    swap(&mut secondary.rays.dir_z(a), &mut secondary.rays.dir_z(b));
-    swap(&mut secondary.rays.tmin(a),  &mut secondary.rays.tmin(b));
-    swap(&mut secondary.rays.tmax(a),  &mut secondary.rays.tmax(b));
-    swap(&mut secondary.color_r(a),    &mut secondary.color_r(b));
-    swap(&mut secondary.color_g(a),    &mut secondary.color_g(b));
-    swap(&mut secondary.color_b(a),    &mut secondary.color_b(b));
-    swap(&mut secondary.mat_id(a),     &mut secondary.mat_id(b));
+    cpu_swap_ray_entry(secondary.rays, a, b);
+
+    swap(&mut secondary.color_r(a), &mut secondary.color_r(b));
+    swap(&mut secondary.color_g(a), &mut secondary.color_g(b));
+    swap(&mut secondary.color_b(a), &mut secondary.color_b(b));
+    swap(&mut secondary.mat_id(a),  &mut secondary.mat_id(b));
 }
 
 // Sort functions ------------------------------------------------------------------
@@ -160,6 +158,7 @@ fn @cpu_compact_ray_stream(rays: RayStream, i: i32, j: i32, mask: bool) -> () {
     rays.dir_z(i) = rv_compact(rays.dir_z(j), mask);
     rays.tmin(i)  = rv_compact(rays.tmin(j),  mask);
     rays.tmax(i)  = rv_compact(rays.tmax(j),  mask);
+    rays.flags(i) = bitcast[u32](rv_compact(bitcast[f32](rays.flags(j)), mask));
 }
 
 fn @cpu_move_ray_stream(rays: RayStream, i: i32, j: i32) -> () {
@@ -171,6 +170,7 @@ fn @cpu_move_ray_stream(rays: RayStream, i: i32, j: i32) -> () {
     rays.dir_z(i) = rays.dir_z(j);
     rays.tmin(i)  = rays.tmin(j);
     rays.tmax(i)  = rays.tmax(j);
+    rays.flags(i) = rays.flags(j);
 }
 
 fn @cpu_compact_primary(primary: &PrimaryStream, vector_width: i32, vector_compact: bool) -> i32 {

@@ -15,7 +15,7 @@ fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
         let dist = vec3_len(dir_);
         let dir  = vec3_mulf(dir_, safe_div(1, dist));
         let cos  = -vec3_dot(dir, n);
-        let ctx  = make_emissive_shading_context(make_ray(from_surf.point, dir, 0, flt_max), pos, make_vec3(coords.x, coords.y, 0));
+        let ctx  = make_emissive_shading_context(make_ray(from_surf.point, dir, 0, flt_max, ray_flag_light), pos, make_vec3(coords.x, coords.y, 0));
         make_direct_sample(pos, dir, color_mulf(color_f(ctx), weight), pdf, cos, dist)
     },
     sample_emission = @ |rnd| {
