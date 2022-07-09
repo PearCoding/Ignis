@@ -75,7 +75,7 @@ def save_mesh(filepath, bm, use_ascii, use_normals, use_uv, use_color):
             if use_uv:
                 uv = loop[uv_lay].uv[:]
             if use_normals:
-                normal = v.normal
+                normal = v.normal if f.smooth else f.normal
             if use_color:
                 color = tuple(int(x * 255.0) for x in loop[col_lay])
 

@@ -53,7 +53,7 @@ def _export_bmesh_by_material(me, name, rootPath):
 
         ply_save(filepath=os.path.join(rootPath, "Meshes", shape_name+".ply"),
                  bm=bm,
-                 use_ascii=True,
+                 use_ascii=False,
                  use_normals=True,
                  use_uv=True,
                  use_color=False,
