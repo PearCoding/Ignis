@@ -270,18 +270,21 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                  ) -> ShadowRay {
                      let pt = unwrap_rsraypayload(payload);
 
-                      if(pt.depth == 1) 
-                             {
-                                 aov_depth_info.splat(pixel, make_color(1.0, 1.0, 1.0, 1.0));
-                             } else 
-                             {
-                                aov_depth_info.splat(pixel, make_color(-1.0, -1.0, -1.0, -1.0));
-                             }
+                     //let newRnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
+
+
+                    //   if(pt.depth == 1) 
+                    //          {
+                    //              aov_depth_info.splat(pixel, make_color(1.0, 1.0, 1.0, 1.0));
+                    //          } else if (pt.depth == 2)
+                    //          {
+                    //             aov_depth_info.splat(pixel, make_color(-1.0, -1.0, -1.0, -1.0));
+                    //          }
 
                     //dont do anything if not yet arrived at the sample point
-                        //  if pt.depth < 2 {
-                        //    return(ShadowRay::None)
-                        //  }  
+                        //   if pt.depth < 2 {
+                        //     return(ShadowRay::None)
+                        //   }  
 
                     // No shadow rays for specular materials
                     if mat.bsdf.is_specular || num_lights == 0 {
@@ -345,6 +348,14 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
               ) -> Option[Color] {
             
         let pt = unwrap_rsraypayload(payload);
+         if(pt.depth == 1) 
+         {
+             aov_depth_info.splat(pixel, make_color(1.0, 1.0, 1.0, 1.0));
+         } else if(pt.depth == 2)
+         {
+             aov_depth_info.splat(pixel, make_color(-1.0, -1.0, -1.0, -1.0));
+         }
+
             // Hits on a light source
         if mat.is_emissive && surf.is_entering {
             let dot = -vec3_dot(ray.dir, surf.local.col(2));
@@ -355,8 +366,16 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                 let contrib = handle_color(color_mulf(color_mul(pt.contrib, emit.intensity), mis));
                     
                 //aov_di.splat(pixel, contrib);
-    
-                return(make_option(contrib))
+ 
+                //check for direct illumination
+                 if(pt.depth == 1) 
+                 {
+                     aov_direct_light.splat(pixel, contrib);
+                     return(Option[Color]::None)
+                 } else 
+                 {
+                     return(make_option(contrib))
+                 }
             }
         }
             Option[Color]::None
@@ -423,11 +442,15 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
             if pt.depth <= 2
             {
                 let sample_idx = pixel * 19;
+                let reservoir_idx = pixel * 22;
               if pt.depth == 1 
               {
                   //store information about visible point
                   sample_buffer.store_vec3(sample_idx, surf.point);
                   sample_buffer.store_vec3(sample_idx + 3, surf.face_normal);
+
+                  //store visible point bsdf in spatial reservoir(test)
+                  spatial_reservoir_buffer.store_vec3(reservoir_idx + 16, color_to_vec3(mat_sample.color));
                   
                   //dont change raypayload at first bounce
                   return(make_option(
@@ -435,9 +458,9 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                       wrap_rsraypayload(RSRayPayload {
                           //storing calculated inv_pdf, is that correct?
                           inv_pdf     = inv_pdf,
-                          contrib = pt.contrib,
+                          contrib = color_builtins::white,
                           depth   = pt.depth + 1,
-                          eta     = pt.eta
+                          eta     = 1
                       })))
               }
         
@@ -449,7 +472,7 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
 
                    //store bsdf of sample point and pdf
                    sample_buffer.store_f32(sample_idx + 15, mat_sample.pdf);
-                   sample_buffer.store_vec3(sample_idx + 16, color_to_vec3(mat.bsdf.eval(ray.dir, mat_sample.in_dir)));
+                   sample_buffer.store_vec3(sample_idx + 16, color_to_vec3(color_mulf(mat_sample.color, mat_sample.pdf)));
               }
             }
 
@@ -472,11 +495,11 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                       , pixel: i32
                       , _shader: Shader
                      , color: Color) -> Option[Color] {
-          if (color_average(aov_depth_info.get(pixel)) == 1.0) 
-          {
-              aov_direct_light.splat(pixel, color);
-              return(Option[Color]::None)
-          }
+           if (color_average(aov_depth_info.get(pixel)) == 1.0) 
+           {
+               aov_direct_light.splat(pixel, color);
+               return(Option[Color]::None)
+           }
         make_option(color)
     }
 
@@ -503,6 +526,7 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
       let aov_restir = device.load_aov_image(1, spi);
       let aov_depth_info = device.load_aov_image(3, 1);
+      let aov_direct_light = device.load_aov_image(2, spi);
      
       //load image with outgoing radiances at sample point
       let aov_radiance = device.load_aov_image(0, spi);
@@ -523,17 +547,14 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
           let averaged_radiance = color_average(sample.radiance); 
 
-         //if sample.pdf is 0 then continue (otherwise division by 0)
          let mut w_new = 0.0;
-         if(sample.pdf == 0.0) 
+         if(sample.pdf != 0.0) 
          {
-             w_new = 0.0;
-         } else {
-             let w = averaged_radiance / sample.pdf; 
-             w_new = w as f64;
+            let w = averaged_radiance / sample.pdf; 
+            w_new = w as f64;
          }
 
-          let mut rnd = generate_rnd_state(sample.vis_point.x, w_new as f32, (j * 22));
+          let mut rnd = generate_rnd_state(sample.sample_point.x, w_new as f32, (j * 22));
 
           update(temporal_reservoir, sample, w_new as f32, (j * 22), temporal_reservoir_buffer, rnd);
 
@@ -551,14 +572,16 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
           //store updated reservoir again
           store_reservoir(temporal_reservoir_buffer, j, temporal_reservoir);
           ////
-          let debug = device.request_debug_output();
-        
-          //calculate final pixel value 
-          let res = color_mulf(temporal_reservoir.sample.bsdf, temporal_reservoir.weight);
-          aov_restir.set(j, color_mul(res, temporal_reservoir.sample.radiance));
+          
+          //calculate final pixel value
 
-          //reset depth info
-          aov_depth_info.splat(j, make_color(-1.0, -1.0, -1.0, -1.0));
+          let visPointBSDF = spatial_reservoir_buffer.load_vec3(j * 22 + 16);
+
+          let rawIndirectRes = color_mul(temporal_reservoir.sample.bsdf, color_mulf(temporal_reservoir.sample.radiance, temporal_reservoir.weight));
+          let indirectRes = color_mul(rawIndirectRes, vec3_to_color(visPointBSDF));
+          let directRes = aov_direct_light.get(j);
+          aov_restir.splat(j, color_add(indirectRes, directRes));
+          //aov_restir.splat(j, rawIndirectRes);
 
       }
       device.sync();
