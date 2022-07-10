@@ -136,7 +136,7 @@ fn @ fma(x : f32, y : f32, z : f32) -> f32 {
 //     }
 // }
 
-fn @ find_interval_eval(warp: &Warp, dim : i32, param_val : f32) -> i32 {
+fn @ find_interval_eval(warp: Warp, dim : i32, param_val : f32) -> i32 {
     let size_ : i32 = warp.param_size(dim) as i32;
     let mut size : i32 = size_ - 2;
     let mut first : i32 = 1;
@@ -546,7 +546,6 @@ fn @ sample_warp2D2(warp : Warp, sample : Vec2, phi_i : f32, theta_i : f32) -> S
 }
  
 fn @ evaluate_brdf(sampler: BRDFData, incoming : Vec3, outgoing : Vec3) -> Color {
-
     if (incoming.z <= 0.0 || outgoing.z <= 0.0) {
         return(make_color(0.0, 0.0, 0.0, 1.0))
     }
@@ -771,11 +770,11 @@ fn @delinearize_warp(buffer : DeviceBuffer, start : i32) {
 // Creates a measured BRDF (Dupuy & Jakob 2018)
 fn @make_djmeasured_bsdf(surf: SurfaceElement, buffer : DeviceBuffer) {
 
-    let size_ndf = buffer.load_f32(2) as i32;
-    let size_vndf = buffer.load_f32(3) as i32;
-    let size_sigma = buffer.load_f32(4) as i32;
-    let size_luminance = buffer.load_f32(5) as i32;
-    let size_rgb = buffer.load_f32(6) as i32;
+    let size_ndf = buffer.load_i32(2);
+    let size_vndf = buffer.load_i32(3);
+    let size_sigma = buffer.load_i32(4);
+    let size_luminance = buffer.load_i32(5);
+    let size_rgb = buffer.load_i32(6);
 
     let start_ndf = 7;
     let start_vndf = start_ndf + size_ndf;
@@ -789,8 +788,8 @@ fn @make_djmeasured_bsdf(surf: SurfaceElement, buffer : DeviceBuffer) {
         vndf = delinearize_warp(buffer, start_vndf),
         luminance = delinearize_warp(buffer, start_luminance),
         rgb = delinearize_warp(buffer, start_rgb),
-        isotropic = buffer.load_f32(0) == 1,
-        jacobian = buffer.load_f32(1) == 1
+        isotropic = buffer.load_i32(0) != 0,
+        jacobian = buffer.load_i32(1) != 0
     };
 
     Bsdf {
@@ -798,15 +797,16 @@ fn @make_djmeasured_bsdf(surf: SurfaceElement, buffer : DeviceBuffer) {
             evaluate_brdf(brdf_data, in_dir, out_dir)
         },
         pdf = @ |in_dir, out_dir| {
-            1.0
+            //pdf_brdf(brdf_data, in_dir, out_dir)
+            cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2)))
         },
         sample = @ |rnd, out_dir, _| {
-            let reflect_out = vec3_reflect(out_dir, surf.local.col(2));
-            let sample      = sample_cosine_power_hemisphere(0.5, randf(rnd), randf(rnd));
-            let in_dir      = mat3x3_mul(make_orthonormal_mat3x3(reflect_out), sample.dir);
-            let cos         = positive_cos(in_dir, surf.local.col(2));
-            let color       = make_color(0,0,0,1);
-            make_bsdf_sample(surf, in_dir, sample.pdf, color, 1, false)
+            //let sample = sample_brdf(brdf_data, make_vec2(randf(rnd), randf(rnd)), out_dir);
+            //make_bsdf_sample(surf, sample.out, sample.pdf, vec3_to_color(sample.res), 1, false)
+
+            let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+            let gdir   = mat3x3_mul(surf.local, sample.dir);
+            make_bsdf_sample(surf, gdir, sample.pdf, color_mulf(evaluate_brdf(brdf_data, gdir, out_dir), 1/sample.pdf), 1, false)
         },
         is_specular = false
     }

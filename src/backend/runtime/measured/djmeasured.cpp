@@ -1,4 +1,5 @@
 #include "djmeasured.h"
+#include "serialization/FileSerializer.h"
 
 #define POWITACQ_IMPLEMENTATION
 #include "powitacq_rgb.h"
@@ -167,10 +168,10 @@ BRDFData* load_brdf_data (std::string brdf_path) {
 }
 
 void write_brdf_data(BRDFData* data, std::string path) {
-    std::ofstream out(path, std::ofstream::out | std::ofstream::binary);
+    IG::FileSerializer os(path, false);
     
-    out << (float) data->isotropic;
-    out << (float) data->jacobian;
+    os.write((int32_t) data->isotropic);
+    os.write((int32_t) data->jacobian);
 
     auto ndf = linearize_warp(&data->ndf);
     auto vndf = linearize_warp(&data->vndf);
@@ -178,23 +179,22 @@ void write_brdf_data(BRDFData* data, std::string path) {
     auto luminance = linearize_warp(&data->luminance);
     auto rgb = linearize_warp(&data->rgb);
 
-    out << ndf.size();
-    out << vndf.size();
-    out << sigma.size();
-    out << luminance.size();
-    out << rgb.size();
+    os.write( (int32_t)ndf.size());
+    os.write( (int32_t)vndf.size());
+    os.write( (int32_t)sigma.size());
+    os.write( (int32_t)luminance.size());
+    os.write( (int32_t)rgb.size());
 
-    for (int i = 0; i < ndf.size(); i++) out << ndf[i];
+    os.write(ndf, true);
 
-    for (int i = 0; i < vndf.size(); i++) out << vndf[i];
+    os.write(vndf, true);
 
-    for (int i = 0; i < sigma.size(); i++) out << sigma[i];
+    os.write(sigma, true);
 
-    for (int i = 0; i < luminance.size(); i++) out << luminance[i];
+    os.write(luminance, true);
 
-    for (int i = 0; i < rgb.size(); i++) out << rgb[i];
-
-    out.close();
+    os.write(rgb, true);
+    os.close();
 }
 
 // BRDFData* read_brdf_data(std::istream& is) {
