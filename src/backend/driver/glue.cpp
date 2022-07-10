@@ -605,7 +605,7 @@ public:
 
             auto& res = getCurrentShaderInfo(dev).images[filename];
             res.counter++;
-            res.memory_usage        = img.width * img.height * 4 * sizeof(float);
+            res.memory_usage        = img.width * img.height * img.channels * sizeof(float);
             return images[filename] = copyToDevice(dev, img);
         } catch (const IG::ImageLoadException& e) {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;
@@ -635,7 +635,7 @@ public:
 
             auto& res = getCurrentShaderInfo(dev).packed_images[filename];
             res.counter++;
-            res.memory_usage        = packed.size() * sizeof(uint32_t);
+            res.memory_usage        = packed.size();
             return images[filename] = DevicePackedImage(copyToDevice(dev, packed), width, height);
         } catch (const IG::ImageLoadException& e) {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;

@@ -7,7 +7,7 @@ fn @make_emissive_shading_context(ray: Ray, p: Vec3, uvw: Vec3) = ShadingContext
         face_normal = vec3_expand(0),
         inv_area    = 0,
         prim_coords = vec2_expand(0),
-        tex_coords  = make_vec2(uvw.x, uvw.y),
+        tex_coords  = vec3_to_2(uvw),
         local       = mat3x3_identity()
     },
     uvw  = uvw

@@ -27,7 +27,7 @@ fn @make_surface_shading_context(ray: Ray, hit: Hit, surf: SurfaceElement) = Sha
     ray  = ray,
     hit  = hit,
     surf = surf,
-    uvw  = make_vec3(surf.tex_coords.x, surf.tex_coords.y, 0)
+    uvw  = vec2_to_3(surf.tex_coords, 0)
 };
 
 type BSDFShader     = fn (ShadingContext) -> Bsdf;

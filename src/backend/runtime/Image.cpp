@@ -106,9 +106,10 @@ void Image::copyToPackedFormat(std::vector<uint8>& dst) const
             tbb::blocked_range<size_t>(0, width * height),
             [&](tbb::blocked_range<size_t> range) {
                 for (size_t k = range.begin(); k < range.end(); ++k)
-                    dst[k] = static_cast<uint8>(static_cast<uint32>(pixels[k] * 255) & 0xFF);
+                    dst[k] = static_cast<uint8>(pixels[k] * 255);
             });
     } else {
+        uint32* ptr = (uint32*)dst.data();
         tbb::parallel_for(
             tbb::blocked_range<size_t>(0, width * height),
             [&](tbb::blocked_range<size_t> range) {
@@ -117,7 +118,7 @@ void Image::copyToPackedFormat(std::vector<uint8>& dst) const
                     uint8 g = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 1] * 255) & 0xFF);
                     uint8 b = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 2] * 255) & 0xFF);
                     uint8 a = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 3] * 255) & 0xFF);
-                    dst[k]  = pack_rgba(r, g, b, a);
+                    ptr[k]  = pack_rgba(r, g, b, a);
                 }
             });
     }
@@ -403,6 +404,7 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
         }
     } else {
         dst.resize(width * height * 4);
+        uint32* ptr = (uint32*)dst.data();
         channels = 4;
 
         if (channels2 == 3) {
@@ -412,7 +414,7 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
                     tbb::blocked_range<size_t>(0, width * height),
                     [&](tbb::blocked_range<size_t> r) {
                         for (size_t i = r.begin(); i < r.end(); ++i)
-                            dst[i] = pack_rgba(data[i * 3 + 0], data[i * 3 + 1], data[i * 3 + 2], 1);
+                            ptr[i] = pack_rgba(data[i * 3 + 0], data[i * 3 + 1], data[i * 3 + 2], 255);
                     });
             } else {
                 // Pack data and map to linear space
@@ -420,7 +422,7 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
                     tbb::blocked_range<size_t>(0, width * height),
                     [&](tbb::blocked_range<size_t> r) {
                         for (size_t i = r.begin(); i < r.end(); ++i)
-                            dst[i] = pack_rgba(byte_color_to_linear(data[i * 3 + 0]), byte_color_to_linear(data[i * 3 + 1]), byte_color_to_linear(data[i * 3 + 2]), 1);
+                            ptr[i] = pack_rgba(byte_color_to_linear(data[i * 3 + 0]), byte_color_to_linear(data[i * 3 + 1]), byte_color_to_linear(data[i * 3 + 2]), 255);
                     });
             }
         } else {
@@ -430,7 +432,7 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
                     tbb::blocked_range<size_t>(0, width * height),
                     [&](tbb::blocked_range<size_t> r) {
                         for (size_t i = r.begin(); i < r.end(); ++i)
-                            dst[i] = pack_rgba(data[i * 4 + 0], data[i * 4 + 1], data[i * 4 + 2], data[i * 4 + 3]);
+                            ptr[i] = pack_rgba(data[i * 4 + 0], data[i * 4 + 1], data[i * 4 + 2], data[i * 4 + 3]);
                     });
             } else {
                 // Pack data and map to linear space
@@ -438,7 +440,7 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
                     tbb::blocked_range<size_t>(0, width * height),
                     [&](tbb::blocked_range<size_t> r) {
                         for (size_t i = r.begin(); i < r.end(); ++i)
-                            dst[i] = pack_rgba(byte_color_to_linear(data[i * 4 + 0]), byte_color_to_linear(data[i * 4 + 1]), byte_color_to_linear(data[i * 4 + 2]), data[i * 4 + 3]);
+                            ptr[i] = pack_rgba(byte_color_to_linear(data[i * 4 + 0]), byte_color_to_linear(data[i * 4 + 1]), byte_color_to_linear(data[i * 4 + 2]), data[i * 4 + 3]);
                     });
             }
         }
