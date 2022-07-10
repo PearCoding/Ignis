@@ -82,24 +82,24 @@ static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, Shadin
 
 static std::string inline_microfacet(ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf)
 {
-    std::string distribution = "microfacet::make_vndf_ggx_distribution";
+    std::string distribution = "microfacet::make_vndf_ggx_distribution(ctx.surf.face_normal, ";
     if (bsdf->property("distribution").type() == Parser::PT_STRING) {
         std::string type = bsdf->property("distribution").getString();
         if (type == "ggx") {
-            distribution = "microfacet::make_ggx_distribution";
+            distribution = "microfacet::make_ggx_distribution(";
         } else if (type == "beckmann") {
-            distribution = "microfacet::make_beckmann_distribution";
+            distribution = "microfacet::make_beckmann_distribution(";
         }
     }
 
     const std::string md_id = tree.currentClosureID();
     std::stringstream stream;
     if (tree.hasParameter("alpha_u")) {
-        stream << "  let md_" << md_id << " = @|ctx : ShadingContext| " << distribution << "(ctx.surf.local, "
+        stream << "  let md_" << md_id << " = @|ctx : ShadingContext| " << distribution << "ctx.surf.local, "
                << tree.getInline("alpha_u") << ", "
                << tree.getInline("alpha_v") << ");" << std::endl;
     } else {
-        stream << "  let md_" << md_id << " = @|ctx : ShadingContext| " << distribution << "(ctx.surf.local, "
+        stream << "  let md_" << md_id << " = @|ctx : ShadingContext| " << distribution << "ctx.surf.local, "
                << tree.getInline("alpha") << ", "
                << tree.getInline("alpha") << ");" << std::endl;
     }
