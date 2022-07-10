@@ -41,6 +41,7 @@ class NodeContext:
     def scene(self):
         return self.depsgraph.scene
 
+
 def _export_default(socket):
     default_value = getattr(socket, "default_value")
     if default_value is None:
@@ -747,38 +748,66 @@ def _export_checkerboard(ctx, node, output_name):
         return raw
 
 
+def _export_image(image, path, is_f32=False, keep_format=False):
+    # Make sure the image is loaded to memory, so we can write it out
+    if not image.has_data:
+        image.pixels[0]
+
+    # Export the actual image data
+    old_path = image.filepath_raw
+    old_format = image.file_format
+    try:
+        image.filepath_raw = path
+        if not keep_format:
+            image.file_format = "PNG" if not is_f32 else "OPEN_EXR"
+        image.save()
+    finally:  # Never break the scene!
+        image.filepath_raw = old_path
+        image.file_format = old_format
+
+
 def _handle_image(ctx, image):
-    os.makedirs(os.path.join(ctx.path, "Textures"), exist_ok=True)            
+    os.makedirs(os.path.join(ctx.path, "Textures"), exist_ok=True)
 
     if image.source == 'GENERATED':
-        img_name = image.name + (".png" if not image.use_generated_float else ".exr")
+        img_name = image.name + \
+            (".png" if not image.use_generated_float else ".exr")
         img_path = os.path.join("Textures", img_name)
         if img_name not in ctx.result["_images"]:
-            image.save_render(os.path.join(ctx.path, img_path), scene=ctx.scene)
+            _export_image(image, os.path.join(ctx.path, img_path),
+                          is_f32=image.use_generated_float)
             ctx.result["_images"].add(img_name)
+
         return img_path
     elif image.source == 'FILE':
-        img_path = bpy.path.relpath(bpy.path.abspath(bpy.path.resolve_ncase(image.filepath_raw)), start=ctx.path).replace("\\", "/")
+        img_path = bpy.path.relpath(bpy.path.abspath(bpy.path.resolve_ncase(
+            image.filepath_raw)), start=ctx.path).replace("\\", "/")
         if img_path.startswith("//"):
             img_path = img_path[2:]
- 
+
         export_image = image.packed_file or ctx.always_copy_images or img_path == ''
 
         if export_image:
             img_name = bpy.path.basename(img_path)
+
             if img_name == '':
+                keep_format = False
                 if image.file_format in ["OPEN_EXR", "OPEN_EXR_MULTILAYER", "HDR"]:
+                    is_f32 = True
                     extension = ".exr"
                 else:
-                    extension = ".png" 
+                    is_f32 = False
+                    extension = ".png"
                 img_path = os.path.join("Textures", image.name + extension)
             else:
+                keep_format = True
+                is_f32 = False  # Does not matter
                 img_path = os.path.join("Textures", img_name)
-            
-            if img_name not in ctx.result["_images"]:
-                image.save_render(os.path.join(ctx.path, img_path), scene=ctx.scene)
-                ctx.result["_images"].add(img_name)
 
+            if img_name not in ctx.result["_images"]:
+                _export_image(image, os.path.join(ctx.path, img_path),
+                              is_f32=is_f32, keep_format=keep_format)
+                ctx.result["_images"].add(img_name)
         return img_path
     else:
         print(f"Image type {image.source} not supported")

@@ -300,15 +300,20 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
         int width = 0, height = 0, channels = 0;
         float* data = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 0);
 
+        // If we got a weird channel number, map to RGBA
+        if (channels != 1 && channels != 3 && channels != 4) {
+            stbi_image_free(data);
+            data = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 4);
+            channels = 4;
+        }
+
         if (data == nullptr)
-            throw ImageLoadException("Could not load image", path);
+            throw ImageLoadException("Could not load image: " + std::string(stbi_failure_reason()), path);
 
         img.width  = width;
         img.height = height;
 
         switch (channels) {
-        case 0:
-            return Image();
         case 1: // Gray
             img.pixels.reset(new float[img.width * img.height]);
             img.channels = 1;
@@ -328,24 +333,12 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
                     }
                 });
             break;
-        case 4: // RGBA
+        default: // RGBA
+            IG_ASSERT(channels == 4, "Expected only images with channel count 4");
+
             img.pixels.reset(new float[img.width * img.height * 4]);
             img.channels = 4;
             std::memcpy(img.pixels.get(), data, sizeof(float) * 4 * img.width * img.height);
-            break;
-        default:
-            img.pixels.reset(new float[img.width * img.height * 4]);
-            img.channels = 4;
-            tbb::parallel_for(
-                tbb::blocked_range<size_t>(0, img.width * img.height),
-                [&](tbb::blocked_range<size_t> r) {
-                    for (size_t i = r.begin(); i < r.end(); ++i) {
-                        img.pixels[i * 4 + 0] = data[i * channels + 1];
-                        img.pixels[i * 4 + 1] = data[i * channels + 2];
-                        img.pixels[i * 4 + 2] = data[i * channels + 3];
-                        img.pixels[i * 4 + 3] = data[i * channels + 0];
-                    }
-                });
             break;
         }
         stbi_image_free(data);
@@ -378,13 +371,14 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
     if (channels2 != 1 && channels2 != 3 && channels2 != 4) {
         stbi_image_free(data);
         data = stbi_load(path.generic_u8string().c_str(), &width2, &height2, &channels2, 4);
+        channels2 = 4;
     }
 
     width  = static_cast<size_t>(width2);
     height = static_cast<size_t>(height2);
 
     if (data == nullptr)
-        throw ImageLoadException("Could not load image", path);
+        throw ImageLoadException("Could not load image: " + std::string(stbi_failure_reason()), path);
 
     if (channels2 == 1) {
         dst.resize(width * height);
@@ -426,6 +420,7 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
                     });
             }
         } else {
+            IG_ASSERT(channels2 == 4, "Expected only images with channel count 4");
             if (linear) {
                 // Pack data
                 tbb::parallel_for(
