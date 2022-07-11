@@ -1,9 +1,11 @@
 #include "DriverManager.h"
 #include "Logger.h"
 #include "RuntimeInfo.h"
+#include "config/Git.h"
 #include "config/Version.h"
 
 #include <algorithm>
+#include <cstring>
 #include <numeric>
 #include <unordered_set>
 
@@ -152,6 +154,17 @@ bool DriverManager::addModule(const std::filesystem::path& path)
         if (interface.MajorVersion != IG_VERSION_MAJOR || interface.MinorVersion != IG_VERSION_MINOR) {
             IG_LOG(L_WARNING) << "Skipping module " << path << " as the provided version " << interface.MajorVersion << "." << interface.MinorVersion
                               << " does not match the runtime version " << IG_VERSION_MAJOR << "." << IG_VERSION_MINOR << std::endl;
+            return false;
+        }
+
+        if (interface.Revision == nullptr) {
+            IG_LOG(L_WARNING) << "Skipping module " << path << " due to invalid interface entries" << std::endl;
+            return false;
+        }
+
+        if (std::strcmp(IG_GIT_REVISION, interface.Revision) != 0) {
+            IG_LOG(L_WARNING) << "Skipping module " << path << " as the provided revision " << interface.Revision
+                              << " does not match the runtime revision " << IG_GIT_REVISION << std::endl;
             return false;
         }
 

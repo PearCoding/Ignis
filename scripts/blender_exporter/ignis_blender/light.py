@@ -83,6 +83,7 @@ def export_light(result, inst):
                 {"type": "disk", "name": light.name +
                     "-shape", "radius": size_x/2, "flip_normals": True}
             )
+            area = 3.141592 * size_x * size_x / 4
         elif l.shape == "ELLIPSE":
             # Approximate by non-uniformly scaling the uniform disk
             size_y = l.size_y
@@ -90,11 +91,13 @@ def export_light(result, inst):
                 {"type": "disk", "name": light.name +
                     "-shape", "radius": 1, "flip_normals": True, "transform": [size_x/2, 0, 0, 0, size_y/2, 0, 0, 0, 1]}
             )
+            area = 3.141592 * size_x * size_y / 4
         else:
             result["shapes"].append(
                 {"type": "rectangle", "name": light.name +
                     "-shape", "width": size_x, "height": size_y, "flip_normals": True}
             )
+            area = size_x * size_y
 
         result["entities"].append(
             {"name": light.name,
@@ -103,7 +106,9 @@ def export_light(result, inst):
              "transform": flat_matrix(inst.matrix_world),
              "camera_visible": False}
         )
+
+        factor = 1/(4*area)  # No idea why there is the factor 4 in it
         result["lights"].append(
             {"type": "area", "name": light.name, "entity": light.name,
-                "radiance": map_rgb(power)}
+                "radiance": map_rgb([power[0] * factor, power[1] * factor, power[2] * factor])}
         )

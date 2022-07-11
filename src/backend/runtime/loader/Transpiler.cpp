@@ -421,6 +421,7 @@ static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynF
     { "atan2", genDynMapFunction2("math_builtins::atan2", nullptr) },
     { "fmod", genDynMapFunction2("math::fmod", nullptr) },
     { "cross", { nullptr, nullptr, nullptr, genArrayFunction2("cross", PExprType::Vec3), nullptr } },
+    { "reflect", { nullptr, nullptr, nullptr, genArrayFunction2("reflect", PExprType::Vec3), nullptr } },
     { "rotate_euler", { nullptr, nullptr, nullptr, genArrayFunction2("rotate_euler", PExprType::Vec3), nullptr } },
     { "rotate_euler_inverse", { nullptr, nullptr, nullptr, genArrayFunction2("rotate_euler_inverse", PExprType::Vec3), nullptr } },
     { "fresnel_dielectric", { nullptr, genFunction2("math::fresnel_dielectric"), nullptr, nullptr, nullptr } }
@@ -492,6 +493,7 @@ static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynR
     { "dot", genDynArrayFunction2("dot") },
     { "dist", genDynArrayFunction2("dist") }
 };
+// TODO: refract (V, N, ior) -> Vec3 !
 
 // Other stuff
 inline std::string binaryCwise(const std::string& A, const std::string& B, PExprType arithType, const std::string& op, const std::string& func)

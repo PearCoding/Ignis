@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include "RuntimeStructs.h"
 #include "Statistics.h"
+#include "config/Git.h"
 #include "config/Version.h"
 #include "driver/Interface.h"
 #include "table/SceneDatabase.h"
@@ -1315,6 +1316,7 @@ IG_EXPORT DriverInterface ig_get_interface()
     };
     interface.MajorVersion = IG_VERSION_MAJOR;
     interface.MinorVersion = IG_VERSION_MINOR;
+    interface.Revision     = IG_GIT_REVISION;
 
 // Expose Target
 #if defined(DEVICE_DEFAULT)

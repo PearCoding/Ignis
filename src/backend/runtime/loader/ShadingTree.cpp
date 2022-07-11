@@ -246,14 +246,6 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
 
 bool ShadingTree::beginClosure(const std::string& name)
 {
-    for (const auto& closure : mClosures) {
-        if (closure.Name == name) {
-            IG_LOG(L_ERROR) << "Closure '" << name << "' calls itself, resulting in a cycle!" << std::endl;
-            signalError();
-            return false;
-        }
-    }
-
     mClosures.emplace_back(Closure{ name, getClosureID(name), {} });
     return true;
 }

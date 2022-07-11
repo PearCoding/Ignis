@@ -272,6 +272,8 @@ static void light_area(size_t id, std::ostream& stream, const std::string& name,
     uint32 shape_id = tree.context().Environment.ShapeIDs.at(entity.Shape);
     if (opt && tree.context().Environment.PlaneShapes.count(shape_id) > 0) {
         // Use more specialized area light
+        IG_LOG(L_DEBUG) << "Using specialized plane sampler for area light '" << name << "'" << std::endl;
+
         const auto& shape = tree.context().Environment.PlaneShapes.at(shape_id);
         Vector3f origin   = entity.Transform * shape.Origin;
         Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;

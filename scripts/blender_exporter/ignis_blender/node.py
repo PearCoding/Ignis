@@ -719,16 +719,25 @@ def _export_normal(ctx, node, output_name):
 
 def _export_normalmap(ctx, node):
     # Only supporting tangent space
-    if node.space != 'TANGENT':
+    if node.space != 'TANGENT' and node.space != 'WORLD':
         print(
-            f"Only tangent space normal mapping supported")
+            f"Only tangent and world space normal mapping supported")
 
     color = export_node(ctx, node.inputs["Color"])
     strength = export_node(ctx, node.inputs["Strength"])
 
     ln = f"(2*{color}-color(1)).xyz"
-    dn = f"vec3(dot(Nx, {ln}), dot(Ny, {ln}), dot(N, {ln}))"
-    return f"norm(({dn} - N)*{strength} + N)"
+    if node.space == 'TANGENT':
+        dn = f"norm(Nx*({ln}).x + Ny*({ln}).y + N*({ln}).z)"
+    else:
+        dn = f"norm({ln})"
+
+    if try_extract_node_value(strength) == 1:
+        return dn
+    elif try_extract_node_value(strength) == 0:
+        return "vec3(0)"
+    else:
+        return f"norm(({dn} - N)*{strength} + N)"
 
 
 def _export_checkerboard(ctx, node, output_name):
@@ -1067,11 +1076,18 @@ def _export_surface_attributes(ctx, node, output_name):
 
 
 def _export_tex_coordinate(ctx, node, output_name):
-    # Currently no other type of output is supported
-    if output_name != 'UV':
+    if output_name == 'UV':
+        return TEXCOORD_UV
+    elif output_name == 'Normal':
+        return 'N'  # TODO: Map to object space!
+    elif output_name == 'Object':
+        return 'P'  # TODO: Map to object space!
+    elif output_name == 'Reflection':
+        return 'reflect(V, N)'
+    else:
         print(
             f"Given texture coordinate output '{output_name}' is not supported")
-    return TEXCOORD_UV
+        return TEXCOORD_UV
 
 
 def _export_uvmap(ctx, node):
@@ -1285,7 +1301,7 @@ def export_node(ctx, socket):
         elif from_type == 'RGBA' and to_type == 'VECTOR':
             full_expr = f"({expr}).rgb"
         elif from_type == 'VECTOR' and to_type == 'RGBA':
-            full_expr = f"color({expr}.x, {expr}.y, {expr}.z, 1)"
+            full_expr = f"max(color({expr}.x, {expr}.y, {expr}.z, 1), color(0))"
         else:
             print(
                 f"Socket connection from {socket.links[0].from_socket.name} to {socket.name} requires cast from {from_type} to {to_type} which is not supported")

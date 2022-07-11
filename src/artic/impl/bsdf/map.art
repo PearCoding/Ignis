@@ -31,6 +31,9 @@ fn @transform_surf_bsdf(old_surf: SurfaceElement, new_surf: SurfaceElement, bsdf
 //--------------------------------------
 // Special bsdf replacing the normal orientation
 fn @make_normal_set(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Vec3) -> Bsdf {
+    let n = ensure_valid_reflection(ctx.surf.face_normal, vec3_neg(ctx.ray.dir), normal);
+    let trans = mat3x3_align_vectors(ctx.surf.local.col(2), n);
+
     let new_surf = SurfaceElement{
         is_entering = ctx.surf.is_entering,
         point       = ctx.surf.point,
@@ -38,7 +41,7 @@ fn @make_normal_set(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bs
         inv_area    = ctx.surf.inv_area,
         prim_coords = ctx.surf.prim_coords,
         tex_coords  = ctx.surf.tex_coords,
-        local       = make_orthonormal_mat3x3(ensure_valid_reflection(ctx.surf.face_normal, vec3_neg(ctx.ray.dir), normal))
+        local       = mat3x3_matmul(trans, ctx.surf.local)
     };
     transform_surf_bsdf(ctx.surf, new_surf, bsdf_factory)
 }
