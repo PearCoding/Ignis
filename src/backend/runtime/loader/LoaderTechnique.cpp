@@ -95,7 +95,7 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
 {
     const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
-    const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(false) : false;
+    const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(true) : true; // FIXME: The convergence rate is kinda worse, fix the non-uniform light selector
     const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
     const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
 
