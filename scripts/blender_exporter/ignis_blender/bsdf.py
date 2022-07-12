@@ -40,7 +40,7 @@ def _export_diffuse_bsdf(ctx, bsdf, export_name):
     if has_roughness:
         return _handle_normal(ctx, bsdf,
                               {"type": "roughdiffuse", "name": export_name,
-                                  "reflectance": reflectance, "roughness": roughness})
+                                  "reflectance": reflectance, "roughness": roughness})  # Square roughness?
     else:
         return _handle_normal(ctx, bsdf,
                               {"type": "diffuse", "name": export_name,
@@ -49,7 +49,10 @@ def _export_diffuse_bsdf(ctx, bsdf, export_name):
 
 def _export_glass_bsdf(ctx, bsdf, export_name):
     reflectance = export_node(ctx, bsdf.inputs["Color"])
-    roughness = export_node(ctx, bsdf.inputs["Roughness"])
+    if bsdf.distribution == 'SHARP':
+        roughness = 1
+    else:
+        roughness = export_node(ctx, bsdf.inputs["Roughness"])
     ior = export_node(ctx, bsdf.inputs["IOR"])
 
     has_roughness = try_extract_node_value(roughness, default=1) > 0
@@ -61,12 +64,16 @@ def _export_glass_bsdf(ctx, bsdf, export_name):
     else:
         return _handle_normal(ctx, bsdf,
                               {"type": "roughdielectric", "name": export_name,
-                               "specular_reflectance": reflectance, "specular_transmittance": reflectance, "roughness": roughness, "ext_ior": ior})
+                               "specular_reflectance": reflectance, "specular_transmittance": reflectance, "roughness": roughness, "ext_ior": ior})  # Square roughness?
 
 
 def _export_refraction_bsdf(ctx, bsdf, export_name):
+    # TODO: Need better support for this?
     base_color = export_node(ctx, bsdf.inputs["Color"])
-    roughness = export_node(ctx, bsdf.inputs["Roughness"])
+    if bsdf.distribution == 'SHARP':
+        roughness = 1
+    else:
+        roughness = export_node(ctx, bsdf.inputs["Roughness"])
     ior = export_node(ctx, bsdf.inputs["IOR"])
     return _handle_normal(ctx, bsdf,
                           {"type": "principled", "name": export_name,
@@ -92,7 +99,11 @@ def _export_translucent_bsdf(ctx, bsdf, export_name):
 def _export_glossy_bsdf(ctx, bsdf, export_name):
     # A simple principled shader
     base_color = export_node(ctx, bsdf.inputs["Color"])
-    roughness = export_node(ctx, bsdf.inputs["Roughness"])
+
+    if bsdf.distribution == 'SHARP':
+        roughness = 1
+    else:  # Only supports GGX
+        roughness = export_node(ctx, bsdf.inputs["Roughness"])
 
     return _handle_normal(ctx, bsdf,
                           {"type": "principled", "name": export_name,

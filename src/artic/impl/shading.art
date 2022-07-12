@@ -1,4 +1,5 @@
 fn @make_emissive_shading_context(ray: Ray, p: Vec3, uvw: Vec3) = ShadingContext {
+    entity_id = 0,
     ray  = ray,
     hit  = make_hit(0,0,0,make_vec2(0,0)),
     surf = SurfaceElement {

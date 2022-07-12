@@ -382,7 +382,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             let glb_surf  = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
             
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
-            let mat       = @shader(make_surface_shading_context(ray, hit, glb_surf));
+            let mat       = @shader(make_surface_shading_context(entity_id2, ray, hit, glb_surf));
             let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, payload, glb_surf, mat) { color } else { color_builtins::black };
             
             for lane in unroll(0, r_vector_width) {

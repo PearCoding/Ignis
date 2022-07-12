@@ -17,13 +17,15 @@ struct SceneGeometry {
 
 // Used as interface
 struct ShadingContext {
+    entity_id: i32,
     ray:  Ray,
     hit:  Hit,
     surf: SurfaceElement,
     uvw:  Vec3
 }
 
-fn @make_surface_shading_context(ray: Ray, hit: Hit, surf: SurfaceElement) = ShadingContext {
+fn @make_surface_shading_context(entity_id: i32, ray: Ray, hit: Hit, surf: SurfaceElement) = ShadingContext {
+    entity_id = entity_id,
     ray  = ray,
     hit  = hit,
     surf = surf,

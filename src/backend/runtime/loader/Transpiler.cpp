@@ -70,6 +70,7 @@ static const std::unordered_map<std::string, InternalVariable> sInternalVariable
     { "uv", { "", PExprType::Vec2, false } },           // Special
     { "frontside", { "", PExprType::Boolean, false } }, // Special
     { "prim_coords", { "", PExprType::Vec2, false } },  // Special
+    { "entity_id", { "", PExprType::Integer, false } }, // Special
     { "P", { "", PExprType::Vec3, false } },            // Special
     { "V", { "", PExprType::Vec3, false } },            // Special
     { "N", { "", PExprType::Vec3, false } },            // Special
@@ -381,7 +382,6 @@ static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynF
     { "asin", genDynMapFunction1("math_builtins::asin", nullptr) },
     { "acos", genDynMapFunction1("math_builtins::acos", nullptr) },
     { "atan", genDynMapFunction1("math_builtins::atan", nullptr) },
-    { "pow", genDynMapFunction1("math_builtins::pow", nullptr) },
     { "exp", genDynMapFunction1("math_builtins::exp", nullptr) },
     { "exp2", genDynMapFunction1("math_builtins::exp2", nullptr) },
     { "log", genDynMapFunction1("math_builtins::log", nullptr) },
@@ -418,6 +418,7 @@ static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynF
     { "max", genDynMapFunction2("math_builtins::fmax", "max") },
     { "snap", genDynMapFunction2("math::snap", nullptr) },
     { "pingpong", genDynMapFunction2("math::pingpong", nullptr) },
+    { "pow", genDynMapFunction2("math_builtins::pow", nullptr) },
     { "atan2", genDynMapFunction2("math_builtins::atan2", nullptr) },
     { "fmod", genDynMapFunction2("math::fmod", nullptr) },
     { "cross", { nullptr, nullptr, nullptr, genArrayFunction2("cross", PExprType::Vec3), nullptr } },
@@ -555,6 +556,8 @@ public:
             return "ctx.surf.prim_coords";
         if (name == "frontside")
             return "ctx.surf.is_entering";
+        if (name == "entity_id")
+            return "ctx.entity_id";
         if (name == "N")
             return "ctx.surf.local.col(2)";
         if (name == "Ng")

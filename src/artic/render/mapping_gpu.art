@@ -120,7 +120,7 @@ fn @gpu_hit_shade( acc: Accelerator
         let lcl_surf = shape.surface_element(local_ray, hit);
         let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
         
-        let mat    = @shader(make_surface_shading_context(ray, hit, glb_surf));
+        let mat    = @shader(make_surface_shading_context(ent_id, ray, hit, glb_surf));
         let on_hit = path_tracer.on_hit;
         if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, payload, glb_surf, mat) {
             accumulate(pixel, color);

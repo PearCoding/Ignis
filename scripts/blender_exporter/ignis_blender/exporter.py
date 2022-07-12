@@ -12,10 +12,18 @@ from .defaults import *
 
 
 def export_technique(result, scene):
-    max_depth = scene.cycles.max_bounces if scene.cycles is not None else 8
+    if scene.cycles is None:
+        max_depth = 8
+        clamp = 0
+    else:
+        max_depth = scene.cycles.max_bounces
+        clamp = max(scene.cycles.sample_clamp_direct,
+                    scene.cycles.sample_clamp_indirect)
+
     result["technique"] = {
         "type": "path",
-        "max_depth": max_depth
+        "max_depth": max_depth,
+        "clamp": clamp
     }
 
 
@@ -100,7 +108,8 @@ def export_all(filepath, result, depsgraph, use_selection, export_materials, exp
     # Export materials
     if export_materials:
         for material in result["_materials"]:
-            mat = export_material(NodeContext(result, filepath, depsgraph, copy_images), material)
+            mat = export_material(NodeContext(
+                result, filepath, depsgraph, copy_images), material)
             if mat is not None:
                 result["bsdfs"].append(mat)
             else:
@@ -138,6 +147,7 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
     result = {}
     # This will not be exported, but removed later on
     result["_images"] = set()
+    result["_image_textures"] = dict()
     result["_materials"] = set()
 
     # Export technique (set to default path tracing with 64 rays)
@@ -163,6 +173,7 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
 
     # Cleanup
     del result["_images"]
+    del result["_image_textures"]
     del result["_materials"]
     result = delete_none(result)
 

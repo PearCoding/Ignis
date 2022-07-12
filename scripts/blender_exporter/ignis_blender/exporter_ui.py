@@ -90,11 +90,11 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
             ),
         )
 
-        with ProgressReport(context.window_manager) as progress:
-            # Exit edit mode before exporting, so current object states are exported properly.
-            if bpy.ops.object.mode_set.poll():
-                bpy.ops.object.mode_set(mode='OBJECT')
+        # Exit edit mode before exporting, so current object states are exported properly.
+        if bpy.ops.object.mode_set.poll():
+            bpy.ops.object.mode_set(mode='OBJECT')
 
+        with ProgressReport(context.window_manager) as progress:
             if self.animations is True:
                 scene_frames = range(
                     context.scene.frame_start, context.scene.frame_end + 1)

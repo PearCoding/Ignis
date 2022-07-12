@@ -75,13 +75,19 @@ std::optional<ConductorSpec> lookupConductor(const std::string& name, const std:
 
 static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
-    tree.addNumber("alpha_u", *bsdf, 0.1f, false, ShadingTree::NumberOptions::Zero());
-    tree.addNumber("alpha_v", *bsdf, 0.1f, false, ShadingTree::NumberOptions::Zero());
-    tree.addNumber("alpha", *bsdf, 0.1f, true, ShadingTree::NumberOptions::Zero());
+    const bool useOldName   = bsdf->property("alpha").isValid() || bsdf->property("alpha_u").isValid() || bsdf->property("alpha_v").isValid();
+    const std::string param = useOldName ? "alpha" : "roughness";
+
+    tree.addNumber(param + "_u", *bsdf, 0.1f, false, ShadingTree::NumberOptions::Zero());
+    tree.addNumber(param + "_v", *bsdf, 0.1f, false, ShadingTree::NumberOptions::Zero());
+    tree.addNumber(param, *bsdf, 0.1f, true, ShadingTree::NumberOptions::Zero());
 }
 
-static std::string inline_microfacet(ShadingTree& tree, const std::shared_ptr<Parser::Object>& bsdf)
+static std::string inline_microfacet(const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
+    const bool useOldName   = bsdf->property("alpha").isValid() || bsdf->property("alpha_u").isValid() || bsdf->property("alpha_v").isValid();
+    const std::string param = useOldName ? "alpha" : "roughness";
+
     std::string distribution = "microfacet::make_vndf_ggx_distribution(ctx.surf.face_normal, ";
     if (bsdf->property("distribution").type() == Parser::PT_STRING) {
         std::string type = bsdf->property("distribution").getString();
@@ -94,14 +100,14 @@ static std::string inline_microfacet(ShadingTree& tree, const std::shared_ptr<Pa
 
     const std::string md_id = tree.currentClosureID();
     std::stringstream stream;
-    if (tree.hasParameter("alpha_u")) {
+    if (tree.hasParameter(param + "_u")) {
         stream << "  let md_" << md_id << " = @|ctx : ShadingContext| " << distribution << "ctx.surf.local, "
-               << tree.getInline("alpha_u") << ", "
-               << tree.getInline("alpha_v") << ");" << std::endl;
+               << tree.getInline(param + "_u") << ", "
+               << tree.getInline(param + "_v") << ");" << std::endl;
     } else {
         stream << "  let md_" << md_id << " = @|ctx : ShadingContext| " << distribution << "ctx.surf.local, "
-               << tree.getInline("alpha") << ", "
-               << tree.getInline("alpha") << ");" << std::endl;
+               << tree.getInline(param) << ", "
+               << tree.getInline(param) << ");" << std::endl;
     }
     return stream.str();
 }
@@ -121,14 +127,16 @@ static void bsdf_diffuse(std::ostream& stream, const std::string& name, const st
 
 static void bsdf_orennayar(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
+    const std::string roughnessName = bsdf->property("alpha").isValid() ? "alpha" : "roughness";
+
     tree.beginClosure(name);
-    tree.addNumber("alpha", *bsdf, 0.0f);
+    tree.addNumber(roughnessName, *bsdf, 0.0f);
     tree.addColor("reflectance", *bsdf, Vector3f::Constant(0.5f));
 
     const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_orennayar_bsdf(ctx.surf, "
-           << tree.getInline("alpha") << ", "
+           << tree.getInline(roughnessName) << ", "
            << tree.getInline("reflectance") << ");" << std::endl;
 
     tree.endClosure();
@@ -174,7 +182,7 @@ static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name,
 
     const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
-           << inline_microfacet(tree, bsdf)
+           << inline_microfacet(bsdf, tree)
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_rough_glass_bsdf(ctx.surf, "
            << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
            << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "
@@ -231,7 +239,7 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
 
     const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
-           << inline_microfacet(tree, bsdf)
+           << inline_microfacet(bsdf, tree)
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_rough_conductor_bsdf(ctx.surf, "
            << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Eta) : tree.getInline("eta")) << ", "
            << (spec.has_value() ? LoaderUtils::inlineColor(spec.value().Kappa) : tree.getInline("k")) << ", "
@@ -278,7 +286,7 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
 
     const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
-           << inline_microfacet(tree, bsdf)
+           << inline_microfacet(bsdf, tree)
            << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_plastic_bsdf(ctx.surf, "
            << (ext_spec.has_value() ? std::to_string(ext_spec.value()) : tree.getInline("ext_ior")) << ", "
            << (int_spec.has_value() ? std::to_string(int_spec.value()) : tree.getInline("int_ior")) << ", "

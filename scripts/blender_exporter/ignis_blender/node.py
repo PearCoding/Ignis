@@ -776,8 +776,6 @@ def _export_image(image, path, is_f32=False, keep_format=False):
 
 
 def _handle_image(ctx, image):
-    os.makedirs(os.path.join(ctx.path, "Textures"), exist_ok=True)
-
     if image.source == 'GENERATED':
         img_name = image.name + \
             (".png" if not image.use_generated_float else ".exr")
@@ -790,7 +788,7 @@ def _handle_image(ctx, image):
         return img_path
     elif image.source == 'FILE':
         img_path = bpy.path.relpath(bpy.path.abspath(bpy.path.resolve_ncase(
-            image.filepath_raw)), start=ctx.path).replace("\\", "/")
+            image.filepath_raw), library=image.library), start=ctx.path).replace("\\", "/")
         if img_path.startswith("//"):
             img_path = img_path[2:]
 
@@ -799,9 +797,11 @@ def _handle_image(ctx, image):
         if export_image:
             img_name = bpy.path.basename(img_path)
 
-            if img_name == '':
+            # Special case: We can not export PNG if bit depth is not 8 (or 32), for whatever reason
+
+            if img_name == '' or image.depth > 32 or image.depth == 16:
                 keep_format = False
-                if image.file_format in ["OPEN_EXR", "OPEN_EXR_MULTILAYER", "HDR"]:
+                if image.depth > 32 or image.depth == 16 or image.file_format in ["OPEN_EXR", "OPEN_EXR_MULTILAYER", "HDR"]:
                     is_f32 = True
                     extension = ".exr"
                 else:
@@ -854,16 +854,24 @@ def _export_image_texture(ctx, node):
         print(f"Not supported image color space {cs}")
         linear = False
 
-    ctx.result["textures"].append(
-        {
-            "type": "image",
-            "name": tex_name,
-            "filename": img_path,
-            "wrap_mode": wrap_mode,
-            "filter_type": filter_type,
-            "linear": linear
-        }
-    )
+    # Make sure we do not add the same texture to the array.
+    # This is not necessary for memory or image loading,
+    # but can improve performance due to less shader complexity
+    key = (img_path, wrap_mode, filter_type, linear)
+    if key in ctx.result["_image_textures"]:
+        tex_name = ctx.result["_image_textures"][key]
+    else:
+        ctx.result["textures"].append(
+            {
+                "type": "image",
+                "name": tex_name,
+                "filename": img_path,
+                "wrap_mode": wrap_mode,
+                "filter_type": filter_type,
+                "linear": linear
+            }
+        )
+        ctx.result["_image_textures"][key] = tex_name
 
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
@@ -1068,6 +1076,14 @@ def _export_surface_attributes(ctx, node, output_name):
         return "P"
     elif output_name == "Normal":
         return "N"
+    elif output_name == "Tangent":
+        return "Nx"
+    elif output_name == "True Normal":
+        return "Ng"
+    elif output_name == "Incoming":
+        return "V"
+    elif output_name == "Parametric":
+        return "vec3(prim_coords.x, prim_coords.y, 0)"
     elif output_name == "Backfacing":
         return "select(frontside, 0, 1)"
     else:
@@ -1095,6 +1111,12 @@ def _export_uvmap(ctx, node):
     if node.uv_map != "":
         print(f"Additional UV Maps are not supported, default to first one")
     return TEXCOORD_UV
+
+
+def _export_object_info(ctx, node, output_name):
+    if output_name != 'Random':
+        print(f"Object info node only supports 'Random' attribute")
+    return "noise(entity_id)"
 
 
 def _export_light_path(ctx, node, output_name):
@@ -1269,6 +1291,8 @@ def export_node(ctx, socket):
             expr = _export_normalmap(ctx, node)
         elif isinstance(node, bpy.types.ShaderNodeUVMap):
             expr = _export_uvmap(ctx, node)
+        elif isinstance(node, bpy.types.ShaderNodeObjectInfo):
+            expr = _export_object_info(ctx, node, output_name)
         elif isinstance(node, bpy.types.ShaderNodeLightPath):
             expr = _export_light_path(ctx, node, output_name)
         elif isinstance(node, bpy.types.ShaderNodeGroup):
