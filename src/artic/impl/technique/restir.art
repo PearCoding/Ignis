@@ -142,15 +142,10 @@ struct Reservoir {
         
         //update weights in reservoir
         r.w += w_new;
-        //let idx = pixel_idx + 16;
-        //buffer.store_f32(idx, buffer.load_f32(idx) + w_new);
 
         //update sample_count
         r.sample_count = r.sample_count + 1.0;
-        //buffer.store_i32(idx + 1, buffer.load_i32(idx + 1) + 1);
-        
-        // w += w_new;
-        // sample_count += 1; 
+
         let random = randf(rnd);
         if(r.w == 0.0) {
             return()
@@ -234,16 +229,35 @@ fn @request_spatial_reservoir_buffer(device: Device, image_size: i32) -> DeviceB
     device.request_buffer("spatial_reservoir_buffer", 22 * image_size, 0)
 }
 
+fn @request_initial_sample_buffer_di(device: Device, image_size: i32) -> DeviceBuffer {
+    device.request_buffer("initial_sample_buffer_di", 19 * image_size, 0)
+}
+
+fn request_temporal_reservoir_buffer_di(device: Device, image_size: i32) -> DeviceBuffer {
+    device.request_buffer("temporal_reservoir_buffer_di", 22 * image_size, 0)
+}
+
+fn @request_spatial_reservoir_buffer_di(device: Device, image_size: i32) -> DeviceBuffer {
+    device.request_buffer("spatial_reservoir_buffer_di", 22 * image_size, 0)
+}
 
 fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, aovs: AOVTable, clamp_value: f32) -> Technique {
     let offset : f32  = 0.001;
     let work_info = get_work_info();
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
+
     
-    //request needed buffer
+    
+    //request needed buffer for ReSTIR GI
     let sample_buffer = request_initial_sample_buffer(device, work_info.height * work_info.width);
     let temporal_reservoir_buffer = request_temporal_reservoir_buffer(device, work_info.height * work_info.width);
     let spatial_reservoir_buffer = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
+        
+    //request needed buffer for ReSTIR DI
+    let sample_buffer_di = request_initial_sample_buffer_di(device, work_info.height * work_info.width);
+    let temporal_reservoir_buffer_di = request_temporal_reservoir_buffer_di(device, work_info.height * work_info.width);
+    //let spatial_reservoir_buffer = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
+
 
     //load aov for direct ligthing
     let aov_direct_light = @aovs(2);
@@ -270,7 +284,7 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                  ) -> ShadowRay {
                      let pt = unwrap_rsraypayload(payload);
 
-                     //let newRnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
+                     let new_rnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
 
 
                     //   if(pt.depth == 1) 
@@ -295,11 +309,11 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                         return(ShadowRay::None)
                     }
             
-                    let (light_id, light_select_pdf) = light_selector.sample(rnd);
+                    let (light_id, light_select_pdf) = light_selector.sample(new_rnd);
             
                     let light         = get_light(light_id); 
                     let sample_direct = light.sample_direct;
-                    let light_sample  = @sample_direct(rnd, surf);
+                    let light_sample  = @sample_direct(new_rnd, surf);
             
                     let pdf_l_s = light_sample.pdf.as_solid(light_sample.cos, light_sample.dist * light_sample.dist) * light_select_pdf; // Pdf to sample the light based on NEE
                     if pdf_l_s <= flt_eps {
@@ -320,10 +334,20 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
             
                         // The intensity is already divided by the pdf, adapt to the (possible) change of domain
                         let factor = light_sample.pdf.value / pdf_l_s;
-            
-                        let contrib = handle_color(color_mulf(
-                            color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));
-            
+
+                        //store information for ReSTIR DI
+                        sample_buffer_di.store_f32(pixel * 19 + 15, pdf_l_s);
+
+                        let mut contrib = make_color(0.0, 0.0, 0.0, 0.0); 
+                        if(pt.depth == 1) 
+                        {
+                            contrib = handle_color(color_mulf(color_mul(light_sample.intensity, mat.bsdf.eval(in_dir, out_dir)), 1.0 / pdf_l_s));
+                        } else 
+                        {
+                            contrib = handle_color(color_mulf(
+                                color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));    
+                        }
+
                         if light.infinite {
                             return(make_simple_shadow_ray(
                                 make_ray(surf.point, in_dir, offset, flt_max),
@@ -495,9 +519,12 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                       , pixel: i32
                       , _shader: Shader
                      , color: Color) -> Option[Color] {
-           if (color_average(aov_depth_info.get(pixel)) == 1.0) 
-           {
-               aov_direct_light.splat(pixel, color);
+
+            //store value of target distribution for ReSTIR DI
+            if (color_average(aov_depth_info.get(pixel)) == 1.0) 
+            {
+               sample_buffer_di.store_vec3(pixel * 19 + 12, color_to_vec3(color));
+               //aov_direct_light.splat(pixel, color);
                return(Option[Color]::None)
            }
         make_option(color)
@@ -523,6 +550,11 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
       let sample_buffer = request_initial_sample_buffer(device, work_info.height * work_info.width);
       let temporal_reservoir_buffer = request_temporal_reservoir_buffer(device, work_info.height * work_info.width);
       let spatial_reservoir_buffer = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
+
+      //request needed buffers for ReSTIR DI again
+      let sample_buffer_di = request_initial_sample_buffer_di(device, work_info.height * work_info.width);
+      let temporal_reservoir_buffer_di = request_temporal_reservoir_buffer_di(device, work_info.height * work_info.width);
+      let spatial_reservoir_buffer_di = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
 
       let aov_restir = device.load_aov_image(1, spi);
       let aov_depth_info = device.load_aov_image(3, 1);
@@ -571,8 +603,46 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
           //store updated reservoir again
           store_reservoir(temporal_reservoir_buffer, j, temporal_reservoir);
-          ////
           
+
+           //start with temporal resampling for DI
+           let mut sample_di = load_sample_from_sample_buffer(j, sample_buffer_di);
+
+           let mut temporal_reservoir_di = load_reservoir(j, temporal_reservoir_buffer_di);
+
+           let averaged_radiance_di = color_average(sample_di.radiance); 
+
+          let mut w_new_di = 0.0;
+          if(sample_di.pdf != 0.0) 
+          {
+             let w = averaged_radiance_di; 
+             w_new_di = w as f64;
+          }
+
+          let mut rnd_di = generate_rnd_state(sample_di.pdf, w_new_di as f32, (j * 22));
+
+         update(temporal_reservoir_di, sample_di, w_new_di as f32, (j * 22), temporal_reservoir_buffer_di, rnd_di);
+
+           //update reservoirs W
+           let rad_di = color_average(temporal_reservoir_di.sample.radiance);
+
+           //if averaged radiance is 0 then set the reservoirs weight to 0 (otherwise division by 0)
+           if(rad_di == 0.0) {
+              temporal_reservoir_di.weight = 0;
+           } else {
+               temporal_reservoir_di.weight = temporal_reservoir_di.w / (temporal_reservoir_di.sample_count * rad_di);
+           }
+
+           store_reservoir(temporal_reservoir_buffer_di, j, temporal_reservoir_di);
+
+           let pdf_l = sample_buffer_di.load_f32(j * 19 + 15);
+
+        //    let debug = device.request_debug_output();
+
+        //    debug.print_f32(pdf_l);
+
+           aov_direct_light.splat(j, color_mulf(color_mulf(temporal_reservoir_di.sample.radiance, pdf_l), temporal_reservoir_di.weight) /*temporal_reservoir_di.sample.radiance*/);
+
           //calculate final pixel value
 
           let visPointBSDF = spatial_reservoir_buffer.load_vec3(j * 22 + 16);
@@ -585,4 +655,5 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
       }
       device.sync();
+
 }
