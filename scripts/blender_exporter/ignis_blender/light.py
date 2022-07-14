@@ -9,6 +9,10 @@ from .defaults import *
 def export_background(result, out_dir, depsgraph, copy_images):
     scene = depsgraph.scene
 
+    # It might be that no world is given at all
+    if not scene.world:
+        return
+
     # Export basic world if no shading nodes are given
     if not scene.world.node_tree:
         if scene.world.color[0] > 0 and scene.world.color[1] > 0 and scene.world.color[2] > 0:
