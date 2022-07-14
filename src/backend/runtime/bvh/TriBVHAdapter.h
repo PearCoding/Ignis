@@ -47,6 +47,7 @@ struct BvhNTriM<2, 1> {
 
 struct TriangleProxy : public bvh::Triangle<float> {
     using bvh::Triangle<float>::Triangle;
+    Vector2f c0, c1, c2;
     int prim_id;
 };
 
@@ -194,14 +195,20 @@ inline void build_bvh(const TriMesh& tri_mesh,
         int id1 = (int)floor(c1[0] * disp_tex.width * disp_tex.height + c1[1] * disp_tex.height) * 4; 
         int id2 = (int)floor(c2[0] * disp_tex.width * disp_tex.height + c2[1] * disp_tex.height) * 4; 
 
-        float d0 = disp_tex.pixels[id0] * 2;
-        float d1 = disp_tex.pixels[id1] * 2;
-        float d2 = disp_tex.pixels[id2] * 2;
+        float d0 = disp_tex.pixels[id0] * 2 * 0;
+        float d1 = disp_tex.pixels[id1] * 2 * 0;
+        float d2 = disp_tex.pixels[id2] * 2 * 0;
 
         auto& v0      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 0]] + n0 * d0;
         auto& v1      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 1]] + n1 * d1;
         auto& v2      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 2]] + n2 * d2;
-        primitives[i] = TriangleProxy(v0, v1, v2);
+        
+        auto tri = TriangleProxy(v0, v1, v2);
+        tri.c0 = c0;
+        tri.c1 = c1;
+        tri.c2 = c2;
+
+        primitives[i] = tri;
 
         primitives[i].prim_id = (int)i;
     }

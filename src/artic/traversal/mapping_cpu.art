@@ -86,6 +86,7 @@ fn @make_cpu_node8(j: i32, nodes: &[Node8]) = Node {
 };
 
 fn @make_cpu_tri4(tris: &[Tri4]) -> fn (i32) -> Prim {
+       
     @ |j| Prim {
         intersect = @ |i, ray| -> Option[Hit] {
             let tri_ptr = rv_align(&tris(j) as &i8, 32) as &Tri4;
@@ -189,6 +190,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
                                    , bvh: PrimBvh
                                    , any_hit: bool
                                    , root: i32
+                                   , shape : Shape
                                    ) -> Hit {
     let sorting_network = match bvh.arity {
         8 => batcher_sort,
@@ -313,6 +315,7 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                             , single: bool
                             , any_hit: bool
                             , root: i32
+                            , shape : Shape
                             ) -> Hit {
 
     let switch_threshold = match vector_width {
@@ -360,7 +363,7 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                     for lane in cpu_one_bits(mask) {
                         let lane_ray = load_ray(&ray, lane);
                         let lane_octant = bitcast[RayOctant](rv_extract(bitcast[f32](octant), lane));
-                        let lane_hit = cpu_traverse_single_helper_prim(lane_ray, lane_octant, min_max, bvh, any_hit, stack.top().node);
+                        let lane_hit = cpu_traverse_single_helper_prim(lane_ray, lane_octant, min_max, bvh, any_hit, stack.top().node, shape);
                         if lane_hit.prim_id >= 0 {
                             store_hit(&mut hit, lane, lane_hit);
                             if !any_hit { rv_store(&mut ray.tmax, lane, lane_hit.distance); }
@@ -504,7 +507,8 @@ fn @cpu_traverse_helper( mut ray: Ray
                     if tmin <= hit.distance {
                         let local_ray = transform_ray(ray, leaf.local);
                         let shape_bvh = @prim_bvhs(leaf.shape_id);
-                        let local_hit = cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
+                        let shape = scene.database.shapes(leaf.shape_id);
+                        let local_hit = cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/, shape);
                         
                         if active {
                             if local_hit.prim_id != -1 {
