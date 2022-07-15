@@ -102,7 +102,7 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
 }
 
 fn @gpu_hit_shade( acc: Accelerator
-             , shader: Shader
+             , shader: MaterialShader
              , scene: Scene
              , technique: Technique
              , accumulate: FilmAccumulator
@@ -155,7 +155,7 @@ fn @gpu_hit_shade( acc: Accelerator
         let lcl_surf = shape.surface_element(local_ray, hit);
         let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
         
-        let mat = @shader(ray, hit, glb_surf);
+        let mat = @shader(make_surface_shading_context(ent_id, ray, hit, glb_surf));
         if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, primary_payload, glb_surf, mat) {
             accumulate(pixel, color);
         }
@@ -195,7 +195,7 @@ fn @gpu_hit_shade_handler(dev_id: i32
                         , acc: Accelerator
                         , atomics: Atomics
                         , entity_id: i32
-                        , shader: Shader
+                        , shader: MaterialShader
                         , scene: Scene
                         , technique: Technique
                         , begin: i32
@@ -275,7 +275,7 @@ fn @gpu_miss_shade_handler(dev_id: i32
 // Handle advanced shadows
 fn @gpu_advanced_shadow(is_hit: bool
                       , acc: Accelerator
-                      , shader: Shader
+                      , shader: MaterialShader
                       , technique: Technique
                       , accumulate: FilmAccumulator
                       , spi: i32
@@ -314,7 +314,7 @@ fn @gpu_advanced_shadow(is_hit: bool
 fn @gpu_advanced_shadow_handler(dev_id: i32
                               , acc: Accelerator
                               , atomics: Atomics
-                              , shader: Shader
+                              , shader: MaterialShader
                               , technique: Technique
                               , begin: i32
                               , end: i32
@@ -347,6 +347,7 @@ fn @gpu_copy_ray( rays: RayStream
     other_rays.dir_z(dst_id) = rays.dir_z(src_id);
     other_rays.tmin(dst_id)  = rays.tmin(src_id);
     other_rays.tmax(dst_id)  = rays.tmax(src_id);
+    other_rays.flags(dst_id) = rays.flags(src_id);
 }
 
 fn @gpu_copy_primary_ray( primary: PrimaryStream
@@ -930,29 +931,81 @@ fn @make_gpu_device( dev_id: i32
             make_gpu_bvh2_tri1(nodes, tris, is_nvvm)
         } 
     },
-    load_image = @ |filename| {
+    load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_image(dev_id, filename, &mut pixel_data, &mut width, &mut height);
+        ignis_load_image(dev_id, filename, &mut pixel_data, &mut width, &mut height, channel_count);
 
-        let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
+        let stride = width; // Drop mutable attribute
         let q = pixel_data as &addrspace(1)[f32];
-        make_image_rgba32( if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
-                           else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) }
-                         , width, height)
+        if channel_count == 1 {
+            make_image_mono(if is_nvvm { @ |x, y| nvvm_ldg_f32(&q(y * stride + x)) } 
+                            else { @ |x, y| q(y * stride + x) },
+                            width, height)
+        } else {
+            make_image_rgba32(if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
+                              else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) },
+                              width, height)
+        }
     },
-    load_packed_image = @ |filename, hint_opaque| {
-        let mut pixel_data : &[u32];
+    load_image_by_id = @ |id, channel_count| {
+        let mut pixel_data : &[f32];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_packed_image(dev_id, filename, &mut pixel_data, &mut width, &mut height);
+        ignis_load_image_by_id(dev_id, id, &mut pixel_data, &mut width, &mut height, channel_count);
 
-        let stride = width; // Without using this and using width directly will result in an error... This is not good behaviour...
-        let q = pixel_data as &addrspace(1)[i32];
-        make_image_rgba32(if is_nvvm { @ |x, y| image_rgba_unpack(bitcast[u32](nvvm_ldg_i32(&(q(y * stride + x)))), hint_opaque) }
-                          else { @ |x, y| image_rgba_unpack(bitcast[u32](q(y * stride + x)), hint_opaque) },
-                          width, height)
+        let stride = width; // Drop mutable attribute
+        let q = pixel_data as &addrspace(1)[f32];
+        if channel_count == 1 {
+            make_image_mono(if is_nvvm { @ |x, y| nvvm_ldg_f32(&q(y * stride + x)) } 
+                            else { @ |x, y| q(y * stride + x) },
+                            width, height)
+        } else {
+            make_image_rgba32(if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
+                              else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) },
+                              width, height)
+        }
+    },
+    load_packed_image = @ |filename, channel_count, is_linear| {
+        let mut pixel_data : &[u8];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_packed_image(dev_id, filename, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
+
+        let stride = width; // Drop mutable attribute
+        if channel_count == 1 {
+            let q = pixel_data as &addrspace(1)[u8];
+            make_image_mono(if is_nvvm { @ |x, y| image_mono_unpack(nvvm_ldg_u8(&(q(y * stride + x)))) }
+                            else { @ |x, y| image_mono_unpack(q(y * stride + x)) },
+                            width, height)
+        } else {
+            let hint_opaque = channel_count == 3;
+            let q = pixel_data as &addrspace(1)[i32];
+            make_image_rgba32(if is_nvvm { @ |x, y| image_rgba_unpack(bitcast[u32](nvvm_ldg_i32(&(q(y * stride + x)))), hint_opaque) }
+                              else { @ |x, y| image_rgba_unpack(bitcast[u32](q(y * stride + x)), hint_opaque) },
+                              width, height)
+        }
+    },
+    load_packed_image_by_id = @ |id, channel_count, is_linear| {
+        let mut pixel_data : &[u8];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_packed_image_by_id(dev_id, id, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
+
+        let stride = width; // Drop mutable attribute
+        if channel_count == 1 {
+            let q = pixel_data as &addrspace(1)[u8];
+            make_image_mono(if is_nvvm { @ |x, y| image_mono_unpack(nvvm_ldg_u8(&(q(y * stride + x)))) }
+                            else { @ |x, y| image_mono_unpack(q(y * stride + x)) },
+                            width, height)
+        } else {
+            let hint_opaque = channel_count == 3;
+            let q = pixel_data as &addrspace(1)[i32];
+            make_image_rgba32(if is_nvvm { @ |x, y| image_rgba_unpack(bitcast[u32](nvvm_ldg_i32(&(q(y * stride + x)))), hint_opaque) }
+                              else { @ |x, y| image_rgba_unpack(bitcast[u32](q(y * stride + x)), hint_opaque) },
+                              width, height)
+        }
     },
     load_aov_image = @ |id, spi| gpu_get_aov_image(id, dev_id, atomics, spi),
     load_rays = @ || {
@@ -960,11 +1013,18 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_rays(dev_id, &mut rays);
         rays
     },
-    load_host_buffer = load_cpu_buffer,
+    load_host_buffer       = load_cpu_buffer,
+    load_host_buffer_by_id = load_cpu_buffer_by_id,
     load_buffer = @ |filename| {
         let mut ptr      : &[u8];
         let mut bytesize : i32;
         ignis_load_buffer(dev_id, filename, &mut ptr, &mut bytesize);
+        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
+    },
+    load_buffer_by_id = @ |id| {
+        let mut ptr      : &[u8];
+        let mut bytesize : i32;
+        ignis_load_buffer_by_id(dev_id, id, &mut ptr, &mut bytesize);
         make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
     },
     request_buffer = @ |name, size, flags| request_gpu_buffer(dev_id, name, size, flags, atomics, is_nvvm),
@@ -976,7 +1036,11 @@ fn @make_gpu_device( dev_id: i32
         ignis_request_buffer(dev_id, "__dbg_output", &mut ptr, size * sizeof[i32]() as i32, 0);
         let buffer = make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm);
         make_debug_output(buffer)
-    }
+    },
+    get_local_parameter_i32   = @|name, def| registry::get_local_parameter_i32(  dev_id, name, def),
+    get_local_parameter_f32   = @|name, def| registry::get_local_parameter_f32(  dev_id, name, def),
+    get_local_parameter_vec3  = @|name, def| registry::get_local_parameter_vec3( dev_id, name, def),
+    get_local_parameter_color = @|name, def| registry::get_local_parameter_color(dev_id, name, def)
 };
 
 fn @make_nvvm_device(dev: i32) -> Device {
@@ -992,7 +1056,7 @@ fn @make_nvvm_device(dev: i32) -> Device {
     make_gpu_device(
         dev_id,
         nvvm_accelerator(dev),
-        make_default_min_max(), //make_nvvm_min_max(), // FIXME: There is an issue with AnyDSL. This is just a workaround. See https://github.com/AnyDSL/thorin/issues/124
+        make_default_min_max(), //make_nvvm_min_max(), // The NVVM min_max stuff seems to be slow compared to the default one
         @ |ptr| make_gpu_buffer(dev, ptr as &addrspace(1)[u8], 0, atomics, true),
         atomics,
         true
@@ -1012,7 +1076,7 @@ fn @make_amdgpu_device(dev: i32) -> Device {
     make_gpu_device(
         dev_id,
         amdgpu_accelerator(dev),
-        make_default_min_max(), //make_amdgpu_min_max(), // FIXME: See above
+        make_default_min_max(), //make_amdgpu_min_max(),
         @ |ptr| make_gpu_buffer(dev, ptr as &addrspace(1)[u8], 0, atomics, false),
         atomics,
         false

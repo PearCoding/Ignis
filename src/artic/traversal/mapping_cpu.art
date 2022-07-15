@@ -134,12 +134,14 @@ fn @make_cpu_entity_leaf(j: i32, objs: &[EntityLeaf1]) -> EntityLeaf {
     let e0 = d.load_vec4(0);
     let e1 = d.load_vec4(4);
     let m  = d.load_mat3x4(8);
+    let e2 = d.load_vec4(20);
     make_entity_leaf(
         make_bbox(make_vec3(e0.x, e0.y, e0.z),
                   make_vec3(e1.x, e1.y, e1.z)),
         bitcast[i32](e0.w),
         bitcast[i32](e1.w),
-        m
+        m,
+        bitcast[u32](e2.x)
     )
 }
 
@@ -330,12 +332,13 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
     let octant = ray_octant(ray);
 
     let load_ray = @ |ray_ptr: &Ray, lane: i32| Ray {
-        org = make_vec3(rv_load(&ray_ptr.org.x, lane), rv_load(&ray_ptr.org.y, lane), rv_load(&ray_ptr.org.z, lane)),
-        dir = make_vec3(rv_load(&ray_ptr.dir.x, lane), rv_load(&ray_ptr.dir.y, lane), rv_load(&ray_ptr.dir.z, lane)),
+        org     = make_vec3(rv_load(&ray_ptr.org.x, lane), rv_load(&ray_ptr.org.y, lane), rv_load(&ray_ptr.org.z, lane)),
+        dir     = make_vec3(rv_load(&ray_ptr.dir.x, lane), rv_load(&ray_ptr.dir.y, lane), rv_load(&ray_ptr.dir.z, lane)),
         inv_org = make_vec3(rv_load(&ray_ptr.inv_org.x, lane), rv_load(&ray_ptr.inv_org.y, lane), rv_load(&ray_ptr.inv_org.z, lane)),
         inv_dir = make_vec3(rv_load(&ray_ptr.inv_dir.x, lane), rv_load(&ray_ptr.inv_dir.y, lane), rv_load(&ray_ptr.inv_dir.z, lane)),
-        tmin = rv_load(&ray_ptr.tmin, lane),
-        tmax = rv_load(&ray_ptr.tmax, lane)
+        tmin    = rv_load(&ray_ptr.tmin, lane),
+        tmax    = rv_load(&ray_ptr.tmax, lane),
+        flags   = bitcast[u32](rv_load(&bitcast[f32](ray_ptr.flags), lane))
     };
 
     let store_hit = @ |hit_ptr: &mut Hit, lane: i32, hit2: Hit| {
@@ -500,21 +503,23 @@ fn @cpu_traverse_helper( mut ray: Ray
             while true {
                 let leaf = bvh.ent(ref_id++);
 
-                if let Option[(f32,f32)]::Some((tmin, _tmax)) = intersect_ray_box_single_section(min_max, false, ray, leaf.bbox) {
-                    if tmin <= hit.distance {
-                        let local_ray = transform_ray(ray, leaf.local);
-                        let shape_bvh = @prim_bvhs(leaf.shape_id);
-                        let local_hit = cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
-                        
-                        if active {
-                            if local_hit.prim_id != -1 {
-                                if local_hit.distance <= hit.distance {
-                                    hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
-                                    ray.tmax = hit.distance;
-                                    
-                                    if any_hit {
-                                        terminated = true;
-                                        active     = false;
+                if check_ray_visibility(ray, leaf.flags) {
+                    if let Option[(f32,f32)]::Some((tmin, _tmax)) = intersect_ray_box_single_section(min_max, false, ray, leaf.bbox) {
+                        if tmin <= hit.distance {
+                            let local_ray = transform_ray(ray, leaf.local);
+                            let shape_bvh = @prim_bvhs(leaf.shape_id);
+                            let local_hit = cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
+                            
+                            if active {
+                                if local_hit.prim_id != -1 {
+                                    if local_hit.distance <= hit.distance {
+                                        hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
+                                        ray.tmax = hit.distance;
+                                        
+                                        if any_hit {
+                                            terminated = true;
+                                            active     = false;
+                                        }
                                     }
                                 }
                             }

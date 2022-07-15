@@ -163,7 +163,7 @@ fn @make_ppm_light_emitter(num_lights: i32, lights: LightTable, iter: i32) -> Ra
             let sample_emission = light.sample_emission;
             let light_sample    = @sample_emission(rnd);
             
-            let ray      = make_ray(light_sample.pos, light_sample.dir, select(light.infinite, 0:f32, offset), flt_max);
+            let ray      = make_ray(light_sample.pos, light_sample.dir, select(light.infinite, 0:f32, offset), flt_max, ray_flag_light);
             let radiance = color_mulf(light_sample.intensity, safe_div(math_builtins::fabs(light_sample.cos), pdf_lightpick));
             
             write_ppmraypayload(payload, PPMRayPayload {
@@ -238,7 +238,7 @@ fn @make_ppm_light_renderer(max_path_len: i32, _aovs: AOVTable, light_cache: Lig
                         radius_or_light = pt.radius_or_light,
                         path_type       = pt.path_type, // Not used
                     });
-                    return(make_option(make_ray(surf.point, mat_sample.in_dir, offset, flt_max)))
+                    return(make_option(make_ray(surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)))
                 }
             }
         }
@@ -412,7 +412,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
                 radius_or_light = get_radius(hit, pt),
                 path_type       = select(mat.bsdf.is_specular, pt.path_type, /*pt.path_type +*/ 1)
             });
-            make_option(make_ray(surf.point, mat_sample.in_dir, offset, flt_max))
+            make_option(make_ray(surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce))
         } else {
             Option[Ray]::None
         }

@@ -31,6 +31,8 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.FilmHeight          = opts.FilmHeight;
     ctx.Lights              = std::make_unique<LoaderLight>();
 
+    ctx.ForceShadingTreeSpecialization = opts.ForceSpecialization;
+
     ctx.Lights->prepare(ctx);
 
     // Load content
@@ -73,62 +75,71 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         ctx.SamplesPerIteration     = info.GetSPI(opts.SamplesPerIteration);
 
         // Generate Ray Generation Shader
+        ctx.resetRegistry();
         IG_LOG(L_DEBUG) << "Generating ray generation shader for variant " << i << std::endl;
         if (info.OverrideCameraGenerator)
-            variant.RayGenerationShader = info.OverrideCameraGenerator(ctx);
+            variant.RayGenerationShader.Exec = info.OverrideCameraGenerator(ctx);
         else
-            variant.RayGenerationShader = RayGenerationShader::setup(ctx);
-        if (variant.RayGenerationShader.empty()) {
+            variant.RayGenerationShader.Exec = RayGenerationShader::setup(ctx);
+        if (variant.RayGenerationShader.Exec.empty()) {
             IG_LOG(L_ERROR) << "Constructed empty ray generation shader." << std::endl;
             return false;
         }
+        variant.RayGenerationShader.LocalRegistry = std::move(ctx.LocalRegistry);
 
         // Generate Miss Shader
+        ctx.resetRegistry();
         IG_LOG(L_DEBUG) << "Generating miss shader for variant " << i << std::endl;
-        variant.MissShader = MissShader::setup(ctx);
-        if (variant.MissShader.empty()) {
+        variant.MissShader.Exec = MissShader::setup(ctx);
+        if (variant.MissShader.Exec.empty()) {
             IG_LOG(L_ERROR) << "Constructed empty miss shader." << std::endl;
             return false;
         }
+        variant.MissShader.LocalRegistry = std::move(ctx.LocalRegistry);
 
         // Generate Hit Shader
         for (size_t j = 0; j < ctx.Environment.Materials.size(); ++j) {
+            ctx.resetRegistry();
             IG_LOG(L_DEBUG) << "Generating hit shader " << j << " for variant " << i << std::endl;
             std::string shader = HitShader::setup(j, ctx);
             if (shader.empty()) {
                 IG_LOG(L_ERROR) << "Constructed empty hit shader for material " << j << "." << std::endl;
                 return false;
             }
-            variant.HitShaders.push_back(shader);
+            variant.HitShaders.push_back(ShaderOutput<std::string>{ shader, std::move(ctx.LocalRegistry) });
         }
 
         // Generate Advanced Shadow Shaders if requested
         if (info.ShadowHandlingMode != ShadowHandlingMode::Simple) {
             const size_t max_materials = info.ShadowHandlingMode == ShadowHandlingMode::Advanced ? 1 : ctx.Environment.Materials.size();
             for (size_t j = 0; j < max_materials; ++j) {
+                ctx.resetRegistry();
                 IG_LOG(L_DEBUG) << "Generating advanced shadow hit shader " << j << " for variant " << i << std::endl;
                 std::string shader = AdvancedShadowShader::setup(true, j, ctx);
                 if (shader.empty()) {
                     IG_LOG(L_ERROR) << "Constructed empty advanced shadow hit shader for material " << j << "." << std::endl;
                     return false;
                 }
-                variant.AdvancedShadowHitShaders.push_back(shader);
+                variant.AdvancedShadowHitShaders.push_back(ShaderOutput<std::string>{ shader, std::move(ctx.LocalRegistry) });
             }
             for (size_t j = 0; j < max_materials; ++j) {
+                ctx.resetRegistry();
                 IG_LOG(L_DEBUG) << "Generating advanced shadow miss shader " << j << " for variant " << i << std::endl;
                 std::string shader = AdvancedShadowShader::setup(false, j, ctx);
                 if (shader.empty()) {
                     IG_LOG(L_ERROR) << "Constructed empty advanced shadow miss shader for material " << j << "." << std::endl;
                     return false;
                 }
-                variant.AdvancedShadowMissShaders.push_back(shader);
+                variant.AdvancedShadowMissShaders.push_back(ShaderOutput<std::string>{ shader, std::move(ctx.LocalRegistry) });
             }
         }
 
         for (size_t j = 0; j < info.CallbackGenerators.size(); ++j) {
             if (info.CallbackGenerators.at(j) != nullptr) {
+                ctx.resetRegistry();
                 IG_LOG(L_DEBUG) << "Generating callback shader " << j << " for variant " << i << std::endl;
-                variant.CallbackShaders[j] = info.CallbackGenerators.at(j)(ctx);
+                variant.CallbackShaders[j].Exec          = info.CallbackGenerators.at(j)(ctx);
+                variant.CallbackShaders[j].LocalRegistry = std::move(ctx.LocalRegistry);
             }
         }
     }
@@ -136,6 +147,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;
     result.Database.SceneBBox   = ctx.Environment.SceneBBox;
     result.TechniqueInfo        = ctx.TechniqueInfo;
+    result.ResourceMap          = ctx.generateResourceMap();
 
     return !ctx.HasError;
 }

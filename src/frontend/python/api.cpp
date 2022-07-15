@@ -80,6 +80,7 @@ PYBIND11_MODULE(pyignis, m)
         .def_readwrite("DumpShaderFull", &RuntimeOptions::DumpShaderFull)
         .def_readwrite("AcquireStats", &RuntimeOptions::AcquireStats)
         .def_readwrite("Device", &RuntimeOptions::Device)
+        .def_readwrite("SPI", &RuntimeOptions::SPI)
         .def_readwrite("OverrideCamera", &RuntimeOptions::OverrideCamera)
         .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique)
         .def_property(
@@ -125,12 +126,20 @@ PYBIND11_MODULE(pyignis, m)
                 std::vector<size_t>{ sizeof(float) * width * 3, sizeof(float) * 3, sizeof(float) } // strides in bytes
             );
         })
+        .def("setParameter", py::overload_cast<const std::string&, int>(&Runtime::setParameter))
+        .def("setParameter", py::overload_cast<const std::string&, float>(&Runtime::setParameter))
+        .def("setParameter", py::overload_cast<const std::string&, const Vector3f&>(&Runtime::setParameter))
+        .def("setParameter", py::overload_cast<const std::string&, const Vector4f&>(&Runtime::setParameter))
         .def("clearFramebuffer", py::overload_cast<>(&Runtime::clearFramebuffer))
         .def("clearFramebuffer", py::overload_cast<size_t>(&Runtime::clearFramebuffer))
         .def_property_readonly("iterationCount", &Runtime::currentIterationCount)
         .def_property_readonly("sampleCount", &Runtime::currentSampleCount)
         .def_property_readonly("framebufferWidth", &Runtime::framebufferWidth)
-        .def_property_readonly("framebufferHeight", &Runtime::framebufferHeight);
+        .def_property_readonly("framebufferHeight", &Runtime::framebufferHeight)
+        .def_property_readonly("technique", &Runtime::technique)
+        .def_property_readonly("camera", &Runtime::camera)
+        .def_property_readonly("target", &Runtime::target)
+        .def_property_readonly("spi", &Runtime::samplesPerIteration);
 
     py::class_<RuntimeWrap>(m, "RuntimeWrap")
         .def("__enter__", &RuntimeWrap::enter, py::return_value_policy::reference)

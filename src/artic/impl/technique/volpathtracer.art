@@ -106,14 +106,14 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
             if light.infinite {
                 let vol = color_mul(hitvol, medium.eval_inf(surf.point, in_dir));
                 return(make_simple_shadow_ray(
-                    make_ray(surf.point, in_dir, offset, flt_max),
+                    make_ray(surf.point, in_dir, offset, flt_max, ray_flag_shadow),
                     color_mul(contrib, vol)
                 ))
             } else {
                 let ld  = vec3_sub(light_sample.pos, surf.point);
                 let vol = color_mul(hitvol, medium.eval(surf.point, ld));
                 return(make_simple_shadow_ray(
-                    make_ray(surf.point, ld, offset, 1 - offset),
+                    make_ray(surf.point, ld, offset, 1 - offset, ray_flag_shadow),
                     color_mul(contrib, vol)
                 ))
             }
@@ -214,7 +214,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                     eta     = pt.eta,
                     medium  = pt.medium
                 });
-                make_option(make_ray(medium_sample.pos, phase_sample.in_dir, 0, flt_max))
+                make_option(make_ray(medium_sample.pos, phase_sample.in_dir, 0, flt_max, ray_flag_bounce))
             }
         } else {
             // Bounce on surface
@@ -239,7 +239,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                         eta     = pt.eta * bsdf_sample.eta,
                         medium  = new_medium
                     });
-                    make_option(make_ray(surf.point, bsdf_sample.in_dir, offset, flt_max))
+                    make_option(make_ray(surf.point, bsdf_sample.in_dir, offset, flt_max, ray_flag_bounce))
                 }
             } else {
                 Option[Ray]::None

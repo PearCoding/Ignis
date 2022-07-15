@@ -12,23 +12,43 @@ struct Ray {
     inv_dir: Vec3, // Inverse of the direction
     inv_org: Vec3, // Origin multiplied by the inverse of the direction
     tmin:    f32,  // Minimum distance from the origin
-    tmax:    f32   // Maximum distance from the origin
+    tmax:    f32,  // Maximum distance from the origin
+    flags:   u32
 }
 
 type RayOctant = i32;
 
-fn @make_ray(org: Vec3, dir: Vec3, tmin: f32, tmax: f32) -> Ray {
+static ray_flag_camera = 0x1:u32;
+static ray_flag_light  = 0x2:u32;
+static ray_flag_bounce = 0x4:u32;
+static ray_flag_shadow = 0x8:u32;
+static ray_flag_type_mask = ray_flag_camera | ray_flag_light | ray_flag_bounce | ray_flag_shadow;
+
+fn @make_ray(org: Vec3, dir: Vec3, tmin: f32, tmax: f32, flags: u32) -> Ray {
     let inv_dir = make_vec3(safe_rcp(dir.x), safe_rcp(dir.y), safe_rcp(dir.z));
     let inv_org = vec3_neg(vec3_mul(org, inv_dir));
     Ray {
-        org = org,
-        dir = dir,
+        org     = org,
+        dir     = dir,
         inv_dir = inv_dir,
         inv_org = inv_org,
-        tmin = tmin,
-        tmax = tmax
+        tmin    = tmin,
+        tmax    = tmax,
+        flags   = flags
     }
 }
+
+fn @make_zero_ray() = Ray {
+    org     = vec3_expand(0),
+    dir     = vec3_expand(0),
+    inv_dir = vec3_expand(0),
+    inv_org = vec3_expand(0),
+    tmin    = 0,
+    tmax    = flt_max,
+    flags   = 0
+};
+
+fn @check_ray_visibility(ray: Ray, flags: u32) = (ray.flags & ray_flag_type_mask) == ((ray.flags & flags) & ray_flag_type_mask);
 
 // Transforms ray. The direction is not normalized
 // The near and far distances are still given in global space
@@ -36,7 +56,7 @@ fn @make_ray(org: Vec3, dir: Vec3, tmin: f32, tmax: f32) -> Ray {
 fn @transform_ray(ray: Ray, m: Mat3x4) = make_ray(
     mat3x4_transform_point(m, ray.org),
     mat3x4_transform_direction(m, ray.dir),
-    ray.tmin, ray.tmax);
+    ray.tmin, ray.tmax, ray.flags);
 
 // Transforms ray. The direction is normalized
 fn @transform_norm_ray(ray: Ray, m: Mat3x4) -> Ray {
@@ -46,7 +66,8 @@ fn @transform_norm_ray(ray: Ray, m: Mat3x4) -> Ray {
         mat3x4_transform_point(m, ray.org),
         vec3_mulf(d, safe_div(1, ln)),
         ray.tmin * ln,
-        ray.tmax * ln)
+        ray.tmax * ln,
+        ray.flags)
 }
 
 // Return the respective octant representation of the given ray

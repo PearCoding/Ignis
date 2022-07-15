@@ -44,7 +44,7 @@ fn @make_list_emitter(rays: &[StreamRay], iter: i32, payloadInitializer: Emitter
             
             let stream_ray = if id < width { rays(id) } else { StreamRay{org=make_vec3(0,0,0), dir=make_vec3(0,0,1), tmin=0, tmax=0}};
             
-            let ray = make_ray(stream_ray.org, stream_ray.dir, stream_ray.tmin, stream_ray.tmax);
+            let ray = make_ray(stream_ray.org, stream_ray.dir, stream_ray.tmin, stream_ray.tmax, 0);
             
             @init(payload, sample, x, y);
             (ray, rnd)

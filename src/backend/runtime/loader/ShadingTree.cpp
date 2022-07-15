@@ -7,9 +7,10 @@
 namespace IG {
 ShadingTree::ShadingTree(LoaderContext& ctx)
     : mContext(ctx)
-    , mTranspiler(ctx)
+    , mTranspiler(*this)
+    , mForceSpecialization(false)
 {
-    beginClosure();
+    beginClosure("_root");
 }
 
 void ShadingTree::signalError()
@@ -17,7 +18,94 @@ void ShadingTree::signalError()
     mContext.signalError();
 }
 
-void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, float def, bool hasDef, InlineMode mode)
+// ------------------ Number
+static inline ShadingTree::NumberOptions mapToNumberOptions(const ShadingTree::VectorOptions& options)
+{
+    return ShadingTree::NumberOptions{
+        options.EmbedType,
+        options.SpecializeZero,
+        options.SpecializeOne
+    };
+}
+
+static inline ShadingTree::NumberOptions mapToNumberOptions(const ShadingTree::ColorOptions& options)
+{
+    return ShadingTree::NumberOptions{
+        options.EmbedType,
+        options.SpecializeBlack,
+        options.SpecializeWhite
+    };
+}
+
+static inline ShadingTree::NumberOptions mapToNumberOptions(const ShadingTree::TextureOptions& options)
+{
+    return ShadingTree::NumberOptions{
+        options.EmbedType,
+        true, // Really?
+        true
+    };
+}
+
+// ------------------ Vector
+static inline ShadingTree::VectorOptions mapToVectorOptions(const ShadingTree::NumberOptions& options)
+{
+    return ShadingTree::VectorOptions{
+        options.EmbedType,
+        options.SpecializeZero,
+        options.SpecializeOne,
+        false
+    };
+}
+
+static inline ShadingTree::VectorOptions mapToVectorOptions(const ShadingTree::ColorOptions& options)
+{
+    return ShadingTree::VectorOptions{
+        options.EmbedType,
+        options.SpecializeBlack,
+        options.SpecializeWhite,
+        false
+    };
+}
+
+static inline ShadingTree::VectorOptions mapToVectorOptions(const ShadingTree::TextureOptions& options)
+{
+    return ShadingTree::VectorOptions{
+        options.EmbedType,
+        true, // Really?
+        true,
+        false
+    };
+}
+
+// ------------------ Color
+static inline ShadingTree::ColorOptions mapToColorOptions(const ShadingTree::NumberOptions& options)
+{
+    return ShadingTree::ColorOptions{
+        options.EmbedType,
+        options.SpecializeZero,
+        options.SpecializeOne
+    };
+}
+
+static inline ShadingTree::ColorOptions mapToColorOptions(const ShadingTree::VectorOptions& options)
+{
+    return ShadingTree::ColorOptions{
+        options.EmbedType,
+        options.SpecializeZero,
+        options.SpecializeOne || options.SpecializeUnit
+    };
+}
+
+static inline ShadingTree::ColorOptions mapToColorOptions(const ShadingTree::TextureOptions& options)
+{
+    return ShadingTree::ColorOptions{
+        options.EmbedType,
+        true, // Really?
+        true
+    };
+}
+
+void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, float def, bool hasDef, const NumberOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -34,25 +122,25 @@ void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, 
     case Parser::PT_NONE:
         if (!hasDef)
             return;
-        inline_str = std::to_string(def);
+        inline_str = acquireNumber(name, def, options);
         break;
     case Parser::PT_INTEGER:
     case Parser::PT_NUMBER:
-        inline_str = std::to_string(prop.getNumber());
+        inline_str = acquireNumber(name, prop.getNumber(), options);
         break;
     case Parser::PT_VECTOR3:
         IG_LOG(L_WARNING) << "Parameter '" << name << "' expects a number but a color was given. Using average instead" << std::endl;
-        inline_str = std::to_string(prop.getVector3().mean());
+        inline_str = "color_luminance(" + acquireColor(name, prop.getVector3(), mapToColorOptions(options)) + ")";
         break;
     case Parser::PT_STRING:
-        inline_str = handleTexture(prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", false, mode == IM_Surface);
+        inline_str = handleTexture(name, prop.getString(), false); // TODO: Map options
         break;
     }
 
     currentClosure().Parameters[name] = inline_str;
 }
 
-void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, InlineMode mode)
+void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, const ColorOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -69,18 +157,51 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
     case Parser::PT_NONE:
         if (!hasDef)
             return;
-        inline_str = "make_color(" + std::to_string(def.x()) + ", " + std::to_string(def.y()) + ", " + std::to_string(def.z()) + ", 1)";
+        inline_str = acquireColor(name, def, options);
         break;
     case Parser::PT_INTEGER:
     case Parser::PT_NUMBER:
-        inline_str = "make_gray_color(" + std::to_string(prop.getNumber()) + ")";
+        inline_str = "make_gray_color(" + acquireNumber(name, prop.getNumber(), mapToNumberOptions(options)) + ")";
         break;
-    case Parser::PT_VECTOR3: {
-        Vector3f color = prop.getVector3();
-        inline_str     = "make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1)";
-    } break;
+    case Parser::PT_VECTOR3:
+        inline_str = acquireColor(name, prop.getVector3(), options);
+        break;
     case Parser::PT_STRING:
-        inline_str = handleTexture(prop.getString(), mode == IM_Bare ? "tex_coords" : "surf.tex_coords", true, mode == IM_Surface);
+        inline_str = handleTexture(name, prop.getString(), true); // TODO: Map options
+        break;
+    }
+
+    currentClosure().Parameters[name] = inline_str;
+}
+
+void ShadingTree::addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, const VectorOptions& options)
+{
+    if (hasParameter(name)) {
+        IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
+        signalError();
+    }
+
+    const auto prop = obj.property(name);
+
+    std::string inline_str;
+    switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        [[fallthrough]];
+    case Parser::PT_NONE:
+        if (!hasDef)
+            return;
+        inline_str = acquireVector(name, def, options);
+        break;
+    case Parser::PT_INTEGER:
+    case Parser::PT_NUMBER:
+        inline_str = "vec3_expand(" + acquireNumber(name, prop.getNumber(), mapToNumberOptions(options)) + ")";
+        break;
+    case Parser::PT_VECTOR3:
+        inline_str = acquireVector(name, prop.getVector3(), options);
+        break;
+    case Parser::PT_STRING:
+        inline_str = "color_to_vec3(" + handleTexture(name, prop.getString(), true) + ")"; // TODO: Map options
         break;
     }
 
@@ -88,7 +209,7 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
 }
 
 // Only use this if no basic color information suffices
-void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj, bool hasDef)
+void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj, bool hasDef, const TextureOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -109,34 +230,23 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
         break;
     case Parser::PT_INTEGER:
     case Parser::PT_NUMBER:
-        IG_LOG(L_WARNING) << "Parameter '" << name << "' expects texture but only a number was given" << std::endl;
-        inline_str = "make_constant_texture(make_gray_color(" + std::to_string(prop.getNumber()) + "))";
+        inline_str = "make_constant_texture(make_gray_color(" + acquireNumber(name, prop.getNumber(), mapToNumberOptions(options)) + "))";
         break;
-    case Parser::PT_VECTOR3: {
-        Vector3f color = prop.getVector3();
-        inline_str     = "make_constant_texture(make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1))";
-    } break;
+    case Parser::PT_VECTOR3:;
+        inline_str = "make_constant_texture(" + acquireColor(name, prop.getVector3(), mapToColorOptions(options)) + ")";
+        break;
     case Parser::PT_STRING: {
-        std::string tex_func = handleTexture(prop.getString(), "uv", true, false /*TODO: Not always*/);
-        inline_str           = "@|uv:Vec2|->Color{" + tex_func + "}";
+        std::string tex_func = handleTexture(name, prop.getString(), true);
+        inline_str           = "@|ctx:ShadingContext|->Color{maybe_unused(ctx); " + tex_func + "}";
     } break;
     }
 
     currentClosure().Parameters[name] = inline_str;
 }
 
-bool ShadingTree::beginClosure(const std::string& texName)
+bool ShadingTree::beginClosure(const std::string& name)
 {
-    if (!texName.empty()) {
-        for (const auto& closure : mClosures) {
-            if (closure.TexName == texName) {
-                IG_LOG(L_ERROR) << "Texture '" << texName << "' calls itself, resulting in a cycle!" << std::endl;
-                signalError();
-                return false;
-            }
-        }
-    }
-    mClosures.emplace_back(Closure{ texName, {} });
+    mClosures.emplace_back(Closure{ name, getClosureID(name), {} });
     return true;
 }
 
@@ -164,13 +274,22 @@ std::string ShadingTree::getInline(const std::string& name)
     return "";
 }
 
+bool ShadingTree::isPureTexture(const std::string& name)
+{
+    if (hasParameter(name))
+        return mPureTextures.count(name) > 0;
+    IG_LOG(L_ERROR) << "Trying to access unknown parameter '" << name << "'" << std::endl;
+    signalError();
+    return "";
+}
+
 void ShadingTree::registerTextureUsage(const std::string& name)
 {
     if (mLoadedTextures.count(name) == 0) {
         const auto tex = mContext.Scene.texture(name);
         if (!tex) {
             IG_LOG(L_ERROR) << "Unknown texture '" << name << "'" << std::endl;
-            mHeaderLines.push_back("tex_" + LoaderUtils::escapeIdentifier(name) + " = make_invalid_texture();");
+            mHeaderLines.push_back("  let tex_" + getClosureID(name) + " = make_invalid_texture();\n");
         } else {
             const std::string res = LoaderTexture::generate(name, *tex, *this);
             if (res.empty()) // Due to some error this might happen
@@ -181,9 +300,9 @@ void ShadingTree::registerTextureUsage(const std::string& name)
     }
 }
 
-std::string ShadingTree::handleTexture(const std::string& expr, const std::string& uv_access, bool needColor, bool hasSurfaceInfo)
+std::string ShadingTree::handleTexture(const std::string& prop_name, const std::string& expr, bool needColor)
 {
-    auto res = mTranspiler.transpile(expr, uv_access, hasSurfaceInfo);
+    auto res = mTranspiler.transpile(expr);
 
     if (!res.has_value()) {
         if (needColor)
@@ -193,6 +312,12 @@ std::string ShadingTree::handleTexture(const std::string& expr, const std::strin
     } else {
         for (const auto& tex : res.value().Textures)
             registerTextureUsage(tex);
+
+        // Check if the call is just a pure texture (without uv or other modifications)
+        if (res.value().Textures.size() == 1) {
+            if (*res.value().Textures.begin() == expr)
+                mPureTextures.insert(prop_name);
+        }
 
         if (needColor) {
             if (res.value().ScalarOutput)
@@ -208,5 +333,118 @@ std::string ShadingTree::handleTexture(const std::string& expr, const std::strin
             }
         }
     }
+}
+
+bool ShadingTree::checkIfEmbed(float val, const NumberOptions& options) const
+{
+    switch (options.EmbedType) {
+    case EmbedType::Structural:
+        return true;
+    case EmbedType::Dynamic:
+        return false;
+    default:
+    case EmbedType::Default:
+        if (mForceSpecialization || context().ForceShadingTreeSpecialization)
+            return true;
+        else if (options.SpecializeZero && std::abs(val) <= FltEps)
+            return true;
+        else if (options.SpecializeOne && std::abs(val - 1) <= FltEps)
+            return true;
+        else
+            return false;
+    }
+}
+
+bool ShadingTree::checkIfEmbed(const Vector3f& color, const ColorOptions& options) const
+{
+    switch (options.EmbedType) {
+    case EmbedType::Structural:
+        return true;
+    case EmbedType::Dynamic:
+        return false;
+    default:
+    case EmbedType::Default:
+        if (mForceSpecialization || context().ForceShadingTreeSpecialization)
+            return true;
+        else if (options.SpecializeBlack && color.isZero(FltEps))
+            return true;
+        else if (options.SpecializeWhite && color.isOnes(FltEps))
+            return true;
+        else
+            return false;
+    }
+}
+
+bool ShadingTree::checkIfEmbed(const Vector3f& vec, const VectorOptions& options) const
+{
+    switch (options.EmbedType) {
+    case EmbedType::Structural:
+        return true;
+    case EmbedType::Dynamic:
+        return false;
+    default:
+    case EmbedType::Default:
+        if (mForceSpecialization || context().ForceShadingTreeSpecialization)
+            return true;
+        else if (options.SpecializeZero && vec.isZero(FltEps))
+            return true;
+        else if (options.SpecializeOne && vec.isOnes(FltEps))
+            return true;
+        else if (options.SpecializeUnit
+                 && (vec.cwiseAbs().isApprox(Vector3f::UnitX(), FltEps) || vec.cwiseAbs().isApprox(Vector3f::UnitY(), FltEps) || vec.cwiseAbs().isApprox(Vector3f::UnitZ(), FltEps)))
+            return true;
+        else
+            return false;
+    }
+}
+
+std::string ShadingTree::acquireNumber(const std::string& prop_name, float number, const NumberOptions& options)
+{
+    if (checkIfEmbed(number, options)) {
+        return std::to_string(number);
+    } else {
+        const std::string id                       = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
+        mContext.LocalRegistry.FloatParameters[id] = number;
+
+        mHeaderLines.push_back("  let var_num_" + id + " = device.get_local_parameter_f32(\"" + id + "\", 0);\n");
+        return "var_num_" + id;
+    }
+}
+
+std::string ShadingTree::acquireColor(const std::string& prop_name, const Vector3f& color, const ColorOptions& options)
+{
+    if (checkIfEmbed(color, options)) {
+        return "make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1)";
+    } else {
+        const std::string id                       = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
+        mContext.LocalRegistry.ColorParameters[id] = Vector4f(color.x(), color.y(), color.z(), 1);
+
+        mHeaderLines.push_back("  let var_color_" + id + " = device.get_local_parameter_color(\"" + id + "\", color_builtins::black);\n");
+        return "var_color_" + id;
+    }
+}
+
+std::string ShadingTree::acquireVector(const std::string& prop_name, const Vector3f& vec, const VectorOptions& options)
+{
+    if (checkIfEmbed(vec, options)) {
+        return "make_vec3(" + std::to_string(vec.x()) + ", " + std::to_string(vec.y()) + ", " + std::to_string(vec.z()) + ")";
+    } else {
+        const std::string id                        = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
+        mContext.LocalRegistry.VectorParameters[id] = vec;
+
+        mHeaderLines.push_back("  let var_vec_" + id + " = device.get_local_parameter_vec3(\"" + id + "\", vec3_expand(0));\n");
+        return "var_vec_" + id;
+    }
+}
+
+std::string ShadingTree::getClosureID(const std::string& name)
+{
+    auto it = mIDMap.find(name);
+    if (it != mIDMap.end())
+        return std::to_string(it->second);
+
+    size_t id    = mIDMap.size();
+    mIDMap[name] = id;
+    return std::to_string(id);
 }
 } // namespace IG

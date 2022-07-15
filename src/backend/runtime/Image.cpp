@@ -92,26 +92,36 @@ void Image::flipY()
     }
 }
 
-static inline uint32 pack(uint8 r, uint8 g, uint8 b, uint8 a)
+static inline uint32 pack_rgba(uint8 r, uint8 g, uint8 b, uint8 a)
 {
     return uint32(r) | (uint32(g) << 8) | (uint32(b) << 16) | (uint32(a) << 24);
 }
 
-void Image::copyToPackedFormat(std::vector<uint32>& dst) const
+void Image::copyToPackedFormat(std::vector<uint8>& dst) const
 {
-    dst.resize(width * height);
+    dst.resize(width * height * channels);
 
-    tbb::parallel_for(
-        tbb::blocked_range<size_t>(0, width * height),
-        [&](tbb::blocked_range<size_t> range) {
-            for (size_t k = range.begin(); k < range.end(); ++k) {
-                uint8 r = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 0] * 255) & 0xFF);
-                uint8 g = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 1] * 255) & 0xFF);
-                uint8 b = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 2] * 255) & 0xFF);
-                uint8 a = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 3] * 255) & 0xFF);
-                dst[k]  = pack(r, g, b, a);
-            }
-        });
+    if (isMono()) {
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, width * height),
+            [&](tbb::blocked_range<size_t> range) {
+                for (size_t k = range.begin(); k < range.end(); ++k)
+                    dst[k] = static_cast<uint8>(pixels[k] * 255);
+            });
+    } else {
+        uint32* ptr = (uint32*)dst.data();
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, width * height),
+            [&](tbb::blocked_range<size_t> range) {
+                for (size_t k = range.begin(); k < range.end(); ++k) {
+                    uint8 r = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 0] * 255) & 0xFF);
+                    uint8 g = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 1] * 255) & 0xFF);
+                    uint8 b = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 2] * 255) & 0xFF);
+                    uint8 a = static_cast<uint8>(static_cast<uint32>(pixels[4 * k + 3] * 255) & 0xFF);
+                    ptr[k]  = pack_rgba(r, g, b, a);
+                }
+            });
+    }
 }
 
 inline bool ends_with(std::string const& value, std::string const& ending)
@@ -130,14 +140,11 @@ bool Image::isPacked(const std::filesystem::path& path)
     return !useExr && !useHdr;
 }
 
-bool Image::hasAlphaChannel(const std::filesystem::path& path)
+size_t Image::extractChannelCount(const std::filesystem::path& path)
 {
-    if (isPacked(path))
-        return true; // Just assume they have
-
     int width = 0, height = 0, channels = 0;
     stbi_info(path.generic_u8string().c_str(), &width, &height, &channels);
-    return channels == 4;
+    return channels == 1 ? 1 : 4;
 }
 
 static inline std::string getStringAttribute(const EXRAttribute& attr)
@@ -251,19 +258,18 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
             ++channels;
         }
 
-        img.pixels.reset(new float[img.width * img.height * 4]);
-
         // TODO: Tiled
         if (channels == 1) {
+            img.pixels.reset(new float[img.width * img.height]);
+            img.channels = 1;
+
             int idx = idxY != -1 ? idxY : idxA;
-            for (size_t i = 0; i < img.width * img.height; ++i) {
-                float g               = reinterpret_cast<float**>(exr_image.images)[idx][i];
-                img.pixels[i * 4 + 0] = g;
-                img.pixels[i * 4 + 1] = g;
-                img.pixels[i * 4 + 2] = g;
-                img.pixels[i * 4 + 3] = 1;
-            }
+            for (size_t i = 0; i < img.width * img.height; ++i)
+                img.pixels[i] = reinterpret_cast<float**>(exr_image.images)[idx][i];
         } else {
+            img.pixels.reset(new float[img.width * img.height * 4]);
+            img.channels = 4;
+
             if (idxR == -1 || idxG == -1 || idxB == -1) {
                 FreeEXRHeader(&exr_header);
                 FreeEXRImage(&exr_image);
@@ -294,30 +300,28 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
         int width = 0, height = 0, channels = 0;
         float* data = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 0);
 
+        // If we got a weird channel number, map to RGBA
+        if (channels != 1 && channels != 3 && channels != 4) {
+            stbi_image_free(data);
+            data = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 4);
+            channels = 4;
+        }
+
         if (data == nullptr)
-            throw ImageLoadException("Could not load image", path);
+            throw ImageLoadException("Could not load image: " + std::string(stbi_failure_reason()), path);
 
         img.width  = width;
         img.height = height;
-        img.pixels.reset(new float[img.width * img.height * 4]);
 
         switch (channels) {
-        case 0:
-            return Image();
         case 1: // Gray
-            tbb::parallel_for(
-                tbb::blocked_range<size_t>(0, img.width * img.height),
-                [&](tbb::blocked_range<size_t> r) {
-                    for (size_t i = r.begin(); i < r.end(); ++i) {
-                        float g               = data[i];
-                        img.pixels[i * 4 + 0] = g;
-                        img.pixels[i * 4 + 1] = g;
-                        img.pixels[i * 4 + 2] = g;
-                        img.pixels[i * 4 + 3] = 1;
-                    }
-                });
+            img.pixels.reset(new float[img.width * img.height]);
+            img.channels = 1;
+            std::memcpy(img.pixels.get(), data, sizeof(float) * img.width * img.height);
             break;
         case 3: // RGB
+            img.pixels.reset(new float[img.width * img.height * 4]);
+            img.channels = 4;
             tbb::parallel_for(
                 tbb::blocked_range<size_t>(0, img.width * img.height),
                 [&](tbb::blocked_range<size_t> r) {
@@ -329,20 +333,12 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
                     }
                 });
             break;
-        case 4: // RGBA
+        default: // RGBA
+            IG_ASSERT(channels == 4, "Expected only images with channel count 4");
+
+            img.pixels.reset(new float[img.width * img.height * 4]);
+            img.channels = 4;
             std::memcpy(img.pixels.get(), data, sizeof(float) * 4 * img.width * img.height);
-            break;
-        default:
-            tbb::parallel_for(
-                tbb::blocked_range<size_t>(0, img.width * img.height),
-                [&](tbb::blocked_range<size_t> r) {
-                    for (size_t i = r.begin(); i < r.end(); ++i) {
-                        img.pixels[i * 4 + 0] = data[i * channels + 1];
-                        img.pixels[i * 4 + 1] = data[i * channels + 2];
-                        img.pixels[i * 4 + 2] = data[i * channels + 3];
-                        img.pixels[i * 4 + 3] = data[i * channels + 0];
-                    }
-                });
             break;
         }
         stbi_image_free(data);
@@ -356,7 +352,7 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
     return img;
 }
 
-void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint32>& dst, size_t& width, size_t& height)
+void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& dst, size_t& width, size_t& height, size_t& channels, bool linear)
 {
     std::string ext   = path.extension().generic_u8string();
     const bool useExr = ends_with(ext, ".exr");
@@ -368,35 +364,92 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint32>&
     stbi_set_unpremultiply_on_load(1);
     stbi_set_flip_vertically_on_load(1);
 
-    int width2 = 0, height2 = 0, channels = 0;
-    stbi_uc* data = stbi_load(path.generic_u8string().c_str(), &width2, &height2, &channels, 4);
+    int width2 = 0, height2 = 0, channels2 = 0;
+    stbi_uc* data = stbi_load(path.generic_u8string().c_str(), &width2, &height2, &channels2, 0);
+
+    // If we got a weird channel number, map to RGBA
+    if (channels2 != 1 && channels2 != 3 && channels2 != 4) {
+        stbi_image_free(data);
+        data = stbi_load(path.generic_u8string().c_str(), &width2, &height2, &channels2, 4);
+        channels2 = 4;
+    }
 
     width  = static_cast<size_t>(width2);
     height = static_cast<size_t>(height2);
 
     if (data == nullptr)
-        throw ImageLoadException("Could not load image", path);
+        throw ImageLoadException("Could not load image: " + std::string(stbi_failure_reason()), path);
 
-    dst.resize(width * height);
+    if (channels2 == 1) {
+        dst.resize(width * height);
+        channels = 1;
 
-    // Pack data and map to linear space
-    tbb::parallel_for(
-        tbb::blocked_range<size_t>(0, width * height),
-        [&](tbb::blocked_range<size_t> r) {
-            for (size_t i = r.begin(); i < r.end(); ++i) {
-                dst[i] = pack(byte_color_to_linear(data[i * 4 + 0]), byte_color_to_linear(data[i * 4 + 1]), byte_color_to_linear(data[i * 4 + 2]), data[i * 4 + 3]);
+        if (linear) {
+            // Pack data
+            std::memcpy(dst.data(), data, dst.size());
+        } else {
+            // Pack data and map to linear space
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, width * height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t i = r.begin(); i < r.end(); ++i)
+                        dst[i] = byte_color_to_linear(data[i]);
+                });
+        }
+    } else {
+        dst.resize(width * height * 4);
+        uint32* ptr = (uint32*)dst.data();
+        channels = 4;
+
+        if (channels2 == 3) {
+            if (linear) {
+                // Pack data
+                tbb::parallel_for(
+                    tbb::blocked_range<size_t>(0, width * height),
+                    [&](tbb::blocked_range<size_t> r) {
+                        for (size_t i = r.begin(); i < r.end(); ++i)
+                            ptr[i] = pack_rgba(data[i * 3 + 0], data[i * 3 + 1], data[i * 3 + 2], 255);
+                    });
+            } else {
+                // Pack data and map to linear space
+                tbb::parallel_for(
+                    tbb::blocked_range<size_t>(0, width * height),
+                    [&](tbb::blocked_range<size_t> r) {
+                        for (size_t i = r.begin(); i < r.end(); ++i)
+                            ptr[i] = pack_rgba(byte_color_to_linear(data[i * 3 + 0]), byte_color_to_linear(data[i * 3 + 1]), byte_color_to_linear(data[i * 3 + 2]), 255);
+                    });
             }
-        });
+        } else {
+            IG_ASSERT(channels2 == 4, "Expected only images with channel count 4");
+            if (linear) {
+                // Pack data
+                tbb::parallel_for(
+                    tbb::blocked_range<size_t>(0, width * height),
+                    [&](tbb::blocked_range<size_t> r) {
+                        for (size_t i = r.begin(); i < r.end(); ++i)
+                            ptr[i] = pack_rgba(data[i * 4 + 0], data[i * 4 + 1], data[i * 4 + 2], data[i * 4 + 3]);
+                    });
+            } else {
+                // Pack data and map to linear space
+                tbb::parallel_for(
+                    tbb::blocked_range<size_t>(0, width * height),
+                    [&](tbb::blocked_range<size_t> r) {
+                        for (size_t i = r.begin(); i < r.end(); ++i)
+                            ptr[i] = pack_rgba(byte_color_to_linear(data[i * 4 + 0]), byte_color_to_linear(data[i * 4 + 1]), byte_color_to_linear(data[i * 4 + 2]), data[i * 4 + 3]);
+                    });
+            }
+        }
+    }
 
     stbi_image_free(data);
 }
 
 bool Image::save(const std::filesystem::path& path)
 {
-    return save(path, pixels.get(), width, height);
+    return save(path, pixels.get(), width, height, channels);
 }
 
-bool Image::save(const std::filesystem::path& path, const float* rgba, size_t width, size_t height, bool skip_alpha)
+bool Image::save(const std::filesystem::path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha)
 {
     std::string ext = path.extension().generic_u8string();
     bool useExr     = ends_with(ext, ".exr");
@@ -407,27 +460,52 @@ bool Image::save(const std::filesystem::path& path, const float* rgba, size_t wi
         return false;
     }
 
-    size_t channels = skip_alpha ? 3 : 4;
-    std::vector<std::vector<float>> images(channels);
-    for (size_t i = 0; i < channels; ++i)
-        images[i].resize(width * height);
+    if (channels == 1 || channels == 3) {
+        std::vector<std::vector<float>> images(channels);
+        for (size_t i = 0; i < channels; ++i)
+            images[i].resize(width * height);
 
-    // Split into layers
-    tbb::parallel_for(
-        tbb::blocked_range<size_t>(0, width * height),
-        [&](tbb::blocked_range<size_t> r) {
-            for (size_t i = r.begin(); i < r.end(); ++i) {
-                for (size_t j = 0; j < channels; ++j)
-                    images[j][i] = rgba[4 * i + j];
-            }
-        });
+        // Split into layers
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, width * height),
+            [&](tbb::blocked_range<size_t> r) {
+                for (size_t i = r.begin(); i < r.end(); ++i) {
+                    for (size_t j = 0; j < channels; ++j)
+                        images[j][i] = data[channels * i + j];
+                }
+            });
 
-    std::vector<const float*> image_ptrs(channels);
-    for (size_t i = 0; i < channels; ++i)
-        image_ptrs[i] = &(images[channels - i - 1].at(0));
+        std::vector<const float*> image_ptrs(channels);
+        for (size_t i = 0; i < channels; ++i)
+            image_ptrs[i] = &(images[channels - i - 1].at(0));
 
-    return ImageIO::save(path, width, height, image_ptrs,
-                         skip_alpha ? std::vector<std::string>{ "B", "G", "R" } : std::vector<std::string>{ "A", "B", "G", "R" });
+        return ImageIO::save(path, width, height, image_ptrs,
+                             channels == 3 ? std::vector<std::string>{ "B", "G", "R" } : std::vector<std::string>{ "A" });
+    } else {
+        IG_ASSERT(channels == 4, "Expected four, three or one channel images");
+
+        size_t channels2 = skip_alpha ? 3 : 4;
+        std::vector<std::vector<float>> images(channels2);
+        for (size_t i = 0; i < channels2; ++i)
+            images[i].resize(width * height);
+
+        // Split into layers
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, width * height),
+            [&](tbb::blocked_range<size_t> r) {
+                for (size_t i = r.begin(); i < r.end(); ++i) {
+                    for (size_t j = 0; j < channels2; ++j)
+                        images[j][i] = data[4 * i + j];
+                }
+            });
+
+        std::vector<const float*> image_ptrs(channels2);
+        for (size_t i = 0; i < channels2; ++i)
+            image_ptrs[i] = &(images[channels2 - i - 1].at(0));
+
+        return ImageIO::save(path, width, height, image_ptrs,
+                             skip_alpha ? std::vector<std::string>{ "B", "G", "R" } : std::vector<std::string>{ "A", "B", "G", "R" });
+    }
 }
 
 } // namespace IG

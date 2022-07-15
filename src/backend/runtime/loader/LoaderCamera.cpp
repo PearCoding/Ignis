@@ -77,9 +77,9 @@ static void camera_perspective(std::ostream& stream, const std::string& name, co
     CameraOrientation orientation = camera_perspective_orientation(name, camera, ctx);
 
     // Dump camera control (above is just defaults)
-    stream << "  let camera_eye = registry::get_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
-           << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
-           << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl;
+    stream << "  let camera_eye = registry::get_global_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
+           << "  let camera_dir = registry::get_global_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
+           << "  let camera_up  = registry::get_global_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl;
 
     std::string aspect_ratio = "settings.width as f32 / settings.height as f32";
     if (camera && camera->property("aspect_ratio").canBeNumber())
@@ -134,9 +134,9 @@ static void camera_orthogonal(std::ostream& stream, const std::string& name, con
         aspect_ratio = std::to_string(camera->property("aspect_ratio").getNumber(1));
 
     // Dump camera control (above is just defaults)
-    stream << "  let camera_eye = registry::get_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
-           << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
-           << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl
+    stream << "  let camera_eye = registry::get_global_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
+           << "  let camera_dir = registry::get_global_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
+           << "  let camera_up  = registry::get_global_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl
            << "  let camera = make_orthogonal_camera(camera_eye, " << std::endl
            << "    camera_dir, " << std::endl
            << "    camera_up, " << std::endl
@@ -164,9 +164,9 @@ static void camera_fishlens(std::ostream& stream, const std::string& name, const
         mode = "FisheyeAspectMode::Full";
 
     // Dump camera control (above is just defaults)
-    stream << "  let camera_eye = registry::get_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
-           << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
-           << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl
+    stream << "  let camera_eye = registry::get_global_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
+           << "  let camera_dir = registry::get_global_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
+           << "  let camera_up  = registry::get_global_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl
            << "  let camera = make_fishlens_camera(camera_eye, " << std::endl
            << "    camera_dir, " << std::endl
            << "    camera_up, " << std::endl

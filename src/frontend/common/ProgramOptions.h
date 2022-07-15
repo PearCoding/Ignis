@@ -63,7 +63,8 @@ public:
     bool DumpShader     = false;
     bool DumpFullShader = false;
 
-    bool AddExtraEnvLight = false;
+    bool AddExtraEnvLight        = false;
+    bool ForceSpecialization = false;
 
     std::filesystem::path Output;
     std::filesystem::path InputScene;

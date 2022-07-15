@@ -1,4 +1,4 @@
-// 9
+// 10
 struct RayStream {
     id:    &mut [i32], // this field is also used to indicate if the ray is alive
     org_x: &mut [f32],
@@ -9,9 +9,10 @@ struct RayStream {
     dir_z: &mut [f32],
     tmin:  &mut [f32],
     tmax:  &mut [f32],
+    flags: &mut [u32]
 }
 
-// 9+6+8=23
+// 10+6+8=24
 struct PrimaryStream {
     rays:    RayStream,
     ent_id:  &mut [i32],
@@ -24,7 +25,7 @@ struct PrimaryStream {
     pad:     i32 // TODO: Needed for AMDGPU backend
 }
 
-// 9+6=15
+// 10+6=16
 struct SecondaryStream {
     rays:    RayStream,
     mat_id:  &mut [i32], // Mat ID + 1, Negative if miss, positive if hit 
@@ -53,7 +54,8 @@ fn @make_ray_stream_reader(rays: RayStream, vector_width: i32) -> fn (i32, i32) 
                       rays.dir_y(k),
                       rays.dir_z(k)),
             rays.tmin(k),
-            rays.tmax(k)
+            rays.tmax(k),
+            rays.flags(k)
         )
     }
 }
@@ -69,6 +71,7 @@ fn @make_ray_stream_writer(rays: RayStream, vector_width: i32) -> fn (i32, i32, 
         rays.dir_z(k) = ray.dir.z;
         rays.tmin(k)  = ray.tmin;
         rays.tmax(k)  = ray.tmax;
+        rays.flags(k) = ray.flags;
     }
 }
 

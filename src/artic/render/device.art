@@ -4,7 +4,7 @@ struct Device {
     // Internal id
     id: i32,
 
-    //////////////// Pipeline    
+    //------------------------------------- Pipeline    
     // [Internal] Run full pipeline with the given scene geometry and spi
     trace: fn (SceneGeometry, Pipeline, i32 /* spi */) -> (),
 
@@ -21,12 +21,12 @@ struct Device {
     handle_miss_shader: fn (Technique, i32, i32, i32, bool) -> (), 
 
     // [Internal] Handle a hit shader
-    handle_hit_shader: fn (i32, Shader, Scene, Technique, i32, i32, i32, bool) -> (),
+    handle_hit_shader: fn (i32, MaterialShader, Scene, Technique, i32, i32, i32, bool) -> (),
 
     // [Internal] Handle an advanced shadow shader (can be hit or miss)
-    handle_advanced_shadow_shader: fn (Shader, Technique, i32, i32, i32, bool, bool) -> (), 
+    handle_advanced_shadow_shader: fn (MaterialShader, Technique, i32, i32, i32, bool, bool) -> (), 
     
-    //////////////// Utilities
+    //------------------------------------- Utilities
     // Parallel one-dimensional range on the device
     parallel_range: fn (fn (i32) -> ()) -> fn (i32 /* start_x */, i32 /* end_x */) -> (),
 
@@ -42,7 +42,7 @@ struct Device {
     // Returns a callback function to create a virtual device buffer by providing a pointer on device memory
     get_device_buffer_accessor: fn () -> DeviceBufferAccessor,
 
-    //////////////// Geometry
+    //------------------------------------- Geometry
     // [Internal] Load the full scene bvh
     load_scene_bvh: fn () -> SceneBvh,
 
@@ -72,20 +72,28 @@ struct Device {
     // [Internal] Will load the rays given in 'tracing' mode
     load_rays: fn () -> &[StreamRay],
 
-    //////////////// Resources
-    // Load RGBA image from a file
-    load_image: fn (&[u8] /* Filename */) -> Image,
+    //------------------------------------- Resources
+    // Load (float) RGBA image from a file
+    load_image: fn (&[u8] /* Filename */, i32 /* Expected channel count */) -> Image,
+    // Load (float) RGBA image from a preregistered resource 
+    load_image_by_id: fn (i32 /* Resource id */, i32 /* Expected channel count */) -> Image,
 
-    // Load (binary) RGBA image from a file, with hint that the given image is fully opaque
-    load_packed_image: fn (&[u8] /* Filename */, bool) -> Image,
+    // Load (binary) RGBA image from a file, with expected channel count and linearity
+    load_packed_image: fn (&[u8] /* Filename */, i32 /* Expected channel count */, bool /* linear */) -> Image,
+    // Load (binary) RGBA image from a preregistered resource, with expected channel count and linearity
+    load_packed_image_by_id: fn (i32 /* Resource id */, i32 /* Expected channel count */, bool /* linear */) -> Image,
 
     // Load aov given by its id and the current spi
     load_aov_image: fn (i32 /* id */, i32 /* spi */) -> AOVImage,
 
     // Load buffer from a file and make it accessible for the host only
     load_host_buffer: fn (&[u8] /* Filename */) -> DeviceBuffer,
+    // Load buffer from a preregistered resource and make it accessible for the host only
+    load_host_buffer_by_id: fn (i32 /* Resource id */) -> DeviceBuffer,
     // Load buffer from a file and make it accessible for the device only
     load_buffer: fn (&[u8] /* Filename */) -> DeviceBuffer,
+    // Load buffer from a preregistered resource and make it accessible for the device only
+    load_buffer_by_id: fn (i32 /* Resource id */) -> DeviceBuffer,
 
     // Request a buffer given by the string identifier with a minimum size and accessible by the device only
     // Keep in mind that size is given in units of i32. This means the actual byte size is size * 4 on most machines
@@ -100,4 +108,10 @@ struct Device {
 
     // Special structure to allow print functions within devices. Should only be used for debug purposes
     request_debug_output: fn () -> DebugOutput,
+
+    //------------------------------------- Local registry
+    get_local_parameter_i32:   fn (&[u8] /* name */, i32 /* default */)   -> i32,
+    get_local_parameter_f32:   fn (&[u8] /* name */, f32 /* default */)   -> f32,
+    get_local_parameter_vec3:  fn (&[u8] /* name */, Vec3 /* default */)  -> Vec3,
+    get_local_parameter_color: fn (&[u8] /* name */, Color /* default */) -> Color
 }

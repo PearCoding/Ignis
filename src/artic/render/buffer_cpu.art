@@ -95,3 +95,10 @@ fn @load_cpu_buffer(filename: &[u8]) {
     ignis_load_buffer(0, filename, &mut ptr, &mut bytesize);
     make_cpu_buffer(ptr, (bytesize as i64 / sizeof[i32]()) as i32)
 }
+
+fn @load_cpu_buffer_by_id(id: i32) {
+    let mut ptr      : &[u8];
+    let mut bytesize : i32;
+    ignis_load_buffer_by_id(0, id, &mut ptr, &mut bytesize);
+    make_cpu_buffer(ptr, (bytesize as i64 / sizeof[i32]()) as i32)
+}

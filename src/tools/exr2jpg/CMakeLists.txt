@@ -5,4 +5,4 @@ SET(CMD_FILES
 add_executable(exr2jpg ${CMD_FILES})
 target_link_libraries(exr2jpg PRIVATE ig_lib_runtime)
 target_include_directories(exr2jpg PRIVATE ${stb_SOURCE_DIR})
-install(TARGETS exr2jpg COMPONENT tools)
+install(TARGETS exr2jpg ${_IG_RUNTIME_SET} COMPONENT tools)

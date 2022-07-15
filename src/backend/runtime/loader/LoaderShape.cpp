@@ -300,7 +300,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
         auto plane = mesh.getAsPlane();
         if (plane.has_value()) {
             plane_shape_mutex.lock();
-            ctx.Environment.PlaneShapes[i] = plane.value();
+            ctx.Environment.PlaneShapes[(uint32)i] = plane.value();
             plane_shape_mutex.unlock();
         }
 

@@ -8,14 +8,16 @@ namespace IG {
 
 static void medium_homogeneous(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& medium, ShadingTree& tree)
 {
-    tree.beginClosure();
+    // FIXME: The shading context is not available here! Texture & PExpr will produce errors
+    tree.beginClosure(name);
 
-    tree.addColor("sigma_a", *medium, Vector3f::Zero(), true, ShadingTree::IM_Bare);
-    tree.addColor("sigma_s", *medium, Vector3f::Zero(), true, ShadingTree::IM_Bare);
-    tree.addNumber("g", *medium, 0, true, ShadingTree::IM_Bare);
+    tree.addColor("sigma_a", *medium, Vector3f::Zero(), true);
+    tree.addColor("sigma_s", *medium, Vector3f::Zero(), true);
+    tree.addNumber("g", *medium, 0, true);
 
+    const std::string media_id = tree.currentClosureID();
     stream << tree.pullHeader()
-           << "  let medium_" << LoaderUtils::escapeIdentifier(name) << " = make_homogeneous_medium(" << tree.getInline("sigma_a")
+           << "  let medium_" << media_id << " = make_homogeneous_medium(" << tree.getInline("sigma_a")
            << ", " << tree.getInline("sigma_s")
            << ", make_henyeygreenstein_phase(" << tree.getInline("g") << "));" << std::endl;
 
@@ -25,10 +27,11 @@ static void medium_homogeneous(std::ostream& stream, const std::string& name, co
 // It is recommended to not define the medium, instead of using vacuum
 static void medium_vacuum(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>&, ShadingTree& tree)
 {
-    tree.beginClosure();
+    tree.beginClosure(name);
 
+    const std::string media_id = tree.currentClosureID();
     stream << tree.pullHeader()
-           << "  let medium_" << LoaderUtils::escapeIdentifier(name) << " = make_vacuum_medium();" << std::endl;
+           << "  let medium_" << media_id << " = make_vacuum_medium();" << std::endl;
 
     tree.endClosure();
 }
@@ -73,8 +76,9 @@ std::string LoaderMedium::generate(ShadingTree& tree)
 
     size_t counter2 = 0;
     for (const auto& pair : tree.context().Scene.media()) {
-        const auto medium = pair.second;
-        stream << "      " << counter2 << " => medium_" << LoaderUtils::escapeIdentifier(pair.first)
+        const auto medium          = pair.second;
+        const std::string media_id = tree.getClosureID(pair.first);
+        stream << "      " << counter2 << " => medium_" << media_id
                << "," << std::endl;
         ++counter2;
     }

@@ -1,6 +1,6 @@
 fn @make_image_texture(border: BorderHandling, filter: ImageFilter, image: Image, transform: Mat3x3) -> Texture {
-    @ |uv| {
-        let uv2 = mat3x3_transform_point_affine(transform, uv);
+    @ |ctx| {
+        let uv2 = mat3x3_transform_point_affine(transform, vec3_to_2(ctx.uvw));
         let u   = border.horz(uv2.x);
         let v   = border.vert(uv2.y);
 

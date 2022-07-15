@@ -229,7 +229,7 @@ foreach(var ${VARIANTS})
     add_dependencies(${_target_name} artic_c_interface)
     add_lto(${_target_name})
     add_checks(${_target_name})
-    install(TARGETS ${_target_name} COMPONENT runtime LIBRARY DESTINATION lib/)
+    install(TARGETS ${_target_name} ${_IG_RUNTIME_SET} COMPONENT runtime LIBRARY DESTINATION lib/)
 
     # Some of the compilation process requires a lot of memory.
     # Prevent parallel build of the drivers (per default) by chaining them together

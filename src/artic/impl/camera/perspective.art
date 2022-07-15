@@ -20,7 +20,7 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f
     Camera {
         generate_ray = @ |_, x, y| {
             let d = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * x, scale.y * y, 1)));
-            make_ray(eye, d, tmin, tmax)
+            make_ray(eye, d, tmin, tmax, ray_flag_camera)
         },
         differential = @ |_| {
             (
@@ -45,7 +45,7 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, ape
             let aperature_pos   = mat3x3_mul(view, make_vec3(aperature_coord.x, aperature_coord.y, 0));
             let d               = vec3_normalize(vec3_sub(focus_pos, aperature_pos));
 
-            make_ray(vec3_add(eye, aperature_pos), d, tmin, tmax)
+            make_ray(vec3_add(eye, aperature_pos), d, tmin, tmax, ray_flag_camera)
         },
         differential = @ |_| {
             (

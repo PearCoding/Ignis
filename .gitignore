@@ -48,6 +48,9 @@ _ignis_cache*/
 out/
 data/
 
+# Plugin output
+ignis_blender.zip
+
 # Some radiance output
 scenes/radiance/*/*.hdr
 scenes/radiance/*/*.exr

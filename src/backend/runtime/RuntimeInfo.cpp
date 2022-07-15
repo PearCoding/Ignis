@@ -1,4 +1,5 @@
 #include "RuntimeInfo.h"
+#include <sstream>
 
 #ifdef IG_OS_LINUX
 #include <climits>
@@ -47,5 +48,42 @@ std::filesystem::path RuntimeInfo::executablePath()
     GetModuleFileNameW(nullptr, path, MAX_PATH);
     return path;
 #endif
+}
+
+#ifndef IG_OS_WINDOWS
+constexpr char ENV_DELIMITER = ':';
+#else
+constexpr char ENV_DELIMITER = ';';
+#endif
+
+std::vector<std::filesystem::path> RuntimeInfo::splitEnvPaths(const std::string& str)
+{
+    std::vector<std::filesystem::path> paths;
+
+    size_t start = 0;
+    size_t end   = str.find(ENV_DELIMITER);
+    while (end != std::string::npos) {
+        paths.push_back(std::filesystem::canonical(str.substr(start, end - start)));
+        start = end + 1;
+        end   = str.find(ENV_DELIMITER, start);
+    }
+
+    if (end != start)
+        paths.push_back(std::filesystem::canonical(str.substr(start, end)));
+
+    return paths;
+}
+
+std::string RuntimeInfo::combineEnvPaths(const std::vector<std::filesystem::path>& paths)
+{
+    std::stringstream stream;
+
+    for (size_t i = 0; i < paths.size(); ++i) {
+        stream << paths[i].u8string();
+        if (i < paths.size() - 1)
+            stream << ENV_DELIMITER;
+    }
+
+    return stream.str();
 }
 } // namespace IG

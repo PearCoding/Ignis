@@ -233,3 +233,28 @@ fn @mat4x4_transform_direction(a: Mat4x4, v: Vec3) -> Vec3 {
     let res = mat4x4_mul(a, make_vec4(v.x, v.y, v.z, 0));
     make_vec3(res.x, res.y, res.z)
 }
+
+fn @mat3x3_align_vectors(a: Vec3, b: Vec3) -> Mat3x3 {
+    let axis = vec3_cross(a, b);
+    let cosA = vec3_dot(a, b);
+    if cosA <= -1 {
+        return(make_mat3x3(
+                make_vec3(-1,  0,  0),
+                make_vec3( 0, -1,  0),
+                make_vec3( 0,  0, -1)
+            ))
+    }
+    let k = 1 / (1 + cosA);
+
+    make_mat3x3(
+        make_vec3((axis.x * axis.x * k) + cosA,
+                  (axis.y * axis.x * k) - axis.z, 
+                  (axis.z * axis.x * k) + axis.y),
+        make_vec3((axis.x * axis.y * k) + axis.z,  
+                  (axis.y * axis.y * k) + cosA,      
+                  (axis.z * axis.y * k) - axis.x),
+        make_vec3((axis.x * axis.z * k) - axis.y,  
+                  (axis.y * axis.z * k) + axis.x,  
+                  (axis.z * axis.z * k) + cosA) 
+                 )
+}

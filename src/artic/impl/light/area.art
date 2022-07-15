@@ -15,15 +15,17 @@ fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
         let dist = vec3_len(dir_);
         let dir  = vec3_mulf(dir_, safe_div(1, dist));
         let cos  = -vec3_dot(dir, n);
-        make_direct_sample(pos, dir, color_mulf(color_f(coords), weight), pdf, cos, dist)
+        let ctx  = make_emissive_shading_context(make_ray(from_surf.point, dir, 0, flt_max, ray_flag_light), pos, vec2_to_3(coords, 0));
+        make_direct_sample(pos, dir, color_mulf(color_f(ctx), weight), pdf, cos, dist)
     },
     sample_emission = @ |rnd| {
         let (pos, n, coords, area_pdf) = area.sample_emission(make_vec2(randf(rnd), randf(rnd)));
         let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
         let weight = safe_div(1, area_pdf * sample.pdf);
-        make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color_mulf(color_f(coords), weight), area_pdf, sample.pdf, sample.dir.z)
+        let ctx    = make_emissive_shading_context(make_zero_ray(), pos, vec2_to_3(coords, 0));
+        make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color_mulf(color_f(ctx), weight), area_pdf, sample.pdf, sample.dir.z)
     },
-    emission     = @ |_, surf|   color_f(surf.tex_coords),
+    emission     = @ |ray, surf| color_f(make_emissive_shading_context(ray, surf.point, vec2_to_3(surf.tex_coords, 0))),
     pdf_direct   = @ |ray, surf| area.pdf_direct(surf.prim_coords, ray.org),
     pdf_emission = @ |ray, surf| make_emissive_pdf(area.pdf_emission(surf.prim_coords, ray.org), cosine_hemisphere_pdf(-vec3_dot(area.normal(surf.prim_coords), ray.dir))),
     delta    = false,

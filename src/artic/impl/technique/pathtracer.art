@@ -110,12 +110,12 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
 
             if light.infinite {
                 return(make_simple_shadow_ray(
-                    make_ray(surf.point, in_dir, offset, flt_max),
+                    make_ray(surf.point, in_dir, offset, flt_max, ray_flag_shadow),
                     contrib
                 ))
             } else {
                 return(make_simple_shadow_ray(
-                    make_ray(surf.point, vec3_sub(light_sample.pos, surf.point), offset, 1 - offset),
+                    make_ray(surf.point, vec3_sub(light_sample.pos, surf.point), offset, 1 - offset, ray_flag_shadow),
                     contrib
                 ))
             }
@@ -217,7 +217,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
                 depth   = pt.depth + 1,
                 eta     = pt.eta * mat_sample.eta
             });
-            make_option(make_ray(surf.point, mat_sample.in_dir, offset, flt_max))
+            make_option(make_ray(surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce))
         } else {
             Option[Ray]::None
         }
@@ -225,7 +225,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
 
     fn @on_shadow_miss( _ray: Ray
                       , pixel: i32
-                      , _shader: Shader
+                      , _shader: MaterialShader
                       , _secondary_payloads: RayPayload
                       , color: Color) -> Option[Color] {
         aov_nee.splat(pixel, color);

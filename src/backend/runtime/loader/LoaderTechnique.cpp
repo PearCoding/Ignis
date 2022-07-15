@@ -27,7 +27,7 @@ static void ao_body_loader(std::ostream& stream, const std::string&, const std::
 static void debug_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&)
 {
     // TODO: Maybe add a changeable default mode?
-    stream << "  let debug_mode = registry::get_parameter_i32(\"__debug_mode\", 0);" << std::endl
+    stream << "  let debug_mode = registry::get_global_parameter_i32(\"__debug_mode\", 0);" << std::endl
            << "  maybe_unused(num_lights); maybe_unused(lights);" << std::endl
            << "  let technique  = make_debug_renderer(debug_mode);" << std::endl;
 }
@@ -84,7 +84,7 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
 {
     const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
-    const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(false) : false;
+    const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(true) : true; // FIXME: The convergence rate is kinda worse, fix the non-uniform light selector
     const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
     const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
 

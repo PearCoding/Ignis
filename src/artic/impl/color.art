@@ -59,3 +59,63 @@ fn @hsl_to_srgb(c: Color) -> Color {
         c.a);
     hsv_to_srgb(hsv)
 }
+
+// Special mix functions used in nodes
+fn @color_mix_screen(a: Color, b: Color, t: f32) {
+    color_sub(color_builtins::white, color_mul(color_lerp(color_builtins::white, color_sub(color_builtins::white, b), t), color_sub(color_builtins::white, a)))
+}
+
+fn @color_mix_overlay(a: Color, b: Color, t: f32) {
+    vec3_to_color(vec3_zip(color_to_vec3(a), color_to_vec3(b), @|x,y|{
+        select(x < 0.5, x * lerp(1, 2*y, t), 1 - (1 - x)*lerp(1, 2*(1 - y), t))
+    }))
+}
+
+fn @color_mix_dodge(a: Color, b: Color, t: f32) {
+    vec3_to_color(vec3_zip(color_to_vec3(a), color_to_vec3(b), @|x,y|{
+        let d = math_builtins::fmin[f32](1, safe_div(x, 1 - t * y));
+        select(x == 0, x, select(d < 0, 1:f32, d))
+    }))
+}
+
+fn @color_mix_burn(a: Color, b: Color, t: f32) {
+    vec3_to_color(vec3_zip(color_to_vec3(a), color_to_vec3(b), @|x,y|{
+        let d = lerp(1, y, t);
+        select(d <= flt_eps, 0:f32, clampf(1 - safe_div(1 - x, d), 0, 1))
+    }))
+}
+
+fn @color_mix_soft(a: Color, b: Color, t: f32) {
+    let scr = color_sub(color_builtins::white, color_mul(color_sub(color_builtins::white, a), color_sub(color_builtins::white, b)));
+    color_lerp(a, color_add(color_mul(color_mul(color_sub(color_builtins::white, a), a), b), color_mul(a, scr)), t)
+}
+
+fn @color_mix_linear(a: Color, b: Color, t: f32) {
+    color_add(a, vec3_to_color(vec3_map(color_to_vec3(b), @|y|{
+        select(y > 0.5, 2 * (y-0.5), 2*y-1) * t
+    })))
+}
+
+fn @color_mix_hue(a: Color, b: Color, t: f32) {
+    let ahsv = srgb_to_hsv(a);
+    let bhsv = srgb_to_hsv(b);
+    color_lerp(a, hsv_to_srgb(make_color(bhsv.r, ahsv.g, ahsv.b, ahsv.a)), t)
+}
+
+fn @color_mix_saturation(a: Color, b: Color, t: f32) {
+    let ahsv = srgb_to_hsv(a);
+    let bhsv = srgb_to_hsv(b);
+    hsv_to_srgb(make_color(ahsv.r, lerp(ahsv.g, bhsv.g, t), ahsv.b, ahsv.a))
+}
+
+fn @color_mix_value(a: Color, b: Color, t: f32) {
+    let ahsv = srgb_to_hsv(a);
+    let bhsv = srgb_to_hsv(b);
+    hsv_to_srgb(make_color(ahsv.r, ahsv.g, lerp(ahsv.b, bhsv.b, t), ahsv.a))
+}
+
+fn @color_mix_color(a: Color, b: Color, t: f32) {
+    let ahsv = srgb_to_hsv(a);
+    let bhsv = srgb_to_hsv(b);
+    color_lerp(a, hsv_to_srgb(make_color(bhsv.r, bhsv.g, ahsv.b, ahsv.a)), t)
+}

@@ -20,11 +20,13 @@ struct LoaderOptions {
     size_t FilmHeight;
     size_t SamplesPerIteration; // Only a recommendation!
     bool IsTracer;
+    bool ForceSpecialization;
 };
 
 struct LoaderResult {
     SceneDatabase Database;
     std::vector<TechniqueVariant> TechniqueVariants;
+    std::vector<std::string> ResourceMap;
     IG::TechniqueInfo TechniqueInfo;
     IG::CameraOrientation CameraOrientation;
 };

@@ -50,11 +50,11 @@ fn ig_miss_shader(_settings: &Settings, _first: i32, _last: i32) -> () {
 }
 
 #[export]
-fn ig_hit_shader(_settings: &Settings, _entity_id: i32, _first: i32, _last: i32) -> () {
+fn ig_hit_shader(_settings: &Settings, _entity_id: i32, _mat_id: i32, _first: i32, _last: i32) -> () {
 }
 
 #[export]
-fn ig_advanced_shadow_shader(_settings: &Settings, _first: i32, _last: i32) -> () {
+fn ig_advanced_shadow_shader(_settings: &Settings, _mat_id: i32, _first: i32, _last: i32) -> () {
     // If is hit or miss is hardcoded
 }
 

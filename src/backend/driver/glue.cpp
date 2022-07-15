@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include "RuntimeStructs.h"
 #include "Statistics.h"
+#include "config/Git.h"
 #include "config/Version.h"
 #include "driver/Interface.h"
 #include "table/SceneDatabase.h"
@@ -108,7 +109,8 @@ struct CPUData {
     anydsl::Array<float> cpu_secondary;
     TemporaryStorageHostProxy temporary_storage_host;
     IG::Statistics stats;
-    void* current_shader = nullptr;
+    void* current_shader                           = nullptr;
+    const IG::ParameterSet* current_local_registry = nullptr;
     std::unordered_map<void*, ShaderStats> shader_stats;
 };
 thread_local CPUData* sThreadData = nullptr;
@@ -120,7 +122,7 @@ class Interface {
 
 public:
     using DeviceImage       = std::tuple<anydsl::Array<float>, size_t, size_t>;
-    using DevicePackedImage = std::tuple<anydsl::Array<uint32_t>, size_t, size_t>; // Packed RGBA
+    using DevicePackedImage = std::tuple<anydsl::Array<uint8_t>, size_t, size_t>; // Packed RGBA
     using DeviceBuffer      = std::tuple<anydsl::Array<uint8_t>, size_t>;
 
     class DeviceData {
@@ -149,7 +151,8 @@ public:
         anydsl::Array<uint32_t> tonemap_pixels;
 
 #ifdef DEVICE_GPU
-        void* current_shader = nullptr;
+        void* current_shader                           = nullptr;
+        const IG::ParameterSet* current_local_registry = nullptr;
 #endif
 
         inline DeviceData()
@@ -211,6 +214,11 @@ public:
 
     inline ~Interface() = default;
 
+    inline const std::string& lookupResource(int32_t id) const
+    {
+        return setup.resource_map->at(id);
+    }
+
     inline void setupFramebuffer()
     {
         host_pixels = anydsl::Array<float>(film_width * film_height * 3);
@@ -265,16 +273,16 @@ public:
         shader_set = shaderSet;
 
         // Prepare cache data
-        shader_infos[shader_set.RayGenerationShader] = {};
-        shader_infos[shader_set.MissShader]          = {};
+        shader_infos[shader_set.RayGenerationShader.Exec] = {};
+        shader_infos[shader_set.MissShader.Exec]          = {};
         for (const auto& clb : shader_set.HitShaders)
-            shader_infos[clb] = {};
+            shader_infos[clb.Exec] = {};
         for (const auto& clb : shader_set.AdvancedShadowHitShaders)
-            shader_infos[clb] = {};
+            shader_infos[clb.Exec] = {};
         for (const auto& clb : shader_set.AdvancedShadowMissShaders)
-            shader_infos[clb] = {};
+            shader_infos[clb.Exec] = {};
         for (const auto& clb : shader_set.CallbackShaders)
-            shader_infos[clb] = {};
+            shader_infos[clb.Exec] = {};
     }
 
     inline void registerThread()
@@ -311,19 +319,31 @@ public:
         return sThreadData;
     }
 
-    inline void setCurrentShader(int32_t dev, int workload, void* shader)
+    inline void setCurrentShader(int32_t dev, int workload, const IG::ShaderOutput<void*>& shader)
     {
 #ifdef DEVICE_GPU
-        devices[dev].current_shader = shader;
-        auto data                   = getThreadData();
-        data->shader_stats[shader].call_count++;
-        data->shader_stats[shader].workload_count += (size_t)workload;
+        devices[dev].current_shader         = shader.Exec;
+        devices[dev].current_local_registry = &shader.LocalRegistry;
+        auto data                           = getThreadData();
+        data->shader_stats[shader.Exec].call_count++;
+        data->shader_stats[shader.Exec].workload_count += (size_t)workload;
 #else
         IG_UNUSED(dev);
-        auto data            = getThreadData();
-        data->current_shader = shader;
-        data->shader_stats[shader].call_count++;
-        data->shader_stats[shader].workload_count += (size_t)workload;
+        auto data                    = getThreadData();
+        data->current_shader         = shader.Exec;
+        data->current_local_registry = &shader.LocalRegistry;
+        data->shader_stats[shader.Exec].call_count++;
+        data->shader_stats[shader.Exec].workload_count += (size_t)workload;
+#endif
+    }
+
+    inline const IG::ParameterSet* getCurrentLocalRegistry(int32_t dev)
+    {
+#ifdef DEVICE_GPU
+        return devices[dev].current_local_registry;
+#else
+        IG_UNUSED(dev);
+        return getThreadData()->current_local_registry;
 #endif
     }
 
@@ -503,9 +523,9 @@ public:
 
     inline DevicePackedImage copyToDevicePacked(int32_t dev, const IG::Image& image)
     {
-        std::vector<uint32_t> packed;
+        std::vector<uint8_t> packed;
         image.copyToPackedFormat(packed);
-        return DevicePackedImage(copyToDevice(dev, packed.data(), image.width * image.height), image.width, image.height);
+        return DevicePackedImage(copyToDevice(dev, packed), image.width, image.height);
     }
 
     template <typename Node>
@@ -566,7 +586,7 @@ public:
         return tables[name] = loadDyntable(dev, database->CustomTables.at(name));
     }
 
-    inline const DeviceImage& loadImage(int32_t dev, const std::string& filename)
+    inline const DeviceImage& loadImage(int32_t dev, const std::string& filename, int32_t expected_channels)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
 
@@ -575,12 +595,17 @@ public:
         if (it != images.end())
             return it->second;
 
-        IG_LOG(IG::L_DEBUG) << "Loading image " << filename << std::endl;
+        IG_LOG(IG::L_DEBUG) << "Loading image " << filename << " (C=" << expected_channels << ")" << std::endl;
         try {
             const auto img = IG::Image::load(filename);
-            auto& res      = getCurrentShaderInfo(dev).images[filename];
+            if (expected_channels != (int32_t)img.channels) {
+                IG_LOG(IG::L_ERROR) << "Image '" << filename << "' is has unexpected channel count" << std::endl;
+                return images[filename] = copyToDevice(dev, IG::Image());
+            }
+
+            auto& res = getCurrentShaderInfo(dev).images[filename];
             res.counter++;
-            res.memory_usage        = img.width * img.height * 4 * sizeof(float);
+            res.memory_usage        = img.width * img.height * img.channels * sizeof(float);
             return images[filename] = copyToDevice(dev, img);
         } catch (const IG::ImageLoadException& e) {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;
@@ -588,7 +613,7 @@ public:
         }
     }
 
-    inline const DevicePackedImage& loadPackedImage(int32_t dev, const std::string& filename)
+    inline const DevicePackedImage& loadPackedImage(int32_t dev, const std::string& filename, int32_t expected_channels, bool linear)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
 
@@ -597,19 +622,24 @@ public:
         if (it != images.end())
             return it->second;
 
-        IG_LOG(IG::L_DEBUG) << "Loading (packed) image " << filename << std::endl;
+        IG_LOG(IG::L_DEBUG) << "Loading (packed) image " << filename << " (C=" << expected_channels << ")" << std::endl;
         try {
-            std::vector<uint32_t> packed;
-            size_t width, height;
-            IG::Image::loadAsPacked(filename, packed, width, height);
+            std::vector<uint8_t> packed;
+            size_t width, height, channels;
+            IG::Image::loadAsPacked(filename, packed, width, height, channels, linear);
+
+            if (expected_channels != (int32_t)channels) {
+                IG_LOG(IG::L_ERROR) << "Packed image '" << filename << "' is has unexpected channel count" << std::endl;
+                return images[filename] = DevicePackedImage(copyToDevice(dev, std::vector<uint8_t>{}), 0, 0);
+            }
 
             auto& res = getCurrentShaderInfo(dev).packed_images[filename];
             res.counter++;
-            res.memory_usage        = packed.size() * sizeof(uint32_t);
+            res.memory_usage        = packed.size();
             return images[filename] = DevicePackedImage(copyToDevice(dev, packed), width, height);
         } catch (const IG::ImageLoadException& e) {
             IG_LOG(IG::L_ERROR) << e.what() << std::endl;
-            return images[filename] = DevicePackedImage(copyToDevice(dev, std::vector<uint32_t>{}), 0, 0);
+            return images[filename] = DevicePackedImage(copyToDevice(dev, std::vector<uint8_t>{}), 0, 0);
         }
     }
 
@@ -785,9 +815,9 @@ public:
             getThreadData()->stats.beginShaderLaunch(IG::ShaderType::RayGeneration, (xmax - xmin) * (ymax - ymin), {});
 
         using Callback = decltype(ig_ray_generation_shader);
-        IG_ASSERT(shader_set.RayGenerationShader != nullptr, "Expected ray generation shader to be valid");
-        auto callback = reinterpret_cast<Callback*>(shader_set.RayGenerationShader);
-        setCurrentShader(dev, (xmax - xmin) * (ymax - ymin), (void*)callback);
+        auto callback  = reinterpret_cast<Callback*>(shader_set.RayGenerationShader.Exec);
+        IG_ASSERT(callback != nullptr, "Expected ray generation shader to be valid");
+        setCurrentShader(dev, (xmax - xmin) * (ymax - ymin), shader_set.RayGenerationShader);
         const int ret = callback(&driver_settings, (int)current_iteration, id, size, xmin, ymin, xmax, ymax);
 
         checkDebugOutput();
@@ -803,9 +833,9 @@ public:
             getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Miss, last - first, {});
 
         using Callback = decltype(ig_miss_shader);
-        IG_ASSERT(shader_set.MissShader != nullptr, "Expected miss shader to be valid");
-        auto callback = reinterpret_cast<Callback*>(shader_set.MissShader);
-        setCurrentShader(dev, last - first, (void*)callback);
+        auto callback  = reinterpret_cast<Callback*>(shader_set.MissShader.Exec);
+        IG_ASSERT(callback != nullptr, "Expected miss shader to be valid");
+        setCurrentShader(dev, last - first, shader_set.MissShader);
         callback(&driver_settings, first, last);
 
         checkDebugOutput();
@@ -823,11 +853,11 @@ public:
 
         using Callback = decltype(ig_hit_shader);
         IG_ASSERT(material_id >= 0 && material_id < (int)shader_set.HitShaders.size(), "Expected material id for hit shaders to be valid");
-        void* hit_shader = shader_set.HitShaders.at(material_id);
-        IG_ASSERT(hit_shader != nullptr, "Expected hit shader to be valid");
-        auto callback = reinterpret_cast<Callback*>(hit_shader);
-        setCurrentShader(dev, last - first, (void*)callback);
-        callback(&driver_settings, entity_id, first, last);
+        const auto& output = shader_set.HitShaders.at(material_id);
+        auto callback      = reinterpret_cast<Callback*>(output.Exec);
+        IG_ASSERT(callback != nullptr, "Expected hit shader to be valid");
+        setCurrentShader(dev, last - first, output);
+        callback(&driver_settings, entity_id, material_id, first, last);
 
         checkDebugOutput();
 
@@ -850,11 +880,11 @@ public:
 
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(material_id >= 0 && material_id < (int)shader_set.AdvancedShadowHitShaders.size(), "Expected material id for advanced shadow hit shaders to be valid");
-            void* shader = shader_set.AdvancedShadowHitShaders.at(material_id);
-            IG_ASSERT(shader != nullptr, "Expected advanced shadow hit shader to be valid");
-            auto callback = reinterpret_cast<Callback*>(shader);
-            setCurrentShader(dev, last - first, (void*)callback);
-            callback(&driver_settings, first, last);
+            const auto& output = shader_set.AdvancedShadowHitShaders.at(material_id);
+            auto callback      = reinterpret_cast<Callback*>(output.Exec);
+            IG_ASSERT(callback != nullptr, "Expected advanced shadow hit shader to be valid");
+            setCurrentShader(dev, last - first, output);
+            callback(&driver_settings, material_id, first, last);
 
             checkDebugOutput();
 
@@ -866,11 +896,11 @@ public:
 
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(material_id >= 0 && material_id < (int)shader_set.AdvancedShadowMissShaders.size(), "Expected material id for advanced shadow miss shaders to be valid");
-            void* shader = shader_set.AdvancedShadowMissShaders.at(material_id);
-            IG_ASSERT(shader != nullptr, "Expected advanced shadow miss shader to be valid");
-            auto callback = reinterpret_cast<Callback*>(shader);
-            setCurrentShader(dev, last - first, (void*)callback);
-            callback(&driver_settings, first, last);
+            const auto& output = shader_set.AdvancedShadowMissShaders.at(material_id);
+            auto callback      = reinterpret_cast<Callback*>(output.Exec);
+            IG_ASSERT(callback != nullptr, "Expected advanced shadow miss shader to be valid");
+            setCurrentShader(dev, last - first, output);
+            callback(&driver_settings, material_id, first, last);
 
             checkDebugOutput();
 
@@ -883,13 +913,15 @@ public:
     {
         IG_ASSERT(type >= 0 && type < (int)IG::CallbackType::_COUNT, "Expected callback shader type to be well formed!");
 
-        if (shader_set.CallbackShaders[type] != nullptr) {
+        const auto& output = shader_set.CallbackShaders[type];
+        using Callback     = decltype(ig_callback_shader);
+        auto callback      = reinterpret_cast<Callback*>(output.Exec);
+
+        if (callback != nullptr) {
             if (setup.acquire_stats)
                 getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Callback, 1, type);
 
-            using Callback = decltype(ig_callback_shader);
-            auto callback  = reinterpret_cast<Callback*>(shader_set.CallbackShaders[type]);
-            setCurrentShader(dev, 1, (void*)callback);
+            setCurrentShader(dev, 1, output);
             callback(&driver_settings, (int)current_iteration);
 
             checkDebugOutput();
@@ -1018,29 +1050,32 @@ public:
     }
 
     // Access parameters
-    int getParameterInt(const char* name, int def)
+    int getParameterInt(int32_t dev, const char* name, int def, bool global)
     {
-        IG_ASSERT(current_parameters != nullptr, "No parameters available!");
-        if (current_parameters->IntParameters.count(name) > 0)
-            return current_parameters->IntParameters.at(name);
+        const IG::ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
+        IG_ASSERT(registry != nullptr, "No parameters available!");
+        if (registry->IntParameters.count(name) > 0)
+            return registry->IntParameters.at(name);
         else
             return def;
     }
 
-    float getParameterFloat(const char* name, float def)
+    float getParameterFloat(int32_t dev, const char* name, float def, bool global)
     {
-        IG_ASSERT(current_parameters != nullptr, "No parameters available!");
-        if (current_parameters->FloatParameters.count(name) > 0)
-            return current_parameters->FloatParameters.at(name);
+        const IG::ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
+        IG_ASSERT(registry != nullptr, "No parameters available!");
+        if (registry->FloatParameters.count(name) > 0)
+            return registry->FloatParameters.at(name);
         else
             return def;
     }
 
-    void getParameterVector(const char* name, float defX, float defY, float defZ, float& outX, float& outY, float& outZ)
+    void getParameterVector(int32_t dev, const char* name, float defX, float defY, float defZ, float& outX, float& outY, float& outZ, bool global)
     {
-        IG_ASSERT(current_parameters != nullptr, "No parameters available!");
-        if (current_parameters->VectorParameters.count(name) > 0) {
-            IG::Vector3f param = current_parameters->VectorParameters.at(name);
+        const IG::ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
+        IG_ASSERT(registry != nullptr, "No parameters available!");
+        if (registry->VectorParameters.count(name) > 0) {
+            IG::Vector3f param = registry->VectorParameters.at(name);
             outX               = param.x();
             outY               = param.y();
             outZ               = param.z();
@@ -1051,11 +1086,12 @@ public:
         }
     }
 
-    void getParameterColor(const char* name, float defR, float defG, float defB, float defA, float& outR, float& outG, float& outB, float& outA)
+    void getParameterColor(int32_t dev, const char* name, float defR, float defG, float defB, float defA, float& outR, float& outG, float& outB, float& outA, bool global)
     {
-        IG_ASSERT(current_parameters != nullptr, "No parameters available!");
-        if (current_parameters->ColorParameters.count(name) > 0) {
-            IG::Vector4f param = current_parameters->ColorParameters.at(name);
+        const IG::ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
+        IG_ASSERT(registry != nullptr, "No parameters available!");
+        if (registry->ColorParameters.count(name) > 0) {
+            IG::Vector4f param = registry->ColorParameters.at(name);
             outR               = param.x();
             outG               = param.y();
             outB               = param.z();
@@ -1279,6 +1315,7 @@ IG_EXPORT DriverInterface ig_get_interface()
     };
     interface.MajorVersion = IG_VERSION_MAJOR;
     interface.MinorVersion = IG_VERSION_MINOR;
+    interface.Revision     = IG_GIT_REVISION;
 
 // Expose Target
 #if defined(DEVICE_DEFAULT)
@@ -1409,20 +1446,30 @@ IG_EXPORT void ignis_load_rays(int dev, StreamRay** list)
     *list = const_cast<StreamRay*>(sInterface->loadRayList(dev).data());
 }
 
-IG_EXPORT void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height)
+IG_EXPORT void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height, int32_t expected_channels)
 {
-    auto& img = sInterface->loadImage(dev, file);
+    auto& img = sInterface->loadImage(dev, file, expected_channels);
     *pixels   = const_cast<float*>(std::get<0>(img).data());
     *width    = (int)std::get<1>(img);
     *height   = (int)std::get<2>(img);
 }
 
-IG_EXPORT void ignis_load_packed_image(int32_t dev, const char* file, uint32_t** pixels, int32_t* width, int32_t* height)
+IG_EXPORT void ignis_load_image_by_id(int32_t dev, int32_t id, float** pixels, int32_t* width, int32_t* height, int32_t expected_channels)
 {
-    auto& img = sInterface->loadPackedImage(dev, file);
-    *pixels   = const_cast<uint32_t*>(std::get<0>(img).data());
+    return ignis_load_image(dev, sInterface->lookupResource(id).c_str(), pixels, width, height, expected_channels);
+}
+
+IG_EXPORT void ignis_load_packed_image(int32_t dev, const char* file, uint8_t** pixels, int32_t* width, int32_t* height, int32_t expected_channels, bool linear)
+{
+    auto& img = sInterface->loadPackedImage(dev, file, expected_channels, linear);
+    *pixels   = const_cast<uint8_t*>(std::get<0>(img).data());
     *width    = (int)std::get<1>(img);
     *height   = (int)std::get<2>(img);
+}
+
+IG_EXPORT void ignis_load_packed_image_by_id(int32_t dev, int32_t id, uint8_t** pixels, int32_t* width, int32_t* height, int32_t expected_channels, bool linear)
+{
+    return ignis_load_packed_image(dev, sInterface->lookupResource(id).c_str(), pixels, width, height, expected_channels, linear);
 }
 
 IG_EXPORT void ignis_load_buffer(int32_t dev, const char* file, uint8_t** data, int32_t* size)
@@ -1430,6 +1477,11 @@ IG_EXPORT void ignis_load_buffer(int32_t dev, const char* file, uint8_t** data, 
     auto& img = sInterface->loadBuffer(dev, file);
     *data     = const_cast<uint8_t*>(std::get<0>(img).data());
     *size     = (int)std::get<1>(img);
+}
+
+IG_EXPORT void ignis_load_buffer_by_id(int32_t dev, int32_t id, uint8_t** data, int32_t* size)
+{
+    return ignis_load_buffer(dev, sInterface->lookupResource(id).c_str(), data, size);
 }
 
 IG_EXPORT void ignis_request_buffer(int32_t dev, const char* name, uint8_t** data, int size, int flags)
@@ -1583,24 +1635,24 @@ IG_EXPORT void ignis_present(int dev)
 
 // Registry stuff
 
-IG_EXPORT int ignis_get_parameter_i32(const char* name, int def)
+IG_EXPORT int ignis_get_parameter_i32(int dev, const char* name, int def, bool global)
 {
-    return sInterface->getParameterInt(name, def);
+    return sInterface->getParameterInt(dev, name, def, global);
 }
 
-IG_EXPORT float ignis_get_parameter_f32(const char* name, float def)
+IG_EXPORT float ignis_get_parameter_f32(int dev, const char* name, float def, bool global)
 {
-    return sInterface->getParameterFloat(name, def);
+    return sInterface->getParameterFloat(dev, name, def, global);
 }
 
-IG_EXPORT void ignis_get_parameter_vector(const char* name, float defX, float defY, float defZ, float* x, float* y, float* z)
+IG_EXPORT void ignis_get_parameter_vector(int dev, const char* name, float defX, float defY, float defZ, float* x, float* y, float* z, bool global)
 {
-    sInterface->getParameterVector(name, defX, defY, defZ, *x, *y, *z);
+    sInterface->getParameterVector(dev, name, defX, defY, defZ, *x, *y, *z, global);
 }
 
-IG_EXPORT void ignis_get_parameter_color(const char* name, float defR, float defG, float defB, float defA, float* r, float* g, float* b, float* a)
+IG_EXPORT void ignis_get_parameter_color(int dev, const char* name, float defR, float defG, float defB, float defA, float* r, float* g, float* b, float* a, bool global)
 {
-    sInterface->getParameterColor(name, defR, defG, defB, defA, *r, *g, *b, *a);
+    sInterface->getParameterColor(dev, name, defR, defG, defB, defA, *r, *g, *b, *a, global);
 }
 
 // Stats

@@ -143,45 +143,56 @@ bool Runtime::loadFromFile(const std::filesystem::path& path)
 {
     // Parse scene file
     IG_LOG(L_DEBUG) << "Parsing scene file" << std::endl;
-    const auto startParser = std::chrono::high_resolution_clock::now();
-    Parser::SceneParser parser;
-    bool ok    = false;
-    auto scene = parser.loadFromFile(path, ok);
-    IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
-    if (!ok)
+    try {
+        const auto startParser = std::chrono::high_resolution_clock::now();
+        Parser::SceneParser parser;
+        bool ok    = false;
+        auto scene = parser.loadFromFile(path, ok);
+        IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
+        if (!ok)
+            return false;
+
+        if (mOptions.AddExtraEnvLight)
+            scene.addConstantEnvLight();
+
+        return load(path, std::move(scene));
+    } catch (const std::runtime_error& err) {
+        IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
         return false;
-
-    if (mOptions.AddExtraEnvLight)
-        scene.addConstantEnvLight();
-
-    return load(path, std::move(scene));
+    }
 }
 
 bool Runtime::loadFromString(const std::string& str)
 {
     // Parse scene string
-    IG_LOG(L_DEBUG) << "Parsing scene string" << std::endl;
-    const auto startParser = std::chrono::high_resolution_clock::now();
-    Parser::SceneParser parser;
-    bool ok    = false;
-    auto scene = parser.loadFromString(str, ok);
-    IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
-    if (!ok)
+    try {
+        IG_LOG(L_DEBUG) << "Parsing scene string" << std::endl;
+        const auto startParser = std::chrono::high_resolution_clock::now();
+        Parser::SceneParser parser;
+        bool ok    = false;
+        auto scene = parser.loadFromString(str, ok);
+        IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
+        if (!ok)
+            return false;
+
+        if (mOptions.AddExtraEnvLight)
+            scene.addConstantEnvLight();
+
+        return load({}, std::move(scene));
+    } catch (const std::runtime_error& err) {
+        IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
         return false;
-
-    if (mOptions.AddExtraEnvLight)
-        scene.addConstantEnvLight();
-
-    return load({}, std::move(scene));
+    }
 }
 
 bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
 {
     LoaderOptions lopts;
-    lopts.FilePath = path;
-    lopts.Target   = mTarget;
-    lopts.IsTracer = mOptions.IsTracer;
-    lopts.Scene    = std::move(scene);
+    lopts.FilePath            = path;
+    lopts.Target              = mTarget;
+    lopts.IsTracer            = mOptions.IsTracer;
+    lopts.Scene               = std::move(scene);
+    lopts.ForceSpecialization = mOptions.ForceSpecialization;
 
     // Extract technique
     setup_technique(lopts, mOptions);
@@ -215,6 +226,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     mTechniqueInfo            = result.TechniqueInfo;
     mInitialCameraOrientation = result.CameraOrientation;
     mTechniqueVariants        = std::move(result.TechniqueVariants);
+    mResourceMap              = std::move(result.ResourceMap);
 
     return setup();
 }
@@ -366,11 +378,22 @@ bool Runtime::setup()
     settings.framebuffer_height = (uint32)mFilmHeight;
     settings.acquire_stats      = mAcquireStats;
     settings.aov_count          = mTechniqueInfo.EnabledAOVs.size();
+    settings.resource_map       = &mResourceMap;
 
     settings.logger = &IG_LOGGER;
 
     IG_LOG(L_DEBUG) << "Init driver" << std::endl;
     mLoadedInterface.SetupFunction(settings);
+
+    if (IG_LOGGER.verbosity() <= L_DEBUG) {
+        if (mResourceMap.empty()) {
+            IG_LOG(L_DEBUG) << "Registered resources: None" << std::endl;
+        } else {
+            IG_LOG(L_DEBUG) << "Registered resources:" << std::endl;
+            for (const auto& resource : mResourceMap)
+                IG_LOG(L_DEBUG) << " -> " << resource << std::endl;
+        }
+    }
 
     if (!compileShaders())
         return false;
@@ -394,15 +417,17 @@ bool Runtime::compileShaders()
 
         IG_LOG(L_DEBUG) << "Handling technique variant " << i << std::endl;
         IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
-        shaders.RayGenerationShader = compileShader(variant.RayGenerationShader, "ig_ray_generation_shader", "v" + std::to_string(i) + "_rayGeneration");
-        if (shaders.RayGenerationShader == nullptr) {
+        shaders.RayGenerationShader.Exec          = compileShader(variant.RayGenerationShader.Exec, "ig_ray_generation_shader", "v" + std::to_string(i) + "_rayGeneration");
+        shaders.RayGenerationShader.LocalRegistry = variant.RayGenerationShader.LocalRegistry;
+        if (shaders.RayGenerationShader.Exec == nullptr) {
             IG_LOG(L_ERROR) << "Failed to compile ray generation shader in variant " << i << "." << std::endl;
             return false;
         }
 
         IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
-        shaders.MissShader = compileShader(variant.MissShader, "ig_miss_shader", "v" + std::to_string(i) + "_missShader");
-        if (shaders.MissShader == nullptr) {
+        shaders.MissShader.Exec          = compileShader(variant.MissShader.Exec, "ig_miss_shader", "v" + std::to_string(i) + "_missShader");
+        shaders.MissShader.LocalRegistry = variant.RayGenerationShader.LocalRegistry;
+        if (shaders.MissShader.Exec == nullptr) {
             IG_LOG(L_ERROR) << "Failed to compile miss shader in variant " << i << "." << std::endl;
             return false;
         }
@@ -410,8 +435,12 @@ bool Runtime::compileShaders()
         IG_LOG(L_DEBUG) << "Compiling hit shaders" << std::endl;
         for (size_t j = 0; j < variant.HitShaders.size(); ++j) {
             IG_LOG(L_DEBUG) << "Compiling Hit shader [" << j << "]" << std::endl;
-            shaders.HitShaders.push_back(compileShader(variant.HitShaders[j].c_str(), "ig_hit_shader", "v" + std::to_string(i) + "_hitShader" + std::to_string(j)));
-            if (shaders.HitShaders[j] == nullptr) {
+            ShaderOutput<void*> result = {
+                compileShader(variant.HitShaders[j].Exec, "ig_hit_shader", "v" + std::to_string(i) + "_hitShader" + std::to_string(j)),
+                variant.HitShaders[j].LocalRegistry
+            };
+            shaders.HitShaders.push_back(result);
+            if (result.Exec == nullptr) {
                 IG_LOG(L_ERROR) << "Failed to compile hit shader " << j << " in variant " << i << "." << std::endl;
                 return false;
             }
@@ -422,9 +451,13 @@ bool Runtime::compileShaders()
 
             for (size_t j = 0; j < variant.AdvancedShadowHitShaders.size(); ++j) {
                 IG_LOG(L_DEBUG) << "Compiling Advanced Shadow Hit shader [" << j << "]" << std::endl;
-                shaders.AdvancedShadowHitShaders.push_back(compileShader(variant.AdvancedShadowHitShaders[j].c_str(), "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowHit" + std::to_string(j)));
+                ShaderOutput<void*> result = {
+                    compileShader(variant.AdvancedShadowHitShaders[j].Exec, "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowHit" + std::to_string(j)),
+                    variant.AdvancedShadowHitShaders[j].LocalRegistry
+                };
+                shaders.AdvancedShadowHitShaders.push_back(result);
 
-                if (shaders.AdvancedShadowHitShaders[j] == nullptr) {
+                if (shaders.AdvancedShadowHitShaders[j].Exec == nullptr) {
                     IG_LOG(L_ERROR) << "Failed to compile advanced shadow hit shader " << j << " in variant " << i << "." << std::endl;
                     return false;
                 }
@@ -432,9 +465,12 @@ bool Runtime::compileShaders()
 
             for (size_t j = 0; j < variant.AdvancedShadowMissShaders.size(); ++j) {
                 IG_LOG(L_DEBUG) << "Compiling Advanced Shadow Miss shader [" << j << "]" << std::endl;
-                shaders.AdvancedShadowMissShaders.push_back(compileShader(variant.AdvancedShadowMissShaders[j].c_str(), "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowMiss" + std::to_string(j)));
-
-                if (shaders.AdvancedShadowMissShaders[j] == nullptr) {
+                ShaderOutput<void*> result = {
+                    compileShader(variant.AdvancedShadowMissShaders[j].Exec, "ig_advanced_shadow_shader", "v" + std::to_string(i) + "_advancedShadowMiss" + std::to_string(j)),
+                    variant.AdvancedShadowMissShaders[j].LocalRegistry
+                };
+                shaders.AdvancedShadowMissShaders.push_back(result);
+                if (shaders.AdvancedShadowMissShaders[j].Exec == nullptr) {
                     IG_LOG(L_ERROR) << "Failed to compile advanced shadow miss shader " << j << " in variant " << i << "." << std::endl;
                     return false;
                 }
@@ -442,12 +478,13 @@ bool Runtime::compileShaders()
         }
 
         for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {
-            if (variant.CallbackShaders.at(j).empty()) {
-                shaders.CallbackShaders[j] = nullptr;
+            if (variant.CallbackShaders.at(j).Exec.empty()) {
+                shaders.CallbackShaders[j].Exec = nullptr;
             } else {
                 IG_LOG(L_DEBUG) << "Compiling callback shader [" << i << "]" << std::endl;
-                shaders.CallbackShaders[j] = compileShader(variant.CallbackShaders.at(j), "ig_callback_shader", "v" + std::to_string(i) + "_callback" + std::to_string(j));
-                if (shaders.CallbackShaders.at(j) == nullptr) {
+                shaders.CallbackShaders[j].Exec          = compileShader(variant.CallbackShaders.at(j).Exec, "ig_callback_shader", "v" + std::to_string(i) + "_callback" + std::to_string(j));
+                shaders.CallbackShaders[j].LocalRegistry = variant.CallbackShaders.at(j).LocalRegistry;
+                if (shaders.CallbackShaders.at(j).Exec == nullptr) {
                     IG_LOG(L_ERROR) << "Failed to compile callback " << j << " shader in variant " << i << "." << std::endl;
                     return false;
                 }

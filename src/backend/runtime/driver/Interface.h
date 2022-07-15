@@ -21,6 +21,7 @@ struct DriverSetupSettings {
     IG::SceneDatabase* database = nullptr;
     bool acquire_stats          = false;
     size_t aov_count            = false;
+    const std::vector<std::string>* resource_map = nullptr;
 
     IG::Logger* logger = nullptr;
 };
@@ -50,6 +51,7 @@ using DriverCompileSourceFunction = void* (*)(const char*, const char*, bool);
 struct DriverInterface {
     IG::uint32 MajorVersion;
     IG::uint32 MinorVersion;
+    const char* Revision;
     IG::Target Target;
     DriverSetupFunction SetupFunction;
     DriverShutdownFunction ShutdownFunction;

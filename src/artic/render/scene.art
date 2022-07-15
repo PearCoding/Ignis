@@ -15,5 +15,22 @@ struct SceneGeometry {
     bvh:      SceneBvh
 }
 
-type BSDFShader = fn (Ray, Hit, SurfaceElement) -> Bsdf;
-type Shader = fn (Ray, Hit, SurfaceElement) -> Material;
+// Used as interface
+struct ShadingContext {
+    entity_id: i32,
+    ray:  Ray,
+    hit:  Hit,
+    surf: SurfaceElement,
+    uvw:  Vec3
+}
+
+fn @make_surface_shading_context(entity_id: i32, ray: Ray, hit: Hit, surf: SurfaceElement) = ShadingContext {
+    entity_id = entity_id,
+    ray  = ray,
+    hit  = hit,
+    surf = surf,
+    uvw  = vec2_to_3(surf.tex_coords, 0)
+};
+
+type BSDFShader     = fn (ShadingContext) -> Bsdf;
+type MaterialShader = fn (ShadingContext) -> Material;

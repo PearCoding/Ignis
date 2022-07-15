@@ -34,6 +34,9 @@ std::string ShaderUtils::constructDevice(Target target)
     case Target::AMDGPU:
         stream << "let device = make_amdgpu_device(settings.device);";
         break;
+    case Target::SINGLE:
+        stream << "let device = make_cpu_singlethreaded_device();";
+        break;
     default:
         stream << "let device = make_cpu_default_device();";
         break;
@@ -58,20 +61,22 @@ std::string ShaderUtils::generateMaterialShader(ShadingTree& tree, size_t mat_id
     const Material material = tree.context().Environment.Materials.at(mat_id);
     stream << LoaderBSDF::generate(material.BSDF, tree);
 
-    const bool isLight = material.hasEmission() && tree.context().Lights->isAreaLight(material.Entity) > 0;
+    std::string bsdf_id = tree.getClosureID(material.BSDF);
+    const bool isLight  = material.hasEmission() && tree.context().Lights->isAreaLight(material.Entity);
 
     if (material.hasMediumInterface())
         stream << "  let medium_interface = make_medium_interface(" << material.MediumInner << ", " << material.MediumOuter << ");" << std::endl;
     else
         stream << "  let medium_interface = no_medium_interface();" << std::endl;
 
+    // We do not embed the actual material id into the shader, as this makes the shader unique without any major performance gain
     if (isLight && requireLights) {
-        const uint32 light_id = tree.context().Lights->getAreaLightID(material.Entity);
-        stream << "  let " << output_var << " : Shader = @|ray, hit, surf| make_emissive_material(" << mat_id << ", surf, bsdf_" << LoaderUtils::escapeIdentifier(material.BSDF) << "(ray, hit, surf), medium_interface,"
+        const size_t light_id = tree.context().Lights->getAreaLightID(material.Entity);
+        stream << "  let " << output_var << " : MaterialShader = @|ctx| make_emissive_material(mat_id, ctx.surf, bsdf_" << bsdf_id << "(ctx), medium_interface,"
                << " @lights(" << light_id << "));" << std::endl
                << std::endl;
     } else {
-        stream << "  let " << output_var << " : Shader = @|ray, hit, surf| make_material(" << mat_id << ", bsdf_" << LoaderUtils::escapeIdentifier(material.BSDF) << "(ray, hit, surf), medium_interface);" << std::endl
+        stream << "  let " << output_var << " : MaterialShader = @|ctx| make_material(mat_id, bsdf_" << bsdf_id << "(ctx), medium_interface);" << std::endl
                << std::endl;
     }
 
@@ -100,7 +105,7 @@ std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
     if (ctx.SamplesPerIteration == 1) // Hardcode this case as some optimizations might apply
         stream << ctx.SamplesPerIteration << " : i32";
     else // Fallback to dynamic spi
-        stream << "registry::get_parameter_i32(\"__spi\", 1)";
+        stream << "registry::get_global_parameter_i32(\"__spi\", 1)";
 
     // We do not hardcode the spi as default to prevent recompilations if spi != 1
     return stream.str();

@@ -23,6 +23,7 @@ struct EntityObject {
     BoundingBox BBox;
     uint32 ShapeID;
     Matrix4f Local;
+    uint32 Flags;
 
     using ScalarType = float;
     inline bvh::BoundingBox<float> bounding_box() const { return bvh::BoundingBox<float>(BBox.min, BBox.max); }
@@ -88,7 +89,9 @@ protected:
                 { { { { in_obj.Local(0, 0), in_obj.Local(1, 0), in_obj.Local(2, 0) },
                       { in_obj.Local(0, 1), in_obj.Local(1, 1), in_obj.Local(2, 1) },
                       { in_obj.Local(0, 2), in_obj.Local(1, 2), in_obj.Local(2, 2) },
-                      { in_obj.Local(0, 3), in_obj.Local(1, 3), in_obj.Local(2, 3) } } } } });
+                      { in_obj.Local(0, 3), in_obj.Local(1, 3), in_obj.Local(2, 3) } } } },
+                in_obj.Flags,
+                {0,0,0} /* Pads */ });
         }
 
         // Add sentinel

@@ -65,7 +65,7 @@ fn @make_wireframe_renderer(camera: Camera) -> Technique {
                 depth    = wpt.depth + 1,
                 distance = wpt.distance + hit.distance,
             });
-            make_option(make_ray(surf.point, ray.dir, offset, flt_max))
+            make_option(make_ray(surf.point, ray.dir, offset, flt_max, ray_flag_bounce))
         } else {
             Option[Ray]::None
         }
