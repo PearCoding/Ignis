@@ -126,11 +126,6 @@ Runtime::Runtime(const RuntimeOptions& opts)
         IG_LOG(L_INFO) << "Loading standard library from " << mOptions.ScriptDir << std::endl;
         mScriptPreprocessor.loadStdLibFromDirectory(mOptions.ScriptDir);
     }
-
-    // Force flush to zero mode for denormals
-#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-    _mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
-#endif
 }
 
 Runtime::~Runtime()

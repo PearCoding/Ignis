@@ -27,6 +27,14 @@
 
 #include <tbb/concurrent_queue.h>
 
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+#ifdef IG_CC_MSC
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
+#endif
+
 #if defined(DEVICE_NVVM) || defined(DEVICE_AMD)
 #define DEVICE_GPU
 #endif
@@ -1138,6 +1146,11 @@ void glue_setup(const DriverSetupSettings& settings)
     IG_ASSERT(sInterface == nullptr, "Only a single instance allowed!");
     sInterface = std::make_unique<Interface>(settings);
 
+    // Force flush to zero mode for denormals
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+    _mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
+#endif
+
     // Make sure the functions exposed are available in the linking process
     anydsl_link(settings.driver_filename);
 }
@@ -1170,6 +1183,17 @@ const IG::Statistics* glue_getStatistics()
     return sInterface->getFullStats();
 }
 
+static inline int get_dev_id(size_t device)
+{
+#if defined(DEVICE_NVVM)
+    return ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
+#elif defined(DEVICE_AMD)
+    return ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
+#else
+    return 0;
+#endif
+}
+
 void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings& driver_settings)
 {
     // Register host thread
@@ -1178,16 +1202,12 @@ void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Tonemap, 1, {});
 
+    int dev_id       = get_dev_id(device);
+    float* in_pixels = sInterface->getAOVImage(dev_id, (int)driver_settings.AOV);
+
 #ifdef DEVICE_GPU
-#if defined(DEVICE_NVVM)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
-#elif defined(DEVICE_AMD)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
-#endif
-    float* in_pixels            = sInterface->getAOVImage(dev_id, (int)driver_settings.AOV);
     uint32_t* device_out_pixels = sInterface->getTonemapImage(dev_id);
 #else
-    float* in_pixels = sInterface->getAOVImage(0, (int)driver_settings.AOV);
     uint32_t* device_out_pixels = out_pixels;
 #endif
 
@@ -1219,16 +1239,8 @@ void glue_imageinfo(size_t device, const IG::ImageInfoSettings& driver_settings,
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::ImageInfo, 1, {});
 
-#ifdef DEVICE_GPU
-#if defined(DEVICE_NVVM)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
-#elif defined(DEVICE_AMD)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
-#endif
+    int dev_id       = get_dev_id(device);
     float* in_pixels = sInterface->getAOVImage(dev_id, (int)driver_settings.AOV);
-#else
-    float* in_pixels = sInterface->getAOVImage(0, (int)driver_settings.AOV);
-#endif
 
     ImageInfoSettings settings;
     settings.scale     = driver_settings.Scale;

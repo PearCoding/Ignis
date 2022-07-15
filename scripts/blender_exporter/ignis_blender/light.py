@@ -97,7 +97,8 @@ def export_light(result, inst):
              "shape": light.name + "-shape",
              "bsdf": BSDF_BLACK_NAME,
              "transform": flat_matrix(inst.matrix_world),
-             "camera_visible": False}
+             "camera_visible": light.visible_camera,
+             "bounce_visible": (light.visible_diffuse or light.visible_glossy or light.visible_transmission)}
         )
 
         factor = 1/(4*area)  # No idea why there is the factor 4 in it
