@@ -34,7 +34,7 @@ def check_socket_if_constant(socket, value):
     if socket.is_linked:
         return False
 
-    if socket.type == "RGBA":
+    if socket.type == "RGBA" or socket.type == "VECTOR":
         return socket.default_value[0] == value and socket.default_value[1] == value and socket.default_value[2] == value
     else:
         return socket.default_value == value

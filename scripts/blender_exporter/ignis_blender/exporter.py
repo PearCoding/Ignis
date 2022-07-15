@@ -1,61 +1,69 @@
+import bpy
 import os
 import json
 
 from .light import export_light, export_background
-from .shape import export_shape, get_shape_name
+from .shape import export_shape, get_shape_name_base
 from .camera import export_camera
 from .bsdf import export_material, export_error_material, export_black_material, get_material_emission
 from .node import NodeContext
 from .utils import *
 from .defaults import *
 
-import bpy
 
+def export_technique(result, scene):
+    if scene.cycles is None:
+        max_depth = 8
+        clamp = 0
+    else:
+        max_depth = scene.cycles.max_bounces
+        clamp = max(scene.cycles.sample_clamp_direct,
+                    scene.cycles.sample_clamp_indirect)
 
-def export_technique(result):
     result["technique"] = {
         "type": "path",
-        "max_depth": 64
+        "max_depth": max_depth,
+        "clamp": clamp
     }
 
 
-def export_entity(result, inst, filepath, export_materials, export_lights, exported_materials):
+def export_entity(result, depsgraph, inst, filepath, shape_name, mat_i, export_materials, export_lights, copy_images):
+    shadow_visibility = True
     if export_materials:
-        if(len(inst.object.material_slots) >= 1):
-            if(len(inst.object.material_slots) > 1):
-                print(
-                    f"Entity {inst.object.name} has multiple materials associated, but only one is supported. Using first entry")
-            mat_name = inst.object.material_slots[0].material.name
+        if(len(inst.object.material_slots) > mat_i):
+            result["_materials"].add(
+                inst.object.material_slots[mat_i].material)
+            mat_name = inst.object.material_slots[mat_i].material.name
             emission = get_material_emission(NodeContext(
-                result, filepath), inst.object.material_slots[0].material)
+                result, filepath, depsgraph, copy_images), inst.object.material_slots[mat_i].material)
+            if bpy.context.engine == "EEVEE":
+                shadow_visibility = inst.object.material_slots[mat_i].material.shadow_method != "NONE"
         else:
             print(f"Entity {inst.object.name} has no material")
             mat_name = BSDF_BLACK_NAME
             emission = None
-
-        # Due to errors while exporting materials, the material might not be available, use a error indicating material instead
-        if mat_name not in exported_materials:
-            mat_name = BSDF_ERROR_NAME
     else:
         mat_name = BSDF_DEFAULT_NAME
         emission = None
 
     # Export actual entity
     matrix = inst.matrix_world
+    entity_name = f"{inst.object.name}-{shape_name}"
     result["entities"].append(
-        {"name": inst.object.name, "shape": get_shape_name(inst.object),
-            "bsdf": mat_name, "transform": flat_matrix(matrix)}
+        {"name": entity_name, "shape": shape_name,
+            "bsdf": mat_name, "transform": flat_matrix(matrix),
+            "shadow_visible": shadow_visibility}
     )
 
     # Export entity as area light if necessary
     if (emission is not None) and export_lights:
         result["lights"].append(
-            {"type": "area", "name": inst.object.name, "entity": inst.object.name,
+            {"type": "area", "name": entity_name, "entity": entity_name,
                 "radiance": emission}
         )
 
 
-def export_all(filepath, result, depsgraph, use_selection, export_materials, export_lights):
+def export_all(filepath, result, depsgraph, use_selection, export_materials, export_lights, copy_images):
     result["shapes"] = []
     result["bsdfs"] = []
     result["entities"] = []
@@ -63,27 +71,13 @@ def export_all(filepath, result, depsgraph, use_selection, export_materials, exp
     result["textures"] = []
 
     # Export all given objects
-    exported_shapes = set()
-    exported_materials = set()
+    exported_shapes = {}
 
     # Export default materials
     result["bsdfs"].append(export_black_material(BSDF_BLACK_NAME))
-    exported_materials.add(BSDF_BLACK_NAME)
     result["bsdfs"].append(export_error_material(BSDF_ERROR_NAME))
-    exported_materials.add(BSDF_ERROR_NAME)
 
-    # Export materials
-    if export_materials:
-        for material in bpy.data.materials:
-            if material.node_tree is None:
-                continue
-            mat = export_material(NodeContext(result, filepath), material)
-            if mat is not None:
-                result["bsdfs"].append(mat)
-                exported_materials.add(material.name)
-    else:
-        result["bsdfs"].append({"type": "diffuse", "name": BSDF_DEFAULT_NAME})
-
+    # Export entities & shapes
     for inst in depsgraph.object_instances:
         object_eval = inst.object
         if use_selection and not object_eval.original.select_get():
@@ -93,48 +87,95 @@ def export_all(filepath, result, depsgraph, use_selection, export_materials, exp
 
         objType = object_eval.type
         if objType == "MESH" or objType == "CURVE" or objType == "SURFACE":
-            shape_name = get_shape_name(object_eval)
-            if shape_name not in exported_shapes:
-                export_shape(result, object_eval, depsgraph, filepath)
-                exported_shapes.add(shape_name)
+            name = get_shape_name_base(object_eval)
+            if name in exported_shapes:
+                shapes = exported_shapes[name]
+            else:
+                shapes = export_shape(result, object_eval, depsgraph, filepath)
+                exported_shapes[name] = shapes
 
-            export_entity(result, inst, filepath,
-                          export_materials, export_lights, exported_materials)
+            if len(shapes) == 0:
+                print(
+                    f"Entity {object_eval.name} has no material or shape and will be ignored")
+
+            for shape in shapes:
+                export_entity(result, depsgraph, inst, filepath, shape[0], shape[1],
+                              export_materials, export_lights, copy_images)
         elif objType == "LIGHT" and export_lights:
             export_light(
                 result, inst)
 
+    # Export materials
+    if export_materials:
+        for material in result["_materials"]:
+            mat = export_material(NodeContext(
+                result, filepath, depsgraph, copy_images), material)
+            if mat is not None:
+                result["bsdfs"].append(mat)
+            else:
+                result["bsdfs"].append(export_error_material(material.name))
+    else:
+        result["bsdfs"].append({"type": "diffuse", "name": BSDF_DEFAULT_NAME})
 
-def export_scene(filepath, context, use_selection, export_materials, export_lights):
+
+def delete_none(_dict):
+    """Delete None values and empty sets recursively from all of the dictionaries, tuples, lists, sets"""
+    if isinstance(_dict, dict):
+        for key, value in list(_dict.items()):
+            if isinstance(value, (list, dict, tuple, set)):
+                val = delete_none(value)
+                if val is not None:
+                    _dict[key] = val
+                else:
+                    del _dict[key]
+            elif value is None or key is None:
+                del _dict[key]
+
+    elif isinstance(_dict, (list, set, tuple)):
+        _dict = type(_dict)(delete_none(item)
+                            for item in _dict if item is not None)
+        if len(_dict) == 0:
+            _dict = None
+
+    return _dict
+
+
+def export_scene(filepath, context, use_selection, export_materials, export_lights, enable_background, enable_camera, enable_technique, copy_images):
     depsgraph = context.evaluated_depsgraph_get()
 
     # Write all materials and cameras to a dict with the layout of our json file
     result = {}
     # This will not be exported, but removed later on
     result["_images"] = set()
+    result["_image_textures"] = dict()
+    result["_materials"] = set()
 
     # Export technique (set to default path tracing with 64 rays)
-    export_technique(result)
+    if enable_technique:
+        export_technique(result, depsgraph.scene)
 
     # Export camera
-    export_camera(result, depsgraph.scene)
+    if enable_camera:
+        export_camera(result, depsgraph.scene)
 
     # Create a path for meshes
-    meshPath = os.path.join(os.path.dirname(filepath), 'Meshes')
-    os.makedirs(meshPath, exist_ok=True)
+    rootPath = os.path.dirname(filepath)
+    os.makedirs(os.path.join(rootPath, 'Meshes'), exist_ok=True)
+    os.makedirs(os.path.join(rootPath, 'Textures'), exist_ok=True)
 
     # Export all objects, materials, textures and lights
-    export_all(meshPath, result, depsgraph, use_selection,
-               export_materials, export_lights)
+    export_all(rootPath, result, depsgraph, use_selection,
+               export_materials, export_lights, copy_images)
 
-    if export_lights:
+    if enable_background:
         # Export background/environmental light
-        export_background(result, meshPath, depsgraph.scene)
+        export_background(result, rootPath, depsgraph, copy_images)
 
     # Cleanup
-    result["_images"] = None
-    result = {key: value for key, value in result.items(
-    ) if not isinstance(value, list) or len(value) > 0}
+    del result["_images"]
+    del result["_image_textures"]
+    del result["_materials"]
+    result = delete_none(result)
 
     # Write the result into the .json
     with open(filepath, 'w') as fp:

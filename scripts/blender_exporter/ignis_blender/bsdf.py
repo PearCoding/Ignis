@@ -1,6 +1,7 @@
 import bpy
+import math
 
-from .node import export_node
+from .node import export_node, handle_node_group_begin, handle_node_group_end, handle_node_reroute
 from .utils import *
 
 
@@ -39,7 +40,7 @@ def _export_diffuse_bsdf(ctx, bsdf, export_name):
     if has_roughness:
         return _handle_normal(ctx, bsdf,
                               {"type": "roughdiffuse", "name": export_name,
-                                  "reflectance": reflectance, "roughness": roughness})
+                                  "reflectance": reflectance, "roughness": roughness})  # Square roughness?
     else:
         return _handle_normal(ctx, bsdf,
                               {"type": "diffuse", "name": export_name,
@@ -48,7 +49,10 @@ def _export_diffuse_bsdf(ctx, bsdf, export_name):
 
 def _export_glass_bsdf(ctx, bsdf, export_name):
     reflectance = export_node(ctx, bsdf.inputs["Color"])
-    roughness = export_node(ctx, bsdf.inputs["Roughness"])
+    if bsdf.distribution == 'SHARP':
+        roughness = 1
+    else:
+        roughness = export_node(ctx, bsdf.inputs["Roughness"])
     ior = export_node(ctx, bsdf.inputs["IOR"])
 
     has_roughness = try_extract_node_value(roughness, default=1) > 0
@@ -60,12 +64,16 @@ def _export_glass_bsdf(ctx, bsdf, export_name):
     else:
         return _handle_normal(ctx, bsdf,
                               {"type": "roughdielectric", "name": export_name,
-                               "specular_reflectance": reflectance, "specular_transmittance": reflectance, "roughness": roughness, "ext_ior": ior})
+                               "specular_reflectance": reflectance, "specular_transmittance": reflectance, "roughness": roughness, "ext_ior": ior})  # Square roughness?
 
 
 def _export_refraction_bsdf(ctx, bsdf, export_name):
+    # TODO: Need better support for this?
     base_color = export_node(ctx, bsdf.inputs["Color"])
-    roughness = export_node(ctx, bsdf.inputs["Roughness"])
+    if bsdf.distribution == 'SHARP':
+        roughness = 1
+    else:
+        roughness = export_node(ctx, bsdf.inputs["Roughness"])
     ior = export_node(ctx, bsdf.inputs["IOR"])
     return _handle_normal(ctx, bsdf,
                           {"type": "principled", "name": export_name,
@@ -91,7 +99,11 @@ def _export_translucent_bsdf(ctx, bsdf, export_name):
 def _export_glossy_bsdf(ctx, bsdf, export_name):
     # A simple principled shader
     base_color = export_node(ctx, bsdf.inputs["Color"])
-    roughness = export_node(ctx, bsdf.inputs["Roughness"])
+
+    if bsdf.distribution == 'SHARP':
+        roughness = 1
+    else:  # Only supports GGX
+        roughness = export_node(ctx, bsdf.inputs["Roughness"])
 
     return _handle_normal(ctx, bsdf,
                           {"type": "principled", "name": export_name,
@@ -100,7 +112,11 @@ def _export_glossy_bsdf(ctx, bsdf, export_name):
 
 
 def _map_specular_to_ior(specular):
-    return f"((1 + sqrt(0.08*{specular})) / max(0.001, 1 - sqrt(0.08*{specular})))"
+    value = try_extract_node_value(specular, default=None)
+    if not value:
+        return f"((1 + sqrt(0.08*{specular})) / max(0.001, 1 - sqrt(0.08*{specular})))"
+    else:  # Compute actual value to simplify code generation
+        return (1 + math.sqrt(0.08*value)) / max(0.001, 1 - math.sqrt(0.08*value))
 
 
 def _export_principled_bsdf(ctx, bsdf, export_name):
@@ -140,7 +156,7 @@ def _export_add_bsdf(ctx, bsdf, export_name):
         ctx, bsdf.inputs[1], export_name + "__2")
 
     if mat1 is None or mat2 is None:
-        print(f"Mix BSDF {export_name} has no valid bsdf input")
+        print(f"Add BSDF {export_name} has no valid bsdf input")
         return None
 
     ctx.result["bsdfs"].append(mat1)
@@ -171,33 +187,6 @@ def _export_emission_bsdf(ctx, bsdf, export_name):
     return {"type": "diffuse", "name": export_name, "reflectance": 0}
 
 
-def _export_group_begin(ctx, node, export_name, output_name):
-    if node.node_tree is None:
-        print(
-            f"Invalid group '{node.name}'")
-        return None
-
-    output = node.node_tree.nodes.get("Group Output")
-    if output is None:
-        print(
-            f"Invalid group '{node.name}'")
-        return None
-
-    ctx.stack.append(node)
-    out = _export_bsdf_inline(ctx, output.inputs[output_name], export_name)
-    ctx.stack.pop()
-    return out
-
-
-def _export_group_end(ctx, node, export_name, output_name):
-    grp = ctx.stack[-1]
-    return _export_bsdf_inline(ctx, grp.inputs[output_name], export_name)
-
-
-def _export_reroute(ctx, node, export_name):
-    return _export_bsdf_inline(ctx, node.inputs[0], export_name)
-
-
 def _export_bsdf(ctx, bsdf, name, output_name):
     if bsdf is None:
         print(f"Material {name} has no valid bsdf")
@@ -223,11 +212,11 @@ def _export_bsdf(ctx, bsdf, name, output_name):
     elif isinstance(bsdf, bpy.types.ShaderNodeEmission):
         return _export_emission_bsdf(ctx, bsdf, name)
     elif isinstance(bsdf, bpy.types.ShaderNodeGroup):
-        return _export_group_begin(ctx, bsdf, name, output_name)
+        return handle_node_group_begin(ctx, bsdf, output_name, lambda ctx2, socket: _export_bsdf_inline(ctx2, socket, name))
     elif isinstance(bsdf, bpy.types.NodeGroupInput):
-        return _export_group_end(ctx, bsdf, name, output_name)
+        return handle_node_group_end(ctx, bsdf, output_name, lambda ctx2, socket: _export_bsdf_inline(ctx2, socket, name))
     elif isinstance(bsdf, bpy.types.NodeReroute):
-        return _export_reroute(ctx, bsdf, name)
+        return handle_node_reroute(ctx, bsdf, lambda ctx2, socket: _export_bsdf_inline(ctx2, socket, name))
     else:
         print(
             f"Material {name} has a bsdf of type {type(bsdf).__name__}  which is not supported")
@@ -345,33 +334,6 @@ def _get_emission_pure(ctx, bsdf):
     return f"({color} * {strength})"
 
 
-def _get_group_begin(ctx, node, output_name):
-    if node.node_tree is None:
-        print(
-            f"Invalid group '{node.name}'")
-        return None
-
-    output = node.node_tree.nodes.get("Group Output")
-    if output is None:
-        print(
-            f"Invalid group '{node.name}'")
-        return None
-
-    ctx.stack.append(node)
-    out = _get_emission_inline(ctx, output.inputs[output_name])
-    ctx.stack.pop()
-    return out
-
-
-def _get_group_end(ctx, node, output_name):
-    grp = ctx.stack[-1]
-    return _get_emission_inline(ctx, grp.inputs[output_name])
-
-
-def _get_reroute(ctx, node):
-    return _get_emission_inline(ctx, node.inputs[0])
-
-
 def _get_emission(ctx, bsdf, output_name):
     if isinstance(bsdf, bpy.types.ShaderNodeMixShader):
         return _get_emission_mix(ctx, bsdf)
@@ -382,11 +344,11 @@ def _get_emission(ctx, bsdf, output_name):
     elif isinstance(bsdf, bpy.types.ShaderNodeEmission):
         return _get_emission_pure(ctx, bsdf)
     elif isinstance(bsdf, bpy.types.ShaderNodeGroup):
-        return _get_group_begin(ctx, bsdf, output_name)
+        return handle_node_group_begin(ctx, bsdf, output_name, _get_emission_inline)
     elif isinstance(bsdf, bpy.types.NodeGroupInput):
-        return _get_group_end(ctx, bsdf, output_name)
+        return handle_node_group_end(ctx, bsdf, output_name, _get_emission_inline)
     elif isinstance(bsdf, bpy.types.NodeReroute):
-        return _get_reroute(ctx, bsdf)
+        return handle_node_reroute(ctx, bsdf, _get_emission_inline)
     else:
         return None
 

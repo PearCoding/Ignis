@@ -338,15 +338,8 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                         //store information for ReSTIR DI
                         sample_buffer_di.store_f32(pixel * 19 + 15, pdf_l_s);
 
-                        let mut contrib = make_color(0.0, 0.0, 0.0, 0.0); 
-                        if(pt.depth == 1) 
-                        {
-                            contrib = handle_color(color_mulf(color_mul(light_sample.intensity, mat.bsdf.eval(in_dir, out_dir)), 1.0 / pdf_l_s));
-                        } else 
-                        {
-                            contrib = handle_color(color_mulf(
-                                color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));    
-                        }
+                        let contrib = handle_color(color_mulf(
+                            color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));    
 
                         if light.infinite {
                             return(make_simple_shadow_ray(
@@ -641,7 +634,7 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
         //    debug.print_f32(pdf_l);
 
-           aov_direct_light.splat(j, color_mulf(color_mulf(temporal_reservoir_di.sample.radiance, pdf_l), temporal_reservoir_di.weight) /*temporal_reservoir_di.sample.radiance*/);
+           aov_direct_light.splat(j, color_mulf(temporal_reservoir_di.sample.radiance, temporal_reservoir_di.weight) /*temporal_reservoir_di.sample.radiance*/);
 
           //calculate final pixel value
 

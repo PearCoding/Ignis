@@ -4,7 +4,7 @@ bl_info = {
     "name": "Ignis Scene",
     "author": "Maher Rayes, Ömercan Yazici, Pascal Grittmann",
     "description": "Export scene to Ignis",
-    "version": (0, 2, 0),
+    "version": (0, 3, 0),
     "blender": (2, 92, 0),
     "location": "File > Import-Export",
     "category": "Import-Export",

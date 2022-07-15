@@ -54,6 +54,30 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
+    enable_background: BoolProperty(
+        name="Export Background",
+        description="If true, background will be exported as a light.",
+        default=True,
+    )
+
+    enable_camera: BoolProperty(
+        name="Export Camera",
+        description="If true, active camera will be exported.",
+        default=True,
+    )
+
+    enable_technique: BoolProperty(
+        name="Export Technique",
+        description="If true, current integration technique will be mapped to Ignis.",
+        default=True,
+    )
+
+    copy_images: BoolProperty(
+        name="Copy all Images",
+        description="If true, copy all images to Textures/, not only Generated or Packed images.",
+        default=False,
+    )
+
     check_extension = True
 
     def execute(self, context):
@@ -66,11 +90,11 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
             ),
         )
 
-        with ProgressReport(context.window_manager) as progress:
-            # Exit edit mode before exporting, so current object states are exported properly.
-            if bpy.ops.object.mode_set.poll():
-                bpy.ops.object.mode_set(mode='OBJECT')
+        # Exit edit mode before exporting, so current object states are exported properly.
+        if bpy.ops.object.mode_set.poll():
+            bpy.ops.object.mode_set(mode='OBJECT')
 
+        with ProgressReport(context.window_manager) as progress:
             if self.animations is True:
                 scene_frames = range(
                     context.scene.frame_start, context.scene.frame_end + 1)
@@ -114,10 +138,17 @@ class IGNIS_PT_export_include(bpy.types.Panel):
         col.prop(operator, 'use_selection')
 
         layout.separator()
-        
-        layout.prop(operator, 'animations')
-        layout.prop(operator, 'export_materials')
-        layout.prop(operator, 'export_lights')
+        col = layout.column(heading="Export")
+        col.prop(operator, 'animations', text="Animations")
+        col.prop(operator, 'export_materials', text="Materials")
+        col.prop(operator, 'export_lights', text="Lights")
+        col.prop(operator, 'enable_background', text="Background")
+        col.prop(operator, 'enable_camera', text="Camera")
+        col.prop(operator, 'enable_technique', text="Technique")
+
+        layout.separator()
+        col = layout.column(heading="Images")
+        col.prop(operator, 'copy_images')
 
 
 def menu_func_export(self, context):
