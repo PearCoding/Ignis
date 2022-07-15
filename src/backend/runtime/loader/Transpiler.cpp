@@ -140,11 +140,11 @@ inline std::optional<PExpr::FunctionDef> checkDynFunction(const PExpr::FunctionL
         return PExpr::FunctionDef(lkp.name(), fixI ? PExprType::Integer : retType.value_or(PExprType::Integer), { params.value_or(PExprType::Integer)... });
     if (df.MapNum && lkp.matchParameter({ params.value_or(PExprType::Number)... }, false))
         return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Number), { params.value_or(PExprType::Number)... });
-    if (df.MapVec2 && lkp.matchParameter({ params.value_or(PExprType::Vec2)... }, true))
+    if (df.MapVec2 && lkp.matchParameter({ params.value_or(PExprType::Vec2)... }, false))
         return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec2), { params.value_or(PExprType::Vec2)... });
-    if (df.MapVec3 && lkp.matchParameter({ params.value_or(PExprType::Vec3)... }, true))
+    if (df.MapVec3 && lkp.matchParameter({ params.value_or(PExprType::Vec3)... }, false))
         return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec3), { params.value_or(PExprType::Vec3)... });
-    if (df.MapVec4 && lkp.matchParameter({ params.value_or(PExprType::Vec4)... }, true))
+    if (df.MapVec4 && lkp.matchParameter({ params.value_or(PExprType::Vec4)... }, false))
         return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec4), { params.value_or(PExprType::Vec4)... });
 
     return {};
