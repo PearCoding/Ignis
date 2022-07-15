@@ -1001,7 +1001,7 @@ fn @make_nvvm_device(dev: i32) -> Device {
     make_gpu_device(
         dev_id,
         nvvm_accelerator(dev),
-        make_default_min_max(), //make_nvvm_min_max(), // FIXME: There is an issue with AnyDSL. This is just a workaround. See https://github.com/AnyDSL/thorin/issues/124
+        make_default_min_max(), //make_nvvm_min_max(), // The NVVM min_max stuff seems to be slow compared to the default one
         @ |ptr| make_gpu_buffer(dev, ptr as &addrspace(1)[u8], 0, atomics, true),
         atomics,
         true
@@ -1021,7 +1021,7 @@ fn @make_amdgpu_device(dev: i32) -> Device {
     make_gpu_device(
         dev_id,
         amdgpu_accelerator(dev),
-        make_default_min_max(), //make_amdgpu_min_max(), // FIXME: See above
+        make_default_min_max(), //make_amdgpu_min_max(),
         @ |ptr| make_gpu_buffer(dev, ptr as &addrspace(1)[u8], 0, atomics, false),
         atomics,
         false

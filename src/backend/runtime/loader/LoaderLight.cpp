@@ -323,7 +323,7 @@ static float light_area_power(const std::shared_ptr<Parser::Object>& light, cons
     const auto shape = ctx.Environment.Shapes[shape_id];
 
     const float approx_area = shape.Area * std::abs(entity.computeGlobalMatrix().block<3, 3>(0, 0).determinant());
-    return power * approx_area;
+    return power * approx_area * Pi;
 }
 
 static void light_directional(size_t id, std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree)
