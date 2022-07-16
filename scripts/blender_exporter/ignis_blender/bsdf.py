@@ -60,11 +60,11 @@ def _export_glass_bsdf(ctx, bsdf, export_name):
     if not has_roughness:
         return _handle_normal(ctx, bsdf,
                               {"type": "dielectric", "name": export_name,
-                               "specular_reflectance": reflectance, "specular_transmittance": reflectance, "ext_ior": ior})
+                               "specular_reflectance": reflectance, "specular_transmittance": reflectance, "int_ior": ior})
     else:
         return _handle_normal(ctx, bsdf,
                               {"type": "roughdielectric", "name": export_name,
-                               "specular_reflectance": reflectance, "specular_transmittance": reflectance, "roughness": roughness, "ext_ior": ior})  # Square roughness?
+                               "specular_reflectance": reflectance, "specular_transmittance": reflectance, "roughness": roughness, "int_ior": ior})  # Square roughness?
 
 
 def _export_refraction_bsdf(ctx, bsdf, export_name):
