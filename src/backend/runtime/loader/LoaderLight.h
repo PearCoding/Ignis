@@ -19,7 +19,7 @@ public:
 
     inline size_t lightCount() const { return mInfiniteLights.size() + mFiniteLights.size(); }
     inline size_t embeddedLightCount() const { return isEmbedding() ? mTotalEmbedCount : 0; }
-    inline bool isEmbedding() const { return mTotalEmbedCount > 10; }
+    inline bool isEmbedding() const { return mTotalEmbedCount >= 10; }
     inline size_t areaLightCount() const { return mAreaLights.size(); }
 
 private:

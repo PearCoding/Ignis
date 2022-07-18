@@ -303,7 +303,7 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
         // If we got a weird channel number, map to RGBA
         if (channels != 1 && channels != 3 && channels != 4) {
             stbi_image_free(data);
-            data = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 4);
+            data     = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 4);
             channels = 4;
         }
 
@@ -342,13 +342,12 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
             break;
         }
         stbi_image_free(data);
-
-        // Linearize data
     }
 
     // Do not flip hdr images (which are fixed to -Y N +X M resolution by stb)
     if (!useHdr)
         img.flipY();
+
     return img;
 }
 
@@ -370,7 +369,7 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
     // If we got a weird channel number, map to RGBA
     if (channels2 != 1 && channels2 != 3 && channels2 != 4) {
         stbi_image_free(data);
-        data = stbi_load(path.generic_u8string().c_str(), &width2, &height2, &channels2, 4);
+        data      = stbi_load(path.generic_u8string().c_str(), &width2, &height2, &channels2, 4);
         channels2 = 4;
     }
 
@@ -399,7 +398,7 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
     } else {
         dst.resize(width * height * 4);
         uint32* ptr = (uint32*)dst.data();
-        channels = 4;
+        channels    = 4;
 
         if (channels2 == 3) {
             if (linear) {
@@ -484,7 +483,7 @@ bool Image::save(const std::filesystem::path& path, const float* data, size_t wi
     } else {
         IG_ASSERT(channels == 4, "Expected four, three or one channel images");
 
-        size_t channels2 = skip_alpha ? 3 : 4;
+        const size_t channels2 = skip_alpha ? 3 : 4;
         std::vector<std::vector<float>> images(channels2);
         for (size_t i = 0; i < channels2; ++i)
             images[i].resize(width * height);

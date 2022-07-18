@@ -149,14 +149,35 @@ void AreaLight::embed(const EmbedInput& input) const
     const Matrix3f normalMat                   = entity.computeGlobalNormalMatrix(); // To Global [Normal]
     uint32 shape_id                            = ctx.Environment.ShapeIDs.at(entity.Shape);
 
-    // TODO: Optimized
-    input.Serializer.write(localMat, true);                           // +3x4 = 12
-    input.Serializer.write(globalMat, true);                          // +3x4 = 24
-    input.Serializer.write(normalMat, true);                          // +3x3 = 33
-    input.Serializer.write((uint32)shape_id);                         // +1   = 34
-    input.Serializer.write((float)std::abs(normalMat.determinant())); // +1   = 35
-    input.Serializer.write((uint32)0 /*Padding*/);                    // +1   = 36
-    input.Serializer.write(radiance);                                 // +3   = 39
+    if (mOptimized) {
+        const auto& shape = input.Tree.context().Environment.PlaneShapes.at(shape_id);
+        Vector3f origin   = entity.Transform * shape.Origin;
+        Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;
+        Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
+        Vector3f normal   = x_axis.cross(y_axis).normalized();
+        float area        = x_axis.cross(y_axis).norm();
+
+        input.Serializer.write(origin);             // +3 = 3
+        input.Serializer.write(normal.x());         // +1 = 4
+        input.Serializer.write(x_axis);             // +3 = 7
+        input.Serializer.write(normal.y());         // +1 = 8
+        input.Serializer.write(y_axis);             // +3 = 11
+        input.Serializer.write(normal.z());         // +1 = 12
+        input.Serializer.write(shape.TexCoords[0]); // +2 = 14
+        input.Serializer.write(shape.TexCoords[1]); // +2 = 16
+        input.Serializer.write(shape.TexCoords[2]); // +2 = 18
+        input.Serializer.write(shape.TexCoords[3]); // +2 = 20
+        input.Serializer.write(radiance);           // +3 = 23
+        input.Serializer.write(area);               // +1 = 24
+    } else {
+        input.Serializer.write(localMat, true);                           // +3x4 = 12
+        input.Serializer.write(globalMat, true);                          // +3x4 = 24
+        input.Serializer.write(normalMat, true);                          // +3x3 = 33
+        input.Serializer.write((uint32)shape_id);                         // +1   = 34
+        input.Serializer.write((float)std::abs(normalMat.determinant())); // +1   = 35
+        input.Serializer.write((uint32)0 /*Padding*/);                    // +1   = 36
+        input.Serializer.write(radiance);                                 // +3   = 39
+    }
 }
 
 } // namespace IG

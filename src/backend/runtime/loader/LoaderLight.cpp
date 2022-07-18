@@ -112,8 +112,10 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipFinite)
     for (auto light : mInfiniteLights)
         light->serialize(Light::SerializationInput{ counter++, stream, tree });
     if (!skipFinite) {
-        for (auto light : mFiniteLights)
-            light->serialize(Light::SerializationInput{ counter++, stream, tree });
+        for (auto light : mFiniteLights) {
+            if (!isEmbedding() || !light->getEmbedClass().has_value())
+                light->serialize(Light::SerializationInput{ counter++, stream, tree });
+        }
     }
 
     // Add a new line for cosmetics if necessary :P
@@ -282,6 +284,8 @@ void LoaderLight::sortLights()
         return embedClass.value_or("") == p.first; });
 
         begin = it;
+        if (begin == mFiniteLights.end())
+            break;
     }
 
     mTotalEmbedCount = std::distance(mFiniteLights.begin(), begin);

@@ -79,7 +79,7 @@ struct Image {
     /// Save a image in linear RGBA in EXR format
     /// No other format is supported, except EXR. The file should end with .exr
     /// Given pointer should be linear in memory and should be in format channels x width x height,
-    /// With height being the major axis. 
+    /// With height being the major axis.
     /// If channels == 4 and alpha channel is omitted as requested, the appointed format still is channels x width x height
     static bool save(const std::filesystem::path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha = false);
 };

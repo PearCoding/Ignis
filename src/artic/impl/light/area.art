@@ -210,10 +210,10 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
 }
 
 fn @load_simple_area_lights(id_off: i32, device: Device, shapes: ShapeTable) -> LightTable {
-    let tbl = device.load_custom_dyntable("SimpleArea");
+    let tbl = device.load_custom_dyntable("SimpleAreaLight");
     let acc = device.get_device_buffer_accessor();
 
-    let elem_s = 40 * sizeof[f32]() as u64; // See LoaderLight.cpp:exportSimpleAreaLights (with padding/alignment included)
+    let elem_s = 40 * sizeof[f32]() as u64; // See AreaLight.cpp (non-optimized)
     @ |id| {
         //let entry = get_lookup_entry(id as u64, tbl); // No need as we have only one type!
         let data = get_table_entry(elem_s * (id as u64), tbl, acc);
@@ -236,12 +236,11 @@ fn @load_simple_area_lights(id_off: i32, device: Device, shapes: ShapeTable) -> 
     } 
 }
 
-// TODO: Make use of this
-fn @load_simple_area_plane_lights(id_off: i32, device: Device) -> LightTable {
-    let tbl = device.load_custom_dyntable("SimpleAreaPlane");
+fn @load_simple_plane_lights(id_off: i32, device: Device) -> LightTable {
+    let tbl = device.load_custom_dyntable("SimplePlaneLight");
     let acc = device.get_device_buffer_accessor();
 
-    let elem_s = 24 * sizeof[f32]() as u64; // See LoaderLight.cpp:exportSimpleAreaPlaneLights (with padding/alignment included)
+    let elem_s = 20 * sizeof[f32]() as u64; // See AreaLight.cpp (optimized)
     @ |id| {
         //let entry = get_lookup_entry(id as u64, tbl); // No need as we have only one type!
         let data = get_table_entry(elem_s * (id as u64), tbl, acc);
