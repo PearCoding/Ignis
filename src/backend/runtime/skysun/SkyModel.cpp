@@ -57,4 +57,15 @@ void SkyModel::save(const std::filesystem::path& path) const
 {
     Image::save(path, mData.data(), mAzimuthCount, mElevationCount, true);
 }
+
+RGB SkyModel::computeTotal() const
+{
+    RGB rgb = RGB(0);
+    for (size_t i = 0; i < mElevationCount * mAzimuthCount; ++i) {
+        rgb.r += mData[i * 4 + 0];
+        rgb.g += mData[i * 4 + 1];
+        rgb.b += mData[i * 4 + 2];
+    }
+    return rgb;
+}
 } // namespace IG

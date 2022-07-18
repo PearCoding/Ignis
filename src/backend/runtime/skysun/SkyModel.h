@@ -27,6 +27,8 @@ public:
         };
     }
 
+    RGB computeTotal() const; 
+
     void save(const std::filesystem::path& path) const;
 
 private:

@@ -89,6 +89,10 @@ public:
     void addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const VectorOptions& options = VectorOptions::Full());
     void addTexture(const std::string& name, const Parser::Object& obj, bool hasDef = true, const TextureOptions& options = TextureOptions::Default());
 
+    // Approximation
+    float computeNumber(const std::string& name, const Parser::Object& obj, float def = 0) const;
+    Vector3f computeColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero()) const;
+
     inline std::string currentClosureID() const { return currentClosure().ID; }
     std::string getClosureID(const std::string& name);
 
@@ -118,6 +122,8 @@ private:
     bool checkIfEmbed(float val, const NumberOptions& options) const;
     bool checkIfEmbed(const Vector3f& color, const ColorOptions& options) const;
     bool checkIfEmbed(const Vector3f& vec, const VectorOptions& options) const;
+
+    Vector3f approxTexture(const std::string& prop_name, const std::string& expr, const Vector3f& def) const;
 
     LoaderContext& mContext;
 

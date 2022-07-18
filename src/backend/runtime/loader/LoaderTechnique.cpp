@@ -128,7 +128,8 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     if (useUniformLS || ctx.Scene.lights().size() <= 1) {
         stream << "  let light_selector = make_uniform_light_selector(num_lights);" << std::endl;
     } else {
-        auto light_cdf = ctx.Lights->generateLightSelectionCDF(ctx);
+        ShadingTree tree(ctx);
+        auto light_cdf = ctx.Lights->generateLightSelectionCDF(tree);
         if (light_cdf.empty()) {
             stream << "  let light_selector = make_null_light_selector();" << std::endl;
         } else {
@@ -167,7 +168,8 @@ static void volpath_body_loader(std::ostream& stream, const std::string&, const 
     if (useUniformLS || ctx.Scene.lights().size() <= 1) {
         stream << "  let light_selector = make_uniform_light_selector(num_lights);" << std::endl;
     } else {
-        auto light_cdf = ctx.Lights->generateLightSelectionCDF(ctx);
+        ShadingTree tree(ctx);
+        auto light_cdf = ctx.Lights->generateLightSelectionCDF(tree);
         if (light_cdf.empty()) {
             stream << "  let light_selector = make_null_light_selector();" << std::endl;
         } else {

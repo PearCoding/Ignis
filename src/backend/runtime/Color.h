@@ -61,6 +61,11 @@ struct RGB {
     {
         return 0.2126f * r + 0.7152f * g + 0.0722f * b;
     }
+
+    inline float average() const
+    {
+        return (r + g + b) / 3;
+    }
 };
 
 struct RGBA {

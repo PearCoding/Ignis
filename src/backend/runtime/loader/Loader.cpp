@@ -44,6 +44,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
     LoaderCamera::setupInitialOrientation(ctx, result);
 
+    ctx.Lights->setup(ctx);
     IG_LOG(L_DEBUG) << "Got " << ctx.Environment.Materials.size() << " unique materials" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Lights->lightCount() << " lights" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Lights->embeddedLightCount() << " embedded lights" << std::endl;

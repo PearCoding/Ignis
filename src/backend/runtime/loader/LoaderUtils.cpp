@@ -1,4 +1,6 @@
 #include "LoaderUtils.h"
+#include "CDF.h"
+#include "skysun/SunLocation.h"
 
 #include <cctype>
 #include <sstream>
@@ -66,6 +68,17 @@ std::string LoaderUtils::inlineMatrix(const Matrix3f& mat)
     }
 }
 
+std::string LoaderUtils::inlineMatrix34(const Eigen::Matrix<float, 3, 4>& mat)
+{
+    if (mat.isIdentity()) {
+        return "mat3x4_identity()";
+    } else {
+        std::stringstream stream;
+        stream << "make_mat3x4(" << inlineVector(mat.col(0)) << ", " << inlineVector(mat.col(1)) << ", " << inlineVector(mat.col(2)) << ", " << inlineVector(mat.col(3)) << ")";
+        return stream.str();
+    }
+}
+
 std::string LoaderUtils::inlineVector2d(const Vector2f& pos)
 {
     std::stringstream stream;
@@ -85,5 +98,56 @@ std::string LoaderUtils::inlineColor(const Vector3f& color)
     std::stringstream stream;
     stream << "make_color(" << color.x() << ", " << color.y() << ", " << color.z() << ", 1)";
     return stream.str();
+}
+
+ElevationAzimuth LoaderUtils::getEA(const Parser::Object& obj)
+{
+    if (obj.property("direction").isValid()) {
+        return ElevationAzimuth::fromDirection(obj.property("direction").getVector3(Vector3f(0, 0, 1)).normalized());
+    } else if (obj.property("sun_direction").isValid()) {
+        return ElevationAzimuth::fromDirection(obj.property("sun_direction").getVector3(Vector3f(0, 0, 1)).normalized());
+    } else if (obj.property("elevation").isValid() || obj.property("azimuth").isValid()) {
+        return ElevationAzimuth{ obj.property("elevation").getNumber(0), obj.property("azimuth").getNumber(0) };
+    } else {
+        TimePoint timepoint;
+        MapLocation location;
+        timepoint.Year     = obj.property("year").getInteger(timepoint.Year);
+        timepoint.Month    = obj.property("month").getInteger(timepoint.Month);
+        timepoint.Day      = obj.property("day").getInteger(timepoint.Day);
+        timepoint.Hour     = obj.property("hour").getInteger(timepoint.Hour);
+        timepoint.Minute   = obj.property("minute").getInteger(timepoint.Minute);
+        timepoint.Seconds  = obj.property("seconds").getNumber(timepoint.Seconds);
+        location.Latitude  = obj.property("latitude").getNumber(location.Latitude);
+        location.Longitude = obj.property("longitude").getNumber(location.Longitude);
+        location.Timezone  = obj.property("timezone").getNumber(location.Timezone);
+        return computeSunEA(timepoint, location);
+    }
+}
+
+Vector3f LoaderUtils::getDirection(const Parser::Object& obj)
+{
+    return getEA(obj).toDirection();
+}
+
+LoaderUtils::CDFData LoaderUtils::setup_cdf(LoaderContext& ctx, const std::string& filename)
+{
+    const std::string exported_id = "_cdf_" + filename;
+
+    const auto data = ctx.ExportedData.find(exported_id);
+    if (data != ctx.ExportedData.end())
+        return std::any_cast<CDFData>(data->second);
+
+    std::string name = std::filesystem::path(filename).stem().generic_u8string();
+
+    std::filesystem::create_directories("data/"); // Make sure this directory exists
+    std::string path = "data/cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin";
+
+    size_t slice_conditional = 0;
+    size_t slice_marginal    = 0;
+    CDF::computeForImage(filename, path, slice_conditional, slice_marginal, true);
+
+    const CDFData cdf_data        = { path, slice_conditional, slice_marginal };
+    ctx.ExportedData[exported_id] = cdf_data;
+    return cdf_data;
 }
 } // namespace IG

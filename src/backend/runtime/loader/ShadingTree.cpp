@@ -105,6 +105,48 @@ static inline ShadingTree::ColorOptions mapToColorOptions(const ShadingTree::Tex
     };
 }
 
+float ShadingTree::computeNumber(const std::string& name, const Parser::Object& obj, float def) const
+{
+    const auto prop = obj.property(name);
+
+    std::string inline_str;
+    switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        [[fallthrough]];
+    case Parser::PT_NONE:
+        return def;
+    case Parser::PT_INTEGER:
+    case Parser::PT_NUMBER:
+        return prop.getNumber();
+    case Parser::PT_VECTOR3:
+        return prop.getVector3().mean();
+    case Parser::PT_STRING:
+        return approxTexture(name, prop.getString(), Vector3f::Constant(def)).mean();
+    }
+}
+
+Vector3f ShadingTree::computeColor(const std::string& name, const Parser::Object& obj, const Vector3f& def) const
+{
+    const auto prop = obj.property(name);
+
+    std::string inline_str;
+    switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        [[fallthrough]];
+    case Parser::PT_NONE:
+        return def;
+    case Parser::PT_INTEGER:
+    case Parser::PT_NUMBER:
+        return Vector3f::Constant(prop.getNumber());
+    case Parser::PT_VECTOR3:
+        return prop.getVector3();
+    case Parser::PT_STRING:
+        return approxTexture(name, prop.getString(), def);
+    }
+}
+
 void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, float def, bool hasDef, const NumberOptions& options)
 {
     if (hasParameter(name)) {
@@ -130,7 +172,7 @@ void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, 
         break;
     case Parser::PT_VECTOR3:
         IG_LOG(L_WARNING) << "Parameter '" << name << "' expects a number but a color was given. Using average instead" << std::endl;
-        inline_str = "color_luminance(" + acquireColor(name, prop.getVector3(), mapToColorOptions(options)) + ")";
+        inline_str = "color_average(" + acquireColor(name, prop.getVector3(), mapToColorOptions(options)) + ")";
         break;
     case Parser::PT_STRING:
         inline_str = handleTexture(name, prop.getString(), false); // TODO: Map options
@@ -333,6 +375,14 @@ std::string ShadingTree::handleTexture(const std::string& prop_name, const std::
             }
         }
     }
+}
+
+Vector3f ShadingTree::approxTexture(const std::string& prop_name, const std::string& expr, const Vector3f& def) const
+{
+    // TODO
+    IG_UNUSED(prop_name);
+    IG_UNUSED(expr);
+    return def;
 }
 
 bool ShadingTree::checkIfEmbed(float val, const NumberOptions& options) const

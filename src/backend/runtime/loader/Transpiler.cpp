@@ -477,7 +477,7 @@ static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynL
 static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynReduceFunctions1 = {
     { "length", genDynArrayFunction1("len") },
     { "sum", genDynArrayFunction1("sum") },
-    { "avg", genDynArrayFunction1("avg") },
+    { "avg", genDynArrayFunction1("average") },
     { "luminance", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorO("color_luminance") } },
     { "checkerboard", { nullptr, nullptr, genFunction1("node_checkerboard2"), genFunction1("node_checkerboard3"), nullptr } },
     { "noise", { nullptr, genFunction1("noise1_def"), genFunction1("noise2_def"), genFunction1("noise3_def"), nullptr } },
