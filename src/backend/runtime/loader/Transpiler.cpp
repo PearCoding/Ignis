@@ -23,18 +23,24 @@ inline std::string var_name(const std::string& name)
 template <typename Func>
 inline static std::string collapseFunction(size_t& uuid_counter, Func func, const std::vector<std::string>& args)
 {
+    constexpr size_t MinLength = 16; // At least a single argument has to larger than this number to generate a collapsed function
+
     if (args.size() <= 1)
         return func(args);
 
+    size_t uuid_counter2 = uuid_counter;
+    size_t max_length = 0;
     std::unordered_map<std::string, std::string> set;
     for (const auto& arg : args) {
+        max_length = std::max(max_length, arg.size());
         if (set.count(arg) == 0)
-            set[arg] = "a" + std::to_string(uuid_counter++);
+            set[arg] = "a" + std::to_string(uuid_counter2++);
     }
 
-    if (set.size() == args.size()) {
+    if (max_length < MinLength || set.size() == args.size()) {
         return func(args);
     } else {
+        uuid_counter = uuid_counter2;
         std::vector<std::string> new_args;
         new_args.reserve(args.size());
         for (const auto& arg : args)
