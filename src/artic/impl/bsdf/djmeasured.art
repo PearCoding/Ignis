@@ -777,10 +777,10 @@ fn @make_djmeasured_bsdf(surf: SurfaceElement, buffer : DeviceBuffer) {
     let size_rgb = buffer.load_i32(6);
 
     let start_ndf = 7;
-    let start_vndf = start_ndf + size_ndf;
-    let start_sigma = start_vndf + size_vndf;
-    let start_luminance = start_sigma + size_sigma;
-    let start_rgb = start_luminance + size_luminance;
+    let start_vndf = start_ndf + size_ndf + 1;
+    let start_sigma = start_vndf + size_vndf + 1;
+    let start_luminance = start_sigma + size_sigma + 1;
+    let start_rgb = start_luminance + size_luminance + 1;
 
     let brdf_data = BRDFData {
         ndf = delinearize_warp(buffer, start_ndf),
@@ -797,16 +797,16 @@ fn @make_djmeasured_bsdf(surf: SurfaceElement, buffer : DeviceBuffer) {
             evaluate_brdf(brdf_data, in_dir, out_dir)
         },
         pdf = @ |in_dir, out_dir| {
-            //pdf_brdf(brdf_data, in_dir, out_dir)
-            cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2)))
+            pdf_brdf(brdf_data, in_dir, out_dir)
+            //cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2)))
         },
         sample = @ |rnd, out_dir, _| {
-            //let sample = sample_brdf(brdf_data, make_vec2(randf(rnd), randf(rnd)), out_dir);
-            //make_bsdf_sample(surf, sample.out, sample.pdf, vec3_to_color(sample.res), 1, false)
+            let sample = sample_brdf(brdf_data, make_vec2(randf(rnd), randf(rnd)), out_dir);
+            make_bsdf_sample(surf, sample.out, sample.pdf, vec3_to_color(sample.res), 1, false)
 
-            let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
-            let gdir   = mat3x3_mul(surf.local, sample.dir);
-            make_bsdf_sample(surf, gdir, sample.pdf, color_mulf(evaluate_brdf(brdf_data, gdir, out_dir), 1/sample.pdf), 1, false)
+            // let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+            // let gdir   = mat3x3_mul(surf.local, sample.dir);
+            // make_bsdf_sample(surf, gdir, sample.pdf, color_mulf(evaluate_brdf(brdf_data, gdir, out_dir), 1/sample.pdf), 1, false)
         },
         is_specular = false
     }
