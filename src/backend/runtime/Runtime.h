@@ -127,6 +127,7 @@ public:
     static std::vector<std::string> getAvailableCameraTypes();
 
 private:
+    void checkCacheDirectory();
     bool load(const std::filesystem::path& path, Parser::Scene&& scene);
     bool setup();
     void shutdown();

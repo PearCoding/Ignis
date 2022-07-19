@@ -1,5 +1,6 @@
 #include "Runtime.h"
 #include "Logger.h"
+#include "RuntimeInfo.h"
 #include "loader/Parser.h"
 
 #include <chrono>
@@ -93,6 +94,8 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mTechniqueVariants()
     , mTechniqueVariantShaderSets()
 {
+    checkCacheDirectory();
+
     if (!mManager.init(opts.ModulePath))
         throw std::runtime_error("Could not init modules!");
 
@@ -132,6 +135,21 @@ Runtime::~Runtime()
 {
     if (!mTechniqueVariants.empty())
         shutdown();
+}
+
+void Runtime::checkCacheDirectory()
+{
+    constexpr size_t WarnSize = 1024 * 1024 * 1024 * 10ULL; // 10GB
+    const size_t size         = RuntimeInfo::cacheDirectorySize();
+    const auto dir            = RuntimeInfo::cacheDirectory();
+
+    if (dir.empty())
+        return;
+
+    if (size >= WarnSize)
+        IG_LOG(L_WARNING) << "Cache directory " << dir << " occupies " << FormatMemory(size) << " of disk space and exceeds " << FormatMemory(WarnSize) << " warn limit " << std::endl;
+    else
+        IG_LOG(L_DEBUG) << "Cache directory " << dir << " occupies " << FormatMemory(size) << " of disk space" << std::endl;
 }
 
 bool Runtime::loadFromFile(const std::filesystem::path& path)

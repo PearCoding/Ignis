@@ -116,6 +116,34 @@ private:
     std::ostream mStream;
     std::mutex mMutex;
 };
+
+template <typename T>
+class FormatMemory {
+public:
+    inline explicit FormatMemory(const T& value)
+        : mValue(value)
+    {
+    }
+
+    inline const T& value() const { return mValue; }
+
+private:
+    T mValue;
+};
+
+template <typename T>
+inline std::ostream& operator<<(std::ostream& stream, const FormatMemory<T>& mem)
+{
+    int i = 0;
+    double mantissa = mem.value();
+    for (; i < 9 && mantissa >= 1024; ++i)
+        mantissa /= 1024;
+
+    mantissa = std::ceil(mantissa * 10) / 10.0;
+    stream << mantissa << "BkMGTPEZY"[i];
+
+    return i == 0 ? stream : (stream << "B");
+}
 } // namespace IG
 
 #define IG_LOGGER (IG::Logger::instance())
