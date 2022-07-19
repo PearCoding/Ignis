@@ -177,6 +177,7 @@ void AreaLight::embed(const EmbedInput& input) const
         input.Serializer.write((float)std::abs(normalMat.determinant())); // +1   = 35
         input.Serializer.write((uint32)0 /*Padding*/);                    // +1   = 36
         input.Serializer.write(radiance);                                 // +3   = 39
+        input.Serializer.write((uint32)0 /*Padding*/);                    // +1   = 40
     }
 }
 

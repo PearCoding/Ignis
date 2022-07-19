@@ -14,8 +14,8 @@ fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
         let dir_ = vec3_sub(pos, from_surf.point);
         let dist = vec3_len(dir_);
         let dir  = vec3_mulf(dir_, safe_div(1, dist));
-        let cos  = -vec3_dot(dir, n);
-        let ctx  = make_emissive_shading_context(make_ray(from_surf.point, dir, 0, flt_max, ray_flag_light), pos, vec2_to_3(coords, 0));
+        let cos  = vec3_dot(dir, n) * select(from_surf.is_entering, -1:f32, 1:f32);
+        let ctx  = make_emissive_shading_context(make_ray(from_surf.point, dir, 0, flt_max, ray_flag_shadow), pos, vec2_to_3(coords, 0));
         make_direct_sample(pos, dir, color_mulf(color_f(ctx), weight), pdf, cos, dist)
     },
     sample_emission = @ |rnd| {
@@ -107,10 +107,10 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
     let ey       = vec3_mulf(y_axis, 1 / height);
 
     fn @compute_sq(from_point: Vec3) -> SQ {
-        let d   = vec3_sub(origin, from_point);
-		let x0  = vec3_dot(d, ex);
-		let y0  = vec3_dot(d, ey);
-		let z0_ = vec3_dot(d, normal);
+        let dir = vec3_sub(origin, from_point);
+		let x0  = vec3_dot(dir, ex);
+		let y0  = vec3_dot(dir, ey);
+		let z0_ = vec3_dot(dir, normal);
 		let x1  = x0 + width;
 		let y1  = y0 + height;
 
@@ -120,7 +120,7 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
 		// Optimization used in Blender Cycles
 	    let diff = vec4_sub(make_vec4(x0, y1, x1, y0), make_vec4(x1, y0, x0, y1));
 		let nz_  = vec4_mul(make_vec4(y0, x1, y1, x0), diff);
-		let nz   = vec4_div(nz_, vec4_map(vec4_add(vec4_mulf(vec4_mul(diff, diff), z0 * z0), vec4_mul(nz_, nz_)), |x| math_builtins::sqrt(x)));
+		let nz   = vec4_div(nz_, vec4_map(vec4_add(vec4_mulf(vec4_mul(diff, diff), z0 * z0), vec4_mul(nz_, nz_)), @|x| math_builtins::sqrt(x)));
 
 		// compute internal angles (gamma_i)
         fn safe_acos(a: f32) = math_builtins::acos(clampf(a, -1, 1));
@@ -160,18 +160,18 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
 		let cu = clampf(math_builtins::copysign[f32](1.0, fu) / math_builtins::sqrt(sum_of_prod(fu, fu, sq.b0, sq.b0)), -1, 1);
 
 		// 2. compute ’xu’
-		let xu = clampf(-(cu * sq.z0) / math_builtins::fmax[f32](1e-7, math_builtins::sqrt(fmaf(-cu, cu, 1.0))), sq.x0, sq.x1);
+		let xu = clampf(-(cu * sq.z0) / math_builtins::sqrt(fmaf(-cu, cu, 1.0)), sq.x0, sq.x1);
 
 		// 3. compute ’yv’
-		let dir = math_builtins::sqrt(sum_of_prod(xu, xu, sq.z0, sq.z0));
-		let h0  = sq.y0 / math_builtins::sqrt(sum_of_prod(dir, dir, sq.y0, sq.y0));
-		let h1  = sq.y1 / math_builtins::sqrt(sum_of_prod(dir, dir, sq.y1, sq.y1));
+		let d   = math_builtins::sqrt(sum_of_prod(xu, xu, sq.z0, sq.z0));
+		let h0  = sq.y0 / math_builtins::sqrt(sum_of_prod(d, d, sq.y0, sq.y0));
+		let h1  = sq.y1 / math_builtins::sqrt(sum_of_prod(d, d, sq.y1, sq.y1));
 		let hv  = fmaf(uv.y, h1 - h0, h0);
 		let hv2 = hv * hv;
-		let yv  = select(hv2 < 1 - 1e-6, (hv * dir) / math_builtins::sqrt(1 - hv2), sq.y1);
+		let yv  = select(hv2 < 1 - 1e-6, (hv * d) / math_builtins::sqrt(1 - hv2), sq.y1);
 
 		// 4. transform (xu,yv,z0) to entity local coords
-		let p = vec3_add(from_point, vec3_add(vec3_mulf(ex, xu), vec3_add(vec3_mulf(ey, yv), vec3_mulf(sq.n, sq.z0))));
+		let p = vec3_add(sq.o, vec3_add(vec3_mulf(ex, xu), vec3_add(vec3_mulf(ey, yv), vec3_mulf(sq.n, sq.z0))));
 
 		// 5. Get pdf
 		let pdf_s = safe_div(1, sq.s);
@@ -189,7 +189,7 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
 		let sq    = compute_sq(from_point);
         let pdf_s = safe_div(1, sq.s);
 		make_solid_pdf(pdf_s)
-    }
+    }   
 
     fn @sample(uv: Vec2) {
         let p = vec3_add(vec3_add(vec3_mulf(x_axis, uv.x), vec3_mulf(y_axis, uv.y)), origin);
@@ -203,9 +203,9 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
     AreaEmitter {
         sample_direct   = @|uv, from_point| sample_direct(uv, from_point),
         sample_emission = @|uv| sample(uv),
-        normal          = @ |_| normal,
+        normal          = @|_| normal,
         pdf_direct      = pdf_direct,
-        pdf_emission    = @ |_,_| inv_area
+        pdf_emission    = @|_,_| inv_area
     }
 }
 
