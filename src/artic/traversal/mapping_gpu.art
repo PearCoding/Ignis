@@ -12,7 +12,11 @@ struct Tri1 {
     e1: [f32 * 3],
     pad2: i32,
     e2: [f32 * 3],
-    prim_id: i32
+    prim_id: i32,
+    c0: [f32 * 2],
+    c1: [f32 * 2],
+    c2: [f32 * 2],
+    pad3: [i32 * 2]
 }
 
 fn @make_gpu_node(j: i32, nodes: &[Node2], is_nvvm: bool) -> Node {
@@ -49,10 +53,17 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax) -> Prim
     let tri2     = load4_f32(simd_ptr, 2);
     let prim_id  = bitcast[i32](tri2(3));
 
+    let c01 = load4_f32(simd_ptr, 3);
+    let c2p = load4_f32(simd_ptr, 4);
+
     let v0  = make_vec3(tri0(0), tri0(1), tri0(2));
     let e1  = make_vec3(tri1(0), tri1(1), tri1(2));
     let e2  = make_vec3(tri2(0), tri2(1), tri2(2));
     let tri = make_tri(v0,e1,e2, vec3_cross(e1,e2));
+
+    let c0 = make_vec2(c01(0), c01(1));
+    let c1 = make_vec2(c01(2), c01(3));
+    let c2 = make_vec2(c2p(0), c2p(1));
 
     let tesselate =  @|t:Tri| {
         let v01 = vec3_mulf(vec3_add(t.v0, t.v1), 0.5);

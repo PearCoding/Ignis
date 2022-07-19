@@ -107,6 +107,15 @@ protected:
                 tri.n.e[2].e[j] = in_tri.n[2];
 
                 tri.prim_id.e[j] = in_tri.prim_id;
+
+                tri.c0.e[0].e[j] = in_tri.c0[0];
+                tri.c0.e[1].e[j] = in_tri.c0[1];
+
+                tri.c1.e[0].e[j] = in_tri.c1[0];
+                tri.c1.e[1].e[j] = in_tri.c1[1];
+
+                tri.c2.e[0].e[j] = in_tri.c2[0];
+                tri.c2.e[1].e[j] = in_tri.c2[1];
             }
 
             for (size_t j = c; j < M; ++j)
