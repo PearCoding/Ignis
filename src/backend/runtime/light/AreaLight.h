@@ -3,7 +3,7 @@
 #include "Light.h"
 
 namespace IG {
-class LoaderContext;
+struct LoaderContext;
 
 class AreaLight : public Light {
 public:

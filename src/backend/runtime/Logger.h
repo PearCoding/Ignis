@@ -135,7 +135,7 @@ template <typename T>
 inline std::ostream& operator<<(std::ostream& stream, const FormatMemory<T>& mem)
 {
     int i = 0;
-    double mantissa = mem.value();
+    double mantissa = (double)mem.value();
     for (; i < 9 && mantissa >= 1024; ++i)
         mantissa /= 1024;
 
