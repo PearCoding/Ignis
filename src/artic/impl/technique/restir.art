@@ -52,16 +52,25 @@ fn create_empty_sample() -> Sample {
     }
 }
 
+fn @load_vec3_from_buffer(pixel: i32, buffer: DeviceBuffer) -> Vec3
+{
+    let x = buffer.load_f32(pixel);
+    let y = buffer.load_f32(pixel + 1);
+    let z = buffer.load_f32(pixel + 2);
+
+    make_vec3(x, y, z)
+}
+
 fn @load_sample_from_reservoir(pixel: i32, buffer: DeviceBuffer) -> Sample 
 {
     let idx = pixel * 22;
-    let vp  = buffer.load_vec3(idx);
-    let vn  = buffer.load_vec3(idx + 3);
-    let sp  = buffer.load_vec3(idx + 6);
-    let sn  = buffer.load_vec3(idx + 9);
-    let rad  = buffer.load_vec3(idx + 12);
+    let vp  = load_vec3_from_buffer(idx, buffer);
+    let vn  = load_vec3_from_buffer(idx + 3, buffer);
+    let sp  = load_vec3_from_buffer(idx + 6, buffer);
+    let sn  = load_vec3_from_buffer(idx + 9, buffer);
+    let rad  = load_vec3_from_buffer(idx + 12, buffer);
     let prob = buffer.load_f32(idx + 15);
-    let f_y = buffer.load_vec3(idx + 16);
+    let f_y = load_vec3_from_buffer(idx + 16, buffer);
 
     Sample {
         vis_point   = make_vec3(vp.x, vp.y, vp.z),
@@ -77,13 +86,13 @@ fn @load_sample_from_reservoir(pixel: i32, buffer: DeviceBuffer) -> Sample
 fn @load_sample_from_sample_buffer(pixel: i32, buffer: DeviceBuffer) -> Sample 
 {
     let idx = pixel * 19;
-    let vp  = buffer.load_vec3(idx);
-    let vn  = buffer.load_vec3(idx + 3);
-    let sp  = buffer.load_vec3(idx + 6);
-    let sn  = buffer.load_vec3(idx + 9);
-    let rad  = buffer.load_vec3(idx + 12);
+    let vp  = load_vec3_from_buffer(idx, buffer);
+    let vn  = load_vec3_from_buffer(idx + 3, buffer);
+    let sp  = load_vec3_from_buffer(idx + 6, buffer);
+    let sn  = load_vec3_from_buffer(idx + 9, buffer);
+    let rad  = load_vec3_from_buffer(idx + 12, buffer);
     let prob = buffer.load_f32(idx + 15);
-    let f_y = buffer.load_vec3(idx + 16);
+    let f_y = load_vec3_from_buffer(idx + 16, buffer);
 
     Sample {
         vis_point   = make_vec3(vp.x, vp.y, vp.z),
@@ -284,7 +293,8 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                  ) -> ShadowRay {
                      let pt = unwrap_rsraypayload(payload);
 
-                     let new_rnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
+                     //let new_rnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
+                     let new_rnd = rnd;
 
 
                     //   if(pt.depth == 1) 
@@ -437,7 +447,8 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                  , mat: Material
                  ) -> Option[(Ray, RayPayload)] {
         let pt = unwrap_rsraypayload(payload);
-        let newRnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
+        //let newRnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
+        let newRnd = rnd;
 
         
          if pt.depth + 1 > max_path_len {
@@ -468,6 +479,7 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
 
                   //store visible point bsdf in spatial reservoir(test)
                   spatial_reservoir_buffer.store_vec3(reservoir_idx + 16, color_to_vec3(mat_sample.color));
+                  spatial_reservoir_buffer.store_f32(reservoir_idx + 15, mat_sample.pdf);
                   
                   //dont change raypayload at first bounce
                   return(make_option(
@@ -571,10 +583,12 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
           let averaged_radiance = color_average(sample.radiance); 
 
+          let source_pdf = spatial_reservoir_buffer.load_f32(j * 22 + 15);
+
          let mut w_new = 0.0;
-         if(sample.pdf != 0.0) 
+         if(source_pdf != 0.0) 
          {
-            let w = averaged_radiance / sample.pdf; 
+            let w = averaged_radiance / source_pdf; 
             w_new = w as f64;
          }
 
@@ -627,17 +641,11 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
            store_reservoir(temporal_reservoir_buffer_di, j, temporal_reservoir_di);
 
-           let pdf_l = sample_buffer_di.load_f32(j * 19 + 15);
-
-        //    let debug = device.request_debug_output();
-
-        //    debug.print_f32(pdf_l);
-
            aov_direct_light.splat(j, color_mulf(temporal_reservoir_di.sample.radiance, temporal_reservoir_di.weight) /*temporal_reservoir_di.sample.radiance*/);
 
           //calculate final pixel value
 
-          let visPointBSDF = spatial_reservoir_buffer.load_vec3(j * 22 + 16);
+          let visPointBSDF = load_vec3_from_buffer(j * 22 + 16, spatial_reservoir_buffer);
 
           let rawIndirectRes = color_mul(temporal_reservoir.sample.bsdf, color_mulf(temporal_reservoir.sample.radiance, temporal_reservoir.weight));
           let indirectRes = color_mul(rawIndirectRes, vec3_to_color(visPointBSDF));
