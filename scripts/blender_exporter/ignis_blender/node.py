@@ -240,7 +240,7 @@ def _export_rgb_math(ctx, node):
 
     ops = ""
     if node.blend_type == "MIX":
-        ops = f"mix({col1}, {col2}, {fac})"
+        ops = f"mix({col1}, {col2}, (float) {fac})"
     elif node.blend_type == "BURN":
         ops = f"mix_burn({col1}, {col2}, {fac})"
     elif node.blend_type == "DARKEN":
@@ -266,15 +266,15 @@ def _export_rgb_math(ctx, node):
     elif node.blend_type == "COLOR":
         ops = f"mix_color({col1}, {col2}, {fac})"
     elif node.blend_type == "DIFFERENCE":
-        ops = f"mix({col1}, abs({col1} - {col2}), {fac})"
+        ops = f"mix({col1}, abs({col1} - {col2}), (float) {fac})"
     elif node.blend_type == "ADD":
-        ops = f"mix({col1}, {col1} + {col2}, {fac})"
+        ops = f"mix({col1}, {col1} + {col2}, (float) {fac})"
     elif node.blend_type == "SUBTRACT":
-        ops = f"mix({col1}, {col1} - {col2}, {fac})"
+        ops = f"mix({col1}, {col1} - {col2}, (float) {fac})"
     elif node.blend_type == "MULTIPLY":
-        ops = f"mix({col1}, {col1} * {col2}, {fac})"
+        ops = f"mix({col1}, {col1} * {col2}, (float) {fac})"
     elif node.blend_type == "DIVIDE":
-        ops = f"mix({col1}, {col1} / ({col2} + color(1)), {fac})"
+        ops = f"mix({col1}, {col1} / ({col2} + color(1)), (float) {fac})"
     else:
         print(
             f"Not supported rgb math operation type {node.operation} for node {node.name}")
@@ -309,7 +309,7 @@ def _export_rgb_invert(ctx, node):
     ops = f"(color(1) - {col1})"
 
     if node.inputs[0].is_linked or node.inputs[0].default_value != 1:
-        return f"mix({col1}, {ops}, {fac})"
+        return f"mix({col1}, {ops}, (float) {fac})"
     else:
         return ops
 
@@ -376,7 +376,7 @@ def _export_hsv(ctx, node):
     fac = export_node(ctx, node.inputs[3])
     col = export_node(ctx, node.inputs[4])
 
-    return f"hsvtorgb(mix(rgbtohsv({col}), color({hue}, {sat}, {val}), {fac}))"
+    return f"hsvtorgb(mix(rgbtohsv({col}), color({hue}, {sat}, {val}), (float) {fac}))"
 
 
 def _export_blackbody(ctx, node):
@@ -473,7 +473,7 @@ def _export_float_curve(ctx, node):
     elif e_f == 0:
         return value
     else:
-        return f"mix({value}, {lV}, {fac})"
+        return f"mix({value}, {lV}, (float) {fac})"
 
 
 def _export_rgb_curve(ctx, node):
@@ -502,7 +502,7 @@ def _export_rgb_curve(ctx, node):
     elif e_f == 0:
         return color
     else:
-        return f"mix({color}, {ops}, {fac})"
+        return f"mix({color}, {ops}, (float) {fac})"
 
 
 def _export_vector_curve(ctx, node):
@@ -527,7 +527,7 @@ def _export_vector_curve(ctx, node):
     elif e_f == 0:
         return vector
     else:
-        return f"mix({vector}, {ops}, {fac})"
+        return f"mix({vector}, {ops}, (float) {fac})"
 
 
 def _export_vector_mapping(ctx, node):  # TRS

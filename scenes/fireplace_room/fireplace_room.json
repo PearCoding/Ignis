@@ -1,0 +1,1125 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 12,
+    "clamp": 10.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 39.597752709049864,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      0.4958236515522003,
+      -0.19807103276252747,
+      -0.8455334305763245,
+      4.737619876861572,
+      -0.8683045506477356,
+      -0.09697738289833069,
+      -0.48645925521850586,
+      2.9767305850982666,
+      0.014355874620378017,
+      0.9753785133361816,
+      -0.22006966173648834,
+      1.104512333869934,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      265.0,
+      265.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "_m_0_fireplace_room",
+      "filename": "Meshes/_m_0_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_1_fireplace_room",
+      "filename": "Meshes/_m_1_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_2_fireplace_room",
+      "filename": "Meshes/_m_2_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_3_fireplace_room",
+      "filename": "Meshes/_m_3_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_4_fireplace_room",
+      "filename": "Meshes/_m_4_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_5_fireplace_room",
+      "filename": "Meshes/_m_5_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_6_fireplace_room",
+      "filename": "Meshes/_m_6_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_7_fireplace_room",
+      "filename": "Meshes/_m_7_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_8_fireplace_room",
+      "filename": "Meshes/_m_8_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_9_fireplace_room",
+      "filename": "Meshes/_m_9_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_10_fireplace_room",
+      "filename": "Meshes/_m_10_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_11_fireplace_room",
+      "filename": "Meshes/_m_11_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_12_fireplace_room",
+      "filename": "Meshes/_m_12_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_13_fireplace_room",
+      "filename": "Meshes/_m_13_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_14_fireplace_room",
+      "filename": "Meshes/_m_14_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_15_fireplace_room",
+      "filename": "Meshes/_m_15_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_16_fireplace_room",
+      "filename": "Meshes/_m_16_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_17_fireplace_room",
+      "filename": "Meshes/_m_17_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_18_fireplace_room",
+      "filename": "Meshes/_m_18_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_19_fireplace_room",
+      "filename": "Meshes/_m_19_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_20_fireplace_room",
+      "filename": "Meshes/_m_20_fireplace_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_21_fireplace_room",
+      "filename": "Meshes/_m_21_fireplace_room.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:Dirt",
+      "base_color": "color(0.10000000149011612, 0.05000000074505806, 0.03999999910593033, 1.0)",
+      "metallic": 0.4000000059604645,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:BrushedStainlessSteel",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.4000000059604645,
+      "roughness": 0.9292893409729004,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.6354230400009828
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:Glass",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:Paneling",
+      "base_color": "color(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9292893409729004,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:lambert2SG_light",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:MattePaint",
+      "base_color": "color(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1.0)",
+      "metallic": 0.4000000059604645,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:TableWood",
+      "base_color": "_tex_0",
+      "metallic": 0.4000000059604645,
+      "roughness": 0.9922540187835693,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.1199208302305514
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:PlantPot",
+      "base_color": "color(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1.0)",
+      "metallic": 0.4000000059604645,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:Transluscent",
+      "base_color": "color(0.30000001192092896, 0.30000001192092896, 0.30000001192092896, 1.0)",
+      "metallic": 0.4000000059604645,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:Mirror",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.761214225098452
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:Walls",
+      "base_color": "color(0.17000000178813934, 0.13199999928474426, 0.10000000149011612, 1.0)",
+      "metallic": 0.0,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:Painting",
+      "base_color": "_tex_1",
+      "metallic": 0.4000000059604645,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:BottleCap",
+      "base_color": "color(0.46000000834465027, 0.0, 0.0, 1.0)",
+      "metallic": 0.4000000059604645,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:SofaLegs",
+      "base_color": "color(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1.0)",
+      "metallic": 0.4000000059604645,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:initialShadingGroup",
+      "base_color": "color(0.5, 0.5, 0.5, 1.0)",
+      "metallic": 0.0,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:Floor",
+      "base_color": "_tex_2",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.0833333323632057
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:Branches",
+      "base_color": "color(0.1599999964237213, 0.07999999821186066, 0.019999999552965164, 1.0)",
+      "metallic": 0.4000000059604645,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:FireplaceGlass",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.4000000059604645,
+      "roughness": 0.6837722063064575,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:Sofa",
+      "base_color": "color(0.8999999761581421, 0.8999999761581421, 0.8799999952316284, 1.0)",
+      "metallic": 0.4000000059604645,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "lambert3SG",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:PaintingBack",
+      "base_color": "color(0.25999999046325684, 0.25, 0.14000000059604645, 1.0)",
+      "metallic": 0.4000000059604645,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "grey_and_white_room:Leaves",
+      "base_color": "_tex_3",
+      "metallic": 0.4000000059604645,
+      "roughness": 0.9922540187835693,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    }
+  ],
+  "entities": [
+    {
+      "name": "fireplace_room-_m_0_fireplace_room",
+      "shape": "_m_0_fireplace_room",
+      "bsdf": "grey_and_white_room:TableWood",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_1_fireplace_room",
+      "shape": "_m_1_fireplace_room",
+      "bsdf": "grey_and_white_room:Glass",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_2_fireplace_room",
+      "shape": "_m_2_fireplace_room",
+      "bsdf": "grey_and_white_room:BottleCap",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_3_fireplace_room",
+      "shape": "_m_3_fireplace_room",
+      "bsdf": "grey_and_white_room:PaintingBack",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_4_fireplace_room",
+      "shape": "_m_4_fireplace_room",
+      "bsdf": "grey_and_white_room:MattePaint",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_5_fireplace_room",
+      "shape": "_m_5_fireplace_room",
+      "bsdf": "grey_and_white_room:Painting",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_6_fireplace_room",
+      "shape": "_m_6_fireplace_room",
+      "bsdf": "grey_and_white_room:Leaves",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_7_fireplace_room",
+      "shape": "_m_7_fireplace_room",
+      "bsdf": "grey_and_white_room:Branches",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_8_fireplace_room",
+      "shape": "_m_8_fireplace_room",
+      "bsdf": "grey_and_white_room:Dirt",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_9_fireplace_room",
+      "shape": "_m_9_fireplace_room",
+      "bsdf": "grey_and_white_room:PlantPot",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_10_fireplace_room",
+      "shape": "_m_10_fireplace_room",
+      "bsdf": "grey_and_white_room:SofaLegs",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_11_fireplace_room",
+      "shape": "_m_11_fireplace_room",
+      "bsdf": "grey_and_white_room:Sofa",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_12_fireplace_room",
+      "shape": "_m_12_fireplace_room",
+      "bsdf": "grey_and_white_room:Paneling",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_13_fireplace_room",
+      "shape": "_m_13_fireplace_room",
+      "bsdf": "grey_and_white_room:Walls",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_14_fireplace_room",
+      "shape": "_m_14_fireplace_room",
+      "bsdf": "grey_and_white_room:Floor",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_15_fireplace_room",
+      "shape": "_m_15_fireplace_room",
+      "bsdf": "grey_and_white_room:Floor",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_16_fireplace_room",
+      "shape": "_m_16_fireplace_room",
+      "bsdf": "grey_and_white_room:FireplaceGlass",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_17_fireplace_room",
+      "shape": "_m_17_fireplace_room",
+      "bsdf": "grey_and_white_room:BrushedStainlessSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_18_fireplace_room",
+      "shape": "_m_18_fireplace_room",
+      "bsdf": "grey_and_white_room:Transluscent",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_19_fireplace_room",
+      "shape": "_m_19_fireplace_room",
+      "bsdf": "grey_and_white_room:initialShadingGroup",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_20_fireplace_room",
+      "shape": "_m_20_fireplace_room",
+      "bsdf": "lambert3SG",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "fireplace_room-_m_21_fireplace_room",
+      "shape": "_m_21_fireplace_room",
+      "bsdf": "grey_and_white_room:lambert2SG_light",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "point",
+      "name": "Light",
+      "position": [
+        4.076245307922363,
+        1.0054539442062378,
+        5.903861999511719
+      ],
+      "intensity": [
+        1000.0,
+        1000.0,
+        1000.0
+      ]
+    },
+    {
+      "type": "area",
+      "name": "fireplace_room-_m_20_fireplace_room",
+      "entity": "fireplace_room-_m_20_fireplace_room",
+      "radiance": "color(4.0, 4.0, 4.0, 1.0)"
+    },
+    {
+      "type": "area",
+      "name": "fireplace_room-_m_21_fireplace_room",
+      "entity": "fireplace_room-_m_21_fireplace_room",
+      "radiance": "color(4.0, 4.0, 4.0, 1.0)"
+    },
+    {
+      "type": "env",
+      "name": "__scene_world",
+      "radiance": "color(0.05087608844041824, 0.05087608844041824, 0.05087608844041824, 1.0)",
+      "transform": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "type": "image",
+      "name": "_tex_0",
+      "filename": "textures/wood5.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_1",
+      "filename": "textures/picture8.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_2",
+      "filename": "textures/wood.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_3",
+      "filename": "textures/leaf.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    }
+  ]
+}

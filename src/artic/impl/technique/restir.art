@@ -138,7 +138,7 @@ struct Reservoir {
     weight: f32
 }
 
-    fn @update(r: &mut Reservoir, s_new: Sample, w_new: f32, pixel_idx: i32, buffer: DeviceBuffer, rnd: &mut RndState) -> () {
+    fn @update(r: &mut Reservoir, s_new: Sample, w_new: f32, rnd: &mut RndState) -> () {
         
         //update weights in reservoir
         r.w += w_new;
@@ -158,10 +158,10 @@ struct Reservoir {
     
     fn @merge(l: &mut Reservoir, r: Reservoir, p_hat: f32, pixel_idx: i32, buffer: DeviceBuffer, rnd: &mut RndState) {
         
-        let m_zero = buffer.load_i32(pixel_idx + 76);
+        //let m_zero = buffer.load_i32(pixel_idx + 76);
         
         //let m_zero = sample_count;
-        update(l, r.sample, p_hat * r.weight * r.sample_count, pixel_idx, buffer, rnd);
+        update(l, r.sample, p_hat * r.weight * r.sample_count, rnd);
 
         //update M
     }
@@ -550,7 +550,6 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
       let spatial_reservoir_buffer_di = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
 
       let aov_restir = device.load_aov_image(1, spi);
-      let aov_depth_info = device.load_aov_image(3, 1);
       let aov_direct_light = device.load_aov_image(2, spi);
      
       //load image with outgoing radiances at sample point
@@ -581,7 +580,7 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
           let mut rnd = generate_rnd_state(sample.sample_point.x, w_new as f32, (j * 22));
 
-          update(temporal_reservoir, sample, w_new as f32, (j * 22), temporal_reservoir_buffer, rnd);
+          update(temporal_reservoir, sample, w_new as f32, rnd);
 
           //update reservoirs W
           let rad = color_average(temporal_reservoir.sample.radiance);
@@ -614,7 +613,7 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
           let mut rnd_di = generate_rnd_state(sample_di.pdf, w_new_di as f32, (j * 22));
 
-         update(temporal_reservoir_di, sample_di, w_new_di as f32, (j * 22), temporal_reservoir_buffer_di, rnd_di);
+         update(temporal_reservoir_di, sample_di, w_new_di as f32, rnd_di);
 
            //update reservoirs W
            let rad_di = color_average(temporal_reservoir_di.sample.radiance);
