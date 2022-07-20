@@ -1,5 +1,6 @@
 #include "djmeasured.h"
 #include "serialization/FileSerializer.h"
+#include "Logger.h"
 
 #define POWITACQ_IMPLEMENTATION
 #include "powitacq_rgb.h"
@@ -184,6 +185,8 @@ void write_brdf_data(BRDFData* data, std::string path) {
     os.write( (int32_t)sigma.size());
     os.write( (int32_t)luminance.size());
     os.write( (int32_t)rgb.size());
+
+    IG_LOG(IG::L_INFO) << "Warp sizes: " << (int32_t)ndf.size() << " " << (int32_t)vndf.size() << " " << (int32_t)sigma.size() << " " << (int32_t)luminance.size() << " " << (int32_t)rgb.size();
 
     os.write(ndf, true);
 
