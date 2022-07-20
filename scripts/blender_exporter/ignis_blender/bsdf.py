@@ -114,9 +114,9 @@ def _export_glossy_bsdf(ctx, bsdf, export_name):
 def _map_specular_to_ior(specular):
     value = try_extract_node_value(specular, default=None)
     if not value:
-        return f"((1 + sqrt(0.08*{specular})) / max(0.001, 1 - sqrt(0.08*{specular})))"
+        return f"(2/(1-sqrt(0.08*{specular}))-1)"
     else:  # Compute actual value to simplify code generation
-        return (1 + math.sqrt(0.08*value)) / max(0.001, 1 - math.sqrt(0.08*value))
+        return 2 * (1 - math.sqrt(0.08 * value)) - 1
 
 
 def _export_principled_bsdf(ctx, bsdf, export_name):
