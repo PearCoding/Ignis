@@ -439,7 +439,7 @@ bool Runtime::compileShaders()
 
         IG_LOG(L_DEBUG) << "Compiling miss shader" << std::endl;
         shaders.MissShader.Exec          = compileShader(variant.MissShader.Exec, "ig_miss_shader", "v" + std::to_string(i) + "_missShader");
-        shaders.MissShader.LocalRegistry = variant.RayGenerationShader.LocalRegistry;
+        shaders.MissShader.LocalRegistry = variant.MissShader.LocalRegistry;
         if (shaders.MissShader.Exec == nullptr) {
             IG_LOG(L_ERROR) << "Failed to compile miss shader in variant " << i << "." << std::endl;
             return false;
