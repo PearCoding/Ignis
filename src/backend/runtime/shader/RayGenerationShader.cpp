@@ -57,7 +57,7 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
             pixel_sampler = "make_mjitt_pixel_sampler(4, 4)";
         }
 
-        stream << "  let emitter = make_camera_emitter(camera, iter, spi, " << pixel_sampler << ", init_raypayload);" << std::endl;
+        stream << "  let emitter = make_camera_emitter(camera, iter, spi, settings.frame, " << pixel_sampler << ", init_raypayload);" << std::endl;
     }
 
     stream << end();

@@ -1,0 +1,245 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 12,
+    "clamp": 10.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 39.597752709049864,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -0.9554879069328308,
+      0.029820019379258156,
+      0.2935197353363037,
+      -4.7607035636901855,
+      0.2947162687778473,
+      0.05055908486247063,
+      0.9542464017868042,
+      -4.264875411987305,
+      0.013615543954074383,
+      0.9982758164405823,
+      -0.057097118347883224,
+      2.32230281829834,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      256.0,
+      256.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "Plane",
+      "filename": "Meshes/Plane.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Plane.001",
+      "filename": "Meshes/Plane.001.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Cube.002",
+      "filename": "Meshes/Cube.002.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Plane.002",
+      "filename": "Meshes/Plane.002.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "principled",
+      "name": "Green",
+      "base_color": "color(0.0, 1.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Emmision",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Grey",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Red",
+      "base_color": "color(1.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    }
+  ],
+  "entities": [
+    {
+      "name": "Plane-Plane",
+      "shape": "Plane",
+      "bsdf": "Green",
+      "transform": [
+        -1.092784742695585e-07,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        4.0,
+        0.0,
+        -1.0,
+        2.5,
+        0.0,
+        -4.371138828673793e-08,
+        2.5,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Plane.001-Plane.001",
+      "shape": "Plane.001",
+      "bsdf": "Red",
+      "transform": [
+        -4.371138828673793e-08,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        4.0,
+        1.0,
+        0.0,
+        -4.371138828673793e-08,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Cube-Cube.002",
+      "shape": "Cube.002",
+      "bsdf": "Grey",
+      "transform": [
+        10.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        5.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.5,
+        2.5,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Plane.002-Plane.002",
+      "shape": "Plane.002",
+      "bsdf": "Emmision",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -5.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        4.900000095367432,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "area",
+      "name": "Plane.002-Plane.002",
+      "entity": "Plane.002-Plane.002",
+      "radiance": "(color(1.0, 0.5, 0.0, 1.0) * 19.5)"
+    }
+  ]
+}

@@ -44,7 +44,7 @@ static TechniqueInfo restir_get_info(const std::string&, const std::shared_ptr<P
 {
     TechniqueInfo info;
 
-     //info.Variants[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
+     info.Variants[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
 
     // make use of post-iteration setup
     info.Variants[0].CallbackGenerators[(int)CallbackType::AfterIteration] = restir_resampling_generator; 
