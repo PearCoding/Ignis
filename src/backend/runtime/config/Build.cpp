@@ -70,8 +70,13 @@ std::string getBuildString()
            << " { OS: " << getOSName()
            << "; Branch: " IG_GIT_BRANCH
            << "; Rev: " IG_GIT_REVISION
+           << "; Date: " IG_GIT_DATE
+           << "; Subject: " IG_GIT_SUBJECT
            << "} [Asserts: " << hasAsserts
            << "]";
+    if (IG_GIT_DIRTY)
+        stream << " [Dirty]";
+
     return stream.str();
 }
 } // namespace IG::Build

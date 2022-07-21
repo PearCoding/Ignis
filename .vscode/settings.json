@@ -134,7 +134,8 @@
         "any": "cpp",
         "charconv": "cpp",
         "numbers": "cpp",
-        "semaphore": "cpp"
+        "semaphore": "cpp",
+        "*.in": "cpp"
     },
     "cmake.configureOnOpen": false,
     "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
