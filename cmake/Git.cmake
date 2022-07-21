@@ -4,7 +4,7 @@ if(NOT GIT_FOUND OR NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")
     set(GIT_REVISION "")
     set(GIT_DATE "")
     set(GIT_SUBJECT "")
-    set(GIT_DIRTY "")
+    set(GIT_DIRTY "true")
     return()
 endif()
 

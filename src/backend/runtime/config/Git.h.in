@@ -1,9 +1,9 @@
 #pragma once
 
 // clang-format off
-#define IG_GIT_BRANCH 	"${GIT_BRANCH}"
+#define IG_GIT_BRANCH "${GIT_BRANCH}"
 #define IG_GIT_REVISION "${GIT_REVISION}"
-#define IG_GIT_DATE     "${GIT_DATE}"
-#define IG_GIT_SUBJECT  "${GIT_SUBJECT}"
-#define IG_GIT_DIRTY    ${GIT_DIRTY}
+#define IG_GIT_DATE "${GIT_DATE}"
+#define IG_GIT_SUBJECT "${GIT_SUBJECT}"
+#define IG_GIT_DIRTY ${GIT_DIRTY}
 // clang-format on
