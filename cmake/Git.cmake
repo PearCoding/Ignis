@@ -26,7 +26,7 @@ execute_process(
 
 # Get the latest date of commit
 execute_process(
-    COMMAND ${GIT_EXECUTABLE} log -1 --format=%ci
+    COMMAND ${GIT_EXECUTABLE} log -1 --format=%cI
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_DATE
     OUTPUT_STRIP_TRAILING_WHITESPACE

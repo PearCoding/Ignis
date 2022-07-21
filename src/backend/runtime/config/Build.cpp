@@ -2,6 +2,9 @@
 #include "config/Git.h"
 #include "config/Version.h"
 
+#include <cstdio>
+#include <cstring>
+#include <ctime>
 #include <sstream>
 
 namespace IG::Build {
@@ -53,6 +56,60 @@ std::string getCompilerName() { return IG_CC_NAME; }
 std::string getOSName() { return IG_OS_NAME; }
 std::string getBuildVariant() { return IG_BUILDVARIANT_NAME; }
 
+static inline time_t parse_preprocessor(char const* date, char const* time)
+{
+    char s_month[5];
+    static const char month_names[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
+
+    int month, day, year;
+    std::sscanf(date, "%3s %d %d", s_month, &day, &year);
+
+    int hour, minute, seconds;
+    std::sscanf(time, "%d:%d:%d", &hour, &minute, &seconds);
+
+    month = (std::strstr(month_names, s_month) - month_names) / 3;
+
+    struct tm tt;
+    std::memset(&tt, 0, sizeof(tt));
+
+    tt.tm_mon   = month;
+    tt.tm_mday  = day;
+    tt.tm_year  = year - 1900;
+    tt.tm_hour  = hour;
+    tt.tm_min   = minute;
+    tt.tm_sec   = seconds;
+    tt.tm_isdst = -1;
+
+    return std::mktime(&tt);
+}
+
+static inline time_t parse_iso8601utc(const char* date)
+{
+    struct tm tt;
+    std::memset(&tt, 0, sizeof(tt));
+
+    double seconds;
+    if (std::sscanf(date, "%04d-%02d-%02dT%02d:%02d:%lfZ",
+                    &tt.tm_year, &tt.tm_mon, &tt.tm_mday,
+                    &tt.tm_hour, &tt.tm_min, &seconds)
+        != 6)
+        return -1;
+
+    tt.tm_sec = (int)seconds;
+    tt.tm_mon -= 1;
+    tt.tm_year -= 1900;
+    tt.tm_isdst = -1;
+    return std::mktime(&tt) - timezone;
+}
+
+static inline std::string build_time_str(const time_t time)
+{
+    std::tm* ptm = std::localtime(&time);
+    char buffer[32];
+    std::strftime(buffer, 32, "%a %d.%m.%Y %H:%M:%S", ptm);
+    return std::string(buffer);
+}
+
 std::string getBuildString()
 {
 #ifdef IG_NO_ASSERTS
@@ -61,19 +118,23 @@ std::string getBuildString()
     constexpr bool hasAsserts = true;
 #endif
 
+    const auto compile_time = parse_preprocessor(__DATE__, __TIME__);
+    const auto commit_time  = parse_iso8601utc(IG_GIT_DATE);
+
     std::stringstream stream;
     stream << std::boolalpha
            << IG_NAME_STRING << " " << IG_VERSION_STRING
            << " (" << getBuildVariant()
-           << ") on " __DATE__ " at " __TIME__
+           << ") built " << build_time_str(compile_time)
            << " with " << getCompilerName()
            << " { OS: " << getOSName()
            << "; Branch: " IG_GIT_BRANCH
            << "; Rev: " IG_GIT_REVISION
-           << "; Date: " IG_GIT_DATE
-           << "; Subject: " IG_GIT_SUBJECT
+           << "; Date: " << build_time_str(commit_time)
+           << "; Subject: \"" IG_GIT_SUBJECT "\""
            << "} [Asserts: " << hasAsserts
            << "]";
+
     if (IG_GIT_DIRTY)
         stream << " [Dirty]";
 
