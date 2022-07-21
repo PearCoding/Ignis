@@ -89,7 +89,7 @@ static inline time_t parse_iso8601utc(const char* date)
     std::memset(&tt, 0, sizeof(tt));
 
     double seconds;
-    if (std::sscanf(date, "%04d-%02d-%02dT%02d:%02d:%lfZ",
+    if (std::sscanf(date, "%04d-%02d-%02d %02d:%02d:%lf",
                     &tt.tm_year, &tt.tm_mon, &tt.tm_mday,
                     &tt.tm_hour, &tt.tm_min, &seconds)
         != 6)
@@ -99,7 +99,7 @@ static inline time_t parse_iso8601utc(const char* date)
     tt.tm_mon -= 1;
     tt.tm_year -= 1900;
     tt.tm_isdst = -1;
-    return std::mktime(&tt) - timezone;
+    return std::mktime(&tt);
 }
 
 static inline std::string build_time_str(const time_t time)
@@ -128,6 +128,7 @@ std::string getBuildString()
            << ") built " << build_time_str(compile_time)
            << " with " << getCompilerName()
            << " { OS: " << getOSName()
+           << "; Author: " IG_GIT_AUTHOR
            << "; Branch: " IG_GIT_BRANCH
            << "; Rev: " IG_GIT_REVISION
            << "; Date: " << build_time_str(commit_time)
