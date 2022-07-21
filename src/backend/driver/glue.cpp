@@ -39,6 +39,8 @@
 #define DEVICE_GPU
 #endif
 
+#define _SECTION(type) const auto sectionClosure = getThreadData()->stats.section((type)); IG_UNUSED(sectionClosure)
+
 static inline size_t roundUp(size_t num, size_t multiple)
 {
     if (multiple == 0)
@@ -604,6 +606,8 @@ public:
         if (it != images.end())
             return it->second;
 
+        _SECTION(IG::SectionType::ImageLoading);
+
         IG_LOG(IG::L_DEBUG) << "Loading image " << filename << " (C=" << expected_channels << ")" << std::endl;
         try {
             const auto img = IG::Image::load(filename);
@@ -630,6 +634,8 @@ public:
         auto it      = images.find(filename);
         if (it != images.end())
             return it->second;
+
+        _SECTION(IG::SectionType::PackedImageLoading);
 
         IG_LOG(IG::L_DEBUG) << "Loading (packed) image " << filename << " (C=" << expected_channels << ")" << std::endl;
         try {
@@ -680,6 +686,8 @@ public:
         if (it != buffers.end())
             return it->second;
 
+        _SECTION(IG::SectionType::BufferLoading);
+
         IG_LOG(IG::L_DEBUG) << "Loading buffer " << filename << std::endl;
         const auto vec = readBufferFile(filename);
 
@@ -705,6 +713,8 @@ public:
         if (it != buffers.end() && std::get<1>(it->second) >= (size_t)size) {
             return it->second;
         }
+
+        _SECTION(IG::SectionType::BufferRequests);
 
         IG_LOG(IG::L_DEBUG) << "Requested buffer " << name << " with " << size << " bytes" << std::endl;
 
@@ -945,6 +955,8 @@ public:
         if (dev != 0) {
             auto& device = devices[dev];
             if (device.film_pixels.size() != host_pixels.size()) {
+                _SECTION(IG::SectionType::FramebufferUpdate);
+
                 auto film_size = film_width * film_height * 3;
                 void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
                 if (ptr == nullptr) {
@@ -977,6 +989,8 @@ public:
                 device.aovs.resize(aovs.size());
 
             if (device.aovs[index].size() != aovs[index].size()) {
+                _SECTION(IG::SectionType::AOVUpdate);
+
                 auto film_size = film_width * film_height * 3;
                 void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
                 if (ptr == nullptr) {
@@ -998,10 +1012,12 @@ public:
 #ifdef DEVICE_GPU
     inline uint32_t* getTonemapImage(int32_t dev)
     {
-        auto& device = devices[dev];
-        if (device.tonemap_pixels.size() != host_pixels.size()) {
-            auto film_size = film_width * film_height;
-            void* ptr      = anydsl_alloc(dev, sizeof(uint32_t) * film_size);
+        const size_t film_size = film_width * film_height;
+        auto& device           = devices[dev];
+        if ((size_t)device.tonemap_pixels.size() != film_size) {
+            _SECTION(IG::SectionType::TonemapUpdate);
+
+            void* ptr = anydsl_alloc(dev, sizeof(uint32_t) * film_size);
             if (ptr == nullptr) {
                 IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
                 std::abort();

@@ -18,6 +18,18 @@ enum class ShaderType {
     ImageInfo
 };
 
+enum class SectionType {
+    ImageLoading = 0,
+    PackedImageLoading,
+    BufferLoading,
+    BufferRequests,
+    FramebufferUpdate,
+    AOVUpdate,
+    TonemapUpdate,
+
+    _COUNT
+};
+
 enum class Quantity {
     // This should be in sync with core/stats.art
     CameraRayCount = 0,
@@ -38,6 +50,33 @@ public:
 
     void beginShaderLaunch(ShaderType type, size_t workload, size_t id);
     void endShaderLaunch(ShaderType type, size_t id);
+
+    void beginSection(SectionType type);
+    void endSection(SectionType type);
+
+    class SectionClosure {
+    private:
+        Statistics& Parent;
+        SectionType Type;
+
+    public:
+        inline SectionClosure(Statistics& parent, SectionType type)
+            : Parent(parent)
+            , Type(type)
+        {
+            Parent.beginSection(Type);
+        }
+
+        inline ~SectionClosure()
+        {
+            Parent.endSection(Type);
+        }
+    };
+
+    [[nodiscard]] inline SectionClosure section(SectionType type)
+    {
+        return SectionClosure(*this, type);
+    }
 
     inline void increase(Quantity quantity, uint64 value)
     {
@@ -62,6 +101,14 @@ private:
 
     [[nodiscard]] ShaderStats* getStats(ShaderType type, size_t id);
 
+    struct SectionStats {
+        Timer timer;
+        size_t elapsedMS = 0;
+        size_t count     = 0;
+
+        SectionStats& operator+=(const SectionStats& other);
+    };
+
     ShaderStats mDeviceStats;
     ShaderStats mRayGenerationStats;
     ShaderStats mMissStats;
@@ -73,5 +120,6 @@ private:
     ShaderStats mTonemapStats;
 
     std::array<uint64, (size_t)Quantity::_COUNT> mQuantities;
+    std::array<SectionStats, (size_t)SectionType::_COUNT> mSections;
 };
 } // namespace IG
