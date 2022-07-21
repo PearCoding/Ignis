@@ -1190,6 +1190,7 @@ static inline int get_dev_id(size_t device)
 #elif defined(DEVICE_AMD)
     return ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
 #else
+    IG_UNUSED(device);
     return 0;
 #endif
 }
