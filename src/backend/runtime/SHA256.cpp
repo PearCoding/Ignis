@@ -23,7 +23,6 @@ static const std::array<uint32, 64> SHA256_K = { 0x428a2f98, 0x71374491, 0xb5c0f
                                                  0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2 };
 
 static inline uint32 rotr(uint32 x, uint32 n) { return (x >> n) | (x << ((sizeof(x) << 3) - n)); }
-static inline uint32 rotl(uint32 x, uint32 n) { return (x << n) | (x >> ((sizeof(x) << 3) - n)); }
 static inline uint32 ch(uint32 x, uint32 y, uint32 z) { return (x & y) ^ (~x & z); }
 static inline uint32 maj(uint32 x, uint32 y, uint32 z) { return (x & y) ^ (x & z) ^ (y & z); }
 

@@ -17,6 +17,8 @@ public:
     {
     }
 
+    virtual ~Light() = default;
+
     virtual bool isInfinite() const { return false; }
     virtual bool isDelta() const { return false; }
     virtual std::optional<Vector3f> position() const { return std::nullopt; }

@@ -46,37 +46,6 @@ static inline ShadingTree::NumberOptions mapToNumberOptions(const ShadingTree::T
     };
 }
 
-// ------------------ Vector
-static inline ShadingTree::VectorOptions mapToVectorOptions(const ShadingTree::NumberOptions& options)
-{
-    return ShadingTree::VectorOptions{
-        options.EmbedType,
-        options.SpecializeZero,
-        options.SpecializeOne,
-        false
-    };
-}
-
-static inline ShadingTree::VectorOptions mapToVectorOptions(const ShadingTree::ColorOptions& options)
-{
-    return ShadingTree::VectorOptions{
-        options.EmbedType,
-        options.SpecializeBlack,
-        options.SpecializeWhite,
-        false
-    };
-}
-
-static inline ShadingTree::VectorOptions mapToVectorOptions(const ShadingTree::TextureOptions& options)
-{
-    return ShadingTree::VectorOptions{
-        options.EmbedType,
-        true, // Really?
-        true,
-        false
-    };
-}
-
 // ------------------ Color
 static inline ShadingTree::ColorOptions mapToColorOptions(const ShadingTree::NumberOptions& options)
 {
@@ -84,15 +53,6 @@ static inline ShadingTree::ColorOptions mapToColorOptions(const ShadingTree::Num
         options.EmbedType,
         options.SpecializeZero,
         options.SpecializeOne
-    };
-}
-
-static inline ShadingTree::ColorOptions mapToColorOptions(const ShadingTree::VectorOptions& options)
-{
-    return ShadingTree::ColorOptions{
-        options.EmbedType,
-        options.SpecializeZero,
-        options.SpecializeOne || options.SpecializeUnit
     };
 }
 
