@@ -235,13 +235,13 @@ constexpr float Rad2Deg = 180.0f * InvPi;
 
 /// Clamps a between b and c.
 template <typename T>
-inline T clamp(const T& a, const T& b, const T& c)
+[[nodiscard]] inline T clamp(const T& a, const T& b, const T& c)
 {
     return (a < b) ? b : ((a > c) ? c : a);
 }
 
 /// Transform string to lowercase
-inline std::string to_lowercase(const std::string& str)
+[[nodiscard]] inline std::string to_lowercase(const std::string& str)
 {
     std::string tmp = str;
     std::transform(tmp.begin(), tmp.end(), tmp.begin(), [](const std::string::value_type& v) { return static_cast<std::string::value_type>(::tolower((int)v)); });

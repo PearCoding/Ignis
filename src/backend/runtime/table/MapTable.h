@@ -12,14 +12,14 @@ class MapTable {
 public:
     MapTableble() = default;
 
-    inline size_t entryCount() const { return mEntries.size(); }
-    inline void reserve(size_t count) { mEntries.reserve(count); }
+    [[nodiscard]] inline size_t entryCount() const { return mEntries.size(); }
+    [[nodiscard]] inline void reserve(size_t count) { mEntries.reserve(count); }
     inline void addEntry(uint32 from, uint32 to)
     {
         mEntries.push_back(MapEntry{ from, to });
     }
 
-    inline const std::vector<MapEntry>& entries() const { return mEntries; }
+    [[nodiscard]] inline const std::vector<MapEntry>& entries() const { return mEntries; }
 
 private:
     std::vector<MapEntry> mEntries;

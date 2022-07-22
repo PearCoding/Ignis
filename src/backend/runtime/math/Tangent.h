@@ -6,14 +6,14 @@ namespace IG {
 namespace Tangent {
 
 // Functions applying to the TBN matrix
-inline Vector3f fromTangentSpace(const Vector3f& N,
+[[nodiscard]] inline Vector3f fromTangentSpace(const Vector3f& N,
                                  const Vector3f& Nx, const Vector3f& Ny,
                                  const Vector3f& V)
 {
     return (N * V(2) + Ny * V(1) + Nx * V(0)).normalized();
 }
 
-inline Vector3f toTangentSpace(const Vector3f& N,
+[[nodiscard]] inline Vector3f toTangentSpace(const Vector3f& N,
                                const Vector3f& Nx, const Vector3f& Ny,
                                const Vector3f& V)
 {
@@ -82,7 +82,7 @@ inline void invert_frame(Vector3f& N, Vector3f& Nx, Vector3f& Ny)
 }
 
 // Align v on N
-inline Vector3f align(const Vector3f& N, const Vector3f& V)
+[[nodiscard]] inline Vector3f align(const Vector3f& N, const Vector3f& V)
 {
     Vector3f nx, ny;
     frame(N, nx, ny);

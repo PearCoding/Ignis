@@ -45,9 +45,9 @@ public:
     ~Runtime();
 
     /// Load from file and initialize
-    bool loadFromFile(const std::filesystem::path& path);
+    [[nodiscard]] bool loadFromFile(const std::filesystem::path& path);
     /// Load from string and initialize
-    bool loadFromString(const std::string& str);
+    [[nodiscard]] bool loadFromString(const std::string& str);
 
     /// Do a single iteration in non-tracing mode
     void step();
@@ -65,40 +65,40 @@ public:
     /// Will resize the framebuffer, clear it and reset rendering
     void resizeFramebuffer(size_t width, size_t height);
     /// Return pointer to framebuffer
-    const float* getFramebuffer(size_t aov = 0) const;
+    [[nodiscard]] const float* getFramebuffer(size_t aov = 0) const;
     /// Will clear all framebuffers
     void clearFramebuffer();
     /// Will clear specific framebuffer
     void clearFramebuffer(size_t aov);
 
     /// Return all names of the enabled AOVs
-    inline const std::vector<std::string>& aovs() const { return mTechniqueInfo.EnabledAOVs; }
+    [[nodiscard]] inline const std::vector<std::string>& aovs() const { return mTechniqueInfo.EnabledAOVs; }
 
     /// Return number of iterations rendered so far
-    inline size_t currentIterationCount() const { return mCurrentIteration; }
+    [[nodiscard]] inline size_t currentIterationCount() const { return mCurrentIteration; }
     /// Return number of samples rendered so far
-    inline size_t currentSampleCount() const { return mCurrentSampleCount; }
+    [[nodiscard]] inline size_t currentSampleCount() const { return mCurrentSampleCount; }
 
     /// Return pointer to structure containing statistics
-    const Statistics* getStatistics() const;
+    [[nodiscard]] const Statistics* getStatistics() const;
 
     /// Returns the name of the loaded technique
-    inline const std::string& technique() const { return mTechniqueName; }
+    [[nodiscard]] inline const std::string& technique() const { return mTechniqueName; }
 
     /// Returns the name of the loaded camera
-    inline const std::string& camera() const { return mCameraName; }
+    [[nodiscard]] inline const std::string& camera() const { return mCameraName; }
 
     /// Return true if the runtime is used in tracing mode
-    inline bool isTrace() const { return mOptions.IsTracer; }
+    [[nodiscard]] inline bool isTrace() const { return mOptions.IsTracer; }
 
     /// The target the runtime is using
-    inline Target target() const { return mTarget; }
+    [[nodiscard]] inline Target target() const { return mTarget; }
 
     /// Computes (approximative) number of samples per iteration. This might be off due to the internal computing of techniques
-    inline size_t samplesPerIteration() const { return mTechniqueInfo.ComputeSPI(0 /* TODO: Not always the best choice */, mSamplesPerIteration); }
+    [[nodiscard]] inline size_t samplesPerIteration() const { return mTechniqueInfo.ComputeSPI(0 /* TODO: Not always the best choice */, mSamplesPerIteration); }
 
     /// The bounding box of the loaded scene
-    inline const BoundingBox& sceneBoundingBox() const { return mDatabase.SceneBBox; }
+    [[nodiscard]] inline const BoundingBox& sceneBoundingBox() const { return mDatabase.SceneBBox; }
 
     /// Set integer parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, int value);
@@ -110,21 +110,21 @@ public:
     void setParameter(const std::string& name, const Vector4f& value);
 
     /// The current framebuffer width
-    inline size_t framebufferWidth() const { return mFilmWidth; }
+    [[nodiscard]] inline size_t framebufferWidth() const { return mFilmWidth; }
     /// The current framebuffer height
-    inline size_t framebufferHeight() const { return mFilmHeight; }
+    [[nodiscard]] inline size_t framebufferHeight() const { return mFilmHeight; }
 
     /// The initial camera orientation the scene was loaded with. Can be used to reset in later iterations
-    inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
+    [[nodiscard]] inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
 
     /// Increase frame count (only used in interactive sessions)
     inline void incFrameCount() { mCurrentFrame++; }
 
     /// Get a list of all available techniques
-    static std::vector<std::string> getAvailableTechniqueTypes();
+    [[nodiscard]] static std::vector<std::string> getAvailableTechniqueTypes();
 
     /// Get a list of all available cameras
-    static std::vector<std::string> getAvailableCameraTypes();
+    [[nodiscard]] static std::vector<std::string> getAvailableCameraTypes();
 
 private:
     void checkCacheDirectory();

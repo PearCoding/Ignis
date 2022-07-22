@@ -12,10 +12,10 @@ class SkyModel {
 public:
     SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, float turbidity = 3.0f, size_t resAzimuth = RES_AZ, size_t resElevation = RES_EL);
 
-    inline size_t azimuthCount() const { return mAzimuthCount; }
-    inline size_t elevationCount() const { return mElevationCount; }
+    [[nodiscard]] inline size_t azimuthCount() const { return mAzimuthCount; }
+    [[nodiscard]] inline size_t elevationCount() const { return mElevationCount; }
 
-    inline RGB radiance(const ElevationAzimuth& ea) const
+    [[nodiscard]] inline RGB radiance(const ElevationAzimuth& ea) const
     {
         int az_in = std::max(0, std::min<int>(static_cast<int>(mAzimuthCount) - 1, static_cast<int>(ea.Azimuth / AZIMUTH_RANGE * static_cast<float>(mAzimuthCount))));
         int el_in = std::max(0, std::min<int>(static_cast<int>(mElevationCount) - 1, static_cast<int>(ea.Elevation / ELEVATION_RANGE * static_cast<float>(mElevationCount))));
@@ -27,9 +27,9 @@ public:
         };
     }
 
-    RGB computeTotal() const; 
+    [[nodiscard]] RGB computeTotal() const; 
 
-    void save(const std::filesystem::path& path) const;
+    bool save(const std::filesystem::path& path) const;
 
 private:
     std::vector<float> mData;

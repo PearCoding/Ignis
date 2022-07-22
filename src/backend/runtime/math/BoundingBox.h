@@ -21,8 +21,8 @@ struct BoundingBox {
     {
     }
 
-    inline Vector3f diameter() const { return isEmpty() ? Vector3f::Zero().eval() : (max - min).eval(); }
-    inline Vector3f center() const { return (max + min) / 2; }
+    [[nodiscard]] inline Vector3f diameter() const { return isEmpty() ? Vector3f::Zero().eval() : (max - min).eval(); }
+    [[nodiscard]] inline Vector3f center() const { return (max + min) / 2; }
 
     inline BoundingBox& extend(const BoundingBox& bb)
     {
@@ -38,7 +38,7 @@ struct BoundingBox {
         return *this;
     }
 
-    inline float halfArea() const
+    [[nodiscard]] inline float halfArea() const
     {
         const Vector3f len = max - min;
         const float kx     = std::max(len(0), 0.0f);
@@ -47,7 +47,7 @@ struct BoundingBox {
         return kx * (ky + kz) + ky * kz;
     }
 
-    inline float volume() const
+    [[nodiscard]] inline float volume() const
     {
         const Vector3f len = max - min;
         return len(0) * len(1) * len(2);
@@ -81,7 +81,7 @@ struct BoundingBox {
         right_bb.min(axis) += off;
     }
 
-    inline BoundingBox transformed(const Transformf& transform) const
+    [[nodiscard]] inline BoundingBox transformed(const Transformf& transform) const
     {
         BoundingBox bbox = Empty();
         bbox.extend(transform * min);                              // 000
@@ -94,36 +94,36 @@ struct BoundingBox {
         bbox.extend(transform * max);                              // 111
         return bbox;
         /*const Vector3f xmin = transform.linear().col(0) * min(0);
-		const Vector3f xmax = transform.linear().col(0) * max(0);
+        const Vector3f xmax = transform.linear().col(0) * max(0);
 
-		const Vector3f ymin = transform.linear().col(1) * min(1);
-		const Vector3f ymax = transform.linear().col(1) * max(1);
+        const Vector3f ymin = transform.linear().col(1) * min(1);
+        const Vector3f ymax = transform.linear().col(1) * max(1);
 
-		const Vector3f zmin = transform.linear().col(2) * min(2);
-		const Vector3f zmax = transform.linear().col(2) * max(2);
+        const Vector3f zmin = transform.linear().col(2) * min(2);
+        const Vector3f zmax = transform.linear().col(2) * max(2);
 
-		return BoundingBox(
-			xmin.cwiseMin(xmax) + ymin.cwiseMin(ymax) + zmin.cwiseMin(zmax) + transform.translation(),
-			xmin.cwiseMax(xmax) + ymin.cwiseMax(ymax) + zmin.cwiseMax(zmax) + transform.translation());*/
+        return BoundingBox(
+            xmin.cwiseMin(xmax) + ymin.cwiseMin(ymax) + zmin.cwiseMin(zmax) + transform.translation(),
+            xmin.cwiseMax(xmax) + ymin.cwiseMax(ymax) + zmin.cwiseMax(zmax) + transform.translation());*/
     }
 
-    inline bool isEmpty() const
+    [[nodiscard]] inline bool isEmpty() const
     {
         return (min.array() > max.array()).any();
     }
 
-    inline bool isInside(const Vector3f& v) const
+    [[nodiscard]] inline bool isInside(const Vector3f& v) const
     {
         return (v.array() >= min.array()).all() && (v.array() <= max.array()).all();
     }
 
-    inline bool isOverlapping(const BoundingBox& bb) const
+    [[nodiscard]] inline bool isOverlapping(const BoundingBox& bb) const
     {
         return (min.array() <= bb.max.array()).all() && (max.array() >= bb.min.array()).all();
     }
 
-    inline static BoundingBox Empty() { return BoundingBox(Vector3f(FltMax, FltMax, FltMax), Vector3f(-FltMax, -FltMax, -FltMax)); }
-    inline static BoundingBox Full() { return BoundingBox(Vector3f(-FltMax, -FltMax, -FltMax), Vector3f(FltMax, FltMax, FltMax)); }
+    [[nodiscard]] inline static BoundingBox Empty() { return BoundingBox(Vector3f(FltMax, FltMax, FltMax), Vector3f(-FltMax, -FltMax, -FltMax)); }
+    [[nodiscard]] inline static BoundingBox Full() { return BoundingBox(Vector3f(-FltMax, -FltMax, -FltMax), Vector3f(FltMax, FltMax, FltMax)); }
 };
 
 } // namespace IG

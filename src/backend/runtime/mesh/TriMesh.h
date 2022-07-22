@@ -20,7 +20,7 @@ struct TriMesh {
     std::vector<float> face_inv_area;
     std::vector<StVector2f> texcoords;
 
-    inline size_t faceCount() const { return indices.size() / 4; }
+    [[nodiscard]] inline size_t faceCount() const { return indices.size() / 4; }
 
     void fixNormals(bool* hasBadNormals = nullptr);
     void flipNormals();
@@ -32,22 +32,22 @@ struct TriMesh {
     void computeVertexNormals();
     void makeTexCoordsZero();
     void setupFaceNormalsAsVertexNormals();
-    float computeArea() const;
+    [[nodiscard]] float computeArea() const;
 
     void transform(const Transformf& t);
 
     /// Returns PlaneShape if the given mesh can be approximated as a plane
-    std::optional<PlaneShape> getAsPlane() const;
+    [[nodiscard]] std::optional<PlaneShape> getAsPlane() const;
 
-    static TriMesh MakeUVSphere(const Vector3f& center, float radius, uint32 stacks, uint32 slices);
-    static TriMesh MakeIcoSphere(const Vector3f& center, float radius, uint32 subdivisions);
-    static TriMesh MakeDisk(const Vector3f& center, const Vector3f& normal, float radius, uint32 sections);
-    static TriMesh MakePlane(const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis);
-    static TriMesh MakeTriangle(const Vector3f& p0, const Vector3f& p1, const Vector3f& p2);
-    static TriMesh MakeRectangle(const Vector3f& p0, const Vector3f& p1, const Vector3f& p2, const Vector3f& p3);
-    static TriMesh MakeBox(const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis, const Vector3f& zAxis);
-    static TriMesh MakeCone(const Vector3f& baseCenter, float baseRadius, const Vector3f& tipPos, uint32 sections, bool fill_cap = true);
-    static TriMesh MakeCylinder(const Vector3f& baseCenter, float baseRadius, const Vector3f& topCenter, float topRadius, uint32 sections, bool fill_cap = true);
+    [[nodiscard]] static TriMesh MakeUVSphere(const Vector3f& center, float radius, uint32 stacks, uint32 slices);
+    [[nodiscard]] static TriMesh MakeIcoSphere(const Vector3f& center, float radius, uint32 subdivisions);
+    [[nodiscard]] static TriMesh MakeDisk(const Vector3f& center, const Vector3f& normal, float radius, uint32 sections);
+    [[nodiscard]] static TriMesh MakePlane(const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis);
+    [[nodiscard]] static TriMesh MakeTriangle(const Vector3f& p0, const Vector3f& p1, const Vector3f& p2);
+    [[nodiscard]] static TriMesh MakeRectangle(const Vector3f& p0, const Vector3f& p1, const Vector3f& p2, const Vector3f& p3);
+    [[nodiscard]] static TriMesh MakeBox(const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis, const Vector3f& zAxis);
+    [[nodiscard]] static TriMesh MakeCone(const Vector3f& baseCenter, float baseRadius, const Vector3f& tipPos, uint32 sections, bool fill_cap = true);
+    [[nodiscard]] static TriMesh MakeCylinder(const Vector3f& baseCenter, float baseRadius, const Vector3f& topCenter, float topRadius, uint32 sections, bool fill_cap = true);
 };
 
 } // namespace IG

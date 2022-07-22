@@ -59,7 +59,7 @@ static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts
 static inline size_t recommendSPI(Target target, size_t width, size_t height, bool interactive)
 {
     // The "best" case was measured with a 1000 x 1000. It does depend on the scene content though, but thats ignored here
-    size_t spi_f = isCPU(target) ? 2 : 8;
+    size_t spi_f = TargetInfo(target).isCPU() ? 2 : 8;
     if (interactive)
         spi_f /= 2;
     const size_t spi = (size_t)std::ceil(spi_f / ((width / 1000.0f) * (height / 1000.0f)));
@@ -114,13 +114,13 @@ Runtime::Runtime(const RuntimeOptions& opts)
     const Target newTarget = mManager.resolveTarget(target);
     if (newTarget != target) {
         IG_LOG(L_WARNING) << "Switched from "
-                          << targetToString(target) << " to "
-                          << targetToString(newTarget) << std::endl;
+                          << TargetInfo(target).toString() << " to "
+                          << TargetInfo(newTarget).toString() << std::endl;
     }
     mTarget = newTarget;
 
     // Load interface
-    IG_LOG(L_INFO) << "Loading target " << targetToString(mTarget) << std::endl;
+    IG_LOG(L_INFO) << "Loading target " << TargetInfo(mTarget).toString() << std::endl;
     if (!mManager.load(mTarget, mLoadedInterface))
         throw std::runtime_error("Error loading interface!");
 

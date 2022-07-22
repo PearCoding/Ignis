@@ -26,8 +26,8 @@ struct EntityObject {
     uint32 Flags;
 
     using ScalarType = float;
-    inline bvh::BoundingBox<float> bounding_box() const { return bvh::BoundingBox<float>(BBox.min, BBox.max); }
-    inline bvh::Vector3<float> center() const { return BBox.center(); }
+    [[nodiscard]] inline bvh::BoundingBox<float> bounding_box() const { return bvh::BoundingBox<float>(BBox.min, BBox.max); }
+    [[nodiscard]] inline bvh::Vector3<float> center() const { return BBox.center(); }
 };
 
 template <size_t N>

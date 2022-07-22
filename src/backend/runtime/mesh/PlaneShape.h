@@ -9,7 +9,7 @@ struct PlaneShape {
     Vector3f YAxis;
     std::array<Vector2f, 4> TexCoords;
 
-    inline Vector3f computeNormal() const { return XAxis.cross(YAxis); }
-    inline float computeArea() const { return XAxis.cross(YAxis).norm(); }
+    [[nodiscard]] inline Vector3f computeNormal() const { return XAxis.cross(YAxis); }
+    [[nodiscard]] inline float computeArea() const { return XAxis.cross(YAxis).norm(); }
 };
 }

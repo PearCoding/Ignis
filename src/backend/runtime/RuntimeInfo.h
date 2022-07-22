@@ -5,11 +5,11 @@
 namespace IG {
 class RuntimeInfo {
 public:
-    static std::filesystem::path executablePath();
-    static std::filesystem::path cacheDirectory();
-    static size_t cacheDirectorySize();
+    [[nodiscard]] static std::filesystem::path executablePath();
+    [[nodiscard]] static std::filesystem::path cacheDirectory();
+    [[nodiscard]] static size_t cacheDirectorySize();
 
-    static std::vector<std::filesystem::path> splitEnvPaths(const std::string& str);
-    static std::string combineEnvPaths(const std::vector<std::filesystem::path>& paths);
+    [[nodiscard]] static std::vector<std::filesystem::path> splitEnvPaths(const std::string& str);
+    [[nodiscard]] static std::string combineEnvPaths(const std::vector<std::filesystem::path>& paths);
 };
 } // namespace IG

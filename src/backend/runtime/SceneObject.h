@@ -13,8 +13,8 @@ public:
     {
     }
 
-    inline const std::string& name() const { return mName; }
-    inline const std::string& type() const { return mType; }
+    [[nodiscard]] inline const std::string& name() const { return mName; }
+    [[nodiscard]] inline const std::string& type() const { return mType; }
 
 private:
     std::string mName;

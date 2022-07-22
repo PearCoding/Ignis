@@ -32,7 +32,7 @@ struct RGB {
 
     inline explicit RGB(const RGBA& rgba);
 
-    inline float operator[](size_t index) const
+    [[nodiscard]] inline float operator[](size_t index) const
     {
         return reinterpret_cast<const float*>(this)[index];
     }
@@ -45,24 +45,24 @@ struct RGB {
         return *this;
     }
 
-    inline RGB applyGamma(float f = 0.5f) const
+    [[nodiscard]] inline RGB applyGamma(float f = 0.5f) const
     {
         return RGB(std::pow(r, f), std::pow(g, f), std::pow(b, f));
     }
 
-    inline RGB clamp(const RGB& min, const RGB& max) const
+    [[nodiscard]] inline RGB clamp(const RGB& min, const RGB& max) const
     {
         return RGB(IG::clamp(r, min.r, max.r),
                    IG::clamp(g, min.g, max.b),
                    IG::clamp(b, min.b, max.g));
     }
 
-    inline float luminance() const
+    [[nodiscard]] inline float luminance() const
     {
         return 0.2126f * r + 0.7152f * g + 0.0722f * b;
     }
 
-    inline float average() const
+    [[nodiscard]] inline float average() const
     {
         return (r + g + b) / 3;
     }
@@ -96,7 +96,7 @@ struct RGBA {
     {
     }
 
-    inline explicit RGBA(const RGB& rgb, float a)
+    inline RGBA(const RGB& rgb, float a)
         : r(rgb.r)
         , g(rgb.g)
         , b(rgb.b)
@@ -113,12 +113,12 @@ struct RGBA {
         return *this;
     }
 
-    inline RGBA applyGamma(float f = 0.5f) const
+    [[nodiscard]] inline RGBA applyGamma(float f = 0.5f) const
     {
         return RGBA(std::pow(r, f), std::pow(g, f), std::pow(b, f), a);
     }
 
-    inline RGBA clamp(const RGBA& min, const RGBA& max) const
+    [[nodiscard]] inline RGBA clamp(const RGBA& min, const RGBA& max) const
     {
         return RGBA(IG::clamp(r, min.r, max.r),
                     IG::clamp(g, min.g, max.b),

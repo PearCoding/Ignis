@@ -87,7 +87,7 @@ class BvhNAdapter<2, Node, LeafObject, Allocator> {
 public:
     using Bvh = bvh::Bvh<float>;
 
-    BvhNAdapter(std::vector<Node, Allocator<Node>>& nodes)
+    explicit BvhNAdapter(std::vector<Node, Allocator<Node>>& nodes)
         : nodes(nodes)
     {
     }

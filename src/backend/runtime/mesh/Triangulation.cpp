@@ -1,5 +1,5 @@
 #include "Triangulation.h"
-#include "Tangent.h"
+#include "math/Tangent.h"
 
 #include <numeric>
 

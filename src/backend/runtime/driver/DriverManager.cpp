@@ -169,7 +169,7 @@ bool DriverManager::addModule(const std::filesystem::path& path)
         }
 
         if (mRegistredDrivers.count(interface.Target) > 0)
-            IG_LOG(L_WARNING) << "Module " << path << " is replacing another module for present target " << targetToString(interface.Target) << std::endl;
+            IG_LOG(L_WARNING) << "Module " << path << " is replacing another module for present target " << TargetInfo(interface.Target).toString() << std::endl;
 
         mRegistredDrivers[interface.Target] = path;
     } catch (const std::exception& e) {
@@ -182,13 +182,13 @@ bool DriverManager::addModule(const std::filesystem::path& path)
 bool DriverManager::hasCPU() const
 {
     return std::any_of(mRegistredDrivers.begin(), mRegistredDrivers.end(),
-                       [](const std::pair<Target, std::filesystem::path>& p) { return isCPU(p.first); });
+                       [](const std::pair<Target, std::filesystem::path>& p) { return TargetInfo(p.first).isCPU(); });
 }
 
 bool DriverManager::hasGPU() const
 {
     return std::any_of(mRegistredDrivers.begin(), mRegistredDrivers.end(),
-                       [](const std::pair<Target, std::filesystem::path>& p) { return !isCPU(p.first); });
+                       [](const std::pair<Target, std::filesystem::path>& p) { return !TargetInfo(p.first).isCPU(); });
 }
 
 static int costFunction(Target target)
@@ -223,7 +223,7 @@ Target DriverManager::recommendCPUTarget() const
     return std::accumulate(mRegistredDrivers.begin(), mRegistredDrivers.end(),
                            Target::GENERIC,
                            [](const Target& a, const std::pair<Target, std::filesystem::path>& b) {
-                               return (isCPU(b.first) && costFunction(b.first) < costFunction(a)) ? b.first : a;
+                               return (TargetInfo(b.first).isCPU() && costFunction(b.first) < costFunction(a)) ? b.first : a;
                            });
 }
 
@@ -232,7 +232,7 @@ Target DriverManager::recommendGPUTarget() const
     return std::accumulate(mRegistredDrivers.begin(), mRegistredDrivers.end(),
                            Target::GENERIC,
                            [](const Target& a, const std::pair<Target, std::filesystem::path>& b) {
-                               return (!isCPU(b.first) && costFunction(b.first) < costFunction(a)) ? b.first : a;
+                               return (!TargetInfo(b.first).isCPU() && costFunction(b.first) < costFunction(a)) ? b.first : a;
                            });
 }
 

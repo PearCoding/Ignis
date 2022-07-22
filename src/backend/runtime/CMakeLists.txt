@@ -24,7 +24,6 @@ set(SRC
   Target.h
   Timer.h
   bvh/BvhNAdapter.h
-  bvh/MemoryPool.h
   bvh/NArityBvh.h
   bvh/SceneBVHAdapter.h
   bvh/TriBVHAdapter.h
@@ -107,7 +106,6 @@ set(SRC
   mesh/PlaneShape.h
   mesh/PlyFile.cpp
   mesh/PlyFile.h
-  mesh/Tangent.h
   mesh/Triangulation.cpp
   mesh/Triangulation.h
   mesh/TriMesh.cpp

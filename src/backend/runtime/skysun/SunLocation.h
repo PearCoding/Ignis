@@ -21,5 +21,5 @@ struct MapLocation {
     float Timezone  = -2;          // Offset to UTC
 };
 
-ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& location);
+[[nodiscard]] ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& location);
 } // namespace IG

@@ -1,5 +1,5 @@
 #include "TriMesh.h"
-#include "Tangent.h"
+#include "math/Tangent.h"
 
 #include <algorithm>
 
