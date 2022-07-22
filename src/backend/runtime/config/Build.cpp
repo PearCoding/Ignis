@@ -59,16 +59,19 @@ std::string getBuildVariant() { return IG_BUILDVARIANT_NAME; }
 
 static inline time_t parse_preprocessor(char const* date, char const* time)
 {
-    char s_month[5];
+    char s_month[4];
     static const char month_names[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
     int month, day, year;
-    std::sscanf(date, "%3s %d %d", s_month, &day, &year);
+    if (std::sscanf(date, "%3s %d %d", s_month, &day, &year) != 3)
+        return -1;
+    s_month[3] = 0;
 
     int hour, minute, seconds;
-    std::sscanf(time, "%d:%d:%d", &hour, &minute, &seconds);
+    if (std::sscanf(time, "%d:%d:%d", &hour, &minute, &seconds) != 3)
+        return -1;
 
-    month = (std::strstr(month_names, s_month) - month_names) / 3;
+    month = int(std::strstr(month_names, s_month) - month_names) / 3;
 
     struct tm tt;
     std::memset(&tt, 0, sizeof(tt));
