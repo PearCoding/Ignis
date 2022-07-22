@@ -157,7 +157,7 @@ bool DriverManager::addModule(const std::filesystem::path& path)
             return false;
         }
 
-        if (interface.Revision.empty()) {
+        if (interface.Revision == nullptr) {
             IG_LOG(L_WARNING) << "Skipping module " << path << " due to invalid interface entries" << std::endl;
             return false;
         }

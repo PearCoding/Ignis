@@ -51,7 +51,7 @@ using DriverCompileSourceFunction = void* (*)(const char*, const char*, bool);
 struct DriverInterface {
     IG::uint32 MajorVersion;
     IG::uint32 MinorVersion;
-    std::string Revision;
+    const char* Revision;
     IG::Target Target;
     DriverSetupFunction SetupFunction;
     DriverShutdownFunction ShutdownFunction;

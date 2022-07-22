@@ -1342,11 +1342,13 @@ void* glue_compileSource(const char* src, const char* function, bool isVerbose)
 extern "C" {
 IG_EXPORT DriverInterface ig_get_interface()
 {
+    static const auto revision = IG::Build::getGitRevision();
+
     DriverInterface interface {
     };
     interface.MajorVersion = IG::Build::getVersion().Major;
     interface.MinorVersion = IG::Build::getVersion().Minor;
-    interface.Revision     = IG::Build::getGitRevision();
+    interface.Revision     = revision.c_str();
 
 // Expose Target
 #if defined(DEVICE_DEFAULT)
