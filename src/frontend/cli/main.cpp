@@ -19,6 +19,9 @@ struct SectionTimer {
 
 static std::string beautiful_time(uint64 ms)
 {
+    if (ms == 0)
+        return "0ms";
+
     uint64_t pms = ms % 1000;
     ms /= 1000;
     uint64_t ps = ms % 60;
