@@ -21,6 +21,12 @@ Version getVersion();
  */
 std::string getVersionString();
 /**
+ * @brief Returns git revision of the build as a string
+ *
+ * @return std::string getGitRevision
+ */
+std::string getGitRevision();
+/**
  * @brief Returns git branch and revision of the build as a string
  *
  * @return std::string getGitString

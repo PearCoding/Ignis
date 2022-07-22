@@ -2,8 +2,7 @@
 #include "Logger.h"
 #include "RuntimeStructs.h"
 #include "Statistics.h"
-#include "config/Git.h"
-#include "config/Version.h"
+#include "config/Build.h"
 #include "driver/Interface.h"
 #include "table/SceneDatabase.h"
 
@@ -39,7 +38,9 @@
 #define DEVICE_GPU
 #endif
 
-#define _SECTION(type) const auto sectionClosure = getThreadData()->stats.section((type)); IG_UNUSED(sectionClosure)
+#define _SECTION(type)                                                  \
+    const auto sectionClosure = getThreadData()->stats.section((type)); \
+    IG_UNUSED(sectionClosure)
 
 static inline size_t roundUp(size_t num, size_t multiple)
 {
@@ -1343,9 +1344,9 @@ IG_EXPORT DriverInterface ig_get_interface()
 {
     DriverInterface interface {
     };
-    interface.MajorVersion = IG_VERSION_MAJOR;
-    interface.MinorVersion = IG_VERSION_MINOR;
-    interface.Revision     = IG_GIT_REVISION;
+    interface.MajorVersion = IG::Build::getVersion().Major;
+    interface.MinorVersion = IG::Build::getVersion().Minor;
+    interface.Revision     = IG::Build::getGitRevision();
 
 // Expose Target
 #if defined(DEVICE_DEFAULT)

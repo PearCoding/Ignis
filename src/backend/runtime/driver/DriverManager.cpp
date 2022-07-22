@@ -1,8 +1,7 @@
 #include "DriverManager.h"
 #include "Logger.h"
 #include "RuntimeInfo.h"
-#include "config/Git.h"
-#include "config/Version.h"
+#include "config/Build.h"
 
 #include <algorithm>
 #include <cstring>
@@ -151,20 +150,21 @@ bool DriverManager::addModule(const std::filesystem::path& path)
 
         const DriverInterface interface = func();
 
-        if (interface.MajorVersion != IG_VERSION_MAJOR || interface.MinorVersion != IG_VERSION_MINOR) {
+        const auto version = Build::getVersion();
+        if (interface.MajorVersion != version.Major || interface.MinorVersion != version.Minor) {
             IG_LOG(L_WARNING) << "Skipping module " << path << " as the provided version " << interface.MajorVersion << "." << interface.MinorVersion
-                              << " does not match the runtime version " << IG_VERSION_MAJOR << "." << IG_VERSION_MINOR << std::endl;
+                              << " does not match the runtime version " << version.Major << "." << version.Minor << std::endl;
             return false;
         }
 
-        if (interface.Revision == nullptr) {
+        if (interface.Revision.empty()) {
             IG_LOG(L_WARNING) << "Skipping module " << path << " due to invalid interface entries" << std::endl;
             return false;
         }
 
-        if (std::strcmp(IG_GIT_REVISION, interface.Revision) != 0) {
+        if (Build::getGitRevision() != interface.Revision) {
             IG_LOG(L_WARNING) << "Skipping module " << path << " as the provided revision " << interface.Revision
-                              << " does not match the runtime revision " << IG_GIT_REVISION << std::endl;
+                              << " does not match the runtime revision " << Build::getGitRevision() << std::endl;
             return false;
         }
 
