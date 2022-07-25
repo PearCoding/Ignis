@@ -60,6 +60,7 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
     // Check if we have a proper defined technique
     // It is totally fine to only define the type by other means then the scene config
     if (technique) {
+        // info.EnabledAOVs.emplace_back("Debug");
         if (technique->property("aov_normals").getBool(false))
             info.EnabledAOVs.emplace_back("Normals");
 

@@ -74,6 +74,7 @@ public:
     std::array<int, HISTOGRAM_SIZE> Histogram;
     std::array<float, HISTOGRAM_SIZE> HistogramF;
 
+    bool gauss_filter                       = true;
     bool ToneMapping_Automatic              = true;
     float ToneMapping_Exposure              = 1.0f;
     float ToneMapping_Offset                = 0.0f;
@@ -712,6 +713,13 @@ public:
                     ImGui::EndDisabled();
                 }
             }
+
+            if (ImGui::CollapsingHeader("Denoiser", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Checkbox("Gauss", &gauss_filter);
+                if(gauss_filter){
+                    Runtime->filter();
+                }
+                }
 
             if (ImGui::CollapsingHeader("ToneMapping", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::Checkbox("Automatic", &ToneMapping_Automatic);

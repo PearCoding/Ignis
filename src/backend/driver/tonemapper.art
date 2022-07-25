@@ -167,23 +167,64 @@ fn gaussian(x : f32, sigma : f32) -> f32{
     result
 }
 
-// fn binomial(i : i32, j : i32) -> f32{
+/* // computes a 3x3 gaussian blur of the variance, centered around
+// the current pixel
+float computeVarianceCenter(int2 ipos)
+{
+    float sum = 0.f;
+
+    const float kernel[2][2] = {
+        { 1.0 / 4.0, 1.0 / 8.0  },
+        { 1.0 / 8.0, 1.0 / 16.0 }
+    };
+
+    const int radius = 1;
+    for (int yy = -radius; yy <= radius; yy++)
+    {
+        for (int xx = -radius; xx <= radius; xx++)
+        {
+            const int2 p = ipos + int2(xx, yy);
+            const float k = kernel[abs(xx)][abs(yy)];
+            sum += gIllumination.Load(int3(p, 0)).a * k;
+        }
+    }
+
+    return sum;
+}
+// try using just color variance first 
+// variance is less if the surrouding/mask pixels are similar to the mean of them
+// could work
+fn compute_variance(pos_x : i32, pos_y : i32) -> f32{
+    let ent1 = make_vec2(1.0 / 4.0, 1.0 / 8.0);
+    let ent2 = make_vec2(1.0 / 8.0, 1.0 / 16.0);
+    let pos  = make_vec2(pos_x as f32, pos_y as f32); //current pixel
+    let kernel = make_mat2x2(ent1, ent2);
+    print_f32(kernel.col(0).x);
     
-// }
+    // variance computed using a 2x2 gaussian kernel centered around center pixel(pos)
+    let up = 1;
+    for i in unroll(up * -1, up + 1){
+        for j in unroll(up * -1, up + 1){
+            let p = vec2_add(pos, make_vec2(i as f32, j as f32));
+            // let k = kernel.col(i);
+            // weight 
+        }
+    }
+    let var = pos_x as f32;
+    var
+}
+*/
 
 #[export]
 fn ig_utility_filter(device_id: i32, in_pixels: &[f32], width: i32, height: i32) -> () {
     let device = @get_device(device_id);
-     
-    // in_pixels - pointer to frame_buffer
-    let buffer_in  = device.make_buffer(in_pixels as &[u8],  width * height * 3);
-    let buffer_out = device.make_buffer(in_pixels as &[u8],  width * height * 3);
-
     // let buffer_normals = device.request_buffer("")
-////////////// Start average filter
-    // Settings for averaging filter
+    let num_levels = 1;
+    
+    // Settings for filter
     let sigma_i = 10.0 as f32;
     let sigma_c = 2.0 as f32;
+    // let stride = 2;
     let kernel_size = 7; //(2 * (4 * sigma_i + 0.5) + 1) as i32;
 
     let mut bool_mean_filter : bool;
@@ -194,7 +235,6 @@ fn ig_utility_filter(device_id: i32, in_pixels: &[f32], width: i32, height: i32)
     bool_gaussian_filter = true;
     bool_bilateral_filter = false;
     
-
     let mut w : f32;
     let mut w_c : f32;   
     let mut w_s : f32; 
@@ -204,50 +244,107 @@ fn ig_utility_filter(device_id: i32, in_pixels: &[f32], width: i32, height: i32)
     // let den_1d = (kernel_size * 2 + 1) as f32;// for averaging filter
     // let den_2d = (kernel_size * kernel_size) as f32;
 
-    for ind in device.parallel_range(width + kernel_size, width * height * 3 - width - kernel_size) {
-        // pixel no. 1,2,3 -> 1.r,1.g,1.b,2.r,2.g,2.b,3.r,3.g,3.b
-        // arranged in serial order
+     
+    // in_pixels - pointer to frame_buffer
+    let buffer_in  = device.make_buffer(in_pixels as &[u8],  width * height * 3 + width + kernel_size);
+    let buffer_out = device.make_buffer(in_pixels as &[u8],  width * height * 3 + width + kernel_size);
+    let history_buffer = device.make_buffer(in_pixels as &[u8],  width * height * 3 + width + kernel_size);
+    let detail_buffer = device.make_buffer(in_pixels as &[u8],  width * height * 3 + width + kernel_size);
+    
+    // for ind in device.parallel_range(0, width * height * 3 + 1) {
+    //     detail_buffer.store_i32(ind, 0);
+    // }
+    // device.present();
+    // device.sync();
 
-        let mut add : f32;
-        add = 0;
-        sum_w = 0.0;
-        w = 0.0;
-        w_c = 0.0;
-        w_s = 0.0;
+    // let lum_buffer = device.make_buffer(in_pixels as &[u8], width * height * 3 + width + kernel_size);
 
-        // 1D kernel
-        // for i in unroll (kernel_size * -1, kernel_size+1){
-        //     add += buffer_in.load_f32(ind + i * 3);
-        // }
-        
-        for i in unroll (up * -1, up + 1){
-            let row = ind + width * 3 * i;
-            for j in unroll (up * -1, up + 1){
-                let dist = (i * i + j * j) as f32;
-                
-                // not a good idea to put filters in if/else
-                // nan, isfinite artifacts pops up
-                let c_diff = (buffer_in.load_f32(row + j * 3) - buffer_in.load_f32(ind));
-                w_s = gaussian(dist, sigma_i);
-                w_c = gaussian(c_diff, sigma_c);
-                w = w_c * w_s;
-                
-                // w = gaussian(dist, sigma_i);
-                add += buffer_in.load_f32(row + j * 3) * w;
-                sum_w += w;
+    // for ind in range_step(0, 3, width * height * 3 + 1) {
+    //     let r = history_buffer.load_f32(ind);
+    //     let g = history_buffer.load_f32(ind+1);
+    //     let b = history_buffer.load_f32(ind+2);
+    //     let color = make_color(r,g,b,1);
+    //     let lum = color_luminance(out);
+    //     lum_buffer.store_i32(ind, bitcast[i32](lum));
+    // }
+    // print_f32(lum_buffer.load_f32(0));
+    
+    // let mut fb : [i32 * 10];
+    // for i in unroll(0, 10){
+    //     fb(i) = i;
+    // }
+    
+    
+    // for ind in device.parallel_range(width + kernel_size, width * height * 3 - width - kernel_size) {
+    for stride in unroll(1, num_levels+2){
+        for ind in device.parallel_range(0, width * height * 3 + 1) {
+            // pixel no. 1,2,3 -> 1.r,1.g,1.b,2.r,2.g,2.b,3.r,3.g,3.b
+            // arranged in serial order
+            let mut add : f32;
+            add = 0;
+            sum_w = 0.0;
+            w = 1.0;
+            w_c = 1.0;
+            w_s = 1.0;
 
-                // if (ind == 1020){
-                //     print_f32(w * w_c);
-                //     print_f32(1235);
-                // }
+            // 1D kernel
+            // for i in unroll (kernel_size * -1, kernel_size+1){
+            //     add += buffer_in.load_f32(ind + i * 3);
+            // }
+            
+            for i in unroll (up * -1, up + 1){
+                let row = ind + stride * width * 3 * i;
+                for j in unroll (up * -1, up + 1){
+                    let dist = (i * i + j * j) as f32;
+                    
+                    // not a good idea to put filters in if/else
+                    // nan, isfinite artifacts pops up
+                    // let c_diff = math_builtins::fabs(buffer_in.load_f32(row + j * 3) - buffer_in.load_f32(ind));
+                    w_s = gaussian(dist, sigma_i);
+                    // w_c = gaussian(c_diff, sigma_c);
+                    // w = w_c * w_s;
+                    
+                    // w = gaussian(dist, sigma_i);
+                    add += buffer_in.load_f32(row + stride * j * 3) * w_s;
+                    sum_w += w_s;
+
+                    // if (ind == 1020){
+                    //     print_f32(w * w_c);
+                    //     print_f32(1235);
+                    // }
+                }
             }
+            
+            let out = add / sum_w;
+            history_buffer.store_i32(ind, bitcast[i32](out)); // convolved result / final convolution that needs to be added at iteration N
+            
+            // if(stride != num_levels+2){
+            //     let detail_prev = detail_buffer.load_f32(ind);
+            //     let detail_current = out - buffer_in.load_f32(ind);
+            //     detail_buffer.store_i32(ind, bitcast[i32](detail_prev + detail_current)); // detail layer of wavelet transform added with prev_detail for reconstruction
+            // }
+            // else{
+            //     let detail_prev = detail_buffer.load_f32(ind);
+            //     let final_conv = history_buffer.load_f32(ind);
+
+            //     detail_buffer.store_i32(ind, bitcast[i32](detail_prev + final_conv));
+            // }
+            // buffer_out.store_i32(ind, bitcast[i32](out));            
         }
-        
-        let out = add / sum_w;
-        buffer_out.store_i32(ind, bitcast[i32](out));
-        
+
+        for ind in device.parallel_range(0, width * height * 3 + 1) {
+            let out = history_buffer.load_f32(ind);
+            buffer_in.store_i32(ind, bitcast[i32](out));
+        }
+        device.present();
+        device.sync();
     }
- 
+
+    for ind in device.parallel_range(0, width * height * 3 + 1) {
+        let out = history_buffer.load_f32(ind);
+        buffer_out.store_i32(ind, bitcast[i32](out));
+    }
+
     device.present();
     device.sync();
 }
