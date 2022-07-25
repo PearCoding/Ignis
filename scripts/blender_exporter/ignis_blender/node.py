@@ -1314,7 +1314,7 @@ def export_node(ctx, socket):
         from_type = socket.links[0].from_socket.type
         if to_type == from_type:
             full_expr = expr
-        elif (from_type == 'VALUE' or from_type == 'INT') and to_type == 'RGBA':
+        elif (from_type == 'VALUE' or from_type == 'INT') and (to_type == 'RGBA' or to_type == 'SHADER'):
             full_expr = f"color({expr})"
         elif from_type == 'RGBA' and (to_type == 'VALUE' or to_type == 'INT'):
             full_expr = f"luminance({expr})"
@@ -1324,7 +1324,7 @@ def export_node(ctx, socket):
             full_expr = f"avg({expr})"
         elif from_type == 'RGBA' and to_type == 'VECTOR':
             full_expr = f"({expr}).rgb"
-        elif from_type == 'VECTOR' and to_type == 'RGBA':
+        elif from_type == 'VECTOR' and (to_type == 'RGBA' or to_type == 'SHADER'):
             full_expr = f"max(color({expr}.x, {expr}.y, {expr}.z, 1), color(0))"
         else:
             print(

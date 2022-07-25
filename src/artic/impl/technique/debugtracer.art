@@ -26,50 +26,50 @@ fn @color_map(i: i32) = [
 
 fn @make_debug_renderer(debug_mode: i32) -> Technique {
     Technique {
-        on_hit    = @ |ray, _, hit, _, surf, mat| {
+        on_hit    = @ |ctx, _, mat| {
             match debug_mode {
                 1 => { // DEBUG_TANGENT
-                    let n = surf.local.col(0);
+                    let n = ctx.surf.local.col(0);
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 },
                 2 => { // DEBUG_BITANGENT
-                    let n = surf.local.col(1);
+                    let n = ctx.surf.local.col(1);
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 },
                 3 => { // DEBUG_GEOMETRY_NORMAL
-                    let n = surf.face_normal;
+                    let n = ctx.surf.face_normal;
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 },
                 4 => { // DEBUG_TEXCOORDS
-                    let n = surf.tex_coords;
+                    let n = ctx.surf.tex_coords;
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), 0, 1))
                 },
                 5 => { // DEBUG_PRIMCOORDS
-                    let n = hit.prim_coords;
+                    let n = ctx.hit.prim_coords;
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), 0, 1))
                 },
                 6 => { // DEBUG_POINT
-                    make_option(vec3_to_color(surf.point))
+                    make_option(vec3_to_color(ctx.surf.point))
                 },
                 7 => { // DEBUG_HIT_DISTANCE
-                    make_option(make_gray_color(hit.distance))
+                    make_option(make_gray_color(ctx.hit.distance))
                 },
                 8 => { // DEBUG_AREA
-                    make_option(make_gray_color(safe_div(1, surf.inv_area)))
+                    make_option(make_gray_color(safe_div(1, ctx.surf.inv_area)))
                 },
                 9 => { // DEBUG_PRIM_ID_RAW
-                    let v = hit.prim_id as f32;
+                    let v = ctx.hit.prim_id as f32;
                     make_option(make_gray_color(v))
                 },
                 10 => { // DEBUG_PRIM_ID
-                    make_option(color_map(hit.prim_id))
+                    make_option(color_map(ctx.hit.prim_id))
                 },
                 11 => { // DEBUG_ENTITY_ID_RAW
-                    let v = hit.ent_id as f32;
+                    let v = ctx.hit.ent_id as f32;
                     make_option(make_gray_color(v))
                 },
                 12 => { // DEBUG_ENTITY_ID
-                    make_option(color_map(hit.ent_id))
+                    make_option(color_map(ctx.hit.ent_id))
                 },
                 13 => { // DEBUG_MATERIAL_ID_RAW
                     let v = mat.id as f32;
@@ -85,17 +85,17 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     make_option(if mat.bsdf.is_specular { color_builtins::green } else { color_builtins::red })
                 },
                 17 => { // DEBUG_ENTERING
-                    make_option(if surf.is_entering { color_builtins::green } else { color_builtins::red })
+                    make_option(if ctx.surf.is_entering { color_builtins::green } else { color_builtins::red })
                 },
                 18 => { // DEBUG_CHECK_BSDF
                     if mat.bsdf.is_specular {
                         make_option(color_builtins::green)
                     } else {
                         let mut tmp = fnv_hash(fnv_hash(fnv_hash(fnv_init(),
-                                                    bitcast[u32](hit.distance)),
-                                                bitcast[u32](hit.prim_coords.x)),
-                                            bitcast[u32](hit.prim_coords.y));
-                        let out_dir = vec3_neg(ray.dir);
+                                                    bitcast[u32](ctx.hit.distance)),
+                                                bitcast[u32](ctx.hit.prim_coords.x)),
+                                            bitcast[u32](ctx.hit.prim_coords.y));
+                        let out_dir = vec3_neg(ctx.ray.dir);
                         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(&mut tmp, out_dir, false) {    
                             let pdf = mat.bsdf.pdf(mat_sample.in_dir, out_dir);
                             let evl = color_mulf(mat.bsdf.eval(mat_sample.in_dir, out_dir), safe_div(1, pdf));
@@ -120,9 +120,9 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                         make_option(color_builtins::black)
                     } else {
                         // This is the reflection albedo
-                        let out_dir = vec3_neg(ray.dir);
-                        let in_dir  = vec3_reflect(out_dir, surf.local.col(2));
-                        let cos = absolute_cos(in_dir, surf.local.col(2));
+                        let out_dir = vec3_neg(ctx.ray.dir);
+                        let in_dir  = vec3_reflect(out_dir, ctx.surf.local.col(2));
+                        let cos = absolute_cos(in_dir, ctx.surf.local.col(2));
                         let evl = color_mulf(mat.bsdf.eval(in_dir, out_dir), 1/cos); // We want the result without cosine term
                         make_option(evl)
                     }
@@ -134,7 +134,7 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     make_option(if mat.interface.outer < 0 { color_builtins::black } else { color_map(mat.interface.outer) })
                 },
                 _ => { // DEBUG_NORMAL 
-                    let n = surf.local.col(2);
+                    let n = ctx.surf.local.col(2);
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 }
             }

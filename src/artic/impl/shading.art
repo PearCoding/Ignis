@@ -1,17 +1,10 @@
-fn @make_emissive_shading_context(ray: Ray, p: Vec3, uvw: Vec3) = ShadingContext {
-    entity_id = 0,
-    ray  = ray,
-    hit  = make_hit(0,0,0,make_vec2(0,0)),
-    surf = SurfaceElement {
-        is_entering = true,
-        point       = p,
-        face_normal = vec3_expand(0),
-        inv_area    = 0,
-        prim_coords = vec2_expand(0),
-        tex_coords  = vec3_to_2(uvw),
-        local       = mat3x3_identity()
-    },
-    uvw  = uvw
+fn @make_emissive_shading_context(ray: Ray, surf: SurfaceElement, uvw: Vec3) = ShadingContext {
+    entity_id = -1,
+    pixel     = -1,
+    ray       = ray,
+    hit       = empty_hit(flt_max),
+    surf      = surf,
+    uvw       = uvw
 };
 
 mod shading {

@@ -29,7 +29,7 @@ fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_an
             let intensity = eval_dir(out_dir);
             make_emission_sample(pos, vec3_neg(out_dir), color_mulf(intensity, 1 / sample.pdf), 1, sample.pdf, 1)
         },
-        emission     = @ |_, _| color_builtins::black,
+        emission     = @ |_|    color_builtins::black,
         pdf_direct   = @ |_, _| make_area_pdf(0), // Does not matter
         pdf_emission = @ |_, _| make_emissive_pdf(1, uniform_disk_pdf(cutoffRadius)),
         delta    = true,

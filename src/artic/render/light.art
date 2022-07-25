@@ -41,7 +41,7 @@ struct Light {
     // Samples the emitting surface of the light
     sample_emission: fn (&mut RndState) -> EmissionSample,
     // Returns the emission properties of the light at a given point on its surface. The SurfaceElement is only valid if delta & infinite is false
-    emission: fn (Ray, SurfaceElement) -> Color,
+    emission: fn (ShadingContext) -> Color,
     // Returns the pdf properties of the light at a given point on its surface for direct illumination. 
     // In contrary to sample_direct, the surface element is on the light source. 
     // The SurfaceElement is only valid if delta & infinite is false

@@ -2,7 +2,7 @@ import mathutils
 import math
 from .utils import *
 from .node import NodeContext
-from .emission import _get_emission_inline
+from .emission import get_emission
 
 from .defaults import *
 
@@ -31,7 +31,7 @@ def export_background(result, out_dir, depsgraph, copy_images):
         print(f"World {scene.world.name} has no surface node")
         return None
 
-    radiance = _get_emission_inline(NodeContext(
+    radiance = get_emission(NodeContext(
         result, out_dir, depsgraph, copy_images), surface)
 
     if not radiance:

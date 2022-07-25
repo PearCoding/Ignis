@@ -109,12 +109,16 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipFinite)
 
     // Write all non-embedded lights to shader
     size_t counter = embeddedLightCount();
-    for (auto light : mInfiniteLights)
+    for (auto light : mInfiniteLights) {
+        IG_ASSERT(light->id() == counter, "Expected id to match in generate");
         light->serialize(Light::SerializationInput{ counter++, stream, tree });
+    }
     if (!skipFinite) {
         for (auto light : mFiniteLights) {
-            if (!isEmbedding() || !light->getEmbedClass().has_value())
+            if (!isEmbedding() || !light->getEmbedClass().has_value()) {
+                IG_ASSERT(light->id() == counter, "Expected id to match in generate");
                 light->serialize(Light::SerializationInput{ counter++, stream, tree });
+            }
         }
     }
 
@@ -228,6 +232,7 @@ void LoaderLight::setup(LoaderContext& ctx)
     loadLights(ctx);
     setupEmbedClasses();
     sortLights();
+    setupLightIDs();
     setupAreaLights();
 }
 
@@ -291,13 +296,47 @@ void LoaderLight::sortLights()
     mTotalEmbedCount = std::distance(mFiniteLights.begin(), begin);
 }
 
+void LoaderLight::setupLightIDs()
+{
+    // Order is based on order in generate
+    size_t id = 0;
+
+    const bool embed = isEmbedding();
+
+    // First finite embedded classes (if necessary)
+    if (embed) {
+        for (const auto& p : mEmbedClassCounter) {
+            const auto embedClass = p.first;
+
+            for (auto& light : mFiniteLights) {
+                if (light->getEmbedClass().value_or("") == embedClass)
+                    light->setID(id++);
+            }
+        }
+    }
+
+    // Second infinite lights
+    for (auto& light : mInfiniteLights) {
+        light->setID(id++);
+    }
+
+    // Third finite non-embedded lights
+    if (embed) {
+        for (auto& light : mFiniteLights) {
+            if (!light->getEmbedClass().has_value())
+                light->setID(id++);
+        }
+    } else {
+        for (auto& light : mFiniteLights)
+            light->setID(id++);
+    }
+}
 void LoaderLight::setupAreaLights()
 {
-    for (size_t id = 0; id < mFiniteLights.size(); ++id) {
-        const auto& light = mFiniteLights[id];
+    for (const auto& light : mFiniteLights) {
         const auto entity = light->entity();
         if (entity.has_value())
-            mAreaLights[entity.value()] = id;
+            mAreaLights[entity.value()] = light->id();
     }
 }
 

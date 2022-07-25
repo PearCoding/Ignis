@@ -28,6 +28,7 @@ private:
     void loadLights(LoaderContext& ctx);
     void setupEmbedClasses();
     void sortLights();
+    void setupLightIDs();
     void setupAreaLights();
     void embedLights(ShadingTree& tree);
 

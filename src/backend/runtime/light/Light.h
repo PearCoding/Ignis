@@ -14,6 +14,7 @@ class Light : public SceneObject {
 public:
     inline Light(const std::string& name, const std::string& type)
         : SceneObject(name, type)
+        , mID(0)
     {
     }
 
@@ -40,5 +41,11 @@ public:
         ShadingTree& Tree;
     };
     virtual void embed(const EmbedInput& input) const { IG_UNUSED(input); };
+
+    inline size_t id() const { return mID; }
+    inline void setID(size_t id) { mID = id; }
+
+private:
+    size_t mID;
 };
 } // namespace IG

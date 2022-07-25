@@ -72,7 +72,7 @@ std::string ShaderUtils::generateMaterialShader(ShadingTree& tree, size_t mat_id
     // We do not embed the actual material id into the shader, as this makes the shader unique without any major performance gain
     if (isLight && requireLights) {
         const size_t light_id = tree.context().Lights->getAreaLightID(material.Entity);
-        stream << "  let " << output_var << " : MaterialShader = @|ctx| make_emissive_material(mat_id, ctx.surf, bsdf_" << bsdf_id << "(ctx), medium_interface,"
+        stream << "  let " << output_var << " : MaterialShader = @|ctx| make_emissive_material(mat_id, bsdf_" << bsdf_id << "(ctx), medium_interface,"
                << " @lights(" << light_id << "));" << std::endl
                << std::endl;
     } else {

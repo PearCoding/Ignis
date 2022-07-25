@@ -1,7 +1,7 @@
 // Surface that emits light
 struct AreaEmitter {
-    sample_direct:   fn (Vec2, Vec3) -> (Vec3, Vec3, Vec2, Pdf, f32),
-    sample_emission: fn (Vec2)       -> (Vec3, Vec3, Vec2, f32),
+    sample_direct:   fn (Vec2, Vec3) -> (SurfaceElement, Pdf, f32),
+    sample_emission: fn (Vec2)       -> (SurfaceElement, f32),
     normal:          fn (Vec2)       -> Vec3,
     pdf_direct:      fn (Vec2, Vec3) -> Pdf,
     pdf_emission:    fn (Vec2, Vec3) -> f32
@@ -10,22 +10,32 @@ struct AreaEmitter {
 fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
     id = id,
     sample_direct = @ |rnd, from_surf| {
-        let (pos, n, coords, pdf, weight) = area.sample_direct(make_vec2(randf(rnd), randf(rnd)), from_surf.point);
-        let dir_ = vec3_sub(pos, from_surf.point);
+        let (to_surf, pdf, weight) = area.sample_direct(make_vec2(randf(rnd), randf(rnd)), from_surf.point);
+        let dir_ = vec3_sub(to_surf.point, from_surf.point);
         let dist = vec3_len(dir_);
         let dir  = vec3_mulf(dir_, safe_div(1, dist));
-        let cos  = vec3_dot(dir, n) * select(from_surf.is_entering, -1:f32, 1:f32);
-        let ctx  = make_emissive_shading_context(make_ray(from_surf.point, dir, 0, flt_max, ray_flag_shadow), pos, vec2_to_3(coords, 0));
-        make_direct_sample(pos, dir, color_mulf(color_f(ctx), weight), pdf, cos, dist)
+        let cos  = vec3_dot(dir, to_surf.face_normal) * select(from_surf.is_entering, -1:f32, 1:f32);
+        let ctx  = make_emissive_shading_context(make_ray(from_surf.point, dir, 0, flt_max, ray_flag_shadow), to_surf, vec2_to_3(to_surf.tex_coords, 0));
+        make_direct_sample(to_surf.point,
+            dir,
+            color_mulf(color_f(ctx), weight),
+            pdf,
+            cos,
+            dist)
     },
     sample_emission = @ |rnd| {
-        let (pos, n, coords, area_pdf) = area.sample_emission(make_vec2(randf(rnd), randf(rnd)));
+        let (surf, area_pdf) = area.sample_emission(make_vec2(randf(rnd), randf(rnd)));
         let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
         let weight = safe_div(1, area_pdf * sample.pdf);
-        let ctx    = make_emissive_shading_context(make_zero_ray(), pos, vec2_to_3(coords, 0));
-        make_emission_sample(pos, mat3x3_mul(make_orthonormal_mat3x3(n), sample.dir), color_mulf(color_f(ctx), weight), area_pdf, sample.pdf, sample.dir.z)
+        let ctx    = make_emissive_shading_context(make_zero_ray(), surf, vec2_to_3(surf.tex_coords, 0));
+        make_emission_sample(surf.point,
+            mat3x3_mul(surf.local, sample.dir),
+            color_mulf(color_f(ctx), weight),
+            area_pdf,
+            sample.pdf,
+            sample.dir.z)
     },
-    emission     = @ |ray, surf| color_f(make_emissive_shading_context(ray, surf.point, vec2_to_3(surf.tex_coords, 0))),
+    emission     = color_f,
     pdf_direct   = @ |ray, surf| area.pdf_direct(surf.prim_coords, ray.org),
     pdf_emission = @ |ray, surf| make_emissive_pdf(area.pdf_emission(surf.prim_coords, ray.org), cosine_hemisphere_pdf(-vec3_dot(area.normal(surf.prim_coords), ray.dir))),
     delta    = false,
@@ -35,40 +45,32 @@ fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
 fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
     let mesh = shape.mesh;
     fn @sample(uv: Vec2) {
-        let ux  = uv.x * (mesh.num_tris as f32);
-        let f   = ux as i32;
-        let uv2 = make_vec2(ux - (f as f32), uv.y);
-        let (i0, i1, i2) = mesh.triangles(f);
-        let v0   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i0));
-        let v1   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i1));
-        let v2   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i2));
-        let t0   = mesh.tex_coords(i0);
-        let t1   = mesh.tex_coords(i1);
-        let t2   = mesh.tex_coords(i2);
-        let area = 0.5 * vec3_len(vec3_cross(vec3_sub(v1, v0), vec3_sub(v2, v0)));
-        let n    = vec3_normalize(mat3x3_mul(entity.normal_mat, mesh.face_normals(f))); // TODO: Maybe use face normal based on orientation
+        let ux     = uv.x * (mesh.num_tris as f32);
+        let f      = ux as i32;
+        let uv2    = make_vec2(ux - (f as f32), uv.y);
         let (u, v) = sample_triangle(uv2.x, uv2.y);
+
+        let surf   = shape.surface_element_for_point(f, make_vec2(u, v));
+        let t_surf = map_surface_element(surf, entity.global_mat, entity.normal_mat);
         
-        (vec3_lerp2(v0, v1, v2, u, v),
-         n,
-         vec2_lerp2(t0, t1, t2, u, v),
-         1 / (area * mesh.num_tris as f32))
+        (t_surf, t_surf.inv_area / (mesh.num_tris as f32))
     }
 
     fn pdf(uv: Vec2) {
-        let f = (uv.x * (mesh.num_tris as f32)) as i32;
-        let (i0, i1, i2) = mesh.triangles(f);
-        let v0   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i0));
-        let v1   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i1));
-        let v2   = mat3x4_transform_point(entity.global_mat, mesh.vertices(i2));
-        let area = 0.5 * vec3_len(vec3_cross(vec3_sub(v1, v0), vec3_sub(v2, v0)));
-        1 / (area * mesh.num_tris as f32)
+        let ux     = uv.x * (mesh.num_tris as f32);
+        let f      = ux as i32;
+        let uv2    = make_vec2(ux - (f as f32), uv.y);
+        let (u, v) = sample_triangle(uv2.x, uv2.y);
+
+        let surf   = shape.surface_element_for_point(f, make_vec2(u, v));
+        let t_surf = map_surface_element(surf, entity.global_mat, entity.normal_mat);
+        t_surf.inv_area / (mesh.num_tris as f32)
     }
 
     AreaEmitter {
         sample_direct   = @|uv, _| {
-            let s = sample(uv);
-            (s.0, s.1, s.2, make_area_pdf(s.3), safe_div(1, s.3))
+            let (surf, pdfv) = sample(uv);
+            (surf, make_area_pdf(pdfv), safe_div(1, pdfv))
         },
         sample_emission = @|uv| sample(uv),
         normal = @ |uv| {
@@ -179,10 +181,21 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
         // Compute texture coordinates
         let tx = vec3_dot(vec3_sub(p, origin), ex) / width;
         let ty = vec3_dot(vec3_sub(p, origin), ey) / height;
+
         let c0 = vec2_lerp(t0, t1, tx);
         let c1 = vec2_lerp(t2, t3, tx);
         let t  = vec2_lerp(c0, c1, ty);
-        (p, normal, t, make_solid_pdf(pdf_s), sq.s)
+
+        let surf = SurfaceElement {
+            is_entering = true,
+            point       = p,
+            face_normal = normal,
+            inv_area    = inv_area,
+            prim_coords = make_vec2(tx, ty),
+            tex_coords  = t,
+            local       = make_orthonormal_mat3x3(normal)
+        };
+        (surf, make_solid_pdf(pdf_s), sq.s)
     }
 
     fn @pdf_direct(_: Vec2, from_point: Vec3) {
@@ -197,7 +210,17 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
         let c0 = vec2_lerp(t0, t1, uv.x);
         let c1 = vec2_lerp(t2, t3, uv.x);
         let t  = vec2_lerp(c0, c1, uv.y);
-        (p, normal, t, inv_area)
+
+        let surf = SurfaceElement {
+            is_entering = true,
+            point       = p,
+            face_normal = normal,
+            inv_area    = inv_area,
+            prim_coords = uv,
+            tex_coords  = t,
+            local       = make_orthonormal_mat3x3(normal)
+        };
+        (surf, inv_area)
     }
 
     AreaEmitter {

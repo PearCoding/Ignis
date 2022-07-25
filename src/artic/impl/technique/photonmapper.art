@@ -182,24 +182,21 @@ fn @make_ppm_light_emitter(num_lights: i32, lights: LightTable, iter: i32) -> Ra
 fn @make_ppm_light_renderer(max_path_len: i32, _aovs: AOVTable, light_cache: LightCache) -> Technique {
     let offset : f32 = 0.001;
     
-    fn @on_hit( ray: Ray
-              , _pixel: i32
-              , _hit: Hit
+    fn @on_hit( ctx: ShadingContext
               , payload: RayPayload
-              , surf: SurfaceElement
               , mat: Material
               ) -> Option[Color] {
         let pt = unwrap_ppmraypayload(payload);
 
         // Only on non emissive and non specular surfaces
         if !mat.is_emissive && !mat.bsdf.is_specular {
-            let cos_o = vec3_dot(vec3_neg(ray.dir), surf.local.col(2));
+            let cos_o = vec3_dot(vec3_neg(ctx.ray.dir), ctx.surf.local.col(2));
 
             if cos_o > flt_eps {        
                 light_cache.splat(Photon {
-                        in_dir   = vec3_neg(ray.dir),  
+                        in_dir   = vec3_neg(ctx.ray.dir),  
                         light    = pt.radius_or_light as i32, 
-                        pos      = surf.point, 
+                        pos      = ctx.surf.point, 
                         eta      = pt.eta,   
                         radiance = pt.contrib,
                         depth    = pt.depth,
@@ -211,12 +208,9 @@ fn @make_ppm_light_renderer(max_path_len: i32, _aovs: AOVTable, light_cache: Lig
         Option[Color]::None
     }
 
-    fn @on_bounce( ray: Ray
-                 , _pixel: i32
-                 , _hit: Hit
+    fn @on_bounce( ctx: ShadingContext
                  , rnd: &mut RndState
                  , payload: RayPayload
-                 , surf: SurfaceElement
                  , mat: Material
                  ) -> Option[(Ray, RayPayload)] {
         let pt = unwrap_ppmraypayload(payload);
@@ -224,12 +218,12 @@ fn @make_ppm_light_renderer(max_path_len: i32, _aovs: AOVTable, light_cache: Lig
         // Bounce until a diffuse element is found or max path-1 length is reached
         if mat.bsdf.is_specular && pt.depth + 2 /* We need space for camera vertex */ <= max_path_len {
             // Bounce
-            let out_dir = vec3_neg(ray.dir);
+            let out_dir = vec3_neg(ctx.ray.dir);
             if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, true) {
                 let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
                 if color_average(contrib) > flt_eps {
                     return(make_option(
-                        make_ray(surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce),
+                        make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce),
                         wrap_ppmraypayload(PPMRayPayload {
                             contrib         = contrib,
                             depth           = pt.depth + 1,
@@ -292,24 +286,21 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
         }
     }
 
-    fn @on_hit( ray: Ray
-              , pixel: i32
-              , hit: Hit
+    fn @on_hit( ctx: ShadingContext
               , payload: RayPayload
-              , surf: SurfaceElement
               , mat: Material
               ) -> Option[Color] {
         let pt = unwrap_ppmraypayload(payload);
 
         // Hits on a light source are only accounted if the path is LS*E
-        if pt.path_type == 0 && mat.is_emissive && surf.is_entering {
-            let out_dir = vec3_neg(ray.dir);
-            let dot     = vec3_dot(out_dir, surf.local.col(2));
+        if pt.path_type == 0 && mat.is_emissive && ctx.surf.is_entering {
+            let out_dir = vec3_neg(ctx.ray.dir);
+            let dot     = vec3_dot(out_dir, ctx.surf.local.col(2));
             if dot > flt_eps { // Only contribute proper aligned directions
-                let emit    = mat.emission(ray);
+                let emit    = mat.emission(ctx);
                 let contrib = color_mul(pt.contrib, emit.intensity);
                 
-                aov_di.splat(pixel, contrib);
+                aov_di.splat(ctx.pixel, contrib);
                 return(make_option(handle_color(contrib)))
             }
         }
@@ -317,17 +308,17 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
         // Do final gather
         if pt.depth + 1 <= max_path_len /* Just to be consistent with the pathtracer and safe unnecessary merges */ 
             && !mat.is_emissive && !mat.bsdf.is_specular {
-            let actual_radius  = get_radius(hit, pt);
+            let actual_radius  = get_radius(ctx.hit, pt);
             let actual_radius2 = actual_radius * actual_radius;
 
-            let out_dir = vec3_neg(ray.dir);
-            let cos_o   = vec3_dot(out_dir, surf.local.col(2));
+            let out_dir = vec3_neg(ctx.ray.dir);
+            let cos_o   = vec3_dot(out_dir, ctx.surf.local.col(2));
             if math_builtins::fabs(cos_o) > flt_eps { // Only contribute proper aligned directions
-                let gather_contrib = light_cache.query(surf.point, actual_radius, 
+                let gather_contrib = light_cache.query(ctx.surf.point, actual_radius, 
                     @|photon| {
-                        let cos_i = vec3_dot(photon.in_dir, surf.local.col(2));
+                        let cos_i = vec3_dot(photon.in_dir, ctx.surf.local.col(2));
                         if pt.depth + photon.depth <= max_path_len && cos_o * cos_i > flt_eps {
-                            let dist2    = vec3_len2(vec3_sub(surf.point, photon.pos));
+                            let dist2    = vec3_len2(vec3_sub(ctx.surf.point, photon.pos));
                             let kernel_f = ppm_kernel(actual_radius2, dist2);
 
                             let mat_contrib = mat.bsdf.eval(photon.in_dir, out_dir);
@@ -339,7 +330,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
                     } );
 
                 let contrib = color_mul(pt.contrib, color_divf(gather_contrib, light_cache.max_count as f32));
-                aov_merging.splat(pixel, contrib);
+                aov_merging.splat(ctx.pixel, contrib);
                 return(make_option(handle_color(contrib)))
             }
         }
@@ -365,7 +356,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
             if light.infinite && !light.delta {
                 inflights += 1;
 
-                let emit = light.emission(ray, make_invalid_surface_element());
+                let emit = light.emission(make_miss_shading_context(pixel, ray));
                 color    = color_add(color, color_mul(pt.contrib, emit));
             }
         }
@@ -378,12 +369,9 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
         }
     }
 
-    fn @on_bounce( ray: Ray
-                 , _pixel: i32
-                 , hit: Hit
+    fn @on_bounce( ctx: ShadingContext
                  , rnd: &mut RndState
                  , payload: RayPayload
-                 , surf: SurfaceElement
                  , mat: Material
                  ) -> Option[(Ray, RayPayload)] {
         let pt = unwrap_ppmraypayload(payload);
@@ -393,7 +381,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
         }
 
         // Bounce
-        let out_dir = vec3_neg(ray.dir);
+        let out_dir = vec3_neg(ctx.ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
             let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
             let rr_prob = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
@@ -404,12 +392,12 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
             let new_contrib = color_mulf(contrib, 1 / rr_prob);
 
             make_option(
-                make_ray(surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce),
+                make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce),
                 wrap_ppmraypayload(PPMRayPayload {
                     contrib         = new_contrib,
                     depth           = pt.depth + 1,
                     eta             = pt.eta * mat_sample.eta,
-                    radius_or_light = get_radius(hit, pt),
+                    radius_or_light = get_radius(ctx.hit, pt),
                     path_type       = select(mat.bsdf.is_specular, pt.path_type, /*pt.path_type +*/ 1)
                 })
             )

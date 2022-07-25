@@ -150,9 +150,9 @@ def _export_principled_bsdf(ctx, bsdf, export_name):
 
 
 def _export_add_bsdf(ctx, bsdf, export_name):
-    mat1 = _export_bsdf_inline(
+    mat1 = _export_bsdf(
         ctx, bsdf.inputs[0], export_name + "__1")
-    mat2 = _export_bsdf_inline(
+    mat2 = _export_bsdf(
         ctx, bsdf.inputs[1], export_name + "__2")
 
     if mat1 is None or mat2 is None:
@@ -166,9 +166,9 @@ def _export_add_bsdf(ctx, bsdf, export_name):
 
 
 def _export_mix_bsdf(ctx, bsdf, export_name):
-    mat1 = _export_bsdf_inline(
+    mat1 = _export_bsdf(
         ctx, bsdf.inputs[1], export_name + "__1")
-    mat2 = _export_bsdf_inline(
+    mat2 = _export_bsdf(
         ctx, bsdf.inputs[2], export_name + "__2")
     factor = export_node(ctx, bsdf.inputs["Fac"])
 
@@ -182,12 +182,18 @@ def _export_mix_bsdf(ctx, bsdf, export_name):
             "first": export_name + "__1", "second": export_name + "__2", "weight": factor}
 
 
-def _export_emission_bsdf(ctx, bsdf, export_name):
+def _export_emission_bsdf_black(export_name):
     # Emission is handled separately
     return {"type": "diffuse", "name": export_name, "reflectance": 0}
 
 
-def _export_bsdf(ctx, bsdf, name, output_name):
+def _export_bsdf(ctx, socket, name):
+    if not socket.is_linked:
+        return None
+
+    bsdf = socket.links[0].from_node
+    output_name = socket.links[0].from_socket.name
+
     if bsdf is None:
         print(f"Material {name} has no valid bsdf")
         return None
@@ -210,24 +216,20 @@ def _export_bsdf(ctx, bsdf, name, output_name):
     elif isinstance(bsdf, bpy.types.ShaderNodeAddShader):
         return _export_add_bsdf(ctx, bsdf, name)
     elif isinstance(bsdf, bpy.types.ShaderNodeEmission):
-        return _export_emission_bsdf(ctx, bsdf, name)
+        return _export_emission_bsdf_black(name)
     elif isinstance(bsdf, bpy.types.ShaderNodeGroup):
-        return handle_node_group_begin(ctx, bsdf, output_name, lambda ctx2, socket: _export_bsdf_inline(ctx2, socket, name))
+        return handle_node_group_begin(ctx, bsdf, output_name, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
     elif isinstance(bsdf, bpy.types.NodeGroupInput):
-        return handle_node_group_end(ctx, bsdf, output_name, lambda ctx2, socket: _export_bsdf_inline(ctx2, socket, name))
+        return handle_node_group_end(ctx, bsdf, output_name, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
     elif isinstance(bsdf, bpy.types.NodeReroute):
-        return handle_node_reroute(ctx, bsdf, lambda ctx2, socket: _export_bsdf_inline(ctx2, socket, name))
+        return handle_node_reroute(ctx, bsdf, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
+    elif isinstance(bsdf, bpy.types.ShaderNode) and socket.links[0].from_socket.type in ['VALUE', 'INT', 'RGBA', 'VECTOR']:
+        # Export as emission, which returns black only
+        return _export_emission_bsdf_black(name)
     else:
         print(
             f"Material {name} has a bsdf of type {type(bsdf).__name__}  which is not supported")
         return None
-
-
-def _export_bsdf_inline(ctx, socket, name):
-    if not socket.is_linked:
-        return None
-
-    return _export_bsdf(ctx, socket.links[0].from_node, name, socket.links[0].from_socket.name)
 
 
 def _get_bsdf_link(material):
@@ -268,4 +270,4 @@ def export_material(ctx, material):
     if not link:
         return None
 
-    return _export_bsdf(ctx, link.from_node, material.name, link.from_socket.name)
+    return _export_bsdf(ctx, link.to_socket, material.name)

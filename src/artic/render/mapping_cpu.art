@@ -382,8 +382,9 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             let glb_surf  = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
             
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
-            let mat       = @shader(make_surface_shading_context(entity_id2, ray, hit, glb_surf));
-            let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, payload, glb_surf, mat) { color } else { color_builtins::black };
+            let ctx       = make_surface_shading_context(entity_id2, pixel, ray, hit, glb_surf);
+            let mat       = @shader(ctx);
+            let hit_color = if let Option[Color]::Some(color) = @on_hit(ctx, payload, mat) { color } else { color_builtins::black };
             
             for lane in unroll(0, r_vector_width) {
                 let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
@@ -398,7 +399,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             }
 
             // Compute shadow rays
-            match @on_shadow(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
+            match @on_shadow(ctx, &mut rnd, payload, mat) {
                 ShadowRay::Simple(new_ray, color) => {
                     write_secondary_ray(i, 0, new_ray);
                     secondary2.mat_id(i)  = mat.id + 1;
@@ -421,7 +422,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             }
 
             // Sample new rays
-            if let Option[(Ray, RayPayload)]::Some(new_ray, new_payload) = @on_bounce(ray, pixel, hit, &mut rnd, payload, glb_surf, mat) {
+            if let Option[(Ray, RayPayload)]::Some(new_ray, new_payload) = @on_bounce(ctx, &mut rnd, payload, mat) {
                 write_primary_ray(i, 0, new_ray);
                 write_primary_rnd_state(i, 0, rnd);
                 write_primary_payload(i, 0, new_payload);

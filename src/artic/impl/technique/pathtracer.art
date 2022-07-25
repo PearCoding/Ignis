@@ -58,12 +58,9 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
         @lights(id)
     }
 
-    fn @on_shadow( ray: Ray
-                 , _pixel: i32
-                 , _hit: Hit
+    fn @on_shadow( ctx: ShadingContext
                  , rnd: &mut RndState
                  , payload: RayPayload
-                 , surf: SurfaceElement
                  , mat: Material
                  ) -> ShadowRay {
         // No shadow rays for specular materials
@@ -80,7 +77,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
 
         let light         = get_light(light_id); 
         let sample_direct = light.sample_direct;
-        let light_sample  = @sample_direct(rnd, surf);
+        let light_sample  = @sample_direct(rnd, ctx.surf);
 
         let pdf_l_s = light_sample.pdf.as_solid(light_sample.cos, light_sample.dist * light_sample.dist) * light_select_pdf; // Pdf to sample the light based on NEE
         if pdf_l_s <= flt_eps {
@@ -88,8 +85,8 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
         }
 
         let in_dir  = light_sample.dir; 
-        let out_dir = vec3_neg(ray.dir);
-        let dot     = vec3_dot(in_dir, surf.local.col(2));
+        let out_dir = vec3_neg(ctx.ray.dir);
+        let dot     = vec3_dot(in_dir, ctx.surf.local.col(2));
 
         if dot > flt_eps && light_sample.cos > flt_eps {
             let mis = if light.delta { 
@@ -107,12 +104,12 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
 
             if light.infinite {
                 return(make_simple_shadow_ray(
-                    make_ray(surf.point, in_dir, offset, flt_max, ray_flag_shadow),
+                    make_ray(ctx.surf.point, in_dir, offset, flt_max, ray_flag_shadow),
                     contrib
                 ))
             } else {
                 return(make_simple_shadow_ray(
-                    make_ray(surf.point, vec3_sub(light_sample.pos, surf.point), offset, 1 - offset, ray_flag_shadow),
+                    make_ray(ctx.surf.point, vec3_sub(light_sample.pos, ctx.surf.point), offset, 1 - offset, ray_flag_shadow),
                     contrib
                 ))
             }
@@ -120,31 +117,28 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
         ShadowRay::None
     }
 
-    fn @on_hit( ray: Ray
-              , pixel: i32
-              , hit: Hit
+    fn @on_hit( ctx: ShadingContext
               , payload: RayPayload
-              , surf: SurfaceElement
               , mat: Material
               ) -> Option[Color] {
         let pt = unwrap_ptraypayload(payload);
         if pt.depth == 1 {
-            aov_normal.splat(pixel, make_color(math_builtins::fabs(surf.local.col(2).x),
-                                               math_builtins::fabs(surf.local.col(2).y),
-                                               math_builtins::fabs(surf.local.col(2).z),
-                                               1));
+            aov_normal.splat(ctx.pixel, make_color(math_builtins::fabs(ctx.surf.local.col(2).x),
+                                                   math_builtins::fabs(ctx.surf.local.col(2).y),
+                                                   math_builtins::fabs(ctx.surf.local.col(2).z),
+                                                   1));
         }
 
         // Hits on a light source
-        if mat.is_emissive && surf.is_entering {
-            let dot = -vec3_dot(ray.dir, surf.local.col(2));
+        if mat.is_emissive && ctx.surf.is_entering {
+            let dot = -vec3_dot(ctx.ray.dir, ctx.surf.local.col(2));
             if dot > flt_eps { // Only contribute proper aligned directions
-                let emit    = mat.emission(ray);
-                let pdf_s   = emit.pdf.as_solid(dot, hit.distance * hit.distance);
+                let emit    = mat.emission(ctx);
+                let pdf_s   = emit.pdf.as_solid(dot, ctx.hit.distance * ctx.hit.distance);
                 let mis     = 1 / (1 + pt.inv_pdf * light_selector.pdf(emit.light_id) * pdf_s);
                 let contrib = handle_color(color_mulf(color_mul(pt.contrib, emit.intensity), mis));
                 
-                aov_di.splat(pixel, contrib);
+                aov_di.splat(ctx.pixel, contrib);
 
                 return(make_option(contrib))
             }
@@ -166,7 +160,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
 
                 inflights += 1;
 
-                let emit  = light.emission(ray, make_invalid_surface_element());
+                let emit  = light.emission(make_miss_shading_context(pixel, ray));
                 let pdf   = light.pdf_direct(ray, make_invalid_surface_element());
                 let pdf_s = pdf.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
                 let mis   = 1 / (1 + pt.inv_pdf * light_selector.pdf(light.id) * pdf_s);
@@ -182,12 +176,9 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
         }
     }
 
-    fn @on_bounce( ray: Ray
-                 , _pixel: i32
-                 , _hit: Hit
+    fn @on_bounce( ctx: ShadingContext
                  , rnd: &mut RndState
                  , payload: RayPayload
-                 , surf: SurfaceElement
                  , mat: Material
                  ) -> Option[(Ray, RayPayload)] {
         let pt = unwrap_ptraypayload(payload);
@@ -197,7 +188,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
         }
 
         // Bounce
-        let out_dir = vec3_neg(ray.dir);
+        let out_dir = vec3_neg(ctx.ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
             let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
             let rr_prob = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
@@ -209,7 +200,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
             let new_contrib = color_mulf(contrib, 1 / rr_prob);
 
             make_option(
-                make_ray(surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce),
+                make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce),
                 wrap_ptraypayload(PTRayPayload {
                     inv_pdf = inv_pdf,
                     contrib = new_contrib,

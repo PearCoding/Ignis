@@ -2,7 +2,7 @@ struct Material {
     id:          i32,
     bsdf:        Bsdf,
     interface:   MediumInterface,
-    emission:    fn (Ray) -> DirectEmissionValue,
+    emission:    fn (ShadingContext) -> DirectEmissionValue,
     is_emissive: bool
 }
 
@@ -16,10 +16,10 @@ fn @make_material(id: i32, bsdf: Bsdf, interface: MediumInterface) = Material {
 };
 
 // Creates a material that emits light
-fn @make_emissive_material(id: i32, surf: SurfaceElement, bsdf: Bsdf, interface: MediumInterface, light: Light) = Material {
+fn @make_emissive_material(id: i32, bsdf: Bsdf, interface: MediumInterface, light: Light) = Material {
     id          = id,
     bsdf        = bsdf,
     interface   = interface,
-    emission    = @ |ray| make_direct_emission_value(light.id, light.emission(ray, surf), light.pdf_direct(ray, surf)),
+    emission    = @ |ctx| make_direct_emission_value(light.id, light.emission(ctx), light.pdf_direct(ctx.ray, ctx.surf)),
     is_emissive = true
 };

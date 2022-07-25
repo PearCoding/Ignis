@@ -4,13 +4,13 @@ fn @make_ao_renderer() -> Technique {
     Technique {
         on_hit    = TechniqueNoHitFunction,
         on_miss   = TechniqueNoMissFunction,
-        on_shadow = @ |ray, _, _, rnd, _, surf, _| {
-            let bsdf    = make_diffuse_bsdf(surf, color_builtins::white);
-            let out_dir = vec3_neg(ray.dir);
+        on_shadow = @ |ctx, rnd, _, _| {
+            let bsdf    = make_diffuse_bsdf(ctx.surf, color_builtins::white);
+            let out_dir = vec3_neg(ctx.ray.dir);
 
             if let Option[BsdfSample]::Some(sample) = bsdf.sample(rnd, out_dir, false) {
                 make_simple_shadow_ray(
-                    make_ray(surf.point, sample.in_dir, offset, flt_max, ray_flag_bounce),
+                    make_ray(ctx.surf.point, sample.in_dir, offset, flt_max, ray_flag_bounce),
                     sample.color
                 )
             } else {

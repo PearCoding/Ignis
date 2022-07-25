@@ -6,9 +6,9 @@ from .bsdf import _get_bsdf_link
 
 
 def _get_emission_mix(ctx, bsdf):
-    mat1 = _get_emission_inline(
+    mat1 = get_emission(
         ctx, bsdf.inputs[0])
-    mat2 = _get_emission_inline(
+    mat2 = get_emission(
         ctx, bsdf.inputs[1])
     factor = export_node(ctx, bsdf.inputs["Fac"])
 
@@ -30,9 +30,9 @@ def _get_emission_mix(ctx, bsdf):
 
 
 def _get_emission_add(ctx, bsdf):
-    mat1 = _get_emission_inline(
+    mat1 = get_emission(
         ctx, bsdf.inputs[0])
-    mat2 = _get_emission_inline(
+    mat2 = get_emission(
         ctx, bsdf.inputs[1])
 
     if mat1 is None:
@@ -79,7 +79,13 @@ def _get_emission_pure(ctx, bsdf):
         return f"({color} * {strength})"
 
 
-def _get_emission(ctx, bsdf, output_name):
+def get_emission(ctx, socket):
+    if not socket.is_linked:
+        return None
+
+    bsdf = socket.links[0].from_node
+    output_name = socket.links[0].from_socket.name
+
     if isinstance(bsdf, bpy.types.ShaderNodeMixShader):
         return _get_emission_mix(ctx, bsdf)
     elif isinstance(bsdf, bpy.types.ShaderNodeAddShader):
@@ -91,20 +97,16 @@ def _get_emission(ctx, bsdf, output_name):
     elif isinstance(bsdf, bpy.types.ShaderNodeBackground):  # Same as emission node
         return _get_emission_pure(ctx, bsdf)
     elif isinstance(bsdf, bpy.types.ShaderNodeGroup):
-        return handle_node_group_begin(ctx, bsdf, output_name, _get_emission_inline)
+        return handle_node_group_begin(ctx, bsdf, output_name, get_emission)
     elif isinstance(bsdf, bpy.types.NodeGroupInput):
-        return handle_node_group_end(ctx, bsdf, output_name, _get_emission_inline)
+        return handle_node_group_end(ctx, bsdf, output_name, get_emission)
     elif isinstance(bsdf, bpy.types.NodeReroute):
-        return handle_node_reroute(ctx, bsdf, _get_emission_inline)
+        return handle_node_reroute(ctx, bsdf, get_emission)
+    elif isinstance(bsdf, bpy.types.ShaderNode) and socket.links[0].from_socket.type in ['VALUE', 'INT', 'RGBA', 'VECTOR']:
+        # Used if a non-shader node is connected directly to the surface output
+        return export_node(ctx, socket)
     else:
         return None
-
-
-def _get_emission_inline(ctx, socket):
-    if not socket.is_linked:
-        return None
-
-    return _get_emission(ctx, socket.links[0].from_node, socket.links[0].from_socket.name)
 
 
 def get_material_emission(ctx, material):
@@ -118,4 +120,4 @@ def get_material_emission(ctx, material):
     if not link:
         return None
 
-    return _get_emission(ctx, link.from_node, link.from_socket.name)
+    return get_emission(ctx, link.to_socket)
