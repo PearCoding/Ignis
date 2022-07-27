@@ -38,7 +38,7 @@ fn @transform_surf_bsdf(old_surf: SurfaceElement, new_surf: SurfaceElement, bsdf
 //--------------------------------------
 // Special bsdf replacing the normal orientation
 fn @make_normal_set(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Vec3) -> Bsdf {
-    let n = vec3_normalize(normal);
+    let n = ensure_valid_reflection(ctx.surf.face_normal, vec3_neg(ctx.ray.dir), vec3_normalize(normal));
     let trans = mat3x3_align_vectors(ctx.surf.local.col(2), n);
 
     let new_surf = ctx.surf.{ local = mat3x3_matmul(trans, ctx.surf.local) };
@@ -48,10 +48,9 @@ fn @make_normal_set(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bs
 //--------------------------------------
 // Special bsdf replacing the normal and tangent orientation
 fn @make_normal_tangent_set(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Vec3, tangent: Vec3) -> Bsdf {
-    let n = vec3_normalize(normal);
-    let t = vec3_normalize(tangent);
+    let n = ensure_valid_reflection(ctx.surf.face_normal, vec3_neg(ctx.ray.dir), vec3_normalize(normal));
 
-    let new_surf = ctx.surf.{ local = make_mat3x3(t, vec3_cross(t, n), n) };
+    let new_surf = ctx.surf.{ local = make_mat3x3(tangent, vec3_cross(tangent, n), n) };
     transform_surf_bsdf(ctx.surf, new_surf, bsdf_factory)
 }
 
