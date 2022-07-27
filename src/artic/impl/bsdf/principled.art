@@ -61,7 +61,8 @@ fn @getMicro(closure: Closure, roughness: f32, _is_refl: bool) -> microfacet::Mi
     let ax	   = math_builtins::fmax[f32](1e-3, roughness * roughness / aspect);
     let ay	   = math_builtins::fmax[f32](1e-3, roughness * roughness * aspect);
 
-    microfacet::make_vndf_ggx_distribution(shading::to_local(closure.surf.local, closure.surf.face_normal), super::mat3x3_identity(), ax, ay)
+    let face_normal = shading::to_local(closure.surf.local, closure.surf.face_normal);
+    microfacet::make_vndf_ggx_distribution(face_normal, super::mat3x3_identity(), ax, ay)
 }
 
 fn @getReflectionMicro(closure: Closure) = getMicro(closure, closure.roughness, true);

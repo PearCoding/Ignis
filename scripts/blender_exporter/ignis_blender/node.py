@@ -1309,7 +1309,6 @@ def export_node(ctx, socket):
         if expr is None:
             return _export_default(socket)
 
-        # Casts are implicitly handled with ShaderNodeValToRGB and ShaderNodeRGBToBW but we still want to make sure ;)
         to_type = socket.type
         from_type = socket.links[0].from_socket.type
         if to_type == from_type:

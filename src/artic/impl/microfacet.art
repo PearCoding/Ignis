@@ -374,6 +374,8 @@ fn @pdf_vndf_ggx(local: Mat3x3, w: Vec3, h: Vec3, alpha_u: f32, alpha_v: f32) ->
 }
 
 fn @make_vndf_ggx_distribution(face_normal: Vec3, local: Mat3x3, alpha_u: f32, alpha_v: f32) -> MicrofacetDistribution {
+    all::maybe_unused(face_normal);
+
     if check_if_delta_distribution(alpha_u, alpha_v) {
         make_delta_distribution(local)
     } else {
@@ -386,7 +388,7 @@ fn @make_vndf_ggx_distribution(face_normal: Vec3, local: Mat3x3, alpha_u: f32, a
             sample = @ |rnd, wo|   {
                 let m   = sample_vndf_ggx(rnd, local, wo, alpha_u, alpha_v);
                 let pdf = pdf_vndf_ggx(local, wo, m, alpha_u, alpha_v);
-                MicrofacetSample { normal = all::ensure_valid_reflection(face_normal, wo, m), pdf = pdf }
+                MicrofacetSample { normal = m/*all::ensure_valid_reflection(face_normal, wo, m)*/, pdf = pdf }
             },
             alpha_u  = alpha_u,
             alpha_v  = alpha_v,

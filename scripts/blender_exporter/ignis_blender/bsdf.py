@@ -38,9 +38,10 @@ def _export_diffuse_bsdf(ctx, bsdf, export_name):
     has_roughness = try_extract_node_value(roughness, default=1) > 0
 
     if has_roughness:
+        roughness = f"({roughness})^2" # Square it
         return _handle_normal(ctx, bsdf,
                               {"type": "roughdiffuse", "name": export_name,
-                                  "reflectance": reflectance, "roughness": roughness})  # Square roughness?
+                                  "reflectance": reflectance, "roughness": roughness})
     else:
         return _handle_normal(ctx, bsdf,
                               {"type": "diffuse", "name": export_name,
@@ -62,6 +63,7 @@ def _export_glass_bsdf(ctx, bsdf, export_name):
                               {"type": "dielectric", "name": export_name,
                                "specular_reflectance": reflectance, "specular_transmittance": reflectance, "int_ior": ior})
     else:
+        roughness = f"({roughness})^2" # Square it
         return _handle_normal(ctx, bsdf,
                               {"type": "roughdielectric", "name": export_name,
                                "specular_reflectance": reflectance, "specular_transmittance": reflectance, "roughness": roughness, "int_ior": ior})  # Square roughness?
