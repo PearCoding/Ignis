@@ -1,3 +1,14 @@
+fn @check_strict_normals(surf: SurfaceElement)               = !math_builtins::signbit(vec3_dot(surf.face_normal, surf.local.col(2)));
+fn @forward_strict_normals(surf: SurfaceElement, bsdf: Bsdf) = if (check_strict_normals(surf)) { bsdf } else { make_null_bsdf(surf) };
+
+// Creates a fully absorbing BSDF non scattering bsdf
+fn @make_null_bsdf(_surf: SurfaceElement) = Bsdf {
+    eval        = @ |_, _| color_builtins::black,
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, _, _| reject_bsdf_sample(),
+    is_specular = false
+};
+
 // Creates a fully absorbing BSDF that behaves like a black body
 fn @make_black_bsdf(_surf: SurfaceElement) = Bsdf {
     eval        = @ |_, _| color_builtins::black,
@@ -30,7 +41,7 @@ fn @make_doublesided_bsdf(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement
         @bsdf_factory(surf)
     } else {
         let bsdf = @bsdf_factory(invert_surface_element(surf));
-        Bsdf {
+        bsdf.{
             eval   = @ |in_dir, out_dir| bsdf.eval(vec3_neg(in_dir), vec3_neg(out_dir)),
             pdf    = @ |in_dir, out_dir| bsdf.pdf(vec3_neg(in_dir), vec3_neg(out_dir)),
             sample = @ |rnd, out_dir, adjoint| {
@@ -39,8 +50,7 @@ fn @make_doublesided_bsdf(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement
                 } else {
                     reject_bsdf_sample()
                 }
-            },
-            is_specular = bsdf.is_specular
+            }
         }
     }
 }

@@ -107,7 +107,6 @@ fn @sample_uniform_disk(u: f32, v: f32, radius: f32) -> PosSample {
     make_pos_sample(vec3_mulf(vec2_to_3(square_to_concentric_disk(make_vec2(u, v)), 0), radius), uniform_disk_pdf(radius))
 }
 
-
 // From Blender Cycles
 // https://github.com/blender/cycles/blob/c40170f6ea8828757eb2cb8db960d3bf4620d03f/src/kernel/closure/bsdf_util.h#L151
 fn @ensure_valid_reflection(Ng: Vec3, I: Vec3, N: Vec3) -> Vec3 {

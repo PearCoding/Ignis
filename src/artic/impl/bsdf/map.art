@@ -15,10 +15,7 @@ fn @shading_normal_adjoint(in_dir: Vec3, out_dir: Vec3, ns: Vec3, ng: Vec3) -> f
 
 fn @transform_surf_bsdf(old_surf: SurfaceElement, new_surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf) -> Bsdf {
     let bsdf = @bsdf_factory(new_surf);
-
-    Bsdf {
-        eval   = bsdf.eval,
-        pdf    = bsdf.pdf,
+    bsdf.{
         sample = @ |rnd, out_dir, adjoint| {
             if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, out_dir, adjoint) {
                 if adjoint {
@@ -30,8 +27,7 @@ fn @transform_surf_bsdf(old_surf: SurfaceElement, new_surf: SurfaceElement, bsdf
             } else {
                 reject_bsdf_sample()
             }
-        },
-        is_specular = bsdf.is_specular
+        }
     }
 }
 

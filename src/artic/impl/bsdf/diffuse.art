@@ -1,5 +1,5 @@
 // Creates a purely two-sided diffuse BSDF
-fn @make_diffuse_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
+fn @make_diffuse_bsdf(surf: SurfaceElement, kd: Color) = forward_strict_normals(surf, Bsdf {
     eval   = @ |in_dir, _| color_mulf(kd, absolute_cos(in_dir, surf.local.col(2)) * flt_inv_pi),
     pdf    = @ |in_dir, _| cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))),
     sample = @ |rnd, _, _| {
@@ -8,11 +8,15 @@ fn @make_diffuse_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
         make_bsdf_sample(gdir, sample.pdf, kd, 1)
     },
     is_specular = false
-};
+});
 
 //--------------------------------------
 // Creates a two-sided BSDF based on orennayar
 fn @make_orennayar_bsdf(surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
+    if (!check_strict_normals(surf)) {
+        return(make_null_bsdf(surf))
+    }
+
     let a2 = alpha * alpha;
     let eval = @ |in_dir : Vec3, out_dir : Vec3| {
         let p1 = absolute_cos(in_dir,  surf.local.col(2));

@@ -169,6 +169,10 @@ fn @make_klems_model(buffer: DeviceBuffer, specification: KlemsSpecification) ->
 
 // TODO: Add proper sampling!
 fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsModel) -> Bsdf {
+    if(!check_strict_normals(surf)) {
+        return(make_null_bsdf(surf))
+    }
+
     let front_refl_total = klems.front_reflection.specification.total;
     let front_tran_total = klems.front_transmission.specification.total;
     let back_refl_total  = klems.back_reflection.specification.total;
