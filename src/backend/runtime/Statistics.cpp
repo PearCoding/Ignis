@@ -258,6 +258,8 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
     dumpSectionStats("  |-FramebufferUpdate", mSections[(size_t)SectionType::FramebufferUpdate]);
     dumpSectionStats("  |-AOVUpdate", mSections[(size_t)SectionType::AOVUpdate]);
     dumpSectionStats("  |-TonemapUpdate", mSections[(size_t)SectionType::TonemapUpdate]);
+    dumpSectionStats("  |-FramebufferHostUpdate", mSections[(size_t)SectionType::FramebufferHostUpdate]);
+    dumpSectionStats("  |-AOVHostUpdate", mSections[(size_t)SectionType::AOVHostUpdate]);
 
     table.addRow({ "  Quantities:" });
     table.addRow({ "  |-CameraRays", dumpQuantity(mQuantities[(size_t)Quantity::CameraRayCount]) });

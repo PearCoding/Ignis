@@ -4,7 +4,7 @@
 
 namespace IG {
 struct TonemapSettings {
-    size_t AOV;
+    const char* AOV;
     size_t Method;
     bool UseGamma;
     float Scale;
@@ -13,7 +13,7 @@ struct TonemapSettings {
 };
 
 struct ImageInfoSettings {
-    size_t AOV;
+    const char* AOV;
     int* Histogram;
     size_t Bins;
     float Scale;

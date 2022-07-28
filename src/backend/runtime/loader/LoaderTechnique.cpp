@@ -123,19 +123,17 @@ static bool handle_ib_body(std::ostream& stream, const std::shared_ptr<Parser::O
     if (ctx.CurrentTechniqueVariant != info.Variants.size() - 1)
         return false;
 
-    const size_t normal_id = std::distance(info.EnabledAOVs.begin(), normal_it) + 1 /* Framebuffer */;
-
     const int max_depth = technique ? technique->property("max_depth").getInteger(64) : 64;
 
-    stream << "  let aov_normals = device.load_aov_image(" << normal_id + 0 << ", spi);" << std::endl;
-    stream << "  let aov_albedos = device.load_aov_image(" << normal_id + 1 << ", spi);" << std::endl;
-    stream << "  let aov_depths  = device.load_aov_image(" << normal_id + 2 << ", spi);" << std::endl;
+    stream << "  let aov_normals = device.load_aov_image(\"Normals\", spi); aov_normals.mark_as_used();" << std::endl;
+    stream << "  let aov_albedo = device.load_aov_image(\"Albedo\", spi); aov_albedo.mark_as_used();" << std::endl;
+    stream << "  let aov_depth  = device.load_aov_image(\"Depth\", spi); aov_depth.mark_as_used();" << std::endl;
 
     stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
            << "    match(id) {" << std::endl
            << "      0x1000 => aov_normals," << std::endl
-           << "      0x1001 => aov_albedos," << std::endl
-           << "      0x1002 => aov_depths," << std::endl
+           << "      0x1001 => aov_albedo," << std::endl
+           << "      0x1002 => aov_depth," << std::endl
            << "      _ => make_empty_aov_image()" << std::endl
            << "    }" << std::endl
            << "  };" << std::endl;
@@ -214,10 +212,9 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(true) : true; // FIXME: The convergence rate is kinda worse, fix the non-uniform light selector
     const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
 
-    size_t counter = 1;
     if (hasMISAOV) {
-        stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
-        stream << "  let aov_nee = device.load_aov_image(" << counter++ << ", spi);" << std::endl;
+        stream << "  let aov_di  = device.load_aov_image(\"Direct Weights\", spi); aov_di.mark_as_used();" << std::endl;
+        stream << "  let aov_nee = device.load_aov_image(\"NEE Weights\", spi); aov_nee.mark_as_used();" << std::endl;
     }
 
     stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
@@ -400,8 +397,8 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
         const bool hasAOV = technique ? technique->property("aov").getBool(false) : false;
 
         if (hasAOV) {
-            stream << "  let aov_di   = device.load_aov_image(1, spi);" << std::endl;
-            stream << "  let aov_merg = device.load_aov_image(2, spi);" << std::endl;
+            stream << "  let aov_di   = device.load_aov_image(\"Direct Weights\", spi); aov_di.mark_as_used();" << std::endl;
+            stream << "  let aov_merg = device.load_aov_image(\"Merging Weights\", spi); aov_merg.mark_as_used();" << std::endl;
         }
 
         stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl

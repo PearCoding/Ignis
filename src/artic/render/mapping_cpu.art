@@ -549,7 +549,7 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
-fn @cpu_get_aov_image(id: i32, spi: i32) -> AOVImage {
+fn @cpu_get_aov_image(id: &[u8], spi: i32) -> AOVImage {
     // Width & height always the same as film_width, film_height
     let mut ptr : &mut [f32];
     ignis_get_aov_image(0, id, &mut ptr);
@@ -579,6 +579,9 @@ fn @cpu_get_aov_image(id: i32, spi: i32) -> AOVImage {
                 color.b = rv_insert(color.b, lane, ptr(j * 3 + 2));
             }
             color
+        },
+        mark_as_used = @|| -> () {
+            ignis_mark_aov_as_used(id, 1);
         }
     }
 }
@@ -749,7 +752,6 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     handle_advanced_shadow_shader = @ | shader, path_tracer, first, last, spi, use_framebuffer, is_hit | {
         cpu_advanced_shadow_handler(shader, path_tracer, first, last, spi, use_framebuffer, is_hit, vector_width);
     },
-    present = @ || ignis_present(0),
     sync    = @ || {},
     parallel_range = @ |body| {
         @|start, end| {

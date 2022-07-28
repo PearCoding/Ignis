@@ -36,6 +36,11 @@ struct RuntimeOptions {
     bool ForceSpecialization = false; // Enforce specialization of generated shader for all parameters. This will increase compile time
 };
 
+struct AOVAccessor {
+    const float* Data;
+    size_t IterationCount;
+};
+
 class Runtime {
     IG_CLASS_NON_COPYABLE(Runtime);
     IG_CLASS_NON_MOVEABLE(Runtime);
@@ -65,11 +70,12 @@ public:
     /// Will resize the framebuffer, clear it and reset rendering
     void resizeFramebuffer(size_t width, size_t height);
     /// Return pointer to framebuffer
-    [[nodiscard]] const float* getFramebuffer(size_t aov = 0) const;
+    /// name == 'Color' or null returns the actual framebuffer, else the corresponding AOV will be returned
+    [[nodiscard]] AOVAccessor getFramebuffer(const std::string& name) const;
     /// Will clear all framebuffers
     void clearFramebuffer();
     /// Will clear specific framebuffer
-    void clearFramebuffer(size_t aov);
+    void clearFramebuffer(const std::string& name);
 
     /// Return all names of the enabled AOVs
     [[nodiscard]] inline const std::vector<std::string>& aovs() const { return mTechniqueInfo.EnabledAOVs; }

@@ -317,7 +317,7 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
     ++mCurrentIteration;
 
     // Get result
-    const float* data_ptr = getFramebuffer(0);
+    const float* data_ptr = getFramebuffer({}).Data;
     data.resize(rays.size() * 3);
     std::memcpy(data.data(), data_ptr, sizeof(float) * rays.size() * 3);
 }
@@ -352,19 +352,21 @@ void Runtime::resizeFramebuffer(size_t width, size_t height)
     reset();
 }
 
-const float* Runtime::getFramebuffer(size_t aov) const
+AOVAccessor Runtime::getFramebuffer(const std::string& name) const
 {
-    return mLoadedInterface.GetFramebufferFunction(aov);
+    DriverAOVAccessor acc;
+    mLoadedInterface.GetFramebufferFunction((int)mDevice, name.c_str(), acc);
+    return AOVAccessor{ acc.Data, acc.IterationCount };
 }
 
 void Runtime::clearFramebuffer()
 {
-    return mLoadedInterface.ClearFramebufferFunction(-1);
+    return mLoadedInterface.ClearAllFramebufferFunction();
 }
 
-void Runtime::clearFramebuffer(size_t aov)
+void Runtime::clearFramebuffer(const std::string& name)
 {
-    return mLoadedInterface.ClearFramebufferFunction((int)aov);
+    return mLoadedInterface.ClearFramebufferFunction(name.c_str());
 }
 
 void Runtime::reset()
@@ -390,7 +392,7 @@ bool Runtime::setup()
     settings.framebuffer_width  = (uint32)mFilmWidth;
     settings.framebuffer_height = (uint32)mFilmHeight;
     settings.acquire_stats      = mAcquireStats;
-    settings.aov_count          = mTechniqueInfo.EnabledAOVs.size();
+    settings.aov_map            = &mTechniqueInfo.EnabledAOVs;
     settings.resource_map       = &mResourceMap;
 
     settings.logger = &IG_LOGGER;

@@ -26,6 +26,8 @@ enum class SectionType {
     FramebufferUpdate,
     AOVUpdate,
     TonemapUpdate,
+    FramebufferHostUpdate,
+    AOVHostUpdate,
 
     _COUNT
 };

@@ -6,7 +6,7 @@ fn @gpu_get_film_data(dev_id: i32) -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
-fn @gpu_get_aov_image(id: i32, dev_id: i32, atomics: Atomics, spi: i32) -> AOVImage {
+fn @gpu_get_aov_image(id: &[u8], dev_id: i32, atomics: Atomics, spi: i32) -> AOVImage {
     // Width & height always the same as film_width, film_height
     let mut ptr : &mut [f32];
     ignis_get_aov_image(dev_id, id, &mut ptr);
@@ -18,6 +18,9 @@ fn @gpu_get_aov_image(id: i32, dev_id: i32, atomics: Atomics, spi: i32) -> AOVIm
             get   = @|pixel| -> Color     {
                 let ptr2 = &pixels(pixel * 3) as &[f32];
                 make_color(ptr2(0), ptr2(1), ptr2(2), 1)
+            },
+            mark_as_used = @|| -> () {
+                ignis_mark_aov_as_used(id, 1);
             }
         }
     }
@@ -803,8 +806,7 @@ fn @make_gpu_device( dev_id: i32
     handle_advanced_shadow_shader = @ | shader, path_tracer, first, last, spi, use_framebuffer, is_hit | {
         gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, path_tracer, first, last, spi, use_framebuffer, is_hit);
     },
-    present = @ || ignis_present(dev_id),
-    sync    = @ || acc.sync(),
+    sync = @ || acc.sync(),
     parallel_range = @ |body| {
         @|start, end| {
             let size = end - start;

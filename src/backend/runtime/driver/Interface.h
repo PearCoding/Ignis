@@ -15,12 +15,12 @@ class Logger;
 
 // Not in namespace IG
 struct DriverSetupSettings {
-    const char* driver_filename = nullptr;
-    size_t framebuffer_width    = 0;
-    size_t framebuffer_height   = 0;
-    IG::SceneDatabase* database = nullptr;
-    bool acquire_stats          = false;
-    size_t aov_count            = false;
+    const char* driver_filename                  = nullptr;
+    size_t framebuffer_width                     = 0;
+    size_t framebuffer_height                    = 0;
+    IG::SceneDatabase* database                  = nullptr;
+    bool acquire_stats                           = false;
+    const std::vector<std::string>* aov_map      = nullptr;
     const std::vector<std::string>* resource_map = nullptr;
 
     IG::Logger* logger = nullptr;
@@ -35,13 +35,19 @@ struct DriverRenderSettings {
     IG::TechniqueVariantInfo info;
 };
 
-using DriverRenderFunction            = void (*)(const IG::TechniqueVariantShaderSet&, const DriverRenderSettings&, const IG::ParameterSet*, size_t, size_t);
-using DriverShutdownFunction          = void (*)();
-using DriverSetupFunction             = void (*)(const DriverSetupSettings&);
-using DriverResizeFramebufferFunction = void (*)(size_t, size_t);
-using DriverGetFramebufferFunction    = const float* (*)(size_t);
-using DriverClearFramebufferFunction  = void (*)(int);
-using DriverGetStatisticsFunction     = const IG::Statistics* (*)();
+struct DriverAOVAccessor {
+    float* Data;
+    size_t IterationCount;
+};
+
+using DriverRenderFunction              = void (*)(const IG::TechniqueVariantShaderSet&, const DriverRenderSettings&, const IG::ParameterSet*, size_t, size_t);
+using DriverShutdownFunction            = void (*)();
+using DriverSetupFunction               = void (*)(const DriverSetupSettings&);
+using DriverResizeFramebufferFunction   = void (*)(size_t, size_t);
+using DriverGetFramebufferFunction      = void (*)(size_t, const char*, DriverAOVAccessor&);
+using DriverClearFramebufferFunction    = void (*)(const char*);
+using DriverClearAllFramebufferFunction = void (*)();
+using DriverGetStatisticsFunction       = const IG::Statistics* (*)();
 
 using DriverTonemapFunction   = void (*)(size_t, uint32_t*, const IG::TonemapSettings&);
 using DriverImageInfoFunction = void (*)(size_t, const IG::ImageInfoSettings&, IG::ImageInfoOutput&);
@@ -59,6 +65,7 @@ struct DriverInterface {
     DriverResizeFramebufferFunction ResizeFramebufferFunction;
     DriverGetFramebufferFunction GetFramebufferFunction;
     DriverClearFramebufferFunction ClearFramebufferFunction;
+    DriverClearAllFramebufferFunction ClearAllFramebufferFunction;
     DriverGetStatisticsFunction GetStatisticsFunction;
     DriverTonemapFunction TonemapFunction;
     DriverImageInfoFunction ImageInfoFunction;
