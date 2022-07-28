@@ -11,9 +11,8 @@ struct PTRayPayload {
     eta:     f32    // Current eta (n1 / n2)
 }
 
-static AOV_PATH_NORMAL = 1;
-static AOV_PATH_DIRECT = 2;
-static AOV_PATH_NEE    = 3;
+static AOV_PATH_DIRECT = 1;
+static AOV_PATH_NEE    = 2;
 
 fn @wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     let mut r : RayPayload;
@@ -43,9 +42,8 @@ fn @init_pt_raypayload() = wrap_ptraypayload(PTRayPayload {
 fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, aovs: AOVTable, clamp_value: f32) -> Technique {
     let offset : f32  = 0.001;
 
-    let aov_normal = @aovs(AOV_PATH_NORMAL);
-    let aov_di     = @aovs(AOV_PATH_DIRECT);
-    let aov_nee    = @aovs(AOV_PATH_NEE);
+    let aov_di  = @aovs(AOV_PATH_DIRECT);
+    let aov_nee = @aovs(AOV_PATH_NEE);
 
     let handle_color = if clamp_value > 0 {
         @|c: Color| color_saturate(c, clamp_value)
@@ -121,16 +119,9 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, l
               , payload: RayPayload
               , mat: Material
               ) -> Option[Color] {
-        let pt = unwrap_ptraypayload(payload);
-        if pt.depth == 1 {
-            aov_normal.splat(ctx.pixel, make_color(math_builtins::fabs(ctx.surf.local.col(2).x),
-                                                   math_builtins::fabs(ctx.surf.local.col(2).y),
-                                                   math_builtins::fabs(ctx.surf.local.col(2).z),
-                                                   1));
-        }
-
         // Hits on a light source
         if mat.is_emissive && ctx.surf.is_entering {
+            let pt  = unwrap_ptraypayload(payload);
             let dot = -vec3_dot(ctx.ray.dir, ctx.surf.local.col(2));
             if dot > flt_eps { // Only contribute proper aligned directions
                 let emit    = mat.emission(ctx);

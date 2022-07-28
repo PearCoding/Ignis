@@ -78,6 +78,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/phase/uniform.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/aotracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/debugtracer.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/infobuffer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/pathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/photonmapper.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/volpathtracer.art

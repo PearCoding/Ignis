@@ -27,6 +27,7 @@ struct LoaderContext {
     std::string PixelSamplerType;
     IG::TechniqueInfo TechniqueInfo;
 
+    bool UseDenoiser = false; // TODO: Make use of this
     bool IsTracer = false;
 
     size_t CurrentTechniqueVariant;
