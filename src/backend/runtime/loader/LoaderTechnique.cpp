@@ -8,6 +8,8 @@
 #include "shader/RayGenerationShader.h"
 #include "shader/ShaderUtils.h"
 
+#include <numeric>
+
 namespace IG {
 
 static void technique_empty_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
@@ -69,17 +71,45 @@ static TechniqueInfo wireframe_get_info(const std::string&, const std::shared_pt
 
 /////////////////////////
 
-static void enable_ib(TechniqueInfo& info, bool first = false)
+static void enable_ib(TechniqueInfo& info, bool extend = true)
 {
     info.EnabledAOVs.emplace_back("Normals");
     info.EnabledAOVs.emplace_back("Albedo");
     info.EnabledAOVs.emplace_back("Depth");
 
-    if (!first)
+    if (extend)
         info.Variants.emplace_back();
 
     info.Variants.back().LockFramebuffer = true;
     info.Variants.back().OverrideSPI     = 1;
+
+    const size_t variantCount = info.Variants.size();
+    if (variantCount > 1) {
+        if (info.VariantSelector) {
+            const auto prevSelector = info.VariantSelector;
+            info.VariantSelector    = [=](size_t iter) {
+                if (iter == 0) {
+                    std::vector<size_t> pass_with_ib = prevSelector(iter);
+                    pass_with_ib.emplace_back(variantCount - 1);
+                    return pass_with_ib;
+                } else {
+                    return prevSelector(iter);
+                }
+            };
+        } else {
+            info.VariantSelector = [=](size_t iter) {
+                if (iter == 0) {
+                    std::vector<size_t> pass_with_ib(variantCount);
+                    std::iota(std::begin(pass_with_ib), std::end(pass_with_ib), 0);
+                    return pass_with_ib;
+                } else {
+                    std::vector<size_t> pass_without_ib(variantCount - 1);
+                    std::iota(std::begin(pass_without_ib), std::end(pass_without_ib), 0);
+                    return pass_without_ib;
+                }
+            };
+        }
+    }
 }
 
 static bool handle_ib_body(std::ostream& stream, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
@@ -136,7 +166,7 @@ static bool handle_ib_header(std::ostream& stream, const LoaderContext& ctx)
 static TechniqueInfo ib_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
     TechniqueInfo info;
-    enable_ib(info, true);
+    enable_ib(info, false);
     return info;
 }
 
