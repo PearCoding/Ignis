@@ -123,7 +123,8 @@ static bool handle_ib_body(std::ostream& stream, const std::shared_ptr<Parser::O
     if (ctx.CurrentTechniqueVariant != info.Variants.size() - 1)
         return false;
 
-    const int max_depth = technique ? technique->property("max_depth").getInteger(64) : 64;
+    const int max_depth        = technique ? technique->property("max_depth").getInteger(64) : 64;
+    const bool handle_specular = technique ? technique->property("denoiser_handle_specular").getBool(false) : false;
 
     stream << "  let aov_normals = device.load_aov_image(\"Normals\", spi); aov_normals.mark_as_used();" << std::endl;
     stream << "  let aov_albedo = device.load_aov_image(\"Albedo\", spi); aov_albedo.mark_as_used();" << std::endl;
@@ -138,7 +139,7 @@ static bool handle_ib_body(std::ostream& stream, const std::shared_ptr<Parser::O
            << "    }" << std::endl
            << "  };" << std::endl;
 
-    stream << "  let technique = make_infobuffer_renderer(" << max_depth << ", aovs);" << std::endl;
+    stream << "  let technique = make_infobuffer_renderer(" << max_depth << ", aovs, " << (handle_specular ? "true" : "false") << ");" << std::endl;
 
     return true;
 }

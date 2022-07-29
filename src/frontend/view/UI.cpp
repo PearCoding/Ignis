@@ -159,7 +159,8 @@ public:
 
     void changeAOV(int delta_aov)
     {
-        CurrentAOV = (CurrentAOV + delta_aov) % (Runtime->aovs().size() + 1);
+        const int rem = (int)Runtime->aovs().size() + 1;
+        CurrentAOV    = static_cast<size_t>((((int)CurrentAOV + delta_aov) % rem + rem) % rem);
     }
 
     enum MouseMode {
@@ -947,6 +948,7 @@ static void handleHelp()
 - *V* to increase (or with *Shift* to decrease) tonemapping offset.
   Step size can be decreased with *Strg/Ctrl*.
   Only works if automatic tonemapping is disabled.
+- *N/M* to switch to previous or next available AOV. 
 - *WASD* or arrow keys to travel through the scene.
 - *Q/E* to rotate the camera around the viewing direction. 
 - *PageUp/PageDown* to pan the camera up and down. 
