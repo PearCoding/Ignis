@@ -19,7 +19,7 @@ void ignis_denoise(const float* color, const float* normal, const float* albedo,
 
     using namespace oidn;
 
-    static auto device     = newDevice(DeviceType::CPU); // TODO: Support new stuff in the future
+    static auto device     = newDevice(DeviceType::Default); // TODO: Support new stuff in the future
     static bool first_time = true;
 
     if (first_time) {
@@ -43,7 +43,7 @@ void ignis_denoise(const float* color, const float* normal, const float* albedo,
     filter.setImage("output", outputBuffer, Format::Float3, width, height);
 
     filter.set("hdr", true);
-    filter.set("inputScale", 1.0f / iter);
+    // filter.set("inputScale", 1.0f / iter);
 
     filter.commit();
 

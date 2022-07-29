@@ -118,6 +118,7 @@ struct ShaderStats {
 struct AOV {
     anydsl::Array<float> Data;
     bool Mapped           = false;
+    bool HostOnly         = false;
     int IterDiff          = 0; // Addition to the upcoming iteration counter at the end of an iteration
     size_t IterationCount = 0;
 };
@@ -251,11 +252,8 @@ public:
         host_pixels.Data = anydsl::Array<float>(film_width * film_height * 3);
 
 #ifdef IG_HAS_DENOISER
-        if (aovs.count("Denoised") != 0) {
-            auto& aov          = aovs["Denoised"];
-            aov.IterationCount = 1;    // Fix it to one
-            aov.Mapped         = true; // Always mapped, ignore data from device
-        }
+        if (aovs.count("Denoised") != 0)
+            aovs["Denoised"].HostOnly = true; // Always mapped, ignore data from device
 #endif
 
         for (auto& p : aovs)
@@ -280,10 +278,8 @@ public:
     {
         host_pixels.Mapped = false;
 
-        for (auto& p : aovs) {
-            if (p.first != "Denoised")
-                p.second.Mapped = false;
-        }
+        for (auto& p : aovs)
+            p.second.Mapped = false;
     }
 
     template <typename T>
@@ -1012,6 +1008,32 @@ public:
         }
     }
 
+    inline void mapAOVToDevice(int32_t dev, const std::string& name, const AOV& host, bool onlyAtCreation = true)
+    {
+        if (dev == 0) // Device is host
+            return;
+
+        bool created = false;
+        auto& device = devices[dev];
+        if (device.aovs[name].size() != host.Data.size()) {
+            _SECTION(IG::SectionType::AOVUpdate);
+
+            auto film_size = film_width * film_height * 3;
+            void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
+            if (ptr == nullptr) {
+                IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
+                std::abort();
+            }
+
+            auto film_data    = reinterpret_cast<float*>(ptr);
+            device.aovs[name] = anydsl::Array<float>(dev, film_data, film_size);
+            created           = true;
+        }
+
+        if (!onlyAtCreation || created)
+            anydsl::copy(host.Data, device.aovs[name]);
+    }
+
     inline DriverAOVAccessor getAOVImage(int32_t dev, const char* name)
     {
         const std::string aov_name = name ? std::string(name) : std::string{};
@@ -1026,21 +1048,7 @@ public:
 
         if (dev != 0) {
             auto& device = devices[dev];
-            if (device.aovs[aov_name].size() != it->second.Data.size()) {
-                _SECTION(IG::SectionType::AOVUpdate);
-
-                auto film_size = film_width * film_height * 3;
-                void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
-                if (ptr == nullptr) {
-                    IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
-                    std::abort();
-                    return DriverAOVAccessor{ nullptr, 0 };
-                }
-
-                auto film_data        = reinterpret_cast<float*>(ptr);
-                device.aovs[aov_name] = anydsl::Array<float>(dev, film_data, film_size);
-                anydsl::copy(it->second.Data, device.aovs[aov_name]);
-            }
+            mapAOVToDevice(dev, aov_name, it->second);
             return DriverAOVAccessor{ device.aovs[aov_name].data(), it->second.IterationCount };
         } else {
             return DriverAOVAccessor{ it->second.Data.data(), it->second.IterationCount };
@@ -1086,7 +1094,7 @@ public:
                 return DriverAOVAccessor{ nullptr, 0 };
             }
 
-            if (!it->second.Mapped && devices[dev].aovs[aov_name].data() != nullptr) {
+            if (!it->second.HostOnly && !it->second.Mapped && devices[dev].aovs[aov_name].data() != nullptr) {
                 _SECTION(IG::SectionType::AOVHostUpdate);
                 anydsl::copy(devices[dev].aovs[aov_name], it->second.Data);
                 it->second.Mapped = true;
@@ -1171,7 +1179,13 @@ public:
 
         ignis_denoise(color.Data, normal.Data, albedo.Data, nullptr, output.Data, film_width, film_height, color.IterationCount);
 
-        aovs["Denoised"].IterationCount = 1; // Fix this
+        // Make sure the iteration count resembles the input
+        auto& outputAOV          = aovs["Denoised"];
+        outputAOV.IterationCount = color.IterationCount;
+        outputAOV.IterDiff       = 0;
+
+        // Map to device
+        mapAOVToDevice(dev, "Denoised", outputAOV, false);
     }
 #endif
 
@@ -1294,7 +1308,7 @@ void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRen
 
 #ifdef IG_HAS_DENOISER
     if (settings.apply_denoiser)
-        sInterface->denoise((int32_t)settings.device);
+        sInterface->denoise(get_dev_id(settings.device));
 #endif
 
     sInterface->unregisterThread();

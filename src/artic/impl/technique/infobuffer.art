@@ -47,11 +47,11 @@ fn @make_infobuffer_renderer(max_path_len: i32, aovs: AOVTable) -> Technique {
             let albedo  = color_mulf(mat.bsdf.eval(in_dir, out_dir), 1/cos); // We want the result without cosine term
 
             let n      = ctx.surf.local.col(2);
-            let normal = make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1);
+            let normal = make_color(n.x, n.y, n.z, 1);
 
             aov_normal.splat(ctx.pixel, normal);
             aov_albedo.splat(ctx.pixel, albedo);
-            aov_depth.splat(ctx.pixel, make_gray_color(ctx.hit.distance+ib.distance));
+            aov_depth.splat(ctx.pixel, make_gray_color(ctx.hit.distance + ib.distance));
         }
 
         Option[Color]::None
