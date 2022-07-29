@@ -41,17 +41,22 @@ fn @make_infobuffer_renderer(max_path_len: i32, aovs: AOVTable, handle_specular:
             let ib = unwrap_ibraypayload(payload);
 
             // Compute albedo
-            let out_dir = vec3_neg(ctx.ray.dir);
-            let in_dir  = vec3_reflect(out_dir, ctx.surf.local.col(2));
-            let cos     = absolute_cos(in_dir, ctx.surf.local.col(2));
-            let albedo  = color_mulf(mat.bsdf.eval(in_dir, out_dir), 1/cos); // We want the result without cosine term
+            let out_dir    = vec3_neg(ctx.ray.dir);
+            let mut albedo = color_builtins::black;
 
-            let n      = ctx.surf.local.col(2);
-            let normal = make_color(n.x, n.y, n.z, 1);
+            let samples = 16:i32;
+            let mut rnd = fnv_hash(fnv_init(), bitcast[u32](ctx.pixel));
+            for _i in unroll(0, samples) {
+                if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(&mut rnd, out_dir, false) {
+                    let cos = absolute_cos(mat_sample.in_dir, ctx.surf.local.col(2));
+                    albedo  = color_add(albedo, color_mulf(mat_sample.color, safe_div(mat_sample.pdf, samples as f32 * cos))); // We want the result without cosine term
+                }
+            }
 
-            aov_normal.splat(ctx.pixel, normal);
-            aov_albedo.splat(ctx.pixel, albedo);
-            aov_depth.splat(ctx.pixel, make_gray_color(ctx.hit.distance + ib.distance));
+            // Splat all
+            aov_normal.splat(ctx.pixel, vec3_to_color(ctx.surf.local.col(2)));
+            aov_albedo.splat(ctx.pixel, color_saturate(albedo, 1));
+            aov_depth.splat(ctx.pixel, make_gray_color(ctx.hit.distance + if !handle_specular { 0 } else { ib.distance }));
         }
 
         Option[Color]::None
