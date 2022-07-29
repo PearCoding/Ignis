@@ -133,6 +133,10 @@ struct CPUData {
 };
 thread_local CPUData* sThreadData = nullptr;
 
+#ifdef IG_HAS_DENOISER
+void ignis_denoise(const float*, const float*, const float*, const float*, float*, size_t, size_t, size_t);
+#endif
+
 constexpr size_t GPUStreamBufferCount = 2;
 class Interface {
     IG_CLASS_NON_COPYABLE(Interface);
@@ -244,13 +248,18 @@ public:
                 aovs.emplace(name, AOV{});
         }
 
-        host_pixels.Data           = anydsl::Array<float>(film_width * film_height * 3);
-        host_pixels.IterationCount = 0;
+        host_pixels.Data = anydsl::Array<float>(film_width * film_height * 3);
 
-        for (auto& p : aovs) {
-            p.second.Data           = anydsl::Array<float>(film_width * film_height * 3);
-            p.second.IterationCount = 0;
+#ifdef IG_HAS_DENOISER
+        if (aovs.count("Denoised") != 0) {
+            auto& aov          = aovs["Denoised"];
+            aov.IterationCount = 1;    // Fix it to one
+            aov.Mapped         = true; // Always mapped, ignore data from device
         }
+#endif
+
+        for (auto& p : aovs)
+            p.second.Data = anydsl::Array<float>(film_width * film_height * 3);
 
         resetFramebufferAccess();
     }
@@ -271,8 +280,10 @@ public:
     {
         host_pixels.Mapped = false;
 
-        for (auto& p : aovs)
-            p.second.Mapped = false;
+        for (auto& p : aovs) {
+            if (p.first != "Denoised")
+                p.second.Mapped = false;
+        }
     }
 
     template <typename T>
@@ -1061,8 +1072,7 @@ public:
     {
 #ifdef DEVICE_GPU
         const std::string aov_name = name ? std::string(name) : std::string{};
-        const bool is_framebuffer  = aov_name.empty() || aov_name == "Color";
-        if (is_framebuffer) {
+        if (aov_name.empty() || aov_name == "Color") {
             if (!host_pixels.Mapped && devices[dev].film_pixels.data() != nullptr) {
                 _SECTION(IG::SectionType::FramebufferHostUpdate);
                 anydsl::copy(devices[dev].film_pixels, host_pixels.Data);
@@ -1142,6 +1152,28 @@ public:
             }
         }
     }
+
+#ifdef IG_HAS_DENOISER
+    inline void denoise(int32_t dev)
+    {
+        if (aovs.count("Denoised") == 0)
+            return;
+
+        const auto color  = getAOVImageForHost(dev, {});
+        const auto normal = getAOVImageForHost(dev, "Normals");
+        const auto albedo = getAOVImageForHost(dev, "Albedo");
+        const auto output = getAOVImageForHost(dev, "Denoised");
+
+        IG_ASSERT(color.Data, "Expected valid color data for denoiser");
+        IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
+        IG_ASSERT(albedo.Data, "Expected valid albedo data for denoiser");
+        IG_ASSERT(output.Data, "Expected valid output data for denoiser");
+
+        ignis_denoise(color.Data, normal.Data, albedo.Data, nullptr, output.Data, film_width, film_height, color.IterationCount);
+
+        aovs["Denoised"].IterationCount = 1; // Fix this
+    }
+#endif
 
     inline void present()
     {
@@ -1259,6 +1291,11 @@ void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRen
 
     if (sInterface->setup.acquire_stats)
         cpu_data->stats.endShaderLaunch(IG::ShaderType::Device, {});
+
+#ifdef IG_HAS_DENOISER
+    if (settings.apply_denoiser)
+        sInterface->denoise((int32_t)settings.device);
+#endif
 
     sInterface->unregisterThread();
 }
@@ -1471,6 +1508,12 @@ IG_EXPORT DriverInterface ig_get_interface()
     interface.Target = IG::Target::AMDGPU;
 #else
 #error No device selected!
+#endif
+
+#ifdef IG_HAS_DENOISER
+    interface.HasDenoiser = true;
+#else
+    interface.HasDenoiser = false;
 #endif
 
     interface.SetupFunction               = glue_setup;

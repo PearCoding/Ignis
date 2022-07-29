@@ -23,6 +23,7 @@ struct RuntimeOptions {
     Target DesiredTarget = Target::INVALID;
     bool RecommendCPU    = true;
     bool RecommendGPU    = true;
+    bool UseDenoiser         = false;
     uint32 Device        = 0;
     uint32 SPI           = 0; // Detect automatically
     std::string OverrideTechnique;
@@ -55,7 +56,7 @@ public:
     [[nodiscard]] bool loadFromString(const std::string& str);
 
     /// Do a single iteration in non-tracing mode
-    void step();
+    void step(bool ignoreDenoiser = false);
     /// Do a single iteration in tracing mode
     void trace(const std::vector<Ray>& rays, std::vector<float>& data);
     /// Reset internal counters etc. This should be used if data (like camera orientation) has changed. Frame counter will NOT be reset
@@ -126,6 +127,8 @@ public:
     /// Increase frame count (only used in interactive sessions)
     inline void incFrameCount() { mCurrentFrame++; }
 
+    [[nodiscard]] inline bool hasDenoiser() const { return mLoadedInterface.HasDenoiser; }
+
     /// Get a list of all available techniques
     [[nodiscard]] static std::vector<std::string> getAvailableTechniqueTypes();
 
@@ -139,7 +142,7 @@ private:
     void shutdown();
     bool compileShaders();
     void* compileShader(const std::string& src, const std::string& func, const std::string& name);
-    void stepVariant(size_t variant);
+    void stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant);
     void traceVariant(const std::vector<Ray>& rays, size_t variant);
 
     const RuntimeOptions mOptions;

@@ -33,6 +33,7 @@ struct DriverRenderSettings {
     size_t work_width   = 0;
     size_t work_height  = 0;
     IG::TechniqueVariantInfo info;
+    bool apply_denoiser = false;
 };
 
 struct DriverAOVAccessor {
@@ -59,6 +60,7 @@ struct DriverInterface {
     IG::uint32 MinorVersion;
     const char* Revision;
     IG::Target Target;
+    bool HasDenoiser;
     DriverSetupFunction SetupFunction;
     DriverShutdownFunction ShutdownFunction;
     DriverRenderFunction RenderFunction;

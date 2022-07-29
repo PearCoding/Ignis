@@ -143,6 +143,7 @@
         "bsdf",
         "bsdfs",
         "Clearcoat",
+        "denoiser",
         "klems",
         "microfacet",
         "pathtracer",

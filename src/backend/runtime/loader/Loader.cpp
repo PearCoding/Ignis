@@ -27,6 +27,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.PixelSamplerType    = opts.PixelSamplerType;
     ctx.SamplesPerIteration = opts.SamplesPerIteration;
     ctx.IsTracer            = opts.IsTracer;
+    ctx.UseDenoiser         = opts.UseDenoiser;
     ctx.FilmWidth           = opts.FilmWidth;
     ctx.FilmHeight          = opts.FilmHeight;
     ctx.Lights              = std::make_unique<LoaderLight>();

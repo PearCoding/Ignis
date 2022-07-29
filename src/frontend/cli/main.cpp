@@ -124,7 +124,7 @@ int main(int argc, char** argv)
         auto ticks = std::chrono::high_resolution_clock::now();
 
         timer_render.start();
-        runtime->step();
+        runtime->step(samples_sec.size() != desired_iter-1);
         timer_render.stop();
 
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
