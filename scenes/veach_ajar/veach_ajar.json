@@ -1,0 +1,901 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 12,
+    "clamp": 10.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 83.97442499163331,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -0.13225606083869934,
+      -0.06638261675834656,
+      -0.9889902472496033,
+      2.608851432800293,
+      -0.9912155866622925,
+      0.008857247419655323,
+      0.13195914030075073,
+      2.3794970512390137,
+      -6.135763896963908e-08,
+      0.9977549314498901,
+      -0.06697090715169907,
+      1.54969322681427,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      256.0,
+      256.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "Mesh000",
+      "filename": "Meshes/Mesh000.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh001",
+      "filename": "Meshes/Mesh001.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh002",
+      "filename": "Meshes/Mesh002.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh003",
+      "filename": "Meshes/Mesh003.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh004",
+      "filename": "Meshes/Mesh004.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh005",
+      "filename": "Meshes/Mesh005.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh006",
+      "filename": "Meshes/Mesh006.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh007",
+      "filename": "Meshes/Mesh007.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh008",
+      "filename": "Meshes/Mesh008.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh009",
+      "filename": "Meshes/Mesh009.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh010",
+      "filename": "Meshes/Mesh010.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh011",
+      "filename": "Meshes/Mesh011.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh012",
+      "filename": "Meshes/Mesh012.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh013",
+      "filename": "Meshes/Mesh013.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh014",
+      "filename": "Meshes/Mesh014.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh015",
+      "filename": "Meshes/Mesh015.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh016",
+      "filename": "Meshes/Mesh016.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Plane",
+      "filename": "Meshes/Plane.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.001",
+      "base_color": "color(1.0, 1.0, 1.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.006",
+      "base_color": "_tex_0",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.010",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.012",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Material.001",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.013",
+      "base_color": "color(0.46207699179649353, 0.13013635575771332, 0.012286532670259476, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ",
+      "base_color": "color(1.0, 1.0, 1.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.014",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.015",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.008",
+      "base_color": "_tex_1",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.004",
+      "base_color": "_tex_2",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.002",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.003",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.007",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.016",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.005",
+      "base_color": "color(0.8000000715255737, 0.49950048327445984, 0.2797251045703888, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.009",
+      "base_color": "color(1.0, 1.0, 1.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "Default OBJ.011",
+      "base_color": "select(checkerboard(vec3(uv.x, uv.y, 0) * 40.100000381469727) == 1, color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0), color(0.0, 0.0, 0.0, 1.0))",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    }
+  ],
+  "entities": [
+    {
+      "name": "Mesh000-Mesh000",
+      "shape": "Mesh000",
+      "bsdf": "Default OBJ",
+      "transform": [
+        0.10975289344787598,
+        0.0,
+        0.0,
+        -1.6937015056610107,
+        0.0,
+        -1.788101577915313e-08,
+        -0.10975289344787598,
+        2.537137985229492,
+        0.0,
+        0.10975289344787598,
+        -1.788101577915313e-08,
+        0.645494818687439,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh001-Mesh001",
+      "shape": "Mesh001",
+      "bsdf": "Default OBJ.001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh002-Mesh002",
+      "shape": "Mesh002",
+      "bsdf": "Default OBJ.002",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh003-Mesh003",
+      "shape": "Mesh003",
+      "bsdf": "Default OBJ.003",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh004-Mesh004",
+      "shape": "Mesh004",
+      "bsdf": "Default OBJ.004",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh005-Mesh005",
+      "shape": "Mesh005",
+      "bsdf": "Default OBJ.005",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh006-Mesh006",
+      "shape": "Mesh006",
+      "bsdf": "Default OBJ.006",
+      "transform": [
+        0.8833749890327454,
+        -7.63555192406784e-08,
+        -0.46866685152053833,
+        -2.245504379272461,
+        -0.46866685152053833,
+        -1.439200616459857e-07,
+        -0.8833749890327454,
+        5.244446754455566,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        1.3784483671188354,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh007-Mesh007",
+      "shape": "Mesh007",
+      "bsdf": "Default OBJ.007",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh008-Mesh008",
+      "shape": "Mesh008",
+      "bsdf": "Default OBJ.008",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh009-Mesh009",
+      "shape": "Mesh009",
+      "bsdf": "Default OBJ.009",
+      "transform": [
+        0.10975289344787598,
+        0.0,
+        0.0,
+        -1.6937015056610107,
+        0.0,
+        -1.788101577915313e-08,
+        -0.10975289344787598,
+        2.537137985229492,
+        0.0,
+        0.10975289344787598,
+        -1.788101577915313e-08,
+        0.645494818687439,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh010-Mesh010",
+      "shape": "Mesh010",
+      "bsdf": "Default OBJ.010",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh011-Mesh011",
+      "shape": "Mesh011",
+      "bsdf": "Default OBJ.011",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh012-Mesh012",
+      "shape": "Mesh012",
+      "bsdf": "Default OBJ.012",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh013-Mesh013",
+      "shape": "Mesh013",
+      "bsdf": "Default OBJ.013",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh014-Mesh014",
+      "shape": "Mesh014",
+      "bsdf": "Default OBJ.014",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh015-Mesh015",
+      "shape": "Mesh015",
+      "bsdf": "Default OBJ.015",
+      "transform": [
+        0.8833749890327454,
+        -7.63555192406784e-08,
+        -0.46866685152053833,
+        -1.7653106451034546,
+        -0.46866685152053833,
+        -1.439200616459857e-07,
+        -0.8833749890327454,
+        5.620275020599365,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        1.2125623226165771,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh016-Mesh016",
+      "shape": "Mesh016",
+      "bsdf": "Default OBJ.016",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Plane-Plane",
+      "shape": "Plane",
+      "bsdf": "Material.001",
+      "transform": [
+        -0.015370775014162064,
+        -0.947587251663208,
+        -0.3191271126270294,
+        -4.703824996948242,
+        0.020446844398975372,
+        0.3188001811504364,
+        -0.9476013779640198,
+        3.352409601211548,
+        0.9996727705001831,
+        -0.021090509369969368,
+        0.014474962837994099,
+        1.39308500289917,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "area",
+      "name": "Plane-Plane",
+      "entity": "Plane-Plane",
+      "radiance": "(color(1.0, 1.0, 1.0, 1.0) * 250.0)"
+    }
+  ],
+  "textures": [
+    {
+      "type": "image",
+      "name": "_tex_0",
+      "filename": "textures/cherry-wood-texture.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_1",
+      "filename": "textures/landscape-with-a-lake.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_2",
+      "filename": "textures/Good Textures_005844.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    }
+  ]
+}

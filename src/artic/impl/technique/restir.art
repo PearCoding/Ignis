@@ -147,6 +147,24 @@ struct Reservoir {
     weight: f32
 }
 
+// fn @choose_random_pixel(pixel: i32, rnd: &mut RndState, range: f32) -> i32
+// {
+//     let work_info = get_work_info();
+
+//     //scale down pixel 
+//     let row = math_builtins::floor(pixel as f32 / work_info.width as f32);
+//     let column = pixel - work_info.width * (row as i32);
+
+//     let mut neighbour_offset_x = math_builtins::floor((randf(rnd) * range * 2.0) - range);
+//     let mut neighbour_offset_y = math_builtins::floor((randf(rnd) * range * 2.0) - range);
+
+//     //ckeck for borders
+//     neighbour_offset_x = math_builtins::fmin(math_builtins::fmax(column + neighbour_offset_x, 0), work_info.width);
+//     neighbour_offset_y = math_builtins::fmin(math_builtins::fmax(row + neighbour_offset_y, 0), work_info.height);
+    
+//     (neighbour_offset_x * neighbour_offset_y) as i32
+// }
+
     fn @update(r: &mut Reservoir, s_new: Sample, w_new: f32, pixel_idx: i32, buffer: DeviceBuffer, rnd: &mut RndState) -> () {
         
         //update weights in reservoir
@@ -174,6 +192,13 @@ struct Reservoir {
 
         //update M
     }
+
+fn @store_vec3_in_buffer(pixel: i32, buffer: DeviceBuffer, vec: Vec3)
+{
+    buffer.store_f32(pixel, vec.x);
+    buffer.store_f32(pixel + 1, vec.y);
+    buffer.store_f32(pixel + 2, vec.z); 
+}
 
 
 //How to do it better?
@@ -296,27 +321,16 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                      //let new_rnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
                      let new_rnd = rnd;
 
-
-                    //   if(pt.depth == 1) 
-                    //          {
-                    //              aov_depth_info.splat(pixel, make_color(1.0, 1.0, 1.0, 1.0));
-                    //          } else if (pt.depth == 2)
-                    //          {
-                    //             aov_depth_info.splat(pixel, make_color(-1.0, -1.0, -1.0, -1.0));
-                    //          }
-
-                    //dont do anything if not yet arrived at the sample point
-                        //   if pt.depth < 2 {
-                        //     return(ShadowRay::None)
-                        //   }  
-
                     // No shadow rays for specular materials
                     if mat.bsdf.is_specular || num_lights == 0 {
                         return(ShadowRay::None)
                     }
                     
                     if pt.depth + 1 > max_path_len {
-                        return(ShadowRay::None)
+                        if(randf(rnd) >= 0.25 && pt.depth != 3) 
+                        {
+                            return(ShadowRay::None)
+                        }
                     }
             
                     let (light_id, light_select_pdf) = light_selector.sample(new_rnd);
@@ -346,7 +360,10 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                         let factor = light_sample.pdf.value / pdf_l_s;
 
                         //store information for ReSTIR DI
-                        sample_buffer_di.store_f32(pixel * 19 + 15, pdf_l_s);
+                        if(!light.delta) 
+                        {
+                            sample_buffer_di.store_f32(pixel * 19 + 15, pdf_l_s);
+                        }
 
                         let contrib = handle_color(color_mulf(
                             color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));    
@@ -447,12 +464,14 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                  , mat: Material
                  ) -> Option[(Ray, RayPayload)] {
         let pt = unwrap_rsraypayload(payload);
-        //let newRnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
         let newRnd = rnd;
 
         
          if pt.depth + 1 > max_path_len {
-                 return(Option[(Ray, RayPayload)]::None)
+            if(randf(rnd) >= 0.25 && pt.depth != 3) 
+                        {
+                            return(Option[(Ray, RayPayload)]::None)
+                        }
                 }
 
         let out_dir = vec3_neg(ray.dir);
@@ -467,8 +486,7 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
             let new_contrib = color_mulf(contrib, 1 / rr_prob);
             
             //store needed information for resampling if depth is smaller or equal 2
-            if pt.depth <= 2
-            {
+
                 let sample_idx = pixel * 19;
                 let reservoir_idx = pixel * 22;
               if pt.depth == 1 
@@ -503,7 +521,6 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                    sample_buffer.store_f32(sample_idx + 15, mat_sample.pdf);
                    sample_buffer.store_vec3(sample_idx + 16, color_to_vec3(color_mulf(mat_sample.color, mat_sample.pdf)));
               }
-            }
 
             make_option(
                 make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
@@ -589,8 +606,8 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
          let mut w_new = 0.0;
          if(source_pdf != 0.0) 
          {
-            let w = averaged_radiance / source_pdf; 
-            w_new = w as f64;
+             let w = averaged_radiance / source_pdf; 
+             w_new = w as f64;
          }
 
           let mut rnd = generate_rnd_state(sample.sample_point.x, w_new as f32, (j * 22));
@@ -602,7 +619,7 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
           //if averaged radiance is 0 then set the reservoirs weight to 0 (otherwise division by 0)
           if(rad == 0.0) {
-             temporal_reservoir.weight = 0;
+             temporal_reservoir.weight = 0.0;
           } else {
               temporal_reservoir.weight = temporal_reservoir.w / (temporal_reservoir.sample_count * rad);
           }
@@ -610,6 +627,33 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
           //store updated reservoir again
           store_reservoir(temporal_reservoir_buffer, j, temporal_reservoir);
+
+          ////
+          
+        //   //start spatial resampling
+
+        //   //intialize needed variables
+        //   let r_s = load_sample_from_reservoir(j, spatial_reservoir_buffer);
+
+        //   for s in range(0, 2) 
+        //   {
+        //     let rnd_pxl = chooseRandomPixel(j, rnd, 5);
+
+        //     //load surface normals from sample buffer for similarity test
+        //     let rnd_pxl_normal = load_vec3_from_buffer(rnd_pxl * 19 + 3, sample_buffer); 
+
+        //     let angle = vec3_angle(sample.vis_normal, rnd_pxl_normal);
+
+        //     if(angle >= 25.0) 
+        //     {
+        //         continue();
+        //     }
+
+        //     let r_n = load_reservoir(rnd_pxl, temporal_reservoir_buffer);
+
+        //     //let jacobian = calculate_jacobian()
+        //   }
+
           
 
            //start with temporal resampling for DI
@@ -618,24 +662,19 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
            let mut temporal_reservoir_di = load_reservoir(j, temporal_reservoir_buffer_di);
 
            let averaged_radiance_di = color_average(sample_di.radiance); 
+         
+             let w_new_di = averaged_radiance_di; 
 
-          let mut w_new_di = 0.0;
-          if(sample_di.pdf != 0.0) 
-          {
-             let w = averaged_radiance_di; 
-             w_new_di = w as f64;
-          }
+          let mut rnd_di = generate_rnd_state((j * 22) as f32, sample.sample_point.x, rnd as i32);
 
-          let mut rnd_di = generate_rnd_state(sample_di.pdf, w_new_di as f32, (j * 22));
-
-         update(temporal_reservoir_di, sample_di, w_new_di as f32, (j * 22), temporal_reservoir_buffer_di, rnd_di);
+         update(temporal_reservoir_di, sample_di, w_new_di, (j * 22), temporal_reservoir_buffer_di, rnd_di);
 
            //update reservoirs W
            let rad_di = color_average(temporal_reservoir_di.sample.radiance);
 
            //if averaged radiance is 0 then set the reservoirs weight to 0 (otherwise division by 0)
            if(rad_di == 0.0) {
-              temporal_reservoir_di.weight = 0;
+              temporal_reservoir_di.weight = 0.0;
            } else {
                temporal_reservoir_di.weight = temporal_reservoir_di.w / (temporal_reservoir_di.sample_count * rad_di);
            }
@@ -652,8 +691,14 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
           let indirectRes = color_mul(rawIndirectRes, vec3_to_color(visPointBSDF));
           let directRes = aov_direct_light.get(j);
           aov_restir.splat(j, color_add(indirectRes, directRes));
-          //aov_restir.splat(j, rawIndirectRes);
+          //aov_restir.splat(j, indirectRes);
 
+          //reset intial buffers to 0 (not working on gpu for GI)
+          store_sample_in_reservoir(create_empty_sample(), j * 19, sample_buffer_di);
+          
+          //store_sample_in_reservoir(create_empty_sample(), j * 19, sample_buffer);
+
+          
       }
       device.sync();
 

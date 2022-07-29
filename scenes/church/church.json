@@ -1,0 +1,820 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 12,
+    "clamp": 10.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 73.73979529168804,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      0.013456068933010101,
+      0.3823917806148529,
+      0.9239023327827454,
+      -16.44037628173828,
+      0.9999094605445862,
+      -0.005168272648006678,
+      -0.012424004264175892,
+      0.0663430392742157,
+      2.412831599940546e-05,
+      0.9239858388900757,
+      -0.38242673873901367,
+      -0.6915912628173828,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      256.0,
+      256.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "_m_0_New object",
+      "filename": "Meshes/_m_0_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_1_New object",
+      "filename": "Meshes/_m_1_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_2_New object",
+      "filename": "Meshes/_m_2_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_3_New object",
+      "filename": "Meshes/_m_3_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_4_New object",
+      "filename": "Meshes/_m_4_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_5_New object",
+      "filename": "Meshes/_m_5_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_6_New object",
+      "filename": "Meshes/_m_6_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_7_New object",
+      "filename": "Meshes/_m_7_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_8_New object",
+      "filename": "Meshes/_m_8_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_9_New object",
+      "filename": "Meshes/_m_9_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_10_New object",
+      "filename": "Meshes/_m_10_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_11_New object",
+      "filename": "Meshes/_m_11_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_12_New object",
+      "filename": "Meshes/_m_12_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_13_New object",
+      "filename": "Meshes/_m_13_New object.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_14_New object",
+      "filename": "Meshes/_m_14_New object.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "principled",
+      "name": "sprljci",
+      "base_color": "color(0.784313976764679, 0.784313976764679, 0.784313976764679, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9105572700500488,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "kamen_zid_inner",
+      "base_color": "_tex_0",
+      "metallic": 0.0,
+      "roughness": 0.9105572700500488,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "kamen_zid",
+      "bsdf": "kamen_zid_inner",
+      "normal": "norm(Nx*((2*_tex_1-color(1)).xyz).x + Ny*((2*_tex_1-color(1)).xyz).y + N*((2*_tex_1-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "pod_tepih",
+      "base_color": "color(1.0, 0.11999999731779099, 0.10000000149011612, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9105572700500488,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "rozeta",
+      "base_color": "_tex_2",
+      "metallic": 0.0,
+      "roughness": 0.9105572700500488,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "stupovi",
+      "base_color": "_tex_2",
+      "metallic": 0.0,
+      "roughness": 0.9105572700500488,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "pod_rub_inner",
+      "base_color": "_tex_0",
+      "metallic": 0.0,
+      "roughness": 0.9105572700500488,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "pod_rub",
+      "bsdf": "pod_rub_inner",
+      "normal": "norm(Nx*((2*_tex_1-color(1)).xyz).x + Ny*((2*_tex_1-color(1)).xyz).y + N*((2*_tex_1-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "staklo_zeleno",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.494035542011261,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "staklo_zuto",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.494035542011261,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "staklo_crveno",
+      "base_color": "color(0.44117599725723267, 0.10392200201749802, 0.04901999980211258, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.494035542011261,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4331086423362762
+    },
+    {
+      "type": "principled",
+      "name": "kamen_zid_prozor_inner",
+      "base_color": "_tex_0",
+      "metallic": 0.0,
+      "roughness": 0.9105572700500488,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "kamen_zid_prozor",
+      "bsdf": "kamen_zid_prozor_inner",
+      "normal": "norm(Nx*((2*_tex_1-color(1)).xyz).x + Ny*((2*_tex_1-color(1)).xyz).y + N*((2*_tex_1-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "kamen_zid_parapet",
+      "base_color": "_tex_2",
+      "metallic": 0.0,
+      "roughness": 0.9105572700500488,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "staklo_plavo",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.494035542011261,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "staklo",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.494035542011261,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "pod_inner",
+      "base_color": "_tex_3",
+      "metallic": 0.0,
+      "roughness": 0.9105572700500488,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "pod",
+      "bsdf": "pod_inner",
+      "normal": "norm(Nx*((2*_tex_4-color(1)).xyz).x + Ny*((2*_tex_4-color(1)).xyz).y + N*((2*_tex_4-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "zid_vani_inner",
+      "base_color": "_tex_0",
+      "metallic": 0.0,
+      "roughness": 0.9105572700500488,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "zid_vani",
+      "bsdf": "zid_vani_inner",
+      "normal": "norm(Nx*((2*_tex_1-color(1)).xyz).x + Ny*((2*_tex_1-color(1)).xyz).y + N*((2*_tex_1-color(1)).xyz).z)"
+    }
+  ],
+  "entities": [
+    {
+      "name": "New object-_m_0_New object",
+      "shape": "_m_0_New object",
+      "bsdf": "sprljci",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_1_New object",
+      "shape": "_m_1_New object",
+      "bsdf": "staklo",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_2_New object",
+      "shape": "_m_2_New object",
+      "bsdf": "kamen_zid",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_3_New object",
+      "shape": "_m_3_New object",
+      "bsdf": "stupovi",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_4_New object",
+      "shape": "_m_4_New object",
+      "bsdf": "pod",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_5_New object",
+      "shape": "_m_5_New object",
+      "bsdf": "pod_tepih",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_6_New object",
+      "shape": "_m_6_New object",
+      "bsdf": "pod_rub",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_7_New object",
+      "shape": "_m_7_New object",
+      "bsdf": "kamen_zid_prozor",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_8_New object",
+      "shape": "_m_8_New object",
+      "bsdf": "zid_vani",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_9_New object",
+      "shape": "_m_9_New object",
+      "bsdf": "kamen_zid_parapet",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_10_New object",
+      "shape": "_m_10_New object",
+      "bsdf": "staklo_crveno",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_11_New object",
+      "shape": "_m_11_New object",
+      "bsdf": "rozeta",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_12_New object",
+      "shape": "_m_12_New object",
+      "bsdf": "staklo_zeleno",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_13_New object",
+      "shape": "_m_13_New object",
+      "bsdf": "staklo_plavo",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "New object-_m_14_New object",
+      "shape": "_m_14_New object",
+      "bsdf": "staklo_zuto",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "direction",
+      "name": "Sun",
+      "direction": [
+        0.035096388310194016,
+        0.9436666965484619,
+        -0.3290310204029083
+      ],
+      "irradiance": [
+        40.0,
+        40.0,
+        40.0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "type": "image",
+      "name": "_tex_0",
+      "filename": "kamen.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_1",
+      "filename": "kamen-bump.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    },
+    {
+      "type": "image",
+      "name": "_tex_2",
+      "filename": "KAMEN-stup.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_3",
+      "filename": "mramor6x6.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_4",
+      "filename": "mramor6x6-bump.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    }
+  ]
+}

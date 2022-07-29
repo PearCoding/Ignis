@@ -1,0 +1,1487 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 12,
+    "clamp": 10.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 78.57881372500071,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -0.020942797884345055,
+      0.09061377495527267,
+      0.9956659078598022,
+      -12.861949920654297,
+      0.9997807145118713,
+      0.0018989145755767822,
+      0.020856482908129692,
+      -4.105258941650391,
+      -8.440189844804991e-07,
+      0.995884358882904,
+      -0.09063371270895004,
+      1.9214273691177368,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      256.0,
+      256.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "Roof",
+      "filename": "Meshes/Roof.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Thorn",
+      "filename": "Meshes/Thorn.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Vase Plant",
+      "filename": "Meshes/Vase Plant.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Vase Round",
+      "filename": "Meshes/Vase Round.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Background",
+      "filename": "Meshes/Background.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Bricks A",
+      "filename": "Meshes/Bricks A.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Arch",
+      "filename": "Meshes/Arch.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Ceiling A",
+      "filename": "Meshes/Ceiling A.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Column A",
+      "filename": "Meshes/Column A.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Floor A",
+      "filename": "Meshes/Floor A.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Column C",
+      "filename": "Meshes/Column C.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Details",
+      "filename": "Meshes/Details.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Column B",
+      "filename": "Meshes/Column B.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Flagpole",
+      "filename": "Meshes/Flagpole.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Fabric Green",
+      "filename": "Meshes/Fabric Green.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Fabric Blue",
+      "filename": "Meshes/Fabric Blue.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Fabric Red",
+      "filename": "Meshes/Fabric Red.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Curtain Blue",
+      "filename": "Meshes/Curtain Blue.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Curtain Red",
+      "filename": "Meshes/Curtain Red.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Curtain Green",
+      "filename": "Meshes/Curtain Green.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Chain",
+      "filename": "Meshes/Chain.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Vase Hanging",
+      "filename": "Meshes/Vase Hanging.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Vase",
+      "filename": "Meshes/Vase.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Lion",
+      "filename": "Meshes/Lion.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "principled",
+      "name": "fabric_a",
+      "base_color": "_tex_0",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "chain_inner",
+      "base_color": "_tex_1",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "chain",
+      "bsdf": "chain_inner",
+      "normal": "norm(Nx*((2*_tex_2-color(1)).xyz).x + Ny*((2*_tex_2-color(1)).xyz).y + N*((2*_tex_2-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "Material__25_inner",
+      "base_color": "_tex_3",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "Material__25",
+      "bsdf": "Material__25_inner",
+      "normal": "norm(Nx*((2*_tex_4-color(1)).xyz).x + Ny*((2*_tex_4-color(1)).xyz).y + N*((2*_tex_4-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "Material__298_inner",
+      "base_color": "_tex_5",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "Material__298",
+      "bsdf": "Material__298_inner",
+      "normal": "norm(Nx*((2*_tex_6-color(1)).xyz).x + Ny*((2*_tex_6-color(1)).xyz).y + N*((2*_tex_6-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "VasePlant_inner",
+      "base_color": "_tex_7",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "VasePlant",
+      "bsdf": "VasePlant_inner",
+      "normal": "norm(Nx*((2*_tex_8-color(1)).xyz).x + Ny*((2*_tex_8-color(1)).xyz).y + N*((2*_tex_8-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "vase_hanging",
+      "base_color": "_tex_9",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "leaf_inner",
+      "base_color": "_tex_10",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "leaf",
+      "bsdf": "leaf_inner",
+      "normal": "norm(Nx*((2*_tex_11-color(1)).xyz).x + Ny*((2*_tex_11-color(1)).xyz).y + N*((2*_tex_11-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "flagpole",
+      "base_color": "_tex_12",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "vase_round_inner",
+      "base_color": "_tex_13",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "vase_round",
+      "bsdf": "vase_round_inner",
+      "normal": "norm(Nx*((2*_tex_14-color(1)).xyz).x + Ny*((2*_tex_14-color(1)).xyz).y + N*((2*_tex_14-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "arch",
+      "base_color": "_tex_15",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "fabric_g",
+      "base_color": "_tex_16",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "details",
+      "base_color": "_tex_17",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "column_a_inner",
+      "base_color": "_tex_18",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "column_a",
+      "bsdf": "column_a_inner",
+      "normal": "norm(Nx*((2*_tex_19-color(1)).xyz).x + Ny*((2*_tex_19-color(1)).xyz).y + N*((2*_tex_19-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "fabric_e",
+      "base_color": "_tex_20",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "fabric_c",
+      "base_color": "_tex_21",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "floor.001",
+      "base_color": "_tex_22",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "ceiling.001",
+      "base_color": "_tex_23",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "bricks_inner",
+      "base_color": "_tex_24",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "bricks",
+      "bsdf": "bricks_inner",
+      "normal": "norm(Nx*((2*_tex_25-color(1)).xyz).x + Ny*((2*_tex_25-color(1)).xyz).y + N*((2*_tex_25-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "column_b_inner",
+      "base_color": "_tex_26",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "column_b",
+      "bsdf": "column_b_inner",
+      "normal": "norm(Nx*((2*_tex_27-color(1)).xyz).x + Ny*((2*_tex_27-color(1)).xyz).y + N*((2*_tex_27-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "fabric_f",
+      "base_color": "_tex_28",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "vase",
+      "base_color": "_tex_29",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "roof",
+      "base_color": "_tex_30",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "column_c_inner",
+      "base_color": "_tex_31",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "transform",
+      "name": "column_c",
+      "bsdf": "column_c_inner",
+      "normal": "norm(Nx*((2*_tex_32-color(1)).xyz).x + Ny*((2*_tex_32-color(1)).xyz).y + N*((2*_tex_32-color(1)).xyz).z)"
+    },
+    {
+      "type": "principled",
+      "name": "fabric_d",
+      "base_color": "_tex_33",
+      "metallic": 0.0,
+      "roughness": 0.8945907354354858,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    }
+  ],
+  "entities": [
+    {
+      "name": "Roof-Roof",
+      "shape": "Roof",
+      "bsdf": "roof",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Thorn-Thorn",
+      "shape": "Thorn",
+      "bsdf": "leaf",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Vase Plant-Vase Plant",
+      "shape": "Vase Plant",
+      "bsdf": "VasePlant",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Vase Round-Vase Round",
+      "shape": "Vase Round",
+      "bsdf": "vase_round",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Background-Background",
+      "shape": "Background",
+      "bsdf": "Material__298",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Bricks A-Bricks A",
+      "shape": "Bricks A",
+      "bsdf": "bricks",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Arch-Arch",
+      "shape": "Arch",
+      "bsdf": "arch",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Ceiling A-Ceiling A",
+      "shape": "Ceiling A",
+      "bsdf": "ceiling.001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Column A-Column A",
+      "shape": "Column A",
+      "bsdf": "column_a",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Floor A-Floor A",
+      "shape": "Floor A",
+      "bsdf": "floor.001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Column C-Column C",
+      "shape": "Column C",
+      "bsdf": "column_c",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Details-Details",
+      "shape": "Details",
+      "bsdf": "details",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Column B-Column B",
+      "shape": "Column B",
+      "bsdf": "column_b",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Flagpole-Flagpole",
+      "shape": "Flagpole",
+      "bsdf": "flagpole",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Fabric Green-Fabric Green",
+      "shape": "Fabric Green",
+      "bsdf": "fabric_e",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Fabric Blue-Fabric Blue",
+      "shape": "Fabric Blue",
+      "bsdf": "fabric_d",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Fabric Red-Fabric Red",
+      "shape": "Fabric Red",
+      "bsdf": "fabric_a",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Curtain Blue-Curtain Blue",
+      "shape": "Curtain Blue",
+      "bsdf": "fabric_g",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Curtain Red-Curtain Red",
+      "shape": "Curtain Red",
+      "bsdf": "fabric_c",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Curtain Green-Curtain Green",
+      "shape": "Curtain Green",
+      "bsdf": "fabric_f",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Chain-Chain",
+      "shape": "Chain",
+      "bsdf": "chain",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Vase Hanging-Vase Hanging",
+      "shape": "Vase Hanging",
+      "bsdf": "vase_hanging",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Vase-Vase",
+      "shape": "Vase",
+      "bsdf": "vase",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Lion-Lion",
+      "shape": "Lion",
+      "bsdf": "Material__25",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "direction",
+      "name": "Sun",
+      "direction": [
+        -9.677359003035235e-08,
+        -0.34289780259132385,
+        -0.939372718334198
+      ],
+      "irradiance": [
+        80.0,
+        80.0,
+        80.0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "type": "image",
+      "name": "_tex_0",
+      "filename": "textures/diffuse/sponza_fabric_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_1",
+      "filename": "textures/diffuse/chain_texture.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_2",
+      "filename": "textures/chain_texture_ddn.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    },
+    {
+      "type": "image",
+      "name": "_tex_3",
+      "filename": "textures/diffuse/lion.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_4",
+      "filename": "textures/lion_ddn.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    },
+    {
+      "type": "image",
+      "name": "_tex_5",
+      "filename": "textures/diffuse/background.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_6",
+      "filename": "textures/background_ddn.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    },
+    {
+      "type": "image",
+      "name": "_tex_7",
+      "filename": "textures/diffuse/vase_plant.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_8",
+      "filename": "textures/vase_plant_NRM.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    },
+    {
+      "type": "image",
+      "name": "_tex_9",
+      "filename": "textures/diffuse/vase_hanging.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_10",
+      "filename": "textures/diffuse/sponza_thorn_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_11",
+      "filename": "textures/sponza_thorn_ddn.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    },
+    {
+      "type": "image",
+      "name": "_tex_12",
+      "filename": "textures/diffuse/sponza_flagpole_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_13",
+      "filename": "textures/diffuse/vase_round.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_14",
+      "filename": "textures/vase_round_ddn.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    },
+    {
+      "type": "image",
+      "name": "_tex_15",
+      "filename": "textures/diffuse/sponza_arch_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_16",
+      "filename": "textures/diffuse/sponza_curtain_blue_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_17",
+      "filename": "textures/diffuse/sponza_details_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_18",
+      "filename": "textures/diffuse/sponza_column_a_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_19",
+      "filename": "textures/sponza_column_a_ddn.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    },
+    {
+      "type": "image",
+      "name": "_tex_20",
+      "filename": "textures/diffuse/sponza_fabric_green_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_21",
+      "filename": "textures/diffuse/sponza_curtain_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_22",
+      "filename": "textures/diffuse/sponza_floor_a_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_23",
+      "filename": "textures/diffuse/sponza_ceiling_a_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_24",
+      "filename": "textures/diffuse/spnza_bricks_a_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_25",
+      "filename": "textures/diffuse/spnza_bricks_a_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    },
+    {
+      "type": "image",
+      "name": "_tex_26",
+      "filename": "textures/diffuse/sponza_column_b_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_27",
+      "filename": "textures/sponza_column_b_ddn.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    },
+    {
+      "type": "image",
+      "name": "_tex_28",
+      "filename": "textures/diffuse/sponza_curtain_green_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_29",
+      "filename": "textures/diffuse/vase_dif.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_30",
+      "filename": "textures/diffuse/sponza_roof_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_31",
+      "filename": "textures/diffuse/sponza_column_c_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_32",
+      "filename": "textures/sponza_column_c_ddn.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    },
+    {
+      "type": "image",
+      "name": "_tex_33",
+      "filename": "textures/diffuse/sponza_fabric_blue_diff.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    }
+  ]
+}

@@ -124,7 +124,7 @@ static void restir_body_loader(std::ostream& stream, const std::string&, const s
         }
     }
 
-    stream << "  let technique = make_restir_renderer(device," << max_depth << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
+    stream << "  let technique = make_restir_renderer(device," << 3 << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
 }
 
 static void restir_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
@@ -250,7 +250,7 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
         }
     }
 
-    stream << "  let technique = make_path_renderer(" << 2 << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
+    stream << "  let technique = make_path_renderer(" << 4 << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
 }
 
 static void path_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
