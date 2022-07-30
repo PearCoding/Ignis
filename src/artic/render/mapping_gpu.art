@@ -860,7 +860,7 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_custom_dyntable(dev_id, name, &mut table);
         table
     },
-    load_bvh_table      = @ |bvhs| -> BVHTable {
+    load_bvh_table      = @ |bvhs, disp_map| -> BVHTable {
         @ |id| {
             let entry  = get_lookup_entry(id as u64, bvhs, accb); 
             let header = get_table_entry(entry.offset, bvhs, accb);
@@ -869,7 +869,7 @@ fn @make_gpu_device( dev_id: i32
             let nodes = get_table_ptr(entry.offset + 16, bvhs) as &[Node2];
             let tris  = get_table_ptr(entry.offset + 16 + leaf_offset * (sizeof[Node2]() as u64), bvhs) as &[Tri1];
 
-            make_gpu_bvh2_tri1(nodes, tris, is_nvvm, min_max)
+            make_gpu_bvh2_tri1(nodes, tris, is_nvvm, min_max, disp_map)
         } 
     },
     load_image = @ |filename| {

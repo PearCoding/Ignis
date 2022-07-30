@@ -14,6 +14,21 @@ struct Tri {
     n:  Vec3  // Geometric normal (= cross(e1, e2))
 }
 
+struct UVTri {
+    v0: Vec3, // First vertex
+    v1: Vec3, // Second vertex
+    v2: Vec3, // Third vertex
+    e1: Vec3, // First edge (= v0 - v1)
+    e2: Vec3, // Second edge (= v2 - v0)
+    n:  Vec3, // Geometric normal (= cross(e1, e2))
+    c0: Vec2,
+    c1: Vec2,
+    c2: Vec2,
+    wc0: Vec2,
+    wc1: Vec2,
+    wc2: Vec2
+}
+
 // Min/max functions required to perform the ray-box test
 struct MinMax {
     fmaxmaxf:   fn (f32, f32, f32) -> f32,
@@ -62,6 +77,30 @@ fn @make_tri(v0: Vec3, e1: Vec3, e2: Vec3, n: Vec3) = Tri {
     e2 = e2,
     n  = n
 };
+
+fn @make_uv_tri(v0: Vec3, e1: Vec3, e2: Vec3, n: Vec3, c0: Vec2, c1: Vec2, c2: Vec2, wc0: Vec2, wc1: Vec2, wc2: Vec2) = UVTri {
+    v0 = v0,
+    v1 = vec3_sub(v0, e1),
+    v2 = vec3_add(v0, e2),
+    e1 = e1,
+    e2 = e2,
+    n  = n,
+    c0 = c0,
+    c1 = c1,
+    c2 = c2,
+    wc0 = wc0,
+    wc1 = wc1,
+    wc2 = wc2
+};
+
+fn @uvtri2tri(uvtri : UVTri) -> Tri {
+    make_tri(
+        uvtri.v0,
+        uvtri.e1,
+        uvtri.e2,
+        uvtri.n
+    )
+}
 
 fn @empty_hit(tmax: f32) = make_hit(-1, -1, tmax, undef[Vec2]());
 

@@ -5,11 +5,15 @@ fn ig_render(settings: &Settings) -> () {
     let device = @get_device(settings.device);
 
     let dtb  = device.load_scene_database();
+    let displacement_map = device.load_image("/home/niklas/hiwi/Ignis/scenes/textures/grid_weight.png");
+    //let pix = |x:i32,y:i32| {make_vec4(0,0,0,1)};
+    //displacement_map = make_image_rgba32(pix, 1, 1);
+
     let acc  = TraceAccessor {
         info     = device.load_scene_info(),
         shapes   = device.load_shape_table(dtb.shapes),
         entities = device.load_entity_table(dtb.entities),
-        bvhs     = device.load_bvh_table(dtb.bvhs)
+        bvhs     = device.load_bvh_table(dtb.bvhs, displacement_map)
     };
 
     let scene = SceneGeometry {

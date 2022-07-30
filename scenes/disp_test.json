@@ -19,18 +19,10 @@
 			"name": "tex",
 			"filename": "textures/bumpmap.png",
 			"filter_type": "trilinear"
-		},
-		{
-			"type": "checkerboard",
-			"name": "check",
-			"scale_x": 10,
-			"scale_y": 5,
-			"color0": [0.3,0.3,0.3],
-			"color1": [1,1,1]
 		}
 	],
 	"bsdfs": [
-		{"type":"diffuse", "name": "mat-Sphere", "reflectance":"check"}
+		{"type":"diffuse", "name": "mat-Sphere", "reflectance":"tex"}
 	],
 	"shapes": [
 		{"type":"uvsphere", "name":"Sphere"}

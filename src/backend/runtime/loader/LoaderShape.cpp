@@ -307,8 +307,10 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
         // Build bounding box
         BoundingBox& bbox = boxes[i];
         bbox              = BoundingBox::Empty();
-        for (const auto& v : mesh.vertices)
-            bbox.extend(v);
+        for (int i = 0; i < mesh.vertices.size(); i++) {
+            bbox.extend(mesh.vertices[i]);
+            bbox.extend(mesh.vertices[i] + mesh.normals[i] * 1.01f);
+        }
         bbox.inflate(1e-5f); // Make sure it has a volume
     };
 

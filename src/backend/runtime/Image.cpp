@@ -294,8 +294,10 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
         int width = 0, height = 0, channels = 0;
         float* data = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 0);
 
-        if (data == nullptr)
-            throw ImageLoadException("Could not load image", path);
+        if (data == nullptr) {
+            auto reason = stbi_failure_reason();
+            throw ImageLoadException(reason, path);
+        }
 
         img.width  = width;
         img.height = height;

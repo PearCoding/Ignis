@@ -8,7 +8,7 @@
 		"fov": 40,
 		"near_clip": 0.1,
 		"far_clip": 100,
-		"transform": [ -1,0,0,0, 0,1,0,0, 0,0,-1,0, 0,0,0,1 ]
+		"transform": [ -1,0,0,0, 0,1,0,0, 0,0,-1,10, 0,0,0,1 ]
 	},
 	"film": {
 		"size": [1000, 1000]
@@ -26,11 +26,17 @@
 			"scale_y": 10,
 			"color0": [0,0,0],
 			"color1": [1,1,1]
+		},
+		{
+			"type": "bitmap",
+			"name": "tex",
+			"filename": "textures/grid_weight.png",
+			"filter_type": "trilinear"
 		}
 	],
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Fallback"},
-		{"type":"diffuse", "name": "mat-Plane", "reflectance":"check"}
+		{"type":"diffuse", "name": "mat-Plane", "reflectance":"tex"}
 	],
 	"shapes": [
 		{"type":"rectangle", "name":"Plane", "width": 4, "height": 4}
@@ -39,6 +45,6 @@
 		{"name":"Plane","shape":"Plane", "bsdf":"mat-Plane", "transform": {"rotate": [0,0,45], "translate": [0,0,0]}}
 	],
 	"lights": [
-		{"type":"env", "name":"Sky", "radiance": "env", "transform": [1,0,0, 0,0,1, 0,1,0]}
+		{"type":"sky", "name":"Sky"}
 	]
 }

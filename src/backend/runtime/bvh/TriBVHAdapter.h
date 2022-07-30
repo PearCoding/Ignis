@@ -164,7 +164,12 @@ protected:
                 { in_tri.e1[0], in_tri.e1[1], in_tri.e1[2] },
                 0,
                 { in_tri.e2[0], in_tri.e2[1], in_tri.e2[2] },
-                in_tri.prim_id });
+                in_tri.prim_id,
+                { in_tri.c0[0], in_tri.c0[1] }, //c0
+                { in_tri.c1[0], in_tri.c1[1] }, //c1
+                { in_tri.c2[0], in_tri.c2[1] }, //c2
+                {0,0} // additional padding
+                });
         }
 
         // Add sentinel
@@ -192,26 +197,14 @@ inline void build_bvh(const TriMesh& tri_mesh,
     const size_t num_tris = tri_mesh.indices.size() / 4;
     std::vector<TriangleProxy> primitives(num_tris);
     for (size_t i = 0; i < num_tris; ++i) {
-        auto& n0      = tri_mesh.normals[tri_mesh.indices[i * 4 + 0]];
-        auto& n1      = tri_mesh.normals[tri_mesh.indices[i * 4 + 1]];
-        auto& n2      = tri_mesh.normals[tri_mesh.indices[i * 4 + 2]];
+        auto& v0      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 0]];
+        auto& v1      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 1]];
+        auto& v2      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 2]];
 
         auto& c0      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 0]];
         auto& c1      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 1]];
         auto& c2      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 2]];
 
-        int id0 = (int)floor(c0[0] * disp_tex.width * disp_tex.height + c0[1] * disp_tex.height) * 4;   
-        int id1 = (int)floor(c1[0] * disp_tex.width * disp_tex.height + c1[1] * disp_tex.height) * 4; 
-        int id2 = (int)floor(c2[0] * disp_tex.width * disp_tex.height + c2[1] * disp_tex.height) * 4; 
-
-        float d0 = disp_tex.pixels[id0] * 2 * 0;
-        float d1 = disp_tex.pixels[id1] * 2 * 0;
-        float d2 = disp_tex.pixels[id2] * 2 * 0;
-
-        auto& v0      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 0]] + n0 * d0;
-        auto& v1      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 1]] + n1 * d1;
-        auto& v2      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 2]] + n2 * d2;
-        
         auto tri = TriangleProxy(v0, v1, v2);
         tri.c0 = c0;
         tri.c1 = c1;
@@ -224,6 +217,40 @@ inline void build_bvh(const TriMesh& tri_mesh,
 
     auto [bboxes, centers] = bvh::compute_bounding_boxes_and_centers(primitives.data(), primitives.size());
     auto global_bbox       = bvh::compute_bounding_boxes_union(bboxes.get(), primitives.size());
+
+    for (size_t i = 0; i < num_tris; ++i) {
+        TriangleProxy t = primitives[i];
+
+        auto normal = normalize(cross(t.e1, t.e2));
+
+        auto& c0      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 0]];
+        auto& c1      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 1]];
+        auto& c2      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 2]];
+
+        int id0 = (int)floor(c0.x() * disp_tex.width * disp_tex.height + c0.y() * disp_tex.height) * 4;   
+        int id1 = (int)floor(c1.x() * disp_tex.width * disp_tex.height + c1.y() * disp_tex.height) * 4; 
+        int id2 = (int)floor(c2.x() * disp_tex.width * disp_tex.height + c2.y() * disp_tex.height) * 4; 
+
+        float d0 = disp_tex.pixels[id0];
+        float d1 = disp_tex.pixels[id1];
+        float d2 = disp_tex.pixels[id2];
+
+        
+        primitives[i].c0 = c0;
+        primitives[i].c1 = c1;
+        primitives[i].c2 = c2;
+
+        bvh::BoundingBox<float> bb;
+        bb.extend(t.p0  );
+        bb.extend(t.p1());
+        bb.extend(t.p2());
+        bb.extend(t.p0   + normal * 1.01f);
+        bb.extend(t.p1() + normal * 1.01f);
+        bb.extend(t.p2() + normal * 1.01f);
+
+        bboxes[i] = bb;
+
+    }
 
     Bvh bvh;
     BvhBuilder builder(bvh);

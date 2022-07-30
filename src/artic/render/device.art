@@ -67,7 +67,7 @@ struct Device {
     load_custom_dyntable: fn (&[u8] /* Filename */) -> DynTable,
 
     // [Internal] Load the whole shape bvh table from a dynamic table
-    load_bvh_table: fn (DynTable) -> BVHTable,
+    load_bvh_table: fn (DynTable, Image) -> BVHTable,
 
     // [Internal] Will load the rays given in 'tracing' mode
     load_rays: fn () -> &[StreamRay],
