@@ -48,6 +48,11 @@ fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, mode: F
     }
 
     Camera {
+                
+        near = 0.0,
+        far  = 0.0,
+        fov = 0.0,
+
         generate_ray = @ |_, x, y| {
             make_ray(eye, compute_d(x,y), tmin, tmax)
         },

@@ -1,5 +1,10 @@
 // Special camera to satisfy issues when using tracing mode
 fn @make_null_camera() = Camera {
+
+    near = 0.0,
+    far  = 0.0,
+    fov = 0.0,
+
     generate_ray = @ |_, _, _| make_ray(make_vec3(0,0,0), make_vec3(0,0,1), 0, flt_max),
     differential = @ |_| ( make_vec3(0,0,0), make_vec3(0,0,0) )
 };

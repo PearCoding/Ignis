@@ -9,6 +9,14 @@ fn @make_uniform_pixel_sampler() -> PixelSampler {
     }
 }
 
+fn @make_in_the_middle_sampler() -> PixelSampler {
+	@|rnd, _, _, _| {
+		let rx = randf(rnd);
+		let ry = randf(rnd);
+        (0.5, 0.5)
+    }
+}
+
 // --------------------------
 fn @make_mjitt_pixel_sampler(bin_x: u32, bin_y: u32) -> PixelSampler {
 	let F1 = 0xa511e9b3 : u32;

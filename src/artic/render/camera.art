@@ -1,5 +1,10 @@
 // Opaque camera object
 struct Camera {
+
+    near: f32,
+    far: f32,
+    fov: f32,
+
     // Generates a ray for a point on the image plane (in [-1, 1]^2)
     generate_ray: fn (&mut RndState, f32, f32) -> Ray,
     // Returns dx and dy vectors in respect to the pixel position (given as index)

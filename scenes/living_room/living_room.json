@@ -1,0 +1,5338 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 12,
+    "clamp": 10.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 39.597752709049864,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -0.9216391444206238,
+      -0.04874107614159584,
+      -0.38497477769851685,
+      2.366002082824707,
+      -0.3877757489681244,
+      0.15283963084220886,
+      0.9089939594268799,
+      -6.715134620666504,
+      0.0145340571179986,
+      0.9870482683181763,
+      -0.15976358950138092,
+      1.2880197763442993,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      1920.0,
+      1080.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "_m_0_Lights (2)",
+      "filename": "Meshes/_m_0_Lights (2).ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_1_Lights (2)",
+      "filename": "Meshes/_m_1_Lights (2).ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_2_Lights (2)",
+      "filename": "Meshes/_m_2_Lights (2).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (2)",
+      "filename": "Meshes/Mesh (2).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (3)",
+      "filename": "Meshes/Mesh (3).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (6)",
+      "filename": "Meshes/Mesh (6).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (7)",
+      "filename": "Meshes/Mesh (7).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (8)",
+      "filename": "Meshes/Mesh (8).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (10)",
+      "filename": "Meshes/Mesh (10).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (12)",
+      "filename": "Meshes/Mesh (12).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (13)",
+      "filename": "Meshes/Mesh (13).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (14)",
+      "filename": "Meshes/Mesh (14).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (15)",
+      "filename": "Meshes/Mesh (15).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (16)",
+      "filename": "Meshes/Mesh (16).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (17)",
+      "filename": "Meshes/Mesh (17).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (18)",
+      "filename": "Meshes/Mesh (18).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (21)",
+      "filename": "Meshes/Mesh (21).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (22)",
+      "filename": "Meshes/Mesh (22).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (23)",
+      "filename": "Meshes/Mesh (23).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (24)",
+      "filename": "Meshes/Mesh (24).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (25)",
+      "filename": "Meshes/Mesh (25).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (26)",
+      "filename": "Meshes/Mesh (26).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (27)",
+      "filename": "Meshes/Mesh (27).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (28)",
+      "filename": "Meshes/Mesh (28).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (29)",
+      "filename": "Meshes/Mesh (29).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (31)",
+      "filename": "Meshes/Mesh (31).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (32)",
+      "filename": "Meshes/Mesh (32).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (33)",
+      "filename": "Meshes/Mesh (33).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (34)",
+      "filename": "Meshes/Mesh (34).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (181)",
+      "filename": "Meshes/Mesh (181).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (35)",
+      "filename": "Meshes/Mesh (35).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (180)",
+      "filename": "Meshes/Mesh (180).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (37)",
+      "filename": "Meshes/Mesh (37).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (38)",
+      "filename": "Meshes/Mesh (38).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (39)",
+      "filename": "Meshes/Mesh (39).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (179)",
+      "filename": "Meshes/Mesh (179).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (41)",
+      "filename": "Meshes/Mesh (41).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (42)",
+      "filename": "Meshes/Mesh (42).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (43)",
+      "filename": "Meshes/Mesh (43).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (44)",
+      "filename": "Meshes/Mesh (44).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (45)",
+      "filename": "Meshes/Mesh (45).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (46)",
+      "filename": "Meshes/Mesh (46).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (47)",
+      "filename": "Meshes/Mesh (47).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (178)",
+      "filename": "Meshes/Mesh (178).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (48)",
+      "filename": "Meshes/Mesh (48).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (49)",
+      "filename": "Meshes/Mesh (49).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (50)",
+      "filename": "Meshes/Mesh (50).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (51)",
+      "filename": "Meshes/Mesh (51).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (161)",
+      "filename": "Meshes/Mesh (161).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (177)",
+      "filename": "Meshes/Mesh (177).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (52)",
+      "filename": "Meshes/Mesh (52).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (53)",
+      "filename": "Meshes/Mesh (53).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (54)",
+      "filename": "Meshes/Mesh (54).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (55)",
+      "filename": "Meshes/Mesh (55).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (57)",
+      "filename": "Meshes/Mesh (57).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (160)",
+      "filename": "Meshes/Mesh (160).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (58)",
+      "filename": "Meshes/Mesh (58).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (60)",
+      "filename": "Meshes/Mesh (60).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (61)",
+      "filename": "Meshes/Mesh (61).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (64)",
+      "filename": "Meshes/Mesh (64).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (65)",
+      "filename": "Meshes/Mesh (65).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (66)",
+      "filename": "Meshes/Mesh (66).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (67)",
+      "filename": "Meshes/Mesh (67).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (68)",
+      "filename": "Meshes/Mesh (68).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (69)",
+      "filename": "Meshes/Mesh (69).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (176)",
+      "filename": "Meshes/Mesh (176).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (70)",
+      "filename": "Meshes/Mesh (70).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (71)",
+      "filename": "Meshes/Mesh (71).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (175)",
+      "filename": "Meshes/Mesh (175).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (73)",
+      "filename": "Meshes/Mesh (73).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (74)",
+      "filename": "Meshes/Mesh (74).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (75)",
+      "filename": "Meshes/Mesh (75).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (77)",
+      "filename": "Meshes/Mesh (77).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (80)",
+      "filename": "Meshes/Mesh (80).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (81)",
+      "filename": "Meshes/Mesh (81).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (82)",
+      "filename": "Meshes/Mesh (82).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (83)",
+      "filename": "Meshes/Mesh (83).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (84)",
+      "filename": "Meshes/Mesh (84).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (85)",
+      "filename": "Meshes/Mesh (85).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (86)",
+      "filename": "Meshes/Mesh (86).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (87)",
+      "filename": "Meshes/Mesh (87).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (172)",
+      "filename": "Meshes/Mesh (172).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (88)",
+      "filename": "Meshes/Mesh (88).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (89)",
+      "filename": "Meshes/Mesh (89).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (91)",
+      "filename": "Meshes/Mesh (91).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (90)",
+      "filename": "Meshes/Mesh (90).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (92)",
+      "filename": "Meshes/Mesh (92).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (93)",
+      "filename": "Meshes/Mesh (93).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (171)",
+      "filename": "Meshes/Mesh (171).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (94)",
+      "filename": "Meshes/Mesh (94).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (95)",
+      "filename": "Meshes/Mesh (95).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (170)",
+      "filename": "Meshes/Mesh (170).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (96)",
+      "filename": "Meshes/Mesh (96).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (97)",
+      "filename": "Meshes/Mesh (97).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (99)",
+      "filename": "Meshes/Mesh (99).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (102)",
+      "filename": "Meshes/Mesh (102).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (106)",
+      "filename": "Meshes/Mesh (106).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (107)",
+      "filename": "Meshes/Mesh (107).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (108)",
+      "filename": "Meshes/Mesh (108).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (109)",
+      "filename": "Meshes/Mesh (109).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (111)",
+      "filename": "Meshes/Mesh (111).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (110)",
+      "filename": "Meshes/Mesh (110).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (112)",
+      "filename": "Meshes/Mesh (112).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (114)",
+      "filename": "Meshes/Mesh (114).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (113)",
+      "filename": "Meshes/Mesh (113).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (116)",
+      "filename": "Meshes/Mesh (116).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (169)",
+      "filename": "Meshes/Mesh (169).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (117)",
+      "filename": "Meshes/Mesh (117).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (168)",
+      "filename": "Meshes/Mesh (168).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (118)",
+      "filename": "Meshes/Mesh (118).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (119)",
+      "filename": "Meshes/Mesh (119).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (167)",
+      "filename": "Meshes/Mesh (167).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (121)",
+      "filename": "Meshes/Mesh (121).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (122)",
+      "filename": "Meshes/Mesh (122).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (166)",
+      "filename": "Meshes/Mesh (166).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (123)",
+      "filename": "Meshes/Mesh (123).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (124)",
+      "filename": "Meshes/Mesh (124).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (125)",
+      "filename": "Meshes/Mesh (125).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (126)",
+      "filename": "Meshes/Mesh (126).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (127)",
+      "filename": "Meshes/Mesh (127).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (128)",
+      "filename": "Meshes/Mesh (128).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (129)",
+      "filename": "Meshes/Mesh (129).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (165)",
+      "filename": "Meshes/Mesh (165).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (130)",
+      "filename": "Meshes/Mesh (130).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (131)",
+      "filename": "Meshes/Mesh (131).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (132)",
+      "filename": "Meshes/Mesh (132).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (133)",
+      "filename": "Meshes/Mesh (133).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (134)",
+      "filename": "Meshes/Mesh (134).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (135)",
+      "filename": "Meshes/Mesh (135).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (164)",
+      "filename": "Meshes/Mesh (164).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (137)",
+      "filename": "Meshes/Mesh (137).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (136)",
+      "filename": "Meshes/Mesh (136).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (140)",
+      "filename": "Meshes/Mesh (140).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (141)",
+      "filename": "Meshes/Mesh (141).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (142)",
+      "filename": "Meshes/Mesh (142).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (143)",
+      "filename": "Meshes/Mesh (143).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (144)",
+      "filename": "Meshes/Mesh (144).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (145)",
+      "filename": "Meshes/Mesh (145).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (147)",
+      "filename": "Meshes/Mesh (147).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (149)",
+      "filename": "Meshes/Mesh (149).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (150)",
+      "filename": "Meshes/Mesh (150).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (151)",
+      "filename": "Meshes/Mesh (151).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (152)",
+      "filename": "Meshes/Mesh (152).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (153)",
+      "filename": "Meshes/Mesh (153).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (163)",
+      "filename": "Meshes/Mesh (163).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (162)",
+      "filename": "Meshes/Mesh (162).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (154)",
+      "filename": "Meshes/Mesh (154).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (157)",
+      "filename": "Meshes/Mesh (157).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (155)",
+      "filename": "Meshes/Mesh (155).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (156)",
+      "filename": "Meshes/Mesh (156).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Mesh (158)",
+      "filename": "Meshes/Mesh (158).ply"
+    },
+    {
+      "type": "ply",
+      "name": "Back Light",
+      "filename": "Meshes/Back Light.ply"
+    },
+    {
+      "type": "ply",
+      "name": "WhitePaint",
+      "filename": "Meshes/WhitePaint.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "principled",
+      "name": "Magazine",
+      "base_color": "_tex_0",
+      "metallic": 0.0,
+      "roughness": 0.858578622341156,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.1350312324060494
+    },
+    {
+      "type": "principled",
+      "name": "Cushion1",
+      "base_color": "_tex_1",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "Ceramic",
+      "base_color": "color(0.30000001192092896, 0.30000001192092896, 0.30000001192092896, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9105572700500488,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "Picture1",
+      "base_color": "_tex_2",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "DullSteel",
+      "base_color": "color(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9225403070449829,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "TvScreen",
+      "base_color": "color(0.009999999776482582, 0.009999999776482582, 0.009999999776482582, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9452277421951294,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "CeilingLampshade",
+      "base_color": "_tex_3",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "WhitePaint",
+      "base_color": "color(0.949999988079071, 0.949999988079071, 0.949999988079071, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9452277421951294,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.1199208302305514
+    },
+    {
+      "type": "principled",
+      "name": "RadioPlastic",
+      "base_color": "color(0.6499999761581421, 0.5699999928474426, 0.4000000059604645, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9452277421951294,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "Trim",
+      "base_color": "color(0.949999988079071, 0.949999988079071, 0.949999988079071, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9452277421951294,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.1199208302305514
+    },
+    {
+      "type": "principled",
+      "name": "RadioSurround",
+      "base_color": "color(0.20000000298023224, 0.10000000149011612, 0.009999999776482582, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "LampStand",
+      "base_color": "color(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "Picture",
+      "base_color": "_tex_4",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "RadioInside",
+      "base_color": "color(0.20000000298023224, 0.20000000298023224, 0.20000000298023224, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "BackLight",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "MiddleLight",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "BlindMaterial",
+      "base_color": "color(0.949999988079071, 0.949999988079071, 0.949999988079071, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9683772325515747,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.1350312324060494
+    },
+    {
+      "type": "principled",
+      "name": "BlackWroughtIron",
+      "base_color": "color(0.07999999821186066, 0.05999999865889549, 0.054999999701976776, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9452277421951294,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.189165521623142
+    },
+    {
+      "type": "principled",
+      "name": "LoveLettersBack",
+      "base_color": "color(0.10000000149011612, 0.019999999552965164, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "Picture5",
+      "base_color": "_tex_5",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "RadiatorKnobOuter",
+      "base_color": "color(0.800000011920929, 0.009999999776482582, 0.009999999776482582, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "Floor",
+      "base_color": "_tex_6",
+      "metallic": 0.0,
+      "roughness": 0.9292893409729004,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.1350312324060494
+    },
+    {
+      "type": "principled",
+      "name": "SmallPictureFrame",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9367544651031494,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "BlackMarble",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.858578622341156,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.0582151139170508
+    },
+    {
+      "type": "principled",
+      "name": "TableGlossy",
+      "base_color": "color(0.9900000095367432, 0.9900000095367432, 0.9900000095367432, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "LampshaderOuter",
+      "base_color": "_tex_7",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "Apple",
+      "base_color": "_tex_8",
+      "metallic": 0.0,
+      "roughness": 0.9163339734077454,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.103026852950586
+    },
+    {
+      "type": "principled",
+      "name": "Cushion3",
+      "base_color": "_tex_9",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "RightLight",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "LargePicture",
+      "base_color": "_tex_10",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "Cushion",
+      "base_color": "_tex_11",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "Picture2",
+      "base_color": "_tex_12",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "LeftLight",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "SofaLeather",
+      "base_color": "color(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "TvBevel",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9225403070449829,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.1350312324060494
+    },
+    {
+      "type": "principled",
+      "name": "CandleHolders",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8775255084037781,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "Carpet",
+      "base_color": "_tex_13",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "Walls",
+      "base_color": "color(0.6000000238418579, 0.6000000238418579, 0.6000000238418579, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "Books",
+      "base_color": "_tex_14",
+      "metallic": 0.0,
+      "roughness": 0.858578622341156,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.1350312324060494
+    },
+    {
+      "type": "principled",
+      "name": "RadiatorPanelsEnamel",
+      "base_color": "color(0.949999988079071, 0.949999988079071, 0.949999988079071, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.9367544651031494,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "Picture4",
+      "base_color": "_tex_15",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "Default",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.4940355718135834,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    }
+  ],
+  "entities": [
+    {
+      "name": "Lights (2)-_m_0_Lights (2)",
+      "shape": "_m_0_Lights (2)",
+      "bsdf": "MiddleLight",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Lights (2)-_m_1_Lights (2)",
+      "shape": "_m_1_Lights (2)",
+      "bsdf": "LeftLight",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Lights (2)-_m_2_Lights (2)",
+      "shape": "_m_2_Lights (2)",
+      "bsdf": "RightLight",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (2)-Mesh (2)",
+      "shape": "Mesh (2)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (3)-Mesh (3)",
+      "shape": "Mesh (3)",
+      "bsdf": "RadioPlastic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (6)-Mesh (6)",
+      "shape": "Mesh (6)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (7)-Mesh (7)",
+      "shape": "Mesh (7)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (8)-Mesh (8)",
+      "shape": "Mesh (8)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (10)-Mesh (10)",
+      "shape": "Mesh (10)",
+      "bsdf": "LampshaderOuter",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (12)-Mesh (12)",
+      "shape": "Mesh (12)",
+      "bsdf": "LargePicture",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (13)-Mesh (13)",
+      "shape": "Mesh (13)",
+      "bsdf": "RadiatorPanelsEnamel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (14)-Mesh (14)",
+      "shape": "Mesh (14)",
+      "bsdf": "SofaLeather",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (15)-Mesh (15)",
+      "shape": "Mesh (15)",
+      "bsdf": "Apple",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (16)-Mesh (16)",
+      "shape": "Mesh (16)",
+      "bsdf": "Walls",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (17)-Mesh (17)",
+      "shape": "Mesh (17)",
+      "bsdf": "RadiatorPanelsEnamel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (18)-Mesh (18)",
+      "shape": "Mesh (18)",
+      "bsdf": "RadioPlastic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (21)-Mesh (21)",
+      "shape": "Mesh (21)",
+      "bsdf": "Cushion",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (22)-Mesh (22)",
+      "shape": "Mesh (22)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (23)-Mesh (23)",
+      "shape": "Mesh (23)",
+      "bsdf": "TableGlossy",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (24)-Mesh (24)",
+      "shape": "Mesh (24)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (25)-Mesh (25)",
+      "shape": "Mesh (25)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (26)-Mesh (26)",
+      "shape": "Mesh (26)",
+      "bsdf": "LoveLettersBack",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (27)-Mesh (27)",
+      "shape": "Mesh (27)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (28)-Mesh (28)",
+      "shape": "Mesh (28)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (29)-Mesh (29)",
+      "shape": "Mesh (29)",
+      "bsdf": "TvScreen",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (31)-Mesh (31)",
+      "shape": "Mesh (31)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (32)-Mesh (32)",
+      "shape": "Mesh (32)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (33)-Mesh (33)",
+      "shape": "Mesh (33)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (34)-Mesh (34)",
+      "shape": "Mesh (34)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (181)-Mesh (181)",
+      "shape": "Mesh (181)",
+      "bsdf": "RadiatorPanelsEnamel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (35)-Mesh (35)",
+      "shape": "Mesh (35)",
+      "bsdf": "SofaLeather",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (180)-Mesh (180)",
+      "shape": "Mesh (180)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (37)-Mesh (37)",
+      "shape": "Mesh (37)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (38)-Mesh (38)",
+      "shape": "Mesh (38)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (39)-Mesh (39)",
+      "shape": "Mesh (39)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (179)-Mesh (179)",
+      "shape": "Mesh (179)",
+      "bsdf": "LampStand",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (41)-Mesh (41)",
+      "shape": "Mesh (41)",
+      "bsdf": "Default",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (42)-Mesh (42)",
+      "shape": "Mesh (42)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (43)-Mesh (43)",
+      "shape": "Mesh (43)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (44)-Mesh (44)",
+      "shape": "Mesh (44)",
+      "bsdf": "SofaLeather",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (45)-Mesh (45)",
+      "shape": "Mesh (45)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (46)-Mesh (46)",
+      "shape": "Mesh (46)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (47)-Mesh (47)",
+      "shape": "Mesh (47)",
+      "bsdf": "SmallPictureFrame",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (178)-Mesh (178)",
+      "shape": "Mesh (178)",
+      "bsdf": "RadiatorPanelsEnamel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (48)-Mesh (48)",
+      "shape": "Mesh (48)",
+      "bsdf": "Picture2",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (49)-Mesh (49)",
+      "shape": "Mesh (49)",
+      "bsdf": "Magazine",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (50)-Mesh (50)",
+      "shape": "Mesh (50)",
+      "bsdf": "SmallPictureFrame",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (51)-Mesh (51)",
+      "shape": "Mesh (51)",
+      "bsdf": "TvBevel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (161)-Mesh (161)",
+      "shape": "Mesh (161)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (177)-Mesh (177)",
+      "shape": "Mesh (177)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (52)-Mesh (52)",
+      "shape": "Mesh (52)",
+      "bsdf": "RadioPlastic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (53)-Mesh (53)",
+      "shape": "Mesh (53)",
+      "bsdf": "CeilingLampshade",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (54)-Mesh (54)",
+      "shape": "Mesh (54)",
+      "bsdf": "BlackMarble",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (55)-Mesh (55)",
+      "shape": "Mesh (55)",
+      "bsdf": "Trim",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (57)-Mesh (57)",
+      "shape": "Mesh (57)",
+      "bsdf": "Cushion1",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (160)-Mesh (160)",
+      "shape": "Mesh (160)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (58)-Mesh (58)",
+      "shape": "Mesh (58)",
+      "bsdf": "Default",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (60)-Mesh (60)",
+      "shape": "Mesh (60)",
+      "bsdf": "Cushion1",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (61)-Mesh (61)",
+      "shape": "Mesh (61)",
+      "bsdf": "CandleHolders",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (64)-Mesh (64)",
+      "shape": "Mesh (64)",
+      "bsdf": "CandleHolders",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (65)-Mesh (65)",
+      "shape": "Mesh (65)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (66)-Mesh (66)",
+      "shape": "Mesh (66)",
+      "bsdf": "Apple",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (67)-Mesh (67)",
+      "shape": "Mesh (67)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (68)-Mesh (68)",
+      "shape": "Mesh (68)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (69)-Mesh (69)",
+      "shape": "Mesh (69)",
+      "bsdf": "Picture",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (176)-Mesh (176)",
+      "shape": "Mesh (176)",
+      "bsdf": "Cushion3",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (70)-Mesh (70)",
+      "shape": "Mesh (70)",
+      "bsdf": "LoveLettersBack",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (71)-Mesh (71)",
+      "shape": "Mesh (71)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (175)-Mesh (175)",
+      "shape": "Mesh (175)",
+      "bsdf": "Default",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (73)-Mesh (73)",
+      "shape": "Mesh (73)",
+      "bsdf": "LoveLettersBack",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (74)-Mesh (74)",
+      "shape": "Mesh (74)",
+      "bsdf": "SmallPictureFrame",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (75)-Mesh (75)",
+      "shape": "Mesh (75)",
+      "bsdf": "BlackWroughtIron",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (77)-Mesh (77)",
+      "shape": "Mesh (77)",
+      "bsdf": "RadioSurround",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (80)-Mesh (80)",
+      "shape": "Mesh (80)",
+      "bsdf": "SofaLeather",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (81)-Mesh (81)",
+      "shape": "Mesh (81)",
+      "bsdf": "BlackWroughtIron",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (82)-Mesh (82)",
+      "shape": "Mesh (82)",
+      "bsdf": "Ceramic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (83)-Mesh (83)",
+      "shape": "Mesh (83)",
+      "bsdf": "CandleHolders",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (84)-Mesh (84)",
+      "shape": "Mesh (84)",
+      "bsdf": "SofaLeather",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (85)-Mesh (85)",
+      "shape": "Mesh (85)",
+      "bsdf": "Default",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (86)-Mesh (86)",
+      "shape": "Mesh (86)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (87)-Mesh (87)",
+      "shape": "Mesh (87)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (172)-Mesh (172)",
+      "shape": "Mesh (172)",
+      "bsdf": "SofaLeather",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (88)-Mesh (88)",
+      "shape": "Mesh (88)",
+      "bsdf": "SofaLeather",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (89)-Mesh (89)",
+      "shape": "Mesh (89)",
+      "bsdf": "Apple",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (91)-Mesh (91)",
+      "shape": "Mesh (91)",
+      "bsdf": "TableGlossy",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (90)-Mesh (90)",
+      "shape": "Mesh (90)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (92)-Mesh (92)",
+      "shape": "Mesh (92)",
+      "bsdf": "Picture1",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (93)-Mesh (93)",
+      "shape": "Mesh (93)",
+      "bsdf": "Apple",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (171)-Mesh (171)",
+      "shape": "Mesh (171)",
+      "bsdf": "RadiatorPanelsEnamel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (94)-Mesh (94)",
+      "shape": "Mesh (94)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (95)-Mesh (95)",
+      "shape": "Mesh (95)",
+      "bsdf": "LoveLettersBack",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (170)-Mesh (170)",
+      "shape": "Mesh (170)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (96)-Mesh (96)",
+      "shape": "Mesh (96)",
+      "bsdf": "Books",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (97)-Mesh (97)",
+      "shape": "Mesh (97)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (99)-Mesh (99)",
+      "shape": "Mesh (99)",
+      "bsdf": "Picture4",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (102)-Mesh (102)",
+      "shape": "Mesh (102)",
+      "bsdf": "LoveLettersBack",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (106)-Mesh (106)",
+      "shape": "Mesh (106)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (107)-Mesh (107)",
+      "shape": "Mesh (107)",
+      "bsdf": "RadioPlastic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (108)-Mesh (108)",
+      "shape": "Mesh (108)",
+      "bsdf": "LoveLettersBack",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (109)-Mesh (109)",
+      "shape": "Mesh (109)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (111)-Mesh (111)",
+      "shape": "Mesh (111)",
+      "bsdf": "SofaLeather",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (110)-Mesh (110)",
+      "shape": "Mesh (110)",
+      "bsdf": "Picture5",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (112)-Mesh (112)",
+      "shape": "Mesh (112)",
+      "bsdf": "SmallPictureFrame",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (114)-Mesh (114)",
+      "shape": "Mesh (114)",
+      "bsdf": "TableGlossy",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (113)-Mesh (113)",
+      "shape": "Mesh (113)",
+      "bsdf": "Walls",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (116)-Mesh (116)",
+      "shape": "Mesh (116)",
+      "bsdf": "Ceramic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (169)-Mesh (169)",
+      "shape": "Mesh (169)",
+      "bsdf": "RadiatorPanelsEnamel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (117)-Mesh (117)",
+      "shape": "Mesh (117)",
+      "bsdf": "RadioInside",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (168)-Mesh (168)",
+      "shape": "Mesh (168)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (118)-Mesh (118)",
+      "shape": "Mesh (118)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (119)-Mesh (119)",
+      "shape": "Mesh (119)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (167)-Mesh (167)",
+      "shape": "Mesh (167)",
+      "bsdf": "RadiatorPanelsEnamel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (121)-Mesh (121)",
+      "shape": "Mesh (121)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (122)-Mesh (122)",
+      "shape": "Mesh (122)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (166)-Mesh (166)",
+      "shape": "Mesh (166)",
+      "bsdf": "RadiatorPanelsEnamel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (123)-Mesh (123)",
+      "shape": "Mesh (123)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (124)-Mesh (124)",
+      "shape": "Mesh (124)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (125)-Mesh (125)",
+      "shape": "Mesh (125)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (126)-Mesh (126)",
+      "shape": "Mesh (126)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (127)-Mesh (127)",
+      "shape": "Mesh (127)",
+      "bsdf": "BlackWroughtIron",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (128)-Mesh (128)",
+      "shape": "Mesh (128)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (129)-Mesh (129)",
+      "shape": "Mesh (129)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (165)-Mesh (165)",
+      "shape": "Mesh (165)",
+      "bsdf": "RadiatorKnobOuter",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (130)-Mesh (130)",
+      "shape": "Mesh (130)",
+      "bsdf": "BlindMaterial",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (131)-Mesh (131)",
+      "shape": "Mesh (131)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (132)-Mesh (132)",
+      "shape": "Mesh (132)",
+      "bsdf": "RadioSurround",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (133)-Mesh (133)",
+      "shape": "Mesh (133)",
+      "bsdf": "BlackWroughtIron",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (134)-Mesh (134)",
+      "shape": "Mesh (134)",
+      "bsdf": "BlackWroughtIron",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (135)-Mesh (135)",
+      "shape": "Mesh (135)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (164)-Mesh (164)",
+      "shape": "Mesh (164)",
+      "bsdf": "RadiatorPanelsEnamel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (137)-Mesh (137)",
+      "shape": "Mesh (137)",
+      "bsdf": "BlackWroughtIron",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (136)-Mesh (136)",
+      "shape": "Mesh (136)",
+      "bsdf": "BlackWroughtIron",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (140)-Mesh (140)",
+      "shape": "Mesh (140)",
+      "bsdf": "Walls",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (141)-Mesh (141)",
+      "shape": "Mesh (141)",
+      "bsdf": "Floor",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (142)-Mesh (142)",
+      "shape": "Mesh (142)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (143)-Mesh (143)",
+      "shape": "Mesh (143)",
+      "bsdf": "Trim",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (144)-Mesh (144)",
+      "shape": "Mesh (144)",
+      "bsdf": "Trim",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (145)-Mesh (145)",
+      "shape": "Mesh (145)",
+      "bsdf": "Walls",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (147)-Mesh (147)",
+      "shape": "Mesh (147)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (149)-Mesh (149)",
+      "shape": "Mesh (149)",
+      "bsdf": "Walls",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (150)-Mesh (150)",
+      "shape": "Mesh (150)",
+      "bsdf": "SofaLeather",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (151)-Mesh (151)",
+      "shape": "Mesh (151)",
+      "bsdf": "RadioPlastic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (152)-Mesh (152)",
+      "shape": "Mesh (152)",
+      "bsdf": "Carpet",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (153)-Mesh (153)",
+      "shape": "Mesh (153)",
+      "bsdf": "TableGlossy",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (163)-Mesh (163)",
+      "shape": "Mesh (163)",
+      "bsdf": "RadiatorPanelsEnamel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (162)-Mesh (162)",
+      "shape": "Mesh (162)",
+      "bsdf": "RadiatorPanelsEnamel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (154)-Mesh (154)",
+      "shape": "Mesh (154)",
+      "bsdf": "Ceramic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (157)-Mesh (157)",
+      "shape": "Mesh (157)",
+      "bsdf": "Ceramic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (155)-Mesh (155)",
+      "shape": "Mesh (155)",
+      "bsdf": "Ceramic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (156)-Mesh (156)",
+      "shape": "Mesh (156)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Mesh (158)-Mesh (158)",
+      "shape": "Mesh (158)",
+      "bsdf": "DullSteel",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Back Light-Back Light",
+      "shape": "Back Light",
+      "bsdf": "BackLight",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "WhitePaint-WhitePaint",
+      "shape": "WhitePaint",
+      "bsdf": "WhitePaint",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "area",
+      "name": "Lights (2)-_m_0_Lights (2)",
+      "entity": "Lights (2)-_m_0_Lights (2)",
+      "radiance": "color(5.0, 5.0, 5.0, 1.0)"
+    },
+    {
+      "type": "area",
+      "name": "Lights (2)-_m_1_Lights (2)",
+      "entity": "Lights (2)-_m_1_Lights (2)",
+      "radiance": "color(5.0, 5.0, 5.0, 1.0)"
+    },
+    {
+      "type": "area",
+      "name": "Lights (2)-_m_2_Lights (2)",
+      "entity": "Lights (2)-_m_2_Lights (2)",
+      "radiance": "color(5.0, 5.0, 5.0, 1.0)"
+    },
+    {
+      "type": "area",
+      "name": "Back Light-Back Light",
+      "entity": "Back Light-Back Light",
+      "radiance": "color(2.0, 2.0, 2.0, 1.0)"
+    },
+    {
+      "type": "env",
+      "name": "__scene_world",
+      "radiance": "color(0.05087608844041824, 0.05087608844041824, 0.05087608844041824, 1.0)",
+      "transform": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "type": "image",
+      "name": "_tex_0",
+      "filename": "textures/magazine.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_1",
+      "filename": "textures/cushion-stripe-purple.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_2",
+      "filename": "textures/photo1.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_3",
+      "filename": "textures/Shade-paper.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_4",
+      "filename": "textures/picture11-vert.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_5",
+      "filename": "textures/photo4.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_6",
+      "filename": "textures/wood4.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_7",
+      "filename": "textures/shade-stripes.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_8",
+      "filename": "textures/apple.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_9",
+      "filename": "textures/cushion-purple-yellow-stripe.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_10",
+      "filename": "textures/pic5wide.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_11",
+      "filename": "textures/cushion-green-circles.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_12",
+      "filename": "textures/photo3.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_13",
+      "filename": "textures/carpet-text3b.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_14",
+      "filename": "textures/book-spines.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_15",
+      "filename": "textures/photo2.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    }
+  ]
+}

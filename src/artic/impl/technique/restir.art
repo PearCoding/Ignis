@@ -147,6 +147,24 @@ struct Reservoir {
     weight: f32
 }
 
+// fn @choose_random_pixel(pixel: i32, rnd: &mut RndState, range: f32) -> i32
+// {
+//     let work_info = get_work_info();
+
+//     //scale down pixel 
+//     let row = math_builtins::floor(pixel as f32 / work_info.width as f32);
+//     let column = pixel - work_info.width * (row as i32);
+
+//     let mut neighbour_offset_x = math_builtins::floor((randf(rnd) * range * 2.0) - range);
+//     let mut neighbour_offset_y = math_builtins::floor((randf(rnd) * range * 2.0) - range);
+
+//     //ckeck for borders
+//     neighbour_offset_x = math_builtins::fmin(math_builtins::fmax(column + neighbour_offset_x, 0), work_info.width);
+//     neighbour_offset_y = math_builtins::fmin(math_builtins::fmax(row + neighbour_offset_y, 0), work_info.height);
+    
+//     (neighbour_offset_x * neighbour_offset_y) as i32
+// }
+
     fn @update(r: &mut Reservoir, s_new: Sample, w_new: f32, rnd: &mut RndState) -> () {
         
         //update weights in reservoir
@@ -165,15 +183,22 @@ struct Reservoir {
     }
     }
     
-    fn @merge(l: &mut Reservoir, r: Reservoir, p_hat: f32, pixel_idx: i32, buffer: DeviceBuffer, rnd: &mut RndState) {
+    fn @merge(l: &mut Reservoir, r: Reservoir, p_hat: f32, rnd: &mut RndState) {
         
-        //let m_zero = buffer.load_i32(pixel_idx + 76);
+        // let m_zero = buffer.load_i32(pixel_idx + 76);
         
-        //let m_zero = sample_count;
-        update(l, r.sample, p_hat * r.weight * r.sample_count, rnd);
+        // //let m_zero = sample_count;
+        // update(l, r.sample, p_hat * r.weight * r.sample_count, rnd);
 
         //update M
     }
+
+fn @store_vec3_in_buffer(pixel: i32, buffer: DeviceBuffer, vec: Vec3)
+{
+    buffer.store_f32(pixel, vec.x);
+    buffer.store_f32(pixel + 1, vec.y);
+    buffer.store_f32(pixel + 2, vec.z); 
+}
 
 
 //How to do it better?
@@ -230,6 +255,30 @@ fn @request_initial_sample_buffer(device: Device, image_size: i32) -> DeviceBuff
     device.request_buffer("initial_sample_buffer", 19 * image_size, 0)
    }
 
+fn @request_first_temporal_buffer(device: Device, image_size: i32) -> DeviceBuffer {
+    device.request_buffer("first_temporal_buffer", 22 * image_size, 0)
+   }
+
+fn @request_temporal_buffers(frame: i32, device: Device, image_size: i32) -> (DeviceBuffer, DeviceBuffer) {
+    if(frame % 2 == 0) {
+        return(device.request_buffer("first_temporal_buffer", 22 * image_size, 0), device.request_buffer("second_temporal_buffer", 22 * image_size, 0))
+    } else {
+        return(device.request_buffer("second_temporal_buffer", 22 * image_size, 0), device.request_buffer("first_temporal_buffer", 22 * image_size, 0))
+    }
+}
+
+fn @request_temporal_buffers_di(frame: i32, device: Device, image_size: i32) -> (DeviceBuffer, DeviceBuffer) {
+    if(frame % 2 == 0) {
+        return(device.request_buffer("first_temporal_buffer_di", 22 * image_size, 0), device.request_buffer("second_temporal_buffer_di", 22 * image_size, 0))
+    } else {
+        return(device.request_buffer("second_temporal_buffer_di", 22 * image_size, 0), device.request_buffer("first_temporal_buffer_di", 22 * image_size, 0))
+    }
+}
+
+fn @request_second_temporal_buffer(device: Device, image_size: i32) -> DeviceBuffer {
+    device.request_buffer("second_temporal_buffer", 22 * image_size, 0)
+   }
+
 fn request_temporal_reservoir_buffer(device: Device, image_size: i32) -> DeviceBuffer {
     device.request_buffer("temporal_reservoir_buffer", 22 * image_size, 0)
 }
@@ -250,17 +299,140 @@ fn @request_spatial_reservoir_buffer_di(device: Device, image_size: i32) -> Devi
     device.request_buffer("spatial_reservoir_buffer_di", 22 * image_size, 0)
 }
 
-fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, aovs: AOVTable, clamp_value: f32) -> Technique {
+fn @request_cam_buffer(device: Device) -> DeviceBuffer {
+    device.request_buffer("cam_buffer", 31, 0)
+} 
+
+fn @look_at_matrix(forward: Vec3, up: Vec3, right: Vec3, eye: Vec3) -> Mat4x4 {
+    let mut lookAt = mat4x4_identity();
+
+    lookAt.col(0).x = right.x;
+    lookAt.col(1).x = right.y;
+    lookAt.col(2).x = right.z;
+
+    lookAt.col(0).y = up.x;
+    lookAt.col(1).y = up.y;
+    lookAt.col(2).y = up.z;
+
+    lookAt.col(0).z = -forward.x;
+    lookAt.col(1).z = -forward.y;
+    lookAt.col(2).z = -forward.z;
+
+    lookAt.col(3).x = -vec3_dot(right, eye);
+    lookAt.col(3).y = -vec3_dot(up, eye);
+    lookAt.col(3).z = vec3_dot(forward, eye);
+
+    lookAt
+}
+
+fn @projection_matrix(near: f32, far: f32, fov: f32) -> Mat4x4 {
+    
+    let work_info = get_work_info(); 
+
+    let mut projectionMatrix = mat4x4_identity();
+
+    let t = near * math_builtins::tan(rad(fov) / 2.0);
+
+    let r = (work_info.width as f32 / work_info.height as f32) * t;
+
+    projectionMatrix.col(0).x = near / r;
+
+    projectionMatrix.col(1).y = near / t;
+
+    projectionMatrix.col(2).z = -(far + near) / (far - near);
+
+    projectionMatrix.col(3).z = (-2.0 * far * near) / (far - near);
+
+    projectionMatrix.col(2).w = -1.0;
+    
+    projectionMatrix.col(3).w = 0.0;
+
+    projectionMatrix
+}
+
+fn @load_matrix_from_buffer(idx: i32, buffer: DeviceBuffer) -> Mat4x4 {
+    let x1 = buffer.load_f32(idx);
+    let y1 = buffer.load_f32(idx + 1);
+    let z1 = buffer.load_f32(idx + 2);
+    let w1 = buffer.load_f32(idx + 3);
+    let col1 = make_vec4(x1, y1, z1, w1);
+
+    let x2 = buffer.load_f32(idx + 4);
+    let y2 = buffer.load_f32(idx + 5);
+    let z2 = buffer.load_f32(idx + 6);
+    let w2 = buffer.load_f32(idx + 7);
+    let col2 = make_vec4(x2, y2, z2, w2);
+ 
+    let x3 = buffer.load_f32(idx + 8);
+    let y3 = buffer.load_f32(idx + 9);
+    let z3 = buffer.load_f32(idx + 10);
+    let w3 = buffer.load_f32(idx + 11);
+    let col3 = make_vec4(x3, y3, z3, w3);
+
+    let x4 = buffer.load_f32(idx + 12);
+    let y4 = buffer.load_f32(idx + 13);
+    let z4 = buffer.load_f32(idx + 14);
+    let w4 = buffer.load_f32(idx + 15);
+    let col4 = make_vec4(x4, y4, z4, w4);
+
+    make_mat4x4(col1, col2, col3, col4)
+}
+
+fn @reproject(visible_point: Vec3, cam_buffer: DeviceBuffer)  -> i32 {
+
+    let work_info = get_work_info();
+
+    let cam_up = load_vec3_from_buffer(0, cam_buffer);
+    let cam_dir = load_vec3_from_buffer(3, cam_buffer);
+    let cam_eye = load_vec3_from_buffer(6, cam_buffer);
+    let cam_right = load_vec3_from_buffer(9, cam_buffer);
+    let proj_matrix = load_matrix_from_buffer(15, cam_buffer);
+    let look_at_matrix = look_at_matrix(cam_dir, cam_up, cam_right, cam_eye);
+
+    let combined_matrix = mat4x4_matmul(proj_matrix, look_at_matrix);
+
+    let normalized_coords = mat4x4_mul(combined_matrix, make_vec4(visible_point.x, visible_point.y, visible_point.z, 1.0));
+
+    let normalized_coords_vec3 = make_vec3(normalized_coords.x / normalized_coords.w, normalized_coords.y / normalized_coords.w, normalized_coords.z / normalized_coords.w);
+
+    let x_coord = math_builtins::floor(((normalized_coords_vec3.x + 1.0) / 2.0) * (work_info.width as f32));
+
+    let y_coord = math_builtins::floor((work_info.height as f32) - (((normalized_coords_vec3.y + 1.0) / 2.0) * (work_info.height as f32)));
+
+    (x_coord + y_coord * (work_info.width as f32)) as i32
+}
+
+static mut counter = 0;
+
+fn @make_restir_renderer(camera: Camera, device: Device, max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, aovs: AOVTable, clamp_value: f32, frame: i32) -> Technique {
     let offset : f32  = 0.001;
     let work_info = get_work_info();
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
 
-    
-    
+    let cam_buffer = request_cam_buffer(device);
+
+    if(frame == 0) {
+        let cam_up = vec3_normalize(registry::get_parameter_vec3("__camera_up", make_vec3(0.0, 0.0, 0.0)));
+        let cam_dir = vec3_normalize(registry::get_parameter_vec3("__camera_dir", make_vec3(0.0, 0.0, 0.0)));
+        let cam_eye = registry::get_parameter_vec3("__camera_eye", make_vec3(0.0, 0.0, 0.0));
+        let cam_right = vec3_normalize(vec3_cross(cam_dir, cam_up));
+            
+        cam_buffer.store_vec3(0, cam_up);
+        cam_buffer.store_vec3(3, cam_dir);
+        cam_buffer.store_vec3(6, cam_eye);
+        cam_buffer.store_vec3(9, cam_right);
+        cam_buffer.store_f32(12, camera.near);
+        cam_buffer.store_f32(13, camera.far);
+        cam_buffer.store_f32(14, camera.fov);
+        cam_buffer.store_mat4x4(15, projection_matrix(camera.near, camera.far, camera.fov));
+    }
+
+
     //request needed buffer for ReSTIR GI
     let sample_buffer = request_initial_sample_buffer(device, work_info.height * work_info.width);
-    let temporal_reservoir_buffer = request_temporal_reservoir_buffer(device, work_info.height * work_info.width);
     let spatial_reservoir_buffer = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
+
+    //request needed buffer for 
         
     //request needed buffer for ReSTIR DI
     let sample_buffer_di = request_initial_sample_buffer_di(device, work_info.height * work_info.width);
@@ -296,27 +468,16 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                      //let new_rnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
                      let new_rnd = rnd;
 
-
-                    //   if(pt.depth == 1) 
-                    //          {
-                    //              aov_depth_info.splat(pixel, make_color(1.0, 1.0, 1.0, 1.0));
-                    //          } else if (pt.depth == 2)
-                    //          {
-                    //             aov_depth_info.splat(pixel, make_color(-1.0, -1.0, -1.0, -1.0));
-                    //          }
-
-                    //dont do anything if not yet arrived at the sample point
-                        //   if pt.depth < 2 {
-                        //     return(ShadowRay::None)
-                        //   }  
-
                     // No shadow rays for specular materials
                     if mat.bsdf.is_specular || num_lights == 0 {
                         return(ShadowRay::None)
                     }
                     
                     if pt.depth + 1 > max_path_len {
-                        return(ShadowRay::None)
+                        if(randf(rnd) >= 0.25 && pt.depth != 3) 
+                        {
+                            return(ShadowRay::None)
+                        }
                     }
             
                     let (light_id, light_select_pdf) = light_selector.sample(new_rnd);
@@ -346,7 +507,10 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                         let factor = light_sample.pdf.value / pdf_l_s;
 
                         //store information for ReSTIR DI
-                        sample_buffer_di.store_f32(pixel * 19 + 15, pdf_l_s);
+                        if(!light.delta) 
+                        {
+                            sample_buffer_di.store_f32(pixel * 19 + 15, pdf_l_s);
+                        }
 
                         let contrib = handle_color(color_mulf(
                             color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));    
@@ -447,12 +611,14 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                  , mat: Material
                  ) -> Option[(Ray, RayPayload)] {
         let pt = unwrap_rsraypayload(payload);
-        //let newRnd = generate_rnd_state(pixel as f32, pt.contrib.r, rnd as i32);
         let newRnd = rnd;
 
         
          if pt.depth + 1 > max_path_len {
-                 return(Option[(Ray, RayPayload)]::None)
+            if(randf(rnd) >= 0.25 && pt.depth != 3) 
+                        {
+                            return(Option[(Ray, RayPayload)]::None)
+                        }
                 }
 
         let out_dir = vec3_neg(ray.dir);
@@ -467,8 +633,7 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
             let new_contrib = color_mulf(contrib, 1 / rr_prob);
             
             //store needed information for resampling if depth is smaller or equal 2
-            if pt.depth <= 2
-            {
+
                 let sample_idx = pixel * 19;
                 let reservoir_idx = pixel * 22;
               if pt.depth == 1 
@@ -503,7 +668,6 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
                    sample_buffer.store_f32(sample_idx + 15, mat_sample.pdf);
                    sample_buffer.store_vec3(sample_idx + 16, color_to_vec3(color_mulf(mat_sample.color, mat_sample.pdf)));
               }
-            }
 
             make_option(
                 make_ray(surf.point, mat_sample.in_dir, offset, flt_max),
@@ -547,21 +711,26 @@ fn @make_restir_renderer(device: Device, max_path_len: i32, num_lights: i32, lig
     }
 }
 
-fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
+fn @resampling_pass(device: Device, _iter: i32, spi: i32, frame: i32) -> ()
 {
       let work_info = get_work_info();
     
       //request needed buffers again
       let sample_buffer = request_initial_sample_buffer(device, work_info.height * work_info.width);
-      let temporal_reservoir_buffer = request_temporal_reservoir_buffer(device, work_info.height * work_info.width);
+      let (current_temporal_buffer, last_temporal_buffer) = request_temporal_buffers(counter, device, work_info.height * work_info.width);
       let spatial_reservoir_buffer = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
+
+      //request cam buffer
+      let cam_buffer = request_cam_buffer(device);
 
       //request needed buffers for ReSTIR DI again
       let sample_buffer_di = request_initial_sample_buffer_di(device, work_info.height * work_info.width);
-      let temporal_reservoir_buffer_di = request_temporal_reservoir_buffer_di(device, work_info.height * work_info.width);
+      let (current_temporal_buffer_di, last_temporal_buffer_di) = request_temporal_buffers_di(counter, device, work_info.height * work_info.width);
+      //let temporal_reservoir_buffer_di = request_temporal_reservoir_buffer_di(device, work_info.height * work_info.width);
       let spatial_reservoir_buffer_di = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
 
       let aov_restir = device.load_aov_image(1, spi);
+      let aov_depth_info = device.load_aov_image(3, 1);
       let aov_direct_light = device.load_aov_image(2, spi);
      
       //load image with outgoing radiances at sample point
@@ -579,7 +748,18 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
           let mut sample = load_sample_from_sample_buffer(j, sample_buffer);
 
           //take out reservoir from temporal reservoir buffer
-          let mut temporal_reservoir = load_reservoir(j, temporal_reservoir_buffer);
+          //let mut temporal_reservoir = load_reservoir(j, temporal_reservoir_buffer);
+
+          //take out reservoir from last frames temporal buffer
+
+          let reprojected_pixel = reproject(sample.vis_point, cam_buffer);
+          let mut temporal_reservoir = create_empty_reservoir();
+        //   if(sample.vis_point.x == 0.0 && sample.vis_point.y == 0.0 && sample.vis_point.z == 0.0) {   
+        //     temporal_reservoir = load_reservoir(j, current_temporal_buffer);
+        //   }
+          if(reprojected_pixel >= 0 && reprojected_pixel <= work_info.height * work_info.width - 1) {
+          temporal_reservoir = load_reservoir(reprojected_pixel, last_temporal_buffer);
+          }
 
           let averaged_radiance = color_average(sample.radiance); 
 
@@ -588,8 +768,8 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
          let mut w_new = 0.0;
          if(source_pdf != 0.0) 
          {
-            let w = averaged_radiance / source_pdf; 
-            w_new = w as f64;
+             let w = averaged_radiance / source_pdf; 
+             w_new = w as f64;
          }
 
           let mut rnd = generate_rnd_state(sample.sample_point.x, w_new as f32, (j * 22));
@@ -601,45 +781,64 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
 
           //if averaged radiance is 0 then set the reservoirs weight to 0 (otherwise division by 0)
           if(rad == 0.0) {
-             temporal_reservoir.weight = 0;
+             temporal_reservoir.weight = 0.0;
           } else {
               temporal_reservoir.weight = temporal_reservoir.w / (temporal_reservoir.sample_count * rad);
           }
 
 
           //store updated reservoir again
-          store_reservoir(temporal_reservoir_buffer, j, temporal_reservoir);
+          store_reservoir(current_temporal_buffer, j, temporal_reservoir);
+
+          ////
           
 
            //start with temporal resampling for DI
            let mut sample_di = load_sample_from_sample_buffer(j, sample_buffer_di);
 
-           let mut temporal_reservoir_di = load_reservoir(j, temporal_reservoir_buffer_di);
+           let mut temporal_reservoir_di = create_empty_reservoir();
+        //    if(sample.vis_point.x == 0.0 && sample.vis_point.y == 0.0 && sample.vis_point.z == 0.0) {   
+        //     temporal_reservoir_di = load_reservoir(j, current_temporal_buffer_di);
+        //   }
+           if(reprojected_pixel >= 0 && reprojected_pixel <= work_info.height * work_info.width - 1) {
+           temporal_reservoir_di = load_reservoir(reprojected_pixel, last_temporal_buffer_di);
+           }
+
+            if(j == 128 + (128 * 256)) {
+            //     let cam_eye = cam_buffer.load_vec3(6);
+            //  let debug = device.request_debug_output();
+            //   debug.print("frame: ");
+            //   debug.print_i32(frame);
+            //   debug.print("\n");
+            //   debug.print_f32(cam_eye.x);
+            //   debug.print("\n");
+            //   debug.print_f32(cam_eye.y);
+            //   debug.print("\n");
+            //   debug.print_f32(cam_eye.z);
+            //   debug.print("\n");
+            //   debug.print("\n");
+          }
+ 
 
            let averaged_radiance_di = color_average(sample_di.radiance); 
+         
+             let w_new_di = averaged_radiance_di; 
 
-          let mut w_new_di = 0.0;
-          if(sample_di.pdf != 0.0) 
-          {
-             let w = averaged_radiance_di; 
-             w_new_di = w as f64;
-          }
+          let mut rnd_di = generate_rnd_state((j * 22) as f32, sample.sample_point.x, rnd as i32);
 
-          let mut rnd_di = generate_rnd_state(sample_di.pdf, w_new_di as f32, (j * 22));
-
-         update(temporal_reservoir_di, sample_di, w_new_di as f32, rnd_di);
+         update(temporal_reservoir_di, sample_di, w_new_di, rnd_di);
 
            //update reservoirs W
            let rad_di = color_average(temporal_reservoir_di.sample.radiance);
 
            //if averaged radiance is 0 then set the reservoirs weight to 0 (otherwise division by 0)
            if(rad_di == 0.0) {
-              temporal_reservoir_di.weight = 0;
+              temporal_reservoir_di.weight = 0.0;
            } else {
                temporal_reservoir_di.weight = temporal_reservoir_di.w / (temporal_reservoir_di.sample_count * rad_di);
            }
 
-           store_reservoir(temporal_reservoir_buffer_di, j, temporal_reservoir_di);
+           store_reservoir(current_temporal_buffer_di, j, temporal_reservoir_di);
 
            aov_direct_light.splat(j, color_mulf(temporal_reservoir_di.sample.radiance, temporal_reservoir_di.weight) /*temporal_reservoir_di.sample.radiance*/);
 
@@ -651,9 +850,26 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32) -> ()
           let indirectRes = color_mul(rawIndirectRes, vec3_to_color(visPointBSDF));
           let directRes = aov_direct_light.get(j);
           aov_restir.splat(j, color_add(indirectRes, directRes));
-          //aov_restir.splat(j, rawIndirectRes);
+          //aov_restir.splat(j, indirectRes);
 
+          //reset intial buffers to 0 (not working on gpu for GI)
+          store_sample_in_reservoir(create_empty_sample(), j * 19, sample_buffer_di);
+          
+          store_sample_in_reservoir(create_empty_sample(), j * 19, sample_buffer);
+
+          
       }
       device.sync();
+
+        let cam_up = vec3_normalize(registry::get_parameter_vec3("__camera_up", make_vec3(0.0, 0.0, 0.0)));
+        let cam_dir = vec3_normalize(registry::get_parameter_vec3("__camera_dir", make_vec3(0.0, 0.0, 0.0)));
+        let cam_eye = registry::get_parameter_vec3("__camera_eye", make_vec3(0.0, 0.0, 0.0));
+        let cam_right = vec3_normalize(vec3_cross(cam_dir, cam_up));
+
+        cam_buffer.store_vec3(0, cam_up);
+        cam_buffer.store_vec3(3, cam_dir);
+        cam_buffer.store_vec3(6, cam_eye);
+        cam_buffer.store_vec3(9, cam_right);
+        counter = counter + 1;
 
 }

@@ -34,7 +34,7 @@ static std::string restir_resampling_generator(LoaderContext& ctx)
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
            << std::endl;
 
-    stream << "  resampling_pass(device, iter," << ctx.SamplesPerIteration << ");" << std::endl
+    stream << "  resampling_pass(device, iter," << ctx.SamplesPerIteration << ", settings.frame"");" << std::endl
            << "}" << std::endl;
 
     return stream.str();
@@ -45,6 +45,9 @@ static TechniqueInfo restir_get_info(const std::string&, const std::shared_ptr<P
     TechniqueInfo info;
 
      info.Variants[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
+
+     info.Variants[0].RequiresExplicitCamera = true;
+     
 
     // make use of post-iteration setup
     info.Variants[0].CallbackGenerators[(int)CallbackType::AfterIteration] = restir_resampling_generator; 
@@ -124,7 +127,7 @@ static void restir_body_loader(std::ostream& stream, const std::string&, const s
         }
     }
 
-    stream << "  let technique = make_restir_renderer(device," << max_depth << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
+    stream << "  let technique = make_restir_renderer(camera, device," << 3 << ", num_lights, lights, light_selector, aovs, " << clamp_value << ", settings.frame);" << std::endl;
 }
 
 static void restir_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
@@ -250,7 +253,7 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
         }
     }
 
-    stream << "  let technique = make_path_renderer(" << max_depth << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
+    stream << "  let technique = make_path_renderer(" << 4 << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
 }
 
 static void path_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
