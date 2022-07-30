@@ -416,11 +416,7 @@
     {
       "type": "principled",
       "name": "Default OBJ.011",
-<<<<<<< HEAD
-      "base_color": "select(checkerboard(vec3(uv.x, uv.y, 0) * 9.100000381469727) == 1, color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0), color(0.0, 0.0, 0.0, 1.0))",
-=======
       "base_color": "select(checkerboard(vec3(uv.x, uv.y, 0) * 40.100000381469727) == 1, color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0), color(0.0, 0.0, 0.0, 1.0))",
->>>>>>> 41143218e557a487b0403d6ea483439d1183c52e
       "metallic": 0.0,
       "roughness": 0.5,
       "anisotropic": 0.0,

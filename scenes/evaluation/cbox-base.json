@@ -6,10 +6,10 @@
     "far_clip": 2800,
     "focus_distance": 1000,
     "near_clip": 10,
+    "fov_axis": "smaller"
   },
   "film": {
-    "size": [ 512, 512],
-    "sampler":  "middle"
+    "size": [256, 256]
   },
   "textures": [],
   "bsdfs": [

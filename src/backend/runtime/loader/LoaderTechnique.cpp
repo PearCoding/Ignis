@@ -127,11 +127,7 @@ static void restir_body_loader(std::ostream& stream, const std::string&, const s
         }
     }
 
-<<<<<<< HEAD
     stream << "  let technique = make_restir_renderer(camera, device," << 3 << ", num_lights, lights, light_selector, aovs, " << clamp_value << ", settings.frame);" << std::endl;
-=======
-    stream << "  let technique = make_restir_renderer(device," << 3 << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
->>>>>>> 41143218e557a487b0403d6ea483439d1183c52e
 }
 
 static void restir_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
