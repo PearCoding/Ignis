@@ -208,6 +208,13 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     lopts.ForceSpecialization = mOptions.ForceSpecialization;
     lopts.UseDenoiser         = !mOptions.IsTracer && mOptions.UseDenoiser && hasDenoiser();
 
+    // Print a warning if denoiser was requested but none is available
+    if (!lopts.UseDenoiser && !mOptions.IsTracer && hasDenoiser())
+        IG_LOG(L_WARNING) << "Trying to use denoiser but no denoiser is available" << std::endl;
+
+    if (lopts.UseDenoiser)
+        IG_LOG(L_INFO) << "Using denoiser" << std::endl;
+
     // Extract technique
     setup_technique(lopts, mOptions);
 
