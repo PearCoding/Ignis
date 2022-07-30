@@ -165,7 +165,11 @@ struct Reservoir {
 //     (neighbour_offset_x * neighbour_offset_y) as i32
 // }
 
+<<<<<<< HEAD
     fn @update(r: &mut Reservoir, s_new: Sample, w_new: f32, rnd: &mut RndState) -> () {
+=======
+    fn @update(r: &mut Reservoir, s_new: Sample, w_new: f32, pixel_idx: i32, buffer: DeviceBuffer, rnd: &mut RndState) -> () {
+>>>>>>> 41143218e557a487b0403d6ea483439d1183c52e
         
         //update weights in reservoir
         r.w += w_new;
@@ -788,9 +792,40 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32, frame: i32) -> ()
 
 
           //store updated reservoir again
+<<<<<<< HEAD
           store_reservoir(current_temporal_buffer, j, temporal_reservoir);
 
           ////
+=======
+          store_reservoir(temporal_reservoir_buffer, j, temporal_reservoir);
+
+          ////
+          
+        //   //start spatial resampling
+
+        //   //intialize needed variables
+        //   let r_s = load_sample_from_reservoir(j, spatial_reservoir_buffer);
+
+        //   for s in range(0, 2) 
+        //   {
+        //     let rnd_pxl = chooseRandomPixel(j, rnd, 5);
+
+        //     //load surface normals from sample buffer for similarity test
+        //     let rnd_pxl_normal = load_vec3_from_buffer(rnd_pxl * 19 + 3, sample_buffer); 
+
+        //     let angle = vec3_angle(sample.vis_normal, rnd_pxl_normal);
+
+        //     if(angle >= 25.0) 
+        //     {
+        //         continue();
+        //     }
+
+        //     let r_n = load_reservoir(rnd_pxl, temporal_reservoir_buffer);
+
+        //     //let jacobian = calculate_jacobian()
+        //   }
+
+>>>>>>> 41143218e557a487b0403d6ea483439d1183c52e
           
 
            //start with temporal resampling for DI
@@ -826,7 +861,11 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32, frame: i32) -> ()
 
           let mut rnd_di = generate_rnd_state((j * 22) as f32, sample.sample_point.x, rnd as i32);
 
+<<<<<<< HEAD
          update(temporal_reservoir_di, sample_di, w_new_di, rnd_di);
+=======
+         update(temporal_reservoir_di, sample_di, w_new_di, (j * 22), temporal_reservoir_buffer_di, rnd_di);
+>>>>>>> 41143218e557a487b0403d6ea483439d1183c52e
 
            //update reservoirs W
            let rad_di = color_average(temporal_reservoir_di.sample.radiance);
@@ -855,7 +894,11 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32, frame: i32) -> ()
           //reset intial buffers to 0 (not working on gpu for GI)
           store_sample_in_reservoir(create_empty_sample(), j * 19, sample_buffer_di);
           
+<<<<<<< HEAD
           store_sample_in_reservoir(create_empty_sample(), j * 19, sample_buffer);
+=======
+          //store_sample_in_reservoir(create_empty_sample(), j * 19, sample_buffer);
+>>>>>>> 41143218e557a487b0403d6ea483439d1183c52e
 
           
       }
