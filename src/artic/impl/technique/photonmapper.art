@@ -140,14 +140,8 @@ fn @unwrap_ppmraypayload(payload: RayPayload) = PPMRayPayload {
 fn init_ppm_raypayload() = wrap_ppmraypayload(PPMRayPayload { contrib = color_builtins::white, depth = 1, eta = 1, radius_or_light = 0, path_type = 0 });
 
 /////////////////////////////////////
-fn @make_ppm_light_emitter(num_lights: i32, lights: LightTable, iter: i32) -> RayEmitter {
-    let offset : f32 = 0.001;
-    let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
-
-    // Only partially evaluate if number of lights is reasonable
-    fn @(num_lights < 10) get_light(id : i32) -> Light {
-        @lights(id)
-    }
+fn @make_ppm_light_emitter(light_selector: LightSelector, iter: i32) -> RayEmitter {
+    let offset = 0.001:f32;
 
     @ |sample, x, y, _width, _height| {
         let mut hash = fnv_init();
@@ -157,19 +151,18 @@ fn @make_ppm_light_emitter(num_lights: i32, lights: LightTable, iter: i32) -> Ra
         hash = fnv_hash(hash, y as u32);
         let mut rnd = hash /*as RndState*/;
         
-        let light_id        = pick_light_id(&mut rnd, num_lights);
-        let light           = get_light(light_id);
-        let sample_emission = light.sample_emission;
-        let light_sample    = @sample_emission(rnd);
+        let (light, light_pdf) = light_selector.sample(&mut rnd);
+        let sample_emission    = light.sample_emission;
+        let light_sample       = @sample_emission(rnd);
         
         let ray      = make_ray(light_sample.pos, light_sample.dir, select(light.infinite, 0:f32, offset), flt_max, ray_flag_light);
-        let radiance = color_mulf(light_sample.intensity, safe_div(math_builtins::fabs(light_sample.cos), pdf_lightpick));
+        let radiance = color_mulf(light_sample.intensity, safe_div(math_builtins::fabs(light_sample.cos), light_pdf));
         
         let payload = wrap_ppmraypayload(PPMRayPayload {
             contrib         = radiance,
             depth           = 1,
             eta             = 1,
-            radius_or_light = light_id as f32,
+            radius_or_light = light.id as f32,
             path_type       = 0 // Not used
         });
 
@@ -264,7 +257,7 @@ fn @ppm_compute_radius(max_radius: f32, iter: i32) -> f32 {
     math_builtins::fmax(radius, 1e-5:f32)
 }
 
-fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, radius: f32, aovs: AOVTable, clamp_value: f32, light_cache: LightCache) -> Technique {
+fn @make_ppm_path_renderer(max_path_len: i32, light_selector: LightSelector, radius: f32, aovs: AOVTable, clamp_value: f32, light_cache: LightCache) -> Technique {
     let offset : f32 = 0.001;
 
     let handle_color = if clamp_value > 0 {
@@ -350,8 +343,8 @@ fn @make_ppm_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTabl
 
         // Due to the renderer design, this will only iterate through
         // infinite lights, as a miss shader does not contain area lights
-        for light_id in safe_unroll(0, num_lights) {
-            let light = @lights(light_id);
+        for light_id in safe_unroll(0, light_selector.infinites.count) {
+            let light = @light_selector.infinites.get(light_id);
             // Do not include delta lights or finite lights
             if light.infinite && !light.delta {
                 inflights += 1;

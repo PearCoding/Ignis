@@ -209,7 +209,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     lopts.UseDenoiser         = !mOptions.IsTracer && mOptions.UseDenoiser && hasDenoiser();
 
     // Print a warning if denoiser was requested but none is available
-    if (!lopts.UseDenoiser && !mOptions.IsTracer && hasDenoiser())
+    if (mOptions.UseDenoiser && !lopts.UseDenoiser && !mOptions.IsTracer && hasDenoiser())
         IG_LOG(L_WARNING) << "Trying to use denoiser but no denoiser is available" << std::endl;
 
     if (lopts.UseDenoiser)

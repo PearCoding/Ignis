@@ -232,55 +232,61 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
     }
 }
 
-fn @load_simple_area_lights(id_off: i32, device: Device, shapes: ShapeTable) -> LightTable {
+fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, shapes: ShapeTable) -> LightTable {
     let tbl = device.load_custom_dyntable("SimpleAreaLight");
     let acc = device.get_device_buffer_accessor();
 
     let elem_s = 40 * sizeof[f32]() as u64; // See AreaLight.cpp (non-optimized)
-    @ |id| {
-        //let entry = get_lookup_entry(id as u64, tbl); // No need as we have only one type!
-        let data = get_table_entry(elem_s * (id as u64), tbl, acc);
+    LightTable {
+        count = count,
+        get   = @|id| {
+            //let entry = get_lookup_entry(id as u64, tbl); // No need as we have only one type!
+            let data = get_table_entry(elem_s * (id as u64), tbl, acc);
 
-        let local_mat  = data.load_mat3x4(0);
-        let global_mat = data.load_mat3x4(12);
-        let m          = data.load_mat3x4(24); // This is faster due to aligned loading instructions
-        let entity     = Entity {
-            local_mat  = local_mat,
-            global_mat = global_mat,
-            normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
-            shape_id   = bitcast[i32](m.col(3).x),
-            scale      = m.col(3).y
-        };
+            let local_mat  = data.load_mat3x4(0);
+            let global_mat = data.load_mat3x4(12);
+            let m          = data.load_mat3x4(24); // This is faster due to aligned loading instructions
+            let entity     = Entity {
+                local_mat  = local_mat,
+                global_mat = global_mat,
+                normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
+                shape_id   = bitcast[i32](m.col(3).x),
+                scale      = m.col(3).y
+            };
 
-        let shape    = shapes(entity.shape_id);
-        let radiance = data.load_vec3(36);
+            let shape    = shapes(entity.shape_id);
+            let radiance = data.load_vec3(36);
 
-        make_area_light(id + id_off, make_shape_area_emitter(entity, shape), @|_| vec3_to_color(radiance))
-    } 
+            make_area_light(id + id_off, make_shape_area_emitter(entity, shape), @|_| vec3_to_color(radiance))
+        } 
+    }
 }
 
-fn @load_simple_plane_lights(id_off: i32, device: Device) -> LightTable {
+fn @load_simple_plane_lights(count: i32, id_off: i32, device: Device) -> LightTable {
     let tbl = device.load_custom_dyntable("SimplePlaneLight");
     let acc = device.get_device_buffer_accessor();
 
     let elem_s = 24 * sizeof[f32]() as u64; // See AreaLight.cpp (optimized)
-    @ |id| {
-        //let entry = get_lookup_entry(id as u64, tbl); // No need as we have only one type!
-        let data = get_table_entry(elem_s * (id as u64), tbl, acc);
+    LightTable {
+        count = count,
+        get   = @|id| {
+            //let entry = get_lookup_entry(id as u64, tbl); // No need as we have only one type!
+            let data = get_table_entry(elem_s * (id as u64), tbl, acc);
 
-        let origin   = data.load_vec4(0);
-        let x_axis   = data.load_vec4(4);
-        let y_axis   = data.load_vec4(8);
-        let t01      = data.load_vec4(12);
-        let t23      = data.load_vec4(16);
-        let radiance = data.load_vec4(20);
+            let origin   = data.load_vec4(0);
+            let x_axis   = data.load_vec4(4);
+            let y_axis   = data.load_vec4(8);
+            let t01      = data.load_vec4(12);
+            let t23      = data.load_vec4(16);
+            let radiance = data.load_vec4(20);
 
-        let normal = make_vec3(origin.w, x_axis.w, y_axis.w);
-        let area   = radiance.w;
+            let normal = make_vec3(origin.w, x_axis.w, y_axis.w);
+            let area   = radiance.w;
 
-        make_area_light(id + id_off, make_plane_area_emitter(vec4_to_3(origin), vec4_to_3(x_axis), vec4_to_3(y_axis),
-                                                normal, area,
-                                                make_vec2(t01.x, t01.y), make_vec2(t01.z, t01.w), make_vec2(t23.x, t23.y), make_vec2(t23.z, t23.w)), 
-                        @|_| vec3_to_color(vec4_to_3(radiance)))
-    } 
+            make_area_light(id + id_off, make_plane_area_emitter(vec4_to_3(origin), vec4_to_3(x_axis), vec4_to_3(y_axis),
+                                                    normal, area,
+                                                    make_vec2(t01.x, t01.y), make_vec2(t01.z, t01.w), make_vec2(t23.x, t23.y), make_vec2(t23.z, t23.w)), 
+                            @|_| vec3_to_color(vec4_to_3(radiance)))
+        } 
+    }
 }

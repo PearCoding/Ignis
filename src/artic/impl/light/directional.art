@@ -1,15 +1,3 @@
-fn @make_null_light(id: i32) = Light {
-    id              = id,
-    sample_direct   = @ |_, _| undef[DirectLightSample](),
-    sample_emission = @ |_|    undef[EmissionSample](),
-    emission        = @ |_|    color_builtins::black,
-    pdf_direct      = @ |_, _| make_solid_pdf(1),
-    pdf_emission    = @ |_, _| make_emissive_pdf(1, 1),
-    delta           = true,
-    infinite        = true
-};
-
-//-------------------------------------------
 fn @make_directional_light(id: i32, dir: Vec3, scene_bbox: BBox, color: Color) -> Light {
     let scene_radius = bbox_radius(scene_bbox) * 1.01;
 

@@ -66,7 +66,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera/perspective.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/area.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/cie.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/common.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/directional.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/env.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/point.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light/spot.art

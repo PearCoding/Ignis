@@ -35,7 +35,7 @@ fn @init_vpt_raypayload() = wrap_vptraypayload(VPTRayPayload {
 });
 
 // TODO: Implement "A null-scattering path integral formulation of light transport", (Miller et. al, 2019)
-fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, light_selector: LightSelector, media: MediaTable, _aovs: AOVTable, clamp_value: f32) -> Technique {
+fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, media: MediaTable, _aovs: AOVTable, clamp_value: f32) -> Technique {
     let offset : f32 = 0.001;
 
     let handle_color = if clamp_value > 0 {
@@ -44,18 +44,13 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         @|c: Color| c
     };
 
-    // Only partially evaluate if number of lights is reasonable
-    fn @(num_lights < 10) get_light(id : i32) -> Light {
-        @lights(id)
-    }
-
     fn @on_shadow( ctx: ShadingContext
                  , rnd: &mut RndState
                  , payload: RayPayload
                  , mat: Material
                  ) -> ShadowRay {
         // No shadow rays for specular materials
-        if mat.bsdf.is_specular || num_lights == 0 {
+        if mat.bsdf.is_specular || light_selector.count == 0 {
             return(ShadowRay::None)
         }
         
@@ -64,9 +59,8 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
             return(ShadowRay::None)
         }
 
-        let (light_id, light_select_pdf) = light_selector.sample(rnd);
+        let (light, light_select_pdf) = light_selector.sample(rnd);
         
-        let light         = get_light(light_id);
         let sample_direct = light.sample_direct;
         let light_sample  = @sample_direct(rnd, ctx.surf);
         
@@ -130,7 +124,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 let emit     = mat.emission(ctx);
                 let inv_pdf  = math_builtins::fmax[f32](0/*Ignore medium interactions*/, pt.inv_pdf);
                 let pdf_s    = emit.pdf.as_solid(dot, ctx.hit.distance * ctx.hit.distance);
-                let mis      = 1 / (1 + inv_pdf * light_selector.pdf(emit.light_id) * pdf_s);
+                let mis      = 1 / (1 + inv_pdf * light_selector.pdf(mat.light) * pdf_s);
                 let vol      = medium.eval(ctx.ray.org, ctx.surf.point);
                 let contrib  = handle_color(color_mulf(color_mul(pt.contrib, color_mul(emit.intensity, vol)), mis));
                 
@@ -149,8 +143,8 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
         let pt     = unwrap_vptraypayload(payload);
         let medium = @media(pt.medium);
 
-        for light_id in safe_unroll(0, num_lights) {
-            let light = @lights(light_id);
+        for light_id in safe_unroll(0, light_selector.infinites.count) {
+            let light = light_selector.infinites.get(light_id);
             // Do not include delta lights or finite lights
             if light.infinite && !light.delta {
                 inflights += 1;
@@ -158,7 +152,7 @@ fn @make_volume_path_renderer(max_path_len: i32, num_lights: i32, lights: LightT
                 let emit  = light.emission(make_miss_shading_context(pixel, ray));
                 let pdf   = light.pdf_direct(ray, make_invalid_surface_element());
                 let pdf_s = pdf.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
-                let mis   = 1 / (1 + math_builtins::fmax[f32](0/*Ignore medium interactions*/, pt.inv_pdf) * light_selector.pdf(light.id) * pdf_s);
+                let mis   = 1 / (1 + math_builtins::fmax[f32](0/*Ignore medium interactions*/, pt.inv_pdf) * light_selector.pdf(light) * pdf_s);
                 let vol   = medium.eval_inf(ray.org, ray.dir);
                 color     = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, color_mul(emit, vol)), mis)));
             }

@@ -27,7 +27,6 @@ struct EmissivePdf {
 // Emission properties of a light source for direct illumination used in materials
 // The respective light is never delta nor infinite!
 struct DirectEmissionValue {
-    light_id:  i32,   // Id of the light
     intensity: Color, // Intensity along the direction
     pdf:       Pdf,   // Probability to sample the point on the light
 }
@@ -77,10 +76,28 @@ fn @make_emissive_pdf(pdf_area: f32, pdf_dir: f32) = EmissivePdf {
     pdf_dir   = pdf_dir
 };
 
-fn @make_direct_emission_value(id: i32, intensity: Color, pdf: Pdf) = DirectEmissionValue {
-    light_id  = id,
+fn @make_direct_emission_value(intensity: Color, pdf: Pdf) = DirectEmissionValue {
     intensity = intensity,
     pdf       = pdf
 };
 
-type LightTable = fn (i32) -> Light;
+fn @make_null_light(id: i32) = Light {
+    id              = id,
+    sample_direct   = @ |_, _| undef[DirectLightSample](),
+    sample_emission = @ |_|    undef[EmissionSample](),
+    emission        = @ |_|    color_builtins::black,
+    pdf_direct      = @ |_, _| make_solid_pdf(1),
+    pdf_emission    = @ |_, _| make_emissive_pdf(1, 1),
+    delta           = true,
+    infinite        = true
+};
+
+struct LightTable {
+    count: i32,
+    get:   fn (i32) -> Light
+}
+
+fn @make_empty_light_table() = LightTable {
+    count = 0,
+    get   = @|_| make_null_light(0)
+};

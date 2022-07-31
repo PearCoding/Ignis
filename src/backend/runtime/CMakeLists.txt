@@ -31,6 +31,11 @@ set(SRC
   config/Build.h
   config/Git.h.in
   config/Version.h.in
+  container/PointBvh.h
+  container/PointBvh.inl
+  container/PointKdTree.h
+  container/PointKdTree.inl
+  container/PositionGetter.h
   driver/DriverManager.cpp
   driver/DriverManager.h
   driver/Interface.h
@@ -43,6 +48,8 @@ set(SRC
   light/EnvironmentLight.cpp
   light/EnvironmentLight.h
   light/Light.h
+  light/LightHierarchy.cpp
+  light/LightHierarchy.h
   light/PerezLight.cpp
   light/PerezLight.h
   light/PointLight.cpp

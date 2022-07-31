@@ -4,6 +4,7 @@
 #include "LoaderUtils.h"
 #include "Logger.h"
 #include "ShadingTree.h"
+#include "light/LightHierarchy.h"
 #include "serialization/VectorSerializer.h"
 #include "shader/RayGenerationShader.h"
 #include "shader/ShaderUtils.h"
@@ -11,6 +12,7 @@
 #include <numeric>
 
 namespace IG {
+static const std::string DefaultLightSelector = "hierarchy"; // FIXME: The convergence rate is kinda worse, fix the non-uniform light selector
 
 static void technique_empty_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
@@ -36,7 +38,6 @@ static void debug_body_loader(std::ostream& stream, const std::string&, const st
 {
     // TODO: Maybe add a changeable default mode?
     stream << "  let debug_mode = registry::get_global_parameter_i32(\"__debug_mode\", 0);" << std::endl
-           << "  maybe_unused(num_lights); maybe_unused(lights);" << std::endl
            << "  let technique  = make_debug_renderer(debug_mode);" << std::endl;
 }
 
@@ -209,8 +210,8 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
         return;
 
     const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
-    const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0;                          // Allow clamping of contributions
-    const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(true) : true; // FIXME: The convergence rate is kinda worse, fix the non-uniform light selector
+    const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
+    const std::string ls    = technique ? technique->property("light_selector").getString(DefaultLightSelector) : DefaultLightSelector;
     const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
 
     if (hasMISAOV) {
@@ -230,20 +231,10 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
            << "    }" << std::endl
            << "  };" << std::endl;
 
-    if (useUniformLS || ctx.Scene.lights().size() <= 1) {
-        stream << "  let light_selector = make_uniform_light_selector(num_lights);" << std::endl;
-    } else {
-        ShadingTree tree(ctx);
-        auto light_cdf = ctx.Lights->generateLightSelectionCDF(tree);
-        if (light_cdf.empty()) {
-            stream << "  let light_selector = make_null_light_selector();" << std::endl;
-        } else {
-            stream << "  let light_cdf = cdf::make_cdf_1d_from_buffer(device.load_buffer(\"" << light_cdf.u8string() << "\"), num_lights, 0);" << std::endl
-                   << "  let light_selector = make_cdf_light_selector(light_cdf);" << std::endl;
-        }
-    }
+    ShadingTree tree(ctx);
+    stream << ctx.Lights->generateLightSelector(ls, tree);
 
-    stream << "  let technique = make_path_renderer(" << max_depth << ", num_lights, lights, light_selector, aovs, " << clamp_value << ");" << std::endl;
+    stream << "  let technique = make_path_renderer(" << max_depth << ", light_selector, aovs, " << clamp_value << ");" << std::endl;
 }
 
 static void path_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext& ctx)
@@ -277,23 +268,13 @@ static void volpath_body_loader(std::ostream& stream, const std::string&, const 
 
     const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
-    const bool useUniformLS = technique ? technique->property("use_uniform_light_selector").getBool(false) : false;
+    const std::string ls    = technique ? technique->property("light_selector").getString(DefaultLightSelector) : DefaultLightSelector;
 
-    if (useUniformLS || ctx.Scene.lights().size() <= 1) {
-        stream << "  let light_selector = make_uniform_light_selector(num_lights);" << std::endl;
-    } else {
-        ShadingTree tree(ctx);
-        auto light_cdf = ctx.Lights->generateLightSelectionCDF(tree);
-        if (light_cdf.empty()) {
-            stream << "  let light_selector = make_null_light_selector();" << std::endl;
-        } else {
-            stream << "  let light_cdf = cdf::make_cdf_1d_from_buffer(device.load_buffer(\"" << light_cdf.u8string() << "\"), num_lights, 0);" << std::endl
-                   << "  let light_selector = make_cdf_light_selector(light_cdf);" << std::endl;
-        }
-    }
+    ShadingTree tree(ctx);
+    stream << ctx.Lights->generateLightSelector(ls, tree);
 
     stream << "  let aovs = @|_id:i32| make_empty_aov_image();" << std::endl;
-    stream << "  let technique = make_volume_path_renderer(" << max_depth << ", num_lights, lights, light_selector, media, aovs, " << clamp_value << ");" << std::endl;
+    stream << "  let technique = make_volume_path_renderer(" << max_depth << ", light_selector, media, aovs, " << clamp_value << ");" << std::endl;
 }
 
 static void volpath_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext& ctx)
@@ -318,9 +299,10 @@ static std::string ppm_light_camera_generator(LoaderContext& ctx)
 
     ShadingTree tree(ctx);
     stream << ctx.Lights->generate(tree, false) << std::endl;
+    stream << ctx.Lights->generateLightSelector("", tree);
 
     stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
-    stream << "  let emitter = make_ppm_light_emitter(num_lights, lights, iter);" << std::endl;
+    stream << "  let emitter = make_ppm_light_emitter(light_selector, iter);" << std::endl;
 
     stream << RayGenerationShader::end();
 
@@ -386,7 +368,8 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
     const int max_depth     = technique ? technique->property("max_depth").getInteger(8) : 8;
     const float radius      = technique ? technique->property("radius").getNumber(0.01f) : 0.01f;
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
-    bool is_lighttracer     = ctx.CurrentTechniqueVariant == 0;
+
+    bool is_lighttracer = ctx.CurrentTechniqueVariant == 0;
 
     if (is_lighttracer) {
         stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
@@ -420,10 +403,13 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
     stream << "  let scene_bbox  = " << LoaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
            << "  let light_cache = make_ppm_lightcache(device, PPMPhotonCount, scene_bbox);" << std::endl;
 
-    if (is_lighttracer)
+    if (is_lighttracer) {
         stream << "  let technique = make_ppm_light_renderer(" << max_depth << ", aovs, light_cache);" << std::endl;
-    else
-        stream << "  let technique = make_ppm_path_renderer(" << max_depth << ", num_lights, lights, ppm_radius, aovs, " << clamp_value << ", light_cache);" << std::endl;
+    } else {
+        ShadingTree tree(ctx);
+        stream << ctx.Lights->generateLightSelector("", tree);
+        stream << "  let technique = make_ppm_path_renderer(" << max_depth << ",light_selector, ppm_radius, aovs, " << clamp_value << ", light_cache);" << std::endl;
+    }
 }
 
 static void ppm_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
