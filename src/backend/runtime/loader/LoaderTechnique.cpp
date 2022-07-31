@@ -34,7 +34,7 @@ static std::string restir_resampling_generator(LoaderContext& ctx)
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
            << std::endl;
 
-    stream << "  resampling_pass(device, iter," << ctx.SamplesPerIteration << ", settings.frame"");" << std::endl
+    stream << "  resampling_pass(device, iter," << ctx.SamplesPerIteration << ", settings.frame,"");" << std::endl
            << "}" << std::endl;
 
     return stream.str();

@@ -243,14 +243,16 @@ fn @request_first_temporal_buffer(device: Device, image_size: i32) -> DeviceBuff
 
 fn @request_temporal_buffers(frame: i32, device: Device, image_size: i32) -> (DeviceBuffer, DeviceBuffer) {
     if(frame % 2 == 0) {
+        // counter = counter + 1;
         return(device.request_buffer("first_temporal_buffer", 22 * image_size, 0), device.request_buffer("second_temporal_buffer", 22 * image_size, 0))
     } else {
+        // counter = counter + 1;
         return(device.request_buffer("second_temporal_buffer", 22 * image_size, 0), device.request_buffer("first_temporal_buffer", 22 * image_size, 0))
     }
 }
 
-fn @request_temporal_buffers_di(frame: i32, device: Device, image_size: i32) -> (DeviceBuffer, DeviceBuffer) {
-    if(frame % 2 == 0) {
+fn @request_temporal_buffers_di(frame: &mut i32, device: Device, image_size: i32) -> (DeviceBuffer, DeviceBuffer) {
+    if(*frame % 2 == 0) {
         return(device.request_buffer("first_temporal_buffer_di", 22 * image_size, 0), device.request_buffer("second_temporal_buffer_di", 22 * image_size, 0))
     } else {
         return(device.request_buffer("second_temporal_buffer_di", 22 * image_size, 0), device.request_buffer("first_temporal_buffer_di", 22 * image_size, 0))
@@ -282,7 +284,7 @@ fn @request_spatial_reservoir_buffer_di(device: Device, image_size: i32) -> Devi
 }
 
 fn @request_cam_buffer(device: Device) -> DeviceBuffer {
-    device.request_buffer("cam_buffer", 31, 0)
+    device.request_buffer("cam_buffer", 32, 0)
 } 
 
 fn @look_at_matrix(forward: Vec3, up: Vec3, right: Vec3, eye: Vec3) -> Mat4x4 {
@@ -307,15 +309,15 @@ fn @look_at_matrix(forward: Vec3, up: Vec3, right: Vec3, eye: Vec3) -> Mat4x4 {
     lookAt
 }
 
-fn @projection_matrix(near: f32, far: f32, fov: f32) -> Mat4x4 {
+fn @projection_matrix(near: f32, far: f32, fov: f32, image_width: i32, image_height: i32) -> Mat4x4 {
     
-    let work_info = get_work_info(); 
+    //let work_info = get_work_info(); 
 
     let mut projectionMatrix = mat4x4_identity();
 
     let t = near * math_builtins::tan(rad(fov) / 2.0);
 
-    let r = (work_info.width as f32 / work_info.height as f32) * t;
+    let r = (image_width as f32 / image_height as f32) * t;
 
     projectionMatrix.col(0).x = near / r;
 
@@ -360,33 +362,74 @@ fn @load_matrix_from_buffer(idx: i32, buffer: DeviceBuffer) -> Mat4x4 {
     make_mat4x4(col1, col2, col3, col4)
 }
 
-fn @reproject(visible_point: Vec3, cam_buffer: DeviceBuffer)  -> i32 {
+// fn @reproject(visible_point: Vec3, cam_buffer: DeviceBuffer, image_width: i32, image_height: i32)  -> i32 {
 
-    let work_info = get_work_info();
+//     let cam_up = load_vec3_from_buffer(0, cam_buffer);
+//     let cam_dir = load_vec3_from_buffer(3, cam_buffer);
+//     let cam_eye = load_vec3_from_buffer(6, cam_buffer);
+//     let cam_right = load_vec3_from_buffer(9, cam_buffer);
+//     let proj_matrix = load_matrix_from_buffer(15, cam_buffer);
+//     let look_at_matrix = look_at_matrix(cam_dir, cam_up, cam_right, cam_eye);
 
-    let cam_up = load_vec3_from_buffer(0, cam_buffer);
-    let cam_dir = load_vec3_from_buffer(3, cam_buffer);
-    let cam_eye = load_vec3_from_buffer(6, cam_buffer);
-    let cam_right = load_vec3_from_buffer(9, cam_buffer);
-    let proj_matrix = load_matrix_from_buffer(15, cam_buffer);
-    let look_at_matrix = look_at_matrix(cam_dir, cam_up, cam_right, cam_eye);
+//     let combined_matrix = mat4x4_matmul(proj_matrix, look_at_matrix);
 
-    let combined_matrix = mat4x4_matmul(proj_matrix, look_at_matrix);
+//     let normalized_coords = mat4x4_mul(combined_matrix, make_vec4(visible_point.x, visible_point.y, visible_point.z, 1.0));
 
-    let normalized_coords = mat4x4_mul(combined_matrix, make_vec4(visible_point.x, visible_point.y, visible_point.z, 1.0));
+//     let normalized_coords_vec3 = make_vec3(normalized_coords.x / normalized_coords.w, normalized_coords.y / normalized_coords.w, normalized_coords.z / normalized_coords.w);
 
-    let normalized_coords_vec3 = make_vec3(normalized_coords.x / normalized_coords.w, normalized_coords.y / normalized_coords.w, normalized_coords.z / normalized_coords.w);
+//     let x_coord = (math_builtins::floor(((normalized_coords_vec3.x + 1.0) / 2.0) * (image_width as f32))) as i32;
 
-    let x_coord = (math_builtins::floor(((normalized_coords_vec3.x + 1.0) / 2.0) * (work_info.width as f32))) as i32;
+//     let y_coord = (math_builtins::floor((image_height as f32) - (((normalized_coords_vec3.y + 1.0) / 2.0) * (image_height as f32)))) as i32;
 
-    let y_coord = (math_builtins::floor((work_info.height as f32) - (((normalized_coords_vec3.y + 1.0) / 2.0) * (work_info.height as f32)))) as i32;
+//     if(x_coord < image_width && x_coord > 0 && y_coord < image_height && y_coord > 0) {
+//         (x_coord + y_coord * image_width)
+//     } else {
+//         -1
+//     }
+// }
 
-    if(x_coord < work_info.width && x_coord > 0 && y_coord < work_info.height && y_coord > 0) {
-        (x_coord + y_coord * work_info.width) as i32
-    } else {
-        -1
-    }
-}
+ fn @reproject(visible_point: Vec3, cam_buffer: DeviceBuffer, image_width: i32, image_height: i32, sample: Sample, temporal_buffer: DeviceBuffer, temporal_buffer_di: DeviceBuffer)  -> (Reservoir, Reservoir) {
+    
+     let mut temporal_reservoir = create_empty_reservoir();
+     let mut temporal_reservoir_di = create_empty_reservoir();
+
+     let cam_up = load_vec3_from_buffer(0, cam_buffer);
+     let cam_dir = load_vec3_from_buffer(3, cam_buffer);
+     let cam_eye = load_vec3_from_buffer(6, cam_buffer);
+     let cam_right = load_vec3_from_buffer(9, cam_buffer);
+     let proj_matrix = load_matrix_from_buffer(15, cam_buffer);
+     let look_at_matrix = look_at_matrix(cam_dir, cam_up, cam_right, cam_eye);
+
+     let combined_matrix = mat4x4_matmul(proj_matrix, look_at_matrix);
+
+     let normalized_coords = mat4x4_mul(combined_matrix, make_vec4(visible_point.x, visible_point.y, visible_point.z, 1.0));
+
+     let normalized_coords_vec3 = make_vec3(normalized_coords.x / normalized_coords.w, normalized_coords.y / normalized_coords.w, normalized_coords.z / normalized_coords.w);
+
+     let x_coord = (math_builtins::floor(((normalized_coords_vec3.x + 1.0) / 2.0) * (image_width as f32))) as i32;
+
+     let y_coord = (math_builtins::floor((image_height as f32) - (((normalized_coords_vec3.y + 1.0) / 2.0) * (image_height as f32)))) as i32;
+
+     if(x_coord < image_width && x_coord > 0 && y_coord < image_height && y_coord > 0) {
+         let res_idx = (x_coord + y_coord * image_width);
+
+         let test = load_reservoir(res_idx, temporal_buffer);
+
+         let sample_combined_matrix = mat4x4_matmul(proj_matrix, look_at_matrix);
+
+         let sample_normalized_coords = mat4x4_mul(sample_combined_matrix, make_vec4(test.sample.vis_point.x, test.sample.vis_point.y, test.sample.vis_point.z, 1.0));
+
+         let sample_normalized_coords_vec3 = make_vec3(normalized_coords.x / normalized_coords.w, normalized_coords.y / normalized_coords.w, normalized_coords.z / normalized_coords.w);
+
+
+         if ((vec3_angle(sample.vis_normal, test.sample.vis_normal) < rad(5.0) || vec3_eq(sample.vis_normal, test.sample.vis_normal)) && 
+             math_builtins::fabs(normalized_coords_vec3.z - sample_normalized_coords_vec3.z) < 0.05) {
+                 temporal_reservoir = load_reservoir(res_idx, temporal_buffer);
+                 temporal_reservoir_di = load_reservoir(res_idx, temporal_buffer_di);
+         }
+     }
+     return(temporal_reservoir, temporal_reservoir_di)
+ }
 
 static mut counter = 0;
 
@@ -395,24 +438,25 @@ fn @make_restir_renderer(camera: Camera, device: Device, max_path_len: i32, num_
     let work_info = get_work_info();
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
 
+    //set camera settings
+
+
     let cam_buffer = request_cam_buffer(device);
 
+    let cam_up = vec3_normalize(registry::get_parameter_vec3("__camera_up", make_vec3(0.0, 0.0, 0.0)));
+    let cam_dir = vec3_normalize(registry::get_parameter_vec3("__camera_dir", make_vec3(0.0, 0.0, 0.0)));
+    let cam_eye = registry::get_parameter_vec3("__camera_eye", make_vec3(0.0, 0.0, 0.0));
+    let cam_right = vec3_normalize(vec3_cross(cam_dir, cam_up));
+    
     if(frame == 0) {
-        let cam_up = vec3_normalize(registry::get_parameter_vec3("__camera_up", make_vec3(0.0, 0.0, 0.0)));
-        let cam_dir = vec3_normalize(registry::get_parameter_vec3("__camera_dir", make_vec3(0.0, 0.0, 0.0)));
-        let cam_eye = registry::get_parameter_vec3("__camera_eye", make_vec3(0.0, 0.0, 0.0));
-        let cam_right = vec3_normalize(vec3_cross(cam_dir, cam_up));
-            
-        cam_buffer.store_vec3(0, cam_up);
-        cam_buffer.store_vec3(3, cam_dir);
-        cam_buffer.store_vec3(6, cam_eye);
-        cam_buffer.store_vec3(9, cam_right);
-        cam_buffer.store_f32(12, camera.near);
-        cam_buffer.store_f32(13, camera.far);
-        cam_buffer.store_f32(14, camera.fov);
-        cam_buffer.store_mat4x4(15, projection_matrix(camera.near, camera.far, camera.fov));
+        for j in device.parallel_range(0, 1) {
+            cam_buffer.store_vec3(0, cam_up);
+            cam_buffer.store_vec3(3, cam_dir);
+            cam_buffer.store_vec3(6, cam_eye);
+            cam_buffer.store_vec3(9, cam_right);
+            cam_buffer.store_mat4x4(15, projection_matrix(camera.near as f32, camera.far as f32, camera.fov as f32, work_info.width, work_info.height));
+     }
     }
-
 
     //request needed buffer for ReSTIR GI
     let sample_buffer = request_initial_sample_buffer(device, work_info.height * work_info.width);
@@ -525,11 +569,6 @@ fn @make_restir_renderer(camera: Camera, device: Device, max_path_len: i32, num_
               ) -> Option[Color] {
             
         let pt = unwrap_rsraypayload(payload);
-
-        // if (frame == 35 && pixel == (128 + (128 * 256))) {
-        //     let debug = device.request_debug_output();
-        //     debug.print("Bin angekommen bei Hit \n"); 
-        //  }
 
          if(pt.depth == 1) 
          {
@@ -715,168 +754,152 @@ fn @make_restir_renderer(camera: Camera, device: Device, max_path_len: i32, num_
 
 fn @resampling_pass(device: Device, _iter: i32, spi: i32, frame: i32) -> ()
 {
-      let work_info = get_work_info();
+
     
-      //request needed buffers again
-      let sample_buffer = request_initial_sample_buffer(device, work_info.height * work_info.width);
-      let (current_temporal_buffer, last_temporal_buffer) = request_temporal_buffers(counter, device, work_info.height * work_info.width);
-      let spatial_reservoir_buffer = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
+    //set up camera settings for first frame
+    let work_info = get_work_info();
+    let cam_buffer = request_cam_buffer(device); 
+    let cam_up = vec3_normalize(registry::get_parameter_vec3("__camera_up", make_vec3(0.0, 0.0, 0.0)));
+    let cam_dir = vec3_normalize(registry::get_parameter_vec3("__camera_dir", make_vec3(0.0, 0.0, 0.0)));
+    let cam_eye = registry::get_parameter_vec3("__camera_eye", make_vec3(0.0, 0.0, 0.0));
+    let cam_right = vec3_normalize(vec3_cross(cam_dir, cam_up));
+    
+    //request needed buffers again
+    let sample_buffer = request_initial_sample_buffer(device, work_info.height * work_info.width);
+    let (current_temporal_buffer, last_temporal_buffer) = request_temporal_buffers(counter, device, work_info.height * work_info.width);
+    //let current_temporal_buffer = request_temporal_reservoir_buffer(device, work_info.height * work_info.width);
+    let spatial_reservoir_buffer = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
+       
+    //request needed buffers for ReSTIR DI again
+    let sample_buffer_di = request_initial_sample_buffer_di(device, work_info.height * work_info.width);
+    let (current_temporal_buffer_di, last_temporal_buffer_di) = request_temporal_buffers_di(counter, device, work_info.height * work_info.width);
+    //let current_temporal_buffer_di = request_temporal_reservoir_buffer_di(device, work_info.height * work_info.width);
+    let spatial_reservoir_buffer_di = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
+       
+    //load needed images
+    let aov_restir = device.load_aov_image(1, spi);
+    let aov_depth_info = device.load_aov_image(3, 1);
+    let aov_direct_light = device.load_aov_image(2, spi);
+    let aov_radiance = device.load_aov_image(0, spi);
+    
+    //main loop for temporal and spatial resampling
+    for j in device.parallel_range(0, work_info.height * work_info.width) {
+        ////start with temporal resampling  
+        //take out sample from initial sample buffer
+        let mut sample = load_sample_from_sample_buffer(j, sample_buffer);
+        sample.radiance = aov_radiance.get(j);
 
-      //request cam buffer
-      let cam_buffer = request_cam_buffer(device);
+        //standard approach
+        //let mut temporal_reservoir = load_reservoir(j, last_temporal_buffer);
+        
+        //take out reservoir from last frames temporal buffer
+        //let reprojected_pixel = reproject(sample.vis_point, cam_buffer, work_info.width, work_info.height);
+    
+        //    let mut temporal_reservoir = create_empty_reservoir();
+        //    if(reprojected_pixel != -1) {
+        //        let mut test = load_reservoir(reprojected_pixel, last_temporal_buffer);
+        //        let distance_current = vec3_len(vec3_sub(sample.vis_point, cam_eye));
+        //        let distance_past = vec3_len(vec3_sub(test.sample.vis_point, cam_eye));
+        //        if (vec3_eq(sample.vis_normal, test.sample.vis_normal) && math_builtins::fabs(distance_current - distance_past) < 0.02) {
+        //            temporal_reservoir = test;
+        //        }
+        //    }
 
-      //request needed buffers for ReSTIR DI again
-      let sample_buffer_di = request_initial_sample_buffer_di(device, work_info.height * work_info.width);
-      let (current_temporal_buffer_di, last_temporal_buffer_di) = request_temporal_buffers_di(counter, device, work_info.height * work_info.width);
-      //let temporal_reservoir_buffer_di = request_temporal_reservoir_buffer_di(device, work_info.height * work_info.width);
-      let spatial_reservoir_buffer_di = request_spatial_reservoir_buffer(device, work_info.height * work_info.width);
+        //new approach
+        let (mut temporal_reservoir, mut temporal_reservoir_di) = reproject(sample.vis_point, cam_buffer, work_info.width, work_info.height, sample, last_temporal_buffer, last_temporal_buffer_di);
 
-      let aov_restir = device.load_aov_image(1, spi);
-      let aov_depth_info = device.load_aov_image(3, 1);
-      let aov_direct_light = device.load_aov_image(2, spi);
-     
-      //load image with outgoing radiances at sample point
-      let aov_radiance = device.load_aov_image(0, spi);
-     
-      //main loop for temporal and spatial resampling
-      for j in device.parallel_range(0, work_info.height * work_info.width) {
+        let averaged_radiance = color_average(sample.radiance); 
+        let source_pdf = spatial_reservoir_buffer.load_f32(j * 22 + 15);
+        let mut w_new = 0.0;
 
-          ////start with temporal resampling
+        if(source_pdf != 0.0) 
+        {
+            let w = averaged_radiance / source_pdf; 
+            w_new = w as f64;
+        }
 
-          //store outgoing radiance at sample
-          sample_buffer.store_vec3((j * 19) + 12, color_to_vec3(aov_radiance.get(j)));
+        let mut rnd = generate_rnd_state(sample.sample_point.x, w_new as f32, counter);
+           
+        update(temporal_reservoir, sample, w_new as f32, rnd);
+        //update reservoirs W
+        let rad = color_average(temporal_reservoir.sample.radiance);
 
-          //take out sample from initial sample buffer
-          let mut sample = load_sample_from_sample_buffer(j, sample_buffer);
+        //if averaged radiance is 0 then set the reservoirs weight to 0 (otherwise division by 0)
+        if(rad == 0.0) {
+            temporal_reservoir.weight = 0.0;
+        } else {
+            temporal_reservoir.weight = temporal_reservoir.w / (temporal_reservoir.sample_count * rad);
+        }
 
-          //take out reservoir from temporal reservoir buffer
-          //let mut temporal_reservoir = load_reservoir(j, temporal_reservoir_buffer);
+        //store updated reservoir again
+        store_reservoir(current_temporal_buffer, j, temporal_reservoir);
+        
+        ////
+  
 
-          //take out reservoir from last frames temporal buffer
+        //start with temporal resampling for DI
+        let mut sample_di = load_sample_from_sample_buffer(j, sample_buffer_di);
+            
+        //standard approach
+        //let mut temporal_reservoir_di = load_reservoir(j, last_temporal_buffer_di);
+            
+        //    let mut temporal_reservoir_di = create_empty_reservoir();
+        //    if(reprojected_pixel != -1) {
+        //        let mut test = load_reservoir(reprojected_pixel, last_temporal_buffer_di);
+        //        let distance_current = vec3_len(vec3_sub(sample_di.vis_point, cam_eye));
+        //        let distance_past = vec3_len(vec3_sub(test.sample.vis_point, cam_eye));
+        //        if (vec3_eq(sample_di.vis_normal, test.sample.vis_normal) && math_builtins::fabs((distance_current - distance_past)) < 0.02) {
+        //            temporal_reservoir_di = test;
+        //        }
+        //    }
 
-          let reprojected_pixel = reproject(sample.vis_point, cam_buffer);
-          let mut temporal_reservoir = create_empty_reservoir();
-          if(reprojected_pixel != -1) {
-          let mut test = load_reservoir(reprojected_pixel, last_temporal_buffer);
-          let cam_eye = registry::get_parameter_vec3("__camera_eye", make_vec3(0.0, 0.0, 0.0));
-           let distance_current = vec3_len(vec3_sub(sample.vis_point, cam_eye));
-           let distance_past = vec3_len(vec3_sub(test.sample.vis_point, cam_eye));
-          if (vec3_eq(sample.vis_normal, test.sample.vis_normal) && math_builtins::fabs(distance_current - distance_past) < 0.2) {
-            temporal_reservoir = test;
-          }
-          }
+        let averaged_radiance_di = color_average(sample_di.radiance); 
+       
+        let w_new_di = averaged_radiance_di; 
 
-          let averaged_radiance = color_average(sample.radiance); 
+        let mut rnd_di = generate_rnd_state(counter as f32, sample.sample_point.x, rnd as i32);
 
-          let source_pdf = spatial_reservoir_buffer.load_f32(j * 22 + 15);
+        update(temporal_reservoir_di, sample_di, w_new_di, rnd_di);
+            
+        //update reservoirs W
+        let rad_di = color_average(temporal_reservoir_di.sample.radiance);
 
-         let mut w_new = 0.0;
-         if(source_pdf != 0.0) 
-         {
-             let w = averaged_radiance / source_pdf; 
-             w_new = w as f64;
-         }
+        //if averaged radiance is 0 then set the reservoirs weight to 0 (otherwise division by 0)
+        if(rad_di == 0.0) {
+            temporal_reservoir_di.weight = 0.0;
+        } else {
+            temporal_reservoir_di.weight = temporal_reservoir_di.w / (temporal_reservoir_di.sample_count * rad_di);
+        }
 
-          let mut rnd = generate_rnd_state(sample.sample_point.x, w_new as f32, counter);
+        store_reservoir(current_temporal_buffer_di, j, temporal_reservoir_di);
+            
+        aov_direct_light.splat(j, color_mulf(temporal_reservoir_di.sample.radiance, temporal_reservoir_di.weight) /*temporal_reservoir_di.sample.radiance*/);
+           
+           
+        //calculate final pixel value
+        let visPointBSDF = load_vec3_from_buffer(j * 22 + 16, spatial_reservoir_buffer);
+        let rawIndirectRes = color_mul(temporal_reservoir.sample.bsdf, color_mulf(temporal_reservoir.sample.radiance, temporal_reservoir.weight));
+        let indirectRes = color_mul(rawIndirectRes, vec3_to_color(visPointBSDF));
+        let directRes = aov_direct_light.get(j);
+        
+        aov_restir.splat(j, color_add(indirectRes, directRes));
+        //aov_restir.splat(j, rawIndirectRes);
+           
+        //reset intial buffers to 0 (not working on gpu for GI)
+        store_sample_in_reservoir(create_empty_sample(), j * 19, sample_buffer_di);
+        
+        //store_sample_in_reservoir(create_empty_sample(), j * 19, sample_buffer);
 
-          update(temporal_reservoir, sample, w_new as f32, rnd);
-
-          //update reservoirs W
-          let rad = color_average(temporal_reservoir.sample.radiance);
-
-          //if averaged radiance is 0 then set the reservoirs weight to 0 (otherwise division by 0)
-          if(rad == 0.0) {
-             temporal_reservoir.weight = 0.0;
-          } else {
-              temporal_reservoir.weight = temporal_reservoir.w / (temporal_reservoir.sample_count * rad);
-          }
-
-
-          //store updated reservoir again
-          store_reservoir(current_temporal_buffer, j, temporal_reservoir);
-
-          ////
-          
-
-           //start with temporal resampling for DI
-           let mut sample_di = load_sample_from_sample_buffer(j, sample_buffer_di);
-
-           let mut temporal_reservoir_di = create_empty_reservoir();
-           if(reprojected_pixel != -1) {
-           let mut test = load_reservoir(reprojected_pixel, last_temporal_buffer_di);
-           let cam_eye = registry::get_parameter_vec3("__camera_eye", make_vec3(0.0, 0.0, 0.0));
-           let distance_current = vec3_len(vec3_sub(sample_di.vis_point, cam_eye));
-           let distance_past = vec3_len(vec3_sub(test.sample.vis_point, cam_eye));
-           if (vec3_eq(sample_di.vis_normal, test.sample.vis_normal) && math_builtins::fabs((distance_current - distance_past)) < 0.2) {
-                temporal_reservoir_di = test;
-          }
-           }
-
-            if(j == 128 + (128 * 256)) {
-              let debug = device.request_debug_output();
-               debug.print("frame: ");
-               debug.print_i32(counter);
-               debug.print("\n");
-               debug.print_f32(temporal_reservoir.sample_count);
-               debug.print("\n");
-               //debug.print_f32(sample.vis_point.y);
-               //debug.print("\n");
-               //debug.print_f32(sample.vis_point.z);
-               //debug.print("\n");
-               debug.print("\n");
-          }
- 
-
-           let averaged_radiance_di = color_average(sample_di.radiance); 
-         
-             let w_new_di = averaged_radiance_di; 
-
-          let mut rnd_di = generate_rnd_state(counter as f32, sample.sample_point.x, rnd as i32);
-
-         update(temporal_reservoir_di, sample_di, w_new_di, rnd_di);
-
-           //update reservoirs W
-           let rad_di = color_average(temporal_reservoir_di.sample.radiance);
-
-           //if averaged radiance is 0 then set the reservoirs weight to 0 (otherwise division by 0)
-           if(rad_di == 0.0) {
-              temporal_reservoir_di.weight = 0.0;
-           } else {
-               temporal_reservoir_di.weight = temporal_reservoir_di.w / (temporal_reservoir_di.sample_count * rad_di);
-           }
-
-           store_reservoir(current_temporal_buffer_di, j, temporal_reservoir_di);
-
-           aov_direct_light.splat(j, color_mulf(temporal_reservoir_di.sample.radiance, temporal_reservoir_di.weight) /*temporal_reservoir_di.sample.radiance*/);
-
-          //calculate final pixel value
-
-          let visPointBSDF = load_vec3_from_buffer(j * 22 + 16, spatial_reservoir_buffer);
-
-          let rawIndirectRes = color_mul(temporal_reservoir.sample.bsdf, color_mulf(temporal_reservoir.sample.radiance, temporal_reservoir.weight));
-          let indirectRes = color_mul(rawIndirectRes, vec3_to_color(visPointBSDF));
-          let directRes = aov_direct_light.get(j);
-          aov_restir.splat(j, color_add(indirectRes, directRes));
-          //aov_restir.splat(j, rawIndirectRes);
-
-          //reset intial buffers to 0 (not working on gpu for GI)
-          store_sample_in_reservoir(create_empty_sample(), j * 19, sample_buffer_di);
-          
-          store_sample_in_reservoir(create_empty_sample(), j * 19, sample_buffer);
-
-          
-      }
-      device.sync();
-
-        let cam_up = vec3_normalize(registry::get_parameter_vec3("__camera_up", make_vec3(0.0, 0.0, 0.0)));
-        let cam_dir = vec3_normalize(registry::get_parameter_vec3("__camera_dir", make_vec3(0.0, 0.0, 0.0)));
-        let cam_eye = registry::get_parameter_vec3("__camera_eye", make_vec3(0.0, 0.0, 0.0));
-        let cam_right = vec3_normalize(vec3_cross(cam_dir, cam_up));
-
+        //update camera settings
+        if(j == (work_info.height * work_info.width - 1)) {
         cam_buffer.store_vec3(0, cam_up);
         cam_buffer.store_vec3(3, cam_dir);
         cam_buffer.store_vec3(6, cam_eye);
-        cam_buffer.store_vec3(9, cam_right);
-        counter = counter + 1;
+        cam_buffer.store_vec3(9, cam_right); 
+        }
+
+       } device.sync();
+
+       counter = counter + 1;
 
 }

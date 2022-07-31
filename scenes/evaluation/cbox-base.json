@@ -9,7 +9,7 @@
     "fov_axis": "smaller"
   },
   "film": {
-    "size": [ 256, 256 ],
+    "size": [ 512, 512 ],
     "sampler" :  "middle"
   },
   "textures": [],
