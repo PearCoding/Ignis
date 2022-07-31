@@ -93,6 +93,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/emitter.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/fresnel.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/interval.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/light_hierarchy.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/light_selector.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/math.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/microfacet.art

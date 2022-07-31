@@ -24,20 +24,18 @@ void PointBvh<T, PositionGetter>::store(const T& elem)
 {
     const auto p = mPositionGetter(elem);
 
-    mBox.extend(p);
     mLeafNodes.push_back(elem);
 
     if (mInnerNodes.empty()) {
         mInnerNodes.emplace_back(InnerNode::makeLeaf(BoundingBox(p)));
     } else {
-        InnerNode* node = getForPoint(p);
+        InnerNode* node = getForPointExtend(p);
 
         IG_ASSERT(node && node->isLeaf(), "Expected a valid leaf");
         const size_t leafIdx    = mLeafNodes.size() - 1;
         const size_t oldLeafIdx = node->Index;
 
-        const auto otherP         = mPositionGetter(mLeafNodes.at(node->Index));
-        const BoundingBox nodeBox = BoundingBox(otherP).extend(p);
+        const BoundingBox nodeBox = node->BBox;
 
         int axis  = 0;
         float mid = nodeBox.diameter().maxCoeff(&axis) / 2;
@@ -47,6 +45,7 @@ void PointBvh<T, PositionGetter>::store(const T& elem)
         // Make node an inner
         node->Index = leftIdx;
         node->Axis  = axis;
+        node->Mid   = mid;
         node->BBox  = nodeBox;
 
         BoundingBox leftBox;
@@ -54,10 +53,13 @@ void PointBvh<T, PositionGetter>::store(const T& elem)
         nodeBox.computeSplit(leftBox, rightBox, axis, 0.5f);
 
         // Construct two new leaf nodes
-        auto& left  = mInnerNodes.emplace_back(InnerNode::makeLeaf(leftBox));
-        auto& right = mInnerNodes.emplace_back(InnerNode::makeLeaf(rightBox));
+        mInnerNodes.emplace_back(InnerNode::makeLeaf(leftBox));
+        mInnerNodes.emplace_back(InnerNode::makeLeaf(rightBox));
 
-        if (p[axis] <= mid) {
+        auto& left  = mInnerNodes[leftIdx];
+        auto& right = mInnerNodes[leftIdx + 1];
+
+        if (p[axis] < mid) {
             left.Index  = leafIdx;
             right.Index = oldLeafIdx;
         } else {
@@ -68,27 +70,28 @@ void PointBvh<T, PositionGetter>::store(const T& elem)
 }
 
 template <class T, template <typename> typename PositionGetter>
-inline typename PointBvh<T, PositionGetter>::InnerNode* PointBvh<T, PositionGetter>::getForPoint(const Vector3f& p)
+inline typename PointBvh<T, PositionGetter>::InnerNode* PointBvh<T, PositionGetter>::getForPointExtend(const Vector3f& p)
 {
     if (mInnerNodes.empty())
         return nullptr;
 
-    if (!mBox.isInside(p))
-        return nullptr;
-
-    return getForPoint(&mInnerNodes.at(0), p);
+    return getForPointExtend(&mInnerNodes.at(0), p);
 }
 
 template <class T, template <typename> typename PositionGetter>
-inline typename PointBvh<T, PositionGetter>::InnerNode* PointBvh<T, PositionGetter>::getForPoint(InnerNode* node, const Vector3f& p)
+inline typename PointBvh<T, PositionGetter>::InnerNode* PointBvh<T, PositionGetter>::getForPointExtend(InnerNode* node, const Vector3f& p)
 {
+    // Add new point to the bbox
+    node->BBox.extend(p);
+
     if (node->isLeaf())
         return node;
 
-    const float m = p[node->Axis];
-    if (m <= node->BBox.center()[node->Axis])
-        return getForPoint(&mInnerNodes.at(node->Index), p);
+    const float mid = node->BBox.center()[node->Axis];
+    const float m   = p[node->Axis];
+    if (m < mid)
+        return getForPointExtend(&mInnerNodes.at(node->Index), p);
     else
-        return getForPoint(&mInnerNodes.at(node->Index + 1), p);
+        return getForPointExtend(&mInnerNodes.at(node->Index + 1), p);
 }
 } // namespace IG

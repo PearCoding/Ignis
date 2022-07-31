@@ -15,12 +15,13 @@ public:
     struct InnerNode {
         size_t Index;
         BoundingBox BBox;
+        float Mid; // Split point
         int Axis;
 
         [[nodiscard]] inline size_t leftIndex() const { return Index; }
         [[nodiscard]] inline size_t rightIndex() const { return Index + 1; }
         [[nodiscard]] inline bool isLeaf() const { return Axis < 0; }
-        [[nodiscard]] static inline InnerNode makeLeaf(const BoundingBox& bbox) { return InnerNode{ 0, bbox, -1 }; }
+        [[nodiscard]] static inline InnerNode makeLeaf(const BoundingBox& bbox) { return InnerNode{ 0, bbox, 0, -1 }; }
     };
 
     template <typename U = T>
@@ -42,13 +43,11 @@ public:
     [[nodiscard]] inline const std::vector<T>& leafNodes() const { return mLeafNodes; }
 
 private:
-    inline InnerNode* getForPoint(const Vector3f& p);
-    inline InnerNode* getForPoint(InnerNode* node, const Vector3f& p);
+    inline InnerNode* getForPointExtend(const Vector3f& p);
+    inline InnerNode* getForPointExtend(InnerNode* node, const Vector3f& p);
 
     std::vector<InnerNode> mInnerNodes;
     std::vector<T> mLeafNodes;
-
-    BoundingBox mBox;
 
     const PositionGetter<T> mPositionGetter;
 };

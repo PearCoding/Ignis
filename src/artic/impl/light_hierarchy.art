@@ -1,0 +1,109 @@
+// Based on:
+// Moreau, P., Clarberg, P. (2019). Importance Sampling of Many Lights on the GPU.
+// In: Haines, E., Akenine-Möller, T. (eds) Ray Tracing Gems.
+// Apress, Berkeley, CA. https://doi.org/10.1007/978-1-4842-4427-2_18
+
+mod light_hierarchy {
+    use super as all;
+    use super::math_builtins;
+
+    type Vec3         = all::Vec3;
+    type RndState     = all::RndState;
+    type DeviceBuffer = all::DeviceBuffer;
+
+    struct LightHierarchyEntry {
+        pos:  Vec3,
+        dir:  Vec3,
+        flux: f32,
+        id:   i32,
+        leaf: bool
+    }
+
+    fn @load_entry(id: i32, data: all::DeviceBuffer) -> LightHierarchyEntry {
+        let e1 = data.load_vec4(id * 8 + 0);
+        let e2 = data.load_vec4(id * 8 + 4);
+
+        let index = all::bitcast[i32](e2.w);
+        LightHierarchyEntry {
+            pos  = all::make_vec3(e1.x, e1.y, e1.z),
+            dir  = all::make_vec3(e2.x, e2.y, e2.z),
+            flux = e1.w,
+            id   = all::select(index < 0, -index - 1, index),
+            leaf = index >= 0
+        }
+    }
+
+    fn @get_entry_cost(entry: LightHierarchyEntry, pos: Vec3) -> f32 {
+        // TODO: Normal direction?
+        let cdir  = all::vec3_sub(entry.pos, pos);
+        let dist2 = all::vec3_len2(cdir);
+        let cos_d = math_builtins::fabs(all::vec3_dot(entry.dir, cdir)); // Has dist applied
+
+        entry.flux * cos_d / math_builtins::fmax(0.0001:f32, dist2)
+    }
+
+    fn @get_left_prop(left: LightHierarchyEntry, right: LightHierarchyEntry, pos: Vec3) -> f32 {
+        let cl = get_entry_cost(left, pos);
+        let cr = get_entry_cost(right, pos);
+        cl / (cl + cr)
+    }
+
+    fn @random_select_left(rnd: &mut RndState, left: LightHierarchyEntry, right: LightHierarchyEntry, pos: Vec3) -> (bool, f32) {
+        let prop = get_left_prop(left, right, pos);
+        (all::randf(rnd) < prop, prop)
+    }
+
+    fn @sample_light_id(rnd: &mut RndState, pos: Vec3, data: DeviceBuffer) -> (i32, f32) {
+        let mut pdf   = 1:f32;
+        let mut entry = load_entry(0, data);
+        while !entry.leaf {
+            let (is_left, prop) = random_select_left(rnd, load_entry(entry.id, data), load_entry(entry.id+1, data), pos);
+
+            entry = load_entry(all::select(is_left, entry.id, entry.id+1), data);
+            pdf  *= all::select(is_left, prop, 1-prop);
+        }
+
+        (entry.id, pdf)
+    }
+
+    fn @compute_pdf(light: all::Light, pos: Vec3, codes: DeviceBuffer, data: DeviceBuffer) -> f32 {
+        let mut code  = all::bitcast[u32](codes.load_i32(light.id));
+        let mut pdf   = 1:f32;
+        let mut entry = load_entry(0, data);
+        while !entry.leaf {
+            let left  = load_entry(entry.id, data);
+            let right = load_entry(entry.id+1, data);
+            let prop  = get_left_prop(left, right, pos);
+
+            if (code & 0x1) == 0 {
+                entry = left;
+                pdf  *= prop;
+            } else {
+                entry = right;
+                pdf  *= 1 - prop;
+            }
+
+            code >>= 1;
+        }
+
+        all::select(entry.id == light.id, pdf, 0:f32)
+    }
+}
+
+struct LightHierarchy {
+    sample: fn (&mut RndState, Vec3) -> (Light, f32),
+    pdf:    fn (Light, Vec3) -> f32
+}
+
+fn @make_light_hierarchy(finite_lights: LightTable, full: DeviceBuffer) -> LightHierarchy {
+    let codes = full;
+    let data  = shift_device_buffer(round_up(finite_lights.count, 4), 0, full);
+
+    LightHierarchy {
+        sample = @|rnd, pos| {
+            let (id, pdf) = light_hierarchy::sample_light_id(rnd, pos, data);
+            (finite_lights.get(id), pdf)
+        },
+        pdf = @|light, pos| light_hierarchy::compute_pdf(light, pos, codes, data)
+    }
+}

@@ -12,7 +12,8 @@
 #include <numeric>
 
 namespace IG {
-static const std::string DefaultLightSelector = "hierarchy"; // FIXME: The convergence rate is kinda worse, fix the non-uniform light selector
+// FIXME: The convergence rate is kinda bad and some have a slight bias, keep it uniform until fixes
+static const std::string DefaultLightSelector = "uniform";
 
 static void technique_empty_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {

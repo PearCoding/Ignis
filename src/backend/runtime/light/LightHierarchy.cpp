@@ -5,6 +5,8 @@
 #include "loader/ShadingTree.h"
 #include "serialization/FileSerializer.h"
 
+#include "Logger.h"
+
 namespace IG {
 class LightEntry : public ISerializable {
 public:
@@ -29,7 +31,7 @@ public:
         serializer.write(Flux);
         serializer.write(Direction);
         serializer.write(ID);
-        // 16 floats
+        // 8 floats
     }
 };
 
@@ -43,19 +45,20 @@ struct DefaultPositionGetter<LightEntry> {
 
 using LightBvh = PointBvh<LightEntry>;
 
-LightEntry populateInnerNodes(size_t id, const LightBvh& bvh, std::vector<LightEntry>& entries)
+inline static LightEntry populateInnerNodes(size_t id, uint32 code, uint32 depth, const LightBvh& bvh, std::vector<LightEntry>& entries, std::vector<uint32>& codes)
 {
-    const auto& node = bvh.innerNodes()[id];
+    const auto& node = bvh.innerNodes().at(id);
     auto& entry      = entries[id];
     if (node.isLeaf()) {
         const auto leaf = bvh.leafNodes().at(node.Index);
         entry           = leaf;
+        codes[leaf.ID]  = code;
     } else {
-        const auto left  = populateInnerNodes(node.leftIndex(), bvh, entries);
-        const auto right = populateInnerNodes(node.rightIndex(), bvh, entries);
+        const auto left  = populateInnerNodes(node.leftIndex(), code, depth + 1, bvh, entries, codes);
+        const auto right = populateInnerNodes(node.rightIndex(), code | (0x1 << depth), depth + 1, bvh, entries, codes);
 
         entry.Position  = node.BBox.center();
-        entry.Direction = (left.Direction + right.Direction) / 2;
+        entry.Direction = (left.Direction + right.Direction).normalized();
         entry.Flux      = left.Flux + right.Flux;
         entry.ID        = -int32(node.leftIndex() + 1);
     }
@@ -84,16 +87,28 @@ std::filesystem::path LightHierarchy::setup(const std::vector<std::shared_ptr<Li
 
         bvh.store(LightEntry(p.value(), dir, flux, (int32)l->id()));
     }
- 
+
     // Compute flux and average direction for inner nodes
     std::vector<LightEntry> innerNodes(bvh.innerNodes().size());
-    populateInnerNodes(0, bvh, innerNodes);
+    std::vector<uint32> codes(lights.size(), 0);
+    populateInnerNodes(0, 0, 0, bvh, innerNodes, codes);
+
+    if (L_DEBUG == IG_LOGGER.verbosity()) {
+        IG_LOG(L_DEBUG) << "Light Hierarchy:" << std::endl;
+        for (const auto& node : innerNodes)
+            IG_LOG(L_DEBUG) << (node.ID < 0 ? "Node" : "Leaf") << ": [" << node.Position.transpose() << ", " << node.Direction.transpose() << ", " << node.Flux << ", " << node.ID << "];" << std::endl;
+
+        for (const auto& code : codes)
+            IG_LOG(L_DEBUG) << code << std::endl;
+    }
 
     // Export bvh
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/light_hierarchy.bin";
 
     FileSerializer serializer(path, false);
+    serializer.write(codes, true); // Codes are used to backtrack for the pdf. TODO: Currently this is limited to max depth 32!
+    serializer.writeAlignmentPad(sizeof(float) * 4);
     serializer.write(innerNodes, true);
 
     tree.context().ExportedData[exported_id] = path;

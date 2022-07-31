@@ -1,8 +1,7 @@
 {
 	"technique": {
 		"type": "path",
-		"max_depth": 64,
-		"use_uniform_light_selector": false
+		"max_depth": 64
 	},
 	"camera": {
 		"type": "perspective",

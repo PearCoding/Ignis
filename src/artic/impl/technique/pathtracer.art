@@ -66,7 +66,7 @@ fn @make_path_renderer(max_path_len: i32, light_selector: LightSelector, aovs: A
             return(ShadowRay::None)
         }
 
-        let (light, light_select_pdf) = light_selector.sample(rnd);
+        let (light, light_select_pdf) = light_selector.sample(rnd, ctx.surf.point);
 
         let sample_direct = light.sample_direct;
         let light_sample  = @sample_direct(rnd, ctx.surf);
@@ -120,7 +120,7 @@ fn @make_path_renderer(max_path_len: i32, light_selector: LightSelector, aovs: A
             if dot > flt_eps { // Only contribute proper aligned directions
                 let emit    = mat.emission(ctx);
                 let pdf_s   = emit.pdf.as_solid(dot, ctx.hit.distance * ctx.hit.distance);
-                let mis     = 1 / (1 + pt.inv_pdf * light_selector.pdf(mat.light) * pdf_s);
+                let mis     = 1 / (1 + pt.inv_pdf * light_selector.pdf(mat.light, ctx.ray.org) * pdf_s);
                 let contrib = handle_color(color_mulf(color_mul(pt.contrib, emit.intensity), mis));
                 
                 aov_di.splat(ctx.pixel, contrib);
@@ -148,7 +148,7 @@ fn @make_path_renderer(max_path_len: i32, light_selector: LightSelector, aovs: A
                 let emit  = light.emission(make_miss_shading_context(pixel, ray));
                 let pdf   = light.pdf_direct(ray, make_invalid_surface_element());
                 let pdf_s = pdf.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
-                let mis   = 1 / (1 + pt.inv_pdf * light_selector.pdf(light) * pdf_s);
+                let mis   = 1 / (1 + pt.inv_pdf * light_selector.pdf(light, ray.org) * pdf_s);
                 color     = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit), mis)));
             }
         }
