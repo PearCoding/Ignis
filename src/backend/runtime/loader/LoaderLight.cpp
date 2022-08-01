@@ -109,7 +109,7 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipFinite)
     stream << generateInfinite(tree);
 
     if (skipFinite)
-        stream << "  let finite_lights = make_empty_light_table();" << std::endl;
+        stream << "  let finite_lights = make_proxy_light_table(" << finiteLightCount() << ");" << std::endl;
     else
         stream << generateFinite(tree);
 
@@ -409,17 +409,20 @@ std::string LoaderLight::generateLightSelector(std::string type, ShadingTree& tr
 {
     const std::string uniformSelector = "  let light_selector = make_uniform_light_selector(infinite_lights, finite_lights);";
 
+    // If there is just a none or just a single light, do not bother with fancy selectors
+    if (lightCount() <= 1)
+        return uniformSelector;
+
     std::stringstream stream;
 
-    const bool fallbackLS = lightCount() <= 1;
-    if (!fallbackLS && type == "hierarchy") {
+    if (type == "hierarchy") {
         auto hierarchy = LightHierarchy::setup(mFiniteLights, tree);
         if (hierarchy.empty()) {
             stream << uniformSelector << std::endl;
         } else {
             stream << "  let light_selector = make_hierarchy_light_selector(infinite_lights, finite_lights, device.load_buffer(\"" << hierarchy.u8string() << "\"));" << std::endl;
         }
-    } else if (!fallbackLS && type == "simple") {
+    } else if (type == "simple") {
         auto cdf = generateLightSelectionCDF(tree);
         if (cdf.empty()) {
             stream << uniformSelector << std::endl;

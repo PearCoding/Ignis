@@ -97,7 +97,10 @@ struct LightTable {
     get:   fn (i32) -> Light
 }
 
-fn @make_empty_light_table() = LightTable {
-    count = 0,
+/// Set count, but return no valid light. Useful for miss shaders
+fn @make_proxy_light_table(count: i32) = LightTable {
+    count = count,
     get   = @|_| make_null_light(0)
 };
+
+fn @make_empty_light_table() = make_proxy_light_table(0);

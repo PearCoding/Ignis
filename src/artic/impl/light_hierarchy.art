@@ -47,13 +47,13 @@ mod light_hierarchy {
             1:f32
         }; 
 
-        entry.flux * cos_d / math_builtins::fmax[f32](0.0001, dist2)
+        all::safe_div(entry.flux * cos_d, dist2)
     }
 
     fn @get_left_prop(left: LightHierarchyEntry, right: LightHierarchyEntry, pos: Vec3) -> f32 {
         let cl = get_entry_cost(left, pos);
         let cr = get_entry_cost(right, pos);
-        cl / (cl + cr)
+        1 / (1 + cr/cl)
     }
 
     fn @random_select_left(rnd: &mut RndState, left: LightHierarchyEntry, right: LightHierarchyEntry, pos: Vec3) -> (bool, f32) {
@@ -65,9 +65,11 @@ mod light_hierarchy {
         let mut pdf   = 1:f32;
         let mut entry = load_entry(0, data);
         while !entry.is_leaf {
-            let (is_left, prop) = random_select_left(rnd, load_entry(entry.id, data), load_entry(entry.id+1, data), pos);
+            let left  = load_entry(entry.id, data);
+            let right = load_entry(entry.id+1, data);
+            let (is_left, prop) = random_select_left(rnd, left, right, pos);
 
-            entry = load_entry(all::select(is_left, entry.id, entry.id+1), data);
+            entry = all::select(is_left, left, right);
             pdf  *= all::select(is_left, prop, 1-prop);
         }
 
@@ -82,19 +84,14 @@ mod light_hierarchy {
             let left  = load_entry(entry.id, data);
             let right = load_entry(entry.id+1, data);
             let prop  = get_left_prop(left, right, pos);
+            let is_left = (code & 0x1) == 0;
 
-            if (code & 0x1) == 0 {
-                entry = left;
-                pdf  *= prop;
-            } else {
-                entry = right;
-                pdf  *= 1 - prop;
-            }
-
+            entry  = all::select(is_left, left, right);
+            pdf   *= all::select(is_left, prop, 1-prop);
             code >>= 1;
         }
 
-        all::select(entry.id == light.id, pdf, 0:f32)
+        pdf
     }
 }
 
