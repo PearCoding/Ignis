@@ -101,14 +101,21 @@ struct LightHierarchy {
 }
 
 fn @make_light_hierarchy(finite_lights: LightTable, full: DeviceBuffer) -> LightHierarchy {
-    let codes = full;
-    let data  = shift_device_buffer(round_up(finite_lights.count, 4), 0, full);
+    if ?finite_lights.count && finite_lights.count == 1 {
+        LightHierarchy {
+            sample = @|_, _| (finite_lights.get(0), 1:f32),
+            pdf    = @|_, _| 1:f32
+        }
+    } else {
+        let codes = full;
+        let data  = shift_device_buffer(round_up(finite_lights.count, 4), 0, full);
 
-    LightHierarchy {
-        sample = @|rnd, pos| {
-            let (id, pdf) = light_hierarchy::sample_light_id(rnd, pos, data);
-            (finite_lights.get(id), pdf)
-        },
-        pdf = @|light, pos| light_hierarchy::compute_pdf(light, pos, codes, data)
+        LightHierarchy {
+            sample = @|rnd, pos| {
+                let (id, pdf) = light_hierarchy::sample_light_id(rnd, pos, data);
+                (finite_lights.get(id), pdf)
+            },
+            pdf = @|light, pos| light_hierarchy::compute_pdf(light, pos, codes, data)
+        }
     }
 }

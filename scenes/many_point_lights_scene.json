@@ -2,7 +2,7 @@
 	"technique": {
 		"type": "path",
 		"max_depth": 64,
-		"light_selector": "simple"
+		"light_selector": "hierarchy"
 	},
 	"camera": {
 		"type": "perspective",

@@ -53,6 +53,7 @@ if __name__ == "__main__":
         ("multilight-uniform", "multilight", 4),
         ("multilight-simple", "multilight", 4),
         ("multilight-hierarchy", "multilight", 4),
+        ("point", None, 4),
     ]
 
     image_names = [f"{scene}4096-d{depth}" for (scene, _, depth) in scenes]

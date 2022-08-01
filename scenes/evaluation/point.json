@@ -31,11 +31,6 @@
       "name": "Bottom",
       "type": "ply",
       "filename": "../meshes/Bottom.ply"
-    },
-    {
-      "name": "Top",
-      "type": "ply",
-      "filename": "../meshes/Top.ply"
     }
   ],
   "entities": [
@@ -43,36 +38,14 @@
       "name": "__entity_1",
       "shape": "Bottom",
       "bsdf": "Bottom"
-    },
-    {
-      "name": "__light",
-      "shape": "Top",
-      "bsdf": "Black"
     }
   ],
   "lights": [
     {
       "name": "__light_0",
-      "type": "area",
-      "entity": "__light",
-      "radiance": 0.5
-    },
-    {
-      "name": "__light_1",
-      "type": "constant",
-      "radiance": [0.2,0.2,0.2]
-    },
-    {
-      "name": "__light_2",
       "type": "point",
-      "intensity": [1.2566370614, 2.513274123, 12.566370614],
-      "position": [-1, 0.25, 0]
-    },
-    {
-      "name": "__light_3",
-      "type": "point",
-      "intensity": [12.566370614, 2.513274123, 1.2566370614],
-      "position": [1, 0.25, 0]
+      "position": [0,1,0],
+      "intensity": 12.566370614 // TODO: Maybe make the 4*pi part of the actual parameter?
     }
   ]
 }

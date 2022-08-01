@@ -35,7 +35,7 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
         Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
         Vector3f normal   = x_axis.cross(y_axis).normalized();
 
-        mPosition  = origin;
+        mPosition  = origin + x_axis * 0.5f + y_axis * 0.5f;
         mDirection = normal;
         mArea      = x_axis.cross(y_axis).norm();
     } else {
