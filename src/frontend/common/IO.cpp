@@ -72,8 +72,10 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime)
     if (runtime.currentIterationCount() == 0)
         scale = 0;
 
-    size_t aov_count = runtime.aovs().size() + 1;
+    // size_t aov_count = runtime.aovs().size() + 1;
+    size_t aov_count = 1;
 
+    // std::cout<< "in Io.cpp" << aov_count << std::endl;
     std::vector<float> images(width * height * 3 * aov_count);
 
     // Copy data
@@ -110,24 +112,53 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime)
 
         // Framebuffer
         if (aov == 0) {
-            if (aov_count == 1) {
+            // std::cout<< "in If" << aov_count << std::endl;
+            if (aov_count == 1) {// wont go into this if since aov_count = 3
                 // If we have no aovs, stick to the standard naming
                 image_names[3 * aov + 0] = "B";
                 image_names[3 * aov + 1] = "G";
                 image_names[3 * aov + 2] = "R";
-            } else {
+            }
+            else {
+                // std::cout<< "in If-else" << aov_count << std::endl;
                 image_names[3 * aov + 0] = "Default.B";
                 image_names[3 * aov + 1] = "Default.G";
                 image_names[3 * aov + 2] = "Default.R";
             }
         } else {
             std::string name         = runtime.aovs()[aov - 1];
+            std::cout<< "aov_names: " << name << std::endl;
             image_names[3 * aov + 0] = name + ".B";
             image_names[3 * aov + 1] = name + ".G";
             image_names[3 * aov + 2] = name + ".R";
         }
     }
 
-    return ImageIO::save(path, width, height, image_ptrs, image_names);
+    std::vector<const float*> img_ptrs;
+    std::vector<std::string> img_names;
+
+    std::cout<< "ptr.size: " << image_ptrs.size() << std::endl;
+    std::cout<< "names.size: " << image_names.size() << std::endl;
+    for (int aovs = 0; aovs < (int)image_names.size(); aovs++){
+        img_ptrs.push_back(image_ptrs[aovs]);
+        img_names.push_back(image_names[aovs]);
+        if((aovs + 1) % 3 == 0){
+            std::cout<< "img_names.size: " << img_names.size() << "cond" << (aovs + 1) << std::endl;
+            auto aov_ret = ImageIO::save(path, width, height, img_ptrs, img_names);
+            if(!aov_ret){
+                std::cout << "Failed to save " << img_names[0] << std::endl;
+                return false;
+            }
+            img_ptrs.clear();
+            img_names.clear();
+            break;
+        }
+    }
+
+        // auto aov_ret = ImageIO::save(path, width, height, img_ptrs, img_names);
+    // ImageIO::save(path, width, height, image_ptrs, image_names);
+
+    // return ImageIO::save(path, width, height, image_ptrs, image_names);
+    return true;
 }
 } // namespace IG

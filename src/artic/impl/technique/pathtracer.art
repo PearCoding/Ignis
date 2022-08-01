@@ -22,6 +22,7 @@ struct PTRayPayload {
 static AOV_PATH_NORMAL = 1;
 static AOV_PATH_DIRECT = 2;
 static AOV_PATH_NEE    = 3;
+static AOV_PATH_DEPTH = 4;
 
 fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     let mut r : RayPayload;
@@ -46,6 +47,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
     let pdf_lightpick = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
 
     let aov_normal = @aovs(AOV_PATH_NORMAL);
+    let aov_depth = @aovs(AOV_PATH_DEPTH);
     let aov_di     = @aovs(AOV_PATH_DIRECT);
     let aov_nee    = @aovs(AOV_PATH_NEE);
 
@@ -148,7 +150,9 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
             aov_normal.splat(pixel, make_color(math_builtins::fabs(surf.local.col(2).x),
                                                math_builtins::fabs(surf.local.col(2).y),
                                                math_builtins::fabs(surf.local.col(2).z),
-                                               1));
+                                               1));     
+            aov_depth.splat(pixel, make_color(hit.distance, hit.distance, hit.distance, 1)); //depth = ray.hit.point-ray.origin
+            // aov_depth.splat(pixel, make_color(1, 1, 1, 1)); //depth = ray.hit.point-ray.origin
         }
 
         // Hits on a light source

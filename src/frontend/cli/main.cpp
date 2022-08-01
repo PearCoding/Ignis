@@ -112,6 +112,7 @@ int main(int argc, char** argv)
     IG_LOG(L_INFO) << "Started rendering..." << std::endl;
 
     std::vector<double> samples_sec;
+    std::vector<std::string> aovs;
 
     // std::vector<uint32_t> filter_Buffer;
     // std::vector<uint32_t> Buffer;
@@ -136,9 +137,20 @@ int main(int argc, char** argv)
 
         timer_render.start();
         runtime->step();
+
+        aovs = runtime->aovs();
+        std::cout<< "AOVS: " << aovs.size() << std::endl;
         //Add filter here 100 percent sure hehehehe
         // runtime->getFramebuffer()
         runtime->filter();
+        // aovs = runtime->aovs();
+        // std::cout<< aovs.size() << std::endl;
+
+        auto width1 = runtime->framebufferWidth();
+        auto height1 = runtime->framebufferHeight(); 
+        std::cout << width1*height1 <<std::endl;
+
+
 
         // SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
 

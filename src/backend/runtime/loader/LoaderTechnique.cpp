@@ -59,10 +59,15 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
 
     // Check if we have a proper defined technique
     // It is totally fine to only define the type by other means then the scene config
+    // info.EnabledAOVs.emplace_back("Normals");
+    // info.EnabledAOVs.emplace_back("Depth");
     if (technique) {
         // info.EnabledAOVs.emplace_back("Debug");
         if (technique->property("aov_normals").getBool(false))
             info.EnabledAOVs.emplace_back("Normals");
+        
+        if (technique->property("aov_depth").getBool(false))
+            info.EnabledAOVs.emplace_back("Depth");
 
         if (technique->property("aov_mis").getBool(false)) {
             info.EnabledAOVs.emplace_back("Direct Weights");
@@ -81,11 +86,16 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
     const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
+    const bool hasDepthAOV = technique ? technique->property("aov_depth").getBool(false) : false;
     const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
 
     size_t counter = 1;
+
     if (hasNormalAOV)
         stream << "  let aov_normals = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
+    
+    if (hasDepthAOV)
+        stream << "  let aov_depth = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
 
     if (hasMISAOV) {
         stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
@@ -104,6 +114,9 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
         stream << "      2 => aov_di," << std::endl
                << "      3 => aov_nee," << std::endl;
     }
+
+    if (hasDepthAOV)
+        stream << "      4 => aov_depth," << std::endl;
 
     stream << "      _ => make_empty_aov_image()" << std::endl
            << "    }" << std::endl

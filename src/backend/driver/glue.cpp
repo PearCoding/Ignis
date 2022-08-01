@@ -942,9 +942,13 @@ void glue_filter(size_t device){
 //     float* in_pixels            = sInterface->getAOVImage(0, 0);
 //     uint32_t* device_out_pixels = out_pixels;
 
-float* in_pixels = sInterface->getAOVImage(0,0); //framebuffer pixels
 
-    ig_utility_filter((int)device, in_pixels, (int)sInterface->film_width, (int)sInterface->film_height);
+float* in_pixels = sInterface->getAOVImage(0,0); //framebuffer pixels
+float* normals = sInterface->getAOVImage(0,1);
+float* depth = sInterface->getAOVImage(0,2);
+
+//enable normal aov, depth aov, add this buffer to the path tracer,
+    ig_utility_filter((int)device, in_pixels, normals, depth, (int)sInterface->film_width, (int)sInterface->film_height);
 
 }
 
