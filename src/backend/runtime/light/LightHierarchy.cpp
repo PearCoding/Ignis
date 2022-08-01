@@ -57,10 +57,23 @@ inline static LightEntry populateInnerNodes(size_t id, uint32 code, uint32 depth
         const auto left  = populateInnerNodes(node.leftIndex(), code, depth + 1, bvh, entries, codes);
         const auto right = populateInnerNodes(node.rightIndex(), code | (0x1 << depth), depth + 1, bvh, entries, codes);
 
-        entry.Position  = node.BBox.center();
-        entry.Direction = (left.Direction + right.Direction).normalized();
-        entry.Flux      = left.Flux + right.Flux;
-        entry.ID        = -int32(node.leftIndex() + 1);
+        entry.Position = node.BBox.center();
+        entry.ID       = -int32(node.leftIndex() + 1);
+
+        // Handle delta cases
+        if (left.Flux < 0 && right.Flux < 0) {
+            entry.Direction = Vector3f::UnitZ();
+            entry.Flux      = left.Flux + right.Flux;
+        } else if (left.Flux < 0) {
+            entry.Direction = Vector3f::UnitZ();
+            entry.Flux      = -(-left.Flux + right.Flux);
+        } else if (right.Flux < 0) {
+            entry.Direction = Vector3f::UnitZ();
+            entry.Flux      = -(left.Flux - right.Flux);
+        } else {
+            entry.Direction = (left.Direction + right.Direction).normalized();
+            entry.Flux      = left.Flux + right.Flux;
+        }
     }
     return entry;
 }
@@ -82,10 +95,11 @@ std::filesystem::path LightHierarchy::setup(const std::vector<std::shared_ptr<Li
     for (const auto& l : lights) {
         const auto p = l->position();
         IG_ASSERT(p.has_value(), "Expected all finite lights to return a valid position");
+        const bool has_dir = l->direction().has_value();
         const Vector3f dir = l->direction().value_or(Vector3f::UnitZ());
         const float flux   = l->computeFlux(tree);
 
-        bvh.store(LightEntry(p.value(), dir, flux, (int32)l->id()));
+        bvh.store(LightEntry(p.value(), dir, has_dir ? flux : -flux, (int32)l->id()));
     }
 
     // Compute flux and average direction for inner nodes

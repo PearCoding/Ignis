@@ -16,7 +16,9 @@ mod light_hierarchy {
         dir:  Vec3,
         flux: f32,
         id:   i32,
-        leaf: bool
+
+        has_dir: bool,
+        is_leaf: bool
     }
 
     fn @load_entry(id: i32, data: all::DeviceBuffer) -> LightHierarchyEntry {
@@ -27,9 +29,10 @@ mod light_hierarchy {
         LightHierarchyEntry {
             pos  = all::make_vec3(e1.x, e1.y, e1.z),
             dir  = all::make_vec3(e2.x, e2.y, e2.z),
-            flux = e1.w,
+            flux = math_builtins::fabs(e1.w),
             id   = all::select(index < 0, -index - 1, index),
-            leaf = index >= 0
+            has_dir = !math_builtins::signbit(e1.w),
+            is_leaf = index >= 0
         }
     }
 
@@ -37,9 +40,14 @@ mod light_hierarchy {
         // TODO: Normal direction?
         let cdir  = all::vec3_sub(entry.pos, pos);
         let dist2 = all::vec3_len2(cdir);
-        let cos_d = math_builtins::fabs(all::vec3_dot(entry.dir, cdir)); // Has dist applied
 
-        entry.flux * cos_d / math_builtins::fmax(0.0001:f32, dist2)
+        let cos_d = if entry.has_dir { 
+            math_builtins::fabs(all::vec3_dot(entry.dir, all::vec3_normalize(cdir))) 
+        } else {
+            1:f32
+        }; 
+
+        entry.flux * cos_d / math_builtins::fmax[f32](0.0001, dist2)
     }
 
     fn @get_left_prop(left: LightHierarchyEntry, right: LightHierarchyEntry, pos: Vec3) -> f32 {
@@ -56,7 +64,7 @@ mod light_hierarchy {
     fn @sample_light_id(rnd: &mut RndState, pos: Vec3, data: DeviceBuffer) -> (i32, f32) {
         let mut pdf   = 1:f32;
         let mut entry = load_entry(0, data);
-        while !entry.leaf {
+        while !entry.is_leaf {
             let (is_left, prop) = random_select_left(rnd, load_entry(entry.id, data), load_entry(entry.id+1, data), pos);
 
             entry = load_entry(all::select(is_left, entry.id, entry.id+1), data);
@@ -70,7 +78,7 @@ mod light_hierarchy {
         let mut code  = all::bitcast[u32](codes.load_i32(light.id));
         let mut pdf   = 1:f32;
         let mut entry = load_entry(0, data);
-        while !entry.leaf {
+        while !entry.is_leaf {
             let left  = load_entry(entry.id, data);
             let right = load_entry(entry.id+1, data);
             let prop  = get_left_prop(left, right, pos);
