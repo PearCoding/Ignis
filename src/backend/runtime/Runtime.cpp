@@ -206,13 +206,14 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     lopts.IsTracer            = mOptions.IsTracer;
     lopts.Scene               = std::move(scene);
     lopts.ForceSpecialization = mOptions.ForceSpecialization;
-    lopts.UseDenoiser         = !mOptions.IsTracer && mOptions.UseDenoiser && hasDenoiser();
+    lopts.Denoiser            = mOptions.Denoiser;
+    lopts.Denoiser.Enabled    = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
 
     // Print a warning if denoiser was requested but none is available
-    if (mOptions.UseDenoiser && !lopts.UseDenoiser && !mOptions.IsTracer && hasDenoiser())
+    if (mOptions.Denoiser.Enabled && !lopts.Denoiser.Enabled && !mOptions.IsTracer && hasDenoiser())
         IG_LOG(L_WARNING) << "Trying to use denoiser but no denoiser is available" << std::endl;
 
-    if (lopts.UseDenoiser)
+    if (lopts.Denoiser.Enabled)
         IG_LOG(L_INFO) << "Using denoiser" << std::endl;
 
     // Extract technique
@@ -249,7 +250,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     mTechniqueVariants        = std::move(result.TechniqueVariants);
     mResourceMap              = std::move(result.ResourceMap);
 
-    if (lopts.UseDenoiser)
+    if (lopts.Denoiser.Enabled)
         mTechniqueInfo.EnabledAOVs.emplace_back("Denoised");
 
     return setup();
@@ -296,7 +297,7 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
     DriverRenderSettings settings;
     settings.rays           = nullptr; // No artificial ray streams
     settings.device         = mDevice;
-    settings.apply_denoiser = mOptions.UseDenoiser && !ignoreDenoiser;
+    settings.apply_denoiser = mOptions.Denoiser.Enabled && !ignoreDenoiser;
     settings.spi            = info.GetSPI(mSamplesPerIteration);
     settings.work_width     = info.GetWidth(mFilmWidth);
     settings.work_height    = info.GetHeight(mFilmHeight);

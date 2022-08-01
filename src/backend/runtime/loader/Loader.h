@@ -2,6 +2,7 @@
 
 #include "CameraOrientation.h"
 #include "Parser.h"
+#include "RuntimeSettings.h"
 #include "Target.h"
 #include "TechniqueInfo.h"
 #include "table/SceneDatabase.h"
@@ -21,7 +22,7 @@ struct LoaderOptions {
     size_t SamplesPerIteration; // Only a recommendation!
     bool IsTracer;
     bool ForceSpecialization;
-    bool UseDenoiser;
+    DenoiserSettings Denoiser;
 };
 
 struct LoaderResult {

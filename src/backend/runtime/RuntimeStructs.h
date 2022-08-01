@@ -35,11 +35,6 @@ struct ParameterSet {
     std::unordered_map<std::string, Vector4f> ColorParameters;
 };
 
-struct RuntimeRenderSettings {
-    size_t FilmWidth  = 800;
-    size_t FilmHeight = 600;
-};
-
 struct Ray {
     Vector3f Origin;
     Vector3f Direction;

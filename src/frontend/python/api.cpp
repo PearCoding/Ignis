@@ -86,11 +86,6 @@ PYBIND11_MODULE(pyignis, m)
         .def_property(
             "ModulePath", [](const RuntimeOptions& opts) { return opts.ModulePath.generic_u8string(); }, [](RuntimeOptions& opts, const std::string& val) { opts.ModulePath = val; });
 
-    py::class_<RuntimeRenderSettings>(m, "RuntimeRenderSettings")
-        .def(py::init([]() { return RuntimeRenderSettings(); }))
-        .def_readwrite("FilmWidth", &RuntimeRenderSettings::FilmWidth)
-        .def_readwrite("FilmHeight", &RuntimeRenderSettings::FilmHeight);
-
     py::class_<Ray>(m, "Ray")
         .def(py::init([](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, 1) }; }))
         .def(py::init([](const Vector3f& org, const Vector3f& dir, float tmin, float tmax) { return Ray{ org, dir, Vector2f(tmin, tmax) }; }))

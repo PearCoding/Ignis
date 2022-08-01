@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RuntimeSettings.h"
 #include "RuntimeStructs.h"
 #include "Statistics.h"
 #include "driver/DriverManager.h"
@@ -13,29 +14,6 @@ class Scene;
 }
 
 struct LoaderOptions;
-
-struct RuntimeOptions {
-    bool IsTracer        = false;
-    bool IsInteractive   = false;
-    bool DumpShader      = false;
-    bool DumpShaderFull  = false;
-    bool AcquireStats    = false;
-    Target DesiredTarget = Target::INVALID;
-    bool RecommendCPU    = true;
-    bool RecommendGPU    = true;
-    bool UseDenoiser         = false;
-    uint32 Device        = 0;
-    uint32 SPI           = 0; // Detect automatically
-    std::string OverrideTechnique;
-    std::string OverrideCamera;
-    std::pair<uint32, uint32> OverrideFilmSize = { 0, 0 };
-
-    bool AddExtraEnvLight            = false;                           // User option to add a constant environment light (just to see something)
-    std::filesystem::path ModulePath = std::filesystem::current_path(); // Optional path to modules
-    std::filesystem::path ScriptDir  = {};                              // Path to a new script directory, replacing the internal standard library
-
-    bool ForceSpecialization = false; // Enforce specialization of generated shader for all parameters. This will increase compile time
-};
 
 struct AOVAccessor {
     const float* Data;

@@ -73,7 +73,7 @@ static TechniqueInfo wireframe_get_info(const std::string&, const std::shared_pt
 
 /////////////////////////
 
-static void enable_ib(TechniqueInfo& info, bool extend = true)
+static void enable_ib(TechniqueInfo& info, bool always = false, bool extend = true)
 {
     info.EnabledAOVs.emplace_back("Normals");
     info.EnabledAOVs.emplace_back("Albedo");
@@ -90,7 +90,7 @@ static void enable_ib(TechniqueInfo& info, bool extend = true)
         if (info.VariantSelector) {
             const auto prevSelector = info.VariantSelector;
             info.VariantSelector    = [=](size_t iter) {
-                if (iter == 0) {
+                if (always || iter == 0) {
                     std::vector<size_t> pass_with_ib = prevSelector(iter);
                     pass_with_ib.emplace_back(variantCount - 1);
                     return pass_with_ib;
@@ -100,7 +100,7 @@ static void enable_ib(TechniqueInfo& info, bool extend = true)
             };
         } else {
             info.VariantSelector = [=](size_t iter) {
-                if (iter == 0) {
+                if (always || iter == 0) {
                     std::vector<size_t> pass_with_ib(variantCount);
                     std::iota(std::begin(pass_with_ib), std::end(pass_with_ib), 0);
                     return pass_with_ib;
@@ -126,7 +126,7 @@ static bool handle_ib_body(std::ostream& stream, const std::shared_ptr<Parser::O
         return false;
 
     const int max_depth        = technique ? technique->property("max_depth").getInteger(64) : 64;
-    const bool handle_specular = technique ? technique->property("denoiser_handle_specular").getBool(false) : false;
+    const bool handle_specular = ctx.Denoiser.FollowSpecular || (technique ? technique->property("denoiser_handle_specular").getBool(false) : false);
 
     stream << "  let aov_normals = device.load_aov_image(\"Normals\", spi); aov_normals.mark_as_used();" << std::endl;
     stream << "  let aov_albedo = device.load_aov_image(\"Albedo\", spi); aov_albedo.mark_as_used();" << std::endl;
@@ -164,10 +164,12 @@ static bool handle_ib_header(std::ostream& stream, const LoaderContext& ctx)
     return true;
 }
 
-static TechniqueInfo ib_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+static TechniqueInfo ib_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
 {
+    const bool apply_always = !ctx.Denoiser.OnlyFirstIteration || (technique ? technique->property("denoiser_ib_all_iterations").getBool(false) : false);
+
     TechniqueInfo info;
-    enable_ib(info, false);
+    enable_ib(info, apply_always, false);
     return info;
 }
 
@@ -199,8 +201,8 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
 
     info.Variants[0].UsesLights = true;
 
-    if (ctx.UseDenoiser)
-        enable_ib(info);
+    if (ctx.Denoiser.Enabled)
+        enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
 
     return info;
 }
@@ -256,8 +258,8 @@ static TechniqueInfo volpath_get_info(const std::string&, const std::shared_ptr<
     info.Variants[0].UsesLights = true;
     info.Variants[0].UsesMedia  = true;
 
-    if (ctx.UseDenoiser)
-        enable_ib(info);
+    if (ctx.Denoiser.Enabled)
+        enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
 
     return info;
 }
@@ -355,8 +357,8 @@ static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Pars
         }
     }
 
-    if (ctx.UseDenoiser)
-        enable_ib(info);
+    if (ctx.Denoiser.Enabled)
+        enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
 
     return info;
 }
