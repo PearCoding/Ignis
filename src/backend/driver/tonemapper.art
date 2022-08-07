@@ -851,7 +851,8 @@ fn ig_utility_filter(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: 
     
     let up = ((kernel_size - 1) / 2);
     // in_pixels - pointer to frame_buffer
-    let buffer_out = device.make_buffer(in_pixels as &[u8],  width * height * 3);
+    // store color buffer in a separate buffer (TODO)
+    let buffer_out = device.make_buffer(in_pixels as &[u8],  width * height * 3); 
     let buffer_n = device.make_buffer(normals as &[u8], width * height * 3);
     let buffer_d = device.make_buffer(depth as &[u8], width * height * 3);
 

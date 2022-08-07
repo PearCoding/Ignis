@@ -23,6 +23,7 @@ static AOV_PATH_NORMAL = 1;
 static AOV_PATH_DIRECT = 2;
 static AOV_PATH_NEE    = 3;
 static AOV_PATH_DEPTH = 4;
+static AOV_PATH_ALBEDO = 5;
 
 fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     let mut r : RayPayload;
@@ -48,6 +49,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
 
     let aov_normal = @aovs(AOV_PATH_NORMAL);
     let aov_depth = @aovs(AOV_PATH_DEPTH);
+    let aov_albedo = @aovs(AOV_PATH_ALBEDO);
     let aov_di     = @aovs(AOV_PATH_DIRECT);
     let aov_nee    = @aovs(AOV_PATH_NEE);
 
@@ -152,7 +154,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                                                math_builtins::fabs(surf.local.col(2).z),
                                                1));     
             aov_depth.splat(pixel, make_color(hit.distance, hit.distance, hit.distance, 1)); //depth = ray.hit.point-ray.origin
-            // aov_depth.splat(pixel, make_color(1, 1, 1, 1)); //depth = ray.hit.point-ray.origin
+           
         }
 
         // Hits on a light source
@@ -203,7 +205,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
     }
 
     fn @on_bounce( ray: Ray
-                 , _pixel: i32
+                 , pixel: i32
                  , _hit: Hit
                  , rnd: &mut RndState
                  , payload: RayPayload
@@ -215,6 +217,13 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
         // Bounce
         let out_dir = vec3_neg(ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
+            if(pt.depth == 1){
+                // let out_dir = vec3_neg(ray.dir);
+                let bsdf_cos = vec3_dot(out_dir, surf.local.col(2)); //has cosine
+                // let albedo = make_color(0.5, 0.9, 0.5, 1);
+                let albedo = color_mulf(mat.bsdf.eval(out_dir, mat_sample.in_dir), 1 / bsdf_cos); // removing cosine
+                aov_albedo.splat(pixel, albedo);
+            }
             let rr_prob = russian_roulette_pbrt(color_mulf(pt.contrib, pt.eta * pt.eta), 0.95);
             if pt.depth + 1 > max_path_len || randf(rnd) >= rr_prob {
                 return(Option[(Ray, RayPayload)]::None)

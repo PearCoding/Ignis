@@ -544,7 +544,7 @@ public:
                                                1.0f / iter,
                                                ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                                                ToneMapping_Automatic ? 0 : ToneMapping_Offset };
-        Runtime->filter();
+        if(gauss_filter == true){Runtime->filter();}
         Runtime->tonemap(buf, tone_settings);
 
         SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
@@ -715,12 +715,9 @@ public:
                 }
             }
 
-            // if (ImGui::CollapsingHeader("Denoiser", ImGuiTreeNodeFlags_DefaultOpen)) {
-            //     ImGui::Checkbox("Gauss", &gauss_filter);
-            //     if(gauss_filter){
-            //         Runtime->filter();
-            //     }
-            //     }
+            if (ImGui::CollapsingHeader("Denoiser", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Checkbox("Gauss", &gauss_filter);
+                }
 
             if (ImGui::CollapsingHeader("ToneMapping", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::Checkbox("Automatic", &ToneMapping_Automatic);

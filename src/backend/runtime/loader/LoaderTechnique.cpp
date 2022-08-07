@@ -68,6 +68,9 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
         
         if (technique->property("aov_depth").getBool(false))
             info.EnabledAOVs.emplace_back("Depth");
+        
+        if (technique->property("aov_albedo").getBool(false))
+            info.EnabledAOVs.emplace_back("Albedo");
 
         if (technique->property("aov_mis").getBool(false)) {
             info.EnabledAOVs.emplace_back("Direct Weights");
@@ -87,6 +90,7 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
     const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
     const bool hasDepthAOV = technique ? technique->property("aov_depth").getBool(false) : false;
+    const bool hasAlbedoAOV = technique ? technique->property("aov_albedo").getBool(false) : false;
     const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
 
     size_t counter = 1;
@@ -96,6 +100,9 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     
     if (hasDepthAOV)
         stream << "  let aov_depth = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
+
+    if (hasAlbedoAOV)
+        stream << "  let aov_albedo = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
 
     if (hasMISAOV) {
         stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
@@ -117,6 +124,9 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
 
     if (hasDepthAOV)
         stream << "      4 => aov_depth," << std::endl;
+    
+    if (hasAlbedoAOV)
+        stream << "      5 => aov_albedo," << std::endl;
 
     stream << "      _ => make_empty_aov_image()" << std::endl
            << "    }" << std::endl
