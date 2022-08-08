@@ -3,7 +3,8 @@
 		"type": "path",
 		"max_depth": 64,
 		"aov_normals": true,
-		"aov_depth": true
+		"aov_depth": true,
+		"aov_albedo": true
 	},
 	"camera": {
 		"type": "perspective",
