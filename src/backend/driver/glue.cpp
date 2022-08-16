@@ -947,9 +947,10 @@ float* in_pixels = sInterface->getAOVImage(0,0); //framebuffer pixels
 float* normals = sInterface->getAOVImage(0,1);
 float* depth = sInterface->getAOVImage(0,2);
 float* albedo = sInterface->getAOVImage(0,3);
+float* luminance = sInterface->getAOVImage(0,3);
 
 //enable normal aov, depth aov, add this buffer to the path tracer,
-    ig_utility_filter((int)device, in_pixels, normals, depth, albedo, (int)sInterface->film_width, (int)sInterface->film_height);
+    ig_utility_filter((int)device, in_pixels, normals, depth, albedo, luminance, (int)sInterface->film_width, (int)sInterface->film_height);
 
 }
 

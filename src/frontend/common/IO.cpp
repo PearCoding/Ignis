@@ -137,13 +137,13 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime)
     std::vector<const float*> img_ptrs;
     std::vector<std::string> img_names;
 
-    std::cout<< "ptr.size: " << image_ptrs.size() << std::endl;
-    std::cout<< "names.size: " << image_names.size() << std::endl;
+    // std::cout<< "ptr.size: " << image_ptrs.size() << std::endl;
+    // std::cout<< "names.size: " << image_names.size() << std::endl;
     for (int aovs = 0; aovs < (int)image_names.size(); aovs++){
         img_ptrs.push_back(image_ptrs[aovs]);
         img_names.push_back(image_names[aovs]);
         if((aovs + 1) % 3 == 0){
-            std::cout<< "img_names.size: " << img_names.size() << "cond" << (aovs + 1) << std::endl;
+            // std::cout<< "img_names.size: " << img_names.size() << "cond" << (aovs + 1) << std::endl;
             auto aov_ret = ImageIO::save(path, width, height, img_ptrs, img_names);
             if(!aov_ret){
                 std::cout << "Failed to save " << img_names[0] << std::endl;

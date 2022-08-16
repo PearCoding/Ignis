@@ -53,7 +53,7 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
     }
 
     const char* err = nullptr;
-    std::cout<< "debug " << path.generic_u8string().c_str() + layer_names[0] << std::endl;
+    // std::cout<< "debug " << path.generic_u8string().c_str() + layer_names[0] << std::endl;
     auto ret_name = path.generic_u8string().c_str();
     int ret         = SaveEXRImageToFile(&image, &header, ret_name, &err);
 

@@ -148,7 +148,7 @@ int main(int argc, char** argv)
 
         auto width1 = runtime->framebufferWidth();
         auto height1 = runtime->framebufferHeight(); 
-        std::cout << width1*height1 <<std::endl;
+        // std::cout << width1*height1 <<std::endl;
 
 
 

@@ -114,6 +114,11 @@ fn @mat4x4_matmul(a: Mat4x4, b: Mat4x4) = make_mat4x4(
     mat4x4_mul(a, b.col(2)),
     mat4x4_mul(a, b.col(3)));
 
+fn @mat2x2_at(a: Mat2x2, row: i32, col: i32) = match(row) {
+    0 => a.col(col).x,
+    _ => a.col(col).y
+};
+
 fn @mat3x3_at(a: Mat3x3, row: i32, col: i32) = match(row) {
     0 => a.col(col).x,
     1 => a.col(col).y,

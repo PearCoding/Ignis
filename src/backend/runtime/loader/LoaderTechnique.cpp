@@ -71,6 +71,9 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
         
         if (technique->property("aov_albedo").getBool(false))
             info.EnabledAOVs.emplace_back("Albedo");
+        
+        if (technique->property("aov_luminance").getBool(false))
+            info.EnabledAOVs.emplace_back("Luminance");
 
         if (technique->property("aov_mis").getBool(false)) {
             info.EnabledAOVs.emplace_back("Direct Weights");
@@ -91,6 +94,7 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
     const bool hasDepthAOV = technique ? technique->property("aov_depth").getBool(false) : false;
     const bool hasAlbedoAOV = technique ? technique->property("aov_albedo").getBool(false) : false;
+    const bool hasLuminanceAOV = technique ? technique->property("aov_luminance").getBool(false) : false;
     const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
 
     size_t counter = 1;
@@ -103,6 +107,9 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
 
     if (hasAlbedoAOV)
         stream << "  let aov_albedo = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
+
+    if (hasLuminanceAOV)
+        stream << "  let aov_luminance = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
 
     if (hasMISAOV) {
         stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
@@ -127,6 +134,9 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     
     if (hasAlbedoAOV)
         stream << "      5 => aov_albedo," << std::endl;
+
+    if (hasLuminanceAOV)
+        stream << "      6 => aov_luminance," << std::endl;
 
     stream << "      _ => make_empty_aov_image()" << std::endl
            << "    }" << std::endl

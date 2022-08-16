@@ -4,7 +4,8 @@
 		"max_depth": 64,
 		"aov_normals": true,
 		"aov_depth": true,
-		"aov_albedo": true
+		"aov_albedo": true,
+		"aov_luminance": true
 	},
 	"camera": {
 		"type": "perspective",

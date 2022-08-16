@@ -24,6 +24,7 @@ static AOV_PATH_DIRECT = 2;
 static AOV_PATH_NEE    = 3;
 static AOV_PATH_DEPTH = 4;
 static AOV_PATH_ALBEDO = 5;
+static AOV_PATH_LUMINANCE = 6;
 
 fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     let mut r : RayPayload;
@@ -50,6 +51,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
     let aov_normal = @aovs(AOV_PATH_NORMAL);
     let aov_depth = @aovs(AOV_PATH_DEPTH);
     let aov_albedo = @aovs(AOV_PATH_ALBEDO);
+    let aov_luminance = @aovs(AOV_PATH_LUMINANCE);
     let aov_di     = @aovs(AOV_PATH_DIRECT);
     let aov_nee    = @aovs(AOV_PATH_NEE);
 
@@ -153,7 +155,8 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                                                math_builtins::fabs(surf.local.col(2).y),
                                                math_builtins::fabs(surf.local.col(2).z),
                                                1));     
-            aov_depth.splat(pixel, make_color(hit.distance, hit.distance, hit.distance, 1)); //depth = ray.hit.point-ray.origin
+            let pos = vec3_add(ray.org, vec3_mulf(ray.dir, hit.distance));
+            aov_depth.splat(pixel, make_color(pos.x, pos.y, pos.z, 1)); //depth = ray.hit.point-ray.origin
            
         }
 
@@ -168,6 +171,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                 let contrib  = handle_color(color_mulf(color_mul(pt.contrib, emit.intensity), mis));
                 
                 aov_di.splat(pixel, contrib);
+                aov_luminance.splat(pixel, contrib);
 
                 return(make_option(contrib))
             }
