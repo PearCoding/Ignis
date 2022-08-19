@@ -48,6 +48,6 @@ struct EntityLeaf1 {
 fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, local: Mat3x4) = EntityLeaf {
     bbox      = bbox,
     entity_id = entity_id,
-    shape_id  = shape_id,
+    shape_id  = shape_id, // use this to check shape similarity ??
     local     = local
 };

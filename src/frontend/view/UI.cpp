@@ -74,7 +74,7 @@ public:
     std::array<int, HISTOGRAM_SIZE> Histogram;
     std::array<float, HISTOGRAM_SIZE> HistogramF;
 
-    bool gauss_filter                       = true;
+    bool atrous_filter                       = true;
     bool ToneMapping_Automatic              = true;
     float ToneMapping_Exposure              = 1.0f;
     float ToneMapping_Offset                = 0.0f;
@@ -544,7 +544,7 @@ public:
                                                1.0f / iter,
                                                ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                                                ToneMapping_Automatic ? 0 : ToneMapping_Offset };
-        if(gauss_filter == true){Runtime->filter();}
+        if(atrous_filter == true){Runtime->filter();}
         Runtime->tonemap(buf, tone_settings);
 
         SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
@@ -716,7 +716,7 @@ public:
             }
 
             if (ImGui::CollapsingHeader("Denoiser", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::Checkbox("Gauss", &gauss_filter);
+                ImGui::Checkbox("A-Trous", &atrous_filter);
                 }
 
             if (ImGui::CollapsingHeader("ToneMapping", ImGuiTreeNodeFlags_DefaultOpen)) {
