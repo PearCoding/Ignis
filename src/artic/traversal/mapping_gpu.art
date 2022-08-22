@@ -96,27 +96,29 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
         let px = c.x * (disp_map.width as f32);
         let py = c.y * (disp_map.height as f32);
 
-        let hi_x = math_builtins::ceil(px) as i32;
-        let lo_x = math_builtins::floor(px) as i32;
-
-        let hi_y = math_builtins::ceil(py) as i32;
-        let lo_y = math_builtins::floor(py) as i32;
-
-        let frac_x = px - (lo_x as f32);
-        let frac_y = py - (lo_y as f32);
-
-        let v00 = disp_map.pixels(lo_x, lo_y).r;
-        let v01 = disp_map.pixels(lo_x, hi_y).r;
-        let v10 = disp_map.pixels(hi_x, lo_y).r;
-        let v11 = disp_map.pixels(hi_x, hi_y).r;
-
-        let v_y0 = frac_x * v00 + (1.0 - frac_x) * v10;
-        let v_y1 = frac_x * v01 + (1.0 - frac_x) * v11;
         
-        let val = (frac_y * v_y0 + (1.0 - frac_x) * v_y1);
-        clampf(val, 0, 1);
-        if (c.x > 0.5) {1}
-        else {0}
+        // let hi_x = math_builtins::ceil(px) as i32;
+        let mut lo_x = math_builtins::floor(px) as i32;
+        
+        // let hi_y = math_builtins::ceil(py) as i32;
+        let mut lo_y = math_builtins::floor(py) as i32;
+        
+        if (lo_x == disp_map.width) {lo_x = disp_map.width -1;}
+        if (lo_y == disp_map.height) {lo_y = disp_map.height -1;}
+        // let frac_x = px - (lo_x as f32);
+        // let frac_y = py - (lo_y as f32);
+
+        // let v00 = disp_map.pixels(lo_x, lo_y).r;
+        // let v01 = disp_map.pixels(lo_x, hi_y).r;
+        // let v10 = disp_map.pixels(hi_x, lo_y).r;
+        // let v11 = disp_map.pixels(hi_x, hi_y).r;
+
+        // let v_y0 = frac_x * v00 + (1.0 - frac_x) * v10;
+        // let v_y1 = frac_x * v01 + (1.0 - frac_x) * v11;
+        
+        // let val = (frac_y * v_y0 + (1.0 - frac_x) * v_y1);
+        //clampf(val, 0, 1)
+        clampf(disp_map.pixels(lo_x, lo_y).r, 0, 1)
     };
 
     let tesselate4 =  @|t:UVTri| {
@@ -328,6 +330,7 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
                                 
                                 closest = t;
                                 //uv = vec2_add(vec2_mulf(current_tri.c0, w), vec2_add(vec2_mulf(current_tri.c1, u), vec2_mulf(current_tri.c2, v)));
+                                uv = make_vec2(current_tri.v1.x, current_tri.v1.y);
                                 break;
                             }
                         } else {
@@ -343,9 +346,9 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
                 let hit = vec3_add(ray.org, vec3_mulf(ray.dir, closest));
                 let dir = uvtri.n;
 
-                if let Option[(f32, f32, f32)]::Some((t,u,v)) = intersect_ray_tri(false, make_ray(hit, dir, -1, flt_max), uvtri2tri(uvtri)) {
-                    uv = make_vec2(u, v);
-                }
+                //if let Option[(f32, f32, f32)]::Some((t,u,v)) = intersect_ray_tri(false, make_ray(hit, dir, -1, flt_max), uvtri2tri(uvtri)) {
+                //    uv = make_vec2(u, v);
+                //}
 
                 make_option(make_hit(-1/* Will be set later*/, prim_id & 0x7FFFFFFF, closest, uv))
             } else {
