@@ -925,7 +925,7 @@ const IG::Statistics* glue_getStatistics()
     return sInterface->getFullStats();
 }
 
-void glue_filter(size_t device){
+void glue_filter(size_t device, float* up, float* dir){
     // if (sInterface->setup.acquire_stats)
     //     sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Tonemap, {});
 
@@ -949,8 +949,12 @@ float* depth = sInterface->getAOVImage(0,2);
 float* albedo = sInterface->getAOVImage(0,3);
 float* luminance = sInterface->getAOVImage(0,3);
 
+// float dir_vec = *dir;
+
+// std::cout<< "in glue " << " Address: " << &dir << " Value: " << *dir << std::endl;
+
 //enable normal aov, depth aov, add this buffer to the path tracer,
-    ig_utility_filter((int)device, in_pixels, normals, depth, albedo, luminance, (int)sInterface->film_width, (int)sInterface->film_height);
+    ig_utility_filter((int)device, in_pixels, normals, depth, albedo, luminance, (int)sInterface->film_width, (int)sInterface->film_height, up, dir);
 
 }
 

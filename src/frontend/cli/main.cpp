@@ -114,20 +114,12 @@ int main(int argc, char** argv)
     std::vector<double> samples_sec;
     std::vector<std::string> aovs;
 
-    // std::vector<uint32_t> filter_Buffer;
-    // std::vector<uint32_t> Buffer;
-    
+    float up[3] = {cmd.UpVector().value_or(def.Up).x(), cmd.UpVector().value_or(def.Up).y(), cmd.UpVector().value_or(def.Up).z()};
+    float dir[3] = {cmd.DirVector().value_or(def.Dir).x(), cmd.DirVector().value_or(def.Dir).y(), cmd.DirVector().value_or(def.Dir).z()};
 
-    // auto width = runtime->framebufferWidth();
-    // auto height = runtime->framebufferHeight();
-    // Buffer.resize(width * height);
-    // filter_Buffer.resize(width * height);
-    // std::cout << Buffer.size();
-    // IG_LOG(L_INFO) << "Size " << Buffer.size() << std::endl;
-    
-    // init framebuffer variable
-    // uint32* filter_buf = filter_Buffer.data();
-    
+    float* dir_vec = &dir[0]; // pointer to direction vector
+    float* up_vec = &up[0];
+    // std::cout<< "In cli.cpp: " << " Address: " << &dir_vec << " Value: " << *dir_vec << std::endl;
     SectionTimer timer_render;
     while (true) {
         if (!cmd.NoProgress)
@@ -142,13 +134,13 @@ int main(int argc, char** argv)
         std::cout<< "AOVS: " << aovs.size() << std::endl;
         //Add filter here 100 percent sure hehehehe
         // runtime->getFramebuffer()
-        runtime->filter();
+        runtime->filter(up_vec, dir_vec);
         // aovs = runtime->aovs();
         // std::cout<< aovs.size() << std::endl;
 
-        auto width1 = runtime->framebufferWidth();
-        auto height1 = runtime->framebufferHeight(); 
-        // std::cout << width1*height1 <<std::endl;
+        // auto width1 = runtime->framebufferWidth();
+        // auto height1 = runtime->framebufferHeight(); 
+        // // std::cout << width1*height1 <<std::endl;
 
 
 

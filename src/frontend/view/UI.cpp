@@ -58,6 +58,8 @@ public:
     SDL_Renderer* Renderer = nullptr;
     SDL_Texture* Texture   = nullptr;
     std::vector<uint32_t> Buffer;
+    float up[3];
+    float dir[3];
 
     int PoseRequest                         = -1;
     bool PoseResetRequest                   = false;
@@ -544,7 +546,14 @@ public:
                                                1.0f / iter,
                                                ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                                                ToneMapping_Automatic ? 0 : ToneMapping_Offset };
-        if(atrous_filter == true){Runtime->filter();}
+        
+        // float* dir_vec = dir.data(); // pointer to direction vector
+        // float* up_vec = up.data();
+
+        float* dir_vec = &dir[0]; // pointer to direction vector
+        float* up_vec = &up[0];
+        // std::cout<< "In Ui.cpp: " << " Address: " << &dir_vec << " Value: " << *dir_vec << std::endl;
+        if(atrous_filter == true){Runtime->filter(up_vec, dir_vec);}
         Runtime->tonemap(buf, tone_settings);
 
         SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
@@ -672,6 +681,11 @@ public:
                 ImGui::Text("Cam Eye (%6.3f, %6.3f, %6.3f)", LastCameraPose.Eye(0), LastCameraPose.Eye(1), LastCameraPose.Eye(2));
                 ImGui::Text("Cam Dir (%6.3f, %6.3f, %6.3f)", LastCameraPose.Dir(0), LastCameraPose.Dir(1), LastCameraPose.Dir(2));
                 ImGui::Text("Cam Up  (%6.3f, %6.3f, %6.3f)", LastCameraPose.Up(0), LastCameraPose.Up(1), LastCameraPose.Up(2));
+
+                for(int i = 0; i < 3; i++){
+                    up[i] = LastCameraPose.Up(i);
+                    dir[i] = LastCameraPose.Dir(i);
+                }
 
                 ImGui::PushItemWidth(-1);
                 ImGui::PlotHistogram("", HistogramF.data(), HISTOGRAM_SIZE, 0, nullptr, 0.0f, 1.0f, ImVec2(0, 60));

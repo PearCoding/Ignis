@@ -113,8 +113,21 @@ struct GbufferTexel{
 
 
 #[export]
-fn ig_utility_filter(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f32], albedo: &[f32], luminance: &[f32], width: i32, height: i32) -> () {
+fn ig_utility_filter(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f32], albedo: &[f32], luminance: &[f32], width: i32, height: i32, up: &[f32], dir: &f32) -> () {
     let device = @get_device(device_id);
+
+    let up_buf = device.make_buffer(dir as &[u8], 3);
+    let dir_buf = device.make_buffer(dir as &[u8], 3);
+
+    let cam_up = make_vec3(up_buf.load_f32(0), up_buf.load_f32(1), up_buf.load_f32(2));
+    let cam_dir = make_vec3(dir_buf.load_f32(0), dir_buf.load_f32(1), dir_buf.load_f32(2));
+
+
+
+    // view matrix:
+    let right = vec3_normalize(vec3_cross(cam_dir, cam_up));
+    let view  = make_mat3x3(right, cam_up, cam_dir);
+
 
     // Computing buffers
     // in_pixels - pointer to frame_buffer
@@ -132,6 +145,8 @@ fn ig_utility_filter(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: 
     let buffer_depth = device.request_buffer("__depth_buffer", width * height * 3, 0);
     let buffer_albedo = device.request_buffer("__albedo_buffer", width * height * 3, 0);
     let buffer_lum = device.request_buffer("__luminance_buffer", width * height * 3, 0);
+
+    let buffer_prev_iter = device.request_buffer("__prev_iter_buffer", width * height * 3, 0);
     
     // intializing buffer_values as 0 (dont know if necessary but to be safe)
     for ind in device.parallel_range(0, (width-1) * (height-1) * 3) {
@@ -358,7 +373,17 @@ fn ig_utility_filter(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: 
         let lum = get_pixel_value(ind, buffer_lum, width, height);
 
         let cuda_out = history_buffer.load_f32(ind);
-        buffer_out.store_i32(ind, bitcast[i32](cuda_out)); //math_builtins::fabs(org)
+        let prev_iter = buffer_prev_iter.load_f32(ind);
+        // buffer_out.store_i32(ind, bitcast[i32](cuda_out)); //math_builtins::fabs(org)
+
+        // storing prev iter info
+        let history_color = cuda_out;
+        buffer_prev_iter.store_i32(ind, bitcast[i32](cuda_out));
+
+        let alpha = 0.2 as f32;
+        let temporal_acc = ((1.0 as f32) - alpha)  * prev_iter + alpha * cuda_out;
+        buffer_out.store_i32(ind, bitcast[i32](temporal_acc));
+
     }
 
     device.present();
