@@ -75,16 +75,17 @@ BRDFData* convert_brdf(powitacq_rgb::BRDF* brdf) {
 std::vector<float> linearize_warp(const Warp* warp) {
     static_assert(sizeof(float) == sizeof(int));
     std::vector<float> data;
-    for (int i = 0; i < 6; i++) {data.push_back( *reinterpret_cast<const float*>(&warp->array_sizes[i]));}
+    data.clear();
+    for (int i = 0; i < 6; i++) {data.push_back( (float)(warp->array_sizes[i]));}
     
-    data.push_back(*reinterpret_cast<const float*>(&warp->size_x));data.push_back(*reinterpret_cast<const float*>(&warp->size_y));
+    data.push_back((float)(warp->size_x));data.push_back((float)(warp->size_y));
     data.push_back(warp->patch_size_x);data.push_back(warp->patch_size_y);
     data.push_back(warp->inv_patch_size_x);data.push_back(warp->inv_patch_size_y);
-    data.push_back(*reinterpret_cast<const float*>(&warp->param_values_offset));
+    data.push_back((float)(warp->param_values_offset));
 
-    for (int i = 0; i < warp->array_sizes[0]; i++) {data.push_back( *reinterpret_cast<const float*>(&warp->param_size[i]));}
+    for (int i = 0; i < warp->array_sizes[0]; i++) {data.push_back( (float)(warp->param_size[i]));}
 
-    for (int i = 0; i < warp->array_sizes[1]; i++) {data.push_back( *reinterpret_cast<const float*>(&warp->param_strides[i]));}
+    for (int i = 0; i < warp->array_sizes[1]; i++) {data.push_back( (float)(warp->param_strides[i]));}
 
     for (int i = 0; i < warp->array_sizes[2]; i++) {data.push_back(warp->param_values[i]);}
 
@@ -97,19 +98,19 @@ std::vector<float> linearize_warp(const Warp* warp) {
     return data;
 }
 
-template <typename Array>
-Warp delinearize_warp(Array& data) {
+Warp delinearize_warp(std::vector<float> data) {
+
     Warp warp;
     unsigned int offset = 0;
     auto sizes = new unsigned int[6];
     for (int i = 0; i < 6; i++) {
-        sizes[i] = *reinterpret_cast<unsigned int*>(&data[i]);
+        sizes[i] = (unsigned int)(data[i]);
     }
     warp.array_sizes = sizes;
     offset += 6;
 
-    warp.size_x = *reinterpret_cast<int*>(&data[offset]);
-    warp.size_y = *reinterpret_cast<int*>(&data[offset + 1]);
+    warp.size_x = (int)(data[offset]);
+    warp.size_y = (int)(data[offset + 1]);
     offset += 2;
 
     warp.patch_size_x = data[offset];
@@ -120,16 +121,16 @@ Warp delinearize_warp(Array& data) {
     warp.inv_patch_size_y = data[offset + 1];
     offset += 2;
 
-    warp.param_values_offset = *reinterpret_cast<int*>(&data[offset]);
+    warp.param_values_offset = (int)(data[offset]);
     offset += 1;
 
     auto param_size = new unsigned int[warp.array_sizes[0]];
-    for (int i = 0; i < warp.array_sizes[0]; i++) {param_size[i] = *reinterpret_cast<unsigned int*>(&data[offset + i]);}
+    for (int i = 0; i < warp.array_sizes[0]; i++) {param_size[i] = (unsigned int)(data[offset + i]);}
     offset += warp.array_sizes[0];
     warp.param_size = param_size;
 
     auto param_strides = new unsigned int[warp.array_sizes[1]];
-    for (int i = 0; i < warp.array_sizes[1]; i++) {param_strides[i] = *reinterpret_cast<unsigned int*>(&data[offset + i]);}
+    for (int i = 0; i < warp.array_sizes[1]; i++) {param_strides[i] = (unsigned int)(data[offset + i]);}
     offset += warp.array_sizes[1];
     warp.param_strides = param_strides;
 
@@ -169,35 +170,31 @@ BRDFData* load_brdf_data (std::string brdf_path) {
 }
 
 void write_brdf_data(BRDFData* data, std::string path) {
-    IG::FileSerializer os(path, false);
-    
-    os.write((int32_t) data->isotropic);
-    os.write((int32_t) data->jacobian);
-
     auto ndf = linearize_warp(&data->ndf);
     auto vndf = linearize_warp(&data->vndf);
     auto sigma = linearize_warp(&data->sigma);
     auto luminance = linearize_warp(&data->luminance);
     auto rgb = linearize_warp(&data->rgb);
 
-    os.write( (int32_t)ndf.size());
-    os.write( (int32_t)vndf.size());
-    os.write( (int32_t)sigma.size());
-    os.write( (int32_t)luminance.size());
-    os.write( (int32_t)rgb.size());
+    IG::FileSerializer os_ndf(path + "_ndf", false);
+    os_ndf.write(ndf, true);
+    os_ndf.close();
 
-    IG_LOG(IG::L_INFO) << "Warp sizes: " << (int32_t)ndf.size() << " " << (int32_t)vndf.size() << " " << (int32_t)sigma.size() << " " << (int32_t)luminance.size() << " " << (int32_t)rgb.size();
+    IG::FileSerializer os_vndf(path + "_vndf", false);
+    os_vndf.write(vndf, true);
+    os_vndf.close();
+    
+    IG::FileSerializer os_sigma(path + "_sigma", false);
+    os_sigma.write(sigma, true);
+    os_sigma.close();
 
-    os.write(ndf, true);
+    IG::FileSerializer os_luminance(path + "_luminance", false);
+    os_luminance.write(luminance, true);
+    os_luminance.close();
 
-    os.write(vndf, true);
-
-    os.write(sigma, true);
-
-    os.write(luminance, true);
-
-    os.write(rgb, true);
-    os.close();
+    IG::FileSerializer os_rgb(path + "_rgb", false);
+    os_rgb.write(rgb, true);
+    os_rgb.close();
 }
 
 // BRDFData* read_brdf_data(std::istream& is) {

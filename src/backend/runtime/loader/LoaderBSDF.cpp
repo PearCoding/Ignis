@@ -112,18 +112,46 @@ static void bsdf_djmeasured(std::ostream& stream, const std::string& name, const
 
     std::string bsdf_name = bsdf->property("filename").getString();
     std::string bsdf_path = "../brdf/" + bsdf_name + "_rgb.bsdf";
-    std::string out_path = "../brdf/" + bsdf_name + ".bin";
+    std::string out_path = "../brdf/" + bsdf_name;
     std::string buffer_name = "buffer_" + bsdf_name;
 
     BRDFData* data = load_brdf_data(bsdf_path);
     write_brdf_data(data, out_path);
 
+    auto t1 = data->vndf;
+    auto lin = linearize_warp(&data->vndf);
+    auto t2 = delinearize_warp(lin);
+
+    IG_LOG(L_INFO) << "Comparing Warps: " <<  compare_warp(&t1, &t2) << "\n";
+    IG_LOG(L_INFO) << "Test Warps: \n";
+    std::stringstream ss;
+    for (int i = 0; i < t1.array_sizes[5]; i++) {
+        if (t1.conditional_cdf[i] != t2.conditional_cdf[i]) {
+            ss << t1.conditional_cdf[i] << "|" << t2.conditional_cdf[i] << ", ";
+        }
+    }
+
+    IG_LOG(L_INFO) << ss.str();
+
+    IG_LOG(L_INFO) << "VNDF Size " << data->vndf.size_x << "/" << data->vndf.size_y << "\n";
+
     tree.beginClosure();
 
     stream << tree.pullHeader()
-           << "  let " << buffer_name << " : DeviceBuffer = device.load_buffer(\"" << out_path << "\");"
-           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_djmeasured_bsdf(surf, "
-           << buffer_name << ");" << std::endl;
+           << "  let " << buffer_name << "_ndf : DeviceBuffer = device.load_buffer(\"" << out_path << "_ndf\");\n"
+           << "  let " << buffer_name << "_vndf : DeviceBuffer = device.load_buffer(\"" << out_path << "_vndf\");\n"
+           << "  let " << buffer_name << "_sigma : DeviceBuffer = device.load_buffer(\"" << out_path << "_sigma\");\n"
+           << "  let " << buffer_name << "_luminance : DeviceBuffer = device.load_buffer(\"" << out_path << "_luminance\");\n"
+           << "  let " << buffer_name << "_rgb : DeviceBuffer = device.load_buffer(\"" << out_path << "_rgb\");\n"
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_djmeasured_bsdf(/*device.request_debug_output(),*/ surf, "
+           << (data->isotropic ? "true" : "false") << ", "   
+           << (data->jacobian ? "true" : "false") << ", "
+           << buffer_name << "_ndf, "
+            << buffer_name << "_vndf, "
+            << buffer_name << "_sigma, "
+            << buffer_name << "_luminance, "
+            << buffer_name << "_rgb"
+            << ");" << std::endl;
 
     tree.endClosure();
 }
@@ -675,7 +703,6 @@ static const struct {
     const char* Name;
     BSDFLoader Loader;
 } _generators[] = {
-    { "djmeasured", bsdf_djmeasured },
     { "diffuse", bsdf_diffuse },
     { "roughdiffuse", bsdf_orennayar },
     { "glass", bsdf_dielectric },
@@ -692,6 +719,7 @@ static const struct {
     { "roughplastic", bsdf_rough_plastic },
     { "klems", bsdf_klems },
     { "tensortree", bsdf_tensortree },
+    { "djmeasured", bsdf_djmeasured },
     { "blend", bsdf_blend },
     { "mask", bsdf_mask },
     { "cutoff", bsdf_cutoff },

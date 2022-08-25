@@ -22,8 +22,7 @@ struct BRDFData {
 
 std::vector<float> linearize_warp(const Warp* warp);
 
-template <typename Array>
-Warp delinearize_warp(Array& data);
+Warp delinearize_warp(std::vector<float> data);
 
 void delinearize_warp_in_place(float* data, Warp* warp);
 
