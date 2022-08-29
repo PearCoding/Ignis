@@ -55,7 +55,7 @@ public:
 
     /// A utility function to speed up tonemapping
     /// out_pixels should be of size width*height!
-    void filter(float* up, float* dir);
+    void filter();
     void tonemap(uint32* out_pixels, const TonemapSettings& settings);
     /// A utility function to speed up utility information from the image
     void imageinfo(const ImageInfoSettings& settings, ImageInfoOutput& output);

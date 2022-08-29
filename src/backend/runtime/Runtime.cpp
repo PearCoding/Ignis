@@ -452,14 +452,14 @@ void* Runtime::compileShader(const std::string& src, const std::string& func, co
     return mLoadedInterface.CompileSourceFunction(full_shader.c_str(), func.c_str());
 }
 
-void Runtime::filter(float* up, float* dir)
+void Runtime::filter()
 {
     if (mTechniqueVariants.empty()) {
         IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
         return;
     }
     // std::cout<< "in runtime " << " Address: " << &dir << " Value: " << *dir << std::endl;
-    mLoadedInterface.FilterFunction((int)mDevice, up, dir);
+    mLoadedInterface.FilterFunction((int)mDevice);
 }
 
 void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)

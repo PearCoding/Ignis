@@ -336,7 +336,7 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
     }
 }
 // TODO write an outer function thats able to call atrous filter, backprojection, etc
-// need to check/ ask if buffers written in other functions can be accessed in another function somehow similar to registry
+// need to check/ ask if buffers written in other functions can be accessed in another function somehow similar to registry --- answer...yes they can be buffers are just written in memory
   
 struct GbufferTexel{
     normal : Vec3,
@@ -357,78 +357,34 @@ fn get_view_matrix(up_buf : DeviceBuffer, dir_buf : DeviceBuffer) -> Mat3x3{
 }
 
 #[export]
-fn ig_utility_filter(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f32], albedo: &[f32], luminance: &[f32], width: i32, height: i32, up: &[f32], dir: &f32, n_levels :i32) -> () {
+fn EstimateVariance(device_id: i32, width: i32, height: i32) -> (){
     let device = @get_device(device_id);
+    let variance_out_buffer = device.request_buffer("__variance_out_buffer", width * height * 3, 0);
+    for ind in unroll(0, (width-1) * (height-1) * 3) {
+        let var_val = 10.0 as f32;
+        variance_out_buffer.store_i32(ind, bitcast[i32](var_val));
+    }
+}
 
-    // let up_buf = device.make_buffer(up as &[u8], 3);
-    // let dir_buf = device.make_buffer(dir as &[u8], 3);
-
-    // let cam_up = make_vec3(up_buf.load_f32(0), up_buf.load_f32(1), up_buf.load_f32(2));
-    // let cam_dir = make_vec3(dir_buf.load_f32(0), dir_buf.load_f32(1), dir_buf.load_f32(2));
-
-
-    // // view matrix:
-    // let up_v = vec3_normalize(registry::get_parameter_vec3("__camera_up", make_vec3(0.0, 0.0, 0.0)));
-    // let dir_v = vec3_normalize(registry::get_parameter_vec3("__camera_dir", make_vec3(0.0, 0.0, 0.0)));
-    
-    // let right = vec3_normalize(vec3_cross(cam_dir, cam_up));
-    // let view  = make_mat3x3(right, cam_up, cam_dir);
-
-    // let current_view = get_view_matrix(up_buf, dir_buf);
-
-    // for i in unroll(0, 3){
-    //     for j in unroll(0, 3){
-    //         print_f32(mat3x3_at(current_view, j, i));
-    //     }
-    // }
-    // let prev_view = current_view;
-    ////////
+#[export]
+fn atrousfilter(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f32], albedo: &[f32], width: i32, height: i32, n_levels :i32) -> () {
+    let device = @get_device(device_id);
 
     // Computing buffers
     // in_pixels - pointer to frame_buffer
     let buffer_out = device.make_buffer(in_pixels as &[u8],  width * height * 3); // contains rendered pixels from fb or if multiple_levels of atrous filter- contains filtered output after 1 level
-    let buffer_n = device.make_buffer(normals as &[u8], width * height * 3);
-    let buffer_d = device.make_buffer(depth as &[u8], width * height * 3);
-    let buffer_a = device.make_buffer(albedo as &[u8], width * height * 3);
-    let buffer_l = device.make_buffer(luminance as &[u8], width * height * 3);
+    let buffer_normals = device.make_buffer(normals as &[u8], width * height * 3);
+    let buffer_depth = device.make_buffer(depth as &[u8], width * height * 3);
+    let buffer_albedo = device.make_buffer(albedo as &[u8], width * height * 3); // not used 
 
     // bunch of buffers for storing intermediates
     let buffer_in = device.request_buffer("__input_buffer", width * height * 3, 0); //c_(i)
     let intermediate_out_buffer = device.request_buffer("__intermediate_out_buffer", width * height * 3, 0); //c_(i+1)
-    // let detail_buffer = device.request_buffer("__reconstruction_buffer", width * height * 3, 0);
-    let buffer_normals = device.request_buffer("__normals_buffer", width * height * 3, 0);
-    let buffer_depth = device.request_buffer("__depth_buffer", width * height * 3, 0);
-    let buffer_albedo = device.request_buffer("__albedo_buffer", width * height * 3, 0);
     let buffer_lum = device.request_buffer("__luminance_buffer", width * height * 3, 0);
-
-    let buffer_prev_iter = device.request_buffer("__prev_iter_buffer", width * height * 3, 0);
-    
-    // intializing buffer_values as 0 (dont know if necessary but to be safe)
-    // for ind in device.parallel_range(0, (width-1) * (height-1) * 3) {
-    //     buffer_in.store_i32(ind, bitcast[i32](0.0));
-    //     history_buffer.store_i32(ind, bitcast[i32](0.0));
-    //     detail_buffer.store_i32(ind, bitcast[i32](0.0));
-    //     buffer_albedo.store_i32(ind, bitcast[i32](0.0));
-    //     buffer_lum.store_i32(ind, bitcast[i32](1.0));
-    // }
-    // device.sync();
-
-    // let val = registry::get_parameter_i32("__luminance_buffer", 12);
-    // print_i32(val);
-    // for ind in unroll(0, (width-1) * (height-1) * 3){
-    //     let val = registry::get_parameter_i32("__luminance_buffer", 0.0);
-
-    // }
-    
 
     for ind in device.parallel_range(0, (width) * (height) * 3 + 1) {
         let out = get_pixel_value(ind, buffer_out, width, height);// buffer_out.load_f32(ind);
         buffer_in.store_i32(ind, bitcast[i32](out));
-        let norml = get_pixel_value(ind, buffer_n, width, height);//buffer_n.load_f32(ind);
-        buffer_normals.store_i32(ind, bitcast[i32](norml));
-        
-        let dep = get_pixel_value(ind, buffer_d, width, height);//buffer_d.load_f32(ind);
-        buffer_depth.store_i32(ind, bitcast[i32](dep));
     }
     device.sync();
 
@@ -440,8 +396,6 @@ fn ig_utility_filter(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: 
         buffer_lum.store_i32(ind, bitcast[i32](lum_val));
     }
     /////////
-
-    ///////// variance computation (DONE)(NEED to check Buffer)
 
     // 2x2 kernel
     // let ent1 = make_vec2((1.0 / 4.0) as f32, (1.0 / 8.0) as f32);
@@ -455,39 +409,18 @@ fn ig_utility_filter(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: 
     // let gaussian_kernel = [1.0 / 16.0 as f32, 1.0 / 8.0 as f32, 1.0 / 16.0 as f32,
     //                     1.0 / 8.0 as f32,  1.0 / 4.0 as f32, 1.0 / 8.0 as f32,
     //                     1.0 / 16.0 as f32, 1.0 / 8.0 as f32, 1.0 / 16.0 as f32];
-    
-    // let mut variance_sum_w : f32;
-    // let mut variance_add : f32;
-    // variance_sum_w = 0.0 as f32;
-    // variance_add = 0.0;
-
-    let g = [make_vec2(-1, -1), make_vec2(0, -1), make_vec2(1, -1),
-                    make_vec2(-1, 0), make_vec2(0, 0), make_vec2(1, 0),
-                    make_vec2(-1, 1), make_vec2(0, 1), make_vec2(1, 1)];
-
     let variance_out_buffer = device.request_buffer("__variance_out_buffer", width * height * 3, 0);
     
-    // variance computed using a 3x3 gaussian kernel centered around center pixel(pos)
-    // let up_var = 1;
+    //test
     // for ind in unroll(0, (width-1) * (height-1) * 3) {
-    //     for j in unroll(up_var * -1, up_var + 1){ // yy
-    //         let row = ind + width * 3 * j;
-    //         for i in unroll(up_var * -1, up_var + 1){ // xx
-    //             let k = mat3x3_at(gaussian_kernel, abs(i), abs(j));
-    //             let val = get_pixel_value(row + j * 3, buffer_in, width, height); // dont know if buffer_in(aka frambuffer is the correct buffer)
-    //             variance_add += val * k;
-    //             variance_sum_w += k;
-    //         }
-    //     }
-    //     let var = math_builtins::fmax(variance_add / variance_sum_w, 0.0 as f32);
-    //     variance_buffer.store_i32(ind, bitcast[i32](var));
+    //     let var_val = 10.0 as f32;
+    //     variance_out_buffer.store_i32(ind, bitcast[i32](var_val));
     // }
-    ///////////
-
-    ///////////////
-    
+    // let print_val = variance_out_buffer.load_f32(500);
+    // print_i32(3334);
+    // print_f32(print_val);
+    /////
     // Settings for filter
-    let sigma_i = 10.0 as f32; // for gaussian filter
 
     // initial setting
     // let sigma_rt = 1.0 as f32;
@@ -512,92 +445,86 @@ fn ig_utility_filter(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: 
         1.0 / 64.0, 1.0 / 16.0, 3.0 / 32.0, 1.0 / 16.0, 1.0 / 64.0,
         1.0 / 256.0, 1.0 / 64.0, 3.0 / 128.0, 1.0 / 64.0, 1.0 / 256.0 ];
     
-    let kernel_weights = [1.0 as f32, 2.0/3.0 as f32, 1.0/6.0 as f32];
+    // let kernel_weights = [1.0 as f32, 2.0/3.0 as f32, 1.0/6.0 as f32];
     
-    let up = ((kernel_size - 1) / 2);
+    let radius = ((kernel_size - 1) / 2);
     let stride = n_levels;
-    
-    // for stride in unroll(1, 2){
-        for ind in unroll(0, (width-1) * (height-1) * 3) {
-            // blurring variance
-            let mut variance_sum_w : f32;
-            let mut variance_add : f32;
-            variance_sum_w = 0.0 as f32;
-            variance_add = 0.0;
 
-            let up_var = 1;
-            for j in unroll(up_var * -1, up_var + 1){ // yy
-                let row = ind + width * 3 * j;
-                for i in unroll(up_var * -1, up_var + 1){ // xx
-                    let k = mat3x3_at(gaussian_kernel, abs(i), abs(j));
-                    let val = get_pixel_value(row + j * 3, variance_out_buffer, width, height); // dont know if buffer_in(aka frambuffer is the correct buffer)
-                    variance_add += val * k;
-                    variance_sum_w += k;
-                }
-            }
-            let var = math_builtins::fmax(variance_add / variance_sum_w, 0.0 as f32);
-            ////////
-            
-            let mut weights_sum = 0.0 as f32; // weights sum
-            let mut color_sum = 0.0 as f32; // color sum
-            let mut variance_sum = 0.0 as f32;
-            let mut weights_sqrd_sum : f32; // for variance
+    for ind in unroll(0, (width-1) * (height-1) * 3) {
+        // blurring variance
+        let mut variance_sum_w : f32;
+        let mut variance_add : f32;
+        variance_sum_w = 0.0 as f32;
+        variance_add = 0.0;
 
-            let lp = get_pixel_value(ind, buffer_lum, width, height); // luminance
-            let pp = get_vector_from_buffer(ind, buffer_depth, width, height); //position
-            let np = get_vector_from_buffer(ind, buffer_normals, width, height); //normal
-            // let variance_p = get_pixel_value(ind, variance_buffer, width, height);
-            
-            for i in unroll (up * -1, up + 1){
-                let row = ind + stride * width * 3 * i;
-                for j in unroll (up * -1, up + 1){
-                    let q = row + stride * j * 3; //neighbour
-                    // let dist = (i * i + j * j) as f32;
-                    // let w_s = gaussian(dist, sigma_i);
-                    // let kernel = w_s;s
-                    let lq = get_pixel_value(q, buffer_lum, width, height);
-                    let pq = get_vector_from_buffer(q, buffer_depth, width, height);
-                    let nq = get_vector_from_buffer(q, buffer_normals, width, height);
-
-                    // edge stopping weights
-                    let wl = compute_luminance_weight(lp, lq, var, sigma_l);
-                    let wn = compute_normal_depth_weight(np, nq, sigma_normal);
-                    let wd = compute_normal_depth_weight(pp, pq, sigma_d);
-
-                    // filter weights
-                    let k = (up + i) + (up + j) * kernel_size; // index to sample from h(the atrous kernel)
-                    let weight = (h(k) as f32) * wn * wd;// * wl; // check luminance buffer
-                    weights_sum += weight;
-                    weights_sqrd_sum += weight * weight;
-                    let buf_value = get_pixel_value(q, buffer_in, width, height);
-                    color_sum += (buf_value * weight);
-
-                    let variance_q = get_pixel_value(q, variance_out_buffer, width, height);
-                    variance_sum += (variance_q * weight * weight);
-                }
-            }
-            // update color and variance
-
-            if(weights_sum > 10e-6){
-                let out = color_sum / weights_sum;
-                // buffer_out.store_i32(ind, bitcast[i32](out));
-                intermediate_out_buffer.store_i32(ind, bitcast[i32](out)); // convolved result / final convolution that needs to be added at iteration N 
-                let var_update = variance_sum / weights_sqrd_sum;
-                variance_out_buffer.store_i32(ind, bitcast[i32](var_update));
-            }
-            else{
-                let out = buffer_in.load_f32(ind);
-                // buffer_out.store_i32(ind, bitcast[i32](out));
-                intermediate_out_buffer.store_i32(ind, bitcast[i32](out));
+        let up_var = 1;
+        for j in unroll(up_var * -1, up_var + 1){ // yy
+            let row = ind + width * 3 * j;
+            for i in unroll(up_var * -1, up_var + 1){ // xx
+                let k = mat3x3_at(gaussian_kernel, abs(i), abs(j));
+                let val = get_pixel_value(row + j * 3, variance_out_buffer, width, height); // dont know if buffer_in(aka frambuffer is the correct buffer)
+                variance_add += val * k;
+                variance_sum_w += k;
             }
         }
-        device.sync();
+        let var = math_builtins::fmax(variance_add / variance_sum_w, 0.0 as f32);
+        // if(ind == 1200) {print_f32(var);}
+        ////////
+        
+        let mut weights_sum = 0.0 as f32; // weights sum
+        let mut color_sum = 0.0 as f32; // color sum
+        let mut variance_sum = 0.0 as f32;
+        let mut weights_sqrd_sum : f32; // for variance
+
+        let lp = get_pixel_value(ind, buffer_lum, width, height); // luminance
+        let pp = get_vector_from_buffer(ind, buffer_depth, width, height); //position
+        let np = get_vector_from_buffer(ind, buffer_normals, width, height); //normal
+        // let variance_p = get_pixel_value(ind, variance_buffer, width, height);
+        
+        for i in unroll (radius * -1, radius + 1){
+            let row = ind + stride * width * 3 * i;
+            for j in unroll (radius * -1, radius + 1){
+                let q = row + stride * j * 3; //neighbour
+                let lq = get_pixel_value(q, buffer_lum, width, height);
+                let pq = get_vector_from_buffer(q, buffer_depth, width, height);
+                let nq = get_vector_from_buffer(q, buffer_normals, width, height);
+
+                // edge stopping weights
+                let wl = compute_luminance_weight(lp, lq, var, sigma_l);
+                let wn = compute_normal_depth_weight(np, nq, sigma_normal);
+                let wd = compute_normal_depth_weight(pp, pq, sigma_d);
+
+                // filter weights
+                let k = (radius + i) + (radius + j) * kernel_size; // index to sample from h(the atrous kernel)
+                let weight = (h(k) as f32) * wn * wd * wl; // check luminance buffer
+                weights_sum += weight;
+                weights_sqrd_sum += weight * weight;
+                let buf_value = get_pixel_value(q, buffer_in, width, height);
+                color_sum += (buf_value * weight);
+
+                let variance_q = get_pixel_value(q, variance_out_buffer, width, height);
+                variance_sum += (variance_q * weight * weight);
+            }
+        }
+        // update color and variance
+
+        if(weights_sum > 10e-6){
+            let out = color_sum / weights_sum;
+            intermediate_out_buffer.store_i32(ind, bitcast[i32](out)); // convolved result / final convolution that needs to be added at iteration N 
+            // let var_update = variance_sum / weights_sqrd_sum;
+            // variance_out_buffer.store_i32(ind, bitcast[i32](var_update));
+        }
+        else{
+            let out = buffer_in.load_f32(ind);
+            intermediate_out_buffer.store_i32(ind, bitcast[i32](out));
+        }
+    }
+    device.sync();
 
     // writing to output- framebuffer
     for ind in device.parallel_range(0, (width-1) * (height-1) * 3) {
-        let cuda_out = intermediate_out_buffer.load_f32(ind);
-        // let prev_iter = buffer_prev_iter.load_f32(ind);
-        buffer_out.store_i32(ind, bitcast[i32](cuda_out)); //math_builtins::fabs(org)
+        let out = intermediate_out_buffer.load_f32(ind);
+        buffer_out.store_i32(ind, bitcast[i32](out)); //math_builtins::fabs(org)
 
     }
 
