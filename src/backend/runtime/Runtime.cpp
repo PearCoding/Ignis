@@ -458,8 +458,6 @@ void Runtime::filter(float* up, float* dir)
         IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
         return;
     }
-    // float dir_vec = &dir;
-
     // std::cout<< "in runtime " << " Address: " << &dir << " Value: " << *dir << std::endl;
     mLoadedInterface.FilterFunction((int)mDevice, up, dir);
 }

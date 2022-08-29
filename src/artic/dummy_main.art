@@ -78,5 +78,14 @@ fn ig_utility_tonemap(_device_id: i32, _in_pixels: &[f32], _out_pixels: &mut [u3
 }
 
 #[export]
-fn ig_utility_filter(_device_id: i32, _in_pixels: &[f32], _normals: &[f32], _depth: &[f32], _albedo: &[f32], _luminance: &[f32], _width: i32, _height: i32, _up: &[f32], _dir: &[f32]) -> (){
+fn ig_get_view_matrix(device_id: i32, up: &[f32], dir: &[f32]) -> &f32 {
+    &(10.0 as f32)    
+}
+
+#[export]
+fn BackProjection(_device_id: i32, _in_pixels: &[f32], _normals: &[f32], _depth: &[f32], _width: i32, _height: i32) -> (){
+}
+
+#[export]
+fn ig_utility_filter(_device_id: i32, _in_pixels: &[f32], _normals: &[f32], _depth: &[f32], _albedo: &[f32], _luminance: &[f32], _width: i32, _height: i32, _up: &[f32], _dir: &[f32], _n_levels :i32) -> (){
 }

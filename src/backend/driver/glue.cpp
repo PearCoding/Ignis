@@ -950,13 +950,30 @@ float* albedo = sInterface->getAOVImage(0,3);
 float* luminance = sInterface->getAOVImage(0,3);
 
 // float dir_vec = *dir;
-
-// std::cout<< "in glue " << " Address: " << &dir << " Value: " << *dir << std::endl;
-
+// std::cout<< "Value 1: " ;
+// for(int i=0; i<6; i++){
+//     std::cout << *dir << " ";//<< std::endl;
+//     *dir++;
+// }
+// std::cout<< "in glue 1 " << " Address: " << &dir << " Value 1: " << *dir << " " << *dir++ << " " << *dir++ << std::endl;
+    // float* pointer = ig_get_view_matrix((int)device, up, dir);
+    // std::cout<< "in glue 2" << " Address: " << &pointer << " Value 2: " << *pointer << " " << *pointer++ << " " << *pointer++ << std::endl;
 //enable normal aov, depth aov, add this buffer to the path tracer,
-    ig_utility_filter((int)device, in_pixels, normals, depth, albedo, luminance, (int)sInterface->film_width, (int)sInterface->film_height, up, dir);
+bool temporal_enable = false;
+if(temporal_enable){
+    BackProjection((int)device, in_pixels, normals, depth, (int)sInterface->film_width, (int)sInterface->film_height);
+}
+int n_levels = 3;
+for(int level = 1; level <= n_levels; level++){
+    in_pixels = sInterface->getAOVImage(0,0); //framebuffer pixels
+    ig_utility_filter((int)device, in_pixels, normals, depth, albedo, luminance, (int)sInterface->film_width, (int)sInterface->film_height, up, dir, level);
+}
 
 }
+
+// void GetViewMatrix(size_t device, float* up, float* dir){
+//     float* pointer = ig_get_view_matrix((int)device, up, dir);
+// }
 
 void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings& driver_settings)
 {

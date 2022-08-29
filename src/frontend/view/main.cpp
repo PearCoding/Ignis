@@ -144,7 +144,7 @@ int main(int argc, char** argv)
             runtime->setParameter("__camera_eye", camera.Eye);
             runtime->setParameter("__camera_dir", camera.Direction);
             runtime->setParameter("__camera_up", camera.Up);
-            runtime->reset();
+            // runtime->reset();
         }
 
         if (running) {
