@@ -943,40 +943,28 @@ void glue_filter(size_t device){
 //     uint32_t* device_out_pixels = out_pixels;
 
 
-float* in_pixels = sInterface->getAOVImage(0,0); //framebuffer pixels
-float* normals = sInterface->getAOVImage(0,1);
-float* depth = sInterface->getAOVImage(0,2);
-float* albedo = sInterface->getAOVImage(0,3);
+    float* in_pixels = sInterface->getAOVImage(0,0); //framebuffer pixels
+    float* normals = sInterface->getAOVImage(0,1);
+    float* depth = sInterface->getAOVImage(0,2);
+    float* albedo = sInterface->getAOVImage(0,3);
 
-// float dir_vec = *dir;
-// std::cout<< "Value 1: " ;
-// for(int i=0; i<6; i++){
-//     std::cout << *dir << " ";//<< std::endl;
-//     *dir++;
-// }
-// std::cout<< "in glue 1 " << " Address: " << &dir << " Value 1: " << *dir << " " << *dir++ << " " << *dir++ << std::endl;
-    // float* pointer = ig_get_view_matrix((int)device, up, dir);
-    // std::cout<< "in glue 2" << " Address: " << &pointer << " Value 2: " << *pointer << " " << *pointer++ << " " << *pointer++ << std::endl;
-//enable normal aov, depth aov, add this buffer to the path tracer,
-bool temporal_enable = true;
-if(temporal_enable){
-    BackProjection((int)device, in_pixels, normals, depth, (int)sInterface->film_width, (int)sInterface->film_height);
-}
-else{
-    EstimateVariance((int)device, (int)sInterface->film_width, (int)sInterface->film_height);
-}
+    bool temporal_enable = true;
+    if(temporal_enable){
+        BackProjection((int)device, in_pixels, normals, depth, (int)sInterface->film_width, (int)sInterface->film_height);
+    }
+    else{
+        EstimateVariance((int)device, (int)sInterface->film_width, (int)sInterface->film_height);
+    }
 
-int n_levels = 3;
-for(int level = 1; level <= n_levels; level++){
-    in_pixels = sInterface->getAOVImage(0,0); //framebuffer pixels
-    atrousfilter((int)device, in_pixels, normals, depth, albedo, (int)sInterface->film_width, (int)sInterface->film_height, level);
+    int n_levels = 5;
+    for(int level = 1; level <= n_levels; level++){
+        in_pixels = sInterface->getAOVImage(0,0); //framebuffer pixels
+        atrousfilter((int)device, in_pixels, normals, depth, albedo, (int)sInterface->film_width, (int)sInterface->film_height, level);
+        // after each iteration filtered output is written to framebuffer
+        // and this is again passed as input to the function
+    }
 }
 
-}
-
-// void GetViewMatrix(size_t device, float* up, float* dir){
-//     float* pointer = ig_get_view_matrix((int)device, up, dir);
-// }
 
 void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings& driver_settings)
 {
