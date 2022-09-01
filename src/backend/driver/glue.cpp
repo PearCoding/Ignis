@@ -762,8 +762,8 @@ public:
     {
         auto& device = devices[dev];
         if (device.filter_pixels.size() != host_pixels.size()) {
-            auto film_size        = film_width * film_height;
-            auto film_data        = reinterpret_cast<uint32_t*>(anydsl_alloc(dev, sizeof(uint32_t) * film_size));
+            auto film_size       = film_width * film_height;
+            auto film_data       = reinterpret_cast<uint32_t*>(anydsl_alloc(dev, sizeof(uint32_t) * film_size));
             device.filter_pixels = anydsl::Array<uint32_t>(dev, film_data, film_size);
         }
         return device.filter_pixels.data();
@@ -925,46 +925,44 @@ const IG::Statistics* glue_getStatistics()
     return sInterface->getFullStats();
 }
 
-void glue_filter(size_t device){
+void glue_filter(size_t device)
+{
     // if (sInterface->setup.acquire_stats)
     //     sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Tonemap, {});
 
-// #ifdef DEVICE_GPU
-// #if defined(DEVICE_NVVM)
-//     int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
-// #elif defined(DEVICE_AMD)
-//     int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
-// #endif
-//     float* in_pixels = sInterface->getAOVImage(dev_id, 0);
-//     uint32_t* device_out_pixels = getFilterImage(dev_id);
-// #endif
-// // #else
-//     float* in_pixels            = sInterface->getAOVImage(0, 0);
-//     uint32_t* device_out_pixels = out_pixels;
+    // #ifdef DEVICE_GPU
+    // #if defined(DEVICE_NVVM)
+    //     int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
+    // #elif defined(DEVICE_AMD)
+    //     int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
+    // #endif
+    //     float* in_pixels = sInterface->getAOVImage(dev_id, 0);
+    //     uint32_t* device_out_pixels = getFilterImage(dev_id);
+    // #endif
+    // // #else
+    //     float* in_pixels            = sInterface->getAOVImage(0, 0);
+    //     uint32_t* device_out_pixels = out_pixels;
 
-
-    float* in_pixels = sInterface->getAOVImage(0,0); //framebuffer pixels
-    float* normals = sInterface->getAOVImage(0,1);
-    float* depth = sInterface->getAOVImage(0,2);
-    float* albedo = sInterface->getAOVImage(0,3);
+    float* in_pixels = sInterface->getAOVImage(0, 0); // framebuffer pixels
+    float* normals   = sInterface->getAOVImage(0, 1);
+    float* depth     = sInterface->getAOVImage(0, 2);
+    float* albedo    = sInterface->getAOVImage(0, 3);
 
     bool temporal_enable = true;
-    if(temporal_enable){
+    if (temporal_enable) {
         BackProjection((int)device, in_pixels, normals, depth, (int)sInterface->film_width, (int)sInterface->film_height);
-    }
-    else{
-        EstimateVariance((int)device, (int)sInterface->film_width, (int)sInterface->film_height);
+    } else {
+        EstimateVariance((int)device, (int)sInterface->film_width, (int)sInterface->film_height); // sets constant variance //spatial estimate for a few frames
     }
 
     int n_levels = 5;
-    for(int level = 1; level <= n_levels; level++){
-        in_pixels = sInterface->getAOVImage(0,0); //framebuffer pixels
+    for (int level = 1; level <= n_levels; level++) {
+        in_pixels = sInterface->getAOVImage(0, 0); // framebuffer pixels
         atrousfilter((int)device, in_pixels, normals, depth, albedo, (int)sInterface->film_width, (int)sInterface->film_height, level);
         // after each iteration filtered output is written to framebuffer
         // and this is again passed as input to the function
     }
 }
-
 
 void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings& driver_settings)
 {
@@ -1125,7 +1123,7 @@ IG_EXPORT DriverInterface ig_get_interface()
     interface.GetFramebufferFunction    = glue_getFramebuffer;
     interface.ClearFramebufferFunction  = glue_clearFramebuffer;
     interface.GetStatisticsFunction     = glue_getStatistics;
-    interface.FilterFunction            = glue_filter;  // filter linking
+    interface.FilterFunction            = glue_filter; // filter linking
     interface.TonemapFunction           = glue_tonemap;
     interface.ImageInfoFunction         = glue_imageinfo;
     interface.CompileSourceFunction     = glue_compileSource;
@@ -1420,4 +1418,3 @@ IG_EXPORT void ignis_stats_add(int id, int value)
     sInterface->getThreadData()->stats.increase((IG::Quantity)id, static_cast<uint64_t>(value));
 }
 }
-

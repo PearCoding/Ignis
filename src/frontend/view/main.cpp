@@ -145,6 +145,7 @@ int main(int argc, char** argv)
             runtime->setParameter("__camera_dir", camera.Direction);
             runtime->setParameter("__camera_up", camera.Up);
             // runtime->reset();
+            runtime->filter();
         }
 
         if (running) {
@@ -157,7 +158,7 @@ int main(int argc, char** argv)
 
                 timer_render.start();
                 runtime->step();
-                
+
                 // runtime->filter();
                 timer_render.stop();
 

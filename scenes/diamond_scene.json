@@ -5,7 +5,7 @@
 		"aov_normals": true,
 		"aov_depth": true,
 		"aov_albedo": true,
-		"aov_luminance": true
+		"aov_motion": true
 	},
 	"camera": {
 		"type": "perspective",
