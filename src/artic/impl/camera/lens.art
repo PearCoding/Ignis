@@ -1,0 +1,382 @@
+// Compute scale based on horizontal field of view and aspect ratio (w/h)
+fn @compute_scale_from_hfov(fov: f32, aspect: f32) -> Vec2 {
+    let sw = math_builtins::tan(fov / 2);
+    let sh = sw / aspect;
+    make_vec2(sw, sh)
+}
+
+// Compute scale based on vertical field of view and aspect ratio (w/h)
+fn @compute_scale_from_vfov(fov: f32, aspect: f32) -> Vec2 {
+    let sh = math_builtins::tan(fov / 2);
+    let sw = sh * aspect;
+    make_vec2(sw, sh)
+}
+
+struct LensElement {
+    thick : f32,
+    is_stop : bool,
+    center : f32, // the z coordinate of the center of the circle/sphere
+    radius : f32,
+    ior : f32,
+    aperture : f32, 
+}
+
+struct Lens {
+    lens_element : [LensElement * 7],
+}
+
+// --------------------------------------------------------------------------------------
+fn @make_lens(le: int, curvature_radius: [f32 * 7], thickness: [f32 * 7], ior: [f32 * 7], aperture: [f32 * 7]) -> (Lens, Lens) {
+    // let lens : [LensElement * 7];
+    let mut back_elts : Lens;
+    let mut elts : Lens;
+    let mut z_coord : f32 = 0.0;
+    let mut z_ap : f32 = 0.0;
+    // unroll : [0,11]
+    for i in unroll(0, le) {
+        back_elts.lens_element(i) = LensElement {
+            thick = thickness(i),
+            center = z_coord,
+            radius = curvature_radius(i) / 100.0,
+            ior = ior(i), // if ior is zero replace with 1.0
+            aperture = aperture(i) / 100.0,
+            is_stop = if (curvature_radius(i)==0.0) {true} else {false},
+        };
+        if (back_elts.lens_element(i).radius == 0.0) {z_ap = z_coord;}
+        z_coord += thickness(i) / 100.0;
+    }
+    // unroll_rev : [7,0) -> leaves 0
+    for i in unroll_rev(le, 0) {
+        // back_elts.lens_element(i-1).center = (back_elts.lens_element(i-1).center - z_ap) + back_elts.lens_element(i-1).radius;
+        // reverse the stored lens in the lens system
+        if (back_elts.lens_element(i-1).ior == 0.0) {back_elts.lens_element(i-1).ior = 1.0;} // if ior is zero replace with 1.0
+        let mut l : LensElement;// = b_elts;
+        // reverse ior for the lens elements
+        if (i-1 != 0) {l.ior = back_elts.lens_element(i-2).ior;} else {l.ior = 1.0;}
+        elts.lens_element(i-1) = LensElement {
+            thick = back_elts.lens_element(i-1).thick,
+            center = back_elts.lens_element(i-1).center,
+            radius = back_elts.lens_element(i-1).radius,
+            ior = l.ior,
+            aperture = back_elts.lens_element(i-1).aperture,
+            is_stop = back_elts.lens_element(i-1).is_stop
+        };   
+    }
+    (back_elts, elts)
+}
+
+// --------------------------------------------------------------------------------------
+// ray-plane intersect
+fn @PlaneIntersect(t : &mut f32, aperture : f32, aperture_override : f32, center : f32 , s_dir : &mut Vec3, s_org : &mut Vec3) -> Option[(Vec3)] {
+    // let mut t_plane : f32;
+
+    *t = (center - (*s_org).z) / (*s_dir).z; // ray-plane intersection
+    if (*t < 0.0) { return(Option[(Vec3)]::None)  }; // return 
+
+    let p_intersect = vec3_add(*s_org, vec3_mulf(*s_dir, *t));
+
+    let actual_aperture =
+    if (aperture_override != 0.0) { 
+        aperture_override 
+    } 
+    else { 
+        aperture
+    };
+    
+    // // check p_intersect is inside/outside the aperture
+    if ((p_intersect.x * p_intersect.x + p_intersect.y * p_intersect.y) > actual_aperture * actual_aperture * 0.25) { return(Option[(Vec3)]::None) }; // return
+    make_option(p_intersect)
+    // make_option(0.0 as f32, make_vec3(0.0, 0.0, 0.0))
+}
+// --------------------------------------------------------------------------------------
+// ray-sphere intersect
+fn @SphereIntersect(t : &mut f32, aperture : f32, radius : f32, center : Vec3, s_dir : &mut Vec3, s_org : &mut Vec3) -> Option[(Vec3)] {
+    let o_to_center = vec3_sub(*s_org, center);
+
+    let a = vec3_dot(*s_dir, *s_dir);
+    let b = 2 * vec3_dot(o_to_center, *s_dir);
+    let c = vec3_dot(o_to_center, o_to_center) - radius * radius;
+
+    let delta = b * b - 4.0 * a * c;
+    if (delta < 0.0) { return(Option[(Vec3)]::None) };
+
+    let t1 = (-b - safe_sqrt(delta)) / (2.0 * a);
+    let t2 = (-b + safe_sqrt(delta)) / (2.0 * a);
+
+    // let mut t : f32;
+
+    if ((*s_dir).z * radius < 0.0) {
+        // check t2 (the further-away one first)
+        if (t2 >= 0.0) {
+        *t = t2;
+        } else if (t1 >= 0.0) {
+        *t = t1;
+        } else { return(Option[(Vec3)]::None) };
+    }
+    else {
+        if (t1 >= 0.0) {
+        *t = t1;
+        } else if (t2 >= 0.0) {
+        *t = t2;
+        } else { return(Option[(Vec3)]::None) };
+    };
+
+
+    let p_intersect =  vec3_add(*s_org, vec3_mulf(*s_dir, *t));
+
+    // distance to the z-axis is greater than (aperture / 2)
+    if ((p_intersect.x * p_intersect.x + p_intersect.y * p_intersect.y) > aperture * aperture * 0.25) { return(Option[(Vec3)]::None) };
+
+    make_option(p_intersect)
+    // make_option(0.0 as f32, make_vec3(0.0, 0.0, 0.0))
+}
+// --------------------------------------------------------------------------------------
+fn @Refract_(incoming : Vec3, normal : Vec3, prev_ior : f32, ior : f32) -> Option[(Vec3)] {
+    // let mut outgoing : Vec3;
+    // regularize normal to point in the opposite direction of the incoming ray
+    let cos_theta_i = math_builtins::fabs(vec3_dot(incoming, normal));
+
+    let k = prev_ior / ior;
+    let sin_theta_o_2 = k * k * (1 - cos_theta_i * cos_theta_i);
+
+    // total internal reflection
+    if (sin_theta_o_2 > 1.0) {
+        return(Option[(Vec3)]::None)
+    }
+    // print_f32(1.0);
+    let outgoing = vec3_normalize(vec3_add( vec3_mulf(incoming, k), vec3_mulf(normal, k*cos_theta_i - safe_sqrt(1-sin_theta_o_2))));
+    make_option(outgoing)
+    // make_option(make_vec3(0.0, 0.0, 0.0))
+}
+
+fn @helper_pass_through(color : &mut f32, s_dir : &mut Vec3, normal : Vec3, prev_ior : f32, ior: f32, is_refract : &mut bool, rnd: &mut RndState) -> () {
+    if let Option[(Vec3)]::Some((out_vec)) = Refract_(*s_dir, normal, prev_ior, ior) {
+        // Schlick's approximation
+        // https://en.wikipedia.org/wiki/Schlick's_approximation
+        let r0 = (prev_ior - ior) / (prev_ior + ior);
+        let r1 = r0 * r0;
+        let r2 = 1.0 - math_builtins::fabs(vec3_dot(*s_dir, normal));
+        let r3 = r2 * r2;
+        let R = r1 + (1 - r1) * r3 * r3 * r2;
+        // random reflection and refraction for lens flare
+        if (randf(rnd) < 0.5 ) {
+            // reflection
+            *s_dir = vec3_sub(out_vec, vec3_mulf(normal, 2.0 * vec3_dot(out_vec, normal)));;
+            *is_refract = false;
+            *color = R / math_builtins::fabs(vec3_dot(*s_dir, normal));
+        } else {
+            // refraction
+            *s_dir = out_vec;
+            *is_refract = true;
+            *color = R / math_builtins::fabs(vec3_dot(out_vec, normal));
+        }
+    }
+    else { // in case of total internal reflection use reflected ray
+        let outgoing = vec3_sub(*s_dir, vec3_mulf(normal, 2.0 * vec3_dot(*s_dir, normal))); // vec3_reflect(*s_dir, normal);
+        *s_dir = outgoing;
+        *is_refract = false;
+        *color = 1.0 as f32;
+    }
+}
+
+// takes a ray passes through the lens element 
+fn @pass_through(color : &mut f32, l : LensElement, s_dir : &mut Vec3, s_org : &mut Vec3, prev_ior : f32, internal_reflection : bool, aperture_override : f32, is_refract : &mut bool, rnd: &mut RndState) -> bool { // Option([f32, Ray]) {
+    *is_refract = true;
+    let mut t : f32;
+    let p_center : Vec3 = make_vec3(0, 0, l.center); // for sphere intersection
+    // let mut p_intersect : Vec3;
+
+    // perform the aperture test
+    // if the element is a aperture-stop
+    // do ray-plane intersection, only update the origin, dir remains same
+    if (l.is_stop) {
+        if let Option[(Vec3)]::Some((plane_intersect_point)) = PlaneIntersect(&mut t, l.aperture, aperture_override, l.center, s_dir, s_org) {
+            // t = t_plane;
+            *s_org = plane_intersect_point;
+        }
+        else {  return (false) }; // return(Option[(f32, Ray)]::None); };
+        true
+    }
+    // do ray-sphere intersection
+    else {
+        if let Option[(Vec3)]::Some((sphere_intersect_point)) = SphereIntersect(&mut t, l.aperture, l.radius, p_center, s_dir, s_org) {
+            // t = t_sphere;
+            *s_org = sphere_intersect_point;
+        }
+        else { return (false) }; // return(Option[(f32, Ray)]::None); };
+
+        // regularize normal to point in the opposite direction of the incoming ray
+        let normal_ = vec3_sub(*s_org, p_center);
+        let normal: Vec3 = if (vec3_dot(normal_, *s_dir) > 0.0) {
+            vec3_neg(normal_)
+        }
+        else {
+            normal_
+        };
+
+        if (internal_reflection) {
+            helper_pass_through(color, s_dir, normal, prev_ior, l.ior, is_refract, rnd);
+        }
+        else {
+        if let Option[(Vec3)]::Some((out_vec)) = Refract_(*s_dir, normal, prev_ior, l.ior) {
+            *s_dir = out_vec;
+            *color = 1.0 as f32;
+            }
+        }
+        true
+    }
+}
+
+
+// trace ray through the lens system
+fn @trace_bi(le: int, elts : Lens, back_elts : Lens, initial_direction : bool, s_dir : &mut Vec3, s_org : &mut Vec3, internal_reflection : bool, f_stop : f32, rnd: &mut RndState ) -> f32 {
+    let mut current_ior : f32 = 1.0; // air
+    // (*r).dir = vec3_normalize((*r).dir); // make ray mutable // Abort error?
+    *s_dir = vec3_normalize(*s_dir);
+
+    let mut p : f32 = 1.0;
+    let mut p_ : f32;
+    let aperture_override = if(f_stop != 0.0) {
+        f_stop * (188.69 / 100.0)
+    } 
+    else {
+        0.0
+    };
+
+    let mut is_forward : bool = initial_direction;
+    let mut forward_idx : i32;
+    if initial_direction {forward_idx = 0;} else {forward_idx = 6;}
+    let mut bounces : i32 = 0;
+    let max_reflect_bounce : i32 = 50;
+    // 13 is lens size : hard coded
+    // TODO how to break and return a value
+    while (bounces < le + max_reflect_bounce && forward_idx >= 0 && forward_idx < le && p != 0.0) { // check to put 6 or 7
+        let mut is_refract : bool;
+        if (is_forward) {
+            // trace forward
+            pass_through(p_, elts.lens_element(forward_idx), s_dir, s_org, current_ior, internal_reflection, aperture_override, &mut is_refract, rnd);
+            if (p_ != 0.0) {p *= p_}
+            else {return(0.0)};
+            if (is_refract) {
+                // keep going in same direction
+                current_ior = elts.lens_element(forward_idx).ior;
+                forward_idx += 1;
+            }
+            else {
+                // reverse course
+                is_forward = false;
+                forward_idx -= 1;
+                // no change in curr_ior
+            }
+        }
+        else {
+            pass_through(p_, back_elts.lens_element(le - forward_idx - 1), s_dir, s_org, current_ior, internal_reflection, aperture_override, &mut is_refract, rnd);
+            if (p_ != 0.0) {p *= p_}
+            else {return(0.0)};
+            if (is_refract) {
+                // keep going in the same direction
+                current_ior = back_elts.lens_element(le - forward_idx - 1).ior;
+                forward_idx -= 1; // reduce forward_idx instead of increasing
+            } 
+            else {
+                // reverse course
+                is_forward = true;
+                forward_idx += 1;
+                // no change in current_ior
+            }
+        }
+        bounces += 1;
+    }
+    p
+}
+
+// sample a point from back lens
+fn sample_back_lens(rnd: &mut RndState, r_ : f32) -> Vec3 {
+    let center : f32 = 0.0; // center of back lens
+    let radius : f32 = r_ / 100.0; // radius of back lens
+    let sample : Vec2 = make_vec2(randf(rnd), randf(rnd)); // how to get a random number [0, 1]
+    let r : f32 = sample.x;
+    let theta : f32 = sample.y * 2.0 * flt_pi;
+
+    make_vec3(
+        r * radius * math_builtins::cos(theta),
+        r * radius * math_builtins::sin(theta),
+        center - radius
+    )
+}
+
+// Creates a lens camera
+fn @make_lens_camera(eye: Vec3, dir: Vec3, up: Vec3, le: int, scale: Vec2, tmin: f32, tmax: f32) -> Camera {
+    let right = vec3_normalize(vec3_cross(dir, up));
+    let view  = make_mat3x3(right, up, dir);
+    // let sw    = math_builtins::tan(fov / 2);
+    // let sh    = sw * h / w;
+    // -> best focus = 100mm for diamond scene
+    // telephoto 
+    // # SIGLER Super achromate telephoto, EFL=254mm, F/5.6"			
+    // # MLD, Page 175"			
+    // # Scaled to 250 mm from 100 mm
+    let curvature_radius: [f32 * le] = [54.6275, -86.365, 271.7625, 0.0, -32.13, 49.5325, -50.945]; //  -> 0.0
+    let thickness: [f32 * le] = [12.52, 3.755, 2.8175, 67.4125, 3.755, 12.52, 0.0]; 
+    let ior: [f32 * le] = [1.529, 1.599, 1.0, 0.0, 1.613, 1.603, 1.0];
+    let aperture: [f32 * le] = [47.5, 44.5, 41.5, 40.5, 31.5, 33.5, 37.0];
+    
+
+    // fisheye
+    // # Muller 16mm/f4 155.9FOV fisheye lens			
+    // # MLD p164
+    // # Scaled to 10 mm from 100 mm
+    // let curvature_radius: [f32 * le] = [30.2249, 11.3931, 75.2019, 8.3349, 9.5882, 43.8677, 0.0, 29.4541, -5.2265, -14.2884, -22.3726, -15.0404]; //  -> 0.0
+    // let thickness: [f32 * le] = [0.8335, 7.4136, 1.0654, 11.1549, 2.0054, 5.3895, 1.4163, 2.1934, 0.9714, 0.0627, 0.94, 0.0]; 
+    // let ior: [f32 * le] = [1.62, 1.0, 1.639, 1.0, 1.654, 1.0, 0.0, 1.517, 1.805, 1.0, 1.673, 1.0];
+    // let aperture: [f32 * le] = [30.34, 20.68, 17.8, 13.42, 9.02, 8.14, 6.08, 5.96, 5.84, 5.96, 5.96, 6.52];
+
+    // wideangle
+    // # Wide-angle (38-degree) lens. Nakamura.			
+    // # MLD, p. 360"			
+    // # Scaled to 22 mm from 100 mm	
+    // let curvature_radius: [f32 * le] = [35.98738,11.69718,13.08714,-22.63294,71.05802,0,-9.58584,-11.28864,-166.7765,-7.5911,-16.7662,-7.70286,-11.97328];
+    // let thickness: [f32 * le] = [1.21638,9.9957,5.12622,1.76924,0.8184,2.27766,2.43254,0.11506,	3.09606,1.32682,3.98068,1.21638,0.0];
+    // let ior: [f32 * le] = [1.54,1,1.772,1.617,	1,0,1.617,1,1.713,1.805,1,1.617,1];
+    // let aperture: [f32 * le] = [23.716,17.996,12.364,9.812,9.152,8.756,8.184,9.152,10.648,11.44,12.276,13.42,17.996];
+    
+    // # D-GAUSS F/2 22deg HFOV			
+    // # US patent 2,673,491 Tronnier"			
+    // # Moden Lens Design, p.312"
+    // # Scaled to 50 mm from 100 mm	
+    // let curvature_radius: [f32 * le] = [29.475,84.83,19.275,40.77,12.75,0,-14.495,40.77,-20.385,437.065,-39.73];
+    // let thickness: [f32 * le] = [3.76,0.12,4.025,3.275,5.705,4.5,1.18,6.065,0.19,3.22,0];
+    // let ior: [f32 * le] =  [1.67,1,1.67,1.699,1,0,1.603,1.658,1,1.717,1];
+    // let aperture: [f32 * le] = [25.2,25.2,23,23,18,17.1,17,20,20,20,20];
+
+    Camera {
+        generate_ray = @ |rnd, x, y| { // -1 < x,y < 1
+            let d = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * x, scale.y * y, 1)));
+            let ray = make_ray(eye, d, tmin, tmax, ray_flag_camera);
+
+            let sample : Vec3 = sample_back_lens(rnd, curvature_radius(0));
+            let sensor_depth : f32 = 188.69 / 100.0; // 188.69 28.607 51.255
+            // generate ray from x, y on the sensor plane (at sensor depth)
+            let sensor_pos = make_vec3((scale.x * sensor_depth) - (x * scale.x * sensor_depth), (scale.y * sensor_depth) - (y * scale.y * sensor_depth), sensor_depth);
+            
+            let sdir = vec3_normalize(vec3_sub(sample, sensor_pos)); 
+            let sensor_ray = make_ray(sensor_pos, sdir, tmin, tmax);
+            let mut s_dir : Vec3 = sensor_ray.dir; let mut s_org = sensor_ray.org; 
+            // create lens
+            let mut lens_color : f32 = 1.0;
+            let (back_elts, elts) = make_lens(le, curvature_radius, thickness, ior, aperture);
+            lens_color = trace_bi(le, elts, back_elts, true, &mut s_dir, &mut s_org, true, 0.0, rnd); // (ray, internal_reflection, f_stop)
+            
+            make_ray(s_org, vec3_normalize(mat3x3_mul(view, s_dir)), tmin, tmax, ray_flag_camera) // transfer lens ray to world coordinates
+
+            // make_ray(eye, make_vec3(0, 0, 1), tmin, tmax)
+            // ray
+        },
+        differential = @ |_| {
+            (
+                vec3_mulf(right, sw),
+                vec3_mulf(up, sh)
+            )
+        }
+    }
+}
