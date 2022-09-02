@@ -283,7 +283,6 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
     const float* data_ptr = getFramebuffer(0);
     data.resize(rays.size() * 3);
     std::memcpy(data.data(), data_ptr, sizeof(float) * rays.size() * 3);
-    
 }
 
 void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)

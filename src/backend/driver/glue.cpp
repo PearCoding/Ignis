@@ -948,14 +948,14 @@ void glue_filter(size_t device)
     float* depth     = sInterface->getAOVImage(0, 2);
     float* albedo    = sInterface->getAOVImage(0, 3);
 
-    bool temporal_enable = true;
+    bool temporal_enable = true; // better // currently checked with only static scene but still better
     if (temporal_enable) {
         BackProjection((int)device, in_pixels, normals, depth, (int)sInterface->film_width, (int)sInterface->film_height);
     } else {
         EstimateVariance((int)device, (int)sInterface->film_width, (int)sInterface->film_height); // sets constant variance //spatial estimate for a few frames
     }
 
-    int n_levels = 5;
+    int n_levels = 3; // if it is too blurred out, we can use less levels(taps)...3 looks nice but paper has 5
     for (int level = 1; level <= n_levels; level++) {
         in_pixels = sInterface->getAOVImage(0, 0); // framebuffer pixels
         atrousfilter((int)device, in_pixels, normals, depth, albedo, (int)sInterface->film_width, (int)sInterface->film_height, level);

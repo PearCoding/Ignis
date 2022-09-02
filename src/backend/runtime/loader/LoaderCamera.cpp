@@ -55,13 +55,19 @@ static void camera_perspective(std::ostream& stream, const std::string& name, co
     stream << "  let camera_eye = registry::get_parameter_vec3(\"__camera_eye\", " << ShaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
            << "  let camera_dir = registry::get_parameter_vec3(\"__camera_dir\", " << ShaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
            << "  let camera_up  = registry::get_parameter_vec3(\"__camera_up\" , " << ShaderUtils::inlineVector(orientation.Up) << ");" << std::endl;
-
+    // for perspective projection matrix calculation
+    //    << "  let camera_fov = registry::get_parameter_f32(\"__camera_fov\", " << fov * Deg2Rad << ");" << std::endl
+    //    << "  let camera_near = registry::get_parameter_f32(\"__camera_near\", " << tmin << ");" << std::endl
+    //    << "  let camera_far = registry::get_parameter_f32(\"__camera_far\", " << tmax << ");" << std::endl;
     if (std::abs(focal_length - 1) <= FltEps && aperture_radius <= FltEps) {
         stream << "  let camera = make_perspective_camera(camera_eye, " << std::endl
                << "    camera_dir, " << std::endl
                << "    camera_up, " << std::endl
                << "    settings.width as f32, " << std::endl
                << "    settings.height as f32, " << std::endl
+               //    << "    camera_fov, " << std::endl
+               //    << "    camera_near, " << std::endl
+               //    << "    camera_far);" << std::endl;
                << "    " << fov * Deg2Rad << ", " << std::endl
                << "    " << tmin << ", " << std::endl
                << "    " << tmax << ");" << std::endl;

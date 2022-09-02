@@ -96,6 +96,13 @@ int main(int argc, char** argv)
     runtime->setParameter("__camera_dir", camera.Direction);
     runtime->setParameter("__camera_up", camera.Up);
 
+    // Need to link with the scene file...how?
+    // registering params for perspective projection matrix
+    runtime->setParameter("__camera_fov", float(40 * Deg2Rad));
+    runtime->setParameter("__camera_near", float(0.1));
+    runtime->setParameter("__camera_far", float(100));
+    // runtime->setParameter("__camera_fov", float(7)); // works hehehehe
+
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(cmd.SPP.value_or(0) / (float)SPI));
 
@@ -144,8 +151,7 @@ int main(int argc, char** argv)
             runtime->setParameter("__camera_eye", camera.Eye);
             runtime->setParameter("__camera_dir", camera.Direction);
             runtime->setParameter("__camera_up", camera.Up);
-            // runtime->reset();
-            runtime->filter();
+            runtime->reset();
         }
 
         if (running) {
