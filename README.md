@@ -12,6 +12,8 @@ To use lens system, set these two lines in camera section of scene description f
 Still the lens system is kinda hard coded. 
 To use different lens system, uncomment the lens configuration in lens.art file and set the number
 of lens element accordingly thoughout the lens.art
+
+The implementation is inspired from https://github.com/rod-lin/cs184-final-project/blob/lens-flare/src/lens/lens.cpp
 <!-- Some scenes rendered with Ignis. Acquired from https://benedikt-bitterli.me/resources/ and converted from Mitsuba to our own format. Both images took roughly one minute to render. With an RTX 2080 Super you can even have an interactive view of the scene.
 
 ![Bedroom scene by SlykDrako](docs/gallery1.jpeg)
