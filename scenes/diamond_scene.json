@@ -6,6 +6,7 @@
 	"camera": {
 		"type": "perspective",
 		"use_lens": 1,
+		"lens_element_size": 7,
 		"fov": 40,
 		"near_clip": 0.1,
 		"far_clip": 100,
