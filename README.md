@@ -3,9 +3,16 @@
 
 ![A scene containing diamonds rendered by Ignis with photonmapping](docs/screenshot.jpeg)
 
-## Gallery
+## Setting up lens system
 
-Some scenes rendered with Ignis. Acquired from https://benedikt-bitterli.me/resources/ and converted from Mitsuba to our own format. Both images took roughly one minute to render. With an RTX 2080 Super you can even have an interactive view of the scene.
+To use lens system, set these two lines in camera section of scene description file: 
+ - use_lens = 1
+ - lens_element = # size of lens element (int)
+
+Still the lens system is kinda hard coded. 
+To use different lens system, uncomment the lens configuration in lens.art file and set the number
+of lens element accordingly thoughout the lens.art
+<!-- Some scenes rendered with Ignis. Acquired from https://benedikt-bitterli.me/resources/ and converted from Mitsuba to our own format. Both images took roughly one minute to render. With an RTX 2080 Super you can even have an interactive view of the scene.
 
 ![Bedroom scene by SlykDrako](docs/gallery1.jpeg)
 
@@ -13,7 +20,9 @@ Some scenes rendered with Ignis. Acquired from https://benedikt-bitterli.me/reso
 
 A sample scene from https://github.com/KhronosGroup/glTF-Sample-Models directly rendered within `igview`.
 
-![DragonAttenuation scene by Stanford Scan and Morgan McGuire's Computer Graphics Archive](docs/gallery3.jpeg)
+![DragonAttenuation scene by Stanford Scan and Morgan McGuire's Computer Graphics Archive](docs/gallery3.jpeg) -->
+
+![Diamond scene using telephoto lens](docs/cal_telephoto.png)
 
 ## Dependencies
 
