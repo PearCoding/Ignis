@@ -774,7 +774,7 @@ fn @make_djmeasured_bsdf(/*dbg: DebugOutput,*/ surf: SurfaceElement, isotropic :
     let brdf_data = BRDFData {
         ndf = delinearize_warp(buffer_ndf, 0),
         sigma = delinearize_warp(buffer_sigma, 0),
-        vndf = delinearize_warp(buffer_vndf, 1), // exception when using 0 offset
+        vndf = delinearize_warp(buffer_vndf, 0), // exception when using 0 offset
         luminance = delinearize_warp(buffer_luminance, 0),
         rgb = delinearize_warp(buffer_rgb, 0),
         isotropic = isotropic,
@@ -783,20 +783,20 @@ fn @make_djmeasured_bsdf(/*dbg: DebugOutput,*/ surf: SurfaceElement, isotropic :
 
     Bsdf {
         eval = @ |in_dir, out_dir| {
-            //evaluate_brdf(brdf_data, in_dir, out_dir)
-            make_color(1.0,0.0,0.0,1.0)
+            evaluate_brdf(brdf_data, in_dir, out_dir)
+            //make_color(1.0,0.0,0.0,1.0)
         },
         pdf = @ |in_dir, out_dir| {
             pdf_brdf(brdf_data, in_dir, out_dir)
             //cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2)))
         },
         sample = @ |rnd, out_dir, _| {
-            //let sample = sample_brdf(brdf_data, make_vec2(randf(rnd), randf(rnd)), out_dir);
-            //make_bsdf_sample(surf, sample.out, sample.pdf, vec3_to_color(sample.res), 1, false)
+            let sample = sample_brdf(brdf_data, make_vec2(randf(rnd), randf(rnd)), out_dir);
+            make_bsdf_sample(surf, sample.out, sample.pdf, vec3_to_color(sample.res), 1, false)
 
-            let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
-            let gdir   = mat3x3_mul(surf.local, sample.dir);
-            make_bsdf_sample(surf, gdir, sample.pdf, color_mulf(evaluate_brdf(brdf_data, gdir, out_dir), 1/sample.pdf), 1, false)
+            //let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+            //let gdir   = mat3x3_mul(surf.local, sample.dir);
+            //make_bsdf_sample(surf, gdir, sample.pdf, color_mulf(evaluate_brdf(brdf_data, gdir, out_dir), 1/sample.pdf), 1, false)
         },
         is_specular = false
     }
