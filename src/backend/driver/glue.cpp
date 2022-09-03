@@ -947,10 +947,11 @@ void glue_filter(size_t device)
     float* normals   = sInterface->getAOVImage(0, 1);
     float* depth     = sInterface->getAOVImage(0, 2);
     float* albedo    = sInterface->getAOVImage(0, 3);
+    float* primid    = sInterface->getAOVImage(0, 4);
 
     bool temporal_enable = true; // better // currently checked with only static scene but still better
     if (temporal_enable) {
-        BackProjection((int)device, in_pixels, normals, depth, (int)sInterface->film_width, (int)sInterface->film_height);
+        BackProjection((int)device, in_pixels, normals, depth, primid, (int)sInterface->film_width, (int)sInterface->film_height);
     } else {
         EstimateVariance((int)device, (int)sInterface->film_width, (int)sInterface->film_height); // sets constant variance //spatial estimate for a few frames
     }

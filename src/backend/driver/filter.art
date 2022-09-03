@@ -81,17 +81,20 @@ fn get_vector_from_buffer(ind : i32, buffer : DeviceBuffer, width : i32, height 
         }
     }
     else{
-        // print_i32(4);
+        if(ind == 15000){
+            print_i32(4);
+        }
         make_vec3(0.0, 0.0, 0.0)
     }
 }
 
-fn get_view_matrix(cam_eye_buf : DeviceBuffer, up_buf : DeviceBuffer, dir_buf : DeviceBuffer, cam_fov : f32, cam_near : f32, cam_far : f32) -> Mat4x4{
-    let cam_eye = make_vec3(cam_eye_buf.load_f32(0), cam_eye_buf.load_f32(1), cam_eye_buf.load_f32(2));
-    let cam_up = make_vec3(up_buf.load_f32(0), up_buf.load_f32(1), up_buf.load_f32(2));
-    let cam_dir = make_vec3(dir_buf.load_f32(0), dir_buf.load_f32(1), dir_buf.load_f32(2));
-    // let cam_up = up_buf.load_vec3(0);
-    // let cam_dir = dir_buf.load_vec3(0);
+fn get_view_matrix(cam_eye_buf : DeviceBuffer, up_buf : DeviceBuffer, dir_buf : DeviceBuffer, cam_fov : f32, cam_near : f32, cam_far : f32, width: i32, height: i32) -> Mat4x4{
+    // let cam_eye = make_vec3(cam_eye_buf.load_f32(0), cam_eye_buf.load_f32(1), cam_eye_buf.load_f32(2));
+    // let cam_up = make_vec3(up_buf.load_f32(0), up_buf.load_f32(1), up_buf.load_f32(2));
+    // let cam_dir = make_vec3(dir_buf.load_f32(0), dir_buf.load_f32(1), dir_buf.load_f32(2));
+    let cam_eye = cam_eye_buf.load_vec3(0);
+    let cam_up = up_buf.load_vec3(0);
+    let cam_dir = dir_buf.load_vec3(0);
     // view matrix: converts world coordinates to camera coordinates
     let right = vec3_normalize(vec3_cross(cam_dir, cam_up));
     let view = (make_mat4x4(
@@ -103,19 +106,29 @@ fn get_view_matrix(cam_eye_buf : DeviceBuffer, up_buf : DeviceBuffer, dir_buf : 
 
     // need to convert camera coords to clip space
     // projection matrix - fixed...if scene file is changed need to change the parameters in line 99-104 in src/frontend/view/main.cpp
-    let s = 1 / (math_builtins::tan(cam_fov / 2));
-    let v1 = (cam_far + cam_near) / (cam_near - cam_far);
-    let v2 = (2 * cam_far * cam_near) / (cam_near - cam_far);
+    let s = 1 / (math_builtins::tan(cam_fov / 2)); // already converted to radians using Deg2rad
+    let aspect = (width/height) as f32;
+    let v1 = (cam_far) / (cam_near - cam_far);
+    let v2 = (cam_far * cam_near) / (cam_near - cam_far);
     let projection = make_mat4x4(
         make_vec4(s, 0, 0, 0), // col 1
         make_vec4(0, s, 0, 0), // col 2
-        make_vec4(0, 0, v1, -1), //...
-        make_vec4(0, 0, v2, 0) 
-    ); // opengl format--- could also be transposed?
+        make_vec4(0, 0, v1, v2), //...
+        make_vec4(0, 0, -1, 0) 
+    );
+    // let v1 = (cam_far + cam_near) / (cam_near - cam_far);
+    // let v2 = (2 * cam_far * cam_near) / (cam_near - cam_far);
+    // let projection = make_mat4x4(
+    //     make_vec4((s/aspect) as f32, 0, 0, 0), // col 1
+    //     make_vec4(0, s, 0, 0), // col 2
+    //     make_vec4(0, 0, v1, -1), //...
+    //     make_vec4(0, 0, v2, 0) 
+    // ); // opengl format--- could also be transposed?
     mat4x4_matmul(projection, view)
+    // view
 }
 
-fn isReprjValid(width: i32, height: i32, prev_coord_ss: Vec2, prev_coord: i32, curr_normal: Vec3, prev_normal: Vec3, curr_depth: Vec3, prev_depth: Vec3, curr_lum: Vec3, prev_lum: Vec3) -> bool {
+fn isReprjValid(width: i32, height: i32, prev_coord_ss: Vec2, prev_coord: i32, curr_normal: Vec3, prev_normal: Vec3, curr_depth: Vec3, prev_depth: Vec3, curr_lum: Vec3, prev_lum: Vec3, curr_prim_id: i32, prev_prim_id: i32) -> bool {
     // let p = curr_coord.x + curr_coord.y * width * 3;
     // let q = prev_coord.x + prev_coord.y * width * 3;
     // check if the pixel is inside the screen
@@ -125,6 +138,11 @@ fn isReprjValid(width: i32, height: i32, prev_coord_ss: Vec2, prev_coord: i32, c
     }
     if((prev_coord < 0) || (prev_coord > (width * height * 3))){
         // print_i32(1);
+        return(false)
+    }
+
+    // consistent geometry?
+    if(prev_prim_id == -2 || prev_prim_id != curr_prim_id){
         return(false)
     }
 
@@ -141,7 +159,7 @@ fn isReprjValid(width: i32, height: i32, prev_coord_ss: Vec2, prev_coord: i32, c
     let diff_normal = vec3_len(vec3_add(prev_normal, vec3_neg(curr_normal)));
     if(diff_normal > (0.1 as f32)){
         // allowing some deviation in normals
-        print_i32(3);
+        // print_i32(3);
         return(false)
     }
 
@@ -163,11 +181,6 @@ fn get_scrspace_coord(ind: i32, width: i32, height: i32) -> Vec2{
     // cols go from 0 to height-1
     let row = (ind / (width * 3));
     let col = ((ind - row * width * 3) / 3);
-
-    // if(ind == 25000){
-    //     print_i32(row);
-    //     print_i32(col);
-    // }
     make_vec2(row as f32, col as f32)
 
 }
@@ -180,13 +193,14 @@ fn get_motionvector(ind: i32, motion_vectorx_buffer: DeviceBuffer, motion_vector
 }
 // https://www.gdcvault.com/play/1022970/Temporal-Reprojection-Anti-Aliasing-in
 #[export]
-fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f32], width: i32, height: i32) -> (){
+fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f32], primid: &[f32], width: i32, height: i32) -> (){
     // TODO //probably can be done independently
     let device = @get_device(device_id);
     // create a bunch of buffers moment_acc, variance_out, color_acc, history_length(if necessary) (everything is accumulated index wise(for each pixel))
     let buffer_out = device.make_buffer(in_pixels as &[u8],  width * height * 3); 
     let buffer_n = device.make_buffer(normals as &[u8], width * height * 3);
     let buffer_d = device.make_buffer(depth as &[u8], width * height * 3);
+    let buffer_prim_id = device.make_buffer(primid as &[u8], width * height * 3);
     
     
     let buffer_in = device.request_buffer("__input_buffer", width * height * 3, 0); //c_(i)
@@ -197,6 +211,7 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
     let prev_buffer_normals = device.request_buffer("__prev_normals_buffer", width * height * 3, 0);
     let prev_buffer_depth = device.request_buffer("__prev_depth_buffer", width * height * 3, 0);
     let prev_buffer_lum = device.request_buffer("__prev_luminance_buffer", width * height * 3, 0);
+    let prev_buffer_prim_id = device.request_buffer("__prev_prim_id_buffer", width * height * 3, 0);
 
     let motion_vectorx_buffer = device.request_buffer("__motion_vectorx_buffer", width * height * 1, 0); //calculated in screen space
     let motion_vectory_buffer = device.request_buffer("__motion_vectory_buffer", width * height * 1, 0); //calculated in screen space
@@ -251,16 +266,12 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
     let prev_eye_buf = device.request_buffer("__prev_cam_eye", 3, 0);
     let prev_up_buf = device.request_buffer("__prev_cam_up", 3, 0);
     let prev_dir_buf = device.request_buffer("__prev_cam_dir", 3, 0);
-    
-    //storing view in buffers for use in next frame
-    for i in unroll(0,3){
-        prev_eye_buf.store_i32(i, bitcast[i32](vec3_at(cam_eye_v, i)));
-        prev_up_buf.store_i32(i, bitcast[i32](vec3_at(up_v, i)));
-        prev_dir_buf.store_i32(i, bitcast[i32](vec3_at(dir_v, i)));
-    }
-    // let mut prev_view_mat : Mat4x4;
-    let prev_view_mat = get_view_matrix(prev_eye_buf, prev_up_buf, prev_dir_buf, cam_fov, cam_near, cam_far);
-    let curr_view_mat = get_view_matrix(curr_eye_buf, curr_up_buf, curr_dir_buf, cam_fov, cam_near, cam_far);
+
+    let mut prev_view_mat : Mat4x4;
+
+    curr_eye_buf.store_vec3(0, cam_eye_v);
+    curr_up_buf.store_vec3(0, up_v);
+    curr_dir_buf.store_vec3(0, dir_v);
     
     // calculating motion vectors (in screen space)
     // http://john-chapman-graphics.blogspot.com/2013/01/per-object-motion-blur.html
@@ -269,13 +280,33 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
     // need the perspective projection matrix-probably could be fixed or computed somewhere  
     let is_first_frame = history_length.load_f32(width * height * 3 + 1);
     if(is_first_frame > 0){
-        for ind in unroll(0, (width) * (height)) {
+        prev_view_mat = get_view_matrix(prev_eye_buf, prev_up_buf, prev_dir_buf, cam_fov, cam_near, cam_far, width, height); // at first frame it is not used 
+        let curr_view_mat = get_view_matrix(curr_eye_buf, curr_up_buf, curr_dir_buf, cam_fov, cam_near, cam_far, width, height);
+
+        // prev_view_mat == curr_view_mat when static --works as expected
+        // print_f32(curr_view_mat.col(0).x);
+        // print_f32(curr_view_mat.col(0).y);
+        // print_f32(curr_view_mat.col(0).z);
+        // print_f32(curr_view_mat.col(0).w);
+
+        // print_f32(prev_view_mat.col(0).x);
+        // print_f32(prev_view_mat.col(0).y);
+        // print_f32(prev_view_mat.col(0).z);
+        // print_f32(prev_view_mat.col(0).w);
+
+        for ind in unroll_step(0, (width) * (height) * 3, 3) {
             let curr_ws_pos = get_vector_from_buffer(ind, buffer_depth, width, height);
             let prev_ws_pos = get_vector_from_buffer(ind, prev_buffer_depth, width, height);
 
+            // if(vec3_len(vec3_add(curr_ws_pos, vec3_neg(prev_ws_pos))) )
+            
             let v_position = mat4x4_mul(curr_view_mat, vec3_to_4(curr_ws_pos, 1));
             let v_prev_position = mat4x4_mul(prev_view_mat, vec3_to_4(prev_ws_pos, 1));
 
+            if(v_position.w < 0.1 as f32 || v_prev_position.w < 0.1 as f32){
+
+
+            }
             let a = vec2_mulf(make_vec2(v_position.x, v_position.y), (1/v_position.w));
             let b = vec2_mulf(make_vec2(v_prev_position.x, v_prev_position.y), (1/v_prev_position.w));
 
@@ -283,15 +314,28 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
             let curr_ss_pos = vec2_add(vec2_mulf(a, 0.5), make_vec2(0.5, 0.5));
             let prev_ss_pos = vec2_add(vec2_mulf(b, 0.5), make_vec2(0.5, 0.5));
 
-            
-            let m_vec = vec2_sub(curr_ss_pos, prev_ss_pos); // why is this not 0 for static scene??
-            motion_vectorx_buffer.store_i32(ind, bitcast[i32](m_vec.x));
-            motion_vectory_buffer.store_i32(ind, bitcast[i32](m_vec.y));
+            // if(ind == 15000){
+            //     print_i32(curr_ws_pos.x as i32);
+            //     print_i32(curr_ws_pos.y as i32);
+            //     print_i32(curr_ws_pos.z as i32);
 
-            // if(m_vec.x != 0){
+            //     print_i32(prev_ws_pos.x as i32);
+            //     print_i32(prev_ws_pos.y as i32);
+            //     print_i32(prev_ws_pos.z as i32);
+
+            //     print_i32(curr_ss_pos.x as i32);
+            //     print_i32(prev_ss_pos.y as i32);
+            // }
+            let mx = curr_ss_pos.x as i32 - prev_ss_pos.x as i32;
+            let my = curr_ss_pos.y as i32 - prev_ss_pos.y as i32;
+            // let m_vec = vec2_sub(curr_ss_pos, prev_ss_pos); // why is this not 0 for static scene??
+            motion_vectorx_buffer.store_i32(ind/3, bitcast[i32](mx));
+            motion_vectory_buffer.store_i32(ind/3, bitcast[i32](my));
+
+            // if(mx != 0){
             //     print_i32(0);
             // }
-            // if(m_vec.y != 0){
+            // if(my != 0){
             //     print_i32(1);
             // }
             // if(ind == ((width * height) - 1)){
@@ -300,10 +344,10 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
             // }
             // let check = (700000/3);
             // if(ind == check){
-            //     print_i32(m_vec.x as i32);
-            //     print_i32(m_vec.y as i32);
+            //     print_i32(mx as i32);
+            //     print_i32(my as i32);
             // }
-            // looks to be correct....very weird behaviour though
+            // looks to be correct....
             // world space coordinates shift/ change from frame to frame for a particular pixel
             
             // debugging static scene
@@ -314,10 +358,14 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
         }        
     }
     else{
+        prev_eye_buf.store_vec3(0, cam_eye_v);
+        prev_up_buf.store_vec3(0, up_v);
+        prev_dir_buf.store_vec3(0, dir_v);
+
         let update_frame = 1.0 as f32;
         history_length.store_i32(width * height * 3 + 1,  bitcast[i32](update_frame));
     }
-    // works correct till here
+    // seems to be working till here (log: 3rd sep, morning 6am)
 
     // let p_val = history_length.load_f32(width * height * 3 + 1);
     // // let p_val = history_length.load_f32(25);
@@ -331,7 +379,7 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
     // if(700000/3 < width * height){
     //     print_i32(4567);
     // }
-
+    let mut cnt = 0;
     for ind in unroll(0, (width) * (height) * 3) {
         let N = history_length.load_f32(ind);
         let lum = buffer_lum.load_f32(ind);
@@ -344,17 +392,18 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
             let vel = get_motionvector(ind, motion_vectorx_buffer, motion_vectory_buffer, width); // is it 1/3rd coz this buffer is 1/3rd?? check this 
             let prev_coord_ss = vec2_sub(curr_coord_ss, vel); // in screen space
 
-            // if(ind == 700000){
-            //     // print_i32(curr_coord_ss.x as i32);
-            //     // print_i32(curr_coord_ss.y as i32);
+            // if(ind == 300000){
+            //     print_i32(curr_coord_ss.x as i32);
+            //     print_i32(curr_coord_ss.y as i32);
             //     print_i32(vel.x as i32);
             //     print_i32(vel.y as i32);
-            //     // print_i32(prev_coord_ss.x as i32);
-            //     // print_i32(prev_coord_ss.y as i32);
-            //     // if(vec2_len(vec2_add(curr_coord_ss, vec2_neg(prev_coord_ss))) != 0){
-            //     print_i32(9);
-            //     // }
+            //     print_i32(prev_coord_ss.x as i32);
+            //     print_i32(prev_coord_ss.y as i32);
+            //     if(vec2_len(vec2_add(curr_coord_ss, vec2_neg(prev_coord_ss))) != 0){
+            //         print_i32(9);
+            //     }
             // }
+            
             // static scene - curr_coord_ss == prev_coord_ss
             // if(vel.x as i32 != 0 || vel.y as i32 != 0){
             //     print_i32(ind);
@@ -372,7 +421,7 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
             // converting to index (looks right)
             let which_channel = (ind % 3);
             let prev_coord = prev_coord_ss.x as i32 * (width * 3) + prev_coord_ss.y as i32 * 3 + which_channel;
-            // if(ind == 26500){
+            // if(ind != prev_coord){
             //     print_i32(prev_coord);
             //     print_i32(9);
             // }
@@ -382,12 +431,14 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
             let curr_normal = get_vector_from_buffer(ind, buffer_normals, width, height);
             let curr_depth = get_vector_from_buffer(ind, buffer_depth, width, height);
             let curr_lum = get_vector_from_buffer(ind, buffer_lum, width, height);
+            let curr_prim_id = get_pixel_value(prev_coord, buffer_prim_id, width, height) as i32;
             
             let prev_normal = get_vector_from_buffer(prev_coord, prev_buffer_normals, width, height);
             let prev_depth = get_vector_from_buffer(prev_coord, prev_buffer_depth, width, height);
             let prev_lum = get_vector_from_buffer(prev_coord, prev_buffer_lum, width, height);
+            let prev_prim_id = get_pixel_value(prev_coord, prev_buffer_prim_id, width, height) as i32;
             let mut valid : bool;
-            valid = isReprjValid(width, height, prev_coord_ss, prev_coord, curr_normal, prev_normal, curr_depth, prev_depth, curr_lum, prev_lum);
+            valid = isReprjValid(width, height, prev_coord_ss, prev_coord, curr_normal, prev_normal, curr_depth, prev_depth, curr_lum, prev_lum, curr_prim_id, prev_prim_id);
             
             // should be valid -> accumulate color, moments
             let mut prev_color = 0.0 as f32; //color value from buffer_in
@@ -430,6 +481,7 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
                 else{
                     variance_out_buffer.store_i32(ind, bitcast[i32](0.0));
                 }  
+                cnt += 1;
             }
             else{
                 // no history -> works as expected if I set if(false)
@@ -459,7 +511,6 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
                 let variance = 100.0 as f32;
                 variance_out_buffer.store_i32(ind, bitcast[i32](variance));
             }
-        
             
             /*
             let mut v:[bool * 4];
@@ -610,20 +661,9 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
             variance_out_buffer.store_i32(ind, bitcast[i32](variance));
         }
     }
+    print_i32(cnt);
+    print_i32(4);
  
-
- // test accumulation
-    // for ind in unroll(0, (width) * (height) * 3) {
-    //     let prev_color = color_acc_buffer.load_f32(ind);
-    //     let curr_color = buffer_in.load_f32(ind);
-    //     let acc_color = curr_color * color_alpha_min + prev_color * (1.0 as f32 - color_alpha_min);
-
-    //     // let depth = get_vector_from_buffer(ind, buffer_depth, width, height);
-    //     // let out = depth.z;
-    //     color_acc_buffer.store_i32(ind, bitcast[i32](acc_color));
-    // }
-    // what did i even expect!!
-    ///////////////
     // let a_val = history_length.load_f32(25);
     // print_i32(a_val as i32);
     // print_i32(1023);
@@ -635,6 +675,8 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
         prev_buffer_depth.store_i32(ind, bitcast[i32](dep));
         let lum = get_pixel_value(ind, buffer_lum, width, height);//buffer_d.load_f32(ind);
         prev_buffer_lum.store_i32(ind, bitcast[i32](lum));
+        let prim_id = get_pixel_value(ind, buffer_prim_id, width, height);//buffer_d.load_f32(ind);
+        prev_buffer_prim_id.store_i32(ind, bitcast[i32](prim_id));
 
         // updating color history
         // color history same as integrated color i.e color_acc_buffer
@@ -652,6 +694,7 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
     // storing accumulated color in out buffer for use in the atrous_filter
     for ind in unroll(0, (width) * (height) * 3) {
         let out = color_history_buffer.load_f32(ind);
+        // let out = buffer_prim_id.load_f32(ind);        
         // let depth = get_vector_from_buffer(ind, buffer_depth, width, height);
         // let out = depth.z;
         buffer_out.store_i32(ind, bitcast[i32](out));

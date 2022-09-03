@@ -78,7 +78,7 @@ fn ig_utility_tonemap(_device_id: i32, _in_pixels: &[f32], _out_pixels: &mut [u3
 }
 
 #[export]
-fn BackProjection(_device_id: i32, _in_pixels: &[f32], _normals: &[f32], _depth: &[f32], _width: i32, _height: i32) -> (){
+fn BackProjection(_device_id: i32, _in_pixels: &[f32], _normals: &[f32], _depth: &[f32], _primid: &[f32], _width: i32, _height: i32) -> (){
 }
 
 #[export]

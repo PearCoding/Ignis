@@ -5,7 +5,7 @@
 		"aov_normals": true,
 		"aov_depth": true,
 		"aov_albedo": true,
-		"aov_motion": true
+		"aov_prim_id": true
 	},
 	"camera": {
 		"type": "perspective",
@@ -33,8 +33,8 @@
 	},
 	"film": {
 		"size": [
-			400,
-			400
+			700,
+			700
 		]
 	},
 	"bsdfs": [

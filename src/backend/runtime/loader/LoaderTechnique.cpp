@@ -72,7 +72,7 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
         if (technique->property("aov_albedo").getBool(false))
             info.EnabledAOVs.emplace_back("Albedo");
 
-        if (technique->property("aov_motion").getBool(false))
+        if (technique->property("aov_prim_id").getBool(false))
             info.EnabledAOVs.emplace_back("Luminance");
 
         if (technique->property("aov_mis").getBool(false)) {
@@ -89,13 +89,13 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
 
 static void path_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext&)
 {
-    const int max_depth        = technique ? technique->property("max_depth").getInteger(64) : 64;
-    const float clamp_value    = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
-    const bool hasNormalAOV    = technique ? technique->property("aov_normals").getBool(false) : false;
-    const bool hasDepthAOV     = technique ? technique->property("aov_depth").getBool(false) : false;
-    const bool hasAlbedoAOV    = technique ? technique->property("aov_albedo").getBool(false) : false;
-    const bool hasLuminanceAOV = technique ? technique->property("aov_motion").getBool(false) : false;
-    const bool hasMISAOV       = technique ? technique->property("aov_mis").getBool(false) : false;
+    const int max_depth     = technique ? technique->property("max_depth").getInteger(64) : 64;
+    const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
+    const bool hasNormalAOV = technique ? technique->property("aov_normals").getBool(false) : false;
+    const bool hasDepthAOV  = technique ? technique->property("aov_depth").getBool(false) : false;
+    const bool hasAlbedoAOV = technique ? technique->property("aov_albedo").getBool(false) : false;
+    const bool hasPrimIdAOV = technique ? technique->property("aov_prim_id").getBool(false) : false;
+    const bool hasMISAOV    = technique ? technique->property("aov_mis").getBool(false) : false;
 
     size_t counter = 1;
 
@@ -108,8 +108,8 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     if (hasAlbedoAOV)
         stream << "  let aov_albedo = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
 
-    if (hasLuminanceAOV)
-        stream << "  let aov_motion = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
+    if (hasPrimIdAOV)
+        stream << "  let aov_prim_id = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
 
     if (hasMISAOV) {
         stream << "  let aov_di = device.load_aov_image(" << counter++ << ", spp);" << std::endl;
@@ -135,8 +135,8 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     if (hasAlbedoAOV)
         stream << "      5 => aov_albedo," << std::endl;
 
-    if (hasLuminanceAOV)
-        stream << "      6 => aov_motion," << std::endl;
+    if (hasPrimIdAOV)
+        stream << "      6 => aov_prim_id," << std::endl;
 
     stream << "      _ => make_empty_aov_image()" << std::endl
            << "    }" << std::endl
