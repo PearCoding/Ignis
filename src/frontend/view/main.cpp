@@ -158,6 +158,7 @@ int main(int argc, char** argv)
             if (cmd.SPPMode != SPPMode::Capped || runtime->currentIterationCount() < desired_iter) {
                 if (cmd.SPPMode == SPPMode::Continous && runtime->currentIterationCount() >= desired_iter) {
                     runtime->reset();
+                    runtime->filter();
                 }
 
                 auto ticks = std::chrono::high_resolution_clock::now();
