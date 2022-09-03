@@ -25,6 +25,7 @@ static AOV_PATH_NEE    = 3;
 static AOV_PATH_DEPTH = 4;
 static AOV_PATH_ALBEDO = 5;
 static AOV_PRIM_ID = 6;
+static AOV_PATH_POSITION = 7;
 
 fn wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
     let mut r : RayPayload;
@@ -50,6 +51,7 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
 
     let aov_normal = @aovs(AOV_PATH_NORMAL);
     let aov_depth = @aovs(AOV_PATH_DEPTH);
+    let aov_position = @aovs(AOV_PATH_POSITION);
     let aov_albedo = @aovs(AOV_PATH_ALBEDO);
     let aov_prim_id = @aovs(AOV_PRIM_ID);
     let aov_di     = @aovs(AOV_PATH_DIRECT);
@@ -155,17 +157,15 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
                                                math_builtins::fabs(surf.local.col(2).y),
                                                math_builtins::fabs(surf.local.col(2).z),
                                                1));     
-            if(hit.distance > flt_eps){
-                let pos = vec3_normalize(vec3_add(ray.org, vec3_mulf(ray.dir, hit.distance)));
-                // aov_depth.splat(pixel, make_color(pos.x/pos.z, pos.y/pos.z, 1, 1)); //depth = z //using the world space coordinates x,y,z for other purposes // so its "technically" not the depth buffer
-                let depth = (make_vec3(hit.distance, hit.distance, hit.distance));
-                aov_depth.splat(pixel, make_color(depth.x, depth.y, depth.z, 1)); //depth = z //using the world space coordinates x,y,z for other purposes // so its "technically" not the depth buffer
+            // if(hit.distance > flt_eps){ // this condition is probably unnecessary
+            let pos = surf.point; //(vec3_add(ray.org, vec3_mulf(ray.dir, hit.distance)));
+            aov_position.splat(pixel, make_color(pos.x, pos.y, pos.z, 1)); //depth = z // world space coordinates
+            if(pos.z == 0){
+                print_i32(12);
             }
-            // else{
-            //     let pos = make_vec3(-1, -1, -1);
-            //     aov_depth.splat(pixel, make_color(pos.x/pos.z, pos.y/pos.z, 1, 1)); //depth = z //using the world space coordinates x,y,z for other purposes // so its "technically" not the depth buffer
+            let depth = (make_vec3(pos.z, pos.z, pos.z));
+            aov_depth.splat(pixel, make_color(depth.x, depth.y, depth.z, 1)); 
             // }
-            // aov_depth.splat(pixel, make_color(pos.x/pos.z, pos.y/pos.z, 1, 1)); //depth = z //using the world space coordinates x,y,z for other purposes // so its "technically" not the depth buffer
             aov_prim_id.splat(pixel, make_color(hit.prim_id as f32, hit.prim_id as f32, hit.prim_id as f32, 1));
         }
 

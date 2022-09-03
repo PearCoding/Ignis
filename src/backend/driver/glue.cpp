@@ -943,15 +943,18 @@ void glue_filter(size_t device)
     //     float* in_pixels            = sInterface->getAOVImage(0, 0);
     //     uint32_t* device_out_pixels = out_pixels;
 
-    float* in_pixels = sInterface->getAOVImage(0, 0); // framebuffer pixels
-    float* normals   = sInterface->getAOVImage(0, 1);
-    float* depth     = sInterface->getAOVImage(0, 2);
-    float* albedo    = sInterface->getAOVImage(0, 3);
-    float* primid    = sInterface->getAOVImage(0, 4);
+    float* in_pixels   = sInterface->getAOVImage(0, 0); // framebuffer pixels
+    float* normals     = sInterface->getAOVImage(0, 1);
+    float* depth       = sInterface->getAOVImage(0, 2);
+    float* albedo      = sInterface->getAOVImage(0, 3);
+    float* primid      = sInterface->getAOVImage(0, 4);
+    float* ws_position = sInterface->getAOVImage(0, 5);
 
-    bool temporal_enable = true; // better // currently checked with only static scene but still better
+    bool temporal_enable = true; // enabled is better // currently checked with static scene but still better
+    // its unstable for dynamic scenes...occlusion tests(might be failing), does not find consistent samples across frames even when its clearly consistent?
+    // so some noise appears for an instant when the camera moves...
     if (temporal_enable) {
-        BackProjection((int)device, in_pixels, normals, depth, primid, (int)sInterface->film_width, (int)sInterface->film_height);
+        BackProjection((int)device, in_pixels, normals, depth, primid, ws_position, (int)sInterface->film_width, (int)sInterface->film_height);
     } else {
         EstimateVariance((int)device, (int)sInterface->film_width, (int)sInterface->film_height); // sets constant variance //spatial estimate for a few frames
     }

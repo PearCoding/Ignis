@@ -4,6 +4,7 @@
 		"max_depth": 8,
 		"aov_normals": true,
 		"aov_depth": true,
+		"aov_position": true,
 		"aov_albedo": true,
 		"aov_prim_id": true
 	},
