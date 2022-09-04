@@ -307,8 +307,9 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
         // Build bounding box
         BoundingBox& bbox = boxes[i];
         bbox              = BoundingBox::Empty();
-        for (int i = 0; i < mesh.vertices.size(); i++) {
+        for (long unsigned int i = 0; i < mesh.vertices.size(); i++) {
             bbox.extend(mesh.vertices[i]);
+            // extend to account for displaced surface(maximum displacement of 1)
             bbox.extend(mesh.vertices[i] + mesh.normals[i] * 1.01f);
         }
         bbox.inflate(1e-5f); // Make sure it has a volume

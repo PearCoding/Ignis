@@ -193,7 +193,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
                                    , bvh: PrimBvh
                                    , any_hit: bool
                                    , root: i32
-                                   , shape : Shape
+                                   , _shape : Shape
                                    ) -> Hit {
     let sorting_network = match bvh.arity {
         8 => batcher_sort,

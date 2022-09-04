@@ -192,8 +192,6 @@ inline void build_bvh(const TriMesh& tri_mesh,
     // using BvhBuilder = bvh::LocallyOrderedClusteringBuilder<Bvh, uint32>;
     // using BvhBuilder = bvh::SweepSahBuilder<Bvh>;
 
-    Image disp_tex = Image::load("../scenes/textures/bumpmap.png");
-
     const size_t num_tris = tri_mesh.indices.size() / 4;
     std::vector<TriangleProxy> primitives(num_tris);
     for (size_t i = 0; i < num_tris; ++i) {
@@ -226,15 +224,6 @@ inline void build_bvh(const TriMesh& tri_mesh,
         auto& c0      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 0]];
         auto& c1      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 1]];
         auto& c2      = tri_mesh.texcoords[tri_mesh.indices[i * 4 + 2]];
-
-        int id0 = (int)floor(c0.x() * disp_tex.width * disp_tex.height + c0.y() * disp_tex.height) * 4;   
-        int id1 = (int)floor(c1.x() * disp_tex.width * disp_tex.height + c1.y() * disp_tex.height) * 4; 
-        int id2 = (int)floor(c2.x() * disp_tex.width * disp_tex.height + c2.y() * disp_tex.height) * 4; 
-
-        float d0 = disp_tex.pixels[id0];
-        float d1 = disp_tex.pixels[id1];
-        float d2 = disp_tex.pixels[id2];
-
         
         primitives[i].c0 = c0;
         primitives[i].c1 = c1;

@@ -53,24 +53,31 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
     let tri2     = load4_f32(simd_ptr, 2);
     let prim_id  = bitcast[i32](tri2(3));
 
+    // uv-coordinates(vertex 0, 1, 2) + padding
     let c01 = load4_f32(simd_ptr, 3);
     let c2p = load4_f32(simd_ptr, 4);
 
+    // create base triangle
     let v0  = make_vec3(tri0(0), tri0(1), tri0(2));
     let e1  = make_vec3(tri1(0), tri1(1), tri1(2));
     let e2  = make_vec3(tri2(0), tri2(1), tri2(2));
     let n = vec3_cross(e1, e2);
     
+    // absolute uv-coordinate of base triangle
     let wc0 = make_vec2(c01(0), c01(1));
     let wc1 = make_vec2(c01(2), c01(3));
     let wc2 = make_vec2(c2p(0), c2p(1));
     
+    // local uv-coordinate of base triangle
     let c0 = make_vec2(0,0);
     let c1 = make_vec2(1,0);
     let c2 = make_vec2(0,1);
     
     let uvtri = make_uv_tri(v0,e1,e2, n, c0, c1, c2, wc0, wc1, wc2);
 
+    /*
+    // Deprecated: Originally used to compute minimum and maximum displacement of BVH but has proven to be 
+    // too inefficient in the current implementation
     let min_max_displacement = @ |c1 : Vec2, c2 : Vec2| -> (f32, f32) {
         let min_px = (math_builtins::floor(minmax.fminf(c1.x, c2.x)) as i32) * disp_map.width;
         let min_py = (math_builtins::floor(minmax.fminf(c1.y, c2.y)) as i32) * disp_map.height;
@@ -91,36 +98,23 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
 
         (min, max)
     };
+    */
 
+    // computes displacement from bumpmap, given an absolute surface coordinate
     let displacement = @|c: Vec2| -> f32 {
         let px = c.x * (disp_map.width as f32);
         let py = c.y * (disp_map.height as f32);
 
-        
-        // let hi_x = math_builtins::ceil(px) as i32;
         let mut lo_x = math_builtins::floor(px) as i32;
-        
-        // let hi_y = math_builtins::ceil(py) as i32;
         let mut lo_y = math_builtins::floor(py) as i32;
         
         if (lo_x == disp_map.width) {lo_x = disp_map.width -1;}
         if (lo_y == disp_map.height) {lo_y = disp_map.height -1;}
-        // let frac_x = px - (lo_x as f32);
-        // let frac_y = py - (lo_y as f32);
-
-        // let v00 = disp_map.pixels(lo_x, lo_y).r;
-        // let v01 = disp_map.pixels(lo_x, hi_y).r;
-        // let v10 = disp_map.pixels(hi_x, lo_y).r;
-        // let v11 = disp_map.pixels(hi_x, hi_y).r;
-
-        // let v_y0 = frac_x * v00 + (1.0 - frac_x) * v10;
-        // let v_y1 = frac_x * v01 + (1.0 - frac_x) * v11;
         
-        // let val = (frac_y * v_y0 + (1.0 - frac_x) * v_y1);
-        //clampf(val, 0, 1)
         clampf(disp_map.pixels(lo_x, lo_y).r, 0, 1)
     };
 
+    /* // Deprecated: Switched to Tesselation into 2 triangles (see tesselate2)
     let tesselate4 =  @|t:UVTri| {
         let v0 = t.v0;
         let e1 = t.e1;
@@ -140,16 +134,6 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
         let v01 = vec3_lerp(t.v0, t.v1, 0.5);
         let v02 = vec3_lerp(t.v0, t.v2, 0.5);
         let v12 = vec3_lerp(t.v1, t.v2, 0.5);
-  
-        // let tri0 = make_uv_tri(v0, half_e1, half_e2, t.n, c0, c01, c02, wc0, wc01, wc02);
-
-        // let tri1 = make_uv_tri(v01, half_e1, half_e2, t.n, c01, c1, c12, wc01, wc1, wc12);
-        
-        // let tri2 = make_uv_tri(v02, half_e1, half_e2, t.n, c02, c12, c2, wc02, wc12, wc2);
-        
-        // let v = vec3_add(vec3_sub(v0, half_e1), half_e2);
-        // let tri3 = make_uv_tri(v, vec3_mulf(half_e1, -1), vec3_mulf(half_e2, -1), t.n, c02, c12, c01, wc02, wc12, wc01);
-
 
         let n_new = vec3_cross(half_e1, half_e2);
         let tri0 = make_uv_tri(v0, half_e1, half_e2, n_new, c0, c01, c02, wc0, wc01, wc02);
@@ -163,34 +147,36 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
         let tri3 = make_uv_tri(v01, ne1, ne2, vec3_cross(ne1, ne2), c12, c02, c01, wc12, wc02, wc01);
 
         (tri0, tri1, tri2, tri2)
-    };
+    }; */
 
+    // Tesselates a single triangle into 2 new triangles
     let tesselate2 =  @|t:UVTri| {
         
-        let v0 = t.v0;
-        let v1 = t.v1;
-        let v2 = t.v2;
-        let v12 = vec3_lerp(v1, v2, 0.5);
+        let tv0 = t.v0;
+        let tv1 = t.v1;
+        let tv2 = t.v2;
+        let tv12 = vec3_lerp(tv1, tv2, 0.5);
 
-        let c0 = t.c0;
-        let c1 = t.c1;
-        let c2 = t.c2;
-        let c12 = vec2_lerp(t.c1, t.c2, 0.5);
+        let tc0 = t.c0;
+        let tc1 = t.c1;
+        let tc2 = t.c2;
+        let tc12 = vec2_lerp(t.c1, t.c2, 0.5);
 
-        let wc0 = t.wc0;
-        let wc1 = t.wc1;
-        let wc2 = t.wc2;
-        let wc12 = vec2_lerp(t.wc1, t.wc2, 0.5);
+        let twc0 = t.wc0;
+        let twc1 = t.wc1;
+        let twc2 = t.wc2;
+        let twc12 = vec2_lerp(t.wc1, t.wc2, 0.5);
 
-        let diag = vec3_sub(v12, v0);
-        let e1 = vec3_sub(v1, v12);
-        let tri0 = make_uv_tri(v12, diag, e1, vec3_cross(diag, e1), c12, c0, c1, wc12, wc0, wc1);
-        let e2 = vec3_sub(v2, v12);
-        let tri1 = make_uv_tri(v12, diag, e2, vec3_cross(diag, e2), c12, c0, c2, wc12, wc0, wc2);
+        let diag = vec3_sub(tv12, tv0);
+        let te1 = vec3_sub(tv1, tv12);
+        let ttri0 = make_uv_tri(tv12, diag, te1, vec3_cross(diag, te1), tc12, tc0, tc1, twc12, twc0, twc1);
+        let te2 = vec3_sub(tv2, tv12);
+        let ttri1 = make_uv_tri(tv12, diag, te2, vec3_cross(diag, te2), tc12, tc0, tc2, twc12, twc0, twc2);
 
-        (tri0, tri1)
+        (ttri0, ttri1)
     };
 
+    // computes bounding box around a single triangle
     let tri_bbox = @|t:UVTri| {        
         let min_x = minmax.fminminf(t.v0.x, t.v1.x, t.v2.x);
         let min_y = minmax.fminminf(t.v0.y, t.v1.y, t.v2.y);
@@ -206,25 +192,7 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
         )
     };
 
-    let tri_uv = @ |p:Vec3, t:UVTri| -> Vec2 {
-        let mut res = t.c0;
-        let mut dist = vec3_dist(p, t.v0);
-
-        let dist1 = vec3_dist(p, t.v1);
-        if (dist1 < dist) {
-            dist = dist1;
-            res = t.c1;
-        }
-
-        let dist2 = vec3_dist(p, t.v2);
-        if (dist2 < dist) {
-            dist = dist2;
-            res = t.c1;
-        }
-
-        res
-    };
-
+    // displaces a single triangle by applying the bumpmap displacement to the triangle vertices
     let displace_tri = @ |t : UVTri| -> UVTri {
         let d0 = displacement(t.wc0);
         let d1 = displacement(t.wc1);
@@ -232,57 +200,24 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
 
         let nn = vec3_normalize(uvtri.n);
 
-        let v0 = vec3_add(t.v0, vec3_mulf(nn, d0)); 
-        let v1 = vec3_add(t.v1, vec3_mulf(nn, d1)); 
-        let v2 = vec3_add(t.v2, vec3_mulf(nn, d2));
+        let dv0 = vec3_add(t.v0, vec3_mulf(nn, d0)); 
+        let dv1 = vec3_add(t.v1, vec3_mulf(nn, d1)); 
+        let dv2 = vec3_add(t.v2, vec3_mulf(nn, d2));
 
-        let e1 = vec3_sub(v0, v1);
-        let e2 = vec3_sub(v2, v0);
+        let de1 = vec3_sub(dv0, dv1);
+        let de2 = vec3_sub(dv2, dv0);
 
-        let normal = vec3_cross(e1, e2);
+        let normal = vec3_cross(de1, de2);
 
-        make_uv_tri(v0, e1, e2, normal, t.c0, t.c1, t.c2, t.wc0, t.wc1, t.wc2)
+        make_uv_tri(dv0, de1, de2, normal, t.c0, t.c1, t.c2, t.wc0, t.wc1, t.wc2)
     };
 
     Prim {
-        // intersect = @ |_, ray| {
-        //     let mut closest = flt_max;
-        //     let mut depth = 0;
-        //     let mut current_tri = tri;
-
-        //     let mut uv = make_vec2(0,0);
-
-        //     while depth < 3 {
-        //         let (t0, t1, t2, t3) = tesselate(current_tri);
-        //         let tris = [t0,t1,t2,t3];
-
-        //         for i in unroll(0,4) {
-        //             let tri = tris(i);
-
-        //             let bbox = tri_bbox(tris(i));
-        //             if let Option[f32]::Some(entry) = intersect_ray_box_single(minmax, false, ray, bbox) {
-        //                 if entry < closest {
-        //                     closest = entry;
-        //                     current_tri = tris(i);
-        //                 }
-        //             }
-        //         }
-
-        //         depth++;
-        //     }
-
-        //     let hit_point = vec3_add(ray.org, vec3_mulf(ray.dir, closest));
-        //     uv = tri_uv(hit_point, current_tri);
-    
-        //     if closest != flt_max {
-        //         make_option(make_hit(-1, prim_id & 0x7FFFFFFF, closest, uv))
-        //     } else {
-        //         Option[Hit]::None
-        //     }
-        // },
-
+        // traverses the displacement BVH by storing triangles that still need to be traversed in a queue
+        // and traversing that frontier
         intersect = @ |_, ray| {
 
+            // initialize queue for storing triangles
             let mut tri_queue : [UVTri * 100];
             let mut queue_index = 0;
 
@@ -300,25 +235,26 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
                 }
             };
             
+            // start with base triangle
             queue_tri(uvtri);
 
+            // record closest intersection and uv
             let mut closest = flt_max;
             let mut uv = make_vec2(0,0);
 
-            
+            // traverse queue frontier (BVH traversal)
             while queue_index > 0 {
                 if let Option[UVTri]::Some(current_tri) = dequeue_tri() {
-                    let (mut t0, mut t1) = tesselate2(current_tri);
-                    let tris = [t0,t1];
+                    let (t0, t1) = tesselate2(current_tri);
+                    let ttris = [t0,t1];
                     
-                    
-                    //closest = flt_max;
-                    
-                    let mut found_hit = false;
                     for i in unroll(0,2) {
-                        let tri = tris(i);
+                        let tri = ttris(i);
                         
                         let disp_tri = (displace_tri(tri));
+
+                        // triangle is considered a leaf under the following condition
+                        // (length of diagonal across triangle is smaller than 0.05)
                         let leaf = vec2_len(make_vec2(
                             minmax.fmaxmaxf(tri.wc0.x, tri.wc1.x, tri.wc2.x) - minmax.fminminf(tri.wc0.x, tri.wc1.x, tri.wc2.x),
                             minmax.fmaxmaxf(tri.wc0.y, tri.wc1.y, tri.wc2.y) - minmax.fminminf(tri.wc0.y, tri.wc1.y, tri.wc2.y)
@@ -326,15 +262,18 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
 
                         if (leaf) {
                             let isec_tri = uvtri2tri(disp_tri);
-                            if let Option[(f32, f32, f32)]::Some((t, u, v)) = intersect_ray_tri(false, ray, isec_tri) {
+                            // intersect leaf-level triangle for final traversal result
+                            if let Option[(f32, f32, f32)]::Some((t, _u, _v)) = intersect_ray_tri(false, ray, isec_tri) {
                                 
                                 closest = t;
-                                //uv = vec2_add(vec2_mulf(current_tri.c0, w), vec2_add(vec2_mulf(current_tri.c1, u), vec2_mulf(current_tri.c2, v)));
+                                // use these uv-coordinates to visualize the tesselated triangles
+                                // get overwritten later on by default
                                 uv = make_vec2(current_tri.v1.x, current_tri.v1.y);
                                 break;
                             }
                         } else {
-                            if let Option[f32]::Some(t) = intersect_ray_box_single(minmax, false, ray, tri_bbox(disp_tri)) {
+                            // queue next tesselation level if current level is not a leaf and next level's bbox is intersected
+                            if let Option[f32]::Some(_t) = intersect_ray_box_single(minmax, false, ray, tri_bbox(disp_tri)) {
                                 queue_tri(tri);
                             }
                         }
@@ -342,14 +281,18 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
                 }
             }
             
+            // if a hit was found, return it
             if closest < flt_max {    
                 let hit = vec3_add(ray.org, vec3_mulf(ray.dir, closest));
                 let dir = uvtri.n;
 
-                //if let Option[(f32, f32, f32)]::Some((t,u,v)) = intersect_ray_tri(false, make_ray(hit, dir, -1, flt_max), uvtri2tri(uvtri)) {
-                //    uv = make_vec2(u, v);
-                //}
-
+                // reproject final intersection onto the base triangle to compute
+                // the correct uv-coordinates
+                // comment this block out if triangle visualization is wanted
+                if let Option[(f32, f32, f32)]::Some((_t,u,v)) = intersect_ray_tri(false, make_ray(hit, dir, -1, flt_max), uvtri2tri(uvtri)) {
+                    uv = make_vec2(u, v);
+                }
+                                
                 make_option(make_hit(-1/* Will be set later*/, prim_id & 0x7FFFFFFF, closest, uv))
             } else {
                 Option[Hit]::None
@@ -411,7 +354,7 @@ fn @make_amdgpu_min_max() = make_min_max(ocml_fminf, ocml_fmaxf, false);
 
 // Traverses a single ray at a time. 
 fn @gpu_traverse_single_helper_prim( min_max: MinMax
-                                    , mut ray: Ray
+                                    , ray: Ray
                                     , bvh: PrimBvh
                                     , any_hit: bool
                                     , root: i32
@@ -484,21 +427,11 @@ fn @gpu_traverse_single_helper_prim( min_max: MinMax
                     if !prim.is_valid(k) { break() }
 
                     if let Option[Hit]::Some(prim_hit) = prim.intersect(k, ray) {
-                        //if (prim_hit.distance < tmin) {
-                            hit = prim_hit;
-                            tmin = prim_hit.distance;
-                            //ray.tmax = prim_hit.distance;
-                        //}
+                        hit = prim_hit;
+                        tmin = prim_hit.distance;
 
                         if any_hit { return(hit) }
                     }
-
-                    // if let Option[f32]::Some(entry) = intersect_ray_box_single(min_max, true, ray, prim.bbox) {
-                    //     hit = make_hit(-1, prim_id & 0x7FFFFFFF, entry, make_vec2(0,0));
-                    //     ray.tmax = entry;
-
-                    //     if any_hit {return(hit)}
-                    // }
                 }
 
                 if prim.is_last { break() }
@@ -586,8 +519,6 @@ fn @gpu_traverse_single_helper( min_max: MinMax
                     if tmin <= hit.distance {
                         let local_ray = transform_ray(ray, leaf.local);
                         let shape_bvh = @prim_bvhs(leaf.shape_id);
-
-                        let shape = scene.database.shapes(leaf.shape_id);
 
                         let local_hit = gpu_traverse_single_helper_prim(min_max, local_ray, shape_bvh, any_hit, 1);
 
