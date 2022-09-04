@@ -60,3 +60,9 @@ scenes/radiance/*/*.hdr
 scenes/radiance/*/*.exr
 scenes/radiance/*/*.unf
 scenes/radiance/*/*.oct
+
+scenes/breakfast_room/*
+scenes/indirect_cornell/*
+scenes/leinarts_sponza/*
+scenes/living_room/*
+scenes/living_room/textures/*
