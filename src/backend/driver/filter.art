@@ -65,9 +65,6 @@ fn @get_vector_from_buffer(ind : i32, buffer : DeviceBuffer, width : i32, height
             make_vec3(nx, ny, nz)
         }
         else if((ind) % 3 == 1){
-            // if(ind == 25){
-            //     print_i32(4);
-            // }
             let nx = buffer.load_f32(ind - 1);
             let ny = buffer.load_f32(ind);
             let nz = buffer.load_f32(ind + 1);
@@ -81,9 +78,6 @@ fn @get_vector_from_buffer(ind : i32, buffer : DeviceBuffer, width : i32, height
         }
     }
     else{
-        if(ind == 15000){
-            print_i32(4);
-        }
         make_vec3(0.0, 0.0, 0.0)
     }
 }
@@ -110,12 +104,6 @@ fn @get_view_matrix(cam_eye_buf : DeviceBuffer, up_buf : DeviceBuffer, dir_buf :
     let aspect = (width/height) as f32;
     // let v1 = (cam_far) / (cam_near - cam_far);
     // let v2 = (cam_far * cam_near) / (cam_near - cam_far);
-    // let projection = make_mat4x4(
-    //     make_vec4((s/aspect) as f32, 0, 0, 0), // col 1
-    //     make_vec4(0, s, 0, 0), // col 2
-    //     make_vec4(0, 0, v1, v2), //...
-    //     make_vec4(0, 0, -1, 0) 
-    // );
     let v1 = (cam_far + cam_near) / (cam_near - cam_far);
     let v2 = (2 * cam_far * cam_near) / (cam_near - cam_far);
     let projection = mat4x4_transpose(make_mat4x4(
@@ -125,7 +113,9 @@ fn @get_view_matrix(cam_eye_buf : DeviceBuffer, up_buf : DeviceBuffer, dir_buf :
         make_vec4(0, 0, -1.0, 0) 
     )); // opengl format--- could also be transposed?
     mat4x4_matmul(projection, view)
+    // projection
     // view
+    // mat4x4_identity()
 }
 
 fn @isReprjValid(width: i32, height: i32, prev_coord_ss: Vec2, prev_coord: i32, curr_normal: Vec3, prev_normal: Vec3, curr_depth: Vec3, prev_depth: Vec3, curr_lum: Vec3, prev_lum: Vec3, curr_prim_id: i32, prev_prim_id: i32) -> bool {
@@ -145,7 +135,7 @@ fn @isReprjValid(width: i32, height: i32, prev_coord_ss: Vec2, prev_coord: i32, 
     // check deviation in depth
     // Doubts in aov_depth, linearize_depth(is this necessary), aov_ws_position(dont know if these values are correct)
     // without this depth check test, continuous mode always resets as a result of invalid samples
-    // seems to work partially... atleast I can see the accumulation over frames happening at the back wall(diamond scene) 
+    // seems to work partially... atleast I can see the accumulation over frames happening (diamond scene) 
     let diff_depth = prev_depth.z - curr_depth.z;
     let distance_depth = math_builtins::fabs(diff_depth);
     if(distance_depth > (0.1 as f32)){
@@ -164,6 +154,7 @@ fn @isReprjValid(width: i32, height: i32, prev_coord_ss: Vec2, prev_coord: i32, 
         return(false)
     }
 
+    // possible check: if(neighbouring samples have similar luminance?)
     // let diff_lum = vec3_sub(prev_lum, curr_lum);
     // let distance_lum = vec3_len(diff_lum);
     // if(distance_lum > (0.1 as f32)){
@@ -174,9 +165,10 @@ fn @isReprjValid(width: i32, height: i32, prev_coord_ss: Vec2, prev_coord: i32, 
 
 fn @linearizeDepth(depth: f32, near: f32, far: f32) -> f32{
     // converts raw depth to range [0,1]
+    // probably need to apply view-projection matrix first??? (this probably should not be used for re-storing depth buffer)
     let z_ndc = depth * 2.0 as f32 - 1.0 as f32; // transform to NDC
     let linearDepth = (2.0 as f32 * near * far) / (far + near - z_ndc * (far - near));
-    linearDepth / far
+    linearDepth/far
 }
 
 fn @get_scrspace_coord(ind: i32, width: i32) -> Vec2{
@@ -266,13 +258,6 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
         buffer_depth.store_i32(ind, bitcast[i32](dep));
     }
     // device.sync();
-    // delete this after check
-    // for ind in unroll_step(0, width*height*3, 3){
-    //     let test = buffer_depth.load_vec3(ind);
-    //     if(test.z > 1){
-    //         print_i32(34);
-    //     }
-    // }
 
     ///////// calculating luminance buffer
     for ind in unroll(0, (width) * (height) * 3) {
@@ -290,28 +275,36 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
     let curr_view_mat = get_view_matrix(curr_eye_buf, curr_up_buf, curr_dir_buf, cam_fov, cam_near, cam_far, width, height);
     // calculating motion vectors (in screen space) before the actual reprojection
     // http://john-chapman-graphics.blogspot.com/2013/01/per-object-motion-blur.html
+    // http://john-chapman-graphics.blogspot.com/2013/01/what-is-motion-blur-motion-pictures-are.html?m=1
     // already have view matrix,,, model-not needed since we already know the world space position
     // need the perspective projection matrix-probably could be fixed or computed somewhere  
-    let is_first_frame = history_length.load_f32(width * height * 3 + 1);
+    let is_first_frame = history_length.load_f32(width * height * 3 + 1); // using this index to count number of frames
     if(is_first_frame > 0){
         prev_view_mat = get_view_matrix(prev_eye_buf, prev_up_buf, prev_dir_buf, cam_fov, cam_near, cam_far, width, height); // at first frame it is not used 
 
         for ind in unroll_step(0, (width) * (height) * 3, 3) {
             let curr_ws_pos = get_vector_from_buffer(ind, buffer_ws_position, width, height);
-            let prev_ws_pos = get_vector_from_buffer(ind, prev_buffer_ws_position, width, height);
+            // let prev_ws_pos = get_vector_from_buffer(ind, buffer_, width, height);
             
             let v_position = mat4x4_mul(curr_view_mat, vec3_to_4(curr_ws_pos, 1));
-            let v_prev_position = mat4x4_mul(prev_view_mat, vec3_to_4(prev_ws_pos, 1));
-
-            let a = vec2_mulf(make_vec2(v_position.x, v_position.y), (1/v_position.w)); // nan errors due to this perpective division(wrong??)
-            let b = vec2_mulf(make_vec2(v_prev_position.x, v_prev_position.y), (1/v_prev_position.w));
+            let v_prev_position = mat4x4_mul(prev_view_mat, vec3_to_4(curr_ws_pos, 1)); // finds where this sample was in the previous view space
+            // get_view_matrix computes (projection * view) matrix
+            let normalize_term_curr = 1 as f32; //1/v_position.w
+            let normalize_term_prev = 1 as f32; // 1/v_prev_position.w
+            // dropping z after projection
+            let a = vec2_mulf(make_vec2(v_position.x, v_position.y), normalize_term_curr); // nan errors due to this perpective division(wrong??)
+            let b = vec2_mulf(make_vec2(v_prev_position.x, v_prev_position.y), normalize_term_prev);
 
             let curr_ss_pos = vec2_add(vec2_mulf(a, 0.5), make_vec2(0.5, 0.5));
             let prev_ss_pos = vec2_add(vec2_neg(vec2_mulf(b, 0.5)), make_vec2(0.5, 0.5));
 
-         
+            // Debugging : storing values in depth_buffer for visualizing later
+            // buffer_depth.store_vec3(ind, make_vec3(v_position.x, v_position.z, v_position.z));
+            // buffer_depth.store_i32(ind, bitcast[i32](v_position.w));
+            // buffer_depth.store_i32(ind+1, bitcast[i32](v_position.w));
+            // buffer_depth.store_i32(ind+2, bitcast[i32](v_position.w));
             // if(curr_ws_pos.z == 0 || prev_ws_pos.z == 0){
-            if(false){ //debugging
+            if(false){ // for debugging
                 // causes nans and moves the new ss_pos to be outside the screen space
                 // pretty much a hack....not sure why this is happening or how to resolve this   
                 // set vector to 0
@@ -322,13 +315,14 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
             else{ // this block is the correct one that has to be run
                 let mx = curr_ss_pos.x as i32 - prev_ss_pos.x as i32;
                 let my = curr_ss_pos.y as i32 - prev_ss_pos.y as i32;
-                motion_vectorx_buffer.store_i32(ind/3, bitcast[i32](mx));
+                motion_vectorx_buffer.store_i32(ind/3, bitcast[i32](mx)); // /3 coz buffer size is 1/3rd...its the same for rgb channels
                 motion_vectory_buffer.store_i32(ind/3, bitcast[i32](my));
             }
 
             // doubts in matrix calculations, correctness of depth, position buffer(world space)
             // as a result, motion vectors might be wrong...
-            // reprojection looks transposed too...
+            // possible solution : https://mynameismjp.wordpress.com/2010/09/05/position-from-depth-3/
+            // reprojection has artifacts that look similar to world space position(aov)
             
         }    
         let update_frame = history_length.load_f32(width * height * 3 + 1) + 1 as f32;
@@ -336,12 +330,6 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
         
     }
     else{
-        // for ind in unroll_step(0, (width) * (height) * 3, 3) {
-        //     let curr_ws_pos = get_vector_from_buffer(ind, buffer_ws_position, width, height);            
-        //     let v_position = mat4x4_mul(curr_view_mat, vec3_to_4(curr_ws_pos, 1));
-        //     let n_v_position = make_vec3(v_position.x / v_position.w, v_position.y / v_position.w, v_position.z / v_position.w);
-        //     buffer_depth.store_vec3(ind, make_vec3(n_v_position.z, n_v_position.z, n_v_position.z));
-        // }
         prev_eye_buf.store_vec3(0, cam_eye_v);
         prev_up_buf.store_vec3(0, up_v);
         prev_dir_buf.store_vec3(0, dir_v);
@@ -349,6 +337,7 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
         let update_frame = 1.0 as f32;
         history_length.store_i32(width * height * 3 + 1,  bitcast[i32](update_frame));
     }
+    // checking if frames update?
     // let p_val = history_length.load_f32(width * height * 3 + 1);
     // print_i32(p_val as i32);
 
@@ -356,7 +345,6 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
     for ind in unroll(0, (width) * (height) * 3) {
         let N = history_length.load_f32(ind);
         let lum = buffer_lum.load_f32(ind);
-        // if(false){
         if(N > 0){ // is the current sample seen before??
             // scene is static - N keeps increasing with increasing frame
             // in frame 2, it is definitely seen before and so we find the index from the prev_buffer 
@@ -369,7 +357,7 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
                 let which_channel = (ind % 3);
                 let prev_coord = prev_coord_ss.x as i32 * (width * 3) + prev_coord_ss.y as i32 * 3 + which_channel;
 
-                // found index in prev_buffer - prev_coord
+                // found index in prev_buffer -> prev_coord
                 // check validity
                 let curr_normal = get_vector_from_buffer(ind, buffer_normals, width, height);
                 let curr_depth = get_vector_from_buffer(ind, buffer_depth, width, height);
@@ -392,10 +380,16 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
                 let mut prev_mean = 0.0 as f32; // first order moment
                 let mut prev_second_moment = 0.0 as f32; // second order moment
 
-                // let mut prev_historylength = 0.0 as f32;
+                if(valid && !improvement){
+                    prev_color = color_history_buffer.load_f32(ind);
+                    prev_mean = mean_history_buffer.load_f32(ind);
+                    prev_second_moment = second_moment_history_buffer.load_f32(ind);
+                }
+
                 if(improvement){
                     let mut v:[bool * 4];
                     let offset = [make_vec2(0 as f32, 0 as f32), make_vec2(1 as f32, 0 as f32), make_vec2(0 as f32, 1 as f32), make_vec2(1 as f32, 1 as f32)];
+                    // offset includes the current pixel too so no need to init with history values
 
                     for sample_idx in unroll(0, 4){
                         let prev_coord_xy = vec2_add(prev_coord_ss, offset(sample_idx));
@@ -408,11 +402,8 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
                         valid = valid || v(sample_idx);
                     }
 
-                    
-
                     if(valid){
-                        // print_i32(1);
-                        // print_i32(999);
+                        // if more than one sample index is valid, bilinearly interpolate them to store integrated color, moments
                         let fracx = prev_coord_ss.x - math_builtins::floor(prev_coord_ss.x);
                         let fracy = prev_coord_ss.y - math_builtins::floor(prev_coord_ss.y);
                         let mut sumw = 0.0 as f32;
@@ -426,7 +417,6 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
                                 prev_color += w(sample_idx) * color_history_buffer.load_f32(prev_coord_b); //get_pixel_value(prev_coord, color_history_buffer, width, height)
                                 prev_mean += w(sample_idx) * mean_history_buffer.load_f32(prev_coord_b);
                                 prev_second_moment += w(sample_idx) * second_moment_history_buffer.load_f32(prev_coord_b);
-                                // prev_historylength += w(sample_idx) * history_length.load_f32(prev_coord);
                                 sumw += w(sample_idx);
                             }
                         }
@@ -434,14 +424,11 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
                             prev_color /= sumw;
                             prev_second_moment /= sumw;
                             prev_mean /= sumw;
-                            // prev_historylength /= sumw;
                             valid = true;
                         }// else prev_color and moments are still 0
                     }
-                    // finding samples elsewhere using 3x3 kernel
                     if(!valid){
-                        // print_i32(1);
-                        // print_i32(999);
+                        // finding samples elsewhere using 3x3 kernel...increasing search space(drastic motion??)
                         let mut cnt = 0.0 as f32;
                         let radius = 1;
 
@@ -458,13 +445,11 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
                                     prev_color += color_history_buffer.load_f32(prev_coord_n);
                                     prev_mean += mean_history_buffer.load_f32(prev_coord_n);
                                     prev_second_moment += second_moment_history_buffer.load_f32(prev_coord_n);
-                                    // prev_historylength += history_length.load_f32(prev_coord);
                                     cnt += 1.0 as f32;
                                 }
                             }
                         }
                         if(cnt > 0.0 as f32){
-                            // print_i32(2);
                             prev_color /= cnt;
                             prev_second_moment /= cnt;
                             prev_mean /= cnt;
@@ -474,11 +459,10 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
                 }
                 /////////////////////////
                 /////////// improvement search for valid samples ends here
-                /// comment the above block for debugging
+                /// comment the above block using bool improvement for debugging
+                
+                // Actual accumulation:
                 // if valid -> accumulate color, moments
-                // let mut prev_color = 0.0 as f32; //color value from buffer_in
-                // let mut prev_mean = 0.0 as f32; // first order moment
-                // let mut prev_second_moment = 0.0 as f32; // second order moment
                 if(valid){
                     // increase history length
                     let prev_historylength = history_length.load_f32(ind);
@@ -489,7 +473,7 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
                     let mean_alpha = math_builtins::fmax((1.0 as f32)/((N + 1)), moment_alpha_min);
                     let second_moment_alpha = math_builtins::fmax((1.0 as f32)/((N + 1)), moment_alpha_min);
 
-                    // prev_color = color_history_buffer.load_f32(prev_coord); //picked color value from previous frame
+                    //picked color value from previous frames....in prev_color(result of all those bilinear interpolations)
                     // drop this color value in the current frame's index
                     let curr_color = buffer_in.load_f32(ind);
                     // exponential moving average and store it in color_acc_buffer
@@ -521,16 +505,11 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
             else{                
                 // discarding history and resetting history/intergrated accumulation buffers to current frame values
                 // populate history buffers
-                
-                // this is what I am supposed to do but the results are not great(occlusion tests??/ screen-space projection is wrong)
                 // color history/ resetting color accumulation
                 let color_history = 0.0 as f32;//buffer_in.load_f32(ind);
                 color_acc_buffer.store_i32(ind, bitcast[i32](color_history));
     
-    
-                // increase sample history (now that it is seen we can use this info in the next frame)
-                // on the other hand there is a chance that this sample comes into view from an occlusion
-                // what happens then??? reset history and start accumulating from this frame...
+                // what happens then??? reset history and start accumulating from next frame...
                 let prev_histlength = 0.0 as f32; 
                 history_length.store_i32(ind, bitcast[i32](prev_histlength));
                
@@ -539,15 +518,12 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
                 let second_moment = 0.0 as f32;
                 mean_acc_buffer.store_i32(ind, bitcast[i32](first_moment));
                 second_moment_acc_buffer.store_i32(ind, bitcast[i32](second_moment));
-                // let variance = 100.0 as f32;
-                // variance_out_buffer.store_i32(ind, bitcast[i32](variance));
-            }
+                let variance = 100.0 as f32;
+                variance_out_buffer.store_i32(ind, bitcast[i32](variance));
+            } 
         }        
         else{
             // no history -> works as expected if I set if(false)
-            // if(ind == 25){
-            //     print_i32(5);
-            // }
             // populate history buffers
 
             // color history/ resetting color accumulation
@@ -599,17 +575,9 @@ fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f
         second_moment_history_buffer.store_i32(ind, bitcast[i32](second_moment_hist));
     
     }
-    // TODO: IMPORTANT
-    // need to check if accumulated history is actually being used???
-    // yes but some transposed pixels from the previous frame are being accessed?
-    // motion vectors??
     // storing accumulated color in out buffer for use in the atrous_filter
     for ind in unroll(0, (width) * (height) * 3) {
         let out = color_history_buffer.load_f32(ind);
-        // let out = buffer_d.load_f32(ind);        
-        // let out = buffer_ws_position.load_f32(ind);        
-        // let depth = get_vector_from_buffer(ind, buffer_depth, width, height);
-        // let out = depth.z;
         buffer_out.store_i32(ind, bitcast[i32](out));
     }
 }
@@ -661,7 +629,7 @@ fn atrousfilter(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f32
         buffer_normals.store_i32(ind, bitcast[i32](norml));
 
         let depth_nonlin = get_pixel_value(ind, buffer_d, width, height);//buffer_d.load_f32(ind);
-        let dep = linearizeDepth(depth_nonlin, cam_near, cam_far);
+        let dep = depth_nonlin; //linearizeDepth(depth_nonlin, cam_near, cam_far);
         buffer_depth.store_i32(ind, bitcast[i32](dep));
     }
     // device.sync();
