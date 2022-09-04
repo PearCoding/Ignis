@@ -927,8 +927,9 @@ const IG::Statistics* glue_getStatistics()
 
 void glue_filter(size_t device)
 {
-    // if (sInterface->setup.acquire_stats)
-    //     sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Tonemap, {});
+    // In new version need to register thread...seems to work in my version of Ignis though
+    if (sInterface->setup.acquire_stats)
+        sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Device, {});
 
     // #ifdef DEVICE_GPU
     // #if defined(DEVICE_NVVM)
@@ -952,23 +953,31 @@ void glue_filter(size_t device)
 
     // if igcli is used....only 1 frame is available?(any other settings to be enabled?)...only atrous-filter is run in this case
     bool temporal_enable = true; // enabled is better // static scene but still better
-    // its unstable for dynamic scenes...occlusion tests(might be failing), does not find consistent samples across frames even when its clearly consistent?
-    // so some noise appears for an instant when the camera moves...
+    // its unstable for dynamic scenes...doubts in reprojection(calculating motion vectors)
+    // If camera moves fast....information gets lost(occlusion tests bug?)
 
     // best result of temporal accumulation is observed in igview continuous mode
+    // temporal accumulation functionality is not present in igcli
+    ////// pipeline from the paper
     if (temporal_enable) {
         BackProjection((int)device, in_pixels, normals, depth, primid, ws_position, (int)sInterface->film_width, (int)sInterface->film_height);
     } else {
-        EstimateVariance((int)device, (int)sInterface->film_width, (int)sInterface->film_height); // sets constant variance //spatial estimate for a few frames
+        EstimateVariance((int)device, (int)sInterface->film_width, (int)sInterface->film_height); // sets constant variance //spatial estimate for a few frames(not really implemented here)
     }
 
     int n_levels = 5; // if it is too blurred out, we can use less levels(taps)...3 looks nice but paper has 5
     for (int level = 1; level <= n_levels; level++) {
         in_pixels = sInterface->getAOVImage(0, 0); // framebuffer pixels
         atrousfilter((int)device, in_pixels, normals, depth, albedo, (int)sInterface->film_width, (int)sInterface->film_height, level);
-        // after each iteration filtered output is written to framebuffer
-        // and this is again passed as input to the function
+        // after each iteration... filtered output is written to framebuffer
+        // and this is again passed as input to the function in the next loop iteration
     }
+    ///// pipeline ends here
+    // only running backprojection without filtering does not lead to accumulation - reprojection gets rejected?
+    // if temporal_enable == false, no accumulation is done and filtering is done on the current render in framebuffer.
+
+    if (sInterface->setup.acquire_stats)
+        sInterface->getThreadData()->stats.endShaderLaunch(IG::ShaderType::Device, {});
 }
 
 void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings& driver_settings)

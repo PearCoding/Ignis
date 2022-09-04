@@ -186,6 +186,9 @@ fn @get_motionvector(ind: i32, motion_vectorx_buffer: DeviceBuffer, motion_vecto
     let m_vecy = motion_vectory_buffer.load_f32(sample_idx);
     make_vec2(m_vecx, m_vecy)
 }
+/////////
+// the below three functions are the main steps of SVGF
+
 // https://www.gdcvault.com/play/1022970/Temporal-Reprojection-Anti-Aliasing-in
 #[export]
 fn BackProjection(device_id: i32, in_pixels: &[f32], normals: &[f32], depth: &[f32], primid: &[f32], ws_position: &[f32], width: i32, height: i32) -> (){

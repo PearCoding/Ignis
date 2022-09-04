@@ -160,9 +160,6 @@ fn @make_path_renderer(max_path_len: i32, num_lights: i32, lights: LightTable, a
             // if(hit.distance > flt_eps){ // this condition is probably unnecessary
             let pos = surf.point; //(vec3_add(ray.org, vec3_mulf(ray.dir, hit.distance)));
             aov_position.splat(pixel, make_color(pos.x, pos.y, pos.z, 1)); //depth = z // world space coordinates
-            if(pos.z == 0){
-                print_i32(12);
-            }
             let depth = (make_vec3(pos.z, pos.z, pos.z));
             aov_depth.splat(pixel, make_color(depth.x, depth.y, depth.z, 1)); 
             // }

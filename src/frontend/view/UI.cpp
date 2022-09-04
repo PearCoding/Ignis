@@ -74,7 +74,7 @@ public:
     std::array<int, HISTOGRAM_SIZE> Histogram;
     std::array<float, HISTOGRAM_SIZE> HistogramF;
 
-    bool atrous_filter                      = true;
+    bool svgf                               = true;
     bool ToneMapping_Automatic              = true;
     float ToneMapping_Exposure              = 1.0f;
     float ToneMapping_Offset                = 0.0f;
@@ -545,7 +545,7 @@ public:
                                               ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                                               ToneMapping_Automatic ? 0 : ToneMapping_Offset };
 
-        if (atrous_filter == true) {
+        if (svgf == true) {
             Runtime->filter();
         }
         Runtime->tonemap(buf, tone_settings);
@@ -719,7 +719,7 @@ public:
             }
 
             if (ImGui::CollapsingHeader("Denoiser", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::Checkbox("A-Trous", &atrous_filter);
+                ImGui::Checkbox("A-Trous", &svgf);
             }
 
             if (ImGui::CollapsingHeader("ToneMapping", ImGuiTreeNodeFlags_DefaultOpen)) {
