@@ -719,7 +719,7 @@ public:
             }
 
             if (ImGui::CollapsingHeader("Denoiser", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::Checkbox("A-Trous", &svgf);
+                ImGui::Checkbox("SVGF", &svgf);
             }
 
             if (ImGui::CollapsingHeader("ToneMapping", ImGuiTreeNodeFlags_DefaultOpen)) {
