@@ -1,0 +1,430 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 64,
+    // "clamp": 10.0,
+    "aov_normals": true,
+    "aov_depth": true,
+    "aov_position": true,
+    "aov_albedo": true,
+    "aov_prim_id": true
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 48.45549063590834,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -0.9999999403953552,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -1.3435885648505064e-07,
+      0.9999999403953552,
+      -3.1508214473724365,
+      0.0,
+      0.9999999403953552,
+      2.028159258316009e-07,
+      1.0000003576278687,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      600.0,
+      600.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "_m_0_CornellBox-Original",
+      "filename": "Meshes/_m_0_CornellBox-Original.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_1_CornellBox-Original",
+      "filename": "Meshes/_m_1_CornellBox-Original.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_2_CornellBox-Original",
+      "filename": "Meshes/_m_2_CornellBox-Original.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_3_CornellBox-Original",
+      "filename": "Meshes/_m_3_CornellBox-Original.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_4_CornellBox-Original",
+      "filename": "Meshes/_m_4_CornellBox-Original.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_5_CornellBox-Original",
+      "filename": "Meshes/_m_5_CornellBox-Original.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_6_CornellBox-Original",
+      "filename": "Meshes/_m_6_CornellBox-Original.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_7_CornellBox-Original",
+      "filename": "Meshes/_m_7_CornellBox-Original.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "principled",
+      "name": "floor",
+      "base_color": "color(0.7250000238418579, 0.7099999785423279, 0.6800000071525574, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "backWall",
+      "base_color": "color(0.7250000238418579, 0.7099999785423279, 0.6800000071525574, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "tallBox",
+      "base_color": "color(0.7250000238418579, 0.7099999785423279, 0.6800000071525574, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "shortBox",
+      "base_color": "color(0.7250000238418579, 0.7099999785423279, 0.6800000071525574, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "rightWall",
+      "base_color": "color(0.14000000059604645, 0.44999998807907104, 0.09099999815225601, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "light",
+      "base_color": "color(0.7799999713897705, 0.7799999713897705, 0.7799999713897705, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "leftWall",
+      "base_color": "color(0.6299999952316284, 0.06499999761581421, 0.05000000074505806, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "ceiling",
+      "base_color": "color(0.7250000238418579, 0.7099999785423279, 0.6800000071525574, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    }
+  ],
+  "entities": [
+    {
+      "name": "CornellBox-Original-_m_0_CornellBox-Original",
+      "shape": "_m_0_CornellBox-Original",
+      "bsdf": "floor",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "CornellBox-Original-_m_1_CornellBox-Original",
+      "shape": "_m_1_CornellBox-Original",
+      "bsdf": "ceiling",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "CornellBox-Original-_m_2_CornellBox-Original",
+      "shape": "_m_2_CornellBox-Original",
+      "bsdf": "backWall",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "CornellBox-Original-_m_3_CornellBox-Original",
+      "shape": "_m_3_CornellBox-Original",
+      "bsdf": "rightWall",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "CornellBox-Original-_m_4_CornellBox-Original",
+      "shape": "_m_4_CornellBox-Original",
+      "bsdf": "leftWall",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "CornellBox-Original-_m_5_CornellBox-Original",
+      "shape": "_m_5_CornellBox-Original",
+      "bsdf": "shortBox",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "CornellBox-Original-_m_6_CornellBox-Original",
+      "shape": "_m_6_CornellBox-Original",
+      "bsdf": "tallBox",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "CornellBox-Original-_m_7_CornellBox-Original",
+      "shape": "_m_7_CornellBox-Original",
+      "bsdf": "light",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "area",
+      "name": "CornellBox-Original-_m_7_CornellBox-Original",
+      "entity": "CornellBox-Original-_m_7_CornellBox-Original",
+      "radiance": "(color(17.0, 12.0, 4.0, 1.0) * 0.2)"
+    }
+  ]
+}

@@ -1,0 +1,1181 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 12,
+    "clamp": 10.0,
+    "aov_normals": true,
+    "aov_depth": true,
+    "aov_position": true,
+    "aov_albedo": true,
+    "aov_prim_id": true
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 61.92751306414704,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -0.939746081829071,
+      -0.06293031573295593,
+      -0.33603134751319885,
+      3.9144129753112793,
+      -0.34167030453681946,
+      0.2067405879497528,
+      0.9167986512184143,
+      -9.624025344848633,
+      0.011776886880397797,
+      0.9763698577880859,
+      -0.21578505635261536,
+      2.7400293350219727,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      512.0,
+      512.0
+    ],
+    "sampler": "middle"
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "_m_0_Blinds_breakfast_room",
+      "filename": "Meshes/_m_0_Blinds_breakfast_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_1_Blinds_breakfast_room",
+      "filename": "Meshes/_m_1_Blinds_breakfast_room.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_0_breakfast_room_Wall_West",
+      "filename": "Meshes/_m_0_breakfast_room_Wall_West.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_1_breakfast_room_Wall_West",
+      "filename": "Meshes/_m_1_breakfast_room_Wall_West.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_0_breakfast_room_Wall_South",
+      "filename": "Meshes/_m_0_breakfast_room_Wall_South.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_1_breakfast_room_Wall_South",
+      "filename": "Meshes/_m_1_breakfast_room_Wall_South.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_0_breakfast_room_Wall_East",
+      "filename": "Meshes/_m_0_breakfast_room_Wall_East.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_1_breakfast_room_Wall_East",
+      "filename": "Meshes/_m_1_breakfast_room_Wall_East.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_0_breakfast_room_Wall_North",
+      "filename": "Meshes/_m_0_breakfast_room_Wall_North.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_0_breakfast_room_Floor",
+      "filename": "Meshes/_m_0_breakfast_room_Floor.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_0_breakfast_room_Ceiling",
+      "filename": "Meshes/_m_0_breakfast_room_Ceiling.ply"
+    },
+    {
+      "type": "ply",
+      "name": "_m_1_breakfast_room_Ceiling",
+      "filename": "Meshes/_m_1_breakfast_room_Ceiling.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Plates_top_material_breakfast_room_Interior.001",
+      "filename": "Meshes/Plates_top_material_breakfast_room_Interior.001.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Chair_Legs_breakfast_room_Interior.002",
+      "filename": "Meshes/Chair_Legs_breakfast_room_Interior.002.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Table_Legs_breakfast_room_Interior.003",
+      "filename": "Meshes/Table_Legs_breakfast_room_Interior.003.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Chair_feet_breakfast_room_Interior.005",
+      "filename": "Meshes/Chair_feet_breakfast_room_Interior.005.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Tea_set_metal_rim_breakfast_room_Interior.008",
+      "filename": "Meshes/Tea_set_metal_rim_breakfast_room_Interior.008.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Teapot_and_Water_Pitcher_breakfast_room_Interior.009",
+      "filename": "Meshes/Teapot_and_Water_Pitcher_breakfast_room_Interior.009.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Light_shades_breakfast_room_Interior.010",
+      "filename": "Meshes/Light_shades_breakfast_room_Interior.010.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Baseboard_breakfast_room_Interior.011",
+      "filename": "Meshes/Baseboard_breakfast_room_Interior.011.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Teaspoons_breakfast_room_Interior.012",
+      "filename": "Meshes/Teaspoons_breakfast_room_Interior.012.ply"
+    },
+    {
+      "type": "ply",
+      "name": "tabletop_breakfast_room_Interior.069",
+      "filename": "Meshes/tabletop_breakfast_room_Interior.069.ply"
+    },
+    {
+      "type": "ply",
+      "name": "wall_art_breakfast_room_Interior.075",
+      "filename": "Meshes/wall_art_breakfast_room_Interior.075.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Plates_breakfast_room_Interior.101",
+      "filename": "Meshes/Plates_breakfast_room_Interior.101.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Teacups_breakfast_room_Interior.083",
+      "filename": "Meshes/Teacups_breakfast_room_Interior.083.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Chair_seats_and_light_fixture_breakfast_room_Interior.003",
+      "filename": "Meshes/Chair_seats_and_light_fixture_breakfast_room_Interior.003.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Chair_seats_and_light_fixture_breakfast_room_Interior.005",
+      "filename": "Meshes/Chair_seats_and_light_fixture_breakfast_room_Interior.005.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Chair_seats_and_light_fixture_breakfast_room_Interior.012",
+      "filename": "Meshes/Chair_seats_and_light_fixture_breakfast_room_Interior.012.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Floor_Tiles",
+      "base_color": "_tex_0",
+      "metallic": 1.0,
+      "roughness": 0.8267949223518372,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Ceramic_001",
+      "base_color": "color(0.5, 0.5, 0.5, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8658359050750732,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Chrome",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.6837722063064575,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.6773124272969588
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Material_002",
+      "base_color": "color(0.5, 0.5, 0.5, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.8658359050750732,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Black_Rubber",
+      "base_color": "color(0.6399999856948853, 0.6399999856948853, 0.6399999856948853, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.6900322437286377,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Gold_Paint",
+      "base_color": "color(0.20000000298023224, 0.10000000149011612, 0.0, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4357137192427747
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Paint___White_Gloss",
+      "base_color": "color(1.0, 1.0, 1.0, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.9292893409729004,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "Material_005.001",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Paint___White_Matt",
+      "base_color": "color(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.9683772325515747,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "Material.003",
+      "base_color": "color(0.1328621804714203, 0.1328621804714203, 0.1328621804714203, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Paint___Black_Satin",
+      "base_color": "color(0.0, 0.0, 0.0, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.858578622341156,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.196457096567159
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Ceramic",
+      "base_color": "color(1.0, 1.0, 1.0, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.6837722063064575,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Frosted_Glass",
+      "base_color": "color(0.8999999761581421, 0.07999999821186066, 0.009999999776482582, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.858578622341156,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.1199208302305514
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:White_Marble",
+      "base_color": "color(0.699999988079071, 0.699999988079071, 0.699999988079071, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:Artwork",
+      "base_color": "_tex_1",
+      "metallic": 1.0,
+      "roughness": 0.9683772325515747,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": "((1 + sqrt(0.08*0.0)) / max(0.001, 1 - sqrt(0.08*0.0)))"
+    },
+    {
+      "type": "principled",
+      "name": "breakfast_room:White_Plastic",
+      "base_color": "color(0.03310185298323631, 0.000400111690396443, 0.0009906840277835727, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.8999999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.2896160724026644
+    },
+    {
+      "type": "principled",
+      "name": "Material.002",
+      "base_color": "color(0.1282377988100052, 0.1282377988100052, 0.1282377988100052, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.4999999999999998
+    }
+  ],
+  "entities": [
+    {
+      "name": "Blinds_breakfast_room-_m_0_Blinds_breakfast_room",
+      "shape": "_m_0_Blinds_breakfast_room",
+      "bsdf": "breakfast_room:Paint___White_Matt",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Blinds_breakfast_room-_m_1_Blinds_breakfast_room",
+      "shape": "_m_1_Blinds_breakfast_room",
+      "bsdf": "breakfast_room:Ceramic_001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "breakfast_room_Wall_West-_m_0_breakfast_room_Wall_West",
+      "shape": "_m_0_breakfast_room_Wall_West",
+      "bsdf": "breakfast_room:Paint___White_Matt",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -2.005988359451294,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "breakfast_room_Wall_West-_m_1_breakfast_room_Wall_West",
+      "shape": "_m_1_breakfast_room_Wall_West",
+      "bsdf": "breakfast_room:Ceramic_001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -2.005988359451294,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "breakfast_room_Wall_South-_m_0_breakfast_room_Wall_South",
+      "shape": "_m_0_breakfast_room_Wall_South",
+      "bsdf": "breakfast_room:Paint___White_Matt",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "breakfast_room_Wall_South-_m_1_breakfast_room_Wall_South",
+      "shape": "_m_1_breakfast_room_Wall_South",
+      "bsdf": "breakfast_room:Ceramic_001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "breakfast_room_Wall_East-_m_0_breakfast_room_Wall_East",
+      "shape": "_m_0_breakfast_room_Wall_East",
+      "bsdf": "breakfast_room:Paint___White_Matt",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "breakfast_room_Wall_East-_m_1_breakfast_room_Wall_East",
+      "shape": "_m_1_breakfast_room_Wall_East",
+      "bsdf": "breakfast_room:Ceramic_001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "breakfast_room_Wall_North-_m_0_breakfast_room_Wall_North",
+      "shape": "_m_0_breakfast_room_Wall_North",
+      "bsdf": "breakfast_room:Paint___White_Matt",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "breakfast_room_Floor-_m_0_breakfast_room_Floor",
+      "shape": "_m_0_breakfast_room_Floor",
+      "bsdf": "breakfast_room:Floor_Tiles",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.5617051124572754,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        -18.519853591918945,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        -7.174718856811523,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "breakfast_room_Ceiling-_m_0_breakfast_room_Ceiling",
+      "shape": "_m_0_breakfast_room_Ceiling",
+      "bsdf": "breakfast_room:Paint___White_Matt",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "breakfast_room_Ceiling-_m_1_breakfast_room_Ceiling",
+      "shape": "_m_1_breakfast_room_Ceiling",
+      "bsdf": "breakfast_room:Ceramic_001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Plates_top_material_breakfast_room_Interior.001-Plates_top_material_breakfast_room_Interior.001",
+      "shape": "Plates_top_material_breakfast_room_Interior.001",
+      "bsdf": "breakfast_room:Material_002",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Chair_Legs_breakfast_room_Interior.002-Chair_Legs_breakfast_room_Interior.002",
+      "shape": "Chair_Legs_breakfast_room_Interior.002",
+      "bsdf": "breakfast_room:Chrome",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Table_Legs_breakfast_room_Interior.003-Table_Legs_breakfast_room_Interior.003",
+      "shape": "Table_Legs_breakfast_room_Interior.003",
+      "bsdf": "breakfast_room:Paint___Black_Satin",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Chair_feet_breakfast_room_Interior.005-Chair_feet_breakfast_room_Interior.005",
+      "shape": "Chair_feet_breakfast_room_Interior.005",
+      "bsdf": "breakfast_room:Black_Rubber",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Tea_set_metal_rim_breakfast_room_Interior.008-Tea_set_metal_rim_breakfast_room_Interior.008",
+      "shape": "Tea_set_metal_rim_breakfast_room_Interior.008",
+      "bsdf": "breakfast_room:Gold_Paint",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Teapot_and_Water_Pitcher_breakfast_room_Interior.009-Teapot_and_Water_Pitcher_breakfast_room_Interior.009",
+      "shape": "Teapot_and_Water_Pitcher_breakfast_room_Interior.009",
+      "bsdf": "breakfast_room:Ceramic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Light_shades_breakfast_room_Interior.010-Light_shades_breakfast_room_Interior.010",
+      "shape": "Light_shades_breakfast_room_Interior.010",
+      "bsdf": "breakfast_room:Frosted_Glass",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Baseboard_breakfast_room_Interior.011-Baseboard_breakfast_room_Interior.011",
+      "shape": "Baseboard_breakfast_room_Interior.011",
+      "bsdf": "breakfast_room:Paint___White_Gloss",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Teaspoons_breakfast_room_Interior.012-Teaspoons_breakfast_room_Interior.012",
+      "shape": "Teaspoons_breakfast_room_Interior.012",
+      "bsdf": "Material_005.001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "tabletop_breakfast_room_Interior.069-tabletop_breakfast_room_Interior.069",
+      "shape": "tabletop_breakfast_room_Interior.069",
+      "bsdf": "breakfast_room:White_Marble",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "wall_art_breakfast_room_Interior.075-wall_art_breakfast_room_Interior.075",
+      "shape": "wall_art_breakfast_room_Interior.075",
+      "bsdf": "breakfast_room:Artwork",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Plates_breakfast_room_Interior.101-Plates_breakfast_room_Interior.101",
+      "shape": "Plates_breakfast_room_Interior.101",
+      "bsdf": "breakfast_room:Ceramic_001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Teacups_breakfast_room_Interior.083-Teacups_breakfast_room_Interior.083",
+      "shape": "Teacups_breakfast_room_Interior.083",
+      "bsdf": "breakfast_room:Ceramic_001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Chair_seats_and_light_fixture_breakfast_room_Interior.003-Chair_seats_and_light_fixture_breakfast_room_Interior.003",
+      "shape": "Chair_seats_and_light_fixture_breakfast_room_Interior.003",
+      "bsdf": "Material.002",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Chair_seats_and_light_fixture_breakfast_room_Interior.005-Chair_seats_and_light_fixture_breakfast_room_Interior.005",
+      "shape": "Chair_seats_and_light_fixture_breakfast_room_Interior.005",
+      "bsdf": "Material.003",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Chair_seats_and_light_fixture_breakfast_room_Interior.012-Chair_seats_and_light_fixture_breakfast_room_Interior.012",
+      "shape": "Chair_seats_and_light_fixture_breakfast_room_Interior.012",
+      "bsdf": "breakfast_room:White_Plastic",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.6292068494294654e-07,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "direction",
+      "name": "Sun",
+      "direction": [
+        -0.870579719543457,
+        0.042059678584337234,
+        -0.4902264177799225
+      ],
+      "irradiance": [
+        80.0,
+        80.0,
+        80.0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "type": "image",
+      "name": "_tex_0",
+      "filename": "tiles.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_1",
+      "filename": "picture3.jpg",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    }
+  ]
+}

@@ -950,16 +950,19 @@ void glue_filter(size_t device)
     float* primid      = sInterface->getAOVImage(0, 4);
     float* ws_position = sInterface->getAOVImage(0, 5);
 
-    bool temporal_enable = true; // enabled is better // currently checked with static scene but still better
+    // if igcli is used....only 1 frame is available?(any other settings to be enabled?)...only atrous-filter is run in this case
+    bool temporal_enable = true; // enabled is better // static scene but still better
     // its unstable for dynamic scenes...occlusion tests(might be failing), does not find consistent samples across frames even when its clearly consistent?
     // so some noise appears for an instant when the camera moves...
+
+    // best result of temporal accumulation is observed in igview continuous mode
     if (temporal_enable) {
         BackProjection((int)device, in_pixels, normals, depth, primid, ws_position, (int)sInterface->film_width, (int)sInterface->film_height);
     } else {
         EstimateVariance((int)device, (int)sInterface->film_width, (int)sInterface->film_height); // sets constant variance //spatial estimate for a few frames
     }
 
-    int n_levels = 3; // if it is too blurred out, we can use less levels(taps)...3 looks nice but paper has 5
+    int n_levels = 5; // if it is too blurred out, we can use less levels(taps)...3 looks nice but paper has 5
     for (int level = 1; level <= n_levels; level++) {
         in_pixels = sInterface->getAOVImage(0, 0); // framebuffer pixels
         atrousfilter((int)device, in_pixels, normals, depth, albedo, (int)sInterface->film_width, (int)sInterface->film_height, level);
