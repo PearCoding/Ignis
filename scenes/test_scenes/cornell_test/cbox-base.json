@@ -1,0 +1,206 @@
+{
+    "camera": {
+        "type": "perspective",
+        "transform": [ 1, 0, 0, 278, 0, 1, 0, 273, 0, 0, 1, -750, 0, 0, 0, 1 ],
+        "fov": 39.3077,
+        "far_clip": 2800,
+        "focus_distance": 1000,
+        "near_clip": 0.01,
+        "fov_axis": "smaller"
+    },
+    "film": {
+        "size": [ 512, 512 ],
+        "sampler": "middle"
+    },
+    "bsdfs": [
+        {
+            "name": "__black",
+            "type": "diffuse",
+            "reflectance": [ 0, 0, 0 ]
+        },
+        {
+            "type": "principled",
+            "name": "Default OBJ.006",
+            "base_color": "_tex_0",
+            "metallic": 0.0,
+            "roughness": 0.5,
+            "anisotropic": 0.0,
+            "sheen": 0.0,
+            "sheen_tint": 0.5,
+            "clearcoat": 0.0,
+            "clearcoat_roughness": 0.029999999329447746,
+            "flatness": 0.0,
+            "specular_transmission": 0.0,
+            "specular_tint": 0.0,
+            "ior": 1.4999999999999998
+        },
+        {
+            "name": "__bsdf_0",
+            "type": "diffuse",
+            "reflectance": [ 0.45, 0.3, 0.9 ]
+        },
+        {
+            "name": "__bsdf_1",
+            "type": "diffuse",
+            "reflectance": [ 0.885809, 0.698859, 0.666422 ]
+        },
+        {
+            "name": "__bsdf_2",
+            "type": "diffuse",
+            "reflectance": [ 0.570068, 0.0430135, 0.0443706 ]
+        },
+        {
+            "name": "__bsdf_3",
+            "type": "diffuse",
+            "reflectance": [ 0.105421, 0.37798, 0.076425 ]
+        },
+        {
+            "name": "__bsdf_4",
+            "type": "diffuse",
+            "reflectance": [ 0.936461, 0.740433, 0.705267 ]
+        },
+        {
+            "name": "__bsdf_5",
+            "type": "diffuse",
+            "reflectance": [ 0.936461, 0.740433, 0.705267 ]
+        },
+        {
+            "name": "__bsdf_6",
+            "type": "diffuse",
+            "reflectance": [ 0.885809, 0.698859, 0.666422 ]
+        },
+        {
+            "name": "__bsdf_7",
+            "type": "diffuse",
+            "reflectance": [ 0.885809, 0.698859, 0.666422 ]
+        },
+        {
+            "name": "__bsdf_8",
+            "type": "diffuse",
+            "reflectance": [ 0.885809, 0.698859, 0.666422 ]
+        },
+        {
+            "name": "__bsdf_9",
+            "type": "diffuse",
+            "reflectance": [ 0.105421, 0.37798, 0.076425 ]
+        },
+        {
+            "name": "__bsdf_10",
+            "type": "diffuse",
+            "reflectance": [ 0.570068, 0.0430135, 0.0443706 ]
+        },
+        {
+            "name": "__bsdf_11",
+            "type": "diffuse",
+            "reflectance": [ 0.45, 0.3, 0.9 ]
+        },
+        {
+            "name": "__bsdf_12",
+            "type": "diffuse",
+            "reflectance": [ 0.45, 0.3, 0.9 ]
+        }
+    ],
+    "shapes": [
+        {
+            "name": "__shape_0",
+            "type": "obj",
+            "transform": [ 1, 0, 0, 0, 0, 1, 0, -0.5, 0, 0, 1, 0, 0, 0, 0, 1 ],
+            "filename": "meshes/cbox_luminaire.obj"
+        },
+        {
+            "name": "__shape_1",
+            "type": "obj",
+            "filename": "meshes/cbox_floor.obj"
+        },
+        {
+            "name": "__shape_2",
+            "type": "obj",
+            "filename": "meshes/cbox_ceiling.obj"
+        },
+        {
+            "name": "__shape_3",
+            "type": "obj",
+            "filename": "meshes/cbox_back.obj"
+        },
+        {
+            "name": "__shape_4",
+            "type": "obj",
+            "filename": "meshes/cbox_greenwall.obj"
+        },
+        {
+            "name": "__shape_5",
+            "type": "obj",
+            "filename": "meshes/cbox_redwall.obj"
+        },
+        {
+            "name": "__shape_6",
+            "type": "obj",
+            "filename": "meshes/cbox_smallbox.obj"
+        },
+        {
+            "name": "__shape_7",
+            "type": "obj",
+            "filename": "meshes/cbox_largebox.obj"
+        }
+    ],
+    "entities": [
+        {
+            "name": "__entity_0",
+            "shape": "__shape_0",
+            "bsdf": "__bsdf_4"
+        },
+        {
+            "name": "__entity_1",
+            "shape": "__shape_1",
+            "bsdf": "__bsdf_1"
+        },
+        {
+            "name": "__entity_2",
+            "shape": "__shape_2",
+            "bsdf": "__bsdf_1"
+        },
+        {
+            "name": "__entity_3",
+            "shape": "__shape_3",
+            "bsdf": "Default OBJ.006"
+        },
+        {
+            "name": "__entity_4",
+            "shape": "__shape_4",
+            "bsdf": "__bsdf_3"
+        },
+        {
+            "name": "__entity_5",
+            "shape": "__shape_5",
+            "bsdf": "__bsdf_2"
+        },
+        {
+            "name": "__entity_6",
+            "shape": "__shape_6",
+            "bsdf": "__bsdf_0"
+        },
+        {
+            "name": "__entity_7",
+            "shape": "__shape_7",
+            "bsdf": "__bsdf_0"
+        }
+    ],
+    "lights": [
+        {
+            "name": "__light_0",
+            "type": "area",
+            "entity": "__entity_0",
+            "radiance": [ 18.387, 10.9873, 2.75357 ]
+        }
+    ],
+    "textures": [
+        {
+            "type": "image",
+            "name": "_tex_0",
+            "filename": "textures/cherry-wood-texture.jpg",
+            "wrap_mode": "repeat",
+            "filter_type": "bilinear",
+            "linear": false
+        }
+    ]
+}

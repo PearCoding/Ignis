@@ -9,80 +9,80 @@
     "fov_axis": "smaller"
   },
   "film": {
-    "size": [ 512, 512 ],
+    "size": [ 800, 800 ],
     "sampler" :  "middle"
   },
   "textures": [],
   "bsdfs": [
     {
-      "name": "__black",
-      "type": "diffuse",
-      "reflectance": [0, 0, 0]
+        "name": "__black",
+        "type": "diffuse",
+        "reflectance": [ 0, 0, 0 ]
     },
     {
-      "name": "__bsdf_0",
-      "type": "diffuse",
-      "reflectance": [0.45, 0.3, 0.9]
+        "name": "__bsdf_0",
+        "type": "diffuse",
+        "reflectance": [ 0.45, 0.3, 0.9 ]
     },
     {
-      "name": "__bsdf_1",
-      "type": "diffuse",
-      "reflectance": [0.885809, 0.698859, 0.666422]
+        "name": "__bsdf_1",
+        "type": "diffuse",
+        "reflectance": [ 0.885809, 0.698859, 0.666422 ]
     },
     {
-      "name": "__bsdf_2",
-      "type": "diffuse",
-      "reflectance": [0.570068, 0.0430135, 0.0443706]
+        "name": "__bsdf_2",
+        "type": "diffuse",
+        "reflectance": [ 0.570068, 0.0430135, 0.0443706 ]
     },
     {
-      "name": "__bsdf_3",
-      "type": "diffuse",
-      "reflectance": [0.105421, 0.37798, 0.076425]
+        "name": "__bsdf_3",
+        "type": "diffuse",
+        "reflectance": [ 0.105421, 0.37798, 0.076425 ]
     },
     {
-      "name": "__bsdf_4",
-      "type": "diffuse",
-      "reflectance": [0.936461, 0.740433, 0.705267]
+        "name": "__bsdf_4",
+        "type": "diffuse",
+        "reflectance": [ 0.936461, 0.740433, 0.705267 ]
     },
     {
-      "name": "__bsdf_5",
-      "type": "diffuse",
-      "reflectance": [0.936461, 0.740433, 0.705267]
+        "name": "__bsdf_5",
+        "type": "diffuse",
+        "reflectance": [ 0.936461, 0.740433, 0.705267 ]
     },
     {
-      "name": "__bsdf_6",
-      "type": "diffuse",
-      "reflectance": [0.885809, 0.698859, 0.666422]
+        "name": "__bsdf_6",
+        "type": "diffuse",
+        "reflectance": [ 0.885809, 0.698859, 0.666422 ]
     },
     {
-      "name": "__bsdf_7",
-      "type": "diffuse",
-      "reflectance": [0.885809, 0.698859, 0.666422]
+        "name": "__bsdf_7",
+        "type": "diffuse",
+        "reflectance": [ 0.885809, 0.698859, 0.666422 ]
     },
     {
-      "name": "__bsdf_8",
-      "type": "diffuse",
-      "reflectance": [0.885809, 0.698859, 0.666422]
+        "name": "__bsdf_8",
+        "type": "diffuse",
+        "reflectance": [ 0.885809, 0.698859, 0.666422 ]
     },
     {
-      "name": "__bsdf_9",
-      "type": "diffuse",
-      "reflectance": [0.105421, 0.37798, 0.076425]
+        "name": "__bsdf_9",
+        "type": "diffuse",
+        "reflectance": [ 0.105421, 0.37798, 0.076425 ]
     },
     {
-      "name": "__bsdf_10",
-      "type": "diffuse",
-      "reflectance": [0.570068, 0.0430135, 0.0443706]
+        "name": "__bsdf_10",
+        "type": "diffuse",
+        "reflectance": [ 0.570068, 0.0430135, 0.0443706 ]
     },
     {
-      "name": "__bsdf_11",
-      "type": "diffuse",
-      "reflectance": [0.45, 0.3, 0.9]
+        "name": "__bsdf_11",
+        "type": "diffuse",
+        "reflectance": [ 0.45, 0.3, 0.9 ]
     },
     {
-      "name": "__bsdf_12",
-      "type": "diffuse",
-      "reflectance": [0.45, 0.3, 0.9]
+        "name": "__bsdf_12",
+        "type": "diffuse",
+        "reflectance": [ 0.45, 0.3, 0.9 ]
     }
   ],
   "shapes": [

@@ -47,12 +47,29 @@ fn @sample_triangle(mut u: f32, mut v: f32) -> (f32, f32) {
 // Probability density function for uniform sphere sampling
 fn @uniform_sphere_pdf() = 1 / (4 * flt_pi);
 
+fn @uniform_hemisphere_pdf() = 1 / (2 * flt_pi);
+
 // Samples a direction uniformly on a sphere
 fn @sample_uniform_sphere(u: f32, v: f32) -> DirSample {
     let c = 2 * v - 1;
     let s = safe_sqrt(1 - c * c);
     let phi = 2 * flt_pi * u;
     make_dir_sample(c, s, phi, uniform_sphere_pdf())
+}
+
+fn @sample_uniform_hemisphere(u: f32, v: f32) -> DirSample {
+    
+    let phi = 2.0 * flt_pi * v;
+	
+	let sinTheta = safe_sqrt(1.0 - u * u);
+	
+	DirSample
+    {
+        dir = make_vec3(sinTheta * math_builtins::cos(phi),
+        sinTheta * math_builtins::sin(phi),
+        u),
+        pdf = uniform_hemisphere_pdf()
+    }
 }
 
 // Probability density function for equal area sphere sampling

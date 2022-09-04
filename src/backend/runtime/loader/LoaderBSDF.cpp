@@ -117,6 +117,18 @@ static void bsdf_diffuse(std::ostream& stream, const std::string& name, const st
     tree.endClosure();
 }
 
+static void bsdf_standard_diffuse(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+{
+    tree.beginClosure();
+    tree.addColor("reflectance", *bsdf, Vector3f::Constant(0.5f));
+
+    stream << tree.pullHeader()
+           << "  let bsdf_" << LoaderUtils::escapeIdentifier(name) << " : BSDFShader = @|_ray, _hit, surf| make_standard_diffuse_bsdf(surf, "
+           << tree.getInline("reflectance") << ");" << std::endl;
+
+    tree.endClosure();
+}
+
 static void bsdf_orennayar(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure();
@@ -709,6 +721,7 @@ static const struct {
     BSDFLoader Loader;
 } _generators[] = {
     { "diffuse", bsdf_diffuse },
+    { "standard_diffuse", bsdf_standard_diffuse },
     { "roughdiffuse", bsdf_orennayar },
     { "glass", bsdf_dielectric },
     { "dielectric", bsdf_dielectric },
