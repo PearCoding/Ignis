@@ -298,9 +298,8 @@ fn compute_normalized_screen_space_coords(proj_matrix: Mat4x4, look_at_mat: Mat4
     make_vec3(normalized_coords.x / normalized_coords.w, normalized_coords.y / normalized_coords.w, normalized_coords.z / normalized_coords.w)
 }
 
-fn @reproject(visible_point: Vec3, cam_buffer: DeviceBuffer, image_width: i32, image_height: i32, visible_normal: Vec3, temporal_buffer: DeviceBuffer, temporal_buffer_di: DeviceBuffer, current_cam_eye: Vec3)  -> (Reservoir, Reservoir) 
-{
-    let mut temporal_reservoir = create_empty_reservoir();
+fn @reproject(visible_point: Vec3, cam_buffer: DeviceBuffer, image_width: i32, image_height: i32, visible_normal: Vec3, temporal_buffer: DeviceBuffer, temporal_buffer_di: DeviceBuffer) -> (Reservoir, Reservoir) {
+    let mut temporal_reservoir    = create_empty_reservoir();
     let mut temporal_reservoir_di = create_empty_reservoir();
     
     //start loading needed stuff for the reprojection
@@ -315,22 +314,18 @@ fn @reproject(visible_point: Vec3, cam_buffer: DeviceBuffer, image_width: i32, i
     let norm_coords = compute_normalized_screen_space_coords(proj_matrix, look_at_mat, visible_point);
 
     let x_coord = (math_builtins::floor(((norm_coords.x + 1.0) / 2.0) * (image_width as f32))) as i32;
-
     let y_coord = (math_builtins::floor((image_height as f32) - (((norm_coords.y + 1.0) / 2.0) * (image_height as f32)))) as i32;
 
     //check if pixel is in range
-    if x_coord < image_width && x_coord > 0 && y_coord < image_height && y_coord > 0 {  
+    if x_coord < image_width && x_coord >= 0 && y_coord < image_height && y_coord >= 0 {  
         let res_idx = (x_coord + y_coord * image_width);
 
         let reprojected_reservoir = load_reservoir(res_idx, temporal_buffer);
         
-        let test = vec3_len(vec3_sub(visible_point, current_cam_eye));
-        let test_2 = vec3_len(vec3_sub(visible_point, last_cam_eye));
-
-        let vis_points_dist  = vec3_len(vec3_sub(visible_point, reprojected_reservoir.sample.vis_point));
+        let vis_points_dist = vec3_len2(vec3_sub(visible_point, reprojected_reservoir.sample.vis_point));
         
         //similarity check to see whether we can reuse this pixels reservoir
-        if vis_points_dist < 0.1 && vec3_dot(visible_normal, reprojected_reservoir.sample.vis_normal) > 0.8 && (test / test_2) > 0.95{
+        if vis_points_dist <= 0.01 && vec3_dot(visible_normal, reprojected_reservoir.sample.vis_normal) >= 0.8 {
             temporal_reservoir = reprojected_reservoir;
             temporal_reservoir_di = load_reservoir(res_idx, temporal_buffer_di);
         }
@@ -620,7 +615,7 @@ fn @resampling_pass(device: Device, _iter: i32, spi: i32, _frame: i32) -> () {
         sample.radiance = aov_radiance.get(j);
         
         //reproject pixels and get the according reservoirs
-        let (mut temporal_reservoir, mut temporal_reservoir_di) = reproject(sample.vis_point, cam_buffer, work_info.width, work_info.height, sample.vis_normal, last_temporal_buffer, last_temporal_buffer_di, current_cam_eye);
+        let (mut temporal_reservoir, mut temporal_reservoir_di) = reproject(sample.vis_point, cam_buffer, work_info.width, work_info.height, sample.vis_normal, last_temporal_buffer, last_temporal_buffer_di);
 
         let averaged_radiance = color_average(sample.radiance); 
         let source_pdf = sample.pdf;
