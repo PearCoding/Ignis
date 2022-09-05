@@ -19,12 +19,6 @@ fn @gpu_get_aov_image(id: &[u8], dev_id: i32, atomics: Atomics, spi: i32) -> AOV
                 let ptr2 = &pixels(pixel * 3) as &[f32];
                 make_color(ptr2(0), ptr2(1), ptr2(2), 1)
             },
-            set = @|pixel, color| -> () { 
-                // FIXME: Atomic access?
-                pixels(pixel * 3 + 0) = color.r;
-                pixels(pixel * 3 + 1) = color.g;
-                pixels(pixel * 3 + 2) = color.b;
-            },
             mark_as_used = @|| -> () {
                 ignis_mark_aov_as_used(id, 1);
             }

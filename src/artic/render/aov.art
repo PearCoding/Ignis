@@ -3,7 +3,6 @@
 struct AOVImage {
     splat:        fn (i32, Color) -> (),
     get:          fn (i32) -> Color,
-    set:          fn (i32, Color) -> (),
     mark_as_used: fn () -> (), // Note: Only useable on the host!
 }
 
@@ -13,6 +12,5 @@ type AOVTable = fn (i32) -> AOVImage;
 fn @make_empty_aov_image() = AOVImage {
     splat        = @|_, _| -> () {},
     get          = @|_| -> Color { color_builtins::black },
-    set          = @|_, _| -> () {},
     mark_as_used = @|| -> () {}
 };
