@@ -290,6 +290,94 @@ static void volpath_header_loader(std::ostream& stream, const std::string&, cons
            << "fn init_raypayload() = init_vpt_raypayload();" << std::endl;
 }
 
+/////////////////////////
+
+static std::string restir_resampling_generator(LoaderContext& ctx)
+{
+    std::stringstream stream;
+
+    stream << LoaderTechnique::generateHeader(ctx, true) << std::endl;
+
+    stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
+           << "  maybe_unused(settings);" << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << std::endl;
+
+    stream << "  resampling_pass(device, iter," << ctx.SamplesPerIteration << ", settings.frame,"
+                                                                              ");"
+           << std::endl
+           << "}" << std::endl;
+
+    return stream.str();
+}
+
+static TechniqueInfo restir_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
+{
+    TechniqueInfo info;
+
+    info.Variants[0].ShadowHandlingMode     = ShadowHandlingMode::Advanced;
+    info.Variants[0].RequiresExplicitCamera = true;
+    info.Variants[0].IsInteractive          = true;
+
+    // make use of post-iteration setup
+    info.Variants[0].CallbackGenerators[(int)CallbackType::AfterIteration] = restir_resampling_generator;
+
+    // Check if we have a proper defined technique
+    // It is totally fine to only define the type by other means then the scene config
+    if (technique) {
+        info.EnabledAOVs.emplace_back("ReSTIR");
+        info.EnabledAOVs.emplace_back("Direct Light");
+        info.EnabledAOVs.emplace_back("Depth Info");
+    }
+
+    info.Variants[0].UsesLights = true;
+
+    if (ctx.Denoiser.Enabled)
+        enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
+
+    return info;
+}
+
+static void restir_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
+{
+    if (handle_ib_body(stream, technique, ctx))
+        return;
+
+    const int max_depth     = technique ? technique->property("max_depth").getInteger(4) : 4;
+    const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
+    const std::string ls    = technique ? technique->property("light_selector").getString(DefaultLightSelector) : DefaultLightSelector;
+
+    stream << "  let aov_restir = device.load_aov_image(\"ReSTIR\", spi); aov_restir.mark_as_used();" << std::endl;
+    stream << "  let aov_direct_light = device.load_aov_image(\"Direct Light\", spi); aov_direct_light.mark_as_used();" << std::endl;
+    stream << "  let aov_depth_info = device.load_aov_image(\"Depth Info\", 1); aov_depth_info.mark_as_used();" << std::endl;
+
+    stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
+           << "    match(id) {" << std::endl;
+
+    stream << "      1 => aov_restir," << std::endl;
+    stream << "      2 => aov_direct_light," << std::endl;
+    stream << "      3 => aov_depth_info," << std::endl;
+
+    stream << "      _ => make_empty_aov_image()" << std::endl
+           << "    }" << std::endl
+           << "  };" << std::endl;
+
+    ShadingTree tree(ctx);
+    stream << ctx.Lights->generateLightSelector(ls, tree);
+
+    stream << "  let technique = make_restir_renderer(camera, device," << max_depth << ", light_selector, aovs, " << clamp_value << ", settings.frame);" << std::endl;
+}
+
+static void restir_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext& ctx)
+{
+    if (handle_ib_header(stream, ctx))
+        return;
+
+    constexpr int C = 1 /* INV_PDF */ + 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */;
+    stream << "static RayPayloadComponents = " << C << ";" << std::endl
+           << "fn init_raypayload() = init_rs_raypayload();" << std::endl;
+}
+
 /////////////////////////////////
 
 static std::string ppm_light_camera_generator(LoaderContext& ctx)
@@ -453,6 +541,7 @@ static const struct TechniqueEntry {
     { "photonmapper", ppm_get_info, ppm_body_loader, ppm_header_loader },
     { "wireframe", wireframe_get_info, wireframe_body_loader, wireframe_header_loader },
     { "infobuffer", ib_get_info, ib_body_loader, ib_header_loader },
+    { "restir", restir_get_info, restir_body_loader, restir_header_loader },
     { "", nullptr, nullptr, nullptr }
 };
 

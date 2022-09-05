@@ -13,11 +13,14 @@ fn @compute_scale_from_vfov(fov: f32, aspect: f32) -> Vec2 {
 }
 
 // Creates a perspective camera
-fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f32, tmax: f32) -> Camera {
+fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f32, angle: f32, tmax: f32) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
     let view  = make_mat3x3(right, up, dir);
 
     Camera {
+        near = tmin,
+        far  = tmax,
+        fov  = angle,
         generate_ray = @ |_, x, y| {
             let d = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * x, scale.y * y, 1)));
             make_ray(eye, d, tmin, tmax, ray_flag_camera)
@@ -37,6 +40,9 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, ape
     let view  = make_mat3x3(right, up, dir);
 
     Camera {
+        near = tmin,
+        far  = tmax,
+        fov  = 0,
         generate_ray = @ |rnd, x, y| {
             let global_dir = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * x, scale.y * y, 1)));
             let focus_pos  = vec3_mulf(global_dir, focal_length);

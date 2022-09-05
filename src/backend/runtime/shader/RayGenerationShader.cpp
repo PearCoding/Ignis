@@ -55,9 +55,16 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
             pixel_sampler = "make_halton_pixel_sampler(halton_setup)";
         } else if (ctx.PixelSamplerType == "mjitt") {
             pixel_sampler = "make_mjitt_pixel_sampler(4, 4)";
+        } else if (ctx.PixelSamplerType == "middle") {
+            pixel_sampler = "make_in_the_middle_sampler()";
         }
 
-        stream << "  let emitter = make_camera_emitter(camera, iter, spi, " << pixel_sampler << ", init_raypayload);" << std::endl;
+        if (ctx.CurrentTechniqueVariantInfo().IsInteractive)
+            stream << "  let current_frame = settings.frame;" << std::endl;
+        else
+            stream << "  let current_frame = 0:i32;" << std::endl;
+
+        stream << "  let emitter = make_camera_emitter(camera, iter, spi, current_frame, " << pixel_sampler << ", init_raypayload);" << std::endl;
     }
 
     stream << end();

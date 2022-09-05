@@ -36,6 +36,9 @@ struct TechniqueVariantInfo {
     /// The variant requires the camera definition in the miss, hit and advanced shadow shaders
     bool RequiresExplicitCamera = false;
 
+    /// The variant is used in interactive sessions. Update the frame counter
+    bool IsInteractive = false;
+
     /// Specialized shader generators for special parts of the pipeline
     std::array<TechniqueCallbackGenerator, (size_t)CallbackType::_COUNT> CallbackGenerators{};
 

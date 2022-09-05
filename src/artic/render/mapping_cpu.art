@@ -580,6 +580,15 @@ fn @cpu_get_aov_image(id: &[u8], spi: i32) -> AOVImage {
             }
             color
         },
+        set = @|pixel, color| -> () {
+            // FIXME: Atomic access? 
+            for lane in unroll(0, rv_num_lanes()) {
+                let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
+                ptr(j * 3 + 0) = color.r;
+                ptr(j * 3 + 1) = color.g;
+                ptr(j * 3 + 2) = color.b;
+            }
+        },
         mark_as_used = @|| -> () {
             ignis_mark_aov_as_used(id, 1);
         }

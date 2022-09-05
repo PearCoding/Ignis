@@ -93,6 +93,7 @@ static void camera_perspective(std::ostream& stream, const std::string& name, co
                << "    camera_up, " << std::endl
                << "    " << fov_gen << "(" << (fov.second * Deg2Rad) << ", " << aspect_ratio << "), " << std::endl
                << "    " << tmin << ", " << std::endl
+               << "    " << fov.second << ", " << std::endl
                << "    " << tmax << ");" << std::endl;
     } else {
         stream << "  let camera = make_perspective_dof_camera(camera_eye, " << std::endl
