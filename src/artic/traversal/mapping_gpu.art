@@ -114,6 +114,10 @@ fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool, minmax : MinMax, disp_ma
         clampf(disp_map.pixels(lo_x, lo_y).r, 0, 1)
     };
 
+    //let displacement = @|c: Vec2| -> f32 {
+    //    (math_builtins::cos(c.x * 7.0) + 1.0) * 0.5
+    //};
+
     /* // Deprecated: Switched to Tesselation into 2 triangles (see tesselate2)
     let tesselate4 =  @|t:UVTri| {
         let v0 = t.v0;
