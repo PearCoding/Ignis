@@ -154,6 +154,11 @@ set(SRC
   shader/ScriptPreprocessor.h
   shader/ShaderUtils.cpp
   shader/ShaderUtils.h
+  shape/ShapeProvider.h
+  shape/SphereProvider.cpp
+  shape/SphereProvider.h
+  shape/TriMeshProvider.cpp
+  shape/TriMeshProvider.h
   table/DynTable.h
   table/SceneDatabase.h
 )
