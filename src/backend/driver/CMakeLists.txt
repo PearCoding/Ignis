@@ -237,7 +237,6 @@ foreach(var ${VARIANTS})
 
     target_include_directories(${_target_name} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
     target_include_directories(${_target_name} PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS})
-    add_dependencies(${_target_name} artic_c_interface)
     add_lto(${_target_name})
     add_checks(${_target_name})
     install(TARGETS ${_target_name} ${_IG_RUNTIME_SET} COMPONENT runtime LIBRARY DESTINATION lib/)

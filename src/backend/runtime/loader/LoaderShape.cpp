@@ -327,6 +327,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 #endif
     IG_LOG(L_DEBUG) << "Loading of shapes took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
+    // Provider specific -----------------------------------------------------------------------------
     // Write non-parallel
     IG_LOG(L_DEBUG) << "Storing triangle meshes..." << std::endl;
     size_t counter    = 0;
@@ -376,6 +377,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
     } else {
         setup_bvhs<8, 4>(meshes, result);
     }
+    // -----------------------------------------------------------------------------
 
     return true;
 }

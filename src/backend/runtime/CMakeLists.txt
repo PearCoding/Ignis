@@ -181,6 +181,7 @@ target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen std::filesystem PRIVAT
 target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR} ${tinygltf_SOURCE_DIR} ${libbvh_SOURCE_DIR}/include)
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 target_compile_definitions(ig_lib_runtime PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
+add_dependencies(ig_lib_runtime artic_c_interface artic_c_interface_extra)
 
 if(IG_WITH_ASSERTS)
   target_compile_definitions(ig_lib_runtime PUBLIC "IG_WITH_ASSERTS")

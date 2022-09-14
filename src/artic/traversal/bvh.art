@@ -1,4 +1,4 @@
-// Bottom level SBVH
+// Bottom level BVH
 struct PrimBvh {
     node:     fn (i32) -> Node, // Access to one node of the BVH
     prim:     fn (i32) -> Prim, // Access to one (possibly packed) primitive
@@ -14,6 +14,14 @@ struct SceneBvh {
     ent:      fn (i32) -> EntityLeaf, // Access to one EntityLeaf
     prefetch: fn (i32) -> (),         // Prefetches a leaf or inner node
     arity:    i32,                    // Arity of the BVH (number of children per node)
+}
+
+// Abstract traversal bvh
+struct TraversalBvh {
+    node:     fn (i32) -> Node,                         // Access to one node of the BVH
+    handle:   fn (NodeRef, &mut Ray, &mut Hit) -> bool, // Handle leaf
+    prefetch: fn (i32) -> (),                           // Prefetches a leaf or inner node
+    arity:    i32,                                      // Arity of the BVH (number of children per node)
 }
 
 struct Node {

@@ -65,8 +65,8 @@ fn @get_table_entry(off: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> Devi
 
 // Mandatory information for the tracing part
 struct TraceAccessor {
-    info:       SceneInfo,
-    shapes:     ShapeTable,  // Defined in shape.art
-    entities:   EntityTable, // Defined in entity.art
-    bvhs:       BVHTable     // Defined in intersection.art
+    info:     SceneInfo,
+    shapes:   ShapeTable,  // Defined in shape.art
+    entities: EntityTable, // Defined in entity.art
+    bvhs:     BVHTable     // Defined in intersection.art
 }

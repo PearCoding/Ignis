@@ -316,15 +316,19 @@ fn @cpu_generate_rays_handler(size: i32
 }
 
 // Traverse functions ------------------------------------------------------------------
-fn @cpu_traverse_primary(scene: SceneGeometry, min_max: MinMax, primary: &PrimaryStream, single: bool, vector_width: i32) -> () {
+fn @cpu_traverse_primary(scene: SceneGeometry, size: i32, min_max: MinMax, single: bool, vector_width: i32) -> () {
+    let mut primary : PrimaryStream;
+    ignis_cpu_get_primary_stream_const(&mut primary);
+
     fn cpu_traverse_primary_specialized(scene2: SceneGeometry, primary2: &PrimaryStream) -> () {
+        // TODO: Inject
         cpu_traverse(
             min_max,
             scene2,
             make_ray_stream_reader(primary2.rays, vector_width),
             make_primary_stream_hit_writer(*primary2, vector_width, scene.info.num_entities),
             vector_width /*packet_size*/,
-            primary2.size / vector_width + select(primary2.size % vector_width != 0, 1, 0),
+            size / vector_width + select(size % vector_width != 0, 1, 0),
             single,
             false /*any_hit*/
         );
@@ -332,15 +336,19 @@ fn @cpu_traverse_primary(scene: SceneGeometry, min_max: MinMax, primary: &Primar
     $cpu_traverse_primary_specialized(scene, primary);
 }
 
-fn @cpu_traverse_secondary(scene: SceneGeometry, min_max: MinMax, secondary: &SecondaryStream, single: bool, vector_width: i32) -> () {
+fn @cpu_traverse_secondary(scene: SceneGeometry, size: i32, min_max: MinMax, single: bool, vector_width: i32) -> () {
+    let mut secondary : SecondaryStream;
+    ignis_cpu_get_secondary_stream_const(&mut secondary);
+    
     fn cpu_traverse_secondary_specialized(scene2: SceneGeometry, secondary2: &SecondaryStream) -> () {
+        // TODO: Inject
         cpu_traverse(
             min_max,
             scene2,
             make_ray_stream_reader(secondary2.rays, vector_width),
             make_secondary_stream_hit_writer(*secondary2, vector_width),
             vector_width /*packet_size*/,
-            secondary2.size / vector_width + select(secondary2.size % vector_width != 0, 1, 0),
+            size / vector_width + select(size % vector_width != 0, 1, 0),
             single,
             true /*any_hit*/
         );
@@ -589,10 +597,8 @@ fn @cpu_get_aov_image(id: &[u8], spi: i32) -> AOVImage {
 // Main shader ------------------------------------------------------------------
 fn @cpu_get_stream_capacity(spi: i32, tile_size: i32) = spi * tile_size * tile_size;
 
-fn @cpu_trace( scene: SceneGeometry
+fn @cpu_trace( scene_info: SceneInfo
              , pipeline: Pipeline
-             , min_max: MinMax
-             , single: bool
              , tile_size: i32
              , spi: i32
              , num_cores: i32
@@ -627,19 +633,19 @@ fn @cpu_trace( scene: SceneGeometry
                 stats::add_quantity(stats::Quantity::CameraRayCount, primary.size - before_s);
             }
 
-            if scene.info.num_entities == 0 {
+            if scene_info.num_entities == 0 {
                 pipeline.on_miss_shade(0, primary.size);
                 primary.size = 0;
             } else {
                 // Trace primary rays
-                cpu_traverse_primary(scene, min_max, primary, single, vector_width);
+                pipeline.on_traverse_primary(primary.size);
 
                 // Sort hits by shader id, and filter invalid hits
-                primary.size = cpu_sort_primary(primary, temp.ray_begins, temp.ray_ends, scene.info.num_entities);
+                primary.size = cpu_sort_primary(primary, temp.ray_begins, temp.ray_ends, scene_info.num_entities);
 
                 // Perform (vectorized) shading
                 let mut begin = 0;
-                for ent_id in range(0, scene.info.num_entities) {
+                for ent_id in range(0, scene_info.num_entities) {
                     let end = temp.ray_ends(ent_id);
                     if begin < end {
                         pipeline.on_hit_shade(ent_id, begin, end);
@@ -648,7 +654,7 @@ fn @cpu_trace( scene: SceneGeometry
                 }
 
                 // Shade misses as well
-                let last = temp.ray_ends(scene.info.num_entities);
+                let last = temp.ray_ends(scene_info.num_entities);
                 if begin < last {
                     pipeline.on_miss_shade(begin, last);
                 }
@@ -661,7 +667,7 @@ fn @cpu_trace( scene: SceneGeometry
                 // Compact and trace secondary rays
                 secondary.size = cpu_compact_secondary(secondary, vector_width, vector_compact);
                 if likely(secondary.size > 0) {
-                    cpu_traverse_secondary(scene, min_max, secondary, single, vector_width);
+                    pipeline.on_traverse_secondary(secondary.size, work_info.advanced_shadows || work_info.advanced_shadows_with_materials);
                     stats::add_quantity(stats::Quantity::ShadowRayCount, secondary.size);
 
                     // Add the contribution for secondary rays to the frame buffer
@@ -677,12 +683,12 @@ fn @cpu_trace( scene: SceneGeometry
                             pipeline.on_advanced_shadow(0, hit_start, secondary.size, true);
                         }
                     } else if work_info.advanced_shadows_with_materials {
-                        let hit_start = cpu_sort_secondary_with_materials(secondary, temp.ray_begins, temp.ray_ends, scene.info.num_materials);
+                        let hit_start = cpu_sort_secondary_with_materials(secondary, temp.ray_begins, temp.ray_ends, scene_info.num_materials);
 
                         let mut sbegin = 0;
                         if hit_start != 0 {
                             // Call valids (miss)
-                            for mat_id in range(0, scene.info.num_materials) {
+                            for mat_id in range(0, scene_info.num_materials) {
                                 let end = temp.ray_ends(mat_id);
                                 if sbegin < end {
                                     pipeline.on_advanced_shadow(mat_id, sbegin, end, false);
@@ -693,8 +699,8 @@ fn @cpu_trace( scene: SceneGeometry
 
                         if hit_start < secondary.size {
                             // Call invalids (hits)
-                            for mat_id in range(0, scene.info.num_materials) {
-                                let end = temp.ray_ends(mat_id + scene.info.num_materials);
+                            for mat_id in range(0, scene_info.num_materials) {
+                                let end = temp.ray_ends(mat_id + scene_info.num_materials);
                                 if sbegin < end {
                                     pipeline.on_advanced_shadow(mat_id, sbegin, end, true);
                                 }
@@ -727,12 +733,10 @@ fn @cpu_trace( scene: SceneGeometry
 // CPU device ----------------------------------------------------------------------
 fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_width: i32, num_cores: i32, tile_size: i32) = Device {
     id    = 0,
-    trace = @ |scene, pipeline, spi| {
+    trace = @ |scene_info, pipeline, spi| {
         cpu_trace(
-            scene,
+            scene_info,
             pipeline,
-            min_max,
-            single,
             tile_size,
             spi,
             num_cores,
@@ -742,6 +746,12 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     },
     generate_rays = @ | emitter, id, size, xmin, ymin, xmax, ymax, spi | -> i32 {
         cpu_generate_rays_handler(size, @cpu_get_stream_capacity(spi, tile_size), emitter, id, xmin, ymin, xmax, ymax, spi, vector_width)
+    },
+    handle_traversal_primary = @ | scene_geometry, size | {
+        cpu_traverse_primary(scene_geometry, size, min_max, single, vector_width);
+    },
+    handle_traversal_secondary = @ | scene_geometry, size, _is_advanced, _spi, _use_framebuffer | {
+        cpu_traverse_secondary(scene_geometry, size, min_max, single, vector_width);
     },
     handle_miss_shader = @ | path_tracer, first, last, spi, use_framebuffer | {
         cpu_miss_shade_handler(path_tracer, first, last, spi, use_framebuffer, vector_width);
@@ -792,35 +802,16 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         ignis_load_scene(0, &mut database);
         database
     },
-    load_scene_info       = @ || {
+    load_scene_info = @ || {
         let mut info: SceneInfo;
         ignis_load_scene_info(0, &mut info);
         info
     },
-    load_entity_table     = @ |dtb| make_entity_table(dtb, @|ptr| make_cpu_buffer(ptr, 0)),
-    load_shape_table      = @ |dtb| make_shape_table(dtb, @|ptr| make_cpu_buffer(ptr, 0)),
-    load_specific_shape   = @ |num_face, num_vert, num_norm, num_tex, off, dtb| load_specific_shape_from_table(num_face, num_vert, num_norm, num_tex, off, dtb, @|ptr| make_cpu_buffer(ptr, 0)),
-    load_custom_dyntable  = @ |name| -> DynTable {
+    load_entity_table    = @ |dtb| make_entity_table(dtb, @|ptr| make_cpu_buffer(ptr, 0)),
+    load_custom_dyntable = @ |name| -> DynTable {
         let mut table: DynTable;
         ignis_load_custom_dyntable(0, name, &mut table);
         table
-    },
-    load_bvh_table        = @ |dtb| -> BVHTable {
-        @ |id| {
-            let entry  = get_lookup_entry(id as u64,   dtb, @|ptr| make_cpu_buffer(ptr, 0)); 
-            let header = get_table_entry(entry.offset, dtb, @|ptr| make_cpu_buffer(ptr, 0));
-            let leaf_offset = header.load_i32(0) as u64;
-    
-            if vector_width >= 8 {
-                let nodes = get_table_ptr(entry.offset + 16 , dtb) as &[Node8];
-                let tris  = get_table_ptr(entry.offset + 16 + leaf_offset * (sizeof[Node8]() as u64), dtb) as &[Tri4];
-                make_cpu_bvh8_tri4(nodes, tris)
-            } else {
-                let nodes = get_table_ptr(entry.offset + 16, dtb) as &[Node4];
-                let tris  = get_table_ptr(entry.offset + 16 + leaf_offset * (sizeof[Node4]() as u64), dtb) as &[Tri4];
-                make_cpu_bvh4_tri4(nodes, tris)
-            }
-        } 
     },
     load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];

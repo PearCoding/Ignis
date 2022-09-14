@@ -1,0 +1,8 @@
+// In contrary to dummy_main.art, dummy_extra.art depends on declarations inside the impl/ folder as well
+
+static RayPayloadComponents = 0;
+
+// Dummy file used to generate a C interface for the renderer
+#[export]
+fn _dummy1(_tri1: &[Tri1], _tri4: &[Tri4]) -> () {
+}

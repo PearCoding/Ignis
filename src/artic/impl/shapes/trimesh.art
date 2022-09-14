@@ -1,0 +1,206 @@
+// Triangle mesh with per-vertex/per-face attributes
+struct TriMesh {
+    vertices:      fn (i32) -> Vec3,
+    normals:       fn (i32) -> Vec3,
+    face_normals:  fn (i32) -> Vec3,
+    face_inv_area: fn (i32) -> f32,
+    triangles:     fn (i32) -> (i32, i32, i32),
+    tex_coords:    fn (i32) -> Vec2,
+    num_tris:      i32
+}
+
+// Creates a geometry object from a triangle mesh definition
+fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
+    Shape {
+        surface_element = @ |local_ray, hit| {
+            let f_tris = tri_mesh.triangles;
+            let f_n    = tri_mesh.normals;
+            let f_fn   = tri_mesh.face_normals;
+            let f_fia  = tri_mesh.face_inv_area;
+            let f_tx   = tri_mesh.tex_coords;
+
+            let (i0, i1, i2) = @f_tris(hit.prim_id);
+
+            let face_normal = @f_fn(hit.prim_id);
+            let inv_area    = @f_fia(hit.prim_id);
+            let normal      = vec3_normalize(vec3_lerp2(@f_n(i0), @f_n(i1), @f_n(i2), hit.prim_coords.x, hit.prim_coords.y));
+            let is_entering = vec3_dot(local_ray.dir, face_normal) <= 0;
+            let tex_coords  = vec2_lerp2(@f_tx(i0), @f_tx(i1), @f_tx(i2), hit.prim_coords.x, hit.prim_coords.y);
+
+            SurfaceElement {
+                is_entering = is_entering,
+                point       = vec3_add(local_ray.org, vec3_mulf(local_ray.dir, hit.distance)),
+                face_normal = if is_entering { face_normal } else { vec3_neg(face_normal) },
+                inv_area    = inv_area,
+                prim_coords = hit.prim_coords,
+                tex_coords  = tex_coords,
+                local       = make_orthonormal_mat3x3(if is_entering { normal } else { vec3_neg(normal) })
+            }
+        },
+        surface_element_for_point = @ |prim_id, prim_coords| {
+            let f_tris = tri_mesh.triangles;
+            let f_v    = tri_mesh.vertices;
+            let f_n    = tri_mesh.normals;
+            let f_fn   = tri_mesh.face_normals;
+            let f_fia  = tri_mesh.face_inv_area;
+            let f_tx   = tri_mesh.tex_coords;
+
+            let (i0, i1, i2) = @f_tris(prim_id);
+
+            let face_normal = @f_fn(prim_id);
+            let inv_area    = @f_fia(prim_id);
+            let point       = vec3_lerp2(@f_v(i0), @f_v(i1), @f_v(i2), prim_coords.x, prim_coords.y);
+            let normal      = vec3_normalize(vec3_lerp2(@f_n(i0), @f_n(i1), @f_n(i2), prim_coords.x, prim_coords.y));
+            let tex_coords  = vec2_lerp2(@f_tx(i0), @f_tx(i1), @f_tx(i2), prim_coords.x, prim_coords.y);
+
+            SurfaceElement {
+                is_entering = true,
+                point       = point,
+                face_normal = face_normal,
+                inv_area    = inv_area,
+                prim_coords = prim_coords,
+                tex_coords  = tex_coords,
+                local       = make_orthonormal_mat3x3(normal)
+            }
+        }
+    }
+}
+
+type TriMeshTable  = fn (i32) -> TriMesh;
+
+fn @make_shape_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32, data: DeviceBuffer) -> TriMesh {
+    let v_start   = 4;
+    let n_start   = v_start   + num_verts * 4;
+    let fn_start  = n_start   + num_norms * 4;
+    let ind_start = fn_start  + num_face  * 4;
+    let tex_start = ind_start + num_face  * 4;
+    let fa_start  = tex_start + num_tex   * 2;
+    
+    TriMesh {
+        vertices      = @ |i:i32| data.load_vec3(v_start  + i*4),
+        normals       = @ |i:i32| data.load_vec3(n_start  + i*4),
+        face_normals  = @ |i:i32| data.load_vec3(fn_start + i*4),
+        face_inv_area = @ |i:i32| data.load_f32(fa_start  + i),
+        triangles     = @ |i:i32| { let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
+        tex_coords    = @ |i:i32| data.load_vec2(tex_start + i*2),
+        num_tris      = num_face
+    }
+}
+
+fn @load_specific_shape_from_table(num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32,
+                                   offset: i32, dtb: DynTable, acc: DeviceBufferAccessor) -> TriMesh {
+    let data  = get_table_entry(offset as u64, dtb, acc);
+    make_shape_from_buffer(num_face, num_verts, num_norms, num_tex, data)
+}
+
+fn @make_trimesh_table(dtb: DynTable, acc: DeviceBufferAccessor) -> TriMeshTable {
+    @ |id| {
+        let entry = get_lookup_entry(id as u64, dtb, acc);
+        let data  = get_table_entry(entry.offset, dtb, acc);
+
+        let (num_face, num_verts, num_norms, num_tex) = data.load_int4(0);
+        
+        make_shape_from_buffer(num_face, num_verts, num_norms, num_tex, data)
+    } 
+}
+
+fn @map_trimesh_to_shape_table(tbl: TriMeshTable) -> ShapeTable {
+    @ |id| make_trimesh_shape(tbl(id))
+}
+
+// ----------------------------------- Intersection stuff
+
+struct Tri1 {
+    v0: [f32 * 3],
+    pad: i32,
+    e1: [f32 * 3],
+    pad2: i32,
+    e2: [f32 * 3],
+    prim_id: i32
+}
+
+struct Tri4 {
+    v0: [[f32 * 4] * 3],
+    e1: [[f32 * 4] * 3],
+    e2: [[f32 * 4] * 3],
+    n:  [[f32 * 4] * 3],
+    prim_id: [i32 * 4]
+}
+
+fn @make_cpu_tri_prim(tris: &[Tri4]) -> fn (i32) -> Prim {
+    @ |j| Prim {
+        intersect = @ |i, ray| -> Option[Hit] {
+            let tri_ptr = rv_align(&tris(j) as &i8, 32) as &Tri4;
+            let v0  = make_vec3(tri_ptr.v0(0)(i), tri_ptr.v0(1)(i), tri_ptr.v0(2)(i));
+            let e1  = make_vec3(tri_ptr.e1(0)(i), tri_ptr.e1(1)(i), tri_ptr.e1(2)(i));
+            let e2  = make_vec3(tri_ptr.e2(0)(i), tri_ptr.e2(1)(i), tri_ptr.e2(2)(i));
+            let n   = make_vec3(tri_ptr.n (0)(i), tri_ptr.n (1)(i), tri_ptr.n (2)(i));
+            let tri = make_tri(v0, e1, e2, n);
+            if let Option[(f32, f32, f32)]::Some(t, u, v) = intersect_ray_tri_cpu(false /*backface_culling*/, ray, tri) {    
+                let prim_id = tri_ptr.prim_id(i) & 0x7FFFFFFF;
+                make_option(make_hit(-1, prim_id, t, make_vec2(u, v))) 
+            } else {
+                Option[Hit]::None
+            }
+        },
+        is_valid = @ |i| tris(j).prim_id(i) != -1,
+        is_last = tris(j).prim_id(3) < 0,
+        size = 4
+    }
+}
+
+fn @make_gpu_tri_prim(j: i32, tris: &[Tri1], is_nvvm: bool) -> Prim {
+    let load4_f32 = @ |p: &addrspace(1)[simd[f32 * 4]], i: i32| if is_nvvm { nvvm_ldg4_f32(&p(i)) } else { p(i) };
+
+    let simd_ptr = &tris(j) as &addrspace(1)[simd[f32 * 4]];
+    let tri0     = load4_f32(simd_ptr, 0);
+    let tri1     = load4_f32(simd_ptr, 1);
+    let tri2     = load4_f32(simd_ptr, 2);
+    let prim_id  = bitcast[i32](tri2(3));
+    Prim {
+        intersect = @ |_, ray| {
+            let v0  = make_vec3(tri0(0), tri0(1), tri0(2));
+            let e1  = make_vec3(tri1(0), tri1(1), tri1(2));
+            let e2  = make_vec3(tri2(0), tri2(1), tri2(2));
+            let n   = vec3_cross(e1, e2);
+            let tri = make_tri(v0, e1, e2, n);
+            if let Option[(f32, f32, f32)]::Some((t, u, v)) = intersect_ray_tri_gpu(false /*backface_culling*/, ray, tri) {
+                make_option(make_hit(-1/* Will be set later*/, prim_id & 0x7FFFFFFF, t, make_vec2(u, v)))
+            } else {
+                Option[Hit]::None
+            }
+        },
+        is_valid = @ |_| true,
+        is_last = prim_id < 0,
+        size = 1
+    }
+}
+
+fn @make_cpu_bvh4_tri4(nodes: &[Node4], tris: &[Tri4]) = PrimBvh {
+    node = @ |j| make_cpu_node4(j, nodes),
+    prim = make_cpu_tri_prim(tris),
+    prefetch = @ |id| {
+        let ptr = select(id < 0, &tris(!id) as &[u8], &nodes(id - 1) as &[u8]);
+        cpu_prefetch_bytes(ptr, 128)
+    },
+    arity = 4
+};
+
+fn @make_cpu_bvh8_tri4(nodes: &[Node8], tris: &[Tri4]) = PrimBvh {
+    node = @ |j| make_cpu_node8(j, nodes),
+    prim = make_cpu_tri_prim(tris),
+    prefetch = @ |id| {
+        let ptr = select(id < 0, &tris(!id) as &[u8], &nodes(id - 1) as &[u8]);
+        cpu_prefetch_bytes(ptr, 256)
+    },
+    arity = 8
+};
+
+fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], is_nvvm: bool) -> PrimBvh {
+    PrimBvh {
+        node     = @ |j| @make_gpu_node(j, nodes, is_nvvm),
+        prim     = @ |j| @make_gpu_tri_prim(j, tris , is_nvvm),
+        prefetch = @ |_| (), // Not implemented
+        arity    = 2
+    }
+}

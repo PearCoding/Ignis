@@ -76,6 +76,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/phase/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/phase/henyeygreenstein.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/phase/uniform.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/shapes/trimesh.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/aotracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/debugtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/technique/infobuffer.art
@@ -113,3 +114,10 @@ anydsl_runtime_wrap(DISCARD_TMP_OBJS
     FILES ${ARTIC_MAIN_SRC} dummy_main.art
     INTERFACE ${CMAKE_BINARY_DIR}/generated_interface)
 add_custom_target(artic_c_interface ALL DEPENDS ${CMAKE_BINARY_DIR}/generated_interface.h)
+
+anydsl_runtime_wrap(DISCARD_TMP_OBJS
+    NAME "interface_extra"
+    FRONTEND "artic"
+    FILES ${ARTIC_EXTRA_SRC} dummy_extra.art
+    INTERFACE ${CMAKE_BINARY_DIR}/generated_interface_extra)
+add_custom_target(artic_c_interface_extra ALL DEPENDS ${CMAKE_BINARY_DIR}/generated_interface_extra.h)

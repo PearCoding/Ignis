@@ -1,4 +1,4 @@
-// Used in the utitility section of the runtime
+// Used in the utility section of the runtime
 
 struct TonemapSettings {
     scale:           f32,

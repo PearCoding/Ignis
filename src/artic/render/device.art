@@ -5,14 +5,20 @@ struct Device {
     id: i32,
 
     //------------------------------------- Pipeline    
-    // [Internal] Run full pipeline with the given scene geometry and spi
-    trace: fn (SceneGeometry, Pipeline, i32 /* spi */) -> (),
+    // [Internal] Run full pipeline with the given scene info and spi
+    trace: fn (SceneInfo, Pipeline, i32 /* spi */) -> (),
 
     // [Internal] Generate rays
     generate_rays: fn (RayEmitter, &mut i32, i32, i32, i32, i32, i32, i32) -> i32, 
 
     // Synchronize device
     sync: fn () -> (),
+
+    // [Internal] Handle a traversal primary shader
+    handle_traversal_primary: fn (SceneGeometry, i32) -> (), 
+
+    // [Internal] Handle a traversal secondary shader
+    handle_traversal_secondary: fn (SceneGeometry, i32, bool, i32, bool) -> (), 
 
     // [Internal] Handle a miss shader
     handle_miss_shader: fn (Technique, i32, i32, i32, bool) -> (), 
@@ -54,17 +60,8 @@ struct Device {
     // [Internal] Load all entities as a dynamic table
     load_entity_table: fn (DynTable) -> EntityTable,
 
-    // [Internal] Load all shapes as a dynamic table
-    load_shape_table: fn (DynTable) -> ShapeTable,
-
-    // [Internal] Load a specific shape given by precomputed properties and an offset within the dynamic table
-    load_specific_shape: fn (i32 /* num_face */, i32 /* num_vert */, i32 /* num_norm */, i32 /* num_tex */, i32 /* off */, DynTable) -> Shape,
-
     // [Internal] Load a specific dyntable constructed in the loading process
     load_custom_dyntable: fn (&[u8] /* Filename */) -> DynTable,
-
-    // [Internal] Load the whole shape bvh table from a dynamic table
-    load_bvh_table: fn (DynTable) -> BVHTable,
 
     // [Internal] Will load the rays given in 'tracing' mode
     load_rays: fn () -> &[StreamRay],
