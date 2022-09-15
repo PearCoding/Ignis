@@ -283,23 +283,6 @@ The following will need <code class="docutils literal notranslate"><span class="
 <ol class="arabic">
 <li><p>Clone AnyDSL from <a class="reference external" href="https://github.com/AnyDSL/anydsl">https://github.com/AnyDSL/anydsl</a>. You have to use the <code class="docutils literal notranslate"><span class="pre">cmake-based-setup</span></code> branch.</p>
 <ol class="arabic">
-<li><p>Patch the repo according to the <a class="reference external" href="https://github.com/PearCoding/Ignis/blob/master/docs/AnyDSLWindows.patch">AnyDSLWindows.patch</a>:</p>
-<div class="highlight-diff notranslate"><div class="highlight"><pre><span></span><span class="gh">diff --git a/cmake/llvm-package.cmake b/cmake/llvm-package.cmake</span>
-<span class="gh">index 958b914..3026bf3 100644</span>
-<span class="gd">--- a/cmake/llvm-package.cmake</span>
-<span class="gi">+++ b/cmake/llvm-package.cmake</span>
-<span class="gu">@@ -1,6 +1,6 @@</span>
- 
-<span class="gd">-set(AnyDSL_PKG_LLVM_VERSION &quot;10.0.1&quot; CACHE STRING &quot;LLVM version of AnyDSL&quot;)</span>
-<span class="gd">-set(AnyDSL_PKG_RV_TAG &quot;origin/release/10.x&quot; CACHE STRING &quot;LLVM is build with this git tag of RV&quot;)</span>
-<span class="gi">+set(AnyDSL_PKG_LLVM_VERSION &quot;12.0.0&quot; CACHE STRING &quot;LLVM version of AnyDSL&quot;)</span>
-<span class="gi">+set(AnyDSL_PKG_RV_TAG &quot;origin/release/12.x&quot; CACHE STRING &quot;LLVM is build with this git tag of RV&quot;)</span>
- 
- set(AnyDSL_PKG_LLVM_URL &quot;https://github.com/llvm/llvm-project/releases/download/llvmorg-${AnyDSL_PKG_LLVM_VERSION}/llvm-project-${AnyDSL_PKG_LLVM_VERSION}.tar.xz&quot; CACHE STRING &quot;where to download LLVM&quot;)
- set(AnyDSL_PKG_RV_URL &quot;https://github.com/cdl-saarland/rv&quot; CACHE STRING &quot;where to clone RV&quot;)
-</pre></div>
-</div>
-</li>
 <li><p>Make sure all the necessary dependencies are installed. Especially zlib and potentially CUDA.</p></li>
 <li><p>Create a new directory named <code class="docutils literal notranslate"><span class="pre">build</span></code></p></li>
 <li><p>Open the command line interface in the newly created directory. Make sure the recent VC environment is available.</p></li>
@@ -311,12 +294,12 @@ The following will need <code class="docutils literal notranslate"><span class="
 <span class="go">    -DCMAKE_BUILD_TYPE=&quot;Release&quot;</span>
 <span class="go">    -DAnyDSL_runtime_BUILD_SHARED=ON</span>
 <span class="go">    -DAnyDSL_PKG_LLVM_AUTOBUILD=ON</span>
-<span class="go">    -DAnyDSL_PKG_LLVM_VERSION=&quot;12.0.0&quot;</span>
-<span class="go">    -DAnyDSL_PKG_RV_TAG=&quot;origin/release/12.x&quot;</span>
-<span class="go">    -DAnyDSL_PKG_LLVM_URL=&quot;https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.0/llvm-project-12.0.0.src.tar.xz&quot;</span>
+<span class="go">    -DAnyDSL_PKG_LLVM_VERSION=&quot;14.0.6&quot;</span>
+<span class="go">    -DAnyDSL_PKG_RV_TAG=&quot;origin/release/14.x&quot;</span>
+<span class="go">    -DAnyDSL_PKG_LLVM_URL=&quot;https://github.com/llvm/llvm-project/releases/download/llvmorg-14.0.6/llvm-project-14.0.6.src.tar.xz&quot;</span>
 <span class="go">    -DTHORIN_PROFILE=OFF</span>
 <span class="go">    -DBUILD_SHARED_LIBS=OFF</span>
-<span class="go">    -DCUDAToolkit_NVVM_LIBRARY=&quot;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.6\\nvvm\\lib\\x64\\nvvm.lib&quot;</span>
+<span class="go">    -DCUDAToolkit_NVVM_LIBRARY=&quot;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\nvvm\\lib\\x64\\nvvm.lib&quot;</span>
 <span class="go">    -DZLIB_LIBRARY=&quot;C:\\Development\\Dependencies\\zlib\\lib\\zlib.lib&quot;</span>
 <span class="go">    -DZLIB_INCLUDE_DIR=&quot;C:\\Development\\Dependencies\\zlib\\include&quot;</span>
 <span class="go">    ..</span>
@@ -334,7 +317,7 @@ The following will need <code class="docutils literal notranslate"><span class="
 </div>
 <p>Just ignore it. A file named <code class="docutils literal notranslate"><span class="pre">AnyDSL.sln</span></code> should still be created in the build folder. This might only be relevant for cmake configs with Visual Studio generators, however.</p>
 </li>
-<li><p>If you are using the Visual Studio generator, you can now use the generated <code class="docutils literal notranslate"><span class="pre">.sln</span></code> to compile the project. This will take some time. Make sure that you use the <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration.</p></li>
+<li><p>If you are using the Visual Studio generator, you can now use the generated <code class="docutils literal notranslate"><span class="pre">.sln</span></code> to compile the project. This will take some time. Make sure that you use the <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration. Make sure the <code class="docutils literal notranslate"><span class="pre">runtime</span></code>, <code class="docutils literal notranslate"><span class="pre">clang</span></code> and <code class="docutils literal notranslate"><span class="pre">artic</span></code> project are built successfully, the others might fail for unknown reasons.</p></li>
 <li><p>For other IDEs use <code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">--build</span> <span class="pre">..</span></code></p></li>
 </ol>
 </li>
@@ -353,6 +336,7 @@ The following will need <code class="docutils literal notranslate"><span class="
 <p>Also make sure that the following snippet is written in a single line and, if necessary, the <code class="docutils literal notranslate"><span class="pre">\</span></code> in paths is properly escaped:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cmake</span>
 <span class="go">    -DCMAKE_BUILD_TYPE=&quot;Release&quot;</span>
+<span class="go">    -DBUILD_TESTING=OFF</span>
 <span class="go">    -DClang_BIN=&quot;C:\\Development\\Projects\\AnyDSL\\build\\_deps\\llvm-build\\Release\\bin\\clang.exe&quot;</span>
 <span class="go">    -DAnyDSL_runtime_DIR=&quot;C:\\Development\\Projects\\AnyDSL\\build\\share\\anydsl\\cmake&quot;</span>
 <span class="go">    -DArtic_BINARY_DIR=&quot;C:\\Development\\Projects\\AnyDSL\\build\\bin\\Release&quot;</span>
@@ -371,7 +355,7 @@ The following will need <code class="docutils literal notranslate"><span class="
 </li>
 <li><p>In contrary to the AnyDSL setup you can <strong>not</strong> use the newly generated <code class="docutils literal notranslate"><span class="pre">.sln</span></code> file directly. Use <code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">--build</span> <span class="pre">.</span> <span class="pre">--config</span> <span class="pre">Release</span></code> or use Visual Studio with the CMake interface.</p></li>
 <li><p>To run the frontends you might have to add multiple shared libraries (<code class="docutils literal notranslate"><span class="pre">*.dlls</span></code>) to the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> environment variable or copy it next to the executables.
-Currently the shared libraries <code class="docutils literal notranslate"><span class="pre">runtime.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">runtime_jit_artic.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">nvvm64.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">tbb.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">tbb_malloc.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">SDL2.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">zlib.dll</span></code> are known to be required.
+Currently the shared libraries <code class="docutils literal notranslate"><span class="pre">runtime.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">runtime_jit_artic.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">nvvm64.dll</span></code> or <code class="docutils literal notranslate"><span class="pre">nvvm64_40_0.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">tbb.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">SDL2.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">zlib.dll</span></code> are known to be required.
 The list is not exhaustive however, as the final list of dependencies depends on the system, current state of development and other external factors.
 If a module (e.g., <code class="docutils literal notranslate"><span class="pre">ig_driver_avx2.dll</span></code>) can not been found, but exists on the filesystem, a reason for the error might be a missing shared library.
 Use one of the many dll dependency viewers available on Windows to find the exact missing dll and copy it next to the build executable or add it to the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> environment variable.</p></li>
@@ -386,6 +370,7 @@ Use one of the many dll dependency viewers available on Windows to find the exac
 A known cause is that <code class="docutils literal notranslate"><span class="pre">igview</span></code> and SDL are using a graphic driver which is loading the system LLVM library in the background.
 On Linux, using accelerated rendering load the X11 drivers, which in return load the system LLVM, which in return clash with the custom LLVM.
 Setting the environment variable <code class="docutils literal notranslate"><span class="pre">SDL_RENDER_DRIVER=software</span></code> and <code class="docutils literal notranslate"><span class="pre">SDL_FRAMEBUFFER_ACCELERATION=0</span></code> should be a good workaround. This will not prevent you of using the GPU for raytracing however, only the UI will be software rendered.</p></li>
+<li><p>If running <code class="docutils literal notranslate"><span class="pre">artic</span></code> or <code class="docutils literal notranslate"><span class="pre">clang</span></code> fails when building Ignis it might be due to the two executables not able to find <code class="docutils literal notranslate"><span class="pre">zlib.dll</span></code>. Make sure it is available for them. A simple solution is to just copy the <code class="docutils literal notranslate"><span class="pre">zlib.dll</span></code> next to the executables.</p></li>
 </ul>
 </section>
 </section>
