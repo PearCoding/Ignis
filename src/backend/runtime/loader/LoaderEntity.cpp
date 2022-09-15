@@ -1,6 +1,7 @@
 #include "LoaderEntity.h"
 #include "Loader.h"
 #include "LoaderLight.h"
+#include "LoaderShape.h"
 #include "Logger.h"
 #include "bvh/SceneBVHAdapter.h"
 #include "serialization/VectorSerializer.h"
@@ -11,17 +12,17 @@ namespace IG {
 using namespace Parser;
 
 template <size_t N>
-inline static void setup_bvh(std::vector<EntityObject>& input, LoaderResult& result)
+inline static void setup_bvh(std::vector<EntityObject>& input, PerPrimTypeDatabase& dtb)
 {
     using Node = typename BvhNEnt<N>::Node;
     std::vector<Node> nodes;
     std::vector<EntityLeaf1> objs;
     build_scene_bvh<N>(nodes, objs, input);
 
-    result.Database.SceneBVH.Nodes.resize(sizeof(Node) * nodes.size());
-    std::memcpy(result.Database.SceneBVH.Nodes.data(), nodes.data(), result.Database.SceneBVH.Nodes.size());
-    result.Database.SceneBVH.Leaves.resize(sizeof(EntityLeaf1) * objs.size());
-    std::memcpy(result.Database.SceneBVH.Leaves.data(), objs.data(), result.Database.SceneBVH.Leaves.size());
+    dtb.SceneBVH.Nodes.resize(sizeof(Node) * nodes.size());
+    std::memcpy(dtb.SceneBVH.Nodes.data(), nodes.data(), dtb.SceneBVH.Nodes.size());
+    dtb.SceneBVH.Leaves.resize(sizeof(EntityLeaf1) * objs.size());
+    std::memcpy(dtb.SceneBVH.Leaves.data(), objs.data(), dtb.SceneBVH.Leaves.size());
 }
 
 bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
@@ -31,7 +32,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
     const auto start1 = std::chrono::high_resolution_clock::now();
 
-    std::vector<EntityObject> in_objs;
+    std::unordered_map<ShapeProvider*, std::vector<EntityObject>> in_objs;
     result.Database.EntityTable.reserve(ctx.Scene.entities().size() * 48);
     for (const auto& pair : ctx.Scene.entities()) {
         const auto child = pair.second;
@@ -41,11 +42,12 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         if (shapeName.empty()) {
             IG_LOG(L_ERROR) << "Entity " << pair.first << " has no shape" << std::endl;
             continue;
-        } else if (ctx.Environment.ShapeIDs.count(shapeName) == 0) {
+        } else if (!ctx.Shapes->hasShape(shapeName)) {
             IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown shape " << shapeName << std::endl;
             continue;
         }
-        const uint32 shapeID = ctx.Environment.ShapeIDs.at(shapeName);
+
+        const uint32 shapeID = ctx.Shapes->getShapeID(shapeName);
 
         // Query bsdf
         const std::string bsdfName = child->property("bsdf").getString();
@@ -99,9 +101,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         Transformf transform = child->property("transform").getTransform();
         transform.makeAffine();
 
-        const auto& shape = ctx.Environment.Shapes[shapeID];
-        if (shape.VertexCount == 0 || shape.FaceCount == 0)
-            continue; // No need to trigger a warning/error as this should have been done earlier
+        const auto& shape = ctx.Shapes->getShape(shapeID);
 
         const Transformf invTransform = transform.inverse();
         const BoundingBox& shapeBox   = shape.BoundingBox;
@@ -152,7 +152,8 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         obj.Local   = invTransform.matrix();
         obj.ShapeID = shapeID;
         obj.Flags   = entity_flags; // Only added to bvh
-        in_objs.emplace_back(obj);
+
+        in_objs[shape.Provider].emplace_back(obj);
     }
 
     IG_LOG(L_DEBUG) << "Storing Entities took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
@@ -168,12 +169,15 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
     // Build bvh (keep in mind that this BVH has no pre-padding as in the case for shape BVHs)
     IG_LOG(L_DEBUG) << "Generating BVH for scene" << std::endl;
     const auto start2 = std::chrono::high_resolution_clock::now();
-    if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
-        setup_bvh<2>(in_objs, result);
-    } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::SINGLE || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
-        setup_bvh<4>(in_objs, result);
-    } else {
-        setup_bvh<8>(in_objs, result);
+    for (auto& p : in_objs) {
+        auto& dtb = result.Database.PrimTypeDatabase.at(p.first->identifier());
+        if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
+            setup_bvh<2>(p.second, dtb);
+        } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::SINGLE || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
+            setup_bvh<4>(p.second, dtb);
+        } else {
+            setup_bvh<8>(p.second, dtb);
+        }
     }
     IG_LOG(L_DEBUG) << "Building Scene BVH took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start2).count() / 1000.0f << " seconds" << std::endl;
 

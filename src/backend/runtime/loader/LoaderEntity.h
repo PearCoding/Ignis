@@ -4,7 +4,9 @@
 
 namespace IG {
 struct LoaderResult;
-struct LoaderEntity {
-    static bool load(LoaderContext& ctx, LoaderResult& res);
+class LoaderEntity {
+public:
+    void prepare(const LoaderContext& ctx);
+    bool load(LoaderContext& ctx, LoaderResult& result);
 };
 } // namespace IG

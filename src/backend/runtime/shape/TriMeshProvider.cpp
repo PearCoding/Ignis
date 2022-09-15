@@ -1,11 +1,16 @@
 #include "TriMeshProvider.h"
 
 #include "bvh/TriBVHAdapter.h"
+#include "loader/LoaderResult.h"
+#include "loader/LoaderShape.h"
 #include "mesh/MtsSerializedFile.h"
 #include "mesh/ObjFile.h"
 #include "mesh/PlyFile.h"
+#include "serialization/VectorSerializer.h"
 
 #include "Logger.h"
+
+#include <tbb/scalable_allocator.h>
 
 namespace IG {
 
@@ -164,59 +169,132 @@ struct BvhTemporary {
 };
 
 template <size_t N, size_t T>
-static void setup_bvhs(const std::vector<TriMesh>& meshes, LoaderResult& result)
+static void setup_bvh(const TriMesh& mesh, PerPrimTypeDatabase& dtb, std::mutex& mutex)
 {
-    // Preload map entries
-    std::vector<BvhTemporary<N, T>> bvhs;
-    bvhs.resize(meshes.size());
+    BvhTemporary<N, T> bvh;
+    if (mesh.faceCount() > 0)
+        build_bvh<N, T>(mesh, bvh.nodes, bvh.tris);
 
-    const auto build_mesh = [&](size_t id) {
-        BvhTemporary<N, T>& tmp = bvhs[id];
-        const TriMesh& mesh     = meshes.at(id);
-        if (mesh.faceCount() > 0)
-            build_bvh<N, T>(mesh, tmp.nodes, tmp.tris);
-    };
+    mutex.lock();
+    auto& bvhData = dtb.BVHTable.addLookup(0, 0, DefaultAlignment);
+    VectorSerializer serializer(bvhData, false);
+    serializer.write((uint32)bvh.nodes.size());
+    serializer.write((uint32)bvh.tris.size()); // Not really needed, but just dump it out
+    serializer.write((uint32)0);               // Padding
+    serializer.write((uint32)0);               // Padding
+    serializer.write(bvh.nodes, true);
+    serializer.write(bvh.tris, true);
+    mutex.unlock();
+}
 
-    // Start building!
-    IG_LOG(L_DEBUG) << "Building BVHs ..." << std::endl;
-    const auto start1 = std::chrono::high_resolution_clock::now();
-#ifdef IG_PARALLEL_BVH
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, meshes.size()),
-                      [&](const tbb::blocked_range<size_t>& range) {
-                          for (size_t i = range.begin(); i != range.end(); ++i)
-                              build_mesh(i);
-                      });
-#else
-    for (size_t i = 0; i < meshes.size(); ++i)
-        build_mesh(i);
-#endif
-    IG_LOG(L_DEBUG) << "Building trimesh BVHs took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
-
-    // Write non-parallel
-    IG_LOG(L_DEBUG) << "Storing trimesh BVHs ..." << std::endl;
-    const auto start2 = std::chrono::high_resolution_clock::now();
-    for (const auto& bvh : bvhs) {
-        auto& bvhData = result.Database.BVHTable.addLookup(0, 0, DefaultAlignment);
-        VectorSerializer serializer(bvhData, false);
-        serializer.write((uint32)bvh.nodes.size());
-        serializer.write((uint32)bvh.tris.size()); // Not really needed, but just dump it out
-        serializer.write((uint32)0);               // Padding
-        serializer.write((uint32)0);               // Padding
-        serializer.write(bvh.nodes, true);
-        serializer.write(bvh.tris, true);
+void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std::string& name, const Parser::Object& elem)
+{
+    TriMesh mesh;
+    if (elem.pluginType() == "triangle") {
+        mesh = setup_mesh_triangle(elem);
+    } else if (elem.pluginType() == "rectangle") {
+        mesh = setup_mesh_rectangle(elem);
+    } else if (elem.pluginType() == "cube" || elem.pluginType() == "box") {
+        mesh = setup_mesh_cube(elem);
+    } else if (elem.pluginType() == "sphere" || elem.pluginType() == "icosphere") {
+        mesh = setup_mesh_ico_sphere(elem);
+    } else if (elem.pluginType() == "uvsphere") {
+        mesh = setup_mesh_uv_sphere(elem);
+    } else if (elem.pluginType() == "cylinder") {
+        mesh = setup_mesh_cylinder(elem);
+    } else if (elem.pluginType() == "cone") {
+        mesh = setup_mesh_cone(elem);
+    } else if (elem.pluginType() == "disk") {
+        mesh = setup_mesh_disk(elem);
+    } else if (elem.pluginType() == "obj") {
+        mesh = setup_mesh_obj(name, elem, ctx);
+    } else if (elem.pluginType() == "ply") {
+        mesh = setup_mesh_ply(name, elem, ctx);
+    } else if (elem.pluginType() == "mitsuba") {
+        mesh = setup_mesh_mitsuba(name, elem, ctx);
+    } else if (elem.pluginType() == "external") {
+        mesh = setup_mesh_external(name, elem, ctx);
+    } else {
+        IG_LOG(L_ERROR) << "Shape '" << name << "': Can not load shape type '" << elem.pluginType() << "'" << std::endl;
+        return;
     }
-    IG_LOG(L_DEBUG) << "Storing trimesh BVHs took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start2).count() / 1000.0f << " seconds" << std::endl;
-}
 
-void TriMeshProvider::handle(LoaderContext& ctx, const Parser::Object& elem)
-{
-}
+    if (mesh.vertices.empty()) {
+        IG_LOG(L_ERROR) << "Shape '" << name << "': While loading shape type '" << elem.pluginType() << "' no vertices were generated" << std::endl;
+        return;
+    }
 
-void TriMeshProvider::setup(LoaderContext& ctx, LoaderResult& result)
-{
+    if (mesh.faceCount() == 0) {
+        IG_LOG(L_ERROR) << "Shape '" << name << "': While loading shape type '" << elem.pluginType() << "' no indices were generated" << std::endl;
+        return;
+    }
+
+    // Handle some user options
+    if (elem.property("flip_normals").getBool())
+        mesh.flipNormals();
+
+    if (elem.property("face_normals").getBool())
+        mesh.setupFaceNormalsAsVertexNormals();
+
+    if (!elem.property("transform").getTransform().matrix().isIdentity())
+        mesh.transform(elem.property("transform").getTransform());
+
+    // Build bounding box
+    BoundingBox bbox = BoundingBox::Empty();
+    for (const auto& v : mesh.vertices)
+        bbox.extend(v);
+    bbox.inflate(1e-5f); // Make sure it has a volume
+
+    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, bbox });
+
+    // Check if shape is actually just a simple plane
+    auto plane = mesh.getAsPlane();
+    if (plane.has_value())
+        ctx.Shapes->addPlaneShape(id, plane.value());
+
+    // Register triangle shape
+    TriShape shape;
+    shape.VertexCount = mesh.vertices.size();
+    shape.NormalCount = mesh.normals.size();
+    shape.TexCount    = mesh.texcoords.size();
+    shape.FaceCount   = mesh.faceCount();
+    shape.Area        = mesh.computeArea();
+    ctx.Shapes->addTriShape(id, shape);
+
+    IG_ASSERT(mesh.face_normals.size() == mesh.faceCount(), "Expected valid face normals!");
+    IG_ASSERT((mesh.indices.size() % 4) == 0, "Expected index buffer count to be a multiple of 4!");
+
+    // Export data:
+    IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
+
+    auto& dtb = result.Database.PrimTypeDatabase.at(identifier());
+
+    mDtbMutex.lock();
+    auto& meshData = dtb.ShapeTable.addLookup(0, 0, DefaultAlignment);
+    VectorSerializer meshSerializer(meshData, false);
+    meshSerializer.write((uint32)mesh.faceCount());
+    meshSerializer.write((uint32)mesh.vertices.size());
+    meshSerializer.write((uint32)mesh.normals.size());
+    meshSerializer.write((uint32)mesh.texcoords.size());
+    meshSerializer.writeAligned(mesh.vertices, DefaultAlignment, true);
+    meshSerializer.writeAligned(mesh.normals, DefaultAlignment, true);
+    meshSerializer.writeAligned(mesh.face_normals, DefaultAlignment, true);
+    meshSerializer.write(mesh.indices, true);   // Already aligned
+    meshSerializer.write(mesh.texcoords, true); // Aligned to 4*2 bytes
+    meshSerializer.write(mesh.face_inv_area, true);
+    mDtbMutex.unlock();
+
+    if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
+        setup_bvh<2, 1>(mesh, dtb, mBvhMutex);
+    } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::SINGLE || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
+        setup_bvh<4, 4>(mesh, dtb, mBvhMutex);
+    } else {
+        setup_bvh<8, 4>(mesh, dtb, mBvhMutex);
+    }
 }
 
 std::string TriMeshProvider::generateTraversalCode(LoaderContext& ctx)
 {
+    return {};
 }
 } // namespace IG

@@ -2,21 +2,11 @@
 
 #include "Parser.h"
 #include "math/BoundingBox.h"
-#include "mesh/PlaneShape.h"
 
 #include <unordered_set>
 #include <vector>
 
 namespace IG {
-
-struct Shape {
-    size_t VertexCount;
-    size_t NormalCount;
-    size_t TexCount;
-    size_t FaceCount;
-    IG::BoundingBox BoundingBox;
-    float Area;
-};
 
 struct Entity {
     Transformf Transform;
@@ -55,11 +45,8 @@ inline bool operator==(const Material& a, const Material& b)
 
 // TODO: Refactor this to the actual loading classes
 struct LoaderEnvironment {
-    std::vector<Shape> Shapes;
-    std::unordered_map<std::string, uint32> ShapeIDs;
     std::unordered_map<std::string, Entity> EmissiveEntities;
     std::vector<Material> Materials;
-    std::unordered_map<uint32, PlaneShape> PlaneShapes; // Used for special optimization
 
     BoundingBox SceneBBox;
     float SceneDiameter = 0.0f;

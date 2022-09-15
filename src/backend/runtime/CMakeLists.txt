@@ -80,6 +80,7 @@ set(SRC
   loader/LoaderLight.h
   loader/LoaderMedium.cpp
   loader/LoaderMedium.h
+  loader/LoaderResult.h
   loader/LoaderShape.cpp
   loader/LoaderShape.h
   loader/LoaderTechnique.cpp
@@ -112,7 +113,6 @@ set(SRC
   mesh/MtsSerializedFile.h
   mesh/ObjFile.cpp
   mesh/ObjFile.h
-  mesh/PlaneShape.h
   mesh/PlyFile.cpp
   mesh/PlyFile.h
   mesh/Triangulation.cpp
@@ -154,11 +154,14 @@ set(SRC
   shader/ScriptPreprocessor.h
   shader/ShaderUtils.cpp
   shader/ShaderUtils.h
+  shape/PlaneShape.h
+  shape/Shape.h
   shape/ShapeProvider.h
   shape/SphereProvider.cpp
   shape/SphereProvider.h
   shape/TriMeshProvider.cpp
   shape/TriMeshProvider.h
+  shape/TriShape.h
   table/DynTable.h
   table/SceneDatabase.h
 )

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PlaneShape.h"
+#include "shape/PlaneShape.h"
 
 namespace IG {
 

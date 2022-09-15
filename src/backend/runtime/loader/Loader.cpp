@@ -30,17 +30,22 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.Denoiser            = opts.Denoiser;
     ctx.FilmWidth           = opts.FilmWidth;
     ctx.FilmHeight          = opts.FilmHeight;
-    ctx.Lights              = std::make_unique<LoaderLight>();
+
+    ctx.Lights   = std::make_unique<LoaderLight>();
+    ctx.Shapes   = std::make_unique<LoaderShape>();
+    ctx.Entities = std::make_unique<LoaderEntity>();
 
     ctx.ForceShadingTreeSpecialization = opts.ForceSpecialization;
 
+    ctx.Shapes->prepare(ctx);
+    ctx.Entities->prepare(ctx);
     ctx.Lights->prepare(ctx);
 
     // Load content
-    if (!LoaderShape::load(ctx, result))
+    if (!ctx.Shapes->load(ctx, result))
         return false;
 
-    if (!LoaderEntity::load(ctx, result))
+    if (!ctx.Entities->load(ctx, result))
         return false;
 
     LoaderCamera::setupInitialOrientation(ctx, result);

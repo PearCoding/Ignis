@@ -9,13 +9,18 @@ struct SceneBVH {
     std::vector<uint8> Leaves;
 };
 
-struct SceneDatabase {
-    DynTable EntityTable;
+struct PerPrimTypeDatabase {
     DynTable ShapeTable;
-    DynTable BVHTable;
+    DynTable BVHTable; // TODO: Single level bvh?
+    IG::SceneBVH SceneBVH;
+};
+
+struct SceneDatabase {
+    std::unordered_map<std::string_view, PerPrimTypeDatabase> PrimTypeDatabase;
     std::unordered_map<std::string, DynTable> CustomTables;
 
-    IG::SceneBVH SceneBVH;
+    DynTable EntityTable;
+
     float SceneRadius;
     BoundingBox SceneBBox;
     size_t MaterialCount;

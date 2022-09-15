@@ -1,15 +1,10 @@
 #pragma once
 
-#include "CameraOrientation.h"
+#include "LoaderResult.h"
 #include "Parser.h"
 #include "RuntimeSettings.h"
-#include "Target.h"
-#include "TechniqueInfo.h"
-#include "table/SceneDatabase.h"
 
 namespace IG {
-constexpr size_t DefaultAlignment = sizeof(float) * 4;
-
 struct LoaderOptions {
     std::filesystem::path FilePath;
     Parser::Scene Scene;
@@ -23,14 +18,6 @@ struct LoaderOptions {
     bool IsTracer;
     bool ForceSpecialization;
     DenoiserSettings Denoiser;
-};
-
-struct LoaderResult {
-    SceneDatabase Database;
-    std::vector<TechniqueVariant> TechniqueVariants;
-    std::vector<std::string> ResourceMap;
-    IG::TechniqueInfo TechniqueInfo;
-    IG::CameraOrientation CameraOrientation;
 };
 
 class Loader {

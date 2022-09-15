@@ -4,7 +4,6 @@
 #include "RuntimeSettings.h"
 #include "Target.h"
 #include "TechniqueInfo.h"
-#include "shape/ShapeProvider.h"
 
 #include <any>
 #include <filesystem>
@@ -12,13 +11,13 @@
 namespace IG {
 
 struct SceneDatabase;
-class ShapeProvider;
 
 struct LoaderContext {
     Parser::Scene Scene;
 
     std::unique_ptr<class LoaderLight> Lights;
-    std::unordered_map<std::string, std::unique_ptr<ShapeProvider>> ShapeProviders;
+    std::unique_ptr<class LoaderShape> Shapes;
+    std::unique_ptr<class LoaderEntity> Entities;
 
     std::filesystem::path FilePath;
     IG::Target Target;

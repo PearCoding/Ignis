@@ -1,5 +1,6 @@
 #include "AreaLight.h"
 #include "Logger.h"
+#include "loader/LoaderShape.h"
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
@@ -21,15 +22,14 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
         entity = ctx.Environment.EmissiveEntities.at(mEntity);
     }
 
-    const bool opt = light->property("optimize").getBool(true);
+    const bool opt        = light->property("optimize").getBool(true);
+    const uint32 shape_id = ctx.Shapes->getShapeID(entity.Shape);
 
-    uint32 shape_id = ctx.Environment.ShapeIDs.at(entity.Shape);
-
-    mOptimized = opt && ctx.Environment.PlaneShapes.count(shape_id) > 0;
+    mOptimized = opt && ctx.Shapes->isPlaneShape(shape_id);
     if (mOptimized) {
         IG_LOG(L_DEBUG) << "Using specialized plane sampler for area light '" << name << "'" << std::endl;
 
-        const auto& shape = ctx.Environment.PlaneShapes.at(shape_id);
+        const auto& shape = ctx.Shapes->getPlaneShape(shape_id);
         Vector3f origin   = entity.Transform * shape.Origin;
         Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;
         Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
@@ -38,11 +38,15 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
         mPosition  = origin + x_axis * 0.5f + y_axis * 0.5f;
         mDirection = normal;
         mArea      = x_axis.cross(y_axis).norm();
+    } else if (ctx.Shapes->isTriShape(shape_id)) {
+        const auto& shape    = ctx.Shapes->getShape(shape_id);
+        const auto& trishape = ctx.Shapes->getTriShape(shape_id);
+
+        mPosition  = entity.Transform * shape.BoundingBox.center();
+        mDirection = Vector3f::Zero();
+        mArea      = trishape.Area * std::abs(entity.computeGlobalMatrix().block<3, 3>(0, 0).determinant());
     } else {
-        const auto shape = ctx.Environment.Shapes[shape_id];
-        mPosition        = entity.Transform * shape.BoundingBox.center();
-        mDirection       = Vector3f::Zero();
-        mArea            = shape.Area * std::abs(entity.computeGlobalMatrix().block<3, 3>(0, 0).determinant());
+        IG_LOG(L_ERROR) << "Given entity '" << mEntity << "' primitive type is not triangular" << std::endl;
     }
 }
 
@@ -84,9 +88,9 @@ void AreaLight::serialize(const SerializationInput& input) const
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader();
 
-    uint32 shape_id = input.Tree.context().Environment.ShapeIDs.at(entity.Shape);
+    const uint32 shape_id = input.Tree.context().Shapes->getShapeID(entity.Shape);
     if (mOptimized) {
-        const auto& shape = input.Tree.context().Environment.PlaneShapes.at(shape_id);
+        const auto& shape = input.Tree.context().Shapes->getPlaneShape(shape_id);
         Vector3f origin   = entity.Transform * shape.Origin;
         Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;
         Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
@@ -103,12 +107,17 @@ void AreaLight::serialize(const SerializationInput& input) const
                      << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[2])
                      << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[3])
                      << ");" << std::endl;
-    } else {
-        const auto shape    = input.Tree.context().Environment.Shapes[shape_id];
-        size_t shape_offset = input.Tree.context().Database->ShapeTable.lookups()[shape_id].Offset;
+    } else if (input.Tree.context().Shapes->isTriShape(shape_id)) {
+        const auto shape    = input.Tree.context().Shapes->getTriShape(shape_id);
+        size_t shape_offset = input.Tree.context().Database->PrimTypeDatabase.at("trimesh").ShapeTable.lookups()[shape_id].Offset; // TODO
 
         input.Stream << "  let ae_" << light_id << " = make_shape_area_emitter(" << inline_entity(entity, shape_id)
                      << ", device.load_specific_shape(" << shape.FaceCount << ", " << shape.VertexCount << ", " << shape.NormalCount << ", " << shape.TexCount << ", " << shape_offset << ", dtb.shapes));" << std::endl;
+    } else {
+        // Error already messaged
+        input.Tree.signalError();
+        input.Tree.endClosure();
+        return;
     }
 
     input.Stream << "  let light_" << light_id << " = make_area_light(" << input.ID
@@ -147,10 +156,10 @@ void AreaLight::embed(const EmbedInput& input) const
     const Eigen::Matrix<float, 3, 4> localMat  = entity.computeLocalMatrix();        // To Local
     const Eigen::Matrix<float, 3, 4> globalMat = entity.computeGlobalMatrix();       // To Global
     const Matrix3f normalMat                   = entity.computeGlobalNormalMatrix(); // To Global [Normal]
-    uint32 shape_id                            = ctx.Environment.ShapeIDs.at(entity.Shape);
+    const uint32 shape_id                      = ctx.Shapes->getShapeID(entity.Shape);
 
     if (mOptimized) {
-        const auto& shape = input.Tree.context().Environment.PlaneShapes.at(shape_id);
+        const auto& shape = input.Tree.context().Shapes->getPlaneShape(shape_id);
         Vector3f origin   = entity.Transform * shape.Origin;
         Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;
         Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
@@ -169,7 +178,7 @@ void AreaLight::embed(const EmbedInput& input) const
         input.Serializer.write(shape.TexCoords[3]); // +2 = 20
         input.Serializer.write(radiance);           // +3 = 23
         input.Serializer.write(area);               // +1 = 24
-    } else {
+    } else if (input.Tree.context().Shapes->isTriShape(shape_id)) {
         input.Serializer.write(localMat, true);                           // +3x4 = 12
         input.Serializer.write(globalMat, true);                          // +3x4 = 24
         input.Serializer.write(normalMat, true);                          // +3x3 = 33
@@ -178,6 +187,10 @@ void AreaLight::embed(const EmbedInput& input) const
         input.Serializer.write((uint32)0 /*Padding*/);                    // +1   = 36
         input.Serializer.write(radiance);                                 // +3   = 39
         input.Serializer.write((uint32)0 /*Padding*/);                    // +1   = 40
+    } else {
+        // Error already messaged
+        input.Tree.signalError();
+        return;
     }
 }
 
