@@ -37,15 +37,10 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
 
 1.  Clone AnyDSL from https://github.com/AnyDSL/anydsl. You have to use the ``cmake-based-setup`` branch.
 
-    1.  Patch the repo according to the `AnyDSLWindows.patch <https://github.com/PearCoding/Ignis/blob/master/docs/AnyDSLWindows.patch>`_:
-    
-        .. literalinclude:: ../../AnyDSLWindows.patch
-            :language: diff
-
-    2.  Make sure all the necessary dependencies are installed. Especially zlib and potentially CUDA.
-    3.  Create a new directory named ``build``
-    4.  Open the command line interface in the newly created directory. Make sure the recent VC environment is available.
-    5.  Use CMake and the following command line to configure the project. It is very likely that you have to change some paths. 
+    1.  Make sure all the necessary dependencies are installed. Especially zlib and potentially CUDA.
+    2.  Create a new directory named ``build``
+    3.  Open the command line interface in the newly created directory. Make sure the recent VC environment is available.
+    4.  Use CMake and the following command line to configure the project. It is very likely that you have to change some paths. 
     
         Also make sure that the following snippet is written in a single line and, if necessary, the ``\`` in paths is properly escaped:
 
@@ -57,17 +52,17 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
                 -DCMAKE_BUILD_TYPE="Release"
                 -DAnyDSL_runtime_BUILD_SHARED=ON
                 -DAnyDSL_PKG_LLVM_AUTOBUILD=ON
-                -DAnyDSL_PKG_LLVM_VERSION="12.0.0"
-                -DAnyDSL_PKG_RV_TAG="origin/release/12.x"
-                -DAnyDSL_PKG_LLVM_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.0/llvm-project-12.0.0.src.tar.xz"
+                -DAnyDSL_PKG_LLVM_VERSION="14.0.6"
+                -DAnyDSL_PKG_RV_TAG="origin/release/14.x"
+                -DAnyDSL_PKG_LLVM_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-14.0.6/llvm-project-14.0.6.src.tar.xz"
                 -DTHORIN_PROFILE=OFF
                 -DBUILD_SHARED_LIBS=OFF
-                -DCUDAToolkit_NVVM_LIBRARY="C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.6\\nvvm\\lib\\x64\\nvvm.lib"
+                -DCUDAToolkit_NVVM_LIBRARY="C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\nvvm\\lib\\x64\\nvvm.lib"
                 -DZLIB_LIBRARY="C:\\Development\\Dependencies\\zlib\\lib\\zlib.lib"
                 -DZLIB_INCLUDE_DIR="C:\\Development\\Dependencies\\zlib\\include"
                 ..
 
-    6.  If you get a similar cmake error like the following:
+    5.  If you get a similar cmake error like the following:
         
         .. code-block:: console
 
@@ -79,8 +74,8 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
               which is prefixed in the build directory.
 
         Just ignore it. A file named ``AnyDSL.sln`` should still be created in the build folder. This might only be relevant for cmake configs with Visual Studio generators, however.
-    7.  If you are using the Visual Studio generator, you can now use the generated ``.sln`` to compile the project. This will take some time. Make sure that you use the ``Release`` configuration.
-    8.  For other IDEs use ``cmake --build ..``
+    6.  If you are using the Visual Studio generator, you can now use the generated ``.sln`` to compile the project. This will take some time. Make sure that you use the ``Release`` configuration. Make sure the ``runtime``, ``clang`` and ``artic`` project are built successfully, the others might fail for unknown reasons.
+    7.  For other IDEs use ``cmake --build ..``
 
 2.  Clone Ignis from https://github.com/PearCoding/Ignis. This time the ``master`` branch is fine.
 
@@ -101,6 +96,7 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
 
             cmake 
                 -DCMAKE_BUILD_TYPE="Release"
+                -DBUILD_TESTING=OFF
                 -DClang_BIN="C:\\Development\\Projects\\AnyDSL\\build\\_deps\\llvm-build\\Release\\bin\\clang.exe" 
                 -DAnyDSL_runtime_DIR="C:\\Development\\Projects\\AnyDSL\\build\\share\\anydsl\\cmake" 
                 -DArtic_BINARY_DIR="C:\\Development\\Projects\\AnyDSL\\build\\bin\\Release" 
@@ -118,7 +114,7 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
 
     7.  In contrary to the AnyDSL setup you can **not** use the newly generated ``.sln`` file directly. Use ``cmake --build . --config Release`` or use Visual Studio with the CMake interface.
     8.  To run the frontends you might have to add multiple shared libraries (``*.dlls``) to the ``PATH`` environment variable or copy it next to the executables.
-        Currently the shared libraries ``runtime.dll``, ``runtime_jit_artic.dll``, ``nvvm64.dll``, ``tbb.dll``, ``tbb_malloc.dll``, ``SDL2.dll``, ``zlib.dll`` are known to be required.
+        Currently the shared libraries ``runtime.dll``, ``runtime_jit_artic.dll``, ``nvvm64.dll`` or ``nvvm64_40_0.dll``, ``tbb.dll``, ``SDL2.dll``, ``zlib.dll`` are known to be required.
         The list is not exhaustive however, as the final list of dependencies depends on the system, current state of development and other external factors.
         If a module (e.g., ``ig_driver_avx2.dll``) can not been found, but exists on the filesystem, a reason for the error might be a missing shared library.
         Use one of the many dll dependency viewers available on Windows to find the exact missing dll and copy it next to the build executable or add it to the ``PATH`` environment variable.
@@ -130,3 +126,5 @@ Known Issues
     A known cause is that ``igview`` and SDL are using a graphic driver which is loading the system LLVM library in the background.
     On Linux, using accelerated rendering load the X11 drivers, which in return load the system LLVM, which in return clash with the custom LLVM.
     Setting the environment variable ``SDL_RENDER_DRIVER=software`` and ``SDL_FRAMEBUFFER_ACCELERATION=0`` should be a good workaround. This will not prevent you of using the GPU for raytracing however, only the UI will be software rendered.
+
+-   If running ``artic`` or ``clang`` fails when building Ignis it might be due to the two executables not able to find ``zlib.dll``. Make sure it is available for them. A simple solution is to just copy the ``zlib.dll`` next to the executables.
