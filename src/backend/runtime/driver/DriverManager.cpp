@@ -64,9 +64,23 @@ bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
     }
 
     if (!skipSystem) {
+        const auto tryAdd = [&](const std::filesystem::path& potential_path) {
+            if (std::filesystem::exists(potential_path))
+                paths.push_back(potential_path);
+
+#ifdef IG_DEBUG // Only debug builds
+            if (std::filesystem::exists(potential_path / "Debug"))
+                paths.push_back(potential_path / "Debug");
+#else
+            if (std::filesystem::exists(potential_path / "Release"))
+                paths.push_back(potential_path / "Release");
+#endif
+        };
+
         const auto exePath = RuntimeInfo::executablePath();
-        const auto libPath = exePath.parent_path().parent_path() / "lib";
-        paths.push_back(libPath);
+        tryAdd(exePath.parent_path() / "lib");
+        tryAdd(exePath.parent_path().parent_path() / "lib");
+        tryAdd(exePath.parent_path().parent_path().parent_path() / "lib");
     }
 
     if (!dir.empty())
