@@ -114,7 +114,8 @@
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Building</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#linux-mac-os">Linux &amp; Mac OS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#windows">Windows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#windows-automatic">Windows (Automatic)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#windows-manual">Windows (Manual)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#known-issues">Known Issues</a></li>
 </ul>
 </li>
@@ -277,8 +278,25 @@ The following will need <code class="docutils literal notranslate"><span class="
 <p>MacOS CPU vectorization and GPU support is still very experimental and limited.</p>
 </div>
 </section>
-<section id="windows">
-<h2>Windows<a class="headerlink" href="#windows" title="Permalink to this heading">¶</a></h2>
+<section id="windows-automatic">
+<h2>Windows (Automatic)<a class="headerlink" href="#windows-automatic" title="Permalink to this heading">¶</a></h2>
+<p>This mini tutorial is expecting some basic knowledge about the Windows build system based on Visual Studio and a recent PowerShell.</p>
+<ol class="arabic simple">
+<li><p>Clone Ignis from <a class="reference external" href="https://github.com/PearCoding/Ignis">https://github.com/PearCoding/Ignis</a>.</p>
+<ol class="arabic simple">
+<li><p>Run the script <code class="docutils literal notranslate"><span class="pre">scripts/windows/setup.ps1</span></code>. This will download all the necessary dependencies, except CUDA, compile it and create a new directory <code class="docutils literal notranslate"><span class="pre">deps/</span></code> on the directory on top of Ignis. This step has to be done only once, or if some of the dependencies got updated.</p></li>
+<li><p>The Visual Studio solution <code class="docutils literal notranslate"><span class="pre">build/Ignis.sln</span></code> can be used for further development.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration is well tested and should be used for most purposes. Any other configuration is experimental and may fail at any time.</p></li>
+</ol>
+</li>
+</ol>
+</section>
+<section id="windows-manual">
+<h2>Windows (Manual)<a class="headerlink" href="#windows-manual" title="Permalink to this heading">¶</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is recommended to use the new automatic windows setup instead of the following one!</p>
+</div>
 <p>This mini tutorial is expecting some basic knowledge about CMake and the Windows build system based on Visual Studio. I highly recommend using the CMake Ninja generator in favour of the Visual Studio ones, as Visual Studio as an IDE itself has support for both.</p>
 <ol class="arabic">
 <li><p>Clone AnyDSL from <a class="reference external" href="https://github.com/AnyDSL/anydsl">https://github.com/AnyDSL/anydsl</a>. You have to use the <code class="docutils literal notranslate"><span class="pre">cmake-based-setup</span></code> branch.</p>

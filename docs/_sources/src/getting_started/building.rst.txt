@@ -30,8 +30,21 @@ The following will need ``ccmake``, but works also with ``cmake-gui`` or with pl
 
 .. NOTE:: MacOS CPU vectorization and GPU support is still very experimental and limited. 
 
-Windows
--------
+Windows (Automatic)
+-------------------
+
+This mini tutorial is expecting some basic knowledge about the Windows build system based on Visual Studio and a recent PowerShell.
+
+1.  Clone Ignis from https://github.com/PearCoding/Ignis.
+
+    1.  Run the script ``scripts/windows/setup.ps1``. This will download all the necessary dependencies, except CUDA, compile it and create a new directory ``deps/`` on the directory on top of Ignis. This step has to be done only once, or if some of the dependencies got updated.
+    2.  The Visual Studio solution ``build/Ignis.sln`` can be used for further development.
+    3.  The ``Release`` configuration is well tested and should be used for most purposes. Any other configuration is experimental and may fail at any time.
+
+Windows (Manual)
+----------------
+
+.. NOTE:: It is recommended to use the new automatic windows setup instead of the following one!
 
 This mini tutorial is expecting some basic knowledge about CMake and the Windows build system based on Visual Studio. I highly recommend using the CMake Ninja generator in favour of the Visual Studio ones, as Visual Studio as an IDE itself has support for both.
 
