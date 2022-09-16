@@ -388,10 +388,10 @@ void LoaderLight::embedLights(ShadingTree& tree)
         const auto embedClass = p.first;
 
         // Check if already loaded
-        if (tree.context().Database->CustomTables.count(embedClass) > 0)
+        if (tree.context().Database->Tables.count(embedClass) > 0)
             continue;
 
-        auto& tbl = tree.context().Database->CustomTables[embedClass];
+        auto& tbl = tree.context().Database->Tables[embedClass];
 
         IG_LOG(L_DEBUG) << "Embedding lights of class '" << embedClass << "'" << std::endl;
 

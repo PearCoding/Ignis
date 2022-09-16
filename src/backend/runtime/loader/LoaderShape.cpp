@@ -72,12 +72,6 @@ void LoaderShape::prepare(const LoaderContext& ctx)
 
 bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
 {
-    // Fill result database
-    for (const auto& p : mShapeProviders) {
-        if (result.Database.PrimTypeDatabase.count(p.second->identifier()) == 0)
-            result.Database.PrimTypeDatabase.emplace(p.second->identifier(), PerPrimTypeDatabase{});
-    }
-
     // To make use of parallelization and workaround the map restrictions
     // we do have to construct a map
     std::vector<std::string> names(ctx.Scene.shapes().size());

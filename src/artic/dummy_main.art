@@ -43,6 +43,10 @@ fn ig_ray_generation_shader(_settings: &Settings, _iter: i32, _id: &mut i32, _si
 }
 
 #[export]
+fn ig_traversal_shader(settings: &Settings, iter: i32, size: i32) -> () {
+}
+
+#[export]
 fn ig_miss_shader(_settings: &Settings, _first: i32, _last: i32) -> () {
 }
 

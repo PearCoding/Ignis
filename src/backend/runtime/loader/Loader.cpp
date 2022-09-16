@@ -10,6 +10,7 @@
 #include "shader/HitShader.h"
 #include "shader/MissShader.h"
 #include "shader/RayGenerationShader.h"
+#include "shader/TraversalShader.h"
 
 #include <chrono>
 
@@ -80,6 +81,23 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         const auto& info            = ctx.TechniqueInfo.Variants[i];
         ctx.CurrentTechniqueVariant = i;
         ctx.SamplesPerIteration     = info.GetSPI(opts.SamplesPerIteration);
+
+        // Generate Traversal Shader
+        ctx.resetRegistry();
+        IG_LOG(L_DEBUG) << "Generating primary traversal shader for variant " << i << std::endl;
+        variant.PrimaryTraversalShader.Exec = TraversalShader::setupPrimary(ctx);
+        if (variant.PrimaryTraversalShader.Exec.empty()) {
+            IG_LOG(L_ERROR) << "Constructed empty primary traversal shader." << std::endl;
+            return false;
+        }
+
+        ctx.resetRegistry();
+        IG_LOG(L_DEBUG) << "Generating secondary traversal shader for variant " << i << std::endl;
+        variant.SecondaryTraversalShader.Exec = TraversalShader::setupSecondary(ctx);
+        if (variant.PrimaryTraversalShader.Exec.empty()) {
+            IG_LOG(L_ERROR) << "Constructed empty secondary traversal shader." << std::endl;
+            return false;
+        }
 
         // Generate Ray Generation Shader
         ctx.resetRegistry();

@@ -10,19 +10,23 @@
 
 namespace IG {
 using namespace Parser;
+void LoaderEntity::prepare(const LoaderContext& ctx)
+{
+    IG_UNUSED(ctx);
+}
 
 template <size_t N>
-inline static void setup_bvh(std::vector<EntityObject>& input, PerPrimTypeDatabase& dtb)
+inline static void setup_bvh(std::vector<EntityObject>& input, SceneBVH& bvh)
 {
     using Node = typename BvhNEnt<N>::Node;
     std::vector<Node> nodes;
     std::vector<EntityLeaf1> objs;
     build_scene_bvh<N>(nodes, objs, input);
 
-    dtb.SceneBVH.Nodes.resize(sizeof(Node) * nodes.size());
-    std::memcpy(dtb.SceneBVH.Nodes.data(), nodes.data(), dtb.SceneBVH.Nodes.size());
-    dtb.SceneBVH.Leaves.resize(sizeof(EntityLeaf1) * objs.size());
-    std::memcpy(dtb.SceneBVH.Leaves.data(), objs.data(), dtb.SceneBVH.Leaves.size());
+    bvh.Nodes.resize(sizeof(Node) * nodes.size());
+    std::memcpy(bvh.Nodes.data(), nodes.data(), bvh.Nodes.size());
+    bvh.Leaves.resize(sizeof(EntityLeaf1) * objs.size());
+    std::memcpy(bvh.Leaves.data(), objs.data(), bvh.Leaves.size());
 }
 
 bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
@@ -170,13 +174,13 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
     IG_LOG(L_DEBUG) << "Generating BVH for scene" << std::endl;
     const auto start2 = std::chrono::high_resolution_clock::now();
     for (auto& p : in_objs) {
-        auto& dtb = result.Database.PrimTypeDatabase.at(p.first->identifier());
+        auto& bvh = result.Database.SceneBVHs[p.first->identifier()];
         if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
-            setup_bvh<2>(p.second, dtb);
+            setup_bvh<2>(p.second, bvh);
         } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::SINGLE || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
-            setup_bvh<4>(p.second, dtb);
+            setup_bvh<4>(p.second, bvh);
         } else {
-            setup_bvh<8>(p.second, dtb);
+            setup_bvh<8>(p.second, bvh);
         }
     }
     IG_LOG(L_DEBUG) << "Building Scene BVH took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start2).count() / 1000.0f << " seconds" << std::endl;

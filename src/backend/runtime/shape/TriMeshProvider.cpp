@@ -169,14 +169,15 @@ struct BvhTemporary {
 };
 
 template <size_t N, size_t T>
-static void setup_bvh(const TriMesh& mesh, PerPrimTypeDatabase& dtb, std::mutex& mutex)
+static void setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mutex)
 {
     BvhTemporary<N, T> bvh;
     if (mesh.faceCount() > 0)
         build_bvh<N, T>(mesh, bvh.nodes, bvh.tris);
 
     mutex.lock();
-    auto& bvhData = dtb.BVHTable.addLookup(0, 0, DefaultAlignment);
+    auto& bvhTable = dtb.Tables["trimesh_primbvh"];
+    auto& bvhData  = bvhTable.addLookup(0, 0, DefaultAlignment);
     VectorSerializer serializer(bvhData, false);
     serializer.write((uint32)bvh.nodes.size());
     serializer.write((uint32)bvh.tris.size()); // Not really needed, but just dump it out
@@ -267,10 +268,9 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     // Export data:
     IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
 
-    auto& dtb = result.Database.PrimTypeDatabase.at(identifier());
-
     mDtbMutex.lock();
-    auto& meshData = dtb.ShapeTable.addLookup(0, 0, DefaultAlignment);
+    auto& shapeTable = result.Database.Tables["trimesh_shapes"];
+    auto& meshData   = shapeTable.addLookup(0, 0, DefaultAlignment);
     VectorSerializer meshSerializer(meshData, false);
     meshSerializer.write((uint32)mesh.faceCount());
     meshSerializer.write((uint32)mesh.vertices.size());
@@ -285,11 +285,11 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     mDtbMutex.unlock();
 
     if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
-        setup_bvh<2, 1>(mesh, dtb, mBvhMutex);
+        setup_bvh<2, 1>(mesh, result.Database, mBvhMutex);
     } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::SINGLE || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
-        setup_bvh<4, 4>(mesh, dtb, mBvhMutex);
+        setup_bvh<4, 4>(mesh, result.Database, mBvhMutex);
     } else {
-        setup_bvh<8, 4>(mesh, dtb, mBvhMutex);
+        setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);
     }
 }
 

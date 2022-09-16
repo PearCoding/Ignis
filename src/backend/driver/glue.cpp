@@ -92,12 +92,6 @@ struct DynTableProxy {
     ShallowArray<uint8_t> Data;
 };
 
-struct SceneDatabaseProxy {
-    DynTableProxy Entities;
-    DynTableProxy Shapes;
-    DynTableProxy BVHs;
-};
-
 struct TemporaryStorageHostProxy {
     anydsl::Array<int32_t> ray_begins;
     anydsl::Array<int32_t> ray_ends;
@@ -156,7 +150,7 @@ public:
         std::atomic_flag scene_loaded = ATOMIC_FLAG_INIT;
         BvhVariant bvh_ent;
         std::atomic_flag database_loaded = ATOMIC_FLAG_INIT;
-        SceneDatabaseProxy database;
+        DynTableProxy entity_table;
         anydsl::Array<int32_t> tmp_buffer;
         TemporaryStorageHostProxy temporary_storage_host;
         std::array<anydsl::Array<float>, GPUStreamBufferCount> primary;
@@ -179,7 +173,7 @@ public:
 #endif
 
         inline DeviceData()
-            : database()
+            : entity_table()
             , current_primary()
             , current_secondary()
         {
@@ -489,11 +483,11 @@ public:
     }
 
     template <typename Bvh, typename Node>
-    inline const Bvh& loadEntityBVH(int32_t dev)
+    inline const Bvh& loadEntityBVH(int32_t dev, const char* prim_type)
     {
         auto& device = devices[dev];
         if (!device.scene_loaded.test_and_set())
-            device.bvh_ent = std::move(loadSceneBVH<Node>(dev));
+            device.bvh_ent = std::move(loadSceneBVH<Node>(dev, prim_type));
         return std::get<Bvh>(device.bvh_ent);
     }
 
@@ -573,13 +567,14 @@ public:
     }
 
     template <typename Node>
-    inline BvhProxy<Node, EntityLeaf1> loadSceneBVH(int32_t dev)
+    inline BvhProxy<Node, EntityLeaf1> loadSceneBVH(int32_t dev, const char* prim_type)
     {
-        const size_t node_count = database->SceneBVH.Nodes.size() / sizeof(Node);
-        const size_t leaf_count = database->SceneBVH.Leaves.size() / sizeof(EntityLeaf1);
+        const auto& bvh         = database->SceneBVHs.at(prim_type);
+        const size_t node_count = bvh.Nodes.size() / sizeof(Node);
+        const size_t leaf_count = bvh.Leaves.size() / sizeof(EntityLeaf1);
         return BvhProxy<Node, EntityLeaf1>{
-            std::move(ShallowArray<Node>(dev, reinterpret_cast<const Node*>(database->SceneBVH.Nodes.data()), node_count)),
-            std::move(ShallowArray<EntityLeaf1>(dev, reinterpret_cast<const EntityLeaf1*>(database->SceneBVH.Leaves.data()), leaf_count))
+            std::move(ShallowArray<Node>(dev, reinterpret_cast<const Node*>(bvh.Nodes.data()), node_count)),
+            std::move(ShallowArray<EntityLeaf1>(dev, reinterpret_cast<const EntityLeaf1*>(bvh.Leaves.data()), leaf_count))
         };
     }
 
@@ -595,19 +590,13 @@ public:
     }
 
     // Load all the data assembled in previous stages to the device
-    inline const SceneDatabaseProxy& loadSceneDatabase(int32_t dev)
+    inline const DynTableProxy& loadEntityTable(int32_t dev)
     {
         auto& device = devices[dev];
         if (device.database_loaded.test_and_set())
-            return device.database;
+            return device.entity_table;
 
-        SceneDatabaseProxy& proxy = device.database;
-
-        proxy.Entities = loadDyntable(dev, database->EntityTable);
-        proxy.Shapes   = loadDyntable(dev, database->ShapeTable);
-        proxy.BVHs     = loadDyntable(dev, database->BVHTable);
-
-        return proxy;
+        return (device.entity_table = loadDyntable(dev, database->EntityTable));
     }
 
     inline SceneInfo loadSceneInfo(int32_t dev)
@@ -618,7 +607,7 @@ public:
                           (int)database->MaterialCount };
     }
 
-    inline const DynTableProxy& loadCustomDyntable(int32_t dev, const char* name)
+    inline const DynTableProxy& loadDyntable(int32_t dev, const char* name)
     {
         auto& tables = devices[dev].custom_dyntables;
         auto it      = tables.find(name);
@@ -627,7 +616,7 @@ public:
 
         IG_LOG(IG::L_DEBUG) << "Loading custom dyntable " << name << std::endl;
 
-        return tables[name] = loadDyntable(dev, database->CustomTables.at(name));
+        return tables[name] = loadDyntable(dev, database->Tables.at(name));
     }
 
     inline const DeviceImage& loadImage(int32_t dev, const std::string& filename, int32_t expected_channels)
@@ -1577,28 +1566,28 @@ IG_EXPORT void ignis_get_work_info(WorkInfo* info)
     info->framebuffer_locked              = sInterface->current_settings.info.LockFramebuffer;
 }
 
-IG_EXPORT void ignis_load_bvh2_ent(int dev, Node2** nodes, EntityLeaf1** objs)
+IG_EXPORT void ignis_load_bvh2_ent(int dev, const char* prim_type, Node2** nodes, EntityLeaf1** objs)
 {
-    auto& bvh = sInterface->loadEntityBVH<Bvh2Ent, Node2>(dev);
+    auto& bvh = sInterface->loadEntityBVH<Bvh2Ent, Node2>(dev, prim_type);
     *nodes    = const_cast<Node2*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
-IG_EXPORT void ignis_load_bvh4_ent(int dev, Node4** nodes, EntityLeaf1** objs)
+IG_EXPORT void ignis_load_bvh4_ent(int dev, const char* prim_type, Node4** nodes, EntityLeaf1** objs)
 {
-    auto& bvh = sInterface->loadEntityBVH<Bvh4Ent, Node4>(dev);
+    auto& bvh = sInterface->loadEntityBVH<Bvh4Ent, Node4>(dev, prim_type);
     *nodes    = const_cast<Node4*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
-IG_EXPORT void ignis_load_bvh8_ent(int dev, Node8** nodes, EntityLeaf1** objs)
+IG_EXPORT void ignis_load_bvh8_ent(int dev, const char* prim_type, Node8** nodes, EntityLeaf1** objs)
 {
-    auto& bvh = sInterface->loadEntityBVH<Bvh8Ent, Node8>(dev);
+    auto& bvh = sInterface->loadEntityBVH<Bvh8Ent, Node8>(dev, prim_type);
     *nodes    = const_cast<Node8*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
-IG_EXPORT void ignis_load_scene(int dev, SceneDatabase* dtb)
+IG_EXPORT void ignis_load_scene(int dev, DynTable* dtb)
 {
     auto assign = [&](const DynTableProxy& tbl) {
         DynTable devtbl;
@@ -1610,10 +1599,8 @@ IG_EXPORT void ignis_load_scene(int dev, SceneDatabase* dtb)
         return devtbl;
     };
 
-    auto& proxy   = sInterface->loadSceneDatabase(dev);
-    dtb->entities = assign(proxy.Entities);
-    dtb->shapes   = assign(proxy.Shapes);
-    dtb->bvhs     = assign(proxy.BVHs);
+    auto& proxy = sInterface->loadEntityTable(dev);
+    *dtb        = assign(proxy);
 }
 
 IG_EXPORT void ignis_load_scene_info(int dev, SceneInfo* info)
@@ -1621,7 +1608,7 @@ IG_EXPORT void ignis_load_scene_info(int dev, SceneInfo* info)
     *info = sInterface->loadSceneInfo(dev);
 }
 
-IG_EXPORT void ignis_load_custom_dyntable(int dev, const char* name, DynTable* dtb)
+IG_EXPORT void ignis_load_dyntable(int dev, const char* name, DynTable* dtb)
 {
     auto assign = [&](const DynTableProxy& tbl) {
         DynTable devtbl;
@@ -1633,7 +1620,7 @@ IG_EXPORT void ignis_load_custom_dyntable(int dev, const char* name, DynTable* d
         return devtbl;
     };
 
-    auto& proxy = sInterface->loadCustomDyntable(dev, name);
+    auto& proxy = sInterface->loadDyntable(dev, name);
     *dtb        = assign(proxy);
 }
 

@@ -8,5 +8,8 @@ struct TraversalShader {
     static std::string begin(const LoaderContext& ctx);
     /// Will close out the shader
     static std::string end();
+
+    static std::string setupPrimary(const LoaderContext& ctx);
+    static std::string setupSecondary(const LoaderContext& ctx);
 };
 } // namespace IG

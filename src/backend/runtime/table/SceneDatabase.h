@@ -9,15 +9,9 @@ struct SceneBVH {
     std::vector<uint8> Leaves;
 };
 
-struct PerPrimTypeDatabase {
-    DynTable ShapeTable;
-    DynTable BVHTable; // TODO: Single level bvh?
-    IG::SceneBVH SceneBVH;
-};
-
 struct SceneDatabase {
-    std::unordered_map<std::string_view, PerPrimTypeDatabase> PrimTypeDatabase;
-    std::unordered_map<std::string, DynTable> CustomTables;
+    std::unordered_map<std::string_view, SceneBVH> SceneBVHs;
+    std::unordered_map<std::string, DynTable> Tables;
 
     DynTable EntityTable;
 

@@ -449,6 +449,22 @@ bool Runtime::compileShaders()
         auto& shaders       = mTechniqueVariantShaderSets[i];
 
         IG_LOG(L_DEBUG) << "Handling technique variant " << i << std::endl;
+        IG_LOG(L_DEBUG) << "Compiling primary traversal shader" << std::endl;
+        shaders.PrimaryTraversalShader.Exec          = compileShader(variant.PrimaryTraversalShader.Exec, "ig_primary_traversal_shader", "v" + std::to_string(i) + "_primaryTraversal");
+        shaders.PrimaryTraversalShader.LocalRegistry = variant.PrimaryTraversalShader.LocalRegistry;
+        if (shaders.PrimaryTraversalShader.Exec == nullptr) {
+            IG_LOG(L_ERROR) << "Failed to compile primary traversal shader in variant " << i << "." << std::endl;
+            return false;
+        }
+
+        IG_LOG(L_DEBUG) << "Compiling secondary traversal shader" << std::endl;
+        shaders.SecondaryTraversalShader.Exec          = compileShader(variant.SecondaryTraversalShader.Exec, "ig_secondary_traversal_shader", "v" + std::to_string(i) + "_secondaryTraversal");
+        shaders.SecondaryTraversalShader.LocalRegistry = variant.SecondaryTraversalShader.LocalRegistry;
+        if (shaders.SecondaryTraversalShader.Exec == nullptr) {
+            IG_LOG(L_ERROR) << "Failed to compile secondary traversal shader in variant " << i << "." << std::endl;
+            return false;
+        }
+
         IG_LOG(L_DEBUG) << "Compiling ray generation shader" << std::endl;
         shaders.RayGenerationShader.Exec          = compileShader(variant.RayGenerationShader.Exec, "ig_ray_generation_shader", "v" + std::to_string(i) + "_rayGeneration");
         shaders.RayGenerationShader.LocalRegistry = variant.RayGenerationShader.LocalRegistry;

@@ -109,7 +109,7 @@ void AreaLight::serialize(const SerializationInput& input) const
                      << ");" << std::endl;
     } else if (input.Tree.context().Shapes->isTriShape(shape_id)) {
         const auto shape    = input.Tree.context().Shapes->getTriShape(shape_id);
-        size_t shape_offset = input.Tree.context().Database->PrimTypeDatabase.at("trimesh").ShapeTable.lookups()[shape_id].Offset; // TODO
+        size_t shape_offset = input.Tree.context().Database->Tables.at("trimesh_shapes").lookups()[shape_id].Offset; // TODO
 
         input.Stream << "  let ae_" << light_id << " = make_shape_area_emitter(" << inline_entity(entity, shape_id)
                      << ", device.load_specific_shape(" << shape.FaceCount << ", " << shape.VertexCount << ", " << shape.NormalCount << ", " << shape.TexCount << ", " << shape_offset << ", dtb.shapes));" << std::endl;

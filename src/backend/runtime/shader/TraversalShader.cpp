@@ -29,4 +29,21 @@ std::string TraversalShader::end()
     return "}";
 }
 
+std::string TraversalShader::setupPrimary(const LoaderContext& ctx)
+{
+    std::stringstream stream;
+    stream << begin(ctx);
+    // TODO
+    stream << end();
+    return stream.str();
+}
+
+std::string TraversalShader::setupSecondary(const LoaderContext& ctx)
+{
+    std::stringstream stream;
+    stream << begin(ctx);
+    // TODO
+    stream << end();
+    return stream.str();
+}
 } // namespace IG

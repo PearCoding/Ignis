@@ -154,6 +154,8 @@ set(SRC
   shader/ScriptPreprocessor.h
   shader/ShaderUtils.cpp
   shader/ShaderUtils.h
+  shader/TraversalShader.cpp
+  shader/TraversalShader.h
   shape/PlaneShape.h
   shape/Shape.h
   shape/ShapeProvider.h
