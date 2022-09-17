@@ -1,15 +1,10 @@
 $CURRENT=Get-Location
 
-# Change the following lines to fit your own system:
-# CHANGE AFTER THIS ----------------------------------
-$TBB_URL="https://github.com/oneapi-src/oneTBB/releases/download/v2021.5.0/oneapi-tbb-2021.5.0-win.zip"
-# NO CHANGE AFTER THIS -------------------------------
-
 cd "tmp"
 
 # Get zip
 if (!(Test-Path "tbb.zip")) {
-    Invoke-WebRequest -Uri "$TBB_URL" -OutFile "tbb.zip"
+    Invoke-WebRequest -Uri "$($Config.TBB_URL)" -OutFile "tbb.zip"
     Expand-Archive tbb.zip -DestinationPath .
 }
 

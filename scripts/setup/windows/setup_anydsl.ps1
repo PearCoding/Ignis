@@ -29,40 +29,41 @@ If (!(test-path "build")) {
 }
 cd "build"
 
+$BUILD_TYPE=$Config.AnyDSL_BUILD_TYPE
 # Setup cmake
-# cmake `
-#     -DRUNTIME_JIT=ON `
-#     -DBUILD_SHARED_LIBS=ON `
-#     -DCMAKE_BUILD_TYPE="Release" `
-#     -DAnyDSL_runtime_BUILD_SHARED=ON `
-#     -DAnyDSL_PKG_LLVM_AUTOBUILD=ON `
-#     -DAnyDSL_PKG_LLVM_VERSION="14.0.6" `
-#     -DAnyDSL_PKG_RV_TAG="origin/release/14.x" `
-#     -DAnyDSL_PKG_LLVM_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-14.0.6/llvm-project-14.0.6.src.tar.xz" `
-#     -DTHORIN_PROFILE=OFF `
-#     -DBUILD_SHARED_LIBS=OFF `
-#     -DCUDAToolkit_NVVM_LIBRARY="$CUDAToolkit_NVVM_LIBRARY" `
-#     -DZLIB_LIBRARY="$ZLIB_LIBRARY" `
-#     -DZLIB_INCLUDE_DIR="$ZLIB_INCLUDE_DIR" `
-#     ..
+cmake `
+    -DRUNTIME_JIT=ON `
+    -DBUILD_SHARED_LIBS=ON `
+    -DCMAKE_BUILD_TYPE="$BUILD_TYPE" `
+    -DAnyDSL_runtime_BUILD_SHARED=ON `
+    -DAnyDSL_PKG_LLVM_AUTOBUILD=ON `
+    -DAnyDSL_PKG_LLVM_VERSION="$($Config.AnyDSL_LLVM_VERSION)" `
+    -DAnyDSL_PKG_RV_TAG="$($Config.AnyDSL_RV_TAG)" `
+    -DAnyDSL_PKG_LLVM_URL="$($Config.AnyDSL_LLVM_URL)" `
+    -DTHORIN_PROFILE=OFF `
+    -DBUILD_SHARED_LIBS=OFF `
+    -DCUDAToolkit_NVVM_LIBRARY="$CUDAToolkit_NVVM_LIBRARY" `
+    -DZLIB_LIBRARY="$ZLIB_LIBRARY" `
+    -DZLIB_INCLUDE_DIR="$ZLIB_INCLUDE_DIR" `
+    ..
 
 # Build it
-# cmake --build . --config "Release" --target runtime runtime_jit_artic artic
+cmake --build . --config "$BUILD_TYPE" --target runtime runtime_jit_artic artic
 
 # Copy necessary stuff
 $ZLIB_DLL="$ZLIB\bin\zlib.dll"
 If (!(test-path $ZLIB_DLL)) {
     Write-Error 'The zlib dll could not be copied. You might have to copy it yourself'
 } Else {
-    cp $ZLIB_DLL "bin\Release\"
-    cp $ZLIB_DLL "_deps\llvm-build\Release\bin\"
+    cp $ZLIB_DLL "bin\$BUILD_TYPE\"
+    cp $ZLIB_DLL "_deps\llvm-build\$BUILD_TYPE\bin\"
 }
 
 If (!(test-path $CUDA)) {
-    cp "$CUDA\nvvm\bin\nvvm*.dll" "bin\Release\"
+    cp "$CUDA\nvvm\bin\nvvm*.dll" "bin\$BUILD_TYPE\"
 }
 
 # Copy to parent dir if necessary
-Copy-Item -Exclude "artic.exe" -Path ".\bin\Release\*" -Destination "$BIN_ROOT\"
+Copy-Item -Exclude "artic.exe" -Path ".\bin\$BUILD_TYPE\*" -Destination "$BIN_ROOT\"
 
 cd $CURRENT

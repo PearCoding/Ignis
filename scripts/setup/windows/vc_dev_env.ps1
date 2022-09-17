@@ -1,25 +1,15 @@
 $CURRENT=Get-Location
 
 # Get VC location
-$VC_ROOT="C:\Program Files\Microsoft Visual Studio\2022"
-If (!(test-path $VC_ROOT)) {
-    $VC_ROOT="C:\Program Files (x86)\Microsoft Visual Studio\2019"
-}
+$VsWherePath = "`"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe`""
+$VsData = Invoke-Expression "& $VsWherePath $whereArgs -format json" | ConvertFrom-Json
 
-$VC="$VC_ROOT\Community\"
-If (!(test-path $VC)) {
-    $VC="$VC_ROOT\Professional\"
-    If (!(test-path $VC)) {
-        $VC="$VC_ROOT\Enterprise\"
-    }
-}
-
-# Check for some possible mistakes beforehand
+$VC=$VsData.installationPath
 If (!(test-path $VC)) {
     throw 'The VC directory is not valid'
 }
 
 # Setup dev environment
-& $VC\Common7\Tools\Launch-VsDevShell.ps1
+& $VC\Common7\Tools\Launch-VsDevShell.ps1 -Arch amd64
 
 cd $CURRENT
