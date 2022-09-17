@@ -1,6 +1,7 @@
 #include "ShaderUtils.h"
 #include "loader/LoaderBSDF.h"
 #include "loader/LoaderLight.h"
+#include "loader/LoaderShape.h"
 #include "loader/LoaderTechnique.h"
 #include "loader/LoaderUtils.h"
 
@@ -48,9 +49,28 @@ std::string ShaderUtils::constructDevice(Target target)
 std::string ShaderUtils::generateDatabase()
 {
     std::stringstream stream;
-    stream << "  let dtb      = device.load_scene_database();" << std::endl
-           << "  let shapes   = device.load_shape_table(dtb.shapes); maybe_unused(shapes);" << std::endl
-           << "  let entities = device.load_entity_table(dtb.entities); maybe_unused(entities);" << std::endl;
+    stream << "  let entities = load_entity_table(device); maybe_unused(entities);" << std::endl;
+    return stream.str();
+}
+
+std::string ShaderUtils::generateShapeLookup(const LoaderContext& ctx, const std::string_view& entity_id)
+{
+    IG_UNUSED(entity_id);
+
+    std::vector<ShapeProvider*> provs;
+    provs.reserve(ctx.Shapes->providers().size());
+    for (const auto& p : ctx.Shapes->providers())
+        provs.emplace_back(p.second.get());
+
+    std::stringstream stream;
+    stream << "  let shapes = load_shape_table(device, @|type_id, data| { match type_id {" << std::endl;
+
+    for (size_t i = 0; i < provs.size() - 1; ++i)
+        stream << "    " << provs.at(i)->id() << " => " << provs.at(i)->generateShapeCode(ctx) << "," << std::endl;
+
+    stream << "    _ => " << provs.back()->generateShapeCode(ctx) << std::endl;
+    stream << "  }});" << std::endl;
+
     return stream.str();
 }
 

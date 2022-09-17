@@ -22,12 +22,6 @@ struct MapTable {
     entries: &[MapEntry], // Pointer to an array of lookup entries
 }
 
-struct SceneDatabase {
-    shapes:   DynTable,
-    entities: DynTable,
-    bvhs:     DynTable
-}
-
 // Essentially the scene for shading. No bvh information used
 // We could drop most shape and entity information as well
 // if area lights are handled differently (in the future)

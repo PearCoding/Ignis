@@ -38,7 +38,7 @@ fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_an
 }
 
 fn @load_simple_spot_lights(count: i32, id_off: i32, device: Device) -> LightTable {
-    let tbl = device.load_custom_dyntable("SimpleSpotLight");
+    let tbl = device.load_dyntable("SimpleSpotLight");
     let acc = device.get_device_buffer_accessor();
 
     let elem_s = 12 * sizeof[f32]() as u64; // See SpotLight.cpp

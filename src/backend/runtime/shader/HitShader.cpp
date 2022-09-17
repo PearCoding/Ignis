@@ -28,6 +28,9 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
 
     stream << ShaderUtils::generateDatabase() << std::endl;
 
+    stream << "  let entity = entities(entity_id);" << std::endl;
+    stream << ShaderUtils::generateShapeLookup(ctx, "entity_id");
+
     ShadingTree tree(ctx);
     const bool requireLights = ctx.CurrentTechniqueVariantInfo().UsesLights;
     if (requireLights)
@@ -37,18 +40,6 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
     if (requireMedia)
         stream << LoaderMedium::generate(tree) << std::endl;
 
-    stream << "  let acc  = SceneAccessor {" << std::endl
-           << "    info     = " << LoaderUtils::inlineSceneInfo(ctx) << "," << std::endl
-           << "    shapes   = shapes," << std::endl
-           << "    entities = entities," << std::endl
-           << "  };" << std::endl
-           << std::endl;
-
-    stream << "  let scene = Scene {" << std::endl
-           << "    info     = acc.info," << std::endl
-           << "    database = acc" << std::endl
-           << "  };" << std::endl
-           << std::endl;
 
     stream << ShaderUtils::generateMaterialShader(tree, mat_id, requireLights, "shader") << std::endl;
 
@@ -63,7 +54,7 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
            << std::endl;
 
     stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_hit_shader(entity_id, shader, scene, technique, first, last, spi, use_framebuffer);" << std::endl
+           << "  device.handle_hit_shader(entity, shape, shader, technique, first, last, spi, use_framebuffer);" << std::endl
            << "}" << std::endl;
 
     return stream.str();

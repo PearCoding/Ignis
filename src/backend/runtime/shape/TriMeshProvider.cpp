@@ -260,6 +260,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     shape.TexCount    = mesh.texcoords.size();
     shape.FaceCount   = mesh.faceCount();
     shape.Area        = mesh.computeArea();
+    shape.BvhID       = ctx.Database->Tables["trimesh_primbvh"].entryCount();
     ctx.Shapes->addTriShape(id, shape);
 
     IG_ASSERT(mesh.face_normals.size() == mesh.faceCount(), "Expected valid face normals!");
@@ -269,8 +270,8 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
 
     mDtbMutex.lock();
-    auto& shapeTable = result.Database.Tables["trimesh_shapes"];
-    auto& meshData   = shapeTable.addLookup(0, 0, DefaultAlignment);
+    auto& shapeTable = result.Database.Shapes;
+    auto& meshData   = shapeTable.addLookup(this->id(), 0, DefaultAlignment);
     VectorSerializer meshSerializer(meshData, false);
     meshSerializer.write((uint32)mesh.faceCount());
     meshSerializer.write((uint32)mesh.vertices.size());
@@ -293,8 +294,16 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     }
 }
 
+std::string TriMeshProvider::generateShapeCode(const LoaderContext& ctx)
+{
+    IG_UNUSED(ctx);
+    return "make_trimesh_shape(load_trimesh(data))";
+}
+
 std::string TriMeshProvider::generateTraversalCode(LoaderContext& ctx)
 {
-    return {};
+    std::stringstream stream;
+    stream << "  let shapes = device.load_dyntable(\"trimesh_shapes\");";
+    return stream.str();
 }
 } // namespace IG

@@ -36,8 +36,10 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
     const auto start1 = std::chrono::high_resolution_clock::now();
 
+    auto& entityTable = result.Database.Tables["entities"];
+    entityTable.reserve(ctx.Scene.entities().size() * 48);
+
     std::unordered_map<ShapeProvider*, std::vector<EntityObject>> in_objs;
-    result.Database.EntityTable.reserve(ctx.Scene.entities().size() * 48);
     for (const auto& pair : ctx.Scene.entities()) {
         const auto child = pair.second;
 
@@ -142,7 +144,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         const float scaleFactor                         = std::abs(toGlobalNormal.determinant());
 
         // Write data to dyntable
-        auto& entityData = result.Database.EntityTable.addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
+        auto& entityData = entityTable.addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
         VectorSerializer entitySerializer(entityData, false);
         entitySerializer.write(toLocal, true);        // To Local
         entitySerializer.write(toGlobal, true);       // To Global

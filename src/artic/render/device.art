@@ -46,22 +46,16 @@ struct Device {
     get_device_buffer_accessor: fn () -> DeviceBufferAccessor,
 
     //------------------------------------- Geometry
-    // [Internal] Load the full scene bvh
-    load_scene_bvh: fn () -> SceneBvh,
-
-    // [Internal] Load the whole scene database
-    load_scene_database: fn () -> SceneDatabase,
+    // [Internal] Load the full scene bvh for a specific prim type
+    load_scene_bvh: fn (&[u8]) -> SceneBvh,
 
     // Load dynamic scene information
     // If possible, a constant scene information should be used instead
     // This is only useful for dynamic shaders
     load_scene_info: fn () -> SceneInfo,
 
-    // [Internal] Load all entities as a dynamic table
-    load_entity_table: fn (DynTable) -> EntityTable,
-
     // [Internal] Load a specific dyntable constructed in the loading process
-    load_custom_dyntable: fn (&[u8] /* Filename */) -> DynTable,
+    load_dyntable: fn (&[u8] /* Filename */) -> DynTable,
 
     // [Internal] Will load the rays given in 'tracing' mode
     load_rays: fn () -> &[StreamRay],

@@ -22,13 +22,13 @@ fn ig_render(_settings: &Settings) -> () {
     let mut node8 : &[Node8];
     let mut entityleaf : &[EntityLeaf1];
     
-    ignis_load_bvh2_ent(0, &mut node2, &mut entityleaf);
-    ignis_load_bvh4_ent(0, &mut node4, &mut entityleaf);
-    ignis_load_bvh8_ent(0, &mut node8, &mut entityleaf);
+    ignis_load_bvh2_ent(0, "", &mut node2, &mut entityleaf);
+    ignis_load_bvh4_ent(0, "", &mut node4, &mut entityleaf);
+    ignis_load_bvh8_ent(0, "", &mut node8, &mut entityleaf);
 
     // Force the export
-    let mut dtb : SceneDatabase;
-    ignis_load_scene(0, &mut dtb);
+    let mut tbl : DynTable;
+    ignis_load_dyntable(0, "", &mut tbl);
 
     let mut info : SceneInfo;
     ignis_load_scene_info(0, &mut info);
@@ -43,7 +43,7 @@ fn ig_ray_generation_shader(_settings: &Settings, _iter: i32, _id: &mut i32, _si
 }
 
 #[export]
-fn ig_traversal_shader(settings: &Settings, iter: i32, size: i32) -> () {
+fn ig_traversal_shader(_settings: &Settings, _iter: i32, _size: i32) -> () {
 }
 
 #[export]

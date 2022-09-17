@@ -96,7 +96,7 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
 fn @gpu_hit_shade( acc: Accelerator
              , shader: MaterialShader
              , scene: Scene
-             , path_tracer: Technique
+             , technique: Technique
              , accumulate: FilmAccumulator
              , primary: PrimaryStream
              , secondary: SecondaryStream
@@ -136,12 +136,12 @@ fn @gpu_hit_shade( acc: Accelerator
         
         let ctx    = make_surface_shading_context(ent_id, pixel, ray, hit, glb_surf);
         let mat    = @shader(ctx);
-        let on_hit = path_tracer.on_hit;
+        let on_hit = technique.on_hit;
         if let Option[Color]::Some(color) = @on_hit(ctx, payload, mat) {
             accumulate(pixel, color);
         }
 
-        let on_shadow = path_tracer.on_shadow;
+        let on_shadow = technique.on_shadow;
         match @on_shadow(ctx, &mut rnd, payload, mat) {
             ShadowRay::Simple(new_ray, color) => {
                 write_secondary_ray(ray_id, 0, new_ray);
@@ -164,7 +164,7 @@ fn @gpu_hit_shade( acc: Accelerator
             }
         }
 
-        let on_bounce = path_tracer.on_bounce;
+        let on_bounce = technique.on_bounce;
         if let Option[(Ray, RayPayload)]::Some(new_ray, new_payload) = @on_bounce(ctx, &mut rnd, payload, mat) {
             write_primary_ray(ray_id, 0, new_ray);
             write_primary_rnd_state(ray_id, 0, rnd);
@@ -181,7 +181,7 @@ fn @gpu_hit_shade_handler(dev_id: i32
                         , entity_id: i32
                         , shader: MaterialShader
                         , scene: Scene
-                        , path_tracer: Technique
+                        , technique: Technique
                         , begin: i32
                         , end: i32
                         , spi: i32
@@ -194,12 +194,12 @@ fn @gpu_hit_shade_handler(dev_id: i32
     ignis_gpu_get_first_secondary_stream_const(dev_id, &mut secondary);
 
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_hit_shade(acc, shader, scene, path_tracer, accumulate, primary, secondary, begin, end, entity_id);
+    gpu_hit_shade(acc, shader, scene, technique, accumulate, primary, secondary, begin, end, entity_id);
 }
 
 // Shade nonhits
 fn @gpu_miss_shade( acc: Accelerator
-                , path_tracer: Technique
+                , technique: Technique
                 , accumulate: FilmAccumulator
                 , primary: PrimaryStream
                 , first: i32, last: i32) -> () {
@@ -208,7 +208,7 @@ fn @gpu_miss_shade( acc: Accelerator
     let read_primary_ray     = make_ray_stream_reader(primary.rays, 1);
     let read_primary_payload = make_primary_stream_payload_reader(primary, 1);
 
-    let on_miss = path_tracer.on_miss;
+    let on_miss = technique.on_miss;
     gpu_exec_1d(acc, n, 64, |work_item| {
         let ray_id = first + work_item.gidx();
         if ray_id >= last {
@@ -230,7 +230,7 @@ fn @gpu_miss_shade( acc: Accelerator
 fn @gpu_miss_shade_handler(dev_id: i32
                          , acc: Accelerator
                          , atomics: Atomics
-                         , path_tracer: Technique
+                         , technique: Technique
                          , begin: i32
                          , end: i32
                          , spi: i32
@@ -241,14 +241,14 @@ fn @gpu_miss_shade_handler(dev_id: i32
     ignis_gpu_get_first_primary_stream_const(dev_id, &mut primary);
 
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_miss_shade(acc, path_tracer, accumulate, primary, begin, end);
+    gpu_miss_shade(acc, technique, accumulate, primary, begin, end);
 }
 
 // Handle advanced shadows
 fn @gpu_advanced_shadow(is_hit: bool
                       , acc: Accelerator
                       , shader: MaterialShader
-                      , path_tracer: Technique
+                      , technique: Technique
                       , accumulate: FilmAccumulator
                       , secondary: SecondaryStream
                       , first: i32, last: i32) -> () {
@@ -257,8 +257,8 @@ fn @gpu_advanced_shadow(is_hit: bool
     let read_secondary_ray   = make_ray_stream_reader(secondary.rays, 1);
     let read_secondary_color = make_secondary_stream_color_reader(secondary, 1);
 
-    let on_miss  = path_tracer.on_shadow_miss;
-    let on_hit   = path_tracer.on_shadow_hit;
+    let on_miss  = technique.on_shadow_miss;
+    let on_hit   = technique.on_shadow_hit;
     let callback = if is_hit { on_hit } else { on_miss };
 
     gpu_exec_1d(acc, n, 64, |work_item| {
@@ -279,7 +279,7 @@ fn @gpu_advanced_shadow_handler(dev_id: i32
                               , acc: Accelerator
                               , atomics: Atomics
                               , shader: MaterialShader
-                              , path_tracer: Technique
+                              , technique: Technique
                               , begin: i32
                               , end: i32
                               , spi: i32
@@ -291,7 +291,7 @@ fn @gpu_advanced_shadow_handler(dev_id: i32
     ignis_gpu_get_first_secondary_stream_const(dev_id, &mut secondary);
 
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_advanced_shadow(is_hit, acc, shader, path_tracer, accumulate, secondary, begin, end);
+    gpu_advanced_shadow(is_hit, acc, shader, technique, accumulate, secondary, begin, end);
 }
 
 fn @gpu_copy_ray( rays: RayStream
@@ -681,10 +681,10 @@ fn @gpu_trace( dev_id: i32
         acc.sync();
 
         if likely(first > 0) {
+            pipeline.on_traverse_secondary(secondary.size);
+
             // Trace secondary rays
-            if work_info.advanced_shadows {
-                pipeline.on_traverse_secondary(secondary.size, true);
-                
+            if work_info.advanced_shadows {                
                 // Secondary stream is modified, sort it to have valid shadows first, invalids last
                 let (valid_count, count) = gpu_sort_secondary(secondary, other_secondary, dev_id, acc, atomics, gpu_tmp);
                 gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
@@ -699,9 +699,7 @@ fn @gpu_trace( dev_id: i32
                     pipeline.on_advanced_shadow(0, valid_count, count, true);
                 }
                 acc.sync();
-            } else if work_info.advanced_shadows {
-                pipeline.on_traverse_secondary(secondary.size, true);
-                
+            } else if work_info.advanced_shadows {                
                 // Secondary stream is modified, sort it to have valid shadows first, invalids last
                 let (valid_count, count) = gpu_sort_secondary_with_materials(secondary, other_secondary, dev_id, acc, atomics, scene_info, gpu_tmp, temp.ray_begins, temp.ray_ends);
                 gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
@@ -729,8 +727,6 @@ fn @gpu_trace( dev_id: i32
                     }
                 }
                 acc.sync();
-            } else {
-                pipeline.on_traverse_secondary(secondary.size, false);
             }
             stats::add_quantity(stats::Quantity::ShadowRayCount, secondary.size);
 
@@ -809,14 +805,14 @@ fn @make_gpu_device( dev_id: i32
         let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
         gpu_traverse_secondary(secondary, scene_geometry, size, min_max, acc, accumulate, is_advanced);
     },
-    handle_miss_shader = @ | path_tracer, first, last, spi, use_framebuffer | {
-        gpu_miss_shade_handler(dev_id, acc, atomics, path_tracer, first, last, spi, use_framebuffer);
+    handle_miss_shader = @ | technique, first, last, spi, use_framebuffer | {
+        gpu_miss_shade_handler(dev_id, acc, atomics, technique, first, last, spi, use_framebuffer);
     },
-    handle_hit_shader = @ | entity_id, shader, scene, path_tracer, first, last, spi, use_framebuffer | {
-        gpu_hit_shade_handler(dev_id, acc, atomics, entity_id, shader, scene, path_tracer, first, last, spi, use_framebuffer);
+    handle_hit_shader = @ | entity_id, shader, scene, technique, first, last, spi, use_framebuffer | {
+        gpu_hit_shade_handler(dev_id, acc, atomics, entity_id, shader, scene, technique, first, last, spi, use_framebuffer);
     },
-    handle_advanced_shadow_shader = @ | shader, path_tracer, first, last, spi, use_framebuffer, is_hit | {
-        gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, path_tracer, first, last, spi, use_framebuffer, is_hit);
+    handle_advanced_shadow_shader = @ | shader, technique, first, last, spi, use_framebuffer, is_hit | {
+        gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, technique, first, last, spi, use_framebuffer, is_hit);
     },
     sync = @ || acc.sync(),
     parallel_range = @ |body| {
@@ -852,26 +848,20 @@ fn @make_gpu_device( dev_id: i32
     parallel_reduce_i32 = @|n, elem, op| gpu_handle_device_reduce[i32](dev_id, acc, n, elem, op),
     parallel_reduce_f32 = @|n, elem, op| gpu_handle_device_reduce[f32](dev_id, acc, n, elem, op),
     get_device_buffer_accessor = @|| accb,
-    load_scene_bvh = @|| {
+    load_scene_bvh = @|prim_type| {
         let mut nodes: &[Node2];
         let mut objs:  &[EntityLeaf1];
-        ignis_load_bvh2_ent(dev_id, &mut nodes, &mut objs);
+        ignis_load_bvh2_ent(dev_id, prim_type, &mut nodes, &mut objs);
         make_gpu_bvh2_ent(nodes, objs, is_nvvm)
-    },
-    load_scene_database = @|| {
-        let mut database: SceneDatabase;
-        ignis_load_scene(dev_id, &mut database);
-        database
     },
     load_scene_info = @|| {
         let mut info: SceneInfo;
         ignis_load_scene_info(dev_id, &mut info);
         info
     },
-    load_entity_table   = @ |dtb| make_entity_table(dtb, accb),
-    load_custom_dyntable  = @ |name| -> DynTable {
+    load_dyntable = @ |name| -> DynTable {
         let mut table: DynTable;
-        ignis_load_custom_dyntable(dev_id, name, &mut table);
+        ignis_load_dyntable(dev_id, name, &mut table);
         table
     },
     load_image = @ |filename, channel_count| {

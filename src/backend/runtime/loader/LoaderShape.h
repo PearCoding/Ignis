@@ -37,6 +37,8 @@ public:
     void addTriShape(uint32 id, const TriShape& shape);
     void addPlaneShape(uint32 id, const PlaneShape& shape);
 
+    [[nodiscard]] inline const std::unordered_map<std::string, std::unique_ptr<ShapeProvider>>& providers() const { return mShapeProviders; }
+
 private:
     std::unordered_map<std::string, std::unique_ptr<ShapeProvider>> mShapeProviders;
 

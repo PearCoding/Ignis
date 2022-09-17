@@ -8,6 +8,8 @@
 namespace IG {
 enum class ShaderType {
     Device,
+    PrimaryTraversal,
+    SecondaryTraversal,
     RayGeneration,
     Hit,
     Miss,
@@ -112,6 +114,8 @@ private:
     };
 
     ShaderStats mDeviceStats;
+    ShaderStats mPrimaryTraversalStats;
+    ShaderStats mSecondaryTraversalStats;
     ShaderStats mRayGenerationStats;
     ShaderStats mMissStats;
     std::map<size_t, ShaderStats> mHitStats;

@@ -13,8 +13,8 @@ fn ig_render(settings: &Settings) -> () {
         on_traverse_primary = @ | size | -> () {
             ignis_handle_traverse_primary(device.id, size)
         },
-        on_traverse_secondary = @ | size, is_advanced | -> () {
-            ignis_handle_traverse_secondary(device.id, size, is_advanced)
+        on_traverse_secondary = @ | size | -> () {
+            ignis_handle_traverse_secondary(device.id, size)
         },
         on_miss_shade = @ | first, last | {
             ignis_handle_miss_shader(device.id, first, last);

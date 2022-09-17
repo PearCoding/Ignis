@@ -357,7 +357,7 @@ fn @cpu_traverse_secondary(scene: SceneGeometry, size: i32, min_max: MinMax, sin
 }
 
 // Hit shader ------------------------------------------------------------------
-fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: MaterialShader, scene: Scene, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &SecondaryStream, shader: MaterialShader, scene: Scene, technique: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_shade_specialized(entity_id2: i32, primary2: &PrimaryStream, secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
@@ -372,9 +372,9 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
         
         let entities  = scene.database.entities;
         let shapes    = scene.database.shapes;
-        let on_hit    = path_tracer.on_hit;
-        let on_shadow = path_tracer.on_shadow;
-        let on_bounce = path_tracer.on_bounce;
+        let on_hit    = technique.on_hit;
+        let on_shadow = technique.on_shadow;
+        let on_bounce = technique.on_bounce;
         let entity    = entities(entity_id2);
         let shape     = shapes(entity.shape_id);
         for i, r_vector_width in vectorized_range(vector_width, begin2, end2) {
@@ -390,7 +390,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             let glb_surf  = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
             
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
-            let ctx       = make_surface_shading_context(entity_id2, pixel, ray, hit, glb_surf);
+            let ctx       = make_surface_shading_context(entity.id, pixel, ray, hit, glb_surf);
             let mat       = @shader(ctx);
             let hit_color = if let Option[Color]::Some(color) = @on_hit(ctx, payload, mat) { color } else { color_builtins::black };
             
@@ -442,7 +442,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
     $cpu_shade_specialized(entity_id, primary, secondary, begin, end);
 }
 
-fn @cpu_hit_shade_handler(entity_id: i32, shader: MaterialShader, scene: Scene, path_tracer: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, vector_width: i32) -> () {
+fn @cpu_hit_shade_handler(entity_id: i32, shader: MaterialShader, scene: Scene, technique: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut primary : PrimaryStream;
@@ -451,18 +451,18 @@ fn @cpu_hit_shade_handler(entity_id: i32, shader: MaterialShader, scene: Scene, 
     ignis_cpu_get_secondary_stream_const(&mut secondary);
 
     let accumulator = if !use_framebuffer { make_null_accumulator() } else { make_standard_accumulator(film_pixels, spi) };
-    cpu_hit_shade(entity_id, primary, secondary, shader, scene, path_tracer, accumulator, begin, end, vector_width);
+    cpu_hit_shade(entity_id, primary, secondary, shader, scene, technique, accumulator, begin, end, vector_width);
 }
 
 // Miss shader ------------------------------------------------------------------
-fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_miss_shade(primary: &PrimaryStream, technique: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_miss_shade_specialized(primary2: &PrimaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
         let read_primary_ray     = make_ray_stream_reader(primary2.rays, 1);
         let read_primary_payload = make_primary_stream_payload_reader(*primary2, 1);
         
-        let on_miss = path_tracer.on_miss;
+        let on_miss = technique.on_miss;
 
         for i, r_vector_width in vectorized_range(vector_width, begin2, end2) {
             let ray     = read_primary_ray(i, 0);
@@ -491,26 +491,26 @@ fn @cpu_miss_shade(primary: &PrimaryStream, path_tracer: Technique, accumulate: 
     $cpu_miss_shade_specialized(primary, begin, end);
 }
 
-fn @cpu_miss_shade_handler(path_tracer: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, vector_width: i32) -> () {
+fn @cpu_miss_shade_handler(technique: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut primary : PrimaryStream;
     ignis_cpu_get_primary_stream_const(&mut primary);
 
     let accumulator = if !use_framebuffer { make_null_accumulator() } else { make_standard_accumulator(film_pixels, spi) };
-    cpu_miss_shade(primary, path_tracer, accumulator, begin, end, vector_width);
+    cpu_miss_shade(primary, technique, accumulator, begin, end, vector_width);
 }
 
 // Advanced shadow shader ------------------------------------------------------------------
-fn @cpu_advanced_shadow(is_hit: bool, shader: MaterialShader, secondary: &SecondaryStream, path_tracer: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
+fn @cpu_advanced_shadow(is_hit: bool, shader: MaterialShader, secondary: &SecondaryStream, technique: Technique, accumulate: FilmAccumulator, begin: i32, end: i32, vector_width: i32) -> () {
     fn cpu_advanced_shadow_specialized(secondary2: &SecondaryStream, begin2: i32, end2: i32) -> () {
         if begin == end { return() }
 
         let read_secondary_ray   = make_ray_stream_reader(secondary2.rays, 1);
         let read_secondary_color = make_secondary_stream_color_reader(*secondary2, 1);
         
-        let on_hit  = path_tracer.on_shadow_hit;
-        let on_miss = path_tracer.on_shadow_miss;
+        let on_hit  = technique.on_shadow_hit;
+        let on_miss = technique.on_shadow_miss;
 
         let callback = if is_hit { on_hit } else { on_miss };
 
@@ -538,14 +538,14 @@ fn @cpu_advanced_shadow(is_hit: bool, shader: MaterialShader, secondary: &Second
     $cpu_advanced_shadow_specialized(secondary, begin, end);
 }
 
-fn @cpu_advanced_shadow_handler(shader: MaterialShader, path_tracer: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
+fn @cpu_advanced_shadow_handler(shader: MaterialShader, technique: Technique, begin: i32, end: i32, spi: i32, use_framebuffer: bool, is_hit: bool, vector_width: i32) -> () {
     let (film_pixels, _, _) = cpu_get_film_data();
 
     let mut secondary : SecondaryStream;
     ignis_cpu_get_secondary_stream_const(&mut secondary);
 
     let accumulator = if !use_framebuffer { make_null_accumulator() } else { make_standard_accumulator(film_pixels, spi) };
-    cpu_advanced_shadow(is_hit, shader, secondary, path_tracer, accumulator, begin, end, vector_width);
+    cpu_advanced_shadow(is_hit, shader, secondary, technique, accumulator, begin, end, vector_width);
 }
 
 // Framebuffer & AOVs ------------------------------------------------------------------
@@ -667,7 +667,7 @@ fn @cpu_trace( scene_info: SceneInfo
                 // Compact and trace secondary rays
                 secondary.size = cpu_compact_secondary(secondary, vector_width, vector_compact);
                 if likely(secondary.size > 0) {
-                    pipeline.on_traverse_secondary(secondary.size, work_info.advanced_shadows || work_info.advanced_shadows_with_materials);
+                    pipeline.on_traverse_secondary(secondary.size);
                     stats::add_quantity(stats::Quantity::ShadowRayCount, secondary.size);
 
                     // Add the contribution for secondary rays to the frame buffer
@@ -753,14 +753,14 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     handle_traversal_secondary = @ | scene_geometry, size, _is_advanced, _spi, _use_framebuffer | {
         cpu_traverse_secondary(scene_geometry, size, min_max, single, vector_width);
     },
-    handle_miss_shader = @ | path_tracer, first, last, spi, use_framebuffer | {
-        cpu_miss_shade_handler(path_tracer, first, last, spi, use_framebuffer, vector_width);
+    handle_miss_shader = @ | technique, first, last, spi, use_framebuffer | {
+        cpu_miss_shade_handler(technique, first, last, spi, use_framebuffer, vector_width);
     },
-    handle_hit_shader = @ | entity_id, shader, scene, path_tracer, first, last, spi, use_framebuffer | {
-        cpu_hit_shade_handler(entity_id, shader, scene, path_tracer, first, last, spi, use_framebuffer, vector_width);
+    handle_hit_shader = @ | entity_id, shader, scene, technique, first, last, spi, use_framebuffer | {
+        cpu_hit_shade_handler(entity_id, shader, scene, technique, first, last, spi, use_framebuffer, vector_width);
     },
-    handle_advanced_shadow_shader = @ | shader, path_tracer, first, last, spi, use_framebuffer, is_hit | {
-        cpu_advanced_shadow_handler(shader, path_tracer, first, last, spi, use_framebuffer, is_hit, vector_width);
+    handle_advanced_shadow_shader = @ | shader, technique, first, last, spi, use_framebuffer, is_hit | {
+        cpu_advanced_shadow_handler(shader, technique, first, last, spi, use_framebuffer, is_hit, vector_width);
     },
     sync    = @ || {},
     parallel_range = @ |body| {
@@ -784,33 +784,27 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     parallel_reduce_i32 = @|n, elem, op| cpu_reduce[i32](n, elem, op),
     parallel_reduce_f32 = @|n, elem, op| cpu_reduce[f32](n, elem, op),
     get_device_buffer_accessor = @|| { @|ptr| make_cpu_buffer(ptr, 0) },
-    load_scene_bvh = @ || {
+    load_scene_bvh = @ |prim_type| {
         if vector_width >= 8 {
             let mut nodes: &[Node8];
             let mut objs: &[EntityLeaf1];
-            ignis_load_bvh8_ent(0, &mut nodes, &mut objs);
+            ignis_load_bvh8_ent(0, prim_type, &mut nodes, &mut objs);
             make_cpu_bvh8_ent(nodes, objs)
         } else {
             let mut nodes: &[Node4];
             let mut objs: &[EntityLeaf1];
-            ignis_load_bvh4_ent(0, &mut nodes, &mut objs);
+            ignis_load_bvh4_ent(0, prim_type, &mut nodes, &mut objs);
             make_cpu_bvh4_ent(nodes, objs)
         }
-    },
-    load_scene_database = @ || {
-        let mut database: SceneDatabase;
-        ignis_load_scene(0, &mut database);
-        database
     },
     load_scene_info = @ || {
         let mut info: SceneInfo;
         ignis_load_scene_info(0, &mut info);
         info
     },
-    load_entity_table    = @ |dtb| make_entity_table(dtb, @|ptr| make_cpu_buffer(ptr, 0)),
-    load_custom_dyntable = @ |name| -> DynTable {
+    load_dyntable = @ |name| -> DynTable {
         let mut table: DynTable;
-        ignis_load_custom_dyntable(0, name, &mut table);
+        ignis_load_dyntable(0, name, &mut table);
         table
     },
     load_image = @ |filename, channel_count| {

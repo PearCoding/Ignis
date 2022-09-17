@@ -2,7 +2,7 @@ struct Pipeline {
     on_generate: fn ( &mut i32, i32, i32, i32, i32, i32) -> i32,
 
     on_traverse_primary:   fn (i32) -> (),
-    on_traverse_secondary: fn (i32, bool) -> (),
+    on_traverse_secondary: fn (i32) -> (),
 
     on_miss_shade:      fn (i32, i32) -> (),
     on_hit_shade:       fn (i32, i32, i32) -> (),

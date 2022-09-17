@@ -68,7 +68,7 @@ fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
 
 type TriMeshTable  = fn (i32) -> TriMesh;
 
-fn @make_shape_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32, data: DeviceBuffer) -> TriMesh {
+fn @make_trimesh_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32, data: DeviceBuffer) -> TriMesh {
     let v_start   = 4;
     let n_start   = v_start   + num_verts * 4;
     let fn_start  = n_start   + num_norms * 4;
@@ -87,25 +87,15 @@ fn @make_shape_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, num_te
     }
 }
 
-fn @load_specific_shape_from_table(num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32,
+fn @load_specific_trimesh_from_table(num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32,
                                    offset: i32, dtb: DynTable, acc: DeviceBufferAccessor) -> TriMesh {
     let data  = get_table_entry(offset as u64, dtb, acc);
-    make_shape_from_buffer(num_face, num_verts, num_norms, num_tex, data)
+    make_trimesh_from_buffer(num_face, num_verts, num_norms, num_tex, data)
 }
 
-fn @make_trimesh_table(dtb: DynTable, acc: DeviceBufferAccessor) -> TriMeshTable {
-    @ |id| {
-        let entry = get_lookup_entry(id as u64, dtb, acc);
-        let data  = get_table_entry(entry.offset, dtb, acc);
-
-        let (num_face, num_verts, num_norms, num_tex) = data.load_int4(0);
-        
-        make_shape_from_buffer(num_face, num_verts, num_norms, num_tex, data)
-    } 
-}
-
-fn @map_trimesh_to_shape_table(tbl: TriMeshTable) -> ShapeTable {
-    @ |id| make_trimesh_shape(tbl(id))
+fn @load_trimesh(data: DeviceBuffer) -> TriMesh {
+    let (num_face, num_verts, num_norms, num_tex) = data.load_int4(0);
+    make_trimesh_from_buffer(num_face, num_verts, num_norms, num_tex, data)
 }
 
 // ----------------------------------- Intersection stuff

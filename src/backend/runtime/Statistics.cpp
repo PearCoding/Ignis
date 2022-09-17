@@ -210,6 +210,8 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
     table.addRow({ "Statistics:" });
     table.addRow({ "  Shader:" });
     dumpStats("  |-Device", mDeviceStats);
+    dumpStats("  |-PrimaryTraversal", mPrimaryTraversalStats);
+    dumpStats("  |-SecondaryTraversal", mSecondaryTraversalStats);
     dumpStats("  |-RayGeneration", mRayGenerationStats);
     dumpStats("  |-Miss", mMissStats);
     dumpStats("  |-Hits", totalHits);
@@ -277,6 +279,10 @@ Statistics::ShaderStats* Statistics::getStats(ShaderType type, size_t id)
     default:
     case ShaderType::Device:
         return &mDeviceStats;
+    case ShaderType::PrimaryTraversal:
+        return &mPrimaryTraversalStats;
+    case ShaderType::SecondaryTraversal:
+        return &mSecondaryTraversalStats;
     case ShaderType::RayGeneration:
         return &mRayGenerationStats;
     case ShaderType::Miss:

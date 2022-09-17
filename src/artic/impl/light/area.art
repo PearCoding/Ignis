@@ -232,7 +232,7 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
 }
 
 fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, meshes: TriMeshTable) -> LightTable {
-    let tbl = device.load_custom_dyntable("SimpleAreaLight");
+    let tbl = device.load_dyntable("SimpleAreaLight");
     let acc = device.get_device_buffer_accessor();
 
     let elem_s = 40 * sizeof[f32]() as u64; // See AreaLight.cpp (non-optimized)
@@ -246,6 +246,7 @@ fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, meshes: Tri
             let global_mat = data.load_mat3x4(12);
             let m          = data.load_mat3x4(24); // This is faster due to aligned loading instructions
             let entity     = Entity {
+                id         = id, // TODO
                 local_mat  = local_mat,
                 global_mat = global_mat,
                 normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
@@ -263,7 +264,7 @@ fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, meshes: Tri
 }
 
 fn @load_simple_plane_lights(count: i32, id_off: i32, device: Device) -> LightTable {
-    let tbl = device.load_custom_dyntable("SimplePlaneLight");
+    let tbl = device.load_dyntable("SimplePlaneLight");
     let acc = device.get_device_buffer_accessor();
 
     let elem_s = 24 * sizeof[f32]() as u64; // See AreaLight.cpp (optimized)

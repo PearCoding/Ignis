@@ -199,6 +199,7 @@ public:
     AOV host_pixels;
 
     const IG::SceneDatabase* database;
+    const size_t entity_count;
     size_t film_width;
     size_t film_height;
 
@@ -215,6 +216,7 @@ public:
 
     inline explicit Interface(const DriverSetupSettings& setup)
         : database(setup.database)
+        , entity_count(database->Tables.count("entities") > 0 ? database->Tables.at("entities").entryCount() : 0)
         , film_width(setup.framebuffer_width)
         , film_height(setup.framebuffer_height)
         , current_iteration(0)
@@ -459,7 +461,7 @@ public:
     inline size_t getTemporaryBufferSize() const
     {
         // Upper bound extracted from "mapping_*.art"
-        return std::max<size_t>(32, std::max(database->EntityTable.entryCount() + 1, database->MaterialCount * 2));
+        return std::max<size_t>(32, std::max(entity_count + 1, database->MaterialCount * 2));
     }
 
     inline const auto& getTemporaryStorageHost(int32_t dev)
@@ -589,21 +591,11 @@ public:
         return proxy;
     }
 
-    // Load all the data assembled in previous stages to the device
-    inline const DynTableProxy& loadEntityTable(int32_t dev)
-    {
-        auto& device = devices[dev];
-        if (device.database_loaded.test_and_set())
-            return device.entity_table;
-
-        return (device.entity_table = loadDyntable(dev, database->EntityTable));
-    }
-
     inline SceneInfo loadSceneInfo(int32_t dev)
     {
         IG_UNUSED(dev);
 
-        return SceneInfo{ (int)database->EntityTable.entryCount(),
+        return SceneInfo{ (int)entity_count,
                           (int)database->MaterialCount };
     }
 
@@ -848,6 +840,40 @@ public:
             if (dev.second.buffers.count("__dbg_output"))
                 dumpDebugBuffer(dev.first, dev.second.buffers["__dbg_output"]);
         }
+    }
+
+    inline void runPrimaryTraversalShader(int32_t dev, int size)
+    {
+        if (setup.acquire_stats)
+            getThreadData()->stats.beginShaderLaunch(IG::ShaderType::PrimaryTraversal, size, {});
+
+        using Callback = decltype(ig_traversal_shader);
+        auto callback  = reinterpret_cast<Callback*>(shader_set.PrimaryTraversalShader.Exec);
+        IG_ASSERT(callback != nullptr, "Expected primary traversal shader to be valid");
+        setCurrentShader(dev, size, shader_set.PrimaryTraversalShader);
+        callback(&driver_settings, (int)current_iteration, size);
+
+        checkDebugOutput();
+
+        if (setup.acquire_stats)
+            getThreadData()->stats.endShaderLaunch(IG::ShaderType::PrimaryTraversal, {});
+    }
+
+    inline void runSecondaryTraversalShader(int32_t dev, int size)
+    {
+        if (setup.acquire_stats)
+            getThreadData()->stats.beginShaderLaunch(IG::ShaderType::SecondaryTraversal, size, {});
+
+        using Callback = decltype(ig_traversal_shader);
+        auto callback  = reinterpret_cast<Callback*>(shader_set.SecondaryTraversalShader.Exec);
+        IG_ASSERT(callback != nullptr, "Expected ray generation shader to be valid");
+        setCurrentShader(dev, size, shader_set.SecondaryTraversalShader);
+        callback(&driver_settings, (int)current_iteration, size);
+
+        checkDebugOutput();
+
+        if (setup.acquire_stats)
+            getThreadData()->stats.endShaderLaunch(IG::ShaderType::SecondaryTraversal, {});
     }
 
     inline int runRayGenerationShader(int32_t dev, int* id, int size, int xmin, int ymin, int xmax, int ymax)
@@ -1587,41 +1613,26 @@ IG_EXPORT void ignis_load_bvh8_ent(int dev, const char* prim_type, Node8** nodes
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
-IG_EXPORT void ignis_load_scene(int dev, DynTable* dtb)
-{
-    auto assign = [&](const DynTableProxy& tbl) {
-        DynTable devtbl;
-        devtbl.count  = tbl.EntryCount;
-        devtbl.header = const_cast<LookupEntry*>(tbl.LookupEntries.ptr());
-        uint64_t size = tbl.Data.size();
-        devtbl.size   = size;
-        devtbl.start  = const_cast<uint8_t*>(tbl.Data.ptr());
-        return devtbl;
-    };
-
-    auto& proxy = sInterface->loadEntityTable(dev);
-    *dtb        = assign(proxy);
-}
-
 IG_EXPORT void ignis_load_scene_info(int dev, SceneInfo* info)
 {
     *info = sInterface->loadSceneInfo(dev);
 }
 
+static inline DynTable assignDynTable(const DynTableProxy& tbl)
+{
+    DynTable devtbl;
+    devtbl.count  = tbl.EntryCount;
+    devtbl.header = const_cast<LookupEntry*>(tbl.LookupEntries.ptr());
+    uint64_t size = tbl.Data.size();
+    devtbl.size   = size;
+    devtbl.start  = const_cast<uint8_t*>(tbl.Data.ptr());
+    return devtbl;
+}
+
 IG_EXPORT void ignis_load_dyntable(int dev, const char* name, DynTable* dtb)
 {
-    auto assign = [&](const DynTableProxy& tbl) {
-        DynTable devtbl;
-        devtbl.count  = tbl.EntryCount;
-        devtbl.header = const_cast<LookupEntry*>(tbl.LookupEntries.ptr());
-        uint64_t size = tbl.Data.size();
-        devtbl.size   = size;
-        devtbl.start  = const_cast<uint8_t*>(tbl.Data.ptr());
-        return devtbl;
-    };
-
     auto& proxy = sInterface->loadDyntable(dev, name);
-    *dtb        = assign(proxy);
+    *dtb        = assignDynTable(proxy);
 }
 
 IG_EXPORT void ignis_load_rays(int dev, StreamRay** list)
@@ -1780,6 +1791,16 @@ IG_EXPORT void ignis_register_thread()
 IG_EXPORT void ignis_unregister_thread()
 {
     sInterface->unregisterThread();
+}
+
+IG_EXPORT void ignis_handle_traverse_primary(int dev, int size)
+{
+    sInterface->runPrimaryTraversalShader(dev, size);
+}
+
+IG_EXPORT void ignis_handle_traverse_secondary(int dev, int size)
+{
+    sInterface->runSecondaryTraversalShader(dev, size);
 }
 
 IG_EXPORT int ignis_handle_ray_generation(int dev, int* id, int size, int xmin, int ymin, int xmax, int ymax)

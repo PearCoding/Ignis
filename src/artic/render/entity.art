@@ -8,6 +8,7 @@ struct EntityData {
 }
 
 struct Entity {
+    id:         i32,
     shape_id:   i32,
     local_mat:  Mat3x4,
     global_mat: Mat3x4,
@@ -27,6 +28,7 @@ fn @make_entity_table(dtb: DynTable, acc: DeviceBufferAccessor) -> EntityTable {
         let global_mat = data.load_mat3x4(12);
         let m          = data.load_mat3x4(24); // This is faster due to aligned loading instructions
         Entity {
+            id         = id,
             local_mat  = local_mat,
             global_mat = global_mat,
             normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
@@ -34,4 +36,9 @@ fn @make_entity_table(dtb: DynTable, acc: DeviceBufferAccessor) -> EntityTable {
             scale      = m.col(3).y
         }
     } 
+}
+
+fn @load_entity_table(device: Device) -> EntityTable {
+    let dtb = device.load_dyntable("entities");
+    make_entity_table(dtb, device.get_device_buffer_accessor())
 }

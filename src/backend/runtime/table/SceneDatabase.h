@@ -13,7 +13,8 @@ struct SceneDatabase {
     std::unordered_map<std::string_view, SceneBVH> SceneBVHs;
     std::unordered_map<std::string, DynTable> Tables;
 
-    DynTable EntityTable;
+    DynTable Shapes;
+    DynTable Entities;
 
     float SceneRadius;
     BoundingBox SceneBBox;

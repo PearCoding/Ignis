@@ -450,7 +450,7 @@ bool Runtime::compileShaders()
 
         IG_LOG(L_DEBUG) << "Handling technique variant " << i << std::endl;
         IG_LOG(L_DEBUG) << "Compiling primary traversal shader" << std::endl;
-        shaders.PrimaryTraversalShader.Exec          = compileShader(variant.PrimaryTraversalShader.Exec, "ig_primary_traversal_shader", "v" + std::to_string(i) + "_primaryTraversal");
+        shaders.PrimaryTraversalShader.Exec          = compileShader(variant.PrimaryTraversalShader.Exec, "ig_traversal_shader", "v" + std::to_string(i) + "_primaryTraversal");
         shaders.PrimaryTraversalShader.LocalRegistry = variant.PrimaryTraversalShader.LocalRegistry;
         if (shaders.PrimaryTraversalShader.Exec == nullptr) {
             IG_LOG(L_ERROR) << "Failed to compile primary traversal shader in variant " << i << "." << std::endl;
@@ -458,7 +458,7 @@ bool Runtime::compileShaders()
         }
 
         IG_LOG(L_DEBUG) << "Compiling secondary traversal shader" << std::endl;
-        shaders.SecondaryTraversalShader.Exec          = compileShader(variant.SecondaryTraversalShader.Exec, "ig_secondary_traversal_shader", "v" + std::to_string(i) + "_secondaryTraversal");
+        shaders.SecondaryTraversalShader.Exec          = compileShader(variant.SecondaryTraversalShader.Exec, "ig_traversal_shader", "v" + std::to_string(i) + "_secondaryTraversal");
         shaders.SecondaryTraversalShader.LocalRegistry = variant.SecondaryTraversalShader.LocalRegistry;
         if (shaders.SecondaryTraversalShader.Exec == nullptr) {
             IG_LOG(L_ERROR) << "Failed to compile secondary traversal shader in variant " << i << "." << std::endl;
