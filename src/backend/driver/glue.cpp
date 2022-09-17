@@ -71,8 +71,8 @@ static Settings convert_settings(const DriverRenderSettings& settings, size_t it
 // We assume only pointers will be added to the struct below, else the calculation has to be modified.
 constexpr size_t MaxRayPayloadComponents = sizeof(decltype(PrimaryStream::user)::e) / sizeof(decltype(PrimaryStream::user)::e[0]);
 constexpr size_t RayStreamSize           = sizeof(RayStream) / sizeof(RayStream::id);
-constexpr size_t PrimaryStreamSize       = RayStreamSize + MaxRayPayloadComponents + (sizeof(PrimaryStream) - sizeof(PrimaryStream::pad) - sizeof(PrimaryStream::size) - sizeof(PrimaryStream::rays) - sizeof(PrimaryStream::user)) / sizeof(PrimaryStream::ent_id);
-constexpr size_t SecondaryStreamSize     = RayStreamSize + (sizeof(SecondaryStream) - sizeof(SecondaryStream::pad) - sizeof(SecondaryStream::size) - sizeof(SecondaryStream::rays)) / sizeof(SecondaryStream::mat_id);
+constexpr size_t PrimaryStreamSize       = RayStreamSize + MaxRayPayloadComponents + (sizeof(PrimaryStream) - sizeof(PrimaryStream::rays) - sizeof(PrimaryStream::user)) / sizeof(PrimaryStream::ent_id);
+constexpr size_t SecondaryStreamSize     = RayStreamSize + (sizeof(SecondaryStream) - sizeof(SecondaryStream::rays)) / sizeof(SecondaryStream::mat_id);
 
 template <typename Node, typename Object>
 struct BvhProxy {
@@ -601,6 +601,8 @@ public:
 
     inline const DynTableProxy& loadDyntable(int32_t dev, const char* name)
     {
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+
         auto& tables = devices[dev].dyntables;
         auto it      = tables.find(name);
         if (it != tables.end())
@@ -844,6 +846,7 @@ public:
 
     inline void runPrimaryTraversalShader(int32_t dev, int size)
     {
+        // std::cout << "AAAAAAA" << std::endl;
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(IG::ShaderType::PrimaryTraversal, size, {});
 
@@ -857,10 +860,12 @@ public:
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::PrimaryTraversal, {});
+        // std::cout << "BBBBBBB" << std::endl;
     }
 
     inline void runSecondaryTraversalShader(int32_t dev, int size)
     {
+        // std::cout << "CCCCCCCC" << std::endl;
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(IG::ShaderType::SecondaryTraversal, size, {});
 
@@ -874,6 +879,7 @@ public:
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(IG::ShaderType::SecondaryTraversal, {});
+        // std::cout << "DDDDDDD" << std::endl;
     }
 
     inline int runRayGenerationShader(int32_t dev, int* id, int size, int xmin, int ymin, int xmax, int ymax)
@@ -1465,8 +1471,6 @@ inline void get_primary_stream(PrimaryStream& primary, float* ptr, size_t capaci
     auto r_ptr = reinterpret_cast<float**>(&primary);
     for (size_t i = RayStreamSize; i < components; ++i)
         r_ptr[i] = ptr + i * capacity;
-
-    primary.size = 0;
 }
 
 inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t capacity)
@@ -1478,8 +1482,6 @@ inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t 
     auto r_ptr = reinterpret_cast<float**>(&secondary);
     for (size_t i = RayStreamSize; i < SecondaryStreamSize; ++i)
         r_ptr[i] = ptr + i * capacity;
-
-    secondary.size = 0;
 }
 
 // TODO: Really fixed at compile time?

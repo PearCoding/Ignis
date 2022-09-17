@@ -46,14 +46,14 @@ std::string TraversalShader::setupPrimary(const LoaderContext& ctx)
 
         stream << "  let bvh  = device.load_scene_bvh(\"" << p.second->identifier() << "\");" << std::endl
                << "  let geom = SceneGeometry { info = info, database = trace, bvh = bvh };" << std::endl
-               << "  device.handle_traversal_primary(geom, size);"
+               << "  device.handle_traversal_primary(geom, size);" << std::endl
                << "  }" << std::endl;
     }
 
     stream << std::endl;
 
     for (size_t k = 0; k < i; ++k)
-        stream << "prim_type_" << k << "();" << std::endl;
+        stream << "  prim_type_" << k << "();" << std::endl;
 
     stream << end();
     return stream.str();
@@ -75,14 +75,14 @@ std::string TraversalShader::setupSecondary(const LoaderContext& ctx)
 
         stream << "  let bvh  = device.load_scene_bvh(\"" << p.second->identifier() << "\");" << std::endl
                << "  let geom = SceneGeometry { info = info, database = trace, bvh = bvh };" << std::endl
-               << "  device.handle_traversal_secondary(geom, size, false/*TODO*/, spi, use_framebuffer);"
+               << "  device.handle_traversal_secondary(geom, size, false/*TODO*/, spi, use_framebuffer);" << std::endl
                << "  }" << std::endl;
     }
 
     stream << std::endl;
 
     for (size_t k = 0; k < i; ++k)
-        stream << "prim_type_" << k << "();" << std::endl;
+        stream << "  prim_type_" << k << "();" << std::endl;
 
     stream << end();
     return stream.str();

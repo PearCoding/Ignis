@@ -109,7 +109,8 @@ std::string LoaderLight::generate(ShadingTree& tree, bool skipFinite)
     stream << generateInfinite(tree);
 
     if (skipFinite)
-        stream << "  let finite_lights = make_proxy_light_table(" << finiteLightCount() << ");" << std::endl;
+        stream << "  let finite_lights = make_proxy_light_table(" << finiteLightCount() << ");" << std::endl
+               << "  maybe_unused(finite_lights);" << std::endl;
     else
         stream << generateFinite(tree);
 
@@ -139,7 +140,8 @@ std::string LoaderLight::generateInfinite(ShadingTree& tree)
 
     stream << "      _ => make_null_light(id)" << std::endl
            << "    }" << std::endl
-           << "  }};" << std::endl;
+           << "  }};" << std::endl
+           << "  maybe_unused(infinite_lights);" << std::endl;
 
     return stream.str();
 }
@@ -184,7 +186,8 @@ std::string LoaderLight::generateFinite(ShadingTree& tree)
 
             // Special case: Nothing except embedded simple point lights
             if (p.second == counter) {
-                stream << "  let finite_lights = e_" << var_name << ";" << std::endl;
+                stream << "  let finite_lights = e_" << var_name << ";" << std::endl
+                       << "  maybe_unused(finite_lights);" << std::endl;
                 return stream.str();
             }
 
@@ -233,7 +236,8 @@ std::string LoaderLight::generateFinite(ShadingTree& tree)
         stream << "    }" << std::endl;
 
     stream << "    }" << std::endl
-           << "  }};" << std::endl;
+           << "  }};" << std::endl
+           << "  maybe_unused(finite_lights);" << std::endl;
 
     return stream.str();
 }

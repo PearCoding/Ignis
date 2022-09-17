@@ -164,8 +164,11 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
     IG_LOG(L_DEBUG) << "Storing Entities took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
-    ctx.EntityCount = in_objs.size();
-    if (in_objs.empty()) {
+    ctx.EntityCount = 0;
+    for (auto& p : in_objs)
+        ctx.EntityCount += p.second.size();
+
+    if (ctx.EntityCount == 0) {
         ctx.Environment.SceneDiameter = 0;
         return true;
     }

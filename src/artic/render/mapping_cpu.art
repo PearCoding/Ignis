@@ -37,12 +37,12 @@ fn @cpu_swap_secondary_entry(secondary: &SecondaryStream, a: i32, b: i32) -> () 
 }
 
 // Sort functions ------------------------------------------------------------------
-fn @cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut[i32], ray_ends: &mut[i32], num_geometries: i32) -> i32 {
+fn @cpu_sort_primary(primary: &PrimaryStream, size: i32, ray_begins: &mut[i32], ray_ends: &mut[i32], num_geometries: i32) -> i32 {
     // Count the number of rays per shader
     for i in range(0, num_geometries + 1) {
         ray_ends(i) = 0;
     }
-    for i in range(0, primary.size) {
+    for i in range(0, size) {
         ray_ends(primary.ent_id(i))++;
     }
 
@@ -73,12 +73,12 @@ fn @cpu_sort_primary(primary: &PrimaryStream, ray_begins: &mut[i32], ray_ends: &
     ray_ends(num_geometries - 1)
 }
 
-fn @cpu_sort_secondary(secondary: &SecondaryStream) -> i32 {
+fn @cpu_sort_secondary(secondary: &SecondaryStream, size: i32) -> i32 {
     fn @map_id(i:i32) = select(secondary.mat_id(i) < 0, 0:i32, 1:i32);
 
     // Get number of hits
     let mut count = 0;
-    for i in range(0, secondary.size) {
+    for i in range(0, size) {
         if map_id(i) == 0 { count++; }
     }
     
@@ -88,7 +88,7 @@ fn @cpu_sort_secondary(secondary: &SecondaryStream) -> i32 {
 
     // Sort
     for i in unroll(0, 2) {
-        let (begin, end) = if i == 0 { (0, count) } else { (count, secondary.size) };
+        let (begin, end) = if i == 0 { (0, count) } else { (count, size) };
         let mut j = begin;
         while j < end {
             let id = map_id(j);
@@ -105,7 +105,7 @@ fn @cpu_sort_secondary(secondary: &SecondaryStream) -> i32 {
     count
 }
 
-fn @cpu_sort_secondary_with_materials(secondary: &SecondaryStream, ray_begins: &mut[i32], ray_ends: &mut[i32], num_materials: i32) -> i32 {
+fn @cpu_sort_secondary_with_materials(secondary: &SecondaryStream, size: i32, ray_begins: &mut[i32], ray_ends: &mut[i32], num_materials: i32) -> i32 {
     fn @map_id(i:i32) -> i32 {
         let id = secondary.mat_id(i); // Is +1
         select(id < 0, -id, num_materials + id) - 1
@@ -117,7 +117,7 @@ fn @cpu_sort_secondary_with_materials(secondary: &SecondaryStream, ray_begins: &
     }
 
     // Count the number of rays per shader
-    for i in range(0, secondary.size) {
+    for i in range(0, size) {
         ray_ends(map_id(i))++;
     }
 
@@ -173,14 +173,14 @@ fn @cpu_move_ray_stream(rays: RayStream, i: i32, j: i32) -> () {
     rays.flags(i) = rays.flags(j);
 }
 
-fn @cpu_compact_primary(primary: &PrimaryStream, vector_width: i32, vector_compact: bool) -> i32 {
+fn @cpu_compact_primary(primary: &PrimaryStream, size: i32, vector_width: i32, vector_compact: bool) -> i32 {
     fn cpu_compact_primary_specialized(primary2: &PrimaryStream) -> i32 {
         let mut k = 0;
         if vector_compact {
-            for i in range_step(0, primary2.size, vector_width) {
+            for i in range_step(0, size, vector_width) {
                 vectorize(vector_width, |j| { 
                     let id = primary.rays.id(i + j);
-                    let mask = (id >= 0) & (i + j < primary2.size);
+                    let mask = (id >= 0) & (i + j < size);
 
                     primary2.rays.id(k + j) = bitcast[i32](rv_compact(bitcast[f32](id), mask));
 
@@ -195,7 +195,7 @@ fn @cpu_compact_primary(primary: &PrimaryStream, vector_width: i32, vector_compa
                 });
             }
         } else {
-            for i in range(0, primary2.size) {
+            for i in range(0, size) {
                 let id = primary2.rays.id(i);
                 if id >= 0 {
                     primary2.rays.id(k) = id;
@@ -214,14 +214,14 @@ fn @cpu_compact_primary(primary: &PrimaryStream, vector_width: i32, vector_compa
     $cpu_compact_primary_specialized(primary)
 }
 
-fn @cpu_compact_secondary(secondary: &SecondaryStream, vector_width: i32, vector_compact: bool) -> i32 {
+fn @cpu_compact_secondary(secondary: &SecondaryStream, size: i32, vector_width: i32, vector_compact: bool) -> i32 {
     fn cpu_compact_secondary_specialized(secondary2: &SecondaryStream) -> i32 {
         let mut k = 0;
         if vector_compact {
-            for i in range_step(0, secondary2.size, vector_width) {
+            for i in range_step(0, size, vector_width) {
                 vectorize(vector_width, |j| {
                     let id = secondary2.rays.id(i + j);
-                    let mask = (id >= 0) & (i + j < secondary2.size);
+                    let mask = (id >= 0) & (i + j < size);
 
                     secondary2.rays.id(k + j) = bitcast[i32](rv_compact(bitcast[f32](id), mask));
 
@@ -236,7 +236,7 @@ fn @cpu_compact_secondary(secondary: &SecondaryStream, vector_width: i32, vector
                 });
             }
         } else {
-            for i in range(0, secondary2.size) {
+            for i in range(0, size) {
                 let id = secondary2.rays.id(i);
                 if id >= 0 {
                     secondary2.rays.id(k) = id;
@@ -256,6 +256,7 @@ fn @cpu_compact_secondary(secondary: &SecondaryStream, vector_width: i32, vector
 
 // Ray generator ------------------------------------------------------------------
 fn @cpu_generate_rays( primary: PrimaryStream
+                     , current_size: i32
                      , capacity: i32
                      , emitter: RayEmitter
                      , id: &mut i32
@@ -273,7 +274,7 @@ fn @cpu_generate_rays( primary: PrimaryStream
     let write_payload = make_primary_stream_payload_writer(primary, 1);
     let first_id = *id;
     let (tile_width, tile_height) = (xmax - xmin, ymax - ymin);
-    let num_rays = cpu_intrinsics.min(spi * tile_width * tile_height - first_id, capacity - primary.size);
+    let num_rays = cpu_intrinsics.min(spi * tile_width * tile_height - first_id, capacity - current_size);
     let tile_div = make_fast_div(tile_width as u32);
     for i, _ in vectorized_range(vector_width, 0, num_rays) {
         let in_tile_id = first_id + i;
@@ -285,7 +286,7 @@ fn @cpu_generate_rays( primary: PrimaryStream
         let in_tile_x = in_tile_pixel - in_tile_y * tile_width;
         let x = xmin + in_tile_x;
         let y = ymin + in_tile_y;
-        let cur_ray = primary.size + i;
+        let cur_ray = current_size + i;
         let (ray, rnd, payload) = @emitter(sample, x, y, film_width, film_height);
         write_ray(cur_ray, 0, ray);
         write_rnd(cur_ray, 0, rnd);
@@ -294,7 +295,7 @@ fn @cpu_generate_rays( primary: PrimaryStream
     }
     
     *id = first_id + num_rays;
-    primary.size + num_rays
+    current_size + num_rays
 }
 
 fn @cpu_generate_rays_handler(size: i32
@@ -311,8 +312,7 @@ fn @cpu_generate_rays_handler(size: i32
 
     let mut primary : PrimaryStream;
     ignis_cpu_get_primary_stream(&mut primary, capacity);
-    primary.size = size;
-    cpu_generate_rays(primary, capacity, emitter, id, xmin, ymin, xmax, ymax, work_info.width, work_info.height, spi, vector_width)
+    cpu_generate_rays(primary, size, capacity, emitter, id, xmin, ymin, xmax, ymax, work_info.width, work_info.height, spi, vector_width)
 }
 
 // Traverse functions ------------------------------------------------------------------
@@ -375,8 +375,8 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
         let on_hit    = technique.on_hit;
         let on_shadow = technique.on_shadow;
         let on_bounce = technique.on_bounce;
-        let entity    = entities(entity_id2);
-        let shape     = shapes(entity.shape_id);
+        let entity    = @entities(entity_id2);
+        let shape     = @shapes(entity.shape_id);
         for i, r_vector_width in vectorized_range(vector_width, begin2, end2) {
             let ray     = read_primary_ray(i, 0);
             let hit     = read_primary_hit(i, 0);
@@ -624,24 +624,25 @@ fn @cpu_trace( scene_info: SceneInfo
         ignis_get_temporary_storage(0, &mut temp);
 
         let mut id = 0;
+        let mut current_size = 0;
         let num_rays = spi * (ymax - ymin) * (xmax - xmin);
-        while id < num_rays || primary.size > 0 {
+        while id < num_rays || current_size > 0 {
             // (Re-)generate primary rays
-            if primary.size < capacity && id < num_rays {
-                let before_s = primary.size;
-                primary.size = pipeline.on_generate(&mut id, primary.size, xmin, ymin, xmax, ymax);
-                stats::add_quantity(stats::Quantity::CameraRayCount, primary.size - before_s);
+            if current_size < capacity && id < num_rays {
+                let before_s = current_size;
+                current_size = pipeline.on_generate(&mut id, current_size, xmin, ymin, xmax, ymax);
+                stats::add_quantity(stats::Quantity::CameraRayCount, current_size - before_s);
             }
 
             if scene_info.num_entities == 0 {
-                pipeline.on_miss_shade(0, primary.size);
-                primary.size = 0;
+                pipeline.on_miss_shade(0, current_size);
+                current_size = 0;
             } else {
                 // Trace primary rays
-                pipeline.on_traverse_primary(primary.size);
+                pipeline.on_traverse_primary(current_size);
 
                 // Sort hits by shader id, and filter invalid hits
-                primary.size = cpu_sort_primary(primary, temp.ray_begins, temp.ray_ends, scene_info.num_entities);
+                current_size = cpu_sort_primary(primary, current_size, temp.ray_begins, temp.ray_ends, scene_info.num_entities);
 
                 // Perform (vectorized) shading
                 let mut begin = 0;
@@ -660,30 +661,30 @@ fn @cpu_trace( scene_info: SceneInfo
                 }
 
                 // Filter terminated rays
-                secondary.size = primary.size;
-                primary.size   = cpu_compact_primary(primary, vector_width, vector_compact);
-                stats::add_quantity(stats::Quantity::BounceRayCount, primary.size);
+                let mut secondary_size = current_size;
+                current_size = cpu_compact_primary(primary, current_size, vector_width, vector_compact);
+                stats::add_quantity(stats::Quantity::BounceRayCount, current_size);
 
                 // Compact and trace secondary rays
-                secondary.size = cpu_compact_secondary(secondary, vector_width, vector_compact);
-                if likely(secondary.size > 0) {
-                    pipeline.on_traverse_secondary(secondary.size);
-                    stats::add_quantity(stats::Quantity::ShadowRayCount, secondary.size);
+                secondary_size = cpu_compact_secondary(secondary, secondary_size, vector_width, vector_compact);
+                if likely(secondary_size > 0) {
+                    pipeline.on_traverse_secondary(secondary_size);
+                    stats::add_quantity(stats::Quantity::ShadowRayCount, secondary_size);
 
                     // Add the contribution for secondary rays to the frame buffer
                     if work_info.advanced_shadows {
-                        let hit_start = cpu_sort_secondary(secondary);
+                        let hit_start = cpu_sort_secondary(secondary, secondary_size);
                         if hit_start != 0 {
                             // Call valids (miss)
                             pipeline.on_advanced_shadow(0, 0, hit_start, false);
                         }
 
-                        if hit_start < secondary.size {
+                        if hit_start < secondary_size {
                             // Call invalids (hits)
-                            pipeline.on_advanced_shadow(0, hit_start, secondary.size, true);
+                            pipeline.on_advanced_shadow(0, hit_start, secondary_size, true);
                         }
                     } else if work_info.advanced_shadows_with_materials {
-                        let hit_start = cpu_sort_secondary_with_materials(secondary, temp.ray_begins, temp.ray_ends, scene_info.num_materials);
+                        let hit_start = cpu_sort_secondary_with_materials(secondary, secondary_size, temp.ray_begins, temp.ray_ends, scene_info.num_materials);
 
                         let mut sbegin = 0;
                         if hit_start != 0 {
@@ -697,7 +698,7 @@ fn @cpu_trace( scene_info: SceneInfo
                             }
                         }
 
-                        if hit_start < secondary.size {
+                        if hit_start < secondary_size {
                             // Call invalids (hits)
                             for mat_id in range(0, scene_info.num_materials) {
                                 let end = temp.ray_ends(mat_id + scene_info.num_materials);
@@ -708,7 +709,7 @@ fn @cpu_trace( scene_info: SceneInfo
                             }
                         }
                     } else if !work_info.framebuffer_locked {    
-                        for i in range(0, secondary.size) {
+                        for i in range(0, secondary_size) {
                             if secondary.mat_id(i) < 0 {
                                 let j = secondary.rays.id(i);
                                 accumulate(j,

@@ -77,9 +77,9 @@ std::string ShaderUtils::generateShapeLookup(const LoaderContext& ctx)
 std::string ShaderUtils::generateShapeLookup(const std::string& varname, ShapeProvider* provider, const LoaderContext& ctx)
 {
     std::stringstream stream;
-    stream << "  let " << varname << " = load_shape_table(device, @|type_id, data| { match type_id {" << std::endl;
-    stream << "    _ => " << provider->generateShapeCode(ctx) << std::endl;
-    stream << "  }});" << std::endl;
+    stream << "  let " << varname << " = load_shape_table(device, @|_, data| { " << std::endl
+           << provider->generateShapeCode(ctx) << std::endl
+           << "  });" << std::endl;
     return stream.str();
 }
 

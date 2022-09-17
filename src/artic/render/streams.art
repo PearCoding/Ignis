@@ -22,8 +22,6 @@ struct PrimaryStream {
     v:       &mut [f32],
     rnd:     &mut [RndState],
     user:    [&mut [f32] * 8], // User defined stuff
-    size:    i32,
-    pad:     i32 // TODO: Needed for AMDGPU backend
 }
 
 // 10+6=16
@@ -33,8 +31,6 @@ struct SecondaryStream {
     color_r: &mut [f32],
     color_g: &mut [f32],
     color_b: &mut [f32],
-    size:    i32,
-    pad:     i32 // TODO: Needed for AMDGPU backend
 }
 
 // Used on the host side only

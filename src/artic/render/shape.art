@@ -1,7 +1,7 @@
 // Abstract geometry object (tied to one device)
 struct Shape {
     // Computes the surface element after an intersection on this geometry
-    surface_element:           fn (Ray, Hit) -> SurfaceElement,
+    surface_element:           fn (Ray, Hit)  -> SurfaceElement,
     surface_element_for_point: fn (i32, Vec2) -> SurfaceElement,
 }
 
