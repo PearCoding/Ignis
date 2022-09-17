@@ -499,9 +499,6 @@ fn @cpu_traverse( min_max: MinMax
                 , single: bool
                 , any_hit: bool
                 ) -> () {
-
-    // pe_info("single_pre", single);
-    // pe_info("any_hit_pre", any_hit);
     for i in range(0, num_packets) {
         vectorize(packet_size, |j| {
             hits(i, j, cpu_traverse_helper(rays(i, j), packet_size, min_max, scene, single, any_hit, 1 /*root*/))

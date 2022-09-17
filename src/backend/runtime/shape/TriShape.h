@@ -9,6 +9,5 @@ struct TriShape {
     size_t TexCount;
     size_t FaceCount;
     float Area;
-    size_t BvhID;
 };
 }

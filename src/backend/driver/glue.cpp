@@ -147,10 +147,8 @@ public:
         IG_CLASS_NON_MOVEABLE(DeviceData);
 
     public:
-        std::atomic_flag scene_loaded = ATOMIC_FLAG_INIT;
+        bool scene_loaded = false;
         BvhVariant bvh_ent;
-        std::atomic_flag database_loaded = ATOMIC_FLAG_INIT;
-        DynTableProxy entity_table;
         anydsl::Array<int32_t> tmp_buffer;
         TemporaryStorageHostProxy temporary_storage_host;
         std::array<anydsl::Array<float>, GPUStreamBufferCount> primary;
@@ -173,8 +171,7 @@ public:
 #endif
 
         inline DeviceData()
-            : entity_table()
-            , current_primary()
+            : current_primary()
             , current_secondary()
         {
             for (size_t i = 0; i < primary.size(); ++i)
@@ -487,9 +484,13 @@ public:
     template <typename Bvh, typename Node>
     inline const Bvh& loadEntityBVH(int32_t dev, const char* prim_type)
     {
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+
         auto& device = devices[dev];
-        if (!device.scene_loaded.test_and_set())
-            device.bvh_ent = std::move(loadSceneBVH<Node>(dev, prim_type));
+        if (!device.scene_loaded) {
+            device.bvh_ent      = std::move(loadSceneBVH<Node>(dev, prim_type));
+            device.scene_loaded = true;
+        }
         return std::get<Bvh>(device.bvh_ent);
     }
 

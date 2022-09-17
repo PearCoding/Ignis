@@ -170,7 +170,7 @@ struct BvhTemporary {
 };
 
 template <size_t N, size_t T>
-static void setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mutex)
+static uint32 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mutex)
 {
     BvhTemporary<N, T> bvh;
     if (mesh.faceCount() > 0)
@@ -178,6 +178,7 @@ static void setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mutex
 
     mutex.lock();
     auto& bvhTable = dtb.Tables["trimesh_primbvh"];
+    uint32 bvhId   = bvhTable.entryCount();
     auto& bvhData  = bvhTable.addLookup(0, 0, DefaultAlignment);
     VectorSerializer serializer(bvhData, false);
     serializer.write((uint32)bvh.nodes.size());
@@ -187,6 +188,8 @@ static void setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mutex
     serializer.write(bvh.nodes, true);
     serializer.write(bvh.tris, true);
     mutex.unlock();
+
+    return bvhId;
 }
 
 void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std::string& name, const Parser::Object& elem)
@@ -247,8 +250,16 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
         bbox.extend(v);
     bbox.inflate(1e-5f); // Make sure it has a volume
 
-    const uint32 bvh_id = ctx.Database->Tables["trimesh_primbvh"].entryCount();
-    const uint32 id     = ctx.Shapes->addShape(name, Shape{ this, bvh_id, bbox });
+    // Setup bvh
+    uint32 bvh_id = 0;
+    if (TargetInfo(ctx.Target).isGPU()) {
+        bvh_id = setup_bvh<2, 1>(mesh, result.Database, mBvhMutex);
+    } else if (TargetInfo(ctx.Target).vectorWidth() == 4) {
+        bvh_id = setup_bvh<4, 4>(mesh, result.Database, mBvhMutex);
+    } else {
+        bvh_id = setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);
+    }
+    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, bvh_id, bbox });
 
     // Check if shape is actually just a simple plane
     auto plane = mesh.getAsPlane();
@@ -262,7 +273,6 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     shape.TexCount    = mesh.texcoords.size();
     shape.FaceCount   = mesh.faceCount();
     shape.Area        = mesh.computeArea();
-    shape.BvhID       = bvh_id;
     ctx.Shapes->addTriShape(id, shape);
 
     IG_ASSERT(mesh.face_normals.size() == mesh.faceCount(), "Expected valid face normals!");
@@ -286,14 +296,6 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     meshSerializer.write(mesh.texcoords, true); // Aligned to 4*2 bytes
     meshSerializer.write(mesh.face_inv_area, true);
     mDtbMutex.unlock();
-
-    if (TargetInfo(ctx.Target).isGPU()) {
-        setup_bvh<2, 1>(mesh, result.Database, mBvhMutex);
-    } else if (TargetInfo(ctx.Target).vectorWidth() == 4) {
-        setup_bvh<4, 4>(mesh, result.Database, mBvhMutex);
-    } else {
-        setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);
-    }
 }
 
 std::string TriMeshProvider::generateShapeCode(const LoaderContext& ctx)
