@@ -30,8 +30,22 @@ The following will need ``ccmake``, but works also with ``cmake-gui`` or with pl
 
 .. NOTE:: MacOS CPU vectorization and GPU support is still very experimental and limited. 
 
-Windows
--------
+Windows (Automatic)
+-------------------
+
+This mini tutorial is expecting some basic knowledge about the Windows build system based on Visual Studio and a recent PowerShell.
+
+1.  Clone Ignis from https://github.com/PearCoding/Ignis.
+
+    1.  (Optional) Copy the config file ``scripts/windows/config.json`` and change it to your needs. Normally you do not have to change anything. The option ``LOCATION`` can be used to specify a different location for the dependencies. The option ``CMAKE_SLN`` can be set true to use Visual Studion .sln instead of the Ninja based Ignis configuration.
+    2.  Run the script ``scripts/windows/setup.ps1``. If you use a different config file, specify the path as an argument to the script. The script will download all the necessary dependencies, except CUDA, compile it and create a new directory ``deps/`` on the directory on top of Ignis or the location specified in the config. This step has to be done only once, or if some of the dependencies got updated.
+    3.  By default the ``build/`` directory contains a Ninja based ``Release`` configuration. If ``CMAKE_SLN`` was set to true, the Visual Studio solution ``build/Ignis.sln`` can be used for further development.
+    4.  The ``Release`` configuration is well tested and should be used for most purposes. Any other configuration is experimental and may fail at any time.
+
+Windows (Manual)
+----------------
+
+.. NOTE:: It is recommended to use the new automatic windows setup instead of the following one!
 
 This mini tutorial is expecting some basic knowledge about CMake and the Windows build system based on Visual Studio. I highly recommend using the CMake Ninja generator in favour of the Visual Studio ones, as Visual Studio as an IDE itself has support for both.
 
@@ -88,6 +102,7 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
         .. code-block:: console
 
             set PATH=%PATH%;C:\Development\Projects\AnyDSL\build\_deps\llvm-build\Release\bin
+
     6.  Use CMake and the following command line to configure the project. Make sure you use the ``Makefile`` or ``Ninja`` generator, as the Visual Studio one is not working. It is very likely that you have to change some paths. Especially, adapt it to your AnyDSL setup. 
         
         Also make sure that the following snippet is written in a single line and, if necessary, the ``\`` in paths is properly escaped:

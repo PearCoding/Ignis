@@ -50,19 +50,7 @@ More information is available here [docker/README.md](docker/README.md)
 
 ## Building
 
-If you made sure the required dependencies are installed in your system, create a directory to build the application in:
-
-    mkdir build
-    cd build
-
-Next step would be to configure and finally build the framework. You might use your favorite generator (e.g. `Ninja`)
-
-    cmake -G Ninja ..
-    cmake --build .
-
-If `Ninja` is not available, skip the `-G Ninja` parameter. You can also set `FETCHCONTENT_UPDATES_DISCONNECTED` to `ON` to speed up the cmake steps after the initial cmake configuration.  
-
-More information about building Ignis on other systems are available at the documentation [online](https://pearcoding.github.io/Ignis/src/getting_started/compiling.html) or in the offline version of the documentation in `docs/`
+Information about building Ignis is available in the documentation [online](https://pearcoding.github.io/Ignis/src/getting_started/building.html) or in the offline version of the documentation inside `docs/`
 
 ## Backends
 
