@@ -80,6 +80,9 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
                        return pair.first;
                    });
 
+    // Make sure this table is preloaded
+    result.Database.Tables.emplace("shapes", DynTable{});
+
     const auto load_shape = [&](size_t i) {
         const std::string name = names.at(i);
         const auto child       = ctx.Scene.shape(name);

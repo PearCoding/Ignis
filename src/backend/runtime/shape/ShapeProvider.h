@@ -12,6 +12,6 @@ public:
     virtual size_t id() const                                                                                          = 0;
     virtual void handle(LoaderContext& ctx, LoaderResult& result, const std::string& name, const Parser::Object& elem) = 0;
     virtual std::string generateShapeCode(const LoaderContext& ctx)                                                    = 0;
-    virtual std::string generateTraversalCode(LoaderContext& ctx)                                                      = 0;
+    virtual std::string generateTraversalCode(const LoaderContext& ctx)                                                = 0;
 };
 } // namespace IG

@@ -11,7 +11,7 @@ public:
 
     void handle(LoaderContext& ctx, LoaderResult& result, const std::string& name, const Parser::Object& elem) override;
     std::string generateShapeCode(const LoaderContext& ctx) override;
-    std::string generateTraversalCode(LoaderContext& ctx) override;
+    std::string generateTraversalCode(const LoaderContext& ctx) override;
 
 private:
     std::mutex mDtbMutex;

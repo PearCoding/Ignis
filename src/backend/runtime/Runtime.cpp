@@ -426,6 +426,14 @@ bool Runtime::setup()
             for (const auto& resource : mResourceMap)
                 IG_LOG(L_DEBUG) << " -> " << resource << std::endl;
         }
+
+        if (mDatabase.Tables.empty()) {
+            IG_LOG(L_DEBUG) << "Registered dyntables: None" << std::endl;
+        } else {
+            IG_LOG(L_DEBUG) << "Registered dyntables:" << std::endl;
+            for (const auto& resource : mDatabase.Tables)
+                IG_LOG(L_DEBUG) << " -> " << resource.first << std::endl;
+        }
     }
 
     if (!compileShaders())

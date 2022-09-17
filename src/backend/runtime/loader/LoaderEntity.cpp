@@ -154,10 +154,10 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
         // Extract information for BVH building
         EntityObject obj;
-        obj.BBox    = entityBox;
-        obj.Local   = invTransform.matrix();
-        obj.ShapeID = shapeID;
-        obj.Flags   = entity_flags; // Only added to bvh
+        obj.BBox  = entityBox;
+        obj.Local = invTransform.matrix();
+        obj.BvhID = shape.BvhID;
+        obj.Flags = entity_flags; // Only added to bvh
 
         in_objs[shape.Provider].emplace_back(obj);
     }

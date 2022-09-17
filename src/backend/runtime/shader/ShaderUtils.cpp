@@ -46,17 +46,17 @@ std::string ShaderUtils::constructDevice(Target target)
     return stream.str();
 }
 
-std::string ShaderUtils::generateDatabase()
+std::string ShaderUtils::generateDatabase(const LoaderContext& ctx)
 {
     std::stringstream stream;
-    stream << "  let entities = load_entity_table(device); maybe_unused(entities);" << std::endl;
+    stream << "  let entities = load_entity_table(device); maybe_unused(entities);" << std::endl
+           << generateShapeLookup(ctx)
+           << "  maybe_unused(shapes);" << std::endl;
     return stream.str();
 }
 
-std::string ShaderUtils::generateShapeLookup(const LoaderContext& ctx, const std::string_view& entity_id)
+std::string ShaderUtils::generateShapeLookup(const LoaderContext& ctx)
 {
-    IG_UNUSED(entity_id);
-
     std::vector<ShapeProvider*> provs;
     provs.reserve(ctx.Shapes->providers().size());
     for (const auto& p : ctx.Shapes->providers())
@@ -71,6 +71,15 @@ std::string ShaderUtils::generateShapeLookup(const LoaderContext& ctx, const std
     stream << "    _ => " << provs.back()->generateShapeCode(ctx) << std::endl;
     stream << "  }});" << std::endl;
 
+    return stream.str();
+}
+
+std::string ShaderUtils::generateShapeLookup(const std::string& varname, ShapeProvider* provider, const LoaderContext& ctx)
+{
+    std::stringstream stream;
+    stream << "  let " << varname << " = load_shape_table(device, @|type_id, data| { match type_id {" << std::endl;
+    stream << "    _ => " << provider->generateShapeCode(ctx) << std::endl;
+    stream << "  }});" << std::endl;
     return stream.str();
 }
 

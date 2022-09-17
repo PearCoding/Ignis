@@ -298,7 +298,7 @@ static std::string ppm_light_camera_generator(LoaderContext& ctx)
 
     stream << RayGenerationShader::begin(ctx) << std::endl;
 
-    stream << ShaderUtils::generateDatabase() << std::endl;
+    stream << ShaderUtils::generateDatabase(ctx) << std::endl;
 
     ShadingTree tree(ctx);
     stream << ctx.Lights->generate(tree, false) << std::endl;

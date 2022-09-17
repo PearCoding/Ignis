@@ -21,7 +21,7 @@ IG_END_IGNORE_WARNINGS
 namespace IG {
 struct EntityObject {
     BoundingBox BBox;
-    uint32 ShapeID;
+    uint32 BvhID;
     Matrix4f Local;
     uint32 Flags;
 
@@ -85,7 +85,7 @@ protected:
                 { in_obj.BBox.min(0), in_obj.BBox.min(1), in_obj.BBox.min(2) },
                 id,
                 { in_obj.BBox.max(0), in_obj.BBox.max(1), in_obj.BBox.max(2) },
-                (int)in_obj.ShapeID,
+                (int)in_obj.BvhID,
                 { { { { in_obj.Local(0, 0), in_obj.Local(1, 0), in_obj.Local(2, 0) },
                       { in_obj.Local(0, 1), in_obj.Local(1, 1), in_obj.Local(2, 1) },
                       { in_obj.Local(0, 2), in_obj.Local(1, 2), in_obj.Local(2, 2) },

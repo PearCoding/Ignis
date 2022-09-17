@@ -457,7 +457,7 @@ fn @cpu_traverse_helper( mut ray: Ray
                     if let Option[(f32,f32)]::Some((tmin, _tmax)) = intersect_ray_box_single_section(min_max, false, ray, leaf.bbox) {
                         if tmin <= hit.distance {
                             let local_ray = transform_ray(ray, leaf.local);
-                            let shape_bvh = @prim_bvhs(leaf.shape_id);
+                            let shape_bvh = @prim_bvhs(leaf.bvh_id);
                             let local_hit = cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
                             
                             if active {

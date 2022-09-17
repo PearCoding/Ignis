@@ -7,6 +7,7 @@
 #include "mesh/ObjFile.h"
 #include "mesh/PlyFile.h"
 #include "serialization/VectorSerializer.h"
+#include "shader/ShaderUtils.h"
 
 #include "Logger.h"
 
@@ -246,7 +247,8 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
         bbox.extend(v);
     bbox.inflate(1e-5f); // Make sure it has a volume
 
-    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, bbox });
+    const uint32 bvh_id = ctx.Database->Tables["trimesh_primbvh"].entryCount();
+    const uint32 id     = ctx.Shapes->addShape(name, Shape{ this, bvh_id, bbox });
 
     // Check if shape is actually just a simple plane
     auto plane = mesh.getAsPlane();
@@ -260,7 +262,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     shape.TexCount    = mesh.texcoords.size();
     shape.FaceCount   = mesh.faceCount();
     shape.Area        = mesh.computeArea();
-    shape.BvhID       = ctx.Database->Tables["trimesh_primbvh"].entryCount();
+    shape.BvhID       = bvh_id;
     ctx.Shapes->addTriShape(id, shape);
 
     IG_ASSERT(mesh.face_normals.size() == mesh.faceCount(), "Expected valid face normals!");
@@ -270,7 +272,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
 
     mDtbMutex.lock();
-    auto& shapeTable = result.Database.Shapes;
+    auto& shapeTable = result.Database.Tables["shapes"];
     auto& meshData   = shapeTable.addLookup(this->id(), 0, DefaultAlignment);
     VectorSerializer meshSerializer(meshData, false);
     meshSerializer.write((uint32)mesh.faceCount());
@@ -300,10 +302,20 @@ std::string TriMeshProvider::generateShapeCode(const LoaderContext& ctx)
     return "make_trimesh_shape(load_trimesh(data))";
 }
 
-std::string TriMeshProvider::generateTraversalCode(LoaderContext& ctx)
+std::string TriMeshProvider::generateTraversalCode(const LoaderContext& ctx)
 {
     std::stringstream stream;
-    stream << "  let shapes = device.load_dyntable(\"trimesh_shapes\");";
+    stream << ShaderUtils::generateShapeLookup("trimesh_shapes", this, ctx) << std::endl;
+
+    if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
+        stream << "  let prim_bvhs = make_gpu_trimesh_bvh_table(device, " << (ctx.Target == Target::NVVM ? "true" : "false") << ");" << std::endl;
+    } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::SINGLE || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
+        stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, 4);" << std::endl;
+    } else {
+        stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, 8);" << std::endl;
+    }
+
+    stream << "  let trace = TraceAccessor { info = info, shapes = trimesh_shapes, entities = entities, bvhs = prim_bvhs };" << std::endl;
     return stream.str();
 }
 } // namespace IG

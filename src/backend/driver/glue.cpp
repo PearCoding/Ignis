@@ -163,7 +163,7 @@ public:
         std::unordered_map<std::string, DeviceImage> images;
         std::unordered_map<std::string, DevicePackedImage> packed_images;
         std::unordered_map<std::string, DeviceBuffer> buffers;
-        std::unordered_map<std::string, DynTableProxy> custom_dyntables;
+        std::unordered_map<std::string, DynTableProxy> dyntables;
 
         anydsl::Array<uint32_t> tonemap_pixels;
 
@@ -601,12 +601,12 @@ public:
 
     inline const DynTableProxy& loadDyntable(int32_t dev, const char* name)
     {
-        auto& tables = devices[dev].custom_dyntables;
+        auto& tables = devices[dev].dyntables;
         auto it      = tables.find(name);
         if (it != tables.end())
             return it->second;
 
-        IG_LOG(IG::L_DEBUG) << "Loading custom dyntable " << name << std::endl;
+        IG_LOG(IG::L_DEBUG) << "Loading dyntable " << name << std::endl;
 
         return tables[name] = loadDyntable(dev, database->Tables.at(name));
     }

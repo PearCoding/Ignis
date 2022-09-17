@@ -201,7 +201,7 @@ fn @gpu_traverse_scene( min_max: MinMax
                 if let Option[(f32,f32)]::Some((tmin, _tmax)) = intersect_ray_box_single_section(min_max, false, *ray2, leaf.bbox) {
                     if tmin <= hit.distance {
                         let local_ray = transform_ray(*ray2, leaf.local);
-                        let shape_bvh = @prim_bvhs(leaf.shape_id);
+                        let shape_bvh = @prim_bvhs(leaf.bvh_id);
                         let local_hit = gpu_traverse_prim(min_max, local_ray, empty_hit(local_ray.tmax)/* TODO */, shape_bvh, any_hit, 1);
 
                         if local_hit.prim_id != -1 {
