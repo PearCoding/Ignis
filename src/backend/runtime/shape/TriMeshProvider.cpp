@@ -287,9 +287,9 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     meshSerializer.write(mesh.face_inv_area, true);
     mDtbMutex.unlock();
 
-    if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
+    if (TargetInfo(ctx.Target).isGPU()) {
         setup_bvh<2, 1>(mesh, result.Database, mBvhMutex);
-    } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::SINGLE || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
+    } else if (TargetInfo(ctx.Target).vectorWidth() == 4) {
         setup_bvh<4, 4>(mesh, result.Database, mBvhMutex);
     } else {
         setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);
@@ -307,12 +307,10 @@ std::string TriMeshProvider::generateTraversalCode(const LoaderContext& ctx)
     std::stringstream stream;
     stream << ShaderUtils::generateShapeLookup("trimesh_shapes", this, ctx) << std::endl;
 
-    if (ctx.Target == Target::NVVM || ctx.Target == Target::AMDGPU) {
+    if (TargetInfo(ctx.Target).isGPU()) {
         stream << "  let prim_bvhs = make_gpu_trimesh_bvh_table(device, " << (ctx.Target == Target::NVVM ? "true" : "false") << ");" << std::endl;
-    } else if (ctx.Target == Target::GENERIC || ctx.Target == Target::SINGLE || ctx.Target == Target::ASIMD || ctx.Target == Target::SSE42) {
-        stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, 4);" << std::endl;
     } else {
-        stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, 8);" << std::endl;
+        stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, " << TargetInfo(ctx.Target).vectorWidth() << ");" << std::endl;
     }
 
     stream << "  let trace = TraceAccessor { info = info, shapes = trimesh_shapes, entities = entities, bvhs = prim_bvhs };" << std::endl;

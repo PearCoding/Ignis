@@ -25,16 +25,7 @@ public:
     {
     }
 
-    [[nodiscard]] inline bool requiresPadding() const
-    {
-        switch (Value) {
-        default:
-            return false;
-        case Target::NVVM:
-        case Target::AMDGPU:
-            return true;
-        }
-    }
+    [[nodiscard]] inline bool requiresPadding() const { return isGPU(); }
 
     [[nodiscard]] inline bool isCPU() const
     {
@@ -46,6 +37,8 @@ public:
             return false;
         }
     }
+
+    [[nodiscard]] inline bool isGPU() const { return !isCPU(); }
 
     [[nodiscard]] inline const char* toString() const
     {
@@ -72,6 +65,27 @@ public:
             return "Invalid";
         default:
             return "Unknown";
+        }
+    }
+
+    [[nodiscard]] inline size_t vectorWidth() const
+    {
+        switch (Value) {
+        case Target::GENERIC:
+        case Target::SINGLE:
+        case Target::SSE42:
+        case Target::ASIMD:
+            return 4;
+        case Target::AVX512:
+        case Target::AVX2:
+        case Target::AVX:
+            return 8;
+        case Target::NVVM:
+        case Target::AMDGPU:
+            return 1;
+        case Target::INVALID:
+        default:
+            return 0;
         }
     }
 };
