@@ -799,14 +799,14 @@ fn @make_gpu_device( dev_id: i32
         gpu_generate_rays_handler(dev_id, size, GPUStreamCapacity, acc, emitter, id, spi)
     },
     handle_traversal_primary = @ | scene_geometry, size | {
-        let mut primary : PrimaryStream;
-        ignis_cpu_get_primary_stream_const(&mut primary);
+        let mut primary: PrimaryStream;
+        ignis_gpu_get_first_primary_stream_const(dev_id, &mut primary);
 
         gpu_traverse_primary(primary, scene_geometry, size, min_max, acc);
     },
     handle_traversal_secondary = @ | scene_geometry, size, is_advanced, spi, use_framebuffer | {
-        let mut secondary : SecondaryStream;
-        ignis_cpu_get_secondary_stream_const(&mut secondary);
+        let mut secondary: SecondaryStream;
+        ignis_gpu_get_first_secondary_stream_const(dev_id, &mut secondary);
 
         let (film_pixels, _, _) = gpu_get_film_data(dev_id);
         let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
