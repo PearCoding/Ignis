@@ -26,6 +26,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
     stream << "#[export] fn ig_advanced_shadow_shader(settings: &Settings, mat_id: i32, first: i32, last: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
            << std::endl;
 
     if (ctx.CurrentTechniqueVariantInfo().UsesLights) {
@@ -59,7 +60,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
 
     stream << "  let is_hit = " << (is_hit ? "true" : "false") << ";" << std::endl
            << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_advanced_shadow_shader(shader, technique, first, last, spi, use_framebuffer, is_hit)" << std::endl
+           << "  device.handle_advanced_shadow_shader(shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit)" << std::endl
            << "}" << std::endl;
 
     return stream.str();

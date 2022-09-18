@@ -18,9 +18,6 @@ IG_END_IGNORE_WARNINGS
 
 // Contains implementation for NodeN and TriN
 #include "generated_interface.h"
-namespace extra {
-#include "generated_interface_extra.h"
-}
 
 namespace IG {
 
@@ -31,19 +28,19 @@ struct BvhNTriM {
 template <>
 struct BvhNTriM<8, 4> {
     using Node = Node8;
-    using Tri  = extra::Tri4;
+    using Tri  = Tri4;
 };
 
 template <>
 struct BvhNTriM<4, 4> {
     using Node = Node4;
-    using Tri  = extra::Tri4;
+    using Tri  = Tri4;
 };
 
 template <>
 struct BvhNTriM<2, 1> {
     using Node = Node2;
-    using Tri  = extra::Tri1;
+    using Tri  = Tri1;
 };
 
 struct TriangleProxy : public bvh::Triangle<float> {
@@ -124,7 +121,7 @@ class BvhNTriMAdapter<2, 1, Allocator> : public BvhNAdapter<2, typename BvhNTriM
     using Parent = BvhNAdapter<2, typename BvhNTriM<2, 1>::Node, TriangleProxy, Allocator>;
     using Bvh    = typename Parent::Bvh;
     using Node   = Node2;
-    using Tri    = extra::Tri1;
+    using Tri    = Tri1;
 
     std::vector<Tri, Allocator<Tri>>& tris;
 
@@ -149,7 +146,7 @@ protected:
         for (size_t i = 0; i < this->primitive_count_of_node(node); ++i) {
             const int id = (int)bvh.primitive_indices[node.first_child_or_primitive + i];
             auto& in_tri = primitives[id];
-            tris.emplace_back(extra::Tri1{
+            tris.emplace_back(Tri1{
                 { in_tri.p0[0], in_tri.p0[1], in_tri.p0[2] },
                 0,
                 { in_tri.e1[0], in_tri.e1[1], in_tri.e1[2] },

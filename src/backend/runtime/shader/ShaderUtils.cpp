@@ -141,4 +141,16 @@ std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
     // We do not hardcode the spi as default to prevent recompilations if spi != 1
     return stream.str();
 }
+
+std::string ShaderUtils::inlinePayloadInfo(const LoaderContext& ctx)
+{
+    std::stringstream stream;
+
+    stream << "PayloadInfo{ primary_count = "
+           << ctx.CurrentTechniqueVariantInfo().PrimaryPayloadCount
+           << ", secondary_count = " << ctx.CurrentTechniqueVariantInfo().SecondaryPayloadCount
+           << " }";
+
+    return stream.str();
+}
 } // namespace IG

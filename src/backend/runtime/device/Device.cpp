@@ -52,10 +52,9 @@ static inline size_t roundUp(size_t num, size_t multiple)
 
 // TODO: This can be improved in the future with a c++ reflection system
 // We assume only pointers will be added to the struct below, else the calculation has to be modified.
-constexpr size_t MaxRayPayloadComponents = sizeof(decltype(PrimaryStream::user)::e) / sizeof(decltype(PrimaryStream::user)::e[0]);
-constexpr size_t RayStreamSize           = sizeof(RayStream) / sizeof(RayStream::id);
-constexpr size_t PrimaryStreamSize       = RayStreamSize + MaxRayPayloadComponents + (sizeof(PrimaryStream) - sizeof(PrimaryStream::rays) - sizeof(PrimaryStream::user)) / sizeof(PrimaryStream::ent_id);
-constexpr size_t SecondaryStreamSize     = RayStreamSize + (sizeof(SecondaryStream) - sizeof(SecondaryStream::rays)) / sizeof(SecondaryStream::mat_id);
+constexpr size_t RayStreamSize          = sizeof(RayStream) / sizeof(RayStream::id);
+constexpr size_t MinPrimaryStreamSize   = RayStreamSize + (sizeof(PrimaryStream) - sizeof(PrimaryStream::rays) - sizeof(PrimaryStream::payload)) / sizeof(PrimaryStream::ent_id);
+constexpr size_t MinSecondaryStreamSize = RayStreamSize + (sizeof(SecondaryStream) - sizeof(SecondaryStream::rays) - sizeof(SecondaryStream::payload)) / sizeof(SecondaryStream::mat_id);
 
 template <typename Node, typename Object>
 struct BvhProxy {
@@ -219,6 +218,9 @@ public:
     }
     inline int getDevID() const { return getDevID(setup.device); }
 
+    inline size_t getPrimaryStreamSize() const { return MinPrimaryStreamSize + current_settings.info.PrimaryPayloadCount; }
+    inline size_t getSecondaryStreamSize() const { return MinSecondaryStreamSize + current_settings.info.SecondaryPayloadCount; }
+
     inline const std::string& lookupResource(int32_t id) const
     {
         return setup.resource_map->at(id);
@@ -282,16 +284,16 @@ public:
 
     inline void setupThreadData()
     {
-#ifdef DEVICE_GPU
-        sThreadData = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
-#else
-        const static size_t max_threads = std::thread::hardware_concurrency() + 1 /* Host */;
+        if (is_gpu) {
+            sThreadData = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
+        } else {
+            const static size_t max_threads = std::thread::hardware_concurrency() + 1 /* Host */;
 
-        for (size_t t = 0; t < max_threads; ++t) {
-            CPUData* ptr = thread_data.emplace_back(std::make_unique<CPUData>()).get();
-            available_thread_data.push(ptr);
+            for (size_t t = 0; t < max_threads; ++t) {
+                CPUData* ptr = thread_data.emplace_back(std::make_unique<CPUData>()).get();
+                available_thread_data.push(ptr);
+            }
         }
-#endif
     }
 
     inline void updateSettings(const Device::RenderSettings& settings)
@@ -309,8 +311,16 @@ public:
         shader_set = shaderSet;
 
         // Prepare cache data
-        shader_infos[shader_set.RayGenerationShader.Exec] = {};
-        shader_infos[shader_set.MissShader.Exec]          = {};
+        shader_infos[shader_set.DeviceShader.Exec] = {};
+        if (shader_set.TonemapShader.Exec) {
+            shader_infos[shader_set.TonemapShader.Exec]   = {};
+            shader_infos[shader_set.ImageinfoShader.Exec] = {};
+        }
+
+        shader_infos[shader_set.PrimaryTraversalShader.Exec]   = {};
+        shader_infos[shader_set.SecondaryTraversalShader.Exec] = {};
+        shader_infos[shader_set.RayGenerationShader.Exec]      = {};
+        shader_infos[shader_set.MissShader.Exec]               = {};
         for (const auto& clb : shader_set.HitShaders)
             shader_infos[clb.Exec] = {};
         for (const auto& clb : shader_set.AdvancedShadowHitShaders)
@@ -323,7 +333,9 @@ public:
 
     inline void registerThread()
     {
-#ifndef DEVICE_GPU
+        if (is_gpu)
+            return;
+
         if (sThreadData != nullptr)
             return;
 
@@ -335,18 +347,18 @@ public:
             IG_LOG(L_FATAL) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " failed!" << std::endl;
         else
             sThreadData = ptr;
-#endif
     }
 
     inline void unregisterThread()
     {
-#ifndef DEVICE_GPU
+        if (is_gpu)
+            return;
+
         if (sThreadData == nullptr)
             return;
 
         available_thread_data.push(sThreadData);
         sThreadData = nullptr;
-#endif
     }
 
     inline CPUData* getThreadData()
@@ -357,45 +369,40 @@ public:
 
     inline void setCurrentShader(int32_t dev, int workload, const ShaderOutput<void*>& shader)
     {
-#ifdef DEVICE_GPU
-        devices[dev].current_shader         = shader.Exec;
-        devices[dev].current_local_registry = &shader.LocalRegistry;
-        auto data                           = getThreadData();
-        data->shader_stats[shader.Exec].call_count++;
-        data->shader_stats[shader.Exec].workload_count += (size_t)workload;
-#else
-        IG_UNUSED(dev);
-        auto data                    = getThreadData();
-        data->current_shader         = shader.Exec;
-        data->current_local_registry = &shader.LocalRegistry;
-        data->shader_stats[shader.Exec].call_count++;
-        data->shader_stats[shader.Exec].workload_count += (size_t)workload;
-#endif
+        if (is_gpu) {
+            devices[dev].current_shader         = shader.Exec;
+            devices[dev].current_local_registry = &shader.LocalRegistry;
+            auto data                           = getThreadData();
+            data->shader_stats[shader.Exec].call_count++;
+            data->shader_stats[shader.Exec].workload_count += (size_t)workload;
+        } else {
+            auto data                    = getThreadData();
+            data->current_shader         = shader.Exec;
+            data->current_local_registry = &shader.LocalRegistry;
+            data->shader_stats[shader.Exec].call_count++;
+            data->shader_stats[shader.Exec].workload_count += (size_t)workload;
+        }
     }
 
     inline const ParameterSet* getCurrentLocalRegistry(int32_t dev)
     {
-#ifdef DEVICE_GPU
-        return devices[dev].current_local_registry;
-#else
-        IG_UNUSED(dev);
-        return getThreadData()->current_local_registry;
-#endif
+        if (is_gpu)
+            return devices[dev].current_local_registry;
+        else
+            return getThreadData()->current_local_registry;
     }
 
     inline ShaderInfo& getCurrentShaderInfo(int32_t dev)
     {
-#ifdef DEVICE_GPU
-        return shader_infos[devices[dev].current_shader];
-#else
-        IG_UNUSED(dev);
-        return shader_infos[getThreadData()->current_shader];
-#endif
+        if (is_gpu)
+            return shader_infos[devices[dev].current_shader];
+        else
+            return shader_infos[getThreadData()->current_shader];
     }
 
     inline anydsl::Array<float>& getCPUPrimaryStream(size_t size)
     {
-        return resizeArray(0, getThreadData()->cpu_primary, size, PrimaryStreamSize);
+        return resizeArray(0, getThreadData()->cpu_primary, size, getPrimaryStreamSize());
     }
 
     inline anydsl::Array<float>& getCPUPrimaryStream()
@@ -406,7 +413,7 @@ public:
 
     inline anydsl::Array<float>& getCPUSecondaryStream(size_t size)
     {
-        return resizeArray(0, getThreadData()->cpu_secondary, size, SecondaryStreamSize);
+        return resizeArray(0, getThreadData()->cpu_secondary, size, getSecondaryStreamSize());
     }
 
     inline anydsl::Array<float>& getCPUSecondaryStream()
@@ -417,7 +424,7 @@ public:
 
     inline anydsl::Array<float>& getGPUPrimaryStream(int32_t dev, size_t buffer, size_t size)
     {
-        return resizeArray(dev, *devices[dev].current_primary.at(buffer), size, PrimaryStreamSize);
+        return resizeArray(dev, *devices[dev].current_primary.at(buffer), size, getPrimaryStreamSize());
     }
 
     inline anydsl::Array<float>& getGPUPrimaryStream(int32_t dev, size_t buffer)
@@ -428,7 +435,7 @@ public:
 
     inline anydsl::Array<float>& getGPUSecondaryStream(int32_t dev, size_t buffer, size_t size)
     {
-        return resizeArray(dev, *devices[dev].current_secondary.at(buffer), size, SecondaryStreamSize);
+        return resizeArray(dev, *devices[dev].current_secondary.at(buffer), size, getSecondaryStreamSize());
     }
 
     inline anydsl::Array<float>& getGPUSecondaryStream(int32_t dev, size_t buffer)
@@ -851,7 +858,7 @@ public:
 
         using Callback = decltype(ig_callback_shader);
         auto callback  = reinterpret_cast<Callback*>(shader_set.DeviceShader.Exec);
-        IG_ASSERT(callback != nullptr, "Expected ray generation shader to be valid");
+        IG_ASSERT(callback != nullptr, "Expected device shader to be valid");
         setCurrentShader(0, 1, shader_set.DeviceShader);
         callback(&driver_settings);
 
@@ -868,7 +875,7 @@ public:
 
         using Callback = decltype(ig_tonemap_shader);
         auto callback  = reinterpret_cast<Callback*>(shader_set.TonemapShader.Exec);
-        IG_ASSERT(callback != nullptr, "Expected ray generation shader to be valid");
+        IG_ASSERT(callback != nullptr, "Expected tonemap shader to be valid");
         setCurrentShader(0, 1, shader_set.TonemapShader);
         callback(&driver_settings, in_pixels, device_out_pixels, (int)film_width, (int)film_height, &settings);
 
@@ -885,7 +892,7 @@ public:
 
         using Callback = decltype(ig_imageinfo_shader);
         auto callback  = reinterpret_cast<Callback*>(shader_set.ImageinfoShader.Exec);
-        IG_ASSERT(callback != nullptr, "Expected ray generation shader to be valid");
+        IG_ASSERT(callback != nullptr, "Expected imageinfo shader to be valid");
         setCurrentShader(0, 1, shader_set.ImageinfoShader);
 
         ::ImageInfoOutput output;
@@ -923,7 +930,7 @@ public:
 
         using Callback = decltype(ig_traversal_shader);
         auto callback  = reinterpret_cast<Callback*>(shader_set.SecondaryTraversalShader.Exec);
-        IG_ASSERT(callback != nullptr, "Expected ray generation shader to be valid");
+        IG_ASSERT(callback != nullptr, "Expected secondary traversal shader to be valid");
         setCurrentShader(dev, size, shader_set.SecondaryTraversalShader);
         callback(&driver_settings, size);
 
@@ -933,7 +940,7 @@ public:
             getThreadData()->stats.endShaderLaunch(ShaderType::SecondaryTraversal, {});
     }
 
-    inline int runRayGenerationShader(int32_t dev, int* id, int size, int xmin, int ymin, int xmax, int ymax)
+    inline int runRayGenerationShader(int32_t dev, int next_id, int size, int xmin, int ymin, int xmax, int ymax)
     {
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(ShaderType::RayGeneration, (xmax - xmin) * (ymax - ymin), {});
@@ -942,7 +949,8 @@ public:
         auto callback  = reinterpret_cast<Callback*>(shader_set.RayGenerationShader.Exec);
         IG_ASSERT(callback != nullptr, "Expected ray generation shader to be valid");
         setCurrentShader(dev, (xmax - xmin) * (ymax - ymin), shader_set.RayGenerationShader);
-        const int ret = callback(&driver_settings, id, size, xmin, ymin, xmax, ymax);
+        std::cout << next_id << " " << size << std::endl;
+        const int ret = callback(&driver_settings, next_id, size, xmin, ymin, xmax, ymax);
 
         checkDebugOutput();
 
@@ -1349,9 +1357,6 @@ Device::Device(const Device::SetupSettings& settings)
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
     _mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
 #endif
-
-    // Make sure the functions exposed are available in the linking process
-    // anydsl_link(settings.driver_filename);
 }
 
 Device::~Device()
@@ -1482,14 +1487,14 @@ inline void get_primary_stream(PrimaryStream& primary, float* ptr, size_t capaci
         r_ptr[i] = ptr + i * capacity;
 }
 
-inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t capacity)
+inline void get_secondary_stream(SecondaryStream& secondary, float* ptr, size_t capacity, size_t components)
 {
     static_assert(std::is_pod<SecondaryStream>::value, "Expected SecondaryStream to be plain old data");
 
     get_ray_stream(secondary.rays, ptr, capacity);
 
     auto r_ptr = reinterpret_cast<float**>(&secondary);
-    for (size_t i = RayStreamSize; i < SecondaryStreamSize; ++i)
+    for (size_t i = RayStreamSize; i < components; ++i)
         r_ptr[i] = ptr + i * capacity;
 }
 } // namespace IG
@@ -1628,26 +1633,30 @@ IG_EXPORT void ignis_dbg_dump_buffer(int32_t dev, const char* name, const char* 
 
 IG_EXPORT void ignis_cpu_get_primary_stream(PrimaryStream* primary, int size)
 {
-    auto& array = sInterface->getCPUPrimaryStream(size);
-    IG::get_primary_stream(*primary, array.data(), array.size() / IG::PrimaryStreamSize, IG::PrimaryStreamSize);
+    const size_t capacity = sInterface->getPrimaryStreamSize();
+    auto& array           = sInterface->getCPUPrimaryStream(size);
+    IG::get_primary_stream(*primary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_cpu_get_primary_stream_const(PrimaryStream* primary)
 {
-    auto& array = sInterface->getCPUPrimaryStream();
-    IG::get_primary_stream(*primary, array.data(), array.size() / IG::PrimaryStreamSize, IG::PrimaryStreamSize);
+    const size_t capacity = sInterface->getPrimaryStreamSize();
+    auto& array           = sInterface->getCPUPrimaryStream();
+    IG::get_primary_stream(*primary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_cpu_get_secondary_stream(SecondaryStream* secondary, int size)
 {
-    auto& array = sInterface->getCPUSecondaryStream(size);
-    IG::get_secondary_stream(*secondary, array.data(), array.size() / IG::SecondaryStreamSize);
+    const size_t capacity = sInterface->getSecondaryStreamSize();
+    auto& array           = sInterface->getCPUSecondaryStream(size);
+    IG::get_secondary_stream(*secondary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_cpu_get_secondary_stream_const(SecondaryStream* secondary)
 {
-    auto& array = sInterface->getCPUSecondaryStream();
-    IG::get_secondary_stream(*secondary, array.data(), array.size() / IG::SecondaryStreamSize);
+    const size_t capacity = sInterface->getSecondaryStreamSize();
+    auto& array           = sInterface->getCPUSecondaryStream();
+    IG::get_secondary_stream(*secondary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_get_temporary_storage(int dev, TemporaryStorageHost* temp)
@@ -1664,50 +1673,58 @@ IG_EXPORT void ignis_gpu_get_tmp_buffer(int dev, int** buf)
 
 IG_EXPORT void ignis_gpu_get_first_primary_stream(int dev, PrimaryStream* primary, int size)
 {
-    auto& array = sInterface->getGPUPrimaryStream(dev, 0, size);
-    IG::get_primary_stream(*primary, array.data(), array.size() / IG::PrimaryStreamSize, IG::PrimaryStreamSize);
+    const size_t capacity = sInterface->getPrimaryStreamSize();
+    auto& array           = sInterface->getGPUPrimaryStream(dev, 0, size);
+    IG::get_primary_stream(*primary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_gpu_get_first_primary_stream_const(int dev, PrimaryStream* primary)
 {
-    auto& array = sInterface->getGPUPrimaryStream(dev, 0);
-    IG::get_primary_stream(*primary, array.data(), array.size() / IG::PrimaryStreamSize, IG::PrimaryStreamSize);
+    const size_t capacity = sInterface->getPrimaryStreamSize();
+    auto& array           = sInterface->getGPUPrimaryStream(dev, 0);
+    IG::get_primary_stream(*primary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_gpu_get_second_primary_stream(int dev, PrimaryStream* primary, int size)
 {
-    auto& array = sInterface->getGPUPrimaryStream(dev, 1, size);
-    IG::get_primary_stream(*primary, array.data(), array.size() / IG::PrimaryStreamSize, IG::PrimaryStreamSize);
+    const size_t capacity = sInterface->getPrimaryStreamSize();
+    auto& array           = sInterface->getGPUPrimaryStream(dev, 1, size);
+    IG::get_primary_stream(*primary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_gpu_get_second_primary_stream_const(int dev, PrimaryStream* primary)
 {
-    auto& array = sInterface->getGPUPrimaryStream(dev, 1);
-    IG::get_primary_stream(*primary, array.data(), array.size() / IG::PrimaryStreamSize, IG::PrimaryStreamSize);
+    const size_t capacity = sInterface->getPrimaryStreamSize();
+    auto& array           = sInterface->getGPUPrimaryStream(dev, 1);
+    IG::get_primary_stream(*primary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_gpu_get_first_secondary_stream(int dev, SecondaryStream* secondary, int size)
 {
-    auto& array = sInterface->getGPUSecondaryStream(dev, 0, size);
-    IG::get_secondary_stream(*secondary, array.data(), array.size() / IG::SecondaryStreamSize);
+    const size_t capacity = sInterface->getSecondaryStreamSize();
+    auto& array           = sInterface->getGPUSecondaryStream(dev, 0, size);
+    IG::get_secondary_stream(*secondary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_gpu_get_first_secondary_stream_const(int dev, SecondaryStream* secondary)
 {
-    auto& array = sInterface->getGPUSecondaryStream(dev, 0);
-    IG::get_secondary_stream(*secondary, array.data(), array.size() / IG::SecondaryStreamSize);
+    const size_t capacity = sInterface->getSecondaryStreamSize();
+    auto& array           = sInterface->getGPUSecondaryStream(dev, 0);
+    IG::get_secondary_stream(*secondary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_gpu_get_second_secondary_stream(int dev, SecondaryStream* secondary, int size)
 {
-    auto& array = sInterface->getGPUSecondaryStream(dev, 1, size);
-    IG::get_secondary_stream(*secondary, array.data(), array.size() / IG::SecondaryStreamSize);
+    const size_t capacity = sInterface->getSecondaryStreamSize();
+    auto& array           = sInterface->getGPUSecondaryStream(dev, 1, size);
+    IG::get_secondary_stream(*secondary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_gpu_get_second_secondary_stream_const(int dev, SecondaryStream* secondary)
 {
-    auto& array = sInterface->getGPUSecondaryStream(dev, 1);
-    IG::get_secondary_stream(*secondary, array.data(), array.size() / IG::SecondaryStreamSize);
+    const size_t capacity = sInterface->getSecondaryStreamSize();
+    auto& array           = sInterface->getGPUSecondaryStream(dev, 1);
+    IG::get_secondary_stream(*secondary, array.data(), array.size() / capacity, capacity);
 }
 
 IG_EXPORT void ignis_gpu_swap_primary_streams(int dev)
@@ -1740,9 +1757,9 @@ IG_EXPORT void ignis_handle_traverse_secondary(int dev, int size)
     sInterface->runSecondaryTraversalShader(dev, size);
 }
 
-IG_EXPORT int ignis_handle_ray_generation(int dev, int* id, int size, int xmin, int ymin, int xmax, int ymax)
+IG_EXPORT int ignis_handle_ray_generation(int dev, int next_id, int size, int xmin, int ymin, int xmax, int ymax)
 {
-    return sInterface->runRayGenerationShader(dev, id, size, xmin, ymin, xmax, ymax);
+    return sInterface->runRayGenerationShader(dev, next_id, size, xmin, ymin, xmax, ymax);
 }
 
 IG_EXPORT void ignis_handle_miss_shader(int dev, int first, int last)

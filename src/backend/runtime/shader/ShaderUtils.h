@@ -18,5 +18,6 @@ public:
     static std::string endCallback();
 
     static std::string inlineSPI(const LoaderContext& ctx);
+    static std::string inlinePayloadInfo(const LoaderContext& ctx);
 };
 } // namespace IG

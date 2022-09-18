@@ -30,6 +30,9 @@ struct TechniqueVariantInfo {
     /// The variant requires all lights (especially area lights) in the miss shader, else only infinite lights will be exposed in the miss shader
     bool UsesAllLightsInMiss = false;
 
+    size_t PrimaryPayloadCount   = 0;
+    size_t SecondaryPayloadCount = 0;
+
     /// The variant overrides the default camera shader
     TechniqueCameraGenerator OverrideCameraGenerator = nullptr;
 

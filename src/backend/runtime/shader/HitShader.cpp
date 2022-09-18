@@ -24,6 +24,7 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
     stream << "#[export] fn ig_hit_shader(settings: &Settings, entity_id: i32, mat_id: i32, first: i32, last: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
            << std::endl;
 
     stream << ShaderUtils::generateDatabase(ctx) << std::endl;
@@ -63,7 +64,7 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
            << std::endl;
 
     stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_hit_shader(entity_id, shader, scene, technique, first, last, spi, use_framebuffer);" << std::endl
+           << "  device.handle_hit_shader(entity_id, shader, scene, technique, payload_info, first, last, spi, use_framebuffer);" << std::endl
            << "}" << std::endl;
 
     return stream.str();

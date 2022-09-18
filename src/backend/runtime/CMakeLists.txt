@@ -183,7 +183,7 @@ add_custom_command(
   VERBATIM)
 
 # ##########################################################
-add_library(ig_lib_runtime STATIC ${SRC} ${API_SRC_FILE})
+add_library(ig_lib_runtime SHARED ${SRC} ${API_SRC_FILE})
 
 if(NOT WIN32)
   find_package(Threads REQUIRED)

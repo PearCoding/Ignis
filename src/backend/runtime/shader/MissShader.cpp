@@ -23,6 +23,7 @@ std::string MissShader::setup(LoaderContext& ctx)
     stream << "#[export] fn ig_miss_shader(settings: &Settings, first: i32, last: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
            << std::endl;
 
     ShadingTree tree(ctx);
@@ -48,7 +49,7 @@ std::string MissShader::setup(LoaderContext& ctx)
            << std::endl;
 
     stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_miss_shader(technique, first, last, spi, use_framebuffer)" << std::endl
+           << "  device.handle_miss_shader(technique, payload_info, first, last, spi, use_framebuffer)" << std::endl
            << "}" << std::endl;
 
     return stream.str();

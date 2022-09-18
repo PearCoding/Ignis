@@ -6,10 +6,10 @@ struct Device {
 
     //------------------------------------- Pipeline    
     // [Internal] Run full pipeline with the given scene info and spi
-    trace: fn (SceneInfo, Pipeline, i32 /* spi */) -> (),
+    trace: fn (SceneInfo, Pipeline, PayloadInfo, i32 /* spi */) -> (),
 
     // [Internal] Generate rays
-    generate_rays: fn (RayEmitter, &mut i32, i32, i32, i32, i32, i32, i32) -> i32, 
+    generate_rays: fn (RayEmitter, PayloadInfo, i32, i32, i32, i32, i32, i32, i32) -> i32, 
 
     // Synchronize device
     sync: fn () -> (),
@@ -21,13 +21,13 @@ struct Device {
     handle_traversal_secondary: fn (SceneGeometry, i32, bool, i32, bool) -> (), 
 
     // [Internal] Handle a miss shader
-    handle_miss_shader: fn (Technique, i32, i32, i32, bool) -> (), 
+    handle_miss_shader: fn (Technique, PayloadInfo, i32, i32, i32, bool) -> (), 
 
     // [Internal] Handle a hit shader
-    handle_hit_shader: fn (i32, MaterialShader, Scene, Technique, i32, i32, i32, bool) -> (),
+    handle_hit_shader: fn (i32, MaterialShader, Scene, Technique, PayloadInfo, i32, i32, i32, bool) -> (),
 
     // [Internal] Handle an advanced shadow shader (can be hit or miss)
-    handle_advanced_shadow_shader: fn (MaterialShader, Technique, i32, i32, i32, bool, bool) -> (), 
+    handle_advanced_shadow_shader: fn (MaterialShader, Technique, PayloadInfo, i32, i32, i32, bool, bool) -> (), 
     
     //------------------------------------- Utilities
     // Parallel one-dimensional range on the device

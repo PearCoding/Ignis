@@ -68,6 +68,7 @@ static TechniqueInfo wireframe_get_info(const std::string&, const std::shared_pt
 {
     TechniqueInfo info;
     info.Variants[0].RequiresExplicitCamera = true; // We make use of the camera differential!
+    info.Variants[0].PrimaryPayloadCount = 2;
     return info;
 }
 
@@ -84,6 +85,7 @@ static void enable_ib(TechniqueInfo& info, bool always = false, bool extend = tr
 
     info.Variants.back().LockFramebuffer = true;
     info.Variants.back().OverrideSPI     = 1;
+    info.Variants.back().PrimaryPayloadCount = 2;
 
     const size_t variantCount = info.Variants.size();
     if (variantCount > 1) {
@@ -200,6 +202,7 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
     }
 
     info.Variants[0].UsesLights = true;
+    info.Variants[0].PrimaryPayloadCount = 6;
 
     if (ctx.Denoiser.Enabled)
         enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
@@ -257,6 +260,7 @@ static TechniqueInfo volpath_get_info(const std::string&, const std::shared_ptr<
     TechniqueInfo info;
     info.Variants[0].UsesLights = true;
     info.Variants[0].UsesMedia  = true;
+    info.Variants[0].PrimaryPayloadCount = 7;
 
     if (ctx.Denoiser.Enabled)
         enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
@@ -332,6 +336,9 @@ static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Pars
     info.Variants.resize(2);
     info.Variants[0].UsesLights = false; // LT makes no use of other lights (but starts on one)
     info.Variants[1].UsesLights = true;  // Standard PT still use of lights in the miss shader
+
+    info.Variants[0].PrimaryPayloadCount = 7;
+    info.Variants[1].PrimaryPayloadCount = 7;
 
     // To start from a light source, we do have to override the standard camera generator for LT
     info.Variants[0].OverrideCameraGenerator = ppm_light_camera_generator;

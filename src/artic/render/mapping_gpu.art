@@ -99,6 +99,7 @@ fn @gpu_hit_shade( acc: Accelerator
              , shader: MaterialShader
              , scene: Scene
              , technique: Technique
+             , payload_info: PayloadInfo
              , accumulate: FilmAccumulator
              , primary: PrimaryStream
              , secondary: SecondaryStream
@@ -111,11 +112,11 @@ fn @gpu_hit_shade( acc: Accelerator
     let read_primary_ray        = make_ray_stream_reader(primary.rays, 1);
     let read_primary_hit        = make_primary_stream_hit_reader(primary, 1);
     let read_primary_rnd_state  = make_primary_stream_rnd_state_reader(primary, 1);
-    let read_primary_payload    = make_primary_stream_payload_reader(primary, 1);
+    let read_primary_payload    = make_primary_stream_payload_reader(primary, payload_info.primary_count, 1);
     let write_primary_ray       = make_ray_stream_writer(primary.rays, 1);
     let write_secondary_ray     = make_ray_stream_writer(secondary.rays, 1);
     let write_primary_rnd_state = make_primary_stream_rnd_state_writer(primary, 1);
-    let write_primary_payload   = make_primary_stream_payload_writer(primary, 1);
+    let write_primary_payload   = make_primary_stream_payload_writer(primary, payload_info.primary_count, 1);
 
     gpu_exec_1d(acc, n, 64 /*block_size*/, |work_item| {
         let ray_id = first + work_item.gidx();
@@ -184,6 +185,7 @@ fn @gpu_hit_shade_handler(dev_id: i32
                         , shader: MaterialShader
                         , scene: Scene
                         , technique: Technique
+                        , payload_info: PayloadInfo
                         , begin: i32
                         , end: i32
                         , spi: i32
@@ -196,19 +198,20 @@ fn @gpu_hit_shade_handler(dev_id: i32
     ignis_gpu_get_first_secondary_stream_const(dev_id, &mut secondary);
 
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_hit_shade(acc, shader, scene, technique, accumulate, primary, secondary, begin, end, entity_id);
+    gpu_hit_shade(acc, shader, scene, technique, payload_info, accumulate, primary, secondary, begin, end, entity_id);
 }
 
 // Shade nonhits
 fn @gpu_miss_shade( acc: Accelerator
                 , technique: Technique
+                , payload_info: PayloadInfo
                 , accumulate: FilmAccumulator
                 , primary: PrimaryStream
                 , first: i32, last: i32) -> () {
     let n = last - first;
     
     let read_primary_ray     = make_ray_stream_reader(primary.rays, 1);
-    let read_primary_payload = make_primary_stream_payload_reader(primary, 1);
+    let read_primary_payload = make_primary_stream_payload_reader(primary, payload_info.primary_count, 1);
 
     let on_miss = technique.on_miss;
     gpu_exec_1d(acc, n, 64, |work_item| {
@@ -233,6 +236,7 @@ fn @gpu_miss_shade_handler(dev_id: i32
                          , acc: Accelerator
                          , atomics: Atomics
                          , technique: Technique
+                         , payload_info: PayloadInfo
                          , begin: i32
                          , end: i32
                          , spi: i32
@@ -243,7 +247,7 @@ fn @gpu_miss_shade_handler(dev_id: i32
     ignis_gpu_get_first_primary_stream_const(dev_id, &mut primary);
 
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_miss_shade(acc, technique, accumulate, primary, begin, end);
+    gpu_miss_shade(acc, technique, payload_info, accumulate, primary, begin, end);
 }
 
 // Handle advanced shadows
@@ -251,6 +255,7 @@ fn @gpu_advanced_shadow(is_hit: bool
                       , acc: Accelerator
                       , shader: MaterialShader
                       , technique: Technique
+                      , _payload_info: PayloadInfo // TODO
                       , accumulate: FilmAccumulator
                       , secondary: SecondaryStream
                       , first: i32, last: i32) -> () {
@@ -282,6 +287,7 @@ fn @gpu_advanced_shadow_handler(dev_id: i32
                               , atomics: Atomics
                               , shader: MaterialShader
                               , technique: Technique
+                              , payload_info: PayloadInfo
                               , begin: i32
                               , end: i32
                               , spi: i32
@@ -293,7 +299,7 @@ fn @gpu_advanced_shadow_handler(dev_id: i32
     ignis_gpu_get_first_secondary_stream_const(dev_id, &mut secondary);
 
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_advanced_shadow(is_hit, acc, shader, technique, accumulate, secondary, begin, end);
+    gpu_advanced_shadow(is_hit, acc, shader, technique, payload_info, accumulate, secondary, begin, end);
 }
 
 fn @gpu_copy_ray( rays: RayStream
@@ -318,6 +324,7 @@ fn @gpu_copy_primary_ray( primary: PrimaryStream
                     , src_id: i32
                     , dst_id: i32
                     , keep_hit: bool
+                    , payload_count: i32
                     ) -> () {
     gpu_copy_ray(primary.rays, other_primary.rays, src_id, dst_id);
     if keep_hit {
@@ -329,9 +336,8 @@ fn @gpu_copy_primary_ray( primary: PrimaryStream
     }
     other_primary.rnd(dst_id) = primary.rnd(src_id);
 
-    // TODO: Fix slow loads/stores
-    for c in unroll(0, MaxRayPayloadComponents) {
-        other_primary.user(c)(dst_id) = primary.user(c)(src_id);
+    for c in unroll(0, payload_count) {
+        other_primary.payload(c)(dst_id) = primary.payload(c)(src_id);
     }
 }
 
@@ -339,12 +345,17 @@ fn @gpu_copy_secondary_ray( secondary: SecondaryStream
                     , other_secondary: SecondaryStream
                     , src_id: i32
                     , dst_id: i32
+                    , payload_count: i32
                     ) -> () {
     gpu_copy_ray(secondary.rays, other_secondary.rays, src_id, dst_id);
     other_secondary.mat_id(dst_id)  = secondary.mat_id(src_id);
     other_secondary.color_r(dst_id) = secondary.color_r(src_id);
     other_secondary.color_g(dst_id) = secondary.color_g(src_id);
     other_secondary.color_b(dst_id) = secondary.color_b(src_id);
+
+    for c in unroll(0, payload_count) {
+        other_secondary.payload(c)(dst_id) = secondary.payload(c)(src_id);
+    }
 }
 
 fn @gpu_sort_primary( primary: PrimaryStream
@@ -354,6 +365,7 @@ fn @gpu_sort_primary( primary: PrimaryStream
                     , acc: Accelerator
                     , atomics: Atomics
                     , scene_info: SceneInfo
+                    , payload_count: i32
                     , gpu_tmp:  &mut [i32]
                     , ray_begins: &mut [i32]
                     , ray_ends: &mut [i32]
@@ -393,7 +405,7 @@ fn @gpu_sort_primary( primary: PrimaryStream
         if src_id >= size { return() }
 
         let dst_id = atomics.add_global_i32(&mut gpu_tmp(primary.ent_id(src_id)), 1);
-        gpu_copy_primary_ray(primary, other_primary, src_id, dst_id, true);
+        gpu_copy_primary_ray(primary, other_primary, src_id, dst_id, true, payload_count);
     });
     acc.sync();
 }
@@ -401,6 +413,7 @@ fn @gpu_sort_primary( primary: PrimaryStream
 fn @gpu_sort_secondary(secondary: SecondaryStream
                      , other_secondary: SecondaryStream
                      , size: i32
+                     , payload_count: i32
                      , dev_id: i32
                      , acc: Accelerator
                      , atomics: Atomics
@@ -437,7 +450,7 @@ fn @gpu_sort_secondary(secondary: SecondaryStream
             atomics.add_global_i32(&mut gpu_tmp(1), 1)
         };
 
-        gpu_copy_secondary_ray(secondary, other_secondary, src_id, dst_id);
+        gpu_copy_secondary_ray(secondary, other_secondary, src_id, dst_id, payload_count);
     });
     acc.sync();
 
@@ -449,7 +462,6 @@ fn @gpu_sort_secondary(secondary: SecondaryStream
     (valid_entries, entries)
 }
 
-
 fn @gpu_sort_secondary_with_materials( secondary: SecondaryStream
                                      , other_secondary: SecondaryStream
                                      , size: i32
@@ -457,6 +469,7 @@ fn @gpu_sort_secondary_with_materials( secondary: SecondaryStream
                                      , acc: Accelerator
                                      , atomics: Atomics
                                      , scene_info: SceneInfo
+                                     , payload_count: i32
                                      , gpu_tmp:  &mut [i32]
                                      , ray_begins: &mut [i32]
                                      , ray_ends: &mut [i32]
@@ -502,7 +515,7 @@ fn @gpu_sort_secondary_with_materials( secondary: SecondaryStream
         if src_id >= size { return() }
 
         let dst_id = atomics.add_global_i32(&mut gpu_tmp(map_id(src_id)), 1);
-        gpu_copy_secondary_ray(secondary, other_secondary, src_id, dst_id);
+        gpu_copy_secondary_ray(secondary, other_secondary, src_id, dst_id, payload_count);
     });
     acc.sync();
 
@@ -514,21 +527,22 @@ fn @gpu_generate_rays( primary: PrimaryStream
                      , capacity: i32
                      , acc: Accelerator
                      , emitter: RayEmitter
-                     , id: &mut i32
+                     , payload_info: PayloadInfo
+                     , next_id: i32
                      , film_width: i32
                      , film_height: i32
                      , spi: i32
                      ) -> i32 {
-    let first_ray_id = *id;
+    let first_ray_id = next_id;
     let first_dst_id = current_size;
     let film_size    = film_width * film_height;
-    let num_rays     = cpu_intrinsics.min(spi * film_size - first_ray_id, capacity - first_dst_id);
+    let num_rays     = min(spi * film_size - first_ray_id, capacity - first_dst_id);
     let film_div     = make_fast_div(film_width as u32);
 
     let ray_ids       = primary.rays.id;
     let write_ray     = make_ray_stream_writer(primary.rays, 1);
     let write_rnd     = make_primary_stream_rnd_state_writer(primary, 1);
-    let write_payload = make_primary_stream_payload_writer(primary, 1);
+    let write_payload = make_primary_stream_payload_writer(primary, payload_info.primary_count, 1);
     let write_id      = @ |i: i32, _: i32, id2: i32| ray_ids(i) = id2;
 
     if num_rays <= 0 { /* TODO: Add error message! */ return(0) }
@@ -553,7 +567,6 @@ fn @gpu_generate_rays( primary: PrimaryStream
     });
     acc.sync();
 
-    *id = first_ray_id + num_rays;
     current_size + num_rays
 }
 
@@ -562,7 +575,8 @@ fn @gpu_generate_rays_handler(dev_id: i32
                             , capacity: i32
                             , acc: Accelerator
                             , emitter: RayEmitter
-                            , id: &mut i32
+                            , payload_info: PayloadInfo
+                            , next_id: i32
                             , spi: i32
                             ) -> i32 {
     let work_info = get_work_info();
@@ -570,12 +584,13 @@ fn @gpu_generate_rays_handler(dev_id: i32
     let mut primary: PrimaryStream;
     ignis_gpu_get_first_primary_stream(dev_id, &mut primary, capacity);
 
-    gpu_generate_rays(primary, size, capacity, acc, emitter, id, work_info.width, work_info.height, spi)
+    gpu_generate_rays(primary, size, capacity, acc, emitter, payload_info, next_id, work_info.width, work_info.height, spi)
 }
 
 fn @gpu_compact_primary( primary: PrimaryStream
                        , other_primary: PrimaryStream
                        , size: i32
+                       , payload_count: i32
                        , dev_id: i32
                        , acc: Accelerator
                        , atomics: Atomics
@@ -594,7 +609,7 @@ fn @gpu_compact_primary( primary: PrimaryStream
         if ray_id < 0 { return() }
 
         let dst_id = atomics.add_global_i32(&mut gpu_tmp(0), 1);
-        gpu_copy_primary_ray(primary, other_primary, src_id, dst_id, false);
+        gpu_copy_primary_ray(primary, other_primary, src_id, dst_id, false, payload_count);
     });
     acc.sync();
 
@@ -620,6 +635,7 @@ fn @gpu_trace( dev_id: i32
              , atomics: Atomics
              , scene_info: SceneInfo
              , pipeline: Pipeline
+             , payload_info: PayloadInfo
              , spi: i32
              ) -> () {
     let work_info = get_work_info();
@@ -647,8 +663,10 @@ fn @gpu_trace( dev_id: i32
         // Regenerate rays
         if current_size < GPUStreamCapacity && id < num_rays {
             let before_s = current_size;
-            current_size = pipeline.on_generate(&mut id, current_size, 0, 0, work_info.width, work_info.height);
-            stats::add_quantity(stats::Quantity::CameraRayCount, current_size - before_s);
+            current_size = pipeline.on_generate(id, current_size, 0, 0, work_info.width, work_info.height);
+            let added    = current_size - before_s;
+            id += added;
+            stats::add_quantity(stats::Quantity::CameraRayCount, added);
         }
 
         // Special case: No entities to intersect
@@ -663,7 +681,7 @@ fn @gpu_trace( dev_id: i32
         pipeline.on_traverse_primary(current_size);
 
         // Sort rays by entity
-        gpu_sort_primary(primary, other_primary, current_size, dev_id, acc, atomics, scene_info, gpu_tmp, temp.ray_begins, temp.ray_ends);
+        gpu_sort_primary(primary, other_primary, current_size, dev_id, acc, atomics, scene_info, payload_info.primary_count, gpu_tmp, temp.ray_begins, temp.ray_ends);
         gpu_swap_primary_streams(dev_id, &mut primary, &mut other_primary);
 
         // Shade rays
@@ -693,7 +711,7 @@ fn @gpu_trace( dev_id: i32
             // Trace secondary rays
             if work_info.advanced_shadows {                
                 // Secondary stream is modified, sort it to have valid shadows first, invalids last
-                let (valid_count, count) = gpu_sort_secondary(secondary, other_secondary, secondary_size, dev_id, acc, atomics, gpu_tmp);
+                let (valid_count, count) = gpu_sort_secondary(secondary, other_secondary, secondary_size, payload_info.secondary_count, dev_id, acc, atomics, gpu_tmp);
                 gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
 
                 if valid_count != 0 {
@@ -708,7 +726,7 @@ fn @gpu_trace( dev_id: i32
                 acc.sync();
             } else if work_info.advanced_shadows {                
                 // Secondary stream is modified, sort it to have valid shadows first, invalids last
-                let (valid_count, count) = gpu_sort_secondary_with_materials(secondary, other_secondary, secondary_size, dev_id, acc, atomics, scene_info, gpu_tmp, temp.ray_begins, temp.ray_ends);
+                let (valid_count, count) = gpu_sort_secondary_with_materials(secondary, other_secondary, secondary_size, dev_id, acc, atomics, scene_info, payload_info.secondary_count, gpu_tmp, temp.ray_begins, temp.ray_ends);
                 gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
 
                 let mut sfirst = 0;
@@ -738,7 +756,7 @@ fn @gpu_trace( dev_id: i32
             stats::add_quantity(stats::Quantity::ShadowRayCount, secondary_size);
 
             // Compact primary rays
-            current_size = gpu_compact_primary(primary, other_primary, current_size, dev_id, acc, atomics, gpu_tmp);
+            current_size = gpu_compact_primary(primary, other_primary, current_size, payload_info.primary_count, dev_id, acc, atomics, gpu_tmp);
             gpu_swap_primary_streams(dev_id, &mut primary, &mut other_primary);
             stats::add_quantity(stats::Quantity::BounceRayCount, current_size);
         }
@@ -785,18 +803,19 @@ fn @make_gpu_device( dev_id: i32
                    , is_nvvm: bool
                    ) = Device {
     id    = dev_id,
-    trace = @ |scene_info, pipeline, spi| {
+    trace = @ |scene_info, pipeline, payload_info, spi| {
         gpu_trace(
             dev_id,
             acc,
             atomics,
             scene_info,
             pipeline,
+            payload_info,
             spi
         )
     },
-    generate_rays = @ | emitter, id, size, _xmin, _ymin, _xmax, _ymax, spi | -> i32 {
-        gpu_generate_rays_handler(dev_id, size, GPUStreamCapacity, acc, emitter, id, spi)
+    generate_rays = @ | emitter, payload_info, next_id, size, _xmin, _ymin, _xmax, _ymax, spi | -> i32 {
+        gpu_generate_rays_handler(dev_id, size, GPUStreamCapacity, acc, emitter, payload_info, next_id, spi)
     },
     handle_traversal_primary = @ | scene_geometry, size | {
         let mut primary: PrimaryStream;
@@ -812,14 +831,14 @@ fn @make_gpu_device( dev_id: i32
         let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
         gpu_traverse_secondary(secondary, scene_geometry, size, min_max, acc, accumulate, is_advanced);
     },
-    handle_miss_shader = @ | technique, first, last, spi, use_framebuffer | {
-        gpu_miss_shade_handler(dev_id, acc, atomics, technique, first, last, spi, use_framebuffer);
+    handle_miss_shader = @ | technique, payload_info, first, last, spi, use_framebuffer | {
+        gpu_miss_shade_handler(dev_id, acc, atomics, technique, payload_info, first, last, spi, use_framebuffer);
     },
-    handle_hit_shader = @ | entity_id, shader, scene, technique, first, last, spi, use_framebuffer | {
-        gpu_hit_shade_handler(dev_id, acc, atomics, entity_id, shader, scene, technique, first, last, spi, use_framebuffer);
+    handle_hit_shader = @ | entity_id, shader, scene, technique, payload_info, first, last, spi, use_framebuffer | {
+        gpu_hit_shade_handler(dev_id, acc, atomics, entity_id, shader, scene, technique, payload_info, first, last, spi, use_framebuffer);
     },
-    handle_advanced_shadow_shader = @ | shader, technique, first, last, spi, use_framebuffer, is_hit | {
-        gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, technique, first, last, spi, use_framebuffer, is_hit);
+    handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit | {
+        gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit);
     },
     sync = @ || acc.sync(),
     parallel_range = @ |body| {

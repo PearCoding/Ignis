@@ -15,7 +15,7 @@ std::string DeviceShader::setup(const LoaderContext& ctx)
            << "  maybe_unused(settings);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
            << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl
-           << "  let payload_info = PayloadInfo { primary_count = 0, secondary_count = 0 };" << std::endl // TODO
+           << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl // TODO
            << "  ig_render_pipeline(device, payload_info, spi)" << std::endl
            << "}";
     

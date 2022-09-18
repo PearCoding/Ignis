@@ -470,10 +470,10 @@ bool Runtime::compileShaders()
             auto& shaders       = mTechniqueVariantShaderSets[i];
 
             IG_LOG(L_DEBUG) << "Handling technique variant " << i << std::endl;
-            compile(i, "device", "ig_callback", variant.DeviceShader, shaders.DeviceShader);
+            compile(i, "device", "ig_callback_shader", variant.DeviceShader, shaders.DeviceShader);
             if (mOptions.EnableTonemapping) {
-                compile(i, "tonemap", "ig_tonemap", variant.TonemapShader, shaders.TonemapShader);
-                compile(i, "imageinfo", "ig_imageinfo", variant.ImageinfoShader, shaders.ImageinfoShader);
+                compile(i, "tonemap", "ig_tonemap_shader", variant.TonemapShader, shaders.TonemapShader);
+                compile(i, "imageinfo", "ig_imageinfo_shader", variant.ImageinfoShader, shaders.ImageinfoShader);
             }
             compile(i, "primary traversal", "ig_traversal_shader", variant.PrimaryTraversalShader, shaders.PrimaryTraversalShader);
             compile(i, "secondary traversal", "ig_traversal_shader", variant.SecondaryTraversalShader, shaders.SecondaryTraversalShader);
@@ -513,6 +513,7 @@ bool Runtime::compileShaders()
         }
     } catch (const std::exception& e) {
         IG_LOG(L_ERROR) << e.what() << std::endl;
+        return false;
     }
 
     IG_LOG(L_DEBUG) << "Compiling shaders took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startJIT).count() / 1000.0f << " seconds" << std::endl;
