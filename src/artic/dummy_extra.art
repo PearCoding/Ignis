@@ -1,6 +1,4 @@
-// In contrary to dummy_main.art, dummy_extra.art depends on declarations inside the impl/ folder as well
-
-static RayPayloadComponents = 0;
+// In contrary to dummy_main.art, dummy_extra.art is intended to be modified or extended by the user
 
 // Dummy file used to generate a C interface for the renderer
 #[export]

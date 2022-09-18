@@ -1,0 +1,65 @@
+fn @make_packed_color(r: u8, g: u8, b: u8, a: u8) = ((a as u32) << 24) | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32);
+fn @make_byte_color(c : Color) = make_packed_color(
+    (clampf(c.r, 0, 1) * 255) as u8,
+    (clampf(c.g, 0, 1) * 255) as u8,
+    (clampf(c.b, 0, 1) * 255) as u8,
+    (clampf(c.a, 0, 1) * 255) as u8
+);
+
+fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &TonemapSettings) -> () {
+    let buffer_in  = device.make_buffer(in_pixels  as &[u8], width * height * 3);
+    let buffer_out = device.make_buffer(out_pixels as &[u8], width * height);
+
+    let use_gamma       = settings.use_gamma;
+    let scale           = settings.scale;
+    let exposure_factor = settings.exposure_factor;
+    let exposure_offset = settings.exposure_offset;
+
+    fn @tonemap(method: i32) -> () {
+        for ind in device.parallel_range(0, width * height) {
+            // TODO: It would be more load friendly if the image buffer was actually 4 units per component, instead of 3
+            let rgb = color_mulf(make_color(buffer_in.load_f32(ind * 3 + 0), buffer_in.load_f32(ind * 3 + 1), buffer_in.load_f32(ind * 3 + 2), 1), scale);
+            let xyY = srgb_to_xyY(rgb);
+    
+            if math_builtins::isnan(xyY.b) {
+                buffer_out.store_i32(ind, bitcast[i32](make_packed_color(0, 255, 255, 255))); // Cyan
+            } else if !math_builtins::isfinite(xyY.b) {
+                buffer_out.store_i32(ind, bitcast[i32](make_packed_color(255, 0, 150, 255))); // Pink
+            } else if xyY.r < 0.0 || xyY.g < 0.0 || xyY.b < 0.0 {
+                buffer_out.store_i32(ind, bitcast[i32](make_packed_color(255, 255, 0, 255))); // Orange
+            } else {
+                let L = exposure_factor * xyY.b + exposure_offset;
+    
+                let nL = match method {
+                    0 => L,
+                    1 => reinhard(L),
+                    2 => reinhard_modified(L),
+                    _ => aces(L)
+                };
+    
+                let color = xyY_to_srgb(make_color(xyY.r, xyY.g, nL, 1));
+                let out_color = if use_gamma {
+                    make_color(srgb_gamma(color.r),
+                               srgb_gamma(color.g),
+                               srgb_gamma(color.b),
+                               color.a)
+                } else { 
+                    color
+                };
+    
+                buffer_out.store_i32(ind, bitcast[i32](make_byte_color(out_color)));
+            }
+        }
+    }
+
+    // Force expansion of the actual methods
+    match settings.method {
+        0 => tonemap(0),
+        1 => tonemap(1),
+        2 => tonemap(2),
+        _ => tonemap(3)
+    };
+    
+
+    device.sync();
+}

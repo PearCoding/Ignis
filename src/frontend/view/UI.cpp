@@ -545,8 +545,8 @@ public:
         ImageInfoSettings settings{ aov_name.c_str(),
                                     Histogram.data(), Histogram.size(),
                                     1.0f };
-        ImageInfoOutput output;
-        Runtime->imageinfo(settings, output);
+
+        const ImageInfoOutput output = Runtime->imageinfo(settings);
 
         LastLum         = LuminanceInfo();
         LastLum.Avg     = output.Average;

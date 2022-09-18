@@ -27,7 +27,6 @@ SET(SRC_FILES
 add_executable(igview ${SRC_FILES})
 target_include_directories(igview PUBLIC ${SDL2_INCLUDE_DIR} ${imgui_SOURCE_DIR} ${imgui_markdown_SOURCE_DIR})
 target_link_libraries(igview PRIVATE ${SDL2_LIBRARY} ig_lib_common)
-add_dependencies(igview ignis_drivers)
 add_lto(igview)
 add_checks(igview)
 install(TARGETS igview ${_IG_RUNTIME_SET} COMPONENT frontends)

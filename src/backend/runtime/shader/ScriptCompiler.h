@@ -3,12 +3,13 @@
 #include "IG_Config.h"
 
 namespace IG {
-class ScriptPreprocessor {
+class ScriptCompiler {
 public:
-    ScriptPreprocessor()  = default;
-    ~ScriptPreprocessor() = default;
+    ScriptCompiler()  = default;
+    ~ScriptCompiler() = default;
 
     std::string prepare(const std::string& script) const;
+    void* compile(const std::string& script, const std::string& function, bool isVerbose) const;
     void loadStdLibFromDirectory(const std::filesystem::path& dir);
 
 private:

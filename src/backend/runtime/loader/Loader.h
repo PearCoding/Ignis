@@ -17,6 +17,7 @@ struct LoaderOptions {
     size_t SamplesPerIteration; // Only a recommendation!
     bool IsTracer;
     bool ForceSpecialization;
+    bool EnableTonemapping;
     DenoiserSettings Denoiser;
 };
 

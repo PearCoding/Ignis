@@ -19,10 +19,9 @@ set(SRC
   SceneObject.h
   SHA256.cpp
   SHA256.h
-  SharedLibrary.cpp
-  SharedLibrary.h
   Statistics.cpp
   Statistics.h
+  Target.cpp
   Target.h
   Timer.h
   bvh/BvhNAdapter.h
@@ -38,9 +37,9 @@ set(SRC
   container/PointKdTree.h
   container/PointKdTree.inl
   container/PositionGetter.h
-  driver/DriverManager.cpp
-  driver/DriverManager.h
-  driver/Interface.h
+  device/Device.cpp
+  device/Device.h
+  device/ShallowArray.h
   light/AreaLight.cpp
   light/AreaLight.h
   light/CIELight.cpp
@@ -144,18 +143,22 @@ set(SRC
   skysun/model/ArHosekSkyModelData_Spectral.h
   shader/AdvancedShadowShader.cpp
   shader/AdvancedShadowShader.h
+  shader/DeviceShader.cpp
+  shader/DeviceShader.h
   shader/HitShader.cpp
   shader/HitShader.h
   shader/MissShader.cpp
   shader/MissShader.h
   shader/RayGenerationShader.cpp
   shader/RayGenerationShader.h
-  shader/ScriptPreprocessor.cpp
-  shader/ScriptPreprocessor.h
+  shader/ScriptCompiler.cpp
+  shader/ScriptCompiler.h
   shader/ShaderUtils.cpp
   shader/ShaderUtils.h
   shader/TraversalShader.cpp
   shader/TraversalShader.h
+  shader/UtilityShader.cpp
+  shader/UtilityShader.h
   shape/PlaneShape.h
   shape/Shape.h
   shape/ShapeProvider.h
@@ -169,13 +172,13 @@ set(SRC
 )
 
 # ##########################################################
-# We could drop some sources from ARTIC_EXTRA_SRC and let it adapt to the actual shading system we jit,
+# We could drop some sources from ARTIC_MAIN_SRC and let it adapt to the actual shading system we jit,
 # but that is not worth the effort currently
 set(API_SRC_FILE ${CMAKE_CURRENT_BINARY_DIR}/api.cpp)
 add_custom_command(
   OUTPUT ${API_SRC_FILE}
-  COMMAND $<TARGET_FILE:ig_api_collector> ${ARTIC_EXTRA_SRC} ${API_SRC_FILE}
-  DEPENDS ${ARTIC_EXTRA_SRC}
+  COMMAND $<TARGET_FILE:ig_api_collector> ${ARTIC_MAIN_SRC} ${API_SRC_FILE}
+  DEPENDS ${ARTIC_MAIN_SRC}
   COMMENT "Embedding API: ${API_SRC_FILE}"
   VERBATIM)
 
@@ -187,11 +190,11 @@ if(NOT WIN32)
   target_link_libraries(ig_lib_runtime PUBLIC Threads::Threads)
 endif()
 
-target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen std::filesystem PRIVATE ${CMAKE_DL_LIBS} pugixml TBB::tbb TBB::tbbmalloc ZLIB::ZLIB pexpr)
-target_include_directories(ig_lib_runtime PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR} ${tinygltf_SOURCE_DIR} ${libbvh_SOURCE_DIR}/include)
+target_link_libraries(ig_lib_runtime PUBLIC Eigen3::Eigen std::filesystem PRIVATE ${CMAKE_DL_LIBS} ${AnyDSL_runtime_LIBRARIES} ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES} pugixml TBB::tbb TBB::tbbmalloc ZLIB::ZLIB pexpr)
+target_include_directories(ig_lib_runtime PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS} ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR} ${tinygltf_SOURCE_DIR} ${libbvh_SOURCE_DIR}/include)
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 target_compile_definitions(ig_lib_runtime PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
-add_dependencies(ig_lib_runtime artic_c_interface artic_c_interface_extra)
+add_dependencies(ig_lib_runtime artic_c_interface)
 
 if(IG_WITH_ASSERTS)
   target_compile_definitions(ig_lib_runtime PUBLIC "IG_WITH_ASSERTS")
@@ -201,6 +204,13 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   # Get rid of annoying pragma warnings
   # Normally we would handle this via diagnostics, but https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
   target_compile_options(ig_lib_runtime PRIVATE -Wno-unknown-pragmas)
+endif()
+
+# Extra
+if(TARGET OpenImageDenoise::OpenImageDenoise)
+  target_sources(ig_lib_runtime PRIVATE extra/oidn.cpp)
+  target_link_libraries(ig_lib_runtime PRIVATE OpenImageDenoise::OpenImageDenoise)
+  target_compile_definitions(ig_lib_runtime PRIVATE "IG_HAS_DENOISER")
 endif()
 
 target_compile_features(ig_lib_runtime PUBLIC cxx_std_17)

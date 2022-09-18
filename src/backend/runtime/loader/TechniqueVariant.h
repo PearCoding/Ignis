@@ -17,10 +17,13 @@ struct ShaderOutput {
 
 template <typename T>
 struct TechniqueVariantBase {
-    ShaderOutput<T> RayGenerationShader;
-    ShaderOutput<T> MissShader;
+    ShaderOutput<T> DeviceShader;
+    ShaderOutput<T> TonemapShader;
+    ShaderOutput<T> ImageinfoShader;
     ShaderOutput<T> PrimaryTraversalShader;
     ShaderOutput<T> SecondaryTraversalShader;
+    ShaderOutput<T> RayGenerationShader;
+    ShaderOutput<T> MissShader;
     std::vector<ShaderOutput<T>> HitShaders;
     std::vector<ShaderOutput<T>> AdvancedShadowHitShaders;
     std::vector<ShaderOutput<T>> AdvancedShadowMissShaders;

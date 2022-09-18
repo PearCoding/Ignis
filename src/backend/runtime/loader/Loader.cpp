@@ -7,12 +7,15 @@
 #include "LoaderTechnique.h"
 #include "Logger.h"
 #include "shader/AdvancedShadowShader.h"
+#include "shader/DeviceShader.h"
 #include "shader/HitShader.h"
 #include "shader/MissShader.h"
 #include "shader/RayGenerationShader.h"
 #include "shader/TraversalShader.h"
+#include "shader/UtilityShader.h"
 
 #include <chrono>
+#include <functional>
 
 namespace IG {
 bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
@@ -77,94 +80,67 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
     result.TechniqueVariants.resize(ctx.TechniqueInfo.Variants.size());
     for (size_t i = 0; i < ctx.TechniqueInfo.Variants.size(); ++i) {
+        const auto setup = [&](const std::string& name, const std::function<std::string()>& func, ShaderOutput<std::string>& output) {
+            ctx.resetRegistry();
+            IG_LOG(L_DEBUG) << "Generating " << name << " shader for variant " << i << std::endl;
+            output.Exec = func();
+            if (output.Exec.empty()) {
+                throw std::runtime_error("Constructed empty " + name + " shader.");
+            }
+            output.LocalRegistry = std::move(ctx.LocalRegistry);
+        };
+
         auto& variant               = result.TechniqueVariants[i];
         const auto& info            = ctx.TechniqueInfo.Variants[i];
         ctx.CurrentTechniqueVariant = i;
         ctx.SamplesPerIteration     = info.GetSPI(opts.SamplesPerIteration);
 
-        // Generate Traversal Shader
-        ctx.resetRegistry();
-        IG_LOG(L_DEBUG) << "Generating primary traversal shader for variant " << i << std::endl;
-        variant.PrimaryTraversalShader.Exec = TraversalShader::setupPrimary(ctx);
-        if (variant.PrimaryTraversalShader.Exec.empty()) {
-            IG_LOG(L_ERROR) << "Constructed empty primary traversal shader." << std::endl;
-            return false;
-        }
+        // Generate shaders
+        setup(
+            "device", [&]() { return DeviceShader::setup(ctx); }, variant.DeviceShader);
+        setup(
+            "tonemap", [&]() { return UtilityShader::setupTonemap(ctx); }, variant.TonemapShader);
+        setup(
+            "imageinfo", [&]() { return UtilityShader::setupImageinfo(ctx); }, variant.ImageinfoShader);
+        setup(
+            "primary traversal", [&]() { return TraversalShader::setupPrimary(ctx); }, variant.PrimaryTraversalShader);
+        setup(
+            "secondary traversal", [&]() { return TraversalShader::setupSecondary(ctx); }, variant.SecondaryTraversalShader);
+        setup(
+            "ray generation", [&]() { return info.OverrideCameraGenerator ? info.OverrideCameraGenerator(ctx) : RayGenerationShader::setup(ctx); }, variant.RayGenerationShader);
+        setup(
+            "miss", [&]() { return MissShader::setup(ctx); }, variant.MissShader);
 
-        ctx.resetRegistry();
-        IG_LOG(L_DEBUG) << "Generating secondary traversal shader for variant " << i << std::endl;
-        variant.SecondaryTraversalShader.Exec = TraversalShader::setupSecondary(ctx);
-        if (variant.PrimaryTraversalShader.Exec.empty()) {
-            IG_LOG(L_ERROR) << "Constructed empty secondary traversal shader." << std::endl;
-            return false;
-        }
-
-        // Generate Ray Generation Shader
-        ctx.resetRegistry();
-        IG_LOG(L_DEBUG) << "Generating ray generation shader for variant " << i << std::endl;
-        if (info.OverrideCameraGenerator)
-            variant.RayGenerationShader.Exec = info.OverrideCameraGenerator(ctx);
-        else
-            variant.RayGenerationShader.Exec = RayGenerationShader::setup(ctx);
-        if (variant.RayGenerationShader.Exec.empty()) {
-            IG_LOG(L_ERROR) << "Constructed empty ray generation shader." << std::endl;
-            return false;
-        }
-        variant.RayGenerationShader.LocalRegistry = std::move(ctx.LocalRegistry);
-
-        // Generate Miss Shader
-        ctx.resetRegistry();
-        IG_LOG(L_DEBUG) << "Generating miss shader for variant " << i << std::endl;
-        variant.MissShader.Exec = MissShader::setup(ctx);
-        if (variant.MissShader.Exec.empty()) {
-            IG_LOG(L_ERROR) << "Constructed empty miss shader." << std::endl;
-            return false;
-        }
-        variant.MissShader.LocalRegistry = std::move(ctx.LocalRegistry);
-
-        // Generate Hit Shader
+        // Generate hit shaders
         for (size_t j = 0; j < ctx.Environment.Materials.size(); ++j) {
-            ctx.resetRegistry();
-            IG_LOG(L_DEBUG) << "Generating hit shader " << j << " for variant " << i << std::endl;
-            std::string shader = HitShader::setup(j, ctx);
-            if (shader.empty()) {
-                IG_LOG(L_ERROR) << "Constructed empty hit shader for material " << j << "." << std::endl;
-                return false;
-            }
-            variant.HitShaders.push_back(ShaderOutput<std::string>{ shader, std::move(ctx.LocalRegistry) });
+            ShaderOutput<std::string> output;
+            setup(
+                "hit " + std::to_string(j), [&]() { return HitShader::setup(j, ctx); }, output);
+            variant.HitShaders.emplace_back(std::move(output));
         }
 
-        // Generate Advanced Shadow Shaders if requested
+        // Generate advanced shadow shaders if requested
         if (info.ShadowHandlingMode != ShadowHandlingMode::Simple) {
             const size_t max_materials = info.ShadowHandlingMode == ShadowHandlingMode::Advanced ? 1 : ctx.Environment.Materials.size();
             for (size_t j = 0; j < max_materials; ++j) {
-                ctx.resetRegistry();
-                IG_LOG(L_DEBUG) << "Generating advanced shadow hit shader " << j << " for variant " << i << std::endl;
-                std::string shader = AdvancedShadowShader::setup(true, j, ctx);
-                if (shader.empty()) {
-                    IG_LOG(L_ERROR) << "Constructed empty advanced shadow hit shader for material " << j << "." << std::endl;
-                    return false;
-                }
-                variant.AdvancedShadowHitShaders.push_back(ShaderOutput<std::string>{ shader, std::move(ctx.LocalRegistry) });
+                ShaderOutput<std::string> output;
+                setup(
+                    "advanced shadow hit " + std::to_string(j), [&]() { return AdvancedShadowShader::setup(true, j, ctx); }, output);
+                variant.AdvancedShadowHitShaders.emplace_back(std::move(output));
             }
             for (size_t j = 0; j < max_materials; ++j) {
-                ctx.resetRegistry();
-                IG_LOG(L_DEBUG) << "Generating advanced shadow miss shader " << j << " for variant " << i << std::endl;
-                std::string shader = AdvancedShadowShader::setup(false, j, ctx);
-                if (shader.empty()) {
-                    IG_LOG(L_ERROR) << "Constructed empty advanced shadow miss shader for material " << j << "." << std::endl;
-                    return false;
-                }
-                variant.AdvancedShadowMissShaders.push_back(ShaderOutput<std::string>{ shader, std::move(ctx.LocalRegistry) });
+                ShaderOutput<std::string> output;
+                setup(
+                    "advanced shadow miss " + std::to_string(j), [&]() { return AdvancedShadowShader::setup(false, j, ctx); }, output);
+                variant.AdvancedShadowMissShaders.emplace_back(std::move(output));
             }
         }
 
+        // Generate callback shaders if requested
         for (size_t j = 0; j < info.CallbackGenerators.size(); ++j) {
             if (info.CallbackGenerators.at(j) != nullptr) {
-                ctx.resetRegistry();
-                IG_LOG(L_DEBUG) << "Generating callback shader " << j << " for variant " << i << std::endl;
-                variant.CallbackShaders[j].Exec          = info.CallbackGenerators.at(j)(ctx);
-                variant.CallbackShaders[j].LocalRegistry = std::move(ctx.LocalRegistry);
+                setup(
+                    "callback " + std::to_string(j), [&]() { return info.CallbackGenerators.at(j)(ctx); }, variant.CallbackShaders[j]);
             }
         }
     }

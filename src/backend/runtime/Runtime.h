@@ -3,9 +3,9 @@
 #include "RuntimeSettings.h"
 #include "RuntimeStructs.h"
 #include "Statistics.h"
-#include "driver/DriverManager.h"
+#include "device/Device.h"
 #include "loader/Loader.h"
-#include "shader/ScriptPreprocessor.h"
+#include "shader/ScriptCompiler.h"
 #include "table/SceneDatabase.h"
 
 namespace IG {
@@ -15,10 +15,7 @@ class Scene;
 
 struct LoaderOptions;
 
-struct AOVAccessor {
-    const float* Data;
-    size_t IterationCount;
-};
+using AOVAccessor = Device::AOVAccessor;
 
 class Runtime {
     IG_CLASS_NON_COPYABLE(Runtime);
@@ -44,7 +41,7 @@ public:
     /// out_pixels should be of size width*height!
     void tonemap(uint32* out_pixels, const TonemapSettings& settings);
     /// A utility function to speed up utility information from the image
-    void imageinfo(const ImageInfoSettings& settings, ImageInfoOutput& output);
+    ImageInfoOutput imageinfo(const ImageInfoSettings& settings);
 
     /// Will resize the framebuffer, clear it and reset rendering
     void resizeFramebuffer(size_t width, size_t height);
@@ -105,7 +102,7 @@ public:
     /// Increase frame count (only used in interactive sessions)
     inline void incFrameCount() { mCurrentFrame++; }
 
-    [[nodiscard]] inline bool hasDenoiser() const { return mLoadedInterface.HasDenoiser; }
+    [[nodiscard]] bool hasDenoiser() const;
 
     /// Get a list of all available techniques
     [[nodiscard]] static std::vector<std::string> getAvailableTechniqueTypes();
@@ -126,12 +123,11 @@ private:
     const RuntimeOptions mOptions;
 
     SceneDatabase mDatabase;
-    DriverInterface mLoadedInterface;
-    DriverManager mManager;
     ParameterSet mParameterSet;
-    ScriptPreprocessor mScriptPreprocessor;
+    ScriptCompiler mCompiler;
 
-    size_t mDevice;
+    std::unique_ptr<Device> mDevice;
+
     size_t mSamplesPerIteration;
     Target mTarget;
 

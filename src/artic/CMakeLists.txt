@@ -10,6 +10,9 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/sort.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/stats.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/vector.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/imageinfo.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/render.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/tonemap.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/aov.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/accumulator.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/bsdf.art
@@ -27,6 +30,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/render/mapping_gpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/material.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/medium.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/payload.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/phase.art
     ${CMAKE_CURRENT_SOURCE_DIR}/render/pipeline.art
@@ -45,10 +49,6 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/mapping_gpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/ray.art
     ${CMAKE_CURRENT_SOURCE_DIR}/traversal/stack.art
-)
-
-set(ARTIC_EXTRA_SRC
-    ${ARTIC_MAIN_SRC}
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/conductor.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/dielectric.art
@@ -106,18 +106,10 @@ set(ARTIC_EXTRA_SRC
 )
 
 set(ARTIC_MAIN_SRC ${ARTIC_MAIN_SRC} PARENT_SCOPE)
-set(ARTIC_EXTRA_SRC ${ARTIC_EXTRA_SRC} PARENT_SCOPE)
 
 anydsl_runtime_wrap(DISCARD_TMP_OBJS
     NAME "interface"
     FRONTEND "artic"
-    FILES ${ARTIC_MAIN_SRC} dummy_main.art
+    FILES ${ARTIC_MAIN_SRC} dummy_main.art dummy_extra.art
     INTERFACE ${CMAKE_BINARY_DIR}/generated_interface)
 add_custom_target(artic_c_interface ALL DEPENDS ${CMAKE_BINARY_DIR}/generated_interface.h)
-
-anydsl_runtime_wrap(DISCARD_TMP_OBJS
-    NAME "interface_extra"
-    FRONTEND "artic"
-    FILES ${ARTIC_EXTRA_SRC} dummy_extra.art
-    INTERFACE ${CMAKE_BINARY_DIR}/generated_interface_extra)
-add_custom_target(artic_c_interface_extra ALL DEPENDS ${CMAKE_BINARY_DIR}/generated_interface_extra.h)

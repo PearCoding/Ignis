@@ -1,0 +1,4 @@
+struct PayloadInfo {
+    primary_count:   i32,
+    secondary_count: i32
+}

@@ -3,7 +3,7 @@ static RayPayloadComponents = 0;
 // Dummy file used to generate a C interface for the renderer
 
 #[export]
-fn ig_render(_settings: &Settings) -> () {
+fn ig_callback_shader(_settings: &Settings) -> () {
     // Force the export of the primary and secondary stream types
     let mut primary : PrimaryStream;
     let mut secondary : SecondaryStream;
@@ -38,12 +38,12 @@ fn ig_render(_settings: &Settings) -> () {
 }
 
 #[export]
-fn ig_ray_generation_shader(_settings: &Settings, _iter: i32, _id: &mut i32, _size: i32, _xmin: i32, _ymin: i32, _xmax: i32, _ymax: i32) -> i32 {
+fn ig_ray_generation_shader(_settings: &Settings, _id: &mut i32, _size: i32, _xmin: i32, _ymin: i32, _xmax: i32, _ymax: i32) -> i32 {
     0
 }
 
 #[export]
-fn ig_traversal_shader(_settings: &Settings, _iter: i32, _size: i32) -> () {
+fn ig_traversal_shader(_settings: &Settings, _size: i32) -> () {
 }
 
 #[export]
@@ -60,16 +60,9 @@ fn ig_advanced_shadow_shader(_settings: &Settings, _mat_id: i32, _first: i32, _l
 }
 
 #[export]
-fn ig_callback_shader(_settings: &Settings, _iter: i32) -> () {
-    let device = make_cpu_default_device();
-    for _i in device.parallel_range(0, 16) {
-    }
+fn ig_imageinfo_shader(_settings: &Settings, _in_pixels: &[f32], _width: i32, _height: i32, _ii_settings: &ImageInfoSettings, _output: &ImageInfoOutput) -> () {
 }
 
 #[export]
-fn ig_utility_imageinfo(_device_id: i32, _in_pixels: &[f32], _width: i32, _height: i32, _settings: &ImageInfoSettings, _output: &ImageInfoOutput) -> () {
-}
-
-#[export]
-fn ig_utility_tonemap(_device_id: i32, _in_pixels: &[f32], _out_pixels: &mut [u32], _width: i32, _height: i32, _settings: &TonemapSettings) -> () {
+fn ig_tonemap_shader(_settings: &Settings, _in_pixels: &[f32], _out_pixels: &mut [u32], _width: i32, _height: i32, _t_settings: &TonemapSettings) -> () {
 }

@@ -88,6 +88,9 @@ public:
             return 0;
         }
     }
+
+    static Target pickCPU();
+    static Target pickGPU();
 };
 
 } // namespace IG

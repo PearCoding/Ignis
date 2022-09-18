@@ -1,6 +1,7 @@
 #include "OpenImageDenoise/oidn.hpp"
 #include "Logger.h"
 
+namespace IG {
 static void errorFunc(void* userPtr, oidn::Error code, const char* message)
 {
     IG_UNUSED(userPtr);
@@ -96,6 +97,8 @@ private:
     oidn::FilterRef mAlbedoFilter;
 };
 
+// Will be exposed to the device and used in Device.cpp
+// TODO: This can be handled waaaay cleaner
 void ignis_denoise(const float* color, const float* normal, const float* albedo, const float* depth, float* output,
                    size_t width, size_t height, size_t iter)
 {
@@ -108,4 +111,5 @@ void ignis_denoise(const float* color, const float* normal, const float* albedo,
 
     static auto device = OIDNContext();
     device.filter(color, normal, albedo, output, width, height);
+}
 }

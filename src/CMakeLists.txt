@@ -1,4 +1,4 @@
-# This directory should be first as it is exposing ARTIC_MAIN_SRC and ARTIC_EXTRA_SRC
+# This directory should be first as it is exposing ARTIC_MAIN_SRC
 add_subdirectory(artic)
 
 add_subdirectory(backend)

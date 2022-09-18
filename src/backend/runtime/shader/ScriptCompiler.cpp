@@ -1,13 +1,37 @@
-#include "ScriptPreprocessor.h"
+#include "ScriptCompiler.h"
 #include "Logger.h"
 #include <fstream>
+
+#include <anydsl_jit.h>
+#include <anydsl_runtime.hpp>
 
 // Will be populated by api_collector
 extern const char* ig_api[];
 extern const char* ig_api_paths[];
 
 namespace IG {
-std::string ScriptPreprocessor::prepare(const std::string& script) const
+// TODO: Really fixed at compile time?
+#ifdef IG_DEBUG
+constexpr uint32_t OPT_LEVEL = 0;
+#else
+constexpr uint32_t OPT_LEVEL = 3;
+#endif
+void* ScriptCompiler::compile(const std::string& script, const std::string& function, bool isVerbose) const
+{
+#ifdef IG_DEBUG
+    anydsl_set_log_level(isVerbose ? 1 /* info */ : 4 /* error */);
+#else
+    anydsl_set_log_level(isVerbose ? 3 /* warn */ : 4 /* error */);
+#endif
+
+    int ret = anydsl_compile(script.c_str(), (uint32_t)script.length(), OPT_LEVEL);
+    if (ret < 0)
+        return nullptr;
+
+    return anydsl_lookup_function(ret, function.c_str());
+}
+
+std::string ScriptCompiler::prepare(const std::string& script) const
 {
     std::stringstream source;
 
@@ -41,7 +65,7 @@ static inline bool checkShaderFileName(const std::filesystem::path& path)
     return true;
 }
 
-void ScriptPreprocessor::loadStdLibFromDirectory(const std::filesystem::path& dir)
+void ScriptCompiler::loadStdLibFromDirectory(const std::filesystem::path& dir)
 {
     std::stringstream lib;
 
