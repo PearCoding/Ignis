@@ -96,11 +96,12 @@ Runtime::Runtime(const RuntimeOptions& opts)
     // Recommend a target based on the loaded drivers
     mTarget = opts.DesiredTarget;
     if (mTarget == Target::INVALID) {
-        if (opts.RecommendGPU)
+        if (!opts.RecommendCPU && opts.RecommendGPU)
             mTarget = TargetInfo::pickGPU();
-
-        if (opts.RecommendCPU && mTarget == Target::INVALID)
+        else if (opts.RecommendCPU && !opts.RecommendGPU)
             mTarget = TargetInfo::pickCPU();
+        else
+            mTarget = TargetInfo::pickGPU(); // TODO
     }
 
     // Check configuration
@@ -410,6 +411,7 @@ const Statistics* Runtime::getStatistics() const
 bool Runtime::setup()
 {
     Device::SetupSettings settings;
+    settings.target             = mTarget;
     settings.device             = mOptions.Device;
     settings.database           = &mDatabase;
     settings.framebuffer_width  = (uint32)mFilmWidth;

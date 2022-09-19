@@ -3,17 +3,20 @@ struct WireframeRayPayload {
     distance: f32
 }
 
-fn wrap_wireframeraypayload(payload: WireframeRayPayload) -> RayPayload {
-    let mut r : RayPayload;
-    r.components(0) = payload.depth as f32;
-    r.components(1) = payload.distance;
-    r
+fn write_wireframeraypayload(payload: RayPayload, w: WireframeRayPayload) -> () {
+    payload.set(0, w.depth as f32);
+    payload.set(1, w.distance);
 }
 
 fn unrap_wireframeraypayload(payload: RayPayload) = WireframeRayPayload {
-    depth    = payload.components(0) as i32,
-    distance = payload.components(1),
+    depth    = payload.get(0) as i32,
+    distance = payload.get(1),
 };
+
+fn @init_wireframe_raypayload(payload: RayPayload) = write_wireframeraypayload(payload, WireframeRayPayload {
+    depth = 1,
+    distance = 0
+});
 
 fn @make_wireframe_renderer(camera: Camera) -> Technique {
     let offset:f32 = 0.001;
@@ -43,19 +46,19 @@ fn @make_wireframe_renderer(camera: Camera) -> Technique {
                 , _rnd: &mut RndState
                 , payload: RayPayload
                 , _mat: Material
-        ) -> Option[(Ray, RayPayload)] {
+        ) -> Option[Ray] {
         let wpt = unrap_wireframeraypayload(payload);
         let (is_edge, _) = is_edge_hit(ctx.pixel, ctx.hit, ctx.surf, wpt.distance);
         if !is_edge { 
+            write_wireframeraypayload(payload, WireframeRayPayload{
+                depth    = wpt.depth + 1,
+                distance = wpt.distance + ctx.hit.distance,
+            });
             make_option(
-                make_ray(ctx.surf.point, ctx.ray.dir, offset, flt_max, ray_flag_bounce),
-                wrap_wireframeraypayload(WireframeRayPayload{
-                    depth    = wpt.depth + 1,
-                    distance = wpt.distance + ctx.hit.distance,
-                })
+                make_ray(ctx.surf.point, ctx.ray.dir, offset, flt_max, ray_flag_bounce)
             )
         } else {
-            Option[(Ray, RayPayload)]::None
+            Option[Ray]::None
         }
     }
 

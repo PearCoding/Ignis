@@ -14,25 +14,23 @@ struct PTRayPayload {
 static AOV_PATH_DIRECT = 1;
 static AOV_PATH_NEE    = 2;
 
-fn @wrap_ptraypayload(payload: PTRayPayload) -> RayPayload {
-    let mut r : RayPayload;
-    r.components(0) = payload.inv_pdf;
-    r.components(1) = payload.contrib.r;
-    r.components(2) = payload.contrib.g;
-    r.components(3) = payload.contrib.b;
-    r.components(4) = payload.depth as f32;
-    r.components(5) = payload.eta;
-    r
+fn @write_ptraypayload(payload: RayPayload, pt: PTRayPayload) -> () {
+    payload.set(0, pt.inv_pdf);
+    payload.set(1, pt.contrib.r);
+    payload.set(2, pt.contrib.g);
+    payload.set(3, pt.contrib.b);
+    payload.set(4, pt.depth as f32);
+    payload.set(5, pt.eta);
 }
 
 fn @unwrap_ptraypayload(payload: RayPayload) = PTRayPayload {
-    inv_pdf = payload.components(0),
-    contrib = make_color(payload.components(1), payload.components(2), payload.components(3), 1),
-    depth   = payload.components(4) as i32,
-    eta     = payload.components(5),
+    inv_pdf = payload.get(0),
+    contrib = make_color(payload.get(1), payload.get(2), payload.get(3), 1),
+    depth   = payload.get(4) as i32,
+    eta     = payload.get(5),
 };
 
-fn @init_pt_raypayload() = wrap_ptraypayload(PTRayPayload {
+fn @init_pt_raypayload(payload: RayPayload) = write_ptraypayload(payload, PTRayPayload {
     inv_pdf = 0,
     contrib = color_builtins::white,
     depth   = 1,
@@ -54,6 +52,7 @@ fn @make_path_renderer(max_path_len: i32, light_selector: LightSelector, aovs: A
     fn @on_shadow( ctx: ShadingContext
                  , rnd: &mut RndState
                  , payload: RayPayload
+                 , _: RayPayload
                  , mat: Material
                  ) -> ShadowRay {
         // No shadow rays for specular materials
@@ -165,11 +164,11 @@ fn @make_path_renderer(max_path_len: i32, light_selector: LightSelector, aovs: A
                  , rnd: &mut RndState
                  , payload: RayPayload
                  , mat: Material
-                 ) -> Option[(Ray, RayPayload)] {
+                 ) -> Option[Ray] {
         let pt = unwrap_ptraypayload(payload);
         
         if pt.depth + 1 > max_path_len {
-            return(Option[(Ray, RayPayload)]::None)
+            return(Option[Ray]::None)
         }
 
         // Bounce
@@ -178,29 +177,30 @@ fn @make_path_renderer(max_path_len: i32, light_selector: LightSelector, aovs: A
             let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
             let rr_prob = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
             if randf(rnd) >= rr_prob {
-                return(Option[(Ray, RayPayload)]::None)
+                return(Option[Ray]::None)
             }
 
             let inv_pdf     = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
             let new_contrib = color_mulf(contrib, 1 / rr_prob);
-
+            
+            write_ptraypayload(payload, PTRayPayload {
+                inv_pdf = inv_pdf,
+                contrib = new_contrib,
+                depth   = pt.depth + 1,
+                eta     = pt.eta * mat_sample.eta
+            });
             make_option(
-                make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce),
-                wrap_ptraypayload(PTRayPayload {
-                    inv_pdf = inv_pdf,
-                    contrib = new_contrib,
-                    depth   = pt.depth + 1,
-                    eta     = pt.eta * mat_sample.eta
-                })
+                make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
             )
         } else {
-            Option[(Ray, RayPayload)]::None
+            Option[Ray]::None
         }
     }
 
     fn @on_shadow_miss( _ray: Ray
                       , pixel: i32
                       , _shader: MaterialShader
+                      , _: RayPayload
                       , color: Color) -> Option[Color] {
         aov_nee.splat(pixel, color);
         make_option(color)

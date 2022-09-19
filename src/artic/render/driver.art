@@ -14,18 +14,10 @@ struct WorkInfo {
 #[import(cc = "C")] fn ignis_get_aov_image(i32, &[u8], &mut &mut [f32]) -> ();
 #[import(cc = "C")] fn ignis_mark_aov_as_used(&[u8], i32) -> ();
 
-#[import(cc = "C")] fn ignis_cpu_get_primary_stream(&mut PrimaryStream, i32) -> ();
-#[import(cc = "C")] fn ignis_cpu_get_primary_stream_const(&mut PrimaryStream) -> ();
-#[import(cc = "C")] fn ignis_cpu_get_secondary_stream(&mut SecondaryStream, i32) -> ();
-#[import(cc = "C")] fn ignis_cpu_get_secondary_stream_const(&mut SecondaryStream) -> ();
-#[import(cc = "C")] fn ignis_gpu_get_first_primary_stream(i32, &mut PrimaryStream, i32) -> ();
-#[import(cc = "C")] fn ignis_gpu_get_first_primary_stream_const(i32, &mut PrimaryStream) -> ();
-#[import(cc = "C")] fn ignis_gpu_get_second_primary_stream(i32, &mut PrimaryStream, i32) -> ();
-#[import(cc = "C")] fn ignis_gpu_get_second_primary_stream_const(i32, &mut PrimaryStream) -> ();
-#[import(cc = "C")] fn ignis_gpu_get_first_secondary_stream(i32, &mut SecondaryStream, i32) -> ();
-#[import(cc = "C")] fn ignis_gpu_get_first_secondary_stream_const(i32, &mut SecondaryStream) -> ();
-#[import(cc = "C")] fn ignis_gpu_get_second_secondary_stream(i32, &mut SecondaryStream, i32) -> ();
-#[import(cc = "C")] fn ignis_gpu_get_second_secondary_stream_const(i32, &mut SecondaryStream) -> ();
+#[import(cc = "C")] fn ignis_get_primary_stream(i32, i32, &mut PrimaryStream, i32) -> ();
+#[import(cc = "C")] fn ignis_get_primary_stream_const(i32, i32, &mut PrimaryStream) -> ();
+#[import(cc = "C")] fn ignis_get_secondary_stream(i32, i32, &mut SecondaryStream, i32) -> ();
+#[import(cc = "C")] fn ignis_get_secondary_stream_const(i32, i32, &mut SecondaryStream) -> ();
 #[import(cc = "C")] fn ignis_gpu_get_tmp_buffer(i32, &mut &mut [i32]) -> ();
 #[import(cc = "C")] fn ignis_gpu_swap_primary_streams(i32) -> ();
 #[import(cc = "C")] fn ignis_gpu_swap_secondary_streams(i32) -> ();

@@ -30,8 +30,14 @@ struct TechniqueVariantInfo {
     /// The variant requires all lights (especially area lights) in the miss shader, else only infinite lights will be exposed in the miss shader
     bool UsesAllLightsInMiss = false;
 
-    size_t PrimaryPayloadCount   = 0;
+    /// Number of entries of the primary ray payload (on_hit, on_shadow, on_miss, on_bounce)
+    size_t PrimaryPayloadCount = 0;
+
+    /// Number of entries of the secondary ray payload has (on_shadow, on_shadow_miss, on_shadow_hit)
     size_t SecondaryPayloadCount = 0;
+
+    /// Name of the EmitterPayloadInitializer generator. If not set, 'make_null_emitter_payload_initializer' will be used. Will be ignored if default camera generator is overriden
+    std::string EmitterPayloadInitializer = {};
 
     /// The variant overrides the default camera shader
     TechniqueCameraGenerator OverrideCameraGenerator = nullptr;
@@ -56,19 +62,27 @@ struct TechniqueVariantInfo {
     /// Override the recommended spi
     std::optional<size_t> OverrideSPI;
 
-    inline size_t GetWidth(size_t hint) const
+    [[nodiscard]] inline size_t GetWidth(size_t hint) const
     {
         return OverrideWidth.value_or(hint);
     }
 
-    inline size_t GetHeight(size_t hint) const
+    [[nodiscard]] inline size_t GetHeight(size_t hint) const
     {
         return OverrideHeight.value_or(hint);
     }
 
-    inline size_t GetSPI(size_t hint) const
+    [[nodiscard]] inline size_t GetSPI(size_t hint) const
     {
         return OverrideSPI.value_or(hint);
+    }
+
+    [[nodiscard]] inline std::string GetEmitterPayloadInitializer() const
+    {
+        if (EmitterPayloadInitializer.empty())
+            return "empty_payload_initializer";
+        else
+            return EmitterPayloadInitializer;
     }
 };
 

@@ -15,8 +15,6 @@ std::string RayGenerationShader::begin(const LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    stream << LoaderTechnique::generateHeader(ctx, true) << std::endl;
-
     stream << "#[export] fn ig_ray_generation_shader(settings: &Settings, next_id: i32, size: i32, xmin: i32, ymin: i32, xmax: i32, ymax: i32) -> i32 {" << std::endl
            << "  maybe_unused(settings);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
@@ -42,7 +40,8 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
     std::stringstream stream;
 
     stream << begin(ctx) << std::endl
-           << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
+           << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl
+           << "  let init_raypayload = " << ctx.CurrentTechniqueVariantInfo().GetEmitterPayloadInitializer() << ";" << std::endl;
 
     if (ctx.IsTracer) {
         stream << "  let emitter = make_list_emitter(device.load_rays(), settings.iter, init_raypayload);" << std::endl;

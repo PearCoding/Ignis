@@ -6,27 +6,25 @@ struct VPTRayPayload {
     medium:  i32,
 }
 
-fn @wrap_vptraypayload(payload: VPTRayPayload) -> RayPayload {
-    let mut r : RayPayload;
-    r.components(0) = payload.inv_pdf;
-    r.components(1) = payload.contrib.r;
-    r.components(2) = payload.contrib.g;
-    r.components(3) = payload.contrib.b;
-    r.components(4) = payload.depth as f32;
-    r.components(5) = payload.eta;
-    r.components(6) = payload.medium as f32;
-    r
+fn @write_vptraypayload(payload: RayPayload, vpt: VPTRayPayload) -> () {
+    payload.set(0, vpt.inv_pdf);
+    payload.set(1, vpt.contrib.r);
+    payload.set(2, vpt.contrib.g);
+    payload.set(3, vpt.contrib.b);
+    payload.set(4, vpt.depth as f32);
+    payload.set(5, vpt.eta);
+    payload.set(6, vpt.medium as f32);
 }
 
 fn @unwrap_vptraypayload(payload: RayPayload) = VPTRayPayload {
-    inv_pdf = payload.components(0),
-    contrib = make_color(payload.components(1), payload.components(2), payload.components(3), 1),
-    depth   = payload.components(4) as i32,
-    eta     = payload.components(5),
-    medium  = payload.components(6) as i32,
+    inv_pdf = payload.get(0),
+    contrib = make_color(payload.get(1), payload.get(2), payload.get(3), 1),
+    depth   = payload.get(4) as i32,
+    eta     = payload.get(5),
+    medium  = payload.get(6) as i32,
 };
 
-fn @init_vpt_raypayload() = wrap_vptraypayload(VPTRayPayload {
+fn @init_vpt_raypayload(payload: RayPayload) = write_vptraypayload(payload, VPTRayPayload {
     inv_pdf = 0,
     contrib = color_builtins::white,
     depth   = 1,
@@ -47,6 +45,7 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
     fn @on_shadow( ctx: ShadingContext
                  , rnd: &mut RndState
                  , payload: RayPayload
+                 , _: RayPayload
                  , mat: Material
                  ) -> ShadowRay {
         // No shadow rays for specular materials
@@ -169,13 +168,13 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
                  , rnd: &mut RndState
                  , payload: RayPayload
                  , mat: Material
-                 ) -> Option[(Ray, RayPayload)] {
+                 ) -> Option[Ray] {
         let pt      = unwrap_vptraypayload(payload);
         let medium  = @media(pt.medium);
         let out_dir = vec3_neg(ctx.ray.dir);
 
         if pt.depth + 1 > max_path_len {
-            return(Option[(Ray, RayPayload)]::None)
+            return(Option[Ray]::None)
         }
 
         // Try sampling the medium
@@ -185,20 +184,20 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
             let rr_prob      = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
 
             if randf(rnd) >= rr_prob {
-                Option[(Ray, RayPayload)]::None
+                Option[Ray]::None
             } else {
                 let new_contrib = color_mulf(contrib, 1 / rr_prob);
                 // Notify other parts that the last interaction was a medium
                 let inv_pdf     = -1:f32; // 1 / (medium_sample.pdf * phase_sample.pdf); // TODO
+                write_vptraypayload(payload, VPTRayPayload {
+                    inv_pdf = inv_pdf,
+                    contrib = new_contrib,
+                    depth   = pt.depth + 1,
+                    eta     = pt.eta,
+                    medium  = pt.medium
+                });
                 make_option(
-                    make_ray(medium_sample.pos, phase_sample.in_dir, 0, flt_max, ray_flag_bounce),
-                    wrap_vptraypayload(VPTRayPayload {
-                        inv_pdf = inv_pdf,
-                        contrib = new_contrib,
-                        depth   = pt.depth + 1,
-                        eta     = pt.eta,
-                        medium  = pt.medium
-                    })
+                    make_ray(medium_sample.pos, phase_sample.in_dir, 0, flt_max, ray_flag_bounce)
                 )
             }
         } else {
@@ -210,26 +209,27 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
                 let rr_prob     = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
                 
                 if randf(rnd) >= rr_prob {
-                    Option[(Ray, RayPayload)]::None
+                    Option[Ray]::None
                 } else {
                     let inv_pdf     = if mat.bsdf.is_specular { 0 } else { 1 / bsdf_sample.pdf };
                     let new_contrib = color_mulf(contrib, 1 / rr_prob);
                     
                     let is_transmission = math_builtins::signbit(vec3_dot(ctx.surf.local.col(2), bsdf_sample.in_dir));
                     let new_medium      = if is_transmission { mat.interface.pick(ctx.surf.is_entering) } else { pt.medium };
+
+                    write_vptraypayload(payload, VPTRayPayload {
+                        inv_pdf = inv_pdf,
+                        contrib = new_contrib,
+                        depth   = pt.depth + 1,
+                        eta     = pt.eta * bsdf_sample.eta,
+                        medium  = new_medium
+                    });
                     make_option(
-                        make_ray(ctx.surf.point, bsdf_sample.in_dir, offset, flt_max, ray_flag_bounce),
-                        wrap_vptraypayload(VPTRayPayload {
-                            inv_pdf = inv_pdf,
-                            contrib = new_contrib,
-                            depth   = pt.depth + 1,
-                            eta     = pt.eta * bsdf_sample.eta,
-                            medium  = new_medium
-                        })
+                        make_ray(ctx.surf.point, bsdf_sample.in_dir, offset, flt_max, ray_flag_bounce)
                     )
                 }
             } else {
-                Option[(Ray, RayPayload)]::None
+                Option[Ray]::None
             }
         }
     }

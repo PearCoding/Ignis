@@ -116,8 +116,6 @@ std::string ShaderUtils::beginCallback(const LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    stream << LoaderTechnique::generateHeader(ctx, true) << std::endl;
-
     stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl;

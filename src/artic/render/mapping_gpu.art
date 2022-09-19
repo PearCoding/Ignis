@@ -112,19 +112,25 @@ fn @gpu_hit_shade( acc: Accelerator
     let read_primary_ray        = make_ray_stream_reader(primary.rays, 1);
     let read_primary_hit        = make_primary_stream_hit_reader(primary, 1);
     let read_primary_rnd_state  = make_primary_stream_rnd_state_reader(primary, 1);
-    let read_primary_payload    = make_primary_stream_payload_reader(primary, payload_info.primary_count, 1);
     let write_primary_ray       = make_ray_stream_writer(primary.rays, 1);
     let write_secondary_ray     = make_ray_stream_writer(secondary.rays, 1);
     let write_primary_rnd_state = make_primary_stream_rnd_state_writer(primary, 1);
-    let write_primary_payload   = make_primary_stream_payload_writer(primary, payload_info.primary_count, 1);
 
+    let get_primary_payload   = make_primary_stream_payload_handler(primary, payload_info.primary_count, 1);
+    let get_secondary_payload = make_secondary_stream_payload_handler(secondary, payload_info.secondary_count, 1);
+
+    let on_hit    = technique.on_hit;
+    let on_shadow = technique.on_shadow;
+    let on_bounce = technique.on_bounce;
     gpu_exec_1d(acc, n, 64 /*block_size*/, |work_item| {
         let ray_id = first + work_item.gidx();
         if ray_id >= last {
             return()
         }
 
-        let payload = read_primary_payload(ray_id, 0);
+        let primary_payload   = get_primary_payload(ray_id, 0);
+        let secondary_payload = get_secondary_payload(ray_id, 0);
+
         let ray     = read_primary_ray(ray_id, 0);
         let mut rnd = read_primary_rnd_state(ray_id, 0);
         let pixel   = primary.rays.id(ray_id);
@@ -137,15 +143,13 @@ fn @gpu_hit_shade( acc: Accelerator
         let lcl_surf = shape.surface_element(local_ray, hit);
         let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
         
-        let ctx    = make_surface_shading_context(ent_id, pixel, ray, hit, glb_surf);
-        let mat    = @shader(ctx);
-        let on_hit = technique.on_hit;
-        if let Option[Color]::Some(color) = @on_hit(ctx, payload, mat) {
+        let ctx = make_surface_shading_context(ent_id, pixel, ray, hit, glb_surf);
+        let mat = @shader(ctx);
+        if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) {
             accumulate(pixel, color);
         }
 
-        let on_shadow = technique.on_shadow;
-        match @on_shadow(ctx, &mut rnd, payload, mat) {
+        match @on_shadow(ctx, &mut rnd, primary_payload, secondary_payload, mat) {
             ShadowRay::Simple(new_ray, color) => {
                 write_secondary_ray(ray_id, 0, new_ray);
                 secondary.mat_id(ray_id)  = mat.id + 1;
@@ -167,11 +171,9 @@ fn @gpu_hit_shade( acc: Accelerator
             }
         }
 
-        let on_bounce = technique.on_bounce;
-        if let Option[(Ray, RayPayload)]::Some(new_ray, new_payload) = @on_bounce(ctx, &mut rnd, payload, mat) {
+        if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, &mut rnd, primary_payload, mat) {
             write_primary_ray(ray_id, 0, new_ray);
             write_primary_rnd_state(ray_id, 0, rnd);
-            write_primary_payload(ray_id, 0, new_payload);
         } else {
             primary.rays.id(ray_id) = -1;
         }
@@ -193,9 +195,9 @@ fn @gpu_hit_shade_handler(dev_id: i32
     let (film_pixels, _, _) = gpu_get_film_data(dev_id);
     
     let mut primary : PrimaryStream;
-    ignis_gpu_get_first_primary_stream_const(dev_id, &mut primary);
+    ignis_get_primary_stream_const(dev_id, 0, &mut primary);
     let mut secondary : SecondaryStream;
-    ignis_gpu_get_first_secondary_stream_const(dev_id, &mut secondary);
+    ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
 
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
     gpu_hit_shade(acc, shader, scene, technique, payload_info, accumulate, primary, secondary, begin, end, entity_id);
@@ -210,8 +212,8 @@ fn @gpu_miss_shade( acc: Accelerator
                 , first: i32, last: i32) -> () {
     let n = last - first;
     
-    let read_primary_ray     = make_ray_stream_reader(primary.rays, 1);
-    let read_primary_payload = make_primary_stream_payload_reader(primary, payload_info.primary_count, 1);
+    let read_primary_ray    = make_ray_stream_reader(primary.rays, 1);
+    let get_primary_payload = make_primary_stream_payload_handler(primary, payload_info.primary_count, 1);
 
     let on_miss = technique.on_miss;
     gpu_exec_1d(acc, n, 64, |work_item| {
@@ -220,7 +222,7 @@ fn @gpu_miss_shade( acc: Accelerator
             return()
         }
 
-        let payload = read_primary_payload(ray_id, 0);
+        let payload = get_primary_payload(ray_id, 0);
         let ray     = read_primary_ray(ray_id, 0);
         let pixel   = primary.rays.id(ray_id);
 
@@ -244,7 +246,7 @@ fn @gpu_miss_shade_handler(dev_id: i32
     let (film_pixels, _, _) = gpu_get_film_data(dev_id);
 
     let mut primary: PrimaryStream;
-    ignis_gpu_get_first_primary_stream_const(dev_id, &mut primary);
+    ignis_get_primary_stream_const(dev_id, 0, &mut primary);
 
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
     gpu_miss_shade(acc, technique, payload_info, accumulate, primary, begin, end);
@@ -255,14 +257,15 @@ fn @gpu_advanced_shadow(is_hit: bool
                       , acc: Accelerator
                       , shader: MaterialShader
                       , technique: Technique
-                      , _payload_info: PayloadInfo // TODO
+                      , payload_info: PayloadInfo
                       , accumulate: FilmAccumulator
                       , secondary: SecondaryStream
                       , first: i32, last: i32) -> () {
     let n = last - first;
 
-    let read_secondary_ray   = make_ray_stream_reader(secondary.rays, 1);
-    let read_secondary_color = make_secondary_stream_color_reader(secondary, 1);
+    let read_secondary_ray    = make_ray_stream_reader(secondary.rays, 1);
+    let read_secondary_color  = make_secondary_stream_color_reader(secondary, 1);
+    let get_secondary_payload = make_secondary_stream_payload_handler(secondary, payload_info.secondary_count, 1);
 
     let on_miss  = technique.on_shadow_miss;
     let on_hit   = technique.on_shadow_hit;
@@ -272,11 +275,12 @@ fn @gpu_advanced_shadow(is_hit: bool
         let ray_id = first + work_item.gidx();
         if ray_id >= last { return() }
 
-        let color = read_secondary_color(ray_id, 0);
-        let ray   = read_secondary_ray(ray_id, 0);
-        let pixel = secondary.rays.id(ray_id);
+        let color   = read_secondary_color(ray_id, 0);
+        let ray     = read_secondary_ray(ray_id, 0);
+        let payload = get_secondary_payload(ray_id, 0);
+        let pixel   = secondary.rays.id(ray_id);
 
-        if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, color) {
+        if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, payload, color) {
             accumulate(pixel, new_color);
         }
     });
@@ -296,7 +300,7 @@ fn @gpu_advanced_shadow_handler(dev_id: i32
     let (film_pixels, _, _) = gpu_get_film_data(dev_id);
 
     let mut secondary: SecondaryStream;
-    ignis_gpu_get_first_secondary_stream_const(dev_id, &mut secondary);
+    ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
 
     let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
     gpu_advanced_shadow(is_hit, acc, shader, technique, payload_info, accumulate, secondary, begin, end);
@@ -337,7 +341,7 @@ fn @gpu_copy_primary_ray( primary: PrimaryStream
     other_primary.rnd(dst_id) = primary.rnd(src_id);
 
     for c in unroll(0, payload_count) {
-        other_primary.payload(c)(dst_id) = primary.payload(c)(src_id);
+        other_primary.payload(dst_id*payload_count + c) = primary.payload(src_id*payload_count + c);
     }
 }
 
@@ -354,7 +358,7 @@ fn @gpu_copy_secondary_ray( secondary: SecondaryStream
     other_secondary.color_b(dst_id) = secondary.color_b(src_id);
 
     for c in unroll(0, payload_count) {
-        other_secondary.payload(c)(dst_id) = secondary.payload(c)(src_id);
+        other_secondary.payload(dst_id*payload_count + c) = secondary.payload(src_id*payload_count + c);
     }
 }
 
@@ -539,11 +543,12 @@ fn @gpu_generate_rays( primary: PrimaryStream
     let num_rays     = min(spi * film_size - first_ray_id, capacity - first_dst_id);
     let film_div     = make_fast_div(film_width as u32);
 
-    let ray_ids       = primary.rays.id;
-    let write_ray     = make_ray_stream_writer(primary.rays, 1);
-    let write_rnd     = make_primary_stream_rnd_state_writer(primary, 1);
-    let write_payload = make_primary_stream_payload_writer(primary, payload_info.primary_count, 1);
-    let write_id      = @ |i: i32, _: i32, id2: i32| ray_ids(i) = id2;
+    let ray_ids   = primary.rays.id;
+    let write_ray = make_ray_stream_writer(primary.rays, 1);
+    let write_rnd = make_primary_stream_rnd_state_writer(primary, 1);
+    let write_id  = @ |i: i32, _: i32, id2: i32| ray_ids(i) = id2;
+
+    let get_payload = make_primary_stream_payload_handler(primary, payload_info.primary_count, 1);
 
     if num_rays <= 0 { /* TODO: Add error message! */ return(0) }
 
@@ -559,10 +564,11 @@ fn @gpu_generate_rays( primary: PrimaryStream
         let pixel  = ray_id / spi;
         let y = fast_div(film_div, pixel as u32) as i32;
         let x = pixel - y * film_width;
-        let (ray, rnd, payload) = @emitter(sample, x, y, film_width, film_height);
+        let payload = get_payload(dst_id, 0);
+
+        let (ray, rnd) = @emitter(sample, x, y, film_width, film_height, payload);
         write_ray(dst_id, 0, ray);
         write_rnd(dst_id, 0, rnd);
-        write_payload(dst_id, 0, payload);
         write_id(dst_id, 0, pixel);
     });
     acc.sync();
@@ -582,7 +588,7 @@ fn @gpu_generate_rays_handler(dev_id: i32
     let work_info = get_work_info();
 
     let mut primary: PrimaryStream;
-    ignis_gpu_get_first_primary_stream(dev_id, &mut primary, capacity);
+    ignis_get_primary_stream(dev_id, 0, &mut primary, capacity);
 
     gpu_generate_rays(primary, size, capacity, acc, emitter, payload_info, next_id, work_info.width, work_info.height, spi)
 }
@@ -644,10 +650,10 @@ fn @gpu_trace( dev_id: i32
     let mut other_primary:   PrimaryStream;
     let mut secondary:       SecondaryStream;
     let mut other_secondary: SecondaryStream;
-    ignis_gpu_get_first_primary_stream(dev_id, &mut primary, GPUStreamCapacity);
-    ignis_gpu_get_second_primary_stream(dev_id, &mut other_primary, GPUStreamCapacity);
-    ignis_gpu_get_first_secondary_stream(dev_id, &mut secondary, GPUStreamCapacity);
-    ignis_gpu_get_second_secondary_stream(dev_id, &mut other_secondary, GPUStreamCapacity);
+    ignis_get_primary_stream(dev_id, 0, &mut primary, GPUStreamCapacity);
+    ignis_get_primary_stream(dev_id, 1, &mut other_primary, GPUStreamCapacity);
+    ignis_get_secondary_stream(dev_id, 0, &mut secondary, GPUStreamCapacity);
+    ignis_get_secondary_stream(dev_id, 1, &mut other_secondary, GPUStreamCapacity);
 
     let mut gpu_tmp : &mut [i32];
     ignis_gpu_get_tmp_buffer(dev_id, &mut gpu_tmp);
@@ -783,7 +789,7 @@ fn @gpu_handle_device_reduce[T]( dev_id: i32
     ignis_request_buffer(dev_id, "__dev_tmp_reduce", &mut tmp_ptr, sizeof[T]() as i32, 0);
 
     let kernel_ptr = tmp_ptr as &mut addrspace(1)[T];
-    @gpu_reduce[T](acc, n, block_size,
+    gpu_reduce[T](acc, n, block_size,
         elem, op,
         @|v| kernel_ptr(0) = v
     );
@@ -819,13 +825,13 @@ fn @make_gpu_device( dev_id: i32
     },
     handle_traversal_primary = @ | scene_geometry, size | {
         let mut primary: PrimaryStream;
-        ignis_gpu_get_first_primary_stream_const(dev_id, &mut primary);
+        ignis_get_primary_stream_const(dev_id, 0, &mut primary);
 
         gpu_traverse_primary(primary, scene_geometry, size, min_max, acc);
     },
     handle_traversal_secondary = @ | scene_geometry, size, is_advanced, spi, use_framebuffer | {
         let mut secondary: SecondaryStream;
-        ignis_gpu_get_first_secondary_stream_const(dev_id, &mut secondary);
+        ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
 
         let (film_pixels, _, _) = gpu_get_film_data(dev_id);
         let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };

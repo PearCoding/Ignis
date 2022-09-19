@@ -1,8 +1,10 @@
+type PayloadInitializer = fn (/*payload:*/ RayPayload, /*sample:*/ i32, /*x:*/ i32, /*y:*/ i32) -> ();
 
-type RayStateInitializer = fn () -> RayPayload;
+fn @make_simple_payload_initializer(f: fn(RayPayload)->()) = @|p: RayPayload, _:i32, _:i32, _:i32| f(p);
+fn @empty_payload_initializer(_: RayPayload, _:i32, _:i32, _:i32) -> () {}
 
-fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, sampler: PixelSampler, initState: RayStateInitializer) -> RayEmitter {
-    @ |sample, x, y, width, height| {
+fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, sampler: PixelSampler, initState: PayloadInitializer) -> RayEmitter {
+    @ |sample, x, y, width, height, payload| {
         let mut hash = fnv_init();
         hash = fnv_hash(hash, sample as u32);
         hash = fnv_hash(hash, iter as u32);
@@ -14,12 +16,13 @@ fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, sampler: PixelSampl
         let ky = 1 - 2 * (y as f32 + ry) / (height as f32);
         let ray = camera.generate_ray(&mut rnd, kx, ky);
         
-        (ray, rnd, initState())
+        initState(payload, sample, x, y);
+        (ray, rnd)
     }
 }
 
-fn @make_list_emitter(rays: &[StreamRay], iter: i32, initState: RayStateInitializer) -> RayEmitter {
-    @ |sample, x, y, width, _height| {
+fn @make_list_emitter(rays: &[StreamRay], iter: i32, initState: PayloadInitializer) -> RayEmitter {
+    @ |sample, x, y, width, _height, payload| {
         let mut hash = fnv_init();
         hash = fnv_hash(hash, sample as u32);
         hash = fnv_hash(hash, iter as u32);
@@ -32,6 +35,7 @@ fn @make_list_emitter(rays: &[StreamRay], iter: i32, initState: RayStateInitiali
         
         let ray = make_ray(stream_ray.org, stream_ray.dir, stream_ray.tmin, stream_ray.tmax, 0);
         
-        (ray, rnd, initState())
+        initState(payload, sample, x, y);
+        (ray, rnd)
     }
 }

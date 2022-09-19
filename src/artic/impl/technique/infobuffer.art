@@ -6,19 +6,17 @@ struct IBRayPayload {
     distance: f32  // Traveled distance, so far
 }
 
-fn @wrap_ibraypayload(payload: IBRayPayload) -> RayPayload {
-    let mut r : RayPayload;
-    r.components(0) = payload.depth as f32;
-    r.components(1) = payload.distance;
-    r
+fn @write_ibraypayload(payload: RayPayload, ib: IBRayPayload) -> () {
+    payload.set(0, ib.depth as f32);
+    payload.set(1, ib.distance);
 }
 
 fn @unwrap_ibraypayload(payload: RayPayload) = IBRayPayload {
-    depth    = payload.components(0) as i32,
-    distance = payload.components(1)
+    depth    = payload.get(0) as i32,
+    distance = payload.get(1)
 };
 
-fn @init_ib_raypayload() = wrap_ibraypayload(IBRayPayload {
+fn @init_ib_raypayload(payload: RayPayload) = write_ibraypayload(payload, IBRayPayload {
     depth    = 1,
     distance = 0
 });
@@ -66,7 +64,7 @@ fn @make_infobuffer_renderer(max_path_len: i32, aovs: AOVTable, handle_specular:
                  , rnd: &mut RndState
                  , payload: RayPayload
                  , mat: Material
-        ) -> Option[(Ray, RayPayload)] {
+        ) -> Option[Ray] {
 
         if (handle_specular && mat.bsdf.is_specular) {
             let ib = unwrap_ibraypayload(payload);
@@ -74,19 +72,19 @@ fn @make_infobuffer_renderer(max_path_len: i32, aovs: AOVTable, handle_specular:
             if ib.depth <= max_path_len {    
                 // Bounce
                 let out_dir = vec3_neg(ctx.ray.dir);
-                if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {        
+                if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) { 
+                    write_ibraypayload(payload, IBRayPayload{
+                        depth    = ib.depth + 1,
+                        distance = ib.distance + ctx.hit.distance,
+                    });      
                     return(make_option(
-                        make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce),
-                        wrap_ibraypayload(IBRayPayload{
-                            depth    = ib.depth + 1,
-                            distance = ib.distance + ctx.hit.distance,
-                        })
+                        make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
                     ))
                 }
             }
         }
         
-        Option[(Ray, RayPayload)]::None
+        Option[Ray]::None
     }
 
     Technique {

@@ -18,9 +18,7 @@ using namespace Parser;
 std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
 {
     std::stringstream stream;
-
-    stream << LoaderTechnique::generateHeader(ctx) << std::endl;
-
+    
     stream << "#[export] fn ig_hit_shader(settings: &Settings, entity_id: i32, mat_id: i32, first: i32, last: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl

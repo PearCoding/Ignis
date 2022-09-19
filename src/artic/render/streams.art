@@ -1,4 +1,3 @@
-// 10
 struct RayStream {
     id:    &mut [i32], // this field is also used to indicate if the ray is alive
     org_x: &mut [f32],
@@ -12,7 +11,6 @@ struct RayStream {
     flags: &mut [u32]
 }
 
-// 10+6+8=24
 struct PrimaryStream {
     rays:    RayStream,
     ent_id:  &mut [i32],
@@ -21,17 +19,16 @@ struct PrimaryStream {
     u:       &mut [f32],
     v:       &mut [f32],
     rnd:     &mut [RndState],
-    payload: &[&mut [f32]],
+    payload: &mut [f32], // Blob (element size is based on payload count)
 }
 
-// 10+6=16
 struct SecondaryStream {
     rays:    RayStream,
     mat_id:  &mut [i32], // Mat ID + 1, Negative if miss, positive if hit 
     color_r: &mut [f32],
     color_g: &mut [f32],
     color_b: &mut [f32],
-    payload: &[&mut [f32]],
+    payload: &mut [f32], // Blob (see above)
 }
 
 // Used on the host side only
@@ -123,34 +120,19 @@ fn @make_primary_stream_rnd_state_writer(primary: PrimaryStream, vector_width: i
 }
 
 //////////// Payload
-fn @make_payload_reader(get: fn(i32) -> & [f32], count: i32, vector_width: i32) -> fn (i32, i32) -> RayPayload {
+fn @make_payload_handler(ptr: &mut [f32], count: i32, vector_width: i32) -> fn (i32, i32) -> RayPayload {
     @ |i, j| {
-        let k = i * vector_width + j;
+        let k = (i * vector_width + j) * count;
 
-        let mut payload : RayPayload;
-
-        for c in unroll(0, count) {
-            payload.components(c) = get(c)(k);
-        }
-
-        payload
-    }
-}
-
-fn @make_payload_writer(get: fn(i32) -> &mut [f32], count: i32, vector_width: i32) -> fn (i32, i32, RayPayload) -> () {
-    @ |i, j, payload| {
-        let k = i * vector_width + j;
-
-        for c in unroll(0, count) {
-            get(c)(k) = payload.components(c);
+        RayPayload {
+            get = @|l| { ptr(k + l) },
+            set = @|l, v| { ptr(k + l) = v; },
         }
     }
 }
 
-fn @make_primary_stream_payload_reader(primary: PrimaryStream, count: i32, vector_width: i32) = make_payload_reader(@|c| primary.payload(c), count, vector_width);
-fn @make_primary_stream_payload_writer(primary: PrimaryStream, count: i32, vector_width: i32) = make_payload_writer(@|c| primary.payload(c), count, vector_width);
-fn @make_secondary_stream_payload_reader(secondary: SecondaryStream, count: i32, vector_width: i32) = make_payload_reader(@|c| secondary.payload(c), count, vector_width);
-fn @make_secondary_stream_payload_writer(secondary: SecondaryStream, count: i32, vector_width: i32) = make_payload_writer(@|c| secondary.payload(c), count, vector_width);
+fn @make_primary_stream_payload_handler(primary: PrimaryStream, count: i32, vector_width: i32) = make_payload_handler(primary.payload, count, vector_width);
+fn @make_secondary_stream_payload_handler(secondary: SecondaryStream, count: i32, vector_width: i32) = make_payload_handler(secondary.payload, count, vector_width);
 
 //////////// Color
 fn @make_secondary_stream_color_reader(secondary: SecondaryStream, vector_width: i32) -> fn (i32, i32) -> Color {

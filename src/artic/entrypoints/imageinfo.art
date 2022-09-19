@@ -2,12 +2,17 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
     let size  = width * height;
     let scale = settings.scale;
 
-    let buffer_in = device.make_buffer(in_pixels as &[u8], size * 3);
-    let get_elem  = @|i:i32| srgb_to_xyY(color_mulf(vec3_to_color(buffer_in.load_vec3(i * 3)), scale)).b; // Only luminance
+    let buffer_in = device.make_buffer(in_pixels as &[u8], size * 3); 
+    // Due to misalignment we can not make use of load_vec3
+    let get_elem = @|i:i32| srgb_to_xyY(color_mulf(make_color(buffer_in.load_f32(i * 3 + 0), buffer_in.load_f32(i * 3 + 1), buffer_in.load_f32(i * 3 + 2), 1), scale)).b; // Only luminance
 
-    output.min = device.parallel_reduce_f32(size, get_elem, @|a, b| math_builtins::fmin(a, b));
-    output.max = device.parallel_reduce_f32(size, get_elem, @|a, b| math_builtins::fmax(a, b));
-    output.avg = device.parallel_reduce_f32(size, get_elem, @|a, b| a + b) / size as f32;
+    // FIXME: https://github.com/AnyDSL/thorin/issues/132
+    output.min = 0;
+    output.max = 1;
+    output.avg = 0.5;
+    // output.min = device.parallel_reduce_f32(size, get_elem, @|a, b| math_builtins::fmin(a, b));
+    // output.max = device.parallel_reduce_f32(size, get_elem, @|a, b| math_builtins::fmax(a, b));
+    // output.avg = device.parallel_reduce_f32(size, get_elem, @|a, b| a + b) / size as f32;
 
     let global_data = device.request_buffer("__imageinfo_percentile", sizeof[f32]() as i32 * 4 , 0);
     global_data.store_i32_host(0, bitcast[i32](flt_max));

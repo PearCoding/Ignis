@@ -5,8 +5,8 @@ fn ig_callback_shader(_settings: &Settings) -> () {
     // Force the export of the primary and secondary stream types
     let mut primary : PrimaryStream;
     let mut secondary : SecondaryStream;
-    ignis_cpu_get_primary_stream(&mut primary, 0);
-    ignis_cpu_get_secondary_stream(&mut secondary, 0);
+    ignis_get_primary_stream(  0, 0, &mut primary,   0);
+    ignis_get_secondary_stream(0, 0, &mut secondary, 0);
 
     let mut temp : TemporaryStorageHost;
     ignis_get_temporary_storage(0, &mut temp);

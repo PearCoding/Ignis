@@ -15,12 +15,6 @@ namespace IG {
 // FIXME: The convergence rate is kinda bad and some have a slight bias, keep it uniform until fixes
 static const std::string DefaultLightSelector = "uniform";
 
-static void technique_empty_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
-{
-    stream << "static RayPayloadComponents = 0;" << std::endl
-           << "fn init_raypayload() = make_empty_payload();" << std::endl;
-}
-
 static TechniqueInfo technique_empty_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
     return {};
@@ -57,18 +51,12 @@ static void wireframe_body_loader(std::ostream& stream, const std::string&, cons
     stream << "  let technique = make_wireframe_renderer(camera);" << std::endl;
 }
 
-static void wireframe_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
-{
-    constexpr int C = 1 /* Depth */ + 1 /* Distance */;
-    stream << "static RayPayloadComponents = " << C << ";" << std::endl
-           << "fn init_raypayload() = wrap_wireframeraypayload(WireframeRayPayload { depth = 1, distance = 0 });" << std::endl;
-}
-
 static TechniqueInfo wireframe_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
 {
     TechniqueInfo info;
-    info.Variants[0].RequiresExplicitCamera = true; // We make use of the camera differential!
-    info.Variants[0].PrimaryPayloadCount = 2;
+    info.Variants[0].RequiresExplicitCamera    = true; // We make use of the camera differential!
+    info.Variants[0].PrimaryPayloadCount       = 2;
+    info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_wireframe_raypayload)";
     return info;
 }
 
@@ -83,9 +71,10 @@ static void enable_ib(TechniqueInfo& info, bool always = false, bool extend = tr
     if (extend)
         info.Variants.emplace_back();
 
-    info.Variants.back().LockFramebuffer = true;
-    info.Variants.back().OverrideSPI     = 1;
-    info.Variants.back().PrimaryPayloadCount = 2;
+    info.Variants.back().LockFramebuffer           = true;
+    info.Variants.back().OverrideSPI               = 1;
+    info.Variants.back().PrimaryPayloadCount       = 2;
+    info.Variants.back().EmitterPayloadInitializer = "make_simple_payload_initializer(init_ib_raypayload)";
 
     const size_t variantCount = info.Variants.size();
     if (variantCount > 1) {
@@ -148,24 +137,6 @@ static bool handle_ib_body(std::ostream& stream, const std::shared_ptr<Parser::O
     return true;
 }
 
-static bool handle_ib_header(std::ostream& stream, const LoaderContext& ctx)
-{
-    const auto& info = ctx.TechniqueInfo;
-
-    const auto& normal_it = std::find(info.EnabledAOVs.begin(), info.EnabledAOVs.end(), "Normals");
-    if (normal_it == info.EnabledAOVs.end())
-        return false;
-
-    if (ctx.CurrentTechniqueVariant != info.Variants.size() - 1)
-        return false;
-
-    constexpr int C = 1 /* Depth */ + 1 /* Distance */;
-    stream << "static RayPayloadComponents = " << C << ";" << std::endl
-           << "fn init_raypayload() = init_ib_raypayload();" << std::endl;
-
-    return true;
-}
-
 static TechniqueInfo ib_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
 {
     const bool apply_always = !ctx.Denoiser.OnlyFirstIteration || (technique ? technique->property("denoiser_ib_all_iterations").getBool(false) : false);
@@ -178,11 +149,6 @@ static TechniqueInfo ib_get_info(const std::string&, const std::shared_ptr<Parse
 static void ib_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
 {
     handle_ib_body(stream, technique, ctx);
-}
-
-static void ib_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext& ctx)
-{
-    handle_ib_header(stream, ctx);
 }
 
 /////////////////////////
@@ -201,8 +167,9 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
         }
     }
 
-    info.Variants[0].UsesLights = true;
-    info.Variants[0].PrimaryPayloadCount = 6;
+    info.Variants[0].UsesLights                = true;
+    info.Variants[0].PrimaryPayloadCount       = 6;
+    info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_pt_raypayload)";
 
     if (ctx.Denoiser.Enabled)
         enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
@@ -243,24 +210,15 @@ static void path_body_loader(std::ostream& stream, const std::string&, const std
     stream << "  let technique = make_path_renderer(" << max_depth << ", light_selector, aovs, " << clamp_value << ");" << std::endl;
 }
 
-static void path_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext& ctx)
-{
-    if (handle_ib_header(stream, ctx))
-        return;
-
-    constexpr int C = 1 /* MIS */ + 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */;
-    stream << "static RayPayloadComponents = " << C << ";" << std::endl
-           << "fn init_raypayload() = init_pt_raypayload();" << std::endl;
-}
-
 /////////////////////////
 
 static TechniqueInfo volpath_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext& ctx)
 {
     TechniqueInfo info;
-    info.Variants[0].UsesLights = true;
-    info.Variants[0].UsesMedia  = true;
-    info.Variants[0].PrimaryPayloadCount = 7;
+    info.Variants[0].UsesLights                = true;
+    info.Variants[0].UsesMedia                 = true;
+    info.Variants[0].PrimaryPayloadCount       = 7;
+    info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_vpt_raypayload)";
 
     if (ctx.Denoiser.Enabled)
         enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
@@ -282,16 +240,6 @@ static void volpath_body_loader(std::ostream& stream, const std::string&, const 
 
     stream << "  let aovs = @|_id:i32| make_empty_aov_image();" << std::endl;
     stream << "  let technique = make_volume_path_renderer(" << max_depth << ", light_selector, media, aovs, " << clamp_value << ");" << std::endl;
-}
-
-static void volpath_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext& ctx)
-{
-    if (handle_ib_header(stream, ctx))
-        return;
-
-    constexpr int C = 1 /* MIS */ + 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */ + 1 /* Medium */;
-    stream << "static RayPayloadComponents = " << C << ";" << std::endl
-           << "fn init_raypayload() = init_vpt_raypayload();" << std::endl;
 }
 
 /////////////////////////////////
@@ -339,6 +287,8 @@ static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Pars
 
     info.Variants[0].PrimaryPayloadCount = 7;
     info.Variants[1].PrimaryPayloadCount = 7;
+
+    info.Variants[1].EmitterPayloadInitializer = "make_simple_payload_initializer(init_ppm_raypayload)";
 
     // To start from a light source, we do have to override the standard camera generator for LT
     info.Variants[0].OverrideCameraGenerator = ppm_light_camera_generator;
@@ -422,19 +372,6 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
     }
 }
 
-static void ppm_header_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
-{
-    if (handle_ib_header(stream, ctx))
-        return;
-
-    constexpr int C          = 3 /* Contrib */ + 1 /* Depth */ + 1 /* Eta */ + 1 /* Light/Radius */ + 1 /* PathType */;
-    const size_t max_photons = std::max(100, technique ? technique->property("photons").getInteger(1000000) : 1000000);
-
-    stream << "static RayPayloadComponents = " << C << ";" << std::endl
-           << "fn init_raypayload() = init_ppm_raypayload();" << std::endl
-           << "static PPMPhotonCount = " << max_photons << ":i32;" << std::endl;
-}
-
 /////////////////////////////////
 
 // Will return information about the enabled AOVs
@@ -450,23 +387,22 @@ static const struct TechniqueEntry {
     const char* Name;
     TechniqueGetInfo GetInfo;
     TechniqueBodyLoader BodyLoader;
-    TechniqueHeaderLoader HeaderLoader;
 } _generators[] = {
-    { "ao", technique_empty_get_info, ao_body_loader, technique_empty_header_loader },
-    { "path", path_get_info, path_body_loader, path_header_loader },
-    { "volpath", volpath_get_info, volpath_body_loader, volpath_header_loader },
-    { "debug", debug_get_info, debug_body_loader, technique_empty_header_loader },
-    { "ppm", ppm_get_info, ppm_body_loader, ppm_header_loader },
-    { "photonmapper", ppm_get_info, ppm_body_loader, ppm_header_loader },
-    { "wireframe", wireframe_get_info, wireframe_body_loader, wireframe_header_loader },
-    { "infobuffer", ib_get_info, ib_body_loader, ib_header_loader },
-    { "", nullptr, nullptr, nullptr }
+    { "ao", technique_empty_get_info, ao_body_loader },
+    { "path", path_get_info, path_body_loader },
+    { "volpath", volpath_get_info, volpath_body_loader },
+    { "debug", debug_get_info, debug_body_loader },
+    { "ppm", ppm_get_info, ppm_body_loader },
+    { "photonmapper", ppm_get_info, ppm_body_loader },
+    { "wireframe", wireframe_get_info, wireframe_body_loader },
+    { "infobuffer", ib_get_info, ib_body_loader },
+    { "", nullptr, nullptr }
 };
 
 static const TechniqueEntry* getTechniqueEntry(const std::string& name)
 {
     const std::string lower_name = to_lowercase(name);
-    for (size_t i = 0; _generators[i].HeaderLoader; ++i) {
+    for (size_t i = 0; _generators[i].BodyLoader; ++i) {
         if (_generators[i].Name == lower_name)
             return &_generators[i];
     }
@@ -499,27 +435,11 @@ std::string LoaderTechnique::generate(LoaderContext& ctx)
     return stream.str();
 }
 
-std::string LoaderTechnique::generateHeader(const LoaderContext& ctx, bool isRayGeneration)
-{
-    IG_UNUSED(isRayGeneration);
-
-    const auto* entry = getTechniqueEntry(ctx.TechniqueType);
-    if (!entry)
-        return {};
-
-    const auto technique = ctx.Scene.technique();
-
-    std::stringstream stream;
-    entry->HeaderLoader(stream, ctx.TechniqueType, technique, ctx);
-
-    return stream.str();
-}
-
 std::vector<std::string> LoaderTechnique::getAvailableTypes()
 {
     std::vector<std::string> array;
 
-    for (size_t i = 0; _generators[i].HeaderLoader; ++i)
+    for (size_t i = 0; _generators[i].BodyLoader; ++i)
         array.emplace_back(_generators[i].Name);
 
     std::sort(array.begin(), array.end());
