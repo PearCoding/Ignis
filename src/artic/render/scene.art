@@ -18,18 +18,29 @@ struct SceneGeometry {
 // Used as interface
 struct ShadingContext {
     entity_id: i32,
-    ray:  Ray,
-    hit:  Hit,
-    surf: SurfaceElement,
-    uvw:  Vec3
+    pixel:     i32,
+    ray:       Ray,
+    hit:       Hit,
+    surf:      SurfaceElement,
+    uvw:       Vec3
 }
 
-fn @make_surface_shading_context(entity_id: i32, ray: Ray, hit: Hit, surf: SurfaceElement) = ShadingContext {
+fn @make_surface_shading_context(entity_id: i32, pixel: i32, ray: Ray, hit: Hit, surf: SurfaceElement) = ShadingContext {
     entity_id = entity_id,
-    ray  = ray,
-    hit  = hit,
-    surf = surf,
-    uvw  = vec2_to_3(surf.tex_coords, 0)
+    pixel     = pixel,
+    ray       = ray,
+    hit       = hit,
+    surf      = surf,
+    uvw       = vec2_to_3(surf.tex_coords, 0)
+};
+
+fn @make_miss_shading_context(pixel: i32, ray: Ray) = ShadingContext {
+    entity_id = -1,
+    pixel     = pixel,
+    ray       = ray,
+    hit       = empty_hit(flt_max),
+    surf      = make_invalid_surface_element(),
+    uvw       = vec3_expand(0)
 };
 
 type BSDFShader     = fn (ShadingContext) -> Bsdf;

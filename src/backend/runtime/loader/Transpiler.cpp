@@ -23,18 +23,24 @@ inline std::string var_name(const std::string& name)
 template <typename Func>
 inline static std::string collapseFunction(size_t& uuid_counter, Func func, const std::vector<std::string>& args)
 {
+    constexpr size_t MinLength = 16; // At least a single argument has to larger than this number to generate a collapsed function
+
     if (args.size() <= 1)
         return func(args);
 
+    size_t uuid_counter2 = uuid_counter;
+    size_t max_length = 0;
     std::unordered_map<std::string, std::string> set;
     for (const auto& arg : args) {
+        max_length = std::max(max_length, arg.size());
         if (set.count(arg) == 0)
-            set[arg] = "a" + std::to_string(uuid_counter++);
+            set[arg] = "a" + std::to_string(uuid_counter2++);
     }
 
-    if (set.size() == args.size()) {
+    if (max_length < MinLength || set.size() == args.size()) {
         return func(args);
     } else {
+        uuid_counter = uuid_counter2;
         std::vector<std::string> new_args;
         new_args.reserve(args.size());
         for (const auto& arg : args)
@@ -140,11 +146,11 @@ inline std::optional<PExpr::FunctionDef> checkDynFunction(const PExpr::FunctionL
         return PExpr::FunctionDef(lkp.name(), fixI ? PExprType::Integer : retType.value_or(PExprType::Integer), { params.value_or(PExprType::Integer)... });
     if (df.MapNum && lkp.matchParameter({ params.value_or(PExprType::Number)... }, false))
         return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Number), { params.value_or(PExprType::Number)... });
-    if (df.MapVec2 && lkp.matchParameter({ params.value_or(PExprType::Vec2)... }, true))
+    if (df.MapVec2 && lkp.matchParameter({ params.value_or(PExprType::Vec2)... }, false))
         return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec2), { params.value_or(PExprType::Vec2)... });
-    if (df.MapVec3 && lkp.matchParameter({ params.value_or(PExprType::Vec3)... }, true))
+    if (df.MapVec3 && lkp.matchParameter({ params.value_or(PExprType::Vec3)... }, false))
         return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec3), { params.value_or(PExprType::Vec3)... });
-    if (df.MapVec4 && lkp.matchParameter({ params.value_or(PExprType::Vec4)... }, true))
+    if (df.MapVec4 && lkp.matchParameter({ params.value_or(PExprType::Vec4)... }, false))
         return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec4), { params.value_or(PExprType::Vec4)... });
 
     return {};
@@ -477,7 +483,7 @@ static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynL
 static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynReduceFunctions1 = {
     { "length", genDynArrayFunction1("len") },
     { "sum", genDynArrayFunction1("sum") },
-    { "avg", genDynArrayFunction1("avg") },
+    { "avg", genDynArrayFunction1("average") },
     { "luminance", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorO("color_luminance") } },
     { "checkerboard", { nullptr, nullptr, genFunction1("node_checkerboard2"), genFunction1("node_checkerboard3"), nullptr } },
     { "noise", { nullptr, genFunction1("noise1_def"), genFunction1("noise2_def"), genFunction1("noise3_def"), nullptr } },

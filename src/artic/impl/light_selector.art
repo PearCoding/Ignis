@@ -1,14 +1,18 @@
 // Result of sampling a direction
 struct LightSelector {
-    count:  i32,
-    sample: fn (&mut RndState) -> (i32, f32),
-    pdf:    fn (i32) -> f32
+    count:     i32,
+    sample:    fn (&mut RndState, Vec3) -> (Light, f32),
+    pdf:       fn (Light, Vec3) -> f32,
+    infinites: LightTable,
+    finites:   LightTable
 }
 
 fn @make_null_light_selector() = LightSelector {
-    count  = 0,
-    sample = @|_| (0, 1),
-    pdf    = @|_| 1
+    count     = 0,
+    sample    = @|_,_| (make_null_light(0), 1),
+    pdf       = @|_,_| 1,
+    infinites = make_empty_light_table(),
+    finites   = make_empty_light_table()
 };
 
 fn @pick_light_id(rnd: &mut RndState, num_lights: i32) {
@@ -20,18 +24,88 @@ fn @pick_light_id(rnd: &mut RndState, num_lights: i32) {
     }
 }
 
-fn @make_uniform_light_selector(num_lights: i32) -> LightSelector {
+fn @make_uniform_light_selector(infinite_lights: LightTable, finite_lights: LightTable) -> LightSelector {
+    let num_lights = infinite_lights.count + finite_lights.count;
     let pdf_lights = if num_lights == 0 { 1 } else { 1 / (num_lights as f32) };
 
     LightSelector {
         count  = num_lights,
-        sample = @|rnd| (pick_light_id(rnd, num_lights), pdf_lights),
-        pdf    = @|_|   pdf_lights
+        sample = @|rnd,_| {
+            let id = pick_light_id(rnd, num_lights);
+            if id < infinite_lights.count {
+                (infinite_lights.get(id), pdf_lights)
+            } else {
+                (finite_lights.get(id - infinite_lights.count), pdf_lights)
+            }
+        },
+        pdf       = @|_,_| pdf_lights,
+        infinites = infinite_lights,
+        finites   = finite_lights
     }
 }
 
-fn @make_cdf_light_selector(sampler: cdf::CDF1D) = LightSelector {
-    count  = sampler.func_size,
-    sample = @|rnd| { let s = sampler.sample_discrete(randf(rnd)); (s.off, s.pdf) },
-    pdf    = @|id|  sampler.pdf_discrete(id).pdf
-};
+fn @make_cdf_light_selector(infinite_lights: LightTable, finite_lights: LightTable, sampler: cdf::CDF1D) -> LightSelector {
+    if infinite_lights.count == 0 {
+        LightSelector {
+            count     = finite_lights.count,
+            sample    = @|rnd,_| { let s = sampler.sample_discrete(randf(rnd)); (finite_lights.get(s.off), s.pdf) },
+            pdf       = @|light,_| sampler.pdf_discrete(light.id).pdf,
+            infinites = infinite_lights,
+            finites   = finite_lights
+        }
+    } else {
+        let pdf_infinite_lights = 1 / (infinite_lights.count as f32);
+        let infinite_ratio      = 0.5:f32;
+        LightSelector {
+            count  = infinite_lights.count + finite_lights.count,
+            sample = @|rnd,_| {
+                let q = randf(rnd);
+                if q < infinite_ratio {
+                    let id = pick_light_id(rnd, infinite_lights.count);
+                    (infinite_lights.get(id), pdf_infinite_lights * infinite_ratio)
+                } else {
+                    let s = sampler.sample_discrete(randf(rnd));
+                    (finite_lights.get(s.off), s.pdf * (1-infinite_ratio))
+                }
+            },
+            pdf       = @|light,_| if light.infinite { pdf_infinite_lights * infinite_ratio } else { sampler.pdf_discrete(light.id).pdf * (1-infinite_ratio) },
+            infinites = infinite_lights,
+            finites   = finite_lights
+        }
+    }
+}
+
+fn @make_hierarchy_light_selector(infinite_lights: LightTable, finite_lights: LightTable, data: DeviceBuffer) -> LightSelector {
+    if finite_lights.count == 0 {
+        make_uniform_light_selector(infinite_lights, finite_lights)
+    } else if infinite_lights.count == 0 {
+        let hierarchy = make_light_hierarchy(finite_lights, data);
+        LightSelector {
+            count     = finite_lights.count,
+            sample    = hierarchy.sample,
+            pdf       = hierarchy.pdf,
+            infinites = infinite_lights,
+            finites   = finite_lights
+        }
+    } else {
+        let pdf_infinite_lights = 1 / (infinite_lights.count as f32);
+        let infinite_ratio      = 0.5:f32;
+        let hierarchy = make_light_hierarchy(finite_lights, data);
+        LightSelector {
+            count     = infinite_lights.count + finite_lights.count,
+            sample    = @|rnd, from_pos| {
+                let q = randf(rnd);
+                if q < infinite_ratio {
+                    let id = pick_light_id(rnd, infinite_lights.count);
+                    (infinite_lights.get(id), pdf_infinite_lights * infinite_ratio)
+                } else {
+                    let (l, pdf) = hierarchy.sample(rnd, from_pos);
+                    (l, pdf * (1-infinite_ratio))
+                }
+            },
+            pdf       = @|light, from_pos| if light.infinite { pdf_infinite_lights * infinite_ratio } else { hierarchy.pdf(light, from_pos) * (1-infinite_ratio) },
+            infinites = infinite_lights,
+            finites   = finite_lights
+        }
+    }
+}

@@ -6,7 +6,7 @@ fn @gpu_get_film_data(dev_id: i32) -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
-fn @gpu_get_aov_image(id: i32, dev_id: i32, atomics: Atomics, spi: i32) -> AOVImage {
+fn @gpu_get_aov_image(id: &[u8], dev_id: i32, atomics: Atomics, spi: i32) -> AOVImage {
     // Width & height always the same as film_width, film_height
     let mut ptr : &mut [f32];
     ignis_get_aov_image(dev_id, id, &mut ptr);
@@ -18,6 +18,9 @@ fn @gpu_get_aov_image(id: i32, dev_id: i32, atomics: Atomics, spi: i32) -> AOVIm
             get   = @|pixel| -> Color     {
                 let ptr2 = &pixels(pixel * 3) as &[f32];
                 make_color(ptr2(0), ptr2(1), ptr2(2), 1)
+            },
+            mark_as_used = @|| -> () {
+                ignis_mark_aov_as_used(id, 1);
             }
         }
     }
@@ -154,13 +157,14 @@ fn @gpu_hit_shade( acc: Accelerator
         let hit      = read_primary_hit(ray_id, 0);
         let lcl_surf = shape.surface_element(local_ray, hit);
         let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
-        
-        let mat = @shader(make_surface_shading_context(ent_id, ray, hit, glb_surf));
-        if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, primary_payload, glb_surf, mat) {
+
+        let ctx = make_surface_shading_context(ent_id, pixel, ray, hit, glb_surf);
+        let mat = @shader(ctx);
+        if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) {
             accumulate(pixel, color);
         }
 
-        match @on_shadow(ray, pixel, hit, &mut rnd, primary_payload, secondary_payload, glb_surf, mat) {
+        match @on_shadow(ctx, &mut rnd, primary_payload, secondary_payload, mat) {
             ShadowRay::Simple(new_ray, color) => {
                 write_secondary_ray(ray_id, 0, new_ray);
                 secondary.mat_id(ray_id)  = mat.id + 1;
@@ -182,7 +186,7 @@ fn @gpu_hit_shade( acc: Accelerator
             }
         }
 
-        if let Option[Ray]::Some(new_ray) = @on_bounce(ray, pixel, hit, &mut rnd, primary_payload, glb_surf, mat) {
+        if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, &mut rnd, primary_payload, mat) {
             write_primary_ray(ray_id, 0, new_ray);
             write_primary_ray_state(ray_id, 0, RayState{ rnd = rnd });
         } else {
@@ -861,8 +865,7 @@ fn @make_gpu_device( dev_id: i32
     handle_advanced_shadow_shader = @ | shader, path_tracer, first, last, spi, use_framebuffer, is_hit | {
         gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, path_tracer, first, last, spi, use_framebuffer, is_hit, is_nvvm);
     },
-    present = @ || ignis_present(dev_id),
-    sync    = @ || acc.sync(),
+    sync = @ || acc.sync(),
     parallel_range = @ |body| {
         @|start, end| {
             let size = end - start;

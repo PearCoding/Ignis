@@ -131,35 +131,18 @@ private:
     T mValue;
 };
 
-template<typename T>
+template <typename T>
 inline std::ostream& operator<<(std::ostream& stream, const FormatMemory<T>& mem)
 {
-    T value = mem.value();
-    if(value <= T(1)) {
-        stream << value << " byte";
-        return stream;
-    }
-    else if(value < T(1024)) {
-        stream << value << " bytes";
-        return stream;
-    }
+    int i = 0;
+    double mantissa = (double)mem.value();
+    for (; i < 9 && mantissa >= 1024; ++i)
+        mantissa /= 1024;
 
-    value /= T(1024);
-    if(value < T(1024)) {
-        stream << value << " kb";
-        return stream;
-    }
+    mantissa = std::ceil(mantissa * 10) / 10.0;
+    stream << mantissa << "BkMGTPEZY"[i];
 
-    value /= T(1024);
-    if(value < T(1024)) {
-        stream << value << " Mb";
-        return stream;
-    }
-
-    value /= T(1024);
-    stream << value << " Gb";
-
-    return stream;
+    return i == 0 ? stream : (stream << "B");
 }
 } // namespace IG
 

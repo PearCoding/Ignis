@@ -53,18 +53,21 @@ void CDF::computeForImage(const std::filesystem::path& in, const std::filesystem
     slice_conditional = image.width;
     slice_marginal    = image.height;
 
+    const size_t c = image.channels;
+    IG_ASSERT(c == 3 || c == 4, "Expected cdf image to have four or three channels per pixel");
+
     // Compute per pixel average over image
     tbb::parallel_for(
         tbb::blocked_range<size_t>(0, image.height),
         [&](const tbb::blocked_range<size_t>& range) {
             for (size_t y = range.begin(); y < range.end(); ++y) {
-                const float* p = &image.pixels[y * image.width * 4];
+                const float* p = &image.pixels[y * image.width * c];
                 float* cond    = &conditional[y * image.width];
 
                 // Compute one dimensional cdf per row
                 cond[0] = (p[0] + p[1] + p[2]) / 3;
                 for (size_t x = 1; x < image.width; ++x)
-                    cond[x] = cond[x - 1] + (p[x * 4 + 0] + p[x * 4 + 1] + p[x * 4 + 2]) / 3;
+                    cond[x] = cond[x - 1] + (p[x * c + 0] + p[x * c + 1] + p[x * c + 2]) / 3;
                 const float sum = cond[image.width - 1];
 
                 // Set as marginal

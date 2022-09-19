@@ -31,4 +31,10 @@ igcli ${args} -o ${output_dir}/env${spp}-d6.exr ${scene_dir}/env.json --gpu
 igcli ${args} -o ${output_dir}/env4k${spp}-d6.exr ${scene_dir}/env4k.json --gpu
 igcli ${args} -o ${output_dir}/env4kNoCDF${spp}-d6.exr ${scene_dir}/env4kNoCDF.json --gpu
 
+igcli ${args} -o ${output_dir}/multilight-uniform${spp}-d4.exr ${scene_dir}/multilight-uniform.json --gpu
+igcli ${args} -o ${output_dir}/multilight-simple${spp}-d4.exr ${scene_dir}/multilight-simple.json --gpu
+igcli ${args} -o ${output_dir}/multilight-hierarchy${spp}-d4.exr ${scene_dir}/multilight-hierarchy.json --gpu
+
+igcli ${args} -o ${output_dir}/point${spp}-d4.exr ${scene_dir}/point.json --gpu
+
 python3 ${script} ${output_dir}/ ${scene_dir}/

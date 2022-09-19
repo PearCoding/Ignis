@@ -11,9 +11,6 @@ struct Device {
     // [Internal] Generate rays
     generate_rays: fn (RayEmitter, &mut i32, i32, i32, i32, i32, i32, i32) -> i32, 
 
-    // [Internal] Make framebuffer changes present 
-    present: fn () -> (),
-
     // Synchronize device
     sync: fn () -> (),
 
@@ -84,7 +81,7 @@ struct Device {
     load_packed_image_by_id: fn (i32 /* Resource id */, i32 /* Expected channel count */, bool /* linear */) -> Image,
 
     // Load aov given by its id and the current spi
-    load_aov_image: fn (i32 /* id */, i32 /* spi */) -> AOVImage,
+    load_aov_image: fn (&[u8] /* id */, i32 /* spi */) -> AOVImage,
 
     // Load buffer from a file and make it accessible for the host only
     load_host_buffer: fn (&[u8] /* Filename */) -> DeviceBuffer,

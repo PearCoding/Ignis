@@ -58,6 +58,7 @@ option(IG_WITH_PYTHON_API    "Build python API" ON)
 option(IG_WITH_TOOLS         "Build tools" ON)
 option(IG_WITH_DOCUMENTATION "Build the documentation if Sphinx is available on the system" ON)
 option(IG_WITH_ASSERTS       "Build with asserts even in release. It is always enabled on debug" OFF)
+option(IG_WITH_DENOISER      "Integrate Inten Open Image Denoise if available" ON)
 option(IG_USE_LTO 			 "Use linked time optimization if available in release" ON)
 
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.21)
@@ -111,6 +112,10 @@ find_package(TBB REQUIRED)
 # ZLib is used in the generator
 find_package(ZLIB REQUIRED)
 
+if(IG_WITH_DENOISER)
+	find_package(OpenImageDenoise)
+endif()
+
 include(cmake/GetDependencies.cmake)
 include(cmake/Install.cmake)
 include(cmake/ExtraUtils.cmake)
@@ -154,7 +159,6 @@ if(IG_HAS_PYTHON_API)
 	message(STATUS "Building with Python API")
 endif()
 
-configure_file(src/backend/runtime/config/Git.h.in     ${CMAKE_CURRENT_BINARY_DIR}/config/Git.h)
 configure_file(src/backend/runtime/config/Version.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/Version.h)
 
 # Add warnings per default

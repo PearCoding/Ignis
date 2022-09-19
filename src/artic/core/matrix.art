@@ -234,8 +234,9 @@ fn @mat4x4_transform_direction(a: Mat4x4, v: Vec3) -> Vec3 {
     make_vec3(res.x, res.y, res.z)
 }
 
+/// Construct an orthogonal matrix M such that b = M*a for a given a and b
 fn @mat3x3_align_vectors(a: Vec3, b: Vec3) -> Mat3x3 {
-    let axis = vec3_cross(a, b);
+    let axis = vec3_cross(b, a);
     let cosA = vec3_dot(a, b);
     if cosA <= -1 {
         return(make_mat3x3(

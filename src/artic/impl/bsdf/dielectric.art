@@ -1,5 +1,5 @@
 // Creates a perfect glass BSDF
-fn @make_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
+fn @make_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = forward_strict_normals(surf, Bsdf {
     eval   = @ |_, _| color_builtins::black,
     pdf    = @ |_, _| 0,
     sample = @ |rnd, out_dir, adjoint| {
@@ -20,11 +20,11 @@ fn @make_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color
         }
     },
     is_specular = true
-};
+});
 
 //--------------------------------------
 // Creates a perfect glass BSDF with thin interface approximation
-fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = Bsdf {
+fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color) = forward_strict_normals(surf, Bsdf {
     eval   = @ |_, _| color_builtins::black,
     pdf    = @ |_, _| 0,
     sample = @ |rnd, out_dir, _| {
@@ -44,11 +44,15 @@ fn @make_thin_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: 
         }
     },
     is_specular = true
-};
+});
 
 //--------------------------------------
 // Creates a rough glass BSDF
 fn @make_rough_glass_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color, kt: Color, micro: microfacet::MicrofacetDistribution) -> Bsdf {
+    if (!check_strict_normals(surf)) {
+        return(make_null_bsdf(surf))
+    }
+
     let cos_eps = 1e-5 : f32; // Epsilon for cosine
     let pdf_eps = if micro.is_delta { 
         flt_eps

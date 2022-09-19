@@ -1,15 +1,16 @@
 #pragma once
 
 #include "TechniqueVariant.h"
+#include <functional>
 #include <numeric>
 
 namespace IG {
 struct LoaderContext;
-using TechniqueCallbackGenerator = std::string (*)(LoaderContext&);
+using TechniqueCallbackGenerator = std::function<std::string(LoaderContext&)>;
 using TechniqueCameraGenerator   = TechniqueCallbackGenerator;
 
 /// Callback returning a list of variants which will be called one after another for the given current iteration
-using TechniqueVariantSelector = std::vector<size_t> (*)(size_t /* currentIteration */);
+using TechniqueVariantSelector = std::function<std::vector<size_t>(size_t /* currentIteration */)>;
 
 enum class ShadowHandlingMode {
     Simple,               // No advanced shadow handling, given color will be splat directly if ray 'misses'.

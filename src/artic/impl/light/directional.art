@@ -1,15 +1,3 @@
-fn @make_null_light(id: i32) = Light {
-    id              = id,
-    sample_direct   = @ |_, _| undef[DirectLightSample](),
-    sample_emission = @ |_|    undef[EmissionSample](),
-    emission        = @ |_, _| color_builtins::black,
-    pdf_direct      = @ |_, _| make_solid_pdf(1),
-    pdf_emission    = @ |_, _| make_emissive_pdf(1, 1),
-    delta           = true,
-    infinite        = true
-};
-
-//-------------------------------------------
 fn @make_directional_light(id: i32, dir: Vec3, scene_bbox: BBox, color: Color) -> Light {
     let scene_radius = bbox_radius(scene_bbox) * 1.01;
 
@@ -20,7 +8,7 @@ fn @make_directional_light(id: i32, dir: Vec3, scene_bbox: BBox, color: Color) -
             let (pos, pos_pdf) = env_sample_pos(rnd, vec3_neg(dir), bbox_center(scene_bbox), scene_radius);
             make_emission_sample(pos, dir, color_mulf(color, safe_div(1, pos_pdf)), pos_pdf, 1, 1)
         },
-        emission     = @ |_, _| color_builtins::black,
+        emission     = @ |_|    color_builtins::black,
         pdf_direct   = @ |_, _| make_solid_pdf(1),
         pdf_emission = @ |_, _| make_emissive_pdf(env_sample_pos_pdf(scene_radius), 1),
         delta    = true,

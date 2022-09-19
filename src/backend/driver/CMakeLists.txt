@@ -193,6 +193,11 @@ endif()
 ###########################################################
 option(IG_BUILD_DRIVER_PARALLEL "Build driver files in parallel. Not recommended" OFF)
 
+set(_driver_cpp_src glue.cpp ShallowArray.h)
+if(TARGET OpenImageDenoise::OpenImageDenoise)
+    set(_driver_cpp_src ${_driver_cpp_src} oidn.cpp)
+endif()
+
 set(_targets )
 foreach(var ${VARIANTS})
     var_to_name(var_name ${var})
@@ -220,10 +225,16 @@ foreach(var ${VARIANTS})
 
     # Construct shared library for runtime loading
     set(_target_name ig_driver_${var_name})
-    add_library(${_target_name} MODULE ${_objs} glue.cpp ShallowArray.h)
+    add_library(${_target_name} MODULE ${_objs} ${_driver_cpp_src})
     set_target_properties(${_target_name} PROPERTIES PREFIX "")
     target_compile_definitions(${_target_name} PRIVATE ${args})
     target_link_libraries(${_target_name} PRIVATE ${AnyDSL_runtime_LIBRARIES} ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES} ig_lib_runtime TBB::tbb)
+    
+    if(TARGET OpenImageDenoise::OpenImageDenoise)
+        target_link_libraries(${_target_name} PRIVATE OpenImageDenoise::OpenImageDenoise)
+        target_compile_definitions(${_target_name} PRIVATE "IG_HAS_DENOISER")
+    endif()
+
     target_include_directories(${_target_name} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
     target_include_directories(${_target_name} PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS})
     add_dependencies(${_target_name} artic_c_interface)

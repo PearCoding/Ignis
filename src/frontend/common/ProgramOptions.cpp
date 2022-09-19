@@ -137,6 +137,22 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_flag("--add-env-light", AddExtraEnvLight, "Add additional constant environment light. This is automatically done for glTF scenes without any lights");
     app.add_flag("--force-specialization", ForceSpecialization, "Enforce specialization for parameters in shading tree. This will increase compile time drastically for potential runtime optimization");
 
+    if (type != ApplicationType::Trace) {
+        if (type == ApplicationType::CLI) {
+            // Focus on quality
+            DenoiserFollowSpecular     = true;
+            DenoiserOnlyFirstIteration = false;
+        } else {
+            // Focus on interactivity
+            DenoiserFollowSpecular     = false;
+            DenoiserOnlyFirstIteration = true;
+        }
+
+        app.add_flag("--denoise", Denoise, "Apply denoiser if available");
+        app.add_flag("--denoiser-follow-specular,!--denoiser-skip-specular", DenoiserFollowSpecular, "Follow specular paths or terminate at them");
+        app.add_flag("--denoiser-aov-first-iteration,!--denoiser-aov-every-iteration", DenoiserOnlyFirstIteration, "Acquire scene normal, albedo and depth information every iteration or only at the first");
+    }
+
     if (type == ApplicationType::Trace) {
         app.add_option("-i,--input", InputRay, "Read list of rays from file instead of the standard input");
         app.add_option("-o,--output", Output, "Write radiance for each ray into file instead of standard output");
@@ -177,6 +193,10 @@ void ProgramOptions::populate(RuntimeOptions& options) const
 
     options.AddExtraEnvLight    = AddExtraEnvLight;
     options.ForceSpecialization = ForceSpecialization;
+
+    options.Denoiser.Enabled            = Denoise;
+    options.Denoiser.FollowSpecular     = DenoiserFollowSpecular;
+    options.Denoiser.OnlyFirstIteration = DenoiserOnlyFirstIteration;
 
     options.ScriptDir = ScriptDir;
 }

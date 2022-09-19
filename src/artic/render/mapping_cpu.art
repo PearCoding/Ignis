@@ -387,8 +387,9 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             let glb_surf  = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
             
             // Execute hit point shading, and add the contribution of each lane to the frame buffer
-            let mat       = @shader(make_surface_shading_context(entity_id2, ray, hit, glb_surf));
-            let hit_color = if let Option[Color]::Some(color) = @on_hit(ray, pixel, hit, primary_payload, glb_surf, mat) { color } else { color_builtins::black };
+            let ctx       = make_surface_shading_context(entity_id2, pixel, ray, hit, glb_surf);
+            let mat       = @shader(ctx);
+            let hit_color = if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) { color } else { color_builtins::black };
             
             for lane in unroll(0, r_vector_width) {
                 let j = bitcast[i32](rv_extract(bitcast[f32](pixel), lane));
@@ -403,7 +404,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             }
 
             // Compute shadow rays
-            match @on_shadow(ray, pixel, hit, &mut rnd, primary_payload, secondary_payload, glb_surf, mat) {
+            match @on_shadow(ctx, &mut rnd, primary_payload, secondary_payload, mat) {
                 ShadowRay::Simple(new_ray, color) => {
                     write_secondary_ray(i, 0, new_ray);
                     secondary2.mat_id(i)  = mat.id + 1;
@@ -426,7 +427,7 @@ fn @cpu_hit_shade(entity_id: i32, primary: &PrimaryStream, secondary: &Secondary
             }
 
             // Sample new rays
-            if let Option[Ray]::Some(new_ray) = @on_bounce(ray, pixel, hit, &mut rnd, primary_payload, glb_surf, mat) {
+            if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, &mut rnd, primary_payload, mat) {
                 write_primary_ray(i, 0, new_ray);
                 write_primary_ray_state(i, 0, RayState{ rnd=rnd });
             } else {
@@ -581,7 +582,7 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
-fn @cpu_get_aov_image(id: i32, spi: i32) -> AOVImage {
+fn @cpu_get_aov_image(id: &[u8], spi: i32) -> AOVImage {
     // Width & height always the same as film_width, film_height
     let mut ptr : &mut [f32];
     ignis_get_aov_image(0, id, &mut ptr);
@@ -611,6 +612,9 @@ fn @cpu_get_aov_image(id: i32, spi: i32) -> AOVImage {
                 color.b = rv_insert(color.b, lane, ptr(j * 3 + 2));
             }
             color
+        },
+        mark_as_used = @|| -> () {
+            ignis_mark_aov_as_used(id, 1);
         }
     }
 }
@@ -791,7 +795,6 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     handle_advanced_shadow_shader = @ | shader, path_tracer, first, last, spi, use_framebuffer, is_hit | {
         cpu_advanced_shadow_handler(shader, path_tracer, first, last, spi, use_framebuffer, is_hit, vector_width);
     },
-    present = @ || ignis_present(0),
     sync    = @ || {},
     parallel_range = @ |body| {
         @|start, end| {

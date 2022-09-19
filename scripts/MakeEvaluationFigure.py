@@ -3,7 +3,6 @@
 import simpleimageio as sio
 import figuregen
 import sys
-import os
 import numpy as np
 import matplotlib.cm as cm
 
@@ -41,20 +40,23 @@ if __name__ == "__main__":
     ref_dir = sys.argv[2]
 
     scenes = [
-        ("plane", 1),
-        ("plane", 6),
-        ("cbox", 1),
-        ("cbox", 6),
-        ("room", 4),
-        ("plane-scale", 4),
-        ("volume", 12),
-        ("env", 6),
-        ("env4k", 6),
-        ("env4kNoCDF", 6),
+        ("plane", None, 1),
+        ("plane", None, 6),
+        ("cbox", None, 1),
+        ("cbox", None, 6),
+        ("room", None, 4),
+        ("plane-scale", None, 4),
+        ("volume", None, 12),
+        ("env", None, 6),
+        ("env4k", None, 6),
+        ("env4kNoCDF", "env4k", 6),
+        ("multilight-uniform", "multilight", 4),
+        ("multilight-simple", "multilight", 4),
+        ("multilight-hierarchy", "multilight", 4),
+        ("point", None, 4),
     ]
 
-    image_names = [f"{scene}4096-d{depth}" for (scene, depth) in scenes]
-    ref_names = ["ref-" + name for name in image_names]
+    image_names = [f"{scene}4096-d{depth}" for (scene, _, depth) in scenes]
 
     title = figuregen.Grid(1, 1)
     title.get_element(0, 0).set_image(
@@ -64,9 +66,9 @@ if __name__ == "__main__":
     errors = []
     grid = figuregen.Grid(len(image_names), 3)
     i = 0
-    for scene, depth in scenes:
+    for scene, ref_name, depth in scenes:
         image_name = f"{scene}4096-d{depth}"
-        ref_name = "ref-" + image_name
+        ref_name = "ref-" + (image_name if ref_name is None else f"{ref_name}4096-d{depth}")
 
         img = sio.read(f"{result_dir}/{image_name}.exr")
         ref_img = sio.read(f"{ref_dir}/{ref_name}.exr")
@@ -81,7 +83,7 @@ if __name__ == "__main__":
 
     grid.set_col_titles("top", ["Reference", "Render", "Rel. Error"])
     grid.set_row_titles(
-        "left", [f"{scene}-d{depth}" for (scene, depth) in scenes])
+        "left", [f"{scene}-d{depth}" for (scene, _, depth) in scenes])
     grid.set_row_titles("right", [f"RelMSE {err:.2E}" for err in errors])
 
     rows = []

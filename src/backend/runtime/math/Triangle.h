@@ -14,13 +14,13 @@ struct Triangle {
     {
     }
 
-    inline Vector3f& operator[](int i) { return i == 0 ? v0 : (i == 1 ? v1 : v2); }
-    inline const Vector3f& operator[](int i) const { return i == 0 ? v0 : (i == 1 ? v1 : v2); }
+    [[nodiscard]] inline Vector3f& operator[](int i) { return i == 0 ? v0 : (i == 1 ? v1 : v2); }
+    [[nodiscard]] inline const Vector3f& operator[](int i) const { return i == 0 ? v0 : (i == 1 ? v1 : v2); }
 
-    inline float area() const { return (v1 - v0).cross(v2 - v0).norm() / 2; }
+    [[nodiscard]] inline float area() const { return (v1 - v0).cross(v2 - v0).norm() / 2; }
 
     /// Computes the triangle bounding box.
-    inline BoundingBox computeBoundingBox() const
+    [[nodiscard]] inline BoundingBox computeBoundingBox() const
     {
         return BoundingBox{ v0.cwiseMin(v1.cwiseMin(v2)),
                             v0.cwiseMax(v1.cwiseMax(v2)) };

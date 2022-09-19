@@ -10,7 +10,7 @@ public:
     void update(const uint8* message, size_t len);
     void update(const std::string_view& str);
 
-    std::string final();
+    [[nodiscard]] std::string final();
 
 protected:
     void transform(const uint8* message, size_t block_nb);

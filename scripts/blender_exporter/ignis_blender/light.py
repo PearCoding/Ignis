@@ -1,7 +1,8 @@
 import mathutils
 import math
 from .utils import *
-from .node import export_node, NodeContext
+from .node import NodeContext
+from .emission import get_emission
 
 from .defaults import *
 
@@ -20,36 +21,24 @@ def export_background(result, out_dir, depsgraph, copy_images):
                 {"type": "env", "name": "__scene_world", "radiance": map_rgb(scene.world.color), "scale": 0.5, "transform": ENVIRONMENT_MAP_TRANSFORM})
         return
 
-    if "Background" not in scene.world.node_tree.nodes:
+    output = scene.world.node_tree.nodes.get("World Output")
+    if output is None:
+        print(f"World {scene.world.name} has no output node")
+        return None
+
+    surface = output.inputs.get("Surface")
+    if surface is None or not surface.is_linked:
+        print(f"World {scene.world.name} has no surface node")
+        return None
+
+    radiance = get_emission(NodeContext(
+        result, out_dir, depsgraph, copy_images), surface)
+
+    if not radiance:
         return
 
-    tree = scene.world.node_tree.nodes["Background"]
-
-    if tree.type == "BACKGROUND":
-        strength = export_node(NodeContext(
-            result, out_dir, depsgraph, copy_images), tree.inputs["Strength"])
-        radiance = export_node(NodeContext(
-            result, out_dir, depsgraph, copy_images), tree.inputs["Color"])
-
-        # Check if there is any emission (if we can detect it)
-        has_emission = try_extract_node_value(strength, default=1) > 0
-        if not has_emission:
-            return
-
-        has_emission = try_extract_node_value(radiance, default=1) > 0
-        if not has_emission:
-            return
-
-        try:
-            has_emission = radiance[0] > 0 or radiance[1] > 0 or radiance[2] > 0
-        except Exception:
-            pass
-
-        if not has_emission:
-            return
-
-        result["lights"].append(
-            {"type": "env", "name": "__scene_world", "radiance": radiance, "scale": strength, "transform": ENVIRONMENT_MAP_TRANSFORM})
+    result["lights"].append({"type": "env", "name": "__scene_world",
+                            "radiance": radiance, "transform": ENVIRONMENT_MAP_TRANSFORM})
 
 
 def export_light(result, inst):
@@ -108,7 +97,8 @@ def export_light(result, inst):
              "shape": light.name + "-shape",
              "bsdf": BSDF_BLACK_NAME,
              "transform": flat_matrix(inst.matrix_world),
-             "camera_visible": False}
+             "camera_visible": light.visible_camera,
+             "bounce_visible": (light.visible_diffuse or light.visible_glossy or light.visible_transmission)}
         )
 
         factor = 1/(4*area)  # No idea why there is the factor 4 in it

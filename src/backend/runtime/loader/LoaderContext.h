@@ -1,6 +1,7 @@
 #pragma once
 
 #include "LoaderEnvironment.h"
+#include "RuntimeSettings.h"
 #include "Target.h"
 #include "TechniqueInfo.h"
 
@@ -27,6 +28,7 @@ struct LoaderContext {
     std::string PixelSamplerType;
     IG::TechniqueInfo TechniqueInfo;
 
+    DenoiserSettings Denoiser;
     bool IsTracer = false;
 
     size_t CurrentTechniqueVariant;

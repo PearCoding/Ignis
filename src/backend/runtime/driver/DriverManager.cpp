@@ -1,8 +1,7 @@
 #include "DriverManager.h"
 #include "Logger.h"
 #include "RuntimeInfo.h"
-#include "config/Git.h"
-#include "config/Version.h"
+#include "config/Build.h"
 
 #include <algorithm>
 #include <cstring>
@@ -65,9 +64,23 @@ bool DriverManager::init(const std::filesystem::path& dir, bool ignoreEnv)
     }
 
     if (!skipSystem) {
+        const auto tryAdd = [&](const std::filesystem::path& potential_path) {
+            if (std::filesystem::exists(potential_path))
+                paths.push_back(potential_path);
+
+#ifdef IG_DEBUG // Only debug builds
+            if (std::filesystem::exists(potential_path / "Debug"))
+                paths.push_back(potential_path / "Debug");
+#else
+            if (std::filesystem::exists(potential_path / "Release"))
+                paths.push_back(potential_path / "Release");
+#endif
+        };
+
         const auto exePath = RuntimeInfo::executablePath();
-        const auto libPath = exePath.parent_path().parent_path() / "lib";
-        paths.push_back(libPath);
+        tryAdd(exePath.parent_path() / "lib");
+        tryAdd(exePath.parent_path().parent_path() / "lib");
+        tryAdd(exePath.parent_path().parent_path().parent_path() / "lib");
     }
 
     if (!dir.empty())
@@ -151,9 +164,10 @@ bool DriverManager::addModule(const std::filesystem::path& path)
 
         const DriverInterface interface = func();
 
-        if (interface.MajorVersion != IG_VERSION_MAJOR || interface.MinorVersion != IG_VERSION_MINOR) {
+        const auto version = Build::getVersion();
+        if (interface.MajorVersion != version.Major || interface.MinorVersion != version.Minor) {
             IG_LOG(L_WARNING) << "Skipping module " << path << " as the provided version " << interface.MajorVersion << "." << interface.MinorVersion
-                              << " does not match the runtime version " << IG_VERSION_MAJOR << "." << IG_VERSION_MINOR << std::endl;
+                              << " does not match the runtime version " << version.Major << "." << version.Minor << std::endl;
             return false;
         }
 
@@ -162,14 +176,14 @@ bool DriverManager::addModule(const std::filesystem::path& path)
             return false;
         }
 
-        if (std::strcmp(IG_GIT_REVISION, interface.Revision) != 0) {
+        if (Build::getGitRevision() != interface.Revision) {
             IG_LOG(L_WARNING) << "Skipping module " << path << " as the provided revision " << interface.Revision
-                              << " does not match the runtime revision " << IG_GIT_REVISION << std::endl;
+                              << " does not match the runtime revision " << Build::getGitRevision() << std::endl;
             return false;
         }
 
         if (mRegistredDrivers.count(interface.Target) > 0)
-            IG_LOG(L_WARNING) << "Module " << path << " is replacing another module for present target " << targetToString(interface.Target) << std::endl;
+            IG_LOG(L_WARNING) << "Module " << path << " is replacing another module for present target " << TargetInfo(interface.Target).toString() << std::endl;
 
         mRegistredDrivers[interface.Target] = path;
     } catch (const std::exception& e) {
@@ -182,13 +196,13 @@ bool DriverManager::addModule(const std::filesystem::path& path)
 bool DriverManager::hasCPU() const
 {
     return std::any_of(mRegistredDrivers.begin(), mRegistredDrivers.end(),
-                       [](const std::pair<Target, std::filesystem::path>& p) { return isCPU(p.first); });
+                       [](const std::pair<Target, std::filesystem::path>& p) { return TargetInfo(p.first).isCPU(); });
 }
 
 bool DriverManager::hasGPU() const
 {
     return std::any_of(mRegistredDrivers.begin(), mRegistredDrivers.end(),
-                       [](const std::pair<Target, std::filesystem::path>& p) { return !isCPU(p.first); });
+                       [](const std::pair<Target, std::filesystem::path>& p) { return !TargetInfo(p.first).isCPU(); });
 }
 
 static int costFunction(Target target)
@@ -223,7 +237,7 @@ Target DriverManager::recommendCPUTarget() const
     return std::accumulate(mRegistredDrivers.begin(), mRegistredDrivers.end(),
                            Target::GENERIC,
                            [](const Target& a, const std::pair<Target, std::filesystem::path>& b) {
-                               return (isCPU(b.first) && costFunction(b.first) < costFunction(a)) ? b.first : a;
+                               return (TargetInfo(b.first).isCPU() && costFunction(b.first) < costFunction(a)) ? b.first : a;
                            });
 }
 
@@ -232,7 +246,7 @@ Target DriverManager::recommendGPUTarget() const
     return std::accumulate(mRegistredDrivers.begin(), mRegistredDrivers.end(),
                            Target::GENERIC,
                            [](const Target& a, const std::pair<Target, std::filesystem::path>& b) {
-                               return (!isCPU(b.first) && costFunction(b.first) < costFunction(a)) ? b.first : a;
+                               return (!TargetInfo(b.first).isCPU() && costFunction(b.first) < costFunction(a)) ? b.first : a;
                            });
 }
 

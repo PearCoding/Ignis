@@ -2,8 +2,7 @@
 #include "Logger.h"
 #include "RuntimeStructs.h"
 #include "Statistics.h"
-#include "config/Git.h"
-#include "config/Version.h"
+#include "config/Build.h"
 #include "driver/Interface.h"
 #include "table/SceneDatabase.h"
 
@@ -27,9 +26,21 @@
 
 #include <tbb/concurrent_queue.h>
 
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+#ifdef IG_CC_MSC
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
+#endif
+
 #if defined(DEVICE_NVVM) || defined(DEVICE_AMD)
 #define DEVICE_GPU
 #endif
+
+#define _SECTION(type)                                                  \
+    const auto sectionClosure = getThreadData()->stats.section((type)); \
+    IG_UNUSED(sectionClosure)
 
 static inline size_t roundUp(size_t num, size_t multiple)
 {
@@ -103,6 +114,13 @@ struct ShaderStats {
     size_t call_count     = 0;
     size_t workload_count = 0;
 };
+struct AOV {
+    anydsl::Array<float> Data;
+    bool Mapped           = false;
+    bool HostOnly         = false;
+    int IterDiff          = 0; // Addition to the upcoming iteration counter at the end of an iteration
+    size_t IterationCount = 0;
+};
 
 struct CPUData {
     anydsl::Array<float> cpu_primary;
@@ -114,6 +132,10 @@ struct CPUData {
     std::unordered_map<void*, ShaderStats> shader_stats;
 };
 thread_local CPUData* sThreadData = nullptr;
+
+#ifdef IG_HAS_DENOISER
+void ignis_denoise(const float*, const float*, const float*, const float*, float*, size_t, size_t, size_t);
+#endif
 
 constexpr size_t GPUStreamBufferCount = 2;
 class Interface {
@@ -138,7 +160,7 @@ public:
         TemporaryStorageHostProxy temporary_storage_host;
         std::array<anydsl::Array<float>, GPUStreamBufferCount> primary;
         std::array<anydsl::Array<float>, GPUStreamBufferCount> secondary;
-        std::vector<anydsl::Array<float>> aovs;
+        std::unordered_map<std::string, anydsl::Array<float>> aovs;
         anydsl::Array<float> film_pixels;
         anydsl::Array<StreamRay> ray_list;
         std::array<anydsl::Array<float>*, GPUStreamBufferCount> current_primary;
@@ -178,8 +200,9 @@ public:
 #endif
     std::unordered_map<void*, ShaderInfo> shader_infos;
 
-    std::vector<anydsl::Array<float>> aovs;
-    anydsl::Array<float> host_pixels;
+    std::unordered_map<std::string, AOV> aovs;
+    AOV host_pixels;
+
     const IG::SceneDatabase* database;
     size_t film_width;
     size_t film_height;
@@ -196,8 +219,7 @@ public:
     Settings driver_settings;
 
     inline explicit Interface(const DriverSetupSettings& setup)
-        : aovs(setup.aov_count)
-        , database(setup.database)
+        : database(setup.database)
         , film_width(setup.framebuffer_width)
         , film_height(setup.framebuffer_height)
         , current_iteration(0)
@@ -221,9 +243,22 @@ public:
 
     inline void setupFramebuffer()
     {
-        host_pixels = anydsl::Array<float>(film_width * film_height * 3);
-        for (auto& arr : aovs)
-            arr = anydsl::Array<float>(film_width * film_height * 3);
+        if (setup.aov_map) {
+            for (const auto& name : *setup.aov_map)
+                aovs.emplace(name, AOV{});
+        }
+
+        host_pixels.Data = anydsl::Array<float>(film_width * film_height * 3);
+
+#ifdef IG_HAS_DENOISER
+        if (aovs.count("Denoised") != 0)
+            aovs["Denoised"].HostOnly = true; // Always mapped, ignore data from device
+#endif
+
+        for (auto& p : aovs)
+            p.second.Data = anydsl::Array<float>(film_width * film_height * 3);
+
+        resetFramebufferAccess();
     }
 
     inline void resizeFramebuffer(size_t width, size_t height)
@@ -236,6 +271,14 @@ public:
         film_width  = width;
         film_height = height;
         setupFramebuffer();
+    }
+
+    inline void resetFramebufferAccess()
+    {
+        host_pixels.Mapped = false;
+
+        for (auto& p : aovs)
+            p.second.Mapped = false;
     }
 
     template <typename T>
@@ -595,6 +638,8 @@ public:
         if (it != images.end())
             return it->second;
 
+        _SECTION(IG::SectionType::ImageLoading);
+
         IG_LOG(IG::L_DEBUG) << "Loading image " << filename << " (C=" << expected_channels << ")" << std::endl;
         try {
             const auto img = IG::Image::load(filename);
@@ -621,6 +666,8 @@ public:
         auto it      = images.find(filename);
         if (it != images.end())
             return it->second;
+
+        _SECTION(IG::SectionType::PackedImageLoading);
 
         IG_LOG(IG::L_DEBUG) << "Loading (packed) image " << filename << " (C=" << expected_channels << ")" << std::endl;
         try {
@@ -671,6 +718,8 @@ public:
         if (it != buffers.end())
             return it->second;
 
+        _SECTION(IG::SectionType::BufferLoading);
+
         IG_LOG(IG::L_DEBUG) << "Loading buffer " << filename << std::endl;
         const auto vec = readBufferFile(filename);
 
@@ -696,6 +745,8 @@ public:
         if (it != buffers.end() && std::get<1>(it->second) >= (size_t)size) {
             return it->second;
         }
+
+        _SECTION(IG::SectionType::BufferRequests);
 
         IG_LOG(IG::L_DEBUG) << "Requested buffer " << name << " with " << IG::FormatMemory(size) << std::endl;
 
@@ -935,7 +986,9 @@ public:
     {
         if (dev != 0) {
             auto& device = devices[dev];
-            if (device.film_pixels.size() != host_pixels.size()) {
+            if (device.film_pixels.size() != host_pixels.Data.size()) {
+                _SECTION(IG::SectionType::FramebufferUpdate);
+
                 auto film_size = film_width * film_height * 3;
                 void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
                 if (ptr == nullptr) {
@@ -946,53 +999,70 @@ public:
 
                 auto film_data     = reinterpret_cast<float*>(ptr);
                 device.film_pixels = anydsl::Array<float>(dev, film_data, film_size);
-                anydsl::copy(host_pixels, device.film_pixels);
+                anydsl::copy(host_pixels.Data, device.film_pixels);
             }
             return device.film_pixels.data();
         } else {
-            return host_pixels.data();
+            return host_pixels.Data.data();
         }
     }
 
-    inline float* getAOVImage(int32_t dev, int32_t id)
+    inline void mapAOVToDevice(int32_t dev, const std::string& name, const AOV& host, bool onlyAtCreation = true)
     {
-        if (id == 0) // Id = 0 is the actual framebuffer
-            return getFilmImage(dev);
+        if (dev == 0) // Device is host
+            return;
 
-        int32_t index = id - 1;
-        IG_ASSERT(index < (int32_t)aovs.size(), "AOV index out of bounds!");
+        bool created = false;
+        auto& device = devices[dev];
+        if (device.aovs[name].size() != host.Data.size()) {
+            _SECTION(IG::SectionType::AOVUpdate);
+
+            auto film_size = film_width * film_height * 3;
+            void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
+            if (ptr == nullptr) {
+                IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
+                std::abort();
+            }
+
+            auto film_data    = reinterpret_cast<float*>(ptr);
+            device.aovs[name] = anydsl::Array<float>(dev, film_data, film_size);
+            created           = true;
+        }
+
+        if (!onlyAtCreation || created)
+            anydsl::copy(host.Data, device.aovs[name]);
+    }
+
+    inline DriverAOVAccessor getAOVImage(int32_t dev, const char* name)
+    {
+        const std::string aov_name = name ? std::string(name) : std::string{};
+        if (aov_name.empty() || aov_name == "Color")
+            return DriverAOVAccessor{ getFilmImage(dev), host_pixels.IterationCount };
+
+        const auto it = aovs.find(aov_name);
+        if (it == aovs.end()) {
+            IG_LOG(IG::L_ERROR) << "Unknown aov '" << aov_name << "' access" << std::endl;
+            return DriverAOVAccessor{ nullptr, 0 };
+        }
 
         if (dev != 0) {
             auto& device = devices[dev];
-            if (device.aovs.size() != aovs.size())
-                device.aovs.resize(aovs.size());
-
-            if (device.aovs[index].size() != aovs[index].size()) {
-                auto film_size = film_width * film_height * 3;
-                void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
-                if (ptr == nullptr) {
-                    IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
-                    std::abort();
-                    return nullptr;
-                }
-
-                auto film_data     = reinterpret_cast<float*>(ptr);
-                device.aovs[index] = anydsl::Array<float>(dev, film_data, film_size);
-                anydsl::copy(aovs[index], device.aovs[index]);
-            }
-            return device.aovs[index].data();
+            mapAOVToDevice(dev, aov_name, it->second);
+            return DriverAOVAccessor{ device.aovs[aov_name].data(), it->second.IterationCount };
         } else {
-            return aovs[index].data();
+            return DriverAOVAccessor{ it->second.Data.data(), it->second.IterationCount };
         }
     }
 
 #ifdef DEVICE_GPU
     inline uint32_t* getTonemapImage(int32_t dev)
     {
-        auto& device = devices[dev];
-        if (device.tonemap_pixels.size() != host_pixels.size()) {
-            auto film_size = film_width * film_height;
-            void* ptr      = anydsl_alloc(dev, sizeof(uint32_t) * film_size);
+        const size_t film_size = film_width * film_height;
+        auto& device           = devices[dev];
+        if ((size_t)device.tonemap_pixels.size() != film_size) {
+            _SECTION(IG::SectionType::TonemapUpdate);
+
+            void* ptr = anydsl_alloc(dev, sizeof(uint32_t) * film_size);
             if (ptr == nullptr) {
                 IG_LOG(IG::L_FATAL) << "Out of memory" << std::endl;
                 std::abort();
@@ -1005,38 +1075,130 @@ public:
     }
 #endif
 
-    inline void present(int32_t dev)
+    inline DriverAOVAccessor getAOVImageForHost(int32_t dev, const char* name)
     {
-        for (size_t id = 0; id < devices[dev].aovs.size(); ++id)
-            anydsl::copy(devices[dev].aovs[id], aovs[id]);
+#ifdef DEVICE_GPU
+        const std::string aov_name = name ? std::string(name) : std::string{};
+        if (aov_name.empty() || aov_name == "Color") {
+            if (!host_pixels.Mapped && devices[dev].film_pixels.data() != nullptr) {
+                _SECTION(IG::SectionType::FramebufferHostUpdate);
+                anydsl::copy(devices[dev].film_pixels, host_pixels.Data);
+                host_pixels.Mapped = true;
+            }
+            return DriverAOVAccessor{ host_pixels.Data.data(), host_pixels.IterationCount };
+        } else {
+            const auto it = aovs.find(aov_name);
+            if (it == aovs.end()) {
+                IG_LOG(IG::L_ERROR) << "Unknown aov '" << aov_name << "' access for host" << std::endl;
+                return DriverAOVAccessor{ nullptr, 0 };
+            }
 
-        anydsl::copy(devices[dev].film_pixels, host_pixels);
+            if (!it->second.HostOnly && !it->second.Mapped && devices[dev].aovs[aov_name].data() != nullptr) {
+                _SECTION(IG::SectionType::AOVHostUpdate);
+                anydsl::copy(devices[dev].aovs[aov_name], it->second.Data);
+                it->second.Mapped = true;
+            }
+            return DriverAOVAccessor{ it->second.Data.data(), it->second.IterationCount };
+        }
+#else
+        return getAOVImage(dev, name);
+#endif
     }
 
-    /// Clear specific aov or clear all if aov < 0. Note, aov == 0 is the framebuffer
-    inline void clear(int aov)
+    inline void markAOVAsUsed(const char* name, int iter)
     {
-        if (aov <= 0) {
-            std::memset(host_pixels.data(), 0, sizeof(float) * host_pixels.size());
+#ifndef DEVICE_GPU
+        const std::lock_guard<std::mutex> guard(thread_mutex);
+#endif
+
+        const std::string aov_name = name ? std::string(name) : std::string{};
+        if (aov_name.empty() || aov_name == "Color") {
+            host_pixels.IterDiff = iter;
+        } else {
+            const auto it = aovs.find(aov_name);
+            if (it == aovs.end())
+                IG_LOG(IG::L_ERROR) << "Unknown aov '" << aov_name << "' access" << std::endl;
+            else
+                it->second.IterDiff = iter;
+        }
+    }
+
+    /// Clear all aovs and the framebuffer
+    inline void clearAllAOVs()
+    {
+        clearAOV(nullptr);
+        for (const auto& p : aovs)
+            clearAOV(p.first.c_str());
+    }
+
+    /// Clear specific aov
+    inline void clearAOV(const char* name)
+    {
+        const std::string aov_name = name ? std::string(name) : std::string{};
+        if (aov_name.empty() || aov_name == "Color") {
+            host_pixels.IterationCount = 0;
+            host_pixels.IterDiff       = 0;
+            std::memset(host_pixels.Data.data(), 0, sizeof(float) * host_pixels.Data.size());
             for (auto& pair : devices) {
                 auto& device_pixels = devices[pair.first].film_pixels;
-                if (device_pixels.size() == host_pixels.size())
-                    anydsl::copy(host_pixels, device_pixels);
+                if (device_pixels.size() == host_pixels.Data.size())
+                    anydsl::copy(host_pixels.Data, device_pixels);
+            }
+        } else {
+            auto& aov          = aovs[name];
+            aov.IterationCount = 0;
+            aov.IterDiff       = 0;
+            auto& buffer       = aov.Data;
+            std::memset(buffer.data(), 0, sizeof(float) * buffer.size());
+            for (auto& pair : devices) {
+                if (devices[pair.first].aovs.empty())
+                    continue;
+                auto& device_pixels = devices[pair.first].aovs[aov_name];
+                if (device_pixels.size() == buffer.size())
+                    anydsl::copy(buffer, device_pixels);
             }
         }
+    }
 
-        for (size_t id = 0; id < aovs.size(); ++id) {
-            if (aov < 0 || (size_t)aov == (id + 1)) {
-                auto& buffer = aovs[id];
-                std::memset(buffer.data(), 0, sizeof(float) * buffer.size());
-                for (auto& pair : devices) {
-                    if (devices[pair.first].aovs.empty())
-                        continue;
-                    auto& device_pixels = devices[pair.first].aovs[id];
-                    if (device_pixels.size() == buffer.size())
-                        anydsl::copy(buffer, device_pixels);
-                }
-            }
+#ifdef IG_HAS_DENOISER
+    inline void denoise(int32_t dev)
+    {
+        if (aovs.count("Denoised") == 0)
+            return;
+
+        const auto color  = getAOVImageForHost(dev, {});
+        const auto normal = getAOVImageForHost(dev, "Normals");
+        const auto albedo = getAOVImageForHost(dev, "Albedo");
+        const auto output = getAOVImageForHost(dev, "Denoised");
+
+        IG_ASSERT(color.Data, "Expected valid color data for denoiser");
+        IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
+        IG_ASSERT(albedo.Data, "Expected valid albedo data for denoiser");
+        IG_ASSERT(output.Data, "Expected valid output data for denoiser");
+
+        ignis_denoise(color.Data, normal.Data, albedo.Data, nullptr, output.Data, film_width, film_height, color.IterationCount);
+
+        // Make sure the iteration count resembles the input
+        auto& outputAOV          = aovs["Denoised"];
+        outputAOV.IterationCount = color.IterationCount;
+        outputAOV.IterDiff       = 0;
+
+        // Map to device
+        mapAOVToDevice(dev, "Denoised", outputAOV, false);
+    }
+#endif
+
+    inline void present()
+    {
+        // Single thread access
+        if (!current_settings.info.LockFramebuffer) {
+            host_pixels.IterationCount = (size_t)std::max<int64_t>(0, (int64_t)host_pixels.IterationCount + 1);
+            host_pixels.IterDiff       = 0;
+        }
+
+        for (auto& p : aovs) {
+            p.second.IterationCount = (size_t)std::max<int64_t>(0, (int64_t)p.second.IterationCount + p.second.IterDiff);
+            p.second.IterDiff       = 0;
         }
     }
 
@@ -1107,6 +1269,18 @@ public:
 
 static std::unique_ptr<Interface> sInterface;
 
+static inline int get_dev_id(size_t device)
+{
+#if defined(DEVICE_NVVM)
+    return ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
+#elif defined(DEVICE_AMD)
+    return ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
+#else
+    IG_UNUSED(device);
+    return 0;
+#endif
+}
+
 void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRenderSettings& settings, const IG::ParameterSet* parameterSet, size_t iter, size_t frame)
 {
     // Register host thread
@@ -1124,10 +1298,17 @@ void glue_render(const IG::TechniqueVariantShaderSet& shaderSet, const DriverRen
         cpu_data->stats.beginShaderLaunch(IG::ShaderType::Device, 1, {});
     }
 
+    sInterface->resetFramebufferAccess();
     ig_render(&sInterface->driver_settings);
+    sInterface->present();
 
     if (sInterface->setup.acquire_stats)
         cpu_data->stats.endShaderLaunch(IG::ShaderType::Device, {});
+
+#ifdef IG_HAS_DENOISER
+    if (settings.apply_denoiser)
+        sInterface->denoise(get_dev_id(settings.device));
+#endif
 
     sInterface->unregisterThread();
 }
@@ -1136,6 +1317,11 @@ void glue_setup(const DriverSetupSettings& settings)
 {
     IG_ASSERT(sInterface == nullptr, "Only a single instance allowed!");
     sInterface = std::make_unique<Interface>(settings);
+
+    // Force flush to zero mode for denormals
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+    _mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
+#endif
 
     // Make sure the functions exposed are available in the linking process
     anydsl_link(settings.driver_filename);
@@ -1151,17 +1337,20 @@ void glue_resizeFramebuffer(size_t width, size_t height)
     sInterface->resizeFramebuffer(width, height);
 }
 
-const float* glue_getFramebuffer(size_t aov)
+void glue_getFramebuffer(size_t device, const char* name, DriverAOVAccessor& accessor)
 {
-    if (aov == 0 || (size_t)aov > sInterface->aovs.size())
-        return sInterface->host_pixels.data();
-    else
-        return sInterface->aovs[aov - 1].data();
+    const int dev_id = get_dev_id(device);
+    accessor         = sInterface->getAOVImageForHost(dev_id, name);
 }
 
-void glue_clearFramebuffer(int aov)
+void glue_clearAllFramebuffer()
 {
-    sInterface->clear(aov);
+    sInterface->clearAllAOVs();
+}
+
+void glue_clearFramebuffer(const char* name)
+{
+    sInterface->clearAOV(name);
 }
 
 const IG::Statistics* glue_getStatistics()
@@ -1177,23 +1366,21 @@ void glue_tonemap(size_t device, uint32_t* out_pixels, const IG::TonemapSettings
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::Tonemap, 1, {});
 
+    const int dev_id     = get_dev_id(device);
+    const auto acc       = sInterface->getAOVImage(dev_id, driver_settings.AOV);
+    float* in_pixels     = acc.Data;
+    const float inv_iter = acc.IterationCount > 0 ? 1.0f / acc.IterationCount : 0.0f;
+
 #ifdef DEVICE_GPU
-#if defined(DEVICE_NVVM)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
-#elif defined(DEVICE_AMD)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
-#endif
-    float* in_pixels            = sInterface->getAOVImage(dev_id, (int)driver_settings.AOV);
     uint32_t* device_out_pixels = sInterface->getTonemapImage(dev_id);
 #else
-    float* in_pixels = sInterface->getAOVImage(0, (int)driver_settings.AOV);
     uint32_t* device_out_pixels = out_pixels;
 #endif
 
     TonemapSettings settings;
     settings.method          = (int)driver_settings.Method;
     settings.use_gamma       = driver_settings.UseGamma;
-    settings.scale           = driver_settings.Scale;
+    settings.scale           = driver_settings.Scale * inv_iter;
     settings.exposure_factor = driver_settings.ExposureFactor;
     settings.exposure_offset = driver_settings.ExposureOffset;
 
@@ -1218,19 +1405,13 @@ void glue_imageinfo(size_t device, const IG::ImageInfoSettings& driver_settings,
     if (sInterface->setup.acquire_stats)
         sInterface->getThreadData()->stats.beginShaderLaunch(IG::ShaderType::ImageInfo, 1, {});
 
-#ifdef DEVICE_GPU
-#if defined(DEVICE_NVVM)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
-#elif defined(DEVICE_AMD)
-    int dev_id = ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
-#endif
-    float* in_pixels = sInterface->getAOVImage(dev_id, (int)driver_settings.AOV);
-#else
-    float* in_pixels = sInterface->getAOVImage(0, (int)driver_settings.AOV);
-#endif
+    const int dev_id     = get_dev_id(device);
+    const auto acc       = sInterface->getAOVImage(dev_id, driver_settings.AOV);
+    float* in_pixels     = acc.Data;
+    const float inv_iter = acc.IterationCount > 0 ? 1.0f / acc.IterationCount : 0.0f;
 
     ImageInfoSettings settings;
-    settings.scale     = driver_settings.Scale;
+    settings.scale     = driver_settings.Scale * inv_iter;
     settings.histogram = driver_settings.Histogram;
     settings.bins      = (int)driver_settings.Bins;
 
@@ -1311,11 +1492,13 @@ void* glue_compileSource(const char* src, const char* function, bool isVerbose)
 extern "C" {
 IG_EXPORT DriverInterface ig_get_interface()
 {
+    static const auto revision = IG::Build::getGitRevision();
+
     DriverInterface interface {
     };
-    interface.MajorVersion = IG_VERSION_MAJOR;
-    interface.MinorVersion = IG_VERSION_MINOR;
-    interface.Revision     = IG_GIT_REVISION;
+    interface.MajorVersion = IG::Build::getVersion().Major;
+    interface.MinorVersion = IG::Build::getVersion().Minor;
+    interface.Revision     = revision.c_str();
 
 // Expose Target
 #if defined(DEVICE_DEFAULT)
@@ -1340,16 +1523,23 @@ IG_EXPORT DriverInterface ig_get_interface()
 #error No device selected!
 #endif
 
-    interface.SetupFunction             = glue_setup;
-    interface.ShutdownFunction          = glue_shutdown;
-    interface.RenderFunction            = glue_render;
-    interface.ResizeFramebufferFunction = glue_resizeFramebuffer;
-    interface.GetFramebufferFunction    = glue_getFramebuffer;
-    interface.ClearFramebufferFunction  = glue_clearFramebuffer;
-    interface.GetStatisticsFunction     = glue_getStatistics;
-    interface.TonemapFunction           = glue_tonemap;
-    interface.ImageInfoFunction         = glue_imageinfo;
-    interface.CompileSourceFunction     = glue_compileSource;
+#ifdef IG_HAS_DENOISER
+    interface.HasDenoiser = true;
+#else
+    interface.HasDenoiser = false;
+#endif
+
+    interface.SetupFunction               = glue_setup;
+    interface.ShutdownFunction            = glue_shutdown;
+    interface.RenderFunction              = glue_render;
+    interface.ResizeFramebufferFunction   = glue_resizeFramebuffer;
+    interface.GetFramebufferFunction      = glue_getFramebuffer;
+    interface.ClearFramebufferFunction    = glue_clearFramebuffer;
+    interface.ClearAllFramebufferFunction = glue_clearAllFramebuffer;
+    interface.GetStatisticsFunction       = glue_getStatistics;
+    interface.TonemapFunction             = glue_tonemap;
+    interface.ImageInfoFunction           = glue_imageinfo;
+    interface.CompileSourceFunction       = glue_compileSource;
 
     return interface;
 }
@@ -1361,9 +1551,14 @@ IG_EXPORT void ignis_get_film_data(int dev, float** pixels, int* width, int* hei
     *height = (int)sInterface->film_height;
 }
 
-IG_EXPORT void ignis_get_aov_image(int dev, int id, float** aov_pixels)
+IG_EXPORT void ignis_get_aov_image(int dev, const char* name, float** aov_pixels)
 {
-    *aov_pixels = sInterface->getAOVImage(dev, id);
+    *aov_pixels = sInterface->getAOVImage(dev, name).Data;
+}
+
+IG_EXPORT void ignis_mark_aov_as_used(const char* name, int iter)
+{
+    sInterface->markAOVAsUsed(name, iter);
 }
 
 IG_EXPORT void ignis_get_work_info(WorkInfo* info)
@@ -1625,12 +1820,6 @@ IG_EXPORT void ignis_handle_advanced_shadow_shader(int dev, int material_id, int
 IG_EXPORT void ignis_handle_callback_shader(int dev, int type)
 {
     sInterface->runCallbackShader(dev, type);
-}
-
-IG_EXPORT void ignis_present(int dev)
-{
-    if (dev != 0)
-        sInterface->present(dev);
 }
 
 // Registry stuff

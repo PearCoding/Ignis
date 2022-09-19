@@ -2,7 +2,7 @@
 	"technique": {
 		"type": "path",
 		"max_depth": 64,
-		"use_uniform_light_selector": false
+		"light_selector": "hierarchy"
 	},
 	"camera": {
 		"type": "perspective",
@@ -52,6 +52,8 @@
 		{"type":"point", "name":"L6", "intensity": [0.0, 1.0, 0.0], "position": [0, 1, 1]},
 		{"type":"point", "name":"L7", "intensity": [0.0, 0.0, 1.0], "position": [0, 0, 1]},
 		{"type":"point", "name":"L8", "intensity": [0.5, 1.0, 0.5], "position": [1, 1, 2]},
+		{"type":"point", "name":"L9", "intensity": [1.0, 0.5, 0.5], "position": [1, 2, 1]},
+		{"type":"point", "name":"L10", "intensity": [0.5, 0.5, 1.0], "position": [2, 1, 1]},
 		{"type":"sky", "name":"Sky"}
 	]
 }

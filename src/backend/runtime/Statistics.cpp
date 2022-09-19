@@ -24,6 +24,19 @@ void Statistics::endShaderLaunch(ShaderType type, size_t id)
     stats->elapsedMS += stats->timer.stopMS();
 }
 
+void Statistics::beginSection(SectionType type)
+{
+    SectionStats& stats = mSections[(size_t)type];
+    stats.timer.start();
+    stats.count++;
+}
+
+void Statistics::endSection(SectionType type)
+{
+    SectionStats& stats = mSections[(size_t)type];
+    stats.elapsedMS += stats.timer.stopMS();
+}
+
 Statistics::ShaderStats& Statistics::ShaderStats::operator+=(const Statistics::ShaderStats& other)
 {
     elapsedMS += other.elapsedMS;
@@ -31,6 +44,14 @@ Statistics::ShaderStats& Statistics::ShaderStats::operator+=(const Statistics::S
     workload += other.workload;
     max_workload = std::max(max_workload, other.max_workload);
     min_workload = std::min(min_workload, other.min_workload);
+
+    return *this;
+}
+
+Statistics::SectionStats& Statistics::SectionStats::operator+=(const Statistics::SectionStats& other)
+{
+    elapsedMS += other.elapsedMS;
+    count += other.count;
 
     return *this;
 }
@@ -53,6 +74,9 @@ void Statistics::add(const Statistics& other)
 
     for (size_t i = 0; i < other.mQuantities.size(); ++i)
         mQuantities[i] += other.mQuantities[i];
+
+    for (size_t i = 0; i < other.mSections.size(); ++i)
+        mSections[i] += other.mSections[i];
 }
 
 class DumpTable {
@@ -124,7 +148,7 @@ private:
 std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
 {
     DumpTable table;
-    const auto dumpInline = [&](const std::string& name, size_t count, size_t elapsedMS, float percentage = -1, size_t max_workload = 0, size_t min_workload = 0) {
+    const auto dumpInline = [&](const std::string& name, size_t count, size_t elapsedMS, float percentage = -1, size_t max_workload = 0, size_t min_workload = 0, bool skip_iter = false) {
         std::vector<std::string> cols;
         cols.emplace_back(name);
 
@@ -133,7 +157,7 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
             bstream << elapsedMS << "ms [" << count << "]";
             cols.emplace_back(bstream.str());
         }
-        if (iter != 0) {
+        if (!skip_iter && iter != 0) {
             std::stringstream bstream;
             bstream << elapsedMS / iter << "ms [" << count / iter << "] per Iteration";
             cols.emplace_back(bstream.str());
@@ -154,11 +178,16 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
     };
 
     const auto dumpStats = [&](const std::string& name, const ShaderStats& stats) {
-        return dumpInline(name, stats.count, stats.elapsedMS);
+        dumpInline(name, stats.count, stats.elapsedMS);
     };
 
     const auto dumpStatsDetail = [&](const std::string& name, const ShaderStats& stats, size_t total_workload) {
-        return dumpInline(name, stats.count, stats.elapsedMS, static_cast<float>(double(stats.workload) / double(total_workload)), stats.max_workload, stats.min_workload);
+        dumpInline(name, stats.count, stats.elapsedMS, static_cast<float>(double(stats.workload) / double(total_workload)), stats.max_workload, stats.min_workload);
+    };
+
+    const auto dumpSectionStats = [&](const std::string& name, const SectionStats& stats) {
+        if (stats.count > 0)
+            dumpInline(name, stats.count, stats.elapsedMS, -1, 0, 0, true);
     };
 
     const auto dumpQuantity = [=](size_t count) {
@@ -220,6 +249,17 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
 
     if (mTonemapStats.count > 0)
         dumpStats("  |-Tonemap", mTonemapStats);
+
+    table.addRow({ "  Sections:" });
+    dumpSectionStats("  |-ImageLoading", mSections[(size_t)SectionType::ImageLoading]);
+    dumpSectionStats("  |-PackedImageLoading", mSections[(size_t)SectionType::PackedImageLoading]);
+    dumpSectionStats("  |-BufferLoading", mSections[(size_t)SectionType::BufferLoading]);
+    dumpSectionStats("  |-BufferRequests", mSections[(size_t)SectionType::BufferRequests]);
+    dumpSectionStats("  |-FramebufferUpdate", mSections[(size_t)SectionType::FramebufferUpdate]);
+    dumpSectionStats("  |-AOVUpdate", mSections[(size_t)SectionType::AOVUpdate]);
+    dumpSectionStats("  |-TonemapUpdate", mSections[(size_t)SectionType::TonemapUpdate]);
+    dumpSectionStats("  |-FramebufferHostUpdate", mSections[(size_t)SectionType::FramebufferHostUpdate]);
+    dumpSectionStats("  |-AOVHostUpdate", mSections[(size_t)SectionType::AOVHostUpdate]);
 
     table.addRow({ "  Quantities:" });
     table.addRow({ "  |-CameraRays", dumpQuantity(mQuantities[(size_t)Quantity::CameraRayCount]) });

@@ -68,20 +68,22 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime, 
 {
     const size_t width  = runtime.framebufferWidth();
     const size_t height = runtime.framebufferHeight();
-    float scale         = 1.0f / runtime.currentIterationCount();
-    if (runtime.currentIterationCount() == 0)
-        scale = 0;
 
-    size_t aov_count = runtime.aovs().size() + 1;
+    const auto& aovs       = runtime.aovs();
+    const size_t aov_count = aovs.size() + 1;
 
     std::vector<float> images(width * height * 3 * aov_count);
 
     // Copy data
     for (size_t aov = 0; aov < aov_count; ++aov) {
-        const float* src = runtime.getFramebuffer((int)aov);
-        float* dst_r     = &images[width * height * (3 * aov + 0)];
-        float* dst_g     = &images[width * height * (3 * aov + 1)];
-        float* dst_b     = &images[width * height * (3 * aov + 2)];
+        const std::string aov_name = aov == 0 ? std::string{} : aovs[aov - 1];
+
+        const auto acc    = runtime.getFramebuffer(aov_name);
+        const float scale = acc.IterationCount > 0 ? 1.0f / acc.IterationCount : 0.0f;
+        const float* src  = acc.Data;
+        float* dst_r      = &images[width * height * (3 * aov + 0)];
+        float* dst_g      = &images[width * height * (3 * aov + 1)];
+        float* dst_b      = &images[width * height * (3 * aov + 2)];
 
         const auto pixelF = [&](size_t ind) {
             float r = src[ind * 3 + 0];

@@ -13,9 +13,9 @@ class DynTable {
 public:
     DynTable() = default;
 
-    inline size_t entryCount() const { return mLookups.size(); }
+    [[nodiscard]] inline size_t entryCount() const { return mLookups.size(); }
     inline void reserve(size_t size) { mData.reserve(size); }
-    inline std::vector<uint8>& addLookup(uint32 typeID, uint32 flags, size_t alignment)
+    [[nodiscard]] inline std::vector<uint8>& addLookup(uint32 typeID, uint32 flags, size_t alignment)
     {
         if (alignment != 0 && !mData.empty()) {
             size_t defect = alignment - mData.size() % alignment;
@@ -26,8 +26,8 @@ public:
         return mData;
     }
 
-    inline const std::vector<LookupEntry>& lookups() const { return mLookups; }
-    inline const std::vector<uint8>& data() const { return mData; }
+    [[nodiscard]] inline const std::vector<LookupEntry>& lookups() const { return mLookups; }
+    [[nodiscard]] inline const std::vector<uint8>& data() const { return mData; }
 
 private:
     std::vector<LookupEntry> mLookups;

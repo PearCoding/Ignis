@@ -144,14 +144,23 @@ public:
 #endif
     }
 
-    [[nodiscard]] inline const float* currentPixels() const
+    [[nodiscard]] inline std::string currentAOVName() const
     {
-        return Runtime->getFramebuffer(CurrentAOV);
+        if (CurrentAOV == 0)
+            return std::string{};
+        else
+            return Runtime->aovs().at(CurrentAOV - 1);
+    }
+
+    [[nodiscard]] inline AOVAccessor currentPixels() const
+    {
+        return Runtime->getFramebuffer(currentAOVName());
     }
 
     void changeAOV(int delta_aov)
     {
-        CurrentAOV = (CurrentAOV + delta_aov) % (Runtime->aovs().size() + 1);
+        const int rem = (int)Runtime->aovs().size() + 1;
+        CurrentAOV    = static_cast<size_t>((((int)CurrentAOV + delta_aov) % rem + rem) % rem);
     }
 
     enum MouseMode {
@@ -530,11 +539,12 @@ public:
         return false;
     }
 
-    void analzeLuminance(size_t width, size_t height, size_t iter)
+    void analzeLuminance(size_t width, size_t height)
     {
-        ImageInfoSettings settings{ CurrentAOV,
+        const std::string aov_name = currentAOVName();
+        ImageInfoSettings settings{ aov_name.c_str(),
                                     Histogram.data(), Histogram.size(),
-                                    1.0f / iter };
+                                    1.0f };
         ImageInfoOutput output;
         Runtime->imageinfo(settings, output);
 
@@ -552,29 +562,28 @@ public:
             HistogramF[i] = Histogram[i] * avgFactor;
     }
 
-    void updateSurface(size_t iter)
+    void updateSurface()
     {
-        if (iter == 0)
-            iter = 1;
-
-        analzeLuminance(Width, Height, iter);
+        const std::string aov_name = currentAOVName();
+        analzeLuminance(Width, Height);
 
         // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
         uint32* buf = Buffer.data();
-        Runtime->tonemap(buf, TonemapSettings{ CurrentAOV, (size_t)ToneMappingMethod, ToneMappingGamma,
-                                               1.0f / iter,
+        Runtime->tonemap(buf, TonemapSettings{ aov_name.c_str(), (size_t)ToneMappingMethod, ToneMappingGamma,
+                                               1.0f,
                                                ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                                                ToneMapping_Automatic ? 0 : ToneMapping_Offset });
 
         SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
     }
 
-    [[nodiscard]] inline RGB getFilmData(size_t width, size_t height, size_t iter, uint32_t x, uint32_t y)
+    [[nodiscard]] inline RGB getFilmData(size_t width, size_t height, uint32_t x, uint32_t y)
     {
         IG_UNUSED(height);
 
-        const float* film    = currentPixels();
-        const float inv_iter = 1.0f / iter;
+        const auto acc       = currentPixels();
+        const float* film    = acc.Data;
+        const float inv_iter = acc.IterationCount > 0 ? 1.0f / acc.IterationCount : 0.0f;
         const size_t ind     = y * width + x;
 
         return RGB{
@@ -680,7 +689,7 @@ public:
         if (ShowUI) {
             RGB rgb{ 0, 0, 0 };
             if (mouse_x >= 0 && mouse_x < (int)Width && mouse_y >= 0 && mouse_y < (int)Height)
-                rgb = getFilmData(Width, Height, iter, (uint32)mouse_x, (uint32)mouse_y);
+                rgb = getFilmData(Width, Height, (uint32)mouse_x, (uint32)mouse_y);
 
             ImGui::SetNextWindowPos(ImVec2(5, 5), ImGuiCond_Once);
             ImGui::SetNextWindowSize(ImVec2(UI_W, UI_H), ImGuiCond_Once);
@@ -784,8 +793,10 @@ public:
             ImGui::End();
         }
 
-        if (ShowInspector)
-            ui_inspect_image(mouse_x, mouse_y, Width, Height, iter == 0 ? 1 : 1.0f / iter, currentPixels(), Buffer.data());
+        if (ShowInspector) {
+            const auto acc = currentPixels();
+            ui_inspect_image(mouse_x, mouse_y, Width, Height, acc.IterationCount == 0 ? 1.0f : 1.0f / acc.IterationCount, acc.Data, Buffer.data());
+        }
     }
 };
 
@@ -937,6 +948,7 @@ static void handleHelp()
 - *V* to increase (or with *Shift* to decrease) tonemapping offset.
   Step size can be decreased with *Strg/Ctrl*.
   Only works if automatic tonemapping is disabled.
+- *N/M* to switch to previous or next available AOV. 
 - *WASD* or arrow keys to travel through the scene.
 - *Q/E* to rotate the camera around the viewing direction. 
 - *PageUp/PageDown* to pan the camera up and down. 
@@ -964,7 +976,7 @@ static void handleHelp()
 
 void UI::update(size_t iter, size_t samples)
 {
-    mInternal->updateSurface(iter);
+    mInternal->updateSurface();
     switch (mInternal->ScreenshotRequest) {
     case ScreenshotRequestMode::Framebuffer:
         mInternal->makeScreenshot();

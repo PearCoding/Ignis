@@ -4,7 +4,7 @@
 
 namespace IG {
 struct TonemapSettings {
-    size_t AOV;
+    const char* AOV;
     size_t Method;
     bool UseGamma;
     float Scale;
@@ -13,7 +13,7 @@ struct TonemapSettings {
 };
 
 struct ImageInfoSettings {
-    size_t AOV;
+    const char* AOV;
     int* Histogram;
     size_t Bins;
     float Scale;
@@ -33,11 +33,6 @@ struct ParameterSet {
     std::unordered_map<std::string, float> FloatParameters;
     std::unordered_map<std::string, Vector3f> VectorParameters;
     std::unordered_map<std::string, Vector4f> ColorParameters;
-};
-
-struct RuntimeRenderSettings {
-    size_t FilmWidth  = 800;
-    size_t FilmHeight = 600;
 };
 
 struct Ray {

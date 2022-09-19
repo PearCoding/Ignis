@@ -5,7 +5,8 @@ import json
 from .light import export_light, export_background
 from .shape import export_shape, get_shape_name_base
 from .camera import export_camera
-from .bsdf import export_material, export_error_material, export_black_material, get_material_emission
+from .bsdf import export_material, export_error_material, export_black_material
+from .emission import get_material_emission
 from .node import NodeContext
 from .utils import *
 from .defaults import *

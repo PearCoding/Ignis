@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RuntimeSettings.h"
 #include "RuntimeStructs.h"
 #include "Statistics.h"
 #include "driver/DriverManager.h"
@@ -14,26 +15,9 @@ class Scene;
 
 struct LoaderOptions;
 
-struct RuntimeOptions {
-    bool IsTracer        = false;
-    bool IsInteractive   = false;
-    bool DumpShader      = false;
-    bool DumpShaderFull  = false;
-    bool AcquireStats    = false;
-    Target DesiredTarget = Target::INVALID;
-    bool RecommendCPU    = true;
-    bool RecommendGPU    = true;
-    uint32 Device        = 0;
-    uint32 SPI           = 0; // Detect automatically
-    std::string OverrideTechnique;
-    std::string OverrideCamera;
-    std::pair<uint32, uint32> OverrideFilmSize = { 0, 0 };
-
-    bool AddExtraEnvLight            = false;                           // User option to add a constant environment light (just to see something)
-    std::filesystem::path ModulePath = std::filesystem::current_path(); // Optional path to modules
-    std::filesystem::path ScriptDir  = {};                              // Path to a new script directory, replacing the internal standard library
-
-    bool ForceSpecialization = false; // Enforce specialization of generated shader for all parameters. This will increase compile time
+struct AOVAccessor {
+    const float* Data;
+    size_t IterationCount;
 };
 
 class Runtime {
@@ -45,12 +29,12 @@ public:
     ~Runtime();
 
     /// Load from file and initialize
-    bool loadFromFile(const std::filesystem::path& path);
+    [[nodiscard]] bool loadFromFile(const std::filesystem::path& path);
     /// Load from string and initialize
-    bool loadFromString(const std::string& str);
+    [[nodiscard]] bool loadFromString(const std::string& str);
 
     /// Do a single iteration in non-tracing mode
-    void step();
+    void step(bool ignoreDenoiser = false);
     /// Do a single iteration in tracing mode
     void trace(const std::vector<Ray>& rays, std::vector<float>& data);
     /// Reset internal counters etc. This should be used if data (like camera orientation) has changed. Frame counter will NOT be reset
@@ -65,40 +49,41 @@ public:
     /// Will resize the framebuffer, clear it and reset rendering
     void resizeFramebuffer(size_t width, size_t height);
     /// Return pointer to framebuffer
-    const float* getFramebuffer(size_t aov = 0) const;
+    /// name == 'Color' or null returns the actual framebuffer, else the corresponding AOV will be returned
+    [[nodiscard]] AOVAccessor getFramebuffer(const std::string& name) const;
     /// Will clear all framebuffers
     void clearFramebuffer();
     /// Will clear specific framebuffer
-    void clearFramebuffer(size_t aov);
+    void clearFramebuffer(const std::string& name);
 
     /// Return all names of the enabled AOVs
-    inline const std::vector<std::string>& aovs() const { return mTechniqueInfo.EnabledAOVs; }
+    [[nodiscard]] inline const std::vector<std::string>& aovs() const { return mTechniqueInfo.EnabledAOVs; }
 
     /// Return number of iterations rendered so far
-    inline size_t currentIterationCount() const { return mCurrentIteration; }
+    [[nodiscard]] inline size_t currentIterationCount() const { return mCurrentIteration; }
     /// Return number of samples rendered so far
-    inline size_t currentSampleCount() const { return mCurrentSampleCount; }
+    [[nodiscard]] inline size_t currentSampleCount() const { return mCurrentSampleCount; }
 
     /// Return pointer to structure containing statistics
-    const Statistics* getStatistics() const;
+    [[nodiscard]] const Statistics* getStatistics() const;
 
     /// Returns the name of the loaded technique
-    inline const std::string& technique() const { return mTechniqueName; }
+    [[nodiscard]] inline const std::string& technique() const { return mTechniqueName; }
 
     /// Returns the name of the loaded camera
-    inline const std::string& camera() const { return mCameraName; }
+    [[nodiscard]] inline const std::string& camera() const { return mCameraName; }
 
     /// Return true if the runtime is used in tracing mode
-    inline bool isTrace() const { return mOptions.IsTracer; }
+    [[nodiscard]] inline bool isTrace() const { return mOptions.IsTracer; }
 
     /// The target the runtime is using
-    inline Target target() const { return mTarget; }
+    [[nodiscard]] inline Target target() const { return mTarget; }
 
     /// Computes (approximative) number of samples per iteration. This might be off due to the internal computing of techniques
-    inline size_t samplesPerIteration() const { return mTechniqueInfo.ComputeSPI(0 /* TODO: Not always the best choice */, mSamplesPerIteration); }
+    [[nodiscard]] inline size_t samplesPerIteration() const { return mTechniqueInfo.ComputeSPI(0 /* TODO: Not always the best choice */, mSamplesPerIteration); }
 
     /// The bounding box of the loaded scene
-    inline const BoundingBox& sceneBoundingBox() const { return mDatabase.SceneBBox; }
+    [[nodiscard]] inline const BoundingBox& sceneBoundingBox() const { return mDatabase.SceneBBox; }
 
     /// Set integer parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, int value);
@@ -110,29 +95,32 @@ public:
     void setParameter(const std::string& name, const Vector4f& value);
 
     /// The current framebuffer width
-    inline size_t framebufferWidth() const { return mFilmWidth; }
+    [[nodiscard]] inline size_t framebufferWidth() const { return mFilmWidth; }
     /// The current framebuffer height
-    inline size_t framebufferHeight() const { return mFilmHeight; }
+    [[nodiscard]] inline size_t framebufferHeight() const { return mFilmHeight; }
 
     /// The initial camera orientation the scene was loaded with. Can be used to reset in later iterations
-    inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
+    [[nodiscard]] inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
 
     /// Increase frame count (only used in interactive sessions)
     inline void incFrameCount() { mCurrentFrame++; }
 
+    [[nodiscard]] inline bool hasDenoiser() const { return mLoadedInterface.HasDenoiser; }
+
     /// Get a list of all available techniques
-    static std::vector<std::string> getAvailableTechniqueTypes();
+    [[nodiscard]] static std::vector<std::string> getAvailableTechniqueTypes();
 
     /// Get a list of all available cameras
-    static std::vector<std::string> getAvailableCameraTypes();
+    [[nodiscard]] static std::vector<std::string> getAvailableCameraTypes();
 
 private:
+    void checkCacheDirectory();
     bool load(const std::filesystem::path& path, Parser::Scene&& scene);
     bool setup();
     void shutdown();
     bool compileShaders();
     void* compileShader(const std::string& src, const std::string& func, const std::string& name);
-    void stepVariant(size_t variant);
+    void stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant);
     void traceVariant(const std::vector<Ray>& rays, size_t variant);
 
     const RuntimeOptions mOptions;

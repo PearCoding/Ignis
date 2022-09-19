@@ -35,14 +35,11 @@ fn @make_wireframe_renderer(camera: Camera) -> Technique {
         (edge_t <= cond, edge_t)
     }
 
-    fn @on_hit( _ray: Ray
-        , pixel: i32
-        , hit: Hit
-        , payload: RayPayload
-        , surf: SurfaceElement
-        , _mat: Material
+    fn @on_hit( ctx: ShadingContext
+              , payload: RayPayload
+              , _mat: Material
         ) -> Option[Color] {
-        let (is_edge, t) = is_edge_hit(pixel, hit, surf, unrap_wireframeraypayload(payload).distance);
+        let (is_edge, t) = is_edge_hit(ctx.pixel, ctx.hit, ctx.surf, unrap_wireframeraypayload(payload).distance);
         if is_edge { 
             make_option(color_lerp(color_builtins::white, color_builtins::black, t))
         } else {
@@ -50,22 +47,19 @@ fn @make_wireframe_renderer(camera: Camera) -> Technique {
         }
     }
 
-    fn @on_bounce( ray: Ray
-        , pixel: i32
-        , hit: Hit
-        , _rnd: &mut RndState
-        , payload: RayPayload
-        , surf: SurfaceElement
-        , _mat: Material
+    fn @on_bounce( ctx: ShadingContext
+                , _rnd: &mut RndState
+                , payload: RayPayload
+                , _mat: Material
         ) -> Option[Ray] {
         let wpt = unrap_wireframeraypayload(payload);
-        let (is_edge, _) = is_edge_hit(pixel, hit, surf, wpt.distance);
+        let (is_edge, _) = is_edge_hit(ctx.pixel, ctx.hit, ctx.surf, wpt.distance);
         if !is_edge { 
             write_wireframeraypayload(payload, WireframeRayPayload{
                 depth    = wpt.depth + 1,
-                distance = wpt.distance + hit.distance,
+                distance = wpt.distance + ctx.hit.distance,
             });
-            make_option(make_ray(surf.point, ray.dir, offset, flt_max, ray_flag_bounce))
+            make_option(make_ray(ctx.surf.point, ctx.ray.dir, offset, flt_max, ray_flag_bounce))
         } else {
             Option[Ray]::None
         }

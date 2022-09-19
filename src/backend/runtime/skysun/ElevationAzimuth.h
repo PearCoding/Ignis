@@ -10,14 +10,14 @@ struct ElevationAzimuth {
     float Elevation; // [0, pi/2] - Degrees (in radians) above the horizon
     float Azimuth;   // [0, 2pi]  - Degrees (in radians) west of south
 
-    inline static ElevationAzimuth fromDirection(const Vector3f& direction)
+    [[nodiscard]] inline static ElevationAzimuth fromDirection(const Vector3f& direction)
     {
         const float theta_dir = std::acos(direction(1)); // Y
         const float phi_dir   = std::atan2(direction(0), -direction(2));
         return ElevationAzimuth{ Pi2 - theta_dir, phi_dir < 0 ? (phi_dir + 2 * Pi) : phi_dir };
     }
 
-    inline Vector3f toDirection() const
+    [[nodiscard]] inline Vector3f toDirection() const
     {
         const float sinE = std::sin(Elevation);
         const float cosE = std::cos(Elevation);

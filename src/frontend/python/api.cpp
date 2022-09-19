@@ -86,11 +86,6 @@ PYBIND11_MODULE(pyignis, m)
         .def_property(
             "ModulePath", [](const RuntimeOptions& opts) { return opts.ModulePath.generic_u8string(); }, [](RuntimeOptions& opts, const std::string& val) { opts.ModulePath = val; });
 
-    py::class_<RuntimeRenderSettings>(m, "RuntimeRenderSettings")
-        .def(py::init([]() { return RuntimeRenderSettings(); }))
-        .def_readwrite("FilmWidth", &RuntimeRenderSettings::FilmWidth)
-        .def_readwrite("FilmHeight", &RuntimeRenderSettings::FilmHeight);
-
     py::class_<Ray>(m, "Ray")
         .def(py::init([](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, 1) }; }))
         .def(py::init([](const Vector3f& org, const Vector3f& dir, float tmin, float tmax) { return Ray{ org, dir, Vector2f(tmin, tmax) }; }))
@@ -117,11 +112,12 @@ PYBIND11_MODULE(pyignis, m)
             return data;
         })
         .def("reset", &Runtime::reset)
-        .def("getFramebuffer", [](const Runtime& r, uint32 aov) {
+        .def("getFramebuffer", [](const Runtime& r, const std::string& aov) {
+            // TODO: Iteration count?
             const size_t width  = r.framebufferWidth();
             const size_t height = r.framebufferHeight();
             return py::memoryview::from_buffer(
-                r.getFramebuffer(aov),                                                             // buffer pointer
+                r.getFramebuffer(aov).Data,                                                        // buffer pointer
                 std::vector<size_t>{ height, width, 3ul },                                         // shape (rows, cols)
                 std::vector<size_t>{ sizeof(float) * width * 3, sizeof(float) * 3, sizeof(float) } // strides in bytes
             );
@@ -131,7 +127,7 @@ PYBIND11_MODULE(pyignis, m)
         .def("setParameter", py::overload_cast<const std::string&, const Vector3f&>(&Runtime::setParameter))
         .def("setParameter", py::overload_cast<const std::string&, const Vector4f&>(&Runtime::setParameter))
         .def("clearFramebuffer", py::overload_cast<>(&Runtime::clearFramebuffer))
-        .def("clearFramebuffer", py::overload_cast<size_t>(&Runtime::clearFramebuffer))
+        .def("clearFramebuffer", py::overload_cast<const std::string&>(&Runtime::clearFramebuffer))
         .def_property_readonly("iterationCount", &Runtime::currentIterationCount)
         .def_property_readonly("sampleCount", &Runtime::currentSampleCount)
         .def_property_readonly("framebufferWidth", &Runtime::framebufferWidth)

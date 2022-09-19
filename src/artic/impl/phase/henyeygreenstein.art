@@ -9,21 +9,17 @@ fn @make_henyeygreenstein_phase(g: f32) -> PhaseFunction {
     PhaseFunction {
         eval   = @ |in_dir, out_dir| hg(absolute_cos(in_dir, out_dir)),
         pdf    = @ |in_dir, out_dir| {
-            if is_iso {
-                // Isotropic
+            if is_iso { // Isotropic
                 uniform_sphere_pdf()
-            } else {
-                // Anisotropic
+            } else {    // Anisotropic
                 hg(absolute_cos(in_dir, out_dir))
             }
         },
         sample = @ |rnd, out_dir| {
-            if is_iso {
-                // Isotropic
+            if is_iso { // Isotropic
                 let sample = sample_uniform_sphere(randf(rnd), randf(rnd));
                 make_phase_sample(sample.dir, sample.pdf, 1)
-            } else {
-                // Anisotropic
+            } else {    // Anisotropic
                 let sqrTerm  = (1 - g * g) / (1 + g - 2 * g * randf(rnd));
                 let cosTheta = -(1 + g * g - sqrTerm * sqrTerm) / (2 * g);
                 let sinTheta = math_builtins::sqrt(math_builtins::fmax[f32](0, 1 - cosTheta * cosTheta));

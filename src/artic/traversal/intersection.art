@@ -65,7 +65,7 @@ fn @make_tri(v0: Vec3, e1: Vec3, e2: Vec3, n: Vec3) = Tri {
 
 fn @empty_hit(tmax: f32) = make_hit(-1, -1, tmax, undef[Vec2]());
 
-fn @intersect_ray_tri_mt(backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
+fn @intersect_ray_tri_mt_cpu(backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
     let c = vec3_sub(tri.v0, ray.org);
     let r = vec3_cross(ray.dir, c);
     let det = vec3_dot(tri.n, ray.dir);
@@ -95,7 +95,35 @@ fn @intersect_ray_tri_mt(backface_culling: bool, ray: Ray, tri: Tri) -> Option[(
     }
 }
 
-fn @intersect_ray_tri_bw(_backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
+fn @intersect_ray_tri_mt_gpu(backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
+    let c = vec3_sub(tri.v0, ray.org);
+    let r = vec3_cross(ray.dir, c);
+    let det = vec3_dot(tri.n, ray.dir);
+    let abs_det = math_builtins::fabs(det);
+
+    let u = prodsign(vec3_dot(r, tri.e2), det);
+    let mut mask = u >= 0;
+
+    let v = prodsign(vec3_dot(r, tri.e1), det);
+    mask &= v >= 0;
+    mask &= u + v <= abs_det;
+
+    if !mask { return(Option[(f32, f32, f32)]::None) }
+
+    let t = prodsign(vec3_dot(c, tri.n), det);
+    mask &= if backface_culling { det < 0 } else { abs_det != 0 };
+    mask &= t >= abs_det * ray.tmin;
+    mask &= t <= abs_det * ray.tmax;
+
+    if mask {
+        let inv_det = 1 / abs_det;
+        make_option(t * inv_det, u * inv_det, v * inv_det)
+    } else {
+        Option[(f32, f32, f32)]::None
+    }
+}
+
+fn @intersect_ray_tri_bw_cpu(_backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
     // Permute components of triangle vertices and ray direction
     let kz = vec3_max_index(vec3_abs(ray.dir));
     let kx = if kz + 1 == 3 { 0 } else { kz + 1 };
@@ -145,7 +173,8 @@ fn @intersect_ray_tri_bw(_backface_culling: bool, ray: Ray, tri: Tri) -> Option[
     }
 }
 
-fn @intersect_ray_tri(backface_culling: bool, ray: Ray, tri: Tri) = intersect_ray_tri_mt(backface_culling, ray, tri);
+fn @intersect_ray_tri_cpu(backface_culling: bool, ray: Ray, tri: Tri) = intersect_ray_tri_mt_cpu(backface_culling, ray, tri);
+fn @intersect_ray_tri_gpu(backface_culling: bool, ray: Ray, tri: Tri) = intersect_ray_tri_mt_gpu(backface_culling, ray, tri);
 
 fn @intersect_ray_box(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> (f32, f32) {
     let t0 = vec3_add(vec3_mul(ray.inv_dir, bbox.min), ray.inv_org);

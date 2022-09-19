@@ -14,7 +14,7 @@ fn @make_sun_light(id: i32, dir: Vec3, scene_bbox: BBox, sun_radius: f32, color:
             let (pos, pos_pdf) = env_sample_pos(rnd, vec3_neg(ndir), bbox_center(scene_bbox), scene_radius);
             make_emission_sample(pos, ndir, color_mulf(color, safe_div(1, pos_pdf * sample.pdf)), pos_pdf, sample.pdf, 1)
         },
-        emission     = @ |_, _| color_builtins::black,
+        emission     = @ |_|    color_builtins::black,
         pdf_direct   = @ |_, _| make_solid_pdf(uniform_disk_pdf(sun_radius)),
         pdf_emission = @ |_, _| make_emissive_pdf(env_sample_pos_pdf(scene_radius), uniform_disk_pdf(sun_radius)),
         delta    = true,

@@ -20,13 +20,14 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.Database            = &result.Database;
     ctx.FilePath            = opts.FilePath;
     ctx.Target              = opts.Target;
-    ctx.EnablePadding       = doesTargetRequirePadding(ctx.Target);
+    ctx.EnablePadding       = TargetInfo(ctx.Target).requiresPadding();
     ctx.Scene               = opts.Scene;
     ctx.CameraType          = opts.CameraType;
     ctx.TechniqueType       = opts.TechniqueType;
     ctx.PixelSamplerType    = opts.PixelSamplerType;
     ctx.SamplesPerIteration = opts.SamplesPerIteration;
     ctx.IsTracer            = opts.IsTracer;
+    ctx.Denoiser            = opts.Denoiser;
     ctx.FilmWidth           = opts.FilmWidth;
     ctx.FilmHeight          = opts.FilmHeight;
     ctx.Lights              = std::make_unique<LoaderLight>();
@@ -44,6 +45,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
     LoaderCamera::setupInitialOrientation(ctx, result);
 
+    ctx.Lights->setup(ctx);
     IG_LOG(L_DEBUG) << "Got " << ctx.Environment.Materials.size() << " unique materials" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Lights->lightCount() << " lights" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Lights->embeddedLightCount() << " embedded lights" << std::endl;

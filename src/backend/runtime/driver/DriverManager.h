@@ -11,16 +11,16 @@ namespace IG {
 class DriverManager {
 public:
     bool init(const std::filesystem::path& dir = std::filesystem::current_path(), bool ignoreEnv = false);
-    Target resolveTarget(Target target) const;
+    [[nodiscard]] Target resolveTarget(Target target) const;
     bool load(Target target, DriverInterface& interface);
-    std::filesystem::path getPath(Target target) const;
+    [[nodiscard]] std::filesystem::path getPath(Target target) const;
 
-    bool hasCPU() const;
-    bool hasGPU() const;
+    [[nodiscard]] bool hasCPU() const;
+    [[nodiscard]] bool hasGPU() const;
 
-    Target recommendCPUTarget() const;
-    Target recommendGPUTarget() const;
-    Target recommendTarget() const;
+    [[nodiscard]] Target recommendCPUTarget() const;
+    [[nodiscard]] Target recommendGPUTarget() const;
+    [[nodiscard]] Target recommendTarget() const;
 
 private:
     bool addModule(const std::filesystem::path& path);

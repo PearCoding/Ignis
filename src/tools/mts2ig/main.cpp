@@ -246,11 +246,13 @@ static void export_property(const Property& prop, JsonWriter& writer)
             std::cerr << "No support for Animation" << std::endl;
         writer.w() << "0";
         break;
-    case PT_BLACKBODY: // TODO
-        if (!sQuiet)
-            std::cerr << "No support for Blackbody curve" << std::endl;
-        writer.w() << "0";
-        break;
+    case PT_BLACKBODY: {
+        const auto bb = prop.getBlackbody();
+        writer.w() << "\"blackbody(" << bb.temperature << ")";
+        if (bb.scale != 1)
+            writer.w() << "*" << bb.scale;
+        writer.w() << "\"";
+    } break;
     case PT_SPECTRUM: {
         const auto spec = prop.getSpectrum();
         if (spec.isUniform()) { // Scaled white
@@ -642,7 +644,7 @@ static void export_light(const std::string& name, const Object& obj, JsonWriter&
     writer.objEnd();
 }
 
-static std::string replace(const std::string& str, const std::string& from, const std::string& to)
+static inline std::string replace(const std::string& str, const std::string& from, const std::string& to)
 {
     size_t start_pos = str.find(from);
     if (start_pos == std::string::npos)
@@ -652,64 +654,80 @@ static std::string replace(const std::string& str, const std::string& from, cons
     return tmp;
 }
 
-static void export_entity(const std::string& name, const Object& obj, JsonWriter& writer, const std::vector<Object*>& bsdfs, const std::vector<Object*>& media)
+struct Entity {
+    Transform transform;
+    std::vector<Object*> shapes;
+};
+static void export_entity(const std::string& name, const Entity& entity, JsonWriter& writer, const std::vector<Object*>& shapes, const std::vector<Object*>& bsdfs, const std::vector<Object*>& media)
 {
-    writer.objBegin();
-    writer.key("name");
-    writer.w() << "\"" << name << "\",";
-    writer.endl();
-    writer.key("shape");
-    writer.w() << "\"" << replace(name, "entity", "shape") << "\",";
-    writer.endl();
+    for (size_t k = 0; k < entity.shapes.size(); ++k) {
+        size_t shape_id = std::distance(shapes.begin(), std::find(shapes.begin(), shapes.end(), entity.shapes[k])); // TODO: This can be improved by bookkeeping the actual ids
+        const auto& obj = *entity.shapes[k];
 
-    // Handle BSDF
-    bool has_bsdf = false;
-    for (const auto& child : obj.anonymousChildren()) {
-        if (child->type() == OT_BSDF) {
-            int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), child.get()));
+        const std::string real_name = entity.shapes.size() == 1 ? name : (name + "_" + std::to_string(k));
+        writer.objBegin();
+        writer.key("name");
+        writer.w() << "\"" << real_name << "\",";
+        writer.endl();
+        writer.key("shape");
+        writer.w() << "\"" << make_id("shape", shape_id) << "\",";
+        writer.endl();
+        writer.key("transform");
+        export_property(Property::fromTransform(entity.transform), writer);
+        writer.w() << ",";
+        writer.endl();
+
+        // Handle BSDF
+        bool has_bsdf = false;
+        for (const auto& child : obj.anonymousChildren()) {
+            if (child->type() == OT_BSDF) {
+                int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), child.get()));
+                writer.key("bsdf");
+                writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
+                writer.endl();
+                has_bsdf = true;
+            }
+        }
+
+        for (const auto& pair : obj.namedChildren()) {
+            if (pair.second->type() == OT_BSDF) {
+                int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), pair.second.get()));
+                writer.key(pair.first);
+                writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
+                writer.endl();
+                has_bsdf = true;
+            }
+        }
+
+        // Handle Media
+        bool has_media = false;
+        for (const auto& pair : obj.namedChildren()) {
+            if (pair.second->type() == OT_MEDIUM && (pair.first == "exterior" || pair.first == "interior")) {
+                int medium = std::distance(media.begin(), std::find(media.begin(), media.end(), pair.second.get()));
+                if (pair.first == "exterior")
+                    writer.key("outer_medium");
+                else
+                    writer.key("inner_medium");
+                writer.w() << "\"" << make_id("medium", medium) << "\",";
+                writer.endl();
+                has_media = true;
+            }
+        }
+
+        // Handle special case
+        if (!has_bsdf) {
             writer.key("bsdf");
-            writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
-            writer.endl();
-            has_bsdf = true;
-        }
-    }
-
-    for (const auto& pair : obj.namedChildren()) {
-        if (pair.second->type() == OT_BSDF) {
-            int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), pair.second.get()));
-            writer.key(pair.first);
-            writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
-            writer.endl();
-            has_bsdf = true;
-        }
-    }
-
-    // Handle Media
-    bool has_media = false;
-    for (const auto& pair : obj.namedChildren()) {
-        if (pair.second->type() == OT_MEDIUM && (pair.first == "exterior" || pair.first == "interior")) {
-            int medium = std::distance(media.begin(), std::find(media.begin(), media.end(), pair.second.get()));
-            if (pair.first == "exterior")
-                writer.key("outer_medium");
+            if (!has_media)
+                writer.w() << "\"__black\",";
             else
-                writer.key("inner_medium");
-            writer.w() << "\"" << make_id("medium", medium) << "\",";
+                writer.w() << "\"__pass\",";
             writer.endl();
-            has_media = true;
         }
-    }
 
-    // Handle special case
-    if (!has_bsdf) {
-        writer.key("bsdf");
-        if (!has_media)
-            writer.w() << "\"__black\",";
-        else
-            writer.w() << "\"__pass\",";
+        writer.objEnd();
+        writer.w() << ",";
         writer.endl();
     }
-
-    writer.objEnd();
 }
 
 static void extract_textures(const Object& obj, std::vector<Object*>& textures)
@@ -789,18 +807,58 @@ static void extract_media(const Object& obj, std::vector<Object*>& media)
     }
 }
 
+static void extract_shapes(const Object& obj, std::vector<Object*>&);
+static void extract_shape(Object* obj, std::vector<Object*>& shapes)
+{
+    if (obj->pluginType() == "shapegroup") {
+        extract_shapes(*obj, shapes);
+    } else if (obj->pluginType() != "instance") {
+        shapes.push_back(obj);
+    }
+}
+
 static void extract_shapes(const Object& obj, std::vector<Object*>& shapes)
 {
     for (const auto& child : obj.anonymousChildren()) {
-        if (child->type() == OT_SHAPE) {
-            shapes.push_back(child.get());
-        }
+        if (child->type() == OT_SHAPE)
+            extract_shape(child.get(), shapes);
     }
 
     for (const auto& pair : obj.namedChildren()) {
-        if (pair.second->type() == OT_SHAPE) {
-            shapes.push_back(pair.second.get());
+        if (pair.second->type() == OT_SHAPE)
+            extract_shape(pair.second.get(), shapes);
+    }
+}
+
+static void extract_entity(Object* obj, std::vector<Entity>& entities)
+{
+    if (obj->pluginType() == "instance") {
+        Entity entity;
+
+        entity.transform = obj->property("to_world").getTransform();
+        const auto shape = obj->namedChild("shape");
+        if (shape && shape->type() == OT_SHAPE && shape->pluginType() == "shapegroup") {
+            extract_shapes(*shape, entity.shapes);
+            entities.push_back(entity);
         }
+    } else if (obj->pluginType() != "shapegroup") {
+        Entity entity;
+        entity.transform = Transform::fromIdentity();
+        entity.shapes.push_back(obj);
+        entities.push_back(entity);
+    }
+}
+
+static void extract_entities(const Object& obj, std::vector<Entity>& entities)
+{
+    for (const auto& child : obj.anonymousChildren()) {
+        if (child->type() == OT_SHAPE)
+            extract_entity(child.get(), entities);
+    }
+
+    for (const auto& pair : obj.namedChildren()) {
+        if (pair.second->type() == OT_SHAPE)
+            extract_entity(pair.second.get(), entities);
     }
 }
 
@@ -952,6 +1010,9 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
     std::vector<Object*> shapes;
     extract_shapes(scene, shapes);
 
+    std::vector<Entity> entities;
+    extract_entities(scene, entities);
+
     if (!shapes.empty()) {
         writer.key("shapes");
         writer.arrBegin();
@@ -970,11 +1031,8 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
         writer.key("entities");
         writer.arrBegin();
         writer.goIn();
-        for (int i = 0; i < (int)shapes.size(); ++i) {
-            export_entity(make_id("entity", i), *shapes[i], writer, bsdfs, media);
-            writer.w() << ",";
-            writer.endl();
-        }
+        for (int i = 0; i < (int)entities.size(); ++i)
+            export_entity(make_id("entity", i), entities[i], writer, shapes, bsdfs, media);
         writer.goOut();
         writer.arrEnd();
         writer.w() << ",";

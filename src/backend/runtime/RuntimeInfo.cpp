@@ -50,6 +50,35 @@ std::filesystem::path RuntimeInfo::executablePath()
 #endif
 }
 
+std::filesystem::path RuntimeInfo::cacheDirectory()
+{
+    const auto exe = executablePath();
+    const auto dir = exe.parent_path();
+
+    if (dir.empty())
+        return {};
+
+    return dir / "cache";
+}
+
+size_t RuntimeInfo::cacheDirectorySize()
+{
+    const auto cacheDir = cacheDirectory();
+
+    if (!std::filesystem::exists(cacheDir))
+        return 0;
+
+    // Non-recursive as the cache directory should be flat
+    size_t size = 0;
+    for (std::filesystem::directory_entry const& entry :
+         std::filesystem::directory_iterator(cacheDir)) {
+        if (entry.is_regular_file())
+            size += entry.file_size();
+    }
+
+    return size;
+}
+
 #ifndef IG_OS_WINDOWS
 constexpr char ENV_DELIMITER = ':';
 #else
