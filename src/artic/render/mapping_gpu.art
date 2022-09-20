@@ -36,7 +36,7 @@ fn @gpu_traverse_primary(primary: PrimaryStream, scene: SceneGeometry, size: i32
     let block = (block_size, 1, 1);
 
     let rays = make_ray_stream_reader(primary.rays, 1);
-    let hits = make_primary_stream_hit_writer(primary, 1, scene.info.num_entities);
+    let hits = make_primary_stream_hit_writer(primary, 1);
 
     acc.exec(|work_item| {
         let (i, j) = (work_item.tidx() + work_item.bidx() * block_size, work_item.tidy());
@@ -384,12 +384,17 @@ fn @gpu_sort_primary( primary: PrimaryStream
     });
     acc.sync();
 
+    let num_geometries = scene_info.num_entities;
+    fn @get_ent_arr_id(i: i32) {
+        let k = primary.ent_id(i);
+        select(k == InvalidHitId, num_geometries, k)
+    }
     // Count number of rays for each geometry
     gpu_exec_1d(acc, size, block_size, |work_item| {
         let ray_id = work_item.gidx();
         if ray_id >= size { return() }
 
-        atomics.add_global_i32(&mut gpu_tmp(primary.ent_id(ray_id)), 1);
+        atomics.add_global_i32(&mut gpu_tmp(get_ent_arr_id(ray_id)), 1);
     });
     acc.sync();
 
@@ -408,7 +413,7 @@ fn @gpu_sort_primary( primary: PrimaryStream
         let src_id = work_item.gidx();
         if src_id >= size { return() }
 
-        let dst_id = atomics.add_global_i32(&mut gpu_tmp(primary.ent_id(src_id)), 1);
+        let dst_id = atomics.add_global_i32(&mut gpu_tmp(get_ent_arr_id(src_id)), 1);
         gpu_copy_primary_ray(primary, other_primary, src_id, dst_id, true, payload_count);
     });
     acc.sync();

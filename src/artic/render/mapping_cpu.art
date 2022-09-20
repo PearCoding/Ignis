@@ -46,8 +46,14 @@ fn @cpu_sort_primary(primary: &PrimaryStream, size: i32, ray_begins: &mut[i32], 
     for i in range(0, num_geometries + 1) {
         ray_ends(i) = 0;
     }
+
+    fn @get_ent_arr_id(i: i32) {
+        let k = primary.ent_id(i);
+        select(k == InvalidHitId, num_geometries, k)
+    }
+
     for i in range(0, size) {
-        ray_ends(primary.ent_id(i))++;
+        ray_ends(get_ent_arr_id(i))++;
     }
 
     // Compute scan over shader bins
@@ -63,7 +69,7 @@ fn @cpu_sort_primary(primary: &PrimaryStream, size: i32, ray_begins: &mut[i32], 
         let (begin, end) = (ray_begins(i), ray_ends(i));
         let mut j = begin;
         while j < end {
-            let ent_id = primary.ent_id(j);
+            let ent_id = get_ent_arr_id(j);
             if ent_id != i {
                 let k = ray_begins(ent_id)++;
                 cpu_swap_primary_entry(primary, payload_count, k, j);
@@ -339,7 +345,7 @@ fn @cpu_traverse_primary(scene: SceneGeometry, size: i32, min_max: MinMax, singl
             min_max,
             scene2,
             make_ray_stream_reader(primary2.rays, vector_width),
-            make_primary_stream_hit_writer(*primary2, vector_width, scene.info.num_entities),
+            make_primary_stream_hit_writer(*primary2, vector_width),
             vector_width /*packet_size*/,
             size / vector_width + select(size % vector_width != 0, 1, 0),
             single,

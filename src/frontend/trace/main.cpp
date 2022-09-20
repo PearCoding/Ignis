@@ -74,6 +74,7 @@ int main(int argc, char** argv)
 
     RuntimeOptions opts;
     cmd.populate(opts);
+    opts.EnableTonemapping = false;
 
     // Fix samples per iteration to 1
     opts.SPI      = 1;

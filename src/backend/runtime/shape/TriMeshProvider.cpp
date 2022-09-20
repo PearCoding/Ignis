@@ -315,7 +315,7 @@ std::string TriMeshProvider::generateTraversalCode(const LoaderContext& ctx)
         stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, " << TargetInfo(ctx.Target).vectorWidth() << ");" << std::endl;
     }
 
-    stream << "  let trace = TraceAccessor { info = info, shapes = trimesh_shapes, entities = entities, bvhs = prim_bvhs };" << std::endl;
+    stream << "  let trace = TraceAccessor { shapes = trimesh_shapes, entities = entities, bvhs = prim_bvhs };" << std::endl;
     return stream.str();
 }
 } // namespace IG

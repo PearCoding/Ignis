@@ -212,6 +212,7 @@ public:
         , is_gpu(TargetInfo(setup.target).isGPU())
     {
         driver_settings.device = (int)setup.device;
+        updateSettings(Device::RenderSettings{}); // Initialize with default values
 
         setupFramebuffer();
         setupThreadData();
@@ -346,10 +347,7 @@ public:
 
     inline void registerThread()
     {
-        if (is_gpu)
-            return;
-
-        if (sThreadData != nullptr)
+        if (is_gpu || sThreadData != nullptr)
             return;
 
         CPUData* ptr = nullptr;
@@ -364,10 +362,7 @@ public:
 
     inline void unregisterThread()
     {
-        if (is_gpu)
-            return;
-
-        if (sThreadData == nullptr)
+        if (is_gpu || sThreadData == nullptr)
             return;
 
         available_thread_data.push(sThreadData);
@@ -728,7 +723,7 @@ public:
         if ((vec.size() % sizeof(int32_t)) != 0)
             IG_LOG(L_WARNING) << "Buffer " << filename << " is not properly sized!" << std::endl;
 
-        return buffers[filename] = DeviceBuffer{ copyToDevice(dev, vec), vec.size() };
+        return buffers[filename] = DeviceBuffer{ copyToDevice(dev, vec), 1 };
     }
 
     inline DeviceBuffer& requestBuffer(int32_t dev, const std::string& name, int32_t size, int32_t flags)
@@ -1480,6 +1475,7 @@ template <typename T>
 inline void get_stream(T& dev_stream, DeviceStream& stream, size_t components)
 {
     static_assert(std::is_pod<T>::value, "Expected stream to be plain old data");
+    static_assert((sizeof(T) % sizeof(float*)) == 0, "Expected stream size to be multiple of pointer size");
 
     float* ptr      = stream.Data.data();
     size_t capacity = stream.BlockSize;
@@ -1516,9 +1512,9 @@ IG_EXPORT void ignis_mark_aov_as_used(const char* name, int iter)
 
 IG_EXPORT void ignis_get_work_info(WorkInfo* info)
 {
-    if (sInterface->current_settings.work_width > 0 && sInterface->current_settings.work_height > 0) {
-        info->width  = (int)sInterface->current_settings.work_width;
-        info->height = (int)sInterface->current_settings.work_height;
+    if (sInterface->driver_settings.width > 0 && sInterface->driver_settings.height > 0) {
+        info->width  = (int)sInterface->driver_settings.width;
+        info->height = (int)sInterface->driver_settings.height;
     } else {
         info->width  = (int)sInterface->film_width;
         info->height = (int)sInterface->film_height;

@@ -19,7 +19,6 @@ std::string TraversalShader::begin(const LoaderContext& ctx)
     stream << "#[export] fn ig_traversal_shader(settings: &Settings, iter: i32, size: i32) -> () {" << std::endl
            << "  maybe_unused(settings); maybe_unused(iter);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
-           << "  let info = " << LoaderUtils::inlineSceneInfo(ctx) << ";" << std::endl
            << "  let entities = load_entity_table(device); maybe_unused(entities);" << std::endl;
 
     return stream.str();
@@ -43,7 +42,7 @@ std::string TraversalShader::setupPrimary(const LoaderContext& ctx)
         stream << p.second->generateTraversalCode(ctx);
 
         stream << "  let bvh  = device.load_scene_bvh(\"" << p.second->identifier() << "\");" << std::endl
-               << "  let geom = SceneGeometry { info = info, database = trace, bvh = bvh };" << std::endl
+               << "  let geom = SceneGeometry { database = trace, bvh = bvh };" << std::endl
                << "  device.handle_traversal_primary(geom, size);" << std::endl
                << "  }" << std::endl;
     }
@@ -71,9 +70,10 @@ std::string TraversalShader::setupSecondary(const LoaderContext& ctx)
         // Will define `trace`
         stream << p.second->generateTraversalCode(ctx);
 
+        bool is_advanced = ctx.CurrentTechniqueVariantInfo().ShadowHandlingMode != ShadowHandlingMode::Simple;
         stream << "  let bvh  = device.load_scene_bvh(\"" << p.second->identifier() << "\");" << std::endl
-               << "  let geom = SceneGeometry { info = info, database = trace, bvh = bvh };" << std::endl
-               << "  device.handle_traversal_secondary(geom, size, false/*TODO*/, spi, use_framebuffer);" << std::endl
+               << "  let geom = SceneGeometry { database = trace, bvh = bvh };" << std::endl
+               << "  device.handle_traversal_secondary(geom, size, " << (is_advanced ? "true" : "false") << ", spi, use_framebuffer);" << std::endl
                << "  }" << std::endl;
     }
 
