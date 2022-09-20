@@ -98,9 +98,14 @@ struct AOV {
     size_t IterationCount = 0;
 };
 
+using DeviceImage       = std::tuple<anydsl::Array<float>, size_t, size_t>;
+using DevicePackedImage = std::tuple<anydsl::Array<uint8_t>, size_t, size_t>; // Packed RGBA
+using DeviceBuffer      = std::tuple<anydsl::Array<uint8_t>, size_t>;
+using DeviceStream      = std::tuple<anydsl::Array<float>, size_t>;
+
 struct CPUData {
-    anydsl::Array<float> cpu_primary;
-    anydsl::Array<float> cpu_secondary;
+    DeviceStream cpu_primary;
+    DeviceStream cpu_secondary;
     TemporaryStorageHostProxy temporary_storage_host;
     Statistics stats;
     void* current_shader                       = nullptr;
@@ -119,10 +124,6 @@ class Interface {
     IG_CLASS_NON_MOVEABLE(Interface);
 
 public:
-    using DeviceImage       = std::tuple<anydsl::Array<float>, size_t, size_t>;
-    using DevicePackedImage = std::tuple<anydsl::Array<uint8_t>, size_t, size_t>; // Packed RGBA
-    using DeviceBuffer      = std::tuple<anydsl::Array<uint8_t>, size_t>;
-
     class DeviceData {
         IG_CLASS_NON_COPYABLE(DeviceData);
         IG_CLASS_NON_MOVEABLE(DeviceData);
@@ -132,13 +133,13 @@ public:
         BvhVariant bvh_ent;
         anydsl::Array<int32_t> tmp_buffer;
         TemporaryStorageHostProxy temporary_storage_host;
-        std::array<anydsl::Array<float>, GPUStreamBufferCount> primary;
-        std::array<anydsl::Array<float>, GPUStreamBufferCount> secondary;
+        std::array<DeviceStream, GPUStreamBufferCount> primary;
+        std::array<DeviceStream, GPUStreamBufferCount> secondary;
         std::unordered_map<std::string, anydsl::Array<float>> aovs;
         anydsl::Array<float> film_pixels;
         anydsl::Array<StreamRay> ray_list;
-        std::array<anydsl::Array<float>*, GPUStreamBufferCount> current_primary;
-        std::array<anydsl::Array<float>*, GPUStreamBufferCount> current_secondary;
+        std::array<DeviceStream*, GPUStreamBufferCount> current_primary;
+        std::array<DeviceStream*, GPUStreamBufferCount> current_secondary;
         std::unordered_map<std::string, DeviceImage> images;
         std::unordered_map<std::string, DevicePackedImage> packed_images;
         std::unordered_map<std::string, DeviceBuffer> buffers;
@@ -177,7 +178,7 @@ public:
     size_t film_width;
     size_t film_height;
 
-    Device::SetupSettings setup;
+    const Device::SetupSettings setup;
     Device::RenderSettings current_settings;
     const ParameterSet* current_parameters = nullptr;
     TechniqueVariantShaderSet shader_set;
@@ -400,16 +401,17 @@ public:
             return shader_infos[getThreadData()->current_shader];
     }
 
-    inline anydsl::Array<float>& getPrimaryStream(int32_t dev, size_t buffer, size_t size)
+    inline DeviceStream& getPrimaryStream(int32_t dev, size_t buffer, size_t size)
     {
         const size_t elements = roundUp(MinPrimaryStreamSize + getPrimaryPayloadBlockSize(), 4);
-        if (is_gpu)
-            return resizeArray(dev, *devices[dev].current_primary.at(buffer), size, elements);
-        else
-            return resizeArray(dev, getThreadData()->cpu_primary, size, elements);
+        auto& stream          = is_gpu ? *devices[dev].current_primary.at(buffer) : getThreadData()->cpu_primary;
+        resizeArray(dev, std::get<0>(stream), size, elements);
+        std::get<1>(stream) = size;
+
+        return getPrimaryStream(dev, buffer);
     }
 
-    inline anydsl::Array<float>& getPrimaryStream(int32_t dev, size_t buffer)
+    inline DeviceStream& getPrimaryStream(int32_t dev, size_t buffer)
     {
         if (is_gpu) {
             IG_ASSERT(devices[dev].current_primary.at(buffer)->size() > 0, "Expected gpu primary stream to be initialized");
@@ -420,16 +422,17 @@ public:
         }
     }
 
-    inline anydsl::Array<float>& getSecondaryStream(int32_t dev, size_t buffer, size_t size)
+    inline DeviceStream& getSecondaryStream(int32_t dev, size_t buffer, size_t size)
     {
         const size_t elements = roundUp(MinSecondaryStreamSize + getSecondaryPayloadBlockSize(), 4);
-        if (is_gpu)
-            return resizeArray(dev, *devices[dev].current_secondary.at(buffer), size, elements);
-        else
-            return resizeArray(dev, getThreadData()->cpu_secondary, size, elements);
+        auto& stream          = is_gpu ? *devices[dev].current_secondary.at(buffer) : getThreadData()->cpu_secondary;
+        resizeArray(dev, std::get<0>(stream), size, elements);
+        std::get<1>(stream) = size;
+
+        return getSecondaryStream(dev, buffer);
     }
 
-    inline anydsl::Array<float>& getSecondaryStream(int32_t dev, size_t buffer)
+    inline DeviceStream& getSecondaryStream(int32_t dev, size_t buffer)
     {
         if (is_gpu) {
             IG_ASSERT(devices[dev].current_secondary.at(buffer)->size() > 0, "Expected gpu secondary stream to be initialized");
@@ -1462,17 +1465,19 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 }
 
 template <typename T>
-inline void get_stream(T& stream, float* ptr, size_t size, size_t components, size_t payload_blob_size)
+inline void get_stream(T& dev_stream, DeviceStream& stream, size_t components)
 {
     static_assert(std::is_pod<T>::value, "Expected stream to be plain old data");
 
-    const size_t capacity = size / roundUp(components + payload_blob_size, 4);
-    auto r_ptr            = reinterpret_cast<float**>(&stream);
+    float* ptr      = std::get<0>(stream).data();
+    size_t capacity = std::get<1>(stream);
+
+    auto r_ptr = reinterpret_cast<float**>(&dev_stream);
     for (size_t i = 0; i < components; ++i)
         r_ptr[i] = ptr + i * capacity;
 
     // The last part of the stream is used by the payload
-    stream.payload = ptr + components * capacity;
+    dev_stream.payload = ptr + components * capacity;
 }
 
 } // namespace IG
@@ -1623,26 +1628,26 @@ IG_EXPORT void ignis_gpu_get_tmp_buffer(int dev, int** buf)
 
 IG_EXPORT void ignis_get_primary_stream(int dev, int id, PrimaryStream* primary, int size)
 {
-    auto& array = sInterface->getPrimaryStream(dev, id, size);
-    IG::get_stream(*primary, array.data(), array.size(), IG::MinPrimaryStreamSize, sInterface->getPrimaryPayloadBlockSize());
+    auto& stream = sInterface->getPrimaryStream(dev, id, size);
+    IG::get_stream(*primary, stream, IG::MinPrimaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_primary_stream_const(int dev, int id, PrimaryStream* primary)
 {
-    auto& array = sInterface->getPrimaryStream(dev, id);
-    IG::get_stream(*primary, array.data(), array.size(), IG::MinPrimaryStreamSize, sInterface->getPrimaryPayloadBlockSize());
+    auto& stream = sInterface->getPrimaryStream(dev, id);
+    IG::get_stream(*primary, stream, IG::MinPrimaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_secondary_stream(int dev, int id, SecondaryStream* secondary, int size)
 {
-    auto& array = sInterface->getSecondaryStream(dev, id, size);
-    IG::get_stream(*secondary, array.data(), array.size(), IG::MinSecondaryStreamSize, sInterface->getSecondaryPayloadBlockSize());
+    auto& stream = sInterface->getSecondaryStream(dev, id, size);
+    IG::get_stream(*secondary, stream, IG::MinSecondaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_secondary_stream_const(int dev, int id, SecondaryStream* secondary)
 {
-    auto& array = sInterface->getSecondaryStream(dev, id);
-    IG::get_stream(*secondary, array.data(), array.size(), IG::MinSecondaryStreamSize, sInterface->getSecondaryPayloadBlockSize());
+    auto& stream = sInterface->getSecondaryStream(dev, id);
+    IG::get_stream(*secondary, stream, IG::MinSecondaryStreamSize);
 }
 
 IG_EXPORT void ignis_gpu_swap_primary_streams(int dev)
