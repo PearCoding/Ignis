@@ -24,7 +24,7 @@ void PointBvh<T, PositionGetter>::store(const T& elem)
 {
     const auto p = mPositionGetter(elem);
 
-    mLeafNodes.push_back(elem);
+    mLeafNodes.emplace_back(elem);
 
     if (mInnerNodes.empty()) {
         mInnerNodes.emplace_back(InnerNode::makeLeaf(BoundingBox(p)));

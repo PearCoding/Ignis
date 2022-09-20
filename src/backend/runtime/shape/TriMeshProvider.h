@@ -6,6 +6,9 @@
 namespace IG {
 class TriMeshProvider : public ShapeProvider {
 public:
+    TriMeshProvider()          = default;
+    virtual ~TriMeshProvider() = default;
+
     inline std::string_view identifier() const override { return "trimesh"; }
     inline size_t id() const override { return 0; }
 

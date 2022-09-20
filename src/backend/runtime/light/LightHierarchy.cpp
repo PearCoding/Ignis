@@ -10,6 +10,7 @@
 namespace IG {
 class LightEntry : public ISerializable {
 public:
+
     Vector3f Position;
     Vector3f Direction;
     float Flux;
@@ -24,6 +25,7 @@ public:
         , ID(id)
     {
     }
+    virtual ~LightEntry() = default;
 
     inline void serialize(Serializer& serializer) override
     {
