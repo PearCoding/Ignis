@@ -98,10 +98,22 @@ struct AOV {
     size_t IterationCount = 0;
 };
 
-using DeviceImage       = std::tuple<anydsl::Array<float>, size_t, size_t>;
-using DevicePackedImage = std::tuple<anydsl::Array<uint8_t>, size_t, size_t>; // Packed RGBA
-using DeviceBuffer      = std::tuple<anydsl::Array<uint8_t>, size_t>;
-using DeviceStream      = std::tuple<anydsl::Array<float>, size_t>;
+template <typename T>
+struct DeviceImageBase {
+    anydsl::Array<T> Data;
+    size_t Width  = 0;
+    size_t Height = 0;
+};
+using DeviceImage       = DeviceImageBase<float>;
+using DevicePackedImage = DeviceImageBase<uint8_t>; // Packed RGBA
+
+template <typename T>
+struct DeviceBufferBase {
+    anydsl::Array<T> Data;
+    size_t BlockSize = 0;
+};
+using DeviceBuffer = DeviceBufferBase<uint8_t>;
+using DeviceStream = DeviceBufferBase<float>;
 
 struct CPUData {
     DeviceStream cpu_primary;
@@ -405,8 +417,8 @@ public:
     {
         const size_t elements = roundUp(MinPrimaryStreamSize + getPrimaryPayloadBlockSize(), 4);
         auto& stream          = is_gpu ? *devices[dev].current_primary.at(buffer) : getThreadData()->cpu_primary;
-        resizeArray(dev, std::get<0>(stream), size, elements);
-        std::get<1>(stream) = size;
+        resizeArray(dev, stream.Data, size, elements);
+        stream.BlockSize = size;
 
         return getPrimaryStream(dev, buffer);
     }
@@ -414,10 +426,10 @@ public:
     inline DeviceStream& getPrimaryStream(int32_t dev, size_t buffer)
     {
         if (is_gpu) {
-            IG_ASSERT(devices[dev].current_primary.at(buffer)->size() > 0, "Expected gpu primary stream to be initialized");
+            IG_ASSERT(devices[dev].current_primary.at(buffer)->Data.size() > 0, "Expected gpu primary stream to be initialized");
             return *devices[dev].current_primary.at(buffer);
         } else {
-            IG_ASSERT(getThreadData()->cpu_primary.size() > 0, "Expected cpu primary stream to be initialized");
+            IG_ASSERT(getThreadData()->cpu_primary.Data.size() > 0, "Expected cpu primary stream to be initialized");
             return getThreadData()->cpu_primary;
         }
     }
@@ -426,8 +438,8 @@ public:
     {
         const size_t elements = roundUp(MinSecondaryStreamSize + getSecondaryPayloadBlockSize(), 4);
         auto& stream          = is_gpu ? *devices[dev].current_secondary.at(buffer) : getThreadData()->cpu_secondary;
-        resizeArray(dev, std::get<0>(stream), size, elements);
-        std::get<1>(stream) = size;
+        resizeArray(dev, stream.Data, size, elements);
+        stream.BlockSize = size;
 
         return getSecondaryStream(dev, buffer);
     }
@@ -435,10 +447,10 @@ public:
     inline DeviceStream& getSecondaryStream(int32_t dev, size_t buffer)
     {
         if (is_gpu) {
-            IG_ASSERT(devices[dev].current_secondary.at(buffer)->size() > 0, "Expected gpu secondary stream to be initialized");
+            IG_ASSERT(devices[dev].current_secondary.at(buffer)->Data.size() > 0, "Expected gpu secondary stream to be initialized");
             return *devices[dev].current_secondary.at(buffer);
         } else {
-            IG_ASSERT(getThreadData()->cpu_secondary.size() > 0, "Expected cpu secondary stream to be initialized");
+            IG_ASSERT(getThreadData()->cpu_secondary.Data.size() > 0, "Expected cpu secondary stream to be initialized");
             return getThreadData()->cpu_secondary;
         }
     }
@@ -564,14 +576,14 @@ public:
 
     inline DeviceImage copyToDevice(int32_t dev, const Image& image)
     {
-        return DeviceImage(copyToDevice(dev, image.pixels.get(), image.width * image.height * 4), image.width, image.height);
+        return DeviceImage{ copyToDevice(dev, image.pixels.get(), image.width * image.height * 4), image.width, image.height };
     }
 
     inline DevicePackedImage copyToDevicePacked(int32_t dev, const Image& image)
     {
         std::vector<uint8_t> packed;
         image.copyToPackedFormat(packed);
-        return DevicePackedImage(copyToDevice(dev, packed), image.width, image.height);
+        return DevicePackedImage{ copyToDevice(dev, packed), image.width, image.height };
     }
 
     template <typename Node>
@@ -667,16 +679,16 @@ public:
 
             if (expected_channels != (int32_t)channels) {
                 IG_LOG(L_ERROR) << "Packed image '" << filename << "' is has unexpected channel count" << std::endl;
-                return images[filename] = DevicePackedImage(copyToDevice(dev, std::vector<uint8_t>{}), 0, 0);
+                return images[filename] = DevicePackedImage{ copyToDevice(dev, std::vector<uint8_t>{}), 0, 0 };
             }
 
             auto& res = getCurrentShaderInfo(dev).packed_images[filename];
             res.counter++;
             res.memory_usage        = packed.size();
-            return images[filename] = DevicePackedImage(copyToDevice(dev, packed), width, height);
+            return images[filename] = DevicePackedImage{ copyToDevice(dev, packed), width, height };
         } catch (const ImageLoadException& e) {
             IG_LOG(L_ERROR) << e.what() << std::endl;
-            return images[filename] = DevicePackedImage(copyToDevice(dev, std::vector<uint8_t>{}), 0, 0);
+            return images[filename] = DevicePackedImage{ copyToDevice(dev, std::vector<uint8_t>{}), 0, 0 };
         }
     }
 
@@ -716,7 +728,7 @@ public:
         if ((vec.size() % sizeof(int32_t)) != 0)
             IG_LOG(L_WARNING) << "Buffer " << filename << " is not properly sized!" << std::endl;
 
-        return buffers[filename] = DeviceBuffer(copyToDevice(dev, vec), vec.size());
+        return buffers[filename] = DeviceBuffer{ copyToDevice(dev, vec), vec.size() };
     }
 
     inline DeviceBuffer& requestBuffer(int32_t dev, const std::string& name, int32_t size, int32_t flags)
@@ -732,7 +744,7 @@ public:
 
         auto& buffers = devices[dev].buffers;
         auto it       = buffers.find(name);
-        if (it != buffers.end() && std::get<1>(it->second) >= (size_t)size) {
+        if (it != buffers.end() && it->second.Data.size() >= (int64_t)size) {
             return it->second;
         }
 
@@ -746,7 +758,7 @@ public:
             std::abort();
         }
 
-        return buffers[name] = DeviceBuffer(anydsl::Array<uint8_t>(dev, reinterpret_cast<uint8_t*>(ptr), size), size);
+        return buffers[name] = DeviceBuffer{ anydsl::Array<uint8_t>(dev, reinterpret_cast<uint8_t*>(ptr), size), 1 };
     }
 
     inline void dumpBuffer(int32_t dev, const std::string& name, const std::string& filename)
@@ -756,11 +768,11 @@ public:
         auto& buffers = devices[dev].buffers;
         auto it       = buffers.find(name);
         if (it != buffers.end()) {
-            const size_t size = std::get<1>(it->second);
+            const size_t size = (size_t)it->second.Data.size();
 
             // Copy data to host
             std::vector<uint8_t> host_data(size);
-            anydsl_copy(dev, std::get<0>(it->second).data(), 0, 0 /* Host */, host_data.data(), 0, host_data.size());
+            anydsl_copy(dev, it->second.Data.data(), 0, 0 /* Host */, host_data.data(), 0, host_data.size());
 
             // Dump data as binary glob
             std::ofstream out(filename);
@@ -814,8 +826,8 @@ public:
 
         if (dev != 0) {
             // Copy data to host
-            std::vector<uint8_t> host_data(std::get<1>(buffer));
-            anydsl_copy(dev, std::get<0>(buffer).data(), 0, 0 /* Host */, host_data.data(), 0, host_data.size());
+            std::vector<uint8_t> host_data((size_t)buffer.Data.size());
+            anydsl_copy(dev, buffer.Data.data(), 0, 0 /* Host */, host_data.data(), 0, host_data.size());
 
             // Parse data
             int32_t* ptr  = reinterpret_cast<int32_t*>(host_data.data());
@@ -827,11 +839,11 @@ public:
             handleDebug(ptr, occup);
 
             // Copy back to device
-            anydsl_copy(0 /* Host */, host_data.data(), 0, dev, std::get<0>(buffer).data(), 0, sizeof(int32_t));
+            anydsl_copy(0 /* Host */, host_data.data(), 0, dev, buffer.Data.data(), 0, sizeof(int32_t));
         } else {
             // Already on the host
-            int32_t* ptr  = reinterpret_cast<int32_t*>(std::get<0>(buffer).data());
-            int32_t occup = std::min(ptr[0], static_cast<int32_t>(std::get<1>(buffer) / sizeof(int32_t)));
+            int32_t* ptr  = reinterpret_cast<int32_t*>(buffer.Data.data());
+            int32_t occup = std::min(ptr[0], static_cast<int32_t>(buffer.Data.size() / sizeof(int32_t)));
 
             if (occup <= 0)
                 return;
@@ -1469,8 +1481,8 @@ inline void get_stream(T& dev_stream, DeviceStream& stream, size_t components)
 {
     static_assert(std::is_pod<T>::value, "Expected stream to be plain old data");
 
-    float* ptr      = std::get<0>(stream).data();
-    size_t capacity = std::get<1>(stream);
+    float* ptr      = stream.Data.data();
+    size_t capacity = stream.BlockSize;
 
     auto r_ptr = reinterpret_cast<float**>(&dev_stream);
     for (size_t i = 0; i < components; ++i)
@@ -1568,9 +1580,9 @@ IG_EXPORT void ignis_load_rays(int dev, StreamRay** list)
 IG_EXPORT void ignis_load_image(int32_t dev, const char* file, float** pixels, int32_t* width, int32_t* height, int32_t expected_channels)
 {
     auto& img = sInterface->loadImage(dev, file, expected_channels);
-    *pixels   = const_cast<float*>(std::get<0>(img).data());
-    *width    = (int)std::get<1>(img);
-    *height   = (int)std::get<2>(img);
+    *pixels   = const_cast<float*>(img.Data.data());
+    *width    = (int32_t)img.Width;
+    *height   = (int32_t)img.Height;
 }
 
 IG_EXPORT void ignis_load_image_by_id(int32_t dev, int32_t id, float** pixels, int32_t* width, int32_t* height, int32_t expected_channels)
@@ -1581,9 +1593,9 @@ IG_EXPORT void ignis_load_image_by_id(int32_t dev, int32_t id, float** pixels, i
 IG_EXPORT void ignis_load_packed_image(int32_t dev, const char* file, uint8_t** pixels, int32_t* width, int32_t* height, int32_t expected_channels, bool linear)
 {
     auto& img = sInterface->loadPackedImage(dev, file, expected_channels, linear);
-    *pixels   = const_cast<uint8_t*>(std::get<0>(img).data());
-    *width    = (int)std::get<1>(img);
-    *height   = (int)std::get<2>(img);
+    *pixels   = const_cast<uint8_t*>(img.Data.data());
+    *width    = (int32_t)img.Width;
+    *height   = (int32_t)img.Height;
 }
 
 IG_EXPORT void ignis_load_packed_image_by_id(int32_t dev, int32_t id, uint8_t** pixels, int32_t* width, int32_t* height, int32_t expected_channels, bool linear)
@@ -1594,8 +1606,8 @@ IG_EXPORT void ignis_load_packed_image_by_id(int32_t dev, int32_t id, uint8_t** 
 IG_EXPORT void ignis_load_buffer(int32_t dev, const char* file, uint8_t** data, int32_t* size)
 {
     auto& img = sInterface->loadBuffer(dev, file);
-    *data     = const_cast<uint8_t*>(std::get<0>(img).data());
-    *size     = (int)std::get<1>(img);
+    *data     = const_cast<uint8_t*>(img.Data.data());
+    *size     = (int32_t)img.Data.size();
 }
 
 IG_EXPORT void ignis_load_buffer_by_id(int32_t dev, int32_t id, uint8_t** data, int32_t* size)
@@ -1606,7 +1618,7 @@ IG_EXPORT void ignis_load_buffer_by_id(int32_t dev, int32_t id, uint8_t** data, 
 IG_EXPORT void ignis_request_buffer(int32_t dev, const char* name, uint8_t** data, int size, int flags)
 {
     auto& buffer = sInterface->requestBuffer(dev, name, size, flags);
-    *data        = const_cast<uint8_t*>(std::get<0>(buffer).data());
+    *data        = const_cast<uint8_t*>(buffer.Data.data());
 }
 
 IG_EXPORT void ignis_dbg_dump_buffer(int32_t dev, const char* name, const char* filename)

@@ -257,7 +257,7 @@ static std::string ppm_light_camera_generator(LoaderContext& ctx)
     stream << ctx.Lights->generateLightSelector("", tree);
 
     stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
-    stream << "  let emitter = make_ppm_light_emitter(light_selector, iter);" << std::endl;
+    stream << "  let emitter = make_ppm_light_emitter(light_selector, settings.iter);" << std::endl;
 
     stream << RayGenerationShader::end();
 
@@ -268,9 +268,12 @@ static std::string ppm_before_iteration_generator(LoaderContext& ctx)
 {
     std::stringstream stream;
 
+    const auto technique     = ctx.Scene.technique();
+    const size_t max_photons = std::max(100, technique ? technique->property("photons").getInteger(1000000) : 1000000);
+
     stream << ShaderUtils::beginCallback(ctx) << std::endl
            << "  let scene_bbox = " << LoaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
-           << "  ppm_handle_before_iteration(device, iter, " << ctx.CurrentTechniqueVariant << ", PPMPhotonCount, scene_bbox);" << std::endl
+           << "  ppm_handle_before_iteration(device, iter, " << ctx.CurrentTechniqueVariant << ", " << max_photons << ", scene_bbox);" << std::endl
            << ShaderUtils::endCallback() << std::endl;
 
     return stream.str();
@@ -325,9 +328,10 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
     if (handle_ib_body(stream, technique, ctx))
         return;
 
-    const int max_depth     = technique ? technique->property("max_depth").getInteger(8) : 8;
-    const float radius      = technique ? technique->property("radius").getNumber(0.01f) : 0.01f;
-    const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
+    const size_t max_photons = std::max(100, technique ? technique->property("photons").getInteger(1000000) : 1000000);
+    const int max_depth      = technique ? technique->property("max_depth").getInteger(8) : 8;
+    const float radius       = technique ? technique->property("radius").getNumber(0.01f) : 0.01f;
+    const float clamp_value  = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
 
     bool is_lighttracer = ctx.CurrentTechniqueVariant == 0;
 
@@ -361,7 +365,7 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
     }
 
     stream << "  let scene_bbox  = " << LoaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
-           << "  let light_cache = make_ppm_lightcache(device, PPMPhotonCount, scene_bbox);" << std::endl;
+           << "  let light_cache = make_ppm_lightcache(device, " << max_photons << ", scene_bbox);" << std::endl;
 
     if (is_lighttracer) {
         stream << "  let technique = make_ppm_light_renderer(" << max_depth << ", aovs, light_cache);" << std::endl;
