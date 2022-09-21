@@ -39,7 +39,6 @@ struct MeasuredBRDFSampleData {
 }
 
 fn @ elevation(v : Vec3) -> f32 {
-    //return 2.0 * asin(.5f * std::sqrt(sqr(d.x()) + sqr(d.y()) + sqr(d.z() - 1.0)));
     2.0 * math_builtins::asin(0.5 * math_builtins::sqrt(v.x * v.x + v.y * v.y + (v.z - 1.0) * (v.z - 1.0)))
 }
 
@@ -89,26 +88,6 @@ fn @ vec2_to_vec2i(v : Vec2) -> Vec2i {
     }
 }
 
-// fn @ clamp (val : i32, low : i32, high : i32) -> i32 {
-//     if val < low {
-//         low
-//     } else if val > high {
-//         high
-//     } else {
-//         val
-//     }
-// }
-
-// fn @ clampf (val : f32, low : f32, high : f32) -> f32 {
-//     if val < low {
-//         low
-//     } else if val > high {
-//         high
-//     } else {
-//         val
-//     }
-// }
-
 fn @ maxf(val1 : f32, val2 : f32) -> f32 {
     if val1 > val2 {
         val1
@@ -128,13 +107,6 @@ fn @ absf(val : f32) -> f32 {
 fn @ fma(x : f32, y : f32, z : f32) -> f32 {
     (x * y) + z
 }
-
-// fn @ vec2_floor(v : Vec2) -> Vec2 {
-//     Vec2 {
-//         x = math_builtins::floor(v.x),
-//         y = math_builtins::floor(v.y)
-//     }
-// }
 
 fn @ find_interval_eval(warp: Warp, dim : i32, param_val : f32) -> i32 {
     let size_ : i32 = warp.param_size(dim) as i32;
@@ -212,8 +184,6 @@ fn @ fetch_conditional_warp2D2(warp : Warp, offset : i32, idx : i32, slice_size 
 
 fn @lookup_warp(warp : Warp, dim: i32, data : fn(i32) -> f32, i0 : i32, size : i32, param_weight : &[f32]) -> f32 {
     if dim == 0 {
-        /* print_pointer(data as &());
-        print_float(data(i0)); */
         data(i0)
     } else {
         let i1 = i0 + warp.param_strides(dim - 1) as i32 * size;
@@ -222,7 +192,6 @@ fn @lookup_warp(warp : Warp, dim: i32, data : fn(i32) -> f32, i0 : i32, size : i
         let v0 = lookup_warp(warp, dim - 1, data, i0, size, param_weight);
         let v1 = lookup_warp(warp, dim - 1, data, i1, size, param_weight);
         
-        // fma(x,y,z) -> (x*y) + z
         (v0 * w0) + (v1 * w1)
     }
 }
@@ -230,8 +199,6 @@ fn @lookup_warp(warp : Warp, dim: i32, data : fn(i32) -> f32, i0 : i32, size : i
 fn @ eval_warp2D0(warp: Warp, pos : Vec2) -> f32 {
     let param_weight = [0.0:f32];
     let slice_offset = 0;
-
-    //let dim = 0;
 
     // linear interpolation
     let n_pos = vec2_rowmul(pos, warp.inv_patch_size);
@@ -460,18 +427,15 @@ fn @ make_sample_result() -> SampleResult {
 }
 
 fn @ sample_warp2D2(warp : Warp, sample : Vec2, phi_i : f32, theta_i : f32) -> SampleResult {
-    //TODO: Take care of degeneracies
     let mut n_sample = make_vec2(sample.x, sample.y);
 
     let mut param_weight = [0.0:f32, 0.0:f32, 0.0:f32, 0.0:f32];
     let mut slice_offset = 0;
 
-    //let mut dim = 0;
     for dim in unroll(0,2) {
         if warp.param_size(dim) == 1 {
             param_weight(2 * dim) = 1.0;
             param_weight(2 * dim + 1) = 0.0;
-            //dim++;
             continue()
         }
 
@@ -488,7 +452,6 @@ fn @ sample_warp2D2(warp : Warp, sample : Vec2, phi_i : f32, theta_i : f32) -> S
         param_weight(2 * dim + 1) = clampf((dim_param - p0) / (p1 - p0), 0.0, 1.0);
         param_weight(2 * dim) = 1.0 - param_weight(2 * dim + 1);
         slice_offset += warp.param_strides(dim) as i32 * param_index;
-        //dim++;
     }
 
     let mut offset = slice_offset * warp.size.y;
@@ -727,27 +690,21 @@ fn @delinearize_warp(buffer : DeviceBuffer, start : i32) {
     let param_values_off = buffer.load_f32(start+offset) as i32;
     offset += 1;
 
-    //let mut param_size = [0 * sizes(0)] as &[u32];
     let param_size_offset = offset;
     offset += sizes(0) as i32;
 
-    //let mut param_strides = [0 * sizes(1)] as &[u32];
     let param_strides_offset = offset;
     offset += sizes(1) as i32;
 
-    //let mut param_values = [0 * sizes(2)] as &[f32];
     let param_values_offset = offset;
     offset += sizes(2) as i32;
 
-    //let mut data = [0 * sizes(3)] as &[f32];
     let data_offset = offset;
     offset += sizes(3) as i32;
 
-    //let mut marginal_cdf = [0 * sizes(4)] as &[f32];
     let marginal_cdf_offset = offset;
     offset += sizes(4) as i32;
 
-    //let mut conditional_cdf = [0 * sizes(5)] as &[f32];
     let conditional_cdf_offset = offset;
     offset += sizes(5) as i32;
 
@@ -767,14 +724,14 @@ fn @delinearize_warp(buffer : DeviceBuffer, start : i32) {
 }
 
 // Creates a measured BRDF (Dupuy & Jakob 2018)
-fn @make_djmeasured_bsdf(/*dbg: DebugOutput,*/ surf: SurfaceElement, isotropic : bool, jacobian : bool, 
+fn @make_djmeasured_bsdf(surf: SurfaceElement, isotropic : bool, jacobian : bool, 
     buffer_ndf : DeviceBuffer, buffer_vndf : DeviceBuffer, buffer_sigma : DeviceBuffer,
     buffer_luminance : DeviceBuffer, buffer_rgb : DeviceBuffer) {  
 
     let brdf_data = BRDFData {
         ndf = delinearize_warp(buffer_ndf, 0),
         sigma = delinearize_warp(buffer_sigma, 0),
-        vndf = delinearize_warp(buffer_vndf, 0), // exception when using 0 offset
+        vndf = delinearize_warp(buffer_vndf, 0),
         luminance = delinearize_warp(buffer_luminance, 0),
         rgb = delinearize_warp(buffer_rgb, 0),
         isotropic = isotropic,
@@ -783,20 +740,20 @@ fn @make_djmeasured_bsdf(/*dbg: DebugOutput,*/ surf: SurfaceElement, isotropic :
 
     Bsdf {
         eval = @ |in_dir, out_dir| {
-            evaluate_brdf(brdf_data, in_dir, out_dir)
-            //make_color(1.0,0.0,0.0,1.0)
+            let wo = shading::to_local(surf.local, out_dir);
+            let wi = shading::to_local(surf.local, in_dir);
+            evaluate_brdf(brdf_data, wi, wo)
         },
         pdf = @ |in_dir, out_dir| {
-            pdf_brdf(brdf_data, in_dir, out_dir)
-            //cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2)))
+            let wo = shading::to_local(surf.local, out_dir);
+            let wi = shading::to_local(surf.local, in_dir);
+            pdf_brdf(brdf_data, wi, wo)
         },
         sample = @ |rnd, out_dir, _| {
-            let sample = sample_brdf(brdf_data, make_vec2(randf(rnd), randf(rnd)), out_dir);
-            make_bsdf_sample(surf, sample.out, sample.pdf, vec3_to_color(sample.res), 1, false)
-
-            //let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
-            //let gdir   = mat3x3_mul(surf.local, sample.dir);
-            //make_bsdf_sample(surf, gdir, sample.pdf, color_mulf(evaluate_brdf(brdf_data, gdir, out_dir), 1/sample.pdf), 1, false)
+            let out_local = shading::to_local(surf.local, out_dir);
+            let sample = sample_brdf(brdf_data, make_vec2(randf(rnd), randf(rnd)), out_local);
+            let in_global = shading::to_world(surf.local, sample.out);
+            make_bsdf_sample(surf, in_global, sample.pdf, vec3_to_color(sample.res), 1, false)
         },
         is_specular = false
     }

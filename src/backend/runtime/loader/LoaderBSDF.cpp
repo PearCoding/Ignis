@@ -109,31 +109,26 @@ static std::string inline_microfacet(const std::string& name, ShadingTree& tree,
 
 static void bsdf_djmeasured(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree) 
 {
+    // full file path to measured BRDF is given
+    std::string full_path = bsdf->property("filename").getString();
 
-    std::string bsdf_name = bsdf->property("filename").getString();
-    std::string bsdf_path = "../brdf/" + bsdf_name + "_rgb.bsdf";
-    std::string out_path = "../brdf/" + bsdf_name;
+    // find last path separator
+    auto last_sep = full_path.find_last_of('/');
+    // extract bsdf name by also getting rid of file extension (.bsdf)
+    auto bsdf_name = full_path.substr(last_sep + 1, full_path.length() - last_sep - 6);
+    auto filename = tree.context().handlePath(full_path, *bsdf);
     std::string buffer_name = "buffer_" + bsdf_name;
 
-    BRDFData* data = load_brdf_data(bsdf_path);
+    // saving of converted brdf data in /data directory (taken from klems loader)
+    std::filesystem::create_directories("data/"); // Make sure this directory exists
+    std::string out_path = "data/djmeasured_" + bsdf_name;
+
+    BRDFData* data = load_brdf_data(filename);
     write_brdf_data(data, out_path);
 
     auto t1 = data->vndf;
     auto lin = linearize_warp(&data->vndf);
     auto t2 = delinearize_warp(lin);
-
-    IG_LOG(L_INFO) << "Comparing Warps: " <<  compare_warp(&t1, &t2) << "\n";
-    IG_LOG(L_INFO) << "Test Warps: \n";
-    std::stringstream ss;
-    for (int i = 0; i < t1.array_sizes[5]; i++) {
-        if (t1.conditional_cdf[i] != t2.conditional_cdf[i]) {
-            ss << t1.conditional_cdf[i] << "|" << t2.conditional_cdf[i] << ", ";
-        }
-    }
-
-    IG_LOG(L_INFO) << ss.str();
-
-    IG_LOG(L_INFO) << "VNDF Size " << data->vndf.size_x << "/" << data->vndf.size_y << "\n";
 
     tree.beginClosure();
 
