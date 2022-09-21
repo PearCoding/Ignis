@@ -60,6 +60,7 @@ set(ARTIC_EXTRA_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/plastic.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/principled.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/tensortree.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/impl/bsdf/djmeasured.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera/fishlens.art
     ${CMAKE_CURRENT_SOURCE_DIR}/impl/camera/orthogonal.art

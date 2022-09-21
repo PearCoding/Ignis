@@ -108,6 +108,10 @@ set(SRC
   measured/KlemsLoader.h
   measured/TensorTreeLoader.cpp
   measured/TensorTreeLoader.h
+  measured/powitacq_rgb.inl
+  measured/powitacq_rgb.h
+  measured/djmeasured.cpp
+  measured/djmeasured.h
   mesh/MtsSerializedFile.cpp
   mesh/MtsSerializedFile.h
   mesh/ObjFile.cpp
@@ -160,7 +164,7 @@ set(SRC
 
 # ##########################################################
 # We could drop some sources from ARTIC_EXTRA_SRC and let it adapt to the actual shading system we jit,
-# but that is not worth the effort currently
+# but that is not worth the effort currently 
 set(API_SRC_FILE ${CMAKE_CURRENT_BINARY_DIR}/api.cpp)
 add_custom_command(
   OUTPUT ${API_SRC_FILE}

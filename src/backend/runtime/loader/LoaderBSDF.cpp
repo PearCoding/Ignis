@@ -7,6 +7,8 @@
 #include "measured/KlemsLoader.h"
 #include "measured/TensorTreeLoader.h"
 
+#include "measured/djmeasured.h"
+
 #include <chrono>
 
 namespace IG {
@@ -110,6 +112,47 @@ static std::string inline_microfacet(const std::shared_ptr<Parser::Object>& bsdf
                << tree.getInline(param) << ");" << std::endl;
     }
     return stream.str();
+}
+
+static void bsdf_djmeasured(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+{
+    // full file path to measured BRDF is given
+    std::string full_path = bsdf->property("filename").getString();
+
+    // find last path separator
+    auto last_sep = full_path.find_last_of('/');
+    // extract bsdf name by also getting rid of file extension (.bsdf)
+    auto bsdf_name          = full_path.substr(last_sep + 1, full_path.length() - last_sep - 6);
+    auto filename           = tree.context().handlePath(full_path, *bsdf);
+    std::string buffer_name = "buffer_" + bsdf_name;
+
+    // saving of converted brdf data in /data directory (taken from klems loader)
+    std::filesystem::create_directories("data/"); // Make sure this directory exists
+    std::string out_path = "data/djmeasured_" + bsdf_name;
+
+    BRDFData* data = load_brdf_data(filename);
+    write_brdf_data(data, out_path);
+
+    tree.beginClosure(name);
+
+    const std::string bsdf_id = tree.currentClosureID();
+    stream << tree.pullHeader()
+           << "  let " << buffer_name << "_ndf : DeviceBuffer = device.load_buffer(\"" << out_path << "_ndf\");\n"
+           << "  let " << buffer_name << "_vndf : DeviceBuffer = device.load_buffer(\"" << out_path << "_vndf\");\n"
+           << "  let " << buffer_name << "_sigma : DeviceBuffer = device.load_buffer(\"" << out_path << "_sigma\");\n"
+           << "  let " << buffer_name << "_luminance : DeviceBuffer = device.load_buffer(\"" << out_path << "_luminance\");\n"
+           << "  let " << buffer_name << "_rgb : DeviceBuffer = device.load_buffer(\"" << out_path << "_rgb\");\n"
+           << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_djmeasured_bsdf(/*device.request_debug_output(),*/ ctx.surf, "
+           << (data->isotropic ? "true" : "false") << ", "
+           << (data->jacobian ? "true" : "false") << ", "
+           << buffer_name << "_ndf, "
+           << buffer_name << "_vndf, "
+           << buffer_name << "_sigma, "
+           << buffer_name << "_luminance, "
+           << buffer_name << "_rgb"
+           << ");" << std::endl;
+
+    tree.endClosure();
 }
 
 static void bsdf_diffuse(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
@@ -764,6 +807,7 @@ static const struct {
     { "roughplastic", bsdf_rough_plastic },
     { "klems", bsdf_klems },
     { "tensortree", bsdf_tensortree },
+    { "djmeasured", bsdf_djmeasured },
     { "add", bsdf_add },
     { "blend", bsdf_blend },
     { "mask", bsdf_mask },
