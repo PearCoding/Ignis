@@ -71,15 +71,17 @@ PYBIND11_MODULE(pyignis, m)
     // Logger IO stuff
     m.def("flush_log", flush_io);
 
+    // TODO: Add missing functions, etc
+    py::class_<Target>(m, "Target")
+        .def(py::init([]() { return Target(); }))
+        .def_static("pickBest", &Target::pickBest);
+
     py::class_<RuntimeOptions>(m, "RuntimeOptions")
         .def(py::init([]() { return RuntimeOptions(); }))
-        .def_readwrite("DesiredTarget", &RuntimeOptions::DesiredTarget)
-        .def_readwrite("RecommendCPU", &RuntimeOptions::RecommendCPU)
-        .def_readwrite("RecommendGPU", &RuntimeOptions::RecommendGPU)
+        .def_readwrite("Target", &RuntimeOptions::Target)
         .def_readwrite("DumpShader", &RuntimeOptions::DumpShader)
         .def_readwrite("DumpShaderFull", &RuntimeOptions::DumpShaderFull)
         .def_readwrite("AcquireStats", &RuntimeOptions::AcquireStats)
-        .def_readwrite("Device", &RuntimeOptions::Device)
         .def_readwrite("SPI", &RuntimeOptions::SPI)
         .def_readwrite("OverrideCamera", &RuntimeOptions::OverrideCamera)
         .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique)
@@ -92,17 +94,6 @@ PYBIND11_MODULE(pyignis, m)
         .def_readwrite("Origin", &Ray::Origin)
         .def_readwrite("Direction", &Ray::Direction)
         .def_readwrite("Range", &Ray::Range);
-
-    py::enum_<Target>(m, "Target")
-        .value("GENERIC", Target::GENERIC)
-        .value("SINGLE", Target::SINGLE)
-        .value("ASIMD", Target::ASIMD)
-        .value("SSE42", Target::SSE42)
-        .value("AVX", Target::AVX)
-        .value("AVX2", Target::AVX2)
-        .value("AVX512", Target::AVX512)
-        .value("NVVM", Target::NVVM)
-        .value("AMDGPU", Target::AMDGPU);
 
     py::class_<Runtime>(m, "Runtime")
         .def("step", &Runtime::step)

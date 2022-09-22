@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BvhNAdapter.h"
-#include "Target.h"
+#include "device/Target.h"
 #include "math/BoundingBox.h"
 
 IG_BEGIN_IGNORE_WARNINGS
@@ -91,7 +91,7 @@ protected:
                       { in_obj.Local(0, 2), in_obj.Local(1, 2), in_obj.Local(2, 2) },
                       { in_obj.Local(0, 3), in_obj.Local(1, 3), in_obj.Local(2, 3) } } } },
                 in_obj.Flags,
-                {0,0,0} /* Pads */ });
+                { 0, 0, 0 } /* Pads */ });
         }
 
         // Add sentinel

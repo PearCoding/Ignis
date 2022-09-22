@@ -74,7 +74,7 @@ public:
     [[nodiscard]] inline bool isTrace() const { return mOptions.IsTracer; }
 
     /// The target the runtime is using
-    [[nodiscard]] inline Target target() const { return mTarget; }
+    [[nodiscard]] inline const Target& target() const { return mTarget; }
 
     /// Computes (approximative) number of samples per iteration. This might be off due to the internal computing of techniques
     [[nodiscard]] inline size_t samplesPerIteration() const { return mTechniqueInfo.ComputeSPI(0 /* TODO: Not always the best choice */, mSamplesPerIteration); }

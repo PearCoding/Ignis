@@ -3,6 +3,15 @@
 #define IG_STRINGIFY(str) #str
 #define IG_DOUBLEQUOTE(str) IG_STRINGIFY(str)
 
+// CPU
+#if defined(__arm__) || defined(_M_ARM)
+#define IG_CPU_ARM
+#elif defined(__x86_64__) || defined(_M_X64) || defined(i386) || defined(__i386__) || defined(__i386) || defined(_M_IX86)
+#define IG_CPU_X86
+#else
+#define IG_CPU_UNKNOWN
+#endif
+
 // OS
 #if defined(__linux) || defined(linux)
 #define IG_OS_LINUX
@@ -131,12 +140,12 @@
 
 #define IG_CLASS_NON_MOVEABLE(C) \
 private:                         \
-    C(C&&)     = delete;         \
+    C(C&&)            = delete;  \
     C& operator=(C&&) = delete
 
-#define IG_CLASS_NON_COPYABLE(C) \
-private:                         \
-    C(const C&) = delete;        \
+#define IG_CLASS_NON_COPYABLE(C)     \
+private:                             \
+    C(const C&)            = delete; \
     C& operator=(const C&) = delete
 
 #define IG_CLASS_NON_CONSTRUCTABLE(C) \

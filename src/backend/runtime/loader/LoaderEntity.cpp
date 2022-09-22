@@ -180,9 +180,9 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
     const auto start2 = std::chrono::high_resolution_clock::now();
     for (auto& p : in_objs) {
         auto& bvh = result.Database.SceneBVHs[p.first->identifier()];
-        if (TargetInfo(ctx.Target).isGPU()) {
+        if (ctx.Target.isGPU()) {
             setup_bvh<2>(p.second, bvh);
-        } else if (TargetInfo(ctx.Target).vectorWidth() == 4) {
+        } else if (ctx.Target.vectorWidth() == 4) {
             setup_bvh<4>(p.second, bvh);
         } else {
             setup_bvh<8>(p.second, bvh);

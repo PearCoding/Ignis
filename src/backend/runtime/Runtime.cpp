@@ -56,10 +56,10 @@ static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts
     lopts.CameraType = camera_type;
 }
 
-static inline size_t recommendSPI(Target target, size_t width, size_t height, bool interactive)
+static inline size_t recommendSPI(const Target& target, size_t width, size_t height, bool interactive)
 {
     // The "best" case was measured with a 1000 x 1000. It does depend on the scene content though, but thats ignored here
-    size_t spi_f = TargetInfo(target).isCPU() ? 2 : 8;
+    size_t spi_f = target.isCPU() ? 2 : 8;
     if (interactive)
         spi_f /= 2;
     const size_t spi = (size_t)std::ceil(spi_f / ((width / 1000.0f) * (height / 1000.0f)));
@@ -77,7 +77,7 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mDatabase()
     , mParameterSet()
     , mSamplesPerIteration(0)
-    , mTarget(Target::INVALID)
+    , mTarget(opts.Target)
     , mCurrentIteration(0)
     , mCurrentSampleCount(0)
     , mCurrentFrame(0)
@@ -93,24 +93,12 @@ Runtime::Runtime(const RuntimeOptions& opts)
 {
     checkCacheDirectory();
 
-    // Recommend a target based on the loaded drivers
-    mTarget = opts.DesiredTarget;
-    if (mTarget == Target::INVALID) {
-        if (!opts.RecommendCPU && opts.RecommendGPU)
-            mTarget = TargetInfo::pickGPU();
-        else if (opts.RecommendCPU && !opts.RecommendGPU)
-            mTarget = TargetInfo::pickCPU();
-        else
-            mTarget = TargetInfo::pickGPU(); // TODO
-    }
-
     // Check configuration
-    if (mTarget == Target::INVALID) {
+    if (!mTarget.isValid())
         throw std::runtime_error("Could not pick a suitable target");
-    }
 
     // Load interface
-    IG_LOG(L_INFO) << "Loading target " << TargetInfo(mTarget).toString() << std::endl;
+    IG_LOG(L_INFO) << "Using target " << mTarget.toString() << std::endl;
 
     // Load standard library if necessary
     if (!mOptions.ScriptDir.empty()) {
@@ -412,7 +400,6 @@ bool Runtime::setup()
 {
     Device::SetupSettings settings;
     settings.target             = mTarget;
-    settings.device             = mOptions.Device;
     settings.database           = &mDatabase;
     settings.framebuffer_width  = (uint32)mFilmWidth;
     settings.framebuffer_height = (uint32)mFilmHeight;
@@ -420,7 +407,7 @@ bool Runtime::setup()
     settings.aov_map            = &mTechniqueInfo.EnabledAOVs;
     settings.resource_map       = &mResourceMap;
 
-    IG_LOG(L_DEBUG) << "Init driver" << std::endl;
+    IG_LOG(L_DEBUG) << "Init device" << std::endl;
     mDevice = std::make_unique<Device>(settings);
 
     if (IG_LOGGER.verbosity() <= L_DEBUG) {

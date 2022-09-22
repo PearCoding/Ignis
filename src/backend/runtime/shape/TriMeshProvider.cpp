@@ -252,9 +252,9 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
 
     // Setup bvh
     uint32 bvh_id = 0;
-    if (TargetInfo(ctx.Target).isGPU()) {
+    if (ctx.Target.isGPU()) {
         bvh_id = setup_bvh<2, 1>(mesh, result.Database, mBvhMutex);
-    } else if (TargetInfo(ctx.Target).vectorWidth() == 4) {
+    } else if (ctx.Target.vectorWidth() == 4) {
         bvh_id = setup_bvh<4, 4>(mesh, result.Database, mBvhMutex);
     } else {
         bvh_id = setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);
@@ -309,10 +309,10 @@ std::string TriMeshProvider::generateTraversalCode(const LoaderContext& ctx)
     std::stringstream stream;
     stream << ShaderUtils::generateShapeLookup("trimesh_shapes", this, ctx) << std::endl;
 
-    if (TargetInfo(ctx.Target).isGPU()) {
-        stream << "  let prim_bvhs = make_gpu_trimesh_bvh_table(device, " << (ctx.Target == Target::NVVM ? "true" : "false") << ");" << std::endl;
+    if (ctx.Target.isGPU()) {
+        stream << "  let prim_bvhs = make_gpu_trimesh_bvh_table(device, " << (ctx.Target.gpuVendor() == GPUVendor::Nvidia ? "true" : "false") << ");" << std::endl;
     } else {
-        stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, " << TargetInfo(ctx.Target).vectorWidth() << ");" << std::endl;
+        stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, " << ctx.Target.vectorWidth() << ");" << std::endl;
     }
 
     stream << "  let trace = TraceAccessor { shapes = trimesh_shapes, entities = entities, bvhs = prim_bvhs };" << std::endl;

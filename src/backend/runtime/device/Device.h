@@ -16,8 +16,7 @@ class Device {
 
 public:
     struct SetupSettings {
-        Target target                                = Target::INVALID;
-        size_t device                                = 0;
+        Target target;
         size_t framebuffer_width                     = 0;
         size_t framebuffer_height                    = 0;
         SceneDatabase* database                      = nullptr;

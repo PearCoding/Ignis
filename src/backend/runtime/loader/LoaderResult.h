@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CameraOrientation.h"
-#include "Target.h"
 #include "TechniqueInfo.h"
+#include "device/Target.h"
 #include "table/SceneDatabase.h"
 
 namespace IG {

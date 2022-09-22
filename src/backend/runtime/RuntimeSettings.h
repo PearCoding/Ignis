@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Target.h"
+#include "device/Target.h"
 
 namespace IG {
 struct DenoiserSettings {
@@ -16,11 +16,8 @@ struct RuntimeOptions {
     bool DumpShader        = false;
     bool DumpShaderFull    = false;
     bool AcquireStats      = false;
-    Target DesiredTarget   = Target::INVALID;
-    bool RecommendCPU      = true;
-    bool RecommendGPU      = true;
-    uint32 Device          = 0;
     uint32 SPI             = 0; // Detect automatically
+    IG::Target Target;
     std::string OverrideTechnique;
     std::string OverrideCamera;
     std::pair<uint32, uint32> OverrideFilmSize = { 0, 0 };

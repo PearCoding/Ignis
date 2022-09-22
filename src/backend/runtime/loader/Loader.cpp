@@ -24,7 +24,6 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.Database            = &result.Database;
     ctx.FilePath            = opts.FilePath;
     ctx.Target              = opts.Target;
-    ctx.EnablePadding       = TargetInfo(ctx.Target).requiresPadding();
     ctx.Scene               = opts.Scene;
     ctx.CameraType          = opts.CameraType;
     ctx.TechniqueType       = opts.TechniqueType;

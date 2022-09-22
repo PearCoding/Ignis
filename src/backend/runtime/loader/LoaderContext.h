@@ -2,8 +2,8 @@
 
 #include "LoaderEnvironment.h"
 #include "RuntimeSettings.h"
-#include "Target.h"
 #include "TechniqueInfo.h"
+#include "device/Target.h"
 
 #include <any>
 #include <filesystem>
@@ -21,7 +21,6 @@ struct LoaderContext {
 
     std::filesystem::path FilePath;
     IG::Target Target;
-    bool EnablePadding;
     size_t SamplesPerIteration;
     std::unordered_map<std::string, uint32> Images; // Image to Buffer
 

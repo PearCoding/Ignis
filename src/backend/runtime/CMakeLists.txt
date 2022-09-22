@@ -21,8 +21,6 @@ set(SRC
   SHA256.h
   Statistics.cpp
   Statistics.h
-  Target.cpp
-  Target.h
   Timer.h
   bvh/BvhNAdapter.h
   bvh/NArityBvh.h
@@ -40,6 +38,8 @@ set(SRC
   device/Device.cpp
   device/Device.h
   device/ShallowArray.h
+  device/Target.cpp
+  device/Target.h
   light/AreaLight.cpp
   light/AreaLight.h
   light/CIELight.cpp

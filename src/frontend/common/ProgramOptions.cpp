@@ -6,7 +6,6 @@
 
 namespace IG {
 static const std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };
-static const std::map<std::string, Target> TargetMap{ { "generic", Target::GENERIC }, { "single", Target::SINGLE }, { "asimd", Target::ASIMD }, { "sse42", Target::SSE42 }, { "avx", Target::AVX }, { "avx2", Target::AVX2 }, { "avx512", Target::AVX512 }, { "amdgpu", Target::AMDGPU }, { "nvvm", Target::NVVM } };
 static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continous", SPPMode::Continous } };
 
 class MyTransformer : public CLI::Validator {
@@ -78,6 +77,12 @@ public:
 
 ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, const std::string& desc)
 {
+    bool useCPU     = false;
+    bool useGPU     = false;
+    int threadCount = 0;
+    int vectorWidth = 0;
+    int device      = 0;
+
     Type = type;
 
     CLI::App app{ desc, argc >= 1 ? argv[0] : "unknown" };
@@ -116,10 +121,11 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_flag_callback(
         "--debug", [&]() { TechniqueType = "debug"; }, "Same as --technique debug");
 
-    app.add_option("--target", Target, "Sets the target platform (default: autodetect GPU)")->transform(MyTransformer(TargetMap, CLI::ignore_case));
-    app.add_option("--device", Device, "Sets the device to use on the selected platform")->default_val(0);
-    app.add_flag("--cpu", AutodetectCPU, "Use autodetected CPU target");
-    app.add_flag("--gpu", AutodetectGPU, "Use autodetected GPU target");
+    app.add_flag("--cpu", useCPU, "Use CPU as target only");
+    app.add_flag("--gpu", useGPU, "Use GPU as target only");
+    app.add_option("--gpu-device", device, "Pick GPU device to use on the selected platform")->default_val(0);
+    app.add_option("--cpu-threads", threadCount, "Number of threads used on a CPU target. Set to 0 to detect automatically")->default_val(threadCount);
+    app.add_option("--cpu-vectorwidth", vectorWidth, "Number of vector lanes used on a CPU target. Set to 0 to detect automatically")->default_val(vectorWidth);
 
     app.add_option("--spp", SPP, "Enables benchmarking mode and sets the number of iterations based on the given spp");
     app.add_option("--spi", SPI, "Number of samples per iteration. This is only considered a hint for the underlying technique");
@@ -165,6 +171,25 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     } catch (const CLI::ParseError& e) {
         app.exit(e);
         ShouldExit = true;
+        return;
+    }
+
+    if (useGPU)
+        Target = IG::Target::pickGPU(device);
+    else if (useCPU)
+        Target = IG::Target::pickCPU();
+    else
+        Target = IG::Target::pickBest();
+
+    if (device >= 0)
+        Target.setDevice((size_t)device);
+
+    if (threadCount >= 0)
+        Target.setThreadCount((size_t)threadCount);
+
+    if (vectorWidth >= 4) {
+        // TODO: Make sure it is greater 4 and power of 2
+        Target.setVectorWidth((size_t)vectorWidth);
     }
 }
 
@@ -177,10 +202,7 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.IsTracer      = Type == ApplicationType::Trace;
     options.IsInteractive = Type == ApplicationType::View;
 
-    options.DesiredTarget  = Target;
-    options.RecommendCPU   = AutodetectCPU;
-    options.RecommendGPU   = AutodetectGPU;
-    options.Device         = Device;
+    options.Target         = Target;
     options.AcquireStats   = AcquireStats || AcquireFullStats;
     options.DumpShader     = DumpShader;
     options.DumpShaderFull = DumpFullShader;

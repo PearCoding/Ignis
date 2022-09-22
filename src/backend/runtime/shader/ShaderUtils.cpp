@@ -9,38 +9,37 @@
 #include <sstream>
 
 namespace IG {
-std::string ShaderUtils::constructDevice(Target target)
+std::string ShaderUtils::constructDevice(const Target& target)
 {
     std::stringstream stream;
 
-    switch (target) {
-    case Target::AVX:
-        stream << "let device = make_avx_device();";
-        break;
-    case Target::AVX2:
-        stream << "let device = make_avx2_device();";
-        break;
-    case Target::AVX512:
-        stream << "let device = make_avx512_device();";
-        break;
-    case Target::SSE42:
-        stream << "let device = make_sse42_device();";
-        break;
-    case Target::ASIMD:
-        stream << "let device = make_asimd_device();";
-        break;
-    case Target::NVVM:
-        stream << "let device = make_nvvm_device(settings.device);";
-        break;
-    case Target::AMDGPU:
-        stream << "let device = make_amdgpu_device(settings.device);";
-        break;
-    case Target::SINGLE:
-        stream << "let device = make_cpu_singlethreaded_device();";
-        break;
-    default:
-        stream << "let device = make_cpu_default_device();";
-        break;
+    stream << "let device = ";
+    if (target.isCPU()) {
+        // TODO: Better decisions?
+        bool compact = target.vectorWidth() >= 4;
+        bool single  = compact;
+
+        std::string min_max = "make_default_min_max()";
+        if (target.vectorWidth() >= 4)
+            min_max = "make_cpu_int_min_max()";
+
+        stream << "make_cpu_device("
+               << (compact ? "true" : "false") << ", "
+               << (single ? "true" : "false") << ", "
+               << min_max << ", "
+               << target.vectorWidth()
+               << ", " << target.threadCount()
+               << ", 16);";
+    } else {
+        switch (target.gpuVendor()) {
+        case GPUVendor::AMD:
+            stream << "make_amdgpu_device(settings.device);";
+            break;
+        default:
+        case GPUVendor::Nvidia:
+            stream << "make_nvvm_device(settings.device);";
+            break;
+        }
     }
 
     return stream.str();

@@ -209,9 +209,9 @@ public:
         , setup(setup)
         , main_stats()
         , driver_settings()
-        , is_gpu(TargetInfo(setup.target).isGPU())
+        , is_gpu(setup.target.isGPU())
     {
-        driver_settings.device = (int)setup.device;
+        driver_settings.device = (int)setup.target.device();
         updateSettings(Device::RenderSettings{}); // Initialize with default values
 
         setupFramebuffer();
@@ -222,16 +222,16 @@ public:
 
     inline int getDevID(size_t device) const
     {
-        switch (setup.target) {
+        switch (setup.target.gpuVendor()) {
         default:
             return 0;
-        case Target::NVVM:
+        case GPUVendor::Nvidia:
             return ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
-        case Target::AMDGPU:
+        case GPUVendor::AMD:
             return ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
         }
     }
-    inline int getDevID() const { return getDevID(setup.device); }
+    inline int getDevID() const { return getDevID(setup.target.device()); }
 
     inline size_t getPrimaryPayloadBlockSize() const { return current_settings.info.PrimaryPayloadCount; }
     inline size_t getSecondaryPayloadBlockSize() const { return current_settings.info.SecondaryPayloadCount; }

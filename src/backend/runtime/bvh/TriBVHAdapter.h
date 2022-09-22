@@ -1,7 +1,6 @@
 #pragma once
 
 #include "BvhNAdapter.h"
-#include "Target.h"
 #include "math/Triangle.h"
 #include "mesh/TriMesh.h"
 

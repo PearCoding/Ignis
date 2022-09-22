@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Target.h"
+#include "device/Target.h"
 #include "loader/ShadingTree.h"
 
 namespace IG {
 class ShapeProvider;
 class ShaderUtils {
 public:
-    static std::string constructDevice(Target target);
+    static std::string constructDevice(const Target& target);
     static std::string generateDatabase(const LoaderContext& ctx);
     static std::string generateShapeLookup(const LoaderContext& ctx);
     static std::string generateShapeLookup(const std::string& varname, ShapeProvider* provider, const LoaderContext& ctx);
