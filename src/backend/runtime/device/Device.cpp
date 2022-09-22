@@ -1480,7 +1480,7 @@ inline void get_stream(T* dev_stream, DeviceStream& stream, size_t min_component
     float* ptr      = stream.Data.data();
     size_t capacity = stream.BlockSize;
 
-    auto r_ptr = reinterpret_cast<float**>(&dev_stream);
+    auto r_ptr = reinterpret_cast<float**>(dev_stream);
     for (size_t i = 0; i <= min_components; ++i) // The last part of the stream is used by the payload
         r_ptr[i] = ptr + i * capacity;
 }

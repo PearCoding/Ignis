@@ -28,7 +28,11 @@ void* ScriptCompiler::compile(const std::string& script, const std::string& func
     if (ret < 0)
         return nullptr;
 
-    return anydsl_lookup_function(ret, function.c_str());
+    void* callback = anydsl_lookup_function(ret, function.c_str());
+    if (callback == nullptr)
+        IG_LOG(L_ERROR) << "Could not find function '" << function << "' in compiled script" << std::endl;
+
+    return callback;
 }
 
 std::string ScriptCompiler::prepare(const std::string& script) const
