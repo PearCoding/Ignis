@@ -124,7 +124,7 @@ struct CPUData {
     const ParameterSet* current_local_registry = nullptr;
     std::unordered_map<void*, ShaderStats> shader_stats;
 };
-thread_local CPUData* sThreadData = nullptr;
+thread_local CPUData* tlThreadData = nullptr;
 
 #ifdef IG_HAS_DENOISER
 void ignis_denoise(const float*, const float*, const float*, const float*, float*, size_t, size_t, size_t);
@@ -300,7 +300,7 @@ public:
     inline void setupThreadData()
     {
         if (is_gpu) {
-            sThreadData = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
+            tlThreadData = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
         } else {
             const static size_t max_threads = std::thread::hardware_concurrency() + 1 /* Host */;
 
@@ -347,7 +347,7 @@ public:
 
     inline void registerThread()
     {
-        if (is_gpu || sThreadData != nullptr)
+        if (is_gpu || tlThreadData != nullptr)
             return;
 
         CPUData* ptr = nullptr;
@@ -357,22 +357,22 @@ public:
         if (ptr == nullptr)
             IG_LOG(L_FATAL) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " failed!" << std::endl;
         else
-            sThreadData = ptr;
+            tlThreadData = ptr;
     }
 
     inline void unregisterThread()
     {
-        if (is_gpu || sThreadData == nullptr)
+        if (is_gpu || tlThreadData == nullptr)
             return;
 
-        available_thread_data.push(sThreadData);
-        sThreadData = nullptr;
+        available_thread_data.push(tlThreadData);
+        tlThreadData = nullptr;
     }
 
     inline CPUData* getThreadData()
     {
-        IG_ASSERT(sThreadData != nullptr, "Thread not registered");
-        return sThreadData;
+        IG_ASSERT(tlThreadData != nullptr, "Thread not registered");
+        return tlThreadData;
     }
 
     inline void setCurrentShader(int32_t dev, int workload, const ShaderOutput<void*>& shader)
@@ -470,7 +470,7 @@ public:
     inline size_t getTemporaryBufferSize() const
     {
         // Upper bound extracted from "mapping_*.art"
-        return std::max<size_t>(32, std::max(entity_count + 1, database->MaterialCount * 2));
+        return roundUp(std::max<size_t>(32, std::max(entity_count + 1, database->MaterialCount * 2)), 4);
     }
 
     inline const auto& getTemporaryStorageHost(int32_t dev)
@@ -1472,7 +1472,7 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 }
 
 template <typename T>
-inline void get_stream(T& dev_stream, DeviceStream& stream, size_t components)
+inline void get_stream(T* dev_stream, DeviceStream& stream, size_t min_components)
 {
     static_assert(std::is_pod<T>::value, "Expected stream to be plain old data");
     static_assert((sizeof(T) % sizeof(float*)) == 0, "Expected stream size to be multiple of pointer size");
@@ -1481,11 +1481,8 @@ inline void get_stream(T& dev_stream, DeviceStream& stream, size_t components)
     size_t capacity = stream.BlockSize;
 
     auto r_ptr = reinterpret_cast<float**>(&dev_stream);
-    for (size_t i = 0; i < components; ++i)
+    for (size_t i = 0; i <= min_components; ++i) // The last part of the stream is used by the payload
         r_ptr[i] = ptr + i * capacity;
-
-    // The last part of the stream is used by the payload
-    dev_stream.payload = ptr + components * capacity;
 }
 
 } // namespace IG
@@ -1637,25 +1634,25 @@ IG_EXPORT void ignis_gpu_get_tmp_buffer(int dev, int** buf)
 IG_EXPORT void ignis_get_primary_stream(int dev, int id, PrimaryStream* primary, int size)
 {
     auto& stream = sInterface->getPrimaryStream(dev, id, size);
-    IG::get_stream(*primary, stream, IG::MinPrimaryStreamSize);
+    IG::get_stream(primary, stream, IG::MinPrimaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_primary_stream_const(int dev, int id, PrimaryStream* primary)
 {
     auto& stream = sInterface->getPrimaryStream(dev, id);
-    IG::get_stream(*primary, stream, IG::MinPrimaryStreamSize);
+    IG::get_stream(primary, stream, IG::MinPrimaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_secondary_stream(int dev, int id, SecondaryStream* secondary, int size)
 {
     auto& stream = sInterface->getSecondaryStream(dev, id, size);
-    IG::get_stream(*secondary, stream, IG::MinSecondaryStreamSize);
+    IG::get_stream(secondary, stream, IG::MinSecondaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_secondary_stream_const(int dev, int id, SecondaryStream* secondary)
 {
     auto& stream = sInterface->getSecondaryStream(dev, id);
-    IG::get_stream(*secondary, stream, IG::MinSecondaryStreamSize);
+    IG::get_stream(secondary, stream, IG::MinSecondaryStreamSize);
 }
 
 IG_EXPORT void ignis_gpu_swap_primary_streams(int dev)

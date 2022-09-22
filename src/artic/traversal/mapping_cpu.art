@@ -154,7 +154,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
     stack.push(root, ray.tmin);
 
     let extract_hit = @ |hit2: Hit, lane: i32| Hit {
-        ent_id      = -1, // Not used here, will be replaced in the top level BVH
+        ent_id      = InvalidHitId, // Not used here, will be replaced in the top level BVH
         prim_id     = bitcast[i32](rv_extract(bitcast[f32](hit2.prim_id), lane)),
         distance    = rv_extract(hit2.distance, lane),
         prim_coords = make_vec2(rv_extract(hit2.prim_coords.x, lane), rv_extract(hit2.prim_coords.y, lane))
@@ -461,7 +461,7 @@ fn @cpu_traverse_helper( mut ray: Ray
                             let local_hit = cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
                             
                             if active {
-                                if local_hit.prim_id != -1 {
+                                if local_hit.prim_id != InvalidHitId {
                                     if local_hit.distance <= hit.distance {
                                         hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
                                         ray.tmax = hit.distance;
