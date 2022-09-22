@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"bsdfs": [
+		{"type":"djmeasured", "name": "mat-Sphere", "filename": "../../brdf/cc_blue_agat_rgb.bsdf"}
+	]
+}
