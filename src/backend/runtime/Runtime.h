@@ -17,7 +17,7 @@ struct LoaderOptions;
 
 using AOVAccessor = Device::AOVAccessor;
 
-class Runtime {
+class IG_LIB Runtime {
     IG_CLASS_NON_COPYABLE(Runtime);
     IG_CLASS_NON_MOVEABLE(Runtime);
 

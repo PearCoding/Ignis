@@ -27,6 +27,12 @@ If($Config.LOCATION) {
 }
 $DEPS_ROOT=Get-Location
 
+# Setup build dir
+$BUILD_DIR=$Config.BUILD_DIR
+if (![System.IO.Path]::IsPathRooted($BUILD_DIR)) {
+    $BUILD_DIR=$(Join-Path -Path "$IGNIS_ROOT" -ChildPath "$BUILD_DIR")
+}
+
 # Create some necessary folders
 If (!(test-path "bin")) {
     md "bin"
@@ -74,6 +80,8 @@ If($Config.GET_SDL2) {
     & $PSScriptRoot\setup_sdl2.ps1
 }
 
-& $PSScriptRoot\setup_ignis.ps1
+if($Config.CONFIGURE_IGNIS) {
+    & $PSScriptRoot\setup_ignis.ps1
+}
 
 cd $CURRENT

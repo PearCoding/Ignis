@@ -16,7 +16,7 @@ enum class CPUArchitecture {
     Unknown
 };
 
-class Target {
+class IG_LIB Target {
 public:
     Target();
 

@@ -17,7 +17,7 @@ enum LogLevel {
 
 class LogListener;
 class ConsoleLogListener;
-class Logger {
+class IG_LIB Logger {
 public:
     class StreamBuf final : public std::streambuf {
     public:

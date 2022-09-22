@@ -39,7 +39,7 @@ struct ImageMetaData;
 /// Linear image with pixels in format Channels x Width x Height
 /// Only supports RGBA and R images
 /// RGB will be expanded to RGBA for access performance
-struct Image {
+struct IG_LIB Image {
     std::unique_ptr<float[]> pixels;
     size_t width, height, channels;
 

@@ -43,7 +43,7 @@ enum class Quantity {
     _COUNT
 };
 
-class Statistics {
+class IG_LIB Statistics {
 public:
     Statistics();
 

@@ -24,8 +24,8 @@ struct BRDFData {
     bool isotropic, jacobian;
 };
 
-BRDFData* load_brdf_data(std::string path);
-void write_brdf_data(BRDFData* data, std::string path);
+BRDFData* load_brdf_data(const std::filesystem::path& path);
+void write_brdf_data(BRDFData* data, const std::filesystem::path& path);
 
 } // namespace measured
 } // namespace IG

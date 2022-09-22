@@ -162,6 +162,12 @@ private:                              \
 #error Unsupported compiler
 #endif
 
+#if defined(IG_BUILD_LIB)
+#define IG_LIB IG_EXPORT
+#else
+#define IG_LIB IG_IMPORT
+#endif
+
 // Useful includes
 #include <array>
 #include <cmath>

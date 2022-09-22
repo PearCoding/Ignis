@@ -123,7 +123,7 @@ uint32 LoaderShape::addShape(const std::string& name, const Shape& shape)
     if (it != mIDs.end())
         return it->second;
 
-    const uint32 id = mIDs.size();
+    const uint32 id = (uint32)mIDs.size();
     mIDs[name]      = id;
 
     mShapes.emplace_back(shape);

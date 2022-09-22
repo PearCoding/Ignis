@@ -12,7 +12,7 @@ Warp convert_warp(powitacq_rgb::Marginal2D<Dimension> in_warp)
 {
     unsigned int* param_sizes = new unsigned int[Dimension];
     for (unsigned int d = 0; d < Dimension; d++) {
-        param_sizes[d] = in_warp.m_param_values[d].size();
+        param_sizes[d] = (unsigned int)in_warp.m_param_values[d].size();
     }
 
     unsigned int* param_strides = new unsigned int[Dimension];
@@ -115,14 +115,14 @@ std::vector<float> linearize_warp(const Warp* warp)
     return data;
 }
 
-BRDFData* load_brdf_data(std::string brdf_path)
+BRDFData* load_brdf_data(const std::filesystem::path& brdf_path)
 {
-    powitacq_rgb::BRDF* brdf = new powitacq_rgb::BRDF(brdf_path);
+    powitacq_rgb::BRDF* brdf = new powitacq_rgb::BRDF(brdf_path.generic_u8string());
     BRDFData* data           = convert_brdf(brdf);
     return data;
 }
 
-void write_brdf_data(BRDFData* data, std::string path)
+void write_brdf_data(BRDFData* data, const std::filesystem::path& path)
 {
     auto ndf       = linearize_warp(&data->ndf);
     auto vndf      = linearize_warp(&data->vndf);
@@ -130,36 +130,25 @@ void write_brdf_data(BRDFData* data, std::string path)
     auto luminance = linearize_warp(&data->luminance);
     auto rgb       = linearize_warp(&data->rgb);
 
-    IG::FileSerializer os_ndf(path + "_ndf", false);
+    IG::FileSerializer os_ndf(path.generic_string() + "_ndf", false);
     os_ndf.write(ndf, true);
     os_ndf.close();
 
-    IG::FileSerializer os_vndf(path + "_vndf", false);
+    IG::FileSerializer os_vndf(path.generic_string() + "_vndf", false);
     os_vndf.write(vndf, true);
     os_vndf.close();
 
-    IG::FileSerializer os_sigma(path + "_sigma", false);
+    IG::FileSerializer os_sigma(path.generic_string() + "_sigma", false);
     os_sigma.write(sigma, true);
     os_sigma.close();
 
-    IG::FileSerializer os_luminance(path + "_luminance", false);
+    IG::FileSerializer os_luminance(path.generic_string() + "_luminance", false);
     os_luminance.write(luminance, true);
     os_luminance.close();
 
-    IG::FileSerializer os_rgb(path + "_rgb", false);
+    IG::FileSerializer os_rgb(path.generic_string() + "_rgb", false);
     os_rgb.write(rgb, true);
     os_rgb.close();
-}
-
-std::unordered_map<std::string, powitacq_rgb::BRDF*> loaded_c_brdfs;
-powitacq_rgb::BRDF* load_c_brdf(std::string name)
-{
-    if (loaded_c_brdfs.find(name) != loaded_c_brdfs.end()) {
-        return loaded_c_brdfs[name];
-    } else {
-        printf("Loading new BRDF: %s\n", name.c_str());
-        return loaded_c_brdfs[name] = new powitacq_rgb::BRDF("../testing/" + name);
-    }
 }
 
 } // namespace measured

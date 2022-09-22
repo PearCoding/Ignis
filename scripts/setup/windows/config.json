@@ -1,6 +1,8 @@
 {
     "LOCATION": "",
     "CMAKE_SLN": false,
+    "BUILD_DIR": "build/Release",
+    "CONFIGURE_IGNIS": true,
     "GET_ZLIB": true,
     "ZLIB_BUILD_TYPE": "Release",
     "ZLIB_URL": "https://zlib.net/zlib1212.zip",

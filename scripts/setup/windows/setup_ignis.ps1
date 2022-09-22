@@ -1,10 +1,8 @@
 $CURRENT=Get-Location
 
-$BUILD_DIR="$IGNIS_ROOT\build"
 If (!(test-path "$BUILD_DIR")) {
     md "$BUILD_DIR"
 }
-
 cd "$BUILD_DIR"
 
 $CLANG_BIN="$DEPS_ROOT\anydsl\build\_deps\llvm-build\$($Config.AnyDSL_BUILD_TYPE)\bin\clang.exe".Replace("\", "/")
@@ -34,7 +32,7 @@ If($Config.CMAKE_SLN) {
     -DZLIB_INCLUDE_DIR="$ZLIB_INCLUDE" `
     -DSDL2_LIBRARY="$SDL2_LIB" `
     -DSDL2_INCLUDE_DIR="$SDL2_INCLUDE" `
-    ..
+    "$IGNIS_ROOT"
 
     # Make sure all the dlls are in the correct place (for Release at least)
     $OUTPUT_DIR="$BUILD_DIR\bin"
@@ -58,7 +56,7 @@ If($Config.CMAKE_SLN) {
     -DZLIB_INCLUDE_DIR="$ZLIB_INCLUDE" `
     -DSDL2_LIBRARY="$SDL2_LIB" `
     -DSDL2_INCLUDE_DIR="$SDL2_INCLUDE" `
-    ..
+    "$IGNIS_ROOT"
     
     # Make sure all the dlls are in the correct place (for Release at least)
     $OUTPUT_DIR="$BUILD_DIR\bin"

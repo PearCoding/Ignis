@@ -178,7 +178,7 @@ static uint32 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mut
 
     mutex.lock();
     auto& bvhTable = dtb.Tables["trimesh_primbvh"];
-    uint32 bvhId   = bvhTable.entryCount();
+    uint32 bvhId   = (uint32)bvhTable.entryCount();
     auto& bvhData  = bvhTable.addLookup(0, 0, DefaultAlignment);
     VectorSerializer serializer(bvhData, false);
     serializer.write((uint32)bvh.nodes.size());
@@ -283,7 +283,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
 
     mDtbMutex.lock();
     auto& shapeTable = result.Database.Tables["shapes"];
-    auto& meshData   = shapeTable.addLookup(this->id(), 0, DefaultAlignment);
+    auto& meshData   = shapeTable.addLookup((uint32)this->id(), 0, DefaultAlignment);
     VectorSerializer meshSerializer(meshData, false);
     meshSerializer.write((uint32)mesh.faceCount());
     meshSerializer.write((uint32)mesh.vertices.size());
