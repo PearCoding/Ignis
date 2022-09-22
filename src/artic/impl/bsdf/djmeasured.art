@@ -726,7 +726,8 @@ fn @delinearize_warp(buffer : DeviceBuffer, start : i32) {
 // Creates a measured BRDF (Dupuy & Jakob 2018)
 fn @make_djmeasured_bsdf(surf: SurfaceElement, isotropic : bool, jacobian : bool, 
     buffer_ndf : DeviceBuffer, buffer_vndf : DeviceBuffer, buffer_sigma : DeviceBuffer,
-    buffer_luminance : DeviceBuffer, buffer_rgb : DeviceBuffer) {  
+    buffer_luminance : DeviceBuffer, buffer_rgb : DeviceBuffer,
+    tint: Color) {  
 
     let brdf_data = BRDFData {
         ndf = delinearize_warp(buffer_ndf, 0),
@@ -742,7 +743,7 @@ fn @make_djmeasured_bsdf(surf: SurfaceElement, isotropic : bool, jacobian : bool
         eval = @ |in_dir, out_dir| {
             let wo = shading::to_local(surf.local, out_dir);
             let wi = shading::to_local(surf.local, in_dir);
-            evaluate_brdf(brdf_data, wi, wo)
+            color_mul(tint, evaluate_brdf(brdf_data, wi, wo))
         },
         pdf = @ |in_dir, out_dir| {
             let wo = shading::to_local(surf.local, out_dir);
@@ -753,7 +754,7 @@ fn @make_djmeasured_bsdf(surf: SurfaceElement, isotropic : bool, jacobian : bool
             let out_local = shading::to_local(surf.local, out_dir);
             let sample = sample_brdf(brdf_data, make_vec2(randf(rnd), randf(rnd)), out_local);
             let in_global = shading::to_world(surf.local, sample.out);
-            make_bsdf_sample(in_global, sample.pdf, vec3_to_color(sample.res), 1)
+            make_bsdf_sample(in_global, sample.pdf, color_mul(tint, vec3_to_color(sample.res)), 1)
         },
         is_specular = false
     }
