@@ -8,6 +8,7 @@ source $SCRIPT_DIR/../source.sh
 
 quiet=false
 scene=${SCRIPT_DIR}/../scenes/diamond_scene.json
+executable=${BUILD_DIR}/bin/igcli
 spp=64
 num_iterations=10
 warmup_iterations=2
@@ -54,7 +55,7 @@ for ((i = 0; i < $warmup_iterations; i++)); do
     if [ "$quiet" = false ]; then
         echo $(expr $i + 1)
     fi
-    igcli ${args} >/dev/null
+    ${executable} ${args} >/dev/null
 done
 
 # Setup counters
@@ -71,7 +72,7 @@ for ((i = 0; i < $num_iterations; i++)); do
     if [ "$quiet" = false ]; then
         echo $(expr $i + 1)
     fi
-    output=$(igcli ${args})
+    output=$(${executable} ${args})
     output=$(echo "${output}" | grep -Po "$REGEX")
     output=${output:2}
     matches=(${output//\// })

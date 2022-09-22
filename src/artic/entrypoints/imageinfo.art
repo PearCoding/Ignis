@@ -30,9 +30,7 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
         // Sort the window
         batcher_sort(9, @|i, j| {
             if window(i) > window(j) {
-                let a = window(i);
-                window(i) = window(j);
-                window(j) = a;
+                swap(&mut window(i), &mut window(j));
             }
         });
 
