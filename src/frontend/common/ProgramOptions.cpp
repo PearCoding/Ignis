@@ -187,7 +187,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     if (threadCount >= 0)
         Target.setThreadCount((size_t)threadCount);
 
-    if (vectorWidth >= 4) {
+    if (vectorWidth >= 1) {
         // TODO: Make sure it is greater 4 and power of 2
         Target.setVectorWidth((size_t)vectorWidth);
     }

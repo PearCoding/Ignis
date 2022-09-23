@@ -182,7 +182,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         auto& bvh = result.Database.SceneBVHs[p.first->identifier()];
         if (ctx.Target.isGPU()) {
             setup_bvh<2>(p.second, bvh);
-        } else if (ctx.Target.vectorWidth() == 4) {
+        } else if (ctx.Target.vectorWidth() < 8) {
             setup_bvh<4>(p.second, bvh);
         } else {
             setup_bvh<8>(p.second, bvh);

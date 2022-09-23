@@ -254,7 +254,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     uint32 bvh_id = 0;
     if (ctx.Target.isGPU()) {
         bvh_id = setup_bvh<2, 1>(mesh, result.Database, mBvhMutex);
-    } else if (ctx.Target.vectorWidth() == 4) {
+    } else if (ctx.Target.vectorWidth() < 8) {
         bvh_id = setup_bvh<4, 4>(mesh, result.Database, mBvhMutex);
     } else {
         bvh_id = setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);

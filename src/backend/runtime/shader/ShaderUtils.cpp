@@ -15,20 +15,20 @@ std::string ShaderUtils::constructDevice(const Target& target)
 
     stream << "let device = ";
     if (target.isCPU()) {
-        // TODO: Better decisions?
-        bool compact = target.vectorWidth() >= 4;
-        bool single  = compact;
+        const bool compact = false; /*target.vectorWidth() >= 8;*/ // FIXME: Maybe something wrong with this flag?
+        const bool single  = target.vectorWidth() >= 4;
 
+        // TODO: Better decisions?
         std::string min_max = "make_default_min_max()";
         if (target.vectorWidth() >= 4)
             min_max = "make_cpu_int_min_max()";
 
         stream << "make_cpu_device("
-               << (false ? "true" : "false") << ", " // FIXME: Maybe something wrong with this flag?
+               << (compact ? "true" : "false") << ", "
                << (single ? "true" : "false") << ", "
                << min_max << ", "
                << target.vectorWidth()
-               << ", " << target.threadCount()
+               << ", " << target.threadCount() // TODO: Replace this by settings.thread_count if possible
                << ", 16);";
     } else {
         switch (target.gpuVendor()) {
