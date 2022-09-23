@@ -24,7 +24,7 @@ std::string ShaderUtils::constructDevice(const Target& target)
             min_max = "make_cpu_int_min_max()";
 
         stream << "make_cpu_device("
-               << (compact ? "true" : "false") << ", "
+               << (false ? "true" : "false") << ", " // FIXME: Maybe something wrong with this flag?
                << (single ? "true" : "false") << ", "
                << min_max << ", "
                << target.vectorWidth()
