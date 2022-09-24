@@ -56,21 +56,6 @@ float AreaLight::computeFlux(const ShadingTree& tree) const
     return power * mArea * Pi;
 }
 
-static std::string inline_entity(const Entity& entity, uint32 shapeID)
-{
-    const Eigen::Matrix<float, 3, 4> localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
-    const Eigen::Matrix<float, 3, 4> globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
-    const Matrix3f normalMat                   = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
-
-    std::stringstream stream;
-    stream << "Entity{ local_mat = " << LoaderUtils::inlineMatrix34(localMat)
-           << ", global_mat = " << LoaderUtils::inlineMatrix34(globalMat)
-           << ", normal_mat = " << LoaderUtils::inlineMatrix(normalMat)
-           << ", scale = " << std::abs(normalMat.determinant())
-           << ", shape_id = " << shapeID << " }";
-    return stream.str();
-}
-
 void AreaLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
@@ -108,10 +93,17 @@ void AreaLight::serialize(const SerializationInput& input) const
                      << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[3])
                      << ");" << std::endl;
     } else if (input.Tree.context().Shapes->isTriShape(shape_id)) {
-        // FIXME: This has to be implemented!
-        IG_ASSERT(false, "Missing implementation!");
-        input.Stream << "  let ae_" << light_id << " = make_shape_area_emitter(" << inline_entity(entity, shape_id)
-                     << ", shapes(" << shape_id << "));" << std::endl;
+        const auto& shape = input.Tree.context().Shapes->getShape(shape_id);
+        const auto& tri   = input.Tree.context().Shapes->getTriShape(shape_id);
+        input.Stream << "  let trimesh_" << light_id << " = load_trimesh_entry(device, "
+                     << shape.TableOffset
+                     << ", " << tri.FaceCount
+                     << ", " << tri.VertexCount
+                     << ", " << tri.NormalCount
+                     << ", " << tri.TexCount << ");" << std::endl
+                     << "  let ae_" << light_id << " = make_shape_area_emitter(" << LoaderUtils::inlineEntity(entity, shape_id)
+                     << ", make_trimesh_shape(trimesh_" << light_id << ")"
+                     << ", trimesh_" << light_id << ");" << std::endl;
     } else {
         // Error already messaged
         input.Tree.signalError();

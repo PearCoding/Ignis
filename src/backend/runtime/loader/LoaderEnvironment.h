@@ -9,6 +9,7 @@
 namespace IG {
 
 struct Entity {
+    size_t ID;
     Transformf Transform;
     std::string Name;
     std::string Shape;

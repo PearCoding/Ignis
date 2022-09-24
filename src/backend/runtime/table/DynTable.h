@@ -28,6 +28,7 @@ public:
 
     [[nodiscard]] inline const std::vector<LookupEntry>& lookups() const { return mLookups; }
     [[nodiscard]] inline const std::vector<uint8>& data() const { return mData; }
+    [[nodiscard]] inline size_t currentOffset() const { return mData.size(); }
 
 private:
     std::vector<LookupEntry> mLookups;

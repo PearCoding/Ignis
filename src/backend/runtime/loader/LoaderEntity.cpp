@@ -40,6 +40,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
     entityTable.reserve(ctx.Scene.entities().size() * 48);
 
     std::unordered_map<ShapeProvider*, std::vector<EntityObject>> in_objs;
+    size_t idCounter = 0;
     for (const auto& pair : ctx.Scene.entities()) {
         const auto child = pair.second;
 
@@ -119,7 +120,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         // Register name for lights to associate with
         uint32 materialID = 0;
         if (ctx.Lights->isAreaLight(pair.first)) {
-            ctx.Environment.EmissiveEntities.insert({ pair.first, Entity{ transform, pair.first, shapeName, bsdfName } });
+            ctx.Environment.EmissiveEntities.insert({ pair.first, Entity{ idCounter, transform, pair.first, shapeName, bsdfName } });
 
             // It is a unique material
             materialID = (uint32)ctx.Environment.Materials.size();
@@ -160,14 +161,12 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         obj.Flags = entity_flags; // Only added to bvh
 
         in_objs[shape.Provider].emplace_back(obj);
+        idCounter++;
     }
 
     IG_LOG(L_DEBUG) << "Storing Entities took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
-    ctx.EntityCount = 0;
-    for (auto& p : in_objs)
-        ctx.EntityCount += p.second.size();
-
+    ctx.EntityCount = idCounter;
     if (ctx.EntityCount == 0) {
         ctx.Environment.SceneDiameter = 0;
         return true;

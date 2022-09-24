@@ -277,19 +277,12 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
 
     // Make sure the id used in shape is same as in the dyntable later
     mDtbMutex.lock();
-    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, bvh_id, bbox });
-
-    // Check if shape is actually just a simple plane
-    if (plane.has_value())
-        ctx.Shapes->addPlaneShape(id, plane.value());
-
-    // Add internal shape structure to table for potential area light usage
-    ctx.Shapes->addTriShape(id, shape);
-
-    // Export data:
     IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
 
-    auto& meshData = result.Database.Tables["shapes"].addLookup((uint32)this->id(), 0, DefaultAlignment);
+    auto& table         = result.Database.Tables["shapes"];
+    auto& meshData      = table.addLookup((uint32)this->id(), 0, DefaultAlignment);
+    const size_t offset = table.currentOffset();
+
     VectorSerializer meshSerializer(meshData, false);
     meshSerializer.write((uint32)mesh.faceCount());
     meshSerializer.write((uint32)mesh.vertices.size());
@@ -301,6 +294,15 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     meshSerializer.write(mesh.indices, true);   // Already aligned
     meshSerializer.write(mesh.texcoords, true); // Aligned to 4*2 bytes
     meshSerializer.write(mesh.face_inv_area, true);
+    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, bvh_id, bbox, offset });
+
+    // Check if shape is actually just a simple plane
+    if (plane.has_value())
+        ctx.Shapes->addPlaneShape(id, plane.value());
+
+    // Add internal shape structure to table for potential area light usage
+    ctx.Shapes->addTriShape(id, shape);
+
     mDtbMutex.unlock();
 }
 

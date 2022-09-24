@@ -20,6 +20,22 @@ std::string LoaderUtils::inlineSceneBBox(const LoaderContext& ctx)
     return stream.str();
 }
 
+std::string LoaderUtils::inlineEntity(const Entity& entity, uint32 shapeID)
+{
+    const Eigen::Matrix<float, 3, 4> localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
+    const Eigen::Matrix<float, 3, 4> globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
+    const Matrix3f normalMat                   = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
+
+    std::stringstream stream;
+    stream << "Entity{ id = " << entity.ID
+           << ", local_mat = " << LoaderUtils::inlineMatrix34(localMat)
+           << ", global_mat = " << LoaderUtils::inlineMatrix34(globalMat)
+           << ", normal_mat = " << LoaderUtils::inlineMatrix(normalMat)
+           << ", scale = " << std::abs(normalMat.determinant())
+           << ", shape_id = " << shapeID << " }";
+    return stream.str();
+}
+
 std::string LoaderUtils::escapeIdentifier(const std::string& name)
 {
     IG_ASSERT(!name.empty(), "Given string should not be empty");

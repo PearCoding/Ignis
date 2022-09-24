@@ -38,6 +38,7 @@ public:
     void addPlaneShape(uint32 id, const PlaneShape& shape);
 
     [[nodiscard]] inline const std::unordered_map<std::string, std::unique_ptr<ShapeProvider>>& providers() const { return mShapeProviders; }
+    [[nodiscard]] inline ShapeProvider* getProvider(const std::string& name) const { return mShapeProviders.at(name).get(); }
 
 private:
     std::unordered_map<std::string, std::unique_ptr<ShapeProvider>> mShapeProviders;

@@ -87,14 +87,16 @@ fn @make_trimesh_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, num_
     }
 }
 
-fn @load_specific_trimesh_from_table(num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32,
-                                   offset: i32, dtb: DynTable, acc: DeviceBufferAccessor) -> TriMesh {
-    let data = get_table_entry(offset as u64, dtb, acc);
+fn @load_trimesh(data: DeviceBuffer) -> TriMesh {
+    let (num_face, num_verts, num_norms, num_tex) = data.load_int4(0);
     make_trimesh_from_buffer(num_face, num_verts, num_norms, num_tex, data)
 }
 
-fn @load_trimesh(data: DeviceBuffer) -> TriMesh {
-    let (num_face, num_verts, num_norms, num_tex) = data.load_int4(0);
+fn @load_trimesh_entry(device: Device, offset: u64, num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32) -> TriMesh {
+    let dtb  = device.load_dyntable("shapes");
+    let accb = device.get_device_buffer_accessor();
+
+    let data = get_table_entry(offset, dtb, accb);
     make_trimesh_from_buffer(num_face, num_verts, num_norms, num_tex, data)
 }
 

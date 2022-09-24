@@ -4,11 +4,14 @@
 
 namespace IG {
 struct ElevationAzimuth;
+struct Entity;
 
 class LoaderUtils {
 public:
     static std::string inlineSceneInfo(const LoaderContext& ctx);
     static std::string inlineSceneBBox(const LoaderContext& ctx);
+
+    static std::string inlineEntity(const Entity& entity, uint32 shapeID);
 
     static std::string escapeIdentifier(const std::string& name);
     static std::string inlineTransformAs2d(const Transformf& t);
