@@ -1,4 +1,5 @@
-#define IG_PARALLEL_LOAD
+// There is a bug when loading in parallel, disable it for now
+// #define IG_PARALLEL_LOAD
 
 #include "LoaderShape.h"
 #include "Loader.h"
