@@ -28,7 +28,7 @@ std::string ShaderUtils::constructDevice(const Target& target)
                << (single ? "true" : "false") << ", "
                << min_max << ", "
                << target.vectorWidth()
-               << ", " << target.threadCount() // TODO: Replace this by settings.thread_count if possible
+               << ", settings.thread_count"
                << ", 16);";
     } else {
         switch (target.gpuVendor()) {

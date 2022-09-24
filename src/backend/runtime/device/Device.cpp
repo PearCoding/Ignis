@@ -213,7 +213,8 @@ public:
         , driver_settings()
         , is_gpu(setup.target.isGPU())
     {
-        driver_settings.device = (int)setup.target.device();
+        driver_settings.device       = (int)setup.target.device();
+        driver_settings.thread_count = (int)setup.target.threadCount();
         updateSettings(Device::RenderSettings{}); // Initialize with default values
 
         setupFramebuffer();
