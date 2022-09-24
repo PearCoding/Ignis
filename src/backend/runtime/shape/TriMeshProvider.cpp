@@ -251,6 +251,9 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
         bbox.extend(v);
     bbox.inflate(1e-5f); // Make sure it has a volume
 
+    IG_ASSERT(mesh.face_normals.size() == mesh.faceCount(), "Expected valid face normals!");
+    IG_ASSERT((mesh.indices.size() % 4) == 0, "Expected index buffer count to be a multiple of 4!");
+
     // Setup bvh
     uint32 bvh_id = 0;
     if (ctx.Target.isGPU()) {
@@ -260,29 +263,32 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     } else {
         bvh_id = setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);
     }
-    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, bvh_id, bbox });
 
-    // Check if shape is actually just a simple plane
-    auto plane = mesh.getAsPlane();
-    if (plane.has_value())
-        ctx.Shapes->addPlaneShape(id, plane.value());
+    // Precompute if plane or not
+    const auto plane = mesh.getAsPlane();
 
-    // Register triangle shape
+    // Setup internal shape object
     TriShape shape;
     shape.VertexCount = mesh.vertices.size();
     shape.NormalCount = mesh.normals.size();
     shape.TexCount    = mesh.texcoords.size();
     shape.FaceCount   = mesh.faceCount();
     shape.Area        = mesh.computeArea();
-    ctx.Shapes->addTriShape(id, shape);
 
-    IG_ASSERT(mesh.face_normals.size() == mesh.faceCount(), "Expected valid face normals!");
-    IG_ASSERT((mesh.indices.size() % 4) == 0, "Expected index buffer count to be a multiple of 4!");
+    // Make sure the id used in shape is same as in the dyntable later
+    mDtbMutex.lock();
+    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, bvh_id, bbox });
+
+    // Check if shape is actually just a simple plane
+    if (plane.has_value())
+        ctx.Shapes->addPlaneShape(id, plane.value());
+
+    // Add internal shape structure to table for potential area light usage
+    ctx.Shapes->addTriShape(id, shape);
 
     // Export data:
     IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
 
-    mDtbMutex.lock();
     auto& meshData = result.Database.Tables["shapes"].addLookup((uint32)this->id(), 0, DefaultAlignment);
     VectorSerializer meshSerializer(meshData, false);
     meshSerializer.write((uint32)mesh.faceCount());
