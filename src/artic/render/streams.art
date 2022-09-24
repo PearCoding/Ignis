@@ -99,7 +99,7 @@ fn @make_secondary_stream_hit_writer(secondary: SecondaryStream, vector_width: i
     @ |i, j, hit| {
         let k      = i * vector_width + j;
         let mat_id = secondary.mat_id(k);
-        secondary.mat_id(k) = select(hit.prim_id < 0, -abs(mat_id), abs(mat_id));
+        secondary.mat_id(k) = select(hit.prim_id < 0, -abs(mat_id), abs(mat_id)); // TODO: 0?
     }
 }
 

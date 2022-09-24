@@ -172,9 +172,10 @@ struct BvhTemporary {
 template <size_t N, size_t T>
 static uint32 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mutex)
 {
+    IG_ASSERT(mesh.faceCount() > 0, "Expected mesh to contain some triangles");
+
     BvhTemporary<N, T> bvh;
-    if (mesh.faceCount() > 0)
-        build_bvh<N, T>(mesh, bvh.nodes, bvh.tris);
+    build_bvh<N, T>(mesh, bvh.nodes, bvh.tris);
 
     mutex.lock();
     auto& bvhTable = dtb.Tables["trimesh_primbvh"];
@@ -282,8 +283,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
 
     mDtbMutex.lock();
-    auto& shapeTable = result.Database.Tables["shapes"];
-    auto& meshData   = shapeTable.addLookup((uint32)this->id(), 0, DefaultAlignment);
+    auto& meshData = result.Database.Tables["shapes"].addLookup((uint32)this->id(), 0, DefaultAlignment);
     VectorSerializer meshSerializer(meshData, false);
     meshSerializer.write((uint32)mesh.faceCount());
     meshSerializer.write((uint32)mesh.vertices.size());

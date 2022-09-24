@@ -44,7 +44,7 @@ struct BvhNTriM<2, 1> {
 
 struct TriangleProxy : public bvh::Triangle<float> {
     using bvh::Triangle<float>::Triangle;
-    int prim_id;
+    int32 prim_id;
 };
 
 template <size_t N, size_t M, template <typename> typename Allocator>
@@ -169,15 +169,15 @@ inline void build_bvh(const TriMesh& tri_mesh,
     // using BvhBuilder = bvh::LocallyOrderedClusteringBuilder<Bvh, uint32>;
     // using BvhBuilder = bvh::SweepSahBuilder<Bvh>;
 
-    const size_t num_tris = tri_mesh.indices.size() / 4;
+    const size_t num_tris = tri_mesh.faceCount();
     std::vector<TriangleProxy> primitives(num_tris);
     for (size_t i = 0; i < num_tris; ++i) {
-        auto& v0      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 0]];
-        auto& v1      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 1]];
-        auto& v2      = tri_mesh.vertices[tri_mesh.indices[i * 4 + 2]];
+        auto& v0      = tri_mesh.vertices.at(tri_mesh.indices.at(i * 4 + 0));
+        auto& v1      = tri_mesh.vertices.at(tri_mesh.indices.at(i * 4 + 1));
+        auto& v2      = tri_mesh.vertices.at(tri_mesh.indices.at(i * 4 + 2));
         primitives[i] = TriangleProxy(v0, v1, v2);
 
-        primitives[i].prim_id = (int)i;
+        primitives[i].prim_id = (int32)i;
     }
 
     auto [bboxes, centers] = bvh::compute_bounding_boxes_and_centers(primitives.data(), primitives.size());
