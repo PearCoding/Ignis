@@ -183,11 +183,8 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     else
         Target = IG::Target::pickBest();
 
-    if (device >= 0)
-        Target.setDevice((size_t)device);
-
-    if (threadCount >= 0)
-        Target.setThreadCount((size_t)threadCount);
+    Target.setDevice((size_t)device);
+    Target.setThreadCount((size_t)threadCount);
 
     if (vectorWidth >= 1)
         Target.setVectorWidth((size_t)vectorWidth);
