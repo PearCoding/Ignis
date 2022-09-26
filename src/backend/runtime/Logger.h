@@ -86,11 +86,7 @@ public:
 
     std::ostream& startEntry(LogLevel level);
 
-    static inline Logger& instance()
-    {
-        static Logger this_log;
-        return this_log;
-    }
+    static Logger& instance();
 
     static inline std::ostream& log(LogLevel level)
     {

@@ -17,5 +17,8 @@ public:
 
 private:
     bool mUseAnsi;
+
+    void startColoring(LogLevel level);
+    void stopColoring();
 };
 } // namespace IG

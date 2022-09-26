@@ -5,13 +5,7 @@
 
 namespace IG {
 Logger::Logger()
-    : mConsoleLogListener(std::make_shared<ConsoleLogListener>(
-#ifdef IG_OS_LINUX
-        true
-#else
-        false
-#endif
-        ))
+    : mConsoleLogListener(std::make_shared<ConsoleLogListener>(true))
 #ifdef IG_DEBUG
     , mVerbosity(L_DEBUG)
 #else
@@ -36,6 +30,12 @@ Logger& Logger::operator=(const Logger& other)
     mConsoleLogListener = other.mConsoleLogListener;
     mListener           = other.mListener;
     return *this;
+}
+
+Logger& Logger::instance()
+{
+    static Logger this_log;
+    return this_log;
 }
 
 static const char* const levelStr[] = {

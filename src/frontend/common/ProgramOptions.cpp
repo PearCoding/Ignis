@@ -77,11 +77,11 @@ public:
 
 ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, const std::string& desc)
 {
-    bool useCPU     = false;
-    bool useGPU     = false;
-    int threadCount = 0;
-    int vectorWidth = 0;
-    int device      = 0;
+    bool useCPU        = false;
+    bool useGPU        = false;
+    uint32 threadCount = 0;
+    uint32 vectorWidth = 0;
+    uint32 device      = 0;
 
     Type = type;
 
@@ -140,6 +140,8 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
 
     app.add_option("--script-dir", ScriptDir, "Override internal script standard library by '.art' files from the given directory");
 
+    app.add_option("-O,--shader-optimization", ShaderOptimizationLevel, "Level of optimization applied to shaders. Range is [0, 3]. Level 0 will also add debug information")->default_val(ShaderOptimizationLevel);
+
     app.add_flag("--add-env-light", AddExtraEnvLight, "Add additional constant environment light. This is automatically done for glTF scenes without any lights");
     app.add_flag("--force-specialization", ForceSpecialization, "Enforce specialization for parameters in shading tree. This will increase compile time drastically for potential runtime optimization");
 
@@ -187,10 +189,8 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     if (threadCount >= 0)
         Target.setThreadCount((size_t)threadCount);
 
-    if (vectorWidth >= 1) {
-        // TODO: Make sure it is greater 4 and power of 2
+    if (vectorWidth >= 1)
         Target.setVectorWidth((size_t)vectorWidth);
-    }
 }
 
 void ProgramOptions::populate(RuntimeOptions& options) const
@@ -198,7 +198,7 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     IG_LOGGER.setQuiet(Quiet);
     IG_LOGGER.setVerbosity(VerbosityLevel);
     IG_LOGGER.enableAnsiTerminal(!NoColor);
-
+    
     options.IsTracer      = Type == ApplicationType::Trace;
     options.IsInteractive = Type == ApplicationType::View;
 
@@ -220,7 +220,27 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.Denoiser.FollowSpecular     = DenoiserFollowSpecular;
     options.Denoiser.OnlyFirstIteration = DenoiserOnlyFirstIteration;
 
-    options.ScriptDir = ScriptDir;
+    options.ScriptDir               = ScriptDir;
+    options.ShaderOptimizationLevel = std::min<size_t>(3, ShaderOptimizationLevel);
+    
+    // Check for power of two and round up if not the case
+    uint64_t vectorWidth = options.Target.vectorWidth();
+    if (vectorWidth == 2) {
+        vectorWidth = 4;
+        IG_LOG(L_WARNING) << "Given vector width is 2, which is invalid. Setting it to " << vectorWidth << std::endl;
+    } else if ((vectorWidth & (vectorWidth - 1)) != 0) {
+        vectorWidth--;
+        vectorWidth |= vectorWidth >> 1;
+        vectorWidth |= vectorWidth >> 2;
+        vectorWidth |= vectorWidth >> 4;
+        vectorWidth |= vectorWidth >> 8;
+        vectorWidth |= vectorWidth >> 16;
+        vectorWidth |= vectorWidth >> 32;
+        vectorWidth++;
+
+        IG_LOG(L_WARNING) << "Given vector width is not power of 2. Setting it to " << vectorWidth << std::endl;
+    }
+    options.Target.setVectorWidth((size_t)vectorWidth);
 }
 
 } // namespace IG

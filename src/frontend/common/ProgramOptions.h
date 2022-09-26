@@ -67,6 +67,8 @@ public:
     bool DenoiserFollowSpecular     = false;
     bool DenoiserOnlyFirstIteration = false;
 
+    size_t ShaderOptimizationLevel = 3;
+
     std::filesystem::path Output;
     std::filesystem::path InputScene;
     std::filesystem::path InputRay;

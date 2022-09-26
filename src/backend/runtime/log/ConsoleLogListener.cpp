@@ -29,29 +29,13 @@ ConsoleLogListener::ConsoleLogListener(bool useAnsi)
 void ConsoleLogListener::startEntry(LogLevel level)
 {
     std::cout << "[";
-    if (mUseAnsi) {
-        switch (level) {
-        case L_DEBUG:
-            std::cout << ANSI_DARK_GRAY;
-            break;
-        case L_INFO:
-            break;
-        case L_WARNING:
-            std::cout << ANSI_YELLOW;
-            break;
-        case L_ERROR:
-            std::cout << ANSI_LIGHT_RED;
-            break;
-        case L_FATAL:
-            std::cout << ANSI_RED;
-            break;
-        }
-    }
+    if (mUseAnsi) 
+        startColoring(level);
 
     std::cout << Logger::levelString(level);
 
     if (mUseAnsi)
-        std::cout << ANSI_RESET;
+        stopColoring();
 
     std::cout << "] ";
 }
@@ -59,5 +43,30 @@ void ConsoleLogListener::startEntry(LogLevel level)
 void ConsoleLogListener::writeEntry(char c)
 {
     std::cout.put(c);
+}
+
+void ConsoleLogListener::startColoring(LogLevel level) 
+{
+    switch (level) {
+    case L_DEBUG:
+        std::cout << ANSI_DARK_GRAY;
+        break;
+    case L_INFO:
+        break;
+    case L_WARNING:
+        std::cout << ANSI_YELLOW;
+        break;
+    case L_ERROR:
+        std::cout << ANSI_LIGHT_RED;
+        break;
+    case L_FATAL:
+        std::cout << ANSI_RED;
+        break;
+    }
+}
+
+void ConsoleLogListener::stopColoring() 
+{
+    std::cout << ANSI_RESET;
 }
 } // namespace IG

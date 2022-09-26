@@ -48,7 +48,7 @@ cmake `
     ..
 
 # Build it
-cmake --build . --config "$BUILD_TYPE" --target runtime runtime_jit_artic artic
+cmake --build . --config "$BUILD_TYPE" --target pull-thorin pull-artic pull-runtime runtime runtime_jit_artic artic
 
 # Copy necessary stuff
 $ZLIB_DLL="$ZLIB\bin\zlib.dll"

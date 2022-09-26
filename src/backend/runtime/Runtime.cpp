@@ -93,6 +93,10 @@ Runtime::Runtime(const RuntimeOptions& opts)
 {
     checkCacheDirectory();
 
+    // Configure compiler
+    mCompiler.setOptimizationLevel(std::min<size_t>(3, mOptions.ShaderOptimizationLevel));
+    mCompiler.setVerbose(IG_LOGGER.verbosity() == L_DEBUG);
+
     // Check configuration
     if (!mTarget.isValid())
         throw std::runtime_error("Could not pick a suitable target");
@@ -520,7 +524,7 @@ void* Runtime::compileShader(const std::string& src, const std::string& func, co
     if (mOptions.DumpShaderFull)
         dumpShader(name + "_full.art", full_shader);
 
-    return mCompiler.compile(full_shader, func, IG_LOGGER.verbosity() == L_DEBUG);
+    return mCompiler.compile(full_shader, func);
 }
 
 void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)

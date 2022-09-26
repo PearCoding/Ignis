@@ -10,21 +10,27 @@ extern const char* ig_api[];
 extern const char* ig_api_paths[];
 
 namespace IG {
-// TODO: Really fixed at compile time?
-#ifdef IG_DEBUG
-constexpr uint32_t OPT_LEVEL = 0;
-#else
-constexpr uint32_t OPT_LEVEL = 3;
-#endif
-void* ScriptCompiler::compile(const std::string& script, const std::string& function, bool isVerbose) const
+ScriptCompiler::ScriptCompiler() 
+    : mStdLibOverride()
+    , mOptimizationLevel(3)
+    , mVerbose(false)
+{
+
+}
+
+ScriptCompiler::~ScriptCompiler() {
+
+}
+
+void* ScriptCompiler::compile(const std::string& script, const std::string& function) const
 {
 #ifdef IG_DEBUG
-    anydsl_set_log_level(isVerbose ? 1 /* info */ : 4 /* error */);
+    anydsl_set_log_level(mVerbose ? 1 /* info */ : 4 /* error */);
 #else
-    anydsl_set_log_level(isVerbose ? 3 /* warn */ : 4 /* error */);
+    anydsl_set_log_level(mVerbose ? 3 /* warn */ : 4 /* error */);
 #endif
 
-    int ret = anydsl_compile(script.c_str(), (uint32_t)script.length(), OPT_LEVEL);
+    const int ret = anydsl_compile(script.c_str(), (uint32_t)script.length(), (uint32_t)mOptimizationLevel);
     if (ret < 0)
         return nullptr;
 

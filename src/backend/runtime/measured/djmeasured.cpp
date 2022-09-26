@@ -2,8 +2,10 @@
 #include "Logger.h"
 #include "serialization/FileSerializer.h"
 
+IG_BEGIN_IGNORE_WARNINGS
 #define POWITACQ_IMPLEMENTATION
 #include "powitacq_rgb.h"
+IG_END_IGNORE_WARNINGS
 
 namespace IG {
 namespace measured {
