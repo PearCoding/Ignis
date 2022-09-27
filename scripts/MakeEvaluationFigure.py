@@ -64,27 +64,34 @@ if __name__ == "__main__":
     title.set_title("top", "Reference Evaluations")
 
     errors = []
-    grid = figuregen.Grid(len(image_names), 3)
+    cpu_errors = []
+    grid = figuregen.Grid(len(image_names), 5)
     i = 0
     for scene, ref_name, depth in scenes:
         image_name = f"{scene}4096-d{depth}"
+        image_cpu_name = f"{scene}4096-cpu-d{depth}"
         ref_name = "ref-" + (image_name if ref_name is None else f"{ref_name}4096-d{depth}")
 
         img = sio.read(f"{result_dir}/{image_name}.exr")
+        img_cpu = sio.read(f"{result_dir}/{image_cpu_name}.exr")
         ref_img = sio.read(f"{ref_dir}/{ref_name}.exr")
 
         errors.append(sio.relative_mse_outlier_rejection(img, ref_img, 0.001))
+        cpu_errors.append(sio.relative_mse_outlier_rejection(img_cpu, ref_img, 0.001))
 
         grid[i, 0].set_image(map_img(ref_img))
         grid[i, 1].set_image(map_img(img))
         grid[i, 2].set_image(map_img(error_image(img, ref_img)))
+        grid[i, 3].set_image(map_img(img_cpu))
+        grid[i, 4].set_image(map_img(error_image(img_cpu, ref_img)))
 
         i += 1
 
-    grid.set_col_titles("top", ["Reference", "Render", "Rel. Error"])
+    grid.set_col_titles("top", ["Reference", "Render GPU", "Rel. Error GPU", "Render CPU", "Rel. Error CPU"])
     grid.set_row_titles(
         "left", [f"{scene}-d{depth}" for (scene, _, depth) in scenes])
-    grid.set_row_titles("right", [f"RelMSE {err:.2E}" for err in errors])
+    grid.set_row_titles("right", [f"RelMSE (GPU,CPU)\\\\ {err:.2E} | {cerr:.2E}" for err, cerr in zip(errors, cpu_errors)])
+    grid.layout.set_row_titles("right", field_size_mm=10, fontsize=6)
 
     rows = []
     rows.append([title])
