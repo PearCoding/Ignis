@@ -54,7 +54,7 @@ Information about building Ignis is available in the documentation [online](http
 
 ## Frontends
 
-The frontends of the raytracer communicate with the user and one, optimal selected, backend.
+The frontends of the raytracer communicate with the user and the runtime.
 Currently, four frontends are available:
 
  - `igview` This is the standard UI interface which displays the scene getting progressively rendered. This frontend is very good to get a first impression of the rendered scene and fly around to pick the one best camera position. Keep in mind that some power of your underlying hardware is used to render the UI and the tonemapping algorithms. Switching to the UI-less frontend `igcli` might be a good idea if no preview is necessary. Note, `igview` will be only available if the UI feature is enabled and SDL2 is available on your system. Disable this frontend by setting the CMake option `IG_WITH_VIEWER` to Off.
