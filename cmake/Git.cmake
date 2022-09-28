@@ -6,7 +6,7 @@ else()
 set(_TOPLEVEL_DIR ${PROJECT_SOURCE_DIR})
 endif()
 
-set(PRE_CONFIGURE_FILE "${_TOPLEVEL_DIR}/src/backend/runtime/config/Git.h.in")
+set(PRE_CONFIGURE_FILE "${_TOPLEVEL_DIR}/src/runtime/config/Git.h.in")
 set(POST_CONFIGURE_FILE "${CMAKE_CURRENT_BINARY_DIR}/config/Git.h")
 
 # git_watcher.cmake
