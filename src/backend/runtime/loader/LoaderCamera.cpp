@@ -71,6 +71,9 @@ static void camera_perspective(std::ostream& stream, const std::string& name, co
     float focal_length    = camera ? camera->property("focal_length").getNumber(1) : 1;
     float aperture_radius = camera ? camera->property("aperture_radius").getNumber(0) : 0;
 
+    int lens_element_size = camera ? camera->property("lens_element").getNumber(1) : 0; 
+    float use_lens = camera ? camera->property("use_lens").getNumber(1) : 0;
+
     if (tmax < tmin)
         std::swap(tmin, tmax);
 
@@ -87,7 +90,16 @@ static void camera_perspective(std::ostream& stream, const std::string& name, co
 
     const std::string fov_gen = fov.first ? "compute_scale_from_vfov" : "compute_scale_from_hfov";
 
-    if (aperture_radius <= FltEps) {
+    if (use_lens) {
+        stream << "  let camera = make_lens_camera(camera_eye, " << std::endl
+               << "    camera_dir, " << std::endl
+               << "    camera_up, " << std::endl
+               << "    " << lens_element_size << ", " << std::endl
+               << "    " << fov_gen << "(" << (fov.second * Deg2Rad) << ", " << aspect_ratio << "), " << std::endl
+               << "    " << tmin << ", " << std::endl
+               << "    " << tmax << ");" << std::endl;
+    }
+    else if (aperture_radius <= FltEps) && (!use_lens) {
         stream << "  let camera = make_perspective_camera(camera_eye, " << std::endl
                << "    camera_dir, " << std::endl
                << "    camera_up, " << std::endl
