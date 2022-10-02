@@ -95,6 +95,19 @@ fn @make_primary_stream_hit_writer(primary: PrimaryStream, vector_width: i32) ->
     }
 }
 
+fn @make_secondary_stream_hit_reader(secondary: SecondaryStream, vector_width: i32) -> fn (i32, i32) -> Hit {
+    @ |i, j| {
+        // TODO: Better approach?
+        let k = i * vector_width + j;
+        let mat_id = secondary.mat_id(k);
+        if mat_id < 0 {
+            make_hit(InvalidHitId, InvalidHitId, flt_max, vec2_expand(0))
+        } else {
+            make_hit(mat_id, mat_id, flt_max, vec2_expand(0))
+        }
+    }
+}
+
 fn @make_secondary_stream_hit_writer(secondary: SecondaryStream, vector_width: i32) -> fn (i32, i32, Hit) -> () {
     @ |i, j, hit| {
         let k      = i * vector_width + j;

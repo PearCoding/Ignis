@@ -6,7 +6,8 @@
 	"shapes": [
 		{"type":"rectangle", "name":"Bottom", "width":10, "height":8},
 		{"type":"cube", "name":"Box"},
-		{"type":"sphere", "name":"IcoSphere"}, // Same as icosphere
+		{"type":"sphere", "name":"Sphere"}, 
+		{"type":"icosphere", "name":"IcoSphere"}, 
 		{"type":"uvsphere", "name":"UVSphere"},
 		{"type":"cylinder", "name":"Cylinder"},
 		{"type":"cylinder", "name":"Cylinder2", "filled":false},
@@ -16,6 +17,7 @@
 	],
 	"entities": [
 		{"name":"Bottom","shape":"Bottom", "bsdf":"ground", "transform": {"translate":[0,0,-1]}},
+		{"name":"Sphere","shape":"Sphere", "bsdf":"object", "transform": {"translate":[-2,2,0]}},
 		{"name":"IcoSphere","shape":"IcoSphere", "bsdf":"object", "transform": {"translate":[-2,0,0]}},
 		{"name":"UVSphere","shape":"UVSphere", "bsdf":"object", "transform": {"translate":[-2,-2,0]}},
 		{"name":"Cube","shape":"Box", "bsdf":"object", "transform": {"translate":[-4,0,0], "scale":0.5}},

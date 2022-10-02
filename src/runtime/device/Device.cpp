@@ -1,4 +1,4 @@
-//#define IG_DEBUG_LOG_TRACE
+// #define IG_DEBUG_LOG_TRACE
 
 #include "Device.h"
 #include "Image.h"
@@ -143,8 +143,7 @@ public:
         IG_CLASS_NON_MOVEABLE(DeviceData);
 
     public:
-        bool scene_loaded = false;
-        BvhVariant bvh_ent;
+        std::unordered_map<std::string, BvhVariant> bvh_ents;
         anydsl::Array<int32_t> tmp_buffer;
         TemporaryStorageHostProxy temporary_storage_host;
         std::array<DeviceStream, GPUStreamBufferCount> primary;
@@ -501,12 +500,13 @@ public:
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
 
-        auto& device = devices[dev];
-        if (!device.scene_loaded) {
-            device.bvh_ent      = std::move(loadSceneBVH<Node>(dev, prim_type));
-            device.scene_loaded = true;
-        }
-        return std::get<Bvh>(device.bvh_ent);
+        auto& device    = devices[dev];
+        std::string str = prim_type;
+        auto it         = device.bvh_ents.find(str);
+        if (it == device.bvh_ents.end())
+            return std::get<Bvh>(device.bvh_ents.emplace(str, std::move(loadSceneBVH<Node>(dev, prim_type))).first->second);
+        else
+            return std::get<Bvh>(it->second);
     }
 
     inline const anydsl::Array<StreamRay>& loadRayList(int32_t dev)
@@ -587,6 +587,7 @@ public:
     template <typename Node>
     inline BvhProxy<Node, EntityLeaf1> loadSceneBVH(int32_t dev, const char* prim_type)
     {
+        IG_LOG(L_DEBUG) << "Loading scene bvh " << prim_type << std::endl;
         const auto& bvh         = database->SceneBVHs.at(prim_type);
         const size_t node_count = bvh.Nodes.size() / sizeof(Node);
         const size_t leaf_count = bvh.Leaves.size() / sizeof(EntityLeaf1);

@@ -17,7 +17,6 @@ public:
     std::string generateTraversalCode(const LoaderContext& ctx) override;
 
 private:
-    std::mutex mDtbMutex;
     std::mutex mBvhMutex;
 };
 } // namespace IG

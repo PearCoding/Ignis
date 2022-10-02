@@ -84,14 +84,14 @@ fn @make_cpu_entity_leaf(j: i32, objs: &[EntityLeaf1]) -> EntityLeaf {
     let e0 = d.load_vec4(0);
     let e1 = d.load_vec4(4);
     let m  = d.load_mat3x4(8);
-    let e2 = d.load_vec4(20);
+    let (f, u1, u2, u3) = d.load_int4(20);
     make_entity_leaf(
         make_bbox(make_vec3(e0.x, e0.y, e0.z),
                   make_vec3(e1.x, e1.y, e1.z)),
         bitcast[i32](e0.w),
-        bitcast[i32](e1.w),
+        bitcast[i32](e1.w), u1, u2, u3,
         m,
-        bitcast[u32](e2.x)
+        bitcast[u32](f)
     )
 }
 
@@ -388,18 +388,23 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
     hit
 }
 
+fn @make_cpu_scene_local_handler_multiple(prims: BVHTable, vector_width: i32, single: bool, min_max: MinMax) -> SceneTraverseLocalHandler {
+    @|local_ray: Ray, leaf: EntityLeaf, any_hit: bool| -> Hit {
+        let shape_bvh = @prims(leaf.user1_id);
+        cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/)
+    }
+}
+
 fn @cpu_traverse_helper( mut ray: Ray
                        , vector_width: i32
                        , min_max: MinMax
                        , scene: SceneGeometry
-                       , single: bool
                        , any_hit: bool
                        , root: i32
+                       , mut hit: Hit
                        ) -> Hit {
-    let bvh       = scene.bvh;
-    let prim_bvhs = scene.database.bvhs;
+    let bvh = scene.bvh;
 
-    let mut hit = empty_hit(ray.tmax);
     let mut terminated = false;
     let stack = alloc_stack();
     stack.push(root, ray.tmin);
@@ -457,8 +462,7 @@ fn @cpu_traverse_helper( mut ray: Ray
                     if let Option[(f32,f32)]::Some((tmin, _tmax)) = intersect_ray_box_single_section(min_max, false, ray, leaf.bbox) {
                         if tmin <= hit.distance {
                             let local_ray = transform_ray(ray, leaf.local);
-                            let shape_bvh = @prim_bvhs(leaf.bvh_id);
-                            let local_hit = cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/);
+                            let local_hit = scene.handle_local(local_ray, leaf, any_hit); 
                             
                             if active {
                                 if local_hit.prim_id != InvalidHitId {
@@ -494,14 +498,15 @@ fn @cpu_traverse( min_max: MinMax
                 , scene: SceneGeometry
                 , rays: fn (i32, i32) -> Ray
                 , hits: fn (i32, i32, Hit) -> ()
+                , init_hits: fn (i32, i32, Ray) -> Hit
                 , packet_size: i32
                 , num_packets: i32
-                , single: bool
                 , any_hit: bool
                 ) -> () {
     for i in range(0, num_packets) {
         vectorize(packet_size, |j| {
-            hits(i, j, cpu_traverse_helper(rays(i, j), packet_size, min_max, scene, single, any_hit, 1 /*root*/))
+            let ray = rays(i, j);
+            hits(i, j, cpu_traverse_helper(ray, packet_size, min_max, scene, any_hit, 1 /*root*/, init_hits(i, j, ray)))
         });
     }
 }

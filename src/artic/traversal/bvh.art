@@ -40,7 +40,10 @@ struct Prim {
 struct EntityLeaf {
     bbox      : BBox,   // Bounding box
     entity_id : i32,    // Entity ID
-    bvh_id    : i32,    // Prim BVH ID
+    shape_id  : i32,    // Shape ID
+    user1_id  : i32,    // Custom ID (most of the time the bvh id)
+    user2_id  : i32,    // Custom ID
+    user3_id  : i32,    // Custom ID
     local     : Mat3x4, // Matrix to local system
     flags     : u32     // Visibility flags and other stuff, partially the same as ray flags
 }
@@ -50,16 +53,19 @@ struct EntityLeaf1 {
     min       : [f32 * 3], // Minimum corner
     entity_id : i32,       // Entity ID
     max       : [f32 * 3], // Maximum corner
-    bvh_id    : i32,       // Shape/BVH ID
+    shape_id  : i32,       // Shape ID
     local     : Mat3x4,    // Matrix to local system
     flags     : u32,       // Flags
-    pads      : [u32 * 3]  // Paddings
+    user      : [i32 * 3]  // Paddings
 }
 
-fn @make_entity_leaf(bbox: BBox, entity_id: i32, bvh_id: i32, local: Mat3x4, flags: u32) = EntityLeaf {
+fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, user1_id: i32, user2_id: i32, user3_id: i32, local: Mat3x4, flags: u32) = EntityLeaf {
     bbox      = bbox,
     entity_id = entity_id,
-    bvh_id    = bvh_id,
+    shape_id  = shape_id,
+    user1_id  = user1_id,
+    user2_id  = user2_id,
+    user3_id  = user3_id,
     local     = local,
     flags     = flags
 };

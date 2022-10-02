@@ -25,7 +25,7 @@ static const struct ShapeProviderEntry {
     { "rectangle", "trimesh" },
     { "cube", "trimesh" },
     { "box", "trimesh" },
-    { "sphere", "trimesh" }, // TODO
+    { "sphere", "sphere" },
     { "icosphere", "trimesh" },
     { "uvsphere", "trimesh" },
     { "cylinder", "trimesh" },
@@ -52,17 +52,25 @@ static const ShapeProviderEntry* getShapeProviderEntry(const std::string& name)
 void LoaderShape::prepare(const LoaderContext& ctx)
 {
     // Check which shape provider we need
-    for (const auto& obj : ctx.Scene.shapes()) {
-        auto entry = getShapeProviderEntry(obj.second->pluginType());
+    for (const auto& ent : ctx.Scene.entities()) {
+        const auto shapeName = ent.second->property("shape").getString();
+        if (shapeName.empty())
+            continue;
+
+        const auto shape = ctx.Scene.shape(shapeName);
+        if (!shape)
+            continue;
+
+        const auto entry = getShapeProviderEntry(shape->pluginType());
         if (!entry)
             continue;
 
-        auto it = mShapeProviders.find(entry->Provider);
+        const auto it = mShapeProviders.find(entry->Provider);
         if (it == mShapeProviders.end()) {
             if (std::string_view(entry->Provider) == "trimesh") {
                 mShapeProviders[entry->Provider] = std::make_unique<TriMeshProvider>();
-                // } else if (std::string_view(entry->Provider) == "sphere") {
-                //     mShapeProviders[entry->Provider] = std::make_unique<SphereProvider>();
+            } else if (std::string_view(entry->Provider) == "sphere") {
+                mShapeProviders[entry->Provider] = std::make_unique<SphereProvider>();
             } else {
                 IG_ASSERT(false, "Shape provider entries and implementation is incomplete!");
             }

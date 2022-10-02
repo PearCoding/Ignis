@@ -29,7 +29,11 @@ fn @gpu_get_aov_image(id: &[u8], dev_id: i32, atomics: Atomics, spi: i32) -> AOV
     $getImage(ptr)
 }
 
-fn @gpu_traverse_primary(primary: PrimaryStream, scene: SceneGeometry, size: i32, min_max: MinMax, acc: Accelerator) -> () {
+fn @gpu_traverse_primary(primary: PrimaryStream
+                       , scene: SceneTracer
+                       , size: i32
+                       , min_max: MinMax
+                       , acc: Accelerator) -> () {
     let block_size = 64;
     let ray_count  = size;
     let grid  = (round_up(size, block_size), 1, 1);
@@ -42,9 +46,12 @@ fn @gpu_traverse_primary(primary: PrimaryStream, scene: SceneGeometry, size: i32
         let (i, j) = (work_item.tidx() + work_item.bidx() * block_size, work_item.tidy());
         if (i + j) >= ray_count { return() }
 
-        let ray = rays(i, j);
-        // TODO: Inject
-        let hit = gpu_traverse_scene(min_max, ray, empty_hit(ray.tmax), scene, false /* any_hit */, 1 /*root*/);
+        let ray     = rays(i, j);
+        let mut hit = empty_hit(ray.tmax);
+
+        for k in unroll(0, scene.type_count) {
+            hit = gpu_traverse_scene(min_max, ray, hit, scene.get(k), false /* any_hit */, 1 /*root*/);
+        }
         
         hits(i, j, hit);
     })(grid, block);
@@ -52,7 +59,7 @@ fn @gpu_traverse_primary(primary: PrimaryStream, scene: SceneGeometry, size: i32
 }
 
 fn @gpu_traverse_secondary( secondary: SecondaryStream
-                          , scene: SceneGeometry
+                          , scene: SceneTracer
                           , size: i32
                           , min_max: MinMax
                           , acc: Accelerator
@@ -69,15 +76,12 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
         if pixel < 0 { return() }
 
         let ray = make_ray_stream_reader(secondary.rays, 1)(gid, 0);
-        // TODO: Inject
-        let hit = gpu_traverse_scene(
-            min_max,
-            ray,
-            empty_hit(ray.tmax),
-            scene,
-            true /*any_hit*/,
-            1 /*root*/
-        );
+        let mut hit = empty_hit(ray.tmax);
+
+        for k in unroll(0, scene.type_count) {
+            hit = gpu_traverse_scene(min_max, ray, hit, scene.get(k), true /* any_hit */, 1 /*root*/);
+            if hit.prim_id >= 0 { break() } // Any hit?
+        }
 
         if is_advanced {
             make_secondary_stream_hit_writer(secondary, 1)(gid, 0, hit); // Just write it to buffer
@@ -106,8 +110,8 @@ fn @gpu_hit_shade( acc: Accelerator
              , first: i32, last: i32, ent_id: i32) -> () {
     let n = last - first;
 
-    let entities = scene.database.entities;
-    let shapes   = scene.database.shapes;
+    let entities = scene.entities;
+    let shapes   = scene.shapes;
     
     let read_primary_ray        = make_ray_stream_reader(primary.rays, 1);
     let read_primary_hit        = make_primary_stream_hit_reader(primary, 1);
@@ -701,6 +705,7 @@ fn @gpu_trace( dev_id: i32
             let last = temp.ray_ends(ent_id);
             if first < last {
                 pipeline.on_hit_shade(ent_id, first, last);
+                // acc.sync(); // Uncomment this for debugging
                 first = last;
             }
         }
@@ -828,19 +833,19 @@ fn @make_gpu_device( dev_id: i32
     generate_rays = @ | emitter, payload_info, next_id, size, _xmin, _ymin, _xmax, _ymax, spi | -> i32 {
         gpu_generate_rays_handler(dev_id, size, GPUStreamCapacity, acc, emitter, payload_info, next_id, spi)
     },
-    handle_traversal_primary = @ | scene_geometry, size | {
+    handle_traversal_primary = @ | scene_tracer, size | {
         let mut primary: PrimaryStream;
         ignis_get_primary_stream_const(dev_id, 0, &mut primary);
 
-        gpu_traverse_primary(primary, scene_geometry, size, min_max, acc);
+        gpu_traverse_primary(primary, scene_tracer, size, min_max, acc);
     },
-    handle_traversal_secondary = @ | scene_geometry, size, is_advanced, spi, use_framebuffer | {
+    handle_traversal_secondary = @ | scene_tracer, size, is_advanced, spi, use_framebuffer | {
         let mut secondary: SecondaryStream;
         ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
 
         let (film_pixels, _, _) = gpu_get_film_data(dev_id);
         let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-        gpu_traverse_secondary(secondary, scene_geometry, size, min_max, acc, accumulate, is_advanced);
+        gpu_traverse_secondary(secondary, scene_tracer, size, min_max, acc, accumulate, is_advanced);
     },
     handle_miss_shader = @ | technique, payload_info, first, last, spi, use_framebuffer | {
         gpu_miss_shade_handler(dev_id, acc, atomics, technique, payload_info, first, last, spi, use_framebuffer);
@@ -851,6 +856,7 @@ fn @make_gpu_device( dev_id: i32
     handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit | {
         gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit);
     },
+    get_traversal_handler_multiple = @ | prims | make_gpu_scene_local_handler_multiple(prims, min_max), 
     sync = @ || acc.sync(),
     parallel_range = @ |body| {
         @|start, end| {

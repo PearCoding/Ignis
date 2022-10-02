@@ -22,15 +22,6 @@ struct MapTable {
     entries: &[MapEntry], // Pointer to an array of lookup entries
 }
 
-// Essentially the scene for shading. No bvh information used
-// We could drop most shape and entity information as well
-// if area lights are handled differently (in the future)
-struct SceneAccessor {
-    info:       SceneInfo,
-    shapes:     ShapeTable,   // Defined in shape.art
-    entities:   EntityTable,  // Defined in entity.art
-}
-
 fn @join_u32(a: u32, b: u32) = ((b as u64) << 32) | (a as u64); // TODO: This assumes little endian
 
 fn @get_lookup_entry(ind: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> LookupEntry {
@@ -61,5 +52,4 @@ fn @get_table_entry(off: u64, tbl: &DynTable, acc: DeviceBufferAccessor) -> Devi
 struct TraceAccessor {
     shapes:   ShapeTable,  // Defined in shape.art
     entities: EntityTable, // Defined in entity.art
-    bvhs:     BVHTable     // Defined in intersection.art
 }

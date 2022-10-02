@@ -61,14 +61,17 @@ std::string ShaderUtils::generateShapeLookup(const LoaderContext& ctx)
     for (const auto& p : ctx.Shapes->providers())
         provs.emplace_back(p.second.get());
 
+    if (provs.size() == 1)
+        return generateShapeLookup("shapes", provs.front(), ctx);
+
     std::stringstream stream;
     stream << "  let shapes = load_shape_table(device, @|type_id, data| { match type_id {" << std::endl;
 
     for (size_t i = 0; i < provs.size() - 1; ++i)
         stream << "    " << provs.at(i)->id() << " => " << provs.at(i)->generateShapeCode(ctx) << "," << std::endl;
 
-    stream << "    _ => " << provs.back()->generateShapeCode(ctx) << std::endl;
-    stream << "  }});" << std::endl;
+    stream << "    _ => " << provs.back()->generateShapeCode(ctx) << std::endl
+           << "  }});" << std::endl;
 
     return stream.str();
 }

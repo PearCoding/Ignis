@@ -6,12 +6,20 @@ struct SceneInfo {
 
 struct Scene {
     info:     SceneInfo,
-    database: SceneAccessor,
+    shapes:   ShapeTable,   // Defined in shape.art
+    entities: EntityTable,  // Defined in entity.art
 }
 
+type SceneTraverseLocalHandler = fn (Ray, EntityLeaf, bool) -> Hit;
 struct SceneGeometry {
-    database: TraceAccessor,
-    bvh:      SceneBvh
+    database:     TraceAccessor,
+    bvh:          SceneBvh,
+    handle_local: SceneTraverseLocalHandler
+}
+
+struct SceneTracer {
+    type_count: i32,
+    get:        fn (i32) -> SceneGeometry
 }
 
 // Used as interface

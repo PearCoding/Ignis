@@ -1,0 +1,127 @@
+fn @sphere_map_uv(dir: Vec3) -> Vec2 {
+    let (theta, phi) = spherical_from_dir(make_vec3(dir.y, -dir.x, dir.z)); // Make sure it is the same coordinate system as the ico & uv sphere variant
+    let v = theta / flt_pi;
+    let u = phi / (2 * flt_pi);
+    make_vec2(u, v)
+}
+
+fn @sphere_unmap_uv(uv: Vec2) -> Vec3 {
+    let theta = uv.y * flt_pi;
+    let phi   = uv.x * 2 * flt_pi;
+    let dir = dir_from_spherical(theta, phi);
+    make_vec3(dir.y, -dir.x, dir.z)
+}
+
+struct Sphere {
+    origin: Vec3,
+    radius: f32
+}
+
+// Creates a geometry object from a triangle mesh definition
+fn @make_sphere_shape(sphere: Sphere) -> Shape {
+    let area = 4 * flt_pi * sphere.radius * sphere.radius;
+    Shape {
+        surface_element = @ |local_ray, hit| {
+            let point  = vec3_add(local_ray.org, vec3_mulf(local_ray.dir, hit.distance));
+            let dir    = vec3_sub(point, sphere.origin);
+            let len    = vec3_len(dir);
+            let normal = vec3_mulf(dir, 1 / len);
+
+            let is_entering = len < sphere.radius;
+
+            SurfaceElement {
+                is_entering = is_entering,
+                point       = point,
+                face_normal = select(is_entering, normal, vec3_neg(normal)),
+                inv_area    = 1 / area,
+                prim_coords = hit.prim_coords,
+                tex_coords  = hit.prim_coords,
+                local       = make_orthonormal_mat3x3(select(is_entering, normal, vec3_neg(normal)))
+            }
+        },
+        surface_element_for_point = @ |_, prim_coords| {
+            // TODO: Cross-check with surface_element if result is same for same input
+            let normal = sphere_unmap_uv(prim_coords);
+            let point  = vec3_add(sphere.origin, vec3_mulf(normal, sphere.radius));
+            SurfaceElement {
+                is_entering = true,
+                point       = point,
+                face_normal = normal,
+                inv_area    = 1 / area,
+                prim_coords = prim_coords,
+                tex_coords  = prim_coords,
+                local       = make_orthonormal_mat3x3(normal)
+            }
+        }
+    }
+}
+
+type SphereTable  = fn (i32) -> Sphere;
+
+fn @load_sphere(data: DeviceBuffer) -> Sphere {
+    let e0 = data.load_vec4(0);
+    
+    Sphere {
+        origin = vec4_to_3(e0),
+        radius = e0.w
+    }
+}
+
+fn @load_sphere_entry(device: Device, offset: u64) -> Sphere {
+    let dtb  = device.load_dyntable("shapes");
+    let accb = device.get_device_buffer_accessor();
+
+    let data = get_table_entry(offset, dtb, accb);
+    load_sphere(data)
+}
+
+fn @load_sphere_table(device: Device) -> SphereTable {
+    let dtb  = device.load_dyntable("shapes");
+    let accb = device.get_device_buffer_accessor();
+    @ |id| {
+        let entry = get_lookup_entry(id as u64, dtb, accb); // Assume only spheres will be accessed
+        let data  = get_table_entry(entry.offset, dtb, accb);
+        load_sphere(data)
+    }
+}
+
+// ----------------------------------- Intersection stuff
+
+fn @intersect_sphere(sphere: Sphere, ray: Ray) -> Option[Hit] {
+    // C - O
+	let S  = -vec3_dot(ray.org, ray.dir);
+	let L2 = vec3_len2(ray.org);
+	let R2 = sphere.radius * sphere.radius;
+	let M2 = L2 - S * S;
+
+    // when object behind ray
+	if (S < 0 && L2 > R2) || (M2 > R2) {
+		return(Option[Hit]::None)
+    }
+
+	let Q = math_builtins::sqrt(R2 - M2);
+
+	let t0_ = S - Q;
+	let t1_ = S + Q;
+    let (t0, t1) = select(t0_ > t1_, (t1_, t0_), (t0_, t1_));
+	
+    let tmin = select(t0 < ray.tmin, t1, t0);
+
+	if tmin >= ray.tmin && tmin <= ray.tmax {
+        let dir = vec3_mulf(vec3_add(vec3_sub(ray.org, sphere.origin), vec3_mulf(ray.dir, tmin)), 1 / sphere.radius);
+        make_option(make_hit(InvalidHitId, 0, tmin, sphere_map_uv(dir))) 
+	} else {
+        Option[Hit]::None
+    }
+}
+
+fn @make_scene_local_handler_sphere(spheres: SphereTable) -> SceneTraverseLocalHandler {
+    @|local_ray: Ray, leaf: EntityLeaf, _: bool| -> Hit {
+        let sphere = spheres(leaf.shape_id);
+        if let Option[Hit]::Some(hit) = intersect_sphere(sphere, local_ray) {
+            hit
+        } else {
+            empty_hit(local_ray.tmax)
+        }
+    }
+}

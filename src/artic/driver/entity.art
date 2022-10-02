@@ -4,7 +4,7 @@ struct EntityData {
     normal_mat: [f32 * 9],
     shape_id:   i32,
     scale:      f32,
-    _pad:       f32         // No bsdf or light assosciation as these information is implicit in other shaders
+    _pad:       f32         // No bsdf or light association as these information is implicit in other shaders
 }
 
 struct Entity {
@@ -26,7 +26,7 @@ fn @make_entity_table(dtb: DynTable, acc: DeviceBufferAccessor) -> EntityTable {
 
         let local_mat  = data.load_mat3x4(0);
         let global_mat = data.load_mat3x4(12);
-        let m          = data.load_mat3x4(24); // This is faster due to aligned loading instructions
+        let m          = data.load_mat3x4(24);
         Entity {
             id         = id,
             local_mat  = local_mat,

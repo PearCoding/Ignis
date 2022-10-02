@@ -27,16 +27,10 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
 
     stream << ShaderUtils::generateDatabase(ctx) << std::endl;
 
-    stream << "  let acc  = SceneAccessor {" << std::endl
+    stream << "  let scene  = Scene {" << std::endl
            << "    info     = " << LoaderUtils::inlineSceneInfo(ctx) << "," << std::endl
            << "    shapes   = shapes," << std::endl
            << "    entities = entities," << std::endl
-           << "  };" << std::endl
-           << std::endl;
-
-    stream << "  let scene = Scene {" << std::endl
-           << "    info     = acc.info," << std::endl
-           << "    database = acc" << std::endl
            << "  };" << std::endl
            << std::endl;
 

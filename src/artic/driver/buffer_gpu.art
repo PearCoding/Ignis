@@ -63,7 +63,7 @@ fn @make_gpu_buffer(dev: i32, p: &addrspace(1)[u8], count: i32, atomics: Atomics
             (v(0), v(1), v(2), v(3))
         },
         load_mat3x3 = @ |i| {
-            let v0 = load_vf32(i);
+            let v0 = load_vf32(i+0);
             let v1 = load_vf32(i+4);
             let v2 = load_vf32(i+8);
             make_mat3x3(make_vec3(v0(0), v0(1), v0(2)),
@@ -71,7 +71,7 @@ fn @make_gpu_buffer(dev: i32, p: &addrspace(1)[u8], count: i32, atomics: Atomics
                         make_vec3(v1(2), v1(3), v2(0)))
         },
         load_mat3x4 = @ |i| {
-            let v0 = load_vf32(i);
+            let v0 = load_vf32(i+0);
             let v1 = load_vf32(i+4);
             let v2 = load_vf32(i+8);
             make_mat3x4(make_vec3(v0(0), v0(1), v0(2)),
@@ -80,10 +80,10 @@ fn @make_gpu_buffer(dev: i32, p: &addrspace(1)[u8], count: i32, atomics: Atomics
                         make_vec3(v2(1), v2(2), v2(3)))
         },
         load_mat4x4 = @ |i| {
-            let v0 = load_vf32(i);
-            let v1 = load_vf32(i+4);
-            let v2 = load_vf32(i+8);
-            let v3 = load_vf32(i+16);
+            let v0 = load_vf32(i+ 0);
+            let v1 = load_vf32(i+ 4);
+            let v2 = load_vf32(i+ 8);
+            let v3 = load_vf32(i+12);
             make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)),
                         make_vec4(v1(0), v1(1), v1(2), v1(3)),
                         make_vec4(v2(0), v2(1), v2(2), v2(3)), 

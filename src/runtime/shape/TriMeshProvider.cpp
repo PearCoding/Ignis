@@ -179,7 +179,7 @@ static uint32 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mut
 
     mutex.lock();
     auto& bvhTable = dtb.Tables["trimesh_primbvh"];
-    uint32 bvhId   = (uint32)bvhTable.entryCount();
+    uint32 bvhId   = (uint32)bvhTable.entryCount(); // TODO: We could skip the id and directly use the offset!
     auto& bvhData  = bvhTable.addLookup(0, 0, DefaultAlignment);
     VectorSerializer serializer(bvhData, false);
     serializer.write((uint32)bvh.nodes.size());
@@ -268,15 +268,15 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     const auto plane = mesh.getAsPlane();
 
     // Setup internal shape object
-    TriShape shape;
-    shape.VertexCount = mesh.vertices.size();
-    shape.NormalCount = mesh.normals.size();
-    shape.TexCount    = mesh.texcoords.size();
-    shape.FaceCount   = mesh.faceCount();
-    shape.Area        = mesh.computeArea();
+    TriShape trishape;
+    trishape.VertexCount = mesh.vertices.size();
+    trishape.NormalCount = mesh.normals.size();
+    trishape.TexCount    = mesh.texcoords.size();
+    trishape.FaceCount   = mesh.faceCount();
+    trishape.Area        = mesh.computeArea();
 
     // Make sure the id used in shape is same as in the dyntable later
-    mDtbMutex.lock();
+    result.DatabaseAccessMutex.lock();
     IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
 
     auto& table         = result.Database.Tables["shapes"];
@@ -294,16 +294,18 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     meshSerializer.write(mesh.indices, true);   // Already aligned
     meshSerializer.write(mesh.texcoords, true); // Aligned to 4*2 bytes
     meshSerializer.write(mesh.face_inv_area, true);
-    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, bvh_id, bbox, offset });
+
+    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, (int32)bvh_id, 0, 0, bbox, offset });
+    IG_ASSERT(id + 1 == table.entryCount(), "Expected id to be in sync with dyntable entry count");
 
     // Check if shape is actually just a simple plane
     if (plane.has_value())
         ctx.Shapes->addPlaneShape(id, plane.value());
 
     // Add internal shape structure to table for potential area light usage
-    ctx.Shapes->addTriShape(id, shape);
+    ctx.Shapes->addTriShape(id, trishape);
 
-    mDtbMutex.unlock();
+    result.DatabaseAccessMutex.unlock();
 }
 
 std::string TriMeshProvider::generateShapeCode(const LoaderContext& ctx)
@@ -323,7 +325,8 @@ std::string TriMeshProvider::generateTraversalCode(const LoaderContext& ctx)
         stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, " << ctx.Target.vectorWidth() << ");" << std::endl;
     }
 
-    stream << "  let trace = TraceAccessor { shapes = trimesh_shapes, entities = entities, bvhs = prim_bvhs };" << std::endl;
+    stream << "  let trace   = TraceAccessor { shapes = trimesh_shapes, entities = entities };" << std::endl
+           << "  let handler = device.get_traversal_handler_multiple(prim_bvhs);" << std::endl;
     return stream.str();
 }
 } // namespace IG

@@ -36,14 +36,14 @@ fn @make_gpu_ent(j: i32, objs: &[EntityLeaf1], is_nvvm: bool) -> EntityLeaf {
     let e0 = d.load_vec4(0);
     let e1 = d.load_vec4(4);
     let m  = d.load_mat3x4(8);
-    let e2 = d.load_vec4(20);
+    let (f, u1, u2, u3) = d.load_int4(20);
     make_entity_leaf(
         make_bbox(make_vec3(e0.x, e0.y, e0.z),
                   make_vec3(e1.x, e1.y, e1.z)),
         bitcast[i32](e0.w),
-        bitcast[i32](e1.w),
+        bitcast[i32](e1.w), u1, u2, u3,
         m,
-        bitcast[u32](e2.x)
+        bitcast[u32](f)
     )
 }
 
@@ -74,13 +74,11 @@ fn @make_amdgpu_min_max() = make_min_max(ocml_fminf, ocml_fmaxf, false);
 // Traversal kernel  ---------------------------------------------------------------
 fn @gpu_traverse_helper( min_max: MinMax
                               , mut ray: Ray
-                              , init_hit: Hit
+                              , mut hit: Hit
                               , bvh: TraversalBvh
                               , any_hit: bool
                               , root: i32
                               ) -> Hit {
-    let mut hit = init_hit;
-
     let stack = alloc_stack();
     stack.push(root, undef[f32]());
 
@@ -181,6 +179,13 @@ fn @gpu_traverse_prim( min_max: MinMax
     gpu_traverse_helper(min_max, ray, init_hit, TraversalBvh{ node=bvh.node, handle=prim_handle, prefetch=bvh.prefetch, arity=bvh.arity }, any_hit, root)
 }
 
+fn @make_gpu_scene_local_handler_multiple(prims: BVHTable, min_max: MinMax) -> SceneTraverseLocalHandler {
+    @|local_ray: Ray, leaf: EntityLeaf, any_hit: bool| -> Hit {
+        let shape_bvh = @prims(leaf.user1_id);
+        gpu_traverse_prim(min_max, local_ray, empty_hit(local_ray.tmax)/* TODO */, shape_bvh, any_hit, 1)
+    }
+}
+
 // Traverses a single ray at a time. 
 fn @gpu_traverse_scene( min_max: MinMax
                         , ray: Ray
@@ -190,8 +195,7 @@ fn @gpu_traverse_scene( min_max: MinMax
                         , root: i32
                         ) -> Hit {
 
-    let bvh       = scene.bvh;
-    let prim_bvhs = scene.database.bvhs;
+    let bvh = scene.bvh;
     fn @scene_handle(leaf_ref: NodeRef, ray2: &mut Ray, hit: &mut Hit) -> bool {
         let mut ref_id = !leaf_ref.node;
         while true {
@@ -201,9 +205,8 @@ fn @gpu_traverse_scene( min_max: MinMax
                 if let Option[(f32,f32)]::Some((tmin, _tmax)) = intersect_ray_box_single_section(min_max, false, *ray2, leaf.bbox) {
                     if tmin <= hit.distance {
                         let local_ray = transform_ray(*ray2, leaf.local);
-                        let shape_bvh = @prim_bvhs(leaf.bvh_id);
-                        let local_hit = gpu_traverse_prim(min_max, local_ray, empty_hit(local_ray.tmax)/* TODO */, shape_bvh, any_hit, 1);
-
+                        let local_hit = scene.handle_local(local_ray, leaf, any_hit); 
+                        
                         if local_hit.prim_id != -1 {
                             if local_hit.distance <= hit.distance {
                                 *hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);

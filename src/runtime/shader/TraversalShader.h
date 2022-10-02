@@ -11,5 +11,8 @@ struct TraversalShader {
 
     static std::string setupPrimary(const LoaderContext& ctx);
     static std::string setupSecondary(const LoaderContext& ctx);
+
+private:
+    static std::string setupInternal(const LoaderContext& ctx);
 };
 } // namespace IG

@@ -21,7 +21,11 @@ IG_END_IGNORE_WARNINGS
 namespace IG {
 struct EntityObject {
     BoundingBox BBox;
-    uint32 BvhID;
+    int32 EntityID;
+    int32 ShapeID;
+    int32 User1ID;
+    int32 User2ID;
+    int32 User3ID;
     Matrix4f Local;
     uint32 Flags;
 
@@ -83,15 +87,17 @@ protected:
 
             objects.emplace_back(EntityLeaf1{
                 { in_obj.BBox.min(0), in_obj.BBox.min(1), in_obj.BBox.min(2) },
-                id,
+                in_obj.EntityID,
                 { in_obj.BBox.max(0), in_obj.BBox.max(1), in_obj.BBox.max(2) },
-                (int)in_obj.BvhID,
+                in_obj.ShapeID,
                 { { { { in_obj.Local(0, 0), in_obj.Local(1, 0), in_obj.Local(2, 0) },
                       { in_obj.Local(0, 1), in_obj.Local(1, 1), in_obj.Local(2, 1) },
                       { in_obj.Local(0, 2), in_obj.Local(1, 2), in_obj.Local(2, 2) },
                       { in_obj.Local(0, 3), in_obj.Local(1, 3), in_obj.Local(2, 3) } } } },
                 in_obj.Flags,
-                { 0, 0, 0 } /* Pads */ });
+                in_obj.User1ID,
+                in_obj.User2ID,
+                in_obj.User3ID });
         }
 
         // Add sentinel

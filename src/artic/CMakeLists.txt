@@ -83,6 +83,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/phase/henyeygreenstein.art
     ${CMAKE_CURRENT_SOURCE_DIR}/phase/uniform.art
     ${CMAKE_CURRENT_SOURCE_DIR}/sampler/pixel_sampler.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/shapes/sphere.art
     ${CMAKE_CURRENT_SOURCE_DIR}/shapes/trimesh.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/aotracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/debugtracer.art

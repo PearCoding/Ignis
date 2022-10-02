@@ -15,10 +15,10 @@ struct Device {
     sync: fn () -> (),
 
     // [Internal] Handle a traversal primary shader
-    handle_traversal_primary: fn (SceneGeometry, i32) -> (), 
+    handle_traversal_primary: fn (SceneTracer, i32) -> (), 
 
     // [Internal] Handle a traversal secondary shader
-    handle_traversal_secondary: fn (SceneGeometry, i32, bool, i32, bool) -> (), 
+    handle_traversal_secondary: fn (SceneTracer, i32, bool, i32, bool) -> (), 
 
     // [Internal] Handle a miss shader
     handle_miss_shader: fn (Technique, PayloadInfo, i32, i32, i32, bool) -> (), 
@@ -28,6 +28,9 @@ struct Device {
 
     // [Internal] Handle an advanced shadow shader (can be hit or miss)
     handle_advanced_shadow_shader: fn (MaterialShader, Technique, PayloadInfo, i32, i32, i32, bool, bool) -> (), 
+
+    // [Internal] Special local handler for multilevel traversal
+    get_traversal_handler_multiple: fn (BVHTable) -> SceneTraverseLocalHandler,
     
     //------------------------------------- Utilities
     // Parallel one-dimensional range on the device

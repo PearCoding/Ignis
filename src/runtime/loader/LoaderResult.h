@@ -5,10 +5,13 @@
 #include "device/Target.h"
 #include "table/SceneDatabase.h"
 
+#include <mutex>
+
 namespace IG {
 constexpr size_t DefaultAlignment = sizeof(float) * 4;
 
 struct LoaderResult {
+    std::mutex DatabaseAccessMutex;
     SceneDatabase Database;
     std::vector<TechniqueVariant> TechniqueVariants;
     std::vector<std::string> ResourceMap;

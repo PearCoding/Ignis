@@ -155,10 +155,14 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
         // Extract information for BVH building
         EntityObject obj;
-        obj.BBox  = entityBox;
-        obj.Local = invTransform.matrix();
-        obj.BvhID = shape.BvhID;
-        obj.Flags = entity_flags; // Only added to bvh
+        obj.BBox     = entityBox;
+        obj.Local    = invTransform.matrix();
+        obj.EntityID = (int32)idCounter;
+        obj.ShapeID  = shapeID;
+        obj.User1ID  = shape.User1ID;
+        obj.User2ID  = shape.User2ID;
+        obj.User3ID  = shape.User3ID;
+        obj.Flags    = entity_flags; // Only added to bvh
 
         in_objs[shape.Provider].emplace_back(obj);
         idCounter++;

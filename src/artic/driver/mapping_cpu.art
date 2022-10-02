@@ -335,44 +335,64 @@ fn @cpu_generate_rays_handler(size: i32
 }
 
 // Traverse functions ------------------------------------------------------------------
-fn @cpu_traverse_primary(scene: SceneGeometry, size: i32, min_max: MinMax, single: bool, vector_width: i32) -> () {
+fn @cpu_traverse_primary(scene: SceneTracer, size: i32, min_max: MinMax, vector_width: i32) -> () {
     let mut primary : PrimaryStream;
     ignis_get_primary_stream_const(0, 0, &mut primary);
 
-    fn cpu_traverse_primary_specialized(scene2: SceneGeometry, primary2: &PrimaryStream) -> () {
-        // TODO: Inject
+    let rays  = make_ray_stream_reader(primary.rays, vector_width);
+    let hits  = make_primary_stream_hit_reader(primary, vector_width);
+    let whits = make_primary_stream_hit_writer(primary, vector_width);
+
+    for k in unroll(0, scene.type_count) {
+        let geom = scene.get(k);
+        let init_hit = if k == 0 { 
+            @|_:i32, _:i32, r: Ray| empty_hit(r.tmax)
+        } else {
+            @|i:i32, j:i32, _: Ray| hits(i, j)
+        };
+
         cpu_traverse(
             min_max,
-            scene2,
-            make_ray_stream_reader(primary2.rays, vector_width),
-            make_primary_stream_hit_writer(*primary2, vector_width),
+            geom,
+            rays,
+            whits,
+            init_hit,
             vector_width /*packet_size*/,
             size / vector_width + select(size % vector_width != 0, 1, 0),
-            single,
             false /*any_hit*/
         );
     }
-    $cpu_traverse_primary_specialized(scene, primary);
 }
 
-fn @cpu_traverse_secondary(scene: SceneGeometry, size: i32, min_max: MinMax, single: bool, vector_width: i32) -> () {
+fn @cpu_traverse_secondary(scene: SceneTracer, size: i32, min_max: MinMax, vector_width: i32) -> () {
     let mut secondary : SecondaryStream;
     ignis_get_secondary_stream_const(0, 0, &mut secondary);
     
-    fn cpu_traverse_secondary_specialized(scene2: SceneGeometry, secondary2: &SecondaryStream) -> () {
-        // TODO: Inject
+    let rays  = make_ray_stream_reader(secondary.rays, vector_width);
+    let hits  = make_secondary_stream_hit_reader(secondary, vector_width);
+    let whits = make_secondary_stream_hit_writer(secondary, vector_width);
+    
+    for k in unroll(0, scene.type_count) {
+        let geom = scene.get(k);
+        
+        let init_hit = if k == 0 { 
+            @|_:i32, _:i32, r: Ray| empty_hit(r.tmax)
+        } else {
+            @|i:i32, j:i32, _: Ray| hits(i, j)
+        };
+
+        // TODO: Check any hit!!
         cpu_traverse(
             min_max,
-            scene2,
-            make_ray_stream_reader(secondary2.rays, vector_width),
-            make_secondary_stream_hit_writer(*secondary2, vector_width),
+            geom,
+            rays,
+            whits,
+            init_hit,
             vector_width /*packet_size*/,
             size / vector_width + select(size % vector_width != 0, 1, 0),
-            single,
             true /*any_hit*/
         );
     }
-    $cpu_traverse_secondary_specialized(scene, secondary);
 }
 
 // Hit shader ------------------------------------------------------------------
@@ -400,8 +420,8 @@ fn @cpu_hit_shade(entity_id: i32
         let get_primary_payload   = make_primary_stream_payload_handler(*primary2, payload_info.primary_count, 1);
         let get_secondary_payload = make_secondary_stream_payload_handler(*secondary2, payload_info.secondary_count, 1);
 
-        let entities  = scene.database.entities;
-        let shapes    = scene.database.shapes;
+        let entities  = scene.entities;
+        let shapes    = scene.shapes;
         let on_hit    = technique.on_hit;
         let on_shadow = technique.on_shadow;
         let on_bounce = technique.on_bounce;
@@ -822,11 +842,11 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     generate_rays = @ | emitter, payload_info, next_id, size, xmin, ymin, xmax, ymax, spi | -> i32 {
         cpu_generate_rays_handler(size, @cpu_get_stream_capacity(spi, tile_size), emitter, next_id, xmin, ymin, xmax, ymax, spi, payload_info, vector_width)
     },
-    handle_traversal_primary = @ | scene_geometry, size | {
-        cpu_traverse_primary(scene_geometry, size, min_max, single, vector_width);
+    handle_traversal_primary = @ | scene_tracer, size | {
+        cpu_traverse_primary(scene_tracer, size, min_max, vector_width);
     },
-    handle_traversal_secondary = @ | scene_geometry, size, _is_advanced, _spi, _use_framebuffer | {
-        cpu_traverse_secondary(scene_geometry, size, min_max, single, vector_width);
+    handle_traversal_secondary = @ | scene_tracer, size, _is_advanced, _spi, _use_framebuffer | {
+        cpu_traverse_secondary(scene_tracer, size, min_max, vector_width);
     },
     handle_miss_shader = @ | technique, payload_info, first, last, spi, use_framebuffer | {
         cpu_miss_shade_handler(technique, first, last, spi, payload_info, use_framebuffer, vector_width);
@@ -837,6 +857,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit | {
         cpu_advanced_shadow_handler(shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit, vector_width);
     },
+    get_traversal_handler_multiple = @ | prims | make_cpu_scene_local_handler_multiple(prims, vector_width, single, min_max), 
     sync    = @ || {},
     parallel_range = @ |body| {
         @|start, end| {
