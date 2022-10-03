@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DynTable.h"
+#include "FixTable.h"
 #include "math/BoundingBox.h"
 
 namespace IG {
@@ -11,7 +12,8 @@ struct SceneBVH {
 
 struct SceneDatabase {
     std::unordered_map<std::string_view, SceneBVH> SceneBVHs;
-    std::unordered_map<std::string, DynTable> Tables;
+    std::unordered_map<std::string, DynTable> DynTables;
+    std::unordered_map<std::string, FixTable> FixTables;
 
     float SceneRadius;
     BoundingBox SceneBBox;

@@ -907,6 +907,12 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_dyntable(dev_id, name, &mut table);
         make_dyntable(table, accb)
     },
+    load_fixtable = @ |name| -> DeviceBuffer {
+        let mut ptr      : &[u8];
+        let mut bytesize : i32;
+        ignis_load_fixtable(dev_id, name, &mut ptr, &mut bytesize);
+        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
+    },
     load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];
         let mut width      : i32;

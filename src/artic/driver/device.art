@@ -58,7 +58,10 @@ struct Device {
     load_scene_info: fn () -> SceneInfo,
 
     // [Internal] Load a specific dyntable constructed in the loading process
-    load_dyntable: fn (&[u8] /* Filename */) -> DynTable,
+    load_dyntable: fn (&[u8] /* Internal name */) -> DynTable,
+
+    // [Internal] Load a specific fixtable constructed in the loading process. The fixtable is accessed via a device buffer
+    load_fixtable: fn (&[u8] /* Internal name */) -> DeviceBuffer,
 
     // [Internal] Will load the rays given in 'tracing' mode
     load_rays: fn () -> &[StreamRay],

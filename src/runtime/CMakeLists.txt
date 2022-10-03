@@ -172,6 +172,7 @@ set(SRC
   shape/TriMeshProvider.h
   shape/TriShape.h
   table/DynTable.h
+  table/FixTable.h
   table/SceneDatabase.h
 )
 

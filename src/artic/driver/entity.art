@@ -18,11 +18,10 @@ struct Entity {
 
 type EntityTable = fn (i32) -> Entity;
 
-fn @make_entity_table(dtb: DynTable) -> EntityTable {
-    let elem_s = sizeof[EntityData]() as u64;
+fn @make_entity_table(tbl: DeviceBuffer) -> EntityTable {
+    let elem_s = (sizeof[EntityData]() / sizeof[f32]()) as i32 ;
     @ |id| {
-        // TODO: Use a buffer directly as the element size is fixed
-        let data = dtb.data(elem_s * (id as u64));
+        let data = shift_device_buffer(elem_s * id, elem_s, tbl);
 
         let local_mat  = data.load_mat3x4(0);
         let global_mat = data.load_mat3x4(12);
@@ -39,6 +38,6 @@ fn @make_entity_table(dtb: DynTable) -> EntityTable {
 }
 
 fn @load_entity_table(device: Device) -> EntityTable {
-    let dtb = device.load_dyntable("entities");
-    make_entity_table(dtb)
+    let tbl = device.load_fixtable("entities");
+    make_entity_table(tbl)
 }

@@ -232,13 +232,13 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
 }
 
 fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, meshes: TriMeshTable) -> LightTable {
-    let tbl = device.load_dyntable("SimpleAreaLight");// TODO: Use buffer
+    let tbl = device.load_fixtable("SimpleAreaLight");
 
-    let elem_s = 40 * sizeof[f32]() as u64; // See AreaLight.cpp (non-optimized)
+    let elem_s = 40; // Given in floats. See AreaLight.cpp (non-optimized)
     LightTable {
         count = count,
         get   = @|id| {
-            let data = tbl.data(elem_s * (id as u64));
+            let data = shift_device_buffer(elem_s * id, elem_s, tbl);
 
             let local_mat  = data.load_mat3x4(0);
             let global_mat = data.load_mat3x4(12);
@@ -262,13 +262,13 @@ fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, meshes: Tri
 }
 
 fn @load_simple_plane_lights(count: i32, id_off: i32, device: Device) -> LightTable {
-    let tbl = device.load_dyntable("SimplePlaneLight"); // TODO: Use buffer
+    let tbl = device.load_fixtable("SimplePlaneLight");
 
-    let elem_s = 24 * sizeof[f32]() as u64; // See AreaLight.cpp (optimized)
+    let elem_s = 24; // Given in floats. See AreaLight.cpp (optimized)
     LightTable {
         count = count,
         get   = @|id| {
-            let data = tbl.data(elem_s * (id as u64));
+            let data = shift_device_buffer(elem_s * id, elem_s, tbl);
 
             let origin   = data.load_vec4(0);
             let x_axis   = data.load_vec4(4);

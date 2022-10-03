@@ -28,6 +28,7 @@ struct WorkInfo {
 #[import(cc = "C")] fn ignis_load_rays(i32, &mut &[StreamRay]) -> ();
 #[import(cc = "C")] fn ignis_load_scene_info(i32, &mut SceneInfo) -> ();
 #[import(cc = "C")] fn ignis_load_dyntable(i32, &[u8], &mut DynTableData) -> ();
+#[import(cc = "C")] fn ignis_load_fixtable(i32, &[u8], &mut &[u8], &mut i32) -> ();
 #[import(cc = "C")] fn ignis_load_image(i32, &[u8], &mut &[f32], &mut i32, &mut i32, i32) -> ();
 #[import(cc = "C")] fn ignis_load_image_by_id(i32, i32, &mut &[f32], &mut i32, &mut i32, i32) -> ();
 #[import(cc = "C")] fn ignis_load_packed_image(i32, &[u8], &mut &[u8], &mut i32, &mut i32, i32, bool) -> ();

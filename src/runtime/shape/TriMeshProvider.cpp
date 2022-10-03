@@ -178,7 +178,7 @@ static uint32 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mut
     build_bvh<N, T>(mesh, bvh.nodes, bvh.tris);
 
     mutex.lock();
-    auto& bvhTable = dtb.Tables["trimesh_primbvh"];
+    auto& bvhTable = dtb.DynTables["trimesh_primbvh"];
     uint32 bvhId   = (uint32)bvhTable.entryCount(); // TODO: We could skip the id and directly use the offset!
     auto& bvhData  = bvhTable.addLookup(0, 0, DefaultAlignment);
     VectorSerializer serializer(bvhData, false);
@@ -279,7 +279,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     result.DatabaseAccessMutex.lock();
     IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
 
-    auto& table         = result.Database.Tables["shapes"];
+    auto& table         = result.Database.DynTables["shapes"];
     auto& meshData      = table.addLookup((uint32)this->id(), 0, DefaultAlignment);
     const size_t offset = table.currentOffset();
 

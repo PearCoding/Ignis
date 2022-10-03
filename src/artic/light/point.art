@@ -20,13 +20,13 @@ fn @make_point_light(id: i32, pos: Vec3, color: Color) = Light {
 };
 
 fn @load_simple_point_lights(count: i32, id_off: i32, device: Device) -> LightTable {
-    let tbl = device.load_dyntable("SimplePointLight"); // TODO: Use buffer
+    let tbl = device.load_fixtable("SimplePointLight");
 
-    let elem_s = 8 * sizeof[f32]() as u64; // See PointLight.cpp
+    let elem_s = 8; // Given in floats. See PointLight.cpp
     LightTable {
         count = count,
         get   = @|id| {
-            let data = tbl.data(elem_s * (id as u64));
+            let data = shift_device_buffer(elem_s * id, elem_s, tbl);
 
             let position  = data.load_vec4(0);
             let intensity = data.load_vec4(4);

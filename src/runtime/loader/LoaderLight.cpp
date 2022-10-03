@@ -392,10 +392,10 @@ void LoaderLight::embedLights(ShadingTree& tree)
         const auto embedClass = p.first;
 
         // Check if already loaded
-        if (tree.context().Database->Tables.count(embedClass) > 0)
+        if (tree.context().Database->FixTables.count(embedClass) > 0)
             continue;
 
-        auto& tbl = tree.context().Database->Tables[embedClass];
+        auto& tbl = tree.context().Database->FixTables[embedClass];
 
         IG_LOG(L_DEBUG) << "Embedding lights of class '" << embedClass << "'" << std::endl;
 
@@ -403,7 +403,7 @@ void LoaderLight::embedLights(ShadingTree& tree)
             if (light->getEmbedClass().value_or("") != embedClass)
                 continue;
 
-            auto& lightData = tbl.addLookup(0, 0, 0); // We do not make use of the typeid
+            auto& lightData = tbl.addEntry(0);
             VectorSerializer lightSerializer(lightData, false);
             light->embed(Light::EmbedInput{ lightSerializer, tree });
         }

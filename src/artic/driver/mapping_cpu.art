@@ -903,6 +903,12 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
         ignis_load_dyntable(0, name, &mut table);
         make_dyntable(table, @|ptr| make_cpu_buffer(ptr, 0))
     },
+    load_fixtable = @ |name| -> DeviceBuffer {
+        let mut ptr      : &[u8];
+        let mut bytesize : i32;
+        ignis_load_fixtable(0, name, &mut ptr, &mut bytesize);
+        make_cpu_buffer(ptr, (bytesize as i64 / sizeof[i32]()) as i32)
+    },
     load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];
         let mut width      : i32;

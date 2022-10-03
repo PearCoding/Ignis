@@ -197,9 +197,9 @@ fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], is_nvvm: bool) -> PrimBvh
 }
 
 fn @make_cpu_trimesh_bvh_table(device: Device, vector_width: i32) -> BVHTable {
-    let dtb = device.load_dyntable("trimesh_primbvh");
+    let dtb = device.load_dyntable("trimesh_primbvh"); 
 
-    @ |id| {
+    @ |id| { // TODO: Instead of the id, use the offset directly?
         let entry  = dtb.lookup(id); 
         let header = dtb.data(entry.offset);
         let leaf_offset = header.load_i32(0);

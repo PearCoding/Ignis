@@ -157,6 +157,7 @@ public:
         std::unordered_map<std::string, DevicePackedImage> packed_images;
         std::unordered_map<std::string, DeviceBuffer> buffers;
         std::unordered_map<std::string, DynTableProxy> dyntables;
+        std::unordered_map<std::string, DeviceBuffer> fixtables;
 
         anydsl::Array<uint32_t> tonemap_pixels;
 
@@ -204,7 +205,7 @@ public:
 
     inline explicit Interface(const Device::SetupSettings& setup)
         : database(setup.database)
-        , entity_count(database->Tables.count("entities") > 0 ? database->Tables.at("entities").entryCount() : 0)
+        , entity_count(database->FixTables.count("entities") > 0 ? database->FixTables.at("entities").entryCount() : 0)
         , film_width(setup.framebuffer_width)
         , film_height(setup.framebuffer_height)
         , setup(setup)
@@ -608,6 +609,11 @@ public:
         return proxy;
     }
 
+    inline DeviceBuffer loadFixtable(int32_t dev, const FixTable& tbl)
+    {
+        return DeviceBuffer{ copyToDevice(dev, tbl.data()), 1 };
+    }
+
     inline SceneInfo loadSceneInfo(int32_t dev)
     {
         IG_UNUSED(dev);
@@ -625,9 +631,23 @@ public:
         if (it != tables.end())
             return it->second;
 
-        IG_LOG(L_DEBUG) << "Loading dyntable " << name << std::endl;
+        IG_LOG(L_DEBUG) << "Loading dyntable '" << name << "'" << std::endl;
 
-        return tables[name] = loadDyntable(dev, database->Tables.at(name));
+        return tables[name] = loadDyntable(dev, database->DynTables.at(name));
+    }
+
+    inline const DeviceBuffer& loadFixtable(int32_t dev, const char* name)
+    {
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+
+        auto& tables = devices[dev].fixtables;
+        auto it      = tables.find(name);
+        if (it != tables.end())
+            return it->second;
+
+        IG_LOG(L_DEBUG) << "Loading fixtable '" << name << "'" << std::endl;
+
+        return tables[name] = loadFixtable(dev, database->FixTables.at(name));
     }
 
     inline const DeviceImage& loadImage(int32_t dev, const std::string& filename, int32_t expected_channels)
@@ -641,7 +661,7 @@ public:
 
         _SECTION(SectionType::ImageLoading);
 
-        IG_LOG(L_DEBUG) << "Loading image " << filename << " (C=" << expected_channels << ")" << std::endl;
+        IG_LOG(L_DEBUG) << "Loading image '" << filename << "' (C=" << expected_channels << ")" << std::endl;
         try {
             const auto img = Image::load(filename);
             if (expected_channels != (int32_t)img.channels) {
@@ -670,7 +690,7 @@ public:
 
         _SECTION(SectionType::PackedImageLoading);
 
-        IG_LOG(L_DEBUG) << "Loading (packed) image " << filename << " (C=" << expected_channels << ")" << std::endl;
+        IG_LOG(L_DEBUG) << "Loading (packed) image '" << filename << "' (C=" << expected_channels << ")" << std::endl;
         try {
             std::vector<uint8_t> packed;
             size_t width, height, channels;
@@ -721,11 +741,11 @@ public:
 
         _SECTION(SectionType::BufferLoading);
 
-        IG_LOG(L_DEBUG) << "Loading buffer " << filename << std::endl;
+        IG_LOG(L_DEBUG) << "Loading buffer '" << filename << "'" << std::endl;
         const auto vec = readBufferFile(filename);
 
         if ((vec.size() % sizeof(int32_t)) != 0)
-            IG_LOG(L_WARNING) << "Buffer " << filename << " is not properly sized!" << std::endl;
+            IG_LOG(L_WARNING) << "Buffer '" << filename << "' is not properly sized!" << std::endl;
 
         return buffers[filename] = DeviceBuffer{ copyToDevice(dev, vec), 1 };
     }
@@ -749,7 +769,7 @@ public:
 
         _SECTION(SectionType::BufferRequests);
 
-        IG_LOG(L_DEBUG) << "Requested buffer " << name << " with " << FormatMemory(size) << std::endl;
+        IG_LOG(L_DEBUG) << "Requested buffer '" << name << "' with " << FormatMemory(size) << std::endl;
 
         void* ptr = anydsl_alloc(dev, size);
         if (ptr == nullptr) {
@@ -778,7 +798,7 @@ public:
             out.write(reinterpret_cast<const char*>(host_data.data()), host_data.size());
             out.close();
         } else {
-            IG_LOG(L_WARNING) << "Buffer " << name << " can not be dumped as it does not exists" << std::endl;
+            IG_LOG(L_WARNING) << "Buffer '" << name << "' can not be dumped as it does not exists" << std::endl;
         }
     }
 
@@ -1611,6 +1631,13 @@ IG_EXPORT void ignis_load_dyntable(int dev, const char* name, DynTableData* dtb)
 {
     auto& proxy = sInterface->loadDyntable(dev, name);
     *dtb        = assignDynTable(proxy);
+}
+
+IG_EXPORT void ignis_load_fixtable(int dev, const char* name, uint8_t** data, int32_t* size)
+{
+    auto& buf = sInterface->loadFixtable(dev, name);
+    *data     = const_cast<uint8_t*>(buf.Data.data());
+    *size     = (int32_t)buf.Data.size();
 }
 
 IG_EXPORT void ignis_load_rays(int dev, StreamRay** list)

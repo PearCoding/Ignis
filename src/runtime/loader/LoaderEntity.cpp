@@ -36,11 +36,11 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
     const auto start1 = std::chrono::high_resolution_clock::now();
 
-    auto& entityTable = result.Database.Tables["entities"];
+    auto& entityTable = result.Database.FixTables["entities"];
     entityTable.reserve(ctx.Scene.entities().size() * 48);
 
     std::unordered_map<ShapeProvider*, std::vector<EntityObject>> in_objs;
-    size_t idCounter = 0;
+    mEntityCount = 0;
     for (const auto& pair : ctx.Scene.entities()) {
         const auto child = pair.second;
 
@@ -120,7 +120,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         // Register name for lights to associate with
         uint32 materialID = 0;
         if (ctx.Lights->isAreaLight(pair.first)) {
-            ctx.Environment.EmissiveEntities.insert({ pair.first, Entity{ idCounter, transform, pair.first, shapeName, bsdfName } });
+            ctx.Environment.EmissiveEntities.insert({ pair.first, Entity{ mEntityCount, transform, pair.first, shapeName, bsdfName } });
 
             // It is a unique material
             materialID = (uint32)ctx.Environment.Materials.size();
@@ -145,7 +145,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         const float scaleFactor                         = std::abs(toGlobalNormal.determinant());
 
         // Write data to dyntable
-        auto& entityData = entityTable.addLookup(0, 0, DefaultAlignment); // We do not make use of the typeid
+        auto& entityData = entityTable.addEntry(DefaultAlignment);
         VectorSerializer entitySerializer(entityData, false);
         entitySerializer.write(toLocal, true);        // To Local
         entitySerializer.write(toGlobal, true);       // To Global
@@ -157,7 +157,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         EntityObject obj;
         obj.BBox     = entityBox;
         obj.Local    = invTransform.matrix();
-        obj.EntityID = (int32)idCounter;
+        obj.EntityID = (int32)mEntityCount;
         obj.ShapeID  = shapeID;
         obj.User1ID  = shape.User1ID;
         obj.User2ID  = shape.User2ID;
@@ -165,12 +165,12 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         obj.Flags    = entity_flags; // Only added to bvh
 
         in_objs[shape.Provider].emplace_back(obj);
-        idCounter++;
+        mEntityCount++;
     }
 
     IG_LOG(L_DEBUG) << "Storing Entities took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
-    ctx.EntityCount = idCounter;
+    ctx.EntityCount = mEntityCount;
     if (ctx.EntityCount == 0) {
         ctx.Environment.SceneDiameter = 0;
         return true;

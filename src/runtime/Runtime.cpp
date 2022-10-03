@@ -423,11 +423,19 @@ bool Runtime::setup()
                 IG_LOG(L_DEBUG) << " -> " << resource << std::endl;
         }
 
-        if (mDatabase.Tables.empty()) {
+        if (mDatabase.DynTables.empty()) {
             IG_LOG(L_DEBUG) << "Registered dyntables: None" << std::endl;
         } else {
             IG_LOG(L_DEBUG) << "Registered dyntables:" << std::endl;
-            for (const auto& resource : mDatabase.Tables)
+            for (const auto& resource : mDatabase.DynTables)
+                IG_LOG(L_DEBUG) << " -> " << resource.first << std::endl;
+        }
+
+        if (mDatabase.FixTables.empty()) {
+            IG_LOG(L_DEBUG) << "Registered buffers: None" << std::endl;
+        } else {
+            IG_LOG(L_DEBUG) << "Registered buffers:" << std::endl;
+            for (const auto& resource : mDatabase.FixTables)
                 IG_LOG(L_DEBUG) << " -> " << resource.first << std::endl;
         }
     }

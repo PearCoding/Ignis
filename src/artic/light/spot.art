@@ -38,13 +38,13 @@ fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_an
 }
 
 fn @load_simple_spot_lights(count: i32, id_off: i32, device: Device) -> LightTable {
-    let tbl = device.load_dyntable("SimpleSpotLight"); // TODO: Use buffer
+    let tbl = device.load_fixtable("SimpleSpotLight");
 
-    let elem_s = 12 * sizeof[f32]() as u64; // See SpotLight.cpp
+    let elem_s = 12; // Given in floats. See SpotLight.cpp
     LightTable {
         count = count,
         get   = @|id| {
-            let data = tbl.data(elem_s * (id as u64));
+            let data = shift_device_buffer(elem_s * id, elem_s, tbl);
 
             let position  = data.load_vec4(0);
             let direction = data.load_vec4(4);

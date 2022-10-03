@@ -89,7 +89,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
                    });
 
     // Make sure this table is preloaded
-    result.Database.Tables.emplace("shapes", DynTable{});
+    result.Database.DynTables.emplace("shapes", DynTable{});
 
     const auto load_shape = [&](size_t i) {
         const std::string name = names.at(i);

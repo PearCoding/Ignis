@@ -39,7 +39,7 @@ void SphereProvider::handle(LoaderContext& ctx, LoaderResult& result, const std:
     // Make sure the id used in shape is same as in the dyntable later
     result.DatabaseAccessMutex.lock();
 
-    auto& table         = result.Database.Tables["shapes"];
+    auto& table         = result.Database.DynTables["shapes"];
     auto& data          = table.addLookup((uint32)this->id(), 0, DefaultAlignment);
     const size_t offset = table.currentOffset();
 
