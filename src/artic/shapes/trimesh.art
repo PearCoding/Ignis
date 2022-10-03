@@ -93,10 +93,9 @@ fn @load_trimesh(data: DeviceBuffer) -> TriMesh {
 }
 
 fn @load_trimesh_entry(device: Device, offset: u64, num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32) -> TriMesh {
-    let dtb  = device.load_dyntable("shapes");
-    let accb = device.get_device_buffer_accessor();
+    let dtb = device.load_dyntable("shapes");
 
-    let data = get_table_entry(offset, dtb, accb);
+    let data = dtb.data(offset);
     make_trimesh_from_buffer(num_face, num_verts, num_norms, num_tex, data)
 }
 
@@ -198,37 +197,35 @@ fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], is_nvvm: bool) -> PrimBvh
 }
 
 fn @make_cpu_trimesh_bvh_table(device: Device, vector_width: i32) -> BVHTable {
-    let dtb  = device.load_dyntable("trimesh_primbvh");
-    let accb = device.get_device_buffer_accessor();
+    let dtb = device.load_dyntable("trimesh_primbvh");
 
     @ |id| {
-        let entry  = get_lookup_entry(id as u64,   dtb, accb); 
-        let header = get_table_entry(entry.offset, dtb, accb);
-        let leaf_offset = header.load_i32(0) as u64;
+        let entry  = dtb.lookup(id); 
+        let header = dtb.data(entry.offset);
+        let leaf_offset = header.load_i32(0);
 
         if vector_width >= 8 {
-            let nodes = get_table_ptr(entry.offset + 16 , dtb) as &[Node8];
-            let tris  = get_table_ptr(entry.offset + 16 + leaf_offset * (sizeof[Node8]() as u64), dtb) as &[Tri4];
+            let nodes = header.pointer(4) as &[Node8];
+            let tris  = header.pointer(4 + leaf_offset * sizeof[Node8]() as i32 / 4) as &[Tri4];
             make_cpu_bvh8_tri4(nodes, tris)
         } else {
-            let nodes = get_table_ptr(entry.offset + 16, dtb) as &[Node4];
-            let tris  = get_table_ptr(entry.offset + 16 + leaf_offset * (sizeof[Node4]() as u64), dtb) as &[Tri4];
+            let nodes = header.pointer(4)as &[Node4];
+            let tris  = header.pointer(4 + leaf_offset * sizeof[Node4]() as i32 / 4) as &[Tri4];
             make_cpu_bvh4_tri4(nodes, tris)
         }
     } 
 }
 
 fn @make_gpu_trimesh_bvh_table(device: Device, is_nvvm: bool) -> BVHTable {
-    let dtb  = device.load_dyntable("trimesh_primbvh");
-    let accb = device.get_device_buffer_accessor();
+    let dtb = device.load_dyntable("trimesh_primbvh");
 
     @ |id| {
-        let entry  = get_lookup_entry(id as u64, dtb, accb); 
-        let header = get_table_entry(entry.offset, dtb, accb);
-        let leaf_offset = header.load_i32(0) as u64;
+        let entry  = dtb.lookup(id); 
+        let header = dtb.data(entry.offset);
+        let leaf_offset = header.load_i32(0);
 
-        let nodes = get_table_ptr(entry.offset + 16, dtb) as &[Node2];
-        let tris  = get_table_ptr(entry.offset + 16 + leaf_offset * (sizeof[Node2]() as u64), dtb) as &[Tri1];
+        let nodes = header.pointer(4) as &[Node2];
+        let tris  = header.pointer(4 + leaf_offset * sizeof[Node2]() as i32 / 4) as &[Tri1];
         make_gpu_bvh2_tri1(nodes, tris, is_nvvm)
     }
 }

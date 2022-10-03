@@ -35,6 +35,7 @@ struct DeviceBuffer {
     store_mat3x3:   fn (i32, Mat3x3) -> (),
     store_mat3x4:   fn (i32, Mat3x4) -> (),
     store_mat4x4:   fn (i32, Mat4x4) -> (),
+    pointer:        fn (i32) -> &[u8],
     count:          i32, // Given in units of i32, not bytes! Zero if unknown
     has_alignment:  bool // True if vec2, vec3, int2 and int3 are expected to be like vec4 or int4 in memory
 }
@@ -70,6 +71,7 @@ fn @make_null_device_buffer() = DeviceBuffer {
     store_mat3x3   = @|_, _| {},
     store_mat3x4   = @|_, _| {},
     store_mat4x4   = @|_, _| {},
+    pointer        = @|_| 0 as &[u8],
     count          = 0,
     has_alignment  = true
 };
@@ -105,6 +107,7 @@ fn @shift_device_buffer(off: i32, count: i32, buffer: DeviceBuffer) = DeviceBuff
     store_mat3x3   = @|id, v| buffer.store_mat3x3(id + off, v),
     store_mat3x4   = @|id, v| buffer.store_mat3x4(id + off, v),
     store_mat4x4   = @|id, v| buffer.store_mat4x4(id + off, v),
+    pointer        = @|id| buffer.pointer(id + off),
     count          = count,
     has_alignment  = buffer.has_alignment
 };

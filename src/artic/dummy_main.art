@@ -25,7 +25,7 @@ fn ig_callback_shader(_settings: &Settings) -> () {
     ignis_load_bvh8_ent(0, "", &mut node8, &mut entityleaf);
 
     // Force the export
-    let mut tbl : DynTable;
+    let mut tbl : DynTableData;
     ignis_load_dyntable(0, "", &mut tbl);
 
     let mut info : SceneInfo;

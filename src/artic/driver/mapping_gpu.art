@@ -903,9 +903,9 @@ fn @make_gpu_device( dev_id: i32
         info
     },
     load_dyntable = @ |name| -> DynTable {
-        let mut table: DynTable;
+        let mut table: DynTableData;
         ignis_load_dyntable(dev_id, name, &mut table);
-        table
+        make_dyntable(table, accb)
     },
     load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];

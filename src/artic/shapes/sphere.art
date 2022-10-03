@@ -68,19 +68,17 @@ fn @load_sphere(data: DeviceBuffer) -> Sphere {
 }
 
 fn @load_sphere_entry(device: Device, offset: u64) -> Sphere {
-    let dtb  = device.load_dyntable("shapes");
-    let accb = device.get_device_buffer_accessor();
+    let dtb = device.load_dyntable("shapes");
 
-    let data = get_table_entry(offset, dtb, accb);
+    let data = dtb.data(offset);
     load_sphere(data)
 }
 
 fn @load_sphere_table(device: Device) -> SphereTable {
-    let dtb  = device.load_dyntable("shapes");
-    let accb = device.get_device_buffer_accessor();
+    let dtb = device.load_dyntable("shapes");
     @ |id| {
-        let entry = get_lookup_entry(id as u64, dtb, accb); // Assume only spheres will be accessed
-        let data  = get_table_entry(entry.offset, dtb, accb);
+        let entry = dtb.lookup(id); // Assume only spheres will be accessed
+        let data  = dtb.data(entry.offset);
         load_sphere(data)
     }
 }

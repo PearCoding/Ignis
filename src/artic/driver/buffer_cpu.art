@@ -85,6 +85,7 @@ fn @make_cpu_buffer(p: &[u8], count: i32) = DeviceBuffer {
         q(i +  8) = v.col(2).x; q(i +  9) = v.col(2).y; q(i + 10) = v.col(2).z; q(i + 11) = v.col(2).w;
         q(i + 12) = v.col(3).x; q(i + 13) = v.col(3).y; q(i + 14) = v.col(3).z; q(i + 15) = v.col(3).w;
     },
+    pointer       = @ |i| &(p as &[i32])(i) as &[u8],
     count         = count,
     has_alignment = false
 };

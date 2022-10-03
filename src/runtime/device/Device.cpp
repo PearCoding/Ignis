@@ -1596,9 +1596,9 @@ IG_EXPORT void ignis_load_scene_info(int dev, SceneInfo* info)
     *info = sInterface->loadSceneInfo(dev);
 }
 
-static inline DynTable assignDynTable(const IG::DynTableProxy& tbl)
+static inline DynTableData assignDynTable(const IG::DynTableProxy& tbl)
 {
-    DynTable devtbl;
+    DynTableData devtbl;
     devtbl.count  = tbl.EntryCount;
     devtbl.header = const_cast<LookupEntry*>(tbl.LookupEntries.ptr());
     uint64_t size = tbl.Data.size();
@@ -1607,7 +1607,7 @@ static inline DynTable assignDynTable(const IG::DynTableProxy& tbl)
     return devtbl;
 }
 
-IG_EXPORT void ignis_load_dyntable(int dev, const char* name, DynTable* dtb)
+IG_EXPORT void ignis_load_dyntable(int dev, const char* name, DynTableData* dtb)
 {
     auto& proxy = sInterface->loadDyntable(dev, name);
     *dtb        = assignDynTable(proxy);
