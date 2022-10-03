@@ -12,7 +12,7 @@ struct Entity {
     size_t ID;
     Transformf Transform;
     std::string Name;
-    std::string Shape;
+    uint32 ShapeID;
     std::string BSDF;
 
     inline Eigen::Matrix<float, 3, 4> computeLocalMatrix() const

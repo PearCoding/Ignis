@@ -22,14 +22,13 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
         entity = ctx.Environment.EmissiveEntities.at(mEntity);
     }
 
-    const bool opt        = light->property("optimize").getBool(true);
-    const uint32 shape_id = ctx.Shapes->getShapeID(entity.Shape);
+    const bool opt = light->property("optimize").getBool(true);
 
-    mOptimized = opt && ctx.Shapes->isPlaneShape(shape_id);
+    mOptimized = opt && ctx.Shapes->isPlaneShape(entity.ShapeID);
     if (mOptimized) {
         IG_LOG(L_DEBUG) << "Using specialized plane sampler for area light '" << name << "'" << std::endl;
 
-        const auto& shape = ctx.Shapes->getPlaneShape(shape_id);
+        const auto& shape = ctx.Shapes->getPlaneShape(entity.ShapeID);
         Vector3f origin   = entity.Transform * shape.Origin;
         Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;
         Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
@@ -38,9 +37,9 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
         mPosition  = origin + x_axis * 0.5f + y_axis * 0.5f;
         mDirection = normal;
         mArea      = x_axis.cross(y_axis).norm();
-    } else if (ctx.Shapes->isTriShape(shape_id)) {
-        const auto& shape    = ctx.Shapes->getShape(shape_id);
-        const auto& trishape = ctx.Shapes->getTriShape(shape_id);
+    } else if (ctx.Shapes->isTriShape(entity.ShapeID)) {
+        const auto& shape    = ctx.Shapes->getShape(entity.ShapeID);
+        const auto& trishape = ctx.Shapes->getTriShape(entity.ShapeID);
 
         mPosition  = entity.Transform * shape.BoundingBox.center();
         mDirection = Vector3f::Zero();
@@ -73,9 +72,8 @@ void AreaLight::serialize(const SerializationInput& input) const
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader();
 
-    const uint32 shape_id = input.Tree.context().Shapes->getShapeID(entity.Shape);
     if (mOptimized) {
-        const auto& shape = input.Tree.context().Shapes->getPlaneShape(shape_id);
+        const auto& shape = input.Tree.context().Shapes->getPlaneShape(entity.ShapeID);
         Vector3f origin   = entity.Transform * shape.Origin;
         Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;
         Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
@@ -92,16 +90,16 @@ void AreaLight::serialize(const SerializationInput& input) const
                      << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[2])
                      << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[3])
                      << ");" << std::endl;
-    } else if (input.Tree.context().Shapes->isTriShape(shape_id)) {
-        const auto& shape = input.Tree.context().Shapes->getShape(shape_id);
-        const auto& tri   = input.Tree.context().Shapes->getTriShape(shape_id);
+    } else if (input.Tree.context().Shapes->isTriShape(entity.ShapeID)) {
+        const auto& shape = input.Tree.context().Shapes->getShape(entity.ShapeID);
+        const auto& tri   = input.Tree.context().Shapes->getTriShape(entity.ShapeID);
         input.Stream << "  let trimesh_" << light_id << " = load_trimesh_entry(device, "
                      << shape.TableOffset
                      << ", " << tri.FaceCount
                      << ", " << tri.VertexCount
                      << ", " << tri.NormalCount
                      << ", " << tri.TexCount << ");" << std::endl
-                     << "  let ae_" << light_id << " = make_shape_area_emitter(" << LoaderUtils::inlineEntity(entity, shape_id)
+                     << "  let ae_" << light_id << " = make_shape_area_emitter(" << LoaderUtils::inlineEntity(entity, entity.ShapeID)
                      << ", make_trimesh_shape(trimesh_" << light_id << ")"
                      << ", trimesh_" << light_id << ");" << std::endl;
     } else {
@@ -147,10 +145,9 @@ void AreaLight::embed(const EmbedInput& input) const
     const Eigen::Matrix<float, 3, 4> localMat  = entity.computeLocalMatrix();        // To Local
     const Eigen::Matrix<float, 3, 4> globalMat = entity.computeGlobalMatrix();       // To Global
     const Matrix3f normalMat                   = entity.computeGlobalNormalMatrix(); // To Global [Normal]
-    const uint32 shape_id                      = ctx.Shapes->getShapeID(entity.Shape);
 
     if (mOptimized) {
-        const auto& shape = input.Tree.context().Shapes->getPlaneShape(shape_id);
+        const auto& shape = input.Tree.context().Shapes->getPlaneShape(entity.ShapeID);
         Vector3f origin   = entity.Transform * shape.Origin;
         Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;
         Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
@@ -169,11 +166,11 @@ void AreaLight::embed(const EmbedInput& input) const
         input.Serializer.write(shape.TexCoords[3]); // +2 = 20
         input.Serializer.write(radiance);           // +3 = 23
         input.Serializer.write(area);               // +1 = 24
-    } else if (input.Tree.context().Shapes->isTriShape(shape_id)) {
+    } else if (input.Tree.context().Shapes->isTriShape(entity.ShapeID)) {
         input.Serializer.write(localMat, true);                           // +3x4 = 12
         input.Serializer.write(globalMat, true);                          // +3x4 = 24
         input.Serializer.write(normalMat, true);                          // +3x3 = 33
-        input.Serializer.write((uint32)shape_id);                         // +1   = 34
+        input.Serializer.write((uint32)entity.ShapeID);                   // +1   = 34
         input.Serializer.write((float)std::abs(normalMat.determinant())); // +1   = 35
         input.Serializer.write((uint32)0 /*Padding*/);                    // +1   = 36
         input.Serializer.write(radiance);                                 // +3   = 39
