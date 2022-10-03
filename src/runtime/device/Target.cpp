@@ -273,27 +273,31 @@ static inline ResultVector detectFeatures()
 
 Target Target::pickCPU()
 {
-    const auto features = detectFeatures();
+    return makeCPU(0, 1);
+    // FIXME: There is a vectorization bug. Do not pick it by default for now
+    /*
+        const auto features = detectFeatures();
 
-    const bool hasSSE2 = getEntryFromResult("SSE2", features);
-    const bool hasAVX2 = getEntryFromResult("AVX2", features);
-    // bool hasAVX512 = getEntryFromResult("AVX512F", features);
+        const bool hasSSE2 = getEntryFromResult("SSE2", features);
+        const bool hasAVX2 = getEntryFromResult("AVX2", features);
+        // bool hasAVX512 = getEntryFromResult("AVX512F", features);
 
-#if defined(IG_CPU_ARM)
-    // TODO
-    size_t vectorWidth = 4;
-#else
-    size_t vectorWidth = 1;
-    /*if (hasAVX512)
-        vectorWidth = 16;
-    else */
-    if (hasAVX2)
-        vectorWidth = 8;
-    else if (hasSSE2)
-        vectorWidth = 4;
-#endif
+    #if defined(IG_CPU_ARM)
+        // TODO
+        size_t vectorWidth = 4;
+    #else
+        size_t vectorWidth = 1;
+        // if (hasAVX512)
+        //    vectorWidth = 16;
+        // else
+        if (hasAVX2)
+            vectorWidth = 8;
+        else if (hasSSE2)
+            vectorWidth = 4;
+    #endif
 
-    return makeCPU(0, vectorWidth);
+        return makeCPU(0, vectorWidth);
+    */
 }
 
 Target Target::pickGPU(size_t device)
