@@ -114,8 +114,8 @@ std::filesystem::path LightHierarchy::setup(const std::vector<std::shared_ptr<Li
         for (const auto& node : innerNodes)
             IG_LOG(L_DEBUG) << (node.ID < 0 ? "Node" : "Leaf") << ": [" << node.Position.transpose() << ", " << node.Direction.transpose() << ", " << node.Flux << ", " << node.ID << "];" << std::endl;
 
-        for (const auto& code : codes)
-            IG_LOG(L_DEBUG) << code << std::endl;
+        // for (const auto& code : codes)
+        //     IG_LOG(L_DEBUG) << code << std::endl;
     }
 
     // Export bvh

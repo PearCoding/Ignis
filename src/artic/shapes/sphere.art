@@ -32,11 +32,11 @@ fn @make_sphere_shape(sphere: Sphere) -> Shape {
             SurfaceElement {
                 is_entering = is_entering,
                 point       = point,
-                face_normal = select(is_entering, normal, vec3_neg(normal)),
+                face_normal = normal,
                 inv_area    = 1 / area,
                 prim_coords = hit.prim_coords,
                 tex_coords  = hit.prim_coords,
-                local       = make_orthonormal_mat3x3(select(is_entering, normal, vec3_neg(normal)))
+                local       = make_orthonormal_mat3x3(normal)
             }
         },
         surface_element_for_point = @ |_, prim_coords| {

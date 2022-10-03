@@ -24,7 +24,7 @@ fn unwrap_lvsecondarypayload(payload: RayPayload) = LVSecondaryPayload {
 
 fn @init_lv_raypayload(payload: RayPayload) = write_lvprimarypayload(payload, LVPrimaryPayload { depth = 1 });
 
-fn @make_lv_renderer(max_path_len: i32, light_selector: LightSelector) -> Technique {
+fn @make_lv_renderer(max_path_len: i32, light_selector: LightSelector, no_connection_factor: f32) -> Technique {
     let offset:f32 = 0.001;
 
     fn @on_shadow( ctx: ShadingContext
@@ -73,12 +73,14 @@ fn @make_lv_renderer(max_path_len: i32, light_selector: LightSelector) -> Techni
         ShadowRay::None
     }
 
+    // Some surface was between the light source and the starting point -> There is no contribution from the light!
     fn @on_advanced_shadow_hit(_ray: Ray, _pixel: i32, _shader: MaterialShader, secondary_payload: RayPayload, _contrib: Color) -> Option[Color] {
         let lvs   = unwrap_lvsecondarypayload(secondary_payload);
         let color = color_map(lvs.light);
-        make_option(make_gray_color(color_average(color) * 0.1))
+        make_option(make_gray_color(color_luminance(color) * no_connection_factor))
     }
 
+    // No surface was between the light source and the starting point -> There is a contribution from the light!
     fn @on_advanced_shadow_miss(_ray: Ray, _pixel: i32, _shader: MaterialShader, secondary_payload: RayPayload, _contrib: Color) -> Option[Color] {
         let lvs = unwrap_lvsecondarypayload(secondary_payload);
         make_option(color_map(lvs.light))

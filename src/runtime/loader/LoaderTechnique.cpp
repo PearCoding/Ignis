@@ -66,11 +66,12 @@ static void lv_body_loader(std::ostream& stream, const std::string&, const std::
 {
     const int max_depth  = technique ? technique->property("max_depth").getInteger(64) : 64;
     const std::string ls = technique ? technique->property("light_selector").getString(DefaultLightSelector) : DefaultLightSelector;
+    const float factor   = technique ? technique->property("no_connection_factor").getNumber(0.0f) : 0.0f; // Set to zero to disable contribution of points not connected to a light
 
     ShadingTree tree(ctx);
     stream << ctx.Lights->generateLightSelector(ls, tree);
 
-    stream << "  let technique = make_lv_renderer(" << max_depth << ", light_selector);" << std::endl;
+    stream << "  let technique = make_lv_renderer(" << max_depth << ", light_selector, " << factor << ");" << std::endl;
 }
 
 static TechniqueInfo lv_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
