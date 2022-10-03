@@ -1,12 +1,3 @@
-struct EntityData {
-    local_mat:  [f32 * 12], // TODO: Check if on-the-fly calculation is worth it?
-    global_mat: [f32 * 12],
-    normal_mat: [f32 * 9],
-    shape_id:   i32,
-    scale:      f32,
-    _pad:       f32         // No bsdf or light association as these information is implicit in other shaders
-}
-
 struct Entity {
     id:         i32,
     shape_id:   i32,
@@ -19,7 +10,7 @@ struct Entity {
 type EntityTable = fn (i32) -> Entity;
 
 fn @make_entity_table(tbl: DeviceBuffer) -> EntityTable {
-    let elem_s = (sizeof[EntityData]() / sizeof[f32]()) as i32 ;
+    let elem_s = 36; // Given in floats. See LoaderEntity.cpp (optimized)
     @ |id| {
         let data = shift_device_buffer(elem_s * id, elem_s, tbl);
 

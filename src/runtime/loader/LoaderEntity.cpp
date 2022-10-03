@@ -37,7 +37,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
     const auto start1 = std::chrono::high_resolution_clock::now();
 
     auto& entityTable = result.Database.FixTables["entities"];
-    entityTable.reserve(ctx.Scene.entities().size() * 48);
+    entityTable.reserve(ctx.Scene.entities().size() * 36);
 
     std::unordered_map<ShapeProvider*, std::vector<EntityObject>> in_objs;
     mEntityCount = 0;
@@ -145,13 +145,14 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         const float scaleFactor                         = std::abs(toGlobalNormal.determinant());
 
         // Write data to dyntable
-        auto& entityData = entityTable.addEntry(DefaultAlignment);
+        auto& entityData = entityTable.addEntry(0);
         VectorSerializer entitySerializer(entityData, false);
-        entitySerializer.write(toLocal, true);        // To Local
-        entitySerializer.write(toGlobal, true);       // To Global
-        entitySerializer.write(toGlobalNormal, true); // To Global [Normal]
-        entitySerializer.write((uint32)shapeID);
-        entitySerializer.write(scaleFactor);
+        entitySerializer.write(toLocal, true);        // +12 = 12, To Local
+        entitySerializer.write(toGlobal, true);       // +12 = 24, To Global
+        entitySerializer.write(toGlobalNormal, true); // +9  = 33, To Global [Normal]
+        entitySerializer.write((uint32)shapeID);      // +1  = 34
+        entitySerializer.write(scaleFactor);          // +1  = 35
+        entitySerializer.write((uint32)0);            // +1  = 36, Padding
 
         // Extract information for BVH building
         EntityObject obj;
