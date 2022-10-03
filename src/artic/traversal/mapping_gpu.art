@@ -181,7 +181,7 @@ fn @gpu_traverse_prim( min_max: MinMax
 
 fn @make_gpu_scene_local_handler_multiple(prims: BVHTable, min_max: MinMax) -> SceneTraverseLocalHandler {
     @|local_ray: Ray, leaf: EntityLeaf, any_hit: bool| -> Hit {
-        let shape_bvh = @prims(leaf.user1_id);
+        let shape_bvh = @prims(join_u32_to_u64(bitcast[u32](leaf.user1), bitcast[u32](leaf.user2)));
         gpu_traverse_prim(min_max, local_ray, empty_hit(local_ray.tmax)/* TODO */, shape_bvh, any_hit, 1)
     }
 }

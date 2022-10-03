@@ -390,7 +390,7 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
 
 fn @make_cpu_scene_local_handler_multiple(prims: BVHTable, vector_width: i32, single: bool, min_max: MinMax) -> SceneTraverseLocalHandler {
     @|local_ray: Ray, leaf: EntityLeaf, any_hit: bool| -> Hit {
-        let shape_bvh = @prims(leaf.user1_id);
+        let shape_bvh = @prims(join_u32_to_u64(bitcast[u32](leaf.user1), bitcast[u32](leaf.user2)));
         cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/)
     }
 }

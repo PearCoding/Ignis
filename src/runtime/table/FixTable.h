@@ -28,7 +28,7 @@ public:
     }
 
     [[nodiscard]] inline const std::vector<uint8>& data() const { return mData; }
-    [[nodiscard]] inline size_t currentOffset() const { return mData.size(); }
+    [[nodiscard]] inline size_t currentOffset() const { return mData.size(); } // TODO: Maybe this should be given as multiple of 4?
     [[nodiscard]] inline size_t elementSize() const { return mElementSize == 0 ? mData.size() : mElementSize; }
     [[nodiscard]] inline size_t entryCount() const { return elementSize() == 0 ? 0 : mData.size() / elementSize(); }
 

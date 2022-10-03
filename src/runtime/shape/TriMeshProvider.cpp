@@ -170,7 +170,7 @@ struct BvhTemporary {
 };
 
 template <size_t N, size_t T>
-static uint32 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mutex)
+static uint64 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mutex)
 {
     IG_ASSERT(mesh.faceCount() > 0, "Expected mesh to contain some triangles");
 
@@ -178,9 +178,9 @@ static uint32 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mut
     build_bvh<N, T>(mesh, bvh.nodes, bvh.tris);
 
     mutex.lock();
-    auto& bvhTable = dtb.DynTables["trimesh_primbvh"];
-    uint32 bvhId   = (uint32)bvhTable.entryCount(); // TODO: We could skip the id and directly use the offset!
-    auto& bvhData  = bvhTable.addLookup(0, 0, DefaultAlignment);
+    auto& bvhTable = dtb.FixTables["trimesh_primbvh"];
+    auto& bvhData  = bvhTable.addEntry(DefaultAlignment);
+    uint64 offset  = bvhTable.currentOffset() / sizeof(float);
     VectorSerializer serializer(bvhData, false);
     serializer.write((uint32)bvh.nodes.size());
     serializer.write((uint32)bvh.tris.size()); // Not really needed, but just dump it out
@@ -190,7 +190,12 @@ static uint32 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mut
     serializer.write(bvh.tris, true);
     mutex.unlock();
 
-    return bvhId;
+    return offset;
+}
+
+static inline std::pair<uint32, uint32> split_u64_to_u32(uint64 a)
+{
+    return { uint32(a & 0xFFFFFFFF), uint32((a >> 32) & 0xFFFFFFFF) };
 }
 
 void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std::string& name, const Parser::Object& elem)
@@ -255,13 +260,13 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     IG_ASSERT((mesh.indices.size() % 4) == 0, "Expected index buffer count to be a multiple of 4!");
 
     // Setup bvh
-    uint32 bvh_id = 0;
+    uint64 bvh_offset = 0;
     if (ctx.Target.isGPU()) {
-        bvh_id = setup_bvh<2, 1>(mesh, result.Database, mBvhMutex);
+        bvh_offset = setup_bvh<2, 1>(mesh, result.Database, mBvhMutex);
     } else if (ctx.Target.vectorWidth() < 8) {
-        bvh_id = setup_bvh<4, 4>(mesh, result.Database, mBvhMutex);
+        bvh_offset = setup_bvh<4, 4>(mesh, result.Database, mBvhMutex);
     } else {
-        bvh_id = setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);
+        bvh_offset = setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);
     }
 
     // Precompute if plane or not
@@ -295,7 +300,8 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     meshSerializer.write(mesh.texcoords, true); // Aligned to 4*2 bytes
     meshSerializer.write(mesh.face_inv_area, true);
 
-    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, (int32)bvh_id, 0, 0, bbox, offset });
+    const auto off  = split_u64_to_u32(bvh_offset);
+    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, (int32)off.first, (int32)off.second, 0, bbox, offset });
     IG_ASSERT(id + 1 == table.entryCount(), "Expected id to be in sync with dyntable entry count");
 
     // Check if shape is actually just a simple plane

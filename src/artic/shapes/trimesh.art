@@ -197,11 +197,12 @@ fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], is_nvvm: bool) -> PrimBvh
 }
 
 fn @make_cpu_trimesh_bvh_table(device: Device, vector_width: i32) -> BVHTable {
-    let dtb = device.load_dyntable("trimesh_primbvh"); 
+    let dtb = device.load_fixtable("trimesh_primbvh"); 
+    let acc = device.get_device_buffer_accessor();
 
-    @ |id| { // TODO: Instead of the id, use the offset directly?
-        let entry  = dtb.lookup(id); 
-        let header = dtb.data(entry.offset);
+    @ |off| {
+        let ptr    = &(dtb.pointer(0) as &[f32])(off) as &[u8];
+        let header = acc(ptr);
         let leaf_offset = header.load_i32(0);
 
         if vector_width >= 8 {
@@ -209,7 +210,7 @@ fn @make_cpu_trimesh_bvh_table(device: Device, vector_width: i32) -> BVHTable {
             let tris  = header.pointer(4 + leaf_offset * sizeof[Node8]() as i32 / 4) as &[Tri4];
             make_cpu_bvh8_tri4(nodes, tris)
         } else {
-            let nodes = header.pointer(4)as &[Node4];
+            let nodes = header.pointer(4) as &[Node4];
             let tris  = header.pointer(4 + leaf_offset * sizeof[Node4]() as i32 / 4) as &[Tri4];
             make_cpu_bvh4_tri4(nodes, tris)
         }
@@ -217,11 +218,12 @@ fn @make_cpu_trimesh_bvh_table(device: Device, vector_width: i32) -> BVHTable {
 }
 
 fn @make_gpu_trimesh_bvh_table(device: Device, is_nvvm: bool) -> BVHTable {
-    let dtb = device.load_dyntable("trimesh_primbvh");
+    let dtb = device.load_fixtable("trimesh_primbvh");
+    let acc = device.get_device_buffer_accessor();
 
-    @ |id| {
-        let entry  = dtb.lookup(id); 
-        let header = dtb.data(entry.offset);
+    @ |off| {
+        let ptr    = &(dtb.pointer(0) as &[f32])(off) as &[u8];
+        let header = acc(ptr);
         let leaf_offset = header.load_i32(0);
 
         let nodes = header.pointer(4) as &[Node2];

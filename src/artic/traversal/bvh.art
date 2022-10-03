@@ -6,7 +6,7 @@ struct PrimBvh {
     arity:    i32,              // Arity of the BVH (number of children per node)
 }
 
-type BVHTable = fn (i32) -> PrimBvh;
+type BVHTable = fn (u64) -> PrimBvh;
 
 // Top level BVH
 struct SceneBvh {
@@ -41,9 +41,9 @@ struct EntityLeaf {
     bbox      : BBox,   // Bounding box
     entity_id : i32,    // Entity ID
     shape_id  : i32,    // Shape ID
-    user1_id  : i32,    // Custom ID (most of the time the bvh id)
-    user2_id  : i32,    // Custom ID
-    user3_id  : i32,    // Custom ID
+    user1     : i32,    // Custom (most of the time the bvh id)
+    user2     : i32,    // Custom
+    user3     : i32,    // Custom
     local     : Mat3x4, // Matrix to local system
     flags     : u32     // Visibility flags and other stuff, partially the same as ray flags
 }
@@ -59,13 +59,13 @@ struct EntityLeaf1 {
     user      : [i32 * 3]  // Paddings
 }
 
-fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, user1_id: i32, user2_id: i32, user3_id: i32, local: Mat3x4, flags: u32) = EntityLeaf {
+fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, user1: i32, user2: i32, user3: i32, local: Mat3x4, flags: u32) = EntityLeaf {
     bbox      = bbox,
     entity_id = entity_id,
     shape_id  = shape_id,
-    user1_id  = user1_id,
-    user2_id  = user2_id,
-    user3_id  = user3_id,
+    user1     = user1,
+    user2     = user2,
+    user3     = user3,
     local     = local,
     flags     = flags
 };

@@ -19,7 +19,8 @@ struct DynTable {
     data:   fn (u64) -> DeviceBuffer
 }
 
-fn @join_u32(a: u32, b: u32) = ((b as u64) << 32) | (a as u64); // TODO: This assumes little endian
+fn @join_u32_to_u64(a: u32, b: u32) = ((b as u64) << 32) | (a as u64);
+fn @split_u64_to_u32(a: u64)        = ((a & 0xFFFFFFFF) as u32, ((a >> 32) & 0xFFFFFFFF) as u32);
 
 fn @make_dyntable(tbl: DynTableData, acc: DeviceBufferAccessor) -> DynTable {
     fn @get_lookup_entry(ind: i32) -> LookupEntry {
@@ -30,7 +31,7 @@ fn @make_dyntable(tbl: DynTableData, acc: DeviceBufferAccessor) -> DynTable {
         LookupEntry {
              type_id = bitcast[u32](type_id),
              flags   = bitcast[u32](flags),
-             offset  = join_u32(bitcast[u32](off1), bitcast[u32](off2))
+             offset  = join_u32_to_u64(bitcast[u32](off1), bitcast[u32](off2))
         }
     }
     

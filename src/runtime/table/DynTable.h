@@ -6,7 +6,7 @@ namespace IG {
 struct LookupEntry {
     uint32 TypeID;
     uint32 Flags;
-    uint64 Offset;
+    uint64 Offset; // TODO: Explicitly split it to two uint32 for compliance with join_u32_to_u64 in data.art
 };
 
 class DynTable {
@@ -28,7 +28,7 @@ public:
 
     [[nodiscard]] inline const std::vector<LookupEntry>& lookups() const { return mLookups; }
     [[nodiscard]] inline const std::vector<uint8>& data() const { return mData; }
-    [[nodiscard]] inline size_t currentOffset() const { return mData.size(); }
+    [[nodiscard]] inline size_t currentOffset() const { return mData.size(); } // TODO: Maybe this should be given as multiple of 4?
 
 private:
     std::vector<LookupEntry> mLookups;
