@@ -133,12 +133,16 @@ fn @make_primary_stream_rnd_state_writer(primary: PrimaryStream, vector_width: i
 
 //////////// Payload
 fn @make_payload_handler(ptr: &mut [f32], count: i32, vector_width: i32) -> fn (i32, i32) -> RayPayload {
-    @ |i, j| {
-        let k = (i * vector_width + j) * count;
+    if ?count && count == 0 {
+        @ |_, _| make_empty_payload()
+    } else {
+        @ |i, j| {
+            let k = (i * vector_width + j) * count;
 
-        RayPayload {
-            get = @|l| { ptr(k + l) },
-            set = @|l, v| { ptr(k + l) = v; },
+            RayPayload {
+                get = @|l| { ptr(k + l) },
+                set = @|l, v| { ptr(k + l) = v; },
+            }
         }
     }
 }
