@@ -62,6 +62,30 @@ static TechniqueInfo wireframe_get_info(const std::string&, const std::shared_pt
 
 /////////////////////////
 
+static void lv_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
+{
+    const int max_depth  = technique ? technique->property("max_depth").getInteger(64) : 64;
+    const std::string ls = technique ? technique->property("light_selector").getString(DefaultLightSelector) : DefaultLightSelector;
+
+    ShadingTree tree(ctx);
+    stream << ctx.Lights->generateLightSelector(ls, tree);
+
+    stream << "  let technique = make_lv_renderer(" << max_depth << ", light_selector);" << std::endl;
+}
+
+static TechniqueInfo lv_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+{
+    TechniqueInfo info;
+    info.Variants[0].UsesLights                = true;
+    info.Variants[0].PrimaryPayloadCount       = 1;
+    info.Variants[0].SecondaryPayloadCount     = 1;
+    info.Variants[0].ShadowHandlingMode        = ShadowHandlingMode::Advanced;
+    info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_lv_raypayload)";
+    return info;
+}
+
+/////////////////////////
+
 static void enable_ib(TechniqueInfo& info, bool always = false, bool extend = true)
 {
     info.EnabledAOVs.emplace_back("Normals");
@@ -400,6 +424,7 @@ static const struct TechniqueEntry {
     { "photonmapper", ppm_get_info, ppm_body_loader },
     { "wireframe", wireframe_get_info, wireframe_body_loader },
     { "infobuffer", ib_get_info, ib_body_loader },
+    { "lightvisibility", lv_get_info, lv_body_loader },
     { "", nullptr, nullptr }
 };
 

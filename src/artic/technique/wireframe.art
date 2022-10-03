@@ -8,7 +8,7 @@ fn write_wireframeraypayload(payload: RayPayload, w: WireframeRayPayload) -> () 
     payload.set(1, w.distance);
 }
 
-fn unrap_wireframeraypayload(payload: RayPayload) = WireframeRayPayload {
+fn unwrap_wireframeraypayload(payload: RayPayload) = WireframeRayPayload {
     depth    = payload.get(0) as i32,
     distance = payload.get(1),
 };
@@ -34,7 +34,7 @@ fn @make_wireframe_renderer(camera: Camera) -> Technique {
               , payload: RayPayload
               , _mat: Material
         ) -> Option[Color] {
-        let (is_edge, t) = is_edge_hit(ctx.pixel, ctx.hit, ctx.surf, unrap_wireframeraypayload(payload).distance);
+        let (is_edge, t) = is_edge_hit(ctx.pixel, ctx.hit, ctx.surf, unwrap_wireframeraypayload(payload).distance);
         if is_edge { 
             make_option(color_lerp(color_builtins::white, color_builtins::black, t))
         } else {
@@ -47,7 +47,7 @@ fn @make_wireframe_renderer(camera: Camera) -> Technique {
                 , payload: RayPayload
                 , _mat: Material
         ) -> Option[Ray] {
-        let wpt = unrap_wireframeraypayload(payload);
+        let wpt = unwrap_wireframeraypayload(payload);
         let (is_edge, _) = is_edge_hit(ctx.pixel, ctx.hit, ctx.surf, wpt.distance);
         if !is_edge { 
             write_wireframeraypayload(payload, WireframeRayPayload{

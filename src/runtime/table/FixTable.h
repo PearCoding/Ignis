@@ -3,8 +3,9 @@
 #include "IG_Config.h"
 
 namespace IG {
-// Special purpose buffer with elements having the same size
-// This table is exposed as a standard DeviceBuffer and no tests are done to ensure all elements having the same size!
+// Special purpose buffer with elements having the same size.
+// This table is exposed as a standard DeviceBuffer and elements are not enforced to have the same size.
+// Keeping track of the indexes is beyond the scope of this class.
 class FixTable {
 public:
     FixTable() = default;
@@ -17,23 +18,16 @@ public:
             mData.resize(mData.size() + defect);
         }
 
-        if (!mData.empty()) {
-            if (mElementSize == 0)
-                mElementSize = mData.size();
-
-            IG_ASSERT((mData.size() % mElementSize == 0), "Expected data size be a multiple of the computed element size");
-        }
-
+        mCount++;
         return mData;
     }
 
     [[nodiscard]] inline const std::vector<uint8>& data() const { return mData; }
     [[nodiscard]] inline size_t currentOffset() const { return mData.size(); } // TODO: Maybe this should be given as multiple of 4?
-    [[nodiscard]] inline size_t elementSize() const { return mElementSize == 0 ? mData.size() : mElementSize; }
-    [[nodiscard]] inline size_t entryCount() const { return elementSize() == 0 ? 0 : mData.size() / elementSize(); }
+    [[nodiscard]] inline size_t entryCount() const { return mCount; }
 
 private:
-    size_t mElementSize = 0;
+    size_t mCount = 0;
     std::vector<uint8> mData;
 };
 } // namespace IG
