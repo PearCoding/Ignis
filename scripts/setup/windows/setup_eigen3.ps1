@@ -16,12 +16,12 @@ cd "build"
 
 # Configure it
 $EIGEN3_ROOT="$DEPS_ROOT\Eigen3".Replace("\", "/")
-cmake -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$EIGEN3_ROOT" ..
+& $CMAKE_BIN $Config.CMAKE_EXTRA_ARGS -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$EIGEN3_ROOT" ..
 
 # Build it
-cmake --build . --config "Release"
+& $CMAKE_BIN --build . --config "Release"
 
 # Install it
-cmake --install .
+& $CMAKE_BIN --install .
 
 cd $CURRENT

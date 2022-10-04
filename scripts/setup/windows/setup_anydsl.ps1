@@ -17,11 +17,11 @@ If (!(test-path $CUDA)) {
 
 # Clone or update if necessary
 If (!(test-path "anydsl")) {
-    git clone --branch cmake-based-setup https://github.com/AnyDSL/anydsl.git
+    & $GIT_BIN clone --branch cmake-based-setup https://github.com/AnyDSL/anydsl.git
     cd "anydsl"
 } Else {
     cd "anydsl"
-    git pull
+    & $GIT_BIN pull
 }
 
 If (!(test-path "build")) {
@@ -31,7 +31,7 @@ cd "build"
 
 $BUILD_TYPE=$Config.AnyDSL_BUILD_TYPE
 # Setup cmake
-cmake `
+& $CMAKE_BIN $Config.CMAKE_EXTRA_ARGS `
     -DRUNTIME_JIT=ON `
     -DBUILD_SHARED_LIBS=ON `
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" `
@@ -48,7 +48,7 @@ cmake `
     ..
 
 # Build it
-cmake --build . --config "$BUILD_TYPE" --target pull-thorin pull-artic pull-runtime runtime runtime_jit_artic artic
+& $CMAKE_BIN --build . --config "$BUILD_TYPE" --target pull-thorin pull-artic pull-runtime runtime runtime_jit_artic artic
 
 # Copy necessary stuff
 $ZLIB_DLL="$ZLIB\bin\zlib.dll"
