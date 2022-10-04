@@ -177,7 +177,7 @@ static const auto Entries = array_of<SearchEntry>(
 
 using ResultVector = std::array<bool, Entries.size()>;
 
-static bool getEntryFromResult(const char* name, const ResultVector& result)
+[[maybe_unused]] static bool getEntryFromResult(const char* name, const ResultVector& result)
 {
     for (size_t i = 0; i < Entries.size(); ++i) {
         if (std::strcmp(Entries[i].Name, name) == 0)
