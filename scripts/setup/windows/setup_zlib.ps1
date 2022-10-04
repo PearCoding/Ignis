@@ -11,12 +11,12 @@ cd "zlib*/"
 
 # Configure
 $ZLIB_ROOT="$DEPS_ROOT\zlib".Replace("\", "/")
-cmake -DCMAKE_BUILD_TYPE="$($Config.ZLIB_BUILD_TYPE)" -DCMAKE_INSTALL_PREFIX="$ZLIB_ROOT" .
+& $CMAKE_BIN $Config.CMAKE_EXTRA_ARGS -DCMAKE_BUILD_TYPE="$($Config.ZLIB_BUILD_TYPE)" -DCMAKE_INSTALL_PREFIX="$ZLIB_ROOT" .
 
 # Build it
-cmake --build . --config "$($Config.ZLIB_BUILD_TYPE)"
+& $CMAKE_BIN --build . --config "$($Config.ZLIB_BUILD_TYPE)"
 
 # Install it
-cmake --install .
+& $CMAKE_BIN --install .
 
 cd $CURRENT
