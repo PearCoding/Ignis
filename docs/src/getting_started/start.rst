@@ -6,7 +6,7 @@ This section gives an overview of the Ignis rendering framework.
 Frontends
 ---------
 
-The frontends of the raytracer communicate with the user and one, optimal selected, backend.
+The frontends of the raytracer communicate with the underlying runtime.
 Currently, four frontends are available:
 
 ``igview``
