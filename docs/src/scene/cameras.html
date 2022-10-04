@@ -250,21 +250,21 @@
 The camera is specified in the <span class="monosp">camera</span> block with a <span class="monosp">type</span> listed in this section below.</p>
 <p>The actual image (or viewport) size is specified in the <span class="monosp">film</span> block with an optional sample strategy in <span class="monosp">sampler</span>.
 The sample strategy has to be one of “independent” (default), “mjitt” or “halton”.</p>
-<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-    <span class="c1">// ...</span>
-   <span class="s2">&quot;camera&quot;</span><span class="o">:</span> <span class="p">{</span>
-        <span class="s2">&quot;type&quot;</span><span class="o">:</span> <span class="s2">&quot;TYPE&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;fov&quot;</span><span class="o">:</span> <span class="nx">FOV</span><span class="p">,</span>
-        <span class="s2">&quot;near_clip&quot;</span><span class="o">:</span> <span class="mf">0.1</span><span class="p">,</span>
-        <span class="s2">&quot;far_clip&quot;</span><span class="o">:</span> <span class="mi">100</span><span class="p">,</span>
-        <span class="s2">&quot;transform&quot;</span><span class="o">:</span> <span class="nx">TRANSFORM</span>
-    <span class="p">},</span>
-    <span class="s2">&quot;film&quot;</span><span class="o">:</span> <span class="p">{</span>
-        <span class="s2">&quot;size&quot;</span><span class="o">:</span> <span class="p">[</span><span class="nx">SX</span><span class="p">,</span> <span class="nx">SZ</span><span class="p">],</span>
-        <span class="s2">&quot;sampler&quot;</span><span class="o">:</span> <span class="s2">&quot;independent&quot;</span>
-    <span class="p">}</span>
-    <span class="c1">// ...</span>
-<span class="p">}</span>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
+<span class="w">   </span><span class="s2">&quot;camera&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;TYPE&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;fov&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">FOV</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;near_clip&quot;</span><span class="o">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;far_clip&quot;</span><span class="o">:</span><span class="w"> </span><span class="mf">100</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;transform&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">TRANSFORM</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="s2">&quot;film&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;size&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="nx">SX</span><span class="p">,</span><span class="w"> </span><span class="nx">SZ</span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;sampler&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;independent&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <section id="perspective-camera-perspective">
@@ -393,12 +393,13 @@ The sample strategy has to be one of “independent” (default), “mjitt” or
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/sphinx_highlight.js"></script>
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
   
     <div class="footer" role="contentinfo">
         <div class="container">
             &#169; Copyright 2020-2022, Ignis-Project.
-        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.1.1.
+        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.2.3.
         </div>
     </div>  
 
