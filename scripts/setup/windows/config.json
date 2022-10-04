@@ -1,6 +1,9 @@
 {
     "LOCATION": "",
-    "CMAKE_SLN": false,
+    "GIT_BIN": "git",
+    "CMAKE_BIN": "cmake",
+    "CMAKE_EXTRA_ARGS": ["-GNinja"],
+    "SKIP_VC_ENV": false,
     "GET_ZLIB": true,
     "ZLIB_BUILD_TYPE": "Release",
     "ZLIB_URL": "https://zlib.net/zlib1212.zip",
