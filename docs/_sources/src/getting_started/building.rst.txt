@@ -37,9 +37,9 @@ This mini tutorial is expecting some basic knowledge about the Windows build sys
 
 1.  Clone Ignis from https://github.com/PearCoding/Ignis.
 
-    1.  (Optional) Copy the config file ``scripts/windows/config.json`` and change it to your needs. Normally you do not have to change anything. The option ``LOCATION`` can be used to specify a different location for the dependencies. The option ``CMAKE_SLN`` can be set true to use Visual Studion .sln instead of the Ninja based Ignis configuration.
+    1.  (Optional) Copy the config file ``scripts/windows/config.json`` and change it to your needs. Normally you do not have to change anything. The option ``LOCATION`` can be used to specify a different location for the dependencies.
     2.  Run the script ``scripts/windows/setup.ps1``. If you use a different config file, specify the path as an argument to the script. The script will download all the necessary dependencies, except CUDA, compile it and create a new directory ``deps/`` on the directory on top of Ignis or the location specified in the config. This step has to be done only once, or if some of the dependencies got updated.
-    3.  By default the ``build/`` directory contains a Ninja based ``Release`` configuration. If ``CMAKE_SLN`` was set to true, the Visual Studio solution ``build/Ignis.sln`` can be used for further development.
+    3.  By default the ``build/`` directory contains a Ninja based ``Release`` configuration. 
     4.  The ``Release`` configuration is well tested and should be used for most purposes. Any other configuration is experimental and may fail at any time.
 
 Windows (Manual)

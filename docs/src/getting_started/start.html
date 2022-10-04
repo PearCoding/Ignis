@@ -106,7 +106,6 @@
                                 <p class="caption" role="heading"><span class="caption-text">Getting Started:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Overview</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#backends">Backends</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#frontends">Frontends</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#running">Running</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#tiny-tools">Tiny tools</a></li>
@@ -176,6 +175,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#normal-mapping-normalmap">Normal mapping (<span class="monosp">normalmap</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#bump-mapping-bumpmap">Bump mapping (<span class="monosp">bumpmap</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#transform-transform">Transform (<span class="monosp">transform</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#dupuy-jakob-measured-materials-djmeasured">Dupuy &amp; Jakob measured materials (<span class="monosp">djmeasured</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#klems-klems">Klems (<span class="monosp">klems</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#tensortree-tensortree">TensorTree (<span class="monosp">tensortree</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../scene/bsdfs.html#list-of-preset-index-of-refractions">List of preset index of refractions</a></li>
@@ -247,18 +247,9 @@
   <section id="overview">
 <h1>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h1>
 <p>This section gives an overview of the Ignis rendering framework.</p>
-<section id="backends">
-<h2>Backends<a class="headerlink" href="#backends" title="Permalink to this heading">¶</a></h2>
-<p>The raytracer as multiple backends available to make sure the best optimized kernel is used for certain tasks.
-Therefore, multiple device and feature specific modules, so-called drivers, have to be compiled.</p>
-<p>The compilation process might take a while depending on your hardware and feature selection.
-Parallel compilation of the drivers is disabled by default.
-Multithreading might freeze your operating system due to the high memory and cpu use.
-You can use the CMake option <code class="docutils literal notranslate"><span class="pre">IG_BUILD_DRIVER_PARALLEL</span></code> to enable it if you are sure your system can handle it.</p>
-</section>
 <section id="frontends">
 <h2>Frontends<a class="headerlink" href="#frontends" title="Permalink to this heading">¶</a></h2>
-<p>The frontends of the raytracer communicate with the user and one, optimal selected, backend.
+<p>The frontends of the raytracer communicate with the underlying runtime.
 Currently, four frontends are available:</p>
 <section id="igview">
 <h3><code class="docutils literal notranslate"><span class="pre">igview</span></code><a class="headerlink" href="#igview" title="Permalink to this heading">¶</a></h3>
@@ -291,12 +282,6 @@ You might disable the API by setting the CMake option <code class="docutils lite
 </section>
 <section id="running">
 <h2>Running<a class="headerlink" href="#running" title="Permalink to this heading">¶</a></h2>
-<p>Each frontend requires the exact location of the backends to run.
-An automatic search procedure will find detect them in the system.
-In some rare cases the automatic search procedure might fail to find all the backends.
-In that case the environment variable <code class="docutils literal notranslate"><span class="pre">IG_DRIVER_PATH</span></code> can be used to point to the directories containing driver modules.
-The environment variable is similar to the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> variable used in Linux environments and should contain absolute paths only, separated by ‘:’ if multiple paths are provided.
-Setting <code class="docutils literal notranslate"><span class="pre">IG_DRIVER_SKIP_SYSTEM_PATH</span></code> will prevent the automatic search and only depend on <code class="docutils literal notranslate"><span class="pre">IG_DRIVER_PATH</span></code>.</p>
 <p>Run a frontend of your choice like this:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>igview scene/diamond_scene.json
 </pre></div>

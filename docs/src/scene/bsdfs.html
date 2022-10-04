@@ -106,7 +106,6 @@
                                 <p class="caption" role="heading"><span class="caption-text">Getting Started:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../getting_started/start.html">Overview</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../getting_started/start.html#backends">Backends</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/start.html#frontends">Frontends</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/start.html#running">Running</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../getting_started/start.html#tiny-tools">Tiny tools</a></li>
@@ -176,6 +175,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#normal-mapping-normalmap">Normal mapping (<span class="monosp">normalmap</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#bump-mapping-bumpmap">Bump mapping (<span class="monosp">bumpmap</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#transform-transform">Transform (<span class="monosp">transform</span>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dupuy-jakob-measured-materials-djmeasured">Dupuy &amp; Jakob measured materials (<span class="monosp">djmeasured</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#klems-klems">Klems (<span class="monosp">klems</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#tensortree-tensortree">TensorTree (<span class="monosp">tensortree</span>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#list-of-preset-index-of-refractions">List of preset index of refractions</a></li>
@@ -979,8 +979,39 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </figcaption>
 </figure>
 </div></section>
+<section id="dupuy-jakob-measured-materials-djmeasured">
+<span id="bsdf-djmeasured"></span><span id="fig-transform"></span><h2>Dupuy &amp; Jakob measured materials (<span class="monosp">djmeasured</span>)<a class="headerlink" href="#dupuy-jakob-measured-materials-djmeasured" title="Permalink to this heading">¶</a></h2>
+<table class="paramstable docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="paramtype">filename</span></p></td>
+<td><p><span class="paramtype">string</span></p></td>
+<td><p><em>None</em></p></td>
+<td><p>Path to a valid brdf.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">tint</span></p></td>
+<td><p><span class="paramtype">color</span></p></td>
+<td><p>1</p></td>
+<td><p>Tint.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="figure compound align-center" id="fig-djmeasured">
+<figure class="align-center" id="id20">
+<a class="reference internal image-reference" href="../../_images/mat_djmeasured.jpg"><img alt="../../_images/mat_djmeasured.jpg" src="../../_images/mat_djmeasured.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="caption-text">Dupuy &amp; Jakob based measured material. More information and measured data available at <a class="reference external" href="https://rgl.epfl.ch/materials">https://rgl.epfl.ch/materials</a></span><a class="headerlink" href="#id20" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="klems-klems">
-<span id="bsdf-klems"></span><span id="fig-transform"></span><h2>Klems (<span class="monosp">klems</span>)<a class="headerlink" href="#klems-klems" title="Permalink to this heading">¶</a></h2>
+<span id="bsdf-klems"></span><span id="fig-djmeasured"></span><h2>Klems (<span class="monosp">klems</span>)<a class="headerlink" href="#klems-klems" title="Permalink to this heading">¶</a></h2>
 <table class="paramstable docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
