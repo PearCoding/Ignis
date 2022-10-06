@@ -1,7 +1,7 @@
-FROM pearcoding/anydsl:latest-avx2-jit as build
+FROM pearcoding/anydsl:latest-cpu-jit as build
 
 LABEL maintainer="Ömercan Yazici" \
-      description="Ignis Raytracer with AVX2 backend" \
+      description="Ignis Raytracer without GPU support" \
       version="0.2.0"
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -15,13 +15,13 @@ RUN ./docker/compile.sh
 FROM gcc:12 as runtime
 
 LABEL maintainer="Ömercan Yazici" \
-      description="Ignis Raytracer with AVX2 backend" \
+      description="Ignis Raytracer without GPU support" \
       version="0.2.0"
 
 ENV DEBIAN_FRONTEND noninteractive
 
 COPY --from=build /ignis-install/ /usr/
-COPY --from=build /anydsl/artic/build/lib/libartic.so /anydsl/impala/build/lib/libimpala.so /anydsl/thorin/build/lib/libthorin.so /anydsl/runtime/build/lib/libruntime.so /anydsl/runtime/build/lib/libruntime_jit_artic.so /anydsl/llvm_install/lib/libLLVM-12.so /usr/lib/
+COPY --from=build /anydsl/artic/build/lib/libartic.so /anydsl/thorin/build/lib/libthorin.so /anydsl/runtime/build/lib/libruntime.so /anydsl/runtime/build/lib/libruntime_jit_artic.so /anydsl/llvm_install/lib/libLLVM-14.so /usr/lib/
 
 RUN apt-get update && apt-get install -y libtbb2 libsdl2-2.0-0 libgomp1 libxml2 && rm -rf /var/lib/apt/lists/* 
 

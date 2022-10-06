@@ -57,5 +57,8 @@ scenes/radiance/*/*.exr
 scenes/radiance/*/*.unf
 scenes/radiance/*/*.oct
 
+# Docker build stuff
+scripts/docker/anydsl/tmp/
+
 # Do not add backup files
 *.blend1
