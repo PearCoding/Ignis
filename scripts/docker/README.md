@@ -3,13 +3,13 @@
 Ignis is available on docker hub with the image [pearcoding/ignis](https://hub.docker.com/repository/docker/pearcoding/ignis)
 and a standard AnyDSL version with JIT is available on docker hub with the image [pearcoding/anydsl](https://hub.docker.com/repository/docker/pearcoding/anydsl)
 
-The images are preconfigured for specific flavours and only contains the runtime without source code or scenes. The underlying distribution is Debian.
+The images are preconfigured for specific flavours and only contain the runtime without source code or scenes. The underlying distribution is Debian.
 
 Available flavours:
 
  - `CPU` with igtrace, igcli, igview for cpu only
  - `CPU-PY` with igtrace, igcli, igview and Python API for cpu only (TODO)
- - `CUDA` with igtrace, igcli, igview with cpu and CUDA support (TODO)
+ - `CUDA` with igtrace, igcli, igview with cpu and CUDA support
  - `CUDA-PY` with igtrace, igcli, igview and Python API with cpu and CUDA support (TODO)
  - `ROCM` with igtrace, igcli, igview with cpu and ROCM (AMD) support (TODO)
  - `ROCM-PY` with igtrace, igcli, igview and Python API with cpu and ROCM (AMD) support (TODO)
