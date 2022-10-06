@@ -1,3 +1,4 @@
+ARG IG_DIR=.
 FROM pearcoding/anydsl:latest-cuda-jit as build
 
 LABEL maintainer="Ömercan Yazici" \
@@ -9,7 +10,7 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y libeigen3-dev libtbb-dev libsdl2-dev && rm -rf /var/lib/apt/lists/* 
 
 ENV LD_LIBRARY_PATH="/usr/local/cuda/compat:${LD_LIBRARY_PATH}"
-COPY . /ignis
+COPY $IG_DIR /ignis
 WORKDIR /ignis
 RUN ./scripts/docker/ignis/compile.sh
 

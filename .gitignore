@@ -59,6 +59,7 @@ scenes/radiance/*/*.oct
 
 # Docker build stuff
 scripts/docker/anydsl/tmp/
+scripts/docker/ignis/tmp/
 
 # Do not add backup files
 *.blend1

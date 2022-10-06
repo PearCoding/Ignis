@@ -31,3 +31,7 @@ Example for `igtrace`
     docker run -v ~/scenes:/scenes --entrypoint igtrace -it pearcoding/ignis:latest-cpu /scenes/diamond_scene.json
 
 The usage of `igview` is still experimental as a X11 server is required.
+
+## CUDA
+
+To use the cuda docker flavour have a look at the userguide from NVidia: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/user-guide.html

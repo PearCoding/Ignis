@@ -11,5 +11,5 @@ RUN mkdir -p /anydsl
 COPY tmp/anydsl /anydsl
 WORKDIR /anydsl
 
-RUN apt-get update && apt-get install -y build-essential wget g++ git subversion zlib1g-dev cmake ninja-build && rm -rf /var/lib/apt/lists/* 
+RUN apt-get update && apt-get install -y build-essential wget g++ git subversion zlib1g-dev cmake ninja-build python3 && rm -rf /var/lib/apt/lists/* 
 RUN chmod +x setup.sh && chmod +x cleanup.sh && ./setup.sh && ./cleanup.sh
