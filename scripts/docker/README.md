@@ -7,12 +7,9 @@ The images are preconfigured for specific flavours and only contain the runtime 
 
 Available flavours:
 
- - `CPU` with igtrace, igcli, igview for cpu only
- - `CPU-PY` with igtrace, igcli, igview and Python API for cpu only (TODO)
- - `CUDA` with igtrace, igcli, igview with cpu and CUDA support
- - `CUDA-PY` with igtrace, igcli, igview and Python API with cpu and CUDA support (TODO)
- - `ROCM` with igtrace, igcli, igview with cpu and ROCM (AMD) support (TODO)
- - `ROCM-PY` with igtrace, igcli, igview and Python API with cpu and ROCM (AMD) support (TODO)
+ - `CPU` with igtrace, igcli, igview and Python API for cpu only
+ - `CUDA` with igtrace, igcli, igview and Python API with cpu and CUDA support
+ - `ROCM` with igtrace, igcli, igview and Python API with cpu and ROCM (AMD) support (TODO)
 
 ## Entrypoint
 
@@ -34,4 +31,5 @@ The usage of `igview` is still experimental as a X11 server is required.
 
 ## CUDA
 
-To use the cuda docker flavour have a look at the userguide from NVidia: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/user-guide.html
+To use the cuda docker flavour have a look at the userguide from NVIDIA:
+https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/user-guide.html and https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
