@@ -3,21 +3,10 @@ Overview
 
 This section gives an overview of the Ignis rendering framework.
 
-Backends
---------
-
-The raytracer as multiple backends available to make sure the best optimized kernel is used for certain tasks.
-Therefore, multiple device and feature specific modules, so-called drivers, have to be compiled.
-
-The compilation process might take a while depending on your hardware and feature selection.
-Parallel compilation of the drivers is disabled by default.
-Multithreading might freeze your operating system due to the high memory and cpu use. 
-You can use the CMake option ``IG_BUILD_DRIVER_PARALLEL`` to enable it if you are sure your system can handle it.
-
 Frontends
 ---------
 
-The frontends of the raytracer communicate with the user and one, optimal selected, backend.
+The frontends of the raytracer communicate with the underlying runtime.
 Currently, four frontends are available:
 
 ``igview``
@@ -59,13 +48,6 @@ More about the Python API can be found at the following section :doc:`../python/
 
 Running
 -------
-
-Each frontend requires the exact location of the backends to run.
-An automatic search procedure will find detect them in the system.
-In some rare cases the automatic search procedure might fail to find all the backends.
-In that case the environment variable ``IG_DRIVER_PATH`` can be used to point to the directories containing driver modules.
-The environment variable is similar to the ``PATH`` variable used in Linux environments and should contain absolute paths only, separated by ':' if multiple paths are provided.
-Setting ``IG_DRIVER_SKIP_SYSTEM_PATH`` will prevent the automatic search and only depend on ``IG_DRIVER_PATH``.
 
 Run a frontend of your choice like this:
 

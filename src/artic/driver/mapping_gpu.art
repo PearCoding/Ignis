@@ -1,0 +1,1073 @@
+fn @gpu_get_film_data(dev_id: i32) -> (&mut [f32], i32, i32) {
+    let mut film_pixels : &mut [f32];
+    let mut film_width  : i32;
+    let mut film_height : i32;
+    ignis_get_film_data(dev_id, &mut film_pixels, &mut film_width, &mut film_height);
+    (film_pixels, film_width, film_height)
+}
+
+fn @gpu_get_aov_image(id: &[u8], dev_id: i32, atomics: Atomics, spi: i32) -> AOVImage {
+    // Width & height always the same as film_width, film_height
+    let mut ptr : &mut [f32];
+    ignis_get_aov_image(dev_id, id, &mut ptr);
+
+    fn getImage(pixels: &mut [f32]) -> AOVImage {
+        let accumulate = make_atomic_accumulator(atomics, pixels, spi);
+        AOVImage{
+            splat = @|pixel, color| -> () { accumulate(pixel, color) },
+            get   = @|pixel| -> Color     {
+                let ptr2 = &pixels(pixel * 3) as &[f32];
+                make_color(ptr2(0), ptr2(1), ptr2(2), 1)
+            },
+            mark_as_used = @|| -> () {
+                ignis_mark_aov_as_used(id, 1);
+            }
+        }
+    }
+
+    // Specialize such that ptr is not captured in a kernel
+    $getImage(ptr)
+}
+
+fn @gpu_traverse_primary(primary: PrimaryStream
+                       , scene: SceneTracer
+                       , size: i32
+                       , min_max: MinMax
+                       , acc: Accelerator) -> () {
+    let block_size = 64;
+    let ray_count  = size;
+    let grid  = (round_up(size, block_size), 1, 1);
+    let block = (block_size, 1, 1);
+
+    let rays = make_ray_stream_reader(primary.rays, 1);
+    let hits = make_primary_stream_hit_writer(primary, 1);
+
+    acc.exec(|work_item| {
+        let (i, j) = (work_item.tidx() + work_item.bidx() * block_size, work_item.tidy());
+        if (i + j) >= ray_count { return() }
+
+        let ray     = rays(i, j);
+        let mut hit = empty_hit(ray.tmax);
+
+        for k in unroll(0, scene.type_count) {
+            hit = gpu_traverse_scene(min_max, ray, hit, scene.get(k), false /* any_hit */, 1 /*root*/);
+        }
+        
+        hits(i, j, hit);
+    })(grid, block);
+    acc.sync();
+}
+
+fn @gpu_traverse_secondary( secondary: SecondaryStream
+                          , scene: SceneTracer
+                          , size: i32
+                          , min_max: MinMax
+                          , acc: Accelerator
+                          , accumulate: FilmAccumulator
+                          , is_advanced: bool
+                          ) -> () {
+    let block_size = 64;
+
+    gpu_exec_1d(acc, size, block_size, |work_item| {
+        let gid = work_item.gidx();
+        if gid >= size { return() }
+
+        let pixel = secondary.rays.id(gid);
+        if pixel < 0 { return() }
+
+        let ray = make_ray_stream_reader(secondary.rays, 1)(gid, 0);
+        let mut hit = empty_hit(ray.tmax);
+
+        for k in unroll(0, scene.type_count) {
+            hit = gpu_traverse_scene(min_max, ray, hit, scene.get(k), true /* any_hit */, 1 /*root*/);
+            if hit.prim_id >= 0 { break() } // Any hit?
+        }
+
+        if is_advanced {
+            make_secondary_stream_hit_writer(secondary, 1)(gid, 0, hit); // Just write it to buffer
+        } else {
+            if hit.prim_id < 0 {
+                accumulate(pixel, make_color(
+                    secondary.color_r(gid),
+                    secondary.color_g(gid),
+                    secondary.color_b(gid),
+                    1
+                ));
+            }
+        }
+    });
+    acc.sync();
+}
+
+fn @gpu_hit_shade( acc: Accelerator
+             , shader: MaterialShader
+             , scene: Scene
+             , technique: Technique
+             , payload_info: PayloadInfo
+             , accumulate: FilmAccumulator
+             , primary: PrimaryStream
+             , secondary: SecondaryStream
+             , first: i32, last: i32, capacity: i32, ent_id: i32) -> () {
+    let n = last - first;
+
+    let entities = scene.entities;
+    let shapes   = scene.shapes;
+    
+    let read_primary_ray        = make_ray_stream_reader(primary.rays, 1);
+    let read_primary_hit        = make_primary_stream_hit_reader(primary, 1);
+    let read_primary_rnd_state  = make_primary_stream_rnd_state_reader(primary, 1);
+    let write_primary_ray       = make_ray_stream_writer(primary.rays, 1);
+    let write_secondary_ray     = make_ray_stream_writer(secondary.rays, 1);
+    let write_primary_rnd_state = make_primary_stream_rnd_state_writer(primary, 1);
+
+    let get_primary_payload   = make_primary_stream_payload_handler(primary, payload_info.primary_count, capacity, 1, false);
+    let get_secondary_payload = make_secondary_stream_payload_handler(secondary, payload_info.secondary_count, capacity, 1, false);
+
+    let on_hit    = technique.on_hit;
+    let on_shadow = technique.on_shadow;
+    let on_bounce = technique.on_bounce;
+    gpu_exec_1d(acc, n, 64 /*block_size*/, |work_item| {
+        let ray_id = first + work_item.gidx();
+        if ray_id >= last {
+            return()
+        }
+
+        let primary_payload   = get_primary_payload(ray_id, 0);
+        let secondary_payload = get_secondary_payload(ray_id, 0);
+
+        let ray     = read_primary_ray(ray_id, 0);
+        let mut rnd = read_primary_rnd_state(ray_id, 0);
+        let pixel   = primary.rays.id(ray_id);
+
+        let entity    = @entities(ent_id);
+        let shape     = @shapes(entity.shape_id);
+        let local_ray = transform_ray(ray, entity.local_mat);
+
+        let hit      = read_primary_hit(ray_id, 0);
+        let lcl_surf = shape.surface_element(local_ray, hit);
+        let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
+        
+        let ctx = make_surface_shading_context(ent_id, pixel, ray, hit, glb_surf);
+        let mat = @shader(ctx);
+        if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) {
+            accumulate(pixel, color);
+        }
+
+        match @on_shadow(ctx, &mut rnd, primary_payload, secondary_payload, mat) {
+            ShadowRay::Simple(new_ray, color) => {
+                write_secondary_ray(ray_id, 0, new_ray);
+                secondary.mat_id(ray_id)  = mat.id + 1;
+                secondary.color_r(ray_id) = color.r;
+                secondary.color_g(ray_id) = color.g;
+                secondary.color_b(ray_id) = color.b;
+                secondary.rays.id(ray_id) = pixel;
+            },
+            ShadowRay::Advanced(new_ray, color, mat_id) => {
+                write_secondary_ray(ray_id, 0, new_ray);
+                secondary.mat_id(ray_id)  = mat_id + 1;
+                secondary.color_r(ray_id) = color.r;
+                secondary.color_g(ray_id) = color.g;
+                secondary.color_b(ray_id) = color.b;
+                secondary.rays.id(ray_id) = pixel;
+            },
+            _ => { /* None */
+                secondary.rays.id(ray_id) = -1;
+            }
+        }
+
+        if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, &mut rnd, primary_payload, mat) {
+            write_primary_ray(ray_id, 0, new_ray);
+            write_primary_rnd_state(ray_id, 0, rnd);
+        } else {
+            primary.rays.id(ray_id) = -1;
+        }
+    });
+}
+
+fn @gpu_hit_shade_handler(dev_id: i32
+                        , acc: Accelerator
+                        , atomics: Atomics
+                        , entity_id: i32
+                        , shader: MaterialShader
+                        , scene: Scene
+                        , technique: Technique
+                        , payload_info: PayloadInfo
+                        , begin: i32
+                        , end: i32
+                        , capacity: i32 
+                        , spi: i32
+                        , use_framebuffer: bool) -> () {
+    let (film_pixels, _, _) = gpu_get_film_data(dev_id);
+    
+    let mut primary : PrimaryStream;
+    ignis_get_primary_stream_const(dev_id, 0, &mut primary);
+    let mut secondary : SecondaryStream;
+    ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
+
+    let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
+    gpu_hit_shade(acc, shader, scene, technique, payload_info, accumulate, primary, secondary, begin, end, capacity, entity_id);
+}
+
+// Shade nonhits
+fn @gpu_miss_shade( acc: Accelerator
+                , technique: Technique
+                , payload_info: PayloadInfo
+                , accumulate: FilmAccumulator
+                , primary: PrimaryStream
+                , first: i32, last: i32, capacity: i32) -> () {
+    let n = last - first;
+    
+    let read_primary_ray    = make_ray_stream_reader(primary.rays, 1);
+    let get_primary_payload = make_primary_stream_payload_handler(primary, payload_info.primary_count, capacity, 1, false);
+
+    let on_miss = technique.on_miss;
+    gpu_exec_1d(acc, n, 64, |work_item| {
+        let ray_id = first + work_item.gidx();
+        if ray_id >= last {
+            return()
+        }
+
+        let payload = get_primary_payload(ray_id, 0);
+        let ray     = read_primary_ray(ray_id, 0);
+        let pixel   = primary.rays.id(ray_id);
+
+        if let Option[Color]::Some(color) = @on_miss(ray, pixel, payload) {
+            accumulate(pixel, color);
+        }
+        
+        primary.rays.id(ray_id) = -1; // Kill ray as it goes to nowhere
+    });
+}
+
+fn @gpu_miss_shade_handler(dev_id: i32
+                         , acc: Accelerator
+                         , atomics: Atomics
+                         , technique: Technique
+                         , payload_info: PayloadInfo
+                         , begin: i32
+                         , end: i32
+                         , capacity: i32
+                         , spi: i32
+                         , use_framebuffer: bool) -> () {
+    let (film_pixels, _, _) = gpu_get_film_data(dev_id);
+
+    let mut primary: PrimaryStream;
+    ignis_get_primary_stream_const(dev_id, 0, &mut primary);
+
+    let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
+    gpu_miss_shade(acc, technique, payload_info, accumulate, primary, begin, end, capacity);
+}
+
+// Handle advanced shadows
+fn @gpu_advanced_shadow(is_hit: bool
+                      , acc: Accelerator
+                      , shader: MaterialShader
+                      , technique: Technique
+                      , payload_info: PayloadInfo
+                      , accumulate: FilmAccumulator
+                      , secondary: SecondaryStream
+                      , first: i32, last: i32, capacity: i32) -> () {
+    let n = last - first;
+
+    let read_secondary_ray    = make_ray_stream_reader(secondary.rays, 1);
+    let read_secondary_color  = make_secondary_stream_color_reader(secondary, 1);
+    let get_secondary_payload = make_secondary_stream_payload_handler(secondary, payload_info.secondary_count, capacity, 1, false);
+
+    let on_miss  = technique.on_shadow_miss;
+    let on_hit   = technique.on_shadow_hit;
+    let callback = if is_hit { on_hit } else { on_miss };
+
+    gpu_exec_1d(acc, n, 64, |work_item| {
+        let ray_id = first + work_item.gidx();
+        if ray_id >= last { return() }
+
+        let color   = read_secondary_color(ray_id, 0);
+        let ray     = read_secondary_ray(ray_id, 0);
+        let payload = get_secondary_payload(ray_id, 0);
+        let pixel   = secondary.rays.id(ray_id);
+
+        if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, payload, color) {
+            accumulate(pixel, new_color);
+        }
+    });
+}
+
+fn @gpu_advanced_shadow_handler(dev_id: i32
+                              , acc: Accelerator
+                              , atomics: Atomics
+                              , shader: MaterialShader
+                              , technique: Technique
+                              , payload_info: PayloadInfo
+                              , begin: i32
+                              , end: i32
+                              , capacity: i32
+                              , spi: i32
+                              , use_framebuffer: bool
+                              , is_hit: bool) -> () {
+    let (film_pixels, _, _) = gpu_get_film_data(dev_id);
+
+    let mut secondary: SecondaryStream;
+    ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
+
+    let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
+    gpu_advanced_shadow(is_hit, acc, shader, technique, payload_info, accumulate, secondary, begin, end, capacity);
+}
+
+fn @gpu_copy_ray( rays: RayStream
+                    , other_rays: RayStream
+                    , src_id: i32
+                    , dst_id: i32
+                    ) -> () {
+    other_rays.id(dst_id)    = rays.id(src_id);
+    other_rays.org_x(dst_id) = rays.org_x(src_id);
+    other_rays.org_y(dst_id) = rays.org_y(src_id);
+    other_rays.org_z(dst_id) = rays.org_z(src_id);
+    other_rays.dir_x(dst_id) = rays.dir_x(src_id);
+    other_rays.dir_y(dst_id) = rays.dir_y(src_id);
+    other_rays.dir_z(dst_id) = rays.dir_z(src_id);
+    other_rays.tmin(dst_id)  = rays.tmin(src_id);
+    other_rays.tmax(dst_id)  = rays.tmax(src_id);
+    other_rays.flags(dst_id) = rays.flags(src_id);
+}
+
+fn @gpu_copy_primary_ray( primary: PrimaryStream
+                    , other_primary: PrimaryStream
+                    , src_id: i32
+                    , dst_id: i32
+                    , keep_hit: bool
+                    , payload_count: i32
+                    ) -> () {
+    gpu_copy_ray(primary.rays, other_primary.rays, src_id, dst_id);
+    if keep_hit {
+        other_primary.ent_id(dst_id)  = primary.ent_id(src_id);
+        other_primary.prim_id(dst_id) = primary.prim_id(src_id);
+        other_primary.t(dst_id)       = primary.t(src_id);
+        other_primary.u(dst_id)       = primary.u(src_id);
+        other_primary.v(dst_id)       = primary.v(src_id);
+    }
+    other_primary.rnd(dst_id) = primary.rnd(src_id);
+
+    for c in unroll(0, payload_count) {
+        other_primary.payload(dst_id*payload_count + c) = primary.payload(src_id*payload_count + c);
+    }
+}
+
+fn @gpu_copy_secondary_ray( secondary: SecondaryStream
+                    , other_secondary: SecondaryStream
+                    , src_id: i32
+                    , dst_id: i32
+                    , payload_count: i32
+                    ) -> () {
+    gpu_copy_ray(secondary.rays, other_secondary.rays, src_id, dst_id);
+    other_secondary.mat_id(dst_id)  = secondary.mat_id(src_id);
+    other_secondary.color_r(dst_id) = secondary.color_r(src_id);
+    other_secondary.color_g(dst_id) = secondary.color_g(src_id);
+    other_secondary.color_b(dst_id) = secondary.color_b(src_id);
+
+    for c in unroll(0, payload_count) {
+        other_secondary.payload(dst_id*payload_count + c) = secondary.payload(src_id*payload_count + c);
+    }
+}
+
+fn @gpu_sort_primary( primary: PrimaryStream
+                    , other_primary: PrimaryStream
+                    , size: i32
+                    , dev_id: i32
+                    , acc: Accelerator
+                    , atomics: Atomics
+                    , scene_info: SceneInfo
+                    , payload_count: i32
+                    , gpu_tmp:  &mut [i32]
+                    , ray_begins: &mut [i32]
+                    , ray_ends: &mut [i32]
+                    ) -> () {
+    let block_size = 64;
+
+    // Fill temporary buffer with 0s
+    gpu_exec_1d(acc, scene_info.num_entities + 1, block_size, |work_item| {
+        let ent_id = work_item.gidx();
+        if ent_id > scene_info.num_entities { return() }
+        gpu_tmp(ent_id) = 0;
+    });
+    acc.sync();
+
+    let num_geometries = scene_info.num_entities;
+    fn @get_ent_arr_id(i: i32) {
+        let k = primary.ent_id(i);
+        select(k == InvalidHitId, num_geometries, k)
+    }
+    // Count number of rays for each geometry
+    gpu_exec_1d(acc, size, block_size, |work_item| {
+        let ray_id = work_item.gidx();
+        if ray_id >= size { return() }
+
+        atomics.add_global_i32(&mut gpu_tmp(get_ent_arr_id(ray_id)), 1);
+    });
+    acc.sync();
+
+    // Perform a scan on the CPU (there are very few elements to scan)
+    runtime_copy(dev_id, gpu_tmp as &[i8], 0, 0, ray_ends as &mut [i8], 0, sizeof[i32]() * (scene_info.num_entities + 1) as i64);
+    let mut n = 0;
+    for i in range(0, scene_info.num_entities + 1) {
+        ray_begins(i) = n;
+        n += ray_ends(i);
+        ray_ends(i) = n;
+    }
+    runtime_copy(0, ray_begins as &[i8], 0, dev_id, gpu_tmp as &mut [i8], 0, sizeof[i32]() * (scene_info.num_entities + 1) as i64);
+
+    // Sort rays
+    gpu_exec_1d(acc, size, block_size, |work_item| {
+        let src_id = work_item.gidx();
+        if src_id >= size { return() }
+
+        let dst_id = atomics.add_global_i32(&mut gpu_tmp(get_ent_arr_id(src_id)), 1);
+        gpu_copy_primary_ray(primary, other_primary, src_id, dst_id, true, payload_count);
+    });
+    acc.sync();
+}
+
+fn @gpu_sort_secondary(secondary: SecondaryStream
+                     , other_secondary: SecondaryStream
+                     , size: i32
+                     , payload_count: i32
+                     , dev_id: i32
+                     , acc: Accelerator
+                     , atomics: Atomics
+                     , gpu_tmp:  &mut [i32]
+                     ) -> (i32, i32) {
+    let block_size = 64;
+
+    // Init temporary values to zero on the GPU
+    let zero = 0 : i32;
+    runtime_copy(0, &zero as &[i8], 0, dev_id, gpu_tmp as &mut [i8], 0, sizeof[i32]());             // Valid count
+    runtime_copy(0, &zero as &[i8], 0, dev_id, gpu_tmp as &mut [i8], sizeof[i32](), sizeof[i32]()); // Invalid count
+
+    // Count valid rays as a head start for invalid count
+    gpu_exec_1d(acc, size, block_size, |work_item| {
+        let src_id = work_item.gidx();
+        if src_id >= size { return() }
+        if secondary.rays.id(src_id) < 0 { return() } // Skip entries which no shadow ray requested
+
+        if secondary.mat_id(src_id) < 0 {
+            atomics.add_global_i32(&mut gpu_tmp(1), 1);
+        }
+    });
+    acc.sync();
+
+    // Sort rays
+    gpu_exec_1d(acc, size, block_size, |work_item| {
+        let src_id = work_item.gidx();
+        if src_id >= size { return() }
+        if secondary.rays.id(src_id) < 0 { return() } // Skip entries which no shadow ray requested
+
+        let dst_id = if secondary.mat_id(src_id) < 0 {
+            atomics.add_global_i32(&mut gpu_tmp(0), 1)
+        } else {
+            atomics.add_global_i32(&mut gpu_tmp(1), 1)
+        };
+
+        gpu_copy_secondary_ray(secondary, other_secondary, src_id, dst_id, payload_count);
+    });
+    acc.sync();
+
+    // Get number of valids
+    let mut valid_entries : i32;
+    runtime_copy(dev_id, gpu_tmp as &[i8], 0, 0, &mut valid_entries as &mut [i8], 0, sizeof[i32]());
+    let mut entries : i32;
+    runtime_copy(dev_id, gpu_tmp as &[i8], sizeof[i32](), 0, &mut entries as &mut [i8], 0, sizeof[i32]());
+    (valid_entries, entries)
+}
+
+fn @gpu_sort_secondary_with_materials( secondary: SecondaryStream
+                                     , other_secondary: SecondaryStream
+                                     , size: i32
+                                     , dev_id: i32
+                                     , acc: Accelerator
+                                     , atomics: Atomics
+                                     , scene_info: SceneInfo
+                                     , payload_count: i32
+                                     , gpu_tmp:  &mut [i32]
+                                     , ray_begins: &mut [i32]
+                                     , ray_ends: &mut [i32]
+                                     ) -> (i32, i32) {
+    let block_size    = 64;
+    let num_materials = scene_info.num_materials;
+    let limit         = num_materials * 2;
+
+    fn @map_id(i:i32) -> i32 {
+        let id = secondary.mat_id(i); // Is +1
+        select(id < 0, -id, num_materials + id) - 1
+    }
+
+    // Count number of rays for each geometry
+    gpu_exec_1d(acc, size, block_size, |work_item| {
+        let ray_id = work_item.gidx();
+        if ray_id >= size { return() }
+
+        atomics.add_global_i32(&mut gpu_tmp(map_id(ray_id)), 1);
+    });
+    acc.sync();
+
+    // Perform a scan on the CPU (there are very few elements to scan)
+    runtime_copy(dev_id, gpu_tmp as &[i8], 0, 0, ray_ends as &mut [i8], 0, sizeof[i32]() * limit as i64);
+    let mut n = 0;
+    for i in range(0, num_materials) {
+        ray_begins(i) = n;
+        n += ray_ends(i);
+        ray_ends(i) = n;
+    }
+    let count = n;
+    for i in range(num_materials, limit) {
+        ray_begins(i) = n;
+        n += ray_ends(i);
+        ray_ends(i) = n;
+    }
+
+    runtime_copy(0, ray_begins as &[i8], 0, dev_id, gpu_tmp as &mut [i8], 0, sizeof[i32]() * limit as i64);
+
+    // Sort rays
+    gpu_exec_1d(acc, size, block_size, |work_item| {
+        let src_id = work_item.gidx();
+        if src_id >= size { return() }
+
+        let dst_id = atomics.add_global_i32(&mut gpu_tmp(map_id(src_id)), 1);
+        gpu_copy_secondary_ray(secondary, other_secondary, src_id, dst_id, payload_count);
+    });
+    acc.sync();
+
+    (count, n)
+}
+
+fn @gpu_generate_rays( primary: PrimaryStream
+                     , current_size: i32
+                     , capacity: i32
+                     , acc: Accelerator
+                     , emitter: RayEmitter
+                     , payload_info: PayloadInfo
+                     , next_id: i32
+                     , film_width: i32
+                     , film_height: i32
+                     , spi: i32
+                     ) -> i32 {
+    let first_ray_id = next_id;
+    let first_dst_id = current_size;
+    let film_size    = film_width * film_height;
+    let num_rays     = min(spi * film_size - first_ray_id, capacity - first_dst_id);
+    let film_div     = make_fast_div(film_width as u32);
+
+    let ray_ids   = primary.rays.id;
+    let write_ray = make_ray_stream_writer(primary.rays, 1);
+    let write_rnd = make_primary_stream_rnd_state_writer(primary, 1);
+    let write_id  = @ |i: i32, _: i32, id2: i32| ray_ids(i) = id2;
+
+    let get_payload = make_primary_stream_payload_handler(primary, payload_info.primary_count, capacity, 1, false);
+
+    if num_rays <= 0 { /* TODO: Add error message! */ return(0) }
+
+    gpu_exec_1d(acc, num_rays, 64 /*block_size*/, |work_item| {
+        let gid = work_item.gidx();
+        if gid >= num_rays {
+            return()
+        }
+
+        let ray_id = first_ray_id + gid;
+        let dst_id = first_dst_id + gid;
+        let sample = ray_id % spi;
+        let pixel  = ray_id / spi;
+        let y = fast_div(film_div, pixel as u32) as i32;
+        let x = pixel - y * film_width;
+        let payload = get_payload(dst_id, 0);
+
+        let (ray, rnd) = @emitter(sample, x, y, film_width, film_height, payload);
+        write_ray(dst_id, 0, ray);
+        write_rnd(dst_id, 0, rnd);
+        write_id(dst_id, 0, pixel);
+    });
+    acc.sync();
+
+    current_size + num_rays
+}
+
+fn @gpu_generate_rays_handler(dev_id: i32
+                            , size: i32
+                            , capacity: i32
+                            , acc: Accelerator
+                            , emitter: RayEmitter
+                            , payload_info: PayloadInfo
+                            , next_id: i32
+                            , spi: i32
+                            ) -> i32 {
+    let work_info = get_work_info();
+
+    let mut primary: PrimaryStream;
+    ignis_get_primary_stream(dev_id, 0, &mut primary, capacity);
+
+    gpu_generate_rays(primary, size, capacity, acc, emitter, payload_info, next_id, work_info.width, work_info.height, spi)
+}
+
+fn @gpu_compact_primary( primary: PrimaryStream
+                       , other_primary: PrimaryStream
+                       , size: i32
+                       , payload_count: i32
+                       , dev_id: i32
+                       , acc: Accelerator
+                       , atomics: Atomics
+                       , gpu_tmp: &mut [i32]
+                       ) -> i32 {
+    // reset temporary memory
+    let mut counter = 0;
+    runtime_copy(0, &counter as &[i8], 0, dev_id, gpu_tmp as &mut [i8], 0, sizeof[i32]());
+
+    // Compact primary rays into another queue
+    gpu_exec_1d(acc, size, 64 /*block_size*/, |work_item| {
+        let src_id = work_item.gidx();
+        if src_id >= size { return() }
+
+        let ray_id = primary.rays.id(src_id);
+        if ray_id < 0 { return() }
+
+        let dst_id = atomics.add_global_i32(&mut gpu_tmp(0), 1);
+        gpu_copy_primary_ray(primary, other_primary, src_id, dst_id, false, payload_count);
+    });
+    acc.sync();
+
+    runtime_copy(dev_id, gpu_tmp as &[i8], 0, 0, &mut counter as &mut [i8], 0, sizeof[i32]());
+    counter
+}
+
+fn @gpu_swap_primary_streams(dev_id: i32, a: &mut PrimaryStream, b: &mut PrimaryStream) -> () {
+    swap(a, b);
+    // We have to make sure that other parts of the runtime also swap it
+    ignis_gpu_swap_primary_streams(dev_id); 
+}
+
+fn @gpu_swap_secondary_streams(dev_id: i32, a: &mut SecondaryStream, b: &mut SecondaryStream) -> () {
+    swap(a, b);
+    // We have to make sure that other parts of the runtime also swap it
+    ignis_gpu_swap_secondary_streams(dev_id); 
+}
+
+static GPUStreamCapacity = 1024 * 1024;
+fn @gpu_trace( dev_id: i32
+             , acc: Accelerator
+             , atomics: Atomics
+             , scene_info: SceneInfo
+             , pipeline: Pipeline
+             , payload_info: PayloadInfo
+             , spi: i32
+             ) -> () {
+    let work_info = get_work_info();
+
+    let mut primary:         PrimaryStream;
+    let mut other_primary:   PrimaryStream;
+    let mut secondary:       SecondaryStream;
+    let mut other_secondary: SecondaryStream;
+    ignis_get_primary_stream(dev_id, 0, &mut primary, GPUStreamCapacity);
+    ignis_get_primary_stream(dev_id, 1, &mut other_primary, GPUStreamCapacity);
+    ignis_get_secondary_stream(dev_id, 0, &mut secondary, GPUStreamCapacity);
+    ignis_get_secondary_stream(dev_id, 1, &mut other_secondary, GPUStreamCapacity);
+
+    let mut gpu_tmp : &mut [i32];
+    ignis_gpu_get_tmp_buffer(dev_id, &mut gpu_tmp);
+
+    // These two buffers are on the host only
+    let mut temp : TemporaryStorageHost;
+    ignis_get_temporary_storage(dev_id, &mut temp);
+
+    let mut id = 0;
+    let mut current_size = 0;
+    let num_rays = spi * work_info.width * work_info.height;
+    while id < num_rays || current_size > 0 {
+        // Regenerate rays
+        if current_size < GPUStreamCapacity && id < num_rays {
+            let before_s = current_size;
+            current_size = pipeline.on_generate(id, current_size, 0, 0, work_info.width, work_info.height);
+            let added    = current_size - before_s;
+            id += added;
+            stats::add_quantity(stats::Quantity::CameraRayCount, added);
+        }
+
+        // Special case: No entities to intersect
+        if scene_info.num_entities == 0 {
+            pipeline.on_miss_shade(0, current_size);
+            current_size = 0;
+            acc.sync();
+            continue()
+        }
+
+        // Traverse primary rays
+        pipeline.on_traverse_primary(current_size);
+
+        // Sort rays by entity
+        gpu_sort_primary(primary, other_primary, current_size, dev_id, acc, atomics, scene_info, payload_info.primary_count, gpu_tmp, temp.ray_begins, temp.ray_ends);
+        gpu_swap_primary_streams(dev_id, &mut primary, &mut other_primary);
+
+        // Shade rays
+        let mut first = 0;
+        for ent_id in range(0, scene_info.num_entities) {
+            let last = temp.ray_ends(ent_id);
+            if first < last {
+                pipeline.on_hit_shade(ent_id, first, last);
+                // acc.sync(); // Uncomment this for debugging
+                first = last;
+            }
+        }
+
+        // Shade non-hits as well
+        let last = temp.ray_ends(scene_info.num_entities);
+        if first < last {
+            pipeline.on_miss_shade(first, last);
+            // Do not set first as last (to make sure they drop out)
+        }
+
+        current_size       = first;
+        let secondary_size = first;
+        acc.sync();
+
+        if likely(first > 0) {
+            pipeline.on_traverse_secondary(secondary_size);
+
+            // Trace secondary rays
+            if work_info.advanced_shadows {                
+                // Secondary stream is modified, sort it to have valid shadows first, invalids last
+                let (valid_count, count) = gpu_sort_secondary(secondary, other_secondary, secondary_size, payload_info.secondary_count, dev_id, acc, atomics, gpu_tmp);
+                gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
+
+                if valid_count != 0 {
+                    // Call valids (miss)
+                    pipeline.on_advanced_shadow(0, 0, valid_count, false);
+                }
+
+                if valid_count < count {
+                    // Call invalids (hits)
+                    pipeline.on_advanced_shadow(0, valid_count, count, true);
+                }
+                acc.sync();
+            } else if work_info.advanced_shadows {                
+                // Secondary stream is modified, sort it to have valid shadows first, invalids last
+                let (valid_count, count) = gpu_sort_secondary_with_materials(secondary, other_secondary, secondary_size, dev_id, acc, atomics, scene_info, payload_info.secondary_count, gpu_tmp, temp.ray_begins, temp.ray_ends);
+                gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
+
+                let mut sfirst = 0;
+                if valid_count != 0 {
+                    // Call valids (miss)
+                    for mat_id in range(0, scene_info.num_materials) {
+                        let slast = temp.ray_ends(mat_id);
+                        if sfirst < slast {
+                            pipeline.on_advanced_shadow(mat_id, sfirst, slast, false);
+                            sfirst = slast;
+                        }
+                    }
+                }
+
+                if valid_count < count {
+                    // Call invalids (hits)
+                    for mat_id in range(0, scene_info.num_materials) {
+                        let slast = temp.ray_ends(scene_info.num_materials + mat_id);
+                        if sfirst < slast {
+                            pipeline.on_advanced_shadow(mat_id, sfirst, slast, true);
+                            sfirst = slast;
+                        }
+                    }
+                }
+                acc.sync();
+            }
+            stats::add_quantity(stats::Quantity::ShadowRayCount, secondary_size);
+
+            // Compact primary rays
+            current_size = gpu_compact_primary(primary, other_primary, current_size, payload_info.primary_count, dev_id, acc, atomics, gpu_tmp);
+            gpu_swap_primary_streams(dev_id, &mut primary, &mut other_primary);
+            stats::add_quantity(stats::Quantity::BounceRayCount, current_size);
+        }
+    }
+}
+
+// GPU device ----------------------------------------------------------------------
+
+fn @gpu_handle_device_reduce[T]( dev_id: i32
+                               , acc: Accelerator
+                               , n: i32
+                               , elem: fn (i32) -> T
+                               , op: fn (T, T) -> T) -> T {
+    let block_size = if ?n && n < 10000 {
+        128
+    } else if ?n && n < 1000000 {
+        256
+    } else {
+        512
+    };
+
+    // TODO: This forces us to only use one reduce call at a single time (which is fair tbh)
+    let mut tmp_ptr : &[u8];
+    ignis_request_buffer(dev_id, "__dev_tmp_reduce", &mut tmp_ptr, sizeof[T]() as i32, 0);
+
+    let kernel_ptr = tmp_ptr as &mut addrspace(1)[T];
+    gpu_reduce[T](acc, n, block_size,
+        elem, op,
+        @|v| kernel_ptr(0) = v
+    );
+    acc.sync();
+
+    let mut value: T;
+    runtime_copy(dev_id, tmp_ptr as &[i8], 0, 0 /* Host */, &mut value as &mut [i8], 0, sizeof[T]());
+    
+    value
+}
+
+fn @make_gpu_device( dev_id: i32
+                   , acc: Accelerator
+                   , min_max: MinMax
+                   , accb: DeviceBufferAccessor
+                   , atomics: Atomics
+                   , is_nvvm: bool
+                   ) = Device {
+    id    = dev_id,
+    trace = @ |scene_info, pipeline, payload_info, spi| {
+        gpu_trace(
+            dev_id,
+            acc,
+            atomics,
+            scene_info,
+            pipeline,
+            payload_info,
+            spi
+        )
+    },
+    generate_rays = @ | emitter, payload_info, next_id, size, _xmin, _ymin, _xmax, _ymax, spi | -> i32 {
+        gpu_generate_rays_handler(dev_id, size, GPUStreamCapacity, acc, emitter, payload_info, next_id, spi)
+    },
+    handle_traversal_primary = @ | scene_tracer, size | {
+        let mut primary: PrimaryStream;
+        ignis_get_primary_stream_const(dev_id, 0, &mut primary);
+
+        gpu_traverse_primary(primary, scene_tracer, size, min_max, acc);
+    },
+    handle_traversal_secondary = @ | scene_tracer, size, is_advanced, spi, use_framebuffer | {
+        let mut secondary: SecondaryStream;
+        ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
+
+        let (film_pixels, _, _) = gpu_get_film_data(dev_id);
+        let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
+        gpu_traverse_secondary(secondary, scene_tracer, size, min_max, acc, accumulate, is_advanced);
+    },
+    handle_miss_shader = @ | technique, payload_info, first, last, spi, use_framebuffer | {
+        gpu_miss_shade_handler(dev_id, acc, atomics, technique, payload_info, first, last, GPUStreamCapacity, spi, use_framebuffer);
+    },
+    handle_hit_shader = @ | entity_id, shader, scene, technique, payload_info, first, last, spi, use_framebuffer | {
+        gpu_hit_shade_handler(dev_id, acc, atomics, entity_id, shader, scene, technique, payload_info, first, last, GPUStreamCapacity, spi, use_framebuffer);
+    },
+    handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit | {
+        gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, technique, payload_info, first, last, GPUStreamCapacity, spi, use_framebuffer, is_hit);
+    },
+    get_traversal_handler_multiple = @ | prims | make_gpu_scene_local_handler_multiple(prims, min_max), 
+    sync = @ || acc.sync(),
+    parallel_range = @ |body| {
+        @|start, end| {
+            let size = end - start;
+            if size > 0 {
+                gpu_exec_1d(acc, size, 64 /* Blocksize */, |work_item| {
+                    let gid = work_item.gidx();
+                    if gid >= size { return() }
+                    @ body(gid + start)
+                })
+            }
+        }
+    },
+    parallel_range_2d = @ |body| {
+        @|start_x, end_x, start_y, end_y| {
+            let size_x = end_x - start_x;
+            let size_y = end_y - start_y;
+
+            let block_size = if size_x <= 48 && size_y <= 48 { 16:i32 } else { 32:i32 };
+
+            let grid  = (round_up(size_x, block_size), round_up(size_y, block_size), 1);
+            let block = (block_size, block_size, 1);
+            acc.exec( @|work_item| {
+                let gid_x = work_item.gidx();
+                let gid_y = work_item.gidy();
+                if gid_x >= size_x || gid_y >= size_y { return() }
+                
+                @ body(gid_x + start_x, gid_y + start_y)
+            })(grid, block);
+        }
+    },
+    parallel_reduce_i32 = @|n, elem, op| gpu_handle_device_reduce[i32](dev_id, acc, n, elem, op),
+    parallel_reduce_f32 = @|n, elem, op| gpu_handle_device_reduce[f32](dev_id, acc, n, elem, op),
+    get_device_buffer_accessor = @|| accb,
+    load_scene_bvh = @|prim_type| {
+        let mut nodes: &[Node2];
+        let mut objs:  &[EntityLeaf1];
+        ignis_load_bvh2_ent(dev_id, prim_type, &mut nodes, &mut objs);
+        make_gpu_bvh2_ent(nodes, objs, is_nvvm)
+    },
+    load_scene_info = @|| {
+        let mut info: SceneInfo;
+        ignis_load_scene_info(dev_id, &mut info);
+        info
+    },
+    load_dyntable = @ |name| -> DynTable {
+        let mut table: DynTableData;
+        ignis_load_dyntable(dev_id, name, &mut table);
+        make_dyntable(table, accb)
+    },
+    load_fixtable = @ |name| -> DeviceBuffer {
+        let mut ptr      : &[u8];
+        let mut bytesize : i32;
+        ignis_load_fixtable(dev_id, name, &mut ptr, &mut bytesize);
+        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
+    },
+    load_image = @ |filename, channel_count| {
+        let mut pixel_data : &[f32];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_image(dev_id, filename, &mut pixel_data, &mut width, &mut height, channel_count);
+
+        let stride = width; // Drop mutable attribute
+        let q = pixel_data as &addrspace(1)[f32];
+        if channel_count == 1 {
+            make_image_mono(if is_nvvm { @ |x, y| nvvm_ldg_f32(&q(y * stride + x)) } 
+                            else { @ |x, y| q(y * stride + x) },
+                            width, height)
+        } else {
+            make_image_rgba32(if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
+                              else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) },
+                              width, height)
+        }
+    },
+    load_image_by_id = @ |id, channel_count| {
+        let mut pixel_data : &[f32];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_image_by_id(dev_id, id, &mut pixel_data, &mut width, &mut height, channel_count);
+
+        let stride = width; // Drop mutable attribute
+        let q = pixel_data as &addrspace(1)[f32];
+        if channel_count == 1 {
+            make_image_mono(if is_nvvm { @ |x, y| nvvm_ldg_f32(&q(y * stride + x)) } 
+                            else { @ |x, y| q(y * stride + x) },
+                            width, height)
+        } else {
+            make_image_rgba32(if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
+                              else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) },
+                              width, height)
+        }
+    },
+    load_packed_image = @ |filename, channel_count, is_linear| {
+        let mut pixel_data : &[u8];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_packed_image(dev_id, filename, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
+
+        let stride = width; // Drop mutable attribute
+        if channel_count == 1 {
+            let q = pixel_data as &addrspace(1)[u8];
+            make_image_mono(if is_nvvm { @ |x, y| image_mono_unpack(nvvm_ldg_u8(&(q(y * stride + x)))) }
+                            else { @ |x, y| image_mono_unpack(q(y * stride + x)) },
+                            width, height)
+        } else {
+            let hint_opaque = channel_count == 3;
+            let q = pixel_data as &addrspace(1)[i32];
+            make_image_rgba32(if is_nvvm { @ |x, y| image_rgba_unpack(bitcast[u32](nvvm_ldg_i32(&(q(y * stride + x)))), hint_opaque) }
+                              else { @ |x, y| image_rgba_unpack(bitcast[u32](q(y * stride + x)), hint_opaque) },
+                              width, height)
+        }
+    },
+    load_packed_image_by_id = @ |id, channel_count, is_linear| {
+        let mut pixel_data : &[u8];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_packed_image_by_id(dev_id, id, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
+
+        let stride = width; // Drop mutable attribute
+        if channel_count == 1 {
+            let q = pixel_data as &addrspace(1)[u8];
+            make_image_mono(if is_nvvm { @ |x, y| image_mono_unpack(nvvm_ldg_u8(&(q(y * stride + x)))) }
+                            else { @ |x, y| image_mono_unpack(q(y * stride + x)) },
+                            width, height)
+        } else {
+            let hint_opaque = channel_count == 3;
+            let q = pixel_data as &addrspace(1)[i32];
+            make_image_rgba32(if is_nvvm { @ |x, y| image_rgba_unpack(bitcast[u32](nvvm_ldg_i32(&(q(y * stride + x)))), hint_opaque) }
+                              else { @ |x, y| image_rgba_unpack(bitcast[u32](q(y * stride + x)), hint_opaque) },
+                              width, height)
+        }
+    },
+    load_aov_image = @ |id, spi| gpu_get_aov_image(id, dev_id, atomics, spi),
+    load_rays = @ || {
+        let mut rays: &[StreamRay]; // TODO: Alignment?
+        ignis_load_rays(dev_id, &mut rays);
+        rays
+    },
+    load_host_buffer       = load_cpu_buffer,
+    load_host_buffer_by_id = load_cpu_buffer_by_id,
+    load_buffer = @ |filename| {
+        let mut ptr      : &[u8];
+        let mut bytesize : i32;
+        ignis_load_buffer(dev_id, filename, &mut ptr, &mut bytesize);
+        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
+    },
+    load_buffer_by_id = @ |id| {
+        let mut ptr      : &[u8];
+        let mut bytesize : i32;
+        ignis_load_buffer_by_id(dev_id, id, &mut ptr, &mut bytesize);
+        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
+    },
+    request_buffer = @ |name, size, flags| {
+        let mut ptr : &[u8];
+        ignis_request_buffer(dev_id, name, &mut ptr, size * sizeof[i32]() as i32, flags);
+        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm)
+    },
+    make_buffer = @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm),
+    dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(dev_id, id, filename),
+    request_debug_output = @|| {
+        let mut ptr : &[u8];
+        let size = 4096;
+        ignis_request_buffer(dev_id, "__dbg_output", &mut ptr, size * sizeof[i32]() as i32, 0);
+        let buffer = make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm);
+        make_debug_output(buffer)
+    },
+    get_local_parameter_i32   = @|name, def| registry::get_local_parameter_i32(  dev_id, name, def),
+    get_local_parameter_f32   = @|name, def| registry::get_local_parameter_f32(  dev_id, name, def),
+    get_local_parameter_vec3  = @|name, def| registry::get_local_parameter_vec3( dev_id, name, def),
+    get_local_parameter_color = @|name, def| registry::get_local_parameter_color(dev_id, name, def)
+};
+
+fn @make_nvvm_device(dev: i32) -> Device {
+    let dev_id  = runtime_device(1, dev);
+    let atomics = Atomics {
+        add_global_i32 = @ |p, i| nvvm_atomic_add_global_i32(p as &mut addrspace(1)i32, i),
+        add_global_f32 = @ |p, i| nvvm_atomic_add_global_f32(p as &mut addrspace(1)f32, i),
+        min_global_i32 = @ |p, i| nvvm_atomic_min_global_i32(p as &mut addrspace(1)i32, i),
+        max_global_i32 = @ |p, i| nvvm_atomic_max_global_i32(p as &mut addrspace(1)i32, i),
+        add_shared_i32 = @ |p, i| nvvm_atomic_add_shared(p, i),
+        add_shared_f32 = @ |p, i| atomic_p3(11:u32, p, i, 2:u32, "")
+    };
+    make_gpu_device(
+        dev_id,
+        nvvm_accelerator(dev),
+        make_default_min_max(), //make_nvvm_min_max(), // The NVVM min_max stuff seems to be slow compared to the default one
+        @ |ptr| make_gpu_buffer(dev, ptr as &addrspace(1)[u8], 0, atomics, true),
+        atomics,
+        true
+    )
+}
+
+fn @make_amdgpu_device(dev: i32) -> Device {
+    let dev_id  = runtime_device(3, dev);
+    let atomics = Atomics {
+        add_global_i32 = @ |p, i| amdgcn_atomic_add_global_i32(p as &mut addrspace(1)i32, i),
+        add_global_f32 = @ |p, i| amdgcn_atomic_add_global_f32(p as &mut addrspace(1)f32, i),
+        min_global_i32 = @ |p, i| amdgcn_atomic_min_global_i32(p as &mut addrspace(1)i32, i),
+        max_global_i32 = @ |p, i| amdgcn_atomic_max_global_i32(p as &mut addrspace(1)i32, i),
+        add_shared_i32 = @ |p, i| amdgcn_atomic_add_shared(p, i),
+        add_shared_f32 = @ |p, i| atomic_p3(11:u32, p, i, 2:u32, "wavefront")
+    };
+    make_gpu_device(
+        dev_id,
+        amdgpu_accelerator(dev),
+        make_default_min_max(), //make_amdgpu_min_max(),
+        @ |ptr| make_gpu_buffer(dev, ptr as &addrspace(1)[u8], 0, atomics, false),
+        atomics,
+        false
+    )
+}

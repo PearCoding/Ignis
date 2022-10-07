@@ -1,0 +1,54 @@
+// Scene data
+struct SceneInfo {
+    num_entities:  i32,
+    num_materials: i32
+}
+
+struct Scene {
+    info:     SceneInfo,
+    shapes:   ShapeTable,   // Defined in shape.art
+    entities: EntityTable,  // Defined in entity.art
+}
+
+type SceneTraverseLocalHandler = fn (Ray, EntityLeaf, bool) -> Hit;
+struct SceneGeometry {
+    database:     TraceAccessor,
+    bvh:          SceneBvh,
+    handle_local: SceneTraverseLocalHandler
+}
+
+struct SceneTracer {
+    type_count: i32,
+    get:        fn (i32) -> SceneGeometry
+}
+
+// Used as interface
+struct ShadingContext {
+    entity_id: i32,
+    pixel:     i32,
+    ray:       Ray,
+    hit:       Hit,
+    surf:      SurfaceElement,
+    uvw:       Vec3
+}
+
+fn @make_surface_shading_context(entity_id: i32, pixel: i32, ray: Ray, hit: Hit, surf: SurfaceElement) = ShadingContext {
+    entity_id = entity_id,
+    pixel     = pixel,
+    ray       = ray,
+    hit       = hit,
+    surf      = surf,
+    uvw       = vec2_to_3(surf.tex_coords, 0)
+};
+
+fn @make_miss_shading_context(pixel: i32, ray: Ray) = ShadingContext {
+    entity_id = -1,
+    pixel     = pixel,
+    ray       = ray,
+    hit       = empty_hit(flt_max),
+    surf      = make_invalid_surface_element(),
+    uvw       = vec3_expand(0)
+};
+
+type BSDFShader     = fn (ShadingContext) -> Bsdf;
+type MaterialShader = fn (ShadingContext) -> Material;

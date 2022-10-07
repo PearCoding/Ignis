@@ -6,15 +6,6 @@ struct Node2 {
     pad:    [i32 * 2]
 }
 
-struct Tri1 {
-    v0: [f32 * 3],
-    pad: i32,
-    e1: [f32 * 3],
-    pad2: i32,
-    e2: [f32 * 3],
-    prim_id: i32
-}
-
 fn @make_gpu_node(j: i32, nodes: &[Node2], is_nvvm: bool) -> Node {
     let load4_f32 = @ |p: &addrspace(1)[simd[f32 * 4]], i: i32| if is_nvvm { nvvm_ldg4_f32(&p(i)) } else { p(i) };
     let load4_i32 = @ |p: &addrspace(1)[simd[i32 * 4]], i: i32| if is_nvvm { nvvm_ldg4_i32(&p(i)) } else { p(i) };
@@ -40,57 +31,22 @@ fn @make_gpu_node(j: i32, nodes: &[Node2], is_nvvm: bool) -> Node {
     }
 }
 
-fn @make_gpu_prim(j: i32, tris: &[Tri1], is_nvvm: bool) -> Prim {
-    let load4_f32 = @ |p: &addrspace(1)[simd[f32 * 4]], i: i32| if is_nvvm { nvvm_ldg4_f32(&p(i)) } else { p(i) };
-
-    let simd_ptr = &tris(j) as &addrspace(1)[simd[f32 * 4]];
-    let tri0     = load4_f32(simd_ptr, 0);
-    let tri1     = load4_f32(simd_ptr, 1);
-    let tri2     = load4_f32(simd_ptr, 2);
-    let prim_id  = bitcast[i32](tri2(3));
-    Prim {
-        intersect = @ |_, ray| {
-            let v0  = make_vec3(tri0(0), tri0(1), tri0(2));
-            let e1  = make_vec3(tri1(0), tri1(1), tri1(2));
-            let e2  = make_vec3(tri2(0), tri2(1), tri2(2));
-            let n   = vec3_cross(e1, e2);
-            let tri = make_tri(v0, e1, e2, n);
-            if let Option[(f32, f32, f32)]::Some((t, u, v)) = intersect_ray_tri_gpu(false /*backface_culling*/, ray, tri) {
-                make_option(make_hit(-1/* Will be set later*/, prim_id & 0x7FFFFFFF, t, make_vec2(u, v)))
-            } else {
-                Option[Hit]::None
-            }
-        },
-        is_valid = @ |_| true,
-        is_last = prim_id < 0,
-        size = 1
-    }
-}
-
 fn @make_gpu_ent(j: i32, objs: &[EntityLeaf1], is_nvvm: bool) -> EntityLeaf {
     let d  = make_gpu_buffer(0/* Does not matter */, &objs(j) as &addrspace(1)[u8], 0, gpu_make_null_atomics(), is_nvvm);
     let e0 = d.load_vec4(0);
     let e1 = d.load_vec4(4);
     let m  = d.load_mat3x4(8);
-    let e2 = d.load_vec4(20);
+    let (f, u1, u2, u3) = d.load_int4(20);
     make_entity_leaf(
         make_bbox(make_vec3(e0.x, e0.y, e0.z),
                   make_vec3(e1.x, e1.y, e1.z)),
         bitcast[i32](e0.w),
-        bitcast[i32](e1.w),
+        bitcast[i32](e1.w), u1, u2, u3,
         m,
-        bitcast[u32](e2.x)
+        bitcast[u32](f)
     )
 }
 
-fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], is_nvvm: bool) -> PrimBvh {
-    PrimBvh {
-        node     = @ |j| @make_gpu_node(j, nodes, is_nvvm),
-        prim     = @ |j| @make_gpu_prim(j, tris , is_nvvm),
-        prefetch = @ |_| (), // Not implemented
-        arity    = 2
-    }
-}
 fn @make_gpu_bvh2_ent(nodes: &[Node2], objs: &[EntityLeaf1], is_nvvm: bool) -> SceneBvh {
     SceneBvh {
         node     = @ |j| @make_gpu_node(j, nodes, is_nvvm),
@@ -116,108 +72,14 @@ fn @make_nvvm_min_max() = MinMax {
 fn @make_amdgpu_min_max() = make_min_max(ocml_fminf, ocml_fmaxf, false);
 
 // Traversal kernel  ---------------------------------------------------------------
-
-// Traverses a single ray at a time. 
-fn @gpu_traverse_single_helper_prim( min_max: MinMax
-                                    , mut ray: Ray
-                                    , bvh: PrimBvh
-                                    , any_hit: bool
-                                    , root: i32
-                                    ) -> Hit {
-    let mut hit = empty_hit(ray.tmax);
-    let stack   = alloc_stack();
-    stack.push(root, undef[f32]());
-
-    while !stack.is_empty() {
-        let node_ref = stack.top();
-        let node = bvh.node(node_ref.node - 1);
-
-        let mut mask = 0;
-        let small_stack = make_small_stack(bvh.arity);
-        for k in unroll(0, bvh.arity) {
-            let bbox = node.bbox(k);
-            if likely(!bbox_is_empty(bbox)) {
-                let (t0, t1) = intersect_ray_box(min_max, false, ray, bbox); 
-                if t0 <= t1 {
-                    mask |= 1 << k;
-                    small_stack.write(k, (node.child(k), t0));
-                }
-            }
-        }
-
-        if bvh.arity == 2 {
-            // Binary BVH
-            if mask == 0 {
-                stack.pop();
-            } else {
-                let (child0, t0) = small_stack.read(0);
-                let (child1, t1) = small_stack.read(1);
-                if mask == 3 {
-                    let first  = select(t0 < t1, child0, child1);
-                    let second = select(t0 < t1, child1, child0); 
-                    stack.set_top(first, undef[f32]());
-                    stack.push_after(second, undef[f32]());
-                } else {
-                    stack.set_top(select(mask == 1, child0, child1), undef[f32]());
-                }
-            }
-        } else {
-            // General case -- slower
-            stack.pop();
-
-            if mask != 0 {
-                let mut tmin = ray.tmax;
-                for k in unroll(0, bvh.arity) {
-                    if mask & (1 << k) != 0 {
-                        let (child, t) = small_stack.read(k);
-                        if any_hit || t < tmin {
-                            stack.push(child, undef[f32]());
-                            tmin = t
-                        } else {
-                            stack.push_after(child, undef[f32]())
-                        }
-                    }
-                }
-            }
-        }
-
-        while is_leaf(stack.top()) {
-            let leaf_ref = stack.pop();
-            let mut prim_id = !leaf_ref.node;
-            while true {
-                let prim = bvh.prim(prim_id++);
-
-                for k in unroll(0, prim.size) {
-                    if !prim.is_valid(k) { break() }
-
-                    if let Option[Hit]::Some(prim_hit) = prim.intersect(k, ray) {
-                        hit = prim_hit;
-                        ray.tmax = prim_hit.distance;
-
-                        if any_hit { return(hit) }
-                    }
-                }
-
-                if prim.is_last { break() }
-            }
-        }
-    }
-
-    hit
-}
-
-// Traverses a single ray at a time. 
-fn @gpu_traverse_single_helper( min_max: MinMax
+fn @gpu_traverse_helper( min_max: MinMax
                               , mut ray: Ray
-                              , scene: SceneGeometry
+                              , mut hit: Hit
+                              , bvh: TraversalBvh
                               , any_hit: bool
                               , root: i32
                               ) -> Hit {
-    let mut hit = empty_hit(ray.tmax);
-
-    let bvh       = scene.bvh;
-    let prim_bvhs = scene.database.bvhs;
-    let stack     = alloc_stack();
+    let stack = alloc_stack();
     stack.push(root, undef[f32]());
 
     while !stack.is_empty() {
@@ -274,32 +136,9 @@ fn @gpu_traverse_single_helper( min_max: MinMax
         }
 
         while is_leaf(stack.top()) {
-            let leaf_ref   = stack.pop();
-            let mut ref_id = !leaf_ref.node;
-            while true {
-                let leaf = bvh.ent(ref_id++);
-
-                if check_ray_visibility(ray, leaf.flags) {
-                    if let Option[(f32,f32)]::Some((tmin, _tmax)) = intersect_ray_box_single_section(min_max, false, ray, leaf.bbox) {
-                        if tmin <= hit.distance {
-                            let local_ray = transform_ray(ray, leaf.local);
-                            let shape_bvh = @prim_bvhs(leaf.shape_id);
-                            let local_hit = gpu_traverse_single_helper_prim(min_max, local_ray, shape_bvh, any_hit, 1);
-
-                            if local_hit.prim_id != -1 {
-                                if local_hit.distance <= hit.distance {
-                                    hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
-                                    ray.tmax = hit.distance;
-
-                                    // Early exit mode
-                                    if any_hit { return(hit) }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if leaf.entity_id < 0 { break() }
+            let leaf_ref = stack.pop();
+            if bvh.handle(leaf_ref, &mut ray, &mut hit) {
+                return(hit)
             }
         }
     }
@@ -307,25 +146,85 @@ fn @gpu_traverse_single_helper( min_max: MinMax
     hit
 }
 
-// Wrapper  ------------------------------------------------------------------------
-fn @gpu_traverse_single( acc: Accelerator
-                       , min_max: MinMax
-                       , scene: SceneGeometry
-                       , rays: fn (i32, i32) -> Ray
-                       , hits: fn (i32, i32, Hit) -> ()
-                       , packet_size: i32
-                       , num_packets: i32
-                       , any_hit: bool
-                       ) -> () {
-    let block_size = 64;
-    let ray_count  = num_packets * packet_size;
-    let grid  = (round_up(num_packets, block_size), packet_size, 1);
-    let block = (block_size, packet_size, 1);
+// Traverses a single ray at a time. 
+fn @gpu_traverse_prim( min_max: MinMax
+                     , ray: Ray
+                     , init_hit: Hit
+                     , bvh: PrimBvh
+                     , any_hit: bool
+                     , root: i32
+                     ) -> Hit {
+    fn @prim_handle(leaf_ref: NodeRef, ray2: &mut Ray, hit: &mut Hit) -> bool {
+        let mut prim_id = !leaf_ref.node;
+        while true {
+            let prim = bvh.prim(prim_id++);
 
-    acc.exec(|work_item| {
-        let (i, j) = (work_item.tidx() + work_item.bidx() * block_size, work_item.tidy());
-        if (i + j) >= ray_count { return() }
+            for k in unroll(0, prim.size) {
+                if !prim.is_valid(k) { break() }
 
-        hits(i, j, gpu_traverse_single_helper(min_max, rays(i, j), scene, any_hit, 1 /*root*/));
-    })(grid, block);
+                if let Option[Hit]::Some(prim_hit) = prim.intersect(k, *ray2) {
+                    *hit = prim_hit;
+                    ray2.tmax = prim_hit.distance;
+
+                    if any_hit { return(true) }
+                }
+            }
+
+            if prim.is_last { break() }
+        }
+
+        false
+    }
+    
+    gpu_traverse_helper(min_max, ray, init_hit, TraversalBvh{ node=bvh.node, handle=prim_handle, prefetch=bvh.prefetch, arity=bvh.arity }, any_hit, root)
+}
+
+fn @make_gpu_scene_local_handler_multiple(prims: BVHTable, min_max: MinMax) -> SceneTraverseLocalHandler {
+    @|local_ray: Ray, leaf: EntityLeaf, any_hit: bool| -> Hit {
+        let shape_bvh = @prims(join_u32_to_u64(bitcast[u32](leaf.user1), bitcast[u32](leaf.user2)));
+        gpu_traverse_prim(min_max, local_ray, empty_hit(local_ray.tmax)/* TODO */, shape_bvh, any_hit, 1)
+    }
+}
+
+// Traverses a single ray at a time. 
+fn @gpu_traverse_scene( min_max: MinMax
+                        , ray: Ray
+                        , init_hit: Hit
+                        , scene: SceneGeometry
+                        , any_hit: bool
+                        , root: i32
+                        ) -> Hit {
+
+    let bvh = scene.bvh;
+    fn @scene_handle(leaf_ref: NodeRef, ray2: &mut Ray, hit: &mut Hit) -> bool {
+        let mut ref_id = !leaf_ref.node;
+        while true {
+            let leaf = bvh.ent(ref_id++);
+
+            if check_ray_visibility(*ray2, leaf.flags) {
+                if let Option[(f32,f32)]::Some((tmin, _tmax)) = intersect_ray_box_single_section(min_max, false, *ray2, leaf.bbox) {
+                    if tmin <= hit.distance {
+                        let local_ray = transform_ray(*ray2, leaf.local);
+                        let local_hit = scene.handle_local(local_ray, leaf, any_hit); 
+                        
+                        if local_hit.prim_id != -1 {
+                            if local_hit.distance <= hit.distance {
+                                *hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
+                                ray2.tmax = hit.distance;
+
+                                // Early exit mode
+                                if any_hit { return(true) }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if leaf.entity_id < 0 { break() }
+        }
+
+        false
+    }
+    
+    gpu_traverse_helper(min_max, ray, init_hit, TraversalBvh{ node=bvh.node, handle=scene_handle, prefetch=bvh.prefetch, arity=bvh.arity }, any_hit, root)
 }

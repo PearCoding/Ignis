@@ -1,0 +1,15 @@
+FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
+
+LABEL maintainer="Ömercan Yazici" \
+      description="Anydsl Meta package with CUDA GPU support" \
+      version="0.1.0"
+
+ENV DEBIAN_FRONTEND noninteractive
+ENV CUDAToolkit_LIBRARY_ROOT /usr/local/cuda
+
+RUN mkdir -p /anydsl
+COPY tmp/anydsl /anydsl
+WORKDIR /anydsl
+
+RUN apt-get update && apt-get install -y build-essential wget g++ git subversion zlib1g-dev cmake ninja-build python3 && rm -rf /var/lib/apt/lists/* 
+RUN chmod +x setup.sh && chmod +x cleanup.sh && ./setup.sh && ./cleanup.sh

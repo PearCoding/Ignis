@@ -1,0 +1,14 @@
+FROM gcc:12
+
+LABEL maintainer="Ömercan Yazici" \
+      description="Anydsl Meta package without GPU support" \
+      version="0.1.0"
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update && apt-get install -y cmake ninja-build && rm -rf /var/lib/apt/lists/* 
+
+RUN mkdir -p /anydsl
+COPY tmp/anydsl/ /anydsl
+WORKDIR /anydsl
+RUN chmod +x setup.sh && chmod +x cleanup.sh && ./setup.sh && ./cleanup.sh

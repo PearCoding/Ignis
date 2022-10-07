@@ -159,7 +159,7 @@ if(IG_HAS_PYTHON_API)
 	message(STATUS "Building with Python API")
 endif()
 
-configure_file(src/backend/runtime/config/Version.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/Version.h)
+configure_file(src/runtime/config/Version.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/Version.h)
 
 # Add warnings per default
 if(MSVC)

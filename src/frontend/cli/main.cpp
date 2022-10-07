@@ -59,6 +59,7 @@ int main(int argc, char** argv)
 
     RuntimeOptions opts;
     cmd.populate(opts);
+    opts.EnableTonemapping = false;
 
     if (!cmd.Quiet)
         std::cout << Build::getCopyrightString() << std::endl;

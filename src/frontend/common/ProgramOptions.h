@@ -2,7 +2,7 @@
 
 #include "Logger.h"
 #include "SPPMode.h"
-#include "Target.h"
+#include "device/Target.h"
 
 #include <array>
 #include <optional>
@@ -48,11 +48,8 @@ public:
     std::string CameraType;
     std::string TechniqueType;
 
-    IG::Target Target  = Target::INVALID;
-    int Device         = 0;
-    bool AutodetectCPU = false;
-    bool AutodetectGPU = false;
-
+    IG::Target Target;
+    
     std::optional<int> SPP;
     std::optional<int> SPI;
     IG::SPPMode SPPMode = SPPMode::Fixed;
@@ -69,6 +66,8 @@ public:
     bool Denoise                    = false;
     bool DenoiserFollowSpecular     = false;
     bool DenoiserOnlyFirstIteration = false;
+
+    size_t ShaderOptimizationLevel = 3;
 
     std::filesystem::path Output;
     std::filesystem::path InputScene;

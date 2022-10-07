@@ -82,7 +82,7 @@ public:
     std::array<int, HISTOGRAM_SIZE> Histogram;
     std::array<float, HISTOGRAM_SIZE> HistogramF;
 
-    bool ToneMapping_Automatic              = true;
+    bool ToneMapping_Automatic              = false;
     float ToneMapping_Exposure              = 1.0f;
     float ToneMapping_Offset                = 0.0f;
     bool ToneMappingGamma                   = true;
@@ -545,8 +545,8 @@ public:
         ImageInfoSettings settings{ aov_name.c_str(),
                                     Histogram.data(), Histogram.size(),
                                     1.0f };
-        ImageInfoOutput output;
-        Runtime->imageinfo(settings, output);
+
+        const ImageInfoOutput output = Runtime->imageinfo(settings);
 
         LastLum         = LuminanceInfo();
         LastLum.Avg     = output.Average;

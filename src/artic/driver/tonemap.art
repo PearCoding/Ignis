@@ -1,0 +1,24 @@
+// Used in the utility section of the runtime
+
+struct TonemapSettings {
+    scale:           f32,
+    use_gamma:       bool,
+    method:          i32,
+    exposure_factor: f32,
+    exposure_offset: f32
+}
+
+struct ImageInfoSettings {
+    scale:     f32,
+    histogram: &mut [i32],
+    bins:      i32
+}
+
+struct ImageInfoOutput {
+    min:      f32,
+    max:      f32,
+    avg:      f32,
+    soft_min: f32, //  5% percentile
+    soft_max: f32, // 95% percentile
+    median:   f32  // 50% percentile
+}

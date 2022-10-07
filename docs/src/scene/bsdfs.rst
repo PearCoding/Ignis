@@ -657,6 +657,34 @@ Transform (:monosp:`transform`)
   :width: 0.6
   :label: fig-transform
 
+.. _bsdf-djmeasured:
+
+Dupuy & Jakob measured materials (:monosp:`djmeasured`)
+-------------------------------------------------------
+
+.. objectparameters::
+
+ * - filename
+   - |string|
+   - *None*
+   - Path to a valid brdf.
+ * - tint
+   - |color|
+   - 1
+   - Tint.
+
+.. subfigstart::
+
+.. figure::  images/mat_djmeasured.jpg
+  :width: 90%
+  :align: center
+  
+  Dupuy & Jakob based measured material. More information and measured data available at https://rgl.epfl.ch/materials
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-djmeasured
+
 .. _bsdf-klems:
 
 Klems (:monosp:`klems`)

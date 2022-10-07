@@ -1,5 +1,7 @@
 {
     "LOCATION": "",
+    "BUILD_DIR": "build/Release",
+    "CONFIGURE_IGNIS": true,
     "GIT_BIN": "git",
     "CMAKE_BIN": "cmake",
     "CMAKE_EXTRA_ARGS": ["-GNinja"],

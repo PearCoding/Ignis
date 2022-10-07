@@ -48,7 +48,7 @@ $BUILD_TYPE=$Config.AnyDSL_BUILD_TYPE
     ..
 
 # Build it
-& $CMAKE_BIN --build . --config "$BUILD_TYPE" --target runtime runtime_jit_artic artic
+& $CMAKE_BIN --build . --config "$BUILD_TYPE" --target pull-thorin pull-artic pull-runtime runtime runtime_jit_artic artic
 
 # Copy necessary stuff
 $ZLIB_DLL="$ZLIB\bin\zlib.dll"

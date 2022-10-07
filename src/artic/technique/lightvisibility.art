@@ -1,0 +1,120 @@
+struct LVPrimaryPayload {
+    depth: i32 // Not really used, only for test purposes
+}
+
+struct LVSecondaryPayload {
+    light: i32
+}
+
+fn write_lvprimarypayload(payload: RayPayload, w: LVPrimaryPayload) -> () {
+    payload.set(0, w.depth as f32);
+}
+
+fn unwrap_lvprimarypayload(payload: RayPayload) = LVPrimaryPayload {
+    depth = payload.get(0) as i32
+};
+
+fn write_lvsecondarypayload(payload: RayPayload, w: LVSecondaryPayload) -> () {
+    payload.set(0, w.light as f32);
+}
+
+fn unwrap_lvsecondarypayload(payload: RayPayload) = LVSecondaryPayload {
+    light = payload.get(0) as i32
+};
+
+fn @init_lv_raypayload(payload: RayPayload) = write_lvprimarypayload(payload, LVPrimaryPayload { depth = 1 });
+
+fn @make_lv_renderer(max_path_len: i32, light_selector: LightSelector, no_connection_factor: f32) -> Technique {
+    let offset:f32 = 0.001;
+
+    fn @on_shadow( ctx: ShadingContext
+                 , rnd: &mut RndState
+                 , primary_payload: RayPayload
+                 , secondary_payload: RayPayload
+                 , mat: Material
+                 ) -> ShadowRay {
+        // No shadow rays for specular materials
+        if mat.bsdf.is_specular || light_selector.count == 0 {
+            return(ShadowRay::None)
+        }
+        
+        let pt = unwrap_lvprimarypayload(primary_payload);
+        if pt.depth + 1 > max_path_len {
+            return(ShadowRay::None)
+        }
+
+        let (light, light_select_pdf) = light_selector.sample(rnd, ctx.surf.point);
+
+        let sample_direct = light.sample_direct;
+        let light_sample  = @sample_direct(rnd, ctx.surf);
+
+        let pdf_l_s = light_sample.pdf.as_solid(light_sample.cos, light_sample.dist * light_sample.dist) * light_select_pdf; // Pdf to sample the light based on NEE
+        if pdf_l_s <= flt_eps {
+            return(ShadowRay::None)
+        }
+
+        let in_dir = light_sample.dir; 
+        let dot    = vec3_dot(in_dir, ctx.surf.local.col(2));
+
+        if dot > flt_eps && light_sample.cos > flt_eps {
+            write_lvsecondarypayload(secondary_payload, LVSecondaryPayload { light = light.id });
+            if light.infinite { // make_advanced_shadow_ray would be needed if we changed the associated material
+                return(make_simple_shadow_ray(
+                    make_ray(ctx.surf.point, in_dir, offset, flt_max, ray_flag_shadow),
+                    color_builtins::white // Ignore this
+                ))
+            } else {
+                return(make_simple_shadow_ray(
+                    make_ray(ctx.surf.point, vec3_sub(light_sample.pos, ctx.surf.point), offset, 1 - offset, ray_flag_shadow),
+                    color_builtins::white // Ignore this
+                ))
+            }
+        }
+        ShadowRay::None
+    }
+
+    // Some surface was between the light source and the starting point -> There is no contribution from the light!
+    fn @on_advanced_shadow_hit(_ray: Ray, _pixel: i32, _shader: MaterialShader, secondary_payload: RayPayload, _contrib: Color) -> Option[Color] {
+        let lvs   = unwrap_lvsecondarypayload(secondary_payload);
+        let color = color_map(lvs.light);
+        make_option(make_gray_color(color_luminance(color) * no_connection_factor))
+    }
+
+    // No surface was between the light source and the starting point -> There is a contribution from the light!
+    fn @on_advanced_shadow_miss(_ray: Ray, _pixel: i32, _shader: MaterialShader, secondary_payload: RayPayload, _contrib: Color) -> Option[Color] {
+        let lvs = unwrap_lvsecondarypayload(secondary_payload);
+        make_option(color_map(lvs.light))
+    }
+
+    fn @on_bounce( ctx: ShadingContext
+                , rnd: &mut RndState
+                , payload: RayPayload
+                , mat: Material
+        ) -> Option[Ray] {
+        let pt = unwrap_lvprimarypayload(payload);
+
+        if pt.depth + 1 > max_path_len || !mat.bsdf.is_specular {
+            return(Option[Ray]::None)
+        }
+
+        // Bounce
+        let out_dir = vec3_neg(ctx.ray.dir);
+        if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
+            write_lvprimarypayload(payload, LVPrimaryPayload { depth = pt.depth + 1 });
+            make_option(
+                make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
+            )
+        } else {
+            Option[Ray]::None
+        }
+    }
+
+    Technique {
+        on_hit         = TechniqueNoHitFunction,
+        on_miss        = TechniqueNoMissFunction,
+        on_shadow      = on_shadow,
+        on_bounce      = on_bounce,
+        on_shadow_hit  = on_advanced_shadow_hit,
+        on_shadow_miss = on_advanced_shadow_miss,
+    }
+}

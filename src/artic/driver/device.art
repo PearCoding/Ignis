@@ -1,0 +1,111 @@
+// Rendering device
+// Methods marked with [Internal] are only for internal use and should not be called in random places
+struct Device {
+    // Internal id
+    id: i32,
+
+    //------------------------------------- Pipeline    
+    // [Internal] Run full pipeline with the given scene info and spi
+    trace: fn (SceneInfo, Pipeline, PayloadInfo, i32 /* spi */) -> (),
+
+    // [Internal] Generate rays
+    generate_rays: fn (RayEmitter, PayloadInfo, i32, i32, i32, i32, i32, i32, i32) -> i32, 
+
+    // Synchronize device
+    sync: fn () -> (),
+
+    // [Internal] Handle a traversal primary shader
+    handle_traversal_primary: fn (SceneTracer, i32) -> (), 
+
+    // [Internal] Handle a traversal secondary shader
+    handle_traversal_secondary: fn (SceneTracer, i32, bool, i32, bool) -> (), 
+
+    // [Internal] Handle a miss shader
+    handle_miss_shader: fn (Technique, PayloadInfo, i32, i32, i32, bool) -> (), 
+
+    // [Internal] Handle a hit shader
+    handle_hit_shader: fn (i32, MaterialShader, Scene, Technique, PayloadInfo, i32, i32, i32, bool) -> (),
+
+    // [Internal] Handle an advanced shadow shader (can be hit or miss)
+    handle_advanced_shadow_shader: fn (MaterialShader, Technique, PayloadInfo, i32, i32, i32, bool, bool) -> (), 
+
+    // [Internal] Special local handler for multilevel traversal
+    get_traversal_handler_multiple: fn (BVHTable) -> SceneTraverseLocalHandler,
+    
+    //------------------------------------- Utilities
+    // Parallel one-dimensional range on the device
+    parallel_range: fn (fn (i32) -> ()) -> fn (i32 /* start_x */, i32 /* end_x */) -> (),
+
+    // Parallel two-dimensional range on the device
+    parallel_range_2d: fn (fn (i32, i32) -> ()) -> fn (i32 /* start_x */, i32 /* end_x */, i32 /* start_y */, i32 /* end_y */) -> (),
+
+    // Parallel reduce function for generic operator on the device
+    parallel_reduce_i32: fn (i32 /* size */, fn (i32) -> i32 /* accessor */, fn (i32, i32) -> i32 /* operator */) -> i32,
+
+    // Parallel reduce function for generic operator on the device
+    parallel_reduce_f32: fn (i32 /* size */, fn (i32) -> f32 /* accessor */, fn (f32, f32) -> f32 /* operator */) -> f32,
+
+    // Returns a callback function to create a virtual device buffer by providing a pointer on device memory
+    get_device_buffer_accessor: fn () -> DeviceBufferAccessor,
+
+    //------------------------------------- Geometry
+    // [Internal] Load the full scene bvh for a specific prim type
+    load_scene_bvh: fn (&[u8]) -> SceneBvh,
+
+    // Load dynamic scene information
+    // If possible, a constant scene information should be used instead
+    // This is only useful for dynamic shaders
+    load_scene_info: fn () -> SceneInfo,
+
+    // [Internal] Load a specific dyntable constructed in the loading process
+    load_dyntable: fn (&[u8] /* Internal name */) -> DynTable,
+
+    // [Internal] Load a specific fixtable constructed in the loading process. The fixtable is accessed via a device buffer
+    load_fixtable: fn (&[u8] /* Internal name */) -> DeviceBuffer,
+
+    // [Internal] Will load the rays given in 'tracing' mode
+    load_rays: fn () -> &[StreamRay],
+
+    //------------------------------------- Resources
+    // Load (float) RGBA image from a file
+    load_image: fn (&[u8] /* Filename */, i32 /* Expected channel count */) -> Image,
+    // Load (float) RGBA image from a preregistered resource 
+    load_image_by_id: fn (i32 /* Resource id */, i32 /* Expected channel count */) -> Image,
+
+    // Load (binary) RGBA image from a file, with expected channel count and linearity
+    load_packed_image: fn (&[u8] /* Filename */, i32 /* Expected channel count */, bool /* linear */) -> Image,
+    // Load (binary) RGBA image from a preregistered resource, with expected channel count and linearity
+    load_packed_image_by_id: fn (i32 /* Resource id */, i32 /* Expected channel count */, bool /* linear */) -> Image,
+
+    // Load aov given by its id and the current spi
+    load_aov_image: fn (&[u8] /* id */, i32 /* spi */) -> AOVImage,
+
+    // Load buffer from a file and make it accessible for the host only
+    load_host_buffer: fn (&[u8] /* Filename */) -> DeviceBuffer,
+    // Load buffer from a preregistered resource and make it accessible for the host only
+    load_host_buffer_by_id: fn (i32 /* Resource id */) -> DeviceBuffer,
+    // Load buffer from a file and make it accessible for the device only
+    load_buffer: fn (&[u8] /* Filename */) -> DeviceBuffer,
+    // Load buffer from a preregistered resource and make it accessible for the device only
+    load_buffer_by_id: fn (i32 /* Resource id */) -> DeviceBuffer,
+
+    // Request a buffer given by the string identifier with a minimum size and accessible by the device only
+    // Keep in mind that size is given in units of i32. This means the actual byte size is size * 4 on most machines
+    request_buffer: fn (&[u8] /* String identifier */, i32 /* Size in units!! */, i32 /* Reserved for future use */) -> DeviceBuffer,
+
+    // Handle given pointer as a device buffer.
+    // This should only be used in very specific cases. No memory management is done from the runtime
+    make_buffer: fn (&[u8] /* Pointer to data! */, i32 /* Size in units!! */) -> DeviceBuffer,
+
+    // Dump buffer given by the string identifier to a file. Should only be used for debug purposes
+    dump_buffer: fn (&[u8] /* String identifier */, &[u8] /* Filename */) -> (),
+
+    // Special structure to allow print functions within devices. Should only be used for debug purposes
+    request_debug_output: fn () -> DebugOutput,
+
+    //------------------------------------- Local registry
+    get_local_parameter_i32:   fn (&[u8] /* name */, i32 /* default */)   -> i32,
+    get_local_parameter_f32:   fn (&[u8] /* name */, f32 /* default */)   -> f32,
+    get_local_parameter_vec3:  fn (&[u8] /* name */, Vec3 /* default */)  -> Vec3,
+    get_local_parameter_color: fn (&[u8] /* name */, Color /* default */) -> Color
+}

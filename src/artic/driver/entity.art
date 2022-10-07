@@ -1,0 +1,34 @@
+struct Entity {
+    id:         i32,
+    shape_id:   i32,
+    local_mat:  Mat3x4,
+    global_mat: Mat3x4,
+    normal_mat: Mat3x3,
+    scale:      f32
+}
+
+type EntityTable = fn (i32) -> Entity;
+
+fn @make_entity_table(tbl: DeviceBuffer) -> EntityTable {
+    let elem_s = 36; // Given in floats. See LoaderEntity.cpp (optimized)
+    @ |id| {
+        let data = shift_device_buffer(elem_s * id, elem_s, tbl);
+
+        let local_mat  = data.load_mat3x4(0);
+        let global_mat = data.load_mat3x4(12);
+        let m          = data.load_mat3x4(24);
+        Entity {
+            id         = id,
+            local_mat  = local_mat,
+            global_mat = global_mat,
+            normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
+            shape_id   = bitcast[i32](m.col(3).x),
+            scale      = m.col(3).y
+        }
+    } 
+}
+
+fn @load_entity_table(device: Device) -> EntityTable {
+    let tbl = device.load_fixtable("entities");
+    make_entity_table(tbl)
+}

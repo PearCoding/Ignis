@@ -52,15 +52,9 @@ More information is available here [docker/README.md](docker/README.md)
 
 Information about building Ignis is available in the documentation [online](https://pearcoding.github.io/Ignis/src/getting_started/building.html) or in the offline version of the documentation inside `docs/`
 
-## Backends
-
-The raytracer has multiple backends available to make sure the best optimized kernel is used for certain tasks. Therefore, multiple device and feature specific modules, so-called drivers, have to be compiled.
-
-The compilation process might take a while depending on your hardware and feature selection. Parallel compilation of the drivers is disabled by default. Multithreading might freeze your operating system due to the high memory and cpu use. You can use the CMake option `IG_BUILD_DRIVER_PARALLEL` to enable it if you are sure your system can handle it.
-
 ## Frontends
 
-The frontends of the raytracer communicate with the user and one, optimal selected, backend.
+The frontends of the raytracer communicate with the user and the runtime.
 Currently, four frontends are available:
 
  - `igview` This is the standard UI interface which displays the scene getting progressively rendered. This frontend is very good to get a first impression of the rendered scene and fly around to pick the one best camera position. Keep in mind that some power of your underlying hardware is used to render the UI and the tonemapping algorithms. Switching to the UI-less frontend `igcli` might be a good idea if no preview is necessary. Note, `igview` will be only available if the UI feature is enabled and SDL2 is available on your system. Disable this frontend by setting the CMake option `IG_WITH_VIEWER` to Off.
@@ -71,8 +65,6 @@ Currently, four frontends are available:
 Use the `--help` argument on each of the executables to get information of possible arguments for each frontend.
 
 ## Running
-
-Each frontend requires the exact location of the backends to run. An automatic search procedure will detect them in the system. In some rare cases the automatic search procedure might fail to find all the backends. In that case the environment variable `IG_DRIVER_PATH` can be used to point to the directories containing driver modules. The environment variable is similar to the `PATH` variable used in Linux environments and should contain absolute paths only, separated by ':' if multiple paths are provided. Setting `IG_DRIVER_SKIP_SYSTEM_PATH` will prevent the automatic search and only depend on `IG_DRIVER_PATH`.
 
 Run a frontend of your choice like this:
 
