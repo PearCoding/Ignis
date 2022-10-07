@@ -1424,6 +1424,8 @@ Device::Device(const Device::SetupSettings& settings)
     IG_ASSERT(sInterface == nullptr, "Only a single instance allowed!");
     sInterface = std::make_unique<Interface>(settings);
 
+    IG_LOG(L_INFO) << "Using device " << anydsl_device_name(sInterface->getDevID()) << std::endl;
+
     // Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
     _mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
