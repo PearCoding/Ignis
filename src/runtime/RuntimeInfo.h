@@ -5,7 +5,8 @@
 namespace IG {
 class RuntimeInfo {
 public:
-    [[nodiscard]] static std::filesystem::path executablePath();
+    [[nodiscard]] static std::filesystem::path executablePath(); // Path to the current executable
+    [[nodiscard]] static std::filesystem::path modulePath();     // Path to the current module/dll
     [[nodiscard]] static std::filesystem::path cacheDirectory();
     [[nodiscard]] static size_t cacheDirectorySize();
 

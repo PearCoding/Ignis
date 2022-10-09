@@ -1,5 +1,6 @@
 #include "ScriptCompiler.h"
 #include "Logger.h"
+#include "RuntimeInfo.h"
 #include <fstream>
 
 #include <anydsl_jit.h>
@@ -10,20 +11,32 @@ extern const char* ig_api[];
 extern const char* ig_api_paths[];
 
 namespace IG {
-ScriptCompiler::ScriptCompiler() 
+ScriptCompiler::ScriptCompiler()
     : mStdLibOverride()
     , mOptimizationLevel(3)
     , mVerbose(false)
 {
-
 }
 
-ScriptCompiler::~ScriptCompiler() {
-
+ScriptCompiler::~ScriptCompiler()
+{
 }
 
 void* ScriptCompiler::compile(const std::string& script, const std::string& function) const
 {
+    static bool once = false;
+    if (!once) {
+        const auto module_path = RuntimeInfo::modulePath();
+        if (!module_path.empty()) {
+            IG_LOG(L_DEBUG) << "Loading symbolic module " << module_path << std::endl;
+            anydsl_link(module_path.generic_string().c_str());
+        }
+
+        const auto cache_dir = RuntimeInfo::cacheDirectory();
+        anydsl_set_cache_directory(cache_dir.generic_string().c_str());
+        once = true;
+    }
+
 #ifdef IG_DEBUG
     anydsl_set_log_level(mVerbose ? 1 /* info */ : 4 /* error */);
 #else

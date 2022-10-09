@@ -9,16 +9,17 @@ CPMAddPackage(
 
 set(OUTPUT_DIR "${CMAKE_BINARY_DIR}/api")
 
-pybind11_add_module(pyignis api.cpp)
-target_link_libraries(pyignis PRIVATE ig_lib_runtime)
+add_library(pyignis MODULE api.cpp)
+target_link_libraries(pyignis PRIVATE ig_lib_runtime pybind11::module pybind11::lto pybind11::windows_extras)
 target_compile_definitions(pyignis PRIVATE IGNIS_VERSION=${PROJECT_VERSION})
 set_target_properties(pyignis PROPERTIES 
+                      LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_DIR}/ignis"
+                      RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIR}/ignis"
                       DEBUG_POSTFIX "" # Disable suffix for this target
                       )
+pybind11_extension(pyignis)
 add_custom_command(TARGET pyignis POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E make_directory "${OUTPUT_DIR}"
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ignis "${OUTPUT_DIR}/ignis"
-                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:pyignis> "${OUTPUT_DIR}/ignis"
                    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/pyproject.toml "${OUTPUT_DIR}/pyproject.toml"
                    COMMAND ${CMAKE_COMMAND} -E copy ${Ignis_SOURCE_DIR}/README.md "${OUTPUT_DIR}/README.md")
 add_checks(pyignis)

@@ -3,6 +3,7 @@
 
 #ifdef IG_OS_LINUX
 #include <climits>
+#include <dlfcn.h>
 #include <unistd.h>
 #elif defined(IG_OS_APPLE)
 #include <climits>
@@ -14,6 +15,8 @@
 #else
 #error DLL implementation missing
 #endif
+
+#include "device/Target.h"
 
 namespace IG {
 std::filesystem::path RuntimeInfo::executablePath()
@@ -50,9 +53,43 @@ std::filesystem::path RuntimeInfo::executablePath()
 #endif
 }
 
+std::filesystem::path RuntimeInfo::modulePath()
+{
+#if defined(IG_OS_LINUX) || defined(IG_OS_APPLE)
+#if __USE_GNU
+    Dl_info dl_info;
+    dladdr((void*)&Target::pickGPU, &dl_info);
+    return (dl_info.dli_fname);
+#else
+    return {}; // TODO
+#endif
+#elif defined(IG_OS_WINDOWS)
+    wchar_t path[MAX_PATH] = { 0 };
+    HMODULE hm             = NULL;
+
+    if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           (LPCSTR)&Target::pickGPU, &hm)
+        == 0) {
+        int ret = GetLastError();
+        IG_LOG(L_ERROR) << "GetModuleHandleExW failed, error = " << ret << std::endl;
+        return {};
+    }
+
+    if (GetModuleFileNameW(hm, path, MAX_PATH) == 0) {
+        int ret = GetLastError();
+        IG_LOG(L_ERROR) << "GetModuleFileNameW failed, error = " << ret << std::endl;
+        return {};
+    }
+    return path;
+#endif
+}
+
 std::filesystem::path RuntimeInfo::cacheDirectory()
 {
-    const auto exe = executablePath();
+    auto exe = modulePath();
+    if (exe.empty())
+        exe = executablePath();
+
     const auto dir = exe.parent_path();
 
     if (dir.empty())

@@ -22,14 +22,21 @@ struct RuntimeOptions {
     std::string OverrideCamera;
     std::pair<uint32, uint32> OverrideFilmSize = { 0, 0 };
 
-    bool AddExtraEnvLight            = false;                           // User option to add a constant environment light (just to see something)
-    std::filesystem::path ModulePath = std::filesystem::current_path(); // Optional path to modules
-    std::filesystem::path ScriptDir  = {};                              // Path to a new script directory, replacing the internal standard library
+    bool AddExtraEnvLight           = false; // User option to add a constant environment light (just to see something)
+    std::filesystem::path ScriptDir = {};    // Path to a new script directory, replacing the internal standard library
 
     size_t ShaderOptimizationLevel = 3;
 
     bool ForceSpecialization = false; // Enforce specialization of generated shader for all parameters. This will increase compile time
 
     DenoiserSettings Denoiser;
+
+    inline static RuntimeOptions makeDefault(bool trace = false)
+    {
+        auto opts     = RuntimeOptions();
+        opts.IsTracer = trace;
+        opts.Target   = Target::pickBest();
+        return opts;
+    }
 };
 } // namespace IG
