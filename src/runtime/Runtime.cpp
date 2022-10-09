@@ -297,7 +297,7 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
         mCurrentSampleCount += settings.spi;
 }
 
-void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
+void Runtime::trace(const std::vector<Ray>& rays)
 {
     if (!mOptions.IsTracer) {
         IG_LOG(L_ERROR) << "Trying to use trace() in a camera driver!" << std::endl;
@@ -324,11 +324,16 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
     }
 
     ++mCurrentIteration;
+}
+
+void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
+{
+    trace(rays);
 
     // Get result
     const float* data_ptr = getFramebuffer({}).Data;
     data.resize(rays.size() * 3);
-    std::memcpy(data.data(), data_ptr, sizeof(float) * rays.size() * 3);
+    std::memcpy(data.data(), data_ptr, sizeof(float) * data.size());
 }
 
 void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)

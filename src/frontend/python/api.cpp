@@ -129,7 +129,7 @@ PYBIND11_MODULE(pyignis, m)
         .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique);
 
     py::class_<Ray>(m, "Ray")
-        .def(py::init([](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, 1) }; }))
+        .def(py::init([](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, FltMax) }; }))
         .def(py::init([](const Vector3f& org, const Vector3f& dir, float tmin, float tmax) { return Ray{ org, dir, Vector2f(tmin, tmax) }; }))
         .def_readwrite("Origin", &Ray::Origin)
         .def_readwrite("Direction", &Ray::Direction)
@@ -143,9 +143,12 @@ PYBIND11_MODULE(pyignis, m)
     py::class_<Runtime>(m, "Runtime")
         .def("step", &Runtime::step, py::arg("ignoreDenoiser") = false)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
-            std::vector<float> data;
-            r.trace(rays, data);
-            return data;
+            r.trace(rays);
+            return py::memoryview::from_buffer(
+                r.getFramebuffer({}).Data,
+                std::vector<size_t>{ rays.size(), 3ul },
+                { sizeof(float) * 3, sizeof(float) },
+                true);
         })
         .def("reset", &Runtime::reset)
         .def(
@@ -154,10 +157,10 @@ PYBIND11_MODULE(pyignis, m)
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
                 return py::memoryview::from_buffer(
-                    r.getFramebuffer(aov).Data,                                                        // buffer pointer
-                    std::vector<size_t>{ height, width, 3ul },                                         // shape (rows, cols)
-                    std::vector<size_t>{ sizeof(float) * width * 3, sizeof(float) * 3, sizeof(float) } // strides in bytes
-                );
+                    r.getFramebuffer(aov).Data,                                                         // buffer pointer
+                    std::vector<size_t>{ height, width, 3ul },                                          // shape (rows, cols)
+                    std::vector<size_t>{ sizeof(float) * width * 3, sizeof(float) * 3, sizeof(float) }, // strides in bytes
+                    true);
             },
             py::arg("aov") = "")
         .def("setParameter", py::overload_cast<const std::string&, int>(&Runtime::setParameter))

@@ -512,16 +512,17 @@ public:
 
     inline const anydsl::Array<StreamRay>& loadRayList(int32_t dev)
     {
+        size_t count = current_settings.work_width;
         auto& device = devices[dev];
-        if (device.ray_list.size() == (int64_t)film_width)
+        if (device.ray_list.size() == (int64_t)count)
             return device.ray_list;
 
         IG_ASSERT(current_settings.rays != nullptr, "Expected list of rays to be available");
 
         std::vector<StreamRay> rays;
-        rays.reserve(film_width);
+        rays.reserve(count);
 
-        for (size_t i = 0; i < film_width; ++i) {
+        for (size_t i = 0; i < count; ++i) {
             const auto dRay = current_settings.rays[i];
 
             float norm = dRay.Direction.norm();

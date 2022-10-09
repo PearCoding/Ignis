@@ -32,8 +32,10 @@ public:
 
     /// Do a single iteration in non-tracing mode
     void step(bool ignoreDenoiser = false);
-    /// Do a single iteration in tracing mode
+    /// Do a single iteration in tracing mode and return values in data
     void trace(const std::vector<Ray>& rays, std::vector<float>& data);
+    /// Do a single iteration in tracing mode. Output will be in the framebuffer
+    void trace(const std::vector<Ray>& rays);
     /// Reset internal counters etc. This should be used if data (like camera orientation) has changed. Frame counter will NOT be reset
     void reset();
 
