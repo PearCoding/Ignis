@@ -24,17 +24,47 @@ class RuntimeWrap {
     RuntimeOptions mOptions;
     std::string mSource;
     std::string mPath;
+    bool mCreated;
 
 public:
     RuntimeWrap(const RuntimeOptions& opts, const std::string& source, const std::string& path)
         : mOptions(opts)
         , mSource(source)
         , mPath(path)
+        , mCreated(false)
     {
         IG_ASSERT(source.empty() ^ path.empty(), "Only source or a path is allowed");
     }
 
     Runtime* enter()
+    {
+        return create();
+    }
+
+    bool exit(const py::object&, const py::object&, const py::object&)
+    {
+        shutdown();
+        return false; // Propagate all the exceptions
+    }
+
+    Runtime* instance()
+    {
+        // Only return instance if the class created it
+        if (mCreated && sInstance)
+            return sInstance.get();
+
+        return create();
+    }
+
+    void shutdown()
+    {
+        sInstance.reset();
+        flush_io();
+        // Do not reset `mCreated`! The class should create the runtime only once
+    }
+
+private:
+    Runtime* create()
     {
         if (sInstance) {
             IG_LOG(L_ERROR) << "Trying to create multiple runtime instances!" << std::endl;
@@ -55,14 +85,8 @@ public:
             }
         }
 
+        mCreated = true;
         return sInstance.get();
-    }
-
-    bool exit(const py::object&, const py::object&, const py::object&)
-    {
-        sInstance.reset();
-        flush_io();
-        return false; // Propagate all the exceptions
     }
 };
 
@@ -184,7 +208,10 @@ PYBIND11_MODULE(pyignis, m)
 
     py::class_<RuntimeWrap>(m, "RuntimeWrap")
         .def("__enter__", &RuntimeWrap::enter, py::return_value_policy::reference_internal)
-        .def("__exit__", &RuntimeWrap::exit);
+        .def("__exit__", &RuntimeWrap::exit)
+        .def_property_readonly("instance", &RuntimeWrap::instance, py::return_value_policy::reference_internal)
+        .def("shutdown", &RuntimeWrap::shutdown)
+        .def("__del__", &RuntimeWrap::shutdown);
 
     m.def("loadFromFile", [](const std::string& path) { return RuntimeWrap(RuntimeOptions::makeDefault(), std::string{}, path); });
     m.def("loadFromFile", [](const std::string& path, const RuntimeOptions& opts) { return RuntimeWrap(opts, std::string{}, path); });
