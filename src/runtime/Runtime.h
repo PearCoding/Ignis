@@ -98,6 +98,7 @@ public:
 
     /// The initial camera orientation the scene was loaded with. Can be used to reset in later iterations
     [[nodiscard]] inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
+    void setCameraOrientationParameter(const CameraOrientation& orientation);
 
     /// Increase frame count (only used in interactive sessions)
     inline void incFrameCount() { mCurrentFrame++; }

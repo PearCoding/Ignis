@@ -135,6 +135,11 @@ PYBIND11_MODULE(pyignis, m)
         .def_readwrite("Direction", &Ray::Direction)
         .def_readwrite("Range", &Ray::Range);
 
+    py::class_<CameraOrientation>(m, "CameraOrientation")
+        .def_readwrite("Eye", &CameraOrientation::Eye)
+        .def_readwrite("Dir", &CameraOrientation::Dir)
+        .def_readwrite("Up", &CameraOrientation::Up);
+
     py::class_<Runtime>(m, "Runtime")
         .def("step", &Runtime::step, py::arg("ignoreDenoiser") = false)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
@@ -143,22 +148,26 @@ PYBIND11_MODULE(pyignis, m)
             return data;
         })
         .def("reset", &Runtime::reset)
-        .def("getFramebuffer", [](const Runtime& r, const std::string& aov) {
-            // TODO: Iteration count?
-            const size_t width  = r.framebufferWidth();
-            const size_t height = r.framebufferHeight();
-            return py::memoryview::from_buffer(
-                r.getFramebuffer(aov).Data,                                                        // buffer pointer
-                std::vector<size_t>{ height, width, 3ul },                                         // shape (rows, cols)
-                std::vector<size_t>{ sizeof(float) * width * 3, sizeof(float) * 3, sizeof(float) } // strides in bytes
-            );
-        }, py::arg("aov") = "")
+        .def(
+            "getFramebuffer", [](const Runtime& r, const std::string& aov) {
+                // TODO: Iteration count?
+                const size_t width  = r.framebufferWidth();
+                const size_t height = r.framebufferHeight();
+                return py::memoryview::from_buffer(
+                    r.getFramebuffer(aov).Data,                                                        // buffer pointer
+                    std::vector<size_t>{ height, width, 3ul },                                         // shape (rows, cols)
+                    std::vector<size_t>{ sizeof(float) * width * 3, sizeof(float) * 3, sizeof(float) } // strides in bytes
+                );
+            },
+            py::arg("aov") = "")
         .def("setParameter", py::overload_cast<const std::string&, int>(&Runtime::setParameter))
         .def("setParameter", py::overload_cast<const std::string&, float>(&Runtime::setParameter))
         .def("setParameter", py::overload_cast<const std::string&, const Vector3f&>(&Runtime::setParameter))
         .def("setParameter", py::overload_cast<const std::string&, const Vector4f&>(&Runtime::setParameter))
+        .def("setCameraOrientationParameter", &Runtime::setCameraOrientationParameter)
         .def("clearFramebuffer", py::overload_cast<>(&Runtime::clearFramebuffer))
         .def("clearFramebuffer", py::overload_cast<const std::string&>(&Runtime::clearFramebuffer))
+        .def_property_readonly("InitialCameraOrientation", &Runtime::initialCameraOrientation)
         .def_property_readonly("IterationCount", &Runtime::currentIterationCount)
         .def_property_readonly("SampleCount", &Runtime::currentSampleCount)
         .def_property_readonly("FramebufferWidth", &Runtime::framebufferWidth)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IG_Config.h"
+#include "CameraOrientation.h"
 
 namespace IG {
 struct Camera {
@@ -83,6 +83,15 @@ struct Camera {
             update_dir(Direction, sign * Vector3f::UnitZ());
             break;
         }
+    }
+
+    inline CameraOrientation asOrientation() const
+    {
+        CameraOrientation orientation;
+        orientation.Eye = Eye;
+        orientation.Dir = Direction;
+        orientation.Up  = Up;
+        return orientation;
     }
 };
 } // namespace IG

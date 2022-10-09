@@ -99,10 +99,11 @@ int main(int argc, char** argv)
 
     timer_loading.stop();
 
-    const auto def = runtime->initialCameraOrientation();
-    runtime->setParameter("__camera_eye", cmd.EyeVector().value_or(def.Eye));
-    runtime->setParameter("__camera_dir", cmd.DirVector().value_or(def.Dir));
-    runtime->setParameter("__camera_up", cmd.UpVector().value_or(def.Up));
+    auto orientation = runtime->initialCameraOrientation();
+    orientation.Eye  = cmd.EyeVector().value_or(orientation.Eye);
+    orientation.Dir  = cmd.DirVector().value_or(orientation.Dir);
+    orientation.Up   = cmd.UpVector().value_or(orientation.Up);
+    runtime->setCameraOrientationParameter(orientation);
 
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(cmd.SPP.value_or(0) / (float)SPI));
@@ -125,7 +126,7 @@ int main(int argc, char** argv)
         auto ticks = std::chrono::high_resolution_clock::now();
 
         timer_render.start();
-        runtime->step(samples_sec.size() != desired_iter-1);
+        runtime->step(samples_sec.size() != desired_iter - 1);
         timer_render.stop();
 
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();

@@ -232,6 +232,8 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     if (lopts.Denoiser.Enabled)
         mTechniqueInfo.EnabledAOVs.emplace_back("Denoised");
 
+    // Preload camera orientation
+    setCameraOrientationParameter(mInitialCameraOrientation);
     return setup();
 }
 
@@ -589,6 +591,13 @@ std::vector<std::string> Runtime::getAvailableTechniqueTypes()
 std::vector<std::string> Runtime::getAvailableCameraTypes()
 {
     return Loader::getAvailableCameraTypes();
+}
+
+void Runtime::setCameraOrientationParameter(const CameraOrientation& orientation)
+{
+    setParameter("__camera_eye", orientation.Eye);
+    setParameter("__camera_dir", orientation.Dir);
+    setParameter("__camera_up", orientation.Up);
 }
 
 bool Runtime::hasDenoiser() const
