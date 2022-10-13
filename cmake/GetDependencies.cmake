@@ -10,7 +10,7 @@ CPMAddPackage(
 CPMAddPackage(
     NAME tinyobjloader
     GITHUB_REPOSITORY tinyobjloader/tinyobjloader
-    GIT_TAG master
+    GIT_TAG release
     DOWNLOAD_ONLY YES
 )
 
