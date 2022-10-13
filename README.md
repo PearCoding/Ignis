@@ -43,7 +43,7 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
 
 ## Docker Image
 
-Ignis is available on docker hub with some preconfigured backends! [pearcoding/ignis](https://hub.docker.com/repository/docker/pearcoding/ignis)
+Ignis is available on docker hub with some preconfigured flavours! [pearcoding/ignis](https://hub.docker.com/repository/docker/pearcoding/ignis)
 
 More information is available here [docker/README.md](docker/README.md)
 
