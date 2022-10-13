@@ -36,7 +36,6 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
  - PExpr <https://github.com/PearCoding/PExpr>
  - pugixml <https://github.com/zeux/pugixml>
  - RapidJSON <https://rapidjson.org/>
- - Simple Tag Preprocessor <https://github.com/PearCoding/stpp>
  - stb <https://github.com/nothings/stb>
  - tinyexr <https://github.com/syoyo/tinyexr>
  - tinyobjloader <https://github.com/tinyobjloader/tinyobjloader>
