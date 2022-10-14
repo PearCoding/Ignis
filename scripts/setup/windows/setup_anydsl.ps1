@@ -40,6 +40,7 @@ $BUILD_TYPE=$Config.AnyDSL_BUILD_TYPE
     -DAnyDSL_PKG_LLVM_VERSION="$($Config.AnyDSL_LLVM_VERSION)" `
     -DAnyDSL_PKG_RV_TAG="$($Config.AnyDSL_RV_TAG)" `
     -DAnyDSL_PKG_LLVM_URL="$($Config.AnyDSL_LLVM_URL)" `
+    -DLLVM_TARGETS_TO_BUILD="$($Config.AnyDSL_LLVM_TARGETS)" `
     -DTHORIN_PROFILE=OFF `
     -DBUILD_SHARED_LIBS=OFF `
     -DCUDAToolkit_NVVM_LIBRARY="$CUDAToolkit_NVVM_LIBRARY" `
@@ -50,20 +51,28 @@ $BUILD_TYPE=$Config.AnyDSL_BUILD_TYPE
 # Build it
 & $CMAKE_BIN --build . --config "$BUILD_TYPE" --target pull-thorin pull-artic pull-runtime runtime runtime_jit_artic artic
 
+If (test-path "bin\$BUILD_TYPE\") {
+    $ANYDSL_BIN_PATH="bin\$BUILD_TYPE\"
+    $LLVM_BIN_PATH="_deps\llvm-build\$BUILD_TYPE\bin\"
+} Else {
+    $ANYDSL_BIN_PATH="bin\"
+    $LLVM_BIN_PATH="_deps\llvm-build\bin\"
+}
+
 # Copy necessary stuff
 $ZLIB_DLL="$ZLIB\bin\zlib.dll"
 If (!(test-path $ZLIB_DLL)) {
     Write-Error 'The zlib dll could not be copied. You might have to copy it yourself'
 } Else {
-    cp $ZLIB_DLL "bin\$BUILD_TYPE\"
-    cp $ZLIB_DLL "_deps\llvm-build\$BUILD_TYPE\bin\"
+    cp $ZLIB_DLL "$ANYDSL_BIN_PATH"
+    cp $ZLIB_DLL "$LLVM_BIN_PATH"
 }
 
-If (!(test-path $CUDA)) {
-    cp "$CUDA\nvvm\bin\nvvm*.dll" "bin\$BUILD_TYPE\"
+If (test-path $CUDA) {
+    cp "$CUDA\nvvm\bin\nvvm*.dll" "$ANYDSL_BIN_PATH"
 }
 
 # Copy to parent dir if necessary
-Copy-Item -Exclude "artic.exe" -Path ".\bin\$BUILD_TYPE\*" -Destination "$BIN_ROOT\"
+Copy-Item -Exclude "artic.exe" -Path ".\$ANYDSL_BIN_PATH*" -Destination "$BIN_ROOT\"
 
 cd $CURRENT

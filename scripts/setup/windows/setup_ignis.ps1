@@ -5,10 +5,23 @@ If (!(test-path "$BUILD_DIR")) {
 }
 cd "$BUILD_DIR"
 
-$CLANG_BIN="$DEPS_ROOT\anydsl\build\_deps\llvm-build\$($Config.AnyDSL_BUILD_TYPE)\bin\clang.exe".Replace("\", "/")
-$RUNTIME_DIR="$DEPS_ROOT\anydsl\build\share\anydsl\cmake".Replace("\", "/")
-$ARTIC_BIN_DIR="$DEPS_ROOT\anydsl\build\bin\$($Config.AnyDSL_BUILD_TYPE)".Replace("\", "/")
+$CLANG_BIN_DIR="$DEPS_ROOT\anydsl\build\_deps\llvm-build\$($Config.AnyDSL_BUILD_TYPE)\bin"
+if (test-path "$CLANG_BIN_DIR") {
+    $CLANG_BIN_DIR=$CLANG_BIN_DIR.Replace("\", "/")
+} Else {
+    $CLANG_BIN_DIR="$DEPS_ROOT\anydsl\build\_deps\llvm-build\bin".Replace("\", "/")
+}
+$CLANG_BIN="$CLANG_BIN_DIR\clang.exe".Replace("\", "/")
+
+$ARTIC_BIN_DIR="$DEPS_ROOT\anydsl\build\bin\$($Config.AnyDSL_BUILD_TYPE)"
+if (test-path "$ARTIC_BIN_DIR") {
+    $ARTIC_BIN_DIR=$ARTIC_BIN_DIR.Replace("\", "/")
+} Else {
+    $ARTIC_BIN_DIR="$DEPS_ROOT\anydsl\build\bin".Replace("\", "/")
+}
 $ARTIC_BIN="$ARTIC_BIN_DIR\artic.exe".Replace("\", "/")
+
+$RUNTIME_DIR="$DEPS_ROOT\anydsl\build\share\anydsl\cmake".Replace("\", "/")
 $TBB_LIB="$DEPS_ROOT\tbb\lib\intel64\vc14\tbb12.lib".Replace("\", "/")
 $TBB_MALLOC_LIB="$DEPS_ROOT\tbb\lib\intel64\vc14\tbbmalloc.lib".Replace("\", "/")
 $TBB_INCLUDE="$DEPS_ROOT\tbb\include".Replace("\", "/")

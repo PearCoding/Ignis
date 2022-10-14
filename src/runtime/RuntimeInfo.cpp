@@ -1,4 +1,5 @@
 #include "RuntimeInfo.h"
+#include "Logger.h"
 #include <sstream>
 
 #ifdef IG_OS_LINUX
@@ -68,7 +69,7 @@ std::filesystem::path RuntimeInfo::modulePath()
     HMODULE hm             = NULL;
 
     if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                           (LPCSTR)&Target::pickGPU, &hm)
+                           (LPCWSTR)&Target::pickGPU, &hm)
         == 0) {
         int ret = GetLastError();
         IG_LOG(L_ERROR) << "GetModuleHandleExW failed, error = " << ret << std::endl;
