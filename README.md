@@ -30,14 +30,18 @@ A sample scene from https://github.com/KhronosGroup/glTF-Sample-Models directly 
 The following dependencies will be downloaded and compiled automatically.
 Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more information. 
 
+ - bvh <https://github.com/madmann91/bvh>
  - Catch2 <https://github.com/catchorg/Catch2>
+ - CLI11 <https://github.com/CLIUtils/CLI11>
  - imgui <https://github.com/ocornut/imgui>
  - imgui-markdown <https://github.com/juliettef/imgui_markdown>
  - PExpr <https://github.com/PearCoding/PExpr>
  - pugixml <https://github.com/zeux/pugixml>
+ - pybind11 <https://github.com/pybind/pybind11>
  - RapidJSON <https://rapidjson.org/>
  - stb <https://github.com/nothings/stb>
  - tinyexr <https://github.com/syoyo/tinyexr>
+ - tinygltf <https://github.com/syoyo/tinygltf>
  - tinyobjloader <https://github.com/tinyobjloader/tinyobjloader>
  - tinyparser-mitsuba <https://github.com/PearCoding/TinyParser-Mitsuba>
 
