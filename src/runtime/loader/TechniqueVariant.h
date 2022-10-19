@@ -17,6 +17,7 @@ struct ShaderOutput {
 
 template <typename T>
 struct TechniqueVariantBase {
+    uint32 ID;
     ShaderOutput<T> DeviceShader;
     ShaderOutput<T> TonemapShader;
     ShaderOutput<T> ImageinfoShader;

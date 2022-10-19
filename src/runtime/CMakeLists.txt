@@ -37,6 +37,7 @@ set(SRC
   container/PositionGetter.h
   device/Device.cpp
   device/Device.h
+  device/ShaderKey.h
   device/ShallowArray.h
   device/Target.cpp
   device/Target.h

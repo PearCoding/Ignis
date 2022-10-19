@@ -7,7 +7,7 @@
 
 namespace IG {
 enum class ShaderType {
-    Device,
+    Device = 0,
     PrimaryTraversal,
     SecondaryTraversal,
     RayGeneration,

@@ -476,6 +476,7 @@ bool Runtime::compileShaders()
         for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
             const auto& variant = mTechniqueVariants[i];
             auto& shaders       = mTechniqueVariantShaderSets[i];
+            shaders.ID          = (uint32)i;
 
             IG_LOG(L_DEBUG) << "Handling technique variant " << i << std::endl;
             compile(i, "device", "ig_callback_shader", variant.DeviceShader, shaders.DeviceShader);
