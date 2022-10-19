@@ -1,7 +1,35 @@
+struct PixelCoord {
+    x: i32,
+    y: i32,
+    linear: i32,
+    nx: f32,     // Normalized coordinate [-1, 1]
+    ny: f32      // Normalized coordinate [-1, 1]
+}
+
+fn @make_pixelcoord_from_xy(x: i32, y: i32, w: i32, h: i32, sx: f32, sy: f32) = PixelCoord {
+    x = x,
+    y = y,
+    linear = y * w + x,
+    nx = 2 * (x as f32 + sx) / (w as f32) - 1,
+    ny = 1 - 2 * (y as f32 + sy) / (h as f32)
+};
+
+fn @make_pixelcoord_from_linear(linear: i32, w: i32, h: i32, sx: f32, sy: f32) -> PixelCoord {
+    let x = linear % w;
+    let y = linear / w;
+    PixelCoord {
+        x = x,
+        y = y,
+        linear = linear,
+        nx = 2 * (x as f32 + sx) / (w as f32) - 1,
+        ny = 1 - 2 * (y as f32 + sy) / (h as f32)
+    }
+}
+
 // Opaque camera object
 struct Camera {
     // Generates a ray for a point on the image plane (in [-1, 1]^2)
-    generate_ray: fn (&mut RndState, f32, f32) -> Ray,
+    generate_ray: fn (&mut RndState, PixelCoord) -> Ray,
     // Returns dx and dy vectors in respect to the pixel position (given as index)
-    differential: fn (i32) -> (Vec3, Vec3)
+    differential: fn (PixelCoord) -> (Vec3, Vec3)
 }

@@ -2,8 +2,8 @@
 fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f32, tmax: f32) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
     Camera {
-        generate_ray = @ |_, x, y| {
-            let pos = vec3_add(vec3_add(vec3_mulf(right, scale.x * x), vec3_mulf(up, scale.y * y)), eye);
+        generate_ray = @ |_, coord| {
+            let pos = vec3_add(vec3_add(vec3_mulf(right, scale.x * coord.nx), vec3_mulf(up, scale.y * coord.ny)), eye);
             make_ray(pos, dir, tmin, tmax, ray_flag_camera)
         },
         differential = @ |_| {

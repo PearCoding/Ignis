@@ -1,7 +1,7 @@
-type PayloadInitializer = fn (/*payload:*/ RayPayload, /*sample:*/ i32, /*x:*/ i32, /*y:*/ i32) -> ();
+type PayloadInitializer = fn (/*payload:*/ RayPayload, /*sample:*/ i32, /*coord:*/ PixelCoord) -> ();
 
-fn @make_simple_payload_initializer(f: fn(RayPayload)->()) = @|p: RayPayload, _:i32, _:i32, _:i32| f(p);
-fn @empty_payload_initializer(_: RayPayload, _:i32, _:i32, _:i32) -> () {}
+fn @make_simple_payload_initializer(f: fn(RayPayload)->()) = @|p: RayPayload, _:i32, _:PixelCoord| f(p);
+fn @empty_payload_initializer(_: RayPayload, _:i32, _:PixelCoord) -> () {}
 
 fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, sampler: PixelSampler, initState: PayloadInitializer) -> RayEmitter {
     @ |sample, x, y, width, height, payload| {
@@ -12,30 +12,30 @@ fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, sampler: PixelSampl
         hash = fnv_hash(hash, y as u32);
         let mut rnd = hash /*as RndState*/;
         let (rx, ry) = sampler(&mut rnd, iter * spi + sample, x, y);
-        let kx = 2 * (x as f32 + rx) / (width as f32) - 1;
-        let ky = 1 - 2 * (y as f32 + ry) / (height as f32);
-        let ray = camera.generate_ray(&mut rnd, kx, ky);
+        let coord = make_pixelcoord_from_xy(x, y, width, height, rx, ry);
+        let ray   = camera.generate_ray(&mut rnd, coord);
         
-        initState(payload, sample, x, y);
+        initState(payload, sample, coord);
         (ray, rnd)
     }
 }
 
 fn @make_list_emitter(rays: &[StreamRay], iter: i32, initState: PayloadInitializer) -> RayEmitter {
-    @ |sample, x, y, width, _height, payload| {
+    @ |sample, x, y, width, height, payload| {
         let mut hash = fnv_init();
         hash = fnv_hash(hash, sample as u32);
         hash = fnv_hash(hash, iter as u32);
         hash = fnv_hash(hash, x as u32);
         hash = fnv_hash(hash, y as u32);
-        let rnd = hash /*as RndState*/;
-        let id  = y*width + x;
+        let rnd   = hash /*as RndState*/;
+        let coord = make_pixelcoord_from_xy(x, y, width, height, 0, 0);
+        let id    = coord.linear;
         
         let stream_ray = if id < width { rays(id) } else { StreamRay{org=make_vec3(0,0,0), dir=make_vec3(0,0,1), tmin=0, tmax=0}};
         
         let ray = make_ray(stream_ray.org, stream_ray.dir, stream_ray.tmin, stream_ray.tmax, 0);
         
-        initState(payload, sample, x, y);
+        initState(payload, sample, coord);
         (ray, rnd)
     }
 }

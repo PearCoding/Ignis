@@ -48,16 +48,13 @@ fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, mode: F
     }
 
     Camera {
-        generate_ray = @ |_, x, y| {
-            make_ray(eye, compute_d(x,y), tmin, tmax, ray_flag_camera)
+        generate_ray = @ |_, coord| {
+            make_ray(eye, compute_d(coord.nx, coord.ny), tmin, tmax, ray_flag_camera)
         },
-        differential = @ |pixel| {
-            let x = (pixel % w as i32) as f32 / w;
-            let y = (pixel / w as i32) as f32 / h;
-
-            let d0  = compute_d(x, y);
-            let d1x = compute_d(x + 1 / w, y);
-            let d1y = compute_d(x, y + 1 / h);
+        differential = @ |coord| {
+            let d0  = compute_d(coord.nx, coord.ny);
+            let d1x = compute_d(coord.nx + 1 / w, coord.ny);
+            let d1y = compute_d(coord.nx, coord.ny + 1 / h);
             
             (
                 vec3_mulf(vec3_sub(d1x, d0), w),

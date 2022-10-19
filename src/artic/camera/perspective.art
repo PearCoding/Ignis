@@ -18,8 +18,8 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f
     let view  = make_mat3x3(right, up, dir);
 
     Camera {
-        generate_ray = @ |_, x, y| {
-            let d = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * x, scale.y * y, 1)));
+        generate_ray = @ |_, coord| {
+            let d = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * coord.nx, scale.y * coord.ny, 1)));
             make_ray(eye, d, tmin, tmax, ray_flag_camera)
         },
         differential = @ |_| {
@@ -37,8 +37,8 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, ape
     let view  = make_mat3x3(right, up, dir);
 
     Camera {
-        generate_ray = @ |rnd, x, y| {
-            let global_dir = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * x, scale.y * y, 1)));
+        generate_ray = @ |rnd, coord| {
+            let global_dir = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * coord.nx, scale.y * coord.ny, 1)));
             let focus_pos  = vec3_mulf(global_dir, focal_length);
 
             let aperature_coord = vec2_mulf(square_to_concentric_disk(make_vec2(randf(rnd), randf(rnd))), aperture_radius);

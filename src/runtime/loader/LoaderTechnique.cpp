@@ -48,7 +48,7 @@ static TechniqueInfo debug_get_info(const std::string&, const std::shared_ptr<Pa
 static void wireframe_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&)
 {
     // Camera was defined by RequiresExplicitCamera flag
-    stream << "  let technique = make_wireframe_renderer(camera);" << std::endl;
+    stream << "  let technique = make_wireframe_renderer(camera, settings.width, settings.height);" << std::endl;
 }
 
 static TechniqueInfo wireframe_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
