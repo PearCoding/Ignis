@@ -32,10 +32,19 @@ std::string TraversalShader::end()
 std::string TraversalShader::setupPrimary(const LoaderContext& ctx)
 {
     std::stringstream stream;
-    stream << begin(ctx)
-           << setupInternal(ctx)
-           << "  device.handle_traversal_primary(tracer, size);" << std::endl
-           << end();
+
+    if (ctx.EntityCount == 0) {
+        stream << begin(ctx) << std::endl
+               << "  maybe_unused(size);" << std::endl
+               << end();
+    } else {
+
+        stream << begin(ctx)
+               << setupInternal(ctx)
+               << "  device.handle_traversal_primary(tracer, size);" << std::endl
+               << end();
+    }
+
     return stream.str();
 }
 
@@ -44,12 +53,19 @@ std::string TraversalShader::setupSecondary(const LoaderContext& ctx)
     const bool is_advanced = ctx.CurrentTechniqueVariantInfo().ShadowHandlingMode != ShadowHandlingMode::Simple;
 
     std::stringstream stream;
-    stream << begin(ctx) << std::endl
-           << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl
-           << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << setupInternal(ctx)
-           << "  device.handle_traversal_secondary(tracer, size, " << (is_advanced ? "true" : "false") << ", spi, use_framebuffer);" << std::endl
-           << end();
+
+    if (ctx.EntityCount == 0) {
+        stream << begin(ctx) << std::endl
+               << "  maybe_unused(size);" << std::endl
+               << end();
+    } else {
+        stream << begin(ctx) << std::endl
+               << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl
+               << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
+               << setupInternal(ctx)
+               << "  device.handle_traversal_secondary(tracer, size, " << (is_advanced ? "true" : "false") << ", spi, use_framebuffer);" << std::endl
+               << end();
+    }
     return stream.str();
 }
 
