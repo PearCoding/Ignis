@@ -34,7 +34,8 @@ fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32
                     0 => L,
                     1 => reinhard(L),
                     2 => reinhard_modified(L),
-                    _ => aces(L)
+                    3 => aces(L),
+                    _ => uncharted2(L)
                 };
     
                 let color = xyY_to_srgb(make_color(xyY.r, xyY.g, nL, 1));

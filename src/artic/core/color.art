@@ -97,12 +97,23 @@ fn @reinhard_modified(L : f32) -> f32 {
 
 // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
 fn @aces(L: f32) -> f32 {
-    let a = 2.51 : f32;
-    let b = 0.03 : f32;
-    let c = 2.43 : f32;
-    let d = 0.59 : f32;
-    let e = 0.14 : f32;
-    safe_div(L * (a * L + b), L * (c * L + d) + e)
+    let A = 2.51 : f32;
+    let B = 0.03 : f32;
+    let C = 2.43 : f32;
+    let D = 0.59 : f32;
+    let E = 0.14 : f32;
+    safe_div(L * (A * L + B), L * (C * L + D) + E)
+}
+
+// Based on http://filmicworlds.com/blog/filmic-tonemapping-operators/
+fn @uncharted2(L: f32) -> f32 {
+    let A = 0.15 : f32;
+    let B = 0.50 : f32;
+    let C = 0.10 : f32;
+    let D = 0.20 : f32;
+    let E = 0.02 : f32;
+    let F = 0.30 : f32;
+    ((L*(A*L + C*B) + D*E)/(L*(A*L + B) + D*F)) - E/F
 }
 
 fn @srgb_gamma(x : f32) -> f32 {

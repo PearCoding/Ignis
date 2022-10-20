@@ -28,7 +28,7 @@ namespace IG {
 
 constexpr size_t HISTOGRAM_SIZE                     = 100;
 static const char* const ToneMappingMethodOptions[] = {
-    "None", "Reinhard", "Mod. Reinhard", "ACES"
+    "None", "Reinhard", "Mod. Reinhard", "ACES", "Uncharted2"
 };
 
 static const char* const DebugModeOptions[] = {
