@@ -123,7 +123,6 @@ struct CPUData {
     DeviceStream cpu_secondary;
     TemporaryStorageHostProxy temporary_storage_host;
     Statistics stats;
-    void* current_shader                       = nullptr;
     const ParameterSet* current_local_registry = nullptr;
     ShaderKey current_shader_key               = ShaderKey(0, ShaderType::Device, 0);
     std::unordered_map<ShaderKey, ShaderStats, ShaderKeyHash> shader_stats;
@@ -163,7 +162,6 @@ public:
 
         anydsl::Array<uint32_t> tonemap_pixels;
 
-        void* current_shader                       = nullptr;
         const ParameterSet* current_local_registry = nullptr;
         ShaderKey current_shader_key;
 
@@ -292,8 +290,8 @@ public:
     inline anydsl::Array<T>& resizeArray(int32_t dev, anydsl::Array<T>& array, size_t size, size_t multiplier)
     {
         const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
-        if (array.size() < (int64_t)capacity) {
-            size_t n  = capacity * multiplier;
+        const size_t n  = capacity * multiplier;
+        if (array.size() < (int64_t)n) {
             void* ptr = anydsl_alloc(dev, sizeof(T) * n);
             if (ptr == nullptr) {
                 IG_LOG(L_FATAL) << "Out of memory" << std::endl;
@@ -385,7 +383,6 @@ public:
     inline void setCurrentShader(int32_t dev, int workload, const ShaderKey& key, const ShaderOutput<void*>& shader)
     {
         if (is_gpu) {
-            devices[dev].current_shader         = shader.Exec;
             devices[dev].current_local_registry = &shader.LocalRegistry;
             devices[dev].current_shader_key     = key;
             auto data                           = getThreadData();
@@ -393,7 +390,6 @@ public:
             data->shader_stats[key].workload_count += (size_t)workload;
         } else {
             auto data                    = getThreadData();
-            data->current_shader         = shader.Exec;
             data->current_local_registry = &shader.LocalRegistry;
             data->current_shader_key     = key;
             data->shader_stats[key].call_count++;
@@ -424,7 +420,7 @@ public:
         resizeArray(dev, stream.Data, size, elements);
         stream.BlockSize = size;
 
-        return getPrimaryStream(dev, buffer);
+        return stream;
     }
 
     inline DeviceStream& getPrimaryStream(int32_t dev, size_t buffer)
@@ -445,7 +441,7 @@ public:
         resizeArray(dev, stream.Data, size, elements);
         stream.BlockSize = size;
 
-        return getSecondaryStream(dev, buffer);
+        return stream;
     }
 
     inline DeviceStream& getSecondaryStream(int32_t dev, size_t buffer)

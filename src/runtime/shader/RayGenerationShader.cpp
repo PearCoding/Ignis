@@ -50,7 +50,7 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
 
         std::string pixel_sampler = "make_uniform_pixel_sampler()";
         if (ctx.PixelSamplerType == "halton") {
-            stream << "  let halton_setup = setup_halton_pixel_sampler(device, settings.width, settings.height, iter, xmin, ymin, xmax, ymax);" << std::endl;
+            stream << "  let halton_setup = setup_halton_pixel_sampler(device, settings.width, settings.height, settings.iter, xmin, ymin, xmax, ymax);" << std::endl;
             pixel_sampler = "make_halton_pixel_sampler(halton_setup)";
         } else if (ctx.PixelSamplerType == "mjitt") {
             pixel_sampler = "make_mjitt_pixel_sampler(4, 4)";
