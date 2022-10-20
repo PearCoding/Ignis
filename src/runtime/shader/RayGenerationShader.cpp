@@ -23,7 +23,7 @@ std::string RayGenerationShader::begin(const LoaderContext& ctx)
     return stream.str();
 }
 
-std::string RayGenerationShader::end(const std::string_view emitterName, const std::string_view spiName, bool skipReturn)
+std::string RayGenerationShader::end(const std::string_view& emitterName, const std::string_view& spiName, bool skipReturn)
 {
     std::stringstream stream;
 
@@ -31,6 +31,22 @@ std::string RayGenerationShader::end(const std::string_view emitterName, const s
         stream << "  device.generate_rays(" << emitterName << ", payload_info, next_id, size, xmin, ymin, xmax, ymax, " << spiName << ")" << std::endl;
 
     stream << "}" << std::endl;
+
+    return stream.str();
+}
+
+std::string RayGenerationShader::setupPixelSampler(const LoaderContext& ctx, const std::string_view& varName)
+{
+    std::stringstream stream;
+
+    if (ctx.PixelSamplerType == "halton") {
+        stream << "  let halton_setup = setup_halton_pixel_sampler(device, settings.width, settings.height, settings.iter, xmin, ymin, xmax, ymax);" << std::endl
+               << "  let " << varName << " = make_halton_pixel_sampler(halton_setup);" << std::endl;
+    } else if (ctx.PixelSamplerType == "mjitt") {
+        stream << "  let " << varName << " = make_mjitt_pixel_sampler(4, 4);" << std::endl;
+    } else {
+        stream << "  let " << varName << " = make_uniform_pixel_sampler();" << std::endl;
+    }
 
     return stream.str();
 }
@@ -46,17 +62,9 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
     if (ctx.IsTracer) {
         stream << "  let emitter = make_list_emitter(device.load_rays(), settings.iter, init_raypayload);" << std::endl;
     } else {
-        stream << LoaderCamera::generate(ctx) << std::endl; // Will set `camera`
-
-        std::string pixel_sampler = "make_uniform_pixel_sampler()";
-        if (ctx.PixelSamplerType == "halton") {
-            stream << "  let halton_setup = setup_halton_pixel_sampler(device, settings.width, settings.height, settings.iter, xmin, ymin, xmax, ymax);" << std::endl;
-            pixel_sampler = "make_halton_pixel_sampler(halton_setup)";
-        } else if (ctx.PixelSamplerType == "mjitt") {
-            pixel_sampler = "make_mjitt_pixel_sampler(4, 4)";
-        }
-
-        stream << "  let emitter = make_camera_emitter(camera, settings.iter, spi, " << pixel_sampler << ", init_raypayload);" << std::endl;
+        stream << LoaderCamera::generate(ctx) << std::endl // Will set `camera`
+               << setupPixelSampler(ctx) << std::endl      // Will set `pixel_sampler`
+               << "  let emitter = make_camera_emitter(camera, settings.iter, spi, pixel_sampler, init_raypayload);" << std::endl;
     }
 
     stream << end();
