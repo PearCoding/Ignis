@@ -86,34 +86,39 @@ fn @srgb_to_xyY(c : Color) -> Color {
     if n <= flt_eps { color_builtins::black } else { make_color(s.r / n, s.g / n, s.g, 1) }
 }
 
-fn @reinhard(L : f32) -> f32 {
-    safe_div(L, 1.0 + L)
-}
+mod tonemapping {
+    fn @reinhard(L : f32) -> f32 {
+        super::safe_div(L, 1.0 + L)
+    }
 
-fn @reinhard_modified(L : f32) -> f32 {
-    let WhitePoint = 4 : f32;
-    safe_div(L * (1.0 + L / (WhitePoint * WhitePoint)), 1.0 + L)
-}
+    fn @reinhard_modified(L : f32) -> f32 {
+        let WhitePoint = 4 : f32;
+        super::safe_div(L * (1.0 + L / (WhitePoint * WhitePoint)), 1.0 + L)
+    }
 
-// Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
-fn @aces(L: f32) -> f32 {
-    let A = 2.51 : f32;
-    let B = 0.03 : f32;
-    let C = 2.43 : f32;
-    let D = 0.59 : f32;
-    let E = 0.14 : f32;
-    safe_div(L * (A * L + B), L * (C * L + D) + E)
-}
+    // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
+    fn @aces(L: f32) -> f32 {
+        let A = 2.51 : f32;
+        let B = 0.03 : f32;
+        let C = 2.43 : f32;
+        let D = 0.59 : f32;
+        let E = 0.14 : f32;
+        super::safe_div(L * (A * L + B), L * (C * L + D) + E)
+    }
 
-// Based on http://filmicworlds.com/blog/filmic-tonemapping-operators/
-fn @uncharted2(L: f32) -> f32 {
-    let A = 0.15 : f32;
-    let B = 0.50 : f32;
-    let C = 0.10 : f32;
-    let D = 0.20 : f32;
-    let E = 0.02 : f32;
-    let F = 0.30 : f32;
-    ((L*(A*L + C*B) + D*E)/(L*(A*L + B) + D*F)) - E/F
+    // Based on http://filmicworlds.com/blog/filmic-tonemapping-operators/
+    fn @uncharted2(L: f32) -> f32 {
+        fn @func(x: f32) -> f32 {
+            let A = 0.15 : f32;
+            let B = 0.50 : f32;
+            let C = 0.10 : f32;
+            let D = 0.20 : f32;
+            let E = 0.02 : f32;
+            let F = 0.30 : f32;
+            ((x*(A*x + C*B) + D*E)/(x*(A*x + B) + D*F)) - E/F
+        }
+        func(L) / func(11.2)
+    }
 }
 
 fn @srgb_gamma(x : f32) -> f32 {

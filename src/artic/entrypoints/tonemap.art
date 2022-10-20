@@ -32,10 +32,10 @@ fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32
     
                 let nL = match method {
                     0 => L,
-                    1 => reinhard(L),
-                    2 => reinhard_modified(L),
-                    3 => aces(L),
-                    _ => uncharted2(L)
+                    1 => tonemapping::reinhard(L),
+                    2 => tonemapping::reinhard_modified(L),
+                    3 => tonemapping::aces(L),
+                    _ => tonemapping::uncharted2(L)
                 };
     
                 let color = xyY_to_srgb(make_color(xyY.r, xyY.g, nL, 1));
@@ -58,9 +58,9 @@ fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32
         0 => tonemap(0),
         1 => tonemap(1),
         2 => tonemap(2),
-        _ => tonemap(3)
+        3 => tonemap(3),
+        _ => tonemap(4)
     };
     
-
     device.sync();
 }
