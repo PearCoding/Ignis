@@ -46,6 +46,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/driver.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/emitter.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/entity.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/driver/filter.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/image.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/light.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/mapping_cpu.art
