@@ -1,8 +1,10 @@
 // A single AOV RGB image.
 // Ignis only supports RGB
 struct AOVImage {
-    splat:        fn (i32, Color) -> (),
-    get:          fn (i32) -> Color,
+    width:        i32,
+    height:       i32,
+    splat:        fn (PixelCoord, Color) -> (),
+    get:          fn (PixelCoord) -> Color,
     mark_as_used: fn () -> (), // Note: Only useable on the host!
 }
 
@@ -10,7 +12,60 @@ struct AOVImage {
 type AOVTable = fn (i32) -> AOVImage;
 
 fn @make_empty_aov_image() = AOVImage {
+    width        = 0,
+    height       = 0,
     splat        = @|_, _| -> () {},
     get          = @|_| -> Color { color_builtins::black },
     mark_as_used = @|| -> () {}
 };
+
+fn @make_atomic_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32, atomics: Atomics) -> AOVImage {
+    let accumulate = make_atomic_accumulator(atomics, pixels, spi);
+    AOVImage{
+        width  = w,
+        height = h,
+        splat  = @|coord, color| -> () { accumulate(coord.linear, color) },
+        get    = @|coord| -> Color     {
+            let ptr2 = &pixels(coord.linear * 3) as &[f32];
+            make_color(ptr2(0), ptr2(1), ptr2(2), 1)
+        },
+        mark_as_used = @|| -> () {
+            ignis_mark_aov_as_used(id, 1);
+        }
+    }
+}
+
+fn @make_rv_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32) -> AOVImage {
+    let accumulate = make_standard_accumulator(pixels, spi);
+    AOVImage {
+        width  = w,
+        height = h,
+        splat  = @|coord, color| -> () { 
+            for lane in unroll(0, rv_num_lanes()) {
+                let j = bitcast[i32](rv_extract(bitcast[f32](coord.linear), lane));
+                accumulate(j,
+                    make_color(
+                        rv_extract(color.r, lane),
+                        rv_extract(color.g, lane),
+                        rv_extract(color.b, lane),
+                        1
+                    )
+                );
+            }
+        },
+        get = @|coord| -> Color {
+            // TODO: Make sure this is correct
+            let mut color = color_builtins::black;
+            for lane in unroll(0, rv_num_lanes()) {
+                let j = bitcast[i32](rv_extract(bitcast[f32](coord.linear), lane));
+                color.r = rv_insert(color.r, lane, pixels(j * 3 + 0));
+                color.g = rv_insert(color.g, lane, pixels(j * 3 + 1));
+                color.b = rv_insert(color.b, lane, pixels(j * 3 + 2));
+            }
+            color
+        },
+        mark_as_used = @|| -> () {
+            ignis_mark_aov_as_used(id, 1);
+        }
+    }
+}

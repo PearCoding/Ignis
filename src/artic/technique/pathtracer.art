@@ -131,7 +131,7 @@ fn @make_path_renderer(max_path_len: i32, light_selector: LightSelector, aovs: A
     }
 
     fn @on_miss( ray: Ray
-               , pixel: i32
+               , pixel: PixelCoord
                , payload: RayPayload) -> Option[Color] {
         let mut inflights = 0;
         let mut color     = color_builtins::black;
@@ -198,7 +198,7 @@ fn @make_path_renderer(max_path_len: i32, light_selector: LightSelector, aovs: A
     }
 
     fn @on_shadow_miss( _ray: Ray
-                      , pixel: i32
+                      , pixel: PixelCoord
                       , _shader: MaterialShader
                       , _: RayPayload
                       , color: Color) -> Option[Color] {

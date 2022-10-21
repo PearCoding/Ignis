@@ -6,6 +6,14 @@ struct PixelCoord {
     ny: f32      // Normalized coordinate [-1, 1]
 }
 
+fn @make_empty_pixelcoord() = PixelCoord {
+    x = 0,
+    y = 0,
+    linear = 0,
+    nx = 0,
+    ny = 0
+};
+
 fn @make_pixelcoord_from_xy(x: i32, y: i32, w: i32, h: i32, sx: f32, sy: f32) = PixelCoord {
     x = x,
     y = y,

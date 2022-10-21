@@ -14,18 +14,18 @@ fn @make_advanced_shadow_ray(ray: Ray, color: Color, material: i32) = ShadowRay:
 // A technique is a combination of functions run on a single variant per iteration
 struct Technique {
     on_hit:         fn (ShadingContext, RayPayload, Material) -> Option[Color],
-    on_miss:        fn (Ray, i32, RayPayload) -> Option[Color],
+    on_miss:        fn (Ray, PixelCoord, RayPayload) -> Option[Color],
     on_shadow:      fn (ShadingContext, &mut RndState, RayPayload, RayPayload, Material) -> ShadowRay,
     on_bounce:      fn (ShadingContext, &mut RndState, RayPayload, Material) -> Option[Ray],
-    on_shadow_hit:  fn (Ray, i32, MaterialShader, RayPayload, Color) -> Option[Color], // Will only be called if renderer makes use of ShadowHandlingMode!=Simple
-    on_shadow_miss: fn (Ray, i32, MaterialShader, RayPayload, Color) -> Option[Color], // Will only be called if renderer makes use of ShadowHandlingMode!=Simple
+    on_shadow_hit:  fn (Ray, PixelCoord, MaterialShader, RayPayload, Color) -> Option[Color], // Will only be called if renderer makes use of ShadowHandlingMode!=Simple
+    on_shadow_miss: fn (Ray, PixelCoord, MaterialShader, RayPayload, Color) -> Option[Color], // Will only be called if renderer makes use of ShadowHandlingMode!=Simple
 }
 
 fn @TechniqueNoHitFunction       (_: ShadingContext, _: RayPayload, _: Material)                               = Option[Color]::None;
-fn @TechniqueNoMissFunction      (_: Ray, _: i32, _: RayPayload)                                               = Option[Color]::None;
+fn @TechniqueNoMissFunction      (_: Ray, _: PixelCoord, _: RayPayload)                                        = Option[Color]::None;
 fn @TechniqueNoShadowFunction    (_: ShadingContext, _: &mut RndState, _: RayPayload, _: RayPayload, Material) = ShadowRay::None;
 fn @TechniqueNoBounceFunction    (_: ShadingContext, _: &mut RndState, _: RayPayload, Material)                = Option[Ray]::None;
-fn @TechniqueNoShadowHitFunction (_: Ray, _: i32, _: MaterialShader, _: RayPayload, _: Color)                  = Option[Color]::None;
-fn @TechniqueNoShadowMissFunction(_: Ray, _: i32, _: MaterialShader, _: RayPayload, _: Color)                  = Option[Color]::None;
+fn @TechniqueNoShadowHitFunction (_: Ray, _: PixelCoord, _: MaterialShader, _: RayPayload, _: Color)           = Option[Color]::None;
+fn @TechniqueNoShadowMissFunction(_: Ray, _: PixelCoord, _: MaterialShader, _: RayPayload, _: Color)           = Option[Color]::None;
 
 type RayEmitter = fn (i32, i32, i32, i32, i32, RayPayload) -> (Ray, RndState);

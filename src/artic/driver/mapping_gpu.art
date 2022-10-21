@@ -6,27 +6,12 @@ fn @gpu_get_film_data(dev_id: i32) -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
-fn @gpu_get_aov_image(id: &[u8], dev_id: i32, atomics: Atomics, spi: i32) -> AOVImage {
+fn @gpu_get_aov_image(id: &[u8], dev_id: i32, w: i32, h: i32, spi: i32, atomics: Atomics) -> AOVImage {
     // Width & height always the same as film_width, film_height
     let mut ptr : &mut [f32];
     ignis_get_aov_image(dev_id, id, &mut ptr);
 
-    fn getImage(pixels: &mut [f32]) -> AOVImage {
-        let accumulate = make_atomic_accumulator(atomics, pixels, spi);
-        AOVImage{
-            splat = @|pixel, color| -> () { accumulate(pixel, color) },
-            get   = @|pixel| -> Color     {
-                let ptr2 = &pixels(pixel * 3) as &[f32];
-                make_color(ptr2(0), ptr2(1), ptr2(2), 1)
-            },
-            mark_as_used = @|| -> () {
-                ignis_mark_aov_as_used(id, 1);
-            }
-        }
-    }
-
-    // Specialize such that ptr is not captured in a kernel
-    $getImage(ptr)
+    make_atomic_aov_image(id, ptr, w, h, spi, atomics)
 }
 
 fn @gpu_traverse_primary(primary: PrimaryStream
@@ -96,12 +81,17 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
     acc.sync();
 }
 
+fn @gpu_get_framebuffer(dev_id: i32, spi: i32, use_framebuffer: bool, atomics: Atomics) -> AOVImage {
+    let (film_pixels, film_width, film_height) = gpu_get_film_data(dev_id);
+    if !use_framebuffer { make_empty_aov_image() } else { make_atomic_aov_image("", film_pixels, film_width, film_height, spi, atomics) }
+}
+
 fn @gpu_hit_shade( acc: Accelerator
              , shader: MaterialShader
              , scene: Scene
              , technique: Technique
              , payload_info: PayloadInfo
-             , accumulate: FilmAccumulator
+             , framebuffer: AOVImage
              , primary: PrimaryStream
              , secondary: SecondaryStream
              , first: i32, last: i32, capacity: i32, ent_id: i32) -> () {
@@ -124,59 +114,60 @@ fn @gpu_hit_shade( acc: Accelerator
     let on_shadow = technique.on_shadow;
     let on_bounce = technique.on_bounce;
     gpu_exec_1d(acc, n, 64 /*block_size*/, |work_item| {
-        let ray_id = first + work_item.gidx();
-        if ray_id >= last {
+        let i = first + work_item.gidx();
+        if i >= last {
             return()
         }
 
-        let primary_payload   = get_primary_payload(ray_id, 0);
-        let secondary_payload = get_secondary_payload(ray_id, 0);
+        let primary_payload   = get_primary_payload(i, 0);
+        let secondary_payload = get_secondary_payload(i, 0);
 
-        let ray     = read_primary_ray(ray_id, 0);
-        let mut rnd = read_primary_rnd_state(ray_id, 0);
-        let pixel   = primary.rays.id(ray_id);
+        let ray     = read_primary_ray(i, 0);
+        let mut rnd = read_primary_rnd_state(i, 0);
+        let ray_id  = primary.rays.id(i);
+        let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
 
         let entity    = @entities(ent_id);
         let shape     = @shapes(entity.shape_id);
         let local_ray = transform_ray(ray, entity.local_mat);
 
-        let hit      = read_primary_hit(ray_id, 0);
+        let hit      = read_primary_hit(i, 0);
         let lcl_surf = shape.surface_element(local_ray, hit);
         let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
         
         let ctx = make_surface_shading_context(ent_id, pixel, ray, hit, glb_surf);
         let mat = @shader(ctx);
         if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) {
-            accumulate(pixel, color);
+            framebuffer.splat(pixel, color);
         }
 
         match @on_shadow(ctx, &mut rnd, primary_payload, secondary_payload, mat) {
             ShadowRay::Simple(new_ray, color) => {
-                write_secondary_ray(ray_id, 0, new_ray);
-                secondary.mat_id(ray_id)  = mat.id + 1;
-                secondary.color_r(ray_id) = color.r;
-                secondary.color_g(ray_id) = color.g;
-                secondary.color_b(ray_id) = color.b;
-                secondary.rays.id(ray_id) = pixel;
+                write_secondary_ray(i, 0, new_ray);
+                secondary.mat_id(i)  = mat.id + 1;
+                secondary.color_r(i) = color.r;
+                secondary.color_g(i) = color.g;
+                secondary.color_b(i) = color.b;
+                secondary.rays.id(i) = ray_id;
             },
             ShadowRay::Advanced(new_ray, color, mat_id) => {
-                write_secondary_ray(ray_id, 0, new_ray);
-                secondary.mat_id(ray_id)  = mat_id + 1;
-                secondary.color_r(ray_id) = color.r;
-                secondary.color_g(ray_id) = color.g;
-                secondary.color_b(ray_id) = color.b;
-                secondary.rays.id(ray_id) = pixel;
+                write_secondary_ray(i, 0, new_ray);
+                secondary.mat_id(i)  = mat_id + 1;
+                secondary.color_r(i) = color.r;
+                secondary.color_g(i) = color.g;
+                secondary.color_b(i) = color.b;
+                secondary.rays.id(i) = ray_id;
             },
             _ => { /* None */
-                secondary.rays.id(ray_id) = -1;
+                secondary.rays.id(i) = -1;
             }
         }
 
         if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, &mut rnd, primary_payload, mat) {
-            write_primary_ray(ray_id, 0, new_ray);
-            write_primary_rnd_state(ray_id, 0, rnd);
+            write_primary_ray(i, 0, new_ray);
+            write_primary_rnd_state(i, 0, rnd);
         } else {
-            primary.rays.id(ray_id) = -1;
+            primary.rays.id(i) = -1;
         }
     });
 }
@@ -193,23 +184,21 @@ fn @gpu_hit_shade_handler(dev_id: i32
                         , end: i32
                         , capacity: i32 
                         , spi: i32
-                        , use_framebuffer: bool) -> () {
-    let (film_pixels, _, _) = gpu_get_film_data(dev_id);
-    
+                        , use_framebuffer: bool) -> () {    
     let mut primary : PrimaryStream;
     ignis_get_primary_stream_const(dev_id, 0, &mut primary);
     let mut secondary : SecondaryStream;
     ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
 
-    let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_hit_shade(acc, shader, scene, technique, payload_info, accumulate, primary, secondary, begin, end, capacity, entity_id);
+    let framebuffer = gpu_get_framebuffer(dev_id, spi, use_framebuffer, atomics);
+    gpu_hit_shade(acc, shader, scene, technique, payload_info, framebuffer, primary, secondary, begin, end, capacity, entity_id);
 }
 
 // Shade nonhits
 fn @gpu_miss_shade( acc: Accelerator
                 , technique: Technique
                 , payload_info: PayloadInfo
-                , accumulate: FilmAccumulator
+                , framebuffer: AOVImage
                 , primary: PrimaryStream
                 , first: i32, last: i32, capacity: i32) -> () {
     let n = last - first;
@@ -219,20 +208,21 @@ fn @gpu_miss_shade( acc: Accelerator
 
     let on_miss = technique.on_miss;
     gpu_exec_1d(acc, n, 64, |work_item| {
-        let ray_id = first + work_item.gidx();
-        if ray_id >= last {
+        let i = first + work_item.gidx();
+        if i >= last {
             return()
         }
 
-        let payload = get_primary_payload(ray_id, 0);
-        let ray     = read_primary_ray(ray_id, 0);
-        let pixel   = primary.rays.id(ray_id);
+        let payload = get_primary_payload(i, 0);
+        let ray     = read_primary_ray(i, 0);
+        let ray_id  = primary.rays.id(i);
+        let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
 
         if let Option[Color]::Some(color) = @on_miss(ray, pixel, payload) {
-            accumulate(pixel, color);
+            framebuffer.splat(pixel, color);
         }
         
-        primary.rays.id(ray_id) = -1; // Kill ray as it goes to nowhere
+        primary.rays.id(i) = -1; // Kill ray as it goes to nowhere
     });
 }
 
@@ -246,13 +236,11 @@ fn @gpu_miss_shade_handler(dev_id: i32
                          , capacity: i32
                          , spi: i32
                          , use_framebuffer: bool) -> () {
-    let (film_pixels, _, _) = gpu_get_film_data(dev_id);
-
     let mut primary: PrimaryStream;
     ignis_get_primary_stream_const(dev_id, 0, &mut primary);
 
-    let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_miss_shade(acc, technique, payload_info, accumulate, primary, begin, end, capacity);
+    let framebuffer = gpu_get_framebuffer(dev_id, spi, use_framebuffer, atomics);
+    gpu_miss_shade(acc, technique, payload_info, framebuffer, primary, begin, end, capacity);
 }
 
 // Handle advanced shadows
@@ -261,7 +249,7 @@ fn @gpu_advanced_shadow(is_hit: bool
                       , shader: MaterialShader
                       , technique: Technique
                       , payload_info: PayloadInfo
-                      , accumulate: FilmAccumulator
+                      , framebuffer: AOVImage
                       , secondary: SecondaryStream
                       , first: i32, last: i32, capacity: i32) -> () {
     let n = last - first;
@@ -275,16 +263,17 @@ fn @gpu_advanced_shadow(is_hit: bool
     let callback = if is_hit { on_hit } else { on_miss };
 
     gpu_exec_1d(acc, n, 64, |work_item| {
-        let ray_id = first + work_item.gidx();
-        if ray_id >= last { return() }
+        let i = first + work_item.gidx();
+        if i >= last { return() }
 
-        let color   = read_secondary_color(ray_id, 0);
-        let ray     = read_secondary_ray(ray_id, 0);
-        let payload = get_secondary_payload(ray_id, 0);
-        let pixel   = secondary.rays.id(ray_id);
+        let color   = read_secondary_color(i, 0);
+        let ray     = read_secondary_ray(i, 0);
+        let payload = get_secondary_payload(i, 0);
+        let ray_id  = secondary.rays.id(i);
+        let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
 
         if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, payload, color) {
-            accumulate(pixel, new_color);
+            framebuffer.splat(pixel, new_color);
         }
     });
 }
@@ -301,13 +290,11 @@ fn @gpu_advanced_shadow_handler(dev_id: i32
                               , spi: i32
                               , use_framebuffer: bool
                               , is_hit: bool) -> () {
-    let (film_pixels, _, _) = gpu_get_film_data(dev_id);
-
     let mut secondary: SecondaryStream;
     ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
 
-    let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-    gpu_advanced_shadow(is_hit, acc, shader, technique, payload_info, accumulate, secondary, begin, end, capacity);
+    let framebuffer = gpu_get_framebuffer(dev_id, spi, use_framebuffer, atomics);
+    gpu_advanced_shadow(is_hit, acc, shader, technique, payload_info, framebuffer, secondary, begin, end, capacity);
 }
 
 fn @gpu_copy_ray( rays: RayStream
@@ -994,7 +981,10 @@ fn @make_gpu_device( dev_id: i32
                               width, height)
         }
     },
-    load_aov_image = @ |id, spi| gpu_get_aov_image(id, dev_id, atomics, spi),
+    load_aov_image = @ |id, spi| {
+        let work_info = get_work_info();
+        gpu_get_aov_image(id, dev_id, work_info.width, work_info.height, spi, atomics)
+    },
     load_rays = @ || {
         let mut rays: &[StreamRay]; // TODO: Alignment?
         ignis_load_rays(dev_id, &mut rays);

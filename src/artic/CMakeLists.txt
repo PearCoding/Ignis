@@ -59,6 +59,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/registry.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/scene.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/settings.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/driver/shading_context.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/shape.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/streams.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/surface_element.art

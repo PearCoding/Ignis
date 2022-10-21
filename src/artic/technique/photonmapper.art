@@ -336,7 +336,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, light_selector: LightSelector, rad
     }
 
     fn @on_miss( ray: Ray
-               , pixel: i32
+               , pixel: PixelCoord
                , payload: RayPayload) -> Option[Color] {
         // To prevent double counting, only direct hits (with delta taken into account) are accounted for
         let pt = unwrap_ppmraypayload(payload);

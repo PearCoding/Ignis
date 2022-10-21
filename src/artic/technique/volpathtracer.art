@@ -134,7 +134,7 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
     }
 
     fn @on_miss( ray: Ray
-               , pixel: i32
+               , pixel: PixelCoord
                , payload: RayPayload) -> Option[Color] {
         let mut inflights = 0;
         let mut color     = color_builtins::black;
