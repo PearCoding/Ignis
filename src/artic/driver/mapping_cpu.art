@@ -686,10 +686,7 @@ fn @cpu_trace( scene_info: SceneInfo
              , vector_compact: bool
              , is_payload_soa: bool
              ) -> () {
-    let (film_pixels, _film_width, _film_height) = cpu_get_film_data();
-
-    let work_info  = get_work_info();
-    let accumulate = make_standard_accumulator(film_pixels, spi);
+    let work_info = get_work_info();
 
     for xmin, ymin, xmax, ymax in cpu_parallel_tiles(work_info.width, work_info.height, tile_size, tile_size, num_cores) {
         ignis_register_thread();
@@ -700,6 +697,8 @@ fn @cpu_trace( scene_info: SceneInfo
         let capacity = cpu_get_stream_capacity(spi, tile_size);
         ignis_get_primary_stream(  0, 0, &mut primary,   capacity);
         ignis_get_secondary_stream(0, 0, &mut secondary, capacity);
+
+        let framebuffer = cpu_get_framebuffer(spi, true/*!work_info.framebuffer_locked*/); // Will only be used if framebuffer is not locked down the line
 
         let mut temp : TemporaryStorageHost;
         ignis_get_temporary_storage(0, &mut temp);
@@ -791,18 +790,17 @@ fn @cpu_trace( scene_info: SceneInfo
                                 sbegin = end;
                             }
                         }
-                    } else if !work_info.framebuffer_locked {    
+                    } else if !work_info.framebuffer_locked /* TODO: We should make this a embedded constant! */ {    
                         for i in range(0, secondary_size) {
                             if secondary.mat_id(i) < 0 {
                                 let j = secondary.rays.id(i);
-                                accumulate(j,
-                                    make_color(
+                                let j_pixel = make_pixelcoord_from_linear(j, framebuffer.width, framebuffer.height, 0, 0);
+                                framebuffer.splat(j_pixel, make_color(
                                         secondary.color_r(i),
                                         secondary.color_g(i),
                                         secondary.color_b(i),
                                         1
-                                    )
-                                );
+                                    ));
                             }
                         }
                     }

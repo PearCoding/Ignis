@@ -14,6 +14,15 @@ fn @gpu_get_aov_image(id: &[u8], dev_id: i32, w: i32, h: i32, spi: i32, atomics:
     make_atomic_aov_image(id, ptr, w, h, spi, atomics)
 }
 
+fn @gpu_get_framebuffer(dev_id: i32, spi: i32, use_framebuffer: bool, atomics: Atomics) -> AOVImage {
+    let (film_pixels, film_width, film_height) = gpu_get_film_data(dev_id);
+    let framebuffer = if !use_framebuffer { make_empty_aov_image() } else { make_atomic_aov_image("", film_pixels, film_width, film_height, spi, atomics) };
+    // TODO: Make this configurable!
+    // attach_mitchell_filter(framebuffer, 3)
+    // attach_triangle_filter(framebuffer, 3)
+    attach_no_filter(framebuffer)
+}
+
 fn @gpu_traverse_primary(primary: PrimaryStream
                        , scene: SceneTracer
                        , size: i32
@@ -45,7 +54,7 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
                           , size: i32
                           , min_max: MinMax
                           , acc: Accelerator
-                          , accumulate: FilmAccumulator
+                          , framebuffer: AOVImage
                           , is_advanced: bool
                           ) -> () {
     let block_size = 64;
@@ -54,8 +63,9 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
         let gid = work_item.gidx();
         if gid >= size { return() }
 
-        let pixel = secondary.rays.id(gid);
-        if pixel < 0 { return() }
+        let ray_id = secondary.rays.id(gid);
+        if ray_id < 0 { return() }
+        let pixel = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
 
         let ray = make_ray_stream_reader(secondary.rays, 1)(gid, 0);
         let mut hit = empty_hit(ray.tmax);
@@ -69,7 +79,7 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
             make_secondary_stream_hit_writer(secondary, 1)(gid, 0, hit); // Just write it to buffer
         } else {
             if hit.prim_id < 0 {
-                accumulate(pixel, make_color(
+                framebuffer.splat(pixel, make_color(
                     secondary.color_r(gid),
                     secondary.color_g(gid),
                     secondary.color_b(gid),
@@ -79,15 +89,6 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
         }
     });
     acc.sync();
-}
-
-fn @gpu_get_framebuffer(dev_id: i32, spi: i32, use_framebuffer: bool, atomics: Atomics) -> AOVImage {
-    let (film_pixels, film_width, film_height) = gpu_get_film_data(dev_id);
-    let framebuffer = if !use_framebuffer { make_empty_aov_image() } else { make_atomic_aov_image("", film_pixels, film_width, film_height, spi, atomics) };
-    // TODO: Make this configurable!
-    // attach_mitchell_filter(framebuffer, 3)
-    // attach_triangle_filter(framebuffer, 3)
-    attach_no_filter(framebuffer)
 }
 
 fn @gpu_hit_shade( acc: Accelerator
@@ -834,9 +835,8 @@ fn @make_gpu_device( dev_id: i32
         let mut secondary: SecondaryStream;
         ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
 
-        let (film_pixels, _, _) = gpu_get_film_data(dev_id);
-        let accumulate = if !use_framebuffer { make_null_accumulator() } else { make_atomic_accumulator(atomics, film_pixels, spi) };
-        gpu_traverse_secondary(secondary, scene_tracer, size, min_max, acc, accumulate, is_advanced);
+        let framebuffer = gpu_get_framebuffer(dev_id, spi, use_framebuffer, atomics);
+        gpu_traverse_secondary(secondary, scene_tracer, size, min_max, acc, framebuffer, is_advanced);
     },
     handle_miss_shader = @ | technique, payload_info, first, last, spi, use_framebuffer | {
         gpu_miss_shade_handler(dev_id, acc, atomics, technique, payload_info, first, last, GPUStreamCapacity, spi, use_framebuffer);
