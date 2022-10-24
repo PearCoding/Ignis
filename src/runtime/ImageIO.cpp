@@ -1,6 +1,9 @@
 #include "ImageIO.h"
 #include "Image.h"
 
+#include <iterator>
+#include <numeric>
+
 IG_BEGIN_IGNORE_WARNINGS
 // We already make use of zlib, so use it here aswell
 #include <zlib.h>
@@ -36,7 +39,7 @@ EXRAttribute makeVec3Attribute(const std::string_view& name, const Vector3f& dat
     strcpy(attr.type, "v3f");
 
     const float xyz[3] = { data.x(), data.y(), data.z() };
-    attr.value   = new unsigned char[3 * sizeof(float)];
+    attr.value         = new unsigned char[3 * sizeof(float)];
     memcpy(attr.value, reinterpret_cast<const unsigned char*>(xyz), 3 * sizeof(float));
 
     attr.size = 3 * sizeof(float);
@@ -69,6 +72,16 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
     if (!path.parent_path().empty())
         std::filesystem::create_directories(path.parent_path());
 
+    // Sort layers
+    std::vector<size_t> layer_indices(layer_names.size());
+    std::iota(std::begin(layer_indices), std::end(layer_indices), 0);
+    std::sort(std::begin(layer_indices), std::end(layer_indices), [&](size_t a, size_t b) { return layer_names[a] < layer_names[b]; });
+
+    std::vector<const float*> sorted_layer_ptrs(layer_ptrs.size());
+    for (size_t i = 0; i < layer_indices.size(); ++i)
+        sorted_layer_ptrs[i] = layer_ptrs[layer_indices[i]];
+
+    // Init
     EXRHeader header;
     InitEXRHeader(&header);
     // header.compression_type = TINYEXR_COMPRESSIONTYPE_ZIP;
@@ -77,8 +90,8 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
     EXRImage image;
     InitEXRImage(&image);
 
-    image.num_channels = (int)layer_ptrs.size();
-    image.images       = (unsigned char**)layer_ptrs.data();
+    image.num_channels = (int)sorted_layer_ptrs.size();
+    image.images       = (unsigned char**)sorted_layer_ptrs.data();
     image.width        = (int)width;
     image.height       = (int)height;
 
@@ -87,7 +100,7 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
 
     constexpr size_t BUFFER_MAX = 255;
     for (int i = 0; i < image.num_channels; ++i) {
-        const auto& name = layer_names[i];
+        const auto& name = layer_names[layer_indices[i]];
         strncpy(header.channels[i].name, name.c_str(), BUFFER_MAX);
         if (name.length() >= BUFFER_MAX)
             header.channels[i].name[BUFFER_MAX - 1] = '\0';

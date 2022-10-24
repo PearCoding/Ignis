@@ -132,9 +132,11 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime, 
 
     // Populate meta data information
     ImageMetaData metaData;
-    metaData.CameraType     = runtime.camera();
-    metaData.TechniqueType  = runtime.technique();
-    metaData.SamplePerPixel = runtime.currentSampleCount();
+    metaData.CameraType         = runtime.camera();
+    metaData.TechniqueType      = runtime.technique();
+    metaData.SamplePerPixel     = runtime.currentSampleCount();
+    metaData.SamplePerIteration = runtime.samplesPerIteration();
+    metaData.TargetString       = runtime.target().toString();
 
     const CameraOrientation orientation = currentOrientation ? *currentOrientation : runtime.initialCameraOrientation();
 

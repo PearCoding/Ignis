@@ -9,8 +9,10 @@ struct ImageMetaData {
     std::optional<Vector3f> CameraUp;
     std::optional<Vector3f> CameraDir;
     std::optional<size_t> SamplePerPixel;
+    std::optional<size_t> SamplePerIteration;
     std::optional<std::string> TechniqueType;
     std::optional<std::string> CameraType;
+    std::optional<std::string> TargetString;
 };
 
 class IG_LIB ImageIO {

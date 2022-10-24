@@ -204,6 +204,8 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
                     metaData->CameraType = getStringAttribute(attr);
                 else if (strcmp(attr.name, "igTechniqueType") == 0 && strcmp(attr.type, "string") == 0)
                     metaData->TechniqueType = getStringAttribute(attr);
+                else if (strcmp(attr.name, "igTargetString") == 0 && strcmp(attr.type, "string") == 0)
+                    metaData->TargetString = getStringAttribute(attr);
                 else if (strcmp(attr.name, "igCameraEye") == 0 && strcmp(attr.type, "v3f") == 0)
                     metaData->CameraEye = getVec3Attribute(attr);
                 else if (strcmp(attr.name, "igCameraUp") == 0 && strcmp(attr.type, "v3f") == 0)
@@ -212,6 +214,8 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
                     metaData->CameraDir = getVec3Attribute(attr);
                 else if (strcmp(attr.name, "igSPP") == 0 && strcmp(attr.type, "int") == 0)
                     metaData->SamplePerPixel = getIntAttribute(attr);
+                else if (strcmp(attr.name, "igSPI") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->SamplePerIteration = getIntAttribute(attr);
             }
         }
 
