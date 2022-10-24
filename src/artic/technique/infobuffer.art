@@ -43,7 +43,7 @@ fn @make_infobuffer_renderer(max_path_len: i32, aovs: AOVTable, handle_specular:
             let mut albedo = color_builtins::black;
 
             let samples = 16:i32;
-            let mut rnd = fnv_hash(fnv_init(), bitcast[u32](ctx.pixel));
+            let mut rnd = fnv_hash(fnv_init(), bitcast[u32](ctx.pixel.linear));
             for _i in unroll(0, samples) {
                 if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(&mut rnd, out_dir, false) {
                     let cos = absolute_cos(mat_sample.in_dir, ctx.surf.local.col(2));
