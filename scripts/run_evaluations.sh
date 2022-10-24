@@ -11,6 +11,9 @@ output_dir=.
 
 args="--spp ${spp} $@"
 
+cmd_p=$(readlink -f $(which igcli))
+echo "Evaluating command ${cmd_p}"
+
 igcli ${args} -o ${output_dir}/cbox${spp}-d6.exr ${scene_dir}/cbox.json --gpu
 igcli ${args} -o ${output_dir}/cbox${spp}-d1.exr ${scene_dir}/cbox-d1.json --gpu
 igcli ${args} -o ${output_dir}/cbox${spp}-cpu-d6.exr ${scene_dir}/cbox.json --cpu
