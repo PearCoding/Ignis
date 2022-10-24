@@ -873,9 +873,12 @@ UI::~UI()
     ImGuiSDL::Deinitialize();
 #endif
 
-    SDL_DestroyTexture(mInternal->Texture);
-    SDL_DestroyRenderer(mInternal->Renderer);
-    SDL_DestroyWindow(mInternal->Window);
+    if (mInternal->Texture)
+        SDL_DestroyTexture(mInternal->Texture);
+    if (mInternal->Renderer)
+        SDL_DestroyRenderer(mInternal->Renderer);
+    if(mInternal->Window)
+        SDL_DestroyWindow(mInternal->Window);
     SDL_Quit();
 
     mInternal->Buffer.clear();

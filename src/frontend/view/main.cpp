@@ -106,14 +106,14 @@ int main(int argc, char** argv)
     std::unique_ptr<UI> ui;
     try {
         ui = std::make_unique<UI>(cmd.SPPMode, runtime.get(), runtime->framebufferWidth(), runtime->framebufferHeight(), runtime->technique() == "debug");
-
-        // Setup initial travelspeed
-        BoundingBox bbox = runtime->sceneBoundingBox();
-        bbox.extend(camera.Eye);
-        ui->setTravelSpeed(std::max(1e-4f, bbox.diameter().maxCoeff() / 50));
     } catch (...) {
         return EXIT_FAILURE;
     }
+
+    // Setup initial travelspeed
+    BoundingBox bbox = runtime->sceneBoundingBox();
+    bbox.extend(camera.Eye);
+    ui->setTravelSpeed(std::max(1e-4f, bbox.diameter().maxCoeff() / 50));
 
     auto lastDebugMode = ui->currentDebugMode();
 

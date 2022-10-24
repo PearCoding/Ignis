@@ -219,11 +219,19 @@ public:
         driver_settings.thread_count = (int)setup.target.threadCount();
         updateSettings(Device::RenderSettings{}); // Initialize with default values
 
-        setupFramebuffer();
+        ensureSetup();
         setupThreadData();
     }
 
     inline ~Interface() = default;
+
+    inline void ensureSetup()
+    {
+        if (host_pixels.Data.data())
+            return;
+
+        setupFramebuffer();
+    }
 
     inline int getDevID(size_t device) const
     {
@@ -290,7 +298,7 @@ public:
     inline anydsl::Array<T>& resizeArray(int32_t dev, anydsl::Array<T>& array, size_t size, size_t multiplier)
     {
         const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
-        const size_t n  = capacity * multiplier;
+        const size_t n      = capacity * multiplier;
         if (array.size() < (int64_t)n) {
             void* ptr = anydsl_alloc(dev, sizeof(T) * n);
             if (ptr == nullptr) {
@@ -307,7 +315,8 @@ public:
         if (is_gpu) {
             tlThreadData = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
         } else {
-            const static size_t max_threads = std::thread::hardware_concurrency() + 1 /* Host */;
+            const size_t req_threads = setup.target.threadCount() == 0 ? std::thread::hardware_concurrency() : setup.target.threadCount();
+            const size_t max_threads = req_threads + 1 /* Host */;
 
             for (size_t t = 0; t < max_threads; ++t) {
                 CPUData* ptr = thread_data.emplace_back(std::make_unique<CPUData>()).get();
@@ -1232,6 +1241,11 @@ public:
 
     inline Device::AOVAccessor getAOVImageForHost(const std::string& aov_name)
     {
+        if (!host_pixels.Data.data()) {
+            IG_LOG(L_ERROR) << "Framebuffer not yet initialized. Run a single iteration first" << std::endl;
+            return Device::AOVAccessor{ nullptr, 0 };
+        }
+
         if (is_gpu) {
             const int32_t dev = getDevID();
             if (aov_name.empty() || aov_name == "Color") {
@@ -1287,6 +1301,9 @@ public:
     /// Clear specific aov
     inline void clearAOV(const std::string& aov_name)
     {
+        if (!host_pixels.Data.data())
+            return;
+
         if (aov_name.empty() || aov_name == "Color") {
             host_pixels.IterationCount = 0;
             host_pixels.IterDiff       = 0;
@@ -1442,6 +1459,9 @@ Device::~Device()
 
 void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, const ParameterSet* parameterSet)
 {
+    // Make sure everything is initialized (lazy setup)
+    sInterface->ensureSetup();
+
     // Register host thread
     sInterface->registerThread();
 
@@ -1489,6 +1509,9 @@ const Statistics* Device::getStatistics()
 
 void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_settings)
 {
+    // Make sure everything is initialized (lazy setup)
+    sInterface->ensureSetup();
+
     // Register host thread
     sInterface->registerThread();
 
@@ -1517,6 +1540,9 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
 
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 {
+    // Make sure everything is initialized (lazy setup)
+    sInterface->ensureSetup();
+
     // Register host thread
     sInterface->registerThread();
 
