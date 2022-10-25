@@ -19,7 +19,7 @@
 	],
 	"shapes": [
 		{"type":"rectangle", "name":"Bottom", "width":10, "height":8},
-		{"type":"sphere", "name":"IcoSphere"}
+		{"type":"icosphere", "name":"IcoSphere"}
 	],
 	"entities": [
 		{"name":"Bottom","shape":"Bottom", "bsdf":"ground", "transform": {"translate":[0,0,-1]}},

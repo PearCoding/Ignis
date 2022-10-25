@@ -14,7 +14,7 @@ int main(int argc, char** argv)
 
         std::unique_ptr<Runtime> runtime;
         try {
-            RuntimeOptions opts;
+            RuntimeOptions opts = RuntimeOptions::makeDefault();
             runtime = std::make_unique<Runtime>(opts);
         } catch (const std::exception& e) {
             IG_LOG(L_ERROR) << e.what() << std::endl;
