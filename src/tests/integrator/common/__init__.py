@@ -55,7 +55,8 @@ def create_flat_scene():
                 "reflectance": [1, 1, 1]}
         ],
         "shapes": [
-            {"type": "rectangle", "name": "Bottom", "width": 2, "height": 2}
+            {"type": "rectangle", "name": "Bottom",
+                "width": 2, "height": 2, "flip_normals": True}
         ],
         "entities": [
             {"name": "Bottom", "shape": "Bottom", "bsdf": "ground"}
@@ -71,5 +72,5 @@ def compute_scene_average(scene, spp=8):
     with ignis.loadFromString(scene_str) as runtime:
         for _i in range(spp):
             runtime.step()
-        return np.average(runtime.getFramebuffer())
-
+        color = np.asarray(runtime.getFramebuffer()) / runtime.IterationCount
+        return np.average(color)
