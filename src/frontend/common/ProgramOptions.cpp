@@ -176,6 +176,15 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         return;
     }
 
+    // Make sure the paths are given in absolutes
+    try {
+        if (!Output.is_absolute())
+            Output = std::filesystem::absolute(Output);
+    } catch (...) {
+        // Ignore it
+    }
+
+    // Setup target
     if (useGPU)
         Target = IG::Target::pickGPU(device);
     else if (useCPU)
@@ -195,7 +204,7 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     IG_LOGGER.setQuiet(Quiet);
     IG_LOGGER.setVerbosity(VerbosityLevel);
     IG_LOGGER.enableAnsiTerminal(!NoColor);
-    
+
     options.IsTracer      = Type == ApplicationType::Trace;
     options.IsInteractive = Type == ApplicationType::View;
 
@@ -219,7 +228,7 @@ void ProgramOptions::populate(RuntimeOptions& options) const
 
     options.ScriptDir               = ScriptDir;
     options.ShaderOptimizationLevel = std::min<size_t>(3, ShaderOptimizationLevel);
-    
+
     // Check for power of two and round up if not the case
     uint64_t vectorWidth = options.Target.vectorWidth();
     if (vectorWidth == 2) {
