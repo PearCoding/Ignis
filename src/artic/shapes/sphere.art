@@ -87,26 +87,28 @@ fn @load_sphere_table(device: Device) -> SphereTable {
 
 fn @intersect_sphere(sphere: Sphere, ray: Ray) -> Option[Hit] {
     // C - O
-	let S  = -vec3_dot(ray.org, ray.dir);
-	let L2 = vec3_len2(ray.org);
-	let R2 = sphere.radius * sphere.radius;
-	let M2 = L2 - S * S;
+    let L  = vec3_sub(ray.org, sphere.origin);
+	let S  = -vec3_dot(L, ray.dir);
+    let D2 = vec3_len2(ray.dir); // In contrary to many other implementations, our ray direction does not have to be normalized
+	let L2 = vec3_len2(L);
+	let R2 = sphere.radius * sphere.radius * D2;
+	let M2 = L2 * D2 - S * S;
 
     // when object behind ray
-	if (S < 0 && L2 > R2) || (M2 > R2) {
+	if (S < 0) || (M2 > R2) {
 		return(Option[Hit]::None)
     }
 
 	let Q = math_builtins::sqrt(R2 - M2);
 
-	let t0_ = S - Q;
-	let t1_ = S + Q;
+	let t0_ = (S - Q) / D2;
+	let t1_ = (S + Q) / D2;
     let (t0, t1) = select(t0_ > t1_, (t1_, t0_), (t0_, t1_));
 	
     let tmin = select(t0 < ray.tmin, t1, t0);
 
 	if tmin >= ray.tmin && tmin <= ray.tmax {
-        let dir = vec3_mulf(vec3_add(vec3_sub(ray.org, sphere.origin), vec3_mulf(ray.dir, tmin)), 1 / sphere.radius);
+        let dir = vec3_mulf(vec3_add(L, vec3_mulf(ray.dir, tmin)), 1 / sphere.radius);
         make_option(make_hit(InvalidHitId, 0, tmin, sphere_map_uv(dir))) 
 	} else {
         Option[Hit]::None

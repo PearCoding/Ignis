@@ -207,14 +207,12 @@ fn @gpu_traverse_scene( min_max: MinMax
                         let local_ray = transform_ray(*ray2, leaf.local);
                         let local_hit = scene.handle_local(local_ray, leaf, any_hit); 
                         
-                        if local_hit.prim_id != -1 {
-                            if local_hit.distance <= hit.distance {
-                                *hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
-                                ray2.tmax = hit.distance;
+                        if local_hit.prim_id != InvalidHitId && local_hit.distance <= hit.distance {
+                            *hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
+                            ray2.tmax = hit.distance;
 
-                                // Early exit mode
-                                if any_hit { return(true) }
-                            }
+                            // Early exit mode
+                            if any_hit { return(true) }
                         }
                     }
                 }
