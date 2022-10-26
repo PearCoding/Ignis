@@ -24,13 +24,16 @@ def test_point_light():
     assert value == pytest.approx(0.005100456, 1e-4)
 
 
-def __test_spot_light():
-    # TODO
+def test_spot_light():
+    # Similar situation as for the point lights.
+    # The cutoff and falloff is chosen such that no black regions appear.
+    # Only a scaling is necessary, which is given by  4pi / (2pi * (1 - cos(cutoffAngle))) = 2/(1 - 1/sqrt(2)) = 6.82842712474
+    # Therefore, the actual scene average is 0.005100456 * 6.82842712474 = 0.0348280920
     scene = create_flat_scene()
     scene["lights"].append(
         {"type": "spot", "name": "_light", "cutoff": 45, "falloff": 45, "position": [0, 0, -2], "direction": [0, 0, 1], "intensity": [1, 1, 1]})
     value = compute_scene_average(scene)
-    assert value == pytest.approx(0.0, 1e-4)
+    assert value == pytest.approx(0.0348280920, 1e-4)
 
 
 def test_env_light():
