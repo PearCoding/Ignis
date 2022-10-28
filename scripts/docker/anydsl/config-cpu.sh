@@ -18,7 +18,7 @@
 # set this to false if you don't want to build with LLVM
 # setting to false is meant to speed up debugging and not recommended for end users
 : ${LLVM:=true}
-: ${LLVM_TARGETS:="AArch64;AMDGPU;ARM;NVPTX;X86"}
+: ${LLVM_TARGETS:="X86"}
 : ${LLVM_GIT:=false}
 : ${LLVM_GIT_REPO:=llvm}
 : ${LLVM_GIT_BRANCH:=release/14.x}
