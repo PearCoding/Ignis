@@ -1,0 +1,46 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import print_function
+
+import sys, re, os, pathlib, shutil
+
+try:
+    from skbuild import setup
+except ImportError:
+    print("The preferred way to invoke 'setup.py' is via pip, as in 'pip "
+          "install .'. If you wish to run the setup script directly, you must "
+          "first install the build dependencies listed in pyproject.toml!",
+          file=sys.stderr)
+    raise
+
+root_directory = "${Ignis_SOURCE_DIR}"
+
+with open(os.path.join(root_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
+long_description = long_description[long_description.find('## Frontends'):]
+shutil.copytree(os.path.join(root_directory, 'src', 'frontend', 'python', 'ignis'), 'ignis', dirs_exist_ok=True)
+
+setup(
+    name="ignis",
+    version="${Ignis_VERSION}",
+    author="${Ignis_VENDOR}",
+    description="${Ignis_DESCRIPTION}",
+    url=" ${Ignis_URL}",
+    license="MIT",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    cmake_source_dir=root_directory,
+    cmake_args=[
+        '-DIG_WITH_CLI:BOOL=OFF',
+        '-DIG_WITH_VIEWER:BOOL=OFF',
+        '-DIG_WITH_TRACER:BOOL=OFF',
+        '-DIG_WITH_TOOLS:BOOL=OFF',
+        '-DIG_WITH_PYTHON_API:BOOL=ON',
+        '-DIG_WITH_DOCUMENTATION:BOOL=OFF',
+        '-DAnyDSL_runtime_DIR=${AnyDSL_runtime_DIR}'
+    ],
+    packages=['ignis'],
+    package_data={'ignis': ['*ig_lib_runtime*', '*pyignis*']},
+    python_requires=">=3.8"
+)

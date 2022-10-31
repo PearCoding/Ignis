@@ -37,7 +37,10 @@ if(IG_INSTALL_RUNTIME_DEPENDENCIES)
     if(WIN32)
         set(exclude_regexes "msvc.*" "api.*" "ext.*")
     else()
-        set(exclude_regexes "libX.*" "libxkb.*" "libwayland.*" "libvorbis.*" "libexpat.*" "libFLAC.*" "libpulse.*" "libasound.*" )
+        set(exclude_regexes 
+            "libX.*" "libxkb.*" "libwayland.*" "libvorbis.*" "libexpat.*" "libFLAC.*" "libpulse.*" "libasound.*" # Skip media related libraries
+            "libcuda.*" "libOpenCL.*" "libnvvm.*" "libnvrtc.*" # Ignore CUDA related stuff, as the system should be providing it!
+            )
     endif()
     install(RUNTIME_DEPENDENCY_SET ignis_runtime_set
             PRE_EXCLUDE_REGEXES ${exclude_regexes}
