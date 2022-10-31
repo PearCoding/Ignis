@@ -35,7 +35,8 @@ fn @transform_medium(medium: Medium, coord: CoordSystem) = medium.{
     pdf = @|sp, ep, p| medium.pdf(mat3x4_transform_point(coord.to_local, sp), mat3x4_transform_point(coord.to_local, ep), mat3x4_transform_point(coord.to_local, p))
 };
 
-type MediaTable = fn (i32) -> Medium;
+type MediumGenerator = fn (ShadingContext) -> Medium;
+type MediaTable      = fn (i32) -> MediumGenerator;
 
 struct MediumInterface {
     inner: i32,

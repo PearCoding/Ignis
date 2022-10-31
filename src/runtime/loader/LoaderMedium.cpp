@@ -8,7 +8,6 @@ namespace IG {
 
 static void medium_homogeneous(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& medium, ShadingTree& tree)
 {
-    // FIXME: The shading context is not available here! Texture & PExpr will produce errors
     tree.beginClosure(name);
 
     tree.addColor("sigma_a", *medium, Vector3f::Zero(), true);
@@ -17,9 +16,9 @@ static void medium_homogeneous(std::ostream& stream, const std::string& name, co
 
     const std::string media_id = tree.currentClosureID();
     stream << tree.pullHeader()
-           << "  let medium_" << media_id << " = make_homogeneous_medium(" << tree.getInline("sigma_a")
+           << "  let medium_" << media_id << " : MediumGenerator = @|ctx| { maybe_unused(ctx); make_homogeneous_medium(" << tree.getInline("sigma_a")
            << ", " << tree.getInline("sigma_s")
-           << ", make_henyeygreenstein_phase(" << tree.getInline("g") << "));" << std::endl;
+           << ", make_henyeygreenstein_phase(" << tree.getInline("g") << ")) };" << std::endl;
 
     tree.endClosure();
 }
@@ -31,7 +30,7 @@ static void medium_vacuum(std::ostream& stream, const std::string& name, const s
 
     const std::string media_id = tree.currentClosureID();
     stream << tree.pullHeader()
-           << "  let medium_" << media_id << " = make_vacuum_medium();" << std::endl;
+           << "  let medium_" << media_id << " : MediumGenerator = @|_ctx| make_vacuum_medium();" << std::endl;
 
     tree.endClosure();
 }
@@ -83,7 +82,7 @@ std::string LoaderMedium::generate(ShadingTree& tree)
         ++counter2;
     }
 
-    stream << "    _ => make_vacuum_medium()" << std::endl;
+    stream << "    _ => @|_ctx : ShadingContext| make_vacuum_medium()" << std::endl;
 
     stream << "    }" << std::endl
            << "  };" << std::endl;
