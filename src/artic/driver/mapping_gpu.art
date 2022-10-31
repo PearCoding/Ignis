@@ -140,7 +140,7 @@ fn @gpu_hit_shade( acc: Accelerator
         let lcl_surf = shape.surface_element(local_ray, hit);
         let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
         
-        let ctx = make_surface_shading_context(ent_id, pixel, ray, hit, glb_surf);
+        let ctx = make_surface_shading_context(ent_id, pixel, ray, hit, glb_surf, CoordSystem{ to_local = entity.local_mat, to_global = entity.global_mat });
         let mat = @shader(ctx);
         if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) {
             framebuffer.splat(pixel, color);
