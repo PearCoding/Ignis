@@ -1,10 +1,7 @@
 {
 	"technique": {
 		"type": "path",
-		"max_depth": 2,
-		"aov_normals": true,
-		"aov_mis": true,
-		"aov_stats": true
+		"max_depth": 2
 	},
 	"camera": {
 		"type": "perspective",
@@ -17,6 +14,6 @@
 		"size": [1000, 1000]
 	},
 	"externals": [
-		{"filename": "primitive_scene_data.json"}
+		{"filename": "primitives_data.json"}
 	]
 }
