@@ -26,7 +26,7 @@
 		{"type":"external", "name":"Left", "filename":"meshes/Left.ply"},
 		{"type":"external", "name":"Right", "filename":"meshes/Right.ply"},
 		{"type":"external", "name":"Back", "filename":"meshes/Back.ply"},
-		{"type":"external", "name":"Object", "filename":"meshes/CubeInCube.obj", "face_normals": true, "transform": {"scale": 0.4, "translate": [0,-1.4,0]} }
+		{"type":"external", "name":"Object", "filename":"meshes/CubeInCube.obj", "face_normals": true }
 	],
 	"entities": [
 		{"name":"AreaLight", "shape":"AreaLight", "bsdf":"mat-Light"},
@@ -35,7 +35,7 @@
 		{"name":"Left","shape":"Left", "bsdf":"mat-ColoredWall"},
 		{"name":"Right","shape":"Right", "bsdf":"mat-ColoredWall"},
 		{"name":"Back","shape":"Back", "bsdf":"mat-GrayWall"},
-		{"name":"Object","shape":"Object", "bsdf":"mat-Object", "inner_medium": "Medium"}
+		{"name":"Object","shape":"Object", "bsdf":"mat-Object", "inner_medium": "Medium", "transform": {"scale": 0.4, "translate": [0,-1.4,0]}}
 	],
 	"lights": [
 		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[100,100,100]}

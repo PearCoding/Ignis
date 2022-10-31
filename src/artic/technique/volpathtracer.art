@@ -42,6 +42,11 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
         @|c: Color| c
     };
 
+    fn @get_global_medium(ctx: ShadingContext, id: i32) {
+        let lcl_media = @media(id);
+        transform_medium(lcl_media, ctx.coord)
+    }
+
     fn @on_shadow( ctx: ShadingContext
                  , rnd: &mut RndState
                  , payload: RayPayload
@@ -64,7 +69,7 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
         let light_sample  = @sample_direct(rnd, ctx.surf);
         
         let was_medium_interaction = math_builtins::signbit(pt.inv_pdf);
-        let medium = @media(pt.medium);
+        let medium = get_global_medium(ctx, pt.medium);
         let hitvol = medium.eval(ctx.ray.org, ctx.surf.point); // Volume transmittance from ray origin to this hit point
 
         let pdf_l_s = light_sample.pdf.as_solid(light_sample.cos, light_sample.dist * light_sample.dist) * light_select_pdf;
@@ -117,7 +122,7 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
         
         // Hits on a light source
         if mat.is_emissive && ctx.surf.is_entering {
-            let medium = @media(pt.medium);
+            let medium = get_global_medium(ctx, pt.medium);
             let dot    = -vec3_dot(ctx.ray.dir, ctx.surf.local.col(2));
             if dot > flt_eps { // Only contribute proper aligned directions
                 let emit     = mat.emission(ctx);
@@ -140,7 +145,7 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
         let mut color     = color_builtins::black;
         
         let pt     = unwrap_vptraypayload(payload);
-        let medium = @media(pt.medium);
+        let medium = @media(pt.medium); // No local variant available
 
         for light_id in safe_unroll(0, light_selector.infinites.count) {
             let light = light_selector.infinites.get(light_id);
@@ -170,7 +175,7 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
                  , mat: Material
                  ) -> Option[Ray] {
         let pt      = unwrap_vptraypayload(payload);
-        let medium  = @media(pt.medium);
+        let medium  = get_global_medium(ctx, pt.medium);
         let out_dir = vec3_neg(ctx.ray.dir);
 
         if pt.depth + 1 > max_path_len {
