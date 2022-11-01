@@ -142,7 +142,6 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         const Eigen::Matrix<float, 3, 4> toLocal        = invTransform.matrix().block<3, 4>(0, 0);
         const Eigen::Matrix<float, 3, 4> toGlobal       = transform.matrix().block<3, 4>(0, 0);
         const Eigen::Matrix<float, 3, 3> toGlobalNormal = toGlobal.block<3, 3>(0, 0).inverse().transpose();
-        const float scaleFactor                         = std::abs(toGlobalNormal.determinant());
 
         // Write data to dyntable
         auto& entityData = entityTable.addEntry(0);
@@ -151,7 +150,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         entitySerializer.write(toGlobal, true);       // +12 = 24, To Global
         entitySerializer.write(toGlobalNormal, true); // +9  = 33, To Global [Normal]
         entitySerializer.write((uint32)shapeID);      // +1  = 34
-        entitySerializer.write(scaleFactor);          // +1  = 35
+        entitySerializer.write((uint32)0);            // +1  = 35, Padding
         entitySerializer.write((uint32)0);            // +1  = 36, Padding
 
         // Extract information for BVH building

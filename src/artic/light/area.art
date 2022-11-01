@@ -248,8 +248,7 @@ fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, meshes: Tri
                 local_mat  = local_mat,
                 global_mat = global_mat,
                 normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
-                shape_id   = bitcast[i32](m.col(3).x),
-                scale      = m.col(3).y
+                shape_id   = bitcast[i32](m.col(3).x)
             };
 
             let mesh     = meshes(entity.shape_id);
