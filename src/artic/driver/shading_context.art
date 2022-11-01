@@ -9,6 +9,13 @@ fn @make_identity_coordsystem() = CoordSystem {
     to_global = mat3x4_identity()
 };
 
+type PointMapper = fn (Vec3) -> Vec3;
+fn @make_zero_pointmapper()                              = @|_: Vec3| vec3_expand(0);
+fn @make_normalized_pointmapper(bbox: BBox, mat: Mat3x4) = @|p: Vec3| {
+    let lp = mat3x4_transform_point(mat, p);
+    vec3_div(vec3_sub(lp, bbox.min), vec3_sub(bbox.max, bbox.min))
+};
+
 struct ShadingContext {
     entity_id: i32,
     pixel:     PixelCoord,
@@ -16,17 +23,21 @@ struct ShadingContext {
     hit:       Hit,
     surf:      SurfaceElement,
     uvw:       Vec3,
-    coord:     CoordSystem // Coordinate system for world & object coordinates. Note: The surf.local transforms from shading orientation to world orientation!
+    coord:     CoordSystem, // Coordinate system for world & object coordinates. Note: The surf.local transforms from shading orientation to world orientation!
+
+    to_normalized_point: PointMapper // Map from global coordinates to normalized coordinates between [0, 1] defined by the bounding box
 }
 
-fn @make_surface_shading_context(entity_id: i32, pixel: PixelCoord, ray: Ray, hit: Hit, surf: SurfaceElement, coord: CoordSystem) = ShadingContext {
+fn @make_surface_shading_context(entity_id: i32, pixel: PixelCoord, ray: Ray, hit: Hit, surf: SurfaceElement, coord: CoordSystem, to_np: PointMapper) = ShadingContext {
     entity_id = entity_id,
     pixel     = pixel,
     ray       = ray,
     hit       = hit,
     surf      = surf,
     uvw       = vec2_to_3(surf.tex_coords, 0),
-    coord     = coord
+    coord     = coord,
+
+    to_normalized_point = to_np
 };
 
 fn @make_miss_shading_context(pixel: PixelCoord, ray: Ray) = ShadingContext {
@@ -36,7 +47,9 @@ fn @make_miss_shading_context(pixel: PixelCoord, ray: Ray) = ShadingContext {
     hit       = empty_hit(flt_max),
     surf      = make_invalid_surface_element(),
     uvw       = vec3_expand(0),
-    coord     = make_identity_coordsystem()
+    coord     = make_identity_coordsystem(),
+
+    to_normalized_point = make_zero_pointmapper()
 };
 
 fn @make_emissive_shading_context(ray: Ray, surf: SurfaceElement, uvw: Vec3) = ShadingContext {
@@ -46,7 +59,9 @@ fn @make_emissive_shading_context(ray: Ray, surf: SurfaceElement, uvw: Vec3) = S
     hit       = empty_hit(flt_max),
     surf      = surf,
     uvw       = uvw,
-    coord     = make_identity_coordsystem() // TODO: ?
+    coord     = make_identity_coordsystem(), // TODO: ?
+
+    to_normalized_point = make_zero_pointmapper() // TODO: ?
 };
 
 type BSDFShader     = fn (ShadingContext) -> Bsdf;

@@ -11,11 +11,11 @@ struct SurfaceElement {
 
 fn make_invalid_surface_element() = SurfaceElement {
     is_entering = false,
-    point       = make_vec3(0,0,0),
-    face_normal = make_vec3(0,0,0),
+    point       = vec3_expand(0),
+    face_normal = vec3_expand(0),
     inv_area    = 0,
-    prim_coords = make_vec2(0,0),
-    tex_coords  = make_vec2(0,0),
+    prim_coords = vec2_expand(0),
+    tex_coords  = vec2_expand(0),
     local       = mat3x3_identity()
 };
 

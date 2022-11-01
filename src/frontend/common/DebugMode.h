@@ -14,6 +14,7 @@ enum class DebugMode {
     PrimCoords,
     Point,
     LocalPoint,
+    GeneratedCoords,
     HitDistance,
     Area,
     PrimIDRaw,

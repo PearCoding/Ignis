@@ -70,43 +70,46 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                 11 => { // DEBUG_LOCAL_POINT
                     make_option(vec3_to_color(mat3x4_transform_point(ctx.coord.to_local, ctx.surf.point)))
                 },
-                12 => { // DEBUG_HIT_DISTANCE
+                12 => { // DEBUG_GENERATED_COORDS
+                    make_option(vec3_to_color(ctx.to_normalized_point(ctx.surf.point)))
+                },
+                13 => { // DEBUG_HIT_DISTANCE
                     make_option(make_gray_color(ctx.hit.distance))
                 },
-                13 => { // DEBUG_AREA
+                14 => { // DEBUG_AREA
                     make_option(make_gray_color(safe_div(1, ctx.surf.inv_area)))
                 },
-                14 => { // DEBUG_PRIM_ID_RAW
+                15 => { // DEBUG_PRIM_ID_RAW
                     let v = ctx.hit.prim_id as f32;
                     make_option(make_gray_color(v))
                 },
-                15 => { // DEBUG_PRIM_ID
+                16 => { // DEBUG_PRIM_ID
                     make_option(color_map(ctx.hit.prim_id))
                 },
-                16 => { // DEBUG_ENTITY_ID_RAW
+                17 => { // DEBUG_ENTITY_ID_RAW
                     let v = ctx.hit.ent_id as f32;
                     make_option(make_gray_color(v))
                 },
-                17 => { // DEBUG_ENTITY_ID
+                18 => { // DEBUG_ENTITY_ID
                     make_option(color_map(ctx.hit.ent_id))
                 },
-                18 => { // DEBUG_MATERIAL_ID_RAW
+                19 => { // DEBUG_MATERIAL_ID_RAW
                     let v = mat.id as f32;
                     make_option(make_gray_color(v))
                 },
-                19 => { // DEBUG_MATERAIL_ID
+                20 => { // DEBUG_MATERAIL_ID
                     make_option(color_map(mat.id))
                 },
-                20 => { // DEBUG_EMISSIVE
+                21 => { // DEBUG_EMISSIVE
                     make_option(if mat.is_emissive { color_builtins::green } else { color_builtins::red })
                 },
-                21 => { // DEBUG_SPECULAR
+                22 => { // DEBUG_SPECULAR
                     make_option(if mat.bsdf.is_specular { color_builtins::green } else { color_builtins::red })
                 },
-                22 => { // DEBUG_ENTERING
+                23 => { // DEBUG_ENTERING
                     make_option(if ctx.surf.is_entering { color_builtins::green } else { color_builtins::red })
                 },
-                23 => { // DEBUG_CHECK_BSDF
+                24 => { // DEBUG_CHECK_BSDF
                     if mat.bsdf.is_specular {
                         make_option(color_builtins::green)
                     } else {
@@ -134,7 +137,7 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                         }
                     }
                 },
-                24 => { // DEBUG_ALBEDO
+                25 => { // DEBUG_ALBEDO
                     if mat.bsdf.is_specular {
                         make_option(color_builtins::black)
                     } else {
@@ -146,10 +149,10 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                         make_option(evl)
                     }
                 },
-                25 => { // DEBUG_MEDIUM_INNER
+                26 => { // DEBUG_MEDIUM_INNER
                     make_option(if mat.interface.inner < 0 { color_builtins::black } else { color_map(mat.interface.inner) })
                 },
-                26 => { // DEBUG_MEDIUM_OUTER
+                27 => { // DEBUG_MEDIUM_OUTER
                     make_option(if mat.interface.outer < 0 { color_builtins::black } else { color_map(mat.interface.outer) })
                 },
                 _ => { // DEBUG_NORMAL 
