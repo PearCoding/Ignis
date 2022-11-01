@@ -21,20 +21,6 @@ struct Medium {
     is_homogeneous: bool
 }
 
-fn @transform_medium(medium: Medium, coord: CoordSystem) = medium.{
-    phase    = @|p|      medium.phase(   mat3x4_transform_point(coord.to_local, p)),
-    eval     = @|sp, ep| medium.eval(    mat3x4_transform_point(coord.to_local, sp), mat3x4_transform_point(coord.to_local, ep)),
-    eval_inf = @|sp, d|  medium.eval_inf(mat3x4_transform_point(coord.to_local, sp), mat3x4_transform_direction(coord.to_local, d)),                     
-    sample   = @|rnd, sp, ep| {
-        if let Option[MediumSample]::Some(medium_sample) = medium.sample(rnd, mat3x4_transform_point(coord.to_local, sp), mat3x4_transform_point(coord.to_local, ep)) {
-            make_option(medium_sample.{ pos=mat3x4_transform_point(coord.to_global, medium_sample.pos) })
-        } else {
-            Option[MediumSample]::None
-        }
-    },
-    pdf = @|sp, ep, p| medium.pdf(mat3x4_transform_point(coord.to_local, sp), mat3x4_transform_point(coord.to_local, ep), mat3x4_transform_point(coord.to_local, p))
-};
-
 type MediumGenerator = fn (ShadingContext) -> Medium;
 type MediaTable      = fn (i32) -> MediumGenerator;
 

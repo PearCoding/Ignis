@@ -1,19 +1,33 @@
 // Used as interface
-struct CoordSystem {
-    to_local:  Mat3x4, // Transform global to local
-    to_global: Mat3x4  // Transform local to global (Precomputed inverse of to_local)
-}
-
-fn @make_identity_coordsystem() = CoordSystem {
-    to_local  = mat3x4_identity(),
-    to_global = mat3x4_identity()
-};
 
 type PointMapper = fn (Vec3) -> Vec3;
 fn @make_zero_pointmapper()                              = @|_: Vec3| vec3_expand(0);
+fn @make_identity_pointmapper()                          = @|p: Vec3| p;
 fn @make_normalized_pointmapper(bbox: BBox, mat: Mat3x4) = @|p: Vec3| {
     let lp = mat3x4_transform_point(mat, p);
     vec3_div(vec3_sub(lp, bbox.min), vec3_sub(bbox.max, bbox.min))
+};
+
+struct PointMapperSet {
+    to_local_point:      PointMapper, // Map point from global coordinates to object coordinates
+    to_local_direction:  PointMapper, // Map direction from global coordinates to object coordinates (Ignoring translation and fixing non-uniform scaling)
+    to_global_point:     PointMapper, // Map point from object coordinates to global coordinates
+    to_global_direction: PointMapper, // Map direction from object coordinates to global coordinates (Ignoring translation and fixing non-uniform scaling)
+    to_normalized_point: PointMapper  // Map point from global coordinates to normalized coordinates between [0, 1] defined by the object bounding box
+}
+fn @make_identity_pointmapperset() = PointMapperSet{
+    to_local_point      = make_identity_pointmapper(),
+    to_local_direction  = make_identity_pointmapper(),
+    to_global_point     = make_identity_pointmapper(),
+    to_global_direction = make_identity_pointmapper(),
+    to_normalized_point = make_identity_pointmapper()
+};
+fn @make_standard_pointmapperset(shape: Shape, entity: Entity) = PointMapperSet{
+    to_local_point      = @|p:Vec3| mat3x4_transform_point(entity.local_mat, p),
+    to_local_direction  = @|p:Vec3| vec3_mulf(mat3x3_left_mul(entity.normal_mat, p), 1/vec3_len2(mat3x3_diag(entity.normal_mat))), // TODO: Really? Invalid scaling...
+    to_global_point     = @|p:Vec3| mat3x4_transform_point(entity.global_mat, p),
+    to_global_direction = @|p:Vec3| mat3x3_mul(entity.normal_mat, p),
+    to_normalized_point = make_normalized_pointmapper(shape.local_bbox, entity.local_mat)
 };
 
 struct ShadingContext {
@@ -23,12 +37,10 @@ struct ShadingContext {
     hit:       Hit,
     surf:      SurfaceElement,
     uvw:       Vec3,
-    coord:     CoordSystem, // Coordinate system for world & object coordinates. Note: The surf.local transforms from shading orientation to world orientation!
-
-    to_normalized_point: PointMapper // Map from global coordinates to normalized coordinates between [0, 1] defined by the bounding box
+    coord:     PointMapperSet
 }
 
-fn @make_surface_shading_context(entity_id: i32, pixel: PixelCoord, ray: Ray, hit: Hit, surf: SurfaceElement, coord: CoordSystem, to_np: PointMapper) = ShadingContext {
+fn @make_surface_shading_context(entity_id: i32, pixel: PixelCoord, ray: Ray, hit: Hit, surf: SurfaceElement, coord: PointMapperSet) = ShadingContext {
     entity_id = entity_id,
     pixel     = pixel,
     ray       = ray,
@@ -36,8 +48,6 @@ fn @make_surface_shading_context(entity_id: i32, pixel: PixelCoord, ray: Ray, hi
     surf      = surf,
     uvw       = vec2_to_3(surf.tex_coords, 0),
     coord     = coord,
-
-    to_normalized_point = to_np
 };
 
 fn @make_miss_shading_context(pixel: PixelCoord, ray: Ray) = ShadingContext {
@@ -47,9 +57,7 @@ fn @make_miss_shading_context(pixel: PixelCoord, ray: Ray) = ShadingContext {
     hit       = empty_hit(flt_max),
     surf      = make_invalid_surface_element(),
     uvw       = vec3_expand(0),
-    coord     = make_identity_coordsystem(),
-
-    to_normalized_point = make_zero_pointmapper()
+    coord     = make_identity_pointmapperset(),
 };
 
 fn @make_emissive_shading_context(ray: Ray, surf: SurfaceElement, uvw: Vec3) = ShadingContext {
@@ -59,9 +67,7 @@ fn @make_emissive_shading_context(ray: Ray, surf: SurfaceElement, uvw: Vec3) = S
     hit       = empty_hit(flt_max),
     surf      = surf,
     uvw       = uvw,
-    coord     = make_identity_coordsystem(), // TODO: ?
-
-    to_normalized_point = make_zero_pointmapper() // TODO: ?
+    coord     = make_identity_pointmapperset(), // TODO: ?
 };
 
 type BSDFShader     = fn (ShadingContext) -> Bsdf;

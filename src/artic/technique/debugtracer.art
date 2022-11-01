@@ -41,19 +41,19 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 },
                 4 => { // DEBUG_LOCAL_NORMAL
-                    let n = vec3_normalize(mat3x4_transform_direction(ctx.coord.to_local, ctx.surf.local.col(2))); // TODO: Maybe fix non-uniform scaling?
+                    let n = vec3_normalize(ctx.coord.to_local_direction(ctx.surf.local.col(2)));
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 },
                 5 => { // DEBUG_LOCAL_TANGENT
-                    let n = vec3_normalize(mat3x4_transform_direction(ctx.coord.to_local, ctx.surf.local.col(0))); // TODO: Maybe fix non-uniform scaling?
+                    let n = vec3_normalize(ctx.coord.to_local_direction(ctx.surf.local.col(0)));
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 },
                 6 => { // DEBUG_LOCAL_BITANGENT
-                    let n = vec3_normalize(mat3x4_transform_direction(ctx.coord.to_local, ctx.surf.local.col(1))); // TODO: Maybe fix non-uniform scaling?
+                    let n = vec3_normalize(ctx.coord.to_local_direction(ctx.surf.local.col(1)));
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 },
                 7 => { // DEBUG_LOCAL_GEOMETRY_NORMAL
-                    let n = vec3_normalize(mat3x4_transform_direction(ctx.coord.to_local, ctx.surf.face_normal));  // TODO: Maybe fix non-uniform scaling?
+                    let n = vec3_normalize(ctx.coord.to_local_direction(ctx.surf.face_normal));
                     make_option(make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1))
                 },
                 8 => { // DEBUG_TEXCOORDS
@@ -68,10 +68,10 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     make_option(vec3_to_color(ctx.surf.point))
                 },
                 11 => { // DEBUG_LOCAL_POINT
-                    make_option(vec3_to_color(mat3x4_transform_point(ctx.coord.to_local, ctx.surf.point)))
+                    make_option(vec3_to_color(ctx.coord.to_local_point(ctx.surf.point)))
                 },
                 12 => { // DEBUG_GENERATED_COORDS
-                    make_option(vec3_to_color(ctx.to_normalized_point(ctx.surf.point)))
+                    make_option(vec3_to_color(ctx.coord.to_normalized_point(ctx.surf.point)))
                 },
                 13 => { // DEBUG_HIT_DISTANCE
                     make_option(make_gray_color(ctx.hit.distance))
