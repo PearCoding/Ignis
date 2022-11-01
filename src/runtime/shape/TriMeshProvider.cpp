@@ -289,10 +289,19 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     const size_t offset = table.currentOffset();
 
     VectorSerializer meshSerializer(meshData, false);
+    // Header
     meshSerializer.write((uint32)mesh.faceCount());
     meshSerializer.write((uint32)mesh.vertices.size());
     meshSerializer.write((uint32)mesh.normals.size());
     meshSerializer.write((uint32)mesh.texcoords.size());
+
+    // Local bounding box
+    meshSerializer.write(bbox.min);
+    meshSerializer.write((float)0);
+    meshSerializer.write(bbox.max);
+    meshSerializer.write((float)0);
+
+    // Data
     meshSerializer.writeAligned(mesh.vertices, DefaultAlignment, true);
     meshSerializer.writeAligned(mesh.normals, DefaultAlignment, true);
     meshSerializer.writeAligned(mesh.face_normals, DefaultAlignment, true);

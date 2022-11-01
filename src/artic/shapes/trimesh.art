@@ -6,7 +6,8 @@ struct TriMesh {
     face_inv_area: fn (i32) -> f32,
     triangles:     fn (i32) -> (i32, i32, i32),
     tex_coords:    fn (i32) -> Vec2,
-    num_tris:      i32
+    num_tris:      i32,
+    bbox:          BBox
 }
 
 // Creates a geometry object from a triangle mesh definition
@@ -62,14 +63,17 @@ fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
                 tex_coords  = tex_coords,
                 local       = make_orthonormal_mat3x3(normal)
             }
-        }
+        },
+        local_bbox = tri_mesh.bbox
     }
 }
 
 type TriMeshTable  = fn (i32) -> TriMesh;
 
 fn @make_trimesh_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32, data: DeviceBuffer) -> TriMesh {
-    let v_start   = 4;
+    let bbox = make_bbox(data.load_vec3(4), data.load_vec3(8));
+
+    let v_start   = 12;
     let n_start   = v_start   + num_verts * 4;
     let fn_start  = n_start   + num_norms * 4;
     let ind_start = fn_start  + num_face  * 4;
@@ -83,7 +87,8 @@ fn @make_trimesh_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, num_
         face_inv_area = @ |i:i32| data.load_f32(fa_start  + i),
         triangles     = @ |i:i32| { let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
         tex_coords    = @ |i:i32| data.load_vec2(tex_start + i*2),
-        num_tris      = num_face
+        num_tris      = num_face,
+        bbox          = bbox
     }
 }
 

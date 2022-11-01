@@ -52,7 +52,8 @@ fn @make_sphere_shape(sphere: Sphere) -> Shape {
                 tex_coords  = prim_coords,
                 local       = make_orthonormal_mat3x3(normal)
             }
-        }
+        },
+        local_bbox = make_centered_bbox(sphere.origin, vec3_expand(2*sphere.radius))
     }
 }
 

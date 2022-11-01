@@ -3,6 +3,7 @@ struct Shape {
     // Computes the surface element after an intersection on this geometry
     surface_element:           fn (Ray, Hit)  -> SurfaceElement,
     surface_element_for_point: fn (i32, Vec2) -> SurfaceElement,
+    local_bbox:                BBox, // Local bounding box
 }
 
 type ShapeTable  = fn (i32) -> Shape;
