@@ -29,7 +29,7 @@ inline static std::string collapseFunction(size_t& uuid_counter, Func func, cons
         return func(args);
 
     size_t uuid_counter2 = uuid_counter;
-    size_t max_length = 0;
+    size_t max_length    = 0;
     std::unordered_map<std::string, std::string> set;
     for (const auto& arg : args) {
         max_length = std::max(max_length, arg.size());
@@ -74,15 +74,19 @@ struct InternalVariable {
 };
 static const std::unordered_map<std::string, InternalVariable> sInternalVariables = {
     { "uv", { "", PExprType::Vec2, false } },           // Special
-    { "frontside", { "", PExprType::Boolean, false } }, // Special
+    { "uvw", { "", PExprType::Vec3, false } },          // Special
     { "prim_coords", { "", PExprType::Vec2, false } },  // Special
-    { "entity_id", { "", PExprType::Integer, false } }, // Special
     { "P", { "", PExprType::Vec3, false } },            // Special
+    { "Np", { "", PExprType::Vec3, false } },           // Special
     { "V", { "", PExprType::Vec3, false } },            // Special
     { "N", { "", PExprType::Vec3, false } },            // Special
     { "Ng", { "", PExprType::Vec3, false } },           // Special
     { "Nx", { "", PExprType::Vec3, false } },           // Special
     { "Ny", { "", PExprType::Vec3, false } },           // Special
+    { "frontside", { "", PExprType::Boolean, false } }, // Special
+    { "entity_id", { "", PExprType::Integer, false } }, // Special
+    { "Ix", { "", PExprType::Integer, false } },        // Special
+    { "Iy", { "", PExprType::Integer, false } },        // Special
     { "Pi", { "flt_pi", PExprType::Number, false } },
     { "E", { "flt_e", PExprType::Number, false } },
     { "Eps", { "flt_eps", PExprType::Number, false } },
@@ -503,7 +507,7 @@ static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynR
 // TODO: refract (V, N, ior) -> Vec3 !
 
 // Other stuff
-inline std::string binaryCwise(const std::string& A, const std::string& B, PExprType arithType, const std::string& op, const std::string& func)
+inline static std::string binaryCwise(const std::string& A, const std::string& B, PExprType arithType, const std::string& op, const std::string& func)
 {
     switch (arithType) {
     default:
@@ -517,7 +521,7 @@ inline std::string binaryCwise(const std::string& A, const std::string& B, PExpr
     }
 }
 
-inline std::string typeConstant(float f, PExprType arithType)
+inline static std::string typeConstant(float f, PExprType arithType)
 {
     switch (arithType) {
     default:
@@ -531,6 +535,74 @@ inline std::string typeConstant(float f, PExprType arithType)
         return "vec3_expand(" + std::to_string(f) + ")";
     case PExprType::Vec4:
         return "vec4_expand(" + std::to_string(f) + ")";
+    }
+}
+
+inline static std::string handleCheckRayFlag(const std::string& arg)
+{
+    const std::string larg = to_lowercase(arg);
+
+    std::string flag;
+    if (larg == "camera") {
+        flag = "ray_flag_camera";
+    } else if (larg == "light") {
+        flag = "ray_flag_light";
+    } else if (larg == "bounce") {
+        flag = "ray_flag_bounce";
+    } else if (larg == "shadow") {
+        flag = "ray_flag_shadow";
+    } else {
+        IG_LOG(L_ERROR) << "Unknown check_ray_flag argument '" << arg << "'" << std::endl;
+        return "false";
+    }
+
+    return "check_ray_visibility(ctx.ray, " + flag + ")";
+}
+
+enum class TransformInterpretation {
+    Point,
+    Direction,
+    Normal
+};
+
+inline static std::string handleTransform(TransformInterpretation interpretation, const std::string& value, const std::string& from, const std::string& to)
+{
+    const std::string lfrom = to_lowercase(from);
+    const std::string lto   = to_lowercase(to);
+
+    // If same space, no transformation required
+    if (lfrom == lto)
+        return value;
+
+    // TODO: Support more coordinate spaces
+    bool object_to_global;
+    if (lfrom == "object" && lto == "global") {
+        object_to_global = true;
+    } else if (lfrom == "global" && lto == "object") {
+        object_to_global = false;
+    } else {
+        IG_LOG(L_ERROR) << "Unknown transform coordinate spaces given from '" << from << "' to '" << to << "'" << std::endl;
+        return "vec3_expand(0)";
+    }
+
+    // Get suffix
+    std::string suffix;
+    switch (interpretation) {
+    case TransformInterpretation::Point:
+        suffix = "point";
+        break;
+    case TransformInterpretation::Direction:
+        suffix = "direction";
+        break;
+    case TransformInterpretation::Normal:
+        suffix = "normal";
+        break;
+    }
+
+    if (object_to_global) {
+        return "ctx.coord.to_global_" + suffix + "(" + value + ")";
+    } else {
+        return "ctx.coord.to_local_" + suffix + "(" + value + ")";
     }
 }
 
@@ -553,11 +625,22 @@ public:
     {
         if (name == "uv")
             return "vec3_to_2(ctx.uvw)";
-        if (name == "V")
+        if (name == "uvw")
+            return "ctx.uvw";
+        if (name == "V" || name == "Rd")
             return "vec3_neg(ctx.ray.dir)";
+        if (name == "Ro")
+            return "ctx.ray.org";
+
+        if (name == "Ix")
+            return "ctx.pixel.x";
+        if (name == "Iy")
+            return "ctx.pixel.y";
 
         if (name == "P")
             return "ctx.surf.point";
+        if (name == "Np")
+            return "ctx.to_normalized_point(ctx.surf.point)";
         if (name == "prim_coords")
             return "ctx.surf.prim_coords";
         if (name == "frontside")
@@ -777,6 +860,9 @@ public:
                     return call;
             }
 
+            if (name == "check_ray_flag")
+                return handleCheckRayFlag(argumentPayloads[0]);
+
             if (name == "vec2")
                 return "vec2_expand(" + argumentPayloads[0] + ")";
             if (name == "vec3")
@@ -837,6 +923,13 @@ public:
 
             if (name == "rotate_axis")
                 return "vec3_rotate_axis(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + ")";
+
+            if (name == "transform_point")
+                return handleTransform(TransformInterpretation::Point, argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
+            if (name == "transform_direction")
+                return handleTransform(TransformInterpretation::Direction, argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
+            if (name == "transform_normal")
+                return handleTransform(TransformInterpretation::Normal, argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
 
             if (name == "vec3") {
                 if (argumentPayloads[0] == argumentPayloads[1] && argumentPayloads[1] == argumentPayloads[2])
@@ -1099,6 +1192,20 @@ public:
         // Function with a "weird" specification
         if (lkp.name() == "rotate_axis" && lkp.parameters().size() == 3) {
             auto var = matchFuncRet(lkp, PExprType::Vec3, { PExprType::Vec3, PExprType::Number, PExprType::Vec3 });
+            if (var.has_value())
+                return var;
+        }
+
+        // Function with a boolean return type and string input parameter
+        if (lkp.name() == "check_ray_flag" && lkp.parameters().size() == 1) {
+            auto var = matchFuncRet(lkp, PExprType::Boolean, { PExprType::String });
+            if (var.has_value())
+                return var;
+        }
+
+        // Function with the same return type as the first input and two additional string input parameters
+        if ((lkp.name() == "transform_point" || lkp.name() == "transform_direction" || lkp.name() == "transform_normal") && lkp.parameters().size() == 3) {
+            auto var = matchFuncRet(lkp, PExprType::Vec3, { PExprType::Vec3, PExprType::String, PExprType::String });
             if (var.has_value())
                 return var;
         }
