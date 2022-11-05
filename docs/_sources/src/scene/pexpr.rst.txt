@@ -65,11 +65,33 @@ Vectorized types like ``vec2``, ``vec3`` and ``vec4`` can be cast or extended to
 Variables
 ---------
 
-Some special variables are available:
+Some special variables given are available as ``vec2``:
 
--   ``uv`` The current texture coordinates as a ``vec2``.
--   ``P`` World position if bsdf or medium, else a zero ``vec3``.
--   ``N`` World shading normal if bsdf, else a zero ``vec3``.
+-   ``uv`` The current texture coordinates.
+-   ``prim_coords`` Primitive specific coordinates if surface, else a zero.
+
+some as ``vec3``:
+
+-   ``uvw`` The current texture coordinates given in as a triplet.
+-   ``V`` World ray direction facing from a surface or any other source outwards.
+-   ``Rd`` Same as ``V``.
+-   ``Ro`` World ray origin.
+-   ``P`` World position if bsdf or medium, else zero.
+-   ``Np`` Normalized position if bsdf or medium, else a zero.
+-   ``N`` World shading normal if bsdf, else a zero.
+-   ``Ng`` World geometry normal if bsdf, else a zero.
+-   ``Nx`` World shading tangent if bsdf, else a zero.
+-   ``Ny`` World shading bitangent if bsdf, else a zero.
+
+few as ``int``:
+
+-   ``entity_id`` Contains the id of the current entity or ``-1`` if not on a surface.
+-   ``Ix`` Contains the current pixel x index or ``0`` if not available.
+-   ``Iy`` Contains the current pixel y index or ``0`` if not available.
+
+and a few as ``bool``:
+
+-   ``frontside`` ``true`` if normal and ray orientation is front facing. This will be always ``true`` if the point is not lying on a surface.
 
 .. NOTE:: More special variables might be introduced in the future.
 
@@ -103,6 +125,7 @@ Functions
 -   ``ceil`` TODO
 -   ``cellnoise`` TODO
 -   ``cfbm`` TODO
+-   ``check_ray_flag`` TODO
 -   ``checkerboard`` TODO
 -   ``clamp`` TODO
 -   ``cnoise`` TODO
@@ -147,6 +170,9 @@ Functions
 -   ``sqrt`` TODO
 -   ``sum`` TODO
 -   ``tan`` TODO
+-   ``transform_point`` TODO
+-   ``transform_direction`` TODO
+-   ``transform_normal`` TODO
 -   ``vec2`` TODO
 -   ``vec3`` TODO
 -   ``vec4`` TODO

@@ -296,11 +296,33 @@ SeExpr is more complex and industry proven, however, more difficult to transpile
 </section>
 <section id="variables">
 <h2>Variables<a class="headerlink" href="#variables" title="Permalink to this heading">¶</a></h2>
-<p>Some special variables are available:</p>
+<p>Some special variables given are available as <code class="docutils literal notranslate"><span class="pre">vec2</span></code>:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">uv</span></code> The current texture coordinates as a <code class="docutils literal notranslate"><span class="pre">vec2</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">P</span></code> World position if bsdf or medium, else a zero <code class="docutils literal notranslate"><span class="pre">vec3</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">N</span></code> World shading normal if bsdf, else a zero <code class="docutils literal notranslate"><span class="pre">vec3</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uv</span></code> The current texture coordinates.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prim_coords</span></code> Primitive specific coordinates if surface, else a zero.</p></li>
+</ul>
+<p>some as <code class="docutils literal notranslate"><span class="pre">vec3</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">uvw</span></code> The current texture coordinates given in as a triplet.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">V</span></code> World ray direction facing from a surface or any other source outwards.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Rd</span></code> Same as <code class="docutils literal notranslate"><span class="pre">V</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ro</span></code> World ray origin.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">P</span></code> World position if bsdf or medium, else zero.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Np</span></code> Normalized position if bsdf or medium, else a zero.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">N</span></code> World shading normal if bsdf, else a zero.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ng</span></code> World geometry normal if bsdf, else a zero.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Nx</span></code> World shading tangent if bsdf, else a zero.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ny</span></code> World shading bitangent if bsdf, else a zero.</p></li>
+</ul>
+<p>few as <code class="docutils literal notranslate"><span class="pre">int</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">entity_id</span></code> Contains the id of the current entity or <code class="docutils literal notranslate"><span class="pre">-1</span></code> if not on a surface.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ix</span></code> Contains the current pixel x index or <code class="docutils literal notranslate"><span class="pre">0</span></code> if not available.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Iy</span></code> Contains the current pixel y index or <code class="docutils literal notranslate"><span class="pre">0</span></code> if not available.</p></li>
+</ul>
+<p>and a few as <code class="docutils literal notranslate"><span class="pre">bool</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">frontside</span></code> <code class="docutils literal notranslate"><span class="pre">true</span></code> if normal and ray orientation is front facing. This will be always <code class="docutils literal notranslate"><span class="pre">true</span></code> if the point is not lying on a surface.</p></li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -338,6 +360,7 @@ The above defined special variable and constant names have precedence over textu
 <li><p><code class="docutils literal notranslate"><span class="pre">ceil</span></code> TODO</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cellnoise</span></code> TODO</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cfbm</span></code> TODO</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">check_ray_flag</span></code> TODO</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">checkerboard</span></code> TODO</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">clamp</span></code> TODO</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cnoise</span></code> TODO</p></li>
@@ -382,6 +405,9 @@ The above defined special variable and constant names have precedence over textu
 <li><p><code class="docutils literal notranslate"><span class="pre">sqrt</span></code> TODO</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">sum</span></code> TODO</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">tan</span></code> TODO</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">transform_point</span></code> TODO</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">transform_direction</span></code> TODO</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">transform_normal</span></code> TODO</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">vec2</span></code> TODO</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">vec3</span></code> TODO</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">vec4</span></code> TODO</p></li>
