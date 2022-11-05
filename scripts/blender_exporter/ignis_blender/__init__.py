@@ -2,7 +2,7 @@ from . import exporter_ui
 
 bl_info = {
     "name": "Ignis Scene",
-    "author": "Maher Rayes, Ömercan Yazici, Pascal Grittmann",
+    "author": "Ömercan Yazici, Maher Rayes, Pascal Grittmann",
     "description": "Export scene to Ignis",
     "version": (0, 3, 0),
     "blender": (2, 92, 0),

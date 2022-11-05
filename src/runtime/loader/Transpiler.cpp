@@ -5,6 +5,7 @@
 
 #include "PExpr.h"
 
+#include <optional>
 #include <unordered_map>
 
 namespace IG {
@@ -538,21 +539,40 @@ inline static std::string typeConstant(float f, PExprType arithType)
     }
 }
 
+inline static std::optional<std::string> extractConstantString(const std::string& arg)
+{
+    if (arg.size() < 2)
+        return {};
+
+    const char c = arg.front();
+    if (c != '"' && c != '\'')
+        return {};
+
+    if (arg.back() != c)
+        return {};
+
+    return arg.substr(1, arg.size() - 2);
+}
+
 inline static std::string handleCheckRayFlag(const std::string& arg)
 {
-    const std::string larg = to_lowercase(arg);
+    const auto flag_name = extractConstantString(to_lowercase(arg));
+    if (!flag_name.has_value()) {
+        IG_LOG(L_ERROR) << "check_ray_flag expects a constant string as an argument but got " << arg << std::endl;
+        return "false";
+    }
 
     std::string flag;
-    if (larg == "camera") {
+    if (flag_name.value() == "camera") {
         flag = "ray_flag_camera";
-    } else if (larg == "light") {
+    } else if (flag_name.value() == "light") {
         flag = "ray_flag_light";
-    } else if (larg == "bounce") {
+    } else if (flag_name.value() == "bounce") {
         flag = "ray_flag_bounce";
-    } else if (larg == "shadow") {
+    } else if (flag_name.value() == "shadow") {
         flag = "ray_flag_shadow";
     } else {
-        IG_LOG(L_ERROR) << "Unknown check_ray_flag argument '" << arg << "'" << std::endl;
+        IG_LOG(L_ERROR) << "Unknown check_ray_flag argument " << arg << std::endl;
         return "false";
     }
 
@@ -567,21 +587,27 @@ enum class TransformInterpretation {
 
 inline static std::string handleTransform(TransformInterpretation interpretation, const std::string& value, const std::string& from, const std::string& to)
 {
-    const std::string lfrom = to_lowercase(from);
-    const std::string lto   = to_lowercase(to);
+    const auto from_name = extractConstantString(to_lowercase(from));
+    const auto to_name   = extractConstantString(to_lowercase(to));
+
+    if (!from_name.has_value() || !to_name.has_value()) {
+        IG_LOG(L_ERROR) << "transform expects two constant strings as additional arguments but got from "
+                        << " to " << to << std::endl;
+        return "false";
+    }
 
     // If same space, no transformation required
-    if (lfrom == lto)
+    if (from_name.value() == to_name.value())
         return value;
 
     // TODO: Support more coordinate spaces
     bool object_to_global;
-    if (lfrom == "object" && lto == "global") {
+    if (from_name.value() == "object" && to_name.value() == "global") {
         object_to_global = true;
-    } else if (lfrom == "global" && lto == "object") {
+    } else if (from_name.value() == "global" && to_name.value() == "object") {
         object_to_global = false;
     } else {
-        IG_LOG(L_ERROR) << "Unknown transform coordinate spaces given from '" << from << "' to '" << to << "'" << std::endl;
+        IG_LOG(L_ERROR) << "Unknown transform coordinate spaces given from " << from << " to " << to << std::endl;
         return "vec3_expand(0)";
     }
 
@@ -640,7 +666,7 @@ public:
         if (name == "P")
             return "ctx.surf.point";
         if (name == "Np")
-            return "ctx.to_normalized_point(ctx.surf.point)";
+            return "ctx.coord.to_normalized_point(ctx.surf.point)";
         if (name == "prim_coords")
             return "ctx.surf.prim_coords";
         if (name == "frontside")
