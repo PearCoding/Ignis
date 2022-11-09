@@ -1,6 +1,7 @@
 #include "ProgramOptions.h"
 #include "Runtime.h"
 #include "config/Build.h"
+#include "loader/Transpiler.h"
 
 #include <CLI/CLI.hpp>
 
@@ -168,6 +169,15 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         app.add_option("-o,--output", Output, "Writes the output image to a file");
     }
 
+    // Add some hidden commandline parameters
+    bool listPExprVariables = false;
+    bool listPExprFunctions = false;
+    bool listCLI            = false;
+    auto grp                = app.add_option_group("");
+    grp->add_flag("--list-pexpr-variables", listPExprVariables);
+    grp->add_flag("--list-pexpr-functions", listPExprFunctions);
+    grp->add_flag("--list-cli-options", listCLI);
+
     try {
         app.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
@@ -175,6 +185,23 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         ShouldExit = true;
         return;
     }
+
+    // Handle hidden options
+    if (listPExprVariables) {
+        std::cout << Transpiler::availableVariables() << std::endl;
+        ShouldExit = true;
+    }
+    if (listPExprFunctions) {
+        std::cout << Transpiler::availableFunctions() << std::endl;
+        ShouldExit = true;
+    }
+    if (listCLI) {
+        // TODO
+        ShouldExit = true;
+    }
+
+    if (ShouldExit)
+        return;
 
     // Make sure the paths are given in absolutes
     try {
