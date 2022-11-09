@@ -849,6 +849,7 @@ public:
                                const std::vector<std::string>& argumentPayloads) override
     {
         // Special lookup function with variadic number of parameters
+        // TODO: Add this to the function signature definition
         if (argumentPayloads.size() >= 3 && (argumentPayloads.size() % 2) == 1 && (name == "lookup_linear" || name == "lookup_constant" || name == "lookup_linear_extrapolate")) {
             return collapseFunction(
                 mUUIDCounter,
@@ -994,6 +995,14 @@ public:
 
         const auto range = sInternalFunctions.equal_range(lkp.name());
         if (range.first != range.second) {
+            // First check exact=true
+            for (auto it = range.first; it != range.second; ++it) {
+                auto var = it->second.matchDef(lkp, true);
+                if (var.has_value())
+                    return var;
+            }
+
+            // Now check exact=false
             for (auto it = range.first; it != range.second; ++it) {
                 auto var = it->second.matchDef(lkp, false);
                 if (var.has_value())
