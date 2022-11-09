@@ -245,6 +245,7 @@ Functions
 -   ``log2(vec2) -> vec2``
 -   ``log2(vec3) -> vec3``
 -   ``log2(vec4) -> vec4``
+-   ``lookup(str, bool, num, vec2, ...) -> num``
 -   ``luminance(vec4) -> num``
 -   ``max(num, num) -> num``
 -   ``max(vec2, vec2) -> vec2``

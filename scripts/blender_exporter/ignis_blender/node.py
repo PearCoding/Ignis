@@ -442,24 +442,19 @@ def _curve_lookup(curve, t, interpolate, extrapolate):
         if curve.points[0].location[0] == 0 and curve.points[0].location[1] == 0 and curve.points[1].location[0] == 1 and curve.points[1].location[1] == 1:
             return t
 
-    if interpolate:
-        if extrapolate:
-            func = "lookup_linear_extrapolate"
-        else:
-            func = "lookup_linear"
-    else:
-        func = "lookup_constant"
+    lookup_type = "'linear'" if interpolate else "'constant'"
+    extrapolate = "true" if extrapolate else "false"
 
     args = ", ".join(
-        [f"{p.location[0]}, {p.location[1]}" for p in curve.points])
+        [f"vec2({p.location[0]}, {p.location[1]})" for p in curve.points])
 
-    return f"{func}({t}, {args})"
+    return f"lookup({lookup_type}, {extrapolate}, {t}, {args})"
 
 
 def _export_float_curve(ctx, node):
     mapping = node.mapping
 
-    fac = export_node(ctx, node.inputs["Fac"])
+    fac = export_node(ctx, node.inputs["Factor"])
     value = export_node(ctx, node.inputs["Value"])
 
     V = mapping.curves[0]
@@ -478,7 +473,7 @@ def _export_float_curve(ctx, node):
 def _export_rgb_curve(ctx, node):
     mapping = node.mapping
 
-    fac = export_node(ctx, node.inputs["Fac"])
+    fac = export_node(ctx, node.inputs["Factor"])
     color = export_node(ctx, node.inputs["Color"])
 
     C = mapping.curves[3]
@@ -507,7 +502,7 @@ def _export_rgb_curve(ctx, node):
 def _export_vector_curve(ctx, node):
     mapping = node.mapping
 
-    fac = export_node(ctx, node.inputs["Fac"])
+    fac = export_node(ctx, node.inputs["Factor"])
     vector = export_node(ctx, node.inputs["Vector"])
 
     X = mapping.curves[0]

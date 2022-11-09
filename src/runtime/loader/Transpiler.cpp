@@ -206,6 +206,50 @@ static inline std::string handleSelect(size_t& uuidCounter, const ParamArr& args
             args);
 }
 
+inline static std::string handleCurveLookup(size_t& uuidCounter, const ParamArr& initArgs)
+{
+    const auto interpolation = extractConstantString(to_lowercase(initArgs.front()));
+    if (!interpolation.has_value()) {
+        IG_LOG(L_ERROR) << "curve_lookup expects one constant string as initial argument but got " << initArgs.front() << std::endl;
+        return "0";
+    }
+
+    bool linear;
+    if (interpolation == "constant") {
+        linear = false;
+    } else if (interpolation == "linear") {
+        linear = true;
+    } else {
+        IG_LOG(L_ERROR) << "Unknown curve_lookup argument " << initArgs.front() << std::endl;
+        return "0";
+    }
+
+    // Remove first argument
+    ParamArr newArgs = initArgs;
+    newArgs.erase(newArgs.begin());
+
+    return collapseFunction(
+        uuidCounter,
+        [linear](const std::vector<std::string>& args) {
+            std::stringstream x_values;
+            x_values << "@|i:i32| [";
+            for (size_t i = 2; i < args.size(); ++i)
+                x_values << "vec2_at(" << args.at(i) << ", 0), ";
+            x_values << "](i)";
+
+            std::stringstream y_values;
+            y_values << "@|i:i32| [";
+            for (size_t i = 2; i < args.size(); ++i)
+                y_values << "vec2_at(" << args.at(i) << ", 1), ";
+            y_values << "](i)";
+
+            std::string interpolate = linear ? "true" : "false";
+            std::string extrapolate = args.front();
+            return "math::lookup_curve(" + std::to_string(args.size() - 2) + ", " + args.at(1) + ", " + x_values.str() + ", " + y_values.str() + ", " + interpolate + ", " + extrapolate + ")";
+        },
+        newArgs);
+}
+
 static inline std::string_view dumpType(PExprType type)
 {
     return PExpr::toString(type);
@@ -379,6 +423,7 @@ struct FunctionDef {
     std::string Name;
     PExprType ReturnType;
     TypeArr Arguments;
+    bool Variadic; // If true, the last argument type can be added infinitely times
 
     inline std::string signature() const
     {
@@ -388,6 +433,8 @@ struct FunctionDef {
             stream << dumpType(Arguments.at(i));
             if (i < Arguments.size() - 1)
                 stream << ", ";
+            else if (Variadic)
+                stream << ", ...";
         }
         stream << ") -> " << dumpType(ReturnType);
         return stream.str();
@@ -398,22 +445,76 @@ struct FunctionDef {
         return PExpr::FunctionDef(Name, ReturnType, Arguments);
     }
 
+    inline PExpr::FunctionDef definition(const TypeArr& arr) const
+    {
+        return PExpr::FunctionDef(Name, ReturnType, arr);
+    }
+
     inline bool checkParameters(const TypeArr& paramTypes) const
     {
-        return Arguments.size() == paramTypes.size() && std::equal(Arguments.begin(), Arguments.end(), paramTypes.begin());
+        if (Variadic && paramTypes.size() > 0) {
+            if (Arguments.size() > paramTypes.size())
+                return false;
+
+            for (size_t i = 0; i < Arguments.size(); ++i) {
+                if (paramTypes.at(i) != Arguments.at(i))
+                    return false;
+            }
+
+            const auto lastType = Arguments.back();
+            for (size_t i = Arguments.size(); i < paramTypes.size(); ++i) {
+                if (paramTypes.at(i) != lastType)
+                    return false;
+            }
+            return true;
+        } else {
+            return Arguments.size() == paramTypes.size() && std::equal(Arguments.begin(), Arguments.end(), paramTypes.begin());
+        }
     }
 
     inline bool check(const PExpr::FunctionLookup& lkp, bool exact = false) const
     {
-        return Arguments.size() == lkp.parameters().size() && lkp.name() == Name && lkp.matchParameter(Arguments, exact);
+        if (lkp.name() != Name)
+            return false;
+
+        if (Variadic) {
+            const auto check = [exact](PExprType a, PExprType b) {
+                return exact ? (a == b) : (PExpr::isConvertible(a, b));
+            };
+
+            if (Arguments.size() > lkp.parameters().size())
+                return false;
+
+            for (size_t i = 0; i < Arguments.size(); ++i) {
+                if (!check(lkp.parameters().at(i), Arguments.at(i)))
+                    return false;
+            }
+
+            const auto lastType = Arguments.back();
+            for (size_t i = Arguments.size(); i < lkp.parameters().size(); ++i) {
+                if (!check(lkp.parameters().at(i), lastType))
+                    return false;
+            }
+            return true;
+        } else {
+            return Arguments.size() == lkp.parameters().size() && lkp.matchParameter(Arguments, exact);
+        }
     }
 
     inline std::optional<PExpr::FunctionDef> matchDef(const PExpr::FunctionLookup& lkp, bool exact = false) const
     {
-        if (check(lkp, exact))
-            return definition();
-        else
+        if (check(lkp, exact)) {
+            if (!Variadic) {
+                return definition();
+            } else {
+                TypeArr args = Arguments;
+                for (size_t i = Arguments.size(); i < lkp.parameters().size(); ++i)
+                    args.push_back(Arguments.back());
+                return definition(args);
+            }
+        } else {
             return {};
+        }
     }
 
     inline std::string call(size_t& uuidCounter, const ParamArr& args) const
@@ -423,13 +524,14 @@ struct FunctionDef {
 };
 
 template <typename... Args>
-inline static FunctionDef constructFunctionDef(const std::string& name, MapFunction func, PExprType retType, const Args&... args)
+inline static FunctionDef constructFunctionDef(const std::string& name, MapFunction func, bool variadic, PExprType retType, const Args&... args)
 {
     return FunctionDef{
         func,
         name,
         retType,
-        TypeArr{ args... }
+        TypeArr{ args... },
+        variadic
     };
 }
 
@@ -437,7 +539,13 @@ inline static FunctionDef constructFunctionDef(const std::string& name, MapFunct
 template <typename... Args>
 static inline std::pair<std::string, FunctionDef> cF(const std::string& name, MapFunction func, PExprType retType, const Args&... args)
 {
-    return std::make_pair(name, constructFunctionDef(name, func, retType, args...));
+    return std::make_pair(name, constructFunctionDef(name, func, false, retType, args...));
+}
+
+template <typename... Args>
+static inline std::pair<std::string, FunctionDef> cFV(const std::string& name, MapFunction func, PExprType retType, const Args&... args)
+{
+    return std::make_pair(name, constructFunctionDef(name, func, true, retType, args...));
 }
 
 #define _MF1A(name, iname)                                                           \
@@ -661,6 +769,8 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("select", handleSelect, PExprType::Vec3, PExprType::Boolean, PExprType::Vec3, PExprType::Vec3),
     cF("select", handleSelect, PExprType::Vec4, PExprType::Boolean, PExprType::Vec4, PExprType::Vec4),
     cF("select", handleSelect, PExprType::String, PExprType::Boolean, PExprType::String, PExprType::String),
+
+    cFV("lookup", handleCurveLookup, PExprType::Number, PExprType::String, PExprType::Boolean, PExprType::Number, PExprType::Vec2)
 };
 #undef _MF1A
 #undef _MF2A
@@ -848,32 +958,6 @@ public:
                                PExprType, const std::vector<PExprType>& argumentTypes,
                                const std::vector<std::string>& argumentPayloads) override
     {
-        // Special lookup function with variadic number of parameters
-        // TODO: Add this to the function signature definition
-        if (argumentPayloads.size() >= 3 && (argumentPayloads.size() % 2) == 1 && (name == "lookup_linear" || name == "lookup_constant" || name == "lookup_linear_extrapolate")) {
-            return collapseFunction(
-                mUUIDCounter,
-                [name](const std::vector<std::string>& args) {
-                    const size_t arg_count = (args.size() - 1) / 2;
-                    std::stringstream x_values;
-                    x_values << "@|i:i32| [";
-                    for (size_t i = 0; i < arg_count; ++i)
-                        x_values << args[2 * i + 1] << ", ";
-                    x_values << "](i)";
-
-                    std::stringstream y_values;
-                    y_values << "@|i:i32| [";
-                    for (size_t i = 0; i < arg_count; ++i)
-                        y_values << args[2 * i + 2] << ", ";
-                    y_values << "](i)";
-
-                    std::string interpolate = (name == "lookup_linear" || name == "lookup_linear_extrapolate") ? "true" : "false";
-                    std::string extrapolate = (name == "lookup_linear_extrapolate") ? "true" : "false";
-                    return "math::lookup_curve(" + std::to_string(arg_count) + ", " + args[0] + ", " + x_values.str() + ", " + y_values.str() + ", " + interpolate + ", " + extrapolate + ")";
-                },
-                argumentPayloads);
-        }
-
         const auto range = sInternalFunctions.equal_range(name);
         if (range.first != range.second) {
             for (auto it = range.first; it != range.second; ++it) {
@@ -979,20 +1063,6 @@ public:
 
     std::optional<PExpr::FunctionDef> functionLookup(const PExpr::FunctionLookup& lkp)
     {
-        // Special lookup function with variadic number of parameters
-        if (lkp.parameters().size() >= 3 && (lkp.parameters().size() % 2) == 1 && (lkp.name() == "lookup_linear" || lkp.name() == "lookup_constant" || lkp.name() == "lookup_linear_extrapolate")) {
-            bool allNumber = true;
-            for (const auto& params : lkp.parameters()) {
-                if (params != PExprType::Number) {
-                    allNumber = false;
-                    break;
-                }
-            }
-
-            if (allNumber)
-                return PExpr::FunctionDef(lkp.name(), PExprType::Number, lkp.parameters());
-        }
-
         const auto range = sInternalFunctions.equal_range(lkp.name());
         if (range.first != range.second) {
             // First check exact=true
@@ -1105,6 +1175,13 @@ std::string Transpiler::generateTestShader()
         } else if (p.first == "transform_point" || p.first == "transform_direction" || p.first == "transform_normal") {
             // Special case
             stream << "v0: " << typeArtic(def.Arguments[0]);
+        } else if (p.first == "lookup") {
+            // Special case
+            for (size_t i = 1; i < def.Arguments.size(); ++i) {
+                stream << "v" << i - 1 << ": " << typeArtic(def.Arguments[i]);
+                if (i < def.Arguments.size() - 1)
+                    stream << ", ";
+            }
         } else {
             for (size_t i = 0; i < def.Arguments.size(); ++i) {
                 stream << "v" << i << ": " << typeArtic(def.Arguments[i]);
@@ -1125,6 +1202,10 @@ std::string Transpiler::generateTestShader()
             arguments[0] = "v0";
             arguments[1] = "'global'";
             arguments[2] = "'object'";
+        } else if (p.first == "lookup") {
+            arguments[0] = "'linear'";
+            for (size_t i = 1; i < def.Arguments.size(); ++i)
+                arguments[i] = "v" + std::to_string(i-1);
         } else {
             for (size_t i = 0; i < def.Arguments.size(); ++i)
                 arguments[i] = "v" + std::to_string(i);
