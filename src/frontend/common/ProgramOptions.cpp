@@ -76,6 +76,30 @@ public:
     }
 };
 
+static void handleListPExprVariables()
+{
+    std::cout << Transpiler::availableVariables() << std::endl;
+}
+
+static void handleListPExprFunctions()
+{
+    std::cout << Transpiler::availableFunctions() << std::endl;
+}
+
+static void handleListCLIOptions(const CLI::App& app)
+{
+    const auto options = app.get_options();
+    for (auto option : options) {
+        const auto shortNames = option->get_snames();
+        for (const auto& s : shortNames)
+            std::cout << "-" << s << std::endl;
+
+        const auto longNames = option->get_lnames();
+        for (const auto& s : longNames)
+            std::cout << "--" << s << std::endl;
+    }
+}
+
 ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, const std::string& desc)
 {
     bool useCPU        = false;
@@ -178,28 +202,33 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     grp->add_flag("--list-pexpr-functions", listPExprFunctions);
     grp->add_flag("--list-cli-options", listCLI);
 
+    auto handleHiddenExtras = [&]() {
+        if (listPExprVariables) {
+            handleListPExprVariables();
+            ShouldExit = true;
+        }
+        if (listPExprFunctions) {
+            handleListPExprFunctions();
+            ShouldExit = true;
+        }
+        if (listCLI) {
+            handleListCLIOptions(app);
+            ShouldExit = true;
+        }
+    };
+
     try {
         app.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
-        app.exit(e);
+        handleHiddenExtras();
+        if (!ShouldExit) // If true, exit is already handled
+            app.exit(e);
         ShouldExit = true;
         return;
     }
 
     // Handle hidden options
-    if (listPExprVariables) {
-        std::cout << Transpiler::availableVariables() << std::endl;
-        ShouldExit = true;
-    }
-    if (listPExprFunctions) {
-        std::cout << Transpiler::availableFunctions() << std::endl;
-        ShouldExit = true;
-    }
-    if (listCLI) {
-        // TODO
-        ShouldExit = true;
-    }
-
+    handleHiddenExtras();
     if (ShouldExit)
         return;
 
