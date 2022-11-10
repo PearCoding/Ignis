@@ -169,6 +169,7 @@ set(SRC
   shape/ShapeProvider.h
   shape/SphereProvider.cpp
   shape/SphereProvider.h
+  shape/SphereShape.h
   shape/TriMeshProvider.cpp
   shape/TriMeshProvider.h
   shape/TriShape.h

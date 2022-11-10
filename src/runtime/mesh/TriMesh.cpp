@@ -396,6 +396,70 @@ std::optional<PlaneShape> TriMesh::getAsPlane() const
     return shape;
 }
 
+std::optional<SphereShape> TriMesh::getAsSphere() const
+{
+    constexpr float SphereEPS = 1e-5f;
+
+    // A sphere requires a sufficient amount of resolution. We pick some empirical value
+    if (faceCount() < 32)
+        return std::nullopt;
+
+    const BoundingBox bbox = computeBBox();
+    const Vector3f origin  = bbox.center();
+
+    // Should not be a flat
+    if (bbox.volume() <= SphereEPS)
+        return std::nullopt;
+
+    // Check if it is symmetric
+    const float wh = std::abs(bbox.diameter().x() - bbox.diameter().y());
+    const float wd = std::abs(bbox.diameter().x() - bbox.diameter().z());
+    const float hd = std::abs(bbox.diameter().y() - bbox.diameter().z());
+    if (wh > SphereEPS || wd > SphereEPS || hd > SphereEPS)
+        return std::nullopt;
+
+    // Compute squared radius from first vertex
+    const float radius2 = (origin - vertices.at(0)).squaredNorm();
+    if (radius2 <= SphereEPS) // Points are not spheres... at least not here
+        return std::nullopt;
+
+    // Check if all vertices are spread around the origin by the given radius
+    for (size_t i = 1; i < vertices.size(); ++i) {
+        const float r2 = (origin - vertices.at(i)).squaredNorm();
+        if (std::abs(r2 - radius2) > SphereEPS)
+            return std::nullopt;
+    }
+
+    // Make sure all sides have geometry present. This is not a perfect solution, but a huge improvement nevertheless
+    std::array<bool, 8> sectors;
+    std::fill(sectors.begin(), sectors.end(), false);
+    for (const auto& v : vertices) {
+        const Vector3f d = origin - v;
+
+        size_t id = 0;
+        if (d.x() < 0)
+            id |= 0x1;
+        if (d.y() < 0)
+            id |= 0x2;
+        if (d.z() < 0)
+            id |= 0x4;
+
+        sectors[id] = true;
+    }
+    for (bool b : sectors) {
+        if (!b)
+            return std::nullopt;
+    }
+
+    // Construct approximative shape
+    SphereShape shape;
+    shape.Origin = origin;
+    shape.Radius = std::sqrt(radius2);
+
+    // The given sphere is only approximative. Texture coordinates are ignored and actual face connectivities (indices) are also neglected
+    return shape;
+}
+
 inline static void addTriangle(TriMesh& mesh, const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis, uint32 off)
 {
     constexpr uint32 M = 0;
