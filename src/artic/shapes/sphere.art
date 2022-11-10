@@ -17,6 +17,21 @@ struct Sphere {
     radius: f32
 }
 
+fn @sphere_compute_surface_element_for_normal(normal: Vec3, sphere: Sphere) {
+    let area  = 4 * flt_pi * sphere.radius * sphere.radius;
+    let point = vec3_add(sphere.origin, vec3_mulf(normal, sphere.radius));
+    let uv    = sphere_map_uv(normal);
+    SurfaceElement {
+        is_entering = true,
+        point       = point,
+        face_normal = normal,
+        inv_area    = 1 / area,
+        prim_coords = uv,
+        tex_coords  = uv,
+        local       = make_orthonormal_mat3x3(normal)
+    }
+}
+
 // Creates a geometry object from a triangle mesh definition
 fn @make_sphere_shape(sphere: Sphere) -> Shape {
     let area = 4 * flt_pi * sphere.radius * sphere.radius;
@@ -42,16 +57,7 @@ fn @make_sphere_shape(sphere: Sphere) -> Shape {
         surface_element_for_point = @ |_, prim_coords| {
             // TODO: Cross-check with surface_element if result is same for same input
             let normal = sphere_unmap_uv(prim_coords);
-            let point  = vec3_add(sphere.origin, vec3_mulf(normal, sphere.radius));
-            SurfaceElement {
-                is_entering = true,
-                point       = point,
-                face_normal = normal,
-                inv_area    = 1 / area,
-                prim_coords = prim_coords,
-                tex_coords  = prim_coords,
-                local       = make_orthonormal_mat3x3(normal)
-            }
+            sphere_compute_surface_element_for_normal(normal, sphere)
         },
         local_bbox = make_centered_bbox(sphere.origin, vec3_expand(2*sphere.radius))
     }

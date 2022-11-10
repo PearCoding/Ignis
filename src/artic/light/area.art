@@ -45,9 +45,8 @@ fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
 fn @make_shape_area_emitter(entity: Entity, shape: Shape, mesh: TriMesh) -> AreaEmitter {
     fn @sample(uv: Vec2) {
         let ux     = uv.x * (mesh.num_tris as f32);
-        let f      = ux as i32;
-        let uv2    = make_vec2(ux - (f as f32), uv.y);
-        let (u, v) = sample_triangle(uv2.x, uv2.y);
+        let f      = min(ux as i32, mesh.num_tris - 1);
+        let (u, v) = sample_triangle(ux - (f as f32), uv.y);
 
         let surf   = shape.surface_element_for_point(f, make_vec2(u, v));
         let t_surf = map_surface_element(surf, entity.global_mat, entity.normal_mat);
@@ -57,9 +56,8 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape, mesh: TriMesh) -> Area
 
     fn @pdf(uv: Vec2) {
         let ux     = uv.x * (mesh.num_tris as f32);
-        let f      = ux as i32;
-        let uv2    = make_vec2(ux - (f as f32), uv.y);
-        let (u, v) = sample_triangle(uv2.x, uv2.y);
+        let f      = min(ux as i32, mesh.num_tris - 1);
+        let (u, v) = sample_triangle(ux - (f as f32), uv.y);
 
         let surf   = shape.surface_element_for_point(f, make_vec2(u, v));
         let t_surf = map_surface_element(surf, entity.global_mat, entity.normal_mat);
@@ -236,11 +234,10 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
 fn @make_sphere_area_emitter(sphere: Sphere) -> AreaEmitter {
     let area   = 4 * flt_pi * sphere.radius * sphere.radius;
     let origin = sphere.origin;
-    let shape  = make_sphere_shape(sphere);
 
     fn @sample_direct(uv: Vec2, from_point: Vec3) {
         // Sampler which makes sure the point lies on the visible side of the sphere
-        let surf = shape.surface_element_for_point(0, uv);
+        let surf = sphere_compute_surface_element_for_normal(equal_area_square_to_sphere(uv), sphere);
 
         let p  = surf.point;
         let os = vec3_sub(from_point, origin);
@@ -258,17 +255,14 @@ fn @make_sphere_area_emitter(sphere: Sphere) -> AreaEmitter {
             let np = vec3_sub(p, vec3_mulf(op, 2)); 
 
             // Compute normal, which is necessary for the other attributes
-            let norm = vec3_normalize(vec3_sub(np, origin));
-            let nuv = sphere_map_uv(norm);
-
-            // Get surface
-            let nsurf = shape.surface_element_for_point(0, nuv);
+            let norm  = vec3_normalize(vec3_sub(np, origin));
+            let nsurf = sphere_compute_surface_element_for_normal(norm, sphere);
             (nsurf, make_area_pdf(2 / area), area / 2)
         }
     }
 
     fn @sample_emission(uv: Vec2) {
-        let surf = shape.surface_element_for_point(0, uv);
+        let surf = sphere_compute_surface_element_for_normal(equal_area_square_to_sphere(uv), sphere);
         (surf, 1/area)
     }
 
@@ -283,12 +277,9 @@ fn @make_sphere_area_emitter(sphere: Sphere) -> AreaEmitter {
     AreaEmitter {
         sample_direct   = sample_direct,
         sample_emission = sample_emission,
-        normal = @ |uv| {
-            let surf = shape.surface_element_for_point(0, uv);
-            surf.face_normal
-        },
-        pdf_direct   = pdf_direct,
-        pdf_emission = pdf_emission
+        normal          = @ |uv| equal_area_square_to_sphere(uv),
+        pdf_direct      = pdf_direct,
+        pdf_emission    = pdf_emission
     }
 }
 
