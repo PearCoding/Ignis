@@ -173,6 +173,27 @@ void TriMesh::makeTexCoordsZero()
     std::fill(texcoords.begin(), texcoords.end(), Vector2f::Zero());
 }
 
+void TriMesh::makeTexCoordsNormalized()
+{
+    texcoords.resize(vertices.size());
+
+    BoundingBox bbox = computeBBox();
+
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        const auto& v    = vertices.at(i);
+        const Vector3f t = (v - bbox.min).cwiseQuotient(bbox.diameter());
+        texcoords[i]     = StVector2f(t[0], t[1]); // Drop the z coordinate
+    }
+}
+
+BoundingBox TriMesh::computeBBox() const
+{
+    BoundingBox bbox = BoundingBox::Empty();
+    for (const auto& v : vertices)
+        bbox.extend(v);
+    return bbox;
+}
+
 void TriMesh::setupFaceNormalsAsVertexNormals()
 {
     // Copy triangle vertices such that each face is unique

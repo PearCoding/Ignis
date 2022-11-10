@@ -202,7 +202,7 @@ TriMesh load(const std::filesystem::path& path, const std::optional<size_t>& sha
     // Texcoords
     if (!has_tex) {
         IG_LOG(L_INFO) << "ObjFile " << path << ": No texture coordinates are present, using default value." << std::endl;
-        tri_mesh.makeTexCoordsZero();
+        tri_mesh.makeTexCoordsNormalized();
     }
 
     tri_mesh.vertices.shrink_to_fit();

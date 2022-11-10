@@ -251,9 +251,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
         mesh.transform(elem.property("transform").getTransform());
 
     // Build bounding box
-    BoundingBox bbox = BoundingBox::Empty();
-    for (const auto& v : mesh.vertices)
-        bbox.extend(v);
+    BoundingBox bbox = mesh.computeBBox();
     bbox.inflate(1e-5f); // Make sure it has a volume
 
     IG_ASSERT(mesh.face_normals.size() == mesh.faceCount(), "Expected valid face normals!");

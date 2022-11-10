@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shape/PlaneShape.h"
+#include "math/BoundingBox.h"
 
 namespace IG {
 
@@ -31,8 +32,11 @@ struct TriMesh {
     void computeFaceNormals(bool* hasBadAreas = nullptr);
     void computeVertexNormals();
     void makeTexCoordsZero();
+    void makeTexCoordsNormalized();
     void setupFaceNormalsAsVertexNormals();
+
     [[nodiscard]] float computeArea() const;
+    [[nodiscard]] BoundingBox computeBBox() const;
 
     void transform(const Transformf& t);
 
