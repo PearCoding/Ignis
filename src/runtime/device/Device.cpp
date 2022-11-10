@@ -312,12 +312,14 @@ public:
 
     inline void setupThreadData()
     {
+        thread_data.clear();
         if (is_gpu) {
             tlThreadData = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
         } else {
             const size_t req_threads = setup.target.threadCount() == 0 ? std::thread::hardware_concurrency() : setup.target.threadCount();
             const size_t max_threads = req_threads + 1 /* Host */;
 
+            available_thread_data.clear();
             for (size_t t = 0; t < max_threads; ++t) {
                 CPUData* ptr = thread_data.emplace_back(std::make_unique<CPUData>()).get();
                 available_thread_data.push(ptr);

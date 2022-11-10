@@ -3,6 +3,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "Image.h"
 #include "Logger.h"
 #include "Runtime.h"
 
@@ -120,7 +121,6 @@ PYBIND11_MODULE(pyignis, m)
         .value("Nvidia", GPUVendor::Nvidia)
         .value("Unknown", GPUVendor::Unknown);
 
-    // TODO: Add missing functions, etc
     py::class_<Target>(m, "Target")
         .def(py::init([]() { return Target(); }))
         .def_property_readonly("IsValid", &Target::isValid)
@@ -139,7 +139,7 @@ PYBIND11_MODULE(pyignis, m)
         .def_static("makeGPU", &Target::makeGPU)
         .def_static("pickBest", &Target::pickBest)
         .def_static("pickCPU", &Target::pickCPU)
-        .def_static("pickGPU", &Target::pickGPU);
+        .def_static("pickGPU", &Target::pickGPU, py::arg("device") = 0);
 
     py::class_<RuntimeOptions>(m, "RuntimeOptions")
         .def(py::init([]() { return RuntimeOptions(); }))
@@ -217,4 +217,26 @@ PYBIND11_MODULE(pyignis, m)
     m.def("loadFromFile", [](const std::string& path, const RuntimeOptions& opts) { return RuntimeWrap(opts, std::string{}, path); });
     m.def("loadFromString", [](const std::string& str) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, std::string{}); });
     m.def("loadFromString", [](const std::string& str, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, std::string{}); });
+    m.def("saveExr", [](const std::string& path, py::buffer b) {
+        py::buffer_info info = b.request();
+
+        /* Some basic validation checks ... */
+        if (info.format != py::format_descriptor<float>::format())
+            throw std::runtime_error("Incompatible buffer: Expected a float array!");
+
+        if (info.ndim != 2 && info.ndim != 3)
+            throw std::runtime_error("Incompatible buffer: Expected two dimensional or three dimensional buffer");
+
+        pybind11::ssize_t width    = info.shape[0];
+        pybind11::ssize_t height   = info.shape[1];
+        pybind11::ssize_t channels = info.ndim == 3 ? info.shape[2] : 1;
+
+        if (width <= 0 || height <= 0)
+            throw std::runtime_error("Incompatible buffer: Expected valid buffer dimensions");
+
+        if (channels != 1 && channels != 3 && channels != 4)
+            throw std::runtime_error("Incompatible buffer: Only 1, 3 or 4 channels supported");
+
+        return Image::save(path, (const float*)info.ptr, width, height, channels);
+    });
 }
