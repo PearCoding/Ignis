@@ -10,7 +10,7 @@ public:
     AreaLight(const std::string& name, const LoaderContext& ctx, const std::shared_ptr<Parser::Object>& light);
 
     virtual std::optional<Vector3f> position() const override { return mPosition; }
-    virtual std::optional<Vector3f> direction() const override { return mOptimized ? std::make_optional(mDirection) : std::nullopt; }
+    virtual std::optional<Vector3f> direction() const override { return mRepresentation == RepresentationType::Plane ? std::make_optional(mDirection) : std::nullopt; }
     virtual std::optional<std::string> entity() const override { return mEntity; }
     virtual float computeFlux(const ShadingTree&) const override;
 
@@ -25,7 +25,12 @@ private:
     float mArea;
     std::string mEntity;
 
-    bool mOptimized;
+    enum class RepresentationType {
+        None,
+        Plane,
+        Sphere
+    };
+    RepresentationType mRepresentation;
     std::shared_ptr<Parser::Object> mLight;
 };
 } // namespace IG

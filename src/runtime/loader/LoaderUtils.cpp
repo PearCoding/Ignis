@@ -31,7 +31,6 @@ std::string LoaderUtils::inlineEntity(const Entity& entity, uint32 shapeID)
            << ", local_mat = " << LoaderUtils::inlineMatrix34(localMat)
            << ", global_mat = " << LoaderUtils::inlineMatrix34(globalMat)
            << ", normal_mat = " << LoaderUtils::inlineMatrix(normalMat)
-           << ", scale = " << std::abs(normalMat.determinant())
            << ", shape_id = " << shapeID << " }";
     return stream.str();
 }
