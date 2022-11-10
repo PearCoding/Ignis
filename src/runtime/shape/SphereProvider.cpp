@@ -46,7 +46,9 @@ void SphereProvider::handle(LoaderContext& ctx, LoaderResult& result, const std:
     VectorSerializer serializer(data, false);
     serializer.write(origin);
     serializer.write(radius);
-    ctx.Shapes->addShape(name, Shape{ this, 0, 0, 0, bbox, offset });
+    const uint32 id = ctx.Shapes->addShape(name, Shape{ this, 0, 0, 0, bbox, offset });
+
+    ctx.Shapes->addSphereShape(id, SphereShape{ origin, radius });
 
     result.DatabaseAccessMutex.unlock();
 }

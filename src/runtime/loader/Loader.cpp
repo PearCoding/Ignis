@@ -61,6 +61,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->shapeCount() << " shapes" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->triShapeCount() << " triangular shapes" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->planeShapeCount() << " shapes which are approximative planar" << std::endl;
+    IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->sphereShapeCount() << " shapes which are approximative spherical" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Entities->entityCount() << " entities" << std::endl;
 
     result.Database.MaterialCount = ctx.Environment.Materials.size();

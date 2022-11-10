@@ -267,8 +267,9 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
         bvh_offset = setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);
     }
 
-    // Precompute if plane or not
-    const auto plane = mesh.getAsPlane();
+    // Precompute approximative shapes outside the lock region
+    const std::optional<PlaneShape> plane   = mesh.getAsPlane();
+    const std::optional<SphereShape> sphere = plane.has_value() ? std::nullopt : mesh.getAsSphere();
 
     // Setup internal shape object
     TriShape trishape;
@@ -312,8 +313,13 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     IG_ASSERT(id + 1 == table.entryCount(), "Expected id to be in sync with dyntable entry count");
 
     // Check if shape is actually just a simple plane
-    if (plane.has_value())
+    if (plane.has_value()) {
         ctx.Shapes->addPlaneShape(id, plane.value());
+    } else {
+        // If not a plane, it might be a simple sphere
+        if (sphere.has_value())
+            ctx.Shapes->addSphereShape(id, sphere.value());
+    }
 
     // Add internal shape structure to table for potential area light usage
     ctx.Shapes->addTriShape(id, trishape);

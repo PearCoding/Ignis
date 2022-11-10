@@ -150,4 +150,10 @@ void LoaderShape::addPlaneShape(uint32 id, const PlaneShape& shape)
     const std::lock_guard<std::mutex> lock(mAccessMutex);
     mPlaneShapes[id] = shape;
 }
+
+void LoaderShape::addSphereShape(uint32 id, const SphereShape& shape)
+{
+    const std::lock_guard<std::mutex> lock(mAccessMutex);
+    mSphereShapes[id] = shape;
+}
 } // namespace IG
