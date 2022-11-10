@@ -54,6 +54,10 @@ if __name__ == "__main__":
         ("multilight-simple", "multilight", 4),
         ("multilight-hierarchy", "multilight", 4),
         ("point", None, 4),
+        ("sphere-light-ico", "sphere-light", 4),
+        ("sphere-light-ico-nopt", "sphere-light", 4),
+        ("sphere-light-uv", "sphere-light", 4),
+        ("sphere-light-pure", "sphere-light", 4),
     ]
 
     image_names = [f"{scene}4096-d{depth}" for (scene, _, depth) in scenes]
@@ -69,7 +73,7 @@ if __name__ == "__main__":
     i = 0
     for scene, ref_name, depth in scenes:
         image_name = f"{scene}4096-d{depth}"
-        image_cpu_name = f"{scene}4096-cpu-d{depth}"
+        image_cpu_name = f"{scene}4096-d{depth}-cpu"
         ref_name = "ref-" + (image_name if ref_name is None else f"{ref_name}4096-d{depth}")
 
         img = sio.read(f"{result_dir}/{image_name}.exr")
@@ -92,6 +96,7 @@ if __name__ == "__main__":
         "left", [f"{scene}-d{depth}" for (scene, _, depth) in scenes])
     grid.set_row_titles("right", [f"RelMSE (GPU,CPU)\\\\ {err:.2E} | {cerr:.2E}" for err, cerr in zip(errors, cpu_errors)])
     grid.layout.set_row_titles("right", field_size_mm=10, fontsize=6)
+    grid.layout.set_row_titles("left", field_size_mm=8, fontsize=6)
 
     rows = []
     rows.append([title])

@@ -181,8 +181,16 @@ void TriMesh::makeTexCoordsNormalized()
 
     for (size_t i = 0; i < vertices.size(); ++i) {
         const auto& v    = vertices.at(i);
-        const Vector3f t = (v - bbox.min).cwiseQuotient(bbox.diameter());
-        texcoords[i]     = StVector2f(t[0], t[1]); // Drop the z coordinate
+        const Vector3f d = bbox.diameter();
+        const Vector3f t = v - bbox.min;
+
+        StVector2f p = StVector2f::Zero();
+        if (d.x() > FltEps)
+            p.x() = t.x() / d.x();
+        if (d.y() > FltEps)
+            p.y() = t.y() / d.y();
+
+        texcoords[i] = p; // Drop the z coordinate
     }
 }
 

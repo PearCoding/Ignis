@@ -1,0 +1,11 @@
+{
+  "shapes": [
+    {
+      "name": "Sphere",
+      "type": "icosphere"
+    }
+  ],
+  "externals": [
+    {"filename": "sphere-light-base.json"}
+  ]
+}
