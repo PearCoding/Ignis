@@ -5,7 +5,7 @@
 
 namespace IG {
 class ShadingTree;
-class Transpiler {
+class IG_LIB Transpiler {
     friend class TranspilerInternal;
 
 public:
