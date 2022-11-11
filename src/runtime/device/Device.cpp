@@ -119,6 +119,7 @@ using DeviceBuffer = DeviceBufferBase<uint8_t>;
 using DeviceStream = DeviceBufferBase<float>;
 
 struct CPUData {
+    size_t ref_count = 0;
     DeviceStream cpu_primary;
     DeviceStream cpu_secondary;
     TemporaryStorageHostProxy temporary_storage_host;
@@ -314,7 +315,8 @@ public:
     {
         thread_data.clear();
         if (is_gpu) {
-            tlThreadData = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
+            tlThreadData            = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
+            tlThreadData->ref_count = 1;
         } else {
             const size_t req_threads = setup.target.threadCount() == 0 ? std::thread::hardware_concurrency() : setup.target.threadCount();
             const size_t max_threads = req_threads + 1 /* Host */;
@@ -363,26 +365,37 @@ public:
 
     inline void registerThread()
     {
-        if (is_gpu || tlThreadData != nullptr)
+        if (is_gpu)
             return;
 
-        CPUData* ptr = nullptr;
-        while (!available_thread_data.try_pop(ptr))
-            std::this_thread::yield();
+        if (tlThreadData == nullptr) {
+            CPUData* ptr = nullptr;
+            while (!available_thread_data.try_pop(ptr))
+                std::this_thread::yield();
 
-        if (ptr == nullptr)
-            IG_LOG(L_FATAL) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " failed!" << std::endl;
-        else
-            tlThreadData = ptr;
+            if (ptr == nullptr)
+                IG_LOG(L_FATAL) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " failed!" << std::endl;
+            else
+                tlThreadData = ptr;
+        }
+
+        tlThreadData->ref_count += 1;
     }
 
     inline void unregisterThread()
     {
-        if (is_gpu || tlThreadData == nullptr)
+        if (is_gpu)
             return;
 
-        available_thread_data.push(tlThreadData);
-        tlThreadData = nullptr;
+        IG_ASSERT(tlThreadData != nullptr, "Expected registerThread together with a unregisterThread");
+
+        if (tlThreadData->ref_count <= 1) {
+            tlThreadData->ref_count = 0;
+            available_thread_data.push(tlThreadData);
+            tlThreadData = nullptr;
+        } else {
+            tlThreadData->ref_count -= 1;
+        }
     }
 
     inline CPUData* getThreadData()
