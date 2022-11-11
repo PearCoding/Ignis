@@ -40,7 +40,7 @@
 	],
 	"entities": [
 		{"name":"Floor","shape":"Floor", "bsdf":"mat-Floor"},
-		{"name":"Plane","shape":"Plane", "bsdf":"mat-Plane", "transform": {"rotate": [0,0,45], "translate": [0,0,2]}}
+		{"name":"Plane","shape":"Plane", "bsdf":"mat-Plane", "transform": [{"rotate": [0,0,45]}, {"translate": [0,0,2]}]}
 	],
 	"lights": [
 		{"type":"env", "name":"Sky", "radiance": "env", "transform": [1,0,0, 0,0,1, 0,1,0]}

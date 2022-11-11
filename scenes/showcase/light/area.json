@@ -9,7 +9,7 @@
 		{"type":"rectangle", "name":"Plane", "width":1, "height":1}
 	],
 	"entities": [
-		{"name":"Plane","shape":"Plane", "bsdf": "mat-Plane", "transform": {"translate": [2, 2, 0], "rotate": [0, -90, 0], "rotate": [45, 0, 0]}}
+		{"name":"Plane","shape":"Plane", "bsdf": "mat-Plane", "transform": [{"translate": [2, 2, 0]}, {"rotate": [0, -90, 0]}, {"rotate": [45, 0, 0]}]}
 	],
 	"lights": [
 		{"type":"area", "name":"Light", "entity": "Plane"}

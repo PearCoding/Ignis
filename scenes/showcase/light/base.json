@@ -9,7 +9,7 @@
 		"fov": 40,
 		"near_clip": 0.1,
 		"far_clip": 100,
-		"transform": {"lookat": { "origin": [ 0,2,-7 ], "target": [0,1,0], "up": [0,1,0] } }
+		"transform": [{"lookat": { "origin": [ 0,2,-7 ], "target": [0,1,0], "up": [0,1,0] } }]
 	},
 	"film": {
 		"size": [1000, 1000]

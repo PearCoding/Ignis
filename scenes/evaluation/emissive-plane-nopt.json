@@ -8,7 +8,7 @@
 		"fov": 90,
 		"near_clip": 0.01,
 		"far_clip": 100,
-		"transform": { "lookat": {"origin":[0, 0, -2], "direction": [0,0,1], "up":[0,1,0]} }
+		"transform": [{ "lookat": {"origin":[0, 0, -2], "direction": [0,0,1], "up":[0,1,0]} }]
   },
   "film": {
     "size": [256, 256]

@@ -12,6 +12,6 @@
 		{"type":"diffuse", "name": "mat-GrayWall", "reflectance":[1,1,1]} // Override
 	],
 	"entities": [
-		{"name":"Front","shape":"Back", "bsdf":"mat-GrayWall", "transform":{"translate":[0,0,2]}}
+		{"name":"Front","shape":"Back", "bsdf":"mat-GrayWall", "transform":[{"translate":[0,0,2]}]}
 	]
 }

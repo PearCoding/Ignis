@@ -8,7 +8,7 @@
 		"mode": "full",
 		"near_clip": 0.1,
 		"far_clip": 100,
-		"transform": {"lookat": {"direction":[0,1,0]}}
+		"transform": [{"lookat": {"direction":[0,1,0]}}]
 	},
 	"film": {
 		"size": [1000, 1000]

@@ -22,7 +22,7 @@
 		{"type":"icosphere", "name":"IcoSphere"}
 	],
 	"entities": [
-		{"name":"Bottom","shape":"Bottom", "bsdf":"ground", "transform": {"translate":[0,0,-1]}},
+		{"name":"Bottom","shape":"Bottom", "bsdf":"ground", "transform": [{"translate":[0,0,-1]}]},
 		{"name":"IcoSphere","shape":"IcoSphere", "bsdf":"object"}
 	],
 	"lights": [

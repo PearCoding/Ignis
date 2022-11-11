@@ -8,7 +8,7 @@
 		"fov": 60,
 		"near_clip": 0.1,
 		"far_clip": 100,
-		"transform": {"translate": [5,-5,0], "rotate": [ 90, -125, 0]},
+		"transform": [{"translate": [5,-5,0]}, {"rotate": [ 90, -125, 0]}],
 		"aperture_radius": 0.1,
 		"focal_length": 7
 	},
@@ -43,12 +43,12 @@
 		{"type":"sphere", "name":"Sphere"}
 	],
 	"entities": [
-		{"name":"Ground","shape":"Ground", "bsdf":"mat-Ground", "transform":{"translate":[0,0,-1]}},
-		{"name":"Sphere1","shape":"Sphere", "bsdf":"mat-Sphere1", "transform":{"translate":[0,4,0]}},
-		{"name":"Sphere2","shape":"Sphere", "bsdf":"mat-Sphere2", "transform":{"translate":[0,2,0]}},
-		{"name":"Sphere3","shape":"Sphere", "bsdf":"mat-Sphere3", "transform":{"translate":[0,0,0]}},
-		{"name":"Sphere4","shape":"Sphere", "bsdf":"mat-Sphere4", "transform":{"translate":[0,-2,0]}},
-		{"name":"Sphere5","shape":"Sphere", "bsdf":"mat-Sphere5", "transform":{"translate":[0,-4,0]}}
+		{"name":"Ground","shape":"Ground", "bsdf":"mat-Ground", "transform":[{"translate":[0,0,-1]}]},
+		{"name":"Sphere1","shape":"Sphere", "bsdf":"mat-Sphere1", "transform":[{"translate":[0,4,0]}]},
+		{"name":"Sphere2","shape":"Sphere", "bsdf":"mat-Sphere2", "transform":[{"translate":[0,2,0]}]},
+		{"name":"Sphere3","shape":"Sphere", "bsdf":"mat-Sphere3", "transform":[{"translate":[0,0,0]}]},
+		{"name":"Sphere4","shape":"Sphere", "bsdf":"mat-Sphere4", "transform":[{"translate":[0,-2,0]}]},
+		{"name":"Sphere5","shape":"Sphere", "bsdf":"mat-Sphere5", "transform":[{"translate":[0,-4,0]}]}
 	],
 	"lights": [
 		{"type":"env", "name":"Environment", "radiance":"env", "transform": [1,0,0, 0,0,1, 0,1,0]}
