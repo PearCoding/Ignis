@@ -456,9 +456,7 @@ std::filesystem::path LoaderLight::generateLightSelectionCDF(ShadingTree& tree)
     std::string path = "data/light_cdf.bin";
 
     std::vector<float> estimated_powers;
-    estimated_powers.reserve(lightCount());
-    for (const auto& light : mInfiniteLights)
-        estimated_powers.push_back(light->computeFlux(tree));
+    estimated_powers.reserve(mFiniteLights.size());
     for (const auto& light : mFiniteLights)
         estimated_powers.push_back(light->computeFlux(tree));
 

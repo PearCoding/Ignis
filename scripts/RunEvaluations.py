@@ -193,19 +193,26 @@ if __name__ == '__main__':
                         help="Disable gpu evaluation")
     parser.add_argument('--no-cpu', action="store_true",
                         help="Disable cpu evaluation")
-    parser.add_argument('--only-figure', action="store_true",
-                        help="Only generate figure and do not rerun evaluations")
+    parser.add_argument('--only-summary', action="store_true",
+                        help="Only generate summary and do not rerun evaluations")
     parser.add_argument('--spp', type=int, default=1024,
                         help="Number of samples to acquire for evaluations")
     parser.add_argument('--reference_dir', type=Path, default=ref_dir,
                         help="Path to directory containing references")
     parser.add_argument("-f", "--filter", type=str,
                         help="Filter scene names and only include matching patterns")
+    parser.add_argument('--verbose', action="store_true",
+                        help="Set logging verbosity to debug")
+    parser.add_argument('--quiet', action="store_true",
+                        help="Make logging quiet")
 
     args = parser.parse_args()
     os.makedirs(args.OutputDir, exist_ok=True)
 
     ignis = load_api()
+    ignis.setVerbose(args.verbose)
+    ignis.setQuiet(args.quiet)
+
     root_dir = get_root_dir()
     print(f"Evaluating Ignis {ignis.__version__} in {root_dir}")
 
@@ -224,7 +231,7 @@ if __name__ == '__main__':
         print("No scenes available. Maybe reset filter if used?")
         exit()
 
-    if not args.only_figure:
+    if not args.only_summary:
         for scene in scenes:
             print(f"Evaluating {scene}")
             evaluate(ignis, scene, args)
