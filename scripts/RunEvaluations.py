@@ -32,7 +32,7 @@ def evaluate_target(ignis, scene_file, spp, target):
 
 def evaluate(ignis, scene_file, spp):
     evaluate_target(ignis, scene_file, spp, "gpu")
-    # evaluate_target(ignis, scene_file, spp, "cpu")
+    evaluate_target(ignis, scene_file, spp, "cpu")
 
 
 if __name__ == '__main__':

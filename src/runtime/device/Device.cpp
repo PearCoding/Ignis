@@ -313,6 +313,7 @@ public:
 
     inline void setupThreadData()
     {
+        tlThreadData = nullptr;
         thread_data.clear();
         if (is_gpu) {
             tlThreadData            = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
@@ -377,6 +378,8 @@ public:
                 IG_LOG(L_FATAL) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " failed!" << std::endl;
             else
                 tlThreadData = ptr;
+
+            tlThreadData->ref_count = 0;
         }
 
         tlThreadData->ref_count += 1;
