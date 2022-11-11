@@ -363,11 +363,6 @@ TriMesh load(const std::filesystem::path& path)
     //     IG_LOG(L_WARNING) << "PlyFile " << path << ": Removed " << removedBadAreas << " triangles with zero area" << std::endl;
 
     // Normals
-    bool hasBadAreas = false;
-    tri_mesh.computeFaceNormals(&hasBadAreas);
-    // if (hasBadAreas)
-    //     IG_LOG(L_WARNING) << "PlyFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
-
     if (tri_mesh.normals.empty()) {
         IG_LOG(L_INFO) << "PlyFile " << path << ": No normals are present, computing smooth approximation." << std::endl;
         tri_mesh.computeVertexNormals();

@@ -281,8 +281,6 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
     tri_mesh.vertices.resize(vertexCount);
     tri_mesh.normals.resize(vertexCount);
     tri_mesh.texcoords.resize(vertexCount);
-    tri_mesh.face_normals.resize(triCount);
-    tri_mesh.face_inv_area.resize(triCount);
     tri_mesh.indices.resize(triCount * 4);
 
     if (mesh_flags & MF_DOUBLE)
@@ -302,11 +300,6 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
     //     IG_LOG(L_WARNING) << "MtsFile " << path << ": Removed " << removedBadAreas << " triangles with zero area" << std::endl;
 
     // Normals
-    bool hasBadAreas = false;
-    tri_mesh.computeFaceNormals(&hasBadAreas);
-    // if (hasBadAreas) // Should always be zero
-    //     IG_LOG(L_WARNING) << "MtsFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
-
     if (!(mesh_flags & MF_VERTEXNORMALS)) {
         IG_LOG(L_INFO) << "MtsFile " << path << ": No normals are present, computing smooth approximation." << std::endl;
         tri_mesh.computeVertexNormals();

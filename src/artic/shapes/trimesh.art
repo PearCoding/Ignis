@@ -1,36 +1,34 @@
 // Triangle mesh with per-vertex/per-face attributes
 struct TriMesh {
-    vertices:      fn (i32) -> Vec3,
-    normals:       fn (i32) -> Vec3,
-    face_normals:  fn (i32) -> Vec3,
-    face_inv_area: fn (i32) -> f32,
-    triangles:     fn (i32) -> (i32, i32, i32),
-    tex_coords:    fn (i32) -> Vec2,
-    num_tris:      i32,
-    bbox:          BBox
+    vertices:   fn (i32) -> Vec3,
+    normals:    fn (i32) -> Vec3,
+    triangles:  fn (i32) -> (i32, i32, i32),
+    tex_coords: fn (i32) -> Vec2,
+    num_tris:   i32,
+    bbox:       BBox
 }
 
 // Creates a geometry object from a triangle mesh definition
 fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
     Shape {
-        surface_element = @ |local_ray, hit| {
+        surface_element = @ |ray, hit, pmset| {
             let f_tris = tri_mesh.triangles;
+            let f_v    = tri_mesh.vertices;
             let f_n    = tri_mesh.normals;
-            let f_fn   = tri_mesh.face_normals;
-            let f_fia  = tri_mesh.face_inv_area;
             let f_tx   = tri_mesh.tex_coords;
 
             let (i0, i1, i2) = @f_tris(hit.prim_id);
 
-            let face_normal = @f_fn(hit.prim_id);
-            let inv_area    = @f_fia(hit.prim_id);
-            let normal      = vec3_normalize(vec3_lerp2(@f_n(i0), @f_n(i1), @f_n(i2), hit.prim_coords.x, hit.prim_coords.y));
-            let is_entering = vec3_dot(local_ray.dir, face_normal) <= 0;
+            let tri         = make_triangle(pmset.to_global_point(@f_v(i0)), pmset.to_global_point(@f_v(i1)), pmset.to_global_point(@f_v(i2)));
+            let face_normal = tri.n;
+            let inv_area    = 1 / tri.area;
+            let normal      = vec3_normalize(pmset.to_global_normal(vec3_lerp2(@f_n(i0), @f_n(i1), @f_n(i2), hit.prim_coords.x, hit.prim_coords.y)));
+            let is_entering = vec3_dot(ray.dir, face_normal) <= 0;
             let tex_coords  = vec2_lerp2(@f_tx(i0), @f_tx(i1), @f_tx(i2), hit.prim_coords.x, hit.prim_coords.y);
 
             SurfaceElement {
                 is_entering = is_entering,
-                point       = vec3_add(local_ray.org, vec3_mulf(local_ray.dir, hit.distance)),
+                point       = vec3_add(ray.org, vec3_mulf(ray.dir, hit.distance)),
                 face_normal = if is_entering { face_normal } else { vec3_neg(face_normal) },
                 inv_area    = inv_area,
                 prim_coords = hit.prim_coords,
@@ -38,20 +36,22 @@ fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
                 local       = make_orthonormal_mat3x3(if is_entering { normal } else { vec3_neg(normal) })
             }
         },
-        surface_element_for_point = @ |prim_id, prim_coords| {
+        surface_element_for_point = @ |prim_id, prim_coords, pmset| {
             let f_tris = tri_mesh.triangles;
             let f_v    = tri_mesh.vertices;
             let f_n    = tri_mesh.normals;
-            let f_fn   = tri_mesh.face_normals;
-            let f_fia  = tri_mesh.face_inv_area;
             let f_tx   = tri_mesh.tex_coords;
 
             let (i0, i1, i2) = @f_tris(prim_id);
 
-            let face_normal = @f_fn(prim_id);
-            let inv_area    = @f_fia(prim_id);
-            let point       = vec3_lerp2(@f_v(i0), @f_v(i1), @f_v(i2), prim_coords.x, prim_coords.y);
-            let normal      = vec3_normalize(vec3_lerp2(@f_n(i0), @f_n(i1), @f_n(i2), prim_coords.x, prim_coords.y));
+            let gv0         = pmset.to_global_point(@f_v(i0));
+            let gv1         = pmset.to_global_point(@f_v(i1));
+            let gv2         = pmset.to_global_point(@f_v(i2));
+            let tri         = make_triangle(gv0, gv1, gv2);
+            let face_normal = tri.n;
+            let inv_area    = 1 / tri.area;
+            let point       = vec3_lerp2(gv0, gv1, gv2, prim_coords.x, prim_coords.y);
+            let normal      = vec3_normalize(pmset.to_global_normal(vec3_lerp2(@f_n(i0), @f_n(i1), @f_n(i2), prim_coords.x, prim_coords.y)));
             let tex_coords  = vec2_lerp2(@f_tx(i0), @f_tx(i1), @f_tx(i2), prim_coords.x, prim_coords.y);
 
             SurfaceElement {
@@ -70,25 +70,21 @@ fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
 
 type TriMeshTable  = fn (i32) -> TriMesh;
 
-fn @make_trimesh_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, num_tex: i32, data: DeviceBuffer) -> TriMesh {
+fn @make_trimesh_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, _num_tex: i32, data: DeviceBuffer) -> TriMesh {
     let bbox = make_bbox(data.load_vec3(4), data.load_vec3(8));
 
     let v_start   = 12;
     let n_start   = v_start   + num_verts * 4;
-    let fn_start  = n_start   + num_norms * 4;
-    let ind_start = fn_start  + num_face  * 4;
+    let ind_start = n_start   + num_norms * 4;
     let tex_start = ind_start + num_face  * 4;
-    let fa_start  = tex_start + num_tex   * 2;
     
     TriMesh {
-        vertices      = @ |i:i32| data.load_vec3(v_start  + i*4),
-        normals       = @ |i:i32| data.load_vec3(n_start  + i*4),
-        face_normals  = @ |i:i32| data.load_vec3(fn_start + i*4),
-        face_inv_area = @ |i:i32| data.load_f32(fa_start  + i),
-        triangles     = @ |i:i32| { let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
-        tex_coords    = @ |i:i32| data.load_vec2(tex_start + i*2),
-        num_tris      = num_face,
-        bbox          = bbox
+        vertices   = @ |i:i32| data.load_vec3(v_start  + i*4),
+        normals    = @ |i:i32| data.load_vec3(n_start  + i*4),
+        triangles  = @ |i:i32| { let (i0,i1,i2,_) = data.load_int4(ind_start + i*4); (i0, i1, i2) },
+        tex_coords = @ |i:i32| data.load_vec2(tex_start + i*2),
+        num_tris   = num_face,
+        bbox       = bbox
     }
 }
 

@@ -117,11 +117,10 @@ void AreaLight::serialize(const SerializationInput& input) const
     } break;
     case RepresentationType::Sphere: {
         const auto& shape = input.Tree.context().Shapes->getSphereShape(entity.ShapeID);
-        Vector3f origin   = entity.Transform * shape.Origin;
-        float radius      = entity.Transform.linear().diagonal().cwiseAbs().maxCoeff() * shape.Radius; // TODO: Ignoring non-uniform scale
 
-        input.Stream << "  let ae_" << light_id << " = make_sphere_area_emitter(Sphere{ origin = " << LoaderUtils::inlineVector(origin)
-                     << ", radius = " << radius
+        input.Stream << "  let ae_" << light_id << " = make_sphere_area_emitter(" << LoaderUtils::inlineEntity(entity, entity.ShapeID)
+                     << ",  Sphere{ origin = " << LoaderUtils::inlineVector(shape.Origin)
+                     << ", radius = " << shape.Radius
                      << " });" << std::endl;
     } break;
     default:
@@ -215,13 +214,13 @@ void AreaLight::embed(const EmbedInput& input) const
     } break;
     case RepresentationType::Sphere: {
         const auto& shape = input.Tree.context().Shapes->getSphereShape(entity.ShapeID);
-        Vector3f origin   = entity.Transform * shape.Origin;
-        float radius      = entity.Transform.linear().diagonal().cwiseAbs().maxCoeff() * shape.Radius; // TODO: Ignoring non-uniform scale
 
-        input.Serializer.write(origin);                // +3 = 3
-        input.Serializer.write(radius);                // +1 = 4
-        input.Serializer.write(radiance);              // +3 = 7
-        input.Serializer.write((uint32)0 /*Padding*/); // +1 = 8
+        input.Serializer.write(localMat, true);  // +3x4 = 12
+        input.Serializer.write(globalMat, true); // +3x4 = 24
+        input.Serializer.write(normalMat, true); // +3x3 = 33
+        input.Serializer.write(shape.Origin);    // +3   = 36
+        input.Serializer.write(radiance);        // +3   = 39
+        input.Serializer.write(shape.Radius);    // +1   = 40
     } break;
     default:
     case RepresentationType::None:

@@ -5,6 +5,12 @@
 
 namespace IG {
 
+/// Returns unnormalized normal for a given triangle
+static inline Vector3f computeTriangleNormal(const Vector3f& v0, const Vector3f& v1, const Vector3f& v2)
+{
+    return (v1 - v0).cross(v2 - v0);
+}
+
 void TriMesh::fixNormals(bool* hasBadNormals)
 {
     // Re-normalize all the values in the OBJ file to handle invalid meshes
@@ -29,9 +35,6 @@ void TriMesh::flipNormals()
     for (size_t i = 0; i < inds; i += 4)
         std::swap(indices[i + 1], indices[i + 2]);
 
-    std::transform(face_normals.begin(), face_normals.end(), face_normals.begin(),
-                   [](const StVector3f& n) { return -n; });
-
     std::transform(normals.begin(), normals.end(), normals.begin(),
                    [](const StVector3f& n) { return -n; });
 }
@@ -42,7 +45,7 @@ size_t TriMesh::removeZeroAreaTriangles()
         const Vector3f v0 = vertices[indices[i + 0]];
         const Vector3f v1 = vertices[indices[i + 1]];
         const Vector3f v2 = vertices[indices[i + 2]];
-        const Vector3f N  = (v1 - v0).cross(v2 - v0);
+        const Vector3f N  = computeTriangleNormal(v0, v1, v2);
         return N.squaredNorm() > FltEps;
     };
 
@@ -81,70 +84,10 @@ size_t TriMesh::removeZeroAreaTriangles()
         new_indices.push_back(indices[0 + 3]);
     }
 
-    // Update face normals if necessary
-    if (!face_normals.empty()) {
-        std::vector<StVector3f> new_face_normals;
-        new_face_normals.reserve(new_indices.size() / 4);
-
-        for (size_t i = 0; i < inds; i += 4) {
-            if (checkGood(i))
-                new_face_normals.push_back(face_normals[i / 4]);
-        }
-
-        // Make sure at least a single triangle is always available
-        if (new_face_normals.empty())
-            new_face_normals.push_back(face_normals[0]);
-
-        face_normals = std::move(new_face_normals);
-    }
-
-    // Update face area if necessary
-    if (!face_inv_area.empty()) {
-        std::vector<float> new_face_area;
-        new_face_area.reserve(new_indices.size() / 4);
-
-        for (size_t i = 0; i < inds; i += 4) {
-            if (checkGood(i))
-                new_face_area.push_back(face_inv_area[i / 4]);
-        }
-
-        // Make sure at least a single triangle is always available
-        if (new_face_area.empty())
-            new_face_area.push_back(face_inv_area[0]);
-
-        face_inv_area = std::move(new_face_area);
-    }
-
     // Finally update indices
     indices = std::move(new_indices);
 
     return badAreaCount;
-}
-
-void TriMesh::computeFaceNormals(bool* hasBadAreas)
-{
-    bool bad = false;
-    face_normals.resize(faceCount());
-    face_inv_area.resize(faceCount());
-
-    const size_t inds = indices.size();
-    for (size_t i = 0; i < inds; i += 4) {
-        const auto& v0 = vertices[indices[i + 0]];
-        const auto& v1 = vertices[indices[i + 1]];
-        const auto& v2 = vertices[indices[i + 2]];
-        Vector3f N     = (v1 - v0).cross(v2 - v0);
-        float lN       = N.norm();
-        if (lN < 1e-5f) {
-            lN  = 1.0f;
-            N   = Vector3f::UnitZ();
-            bad = true;
-        }
-        face_normals[i / 4]  = N / lN;
-        face_inv_area[i / 4] = 1 / (0.5f * lN);
-    }
-
-    if (hasBadAreas)
-        *hasBadAreas = bad;
 }
 
 void TriMesh::computeVertexNormals()
@@ -154,13 +97,14 @@ void TriMesh::computeVertexNormals()
 
     const size_t inds = indices.size();
     for (size_t i = 0; i < inds; i += 4) {
-        auto& n0      = normals[indices[i + 0]];
-        auto& n1      = normals[indices[i + 1]];
-        auto& n2      = normals[indices[i + 2]];
-        const auto& n = face_normals[i / 4];
-        n0 += n;
-        n1 += n;
-        n2 += n;
+        const auto& v0   = vertices[indices[i + 0]];
+        const auto& v1   = vertices[indices[i + 1]];
+        const auto& v2   = vertices[indices[i + 2]];
+        const Vector3f N = computeTriangleNormal(v0, v1, v2).normalized();
+
+        normals[indices[i + 0]] += N;
+        normals[indices[i + 1]] += N;
+        normals[indices[i + 2]] += N;
     }
 
     for (auto& n : normals)
@@ -218,10 +162,14 @@ void TriMesh::setupFaceNormalsAsVertexNormals()
     std::vector<StVector3f> new_normals;
     new_normals.resize(faceCount() * 3);
     for (size_t f = 0; f < faceCount(); ++f) {
-        const StVector3f facenormal = face_normals[f];
-        new_normals[3 * f + 0]      = facenormal;
-        new_normals[3 * f + 1]      = facenormal;
-        new_normals[3 * f + 2]      = facenormal;
+        const auto& v0   = vertices[indices[4 * f + 0]];
+        const auto& v1   = vertices[indices[4 * f + 1]];
+        const auto& v2   = vertices[indices[4 * f + 2]];
+        const Vector3f N = computeTriangleNormal(v0, v1, v2).normalized();
+
+        new_normals[3 * f + 0] = N;
+        new_normals[3 * f + 1] = N;
+        new_normals[3 * f + 2] = N;
     }
     normals = std::move(new_normals);
 
@@ -248,8 +196,12 @@ void TriMesh::setupFaceNormalsAsVertexNormals()
 float TriMesh::computeArea() const
 {
     float area = 0;
-    for (float v : face_inv_area)
-        area += 1 / v;
+    for (size_t f = 0; f < faceCount(); ++f) {
+        const auto& v0 = vertices[indices[4 * f + 0]];
+        const auto& v1 = vertices[indices[4 * f + 1]];
+        const auto& v2 = vertices[indices[4 * f + 2]];
+        area += 0.5f * computeTriangleNormal(v0, v1, v2).norm();
+    }
     return area;
 }
 
@@ -286,8 +238,6 @@ void TriMesh::transform(const Transformf& t)
         v = transform.applyTransform(v);
     for (auto& n : normals)
         n = transform.applyNormal(n);
-
-    computeFaceNormals();
 }
 
 std::optional<PlaneShape> TriMesh::getAsPlane() const
@@ -335,7 +285,9 @@ std::optional<PlaneShape> TriMesh::getAsPlane() const
     }
 
     // If the two triangles are facing differently, its not a plane
-    if (!face_normals[0].isApprox(face_normals[1], PlaneEPS))
+    const Vector3f fn0 = computeTriangleNormal(vertices[indices[0]], vertices[indices[1]], vertices[indices[2]]).normalized();
+    const Vector3f fn1 = computeTriangleNormal(vertices[indices[4 + 0]], vertices[indices[4 + 1]], vertices[indices[4 + 2]]).normalized();
+    if (!fn0.isApprox(fn1, PlaneEPS))
         return std::nullopt;
 
     // Check each edge. The second triangle has to have the same edges (but order might be different)
@@ -382,7 +334,7 @@ std::optional<PlaneShape> TriMesh::getAsPlane() const
 
     // Check if the sign is flipped
     Vector3f normal = shape.computeNormal();
-    if (face_normals[0].dot(normal) < 0) {
+    if (fn0.dot(normal) < 0) {
         std::swap(shape.XAxis, shape.YAxis);
         std::swap(unique_verts[1], unique_verts[2]);
         std::swap(unique_ids[1], unique_ids[2]);
@@ -478,8 +430,6 @@ inline static void addTriangle(TriMesh& mesh, const Vector3f& origin, const Vect
     mesh.vertices.insert(mesh.vertices.end(), { origin, origin + xAxis, origin + yAxis });
     mesh.normals.insert(mesh.normals.end(), { N, N, N });
     mesh.texcoords.insert(mesh.texcoords.end(), { Vector2f(0, 0), Vector2f(1, 0), Vector2f(0, 1) });
-    mesh.face_normals.insert(mesh.face_normals.end(), N);
-    mesh.face_inv_area.insert(mesh.face_inv_area.end(), 1 / area);
     mesh.indices.insert(mesh.indices.end(), { 0 + off, 1 + off, 2 + off, M });
 }
 
@@ -493,8 +443,6 @@ inline static void addPlane(TriMesh& mesh, const Vector3f& origin, const Vector3
     mesh.vertices.insert(mesh.vertices.end(), { origin, origin + xAxis, origin + xAxis + yAxis, origin + yAxis });
     mesh.normals.insert(mesh.normals.end(), { N, N, N, N });
     mesh.texcoords.insert(mesh.texcoords.end(), { Vector2f(0, 0), Vector2f(1, 0), Vector2f(1, 1), Vector2f(0, 1) });
-    mesh.face_normals.insert(mesh.face_normals.end(), { N, N });
-    mesh.face_inv_area.insert(mesh.face_inv_area.end(), { 1 / area, 1 / area });
     mesh.indices.insert(mesh.indices.end(), { 0 + off, 1 + off, 2 + off, M, 0 + off, 2 + off, 3 + off, M });
 }
 
@@ -522,14 +470,10 @@ inline static void addDisk(TriMesh& mesh, const Vector3f& origin, const Vector3f
     if (!fill_cap)
         return;
 
-    const float area    = 2 * Pi * radius;
-    const float secArea = area / sections;
-    const uint32 start  = 1; // Skip disk origin
+    const uint32 start = 1; // Skip disk origin
     for (uint32 i = 0; i < sections; ++i) {
         uint32 C  = i + start;
         uint32 NC = (i + 1 < sections ? i + 1 : 0) + start;
-        mesh.face_normals.insert(mesh.face_normals.end(), N);
-        mesh.face_inv_area.insert(mesh.face_inv_area.end(), 1 / secArea);
         mesh.indices.insert(mesh.indices.end(), { 0 + off, C + off, NC + off, M });
     }
 }
@@ -546,9 +490,6 @@ TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stack
 
     float drho   = 3.141592f / (float)stacks;
     float dtheta = 2 * 3.141592f / (float)slices;
-
-    const float area     = 4 * Pi * radius * radius / (stacks * slices); // TODO: Really?
-    const float inv_area = 1 / area;
 
     // TODO: We create a 2*stacks of redundant vertices at the two critical points... remove them
     // Vertices
@@ -571,9 +512,6 @@ TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stack
             mesh.vertices.emplace_back(N * radius + center);
             mesh.normals.emplace_back(N);
             mesh.texcoords.emplace_back(0.5 * theta / Pi, rho / Pi);
-
-            mesh.face_normals.insert(mesh.face_normals.end(), { N, N });
-            mesh.face_inv_area.insert(mesh.face_inv_area.end(), { inv_area, inv_area });
         }
     }
 
@@ -682,8 +620,6 @@ TriMesh TriMesh::MakeIcoSphere(const Vector3f& center, float radius, uint32 subd
         mesh.indices = std::move(refinedIndices);
     }
 
-    mesh.computeFaceNormals();
-
     // Vertices are layed out in spherical orientation, use this for the normals
     mesh.normals.resize(mesh.vertices.size());
     for (size_t i = 0; i < mesh.vertices.size(); ++i)
@@ -788,14 +724,6 @@ TriMesh TriMesh::MakeCone(const Vector3f& baseCenter, float baseRadius, const Ve
         uint32 C  = i + start;
         uint32 NC = (i + 1 < sections ? i + 1 : 0) + start;
 
-        const Vector3f dx = mesh.vertices[NC] - mesh.vertices[C];
-        const Vector3f dy = tipPos - mesh.vertices[C];
-        const Vector3f lN = -dx.cross(dy);
-        const float area  = lN.norm() / 2;
-        const Vector3f N  = lN / (2 * area);
-
-        mesh.face_normals.insert(mesh.face_normals.end(), N);
-        mesh.face_inv_area.insert(mesh.face_inv_area.end(), 1 / area);
         mesh.indices.insert(mesh.indices.end(), { C, tP, NC, 0 });
     }
 
@@ -821,14 +749,6 @@ TriMesh TriMesh::MakeCylinder(const Vector3f& baseCenter, float baseRadius, cons
         uint32 C  = i + start;
         uint32 NC = (i + 1 < sections ? i + 1 : 0) + start;
 
-        const Vector3f dx = mesh.vertices[NC] - mesh.vertices[C];
-        const Vector3f dy = mesh.vertices[C + off] - mesh.vertices[C];
-        const Vector3f lN = -dx.cross(dy);
-        const float area  = lN.norm() / 2;
-        const Vector3f N  = lN / (2 * area);
-
-        mesh.face_normals.insert(mesh.face_normals.end(), { N, N });
-        mesh.face_inv_area.insert(mesh.face_inv_area.end(), { 1 / area, 1 / area });
         mesh.indices.insert(mesh.indices.end(), { C, C + off, NC, 0, C + off, NC + off, NC, 0 });
     }
 

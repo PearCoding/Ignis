@@ -254,7 +254,6 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     BoundingBox bbox = mesh.computeBBox();
     bbox.inflate(1e-5f); // Make sure it has a volume
 
-    IG_ASSERT(mesh.face_normals.size() == mesh.faceCount(), "Expected valid face normals!");
     IG_ASSERT((mesh.indices.size() % 4) == 0, "Expected index buffer count to be a multiple of 4!");
 
     // Setup bvh
@@ -303,10 +302,8 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     // Data
     meshSerializer.writeAligned(mesh.vertices, DefaultAlignment, true);
     meshSerializer.writeAligned(mesh.normals, DefaultAlignment, true);
-    meshSerializer.writeAligned(mesh.face_normals, DefaultAlignment, true);
     meshSerializer.write(mesh.indices, true);   // Already aligned
     meshSerializer.write(mesh.texcoords, true); // Aligned to 4*2 bytes
-    meshSerializer.write(mesh.face_inv_area, true);
 
     const auto off  = split_u64_to_u32(bvh_offset);
     const uint32 id = ctx.Shapes->addShape(name, Shape{ this, (int32)off.first, (int32)off.second, 0, bbox, offset });

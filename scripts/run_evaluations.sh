@@ -51,7 +51,11 @@ evaluate ${output_dir}/plane${spp}-d1.exr ${scene_dir}/plane-d1.json
 
 evaluate ${output_dir}/room${spp}-d4.exr ${scene_dir}/room.json
 
-evaluate ${output_dir}/plane-scale${spp}-d4.exr ${scene_dir}/plane-scale.json
+evaluate ${output_dir}/emissive-plane${spp}-d4.exr ${scene_dir}/emissive-plane.json
+evaluate ${output_dir}/emissive-plane-nopt${spp}-d4.exr ${scene_dir}/emissive-plane-nopt.json
+
+evaluate ${output_dir}/emissive-plane-scale${spp}-d4.exr ${scene_dir}/emissive-plane-scale.json
+evaluate ${output_dir}/emissive-plane-scale-nopt${spp}-d4.exr ${scene_dir}/emissive-plane-scale-nopt.json
 
 evaluate ${output_dir}/volume${spp}-d12.exr ${scene_dir}/volume.json
 
