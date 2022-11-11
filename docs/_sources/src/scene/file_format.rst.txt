@@ -35,15 +35,14 @@ The transformation can be specified as a 4x4 matrix:
 
 as a 3x4 matrix with last row set to (0, 0, 0, 1) and a 3x3 matrix with also sets the last column (the translation) to (0, 0, 0).
 
-Another way to describe transformation is by using simple operators. The operators will be applied at the order of their appearance from left to right.
+Another way to describe transformation is by using simple operators. The operators will be applied at the order of their appearance from left to right inside the array.
 The last entry will be applied first to the incoming point.
-In contrary to other parts of the scene description, you may define multiple entries with the same key to chain operations together.  
 
 .. code-block:: javascript
     
     {
         // ...
-        "transform": { "translate": [X,Y,Z], "rotate": [RX,RY,RZ], "scale":[SX,SY,SZ], /* AND MORE */  },
+        "transform": [{ "translate": [X,Y,Z] }, { "rotate": [RX,RY,RZ] }, { "scale":[SX,SY,SZ] }, /* AND MORE */  ],
         //
     }
 
@@ -58,7 +57,7 @@ Specified with an array of three numbers.
     
     {
         // ...
-        "transform": { "translate": [X,Y,Z] },
+        "transform": [{ "translate": [X,Y,Z] }],
         //
     }
 
@@ -71,7 +70,7 @@ Specified with an array of three numbers given in degrees rotating around the re
     
     {
         // ...
-        "transform": { "rotate": [RX,RY,RZ] },
+        "transform": [{ "rotate": [RX,RY,RZ] }],
         //
     }
 
@@ -81,7 +80,7 @@ Each rotation around an axis is applied individually. The rotation above is equa
     
     {
         // ...
-        "transform": { "rotate": [RX,0,0], "rotate": [0,RY,0], "rotate": [0,0,RZ] },
+        "transform": [{ "rotate": [RX,0,0] }, { "rotate": [0,RY,0] }, { "rotate": [0,0,RZ] }],
         //
     }
 
@@ -95,7 +94,7 @@ Have a look at your favorite math book to understand what that means.
     
     {
         // ...
-        "transform": { "qrotate": [RW,RX,RY,RZ] },
+        "transform": [{ "qrotate": [RW,RX,RY,RZ] }],
         //
     }
 
@@ -108,7 +107,7 @@ Specified with an array of three numbers scaling the respective euler axis or as
     
     {
         // ...
-        "transform": { "scale": [SX,SY,SZ], "scale": S },
+        "transform": [{ "scale": [SX,SY,SZ] }, { "scale": S }],
         //
     }
 
@@ -122,7 +121,7 @@ You are able to specify a :monosp:`direction` instead of an explicit :monosp:`ta
     
     {
         // ...
-        "transform": { "lookat": { "origin": [OX,OY,OZ], "up": [UX,UY,UZ], "target": [TX,TY,TZ], /* or */ "direction": [DX,DY,DZ] } },
+        "transform": [{ "lookat": { "origin": [OX,OY,OZ], "up": [UX,UY,UZ], "target": [TX,TY,TZ], /* or */ "direction": [DX,DY,DZ] } }],
         //
     }
 
@@ -136,6 +135,6 @@ Specifies a matrix of the size 4x4, 3x4 or 3x3 to be applied to the full transfo
     
     {
         // ...
-        "transform": { "matrix": [m00, m01, m02, /*...*/, m31, m32, m33] },
+        "transform": [{ "matrix": [m00, m01, m02, /*...*/, m31, m32, m33] }],
         //
     }
