@@ -5,7 +5,7 @@
 
 namespace IG {
 
-/// Returns unnormalized normal for a given triangle
+/// Returns non-unit normal for a given triangle
 static inline Vector3f computeTriangleNormal(const Vector3f& v0, const Vector3f& v1, const Vector3f& v2)
 {
     return (v1 - v0).cross(v2 - v0);

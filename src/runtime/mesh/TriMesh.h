@@ -25,7 +25,7 @@ struct TriMesh {
     void fixNormals(bool* hasBadNormals = nullptr);
     void flipNormals();
 
-    // Remove all triangles with zero area. Will return number of triangles removed
+    /// Remove all triangles with zero area. Will return number of triangles removed
     size_t removeZeroAreaTriangles();
 
     void computeVertexNormals();

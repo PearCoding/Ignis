@@ -104,7 +104,7 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
                 ))
             } else {
                 let ld  = vec3_sub(light_sample.pos, ctx.surf.point);
-                let vol = color_mul(hitvol, medium.eval(ctx.surf.point, ld));
+                let vol = color_mul(hitvol, medium.eval(ctx.surf.point, light_sample.pos));
                 return(make_simple_shadow_ray(
                     make_ray(ctx.surf.point, ld, offset, 1 - offset, ray_flag_shadow),
                     color_mul(contrib, vol)
