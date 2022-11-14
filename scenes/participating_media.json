@@ -35,7 +35,7 @@
 		{"name":"Left","shape":"Left", "bsdf":"mat-ColoredWall"},
 		{"name":"Right","shape":"Right", "bsdf":"mat-ColoredWall"},
 		{"name":"Back","shape":"Back", "bsdf":"mat-GrayWall"},
-		{"name":"Object","shape":"Object", "bsdf":"mat-Object", "inner_medium": "Medium", "transform": [{"scale": 0.4}, {"translate": [0,-1.4,0]}]}
+		{"name":"Object","shape":"Object", "bsdf":"mat-Object", "inner_medium": "Medium", "transform": [{"translate": [0,-0.59,0]}, {"scale": 0.4}]}
 	],
 	"lights": [
 		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[100,100,100]}

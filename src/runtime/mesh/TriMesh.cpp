@@ -162,9 +162,9 @@ void TriMesh::setupFaceNormalsAsVertexNormals()
     std::vector<StVector3f> new_normals;
     new_normals.resize(faceCount() * 3);
     for (size_t f = 0; f < faceCount(); ++f) {
-        const auto& v0   = vertices[indices[4 * f + 0]];
-        const auto& v1   = vertices[indices[4 * f + 1]];
-        const auto& v2   = vertices[indices[4 * f + 2]];
+        const auto& v0   = vertices[3 * f + 0];
+        const auto& v1   = vertices[3 * f + 1];
+        const auto& v2   = vertices[3 * f + 2];
         const Vector3f N = computeTriangleNormal(v0, v1, v2).normalized();
 
         new_normals[3 * f + 0] = N;

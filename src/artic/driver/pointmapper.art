@@ -3,7 +3,7 @@ fn @make_zero_pointmapper()                              = @|_: Vec3| vec3_expan
 fn @make_identity_pointmapper()                          = @|p: Vec3| p;
 fn @make_normalized_pointmapper(bbox: BBox, mat: Mat3x4) = @|p: Vec3| {
     let lp = mat3x4_transform_point(mat, p);
-    vec3_div(vec3_sub(lp, bbox.min), vec3_sub(bbox.max, bbox.min))
+    vec3_zip(vec3_sub(lp, bbox.min), vec3_sub(bbox.max, bbox.min), @|a:f32, b:f32| safe_div(a, b))
 };
 
 struct PointMapperSet {
