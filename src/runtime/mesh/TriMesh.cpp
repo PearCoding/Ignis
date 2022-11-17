@@ -838,7 +838,6 @@ TriMesh TriMesh::MakeGaussianLobe(const Vector3f& origin, const Vector3f& direct
                                   const Vector3f& xAxis, const Vector3f& yAxis,
                                   const Matrix2f& cov, uint32 theta_size, uint32 phi_size, float scale)
 {
-    // TODO: This can be further optimized to adaptively put resolution close to the mean
     theta_size = std::max<uint32>(8, theta_size);
     phi_size   = std::max<uint32>(8, phi_size);
 
@@ -864,10 +863,10 @@ TriMesh TriMesh::MakeGaussianLobe(const Vector3f& origin, const Vector3f& direct
     TriMesh mesh;
     addGrid(mesh, Vector3f::Zero(), Vector3f::UnitX(), Vector3f::UnitY(), theta_size, phi_size);
 
-    for (uint32 j = 0; j <= phi_size; ++j) {
-        for (uint32 i = 0; i <= theta_size; ++i) {
-            const float phi   = 2 * Pi * j / (float)phi_size;
-            const float theta = Pi * i / (float)theta_size;
+    for (uint32 j = 0; j <= phi_size; ++j) {       // [-Pi, Pi]
+        for (uint32 i = 0; i <= theta_size; ++i) { // [0, Pi]
+            const float phi   = 2 * Pi * (j / (float)phi_size) - Pi;
+            const float theta = Pi * (i / (float)theta_size);
             const float value = func(theta, phi);
             const Vector3f u  = Tangent::fromTangentSpace(N, xAxis, yAxis, Spherical::fromThetaPhi(theta, phi));
 
