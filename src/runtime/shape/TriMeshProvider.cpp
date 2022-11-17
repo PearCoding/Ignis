@@ -105,6 +105,19 @@ inline TriMesh setup_mesh_disk(const Object& elem)
     return TriMesh::MakeDisk(origin, normal, radius, sections);
 }
 
+inline TriMesh setup_mesh_gauss(const Object& elem)
+{
+    // TODO: Add covariance based approach as well
+    const Vector3f origin    = elem.property("origin").getVector3();
+    const Vector3f normal    = elem.property("normal").getVector3(Vector3f(0, 0, 1));
+    const float sigma        = elem.property("sigma").getNumber(1.0f);
+    const float radius_scale = elem.property("radius_scale").getNumber(1.0f);
+    const float height       = elem.property("height").getNumber(1.0f);
+    const uint32 sections    = elem.property("sections").getInteger(32);
+    const uint32 slices      = elem.property("slices").getInteger(16);
+    return TriMesh::MakeRadialGaussianLobe(origin, normal * height, sigma, radius_scale, sections, slices);
+}
+
 inline TriMesh setup_mesh_obj(const std::string& name, const Object& elem, const LoaderContext& ctx)
 {
     int shape_index     = elem.property("shape_index").getInteger(-1);
@@ -217,6 +230,8 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
         mesh = setup_mesh_cone(elem);
     } else if (elem.pluginType() == "disk") {
         mesh = setup_mesh_disk(elem);
+    } else if (elem.pluginType() == "gauss") {
+        mesh = setup_mesh_gauss(elem);
     } else if (elem.pluginType() == "obj") {
         mesh = setup_mesh_obj(name, elem, ctx);
     } else if (elem.pluginType() == "ply") {

@@ -756,4 +756,57 @@ TriMesh TriMesh::MakeCylinder(const Vector3f& baseCenter, float baseRadius, cons
     return mesh;
 }
 
+TriMesh TriMesh::MakeRadialGaussianLobe(const Vector3f& origin, const Vector3f& direction, float sigma, float radius_scale, uint32 sections, uint32 slices)
+{
+    const auto gauss = [=](float r) { return std::exp(-(r * r) / (2 * sigma * sigma)) / (sigma * 2 * Pi); };
+
+    const Vector3f defect = direction * gauss(1);
+    const Vector3f peak   = origin + direction * gauss(0) - defect;
+    const Vector3f normal = direction.normalized();
+
+    Vector3f Nx, Ny;
+    Tangent::frame(normal, Nx, Ny);
+
+    TriMesh mesh;
+
+    // Bottom circle
+    addDisk(mesh, origin, normal, Nx, Ny, radius_scale, sections, 0, true);
+
+    // Inbetweens
+    for (uint32 i = 1; i < slices; ++i) {
+        const float radius = 1 - i / (float)slices;
+        const float g      = gauss(radius);
+
+        addDisk(mesh, origin + direction * g - defect, normal, Nx, Ny, radius_scale * radius, sections, 0 /* Not needed */, false);
+
+        const uint32 start = (i - 1) * sections + 1/* Origin */;
+        for (uint32 k = 0; k < sections; ++k) {
+            const uint32 C  = k + start;
+            const uint32 NC = (k + 1 < sections ? k + 1 : 0) + start;
+
+            mesh.indices.insert(mesh.indices.end(), { C, C + sections, NC, 0,
+                                                      C + sections, NC + sections, NC, 0 });
+        }
+    }
+
+    // Peak
+    mesh.vertices.emplace_back(peak);
+    mesh.normals.emplace_back(normal);
+    mesh.texcoords.emplace_back(Vector2f::Zero());
+
+    for (uint32 i = 0; i < sections; ++i) {
+        const uint32 end   = mesh.vertices.size() - 1;
+        const uint32 start = (slices - 1) * sections + 1/* Origin */;
+        const uint32 C     = i + start;
+        const uint32 NC    = (i + 1 < sections ? i + 1 : 0) + start;
+
+        mesh.indices.insert(mesh.indices.end(), { C, end, NC, 0 });
+    }
+    std::cout << mesh.vertices.size() << " " << mesh.indices.size() << std::endl;
+
+    // Give it a smooth representation (by default)
+    mesh.computeVertexNormals();
+    return mesh;
+}
+
 } // namespace IG

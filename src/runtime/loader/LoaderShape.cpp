@@ -31,6 +31,7 @@ static const struct ShapeProviderEntry {
     { "cylinder", "trimesh" },
     { "cone", "trimesh" },
     { "disk", "trimesh" },
+    { "gauss", "trimesh" },
     { "obj", "trimesh" },
     { "ply", "trimesh" },
     { "mitsuba", "trimesh" },
