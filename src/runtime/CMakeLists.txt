@@ -103,6 +103,7 @@ set(SRC
   log/FileLogListener.h
   log/LogListener.h
   math/BoundingBox.h
+  math/Spherical.h
   math/Tangent.h
   math/Triangle.h
   measured/KlemsLoader.cpp

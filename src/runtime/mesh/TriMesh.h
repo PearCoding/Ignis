@@ -53,7 +53,10 @@ struct TriMesh {
     [[nodiscard]] static TriMesh MakeCone(const Vector3f& baseCenter, float baseRadius, const Vector3f& tipPos, uint32 sections, bool fill_cap = true);
     [[nodiscard]] static TriMesh MakeCylinder(const Vector3f& baseCenter, float baseRadius, const Vector3f& topCenter, float topRadius, uint32 sections, bool fill_cap = true);
 
-    [[nodiscard]] static TriMesh MakeRadialGaussianLobe(const Vector3f& origin, const Vector3f& direction, float sigma, float radius_scale, uint32 sections, uint32 slices);
+    [[nodiscard]] static TriMesh MakeRadialGaussian(const Vector3f& origin, const Vector3f& direction, float sigma, float radius_scale, uint32 sections, uint32 slices);
+    [[nodiscard]] static TriMesh MakeGaussianLobe(const Vector3f& origin, const Vector3f& direction,
+                                                  const Vector3f& xAxis, const Vector3f& yAxis,
+                                                  const Matrix2f& cov, uint32 theta_size, uint32 phi_size, float scale);
 };
 
 } // namespace IG

@@ -115,7 +115,27 @@ inline TriMesh setup_mesh_gauss(const Object& elem)
     const float height       = elem.property("height").getNumber(1.0f);
     const uint32 sections    = elem.property("sections").getInteger(32);
     const uint32 slices      = elem.property("slices").getInteger(16);
-    return TriMesh::MakeRadialGaussianLobe(origin, normal * height, sigma, radius_scale, sections, slices);
+    return TriMesh::MakeRadialGaussian(origin, normal * height, sigma, radius_scale, sections, slices);
+}
+
+inline TriMesh setup_mesh_gauss_lobe(const Object& elem)
+{
+    const Vector3f origin    = elem.property("origin").getVector3();
+    const Vector3f direction = elem.property("direction").getVector3(Vector3f(0, 0, 1));
+    const float sigma_theta  = elem.property("sigma_theta").getNumber(1);
+    const float sigma_phi    = elem.property("sigma_phi").getNumber(1);
+    const float anisotropy   = elem.property("anisotropy").getNumber(0);
+    const uint32 theta_size  = elem.property("theta_size").getInteger(64);
+    const uint32 phi_size    = elem.property("phi_size").getInteger(128);
+    const float scale        = elem.property("scale").getNumber(1);
+    const Vector3f xAxis     = elem.property("x_axis").getVector3(Vector3f::UnitX());
+    const Vector3f yAxis     = elem.property("y_axis").getVector3(Vector3f::UnitY());
+
+    Matrix2f cov;
+    cov << sigma_theta * sigma_theta, anisotropy * sigma_theta * sigma_phi,
+        anisotropy * sigma_theta * sigma_phi, sigma_phi * sigma_phi;
+
+    return TriMesh::MakeGaussianLobe(origin, direction, xAxis, yAxis, cov, theta_size, phi_size, scale);
 }
 
 inline TriMesh setup_mesh_obj(const std::string& name, const Object& elem, const LoaderContext& ctx)
@@ -232,6 +252,8 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
         mesh = setup_mesh_disk(elem);
     } else if (elem.pluginType() == "gauss") {
         mesh = setup_mesh_gauss(elem);
+    } else if (elem.pluginType() == "gauss_lobe") {
+        mesh = setup_mesh_gauss_lobe(elem);
     } else if (elem.pluginType() == "obj") {
         mesh = setup_mesh_obj(name, elem, ctx);
     } else if (elem.pluginType() == "ply") {
