@@ -17,6 +17,7 @@ public:
 private:
     Vector3f mSunDirection;
     TimePoint mTimePoint;
+    bool mHasGround;
 
     std::shared_ptr<Parser::Object> mLight;
 };

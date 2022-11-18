@@ -1,5 +1,4 @@
 #include "PerezLight.h"
-#include "Logger.h"
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
@@ -12,6 +11,8 @@ PerezLight::PerezLight(const std::string& name, const std::shared_ptr<Parser::Ob
 {
     mSunDirection = LoaderUtils::getDirection(*light);
     mTimePoint    = LoaderUtils::getTimePoint(*light);
+    mHasGround    = mLight->property("has_ground").getBool(true);
+    std::cout << mSunDirection << std::endl;
 }
 
 float PerezLight::computeFlux(const ShadingTree& tree) const
@@ -25,14 +26,13 @@ void PerezLight::serialize(const SerializationInput& input) const
 {
     const float sin_elevation = std::min(1.0f, std::max(-1.0f, -mSunDirection(1)));
     const float solar_zenith  = std::acos(std::min(1.0f, std::max(-1.0f, mSunDirection(1))));
-    // const float solar_zenith  = 64.471436915*Deg2Rad;
 
     input.Tree.beginClosure(name());
+    input.Tree.addColor("ground", *mLight, Vector3f::Ones(), true);
 
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
     const auto insertModel = [&](const PerezModel& model) {
-        IG_LOG(L_DEBUG) << "Perez: " << model.a() << " " << model.b() << " " << model.c() << " " << model.d() << " " << model.e() << std::endl;
         // Will replace potential other parameters
         input.Tree.insertNumber("a", Parser::Property::fromNumber(model.a()));
         input.Tree.insertNumber("b", Parser::Property::fromNumber(model.b()));
@@ -92,11 +92,13 @@ void PerezLight::serialize(const SerializationInput& input) const
                      << "))";
     }
 
-    input.Stream << ", " << input.Tree.getInline("a")
+    input.Stream << ", " << input.Tree.getInline("ground")
+                 << ", " << input.Tree.getInline("a")
                  << ", " << input.Tree.getInline("b")
                  << ", " << input.Tree.getInline("c")
                  << ", " << input.Tree.getInline("d")
                  << ", " << input.Tree.getInline("e")
+                 << ", " << (mHasGround ? "true" : "false")
                  << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
 
     input.Tree.endClosure();

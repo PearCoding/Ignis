@@ -1,4 +1,5 @@
 #include "PerezModel.h"
+#include "Logger.h"
 
 namespace IG {
 constexpr float SolarConstantE = 1367;   // solar constant [W/m^2]
@@ -65,6 +66,7 @@ static float E[BinCount * 4] = {
 
 PerezModel PerezModel::fromParameter(float a, float b, float c, float d, float e)
 {
+    IG_LOG(L_DEBUG) << "Perez: " << a << " " << b << " " << c << " " << d << " " << e << std::endl;
     return PerezModel(a, b, c, d, e);
 }
 
@@ -78,7 +80,6 @@ PerezModel PerezModel::fromSky(float sky_brightness, float sky_clearness, float 
 
     sky_brightness = std::min(std::max(sky_brightness, 0.01f), 0.6f);
 
-    std::cout << sky_brightness << " " << sky_clearness << " " << Rad2Deg * solar_zenith << std::endl;
     const auto compute         = [=](const float* x) { return x[0] + x[1] * solar_zenith + sky_brightness * (x[2] + x[3] * solar_zenith); };
     const auto computeSpecialC = [=]() { return std::exp(std::pow(sky_brightness * (C[0] + C[1] * solar_zenith), C[2])) - C[3]; };
     const auto computeSpecialD = [=]() { return -std::exp(sky_brightness * (D[0] + D[1] * solar_zenith)) + D[2] + sky_brightness * D[3]; };

@@ -1,4 +1,5 @@
 fn @cie_wmean(cos_theta: f32, c1: Color, c2: Color) -> Color {
+    // This is the same as wmean in Radiance, but with better precision for f32
     let a  = math_builtins::pow[f32](cos_theta + 1.01, 10);
     let f1 = a * a / (a * a + 1);
     let f2 = 1 / (a * a + 1);
@@ -45,12 +46,12 @@ fn @calc_perez(sun_c: f32, cos_theta: f32, a: f32, b: f32, c: f32, d: f32, e: f3
     A * B
 }
 
-fn @make_perez_light(id: i32, scene_bbox: BBox, sun_dir: Vec3, lum: Color, a: f32, b: f32, c: f32, d: f32, e: f32, transform: Mat3x3)  =
+fn @make_perez_light(id: i32, scene_bbox: BBox, sun_dir: Vec3, lum: Color, ground: Color, a: f32, b: f32, c: f32, d: f32, e: f32, has_ground: bool, transform: Mat3x3)  =
     make_environment_light_function(id, scene_bbox, @|dir|{
         let cos_theta = dir.y; // Cosine between zenith and direction
-        if cos_theta < 0 { return(color_builtins::black) }
+        if !has_ground && cos_theta < 0 { return(color_builtins::black) }
 
         let sun_c = clampf(vec3_dot(dir, sun_dir), -1, 1); // Cosine between sun and direction
         let fac   = calc_perez(sun_c, cos_theta, a, b, c, d, e);
-        color_mulf(lum, fac)
+        cie_wmean(cos_theta, color_mulf(lum, fac), ground)
 }, transform, false);
