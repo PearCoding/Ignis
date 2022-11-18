@@ -1,6 +1,18 @@
 #include "SunLocation.h"
 
+#include <time.h>
+
 namespace IG {
+
+int TimePoint::dayOfTheYear() const
+{
+    tm date      = {};
+    date.tm_year = Year - 1900;
+    date.tm_mon  = Month - 1;
+    date.tm_mday = Day;
+    mktime(&date);
+    return date.tm_yday;
+}
 
 /* Based on "Computing the Solar Vector" by Manuel Blanco-Muriel,
  * Diego C. Alarcon-Padilla, Teodoro Lopez-Moratalla, and Martin Lara-Coira,

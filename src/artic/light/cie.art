@@ -40,7 +40,7 @@ fn @make_cie_sunny_light(id: i32, scene_bbox: BBox, scale: Color, zenith: Color,
 fn @calc_perez(sun_c: f32, cos_theta: f32, a: f32, b: f32, c: f32, d: f32, e: f32) -> f32 {
     let sun_a = math_builtins::acos(sun_c); // Angle between sun and direction
 
-    let A = 1 + a * math_builtins::exp(-b / math_builtins::fmax[f32](0.01, cos_theta));
+    let A = 1 + a * math_builtins::exp(b / math_builtins::fmax[f32](0.01, cos_theta));
     let B = 1 + c * math_builtins::exp(d * sun_a) + e * sun_c * sun_c;
     A * B
 }

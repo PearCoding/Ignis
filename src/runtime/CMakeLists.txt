@@ -137,6 +137,8 @@ set(SRC
   serialization/VectorSerializer.cpp
   serialization/VectorSerializer.h
   skysun/ElevationAzimuth.h
+  skysun/PerezModel.cpp
+  skysun/PerezModel.h
   skysun/SkyModel.cpp
   skysun/SkyModel.h
   skysun/SkySunConfig.h
