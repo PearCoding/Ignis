@@ -13,6 +13,17 @@ struct TimePoint {
     int Minute    = 0;
     float Seconds = 0.0f;
 
+    TimePoint() = default;
+    TimePoint(int year, int month, int day, int hour = 0, int minute = 0, float seconds = 0)
+        : Year(year)
+        , Month(month)
+        , Day(day)
+        , Hour(hour)
+        , Minute(minute)
+        , Seconds(seconds)
+    {
+    }
+
     int dayOfTheYear() const;
 };
 

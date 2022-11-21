@@ -17,5 +17,6 @@ macro(push_test name files)
 endmacro(push_test)
 
 push_test(elevation_azimuth elevation_azimuth.cpp)
+push_test(perez perez.cpp)
 push_test(trimesh_plane trimesh_plane.cpp)
 push_test(trimesh_sphere trimesh_sphere.cpp)

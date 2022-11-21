@@ -16,9 +16,9 @@
 		{
 			"type":"perez", "name":"Sky",
 			"diffuse_irradiance": 57.029998779296875, "direct_irradiance": 0.38999998569488525,
-			"year": 2022, "month": 11, "day": 18, "hour": 14, "minute": 0, "seconds": 0,
+			"year": 2022, "month": 11, "day": 18, "hour": 13, "minute": 0, "seconds": 0,
 			// "direction": [0.590157, 0.230601, -0.773652],
-			"luminance": 6.849, "ground": 2.973 // TODO: Compute automatically
+			"luminance": 6.774, "ground": 2.904 // TODO: Compute automatically
 		}
 	]
 }

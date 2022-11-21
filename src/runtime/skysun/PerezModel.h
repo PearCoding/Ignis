@@ -11,6 +11,21 @@ public:
     inline float d() const { return mD; }
     inline float e() const { return mE; }
 
+    /// @brief Compute perez value for given parameters
+    /// @param cos_sun Cosine between sun and direction
+    /// @param cos_theta Cosine between up and direction
+    float eval(float cos_sun, float cos_theta) const;
+
+    /// @brief Integrate hemi-sphere
+    /// @param solar_zenith Solar zenith given radians
+    float integrate(float solar_zenith) const;
+
+    static float computeSkyBrightness(float diffuse_irradiance, float solar_zenith, int day_of_the_year);
+    static float computeSkyClearness(float diffuse_irradiance, float direct_irradiance, float solar_zenith);
+
+    static float computeDiffuseIrradiance(float sky_brightness, float solar_zenith, int day_of_the_year);
+    static float computeDirectIrradiance(float sky_brightness, float sky_clearness, float solar_zenith, int day_of_the_year);
+
     /// Construct perez model directly with the given parameters
     static PerezModel fromParameter(float a, float b, float c, float d, float e);
 

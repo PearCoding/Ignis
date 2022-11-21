@@ -1,9 +1,8 @@
 #include "PerezModel.h"
+#include "Illuminance.h"
 #include "Logger.h"
 
 namespace IG {
-constexpr float SolarConstantE = 1367;   // solar constant [W/m^2]
-constexpr float SolarConstantL = 127500; // solar constant [Lux]
 
 // Data based on 'Modeling Skylight Angular Luminance Distribution from Routine Irradiance Measurements' by R. Perez, R. Seals, and J. Michalsky (1993)
 constexpr size_t BinCount         = 8;
@@ -64,6 +63,88 @@ static float E[BinCount * 4] = {
     1.5000f, -0.6426f, 1.8564f, 0.5636f
 };
 
+float PerezModel::eval(float cos_sun, float cos_theta) const
+{
+    const float sun_a = std::acos(cos_sun); // Angle between sun and direction
+    const float A     = 1 + mA * std::exp(mB / std::fmax(0.01f, cos_theta));
+    const float B     = 1 + mC * std::exp(mD * sun_a) + mE * cos_sun * cos_sun;
+    return A * B;
+}
+
+float PerezModel::integrate(const float solar_zenith) const
+{
+    const float cos_solar = std::cos(solar_zenith);
+    const float sin_solar = std::sin(solar_zenith);
+
+    const auto compute = [=](float cos_theta, float sin_theta, float cos_phi) {
+        const float cos_sun = std::min(1.0f, cos_solar * cos_theta + sin_solar * sin_theta * cos_phi);
+        return this->eval(cos_sun, cos_theta) * cos_theta;
+    };
+
+    // The first algorithm is not as precise as the second one, but due to backwards compatability, we are using the first one for now...
+#if 1
+    constexpr size_t BaseCount = 145;
+    // Default integration base used in Radiance
+    static float ThetaBase[BaseCount] = {
+        84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84,
+        84, 84, 84, 84, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+        72, 72, 72, 72, 72, 72, 72, 72, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
+        60, 60, 60, 60, 60, 60, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
+        48, 48, 48, 48, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 24, 24, 24, 24,
+        24, 24, 24, 24, 24, 24, 24, 24, 12, 12, 12, 12, 12, 12, 0
+    };
+
+    static float PhiBase[BaseCount] = {
+        0, 12, 24, 36, 48, 60, 72, 84, 96, 108, 120, 132, 144, 156, 168, 180, 192, 204, 216, 228, 240, 252, 264,
+        276, 288, 300, 312, 324, 336, 348, 0, 12, 24, 36, 48, 60, 72, 84, 96, 108, 120, 132, 144, 156, 168, 180,
+        192, 204, 216, 228, 240, 252, 264, 276, 288, 300, 312, 324, 336, 348, 0, 15, 30, 45, 60, 75, 90, 105,
+        120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300, 315, 330, 345, 0, 15, 30, 45, 60, 75,
+        90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300, 315, 330, 345, 0, 20, 40, 60,
+        80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 0, 30, 60, 90, 120, 150, 180, 210,
+        240, 270, 300, 330, 0, 60, 120, 180, 240, 300, 0
+    };
+
+    float integrand = 0;
+    for (size_t i = 0; i < BaseCount; ++i) {
+        const float theta = ThetaBase[i] * Deg2Rad;
+        const float ct    = std::cos(theta);
+        const float st    = std::sin(theta);
+
+        const float phi = PhiBase[i] * Deg2Rad;
+        const float cp  = std::cos(phi);
+
+        integrand += compute(ct, st, cp);
+    }
+
+    return 2 * Pi * integrand / BaseCount;
+#else
+    constexpr size_t ThetaCount = 32;
+    constexpr size_t PhiCount   = 64;
+    constexpr float MaxTheta    = 84 * Deg2Rad;
+    constexpr float StepTheta   = MaxTheta / (float)(ThetaCount);
+
+    float integrand = 0;
+    for (size_t i = 0; i < ThetaCount; ++i) {
+        const float theta = i == 0 ? 0.0f : (i + 0.5f) * StepTheta;
+        const float ct    = std::cos(theta);
+        const float st    = std::sin(theta);
+
+        const size_t phi_count = i == 0 ? 1 : PhiCount;
+
+        const float dth  = std::abs(std::cos((i + 1) * StepTheta) - std::cos(i * StepTheta));
+        const float dphi = 2 * Pi / phi_count;
+        for (size_t j = 0; j < phi_count; ++j) {
+            const float phi = 2 * Pi * j / (float)phi_count;
+            const float cp  = std::cos(phi);
+
+            integrand += compute(ct, st, cp) * dphi * dth;
+        }
+    }
+
+    return integrand;
+#endif
+}
+
 PerezModel PerezModel::fromParameter(float a, float b, float c, float d, float e)
 {
     IG_LOG(L_DEBUG) << "Perez: " << a << " " << b << " " << c << " " << d << " " << e << std::endl;
@@ -113,14 +194,28 @@ static inline float computeEccentricity(int day_of_the_year)
     return 1.00011f + 0.034221f * std::cos(day_angle) + 0.00128f * std::sin(day_angle) + 0.000719f * std::cos(2 * day_angle) + 0.000077f * std::sin(2 * day_angle);
 }
 
-static inline float computeSkyBrightness(float diff_irrad, float solar_zenith, int day_of_the_year)
+float PerezModel::computeSkyBrightness(float diff_irrad, float solar_zenith, int day_of_the_year)
 {
     return diff_irrad * computeAirMass(solar_zenith) / (SolarConstantE * computeEccentricity(day_of_the_year));
 }
 
-static inline float computeSkyClearness(float diff_irrad, float diret_irrad, float solar_zenith)
+float PerezModel::computeSkyClearness(float diff_irrad, float direct_irrad, float solar_zenith)
 {
-    return ((diff_irrad + diret_irrad) / diff_irrad + 1.041f * solar_zenith * solar_zenith * solar_zenith) / (1 + 1.041f * solar_zenith * solar_zenith * solar_zenith);
+    const float A = 1.041f * solar_zenith * solar_zenith * solar_zenith;
+    return ((diff_irrad + direct_irrad) / diff_irrad + A) / (1 + A);
+}
+
+float PerezModel::computeDiffuseIrradiance(float sky_brightness, float solar_zenith, int day_of_the_year)
+{
+    return sky_brightness * SolarConstantE * computeEccentricity(day_of_the_year) / computeAirMass(solar_zenith);
+}
+
+float PerezModel::computeDirectIrradiance(float sky_brightness, float sky_clearness, float solar_zenith, int day_of_the_year)
+{
+    const float diff_irrad = computeDiffuseIrradiance(sky_brightness, solar_zenith, day_of_the_year);
+    const float A          = 1.041f * solar_zenith * solar_zenith * solar_zenith;
+
+    return (sky_clearness * (1 + A) - A) * diff_irrad - diff_irrad;
 }
 
 PerezModel PerezModel::fromIrrad(float diffuse_irradiance, float direct_irradiance, float solar_zenith, int day_of_the_year)
@@ -132,8 +227,8 @@ PerezModel PerezModel::fromIrrad(float diffuse_irradiance, float direct_irradian
 
 PerezModel PerezModel::fromIllum(float diffuse_illuminance, float direct_illuminance, float solar_zenith, int day_of_the_year)
 {
-    return fromIrrad(diffuse_illuminance * SolarConstantE / SolarConstantL,
-                     direct_illuminance * SolarConstantE / SolarConstantL,
+    return fromIrrad(convertIlluminanceToIrradiance(diffuse_illuminance),
+                     convertIlluminanceToIrradiance(direct_illuminance),
                      solar_zenith, day_of_the_year);
 }
 
