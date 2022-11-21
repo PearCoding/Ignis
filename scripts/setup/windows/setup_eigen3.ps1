@@ -16,7 +16,7 @@ cd "build"
 
 # Configure it
 $EIGEN3_ROOT="$DEPS_ROOT\Eigen3".Replace("\", "/")
-& $CMAKE_BIN $Config.CMAKE_EXTRA_ARGS -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$EIGEN3_ROOT" ..
+& $CMAKE_BIN $Config.CMAKE_EXTRA_ARGS -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$EIGEN3_ROOT" -DCMAKE_INSTALL_MESSAGE="LAZY" ..
 
 # Build it
 & $CMAKE_BIN --build . --config "Release"
