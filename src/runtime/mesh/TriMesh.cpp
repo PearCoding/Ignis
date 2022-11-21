@@ -820,7 +820,7 @@ TriMesh TriMesh::MakeRadialGaussian(const Vector3f& origin, const Vector3f& dire
     mesh.texcoords.emplace_back(Vector2f::Zero());
 
     for (uint32 i = 0; i < sections; ++i) {
-        const uint32 end   = mesh.vertices.size() - 1;
+        const uint32 end   = (uint32)mesh.vertices.size() - 1;
         const uint32 start = (slices - 1) * sections + 1 /* Origin */;
         const uint32 C     = i + start;
         const uint32 NC    = (i + 1 < sections ? i + 1 : 0) + start;

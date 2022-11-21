@@ -226,7 +226,7 @@ inline static void applyTransformProperty(Transformf& transform, const rapidjson
 inline static Transformf getTransform(const rapidjson::GenericArray<true, rapidjson::Value>& array)
 {
     Transformf transform = Transformf::Identity();
-    for (size_t i = 0; i < array.Size(); ++i) {
+    for (rapidjson::SizeType i = 0; i < array.Size(); ++i) {
         if (!array[i].IsObject())
             throw std::runtime_error("Given transform property does not consists of transform operations only");
 

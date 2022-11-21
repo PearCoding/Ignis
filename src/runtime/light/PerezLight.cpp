@@ -43,7 +43,7 @@ void PerezLight::serialize(const SerializationInput& input) const
 
     // Other input specifications
     if (mLight->properties().count("clearness") || mLight->properties().count("brightness")) {
-        insertModel(PerezModel::fromSky(mLight->property("brightness").getNumber(0.2),
+        insertModel(PerezModel::fromSky(mLight->property("brightness").getNumber(0.2f),
                                         mLight->property("clearness").getNumber(1),
                                         solar_zenith));
     } else if (mLight->properties().count("direct_irradiance") || mLight->properties().count("diffuse_irradiance")) {
