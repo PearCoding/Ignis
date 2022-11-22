@@ -1,2 +1,21 @@
+/* Make each footer item in-line so they stack horizontally instead of vertically */
+.footer-item {
+    display: inline-block;
+}
 
-/*# sourceMappingURL=custom.css.map */
+/* Add a separating border line for all but the last item */
+.footer-item:not(:last-child) {
+    border-right: 1px solid var(--pst-color-text-base);
+    margin-right: .5em;
+    padding-right: .5em;
+}
+
+html[data-theme="light"] {
+    --pst-color-background: #fdfdfd;
+    --pst-color-on-background: #f2f2f2;
+}
+
+html[data-theme="dark"] {
+    --pst-color-background: #222222;
+    --pst-color-on-background: #1b1b1b;
+}
