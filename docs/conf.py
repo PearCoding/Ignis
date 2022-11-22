@@ -39,7 +39,8 @@ language = "en"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 sys.path.append(os.path.abspath('exts'))
-extensions = ['objectparameters', 'subfig']
+extensions = ['objectparameters', 'subfig',
+              'sphinx_design', 'sphinx_copybutton']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = []
@@ -93,6 +94,10 @@ source_suffix = '.rst'
 rst_prolog = r"""
 .. role:: paramtype
 
+.. role:: param_true
+
+.. role:: param_false
+
 .. role:: monosp
 
 .. |texture| replace:: :paramtype:`texture`
@@ -100,8 +105,8 @@ rst_prolog = r"""
 .. |number| replace:: :paramtype:`number`
 .. |bool| replace:: :paramtype:`boolean`
 .. |int| replace:: :paramtype:`integer`
-.. |false| replace:: :monosp:`false`
-.. |true| replace:: :monosp:`true`
+.. |false| replace:: :param_false:`false`
+.. |true| replace:: :param_true:`true`
 .. |string| replace:: :paramtype:`string`
 .. |bsdf| replace:: :paramtype:`bsdf`
 .. |vector| replace:: :paramtype:`vector`

@@ -1,1 +1,4 @@
+sphinx
 pydata_sphinx_theme
+sphinx-design
+sphinx_copybutton
