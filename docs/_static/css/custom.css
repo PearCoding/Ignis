@@ -19,3 +19,23 @@ html[data-theme="dark"] {
     --pst-color-background: #222222;
     --pst-color-on-background: #1b1b1b;
 }
+
+.paramtype {
+	font-family: 'Courier New', Courier, monospace;
+    color: var(--pst-color-primary);
+}
+
+.param-true {
+	font-family: 'Courier New', Courier, monospace;
+    color: var(--pst-color-success);
+}
+
+.param-false {
+	font-family: 'Courier New', Courier, monospace;
+    color: var(--pst-color-danger);
+}
+
+.monosp {
+	font-family: 'Courier New', Courier, monospace;
+    font-size: 90%;
+}

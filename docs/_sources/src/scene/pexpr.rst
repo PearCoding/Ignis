@@ -47,7 +47,7 @@ PExpr is strongly typed. Only a single implicit cast from ``int`` to ``num`` is 
 
 All available types are:
 
--   ``bool`` Boolean with ``true`` and ``false`` states.
+-   ``bool`` Boolean with |true| and |false| states.
 -   ``int`` Signed integer.
 -   ``num`` Floating point number.
 -   ``vec2`` Two-dimensional vector.
@@ -91,7 +91,7 @@ few as ``int``:
 
 and a few as ``bool``:
 
--   ``frontside`` ``true`` if normal and ray orientation is front facing. This will be always ``true`` if the point is not lying on a surface.
+-   ``frontside`` |true| if normal and ray orientation is front facing. This will be always ``true`` if the point is not lying on a surface.
 
 .. NOTE:: More special variables might be introduced in the future.
 

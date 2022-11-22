@@ -27,6 +27,8 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
@@ -39,6 +41,9 @@
     <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script src="../../_static/design-tabs.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'src/scene/cameras';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -331,7 +336,7 @@
 <p>Ignis contains several useful camera models. Only one camera can be specified per scene.
 The camera is specified in the <span class="monosp">camera</span> block with a <span class="monosp">type</span> listed in this section below.</p>
 <p>The actual image (or viewport) size is specified in the <span class="monosp">film</span> block with an optional sample strategy in <span class="monosp">sampler</span>.
-The sample strategy has to be one of “independent” (default), “mjitt” or “halton”.</p>
+The sample strategy has to be one of <code class="code docutils literal notranslate"><span class="pre">&quot;independent&quot;</span></code> (default), <code class="code docutils literal notranslate"><span class="pre">&quot;mjitt&quot;</span></code> or <code class="code docutils literal notranslate"><span class="pre">&quot;halton&quot;</span></code>.</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
 <span class="w">   </span><span class="s2">&quot;camera&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
@@ -356,38 +361,46 @@ The sample strategy has to be one of “independent” (default), “mjitt” or
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">fov</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>60</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">60</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Horizontal field of view given in degrees. Can be also given via the name <span class="monosp">hfov</span>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">vfov</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Vertical field of view given in degrees. Can not be defined together with <span class="monosp">fov</span> or <span class="monosp">hfov</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">aspect_ratio</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Aspect ratio (width over height). If not specified the current viewport will be used.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">near_clip, far_clip</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">near_clip</span>
+<span class="paramtype">far_clip</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, inf</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">inf</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Near and far clip of the camera.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">focal_length</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Focal length given in scene units. Only used if aperture_radius != 0.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">aperture_radius</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Aperture radius in scene units. 0 disables depth of field.</p></td>
 </tr>
 </tbody>
@@ -400,23 +413,28 @@ The sample strategy has to be one of “independent” (default), “mjitt” or
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><span class="paramtype">near_clip, far_clip</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">near_clip</span>
+<span class="paramtype">far_clip</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, inf</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">inf</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Near and far clip of the camera.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">scale</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Horizontal scale factor given in scene units.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">aspect_ratio</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Aspect ratio (width over height). If not specified the current viewport will be used.</p></td>
 </tr>
 </tbody>
@@ -429,19 +447,23 @@ The sample strategy has to be one of “independent” (default), “mjitt” or
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><span class="paramtype">near_clip, far_clip</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">near_clip</span>
+<span class="paramtype">far_clip</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, inf</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">inf</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Near and far clip of the camera.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">mode</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
-<td><p>“circular”</p></td>
-<td><p>Clipping mode. Must be one of “circular”, “cropped” or “full”.</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">&quot;circular&quot;</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
+<td><p>Clipping mode. Must be one of <code class="code docutils literal notranslate"><span class="pre">&quot;circular&quot;</span></code>, <code class="code docutils literal notranslate"><span class="pre">&quot;cropped&quot;</span></code> or <code class="code docutils literal notranslate"><span class="pre">&quot;full&quot;</span></code>.</p></td>
 </tr>
 </tbody>
 </table>

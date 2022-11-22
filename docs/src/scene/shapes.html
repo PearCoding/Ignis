@@ -27,6 +27,8 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
@@ -39,6 +41,9 @@
     <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script src="../../_static/design-tabs.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'src/scene/shapes';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -342,6 +347,10 @@ The type has to be one of the shape listed at this section below.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Shapes do not support PExpr expressions.</p>
+</div>
 <section id="triangle-triangle">
 <span id="shape-triangle"></span><h2>Triangle (<span class="monosp">triangle</span>)<a class="headerlink" href="#triangle-triangle" title="Permalink to this heading">#</a></h2>
 <table class="paramstable table">
@@ -353,19 +362,21 @@ The type has to be one of the shape listed at this section below.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><span class="paramtype">p0, p1, p2</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">p0</span>
+<span class="paramtype">p1</span>
+<span class="paramtype">p2</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,0), (1,0,0), (0,1,0)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,0)</span></code>, <code class="code docutils literal notranslate"><span class="pre">(1,0,0)</span></code>, <code class="code docutils literal notranslate"><span class="pre">(0,1,0)</span></code></p></td>
 <td><p>Vertices of the triangle.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
@@ -387,29 +398,33 @@ The type has to be one of the shape listed at this section below.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><span class="paramtype">width, height</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">width</span>
+<span class="paramtype">height</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2, 2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2</span></code>, <code class="code docutils literal notranslate"><span class="pre">2</span></code></p></td>
 <td><p>Width and height of the rectangle in the XY-Plane. The rectangle is centered around the parameter <span class="monosp">origin</span>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">origin</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,0)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,0)</span></code></p></td>
 <td><p>The origin of the rectangle.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">p0, p1, p2, p3</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">p0</span>
+<span class="paramtype">p1</span>
+<span class="paramtype">p2</span>
+<span class="paramtype">p3</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(-1,-1,0), (1,-1,0), (1,1,0), (-1,1,0)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(-1,-1,0)</span></code>, <code class="code docutils literal notranslate"><span class="pre">(1,-1,0)</span></code>, <code class="code docutils literal notranslate"><span class="pre">(1,1,0)</span></code>, <code class="code docutils literal notranslate"><span class="pre">(-1,1,0)</span></code></p></td>
 <td><p>Vertices of the rectangle. This will only be used if no <span class="monosp">width</span> or <span class="monosp">height</span> is specified.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
@@ -431,24 +446,26 @@ The type has to be one of the shape listed at this section below.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><span class="paramtype">width, height, depth</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">width</span>
+<span class="paramtype">height</span>
+<span class="paramtype">depth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2, 2, 2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2</span></code>, <code class="code docutils literal notranslate"><span class="pre">2</span></code>, <code class="code docutils literal notranslate"><span class="pre">2</span></code></p></td>
 <td><p>Width (x-axis), height (y-axis) and depth (z-axis) of the box. The box is centered around the parameter <span class="monosp">origin</span>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">origin</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,0)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,0)</span></code></p></td>
 <td><p>The origin of the box.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">transform</span></p></td>
@@ -459,8 +476,8 @@ The type has to be one of the shape listed at this section below.</p>
 </tbody>
 </table>
 </section>
-<section id="ico-sphere-icosphere-sphere">
-<span id="shape-icosphere"></span><h2>Ico-Sphere (<span class="monosp">icosphere</span>, <span class="monosp">sphere</span>)<a class="headerlink" href="#ico-sphere-icosphere-sphere" title="Permalink to this heading">#</a></h2>
+<section id="sphere-sphere">
+<span id="shape-sphere"></span><h2>Sphere (<span class="monosp">sphere</span>)<a class="headerlink" href="#sphere-sphere" title="Permalink to this heading">#</a></h2>
 <table class="paramstable table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
@@ -472,27 +489,55 @@ The type has to be one of the shape listed at this section below.</p>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">radius</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
 <td><p>Radius of the sphere.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">center</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,0)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,0)</span></code></p></td>
+<td><p>The origin of the box.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In contrary to the other spheres, the constructed sphere is analytical and precise. However, it adds a new primitive type to the renderer, which might decrease performance.</p>
+</div>
+</section>
+<section id="ico-sphere-icosphere">
+<span id="shape-icosphere"></span><h2>Ico-Sphere (<span class="monosp">icosphere</span>)<a class="headerlink" href="#ico-sphere-icosphere" title="Permalink to this heading">#</a></h2>
+<table class="paramstable table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="paramtype">radius</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p>Radius of the sphere.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">center</span></p></td>
+<td><p><span class="paramtype">vector</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,0)</span></code></p></td>
 <td><p>The origin of the box.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">subdivions</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
-<td><p>4</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">4</span></code></p></td>
 <td><p>Number of subdivions used.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
@@ -516,27 +561,28 @@ The type has to be one of the shape listed at this section below.</p>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">radius</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
 <td><p>Radius of the sphere.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">center</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,0)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,0)</span></code></p></td>
 <td><p>The origin of the box.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">stacks, slices</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">stacks</span>
+<span class="paramtype">slices</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
-<td><p>32, 16</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">32</span></code>, <code class="code docutils literal notranslate"><span class="pre">16</span></code></p></td>
 <td><p>Stacks and slices used for internal triangulation.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
@@ -560,37 +606,39 @@ The type has to be one of the shape listed at this section below.</p>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">radius</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
 <td><p>Radius of the cylinder for the top and bottom part.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">top_radius, bottom_radius</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">top_radius</span>
+<span class="paramtype">bottom_radius</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1, 1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code>, <code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
 <td><p>Radius of the cylinder for the top and bottom part respectively. Can not be used together with <span class="monosp">radius</span>.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">p0, p1</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">p0</span>
+<span class="paramtype">p1</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,0), (0,0,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,0)</span></code>, <code class="code docutils literal notranslate"><span class="pre">(0,0,1)</span></code></p></td>
 <td><p>The origin of the top and bottom of the cylinder respectively.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">filled</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>true</p></td>
-<td><p>Set true to fill the top and bottom of the cylinder.</p></td>
+<td><p><span class="param-true">true</span></p></td>
+<td><p>Set <span class="param-true">true</span> to fill the top and bottom of the cylinder.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">sections</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
-<td><p>32</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">32</span></code></p></td>
 <td><p>Sections used for internal triangulation.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
@@ -614,32 +662,33 @@ The type has to be one of the shape listed at this section below.</p>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">radius</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
 <td><p>Radius of the cone.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">p0, p1</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">p0</span>
+<span class="paramtype">p1</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,0), (0,0,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,0)</span></code>, <code class="code docutils literal notranslate"><span class="pre">(0,0,1)</span></code></p></td>
 <td><p>The origin of the top and bottom of the cone respectively.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">filled</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>true</p></td>
-<td><p>Set true to fill the bottom of the cone.</p></td>
+<td><p><span class="param-true">true</span></p></td>
+<td><p>Set <span class="param-true">true</span> to fill the bottom of the cone.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">sections</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
-<td><p>32</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">32</span></code></p></td>
 <td><p>Sections used for internal triangulation.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">transform</span></p></td>
@@ -663,32 +712,32 @@ The type has to be one of the shape listed at this section below.</p>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">radius</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
 <td><p>Radius of the disk.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">origin</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,0)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,0)</span></code></p></td>
 <td><p>The origin of the disk.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">normal</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,1)</span></code></p></td>
 <td><p>The normal of the disk.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">sections</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
-<td><p>32</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">32</span></code></p></td>
 <td><p>Sections used for internal triangulation.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">transform</span></p></td>
@@ -717,17 +766,17 @@ The type has to be one of the shape listed at this section below.</p>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">shape_index</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
-<td><p>-1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">-1</span></code></p></td>
 <td><p>If greater or equal 0 a specific shape given by the index will be loaded, else all shapes will be merged to one.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">transform</span></p></td>
@@ -756,12 +805,12 @@ The type has to be one of the shape listed at this section below.</p>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
@@ -790,17 +839,17 @@ The type has to be one of the shape listed at this section below.</p>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">shape_index</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
-<td><p>0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
 <td><p>A Mitsuba Serialized Format is able to contain multiple shapes. This parameter allows to select the requested one.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">flip_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Flip the normals.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">face_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use normals from triangles as vertex normals. This will let the object look <em>hard</em>.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">transform</span></p></td>
@@ -899,14 +948,19 @@ The type has to be one of the shape listed at this section below.</p>
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#ico-sphere-icosphere-sphere">
+  <a class="reference internal nav-link" href="#sphere-sphere">
+   Sphere (
+   <span class="monosp">
+    sphere
+   </span>
+   )
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#ico-sphere-icosphere">
    Ico-Sphere (
    <span class="monosp">
     icosphere
-   </span>
-   ,
-   <span class="monosp">
-    sphere
    </span>
    )
   </a>

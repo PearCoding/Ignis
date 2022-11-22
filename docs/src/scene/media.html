@@ -27,6 +27,8 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
@@ -39,6 +41,9 @@
     <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script src="../../_static/design-tabs.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'src/scene/media';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -350,23 +355,27 @@ The type has to be one of the media listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">sigma_s</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Scattering term.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">sigma_a</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Attenuation term.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">g</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Henyey-Greenstein phase parameter. Valid range is [-1, 1]. 0 = Isotropic, -1 = Full back scattering, 1 = Full forward scattering.</p></td>
 </tr>
 </tbody>

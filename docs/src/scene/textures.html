@@ -27,6 +27,8 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
@@ -39,6 +41,9 @@
     <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script src="../../_static/design-tabs.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'src/scene/textures';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -350,6 +355,7 @@ The type has to be one of the textures listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -357,26 +363,31 @@ The type has to be one of the textures listed at this section below.</p>
 <tr class="row-even"><td><p><span class="paramtype">filename</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Path to a valid image file.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">filter_type</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
-<td><p>“bilinear”</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">&quot;bilinear&quot;</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>The filter type to be used. Has to be one of the following: [“bilinear”, “nearest”].</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">wrap_mode</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
-<td><p>“repeat”</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">&quot;repeat&quot;</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>The wrap method to be used. Has to be one of the following: [“repeat”, “mirror”, “clamp”].</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
 <td><p><span class="paramtype">transform</span></p></td>
 <td><p>Identity</p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Optional 2d transformation applied to texture coordinates.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">linear</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>The given image file is already in linear space and inverse gamma mapping can be skipped. Ignored for EXR and HDR images as it is expected that they are always in linear space.</p></td>
 </tr>
 </tbody>
@@ -396,28 +407,36 @@ The type has to be one of the textures listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><span class="paramtype">color0, color1</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">color0</span>
+<span class="paramtype">color1</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(0,0,0), (1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>The colors to used for the brick. color0 is the mortar, color1 is the actual brick.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">scale_x, scale_y</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">scale_x</span>
+<span class="paramtype">scale_y</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>6, 3</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">6</span></code>, <code class="code docutils literal notranslate"><span class="pre">3</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Numbers of grids in a normalized frame [0,0]x[1,1].</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">gap_x, gap_y</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">gap_x</span>
+<span class="paramtype">gap_y</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.05, 0.1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.05</span></code>, <code class="code docutils literal notranslate"><span class="pre">0.1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Normalized gap size.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
 <td><p><span class="paramtype">transform</span></p></td>
 <td><p>Identity</p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Optional 2d transformation applied to texture coordinates.</p></td>
 </tr>
 </tbody>
@@ -437,23 +456,29 @@ The type has to be one of the textures listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><span class="paramtype">color0, color1</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">color0</span>
+<span class="paramtype">color1</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(0,0,0), (1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>The colors to use in the checkerboard.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">scale_x, scale_y</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">scale_x</span>
+<span class="paramtype">scale_y</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2, 2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2</span></code>, <code class="code docutils literal notranslate"><span class="pre">2</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Numbers of grids in a normalized frame [0,0]x[1,1].</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">transform</span></p></td>
 <td><p><span class="paramtype">transform</span></p></td>
 <td><p>Identity</p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Optional 2d transformation applied to texture coordinates.</p></td>
 </tr>
 </tbody>
@@ -473,18 +498,21 @@ The type has to be one of the textures listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">color</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Tint</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">colored</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>True will generate a colored texture, instead of a grayscale one.</p></td>
 </tr>
 </tbody>
@@ -505,28 +533,34 @@ The type has to be one of the textures listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">color</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Tint</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">colored</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>True will generate a colored texture, instead of a grayscale one.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">scale_x, scale_y</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">scale_x</span>
+<span class="paramtype">scale_y</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>20, 20</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">20</span></code>, <code class="code docutils literal notranslate"><span class="pre">20</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Numbers of grids used for noise in a normalized frame [0,0]x[1,1].</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
 <td><p><span class="paramtype">transform</span></p></td>
 <td><p>Identity</p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Optional 2d transformation applied to texture coordinates.</p></td>
 </tr>
 </tbody>
@@ -546,28 +580,34 @@ The type has to be one of the textures listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">color</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Tint</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">colored</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>True will generate a colored texture, instead of a grayscale one.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">scale_x, scale_y</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">scale_x</span>
+<span class="paramtype">scale_y</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>20, 20</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">20</span></code>, <code class="code docutils literal notranslate"><span class="pre">20</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Numbers of grids used for noise in a normalized frame [0,0]x[1,1].</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
 <td><p><span class="paramtype">transform</span></p></td>
 <td><p>Identity</p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Optional 2d transformation applied to texture coordinates.</p></td>
 </tr>
 </tbody>
@@ -587,28 +627,34 @@ The type has to be one of the textures listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">color</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Tint</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">colored</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>True will generate a colored texture, instead of a grayscale one.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">scale_x, scale_y</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">scale_x</span>
+<span class="paramtype">scale_y</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>20, 20</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">20</span></code>, <code class="code docutils literal notranslate"><span class="pre">20</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Numbers of grids used for noise in a normalized frame [0,0]x[1,1].</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
 <td><p><span class="paramtype">transform</span></p></td>
 <td><p>Identity</p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Optional 2d transformation applied to texture coordinates.</p></td>
 </tr>
 </tbody>
@@ -628,28 +674,34 @@ The type has to be one of the textures listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">color</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Tint</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">colored</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>True will generate a colored texture, instead of a grayscale one.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">scale_x, scale_y</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">scale_x</span>
+<span class="paramtype">scale_y</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>20, 20</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">20</span></code>, <code class="code docutils literal notranslate"><span class="pre">20</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Numbers of grids used for noise in a normalized frame [0,0]x[1,1].</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
 <td><p><span class="paramtype">transform</span></p></td>
 <td><p>Identity</p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Optional 2d transformation applied to texture coordinates.</p></td>
 </tr>
 </tbody>
@@ -669,28 +721,34 @@ The type has to be one of the textures listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">color</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Tint</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">colored</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>True will generate a colored texture, instead of a grayscale one.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">scale_x, scale_y</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">scale_x</span>
+<span class="paramtype">scale_y</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>20, 20</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">20</span></code>, <code class="code docutils literal notranslate"><span class="pre">20</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Numbers of grids used for noise in a normalized frame [0,0]x[1,1].</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
 <td><p><span class="paramtype">transform</span></p></td>
 <td><p>Identity</p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Optional 2d transformation applied to texture coordinates.</p></td>
 </tr>
 </tbody>
@@ -714,6 +772,7 @@ The parameters used inside the expression have to be prefixed with <code class="
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -721,6 +780,7 @@ The parameters used inside the expression have to be prefixed with <code class="
 <tr class="row-even"><td><p><span class="paramtype">expr</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>A <a class="reference internal" href="pexpr.html#pexpr"><span class="std std-ref">PExpr</span></a> based expression</p></td>
 </tr>
 </tbody>
@@ -740,6 +800,7 @@ The parameters used inside the expression have to be prefixed with <code class="
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -747,11 +808,13 @@ The parameters used inside the expression have to be prefixed with <code class="
 <tr class="row-even"><td><p><span class="paramtype">texture</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>The texture the transform is applied to.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">transform</span></p></td>
 <td><p><span class="paramtype">transform</span></p></td>
 <td><p>Identity</p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>2d transformation applied to texture coordinates.</p></td>
 </tr>
 </tbody>

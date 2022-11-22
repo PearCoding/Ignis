@@ -27,6 +27,8 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
@@ -39,6 +41,9 @@
     <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script src="../../_static/design-tabs.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'src/scene/bsdfs';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -350,13 +355,15 @@ The type has to be one of the bsdfs listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>0.5</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Albedo</p></td>
 </tr>
 </tbody>
@@ -376,18 +383,21 @@ The type has to be one of the bsdfs listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>0.5</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Albedo</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">alpha</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Isotropic roughness.</p></td>
 </tr>
 </tbody>
@@ -407,34 +417,42 @@ The type has to be one of the bsdfs listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">specular_reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">specular_transmittance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">ext_ior, int_ior</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">ext_ior</span>
+<span class="paramtype">int_ior</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>vacuum, bk7</p></td>
+<td><p>~vacuum, ~bk7</p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Specifies exterior and interior index of refraction.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">ext_ior_material, int_ior_material</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">ext_ior_material</span>
+<span class="paramtype">int_ior_material</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
 <td><p><em>None</em>, <em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Has to be one of the available presets listed <a class="reference internal" href="#bsdf-dielectric-list"><span class="std std-ref">here</span></a>.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">thin</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
-<td><p>True if the glass should be treated as a thin interface. <span class="monosp">int_ior</span> will be always the inside of the thin surface, regardless of the direction of the surface normal.</p></td>
+<td><p><span class="param-false">false</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
+<td><p>True if the glass should be treated as a thin interface. <span class="paramtype">int_ior</span> will be always the inside of the thin surface, regardless of the direction of the surface normal.</p></td>
 </tr>
 </tbody>
 </table>
@@ -459,34 +477,43 @@ The type has to be one of the bsdfs listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">specular_reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">specular_transmittance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">ext_ior, int_ior</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">ext_ior</span>
+<span class="paramtype">int_ior</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>vacuum, bk7</p></td>
+<td><p>~vacuum, ~bk7</p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Specifies exterior and interior index of refraction.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">ext_ior_material, int_ior_material</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">ext_ior_material</span>
+<span class="paramtype">int_ior_material</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
 <td><p><em>None</em>, <em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Has to be one of the available presets listed <a class="reference internal" href="#bsdf-dielectric-list"><span class="std std-ref">here</span></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">alpha_u, alpha_v</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">alpha_u</span>
+<span class="paramtype">alpha_v</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.1, 0.1</p></td>
-<td><p>Roughness terms. Can be specified isotropically with just <cite>alpha</cite> as well.</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.1</span></code>, <code class="code docutils literal notranslate"><span class="pre">0.1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
+<td><p>Roughness terms. Can be specified isotropic using <span class="paramtype">alpha</span> as well.</p></td>
 </tr>
 </tbody>
 </table>
@@ -505,13 +532,15 @@ The type has to be one of the bsdfs listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">specular_reflectance</span></p></td>
 <td><p><span class="paramtype">texture</span></p></td>
-<td><p>1.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 </tbody>
@@ -531,23 +560,28 @@ The type has to be one of the bsdfs listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><span class="paramtype">eta, k</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">eta</span>
+<span class="paramtype">k</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>~ Perfect mirror</p></td>
+<td><p>~Perfect mirror</p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Real and imaginary components of the material’s index of refraction.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">material</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
-<td><p>“none”</p></td>
+<td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of eta, k a material name can be specified. Available presets are listed <a class="reference internal" href="#bsdf-conductor-list"><span class="std std-ref">here</span></a>.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">specular_reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Optional factor that can be used to modulate the specular reflection component.
 Note that for physical realism, this parameter should never be touched.</p></td>
 </tr>
@@ -568,30 +602,37 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><span class="paramtype">eta, k</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">eta</span>
+<span class="paramtype">k</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>~ Gold</p></td>
+<td><p>~Gold</p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Real and imaginary components of the material’s index of refraction.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">material</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
-<td><p>“none”</p></td>
+<td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of eta, k a material name can be specified. Available presets are listed <a class="reference internal" href="#bsdf-conductor-list"><span class="std std-ref">here</span></a>.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">specular_reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Optional factor that can be used to modulate the specular reflection component.
 Note that for physical realism, this parameter should never be touched.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">alpha_u, alpha_v</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">alpha_u</span>
+<span class="paramtype">alpha_v</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.1, 0.1</p></td>
-<td><p>Roughness terms. Can be specified isotropically with just <cite>alpha</cite> as well.</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.1</span></code>, <code class="code docutils literal notranslate"><span class="pre">0.1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
+<td><p>Roughness terms. Can be specified isotropic using <span class="paramtype">alpha</span> as well.</p></td>
 </tr>
 </tbody>
 </table>
@@ -610,28 +651,35 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">specular_reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">diffuse_reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>0.5</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">ext_ior, int_ior</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">ext_ior</span>
+<span class="paramtype">int_ior</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>vacuum, bk7</p></td>
+<td><p>~vacuum, ~bk7</p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Specifies exterior and interior index of refraction.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">ext_ior_material, int_ior_material</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">ext_ior_material</span>
+<span class="paramtype">int_ior_material</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
 <td><p><em>None</em>, <em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Has to be one of the available presets listed <a class="reference internal" href="#bsdf-dielectric-list"><span class="std std-ref">here</span></a>.</p></td>
 </tr>
 </tbody>
@@ -651,34 +699,43 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">specular_reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">diffuse_reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>0.5</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">ext_ior, int_ior</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">ext_ior</span>
+<span class="paramtype">int_ior</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>vacuum, bk7</p></td>
+<td><p>~vacuum, ~bk7</p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Specifies exterior and interior index of refraction.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">ext_ior_material, int_ior_material</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">ext_ior_material</span>
+<span class="paramtype">int_ior_material</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
 <td><p><em>None</em>, <em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Has to be one of the available presets listed <a class="reference internal" href="#bsdf-dielectric-list"><span class="std std-ref">here</span></a>.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">alpha_u, alpha_v</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">alpha_u</span>
+<span class="paramtype">alpha_v</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.1, 0.1</p></td>
-<td><p>Roughness terms. Can be specified isotropically with just <cite>alpha</cite> as well.</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.1</span></code>, <code class="code docutils literal notranslate"><span class="pre">0.1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
+<td><p>Roughness terms. Can be specified isotropic using <span class="paramtype">alpha</span> as well.</p></td>
 </tr>
 </tbody>
 </table>
@@ -697,18 +754,21 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">specular_reflectance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">exponent</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>30</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">30</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 </tbody>
@@ -732,93 +792,111 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">base_color</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>0.8</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.8</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">metallic</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">roughness</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.5</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">anisotropic</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">ior</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>bk7</p></td>
+<td><p>~bk7</p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Specifies index of refraction.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">ior_material</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Has to be one of the available presets listed <a class="reference internal" href="#bsdf-dielectric-list"><span class="std std-ref">here</span></a>.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">thin</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">flatness</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">specular_transmission</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">specular_tint</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">sheen</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">sheen_tint</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">clearcoat</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">clearcoat_gloss</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">clearcoat_top_only</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>true</p></td>
-<td><p>True if clearcoat should only be applied to the front side of the surface only.</p></td>
+<td><p><span class="param-true">true</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
+<td><p><span class="param-true">true</span> if clearcoat should only be applied to the front side of the surface only.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">clearcoat_roughness</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">diffuse_transmission</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.0</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 </tbody>
@@ -838,18 +916,22 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><span class="paramtype">first, second</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">first</span>
+<span class="paramtype">second</span></p></td>
 <td><p><span class="paramtype">bsdf</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">weight</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.5</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 </tbody>
@@ -869,6 +951,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -876,16 +959,19 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-even"><td><p><span class="paramtype">bsdf</span></p></td>
 <td><p><span class="paramtype">bsdf</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">weight</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.5</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">inverted</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 </tbody>
@@ -905,6 +991,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -912,21 +999,25 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-even"><td><p><span class="paramtype">bsdf</span></p></td>
 <td><p><span class="paramtype">bsdf</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">weight</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.5</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">cutoff</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.5</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.5</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">inverted</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 </tbody>
@@ -960,6 +1051,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -967,16 +1059,19 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-even"><td><p><span class="paramtype">bsdf</span></p></td>
 <td><p><span class="paramtype">bsdf</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">map</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Usually a texture used for normal mapping.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">strength</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 </tbody>
@@ -996,6 +1091,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -1003,16 +1099,19 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-even"><td><p><span class="paramtype">bsdf</span></p></td>
 <td><p><span class="paramtype">bsdf</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">map</span></p></td>
 <td><p><span class="paramtype">texture</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>A grayscale texture used for texture mapping.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">strength</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>TODO</p></td>
 </tr>
 </tbody>
@@ -1032,6 +1131,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -1039,16 +1139,19 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-even"><td><p><span class="paramtype">bsdf</span></p></td>
 <td><p><span class="paramtype">bsdf</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Bsdf the normal transformation will be applied to.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">normal</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,1)</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Normal to use instead of the callee normal (e.g., surface normal).</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">tangent</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Tangent to use instead of the callee tangent (e.g., surface tangent). Will be calculated from the normal parameter if not set.</p></td>
 </tr>
 </tbody>
@@ -1068,6 +1171,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -1075,11 +1179,13 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-even"><td><p><span class="paramtype">filename</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Path to a valid brdf.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">tint</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Tint.</p></td>
 </tr>
 </tbody>
@@ -1099,6 +1205,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -1106,16 +1213,19 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-even"><td><p><span class="paramtype">filename</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Path to a valid windows xml specifying a klems bsdf.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">base_color</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Tint.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">up</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0, 0, 1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,</span> <span class="pre">0,</span> <span class="pre">1)</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Up vector</p></td>
 </tr>
 </tbody>
@@ -1132,6 +1242,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -1139,16 +1250,19 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <tr class="row-even"><td><p><span class="paramtype">filename</span></p></td>
 <td><p><span class="paramtype">string</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Path to a valid windows xml specifying a tensortree bsdf.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">base_color</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Tint.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">up</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0, 0, 1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,</span> <span class="pre">0,</span> <span class="pre">1)</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Up vector</p></td>
 </tr>
 </tbody>

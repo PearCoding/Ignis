@@ -27,6 +27,8 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
@@ -39,6 +41,9 @@
     <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script src="../../_static/design-tabs.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'src/scene/techniques';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -332,6 +337,10 @@
 They allow the calculation of global illumination based on different methods or the acquisition of information about the underlying scene.</p>
 <p>A technique is specified in the <span class="monosp">technique</span> block with a <span class="monosp">type</span>.
 The type has to be one of the techniques listed at this section below.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Techniques do not support PExpr expressions.</p>
+</div>
 <section id="path-tracer-path">
 <h2>Path Tracer (<span class="monosp">path</span>)<a class="headerlink" href="#path-tracer-path" title="Permalink to this heading">#</a></h2>
 <table class="paramstable table">
@@ -345,27 +354,27 @@ The type has to be one of the techniques listed at this section below.</p>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">max_depth</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
-<td><p>64</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">64</span></code></p></td>
 <td><p>Maximum depth of rays to be traced.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">clamp</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
 <td><p>Value to clamp contributions to. This introduces bias in favour of omitting outlier. 0 disables clamping.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">use_uniform_light_selector</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use uniform light selection technique. The default adaptive technique is better in most cases, use with caution.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">aov_normals</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Enable normal output as aov.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">aov_mis</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Enable two aovs displaying mis related weights.</p></td>
 </tr>
 </tbody>
@@ -386,17 +395,17 @@ If participating media is used, it is recommended to use the volumetric path tra
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">max_depth</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
-<td><p>64</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">64</span></code></p></td>
 <td><p>Maximum depth of rays to be traced.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">clamp</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
 <td><p>Value to clamp contributions to. This introduces bias in favour of omitting outlier. 0 disables clamping.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">use_uniform_light_selector</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Use uniform light selection technique. The default adaptive technique is better in most cases, use with caution.</p></td>
 </tr>
 </tbody>
@@ -416,22 +425,22 @@ If participating media is used, it is recommended to use the volumetric path tra
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">max_depth</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
-<td><p>8</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">8</span></code></p></td>
 <td><p>Maximum depth of rays to be traced.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">radius</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.01</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.01</span></code></p></td>
 <td><p>Initial merging radius.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">clamp</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
 <td><p>Value to clamp contributions to. This introduces bias in favour of omitting outlier. 0 disables clamping.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">aov</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>false</p></td>
+<td><p><span class="param-false">false</span></p></td>
 <td><p>Enable aovs displaying internal weights.</p></td>
 </tr>
 </tbody>

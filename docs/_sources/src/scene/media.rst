@@ -26,17 +26,18 @@ Homogeneous (:monosp:`homogeneous`, :monosp:`constant`)
 
 .. objectparameters::
 
- * - sigma_s
-   - |color|
-   - 0
-   - Scattering term.
-
- * - sigma_a
-   - |color|
-   - 0
-   - Attenuation term.
-
- * - g
-   - |number|
-   - 0
-   - Henyey-Greenstein phase parameter. Valid range is [-1, 1]. 0 = Isotropic, -1 = Full back scattering, 1 = Full forward scattering.
+  * - sigma_s
+    - |color|
+    - :code:`0`
+    - Yes
+    - Scattering term.
+  * - sigma_a
+    - |color|
+    - :code:`0`
+    - Yes
+    - Attenuation term.
+  * - g
+    - |number|
+    - :code:`0`
+    - Yes
+    - Henyey-Greenstein phase parameter. Valid range is [-1, 1]. 0 = Isotropic, -1 = Full back scattering, 1 = Full forward scattering.

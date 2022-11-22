@@ -27,6 +27,8 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/design-style.4045f2051d55cab465a707391d5b2007.min.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
@@ -39,6 +41,9 @@
     <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/clipboard.min.js"></script>
+    <script src="../../_static/copybutton.js"></script>
+    <script src="../../_static/design-tabs.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'src/scene/lights';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -354,18 +359,21 @@ The type has to be one of the lights listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">position</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,0)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,0)</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Position of the point light.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">intensity</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Intensity of the point light.</p></td>
 </tr>
 </tbody>
@@ -385,43 +393,59 @@ The type has to be one of the lights listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">cutoff</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>30</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">30</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Cutoff angle in degree. Greater angles will be completely black.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">falloff</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>20</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">20</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Falloff angle in degree. Greater angles will linearly falloff towards the cutoff angle. Falloff angle should be less or equal to the cutoff angle.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">position</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,0)</p></td>
-<td><p>Position of the light.</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,0)</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">direction</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,1)</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Direction of the light towards the scene.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">elevation</span>
+<span class="paramtype">azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">year</span>
+<span class="paramtype">month</span>
+<span class="paramtype">day</span>
+<span class="paramtype">hour</span>
+<span class="paramtype">minute</span>
+<span class="paramtype">seconds</span>
+<span class="paramtype">latitude</span>
+<span class="paramtype">longitude</span>
+<span class="paramtype">timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2020</span></code>, <code class="code docutils literal notranslate"><span class="pre">5</span></code>, <code class="code docutils literal notranslate"><span class="pre">6</span></code>, <code class="code docutils literal notranslate"><span class="pre">12</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">49.235422</span></code>, <code class="code docutils literal notranslate"><span class="pre">-6.9965744</span></code>, <code class="code docutils literal notranslate"><span class="pre">-2</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">intensity</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Intensity of the light.</p></td>
 </tr>
 </tbody>
@@ -441,28 +465,42 @@ The type has to be one of the lights listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,1)</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Direction of the light towards the scene.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">elevation</span>
+<span class="paramtype">azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">year</span>
+<span class="paramtype">month</span>
+<span class="paramtype">day</span>
+<span class="paramtype">hour</span>
+<span class="paramtype">minute</span>
+<span class="paramtype">seconds</span>
+<span class="paramtype">latitude</span>
+<span class="paramtype">longitude</span>
+<span class="paramtype">timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2020</span></code>, <code class="code docutils literal notranslate"><span class="pre">5</span></code>, <code class="code docutils literal notranslate"><span class="pre">6</span></code>, <code class="code docutils literal notranslate"><span class="pre">12</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">49.235422</span></code>, <code class="code docutils literal notranslate"><span class="pre">-6.9965744</span></code>, <code class="code docutils literal notranslate"><span class="pre">-2</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">irradiance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Output of the directional light.</p></td>
 </tr>
 </tbody>
@@ -482,6 +520,7 @@ The type has to be one of the lights listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
@@ -489,11 +528,13 @@ The type has to be one of the lights listed at this section below.</p>
 <tr class="row-even"><td><p><span class="paramtype">entity</span></p></td>
 <td><p><span class="paramtype">entity</span></p></td>
 <td><p><em>None</em></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>A valid entity.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">radiance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Output of the area light.</p></td>
 </tr>
 </tbody>
@@ -513,33 +554,48 @@ The type has to be one of the lights listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,1)</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Direction of the incoming sun towards the scene.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">elevation</span>
+<span class="paramtype">azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">year</span>
+<span class="paramtype">month</span>
+<span class="paramtype">day</span>
+<span class="paramtype">hour</span>
+<span class="paramtype">minute</span>
+<span class="paramtype">seconds</span>
+<span class="paramtype">latitude</span>
+<span class="paramtype">longitude</span>
+<span class="paramtype">timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2020</span></code>, <code class="code docutils literal notranslate"><span class="pre">5</span></code>, <code class="code docutils literal notranslate"><span class="pre">6</span></code>, <code class="code docutils literal notranslate"><span class="pre">12</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">49.235422</span></code>, <code class="code docutils literal notranslate"><span class="pre">-6.9965744</span></code>, <code class="code docutils literal notranslate"><span class="pre">-2</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">sun_scale</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Scale of the sun power in the sky.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">sun_radius_scale</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Scale of the sun radius in the sky.</p></td>
 </tr>
 </tbody>
@@ -559,38 +615,54 @@ The type has to be one of the lights listed at this section below.</p>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">ground</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Ground color of the sky model.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">turbidity</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>3</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">3</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Turbidity factor of the sky model.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,1)</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Direction of the incoming sun towards the scene.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">elevation</span>
+<span class="paramtype">azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">year</span>
+<span class="paramtype">month</span>
+<span class="paramtype">day</span>
+<span class="paramtype">hour</span>
+<span class="paramtype">minute</span>
+<span class="paramtype">seconds</span>
+<span class="paramtype">latitude</span>
+<span class="paramtype">longitude</span>
+<span class="paramtype">timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2020</span></code>, <code class="code docutils literal notranslate"><span class="pre">5</span></code>, <code class="code docutils literal notranslate"><span class="pre">6</span></code>, <code class="code docutils literal notranslate"><span class="pre">12</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">49.235422</span></code>, <code class="code docutils literal notranslate"><span class="pre">-6.9965744</span></code>, <code class="code docutils literal notranslate"><span class="pre">-2</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">scale</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Scale factor multiplied to the radiance.</p></td>
 </tr>
 </tbody>
@@ -613,24 +685,27 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">zenith</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Zenith color of the sky model.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">ground</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Ground color of the sky model.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">ground_brightness</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.2</p></td>
-<td><p>Brightness of the ground.</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.2</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 </tr>
 </tbody>
 </table>
@@ -649,23 +724,27 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">zenith</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Zenith color of the sky model.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">ground</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Ground color of the sky model.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">ground_brightness</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.2</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Brightness of the ground.</p></td>
 </tr>
 </tbody>
@@ -685,48 +764,66 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">zenith</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Zenith tint of the sky model.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">ground</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Ground tint of the sky model.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">ground_brightness</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.2</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Brightness of the ground.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">turbidity</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2.45</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2.45</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Turbidity factor of sky model. This parameter can not be an expression (yet).</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,1)</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Direction of the incoming sun towards the scene.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">elevation</span>
+<span class="paramtype">azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">year</span>
+<span class="paramtype">month</span>
+<span class="paramtype">day</span>
+<span class="paramtype">hour</span>
+<span class="paramtype">minute</span>
+<span class="paramtype">seconds</span>
+<span class="paramtype">latitude</span>
+<span class="paramtype">longitude</span>
+<span class="paramtype">timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2020</span></code>, <code class="code docutils literal notranslate"><span class="pre">5</span></code>, <code class="code docutils literal notranslate"><span class="pre">6</span></code>, <code class="code docutils literal notranslate"><span class="pre">12</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">49.235422</span></code>, <code class="code docutils literal notranslate"><span class="pre">-6.9965744</span></code>, <code class="code docutils literal notranslate"><span class="pre">-2</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">scale</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Scale factor multiplied to the radiance.</p></td>
 </tr>
 </tbody>
@@ -746,48 +843,66 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">zenith</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Zenith tint of the sky model.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">ground</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Ground tint of the sky model.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">ground_brightness</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0.2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0.2</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Brightness of the ground.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">turbidity</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2.45</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2.45</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Turbidity factor of sky model. This parameter can not be an expression (yet).</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,1)</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Direction of the incoming sun towards the scene.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">elevation</span>
+<span class="paramtype">azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">year</span>
+<span class="paramtype">month</span>
+<span class="paramtype">day</span>
+<span class="paramtype">hour</span>
+<span class="paramtype">minute</span>
+<span class="paramtype">seconds</span>
+<span class="paramtype">latitude</span>
+<span class="paramtype">longitude</span>
+<span class="paramtype">timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2020</span></code>, <code class="code docutils literal notranslate"><span class="pre">5</span></code>, <code class="code docutils literal notranslate"><span class="pre">6</span></code>, <code class="code docutils literal notranslate"><span class="pre">12</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">49.235422</span></code>, <code class="code docutils literal notranslate"><span class="pre">-6.9965744</span></code>, <code class="code docutils literal notranslate"><span class="pre">-2</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">scale</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Scale factor multiplied to the radiance.</p></td>
 </tr>
 </tbody>
@@ -807,65 +922,92 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">direction</span></p></td>
 <td><p><span class="paramtype">vector</span></p></td>
-<td><p>(0,0,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">(0,0,1)</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Direction of the light towards the scene.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">elevation, azimuth</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">elevation</span>
+<span class="paramtype">azimuth</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>0, 0</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">year, month, day, hour, minute, seconds, latitude, longitude, timezone</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">year</span>
+<span class="paramtype">month</span>
+<span class="paramtype">day</span>
+<span class="paramtype">hour</span>
+<span class="paramtype">minute</span>
+<span class="paramtype">seconds</span>
+<span class="paramtype">latitude</span>
+<span class="paramtype">longitude</span>
+<span class="paramtype">timezone</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">2020</span></code>, <code class="code docutils literal notranslate"><span class="pre">5</span></code>, <code class="code docutils literal notranslate"><span class="pre">6</span></code>, <code class="code docutils literal notranslate"><span class="pre">12</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">0</span></code>, <code class="code docutils literal notranslate"><span class="pre">49.235422</span></code>, <code class="code docutils literal notranslate"><span class="pre">-6.9965744</span></code>, <code class="code docutils literal notranslate"><span class="pre">-2</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Instead of <span class="monosp">direction</span> the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">luminance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Luminance of the sky model. Set this to 1 to prevent the parameter <span class="monosp">zenith</span> to be applied.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">zenith</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Zenith color of the sky model. This can not be used together with <span class="monosp">luminance</span>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">ground</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Ground tint of the sky model. The ground has to be explicitly given.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">a, b, c, d, e</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">a</span>
+<span class="paramtype">b</span>
+<span class="paramtype">c</span>
+<span class="paramtype">d</span>
+<span class="paramtype">e</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1,1,1,1,1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code>, <code class="code docutils literal notranslate"><span class="pre">1</span></code>, <code class="code docutils literal notranslate"><span class="pre">1</span></code>, <code class="code docutils literal notranslate"><span class="pre">1</span></code>, <code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Perez explicit parameters. Can not be used with other options specifying Perez parameters.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">clearness, brightness</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">clearness</span>
+<span class="paramtype">brightness</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1, 0.2</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code>, <code class="code docutils literal notranslate"><span class="pre">0.2</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Perez specified parameters to populate a, b, c, d and e. Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="paramtype">diffuse_irradiance, direct_irradiance</span></p></td>
+<tr class="row-even"><td><p><span class="paramtype">diffuse_irradiance</span>
+<span class="paramtype">direct_irradiance</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1, 1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code>, <code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Diffuse horizontal irradiance (W/m^2) and direct normal irradiance (W/m^2). Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.</p></td>
 </tr>
-<tr class="row-odd"><td><p><span class="paramtype">diffuse_illuminance, direct_illuminance</span></p></td>
+<tr class="row-odd"><td><p><span class="paramtype">diffuse_illuminance</span>
+<span class="paramtype">direct_illuminance</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
-<td><p>1, 1</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code>, <code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Diffuse horizontal illuminance (Lux) and direct normal illuminance (Lux). Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.</p></td>
 </tr>
 </tbody>
 </table>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Using PExpr is not supported. Output is in W m^-2 sr^-1 solar radiation, which equals the “-O 1” parameter in <span class="monosp">gendaylit</span> from the Radiance framework. Support of the default “-O 0” is planned</p>
+<p>Output is in W m^-2 sr^-1 solar radiation, which equals the “-O 1” parameter in <code class="docutils literal notranslate"><span class="pre">gendaylit</span></code> from the <a class="reference external" href="https://www.radiance-online.org/">Radiance</a> framework. Support of the default “-O 0” is planned</p>
 </div>
 <div class="figure compound align-center" id="fig-perez-light">
 <figure class="align-default" id="id11">
@@ -882,23 +1024,27 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
 <th class="head"><p>Type</p></th>
 <th class="head"><p>Default</p></th>
+<th class="head"><p>PExpr</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">radiance</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Radiance of the sky model. This can also be a texture.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">scale</span></p></td>
 <td><p><span class="paramtype">color</span></p></td>
-<td><p>(1,1,1)</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p><span class="fas fa-check sd-text-success"></span></p></td>
 <td><p>Scale factor multiplied to the radiance. Only really useful in combination with a texture.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">cdf</span></p></td>
 <td><p><span class="paramtype">boolean</span></p></td>
-<td><p>true</p></td>
+<td><p><span class="param-true">true</span></p></td>
+<td><p><span class="fas fa-xmark sd-text-danger"></span></p></td>
 <td><p>Construct a 2d cdf for sampling purposes. Will only be considered if parameter <cite>radiance</cite> is an <span class="monosp">image</span> texture (without PExpr and other terms)</p></td>
 </tr>
 </tbody>
