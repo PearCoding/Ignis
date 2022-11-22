@@ -455,7 +455,7 @@ Perez Sky Model (:monosp:`perez`)
    - 1, 1
    - Diffuse horizontal illuminance (Lux) and direct normal illuminance (Lux). Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
    
-.. NOTE:: The interface with PExpr is still experimental and will be further improved in the future. 
+.. NOTE:: Using PExpr is not supported. Output is in W m^-2 sr^-1 solar radiation, which equals the "-O 1" parameter in :monosp:`gendaylit` from the Radiance framework. Support of the default "-O 0" is planned 
 
 .. subfigstart::
   
