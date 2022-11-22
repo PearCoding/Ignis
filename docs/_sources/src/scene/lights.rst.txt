@@ -38,7 +38,7 @@ Point Light (:monosp:`point`)
 
 .. subfigstart::
   
-.. figure:: images/lig_point.jpg
+.. figure:: images/light_point.jpg
   :width: 90%
 
   Point light 
@@ -83,7 +83,7 @@ Spot Light (:monosp:`spot`)
    
 .. subfigstart::
   
-.. figure:: images/lig_spot.jpg
+.. figure:: images/light_spot.jpg
   :width: 90%
 
   Spot light
@@ -119,7 +119,7 @@ Directional Light (:monosp:`directional`)
 
 .. subfigstart::
   
-.. figure:: images/lig_directional.jpg
+.. figure:: images/light_directional.jpg
   :width: 90%
 
   Directional light infinitely away from the scene 
@@ -145,7 +145,7 @@ Area Light (:monosp:`area`)
    
 .. subfigstart::
   
-.. figure:: images/lig_area.jpg
+.. figure:: images/light_area.jpg
   :width: 90%
 
   Area light
@@ -186,7 +186,7 @@ Sun Light (:monosp:`sun`)
 
 .. subfigstart::
   
-.. figure:: images/lig_sun.jpg
+.. figure:: images/light_sun.jpg
   :width: 90%
 
   Sun light infinitely away from the scene. In contrary to the directional light, the sun casts smooth shadows depending on the scale of the sun radius.
@@ -231,7 +231,7 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 
 .. subfigstart::
   
-.. figure:: images/lig_sky.jpg
+.. figure:: images/light_sky.jpg
   :width: 90%
 
   Sky light with default settings.
@@ -262,7 +262,7 @@ CIE Uniform Sky Model (:monosp:`cie_uniform`)
    
 .. subfigstart::
   
-.. figure:: images/lig_cie_uniform.jpg
+.. figure:: images/light_cie_uniform.jpg
   :width: 90%
 
   CIE uniform sky model.
@@ -293,7 +293,7 @@ CIE Cloudy Sky Model (:monosp:`cie_cloudy`)
    
 .. subfigstart::
   
-.. figure:: images/lig_cie_cloudy.jpg
+.. figure:: images/light_cie_cloudy.jpg
   :width: 90%
 
   CIE cloudy sky model.
@@ -342,7 +342,7 @@ CIE Clear Sky Model (:monosp:`cie_clear`)
    
 .. subfigstart::
   
-.. figure:: images/lig_cie_clear.jpg
+.. figure:: images/light_cie_clear.jpg
   :width: 90%
 
   CIE clear sky model.
@@ -391,7 +391,7 @@ CIE Intermediate Sky Model (:monosp:`cie_intermediate`)
    
 .. subfigstart::
   
-.. figure:: images/lig_cie_intermediate.jpg
+.. figure:: images/light_cie_intermediate.jpg
   :width: 90%
 
   CIE intermediate sky model.
@@ -423,24 +423,46 @@ Perez Sky Model (:monosp:`perez`)
  * - luminance
    - |color|
    - (1,1,1)
-   - Luminance of the sky model.
+   - Luminance of the sky model. Set this to 1 to prevent the parameter :monosp:`zenith` to be applied.
 
  * - zenith
    - |color|
    - (1,1,1)
    - Zenith color of the sky model. This can not be used together with :monosp:`luminance`.
 
+ * - ground
+   - |color|
+   - (1,1,1)
+   - Ground tint of the sky model. The ground has to be explicitly given.
+
  * - a, b, c, d, e
    - |number|
    - 1,1,1,1,1
-   - Perez specific parameters.
+   - Perez explicit parameters. Can not be used with other options specifying Perez parameters.
+
+ * - clearness, brightness
+   - |number|
+   - 1, 0.2
+   - Perez specified parameters to populate a, b, c, d and e. Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
+
+ * - diffuse_irradiance, direct_irradiance
+   - |number|
+   - 1, 1
+   - Diffuse horizontal irradiance (W/m^2) and direct normal irradiance (W/m^2). Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
+
+ * - diffuse_illuminance, direct_illuminance
+   - |number|
+   - 1, 1
+   - Diffuse horizontal illuminance (Lux) and direct normal illuminance (Lux). Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
    
+.. NOTE:: The interface with PExpr is still experimental and will be further improved in the future. 
+
 .. subfigstart::
   
-.. figure:: images/lig_perez.jpg
+.. figure:: images/light_perez.jpg
   :width: 90%
 
-  Perez sky model with default settings. The sky model has no ground term, therefore everything below the horizon is displayed in black.
+  Perez sky model with clearness = 1, brightness = 0.01 and other parameters.
 
 .. subfigend::
   :width: 0.6
@@ -466,7 +488,7 @@ Environment Light (:monosp:`env`)
 
 .. subfigstart::
   
-.. figure:: images/lig_env.jpg
+.. figure:: images/light_env.jpg
   :width: 90%
 
   Environment light with EXR environment map used throughout the documentation.
