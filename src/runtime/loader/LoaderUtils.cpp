@@ -138,9 +138,9 @@ MapLocation LoaderUtils::getLocation(const Parser::Object& obj)
 ElevationAzimuth LoaderUtils::getEA(const Parser::Object& obj)
 {
     if (obj.property("direction").isValid()) {
-        return ElevationAzimuth::fromDirection(obj.property("direction").getVector3(Vector3f(0, 0, 1)).normalized());
+        return ElevationAzimuth::fromDirectionYUp(obj.property("direction").getVector3(Vector3f(0, 0, 1)).normalized());
     } else if (obj.property("sun_direction").isValid()) {
-        return ElevationAzimuth::fromDirection(obj.property("sun_direction").getVector3(Vector3f(0, 0, 1)).normalized());
+        return ElevationAzimuth::fromDirectionYUp(obj.property("sun_direction").getVector3(Vector3f(0, 0, 1)).normalized());
     } else if (obj.property("elevation").isValid() || obj.property("azimuth").isValid()) {
         return ElevationAzimuth{ obj.property("elevation").getNumber(0), obj.property("azimuth").getNumber(0) };
     } else {
@@ -150,7 +150,7 @@ ElevationAzimuth LoaderUtils::getEA(const Parser::Object& obj)
 
 Vector3f LoaderUtils::getDirection(const Parser::Object& obj)
 {
-    return getEA(obj).toDirection();
+    return getEA(obj).toDirectionYUp();
 }
 
 LoaderUtils::CDFData LoaderUtils::setup_cdf(LoaderContext& ctx, const std::string& filename)

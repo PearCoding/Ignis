@@ -32,7 +32,16 @@ struct MapLocation {
     float Longitude = -6.9965744f; // Degrees west
     float Latitude  = 49.235422f;  // Degrees north
     float Timezone  = -2;          // Offset to UTC
+
+    MapLocation() = default;
+    MapLocation(float longitude, float latitude, float timezone = 0)
+        : Longitude(longitude)
+        , Latitude(latitude)
+        , Timezone(timezone)
+    {
+    }
 };
 
+/// Will return elevation and azimuth (west of south)
 [[nodiscard]] ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& location);
 } // namespace IG

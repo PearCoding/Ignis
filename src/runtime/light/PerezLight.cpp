@@ -2,6 +2,7 @@
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
+#include "skysun/Illuminance.h"
 #include "skysun/PerezModel.h"
 
 namespace IG {
@@ -12,7 +13,6 @@ PerezLight::PerezLight(const std::string& name, const std::shared_ptr<Parser::Ob
     mSunDirection = LoaderUtils::getDirection(*light);
     mTimePoint    = LoaderUtils::getTimePoint(*light);
     mHasGround    = mLight->property("has_ground").getBool(true);
-    std::cout << mSunDirection << std::endl;
 }
 
 float PerezLight::computeFlux(const ShadingTree& tree) const
@@ -22,8 +22,43 @@ float PerezLight::computeFlux(const ShadingTree& tree) const
     return Pi * radius * radius;
 }
 
+static std::tuple<PerezModel, float> getModel(const Parser::Object& obj, float solar_zenith, const TimePoint& timepoint)
+{
+    if (obj.properties().count("clearness") || obj.properties().count("brightness")) {
+        const PerezModel model = PerezModel::fromSky(obj.property("brightness").getNumber(0.2f),
+                                                     obj.property("clearness").getNumber(1),
+                                                     solar_zenith);
+        return { model,
+                 PerezModel::computeDiffuseIrradiance(obj.property("brightness").getNumber(0.2f), solar_zenith, timepoint.dayOfTheYear()) };
+    } else if (obj.properties().count("direct_irradiance") || obj.properties().count("diffuse_irradiance")) {
+        const PerezModel model = PerezModel::fromIrrad(obj.property("diffuse_irradiance").getNumber(1),
+                                                       obj.property("direct_irradiance").getNumber(1),
+                                                       solar_zenith,
+                                                       timepoint.dayOfTheYear());
+        return { model,
+                 obj.property("diffuse_irradiance").getNumber(1) };
+    } else if (obj.properties().count("direct_illuminance") || obj.properties().count("diffuse_illuminance")) {
+        const PerezModel model = PerezModel::fromIllum(obj.property("diffuse_illuminance").getNumber(1),
+                                                       obj.property("direct_illuminance").getNumber(1),
+                                                       solar_zenith,
+                                                       timepoint.dayOfTheYear());
+        return { model,
+                 convertIlluminanceToIrradiance(obj.property("diffuse_illuminance").getNumber(1)) /* TODO: Not that simple */ };
+    } else {
+        return { PerezModel::fromParameters(
+                     obj.property("a").getNumber(1),
+                     obj.property("b").getNumber(1),
+                     obj.property("c").getNumber(1),
+                     obj.property("d").getNumber(1),
+                     obj.property("e").getNumber(1)),
+                 1.0f /* TODO*/ };
+    }
+}
+
 void PerezLight::serialize(const SerializationInput& input) const
 {
+    // TODO: No support for PExpr
+
     const float sin_elevation = std::min(1.0f, std::max(-1.0f, -mSunDirection(1)));
     const float solar_zenith  = std::acos(std::min(1.0f, std::max(-1.0f, mSunDirection(1))));
 
@@ -32,37 +67,9 @@ void PerezLight::serialize(const SerializationInput& input) const
 
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
-    const auto insertModel = [&](const PerezModel& model) {
-        // Will replace potential other parameters
-        input.Tree.insertNumber("a", Parser::Property::fromNumber(model.a()));
-        input.Tree.insertNumber("b", Parser::Property::fromNumber(model.b()));
-        input.Tree.insertNumber("c", Parser::Property::fromNumber(model.c()));
-        input.Tree.insertNumber("d", Parser::Property::fromNumber(model.d()));
-        input.Tree.insertNumber("e", Parser::Property::fromNumber(model.e()));
-    };
-
     // Other input specifications
-    if (mLight->properties().count("clearness") || mLight->properties().count("brightness")) {
-        insertModel(PerezModel::fromSky(mLight->property("brightness").getNumber(0.2f),
-                                        mLight->property("clearness").getNumber(1),
-                                        solar_zenith));
-    } else if (mLight->properties().count("direct_irradiance") || mLight->properties().count("diffuse_irradiance")) {
-        insertModel(PerezModel::fromIrrad(mLight->property("diffuse_irradiance").getNumber(1),
-                                          mLight->property("direct_irradiance").getNumber(1),
-                                          solar_zenith,
-                                          mTimePoint.dayOfTheYear()));
-    } else if (mLight->properties().count("direct_illuminance") || mLight->properties().count("diffuse_illuminance")) {
-        insertModel(PerezModel::fromIllum(mLight->property("diffuse_illuminance").getNumber(1),
-                                          mLight->property("direct_illuminance").getNumber(1),
-                                          solar_zenith,
-                                          mTimePoint.dayOfTheYear()));
-    } else {
-        input.Tree.addNumber("a", *mLight, 1.0f, true);
-        input.Tree.addNumber("b", *mLight, 1.0f, true);
-        input.Tree.addNumber("c", *mLight, 1.0f, true);
-        input.Tree.addNumber("d", *mLight, 1.0f, true);
-        input.Tree.addNumber("e", *mLight, 1.0f, true);
-    }
+    const auto [model, diff_irrad] = getModel(*mLight, solar_zenith, mTimePoint);
+    const float diffnorm           = diff_irrad / model.integrate(solar_zenith);
 
     bool usesLuminance = false;
     if (mLight->properties().count("luminance")) {
@@ -80,24 +87,25 @@ void PerezLight::serialize(const SerializationInput& input) const
                  << ", " << LoaderUtils::inlineVector(mSunDirection);
 
     if (usesLuminance) {
-        input.Stream << ", " << input.Tree.getInline("luminance");
+        input.Stream << ", color_mulf(" << input.Tree.getInline("luminance")
+                     << ", " << diffnorm << ")";
     } else {
         input.Stream << ", color_mulf(" << input.Tree.getInline("zenith")
                      << ", calc_perez(" << sin_elevation
-                     << ", 1, " << input.Tree.getInline("a")
-                     << ", " << input.Tree.getInline("b")
-                     << ", " << input.Tree.getInline("c")
-                     << ", " << input.Tree.getInline("d")
-                     << ", " << input.Tree.getInline("e")
-                     << "))";
+                     << ", 1, " << model.a()
+                     << ", " << model.b()
+                     << ", " << model.c()
+                     << ", " << model.d()
+                     << ", " << model.e()
+                     << ") * " << diffnorm << ")";
     }
 
     input.Stream << ", " << input.Tree.getInline("ground")
-                 << ", " << input.Tree.getInline("a")
-                 << ", " << input.Tree.getInline("b")
-                 << ", " << input.Tree.getInline("c")
-                 << ", " << input.Tree.getInline("d")
-                 << ", " << input.Tree.getInline("e")
+                 << ", " << model.a()
+                 << ", " << model.b()
+                 << ", " << model.c()
+                 << ", " << model.d()
+                 << ", " << model.e()
                  << ", " << (mHasGround ? "true" : "false")
                  << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
 

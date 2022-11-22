@@ -27,7 +27,7 @@ public:
     static float computeDirectIrradiance(float sky_brightness, float sky_clearness, float solar_zenith, int day_of_the_year);
 
     /// Construct perez model directly with the given parameters
-    static PerezModel fromParameter(float a, float b, float c, float d, float e);
+    static PerezModel fromParameters(float a, float b, float c, float d, float e);
 
     /// @brief Setup perez model with parameters determined by the Perez paper
     /// @param sky_brightness

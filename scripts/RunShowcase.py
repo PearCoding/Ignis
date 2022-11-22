@@ -34,6 +34,7 @@ def render(ignis, scene_file, prefix, args):
                 return  # Skip render
 
     with ignis.loadFromFile(str(scene_file), opts) as runtime:
+        print(f"Rendering {scene_file}")
         if runtime is None:
             raise RuntimeError("Could not load scene")
 

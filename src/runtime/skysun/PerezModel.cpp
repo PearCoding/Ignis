@@ -145,7 +145,7 @@ float PerezModel::integrate(const float solar_zenith) const
 #endif
 }
 
-PerezModel PerezModel::fromParameter(float a, float b, float c, float d, float e)
+PerezModel PerezModel::fromParameters(float a, float b, float c, float d, float e)
 {
     IG_LOG(L_DEBUG) << "Perez: " << a << " " << b << " " << c << " " << d << " " << e << std::endl;
     return PerezModel(a, b, c, d, e);
@@ -179,7 +179,7 @@ PerezModel PerezModel::fromSky(float sky_brightness, float sky_clearness, float 
     const float d = bin > 0 ? compute(&D[bin * 4]) : computeSpecialD();
     const float e = compute(&E[bin * 4]);
 
-    return PerezModel::fromParameter(a, b, c, d, e);
+    return PerezModel::fromParameters(a, b, c, d, e);
 }
 
 static inline float computeAirMass(float solar_zenith)

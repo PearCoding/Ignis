@@ -423,24 +423,44 @@ Perez Sky Model (:monosp:`perez`)
  * - luminance
    - |color|
    - (1,1,1)
-   - Luminance of the sky model.
+   - Luminance of the sky model. Set this to 1 to prevent the parameter :monosp:`zenith` to be applied.
 
  * - zenith
    - |color|
    - (1,1,1)
    - Zenith color of the sky model. This can not be used together with :monosp:`luminance`.
 
+ * - ground
+   - |color|
+   - (1,1,1)
+   - Ground tint of the sky model. The ground has to be explicitly given.
+
  * - a, b, c, d, e
    - |number|
    - 1,1,1,1,1
-   - Perez specific parameters.
+   - Perez explicit parameters. Can not be used with other options specifying Perez parameters.
+
+ * - clearness, brightness
+   - |number|
+   - 1, 0.2
+   - Perez specified parameters to populate a, b, c, d and e. Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
+
+ * - diffuse_irradiance, direct_irradiance
+   - |number|
+   - 1, 1
+   - Diffuse horizontal irradiance (W/m^2) and direct normal irradiance (W/m^2). Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
+
+ * - diffuse_illuminance, direct_illuminance
+   - |number|
+   - 1, 1
+   - Diffuse horizontal illuminance (Lux) and direct normal illuminance (Lux). Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
    
 .. subfigstart::
   
 .. figure:: images/lig_perez.jpg
   :width: 90%
 
-  Perez sky model with default settings. The sky model has no ground term, therefore everything below the horizon is displayed in black.
+  Perez sky model with default settings.
 
 .. subfigend::
   :width: 0.6
