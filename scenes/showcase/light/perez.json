@@ -3,6 +3,6 @@
         {"filename":"base.json"}
     ],
 	"lights": [
-		{"type":"perez", "name":"Light", "luminance": 0.1}
+		{"type":"perez", "name":"Light", "luminance": 0.1, "ground": 0.1, "clearness": 1, "brightness": 0.01}
 	]
 }
