@@ -1,7 +1,13 @@
-Overview
-========
+Getting Started
+===============
 
-This section gives an overview of the Ignis rendering framework.
+This section gives an overview of the Ignis rendering framework. Select one of the left chapters to learn more.
+
+..  toctree::
+    :hidden:
+
+    building
+    tutorials/index
 
 Frontends
 ---------
@@ -44,7 +50,7 @@ This simple python API allows to communicate with the runtime and allows you to 
 The API is only available if Python3 was found in the system.
 You might disable the API by setting the CMake option ``IG_WITH_PYTHON_API`` to ``Off``.
 
-More about the Python API can be found at the following section :doc:`../python/overview`.
+More about the Python API can be found at the following section :doc:`../python/index`.
 
 Running
 -------

@@ -11,11 +11,15 @@ from sphinx.writers.html5 import HTML5Translator
 
 # Work around an odd exception on readthedocs.org
 vr = HTML5Translator.visit_reference
+
+
 def replacement(self, node):
     if 'refuri' not in node and 'refid' not in node:
         print(node)
         return
     vr(self, node)
+
+
 HTML5Translator.visit_reference = replacement
 
 # -- Project information -----------------------------------------------------
@@ -28,6 +32,8 @@ author = 'Ömercan Yazici'
 # -- General configuration ---------------------------------------------------
 
 needs_sphinx = '2.4'
+
+language = "en"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -49,18 +55,36 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'karma_sphinx_theme'
+html_theme = 'pydata_sphinx_theme'
 html_logo = None
+html_favicon = None
+html_sourcelink_suffix = ""
 
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = []
+html_theme_options = {
+    "show_toc_level": 2,
+    "show_nav_level": 2,
+    "navbar_align": "content",
+    "secondary_sidebar_items": ["page-toc"],
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/PearCoding/Ignis",
+            "icon": "fa-brands fa-square-github",
+            "type": "fontawesome",
+        }
+    ],
+    "logo": {
+        "text": "Ignis",
+    }
+}
 
-html_theme_options = {}
+html_static_path = ['_static']
+html_css_files = [
+    'css/custom.css',
+]
 
 html_sidebars = {
-    '**': ['logo-text.html', 'globaltoc.html', 'searchbox.html']
+    '**': ["sidebar-nav-bs"]
 }
 html_show_sourcelink = False
 
@@ -89,9 +113,9 @@ rst_prolog = r"""
 """
 
 latex_elements = {
-#    'papersize': 'a4paper',
- #   'classoptions': ',english,twoside,singlespace',
-    #'pointsize': '12pt',
+    #    'papersize': 'a4paper',
+    #   'classoptions': ',english,twoside,singlespace',
+    # 'pointsize': '12pt',
     'preamble': r"""
 \captionsetup{labelfont=bf}
 \DeclareUnicodeCharacter{00A0}{}
@@ -104,7 +128,7 @@ latex_elements = {
 \usepackage{multirow}
 \usepackage{longtable}
     """,
-    
+
     # disable font inclusion
     'fontpkg': '',
     'fontenc': '',
