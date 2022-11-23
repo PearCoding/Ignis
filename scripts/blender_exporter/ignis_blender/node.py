@@ -375,7 +375,17 @@ def _export_hsv(ctx, node):
     fac = export_node(ctx, node.inputs[3])
     col = export_node(ctx, node.inputs[4])
 
-    return f"hsvtorgb(mix(rgbtohsv({col}), color({hue}, {sat}, {val}), {fac}))"
+    main = f"hsvtorgb(color(fmod(rgbtohsv({col}).x + {hue} + 0.5, 1), clamp(rgbtohsv({col}).y * {sat}, 0, 1), rgbtohsv({col}).z * {val}))"
+    e_f = try_extract_node_value(fac, default=-1)
+
+    if e_f == 1:
+        ret = main
+    elif e_f == 0:
+        ret = col
+    else:
+        ret = f"mix({col}, {main}, {fac})"
+
+    return f"max(color(0), {ret})"
 
 
 def _export_blackbody(ctx, node):

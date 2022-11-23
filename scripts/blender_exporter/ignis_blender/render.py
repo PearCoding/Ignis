@@ -25,7 +25,7 @@ class IgnisRender(bpy.types.RenderEngine):
     def render(self, depsgraph):
         prefs = addon_preferences.get_prefs()
         ig = api.load_api()
-        ig.setVerbose = prefs.verbose
+        ig.setVerbose(prefs.verbose)
 
         import tempfile
         scene = depsgraph.scene

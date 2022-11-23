@@ -104,7 +104,7 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
                         '.json', f'{frame:04}.json'), context, **keywords)
                 progress.leave_substeps()
             else:
-                export_scene(self.filepath, context, **keywords)
+                export_scene_to_file(self.filepath, context, **keywords)
         return {'FINISHED'}
 
     def draw(self, context):
