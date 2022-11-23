@@ -396,9 +396,9 @@ def _export_val_to_rgb(ctx, node):
     # TODO: Add more interpolation methods
     # TODO: Add hue_interpolation
     if cr.interpolation == "CONSTANT":
-        func = "lookup_constant"
+        lookup_type = "'constant'"
     else:
-        func = "lookup_linear"
+        lookup_type = "'linear'"
 
     def check_constant(idx):
         a = cr.elements[0].color[idx]
@@ -412,8 +412,8 @@ def _export_val_to_rgb(ctx, node):
             return cr.elements[0].color[idx]
         else:
             args = ", ".join(
-                [f"{p.position}, {p.color[idx]}" for p in cr.elements])
-            return f"{func}({t}, {args})"
+                [f"vec2({p.position}, {p.color[idx]})" for p in cr.elements])
+            return f"lookup({lookup_type}, true, {t}, {args})"
 
     r_func = gen_c(0)
     g_func = gen_c(1)
@@ -454,8 +454,8 @@ def _curve_lookup(curve, t, interpolate, extrapolate):
 def _export_float_curve(ctx, node):
     mapping = node.mapping
 
-    fac = export_node(ctx, node.inputs["Factor"])
-    value = export_node(ctx, node.inputs["Value"])
+    fac = export_node(ctx, node.inputs[0])
+    value = export_node(ctx, node.inputs[1])
 
     V = mapping.curves[0]
 
@@ -473,8 +473,8 @@ def _export_float_curve(ctx, node):
 def _export_rgb_curve(ctx, node):
     mapping = node.mapping
 
-    fac = export_node(ctx, node.inputs["Factor"])
-    color = export_node(ctx, node.inputs["Color"])
+    fac = export_node(ctx, node.inputs[0])
+    color = export_node(ctx, node.inputs[1])
 
     C = mapping.curves[3]
     R = mapping.curves[0]
@@ -502,8 +502,8 @@ def _export_rgb_curve(ctx, node):
 def _export_vector_curve(ctx, node):
     mapping = node.mapping
 
-    fac = export_node(ctx, node.inputs["Factor"])
-    vector = export_node(ctx, node.inputs["Vector"])
+    fac = export_node(ctx, node.inputs[0])
+    vector = export_node(ctx, node.inputs[1])
 
     X = mapping.curves[0]
     Y = mapping.curves[1]
@@ -1193,6 +1193,29 @@ def handle_node_reroute(ctx, node, func):
     return func(ctx, node.inputs[0])
 
 
+def handle_node_implicit_mappings(socket, expr):
+    to_type = socket.type
+    from_type = socket.links[0].from_socket.type
+    if to_type == from_type:
+        return expr
+    elif (from_type == 'VALUE' or from_type == 'INT') and (to_type == 'RGBA' or to_type == 'SHADER'):
+        return f"color({expr})"
+    elif from_type == 'RGBA' and (to_type == 'VALUE' or to_type == 'INT'):
+        return f"luminance({expr})"
+    elif (from_type == 'VALUE' or from_type == 'INT') and to_type == 'VECTOR':
+        return f"vec3({expr})"
+    elif from_type == 'VECTOR' and (to_type == 'VALUE' or to_type == 'INT'):
+        return f"avg({expr})"
+    elif from_type == 'RGBA' and to_type == 'VECTOR':
+        return f"({expr}).rgb"
+    elif from_type == 'VECTOR' and (to_type == 'RGBA' or to_type == 'SHADER'):
+        return f"max(color({expr}.x, {expr}.y, {expr}.z, 1), color(0))"
+    else:
+        print(
+            f"Socket connection from {socket.links[0].from_socket.name} to {socket.name} requires cast from {from_type} to {to_type} which is not supported")
+        return expr
+
+
 def export_node(ctx, socket):
     # Missing:
     # ShaderNodeAttribute, ShaderNodeBevel, ShaderNodeBump, ShaderNodeCameraData,
@@ -1316,26 +1339,7 @@ def export_node(ctx, socket):
         if expr is None:
             return _export_default(socket)
 
-        to_type = socket.type
-        from_type = socket.links[0].from_socket.type
-        if to_type == from_type:
-            full_expr = expr
-        elif (from_type == 'VALUE' or from_type == 'INT') and (to_type == 'RGBA' or to_type == 'SHADER'):
-            full_expr = f"color({expr})"
-        elif from_type == 'RGBA' and (to_type == 'VALUE' or to_type == 'INT'):
-            full_expr = f"luminance({expr})"
-        elif (from_type == 'VALUE' or from_type == 'INT') and to_type == 'VECTOR':
-            full_expr = f"vec3({expr})"
-        elif from_type == 'VECTOR' and (to_type == 'VALUE' or to_type == 'INT'):
-            full_expr = f"avg({expr})"
-        elif from_type == 'RGBA' and to_type == 'VECTOR':
-            full_expr = f"({expr}).rgb"
-        elif from_type == 'VECTOR' and (to_type == 'RGBA' or to_type == 'SHADER'):
-            full_expr = f"max(color({expr}.x, {expr}.y, {expr}.z, 1), color(0))"
-        else:
-            print(
-                f"Socket connection from {socket.links[0].from_socket.name} to {socket.name} requires cast from {from_type} to {to_type} which is not supported")
-            full_expr = expr
+        full_expr = handle_node_implicit_mappings(socket, expr)
 
         ctx.cache[socket] = full_expr
         return full_expr

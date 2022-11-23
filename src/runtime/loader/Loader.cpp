@@ -56,12 +56,16 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
     ctx.Lights->setup(ctx);
     IG_LOG(L_DEBUG) << "Got " << ctx.Environment.Materials.size() << " unique materials" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Lights->lightCount() << " lights" << std::endl;
-    IG_LOG(L_DEBUG) << "Got " << ctx.Lights->embeddedLightCount() << " embedded lights" << std::endl;
-    IG_LOG(L_DEBUG) << "Got " << ctx.Lights->areaLightCount() << " area lights" << std::endl;
+    if (ctx.Lights->embeddedLightCount() > 0)
+        IG_LOG(L_DEBUG) << "Got " << ctx.Lights->embeddedLightCount() << " embedded lights" << std::endl;
+    if (ctx.Lights->areaLightCount() > 0)
+        IG_LOG(L_DEBUG) << "Got " << ctx.Lights->areaLightCount() << " area lights" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->shapeCount() << " shapes" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->triShapeCount() << " triangular shapes" << std::endl;
-    IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->planeShapeCount() << " shapes which are approximative planar" << std::endl;
-    IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->sphereShapeCount() << " shapes which are approximative spherical" << std::endl;
+    if (ctx.Shapes->planeShapeCount() > 0)
+        IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->planeShapeCount() << " shapes which are approximative planar" << std::endl;
+    if (ctx.Shapes->sphereShapeCount() > 0)
+        IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->sphereShapeCount() << " shapes which are approximative spherical" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Entities->entityCount() << " entities" << std::endl;
 
     result.Database.MaterialCount = ctx.Environment.Materials.size();

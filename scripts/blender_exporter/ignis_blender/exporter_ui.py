@@ -1,9 +1,7 @@
-import mathutils
-
 import bpy
+
 from bpy.props import (
     BoolProperty,
-    FloatProperty,
     StringProperty
 )
 from bpy_extras.io_utils import (
@@ -102,7 +100,7 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
                 for frame in scene_frames:
                     context.scene.frame_set(frame)
                     progress.enter_substeps(1)
-                    export_scene(self.filepath.replace(
+                    export_scene_to_file(self.filepath.replace(
                         '.json', f'{frame:04}.json'), context, **keywords)
                 progress.leave_substeps()
             else:

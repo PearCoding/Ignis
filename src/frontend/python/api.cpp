@@ -150,7 +150,9 @@ PYBIND11_MODULE(pyignis, m)
         .def_readwrite("AcquireStats", &RuntimeOptions::AcquireStats)
         .def_readwrite("SPI", &RuntimeOptions::SPI)
         .def_readwrite("OverrideCamera", &RuntimeOptions::OverrideCamera)
-        .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique);
+        .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique)
+        .def_readwrite("OverrideFilmSize", &RuntimeOptions::OverrideFilmSize)
+        .def_readwrite("EnableTonemapping", &RuntimeOptions::EnableTonemapping);
 
     py::class_<Ray>(m, "Ray")
         .def(py::init([](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, FltMax) }; }))
@@ -187,6 +189,38 @@ PYBIND11_MODULE(pyignis, m)
                     true);
             },
             py::arg("aov") = "")
+        .def(
+            "tonemap", [](Runtime& r, py::buffer output) {
+                TonemapSettings settings;
+                settings.AOV            = "";
+                settings.ExposureFactor = 1;
+                settings.ExposureOffset = 0;
+                settings.Method         = 0;
+                settings.Scale          = r.currentIterationCount() > 0 ? 1.0f / r.currentIterationCount() : 1.0f;
+                settings.UseGamma       = true;
+
+                const size_t width  = r.framebufferWidth();
+                const size_t height = r.framebufferHeight();
+
+                py::buffer_info info = output.request(true);
+
+                /* Some basic validation checks ... */
+                if (info.format != py::format_descriptor<uint8>::format())
+                    throw std::runtime_error("Incompatible buffer: Expected a byte array!");
+
+                if (info.ndim != 1 && info.ndim != 2 && info.ndim != 3)
+                    throw std::runtime_error("Incompatible buffer: Expected one, two or three dimensional buffer");
+
+                py::ssize_t linear_size = 1;
+                for (py::ssize_t i = 0; i < info.ndim; ++i)
+                    linear_size *= info.shape[i];
+
+                if (linear_size != static_cast<py::ssize_t>(width * height * 4))
+                    throw std::runtime_error("Incompatible buffer: Buffer has not the correct size");
+
+                // TODO: Check stride?
+                r.tonemap((uint32*)info.ptr, settings);
+            })
         .def("setParameter", py::overload_cast<const std::string&, int>(&Runtime::setParameter))
         .def("setParameter", py::overload_cast<const std::string&, float>(&Runtime::setParameter))
         .def("setParameter", py::overload_cast<const std::string&, const Vector3f&>(&Runtime::setParameter))
