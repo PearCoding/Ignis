@@ -119,36 +119,11 @@ class IgnisRender(bpy.types.RenderEngine):
         self.update_stats("", "")
 
 
-def get_panels():
-    exclude_panels = {
-        'DATA_PT_camera_dof',
-        'DATA_PT_falloff_curve',
-        'OBJECT_PT_visibility',
-        'VIEWLAYER_PT_filter',
-        'VIEWLAYER_PT_layer_passes',
-        'RENDER_PT_post_processing',
-        'RENDER_PT_simplify',
-    }
-
-    panels = []
-    for panel in bpy.types.Panel.__subclasses__():
-        if hasattr(panel, 'COMPAT_ENGINES') and 'BLENDER_RENDER' in panel.COMPAT_ENGINES:
-            if panel.__name__ not in exclude_panels:
-                panels.append(panel)
-
-    return panels
-
 
 def register():
     bpy.utils.register_class(IgnisRender)
 
-    for panel in get_panels():
-        panel.COMPAT_ENGINES.add(IgnisRender.bl_idname)
 
 
 def unregister():
-    for panel in get_panels():
-        if IgnisRender.bl_idname in panel.COMPAT_ENGINES:
-            panel.COMPAT_ENGINES.remove(IgnisRender.bl_idname)
-
     bpy.utils.unregister_class(IgnisRender)
