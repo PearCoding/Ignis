@@ -153,7 +153,7 @@ bool Runtime::loadFromFile(const std::filesystem::path& path)
     }
 }
 
-bool Runtime::loadFromString(const std::string& str)
+bool Runtime::loadFromString(const std::string& str, const std::filesystem::path& dir)
 {
     // Parse scene string
     try {
@@ -161,7 +161,7 @@ bool Runtime::loadFromString(const std::string& str)
         const auto startParser = std::chrono::high_resolution_clock::now();
         Parser::SceneParser parser;
         bool ok    = false;
-        auto scene = parser.loadFromString(str, ok);
+        auto scene = parser.loadFromString(str, dir, ok);
         IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
         if (!ok)
             return false;

@@ -767,16 +767,23 @@ def _export_image(image, path, is_f32=False, keep_format=False):
         image.pixels[0]
 
     # Export the actual image data
-    old_path = image.filepath_raw
-    old_format = image.file_format
     try:
-        image.filepath_raw = path
+        old_path = image.filepath_raw
+        old_format = image.file_format
+        try:
+            image.filepath_raw = path
+            if not keep_format:
+                image.file_format = "PNG" if not is_f32 else "OPEN_EXR"
+            image.save()
+        finally:  # Never break the scene!
+            image.filepath_raw = old_path
+            image.file_format = old_format
+    except:
         if not keep_format:
-            image.file_format = "PNG" if not is_f32 else "OPEN_EXR"
-        image.save()
-    finally:  # Never break the scene!
-        image.filepath_raw = old_path
-        image.file_format = old_format
+            raise RuntimeError(
+                "Can not change the original format of given image")
+        # Try other way
+        image.save_render(path)
 
 
 def _handle_image(ctx, image):
@@ -818,8 +825,14 @@ def _handle_image(ctx, image):
                 img_path = os.path.join("Textures", img_name)
 
             if img_name not in ctx.result["_images"]:
-                _export_image(image, os.path.join(ctx.path, img_path),
-                              is_f32=is_f32, keep_format=keep_format)
+                try:
+                    _export_image(image, os.path.join(ctx.path, img_path),
+                                  is_f32=is_f32, keep_format=keep_format)
+                except:
+                    # Above failed, so give this a try
+                    img_path = os.path.join("Textures", img_name)
+                    _export_image(image, os.path.join(ctx.path, img_path),
+                                  is_f32=False, keep_format=False)
                 ctx.result["_images"].add(img_name)
         return img_path
     else:

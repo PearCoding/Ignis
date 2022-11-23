@@ -48,7 +48,7 @@ public:
     Property(Property&& other)      = default;
 
     Property& operator=(const Property& other) = default;
-    Property& operator=(Property&& other) = default;
+    Property& operator=(Property&& other)      = default;
 
     inline PropertyType type() const { return mType; }
     inline bool isValid() const { return mType != PT_NONE; }
@@ -232,7 +232,7 @@ public:
     Object(Object&& other)      = default;
 
     Object& operator=(const Object& other) = default;
-    Object& operator=(Object&& other) = default;
+    Object& operator=(Object&& other)      = default;
 
     inline ObjectType type() const { return mType; }
     inline const std::string& pluginType() const { return mPluginType; }
@@ -267,7 +267,7 @@ public:
     Scene(Scene&& other)      = default;
 
     Scene& operator=(const Scene& other) = default;
-    Scene& operator=(Scene&& other) = default;
+    Scene& operator=(Scene&& other)      = default;
 
     inline std::shared_ptr<Object> technique() const { return mTechnique; }
     inline void setTechnique(const std::shared_ptr<Object>& technique) { mTechnique = technique; }
@@ -324,36 +324,25 @@ class SceneParser {
 public:
     inline SceneParser() = default;
 
+    /// @brief Load from file, lookup directory will be the directory the file is in
+    /// @param path Path to file containing scene description
+    /// @param ok True if everything is fine
+    /// @return Scene, only valid if ok equals true
     Scene loadFromFile(const std::filesystem::path& path, bool& ok);
-    inline Scene loadFromString(const std::string& str, bool& ok)
-    {
-        return loadFromString(str.c_str(), ok);
-    }
 
-#ifdef TPM_HAS_STRING_VIEW
-    inline Scene loadFromString(const std::string_view& str, bool& ok)
-    {
-        return loadFromString(str.data(), str.size(), ok);
-    }
-#endif
-
-    Scene loadFromString(const char* str, bool& ok);
-    Scene loadFromString(const char* str, size_t max_len, bool& ok);
-
-    inline void addLookupDir(const std::filesystem::path& path)
-    {
-        mLookupPaths.push_back(path);
-    }
+    /// @brief Load from string, lookup directory can be set optionally, else external files depend on the current working directory
+    /// @param str String containing scene description
+    /// @param opt_dir Optional directory containing external files if not given as absolute files inside the scene description
+    /// @param ok True if everything is fine
+    /// @return Scene, only valid if ok equals true
+    Scene loadFromString(const std::string& str, const std::filesystem::path& opt_dir, bool& ok);
 
     inline void addArgument(const std::string& key, const std::string& value)
     {
         mArguments[key] = value;
     }
 
-    inline const std::vector<std::filesystem::path>& lookupPaths() const { return mLookupPaths; }
-
 private:
-    std::vector<std::filesystem::path> mLookupPaths;
     std::unordered_map<std::string, std::string> mArguments;
 };
 } // namespace IG::Parser

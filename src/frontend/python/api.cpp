@@ -34,7 +34,6 @@ public:
         , mPath(path)
         , mCreated(false)
     {
-        IG_ASSERT(source.empty() ^ path.empty(), "Only source or a path is allowed");
     }
 
     Runtime* enter()
@@ -80,7 +79,7 @@ private:
                 return nullptr;
             }
         } else {
-            if (!sInstance->loadFromString(mSource)) {
+            if (!sInstance->loadFromString(mSource, mPath)) {
                 sInstance.reset();
                 return nullptr;
             }
@@ -189,38 +188,37 @@ PYBIND11_MODULE(pyignis, m)
                     true);
             },
             py::arg("aov") = "")
-        .def(
-            "tonemap", [](Runtime& r, py::buffer output) {
-                TonemapSettings settings;
-                settings.AOV            = "";
-                settings.ExposureFactor = 1;
-                settings.ExposureOffset = 0;
-                settings.Method         = 0;
-                settings.Scale          = r.currentIterationCount() > 0 ? 1.0f / r.currentIterationCount() : 1.0f;
-                settings.UseGamma       = true;
+        .def("tonemap", [](Runtime& r, py::buffer output) {
+            TonemapSettings settings;
+            settings.AOV            = "";
+            settings.ExposureFactor = 1;
+            settings.ExposureOffset = 0;
+            settings.Method         = 0;
+            settings.Scale          = r.currentIterationCount() > 0 ? 1.0f / r.currentIterationCount() : 1.0f;
+            settings.UseGamma       = true;
 
-                const size_t width  = r.framebufferWidth();
-                const size_t height = r.framebufferHeight();
+            const size_t width  = r.framebufferWidth();
+            const size_t height = r.framebufferHeight();
 
-                py::buffer_info info = output.request(true);
+            py::buffer_info info = output.request(true);
 
-                /* Some basic validation checks ... */
-                if (info.format != py::format_descriptor<uint8>::format())
-                    throw std::runtime_error("Incompatible buffer: Expected a byte array!");
+            /* Some basic validation checks ... */
+            if (info.format != py::format_descriptor<uint8>::format())
+                throw std::runtime_error("Incompatible buffer: Expected a byte array!");
 
-                if (info.ndim != 1 && info.ndim != 2 && info.ndim != 3)
-                    throw std::runtime_error("Incompatible buffer: Expected one, two or three dimensional buffer");
+            if (info.ndim != 1 && info.ndim != 2 && info.ndim != 3)
+                throw std::runtime_error("Incompatible buffer: Expected one, two or three dimensional buffer");
 
-                py::ssize_t linear_size = 1;
-                for (py::ssize_t i = 0; i < info.ndim; ++i)
-                    linear_size *= info.shape[i];
+            py::ssize_t linear_size = 1;
+            for (py::ssize_t i = 0; i < info.ndim; ++i)
+                linear_size *= info.shape[i];
 
-                if (linear_size != static_cast<py::ssize_t>(width * height * 4))
-                    throw std::runtime_error("Incompatible buffer: Buffer has not the correct size");
+            if (linear_size != static_cast<py::ssize_t>(width * height * 4))
+                throw std::runtime_error("Incompatible buffer: Buffer has not the correct size");
 
-                // TODO: Check stride?
-                r.tonemap((uint32*)info.ptr, settings);
-            })
+            // TODO: Check stride?
+            r.tonemap((uint32*)info.ptr, settings);
+        })
         .def("setParameter", py::overload_cast<const std::string&, int>(&Runtime::setParameter))
         .def("setParameter", py::overload_cast<const std::string&, float>(&Runtime::setParameter))
         .def("setParameter", py::overload_cast<const std::string&, const Vector3f&>(&Runtime::setParameter))
@@ -250,7 +248,9 @@ PYBIND11_MODULE(pyignis, m)
     m.def("loadFromFile", [](const std::string& path) { return RuntimeWrap(RuntimeOptions::makeDefault(), std::string{}, path); });
     m.def("loadFromFile", [](const std::string& path, const RuntimeOptions& opts) { return RuntimeWrap(opts, std::string{}, path); });
     m.def("loadFromString", [](const std::string& str) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, std::string{}); });
+    m.def("loadFromString", [](const std::string& str, const std::string& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, dir); });
     m.def("loadFromString", [](const std::string& str, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, std::string{}); });
+    m.def("loadFromString", [](const std::string& str, const std::string& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, dir); });
     m.def("saveExr", [](const std::string& path, py::buffer b) {
         py::buffer_info info = b.request();
 

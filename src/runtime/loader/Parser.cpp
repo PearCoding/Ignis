@@ -16,8 +16,7 @@
 namespace IG::Parser {
 // TODO: (Re)Add arguments!
 
-using LookupPaths = std::vector<std::filesystem::path>;
-using Arguments   = std::unordered_map<std::string, std::string>;
+using Arguments = std::unordered_map<std::string, std::string>;
 
 // ------------- File IO
 static inline bool doesFileExist(const std::filesystem::path& fileName)
@@ -25,15 +24,10 @@ static inline bool doesFileExist(const std::filesystem::path& fileName)
     return std::ifstream(fileName.generic_u8string()).good();
 }
 
-static inline std::filesystem::path resolvePath(const std::filesystem::path& path, const std::filesystem::path& baseDir, const LookupPaths& lookups)
+static inline std::filesystem::path resolvePath(const std::filesystem::path& path, const std::filesystem::path& baseDir)
 {
     if (doesFileExist(baseDir / path))
         return baseDir / path;
-
-    for (const auto& dir : lookups) {
-        if (doesFileExist(dir / path))
-            return dir / path;
-    }
 
     if (doesFileExist(path))
         return path;
@@ -352,7 +346,7 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const std::f
 
     std::string pluginType           = obj.HasMember("type") ? to_lowercase(getString(obj["type"])) : "";
     const std::string inc_path       = getString(obj["filename"]);
-    const std::filesystem::path path = std::filesystem::canonical(resolvePath(inc_path, baseDir, loader.lookupPaths()));
+    const std::filesystem::path path = std::filesystem::canonical(resolvePath(inc_path, baseDir));
     if (path.empty())
         throw std::runtime_error("Could not find path '" + inc_path + "'");
 
@@ -560,27 +554,16 @@ Scene SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
     return InternalSceneParser::loadFromJSON(*this, parent, doc);
 }
 
-Scene SceneParser::loadFromString(const char* str, bool& ok)
+Scene SceneParser::loadFromString(const std::string& str, const std::filesystem::path& opt_dir, bool& ok)
 {
     rapidjson::Document doc;
-    if (doc.Parse<JsonFlags>(str).HasParseError()) {
+    if (doc.Parse<JsonFlags>(str.c_str()).HasParseError()) {
         ok = false;
         IG_LOG(L_ERROR) << "JSON[" << doc.GetErrorOffset() << "]: " << rapidjson::GetParseError_En(doc.GetParseError()) << std::endl;
         return Scene();
     }
     ok = true;
-    return InternalSceneParser::loadFromJSON(*this, "", doc);
+    return InternalSceneParser::loadFromJSON(*this, opt_dir, doc);
 }
 
-Scene SceneParser::loadFromString(const char* str, size_t max_len, bool& ok)
-{
-    rapidjson::Document doc;
-    if (doc.Parse<JsonFlags>(str, max_len).HasParseError()) {
-        ok = false;
-        IG_LOG(L_ERROR) << "JSON[" << doc.GetErrorOffset() << "]: " << rapidjson::GetParseError_En(doc.GetParseError()) << std::endl;
-        return Scene();
-    }
-    ok = true;
-    return InternalSceneParser::loadFromJSON(*this, "", doc);
-}
 } // namespace IG::Parser

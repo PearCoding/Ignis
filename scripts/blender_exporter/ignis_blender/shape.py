@@ -51,7 +51,8 @@ def _export_bmesh_by_material(me, name, rootPath):
         shape_name = name if mat_count == 1 else _shape_name_material(
             name, mat_id)
 
-        ply_save(filepath=os.path.join(rootPath, "Meshes", shape_name+".ply"),
+        abs_filepath = os.path.join(rootPath, "Meshes", shape_name+".ply")
+        ply_save(filepath=abs_filepath,
                  bm=bm,
                  use_ascii=False,
                  use_normals=True,
