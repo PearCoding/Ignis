@@ -202,10 +202,6 @@ fn @tt_transform_matrix(normal: Vec3, up: Vec3) {
 // TODO: Add proper sampling!
 // TODO: Handle peak extraction (ABSDF)
 fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, up: Vec3, tree: TensorTreeModel) -> Bsdf {
-    if(!check_strict_normals(surf)) {
-        return(make_null_bsdf(surf))
-    }
-
     let front_refl_total = tree.front_reflection.specification.total;
     let front_tran_total = tree.front_transmission.specification.total;
     let back_refl_total  = tree.back_reflection.specification.total;

@@ -278,10 +278,10 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     }
 
     // Handle some user options
-    if (elem.property("flip_normals").getBool())
+    if (elem.property("flip_normals").getBool(false))
         mesh.flipNormals();
 
-    if (elem.property("face_normals").getBool())
+    if (elem.property("face_normals").getBool(false))
         mesh.setupFaceNormalsAsVertexNormals();
 
     if (!elem.property("transform").getTransform().matrix().isIdentity())

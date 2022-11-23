@@ -1,6 +1,3 @@
-fn @check_strict_normals(surf: SurfaceElement)               = !math_builtins::signbit(vec3_dot(surf.face_normal, surf.local.col(2)));
-fn @forward_strict_normals(surf: SurfaceElement, bsdf: Bsdf) = if (check_strict_normals(surf)) { bsdf } else { make_null_bsdf(surf) };
-
 // Creates a fully absorbing BSDF non scattering bsdf
 fn @make_null_bsdf(_surf: SurfaceElement) = Bsdf {
     eval        = @ |_, _| color_builtins::black,

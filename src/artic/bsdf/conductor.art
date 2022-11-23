@@ -1,16 +1,16 @@
 // Creates a perfect mirror BSDF
-fn @make_mirror_bsdf(surf: SurfaceElement, ks: Color) = forward_strict_normals(surf, Bsdf {
+fn @make_mirror_bsdf(surf: SurfaceElement, ks: Color) = Bsdf {
     eval   = @ |_, _| color_builtins::black,
     pdf    = @ |_, _| 0,
     sample = @ |_, out_dir, _| {
         make_bsdf_sample(vec3_reflect(out_dir, surf.local.col(2)), 1, ks, 1)
     },
     is_specular = true
-});
+};
 
 //--------------------------------------
 // Creates a perfect conductor BSDF
-fn @make_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Color) = forward_strict_normals(surf, Bsdf {
+fn @make_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Color) = Bsdf {
     eval   = @ |_, _| color_builtins::black,
     pdf    = @ |_, _| 0,
     sample = @ |_, out_dir, _| {
@@ -27,15 +27,11 @@ fn @make_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Color) =
         make_bsdf_sample(vec3_reflect(out_dir, n), 1, color, 1)
     },
     is_specular = true
-});
+};
 
 //--------------------------------------
 // Creates a microfacet conductor BSDF with specific fresnel term
 fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, fresnelTerm: fn (f32) -> Color, micro: microfacet::MicrofacetDistribution) -> Bsdf {
-    if (!check_strict_normals(surf)) {
-        return(make_null_bsdf(surf))
-    }
-
     let N = surf.local.col(2);
 
     if micro.is_delta {
