@@ -11,10 +11,13 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
     output.max = device.parallel_reduce_f32(size, get_elem, @|a, b| math_builtins::fmax(a, b));
     output.avg = device.parallel_reduce_f32(size, get_elem, @|a, b| a + b) / size as f32;
 
-    let global_data = device.request_buffer("__imageinfo_percentile", sizeof[f32]() as i32 * 4 , 0);
-    global_data.store_i32_host(0, bitcast[i32](flt_max));
-    global_data.store_i32_host(1, 0);
-    global_data.store_i32_host(2, 0);
+    let global_data = device.request_buffer("__imageinfo_percentile", sizeof[f32]() as i32 * 8, 0);
+    global_data.store_i32_host(0, bitcast[i32](flt_max)); // Soft Min
+    global_data.store_i32_host(1, 0);                     // Soft Max
+    global_data.store_i32_host(2, 0);                     // Median
+    global_data.store_i32_host(3, 0);                     // Inf Counter
+    global_data.store_i32_host(4, 0);                     // NaN Counter
+    global_data.store_i32_host(5, 0);                     // Neg Counter
 
     // Window based percentile setup (which is just approximative)
     let median_factor = safe_div(1, ((width - 2) * (height - 2)) as f32);
@@ -44,11 +47,30 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
         if soft_max >= 0 { global_data.max_atomic_i32(1, bitcast[i32](soft_max)); }
         if median   >= 0 { global_data.add_atomic_f32(2, median * median_factor); }
     }
+
+    // Check pixels
+    if settings.acquire_error_stats {
+        for i in device.parallel_range(0, 3*width*height) {
+            let c = buffer_in.load_f32(i);
+
+            let is_nan = math_builtins::isnan(c);
+            let is_inf = !math_builtins::isfinite(c) && !is_nan;
+            let is_neg = math_builtins::signbit(c);
+
+            if is_inf { global_data.add_atomic_i32(3, 1); }
+            if is_nan { global_data.add_atomic_i32(4, 1); }
+            if is_neg { global_data.add_atomic_i32(5, 1); }
+        }
+    }
+
     device.sync();
 
-    output.soft_min = bitcast[f32](global_data.load_i32_host(0));
-    output.soft_max = bitcast[f32](global_data.load_i32_host(1));
-    output.median   = bitcast[f32](global_data.load_i32_host(2));
+    output.soft_min    = bitcast[f32](global_data.load_i32_host(0));
+    output.soft_max    = bitcast[f32](global_data.load_i32_host(1));
+    output.median      = bitcast[f32](global_data.load_i32_host(2));
+    output.inf_counter = global_data.load_i32_host(3);
+    output.nan_counter = global_data.load_i32_host(4);
+    output.neg_counter = global_data.load_i32_host(5);
 
     // Setup histogram
     let histogram_start     = output.soft_min;

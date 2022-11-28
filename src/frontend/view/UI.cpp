@@ -49,6 +49,9 @@ struct LuminanceInfo {
     float SoftMax = 0.0f;
     float Med     = 0.0f;
     float Est     = 1e-5f;
+    int InfCount  = 0;
+    int NaNCount  = 0;
+    int NegCount  = 0;
 
     LuminanceInfo& operator=(const LuminanceInfo& other) = default;
 };
@@ -545,18 +548,21 @@ public:
         const std::string aov_name = currentAOVName();
         ImageInfoSettings settings{ aov_name.c_str(),
                                     Histogram.data(), Histogram.size(),
-                                    1.0f };
+                                    1.0f, true };
 
         const ImageInfoOutput output = Runtime->imageinfo(settings);
 
-        LastLum         = LuminanceInfo();
-        LastLum.Avg     = output.Average;
-        LastLum.Max     = output.Max;
-        LastLum.Min     = output.Min;
-        LastLum.Med     = output.Median;
-        LastLum.SoftMax = output.SoftMax;
-        LastLum.SoftMin = output.SoftMin;
-        LastLum.Est     = output.SoftMax;
+        LastLum          = LuminanceInfo();
+        LastLum.Avg      = output.Average;
+        LastLum.Max      = output.Max;
+        LastLum.Min      = output.Min;
+        LastLum.Med      = output.Median;
+        LastLum.SoftMax  = output.SoftMax;
+        LastLum.SoftMin  = output.SoftMin;
+        LastLum.Est      = output.SoftMax;
+        LastLum.InfCount = output.InfCount;
+        LastLum.NaNCount = output.NaNCount;
+        LastLum.NegCount = output.NegCount;
 
         const float avgFactor = 1.0f / (width * height);
         for (size_t i = 0; i < Histogram.size(); ++i)
@@ -683,7 +689,7 @@ public:
     void handleImgui(size_t iter, size_t samples)
     {
         constexpr size_t UI_W = 300;
-        constexpr size_t UI_H = 440;
+        constexpr size_t UI_H = 450;
         int mouse_x, mouse_y;
         SDL_GetMouseState(&mouse_x, &mouse_y);
 
@@ -702,6 +708,20 @@ public:
                 ImGui::Text("Lum Max %8.3f | 95%% %8.3f", LastLum.Max, LastLum.SoftMax);
                 ImGui::Text("Lum Min %8.3f |  5%% %8.3f", LastLum.Min, LastLum.SoftMin);
                 ImGui::Text("Lum Avg %8.3f | Med %8.3f", LastLum.Avg, LastLum.Med);
+
+                // Draw informative section
+                if (LastLum.InfCount > 0 || LastLum.NaNCount > 0 || LastLum.NegCount > 0) {
+                    const size_t pixel_comp_count = Width * Height * 3;
+                    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(200, 0, 0, 255));
+                    if (LastLum.InfCount > 0)
+                        ImGui::Text("Infinite %7.3f%%", 100 * LastLum.InfCount / (float)pixel_comp_count);
+                    if (LastLum.NaNCount > 0)
+                        ImGui::Text("NaN     %8.3f%%", 100 * LastLum.NaNCount / (float)pixel_comp_count);
+                    if (LastLum.NegCount > 0)
+                        ImGui::Text("Negative %7.3f%%", 100 * LastLum.NegCount / (float)pixel_comp_count);
+                    ImGui::PopStyleColor();
+                }
+
                 ImGui::Text("Cam Eye (%6.3f, %6.3f, %6.3f)", LastCameraPose.Eye(0), LastCameraPose.Eye(1), LastCameraPose.Eye(2));
                 ImGui::Text("Cam Dir (%6.3f, %6.3f, %6.3f)", LastCameraPose.Dir(0), LastCameraPose.Dir(1), LastCameraPose.Dir(2));
                 ImGui::Text("Cam Up  (%6.3f, %6.3f, %6.3f)", LastCameraPose.Up(0), LastCameraPose.Up(1), LastCameraPose.Up(2));
@@ -878,7 +898,7 @@ UI::~UI()
         SDL_DestroyTexture(mInternal->Texture);
     if (mInternal->Renderer)
         SDL_DestroyRenderer(mInternal->Renderer);
-    if(mInternal->Window)
+    if (mInternal->Window)
         SDL_DestroyWindow(mInternal->Window);
     SDL_Quit();
 

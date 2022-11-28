@@ -17,6 +17,7 @@ struct ImageInfoSettings {
     int* Histogram;
     size_t Bins;
     float Scale;
+    bool AcquireErrorStats;
 };
 
 struct ImageInfoOutput {
@@ -26,6 +27,9 @@ struct ImageInfoOutput {
     float SoftMin;
     float SoftMax;
     float Median;
+    int InfCount;
+    int NaNCount;
+    int NegCount;
 };
 
 struct ParameterSet {

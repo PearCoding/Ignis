@@ -1569,19 +1569,23 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
     const float inv_iter = acc.IterationCount > 0 ? 1.0f / acc.IterationCount : 0.0f;
 
     ::ImageInfoSettings settings;
-    settings.scale     = driver_settings.Scale * inv_iter;
-    settings.histogram = driver_settings.Histogram;
-    settings.bins      = (int)driver_settings.Bins;
+    settings.scale               = driver_settings.Scale * inv_iter;
+    settings.histogram           = driver_settings.Histogram;
+    settings.bins                = (int)driver_settings.Bins;
+    settings.acquire_error_stats = driver_settings.AcquireErrorStats;
 
     ::ImageInfoOutput output = sInterface->runImageinfoShader(in_pixels, settings);
 
     ImageInfoOutput driver_output;
-    driver_output.Min     = output.min;
-    driver_output.Max     = output.max;
-    driver_output.Average = output.avg;
-    driver_output.SoftMin = output.soft_min;
-    driver_output.SoftMax = output.soft_max;
-    driver_output.Median  = output.median;
+    driver_output.Min      = output.min;
+    driver_output.Max      = output.max;
+    driver_output.Average  = output.avg;
+    driver_output.SoftMin  = output.soft_min;
+    driver_output.SoftMax  = output.soft_max;
+    driver_output.Median   = output.median;
+    driver_output.InfCount = output.inf_counter;
+    driver_output.NaNCount = output.nan_counter;
+    driver_output.NegCount = output.neg_counter;
 
     sInterface->unregisterThread();
 
