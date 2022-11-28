@@ -1,0 +1,50 @@
+struct GlareSettings {
+    avg:f32,
+    mul:f32
+}
+
+fn @ig_glare_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &GlareSettings) {
+
+    let buffer_in  = device.make_buffer(in_pixels as &[u8],  width * height * 3);
+    let buffer_out = device.make_buffer(out_pixels as &[u8], width * height);
+
+    fn @store_pixel(index: i32, color: Color) {
+        buffer_out.store_i32(index, bitcast[i32](make_byte_color(color)));
+    }
+
+    let lum_source = (settings.avg * settings.mul) as f64;
+
+    fn @evalglare() -> () {
+        // primary glare source scan
+        for ind in device.parallel_range(0, width * height) {
+            let mut actual_igs = 0;
+            let mut igs = 0;
+    
+            //let lum_thres = 2000.0;
+            //let lum_task = 0.0;
+
+            let mut last_was_glare_source = false;
+            let mut lum_total_max = 0.0 as f64;
+            let mut pixel_color = make_color(buffer_in.load_f32(ind * 3 + 0), buffer_in.load_f32(ind * 3 + 1), buffer_in.load_f32(ind * 3 + 2), 1);
+
+            let act_lum = color_luminance(pixel_color) as f64;
+            if (act_lum > lum_source) {
+                store_pixel(ind, make_color(1.0, 0.0, 0.0, 1.0));
+                if (act_lum > lum_total_max) {
+                    lum_total_max = act_lum;
+                }
+
+                if (last_was_glare_source) {
+                    //actual_igs = find_near_pgs()
+                }
+            } else {
+                last_was_glare_source = false;
+            }
+	    }
+    }
+        
+
+    evalglare();
+
+    device.sync();
+}

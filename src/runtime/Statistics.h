@@ -17,6 +17,7 @@ enum class ShaderType {
     AdvancedShadowMiss,
     Callback,
     Tonemap,
+    Glare,
     ImageInfo
 };
 

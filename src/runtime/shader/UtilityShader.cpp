@@ -20,6 +20,19 @@ std::string UtilityShader::setupTonemap(const LoaderContext& ctx)
     return stream.str();
 }
 
+std::string UtilityShader::setupGlare(const LoaderContext& ctx)
+{
+    std::stringstream stream;
+
+    stream << "#[export] fn ig_glare_shader(settings: &Settings, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, glare_settings: &GlareSettings) -> () {" << std::endl
+           << "  maybe_unused(settings);" << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << "  ig_glare_pipeline(device, in_pixels, out_pixels, width, height, glare_settings)" << std::endl
+           << "}";
+
+    return stream.str();
+}
+
 std::string UtilityShader::setupImageinfo(const LoaderContext& ctx)
 {
     std::stringstream stream;

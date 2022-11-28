@@ -484,6 +484,7 @@ bool Runtime::compileShaders()
                 compile(i, "tonemap", "ig_tonemap_shader", variant.TonemapShader, shaders.TonemapShader);
                 compile(i, "imageinfo", "ig_imageinfo_shader", variant.ImageinfoShader, shaders.ImageinfoShader);
             }
+            compile(i, "glare", "ig_glare_shader", variant.GlareShader, shaders.GlareShader);
             compile(i, "primary traversal", "ig_traversal_shader", variant.PrimaryTraversalShader, shaders.PrimaryTraversalShader);
             compile(i, "secondary traversal", "ig_traversal_shader", variant.SecondaryTraversalShader, shaders.SecondaryTraversalShader);
             compile(i, "ray generation", "ig_ray_generation_shader", variant.RayGenerationShader, shaders.RayGenerationShader);
@@ -553,6 +554,17 @@ void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
     IG_ASSERT(mDevice, "Expected device to be available");
     if (mDevice)
         mDevice->tonemap(out_pixels, settings);
+}
+
+void Runtime::evaluateGlare(uint32* out_pixels, const GlareSettings& settings) {
+    if (mTechniqueVariants.empty()) {
+        IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
+        return;
+    }
+
+    IG_ASSERT(mDevice, "Expected device to be available");
+    if (mDevice)
+        mDevice->evaluateGlare(out_pixels, settings);
 }
 
 ImageInfoOutput Runtime::imageinfo(const ImageInfoSettings& settings)

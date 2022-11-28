@@ -70,6 +70,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/imageinfo.art
     ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/render.art
     ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/tonemap.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/glare.art
     ${CMAKE_CURRENT_SOURCE_DIR}/light/area.art
     ${CMAKE_CURRENT_SOURCE_DIR}/light/cie.art
     ${CMAKE_CURRENT_SOURCE_DIR}/light/directional.art

@@ -20,6 +20,7 @@ struct TechniqueVariantBase {
     uint32 ID;
     ShaderOutput<T> DeviceShader;
     ShaderOutput<T> TonemapShader;
+    ShaderOutput<T> GlareShader;
     ShaderOutput<T> ImageinfoShader;
     ShaderOutput<T> PrimaryTraversalShader;
     ShaderOutput<T> SecondaryTraversalShader;

@@ -12,6 +12,12 @@ struct TonemapSettings {
     float ExposureOffset;
 };
 
+struct GlareSettings {
+    const char* AOV;
+    float LuminanceAverage;
+    float LuminanceMultiplier;
+};
+
 struct ImageInfoSettings {
     const char* AOV;
     int* Histogram;

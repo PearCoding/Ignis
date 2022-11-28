@@ -933,6 +933,27 @@ public:
             getThreadData()->stats.endShaderLaunch(ShaderType::Tonemap, {});
     }
 
+    inline void runGlareShader(float* in_pixels, uint32_t* device_out_pixels, ::GlareSettings& settings)
+    {
+#ifdef IG_DEBUG_LOG_TRACE
+        IG_LOG(L_DEBUG) << "TRACE> Glare Shader" << std::endl;
+#endif
+
+        if (setup.acquire_stats)
+            getThreadData()->stats.beginShaderLaunch(ShaderType::Glare, 1, {});
+
+        using Callback = decltype(ig_glare_shader);
+        auto callback  = reinterpret_cast<Callback*>(shader_set.GlareShader.Exec);
+        IG_ASSERT(callback != nullptr, "Expected Glare shader to be valid");
+        setCurrentShader(0, 1, ShaderKey(shader_set.ID, ShaderType::Glare, 0), shader_set.GlareShader);
+        callback(&driver_settings, in_pixels, device_out_pixels, (int)film_width, (int)film_height, &settings);
+
+        checkDebugOutput();
+
+        if (setup.acquire_stats)
+            getThreadData()->stats.endShaderLaunch(ShaderType::Glare, {});
+    }
+
     inline ::ImageInfoOutput runImageinfoShader(float* in_pixels, ::ImageInfoSettings& settings)
     {
 #ifdef IG_DEBUG_LOG_TRACE
@@ -1529,6 +1550,33 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
     settings.exposure_offset = driver_settings.ExposureOffset;
 
     sInterface->runTonemapShader(in_pixels, device_out_pixels, settings);
+
+    if (sInterface->is_gpu) {
+        size_t size = sInterface->film_width * sInterface->film_height;
+        anydsl_copy(sInterface->getDevID(), device_out_pixels, 0, 0 /* Host */, out_pixels, 0, sizeof(uint32_t) * size);
+    }
+
+    sInterface->unregisterThread();
+}
+
+void Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& driver_settings)
+{
+    // Make sure everything is initialized (lazy setup)
+    sInterface->ensureSetup();
+
+    // Register host thread
+    sInterface->registerThread();
+
+    const auto acc       = sInterface->getAOVImage(driver_settings.AOV);
+    float* in_pixels     = acc.Data;
+
+    uint32_t* device_out_pixels = sInterface->is_gpu ? sInterface->getTonemapImageGPU() : out_pixels;
+
+    ::GlareSettings settings;
+    settings.avg = driver_settings.LuminanceAverage;
+    settings.mul = driver_settings.LuminanceMultiplier;
+
+    sInterface->runGlareShader(in_pixels, device_out_pixels, settings);
 
     if (sInterface->is_gpu) {
         size_t size = sInterface->film_width * sInterface->film_height;

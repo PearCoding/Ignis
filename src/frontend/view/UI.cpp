@@ -89,6 +89,10 @@ public:
     bool ToneMappingGamma                   = true;
     IG::ToneMappingMethod ToneMappingMethod = ToneMappingMethod::ACES;
 
+    //Visualization
+    bool VisualizeGlare                     = true;
+    float VisualizeGlare_Multiplier         = 8.0f;
+
     size_t CurrentAOV = 0;
 
     bool Running       = true;
@@ -566,6 +570,7 @@ public:
     void updateSurface()
     {
         const std::string aov_name = currentAOVName();
+
         analzeLuminance(Width, Height);
 
         // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
@@ -574,6 +579,8 @@ public:
                                                1.0f,
                                                ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                                                ToneMapping_Automatic ? 0 : ToneMapping_Offset });
+
+        //if (VisualizeGlare) Runtime->evaluateGlare(buf, GlareSettings{ aov_name.c_str(), LastLum.Avg, VisualizeGlare_Multiplier });
 
         SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
     }
@@ -768,6 +775,11 @@ public:
                     ImGui::EndCombo();
                 }
                 ImGui::Checkbox("Gamma", &ToneMappingGamma);
+            }
+
+            if (ImGui::CollapsingHeader("Visualization", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Checkbox("Visualize Glare", &VisualizeGlare);
+                ImGui::SliderFloat("Multiplier", &VisualizeGlare_Multiplier, 7.0, 100.0);
             }
 
             if (ImGui::CollapsingHeader("Poses")) {

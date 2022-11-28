@@ -5,6 +5,7 @@
 namespace IG {
 struct UtilityShader {
     static std::string setupTonemap(const LoaderContext& ctx);
+    static std::string setupGlare(const LoaderContext& ctx);
     static std::string setupImageinfo(const LoaderContext& ctx);
 };
 } // namespace IG
