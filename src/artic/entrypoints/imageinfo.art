@@ -4,7 +4,8 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
 
     let buffer_in = device.make_buffer(in_pixels as &[u8], size * 3); 
     // Due to misalignment we can not make use of load_vec3
-    let get_elem = @|i:i32| srgb_to_xyY(color_mulf(make_color(buffer_in.load_f32(i * 3 + 0), buffer_in.load_f32(i * 3 + 1), buffer_in.load_f32(i * 3 + 2), 1), scale)).b; // Only luminance
+    let check_get = @|i:i32| { let a = buffer_in.load_f32(i); select(math_builtins::isfinite(a), a, 0:f32) };
+    let get_elem  = @|i:i32| srgb_to_xyY(color_mulf(make_color(check_get(i * 3 + 0), check_get(i * 3 + 1), check_get(i * 3 + 2), 1), scale)).b; // Only luminance
 
     output.min = device.parallel_reduce_f32(size, get_elem, @|a, b| math_builtins::fmin(a, b));
     output.max = device.parallel_reduce_f32(size, get_elem, @|a, b| math_builtins::fmax(a, b));
