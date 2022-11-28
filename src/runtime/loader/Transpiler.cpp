@@ -5,11 +5,16 @@
 
 #include "PExpr.h"
 
+#include <algorithm>
+#include <map>
 #include <optional>
 #include <unordered_map>
 
 namespace IG {
-using PExprType = PExpr::ElementaryType;
+using PExprType   = PExpr::ElementaryType;
+using ParamArr    = std::vector<std::string>;
+using TypeArr     = std::vector<PExprType>;
+using MapFunction = std::function<std::string(size_t&, const ParamArr&)>;
 
 inline std::string tex_name(const std::string& name)
 {
@@ -18,508 +23,6 @@ inline std::string tex_name(const std::string& name)
 inline std::string var_name(const std::string& name)
 {
     return "var_tex_" + name;
-}
-
-// We assume function state and return value to depend only on the parameters!
-template <typename Func>
-inline static std::string collapseFunction(size_t& uuid_counter, Func func, const std::vector<std::string>& args)
-{
-    constexpr size_t MinLength = 16; // At least a single argument has to larger than this number to generate a collapsed function
-
-    if (args.size() <= 1)
-        return func(args);
-
-    size_t uuid_counter2 = uuid_counter;
-    size_t max_length    = 0;
-    std::unordered_map<std::string, std::string> set;
-    for (const auto& arg : args) {
-        max_length = std::max(max_length, arg.size());
-        if (set.count(arg) == 0)
-            set[arg] = "a" + std::to_string(uuid_counter2++);
-    }
-
-    if (max_length < MinLength || set.size() == args.size()) {
-        return func(args);
-    } else {
-        uuid_counter = uuid_counter2;
-        std::vector<std::string> new_args;
-        new_args.reserve(args.size());
-        for (const auto& arg : args)
-            new_args.emplace_back(set.at(arg));
-
-        std::stringstream stream;
-        stream << "(@|| { ";
-
-        for (const auto& p : set)
-            stream << "let " << p.second << " = " << p.first << ";";
-
-        stream << func(new_args)
-               << "})()";
-        return stream.str();
-    }
-}
-
-// Internal Variables
-struct InternalVariable {
-    std::string Map;
-    PExprType Type;
-    bool IsColor;
-
-    inline std::string access() const
-    {
-        if (IsColor && Type == PExprType::Vec4)
-            return "color_to_vec4(" + Map + ")";
-        else
-            return Map;
-    }
-};
-static const std::unordered_map<std::string, InternalVariable> sInternalVariables = {
-    { "uv", { "", PExprType::Vec2, false } },           // Special
-    { "uvw", { "", PExprType::Vec3, false } },          // Special
-    { "prim_coords", { "", PExprType::Vec2, false } },  // Special
-    { "P", { "", PExprType::Vec3, false } },            // Special
-    { "Np", { "", PExprType::Vec3, false } },           // Special
-    { "V", { "", PExprType::Vec3, false } },            // Special
-    { "N", { "", PExprType::Vec3, false } },            // Special
-    { "Ng", { "", PExprType::Vec3, false } },           // Special
-    { "Nx", { "", PExprType::Vec3, false } },           // Special
-    { "Ny", { "", PExprType::Vec3, false } },           // Special
-    { "frontside", { "", PExprType::Boolean, false } }, // Special
-    { "entity_id", { "", PExprType::Integer, false } }, // Special
-    { "Ix", { "", PExprType::Integer, false } },        // Special
-    { "Iy", { "", PExprType::Integer, false } },        // Special
-    { "Pi", { "flt_pi", PExprType::Number, false } },
-    { "E", { "flt_e", PExprType::Number, false } },
-    { "Eps", { "flt_eps", PExprType::Number, false } },
-    { "NumMax", { "flt_max", PExprType::Number, false } },
-    { "NumMin", { "flt_min", PExprType::Number, false } },
-    { "Inf", { "flt_inf", PExprType::Number, false } }
-};
-
-// Dyn Functions
-template <typename MapF>
-struct InternalDynFunction {
-    MapF MapInt;
-    MapF MapNum;
-    MapF MapVec2;
-    MapF MapVec3;
-    MapF MapVec4;
-};
-
-template <typename MapF, typename... Args>
-inline static std::string callDynFunction(const InternalDynFunction<MapF>& df, size_t& uuidCounter, PExprType type, const Args&... args)
-{
-    switch (type) {
-    case PExprType::Integer:
-        if (df.MapInt)
-            return df.MapInt(uuidCounter, args...);
-        break;
-    case PExprType::Number:
-        if (df.MapNum)
-            return df.MapNum(uuidCounter, args...);
-        break;
-    case PExprType::Vec2:
-        if (df.MapVec2)
-            return df.MapVec2(uuidCounter, args...);
-        break;
-    case PExprType::Vec3:
-        if (df.MapVec3)
-            return df.MapVec3(uuidCounter, args...);
-        break;
-    case PExprType::Vec4:
-        if (df.MapVec4)
-            return df.MapVec4(uuidCounter, args...);
-        break;
-    default:
-        break;
-    }
-    return {};
-}
-std::optional<PExpr::FunctionDef> matchFuncRet(const PExpr::FunctionLookup& lkp, PExprType retType, const std::vector<PExprType>& params)
-{
-    if (lkp.matchParameter(params))
-        return PExpr::FunctionDef(lkp.name(), retType, params);
-    return {};
-}
-
-using OpParam = std::optional<PExprType>;
-template <typename MapF, typename... Args>
-inline std::optional<PExpr::FunctionDef> checkDynFunction(const PExpr::FunctionLookup& lkp, const InternalDynFunction<MapF>& df,
-                                                          const OpParam& retType, bool fixI, const std::optional<Args>&... params)
-{
-    if (df.MapInt && lkp.matchParameter({ params.value_or(PExprType::Integer)... }, true))
-        return PExpr::FunctionDef(lkp.name(), fixI ? PExprType::Integer : retType.value_or(PExprType::Integer), { params.value_or(PExprType::Integer)... });
-    if (df.MapNum && lkp.matchParameter({ params.value_or(PExprType::Number)... }, false))
-        return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Number), { params.value_or(PExprType::Number)... });
-    if (df.MapVec2 && lkp.matchParameter({ params.value_or(PExprType::Vec2)... }, false))
-        return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec2), { params.value_or(PExprType::Vec2)... });
-    if (df.MapVec3 && lkp.matchParameter({ params.value_or(PExprType::Vec3)... }, false))
-        return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec3), { params.value_or(PExprType::Vec3)... });
-    if (df.MapVec4 && lkp.matchParameter({ params.value_or(PExprType::Vec4)... }, false))
-        return PExpr::FunctionDef(lkp.name(), retType.value_or(PExprType::Vec4), { params.value_or(PExprType::Vec4)... });
-
-    return {};
-}
-
-// Dyn Functions 1
-using MapFunction1 = std::function<std::string(size_t&, const std::string&)>;
-inline static MapFunction1 genMapFunction1(const char* func, PExprType type)
-{
-    switch (type) {
-    default:
-        return {};
-    case PExprType::Integer:
-    case PExprType::Number:
-        return [=](size_t&, const std::string& a) { return std::string(func) + "(" + a + ")"; };
-    case PExprType::Vec2:
-        return [=](size_t&, const std::string& a) { return "vec2_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
-    case PExprType::Vec3:
-        return [=](size_t&, const std::string& a) { return "vec3_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
-    case PExprType::Vec4:
-        return [=](size_t&, const std::string& a) { return "vec4_map(" + a + ", @|x:f32| " + std::string(func) + "(x))"; };
-    }
-}
-inline static MapFunction1 genMapFunction1(const char* func, const char* funcI, PExprType type)
-{
-    if (type == PExprType::Integer)
-        return [=](size_t&, const std::string& a) { return std::string(funcI) + "(" + a + ")"; };
-    else
-        return genMapFunction1(func, type);
-}
-inline static MapFunction1 genFunction1(const char* func)
-{
-    return [=](size_t&, const std::string& a) { return std::string(func) + "(" + a + ")"; };
-}
-inline static MapFunction1 genFunction1Color(const char* func)
-{
-    return [=](size_t&, const std::string& a) { return "color_to_vec4(" + std::string(func) + "(" + a + "))"; };
-}
-inline static MapFunction1 genFunction1ColorO(const char* func)
-{
-    return [=](size_t&, const std::string& a) { return std::string(func) + "(vec4_to_color(" + a + "))"; };
-}
-inline static MapFunction1 genFunction1ColorIO(const char* func)
-{
-    return [=](size_t&, const std::string& a) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + a + ")))"; };
-}
-inline static MapFunction1 genArrayFunction1(const char* func, PExprType type)
-{
-    switch (type) {
-    default:
-        return {};
-    case PExprType::Vec2:
-        return [=](size_t&, const std::string& a) { return "vec2_" + std::string(func) + "(" + a + ")"; };
-    case PExprType::Vec3:
-        return [=](size_t&, const std::string& a) { return "vec3_" + std::string(func) + "(" + a + ")"; };
-    case PExprType::Vec4:
-        return [=](size_t&, const std::string& a) { return "vec4_" + std::string(func) + "(" + a + ")"; };
-    }
-}
-using InternalDynFunction1 = InternalDynFunction<MapFunction1>;
-inline static InternalDynFunction1 genDynMapFunction1(const char* func, const char* funcI)
-{
-    return {
-        funcI ? genMapFunction1(func, funcI, PExprType::Integer) : nullptr,
-        genMapFunction1(func, PExprType::Number),
-        genMapFunction1(func, PExprType::Vec2),
-        genMapFunction1(func, PExprType::Vec3),
-        genMapFunction1(func, PExprType::Vec4)
-    };
-}
-inline static InternalDynFunction1 genDynArrayFunction1(const char* func)
-{
-    return {
-        nullptr,
-        nullptr,
-        genArrayFunction1(func, PExprType::Vec2),
-        genArrayFunction1(func, PExprType::Vec3),
-        genArrayFunction1(func, PExprType::Vec4)
-    };
-}
-
-// Dyn Functions 2
-using MapFunction2         = std::function<std::string(size_t&, const std::string&, const std::string&)>;
-using InternalDynFunction2 = InternalDynFunction<MapFunction2>;
-inline static MapFunction2 genMapFunction2(const char* func, PExprType type)
-{
-    switch (type) {
-    default:
-        return {};
-    case PExprType::Integer:
-    case PExprType::Number:
-        return [=](size_t& uuid_counter, const std::string& a, const std::string& b) { return collapseFunction(
-                                                                                           uuid_counter,
-                                                                                           [func](const std::vector<std::string>& args) {
-                                                                                               return std::string(func) + "(" + args[0] + ", " + args[1] + ")";
-                                                                                           },
-                                                                                           std::vector<std::string>{ a, b }); };
-    case PExprType::Vec2:
-        return [=](size_t& uuid_counter, const std::string& a, const std::string& b) { return collapseFunction(
-                                                                                           uuid_counter,
-                                                                                           [func](const std::vector<std::string>& args) { return "vec2_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
-                                                                                           std::vector<std::string>{ a, b }); };
-    case PExprType::Vec3:
-        return [=](size_t& uuid_counter, const std::string& a, const std::string& b) { return collapseFunction(
-                                                                                           uuid_counter,
-                                                                                           [func](const std::vector<std::string>& args) { return "vec3_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
-                                                                                           std::vector<std::string>{ a, b }); };
-    case PExprType::Vec4:
-        return [=](size_t& uuid_counter, const std::string& a, const std::string& b) { return collapseFunction(
-                                                                                           uuid_counter,
-                                                                                           [func](const std::vector<std::string>& args) { return "vec4_zip(" + args[0] + ", " + args[1] + ", @|x:f32, y:f32| " + std::string(func) + "(x, y))"; },
-                                                                                           std::vector<std::string>{ a, b }); };
-    }
-}
-inline static MapFunction2 genFunction2(const std::string& prefix, const std::string& suffix = "")
-{
-    return [=](size_t& uuid_counter, const std::string& a, const std::string& b) { return collapseFunction(
-                                                                                       uuid_counter,
-                                                                                       [prefix, suffix](const std::vector<std::string>& args) { return prefix + "(" + args[0] + ", " + args[1] + ")" + suffix; },
-                                                                                       std::vector<std::string>{ a, b }); };
-}
-inline static MapFunction2 genArrayFunction2(const char* func, PExprType type)
-{
-    switch (type) {
-    default:
-        return {};
-    case PExprType::Vec2:
-        return genFunction2("vec2_" + std::string(func));
-    case PExprType::Vec3:
-        return genFunction2("vec3_" + std::string(func));
-    case PExprType::Vec4:
-        return genFunction2("vec4_" + std::string(func));
-    }
-}
-inline static MapFunction2 genFunction2Color(const char* func)
-{
-    return genFunction2("color_to_vec4(" + std::string(func), ")");
-}
-inline static InternalDynFunction2 genDynMapFunction2(const char* func, const char* funcI)
-{
-    return {
-        funcI ? genMapFunction2(funcI, PExprType::Integer) : nullptr,
-        genMapFunction2(func, PExprType::Number),
-        genMapFunction2(func, PExprType::Vec2),
-        genMapFunction2(func, PExprType::Vec3),
-        genMapFunction2(func, PExprType::Vec4)
-    };
-}
-inline static InternalDynFunction2 genDynArrayFunction2(const char* func)
-{
-    return {
-        nullptr,
-        nullptr,
-        genArrayFunction2(func, PExprType::Vec2),
-        genArrayFunction2(func, PExprType::Vec3),
-        genArrayFunction2(func, PExprType::Vec4)
-    };
-}
-
-// Dyn Functions 3
-using MapFunction3         = std::function<std::string(size_t&, const std::string&, const std::string&, const std::string&)>;
-using InternalDynFunction3 = InternalDynFunction<MapFunction3>;
-inline static MapFunction3 genFunction3(const std::string& prefix, const std::string& suffix = "")
-{
-    return [=](size_t& uuid_counter, const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
-                                                                                                             uuid_counter,
-                                                                                                             [prefix, suffix](const std::vector<std::string>& args) { return prefix + "(" + args[0] + ", " + args[1] + ", " + args[2] + ")" + suffix; },
-                                                                                                             std::vector<std::string>{ a, b, c }); };
-}
-inline static MapFunction3 genMapFunction3(const char* func, PExprType type)
-{
-    switch (type) {
-    default:
-        return {};
-    case PExprType::Integer:
-    case PExprType::Number:
-        return genFunction3(func);
-    case PExprType::Vec2:
-        return [=](size_t& uuid_counter, const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
-                                                                                                                 uuid_counter,
-                                                                                                                 [func](const std::vector<std::string>& args) { return "vec2_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
-                                                                                                                 std::vector<std::string>{ a, b, c }); };
-    case PExprType::Vec3:
-        return [=](size_t& uuid_counter, const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
-                                                                                                                 uuid_counter,
-                                                                                                                 [func](const std::vector<std::string>& args) { return "vec3_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
-                                                                                                                 std::vector<std::string>{ a, b, c }); };
-    case PExprType::Vec4:
-        return [=](size_t& uuid_counter, const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
-                                                                                                                 uuid_counter,
-                                                                                                                 [func](const std::vector<std::string>& args) { return "vec4_zip3(" + args[0] + ", " + args[1] + ", " + args[2] + ", @|x:f32, y:f32, z:f32| " + std::string(func) + "(x, y, z))"; },
-                                                                                                                 std::vector<std::string>{ a, b, c }); };
-    }
-}
-inline static InternalDynFunction3 genDynMapFunction3(const char* func, const char* funcI)
-{
-    return {
-        funcI ? genMapFunction3(funcI, PExprType::Integer) : nullptr,
-        genMapFunction3(func, PExprType::Number),
-        genMapFunction3(func, PExprType::Vec2),
-        genMapFunction3(func, PExprType::Vec3),
-        genMapFunction3(func, PExprType::Vec4)
-    };
-}
-// Type A func (A, A, num)
-inline static InternalDynFunction3 genDynLerpFunction3(const char* func)
-{
-    return {
-        nullptr,
-        genMapFunction3(func, PExprType::Number),
-        genFunction3("vec2_" + std::string(func)),
-        genFunction3("vec3_" + std::string(func)),
-        genFunction3("vec4_" + std::string(func))
-    };
-}
-inline static InternalDynFunction3 genDynColorLerpFunction3(const char* func)
-{
-    return {
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        [=](size_t& uuid_counter, const std::string& a, const std::string& b, const std::string& c) { return collapseFunction(
-                                                                                                          uuid_counter,
-                                                                                                          [func](const std::vector<std::string>& args) { return "color_to_vec4(" + std::string(func) + "(vec4_to_color(" + args[0] + "), vec4_to_color(" + args[1] + "), " + args[2] + "))"; },
-                                                                                                          std::vector<std::string>{ a, b, c }); }
-    };
-}
-
-// Defs
-static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynFunctions1 = {
-    { "sin", genDynMapFunction1("math_builtins::sin", nullptr) },
-    { "cos", genDynMapFunction1("math_builtins::cos", nullptr) },
-    { "tan", genDynMapFunction1("math_builtins::tan", nullptr) },
-    { "asin", genDynMapFunction1("math_builtins::asin", nullptr) },
-    { "acos", genDynMapFunction1("math_builtins::acos", nullptr) },
-    { "atan", genDynMapFunction1("math_builtins::atan", nullptr) },
-    { "exp", genDynMapFunction1("math_builtins::exp", nullptr) },
-    { "exp2", genDynMapFunction1("math_builtins::exp2", nullptr) },
-    { "log", genDynMapFunction1("math_builtins::log", nullptr) },
-    { "log2", genDynMapFunction1("math_builtins::log2", nullptr) },
-    { "log10", genDynMapFunction1("math_builtins::log10", nullptr) },
-    { "floor", genDynMapFunction1("math_builtins::floor", nullptr) },
-    { "ceil", genDynMapFunction1("math_builtins::ceil", nullptr) },
-    { "round", genDynMapFunction1("math_builtins::round", nullptr) },
-    { "fract", genDynMapFunction1("math::fract", nullptr) },
-    { "trunc", genDynMapFunction1("math::trunc", nullptr) },
-    { "sqrt", genDynMapFunction1("math_builtins::sqrt", nullptr) },
-    { "cbrt", genDynMapFunction1("math_builtins::cbrt", nullptr) },
-    { "abs", genDynMapFunction1("math_builtins::fabs", "abs") },
-    { "rad", genDynMapFunction1("rad", nullptr) },
-    { "deg", genDynMapFunction1("deg", nullptr) },
-    { "norm", genDynArrayFunction1("normalize") },
-    { "hash", { nullptr, genMapFunction1("hash_rndf", PExprType::Number), nullptr, nullptr, nullptr } },
-    { "smoothstep", { nullptr, genMapFunction1("smoothstep", PExprType::Number), nullptr, nullptr, nullptr } },
-    { "smootherstep", { nullptr, genMapFunction1("smootherstep", PExprType::Number), nullptr, nullptr, nullptr } },
-    { "rgbtoxyz", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("srgb_to_xyz") } },
-    { "xyztorgb", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("xyz_to_srgb") } },
-    { "rgbtohsv", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("srgb_to_hsv") } },
-    { "hsvtorgb", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("hsv_to_srgb") } },
-    { "rgbtohsl", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("srgb_to_hsl") } },
-    { "hsltorgb", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorIO("hsl_to_srgb") } }
-};
-
-static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynConstructFunctions1 = {
-    { "blackbody", { nullptr, genFunction1Color("math::blackbody"), nullptr, nullptr, nullptr } }
-};
-
-static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynFunctions2 = {
-    { "min", genDynMapFunction2("math_builtins::fmin", "min") },
-    { "max", genDynMapFunction2("math_builtins::fmax", "max") },
-    { "snap", genDynMapFunction2("math::snap", nullptr) },
-    { "pingpong", genDynMapFunction2("math::pingpong", nullptr) },
-    { "pow", genDynMapFunction2("math_builtins::pow", nullptr) },
-    { "atan2", genDynMapFunction2("math_builtins::atan2", nullptr) },
-    { "fmod", genDynMapFunction2("math::fmod", nullptr) },
-    { "cross", { nullptr, nullptr, nullptr, genArrayFunction2("cross", PExprType::Vec3), nullptr } },
-    { "reflect", { nullptr, nullptr, nullptr, genArrayFunction2("reflect", PExprType::Vec3), nullptr } },
-    { "rotate_euler", { nullptr, nullptr, nullptr, genArrayFunction2("rotate_euler", PExprType::Vec3), nullptr } },
-    { "rotate_euler_inverse", { nullptr, nullptr, nullptr, genArrayFunction2("rotate_euler_inverse", PExprType::Vec3), nullptr } },
-    { "fresnel_dielectric", { nullptr, genFunction2("math::fresnel_dielectric"), nullptr, nullptr, nullptr } }
-};
-static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynNoiseFunctions2 = {
-    { "noise", { nullptr, genFunction2("noise1"), genFunction2("noise2_v"), genFunction2("noise3_v"), nullptr } },
-    { "snoise", { nullptr, genFunction2("snoise1"), genFunction2("snoise2"), genFunction2("snoise3"), nullptr } },
-    { "pnoise", { nullptr, genFunction2("pnoise1"), genFunction2("pnoise2"), genFunction2("pnoise3"), nullptr } },
-    { "cellnoise", { nullptr, genFunction2("cellnoise1"), genFunction2("cellnoise2"), genFunction2("cellnoise3"), nullptr } },
-    { "perlin", { nullptr, nullptr, genFunction2("perlin2"), nullptr /*TODO*/, nullptr } },
-    { "sperlin", { nullptr, nullptr, genFunction2("sperlin2"), nullptr /*TODO*/, nullptr } },
-    { "voronoi", { nullptr, nullptr, genFunction2("voronoi2"), nullptr, nullptr } },
-    { "fbm", { nullptr, nullptr, genFunction2("fbm2"), nullptr, nullptr } }
-};
-static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynColoredNoiseFunctions1 = {
-    { "cnoise", { nullptr, genFunction1Color("cnoise1_def"), genFunction1Color("cnoise2_def"), genFunction1Color("cnoise3_def"), nullptr } },
-    { "cpnoise", { nullptr, genFunction1Color("cpnoise1_def"), genFunction1Color("cpnoise2_def"), genFunction1Color("cpnoise3_def"), nullptr } },
-    { "ccellnoise", { nullptr, genFunction1Color("ccellnoise1_def"), genFunction1Color("ccellnoise2_def"), genFunction1Color("ccellnoise3_def"), nullptr } },
-    { "cperlin", { nullptr, nullptr, genFunction1Color("cperlin2_def"), nullptr /*TODO*/, nullptr } },
-    { "cvoronoi", { nullptr, nullptr, genFunction1Color("cvoronoi2_def"), nullptr, nullptr } },
-    { "cfbm", { nullptr, nullptr, genFunction1Color("cfbm2_def"), nullptr, nullptr } }
-};
-static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynColoredNoiseFunctions2 = {
-    { "cnoise", { nullptr, genFunction2Color("cnoise1"), genFunction2Color("cnoise2"), genFunction2Color("cnoise3"), nullptr } },
-    { "cpnoise", { nullptr, genFunction2Color("cpnoise1"), genFunction2Color("cpnoise2"), genFunction2Color("cpnoise3"), nullptr } },
-    { "ccellnoise", { nullptr, genFunction2Color("ccellnoise1"), genFunction2Color("ccellnoise2"), genFunction2Color("ccellnoise3"), nullptr } },
-    { "cvoronoi", { nullptr, nullptr, genFunction2Color("cvoronoi2"), nullptr, nullptr } },
-    { "cfbm", { nullptr, nullptr, genFunction2Color("cfbm2"), nullptr, nullptr } }
-};
-
-static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynFunctions3 = {
-    { "clamp", genDynMapFunction3("clampf", "clamp") },
-    { "smin", genDynMapFunction3("math::smoothmin", nullptr) },
-    { "smax", genDynMapFunction3("math::smoothmax", nullptr) },
-    { "wrap", genDynMapFunction3("math::wrap", nullptr) },
-    { "fresnel_conductor", { nullptr, genFunction3("math::fresnel_conductor"), nullptr, nullptr, nullptr } }
-};
-static const std::unordered_map<std::string, InternalDynFunction3> sInternalDynLerpFunctions3 = {
-    { "mix", genDynLerpFunction3("lerp") },
-    { "mix_screen", genDynColorLerpFunction3("color_mix_screen") },
-    { "mix_overlay", genDynColorLerpFunction3("color_mix_overlay") },
-    { "mix_dodge", genDynColorLerpFunction3("color_mix_dodge") },
-    { "mix_burn", genDynColorLerpFunction3("color_mix_burn") },
-    { "mix_soft", genDynColorLerpFunction3("color_mix_soft") },
-    { "mix_linear", genDynColorLerpFunction3("color_mix_linear") },
-    { "mix_hue", genDynColorLerpFunction3("color_mix_hue") },
-    { "mix_saturation", genDynColorLerpFunction3("color_mix_saturation") },
-    { "mix_value", genDynColorLerpFunction3("color_mix_value") },
-    { "mix_color", genDynColorLerpFunction3("color_mix_color") }
-};
-
-static const std::unordered_map<std::string, InternalDynFunction1> sInternalDynReduceFunctions1 = {
-    { "length", genDynArrayFunction1("len") },
-    { "sum", genDynArrayFunction1("sum") },
-    { "avg", genDynArrayFunction1("average") },
-    { "luminance", { nullptr, nullptr, nullptr, nullptr, genFunction1ColorO("color_luminance") } },
-    { "checkerboard", { nullptr, nullptr, genFunction1("node_checkerboard2"), genFunction1("node_checkerboard3"), nullptr } },
-    { "noise", { nullptr, genFunction1("noise1_def"), genFunction1("noise2_def"), genFunction1("noise3_def"), nullptr } },
-    { "snoise", { nullptr, genFunction1("snoise1_def"), genFunction1("snoise2_def"), genFunction1("snoise3_def"), nullptr } },
-    { "pnoise", { nullptr, genFunction1("pnoise1_def"), genFunction1("pnoise2_def"), genFunction1("pnoise3_def"), nullptr } },
-    { "cellnoise", { nullptr, genFunction1("cellnoise1_def"), genFunction1("cellnoise2_def"), genFunction1("cellnoise3_def"), nullptr } },
-    { "perlin", { nullptr, nullptr, genFunction1("perlin2_def"), nullptr /* TODO: 3D Version */, nullptr } },
-    { "sperlin", { nullptr, nullptr, genFunction1("sperlin2_def"), nullptr /* TODO: 3D Version */, nullptr } },
-    { "voronoi", { nullptr, nullptr, genFunction1("voronoi2_def"), nullptr, nullptr } },
-    { "fbm", { nullptr, nullptr, genFunction1("fbm2_def"), nullptr, nullptr } }
-};
-static const std::unordered_map<std::string, InternalDynFunction2> sInternalDynReduceFunctions2 = {
-    { "angle", genDynArrayFunction2("angle") },
-    { "dot", genDynArrayFunction2("dot") },
-    { "dist", genDynArrayFunction2("dist") }
-};
-// TODO: refract (V, N, ior) -> Vec3 !
-
-// Other stuff
-inline static std::string binaryCwise(const std::string& A, const std::string& B, PExprType arithType, const std::string& op, const std::string& func)
-{
-    switch (arithType) {
-    default:
-        return "(" + A + ") " + op + " (" + B + ")";
-    case PExprType::Vec2:
-        return "vec2_" + func + "(" + A + ", " + B + ")";
-    case PExprType::Vec3:
-        return "vec3_" + func + "(" + A + ", " + B + ")";
-    case PExprType::Vec4:
-        return "vec4_" + func + "(" + A + ", " + B + ")";
-    }
 }
 
 inline static std::string typeConstant(float f, PExprType arithType)
@@ -539,6 +42,27 @@ inline static std::string typeConstant(float f, PExprType arithType)
     }
 }
 
+inline static constexpr std::string_view typeArtic(PExprType type)
+{
+    switch (type) {
+    default:
+    case PExprType::Boolean:
+        return "bool";
+    case PExprType::String:
+        return "&[u8]";
+    case PExprType::Number:
+        return "f32";
+    case PExprType::Integer:
+        return "i32";
+    case PExprType::Vec2:
+        return "Vec2";
+    case PExprType::Vec3:
+        return "Vec3";
+    case PExprType::Vec4:
+        return "Vec4";
+    }
+}
+
 inline static std::optional<std::string> extractConstantString(const std::string& arg)
 {
     if (arg.size() < 2)
@@ -554,11 +78,11 @@ inline static std::optional<std::string> extractConstantString(const std::string
     return arg.substr(1, arg.size() - 2);
 }
 
-inline static std::string handleCheckRayFlag(const std::string& arg)
+inline static std::string handleCheckRayFlag(size_t&, const ParamArr& args)
 {
-    const auto flag_name = extractConstantString(to_lowercase(arg));
+    const auto flag_name = extractConstantString(to_lowercase(args.front()));
     if (!flag_name.has_value()) {
-        IG_LOG(L_ERROR) << "check_ray_flag expects a constant string as an argument but got " << arg << std::endl;
+        IG_LOG(L_ERROR) << "check_ray_flag expects a constant string as an argument but got " << args.front() << std::endl;
         return "false";
     }
 
@@ -572,7 +96,7 @@ inline static std::string handleCheckRayFlag(const std::string& arg)
     } else if (flag_name.value() == "shadow") {
         flag = "ray_flag_shadow";
     } else {
-        IG_LOG(L_ERROR) << "Unknown check_ray_flag argument " << arg << std::endl;
+        IG_LOG(L_ERROR) << "Unknown check_ray_flag argument " << args.front() << std::endl;
         return "false";
     }
 
@@ -632,6 +156,641 @@ inline static std::string handleTransform(TransformInterpretation interpretation
     }
 }
 
+// We assume function state and return value to depend only on the parameters!
+template <typename Func>
+inline static std::string collapseFunction(size_t& uuid_counter, Func func, const std::vector<std::string>& args)
+{
+    constexpr size_t MinLength = 16; // At least a single argument has to larger than this number to generate a collapsed function
+
+    if (args.size() <= 1)
+        return func(args);
+
+    size_t uuid_counter2 = uuid_counter;
+    size_t max_length    = 0;
+    std::unordered_map<std::string, std::string> set;
+    for (const auto& arg : args) {
+        max_length = std::max(max_length, arg.size());
+        if (set.count(arg) == 0)
+            set[arg] = "a" + std::to_string(uuid_counter2++);
+    }
+
+    if (max_length < MinLength || set.size() == args.size()) {
+        return func(args);
+    } else {
+        uuid_counter = uuid_counter2;
+        std::vector<std::string> new_args;
+        new_args.reserve(args.size());
+        for (const auto& arg : args)
+            new_args.emplace_back(set.at(arg));
+
+        std::stringstream stream;
+        stream << "(@|| { ";
+
+        for (const auto& p : set)
+            stream << "let " << p.second << " = " << p.first << ";";
+
+        stream << func(new_args)
+               << "})()";
+        return stream.str();
+    }
+}
+
+static inline std::string handleSelect(size_t& uuidCounter, const ParamArr& args)
+{
+    if (args[1] == args[2])
+        return args[1];
+    else
+        return collapseFunction(
+            uuidCounter,
+            [](const ParamArr& args2) { return "select(" + args2[0] + "," + args2[1] + "," + args2[2] + ")"; },
+            args);
+}
+
+inline static std::string handleCurveLookup(size_t& uuidCounter, const ParamArr& initArgs)
+{
+    const auto interpolation = extractConstantString(to_lowercase(initArgs.front()));
+    if (!interpolation.has_value()) {
+        IG_LOG(L_ERROR) << "curve_lookup expects one constant string as initial argument but got " << initArgs.front() << std::endl;
+        return "0";
+    }
+
+    bool linear;
+    if (interpolation == "constant") {
+        linear = false;
+    } else if (interpolation == "linear") {
+        linear = true;
+    } else {
+        IG_LOG(L_ERROR) << "Unknown curve_lookup argument " << initArgs.front() << std::endl;
+        return "0";
+    }
+
+    // Remove first argument
+    ParamArr newArgs = initArgs;
+    newArgs.erase(newArgs.begin());
+
+    return collapseFunction(
+        uuidCounter,
+        [linear](const std::vector<std::string>& args) {
+            std::stringstream x_values;
+            x_values << "@|i:i32| [";
+            for (size_t i = 2; i < args.size(); ++i)
+                x_values << "vec2_at(" << args.at(i) << ", 0), ";
+            x_values << "](i)";
+
+            std::stringstream y_values;
+            y_values << "@|i:i32| [";
+            for (size_t i = 2; i < args.size(); ++i)
+                y_values << "vec2_at(" << args.at(i) << ", 1), ";
+            y_values << "](i)";
+
+            std::string interpolate = linear ? "true" : "false";
+            std::string extrapolate = args.front();
+            return "math::lookup_curve(" + std::to_string(args.size() - 2) + ", " + args.at(1) + ", " + x_values.str() + ", " + y_values.str() + ", " + interpolate + ", " + extrapolate + ")";
+        },
+        newArgs);
+}
+
+static inline std::string_view dumpType(PExprType type)
+{
+    return PExpr::toString(type);
+}
+
+// Internal Variables
+struct InternalVariable {
+    std::string Map;
+    PExprType Type;
+
+    inline const std::string& access() const { return Map; }
+};
+static const std::unordered_map<std::string, InternalVariable> sInternalVariables = {
+    { "uv", { "vec3_to_2(ctx.uvw)", PExprType::Vec2 } },
+    { "uvw", { "ctx.uvw", PExprType::Vec3 } },
+    { "prim_coords", { "ctx.surf.prim_coords", PExprType::Vec2 } },
+    { "P", { "ctx.surf.point", PExprType::Vec3 } },
+    { "Np", { "ctx.coord.to_normalized_point(ctx.surf.point)", PExprType::Vec3 } },
+    { "V", { "vec3_neg(ctx.ray.dir)", PExprType::Vec3 } },
+    { "Rd", { "vec3_neg(ctx.ray.dir)", PExprType::Vec3 } },
+    { "Ro", { "ctx.ray.org", PExprType::Vec3 } },
+    { "N", { "ctx.surf.local.col(2)", PExprType::Vec3 } },
+    { "Ng", { "ctx.surf.face_normal", PExprType::Vec3 } },
+    { "Nx", { "ctx.surf.local.col(0)", PExprType::Vec3 } },
+    { "Ny", { "ctx.surf.local.col(1)", PExprType::Vec3 } },
+    { "frontside", { "ctx.surf.is_entering", PExprType::Boolean } },
+    { "entity_id", { "ctx.entity_id", PExprType::Integer } },
+    { "Ix", { "ctx.pixel.x", PExprType::Integer } },
+    { "Iy", { "ctx.pixel.y", PExprType::Integer } },
+    { "Pi", { "flt_pi", PExprType::Number } },
+    { "E", { "flt_e", PExprType::Number } },
+    { "Eps", { "flt_eps", PExprType::Number } },
+    { "NumMax", { "flt_max", PExprType::Number } },
+    { "NumMin", { "flt_min", PExprType::Number } },
+    { "Inf", { "flt_inf", PExprType::Number } }
+};
+
+// Dyn Functions
+static inline MapFunction createFunction(const std::string& func)
+{
+    return [func](size_t& uuid_counter, const ParamArr& args) {
+        return collapseFunction(
+            uuid_counter,
+            [func](const ParamArr& args2) {
+                std::stringstream stream;
+
+                stream << func << "(";
+                for (size_t i = 0; i < args2.size(); ++i) {
+                    stream << args2.at(i);
+                    if (i < args2.size() - 1)
+                        stream << ", ";
+                }
+                stream << ")";
+                return stream.str();
+            },
+            args);
+    };
+}
+
+static inline MapFunction createColorFunctionIn1(const std::string& func)
+{
+    return [func](size_t&, const ParamArr& args) {
+        IG_ASSERT(args.size() == 1, "Only one argument expected for createColorFunctionIn1");
+        std::stringstream stream;
+        stream << func << "(vec4_to_color(" << args[0] << "))";
+        return stream.str();
+    };
+}
+
+static inline MapFunction createColorFunctionInOut1(const std::string& func)
+{
+    return [func](size_t&, const ParamArr& args) {
+        IG_ASSERT(args.size() == 1, "Only one argument expected for createColorFunctionInOut1");
+        std::stringstream stream;
+        stream << "color_to_vec4(" << func << "(vec4_to_color(" << args[0] << ")))";
+        return stream.str();
+    };
+}
+
+static inline MapFunction createColorFunctionOut(const std::string& func)
+{
+    return [func](size_t& uuid_counter, const ParamArr& args) {
+        return collapseFunction(
+            uuid_counter,
+            [func](const ParamArr& args2) {
+                std::stringstream stream;
+
+                stream << "color_to_vec4(" << func << "(";
+                for (size_t i = 0; i < args2.size(); ++i) {
+                    stream << args2.at(i);
+                    if (i < args2.size() - 1)
+                        stream << ", ";
+                }
+                stream << "))";
+                return stream.str();
+            },
+            args);
+    };
+}
+
+static inline MapFunction createNto1MapFunction(const std::string& func, size_t dim)
+{
+    return [func, dim](size_t&, const ParamArr& args) {
+        IG_ASSERT(args.size() == 1, "Only one argument expected for createNto1MapFunction");
+        std::stringstream stream;
+
+        if (dim > 1)
+            stream << "vec" << dim << "_map(" << args[0] << ", @|x:f32| " << func << "(x))";
+        else
+            stream << func << "(" << args[0] << ")";
+        return stream.str();
+    };
+}
+
+static inline MapFunction createZipFunction(const std::string& func, size_t dim)
+{
+    return [func, dim](size_t& uuid_counter, const ParamArr& args) {
+        IG_ASSERT(args.size() == 2, "Only one argument expected for createZipFunction");
+        return collapseFunction(
+            uuid_counter,
+            [func, dim](const ParamArr& args2) {
+                std::stringstream stream;
+
+                if (dim > 1)
+                    stream << "vec" << dim << "_zip(" << args2[0] << ", " << args2[1] << ", @|x:f32, y:f32| " << func << "(x, y))";
+                else
+                    stream << func << "(" << args2[0] << ", " << args2[1] << ")";
+                return stream.str();
+            },
+            args);
+    };
+}
+
+static inline MapFunction createZip3Function(const std::string& func, size_t dim)
+{
+    return [func, dim](size_t& uuid_counter, const ParamArr& args) {
+        IG_ASSERT(args.size() == 3, "Only one argument expected for createZip3Function");
+        return collapseFunction(
+            uuid_counter,
+            [func, dim](const ParamArr& args2) {
+                std::stringstream stream;
+
+                if (dim > 1)
+                    stream << "vec" << dim << "_zip3(" << args2[0] << ", " << args2[1] << ", " << args2[2] << ", @|x:f32, y:f32, z:f32| " << func << "(x, y, z))";
+                else
+                    stream << func << "(" << args2[0] << ", " << args2[1] << ", " << args2[2] << ")";
+                return stream.str();
+            },
+            args);
+    };
+}
+
+static inline MapFunction createColorLerpFunction(const std::string& func)
+{
+    return [func](size_t& uuid_counter, const ParamArr& args) {
+        IG_ASSERT(args.size() == 3, "Only one argument expected for createColorLerpFunction");
+        return collapseFunction(
+            uuid_counter,
+            [func](const ParamArr& args2) {
+                std::stringstream stream;
+
+                stream << "color_to_vec4(" << func << "(vec4_to_color(" << args2[0] << "), vec4_to_color(" << args2[1] << "), " << args2[2] << "))";
+                return stream.str();
+            },
+            args);
+    };
+}
+
+struct FunctionDef {
+    MapFunction Func;
+    std::string Name;
+    PExprType ReturnType;
+    TypeArr Arguments;
+    bool Variadic; // If true, the last argument type can be added infinitely times
+
+    inline std::string signature() const
+    {
+        std::stringstream stream;
+        stream << Name << "(";
+        for (size_t i = 0; i < Arguments.size(); ++i) {
+            stream << dumpType(Arguments.at(i));
+            if (i < Arguments.size() - 1)
+                stream << ", ";
+            else if (Variadic)
+                stream << ", ...";
+        }
+        stream << ") -> " << dumpType(ReturnType);
+        return stream.str();
+    }
+
+    inline PExpr::FunctionDef definition() const
+    {
+        return PExpr::FunctionDef(Name, ReturnType, Arguments);
+    }
+
+    inline PExpr::FunctionDef definition(const TypeArr& arr) const
+    {
+        return PExpr::FunctionDef(Name, ReturnType, arr);
+    }
+
+    inline bool checkParameters(const TypeArr& paramTypes) const
+    {
+        if (Variadic && paramTypes.size() > 0) {
+            if (Arguments.size() > paramTypes.size())
+                return false;
+
+            for (size_t i = 0; i < Arguments.size(); ++i) {
+                if (paramTypes.at(i) != Arguments.at(i))
+                    return false;
+            }
+
+            const auto lastType = Arguments.back();
+            for (size_t i = Arguments.size(); i < paramTypes.size(); ++i) {
+                if (paramTypes.at(i) != lastType)
+                    return false;
+            }
+            return true;
+        } else {
+            return Arguments.size() == paramTypes.size() && std::equal(Arguments.begin(), Arguments.end(), paramTypes.begin());
+        }
+    }
+
+    inline bool check(const PExpr::FunctionLookup& lkp, bool exact = false) const
+    {
+        if (lkp.name() != Name)
+            return false;
+
+        if (Variadic) {
+            const auto check = [exact](PExprType a, PExprType b) {
+                return exact ? (a == b) : (PExpr::isConvertible(a, b));
+            };
+
+            if (Arguments.size() > lkp.parameters().size())
+                return false;
+
+            for (size_t i = 0; i < Arguments.size(); ++i) {
+                if (!check(lkp.parameters().at(i), Arguments.at(i)))
+                    return false;
+            }
+
+            const auto lastType = Arguments.back();
+            for (size_t i = Arguments.size(); i < lkp.parameters().size(); ++i) {
+                if (!check(lkp.parameters().at(i), lastType))
+                    return false;
+            }
+            return true;
+        } else {
+            return Arguments.size() == lkp.parameters().size() && lkp.matchParameter(Arguments, exact);
+        }
+    }
+
+    inline std::optional<PExpr::FunctionDef> matchDef(const PExpr::FunctionLookup& lkp, bool exact = false) const
+    {
+        if (check(lkp, exact)) {
+            if (!Variadic) {
+                return definition();
+            } else {
+                TypeArr args = Arguments;
+                for (size_t i = Arguments.size(); i < lkp.parameters().size(); ++i)
+                    args.push_back(Arguments.back());
+                return definition(args);
+            }
+        } else {
+            return {};
+        }
+    }
+
+    inline std::string call(size_t& uuidCounter, const ParamArr& args) const
+    {
+        return Func(uuidCounter, args);
+    }
+};
+
+template <typename... Args>
+inline static FunctionDef constructFunctionDef(const std::string& name, MapFunction func, bool variadic, PExprType retType, const Args&... args)
+{
+    return FunctionDef{
+        func,
+        name,
+        retType,
+        TypeArr{ args... },
+        variadic
+    };
+}
+
+// Defs
+template <typename... Args>
+static inline std::pair<std::string, FunctionDef> cF(const std::string& name, MapFunction func, PExprType retType, const Args&... args)
+{
+    return std::make_pair(name, constructFunctionDef(name, func, false, retType, args...));
+}
+
+template <typename... Args>
+static inline std::pair<std::string, FunctionDef> cFV(const std::string& name, MapFunction func, PExprType retType, const Args&... args)
+{
+    return std::make_pair(name, constructFunctionDef(name, func, true, retType, args...));
+}
+
+#define _MF1A(name, iname)                                                           \
+    cF(name, createNto1MapFunction(iname, 1), PExprType::Number, PExprType::Number), \
+        cF(name, createNto1MapFunction(iname, 2), PExprType::Vec2, PExprType::Vec2), \
+        cF(name, createNto1MapFunction(iname, 3), PExprType::Vec3, PExprType::Vec3), \
+        cF(name, createNto1MapFunction(iname, 4), PExprType::Vec4, PExprType::Vec4)
+
+#define _MF2A(name, iname)                                                                          \
+    cF(name, createZipFunction(iname, 1), PExprType::Number, PExprType::Number, PExprType::Number), \
+        cF(name, createZipFunction(iname, 2), PExprType::Vec2, PExprType::Vec2, PExprType::Vec2),   \
+        cF(name, createZipFunction(iname, 3), PExprType::Vec3, PExprType::Vec3, PExprType::Vec3),   \
+        cF(name, createZipFunction(iname, 4), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4)
+
+#define _MF3A(name, iname)                                                                                              \
+    cF(name, createZip3Function(iname, 1), PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number), \
+        cF(name, createZip3Function(iname, 2), PExprType::Vec2, PExprType::Vec2, PExprType::Vec2, PExprType::Vec2),     \
+        cF(name, createZip3Function(iname, 3), PExprType::Vec3, PExprType::Vec3, PExprType::Vec3, PExprType::Vec3),     \
+        cF(name, createZip3Function(iname, 4), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Vec4)
+
+static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
+    _MF1A("sin", "math_builtins::sin"),
+    _MF1A("cos", "math_builtins::cos"),
+    _MF1A("tan", "math_builtins::tan"),
+    _MF1A("asin", "math_builtins::asin"),
+    _MF1A("acos", "math_builtins::acos"),
+    _MF1A("atan", "math_builtins::atan"),
+    _MF1A("exp", "math_builtins::exp"),
+    _MF1A("exp2", "math_builtins::exp2"),
+    _MF1A("log", "math_builtins::log"),
+    _MF1A("log2", "math_builtins::log2"),
+    _MF1A("log10", "math_builtins::log10"),
+    _MF1A("floor", "math_builtins::floor"),
+    _MF1A("ceil", "math_builtins::ceil"),
+    _MF1A("round", "math_builtins::round"),
+    _MF1A("fract", "math::fract"),
+    _MF1A("trunc", "math::trunc"),
+    _MF1A("sqrt", "math_builtins::sqrt"),
+    _MF1A("cbrt", "math_builtins::cbrt"),
+    _MF1A("abs", "math_builtins::fabs"),
+    cF("abs", createFunction("abs"), PExprType::Integer, PExprType::Integer),
+
+    _MF1A("rad", "rad"),
+    _MF1A("deg", "deg"),
+
+    cF("hash", createFunction("hash_rndf"), PExprType::Number, PExprType::Number),
+    cF("smoothstep", createFunction("smoothstep"), PExprType::Number, PExprType::Number),
+    cF("smootherstep", createFunction("smootherstep"), PExprType::Number, PExprType::Number),
+    cF("rgbtoxyz", createColorFunctionInOut1("srgb_to_xyz"), PExprType::Vec4, PExprType::Vec4),
+    cF("xyztorgb", createColorFunctionInOut1("xyz_to_srgb"), PExprType::Vec4, PExprType::Vec4),
+    cF("rgbtohsv", createColorFunctionInOut1("srgb_to_hsv"), PExprType::Vec4, PExprType::Vec4),
+    cF("hsvtorgb", createColorFunctionInOut1("hsv_to_srgb"), PExprType::Vec4, PExprType::Vec4),
+    cF("rgbtohsl", createColorFunctionInOut1("srgb_to_hsl"), PExprType::Vec4, PExprType::Vec4),
+    cF("hsltorgb", createColorFunctionInOut1("hsl_to_srgb"), PExprType::Vec4, PExprType::Vec4),
+    cF("norm", createFunction("vec2_normalize"), PExprType::Vec2, PExprType::Vec2),
+    cF("norm", createFunction("vec3_normalize"), PExprType::Vec3, PExprType::Vec3),
+    cF("norm", createFunction("vec4_normalize"), PExprType::Vec4, PExprType::Vec4),
+    cF("length", createFunction("vec2_len"), PExprType::Number, PExprType::Vec2),
+    cF("length", createFunction("vec3_len"), PExprType::Number, PExprType::Vec3),
+    cF("length", createFunction("vec4_len"), PExprType::Number, PExprType::Vec4),
+    cF("sum", createFunction("vec2_sum"), PExprType::Number, PExprType::Vec2),
+    cF("sum", createFunction("vec3_sum"), PExprType::Number, PExprType::Vec3),
+    cF("sum", createFunction("vec4_sum"), PExprType::Number, PExprType::Vec4),
+    cF("avg", createFunction("vec2_average"), PExprType::Number, PExprType::Vec2),
+    cF("avg", createFunction("vec3_average"), PExprType::Number, PExprType::Vec3),
+    cF("avg", createFunction("vec4_average"), PExprType::Number, PExprType::Vec4),
+    cF("luminance", createColorFunctionIn1("color_luminance"), PExprType::Number, PExprType::Vec4),
+    cF("blackbody", createColorFunctionOut("math::blackbody"), PExprType::Vec4, PExprType::Number),
+
+    cF("checkerboard", createFunction("node_checkerboard2"), PExprType::Number, PExprType::Vec2),
+    cF("checkerboard", createFunction("node_checkerboard3"), PExprType::Number, PExprType::Vec3),
+
+    _MF2A("min", "math_builtins::fmin"),
+    cF("min", createFunction("min"), PExprType::Integer, PExprType::Integer, PExprType::Integer),
+    _MF2A("max", "math_builtins::fmax"),
+    cF("max", createFunction("max"), PExprType::Integer, PExprType::Integer, PExprType::Integer),
+
+    _MF2A("snap", "math::snap"),
+    _MF2A("pingpong", "math::pingpong"),
+    _MF2A("pow", "math_builtins::pow"),
+    _MF2A("atan2", "math_builtins::atan2"),
+    _MF2A("fmod", "math::fmod"),
+
+    cF("angle", createFunction("vec2_angle"), PExprType::Number, PExprType::Vec2, PExprType::Vec2),
+    cF("angle", createFunction("vec3_angle"), PExprType::Number, PExprType::Vec3, PExprType::Vec3),
+    cF("angle", createFunction("vec4_angle"), PExprType::Number, PExprType::Vec4, PExprType::Vec4),
+    cF("dot", createFunction("vec2_dot"), PExprType::Number, PExprType::Vec2, PExprType::Vec2),
+    cF("dot", createFunction("vec3_dot"), PExprType::Number, PExprType::Vec3, PExprType::Vec3),
+    cF("dot", createFunction("vec4_dot"), PExprType::Number, PExprType::Vec4, PExprType::Vec4),
+    cF("dist", createFunction("vec2_dist"), PExprType::Number, PExprType::Vec2, PExprType::Vec2),
+    cF("dist", createFunction("vec3_dist"), PExprType::Number, PExprType::Vec3, PExprType::Vec3),
+    cF("dist", createFunction("vec4_dist"), PExprType::Number, PExprType::Vec4, PExprType::Vec4),
+
+    cF("cross", createFunction("vec3_cross"), PExprType::Vec3, PExprType::Vec3, PExprType::Vec3),
+    cF("reflect", createFunction("vec3_reflect"), PExprType::Vec3, PExprType::Vec3, PExprType::Vec3),
+    cF("rotate_euler", createFunction("vec3_rotate_euler"), PExprType::Vec3, PExprType::Vec3, PExprType::Vec3),
+    cF("rotate_euler_inverse", createFunction("vec3_rotate_euler_inverse"), PExprType::Vec3, PExprType::Vec3, PExprType::Vec3),
+    cF("fresnel_dielectric", createFunction("math::fresnel_dielectric"), PExprType::Number, PExprType::Number, PExprType::Number),
+
+    // TODO: refract (V, N, ior) -> Vec3 !
+
+    cF("noise", createFunction("noise1_def"), PExprType::Number, PExprType::Number),
+    cF("noise", createFunction("noise1"), PExprType::Number, PExprType::Number, PExprType::Number),
+    cF("noise", createFunction("noise2_def"), PExprType::Number, PExprType::Vec2),
+    cF("noise", createFunction("noise2_v"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+    cF("noise", createFunction("noise3_def"), PExprType::Number, PExprType::Vec3),
+    cF("noise", createFunction("noise3_v"), PExprType::Number, PExprType::Vec3, PExprType::Number),
+    cF("snoise", createFunction("snoise1_def"), PExprType::Number, PExprType::Number),
+    cF("snoise", createFunction("snoise1"), PExprType::Number, PExprType::Number, PExprType::Number),
+    cF("snoise", createFunction("snoise2_def"), PExprType::Number, PExprType::Vec2),
+    cF("snoise", createFunction("snoise2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+    cF("snoise", createFunction("snoise3_def"), PExprType::Number, PExprType::Vec3),
+    cF("snoise", createFunction("snoise3"), PExprType::Number, PExprType::Vec3, PExprType::Number),
+    cF("pnoise", createFunction("pnoise1_def"), PExprType::Number, PExprType::Number),
+    cF("pnoise", createFunction("pnoise1"), PExprType::Number, PExprType::Number, PExprType::Number),
+    cF("pnoise", createFunction("pnoise2_def"), PExprType::Number, PExprType::Vec2),
+    cF("pnoise", createFunction("pnoise2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+    cF("pnoise", createFunction("pnoise3_def"), PExprType::Number, PExprType::Vec3),
+    cF("pnoise", createFunction("pnoise3"), PExprType::Number, PExprType::Vec3, PExprType::Number),
+    cF("cellnoise", createFunction("cellnoise1_def"), PExprType::Number, PExprType::Number),
+    cF("cellnoise", createFunction("cellnoise1"), PExprType::Number, PExprType::Number, PExprType::Number),
+    cF("cellnoise", createFunction("cellnoise2_def"), PExprType::Number, PExprType::Vec2),
+    cF("cellnoise", createFunction("cellnoise2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+    cF("cellnoise", createFunction("cellnoise3_def"), PExprType::Number, PExprType::Vec3),
+    cF("cellnoise", createFunction("cellnoise3"), PExprType::Number, PExprType::Vec3, PExprType::Number),
+    cF("perlin", createFunction("perlin2_def"), PExprType::Number, PExprType::Vec2),
+    cF("perlin", createFunction("perlin2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+    cF("sperlin", createFunction("sperlin2_def"), PExprType::Number, PExprType::Vec2),
+    cF("sperlin", createFunction("sperlin2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+    cF("voronoi", createFunction("voronoi2_def"), PExprType::Number, PExprType::Vec2),
+    cF("voronoi", createFunction("voronoi2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+    cF("fbm", createFunction("fbm2_def"), PExprType::Number, PExprType::Vec2),
+    cF("fbm", createFunction("fbm2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+
+    cF("cnoise", createColorFunctionOut("cnoise1_def"), PExprType::Vec4, PExprType::Number),
+    cF("cnoise", createColorFunctionOut("cnoise1"), PExprType::Vec4, PExprType::Number, PExprType::Number),
+    cF("cnoise", createColorFunctionOut("cnoise2_def"), PExprType::Vec4, PExprType::Vec2),
+    cF("cnoise", createColorFunctionOut("cnoise2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
+    cF("cnoise", createColorFunctionOut("cnoise3_def"), PExprType::Vec4, PExprType::Vec3),
+    cF("cnoise", createColorFunctionOut("cnoise3"), PExprType::Vec4, PExprType::Vec3, PExprType::Number),
+    cF("cpnoise", createColorFunctionOut("cpnoise1_def"), PExprType::Vec4, PExprType::Number),
+    cF("cpnoise", createColorFunctionOut("cpnoise1"), PExprType::Vec4, PExprType::Number, PExprType::Number),
+    cF("cpnoise", createColorFunctionOut("cpnoise2_def"), PExprType::Vec4, PExprType::Vec2),
+    cF("cpnoise", createColorFunctionOut("cpnoise2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
+    cF("cpnoise", createColorFunctionOut("cpnoise3_def"), PExprType::Vec4, PExprType::Vec3),
+    cF("cpnoise", createColorFunctionOut("cpnoise3"), PExprType::Vec4, PExprType::Vec3, PExprType::Number),
+    cF("ccellnoise", createColorFunctionOut("ccellnoise1_def"), PExprType::Vec4, PExprType::Number),
+    cF("ccellnoise", createColorFunctionOut("ccellnoise1"), PExprType::Vec4, PExprType::Number, PExprType::Number),
+    cF("ccellnoise", createColorFunctionOut("ccellnoise2_def"), PExprType::Vec4, PExprType::Vec2),
+    cF("ccellnoise", createColorFunctionOut("ccellnoise2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
+    cF("ccellnoise", createColorFunctionOut("ccellnoise3_def"), PExprType::Vec4, PExprType::Vec3),
+    cF("ccellnoise", createColorFunctionOut("ccellnoise3"), PExprType::Vec4, PExprType::Vec3, PExprType::Number),
+    cF("cperlin", createColorFunctionOut("cperlin2_def"), PExprType::Vec4, PExprType::Vec2),
+    cF("cperlin", createColorFunctionOut("cperlin2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
+    cF("cvoronoi", createColorFunctionOut("cvoronoi2_def"), PExprType::Vec4, PExprType::Vec2),
+    cF("cvoronoi", createColorFunctionOut("cvoronoi2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
+    cF("cfbm", createColorFunctionOut("cfbm2_def"), PExprType::Vec4, PExprType::Vec2),
+    cF("cfbm", createColorFunctionOut("cfbm2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
+
+    _MF3A("clamp", "clampf"),
+    cF("clamp", createFunction("clamp"), PExprType::Integer, PExprType::Integer, PExprType::Integer, PExprType::Integer),
+    _MF3A("smin", "math::smoothmin"),
+    _MF3A("smax", "math::smoothmax"),
+    _MF3A("wrap", "math::wrap"),
+    cF("fresnel_conductor", createFunction("math::fresnel_conductor"), PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number),
+
+    cF("rotate_axis", createFunction("vec3_rotate_axis"), PExprType::Vec3, PExprType::Vec3, PExprType::Number, PExprType::Vec3),
+    cF(
+        "transform_point",
+        [](size_t&, const ParamArr& args) { return handleTransform(TransformInterpretation::Point, args[0], args[1], args[2]); },
+        PExprType::Vec3, PExprType::Vec3, PExprType::String, PExprType::String),
+    cF(
+        "transform_direction",
+        [](size_t&, const ParamArr& args) { return handleTransform(TransformInterpretation::Direction, args[0], args[1], args[2]); },
+        PExprType::Vec3, PExprType::Vec3, PExprType::String, PExprType::String),
+    cF(
+        "transform_normal",
+        [](size_t&, const ParamArr& args) { return handleTransform(TransformInterpretation::Normal, args[0], args[1], args[2]); },
+        PExprType::Vec3, PExprType::Vec3, PExprType::String, PExprType::String),
+
+    cF("mix", createFunction("lerp"), PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number),
+    cF("mix", createFunction("vec2_lerp"), PExprType::Vec2, PExprType::Vec2, PExprType::Vec2, PExprType::Number),
+    cF("mix", createFunction("vec3_lerp"), PExprType::Vec3, PExprType::Vec3, PExprType::Vec3, PExprType::Number),
+    cF("mix", createFunction("vec4_lerp"), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Number),
+    cF("mix_screen", createColorLerpFunction("color_mix_screen"), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Number),
+    cF("mix_overlay", createColorLerpFunction("color_mix_overlay"), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Number),
+    cF("mix_dodge", createColorLerpFunction("color_mix_dodge"), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Number),
+    cF("mix_burn", createColorLerpFunction("color_mix_burn"), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Number),
+    cF("mix_soft", createColorLerpFunction("color_mix_soft"), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Number),
+    cF("mix_linear", createColorLerpFunction("color_mix_linear"), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Number),
+    cF("mix_hue", createColorLerpFunction("color_mix_hue"), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Number),
+    cF("mix_saturation", createColorLerpFunction("color_mix_saturation"), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Number),
+    cF("mix_value", createColorLerpFunction("color_mix_value"), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Number),
+    cF("mix_color", createColorLerpFunction("color_mix_color"), PExprType::Vec4, PExprType::Vec4, PExprType::Vec4, PExprType::Number),
+
+    cF("vec2", createFunction("make_vec2"), PExprType::Vec2, PExprType::Number, PExprType::Number),
+    cF("vec2", createFunction("vec2_expand"), PExprType::Vec2, PExprType::Number),
+    cF("vec3", createFunction("make_vec3"), PExprType::Vec3, PExprType::Number, PExprType::Number, PExprType::Number),
+    cF("vec3", createFunction("vec3_expand"), PExprType::Vec3, PExprType::Number),
+    cF("vec4", createFunction("make_vec4"), PExprType::Vec4, PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number),
+    cF("vec4", createFunction("vec4_expand"), PExprType::Vec4, PExprType::Number),
+    cF("color", createFunction("make_vec4"), PExprType::Vec4, PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number),
+    cF(
+        "color",
+        [](size_t& uuidCounter, const ParamArr& args) {
+            return collapseFunction(
+                uuidCounter, [](const ParamArr& args2) {
+                    return "make_vec4(" + args2[0] + "," + args2[1] + "," + args2[2] + ", 1)";
+                },
+                args);
+        },
+        PExprType::Vec4, PExprType::Number, PExprType::Number, PExprType::Number),
+    cF("color", createFunction("vec4_expand"), PExprType::Vec4, PExprType::Number),
+
+    cF("check_ray_flag", handleCheckRayFlag, PExprType::Boolean, PExprType::String),
+
+    cF("select", handleSelect, PExprType::Boolean, PExprType::Boolean, PExprType::Boolean, PExprType::Boolean),
+    cF("select", handleSelect, PExprType::Integer, PExprType::Boolean, PExprType::Integer, PExprType::Integer),
+    cF("select", handleSelect, PExprType::Number, PExprType::Boolean, PExprType::Number, PExprType::Number),
+    cF("select", handleSelect, PExprType::Vec2, PExprType::Boolean, PExprType::Vec2, PExprType::Vec2),
+    cF("select", handleSelect, PExprType::Vec3, PExprType::Boolean, PExprType::Vec3, PExprType::Vec3),
+    cF("select", handleSelect, PExprType::Vec4, PExprType::Boolean, PExprType::Vec4, PExprType::Vec4),
+    cF("select", handleSelect, PExprType::String, PExprType::Boolean, PExprType::String, PExprType::String),
+
+    cFV("lookup", handleCurveLookup, PExprType::Number, PExprType::String, PExprType::Boolean, PExprType::Number, PExprType::Vec2)
+};
+#undef _MF1A
+#undef _MF2A
+#undef _MF3A
+
+// Other stuff
+inline static std::string binaryCwise(const std::string& A, const std::string& B, PExprType arithType, const std::string& op, const std::string& func)
+{
+    switch (arithType) {
+    default:
+        return "(" + A + ") " + op + " (" + B + ")";
+    case PExprType::Vec2:
+        return "vec2_" + func + "(" + A + ", " + B + ")";
+    case PExprType::Vec3:
+        return "vec3_" + func + "(" + A + ", " + B + ")";
+    case PExprType::Vec4:
+        return "vec4_" + func + "(" + A + ", " + B + ")";
+    }
+}
+
 class ArticVisitor : public PExpr::TranspileVisitor<std::string> {
 private:
     ShadingTree& mTree;
@@ -649,39 +808,6 @@ public:
 
     std::string onVariable(const std::string& name, PExprType expectedType) override
     {
-        if (name == "uv")
-            return "vec3_to_2(ctx.uvw)";
-        if (name == "uvw")
-            return "ctx.uvw";
-        if (name == "V" || name == "Rd")
-            return "vec3_neg(ctx.ray.dir)";
-        if (name == "Ro")
-            return "ctx.ray.org";
-
-        if (name == "Ix")
-            return "ctx.pixel.x";
-        if (name == "Iy")
-            return "ctx.pixel.y";
-
-        if (name == "P")
-            return "ctx.surf.point";
-        if (name == "Np")
-            return "ctx.coord.to_normalized_point(ctx.surf.point)";
-        if (name == "prim_coords")
-            return "ctx.surf.prim_coords";
-        if (name == "frontside")
-            return "ctx.surf.is_entering";
-        if (name == "entity_id")
-            return "ctx.entity_id";
-        if (name == "N")
-            return "ctx.surf.local.col(2)";
-        if (name == "Ng")
-            return "ctx.surf.face_normal";
-        if (name == "Nx")
-            return "ctx.surf.local.col(0)";
-        if (name == "Ny")
-            return "ctx.surf.local.col(1)";
-
         auto var = sInternalVariables.find(name);
         if (var != sInternalVariables.end())
             return var->second.access();
@@ -832,167 +958,14 @@ public:
                                PExprType, const std::vector<PExprType>& argumentTypes,
                                const std::vector<std::string>& argumentPayloads) override
     {
-        // Special lookup function with variadic number of parameters
-        if (argumentPayloads.size() >= 3 && (argumentPayloads.size() % 2) == 1 && (name == "lookup_linear" || name == "lookup_constant" || name == "lookup_linear_extrapolate")) {
-            return collapseFunction(
-                mUUIDCounter,
-                [name](const std::vector<std::string>& args) {
-                    const size_t arg_count = (args.size() - 1) / 2;
-                    std::stringstream x_values;
-                    x_values << "@|i:i32| [";
-                    for (size_t i = 0; i < arg_count; ++i)
-                        x_values << args[2 * i + 1] << ", ";
-                    x_values << "](i)";
-
-                    std::stringstream y_values;
-                    y_values << "@|i:i32| [";
-                    for (size_t i = 0; i < arg_count; ++i)
-                        y_values << args[2 * i + 2] << ", ";
-                    y_values << "](i)";
-
-                    std::string interpolate = (name == "lookup_linear" || name == "lookup_linear_extrapolate") ? "true" : "false";
-                    std::string extrapolate = (name == "lookup_linear_extrapolate") ? "true" : "false";
-                    return "math::lookup_curve(" + std::to_string(arg_count) + ", " + args[0] + ", " + x_values.str() + ", " + y_values.str() + ", " + interpolate + ", " + extrapolate + ")";
-                },
-                argumentPayloads);
-        }
-
-        if (argumentPayloads.size() == 1) {
-            auto df1 = sInternalDynFunctions1.find(name);
-            if (df1 != sInternalDynFunctions1.end()) {
-                std::string call = callDynFunction(df1->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0]);
-                if (!call.empty())
-                    return call;
-            }
-
-            auto dcf1 = sInternalDynConstructFunctions1.find(name);
-            if (dcf1 != sInternalDynConstructFunctions1.end()) {
-                std::string call = callDynFunction(dcf1->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0]);
-                if (!call.empty())
-                    return call;
-            }
-
-            auto drf1 = sInternalDynReduceFunctions1.find(name);
-            if (drf1 != sInternalDynReduceFunctions1.end()) {
-                std::string call = callDynFunction(drf1->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0]);
-                if (!call.empty())
-                    return call;
-            }
-
-            auto dcnf1 = sInternalDynColoredNoiseFunctions1.find(name);
-            if (dcnf1 != sInternalDynColoredNoiseFunctions1.end()) {
-                std::string call = callDynFunction(dcnf1->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0]);
-                if (!call.empty())
-                    return call;
-            }
-
-            if (name == "check_ray_flag")
-                return handleCheckRayFlag(argumentPayloads[0]);
-
-            if (name == "vec2")
-                return "vec2_expand(" + argumentPayloads[0] + ")";
-            if (name == "vec3")
-                return "vec3_expand(" + argumentPayloads[0] + ")";
-            if (name == "vec4")
-                return "vec4_expand(" + argumentPayloads[0] + ")";
-            if (name == "color")
-                return "make_vec4(" + argumentPayloads[0] + "," + argumentPayloads[0] + "," + argumentPayloads[0] + ", 1)";
-        } else if (argumentPayloads.size() == 2) {
-            auto df2 = sInternalDynFunctions2.find(name);
-            if (df2 != sInternalDynFunctions2.end()) {
-                std::string call = callDynFunction(df2->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
-                if (!call.empty())
-                    return call;
-            }
-
-            auto drf2 = sInternalDynReduceFunctions2.find(name);
-            if (drf2 != sInternalDynReduceFunctions2.end()) {
-                std::string call = callDynFunction(drf2->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
-                if (!call.empty())
-                    return call;
-            }
-
-            auto dnf2 = sInternalDynNoiseFunctions2.find(name);
-            if (dnf2 != sInternalDynNoiseFunctions2.end()) {
-                std::string call = callDynFunction(dnf2->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
-                if (!call.empty())
-                    return call;
-            }
-
-            auto dcnf2 = sInternalDynColoredNoiseFunctions2.find(name);
-            if (dcnf2 != sInternalDynColoredNoiseFunctions2.end()) {
-                std::string call = callDynFunction(dcnf2->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1]);
-                if (!call.empty())
-                    return call;
-            }
-
-            if (name == "vec2") {
-                if (argumentPayloads[0] == argumentPayloads[1])
-                    return "vec2_expand(" + argumentPayloads[0] + ")";
-                else
-                    return "make_vec2(" + argumentPayloads[0] + "," + argumentPayloads[1] + ")";
-            }
-        } else if (argumentPayloads.size() == 3) {
-            auto df3 = sInternalDynFunctions3.find(name);
-            if (df3 != sInternalDynFunctions3.end()) {
-                std::string call = callDynFunction(df3->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
-                if (!call.empty())
-                    return call;
-            }
-
-            auto dlf3 = sInternalDynLerpFunctions3.find(name);
-            if (dlf3 != sInternalDynLerpFunctions3.end()) {
-                std::string call = callDynFunction(dlf3->second, mUUIDCounter, argumentTypes[0], argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
-                if (!call.empty())
-                    return call;
-            }
-
-            if (name == "rotate_axis")
-                return "vec3_rotate_axis(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + ")";
-
-            if (name == "transform_point")
-                return handleTransform(TransformInterpretation::Point, argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
-            if (name == "transform_direction")
-                return handleTransform(TransformInterpretation::Direction, argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
-            if (name == "transform_normal")
-                return handleTransform(TransformInterpretation::Normal, argumentPayloads[0], argumentPayloads[1], argumentPayloads[2]);
-
-            if (name == "vec3") {
-                if (argumentPayloads[0] == argumentPayloads[1] && argumentPayloads[1] == argumentPayloads[2])
-                    return "vec3_expand(" + argumentPayloads[0] + ")";
-                else
-                    return collapseFunction(
-                        mUUIDCounter,
-                        [](const std::vector<std::string>& args) {
-                            return "make_vec3(" + args[0] + "," + args[1] + "," + args[2] + ")";
-                        },
-                        argumentPayloads);
-            }
-            if (name == "color") {
-                return collapseFunction(
-                    mUUIDCounter,
-                    [](const std::vector<std::string>& args) {
-                        return "make_vec4(" + args[0] + "," + args[1] + "," + args[2] + ", 1)";
-                    },
-                    argumentPayloads);
-            }
-            if (name == "select") {
-                if (argumentPayloads[1] == argumentPayloads[2])
-                    return argumentPayloads[1];
-                else
-                    return "select(" + argumentPayloads[0] + "," + argumentPayloads[1] + "," + argumentPayloads[2] + ")";
-            }
-        } else if (argumentPayloads.size() == 4) {
-            if (name == "vec4" || name == "color") {
-                if (argumentPayloads[0] == argumentPayloads[1] && argumentPayloads[1] == argumentPayloads[2] && argumentPayloads[2] == argumentPayloads[3])
-                    return "vec4_expand(" + argumentPayloads[0] + ")";
-                else
-                    return collapseFunction(
-                        mUUIDCounter,
-                        [](const std::vector<std::string>& args) {
-                            return "make_vec4(" + args[0] + "," + args[1] + "," + args[2] + "," + args[3] + ")";
-                        },
-                        argumentPayloads);
+        const auto range = sInternalFunctions.equal_range(name);
+        if (range.first != range.second) {
+            for (auto it = range.first; it != range.second; ++it) {
+                if (it->second.checkParameters(argumentTypes)) {
+                    std::string call = it->second.call(mUUIDCounter, argumentPayloads);
+                    if (!call.empty())
+                        return call;
+                }
             }
         }
 
@@ -1081,7 +1054,7 @@ public:
         if (Parent->mCustomVariableColor.count(lkp.name()))
             return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
 
-        // Check for textures/nodes to the variable table
+        // Check for textures/nodes in the variable table
         if (Parent->mTree.context().Scene.texture(lkp.name()))
             return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
 
@@ -1090,181 +1063,21 @@ public:
 
     std::optional<PExpr::FunctionDef> functionLookup(const PExpr::FunctionLookup& lkp)
     {
-        // Special lookup function with variadic number of parameters
-        if (lkp.parameters().size() >= 3 && (lkp.parameters().size() % 2) == 1 && (lkp.name() == "lookup_linear" || lkp.name() == "lookup_constant" || lkp.name() == "lookup_linear_extrapolate")) {
-            bool allNumber = true;
-            for (const auto& params : lkp.parameters()) {
-                if (params != PExprType::Number) {
-                    allNumber = false;
-                    break;
-                }
-            }
-
-            if (allNumber)
-                return PExpr::FunctionDef(lkp.name(), PExprType::Number, lkp.parameters());
-        }
-
-        // Add some internal functions
-        if (lkp.name() == "vec2") {
-            auto var = matchFuncRet(lkp, PExprType::Vec2, { PExprType::Number });
-            if (var.has_value())
-                return var;
-
-            var = matchFuncRet(lkp, PExprType::Vec2, { PExprType::Number, PExprType::Number });
-            if (var.has_value())
-                return var;
-        }
-
-        if (lkp.name() == "vec3") {
-            auto var = matchFuncRet(lkp, PExprType::Vec3, { PExprType::Number });
-            if (var.has_value())
-                return var;
-
-            var = matchFuncRet(lkp, PExprType::Vec3, { PExprType::Number, PExprType::Number, PExprType::Number });
-            if (var.has_value())
-                return var;
-        }
-
-        if (lkp.name() == "vec4" || lkp.name() == "color") {
-            auto var = matchFuncRet(lkp, PExprType::Vec4, { PExprType::Number });
-            if (var.has_value())
-                return var;
-
-            var = matchFuncRet(lkp, PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number });
-            if (var.has_value())
-                return var;
-
-            if (lkp.name() == "color") {
-                var = matchFuncRet(lkp, PExprType::Vec4, { PExprType::Number, PExprType::Number, PExprType::Number });
+        const auto range = sInternalFunctions.equal_range(lkp.name());
+        if (range.first != range.second) {
+            // First check exact=true
+            for (auto it = range.first; it != range.second; ++it) {
+                auto var = it->second.matchDef(lkp, true);
                 if (var.has_value())
                     return var;
             }
-        }
 
-        if (sInternalDynFunctions1.count(lkp.name())) {
-            auto var = checkDynFunction(lkp, sInternalDynFunctions1.at(lkp.name()), OpParam{}, false,
-                                        OpParam{});
-            if (var.has_value())
-                return var;
-        }
-
-        if (sInternalDynFunctions2.count(lkp.name())) {
-            auto var = checkDynFunction(lkp, sInternalDynFunctions2.at(lkp.name()), OpParam{}, false,
-                                        OpParam{}, OpParam{});
-            if (var.has_value())
-                return var;
-        }
-
-        if (sInternalDynFunctions3.count(lkp.name())) {
-            auto var = checkDynFunction(lkp, sInternalDynFunctions3.at(lkp.name()), OpParam{}, false,
-                                        OpParam{}, OpParam{}, OpParam{});
-            if (var.has_value())
-                return var;
-        }
-
-        // Reduce functions
-        if (sInternalDynReduceFunctions1.count(lkp.name())) {
-            auto var = checkDynFunction(lkp, sInternalDynReduceFunctions1.at(lkp.name()), PExprType::Number, true,
-                                        OpParam{});
-            if (var.has_value())
-                return var;
-        }
-
-        if (sInternalDynConstructFunctions1.count(lkp.name())) {
-            auto var = checkDynFunction(lkp, sInternalDynConstructFunctions1.at(lkp.name()), PExprType::Vec4, true,
-                                        OpParam{});
-            if (var.has_value())
-                return var;
-        }
-
-        if (sInternalDynReduceFunctions2.count(lkp.name())) {
-            auto var = checkDynFunction(lkp, sInternalDynReduceFunctions2.at(lkp.name()), PExprType::Number, true,
-                                        OpParam{}, OpParam{});
-            if (var.has_value())
-                return var;
-        }
-
-        // Always vec4 foo(A), with A can be num, vec2 or vec3
-        if (sInternalDynColoredNoiseFunctions1.count(lkp.name())) {
-            auto var = checkDynFunction(lkp, sInternalDynColoredNoiseFunctions1.at(lkp.name()), PExprType::Vec4, true,
-                                        OpParam{});
-            if (var.has_value())
-                return var;
-        }
-
-        // Always num foo(A, num), with A can be num, vec2 or vec3
-        if (sInternalDynColoredNoiseFunctions1.count(lkp.name())) {
-            auto var = checkDynFunction(lkp, sInternalDynColoredNoiseFunctions1.at(lkp.name()), PExprType::Number, true,
-                                        OpParam{}, OpParam{ PExprType::Number });
-            if (var.has_value())
-                return var;
-        }
-
-        // Always vec4 foo(A, num), with A can be num, vec2 or vec3
-        if (sInternalDynColoredNoiseFunctions2.count(lkp.name())) {
-            auto var = checkDynFunction(lkp, sInternalDynColoredNoiseFunctions2.at(lkp.name()), PExprType::Vec4, true,
-                                        OpParam{}, OpParam{ PExprType::Number });
-            if (var.has_value())
-                return var;
-        }
-
-        if (sInternalDynLerpFunctions3.count(lkp.name())) {
-            auto var = checkDynFunction(lkp, sInternalDynLerpFunctions3.at(lkp.name()), OpParam{}, true,
-                                        OpParam{}, OpParam{}, OpParam{ PExprType::Number });
-            if (var.has_value())
-                return var;
-        }
-
-        // Function with a "weird" specification
-        if (lkp.name() == "rotate_axis" && lkp.parameters().size() == 3) {
-            auto var = matchFuncRet(lkp, PExprType::Vec3, { PExprType::Vec3, PExprType::Number, PExprType::Vec3 });
-            if (var.has_value())
-                return var;
-        }
-
-        // Function with a boolean return type and string input parameter
-        if (lkp.name() == "check_ray_flag" && lkp.parameters().size() == 1) {
-            auto var = matchFuncRet(lkp, PExprType::Boolean, { PExprType::String });
-            if (var.has_value())
-                return var;
-        }
-
-        // Function with the same return type as the first input and two additional string input parameters
-        if ((lkp.name() == "transform_point" || lkp.name() == "transform_direction" || lkp.name() == "transform_normal") && lkp.parameters().size() == 3) {
-            auto var = matchFuncRet(lkp, PExprType::Vec3, { PExprType::Vec3, PExprType::String, PExprType::String });
-            if (var.has_value())
-                return var;
-        }
-
-        // Select function
-        if (lkp.name() == "select" && lkp.parameters().size() == 3) {
-            auto var = matchFuncRet(lkp, PExprType::Boolean, { PExprType::Boolean, PExprType::Boolean, PExprType::Boolean });
-            if (var.has_value())
-                return var;
-
-            var = matchFuncRet(lkp, PExprType::String, { PExprType::Boolean, PExprType::String, PExprType::String });
-            if (var.has_value())
-                return var;
-
-            var = matchFuncRet(lkp, PExprType::Integer, { PExprType::Boolean, PExprType::Integer, PExprType::Integer });
-            if (var.has_value())
-                return var;
-
-            var = matchFuncRet(lkp, PExprType::Number, { PExprType::Boolean, PExprType::Number, PExprType::Number });
-            if (var.has_value())
-                return var;
-
-            var = matchFuncRet(lkp, PExprType::Vec2, { PExprType::Boolean, PExprType::Vec2, PExprType::Vec2 });
-            if (var.has_value())
-                return var;
-
-            var = matchFuncRet(lkp, PExprType::Vec3, { PExprType::Boolean, PExprType::Vec3, PExprType::Vec3 });
-            if (var.has_value())
-                return var;
-
-            var = matchFuncRet(lkp, PExprType::Vec4, { PExprType::Boolean, PExprType::Vec4, PExprType::Vec4 });
-            if (var.has_value())
-                return var;
+            // Now check exact=false
+            for (auto it = range.first; it != range.second; ++it) {
+                auto var = it->second.matchDef(lkp, false);
+                if (var.has_value())
+                    return var;
+            }
         }
 
         // Add all texture/nodes to the function table as well, such that the uv can be changed directly
@@ -1319,5 +1132,92 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr)
     }
 
     return Result{ res, std::move(visitor.usedTextures()), scalar_output };
+}
+
+std::string Transpiler::availableVariables()
+{
+    std::stringstream stream;
+    for (const auto& p : sInternalVariables)
+        stream << p.first << ":" << dumpType(p.second.Type) << std::endl;
+    return stream.str();
+}
+
+std::string Transpiler::availableFunctions()
+{
+    std::stringstream stream;
+    for (const auto& p : sInternalFunctions)
+        stream << p.second.signature() << std::endl;
+    return stream.str();
+}
+
+std::string Transpiler::generateTestShader()
+{
+    std::stringstream stream;
+
+    // Dump variables
+    stream << "#[export]" << std::endl
+           << "fn _var_test_() -> () { " << std::endl
+           << "  let ctx = make_miss_shading_context(make_empty_pixelcoord(), make_zero_ray());" << std::endl;
+
+    for (const auto& p : sInternalVariables)
+        stream << "  let _var_" << p.first << " = " << p.second.access() << ";" << std::endl;
+    stream << "}" << std::endl
+           << std::endl;
+
+    // Dump out functions
+    for (const auto& p : sInternalFunctions) {
+        const auto& def = p.second;
+        stream << "#[export]" << std::endl
+               << "fn _test_" << p.first << "(";
+
+        if (p.first == "check_ray_flag") {
+            // Special case
+        } else if (p.first == "transform_point" || p.first == "transform_direction" || p.first == "transform_normal") {
+            // Special case
+            stream << "v0: " << typeArtic(def.Arguments[0]);
+        } else if (p.first == "lookup") {
+            // Special case
+            for (size_t i = 1; i < def.Arguments.size(); ++i) {
+                stream << "v" << i - 1 << ": " << typeArtic(def.Arguments[i]);
+                if (i < def.Arguments.size() - 1)
+                    stream << ", ";
+            }
+        } else {
+            for (size_t i = 0; i < def.Arguments.size(); ++i) {
+                stream << "v" << i << ": " << typeArtic(def.Arguments[i]);
+                if (i < def.Arguments.size() - 1)
+                    stream << ", ";
+            }
+        }
+
+        stream << ") -> " << typeArtic(def.ReturnType) << " {" << std::endl
+               << "  let ctx = make_miss_shading_context(make_empty_pixelcoord(), make_zero_ray());" << std::endl
+               << "  maybe_unused(ctx);" << std::endl;
+
+        ParamArr arguments;
+        arguments.resize(def.Arguments.size());
+        if (p.first == "check_ray_flag") {
+            arguments[0] = "'camera'";
+        } else if (p.first == "transform_point" || p.first == "transform_direction" || p.first == "transform_normal") {
+            arguments[0] = "v0";
+            arguments[1] = "'global'";
+            arguments[2] = "'object'";
+        } else if (p.first == "lookup") {
+            arguments[0] = "'linear'";
+            for (size_t i = 1; i < def.Arguments.size(); ++i)
+                arguments[i] = "v" + std::to_string(i-1);
+        } else {
+            for (size_t i = 0; i < def.Arguments.size(); ++i)
+                arguments[i] = "v" + std::to_string(i);
+        }
+
+        size_t counter = 0;
+        stream << "  " << def.call(counter, arguments) << std::endl;
+
+        stream << "}" << std::endl
+               << std::endl;
+    }
+
+    return stream.str();
 }
 } // namespace IG

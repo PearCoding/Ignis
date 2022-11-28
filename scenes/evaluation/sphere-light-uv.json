@@ -1,0 +1,13 @@
+{
+  "shapes": [
+    {
+      "name": "Sphere",
+      "type": "uvsphere",
+      "stacks": 64,
+      "slices": 32
+    }
+  ],
+  "externals": [
+    {"filename": "sphere-light-base.json"}
+  ]
+}

@@ -375,7 +375,17 @@ def _export_hsv(ctx, node):
     fac = export_node(ctx, node.inputs[3])
     col = export_node(ctx, node.inputs[4])
 
-    return f"hsvtorgb(mix(rgbtohsv({col}), color({hue}, {sat}, {val}), {fac}))"
+    main = f"hsvtorgb(color(fmod(rgbtohsv({col}).x + {hue} + 0.5, 1), clamp(rgbtohsv({col}).y * {sat}, 0, 1), rgbtohsv({col}).z * {val}))"
+    e_f = try_extract_node_value(fac, default=-1)
+
+    if e_f == 1:
+        ret = main
+    elif e_f == 0:
+        ret = col
+    else:
+        ret = f"mix({col}, {main}, {fac})"
+
+    return f"max(color(0), {ret})"
 
 
 def _export_blackbody(ctx, node):
@@ -396,9 +406,9 @@ def _export_val_to_rgb(ctx, node):
     # TODO: Add more interpolation methods
     # TODO: Add hue_interpolation
     if cr.interpolation == "CONSTANT":
-        func = "lookup_constant"
+        lookup_type = "'constant'"
     else:
-        func = "lookup_linear"
+        lookup_type = "'linear'"
 
     def check_constant(idx):
         a = cr.elements[0].color[idx]
@@ -412,8 +422,8 @@ def _export_val_to_rgb(ctx, node):
             return cr.elements[0].color[idx]
         else:
             args = ", ".join(
-                [f"{p.position}, {p.color[idx]}" for p in cr.elements])
-            return f"{func}({t}, {args})"
+                [f"vec2({p.position}, {p.color[idx]})" for p in cr.elements])
+            return f"lookup({lookup_type}, true, {t}, {args})"
 
     r_func = gen_c(0)
     g_func = gen_c(1)
@@ -442,25 +452,20 @@ def _curve_lookup(curve, t, interpolate, extrapolate):
         if curve.points[0].location[0] == 0 and curve.points[0].location[1] == 0 and curve.points[1].location[0] == 1 and curve.points[1].location[1] == 1:
             return t
 
-    if interpolate:
-        if extrapolate:
-            func = "lookup_linear_extrapolate"
-        else:
-            func = "lookup_linear"
-    else:
-        func = "lookup_constant"
+    lookup_type = "'linear'" if interpolate else "'constant'"
+    extrapolate = "true" if extrapolate else "false"
 
     args = ", ".join(
-        [f"{p.location[0]}, {p.location[1]}" for p in curve.points])
+        [f"vec2({p.location[0]}, {p.location[1]})" for p in curve.points])
 
-    return f"{func}({t}, {args})"
+    return f"lookup({lookup_type}, {extrapolate}, {t}, {args})"
 
 
 def _export_float_curve(ctx, node):
     mapping = node.mapping
 
-    fac = export_node(ctx, node.inputs["Fac"])
-    value = export_node(ctx, node.inputs["Value"])
+    fac = export_node(ctx, node.inputs[0])
+    value = export_node(ctx, node.inputs[1])
 
     V = mapping.curves[0]
 
@@ -478,8 +483,8 @@ def _export_float_curve(ctx, node):
 def _export_rgb_curve(ctx, node):
     mapping = node.mapping
 
-    fac = export_node(ctx, node.inputs["Fac"])
-    color = export_node(ctx, node.inputs["Color"])
+    fac = export_node(ctx, node.inputs[0])
+    color = export_node(ctx, node.inputs[1])
 
     C = mapping.curves[3]
     R = mapping.curves[0]
@@ -507,8 +512,8 @@ def _export_rgb_curve(ctx, node):
 def _export_vector_curve(ctx, node):
     mapping = node.mapping
 
-    fac = export_node(ctx, node.inputs["Fac"])
-    vector = export_node(ctx, node.inputs["Vector"])
+    fac = export_node(ctx, node.inputs[0])
+    vector = export_node(ctx, node.inputs[1])
 
     X = mapping.curves[0]
     Y = mapping.curves[1]
@@ -772,16 +777,23 @@ def _export_image(image, path, is_f32=False, keep_format=False):
         image.pixels[0]
 
     # Export the actual image data
-    old_path = image.filepath_raw
-    old_format = image.file_format
     try:
-        image.filepath_raw = path
+        old_path = image.filepath_raw
+        old_format = image.file_format
+        try:
+            image.filepath_raw = path
+            if not keep_format:
+                image.file_format = "PNG" if not is_f32 else "OPEN_EXR"
+            image.save()
+        finally:  # Never break the scene!
+            image.filepath_raw = old_path
+            image.file_format = old_format
+    except:
         if not keep_format:
-            image.file_format = "PNG" if not is_f32 else "OPEN_EXR"
-        image.save()
-    finally:  # Never break the scene!
-        image.filepath_raw = old_path
-        image.file_format = old_format
+            raise RuntimeError(
+                "Can not change the original format of given image")
+        # Try other way
+        image.save_render(path)
 
 
 def _handle_image(ctx, image):
@@ -823,8 +835,14 @@ def _handle_image(ctx, image):
                 img_path = os.path.join("Textures", img_name)
 
             if img_name not in ctx.result["_images"]:
-                _export_image(image, os.path.join(ctx.path, img_path),
-                              is_f32=is_f32, keep_format=keep_format)
+                try:
+                    _export_image(image, os.path.join(ctx.path, img_path),
+                                  is_f32=is_f32, keep_format=keep_format)
+                except:
+                    # Above failed, so give this a try
+                    img_path = os.path.join("Textures", img_name)
+                    _export_image(image, os.path.join(ctx.path, img_path),
+                                  is_f32=False, keep_format=False)
                 ctx.result["_images"].add(img_name)
         return img_path
     else:
@@ -1198,6 +1216,29 @@ def handle_node_reroute(ctx, node, func):
     return func(ctx, node.inputs[0])
 
 
+def handle_node_implicit_mappings(socket, expr):
+    to_type = socket.type
+    from_type = socket.links[0].from_socket.type
+    if to_type == from_type:
+        return expr
+    elif (from_type == 'VALUE' or from_type == 'INT') and (to_type == 'RGBA' or to_type == 'SHADER'):
+        return f"color({expr})"
+    elif from_type == 'RGBA' and (to_type == 'VALUE' or to_type == 'INT'):
+        return f"luminance({expr})"
+    elif (from_type == 'VALUE' or from_type == 'INT') and to_type == 'VECTOR':
+        return f"vec3({expr})"
+    elif from_type == 'VECTOR' and (to_type == 'VALUE' or to_type == 'INT'):
+        return f"avg({expr})"
+    elif from_type == 'RGBA' and to_type == 'VECTOR':
+        return f"({expr}).rgb"
+    elif from_type == 'VECTOR' and (to_type == 'RGBA' or to_type == 'SHADER'):
+        return f"max(color({expr}.x, {expr}.y, {expr}.z, 1), color(0))"
+    else:
+        print(
+            f"Socket connection from {socket.links[0].from_socket.name} to {socket.name} requires cast from {from_type} to {to_type} which is not supported")
+        return expr
+
+
 def export_node(ctx, socket):
     # Missing:
     # ShaderNodeAttribute, ShaderNodeBevel, ShaderNodeBump, ShaderNodeCameraData,
@@ -1321,26 +1362,7 @@ def export_node(ctx, socket):
         if expr is None:
             return _export_default(socket)
 
-        to_type = socket.type
-        from_type = socket.links[0].from_socket.type
-        if to_type == from_type:
-            full_expr = expr
-        elif (from_type == 'VALUE' or from_type == 'INT') and (to_type == 'RGBA' or to_type == 'SHADER'):
-            full_expr = f"color({expr})"
-        elif from_type == 'RGBA' and (to_type == 'VALUE' or to_type == 'INT'):
-            full_expr = f"luminance({expr})"
-        elif (from_type == 'VALUE' or from_type == 'INT') and to_type == 'VECTOR':
-            full_expr = f"vec3({expr})"
-        elif from_type == 'VECTOR' and (to_type == 'VALUE' or to_type == 'INT'):
-            full_expr = f"avg({expr})"
-        elif from_type == 'RGBA' and to_type == 'VECTOR':
-            full_expr = f"({expr}).rgb"
-        elif from_type == 'VECTOR' and (to_type == 'RGBA' or to_type == 'SHADER'):
-            full_expr = f"max(color({expr}.x, {expr}.y, {expr}.z, 1), color(0))"
-        else:
-            print(
-                f"Socket connection from {socket.links[0].from_socket.name} to {socket.name} requires cast from {from_type} to {to_type} which is not supported")
-            full_expr = expr
+        full_expr = handle_node_implicit_mappings(socket, expr)
 
         ctx.cache[socket] = full_expr
         return full_expr

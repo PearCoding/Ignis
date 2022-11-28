@@ -11,7 +11,7 @@ SkyLight::SkyLight(const std::string& name, const std::shared_ptr<Parser::Object
     , mLight(light)
 {
     auto ea       = LoaderUtils::getEA(*light);
-    mSunDirection = ea.toDirection();
+    mSunDirection = ea.toDirectionYUp();
 
     auto ground    = light->property("ground").getVector3(Vector3f(0.8f, 0.8f, 0.8f));
     auto turbidity = light->property("turbidity").getNumber(3.0f);

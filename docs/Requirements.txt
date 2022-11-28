@@ -1,1 +1,4 @@
-karma_sphinx_theme
+sphinx
+pydata_sphinx_theme
+sphinx-design
+sphinx_copybutton

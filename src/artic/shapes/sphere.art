@@ -17,41 +17,55 @@ struct Sphere {
     radius: f32
 }
 
+// Compute (approximative) area of an ellipsoid created by mapping a sphere into a new coordinate system
+fn @compute_ellipsoid_area(sphere: Sphere, pmset: PointMapperSet) {
+    let l1 = vec3_len(pmset.to_global_direction(make_vec3(1, 0, 0)));
+    let l2 = vec3_len(pmset.to_global_direction(make_vec3(0, 1, 0)));
+    let l3 = vec3_len(pmset.to_global_direction(make_vec3(0, 0, 1)));
+    let P  = 1.6:f32;
+    4 * flt_pi * sphere.radius * math_builtins::pow((math_builtins::pow(l1*l2, P) + math_builtins::pow(l1*l3, P) + math_builtins::pow(l2*l3, P))/3, 1/P)
+}
+
+fn @sphere_compute_surface_element_for_normal(normal: Vec3, sphere: Sphere, pmset: PointMapperSet) {
+    let point = vec3_add(sphere.origin, vec3_mulf(normal, sphere.radius));
+    let uv    = sphere_map_uv(normal);
+    let gn    = vec3_normalize(pmset.to_global_normal(normal));
+    SurfaceElement {
+        is_entering = true,
+        point       = pmset.to_global_point(point),
+        face_normal = gn,
+        inv_area    = 1 / compute_ellipsoid_area(sphere, pmset),
+        prim_coords = uv,
+        tex_coords  = uv,
+        local       = make_orthonormal_mat3x3(gn)
+    }
+}
+
 // Creates a geometry object from a triangle mesh definition
 fn @make_sphere_shape(sphere: Sphere) -> Shape {
-    let area = 4 * flt_pi * sphere.radius * sphere.radius;
     Shape {
-        surface_element = @ |local_ray, hit| {
-            let point  = vec3_add(local_ray.org, vec3_mulf(local_ray.dir, hit.distance));
-            let dir    = vec3_sub(point, sphere.origin);
+        surface_element = @ |ray, hit, pmset| {
+            let point  = vec3_add(ray.org, vec3_mulf(ray.dir, hit.distance));
+            let dir    = vec3_sub(point, pmset.to_global_point(sphere.origin));
             let len    = vec3_len(dir);
             let normal = vec3_mulf(dir, 1 / len);
 
-            let is_entering = len < sphere.radius;
+            let is_entering = true;//len < sphere.radius;
 
             SurfaceElement {
                 is_entering = is_entering,
                 point       = point,
                 face_normal = normal,
-                inv_area    = 1 / area,
+                inv_area    = 1 / compute_ellipsoid_area(sphere, pmset),
                 prim_coords = hit.prim_coords,
                 tex_coords  = hit.prim_coords,
                 local       = make_orthonormal_mat3x3(normal)
             }
         },
-        surface_element_for_point = @ |_, prim_coords| {
+        surface_element_for_point = @ |_, prim_coords, pmset| {
             // TODO: Cross-check with surface_element if result is same for same input
             let normal = sphere_unmap_uv(prim_coords);
-            let point  = vec3_add(sphere.origin, vec3_mulf(normal, sphere.radius));
-            SurfaceElement {
-                is_entering = true,
-                point       = point,
-                face_normal = normal,
-                inv_area    = 1 / area,
-                prim_coords = prim_coords,
-                tex_coords  = prim_coords,
-                local       = make_orthonormal_mat3x3(normal)
-            }
+            sphere_compute_surface_element_for_normal(normal, sphere, pmset)
         },
         local_bbox = make_centered_bbox(sphere.origin, vec3_expand(2*sphere.radius))
     }

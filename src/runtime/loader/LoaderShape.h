@@ -4,6 +4,7 @@
 #include "shape/PlaneShape.h"
 #include "shape/Shape.h"
 #include "shape/ShapeProvider.h"
+#include "shape/SphereShape.h"
 #include "shape/TriShape.h"
 
 #include <mutex>
@@ -23,19 +24,24 @@ public:
     [[nodiscard]] inline bool isTriShape(const std::string& name) const { return isTriShape(getShapeID(name)); }
     [[nodiscard]] inline bool isPlaneShape(uint32 id) const { return mPlaneShapes.count(id) > 0; }
     [[nodiscard]] inline bool isPlaneShape(const std::string& name) const { return isPlaneShape(getShapeID(name)); }
+    [[nodiscard]] inline bool isSphereShape(uint32 id) const { return mSphereShapes.count(id) > 0; }
+    [[nodiscard]] inline bool isSphereShape(const std::string& name) const { return isSphereShape(getShapeID(name)); }
 
     [[nodiscard]] inline const Shape& getShape(uint32 id) const { return mShapes.at(id); }
     [[nodiscard]] inline const TriShape& getTriShape(uint32 id) const { return mTriShapes.at(id); }
     [[nodiscard]] inline const PlaneShape& getPlaneShape(uint32 id) const { return mPlaneShapes.at(id); }
+    [[nodiscard]] inline const SphereShape& getSphereShape(uint32 id) const { return mSphereShapes.at(id); }
 
     [[nodiscard]] inline size_t shapeCount() const { return mShapes.size(); }
     [[nodiscard]] inline size_t triShapeCount() const { return mTriShapes.size(); }
     [[nodiscard]] inline size_t planeShapeCount() const { return mPlaneShapes.size(); }
+    [[nodiscard]] inline size_t sphereShapeCount() const { return mSphereShapes.size(); }
 
     // Note: The following functions can be called inside the ShapeProvider, as they are thread-safe
     uint32 addShape(const std::string& name, const Shape& shape);
     void addTriShape(uint32 id, const TriShape& shape);
     void addPlaneShape(uint32 id, const PlaneShape& shape);
+    void addSphereShape(uint32 id, const SphereShape& shape);
 
     [[nodiscard]] inline const std::unordered_map<std::string, std::unique_ptr<ShapeProvider>>& providers() const { return mShapeProviders; }
     [[nodiscard]] inline ShapeProvider* getProvider(const std::string& name) const { return mShapeProviders.at(name).get(); }
@@ -45,8 +51,9 @@ private:
 
     std::vector<Shape> mShapes;
     std::unordered_map<std::string, uint32> mIDs;
-    std::unordered_map<uint32, TriShape> mTriShapes;     // Used for special optimization
-    std::unordered_map<uint32, PlaneShape> mPlaneShapes; // Used for special optimization
+    std::unordered_map<uint32, TriShape> mTriShapes;       // Used for special optimization
+    std::unordered_map<uint32, PlaneShape> mPlaneShapes;   // Used for special optimization
+    std::unordered_map<uint32, SphereShape> mSphereShapes; // Used for special optimization
 
     std::mutex mAccessMutex;
 };

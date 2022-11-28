@@ -128,6 +128,7 @@ endif()
 
 include(cmake/GetDependencies.cmake)
 include(cmake/Install.cmake)
+include(cmake/Bash.cmake)
 include(cmake/ExtraUtils.cmake)
 
 # Enable folders for Visual Studio

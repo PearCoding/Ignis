@@ -106,12 +106,12 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
         return val;
     };
 
-    TriMesh trimesh;
-    trimesh.vertices.reserve(header.VertexCount);
+    TriMesh tri_mesh;
+    tri_mesh.vertices.reserve(header.VertexCount);
     if (header.hasNormals())
-        trimesh.normals.reserve(header.VertexCount);
+        tri_mesh.normals.reserve(header.VertexCount);
     if (header.hasUVs())
-        trimesh.texcoords.reserve(header.VertexCount);
+        tri_mesh.texcoords.reserve(header.VertexCount);
 
     for (int i = 0; i < header.VertexCount; ++i) {
 
@@ -172,26 +172,26 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
             }
         }
 
-        trimesh.vertices.emplace_back(x, y, z);
+        tri_mesh.vertices.emplace_back(x, y, z);
 
         if (header.hasNormals()) {
             float norm = std::sqrt(nx * nx + ny * ny + nz * nz);
             if (norm == 0.0f)
                 norm = 1.0f;
-            trimesh.normals.emplace_back(nx / norm, ny / norm, nz / norm);
+            tri_mesh.normals.emplace_back(nx / norm, ny / norm, nz / norm);
         }
 
         if (header.hasUVs()) {
-            trimesh.texcoords.emplace_back(u, v);
+            tri_mesh.texcoords.emplace_back(u, v);
         }
     }
 
-    if (trimesh.vertices.empty()) {
+    if (tri_mesh.vertices.empty()) {
         IG_LOG(L_ERROR) << "PlyFile " << path << ": No vertices found in ply file" << std::endl;
         return TriMesh{}; // Failed
     }
 
-    trimesh.indices.reserve(header.FaceCount * 4);
+    tri_mesh.indices.reserve(header.FaceCount * 4);
 
     std::vector<uint32_t> tmp_indices;
     tmp_indices.reserve(3);
@@ -218,13 +218,13 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
                 uint32_t index = 0;
                 sstream >> index;
                 tmp_indices[elem]  = index;
-                tmp_vertices[elem] = trimesh.vertices[index];
+                tmp_vertices[elem] = tri_mesh.vertices[index];
             }
 
             std::vector<uint32_t> inds = triangulatePly(path, tmp_vertices, tmp_indices, warned);
 
             for (size_t f = 0; f < inds.size() / 3; ++f) {
-                trimesh.indices.insert(trimesh.indices.end(), { inds[f * 3 + 0], inds[f * 3 + 1], inds[f * 3 + 2], 0 });
+                tri_mesh.indices.insert(tri_mesh.indices.end(), { inds[f * 3 + 0], inds[f * 3 + 1], inds[f * 3 + 2], 0 });
             }
         }
     } else {
@@ -238,18 +238,18 @@ static TriMesh read(const std::filesystem::path& path, std::istream& stream, con
             for (uint32_t elem = 0; elem < elems; ++elem) {
                 uint32_t index     = readIdx();
                 tmp_indices[elem]  = index;
-                tmp_vertices[elem] = trimesh.vertices[index];
+                tmp_vertices[elem] = tri_mesh.vertices[index];
             }
 
             std::vector<uint32_t> inds = triangulatePly(path, tmp_vertices, tmp_indices, warned);
 
             for (size_t f = 0; f < inds.size() / 3; ++f) {
-                trimesh.indices.insert(trimesh.indices.end(), { inds[f * 3 + 0], inds[f * 3 + 1], inds[f * 3 + 2], 0 });
+                tri_mesh.indices.insert(tri_mesh.indices.end(), { inds[f * 3 + 0], inds[f * 3 + 1], inds[f * 3 + 2], 0 });
             }
         }
     }
 
-    return trimesh;
+    return tri_mesh;
 }
 
 static inline bool isAllowedVertIndType(const std::string& str)
@@ -352,38 +352,33 @@ TriMesh load(const std::filesystem::path& path)
     }
 
     header.SwitchEndianness = (method == "binary_big_endian");
-    TriMesh trimesh         = read(path, stream, header, (method == "ascii"));
-    if (trimesh.vertices.empty())
-        return trimesh;
+    TriMesh tri_mesh        = read(path, stream, header, (method == "ascii"));
+    if (tri_mesh.vertices.empty())
+        return tri_mesh;
 
     // Cleanup
     // TODO: This does not work due to fp precision problems
-    // const size_t removedBadAreas = trimesh.removeZeroAreaTriangles();
+    // const size_t removedBadAreas = tri_mesh.removeZeroAreaTriangles();
     // if (removedBadAreas != 0)
     //     IG_LOG(L_WARNING) << "PlyFile " << path << ": Removed " << removedBadAreas << " triangles with zero area" << std::endl;
 
     // Normals
-    bool hasBadAreas = false;
-    trimesh.computeFaceNormals(&hasBadAreas);
-    // if (hasBadAreas)
-    //     IG_LOG(L_WARNING) << "PlyFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
-
-    if (trimesh.normals.empty()) {
+    if (tri_mesh.normals.empty()) {
         IG_LOG(L_INFO) << "PlyFile " << path << ": No normals are present, computing smooth approximation." << std::endl;
-        trimesh.computeVertexNormals();
+        tri_mesh.computeVertexNormals();
     } else {
         bool hasBadNormals = false;
-        trimesh.fixNormals(&hasBadNormals);
+        tri_mesh.fixNormals(&hasBadNormals);
         if (hasBadNormals)
             IG_LOG(L_WARNING) << "PlyFile " << path << ": Some normals were incorrect and thus had to be replaced with arbitrary values." << std::endl;
     }
 
-    if (trimesh.texcoords.empty()) {
+    if (tri_mesh.texcoords.empty()) {
         IG_LOG(L_INFO) << "PlyFile " << path << ": No texture coordinates are present, using default value." << std::endl;
-        trimesh.makeTexCoordsZero();
+        tri_mesh.makeTexCoordsNormalized();
     }
 
-    return trimesh;
+    return tri_mesh;
 }
 } // namespace ply
 } // namespace IG

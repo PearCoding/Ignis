@@ -105,6 +105,39 @@ inline TriMesh setup_mesh_disk(const Object& elem)
     return TriMesh::MakeDisk(origin, normal, radius, sections);
 }
 
+inline TriMesh setup_mesh_gauss(const Object& elem)
+{
+    // TODO: Add covariance based approach as well
+    const Vector3f origin    = elem.property("origin").getVector3();
+    const Vector3f normal    = elem.property("normal").getVector3(Vector3f(0, 0, 1));
+    const float sigma        = elem.property("sigma").getNumber(1.0f);
+    const float radius_scale = elem.property("radius_scale").getNumber(1.0f);
+    const float height       = elem.property("height").getNumber(1.0f);
+    const uint32 sections    = elem.property("sections").getInteger(32);
+    const uint32 slices      = elem.property("slices").getInteger(16);
+    return TriMesh::MakeRadialGaussian(origin, normal * height, sigma, radius_scale, sections, slices);
+}
+
+inline TriMesh setup_mesh_gauss_lobe(const Object& elem)
+{
+    const Vector3f origin    = elem.property("origin").getVector3();
+    const Vector3f direction = elem.property("direction").getVector3(Vector3f(0, 0, 1));
+    const float sigma_theta  = elem.property("sigma_theta").getNumber(1);
+    const float sigma_phi    = elem.property("sigma_phi").getNumber(1);
+    const float anisotropy   = elem.property("anisotropy").getNumber(0);
+    const uint32 theta_size  = elem.property("theta_size").getInteger(64);
+    const uint32 phi_size    = elem.property("phi_size").getInteger(128);
+    const float scale        = elem.property("scale").getNumber(1);
+    const Vector3f xAxis     = elem.property("x_axis").getVector3(Vector3f::UnitX());
+    const Vector3f yAxis     = elem.property("y_axis").getVector3(Vector3f::UnitY());
+
+    Matrix2f cov;
+    cov << sigma_theta * sigma_theta, anisotropy * sigma_theta * sigma_phi,
+        anisotropy * sigma_theta * sigma_phi, sigma_phi * sigma_phi;
+
+    return TriMesh::MakeGaussianLobe(origin, direction, xAxis, yAxis, cov, theta_size, phi_size, scale);
+}
+
 inline TriMesh setup_mesh_obj(const std::string& name, const Object& elem, const LoaderContext& ctx)
 {
     int shape_index     = elem.property("shape_index").getInteger(-1);
@@ -217,6 +250,10 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
         mesh = setup_mesh_cone(elem);
     } else if (elem.pluginType() == "disk") {
         mesh = setup_mesh_disk(elem);
+    } else if (elem.pluginType() == "gauss") {
+        mesh = setup_mesh_gauss(elem);
+    } else if (elem.pluginType() == "gauss_lobe") {
+        mesh = setup_mesh_gauss_lobe(elem);
     } else if (elem.pluginType() == "obj") {
         mesh = setup_mesh_obj(name, elem, ctx);
     } else if (elem.pluginType() == "ply") {
@@ -241,22 +278,19 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     }
 
     // Handle some user options
-    if (elem.property("flip_normals").getBool())
+    if (elem.property("flip_normals").getBool(false))
         mesh.flipNormals();
 
-    if (elem.property("face_normals").getBool())
+    if (elem.property("face_normals").getBool(false))
         mesh.setupFaceNormalsAsVertexNormals();
 
     if (!elem.property("transform").getTransform().matrix().isIdentity())
         mesh.transform(elem.property("transform").getTransform());
 
     // Build bounding box
-    BoundingBox bbox = BoundingBox::Empty();
-    for (const auto& v : mesh.vertices)
-        bbox.extend(v);
+    BoundingBox bbox = mesh.computeBBox();
     bbox.inflate(1e-5f); // Make sure it has a volume
 
-    IG_ASSERT(mesh.face_normals.size() == mesh.faceCount(), "Expected valid face normals!");
     IG_ASSERT((mesh.indices.size() % 4) == 0, "Expected index buffer count to be a multiple of 4!");
 
     // Setup bvh
@@ -269,8 +303,9 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
         bvh_offset = setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);
     }
 
-    // Precompute if plane or not
-    const auto plane = mesh.getAsPlane();
+    // Precompute approximative shapes outside the lock region
+    const std::optional<PlaneShape> plane   = mesh.getAsPlane();
+    const std::optional<SphereShape> sphere = plane.has_value() ? std::nullopt : mesh.getAsSphere();
 
     // Setup internal shape object
     TriShape trishape;
@@ -304,18 +339,21 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     // Data
     meshSerializer.writeAligned(mesh.vertices, DefaultAlignment, true);
     meshSerializer.writeAligned(mesh.normals, DefaultAlignment, true);
-    meshSerializer.writeAligned(mesh.face_normals, DefaultAlignment, true);
     meshSerializer.write(mesh.indices, true);   // Already aligned
     meshSerializer.write(mesh.texcoords, true); // Aligned to 4*2 bytes
-    meshSerializer.write(mesh.face_inv_area, true);
 
     const auto off  = split_u64_to_u32(bvh_offset);
     const uint32 id = ctx.Shapes->addShape(name, Shape{ this, (int32)off.first, (int32)off.second, 0, bbox, offset });
     IG_ASSERT(id + 1 == table.entryCount(), "Expected id to be in sync with dyntable entry count");
 
     // Check if shape is actually just a simple plane
-    if (plane.has_value())
+    if (plane.has_value()) {
         ctx.Shapes->addPlaneShape(id, plane.value());
+    } else {
+        // If not a plane, it might be a simple sphere
+        if (sphere.has_value())
+            ctx.Shapes->addSphereShape(id, sphere.value());
+    }
 
     // Add internal shape structure to table for potential area light usage
     ctx.Shapes->addTriShape(id, trishape);

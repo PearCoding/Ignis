@@ -17,9 +17,9 @@
 	],
 	"entities": [
 		{"name":"Window1","shape":"Window", "bsdf":"windowTL"},
-		{"name":"Window2","shape":"Window", "bsdf":"windowTR", "transform": {"translate": [0, 2.25, 0]} },
-		{"name":"Window3","shape":"Window", "bsdf":"windowBL", "transform": {"translate": [0, 0, 2.25]} },
-		{"name":"Window4","shape":"Window", "bsdf":"windowBR", "transform": {"translate": [0, 2.25, 2.25]} }
+		{"name":"Window2","shape":"Window", "bsdf":"windowTR", "transform": [{"translate": [0, 2.25, 0]}] },
+		{"name":"Window3","shape":"Window", "bsdf":"windowBL", "transform": [{"translate": [0, 0, 2.25]}] },
+		{"name":"Window4","shape":"Window", "bsdf":"windowBR", "transform": [{"translate": [0, 2.25, 2.25]}] }
 	],
 	"lights": [
 		{"type":"constant", "name":"Sky"}

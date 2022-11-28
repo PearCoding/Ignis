@@ -16,8 +16,7 @@
 namespace IG::Parser {
 // TODO: (Re)Add arguments!
 
-using LookupPaths = std::vector<std::filesystem::path>;
-using Arguments   = std::unordered_map<std::string, std::string>;
+using Arguments = std::unordered_map<std::string, std::string>;
 
 // ------------- File IO
 static inline bool doesFileExist(const std::filesystem::path& fileName)
@@ -25,15 +24,10 @@ static inline bool doesFileExist(const std::filesystem::path& fileName)
     return std::ifstream(fileName.generic_u8string()).good();
 }
 
-static inline std::filesystem::path resolvePath(const std::filesystem::path& path, const std::filesystem::path& baseDir, const LookupPaths& lookups)
+static inline std::filesystem::path resolvePath(const std::filesystem::path& path, const std::filesystem::path& baseDir)
 {
     if (doesFileExist(baseDir / path))
         return baseDir / path;
-
-    for (const auto& dir : lookups) {
-        if (doesFileExist(dir / path))
-            return dir / path;
-    }
 
     if (doesFileExist(path))
         return path;
@@ -132,33 +126,6 @@ inline static Matrix4f getMatrix4f(const rapidjson::Value& obj)
     return mat;
 }
 
-inline static Property getProperty(const rapidjson::Value& obj)
-{
-    if (obj.IsBool())
-        return Property::fromBool(obj.GetBool());
-    else if (obj.IsString())
-        return Property::fromString(getString(obj));
-    else if (obj.IsInt())
-        return Property::fromInteger(obj.GetInt());
-    else if (obj.IsNumber())
-        return Property::fromNumber(obj.GetFloat());
-    else if (obj.IsArray()) {
-        const auto& array = obj.GetArray();
-        const size_t len  = array.Size();
-
-        if (len == 2)
-            return Property::fromVector2(getVector2f(obj));
-        else if (len == 3)
-            return Property::fromVector3(getVector3f(obj));
-        else if (len == 9)
-            return Property::fromTransform(Transformf(getMatrix3f(obj)));
-        else if (len == 16)
-            return Property::fromTransform(Transformf(getMatrix4f(obj)));
-    }
-
-    return Property();
-}
-
 template <typename Derived1, typename Derived2, typename Derived3>
 Eigen::Matrix<typename Derived1::Scalar, 3, 4> lookAt(const Eigen::MatrixBase<Derived1>& eye,
                                                       const Eigen::MatrixBase<Derived2>& center,
@@ -188,6 +155,116 @@ Eigen::Matrix<typename Derived1::Scalar, 3, 4> lookAt(const Eigen::MatrixBase<De
     return m;
 }
 
+inline static void applyTransformProperty(Transformf& transform, const rapidjson::GenericObject<true, rapidjson::Value>& obj)
+{
+    // For legacy purposes, multiple operations can defined.
+    // New scenes should only use a single operation and concat it one level above.
+
+    // From left to right. The last entry will be applied first to a potential point A1*A2*A3*...*An*p
+    for (auto val = obj.MemberBegin(); val != obj.MemberEnd(); ++val) {
+        if (val->name == "translate") {
+            const Vector3f pos = getVector3f(val->value, true);
+            transform.translate(pos);
+        } else if (val->name == "scale") {
+            if (val->value.IsNumber()) {
+                transform.scale(val->value.GetFloat());
+            } else {
+                const Vector3f s = getVector3f(val->value, true);
+                transform.scale(s);
+            }
+        } else if (val->name == "rotate") { // [Rotation around X, Rotation around Y, Rotation around Z] all in degrees
+            const Vector3f angles = getVector3f(val->value, true);
+            transform *= Eigen::AngleAxisf(Deg2Rad * angles(0), Vector3f::UnitX())
+                         * Eigen::AngleAxisf(Deg2Rad * angles(1), Vector3f::UnitY())
+                         * Eigen::AngleAxisf(Deg2Rad * angles(2), Vector3f::UnitZ());
+        } else if (val->name == "qrotate") { // 4D Vector quaternion
+            transform *= getQuaternionf(val->value);
+        } else if (val->name == "lookat") {
+            if (val->value.IsObject()) {
+                Vector3f origin = Vector3f::Zero();
+                Vector3f target = Vector3f::UnitY();
+                Vector3f up     = Vector3f::UnitZ();
+
+                std::optional<Vector3f> direction;
+                for (auto val2 = val->value.MemberBegin(); val2 != val->value.MemberEnd(); ++val2) {
+                    if (val2->name == "origin")
+                        origin = getVector3f(val2->value);
+                    else if (val2->name == "target")
+                        target = getVector3f(val2->value);
+                    else if (val2->name == "up")
+                        up = getVector3f(val2->value);
+                    else if (val2->name == "direction") // You might give the direction instead of the target
+                        direction = getVector3f(val2->value);
+                }
+
+                if (direction.has_value())
+                    transform *= lookAt(origin, direction.value() + origin, up);
+                else
+                    transform *= lookAt(origin, target, up);
+            } else
+                throw std::runtime_error("Expected transform lookat property to be an object with origin, target and optional up vector");
+        } else if (val->name == "matrix") {
+            const size_t len = val->value.GetArray().Size();
+            if (len == 9)
+                transform = transform * Transformf(getMatrix3f(val->value));
+            else if (len == 12 || len == 16)
+                transform = transform * Transformf(getMatrix4f(val->value));
+            else
+                throw std::runtime_error("Expected transform property to be an array of size 9 or 16");
+        } else {
+            throw std::runtime_error("Transform property got unknown entry type '" + std::string(val->name.GetString()) + "'");
+        }
+    }
+}
+
+inline static Transformf getTransform(const rapidjson::GenericArray<true, rapidjson::Value>& array)
+{
+    Transformf transform = Transformf::Identity();
+    for (rapidjson::SizeType i = 0; i < array.Size(); ++i) {
+        if (!array[i].IsObject())
+            throw std::runtime_error("Given transform property does not consists of transform operations only");
+
+        const auto obj = array[i].GetObject();
+        applyTransformProperty(transform, obj);
+    }
+    return transform;
+}
+
+inline static Property getProperty(const rapidjson::Value& obj)
+{
+    if (obj.IsBool())
+        return Property::fromBool(obj.GetBool());
+    else if (obj.IsString())
+        return Property::fromString(getString(obj));
+    else if (obj.IsInt())
+        return Property::fromInteger(obj.GetInt());
+    else if (obj.IsNumber())
+        return Property::fromNumber(obj.GetFloat());
+    else if (obj.IsArray()) {
+        const auto& array = obj.GetArray();
+        const size_t len  = array.Size();
+
+        if (len >= 1 && array[0].IsObject())
+            return Property::fromTransform(getTransform(array));
+        else if (len == 2)
+            return Property::fromVector2(getVector2f(obj));
+        else if (len == 3)
+            return Property::fromVector3(getVector3f(obj));
+        else if (len == 9)
+            return Property::fromTransform(Transformf(getMatrix3f(obj)));
+        else if (len == 16)
+            return Property::fromTransform(Transformf(getMatrix4f(obj)));
+    } else if (obj.IsObject()) {
+        // Deprecated way of handling transforms
+        Transformf transform = Transformf::Identity();
+
+        applyTransformProperty(transform, obj.GetObject());
+        return Property::fromTransform(transform);
+    }
+
+    return Property();
+}
+
 inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson::Value& obj)
 {
     for (auto itr = obj.MemberBegin(); itr != obj.MemberEnd(); ++itr) {
@@ -197,84 +274,9 @@ inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson:
         if (name == "name" || name == "type")
             continue;
 
-        if (name == "transform") {
-            if (itr->value.IsObject()) {
-                Transformf transform = Transformf::Identity();
-
-                // From left to right. The last entry will be applied first to a potential point A1*A2*A3*...*An*p
-                for (auto val = itr->value.MemberBegin(); val != itr->value.MemberEnd(); ++val) {
-                    if (val->name == "translate") {
-                        const Vector3f pos = getVector3f(val->value, true);
-                        transform.translate(pos);
-                    } else if (val->name == "scale") {
-                        if (val->value.IsNumber()) {
-                            transform.scale(val->value.GetFloat());
-                        } else {
-                            const Vector3f s = getVector3f(val->value, true);
-                            transform.scale(s);
-                        }
-                    } else if (val->name == "rotate") { // [Rotation around X, Rotation around Y, Rotation around Z] all in degrees
-                        const Vector3f angles = getVector3f(val->value, true);
-                        transform *= Eigen::AngleAxisf(Deg2Rad * angles(0), Vector3f::UnitX())
-                                     * Eigen::AngleAxisf(Deg2Rad * angles(1), Vector3f::UnitY())
-                                     * Eigen::AngleAxisf(Deg2Rad * angles(2), Vector3f::UnitZ());
-                    } else if (val->name == "qrotate") { // 4D Vector quaternion
-                        transform *= getQuaternionf(val->value);
-                    } else if (val->name == "lookat") {
-                        if (val->value.IsObject()) {
-                            Vector3f origin = Vector3f::Zero();
-                            Vector3f target = Vector3f::UnitY();
-                            Vector3f up     = Vector3f::UnitZ();
-
-                            std::optional<Vector3f> direction;
-                            for (auto val2 = val->value.MemberBegin(); val2 != val->value.MemberEnd(); ++val2) {
-                                if (val2->name == "origin")
-                                    origin = getVector3f(val2->value);
-                                else if (val2->name == "target")
-                                    target = getVector3f(val2->value);
-                                else if (val2->name == "up")
-                                    up = getVector3f(val2->value);
-                                else if (val2->name == "direction") // You might give the direction instead of the target
-                                    direction = getVector3f(val2->value);
-                            }
-
-                            if (direction.has_value())
-                                transform *= lookAt(origin, direction.value() + origin, up);
-                            else
-                                transform *= lookAt(origin, target, up);
-                        } else
-                            throw std::runtime_error("Expected transform lookat property to be an object with origin, target and optional up vector");
-                    } else if (val->name == "matrix") {
-                        const size_t len = val->value.GetArray().Size();
-                        if (len == 9)
-                            transform = transform * Transformf(getMatrix3f(val->value));
-                        else if (len == 12 || len == 16)
-                            transform = transform * Transformf(getMatrix4f(val->value));
-                        else
-                            throw std::runtime_error("Expected transform property to be an array of size 9 or 16");
-                    } else {
-                        throw std::runtime_error("Transform property got unknown entry type '" + std::string(val->name.GetString()) + "'");
-                    }
-                }
-                ptr->setProperty(name, Property::fromTransform(transform));
-            } else if (itr->value.IsArray()) {
-                const size_t len = itr->value.GetArray().Size();
-                if (len == 0)
-                    ptr->setProperty(name, Property::fromTransform(Transformf::Identity()));
-                else if (len == 9)
-                    ptr->setProperty(name, Property::fromTransform(Transformf(getMatrix3f(itr->value))));
-                else if (len == 12 || len == 16)
-                    ptr->setProperty(name, Property::fromTransform(Transformf(getMatrix4f(itr->value))));
-                else
-                    throw std::runtime_error("Expected transform property to be an array of size 9 or 16");
-            } else {
-                throw std::runtime_error("Expected transform property to be an object");
-            }
-        } else {
-            const auto prop = getProperty(itr->value);
-            if (prop.isValid())
-                ptr->setProperty(name, prop);
-        }
+        const auto prop = getProperty(itr->value);
+        if (prop.isValid())
+            ptr->setProperty(name, prop);
     }
 }
 
@@ -344,7 +346,7 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const std::f
 
     std::string pluginType           = obj.HasMember("type") ? to_lowercase(getString(obj["type"])) : "";
     const std::string inc_path       = getString(obj["filename"]);
-    const std::filesystem::path path = std::filesystem::canonical(resolvePath(inc_path, baseDir, loader.lookupPaths()));
+    const std::filesystem::path path = std::filesystem::canonical(resolvePath(inc_path, baseDir));
     if (path.empty())
         throw std::runtime_error("Could not find path '" + inc_path + "'");
 
@@ -552,27 +554,16 @@ Scene SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
     return InternalSceneParser::loadFromJSON(*this, parent, doc);
 }
 
-Scene SceneParser::loadFromString(const char* str, bool& ok)
+Scene SceneParser::loadFromString(const std::string& str, const std::filesystem::path& opt_dir, bool& ok)
 {
     rapidjson::Document doc;
-    if (doc.Parse<JsonFlags>(str).HasParseError()) {
+    if (doc.Parse<JsonFlags>(str.c_str()).HasParseError()) {
         ok = false;
         IG_LOG(L_ERROR) << "JSON[" << doc.GetErrorOffset() << "]: " << rapidjson::GetParseError_En(doc.GetParseError()) << std::endl;
         return Scene();
     }
     ok = true;
-    return InternalSceneParser::loadFromJSON(*this, "", doc);
+    return InternalSceneParser::loadFromJSON(*this, opt_dir, doc);
 }
 
-Scene SceneParser::loadFromString(const char* str, size_t max_len, bool& ok)
-{
-    rapidjson::Document doc;
-    if (doc.Parse<JsonFlags>(str, max_len).HasParseError()) {
-        ok = false;
-        IG_LOG(L_ERROR) << "JSON[" << doc.GetErrorOffset() << "]: " << rapidjson::GetParseError_En(doc.GetParseError()) << std::endl;
-        return Scene();
-    }
-    ok = true;
-    return InternalSceneParser::loadFromJSON(*this, "", doc);
-}
 } // namespace IG::Parser

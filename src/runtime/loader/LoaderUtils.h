@@ -1,6 +1,7 @@
 #pragma once
 
 #include "LoaderContext.h"
+#include "skysun/SunLocation.h"
 
 namespace IG {
 struct ElevationAzimuth;
@@ -22,6 +23,8 @@ public:
     static std::string inlineVector(const Vector3f& pos);
     static std::string inlineColor(const Vector3f& color);
 
+    static TimePoint getTimePoint(const Parser::Object& obj);
+    static MapLocation getLocation(const Parser::Object& obj);
     static ElevationAzimuth getEA(const Parser::Object& obj);
     static Vector3f getDirection(const Parser::Object& obj);
 

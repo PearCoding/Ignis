@@ -148,13 +148,6 @@ fn @sum_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
     sum + err
 }
 
-fn @triangle_area(v0: Vec3, v1: Vec3, v2: Vec3) -> f32 {
-    let e1 = vec3_sub(v1, v0);
-    let e2 = vec3_sub(v2, v0);
-    let  n = vec3_cross(e1, e2);
-    0.5 * vec3_len(n)
-}
-
 fn @positive_cos(a: Vec3, b: Vec3) -> f32 {
     let cos = vec3_dot(a, b);
     if cos >= 0 { cos } else { 0 }

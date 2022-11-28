@@ -43,38 +43,44 @@ fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
 };
 
 fn @make_shape_area_emitter(entity: Entity, shape: Shape, mesh: TriMesh) -> AreaEmitter {
+    let pmset = make_standard_pointmapperset(shape, entity);
+
     fn @sample(uv: Vec2) {
         let ux     = uv.x * (mesh.num_tris as f32);
-        let f      = ux as i32;
-        let uv2    = make_vec2(ux - (f as f32), uv.y);
-        let (u, v) = sample_triangle(uv2.x, uv2.y);
+        let f      = min(ux as i32, mesh.num_tris - 1);
+        let (u, v) = sample_triangle(ux - (f as f32), uv.y);
 
-        let surf   = shape.surface_element_for_point(f, make_vec2(u, v));
-        let t_surf = map_surface_element(surf, entity.global_mat, entity.normal_mat);
-        
-        (t_surf, t_surf.inv_area / (mesh.num_tris as f32))
+        let surf = shape.surface_element_for_point(f, make_vec2(u, v), pmset);
+
+        (surf, surf.inv_area / (mesh.num_tris as f32), (mesh.num_tris as f32) / surf.inv_area)
     }
 
-    fn pdf(uv: Vec2) {
+    fn @pdf(uv: Vec2) {
         let ux     = uv.x * (mesh.num_tris as f32);
-        let f      = ux as i32;
-        let uv2    = make_vec2(ux - (f as f32), uv.y);
-        let (u, v) = sample_triangle(uv2.x, uv2.y);
+        let f      = min(ux as i32, mesh.num_tris - 1);
+        let (u, v) = sample_triangle(ux - (f as f32), uv.y);
 
-        let surf   = shape.surface_element_for_point(f, make_vec2(u, v));
-        let t_surf = map_surface_element(surf, entity.global_mat, entity.normal_mat);
-        t_surf.inv_area / (mesh.num_tris as f32)
+        let surf = shape.surface_element_for_point(f, make_vec2(u, v), pmset);
+
+        surf.inv_area / (mesh.num_tris as f32)
     }
 
     AreaEmitter {
         sample_direct   = @|uv, _| {
-            let (surf, pdfv) = sample(uv);
-            (surf, make_area_pdf(pdfv), safe_div(1, pdfv))
+            let (surf, pdfv, weight) = sample(uv);
+            (surf, make_area_pdf(pdfv), weight)
         },
-        sample_emission = @|uv| sample(uv),
+        sample_emission = @|uv| {
+            let (surf, pdfv, _) = sample(uv);
+            (surf, pdfv)
+        },
         normal = @ |uv| {
-            let f = (uv.x * (mesh.num_tris as f32)) as i32;
-            vec3_normalize(mat3x3_mul(entity.normal_mat, mesh.face_normals(f)))
+            let ux     = uv.x * (mesh.num_tris as f32);
+            let f      = min(ux as i32, mesh.num_tris - 1);
+            let (u, v) = sample_triangle(ux - (f as f32), uv.y);
+    
+            let surf = shape.surface_element_for_point(f, make_vec2(u, v), pmset);
+            surf.face_normal
         },
         pdf_direct   = @ |uv, _| make_area_pdf(pdf(uv)),
         pdf_emission = @ |uv, _| pdf(uv)
@@ -231,6 +237,64 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
     }
 }
 
+// Sphere sampler
+fn @make_sphere_area_emitter(entity: Entity, sphere: Sphere) -> AreaEmitter {
+    let shape = make_sphere_shape(sphere);
+    let pmset = make_standard_pointmapperset(shape, entity);
+
+    let area   = compute_ellipsoid_area(sphere, pmset);
+    let origin = sphere.origin;
+
+    fn @sample_direct(uv: Vec2, from_point: Vec3) {
+        let glb_org = pmset.to_global_point(origin);
+
+        // Sampler which makes sure the point lies on the visible side of the sphere
+        let surf = sphere_compute_surface_element_for_normal(equal_area_square_to_sphere(uv), sphere, pmset);
+
+        let p  = surf.point;
+        let os = vec3_sub(from_point, glb_org);
+        let ps = vec3_sub(from_point, p);
+
+        // Check if the origin is closer then the actual point...
+        let los = vec3_len2(os);
+        let lps = vec3_len2(ps);
+        
+        if lps <= los {
+            (surf, make_area_pdf(2 * surf.inv_area), 1 / (2 * surf.inv_area))
+        } else {
+            // Compute new point by offsetting it two times the radius
+            let op = vec3_sub(p, glb_org);
+            let np = vec3_sub(p, vec3_mulf(op, 2)); 
+
+            // Compute normal, which is necessary for the other attributes
+            let norm  = vec3_normalize(vec3_sub(np, glb_org));
+            let nsurf = sphere_compute_surface_element_for_normal(norm, sphere, pmset);
+            (nsurf, make_area_pdf(2 * surf.inv_area), 1 / (2 * surf.inv_area))
+        }
+    }
+
+    fn @sample_emission(uv: Vec2) {
+        let surf = sphere_compute_surface_element_for_normal(equal_area_square_to_sphere(uv), sphere, pmset);
+        (surf, surf.inv_area)
+    }
+
+    fn @pdf_direct(_uv: Vec2, _:Vec3) {
+        make_area_pdf(2 / area)
+    }
+
+    fn @pdf_emission(_uv: Vec2, _: Vec3) {
+        1 / area
+    }
+
+    AreaEmitter {
+        sample_direct   = sample_direct,
+        sample_emission = sample_emission,
+        normal          = @ |uv| equal_area_square_to_sphere(uv),
+        pdf_direct      = pdf_direct,
+        pdf_emission    = pdf_emission
+    }
+}
+
 fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, meshes: TriMeshTable) -> LightTable {
     let tbl = device.load_fixtable("SimpleAreaLight");
 
@@ -282,6 +346,37 @@ fn @load_simple_plane_lights(count: i32, id_off: i32, device: Device) -> LightTa
             make_area_light(id + id_off, make_plane_area_emitter(vec4_to_3(origin), vec4_to_3(x_axis), vec4_to_3(y_axis),
                                                     normal, area,
                                                     make_vec2(t01.x, t01.y), make_vec2(t01.z, t01.w), make_vec2(t23.x, t23.y), make_vec2(t23.z, t23.w)), 
+                            @|_| vec3_to_color(vec4_to_3(radiance)))
+        } 
+    }
+}
+
+fn @load_simple_sphere_lights(count: i32, id_off: i32, device: Device) -> LightTable {
+    let tbl = device.load_fixtable("SimpleSphereLight");
+
+    let elem_s = 40; // Given in floats. See AreaLight.cpp (optimized)
+    LightTable {
+        count = count,
+        get   = @|id| {
+            let data = shift_device_buffer(elem_s * id, elem_s, tbl);
+
+            let local_mat  = data.load_mat3x4(0);
+            let global_mat = data.load_mat3x4(12);
+            let m          = data.load_mat3x4(24); // This is faster due to aligned loading instructions
+            let entity     = Entity {
+                id         = id, // TODO
+                local_mat  = local_mat,
+                global_mat = global_mat,
+                normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
+                shape_id   = 0
+            };
+
+            let radiance = data.load_vec4(36);
+            let origin   = m.col(3);
+            let radius   = radiance.w;
+
+            let sphere = Sphere{ origin = origin, radius = radius };
+            make_area_light(id + id_off, make_sphere_area_emitter(entity, sphere), 
                             @|_| vec3_to_color(vec4_to_3(radiance)))
         } 
     }

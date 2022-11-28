@@ -28,7 +28,9 @@ public:
     /// Load from file and initialize
     [[nodiscard]] bool loadFromFile(const std::filesystem::path& path);
     /// Load from string and initialize
-    [[nodiscard]] bool loadFromString(const std::string& str);
+    /// @param str String containing valid scene description
+    /// @param dir Optional directory containing external files if not given as absolute files inside the scene description
+    [[nodiscard]] bool loadFromString(const std::string& str, const std::filesystem::path& dir);
 
     /// Do a single iteration in non-tracing mode
     void step(bool ignoreDenoiser = false);

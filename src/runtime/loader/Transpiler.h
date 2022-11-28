@@ -5,7 +5,7 @@
 
 namespace IG {
 class ShadingTree;
-class Transpiler {
+class IG_LIB Transpiler {
     friend class TranspilerInternal;
 
 public:
@@ -28,6 +28,13 @@ public:
     inline void registerCustomVariableVector(const std::string& name) { mCustomVariableVector.insert(name); }
     inline void registerCustomVariableColor(const std::string& name) { mCustomVariableColor.insert(name); }
 
+    /// Return list of available variables and their respective types
+    static std::string availableVariables();
+    /// Return list of available functions and their respective signatures
+    static std::string availableFunctions();
+
+    /// Return shader to check correctness of all signatures and used functions. Only useful for internal purposes
+    static std::string generateTestShader();
 private:
     ShadingTree& mTree;
     std::unordered_set<std::string> mCustomVariableBool;

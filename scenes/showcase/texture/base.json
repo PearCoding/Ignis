@@ -9,7 +9,7 @@
 		"fov": 40,
 		"near_clip": 0.1,
 		"far_clip": 100,
-		"transform": {"lookat": { "origin": [ 0,-6,11 ], "target": [0,1,0] } }
+		"transform": [{"lookat": { "origin": [ 0,-6,11 ], "target": [0,1,0] } }]
 	},
 	"film": {
 		"size": [1000, 1000]
@@ -28,7 +28,7 @@
 		{"type":"rectangle", "name":"Plane", "width":6, "height":6}
 	],
 	"entities": [
-		{"name":"Plane","shape":"Plane", "bsdf":"mat-Plane", "transform":{"translate":[0,0,2]}}
+		{"name":"Plane","shape":"Plane", "bsdf":"mat-Plane", "transform":[{"translate":[0,0,2]}]}
 	],
 	"lights": [
 		{"type":"env", "name":"Environment", "radiance":"env", "transform": [0,-1,0, 0,0,1, 1,0,0]}

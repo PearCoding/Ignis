@@ -107,6 +107,24 @@ Vector3f ShadingTree::computeColor(const std::string& name, const Parser::Object
     }
 }
 
+std::string ShadingTree::handlePropertyNumber(const std::string& name, const Parser::Property& prop, const NumberOptions& options)
+{
+    switch (prop.type()) {
+    default:
+    case Parser::PT_NONE:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        return {};
+    case Parser::PT_INTEGER:
+    case Parser::PT_NUMBER:
+        return acquireNumber(name, prop.getNumber(), options);
+    case Parser::PT_VECTOR3:
+        IG_LOG(L_WARNING) << "Parameter '" << name << "' expects a number but a color was given. Using average instead" << std::endl;
+        return "color_average(" + acquireColor(name, prop.getVector3(), mapToColorOptions(options)) + ")";
+    case Parser::PT_STRING:
+        return handleTexture(name, prop.getString(), false); // TODO: Map options
+    }
+}
+
 void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, float def, bool hasDef, const NumberOptions& options)
 {
     if (hasParameter(name)) {
@@ -117,29 +135,26 @@ void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, 
     const auto prop = obj.property(name);
 
     std::string inline_str;
-    switch (prop.type()) {
-    default:
-        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
-        [[fallthrough]];
-    case Parser::PT_NONE:
+    if (prop.type() == Parser::PT_NONE) {
         if (!hasDef)
             return;
         inline_str = acquireNumber(name, def, options);
-        break;
-    case Parser::PT_INTEGER:
-    case Parser::PT_NUMBER:
-        inline_str = acquireNumber(name, prop.getNumber(), options);
-        break;
-    case Parser::PT_VECTOR3:
-        IG_LOG(L_WARNING) << "Parameter '" << name << "' expects a number but a color was given. Using average instead" << std::endl;
-        inline_str = "color_average(" + acquireColor(name, prop.getVector3(), mapToColorOptions(options)) + ")";
-        break;
-    case Parser::PT_STRING:
-        inline_str = handleTexture(name, prop.getString(), false); // TODO: Map options
-        break;
+    } else {
+        inline_str = handlePropertyNumber(name, prop, options);
     }
 
     currentClosure().Parameters[name] = inline_str;
+}
+
+void ShadingTree::insertNumber(const std::string& name, const Parser::Property& prop, const NumberOptions& options)
+{
+    if (prop.type() == Parser::PT_NONE) {
+        IG_LOG(L_ERROR) << "Invalid property given for '" << name << "'" << std::endl;
+        signalError();
+    }
+
+    // TODO: Remove corresponding header line entries?
+    currentClosure().Parameters[name] = handlePropertyNumber(name, prop, options);
 }
 
 void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, const ColorOptions& options)

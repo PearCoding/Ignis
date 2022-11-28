@@ -36,8 +36,8 @@
 		{"name":"Right","shape":"Right", "bsdf":"mat-ColoredWall"},
 		{"name":"Back","shape":"Back", "bsdf":"mat-GrayWall"},
 		{"name":"Diamond1","shape":"Diamond", "bsdf":"mat-Copper"},
-		{"name":"Diamond2","shape":"Diamond", "bsdf":"mat-Copper", "transform":{"translate":[-0.6,0,0]}},
-		{"name":"Diamond3","shape":"Diamond", "bsdf":"mat-Copper", "transform":{"translate":[0.6,0,0]}}
+		{"name":"Diamond2","shape":"Diamond", "bsdf":"mat-Copper", "transform":[{"translate":[-0.6,0,0]}]},
+		{"name":"Diamond3","shape":"Diamond", "bsdf":"mat-Copper", "transform":[{"translate":[0.6,0,0]}]}
 	],
 	"lights": [
 		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[100,100,100]}

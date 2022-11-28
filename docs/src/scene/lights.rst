@@ -26,19 +26,21 @@ Point Light (:monosp:`point`)
 
 .. objectparameters::
 
- * - position
-   - |vector|
-   - (0,0,0)
-   - Position of the point light.
-   
- * - intensity
-   - |color|
-   - (1,1,1)
-   - Intensity of the point light.
+  * - position
+    - |vector|
+    - :code:`(0,0,0)`
+    - No
+    - Position of the point light.
+    
+  * - intensity
+    - |color|
+    - :code:`1`
+    - Yes
+    - Intensity of the point light.
 
 .. subfigstart::
   
-.. figure:: images/lig_point.jpg
+.. figure:: images/light_point.jpg
   :width: 90%
 
   Point light 
@@ -52,38 +54,44 @@ Spot Light (:monosp:`spot`)
 
 .. objectparameters::
 
- * - cutoff
-   - |number|
-   - 30
-   - Cutoff angle in degree. Greater angles will be completely black.
- * - falloff
-   - |number|
-   - 20
-   - Falloff angle in degree. Greater angles will linearly falloff towards the cutoff angle. Falloff angle should be less or equal to the cutoff angle.
- * - position
-   - |vector|
-   - (0,0,0)
-   - Position of the light.
- * - direction
-   - |vector|
-   - (0,0,1)
-   - Direction of the light towards the scene.
- * - elevation, azimuth
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
- * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
-   - |number|
-   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
- * - intensity
-   - |color|
-   - (1,1,1)
-   - Intensity of the light.
+  * - cutoff
+    - |number|
+    - :code:`30`
+    - No
+    - Cutoff angle in degree. Greater angles will be completely black.
+  * - falloff
+    - |number|
+    - :code:`20`
+    - No
+    - Falloff angle in degree. Greater angles will linearly falloff towards the cutoff angle. Falloff angle should be less or equal to the cutoff angle.
+  * - position
+    - |vector|
+    - :code:`(0,0,0)`
+    - Position of the light.
+  * - direction
+    - |vector|
+    - :code:`(0,0,1)`
+    - No
+    - Direction of the light towards the scene.
+  * - elevation, azimuth
+    - |number|
+    - :code:`0`, :code:`0`
+    - No
+    - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
+  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
+    - |number|
+    - :code:`2020`, :code:`5`, :code:`6`, :code:`12`, :code:`0`, :code:`0`, :code:`49.235422`, :code:`-6.9965744`, :code:`-2`
+    - No
+    - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
+  * - intensity
+    - |color|
+    - :code:`1`
+    - Yes
+    - Intensity of the light.
    
 .. subfigstart::
   
-.. figure:: images/lig_spot.jpg
+.. figure:: images/light_spot.jpg
   :width: 90%
 
   Spot light
@@ -97,29 +105,30 @@ Directional Light (:monosp:`directional`)
 
 .. objectparameters::
 
- * - direction
-   - |vector|
-   - (0,0,1)
-   - Direction of the light towards the scene.
-   
- * - elevation, azimuth
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
-   
- * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
-   - |number|
-   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
-
- * - irradiance
-   - |color|
-   - (1,1,1)
-   - Output of the directional light.
+  * - direction
+    - |vector|
+    - :code:`(0,0,1)`
+    - No
+    - Direction of the light towards the scene.
+  * - elevation, azimuth
+    - |number|
+    - :code:`0`, :code:`0`
+    - No
+    - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
+  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
+    - |number|
+    - :code:`2020`, :code:`5`, :code:`6`, :code:`12`, :code:`0`, :code:`0`, :code:`49.235422`, :code:`-6.9965744`, :code:`-2`
+    - No
+    - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
+  * - irradiance
+    - |color|
+    - :code:`1`
+    - Yes
+    - Output of the directional light.
 
 .. subfigstart::
   
-.. figure:: images/lig_directional.jpg
+.. figure:: images/light_directional.jpg
   :width: 90%
 
   Directional light infinitely away from the scene 
@@ -133,19 +142,20 @@ Area Light (:monosp:`area`)
 
 .. objectparameters::
 
- * - entity
-   - |entity|
-   - *None*
-   - A valid entity.
-
- * - radiance
-   - |color|
-   - (1,1,1)
-   - Output of the area light.
+  * - entity
+    - |entity|
+    - *None*
+    - No
+    - A valid entity.
+  * - radiance
+    - |color|
+    - :code:`1`
+    - Yes
+    - Output of the area light.
    
 .. subfigstart::
   
-.. figure:: images/lig_area.jpg
+.. figure:: images/light_area.jpg
   :width: 90%
 
   Area light
@@ -159,34 +169,35 @@ Sun Light (:monosp:`sun`)
 
 .. objectparameters::
 
- * - direction
-   - |vector|
-   - (0,0,1)
-   - Direction of the incoming sun towards the scene.
-   
- * - elevation, azimuth
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
-   
- * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
-   - |number|
-   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
-
- * - sun_scale
-   - |number|
-   - 1
-   - Scale of the sun power in the sky.
-   
- * - sun_radius_scale
-   - |number|
-   - 1
-   - Scale of the sun radius in the sky.
+  * - direction
+    - |vector|
+    - :code:`(0,0,1)`
+    - No
+    - Direction of the incoming sun towards the scene.
+  * - elevation, azimuth
+    - |number|
+    - :code:`0`, :code:`0`
+    - No
+    - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
+  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
+    - |number|
+    - :code:`2020`, :code:`5`, :code:`6`, :code:`12`, :code:`0`, :code:`0`, :code:`49.235422`, :code:`-6.9965744`, :code:`-2`
+    - No
+    - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
+  * - sun_scale
+    - |number|
+    - :code:`1`
+    - Yes
+    - Scale of the sun power in the sky.
+  * - sun_radius_scale
+    - |number|
+    - :code:`1`
+    - No
+    - Scale of the sun radius in the sky.
 
 .. subfigstart::
   
-.. figure:: images/lig_sun.jpg
+.. figure:: images/light_sun.jpg
   :width: 90%
 
   Sun light infinitely away from the scene. In contrary to the directional light, the sun casts smooth shadows depending on the scale of the sun radius.
@@ -200,30 +211,36 @@ Sky Light (:monosp:`sky`)
 
 .. objectparameters::
 
- * - ground
-   - |color|
-   - (1,1,1)
-   - Ground color of the sky model.
- * - turbidity
-   - |number|
-   - 3
-   - Turbidity factor of the sky model.
- * - direction
-   - |vector|
-   - (0,0,1)
-   - Direction of the incoming sun towards the scene.
- * - elevation, azimuth
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
- * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
-   - |number|
-   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
- * - scale
-   - |color|
-   - (1,1,1)
-   - Scale factor multiplied to the radiance.
+  * - ground
+    - |color|
+    - :code:`1`
+    - No
+    - Ground color of the sky model.
+  * - turbidity
+    - |number|
+    - :code:`3`
+    - No
+    - Turbidity factor of the sky model.
+  * - direction
+    - |vector|
+    - :code:`(0,0,1)`
+    - No
+    - Direction of the incoming sun towards the scene.
+  * - elevation, azimuth
+    - |number|
+    - :code:`0`, :code:`0`
+    - No
+    - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
+  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
+    - |number|
+    - :code:`2020`, :code:`5`, :code:`6`, :code:`12`, :code:`0`, :code:`0`, :code:`49.235422`, :code:`-6.9965744`, :code:`-2`
+    - No
+    - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
+  * - scale
+    - |color|
+    - :code:`1`
+    - Yes
+    - Scale factor multiplied to the radiance.
    
 This sky model is based on the paper "An Analytic Model for Full Spectral Sky-Dome Radiance"
 and the 2013 IEEE CG&A paper "Adding a Solar Radiance Function to the Hosek Skylight Model" both by 
@@ -231,7 +248,7 @@ Lukas Hosek and Alexander Wilkie, both Charles University in Prague, Czech Repub
 
 .. subfigstart::
   
-.. figure:: images/lig_sky.jpg
+.. figure:: images/light_sky.jpg
   :width: 90%
 
   Sky light with default settings.
@@ -245,24 +262,24 @@ CIE Uniform Sky Model (:monosp:`cie_uniform`)
 
 .. objectparameters::
 
- * - zenith
-   - |color|
-   - (1,1,1)
-   - Zenith color of the sky model.
-
- * - ground
-   - |color|
-   - (1,1,1)
-   - Ground color of the sky model.
-
- * - ground_brightness
-   - |number|
-   - 0.2
-   - Brightness of the ground.
+  * - zenith
+    - |color|
+    - :code:`1`
+    - Yes
+    - Zenith color of the sky model.
+  * - ground
+    - |color|
+    - :code:`1`
+    - Yes
+    - Ground color of the sky model.
+  * - ground_brightness
+    - |number|
+    - :code:`0.2`
+    - Brightness of the ground.
    
 .. subfigstart::
   
-.. figure:: images/lig_cie_uniform.jpg
+.. figure:: images/light_cie_uniform.jpg
   :width: 90%
 
   CIE uniform sky model.
@@ -276,24 +293,25 @@ CIE Cloudy Sky Model (:monosp:`cie_cloudy`)
 
 .. objectparameters::
 
- * - zenith
-   - |color|
-   - (1,1,1)
-   - Zenith color of the sky model.
-
- * - ground
-   - |color|
-   - (1,1,1)
-   - Ground color of the sky model.
-
- * - ground_brightness
-   - |number|
-   - 0.2
-   - Brightness of the ground.
+  * - zenith
+    - |color|
+    - :code:`1`
+    - Yes
+    - Zenith color of the sky model.
+  * - ground
+    - |color|
+    - :code:`1`
+    - Yes
+    - Ground color of the sky model.
+  * - ground_brightness
+    - |number|
+    - :code:`0.2`
+    - Yes
+    - Brightness of the ground.
    
 .. subfigstart::
   
-.. figure:: images/lig_cie_cloudy.jpg
+.. figure:: images/light_cie_cloudy.jpg
   :width: 90%
 
   CIE cloudy sky model.
@@ -307,42 +325,50 @@ CIE Clear Sky Model (:monosp:`cie_clear`)
 
 .. objectparameters::
 
- * - zenith
-   - |color|
-   - (1,1,1)
-   - Zenith tint of the sky model.
- * - ground
-   - |color|
-   - (1,1,1)
-   - Ground tint of the sky model.
- * - ground_brightness
-   - |number|
-   - 0.2
-   - Brightness of the ground.
- * - turbidity
-   - |number|
-   - 2.45
-   - Turbidity factor of sky model. This parameter can not be an expression (yet).
- * - direction
-   - |vector|
-   - (0,0,1)
-   - Direction of the incoming sun towards the scene.
- * - elevation, azimuth
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
- * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
-   - |number|
-   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
- * - scale
-   - |color|
-   - (1,1,1)
-   - Scale factor multiplied to the radiance.
+  * - zenith
+    - |color|
+    - :code:`1`
+    - No
+    - Zenith tint of the sky model.
+  * - ground
+    - |color|
+    - :code:`1`
+    - No
+    - Ground tint of the sky model.
+  * - ground_brightness
+    - |number|
+    - :code:`0.2`
+    - No
+    - Brightness of the ground.
+  * - turbidity
+    - |number|
+    - :code:`2.45`
+    - No
+    - Turbidity factor of sky model. This parameter can not be an expression (yet).
+  * - direction
+    - |vector|
+    - :code:`(0,0,1)`
+    - No
+    - Direction of the incoming sun towards the scene.
+  * - elevation, azimuth
+    - |number|
+    - :code:`0`, :code:`0`
+    - No
+    - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
+  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
+    - |number|
+    - :code:`2020`, :code:`5`, :code:`6`, :code:`12`, :code:`0`, :code:`0`, :code:`49.235422`, :code:`-6.9965744`, :code:`-2`
+    - No
+    - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
+  * - scale
+    - |color|
+    - :code:`1`
+    - Yes
+    - Scale factor multiplied to the radiance.
    
 .. subfigstart::
   
-.. figure:: images/lig_cie_clear.jpg
+.. figure:: images/light_cie_clear.jpg
   :width: 90%
 
   CIE clear sky model.
@@ -356,42 +382,50 @@ CIE Intermediate Sky Model (:monosp:`cie_intermediate`)
 
 .. objectparameters::
 
- * - zenith
-   - |color|
-   - (1,1,1)
-   - Zenith tint of the sky model.
- * - ground
-   - |color|
-   - (1,1,1)
-   - Ground tint of the sky model.
- * - ground_brightness
-   - |number|
-   - 0.2
-   - Brightness of the ground.
- * - turbidity
-   - |number|
-   - 2.45
-   - Turbidity factor of sky model. This parameter can not be an expression (yet).
- * - direction
-   - |vector|
-   - (0,0,1)
-   - Direction of the incoming sun towards the scene.
- * - elevation, azimuth
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
- * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
-   - |number|
-   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
- * - scale
-   - |color|
-   - (1,1,1)
-   - Scale factor multiplied to the radiance.
+  * - zenith
+    - |color|
+    - :code:`1`
+    - No
+    - Zenith tint of the sky model.
+  * - ground
+    - |color|
+    - :code:`1`
+    - No
+    - Ground tint of the sky model.
+  * - ground_brightness
+    - |number|
+    - :code:`0.2`
+    - No
+    - Brightness of the ground.
+  * - turbidity
+    - |number|
+    - :code:`2.45`
+    - No
+    - Turbidity factor of sky model. This parameter can not be an expression (yet).
+  * - direction
+    - |vector|
+    - :code:`(0,0,1)`
+    - No
+    - Direction of the incoming sun towards the scene.
+  * - elevation, azimuth
+    - |number|
+    - :code:`0`, :code:`0`
+    - No
+    - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
+  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
+    - |number|
+    - :code:`2020`, :code:`5`, :code:`6`, :code:`12`, :code:`0`, :code:`0`, :code:`49.235422`, :code:`-6.9965744`, :code:`-2`
+    - No
+    - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
+  * - scale
+    - |color|
+    - :code:`1`
+    - Yes
+    - Scale factor multiplied to the radiance.
    
 .. subfigstart::
   
-.. figure:: images/lig_cie_intermediate.jpg
+.. figure:: images/light_cie_intermediate.jpg
   :width: 90%
 
   CIE intermediate sky model.
@@ -405,42 +439,65 @@ Perez Sky Model (:monosp:`perez`)
 
 .. objectparameters::
 
- * - direction
-   - |vector|
-   - (0,0,1)
-   - Direction of the light towards the scene.
+  * - direction
+    - |vector|
+    - :code:`(0,0,1)`
+    - No
+    - Direction of the light towards the scene.
+  * - elevation, azimuth
+    - |number|
+    - :code:`0`, :code:`0`
+    - No
+    - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
+  * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
+    - |number|
+    - :code:`2020`, :code:`5`, :code:`6`, :code:`12`, :code:`0`, :code:`0`, :code:`49.235422`, :code:`-6.9965744`, :code:`-2`
+    - No
+    - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
+  * - luminance
+    - |color|
+    - :code:`1`
+    - No
+    - Luminance of the sky model. Set this to 1 to prevent the parameter :monosp:`zenith` to be applied.
+  * - zenith
+    - |color|
+    - :code:`1`
+    - No
+    - Zenith color of the sky model. This can not be used together with :monosp:`luminance`.
+  * - ground
+    - |color|
+    - :code:`1`
+    - No
+    - Ground tint of the sky model. The ground has to be explicitly given.
+  * - a, b, c, d, e
+    - |number|
+    - :code:`1`, :code:`1`, :code:`1`, :code:`1`, :code:`1`
+    - No
+    - Perez explicit parameters. Can not be used with other options specifying Perez parameters.
+  * - clearness, brightness
+    - |number|
+    - :code:`1`, :code:`0.2`
+    - No
+    - Perez specified parameters to populate a, b, c, d and e. Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
+  * - diffuse_irradiance, direct_irradiance
+    - |number|
+    - :code:`1`, :code:`1`
+    - No
+    - Diffuse horizontal irradiance (W/m^2) and direct normal irradiance (W/m^2). Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
+  * - diffuse_illuminance, direct_illuminance
+    - |number|
+    - :code:`1`, :code:`1`
+    - No
+    - Diffuse horizontal illuminance (Lux) and direct normal illuminance (Lux). Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
    
- * - elevation, azimuth
-   - |number|
-   - 0, 0
-   - Instead of :monosp:`direction` the elevation (in degrees above the horizon) and azimuth (in degrees west of south) of a celestial object can be used.
-   
- * - year, month, day, hour, minute, seconds, latitude, longitude, timezone
-   - |number|
-   - 2020, 5, 6, 12, 0, 0, 49.235422, -6.9965744, -2
-   - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
+.. NOTE:: Output is in W m^-2 sr^-1 solar radiation, which equals the "-O 1" parameter in ``gendaylit`` from the `Radiance <https://www.radiance-online.org/>`_ framework. Support of the default "-O 0" is planned 
 
- * - luminance
-   - |color|
-   - (1,1,1)
-   - Luminance of the sky model.
-
- * - zenith
-   - |color|
-   - (1,1,1)
-   - Zenith color of the sky model. This can not be used together with :monosp:`luminance`.
-
- * - a, b, c, d, e
-   - |number|
-   - 1,1,1,1,1
-   - Perez specific parameters.
-   
 .. subfigstart::
   
-.. figure:: images/lig_perez.jpg
+.. figure:: images/light_perez.jpg
   :width: 90%
 
-  Perez sky model with default settings. The sky model has no ground term, therefore everything below the horizon is displayed in black.
+  Perez sky model with clearness = 1, brightness = 0.01 and other parameters.
 
 .. subfigend::
   :width: 0.6
@@ -451,22 +508,25 @@ Environment Light (:monosp:`env`)
 
 .. objectparameters::
 
- * - radiance
-   - |color|
-   - (1,1,1)
-   - Radiance of the sky model. This can also be a texture.
- * - scale
-   - |color|
-   - (1,1,1)
-   - Scale factor multiplied to the radiance. Only really useful in combination with a texture.
- * - cdf
-   - |bool|
-   - true
-   - Construct a 2d cdf for sampling purposes. Will only be considered if parameter `radiance` is an :monosp:`image` texture (without PExpr and other terms)
+  * - radiance
+    - |color|
+    - :code:`1`
+    - Yes
+    - Radiance of the sky model. This can also be a texture.
+  * - scale
+    - |color|
+    - :code:`1`
+    - Yes
+    - Scale factor multiplied to the radiance. Only really useful in combination with a texture.
+  * - cdf
+    - |bool|
+    - |true|
+    - No
+    - Construct a 2d cdf for sampling purposes. Will only be considered if parameter `radiance` is an :monosp:`image` texture (without PExpr and other terms)
 
 .. subfigstart::
   
-.. figure:: images/lig_env.jpg
+.. figure:: images/light_env.jpg
   :width: 90%
 
   Environment light with EXR environment map used throughout the documentation.

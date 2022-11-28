@@ -36,12 +36,8 @@ fn @make_pos_sample(pos: Vec3, pdf: f32) = PosSample {
 };
 
 // Samples a point uniformly on a triangle
-fn @sample_triangle(mut u: f32, mut v: f32) -> (f32, f32) {
-    if (u + v > 1) {
-        u = 1 - u;
-        v = 1 - v;
-    }
-    (u, v)
+fn @sample_triangle(u: f32, v: f32) -> (f32, f32) {
+    select(u + v > 1, (1 - u, 1 - v), (u, v))
 }
 
 // Probability density function for uniform sphere sampling

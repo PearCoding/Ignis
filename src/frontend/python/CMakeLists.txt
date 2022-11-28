@@ -20,9 +20,9 @@ set_target_properties(pyignis PROPERTIES
 pybind11_extension(pyignis)
 add_custom_command(TARGET pyignis POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ignis "${OUTPUT_DIR}/ignis"
-                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/pyproject.toml "${OUTPUT_DIR}/pyproject.toml"
-                   COMMAND ${CMAKE_COMMAND} -E copy ${Ignis_SOURCE_DIR}/README.md "${OUTPUT_DIR}/README.md"
-                   COMMAND ${CMAKE_COMMAND} -E copy ${Ignis_SOURCE_DIR}/LICENSE.txt "${OUTPUT_DIR}/LICENSE")
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/pyproject.toml "${OUTPUT_DIR}/pyproject.toml"
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${Ignis_SOURCE_DIR}/README.md "${OUTPUT_DIR}/README.md"
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${Ignis_SOURCE_DIR}/LICENSE.txt "${OUTPUT_DIR}/LICENSE")
 add_checks(pyignis)
 install(TARGETS pyignis ${_IG_RUNTIME_SET} COMPONENT python LIBRARY DESTINATION ignis)
 

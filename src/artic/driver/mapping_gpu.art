@@ -132,17 +132,15 @@ fn @gpu_hit_shade( acc: Accelerator
         let ray_id  = primary.rays.id(i);
         let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
 
-        let entity    = @entities(ent_id);
-        let shape     = @shapes(entity.shape_id);
-        let local_ray = transform_ray(ray, entity.local_mat);
+        let entity = @entities(ent_id);
+        let shape  = @shapes(entity.shape_id);
 
         let hit      = read_primary_hit(i, 0);
-        let lcl_surf = shape.surface_element(local_ray, hit);
-        let glb_surf = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
+        let pmset    = make_standard_pointmapperset(shape, entity);
+        let glb_surf = shape.surface_element(ray, hit, pmset);
         
-        let crd   = make_standard_pointmapperset(shape, entity);
-        let ctx   = make_surface_shading_context(ent_id, pixel, ray, hit, glb_surf, crd);
-        let mat   = @shader(ctx);
+        let ctx = make_surface_shading_context(ent_id, pixel, ray, hit, glb_surf, pmset);
+        let mat = @shader(ctx);
         if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) {
             framebuffer.splat(pixel, color);
         }

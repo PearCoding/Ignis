@@ -489,13 +489,11 @@ fn @cpu_hit_shade(entity_id: i32
         let primary_payload   = get_primary_payload(i, 0);
         let secondary_payload = get_secondary_payload(i, 0);
 
-        let local_ray = transform_ray(ray, entity.local_mat);
-        let lcl_surf  = shape.surface_element(local_ray, hit);
-        let glb_surf  = map_surface_element(lcl_surf, entity.global_mat, entity.normal_mat);
+        let pmset    = make_standard_pointmapperset(shape, entity);
+        let glb_surf = shape.surface_element(ray, hit, pmset);
         
         // Execute hit point shading, and add the contribution of each lane to the frame buffer
-        let crd       = make_standard_pointmapperset(shape, entity);
-        let ctx       = make_surface_shading_context(entity.id, pixel, ray, hit, glb_surf, crd);
+        let ctx       = make_surface_shading_context(entity.id, pixel, ray, hit, glb_surf, pmset);
         let mat       = @shader(ctx);
         let hit_color = if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) { color } else { color_builtins::black };
         

@@ -3,6 +3,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "Image.h"
 #include "Logger.h"
 #include "Runtime.h"
 
@@ -33,7 +34,6 @@ public:
         , mPath(path)
         , mCreated(false)
     {
-        IG_ASSERT(source.empty() ^ path.empty(), "Only source or a path is allowed");
     }
 
     Runtime* enter()
@@ -79,7 +79,7 @@ private:
                 return nullptr;
             }
         } else {
-            if (!sInstance->loadFromString(mSource)) {
+            if (!sInstance->loadFromString(mSource, mPath)) {
                 sInstance.reset();
                 return nullptr;
             }
@@ -120,7 +120,6 @@ PYBIND11_MODULE(pyignis, m)
         .value("Nvidia", GPUVendor::Nvidia)
         .value("Unknown", GPUVendor::Unknown);
 
-    // TODO: Add missing functions, etc
     py::class_<Target>(m, "Target")
         .def(py::init([]() { return Target(); }))
         .def_property_readonly("IsValid", &Target::isValid)
@@ -139,7 +138,7 @@ PYBIND11_MODULE(pyignis, m)
         .def_static("makeGPU", &Target::makeGPU)
         .def_static("pickBest", &Target::pickBest)
         .def_static("pickCPU", &Target::pickCPU)
-        .def_static("pickGPU", &Target::pickGPU);
+        .def_static("pickGPU", &Target::pickGPU, py::arg("device") = 0);
 
     py::class_<RuntimeOptions>(m, "RuntimeOptions")
         .def(py::init([]() { return RuntimeOptions(); }))
@@ -150,7 +149,9 @@ PYBIND11_MODULE(pyignis, m)
         .def_readwrite("AcquireStats", &RuntimeOptions::AcquireStats)
         .def_readwrite("SPI", &RuntimeOptions::SPI)
         .def_readwrite("OverrideCamera", &RuntimeOptions::OverrideCamera)
-        .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique);
+        .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique)
+        .def_readwrite("OverrideFilmSize", &RuntimeOptions::OverrideFilmSize)
+        .def_readwrite("EnableTonemapping", &RuntimeOptions::EnableTonemapping);
 
     py::class_<Ray>(m, "Ray")
         .def(py::init([](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, FltMax) }; }))
@@ -187,6 +188,37 @@ PYBIND11_MODULE(pyignis, m)
                     true);
             },
             py::arg("aov") = "")
+        .def("tonemap", [](Runtime& r, py::buffer output) {
+            TonemapSettings settings;
+            settings.AOV            = "";
+            settings.ExposureFactor = 1;
+            settings.ExposureOffset = 0;
+            settings.Method         = 0;
+            settings.Scale          = r.currentIterationCount() > 0 ? 1.0f / r.currentIterationCount() : 1.0f;
+            settings.UseGamma       = true;
+
+            const size_t width  = r.framebufferWidth();
+            const size_t height = r.framebufferHeight();
+
+            py::buffer_info info = output.request(true);
+
+            /* Some basic validation checks ... */
+            if (info.format != py::format_descriptor<uint8>::format())
+                throw std::runtime_error("Incompatible buffer: Expected a byte array!");
+
+            if (info.ndim != 1 && info.ndim != 2 && info.ndim != 3)
+                throw std::runtime_error("Incompatible buffer: Expected one, two or three dimensional buffer");
+
+            py::ssize_t linear_size = 1;
+            for (py::ssize_t i = 0; i < info.ndim; ++i)
+                linear_size *= info.shape[i];
+
+            if (linear_size != static_cast<py::ssize_t>(width * height * 4))
+                throw std::runtime_error("Incompatible buffer: Buffer has not the correct size");
+
+            // TODO: Check stride?
+            r.tonemap((uint32*)info.ptr, settings);
+        })
         .def("setParameter", py::overload_cast<const std::string&, int>(&Runtime::setParameter))
         .def("setParameter", py::overload_cast<const std::string&, float>(&Runtime::setParameter))
         .def("setParameter", py::overload_cast<const std::string&, const Vector3f&>(&Runtime::setParameter))
@@ -216,5 +248,29 @@ PYBIND11_MODULE(pyignis, m)
     m.def("loadFromFile", [](const std::string& path) { return RuntimeWrap(RuntimeOptions::makeDefault(), std::string{}, path); });
     m.def("loadFromFile", [](const std::string& path, const RuntimeOptions& opts) { return RuntimeWrap(opts, std::string{}, path); });
     m.def("loadFromString", [](const std::string& str) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, std::string{}); });
+    m.def("loadFromString", [](const std::string& str, const std::string& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, dir); });
     m.def("loadFromString", [](const std::string& str, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, std::string{}); });
+    m.def("loadFromString", [](const std::string& str, const std::string& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, dir); });
+    m.def("saveExr", [](const std::string& path, py::buffer b) {
+        py::buffer_info info = b.request();
+
+        /* Some basic validation checks ... */
+        if (info.format != py::format_descriptor<float>::format())
+            throw std::runtime_error("Incompatible buffer: Expected a float array!");
+
+        if (info.ndim != 2 && info.ndim != 3)
+            throw std::runtime_error("Incompatible buffer: Expected two dimensional or three dimensional buffer");
+
+        pybind11::ssize_t width    = info.shape[0];
+        pybind11::ssize_t height   = info.shape[1];
+        pybind11::ssize_t channels = info.ndim == 3 ? info.shape[2] : 1;
+
+        if (width <= 0 || height <= 0)
+            throw std::runtime_error("Incompatible buffer: Expected valid buffer dimensions");
+
+        if (channels != 1 && channels != 3 && channels != 4)
+            throw std::runtime_error("Incompatible buffer: Only 1, 3 or 4 channels supported");
+
+        return Image::save(path, (const float*)info.ptr, width, height, channels);
+    });
 }

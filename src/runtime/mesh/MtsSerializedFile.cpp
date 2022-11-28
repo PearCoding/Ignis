@@ -47,11 +47,11 @@ public:
                 mStream.next_in  = mBuffer.data();
                 mStream.avail_in = (uInt)std::min(remaining, mBuffer.size());
                 if (mStream.avail_in == 0)
-                    IG_LOG(L_ERROR) << "Read less data than expected (" << size << " more bytes required)" << std::endl;
+                    IG_LOG(L_ERROR) << "Read less data than expected (" << FormatMemory(size) << " missing)" << std::endl;
                 mIn.read(reinterpret_cast<char*>(mBuffer.data()), mStream.avail_in);
 
                 if (!mIn.good())
-                    IG_LOG(L_ERROR) << "Could not read " << mStream.avail_in << " bytes" << std::endl;
+                    IG_LOG(L_ERROR) << "Could not read " << FormatMemory(mStream.avail_in) << std::endl;
 
                 mPos += mStream.avail_in;
             }
@@ -102,10 +102,10 @@ enum MeshFlags {
 };
 
 template <typename T>
-void extractMeshVertices(TriMesh& trimesh, CompressedStream& cin, uint32_t flags)
+void extractMeshVertices(TriMesh& tri_mesh, CompressedStream& cin, uint32_t flags)
 {
     // Vertex Positions
-    for (auto& v : trimesh.vertices) {
+    for (auto& v : tri_mesh.vertices) {
         T x, y, z;
         cin.read(&x);
         cin.read(&y);
@@ -115,7 +115,7 @@ void extractMeshVertices(TriMesh& trimesh, CompressedStream& cin, uint32_t flags
 
     // Normals
     if (flags & MF_VERTEXNORMALS) {
-        for (auto& n : trimesh.normals) {
+        for (auto& n : tri_mesh.normals) {
             T x, y, z;
             cin.read(&x);
             cin.read(&y);
@@ -126,7 +126,7 @@ void extractMeshVertices(TriMesh& trimesh, CompressedStream& cin, uint32_t flags
 
     // UV
     if (flags & MF_TEXCOORDS) {
-        for (auto& uv : trimesh.texcoords) {
+        for (auto& uv : tri_mesh.texcoords) {
             T x, y;
             cin.read(&x);
             cin.read(&y);
@@ -136,7 +136,7 @@ void extractMeshVertices(TriMesh& trimesh, CompressedStream& cin, uint32_t flags
 
     // Vertex Color (ignored)
     if (flags & MF_VERTEXCOLORS) {
-        for (size_t i = 0; i < trimesh.vertices.size() * 3; ++i) {
+        for (size_t i = 0; i < tri_mesh.vertices.size() * 3; ++i) {
             T _ignore;
             cin.read(&_ignore);
         }
@@ -144,19 +144,19 @@ void extractMeshVertices(TriMesh& trimesh, CompressedStream& cin, uint32_t flags
 }
 
 template <typename T>
-void extractMeshIndices(TriMesh& trimesh, CompressedStream& cin)
+void extractMeshIndices(TriMesh& tri_mesh, CompressedStream& cin)
 {
-    size_t tricount = trimesh.indices.size() / 4;
+    size_t tricount = tri_mesh.indices.size() / 4;
     // Indices
     for (size_t i = 0; i < tricount; ++i) {
         T x, y, z;
         cin.read(&x);
         cin.read(&y);
         cin.read(&z);
-        trimesh.indices[i * 4 + 0] = (uint32)x;
-        trimesh.indices[i * 4 + 1] = (uint32)y;
-        trimesh.indices[i * 4 + 2] = (uint32)z;
-        trimesh.indices[i * 4 + 3] = 0;
+        tri_mesh.indices[i * 4 + 0] = (uint32)x;
+        tri_mesh.indices[i * 4 + 1] = (uint32)y;
+        tri_mesh.indices[i * 4 + 2] = (uint32)z;
+        tri_mesh.indices[i * 4 + 3] = 0;
     }
 }
 
@@ -277,51 +277,44 @@ TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
         return TriMesh{};
     }
 
-    TriMesh trimesh;
-    trimesh.vertices.resize(vertexCount);
-    trimesh.normals.resize(vertexCount);
-    trimesh.texcoords.resize(vertexCount);
-    trimesh.face_normals.resize(triCount);
-    trimesh.face_inv_area.resize(triCount);
-    trimesh.indices.resize(triCount * 4);
+    TriMesh tri_mesh;
+    tri_mesh.vertices.resize(vertexCount);
+    tri_mesh.normals.resize(vertexCount);
+    tri_mesh.texcoords.resize(vertexCount);
+    tri_mesh.indices.resize(triCount * 4);
 
     if (mesh_flags & MF_DOUBLE)
-        extractMeshVertices<double>(trimesh, cin, mesh_flags);
+        extractMeshVertices<double>(tri_mesh, cin, mesh_flags);
     else
-        extractMeshVertices<float>(trimesh, cin, mesh_flags);
+        extractMeshVertices<float>(tri_mesh, cin, mesh_flags);
 
     if (vertexCount > 0xFFFFFFFF)
-        extractMeshIndices<uint64_t>(trimesh, cin);
+        extractMeshIndices<uint64_t>(tri_mesh, cin);
     else
-        extractMeshIndices<uint32_t>(trimesh, cin);
+        extractMeshIndices<uint32_t>(tri_mesh, cin);
 
     // Cleanup
     // TODO: This does not work due to fp precision problems
-    // const size_t removedBadAreas = trimesh.removeZeroAreaTriangles();
+    // const size_t removedBadAreas = tri_mesh.removeZeroAreaTriangles();
     // if (removedBadAreas != 0)
     //     IG_LOG(L_WARNING) << "MtsFile " << path << ": Removed " << removedBadAreas << " triangles with zero area" << std::endl;
 
     // Normals
-    bool hasBadAreas = false;
-    trimesh.computeFaceNormals(&hasBadAreas);
-    // if (hasBadAreas) // Should always be zero
-    //     IG_LOG(L_WARNING) << "MtsFile " << path << ": Triangle mesh contains triangles with zero area" << std::endl;
-
     if (!(mesh_flags & MF_VERTEXNORMALS)) {
         IG_LOG(L_INFO) << "MtsFile " << path << ": No normals are present, computing smooth approximation." << std::endl;
-        trimesh.computeVertexNormals();
+        tri_mesh.computeVertexNormals();
     } else {
         bool hasBadNormals = false;
-        trimesh.fixNormals(&hasBadNormals);
+        tri_mesh.fixNormals(&hasBadNormals);
         if (hasBadNormals)
             IG_LOG(L_WARNING) << "MtsFile " << path << ": Some normals were incorrect and thus had to be replaced with arbitrary values." << std::endl;
     }
 
     if (!(mesh_flags & MF_TEXCOORDS)) {
         IG_LOG(L_INFO) << "MtsFile " << path << ": No texture coordinates are present, using default value." << std::endl;
-        std::fill(trimesh.texcoords.begin(), trimesh.texcoords.end(), Vector2f::Zero());
+        tri_mesh.makeTexCoordsNormalized();
     }
 
-    return trimesh;
+    return tri_mesh;
 }
 } // namespace IG::mts

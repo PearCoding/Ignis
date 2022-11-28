@@ -103,6 +103,7 @@ set(SRC
   log/FileLogListener.h
   log/LogListener.h
   math/BoundingBox.h
+  math/Spherical.h
   math/Tangent.h
   math/Triangle.h
   measured/KlemsLoader.cpp
@@ -136,6 +137,9 @@ set(SRC
   serialization/VectorSerializer.cpp
   serialization/VectorSerializer.h
   skysun/ElevationAzimuth.h
+  skysun/Illuminance.h
+  skysun/PerezModel.cpp
+  skysun/PerezModel.h
   skysun/SkyModel.cpp
   skysun/SkyModel.h
   skysun/SkySunConfig.h
@@ -169,6 +173,7 @@ set(SRC
   shape/ShapeProvider.h
   shape/SphereProvider.cpp
   shape/SphereProvider.h
+  shape/SphereShape.h
   shape/TriMeshProvider.cpp
   shape/TriMeshProvider.h
   shape/TriShape.h

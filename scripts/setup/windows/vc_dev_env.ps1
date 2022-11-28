@@ -3,7 +3,7 @@ $Arch="amd64"
 # A simplified version of the Launch.VsDevShell.ps1
 function LaunchDevShell {
     $VsWherePath = "`"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe`""    
-    $config = Invoke-Expression "& $VsWherePath -format json" | ConvertFrom-Json
+    $config = Invoke-Expression "& $VsWherePath -latest -format json" | ConvertFrom-Json
     $basePath = $config.installationPath
     $instanceId = $config.instanceId
 

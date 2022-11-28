@@ -24,16 +24,3 @@ fn @invert_surface_element(surf: SurfaceElement) = surf.{
     face_normal = vec3_neg(surf.face_normal),
     local       = flip_orthonormal_mat3x3(surf.local)
 };
-
-// Map local surface element to global surface element based on the given entity
-fn @map_surface_element(surf: SurfaceElement, global_mat: Mat3x4, normal_mat: Mat3x3) -> SurfaceElement {
-    let new_n    = mat3x3_mul(normal_mat, surf.face_normal);
-    let inv_area = safe_div(1, vec3_len(new_n));
-
-    surf.{
-        point       = mat3x4_transform_point(global_mat, surf.point),
-        face_normal = vec3_mulf(new_n, inv_area),
-        inv_area    = surf.inv_area * inv_area,
-        local       = mat3x3_normalize_cols(mat3x3_matmul(normal_mat, surf.local))
-    }
-}

@@ -1,6 +1,7 @@
 #include "ProgramOptions.h"
 #include "Runtime.h"
 #include "config/Build.h"
+#include "loader/Transpiler.h"
 
 #include <CLI/CLI.hpp>
 
@@ -74,6 +75,30 @@ public:
     {
     }
 };
+
+static void handleListPExprVariables()
+{
+    std::cout << Transpiler::availableVariables() << std::endl;
+}
+
+static void handleListPExprFunctions()
+{
+    std::cout << Transpiler::availableFunctions() << std::endl;
+}
+
+static void handleListCLIOptions(const CLI::App& app)
+{
+    const auto options = app.get_options();
+    for (auto option : options) {
+        const auto shortNames = option->get_snames();
+        for (const auto& s : shortNames)
+            std::cout << "-" << s << std::endl;
+
+        const auto longNames = option->get_lnames();
+        for (const auto& s : longNames)
+            std::cout << "--" << s << std::endl;
+    }
+}
 
 ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, const std::string& desc)
 {
@@ -168,13 +193,44 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         app.add_option("-o,--output", Output, "Writes the output image to a file");
     }
 
+    // Add some hidden commandline parameters
+    bool listPExprVariables = false;
+    bool listPExprFunctions = false;
+    bool listCLI            = false;
+    auto grp                = app.add_option_group("");
+    grp->add_flag("--list-pexpr-variables", listPExprVariables);
+    grp->add_flag("--list-pexpr-functions", listPExprFunctions);
+    grp->add_flag("--list-cli-options", listCLI);
+
+    auto handleHiddenExtras = [&]() {
+        if (listPExprVariables) {
+            handleListPExprVariables();
+            ShouldExit = true;
+        }
+        if (listPExprFunctions) {
+            handleListPExprFunctions();
+            ShouldExit = true;
+        }
+        if (listCLI) {
+            handleListCLIOptions(app);
+            ShouldExit = true;
+        }
+    };
+
     try {
         app.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
-        app.exit(e);
+        handleHiddenExtras();
+        if (!ShouldExit) // If true, exit is already handled
+            app.exit(e);
         ShouldExit = true;
         return;
     }
+
+    // Handle hidden options
+    handleHiddenExtras();
+    if (ShouldExit)
+        return;
 
     // Make sure the paths are given in absolutes
     try {

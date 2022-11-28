@@ -13,13 +13,42 @@ from .defaults import *
 
 
 def export_technique(result, scene):
-    if scene.cycles is None:
-        max_depth = 8
-        clamp = 0
-    else:
+    if getattr(scene, 'ignis', None) is not None and bpy.context.engine == 'IGNIS_RENDER':
+        if scene.ignis.integrator == 'PATH':
+            result["technique"] = {
+                "type": "path",
+                "max_depth": scene.ignis.max_ray_depth,
+                "clamp": scene.ignis.clamp_value
+            }
+            return
+        elif scene.ignis.integrator == 'VOLPATH':
+            result["technique"] = {
+                "type": "volpath",
+                "max_depth": scene.ignis.max_ray_depth,
+                "clamp": scene.ignis.clamp_value
+            }
+            return
+        elif scene.ignis.integrator == 'PPM':
+            result["technique"] = {
+                "type": "ppm",
+                "max_depth": scene.ignis.max_ray_depth,  # TODO
+                "clamp": scene.ignis.clamp_value,
+                "photons": scene.ignis.ppm_photons_per_pass
+            }
+            return
+        elif scene.ignis.integrator == 'AO':
+            result["technique"] = {"type": "ao"}
+            return
+    elif getattr(scene, 'cycles', None) is not None and bpy.context.engine == 'CYCLES':
         max_depth = scene.cycles.max_bounces
         clamp = max(scene.cycles.sample_clamp_direct,
                     scene.cycles.sample_clamp_indirect)
+    elif getattr(scene, 'eevee', None) is not None and bpy.context.engine == 'BLENDER_EEVEE':
+        max_depth = scene.eevee.gi_diffuse_bounces
+        clamp = scene.eevee.gi_glossy_clamp
+    else:
+        max_depth = 8
+        clamp = 0
 
     result["technique"] = {
         "type": "path",
@@ -142,7 +171,8 @@ def delete_none(_dict):
 
 
 def export_scene(filepath, context, use_selection, export_materials, export_lights, enable_background, enable_camera, enable_technique, copy_images):
-    depsgraph = context.evaluated_depsgraph_get()
+    depsgraph = context.evaluated_depsgraph_get() if not isinstance(
+        context, bpy.types.Depsgraph) else context
 
     # Write all materials and cameras to a dict with the layout of our json file
     result = {}
@@ -177,6 +207,13 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
     del result["_image_textures"]
     del result["_materials"]
     result = delete_none(result)
+
+    return result
+
+
+def export_scene_to_file(filepath, context, use_selection, export_materials, export_lights, enable_background, enable_camera, enable_technique, copy_images):
+    result = export_scene(filepath, context, use_selection, export_materials,
+                          export_lights, enable_background, enable_camera, enable_technique, copy_images)
 
     # Write the result into the .json
     with open(filepath, 'w') as fp:

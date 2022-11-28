@@ -1,6 +1,5 @@
 #include "LoaderUtils.h"
 #include "CDF.h"
-#include "skysun/SunLocation.h"
 
 #include <cctype>
 #include <sstream>
@@ -31,7 +30,6 @@ std::string LoaderUtils::inlineEntity(const Entity& entity, uint32 shapeID)
            << ", local_mat = " << LoaderUtils::inlineMatrix34(localMat)
            << ", global_mat = " << LoaderUtils::inlineMatrix34(globalMat)
            << ", normal_mat = " << LoaderUtils::inlineMatrix(normalMat)
-           << ", scale = " << std::abs(normalMat.determinant())
            << ", shape_id = " << shapeID << " }";
     return stream.str();
 }
@@ -116,33 +114,43 @@ std::string LoaderUtils::inlineColor(const Vector3f& color)
     return stream.str();
 }
 
+TimePoint LoaderUtils::getTimePoint(const Parser::Object& obj)
+{
+    TimePoint timepoint;
+    timepoint.Year    = obj.property("year").getInteger(timepoint.Year);
+    timepoint.Month   = obj.property("month").getInteger(timepoint.Month);
+    timepoint.Day     = obj.property("day").getInteger(timepoint.Day);
+    timepoint.Hour    = obj.property("hour").getInteger(timepoint.Hour);
+    timepoint.Minute  = obj.property("minute").getInteger(timepoint.Minute);
+    timepoint.Seconds = obj.property("seconds").getNumber(timepoint.Seconds);
+    return timepoint;
+}
+
+MapLocation LoaderUtils::getLocation(const Parser::Object& obj)
+{
+    MapLocation location;
+    location.Latitude  = obj.property("latitude").getNumber(location.Latitude);
+    location.Longitude = obj.property("longitude").getNumber(location.Longitude);
+    location.Timezone  = obj.property("timezone").getNumber(location.Timezone);
+    return location;
+}
+
 ElevationAzimuth LoaderUtils::getEA(const Parser::Object& obj)
 {
     if (obj.property("direction").isValid()) {
-        return ElevationAzimuth::fromDirection(obj.property("direction").getVector3(Vector3f(0, 0, 1)).normalized());
+        return ElevationAzimuth::fromDirectionYUp(obj.property("direction").getVector3(Vector3f(0, 0, 1)).normalized());
     } else if (obj.property("sun_direction").isValid()) {
-        return ElevationAzimuth::fromDirection(obj.property("sun_direction").getVector3(Vector3f(0, 0, 1)).normalized());
+        return ElevationAzimuth::fromDirectionYUp(obj.property("sun_direction").getVector3(Vector3f(0, 0, 1)).normalized());
     } else if (obj.property("elevation").isValid() || obj.property("azimuth").isValid()) {
         return ElevationAzimuth{ obj.property("elevation").getNumber(0), obj.property("azimuth").getNumber(0) };
     } else {
-        TimePoint timepoint;
-        MapLocation location;
-        timepoint.Year     = obj.property("year").getInteger(timepoint.Year);
-        timepoint.Month    = obj.property("month").getInteger(timepoint.Month);
-        timepoint.Day      = obj.property("day").getInteger(timepoint.Day);
-        timepoint.Hour     = obj.property("hour").getInteger(timepoint.Hour);
-        timepoint.Minute   = obj.property("minute").getInteger(timepoint.Minute);
-        timepoint.Seconds  = obj.property("seconds").getNumber(timepoint.Seconds);
-        location.Latitude  = obj.property("latitude").getNumber(location.Latitude);
-        location.Longitude = obj.property("longitude").getNumber(location.Longitude);
-        location.Timezone  = obj.property("timezone").getNumber(location.Timezone);
-        return computeSunEA(timepoint, location);
+        return computeSunEA(getTimePoint(obj), getLocation(obj));
     }
 }
 
 Vector3f LoaderUtils::getDirection(const Parser::Object& obj)
 {
-    return getEA(obj).toDirection();
+    return getEA(obj).toDirectionYUp();
 }
 
 LoaderUtils::CDFData LoaderUtils::setup_cdf(LoaderContext& ctx, const std::string& filename)

@@ -1,6 +1,18 @@
 #include "SunLocation.h"
 
+#include <time.h>
+
 namespace IG {
+
+int TimePoint::dayOfTheYear() const
+{
+    tm date      = {};
+    date.tm_year = Year - 1900;
+    date.tm_mon  = Month - 1;
+    date.tm_mday = Day;
+    mktime(&date);
+    return date.tm_yday;
+}
 
 /* Based on "Computing the Solar Vector" by Manuel Blanco-Muriel,
  * Diego C. Alarcon-Padilla, Teodoro Lopez-Moratalla, and Martin Lara-Coira,
@@ -10,10 +22,6 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
 {
     constexpr double EARTH_MEAN_RADIUS = 6371.01;   // In km
     constexpr double ASTRONOMICAL_UNIT = 149597890; // In km
-
-    // Auxiliary variables
-    double dY = 0;
-    double dX = 0;
 
     /* Calculate difference in days between the current Julian Day
        and JD 2451545.0, which is noon 1 January 2000 Universal Time */
@@ -57,10 +65,10 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
     double rightAscension = 0, declination = 0;
     {
         double sinEclipticLongitude = std::sin(eclipticLongitude);
-        dY                          = std::cos(eclipticObliquity) * sinEclipticLongitude;
-        dX                          = std::cos(eclipticLongitude);
+        double dY                   = std::cos(eclipticObliquity) * sinEclipticLongitude;
+        double dX                   = std::cos(eclipticLongitude);
         rightAscension              = std::atan2(dY, dX);
-        if (rightAscension < 0.0)
+        if (rightAscension < 0)
             rightAscension += 2 * Pi;
         declination = std::asin(std::sin(eclipticObliquity) * sinEclipticLongitude);
     }
@@ -68,8 +76,7 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
     // Calculate local zenith and azimuth angles
     double zenith = 0, azimuth = 0;
     {
-        double greenwichMeanSiderealTime = 6.6974243242
-                                           + 0.0657098283 * elapsedJulianDays + decHours;
+        double greenwichMeanSiderealTime = 6.6974243242 + 0.0657098283 * elapsedJulianDays + decHours;
 
         double localMeanSiderealTime = Deg2Rad * ((float)((greenwichMeanSiderealTime * 15 - location.Longitude)));
 
@@ -80,15 +87,13 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
         double hourAngle    = localMeanSiderealTime - rightAscension;
         double cosHourAngle = std::cos(hourAngle);
 
-        zenith = std::acos(cosLatitude * cosHourAngle
-                               * std::cos(declination)
-                           + std::sin(declination) * sinLatitude);
+        zenith = std::acos(cosLatitude * cosHourAngle * std::cos(declination) + std::sin(declination) * sinLatitude);
 
-        dY = -std::sin(hourAngle);
-        dX = std::tan(declination) * cosLatitude - sinLatitude * cosHourAngle;
+        double dY = -std::sin(hourAngle);
+        double dX = std::tan(declination) * cosLatitude - sinLatitude * cosHourAngle;
 
         azimuth = std::atan2(dY, dX);
-        if (azimuth < 0.0)
+        if (azimuth < 0)
             azimuth += 2 * Pi;
 
         // Parallax Correction

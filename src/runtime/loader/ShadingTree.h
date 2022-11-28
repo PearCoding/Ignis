@@ -89,6 +89,9 @@ public:
     void addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const VectorOptions& options = VectorOptions::Full());
     void addTexture(const std::string& name, const Parser::Object& obj, bool hasDef = true, const TextureOptions& options = TextureOptions::Default());
 
+    // Insert number, replacing previous definitions
+    void insertNumber(const std::string& name, const Parser::Property& prop, const NumberOptions& options = NumberOptions::Full());
+
     // Approximation
     float computeNumber(const std::string& name, const Parser::Object& obj, float def = 0) const;
     Vector3f computeColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero()) const;
@@ -112,8 +115,11 @@ public:
     void signalError();
 
 private:
+
     inline const Closure& currentClosure() const { return mClosures.back(); }
     inline Closure& currentClosure() { return mClosures.back(); }
+
+    std::string handlePropertyNumber(const std::string& name, const Parser::Property& prop, const NumberOptions& options);
 
     std::string handleTexture(const std::string& prop_name, const std::string& expr, bool needColor);
     std::string acquireNumber(const std::string& prop_name, float number, const NumberOptions& options);
