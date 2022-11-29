@@ -1,13 +1,6 @@
-/* Make each footer item in-line so they stack horizontally instead of vertically */
-.footer-item {
-    display: inline-block;
-}
-
-/* Add a separating border line for all but the last item */
-.footer-item:not(:last-child) {
-    border-right: 1px solid var(--pst-color-text-base);
-    margin-right: .5em;
-    padding-right: .5em;
+/* Some overrides */
+:root {
+    --pst-header-height: 40px;
 }
 
 html[data-theme="light"] {
@@ -20,6 +13,24 @@ html[data-theme="dark"] {
     --pst-color-on-background: #1b1b1b;
 }
 
+/* Reduce primary sidebar */
+.bd-sidebar-primary {
+    max-width:20%;
+}
+
+/* Make each footer item in-line so they stack horizontally instead of vertically */
+.footer-item {
+    display: inline-block;
+}
+
+/* Add a separating border line for all but the last item */
+.footer-item:not(:last-child) {
+    border-right: 1px solid var(--pst-color-text-base);
+    margin-right: .5em;
+    padding-right: .5em;
+}
+
+/* Roles */
 .paramtype {
 	font-family: 'Courier New', Courier, monospace;
     color: var(--pst-color-primary);
