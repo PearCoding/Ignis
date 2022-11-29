@@ -34,7 +34,7 @@ Smooth diffuse (:monosp:`diffuse`)
 
 .. subfigstart::
   
-.. figure:: images/mat_diffuse.jpg
+.. figure:: images/bsdf_diffuse.jpg
   :width: 90%
 
   Diffuse
@@ -64,7 +64,7 @@ Rough diffuse (:monosp:`roughdiffuse`)
 
 .. subfigstart::
 
-.. figure::  images/mat_roughdiffuse.jpg
+.. figure::  images/bsdf_roughdiffuse.jpg
   :width: 90%
   :align: center
   
@@ -110,13 +110,13 @@ Smooth dielectric (:monosp:`dielectric`)
 
 .. subfigstart::
 
-.. figure::  images/mat_dielectric.jpg
+.. figure::  images/bsdf_dielectric.jpg
   :width: 90%
   :align: center
   
   Dielectric
 
-.. figure::  images/mat_thindielectric.jpg
+.. figure::  images/bsdf_thindielectric.jpg
   :width: 90%
   :align: center
   
@@ -161,7 +161,7 @@ Rough dielectric (:monosp:`roughdielectric`)
 
 .. subfigstart::
 
-.. figure::  images/mat_roughdielectric.jpg
+.. figure::  images/bsdf_roughdielectric.jpg
   :width: 90%
   :align: center
   
@@ -186,7 +186,7 @@ Perfect smooth mirror (:monosp:`mirror`)
 
 .. subfigstart::
 
-.. figure::  images/mat_mirror.jpg
+.. figure::  images/bsdf_mirror.jpg
   :width: 90%
   :align: center
   
@@ -222,7 +222,7 @@ Smooth conductor (:monosp:`conductor`)
 
 .. subfigstart::
 
-.. figure::  images/mat_conductor.jpg
+.. figure::  images/bsdf_conductor.jpg
   :width: 90%
   :align: center
   
@@ -263,7 +263,7 @@ Rough conductor (:monosp:`roughconductor`)
    
 .. subfigstart::
 
-.. figure::  images/mat_roughconductor.jpg
+.. figure::  images/bsdf_roughconductor.jpg
   :width: 90%
   :align: center
   
@@ -303,7 +303,7 @@ Smooth plastic (:monosp:`plastic`)
 
 .. subfigstart::
 
-.. figure::  images/mat_plastic.jpg
+.. figure::  images/bsdf_plastic.jpg
   :width: 90%
   :align: center
   
@@ -348,7 +348,7 @@ Rough plastic (:monosp:`roughplastic`)
 
 .. subfigstart::
 
-.. figure::  images/mat_roughplastic.jpg
+.. figure::  images/bsdf_roughplastic.jpg
   :width: 90%
   :align: center
   
@@ -378,7 +378,7 @@ Phong (:monosp:`phong`)
 
 .. subfigstart::
 
-.. figure::  images/mat_phong.jpg
+.. figure::  images/bsdf_phong.jpg
   :width: 90%
   :align: center
   
@@ -485,7 +485,7 @@ Disney *Principled* (:monosp:`principled`)
 
 .. subfigstart::
 
-.. figure::  images/mat_principled.jpg
+.. figure::  images/bsdf_principled.jpg
   :width: 90%
   :align: center
   
@@ -515,7 +515,7 @@ Blend (:monosp:`blend`)
 
 .. subfigstart::
 
-.. figure::  images/mat_blend.jpg
+.. figure::  images/bsdf_blend.jpg
   :width: 90%
   :align: center
   
@@ -550,7 +550,7 @@ Mask (:monosp:`mask`)
 
 .. subfigstart::
 
-.. figure::  images/mat_mask.jpg
+.. figure::  images/bsdf_mask.jpg
   :width: 90%
   :align: center
   
@@ -590,7 +590,7 @@ Cutoff (:monosp:`cutoff`)
 
 .. subfigstart::
 
-.. figure::  images/mat_cutoff.jpg
+.. figure::  images/bsdf_cutoff.jpg
   :width: 90%
   :align: center
   
@@ -607,7 +607,7 @@ Passthrough (:monosp:`passthrough`)
 
 .. subfigstart::
 
-.. figure::  images/mat_passthrough.jpg
+.. figure::  images/bsdf_passthrough.jpg
   :width: 90%
   :align: center
   
@@ -644,7 +644,7 @@ Normal mapping (:monosp:`normalmap`)
 
 .. subfigstart::
 
-.. figure::  images/mat_normalmap.jpg
+.. figure::  images/bsdf_normalmap.jpg
   :width: 90%
   :align: center
   
@@ -679,7 +679,7 @@ Bump mapping (:monosp:`bumpmap`)
 
 .. subfigstart::
 
-.. figure::  images/mat_bumpmap.jpg
+.. figure::  images/bsdf_bumpmap.jpg
   :width: 90%
   :align: center
   
@@ -714,7 +714,7 @@ Transform (:monosp:`transform`)
 
 .. subfigstart::
 
-.. figure::  images/mat_transform.jpg
+.. figure::  images/bsdf_transform.jpg
   :width: 90%
   :align: center
   
@@ -744,7 +744,7 @@ Dupuy & Jakob measured materials (:monosp:`djmeasured`)
 
 .. subfigstart::
 
-.. figure::  images/mat_djmeasured.jpg
+.. figure::  images/bsdf_djmeasured.jpg
   :width: 90%
   :align: center
   
