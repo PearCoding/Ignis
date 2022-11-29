@@ -16,18 +16,21 @@ def get_output_path(scene_file, out_dir, spp, target):
 
 def get_reference_path(scene_file, ref_dir):
     basename = Path(scene_file).stem
-    for filename in Path(ref_dir).glob(f"ref-{basename}*.exr"):
-        return filename  # Return first filename
+    filenames = [str(p) for p in Path(ref_dir).glob(f"ref-{basename}*.exr")]
+    if len(filenames) > 0:
+        return min(filenames, key=len)
 
     # If not found, drop one '-' section
     basename = basename[:basename.rfind('-')]
-    for filename in Path(ref_dir).glob(f"ref-{basename}*.exr"):
-        return filename  # Return first filename
+    filenames = [str(p) for p in Path(ref_dir).glob(f"ref-{basename}*.exr")]
+    if len(filenames) > 0:
+        return min(filenames, key=len)
 
     # If not found, drop another '-' section
     basename = basename[:basename.rfind('-')]
-    for filename in Path(ref_dir).glob(f"ref-{basename}*.exr"):
-        return filename  # Return first filename
+    filenames = [str(p) for p in Path(ref_dir).glob(f"ref-{basename}*.exr")]
+    if len(filenames) > 0:
+        return min(filenames, key=len)
 
     print(f"Could not find a reference in {ref_dir} for {scene_file}")
     return None
