@@ -44,6 +44,18 @@ Triangle (:monosp:`triangle`)
     - Identity
     - Apply given transformation to shape.
 
+.. subfigstart::
+
+.. figure::  images/shape_triangle.jpg
+  :width: 90%
+  :align: center
+  
+  Triangle shape with visualized primitive coordinates
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-shape-triangle
+
 .. _shape-rectangle:
 
 Rectangle (:monosp:`rectangle`)
@@ -76,6 +88,18 @@ Rectangle (:monosp:`rectangle`)
     - Identity
     - Apply given transformation to shape.
 
+.. subfigstart::
+
+.. figure::  images/shape_rectangle.jpg
+  :width: 90%
+  :align: center
+  
+  Rectangle shape with visualized primitive coordinates
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-shape-rectangle
+
 .. _shape-box:
 
 Box (:monosp:`box`)
@@ -104,6 +128,18 @@ Box (:monosp:`box`)
     - Identity
     - Apply given transformation to shape.
 
+.. subfigstart::
+
+.. figure::  images/shape_box.jpg
+  :width: 90%
+  :align: center
+  
+  Box shape with visualized primitive coordinates
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-shape-box
+
 .. _shape-sphere:
 
 Sphere (:monosp:`sphere`)
@@ -121,6 +157,18 @@ Sphere (:monosp:`sphere`)
     - The origin of the box.
 
 .. NOTE:: In contrary to the other spheres, the constructed sphere is analytical and precise. However, it adds a new primitive type to the renderer, which might decrease performance.
+
+.. subfigstart::
+
+.. figure::  images/shape_sphere.jpg
+  :width: 90%
+  :align: center
+  
+  Sphere shape with visualized primitive coordinates. The primitive coordinates map to the normalized spherical coordinates
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-shape-sphere
 
 .. _shape-icosphere:
 
@@ -154,6 +202,18 @@ Ico-Sphere (:monosp:`icosphere`)
     - Identity
     - Apply given transformation to shape.
 
+.. subfigstart::
+
+.. figure::  images/shape_icosphere.jpg
+  :width: 90%
+  :align: center
+  
+  Ico sphere shape with visualized primitive coordinates. In contrary to the analytical sphere, the ico sphere consists of multiple tiny triangles
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-shape-icosphere
+
 .. _shape-uvsphere:
 
 UV-Sphere (:monosp:`uvsphere`)
@@ -185,6 +245,18 @@ UV-Sphere (:monosp:`uvsphere`)
     - |transform|
     - Identity
     - Apply given transformation to shape.
+
+.. subfigstart::
+
+.. figure::  images/shape_uvsphere.jpg
+  :width: 90%
+  :align: center
+  
+  UV sphere shape with visualized primitive coordinates. In contrary to the analytical sphere, the uv sphere consists of multiple tiny triangles
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-shape-uvsphere
 
 .. _shape-cylinder:
 
@@ -226,6 +298,18 @@ Cylinder (:monosp:`cylinder`)
     - Identity
     - Apply given transformation to shape.
 
+.. subfigstart::
+
+.. figure::  images/shape_cylinder.jpg
+  :width: 90%
+  :align: center
+  
+  Cylinder shape with visualized primitive coordinates
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-shape-cylinder
+
 .. _shape-cone:
 
 Cone (:monosp:`cone`)
@@ -262,6 +346,18 @@ Cone (:monosp:`cone`)
     - Identity
     - Apply given transformation to shape.
 
+.. subfigstart::
+
+.. figure::  images/shape_cone.jpg
+  :width: 90%
+  :align: center
+  
+  Cone shape with visualized primitive coordinates
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-shape-cone
+
 .. _shape-disk:
 
 Disk (:monosp:`disk`)
@@ -297,6 +393,18 @@ Disk (:monosp:`disk`)
     - |transform|
     - Identity
     - Apply given transformation to shape.
+
+.. subfigstart::
+
+.. figure::  images/shape_disk.jpg
+  :width: 90%
+  :align: center
+  
+  Disk shape with visualized primitive coordinates
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-shape-disk
 
 .. _shape-obj:
 
@@ -391,3 +499,15 @@ External File (:monosp:`external`)
     - Path to a valid file with a known file extension.
 
 This type of shape will load a obj (.obj), ply (.ply) or mitsuba serialized mesh (.mts or .serialized) depending on the extension of the filename. Additional properties will be forwarded to the actual shape type.
+
+.. subfigstart::
+
+.. figure::  images/shape_external.jpg
+  :width: 90%
+  :align: center
+  
+  External shape (the diamond used in the showcase) with visualized primitive coordinates
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-shape-external

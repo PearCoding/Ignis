@@ -3,6 +3,6 @@
         {"filename":"base.json"}
     ],
 	"shapes": [
-		{"type":"triangle", "name":"Object"}
+		{"type":"cone", "name":"Object"}
 	]
 }

@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"shapes": [
+		{"type":"triangle", "name":"Object", "transform": [ {"translate": [-1,0,-1]}, {"scale": 3}]}
+	]
+}

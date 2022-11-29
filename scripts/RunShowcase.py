@@ -81,6 +81,8 @@ if __name__ == '__main__':
                         help="Skip lights")
     parser.add_argument('--no-textures', action="store_true",
                         help="Skip textures")
+    parser.add_argument('--no-shapes', action="store_true",
+                        help="Skip shapes")
     parser.add_argument('--force', '-f', action="store_true",
                         help="Force rendering all pictures, regardless if already rendered or not ")
     parser.add_argument('--verbose', action="store_true",
@@ -104,3 +106,5 @@ if __name__ == '__main__':
         render_block(ignis, "light", args)
     if not args.no_textures:
         render_block(ignis, "texture", args)
+    if not args.no_shapes:
+        render_block(ignis, "shape", args)
