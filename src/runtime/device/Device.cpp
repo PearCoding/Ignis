@@ -1573,6 +1573,7 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
     settings.histogram           = driver_settings.Histogram;
     settings.bins                = (int)driver_settings.Bins;
     settings.acquire_error_stats = driver_settings.AcquireErrorStats;
+    settings.acquire_histogram   = driver_settings.AcquireHistogram;
 
     ::ImageInfoOutput output = sInterface->runImageinfoShader(in_pixels, settings);
 

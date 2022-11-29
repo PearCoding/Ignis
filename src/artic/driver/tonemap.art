@@ -12,7 +12,8 @@ struct ImageInfoSettings {
     scale:     f32,
     histogram: &mut [i32],
     bins:      i32,
-    acquire_error_stats: bool
+    acquire_error_stats: bool,
+    acquire_histogram:   bool
 }
 
 struct ImageInfoOutput {

@@ -865,8 +865,9 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             }
         }
     },
-    parallel_reduce_i32 = @|n, elem, op| cpu_reduce[i32](n, elem, op),
-    parallel_reduce_f32 = @|n, elem, op| cpu_reduce[f32](n, elem, op),
+    parallel_reduce_i32     = @|n, elem, op| reduce[i32](make_cpu_parallel_reduce_handler(), n, elem, op),
+    parallel_reduce_f32     = @|n, elem, op| reduce[f32](make_cpu_parallel_reduce_handler(), n, elem, op),
+    parallel_reduce_handler = make_cpu_parallel_reduce_handler(),
     get_device_buffer_accessor = @|| { @|ptr| make_cpu_buffer(ptr, 0) },
     load_scene_bvh = @ |prim_type| {
         if vector_width >= 8 {

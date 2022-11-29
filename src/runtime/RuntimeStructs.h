@@ -18,6 +18,7 @@ struct ImageInfoSettings {
     size_t Bins;
     float Scale;
     bool AcquireErrorStats;
+    bool AcquireHistogram;
 };
 
 struct ImageInfoOutput {

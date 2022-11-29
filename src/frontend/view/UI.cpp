@@ -548,7 +548,7 @@ public:
         const std::string aov_name = currentAOVName();
         ImageInfoSettings settings{ aov_name.c_str(),
                                     Histogram.data(), Histogram.size(),
-                                    1.0f, true };
+                                    1.0f, true, true };
 
         const ImageInfoOutput output = Runtime->imageinfo(settings);
 

@@ -54,6 +54,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/mapping_gpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/material.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/medium.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/driver/parallel_reduce.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/payload.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/pdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/phase.art
