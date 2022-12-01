@@ -14,9 +14,12 @@ struct TonemapSettings {
 
 struct ImageInfoSettings {
     const char* AOV;
-    int* Histogram;
-    size_t Bins;
     float Scale;
+    size_t Bins;
+    int* HistogramR;
+    int* HistogramG;
+    int* HistogramB;
+    int* HistogramL;
     bool AcquireErrorStats;
     bool AcquireHistogram;
 };

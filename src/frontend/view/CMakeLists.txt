@@ -6,6 +6,13 @@ CPMAddPackage(
 )
 
 CPMAddPackage(
+    NAME implot
+    GITHUB_REPOSITORY epezent/implot
+    GIT_TAG master
+    DOWNLOAD_ONLY YES
+)
+
+CPMAddPackage(
     NAME imgui_markdown
     GITHUB_REPOSITORY PearCoding/imgui_markdown 
     GIT_TAG main
@@ -25,7 +32,7 @@ SET(SRC_FILES
     UI.h)
 
 add_executable(igview ${SRC_FILES})
-target_include_directories(igview PUBLIC ${SDL2_INCLUDE_DIR} ${imgui_SOURCE_DIR} ${imgui_markdown_SOURCE_DIR})
+target_include_directories(igview PUBLIC ${SDL2_INCLUDE_DIR} ${imgui_SOURCE_DIR} ${implot_SOURCE_DIR} ${imgui_markdown_SOURCE_DIR})
 target_link_libraries(igview PRIVATE ${SDL2_LIBRARY} ig_lib_common)
 add_lto(igview)
 add_checks(igview)

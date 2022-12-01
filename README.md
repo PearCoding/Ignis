@@ -35,6 +35,7 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
  - CLI11 <https://github.com/CLIUtils/CLI11>
  - imgui <https://github.com/ocornut/imgui>
  - imgui-markdown <https://github.com/juliettef/imgui_markdown>
+ - implot <https://github.com/epezent/implot>
  - PExpr <https://github.com/PearCoding/PExpr>
  - pugixml <https://github.com/zeux/pugixml>
  - pybind11 <https://github.com/pybind/pybind11>

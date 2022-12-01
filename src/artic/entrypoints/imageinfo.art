@@ -86,31 +86,49 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
 
     if settings.acquire_histogram {
         // Setup histogram
-        let histogram_start     = output.soft_min;
+        let histogram_start     = output.min;
         let histogram_end       = output.soft_max;
-        let histogram_range     = histogram_end - histogram_start;
+        let histogram_range     = math_builtins::fmax[f32](0, histogram_end - histogram_start);
         let histogram_bin_count = settings.bins;
         let histogram_factor    = safe_div(histogram_bin_count as f32, histogram_range);
 
         let dev_hist_size = round_up(histogram_bin_count, 4);
-        let dev_histogram = device.request_buffer("__imageinfo_histogram", sizeof[i32]() as i32 * dev_hist_size, 0);
+        let dev_histogram_r = device.request_buffer("__imageinfo_histogram_r", sizeof[i32]() as i32 * dev_hist_size, 0);
+        let dev_histogram_g = device.request_buffer("__imageinfo_histogram_g", sizeof[i32]() as i32 * dev_hist_size, 0);
+        let dev_histogram_b = device.request_buffer("__imageinfo_histogram_b", sizeof[i32]() as i32 * dev_hist_size, 0);
+        let dev_histogram_l = device.request_buffer("__imageinfo_histogram_l", sizeof[i32]() as i32 * dev_hist_size, 0);
 
         // Reset histogram
         for i in device.parallel_range(0, dev_hist_size / 4) {
-            dev_histogram.store_int4(i * 4, 0, 0, 0, 0);
+            dev_histogram_r.store_int4(i * 4, 0, 0, 0, 0);
+            dev_histogram_g.store_int4(i * 4, 0, 0, 0, 0);
+            dev_histogram_b.store_int4(i * 4, 0, 0, 0, 0);
+            dev_histogram_l.store_int4(i * 4, 0, 0, 0, 0);
         }
         device.sync();
 
+        // Map all components to the given min & soft max, even while RGB might be larger
+        fn @get_bin(v: f32) = clamp(((v - histogram_start) * histogram_factor) as i32, 0, histogram_bin_count - 1);
+
         // Update histogram
         for i in device.parallel_range(0, size) {
-            let L   = get_elem(i);
-            let bin = clamp(((L - histogram_start) * histogram_factor) as i32, 0, histogram_bin_count - 1);
-            dev_histogram.add_atomic_i32(bin, 1);
+            let r = check_get(i*3 + 0) * scale;
+            let g = check_get(i*3 + 1) * scale;
+            let b = check_get(i*3 + 2) * scale;
+            let L = srgb_to_xyY(make_color(r, g, b, 1)).b;
+
+            dev_histogram_r.add_atomic_i32(get_bin(r), 1);
+            dev_histogram_g.add_atomic_i32(get_bin(g), 1);
+            dev_histogram_b.add_atomic_i32(get_bin(b), 1);
+            dev_histogram_l.add_atomic_i32(get_bin(L), 1);
         }
         device.sync();
 
         // Copy histogram to host
-        dev_histogram.copy_to_host(0, histogram_bin_count, settings.histogram);
+        dev_histogram_r.copy_to_host(0, histogram_bin_count, settings.histogram_r);
+        dev_histogram_g.copy_to_host(0, histogram_bin_count, settings.histogram_g);
+        dev_histogram_b.copy_to_host(0, histogram_bin_count, settings.histogram_b);
+        dev_histogram_l.copy_to_host(0, histogram_bin_count, settings.histogram_l);
         device.sync();
     }
 }

@@ -9,9 +9,12 @@ struct TonemapSettings {
 }
 
 struct ImageInfoSettings {
-    scale:     f32,
-    histogram: &mut [i32],
-    bins:      i32,
+    scale:               f32,
+    bins:                i32,
+    histogram_r:         &mut [i32],
+    histogram_g:         &mut [i32],
+    histogram_b:         &mut [i32],
+    histogram_l:         &mut [i32],
     acquire_error_stats: bool,
     acquire_histogram:   bool
 }

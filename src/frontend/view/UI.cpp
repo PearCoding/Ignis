@@ -7,6 +7,7 @@
 
 #include "imgui.h"
 #include "imgui_markdown.h"
+#include "implot.h"
 
 #if SDL_VERSION_ATLEAST(2, 0, 17)
 #include "backends/imgui_impl_sdl.h"
@@ -83,8 +84,7 @@ public:
 
     // Stats
     LuminanceInfo LastLum;
-    std::array<int, HISTOGRAM_SIZE> Histogram;
-    std::array<float, HISTOGRAM_SIZE> HistogramF;
+    std::array<int, HISTOGRAM_SIZE*4> Histogram;
 
     bool ToneMapping_Automatic              = false;
     float ToneMapping_Exposure              = 1.0f;
@@ -543,12 +543,14 @@ public:
         return false;
     }
 
-    void analzeLuminance(size_t width, size_t height)
+    void analzeLuminance()
     {
         const std::string aov_name = currentAOVName();
         ImageInfoSettings settings{ aov_name.c_str(),
-                                    Histogram.data(), Histogram.size(),
-                                    1.0f, true, true };
+                                    1.0f, HISTOGRAM_SIZE,
+                                    Histogram.data() + 0*HISTOGRAM_SIZE, Histogram.data() + 1*HISTOGRAM_SIZE,
+                                    Histogram.data() + 2*HISTOGRAM_SIZE, Histogram.data() + 3*HISTOGRAM_SIZE,
+                                    true, true };
 
         const ImageInfoOutput output = Runtime->imageinfo(settings);
 
@@ -563,16 +565,12 @@ public:
         LastLum.InfCount = output.InfCount;
         LastLum.NaNCount = output.NaNCount;
         LastLum.NegCount = output.NegCount;
-
-        const float avgFactor = 1.0f / (width * height);
-        for (size_t i = 0; i < Histogram.size(); ++i)
-            HistogramF[i] = Histogram[i] * avgFactor;
     }
 
     void updateSurface()
     {
         const std::string aov_name = currentAOVName();
-        analzeLuminance(Width, Height);
+        analzeLuminance();
 
         // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
         uint32* buf = Buffer.data();
@@ -688,8 +686,9 @@ public:
 
     void handleImgui(size_t iter, size_t samples)
     {
-        constexpr size_t UI_W = 300;
-        constexpr size_t UI_H = 450;
+        constexpr size_t UI_W   = 300;
+        constexpr size_t UI_H   = 500;
+        constexpr size_t HIST_W = 250;
         int mouse_x, mouse_y;
         SDL_GetMouseState(&mouse_x, &mouse_y);
 
@@ -727,7 +726,24 @@ public:
                 ImGui::Text("Cam Up  (%6.3f, %6.3f, %6.3f)", LastCameraPose.Up(0), LastCameraPose.Up(1), LastCameraPose.Up(2));
 
                 ImGui::PushItemWidth(-1);
-                ImGui::PlotHistogram("", HistogramF.data(), HISTOGRAM_SIZE, 0, nullptr, 0.0f, 1.0f, ImVec2(0, 60));
+                ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0, 0));
+                if (ImPlot::BeginPlot("Histogram", ImVec2((int)HIST_W, 100), ImPlotFlags_NoTitle | ImPlotFlags_NoInputs | ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus)) {
+                    ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickLabels);
+                    ImPlot::SetupAxesLimits(0, (double)HISTOGRAM_SIZE, 0, static_cast<double>(Width*Height), ImPlotCond_Always);
+                    ImPlot::SetupFinish();
+
+                    ImPlot::SetNextFillStyle(ImVec4(1, 0, 0, 1), 0.25f);
+                    ImPlot::PlotBars("R", Histogram.data(), HISTOGRAM_SIZE, 1, 0, ImPlotBarsFlags_None, 0*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+                    ImPlot::SetNextFillStyle(ImVec4(0, 1, 0, 1), 0.25f);
+                    ImPlot::PlotBars("G", Histogram.data(), HISTOGRAM_SIZE, 1, 0, ImPlotBarsFlags_None, 1*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+                    ImPlot::SetNextFillStyle(ImVec4(0, 0, 1, 1), 0.25f);
+                    ImPlot::PlotBars("B", Histogram.data(), HISTOGRAM_SIZE, 1, 0, ImPlotBarsFlags_None, 2*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+                    ImPlot::SetNextFillStyle(ImVec4(1, 1, 0, 1), 0.25f);
+                    ImPlot::PlotBars("L", Histogram.data(), HISTOGRAM_SIZE, 1, 0.0, ImPlotBarsFlags_None, 3*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+
+                    ImPlot::EndPlot();
+                }
+                ImPlot::PopStyleVar();
                 ImGui::PopItemWidth();
             }
 
@@ -865,6 +881,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
+    ImPlot::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
@@ -893,6 +910,9 @@ UI::~UI()
 #else
     ImGuiSDL::Deinitialize();
 #endif
+
+    ImPlot::DestroyContext();
+    ImGui::DestroyContext();
 
     if (mInternal->Texture)
         SDL_DestroyTexture(mInternal->Texture);

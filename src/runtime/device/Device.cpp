@@ -1570,8 +1570,11 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 
     ::ImageInfoSettings settings;
     settings.scale               = driver_settings.Scale * inv_iter;
-    settings.histogram           = driver_settings.Histogram;
     settings.bins                = (int)driver_settings.Bins;
+    settings.histogram_r         = driver_settings.HistogramR;
+    settings.histogram_g         = driver_settings.HistogramG;
+    settings.histogram_b         = driver_settings.HistogramB;
+    settings.histogram_l         = driver_settings.HistogramL;
     settings.acquire_error_stats = driver_settings.AcquireErrorStats;
     settings.acquire_histogram   = driver_settings.AcquireHistogram;
 
