@@ -14,6 +14,13 @@
 	"film": {
 		"size": [1000, 1000]
 	},
+	"textures": [
+		{
+			"type": "image",
+			"name": "env",
+			"filename": "../../textures/environment/phalzer_forest_01_4k.exr"
+		}
+	],
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Object", "reflectance":"vec3(prim_coords.x, prim_coords.y, 0)"}
 	],
@@ -21,6 +28,6 @@
 		{"name":"Object","shape":"Object", "bsdf":"mat-Object"}
 	],
 	"lights": [
-		{"type":"env", "name":"Environment", "radiance":0.8}
+		{"type":"env", "name":"Environment", "radiance":"env", "transform": [0,-1,0, 0,0,1, 1,0,0]}
 	]
 }

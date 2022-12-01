@@ -157,7 +157,14 @@
         "xtree": "cpp",
         "xutility": "cpp",
         "queue": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "iterativelinearsolvers": "cpp",
+        "orderingmethods": "cpp",
+        "alignedvector3": "cpp",
+        "bvh": "cpp",
+        "mprealsupport": "cpp",
+        "matrixfunctions": "cpp",
+        "*.rh": "cpp"
     },
     "cmake.configureOnOpen": false,
     "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
