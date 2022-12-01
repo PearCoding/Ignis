@@ -1,0 +1,29 @@
+fn @make_camera_check_renderer(camera: Camera) -> Technique {
+    let offset:f32 = 0.001;
+
+     fn @on_shadow( ctx: ShadingContext
+                 , rnd: &mut RndState
+                 , _: RayPayload
+                 , _: RayPayload
+                 , _: Material
+                 ) -> ShadowRay {
+        if let Option[CameraSample]::Some(camera_sample) = camera.sample_pixel(rnd, ctx.surf.point) {
+            let dot = clampf(-vec3_dot(vec3_normalize(camera_sample.dir), ctx.ray.dir), 0, 1);
+            return(make_simple_shadow_ray(
+                make_ray(ctx.surf.point, camera_sample.dir, offset, flt_max, ray_flag_shadow),
+                color_mul(camera_sample.weight, color_lerp(color_builtins::red, color_builtins::green, dot))
+            ))
+        } else {
+            ShadowRay::None
+        }
+    }
+
+    Technique {
+        on_hit         = TechniqueNoHitFunction,
+        on_miss        = TechniqueNoMissFunction,
+        on_shadow      = on_shadow,
+        on_bounce      = TechniqueNoBounceFunction,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = TechniqueNoShadowMissFunction,
+    }
+}

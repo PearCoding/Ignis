@@ -91,6 +91,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/shapes/sphere.art
     ${CMAKE_CURRENT_SOURCE_DIR}/shapes/trimesh.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/aotracer.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/technique/camera_check.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/debugtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/infobuffer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/lightvisibility.art

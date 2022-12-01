@@ -12,6 +12,18 @@ fn @compute_scale_from_vfov(fov: f32, aspect: f32) -> Vec2 {
     make_vec2(sw, sh)
 }
 
+// Return pixel coordinate from a point for a perspective projection
+fn @perspective_pos_to_pixel(v: Vec3, eye: Vec3, view: Mat3x3, scale: Vec2, w: i32, h: i32) -> Option[PixelCoord] {
+    let dir = vec3_normalize(vec3_sub(eye, v)); // FROM camera to point
+    let un  = mat3x3_left_mul(view, dir);
+    let n   = make_vec2(un.x / (un.z * scale.x), un.y / (un.z * scale.y));
+    if n.x >= -1 && n.x <= 1 && n.y >= -1 && n.y <= 1 {
+        make_option(make_pixelcoord_from_normalized(n.x, n.y, w, h)) // TODO: Width & Height
+    } else {
+        Option[PixelCoord]::None
+    }
+}
+
 // Creates a perspective camera
 fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f32, tmax: f32) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
@@ -22,6 +34,19 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f
             let d = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * coord.nx, scale.y * coord.ny, 1)));
             make_ray(eye, d, tmin, tmax, ray_flag_camera)
         },
+        sample_pixel = @ |_, pos| {
+            if let Option[PixelCoord]::Some(coord) = perspective_pos_to_pixel(pos, eye, view, scale, 1, 1) {  // TODO
+                make_option(CameraSample{
+                    coord  = coord,
+                    dir    = vec3_sub(eye, pos),
+                    weight = color_builtins::white,
+                    pdf    = 1,
+                })
+            } else {
+                Option[CameraSample]::None
+            }
+        },
+        pos_to_pixel = @ |pos| perspective_pos_to_pixel(pos, eye, view, scale, 1, 1), // TODO
         differential = @ |_| {
             (
                 vec3_mulf(right, scale.x),
@@ -36,17 +61,32 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, ape
     let right = vec3_normalize(vec3_cross(dir, up));
     let view  = make_mat3x3(right, up, dir);
 
+    fn @gen_ray(rnd: &mut RndState, coord: PixelCoord ) {
+        let global_dir = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * coord.nx, scale.y * coord.ny, 1)));
+        let focus_pos  = vec3_mulf(global_dir, focal_length);
+
+        let aperature_coord = vec2_mulf(square_to_concentric_disk(make_vec2(randf(rnd), randf(rnd))), aperture_radius);
+        let aperature_pos   = mat3x3_mul(view, make_vec3(aperature_coord.x, aperature_coord.y, 0));
+        let d               = vec3_normalize(vec3_sub(focus_pos, aperature_pos));
+
+        make_ray(vec3_add(eye, aperature_pos), d, tmin, tmax, ray_flag_camera)
+    }
+
     Camera {
-        generate_ray = @ |rnd, coord| {
-            let global_dir = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * coord.nx, scale.y * coord.ny, 1)));
-            let focus_pos  = vec3_mulf(global_dir, focal_length);
-
-            let aperature_coord = vec2_mulf(square_to_concentric_disk(make_vec2(randf(rnd), randf(rnd))), aperture_radius);
-            let aperature_pos   = mat3x3_mul(view, make_vec3(aperature_coord.x, aperature_coord.y, 0));
-            let d               = vec3_normalize(vec3_sub(focus_pos, aperature_pos));
-
-            make_ray(vec3_add(eye, aperature_pos), d, tmin, tmax, ray_flag_camera)
+        generate_ray = gen_ray,
+        sample_pixel = @ |rnd, pos| {
+            if let Option[PixelCoord]::Some(coord) = perspective_pos_to_pixel(pos, eye, view, scale, 1, 1) {  // TODO
+                make_option(CameraSample{
+                    coord  = coord,
+                    dir    = vec3_neg(gen_ray(rnd, coord).dir),
+                    weight = color_builtins::white,
+                    pdf    = 1 / (2*flt_pi*aperture_radius*aperture_radius), // TODO
+                })
+            } else {
+                Option[CameraSample]::None
+            }
         },
+        pos_to_pixel = @ |pos| perspective_pos_to_pixel(pos, eye, view, scale, 1, 1), // TODO
         differential = @ |_| {
             (
                 // TODO: We ignore the lens effect here

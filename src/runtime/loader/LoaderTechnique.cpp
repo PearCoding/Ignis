@@ -62,6 +62,21 @@ static TechniqueInfo wireframe_get_info(const std::string&, const std::shared_pt
 
 /////////////////////////
 
+static void cc_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&)
+{
+    // Camera was defined by RequiresExplicitCamera flag
+    stream << "  let technique = make_camera_check_renderer(camera);" << std::endl;
+}
+
+static TechniqueInfo cc_get_info(const std::string&, const std::shared_ptr<Parser::Object>&, const LoaderContext&)
+{
+    TechniqueInfo info;
+    info.Variants[0].RequiresExplicitCamera = true; // We make use of the camera differential!
+    return info;
+}
+
+/////////////////////////
+
 static void lv_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
 {
     const int max_depth  = technique ? technique->property("max_depth").getInteger(64) : 64;
@@ -426,6 +441,7 @@ static const struct TechniqueEntry {
     { "wireframe", wireframe_get_info, wireframe_body_loader },
     { "infobuffer", ib_get_info, ib_body_loader },
     { "lightvisibility", lv_get_info, lv_body_loader },
+    { "camera_check", cc_get_info,cc_body_loader },
     { "", nullptr, nullptr }
 };
 

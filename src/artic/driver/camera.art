@@ -34,10 +34,36 @@ fn @make_pixelcoord_from_linear(linear: i32, w: i32, h: i32, sx: f32, sy: f32) -
     }
 }
 
+fn @make_pixelcoord_from_normalized(nx: f32, ny: f32, w: i32, h: i32) -> PixelCoord {
+    let x = math_builtins::floor(w as f32 * (nx + 1) / 2) as i32;
+    let y = math_builtins::floor(h as f32 * (1 - ny) / 2) as i32;
+
+    PixelCoord {
+        x = x,
+        y = y,
+        linear = y * w + x,
+        nx = nx,
+        ny = ny
+    }
+}
+
+struct CameraSample {
+    coord:  PixelCoord, // Sampled pixel
+    dir:    Vec3,       // Sampled direction from given point TOWARDS the camera. The vector is NOT normalized
+    weight: Color,      // Importance (already divided by pdf)
+    pdf:    f32         // Pdf of sample to connect
+}
+
 // Opaque camera object
 struct Camera {
-    // Generates a ray for a point on the image plane (in [-1, 1]^2)
+    // Generates a ray for a point on the image plane
     generate_ray: fn (&mut RndState, PixelCoord) -> Ray,
+    // Sample a point on the image plane with corresponding pixel for given point in the scene if possible
+    // This call might fail if given point in scene is not within the direction of the camera
+    sample_pixel: fn (&mut RndState, Vec3) -> Option[CameraSample],
+    // Map point in scene to a pixel coordinate if possible
+    // This call might fail if given point in scene is not within the direction of the camera
+    pos_to_pixel: fn (Vec3) -> Option[PixelCoord],
     // Returns dx and dy vectors in respect to the pixel position (given as index)
     differential: fn (PixelCoord) -> (Vec3, Vec3)
 }

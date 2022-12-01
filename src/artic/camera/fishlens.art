@@ -51,6 +51,8 @@ fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, mode: F
         generate_ray = @ |_, coord| {
             make_ray(eye, compute_d(coord.nx, coord.ny), tmin, tmax, ray_flag_camera)
         },
+        sample_pixel = @ |_, _| Option[CameraSample]::None, // TODO
+        pos_to_pixel = @ |_| Option[PixelCoord]::None,      // TODO
         differential = @ |coord| {
             let d0  = compute_d(coord.nx, coord.ny);
             let d1x = compute_d(coord.nx + 1 / w, coord.ny);
