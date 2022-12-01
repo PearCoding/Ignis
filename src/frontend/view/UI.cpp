@@ -732,14 +732,16 @@ public:
                     ImPlot::SetupAxesLimits(0, (double)HISTOGRAM_SIZE, 0, static_cast<double>(Width*Height), ImPlotCond_Always);
                     ImPlot::SetupFinish();
 
+                    constexpr double BarWidth = 0.67;
+                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
                     ImPlot::SetNextFillStyle(ImVec4(1, 0, 0, 1), 0.25f);
-                    ImPlot::PlotBars("R", Histogram.data(), HISTOGRAM_SIZE, 1, 0, ImPlotBarsFlags_None, 0*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("R", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 0*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
                     ImPlot::SetNextFillStyle(ImVec4(0, 1, 0, 1), 0.25f);
-                    ImPlot::PlotBars("G", Histogram.data(), HISTOGRAM_SIZE, 1, 0, ImPlotBarsFlags_None, 1*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("G", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 1*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
                     ImPlot::SetNextFillStyle(ImVec4(0, 0, 1, 1), 0.25f);
-                    ImPlot::PlotBars("B", Histogram.data(), HISTOGRAM_SIZE, 1, 0, ImPlotBarsFlags_None, 2*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("B", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 2*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
                     ImPlot::SetNextFillStyle(ImVec4(1, 1, 0, 1), 0.25f);
-                    ImPlot::PlotBars("L", Histogram.data(), HISTOGRAM_SIZE, 1, 0.0, ImPlotBarsFlags_None, 3*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("L", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 3*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
 
                     ImPlot::EndPlot();
                 }
