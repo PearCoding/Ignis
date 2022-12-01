@@ -22,10 +22,10 @@ Path Tracer (:monosp:`path`)
     - |number|
     - :code:`0`
     - Value to clamp contributions to. This introduces bias in favour of omitting outlier. 0 disables clamping.
-  * - use_uniform_light_selector
-    - |bool|
-    - |false|
-    - Use uniform light selection technique. The default adaptive technique is better in most cases, use with caution.
+  * - light_selector
+    - |string|
+    - :code:`"uniform"`
+    - Light selection technique. Available are :code:`"hierarchy"`, :code:`"simple"` and :code:`"uniform"`
   * - aov_normals
     - |bool|
     - |false|
@@ -51,10 +51,10 @@ Volume Path Tracer (:monosp:`volpath`)
     - |number|
     - :code:`0`
     - Value to clamp contributions to. This introduces bias in favour of omitting outlier. 0 disables clamping.
-  * - use_uniform_light_selector
-    - |bool|
-    - |false|
-    - Use uniform light selection technique. The default adaptive technique is better in most cases, use with caution.
+  * - light_selector
+    - |string|
+    - :code:`"uniform"`
+    - Light selection technique. Available are :code:`"hierarchy"`, :code:`"simple"` and :code:`"uniform"`
 
 A simple volumetric path tracer. It calculates the full global illumination in the scene.
 
