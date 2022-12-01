@@ -8,7 +8,7 @@ namespace IG {
 constexpr size_t BinCount         = 8;
 static float Ranges[BinCount + 1] = { 1.000f, 1.065f, 1.230f, 1.500f, 1.950f, 2.800f, 4.500f, 6.200f, FltInf };
 
-static float A[BinCount * 4] = {
+static float sA[BinCount * 4] = {
     1.3525f, -0.2576f, -0.2690f, -1.4366f,
     -1.2219f, -0.7730f, 1.4148f, 1.1016f,
     -1.1000f, -0.2515f, 0.8952f, 0.0156f,
@@ -19,7 +19,7 @@ static float A[BinCount * 4] = {
     -1.0500f, 0.0289f, 0.4260f, 0.3590f
 };
 
-static float B[BinCount * 4] = {
+static float sB[BinCount * 4] = {
     -0.7670f, 0.0007f, 1.2734f, -0.1233f,
     -0.2054f, 0.0367f, -3.9128f, 0.9156f,
     0.2782f, -0.1812f, -4.5000f, 1.1766f,
@@ -30,7 +30,7 @@ static float B[BinCount * 4] = {
     -0.3250f, 0.1156f, 0.7781f, 0.0025f
 };
 
-static float C[BinCount * 4] = {
+static float sC[BinCount * 4] = {
     2.8000f, 0.6004f, 1.2375f, 1.0000f,
     6.9750f, 0.1774f, 6.4477f, -0.1239f,
     24.7219f, -13.0812f, -37.7000f, 34.8438f,
@@ -41,7 +41,7 @@ static float C[BinCount * 4] = {
     31.0625f, -14.5000f, -46.1148f, 55.3750f
 };
 
-static float D[BinCount * 4] = {
+static float sD[BinCount * 4] = {
     1.8734f, 0.6297f, 0.9738f, 0.2809f,
     -1.5798f, -0.5081f, -1.7812f, 0.1080f,
     -5.0000f, 1.5218f, 3.9229f, -2.6204f,
@@ -52,7 +52,7 @@ static float D[BinCount * 4] = {
     -7.2312f, 0.4050f, 13.3500f, 0.6234f
 };
 
-static float E[BinCount * 4] = {
+static float sE[BinCount * 4] = {
     0.0356f, -0.1246f, -0.5718f, 0.9938f,
     0.2624f, 0.0672f, -0.2190f, -0.4285f,
     -0.0156f, 0.1597f, 0.4199f, -0.5562f,
@@ -162,8 +162,8 @@ PerezModel PerezModel::fromSky(float sky_brightness, float sky_clearness, float 
     sky_brightness = std::min(std::max(sky_brightness, 0.01f), 0.6f);
 
     const auto compute         = [=](const float* x) { return x[0] + x[1] * solar_zenith + sky_brightness * (x[2] + x[3] * solar_zenith); };
-    const auto computeSpecialC = [=]() { return std::exp(std::pow(sky_brightness * (C[0] + C[1] * solar_zenith), C[2])) - C[3]; };
-    const auto computeSpecialD = [=]() { return -std::exp(sky_brightness * (D[0] + D[1] * solar_zenith)) + D[2] + sky_brightness * D[3]; };
+    const auto computeSpecialC = [=]() { return std::exp(std::pow(sky_brightness * (sC[0] + sC[1] * solar_zenith), sC[2])) - sC[3]; };
+    const auto computeSpecialD = [=]() { return -std::exp(sky_brightness * (sD[0] + sD[1] * solar_zenith)) + sD[2] + sky_brightness * sD[3]; };
 
     // Get bin (this can be optimized by binary search)
     size_t bin = 0;
@@ -173,11 +173,11 @@ PerezModel PerezModel::fromSky(float sky_brightness, float sky_clearness, float 
     }
 
     // Compute parameters
-    const float a = compute(&A[bin * 4]);
-    const float b = compute(&B[bin * 4]);
-    const float c = bin > 0 ? compute(&C[bin * 4]) : computeSpecialC();
-    const float d = bin > 0 ? compute(&D[bin * 4]) : computeSpecialD();
-    const float e = compute(&E[bin * 4]);
+    const float a = compute(&sA[bin * 4]);
+    const float b = compute(&sB[bin * 4]);
+    const float c = bin > 0 ? compute(&sC[bin * 4]) : computeSpecialC();
+    const float d = bin > 0 ? compute(&sD[bin * 4]) : computeSpecialD();
+    const float e = compute(&sE[bin * 4]);
 
     return PerezModel::fromParameters(a, b, c, d, e);
 }
