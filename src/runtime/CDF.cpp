@@ -41,7 +41,7 @@ void CDF::computeForArray(const std::vector<float>& values, const std::filesyste
 
 void CDF::computeForImage(const std::filesystem::path& in, const std::filesystem::path& out,
                           size_t& slice_conditional, size_t& slice_marginal,
-                          bool premultiplySin)
+                          bool premultiplySin, bool compensate)
 {
     constexpr float MinEps = 1e-5f;
 
@@ -56,6 +56,17 @@ void CDF::computeForImage(const std::filesystem::path& in, const std::filesystem
     const size_t c = image.channels;
     IG_ASSERT(c == 3 || c == 4, "Expected cdf image to have four or three channels per pixel");
 
+    // Apply MIS compensation if necessary
+    Vector3f defect = Vector3f::Zero();
+    if (compensate) {
+        for (size_t i = 0; i < image.width * image.height; ++i) {
+            defect.x() += std::max(image.pixels[i * c + 0], 0.0f) / image.width;
+            defect.y() += std::max(image.pixels[i * c + 1], 0.0f) / image.width;
+            defect.z() += std::max(image.pixels[i * c + 2], 0.0f) / image.width;
+        }
+        defect /= image.height; // We split width & height to prevent large divisions
+    }
+
     // Compute per pixel average over image
     tbb::parallel_for(
         tbb::blocked_range<size_t>(0, image.height),
@@ -65,9 +76,16 @@ void CDF::computeForImage(const std::filesystem::path& in, const std::filesystem
                 float* cond    = &conditional[y * image.width];
 
                 // Compute one dimensional cdf per row
-                cond[0] = (p[0] + p[1] + p[2]) / 3;
+                cond[0] = (std::max(p[0] - defect.x(), 0.0f)
+                           + std::max(p[1] - defect.y(), 0.0f)
+                           + std::max(p[2] - defect.z(), 0.0f))
+                          / 3;
                 for (size_t x = 1; x < image.width; ++x)
-                    cond[x] = cond[x - 1] + (p[x * c + 0] + p[x * c + 1] + p[x * c + 2]) / 3;
+                    cond[x] = cond[x - 1]
+                              + (std::max(p[x * c + 0] - defect.x(), 0.0f)
+                                 + std::max(p[x * c + 1] - defect.y(), 0.0f)
+                                 + std::max(p[x * c + 2] - defect.z(), 0.0f))
+                                    / 3;
                 const float sum = cond[image.width - 1];
 
                 // Set as marginal

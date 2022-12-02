@@ -93,6 +93,7 @@ predef_eps = {
     "volume":  5e-3,
     "env4k":  8e-2,
     "env4k-nocdf":  8e-2,
+    "env4k-nomisc":  8e-2,
     "multilight-uniform":  3e-4,
     "multilight-simple":  3e-4,
     "multilight-hierarchy":  3e-4,
@@ -131,7 +132,7 @@ def make_figure(scenes, args):
         scene_data.append((Path(scene).stem, image_gpu_name,
                           image_cpu_name, image_ref_name))
 
-    errors = []
+    gpu_errors = []
     cpu_errors = []
     names = []
     grid = figuregen.Grid(len(scene_data), 5)
@@ -139,30 +140,50 @@ def make_figure(scenes, args):
 
     eps = 1e-3
     for name, image_gpu_name, image_cpu_name, image_ref_name in scene_data:
-        img = sio.read(str(image_gpu_name))
+        img_gpu = sio.read(str(image_gpu_name))
         img_cpu = sio.read(str(image_cpu_name))
         ref_img = sio.read(str(image_ref_name))
 
-        err = sio.relative_mse_outlier_rejection(img, ref_img, 0.001)
+        has_nan_gpu = np.isnan(img_gpu).any()
+        has_inf_gpu = np.isinf(img_gpu).any()
+        has_nan_cpu = np.isnan(img_cpu).any()
+        has_inf_cpu = np.isinf(img_cpu).any()
+
+        img_gpu[~np.isfinite(img_gpu)] = 0
+        img_cpu[~np.isfinite(img_cpu)] = 0
+
+        err_gpu = sio.relative_mse_outlier_rejection(img_gpu, ref_img, 0.001)
         err_cpu = sio.relative_mse_outlier_rejection(img_cpu, ref_img, 0.001)
 
-        errors.append(err)
+        gpu_errors.append(err_gpu)
         cpu_errors.append(err_cpu)
         names.append(str(name))
 
+        frame_gpu = [0, 255, 0]
+        frame_cpu = [0, 255, 0]
+
         leps = predef_eps[name] if name in predef_eps else eps
-        if not err < leps:
+        if has_nan_gpu or has_inf_gpu:
+            print(f"-> Scene {name} contains erroneous pixels on the GPU")
+            frame_gpu = [255, 255, 0]
+        if not err_gpu < leps:
             print(f"-> Scene {name} fails on the GPU")
+            frame_gpu = [255, 0, 0]
+
+        if has_nan_cpu or has_inf_cpu:
+            print(f"-> Scene {name} contains erroneous pixels on the CPU")
+            frame_cpu = [255, 255, 0]
         if not err_cpu < leps:
             print(f"-> Scene {name} fails on the CPU")
+            frame_cpu = [255, 0, 0]
 
         grid[i, 0].set_image(map_img(ref_img))
-        grid[i, 1].set_image(map_img(img))
-        grid[i, 2].set_image(map_img(error_image(img, ref_img)))
-        grid[i, 2].set_frame(1, [0, 255, 0] if err < leps else [255, 0, 0])
+        grid[i, 1].set_image(map_img(img_gpu))
+        grid[i, 2].set_image(map_img(error_image(img_gpu, ref_img)))
+        grid[i, 2].set_frame(1, frame_gpu)
         grid[i, 3].set_image(map_img(img_cpu))
         grid[i, 4].set_image(map_img(error_image(img_cpu, ref_img)))
-        grid[i, 4].set_frame(1, [0, 255, 0] if err_cpu < leps else [255, 0, 0])
+        grid[i, 4].set_frame(1, frame_cpu)
 
         i += 1
 
@@ -170,7 +191,7 @@ def make_figure(scenes, args):
                         "Rel. Error GPU", "Render CPU", "Rel. Error CPU"])
     grid.set_row_titles("left", names)
     grid.set_row_titles("right", [
-                        f"RelMSE (GPU,CPU)\\\\ {err:.2E} | {cerr:.2E}" for err, cerr in zip(errors, cpu_errors)])
+                        f"RelMSE (GPU,CPU)\\\\ {err:.2E} | {cerr:.2E}" for err, cerr in zip(gpu_errors, cpu_errors)])
     grid.layout.set_row_titles("right", field_size_mm=10, fontsize=6)
     grid.layout.set_row_titles("left", field_size_mm=8, fontsize=6)
 
@@ -182,6 +203,7 @@ def make_figure(scenes, args):
 
     # Generate the figure with the pdflatex backend and default settings
     figuregen.figure(rows, width_cm=10, filename=f"{out_dir}/Evaluation.pdf")
+    figuregen.figure(rows, width_cm=30, filename=f"{out_dir}/Evaluation.html")
 
 
 if __name__ == '__main__':

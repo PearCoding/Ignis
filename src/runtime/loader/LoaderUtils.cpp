@@ -153,9 +153,9 @@ Vector3f LoaderUtils::getDirection(const Parser::Object& obj)
     return getEA(obj).toDirectionYUp();
 }
 
-LoaderUtils::CDFData LoaderUtils::setup_cdf(LoaderContext& ctx, const std::string& filename)
+LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate)
 {
-    const std::string exported_id = "_cdf_" + filename;
+    const std::string exported_id = "_cdf2d_" + filename;
 
     const auto data = ctx.ExportedData.find(exported_id);
     if (data != ctx.ExportedData.end())
@@ -168,7 +168,7 @@ LoaderUtils::CDFData LoaderUtils::setup_cdf(LoaderContext& ctx, const std::strin
 
     size_t slice_conditional = 0;
     size_t slice_marginal    = 0;
-    CDF::computeForImage(filename, path, slice_conditional, slice_marginal, true);
+    CDF::computeForImage(filename, path, slice_conditional, slice_marginal, premultiplySin, compensate);
 
     const CDFData cdf_data        = { path, slice_conditional, slice_marginal };
     ctx.ExportedData[exported_id] = cdf_data;

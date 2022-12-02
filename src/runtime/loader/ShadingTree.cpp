@@ -294,7 +294,7 @@ std::string ShadingTree::getInline(const std::string& name)
 bool ShadingTree::isPureTexture(const std::string& name)
 {
     if (hasParameter(name))
-        return mPureTextures.count(name) > 0;
+        return currentClosure().PureTextures.count(name) > 0;
     IG_LOG(L_ERROR) << "Trying to access unknown parameter '" << name << "'" << std::endl;
     signalError();
     return "";
@@ -333,7 +333,7 @@ std::string ShadingTree::handleTexture(const std::string& prop_name, const std::
         // Check if the call is just a pure texture (without uv or other modifications)
         if (res.value().Textures.size() == 1) {
             if (*res.value().Textures.begin() == expr)
-                mPureTextures.insert(prop_name);
+                currentClosure().PureTextures.insert(prop_name);
         }
 
         if (needColor) {

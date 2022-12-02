@@ -29,6 +29,6 @@ public:
     static Vector3f getDirection(const Parser::Object& obj);
 
     using CDFData = std::tuple<std::string, size_t, size_t>;
-    static CDFData setup_cdf(LoaderContext& ctx, const std::string& filename);
+    static CDFData setup_cdf2d(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate = false);
 };
 } // namespace IG

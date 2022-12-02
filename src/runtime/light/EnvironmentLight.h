@@ -14,6 +14,7 @@ public:
 
 private:
     bool mUseCDF;
+    bool mUseCompensation;
 
     std::shared_ptr<Parser::Object> mLight;
 };

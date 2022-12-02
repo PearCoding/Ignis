@@ -67,6 +67,7 @@ private:
         std::string Name;
         std::string ID;
         std::unordered_map<std::string, std::string> Parameters;
+        std::unordered_set<std::string> PureTextures;
     };
 
 public:
@@ -115,7 +116,6 @@ public:
     void signalError();
 
 private:
-
     inline const Closure& currentClosure() const { return mClosures.back(); }
     inline Closure& currentClosure() { return mClosures.back(); }
 
@@ -135,7 +135,6 @@ private:
 
     std::vector<std::string> mHeaderLines; // The order matters
     std::unordered_set<std::string> mLoadedTextures;
-    std::unordered_set<std::string> mPureTextures;
 
     std::vector<Closure> mClosures;
 

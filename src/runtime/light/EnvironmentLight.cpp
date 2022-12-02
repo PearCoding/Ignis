@@ -1,16 +1,17 @@
 #include "EnvironmentLight.h"
 #include "Logger.h"
+#include "loader/LoaderTexture.h"
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
-#include "loader/LoaderTexture.h"
 
 namespace IG {
 EnvironmentLight::EnvironmentLight(const std::string& name, const std::shared_ptr<Parser::Object>& light)
     : Light(name, light->pluginType())
     , mLight(light)
 {
-    mUseCDF = light->property("cdf").getBool(true);
+    mUseCDF          = light->property("cdf").getBool(true);
+    mUseCompensation = light->property("compensate").getBool(true);
 }
 
 float EnvironmentLight::computeFlux(const ShadingTree& tree) const
@@ -48,7 +49,8 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
                          << ", tex_" << input.Tree.getClosureID(tex_name)
                          << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
         } else {
-            const auto cdf          = LoaderUtils::setup_cdf(input.Tree.context(), tex_path);
+            IG_LOG(L_DEBUG) << "Using environment cdf for '" << tex_name << "'" << std::endl;
+            const auto cdf          = LoaderUtils::setup_cdf2d(input.Tree.context(), tex_path, true, mUseCompensation);
             const size_t res_cdf_id = input.Tree.context().registerExternalResource(std::get<0>(cdf));
             input.Stream << input.Tree.pullHeader()
                          << "  let cdf_" << light_id << "   = cdf::make_cdf_2d_from_buffer(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl

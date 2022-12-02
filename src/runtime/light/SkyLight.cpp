@@ -55,7 +55,7 @@ void SkyLight::serialize(const SerializationInput& input) const
     input.Tree.addColor("scale", *mLight, Vector3f::Ones(), true);
 
     const std::string path = setup_sky(input.Tree.context(), name(), mLight);
-    const auto cdf         = LoaderUtils::setup_cdf(input.Tree.context(), path);
+    const auto cdf         = LoaderUtils::setup_cdf2d(input.Tree.context(), path, true, false);
 
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
