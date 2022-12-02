@@ -24,6 +24,7 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
     output.avg = reduce_output.sum / size as f32;
 
     let global_data = device.request_buffer("__imageinfo_stats", sizeof[f32]() as i32 * 8, 0);
+
     global_data.store_i32_host(0, bitcast[i32](flt_max)); // Soft Min
     global_data.store_i32_host(1, 0);                     // Soft Max
     global_data.store_i32_host(2, 0);                     // Median
@@ -31,33 +32,41 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
     global_data.store_i32_host(4, 0);                     // NaN Counter
     global_data.store_i32_host(5, 0);                     // Neg Counter
 
-    // Window based percentile setup (which is just approximative)
-    let median_factor = safe_div(1, ((width - 2) * (height - 2)) as f32);
-    for (x, y) in device.parallel_range_2d(1, width - 1, 1, height - 1) {
-        // First get the window information
-        let mut window : [f32 * 9];
-        for i in unroll(0, 3) {
-            for j in unroll(0, 3) {
-                let ind = (y+i-1) * width + (x+j-1);
-                window(i*3+j) = @get_elem(ind);
+    let do_soft = width > 10 && height > 10;
+    if do_soft {
+        // Window based percentile setup (which is just approximative)
+        let median_factor = safe_div(1, ((width - 2) * (height - 2)) as f32);
+        for (x, y) in device.parallel_range_2d(1, width - 1, 1, height - 1) {
+            // First get the window information
+            let mut window : [f32 * 9];
+            for i in unroll(0, 3) {
+                for j in unroll(0, 3) {
+                    let ind = (y+i-1) * width + (x+j-1);
+                    window(i*3+j) = @get_elem(ind);
+                }
             }
+            
+            // Sort the window
+            batcher_sort(9, @|i, j| {
+                if window(i) > window(j) {
+                    swap(&mut window(i), &mut window(j));
+                }
+            });
+
+            // Put percentile information
+            let soft_min = window(1);
+            let soft_max = window(7);
+            let median   = window(4);
+
+            if soft_min >= 0 { global_data.min_atomic_i32(0, bitcast[i32](soft_min)); }
+            if soft_max >= 0 { global_data.max_atomic_i32(1, bitcast[i32](soft_max)); }
+            if median   >= 0 { global_data.add_atomic_f32(2, median * median_factor); }
         }
-        
-        // Sort the window
-        batcher_sort(9, @|i, j| {
-            if window(i) > window(j) {
-                swap(&mut window(i), &mut window(j));
-            }
-        });
-
-        // Put percentile information
-        let soft_min = window(1);
-        let soft_max = window(7);
-        let median   = window(4);
-
-        if soft_min >= 0 { global_data.min_atomic_i32(0, bitcast[i32](soft_min)); }
-        if soft_max >= 0 { global_data.max_atomic_i32(1, bitcast[i32](soft_max)); }
-        if median   >= 0 { global_data.add_atomic_f32(2, median * median_factor); }
+    } else {
+        // Given window is not large enough, use the fixed variants
+        output.soft_min = output.min;
+        output.soft_max = output.max;
+        output.median   = output.avg;
     }
 
     // Check pixels
@@ -77,9 +86,12 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
 
     device.sync();
 
-    output.soft_min    = bitcast[f32](global_data.load_i32_host(0));
-    output.soft_max    = bitcast[f32](global_data.load_i32_host(1));
-    output.median      = bitcast[f32](global_data.load_i32_host(2));
+    if do_soft {
+        output.soft_min = bitcast[f32](global_data.load_i32_host(0));
+        output.soft_max = bitcast[f32](global_data.load_i32_host(1));
+        output.median   = bitcast[f32](global_data.load_i32_host(2));
+    }
+
     output.inf_counter = global_data.load_i32_host(3);
     output.nan_counter = global_data.load_i32_host(4);
     output.neg_counter = global_data.load_i32_host(5);

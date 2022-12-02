@@ -1,9 +1,11 @@
 struct PixelCoord {
-    x: i32,
-    y: i32,
-    linear: i32,
+    x: i32,      // X Coordinate
+    y: i32,      // Y Coordinate
+    linear: i32, // Linearized index to be used in flat buffers
     nx: f32,     // Normalized coordinate [-1, 1]
-    ny: f32      // Normalized coordinate [-1, 1]
+    ny: f32,     // Normalized coordinate [-1, 1]
+    w:  i32,     // Width of framebuffer this pixel is associated with
+    h:  i32,     // Height of framebuffer this pixel is associated with
 }
 
 fn @make_empty_pixelcoord() = PixelCoord {
@@ -11,7 +13,9 @@ fn @make_empty_pixelcoord() = PixelCoord {
     y = 0,
     linear = 0,
     nx = 0,
-    ny = 0
+    ny = 0,
+    w  = 0,
+    h  = 0,
 };
 
 fn @make_pixelcoord_from_xy(x: i32, y: i32, w: i32, h: i32, sx: f32, sy: f32) = PixelCoord {
@@ -19,7 +23,9 @@ fn @make_pixelcoord_from_xy(x: i32, y: i32, w: i32, h: i32, sx: f32, sy: f32) = 
     y = y,
     linear = y * w + x,
     nx = 2 * (x as f32 + sx) / (w as f32) - 1,
-    ny = 1 - 2 * (y as f32 + sy) / (h as f32)
+    ny = 1 - 2 * (y as f32 + sy) / (h as f32),
+    w  = w,
+    h  = h,
 };
 
 fn @make_pixelcoord_from_linear(linear: i32, w: i32, h: i32, sx: f32, sy: f32) -> PixelCoord {
@@ -30,20 +36,24 @@ fn @make_pixelcoord_from_linear(linear: i32, w: i32, h: i32, sx: f32, sy: f32) -
         y = y,
         linear = linear,
         nx = 2 * (x as f32 + sx) / (w as f32) - 1,
-        ny = 1 - 2 * (y as f32 + sy) / (h as f32)
+        ny = 1 - 2 * (y as f32 + sy) / (h as f32),
+        w  = w,
+        h  = h,
     }
 }
 
 fn @make_pixelcoord_from_normalized(nx: f32, ny: f32, w: i32, h: i32) -> PixelCoord {
-    let x = math_builtins::floor(w as f32 * (nx + 1) / 2) as i32;
-    let y = math_builtins::floor(h as f32 * (1 - ny) / 2) as i32;
+    let x = min(math_builtins::floor(w as f32 * (nx + 1) / 2) as i32, w - 1);
+    let y = min(math_builtins::floor(h as f32 * (1 - ny) / 2) as i32, h - 1);
 
     PixelCoord {
         x = x,
         y = y,
         linear = y * w + x,
         nx = nx,
-        ny = ny
+        ny = ny,
+        w  = w,
+        h  = h,
     }
 }
 

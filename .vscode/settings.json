@@ -171,8 +171,10 @@
     "cSpell.words": [
         "bsdf",
         "bsdfs",
+        "builtins",
         "Clearcoat",
         "denoiser",
+        "framebuffer",
         "klems",
         "microfacet",
         "pathtracer",

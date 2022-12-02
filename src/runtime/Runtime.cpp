@@ -77,7 +77,6 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mDatabase()
     , mParameterSet()
     , mSamplesPerIteration(0)
-    , mTarget(opts.Target)
     , mCurrentIteration(0)
     , mCurrentSampleCount(0)
     , mCurrentFrame(0)
@@ -85,7 +84,6 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mFilmHeight(0)
     , mCameraName()
     , mInitialCameraOrientation()
-    , mAcquireStats(opts.AcquireStats)
     , mTechniqueName()
     , mTechniqueInfo()
     , mTechniqueVariants()
@@ -98,11 +96,11 @@ Runtime::Runtime(const RuntimeOptions& opts)
     mCompiler.setVerbose(IG_LOGGER.verbosity() == L_DEBUG);
 
     // Check configuration
-    if (!mTarget.isValid())
+    if (!mOptions.Target.isValid())
         throw std::runtime_error("Could not pick a suitable target");
 
     // Load interface
-    IG_LOG(L_INFO) << "Using target " << mTarget.toString() << std::endl;
+    IG_LOG(L_INFO) << "Using target " << mOptions.Target.toString() << std::endl;
 
     // Load standard library if necessary
     if (!mOptions.ScriptDir.empty()) {
@@ -180,7 +178,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
 {
     LoaderOptions lopts;
     lopts.FilePath            = path;
-    lopts.Target              = mTarget;
+    lopts.Target              = mOptions.Target;
     lopts.IsTracer            = mOptions.IsTracer;
     lopts.Scene               = std::move(scene);
     lopts.ForceSpecialization = mOptions.ForceSpecialization;
@@ -207,7 +205,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     setup_camera(lopts, mOptions);
 
     if (mOptions.SPI == 0)
-        mSamplesPerIteration = recommendSPI(mTarget, mFilmWidth, mFilmHeight, mOptions.IsInteractive);
+        mSamplesPerIteration = recommendSPI(mOptions.Target, mFilmWidth, mFilmHeight, mOptions.IsInteractive);
     else
         mSamplesPerIteration = mOptions.SPI;
 
@@ -404,19 +402,20 @@ void Runtime::reset()
 const Statistics* Runtime::getStatistics() const
 {
     IG_ASSERT(mDevice, "Expected device to be available");
-    return mAcquireStats && mDevice ? mDevice->getStatistics() : nullptr;
+    return mOptions.AcquireStats && mDevice ? mDevice->getStatistics() : nullptr;
 }
 
 bool Runtime::setup()
 {
     Device::SetupSettings settings;
-    settings.target             = mTarget;
+    settings.target             = mOptions.Target;
     settings.database           = &mDatabase;
     settings.framebuffer_width  = (uint32)mFilmWidth;
     settings.framebuffer_height = (uint32)mFilmHeight;
-    settings.acquire_stats      = mAcquireStats;
+    settings.acquire_stats      = mOptions.AcquireStats;
     settings.aov_map            = &mTechniqueInfo.EnabledAOVs;
     settings.resource_map       = &mResourceMap;
+    settings.debug_trace        = mOptions.DebugTrace;
 
     IG_LOG(L_DEBUG) << "Init device" << std::endl;
     mDevice = std::make_unique<Device>(settings);

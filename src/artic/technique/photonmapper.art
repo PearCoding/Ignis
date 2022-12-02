@@ -303,7 +303,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, light_selector: LightSelector, rad
         }
 
         // Do final gather
-        if pt.depth + 1 <= max_path_len /* Just to be consistent with the pathtracer and safe unnecessary merges */ 
+        if pt.depth + 1 <= max_path_len /* Just to be consistent with the pathtracer and omit unnecessary merges */ 
             && !mat.is_emissive && !mat.bsdf.is_specular {
             let actual_radius  = get_radius(ctx.hit, pt);
             let actual_radius2 = actual_radius * actual_radius;

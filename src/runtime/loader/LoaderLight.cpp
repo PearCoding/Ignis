@@ -415,7 +415,7 @@ std::string LoaderLight::generateLightSelector(std::string type, ShadingTree& tr
 
     // If there is just a none or just a single light, do not bother with fancy selectors
     if (lightCount() <= 1)
-        return uniformSelector;
+        return uniformSelector + "\n";
 
     std::stringstream stream;
 

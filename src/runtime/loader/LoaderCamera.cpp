@@ -92,6 +92,8 @@ static void camera_perspective(std::ostream& stream, const std::string& name, co
                << "    camera_dir, " << std::endl
                << "    camera_up, " << std::endl
                << "    " << fov_gen << "(" << (fov.second * Deg2Rad) << ", " << aspect_ratio << "), " << std::endl
+               << "    settings.width, " << std::endl
+               << "    settings.height, " << std::endl
                << "    " << tmin << ", " << std::endl
                << "    " << tmax << ");" << std::endl;
     } else {
@@ -101,6 +103,8 @@ static void camera_perspective(std::ostream& stream, const std::string& name, co
                << "    " << fov_gen << "(" << (fov.second * Deg2Rad) << ", " << aspect_ratio << "), " << std::endl
                << "    " << aperture_radius << ", " << std::endl
                << "    " << focal_length << ", " << std::endl
+               << "    settings.width, " << std::endl
+               << "    settings.height, " << std::endl
                << "    " << tmin << ", " << std::endl
                << "    " << tmax << ");" << std::endl;
     }
@@ -141,6 +145,8 @@ static void camera_orthogonal(std::ostream& stream, const std::string& name, con
            << "    camera_dir, " << std::endl
            << "    camera_up, " << std::endl
            << "    make_vec2(" << scale << ", " << scale << " / " << aspect_ratio << "), " << std::endl
+           << "    settings.width, " << std::endl
+           << "    settings.height, " << std::endl
            << "    " << tmin << ", " << std::endl
            << "    " << tmax << ");" << std::endl;
 }

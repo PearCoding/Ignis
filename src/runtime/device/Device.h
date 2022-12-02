@@ -23,6 +23,7 @@ public:
         bool acquire_stats                           = false;
         const std::vector<std::string>* aov_map      = nullptr;
         const std::vector<std::string>* resource_map = nullptr;
+        bool debug_trace                             = false;
     };
 
     struct RenderSettings {

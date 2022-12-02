@@ -1,5 +1,6 @@
 #include "LoaderTechnique.h"
 #include "Loader.h"
+#include "LoaderCamera.h"
 #include "LoaderLight.h"
 #include "LoaderUtils.h"
 #include "Logger.h"
@@ -373,9 +374,9 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
     const float radius       = technique ? technique->property("radius").getNumber(0.01f) : 0.01f;
     const float clamp_value  = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
 
-    bool is_lighttracer = ctx.CurrentTechniqueVariant == 0;
+    const bool is_light_pass = ctx.CurrentTechniqueVariant == 0;
 
-    if (is_lighttracer) {
+    if (is_light_pass) {
         stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
                << "    match(id) {" << std::endl
                << "      _ => make_empty_aov_image()" << std::endl
@@ -407,13 +408,70 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
     stream << "  let scene_bbox  = " << LoaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
            << "  let light_cache = make_ppm_lightcache(device, " << max_photons << ", scene_bbox);" << std::endl;
 
-    if (is_lighttracer) {
+    if (is_light_pass) {
         stream << "  let technique = make_ppm_light_renderer(" << max_depth << ", aovs, light_cache);" << std::endl;
     } else {
         ShadingTree tree(ctx);
         stream << ctx.Lights->generateLightSelector("", tree);
         stream << "  let technique = make_ppm_path_renderer(" << max_depth << ",light_selector, ppm_radius, aovs, " << clamp_value << ", light_cache);" << std::endl;
     }
+}
+
+/////////////////////////////////
+
+static std::string lt_light_camera_generator(LoaderContext& ctx)
+{
+    std::stringstream stream;
+
+    stream << RayGenerationShader::begin(ctx) << std::endl;
+
+    stream << ShaderUtils::generateDatabase(ctx) << std::endl;
+
+    ShadingTree tree(ctx);
+    stream << ctx.Lights->generate(tree, false) << std::endl;
+    stream << ctx.Lights->generateLightSelector("", tree);
+
+    stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
+    stream << "  let emitter = make_lt_emitter(light_selector, settings.iter, spi);" << std::endl;
+
+    stream << RayGenerationShader::end();
+
+    return stream.str();
+}
+
+static TechniqueInfo lt_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
+{
+    IG_UNUSED(technique);
+
+    TechniqueInfo info;
+
+    info.Variants[0].UsesLights = false; // LT makes no use of other lights (but starts on one)
+
+    info.Variants[0].PrimaryPayloadCount   = 5;
+    info.Variants[0].SecondaryPayloadCount = 2;
+
+    // To start from a light source, we do have to override the standard camera generator for LT
+    info.Variants[0].OverrideCameraGenerator = lt_light_camera_generator;
+
+    info.Variants[0].RequiresExplicitCamera = true;
+    info.Variants[0].ShadowHandlingMode     = ShadowHandlingMode::Advanced;
+
+    if (ctx.Denoiser.Enabled)
+        enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
+
+    return info;
+}
+
+static void lt_body_loader(std::ostream& stream, const std::string&, const std::shared_ptr<Parser::Object>& technique, LoaderContext& ctx)
+{
+    if (handle_ib_body(stream, technique, ctx))
+        return;
+
+    const int max_depth     = technique ? technique->property("max_depth").getInteger(8) : 8;
+    const float clamp_value = technique ? technique->property("clamp").getNumber(0) : 0; // Allow clamping of contributions
+
+    stream << "  let framebuffer = device.load_aov_image(\"\", spi);" << std::endl
+           << "  let technique = make_lt_renderer(camera, framebuffer, " << max_depth << ", " << clamp_value << ");" << std::endl;
 }
 
 /////////////////////////////////
@@ -438,10 +496,12 @@ static const struct TechniqueEntry {
     { "debug", debug_get_info, debug_body_loader },
     { "ppm", ppm_get_info, ppm_body_loader },
     { "photonmapper", ppm_get_info, ppm_body_loader },
+    { "lt", lt_get_info, lt_body_loader },
+    { "lighttracer", lt_get_info, lt_body_loader },
     { "wireframe", wireframe_get_info, wireframe_body_loader },
     { "infobuffer", ib_get_info, ib_body_loader },
     { "lightvisibility", lv_get_info, lv_body_loader },
-    { "camera_check", cc_get_info,cc_body_loader },
+    { "camera_check", cc_get_info, cc_body_loader },
     { "", nullptr, nullptr }
 };
 

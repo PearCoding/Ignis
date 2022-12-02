@@ -160,6 +160,8 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_flag("--stats", AcquireStats, "Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session");
     app.add_flag("--stats-full", AcquireFullStats, "Acquire all stats alongside rendering. Will be dumped at the end of the rendering session");
 
+    app.add_flag("--debug-trace", DebugTrace, "Dump information regarding calls on the device. Will slow down execution and produce a lot of output!");
+
     app.add_flag("--dump-shader", DumpShader, "Dump produced shaders to files in the current working directory");
     app.add_flag("--dump-shader-full", DumpFullShader, "Dump produced shaders with standard library to files in the current working directory");
 
@@ -258,7 +260,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
 void ProgramOptions::populate(RuntimeOptions& options) const
 {
     IG_LOGGER.setQuiet(Quiet);
-    IG_LOGGER.setVerbosity(VerbosityLevel);
+    IG_LOGGER.setVerbosity(DebugTrace ? IG::L_DEBUG : VerbosityLevel);
     IG_LOGGER.enableAnsiTerminal(!NoColor);
 
     options.IsTracer      = Type == ApplicationType::Trace;
@@ -266,6 +268,7 @@ void ProgramOptions::populate(RuntimeOptions& options) const
 
     options.Target         = Target;
     options.AcquireStats   = AcquireStats || AcquireFullStats;
+    options.DebugTrace     = DebugTrace;
     options.DumpShader     = DumpShader;
     options.DumpShaderFull = DumpFullShader;
     options.SPI            = SPI.value_or(0);

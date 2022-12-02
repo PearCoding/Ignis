@@ -49,13 +49,14 @@ public:
     std::string TechniqueType;
 
     IG::Target Target;
-    
+
     std::optional<int> SPP;
     std::optional<int> SPI;
     IG::SPPMode SPPMode = SPPMode::Fixed;
 
     bool AcquireStats     = false;
     bool AcquireFullStats = false;
+    bool DebugTrace       = false;
 
     bool DumpShader     = false;
     bool DumpFullShader = false;

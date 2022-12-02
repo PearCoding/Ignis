@@ -14,18 +14,19 @@ fn @compute_scale_from_vfov(fov: f32, aspect: f32) -> Vec2 {
 
 // Return pixel coordinate from a point for a perspective projection
 fn @perspective_pos_to_pixel(v: Vec3, eye: Vec3, view: Mat3x3, scale: Vec2, w: i32, h: i32) -> Option[PixelCoord] {
-    let dir = vec3_normalize(vec3_sub(eye, v)); // FROM camera to point
+    let dir = (vec3_sub(v, eye)); // FROM camera to point
     let un  = mat3x3_left_mul(view, dir);
-    let n   = make_vec2(un.x / (un.z * scale.x), un.y / (un.z * scale.y));
+    let d   = un.z;
+    let n   = make_vec2(un.x / (d * scale.x), un.y / (d * scale.y));
     if n.x >= -1 && n.x <= 1 && n.y >= -1 && n.y <= 1 {
-        make_option(make_pixelcoord_from_normalized(n.x, n.y, w, h)) // TODO: Width & Height
+        make_option(make_pixelcoord_from_normalized(n.x, n.y, w, h))
     } else {
         Option[PixelCoord]::None
     }
 }
 
 // Creates a perspective camera
-fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f32, tmax: f32) -> Camera {
+fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, w: i32, h: i32, tmin: f32, tmax: f32) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
     let view  = make_mat3x3(right, up, dir);
 
@@ -35,7 +36,7 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f
             make_ray(eye, d, tmin, tmax, ray_flag_camera)
         },
         sample_pixel = @ |_, pos| {
-            if let Option[PixelCoord]::Some(coord) = perspective_pos_to_pixel(pos, eye, view, scale, 1, 1) {  // TODO
+            if let Option[PixelCoord]::Some(coord) = perspective_pos_to_pixel(pos, eye, view, scale, w, h) {
                 make_option(CameraSample{
                     coord  = coord,
                     dir    = vec3_sub(eye, pos),
@@ -46,7 +47,7 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f
                 Option[CameraSample]::None
             }
         },
-        pos_to_pixel = @ |pos| perspective_pos_to_pixel(pos, eye, view, scale, 1, 1), // TODO
+        pos_to_pixel = @ |pos| perspective_pos_to_pixel(pos, eye, view, scale, w, h),
         differential = @ |_| {
             (
                 vec3_mulf(right, scale.x),
@@ -57,7 +58,7 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f
 }
 
 // Creates a perspective camera with depth of field
-fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, aperture_radius: f32, focal_length: f32, tmin: f32, tmax: f32) -> Camera {
+fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, aperture_radius: f32, focal_length: f32, w: i32, h: i32, tmin: f32, tmax: f32) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
     let view  = make_mat3x3(right, up, dir);
 
@@ -75,7 +76,7 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, ape
     Camera {
         generate_ray = gen_ray,
         sample_pixel = @ |rnd, pos| {
-            if let Option[PixelCoord]::Some(coord) = perspective_pos_to_pixel(pos, eye, view, scale, 1, 1) {  // TODO
+            if let Option[PixelCoord]::Some(coord) = perspective_pos_to_pixel(pos, eye, view, scale, w, h) {
                 make_option(CameraSample{
                     coord  = coord,
                     dir    = vec3_neg(gen_ray(rnd, coord).dir),
@@ -86,7 +87,7 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, ape
                 Option[CameraSample]::None
             }
         },
-        pos_to_pixel = @ |pos| perspective_pos_to_pixel(pos, eye, view, scale, 1, 1), // TODO
+        pos_to_pixel = @ |pos| perspective_pos_to_pixel(pos, eye, view, scale, w, h),
         differential = @ |_| {
             (
                 // TODO: We ignore the lens effect here

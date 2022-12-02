@@ -1,5 +1,3 @@
-// #define IG_DEBUG_LOG_TRACE
-
 #include "Device.h"
 #include "Image.h"
 #include "Logger.h"
@@ -911,9 +909,8 @@ public:
 
     inline void runDeviceShader()
     {
-#ifdef IG_DEBUG_LOG_TRACE
-        IG_LOG(L_DEBUG) << "TRACE> Device Shader" << std::endl;
-#endif
+        if (setup.debug_trace)
+            IG_LOG(L_DEBUG) << "TRACE> Device Shader" << std::endl;
 
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(ShaderType::Device, 1, {});
@@ -932,9 +929,8 @@ public:
 
     inline void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, ::TonemapSettings& settings)
     {
-#ifdef IG_DEBUG_LOG_TRACE
-        IG_LOG(L_DEBUG) << "TRACE> Tonemap Shader" << std::endl;
-#endif
+        if (setup.debug_trace)
+            IG_LOG(L_DEBUG) << "TRACE> Tonemap Shader" << std::endl;
 
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(ShaderType::Tonemap, 1, {});
@@ -953,9 +949,8 @@ public:
 
     inline ::ImageInfoOutput runImageinfoShader(float* in_pixels, ::ImageInfoSettings& settings)
     {
-#ifdef IG_DEBUG_LOG_TRACE
-        IG_LOG(L_DEBUG) << "TRACE> Imageinfo Shader" << std::endl;
-#endif
+        if (setup.debug_trace)
+            IG_LOG(L_DEBUG) << "TRACE> Imageinfo Shader" << std::endl;
 
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(ShaderType::ImageInfo, 1, {});
@@ -978,9 +973,8 @@ public:
 
     inline void runPrimaryTraversalShader(int32_t dev, int size)
     {
-#ifdef IG_DEBUG_LOG_TRACE
-        IG_LOG(L_DEBUG) << "TRACE> Primary Traversal Shader [S=" << size << "]" << std::endl;
-#endif
+        if (setup.debug_trace)
+            IG_LOG(L_DEBUG) << "TRACE> Primary Traversal Shader [S=" << size << "]" << std::endl;
 
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(ShaderType::PrimaryTraversal, size, {});
@@ -999,9 +993,8 @@ public:
 
     inline void runSecondaryTraversalShader(int32_t dev, int size)
     {
-#ifdef IG_DEBUG_LOG_TRACE
-        IG_LOG(L_DEBUG) << "TRACE> Secondary Traversal Shader [S=" << size << "]" << std::endl;
-#endif
+        if (setup.debug_trace)
+            IG_LOG(L_DEBUG) << "TRACE> Secondary Traversal Shader [S=" << size << "]" << std::endl;
 
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(ShaderType::SecondaryTraversal, size, {});
@@ -1020,9 +1013,8 @@ public:
 
     inline int runRayGenerationShader(int32_t dev, int next_id, int size, int xmin, int ymin, int xmax, int ymax)
     {
-#ifdef IG_DEBUG_LOG_TRACE
-        IG_LOG(L_DEBUG) << "TRACE> Ray Generation Shader [S=" << size << ", I=" << next_id << "]" << std::endl;
-#endif
+        if (setup.debug_trace)
+            IG_LOG(L_DEBUG) << "TRACE> Ray Generation Shader [S=" << size << ", I=" << next_id << "]" << std::endl;
 
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(ShaderType::RayGeneration, (xmax - xmin) * (ymax - ymin), {});
@@ -1042,9 +1034,8 @@ public:
 
     inline void runMissShader(int32_t dev, int first, int last)
     {
-#ifdef IG_DEBUG_LOG_TRACE
-        IG_LOG(L_DEBUG) << "TRACE> Miss Shader [S=" << first << ", E=" << last << "]" << std::endl;
-#endif
+        if (setup.debug_trace)
+            IG_LOG(L_DEBUG) << "TRACE> Miss Shader [S=" << first << ", E=" << last << "]" << std::endl;
 
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(ShaderType::Miss, last - first, {});
@@ -1065,9 +1056,8 @@ public:
     {
         const int material_id = database->EntityToMaterial.at(entity_id);
 
-#ifdef IG_DEBUG_LOG_TRACE
-        IG_LOG(L_DEBUG) << "TRACE> Hit Shader [I=" << entity_id << ", M=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
-#endif
+        if (setup.debug_trace)
+            IG_LOG(L_DEBUG) << "TRACE> Hit Shader [I=" << entity_id << ", M=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
 
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(ShaderType::Hit, last - first, material_id);
@@ -1096,9 +1086,8 @@ public:
         IG_ASSERT(useAdvancedShadowHandling(), "Expected advanced shadow shader only be called if it is enabled!");
 
         if (is_hit) {
-#ifdef IG_DEBUG_LOG_TRACE
-            IG_LOG(L_DEBUG) << "TRACE> Advanced Hit Shader [I=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
-#endif
+            if (setup.debug_trace)
+                IG_LOG(L_DEBUG) << "TRACE> Advanced Hit Shader [I=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
 
             if (setup.acquire_stats)
                 getThreadData()->stats.beginShaderLaunch(ShaderType::AdvancedShadowHit, last - first, material_id);
@@ -1116,9 +1105,8 @@ public:
             if (setup.acquire_stats)
                 getThreadData()->stats.endShaderLaunch(ShaderType::AdvancedShadowHit, material_id);
         } else {
-#ifdef IG_DEBUG_LOG_TRACE
-            IG_LOG(L_DEBUG) << "TRACE> Advanced Miss Shader [I=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
-#endif
+            if (setup.debug_trace)
+                IG_LOG(L_DEBUG) << "TRACE> Advanced Miss Shader [I=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
 
             if (setup.acquire_stats)
                 getThreadData()->stats.beginShaderLaunch(ShaderType::AdvancedShadowMiss, last - first, material_id);
@@ -1147,9 +1135,8 @@ public:
         auto callback      = reinterpret_cast<Callback*>(output.Exec);
 
         if (callback != nullptr) {
-#ifdef IG_DEBUG_LOG_TRACE
-            IG_LOG(L_DEBUG) << "TRACE> Callback Shader [T=" << type << "]" << std::endl;
-#endif
+            if (setup.debug_trace)
+                IG_LOG(L_DEBUG) << "TRACE> Callback Shader [T=" << type << "]" << std::endl;
 
             if (setup.acquire_stats)
                 getThreadData()->stats.beginShaderLaunch(ShaderType::Callback, 1, type);

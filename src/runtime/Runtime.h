@@ -78,7 +78,7 @@ public:
     [[nodiscard]] inline bool isTrace() const { return mOptions.IsTracer; }
 
     /// The target the runtime is using
-    [[nodiscard]] inline const Target& target() const { return mTarget; }
+    [[nodiscard]] inline const Target& target() const { return mOptions.Target; }
 
     /// Computes (approximative) number of samples per iteration. This might be off due to the internal computing of techniques
     [[nodiscard]] inline size_t samplesPerIteration() const { return mTechniqueInfo.ComputeSPI(0 /* TODO: Not always the best choice */, mSamplesPerIteration); }
@@ -134,7 +134,6 @@ private:
     std::unique_ptr<Device> mDevice;
 
     size_t mSamplesPerIteration;
-    Target mTarget;
 
     size_t mCurrentIteration;
     size_t mCurrentSampleCount;
@@ -145,8 +144,6 @@ private:
 
     std::string mCameraName;
     CameraOrientation mInitialCameraOrientation;
-
-    bool mAcquireStats;
 
     std::string mTechniqueName;
     TechniqueInfo mTechniqueInfo;

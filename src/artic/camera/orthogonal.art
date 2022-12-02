@@ -1,17 +1,17 @@
 // Return pixel coordinate from a point for a orthogonal projection
 fn @orthogonal_pos_to_pixel(v: Vec3, eye: Vec3, view: Mat3x3, scale: Vec2, w: i32, h: i32) -> Option[PixelCoord] {
-    let dir = vec3_normalize(vec3_sub(eye, v)); // FROM camera to point
+    let dir = vec3_normalize(vec3_sub(v, eye)); // FROM camera to point
     let un  = mat3x3_left_mul(view, dir);
     let n   = make_vec2(un.x / scale.x, un.y / scale.y);
     if n.x >= -1 && n.x <= 1 && n.y >= -1 && n.y <= 1 {
-        make_option(make_pixelcoord_from_normalized(n.x, n.y, w, h)) // TODO: Width & Height
+        make_option(make_pixelcoord_from_normalized(n.x, n.y, w, h))
     } else {
         Option[PixelCoord]::None
     }
 }
 
 // Creates an orthogonal camera
-fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f32, tmax: f32) -> Camera {
+fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, w: i32, h: i32, tmin: f32, tmax: f32) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
     let view  = make_mat3x3(right, up, dir);
 
@@ -21,7 +21,7 @@ fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f3
             make_ray(pos, dir, tmin, tmax, ray_flag_camera)
         },
         sample_pixel = @ |_, pos| {
-            if let Option[PixelCoord]::Some(coord) = orthogonal_pos_to_pixel(pos, eye, view, scale, 1, 1) {  // TODO
+            if let Option[PixelCoord]::Some(coord) = orthogonal_pos_to_pixel(pos, eye, view, scale, w, h) {
                 make_option(CameraSample{
                     coord  = coord,
                     dir    = vec3_neg(dir),
@@ -32,7 +32,7 @@ fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, tmin: f3
                 Option[CameraSample]::None
             }
         },
-        pos_to_pixel = @ |pos| orthogonal_pos_to_pixel(pos, eye, view, scale, 1, 1), // TODO
+        pos_to_pixel = @ |pos| orthogonal_pos_to_pixel(pos, eye, view, scale, w, h),
         differential = @ |_| {
             (
                 right,
