@@ -252,7 +252,7 @@ inline static Property getProperty(const rapidjson::Value& obj)
             return Property::fromVector3(getVector3f(obj));
         else if (len == 9)
             return Property::fromTransform(Transformf(getMatrix3f(obj)));
-        else if (len == 16)
+        else if (len == 12 || len == 16)
             return Property::fromTransform(Transformf(getMatrix4f(obj)));
     } else if (obj.IsObject()) {
         // Deprecated way of handling transforms
