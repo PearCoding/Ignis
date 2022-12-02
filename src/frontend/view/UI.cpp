@@ -79,12 +79,13 @@ public:
     bool ShowUI                             = true;
     bool ShowInspector                      = false;
     bool LockInteraction                    = false;
+    bool ZoomIsScale                        = false;
 
     size_t Width = 0, Height = 0;
 
     // Stats
     LuminanceInfo LastLum;
-    std::array<int, HISTOGRAM_SIZE*4> Histogram;
+    std::array<int, HISTOGRAM_SIZE * 4> Histogram;
 
     bool ToneMapping_Automatic              = false;
     float ToneMapping_Exposure              = 1.0f;
@@ -101,6 +102,7 @@ public:
     CameraPose LastCameraPose;
 
     float CurrentTravelSpeed = 1.0f;
+    float CurrentZoom        = 1.0f; // Only important if orthogonal
 
     // Buffer stuff
     bool setupTextureBuffer(size_t width, size_t height)
@@ -459,7 +461,10 @@ public:
 
                 if (!hover && canInteract) {
                     if (event.wheel.y != 0) {
-                        cam.move(0, 0, event.wheel.y * CurrentTravelSpeed);
+                        if (ZoomIsScale)
+                            CurrentZoom *= (event.wheel.y < 0) ? -event.wheel.y * 1.05f : event.wheel.y * 0.95f;
+                        else
+                            cam.move(0, 0, event.wheel.y * CurrentTravelSpeed);
                         iter = 0;
                     }
                 }
@@ -531,6 +536,7 @@ public:
                 auto pose = PoseResetRequest ? PoseManager.initialPose() : PoseManager.pose(PoseRequest);
                 cam.Eye   = pose.Eye;
                 cam.update_dir(pose.Dir, pose.Up);
+                CurrentZoom      = 1;
                 iter             = 0;
                 PoseRequest      = -1;
                 PoseResetRequest = false;
@@ -540,6 +546,9 @@ public:
         LastCameraPose = CameraPose(cam);
         Running        = run;
 
+        if (Running && ZoomIsScale)
+            Runtime->setParameter("__camera_scale", CurrentZoom);
+
         return false;
     }
 
@@ -548,8 +557,8 @@ public:
         const std::string aov_name = currentAOVName();
         ImageInfoSettings settings{ aov_name.c_str(),
                                     1.0f, HISTOGRAM_SIZE,
-                                    Histogram.data() + 0*HISTOGRAM_SIZE, Histogram.data() + 1*HISTOGRAM_SIZE,
-                                    Histogram.data() + 2*HISTOGRAM_SIZE, Histogram.data() + 3*HISTOGRAM_SIZE,
+                                    Histogram.data() + 0 * HISTOGRAM_SIZE, Histogram.data() + 1 * HISTOGRAM_SIZE,
+                                    Histogram.data() + 2 * HISTOGRAM_SIZE, Histogram.data() + 3 * HISTOGRAM_SIZE,
                                     true, true };
 
         const ImageInfoOutput output = Runtime->imageinfo(settings);
@@ -729,19 +738,19 @@ public:
                 ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0, 0));
                 if (ImPlot::BeginPlot("Histogram", ImVec2((int)HIST_W, 100), ImPlotFlags_NoTitle | ImPlotFlags_NoInputs | ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus)) {
                     ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickLabels);
-                    ImPlot::SetupAxesLimits(0, (double)HISTOGRAM_SIZE, 0, static_cast<double>(Width*Height), ImPlotCond_Always);
+                    ImPlot::SetupAxesLimits(0, (double)HISTOGRAM_SIZE, 0, static_cast<double>(Width * Height), ImPlotCond_Always);
                     ImPlot::SetupFinish();
 
                     constexpr double BarWidth = 0.67;
                     ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
                     ImPlot::SetNextFillStyle(ImVec4(1, 0, 0, 1), 0.25f);
-                    ImPlot::PlotBars("R", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 0*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("R", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 0 * HISTOGRAM_SIZE * sizeof(decltype(Histogram)::value_type));
                     ImPlot::SetNextFillStyle(ImVec4(0, 1, 0, 1), 0.25f);
-                    ImPlot::PlotBars("G", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 1*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("G", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 1 * HISTOGRAM_SIZE * sizeof(decltype(Histogram)::value_type));
                     ImPlot::SetNextFillStyle(ImVec4(0, 0, 1, 1), 0.25f);
-                    ImPlot::PlotBars("B", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 2*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("B", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 2 * HISTOGRAM_SIZE * sizeof(decltype(Histogram)::value_type));
                     ImPlot::SetNextFillStyle(ImVec4(1, 1, 0, 1), 0.25f);
-                    ImPlot::PlotBars("L", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 3*HISTOGRAM_SIZE*sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("L", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 3 * HISTOGRAM_SIZE * sizeof(decltype(Histogram)::value_type));
 
                     ImPlot::EndPlot();
                 }
@@ -856,6 +865,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
     mInternal->Width         = width;
     mInternal->Height        = height;
     mInternal->ShowDebugMode = showDebug;
+    mInternal->ZoomIsScale   = runtime->camera() == "orthogonal";
 
     mInternal->Window = SDL_CreateWindow(
         "Ignis",

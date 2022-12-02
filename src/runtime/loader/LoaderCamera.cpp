@@ -138,13 +138,14 @@ static void camera_orthogonal(std::ostream& stream, const std::string& name, con
         aspect_ratio = std::to_string(camera->property("aspect_ratio").getNumber(1));
 
     // Dump camera control (above is just defaults)
-    stream << "  let camera_eye = registry::get_global_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
-           << "  let camera_dir = registry::get_global_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
-           << "  let camera_up  = registry::get_global_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl
+    stream << "  let camera_eye   = registry::get_global_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
+           << "  let camera_dir   = registry::get_global_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
+           << "  let camera_up    = registry::get_global_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl
+           << "  let camera_scale = registry::get_global_parameter_f32(\"__camera_scale\" , 1);" << std::endl
            << "  let camera = make_orthogonal_camera(camera_eye, " << std::endl
            << "    camera_dir, " << std::endl
            << "    camera_up, " << std::endl
-           << "    make_vec2(" << scale << ", " << scale << " / " << aspect_ratio << "), " << std::endl
+           << "    make_vec2(" << scale << " * camera_scale, " << scale << " * camera_scale / " << aspect_ratio << "), " << std::endl
            << "    settings.width, " << std::endl
            << "    settings.height, " << std::endl
            << "    " << tmin << ", " << std::endl
