@@ -491,6 +491,7 @@ static const struct TechniqueEntry {
     TechniqueBodyLoader BodyLoader;
 } _generators[] = {
     { "ao", technique_empty_get_info, ao_body_loader },
+    { "pt", path_get_info, path_body_loader },
     { "path", path_get_info, path_body_loader },
     { "volpath", volpath_get_info, volpath_body_loader },
     { "debug", debug_get_info, debug_body_loader },

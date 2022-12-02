@@ -91,17 +91,21 @@ fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, c
         if let Option[CameraSample]::Some(camera_sample) = camera.sample_pixel(rnd, ctx.surf.point) {
             let in_dir  = vec3_normalize(camera_sample.dir); 
             let out_dir = vec3_neg(ctx.ray.dir);
-            // let cos_o   = vec3_dot(out_dir, ctx.surf.local.col(2));
-            // let cos_i   = vec3_dot(in_dir, ctx.surf.local.col(2));
+            let cos_o   = vec3_dot(out_dir, ctx.surf.local.col(2));
+            let cos_i   = vec3_dot(in_dir, ctx.surf.local.col(2));
 
-            let factor  = 1:f32;//safe_div(math_builtins::fabs(cos_o), math_builtins::fabs(cos_i));
-            let contrib = handle_color(color_mulf(color_mul(camera_sample.weight, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), factor));
+            if cos_o * cos_i > flt_eps {
+                let factor  = 1:f32;//safe_div(math_builtins::fabs(cos_o), math_builtins::fabs(cos_i));
+                let contrib = handle_color(color_mulf(color_mul(camera_sample.weight, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), factor));
 
-            write_ltsecondarypayload(secondary_payload, LTSecondaryPayload { pixel = make_vec2(camera_sample.coord.nx, camera_sample.coord.ny) });
-            make_simple_shadow_ray(
-                make_ray(ctx.surf.point, camera_sample.dir, offset, 1 - offset, ray_flag_shadow),
-                contrib
-            )
+                write_ltsecondarypayload(secondary_payload, LTSecondaryPayload { pixel = make_vec2(camera_sample.coord.nx, camera_sample.coord.ny) });
+                make_simple_shadow_ray(
+                    make_ray(ctx.surf.point, camera_sample.dir, offset, 1 - offset, ray_flag_shadow),
+                    contrib
+                )
+            } else {
+                ShadowRay::None
+            }
         } else {
             ShadowRay::None
         }
