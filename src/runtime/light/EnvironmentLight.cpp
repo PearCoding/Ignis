@@ -26,41 +26,25 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
+    const auto baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones(), true);
+
     input.Tree.addColor("scale", *mLight, Vector3f::Ones(), true);
     input.Tree.addTexture("radiance", *mLight, true);
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
     const std::string light_id = input.Tree.currentClosureID();
-    if (input.Tree.isPureTexture("radiance")) {
-        const std::string tex_name = mLight->property("radiance").getString();
-        const auto tex             = input.Tree.context().Scene.texture(tex_name);
-        if (!tex) {
-            IG_LOG(L_ERROR) << "Unknown texture '" << tex_name << "'" << std::endl;
-            input.Tree.signalError();
-            return; // TODO
-        }
-
-        const std::string tex_path = LoaderTexture::getFilename(*tex, input.Tree.context()).generic_u8string();
-        if (!mUseCDF || tex_path.empty()) {
-            input.Stream << input.Tree.pullHeader()
-                         << "  let light_" << light_id << " = make_environment_light(" << input.ID
-                         << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
-                         << ", " << input.Tree.getInline("scale")
-                         << ", tex_" << input.Tree.getClosureID(tex_name)
-                         << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
-        } else {
-            IG_LOG(L_DEBUG) << "Using environment cdf for '" << tex_name << "'" << std::endl;
-            const auto cdf          = LoaderUtils::setup_cdf2d(input.Tree.context(), tex_path, true, mUseCompensation);
-            const size_t res_cdf_id = input.Tree.context().registerExternalResource(std::get<0>(cdf));
-            input.Stream << input.Tree.pullHeader()
-                         << "  let cdf_" << light_id << "   = cdf::make_cdf_2d_from_buffer(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
-                         << "  let light_" << light_id << " = make_environment_light_textured(" << input.ID
-                         << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
-                         << ", " << input.Tree.getInline("scale")
-                         << ", tex_" << input.Tree.getClosureID(tex_name)
-                         << ", cdf_" << light_id
-                         << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
-        }
+    if (mUseCDF && baked.has_value() && baked.value()->width > 1 && baked.value()->height > 1) {
+        IG_LOG(L_DEBUG) << "Generating environment cdf for '" << name() << "'" << std::endl;
+        const auto cdf          = LoaderUtils::setup_cdf2d(input.Tree.context(), light_id, *baked.value(), true, mUseCompensation);
+        const size_t res_cdf_id = input.Tree.context().registerExternalResource(std::get<0>(cdf));
+        input.Stream << input.Tree.pullHeader()
+                     << "  let cdf_" << light_id << "   = cdf::make_cdf_2d_from_buffer(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
+                     << "  let light_" << light_id << " = make_environment_light_textured(" << input.ID
+                     << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
+                     << ", " << input.Tree.getInline("scale")
+                     << ", tex_" << light_id
+                     << ", cdf_" << light_id
+                     << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
     } else {
         input.Stream << input.Tree.pullHeader()
                      << "  let light_" << light_id << " = make_environment_light(" << input.ID

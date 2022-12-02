@@ -146,17 +146,6 @@ void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, 
     currentClosure().Parameters[name] = inline_str;
 }
 
-void ShadingTree::insertNumber(const std::string& name, const Parser::Property& prop, const NumberOptions& options)
-{
-    if (prop.type() == Parser::PT_NONE) {
-        IG_LOG(L_ERROR) << "Invalid property given for '" << name << "'" << std::endl;
-        signalError();
-    }
-
-    // TODO: Remove corresponding header line entries?
-    currentClosure().Parameters[name] = handlePropertyNumber(name, prop, options);
-}
-
 void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, const ColorOptions& options)
 {
     if (hasParameter(name)) {
@@ -261,9 +250,47 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
     currentClosure().Parameters[name] = inline_str;
 }
 
+ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, const TextureBakeOptions& options)
+{
+    // options only affect bake process with PExpr expressions
+
+    if (!hasParameter(name)) {
+        if (!hasDef) {
+            return {};
+        } else {
+            return std::make_shared<Image>(Image::createSolidImage(Vector4f(def.x(), def.y(), def.z(), 1)));
+        }
+    }
+
+    const auto prop = obj.property(name);
+
+    std::string inline_str;
+    switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        [[fallthrough]];
+    case Parser::PT_NONE:
+        if (!hasDef)
+            return {};
+        return std::make_shared<Image>(Image::createSolidImage(Vector4f(def.x(), def.y(), def.z(), 1)));
+    case Parser::PT_INTEGER:
+    case Parser::PT_NUMBER:
+        return std::make_shared<Image>(Image::createSolidImage(Vector4f(prop.getNumber(), prop.getNumber(), prop.getNumber(), 1)));
+    case Parser::PT_VECTOR3: {
+        const Vector3f c = prop.getVector3();
+        return std::make_shared<Image>(Image::createSolidImage(Vector4f(c.x(), c.y(), c.z(), 1)));
+    }
+    case Parser::PT_STRING: {
+        IG_LOG(L_DEBUG) << "Baking property '" << name << "'" << std::endl;
+        IG_UNUSED(options);
+        return {}; // TODO
+    }
+    }
+}
+
 bool ShadingTree::beginClosure(const std::string& name)
 {
-    mClosures.emplace_back(Closure{ name, getClosureID(name), {} });
+    mClosures.emplace_back(Closure{ name, getClosureID(name), {}, {} });
     return true;
 }
 
@@ -286,15 +313,6 @@ std::string ShadingTree::getInline(const std::string& name)
 {
     if (hasParameter(name))
         return currentClosure().Parameters.at(name);
-    IG_LOG(L_ERROR) << "Trying to access unknown parameter '" << name << "'" << std::endl;
-    signalError();
-    return "";
-}
-
-bool ShadingTree::isPureTexture(const std::string& name)
-{
-    if (hasParameter(name))
-        return currentClosure().PureTextures.count(name) > 0;
     IG_LOG(L_ERROR) << "Trying to access unknown parameter '" << name << "'" << std::endl;
     signalError();
     return "";

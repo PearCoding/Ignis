@@ -152,6 +152,8 @@ set(SRC
   skysun/model/ArHosekSkyModelData_Spectral.h
   shader/AdvancedShadowShader.cpp
   shader/AdvancedShadowShader.h
+  shader/BakeShader.cpp
+  shader/BakeShader.h
   shader/DeviceShader.cpp
   shader/DeviceShader.h
   shader/HitShader.cpp

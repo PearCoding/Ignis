@@ -64,3 +64,7 @@ fn ig_imageinfo_shader(_settings: &Settings, _in_pixels: &[f32], _width: i32, _h
 #[export]
 fn ig_tonemap_shader(_settings: &Settings, _in_pixels: &[f32], _out_pixels: &mut [u32], _width: i32, _height: i32, _t_settings: &TonemapSettings) -> () {
 }
+
+#[export]
+fn ig_bake_shader(_settings: &Settings, _output: &mut [f32]) -> () {
+}

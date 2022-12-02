@@ -39,13 +39,11 @@ void CDF::computeForArray(const std::vector<float>& values, const std::filesyste
     serializer.write(cdf, true);
 }
 
-void CDF::computeForImage(const std::filesystem::path& in, const std::filesystem::path& out,
+void CDF::computeForImage(const Image& image, const std::filesystem::path& out,
                           size_t& slice_conditional, size_t& slice_marginal,
                           bool premultiplySin, bool compensate)
 {
     constexpr float MinEps = 1e-5f;
-
-    Image image = Image::load(in);
 
     std::vector<float> marginal(image.height);
     std::vector<float> conditional(image.width * image.height);

@@ -155,23 +155,28 @@ Vector3f LoaderUtils::getDirection(const Parser::Object& obj)
 
 LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate)
 {
-    const std::string exported_id = "_cdf2d_" + filename;
+    std::string name = std::filesystem::path(filename).stem().generic_u8string();
+    Image image      = Image::load(filename);
+    return setup_cdf2d(ctx, name, image, premultiplySin, compensate);
+}
 
-    const auto data = ctx.ExportedData.find(exported_id);
+LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate)
+{
+    const std::string exported_id = "_cdf2d_" + name;
+    const auto data               = ctx.ExportedData.find(exported_id);
     if (data != ctx.ExportedData.end())
         return std::any_cast<CDFData>(data->second);
-
-    std::string name = std::filesystem::path(filename).stem().generic_u8string();
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin";
 
     size_t slice_conditional = 0;
     size_t slice_marginal    = 0;
-    CDF::computeForImage(filename, path, slice_conditional, slice_marginal, premultiplySin, compensate);
+    CDF::computeForImage(image, path, slice_conditional, slice_marginal, premultiplySin, compensate);
 
     const CDFData cdf_data        = { path, slice_conditional, slice_marginal };
     ctx.ExportedData[exported_id] = cdf_data;
     return cdf_data;
 }
+
 } // namespace IG

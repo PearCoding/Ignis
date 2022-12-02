@@ -511,4 +511,22 @@ bool Image::save(const std::filesystem::path& path, const float* data, size_t wi
     }
 }
 
+Image Image::createSolidImage(const Vector4f& color, size_t width, size_t height)
+{
+    Image img;
+    img.width    = width;
+    img.height   = height;
+    img.channels = 4;
+
+    img.pixels.reset(new float[img.width * img.height * 4]);
+    for (size_t k = 0; k < width * height; ++k) {
+        img.pixels[k * 4 + 0] = color.x();
+        img.pixels[k * 4 + 1] = color.y();
+        img.pixels[k * 4 + 2] = color.z();
+        img.pixels[k * 4 + 3] = color.w();
+    }
+
+    return img;
+}
+
 } // namespace IG

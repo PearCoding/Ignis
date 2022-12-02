@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Image.h"
 #include "LoaderContext.h"
 #include "skysun/SunLocation.h"
 
@@ -30,5 +31,6 @@ public:
 
     using CDFData = std::tuple<std::string, size_t, size_t>;
     static CDFData setup_cdf2d(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate = false);
+    static CDFData setup_cdf2d(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate = false);
 };
 } // namespace IG

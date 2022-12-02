@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Image.h"
 #include "Transpiler.h"
 #include <unordered_map>
 #include <unordered_set>
@@ -58,6 +59,11 @@ struct TextureOptions {
     static constexpr TextureOptions Structural() { return TextureOptions{ EmbedType::Structural }; }
     static constexpr TextureOptions Default() { return TextureOptions{ EmbedType::Default }; }
 };
+struct TextureBakeOptions {
+    size_t Width;
+    size_t Height;
+    static constexpr TextureBakeOptions Default() { return TextureBakeOptions{ 1024, 1024 }; }
+};
 } // namespace _details
 
 struct LoaderContext;
@@ -79,6 +85,8 @@ public:
     using VectorOptions  = _details::VectorOptions;
     using TextureOptions = _details::TextureOptions;
 
+    using TextureBakeOptions = _details::TextureBakeOptions;
+
     explicit ShadingTree(LoaderContext& ctx);
 
     /// Register new closure, can be empty if not a texture
@@ -90,12 +98,15 @@ public:
     void addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const VectorOptions& options = VectorOptions::Full());
     void addTexture(const std::string& name, const Parser::Object& obj, bool hasDef = true, const TextureOptions& options = TextureOptions::Default());
 
-    // Insert number, replacing previous definitions
-    void insertNumber(const std::string& name, const Parser::Property& prop, const NumberOptions& options = NumberOptions::Full());
+    using BakeOutputTexture = std::optional<std::shared_ptr<Image>>;
+    using BakeOutputNumber  = std::optional<float>;
+    using BakeOutputColor   = std::optional<Vector3f>;
 
-    // Approximation
+    // Approximation (TODO: Change to bake interface!)
     float computeNumber(const std::string& name, const Parser::Object& obj, float def = 0) const;
     Vector3f computeColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero()) const;
+
+    BakeOutputTexture bakeTexture(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const TextureBakeOptions& options = TextureBakeOptions::Default());
 
     inline std::string currentClosureID() const { return currentClosure().ID; }
     std::string getClosureID(const std::string& name);
@@ -103,7 +114,6 @@ public:
     void registerTextureUsage(const std::string& name);
     std::string pullHeader();
     std::string getInline(const std::string& name);
-    bool isPureTexture(const std::string& name);
     inline bool hasParameter(const std::string& name) const { return currentClosure().Parameters.count(name) > 0; }
 
     inline LoaderContext& context() { return mContext; }
