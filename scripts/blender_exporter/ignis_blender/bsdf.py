@@ -79,7 +79,7 @@ def _export_refraction_bsdf(ctx, bsdf, export_name):
     ior = export_node(ctx, bsdf.inputs["IOR"])
     return _handle_normal(ctx, bsdf,
                           {"type": "principled", "name": export_name,
-                           "base_color": base_color, "roughness": roughness, "specular_transmission": 1, "metallic": 1, "ior": ior})
+                           "base_color": base_color, "roughness": roughness, "specular_transmission": 1, "metallic": 0, "ior": ior})
 
 
 def _export_transparent_bsdf(ctx, bsdf, export_name):

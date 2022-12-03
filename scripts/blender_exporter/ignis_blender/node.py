@@ -850,7 +850,7 @@ def _handle_image(ctx, image):
         return None
 
 
-def _export_image_texture(ctx, node):
+def _export_image_texture(ctx, node, output_name):
     id = len(ctx.result["textures"])
     tex_name = f"_tex_{id}"
 
@@ -906,7 +906,10 @@ def _export_image_texture(ctx, node):
     else:
         tex_access = tex_name
 
-    return tex_access
+    if output_name == "Color":
+        return tex_access
+    else:
+        return f"{tex_access}.w"
 
 
 def _get_noise_vector(ctx, node):
@@ -1261,7 +1264,7 @@ def export_node(ctx, socket):
         output_name = socket.links[0].from_socket.name
 
         if isinstance(node, bpy.types.ShaderNodeTexImage):
-            expr = _export_image_texture(ctx, node)
+            expr = _export_image_texture(ctx, node, output_name)
         elif isinstance(node, bpy.types.ShaderNodeTexChecker):
             expr = _export_checkerboard(ctx, node, output_name)
         elif isinstance(node, bpy.types.ShaderNodeTexCoord):
