@@ -196,36 +196,39 @@ def _export_bsdf(ctx, socket, name):
     bsdf = socket.links[0].from_node
     output_name = socket.links[0].from_socket.name
 
+    def check_instance(typename):
+        return hasattr(bpy.types, typename) and isinstance(bsdf, getattr(bpy.types, typename))
+
     if bsdf is None:
         print(f"Material {name} has no valid bsdf")
         return None
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfDiffuse):
+    elif check_instance("ShaderNodeBsdfDiffuse"):
         expr = _export_diffuse_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfGlass):
+    elif check_instance("ShaderNodeBsdfGlass"):
         expr = _export_glass_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfRefraction):
+    elif check_instance("ShaderNodeBsdfRefraction"):
         expr = _export_refraction_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfTransparent):
+    elif check_instance("ShaderNodeBsdfTransparent"):
         expr = _export_transparent_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfTranslucent):
+    elif check_instance("ShaderNodeBsdfTranslucent"):
         expr = _export_translucent_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfGlossy):
+    elif check_instance("ShaderNodeBsdfGlossy"):
         expr = _export_glossy_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfPrincipled):
+    elif check_instance("ShaderNodeBsdfPrincipled"):
         expr = _export_principled_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeMixShader):
+    elif check_instance("ShaderNodeMixShader"):
         expr = _export_mix_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeAddShader):
+    elif check_instance("ShaderNodeAddShader"):
         expr = _export_add_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeEmission):
+    elif check_instance("ShaderNodeEmission"):
         expr = _export_emission_bsdf_black(name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeGroup):
+    elif check_instance("ShaderNodeGroup"):
         expr = handle_node_group_begin(
             ctx, bsdf, output_name, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
-    elif isinstance(bsdf, bpy.types.NodeGroupInput):
+    elif check_instance("NodeGroupInput"):
         expr = handle_node_group_end(
             ctx, bsdf, output_name, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
-    elif isinstance(bsdf, bpy.types.NodeReroute):
+    elif check_instance("NodeReroute"):
         expr = handle_node_reroute(
             ctx, bsdf, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
     elif isinstance(bsdf, bpy.types.ShaderNode) and socket.links[0].from_socket.type in ['VALUE', 'INT', 'RGBA', 'VECTOR']:
