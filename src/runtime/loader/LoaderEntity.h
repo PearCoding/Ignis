@@ -3,11 +3,10 @@
 #include "LoaderContext.h"
 
 namespace IG {
-struct LoaderResult;
 class LoaderEntity {
 public:
     void prepare(const LoaderContext& ctx);
-    bool load(LoaderContext& ctx, LoaderResult& result);
+    bool load(LoaderContext& ctx);
 
     [[nodiscard]] inline size_t entityCount() const { return mEntityCount; }
 

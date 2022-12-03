@@ -3,10 +3,9 @@
 #include "LoaderContext.h"
 
 namespace IG {
-struct LoaderResult;
 struct LoaderCamera {
     static std::string generate(const LoaderContext& ctx);
-    static void setupInitialOrientation(const LoaderContext& ctx, LoaderResult& result);
+    static void setupInitialOrientation(LoaderContext& ctx);
 
     static std::vector<std::string> getAvailableTypes();
 };

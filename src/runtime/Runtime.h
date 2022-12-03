@@ -118,7 +118,7 @@ public:
 private:
     void checkCacheDirectory();
     bool load(const std::filesystem::path& path, Parser::Scene&& scene);
-    bool setup();
+    bool setupScene();
     void shutdown();
     bool compileShaders();
     void* compileShader(const std::string& src, const std::string& func, const std::string& name);

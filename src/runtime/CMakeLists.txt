@@ -74,13 +74,11 @@ set(SRC
   loader/LoaderContext.h
   loader/LoaderEntity.cpp
   loader/LoaderEntity.h
-  loader/LoaderEnvironment.cpp
-  loader/LoaderEnvironment.h
   loader/LoaderLight.cpp
   loader/LoaderLight.h
   loader/LoaderMedium.cpp
   loader/LoaderMedium.h
-  loader/LoaderResult.h
+  loader/LoaderOptions.h
   loader/LoaderShape.cpp
   loader/LoaderShape.h
   loader/LoaderTechnique.cpp

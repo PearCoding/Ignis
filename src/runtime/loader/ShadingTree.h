@@ -73,7 +73,6 @@ private:
         std::string Name;
         std::string ID;
         std::unordered_map<std::string, std::string> Parameters;
-        std::unordered_set<std::string> PureTextures;
     };
 
 public:
@@ -139,7 +138,9 @@ private:
     bool checkIfEmbed(const Vector3f& color, const ColorOptions& options) const;
     bool checkIfEmbed(const Vector3f& vec, const VectorOptions& options) const;
 
+    BakeOutputTexture bakeTextureExpression(const std::string& name, const std::string& expr, const TextureBakeOptions& options);
     Vector3f approxTexture(const std::string& prop_name, const std::string& expr, const Vector3f& def) const;
+    std::string loadTexture(const std::string& tex_name);
 
     LoaderContext& mContext;
 

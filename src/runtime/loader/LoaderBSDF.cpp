@@ -827,7 +827,7 @@ static const struct {
 std::string LoaderBSDF::generate(const std::string& name, ShadingTree& tree)
 {
     std::stringstream stream;
-    const auto bsdf = tree.context().Scene.bsdf(name);
+    const auto bsdf = tree.context().Options.Scene.bsdf(name);
 
     bool error = false;
 

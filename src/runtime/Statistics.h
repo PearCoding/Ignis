@@ -17,7 +17,8 @@ enum class ShaderType {
     AdvancedShadowMiss,
     Callback,
     Tonemap,
-    ImageInfo
+    ImageInfo,
+    Bake
 };
 
 enum class SectionType {
@@ -124,6 +125,7 @@ private:
     std::map<size_t, ShaderStats> mCallbackStats;
     ShaderStats mImageInfoStats;
     ShaderStats mTonemapStats;
+    ShaderStats mBakeStats;
 
     std::array<uint64, (size_t)Quantity::_COUNT> mQuantities;
     std::array<SectionStats, (size_t)SectionType::_COUNT> mSections;

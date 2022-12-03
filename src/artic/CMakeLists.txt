@@ -70,6 +70,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/technique.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/texture.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/tonemap.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/bake.art
     ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/imageinfo.art
     ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/render.art
     ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/tonemap.art

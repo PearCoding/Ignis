@@ -1,41 +1,82 @@
 #pragma once
 
-#include "LoaderEnvironment.h"
+#include "CameraOrientation.h"
+#include "LoaderOptions.h"
 #include "RuntimeSettings.h"
 #include "TechniqueInfo.h"
 #include "device/Target.h"
+#include "math/BoundingBox.h"
+#include "table/SceneDatabase.h"
 
 #include <any>
 #include <filesystem>
+#include <unordered_set>
+#include <vector>
 
 namespace IG {
+// TODO: Refactor to LoaderEntity?
+struct Entity {
+    size_t ID;
+    Transformf Transform;
+    std::string Name;
+    uint32 ShapeID;
+    std::string BSDF;
 
-struct SceneDatabase;
+    inline Eigen::Matrix<float, 3, 4> computeLocalMatrix() const
+    {
+        return Transform.inverse().matrix().block<3, 4>(0, 0);
+    }
+    inline Eigen::Matrix<float, 3, 4> computeGlobalMatrix() const
+    {
+        return Transform.matrix().block<3, 4>(0, 0);
+    }
+    inline Eigen::Matrix<float, 3, 3> computeGlobalNormalMatrix() const
+    {
+        return Transform.matrix().block<3, 3>(0, 0).inverse().transpose();
+    }
+};
 
-struct LoaderContext {
-    Parser::Scene Scene;
+/// A material is a combination of bsdf, entity (if the entity is emissive) and volume/medium interface
+struct Material {
+    std::string BSDF;
+    int MediumInner = -1;
+    int MediumOuter = -1;
+    std::string Entity; // Empty if not emissive
+    inline bool hasEmission() const { return !Entity.empty(); }
+    inline bool hasMediumInterface() const { return MediumInner >= 0 || MediumOuter >= 0; }
+};
+
+inline bool operator==(const Material& a, const Material& b)
+{
+    return a.BSDF == b.BSDF && a.MediumInner == b.MediumInner && a.MediumOuter == b.MediumOuter && a.Entity == b.Entity;
+}
+
+constexpr size_t DefaultAlignment = sizeof(float) * 4;
+class LoaderContext {
+    IG_CLASS_NON_COPYABLE(LoaderContext);
+
+public:
+    LoaderContext()                           = default;
+    LoaderContext(LoaderContext&&)            = default;
+    LoaderContext& operator=(LoaderContext&&) = default;
+    ~LoaderContext();
+
+    LoaderOptions Options;
 
     std::unique_ptr<class LoaderLight> Lights;
     std::unique_ptr<class LoaderShape> Shapes;
     std::unique_ptr<class LoaderEntity> Entities;
 
-    std::filesystem::path FilePath;
-    IG::Target Target;
-    size_t SamplesPerIteration;
-    std::unordered_map<std::string, uint32> Images; // Image to Buffer
-
-    std::string CameraType;
-    std::string TechniqueType;
-    std::string PixelSamplerType;
+    SceneDatabase Database;
+    std::vector<TechniqueVariant> TechniqueVariants; // TODO: Refactor this out, as no loader requires this, but will produce it...
     IG::TechniqueInfo TechniqueInfo;
+    IG::CameraOrientation CameraOrientation;
 
-    DenoiserSettings Denoiser;
-    bool IsTracer = false;
+    std::unordered_map<std::string, uint32> Images; // Image to Buffer
 
     size_t CurrentTechniqueVariant;
     inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return TechniqueInfo.Variants[CurrentTechniqueVariant]; }
 
-    bool ForceShadingTreeSpecialization = false;
     ParameterSet LocalRegistry; // Current local registry for given shader
     inline void resetRegistry()
     {
@@ -44,14 +85,14 @@ struct LoaderContext {
 
     std::unordered_map<std::string, std::any> ExportedData; // Cache with already exported data and auxillary info
 
-    LoaderEnvironment Environment;
-    SceneDatabase* Database = nullptr;
+    // TODO: Refactor this into LoaderEntity?
+    std::unordered_map<std::string, Entity> EmissiveEntities;
+    std::vector<Material> Materials;
+
+    BoundingBox SceneBBox;
+    float SceneDiameter = 0.0f;
 
     size_t EntityCount;
-
-    // The width & height while loading. This might change in the actual rendering
-    size_t FilmWidth  = 800;
-    size_t FilmHeight = 600;
 
     std::filesystem::path handlePath(const std::filesystem::path& path, const Parser::Object& obj) const;
 

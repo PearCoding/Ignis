@@ -4,9 +4,18 @@
 #include "serialization/VectorSerializer.h"
 #include "table/SceneDatabase.h"
 
+// Include for deconstructor
+#include "LoaderEntity.h"
+#include "LoaderLight.h"
+#include "LoaderShape.h"
+
 namespace IG {
 
 using namespace Parser;
+
+LoaderContext::~LoaderContext()
+{
+}
 
 std::filesystem::path LoaderContext::handlePath(const std::filesystem::path& path, const Parser::Object& obj) const
 {
@@ -19,8 +28,8 @@ std::filesystem::path LoaderContext::handlePath(const std::filesystem::path& pat
             return std::filesystem::canonical(p);
     }
 
-    if (!FilePath.empty()) {
-        const auto p = FilePath.parent_path() / path;
+    if (!Options.FilePath.empty()) {
+        const auto p = Options.FilePath.parent_path() / path;
         if (std::filesystem::exists(p))
             return std::filesystem::canonical(p);
     }

@@ -18,7 +18,7 @@ PerezLight::PerezLight(const std::string& name, const std::shared_ptr<Parser::Ob
 float PerezLight::computeFlux(const ShadingTree& tree) const
 {
     // TODO
-    const float radius = tree.context().Environment.SceneDiameter / 2;
+    const float radius = tree.context().SceneDiameter / 2;
     return Pi * radius * radius;
 }
 

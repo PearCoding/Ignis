@@ -35,7 +35,7 @@ static CameraOrientation camera_perspective_orientation(const std::string&, cons
         orientation.Up             = cameraTransform.linear().col(1);
     } else {
         const auto fov       = extract_fov(camera);
-        const auto sceneBBox = ctx.Environment.SceneBBox;
+        const auto sceneBBox = ctx.SceneBBox;
 
         // Special case when the scene is completely empty
         if (sceneBBox.isEmpty()) {
@@ -46,7 +46,7 @@ static CameraOrientation camera_perspective_orientation(const std::string&, cons
         }
 
         // Try to setup a view over the whole scene
-        const float aspect_ratio = camera ? camera->property("aspect_ratio").getNumber(1) : ctx.FilmWidth / static_cast<float>(ctx.FilmHeight);
+        const float aspect_ratio = camera ? camera->property("aspect_ratio").getNumber(1) : ctx.Options.FilmWidth / static_cast<float>(ctx.Options.FilmHeight);
         const float a            = sceneBBox.diameter().x() / (2 * (fov.first ? aspect_ratio : 1)); // TODO: Really?
         const float b            = sceneBBox.diameter().y() / (2 * (!fov.first ? aspect_ratio : 1));
         const float s            = std::sin(fov.second * Deg2Rad / 2);
@@ -211,31 +211,31 @@ static const CameraEntry* getCameraEntry(const std::string& name)
 
 std::string LoaderCamera::generate(const LoaderContext& ctx)
 {
-    if (ctx.IsTracer)
+    if (ctx.Options.IsTracer)
         return "  let camera = make_null_camera(); maybe_unused(camera);";
 
-    const auto entry = getCameraEntry(ctx.CameraType);
+    const auto entry = getCameraEntry(ctx.Options.CameraType);
     if (!entry)
         return {};
 
-    const auto camera = ctx.Scene.camera();
+    const auto camera = ctx.Options.Scene.camera();
 
     std::stringstream stream;
-    entry->Loader(stream, ctx.CameraType, camera, ctx);
+    entry->Loader(stream, ctx.Options.CameraType, camera, ctx);
 
     stream << "  maybe_unused(camera);" << std::endl;
 
     return stream.str();
 }
 
-void LoaderCamera::setupInitialOrientation(const LoaderContext& ctx, LoaderResult& result)
+void LoaderCamera::setupInitialOrientation(LoaderContext& ctx)
 {
-    const auto entry = getCameraEntry(ctx.CameraType);
+    const auto entry = getCameraEntry(ctx.Options.CameraType);
     if (!entry)
         return;
 
-    const auto camera        = ctx.Scene.camera();
-    result.CameraOrientation = entry->SetupOrientation(ctx.CameraType, camera, ctx);
+    const auto camera     = ctx.Options.Scene.camera();
+    ctx.CameraOrientation = entry->SetupOrientation(ctx.Options.CameraType, camera, ctx);
 }
 
 std::vector<std::string> LoaderCamera::getAvailableTypes()

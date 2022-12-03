@@ -12,7 +12,7 @@ std::string BakeShader::begin(const LoaderContext& ctx)
 
     stream << "#[export] fn ig_bake_shader(settings: &Settings, output: &mut [f32]) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl;
+           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl;
 
     return stream.str();
 }
@@ -20,5 +20,15 @@ std::string BakeShader::begin(const LoaderContext& ctx)
 std::string BakeShader::end()
 {
     return "}";
+}
+
+std::string BakeShader::setupTexture2d(const LoaderContext& ctx, const std::string& expr, size_t width, size_t height)
+{
+    std::stringstream stream;
+    stream << begin(ctx)
+           << expr << std::endl
+           << "  bake_texture2d(device, main_func, " << width << ", " << height << ", output);" << std::endl
+           << end() << std::endl;
+    return stream.str();
 }
 } // namespace IG

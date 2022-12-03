@@ -210,7 +210,7 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
     bool failed = !res.has_value();
     if (failed) {
         // Mark as failed output
-        res = Transpiler::Result{ "color_builtins::pink", {}, false };
+        res = Transpiler::Result{ "color_builtins::pink", {}, {}, false };
     }
 
     // Patch output to color

@@ -51,7 +51,7 @@ std::string LoaderMedium::generate(ShadingTree& tree)
     std::stringstream stream;
 
     size_t counter = 0;
-    for (const auto& pair : tree.context().Scene.media()) {
+    for (const auto& pair : tree.context().Options.Scene.media()) {
         const auto medium = pair.second;
 
         bool found = false;
@@ -74,7 +74,7 @@ std::string LoaderMedium::generate(ShadingTree& tree)
            << "    match(id) {" << std::endl;
 
     size_t counter2 = 0;
-    for (const auto& pair : tree.context().Scene.media()) {
+    for (const auto& pair : tree.context().Options.Scene.media()) {
         const auto medium          = pair.second;
         const std::string media_id = tree.getClosureID(pair.first);
         stream << "      " << counter2 << " => medium_" << media_id

@@ -18,7 +18,7 @@ CIELight::CIELight(CIEType classification, const std::string& name, const std::s
 float CIELight::computeFlux(const ShadingTree& tree) const
 {
     // TODO: Better approximation?
-    const float radius = tree.context().Environment.SceneDiameter / 2;
+    const float radius = tree.context().SceneDiameter / 2;
     const float zenith = tree.computeNumber("zenith", *mLight, 1.0f);
     return zenith * Pi * radius * radius * (mHasGround ? 1.0f : 0.5f);
 }

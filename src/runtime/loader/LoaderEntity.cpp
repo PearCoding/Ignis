@@ -29,19 +29,19 @@ inline static void setup_bvh(std::vector<EntityObject>& input, SceneBVH& bvh)
     std::memcpy(bvh.Leaves.data(), objs.data(), bvh.Leaves.size());
 }
 
-bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
+bool LoaderEntity::load(LoaderContext& ctx)
 {
     // Fill entity list
-    ctx.Environment.SceneBBox = BoundingBox::Empty();
+    ctx.SceneBBox = BoundingBox::Empty();
 
     const auto start1 = std::chrono::high_resolution_clock::now();
 
-    auto& entityTable = result.Database.FixTables["entities"];
-    entityTable.reserve(ctx.Scene.entities().size() * 36);
+    auto& entityTable = ctx.Database.FixTables["entities"];
+    entityTable.reserve(ctx.Options.Scene.entities().size() * 36);
 
     std::unordered_map<ShapeProvider*, std::vector<EntityObject>> in_objs;
     mEntityCount = 0;
-    for (const auto& pair : ctx.Scene.entities()) {
+    for (const auto& pair : ctx.Options.Scene.entities()) {
         const auto child = pair.second;
 
         // Query shape
@@ -61,7 +61,7 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         if (bsdfName.empty()) {
             IG_LOG(L_ERROR) << "Entity " << pair.first << " has no bsdf" << std::endl;
             continue;
-        } else if (!ctx.Scene.bsdf(bsdfName)) {
+        } else if (!ctx.Options.Scene.bsdf(bsdfName)) {
             IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown bsdf " << bsdfName << std::endl;
             continue;
         }
@@ -71,12 +71,12 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         int mediumInner                   = -1;
 
         if (!mediumInnerName.empty()) {
-            if (!ctx.Scene.medium(mediumInnerName)) {
+            if (!ctx.Options.Scene.medium(mediumInnerName)) {
                 IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown medium " << mediumInnerName << std::endl;
                 continue;
             } else {
-                const auto it = ctx.Scene.media().find(mediumInnerName);
-                mediumInner   = (int)std::distance(ctx.Scene.media().begin(), it);
+                const auto it = ctx.Options.Scene.media().find(mediumInnerName);
+                mediumInner   = (int)std::distance(ctx.Options.Scene.media().begin(), it);
             }
         }
 
@@ -84,12 +84,12 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         int mediumOuter                   = -1;
 
         if (!mediumOuterName.empty()) {
-            if (!ctx.Scene.medium(mediumOuterName)) {
+            if (!ctx.Options.Scene.medium(mediumOuterName)) {
                 IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown medium " << mediumOuterName << std::endl;
                 continue;
             } else {
-                const auto it = ctx.Scene.media().find(mediumOuterName);
-                mediumOuter   = (int)std::distance(ctx.Scene.media().begin(), it);
+                const auto it = ctx.Options.Scene.media().find(mediumOuterName);
+                mediumOuter   = (int)std::distance(ctx.Options.Scene.media().begin(), it);
             }
         }
 
@@ -115,29 +115,29 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
         const BoundingBox entityBox   = shapeBox.transformed(transform);
 
         // Extend scene box
-        ctx.Environment.SceneBBox.extend(entityBox);
+        ctx.SceneBBox.extend(entityBox);
 
         // Register name for lights to associate with
         uint32 materialID = 0;
         if (ctx.Lights->isAreaLight(pair.first)) {
-            ctx.Environment.EmissiveEntities.insert({ pair.first, Entity{ mEntityCount, transform, pair.first, shapeID, bsdfName } });
+            ctx.EmissiveEntities.insert({ pair.first, Entity{ mEntityCount, transform, pair.first, shapeID, bsdfName } });
 
             // It is a unique material
-            materialID = (uint32)ctx.Environment.Materials.size();
-            ctx.Environment.Materials.push_back(Material{ bsdfName, mediumInner, mediumOuter, pair.first });
+            materialID = (uint32)ctx.Materials.size();
+            ctx.Materials.push_back(Material{ bsdfName, mediumInner, mediumOuter, pair.first });
         } else {
             Material mat{ bsdfName, mediumInner, mediumOuter, {} };
-            auto it = std::find(ctx.Environment.Materials.begin(), ctx.Environment.Materials.end(), mat);
-            if (it == ctx.Environment.Materials.end()) {
-                materialID = (uint32)ctx.Environment.Materials.size();
-                ctx.Environment.Materials.push_back(mat);
+            auto it = std::find(ctx.Materials.begin(), ctx.Materials.end(), mat);
+            if (it == ctx.Materials.end()) {
+                materialID = (uint32)ctx.Materials.size();
+                ctx.Materials.push_back(mat);
             } else {
-                materialID = (uint32)std::distance(ctx.Environment.Materials.begin(), it);
+                materialID = (uint32)std::distance(ctx.Materials.begin(), it);
             }
         }
 
         // Remember the entity to material
-        result.Database.EntityToMaterial.push_back(materialID);
+        ctx.Database.EntityToMaterial.push_back(materialID);
 
         const Eigen::Matrix<float, 3, 4> toLocal        = invTransform.matrix().block<3, 4>(0, 0);
         const Eigen::Matrix<float, 3, 4> toGlobal       = transform.matrix().block<3, 4>(0, 0);
@@ -172,20 +172,20 @@ bool LoaderEntity::load(LoaderContext& ctx, LoaderResult& result)
 
     ctx.EntityCount = mEntityCount;
     if (ctx.EntityCount == 0) {
-        ctx.Environment.SceneDiameter = 0;
+        ctx.SceneDiameter = 0;
         return true;
     }
 
-    ctx.Environment.SceneDiameter = ctx.Environment.SceneBBox.diameter().norm();
+    ctx.SceneDiameter = ctx.SceneBBox.diameter().norm();
 
     // Build bvh (keep in mind that this BVH has no pre-padding as in the case for shape BVHs)
     IG_LOG(L_DEBUG) << "Generating BVH for scene" << std::endl;
     const auto start2 = std::chrono::high_resolution_clock::now();
     for (auto& p : in_objs) {
-        auto& bvh = result.Database.SceneBVHs[p.first->identifier()];
-        if (ctx.Target.isGPU()) {
+        auto& bvh = ctx.Database.SceneBVHs[p.first->identifier()];
+        if (ctx.Options.Target.isGPU()) {
             setup_bvh<2>(p.second, bvh);
-        } else if (ctx.Target.vectorWidth() < 8) {
+        } else if (ctx.Options.Target.vectorWidth() < 8) {
             setup_bvh<4>(p.second, bvh);
         } else {
             setup_bvh<8>(p.second, bvh);

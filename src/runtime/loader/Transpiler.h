@@ -14,12 +14,15 @@ public:
 
     struct Result {
         std::string Expr;
-        std::unordered_set<std::string> Textures;
-        bool ScalarOutput; // Else it is a color
+        std::unordered_set<std::string> Textures;  // Textures used by the expression
+        std::unordered_set<std::string> Variables; // Variables used by the expression. Constants will be omitted
+        bool ScalarOutput;                         // Else it is a color
     };
 
     /// Transpile the given expression to artic code.
     std::optional<Result> transpile(const std::string& expr) const;
+
+    bool checkIfColor(const std::string& expr) const;
 
     inline const ShadingTree& tree() const { return mTree; }
 
@@ -35,6 +38,7 @@ public:
 
     /// Return shader to check correctness of all signatures and used functions. Only useful for internal purposes
     static std::string generateTestShader();
+
 private:
     ShadingTree& mTree;
     std::unordered_set<std::string> mCustomVariableBool;

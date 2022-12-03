@@ -188,12 +188,12 @@ public:
     std::unordered_map<std::string, AOV> aovs;
     AOV host_pixels;
 
-    const SceneDatabase* database;
-    const size_t entity_count;
+    size_t entity_count;
     size_t film_width;
     size_t film_height;
 
     const Device::SetupSettings setup;
+    Device::SceneSettings scene;
     Device::RenderSettings current_settings;
     const ParameterSet* current_parameters = nullptr;
     TechniqueVariantShaderSet shader_set;
@@ -205,10 +205,9 @@ public:
     const bool is_gpu;
 
     inline explicit Interface(const Device::SetupSettings& setup)
-        : database(setup.database)
-        , entity_count(database->FixTables.count("entities") > 0 ? database->FixTables.at("entities").entryCount() : 0)
-        , film_width(setup.framebuffer_width)
-        , film_height(setup.framebuffer_height)
+        : entity_count(0)
+        , film_width(0)
+        , film_height(0)
         , setup(setup)
         , main_stats()
         , driver_settings()
@@ -218,19 +217,10 @@ public:
         driver_settings.thread_count = (int)setup.target.threadCount();
         updateSettings(Device::RenderSettings{}); // Initialize with default values
 
-        ensureSetup();
         setupThreadData();
     }
 
     inline ~Interface() = default;
-
-    inline void ensureSetup()
-    {
-        if (host_pixels.Data.data())
-            return;
-
-        setupFramebuffer();
-    }
 
     inline int getDevID(size_t device) const
     {
@@ -245,22 +235,34 @@ public:
     }
     inline int getDevID() const { return getDevID(setup.target.device()); }
 
+    inline void assignScene(const Device::SceneSettings& settings)
+    {
+        scene        = settings;
+        entity_count = scene.database->FixTables.count("entities") > 0 ? scene.database->FixTables.at("entities").entryCount() : 0;
+    }
+
     inline size_t getPrimaryPayloadBlockSize() const { return current_settings.info.PrimaryPayloadCount; }
     inline size_t getSecondaryPayloadBlockSize() const { return current_settings.info.SecondaryPayloadCount; }
 
     inline const std::string& lookupResource(int32_t id) const
     {
-        return setup.resource_map->at(id);
+        IG_ASSERT(scene.resource_map != nullptr, "Expected resource map to be initialized");
+        return scene.resource_map->at(id);
     }
 
-    inline void setupFramebuffer()
+    inline void ensureFramebuffer()
     {
-        if (setup.aov_map) {
-            for (const auto& name : *setup.aov_map)
+        const size_t expectedSize = film_width * film_height * 3;
+
+        if (host_pixels.Data.data() && (size_t)host_pixels.Data.size() >= expectedSize * sizeof(float))
+            return;
+
+        if (scene.aov_map) {
+            for (const auto& name : *scene.aov_map)
                 aovs.emplace(name, AOV{});
         }
 
-        host_pixels.Data = anydsl::Array<float>(film_width * film_height * 3);
+        host_pixels.Data = anydsl::Array<float>(expectedSize);
 
 #ifdef IG_HAS_DENOISER
         if (aovs.count("Denoised") != 0)
@@ -268,7 +270,7 @@ public:
 #endif
 
         for (auto& p : aovs)
-            p.second.Data = anydsl::Array<float>(film_width * film_height * 3);
+            p.second.Data = anydsl::Array<float>(expectedSize);
 
         resetFramebufferAccess();
     }
@@ -277,12 +279,9 @@ public:
     {
         IG_ASSERT(width > 0 && height > 0, "Expected given width & height to be greater than 0");
 
-        if (film_width == width && film_height == height)
-            return;
-
         film_width  = width;
         film_height = height;
-        setupFramebuffer();
+        ensureFramebuffer();
     }
 
     inline void resetFramebufferAccess()
@@ -335,6 +334,9 @@ public:
         driver_settings.iter   = (int)settings.iteration;
         driver_settings.width  = (int)settings.work_width;
         driver_settings.height = (int)settings.work_height;
+
+        if (settings.work_width > film_width || settings.work_height > film_height)
+            resizeFramebuffer(std::max(settings.work_width, film_width), std::max(settings.work_height, film_height));
     }
 
     inline void setupShaderSet(const TechniqueVariantShaderSet& shaderSet)
@@ -500,7 +502,7 @@ public:
     inline size_t getTemporaryBufferSize() const
     {
         // Upper bound extracted from "mapping_*.art"
-        return roundUp(std::max<size_t>(32, std::max(entity_count + 1, database->MaterialCount * 2)), 4);
+        return roundUp(std::max<size_t>(32, std::max(entity_count + 1, scene.database->MaterialCount * 2)), 4);
     }
 
     inline const auto& getTemporaryStorageHost(int32_t dev)
@@ -617,7 +619,7 @@ public:
     inline BvhProxy<Node, EntityLeaf1> loadSceneBVH(int32_t dev, const char* prim_type)
     {
         IG_LOG(L_DEBUG) << "Loading scene bvh " << prim_type << std::endl;
-        const auto& bvh         = database->SceneBVHs.at(prim_type);
+        const auto& bvh         = scene.database->SceneBVHs.at(prim_type);
         const size_t node_count = bvh.Nodes.size() / sizeof(Node);
         const size_t leaf_count = bvh.Leaves.size() / sizeof(EntityLeaf1);
         return BvhProxy<Node, EntityLeaf1>{
@@ -647,7 +649,7 @@ public:
         IG_UNUSED(dev);
 
         return SceneInfo{ (int)entity_count,
-                          (int)database->MaterialCount };
+                          (int)scene.database->MaterialCount };
     }
 
     inline const DynTableProxy& loadDyntable(int32_t dev, const char* name)
@@ -661,7 +663,7 @@ public:
 
         IG_LOG(L_DEBUG) << "Loading dyntable '" << name << "'" << std::endl;
 
-        return tables[name] = loadDyntable(dev, database->DynTables.at(name));
+        return tables[name] = loadDyntable(dev, scene.database->DynTables.at(name));
     }
 
     inline const DeviceBuffer& loadFixtable(int32_t dev, const char* name)
@@ -675,7 +677,7 @@ public:
 
         IG_LOG(L_DEBUG) << "Loading fixtable '" << name << "'" << std::endl;
 
-        return tables[name] = loadFixtable(dev, database->FixTables.at(name));
+        return tables[name] = loadFixtable(dev, scene.database->FixTables.at(name));
     }
 
     inline const DeviceImage& loadImage(int32_t dev, const std::string& filename, int32_t expected_channels)
@@ -1054,7 +1056,7 @@ public:
 
     inline void runHitShader(int32_t dev, int entity_id, int first, int last)
     {
-        const int material_id = database->EntityToMaterial.at(entity_id);
+        const int material_id = scene.database->EntityToMaterial.at(entity_id);
 
         if (setup.debug_trace)
             IG_LOG(L_DEBUG) << "TRACE> Hit Shader [I=" << entity_id << ", M=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
@@ -1149,6 +1151,28 @@ public:
             if (setup.acquire_stats)
                 getThreadData()->stats.endShaderLaunch(ShaderType::Callback, type);
         }
+    }
+
+    inline void runBakeShader(const ShaderOutput<void*>& shader, float* output)
+    {
+        IG_ASSERT(shader.Exec != nullptr, "Expected bake shader to be valid");
+
+        if (setup.debug_trace)
+            IG_LOG(L_DEBUG) << "TRACE> Bake Shader" << std::endl;
+
+        if (setup.acquire_stats)
+            getThreadData()->stats.beginShaderLaunch(ShaderType::Bake, 1, {});
+
+        using Callback = decltype(ig_bake_shader);
+        auto callback  = reinterpret_cast<Callback*>(shader.Exec);
+
+        setCurrentShader(getDevID(), 1, ShaderKey(0, ShaderType::Bake, 0), shader);
+        callback(&driver_settings, output);
+
+        checkDebugOutput();
+
+        if (setup.acquire_stats)
+            getThreadData()->stats.endShaderLaunch(ShaderType::Bake, {});
     }
 
     inline float* getFilmImage(int32_t dev)
@@ -1462,11 +1486,13 @@ Device::~Device()
     sInterface.reset();
 }
 
+void Device::assignScene(const SceneSettings& settings)
+{
+    sInterface->assignScene(settings);
+}
+
 void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, const ParameterSet* parameterSet)
 {
-    // Make sure everything is initialized (lazy setup)
-    sInterface->ensureSetup();
-
     // Register host thread
     sInterface->registerThread();
 
@@ -1475,7 +1501,7 @@ void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::Re
     sInterface->current_settings   = settings;
     sInterface->current_parameters = parameterSet;
 
-    sInterface->resetFramebufferAccess();
+    sInterface->ensureFramebuffer();
     sInterface->runDeviceShader();
     sInterface->present();
 
@@ -1514,11 +1540,9 @@ const Statistics* Device::getStatistics()
 
 void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_settings)
 {
-    // Make sure everything is initialized (lazy setup)
-    sInterface->ensureSetup();
-
     // Register host thread
     sInterface->registerThread();
+    sInterface->ensureFramebuffer();
 
     const auto acc       = sInterface->getAOVImage(driver_settings.AOV);
     float* in_pixels     = acc.Data;
@@ -1545,11 +1569,9 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
 
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 {
-    // Make sure everything is initialized (lazy setup)
-    sInterface->ensureSetup();
-
     // Register host thread
     sInterface->registerThread();
+    sInterface->ensureFramebuffer();
 
     const auto acc       = sInterface->getAOVImage(driver_settings.AOV);
     float* in_pixels     = acc.Data;
@@ -1581,6 +1603,24 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
     sInterface->unregisterThread();
 
     return driver_output;
+}
+
+void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output)
+{
+    // Register host thread
+    sInterface->registerThread();
+
+    // A bake shader does not access framebuffer and global registry
+    sInterface->current_parameters = nullptr;
+
+    const auto copy                = sInterface->scene.resource_map;
+    sInterface->scene.resource_map = resource_map;
+
+    sInterface->runBakeShader(shader, output);
+
+    sInterface->scene.resource_map = copy;
+
+    sInterface->unregisterThread();
 }
 
 template <typename T>

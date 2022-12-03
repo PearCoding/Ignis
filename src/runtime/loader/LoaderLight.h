@@ -5,7 +5,6 @@
 namespace IG {
 class Light;
 class ShadingTree;
-struct LoaderResult;
 class LoaderLight {
 public:
     void prepare(const LoaderContext& ctx);

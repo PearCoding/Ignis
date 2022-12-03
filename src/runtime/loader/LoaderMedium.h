@@ -4,7 +4,6 @@
 
 namespace IG {
 class ShadingTree;
-struct LoaderResult;
 struct LoaderMedium {
     static std::string generate(ShadingTree& tree);
 };

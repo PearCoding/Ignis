@@ -10,12 +10,10 @@
 #include <mutex>
 
 namespace IG {
-struct LoaderResult;
-
 class LoaderShape {
 public:
     void prepare(const LoaderContext& ctx);
-    bool load(LoaderContext& ctx, LoaderResult& result);
+    bool load(LoaderContext& ctx);
 
     // Note: The following accessors should not be called inside the ShapeProvider, as they are not thread-safe
     [[nodiscard]] inline bool hasShape(const std::string& name) const { return mIDs.count(name) > 0; }

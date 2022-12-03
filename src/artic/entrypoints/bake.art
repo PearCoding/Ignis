@@ -1,0 +1,55 @@
+fn @bake_texture2d(device: Device, func: fn(ShadingContext)->Color, w: i32, h: i32, output: &mut [f32]) -> () {
+    let size       = w * h;
+    let buffer_out = device.request_buffer("__bake_output", size * 4, 0); 
+
+    for (x, y) in device.parallel_range_2d(0, w, 0, h) {
+        let uvw = make_vec3(x as f32 / (w-1) as f32, y as f32 / (h-1) as f32, 0);
+
+        let ctx = ShadingContext {
+            entity_id = -1,
+            pixel     = make_empty_pixelcoord(),
+            ray       = make_zero_ray(),
+            hit       = empty_hit(flt_max),
+            surf      = make_invalid_surface_element(),
+            uvw       = uvw,
+            coord     = make_identity_pointmapperset(),
+        };
+
+        let color = @func(ctx);
+
+        buffer_out.store_vec4(y * w + x, color_to_vec4(color));
+    }
+    device.sync();
+
+    buffer_out.copy_to_host(0, size, output as &mut [i32]);
+}
+
+fn @sum_texture2d(device: Device, func: fn(ShadingContext)->Color, w: i32, h: i32) -> Color {
+    let size = w * h;
+
+    fn @get(i: i32) -> Color {
+        let x   = i % w;
+        let y   = i / w;
+        let uvw = make_vec3(x as f32 / (w-1) as f32, y as f32 / (h-1) as f32, 0);
+
+        let ctx = ShadingContext {
+            entity_id = -1,
+            pixel     = make_empty_pixelcoord(),
+            ray       = make_zero_ray(),
+            hit       = empty_hit(flt_max),
+            surf      = make_invalid_surface_element(),
+            uvw       = uvw,
+            coord     = make_identity_pointmapperset(),
+        };
+
+        @func(ctx)
+    }
+
+    let reduce_handler = device.parallel_reduce_handler;
+    let reduce_output  = reduce[Color](reduce_handler, size,
+        get,
+        @|a, b| { color_add(a, b) }
+    );
+    
+    reduce_output
+}

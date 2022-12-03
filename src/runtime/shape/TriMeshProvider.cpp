@@ -1,7 +1,6 @@
 #include "TriMeshProvider.h"
 
 #include "bvh/TriBVHAdapter.h"
-#include "loader/LoaderResult.h"
 #include "loader/LoaderShape.h"
 #include "mesh/MtsSerializedFile.h"
 #include "mesh/ObjFile.h"
@@ -231,7 +230,7 @@ static inline std::pair<uint32, uint32> split_u64_to_u32(uint64 a)
     return { uint32(a & 0xFFFFFFFF), uint32((a >> 32) & 0xFFFFFFFF) };
 }
 
-void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std::string& name, const Parser::Object& elem)
+void TriMeshProvider::handle(LoaderContext& ctx,  ShapeMTAccessor& acc, const std::string& name, const Parser::Object& elem)
 {
     TriMesh mesh;
     if (elem.pluginType() == "triangle") {
@@ -295,12 +294,12 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
 
     // Setup bvh
     uint64 bvh_offset = 0;
-    if (ctx.Target.isGPU()) {
-        bvh_offset = setup_bvh<2, 1>(mesh, result.Database, mBvhMutex);
-    } else if (ctx.Target.vectorWidth() < 8) {
-        bvh_offset = setup_bvh<4, 4>(mesh, result.Database, mBvhMutex);
+    if (ctx.Options.Target.isGPU()) {
+        bvh_offset = setup_bvh<2, 1>(mesh, ctx.Database, mBvhMutex);
+    } else if (ctx.Options.Target.vectorWidth() < 8) {
+        bvh_offset = setup_bvh<4, 4>(mesh, ctx.Database, mBvhMutex);
     } else {
-        bvh_offset = setup_bvh<8, 4>(mesh, result.Database, mBvhMutex);
+        bvh_offset = setup_bvh<8, 4>(mesh, ctx.Database, mBvhMutex);
     }
 
     // Precompute approximative shapes outside the lock region
@@ -316,10 +315,10 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     trishape.Area        = mesh.computeArea();
 
     // Make sure the id used in shape is same as in the dyntable later
-    result.DatabaseAccessMutex.lock();
+    acc.DatabaseAccessMutex.lock();
     IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
 
-    auto& table         = result.Database.DynTables["shapes"];
+    auto& table         = ctx.Database.DynTables["shapes"];
     auto& meshData      = table.addLookup((uint32)this->id(), 0, DefaultAlignment);
     const size_t offset = table.currentOffset();
 
@@ -358,7 +357,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, LoaderResult& result, const std
     // Add internal shape structure to table for potential area light usage
     ctx.Shapes->addTriShape(id, trishape);
 
-    result.DatabaseAccessMutex.unlock();
+    acc.DatabaseAccessMutex.unlock();
 }
 
 std::string TriMeshProvider::generateShapeCode(const LoaderContext& ctx)
@@ -372,10 +371,10 @@ std::string TriMeshProvider::generateTraversalCode(const LoaderContext& ctx)
     std::stringstream stream;
     stream << ShaderUtils::generateShapeLookup("trimesh_shapes", this, ctx) << std::endl;
 
-    if (ctx.Target.isGPU()) {
-        stream << "  let prim_bvhs = make_gpu_trimesh_bvh_table(device, " << (ctx.Target.gpuVendor() == GPUVendor::Nvidia ? "true" : "false") << ");" << std::endl;
+    if (ctx.Options.Target.isGPU()) {
+        stream << "  let prim_bvhs = make_gpu_trimesh_bvh_table(device, " << (ctx.Options.Target.gpuVendor() == GPUVendor::Nvidia ? "true" : "false") << ");" << std::endl;
     } else {
-        stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, " << ctx.Target.vectorWidth() << ");" << std::endl;
+        stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, " << ctx.Options.Target.vectorWidth() << ");" << std::endl;
     }
 
     stream << "  let trace   = TraceAccessor { shapes = trimesh_shapes, entities = entities };" << std::endl

@@ -158,7 +158,7 @@ static bool handle_ib_body(std::ostream& stream, const std::shared_ptr<Parser::O
         return false;
 
     const int max_depth        = technique ? technique->property("max_depth").getInteger(64) : 64;
-    const bool handle_specular = ctx.Denoiser.FollowSpecular || (technique ? technique->property("denoiser_handle_specular").getBool(false) : false);
+    const bool handle_specular = ctx.Options.Denoiser.FollowSpecular || (technique ? technique->property("denoiser_handle_specular").getBool(false) : false);
 
     stream << "  let aov_normals = device.load_aov_image(\"Normals\", spi); aov_normals.mark_as_used();" << std::endl;
     stream << "  let aov_albedo = device.load_aov_image(\"Albedo\", spi); aov_albedo.mark_as_used();" << std::endl;
@@ -180,7 +180,7 @@ static bool handle_ib_body(std::ostream& stream, const std::shared_ptr<Parser::O
 
 static TechniqueInfo ib_get_info(const std::string&, const std::shared_ptr<Parser::Object>& technique, const LoaderContext& ctx)
 {
-    const bool apply_always = !ctx.Denoiser.OnlyFirstIteration || (technique ? technique->property("denoiser_ib_all_iterations").getBool(false) : false);
+    const bool apply_always = !ctx.Options.Denoiser.OnlyFirstIteration || (technique ? technique->property("denoiser_ib_all_iterations").getBool(false) : false);
 
     TechniqueInfo info;
     enable_ib(info, apply_always, false);
@@ -212,8 +212,8 @@ static TechniqueInfo path_get_info(const std::string&, const std::shared_ptr<Par
     info.Variants[0].PrimaryPayloadCount       = 6;
     info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_pt_raypayload)";
 
-    if (ctx.Denoiser.Enabled)
-        enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
+    if (ctx.Options.Denoiser.Enabled)
+        enable_ib(info, !ctx.Options.Denoiser.OnlyFirstIteration);
 
     return info;
 }
@@ -261,8 +261,8 @@ static TechniqueInfo volpath_get_info(const std::string&, const std::shared_ptr<
     info.Variants[0].PrimaryPayloadCount       = 7;
     info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_vpt_raypayload)";
 
-    if (ctx.Denoiser.Enabled)
-        enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
+    if (ctx.Options.Denoiser.Enabled)
+        enable_ib(info, !ctx.Options.Denoiser.OnlyFirstIteration);
 
     return info;
 }
@@ -309,7 +309,7 @@ static std::string ppm_before_iteration_generator(LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    const auto technique     = ctx.Scene.technique();
+    const auto technique     = ctx.Options.Scene.technique();
     const size_t max_photons = std::max(100, technique ? technique->property("photons").getInteger(1000000) : 1000000);
 
     stream << ShaderUtils::beginCallback(ctx) << std::endl
@@ -358,8 +358,8 @@ static TechniqueInfo ppm_get_info(const std::string&, const std::shared_ptr<Pars
         }
     }
 
-    if (ctx.Denoiser.Enabled)
-        enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
+    if (ctx.Options.Denoiser.Enabled)
+        enable_ib(info, !ctx.Options.Denoiser.OnlyFirstIteration);
 
     return info;
 }
@@ -402,7 +402,7 @@ static void ppm_body_loader(std::ostream& stream, const std::string&, const std:
                << "    }" << std::endl
                << "  };" << std::endl;
 
-        stream << "  let ppm_radius = ppm_compute_radius(" << radius * ctx.Environment.SceneDiameter << ", settings.iter);" << std::endl;
+        stream << "  let ppm_radius = ppm_compute_radius(" << radius * ctx.SceneDiameter << ", settings.iter);" << std::endl;
     }
 
     stream << "  let scene_bbox  = " << LoaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
@@ -456,8 +456,8 @@ static TechniqueInfo lt_get_info(const std::string&, const std::shared_ptr<Parse
     info.Variants[0].RequiresExplicitCamera = true;
     info.Variants[0].ShadowHandlingMode     = ShadowHandlingMode::Advanced;
 
-    if (ctx.Denoiser.Enabled)
-        enable_ib(info, !ctx.Denoiser.OnlyFirstIteration);
+    if (ctx.Options.Denoiser.Enabled)
+        enable_ib(info, !ctx.Options.Denoiser.OnlyFirstIteration);
 
     return info;
 }
@@ -519,25 +519,25 @@ static const TechniqueEntry* getTechniqueEntry(const std::string& name)
 
 std::optional<TechniqueInfo> LoaderTechnique::getInfo(const LoaderContext& ctx)
 {
-    const auto* entry = getTechniqueEntry(ctx.TechniqueType);
+    const auto* entry = getTechniqueEntry(ctx.Options.TechniqueType);
     if (!entry)
         return {};
 
-    const auto technique = ctx.Scene.technique();
+    const auto technique = ctx.Options.Scene.technique();
 
-    return entry->GetInfo(ctx.TechniqueType, technique, ctx);
+    return entry->GetInfo(ctx.Options.TechniqueType, technique, ctx);
 }
 
 std::string LoaderTechnique::generate(LoaderContext& ctx)
 {
-    const auto* entry = getTechniqueEntry(ctx.TechniqueType);
+    const auto* entry = getTechniqueEntry(ctx.Options.TechniqueType);
     if (!entry)
         return {};
 
-    const auto technique = ctx.Scene.technique();
+    const auto technique = ctx.Options.Scene.technique();
 
     std::stringstream stream;
-    entry->BodyLoader(stream, ctx.TechniqueType, technique, ctx);
+    entry->BodyLoader(stream, ctx.Options.TechniqueType, technique, ctx);
 
     return stream.str();
 }

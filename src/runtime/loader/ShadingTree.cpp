@@ -3,6 +3,9 @@
 #include "LoaderTexture.h"
 #include "LoaderUtils.h"
 #include "Logger.h"
+#include "device/Device.h"
+#include "shader/BakeShader.h"
+#include "shader/ScriptCompiler.h"
 
 namespace IG {
 ShadingTree::ShadingTree(LoaderContext& ctx)
@@ -254,14 +257,6 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name,
 {
     // options only affect bake process with PExpr expressions
 
-    if (!hasParameter(name)) {
-        if (!hasDef) {
-            return {};
-        } else {
-            return std::make_shared<Image>(Image::createSolidImage(Vector4f(def.x(), def.y(), def.z(), 1)));
-        }
-    }
-
     const auto prop = obj.property(name);
 
     std::string inline_str;
@@ -282,15 +277,71 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name,
     }
     case Parser::PT_STRING: {
         IG_LOG(L_DEBUG) << "Baking property '" << name << "'" << std::endl;
-        IG_UNUSED(options);
-        return {}; // TODO
+        return bakeTextureExpression(name, prop.getString(), options);
     }
+    }
+}
+
+ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::string& name, const std::string& expr, const TextureBakeOptions& options)
+{
+    auto res = mTranspiler.transpile(expr);
+
+    if (!res.has_value()) {
+        return {};
+    } else {
+        const auto& result = res.value();
+
+        if (result.Textures.empty() && result.Variables.empty()) {
+            // TODO: Constant expression
+        }
+
+        bool warn = false;
+        for (const std::string& var : result.Variables) {
+            if (var != "uv")
+                warn = true;
+        }
+
+        if (warn)
+            IG_LOG(L_WARNING) << "Given expression for '" << name << "' contains variables outside `uv`. Baking process might be incomplete" << std::endl;
+
+        const bool forceSpec        = mForceSpecialization;
+        mForceSpecialization        = true;
+        const ParameterSet localReg = mContext.LocalRegistry;
+        beginClosure("__bake");
+
+        std::stringstream inner_script;
+        for (const auto& tex : res.value().Textures) {
+            inner_script << loadTexture(tex);
+        }
+
+        std::string expr = result.Expr;
+        if (result.ScalarOutput)
+            expr = "make_gray_color(" + expr + ")";
+
+        inner_script << "  let main_func = @|ctx:ShadingContext|->Color{maybe_unused(ctx); " + expr + "};" << std::endl;
+
+        const std::string script = BakeShader::setupTexture2d(mContext, inner_script.str(), options.Width, options.Height);
+        IG_LOG(L_DEBUG) << "Compiling bake shader:" << std::endl
+                        << script;
+
+        void* shader = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_bake_shader");
+
+        Image image = Image::createSolidImage(Vector4f::Zero(), options.Width, options.Height);
+        const auto resources = mContext.generateResourceMap();
+        mContext.Options.Device->bake(ShaderOutput<void*>{ shader, mContext.LocalRegistry }, &resources, image.pixels.get());
+
+        image.save("test.exr");
+
+        endClosure();
+        mContext.LocalRegistry = localReg;
+        mForceSpecialization   = forceSpec;
+        return std::make_shared<Image>(std::move(image));
     }
 }
 
 bool ShadingTree::beginClosure(const std::string& name)
 {
-    mClosures.emplace_back(Closure{ name, getClosureID(name), {}, {} });
+    mClosures.emplace_back(Closure{ name, getClosureID(name), {} });
     return true;
 }
 
@@ -321,22 +372,29 @@ std::string ShadingTree::getInline(const std::string& name)
 void ShadingTree::registerTextureUsage(const std::string& name)
 {
     if (mLoadedTextures.count(name) == 0) {
-        const auto tex = mContext.Scene.texture(name);
-        if (!tex) {
-            IG_LOG(L_ERROR) << "Unknown texture '" << name << "'" << std::endl;
-            mHeaderLines.push_back("  let tex_" + getClosureID(name) + " = make_invalid_texture();\n");
-        } else {
-            const std::string res = LoaderTexture::generate(name, *tex, *this);
-            if (res.empty()) // Due to some error this might happen
-                return;
-            mHeaderLines.push_back(res);
-        }
+        const std::string res = loadTexture(name);
+        if (res.empty()) // Due to some error this might happen
+            return;
+        mHeaderLines.push_back(res);
         mLoadedTextures.insert(name);
+    }
+}
+
+std::string ShadingTree::loadTexture(const std::string& tex_name)
+{
+    const auto tex = mContext.Options.Scene.texture(tex_name);
+    if (!tex) {
+        IG_LOG(L_ERROR) << "Unknown texture '" << tex_name << "'" << std::endl;
+        return "let tex_" + getClosureID(tex_name) + " = make_invalid_texture();\n";
+    } else {
+        return LoaderTexture::generate(tex_name, *tex, *this);
     }
 }
 
 std::string ShadingTree::handleTexture(const std::string& prop_name, const std::string& expr, bool needColor)
 {
+    IG_UNUSED(prop_name);
+
     auto res = mTranspiler.transpile(expr);
 
     if (!res.has_value()) {
@@ -347,12 +405,6 @@ std::string ShadingTree::handleTexture(const std::string& prop_name, const std::
     } else {
         for (const auto& tex : res.value().Textures)
             registerTextureUsage(tex);
-
-        // Check if the call is just a pure texture (without uv or other modifications)
-        if (res.value().Textures.size() == 1) {
-            if (*res.value().Textures.begin() == expr)
-                currentClosure().PureTextures.insert(prop_name);
-        }
 
         if (needColor) {
             if (res.value().ScalarOutput)
@@ -387,7 +439,7 @@ bool ShadingTree::checkIfEmbed(float val, const NumberOptions& options) const
         return false;
     default:
     case EmbedType::Default:
-        if (mForceSpecialization || context().ForceShadingTreeSpecialization)
+        if (mForceSpecialization || context().Options.ForceSpecialization)
             return true;
         else if (options.SpecializeZero && std::abs(val) <= FltEps)
             return true;
@@ -407,7 +459,7 @@ bool ShadingTree::checkIfEmbed(const Vector3f& color, const ColorOptions& option
         return false;
     default:
     case EmbedType::Default:
-        if (mForceSpecialization || context().ForceShadingTreeSpecialization)
+        if (mForceSpecialization || context().Options.ForceSpecialization)
             return true;
         else if (options.SpecializeBlack && color.isZero(FltEps))
             return true;
@@ -427,7 +479,7 @@ bool ShadingTree::checkIfEmbed(const Vector3f& vec, const VectorOptions& options
         return false;
     default:
     case EmbedType::Default:
-        if (mForceSpecialization || context().ForceShadingTreeSpecialization)
+        if (mForceSpecialization || context().Options.ForceSpecialization)
             return true;
         else if (options.SpecializeZero && vec.isZero(FltEps))
             return true;

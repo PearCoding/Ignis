@@ -107,6 +107,14 @@ Runtime::Runtime(const RuntimeOptions& opts)
         IG_LOG(L_INFO) << "Loading standard library from " << mOptions.ScriptDir << std::endl;
         mCompiler.loadStdLibFromDirectory(mOptions.ScriptDir);
     }
+
+    Device::SetupSettings settings;
+    settings.target        = mOptions.Target;
+    settings.acquire_stats = mOptions.AcquireStats;
+    settings.debug_trace   = mOptions.DebugTrace;
+
+    IG_LOG(L_DEBUG) << "Init device" << std::endl;
+    mDevice = std::make_unique<Device>(settings);
 }
 
 Runtime::~Runtime()
@@ -185,6 +193,8 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     lopts.EnableTonemapping   = mOptions.EnableTonemapping;
     lopts.Denoiser            = mOptions.Denoiser;
     lopts.Denoiser.Enabled    = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
+    lopts.Compiler            = &mCompiler;
+    lopts.Device              = mDevice.get();
 
     // Print a warning if denoiser was requested but none is available
     if (mOptions.Denoiser.Enabled && !lopts.Denoiser.Enabled && !mOptions.IsTracer && hasDenoiser())
@@ -214,25 +224,29 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
 
     IG_LOG(L_DEBUG) << "Loading scene" << std::endl;
     const auto startLoader = std::chrono::high_resolution_clock::now();
-    LoaderResult result;
-    if (!Loader::load(lopts, result))
+    
+    auto ctx = Loader::load(lopts);
+    if (!ctx)
         return false;
-    mDatabase = std::move(result.Database);
+    mDatabase = std::move(ctx->Database);
     IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startLoader).count() / 1000.0f << " seconds" << std::endl;
 
-    mCameraName               = lopts.CameraType;
-    mTechniqueName            = lopts.TechniqueType;
-    mTechniqueInfo            = result.TechniqueInfo;
-    mInitialCameraOrientation = result.CameraOrientation;
-    mTechniqueVariants        = std::move(result.TechniqueVariants);
-    mResourceMap              = std::move(result.ResourceMap);
+    mCameraName               = ctx->Options.CameraType;
+    mTechniqueName            = ctx->Options.TechniqueType;
+    mTechniqueInfo            = ctx->TechniqueInfo;
+    mInitialCameraOrientation = ctx->CameraOrientation;
+    mTechniqueVariants        = std::move(ctx->TechniqueVariants);
+    mResourceMap              = ctx->generateResourceMap();
 
-    if (lopts.Denoiser.Enabled)
+    if (ctx->Options.Denoiser.Enabled)
         mTechniqueInfo.EnabledAOVs.emplace_back("Denoised");
+
+    // Free memory from loader context
+    ctx.reset();
 
     // Preload camera orientation
     setCameraOrientationParameter(mInitialCameraOrientation);
-    return setup();
+    return setupScene();
 }
 
 void Runtime::step(bool ignoreDenoiser)
@@ -244,11 +258,6 @@ void Runtime::step(bool ignoreDenoiser)
 
     if (mTechniqueVariants.empty()) {
         IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
-        return;
-    }
-
-    if (!mDevice) {
-        IG_LOG(L_ERROR) << "Device not setup!" << std::endl;
         return;
     }
 
@@ -307,11 +316,6 @@ void Runtime::trace(const std::vector<Ray>& rays)
         return;
     }
 
-    if (!mDevice) {
-        IG_LOG(L_ERROR) << "Device not setup!" << std::endl;
-        return;
-    }
-
     if (mTechniqueInfo.VariantSelector) {
         const auto& active = mTechniqueInfo.VariantSelector(mCurrentIteration);
         for (const auto& ind : active)
@@ -360,35 +364,25 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
 
 void Runtime::resizeFramebuffer(size_t width, size_t height)
 {
-    IG_ASSERT(mDevice, "Expected device to be available");
     mFilmWidth  = width;
     mFilmHeight = height;
-    if (mDevice)
-        mDevice->resize(width, height);
+    mDevice->resize(width, height);
     reset();
 }
 
 AOVAccessor Runtime::getFramebuffer(const std::string& name) const
 {
-    IG_ASSERT(mDevice, "Expected device to be available");
-    if (mDevice)
-        return mDevice->getFramebuffer(name);
-    else
-        return AOVAccessor{ nullptr, 0 };
+    return mDevice->getFramebuffer(name);
 }
 
 void Runtime::clearFramebuffer()
 {
-    IG_ASSERT(mDevice, "Expected device to be available");
-    if (mDevice)
-        mDevice->clearAllFramebuffer();
+    mDevice->clearAllFramebuffer();
 }
 
 void Runtime::clearFramebuffer(const std::string& name)
 {
-    IG_ASSERT(mDevice, "Expected device to be available");
-    if (mDevice)
-        mDevice->clearFramebuffer(name);
+    mDevice->clearFramebuffer(name);
 }
 
 void Runtime::reset()
@@ -401,24 +395,18 @@ void Runtime::reset()
 
 const Statistics* Runtime::getStatistics() const
 {
-    IG_ASSERT(mDevice, "Expected device to be available");
-    return mOptions.AcquireStats && mDevice ? mDevice->getStatistics() : nullptr;
+    return mOptions.AcquireStats ? mDevice->getStatistics() : nullptr;
 }
 
-bool Runtime::setup()
+bool Runtime::setupScene()
 {
-    Device::SetupSettings settings;
-    settings.target             = mOptions.Target;
-    settings.database           = &mDatabase;
-    settings.framebuffer_width  = (uint32)mFilmWidth;
-    settings.framebuffer_height = (uint32)mFilmHeight;
-    settings.acquire_stats      = mOptions.AcquireStats;
-    settings.aov_map            = &mTechniqueInfo.EnabledAOVs;
-    settings.resource_map       = &mResourceMap;
-    settings.debug_trace        = mOptions.DebugTrace;
+    Device::SceneSettings settings;
+    settings.database     = &mDatabase;
+    settings.aov_map      = &mTechniqueInfo.EnabledAOVs;
+    settings.resource_map = &mResourceMap;
 
-    IG_LOG(L_DEBUG) << "Init device" << std::endl;
-    mDevice = std::make_unique<Device>(settings);
+    IG_LOG(L_DEBUG) << "Assign scene to device" << std::endl;
+    mDevice->assignScene(settings);
 
     if (IG_LOGGER.verbosity() <= L_DEBUG) {
         if (mResourceMap.empty()) {
@@ -451,11 +439,6 @@ bool Runtime::setup()
 
     clearFramebuffer();
     return true;
-}
-
-void Runtime::shutdown()
-{
-    mDevice.reset();
 }
 
 bool Runtime::compileShaders()
@@ -549,9 +532,7 @@ void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
         return;
     }
 
-    IG_ASSERT(mDevice, "Expected device to be available");
-    if (mDevice)
-        mDevice->tonemap(out_pixels, settings);
+    mDevice->tonemap(out_pixels, settings);
 }
 
 ImageInfoOutput Runtime::imageinfo(const ImageInfoSettings& settings)
@@ -561,11 +542,7 @@ ImageInfoOutput Runtime::imageinfo(const ImageInfoSettings& settings)
         return ImageInfoOutput{};
     }
 
-    IG_ASSERT(mDevice, "Expected device to be available");
-    if (mDevice)
-        return mDevice->imageinfo(settings);
-    else
-        return ImageInfoOutput{};
+    return mDevice->imageinfo(settings);
 }
 
 void Runtime::setParameter(const std::string& name, int value)

@@ -16,7 +16,7 @@ EnvironmentLight::EnvironmentLight(const std::string& name, const std::shared_pt
 
 float EnvironmentLight::computeFlux(const ShadingTree& tree) const
 {
-    const float radius   = tree.context().Environment.SceneDiameter / 2;
+    const float radius   = tree.context().SceneDiameter / 2;
     const float radiance = tree.computeNumber("radiance", *mLight, 1.0f);
     const float scale    = tree.computeNumber("scale", *mLight, 1.0f);
     return scale * radiance * Pi * radius * radius;
@@ -26,7 +26,7 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    const auto baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones(), true);
+    const auto baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones());
 
     input.Tree.addColor("scale", *mLight, Vector3f::Ones(), true);
     input.Tree.addTexture("radiance", *mLight, true);

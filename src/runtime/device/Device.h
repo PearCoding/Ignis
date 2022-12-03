@@ -17,13 +17,14 @@ class Device {
 public:
     struct SetupSettings {
         Target target;
-        size_t framebuffer_width                     = 0;
-        size_t framebuffer_height                    = 0;
+        bool acquire_stats = false;
+        bool debug_trace   = false;
+    };
+
+    struct SceneSettings {
         SceneDatabase* database                      = nullptr;
-        bool acquire_stats                           = false;
         const std::vector<std::string>* aov_map      = nullptr;
         const std::vector<std::string>* resource_map = nullptr;
-        bool debug_trace                             = false;
     };
 
     struct RenderSettings {
@@ -45,6 +46,7 @@ public:
     Device(const SetupSettings& settings);
     ~Device();
 
+    void assignScene(const SceneSettings& settings);
     void render(const TechniqueVariantShaderSet& shader_set, const RenderSettings& settings, const ParameterSet* parameter_set);
     void resize(size_t width, size_t height);
 
@@ -56,5 +58,6 @@ public:
 
     void tonemap(uint32_t*, const TonemapSettings&);
     ImageInfoOutput imageinfo(const ImageInfoSettings&);
+    void bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output);
 };
 } // namespace IG

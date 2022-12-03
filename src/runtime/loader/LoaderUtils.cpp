@@ -8,14 +8,14 @@ namespace IG {
 std::string LoaderUtils::inlineSceneInfo(const LoaderContext& ctx)
 {
     std::stringstream stream;
-    stream << "SceneInfo { num_entities = " << ctx.EntityCount << ", num_materials = " << ctx.Environment.Materials.size() << " }";
+    stream << "SceneInfo { num_entities = " << ctx.EntityCount << ", num_materials = " << ctx.Materials.size() << " }";
     return stream.str();
 }
 
 std::string LoaderUtils::inlineSceneBBox(const LoaderContext& ctx)
 {
     std::stringstream stream;
-    stream << "make_bbox(" << LoaderUtils::inlineVector(ctx.Environment.SceneBBox.min) << ", " << LoaderUtils::inlineVector(ctx.Environment.SceneBBox.max) << ")";
+    stream << "make_bbox(" << LoaderUtils::inlineVector(ctx.SceneBBox.min) << ", " << LoaderUtils::inlineVector(ctx.SceneBBox.max) << ")";
     return stream.str();
 }
 

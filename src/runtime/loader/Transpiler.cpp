@@ -259,32 +259,31 @@ static inline std::string_view dumpType(PExprType type)
 struct InternalVariable {
     std::string Map;
     PExprType Type;
-
-    inline const std::string& access() const { return Map; }
+    bool IsConstant;
 };
 static const std::unordered_map<std::string, InternalVariable> sInternalVariables = {
-    { "uv", { "vec3_to_2(ctx.uvw)", PExprType::Vec2 } },
-    { "uvw", { "ctx.uvw", PExprType::Vec3 } },
-    { "prim_coords", { "ctx.surf.prim_coords", PExprType::Vec2 } },
-    { "P", { "ctx.surf.point", PExprType::Vec3 } },
-    { "Np", { "ctx.coord.to_normalized_point(ctx.surf.point)", PExprType::Vec3 } },
-    { "V", { "vec3_neg(ctx.ray.dir)", PExprType::Vec3 } },
-    { "Rd", { "vec3_neg(ctx.ray.dir)", PExprType::Vec3 } },
-    { "Ro", { "ctx.ray.org", PExprType::Vec3 } },
-    { "N", { "ctx.surf.local.col(2)", PExprType::Vec3 } },
-    { "Ng", { "ctx.surf.face_normal", PExprType::Vec3 } },
-    { "Nx", { "ctx.surf.local.col(0)", PExprType::Vec3 } },
-    { "Ny", { "ctx.surf.local.col(1)", PExprType::Vec3 } },
-    { "frontside", { "ctx.surf.is_entering", PExprType::Boolean } },
-    { "entity_id", { "ctx.entity_id", PExprType::Integer } },
-    { "Ix", { "ctx.pixel.x", PExprType::Integer } },
-    { "Iy", { "ctx.pixel.y", PExprType::Integer } },
-    { "Pi", { "flt_pi", PExprType::Number } },
-    { "E", { "flt_e", PExprType::Number } },
-    { "Eps", { "flt_eps", PExprType::Number } },
-    { "NumMax", { "flt_max", PExprType::Number } },
-    { "NumMin", { "flt_min", PExprType::Number } },
-    { "Inf", { "flt_inf", PExprType::Number } }
+    { "uv", { "vec3_to_2(ctx.uvw)", PExprType::Vec2, false } },
+    { "uvw", { "ctx.uvw", PExprType::Vec3, false } },
+    { "prim_coords", { "ctx.surf.prim_coords", PExprType::Vec2, false } },
+    { "P", { "ctx.surf.point", PExprType::Vec3, false } },
+    { "Np", { "ctx.coord.to_normalized_point(ctx.surf.point)", PExprType::Vec3, false } },
+    { "V", { "vec3_neg(ctx.ray.dir)", PExprType::Vec3, false } },
+    { "Rd", { "vec3_neg(ctx.ray.dir)", PExprType::Vec3, false } },
+    { "Ro", { "ctx.ray.org", PExprType::Vec3, false } },
+    { "N", { "ctx.surf.local.col(2)", PExprType::Vec3, false } },
+    { "Ng", { "ctx.surf.face_normal", PExprType::Vec3, false } },
+    { "Nx", { "ctx.surf.local.col(0)", PExprType::Vec3, false } },
+    { "Ny", { "ctx.surf.local.col(1)", PExprType::Vec3, false } },
+    { "frontside", { "ctx.surf.is_entering", PExprType::Boolean, false } },
+    { "entity_id", { "ctx.entity_id", PExprType::Integer, false } },
+    { "Ix", { "ctx.pixel.x", PExprType::Integer, false } },
+    { "Iy", { "ctx.pixel.y", PExprType::Integer, false } },
+    { "Pi", { "flt_pi", PExprType::Number, true } },
+    { "E", { "flt_e", PExprType::Number, true } },
+    { "Eps", { "flt_eps", PExprType::Number, true } },
+    { "NumMax", { "flt_max", PExprType::Number, true } },
+    { "NumMin", { "flt_min", PExprType::Number, true } },
+    { "Inf", { "flt_inf", PExprType::Number, true } }
 };
 
 // Dyn Functions
@@ -794,7 +793,8 @@ inline static std::string binaryCwise(const std::string& A, const std::string& B
 class ArticVisitor : public PExpr::TranspileVisitor<std::string> {
 private:
     ShadingTree& mTree;
-    std::unordered_set<std::string> mUsedTextures;
+    std::unordered_set<std::string> mUsedTextures;  // Will count used textures
+    std::unordered_set<std::string> mUsedVariables; // Will count used internal variables, but not constants
     size_t mUUIDCounter;
 
 public:
@@ -805,14 +805,18 @@ public:
     }
 
     inline std::unordered_set<std::string>& usedTextures() { return mUsedTextures; }
+    inline std::unordered_set<std::string>& usedVariables() { return mUsedVariables; }
 
     std::string onVariable(const std::string& name, PExprType expectedType) override
     {
         auto var = sInternalVariables.find(name);
-        if (var != sInternalVariables.end())
-            return var->second.access();
+        if (var != sInternalVariables.end()) {
+            if (!var->second.IsConstant)
+                mUsedVariables.insert(var->first);
+            return var->second.Map;
+        }
 
-        if (expectedType == PExprType::Vec4 && mTree.context().Scene.texture(name) != nullptr) {
+        if (expectedType == PExprType::Vec4 && mTree.context().Options.Scene.texture(name) != nullptr) {
             mUsedTextures.insert(name);
             return "color_to_vec4(" + tex_name(mTree.getClosureID(name)) + "(ctx))";
         } else {
@@ -970,7 +974,7 @@ public:
         }
 
         // Must be a texture
-        IG_ASSERT(mTree.context().Scene.texture(name) != nullptr, "Expected a valid texture name");
+        IG_ASSERT(mTree.context().Options.Scene.texture(name) != nullptr, "Expected a valid texture name");
         mUsedTextures.insert(name);
         return "color_to_vec4(" + tex_name(mTree.getClosureID(name)) + "(" + (argumentPayloads.empty() ? std::string("ctx") : ("ctx.{uvw=vec2_to_3(" + argumentPayloads[0] + ", 0)}")) + "))";
     }
@@ -1055,7 +1059,7 @@ public:
             return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
 
         // Check for textures/nodes in the variable table
-        if (Parent->mTree.context().Scene.texture(lkp.name()))
+        if (Parent->mTree.context().Options.Scene.texture(lkp.name()))
             return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
 
         return {};
@@ -1081,7 +1085,7 @@ public:
         }
 
         // Add all texture/nodes to the function table as well, such that the uv can be changed directly
-        if (Parent->mTree.context().Scene.texture(lkp.name()) && lkp.matchParameter({ PExprType::Vec2 }))
+        if (Parent->mTree.context().Options.Scene.texture(lkp.name()) && lkp.matchParameter({ PExprType::Vec2 }))
             return PExpr::FunctionDef(lkp.name(), PExprType::Vec4, { PExprType::Vec2 });
 
         return {};
@@ -1131,7 +1135,24 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr)
         break;
     }
 
-    return Result{ res, std::move(visitor.usedTextures()), scalar_output };
+    return Result{ res, std::move(visitor.usedTextures()), visitor.usedVariables(), scalar_output };
+}
+
+bool Transpiler::checkIfColor(const std::string& expr) const
+{
+    auto ast = mInternal->Environment.parse(expr);
+    if (!ast)
+        return true;
+
+    switch (ast->returnType()) {
+    default:
+    case PExprType::Vec3:
+    case PExprType::Vec4:
+        return true;
+    case PExprType::Number:
+    case PExprType::Integer:
+        return false;
+    }
 }
 
 std::string Transpiler::availableVariables()
@@ -1160,7 +1181,7 @@ std::string Transpiler::generateTestShader()
            << "  let ctx = make_miss_shading_context(make_empty_pixelcoord(), make_zero_ray());" << std::endl;
 
     for (const auto& p : sInternalVariables)
-        stream << "  let _var_" << p.first << " = " << p.second.access() << ";" << std::endl;
+        stream << "  let _var_" << p.first << " = " << p.second.Map << ";" << std::endl;
     stream << "}" << std::endl
            << std::endl;
 
@@ -1205,7 +1226,7 @@ std::string Transpiler::generateTestShader()
         } else if (p.first == "lookup") {
             arguments[0] = "'linear'";
             for (size_t i = 1; i < def.Arguments.size(); ++i)
-                arguments[i] = "v" + std::to_string(i-1);
+                arguments[i] = "v" + std::to_string(i - 1);
         } else {
             for (size_t i = 0; i < def.Arguments.size(); ++i)
                 arguments[i] = "v" + std::to_string(i);

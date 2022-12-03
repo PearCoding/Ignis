@@ -15,11 +15,11 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
     mEntity = light->property("entity").getString();
 
     Entity entity;
-    if (!ctx.Environment.EmissiveEntities.count(mEntity)) {
+    if (!ctx.EmissiveEntities.count(mEntity)) {
         IG_LOG(L_ERROR) << "No entity named '" << mEntity << "' exists for area light" << std::endl;
         return;
     } else {
-        entity = ctx.Environment.EmissiveEntities.at(mEntity);
+        entity = ctx.EmissiveEntities.at(mEntity);
     }
 
     const bool opt = light->property("optimize").getBool(true) || !ctx.Shapes->isTriShape(entity.ShapeID);
@@ -85,11 +85,11 @@ void AreaLight::serialize(const SerializationInput& input) const
     input.Tree.addColor("radiance", *mLight, Vector3f::Constant(1.0f), true);
 
     Entity entity;
-    if (!input.Tree.context().Environment.EmissiveEntities.count(mEntity)) {
+    if (!input.Tree.context().EmissiveEntities.count(mEntity)) {
         IG_LOG(L_ERROR) << "No entity named '" << mEntity << "' exists for area light" << std::endl;
         return;
     } else {
-        entity = input.Tree.context().Environment.EmissiveEntities.at(mEntity);
+        entity = input.Tree.context().EmissiveEntities.at(mEntity);
     }
 
     const std::string light_id = input.Tree.currentClosureID();
@@ -179,11 +179,11 @@ void AreaLight::embed(const EmbedInput& input) const
 
     const auto& ctx = input.Tree.context();
     Entity entity;
-    if (!ctx.Environment.EmissiveEntities.count(entityName)) {
+    if (!ctx.EmissiveEntities.count(entityName)) {
         IG_LOG(L_ERROR) << "No entity named '" << entityName << "' exists for area light" << std::endl;
         return;
     } else {
-        entity = ctx.Environment.EmissiveEntities.at(entityName);
+        entity = ctx.EmissiveEntities.at(entityName);
     }
 
     const Eigen::Matrix<float, 3, 4> localMat  = entity.computeLocalMatrix();        // To Local
