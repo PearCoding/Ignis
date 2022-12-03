@@ -257,8 +257,10 @@ public:
     {
         const size_t expectedSize = film_width * film_height * 3;
 
-        if (host_pixels.Data.data() && (size_t)host_pixels.Data.size() >= expectedSize * sizeof(float))
+        if (host_pixels.Data.data() && (size_t)host_pixels.Data.size() >= expectedSize * sizeof(float)) {
+            resetFramebufferAccess();
             return;
+        }
 
         if (scene.aov_map) {
             for (const auto& name : *scene.aov_map)

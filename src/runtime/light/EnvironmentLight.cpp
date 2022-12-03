@@ -26,7 +26,16 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    const auto baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones(), true, ShadingTree::TextureBakeOptions{ 1024, 256, true });
+    ShadingTree::BakeOutputTexture baked;
+    const std::string exported_id = "_light_" + name();
+    const auto cache_data         = input.Tree.context().ExportedData.find(exported_id);
+    if (cache_data != input.Tree.context().ExportedData.end()) {
+        baked = std::any_cast<ShadingTree::BakeOutputTexture>(cache_data->second);
+    } else {
+        baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones(), true, ShadingTree::TextureBakeOptions{ 1024, 256, true });
+
+        input.Tree.context().ExportedData[exported_id] = baked;
+    }
 
     input.Tree.addColor("scale", *mLight, Vector3f::Ones(), true);
     input.Tree.addTexture("radiance", *mLight, true);
@@ -34,7 +43,6 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
 
     const std::string light_id = input.Tree.currentClosureID();
     if (mUseCDF && baked.has_value() && baked.value()->width > 1 && baked.value()->height > 1) {
-        IG_LOG(L_DEBUG) << "Generating environment cdf for '" << name() << "'" << std::endl;
         const auto cdf          = LoaderUtils::setup_cdf2d(input.Tree.context(), light_id, *baked.value(), true, mUseCompensation);
         const size_t res_cdf_id = input.Tree.context().registerExternalResource(std::get<0>(cdf));
         input.Stream << input.Tree.pullHeader()

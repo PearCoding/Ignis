@@ -1,5 +1,6 @@
 #include "LoaderUtils.h"
 #include "CDF.h"
+#include "Logger.h"
 
 #include <cctype>
 #include <sstream>
@@ -167,6 +168,7 @@ LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::str
     if (data != ctx.ExportedData.end())
         return std::any_cast<CDFData>(data->second);
 
+    IG_LOG(L_DEBUG) << "Generating environment cdf for '" << name << "'" << std::endl;
     std::filesystem::create_directories("data/"); // Make sure this directory exists
     std::string path = "data/cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin";
 
