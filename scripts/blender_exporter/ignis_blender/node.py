@@ -842,7 +842,7 @@ def _handle_image(ctx, image):
                     # Above failed, so give this a try
                     img_path = os.path.join("Textures", img_name)
                     _export_image(image, os.path.join(ctx.path, img_path),
-                                  is_f32=False, keep_format=False)
+                                  is_f32=False, keep_format=True)
                 ctx.result["_images"].add(img_name)
         return img_path
     else:
