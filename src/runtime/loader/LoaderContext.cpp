@@ -4,7 +4,7 @@
 #include "serialization/VectorSerializer.h"
 #include "table/SceneDatabase.h"
 
-// Include for deconstructor
+// Include for constructor & deconstructor
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
 #include "LoaderShape.h"
@@ -13,9 +13,10 @@ namespace IG {
 
 using namespace Parser;
 
-LoaderContext::~LoaderContext()
-{
-}
+LoaderContext::LoaderContext()                           = default;
+LoaderContext::LoaderContext(LoaderContext&&)            = default;
+LoaderContext& LoaderContext::operator=(LoaderContext&&) = default;
+LoaderContext::~LoaderContext()                          = default;
 
 std::filesystem::path LoaderContext::handlePath(const std::filesystem::path& path, const Parser::Object& obj) const
 {

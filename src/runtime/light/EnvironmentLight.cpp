@@ -26,7 +26,7 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    const auto baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones());
+    const auto baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones(), true, ShadingTree::TextureBakeOptions{ 1024, 256, true });
 
     input.Tree.addColor("scale", *mLight, Vector3f::Ones(), true);
     input.Tree.addTexture("radiance", *mLight, true);
@@ -42,7 +42,7 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
                      << "  let light_" << light_id << " = make_environment_light_textured(" << input.ID
                      << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
                      << ", " << input.Tree.getInline("scale")
-                     << ", tex_" << light_id
+                     << ", " << input.Tree.getInline("radiance")
                      << ", cdf_" << light_id
                      << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
     } else {

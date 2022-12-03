@@ -277,7 +277,8 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name,
     }
     case Parser::PT_STRING: {
         IG_LOG(L_DEBUG) << "Baking property '" << name << "'" << std::endl;
-        return bakeTextureExpression(name, prop.getString(), options);
+        LoaderContext ctx = copyContextForBake();
+        return ShadingTree(ctx).bakeTextureExpression(name, prop.getString(), options);
     }
     }
 }
@@ -290,9 +291,26 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::str
         return {};
     } else {
         const auto& result = res.value();
+        std::string expr   = result.Expr;
+        if (result.ScalarOutput)
+            expr = "make_gray_color(" + expr + ")";
 
         if (result.Textures.empty() && result.Variables.empty()) {
-            // TODO: Constant expression
+            if (options.SkipConstant)
+                return {};
+
+            // TODO: Handle simple case where it is just a string number!
+
+            // Constant expression with no ctx and textures
+            const std::string script = BakeShader::setupConstantColor("  let main_func = @|| " + expr + ";");
+            // IG_LOG(L_DEBUG) << "Compiling constant shader:" << std::endl
+            //                 << script;
+
+            void* shader  = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_constant_color");
+            auto callback = reinterpret_cast<BakeShader::ConstantColorFunc>(shader);
+            Vector4f color;
+            callback(&color.x(), &color.y(), &color.z(), &color.w());
+            return std::make_shared<Image>(Image::createSolidImage(color));
         }
 
         bool warn = false;
@@ -304,39 +322,35 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::str
         if (warn)
             IG_LOG(L_WARNING) << "Given expression for '" << name << "' contains variables outside `uv`. Baking process might be incomplete" << std::endl;
 
-        const bool forceSpec        = mForceSpecialization;
-        mForceSpecialization        = true;
-        const ParameterSet localReg = mContext.LocalRegistry;
-        beginClosure("__bake");
-
         std::stringstream inner_script;
         for (const auto& tex : res.value().Textures) {
             inner_script << loadTexture(tex);
         }
 
-        std::string expr = result.Expr;
-        if (result.ScalarOutput)
-            expr = "make_gray_color(" + expr + ")";
-
         inner_script << "  let main_func = @|ctx:ShadingContext|->Color{maybe_unused(ctx); " + expr + "};" << std::endl;
 
         const std::string script = BakeShader::setupTexture2d(mContext, inner_script.str(), options.Width, options.Height);
-        IG_LOG(L_DEBUG) << "Compiling bake shader:" << std::endl
-                        << script;
+        // IG_LOG(L_DEBUG) << "Compiling bake shader:" << std::endl
+        //                 << script;
 
         void* shader = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_bake_shader");
 
-        Image image = Image::createSolidImage(Vector4f::Zero(), options.Width, options.Height);
+        Image image          = Image::createSolidImage(Vector4f::Zero(), options.Width, options.Height);
         const auto resources = mContext.generateResourceMap();
         mContext.Options.Device->bake(ShaderOutput<void*>{ shader, mContext.LocalRegistry }, &resources, image.pixels.get());
 
-        image.save("test.exr");
+        image.save("bake.exr");
 
-        endClosure();
-        mContext.LocalRegistry = localReg;
-        mForceSpecialization   = forceSpec;
         return std::make_shared<Image>(std::move(image));
     }
+}
+
+LoaderContext ShadingTree::copyContextForBake() const
+{
+    LoaderContext ctx;
+    ctx.Options = mContext.Options;
+    // Maybe copy more?
+    return ctx;
 }
 
 bool ShadingTree::beginClosure(const std::string& name)

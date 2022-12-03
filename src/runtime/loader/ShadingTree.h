@@ -62,7 +62,8 @@ struct TextureOptions {
 struct TextureBakeOptions {
     size_t Width;
     size_t Height;
-    static constexpr TextureBakeOptions Default() { return TextureBakeOptions{ 1024, 1024 }; }
+    bool SkipConstant; // Will not bake parameters which are simple constants
+    static constexpr TextureBakeOptions Default() { return TextureBakeOptions{ 1024, 1024, false }; }
 };
 } // namespace _details
 
@@ -143,6 +144,7 @@ private:
     std::string loadTexture(const std::string& tex_name);
 
     LoaderContext& mContext;
+    LoaderContext copyContextForBake() const;
 
     std::vector<std::string> mHeaderLines; // The order matters
     std::unordered_set<std::string> mLoadedTextures;

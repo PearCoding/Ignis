@@ -56,9 +56,9 @@ class LoaderContext {
     IG_CLASS_NON_COPYABLE(LoaderContext);
 
 public:
-    LoaderContext()                           = default;
-    LoaderContext(LoaderContext&&)            = default;
-    LoaderContext& operator=(LoaderContext&&) = default;
+    LoaderContext();
+    LoaderContext(LoaderContext&&);
+    LoaderContext& operator=(LoaderContext&&);
     ~LoaderContext();
 
     LoaderOptions Options;
@@ -72,10 +72,8 @@ public:
     IG::TechniqueInfo TechniqueInfo;
     IG::CameraOrientation CameraOrientation;
 
-    std::unordered_map<std::string, uint32> Images; // Image to Buffer
-
     size_t CurrentTechniqueVariant;
-    inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return TechniqueInfo.Variants[CurrentTechniqueVariant]; }
+    [[nodiscard]] inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return TechniqueInfo.Variants.at(CurrentTechniqueVariant); }
 
     ParameterSet LocalRegistry; // Current local registry for given shader
     inline void resetRegistry()
@@ -108,7 +106,7 @@ public:
         return RegisteredResources[path.generic_u8string()] = id;
     }
 
-    inline std::vector<std::string> generateResourceMap() const
+    [[nodiscard]] inline std::vector<std::string> generateResourceMap() const
     {
         std::vector<std::string> map(RegisteredResources.size());
         for (const auto& p : RegisteredResources) {

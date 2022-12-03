@@ -218,6 +218,9 @@ public:
         updateSettings(Device::RenderSettings{}); // Initialize with default values
 
         setupThreadData();
+
+        // Special purpose bake shader
+        shader_infos[ShaderKey(0, ShaderType::Bake, 0)] = {};
     }
 
     inline ~Interface() = default;
@@ -699,7 +702,7 @@ public:
                 return images[filename] = copyToDevice(dev, Image());
             }
 
-            auto& res = getCurrentShaderInfo(dev).images[filename];
+            auto& res = getCurrentShaderInfo(dev).images[filename]; // Get or construct resource info for given resource
             res.counter++;
             res.memory_usage        = img.width * img.height * img.channels * sizeof(float);
             return images[filename] = copyToDevice(dev, img);
@@ -731,7 +734,7 @@ public:
                 return images[filename] = DevicePackedImage{ copyToDevice(dev, std::vector<uint8_t>{}), 0, 0 };
             }
 
-            auto& res = getCurrentShaderInfo(dev).packed_images[filename];
+            auto& res = getCurrentShaderInfo(dev).packed_images[filename]; // Get or construct resource info for given resource
             res.counter++;
             res.memory_usage        = packed.size();
             return images[filename] = DevicePackedImage{ copyToDevice(dev, packed), width, height };
@@ -1611,8 +1614,6 @@ void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::stri
     sInterface->registerThread();
 
     // A bake shader does not access framebuffer and global registry
-    sInterface->current_parameters = nullptr;
-
     const auto copy                = sInterface->scene.resource_map;
     sInterface->scene.resource_map = resource_map;
 

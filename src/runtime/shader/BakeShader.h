@@ -11,5 +11,13 @@ struct BakeShader {
 
     /// Will construct a script baking a texture with the given size.
     static std::string setupTexture2d(const LoaderContext& ctx, const std::string& expr, size_t width, size_t height);
+
+    /// Special purpose shader with no device. Signature is fn func(&mut f32,&mut f32,&mut f32,&mut f32)
+    using ConstantColorFunc = void(*)(float*, float*,float*,float*);
+    static std::string setupConstantColor(const std::string& expr);
+
+    /// Special purpose shader with no device. Signature is fn func() -> f32
+    using ConstantNumberFunc = float(*)();
+    static std::string setupConstantNumber(const std::string& expr);
 };
 } // namespace IG

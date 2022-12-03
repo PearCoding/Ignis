@@ -17,11 +17,11 @@ fn @bake_texture2d(device: Device, func: fn(ShadingContext)->Color, w: i32, h: i
 
         let color = @func(ctx);
 
-        buffer_out.store_vec4(y * w + x, color_to_vec4(color));
+        buffer_out.store_vec4(y * w * 4 + x * 4, color_to_vec4(color));
     }
     device.sync();
 
-    buffer_out.copy_to_host(0, size, output as &mut [i32]);
+    buffer_out.copy_to_host(0, size*4, output as &mut [i32]);
 }
 
 fn @sum_texture2d(device: Device, func: fn(ShadingContext)->Color, w: i32, h: i32) -> Color {

@@ -31,4 +31,25 @@ std::string BakeShader::setupTexture2d(const LoaderContext& ctx, const std::stri
            << end() << std::endl;
     return stream.str();
 }
+
+std::string BakeShader::setupConstantColor(const std::string& expr)
+{
+    std::stringstream stream;
+    stream << "#[export] fn ig_constant_color(r:&mut f32,g:&mut f32,b:&mut f32,a:&mut f32) -> () {" << std::endl
+           << expr << std::endl
+           << "  let color = main_func();" << std::endl
+           << "  *r=color.r; *g=color.g; *b=color.b; *a=color.a;" << std::endl
+           << "}" << std::endl;
+    return stream.str();
+}
+
+std::string BakeShader::setupConstantNumber(const std::string& expr)
+{
+    std::stringstream stream;
+    stream << "#[export] fn ig_constant_number() -> f32 {" << std::endl
+           << expr << std::endl
+           << "  main_func()" << std::endl
+           << "}" << std::endl;
+    return stream.str();
+}
 } // namespace IG
