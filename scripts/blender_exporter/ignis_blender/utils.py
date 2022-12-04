@@ -24,9 +24,9 @@ def map_vector(vec):
 
 
 def try_extract_node_value(value, default=0):
-    if type(value) == int or type(value) == float:
-        return value
-    else:
+    try:
+        return float(value)
+    except:
         return default
 
 
