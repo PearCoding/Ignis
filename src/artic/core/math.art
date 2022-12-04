@@ -115,7 +115,10 @@ fn @lookup_curve(count: i32, t: f32, x: fn (i32)->f32, y: fn (i32)->f32, interpo
 }
 
 // Simple function used in nodes
-fn @fresnel_dielectric(eta: f32, cos_i: f32)     = all::fresnel(eta, cos_i).factor;
+fn @fresnel_dielectric(eta: f32, cos_i: f32)     = match all::fresnel(eta, cos_i) {
+                                                        all::Option[all::FresnelTerm]::Some(x) => x.factor,
+                                                        _ => 1
+                                                   };
 fn @fresnel_conductor(n: f32, k:f32, cos_i: f32) = all::conductor_factor(n, k, cos_i);
 
 // An approximative blackbody function returning a color tone
