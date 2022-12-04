@@ -248,7 +248,7 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         eta                   = if surf.is_entering || thin { 1 / ior } else { ior },
     };
 
-    let eval = @ |in_dir : Vec3, out_dir : Vec3| -> Color {
+    fn @eval(in_dir : Vec3, out_dir : Vec3) -> Color {
         let wo = shading::to_local(surf.local, out_dir);
         let wi = shading::to_local(surf.local, in_dir);
 
@@ -312,9 +312,34 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         }
 
         contrib
-    };
+    }
 
-    let pdf = @ |in_dir: Vec3, out_dir: Vec3| -> f32 {            
+    fn @diffPdf_local(_wo: Vec3, wi: Vec3) {
+        cosine_hemisphere_pdf(shading::abs_cos_theta(wi))
+    }
+
+    fn @specReflPdf_local(wo: Vec3, wi: Vec3) {
+        let pwo     = shading::make_positive_hemisphere(wo);
+        let pwi     = shading::make_positive_hemisphere(wi);
+        let micro   = principled::getReflectionMicro(closure);
+        let H       = vec3_halfway(pwo, pwi);
+        let cos_h_o = vec3_dot(pwo, H); // Is always positive
+
+        math_builtins::fabs(bound_spec_pdf(micro.pdf(pwi, pwo, H)) * shading::halfway_reflective_jacobian(cos_h_o))
+    }
+
+    fn @specTransPdf_local(wo: Vec3, wi: Vec3) {
+        let pwo     = shading::make_positive_hemisphere(wo);
+        let pwi     = vec3_neg(shading::make_positive_hemisphere(wi));
+        let micro   = principled::getRefractionMicro(closure);
+        let H       = vec3_halfway_refractive(pwi, pwo, closure.eta);
+        let cos_h_i = vec3_dot(pwi, H);
+        let cos_h_o = vec3_dot(pwo, H);
+
+        math_builtins::fabs(bound_spec_pdf(micro.pdf(pwi, pwo, H)) * shading::halfway_refractive_jacobian(closure.eta, cos_h_i, cos_h_o))
+    }
+
+    fn @pdf(in_dir: Vec3, out_dir: Vec3) -> f32 {            
         let wo = shading::to_local(surf.local, out_dir);
         let wi = shading::to_local(surf.local, in_dir);
         if shading::abs_cos_theta(wo) <= flt_eps || shading::abs_cos_theta(wi) <= flt_eps {
@@ -322,33 +347,15 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         }
 
         let lobes    = principled::calcLobeDistribution(closure, wo);
-        let diff_pdf = cosine_hemisphere_pdf(shading::abs_cos_theta(wi));
+        let diff_pdf = diffPdf_local(wo, wi);
         if shading::is_same_hemisphere(wo, wi) {
-            let pwo      = shading::make_positive_hemisphere(wo);
-            let pwi      = shading::make_positive_hemisphere(wi);
-            let micro    = principled::getReflectionMicro(closure);
-            let H        = vec3_halfway(pwo, pwi);
-            let cos_h_o  = vec3_dot(pwo, H); // Is always positive
-            let refl_pdf = math_builtins::fabs(bound_spec_pdf(micro.pdf(pwi, pwo, H)) * shading::halfway_reflective_jacobian(cos_h_o));
-
-            lobes.diff_refl * diff_pdf + lobes.spec_refl * refl_pdf
+            lobes.diff_refl * diff_pdf + lobes.spec_refl * specReflPdf_local(wo, wi)
+        } else if closure.thin {
+            lobes.diff_trans * diff_pdf + lobes.spec_trans
         } else {
-            if closure.thin {
-                lobes.diff_trans * diff_pdf + lobes.spec_trans
-            } else {   
-                let pwo     = shading::make_positive_hemisphere(wo);
-                let pwi     = vec3_neg(shading::make_positive_hemisphere(wi));
-                let micro   = principled::getRefractionMicro(closure);
-                let H       = vec3_halfway_refractive(pwi, pwo, closure.eta);
-                let cos_h_i = vec3_dot(pwi, H);
-                let cos_h_o = vec3_dot(pwo, H);
-
-                let trans_pdf = math_builtins::fabs(bound_spec_pdf(micro.pdf(pwi, pwo, H)) * shading::halfway_refractive_jacobian(closure.eta, cos_h_i, cos_h_o));
-
-                lobes.diff_trans * diff_pdf + lobes.spec_trans * trans_pdf
-            }
+            lobes.diff_trans * diff_pdf + lobes.spec_trans * specTransPdf_local(wo, wi)
         }
-    };
+    }
 
     Bsdf {
         eval = eval,
@@ -356,29 +363,32 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         sample = @ |rnd, out_dir, adjoint| {
             let s_return = return;
 
-            let wo    = shading::to_local(surf.local, out_dir);
+            let wo = shading::to_local(surf.local, out_dir);
+            // Prevent extreme case of parallel direction on surface
+            if shading::abs_cos_theta(wo) <= flt_eps {
+                return(reject_bsdf_sample())
+            }
+
             let lobes = principled::calcLobeDistribution(closure, wo);
             let pick  = randf(rnd);
 
             let sample = if pick < lobes.diff_refl {
                 // Diffuse reflection
-                let s = sample_cosine_hemisphere(randf(rnd), randf(rnd));
-                DirSample { dir = shading::make_same_hemisphere(wo, s.dir),
-                            pdf = s.pdf * lobes.diff_refl }
+                let s  = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+                let wi = shading::make_same_hemisphere(wo, s.dir);
+                DirSample { dir = wi,
+                            pdf = s.pdf * lobes.diff_refl + specReflPdf_local(wo, wi) * lobes.spec_refl }
             } else if pick < lobes.diff_refl + lobes.diff_trans {
                 // Diffuse transmission
-                let s = sample_cosine_hemisphere(randf(rnd), randf(rnd));
-                DirSample { dir = vec3_neg(shading::make_same_hemisphere(wo, s.dir)),
-                            pdf = s.pdf * lobes.diff_trans }
+                let s  = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+                let wi = vec3_neg(shading::make_same_hemisphere(wo, s.dir));
+                DirSample { dir = wi,
+                            pdf = s.pdf * lobes.diff_trans + specTransPdf_local(wo, wi) * lobes.spec_trans }
             } else if pick < lobes.diff_refl + lobes.diff_trans + lobes.spec_trans {
                 // Specular transmission
                 if closure.thin {
-                    if shading::abs_cos_theta(wo) <= flt_eps {
-                        s_return(reject_bsdf_sample())
-                    } else {
-                        DirSample { dir = vec3_neg(wo), 
-                                    pdf = lobes.spec_trans }
-                    }
+                    DirSample { dir = vec3_neg(wo), 
+                                pdf = lobes.spec_trans }
                 } else {
                     let pwo   = shading::make_positive_hemisphere(wo);
                     let micro = principled::getRefractionMicro(closure);
@@ -394,18 +404,20 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                     if fr.total {
                         let pwi = vec3_normalize(vec3_reflect(pwo, H));
 
-                        if shading::is_same_hemisphere(pwo, pwi) && cos_h_o > flt_eps {
-                            DirSample { dir = shading::make_same_hemisphere(wo, pwi),
-                                        pdf = s.pdf * shading::halfway_reflective_jacobian(cos_h_o) * lobes.spec_trans }
+                        if shading::is_same_hemisphere(pwo, pwi) && cos_h_o > flt_eps && shading::cos_theta(pwi) > flt_eps {
+                            let wi = shading::make_same_hemisphere(wo, pwi);
+                            DirSample { dir = wi,
+                                        pdf = s.pdf * shading::halfway_reflective_jacobian(cos_h_o) * lobes.spec_trans + diffPdf_local(wo, wi) * lobes.diff_trans }
                         } else {
                             s_return(reject_bsdf_sample()) 
                         }
                     } else {
                         let pwi = vec3_normalize(vec3_refract(pwo, H, closure.eta, cos_h_o, fr.cos_t));
 
-                        if !shading::is_same_hemisphere(pwo, pwi) && cos_h_o > flt_eps  {
-                            DirSample { dir = vec3_neg(shading::make_same_hemisphere(wo, pwi)), 
-                                        pdf = math_builtins::fabs(s.pdf * shading::halfway_refractive_jacobian(closure.eta, vec3_dot(pwi, H), cos_h_o)) * lobes.spec_trans }
+                        if !shading::is_same_hemisphere(pwo, pwi) && cos_h_o > flt_eps && -shading::cos_theta(pwi) > flt_eps  {
+                            let wi = vec3_neg(shading::make_same_hemisphere(wo, pwi));
+                            DirSample { dir = wi, 
+                                        pdf = math_builtins::fabs(s.pdf * shading::halfway_refractive_jacobian(closure.eta, vec3_dot(pwi, H), cos_h_o)) * lobes.spec_trans + diffPdf_local(wo, wi) * lobes.diff_trans }
                         } else {
                             s_return(reject_bsdf_sample()) 
                         }
@@ -424,9 +436,10 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                 let cos_h_o = vec3_dot(pwo, H);
                 let pwi     = vec3_normalize(vec3_reflect(pwo, H));
 
-                if shading::is_same_hemisphere(pwo, pwi) && cos_h_o > flt_eps {
-                    DirSample { dir = shading::make_same_hemisphere(wo, pwi),
-                                pdf = math_builtins::fabs(s.pdf * shading::halfway_reflective_jacobian(cos_h_o)) * lobes.spec_refl }
+                if shading::is_same_hemisphere(pwo, pwi) && cos_h_o > flt_eps && shading::cos_theta(pwi) > flt_eps {
+                    let wi = shading::make_same_hemisphere(wo, pwi);
+                    DirSample { dir = wi,
+                                pdf = math_builtins::fabs(s.pdf * shading::halfway_reflective_jacobian(cos_h_o)) * lobes.spec_refl + diffPdf_local(wo, wi) * lobes.diff_refl }
                 } else {
                     s_return(reject_bsdf_sample()) 
                 }
@@ -438,13 +451,8 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                 let spread  = if adjoint && !closure.thin && !shading::is_same_hemisphere(wo, sample.dir) { 1 / (closure.eta * closure.eta) } else { 1 };
                 let s_eta   = if closure.thin || shading::is_same_hemisphere(wo, sample.dir) { 1 } else { closure.eta };
                 let in_dir  = shading::to_world(surf.local, sample.dir);
-                let lay_pdf = pdf(in_dir, out_dir); // FIXME: This can be optimized using the sampled information
-
-                if lay_pdf <= flt_eps {
-                    reject_bsdf_sample()
-                } else {
-                    make_bsdf_sample(in_dir, lay_pdf, color_mulf(eval(in_dir, out_dir), spread / lay_pdf), s_eta)
-                }
+                
+                make_bsdf_sample(in_dir, sample.pdf, color_mulf(eval(in_dir, out_dir), spread / sample.pdf), s_eta)
             }
         },
         is_specular = false // We prevent a roughness = 0, so no chance to be specular

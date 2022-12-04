@@ -14,16 +14,6 @@ fn @make_dir_sample(c: f32, s: f32, phi: f32, pdf: f32) -> DirSample {
     }
 }
 
-fn @scale_dir_sample(sample: DirSample, factor: f32) = DirSample {
-    dir = sample.dir,
-    pdf = sample.pdf * factor
-};
-
-fn @neg_dir_sample(sample: DirSample) = DirSample {
-    dir = vec3_neg(sample.dir),
-    pdf = sample.pdf
-};
-
 // Result of sampling a position
 struct PosSample {
     pos: Vec3,
@@ -68,12 +58,16 @@ fn @cosine_hemisphere_pdf(c: f32) = c / flt_pi;
 
 // Samples a direction on a hemisphere proportionally to the cosine with the surface normal
 fn @sample_cosine_hemisphere(u: f32, v: f32) -> DirSample {
-    let p = square_to_concentric_disk(make_vec2(u, v));
-    let z = safe_sqrt(1 - vec2_len2(p));
-    DirSample {
-        dir = make_vec3(p.x, p.y, z),
-        pdf = cosine_hemisphere_pdf(z)
-    }
+    let c = safe_sqrt(v);
+    let s = safe_sqrt(1 - v);
+    let phi = 2 * flt_pi * u;
+    make_dir_sample(c, s, phi, cosine_hemisphere_pdf(c))
+    // let p = square_to_concentric_disk(make_vec2(u, v));
+    // let z = safe_sqrt(1 - vec2_len2(p));
+    // DirSample {
+    //     dir = make_vec3(p.x, p.y, z),
+    //     pdf = cosine_hemisphere_pdf(z)
+    // }
 }
 
 // Probability density function for cosine-power weighted hemisphere sampling
