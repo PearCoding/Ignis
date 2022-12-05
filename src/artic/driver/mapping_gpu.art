@@ -99,7 +99,7 @@ fn @gpu_hit_shade( acc: Accelerator
              , framebuffer: AOVImage
              , primary: PrimaryStream
              , secondary: SecondaryStream
-             , first: i32, last: i32, capacity: i32, ent_id: i32) -> () {
+             , first: i32, last: i32, capacity: i32) -> () {
     let n = last - first;
 
     let entities = scene.entities;
@@ -128,18 +128,18 @@ fn @gpu_hit_shade( acc: Accelerator
         let secondary_payload = get_secondary_payload(i, 0);
 
         let ray     = read_primary_ray(i, 0);
+        let hit     = read_primary_hit(i, 0);
         let mut rnd = read_primary_rnd_state(i, 0);
         let ray_id  = primary.rays.id(i);
         let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
 
-        let entity = @entities(ent_id);
+        let entity = @entities(hit.ent_id);
         let shape  = @shapes(entity.shape_id);
 
-        let hit      = read_primary_hit(i, 0);
         let pmset    = make_standard_pointmapperset(shape, entity);
         let glb_surf = shape.surface_element(ray, hit, pmset);
         
-        let ctx = make_surface_shading_context(ent_id, pixel, ray, hit, glb_surf, pmset);
+        let ctx = make_surface_shading_context(hit.ent_id, pixel, ray, hit, glb_surf, pmset);
         let mat = @shader(ctx);
         if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) {
             framebuffer.splat(pixel, color);
@@ -179,7 +179,6 @@ fn @gpu_hit_shade( acc: Accelerator
 fn @gpu_hit_shade_handler(dev_id: i32
                         , acc: Accelerator
                         , atomics: Atomics
-                        , entity_id: i32
                         , shader: MaterialShader
                         , scene: Scene
                         , technique: Technique
@@ -195,7 +194,7 @@ fn @gpu_hit_shade_handler(dev_id: i32
     ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
 
     let framebuffer = gpu_get_framebuffer(dev_id, spi, use_framebuffer, atomics);
-    gpu_hit_shade(acc, shader, scene, technique, payload_info, framebuffer, primary, secondary, begin, end, capacity, entity_id);
+    gpu_hit_shade(acc, shader, scene, technique, payload_info, framebuffer, primary, secondary, begin, end, capacity);
 }
 
 // Shade nonhits
@@ -365,6 +364,7 @@ fn @gpu_sort_primary( primary: PrimaryStream
                     , atomics: Atomics
                     , scene_info: SceneInfo
                     , payload_count: i32
+                    , entity_per_material: &[i32]
                     , gpu_tmp:  &mut [i32]
                     , ray_begins: &mut [i32]
                     , ray_ends: &mut [i32]
@@ -384,6 +384,7 @@ fn @gpu_sort_primary( primary: PrimaryStream
         let k = primary.ent_id(i);
         select(k == InvalidHitId, num_geometries, k)
     }
+
     // Count number of rays for each geometry
     gpu_exec_1d(acc, size, block_size, |work_item| {
         let ray_id = work_item.gidx();
@@ -412,6 +413,26 @@ fn @gpu_sort_primary( primary: PrimaryStream
         gpu_copy_primary_ray(primary, other_primary, src_id, dst_id, true, payload_count);
     });
     acc.sync();
+
+    // Collapse entities to materials, because entities are ordered by material while loading
+    // The assumption num_materials <= num_entities has to be strictly fulfilled
+    let mut k = 0;
+    for i in range(0, scene_info.num_materials) {
+        let s = entity_per_material(i);
+
+        // A material has at least one entity
+        let start = ray_begins(k);
+        let end   = ray_ends(k + s - 1);
+        
+        ray_begins(i) = start;
+        ray_ends(i)   = end;
+        
+        k += s;
+    }
+
+    // Ensure the "invalids" are propagated
+    ray_begins(scene_info.num_materials) = ray_begins(scene_info.num_entities);
+    ray_ends(scene_info.num_materials)   = ray_ends(scene_info.num_entities);
 }
 
 fn @gpu_sort_secondary(secondary: SecondaryStream
@@ -687,22 +708,22 @@ fn @gpu_trace( dev_id: i32
         pipeline.on_traverse_primary(current_size);
 
         // Sort rays by entity
-        gpu_sort_primary(primary, other_primary, current_size, dev_id, acc, atomics, scene_info, payload_info.primary_count, gpu_tmp, temp.ray_begins, temp.ray_ends);
+        gpu_sort_primary(primary, other_primary, current_size, dev_id, acc, atomics, scene_info, payload_info.primary_count, temp.entity_per_material, gpu_tmp, temp.ray_begins, temp.ray_ends);
         gpu_swap_primary_streams(dev_id, &mut primary, &mut other_primary);
 
         // Shade rays
         let mut first = 0;
-        for ent_id in range(0, scene_info.num_entities) {
-            let last = temp.ray_ends(ent_id);
+        for mat_id in range(0, scene_info.num_materials) {
+            let last = temp.ray_ends(mat_id);
             if first < last {
-                pipeline.on_hit_shade(ent_id, first, last);
+                pipeline.on_hit_shade(mat_id, first, last);
                 // acc.sync(); // Uncomment this for debugging
                 first = last;
             }
         }
 
         // Shade non-hits as well
-        let last = temp.ray_ends(scene_info.num_entities);
+        let last = temp.ray_ends(scene_info.num_materials);
         if first < last {
             pipeline.on_miss_shade(first, last);
             // Do not set first as last (to make sure they drop out)
@@ -810,8 +831,8 @@ fn @make_gpu_device( dev_id: i32
     handle_miss_shader = @ | technique, payload_info, first, last, spi, use_framebuffer | {
         gpu_miss_shade_handler(dev_id, acc, atomics, technique, payload_info, first, last, GPUStreamCapacity, spi, use_framebuffer);
     },
-    handle_hit_shader = @ | entity_id, shader, scene, technique, payload_info, first, last, spi, use_framebuffer | {
-        gpu_hit_shade_handler(dev_id, acc, atomics, entity_id, shader, scene, technique, payload_info, first, last, GPUStreamCapacity, spi, use_framebuffer);
+    handle_hit_shader = @ | shader, scene, technique, payload_info, first, last, spi, use_framebuffer | {
+        gpu_hit_shade_handler(dev_id, acc, atomics, shader, scene, technique, payload_info, first, last, GPUStreamCapacity, spi, use_framebuffer);
     },
     handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit | {
         gpu_advanced_shadow_handler(dev_id, acc, atomics, shader, technique, payload_info, first, last, GPUStreamCapacity, spi, use_framebuffer, is_hit);

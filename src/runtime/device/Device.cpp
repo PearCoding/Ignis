@@ -511,7 +511,7 @@ public:
     inline size_t getTemporaryBufferSize() const
     {
         // Upper bound extracted from "mapping_*.art"
-        return roundUp(std::max<size_t>(32, std::max(entity_count + 1, scene.database->MaterialCount * 2)), 4);
+        return roundUp(std::max<size_t>(32, std::max(entity_count + 1, (scene.database->MaterialCount + 1) * 2)), 4);
     }
 
     inline const auto& getTemporaryStorageHost(int32_t dev)
@@ -1064,12 +1064,10 @@ public:
             getThreadData()->stats.endShaderLaunch(ShaderType::Miss, {});
     }
 
-    inline void runHitShader(int32_t dev, int entity_id, int first, int last)
+    inline void runHitShader(int32_t dev, int material_id, int first, int last)
     {
-        const int material_id = scene.database->EntityToMaterial.at(entity_id);
-
         if (setup.debug_trace)
-            IG_LOG(L_DEBUG) << "TRACE> Hit Shader [I=" << entity_id << ", M=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
+            IG_LOG(L_DEBUG) << "TRACE> Hit Shader [M=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
 
         if (setup.acquire_stats)
             getThreadData()->stats.beginShaderLaunch(ShaderType::Hit, last - first, material_id);
@@ -1080,7 +1078,7 @@ public:
         auto callback      = reinterpret_cast<Callback*>(output.Exec);
         IG_ASSERT(callback != nullptr, "Expected hit shader to be valid");
         setCurrentShader(dev, last - first, ShaderKey(shader_set.ID, ShaderType::Hit, (uint32)material_id), output);
-        callback(&driver_settings, entity_id, material_id, first, last);
+        callback(&driver_settings, material_id, first, last);
 
         checkDebugOutput();
 
@@ -1786,9 +1784,10 @@ IG_EXPORT void ignis_dbg_dump_buffer(int32_t dev, const char* name, const char* 
 
 IG_EXPORT void ignis_get_temporary_storage(int dev, TemporaryStorageHost* temp)
 {
-    const auto& data = sInterface->getTemporaryStorageHost(dev);
-    temp->ray_begins = const_cast<int32_t*>(data.ray_begins.data());
-    temp->ray_ends   = const_cast<int32_t*>(data.ray_ends.data());
+    const auto& data          = sInterface->getTemporaryStorageHost(dev);
+    temp->ray_begins          = const_cast<int32_t*>(data.ray_begins.data());
+    temp->ray_ends            = const_cast<int32_t*>(data.ray_ends.data());
+    temp->entity_per_material = const_cast<int32_t*>(sInterface->scene.entity_per_material->data()); // Always on the host
 }
 
 IG_EXPORT void ignis_gpu_get_tmp_buffer(int dev, int** buf)
