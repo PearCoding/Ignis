@@ -42,6 +42,8 @@ This mini tutorial is expecting some basic knowledge about the Windows build sys
     3.  By default the ``build/`` directory contains a Ninja based ``Release`` configuration. 
     4.  The ``Release`` configuration is well tested and should be used for most purposes. Any other configuration is experimental and may fail at any time.
 
+.. NOTE:: It might be necessary to run the script ``scripts/setup/windows/vc_dev_env.ps1`` every time a new terminal is opened to ensure the correct visual studio environment is available.
+
 Windows (Manual)
 ----------------
 
