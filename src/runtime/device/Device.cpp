@@ -202,6 +202,8 @@ public:
 
     Settings driver_settings;
 
+    static const Image MissingImage;
+
     const bool is_gpu;
 
     inline explicit Interface(const Device::SetupSettings& setup)
@@ -610,7 +612,8 @@ public:
 
     inline DeviceImage copyToDevice(int32_t dev, const Image& image)
     {
-        return DeviceImage{ copyToDevice(dev, image.pixels.get(), image.width * image.height * 4), image.width, image.height };
+        IG_ASSERT(image.channels == 1 || image.channels == 4, "Expected image to have one or four channels");
+        return DeviceImage{ copyToDevice(dev, image.pixels.get(), image.width * image.height * image.channels), image.width, image.height };
     }
 
     inline DevicePackedImage copyToDevicePacked(int32_t dev, const Image& image)
@@ -710,7 +713,7 @@ public:
             return images[filename] = copyToDevice(dev, img);
         } catch (const ImageLoadException& e) {
             IG_LOG(L_ERROR) << e.what() << std::endl;
-            return images[filename] = copyToDevice(dev, Image());
+            return images[filename] = copyToDevice(dev, MissingImage);
         }
     }
 
@@ -733,7 +736,7 @@ public:
 
             if (expected_channels != (int32_t)channels) {
                 IG_LOG(L_ERROR) << "Packed image '" << filename << "' is has unexpected channel count" << std::endl;
-                return images[filename] = DevicePackedImage{ copyToDevice(dev, std::vector<uint8_t>{}), 0, 0 };
+                return images[filename] = copyToDevicePacked(dev, MissingImage);
             }
 
             auto& res = getCurrentShaderInfo(dev).packed_images[filename]; // Get or construct resource info for given resource
@@ -742,7 +745,7 @@ public:
             return images[filename] = DevicePackedImage{ copyToDevice(dev, packed), width, height };
         } catch (const ImageLoadException& e) {
             IG_LOG(L_ERROR) << e.what() << std::endl;
-            return images[filename] = DevicePackedImage{ copyToDevice(dev, std::vector<uint8_t>{}), 0, 0 };
+            return images[filename] = copyToDevicePacked(dev, MissingImage);
         }
     }
 
@@ -1470,6 +1473,7 @@ public:
     }
 };
 
+const Image Interface::MissingImage = Image::createSolidImage(Vector4f(1, 0, 1, 1));
 static std::unique_ptr<Interface> sInterface;
 
 // --------------------- Device
