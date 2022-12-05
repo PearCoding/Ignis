@@ -62,7 +62,7 @@ void CDF::computeForImage(const Image& image, const std::filesystem::path& out,
             defect.y() += std::max(image.pixels[i * c + 1], 0.0f) / image.width;
             defect.z() += std::max(image.pixels[i * c + 2], 0.0f) / image.width;
         }
-        defect /= image.height; // We split width & height to prevent large divisions
+        defect /= (float)image.height; // We split width & height to prevent large divisions
     }
 
     // Compute per pixel average over image

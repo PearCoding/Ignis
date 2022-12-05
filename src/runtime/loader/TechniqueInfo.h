@@ -5,7 +5,7 @@
 #include <numeric>
 
 namespace IG {
-struct LoaderContext;
+class LoaderContext;
 using TechniqueCallbackGenerator = std::function<std::string(LoaderContext&)>;
 using TechniqueCameraGenerator   = TechniqueCallbackGenerator;
 
