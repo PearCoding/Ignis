@@ -67,7 +67,7 @@ struct TextureBakeOptions {
 };
 } // namespace _details
 
-struct LoaderContext;
+class LoaderContext;
 class ShadingTree {
 private:
     struct Closure {
