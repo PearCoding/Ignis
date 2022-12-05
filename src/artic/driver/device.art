@@ -24,7 +24,7 @@ struct Device {
     handle_miss_shader: fn (Technique, PayloadInfo, i32, i32, i32, bool) -> (), 
 
     // [Internal] Handle a hit shader
-    handle_hit_shader: fn (i32, MaterialShader, Scene, Technique, PayloadInfo, i32, i32, i32, bool) -> (),
+    handle_hit_shader: fn (MaterialShader, Scene, Technique, PayloadInfo, i32, i32, i32, bool) -> (),
 
     // [Internal] Handle an advanced shadow shader (can be hit or miss)
     handle_advanced_shadow_shader: fn (MaterialShader, Technique, PayloadInfo, i32, i32, i32, bool, bool) -> (), 

@@ -34,7 +34,8 @@ struct SecondaryStream {
 // Used on the host side only
 struct TemporaryStorageHost {
     ray_begins: &mut [i32],
-    ray_ends:   &mut [i32]
+    ray_ends:   &mut [i32],
+    entity_per_material: &[i32] // This array is always on the host!
 }
 
 //////////// Ray

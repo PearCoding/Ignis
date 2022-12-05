@@ -149,6 +149,7 @@ private:
     TechniqueInfo mTechniqueInfo;
 
     std::vector<std::string> mResourceMap;
+    std::vector<int> mEntityPerMaterial;
 
     std::vector<TechniqueVariant> mTechniqueVariants;
     std::vector<TechniqueVariantShaderSet> mTechniqueVariantShaderSets; // Compiled shaders

@@ -839,8 +839,8 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     handle_miss_shader = @ | technique, payload_info, first, last, spi, use_framebuffer | {
         cpu_miss_shade_handler(technique, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, payload_info, use_framebuffer, vector_width, is_payload_soa);
     },
-    handle_hit_shader = @ | entity_id, shader, scene, technique, payload_info, first, last, spi, use_framebuffer | {
-        cpu_hit_shade_handler(entity_id, shader, scene, technique, payload_info, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, use_framebuffer, vector_width, is_payload_soa);
+    handle_hit_shader = @ | shader, scene, technique, payload_info, first, last, spi, use_framebuffer | {
+        cpu_hit_shade_handler(0/* FIXME For now */, shader, scene, technique, payload_info, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, use_framebuffer, vector_width, is_payload_soa);
     },
     handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit | {
         cpu_advanced_shadow_handler(shader, technique, payload_info, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, use_framebuffer, is_hit, vector_width, is_payload_soa);

@@ -224,7 +224,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
 
     IG_LOG(L_DEBUG) << "Loading scene" << std::endl;
     const auto startLoader = std::chrono::high_resolution_clock::now();
-    
+
     auto ctx = Loader::load(lopts);
     if (!ctx)
         return false;
@@ -240,6 +240,13 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
 
     if (ctx->Options.Denoiser.Enabled)
         mTechniqueInfo.EnabledAOVs.emplace_back("Denoised");
+
+    // Setup array of number of entities per material
+    mEntityPerMaterial.clear();
+    mEntityPerMaterial.reserve(ctx->Materials.size());
+    for (const auto& mat : ctx->Materials) {
+        mEntityPerMaterial.emplace_back((int)mat.Count);
+    }
 
     // Free memory from loader context
     ctx.reset();
@@ -401,9 +408,10 @@ const Statistics* Runtime::getStatistics() const
 bool Runtime::setupScene()
 {
     Device::SceneSettings settings;
-    settings.database     = &mDatabase;
-    settings.aov_map      = &mTechniqueInfo.EnabledAOVs;
-    settings.resource_map = &mResourceMap;
+    settings.database            = &mDatabase;
+    settings.aov_map             = &mTechniqueInfo.EnabledAOVs;
+    settings.resource_map        = &mResourceMap;
+    settings.entity_per_material = &mEntityPerMaterial;
 
     IG_LOG(L_DEBUG) << "Assign scene to device" << std::endl;
     mDevice->assignScene(settings);

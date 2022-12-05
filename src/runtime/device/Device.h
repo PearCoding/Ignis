@@ -22,9 +22,10 @@ public:
     };
 
     struct SceneSettings {
-        SceneDatabase* database                      = nullptr;
-        const std::vector<std::string>* aov_map      = nullptr;
-        const std::vector<std::string>* resource_map = nullptr;
+        SceneDatabase* database                       = nullptr;
+        const std::vector<std::string>* aov_map       = nullptr;
+        const std::vector<std::string>* resource_map  = nullptr;
+        const std::vector<int32>* entity_per_material = nullptr; // Contains number of entities per unique material
     };
 
     struct RenderSettings {
