@@ -336,6 +336,8 @@ public:
 
     inline void updateSettings(const Device::RenderSettings& settings)
     {
+        // Target specific stuff is NOT updated
+
         driver_settings.spi    = (int)settings.spi;
         driver_settings.frame  = (int)settings.frame;
         driver_settings.iter   = (int)settings.iteration;
@@ -417,9 +419,9 @@ public:
     inline void setCurrentShader(int32_t dev, int workload, const ShaderKey& key, const ShaderOutput<void*>& shader)
     {
         if (is_gpu) {
+            auto data                           = getThreadData();
             devices[dev].current_local_registry = &shader.LocalRegistry;
             devices[dev].current_shader_key     = key;
-            auto data                           = getThreadData();
             data->shader_stats[key].call_count++;
             data->shader_stats[key].workload_count += (size_t)workload;
         } else {
@@ -1185,6 +1187,8 @@ public:
 
     inline float* getFilmImage(int32_t dev)
     {
+        IG_ASSERT(host_pixels.Data.data() != nullptr, "Expected host framebuffer to be already initialized");
+
         if (dev != 0) {
             auto& device = devices[dev];
             if (device.film_pixels.size() != host_pixels.Data.size()) {
@@ -1351,7 +1355,7 @@ public:
                     anydsl::copy(host_pixels.Data, device_pixels);
             }
         } else {
-            auto& aov          = aovs[aov_name];
+            auto& aov          = aovs.at(aov_name);
             aov.IterationCount = 0;
             aov.IterDiff       = 0;
             auto& buffer       = aov.Data;
