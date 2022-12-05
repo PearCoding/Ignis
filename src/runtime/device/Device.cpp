@@ -1064,8 +1064,6 @@ public:
 
     inline void runHitShader(int32_t dev, int material_id, int first, int last)
     {
-        // const int material_id = scene.database->EntityToMaterial.at(entity_id);
-
         if (setup.debug_trace)
             IG_LOG(L_DEBUG) << "TRACE> Hit Shader [M=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
 
