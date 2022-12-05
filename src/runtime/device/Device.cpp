@@ -259,7 +259,7 @@ public:
     {
         const size_t expectedSize = film_width * film_height * 3;
 
-        if (host_pixels.Data.data() && (size_t)host_pixels.Data.size() >= expectedSize * sizeof(float)) {
+        if (host_pixels.Data.data() && (size_t)host_pixels.Data.size() >= expectedSize) {
             resetFramebufferAccess();
             return;
         }
@@ -341,11 +341,11 @@ public:
         driver_settings.spi    = (int)settings.spi;
         driver_settings.frame  = (int)settings.frame;
         driver_settings.iter   = (int)settings.iteration;
-        driver_settings.width  = (int)settings.work_width;
-        driver_settings.height = (int)settings.work_height;
+        driver_settings.width  = (int)settings.width;
+        driver_settings.height = (int)settings.height;
 
-        if (settings.work_width > film_width || settings.work_height > film_height)
-            resizeFramebuffer(std::max(settings.work_width, film_width), std::max(settings.work_height, film_height));
+        if (settings.width > film_width || settings.height > film_height)
+            resizeFramebuffer(std::max(settings.width, film_width), std::max(settings.height, film_height));
     }
 
     inline void setupShaderSet(const TechniqueVariantShaderSet& shaderSet)
@@ -353,24 +353,24 @@ public:
         shader_set = shaderSet;
 
         // Prepare cache data
-        shader_infos[ShaderKey(shader_set.ID, ShaderType::Device, 0)] = {};
+        shader_infos.try_emplace(ShaderKey(shader_set.ID, ShaderType::Device, 0));
         if (shader_set.TonemapShader.Exec) {
-            shader_infos[ShaderKey(shader_set.ID, ShaderType::Tonemap, 0)]   = {};
-            shader_infos[ShaderKey(shader_set.ID, ShaderType::ImageInfo, 0)] = {};
+            shader_infos.try_emplace(ShaderKey(shader_set.ID, ShaderType::Tonemap, 0));
+            shader_infos.try_emplace(ShaderKey(shader_set.ID, ShaderType::ImageInfo, 0));
         }
 
-        shader_infos[ShaderKey(shader_set.ID, ShaderType::PrimaryTraversal, 0)]   = {};
-        shader_infos[ShaderKey(shader_set.ID, ShaderType::SecondaryTraversal, 0)] = {};
-        shader_infos[ShaderKey(shader_set.ID, ShaderType::RayGeneration, 0)]      = {};
-        shader_infos[ShaderKey(shader_set.ID, ShaderType::Miss, 0)]               = {};
+        shader_infos.try_emplace(ShaderKey(shader_set.ID, ShaderType::PrimaryTraversal, 0));
+        shader_infos.try_emplace(ShaderKey(shader_set.ID, ShaderType::SecondaryTraversal, 0));
+        shader_infos.try_emplace(ShaderKey(shader_set.ID, ShaderType::RayGeneration, 0));
+        shader_infos.try_emplace(ShaderKey(shader_set.ID, ShaderType::Miss, 0));
         for (size_t i = 0; i < shader_set.HitShaders.size(); ++i)
-            shader_infos[ShaderKey(shader_set.ID, ShaderType::Hit, (uint32)i)] = {};
+            shader_infos.try_emplace(ShaderKey(shader_set.ID, ShaderType::Hit, (uint32)i));
         for (size_t i = 0; i < shader_set.AdvancedShadowHitShaders.size(); ++i)
-            shader_infos[ShaderKey(shader_set.ID, ShaderType::AdvancedShadowHit, (uint32)i)] = {};
+            shader_infos.try_emplace(ShaderKey(shader_set.ID, ShaderType::AdvancedShadowHit, (uint32)i));
         for (size_t i = 0; i < shader_set.AdvancedShadowMissShaders.size(); ++i)
-            shader_infos[ShaderKey(shader_set.ID, ShaderType::AdvancedShadowMiss, (uint32)i)] = {};
+            shader_infos.try_emplace(ShaderKey(shader_set.ID, ShaderType::AdvancedShadowMiss, (uint32)i));
         for (size_t i = 0; i < shader_set.CallbackShaders.size(); ++i)
-            shader_infos[ShaderKey(shader_set.ID, ShaderType::Callback, (uint32)i)] = {};
+            shader_infos.try_emplace(ShaderKey(shader_set.ID, ShaderType::Callback, (uint32)i));
     }
 
     inline void registerThread()
@@ -550,7 +550,7 @@ public:
 
     inline const anydsl::Array<StreamRay>& loadRayList(int32_t dev)
     {
-        size_t count = current_settings.work_width;
+        size_t count = current_settings.width;
         auto& device = devices[dev];
         if (device.ray_list.size() == (int64_t)count)
             return device.ray_list;
@@ -1185,6 +1185,20 @@ public:
             getThreadData()->stats.endShaderLaunch(ShaderType::Bake, {});
     }
 
+    inline anydsl::Array<float> createFramebuffer(int32_t dev) const
+    {
+        auto film_size = film_width * film_height * 3;
+        void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
+        if (ptr == nullptr) {
+            IG_LOG(L_FATAL) << "Out of memory" << std::endl;
+            std::abort();
+            return anydsl::Array<float>();
+        }
+
+        auto film_data = reinterpret_cast<float*>(ptr);
+        return anydsl::Array<float>(dev, film_data, film_size);
+    }
+
     inline float* getFilmImage(int32_t dev)
     {
         IG_ASSERT(host_pixels.Data.data() != nullptr, "Expected host framebuffer to be already initialized");
@@ -1193,17 +1207,7 @@ public:
             auto& device = devices[dev];
             if (device.film_pixels.size() != host_pixels.Data.size()) {
                 _SECTION(SectionType::FramebufferUpdate);
-
-                auto film_size = film_width * film_height * 3;
-                void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
-                if (ptr == nullptr) {
-                    IG_LOG(L_FATAL) << "Out of memory" << std::endl;
-                    std::abort();
-                    return nullptr;
-                }
-
-                auto film_data     = reinterpret_cast<float*>(ptr);
-                device.film_pixels = anydsl::Array<float>(dev, film_data, film_size);
+                device.film_pixels = createFramebuffer(dev);
                 anydsl::copy(host_pixels.Data, device.film_pixels);
             }
             return device.film_pixels.data();
@@ -1222,16 +1226,7 @@ public:
         auto& device = devices[dev];
         if (device.aovs[name].size() != host.Data.size()) {
             _SECTION(SectionType::AOVUpdate);
-
-            auto film_size = film_width * film_height * 3;
-            void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
-            if (ptr == nullptr) {
-                IG_LOG(L_FATAL) << "Out of memory" << std::endl;
-                std::abort();
-            }
-
-            auto film_data    = reinterpret_cast<float*>(ptr);
-            device.aovs[name] = anydsl::Array<float>(dev, film_data, film_size);
+            device.aovs[name] = createFramebuffer(dev);
             created           = true;
         }
 
@@ -1519,7 +1514,7 @@ void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::Re
     sInterface->present();
 
 #ifdef IG_HAS_DENOISER
-    if (settings.apply_denoiser)
+    if (settings.denoise)
         sInterface->denoise();
 #endif
 

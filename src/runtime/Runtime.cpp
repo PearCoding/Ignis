@@ -224,7 +224,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
 
     IG_LOG(L_DEBUG) << "Loading scene" << std::endl;
     const auto startLoader = std::chrono::high_resolution_clock::now();
-    
+
     auto ctx = Loader::load(lopts);
     if (!ctx)
         return false;
@@ -288,14 +288,14 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
         ignoreDenoiser = true;
 
     Device::RenderSettings settings;
-    settings.rays           = nullptr; // No artificial ray streams
-    settings.apply_denoiser = mOptions.Denoiser.Enabled && !ignoreDenoiser;
-    settings.spi            = info.GetSPI(mSamplesPerIteration);
-    settings.work_width     = info.GetWidth(mFilmWidth);
-    settings.work_height    = info.GetHeight(mFilmHeight);
-    settings.info           = info;
-    settings.iteration      = mCurrentIteration;
-    settings.frame          = mCurrentFrame;
+    settings.rays      = nullptr; // No artificial ray streams
+    settings.denoise   = mOptions.Denoiser.Enabled && !ignoreDenoiser;
+    settings.spi       = info.GetSPI(mSamplesPerIteration);
+    settings.width     = info.GetWidth(mFilmWidth);
+    settings.height    = info.GetHeight(mFilmHeight);
+    settings.info      = info;
+    settings.iteration = mCurrentIteration;
+    settings.frame     = mCurrentFrame;
 
     setParameter("__spi", (int)settings.spi);
     mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mParameterSet);
@@ -346,14 +346,14 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
     // IG_LOG(L_DEBUG) << "Tracing iteration " << mCurrentIteration << ", variant " << variant << std::endl;
 
     Device::RenderSettings settings;
-    settings.rays           = rays.data();
-    settings.apply_denoiser = false;
-    settings.spi            = info.GetSPI(mSamplesPerIteration);
-    settings.work_width     = rays.size();
-    settings.work_height    = 1;
-    settings.info           = info;
-    settings.iteration      = mCurrentIteration;
-    settings.frame          = mCurrentFrame;
+    settings.rays      = rays.data();
+    settings.denoise   = false;
+    settings.spi       = info.GetSPI(mSamplesPerIteration);
+    settings.width     = rays.size();
+    settings.height    = 1;
+    settings.info      = info;
+    settings.iteration = mCurrentIteration;
+    settings.frame     = mCurrentFrame;
 
     setParameter("__spi", (int)settings.spi);
     mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mParameterSet);
