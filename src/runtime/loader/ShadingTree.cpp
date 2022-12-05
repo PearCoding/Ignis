@@ -7,6 +7,10 @@
 #include "shader/BakeShader.h"
 #include "shader/ScriptCompiler.h"
 
+#include <algorithm> 
+#include <cctype>
+#include <locale>
+
 namespace IG {
 ShadingTree::ShadingTree(LoaderContext& ctx)
     : mContext(ctx)
@@ -283,6 +287,42 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name,
     }
 }
 
+// trim from start (in place)
+static inline void ltrim(std::string &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }));
+}
+
+// trim from end (in place)
+static inline void rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+}
+
+// trim from both ends (in place)
+static inline void trim(std::string &s) {
+    rtrim(s);
+    ltrim(s);
+}
+
+static inline std::optional<float> tryExtractFloat(const std::string& str) {
+    std::string c_str = str;
+    trim(c_str);
+
+    try {
+        size_t idx = 0;
+        float f = std::stof(c_str, &idx);
+        if(idx != c_str.size())
+            return std::nullopt;
+        else
+            return std::make_optional(f);
+    } catch(...) {
+        return std::nullopt;
+    }
+}
+
 ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::string& name, const std::string& expr, const TextureBakeOptions& options)
 {
     auto res = mTranspiler.transpile(expr);
@@ -299,7 +339,10 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::str
             if (options.SkipConstant)
                 return {};
 
-            // TODO: Handle simple case where it is just a string number!
+            // Handle simple case where it is just a number
+            const auto potential_number = tryExtractFloat(expr_art);
+            if (potential_number)
+                return std::make_shared<Image>(Image::createSolidImage(Vector4f::Constant(*potential_number)));
 
             // Constant expression with no ctx and textures
             const std::string script = BakeShader::setupConstantColor("  let main_func = @|| " + expr_art + ";");
