@@ -27,7 +27,7 @@
 
 namespace IG {
 
-constexpr size_t HISTOGRAM_SIZE                     = 100;
+constexpr size_t HISTOGRAM_SIZE                     = 50;
 static const char* const ToneMappingMethodOptions[] = {
     "None", "Reinhard", "Mod. Reinhard", "ACES", "Uncharted2"
 };
@@ -744,13 +744,16 @@ public:
                     constexpr double BarWidth = 0.67;
                     ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
                     ImPlot::SetNextFillStyle(ImVec4(1, 0, 0, 1), 0.25f);
-                    ImPlot::PlotBars("R", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 0 * HISTOGRAM_SIZE * sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("R", Histogram.data() + 0 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
+                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
                     ImPlot::SetNextFillStyle(ImVec4(0, 1, 0, 1), 0.25f);
-                    ImPlot::PlotBars("G", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 1 * HISTOGRAM_SIZE * sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("G", Histogram.data() + 1 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
+                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
                     ImPlot::SetNextFillStyle(ImVec4(0, 0, 1, 1), 0.25f);
-                    ImPlot::PlotBars("B", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 2 * HISTOGRAM_SIZE * sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("B", Histogram.data() + 2 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
+                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
                     ImPlot::SetNextFillStyle(ImVec4(1, 1, 0, 1), 0.25f);
-                    ImPlot::PlotBars("L", Histogram.data(), HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None, 3 * HISTOGRAM_SIZE * sizeof(decltype(Histogram)::value_type));
+                    ImPlot::PlotBars("L", Histogram.data() + 3 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
 
                     ImPlot::EndPlot();
                 }

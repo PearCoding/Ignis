@@ -98,8 +98,8 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
 
     if settings.acquire_histogram {
         // Setup histogram
-        let histogram_start     = output.min;
-        let histogram_end       = output.soft_max;
+        let histogram_start     = select(output.min < output.max, output.min, 0:f32);
+        let histogram_end       = select(output.min < output.soft_max, output.soft_max, select(output.min < output.max, output.max, histogram_start + 1));
         let histogram_range     = math_builtins::fmax[f32](0, histogram_end - histogram_start);
         let histogram_bin_count = settings.bins;
         let histogram_factor    = safe_div(histogram_bin_count as f32, histogram_range);
