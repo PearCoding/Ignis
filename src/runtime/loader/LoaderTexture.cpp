@@ -13,15 +13,17 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
         return;
 
     const std::filesystem::path filename = tree.context().handlePath(tex.property("filename").getString(), tex);
-    const std::string filter_type        = tex.property("filter_type").getString("bilinear");
+    const std::string filter_type        = tex.property("filter_type").getString("bicubic");
     const Transformf transform           = tex.property("transform").getTransform();
     const bool force_unpacked            = tex.property("force_unpacked").getBool(false); // Force the use of unpacked (float) images
     const bool linear                    = tex.property("linear").getBool(false);         // Hint that the image is already in linear. Only important if image type is not EXR or HDR, as they are always given in linear
 
     size_t res_id = tree.context().registerExternalResource(filename);
 
-    std::string filter = "make_bilinear_filter()";
-    if (filter_type == "nearest")
+    std::string filter = "make_bicubic_filter()";
+    if (filter_type == "bilinear")
+        filter = "make_bilinear_filter()";
+    else if (filter_type == "nearest")
         filter = "make_nearest_filter()";
 
     const auto getWrapMode = [](const std::string& str) {
