@@ -32,9 +32,9 @@ Image texture (:monosp:`image`)
     - Path to a valid image file.
   * - filter_type
     - |string|
-    - :code:`"bilinear"`
+    - :code:`"bicubic"`
     - No
-    - The filter type to be used. Has to be one of the following: ["bilinear", "nearest"].
+    - The filter type to be used. Has to be one of the following: ["bicubic", "bilinear", "nearest"].
   * - wrap_mode
     - |string|
     - :code:`"repeat"`
