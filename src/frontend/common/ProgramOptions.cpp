@@ -152,10 +152,14 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_option("--cpu-threads", threadCount, "Number of threads used on a CPU target. Set to 0 to detect automatically")->default_val(threadCount);
     app.add_option("--cpu-vectorwidth", vectorWidth, "Number of vector lanes used on a CPU target. Set to 0 to detect automatically")->default_val(vectorWidth);
 
-    app.add_option("--spp", SPP, "Enables benchmarking mode and sets the number of iterations based on the given spp");
+    app.add_option("--spp", SPP, "Number of samples per pixel a frame contains");
     app.add_option("--spi", SPI, "Number of samples per iteration. This is only considered a hint for the underlying technique");
-    if (type == ApplicationType::View)
+    if (type == ApplicationType::View) {
         app.add_option("--spp-mode", SPPMode, "Sets the current spp mode")->transform(MyTransformer(SPPModeMap, CLI::ignore_case))->default_str("fixed");
+        app.add_flag_callback(
+            "--realtime", [&]() { SPPMode = SPPMode::Continuos; SPI = 1; SPP = 1; },
+            "Same as setting SPPMode='Continuos', SPI=1 and SPP=1 to emulate realtime rendering");
+    }
 
     app.add_flag("--stats", AcquireStats, "Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session");
     app.add_flag("--stats-full", AcquireFullStats, "Acquire all stats alongside rendering. Will be dumped at the end of the rendering session");

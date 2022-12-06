@@ -173,6 +173,7 @@
         "bsdfs",
         "builtins",
         "clearcoat",
+        "commandline",
         "denoiser",
         "framebuffer",
         "klems",
