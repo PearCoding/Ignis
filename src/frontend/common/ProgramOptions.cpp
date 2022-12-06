@@ -157,7 +157,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     if (type == ApplicationType::View) {
         app.add_option("--spp-mode", SPPMode, "Sets the current spp mode")->transform(MyTransformer(SPPModeMap, CLI::ignore_case))->default_str("fixed");
         app.add_flag_callback(
-            "--realtime", [&]() { SPPMode = SPPMode::Continuos; SPI = 1; SPP = 1; },
+            "--realtime", [&]() { this->SPPMode = SPPMode::Continuos; SPI = 1; SPP = 1; },
             "Same as setting SPPMode='Continuos', SPI=1 and SPP=1 to emulate realtime rendering");
     }
 
