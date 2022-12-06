@@ -10,6 +10,7 @@ from docutils.parsers.rst import Directive, Parser
 from docutils.parsers.rst.directives.images import Image
 from docutils.statemachine import ViewList
 from sphinx.util.nodes import nested_parse_with_titles
+import re
 
 
 class subfig(nodes.General, nodes.Element):
@@ -39,10 +40,20 @@ def visit_subfig_html(self, node):
     self.body = []
 
 
+fig_reg = re.compile(r"<figure([^>]*)>")
+a_reg = re.compile(r"<a([^>]*)>")
+
+
 def depart_subfig_html(self, node):
+    # TODO: Getting the id of the upper figure would allow proper gallery usage
+
     figoutput = ''.join(self.body)
     figoutput = figoutput.replace(
-        'class="', 'class="align-center subsubfigure" style="width: %g%%"' % (float(node['width']) * 100))
+        'class="', 'class="align-center subsubfigure lightbox-image ')
+    figoutput = re.sub(fig_reg, '<figure\g<1> style="width: %g%%">' %
+                       (float(node['width']) * 100), figoutput, count=1)
+    figoutput = re.sub(a_reg, '<a\g<1> style="width: %g%%" data-lightbox="%s" data-title="">' %
+                       (float(node['width']) * 100, hash(figoutput)), figoutput, count=1)
     self.body = self.__body
     self.body.append(figoutput)
 
