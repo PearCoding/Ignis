@@ -955,8 +955,8 @@ void UI::setTitle(const char* str)
     case SPPMode::Capped:
         sstream << " [Capped]";
         break;
-    case SPPMode::Continous:
-        sstream << " [Continous]";
+    case SPPMode::Continuos:
+        sstream << " [Continuos]";
         break;
     }
     SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());
