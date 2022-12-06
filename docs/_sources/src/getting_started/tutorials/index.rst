@@ -1,8 +1,10 @@
 Tutorials
 =========
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Overview:
+This section contains some tutorials around the Ignis rendering framework. Select one of the left sections to learn more.
 
-   evalglare.rst
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+
+   Evalglare<evalglare.rst>
