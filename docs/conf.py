@@ -25,7 +25,7 @@ HTML5Translator.visit_reference = replacement
 # -- Project information -----------------------------------------------------
 
 project = 'Ignis'
-copyright = '2020-2022, Ignis-Project'
+copyright = '2020-2023, Ignis-Project'
 author = 'Ömercan Yazici'
 
 
@@ -48,7 +48,7 @@ templates_path = []
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'README.md', '*/README.md']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -89,7 +89,7 @@ html_sidebars = {
 }
 html_show_sourcelink = False
 
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
 
 rst_prolog = r"""
 .. role:: paramtype

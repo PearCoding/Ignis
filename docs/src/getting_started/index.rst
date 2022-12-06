@@ -1,13 +1,15 @@
 Getting Started
 ===============
 
-This section gives an overview of the Ignis rendering framework. Select one of the left chapters to learn more.
+This section gives an overview of the Ignis rendering framework. Select one of the left sections to learn more.
 
 ..  toctree::
     :hidden:
 
     building
+    realtime
     tutorials/index
+    plugins/index
 
 Frontends
 ---------
