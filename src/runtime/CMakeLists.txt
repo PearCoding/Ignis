@@ -112,6 +112,12 @@ set(SRC
   measured/powitacq_rgb.h
   measured/djmeasured.cpp
   measured/djmeasured.h
+  medium/HomogeneousMedium.cpp
+  medium/HomogeneousMedium.h
+  medium/Medium.cpp
+  medium/Medium.h
+  medium/VacuumMedium.cpp
+  medium/VacuumMedium.h
   mesh/MtsSerializedFile.cpp
   mesh/MtsSerializedFile.h
   mesh/ObjFile.cpp

@@ -37,7 +37,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
     }
 
     if (ctx.CurrentTechniqueVariantInfo().UsesMedia)
-        stream << LoaderMedium::generate(tree) << std::endl;
+        stream << ctx.Media->generate(tree) << std::endl;
 
     if (ctx.CurrentTechniqueVariantInfo().ShadowHandlingMode == ShadowHandlingMode::AdvancedWithMaterials) {
         stream << ShaderUtils::generateMaterialShader(tree, mat_id, ctx.CurrentTechniqueVariantInfo().UsesLights, "shader") << std::endl;

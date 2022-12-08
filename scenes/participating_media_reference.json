@@ -35,16 +35,14 @@
 		{"name":"Left","shape":"Left", "bsdf":"mat-ColoredWall"},
 		{"name":"Right","shape":"Right", "bsdf":"mat-ColoredWall"},
 		{"name":"Back","shape":"Back", "bsdf":"mat-GrayWall"},
-		{"name":"Object","shape":"Object", "bsdf":"mat-Object", "inner_medium": "Medium", "transform": [{"translate": [0,-0.59,0]}, {"scale": 0.4}]}
+		{"name":"LeftObject","shape":"Object", "bsdf":"mat-Object", "inner_medium": "LeftMedium", "transform": [{"translate": [-0.5,-0.59,0]}, {"scale": 0.4}]},
+		{"name":"RightObject","shape":"Object", "bsdf":"mat-Object", "inner_medium": "RightMedium", "transform": [{"translate": [0.5,-0.59,0]}, {"scale": 0.4}]}
 	],
 	"lights": [
 		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[100,100,100]}
 	],
-	"media": [
-		// {"type": "homogeneous", "name": "Medium", "sigma_a": [0.0015333, 0.0046, 0.019933], "sigma_s": [4.5513, 5.8294, 7.136], "g": -0.6}
-		// {"type": "homogeneous", "name": "Medium", "sigma_a": [0,0,0], "sigma_s": [0,0,0], "g": 0}
-		// {"type": "homogeneous", "name": "Medium", "sigma_a": [0.2,0.6,0.8], "sigma_s": [0.3,0.2,0.1], "g": 0}
-		// {"type": "homogeneous", "name": "Medium", "sigma_a": "color(0.2,0.6,0.8)*exp(-abs(V)).xyzz", "sigma_s": "color(0.3,0.2,0.1)*exp(-abs(V)).xyzz", "g": 0}
-		{"type": "homogeneous", "name": "Medium", "sigma_a": "4*Np.xyzz", "sigma_s": "0.2*(color(1)-Np.xyzz)", "g": 0}
+	"media": [ // TODO: Add meaningful media type to show reference function
+		{"type": "homogeneous", "name": "LeftMedium", "sigma_a": "4*Np.xyzz", "sigma_s": 0, "reference": "RightObject"},
+		{"type": "homogeneous", "name": "RightMedium", "sigma_a": "4*Np.xyzz", "sigma_s": 0}
 	]
 }

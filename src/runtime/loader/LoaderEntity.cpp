@@ -1,6 +1,7 @@
 #include "LoaderEntity.h"
 #include "Loader.h"
 #include "LoaderLight.h"
+#include "LoaderMedium.h"
 #include "LoaderShape.h"
 #include "Logger.h"
 #include "bvh/SceneBVHAdapter.h"
@@ -116,6 +117,11 @@ bool LoaderEntity::load(LoaderContext& ctx)
             }
 
             const uint32 shapeID = ctx.Shapes->getShapeID(shapeName);
+
+            // Query (inner) medium interface for reference
+            const std::string mediumInnerName = child->property("inner_medium").getString();
+            std::cout << mEntityCount << " " << pair.first << ": " << mediumInnerName << std::endl;
+            ctx.Media->handleReferenceEntity(mediumInnerName, pair.first, mEntityCount);
 
             // Populate flags
             uint32 entity_flags = 0;

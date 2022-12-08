@@ -65,6 +65,7 @@ public:
     LoaderOptions Options;
 
     std::unique_ptr<class LoaderLight> Lights;
+    std::unique_ptr<class LoaderMedium> Media;
     std::unique_ptr<class LoaderShape> Shapes;
     std::unique_ptr<class LoaderEntity> Entities;
 

@@ -3,6 +3,7 @@
 #include "LoaderCamera.h"
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
+#include "LoaderMedium.h"
 #include "LoaderShape.h"
 #include "LoaderTechnique.h"
 #include "Logger.h"
@@ -24,12 +25,14 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     ctx.Options = opts;
 
     ctx.Lights   = std::make_unique<LoaderLight>();
+    ctx.Media    = std::make_unique<LoaderMedium>();
     ctx.Shapes   = std::make_unique<LoaderShape>();
     ctx.Entities = std::make_unique<LoaderEntity>();
 
     ctx.Shapes->prepare(ctx);
     ctx.Entities->prepare(ctx);
     ctx.Lights->prepare(ctx);
+    ctx.Media->prepare(ctx);
 
     // Load content
     if (!ctx.Shapes->load(ctx))
@@ -47,6 +50,8 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
         IG_LOG(L_DEBUG) << "Got " << ctx.Lights->embeddedLightCount() << " embedded lights" << std::endl;
     if (ctx.Lights->areaLightCount() > 0)
         IG_LOG(L_DEBUG) << "Got " << ctx.Lights->areaLightCount() << " area lights" << std::endl;
+    if (ctx.Media->mediumCount() > 0)
+        IG_LOG(L_DEBUG) << "Got " << ctx.Media->mediumCount() << " participating media" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->shapeCount() << " shapes" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->triShapeCount() << " triangular shapes" << std::endl;
     if (ctx.Shapes->planeShapeCount() > 0)

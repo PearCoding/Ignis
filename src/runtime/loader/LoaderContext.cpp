@@ -7,6 +7,7 @@
 // Include for constructor & deconstructor
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
+#include "LoaderMedium.h"
 #include "LoaderShape.h"
 
 namespace IG {

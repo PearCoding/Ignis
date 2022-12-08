@@ -1,5 +1,5 @@
-Media
-=====
+Participating Media
+===================
 
 This section contains a list of media supported by the Ignis renderer.
 All number and color parameters can be connected to a shading network or texture via :ref:`PExpr <PExpr>`.
@@ -18,6 +18,9 @@ The type has to be one of the media listed at this section below.
         ]
         // ...
     }
+
+
+.. NOTE:: The participating media interface allows usage of :ref:`PExpr <PExpr>` but the expressions are evaluated via a surface contest and do **not** vary inside the volume!
 
 .. _bsdf-homogeneous:
 
@@ -41,3 +44,11 @@ Homogeneous (:monosp:`homogeneous`, :monosp:`constant`)
     - :code:`0`
     - Yes
     - Henyey-Greenstein phase parameter. Valid range is [-1, 1]. 0 = Isotropic, -1 = Full back scattering, 1 = Full forward scattering.
+
+
+.. _bsdf-vacuum:
+
+Vacuum (:monosp:`vacuum`)
+-------------------------------------------------------
+
+This medium has no properties and is used internally in some situations. It is better to not define a medium instead of using this type.

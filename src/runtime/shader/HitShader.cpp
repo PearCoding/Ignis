@@ -41,7 +41,7 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
 
     const bool requireMedia = ctx.CurrentTechniqueVariantInfo().UsesMedia;
     if (requireMedia)
-        stream << LoaderMedium::generate(tree) << std::endl;
+        stream << ctx.Media->generate(tree) << std::endl;
 
     stream << ShaderUtils::generateMaterialShader(tree, mat_id, requireLights, "shader") << std::endl;
 

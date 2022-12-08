@@ -25,16 +25,17 @@ std::string MissShader::setup(LoaderContext& ctx)
            << std::endl;
 
     ShadingTree tree(ctx);
-    if (ctx.CurrentTechniqueVariantInfo().UsesLights) {
-        if (ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss)
-            stream << ShaderUtils::generateDatabase(ctx) << std::endl;
 
+    if ((ctx.CurrentTechniqueVariantInfo().UsesLights && ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss)
+        || ctx.CurrentTechniqueVariantInfo().UsesMedia)
+        stream << ShaderUtils::generateDatabase(ctx) << std::endl;
+
+    if (ctx.CurrentTechniqueVariantInfo().UsesLights)
         stream << ctx.Lights->generate(tree, !ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss)
                << std::endl;
-    }
 
     if (ctx.CurrentTechniqueVariantInfo().UsesMedia)
-        stream << LoaderMedium::generate(tree) << std::endl;
+        stream << ctx.Media->generate(tree) << std::endl;
 
     // Include camera if necessary
     if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
