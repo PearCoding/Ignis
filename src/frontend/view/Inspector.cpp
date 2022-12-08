@@ -86,13 +86,13 @@ void ui_inspect_image(int px, int py, size_t width, size_t height, float scale, 
     ImGui::SameLine();
 
     std::sort(lums.begin(), lums.end());
-    float mean = std::accumulate(lums.begin(), lums.end(), 0.0f) / (float)lums.size();
-    float max  = std::reduce(lums.begin(), lums.end(), 0.0f, [](float a, float b) { return std::max(a, b); });
-    float min  = std::reduce(lums.begin(), lums.end(), std::numeric_limits<float>::infinity(), [](float a, float b) { return std::min(a, b); });
+    const float mean = std::accumulate(lums.begin(), lums.end(), 0.0f) / (float)lums.size();
+    const float max  = lums.back();
+    const float min  = lums.front();
 
-    float median  = lums[lums.size() / 2];
-    float softMax = lums[lums.size() - 2];
-    float softMin = lums[1];
+    const float median  = lums[lums.size() / 2];
+    const float softMax = lums[lums.size() - 2];
+    const float softMin = lums[1];
 
     // center quad
     const ImVec2 pos = rectMin + ImVec2(float(ZoomSize), float(ZoomSize)) * quadSize;
