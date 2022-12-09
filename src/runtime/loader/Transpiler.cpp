@@ -20,10 +20,6 @@ inline std::string tex_name(const std::string& name)
 {
     return "tex_" + name;
 }
-inline std::string var_name(const std::string& name)
-{
-    return "var_tex_" + name;
-}
 
 inline static std::string typeConstant(float f, PExprType arithType)
 {
@@ -792,15 +788,15 @@ inline static std::string binaryCwise(const std::string& A, const std::string& B
 
 class ArticVisitor : public PExpr::TranspileVisitor<std::string> {
 private:
-    ShadingTree& mTree;
     std::unordered_set<std::string> mUsedTextures;  // Will count used textures
     std::unordered_set<std::string> mUsedVariables; // Will count used internal variables, but not constants
     size_t mUUIDCounter;
+    const Transpiler* mParent;
 
 public:
-    inline explicit ArticVisitor(ShadingTree& tree)
-        : mTree(tree)
-        , mUUIDCounter(0)
+    inline explicit ArticVisitor(const Transpiler* parent)
+        : mUUIDCounter(0)
+        , mParent(parent)
     {
     }
 
@@ -809,22 +805,26 @@ public:
 
     std::string onVariable(const std::string& name, PExprType expectedType) override
     {
-        auto var = sInternalVariables.find(name);
-        if (var != sInternalVariables.end()) {
+        // Return internal variables if matched
+        if (auto var = sInternalVariables.find(name); var != sInternalVariables.end() && var->second.Type == expectedType) {
             if (!var->second.IsConstant)
                 mUsedVariables.insert(var->first);
             return var->second.Map;
         }
 
-        if (expectedType == PExprType::Vec4 && mTree.context().Options.Scene.texture(name) != nullptr) {
-            mUsedTextures.insert(name);
-            return "color_to_vec4(" + tex_name(mTree.getClosureID(name)) + "(ctx))";
-        } else {
-            if (expectedType == PExprType::Vec4)
-                return "color_to_vec4(" + var_name(mTree.getClosureID(name)) + ")";
-            else
-                return var_name(mTree.getClosureID(name));
-        }
+        // Return custom variables if matched
+        if (auto var = mParent->mCustomVariableBool.find(name); expectedType == PExprType::Boolean && var != mParent->mCustomVariableBool.end())
+            return var->second;
+        if (auto var = mParent->mCustomVariableNumber.find(name); expectedType == PExprType::Number && var != mParent->mCustomVariableNumber.end())
+            return var->second;
+        if (auto var = mParent->mCustomVariableVector.find(name); expectedType == PExprType::Vec3 && var != mParent->mCustomVariableVector.end())
+            return var->second;
+        if (auto var = mParent->mCustomVariableColor.find(name); expectedType == PExprType::Vec4 && var != mParent->mCustomVariableColor.end())
+            return "color_to_vec4(" + var->second + ")";
+
+        IG_ASSERT(expectedType == PExprType::Vec4 && mParent->mTree.context().Options.Scene.texture(name) != nullptr, "Expected a valid texture name");
+        mUsedTextures.insert(name);
+        return "color_to_vec4(" + tex_name(mParent->mTree.getClosureID(name)) + "(ctx))";
     }
 
     std::string onInteger(PExpr::Integer v) override { return std::to_string(v) + ":i32"; }
@@ -974,9 +974,9 @@ public:
         }
 
         // Must be a texture
-        IG_ASSERT(mTree.context().Options.Scene.texture(name) != nullptr, "Expected a valid texture name");
+        IG_ASSERT(mParent->mTree.context().Options.Scene.texture(name) != nullptr, "Expected a valid texture name");
         mUsedTextures.insert(name);
-        return "color_to_vec4(" + tex_name(mTree.getClosureID(name)) + "(" + (argumentPayloads.empty() ? std::string("ctx") : ("ctx.{uvw=vec2_to_3(" + argumentPayloads[0] + ", 0)}")) + "))";
+        return "color_to_vec4(" + tex_name(mParent->mTree.getClosureID(name)) + "(" + (argumentPayloads.empty() ? std::string("ctx") : ("ctx.{uvw=vec2_to_3(" + argumentPayloads[0] + ", 0)}")) + "))";
     }
 
     /// a.xyz Access operator for vector types
@@ -1110,7 +1110,7 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr)
         return {};
 
     // Transpile
-    ArticVisitor visitor(mTree);
+    ArticVisitor visitor(this);
     std::string res = mInternal->Environment.transpile(ast, &visitor);
 
     // Patch output

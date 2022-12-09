@@ -1,12 +1,14 @@
 #pragma once
 
 #include "IG_Config.h"
+#include <unordered_map>
 #include <unordered_set>
 
 namespace IG {
 class ShadingTree;
 class IG_LIB Transpiler {
     friend class TranspilerInternal;
+    friend class ArticVisitor;
 
 public:
     explicit Transpiler(ShadingTree& tree);
@@ -22,14 +24,16 @@ public:
     /// Transpile the given expression to artic code.
     std::optional<Result> transpile(const std::string& expr) const;
 
+    /// Returns true if the expression is evaluated as color (vec4)
     bool checkIfColor(const std::string& expr) const;
 
+    /// Return reference to associated shading tree
     inline const ShadingTree& tree() const { return mTree; }
 
-    inline void registerCustomVariableBool(const std::string& name) { mCustomVariableBool.insert(name); }
-    inline void registerCustomVariableNumber(const std::string& name) { mCustomVariableNumber.insert(name); }
-    inline void registerCustomVariableVector(const std::string& name) { mCustomVariableVector.insert(name); }
-    inline void registerCustomVariableColor(const std::string& name) { mCustomVariableColor.insert(name); }
+    inline void registerCustomVariableBool(const std::string& name, const std::string& value) { mCustomVariableBool[name] = value; }
+    inline void registerCustomVariableNumber(const std::string& name, const std::string& value) { mCustomVariableNumber[name] = value; }
+    inline void registerCustomVariableVector(const std::string& name, const std::string& value) { mCustomVariableVector[name] = value; }
+    inline void registerCustomVariableColor(const std::string& name, const std::string& value) { mCustomVariableColor[name] = value; }
 
     /// Return list of available variables and their respective types
     static std::string availableVariables();
@@ -41,10 +45,10 @@ public:
 
 private:
     ShadingTree& mTree;
-    std::unordered_set<std::string> mCustomVariableBool;
-    std::unordered_set<std::string> mCustomVariableNumber;
-    std::unordered_set<std::string> mCustomVariableVector;
-    std::unordered_set<std::string> mCustomVariableColor;
+    std::unordered_map<std::string, std::string> mCustomVariableBool;
+    std::unordered_map<std::string, std::string> mCustomVariableNumber;
+    std::unordered_map<std::string, std::string> mCustomVariableVector;
+    std::unordered_map<std::string, std::string> mCustomVariableColor;
 
     std::unique_ptr<class TranspilerInternal> mInternal;
 };

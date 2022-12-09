@@ -2,6 +2,8 @@
 
 #include "LoaderContext.h"
 
+#include <unordered_set>
+
 namespace IG {
 class Light;
 class ShadingTree;

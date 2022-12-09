@@ -10,7 +10,6 @@
 
 #include <any>
 #include <filesystem>
-#include <unordered_set>
 #include <vector>
 
 namespace IG {

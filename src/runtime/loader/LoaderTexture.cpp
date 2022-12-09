@@ -190,6 +190,8 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
     for (const auto& pair : tex.properties()) {
         if (startsWith(pair.first, "num_"))
             tree.addNumber(pair.first, tex, 0.0f, true);
+        else if (startsWith(pair.first, "vec_"))
+            tree.addVector(pair.first, tex, Vector3f::Ones(), true);
         else if (startsWith(pair.first, "color_"))
             tree.addColor(pair.first, tex, Vector3f::Ones(), true);
     }
@@ -198,13 +200,13 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
     Transpiler transpiler(tree);
     for (const auto& pair : tex.properties()) {
         if (startsWith(pair.first, "num_"))
-            transpiler.registerCustomVariableNumber(pair.first.substr(4));
+            transpiler.registerCustomVariableNumber(pair.first.substr(4), "var_tex_" + tree.getClosureID(pair.first.substr(4)));
         else if (startsWith(pair.first, "color_"))
-            transpiler.registerCustomVariableColor(pair.first.substr(6));
+            transpiler.registerCustomVariableColor(pair.first.substr(6), "var_tex_" + tree.getClosureID(pair.first.substr(6)));
         else if (startsWith(pair.first, "vec_"))
-            transpiler.registerCustomVariableVector(pair.first.substr(4));
+            transpiler.registerCustomVariableVector(pair.first.substr(4), "var_tex_" + tree.getClosureID(pair.first.substr(4)));
         else if (startsWith(pair.first, "bool_"))
-            transpiler.registerCustomVariableBool(pair.first.substr(5));
+            transpiler.registerCustomVariableBool(pair.first.substr(5), "var_tex_" + tree.getClosureID(pair.first.substr(5)));
     }
 
     // Transpile
@@ -242,7 +244,7 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
                 stream << "    let var_tex_" << var_id << " = " << tree.getInline(pair.first) << ";" << std::endl;
             } else if (startsWith(pair.first, "vec_")) {
                 const std::string var_id = tree.getClosureID(pair.first.substr(4));
-                stream << "    let var_tex_" << var_id << " = " << LoaderUtils::inlineVector(pair.second.getVector3()) << ";" << std::endl;
+                stream << "    let var_tex_" << var_id << " = " << tree.getInline(pair.first) << ";" << std::endl;
             } else if (startsWith(pair.first, "bool_")) {
                 const std::string var_id = tree.getClosureID(pair.first.substr(5));
                 stream << "    let var_tex_" << var_id << " = " << (pair.second.getBool() ? "true" : "false") << ";" << std::endl;

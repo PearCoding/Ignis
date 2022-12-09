@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <string_view>
-#include <unordered_set>
 
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
