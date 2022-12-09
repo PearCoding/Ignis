@@ -383,6 +383,10 @@ The following will need <code class="docutils literal notranslate"><span class="
 <p class="admonition-title">Note</p>
 <p>It might be necessary to run the script <code class="docutils literal notranslate"><span class="pre">scripts/setup/windows/vc_dev_env.ps1</span></code> every time a new terminal is opened to ensure the correct visual studio environment is available.</p>
 </div>
+<p>To change from the single build configuration using <code class="docutils literal notranslate"><span class="pre">`Ninja</span></code> to a multiconfig-generator, remove or adapt the following line in <code class="docutils literal notranslate"><span class="pre">scripts/setup/windows/config.json</span></code>:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;CMAKE_EXTRA_ARGS&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;-GNinja&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;-UCMAKE_CONFIGURATION_TYPES&quot;</span><span class="p">]</span><span class="w"></span>
+</pre></div>
+</div>
 </section>
 <section id="windows-manual">
 <h2>Windows (Manual)<a class="headerlink" href="#windows-manual" title="Permalink to this heading">#</a></h2>
@@ -476,12 +480,21 @@ Use one of the many dll dependency viewers available on Windows to find the exac
 </section>
 <section id="known-issues">
 <h2>Known Issues<a class="headerlink" href="#known-issues" title="Permalink to this heading">#</a></h2>
-<ul class="simple">
+<ul>
 <li><p>If you get a <code class="docutils literal notranslate"><span class="pre">CommandLine</span> <span class="pre">Error:</span> <span class="pre">Option</span> <span class="pre">'help-list'</span> <span class="pre">registred</span> <span class="pre">more</span> <span class="pre">than</span> <span class="pre">once!</span></code>, most likely the AnyDSL LLVM library and system LLVM library with exposed symbols are loaded at the same time.
 A known cause is that <code class="docutils literal notranslate"><span class="pre">igview</span></code> and SDL are using a graphic driver which is loading the system LLVM library in the background.
 On Linux, using accelerated rendering load the X11 drivers, which in return load the system LLVM, which in return clash with the custom LLVM.
 Setting the environment variable <code class="docutils literal notranslate"><span class="pre">SDL_RENDER_DRIVER=software</span></code> and <code class="docutils literal notranslate"><span class="pre">SDL_FRAMEBUFFER_ACCELERATION=0</span></code> should be a good workaround. This will not prevent you of using the GPU for raytracing however, only the UI will be software rendered.</p></li>
 <li><p>If running <code class="docutils literal notranslate"><span class="pre">artic</span></code> or <code class="docutils literal notranslate"><span class="pre">clang</span></code> fails when building Ignis it might be due to the two executables not able to find <code class="docutils literal notranslate"><span class="pre">zlib.dll</span></code>. Make sure it is available for them. A simple solution is to just copy the <code class="docutils literal notranslate"><span class="pre">zlib.dll</span></code> next to the executables.</p></li>
+<li><p>Getting the following cmake error in LLVM:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">CMake Error at build/_deps/llvm-src/llvm/cmake/modules/AddLLVM.cmake:1985 (string):</span>
+<span class="go">string begin index: -1 is out of range 0 - 23</span>
+<span class="go">Call Stack (most recent call first):</span>
+<span class="go">build/_deps/llvm-src/llvm/tools/llvm-ar/CMakeLists.txt:20 (add_llvm_tool_symlink)</span>
+</pre></div>
+</div>
+<p>can be fixed by explicitly undefining the cmake variable <code class="docutils literal notranslate"><span class="pre">CMAKE_CONFIGURATION_TYPES</span></code> via <code class="docutils literal notranslate"><span class="pre">-UCMAKE_CONFIGURATION_TYPES</span></code> in the command line or in the <code class="docutils literal notranslate"><span class="pre">scripts/setup/windows/config.json</span></code> when using the automatic script.</p>
+</li>
 </ul>
 </section>
 </section>
