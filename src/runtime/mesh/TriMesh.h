@@ -14,7 +14,9 @@ using StVector2f = StVectorXf<2>;
 static_assert(sizeof(StVector3f) == sizeof(float) * 3, "Expected storage vector types to be well sized");
 static_assert(sizeof(StVector2f) == sizeof(float) * 2, "Expected storage vector types to be well sized");
 
-struct TriMesh {
+class IG_LIB TriMesh {
+public:
+    // TODO: Refactor the direct access out
     std::vector<StVector3f> vertices;
     std::vector<uint32> indices; // A triangle is based as [i0,i1,i2,0]
     std::vector<StVector3f> normals;

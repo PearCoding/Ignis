@@ -3,7 +3,7 @@
 #include "IG_Config.h"
 
 namespace IG {
-class PerezModel {
+class IG_LIB PerezModel {
 public:
     inline float a() const { return mA; }
     inline float b() const { return mB; }

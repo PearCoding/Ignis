@@ -3,7 +3,7 @@
 #include "IG_Config.h"
 
 namespace IG {
-class ScriptCompiler {
+class IG_LIB ScriptCompiler {
 public:
     ScriptCompiler();
     ~ScriptCompiler();

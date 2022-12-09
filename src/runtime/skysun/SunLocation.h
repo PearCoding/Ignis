@@ -5,7 +5,7 @@
 namespace IG {
 
 // Default is 2020.05.06 12:00:00 (midday)
-struct TimePoint {
+struct IG_LIB TimePoint {
     int Year      = 2020;
     int Month     = 5;
     int Day       = 6;
@@ -43,5 +43,5 @@ struct MapLocation {
 };
 
 /// Will return elevation and azimuth (west of south)
-[[nodiscard]] ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& location);
+[[nodiscard]] IG_LIB ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& location);
 } // namespace IG
