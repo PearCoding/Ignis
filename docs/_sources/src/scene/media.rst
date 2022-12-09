@@ -20,7 +20,7 @@ The type has to be one of the media listed at this section below.
     }
 
 
-.. NOTE:: The participating media interface allows usage of :ref:`PExpr <PExpr>` but the expressions are evaluated via a surface contest and do **not** vary inside the volume!
+.. WARNING:: The participating media interface allows usage of :ref:`PExpr <PExpr>` but the expressions are evaluated via a surface context and do **not** vary inside the volume, but along the surface! This behavior is considered non-intuitive and might change in the future.
 
 .. _bsdf-homogeneous:
 
@@ -51,4 +51,4 @@ Homogeneous (:monosp:`homogeneous`, :monosp:`constant`)
 Vacuum (:monosp:`vacuum`)
 -------------------------------------------------------
 
-This medium has no properties and is used internally in some situations. It is better to not define a medium instead of using this type.
+This medium has no properties and is used internally for the absence of volumes. It is better to **not** define a medium in the scene description instead of using this type.

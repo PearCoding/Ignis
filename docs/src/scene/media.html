@@ -350,9 +350,9 @@ The type has to be one of the media listed at this section below.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The participating media interface allows usage of <a class="reference internal" href="pexpr.html#pexpr"><span class="std std-ref">PExpr</span></a> but the expressions are evaluated via a surface contest and do <strong>not</strong> vary inside the volume!</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The participating media interface allows usage of <a class="reference internal" href="pexpr.html#pexpr"><span class="std std-ref">PExpr</span></a> but the expressions are evaluated via a surface context and do <strong>not</strong> vary inside the volume, but along the surface! This behavior is considered non-intuitive and might change in the future.</p>
 </div>
 <section id="homogeneous-homogeneous-constant">
 <span id="bsdf-homogeneous"></span><h2>Homogeneous (<span class="monosp">homogeneous</span>, <span class="monosp">constant</span>)<a class="headerlink" href="#homogeneous-homogeneous-constant" title="Permalink to this heading">#</a></h2>
@@ -389,7 +389,7 @@ The type has to be one of the media listed at this section below.</p>
 </section>
 <section id="vacuum-vacuum">
 <span id="bsdf-vacuum"></span><h2>Vacuum (<span class="monosp">vacuum</span>)<a class="headerlink" href="#vacuum-vacuum" title="Permalink to this heading">#</a></h2>
-<p>This medium has no properties and is used internally in some situations. It is better to not define a medium instead of using this type.</p>
+<p>This medium has no properties and is used internally for the absence of volumes. It is better to <strong>not</strong> define a medium in the scene description instead of using this type.</p>
 </section>
 </section>
 
