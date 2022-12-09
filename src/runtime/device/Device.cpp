@@ -270,14 +270,17 @@ public:
         }
 
         host_pixels.Data = anydsl::Array<float>(expectedSize);
+        std::fill(host_pixels.Data.begin(), host_pixels.Data.end(), 0);
 
 #ifdef IG_HAS_DENOISER
         if (aovs.count("Denoised") != 0)
             aovs["Denoised"].HostOnly = true; // Always mapped, ignore data from device
 #endif
 
-        for (auto& p : aovs)
+        for (auto& p : aovs) {
             p.second.Data = anydsl::Array<float>(expectedSize);
+            std::fill(p.second.Data.begin(), p.second.Data.end(), 0);
+        }
 
         resetFramebufferAccess();
     }
@@ -919,6 +922,7 @@ public:
         }
     }
 
+    // -------------------------------------------------------- Shader
     inline void runDeviceShader()
     {
         if (setup.debug_trace)
@@ -1182,6 +1186,8 @@ public:
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(ShaderType::Bake, {});
     }
+
+    // ---------------------------------------------------- Framebuffer/AOV stuff
 
     inline anydsl::Array<float> createFramebuffer(int32_t dev) const
     {
