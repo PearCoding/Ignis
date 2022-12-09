@@ -120,7 +120,6 @@ bool LoaderEntity::load(LoaderContext& ctx)
 
             // Query (inner) medium interface for reference
             const std::string mediumInnerName = child->property("inner_medium").getString();
-            std::cout << mEntityCount << " " << pair.first << ": " << mediumInnerName << std::endl;
             ctx.Media->handleReferenceEntity(mediumInnerName, pair.first, mEntityCount);
 
             // Populate flags
