@@ -1,4 +1,5 @@
 {
+  // Exported via Blender plugin, modified for size and testing principled bsdf and environment map 
   "technique": {
     "type": "path",
     "max_depth": 32,
