@@ -1,12 +1,12 @@
 $CURRENT=Get-Location
 
-If (!(test-path "$BUILD_DIR")) {
-    md "$BUILD_DIR"
+If (!(Test-Path "$BUILD_DIR")) {
+    md "$BUILD_DIR" > $null
 }
 cd "$BUILD_DIR"
 
 $CLANG_BIN_DIR="$DEPS_ROOT\anydsl\build\_deps\llvm-build\$($Config.AnyDSL_BUILD_TYPE)\bin"
-if (test-path "$CLANG_BIN_DIR") {
+if (Test-Path "$CLANG_BIN_DIR") {
     $CLANG_BIN_DIR=$CLANG_BIN_DIR.Replace("\", "/")
 } Else {
     $CLANG_BIN_DIR="$DEPS_ROOT\anydsl\build\_deps\llvm-build\bin".Replace("\", "/")
@@ -14,7 +14,7 @@ if (test-path "$CLANG_BIN_DIR") {
 $CLANG_BIN="$CLANG_BIN_DIR\clang.exe".Replace("\", "/")
 
 $ARTIC_BIN_DIR="$DEPS_ROOT\anydsl\build\bin\$($Config.AnyDSL_BUILD_TYPE)"
-if (test-path "$ARTIC_BIN_DIR") {
+if (Test-Path "$ARTIC_BIN_DIR") {
     $ARTIC_BIN_DIR=$ARTIC_BIN_DIR.Replace("\", "/")
 } Else {
     $ARTIC_BIN_DIR="$DEPS_ROOT\anydsl\build\bin".Replace("\", "/")
@@ -50,17 +50,17 @@ $SDL2_INCLUDE="$DEPS_ROOT\SDL2\include".Replace("\", "/")
 If(!$Config.CMAKE_EXTRA_ARGS.Contains("-GNinja")) { # TODO: What about other single configuration generators?
     $OUTPUT_DIR="$BUILD_DIR\bin"
     if(!(Test-Path "$OUTPUT_DIR\Release")) {
-        md "$OUTPUT_DIR\Release"
+        md "$OUTPUT_DIR\Release" > $null
     }
 
-    cp "$BIN_ROOT\*" "$OUTPUT_DIR\Release"
+    cp "$BIN_ROOT\*" "$OUTPUT_DIR\Release" > $null
 } Else {
     $OUTPUT_DIR="$BUILD_DIR\bin"
     if(!(Test-Path "$OUTPUT_DIR")) {
-        md "$OUTPUT_DIR"
+        md "$OUTPUT_DIR" > $null
     }
 
-    cp "$BIN_ROOT\*" "$OUTPUT_DIR"
+    cp "$BIN_ROOT\*" "$OUTPUT_DIR" > $null
 }
 
 cd $CURRENT

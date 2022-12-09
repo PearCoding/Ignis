@@ -17,14 +17,14 @@ cd $PSScriptRoot\..\..\..\
 $IGNIS_ROOT="$(Get-Location)\"
 
 If($Config.LOCATION) {
-    If (!(test-path "$($Config.LOCATION)")) {
-        md "$($Config.LOCATION)"
+    If (!(Test-Path "$($Config.LOCATION)")) {
+        md "$($Config.LOCATION)" > $null
     }
     cd "$($Config.LOCATION)"
 } Else {
     cd ..
-    If (!(test-path "deps")) {
-        md "deps"
+    If (!(Test-Path "deps")) {
+        md "deps" > $null
     }
     cd "deps"
 }
@@ -37,13 +37,13 @@ if (![System.IO.Path]::IsPathRooted($BUILD_DIR)) {
 }
 
 # Create some necessary folders
-If (!(test-path "bin")) {
-    md "bin"
+If (!(Test-Path "bin")) {
+    md "bin" > $null
 }
 $BIN_ROOT="$DEPS_ROOT\bin"
 
-If (!(test-path "tmp")) {
-    md "tmp"
+If (!(Test-Path "tmp")) {
+    md "tmp" > $null
 }
 $TMP_ROOT="$DEPS_ROOT\tmp"
 

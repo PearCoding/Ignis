@@ -5,7 +5,7 @@ cd "tmp"
 # Get zip
 if (!(Test-Path "zlib.zip")) {
     Invoke-WebRequest -Uri "$($Config.ZLIB_URL)" -OutFile "zlib.zip"
-    Expand-Archive zlib.zip -DestinationPath .
+    Expand-Archive zlib.zip -DestinationPath . > $null
 }
 cd "zlib*/"
 

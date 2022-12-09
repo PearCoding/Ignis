@@ -4,7 +4,7 @@
     "CONFIGURE_IGNIS": true,
     "GIT_BIN": "git",
     "CMAKE_BIN": "cmake",
-    "CMAKE_EXTRA_ARGS": ["-GNinja"],
+    "CMAKE_EXTRA_ARGS": ["-GNinja", "-UCMAKE_CONFIGURATION_TYPES"],
     "SKIP_VC_ENV": false,
     "GET_ZLIB": true,
     "ZLIB_BUILD_TYPE": "Release",

@@ -270,7 +270,7 @@ public:
         }
 
         host_pixels.Data = anydsl::Array<float>(expectedSize);
-        std::fill(host_pixels.Data.begin(), host_pixels.Data.end(), 0);
+        std::fill(host_pixels.Data.begin(), host_pixels.Data.end(), 0.0f);
 
 #ifdef IG_HAS_DENOISER
         if (aovs.count("Denoised") != 0)
@@ -279,7 +279,7 @@ public:
 
         for (auto& p : aovs) {
             p.second.Data = anydsl::Array<float>(expectedSize);
-            std::fill(p.second.Data.begin(), p.second.Data.end(), 0);
+            std::fill(p.second.Data.begin(), p.second.Data.end(), 0.0f);
         }
 
         resetFramebufferAccess();
