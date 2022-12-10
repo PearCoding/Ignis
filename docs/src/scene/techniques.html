@@ -383,9 +383,16 @@ The type has to be one of the techniques listed at this section below.</p>
 </table>
 <p>This is the default and probably most used type. It calculates the full global illumination in the scene.
 If participating media is used, it is recommended to use the volumetric path tracer instead.</p>
-</section>
+<div class="figure subfigure compound align-center" id="fig-path-technique">
+<figure class="align-center subsubfigure lightbox-image align-default" id="id1" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_path.jpg" style="width: 60%" data-lightbox="5815391598461467041" data-title=""><img alt="../../_images/technique_path.jpg" src="../../_images/technique_path.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using the path technique</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id1" title="Permalink to this image">#</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="volume-path-tracer-volpath">
-<h2>Volume Path Tracer (<span class="monosp">volpath</span>)<a class="headerlink" href="#volume-path-tracer-volpath" title="Permalink to this heading">#</a></h2>
+<span id="fig-path-technique"></span><h2>Volume Path Tracer (<span class="monosp">volpath</span>)<a class="headerlink" href="#volume-path-tracer-volpath" title="Permalink to this heading">#</a></h2>
 <table class="paramstable table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
@@ -413,9 +420,16 @@ If participating media is used, it is recommended to use the volumetric path tra
 </tbody>
 </table>
 <p>A simple volumetric path tracer. It calculates the full global illumination in the scene.</p>
-</section>
-<section id="photonmapper-photonmapper">
-<h2>Photonmapper (<span class="monosp">photonmapper</span>)<a class="headerlink" href="#photonmapper-photonmapper" title="Permalink to this heading">#</a></h2>
+<div class="figure subfigure compound align-center" id="fig-volpath-technique">
+<figure class="align-center subsubfigure lightbox-image align-default" id="id2" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_volpath.jpg" style="width: 60%" data-lightbox="7905783435646262434" data-title=""><img alt="../../_images/technique_volpath.jpg" src="../../_images/technique_volpath.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using the volumetric path technique. In this picture no volumes were used, converging to the same result as the standard path tracer.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id2" title="Permalink to this image">#</a></p>
+</figcaption>
+</figure>
+</div></section>
+<section id="light-tracer-lighttracer">
+<span id="fig-volpath-technique"></span><h2>Light Tracer (<span class="monosp">lighttracer</span>)<a class="headerlink" href="#light-tracer-lighttracer" title="Permalink to this heading">#</a></h2>
 <table class="paramstable table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
@@ -427,8 +441,63 @@ If participating media is used, it is recommended to use the volumetric path tra
 <tbody>
 <tr class="row-even"><td><p><span class="paramtype">max_depth</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
-<td><p><code class="code docutils literal notranslate"><span class="pre">8</span></code></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">64</span></code></p></td>
 <td><p>Maximum depth of rays to be traced.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">clamp</span></p></td>
+<td><p><span class="paramtype">number</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p>Value to clamp contributions to. This introduces bias in favour of omitting outlier. 0 disables clamping.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">light_selector</span></p></td>
+<td><p><span class="paramtype">string</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">&quot;uniform&quot;</span></code></p></td>
+<td><p>Light selection technique. Available are <code class="code docutils literal notranslate"><span class="pre">&quot;hierarchy&quot;</span></code>, <code class="code docutils literal notranslate"><span class="pre">&quot;simple&quot;</span></code> and <code class="code docutils literal notranslate"><span class="pre">&quot;uniform&quot;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>A basic light tracer. Primarily developed as a proof-of-concept for the project framework. It fails to display fully specular paths.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The light tracer is very basic and misses many features. This might change in the future.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>At the time of this writing the light tracer still has some problems and is not recommended to be used.</p>
+</div>
+<div class="figure subfigure compound align-center" id="fig-lt-technique">
+<figure class="align-center subsubfigure lightbox-image align-default" id="id3" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_lt.jpg" style="width: 60%" data-lightbox="8021393393173228976" data-title=""><img alt="../../_images/technique_lt.jpg" src="../../_images/technique_lt.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using light tracing. It fails to display fully specular paths, as a path starting from a light source through a perfect specular path can <strong>not</strong> hit a virtual camera randomly.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id3" title="Permalink to this image">#</a></p>
+</figcaption>
+</figure>
+</div></section>
+<section id="photonmapper-photonmapper">
+<span id="fig-lt-technique"></span><h2>Photonmapper (<span class="monosp">photonmapper</span>)<a class="headerlink" href="#photonmapper-photonmapper" title="Permalink to this heading">#</a></h2>
+<table class="paramstable table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="paramtype">max_camera_depth</span></p></td>
+<td><p><span class="paramtype">integer</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">64</span></code></p></td>
+<td><p>Maximum depth of rays starting from the camera.</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="paramtype">max_light_depth</span></p></td>
+<td><p><span class="paramtype">integer</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">8</span></code></p></td>
+<td><p>Maximum depth of rays starting from a light source.</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="paramtype">photons</span></p></td>
+<td><p><span class="paramtype">integer</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">1000000</span></code></p></td>
+<td><p>Number of photons emitted into the scene.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">radius</span></p></td>
 <td><p><span class="paramtype">number</span></p></td>
@@ -447,18 +516,71 @@ If participating media is used, it is recommended to use the volumetric path tra
 </tr>
 </tbody>
 </table>
-</section>
+<p>A basic photon mapping technique. Primarily developed as a proof-of-concept for the project framework.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The photon mapper is very basic and more recent advancements are not used. This will change in the future.</p>
+</div>
+<div class="figure subfigure compound align-center" id="fig-ppm-technique">
+<figure class="align-center subsubfigure lightbox-image align-default" id="id4" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_ppm.jpg" style="width: 60%" data-lightbox="6615880614233725658" data-title=""><img alt="../../_images/technique_ppm.jpg" src="../../_images/technique_ppm.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using photon mapping. The footprint of each photon is clearly visible. However, the technique exceeds in displaying the caustics, whom are missing in the standard path tracing technique.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id4" title="Permalink to this image">#</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="ambient-occlusion-ao">
-<h2>Ambient Occlusion (<span class="monosp">ao</span>)<a class="headerlink" href="#ambient-occlusion-ao" title="Permalink to this heading">#</a></h2>
+<span id="fig-ppm-technique"></span><h2>Ambient Occlusion (<span class="monosp">ao</span>)<a class="headerlink" href="#ambient-occlusion-ao" title="Permalink to this heading">#</a></h2>
 <p>This technique calculates the ambient occlusion in the scene. Currently no parameters are available to tinkle around.</p>
-</section>
+<div class="figure subfigure compound align-center" id="fig-ao-technique">
+<figure class="align-center subsubfigure lightbox-image align-default" id="id5" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_ao.jpg" style="width: 60%" data-lightbox="3412196064591023514" data-title=""><img alt="../../_images/technique_ao.jpg" src="../../_images/technique_ao.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample ambient occlusion rendering. The images looks almost converged, which is due to the grayscale appearance and large number of samples within each bounce.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id5" title="Permalink to this image">#</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="wireframe-wireframe">
-<h2>Wireframe (<span class="monosp">wireframe</span>)<a class="headerlink" href="#wireframe-wireframe" title="Permalink to this heading">#</a></h2>
+<span id="fig-ao-technique"></span><h2>Wireframe (<span class="monosp">wireframe</span>)<a class="headerlink" href="#wireframe-wireframe" title="Permalink to this heading">#</a></h2>
 <p>This technique renders the scene in wireframe. Currently no parameters are available to tinkle around.</p>
-</section>
+<div class="figure subfigure compound align-center" id="fig-wireframe-technique">
+<figure class="align-center subsubfigure lightbox-image align-default" id="id6" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_wireframe.jpg" style="width: 60%" data-lightbox="-5363880065725600057" data-title=""><img alt="../../_images/technique_wireframe.jpg" src="../../_images/technique_wireframe.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A basic visualization of the scene using wireframes.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id6" title="Permalink to this image">#</a></p>
+</figcaption>
+</figure>
+</div></section>
 <section id="debug-debug">
-<h2>Debug (<span class="monosp">debug</span>)<a class="headerlink" href="#debug-debug" title="Permalink to this heading">#</a></h2>
+<span id="fig-wireframe-technique"></span><h2>Debug (<span class="monosp">debug</span>)<a class="headerlink" href="#debug-debug" title="Permalink to this heading">#</a></h2>
+<table class="paramstable table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="paramtype">mode</span></p></td>
+<td><p><span class="paramtype">string</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">&quot;Normal&quot;</span></code></p></td>
+<td><p>Property to display or check. One of the options displayed in <code class="docutils literal notranslate"><span class="pre">igview</span></code> when using the debug mode <code class="docutils literal notranslate"><span class="pre">--debug</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
 <p>This is a special technique only usable with the <span class="monosp">igview</span> frontend. It displays scene specific information on the screen.</p>
+<div class="figure subfigure compound align-center" id="fig-debug-technique">
+<figure class="align-center subsubfigure lightbox-image align-default" id="id7" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_debug.jpg" style="width: 60%" data-lightbox="-9116389617221502720" data-title=""><img alt="../../_images/technique_debug.jpg" src="../../_images/technique_debug.jpg" style="width: 90%;" /></a>
+<figcaption>
+<p><span class="align-center subsubfigure lightbox-image caption-text">Debug visualization of the scene displaying the shading normals.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id7" title="Permalink to this image">#</a></p>
+</figcaption>
+</figure>
+</div></section>
+<section id="other">
+<span id="fig-debug-technique"></span><h2>Other<a class="headerlink" href="#other" title="Permalink to this heading">#</a></h2>
+<p>The interested reader might have found that Ignis contains some more techniques. These are primarily intended for development and test purposes and are therefore not further documented at this page.</p>
 </section>
 </section>
 
@@ -519,6 +641,15 @@ If participating media is used, it is recommended to use the volumetric path tra
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#light-tracer-lighttracer">
+   Light Tracer (
+   <span class="monosp">
+    lighttracer
+   </span>
+   )
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#photonmapper-photonmapper">
    Photonmapper (
    <span class="monosp">
@@ -552,6 +683,11 @@ If participating media is used, it is recommended to use the volumetric path tra
     debug
    </span>
    )
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#other">
+   Other
   </a>
  </li>
 </ul>
