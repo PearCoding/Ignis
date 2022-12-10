@@ -1,6 +1,5 @@
 #pragma once
 
-#include "CameraOrientation.h"
 #include "LoaderOptions.h"
 #include "LoaderTechnique.h"
 #include "RuntimeSettings.h"
@@ -48,10 +47,10 @@ public:
     std::unique_ptr<class LoaderShape> Shapes;
     std::unique_ptr<class LoaderEntity> Entities;
     std::unique_ptr<LoaderTechnique> Technique;
+    std::unique_ptr<class LoaderCamera> Camera;
 
     SceneDatabase Database;
     std::vector<TechniqueVariant> TechniqueVariants; // TODO: Refactor this out, as no loader requires this, but will produce it...
-    IG::CameraOrientation CameraOrientation;
 
     size_t CurrentTechniqueVariant;
     [[nodiscard]] inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return Technique->info().Variants.at(CurrentTechniqueVariant); }

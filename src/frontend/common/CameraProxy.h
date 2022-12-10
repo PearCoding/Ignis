@@ -1,15 +1,15 @@
 #pragma once
 
-#include "CameraOrientation.h"
+#include "camera/CameraOrientation.h"
 
 namespace IG {
-struct Camera {
+struct CameraProxy {
     Vector3f Eye;
     Vector3f Direction;
     Vector3f Right;
     Vector3f Up;
 
-    inline Camera(const Vector3f& e, const Vector3f& d, const Vector3f& u)
+    inline CameraProxy(const Vector3f& e, const Vector3f& d, const Vector3f& u)
         : Eye(e)
     {
         update_dir(d.normalized(), u.normalized());

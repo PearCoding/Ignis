@@ -5,10 +5,12 @@
 #include "table/SceneDatabase.h"
 
 // Include for constructor & deconstructor
+#include "LoaderCamera.h"
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
 #include "LoaderMedium.h"
 #include "LoaderShape.h"
+#include "LoaderTechnique.h"
 
 namespace IG {
 

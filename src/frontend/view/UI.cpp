@@ -114,7 +114,7 @@ public:
     }
 
     // Events
-    void handlePoseInput(size_t posenmbr, bool capture, const Camera& cam)
+    void handlePoseInput(size_t posenmbr, bool capture, const CameraProxy& cam)
     {
         if (!capture) {
             PoseRequest = (int)posenmbr;
@@ -169,7 +169,7 @@ public:
     };
 
     // Events
-    bool handleEvents(size_t& iter, bool& run, Camera& cam)
+    bool handleEvents(size_t& iter, bool& run, CameraProxy& cam)
     {
         const Vector3f sceneCenter = Runtime->sceneBoundingBox().center();
 
@@ -956,7 +956,7 @@ void UI::setTitle(const char* str)
     SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());
 }
 
-bool UI::handleInput(size_t& iter, bool& run, Camera& cam)
+bool UI::handleInput(size_t& iter, bool& run, CameraProxy& cam)
 {
     return mInternal->handleEvents(iter, run, cam);
 }

@@ -115,6 +115,8 @@ void LoaderTechnique::setup(const LoaderContext& ctx)
     if (!mTechnique)
         return;
 
+    IG_LOG(L_DEBUG) << "Using technique: '" << mTechnique->type() << "'" << std::endl;
+
     mInfo = mTechnique->getInfo(ctx);
     if (ctx.Options.Denoiser.Enabled && mTechnique->hasDenoiserSupport())
         InfoBufferTechnique::enable(mInfo, !ctx.Options.Denoiser.OnlyFirstIteration);

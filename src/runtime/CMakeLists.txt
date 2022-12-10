@@ -1,6 +1,5 @@
 set(SRC
   IG_Config.h
-  CameraOrientation.h
   CDF.cpp
   CDF.h
   Color.h
@@ -29,6 +28,17 @@ set(SRC
   bvh/NArityBvh.h
   bvh/SceneBVHAdapter.h
   bvh/TriBVHAdapter.h
+  camera/Camera.cpp
+  camera/Camera.h
+  camera/CameraOrientation.h
+  camera/FishLensCamera.cpp
+  camera/FishLensCamera.h
+  camera/NullCamera.cpp
+  camera/NullCamera.h
+  camera/OrthogonalCamera.cpp
+  camera/OrthogonalCamera.h
+  camera/PerspectiveCamera.cpp
+  camera/PerspectiveCamera.h
   config/Build.cpp
   config/Build.h
   config/Git.h.in

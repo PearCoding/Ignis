@@ -29,6 +29,7 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     ctx.Shapes    = std::make_unique<LoaderShape>();
     ctx.Entities  = std::make_unique<LoaderEntity>();
     ctx.Technique = std::make_unique<LoaderTechnique>();
+    ctx.Camera    = std::make_unique<LoaderCamera>();
 
     ctx.Shapes->prepare(ctx);
     ctx.Entities->prepare(ctx);
@@ -41,8 +42,6 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
 
     if (!ctx.Entities->load(ctx))
         return std::nullopt;
-
-    LoaderCamera::setupInitialOrientation(ctx);
 
     ctx.Lights->setup(ctx);
     IG_LOG(L_DEBUG) << "Got " << ctx.Materials.size() << " unique materials" << std::endl;
@@ -62,6 +61,10 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     IG_LOG(L_DEBUG) << "Got " << ctx.Entities->entityCount() << " entities" << std::endl;
 
     ctx.Database.MaterialCount = ctx.Materials.size(); // TODO: Refactor this
+
+    ctx.Camera->setup(ctx);
+    if (!ctx.Camera->hasCamera())
+        return std::nullopt;
 
     ctx.Technique->setup(ctx);
     if (!ctx.Technique->hasTechnique())

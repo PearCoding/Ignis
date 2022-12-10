@@ -1,4 +1,4 @@
-#include "Camera.h"
+#include "CameraProxy.h"
 #include "IO.h"
 #include "Logger.h"
 #include "ProgramOptions.h"
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     timer_loading.stop();
 
     const auto def = runtime->initialCameraOrientation();
-    Camera camera(cmd.EyeVector().value_or(def.Eye), cmd.DirVector().value_or(def.Dir), cmd.UpVector().value_or(def.Up));
+    CameraProxy camera(cmd.EyeVector().value_or(def.Eye), cmd.DirVector().value_or(def.Dir), cmd.UpVector().value_or(def.Up));
     runtime->setCameraOrientationParameter(camera.asOrientation());
 
     const size_t SPI          = runtime->samplesPerIteration();

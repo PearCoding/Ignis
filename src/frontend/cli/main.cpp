@@ -1,4 +1,4 @@
-#include "Camera.h"
+#include "CameraProxy.h"
 #include "IO.h"
 #include "Logger.h"
 #include "ProgramOptions.h"

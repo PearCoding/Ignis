@@ -48,7 +48,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
 
     // Include camera if necessary
     if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
-        stream << LoaderCamera::generate(ctx) << std::endl;
+        stream << ctx.Camera->generate(ctx) << std::endl;
 
     stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
 

@@ -3,6 +3,7 @@
 #include "RuntimeSettings.h"
 #include "RuntimeStructs.h"
 #include "Statistics.h"
+#include "camera/CameraOrientation.h"
 #include "device/Device.h"
 #include "loader/Loader.h"
 #include "shader/ScriptCompiler.h"

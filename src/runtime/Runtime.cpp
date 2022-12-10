@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include "RuntimeInfo.h"
 #include "StringUtils.h"
+#include "loader/LoaderCamera.h"
 #include "loader/Parser.h"
 
 #include <chrono>
@@ -235,7 +236,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     mCameraName               = ctx->Options.CameraType;
     mTechniqueName            = ctx->Options.TechniqueType;
     mTechniqueInfo            = ctx->Technique->info();
-    mInitialCameraOrientation = ctx->CameraOrientation;
+    mInitialCameraOrientation = ctx->Camera->getOrientation(*ctx);
     mTechniqueVariants        = std::move(ctx->TechniqueVariants);
     mResourceMap              = ctx->generateResourceMap();
 

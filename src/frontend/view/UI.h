@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Camera.h"
+#include "CameraProxy.h"
 #include "technique/DebugMode.h"
 #include "SPPMode.h"
 
@@ -22,7 +22,7 @@ public:
     ~UI();
 
     void setTitle(const char* str);
-    bool handleInput(size_t& iter, bool& run, Camera& cam);
+    bool handleInput(size_t& iter, bool& run, CameraProxy& cam);
     void update(size_t iter, size_t samples);
 
     inline DebugMode currentDebugMode() const { return mDebugMode; }
