@@ -2,6 +2,7 @@ import bpy
 import os
 
 from .utils import *
+from .addon_preferences import get_prefs
 
 
 TEXCOORD_UV = "uvw"
@@ -841,10 +842,12 @@ def _export_image(image, path, is_f32=False, keep_format=False):
 
 
 def _handle_image(ctx, image):
+    tex_dir_name = get_prefs().tex_dir_name
+
     if image.source == 'GENERATED':
         img_name = image.name + \
             (".png" if not image.use_generated_float else ".exr")
-        img_path = os.path.join("Textures", img_name)
+        img_path = os.path.join(tex_dir_name, img_name)
         if img_name not in ctx.result["_images"]:
             _export_image(image, os.path.join(ctx.path, img_path),
                           is_f32=image.use_generated_float)
@@ -872,11 +875,11 @@ def _handle_image(ctx, image):
                 else:
                     is_f32 = False
                     extension = ".png"
-                img_path = os.path.join("Textures", image.name + extension)
+                img_path = os.path.join(tex_dir_name, image.name + extension)
             else:
                 keep_format = True
                 is_f32 = False  # Does not matter
-                img_path = os.path.join("Textures", img_name)
+                img_path = os.path.join(tex_dir_name, img_name)
 
             if img_name not in ctx.result["_images"]:
                 try:
@@ -884,7 +887,7 @@ def _handle_image(ctx, image):
                                   is_f32=is_f32, keep_format=keep_format)
                 except:
                     # Above failed, so give this a try
-                    img_path = os.path.join("Textures", img_name)
+                    img_path = os.path.join(tex_dir_name, img_name)
                     _export_image(image, os.path.join(ctx.path, img_path),
                                   is_f32=False, keep_format=True)
                 ctx.result["_images"].add(img_name)

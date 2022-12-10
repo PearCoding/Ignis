@@ -10,6 +10,7 @@ from .emission import get_material_emission
 from .node import NodeContext
 from .utils import *
 from .defaults import *
+from .addon_preferences import get_prefs
 
 
 def export_technique(result, scene):
@@ -189,10 +190,12 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
     if enable_camera:
         export_camera(result, depsgraph.scene)
 
-    # Create a path for meshes
+    # Create a path for meshes & textures
     rootPath = os.path.dirname(filepath)
-    os.makedirs(os.path.join(rootPath, 'Meshes'), exist_ok=True)
-    os.makedirs(os.path.join(rootPath, 'Textures'), exist_ok=True)
+    meshDir = os.path.join(rootPath, get_prefs().mesh_dir_name)
+    texDir = os.path.join(rootPath, get_prefs().tex_dir_name)
+    os.makedirs(meshDir, exist_ok=True)
+    os.makedirs(texDir, exist_ok=True)
 
     # Export all objects, materials, textures and lights
     export_all(rootPath, result, depsgraph, use_selection,
@@ -207,6 +210,15 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
     del result["_image_textures"]
     del result["_materials"]
     result = delete_none(result)
+
+    # Remove mesh & texture directory if empty
+    try:
+        if len(os.listdir(meshDir)) == 0:
+            os.rmdir(meshDir)
+        if len(os.listdir(texDir)) == 0:
+            os.rmdir(texDir)
+    except:
+        pass  # Ignore any errors
 
     return result
 

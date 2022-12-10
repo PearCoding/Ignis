@@ -51,7 +51,7 @@ def _export_diffuse_bsdf(ctx, bsdf, export_name):
 def _export_glass_bsdf(ctx, bsdf, export_name):
     reflectance = export_node(ctx, bsdf.inputs["Color"])
     if bsdf.distribution == 'SHARP':
-        roughness = 1
+        roughness = 0
     else:
         roughness = export_node(ctx, bsdf.inputs["Roughness"])
     ior = export_node(ctx, bsdf.inputs["IOR"])
@@ -73,7 +73,7 @@ def _export_refraction_bsdf(ctx, bsdf, export_name):
     # TODO: Need better support for this?
     base_color = export_node(ctx, bsdf.inputs["Color"])
     if bsdf.distribution == 'SHARP':
-        roughness = 1
+        roughness = 0
     else:
         roughness = export_node(ctx, bsdf.inputs["Roughness"])
     ior = export_node(ctx, bsdf.inputs["IOR"])
@@ -103,7 +103,7 @@ def _export_glossy_bsdf(ctx, bsdf, export_name):
     base_color = export_node(ctx, bsdf.inputs["Color"])
 
     if bsdf.distribution == 'SHARP':
-        roughness = 1
+        roughness = 0
     else:  # Only supports GGX
         roughness = export_node(ctx, bsdf.inputs["Roughness"])
 
