@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <string_view>
 
+IG_BEGIN_IGNORE_WARNINGS
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/rapidjson.h>
@@ -19,6 +20,7 @@
 #define TINYGLTF_NO_EXTERNAL_IMAGE
 #define TINYGLTF_IMPLEMENTATION
 #include "tiny_gltf.h"
+IG_END_IGNORE_WARNINGS
 
 [[maybe_unused]] constexpr std::string_view KHR_lights_punctual             = "KHR_lights_punctual";
 [[maybe_unused]] constexpr std::string_view KHR_materials_clearcoat         = "KHR_materials_clearcoat";

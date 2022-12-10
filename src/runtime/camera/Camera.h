@@ -20,7 +20,7 @@ public:
 
     struct SerializationInput {
         std::ostream& Stream;
-        const LoaderContext& Context;
+        LoaderContext& Context;
     };
     virtual void serialize(const SerializationInput& input) const = 0;
 

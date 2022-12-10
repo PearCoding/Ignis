@@ -67,7 +67,7 @@ void LoaderCamera::setup(const LoaderContext& ctx)
     IG_LOG(L_DEBUG) << "Using camera: '" << mCamera->type() << "'" << std::endl;
 }
 
-std::string LoaderCamera::generate(const LoaderContext& ctx) const
+std::string LoaderCamera::generate(LoaderContext& ctx) const
 {
     if (!mCamera)
         return {};

@@ -23,14 +23,20 @@ void OrthogonalCamera::serialize(const SerializationInput& input) const
 {
     CameraOrientation orientation = getOrientation(input.Context);
 
-    std::string aspect_ratio = "settings.width as f32 / settings.height as f32";
+    // The following variables are modified by `igview` to allow interactive control
+    input.Context.GlobalRegistry.VectorParameters["__camera_eye"]  = orientation.Eye;
+    input.Context.GlobalRegistry.VectorParameters["__camera_dir"]  = orientation.Dir;
+    input.Context.GlobalRegistry.VectorParameters["__camera_up"]   = orientation.Up;
+    input.Context.GlobalRegistry.FloatParameters["__camera_scale"] = mScale;
+
+    std::string aspect_ratio = "(settings.width as f32 / settings.height as f32)";
     if (mAspectRatio.has_value())
         aspect_ratio = std::to_string(*mAspectRatio);
 
     // Dump camera control (above is just defaults)
-    input.Stream << "  let camera_eye   = registry::get_global_parameter_vec3(\"__camera_eye\", " << LoaderUtils::inlineVector(orientation.Eye) << ");" << std::endl
-                 << "  let camera_dir   = registry::get_global_parameter_vec3(\"__camera_dir\", " << LoaderUtils::inlineVector(orientation.Dir) << ");" << std::endl
-                 << "  let camera_up    = registry::get_global_parameter_vec3(\"__camera_up\" , " << LoaderUtils::inlineVector(orientation.Up) << ");" << std::endl
+    input.Stream << "  let camera_eye   = registry::get_global_parameter_vec3(\"__camera_eye\", vec3_expand(0));" << std::endl
+                 << "  let camera_dir   = registry::get_global_parameter_vec3(\"__camera_dir\", vec3_expand(0));" << std::endl
+                 << "  let camera_up    = registry::get_global_parameter_vec3(\"__camera_up\" , vec3_expand(0));" << std::endl
                  << "  let camera_scale = registry::get_global_parameter_f32(\"__camera_scale\" , 1);" << std::endl
                  << "  let camera = make_orthogonal_camera(camera_eye, " << std::endl
                  << "    camera_dir, " << std::endl

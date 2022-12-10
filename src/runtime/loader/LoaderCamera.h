@@ -7,7 +7,7 @@ class LoaderContext;
 class LoaderCamera {
 public:
     void setup(const LoaderContext& ctx);
-    [[nodiscard]] std::string generate(const LoaderContext& ctx) const;
+    [[nodiscard]] std::string generate(LoaderContext& ctx) const;
     [[nodiscard]] CameraOrientation getOrientation(const LoaderContext& ctx) const;
 
     inline bool hasCamera() const { return mCamera != nullptr; }

@@ -51,7 +51,7 @@ std::string RayGenerationShader::generatePixelSampler(const LoaderContext& ctx, 
     return stream.str();
 }
 
-std::string RayGenerationShader::setup(const LoaderContext& ctx)
+std::string RayGenerationShader::setup(LoaderContext& ctx)
 {
     std::stringstream stream;
 

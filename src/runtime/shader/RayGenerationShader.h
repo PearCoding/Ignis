@@ -13,6 +13,6 @@ struct RayGenerationShader {
     static std::string generatePixelSampler(const LoaderContext& ctx, const std::string_view& varName = "pixel_sampler");
 
     /// Will generate the default complete shader. Will call begin & end internally
-    static std::string setup(const LoaderContext& ctx);
+    static std::string setup(LoaderContext& ctx);
 };
 } // namespace IG

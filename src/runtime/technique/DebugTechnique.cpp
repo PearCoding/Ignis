@@ -21,7 +21,8 @@ TechniqueInfo DebugTechnique::getInfo(const LoaderContext&) const
 
 void DebugTechnique::generateBody(const SerializationInput& input) const
 {
-    // The global parameter "__debug_mode" is set by the igview frontend to allow interactive controls
+    // The global parameter "__debug_mode" is modified by the igview frontend to allow interactive controls
+    input.Context.GlobalRegistry.IntParameters["__debug_mode"] = (int)mInitialDebugMode;
 
     // TODO: Maybe add a changeable default mode?
     input.Stream << "  let debug_mode = registry::get_global_parameter_i32(\"__debug_mode\", 0);" << std::endl
