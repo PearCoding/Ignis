@@ -3,6 +3,7 @@
 #include "Loader.h"
 #include "Logger.h"
 #include "ShadingTree.h"
+#include "StringUtils.h"
 #include "serialization/VectorSerializer.h"
 
 #include "light/AreaLight.h"

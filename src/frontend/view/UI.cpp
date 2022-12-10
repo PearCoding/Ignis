@@ -32,13 +32,6 @@ static const char* const ToneMappingMethodOptions[] = {
     "None", "Reinhard", "Mod. Reinhard", "ACES", "Uncharted2"
 };
 
-static const char* const DebugModeOptions[] = {
-    "Normal", "Tangent", "Bitangent", "Geometric Normal", "Local Normal", "Local Tangent", "Local Bitangent", "Local Geometric Normal",
-    "Texture Coords", "Prim Coords", "Point", "Local Point", "Generated Coords", "Hit Distance", "Area",
-    "Raw Prim ID", "Prim ID", "Raw Entity ID", "Entity ID", "Raw Material ID", "Material ID",
-    "Is Emissive", "Is Specular", "Is Entering", "Check BSDF", "Albedo", "Medium Inner", "Medium Outer"
-};
-
 // Pose IO
 constexpr const char* const POSE_FILE = "poses.lst";
 
@@ -781,13 +774,14 @@ public:
 
             if (ShowDebugMode) {
                 if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    static auto debugModeNames = getDebugModeNames();
                     ImGui::BeginDisabled(!Running);
-                    const char* current_method = DebugModeOptions[(int)Parent->mDebugMode];
-                    if (ImGui::BeginCombo("Mode", current_method)) {
-                        for (int i = 0; i < IM_ARRAYSIZE(DebugModeOptions); ++i) {
-                            bool is_selected = (current_method == DebugModeOptions[i]);
-                            if (ImGui::Selectable(DebugModeOptions[i], is_selected) && Running)
-                                Parent->mDebugMode = (DebugMode)i;
+                    std::string current_method = debugModeToString(Parent->mDebugMode);
+                    if (ImGui::BeginCombo("Mode", current_method.c_str())) {
+                        for (const auto& s : debugModeNames) {
+                            bool is_selected = (current_method == s);
+                            if (ImGui::Selectable(s.c_str(), is_selected) && Running)
+                                Parent->mDebugMode = stringToDebugMode(s).value();
                             if (is_selected && Running)
                                 ImGui::SetItemDefaultFocus();
                         }

@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include "Logger.h"
+#include "StringUtils.h"
 #include "math/Tangent.h"
 
 #include <cmath>

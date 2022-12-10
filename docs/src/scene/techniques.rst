@@ -195,6 +195,13 @@ This technique renders the scene in wireframe. Currently no parameters are avail
 Debug (:monosp:`debug`)
 ---------------------------------------------
 
+.. objectparameters::
+
+  * - mode
+    - |string|
+    - :code:`"Normal"`
+    - Property to display or check. One of the options displayed in ``igview`` when using the debug mode ``--debug``.
+
 This is a special technique only usable with the :monosp:`igview` frontend. It displays scene specific information on the screen.
 
 .. subfigstart::

@@ -2,8 +2,8 @@
 
 #include "LoaderShape.h"
 #include "Loader.h"
-
 #include "Logger.h"
+#include "StringUtils.h"
 #include "shape/SphereProvider.h"
 #include "shape/TriMeshProvider.h"
 

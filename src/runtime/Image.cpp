@@ -1,6 +1,7 @@
 #include "Image.h"
 #include "ImageIO.h"
 #include "Logger.h"
+#include "StringUtils.h"
 
 IG_BEGIN_IGNORE_WARNINGS
 #define STB_IMAGE_IMPLEMENTATION

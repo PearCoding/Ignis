@@ -3,6 +3,7 @@
 #include "LoaderUtils.h"
 #include "Logger.h"
 #include "ShadingTree.h"
+#include "StringUtils.h"
 
 #include "measured/KlemsLoader.h"
 #include "measured/TensorTreeLoader.h"

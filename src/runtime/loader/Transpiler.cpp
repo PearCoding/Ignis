@@ -2,6 +2,7 @@
 #include "LoaderUtils.h"
 #include "Logger.h"
 #include "ShadingTree.h"
+#include "StringUtils.h"
 
 #include "PExpr.h"
 

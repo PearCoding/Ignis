@@ -2,6 +2,7 @@
 #include "Loader.h"
 #include "LoaderUtils.h"
 #include "Logger.h"
+#include "StringUtils.h"
 
 #include <chrono>
 

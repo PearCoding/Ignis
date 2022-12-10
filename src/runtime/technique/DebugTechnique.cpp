@@ -1,9 +1,15 @@
 #include "DebugTechnique.h"
+#include "loader/LoaderContext.h"
+#include "loader/Parser.h"
 
 namespace IG {
-DebugTechnique::DebugTechnique()
+DebugTechnique::DebugTechnique(const Parser::Object& obj)
     : Technique("debug")
+    , mInitialDebugMode(DebugMode::Normal)
 {
+    const auto debug = stringToDebugMode(obj.property("mode").getString(""));
+    if (debug.has_value())
+        mInitialDebugMode = *debug;
 }
 
 TechniqueInfo DebugTechnique::getInfo(const LoaderContext&) const

@@ -5,6 +5,7 @@
 #include "LoaderUtils.h"
 #include "Logger.h"
 #include "ShadingTree.h"
+#include "StringUtils.h"
 #include "light/LightHierarchy.h"
 #include "technique/AOTechnique.h"
 #include "technique/CameraCheckTechnique.h"
@@ -30,9 +31,9 @@ static std::shared_ptr<Technique> cc_loader(const std::shared_ptr<Parser::Object
 {
     return std::make_shared<CameraCheckTechnique>();
 }
-static std::shared_ptr<Technique> debug_loader(const std::shared_ptr<Parser::Object>&)
+static std::shared_ptr<Technique> debug_loader(const std::shared_ptr<Parser::Object>& obj)
 {
-    return std::make_shared<DebugTechnique>();
+    return std::make_shared<DebugTechnique>(*obj);
 }
 static std::shared_ptr<Technique> ib_loader(const std::shared_ptr<Parser::Object>& obj)
 {

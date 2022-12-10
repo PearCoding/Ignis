@@ -1,5 +1,7 @@
 #pragma once
 
+#include "IG_Config.h"
+
 namespace IG {
 enum class DebugMode {
     Normal = 0,
@@ -31,4 +33,11 @@ enum class DebugMode {
     MediumInner,
     MediumOuter
 };
-}
+
+[[nodiscard]] std::optional<DebugMode> stringToDebugMode(const std::string& name);
+[[nodiscard]] std::string debugModeToString(DebugMode mode);
+
+/// Will return names in order of the debug mode enum
+[[nodiscard]] std::vector<std::string> getDebugModeNames();
+
+} // namespace IG

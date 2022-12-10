@@ -22,6 +22,8 @@ set(SRC
   SHA256.h
   Statistics.cpp
   Statistics.h
+  StringUtils.cpp
+  StringUtils.h
   Timer.h
   bvh/BvhNAdapter.h
   bvh/NArityBvh.h
@@ -189,6 +191,8 @@ set(SRC
   technique/AOTechnique.h
   technique/CameraCheckTechnique.cpp
   technique/CameraCheckTechnique.h
+  technique/DebugMode.cpp
+  technique/DebugMode.h
   technique/DebugTechnique.cpp
   technique/DebugTechnique.h
   technique/InfoBufferTechnique.cpp
@@ -238,6 +242,7 @@ add_dependencies(ig_lib_runtime artic_c_interface)
 
 # There is a weird behaviour in multi-config generators and the git checker. It is fixed with the following line
 get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
 if(is_multi_config)
   add_dependencies(ig_lib_runtime check_git)
 endif()

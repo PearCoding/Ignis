@@ -1,6 +1,7 @@
 #include "Runtime.h"
 #include "Logger.h"
 #include "RuntimeInfo.h"
+#include "StringUtils.h"
 #include "loader/Parser.h"
 
 #include <chrono>

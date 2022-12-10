@@ -260,19 +260,4 @@ template <typename T>
     return (a < b) ? b : ((a > c) ? c : a);
 }
 
-/// Transform string to lowercase
-[[nodiscard]] inline std::string to_lowercase(const std::string& str)
-{
-    std::string tmp = str;
-    std::transform(tmp.begin(), tmp.end(), tmp.begin(), [](const std::string::value_type& v) { return static_cast<std::string::value_type>(::tolower((int)v)); });
-    return tmp;
-}
-
-/// Transform string to a string with whitespace replaced by the character given with c
-[[nodiscard]] inline std::string whitespace_escaped(const std::string& str, const std::string::value_type& c = '_')
-{
-    std::string tmp = str;
-    std::transform(tmp.begin(), tmp.end(), tmp.begin(), [=](const std::string::value_type& v) { return std::isspace(v) ? c : v; });
-    return tmp;
-}
 } // namespace IG

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Camera.h"
-#include "DebugMode.h"
+#include "technique/DebugMode.h"
 #include "SPPMode.h"
 
 #include <memory>

@@ -1,5 +1,5 @@
 #include "TriMeshProvider.h"
-
+#include "StringUtils.h"
 #include "bvh/TriBVHAdapter.h"
 #include "loader/LoaderShape.h"
 #include "mesh/MtsSerializedFile.h"
@@ -230,7 +230,7 @@ static inline std::pair<uint32, uint32> split_u64_to_u32(uint64 a)
     return { uint32(a & 0xFFFFFFFF), uint32((a >> 32) & 0xFFFFFFFF) };
 }
 
-void TriMeshProvider::handle(LoaderContext& ctx,  ShapeMTAccessor& acc, const std::string& name, const Parser::Object& elem)
+void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std::string& name, const Parser::Object& elem)
 {
     TriMesh mesh;
     if (elem.pluginType() == "triangle") {
