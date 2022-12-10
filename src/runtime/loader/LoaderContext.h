@@ -3,17 +3,17 @@
 #include "CameraOrientation.h"
 #include "LoaderOptions.h"
 #include "RuntimeSettings.h"
-#include "TechniqueInfo.h"
 #include "device/Target.h"
 #include "math/BoundingBox.h"
 #include "table/SceneDatabase.h"
+#include "technique/TechniqueInfo.h"
+#include "LoaderTechnique.h"
 
 #include <any>
 #include <filesystem>
 #include <vector>
 
 namespace IG {
-
 
 /// A material is a combination of bsdf, entity (if the entity is emissive) and volume/medium interface
 struct Material {
@@ -47,14 +47,14 @@ public:
     std::unique_ptr<class LoaderMedium> Media;
     std::unique_ptr<class LoaderShape> Shapes;
     std::unique_ptr<class LoaderEntity> Entities;
+    std::unique_ptr<LoaderTechnique> Technique;
 
     SceneDatabase Database;
     std::vector<TechniqueVariant> TechniqueVariants; // TODO: Refactor this out, as no loader requires this, but will produce it...
-    IG::TechniqueInfo TechniqueInfo;
     IG::CameraOrientation CameraOrientation;
 
     size_t CurrentTechniqueVariant;
-    [[nodiscard]] inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return TechniqueInfo.Variants.at(CurrentTechniqueVariant); }
+    [[nodiscard]] inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return Technique->info().Variants.at(CurrentTechniqueVariant); }
 
     ParameterSet LocalRegistry; // Current local registry for given shader
     inline void resetRegistry()

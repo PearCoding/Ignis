@@ -91,8 +91,6 @@ set(SRC
   loader/Parser.h
   loader/ShadingTree.cpp
   loader/ShadingTree.h
-  loader/TechniqueInfo.h
-  loader/TechniqueVariant.h
   loader/Transpiler.cpp
   loader/Transpiler.h
   log/ConsoleLogListener.cpp
@@ -186,6 +184,30 @@ set(SRC
   table/DynTable.h
   table/FixTable.h
   table/SceneDatabase.h
+  technique/AOTechnique.cpp
+  technique/AOTechnique.h
+  technique/CameraCheckTechnique.cpp
+  technique/CameraCheckTechnique.h
+  technique/DebugTechnique.cpp
+  technique/DebugTechnique.h
+  technique/InfoBufferTechnique.cpp
+  technique/InfoBufferTechnique.h
+  technique/LightTracerTechnique.cpp
+  technique/LightTracerTechnique.h
+  technique/LightVisibilityTechnique.cpp
+  technique/LightVisibilityTechnique.h
+  technique/PathTechnique.cpp
+  technique/PathTechnique.h
+  technique/PhotonMappingTechnique.cpp
+  technique/PhotonMappingTechnique.h
+  technique/Technique.cpp
+  technique/Technique.h
+  technique/TechniqueInfo.h
+  technique/TechniqueVariant.h
+  technique/VolumePathTechnique.cpp
+  technique/VolumePathTechnique.h
+  technique/WireframeTechnique.cpp
+  technique/WireframeTechnique.h
 )
 
 # ##########################################################

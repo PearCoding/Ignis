@@ -24,10 +24,11 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     LoaderContext ctx;
     ctx.Options = opts;
 
-    ctx.Lights   = std::make_unique<LoaderLight>();
-    ctx.Media    = std::make_unique<LoaderMedium>();
-    ctx.Shapes   = std::make_unique<LoaderShape>();
-    ctx.Entities = std::make_unique<LoaderEntity>();
+    ctx.Lights    = std::make_unique<LoaderLight>();
+    ctx.Media     = std::make_unique<LoaderMedium>();
+    ctx.Shapes    = std::make_unique<LoaderShape>();
+    ctx.Entities  = std::make_unique<LoaderEntity>();
+    ctx.Technique = std::make_unique<LoaderTechnique>();
 
     ctx.Shapes->prepare(ctx);
     ctx.Entities->prepare(ctx);
@@ -62,25 +63,23 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
 
     ctx.Database.MaterialCount = ctx.Materials.size(); // TODO: Refactor this
 
-    auto tech_info = LoaderTechnique::getInfo(ctx);
-    if (!tech_info.has_value())
+    ctx.Technique->setup(ctx);
+    if (!ctx.Technique->hasTechnique())
         return std::nullopt;
 
-    ctx.TechniqueInfo = tech_info.value();
-
-    if (ctx.TechniqueInfo.Variants.empty()) {
+    if (ctx.Technique->info().Variants.empty()) {
         IG_LOG(L_ERROR) << "Invalid technique with no variants" << std::endl;
         return std::nullopt;
     }
 
-    if (ctx.TechniqueInfo.Variants.size() == 1)
+    if (ctx.Technique->info().Variants.size() == 1)
         IG_LOG(L_DEBUG) << "Generating shaders for a single variant" << std::endl;
     else
-        IG_LOG(L_DEBUG) << "Generating shaders for " << ctx.TechniqueInfo.Variants.size() << " variants" << std::endl;
+        IG_LOG(L_DEBUG) << "Generating shaders for " << ctx.Technique->info().Variants.size() << " variants" << std::endl;
 
-    ctx.TechniqueVariants.resize(ctx.TechniqueInfo.Variants.size());
+    ctx.TechniqueVariants.resize(ctx.Technique->info().Variants.size());
     try {
-        for (size_t i = 0; i < ctx.TechniqueInfo.Variants.size(); ++i) {
+        for (size_t i = 0; i < ctx.Technique->info().Variants.size(); ++i) {
             const auto setup = [&](const std::string& name, const std::function<std::string()>& func, ShaderOutput<std::string>& output) {
                 ctx.resetRegistry();
                 IG_LOG(L_DEBUG) << "Generating " << name << " shader for variant " << i << std::endl;
@@ -92,7 +91,7 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
             };
 
             auto& variant                   = ctx.TechniqueVariants[i];
-            const auto& info                = ctx.TechniqueInfo.Variants[i];
+            const auto& info                = ctx.Technique->info().Variants[i];
             ctx.CurrentTechniqueVariant     = i;
             ctx.Options.SamplesPerIteration = info.GetSPI(opts.SamplesPerIteration);
 

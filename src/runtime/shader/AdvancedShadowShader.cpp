@@ -53,7 +53,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
     stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
 
     // Will define technique
-    stream << LoaderTechnique::generate(ctx) << std::endl
+    stream << ctx.Technique->generate(ctx) << std::endl
            << std::endl;
 
     stream << "  let is_hit = " << (is_hit ? "true" : "false") << ";" << std::endl

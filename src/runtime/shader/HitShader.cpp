@@ -52,7 +52,7 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
     stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
 
     // Will define technique
-    stream << LoaderTechnique::generate(ctx) << std::endl
+    stream << ctx.Technique->generate(ctx) << std::endl
            << std::endl;
 
     stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl

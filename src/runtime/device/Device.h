@@ -2,8 +2,8 @@
 
 #include "RuntimeStructs.h"
 #include "Target.h"
-#include "loader/TechniqueInfo.h"
-#include "loader/TechniqueVariant.h"
+#include "technique/TechniqueInfo.h"
+#include "technique/TechniqueVariant.h"
 #include <vector>
 
 namespace IG {

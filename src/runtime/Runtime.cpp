@@ -233,12 +233,12 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
 
     mCameraName               = ctx->Options.CameraType;
     mTechniqueName            = ctx->Options.TechniqueType;
-    mTechniqueInfo            = ctx->TechniqueInfo;
+    mTechniqueInfo            = ctx->Technique->info();
     mInitialCameraOrientation = ctx->CameraOrientation;
     mTechniqueVariants        = std::move(ctx->TechniqueVariants);
     mResourceMap              = ctx->generateResourceMap();
 
-    if (ctx->Options.Denoiser.Enabled)
+    if (ctx->Technique->hasDenoiserEnabled())
         mTechniqueInfo.EnabledAOVs.emplace_back("Denoised");
 
     // Setup array of number of entities per material

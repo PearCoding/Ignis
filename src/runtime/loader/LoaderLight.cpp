@@ -434,7 +434,7 @@ std::string LoaderLight::generateLightSelector(std::string type, ShadingTree& tr
             stream << "  let light_cdf = cdf::make_cdf_1d_from_buffer(device.load_buffer(\"" << cdf.u8string() << "\"), finite_lights.count, 0);" << std::endl
                    << "  let light_selector = make_cdf_light_selector(infinite_lights, finite_lights, light_cdf);" << std::endl;
         }
-    } else {
+    } else { // Default
         stream << uniformSelector << std::endl;
     }
 

@@ -4,7 +4,6 @@
 
 namespace IG {
 class ShadingTree;
-class VectorSerializer;
 
 namespace Parser {
 class Object;
