@@ -128,7 +128,7 @@ private:
     const RuntimeOptions mOptions;
 
     SceneDatabase mDatabase;
-    ParameterSet mParameterSet;
+    ParameterSet mGlobalRegistry;
     ScriptCompiler mCompiler;
 
     std::unique_ptr<Device> mDevice;

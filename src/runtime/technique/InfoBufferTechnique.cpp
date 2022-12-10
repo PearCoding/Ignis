@@ -79,6 +79,14 @@ bool InfoBufferTechnique::insertBody(const SerializationInput& input, size_t max
 
     const bool handle_specular = input.Context.Options.Denoiser.FollowSpecular || followSpecular;
 
+    // Insert config into global registry
+    input.Context.GlobalRegistry.IntParameters["__tech_ib_max_depth"] = (int)maxDepth;
+
+    if (maxDepth < 2) // 0 & 1 can be an optimization
+        input.Stream << "  let tech_max_depth = " << maxDepth << ":i32;" << std::endl;
+    else
+        input.Stream << "  let tech_max_depth = registry::get_global_parameter_i32(\"__tech_ib_max_depth\", 8);" << std::endl;
+
     input.Stream << "  let aov_normals = device.load_aov_image(\"Normals\", spi); aov_normals.mark_as_used();" << std::endl
                  << "  let aov_albedo = device.load_aov_image(\"Albedo\", spi); aov_albedo.mark_as_used();" << std::endl
                  << "  let aov_depth  = device.load_aov_image(\"Depth\", spi); aov_depth.mark_as_used();" << std::endl
@@ -90,7 +98,7 @@ bool InfoBufferTechnique::insertBody(const SerializationInput& input, size_t max
                  << "      _ => make_empty_aov_image()" << std::endl
                  << "    }" << std::endl
                  << "  };" << std::endl
-                 << "  let technique = make_infobuffer_renderer(" << maxDepth << ", aovs, " << (handle_specular ? "true" : "false") << ");" << std::endl;
+                 << "  let technique = make_infobuffer_renderer(tech_max_depth, aovs, " << (handle_specular ? "true" : "false") << ");" << std::endl;
 
     return true;
 }

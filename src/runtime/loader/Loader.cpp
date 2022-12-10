@@ -81,7 +81,7 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     try {
         for (size_t i = 0; i < ctx.Technique->info().Variants.size(); ++i) {
             const auto setup = [&](const std::string& name, const std::function<std::string()>& func, ShaderOutput<std::string>& output) {
-                ctx.resetRegistry();
+                ctx.resetLocalRegistry();
                 IG_LOG(L_DEBUG) << "Generating " << name << " shader for variant " << i << std::endl;
                 output.Exec = func();
                 if (output.Exec.empty()) {

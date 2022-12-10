@@ -2,12 +2,12 @@
 
 #include "CameraOrientation.h"
 #include "LoaderOptions.h"
+#include "LoaderTechnique.h"
 #include "RuntimeSettings.h"
 #include "device/Target.h"
 #include "math/BoundingBox.h"
 #include "table/SceneDatabase.h"
 #include "technique/TechniqueInfo.h"
-#include "LoaderTechnique.h"
 
 #include <any>
 #include <filesystem>
@@ -56,8 +56,9 @@ public:
     size_t CurrentTechniqueVariant;
     [[nodiscard]] inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return Technique->info().Variants.at(CurrentTechniqueVariant); }
 
-    ParameterSet LocalRegistry; // Current local registry for given shader
-    inline void resetRegistry()
+    ParameterSet GlobalRegistry; // Global registry, will be merged with the user registry at the end (user preceding over)
+    ParameterSet LocalRegistry;  // Current local registry for given shader
+    inline void resetLocalRegistry()
     {
         LocalRegistry = ParameterSet();
     }

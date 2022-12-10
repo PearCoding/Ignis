@@ -31,7 +31,7 @@ fn @unwrap_ltsecondarypayload(payload: RayPayload) = LTSecondaryPayload {
     pixel = make_vec2(payload.get(0), payload.get(1)),
 };
 
-fn @make_lt_emitter(light_selector: LightSelector, iter: i32, _spi: i32) -> RayEmitter {
+fn @make_lt_emitter(light_selector: LightSelector, iter: i32) -> RayEmitter {
     let offset = 0.001:f32;
 
     @ |sample, x, y, _width, _height, payload| {

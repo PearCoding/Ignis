@@ -347,8 +347,8 @@ public:
         driver_settings.width  = (int)settings.width;
         driver_settings.height = (int)settings.height;
 
-        if (settings.width > film_width || settings.height > film_height)
-            resizeFramebuffer(std::max(settings.width, film_width), std::max(settings.height, film_height));
+        if (settings.width != film_width || settings.height != film_height)
+            resizeFramebuffer(settings.width, settings.height);
     }
 
     inline void setupShaderSet(const TechniqueVariantShaderSet& shaderSet)

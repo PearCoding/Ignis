@@ -32,6 +32,21 @@ TechniqueInfo PathTechnique::getInfo(const LoaderContext&) const
 
 void PathTechnique::generateBody(const SerializationInput& input) const
 {
+    // Insert config into global registry
+    input.Context.GlobalRegistry.IntParameters["__tech_max_depth"] = (int)mMaxDepth;
+    input.Context.GlobalRegistry.FloatParameters["__tech_clamp"]   = mClamp;
+
+    if (mMaxDepth < 2) // 0 & 1 can be an optimization
+        input.Stream << "  let tech_max_depth = " << mMaxDepth << ":i32;" << std::endl;
+    else
+        input.Stream << "  let tech_max_depth = registry::get_global_parameter_i32(\"__tech_max_depth\", 8);" << std::endl;
+
+    if (mClamp <= 0) // 0 is a special case
+        input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
+    else
+        input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;
+
+    // Handle AOVs
     if (mMISAOVs) {
         input.Stream << "  let aov_di  = device.load_aov_image(\"Direct Weights\", spi); aov_di.mark_as_used();" << std::endl
                      << "  let aov_nee = device.load_aov_image(\"NEE Weights\", spi); aov_nee.mark_as_used();" << std::endl;
@@ -51,7 +66,7 @@ void PathTechnique::generateBody(const SerializationInput& input) const
 
     ShadingTree tree(input.Context);
     input.Stream << input.Context.Lights->generateLightSelector(mLightSelector, tree)
-                 << "  let technique = make_path_renderer(" << mMaxDepth << ", light_selector, aovs, " << mClamp << ");" << std::endl;
+                 << "  let technique = make_path_renderer(tech_max_depth, light_selector, aovs, tech_clamp);" << std::endl;
 }
 
 } // namespace IG

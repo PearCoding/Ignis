@@ -75,7 +75,7 @@ static inline void dumpShader(const std::string& filename, const std::string& sh
 Runtime::Runtime(const RuntimeOptions& opts)
     : mOptions(opts)
     , mDatabase()
-    , mParameterSet()
+    , mGlobalRegistry()
     , mSamplesPerIteration(0)
     , mCurrentIteration(0)
     , mCurrentSampleCount(0)
@@ -248,6 +248,9 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
         mEntityPerMaterial.emplace_back((int)mat.Count);
     }
 
+    // Merge global registry
+    mGlobalRegistry.mergeFrom(ctx->GlobalRegistry);
+
     // Free memory from loader context
     ctx.reset();
 
@@ -305,7 +308,7 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
     settings.frame     = mCurrentFrame;
 
     setParameter("__spi", (int)settings.spi);
-    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mParameterSet);
+    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -363,7 +366,7 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
     settings.frame     = mCurrentFrame;
 
     setParameter("__spi", (int)settings.spi);
-    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mParameterSet);
+    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -417,6 +420,13 @@ bool Runtime::setupScene()
     mDevice->assignScene(settings);
 
     if (IG_LOGGER.verbosity() <= L_DEBUG) {
+        if (mGlobalRegistry.empty()) {
+            IG_LOG(L_DEBUG) << "Global registry at setup: None" << std::endl;
+        } else {
+            IG_LOG(L_DEBUG) << "Global registry at setup:" << std::endl
+                            << mGlobalRegistry.dump();
+        }
+
         if (mResourceMap.empty()) {
             IG_LOG(L_DEBUG) << "Registered resources: None" << std::endl;
         } else {
@@ -555,22 +565,22 @@ ImageInfoOutput Runtime::imageinfo(const ImageInfoSettings& settings)
 
 void Runtime::setParameter(const std::string& name, int value)
 {
-    mParameterSet.IntParameters[name] = value;
+    mGlobalRegistry.IntParameters[name] = value;
 }
 
 void Runtime::setParameter(const std::string& name, float value)
 {
-    mParameterSet.FloatParameters[name] = value;
+    mGlobalRegistry.FloatParameters[name] = value;
 }
 
 void Runtime::setParameter(const std::string& name, const Vector3f& value)
 {
-    mParameterSet.VectorParameters[name] = value;
+    mGlobalRegistry.VectorParameters[name] = value;
 }
 
 void Runtime::setParameter(const std::string& name, const Vector4f& value)
 {
-    mParameterSet.ColorParameters[name] = value;
+    mGlobalRegistry.ColorParameters[name] = value;
 }
 
 std::vector<std::string> Runtime::getAvailableTechniqueTypes()

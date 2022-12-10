@@ -15,6 +15,7 @@ set(SRC
   RuntimeInfo.cpp
   RuntimeInfo.h
   RuntimeSettings.h
+  RuntimeStructs.cpp
   RuntimeStructs.h
   SceneObject.h
   SHA256.cpp

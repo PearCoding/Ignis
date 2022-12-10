@@ -26,9 +26,25 @@ TechniqueInfo LightVisibilityTechnique::getInfo(const LoaderContext&) const
 
 void LightVisibilityTechnique::generateBody(const SerializationInput& input) const
 {
+    // Insert config into global registry
+    input.Context.GlobalRegistry.IntParameters["__tech_max_depth"]       = (int)mMaxDepth;
+    input.Context.GlobalRegistry.FloatParameters["__tech_no_connection"] = mNoConnectionFactor;
+
+    if (mMaxDepth < 2) // 0 & 1 can be an optimization
+        input.Stream << "  let tech_max_depth = " << mMaxDepth << ":i32;" << std::endl;
+    else
+        input.Stream << "  let tech_max_depth = registry::get_global_parameter_i32(\"__tech_max_depth\", 8);" << std::endl;
+
+    if (mNoConnectionFactor <= 0) // 0 is a special case
+        input.Stream << "  let tech_no_connection = " << mNoConnectionFactor << ":f32;" << std::endl;
+    else
+        input.Stream << "  let tech_no_connection = registry::get_global_parameter_f32(\"__tech_no_connection\", 0);" << std::endl;
+
+    // Handle AOVs
+
     ShadingTree tree(input.Context);
     input.Stream << input.Context.Lights->generateLightSelector(mLightSelector, tree)
-                 << "  let technique = make_lv_renderer(" << mMaxDepth << ", light_selector, " << mNoConnectionFactor << ");" << std::endl;
+                 << "  let technique = make_lv_renderer(tech_max_depth, light_selector, tech_no_connection);" << std::endl;
 }
 
 } // namespace IG

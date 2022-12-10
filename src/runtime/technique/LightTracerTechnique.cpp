@@ -26,7 +26,7 @@ static std::string lt_light_camera_generator(LoaderContext& ctx, const std::stri
     stream << ctx.Lights->generate(tree, false) << std::endl
            << ctx.Lights->generateLightSelector(light_selector, tree)
            << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl
-           << "  let emitter = make_lt_light_emitter(light_selector, settings.iter);" << std::endl
+           << "  let emitter = make_lt_emitter(light_selector, settings.iter);" << std::endl
            << RayGenerationShader::end();
 
     return stream.str();
@@ -52,8 +52,22 @@ TechniqueInfo LightTracerTechnique::getInfo(const LoaderContext&) const
 
 void LightTracerTechnique::generateBody(const SerializationInput& input) const
 {
+    // Insert config into global registry
+    input.Context.GlobalRegistry.IntParameters["__tech_max_depth"] = (int)mMaxLightDepth;
+    input.Context.GlobalRegistry.FloatParameters["__tech_clamp"]   = mClamp;
+
+    if (mMaxLightDepth < 2) // 0 & 1 can be an optimization
+        input.Stream << "  let tech_max_depth = " << mMaxLightDepth << ":i32;" << std::endl;
+    else
+        input.Stream << "  let tech_max_depth = registry::get_global_parameter_i32(\"__tech_max_depth\", 8);" << std::endl;
+
+    if (mClamp <= 0) // 0 is a special case
+        input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
+    else
+        input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;
+
     input.Stream << "  let framebuffer = device.load_aov_image(\"\", spi);" << std::endl
-                 << "  let technique = make_lt_renderer(camera, framebuffer, " << mMaxLightDepth << ", " << mClamp << ");" << std::endl;
+                 << "  let technique = make_lt_renderer(camera, framebuffer, tech_max_depth, tech_clamp);" << std::endl;
 }
 
 } // namespace IG
