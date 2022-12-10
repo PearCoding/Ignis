@@ -106,14 +106,14 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
             input.Stream << "  let tech_max_camera_depth = registry::get_global_parameter_i32(\"__tech_max_camera_depth\", 8);" << std::endl;
 
         if (mMergeRadius <= 0) // 0 is a special case
-            input.Stream << "  let tech_radius = " << mMergeRadius << ":f32;" << std::endl;
+            input.Stream << "  let tech_radius = " << mMergeRadius * input.Context.SceneDiameter << ":f32;" << std::endl;
         else
-            input.Stream << "  let tech_radius = registry::get_global_parameter_i32(\"__tech_radius\", 0);" << std::endl;
+            input.Stream << "  let tech_radius = registry::get_global_parameter_f32(\"__tech_radius\", 0);" << std::endl;
 
         if (mClamp <= 0) // 0 is a special case
             input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
         else
-            input.Stream << "  let tech_clamp = registry::get_global_parameter_i32(\"__tech_clamp\", 0);" << std::endl;
+            input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;
     } else {
         if (mMaxLightDepth < 2) // 0 & 1 can be an optimization
             input.Stream << "  let tech_max_light_depth = " << mMaxLightDepth << ":i32;" << std::endl;
