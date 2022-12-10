@@ -1,5 +1,6 @@
 #include "AreaLight.h"
 #include "Logger.h"
+#include "loader/LoaderEntity.h"
 #include "loader/LoaderShape.h"
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
@@ -14,19 +15,17 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
 {
     mEntity = light->property("entity").getString();
 
-    Entity entity;
-    if (!ctx.EmissiveEntities.count(mEntity)) {
+    const auto entity = ctx.Entities->getEmissiveEntity(mEntity);
+    if (!entity.has_value()) {
         IG_LOG(L_ERROR) << "No entity named '" << mEntity << "' exists for area light" << std::endl;
         return;
-    } else {
-        entity = ctx.EmissiveEntities.at(mEntity);
     }
 
-    const bool opt = light->property("optimize").getBool(true) || !ctx.Shapes->isTriShape(entity.ShapeID);
+    const bool opt = light->property("optimize").getBool(true) || !ctx.Shapes->isTriShape(entity->ShapeID);
 
-    if (opt && ctx.Shapes->isPlaneShape(entity.ShapeID))
+    if (opt && ctx.Shapes->isPlaneShape(entity->ShapeID))
         mRepresentation = RepresentationType::Plane;
-    else if (opt && ctx.Shapes->isSphereShape(entity.ShapeID))
+    else if (opt && ctx.Shapes->isSphereShape(entity->ShapeID))
         mRepresentation = RepresentationType::Sphere;
     else
         mRepresentation = RepresentationType::None;
@@ -35,10 +34,10 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
     case RepresentationType::Plane: {
         IG_LOG(L_DEBUG) << "Using specialized plane sampler for area light '" << name << "'" << std::endl;
 
-        const auto& shape = ctx.Shapes->getPlaneShape(entity.ShapeID);
-        Vector3f origin   = entity.Transform * shape.Origin;
-        Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;
-        Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
+        const auto& shape = ctx.Shapes->getPlaneShape(entity->ShapeID);
+        Vector3f origin   = entity->Transform * shape.Origin;
+        Vector3f x_axis   = entity->Transform.linear() * shape.XAxis;
+        Vector3f y_axis   = entity->Transform.linear() * shape.YAxis;
         Vector3f normal   = x_axis.cross(y_axis).normalized();
 
         mPosition  = origin + x_axis * 0.5f + y_axis * 0.5f;
@@ -48,9 +47,9 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
     case RepresentationType::Sphere: {
         IG_LOG(L_DEBUG) << "Using specialized sphere sampler for area light '" << name << "'" << std::endl;
 
-        const auto& shape = ctx.Shapes->getSphereShape(entity.ShapeID);
-        Vector3f origin   = entity.Transform * shape.Origin;
-        float radius      = entity.Transform.linear().diagonal().cwiseAbs().maxCoeff() * shape.Radius; // TODO: Ignoring non-uniform scale
+        const auto& shape = ctx.Shapes->getSphereShape(entity->ShapeID);
+        Vector3f origin   = entity->Transform * shape.Origin;
+        float radius      = entity->Transform.linear().diagonal().cwiseAbs().maxCoeff() * shape.Radius; // TODO: Ignoring non-uniform scale
 
         mPosition  = origin;
         mDirection = Vector3f::Zero();
@@ -58,13 +57,13 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
     } break;
     default:
     case RepresentationType::None:
-        if (ctx.Shapes->isTriShape(entity.ShapeID)) {
-            const auto& shape    = ctx.Shapes->getShape(entity.ShapeID);
-            const auto& trishape = ctx.Shapes->getTriShape(entity.ShapeID);
+        if (ctx.Shapes->isTriShape(entity->ShapeID)) {
+            const auto& shape    = ctx.Shapes->getShape(entity->ShapeID);
+            const auto& trishape = ctx.Shapes->getTriShape(entity->ShapeID);
 
-            mPosition  = entity.Transform * shape.BoundingBox.center();
+            mPosition  = entity->Transform * shape.BoundingBox.center();
             mDirection = Vector3f::Zero();
-            mArea      = trishape.Area * std::abs(entity.computeGlobalMatrix().block<3, 3>(0, 0).determinant());
+            mArea      = trishape.Area * std::abs(entity->computeGlobalMatrix().block<3, 3>(0, 0).determinant());
         } else {
             IG_LOG(L_ERROR) << "Given entity '" << mEntity << "' primitive type is not triangular" << std::endl;
         }
@@ -84,12 +83,10 @@ void AreaLight::serialize(const SerializationInput& input) const
 
     input.Tree.addColor("radiance", *mLight, Vector3f::Constant(1.0f), true);
 
-    Entity entity;
-    if (!input.Tree.context().EmissiveEntities.count(mEntity)) {
+    const auto entity = input.Tree.context().Entities->getEmissiveEntity(mEntity);
+    if (!entity.has_value()) {
         IG_LOG(L_ERROR) << "No entity named '" << mEntity << "' exists for area light" << std::endl;
         return;
-    } else {
-        entity = input.Tree.context().EmissiveEntities.at(mEntity);
     }
 
     const std::string light_id = input.Tree.currentClosureID();
@@ -97,10 +94,10 @@ void AreaLight::serialize(const SerializationInput& input) const
 
     switch (mRepresentation) {
     case RepresentationType::Plane: {
-        const auto& shape = input.Tree.context().Shapes->getPlaneShape(entity.ShapeID);
-        Vector3f origin   = entity.Transform * shape.Origin;
-        Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;
-        Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
+        const auto& shape = input.Tree.context().Shapes->getPlaneShape(entity->ShapeID);
+        Vector3f origin   = entity->Transform * shape.Origin;
+        Vector3f x_axis   = entity->Transform.linear() * shape.XAxis;
+        Vector3f y_axis   = entity->Transform.linear() * shape.YAxis;
         Vector3f normal   = x_axis.cross(y_axis).normalized();
         float area        = x_axis.cross(y_axis).norm();
 
@@ -116,25 +113,25 @@ void AreaLight::serialize(const SerializationInput& input) const
                      << ");" << std::endl;
     } break;
     case RepresentationType::Sphere: {
-        const auto& shape = input.Tree.context().Shapes->getSphereShape(entity.ShapeID);
+        const auto& shape = input.Tree.context().Shapes->getSphereShape(entity->ShapeID);
 
-        input.Stream << "  let ae_" << light_id << " = make_sphere_area_emitter(" << LoaderUtils::inlineEntity(entity, entity.ShapeID)
+        input.Stream << "  let ae_" << light_id << " = make_sphere_area_emitter(" << LoaderUtils::inlineEntity(*entity)
                      << ",  Sphere{ origin = " << LoaderUtils::inlineVector(shape.Origin)
                      << ", radius = " << shape.Radius
                      << " });" << std::endl;
     } break;
     default:
     case RepresentationType::None:
-        if (input.Tree.context().Shapes->isTriShape(entity.ShapeID)) {
-            const auto& shape = input.Tree.context().Shapes->getShape(entity.ShapeID);
-            const auto& tri   = input.Tree.context().Shapes->getTriShape(entity.ShapeID);
+        if (input.Tree.context().Shapes->isTriShape(entity->ShapeID)) {
+            const auto& shape = input.Tree.context().Shapes->getShape(entity->ShapeID);
+            const auto& tri   = input.Tree.context().Shapes->getTriShape(entity->ShapeID);
             input.Stream << "  let trimesh_" << light_id << " = load_trimesh_entry(device, "
                          << shape.TableOffset
                          << ", " << tri.FaceCount
                          << ", " << tri.VertexCount
                          << ", " << tri.NormalCount
                          << ", " << tri.TexCount << ");" << std::endl
-                         << "  let ae_" << light_id << " = make_shape_area_emitter(" << LoaderUtils::inlineEntity(entity, entity.ShapeID)
+                         << "  let ae_" << light_id << " = make_shape_area_emitter(" << LoaderUtils::inlineEntity(*entity)
                          << ", make_trimesh_shape(trimesh_" << light_id << ")"
                          << ", trimesh_" << light_id << ");" << std::endl;
         } else {
@@ -177,25 +174,23 @@ void AreaLight::embed(const EmbedInput& input) const
     const std::string entityName = mLight->property("entity").getString();
     const Vector3f radiance      = input.Tree.computeColor("radiance", *mLight, Vector3f::Ones());
 
-    const auto& ctx = input.Tree.context();
-    Entity entity;
-    if (!ctx.EmissiveEntities.count(entityName)) {
+    const auto& ctx   = input.Tree.context();
+    const auto entity = ctx.Entities->getEmissiveEntity(entityName);
+    if (!entity.has_value()) {
         IG_LOG(L_ERROR) << "No entity named '" << entityName << "' exists for area light" << std::endl;
         return;
-    } else {
-        entity = ctx.EmissiveEntities.at(entityName);
     }
 
-    const Eigen::Matrix<float, 3, 4> localMat  = entity.computeLocalMatrix();        // To Local
-    const Eigen::Matrix<float, 3, 4> globalMat = entity.computeGlobalMatrix();       // To Global
-    const Matrix3f normalMat                   = entity.computeGlobalNormalMatrix(); // To Global [Normal]
+    const Eigen::Matrix<float, 3, 4> localMat  = entity->computeLocalMatrix();        // To Local
+    const Eigen::Matrix<float, 3, 4> globalMat = entity->computeGlobalMatrix();       // To Global
+    const Matrix3f normalMat                   = entity->computeGlobalNormalMatrix(); // To Global [Normal]
 
     switch (mRepresentation) {
     case RepresentationType::Plane: {
-        const auto& shape = input.Tree.context().Shapes->getPlaneShape(entity.ShapeID);
-        Vector3f origin   = entity.Transform * shape.Origin;
-        Vector3f x_axis   = entity.Transform.linear() * shape.XAxis;
-        Vector3f y_axis   = entity.Transform.linear() * shape.YAxis;
+        const auto& shape = input.Tree.context().Shapes->getPlaneShape(entity->ShapeID);
+        Vector3f origin   = entity->Transform * shape.Origin;
+        Vector3f x_axis   = entity->Transform.linear() * shape.XAxis;
+        Vector3f y_axis   = entity->Transform.linear() * shape.YAxis;
         Vector3f normal   = x_axis.cross(y_axis).normalized();
         float area        = x_axis.cross(y_axis).norm();
 
@@ -213,7 +208,7 @@ void AreaLight::embed(const EmbedInput& input) const
         input.Serializer.write(area);               // +1 = 24
     } break;
     case RepresentationType::Sphere: {
-        const auto& shape = input.Tree.context().Shapes->getSphereShape(entity.ShapeID);
+        const auto& shape = input.Tree.context().Shapes->getSphereShape(entity->ShapeID);
 
         input.Serializer.write(localMat, true);  // +3x4 = 12
         input.Serializer.write(globalMat, true); // +3x4 = 24
@@ -224,11 +219,11 @@ void AreaLight::embed(const EmbedInput& input) const
     } break;
     default:
     case RepresentationType::None:
-        if (input.Tree.context().Shapes->isTriShape(entity.ShapeID)) {
+        if (input.Tree.context().Shapes->isTriShape(entity->ShapeID)) {
             input.Serializer.write(localMat, true);                           // +3x4 = 12
             input.Serializer.write(globalMat, true);                          // +3x4 = 24
             input.Serializer.write(normalMat, true);                          // +3x3 = 33
-            input.Serializer.write((uint32)entity.ShapeID);                   // +1   = 34
+            input.Serializer.write((uint32)entity->ShapeID);                  // +1   = 34
             input.Serializer.write((float)std::abs(normalMat.determinant())); // +1   = 35
             input.Serializer.write((uint32)0 /*Padding*/);                    // +1   = 36
             input.Serializer.write(radiance);                                 // +3   = 39

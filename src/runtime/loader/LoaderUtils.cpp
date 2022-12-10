@@ -1,5 +1,6 @@
 #include "LoaderUtils.h"
 #include "CDF.h"
+#include "LoaderEntity.h"
 #include "Logger.h"
 
 #include <cctype>
@@ -20,7 +21,7 @@ std::string LoaderUtils::inlineSceneBBox(const LoaderContext& ctx)
     return stream.str();
 }
 
-std::string LoaderUtils::inlineEntity(const Entity& entity, uint32 shapeID)
+std::string LoaderUtils::inlineEntity(const Entity& entity)
 {
     const Eigen::Matrix<float, 3, 4> localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
     const Eigen::Matrix<float, 3, 4> globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
@@ -31,7 +32,7 @@ std::string LoaderUtils::inlineEntity(const Entity& entity, uint32 shapeID)
            << ", local_mat = " << LoaderUtils::inlineMatrix34(localMat)
            << ", global_mat = " << LoaderUtils::inlineMatrix34(globalMat)
            << ", normal_mat = " << LoaderUtils::inlineMatrix(normalMat)
-           << ", shape_id = " << shapeID << " }";
+           << ", shape_id = " << entity.ShapeID << " }";
     return stream.str();
 }
 

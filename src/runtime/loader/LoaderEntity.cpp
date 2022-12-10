@@ -148,7 +148,7 @@ bool LoaderEntity::load(LoaderContext& ctx)
 
             // Make sure the entity is added to the emissive list if it is associated with an area light
             if (ctx.Lights->isAreaLight(pair.first))
-                ctx.EmissiveEntities.insert({ pair.first, Entity{ mEntityCount, transform, pair.first, shapeID, ctx.Materials.at(materialID).BSDF } });
+                mEmissiveEntities.insert({ pair.first, Entity{ mEntityCount, transform, pair.first, shapeID, ctx.Materials.at(materialID).BSDF } });
 
             const Eigen::Matrix<float, 3, 4> toLocal        = invTransform.matrix().block<3, 4>(0, 0);
             const Eigen::Matrix<float, 3, 4> toGlobal       = transform.matrix().block<3, 4>(0, 0);
@@ -208,4 +208,11 @@ bool LoaderEntity::load(LoaderContext& ctx)
     return true;
 }
 
+std::optional<Entity> LoaderEntity::getEmissiveEntity(const std::string& name) const
+{
+    if (auto it = mEmissiveEntities.find(name); it != mEmissiveEntities.end())
+        return std::make_optional(it->second);
+    else
+        return std::nullopt;
+}
 } // namespace IG

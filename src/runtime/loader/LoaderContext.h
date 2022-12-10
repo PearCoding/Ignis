@@ -13,27 +13,7 @@
 #include <vector>
 
 namespace IG {
-// TODO: Refactor to LoaderEntity?
-struct Entity {
-    size_t ID;
-    Transformf Transform;
-    std::string Name;
-    uint32 ShapeID;
-    std::string BSDF;
 
-    inline Eigen::Matrix<float, 3, 4> computeLocalMatrix() const
-    {
-        return Transform.inverse().matrix().block<3, 4>(0, 0);
-    }
-    inline Eigen::Matrix<float, 3, 4> computeGlobalMatrix() const
-    {
-        return Transform.matrix().block<3, 4>(0, 0);
-    }
-    inline Eigen::Matrix<float, 3, 3> computeGlobalNormalMatrix() const
-    {
-        return Transform.matrix().block<3, 3>(0, 0).inverse().transpose();
-    }
-};
 
 /// A material is a combination of bsdf, entity (if the entity is emissive) and volume/medium interface
 struct Material {
@@ -84,8 +64,6 @@ public:
 
     std::unordered_map<std::string, std::any> ExportedData; // Cache with already exported data and auxillary info
 
-    // TODO: Refactor this into LoaderEntity?
-    std::unordered_map<std::string, Entity> EmissiveEntities;
     std::vector<Material> Materials;
 
     BoundingBox SceneBBox;
