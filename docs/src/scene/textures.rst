@@ -63,6 +63,27 @@ Image texture (:monosp:`image`)
   :width: 0.6
   :label: fig-image
 
+.. subfigstart::
+
+.. subfigure::  images/texture_image_nearest.jpg
+  :align: center
+  
+  Nearest filter
+
+.. subfigure::  images/texture_image_bilinear.jpg
+  :align: center
+  
+  Bilinear filter
+
+.. subfigure::  images/texture_image_bicubic.jpg
+  :align: center
+  
+  Bicubic filter
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-image-filters
+
 Brick (:monosp:`brick`)
 -------------------------------------
 

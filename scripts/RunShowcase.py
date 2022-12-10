@@ -33,8 +33,8 @@ def render(ignis, scene_file, prefix, args):
                 print(f"Skipping {scene_file}")
                 return  # Skip render
 
+    print(f"Rendering {scene_file}")
     with ignis.loadFromFile(str(scene_file), opts) as runtime:
-        print(f"Rendering {scene_file}")
         if runtime is None:
             raise RuntimeError("Could not load scene")
 
@@ -83,6 +83,8 @@ if __name__ == '__main__':
                         help="Skip textures")
     parser.add_argument('--no-shapes', action="store_true",
                         help="Skip shapes")
+    parser.add_argument('--no-cameras', action="store_true",
+                        help="Skip cameras")
     parser.add_argument('--no-techniques', action="store_true",
                         help="Skip techniques")
     parser.add_argument('--force', '-f', action="store_true",
@@ -110,6 +112,8 @@ if __name__ == '__main__':
         render_block(ignis, "texture", args)
     if not args.no_shapes:
         render_block(ignis, "shape", args)
+    if not args.no_cameras:
+        render_block(ignis, "camera", args)
 
     # Should be last
     if not args.no_techniques:

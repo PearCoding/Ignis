@@ -47,22 +47,24 @@ def export_light(result, inst):
     power = [l.color[0] * l.energy, l.color[1]
              * l.energy, l.color[2] * l.energy]
     position = inst.matrix_world @ mathutils.Vector((0, 0, 0, 1))
-    direction = inst.matrix_world @ mathutils.Vector((0, 0, 1, 0))
+    direction = inst.matrix_world @ mathutils.Vector((0, 0, -1, 0))
 
-    if l.type == "POINT":
+    if l.type == "POINT":  # TODO: Support radius
         result["lights"].append(
             {"type": "point", "name": light.name, "position": map_vector(
                 position), "intensity": map_rgb(power)}
         )
-    elif l.type == "SPOT":
+    elif l.type == "SPOT":  # TODO: Support radius?
+        factor = (1 - 0.5 * (math.cos(math.radians(l.spot_size)/2) +
+                             math.cos(math.radians(l.spot_size)/2)*(1 - l.spot_blend))) # TODO: Verify this
         result["lights"].append(
             {"type": "spot", "name": light.name, "position": map_vector(position), "direction": map_vector(direction.normalized(
-            )), "intensity": map_rgb(power), "cutoff": math.degrees(l.spot_size/2), "falloff": math.degrees(l.spot_size/2)*(1 - l.spot_blend)}
+            )), "intensity": map_rgb([power[0] * factor, power[1] * factor, power[2] * factor]), "cutoff": math.degrees(l.spot_size/2), "falloff": math.degrees(l.spot_size/2)*(1 - l.spot_blend)}
         )
     elif l.type == "SUN":
         result["lights"].append(
             {"type": "direction", "name": light.name, "direction": map_vector(
-                -direction.normalized()), "irradiance": map_rgb(power)}
+                direction.normalized()), "irradiance": map_rgb(power)}
         )
     elif l.type == "AREA":
         size_x = l.size
