@@ -1,5 +1,5 @@
-fn @node_checkerboard2(p: Vec2) = select( (math::wrap(p.x, 0, 2) as i32 % 2) == (math::wrap(p.y, 0, 2) as i32 % 2)                                              , 1:f32, 0:f32);
-fn @node_checkerboard3(p: Vec3) = select(((math::wrap(p.x, 0, 2) as i32 % 2) == (math::wrap(p.y, 0, 2) as i32 % 2)) == ((math::wrap(p.z, 0, 2) as i32 % 2) == 1), 1:f32, 0:f32);
+fn @node_checkerboard2(p: Vec2) = select( (math::wrap(p.x, 0, 2) as i32 % 2) == (math::wrap(p.y, 0, 2) as i32 % 2)                                              , 1:i32, 0:i32);
+fn @node_checkerboard3(p: Vec3) = select(((math::wrap(p.x, 0, 2) as i32 % 2) == (math::wrap(p.y, 0, 2) as i32 % 2)) == ((math::wrap(p.z, 0, 2) as i32 % 2) == 1), 1:i32, 0:i32);
 
 fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color, transform: Mat3x3) -> Texture {
     @ |ctx| { 

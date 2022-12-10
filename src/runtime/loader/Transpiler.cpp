@@ -610,8 +610,8 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("luminance", createColorFunctionIn1("color_luminance"), PExprType::Number, PExprType::Vec4),
     cF("blackbody", createColorFunctionOut("math::blackbody"), PExprType::Vec4, PExprType::Number),
 
-    cF("checkerboard", createFunction("node_checkerboard2"), PExprType::Number, PExprType::Vec2),
-    cF("checkerboard", createFunction("node_checkerboard3"), PExprType::Number, PExprType::Vec3),
+    cF("checkerboard", createFunction("node_checkerboard2"), PExprType::Integer, PExprType::Vec2),
+    cF("checkerboard", createFunction("node_checkerboard3"), PExprType::Integer, PExprType::Vec3),
 
     _MF2A("min", "math_builtins::fmin"),
     cF("min", createFunction("min"), PExprType::Integer, PExprType::Integer, PExprType::Integer),
@@ -832,10 +832,17 @@ public:
     std::string onBool(bool v) override { return v ? "true" : "false"; }
     std::string onString(const std::string& v) override { return "\"" + v + "\""; }
 
-    /// Implicit casts. Currently only int -> num
-    std::string onCast(const std::string& v, PExprType, PExprType) override
+    /// Implicit casts. Currently only int -> num, num -> int
+    std::string onCast(const std::string& v, PExprType fromType, PExprType toType) override
     {
-        return "((" + v + ") as f32)";
+        if (fromType == PExprType::Integer && toType == PExprType::Number) {
+            return "((" + v + ") as f32)";
+        } else if (fromType == PExprType::Number && toType == PExprType::Integer) {
+            return "((" + v + ") as i32)";
+        } else {
+            IG_ASSERT(false, "Only cast from int to num or back supported");
+            return "0";
+        }
     }
 
     /// +a, -a. Only called for arithmetic types
@@ -907,7 +914,7 @@ public:
     std::string onPow(PExprType aType, const std::string& a, const std::string& f) override
     {
         if (aType == PExprType::Integer)
-            return "(math_builtins::pow(" + a + " as f32, " + f + " as f32) as i32)";
+            return "(math_builtins::pow((" + a + ") as f32, (" + f + ") as f32) as i32)";
         else if (aType == PExprType::Number)
             return "math_builtins::pow(" + a + ", " + f + ")";
         else
