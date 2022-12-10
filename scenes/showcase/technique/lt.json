@@ -1,0 +1,8 @@
+{
+	"technique": {
+		"type": "lt"
+	},
+	"externals": [
+        {"filename":"base.json"}
+    ]
+}

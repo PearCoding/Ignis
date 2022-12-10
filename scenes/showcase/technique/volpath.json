@@ -1,0 +1,9 @@
+{
+	"technique": {
+		"type": "volpath"
+	},
+	// TODO: Add some volumes to the scene
+	"externals": [
+        {"filename":"base.json"}
+    ]
+}

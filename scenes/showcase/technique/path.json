@@ -1,0 +1,8 @@
+{
+	"technique": {
+		"type": "path"
+	},
+	"externals": [
+        {"filename":"base.json"}
+    ]
+}

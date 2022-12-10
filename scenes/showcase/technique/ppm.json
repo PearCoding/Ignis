@@ -1,0 +1,8 @@
+{
+	"technique": {
+		"type": "ppm"
+	},
+	"externals": [
+        {"filename":"base.json"}
+    ]
+}
