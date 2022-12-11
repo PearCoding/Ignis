@@ -1,0 +1,170 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 32,
+    "clamp": 0.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 39.597752709049864,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -1.0,
+      12.490668296813965,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      256.0,
+      256.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "GroundPlane",
+      "filename": "meshes/GroundPlane.ply"
+    },
+    {
+      "type": "rectangle",
+      "name": "Light.002-shape",
+      "width": 0.10000000149011612,
+      "height": 0.10000000149011612,
+      "flip_normals": true
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "diffuse",
+      "name": "Ground",
+      "reflectance": "select(checkerboard(uvw * 10.0) == 1, color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0), color(0.20000000298023224, 0.20000000298023224, 0.20000000298023224, 1.0))"
+    }
+  ],
+  "entities": [
+    {
+      "name": "GroundPlane-GroundPlane",
+      "shape": "GroundPlane",
+      "bsdf": "Ground",
+      "transform": [
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Light.002",
+      "shape": "Light.002-shape",
+      "bsdf": "__bsdf_black",
+      "transform": [
+        0.36456236243247986,
+        0.750999927520752,
+        -0.5505391955375671,
+        -1.0198211669921875,
+        -0.4070475101470947,
+        0.6602750420570374,
+        0.6311490535736084,
+        1.6631189584732056,
+        0.8375002145767212,
+        -0.005997585132718086,
+        0.5464040637016296,
+        2.5988268852233887,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "camera_visible": false,
+      "bounce_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "point",
+      "name": "Light",
+      "position": [
+        2.7762451171875,
+        2.9477834701538086,
+        3.067789316177368
+      ],
+      "intensity": [
+        0.0,
+        0.0,
+        1000.0
+      ]
+    },
+    {
+      "type": "spot",
+      "name": "Light.001",
+      "position": [
+        -2.9966487884521484,
+        -0.22661614418029785,
+        3.305354356765747
+      ],
+      "direction": [
+        0.7042534351348877,
+        -0.13068173825740814,
+        -0.6978176236152649
+      ],
+      "intensity": [
+        0.0,
+        1000.0,
+        0.0
+      ],
+      "cutoff": 37.49999933598528,
+      "falloff": 34.477318400880165
+    },
+    {
+      "type": "area",
+      "name": "Light.002",
+      "entity": "Light.002",
+      "radiance": [
+        24999.99925494196,
+        0.0,
+        0.0
+      ]
+    }
+  ]
+}

@@ -89,18 +89,21 @@ def error_image(img, ref):
 predef_eps = {
     "cbox-d1": 5e-3,
     "cbox-d6": 5e-3,
+    "cycles-lights": 5e-2,  # Ignis should resemble Blender Cycles, but there is no need to be exact
+    "cycles-principled": 5e-2,
+    "cycles-tex": 1e-2,
     "room": 1e-3,
-    "volume":  5e-3,
-    "env4k":  8e-2,
-    "env4k-nocdf":  8e-2,
-    "env4k-nomisc":  8e-2,
-    "multilight-uniform":  3e-4,
-    "multilight-simple":  3e-4,
-    "multilight-hierarchy":  3e-4,
-    "sphere-light-ico":  2e-3,
-    "sphere-light-ico-nopt":  2e-3,
-    "sphere-light-uv":  2e-3,
-    "sphere-light-pure":  2e-3,
+    "volume": 5e-3,
+    "env4k": 8e-2,
+    "env4k-nocdf": 8e-2,
+    "env4k-nomisc": 8e-2,
+    "multilight-uniform": 3e-4,
+    "multilight-simple": 3e-4,
+    "multilight-hierarchy": 3e-4,
+    "sphere-light-ico": 2e-3,
+    "sphere-light-ico-nopt": 2e-3,
+    "sphere-light-uv": 2e-3,
+    "sphere-light-pure": 3e-3,
 }
 
 

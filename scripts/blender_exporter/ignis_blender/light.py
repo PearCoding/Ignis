@@ -50,16 +50,19 @@ def export_light(result, inst):
     direction = inst.matrix_world @ mathutils.Vector((0, 0, -1, 0))
 
     if l.type == "POINT":  # TODO: Support radius
+        # factor = 1 / (math.pi * l.radius * l.radius) if l.radius > 0 else 1
         result["lights"].append(
             {"type": "point", "name": light.name, "position": map_vector(
                 position), "intensity": map_rgb(power)}
         )
     elif l.type == "SPOT":  # TODO: Support radius?
-        factor = (1 - 0.5 * (math.cos(math.radians(l.spot_size)/2) +
-                             math.cos(math.radians(l.spot_size)/2)*(1 - l.spot_blend))) # TODO: Verify this
+        cutoff = l.spot_size / 2
+        falloff = math.acos(
+            l.spot_blend + (1 - l.spot_blend) * math.cos(cutoff))
+        # factor = 1 / (math.pi * l.radius * l.radius) if l.radius > 0 else 1
         result["lights"].append(
             {"type": "spot", "name": light.name, "position": map_vector(position), "direction": map_vector(direction.normalized(
-            )), "intensity": map_rgb([power[0] * factor, power[1] * factor, power[2] * factor]), "cutoff": math.degrees(l.spot_size/2), "falloff": math.degrees(l.spot_size/2)*(1 - l.spot_blend)}
+            )), "intensity": map_rgb(power), "cutoff": math.degrees(cutoff), "falloff": math.degrees(falloff)}
         )
     elif l.type == "SUN":
         result["lights"].append(
@@ -78,7 +81,7 @@ def export_light(result, inst):
                 {"type": "disk", "name": light.name +
                     "-shape", "radius": size_x/2, "flip_normals": True}
             )
-            area = 3.141592 * size_x * size_x / 4
+            area = math.pi * size_x * size_x / 4
         elif l.shape == "ELLIPSE":
             # Approximate by non-uniformly scaling the uniform disk
             size_y = l.size_y
@@ -86,7 +89,7 @@ def export_light(result, inst):
                 {"type": "disk", "name": light.name +
                     "-shape", "radius": 1, "flip_normals": True, "transform": [size_x/2, 0, 0, 0, size_y/2, 0, 0, 0, 1]}
             )
-            area = 3.141592 * size_x * size_y / 4
+            area = math.pi * size_x * size_y / 4
         else:
             result["shapes"].append(
                 {"type": "rectangle", "name": light.name +
@@ -103,7 +106,7 @@ def export_light(result, inst):
              "bounce_visible": (light.visible_diffuse or light.visible_glossy or light.visible_transmission)}
         )
 
-        factor = 1/(4*area)  # No idea why there is the factor 4 in it
+        factor = 1 / (4 * area)  # No idea why there is the factor 4 in it
         result["lights"].append(
             {"type": "area", "name": light.name, "entity": light.name,
                 "radiance": map_rgb([power[0] * factor, power[1] * factor, power[2] * factor])}

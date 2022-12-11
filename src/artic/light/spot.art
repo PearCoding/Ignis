@@ -3,14 +3,18 @@ fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_an
     let cosCutoffAngle  = math_builtins::cos(cutoff_angle);
     let cosFalloffAngle = math_builtins::cos(falloff_angle);
     let cutoffRadius    = math_builtins::tan(cutoff_angle);
-    let cutoffArea      = math_builtins::fmax[f32](0.001, 2 * flt_pi * (1 - cosCutoffAngle));
+    let blendRange      = cosFalloffAngle - cosCutoffAngle;
 
     fn @to_world(vec: Vec3) = mat3x3_mul(frame, vec);
 
     fn @eval_dir(out_dir: Vec3) {
         let cos_angle = vec3_dot(out_dir, dir);
-        let factor    = select(cos_angle >= cosFalloffAngle, 1:f32, math_builtins::fmax[f32](0, (cos_angle - cosCutoffAngle) / (cosFalloffAngle - cosCutoffAngle)));
-        color_mulf(color, factor / cutoffArea)
+        let factor    = if blendRange <= flt_eps { 
+                            select(cos_angle <= cosCutoffAngle, 0:f32, 1:f32)
+                        } else {
+                            smoothstep(clampf((cos_angle - cosCutoffAngle) / blendRange, 0, 1))
+                        };
+        color_mulf(color, cos_angle * factor / (4 * flt_pi))
     }
 
     Light{
