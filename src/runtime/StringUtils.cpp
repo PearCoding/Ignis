@@ -25,7 +25,7 @@ std::string to_word_uppercase(const std::string& str)
             lastWS = true;
         } else if (lastWS && std::islower(c)) {
             lastWS = false;
-            c      = std::toupper(c);
+            c      = (std::string::value_type)::toupper(c);
         }
     }
 

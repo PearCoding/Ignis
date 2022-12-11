@@ -4,7 +4,7 @@
 #include "Technique.h"
 
 namespace IG {
-class IG_LIB DebugTechnique : public Technique {
+class DebugTechnique : public Technique {
 public:
     DebugTechnique(const Parser::Object& obj);
     ~DebugTechnique() = default;

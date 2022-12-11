@@ -34,10 +34,10 @@ enum class DebugMode {
     MediumOuter
 };
 
-[[nodiscard]] std::optional<DebugMode> stringToDebugMode(const std::string& name);
-[[nodiscard]] std::string debugModeToString(DebugMode mode);
+[[nodiscard]] IG_LIB std::optional<DebugMode> stringToDebugMode(const std::string& name);
+[[nodiscard]] IG_LIB std::string debugModeToString(DebugMode mode);
 
 /// Will return names in order of the debug mode enum
-[[nodiscard]] std::vector<std::string> getDebugModeNames();
+[[nodiscard]] IG_LIB std::vector<std::string> getDebugModeNames();
 
 } // namespace IG
