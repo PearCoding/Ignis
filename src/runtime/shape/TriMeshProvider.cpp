@@ -195,6 +195,109 @@ inline TriMesh setup_mesh_external(const std::string& name, const Object& elem, 
     return {};
 }
 
+inline TriMesh setup_mesh_inline(const std::string& name, const Object& elem, const LoaderContext&)
+{
+    auto propIndices   = elem.propertyOpt("indices");
+    auto propVertices  = elem.propertyOpt("vertices");
+    auto propNormals   = elem.propertyOpt("normals");
+    auto propTexCoords = elem.propertyOpt("texcoords");
+
+    bool hasIndices   = false;
+    bool hasVertices  = false;
+    bool hasNormals   = false;
+    bool hasTexCoords = false;
+
+    // TODO: Would be nice to acquire the arrays and remove data from the properties, as, very likely, they will not be needed anymore. 
+    // This however requires write access to Scene to consume properties
+    IntegerArray indices;
+    if (propIndices.has_value())
+        indices = propIndices.value().get().getIntegerArray(&hasIndices);
+    NumberArray vertices;
+    if (propVertices.has_value())
+        vertices = propVertices.value().get().getNumberArray(&hasVertices);
+    NumberArray normals;
+    if (propNormals.has_value())
+        normals = propNormals.value().get().getNumberArray(&hasNormals);
+    NumberArray texcoords;
+    if (propTexCoords.has_value())
+        texcoords = propTexCoords.value().get().getNumberArray(&hasTexCoords);
+
+    if (!hasIndices) {
+        IG_LOG(L_ERROR) << "Shape '" << name << "': No indices given" << std::endl;
+        return {};
+    }
+
+    if ((indices.size() % 3) != 0) {
+        IG_LOG(L_ERROR) << "Shape '" << name << "': Number of indices not multiple of 3. Only triangular faces are accepted" << std::endl;
+        return {};
+    }
+
+    if (!hasVertices) {
+        IG_LOG(L_ERROR) << "Shape '" << name << "': No vertices given" << std::endl;
+        return {};
+    }
+
+    if ((vertices.size() % 3) != 0) {
+        IG_LOG(L_ERROR) << "Shape '" << name << "': Number of vertices not multiple of 3" << std::endl;
+        return {};
+    }
+
+    if (hasNormals && vertices.size() != normals.size()) {
+        IG_LOG(L_ERROR) << "Shape '" << name << "': Number of normals does not match number of vertices" << std::endl;
+        return {};
+    }
+
+    if (hasTexCoords && (texcoords.size() % 2) != 0) {
+        IG_LOG(L_ERROR) << "Shape '" << name << "': Number of texcoords not multiple of 2" << std::endl;
+        return {};
+    }
+
+    if (hasTexCoords && vertices.size() / 3 != texcoords.size() / 2) {
+        IG_LOG(L_ERROR) << "Shape '" << name << "': Number of texcoords entries divided by 2 does not match number of vertices entries divided by 3" << std::endl;
+        return {};
+    }
+
+    TriMesh mesh;
+
+    // Copy data
+    const size_t faceCount = indices.size() / 3;
+    mesh.indices.resize(faceCount * 4);
+    for (size_t i = 0; i < faceCount; ++i) {
+        mesh.indices[4 * i + 0] = indices[3 * i + 0];
+        mesh.indices[4 * i + 1] = indices[3 * i + 1];
+        mesh.indices[4 * i + 2] = indices[3 * i + 2];
+        mesh.indices[4 * i + 3] = 0;
+    }
+
+    const size_t pointCount = vertices.size() / 3;
+    mesh.vertices.resize(pointCount);
+    for (size_t i = 0; i < pointCount; ++i)
+        mesh.vertices[i] = StVector3f(vertices[3 * i + 0], vertices[3 * i + 1], vertices[3 * i + 2]);
+
+    if (hasNormals) {
+        mesh.normals.resize(pointCount);
+        for (size_t i = 0; i < pointCount; ++i)
+            mesh.normals[i] = StVector3f(normals[3 * i + 0], normals[3 * i + 1], normals[3 * i + 2]);
+    } else {
+        mesh.computeVertexNormals();
+    }
+
+    if (hasTexCoords) {
+        mesh.texcoords.resize(pointCount);
+        for (size_t i = 0; i < pointCount; ++i)
+            mesh.texcoords[i] = StVector2f(texcoords[2 * i + 0], texcoords[2 * i + 1]);
+    } else {
+        mesh.makeTexCoordsNormalized();
+    }
+
+    mesh.vertices.shrink_to_fit();
+    mesh.normals.shrink_to_fit();
+    mesh.texcoords.shrink_to_fit();
+    mesh.indices.shrink_to_fit();
+
+    return mesh;
+}
+
 template <size_t N, size_t T>
 struct BvhTemporary {
     std::vector<typename BvhNTriM<N, T>::Node, tbb::scalable_allocator<typename BvhNTriM<N, T>::Node>> nodes;
@@ -261,6 +364,8 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
         mesh = setup_mesh_mitsuba(name, elem, ctx);
     } else if (elem.pluginType() == "external") {
         mesh = setup_mesh_external(name, elem, ctx);
+    } else if (elem.pluginType() == "inline") {
+        mesh = setup_mesh_inline(name, elem, ctx);
     } else {
         IG_LOG(L_ERROR) << "Shape '" << name << "': Can not load shape type '" << elem.pluginType() << "'" << std::endl;
         return;

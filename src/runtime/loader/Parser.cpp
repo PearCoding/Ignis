@@ -54,6 +54,17 @@ inline bool checkArrayIsAllNumber(const rapidjson::GenericArray<true, rapidjson:
     return true;
 }
 
+inline bool checkArrayIsAllInteger(const rapidjson::GenericArray<true, rapidjson::Value>& arr)
+{
+    if (arr.Size() == 0)
+        return false;
+    for (rapidjson::SizeType i = 0; i < arr.Size(); ++i) {
+        if (!arr[i].IsInt())
+            return false;
+    }
+    return true;
+}
+
 inline static Vector2f getVector2f(const rapidjson::Value& obj)
 {
     const auto& array = obj.GetArray();
@@ -231,6 +242,42 @@ inline static Transformf getTransform(const rapidjson::GenericArray<true, rapidj
     return transform;
 }
 
+inline static Property handleArrayProperty(const rapidjson::Value& obj)
+{
+    const auto values_it = obj.FindMember("values");
+    const auto type_it   = obj.FindMember("type");
+
+    bool assumeNumbers = true;
+    if (type_it != obj.MemberEnd() && type_it->value.IsString() && (type_it->value == "int" || type_it->value == "integer"))
+        assumeNumbers = false;
+
+    IG_ASSERT(values_it != obj.MemberEnd(), "Expected 'values' to be present");
+
+    if (!values_it->value.IsArray())
+        throw std::runtime_error("Expected array property to have an array 'values' member");
+
+    const auto arr = values_it->value.GetArray();
+    if (assumeNumbers) {
+        if (!checkArrayIsAllNumber(arr))
+            throw std::runtime_error("Expected number array to have only numbers in it");
+
+        NumberArray values;
+        values.reserve(arr.Size());
+        for (rapidjson::SizeType i = 0; i < arr.Size(); ++i)
+            values.push_back(arr[i].GetFloat());
+        return Property::fromNumberArray(std::move(values));
+    } else {
+        if (!checkArrayIsAllInteger(arr))
+            throw std::runtime_error("Expected integer array to have only integers in it");
+
+        IntegerArray values;
+        values.reserve(arr.Size());
+        for (rapidjson::SizeType i = 0; i < arr.Size(); ++i)
+            values.push_back(arr[i].GetInt());
+        return Property::fromIntegerArray(std::move(values));
+    }
+}
+
 inline static Property getProperty(const rapidjson::Value& obj)
 {
     if (obj.IsBool())
@@ -256,11 +303,16 @@ inline static Property getProperty(const rapidjson::Value& obj)
         else if (len == 12 || len == 16)
             return Property::fromTransform(Transformf(getMatrix4f(obj)));
     } else if (obj.IsObject()) {
-        // Deprecated way of handling transforms
-        Transformf transform = Transformf::Identity();
+        const auto innerObj = obj.GetObject();
+        if (innerObj.HasMember("values")) {
+            return handleArrayProperty(innerObj);
+        } else {
+            // Deprecated way of handling transforms
+            Transformf transform = Transformf::Identity();
 
-        applyTransformProperty(transform, obj.GetObject());
-        return Property::fromTransform(transform);
+            applyTransformProperty(transform, innerObj);
+            return Property::fromTransform(transform);
+        }
     }
 
     return Property();
@@ -399,15 +451,9 @@ void Scene::addFrom(const Scene& other)
     for (const auto& ent : other.entities())
         addEntity(ent.first, ent.second);
 
-    // Ignore technique, camera & film if already specified
-    if (!mTechnique)
-        mTechnique = other.mTechnique;
-
-    if (!mCamera)
-        mCamera = other.mCamera;
-
-    if (!mFilm)
-        mFilm = other.mFilm;
+    mTechnique = other.mTechnique;
+    mCamera    = other.mCamera;
+    mFilm      = other.mFilm;
 }
 
 void Scene::addConstantEnvLight()
@@ -428,15 +474,7 @@ public:
 
         Scene scene;
 
-        if (doc.HasMember("camera"))
-            scene.setCamera(handleAnonymousObject(scene, OT_CAMERA, baseDir, doc["camera"]));
-
-        if (doc.HasMember("technique"))
-            scene.setTechnique(handleAnonymousObject(scene, OT_TECHNIQUE, baseDir, doc["technique"]));
-
-        if (doc.HasMember("film"))
-            scene.setFilm(handleAnonymousObject(scene, OT_FILM, baseDir, doc["film"]));
-
+        // Handle externals first, such that the current file can replace parts of it later on
         if (doc.HasMember("externals")) {
             if (!doc["externals"].IsArray())
                 throw std::runtime_error("Expected external elements to be an array");
@@ -447,6 +485,15 @@ public:
                 handleExternalObject(loader, scene, baseDir, exts);
             }
         }
+
+        if (doc.HasMember("camera"))
+            scene.setCamera(handleAnonymousObject(scene, OT_CAMERA, baseDir, doc["camera"]));
+
+        if (doc.HasMember("technique"))
+            scene.setTechnique(handleAnonymousObject(scene, OT_TECHNIQUE, baseDir, doc["technique"]));
+
+        if (doc.HasMember("film"))
+            scene.setFilm(handleAnonymousObject(scene, OT_FILM, baseDir, doc["film"]));
 
         if (doc.HasMember("shapes")) {
             if (!doc["shapes"].IsArray())

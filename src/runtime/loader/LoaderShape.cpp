@@ -37,6 +37,7 @@ static const struct ShapeProviderEntry {
     { "ply", "trimesh" },
     { "mitsuba", "trimesh" },
     { "external", "trimesh" },
+    { "inline", "trimesh" },
     { "", nullptr }
 };
 

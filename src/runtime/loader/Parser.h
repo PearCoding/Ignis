@@ -2,6 +2,7 @@
 
 #include "IG_Config.h"
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -30,11 +31,15 @@ enum PropertyType {
     PT_STRING,
     PT_TRANSFORM,
     PT_VECTOR2,
-    PT_VECTOR3
+    PT_VECTOR3,
+    PT_INTEGER_ARRAY,
+    PT_NUMBER_ARRAY
 };
 
-using Number  = float;
-using Integer = int32;
+using Number       = float;
+using Integer      = int32;
+using NumberArray  = std::vector<Number>;
+using IntegerArray = std::vector<Integer>;
 
 // --------------- Property
 class Property {
@@ -198,6 +203,82 @@ public:
         return p;
     }
 
+    inline const IntegerArray& getIntegerArray(bool* ok = nullptr) const
+    {
+        if (mType == PT_INTEGER_ARRAY) {
+            if (ok)
+                *ok = true;
+        } else {
+            if (ok)
+                *ok = false;
+        }
+        return mIntegerArray;
+    }
+
+    inline IntegerArray&& acquireIntegerArray(bool* ok = nullptr)
+    {
+        if (mType == PT_INTEGER_ARRAY) {
+            if (ok)
+                *ok = true;
+        } else {
+            if (ok)
+                *ok = false;
+        }
+        return std::move(mIntegerArray);
+    }
+
+    static inline Property fromIntegerArray(const IntegerArray& v)
+    {
+        Property p(PT_INTEGER_ARRAY);
+        p.mIntegerArray = v;
+        return p;
+    }
+
+    static inline Property fromIntegerArray(IntegerArray&& v)
+    {
+        Property p(PT_INTEGER_ARRAY);
+        p.mIntegerArray = std::move(v);
+        return p;
+    }
+
+    inline const NumberArray& getNumberArray(bool* ok = nullptr) const
+    {
+        if (mType == PT_NUMBER_ARRAY) {
+            if (ok)
+                *ok = true;
+        } else {
+            if (ok)
+                *ok = false;
+        }
+        return mNumberArray;
+    }
+
+    inline NumberArray&& acquireNumberArray(bool* ok = nullptr)
+    {
+        if (mType == PT_NUMBER_ARRAY) {
+            if (ok)
+                *ok = true;
+        } else {
+            if (ok)
+                *ok = false;
+        }
+        return std::move(mNumberArray);
+    }
+
+    static inline Property fromNumberArray(const NumberArray& v)
+    {
+        Property p(PT_NUMBER_ARRAY);
+        p.mNumberArray = v;
+        return p;
+    }
+
+    static inline Property fromNumberArray(NumberArray&& v)
+    {
+        Property p(PT_NUMBER_ARRAY);
+        p.mNumberArray = std::move(v);
+        return p;
+    }
+
 private:
     inline explicit Property(PropertyType type)
         : mType(type)
@@ -216,6 +297,8 @@ private:
     Vector3f mVector3;
     Vector2f mVector2;
     Transformf mTransform;
+    IntegerArray mIntegerArray;
+    NumberArray mNumberArray;
 };
 
 // --------------- Object
@@ -240,7 +323,19 @@ public:
 
     inline Property property(const std::string& key) const
     {
-        return mProperties.count(key) ? mProperties.at(key) : Property();
+        if (auto it = mProperties.find(key); it != mProperties.end())
+            return it->second;
+        else
+            return Property();
+    }
+
+    /// @brief Guarded property access for heavy weight properties, due to the reference access. No copy is made
+    inline std::optional<std::reference_wrapper<const Property>> propertyOpt(const std::string& key) const
+    {
+        if (auto it = mProperties.find(key); it != mProperties.end())
+            return std::cref(it->second);
+        else
+            return std::nullopt;
     }
 
     inline void setProperty(const std::string& key, const Property& prop) { mProperties[key] = prop; }
@@ -299,7 +394,7 @@ public:
     inline void addMedium(const std::string& name, const std::shared_ptr<Object>& medium) { mMedia[name] = medium; }
     inline void addEntity(const std::string& name, const std::shared_ptr<Object>& entity) { mEntities[name] = entity; }
 
-    // Add all information from other to this scene, except technique, film and camera information
+    /// Add all information from other to this scene, replacing present information
     void addFrom(const Scene& other);
 
     void addConstantEnvLight();
