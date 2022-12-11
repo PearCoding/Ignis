@@ -58,7 +58,7 @@ void LoaderCamera::setup(const LoaderContext& ctx)
     if (!entry)
         return;
 
-    auto camera = ctx.Options.Scene.camera();
+    auto camera = ctx.Options.Scene->camera();
     if (!camera)
         camera = std::make_shared<SceneObject>(SceneObject::OT_CAMERA, "", ctx.Options.FilePath.parent_path()); // Create a default variant
 

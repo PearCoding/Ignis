@@ -823,7 +823,7 @@ public:
         if (auto var = mParent->mCustomVariableColor.find(name); expectedType == PExprType::Vec4 && var != mParent->mCustomVariableColor.end())
             return "color_to_vec4(" + var->second + ")";
 
-        IG_ASSERT(expectedType == PExprType::Vec4 && mParent->mTree.context().Options.Scene.texture(name) != nullptr, "Expected a valid texture name");
+        IG_ASSERT(expectedType == PExprType::Vec4 && mParent->mTree.context().Options.Scene->texture(name) != nullptr, "Expected a valid texture name");
         mUsedTextures.insert(name);
         return "color_to_vec4(" + tex_name(mParent->mTree.getClosureID(name)) + "(ctx))";
     }
@@ -982,7 +982,7 @@ public:
         }
 
         // Must be a texture
-        IG_ASSERT(mParent->mTree.context().Options.Scene.texture(name) != nullptr, "Expected a valid texture name");
+        IG_ASSERT(mParent->mTree.context().Options.Scene->texture(name) != nullptr, "Expected a valid texture name");
         mUsedTextures.insert(name);
         return "color_to_vec4(" + tex_name(mParent->mTree.getClosureID(name)) + "(" + (argumentPayloads.empty() ? std::string("ctx") : ("ctx.{uvw=vec2_to_3(" + argumentPayloads[0] + ", 0)}")) + "))";
     }
@@ -1067,7 +1067,7 @@ public:
             return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
 
         // Check for textures/nodes in the variable table
-        if (Parent->mTree.context().Options.Scene.texture(lkp.name()))
+        if (Parent->mTree.context().Options.Scene->texture(lkp.name()))
             return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
 
         return {};
@@ -1093,7 +1093,7 @@ public:
         }
 
         // Add all texture/nodes to the function table as well, such that the uv can be changed directly
-        if (Parent->mTree.context().Options.Scene.texture(lkp.name()) && lkp.matchParameter({ PExprType::Vec2 }))
+        if (Parent->mTree.context().Options.Scene->texture(lkp.name()) && lkp.matchParameter({ PExprType::Vec2 }))
             return PExpr::FunctionDef(lkp.name(), PExprType::Vec4, { PExprType::Vec2 });
 
         return {};

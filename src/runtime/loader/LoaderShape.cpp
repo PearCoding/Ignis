@@ -55,12 +55,12 @@ static const ShapeProviderEntry* getShapeProviderEntry(const std::string& name)
 void LoaderShape::prepare(const LoaderContext& ctx)
 {
     // Check which shape provider we need
-    for (const auto& ent : ctx.Options.Scene.entities()) {
+    for (const auto& ent : ctx.Options.Scene->entities()) {
         const auto shapeName = ent.second->property("shape").getString();
         if (shapeName.empty())
             continue;
 
-        const auto shape = ctx.Options.Scene.shape(shapeName);
+        const auto shape = ctx.Options.Scene->shape(shapeName);
         if (!shape)
             continue;
 
@@ -87,8 +87,8 @@ bool LoaderShape::load(LoaderContext& ctx)
 
     // To make use of parallelization and workaround the map restrictions
     // we do have to construct a map
-    std::vector<std::string> names(ctx.Options.Scene.shapes().size());
-    std::transform(ctx.Options.Scene.shapes().begin(), ctx.Options.Scene.shapes().end(), names.begin(),
+    std::vector<std::string> names(ctx.Options.Scene->shapes().size());
+    std::transform(ctx.Options.Scene->shapes().begin(), ctx.Options.Scene->shapes().end(), names.begin(),
                    [](const std::pair<std::string, std::shared_ptr<SceneObject>>& pair) {
                        return pair.first;
                    });
@@ -98,7 +98,7 @@ bool LoaderShape::load(LoaderContext& ctx)
 
     const auto load_shape = [&](size_t i) {
         const std::string name = names.at(i);
-        const auto child       = ctx.Options.Scene.shape(name);
+        const auto child       = ctx.Options.Scene->shape(name);
 
         auto entry = getShapeProviderEntry(child->pluginType());
         if (!entry)

@@ -33,7 +33,7 @@ static const struct {
 void LoaderMedium::loadMedia(LoaderContext& ctx)
 {
     size_t id = 0;
-    for (const auto& pair : ctx.Options.Scene.media()) {
+    for (const auto& pair : ctx.Options.Scene->media()) {
         const auto medium = pair.second;
 
         bool found = false;
@@ -67,7 +67,7 @@ void LoaderMedium::handleReferenceEntity(const std::string& mediumInnerName, con
 
 void LoaderMedium::prepare(LoaderContext& ctx)
 {
-    if (ctx.Options.Scene.media().empty())
+    if (ctx.Options.Scene->media().empty())
         return;
 
     IG_LOG(L_DEBUG) << "Prepare participating media" << std::endl;

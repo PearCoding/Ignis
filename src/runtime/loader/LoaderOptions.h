@@ -10,7 +10,7 @@ class Device;
 
 struct LoaderOptions {
     std::filesystem::path FilePath;
-    IG::Scene Scene;
+    std::shared_ptr<IG::Scene> Scene;
     IG::Target Target;
     std::string CameraType;
     std::string TechniqueType;

@@ -14,7 +14,7 @@ static inline void setup_technique(LoaderOptions& lopts, const RuntimeOptions& o
 {
     std::string tech_type;
     if (opts.OverrideTechnique.empty()) {
-        const auto technique = lopts.Scene.technique();
+        const auto technique = lopts.Scene->technique();
         if (technique)
             tech_type = technique->pluginType();
         else
@@ -28,7 +28,7 @@ static inline void setup_technique(LoaderOptions& lopts, const RuntimeOptions& o
 static inline void setup_film(LoaderOptions& lopts, const RuntimeOptions& opts)
 {
     Vector2f filmSize = Vector2f(800, 600);
-    const auto film   = lopts.Scene.film();
+    const auto film   = lopts.Scene->film();
     if (film)
         filmSize = film->property("size").getVector2(filmSize);
 
@@ -50,7 +50,7 @@ static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts
     if (!opts.OverrideCamera.empty()) {
         camera_type = opts.OverrideCamera;
     } else {
-        const auto camera = lopts.Scene.camera();
+        const auto camera = lopts.Scene->camera();
         if (camera)
             camera_type = camera->pluginType();
     }
@@ -152,9 +152,9 @@ bool Runtime::loadFromFile(const std::filesystem::path& path)
             return false;
 
         if (mOptions.AddExtraEnvLight)
-            scene.addConstantEnvLight();
+            scene->addConstantEnvLight();
 
-        return load(path, std::move(scene));
+        return load(path, scene);
     } catch (const std::runtime_error& err) {
         IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
         return false;
@@ -175,35 +175,35 @@ bool Runtime::loadFromString(const std::string& str, const std::filesystem::path
             return false;
 
         if (mOptions.AddExtraEnvLight)
-            scene.addConstantEnvLight();
+            scene->addConstantEnvLight();
 
-        return load({}, std::move(scene));
+        return load({}, scene);
     } catch (const std::runtime_error& err) {
         IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
         return false;
     }
 }
 
-bool Runtime::loadFromScene(Scene&& scene)
+bool Runtime::loadFromScene(const std::shared_ptr<Scene>& scene)
 {
     try {
         if (mOptions.AddExtraEnvLight)
-            scene.addConstantEnvLight();
+            scene->addConstantEnvLight();
 
-        return load({}, std::move(scene));
+        return load({}, scene);
     } catch (const std::runtime_error& err) {
         IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
         return false;
     }
 }
 
-bool Runtime::load(const std::filesystem::path& path, Scene&& scene)
+bool Runtime::load(const std::filesystem::path& path, const std::shared_ptr<Scene>& scene)
 {
     LoaderOptions lopts;
     lopts.FilePath            = path;
     lopts.Target              = mOptions.Target;
     lopts.IsTracer            = mOptions.IsTracer;
-    lopts.Scene               = std::move(scene);
+    lopts.Scene               = scene;
     lopts.ForceSpecialization = mOptions.ForceSpecialization;
     lopts.EnableTonemapping   = mOptions.EnableTonemapping;
     lopts.Denoiser            = mOptions.Denoiser;

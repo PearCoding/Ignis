@@ -32,9 +32,9 @@ public:
     /// @param dir Optional directory containing external files if not given as absolute files inside the scene description
     [[nodiscard]] bool loadFromString(const std::string& str, const std::filesystem::path& dir);
 
-    /// Load from an already present scene, consume it and initialize
-    /// @param scene Valid scene. The scene will be consumed!
-    [[nodiscard]] bool loadFromScene(Scene&& scene);
+    /// Load from an already present scene and initialize
+    /// @param scene Valid scene
+    [[nodiscard]] bool loadFromScene(const std::shared_ptr<Scene>& scene);
 
     /// Do a single iteration in non-tracing mode
     void step(bool ignoreDenoiser = false);
@@ -121,7 +121,7 @@ public:
 
 private:
     void checkCacheDirectory();
-    bool load(const std::filesystem::path& path, Scene&& scene);
+    bool load(const std::filesystem::path& path, const std::shared_ptr<Scene>& scene);
     bool setupScene();
     void shutdown();
     bool compileShaders();

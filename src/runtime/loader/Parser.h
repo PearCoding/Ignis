@@ -15,14 +15,14 @@ public:
     /// @param path Path to file containing scene description
     /// @param ok True if everything is fine
     /// @return Scene, only valid if ok equals true
-    Scene loadFromFile(const std::filesystem::path& path, bool& ok);
+    std::shared_ptr<Scene> loadFromFile(const std::filesystem::path& path, bool& ok);
 
     /// @brief Load from string, lookup directory can be set optionally, else external files depend on the current working directory
     /// @param str String containing scene description
     /// @param opt_dir Optional directory containing external files if not given as absolute files inside the scene description
     /// @param ok True if everything is fine
     /// @return Scene, only valid if ok equals true
-    Scene loadFromString(const std::string& str, const std::filesystem::path& opt_dir, bool& ok);
+    std::shared_ptr<Scene> loadFromString(const std::string& str, const std::filesystem::path& opt_dir, bool& ok);
 
     inline void addArgument(const std::string& key, const std::string& value)
     {

@@ -439,7 +439,7 @@ void ShadingTree::registerTextureUsage(const std::string& name)
 
 std::string ShadingTree::loadTexture(const std::string& tex_name)
 {
-    const auto tex = mContext.Options.Scene.texture(tex_name);
+    const auto tex = mContext.Options.Scene->texture(tex_name);
     if (!tex) {
         IG_LOG(L_ERROR) << "Unknown texture '" << tex_name << "'" << std::endl;
         return "let tex_" + getClosureID(tex_name) + " = make_invalid_texture();\n";

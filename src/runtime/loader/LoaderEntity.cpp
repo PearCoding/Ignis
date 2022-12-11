@@ -37,11 +37,11 @@ bool LoaderEntity::load(LoaderContext& ctx)
     const auto start1 = std::chrono::high_resolution_clock::now();
 
     auto& entityTable = ctx.Database.FixTables["entities"];
-    entityTable.reserve(ctx.Options.Scene.entities().size() * 36);
+    entityTable.reserve(ctx.Options.Scene->entities().size() * 36);
 
     // First group all entities to groups of unique materials
     std::vector<std::vector<std::pair<std::string, std::shared_ptr<SceneObject>>>> material_groups;
-    for (const auto& pair : ctx.Options.Scene.entities()) {
+    for (const auto& pair : ctx.Options.Scene->entities()) {
         const auto child = pair.second;
 
         // Query bsdf
@@ -49,7 +49,7 @@ bool LoaderEntity::load(LoaderContext& ctx)
         if (bsdfName.empty()) {
             IG_LOG(L_ERROR) << "Entity " << pair.first << " has no bsdf" << std::endl;
             continue;
-        } else if (!ctx.Options.Scene.bsdf(bsdfName)) {
+        } else if (!ctx.Options.Scene->bsdf(bsdfName)) {
             IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown bsdf " << bsdfName << std::endl;
             continue;
         }
@@ -59,12 +59,12 @@ bool LoaderEntity::load(LoaderContext& ctx)
         int mediumInner                   = -1;
 
         if (!mediumInnerName.empty()) {
-            if (!ctx.Options.Scene.medium(mediumInnerName)) {
+            if (!ctx.Options.Scene->medium(mediumInnerName)) {
                 IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown medium " << mediumInnerName << std::endl;
                 continue;
             } else {
-                const auto it = ctx.Options.Scene.media().find(mediumInnerName);
-                mediumInner   = (int)std::distance(ctx.Options.Scene.media().begin(), it);
+                const auto it = ctx.Options.Scene->media().find(mediumInnerName);
+                mediumInner   = (int)std::distance(ctx.Options.Scene->media().begin(), it);
             }
         }
 
@@ -72,12 +72,12 @@ bool LoaderEntity::load(LoaderContext& ctx)
         int mediumOuter                   = -1;
 
         if (!mediumOuterName.empty()) {
-            if (!ctx.Options.Scene.medium(mediumOuterName)) {
+            if (!ctx.Options.Scene->medium(mediumOuterName)) {
                 IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown medium " << mediumOuterName << std::endl;
                 continue;
             } else {
-                const auto it = ctx.Options.Scene.media().find(mediumOuterName);
-                mediumOuter   = (int)std::distance(ctx.Options.Scene.media().begin(), it);
+                const auto it = ctx.Options.Scene->media().find(mediumOuterName);
+                mediumOuter   = (int)std::distance(ctx.Options.Scene->media().begin(), it);
             }
         }
 

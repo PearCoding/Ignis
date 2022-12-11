@@ -898,7 +898,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
     }
 }
 
-Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
+std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 {
     std::filesystem::path directory = path.parent_path();
     std::filesystem::path cache_dir = directory / (std::string("_ignis_cache_") + path.stem().generic_u8string());
@@ -935,14 +935,14 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             IG_LOG(L_WARNING) << "glTF '" << path << "': Required extension '" << ext << "' is yet not supported." << std::endl;
     }
 
-    Scene scene;
-    loadTextures(scene, model, directory, cache_dir);
+    std::shared_ptr<Scene> scene = std::make_shared<Scene>();
+    loadTextures(*scene, model, directory, cache_dir);
 
     tinygltf::Material defaultMaterial;
     tinygltf::ParseMaterial(&defaultMaterial, nullptr, {}, false);
     model.materials.push_back(defaultMaterial);
 
-    loadMaterials(scene, model, directory);
+    loadMaterials(*scene, model, directory);
 
     size_t meshCount = 0;
     for (const auto& mesh : model.meshes) {
@@ -954,7 +954,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             exportMeshPrimitive(ply_path, model, prim);
             auto obj = std::make_shared<SceneObject>(SceneObject::OT_SHAPE, "ply", directory);
             obj->setProperty("filename", SceneProperty::fromString(std::filesystem::canonical(ply_path).generic_u8string()));
-            scene.addShape(name, obj);
+            scene->addShape(name, obj);
 
             ++primCount;
         }
@@ -963,7 +963,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
     const tinygltf::Scene& gltf_scene = model.scenes[model.defaultScene];
     for (int nodeId : gltf_scene.nodes)
-        addNode(scene, defaultMaterial, directory, model, model.nodes[nodeId], Transformf::Identity());
+        addNode(*scene, defaultMaterial, directory, model, model.nodes[nodeId], Transformf::Identity());
 
     return scene;
 }

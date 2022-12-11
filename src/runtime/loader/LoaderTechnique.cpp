@@ -107,7 +107,7 @@ void LoaderTechnique::setup(const LoaderContext& ctx)
     if (!entry)
         return;
 
-    auto technique = ctx.Options.Scene.technique();
+    auto technique = ctx.Options.Scene->technique();
     if (!technique)
         technique = std::make_shared<SceneObject>(SceneObject::OT_TECHNIQUE, "", ctx.Options.FilePath.parent_path()); // Create a default variant
 

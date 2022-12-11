@@ -45,7 +45,6 @@ def second_variant(scene_file):
 if __name__ == "__main__":
     ignis = load_api()
     ignis.setVerbose(True)
-    print(dir(ignis))
 
     first_variant(get_root_dir().joinpath("scenes", "diamond_scene.json"))
     second_variant(get_root_dir().joinpath("scenes", "sky_scene.json"))

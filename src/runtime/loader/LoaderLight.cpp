@@ -253,7 +253,7 @@ void LoaderLight::findEmissiveEntities(const LoaderContext& ctx)
 {
     // Before we create the actual light objects, we need the entity loader to know the actual emissive entity names
     // to prevent having all the entities in the memory just in case they are flagged 'emissive' later-on.
-    const auto& lights = ctx.Options.Scene.lights();
+    const auto& lights = ctx.Options.Scene->lights();
     for (auto pair : lights) {
         const auto light = pair.second;
 
@@ -278,7 +278,7 @@ void LoaderLight::setup(LoaderContext& ctx)
 
 void LoaderLight::loadLights(LoaderContext& ctx)
 {
-    const auto& lights = ctx.Options.Scene.lights();
+    const auto& lights = ctx.Options.Scene->lights();
     for (auto pair : lights) {
         const auto light = pair.second;
 
