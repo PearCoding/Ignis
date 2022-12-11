@@ -1,6 +1,8 @@
 #pragma once
 
 #include "SceneProperty.h"
+#include <memory>
+#include <unordered_map>
 
 namespace IG {
 class SceneObject {

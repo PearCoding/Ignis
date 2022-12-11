@@ -3,10 +3,8 @@
 #include "IG_Config.h"
 
 #include <functional>
-#include <memory>
 #include <string>
-#include <unordered_map>
-#include <vector>
+#include <variant>
 
 namespace IG {
 class SceneProperty {
@@ -49,11 +47,11 @@ public:
         if (mType == PT_NUMBER) {
             if (ok)
                 *ok = true;
-            return mNumber;
+            return std::get<Number>(mData);
         } else if (!exact && mType == PT_INTEGER) {
             if (ok)
                 *ok = true;
-            return static_cast<Number>(mInteger);
+            return static_cast<Number>(std::get<Integer>(mData));
         } else {
             if (ok)
                 *ok = false;
@@ -64,7 +62,7 @@ public:
     static inline SceneProperty fromNumber(Number v)
     {
         SceneProperty p(PT_NUMBER);
-        p.mNumber = v;
+        p.mData = v;
         return p;
     }
 
@@ -73,7 +71,7 @@ public:
         if (mType == PT_INTEGER) {
             if (ok)
                 *ok = true;
-            return mInteger;
+            return std::get<Integer>(mData);
         } else {
             if (ok)
                 *ok = false;
@@ -84,7 +82,7 @@ public:
     static inline SceneProperty fromInteger(Integer v)
     {
         SceneProperty p(PT_INTEGER);
-        p.mInteger = v;
+        p.mData = v;
         return p;
     }
 
@@ -93,7 +91,7 @@ public:
         if (mType == PT_BOOL) {
             if (ok)
                 *ok = true;
-            return mBool;
+            return std::get<bool>(mData);
         } else {
             if (ok)
                 *ok = false;
@@ -104,7 +102,7 @@ public:
     static inline SceneProperty fromBool(bool b)
     {
         SceneProperty p(PT_BOOL);
-        p.mBool = b;
+        p.mData = b;
         return p;
     }
 
@@ -113,7 +111,7 @@ public:
         if (mType == PT_VECTOR2) {
             if (ok)
                 *ok = true;
-            return mVector2;
+            return std::get<Vector2f>(mData);
         } else {
             if (ok)
                 *ok = false;
@@ -124,7 +122,7 @@ public:
     static inline SceneProperty fromVector2(const Vector2f& v)
     {
         SceneProperty p(PT_VECTOR2);
-        p.mVector2 = v;
+        p.mData = v;
         return p;
     }
 
@@ -133,7 +131,7 @@ public:
         if (mType == PT_VECTOR3) {
             if (ok)
                 *ok = true;
-            return mVector3;
+            return std::get<Vector3f>(mData);
         } else {
             if (ok)
                 *ok = false;
@@ -144,7 +142,7 @@ public:
     static inline SceneProperty fromVector3(const Vector3f& v)
     {
         SceneProperty p(PT_VECTOR3);
-        p.mVector3 = v;
+        p.mData = v;
         return p;
     }
 
@@ -153,7 +151,7 @@ public:
         if (mType == PT_TRANSFORM) {
             if (ok)
                 *ok = true;
-            return mTransform;
+            return std::get<Transformf>(mData);
         } else {
             if (ok)
                 *ok = false;
@@ -164,7 +162,7 @@ public:
     static inline SceneProperty fromTransform(const Transformf& v)
     {
         SceneProperty p(PT_TRANSFORM);
-        p.mTransform = v;
+        p.mData = v;
         return p;
     }
 
@@ -173,7 +171,7 @@ public:
         if (mType == PT_STRING) {
             if (ok)
                 *ok = true;
-            return mString;
+            return std::get<std::string>(mData);
         } else {
             if (ok)
                 *ok = false;
@@ -184,7 +182,7 @@ public:
     static inline SceneProperty fromString(const std::string& v)
     {
         SceneProperty p(PT_STRING);
-        p.mString = v;
+        p.mData = v;
         return p;
     }
 
@@ -197,7 +195,7 @@ public:
             if (ok)
                 *ok = false;
         }
-        return mIntegerArray;
+        return std::get<IntegerArray>(mData);
     }
 
     inline IntegerArray&& acquireIntegerArray(bool* ok = nullptr)
@@ -209,20 +207,20 @@ public:
             if (ok)
                 *ok = false;
         }
-        return std::move(mIntegerArray);
+        return std::move(std::get<IntegerArray>(std::move(mData)));
     }
 
     static inline SceneProperty fromIntegerArray(const IntegerArray& v)
     {
         SceneProperty p(PT_INTEGER_ARRAY);
-        p.mIntegerArray = v;
+        p.mData = v;
         return p;
     }
 
     static inline SceneProperty fromIntegerArray(IntegerArray&& v)
     {
         SceneProperty p(PT_INTEGER_ARRAY);
-        p.mIntegerArray = std::move(v);
+        p.mData = std::move(v);
         return p;
     }
 
@@ -235,7 +233,7 @@ public:
             if (ok)
                 *ok = false;
         }
-        return mNumberArray;
+        return std::get<NumberArray>(mData);
     }
 
     inline NumberArray&& acquireNumberArray(bool* ok = nullptr)
@@ -247,20 +245,20 @@ public:
             if (ok)
                 *ok = false;
         }
-        return std::move(mNumberArray);
+        return std::move(std::get<NumberArray>(std::move(mData)));
     }
 
     static inline SceneProperty fromNumberArray(const NumberArray& v)
     {
         SceneProperty p(PT_NUMBER_ARRAY);
-        p.mNumberArray = v;
+        p.mData = v;
         return p;
     }
 
     static inline SceneProperty fromNumberArray(NumberArray&& v)
     {
         SceneProperty p(PT_NUMBER_ARRAY);
-        p.mNumberArray = std::move(v);
+        p.mData = std::move(v);
         return p;
     }
 
@@ -272,18 +270,16 @@ private:
 
     Type mType;
 
-    // Data Types
-    union {
-        Number mNumber;
-        Integer mInteger;
-        bool mBool;
-    };
-    std::string mString;
-    Vector3f mVector3;
-    Vector2f mVector2;
-    Transformf mTransform;
-    IntegerArray mIntegerArray;
-    NumberArray mNumberArray;
+    std::variant<Number,
+                 Integer,
+                 bool,
+                 std::string,
+                 Vector3f,
+                 Vector2f,
+                 Transformf,
+                 IntegerArray,
+                 NumberArray>
+        mData;
 };
 
 } // namespace IG
