@@ -16,8 +16,10 @@ public:
 
     void handleReferenceEntity(const std::string& mediumInnerName, const std::string& entity_name, size_t id);
 
+    size_t acquire(const std::string& name);
 private:
     std::unordered_map<std::string, std::shared_ptr<Medium>> mMedia;
+    std::vector<std::string> mAcquiredMedia;
 
     void loadMedia(LoaderContext& ctx);
     void generateReferencePMS(ShadingTree& tree);

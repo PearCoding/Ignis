@@ -63,8 +63,7 @@ bool LoaderEntity::load(LoaderContext& ctx)
                 IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown medium " << mediumInnerName << std::endl;
                 continue;
             } else {
-                const auto it = ctx.Options.Scene->media().find(mediumInnerName);
-                mediumInner   = (int)std::distance(ctx.Options.Scene->media().begin(), it);
+                mediumInner = (int)ctx.Media->acquire(mediumInnerName);
             }
         }
 
@@ -76,8 +75,7 @@ bool LoaderEntity::load(LoaderContext& ctx)
                 IG_LOG(L_ERROR) << "Entity " << pair.first << " has unknown medium " << mediumOuterName << std::endl;
                 continue;
             } else {
-                const auto it = ctx.Options.Scene->media().find(mediumOuterName);
-                mediumOuter   = (int)std::distance(ctx.Options.Scene->media().begin(), it);
+                mediumOuter = (int)ctx.Media->acquire(mediumOuterName);
             }
         }
 

@@ -79,8 +79,8 @@ std::string LoaderMedium::generate(ShadingTree& tree)
     std::stringstream stream;
 
     size_t counter = 0;
-    for (auto pair : mMedia)
-        pair.second->serialize(Medium::SerializationInput{ counter++, stream, tree });
+    for (auto name : mAcquiredMedia)
+        mMedia.at(name)->serialize(Medium::SerializationInput{ counter++, stream, tree });
 
     if (counter != 0)
         stream << std::endl;
@@ -89,9 +89,8 @@ std::string LoaderMedium::generate(ShadingTree& tree)
            << "    match(id) {" << std::endl;
 
     counter = 0;
-    for (const auto& pair : mMedia) {
-        const auto medium          = pair.second;
-        const std::string media_id = tree.getClosureID(medium->name());
+    for (const auto& name : mAcquiredMedia) {
+        const std::string media_id = tree.getClosureID(name);
         stream << "      " << counter << " => medium_" << media_id
                << "," << std::endl;
         ++counter;
@@ -103,5 +102,14 @@ std::string LoaderMedium::generate(ShadingTree& tree)
            << "  };" << std::endl;
 
     return stream.str();
+}
+
+size_t LoaderMedium::acquire(const std::string& name)
+{
+    if (auto it = std::find(mAcquiredMedia.begin(), mAcquiredMedia.end(), name); it != mAcquiredMedia.end())
+        return std::distance(mAcquiredMedia.begin(), it);
+
+    mAcquiredMedia.push_back(name);
+    return mAcquiredMedia.size() - 1;
 }
 } // namespace IG

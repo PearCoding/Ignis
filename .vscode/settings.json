@@ -1,11 +1,11 @@
 {
     "files.associations": {
-        "*.h": "cpp",
         "*.prc": "lisp",
         "*.artpp": "rust",
         "*.nvvm": "llvm",
         "*.llvm": "llvm",
         "*.art": "rust",
+        "*.h": "cpp",
         "*.impala": "rust",
         "cctype": "cpp",
         "clocale": "cpp",
@@ -164,7 +164,9 @@
         "bvh": "cpp",
         "mprealsupport": "cpp",
         "matrixfunctions": "cpp",
-        "*.rh": "cpp"
+        "*.rh": "cpp",
+        "hash_map": "cpp",
+        "hash_set": "cpp"
     },
     "cmake.configureOnOpen": false,
     "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
