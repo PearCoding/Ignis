@@ -89,7 +89,7 @@ bool LoaderShape::load(LoaderContext& ctx)
     // we do have to construct a map
     std::vector<std::string> names(ctx.Options.Scene.shapes().size());
     std::transform(ctx.Options.Scene.shapes().begin(), ctx.Options.Scene.shapes().end(), names.begin(),
-                   [](const std::pair<std::string, std::shared_ptr<Parser::Object>>& pair) {
+                   [](const std::pair<std::string, std::shared_ptr<SceneObject>>& pair) {
                        return pair.first;
                    });
 

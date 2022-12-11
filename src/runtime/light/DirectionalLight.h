@@ -5,7 +5,7 @@
 namespace IG {
 class DirectionalLight : public Light {
 public:
-    DirectionalLight(const std::string& name, const std::shared_ptr<Parser::Object>& light);
+    DirectionalLight(const std::string& name, const std::shared_ptr<SceneObject>& light);
 
     virtual bool isInfinite() const override { return true; }
     virtual bool isDelta() const override { return true; }
@@ -17,6 +17,6 @@ public:
 private:
     Vector3f mDirection;
 
-    std::shared_ptr<Parser::Object> mLight;
+    std::shared_ptr<SceneObject> mLight;
 };
 } // namespace IG

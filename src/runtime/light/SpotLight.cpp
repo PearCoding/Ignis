@@ -5,7 +5,7 @@
 #include "serialization/VectorSerializer.h"
 
 namespace IG {
-SpotLight::SpotLight(const std::string& name, const std::shared_ptr<Parser::Object>& light)
+SpotLight::SpotLight(const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mLight(light)
 {
@@ -48,8 +48,8 @@ std::optional<std::string> SpotLight::getEmbedClass() const
     const auto cutoff    = mLight->property("cutoff");
     const auto falloff   = mLight->property("falloff");
 
-    const bool simple = (!position.isValid() || position.type() == Parser::PT_VECTOR3)
-                        && (!intensity.isValid() || intensity.canBeNumber() || intensity.type() == Parser::PT_VECTOR3)
+    const bool simple = (!position.isValid() || position.type() == SceneProperty::PT_VECTOR3)
+                        && (!intensity.isValid() || intensity.canBeNumber() || intensity.type() == SceneProperty::PT_VECTOR3)
                         && (!cutoff.isValid() || cutoff.canBeNumber())
                         && (!falloff.isValid() || falloff.canBeNumber());
 

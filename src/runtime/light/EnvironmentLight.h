@@ -5,7 +5,7 @@
 namespace IG {
 class EnvironmentLight : public Light {
 public:
-    EnvironmentLight(const std::string& name, const std::shared_ptr<Parser::Object>& light);
+    EnvironmentLight(const std::string& name, const std::shared_ptr<SceneObject>& light);
 
     virtual bool isInfinite() const override { return true; }
     
@@ -16,6 +16,6 @@ private:
     bool mUseCDF;
     bool mUseCompensation;
 
-    std::shared_ptr<Parser::Object> mLight;
+    std::shared_ptr<SceneObject> mLight;
 };
 } // namespace IG

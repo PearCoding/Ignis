@@ -4,7 +4,7 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-SunLight::SunLight(const std::string& name, const std::shared_ptr<Parser::Object>& light)
+SunLight::SunLight(const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mLight(light)
 {

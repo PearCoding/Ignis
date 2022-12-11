@@ -4,8 +4,6 @@
 #include <sstream>
 
 namespace IG {
-using namespace Parser;
-
 std::string BakeShader::begin(const LoaderContext& ctx)
 {
     std::stringstream stream;

@@ -5,8 +5,6 @@
 #include <sstream>
 
 namespace IG {
-using namespace Parser;
-
 std::string UtilityShader::setupTonemap(const LoaderContext& ctx)
 {
     std::stringstream stream;

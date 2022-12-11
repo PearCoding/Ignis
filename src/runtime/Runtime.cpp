@@ -144,7 +144,7 @@ bool Runtime::loadFromFile(const std::filesystem::path& path)
     IG_LOG(L_DEBUG) << "Parsing scene file" << std::endl;
     try {
         const auto startParser = std::chrono::high_resolution_clock::now();
-        Parser::SceneParser parser;
+        SceneParser parser;
         bool ok    = false;
         auto scene = parser.loadFromFile(path, ok);
         IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
@@ -167,7 +167,7 @@ bool Runtime::loadFromString(const std::string& str, const std::filesystem::path
     try {
         IG_LOG(L_DEBUG) << "Parsing scene string" << std::endl;
         const auto startParser = std::chrono::high_resolution_clock::now();
-        Parser::SceneParser parser;
+        SceneParser parser;
         bool ok    = false;
         auto scene = parser.loadFromString(str, dir, ok);
         IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
@@ -184,7 +184,20 @@ bool Runtime::loadFromString(const std::string& str, const std::filesystem::path
     }
 }
 
-bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
+bool Runtime::loadFromScene(Scene&& scene)
+{
+    try {
+        if (mOptions.AddExtraEnvLight)
+            scene.addConstantEnvLight();
+
+        return load({}, std::move(scene));
+    } catch (const std::runtime_error& err) {
+        IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
+        return false;
+    }
+}
+
+bool Runtime::load(const std::filesystem::path& path, Scene&& scene)
 {
     LoaderOptions lopts;
     lopts.FilePath            = path;

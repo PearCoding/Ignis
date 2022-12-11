@@ -1,19 +1,16 @@
 #pragma once
 
-#include "SceneObject.h"
+#include "SceneObjectProxy.h"
 
 namespace IG {
 class ShadingTree;
 class VectorSerializer;
+class SceneObject;
 
-namespace Parser {
-class Object;
-}
-
-class Light : public SceneObject {
+class Light : public SceneObjectProxy {
 public:
     inline Light(const std::string& name, const std::string& type)
-        : SceneObject(name, type)
+        : SceneObjectProxy(name, type)
         , mID(0)
     {
     }

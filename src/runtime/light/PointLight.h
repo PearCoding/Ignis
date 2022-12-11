@@ -5,7 +5,7 @@
 namespace IG {
 class PointLight : public Light {
 public:
-    PointLight(const std::string& name, const std::shared_ptr<Parser::Object>& light);
+    PointLight(const std::string& name, const std::shared_ptr<SceneObject>& light);
 
     virtual bool isDelta() const override { return true; }
     virtual std::optional<Vector3f> position() const override { return mPosition; }
@@ -19,6 +19,6 @@ public:
 private:
     Vector3f mPosition;
 
-    std::shared_ptr<Parser::Object> mLight;
+    std::shared_ptr<SceneObject> mLight;
 };
 } // namespace IG

@@ -3,7 +3,7 @@
 #include "loader/Parser.h"
 
 namespace IG {
-DebugTechnique::DebugTechnique(const Parser::Object& obj)
+DebugTechnique::DebugTechnique(const SceneObject& obj)
     : Technique("debug")
     , mInitialDebugMode(DebugMode::Normal)
 {

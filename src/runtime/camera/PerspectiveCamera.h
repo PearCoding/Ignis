@@ -5,7 +5,7 @@
 namespace IG {
 class PerspectiveCamera : public Camera {
 public:
-    PerspectiveCamera(const Parser::Object& obj);
+    PerspectiveCamera(const SceneObject& obj);
     ~PerspectiveCamera() = default;
 
     void serialize(const SerializationInput& input) const override;

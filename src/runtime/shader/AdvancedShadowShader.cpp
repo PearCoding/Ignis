@@ -13,8 +13,6 @@
 #include <sstream>
 
 namespace IG {
-using namespace Parser;
-
 std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContext& ctx)
 {
     std::stringstream stream;

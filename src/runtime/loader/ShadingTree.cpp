@@ -72,7 +72,7 @@ static inline ShadingTree::ColorOptions mapToColorOptions(const ShadingTree::Tex
     };
 }
 
-float ShadingTree::computeNumber(const std::string& name, const Parser::Object& obj, float def) const
+float ShadingTree::computeNumber(const std::string& name, const SceneObject& obj, float def) const
 {
     const auto prop = obj.property(name);
 
@@ -81,19 +81,19 @@ float ShadingTree::computeNumber(const std::string& name, const Parser::Object& 
     default:
         IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
         [[fallthrough]];
-    case Parser::PT_NONE:
+    case SceneProperty::PT_NONE:
         return def;
-    case Parser::PT_INTEGER:
-    case Parser::PT_NUMBER:
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
         return prop.getNumber();
-    case Parser::PT_VECTOR3:
+    case SceneProperty::PT_VECTOR3:
         return prop.getVector3().mean();
-    case Parser::PT_STRING:
+    case SceneProperty::PT_STRING:
         return approxTexture(name, prop.getString(), Vector3f::Constant(def)).mean();
     }
 }
 
-Vector3f ShadingTree::computeColor(const std::string& name, const Parser::Object& obj, const Vector3f& def) const
+Vector3f ShadingTree::computeColor(const std::string& name, const SceneObject& obj, const Vector3f& def) const
 {
     const auto prop = obj.property(name);
 
@@ -102,37 +102,37 @@ Vector3f ShadingTree::computeColor(const std::string& name, const Parser::Object
     default:
         IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
         [[fallthrough]];
-    case Parser::PT_NONE:
+    case SceneProperty::PT_NONE:
         return def;
-    case Parser::PT_INTEGER:
-    case Parser::PT_NUMBER:
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
         return Vector3f::Constant(prop.getNumber());
-    case Parser::PT_VECTOR3:
+    case SceneProperty::PT_VECTOR3:
         return prop.getVector3();
-    case Parser::PT_STRING:
+    case SceneProperty::PT_STRING:
         return approxTexture(name, prop.getString(), def);
     }
 }
 
-std::string ShadingTree::handlePropertyNumber(const std::string& name, const Parser::Property& prop, const NumberOptions& options)
+std::string ShadingTree::handlePropertyNumber(const std::string& name, const SceneProperty& prop, const NumberOptions& options)
 {
     switch (prop.type()) {
     default:
-    case Parser::PT_NONE:
+    case SceneProperty::PT_NONE:
         IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
         return {};
-    case Parser::PT_INTEGER:
-    case Parser::PT_NUMBER:
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
         return acquireNumber(name, prop.getNumber(), options);
-    case Parser::PT_VECTOR3:
+    case SceneProperty::PT_VECTOR3:
         IG_LOG(L_WARNING) << "Parameter '" << name << "' expects a number but a color was given. Using average instead" << std::endl;
         return "color_average(" + acquireColor(name, prop.getVector3(), mapToColorOptions(options)) + ")";
-    case Parser::PT_STRING:
+    case SceneProperty::PT_STRING:
         return handleTexture(name, prop.getString(), false); // TODO: Map options
     }
 }
 
-void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, float def, bool hasDef, const NumberOptions& options)
+void ShadingTree::addNumber(const std::string& name, const SceneObject& obj, float def, bool hasDef, const NumberOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -142,7 +142,7 @@ void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, 
     const auto prop = obj.property(name);
 
     std::string inline_str;
-    if (prop.type() == Parser::PT_NONE) {
+    if (prop.type() == SceneProperty::PT_NONE) {
         if (!hasDef)
             return;
         inline_str = acquireNumber(name, def, options);
@@ -153,7 +153,7 @@ void ShadingTree::addNumber(const std::string& name, const Parser::Object& obj, 
     currentClosure().Parameters[name] = inline_str;
 }
 
-void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, const ColorOptions& options)
+void ShadingTree::addColor(const std::string& name, const SceneObject& obj, const Vector3f& def, bool hasDef, const ColorOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -167,19 +167,19 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
     default:
         IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
         [[fallthrough]];
-    case Parser::PT_NONE:
+    case SceneProperty::PT_NONE:
         if (!hasDef)
             return;
         inline_str = acquireColor(name, def, options);
         break;
-    case Parser::PT_INTEGER:
-    case Parser::PT_NUMBER:
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
         inline_str = "make_gray_color(" + acquireNumber(name, prop.getNumber(), mapToNumberOptions(options)) + ")";
         break;
-    case Parser::PT_VECTOR3:
+    case SceneProperty::PT_VECTOR3:
         inline_str = acquireColor(name, prop.getVector3(), options);
         break;
-    case Parser::PT_STRING:
+    case SceneProperty::PT_STRING:
         inline_str = handleTexture(name, prop.getString(), true); // TODO: Map options
         break;
     }
@@ -187,7 +187,7 @@ void ShadingTree::addColor(const std::string& name, const Parser::Object& obj, c
     currentClosure().Parameters[name] = inline_str;
 }
 
-void ShadingTree::addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, const VectorOptions& options)
+void ShadingTree::addVector(const std::string& name, const SceneObject& obj, const Vector3f& def, bool hasDef, const VectorOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -201,19 +201,19 @@ void ShadingTree::addVector(const std::string& name, const Parser::Object& obj, 
     default:
         IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
         [[fallthrough]];
-    case Parser::PT_NONE:
+    case SceneProperty::PT_NONE:
         if (!hasDef)
             return;
         inline_str = acquireVector(name, def, options);
         break;
-    case Parser::PT_INTEGER:
-    case Parser::PT_NUMBER:
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
         inline_str = "vec3_expand(" + acquireNumber(name, prop.getNumber(), mapToNumberOptions(options)) + ")";
         break;
-    case Parser::PT_VECTOR3:
+    case SceneProperty::PT_VECTOR3:
         inline_str = acquireVector(name, prop.getVector3(), options);
         break;
-    case Parser::PT_STRING:
+    case SceneProperty::PT_STRING:
         inline_str = "color_to_vec3(" + handleTexture(name, prop.getString(), true) + ")"; // TODO: Map options
         break;
     }
@@ -222,7 +222,7 @@ void ShadingTree::addVector(const std::string& name, const Parser::Object& obj, 
 }
 
 // Only use this if no basic color information suffices
-void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj, bool hasDef, const TextureOptions& options)
+void ShadingTree::addTexture(const std::string& name, const SceneObject& obj, bool hasDef, const TextureOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -236,19 +236,19 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
     default:
         IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
         [[fallthrough]];
-    case Parser::PT_NONE:
+    case SceneProperty::PT_NONE:
         if (!hasDef)
             return;
         inline_str = "make_black_texture()";
         break;
-    case Parser::PT_INTEGER:
-    case Parser::PT_NUMBER:
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
         inline_str = "make_constant_texture(make_gray_color(" + acquireNumber(name, prop.getNumber(), mapToNumberOptions(options)) + "))";
         break;
-    case Parser::PT_VECTOR3:;
+    case SceneProperty::PT_VECTOR3:;
         inline_str = "make_constant_texture(" + acquireColor(name, prop.getVector3(), mapToColorOptions(options)) + ")";
         break;
-    case Parser::PT_STRING: {
+    case SceneProperty::PT_STRING: {
         std::string tex_func = handleTexture(name, prop.getString(), true);
         inline_str           = "@|ctx:ShadingContext|->Color{maybe_unused(ctx); " + tex_func + "}";
     } break;
@@ -257,7 +257,7 @@ void ShadingTree::addTexture(const std::string& name, const Parser::Object& obj,
     currentClosure().Parameters[name] = inline_str;
 }
 
-ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name, const Parser::Object& obj, const Vector3f& def, bool hasDef, const TextureBakeOptions& options)
+ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name, const SceneObject& obj, const Vector3f& def, bool hasDef, const TextureBakeOptions& options)
 {
     // options only affect bake process with PExpr expressions
 
@@ -268,18 +268,18 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name,
     default:
         IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
         [[fallthrough]];
-    case Parser::PT_NONE:
+    case SceneProperty::PT_NONE:
         if (!hasDef)
             return {};
         return std::make_shared<Image>(Image::createSolidImage(Vector4f(def.x(), def.y(), def.z(), 1)));
-    case Parser::PT_INTEGER:
-    case Parser::PT_NUMBER:
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
         return std::make_shared<Image>(Image::createSolidImage(Vector4f(prop.getNumber(), prop.getNumber(), prop.getNumber(), 1)));
-    case Parser::PT_VECTOR3: {
+    case SceneProperty::PT_VECTOR3: {
         const Vector3f c = prop.getVector3();
         return std::make_shared<Image>(Image::createSolidImage(Vector4f(c.x(), c.y(), c.z(), 1)));
     }
-    case Parser::PT_STRING: {
+    case SceneProperty::PT_STRING: {
         IG_LOG(L_DEBUG) << "Baking property '" << name << "'" << std::endl;
         LoaderContext ctx = copyContextForBake();
         return ShadingTree(ctx).bakeTextureExpression(name, prop.getString(), options);

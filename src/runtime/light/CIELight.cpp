@@ -6,7 +6,7 @@
 #include "skysun/SunLocation.h"
 
 namespace IG {
-CIELight::CIELight(CIEType classification, const std::string& name, const std::shared_ptr<Parser::Object>& light)
+CIELight::CIELight(CIEType classification, const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mClassification(classification)
     , mLight(light)

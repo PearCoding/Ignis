@@ -4,7 +4,7 @@
 #include "loader/Parser.h"
 
 namespace IG {
-PerspectiveCamera::PerspectiveCamera(const Parser::Object& camera)
+PerspectiveCamera::PerspectiveCamera(const SceneObject& camera)
     : Camera("perspective")
 {
     if (camera.property("transform").isValid())

@@ -31,9 +31,9 @@ const static float DefaultDielectricInterior = Dielectrics.at("bk7");
 const static float DefaultDielectricExterior = Dielectrics.at("vacuum");
 const static float DefaultPlastic            = Dielectrics.at("polypropylene");
 
-std::optional<float> lookupDielectric(const std::string& prop, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf)
+std::optional<float> lookupDielectric(const std::string& prop, const std::string& name, const std::shared_ptr<SceneObject>& bsdf)
 {
-    if (bsdf->property(prop).type() == Parser::PT_STRING) {
+    if (bsdf->property(prop).type() == SceneProperty::PT_STRING) {
         const std::string material = to_lowercase(bsdf->property(prop).getString());
         if (Dielectrics.count(material) > 0)
             return Dielectrics.at(material);
@@ -64,9 +64,9 @@ const static std::unordered_map<std::string_view, ConductorSpec> Conductors = {
 };
 const static auto& DefaultConductor = Conductors.at("none");
 
-std::optional<ConductorSpec> lookupConductor(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf)
+std::optional<ConductorSpec> lookupConductor(const std::string& name, const std::shared_ptr<SceneObject>& bsdf)
 {
-    if (bsdf->property("material").type() == Parser::PT_STRING) {
+    if (bsdf->property("material").type() == SceneProperty::PT_STRING) {
         const std::string material = to_lowercase(bsdf->property("material").getString());
         if (Conductors.count(material) > 0)
             return Conductors.at(material);
@@ -76,7 +76,7 @@ std::optional<ConductorSpec> lookupConductor(const std::string& name, const std:
     return {};
 }
 
-static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void setup_microfacet(const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     const bool useOldName   = bsdf->property("alpha").isValid() || bsdf->property("alpha_u").isValid() || bsdf->property("alpha_v").isValid();
     const std::string param = useOldName ? "alpha" : "roughness";
@@ -86,13 +86,13 @@ static void setup_microfacet(const std::shared_ptr<Parser::Object>& bsdf, Shadin
     tree.addNumber(param, *bsdf, 0.1f, true, ShadingTree::NumberOptions::Zero());
 }
 
-static std::string inline_microfacet(const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static std::string inline_microfacet(const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     const bool useOldName   = bsdf->property("alpha").isValid() || bsdf->property("alpha_u").isValid() || bsdf->property("alpha_v").isValid();
     const std::string param = useOldName ? "alpha" : "roughness";
 
     std::string distribution = "microfacet::make_vndf_ggx_distribution(ctx.surf.face_normal, ";
-    if (bsdf->property("distribution").type() == Parser::PT_STRING) {
+    if (bsdf->property("distribution").type() == SceneProperty::PT_STRING) {
         std::string type = bsdf->property("distribution").getString();
         if (type == "ggx") {
             distribution = "microfacet::make_ggx_distribution(";
@@ -115,7 +115,7 @@ static std::string inline_microfacet(const std::shared_ptr<Parser::Object>& bsdf
     return stream.str();
 }
 
-static void bsdf_diffuse(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_diffuse(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     tree.addColor("reflectance", *bsdf, Vector3f::Constant(0.5f));
@@ -128,7 +128,7 @@ static void bsdf_diffuse(std::ostream& stream, const std::string& name, const st
     tree.endClosure();
 }
 
-static void bsdf_orennayar(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_orennayar(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     const std::string roughnessName = bsdf->property("alpha").isValid() ? "alpha" : "roughness";
 
@@ -145,7 +145,7 @@ static void bsdf_orennayar(std::ostream& stream, const std::string& name, const 
     tree.endClosure();
 }
 
-static void bsdf_dielectric(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_dielectric(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
@@ -170,7 +170,7 @@ static void bsdf_dielectric(std::ostream& stream, const std::string& name, const
     tree.endClosure();
 }
 
-static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
@@ -196,7 +196,7 @@ static void bsdf_rough_dielectric(std::ostream& stream, const std::string& name,
     tree.endClosure();
 }
 
-static void bsdf_mirror(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_mirror(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
@@ -209,7 +209,7 @@ static void bsdf_mirror(std::ostream& stream, const std::string& name, const std
     tree.endClosure();
 }
 
-static void bsdf_conductor(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_conductor(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
 
     tree.beginClosure(name);
@@ -229,7 +229,7 @@ static void bsdf_conductor(std::ostream& stream, const std::string& name, const 
     tree.endClosure();
 }
 
-static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
@@ -252,7 +252,7 @@ static void bsdf_rough_conductor(std::ostream& stream, const std::string& name, 
     tree.endClosure();
 }
 
-static void bsdf_plastic(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_plastic(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
@@ -274,7 +274,7 @@ static void bsdf_plastic(std::ostream& stream, const std::string& name, const st
     tree.endClosure();
 }
 
-static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
@@ -301,7 +301,7 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
     tree.endClosure();
 }
 
-static void bsdf_phong(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_phong(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
@@ -316,7 +316,7 @@ static void bsdf_phong(std::ostream& stream, const std::string& name, const std:
     tree.endClosure();
 }
 
-static void bsdf_principled(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_principled(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     tree.addColor("base_color", *bsdf, Vector3f::Constant(0.8f));
@@ -362,7 +362,7 @@ static void bsdf_principled(std::ostream& stream, const std::string& name, const
     tree.endClosure();
 }
 
-static void bsdf_djmeasured(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_djmeasured(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     // full file path to measured BRDF is given
     std::string full_path = bsdf->property("filename").getString();
@@ -406,7 +406,7 @@ static void bsdf_djmeasured(std::ostream& stream, const std::string& name, const
 }
 
 using KlemsExportedData = std::pair<std::string, KlemsSpecification>;
-static KlemsExportedData setup_klems(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx)
+static KlemsExportedData setup_klems(const std::string& name, const std::shared_ptr<SceneObject>& bsdf, LoaderContext& ctx)
 {
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
 
@@ -450,7 +450,7 @@ static inline std::string dump_klems_specification(const KlemsSpecification& spe
     return stream.str();
 }
 
-static void bsdf_klems(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_klems(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     tree.addColor("base_color", *bsdf, Vector3f::Ones());
@@ -476,7 +476,7 @@ static void bsdf_klems(std::ostream& stream, const std::string& name, const std:
 }
 
 using TTExportedData = std::pair<std::string, TensorTreeSpecification>;
-static TTExportedData setup_tensortree(const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, LoaderContext& ctx)
+static TTExportedData setup_tensortree(const std::string& name, const std::shared_ptr<SceneObject>& bsdf, LoaderContext& ctx)
 {
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
 
@@ -522,7 +522,7 @@ static inline std::string dump_tt_specification(const TensorTreeSpecification& s
     return stream.str();
 }
 
-static void bsdf_tensortree(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_tensortree(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     tree.addColor("base_color", *bsdf, Vector3f::Ones());
@@ -547,7 +547,7 @@ static void bsdf_tensortree(std::ostream& stream, const std::string& name, const
     tree.endClosure();
 }
 
-static void bsdf_twosided(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_twosided(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     // Ignore
     tree.beginClosure(name);
@@ -558,7 +558,7 @@ static void bsdf_twosided(std::ostream& stream, const std::string& name, const s
     tree.endClosure();
 }
 
-static void bsdf_passthrough(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>&, ShadingTree& tree)
+static void bsdf_passthrough(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>&, ShadingTree& tree)
 {
     tree.beginClosure(name);
     const std::string bsdf_id = tree.currentClosureID();
@@ -566,7 +566,7 @@ static void bsdf_passthrough(std::ostream& stream, const std::string& name, cons
     tree.endClosure();
 }
 
-static void bsdf_add(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_add(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     const std::string first  = bsdf->property("first").getString();
@@ -592,7 +592,7 @@ static void bsdf_add(std::ostream& stream, const std::string& name, const std::s
     tree.endClosure();
 }
 
-static void bsdf_blend(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_blend(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     const std::string first  = bsdf->property("first").getString();
@@ -621,7 +621,7 @@ static void bsdf_blend(std::ostream& stream, const std::string& name, const std:
     tree.endClosure();
 }
 
-static void bsdf_mask(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_mask(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     const std::string masked = bsdf->property("bsdf").getString();
@@ -654,7 +654,7 @@ static void bsdf_mask(std::ostream& stream, const std::string& name, const std::
     tree.endClosure();
 }
 
-static void bsdf_cutoff(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_cutoff(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     const std::string masked = bsdf->property("bsdf").getString();
@@ -689,7 +689,7 @@ static void bsdf_cutoff(std::ostream& stream, const std::string& name, const std
     tree.endClosure();
 }
 
-static void bsdf_normalmap(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_normalmap(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     const std::string inner = bsdf->property("bsdf").getString();
@@ -713,7 +713,7 @@ static void bsdf_normalmap(std::ostream& stream, const std::string& name, const 
     tree.endClosure();
 }
 
-static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     const std::string inner = bsdf->property("bsdf").getString();
@@ -738,7 +738,7 @@ static void bsdf_bumpmap(std::ostream& stream, const std::string& name, const st
     tree.endClosure();
 }
 
-static void bsdf_transform(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_transform(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     const std::string inner = bsdf->property("bsdf").getString();
@@ -769,7 +769,7 @@ static void bsdf_transform(std::ostream& stream, const std::string& name, const 
     tree.endClosure();
 }
 
-static void bsdf_doublesided(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& bsdf, ShadingTree& tree)
+static void bsdf_doublesided(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
     const std::string inner = bsdf->property("bsdf").getString();
@@ -789,7 +789,7 @@ static void bsdf_doublesided(std::ostream& stream, const std::string& name, cons
     tree.endClosure();
 }
 
-using BSDFLoader = void (*)(std::ostream& stream, const std::string& name, const std::shared_ptr<Parser::Object>& light, ShadingTree& tree);
+using BSDFLoader = void (*)(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& light, ShadingTree& tree);
 static const struct {
     const char* Name;
     BSDFLoader Loader;

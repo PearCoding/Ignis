@@ -6,7 +6,7 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-EnvironmentLight::EnvironmentLight(const std::string& name, const std::shared_ptr<Parser::Object>& light)
+EnvironmentLight::EnvironmentLight(const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mLight(light)
 {

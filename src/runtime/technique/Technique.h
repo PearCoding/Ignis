@@ -3,9 +3,7 @@
 #include "TechniqueInfo.h"
 
 namespace IG {
-namespace Parser {
-class Object;
-}
+class SceneObject;
 
 constexpr int32 DefaultMaxRayDepth = 64;
 class Technique {

@@ -10,8 +10,6 @@
 #include <sstream>
 
 namespace IG {
-using namespace Parser;
-
 std::string TraversalShader::begin(const LoaderContext& ctx)
 {
     std::stringstream stream;

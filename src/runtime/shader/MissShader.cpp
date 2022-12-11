@@ -12,8 +12,6 @@
 #include <sstream>
 
 namespace IG {
-using namespace Parser;
-
 std::string MissShader::setup(LoaderContext& ctx)
 {
     std::stringstream stream;

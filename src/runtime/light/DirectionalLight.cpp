@@ -4,7 +4,7 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-DirectionalLight::DirectionalLight(const std::string& name, const std::shared_ptr<Parser::Object>& light)
+DirectionalLight::DirectionalLight(const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mLight(light)
 {

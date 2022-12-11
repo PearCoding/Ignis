@@ -22,37 +22,37 @@
 #include <chrono>
 
 namespace IG {
-static std::shared_ptr<Light> light_point(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_point(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<PointLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_area(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext& ctx)
+static std::shared_ptr<Light> light_area(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext& ctx)
 {
     return std::make_shared<AreaLight>(name, ctx, light);
 }
 
-static std::shared_ptr<Light> light_directional(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_directional(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<DirectionalLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_spot(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_spot(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<SpotLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_sun(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_sun(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<SunLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_sky(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<SkyLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_cie_env(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_cie_env(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     if (light->pluginType() == "cie_cloudy" || light->pluginType() == "ciecloudy")
         return std::make_shared<CIELight>(CIEType::Cloudy, name, light);
@@ -64,17 +64,17 @@ static std::shared_ptr<Light> light_cie_env(const std::string& name, const std::
         return std::make_shared<CIELight>(CIEType::Uniform, name, light);
 }
 
-static std::shared_ptr<Light> light_perez(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_perez(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<PerezLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_env(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_env(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<EnvironmentLight>(name, light);
 }
 
-using LightLoader = std::shared_ptr<Light> (*)(const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&);
+using LightLoader = std::shared_ptr<Light> (*)(const std::string&, const std::shared_ptr<SceneObject>&, LoaderContext&);
 static const struct {
     const char* Name;
     LightLoader Loader;

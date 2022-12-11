@@ -3,7 +3,7 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-HomogeneousMedium::HomogeneousMedium(const std::string& name, const std::shared_ptr<Parser::Object>& medium)
+HomogeneousMedium::HomogeneousMedium(const std::string& name, const std::shared_ptr<SceneObject>& medium)
     : Medium(name, "homogeneous")
     , mMedium(medium)
 {

@@ -4,7 +4,7 @@
 #include "loader/Parser.h"
 
 namespace IG {
-OrthogonalCamera::OrthogonalCamera(const Parser::Object& camera)
+OrthogonalCamera::OrthogonalCamera(const SceneObject& camera)
     : Camera("orthogonal")
 {
     mTransform = camera.property("transform").getTransform();

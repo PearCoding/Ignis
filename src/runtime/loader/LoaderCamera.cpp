@@ -10,21 +10,21 @@
 
 namespace IG {
 
-static std::shared_ptr<Camera> camera_perspective(const std::shared_ptr<Parser::Object>& camera)
+static std::shared_ptr<Camera> camera_perspective(const std::shared_ptr<SceneObject>& camera)
 {
     return std::make_shared<PerspectiveCamera>(*camera);
 }
-static std::shared_ptr<Camera> camera_orthogonal(const std::shared_ptr<Parser::Object>& camera)
+static std::shared_ptr<Camera> camera_orthogonal(const std::shared_ptr<SceneObject>& camera)
 {
     return std::make_shared<OrthogonalCamera>(*camera);
 }
 
-static std::shared_ptr<Camera> camera_fishlens(const std::shared_ptr<Parser::Object>& camera)
+static std::shared_ptr<Camera> camera_fishlens(const std::shared_ptr<SceneObject>& camera)
 {
     return std::make_shared<FishLensCamera>(*camera);
 }
 
-using CameraConstructor = std::shared_ptr<Camera> (*)(const std::shared_ptr<Parser::Object>&);
+using CameraConstructor = std::shared_ptr<Camera> (*)(const std::shared_ptr<SceneObject>&);
 static const struct CameraEntry {
     const char* Name;
     CameraConstructor Constructor;
@@ -60,7 +60,7 @@ void LoaderCamera::setup(const LoaderContext& ctx)
 
     auto camera = ctx.Options.Scene.camera();
     if (!camera)
-        camera = std::make_shared<Parser::Object>(Parser::OT_CAMERA, "", ctx.Options.FilePath.parent_path()); // Create a default variant
+        camera = std::make_shared<SceneObject>(SceneObject::OT_CAMERA, "", ctx.Options.FilePath.parent_path()); // Create a default variant
 
     mCamera = entry->Constructor(camera);
 

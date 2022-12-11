@@ -5,7 +5,7 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-LightVisibilityTechnique::LightVisibilityTechnique(const Parser::Object& obj)
+LightVisibilityTechnique::LightVisibilityTechnique(const SceneObject& obj)
     : Technique("lightvisibility")
 {
     mMaxDepth           = obj.property("max_depth").getInteger(DefaultMaxRayDepth);

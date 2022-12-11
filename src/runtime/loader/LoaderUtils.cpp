@@ -116,7 +116,7 @@ std::string LoaderUtils::inlineColor(const Vector3f& color)
     return stream.str();
 }
 
-TimePoint LoaderUtils::getTimePoint(const Parser::Object& obj)
+TimePoint LoaderUtils::getTimePoint(const SceneObject& obj)
 {
     TimePoint timepoint;
     timepoint.Year    = obj.property("year").getInteger(timepoint.Year);
@@ -128,7 +128,7 @@ TimePoint LoaderUtils::getTimePoint(const Parser::Object& obj)
     return timepoint;
 }
 
-MapLocation LoaderUtils::getLocation(const Parser::Object& obj)
+MapLocation LoaderUtils::getLocation(const SceneObject& obj)
 {
     MapLocation location;
     location.Latitude  = obj.property("latitude").getNumber(location.Latitude);
@@ -137,7 +137,7 @@ MapLocation LoaderUtils::getLocation(const Parser::Object& obj)
     return location;
 }
 
-ElevationAzimuth LoaderUtils::getEA(const Parser::Object& obj)
+ElevationAzimuth LoaderUtils::getEA(const SceneObject& obj)
 {
     if (obj.property("direction").isValid()) {
         return ElevationAzimuth::fromDirectionYUp(obj.property("direction").getVector3(Vector3f(0, 0, 1)).normalized());
@@ -150,7 +150,7 @@ ElevationAzimuth LoaderUtils::getEA(const Parser::Object& obj)
     }
 }
 
-Vector3f LoaderUtils::getDirection(const Parser::Object& obj)
+Vector3f LoaderUtils::getDirection(const SceneObject& obj)
 {
     return getEA(obj).toDirectionYUp();
 }

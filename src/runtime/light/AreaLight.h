@@ -7,7 +7,7 @@ class LoaderContext;
 
 class AreaLight : public Light {
 public:
-    AreaLight(const std::string& name, const LoaderContext& ctx, const std::shared_ptr<Parser::Object>& light);
+    AreaLight(const std::string& name, const LoaderContext& ctx, const std::shared_ptr<SceneObject>& light);
 
     virtual std::optional<Vector3f> position() const override { return mPosition; }
     virtual std::optional<Vector3f> direction() const override { return mRepresentation == RepresentationType::Plane ? std::make_optional(mDirection) : std::nullopt; }
@@ -31,6 +31,6 @@ private:
         Sphere
     };
     RepresentationType mRepresentation;
-    std::shared_ptr<Parser::Object> mLight;
+    std::shared_ptr<SceneObject> mLight;
 };
 } // namespace IG

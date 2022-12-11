@@ -2,7 +2,7 @@
 #include "loader/Parser.h"
 
 namespace IG {
-Camera::FOV Camera::extractFOV(const Parser::Object& camera)
+Camera::FOV Camera::extractFOV(const SceneObject& camera)
 {
     constexpr float DefaultFOV = 60.0f;
 

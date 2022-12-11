@@ -24,10 +24,10 @@ public:
     static std::string inlineVector(const Vector3f& pos);
     static std::string inlineColor(const Vector3f& color);
 
-    static TimePoint getTimePoint(const Parser::Object& obj);
-    static MapLocation getLocation(const Parser::Object& obj);
-    static ElevationAzimuth getEA(const Parser::Object& obj);
-    static Vector3f getDirection(const Parser::Object& obj);
+    static TimePoint getTimePoint(const SceneObject& obj);
+    static MapLocation getLocation(const SceneObject& obj);
+    static ElevationAzimuth getEA(const SceneObject& obj);
+    static Vector3f getDirection(const SceneObject& obj);
 
     using CDFData = std::tuple<std::string, size_t, size_t>;
     static CDFData setup_cdf2d(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate = false);

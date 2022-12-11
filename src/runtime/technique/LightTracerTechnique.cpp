@@ -7,7 +7,7 @@
 #include "shader/ShaderUtils.h"
 
 namespace IG {
-LightTracerTechnique::LightTracerTechnique(const Parser::Object& obj)
+LightTracerTechnique::LightTracerTechnique(const SceneObject& obj)
     : Technique("lighttracer")
 {
     mMaxLightDepth = (size_t)obj.property("max_depth").isValid() ? obj.property("max_depth").getInteger(DefaultMaxRayDepth) : obj.property("max_light_depth").getInteger(DefaultMaxRayDepth);

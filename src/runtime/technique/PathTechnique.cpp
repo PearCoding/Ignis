@@ -5,7 +5,7 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-PathTechnique::PathTechnique(const Parser::Object& obj)
+PathTechnique::PathTechnique(const SceneObject& obj)
     : Technique("path")
 {
     mMaxDepth      = obj.property("max_depth").getInteger(DefaultMaxRayDepth);

@@ -13,8 +13,6 @@
 #include <sstream>
 
 namespace IG {
-using namespace Parser;
-
 std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
 {
     std::stringstream stream;

@@ -6,7 +6,7 @@
 #include "skysun/SkyModel.h"
 
 namespace IG {
-SkyLight::SkyLight(const std::string& name, const std::shared_ptr<Parser::Object>& light)
+SkyLight::SkyLight(const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mLight(light)
 {
@@ -27,7 +27,7 @@ float SkyLight::computeFlux(const ShadingTree& tree) const
     return mTotalFlux * scale * radius * radius;
 }
 
-static std::string setup_sky(LoaderContext& ctx, const std::string& name, const std::shared_ptr<Parser::Object>& light)
+static std::string setup_sky(LoaderContext& ctx, const std::string& name, const std::shared_ptr<SceneObject>& light)
 {
     const std::string exported_id = "_sky_" + name;
 

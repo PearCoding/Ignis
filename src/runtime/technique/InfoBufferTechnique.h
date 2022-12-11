@@ -5,7 +5,7 @@
 namespace IG {
 class InfoBufferTechnique : public Technique {
 public:
-    InfoBufferTechnique(const Parser::Object& obj);
+    InfoBufferTechnique(const SceneObject& obj);
     ~InfoBufferTechnique() = default;
 
     TechniqueInfo getInfo(const LoaderContext& ctx) const override;

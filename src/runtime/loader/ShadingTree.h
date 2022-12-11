@@ -6,10 +6,8 @@
 #include <unordered_set>
 
 namespace IG {
-namespace Parser {
-class Object;
-class Property;
-} // namespace Parser
+class SceneObject;
+class SceneProperty;
 
 namespace _details {
 // Embed behaviour for constant values. References to other nodes will us override the property embed type
@@ -93,20 +91,20 @@ public:
     bool beginClosure(const std::string& name);
     void endClosure();
 
-    void addNumber(const std::string& name, const Parser::Object& obj, float def = 0, bool hasDef = true, const NumberOptions& options = NumberOptions::Full());
-    void addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const ColorOptions& options = ColorOptions::Full());
-    void addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const VectorOptions& options = VectorOptions::Full());
-    void addTexture(const std::string& name, const Parser::Object& obj, bool hasDef = true, const TextureOptions& options = TextureOptions::Default());
+    void addNumber(const std::string& name, const SceneObject& obj, float def = 0, bool hasDef = true, const NumberOptions& options = NumberOptions::Full());
+    void addColor(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const ColorOptions& options = ColorOptions::Full());
+    void addVector(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const VectorOptions& options = VectorOptions::Full());
+    void addTexture(const std::string& name, const SceneObject& obj, bool hasDef = true, const TextureOptions& options = TextureOptions::Default());
 
     using BakeOutputTexture = std::optional<std::shared_ptr<Image>>;
     using BakeOutputNumber  = std::optional<float>;
     using BakeOutputColor   = std::optional<Vector3f>;
 
     // Approximation (TODO: Change to bake interface!)
-    float computeNumber(const std::string& name, const Parser::Object& obj, float def = 0) const;
-    Vector3f computeColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero()) const;
+    float computeNumber(const std::string& name, const SceneObject& obj, float def = 0) const;
+    Vector3f computeColor(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero()) const;
 
-    BakeOutputTexture bakeTexture(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const TextureBakeOptions& options = TextureBakeOptions::Default());
+    BakeOutputTexture bakeTexture(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const TextureBakeOptions& options = TextureBakeOptions::Default());
 
     inline std::string currentClosureID() const { return currentClosure().ID; }
     std::string getClosureID(const std::string& name);
@@ -129,7 +127,7 @@ private:
     inline const Closure& currentClosure() const { return mClosures.back(); }
     inline Closure& currentClosure() { return mClosures.back(); }
 
-    std::string handlePropertyNumber(const std::string& name, const Parser::Property& prop, const NumberOptions& options);
+    std::string handlePropertyNumber(const std::string& name, const SceneProperty& prop, const NumberOptions& options);
 
     std::string handleTexture(const std::string& prop_name, const std::string& expr, bool needColor);
     std::string acquireNumber(const std::string& prop_name, float number, const NumberOptions& options);

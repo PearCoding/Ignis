@@ -5,7 +5,7 @@
 namespace IG {
 class SkyLight : public Light {
 public:
-    SkyLight(const std::string& name, const std::shared_ptr<Parser::Object>& light);
+    SkyLight(const std::string& name, const std::shared_ptr<SceneObject>& light);
 
     virtual bool isInfinite() const override { return true; }
     virtual std::optional<Vector3f> direction() const override { return mSunDirection; }
@@ -17,6 +17,6 @@ private:
     Vector3f mSunDirection;
     float mTotalFlux;
 
-    std::shared_ptr<Parser::Object> mLight;
+    std::shared_ptr<SceneObject> mLight;
 };
 } // namespace IG

@@ -5,7 +5,7 @@
 #include "serialization/VectorSerializer.h"
 
 namespace IG {
-PointLight::PointLight(const std::string& name, const std::shared_ptr<Parser::Object>& light)
+PointLight::PointLight(const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mLight(light)
 {
@@ -36,8 +36,8 @@ std::optional<std::string> PointLight::getEmbedClass() const
     const auto position  = mLight->property("position");
     const auto intensity = mLight->property("intensity");
 
-    const bool simple = (!position.isValid() || position.type() == Parser::PT_VECTOR3)
-                        && (!intensity.isValid() || intensity.canBeNumber() || intensity.type() == Parser::PT_VECTOR3);
+    const bool simple = (!position.isValid() || position.type() == SceneProperty::PT_VECTOR3)
+                        && (!intensity.isValid() || intensity.canBeNumber() || intensity.type() == SceneProperty::PT_VECTOR3);
 
     return simple ? std::make_optional("SimplePointLight") : std::nullopt;
 }

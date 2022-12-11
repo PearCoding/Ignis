@@ -5,7 +5,7 @@
 namespace IG {
 class FishLensCamera : public Camera {
 public:
-    FishLensCamera(const Parser::Object& obj);
+    FishLensCamera(const SceneObject& obj);
     ~FishLensCamera() = default;
 
     void serialize(const SerializationInput& input) const override;

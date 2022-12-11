@@ -14,14 +14,12 @@
 
 namespace IG {
 
-using namespace Parser;
-
 LoaderContext::LoaderContext()                           = default;
 LoaderContext::LoaderContext(LoaderContext&&)            = default;
 LoaderContext& LoaderContext::operator=(LoaderContext&&) = default;
 LoaderContext::~LoaderContext()                          = default;
 
-std::filesystem::path LoaderContext::handlePath(const std::filesystem::path& path, const Parser::Object& obj) const
+std::filesystem::path LoaderContext::handlePath(const std::filesystem::path& path, const SceneObject& obj) const
 {
     if (path.is_absolute())
         return path;

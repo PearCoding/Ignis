@@ -3,10 +3,8 @@
 #include "CameraOrientation.h"
 
 namespace IG {
-namespace Parser {
-class Object;
-}
 
+class SceneObject;
 class LoaderContext;
 class Camera {
 public:
@@ -30,7 +28,7 @@ public:
         bool Vertical;
         float Value; // Field of View in radians
     };
-    static FOV extractFOV(const Parser::Object& obj);
+    static FOV extractFOV(const SceneObject& obj);
 
 private:
     std::string mType;

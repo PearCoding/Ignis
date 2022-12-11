@@ -6,7 +6,7 @@
 #include "skysun/PerezModel.h"
 
 namespace IG {
-PerezLight::PerezLight(const std::string& name, const std::shared_ptr<Parser::Object>& light)
+PerezLight::PerezLight(const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mLight(light)
 {
@@ -22,7 +22,7 @@ float PerezLight::computeFlux(const ShadingTree& tree) const
     return Pi * radius * radius;
 }
 
-static std::tuple<PerezModel, float> getModel(const Parser::Object& obj, float solar_zenith, const TimePoint& timepoint)
+static std::tuple<PerezModel, float> getModel(const SceneObject& obj, float solar_zenith, const TimePoint& timepoint)
 {
     if (obj.properties().count("clearness") || obj.properties().count("brightness")) {
         const PerezModel model = PerezModel::fromSky(obj.property("brightness").getNumber(0.2f),

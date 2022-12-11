@@ -12,7 +12,7 @@ enum class CIEType {
 
 class CIELight : public Light {
 public:
-    CIELight(CIEType classification, const std::string& name, const std::shared_ptr<Parser::Object>& light);
+    CIELight(CIEType classification, const std::string& name, const std::shared_ptr<SceneObject>& light);
 
     virtual bool isInfinite() const override { return true; }
     virtual std::optional<Vector3f> direction() const override
@@ -34,6 +34,6 @@ private:
     Vector3f mSunDirection;
     bool mHasGround;
 
-    std::shared_ptr<Parser::Object> mLight;
+    std::shared_ptr<SceneObject> mLight;
 };
 } // namespace IG

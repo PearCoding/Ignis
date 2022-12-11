@@ -5,7 +5,7 @@
 namespace IG {
 class VolumePathTechnique : public Technique {
 public:
-    VolumePathTechnique(const Parser::Object& obj);
+    VolumePathTechnique(const SceneObject& obj);
     ~VolumePathTechnique() = default;
 
     bool hasDenoiserSupport() const override { return true; }

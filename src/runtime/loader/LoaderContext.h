@@ -71,7 +71,7 @@ public:
 
     size_t EntityCount;
 
-    std::filesystem::path handlePath(const std::filesystem::path& path, const Parser::Object& obj) const;
+    std::filesystem::path handlePath(const std::filesystem::path& path, const SceneObject& obj) const;
 
     std::unordered_map<std::string, size_t> RegisteredResources;
     inline size_t registerExternalResource(const std::filesystem::path& path)

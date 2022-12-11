@@ -7,7 +7,7 @@
 #include "Transpiler.h"
 
 namespace IG {
-static void tex_image(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_image(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     if (!tree.beginClosure(name))
         return;
@@ -69,7 +69,7 @@ static void tex_image(std::ostream& stream, const std::string& name, const Parse
     tree.endClosure();
 }
 
-static void tex_checkerboard(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_checkerboard(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     if (!tree.beginClosure(name))
         return;
@@ -92,7 +92,7 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
     tree.endClosure();
 }
 
-static void tex_brick(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_brick(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     if (!tree.beginClosure(name))
         return;
@@ -118,7 +118,7 @@ static void tex_brick(std::ostream& stream, const std::string& name, const Parse
     tree.endClosure();
 }
 
-static void tex_gen_noise(const std::string& func, std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_gen_noise(const std::string& func, std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     constexpr float DefaultSeed = 36326639.0f;
 
@@ -143,28 +143,28 @@ static void tex_gen_noise(const std::string& func, std::ostream& stream, const s
 
     tree.endClosure();
 }
-static void tex_noise(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_noise(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     return tex_gen_noise("noise", stream, name, tex, tree);
 }
-static void tex_cellnoise(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_cellnoise(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     return tex_gen_noise("cellnoise", stream, name, tex, tree);
 }
-static void tex_pnoise(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_pnoise(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     return tex_gen_noise("pnoise", stream, name, tex, tree);
 }
-static void tex_perlin(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_perlin(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     return tex_gen_noise("perlin", stream, name, tex, tree);
 }
-static void tex_voronoi(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_voronoi(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     // TODO: More customization
     return tex_gen_noise("voronoi", stream, name, tex, tree);
 }
-static void tex_fbm(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_fbm(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     // TODO: More customization
     return tex_gen_noise("fbm", stream, name, tex, tree);
@@ -175,7 +175,7 @@ inline static bool startsWith(std::string_view str, std::string_view prefix)
     return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
 }
 
-static void tex_expr(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_expr(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     if (!tree.beginClosure(name))
         return;
@@ -258,7 +258,7 @@ static void tex_expr(std::ostream& stream, const std::string& name, const Parser
     tree.endClosure();
 }
 
-static void tex_transform(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree)
+static void tex_transform(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     if (!tree.beginClosure(name))
         return;
@@ -276,7 +276,7 @@ static void tex_transform(std::ostream& stream, const std::string& name, const P
     tree.endClosure();
 }
 
-using TextureLoader = void (*)(std::ostream& stream, const std::string& name, const Parser::Object& tex, ShadingTree& tree);
+using TextureLoader = void (*)(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree);
 static const struct {
     const char* Name;
     TextureLoader Loader;
@@ -296,7 +296,7 @@ static const struct {
     { "", nullptr }
 };
 
-std::string LoaderTexture::generate(const std::string& name, const Parser::Object& obj, ShadingTree& tree)
+std::string LoaderTexture::generate(const std::string& name, const SceneObject& obj, ShadingTree& tree)
 {
     for (size_t i = 0; _generators[i].Loader; ++i) {
         if (_generators[i].Name == obj.pluginType()) {
@@ -313,7 +313,7 @@ std::string LoaderTexture::generate(const std::string& name, const Parser::Objec
     return stream.str();
 }
 
-std::filesystem::path LoaderTexture::getFilename(const Parser::Object& obj, const LoaderContext& ctx)
+std::filesystem::path LoaderTexture::getFilename(const SceneObject& obj, const LoaderContext& ctx)
 {
     for (size_t i = 0; _generators[i].Loader; ++i) {
         if (_generators[i].Name == obj.pluginType()) {

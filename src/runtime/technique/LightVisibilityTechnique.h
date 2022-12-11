@@ -5,7 +5,7 @@
 namespace IG {
 class LightVisibilityTechnique : public Technique {
 public:
-    LightVisibilityTechnique(const Parser::Object& obj);
+    LightVisibilityTechnique(const SceneObject& obj);
     ~LightVisibilityTechnique() = default;
 
     TechniqueInfo getInfo(const LoaderContext& ctx) const override;

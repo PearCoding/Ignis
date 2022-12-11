@@ -8,18 +8,18 @@
 
 namespace IG {
 
-static std::shared_ptr<Medium> medium_homogeneous(const std::string& name, const std::shared_ptr<Parser::Object>& medium, LoaderContext&)
+static std::shared_ptr<Medium> medium_homogeneous(const std::string& name, const std::shared_ptr<SceneObject>& medium, LoaderContext&)
 {
     return std::make_shared<HomogeneousMedium>(name, medium);
 }
 
 // It is recommended to not define the medium, instead of using vacuum
-static std::shared_ptr<Medium> medium_vacuum(const std::string& name, const std::shared_ptr<Parser::Object>&, LoaderContext&)
+static std::shared_ptr<Medium> medium_vacuum(const std::string& name, const std::shared_ptr<SceneObject>&, LoaderContext&)
 {
     return std::make_shared<VacuumMedium>(name);
 }
 
-using MediumLoader = std::shared_ptr<Medium> (*)(const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&);
+using MediumLoader = std::shared_ptr<Medium> (*)(const std::string&, const std::shared_ptr<SceneObject>&, LoaderContext&);
 static const struct {
     const char* Name;
     MediumLoader Loader;

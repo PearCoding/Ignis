@@ -23,49 +23,49 @@
 
 namespace IG {
 
-static std::shared_ptr<Technique> ao_loader(const std::shared_ptr<Parser::Object>&)
+static std::shared_ptr<Technique> ao_loader(const std::shared_ptr<SceneObject>&)
 {
     return std::make_shared<AOTechnique>();
 }
-static std::shared_ptr<Technique> cc_loader(const std::shared_ptr<Parser::Object>&)
+static std::shared_ptr<Technique> cc_loader(const std::shared_ptr<SceneObject>&)
 {
     return std::make_shared<CameraCheckTechnique>();
 }
-static std::shared_ptr<Technique> debug_loader(const std::shared_ptr<Parser::Object>& obj)
+static std::shared_ptr<Technique> debug_loader(const std::shared_ptr<SceneObject>& obj)
 {
     return std::make_shared<DebugTechnique>(*obj);
 }
-static std::shared_ptr<Technique> ib_loader(const std::shared_ptr<Parser::Object>& obj)
+static std::shared_ptr<Technique> ib_loader(const std::shared_ptr<SceneObject>& obj)
 {
     return std::make_shared<InfoBufferTechnique>(*obj);
 }
-static std::shared_ptr<Technique> lt_loader(const std::shared_ptr<Parser::Object>& obj)
+static std::shared_ptr<Technique> lt_loader(const std::shared_ptr<SceneObject>& obj)
 {
     return std::make_shared<LightTracerTechnique>(*obj);
 }
-static std::shared_ptr<Technique> lv_loader(const std::shared_ptr<Parser::Object>& obj)
+static std::shared_ptr<Technique> lv_loader(const std::shared_ptr<SceneObject>& obj)
 {
     return std::make_shared<LightVisibilityTechnique>(*obj);
 }
-static std::shared_ptr<Technique> pt_loader(const std::shared_ptr<Parser::Object>& obj)
+static std::shared_ptr<Technique> pt_loader(const std::shared_ptr<SceneObject>& obj)
 {
     return std::make_shared<PathTechnique>(*obj);
 }
-static std::shared_ptr<Technique> ppm_loader(const std::shared_ptr<Parser::Object>& obj)
+static std::shared_ptr<Technique> ppm_loader(const std::shared_ptr<SceneObject>& obj)
 {
     return std::make_shared<PhotonMappingTechnique>(*obj);
 }
-static std::shared_ptr<Technique> vpt_loader(const std::shared_ptr<Parser::Object>& obj)
+static std::shared_ptr<Technique> vpt_loader(const std::shared_ptr<SceneObject>& obj)
 {
     return std::make_shared<VolumePathTechnique>(*obj);
 }
-static std::shared_ptr<Technique> wf_loader(const std::shared_ptr<Parser::Object>&)
+static std::shared_ptr<Technique> wf_loader(const std::shared_ptr<SceneObject>&)
 {
     return std::make_shared<WireframeTechnique>();
 }
 
 // Will return information about the enabled AOVs
-using TechniqueConstructor = std::shared_ptr<Technique> (*)(const std::shared_ptr<Parser::Object>&);
+using TechniqueConstructor = std::shared_ptr<Technique> (*)(const std::shared_ptr<SceneObject>&);
 
 static const struct TechniqueEntry {
     const char* Name;
@@ -109,7 +109,7 @@ void LoaderTechnique::setup(const LoaderContext& ctx)
 
     auto technique = ctx.Options.Scene.technique();
     if (!technique)
-        technique = std::make_shared<Parser::Object>(Parser::OT_TECHNIQUE, "", ctx.Options.FilePath.parent_path()); // Create a default variant
+        technique = std::make_shared<SceneObject>(SceneObject::OT_TECHNIQUE, "", ctx.Options.FilePath.parent_path()); // Create a default variant
 
     mTechnique = entry->Constructor(technique);
     if (!mTechnique)

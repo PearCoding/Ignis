@@ -1,18 +1,15 @@
 #pragma once
 
-#include "SceneObject.h"
+#include "SceneObjectProxy.h"
 
 namespace IG {
 class ShadingTree;
+class SceneObject;
 
-namespace Parser {
-class Object;
-}
-
-class Medium : public SceneObject {
+class Medium : public SceneObjectProxy {
 public:
     inline Medium(const std::string& name, const std::string& type)
-        : SceneObject(name, type)
+        : SceneObjectProxy(name, type)
         , mID(0)
         , mReferenceEntityID(0)
         , mReferenceEntityIDSet(false)
@@ -44,7 +41,7 @@ public:
     [[nodiscard]] inline bool isReferenceEntityIDSet() const { return mReferenceEntityIDSet; }
 
 protected:
-    void handleReferenceEntity(const Parser::Object& obj);
+    void handleReferenceEntity(const SceneObject& obj);
     /// Will generate a function fn () -> PointMapperSet and return the name of it
     std::string generateReferencePMS(const SerializationInput& input) const; 
 

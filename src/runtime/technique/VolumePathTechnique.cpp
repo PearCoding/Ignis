@@ -5,7 +5,7 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-VolumePathTechnique::VolumePathTechnique(const Parser::Object& obj)
+VolumePathTechnique::VolumePathTechnique(const SceneObject& obj)
     : Technique("volpath")
 {
     mMaxDepth      = obj.property("max_depth").getInteger(DefaultMaxRayDepth);

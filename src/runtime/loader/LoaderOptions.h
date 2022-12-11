@@ -2,6 +2,7 @@
 
 #include "Parser.h"
 #include "RuntimeSettings.h"
+#include "Scene.h"
 
 namespace IG {
 class ScriptCompiler;
@@ -9,7 +10,7 @@ class Device;
 
 struct LoaderOptions {
     std::filesystem::path FilePath;
-    Parser::Scene Scene;
+    IG::Scene Scene;
     IG::Target Target;
     std::string CameraType;
     std::string TechniqueType;

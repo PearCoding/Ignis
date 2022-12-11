@@ -14,7 +14,7 @@
 
 #include "glTFParser.h"
 
-namespace IG::Parser {
+namespace IG {
 // TODO: (Re)Add arguments!
 
 using Arguments = std::unordered_map<std::string, std::string>;
@@ -242,7 +242,7 @@ inline static Transformf getTransform(const rapidjson::GenericArray<true, rapidj
     return transform;
 }
 
-inline static Property handleArrayProperty(const rapidjson::Value& obj)
+inline static SceneProperty handleArrayProperty(const rapidjson::Value& obj)
 {
     const auto values_it = obj.FindMember("values");
     const auto type_it   = obj.FindMember("type");
@@ -261,47 +261,47 @@ inline static Property handleArrayProperty(const rapidjson::Value& obj)
         if (!checkArrayIsAllNumber(arr))
             throw std::runtime_error("Expected number array to have only numbers in it");
 
-        NumberArray values;
+        SceneProperty::NumberArray values;
         values.reserve(arr.Size());
         for (rapidjson::SizeType i = 0; i < arr.Size(); ++i)
             values.push_back(arr[i].GetFloat());
-        return Property::fromNumberArray(std::move(values));
+        return SceneProperty::fromNumberArray(std::move(values));
     } else {
         if (!checkArrayIsAllInteger(arr))
             throw std::runtime_error("Expected integer array to have only integers in it");
 
-        IntegerArray values;
+        SceneProperty::IntegerArray values;
         values.reserve(arr.Size());
         for (rapidjson::SizeType i = 0; i < arr.Size(); ++i)
             values.push_back(arr[i].GetInt());
-        return Property::fromIntegerArray(std::move(values));
+        return SceneProperty::fromIntegerArray(std::move(values));
     }
 }
 
-inline static Property getProperty(const rapidjson::Value& obj)
+inline static SceneProperty getProperty(const rapidjson::Value& obj)
 {
     if (obj.IsBool())
-        return Property::fromBool(obj.GetBool());
+        return SceneProperty::fromBool(obj.GetBool());
     else if (obj.IsString())
-        return Property::fromString(getString(obj));
+        return SceneProperty::fromString(getString(obj));
     else if (obj.IsInt())
-        return Property::fromInteger(obj.GetInt());
+        return SceneProperty::fromInteger(obj.GetInt());
     else if (obj.IsNumber())
-        return Property::fromNumber(obj.GetFloat());
+        return SceneProperty::fromNumber(obj.GetFloat());
     else if (obj.IsArray()) {
         const auto& array = obj.GetArray();
         const size_t len  = array.Size();
 
         if (len >= 1 && array[0].IsObject())
-            return Property::fromTransform(getTransform(array));
+            return SceneProperty::fromTransform(getTransform(array));
         else if (len == 2)
-            return Property::fromVector2(getVector2f(obj));
+            return SceneProperty::fromVector2(getVector2f(obj));
         else if (len == 3)
-            return Property::fromVector3(getVector3f(obj));
+            return SceneProperty::fromVector3(getVector3f(obj));
         else if (len == 9)
-            return Property::fromTransform(Transformf(getMatrix3f(obj)));
+            return SceneProperty::fromTransform(Transformf(getMatrix3f(obj)));
         else if (len == 12 || len == 16)
-            return Property::fromTransform(Transformf(getMatrix4f(obj)));
+            return SceneProperty::fromTransform(Transformf(getMatrix4f(obj)));
     } else if (obj.IsObject()) {
         const auto innerObj = obj.GetObject();
         if (innerObj.HasMember("values")) {
@@ -311,14 +311,14 @@ inline static Property getProperty(const rapidjson::Value& obj)
             Transformf transform = Transformf::Identity();
 
             applyTransformProperty(transform, innerObj);
-            return Property::fromTransform(transform);
+            return SceneProperty::fromTransform(transform);
         }
     }
 
-    return Property();
+    return SceneProperty();
 }
 
-inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson::Value& obj)
+inline static void populateObject(std::shared_ptr<SceneObject>& ptr, const rapidjson::Value& obj)
 {
     for (auto itr = obj.MemberBegin(); itr != obj.MemberEnd(); ++itr) {
         const std::string name = getString(itr->name);
@@ -333,7 +333,7 @@ inline static void populateObject(std::shared_ptr<Object>& ptr, const rapidjson:
     }
 }
 
-static std::shared_ptr<Object> handleAnonymousObject(Scene& scene, ObjectType type, const std::filesystem::path& baseDir, const rapidjson::Value& obj)
+static std::shared_ptr<SceneObject> handleAnonymousObject(Scene& scene, SceneObject::Type type, const std::filesystem::path& baseDir, const rapidjson::Value& obj)
 {
     IG_UNUSED(scene);
 
@@ -342,12 +342,12 @@ static std::shared_ptr<Object> handleAnonymousObject(Scene& scene, ObjectType ty
 
     const auto pluginType = obj.HasMember("type") ? getString(obj["type"]) : "";
 
-    auto ptr = std::make_shared<Object>(type, pluginType, baseDir);
+    auto ptr = std::make_shared<SceneObject>(type, pluginType, baseDir);
     populateObject(ptr, obj);
     return ptr;
 }
 
-static void handleNamedObject(Scene& scene, ObjectType type, const std::filesystem::path& baseDir, const rapidjson::Value& obj)
+static void handleNamedObject(Scene& scene, SceneObject::Type type, const std::filesystem::path& baseDir, const rapidjson::Value& obj)
 {
     if (obj.HasMember("type") && !obj["type"].IsString())
         throw std::runtime_error("Expected type to be a string");
@@ -361,26 +361,26 @@ static void handleNamedObject(Scene& scene, ObjectType type, const std::filesyst
     const auto pluginType = obj.HasMember("type") ? getString(obj["type"]) : "";
     const auto name       = getString(obj["name"]);
 
-    auto ptr = std::make_shared<Object>(type, pluginType, baseDir);
+    auto ptr = std::make_shared<SceneObject>(type, pluginType, baseDir);
     populateObject(ptr, obj);
 
     switch (type) {
-    case OT_SHAPE:
+    case SceneObject::OT_SHAPE:
         scene.addShape(name, ptr);
         break;
-    case OT_TEXTURE:
+    case SceneObject::OT_TEXTURE:
         scene.addTexture(name, ptr);
         break;
-    case OT_BSDF:
+    case SceneObject::OT_BSDF:
         scene.addBSDF(name, ptr);
         break;
-    case OT_LIGHT:
+    case SceneObject::OT_LIGHT:
         scene.addLight(name, ptr);
         break;
-    case OT_MEDIUM:
+    case SceneObject::OT_MEDIUM:
         scene.addMedium(name, ptr);
         break;
-    case OT_ENTITY:
+    case SceneObject::OT_ENTITY:
         scene.addEntity(name, ptr);
         break;
     default:
@@ -436,35 +436,6 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const std::f
     }
 }
 
-void Scene::addFrom(const Scene& other)
-{
-    for (const auto& tex : other.textures())
-        addTexture(tex.first, tex.second);
-    for (const auto& bsdf : other.bsdfs())
-        addBSDF(bsdf.first, bsdf.second);
-    for (const auto& light : other.lights())
-        addLight(light.first, light.second);
-    for (const auto& medium : other.media())
-        addLight(medium.first, medium.second);
-    for (const auto& shape : other.shapes())
-        addShape(shape.first, shape.second);
-    for (const auto& ent : other.entities())
-        addEntity(ent.first, ent.second);
-
-    mTechnique = other.mTechnique;
-    mCamera    = other.mCamera;
-    mFilm      = other.mFilm;
-}
-
-void Scene::addConstantEnvLight()
-{
-    if (mLights.count("__env") == 0) {
-        auto env = std::make_shared<Object>(OT_LIGHT, "constant", std::filesystem::path{});
-        env->setProperty("radiance", Property::fromNumber(1));
-        addLight("__env", env);
-    }
-}
-
 class InternalSceneParser {
 public:
     static Scene loadFromJSON(SceneParser& loader, const std::filesystem::path& baseDir, const rapidjson::Document& doc)
@@ -487,13 +458,13 @@ public:
         }
 
         if (doc.HasMember("camera"))
-            scene.setCamera(handleAnonymousObject(scene, OT_CAMERA, baseDir, doc["camera"]));
+            scene.setCamera(handleAnonymousObject(scene, SceneObject::OT_CAMERA, baseDir, doc["camera"]));
 
         if (doc.HasMember("technique"))
-            scene.setTechnique(handleAnonymousObject(scene, OT_TECHNIQUE, baseDir, doc["technique"]));
+            scene.setTechnique(handleAnonymousObject(scene, SceneObject::OT_TECHNIQUE, baseDir, doc["technique"]));
 
         if (doc.HasMember("film"))
-            scene.setFilm(handleAnonymousObject(scene, OT_FILM, baseDir, doc["film"]));
+            scene.setFilm(handleAnonymousObject(scene, SceneObject::OT_FILM, baseDir, doc["film"]));
 
         if (doc.HasMember("shapes")) {
             if (!doc["shapes"].IsArray())
@@ -501,7 +472,7 @@ public:
             for (const auto& shape : doc["shapes"].GetArray()) {
                 if (!shape.IsObject())
                     throw std::runtime_error("Expected shape element to be an object");
-                handleNamedObject(scene, OT_SHAPE, baseDir, shape);
+                handleNamedObject(scene, SceneObject::OT_SHAPE, baseDir, shape);
             }
         }
 
@@ -511,7 +482,7 @@ public:
             for (const auto& tex : doc["textures"].GetArray()) {
                 if (!tex.IsObject())
                     throw std::runtime_error("Expected texture element to be an object");
-                handleNamedObject(scene, OT_TEXTURE, baseDir, tex);
+                handleNamedObject(scene, SceneObject::OT_TEXTURE, baseDir, tex);
             }
         }
 
@@ -521,7 +492,7 @@ public:
             for (const auto& bsdf : doc["bsdfs"].GetArray()) {
                 if (!bsdf.IsObject())
                     throw std::runtime_error("Expected bsdf element to be an object");
-                handleNamedObject(scene, OT_BSDF, baseDir, bsdf);
+                handleNamedObject(scene, SceneObject::OT_BSDF, baseDir, bsdf);
             }
         }
 
@@ -531,7 +502,7 @@ public:
             for (const auto& light : doc["lights"].GetArray()) {
                 if (!light.IsObject())
                     throw std::runtime_error("Expected light element to be an object");
-                handleNamedObject(scene, OT_LIGHT, baseDir, light);
+                handleNamedObject(scene, SceneObject::OT_LIGHT, baseDir, light);
             }
         }
 
@@ -541,7 +512,7 @@ public:
             for (const auto& medium : doc["media"].GetArray()) {
                 if (!medium.IsObject())
                     throw std::runtime_error("Expected medium element to be an object");
-                handleNamedObject(scene, OT_MEDIUM, baseDir, medium);
+                handleNamedObject(scene, SceneObject::OT_MEDIUM, baseDir, medium);
             }
         }
 
@@ -551,7 +522,7 @@ public:
             for (const auto& entity : doc["entities"].GetArray()) {
                 if (!entity.IsObject())
                     throw std::runtime_error("Expected entity element to be an object");
-                handleNamedObject(scene, OT_ENTITY, baseDir, entity);
+                handleNamedObject(scene, SceneObject::OT_ENTITY, baseDir, entity);
             }
         }
 
@@ -569,7 +540,7 @@ Scene SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
         if (ok) {
             // Scene is using volumes, switch to the volpath technique
             if (!scene.media().empty())
-                scene.setTechnique(std::make_shared<Object>(OT_TECHNIQUE, "volpath", path.parent_path()));
+                scene.setTechnique(std::make_shared<SceneObject>(SceneObject::OT_TECHNIQUE, "volpath", path.parent_path()));
 
             // Add light to the scene if no light is available (preview style)
             if (scene.lights().empty()) {
@@ -613,4 +584,4 @@ Scene SceneParser::loadFromString(const std::string& str, const std::filesystem:
     return InternalSceneParser::loadFromJSON(*this, opt_dir, doc);
 }
 
-} // namespace IG::Parser
+} // namespace IG

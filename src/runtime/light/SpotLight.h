@@ -5,7 +5,7 @@
 namespace IG {
 class SpotLight : public Light {
 public:
-    SpotLight(const std::string& name, const std::shared_ptr<Parser::Object>& light);
+    SpotLight(const std::string& name, const std::shared_ptr<SceneObject>& light);
 
     virtual bool isDelta() const override { return true; }
     virtual std::optional<Vector3f> position() const override { return mPosition; }
@@ -21,6 +21,6 @@ private:
     Vector3f mPosition;
     Vector3f mDirection;
 
-    std::shared_ptr<Parser::Object> mLight;
+    std::shared_ptr<SceneObject> mLight;
 };
 } // namespace IG

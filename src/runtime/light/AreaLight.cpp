@@ -9,7 +9,7 @@
 #include "table/SceneDatabase.h"
 
 namespace IG {
-AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const std::shared_ptr<Parser::Object>& light)
+AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mLight(light)
 {
@@ -154,7 +154,7 @@ std::optional<std::string> AreaLight::getEmbedClass() const
 {
     // TODO: Basic texture?
     const auto radiance = mLight->property("radiance");
-    const bool simple   = (!radiance.isValid() || radiance.canBeNumber() || radiance.type() == Parser::PT_VECTOR3);
+    const bool simple   = (!radiance.isValid() || radiance.canBeNumber() || radiance.type() == SceneProperty::PT_VECTOR3);
 
     if (!simple)
         return std::nullopt;

@@ -10,7 +10,6 @@
 #include <chrono>
 
 namespace IG {
-using namespace Parser;
 void LoaderEntity::prepare(const LoaderContext& ctx)
 {
     IG_UNUSED(ctx);
@@ -41,7 +40,7 @@ bool LoaderEntity::load(LoaderContext& ctx)
     entityTable.reserve(ctx.Options.Scene.entities().size() * 36);
 
     // First group all entities to groups of unique materials
-    std::vector<std::vector<std::pair<std::string, std::shared_ptr<Parser::Object>>>> material_groups;
+    std::vector<std::vector<std::pair<std::string, std::shared_ptr<SceneObject>>>> material_groups;
     for (const auto& pair : ctx.Options.Scene.entities()) {
         const auto child = pair.second;
 
