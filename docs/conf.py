@@ -111,6 +111,7 @@ rst_prolog = r"""
 .. |int| replace:: :paramtype:`integer`
 .. |false| replace:: :param_false:`false`
 .. |true| replace:: :param_true:`true`
+.. |array| replace:: :paramtype:`array`
 .. |string| replace:: :paramtype:`string`
 .. |bsdf| replace:: :paramtype:`bsdf`
 .. |vector| replace:: :paramtype:`vector`

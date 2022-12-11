@@ -511,3 +511,63 @@ This type of shape will load a obj (.obj), ply (.ply) or mitsuba serialized mesh
 .. subfigend::
   :width: 0.6
   :label: fig-shape-external
+
+.. _shape-inline:
+
+Inline Mesh (:monosp:`inline`)
+----------------------------------
+
+.. objectparameters::
+
+  * - indices
+    - |array| of |int|
+    - *none*
+    - Indices for a list of triangles given as a flat list of integers. The number of entries must be a multiple of 3. Only triangles are currently supported.
+  * - vertices
+    - |array| of |number|
+    - *none*
+    - Three dimensional vertices given as a flat list of numbers. The number of entries must be a multiple of 3.
+  * - normals
+    - |array| of |number|
+    - *none*
+    - Three dimensional normals given as a flat list of numbers. The number of entries must be a multiple of 3 and must match the number of vertices.
+  * - texcoords
+    - |array| of |number|
+    - *none*
+    - Two dimensional texture coordinates given as a flat list of numbers. The number of entries must be a multiple of 2 and must match the number of vertices.
+  * - flip_normals
+    - |bool|
+    - |false|
+    - Flip the normals.
+  * - face_normals
+    - |bool|
+    - |false|
+    - Use normals from triangles as vertex normals. This will let the object look *hard*.
+  * - transform
+    - |transform|
+    - Identity
+    - Apply given transformation to shape.
+
+.. NOTE:: A list of |number| or |int| can be specified via the ``{"type": "number", values=[...]}`` with ``number`` or ``integer`` as type respectively.
+
+.. WARNING:: It is recommended to use external files for large meshes, as the scene description is not intended to host large data. The :monosp:`inline` should be used for interop between different frameworks and very small meshes.
+
+.. subfigstart::
+
+.. figure::  images/shape_inline.jpg
+  :width: 90%
+  :align: center
+  
+  Inline custom plane specified directly in the scene file
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-shape-external
+
+.. literalinclude:: ../../../scenes/showcase/shape/inline.json
+    :language: javascript
+    :lines: 4-10
+    :linenos:
+    :dedent:
+    :emphasize-lines: 5-6
+    :caption: The following shape definition is a simple example of an inlined mesh specification. 
