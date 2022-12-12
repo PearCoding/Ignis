@@ -55,6 +55,7 @@ public:
     }
 
     inline void setProperty(const std::string& key, const SceneProperty& prop) { mProperties[key] = prop; }
+    inline bool hasProperty(const std::string& key) const { return mProperties.count(key) > 0; }
     inline const std::unordered_map<std::string, SceneProperty>& properties() const { return mProperties; }
 
     inline SceneProperty& operator[](const std::string& key) { return mProperties[key]; }

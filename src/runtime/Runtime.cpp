@@ -145,10 +145,9 @@ bool Runtime::loadFromFile(const std::filesystem::path& path)
     try {
         const auto startParser = std::chrono::high_resolution_clock::now();
         SceneParser parser;
-        bool ok    = false;
-        auto scene = parser.loadFromFile(path, ok);
+        auto scene = parser.loadFromFile(path);
         IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
-        if (!ok)
+        if (scene == nullptr)
             return false;
 
         if (mOptions.AddExtraEnvLight)
@@ -168,10 +167,9 @@ bool Runtime::loadFromString(const std::string& str, const std::filesystem::path
         IG_LOG(L_DEBUG) << "Parsing scene string" << std::endl;
         const auto startParser = std::chrono::high_resolution_clock::now();
         SceneParser parser;
-        bool ok    = false;
-        auto scene = parser.loadFromString(str, dir, ok);
+        auto scene = parser.loadFromString(str, dir);
         IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
-        if (!ok)
+        if (scene == nullptr)
             return false;
 
         if (mOptions.AddExtraEnvLight)

@@ -106,7 +106,7 @@ public:
         return p;
     }
 
-    inline const Vector2f& getVector2(const Vector2f& def = Vector2f(0, 0), bool* ok = nullptr) const
+    inline const Vector2f& getVector2(const Vector2f& def = Vector2f::Zero(), bool* ok = nullptr) const
     {
         if (mType == PT_VECTOR2) {
             if (ok)
@@ -126,7 +126,7 @@ public:
         return p;
     }
 
-    inline const Vector3f& getVector3(const Vector3f& def = Vector3f(0, 0, 0), bool* ok = nullptr) const
+    inline const Vector3f& getVector3(const Vector3f& def = Vector3f::Zero(), bool* ok = nullptr) const
     {
         if (mType == PT_VECTOR3) {
             if (ok)

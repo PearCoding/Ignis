@@ -389,7 +389,7 @@ static void handleNamedObject(Scene& scene, SceneObject::Type type, const std::f
     }
 }
 
-static void handleExternalObject(SceneParser& loader, Scene& scene, const std::filesystem::path& baseDir, const rapidjson::Value& obj)
+static void handleExternalObject(SceneParser& loader, Scene& scene, const std::filesystem::path& baseDir, const rapidjson::Value& obj, uint32 flags)
 {
     if (obj.HasMember("type") && !obj["type"].IsString())
         throw std::runtime_error("Expected type to be a string");
@@ -415,19 +415,17 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const std::f
 
     if (pluginType == "ignis") {
         // Include ignis file
-        bool ok          = false;
-        auto local_scene = loader.loadFromFile(path, ok);
+        auto local_scene = loader.loadFromFile(path, flags);
 
-        if (!ok || local_scene == nullptr)
+        if (local_scene == nullptr)
             throw std::runtime_error("Could not load '" + path.generic_u8string() + "'");
 
         scene.addFrom(*local_scene);
     } else if (pluginType == "gltf") {
         // Include and map gltf stuff
-        bool ok          = false;
-        auto local_scene = glTFSceneParser::loadFromFile(path, ok);
+        auto local_scene = glTFSceneParser::loadFromFile(path); // TODO: Maybe honor flags?
 
-        if (!ok || local_scene == nullptr)
+        if (local_scene == nullptr)
             throw std::runtime_error("Could not load '" + path.generic_u8string() + "'");
 
         scene.addFrom(*local_scene);
@@ -436,9 +434,10 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const std::f
     }
 }
 
+#define _CHECK_FLAG(x) ((flags & x) == x)
 class InternalSceneParser {
 public:
-    static std::shared_ptr<Scene> loadFromJSON(SceneParser& loader, const std::filesystem::path& baseDir, const rapidjson::Document& doc)
+    static std::shared_ptr<Scene> loadFromJSON(SceneParser& loader, const std::filesystem::path& baseDir, const rapidjson::Document& doc, uint32 flags)
     {
         if (!doc.IsObject())
             throw std::runtime_error("Expected root element to be an object");
@@ -446,27 +445,27 @@ public:
         std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
         // Handle externals first, such that the current file can replace parts of it later on
-        if (doc.HasMember("externals")) {
+        if (_CHECK_FLAG(SceneParser::F_LoadExternals) && doc.HasMember("externals")) {
             if (!doc["externals"].IsArray())
                 throw std::runtime_error("Expected external elements to be an array");
             for (const auto& exts : doc["externals"].GetArray()) {
                 if (!exts.IsObject())
                     throw std::runtime_error("Expected external element to be an object");
 
-                handleExternalObject(loader, *scene, baseDir, exts);
+                handleExternalObject(loader, *scene, baseDir, exts, flags);
             }
         }
 
-        if (doc.HasMember("camera"))
+        if (_CHECK_FLAG(SceneParser::F_LoadCamera) && doc.HasMember("camera"))
             scene->setCamera(handleAnonymousObject(*scene, SceneObject::OT_CAMERA, baseDir, doc["camera"]));
 
-        if (doc.HasMember("technique"))
+        if (_CHECK_FLAG(SceneParser::F_LoadTechnique) && doc.HasMember("technique"))
             scene->setTechnique(handleAnonymousObject(*scene, SceneObject::OT_TECHNIQUE, baseDir, doc["technique"]));
 
-        if (doc.HasMember("film"))
+        if (_CHECK_FLAG(SceneParser::F_LoadFilm) && doc.HasMember("film"))
             scene->setFilm(handleAnonymousObject(*scene, SceneObject::OT_FILM, baseDir, doc["film"]));
 
-        if (doc.HasMember("shapes")) {
+        if (_CHECK_FLAG(SceneParser::F_LoadShapes) && doc.HasMember("shapes")) {
             if (!doc["shapes"].IsArray())
                 throw std::runtime_error("Expected shapes element to be an array");
             for (const auto& shape : doc["shapes"].GetArray()) {
@@ -476,7 +475,7 @@ public:
             }
         }
 
-        if (doc.HasMember("textures")) {
+        if (_CHECK_FLAG(SceneParser::F_LoadTextures) && doc.HasMember("textures")) {
             if (!doc["textures"].IsArray())
                 throw std::runtime_error("Expected textures element to be an array");
             for (const auto& tex : doc["textures"].GetArray()) {
@@ -486,7 +485,7 @@ public:
             }
         }
 
-        if (doc.HasMember("bsdfs")) {
+        if (_CHECK_FLAG(SceneParser::F_LoadBSDFs) && doc.HasMember("bsdfs")) {
             if (!doc["bsdfs"].IsArray())
                 throw std::runtime_error("Expected bsdfs element to be an array");
             for (const auto& bsdf : doc["bsdfs"].GetArray()) {
@@ -496,7 +495,7 @@ public:
             }
         }
 
-        if (doc.HasMember("lights")) {
+        if (_CHECK_FLAG(SceneParser::F_LoadLights) && doc.HasMember("lights")) {
             if (!doc["lights"].IsArray())
                 throw std::runtime_error("Expected lights element to be an array");
             for (const auto& light : doc["lights"].GetArray()) {
@@ -506,7 +505,7 @@ public:
             }
         }
 
-        if (doc.HasMember("media")) {
+        if (_CHECK_FLAG(SceneParser::F_LoadMedia) && doc.HasMember("media")) {
             if (!doc["media"].IsArray())
                 throw std::runtime_error("Expected lights element to be an array");
             for (const auto& medium : doc["media"].GetArray()) {
@@ -516,7 +515,7 @@ public:
             }
         }
 
-        if (doc.HasMember("entities")) {
+        if (_CHECK_FLAG(SceneParser::F_LoadEntities) && doc.HasMember("entities")) {
             if (!doc["entities"].IsArray())
                 throw std::runtime_error("Expected entities element to be an array");
             for (const auto& entity : doc["entities"].GetArray()) {
@@ -529,15 +528,16 @@ public:
         return scene;
     }
 };
+#undef _CHECK_FLAG
 
 constexpr auto JsonFlags = rapidjson::kParseDefaultFlags | rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag | rapidjson::kParseNanAndInfFlag | rapidjson::kParseEscapedApostropheFlag;
 
-std::shared_ptr<Scene> SceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
+std::shared_ptr<Scene> SceneParser::loadFromFile(const std::filesystem::path& path, uint32 flags)
 {
     if (path.extension() == ".gltf" || path.extension() == ".glb") {
         // Load gltf directly
-        std::shared_ptr<Scene> scene = glTFSceneParser::loadFromFile(path, ok);
-        if (ok) {
+        std::shared_ptr<Scene> scene = glTFSceneParser::loadFromFile(path);
+        if (scene) {
             // Scene is using volumes, switch to the volpath technique
             if (!scene->media().empty())
                 scene->setTechnique(std::make_shared<SceneObject>(SceneObject::OT_TECHNIQUE, "volpath", path.parent_path()));
@@ -553,35 +553,30 @@ std::shared_ptr<Scene> SceneParser::loadFromFile(const std::filesystem::path& pa
 
     std::ifstream ifs(path.generic_u8string());
     if (!ifs.good()) {
-        ok = false;
         IG_LOG(L_ERROR) << "Could not open file '" << path << "'" << std::endl;
         return nullptr;
     }
 
     rapidjson::IStreamWrapper isw(ifs);
 
-    ok = true;
     rapidjson::Document doc;
     if (doc.ParseStream<JsonFlags>(isw).HasParseError()) {
-        ok = false;
         IG_LOG(L_ERROR) << "JSON[" << doc.GetErrorOffset() << "]: " << rapidjson::GetParseError_En(doc.GetParseError()) << std::endl;
         return nullptr;
     }
 
     const std::filesystem::path parent = path.has_parent_path() ? std::filesystem::canonical(path.parent_path()) : std::filesystem::path{};
-    return InternalSceneParser::loadFromJSON(*this, parent, doc);
+    return InternalSceneParser::loadFromJSON(*this, parent, doc, flags);
 }
 
-std::shared_ptr<Scene> SceneParser::loadFromString(const std::string& str, const std::filesystem::path& opt_dir, bool& ok)
+std::shared_ptr<Scene> SceneParser::loadFromString(const std::string& str, const std::filesystem::path& opt_dir, uint32 flags)
 {
     rapidjson::Document doc;
     if (doc.Parse<JsonFlags>(str.c_str()).HasParseError()) {
-        ok = false;
         IG_LOG(L_ERROR) << "JSON[" << doc.GetErrorOffset() << "]: " << rapidjson::GetParseError_En(doc.GetParseError()) << std::endl;
         return nullptr;
     }
-    ok = true;
-    return InternalSceneParser::loadFromJSON(*this, opt_dir, doc);
+    return InternalSceneParser::loadFromJSON(*this, opt_dir, doc, flags);
 }
 
 } // namespace IG

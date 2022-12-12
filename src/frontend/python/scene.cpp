@@ -4,6 +4,7 @@
 #include <pybind11/stl.h>
 
 #include "Scene.h"
+#include "loader/Parser.h"
 
 namespace py = pybind11;
 using namespace IG;
@@ -14,23 +15,30 @@ void scene_module(py::module_& m)
                     .def_property_readonly("type", &SceneProperty::type)
                     .def("isValid", &SceneProperty::isValid)
                     .def("canBeNumber", &SceneProperty::canBeNumber)
-                    .def("getBool", &SceneProperty::getBool)
+                    .def(
+                        "getBool", [](const SceneProperty& prop, bool def) { return prop.getBool(def); }, py::arg("def") = false)
                     .def_static("fromBool", &SceneProperty::fromBool)
-                    .def("getInteger", &SceneProperty::getInteger)
+                    .def(
+                        "getInteger", [](const SceneProperty& prop, SceneProperty::Integer def) { return prop.getInteger(def); }, py::arg("def") = (SceneProperty::Integer)0)
                     .def_static("fromInteger", &SceneProperty::fromInteger)
-                    .def("getIntegerArray", &SceneProperty::getIntegerArray)
+                    .def("getIntegerArray", [](const SceneProperty& prop) { return prop.getIntegerArray(); })
                     .def_static("fromIntegerArray", py::overload_cast<const SceneProperty::IntegerArray&>(&SceneProperty::fromIntegerArray))
-                    .def("getNumber", &SceneProperty::getNumber)
+                    .def(
+                        "getNumber", [](const SceneProperty& prop, SceneProperty::Number def) { return prop.getNumber(def); }, py::arg("def") = (SceneProperty::Number)0)
                     .def_static("fromNumber", &SceneProperty::fromNumber)
-                    .def("getNumberArray", &SceneProperty::getNumberArray)
+                    .def("getNumberArray", [](const SceneProperty& prop) { return prop.getNumberArray(); })
                     .def_static("fromNumberArray", py::overload_cast<const SceneProperty::NumberArray&>(&SceneProperty::fromNumberArray))
-                    .def("getString", &SceneProperty::getString)
+                    .def(
+                        "getString", [](const SceneProperty& prop, const std::string& def) { return prop.getString(def); }, py::arg("def") = "")
                     .def_static("fromString", &SceneProperty::fromString)
-                    .def("getTransform", &SceneProperty::getTransform)
-                    .def_static("fromTransform", &SceneProperty::fromTransform)
-                    .def("getVector2", &SceneProperty::getVector2)
+                    .def(
+                        "getTransform", [](const SceneProperty& prop, const Matrix4f& def) -> Matrix4f { return prop.getTransform(Transformf(def)).matrix(); }, py::arg("def") = Matrix4f::Identity())
+                    .def_static("fromTransform", [](const Matrix4f& mat) { return SceneProperty::fromTransform(Transformf(mat)); })
+                    .def(
+                        "getVector2", [](const SceneProperty& prop, const Vector2f& def) { return prop.getVector2(def); }, py::arg("def") = Vector2f::Zero())
                     .def_static("fromVector2", &SceneProperty::fromVector2)
-                    .def("getVector3", &SceneProperty::getVector3)
+                    .def(
+                        "getVector3", [](const SceneProperty& prop, const Vector3f& def) { return prop.getVector3(def); }, py::arg("def") = Vector3f::Zero())
                     .def_static("fromVector3", &SceneProperty::fromVector3);
 
     py::enum_<SceneProperty::Type>(prop, "Type")
@@ -55,6 +63,10 @@ void scene_module(py::module_& m)
                    .def_property_readonly("pluginType", &SceneObject::pluginType)
                    .def("property", &SceneObject::property)
                    .def("setProperty", &SceneObject::setProperty)
+                   .def("hasProperty", &SceneObject::hasProperty)
+                   .def("__getitem__", &SceneObject::property)
+                   .def("__setitem__", &SceneObject::setProperty)
+                   .def("__contains__", &SceneObject::hasProperty)
                    .def_property_readonly("properties", &SceneObject::properties);
 
     py::enum_<SceneObject::Type>(obj, "Type")
@@ -94,4 +106,31 @@ void scene_module(py::module_& m)
         .def_property_readonly("entities", &Scene::entities)
         .def("addConstantEnvLight", &Scene::addConstantEnvLight)
         .def("addFrom", &Scene::addFrom);
+
+    auto parser = py::class_<SceneParser>(m, "SceneParser")
+                      .def(py::init<>())
+                      .def(
+                          "loadFromFile", [](SceneParser& parser, const std::string& path, uint32 flags) {
+                              return parser.loadFromFile(path, flags);
+                          },
+                          py::arg("path"), py::arg("flags") = (uint32)SceneParser::F_LoadAll)
+                      .def(
+                          "loadFromString", [](SceneParser& parser, const std::string& str, const std::string& dir, uint32 flags) {
+                              return parser.loadFromString(str, dir, flags);
+                          },
+                          py::arg("str"), py::arg("opt_dir") = "", py::arg("flags") = (uint32)SceneParser::F_LoadAll);
+
+    py::enum_<SceneParser::Flags>(parser, "Flags", py::arithmetic())
+        .value("F_LoadCamera", SceneParser::F_LoadCamera)
+        .value("F_LoadFilm", SceneParser::F_LoadFilm)
+        .value("F_LoadTechnique", SceneParser::F_LoadTechnique)
+        .value("F_LoadBSDFs", SceneParser::F_LoadBSDFs)
+        .value("F_LoadMedia", SceneParser::F_LoadMedia)
+        .value("F_LoadLights", SceneParser::F_LoadLights)
+        .value("F_LoadTextures", SceneParser::F_LoadTextures)
+        .value("F_LoadShapes", SceneParser::F_LoadShapes)
+        .value("F_LoadEntities", SceneParser::F_LoadEntities)
+        .value("F_LoadExternals", SceneParser::F_LoadExternals)
+        .value("F_LoadAll", SceneParser::F_LoadAll)
+        .export_values();
 }

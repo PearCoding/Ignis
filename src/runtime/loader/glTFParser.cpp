@@ -898,7 +898,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
     }
 }
 
-std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
+std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const std::filesystem::path& path)
 {
     std::filesystem::path directory = path.parent_path();
     std::filesystem::path cache_dir = directory / (std::string("_ignis_cache_") + path.stem().generic_u8string());
@@ -914,6 +914,7 @@ std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const std::filesystem::path
 
     loader.SetImageLoader(imageLoader, nullptr);
 
+    bool ok = false;
     if (path.extension() == ".glb")
         ok = loader.LoadBinaryFromFile(&model, &err, &warn, path.generic_u8string());
     else
