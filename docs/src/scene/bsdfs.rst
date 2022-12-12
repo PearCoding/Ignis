@@ -28,7 +28,7 @@ Smooth diffuse (:monosp:`diffuse`)
 
   * - reflectance
     - |color|
-    - :code:`0.5`
+    - :code:`0.8`
     - Yes
     - Albedo
 
@@ -52,7 +52,7 @@ Rough diffuse (:monosp:`roughdiffuse`)
 
   * - reflectance
     - |color|
-    - :code:`0.5`
+    - :code:`0.8`
     - Yes
     - Albedo
 
@@ -287,7 +287,7 @@ Smooth plastic (:monosp:`plastic`)
     - TODO
   * - diffuse_reflectance
     - |color|
-    - :code:`0.5`
+    - :code:`0.8`
     - Yes
     - TODO
   * - ext_ior, int_ior
@@ -327,7 +327,7 @@ Rough plastic (:monosp:`roughplastic`)
     - TODO
   * - diffuse_reflectance
     - |color|
-    - :code:`0.5`
+    - :code:`0.8`
     - Yes
     - TODO
   * - ext_ior, int_ior

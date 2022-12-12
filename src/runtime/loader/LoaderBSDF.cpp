@@ -118,7 +118,7 @@ static std::string inline_microfacet(const std::shared_ptr<SceneObject>& bsdf, S
 static void bsdf_diffuse(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
 {
     tree.beginClosure(name);
-    tree.addColor("reflectance", *bsdf, Vector3f::Constant(0.5f));
+    tree.addColor("reflectance", *bsdf, Vector3f::Constant(0.8f));
 
     const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
@@ -134,7 +134,7 @@ static void bsdf_orennayar(std::ostream& stream, const std::string& name, const 
 
     tree.beginClosure(name);
     tree.addNumber(roughnessName, *bsdf, 0.0f);
-    tree.addColor("reflectance", *bsdf, Vector3f::Constant(0.5f));
+    tree.addColor("reflectance", *bsdf, Vector3f::Constant(0.8f));
 
     const std::string bsdf_id = tree.currentClosureID();
     stream << tree.pullHeader()
@@ -256,7 +256,7 @@ static void bsdf_plastic(std::ostream& stream, const std::string& name, const st
 {
     tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
-    tree.addColor("diffuse_reflectance", *bsdf, Vector3f::Constant(0.5f));
+    tree.addColor("diffuse_reflectance", *bsdf, Vector3f::Constant(0.8f));
     tree.addNumber("ext_ior", *bsdf, DefaultDielectricExterior);
     tree.addNumber("int_ior", *bsdf, DefaultPlastic);
 
@@ -278,7 +278,7 @@ static void bsdf_rough_plastic(std::ostream& stream, const std::string& name, co
 {
     tree.beginClosure(name);
     tree.addColor("specular_reflectance", *bsdf, Vector3f::Ones());
-    tree.addColor("diffuse_reflectance", *bsdf, Vector3f::Constant(0.5f));
+    tree.addColor("diffuse_reflectance", *bsdf, Vector3f::Constant(0.8f));
     tree.addNumber("ext_ior", *bsdf, DefaultDielectricExterior);
     tree.addNumber("int_ior", *bsdf, DefaultPlastic);
 
