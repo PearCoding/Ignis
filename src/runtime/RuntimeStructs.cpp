@@ -10,9 +10,9 @@ std::string ParameterSet::dump() const
     for (auto p : FloatParameters)
         stream << "[f32] " << p.first << " = " << p.second << std::endl;
     for (auto p : VectorParameters)
-        stream << "[vec3] " << p.first << " = [" << p.second.x() << ", " << p.second.y() << "," << p.second.z() << "]" << std::endl;
+        stream << "[vec3] " << p.first << " = [" << p.second.x() << ", " << p.second.y() << ", " << p.second.z() << "]" << std::endl;
     for (auto p : ColorParameters)
-        stream << "[color] " << p.first << " = [" << p.second.x() << ", " << p.second.y() << "," << p.second.z() << "," << p.second.w() << "]" << std::endl;
+        stream << "[color] " << p.first << " = [" << p.second.x() << ", " << p.second.y() << ", " << p.second.z() << ", " << p.second.w() << "]" << std::endl;
 
     return stream.str();
 }

@@ -4,6 +4,7 @@
 #include "LoaderUtils.h"
 #include "Logger.h"
 #include "ShadingTree.h"
+#include "StringUtils.h"
 #include "Transpiler.h"
 
 namespace IG {
@@ -170,11 +171,6 @@ static void tex_fbm(std::ostream& stream, const std::string& name, const SceneOb
     return tex_gen_noise("fbm", stream, name, tex, tree);
 }
 
-inline static bool startsWith(std::string_view str, std::string_view prefix)
-{
-    return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
-}
-
 static void tex_expr(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
 {
     if (!tree.beginClosure(name))
@@ -188,24 +184,24 @@ static void tex_expr(std::ostream& stream, const std::string& name, const SceneO
 
     // Register on the shading tree first
     for (const auto& pair : tex.properties()) {
-        if (startsWith(pair.first, "num_"))
+        if (string_starts_with(pair.first, "num_"))
             tree.addNumber(pair.first, tex, 0.0f, true);
-        else if (startsWith(pair.first, "vec_"))
+        else if (string_starts_with(pair.first, "vec_"))
             tree.addVector(pair.first, tex, Vector3f::Ones(), true);
-        else if (startsWith(pair.first, "color_"))
+        else if (string_starts_with(pair.first, "color_"))
             tree.addColor(pair.first, tex, Vector3f::Ones(), true);
     }
 
     // Register available variables to transpiler as well
     Transpiler transpiler(tree);
     for (const auto& pair : tex.properties()) {
-        if (startsWith(pair.first, "num_"))
+        if (string_starts_with(pair.first, "num_"))
             transpiler.registerCustomVariableNumber(pair.first.substr(4), "var_tex_" + tree.getClosureID(pair.first.substr(4)));
-        else if (startsWith(pair.first, "color_"))
+        else if (string_starts_with(pair.first, "color_"))
             transpiler.registerCustomVariableColor(pair.first.substr(6), "var_tex_" + tree.getClosureID(pair.first.substr(6)));
-        else if (startsWith(pair.first, "vec_"))
+        else if (string_starts_with(pair.first, "vec_"))
             transpiler.registerCustomVariableVector(pair.first.substr(4), "var_tex_" + tree.getClosureID(pair.first.substr(4)));
-        else if (startsWith(pair.first, "bool_"))
+        else if (string_starts_with(pair.first, "bool_"))
             transpiler.registerCustomVariableBool(pair.first.substr(5), "var_tex_" + tree.getClosureID(pair.first.substr(5)));
     }
 
@@ -236,16 +232,16 @@ static void tex_expr(std::ostream& stream, const std::string& name, const SceneO
     if (!failed) {
         // Inline custom variables
         for (const auto& pair : tex.properties()) {
-            if (startsWith(pair.first, "num_")) {
+            if (string_starts_with(pair.first, "num_")) {
                 const std::string var_id = tree.getClosureID(pair.first.substr(4));
                 stream << "    let var_tex_" << var_id << " = " << tree.getInline(pair.first) << ";" << std::endl;
-            } else if (startsWith(pair.first, "color_")) {
+            } else if (string_starts_with(pair.first, "color_")) {
                 const std::string var_id = tree.getClosureID(pair.first.substr(6));
                 stream << "    let var_tex_" << var_id << " = " << tree.getInline(pair.first) << ";" << std::endl;
-            } else if (startsWith(pair.first, "vec_")) {
+            } else if (string_starts_with(pair.first, "vec_")) {
                 const std::string var_id = tree.getClosureID(pair.first.substr(4));
                 stream << "    let var_tex_" << var_id << " = " << tree.getInline(pair.first) << ";" << std::endl;
-            } else if (startsWith(pair.first, "bool_")) {
+            } else if (string_starts_with(pair.first, "bool_")) {
                 const std::string var_id = tree.getClosureID(pair.first.substr(5));
                 stream << "    let var_tex_" << var_id << " = " << (pair.second.getBool() ? "true" : "false") << ";" << std::endl;
             }

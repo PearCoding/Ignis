@@ -38,4 +38,28 @@ std::string whitespace_escaped(const std::string& str, const std::string::value_
     std::transform(tmp.begin(), tmp.end(), tmp.begin(), [=](const std::string::value_type& v) { return std::isspace(v) ? c : v; });
     return tmp;
 }
+
+bool string_starts_with(std::string_view str, std::string_view prefix)
+{
+    if (prefix.size() > str.size())
+        return false;
+    return std::equal(prefix.begin(), prefix.end(), str.begin());
+}
+
+bool string_starts_with(const std::string& str, const std::string& prefix)
+{
+    return string_starts_with((std::string_view)str, (std::string_view)prefix);
+}
+
+bool string_ends_with(std::string_view str, std::string_view suffix)
+{
+    if (suffix.size() > str.size())
+        return false;
+    return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
+}
+
+bool string_ends_with(const std::string& str, const std::string& suffix)
+{
+    return string_ends_with((std::string_view)str, (std::string_view)suffix);
+}
 } // namespace IG

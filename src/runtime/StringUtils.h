@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IG_Config.h"
+#include <string_view>
 
 namespace IG {
 /// Transform string to lowercase
@@ -14,4 +15,10 @@ namespace IG {
 
 /// Transform string to a string with whitespace replaced by the character given with c
 [[nodiscard]] IG_LIB std::string whitespace_escaped(const std::string& str, const std::string::value_type& c = '_');
+
+[[nodiscard]] IG_LIB bool string_starts_with(std::string_view str, std::string_view prefix);
+[[nodiscard]] IG_LIB bool string_starts_with(const std::string& str, const std::string& prefix);
+
+[[nodiscard]] IG_LIB bool string_ends_with(std::string_view str, std::string_view suffix);
+[[nodiscard]] IG_LIB bool string_ends_with(const std::string& str, const std::string& suffix);
 } // namespace IG

@@ -125,18 +125,11 @@ void Image::copyToPackedFormat(std::vector<uint8>& dst) const
     }
 }
 
-inline bool ends_with(std::string const& value, std::string const& ending)
-{
-    if (ending.size() > value.size())
-        return false;
-    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
-}
-
 bool Image::isPacked(const std::filesystem::path& path)
 {
     std::string ext   = path.extension().generic_u8string();
-    const bool useExr = ends_with(ext, ".exr");
-    const bool useHdr = ends_with(ext, ".hdr");
+    const bool useExr = string_ends_with(ext, ".exr");
+    const bool useHdr = string_ends_with(ext, ".hdr");
 
     return !useExr && !useHdr;
 }
@@ -175,8 +168,7 @@ static inline int getIntAttribute(const EXRAttribute& attr)
 Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
 {
     std::string ext   = path.extension().generic_u8string();
-    const bool useExr = ends_with(ext, ".exr");
-    const bool useHdr = ends_with(ext, ".hdr");
+    const bool useExr = string_ends_with(ext, ".exr");
 
     Image img;
 
@@ -349,9 +341,8 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
         stbi_image_free(data);
     }
 
-    // Do not flip hdr images (which are fixed to -Y N +X M resolution by stb)
-    if (!useHdr)
-        img.flipY();
+    // Flip images
+    img.flipY();
 
     return img;
 }
@@ -359,8 +350,8 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
 void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& dst, size_t& width, size_t& height, size_t& channels, bool linear)
 {
     std::string ext   = path.extension().generic_u8string();
-    const bool useExr = ends_with(ext, ".exr");
-    const bool useHdr = ends_with(ext, ".hdr");
+    const bool useExr = string_ends_with(ext, ".exr");
+    const bool useHdr = string_ends_with(ext, ".hdr");
 
     if (useExr || useHdr)
         throw ImageLoadException("Can not load EXR or HDR as packed", path);
@@ -456,7 +447,7 @@ bool Image::save(const std::filesystem::path& path)
 bool Image::save(const std::filesystem::path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha)
 {
     std::string ext = path.extension().generic_u8string();
-    bool useExr     = ends_with(ext, ".exr");
+    bool useExr     = string_ends_with(ext, ".exr");
 
     // We only support .exr output
     if (!useExr) {
