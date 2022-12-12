@@ -212,7 +212,7 @@ def make_figure(scenes, args):
 if __name__ == '__main__':
     root_dir = get_root_dir()
     out_dir = os.path.join(root_dir, "build", "evaluation")
-    ref_dir = os.path.join(root_dir, "scenes", "evaluation")
+    ref_dir = os.path.join(root_dir, "scenes", "evaluation", "references")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('OutputDir', nargs='?', type=Path, default=out_dir,
