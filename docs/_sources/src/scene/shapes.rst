@@ -566,6 +566,7 @@ Inline Mesh (:monosp:`inline`)
 
 .. literalinclude:: ../../../scenes/showcase/shape/inline.json
     :language: javascript
+    :tab-width: 4
     :lines: 4-10
     :linenos:
     :dedent:
