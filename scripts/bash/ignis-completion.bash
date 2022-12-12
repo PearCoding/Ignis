@@ -6,6 +6,16 @@ _completion_handler()
 {
     local args cur prev opts
  	
+    # Filter valid executable names (no idea why this is needed)
+    case $(basename $1) in
+    igcli) ;;
+    igview) ;;
+    igtrace) ;;
+    *)
+        return ;;
+    esac
+
+
     COMPREPLY=()
  	cur="${COMP_WORDS[COMP_CWORD]}"
  	prev="${COMP_WORDS[COMP_CWORD-1]}"

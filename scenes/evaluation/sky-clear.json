@@ -13,6 +13,10 @@
 		"size": [256, 256]
 	},
 	"lights": [
-		{"type":"cieclear", "name":"Sky"}
+		{
+			"type":"cieclear", "name":"Sky",
+			"year": 2022, "month": 11, "day": 18, "hour": 13, "minute": 0, "seconds": 0,
+			"latitude": 49.235422, "longitude": -6.9965744, "timezone": -1
+		}
 	]
 }

@@ -20,6 +20,9 @@ int main(int argc, char** argv)
         if (!image.isValid())
             return EXIT_FAILURE;
 
+        // Flip Y
+        image.flipY();
+
         // Output
         if (!image.save(output))
             return EXIT_FAILURE;

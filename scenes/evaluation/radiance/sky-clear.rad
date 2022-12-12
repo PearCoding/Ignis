@@ -1,5 +1,4 @@
-#!gensky -ang 52.8552 323.271 -s 
-!gensky 5 6 12:00CEST -s -a +49.235422 -o -6.9965744 -m -2
+!gensky 11 18 13 -y 2022 -a +49.235422 -o -6.9965744 -m -15 -s
 
 skyfunc glow skyglow
 0

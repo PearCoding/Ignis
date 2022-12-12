@@ -12,7 +12,7 @@ DETAIL=MEDIUM
 VARIABILITY=MEDIUM
 EXPOSURE=1
 
-RAWFILE=output_cloudy_raw
-PICTURE=output_cloudy
+RAWFILE=ref-sky-cloudy-rad-raw
+PICTURE=ref-sky-cloudy-rad
 
 REPORT=0.1

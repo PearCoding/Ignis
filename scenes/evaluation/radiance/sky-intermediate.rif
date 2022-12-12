@@ -12,7 +12,7 @@ DETAIL=MEDIUM
 VARIABILITY=MEDIUM
 EXPOSURE=1
 
-RAWFILE=output_intermediate_raw
-PICTURE=output_intermediate
+RAWFILE=ref-sky-intermediate-rad-raw
+PICTURE=ref-sky-intermediate-rad
 
 REPORT=0.1

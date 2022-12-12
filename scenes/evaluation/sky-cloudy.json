@@ -13,6 +13,6 @@
 		"size": [256, 256]
 	},
 	"lights": [
-		{"type":"ciecloudy", "name":"Sky"}
+		{ "type":"ciecloudy", "name":"Sky" }
 	]
 }
