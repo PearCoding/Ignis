@@ -5,6 +5,7 @@ from api.utils import load_api
 import argparse
 from pathlib import Path
 import numpy as np
+import sys
 
 if __name__ == "__main__":
     # See https://floyd.lbl.gov/radiance/man_html/rpict.1.html for more information
@@ -54,13 +55,13 @@ if __name__ == "__main__":
     elif scene.camera.pluginType == 'orthogonal':
         type_s = "-vtl"
         scale = scene.camera["scale"].getNumber(1)
-        size_s = f"-vh {scale:.4f} -vv {scale:.4f}" # Apply aspect ratio ?
+        size_s = f"-vh {scale:.4f} -vv {scale:.4f}"  # Apply aspect ratio ?
     elif scene.camera.pluginType == 'fishlens':
         type_s = "-vta"  # TODO: Be more diverse
         size_s = "-vh 180 -vv 180"
     else:
         print(
-            f"Can not map {scene.camera.pluginType} to a Radiance known view type, using perspective instead")
+            f"Can not map {scene.camera.pluginType} to a Radiance known view type, using perspective instead", file=sys.stderr)
         type_s = "-vtv"
         size_s = "-vh 60 -vv 60"
 
@@ -75,4 +76,4 @@ if __name__ == "__main__":
         with open(args.OutputFile, "w") as f:
             f.write(output)
     else:
-        print(output)
+        print(output, file=sys.stdout)
