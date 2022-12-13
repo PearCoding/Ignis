@@ -42,6 +42,6 @@ LW=$(awk "BEGIN {print 1/$AD}")
 # The preselected parameters should ensure unbiased images from the first sample on
 # Comparing to SPP based renderer (like Ignis) is difficult, as Radiance `rpict` does not have such an option
 
-oconv ${SCENES[@]} > $TMP_OCT &&
-rpict -t 10 -u+ -ps 1 -aa 0 -as 0 -av 0 0 0 -aw 0 -pt 0 -ss 0 -st 0 -as 128 -ad $AD -lw $LW -dt 0 -dp 0 -dc 0 -ar 0 -lr -16 ${ARGS[@]} $TMP_OCT > $TMP_HDR &&
+oconv ${SCENES[@]} > $TMP_OCT || exit 1
+rpict -t 10 -u+ -ps 1 -aa 0 -as 0 -av 0 0 0 -aw 0 -pt 0 -ss 0 -st 0 -as 128 -ad $AD -lw $LW -dt 0 -dp 0 -dc 0 -ar 0 -lr -16 ${ARGS[@]} $TMP_OCT > $TMP_HDR || exit 1
 hdr2exr "$TMP_HDR" "$OUTPUT"
