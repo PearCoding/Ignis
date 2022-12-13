@@ -106,32 +106,6 @@ fn @tt_eval_component(_dbg: DebugOutput, in_dir: Vec3, out_dir: Vec3, component:
         }
     };
 
-    // if dbg.rnd(in_dir.x+in_dir.y+in_dir.z+out_dir.x+out_dir.y+out_dir.z) < 1e-6 {
-    //     dbg.print("TT ");
-    //     dbg.print_f32(in_dir.x);
-    //     dbg.print(" ");
-    //     dbg.print_f32(in_dir.y);
-    //     dbg.print(" ");
-    //     dbg.print_f32(in_dir.z);
-    //     dbg.print("#");
-    //     dbg.print_f32(out_dir.x);
-    //     dbg.print(" ");
-    //     dbg.print_f32(out_dir.y);
-    //     dbg.print(" ");
-    //     dbg.print_f32(out_dir.z);
-    //     dbg.print("->");
-    //     dbg.print_f32(in_pos.x);
-    //     dbg.print(" ");
-    //     dbg.print_f32(in_pos.y);
-    //     dbg.print("#");
-    //     dbg.print_f32(out_pos.x);
-    //     dbg.print(" ");
-    //     dbg.print_f32(out_pos.y);
-    //     dbg.print("->");
-    //     dbg.print_f32(res);
-    //     dbg.print("\n");
-    // }
-
     res
 }
 
@@ -152,12 +126,11 @@ fn @make_tensortree_model(dbg: DebugOutput, buffer: DeviceBuffer, specification:
     let (front_transmission, front_transmission_off) = make_tensortree_component(specification.front_transmission, buffer, front_reflection_off);
     let (back_reflection,    back_reflection_off)    = make_tensortree_component(specification.back_reflection,    buffer, front_reflection_off + front_transmission_off);
     let (back_transmission,  _)                      = make_tensortree_component(specification.back_transmission,  buffer, front_reflection_off + front_transmission_off + back_reflection_off);
-   
-    // Only optimize components away if they are given at compile time!
-    let has_front_refl = !?front_reflection.specification.total   || front_reflection.specification.total > 0;
-    let has_front_tran = !?front_transmission.specification.total || front_transmission.specification.total > 0;
-    let has_back_refl  = !?back_reflection.specification.total    || back_reflection.specification.total > 0;
-    let has_back_tran  = !?back_transmission.specification.total  || back_transmission.specification.total > 0;
+
+    let has_front_refl = front_reflection.specification.total   > 0;
+    let has_front_tran = front_transmission.specification.total > 0;
+    let has_back_refl  = back_reflection.specification.total    > 0;
+    let has_back_tran  = back_transmission.specification.total  > 0;
 
     TensorTreeModel {
         specification      = specification,
@@ -221,15 +194,11 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, up: Vec3, tree: Ten
 
     Bsdf {
         eval   = @ |in_dir, out_dir| {
-            if true { return(color_builtins::black) } // See note below about NEE
-
             let wo = to_local(out_dir);
             let wi = to_local(in_dir);
             color_mulf(color, tree.eval(surf, wi, wo))
         },
         pdf    = @ |in_dir, out_dir| {
-            if true { return(0) } // See note below about NEE
-
             let wo        = to_local(out_dir);
             let wi        = to_local(in_dir);
             let refl_prob = get_refl_prob(wo);
@@ -260,6 +229,6 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, up: Vec3, tree: Ten
                 }
             }
         },
-        is_specular = true // FIXME: The bsdf does not work properly together with NEE. Figure out why!
+        is_specular = false
     }
 }
