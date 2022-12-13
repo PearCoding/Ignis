@@ -62,4 +62,25 @@ bool string_ends_with(const std::string& str, const std::string& suffix)
 {
     return string_ends_with((std::string_view)str, (std::string_view)suffix);
 }
+
+void string_left_trim(std::string& s)
+{
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+                return !std::isspace(ch);
+            }));
+}
+
+void string_right_trim(std::string& s)
+{
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+                return !std::isspace(ch);
+            }).base(),
+            s.end());
+}
+
+void string_trim(std::string& s)
+{
+    string_left_trim(s);
+    string_right_trim(s);
+}
 } // namespace IG

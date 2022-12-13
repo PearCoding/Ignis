@@ -94,7 +94,7 @@ public:
     void addNumber(const std::string& name, const SceneObject& obj, float def = 0, bool hasDef = true, const NumberOptions& options = NumberOptions::Full());
     void addColor(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const ColorOptions& options = ColorOptions::Full());
     void addVector(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const VectorOptions& options = VectorOptions::Full());
-    void addTexture(const std::string& name, const SceneObject& obj, bool hasDef = true, const TextureOptions& options = TextureOptions::Default());
+    void addTexture(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const TextureOptions& options = TextureOptions::Default());
 
     using BakeOutputTexture = std::optional<std::shared_ptr<Image>>;
     using BakeOutputNumber  = std::optional<float>;

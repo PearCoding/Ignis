@@ -38,7 +38,7 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
     }
 
     input.Tree.addColor("scale", *mLight, Vector3f::Ones(), true);
-    input.Tree.addTexture("radiance", *mLight, true);
+    input.Tree.addTexture("radiance", *mLight, Vector3f::Ones());
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
     const std::string light_id = input.Tree.currentClosureID();

@@ -21,4 +21,13 @@ namespace IG {
 
 [[nodiscard]] IG_LIB bool string_ends_with(std::string_view str, std::string_view suffix);
 [[nodiscard]] IG_LIB bool string_ends_with(const std::string& str, const std::string& suffix);
+
+/// Trim string from the left side in place
+IG_LIB void string_left_trim(std::string& s);
+
+/// Trim string from the right side in place
+IG_LIB void string_right_trim(std::string& s);
+
+/// Trim string from the left and right side in place
+IG_LIB void string_trim(std::string& s);
 } // namespace IG

@@ -1,6 +1,6 @@
 {
 	"externals": [
-		{"filename": "../../plane_array_data.json"}
+		{"filename": "plane_array_data.json"}
 	],
 	"bsdfs": [
 		{"type":"tensortree", "name": "windowBL", "up":[0,1,0], "filename":"../simple_tensor_d2_trans.xml"},

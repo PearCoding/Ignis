@@ -259,7 +259,7 @@ static void tex_transform(std::ostream& stream, const std::string& name, const S
     if (!tree.beginClosure(name))
         return;
 
-    tree.addTexture("texture", tex, true);
+    tree.addTexture("texture", tex, Vector3f::Zero(), true);
 
     const Transformf transform = tex.property("transform").getTransform();
 

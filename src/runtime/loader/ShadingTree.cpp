@@ -3,11 +3,12 @@
 #include "LoaderTexture.h"
 #include "LoaderUtils.h"
 #include "Logger.h"
+#include "StringUtils.h"
 #include "device/Device.h"
 #include "shader/BakeShader.h"
 #include "shader/ScriptCompiler.h"
 
-#include <algorithm> 
+#include <algorithm>
 #include <cctype>
 #include <locale>
 
@@ -222,7 +223,7 @@ void ShadingTree::addVector(const std::string& name, const SceneObject& obj, con
 }
 
 // Only use this if no basic color information suffices
-void ShadingTree::addTexture(const std::string& name, const SceneObject& obj, bool hasDef, const TextureOptions& options)
+void ShadingTree::addTexture(const std::string& name, const SceneObject& obj, const Vector3f& def, bool hasDef, const TextureOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -239,13 +240,13 @@ void ShadingTree::addTexture(const std::string& name, const SceneObject& obj, bo
     case SceneProperty::PT_NONE:
         if (!hasDef)
             return;
-        inline_str = "make_black_texture()";
+        inline_str = "make_constant_texture(" + acquireColor(name, def, mapToColorOptions(options)) + ")";
         break;
     case SceneProperty::PT_INTEGER:
     case SceneProperty::PT_NUMBER:
         inline_str = "make_constant_texture(make_gray_color(" + acquireNumber(name, prop.getNumber(), mapToNumberOptions(options)) + "))";
         break;
-    case SceneProperty::PT_VECTOR3:;
+    case SceneProperty::PT_VECTOR3:
         inline_str = "make_constant_texture(" + acquireColor(name, prop.getVector3(), mapToColorOptions(options)) + ")";
         break;
     case SceneProperty::PT_STRING: {
@@ -287,38 +288,19 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name,
     }
 }
 
-// trim from start (in place)
-static inline void ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }));
-}
-
-// trim from end (in place)
-static inline void rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }).base(), s.end());
-}
-
-// trim from both ends (in place)
-static inline void trim(std::string &s) {
-    rtrim(s);
-    ltrim(s);
-}
-
-static inline std::optional<float> tryExtractFloat(const std::string& str) {
+static inline std::optional<float> tryExtractFloat(const std::string& str)
+{
     std::string c_str = str;
-    trim(c_str);
+    string_trim(c_str);
 
     try {
         size_t idx = 0;
-        float f = std::stof(c_str, &idx);
-        if(idx != c_str.size())
+        float f    = std::stof(c_str, &idx);
+        if (idx != c_str.size())
             return std::nullopt;
         else
             return std::make_optional(f);
-    } catch(...) {
+    } catch (...) {
         return std::nullopt;
     }
 }
