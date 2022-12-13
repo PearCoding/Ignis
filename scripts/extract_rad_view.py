@@ -25,7 +25,12 @@ if __name__ == "__main__":
     # Get scene, but only load camera information
     parser = ignis.SceneParser()
     scene = parser.loadFromFile(
-        str(args.InputFile), ignis.SceneParser.F_LoadCamera | ignis.SceneParser.F_LoadFilm)
+        str(args.InputFile.resolve()), ignis.SceneParser.F_LoadCamera | ignis.SceneParser.F_LoadFilm | ignis.SceneParser.F_LoadExternals)
+
+    if scene.camera is None:
+        print(
+            f"Scene has no camera defined", file=sys.stderr)
+        exit(-1)
 
     # Extract orientation
     view = scene.camera["transform"].getTransform()

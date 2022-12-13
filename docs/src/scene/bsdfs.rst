@@ -777,7 +777,7 @@ Klems (:monosp:`klems`)
     - Yes
     - Up vector
 
-.. WARNING:: The :monosp:`klems` bsdf is still experimental.
+.. WARNING:: The :monosp:`klems` bsdf is still experimental and has some issues.
 
 .. _bsdf-tensortree:
 
@@ -801,8 +801,6 @@ TensorTree (:monosp:`tensortree`)
     - :code:`(0, 0, 1)`
     - Yes
     - Up vector
-
-.. WARNING:: The :monosp:`tensortree` bsdf is still experimental.
 
 .. _bsdf-dielectric-list:
 

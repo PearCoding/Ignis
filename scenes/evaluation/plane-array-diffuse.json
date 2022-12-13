@@ -1,6 +1,6 @@
 {
 	"externals": [
-		{"filename": "plane_array_data.json"}
+		{"filename": "plane-array-base.json"}
 	],
 	"bsdfs": [
 		{"type":"diffuse", "name": "windowBL", "reflectance":0.8},

@@ -13,7 +13,7 @@
 		"size": [256, 256]
 	},
 	"shapes": [
-		{"type":"obj", "name":"Window", "filename":"../../meshes/RoomWindow.obj"}
+		{"type":"obj", "name":"Window", "filename":"../meshes/RoomWindow.obj"}
 	],
 	"entities": [
 		{"name":"Window1","shape":"Window", "bsdf":"windowTL"},
