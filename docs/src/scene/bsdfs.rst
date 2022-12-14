@@ -110,20 +110,17 @@ Smooth dielectric (:monosp:`dielectric`)
 
 .. subfigstart::
 
-.. figure::  images/bsdf_dielectric.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_dielectric.jpg
   :align: center
   
   Dielectric
 
-.. figure::  images/bsdf_thindielectric.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_thindielectric.jpg
   :align: center
   
   Dielectric with thin approximation 
 
 .. subfigend::
-  :width: 0.30
   :label: fig-dielectric 
 
 .. _bsdf-roughdielectric:
