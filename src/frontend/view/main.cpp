@@ -105,7 +105,7 @@ int main(int argc, char** argv)
 
     std::unique_ptr<UI> ui;
     try {
-        ui = std::make_unique<UI>(cmd.SPPMode, runtime.get(), runtime->framebufferWidth(), runtime->framebufferHeight(), runtime->technique() == "debug");
+        ui = std::make_unique<UI>(cmd.SPPMode, runtime.get(), runtime->technique() == "debug");
     } catch (...) {
         return EXIT_FAILURE;
     }
@@ -129,21 +129,32 @@ int main(int argc, char** argv)
     SectionTimer timer_ui;
     SectionTimer timer_render;
     while (!done) {
-        bool prevRun = running;
-
         timer_input.start();
-        size_t iter = runtime->currentIterationCount();
-        done        = ui->handleInput(iter, running, camera);
-        timer_input.stop();
+        const auto input_result = ui->handleInput(camera);
+        switch (input_result) {
+        case UI::InputResult::Quit:
+            done = true;
+            break;
+        case UI::InputResult::Resume:
+            running = true;
+            break;
+        case UI::InputResult::Pause:
+            running = false;
+            break;
+        case UI::InputResult::Reset:
+            runtime->setCameraOrientationParameter(camera.asOrientation());
+            runtime->reset();
+            break;
+        default:
+            break;
+        }
 
         if (lastDebugMode != ui->currentDebugMode()) {
             runtime->setParameter("__debug_mode", (int)ui->currentDebugMode());
             runtime->reset();
             lastDebugMode = ui->currentDebugMode();
-        } else if (iter != runtime->currentIterationCount()) {
-            runtime->setCameraOrientationParameter(camera.asOrientation());
-            runtime->reset();
         }
+        timer_input.stop();
 
         if (running) {
             if (cmd.SPPMode != SPPMode::Capped || runtime->currentIterationCount() < desired_iter) {
@@ -192,7 +203,7 @@ int main(int argc, char** argv)
         } else {
             frames++;
 
-            if (prevRun != running || frames > 100) {
+            if (input_result == UI::InputResult::Pause || frames > 100) {
                 std::ostringstream os;
                 os << "Ignis [Paused, "
                    << runtime->currentSampleCount() << " "
@@ -204,7 +215,7 @@ int main(int argc, char** argv)
         }
 
         timer_ui.start();
-        ui->update(runtime->currentIterationCount(), runtime->currentSampleCount());
+        ui->update();
         timer_ui.stop();
     }
 

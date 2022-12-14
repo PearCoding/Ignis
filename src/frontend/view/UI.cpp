@@ -169,7 +169,7 @@ public:
     };
 
     // Events
-    bool handleEvents(size_t& iter, bool& run, CameraProxy& cam)
+    UI::InputResult handleEvents(CameraProxy& cam)
     {
         const Vector3f sceneCenter = Runtime->sceneBoundingBox().center();
 
@@ -186,7 +186,7 @@ public:
         static bool speed[2]               = { false, false };
         constexpr float RSPEED             = 0.005f;
 
-        const bool canInteract = !LockInteraction && run;
+        const bool canInteract = !LockInteraction && Running;
 
         const auto handleRotation = [&](float xmotion, float ymotion) {
             if (io.KeyCtrl && io.KeyAlt) {
@@ -201,6 +201,7 @@ public:
             }
         };
 
+        bool reset = false;
         SDL_Event event;
         const bool hover = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
         while (SDL_PollEvent(&event)) {
@@ -229,7 +230,7 @@ public:
 
                 switch (event.key.keysym.sym) {
                 case SDLK_ESCAPE:
-                    return true;
+                    return UI::InputResult::Quit;
                 case SDLK_KP_PLUS:
                     speed[0] = key_down;
                     break;
@@ -289,23 +290,80 @@ public:
                 // Followings should only be handled once
                 if (event.type == SDL_KEYUP) {
                     const bool capture = io.KeyCtrl;
+                    switch (event.key.keysym.sym) {
+                    case SDLK_t:
+                        ToneMapping_Automatic = !ToneMapping_Automatic;
+                        break;
+                    case SDLK_g:
+                        if (!ToneMapping_Automatic) {
+                            ToneMapping_Exposure = 1.0f;
+                            ToneMapping_Offset   = 0.0f;
+                        }
+                        break;
+                    case SDLK_f:
+                        if (!ToneMapping_Automatic) {
+                            const float delta = io.KeyCtrl ? 0.05f : 0.5f;
+                            ToneMapping_Exposure += io.KeyShift ? -delta : delta;
+                        }
+                        break;
+                    case SDLK_v:
+                        if (!ToneMapping_Automatic) {
+                            const float delta = io.KeyCtrl ? 0.05f : 0.5f;
+                            ToneMapping_Offset += io.KeyShift ? -delta : delta;
+                        }
+                        break;
+                    case SDLK_p:
+                        if (Running) {
+                            Running = false;
+                            return UI::InputResult::Pause;
+                        } else {
+                            Running = true;
+                            return UI::InputResult::Resume;
+                        }
+                        break;
+                    case SDLK_n:
+                        changeAOV(-1);
+                        break;
+                    case SDLK_m:
+                        changeAOV(1);
+                        break;
+                    case SDLK_i:
+                        ShowInspector = !ShowInspector;
+                        break;
+                    case SDLK_F1:
+                        ShowHelp = !ShowHelp;
+                        break;
+                    case SDLK_F2:
+                        ShowUI = !ShowUI;
+                        break;
+                    case SDLK_F3:
+                        LockInteraction = !LockInteraction;
+                        break;
+                    case SDLK_F11:
+                        if (io.KeyCtrl)
+                            ScreenshotRequest = ScreenshotRequestMode::Full;
+                        else
+                            ScreenshotRequest = ScreenshotRequestMode::Framebuffer;
+                        break;
+                    }
+
                     if (canInteract) {
                         switch (event.key.keysym.sym) {
                         case SDLK_KP_1:
                             cam.update_dir(Vector3f(0, 0, 1), Vector3f(0, 1, 0));
-                            iter = 0;
+                            reset = true;
                             break;
                         case SDLK_KP_3:
                             cam.update_dir(Vector3f(1, 0, 0), Vector3f(0, 1, 0));
-                            iter = 0;
+                            reset = true;
                             break;
                         case SDLK_KP_7:
                             cam.update_dir(Vector3f(0, 1, 0), Vector3f(0, 0, 1));
-                            iter = 0;
+                            reset = true;
                             break;
                         case SDLK_KP_9:
                             cam.update_dir(-cam.Direction, cam.Up);
-                            iter = 0;
+                            reset = true;
                             break;
                         case SDLK_1:
                             handlePoseInput(0, capture, cam);
@@ -339,62 +397,12 @@ public:
                             break;
                         case SDLK_o:
                             cam.snap_up();
-                            iter = 0;
+                            reset = true;
                             break;
                         case SDLK_r:
                             PoseResetRequest = true;
                             break;
                         }
-                    }
-                    switch (event.key.keysym.sym) {
-                    case SDLK_t:
-                        ToneMapping_Automatic = !ToneMapping_Automatic;
-                        break;
-                    case SDLK_g:
-                        if (!ToneMapping_Automatic) {
-                            ToneMapping_Exposure = 1.0f;
-                            ToneMapping_Offset   = 0.0f;
-                        }
-                        break;
-                    case SDLK_f:
-                        if (!ToneMapping_Automatic) {
-                            const float delta = io.KeyCtrl ? 0.05f : 0.5f;
-                            ToneMapping_Exposure += io.KeyShift ? -delta : delta;
-                        }
-                        break;
-                    case SDLK_v:
-                        if (!ToneMapping_Automatic) {
-                            const float delta = io.KeyCtrl ? 0.05f : 0.5f;
-                            ToneMapping_Offset += io.KeyShift ? -delta : delta;
-                        }
-                        break;
-                    case SDLK_p:
-                        run = !run;
-                        break;
-                    case SDLK_n:
-                        changeAOV(-1);
-                        break;
-                    case SDLK_m:
-                        changeAOV(1);
-                        break;
-                    case SDLK_i:
-                        ShowInspector = !ShowInspector;
-                        break;
-                    case SDLK_F1:
-                        ShowHelp = !ShowHelp;
-                        break;
-                    case SDLK_F2:
-                        ShowUI = !ShowUI;
-                        break;
-                    case SDLK_F3:
-                        LockInteraction = !LockInteraction;
-                        break;
-                    case SDLK_F11:
-                        if (io.KeyCtrl)
-                            ScreenshotRequest = ScreenshotRequestMode::Full;
-                        else
-                            ScreenshotRequest = ScreenshotRequestMode::Framebuffer;
-                        break;
                     }
                 }
             } break;
@@ -430,14 +438,14 @@ public:
                         const float xmotion = event.motion.xrel * aspeed;
                         const float ymotion = event.motion.yrel * aspeed;
                         handleRotation(xmotion, ymotion);
-                        iter = 0;
+                        reset = true;
                     } break;
                     case MM_Pan: {
                         const float aspeed  = CurrentTravelSpeed / 10;
                         const float xmotion = event.motion.xrel * aspeed;
                         const float ymotion = -event.motion.yrel * aspeed;
                         cam.move(xmotion, ymotion, 0);
-                        iter = 0;
+                        reset = true;
                     } break;
                     }
                 }
@@ -458,17 +466,17 @@ public:
                             CurrentZoom *= (event.wheel.y < 0) ? -event.wheel.y * 1.05f : event.wheel.y * 0.95f;
                         else
                             cam.move(0, 0, event.wheel.y * CurrentTravelSpeed);
-                        iter = 0;
+                        reset = true;
                     }
                 }
                 break;
             case SDL_QUIT:
-                return true;
+                return UI::InputResult::Quit;
             case SDL_WINDOWEVENT: {
                 switch (event.window.event) {
                 case SDL_WINDOWEVENT_RESIZED:
                     handleFramebufferResize(event.window.data1, event.window.data2);
-                    iter = 0;
+                    reset = true;
                     break;
                 default:
                     break;
@@ -488,61 +496,57 @@ public:
         io.MouseDown[0] = buttons & SDL_BUTTON(SDL_BUTTON_LEFT);
         io.MouseDown[1] = buttons & SDL_BUTTON(SDL_BUTTON_RIGHT);
 
-        if (run) {
-            if (!LockInteraction) {
-                if (std::any_of(arrows.begin(), arrows.end(), [](bool b) { return b; })) {
-                    iter = 0;
-                }
+        if (canInteract) {
+            if (std::any_of(arrows.begin(), arrows.end(), [](bool b) { return b; }))
+                reset = true;
 
-                constexpr float KRSPEED = 10 * RSPEED;
-                if (arrows[0])
-                    cam.move(0, 0, CurrentTravelSpeed);
-                if (arrows[1])
-                    cam.move(0, 0, -CurrentTravelSpeed);
-                if (arrows[2])
-                    cam.move(-CurrentTravelSpeed, 0, 0);
-                if (arrows[3])
-                    cam.move(CurrentTravelSpeed, 0, 0);
-                if (arrows[4])
-                    cam.roll(KRSPEED);
-                if (arrows[5])
-                    cam.roll(-KRSPEED);
-                if (arrows[6])
-                    cam.move(0, CurrentTravelSpeed, 0);
-                if (arrows[7])
-                    cam.move(0, -CurrentTravelSpeed, 0);
-                if (arrows[8])
-                    handleRotation(0, KRSPEED);
-                if (arrows[9])
-                    handleRotation(0, -KRSPEED);
-                if (arrows[10])
-                    handleRotation(-KRSPEED, 0);
-                if (arrows[11])
-                    handleRotation(KRSPEED, 0);
-                if (speed[0])
-                    CurrentTravelSpeed *= 1.1f;
-                if (speed[1])
-                    CurrentTravelSpeed *= 0.9f;
-            }
+            constexpr float KRSPEED = 10 * RSPEED;
+            if (arrows[0])
+                cam.move(0, 0, CurrentTravelSpeed);
+            if (arrows[1])
+                cam.move(0, 0, -CurrentTravelSpeed);
+            if (arrows[2])
+                cam.move(-CurrentTravelSpeed, 0, 0);
+            if (arrows[3])
+                cam.move(CurrentTravelSpeed, 0, 0);
+            if (arrows[4])
+                cam.roll(KRSPEED);
+            if (arrows[5])
+                cam.roll(-KRSPEED);
+            if (arrows[6])
+                cam.move(0, CurrentTravelSpeed, 0);
+            if (arrows[7])
+                cam.move(0, -CurrentTravelSpeed, 0);
+            if (arrows[8])
+                handleRotation(0, KRSPEED);
+            if (arrows[9])
+                handleRotation(0, -KRSPEED);
+            if (arrows[10])
+                handleRotation(-KRSPEED, 0);
+            if (arrows[11])
+                handleRotation(KRSPEED, 0);
+            if (speed[0])
+                CurrentTravelSpeed *= 1.1f;
+            if (speed[1])
+                CurrentTravelSpeed *= 0.9f;
 
             if (PoseResetRequest || PoseRequest >= 0) {
                 auto pose = PoseResetRequest ? PoseManager.initialPose() : PoseManager.pose(PoseRequest);
                 cam.Eye   = pose.Eye;
                 cam.update_dir(pose.Dir, pose.Up);
                 CurrentZoom      = 1;
-                iter             = 0;
                 PoseRequest      = -1;
                 PoseResetRequest = false;
+
+                reset = true;
             }
         }
 
         LastCameraPose = CameraPose(cam);
-        Running        = run;
-
         if (Running && ZoomIsScale)
             Runtime->setParameter("__camera_scale", CurrentZoom);
 
-        return false;
+        return reset ? UI::InputResult::Reset : UI::InputResult::Continue;
     }
 
     void analzeLuminance()
@@ -686,7 +690,7 @@ public:
         delete[] rgba;
     }
 
-    void handleImgui(size_t iter, size_t samples)
+    void handleImgui()
     {
         constexpr size_t UI_W   = 300;
         constexpr size_t UI_H   = 500;
@@ -703,8 +707,10 @@ public:
             ImGui::SetNextWindowSize(ImVec2(UI_W, UI_H), ImGuiCond_Once);
             ImGui::Begin("Control");
             if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::Text("Iter %zu", iter);
-                ImGui::Text("SPP  %zu", samples);
+                ImGui::Text("Iter %zu", Runtime->currentIterationCount());
+                ImGui::Text("SPP  %zu", Runtime->currentSampleCount());
+                if (Parent->mSPPMode == SPPMode::Continuos)
+                    ImGui::Text("Frame %zu", Runtime->currentFrameCount());
                 ImGui::Text("Cursor  (%f, %f, %f)", rgb.r, rgb.g, rgb.b);
                 ImGui::Text("Lum Max %8.3f | 95%% %8.3f", LastLum.Max, LastLum.SoftMax);
                 ImGui::Text("Lum Min %8.3f |  5%% %8.3f", LastLum.Min, LastLum.SoftMin);
@@ -847,7 +853,7 @@ public:
 
 ////////////////////////////////////////////////////////////////
 
-UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool showDebug)
+UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
     : mSPPMode(sppmode)
     , mDebugMode(DebugMode::Normal)
     , mInternal(std::make_unique<UIInternal>())
@@ -859,8 +865,8 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
 
     mInternal->Runtime       = runtime;
     mInternal->Parent        = this;
-    mInternal->Width         = width;
-    mInternal->Height        = height;
+    mInternal->Width         = runtime->framebufferWidth();
+    mInternal->Height        = runtime->framebufferHeight();
     mInternal->ShowDebugMode = showDebug;
     mInternal->ZoomIsScale   = runtime->camera() == "orthogonal";
 
@@ -868,8 +874,8 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
         "Ignis",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        (int)width,
-        (int)height,
+        (int)mInternal->Width,
+        (int)mInternal->Height,
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
     if (!mInternal->Window) {
@@ -884,7 +890,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
         throw std::runtime_error("Could not setup UI");
     }
 
-    if (!mInternal->setupTextureBuffer(width, height))
+    if (!mInternal->setupTextureBuffer(mInternal->Width, mInternal->Height))
         throw std::runtime_error("Could not setup UI");
 
     IMGUI_CHECKVERSION();
@@ -905,7 +911,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
 
     mInternal->PoseManager.load(POSE_FILE);
 
-    if (width < 350 || height < 500) {
+    if (mInternal->Width < 350 || mInternal->Height < 500) {
         IG_LOG(L_WARNING) << "Window too small to show UI. Hiding it by default. Press F2 to show it" << std::endl;
         mInternal->ShowUI = false;
     }
@@ -956,9 +962,9 @@ void UI::setTitle(const char* str)
     SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());
 }
 
-bool UI::handleInput(size_t& iter, bool& run, CameraProxy& cam)
+UI::InputResult UI::handleInput(CameraProxy& cam)
 {
-    return mInternal->handleEvents(iter, run, cam);
+    return mInternal->handleEvents(cam);
 }
 
 inline static void markdownFormatCallback(const ImGui::MarkdownFormatInfo& markdownFormatInfo_, bool start_)
@@ -1027,7 +1033,7 @@ static void handleHelp()
     ImGui::End();
 }
 
-void UI::update(size_t iter, size_t samples)
+void UI::update()
 {
     mInternal->updateSurface();
     switch (mInternal->ScreenshotRequest) {
@@ -1052,7 +1058,7 @@ void UI::update(size_t iter, size_t samples)
 #endif
 
         ImGui::NewFrame();
-        mInternal->handleImgui(iter, samples);
+        mInternal->handleImgui();
         if (mInternal->ShowHelp)
             handleHelp();
         ImGui::Render();

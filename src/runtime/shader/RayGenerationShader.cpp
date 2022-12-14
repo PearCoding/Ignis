@@ -61,8 +61,8 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
         stream << "  let emitter = make_list_emitter(device.load_rays(), settings.iter, init_raypayload);" << std::endl;
     } else {
         stream << ctx.Camera->generate(ctx) << std::endl // Will set `camera`
-               << generatePixelSampler(ctx) << std::endl      // Will set `pixel_sampler`
-               << "  let emitter = make_camera_emitter(camera, settings.iter, spi, pixel_sampler, init_raypayload);" << std::endl;
+               << generatePixelSampler(ctx) << std::endl // Will set `pixel_sampler`
+               << "  let emitter = make_camera_emitter(camera, settings.iter, spi, settings.frame, pixel_sampler, init_raypayload);" << std::endl;
     }
 
     stream << end();

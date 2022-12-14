@@ -64,10 +64,19 @@ public:
     /// Return all names of the enabled AOVs
     [[nodiscard]] inline const std::vector<std::string>& aovs() const { return mTechniqueInfo.EnabledAOVs; }
 
-    /// Return number of iterations rendered so far
-    [[nodiscard]] inline size_t currentIterationCount() const { return mCurrentIteration; }
+    // A frame consists of multiple iterations until target SPP is (ever) reached.
+    // An iteration consists of SPI samples per iteration.
+    // See https://pearcoding.github.io/Ignis/src/getting_started/realtime.html for more information
+
     /// Return number of samples rendered so far
     [[nodiscard]] inline size_t currentSampleCount() const { return mCurrentSampleCount; }
+    /// Return number of iterations rendered so far
+    [[nodiscard]] inline size_t currentIterationCount() const { return mCurrentIteration; }
+    /// Return number of frames rendered so far
+    [[nodiscard]] inline size_t currentFrameCount() const { return mCurrentFrame; }
+
+    /// Increase frame count (only used in interactive/realtime sessions)
+    inline void incFrameCount() { mCurrentFrame++; }
 
     /// Return pointer to structure containing statistics
     [[nodiscard]] const Statistics* getStatistics() const;
@@ -107,9 +116,6 @@ public:
     /// The initial camera orientation the scene was loaded with. Can be used to reset in later iterations
     [[nodiscard]] inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
     void setCameraOrientationParameter(const CameraOrientation& orientation);
-
-    /// Increase frame count (only used in interactive sessions)
-    inline void incFrameCount() { mCurrentFrame++; }
 
     [[nodiscard]] bool hasDenoiser() const;
 
