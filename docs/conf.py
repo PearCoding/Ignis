@@ -40,10 +40,11 @@ language = "en"
 # ones.
 sys.path.append(os.path.abspath('exts'))
 extensions = ['objectparameters', 'subfig',
-              'sphinx_design', 'sphinx_copybutton']
+              'sphinx_design', 'sphinx_copybutton',
+              'sphinx_last_updated_by_git']
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = []
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -53,12 +54,10 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'README.md', '*/README.m
 
 # -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
 html_theme = 'pydata_sphinx_theme'
 html_logo = None
 html_favicon = None
+html_show_sourcelink = False
 html_sourcelink_suffix = ""
 
 html_theme_options = {
@@ -91,7 +90,6 @@ html_js_files = [
 html_sidebars = {
     '**': ["sidebar-nav-bs"]
 }
-html_show_sourcelink = False
 
 source_suffix = ['.rst', '.md']
 

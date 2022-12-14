@@ -405,6 +405,13 @@ E.g., ``color_tint`` will be called ``tint`` inside the expression.
   :width: 0.6
   :label: fig-expr
 
+.. literalinclude:: ../../../scenes/showcase/texture/expr.json
+    :language: javascript
+    :tab-width: 4
+    :lines: 6-12
+    :dedent:
+    :caption: The following texture specification generates the above image. 
+
 Texture transform (:monosp:`transform`)
 ---------------------------------------------
 
