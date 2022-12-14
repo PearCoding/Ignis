@@ -906,7 +906,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
     ImGui_ImplSDL2_InitForSDLRenderer(mInternal->Window, mInternal->Renderer);
     ImGui_ImplSDLRenderer_Init(mInternal->Renderer);
 #else
-    ImGuiSDL::Initialize(mInternal->Renderer, (int)width, (int)height);
+    ImGuiSDL::Initialize(mInternal->Renderer, (int)mInternal->Width, (int)mInternal->Height);
 #endif
 
     mInternal->PoseManager.load(POSE_FILE);
