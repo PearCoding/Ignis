@@ -74,7 +74,7 @@ fi
 # The preselected parameters should ensure unbiased images from the first sample on
 # Comparing to SPP based renderer (like Ignis) is difficult, as Radiance `rpict` does not have such an option
 
-SS=1 #TODO: -ss N might be a good indicator for sample count (even while this is more like splitting per ray)
+SS=0 #TODO: -ss N might be a good indicator for sample count (even while this is more like splitting per ray)
 AD=800
 LW=$(awk "BEGIN {print 1/$AD}")
 DEF=$(cat "$SCRIPT_DIR/rpict_default.txt")
