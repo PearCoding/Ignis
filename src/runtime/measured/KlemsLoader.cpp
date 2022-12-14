@@ -481,9 +481,9 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
     }
 
     // Make sure both transmission parts are equal if not specified otherwise
-    if (!transmissionBack)
+    if (!transmissionBack || (transmissionFront && transmissionBack->computeTotal() <= FltEps))
         transmissionBack = transmissionFront;
-    if (!transmissionFront)
+    if (!transmissionFront || (transmissionBack && transmissionFront->computeTotal() <= FltEps))
         transmissionFront = transmissionBack;
 
     // TODO: Weird behaviour in Radiance: Radiance expects reciprocity and keeps both transmission sides the same
