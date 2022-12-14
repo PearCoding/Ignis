@@ -30,6 +30,12 @@ html[data-theme="dark"] {
     padding-right: .5em;
 }
 
+.bd-footer-content__inner .last-updated {
+	margin: 0.5rem 3rem;
+	color: var(--pst-color-muted);
+	font-style: italic;
+}
+
 /* Roles */
 .paramtype {
 	font-family: 'Courier New', Courier, monospace;

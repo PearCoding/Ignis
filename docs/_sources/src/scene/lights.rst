@@ -67,6 +67,7 @@ Spot Light (:monosp:`spot`)
   * - position
     - |vector|
     - :code:`(0,0,0)`
+    - No
     - Position of the light.
   * - direction
     - |vector|
@@ -522,7 +523,7 @@ Environment Light (:monosp:`env`)
     - |bool|
     - |true|
     - No
-    - Construct a 2d cdf for sampling purposes. Will only be considered if parameter `radiance` is an :monosp:`image` texture (without PExpr and other terms)
+    - Construct a 2d cdf for sampling purposes. Will only be considered if parameter `radiance` is resembling a texture
 
 .. subfigstart::
   

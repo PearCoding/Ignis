@@ -1,7 +1,7 @@
 Shapes
 ======
 
-Shapes represent geometry in the scene and are a group of triangles. No exact primitives representing e.g., a sphere are possible in Ignis currently. This might change in the future.
+Shapes represent geometry in the scene.
 
 A shape is specified in the :monosp:`shapes` block with a :monosp:`name` and a :monosp:`type`.
 The type has to be one of the shape listed at this section below.
@@ -156,7 +156,7 @@ Sphere (:monosp:`sphere`)
     - :code:`(0,0,0)`
     - The origin of the box.
 
-.. NOTE:: In contrary to the other spheres, the constructed sphere is analytical and precise. However, it adds a new primitive type to the renderer, which might decrease performance.
+.. NOTE:: In contrary to the other spheres, the constructed sphere is analytical and precise. Due to it not being constructed via triangle, the shape adds a new fundamental primitive type to the renderer, which in turn might decrease performance.
 
 .. subfigstart::
 
