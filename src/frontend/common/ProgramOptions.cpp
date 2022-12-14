@@ -168,6 +168,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
 
     app.add_flag("--dump-shader", DumpShader, "Dump produced shaders to files in the current working directory");
     app.add_flag("--dump-shader-full", DumpFullShader, "Dump produced shaders with standard library to files in the current working directory");
+    app.add_flag("--dump-registry", DumpRegistry, "Dump internal constructed registry to standard output");
 
     app.add_option("--script-dir", ScriptDir, "Override internal script standard library by '.art' files from the given directory");
 
@@ -264,7 +265,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
 void ProgramOptions::populate(RuntimeOptions& options) const
 {
     IG_LOGGER.setQuiet(Quiet);
-    IG_LOGGER.setVerbosity(DebugTrace ? IG::L_DEBUG : VerbosityLevel);
+    IG_LOGGER.setVerbosity((DebugTrace || DumpRegistry) ? IG::L_DEBUG : VerbosityLevel);
     IG_LOGGER.enableAnsiTerminal(!NoColor);
 
     options.IsTracer      = Type == ApplicationType::Trace;
@@ -275,6 +276,7 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.DebugTrace     = DebugTrace;
     options.DumpShader     = DumpShader;
     options.DumpShaderFull = DumpFullShader;
+    options.DumpRegistry   = DumpRegistry;
     options.SPI            = SPI.value_or(0);
 
     options.OverrideTechnique = TechniqueType;

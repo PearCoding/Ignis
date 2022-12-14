@@ -60,6 +60,7 @@ public:
 
     bool DumpShader     = false;
     bool DumpFullShader = false;
+    bool DumpRegistry   = false;
 
     bool AddExtraEnvLight    = false;
     bool ForceSpecialization = false;

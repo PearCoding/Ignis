@@ -18,7 +18,9 @@ enum class ShaderType {
     Callback,
     Tonemap,
     ImageInfo,
-    Bake
+    Bake,
+
+    _COUNT
 };
 
 enum class SectionType {

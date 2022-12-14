@@ -119,10 +119,11 @@ int main(int argc, char** argv)
 
     IG_LOG(L_INFO) << "Started rendering..." << std::endl;
 
-    bool running    = true;
-    bool done       = false;
-    uint64_t timing = 0;
-    uint32_t frames = 0;
+    bool running     = true;
+    bool done        = false;
+    uint64_t timing  = 0;
+    uint32_t frames  = 0;
+    size_t totalIter = 0; // Total number of iterations, without ever reseting
     std::vector<double> samples_stats;
 
     SectionTimer timer_input;
@@ -167,6 +168,7 @@ int main(int argc, char** argv)
 
                 timer_render.start();
                 runtime->step();
+                ++totalIter;
                 timer_render.stop();
 
                 auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
@@ -240,8 +242,8 @@ int main(int argc, char** argv)
     auto stats = runtime->getStatistics();
     if (stats) {
         IG_LOG(L_INFO)
-            << stats->dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats)
-            << "  Iterations: " << runtime->currentIterationCount() << std::endl
+            << stats->dump(timer_all.duration_ms, totalIter, cmd.AcquireFullStats)
+            << "  Iterations: " << runtime->currentIterationCount() << " (total: " << totalIter << ")" << std::endl
             << "  SPP: " << runtime->currentSampleCount() << std::endl
             << "  SPI: " << SPI << std::endl
             << "  Time: " << beautiful_time(timer_all.duration_ms) << std::endl

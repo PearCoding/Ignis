@@ -59,6 +59,8 @@ Statistics::SectionStats& Statistics::SectionStats::operator+=(const Statistics:
 void Statistics::add(const Statistics& other)
 {
     mDeviceStats += other.mDeviceStats;
+    mPrimaryTraversalStats += other.mPrimaryTraversalStats;
+    mSecondaryTraversalStats += other.mSecondaryTraversalStats;
     mRayGenerationStats += other.mRayGenerationStats;
     mMissStats += other.mMissStats;
     for (const auto& pair : other.mHitStats)

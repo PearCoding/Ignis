@@ -421,6 +421,34 @@ const Statistics* Runtime::getStatistics() const
     return mOptions.AcquireStats ? mDevice->getStatistics() : nullptr;
 }
 
+static void dumpRegistries(std::ostream& stream, const std::string& name, const ShaderOutput<void*>& shader)
+{
+    if (shader.Exec == nullptr || shader.LocalRegistry.empty())
+        return;
+
+    stream << "Registry '" << name << "' at setup:" << std::endl
+           << shader.LocalRegistry.dump();
+}
+
+static void dumpRegistries(std::ostream& stream, const TechniqueVariantBase<void*>& variant)
+{
+    dumpRegistries(stream, "Device", variant.DeviceShader);
+    dumpRegistries(stream, "Tonemap", variant.TonemapShader);
+    dumpRegistries(stream, "Imageinfo", variant.ImageinfoShader);
+    dumpRegistries(stream, "PrimaryTraversal", variant.PrimaryTraversalShader);
+    dumpRegistries(stream, "SecondaryTraversal", variant.SecondaryTraversalShader);
+    dumpRegistries(stream, "RayGeneration", variant.RayGenerationShader);
+    dumpRegistries(stream, "Miss", variant.MissShader);
+    for (size_t i = 0; i < variant.HitShaders.size(); ++i)
+        dumpRegistries(stream, "Hit[" + std::to_string(i) + "]", variant.HitShaders.at(i));
+    for (size_t i = 0; i < variant.AdvancedShadowHitShaders.size(); ++i)
+        dumpRegistries(stream, "AdvancedShadowHit[" + std::to_string(i) + "]", variant.AdvancedShadowHitShaders.at(i));
+    for (size_t i = 0; i < variant.AdvancedShadowMissShaders.size(); ++i)
+        dumpRegistries(stream, "AdvancedShadowMiss[" + std::to_string(i) + "]", variant.AdvancedShadowMissShaders.at(i));
+    for (size_t i = 0; i < variant.CallbackShaders.size(); ++i)
+        dumpRegistries(stream, "Callback[" + std::to_string(i) + "]", variant.CallbackShaders.at(i));
+}
+
 bool Runtime::setupScene()
 {
     Device::SceneSettings settings;
@@ -433,11 +461,13 @@ bool Runtime::setupScene()
     mDevice->assignScene(settings);
 
     if (IG_LOGGER.verbosity() <= L_DEBUG) {
-        if (mGlobalRegistry.empty()) {
-            IG_LOG(L_DEBUG) << "Global registry at setup: None" << std::endl;
-        } else {
-            IG_LOG(L_DEBUG) << "Global registry at setup:" << std::endl
-                            << mGlobalRegistry.dump();
+        if (mOptions.DumpRegistry) {
+            if (mGlobalRegistry.empty()) {
+                IG_LOG(L_DEBUG) << "Global registry at setup: None" << std::endl;
+            } else {
+                IG_LOG(L_DEBUG) << "Global registry at setup:" << std::endl
+                                << mGlobalRegistry.dump();
+            }
         }
 
         if (mResourceMap.empty()) {
@@ -467,6 +497,16 @@ bool Runtime::setupScene()
 
     if (!compileShaders())
         return false;
+
+    if (IG_LOGGER.verbosity() <= L_DEBUG) {
+        if (mOptions.DumpRegistry) {
+            for (size_t i = 0; i < mTechniqueVariantShaderSets.size(); ++i) {
+                auto& stream = IG_LOG_UNSAFE(L_DEBUG);
+                stream << "Local Variant [" << i << "] Registries:" << std::endl;
+                dumpRegistries(stream, mTechniqueVariantShaderSets.at(i));
+            }
+        }
+    }
 
     clearFramebuffer();
     return true;
