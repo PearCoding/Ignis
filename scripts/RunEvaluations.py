@@ -79,10 +79,12 @@ def colorbar(cmap=cm.inferno):
 
 def error_image(img, ref):
     mask = ref != 0
-    raw = np.zeros_like(ref)
-    raw[mask] = np.square((img[mask] - ref[mask]) / ref[mask])
-    max = np.percentile(raw, 99)
-    return np.clip(raw / max, 0, 1) if max != 0 else np.zeros_like(ref)
+    err = np.zeros_like(ref)
+    err[mask] = np.square((img[mask] - ref[mask]) / ref[mask])       # RelSE
+    err[np.logical_not(mask)] = np.square(img[np.logical_not(mask)]) # AbsSE
+    max = np.percentile(err, 99)
+    avg = np.average(np.clip(err, 0, max)) # This is a questionable mixture, but allows some corner-cases with zero reference pixels
+    return (avg, np.clip(err / max, 0, 1) if max != 0 else np.zeros_like(ref))
 
 
 # Some predefined eps
@@ -159,8 +161,8 @@ def make_figure(scenes, args):
         img_gpu[~np.isfinite(img_gpu)] = 0
         img_cpu[~np.isfinite(img_cpu)] = 0
 
-        err_gpu = sio.relative_mse_outlier_rejection(img_gpu, ref_img, 0.001)
-        err_cpu = sio.relative_mse_outlier_rejection(img_cpu, ref_img, 0.001)
+        err_gpu, err_img_gpu = error_image(img_gpu, ref_img) 
+        err_cpu, err_img_cpu = error_image(img_cpu, ref_img) 
 
         gpu_errors.append(err_gpu)
         cpu_errors.append(err_cpu)
@@ -186,10 +188,10 @@ def make_figure(scenes, args):
 
         grid[i, 0].set_image(map_img(ref_img))
         grid[i, 1].set_image(map_img(img_gpu))
-        grid[i, 2].set_image(map_img(error_image(img_gpu, ref_img)))
+        grid[i, 2].set_image(map_img(err_img_gpu))
         grid[i, 2].set_frame(1, frame_gpu)
         grid[i, 3].set_image(map_img(img_cpu))
-        grid[i, 4].set_image(map_img(error_image(img_cpu, ref_img)))
+        grid[i, 4].set_image(map_img(err_img_cpu))
         grid[i, 4].set_frame(1, frame_cpu)
 
         i += 1

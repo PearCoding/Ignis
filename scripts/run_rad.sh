@@ -3,13 +3,14 @@
 # Use `run_rad.sh RPICT_PARAMETERS.. -- SCENES.. OUTPUT`
 # In contrary to rad *.rif, this one does not cache files nor does is share the same command line parameters!
 # The intended use case is limited to short renderings for comparison purposes
-# `oconv` and `rpict` (both Radiance tools) have to be available
+# `oconv` and `rpict` (both Radiance tools) have to be available in the current scope
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 source $SCRIPT_DIR/../source.sh
 
 TMP_OCT=$(mktemp).oct
 TMP_HDR=$(mktemp).hdr
+
 SCENES=()
 ARGS=()
 
@@ -35,13 +36,16 @@ done
 OUTPUT=${SCENES[${#SCENES[@]}-1]}
 unset SCENES[${#SCENES[@]}-1]
 
+SS=1 #TODO: -ss N might be a good indicator for sample count (even while this is more like splitting per ray)
 AD=800
 LW=$(awk "BEGIN {print 1/$AD}")
+DEF=$(cat "$SCRIPT_DIR/rpict_default.txt")
+ARGS="$DEF -ad $AD -lw $LW -ss $SS ${ARGS[@]}"
 
 # See https://floyd.lbl.gov/radiance/man_html/rpict.1.html for documentation
 # The preselected parameters should ensure unbiased images from the first sample on
 # Comparing to SPP based renderer (like Ignis) is difficult, as Radiance `rpict` does not have such an option
 
 oconv ${SCENES[@]} > $TMP_OCT || exit 1
-rpict -t 10 -u+ -ps 1 -aa 0 -as 0 -av 0 0 0 -aw 0 -pt 0 -ss 0 -st 0 -as 128 -ad $AD -lw $LW -dt 0 -dp 0 -dc 0 -ar 0 -lr -16 ${ARGS[@]} $TMP_OCT > $TMP_HDR || exit 1
+rpict $ARGS $TMP_OCT > $TMP_HDR || exit 1
 hdr2exr "$TMP_HDR" "$OUTPUT"

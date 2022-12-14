@@ -209,6 +209,56 @@ public:
         return sum;
     }
 
+    [[nodiscard]] inline float computeMinimumProjectedSolidAngle() const
+    {
+        float minValue = Pi;
+        for (const auto& thetaBase : mRowBasis->thetaBasis())
+            minValue = std::min(minValue, thetaBase.PhiSolidAngle);
+
+        if (mRowBasis != mColumnBasis) {
+            for (const auto& thetaBase : mColumnBasis->thetaBasis())
+                minValue = std::min(minValue, thetaBase.PhiSolidAngle);
+        }
+
+        return minValue;
+    }
+
+    [[nodiscard]] inline float computeMaxHemisphericalScattering() const
+    {
+        const auto& colThetas = mColumnBasis->thetaBasis();
+
+        float maxHemi = 0;
+        for (Eigen::Index row = 0; row < mMatrix.rows(); ++row) {
+            float sum        = 0;
+            Eigen::Index col = 0;
+            for (size_t j = 0; j < colThetas.size(); ++j) {
+                const float colScale     = colThetas.at(j).PhiSolidAngle;
+                const uint32 colPhiCount = colThetas.at(j).PhiCount;
+                for (size_t jp = 0; jp < colPhiCount; ++jp) {
+                    const float value = mMatrix(row, col);
+
+                    sum += value * colScale;
+                    ++col;
+                }
+            }
+            maxHemi = std::max(maxHemi, sum);
+        }
+
+        return maxHemi;
+    }
+
+    [[nodiscard]] inline float extractDiffuse()
+    {
+        const float minValue = mMatrix.minCoeff();
+
+        if (minValue <= 0.01f)
+            return 0; // Not worth extracting diffuse part
+
+        mMatrix.array() -= minValue;
+
+        return Pi * minValue;
+    }
+
     inline void write(Serializer& os)
     {
         constexpr size_t DefaultAlignment = 4 * sizeof(float);
@@ -230,8 +280,9 @@ private:
     KlemsMatrix mCDFMatrix;
 };
 
-static inline void assignSpecification(const KlemsComponent& component, KlemsComponentSpecification& spec)
+static inline void assignSpecification(KlemsComponent& component, KlemsComponentSpecification& spec)
 {
+    // IG_LOG(L_INFO) << "MinPSA: " << component.computeMinimumProjectedSolidAngle() << " MaxHemiS: " << component.computeMaxHemisphericalScattering() << " Diff: " << component.extractDiffuse() << std::endl;
     spec.total       = component.computeTotal();
     spec.theta_count = { component.row()->thetaCount(), component.column()->thetaCount() };
     spec.entry_count = { component.row()->entryCount(), component.column()->entryCount() };
@@ -366,9 +417,12 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
                 continue;
             }
 
-            if (std::signbit(value) && !did_warn_sign) {
-                IG_LOG(L_WARNING) << "Data contains negative values in " << in_xml << ": Using absolute value instead" << std::endl;
-                did_warn_sign = true;
+            if (std::signbit(value)) {
+                value = 0;
+                if (!did_warn_sign) {
+                    IG_LOG(L_WARNING) << "Data contains negative values in " << in_xml << ": Using absolute value instead" << std::endl;
+                    did_warn_sign = true;
+                }
             }
 
             if (!std::isfinite(value)) {
@@ -388,7 +442,7 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
                 col = ind % columnBasis->entryCount();
             }
 
-            component->matrix()(rowPerm.at(row), colPerm.at(col)) = std::abs(value);
+            component->matrix()(rowPerm.at(row), colPerm.at(col)) = value;
             ++ind;
             if (scat_str == end)
                 break;
@@ -416,7 +470,7 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
     }
 
     // If reflection components are not given, make them black
-    // See docs/notes/BSDFdirections.txt in Radiance for more information
+    // See doc/notes/BSDFdirections.txt in Radiance for more information
     if (!reflectionBack) {
         auto basis     = allbasis.begin()->second;
         reflectionBack = std::make_shared<KlemsComponent>(basis, basis);
