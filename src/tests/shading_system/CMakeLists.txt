@@ -1,0 +1,5 @@
+add_executable(ig_check_shading_system main.cpp)
+target_link_libraries(ig_check_shading_system PRIVATE ig_lib_runtime)
+add_lto(ig_check_shading_system)
+add_checks(ig_check_shading_system)
+#add_test(NAME check_shading_system COMMAND ig_check_shading_system)

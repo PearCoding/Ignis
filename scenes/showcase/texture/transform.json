@@ -3,8 +3,7 @@
         {"filename":"base.json"}
     ],
 	"textures": [
-		{"type":"checkerboard", "name":"tex2"},
-		{"type":"transform", "name":"tex", "texture":"tex2", "transform":{"translate": [10,10,0], "rotate": [0, 0, 30], "scale":10}}
+		{"type":"transform", "name":"tex", "texture":"checkerboard(uv)", "transform":[{"translate": [10,10,0]}, {"rotate": [0, 0, 30]}, {"scale":10}]}
 	],
 	"bsdfs": [
 		{"type":"diffuse", "name":"mat-Plane", "reflectance": "tex"}

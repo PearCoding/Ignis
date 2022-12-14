@@ -1,0 +1,57 @@
+fn @cie_wmean(cos_theta: f32, c1: Color, c2: Color) -> Color {
+    // This is the same as wmean in Radiance, but with better precision for f32
+    let a  = math_builtins::pow[f32](cos_theta + 1.01, 10);
+    let f1 = a * a / (a * a + 1);
+    let f2 = 1 / (a * a + 1);
+    color_add(color_mulf(c1, f1), color_mulf(c2, f2))
+}
+
+// Note: groundBrightness is the same as gensky ... -b (x/0.2) in gensky as gensky makes use of the constant gprefl=0.2!
+fn @make_cie_sky_light(id: i32, scene_bbox: BBox, zenith: Color, ground: Color, groundBrightness: f32, cloudy: bool, has_ground: bool, transform: Mat3x3) =
+    make_environment_light_function(id, scene_bbox, @|dir|{
+        let cos_theta = dir.y; // In contrary to other places, environment maps use Y as up
+        if !has_ground && cos_theta < 0 { return(color_builtins::black) }
+
+        let c1 = if cloudy { (1 + 2 * cos_theta) / 3} else { 1 : f32 };
+        let c2 = if cloudy { 0.777777777 : f32} else { 1 : f32 };
+        cie_wmean(cos_theta, color_mulf(zenith, c1), color_mulf(ground, groundBrightness * c2))
+}, transform, !has_ground);
+
+// Note: groundBrightness is the same as gensky ... -b (x/0.2) in gensky as gensky makes use of the constant gprefl=0.2!
+fn @make_cie_sunny_light(id: i32, scene_bbox: BBox, scale: Color, zenith: Color, zenithBrightness: f32, ground: Color, groundBrightness: f32, is_clear: bool, has_ground: bool, sun_dir: Vec3, c2: f32, transform: Mat3x3) =
+    make_environment_light_function(id, scene_bbox, @|dir|{
+        let cos_theta = dir.y; // In contrary to other places, environment maps use Y as up
+        if !has_ground && cos_theta < 0 { return(color_builtins::black) }
+
+        let cos_gamma = vec3_dot(dir, sun_dir);
+        let gamma     = math_builtins::acos(clampf(cos_gamma, -1, 1));
+
+        let c1 = if is_clear { 
+            (0.91 + 10*math_builtins::exp(-3*gamma) + 0.45*cos_gamma*cos_gamma) * select(cos_theta >= 0.01, 1 - math_builtins::exp(-0.32 / cos_theta), 1:f32)
+        } else {
+            let theta  = math_builtins::acos(clampf(cos_theta, -1, 1));
+            let stheta = math_builtins::acos(clampf(sun_dir.y, -1, 1));
+            ((1.35 * math_builtins::sin(5.631 - 3.59*theta) + 3.12) * math_builtins::sin(4.396-2.6*stheta) + 6.37 - theta ) / 2.326 * math_builtins::exp(gamma* (-0.563)*((2.629-theta)*(1.562-stheta)+0.812))
+        };
+
+        color_mul(scale, cie_wmean(cos_theta, color_mulf(zenith, zenithBrightness * c1), color_mulf(ground, groundBrightness * c2)))
+}, transform, !has_ground);
+
+//-------------------------------------------
+fn @calc_perez(sun_c: f32, cos_theta: f32, a: f32, b: f32, c: f32, d: f32, e: f32) -> f32 {
+    let sun_a = math_builtins::acos(sun_c); // Angle between sun and direction
+
+    let A = 1 + a * math_builtins::exp(b / math_builtins::fmax[f32](0.01, cos_theta));
+    let B = 1 + c * math_builtins::exp(d * sun_a) + e * sun_c * sun_c;
+    A * B
+}
+
+fn @make_perez_light(id: i32, scene_bbox: BBox, sun_dir: Vec3, lum: Color, ground: Color, a: f32, b: f32, c: f32, d: f32, e: f32, has_ground: bool, transform: Mat3x3)  =
+    make_environment_light_function(id, scene_bbox, @|dir|{
+        let cos_theta = dir.y; // Cosine between zenith and direction
+        if !has_ground && cos_theta < 0 { return(color_builtins::black) }
+
+        let sun_c = clampf(vec3_dot(dir, sun_dir), -1, 1); // Cosine between sun and direction
+        let fac   = calc_perez(sun_c, cos_theta, a, b, c, d, e);
+        cie_wmean(cos_theta, color_mulf(lum, fac), ground)
+}, transform, false);

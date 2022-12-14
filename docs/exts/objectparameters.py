@@ -1,15 +1,11 @@
 __docformat__ = 'reStructuredText'
 
-import sys
-import os.path
-import csv
 
 from docutils import nodes
-from docutils.utils import SystemMessagePropagation
-from docutils.parsers.rst import Directive, Parser
 from docutils.parsers.rst.directives.tables import Table
 from docutils.statemachine import ViewList
 from sphinx.util.nodes import nested_parse_with_titles
+
 
 class ObjectParameters(Table):
     """
@@ -31,11 +27,13 @@ class ObjectParameters(Table):
         node = nodes.Element()          # anonymous container for parsing
         self.state.nested_parse(self.content, self.content_offset, node)
 
-        # Hardcode this:
-        col_widths = [20, 15, 15, 65]
-
         table_data = [[item.children for item in row_list[0]]
-                        for row_list in node[0]]
+                      for row_list in node[0]]
+
+        num_cols = len(table_data[0])
+        # Hardcode this:
+        col_widths = [20, 15, 15, 65] if num_cols == 4 else [20, 15, 15, 5, 60]
+
         header_rows = self.options.get('header-rows', 1)
         stub_columns = self.options.get('stub-columns', 0)
         self.check_table_dimensions(table_data, header_rows-1, stub_columns)
@@ -60,8 +58,10 @@ class ObjectParameters(Table):
             tgroup += colspec
         rows = []
 
+        num_cols = len(col_widths)
         # Append first row
-        header_text = ['Parameter', 'Type', 'Default', 'Description']
+        header_text = ['Parameter', 'Type', 'Default', 'Description'] if num_cols == 4 else [
+            'Parameter', 'Type', 'Default', 'PExpr', 'Description']
         header_row_node = nodes.row()
         for text in header_text:
             entry = nodes.entry()
@@ -75,9 +75,24 @@ class ObjectParameters(Table):
                 entry = nodes.entry()
 
                 # force the first column to be write in paramtype style
-                if i == 0:
+                if i == 0:  # Name
                     rst = ViewList()
-                    rst.append(""":paramtype:`{name}`""".format(name=str(cell[0][0])), "", 0)
+                    params = str(cell[0][0]).split(",")
+                    for name in params:
+                        rst.append(f":paramtype:`{name.strip()}`", "", 0)
+                    parsed_node = nodes.section()
+                    parsed_node.document = self.state.document
+                    nested_parse_with_titles(self.state, rst, parsed_node)
+
+                    entry += [parsed_node[0]]
+                elif i == 3 and num_cols == 5:
+                    rst = ViewList()
+                    choice = str(cell[0][0]).upper()
+                    if choice == 'YES':
+                        rst.append(":fas:`check;sd-text-success`", "", 0)
+                    else:
+                        rst.append(":fas:`xmark;sd-text-danger`", "", 0)
+
                     parsed_node = nodes.section()
                     parsed_node.document = self.state.document
                     nested_parse_with_titles(self.state, rst, parsed_node)
@@ -96,6 +111,7 @@ class ObjectParameters(Table):
         tbody.extend(rows[header_rows:])
         tgroup += tbody
         return table
+
 
 def setup(app):
     app.add_directive('objectparameters', ObjectParameters)

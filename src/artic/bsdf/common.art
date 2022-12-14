@@ -1,0 +1,53 @@
+// Creates a fully absorbing BSDF non scattering bsdf
+fn @make_null_bsdf(_surf: SurfaceElement) = Bsdf {
+    eval        = @ |_, _| color_builtins::black,
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, _, _| reject_bsdf_sample(),
+    is_specular = false
+};
+
+// Creates a fully absorbing BSDF that behaves like a black body
+fn @make_black_bsdf(_surf: SurfaceElement) = Bsdf {
+    eval        = @ |_, _| color_builtins::black,
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, out_dir, _| make_bsdf_sample(vec3_neg(out_dir), 1, color_builtins::black, 1),
+    is_specular = true
+};
+
+// Error
+fn @make_error_bsdf(surf: SurfaceElement) = Bsdf {
+    eval        = @ |in_dir, _| color_mulf(color_builtins::pink, absolute_cos(in_dir, surf.local.col(2)) * flt_inv_pi),
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, _, _| reject_bsdf_sample(),
+    is_specular = false
+};
+
+// Creates a BSDF that passthroughs all rays and behaves like a refractive interface with ior=1
+fn @make_passthrough_bsdf(_surf: SurfaceElement) = Bsdf {
+    eval        = @ |_, _| color_builtins::black,
+    pdf         = @ |_, _| 0,
+    sample      = @ |_, out_dir, _| make_bsdf_sample(vec3_neg(out_dir), 1, color_builtins::white, 1),
+    is_specular = true
+};
+
+// Allows some bsdfs to be handled as double-sided thin objects. 
+// Most stuff does NOT need it! Support of this should better be integrated in the BSDF itself.
+// Currently only principled BSDF with glTF makes use of it.
+fn @make_doublesided_bsdf(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf) -> Bsdf {
+    if surf.is_entering { 
+        @bsdf_factory(surf)
+    } else {
+        let bsdf = @bsdf_factory(invert_surface_element(surf));
+        bsdf.{
+            eval   = @ |in_dir, out_dir| bsdf.eval(vec3_neg(in_dir), vec3_neg(out_dir)),
+            pdf    = @ |in_dir, out_dir| bsdf.pdf(vec3_neg(in_dir), vec3_neg(out_dir)),
+            sample = @ |rnd, out_dir, adjoint| {
+                if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, vec3_neg(out_dir), adjoint) {
+                    make_bsdf_sample(vec3_neg(s.in_dir), s.pdf, s.color, s.eta)
+                } else {
+                    reject_bsdf_sample()
+                }
+            }
+        }
+    }
+}

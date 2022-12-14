@@ -1,0 +1,98 @@
+// Special purpose technique to extract information useful for denoising and other post-processing techniques
+// This technique will be injected as the first pass in the first iteration if denoising is enabled
+// The framebuffer is not touched
+struct IBRayPayload {
+    depth:    i32, // Current depth,
+    distance: f32  // Traveled distance, so far
+}
+
+fn @write_ibraypayload(payload: RayPayload, ib: IBRayPayload) -> () {
+    payload.set(0, ib.depth as f32);
+    payload.set(1, ib.distance);
+}
+
+fn @unwrap_ibraypayload(payload: RayPayload) = IBRayPayload {
+    depth    = payload.get(0) as i32,
+    distance = payload.get(1)
+};
+
+fn @init_ib_raypayload(payload: RayPayload) = write_ibraypayload(payload, IBRayPayload {
+    depth    = 1,
+    distance = 0
+});
+
+static AOV_IB_NORMAL = 0x1000;
+static AOV_IB_ALBEDO = 0x1001;
+static AOV_IB_DEPTH  = 0x1002;
+fn @make_infobuffer_renderer(max_path_len: i32, aovs: AOVTable, handle_specular: bool) -> Technique {
+    let offset : f32  = 0.001;
+
+    let aov_normal = @aovs(AOV_IB_NORMAL);
+    let aov_albedo = @aovs(AOV_IB_ALBEDO);
+    let aov_depth  = @aovs(AOV_IB_DEPTH);
+
+    fn @on_hit( ctx: ShadingContext
+              , payload: RayPayload
+              , mat: Material
+        ) -> Option[Color] {
+        if (!handle_specular || !mat.bsdf.is_specular) {
+            let ib = unwrap_ibraypayload(payload);
+
+            // Compute albedo
+            let out_dir    = vec3_neg(ctx.ray.dir);
+            let mut albedo = color_builtins::black;
+
+            let samples = 16:i32;
+            let mut rnd = fnv_hash(fnv_init(), bitcast[u32](ctx.pixel.linear));
+            for _i in unroll(0, samples) {
+                if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(&mut rnd, out_dir, false) {
+                    let cos = absolute_cos(mat_sample.in_dir, ctx.surf.local.col(2));
+                    albedo  = color_add(albedo, color_mulf(mat_sample.color, safe_div(mat_sample.pdf, samples as f32 * cos))); // We want the result without cosine term
+                }
+            }
+
+            // Splat all
+            aov_normal.splat(ctx.pixel, vec3_to_color(ctx.surf.local.col(2)));
+            aov_albedo.splat(ctx.pixel, color_saturate(albedo, 1));
+            aov_depth.splat(ctx.pixel, make_gray_color(ctx.hit.distance + if !handle_specular { 0 } else { ib.distance }));
+        }
+
+        Option[Color]::None
+    }
+
+    fn @on_bounce( ctx: ShadingContext
+                 , rnd: &mut RndState
+                 , payload: RayPayload
+                 , mat: Material
+        ) -> Option[Ray] {
+
+        if (handle_specular && mat.bsdf.is_specular) {
+            let ib = unwrap_ibraypayload(payload);
+
+            if ib.depth <= max_path_len {    
+                // Bounce
+                let out_dir = vec3_neg(ctx.ray.dir);
+                if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) { 
+                    write_ibraypayload(payload, IBRayPayload{
+                        depth    = ib.depth + 1,
+                        distance = ib.distance + ctx.hit.distance,
+                    });      
+                    return(make_option(
+                        make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
+                    ))
+                }
+            }
+        }
+        
+        Option[Ray]::None
+    }
+
+    Technique {
+        on_hit         = on_hit,
+        on_miss        = TechniqueNoMissFunction,
+        on_shadow      = TechniqueNoShadowFunction,
+        on_bounce      = on_bounce,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = TechniqueNoShadowMissFunction,
+    }
+}

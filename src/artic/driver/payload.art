@@ -1,0 +1,14 @@
+struct PayloadInfo {
+    primary_count:   i32,
+    secondary_count: i32
+}
+
+struct RayPayload {
+    get: fn (i32) -> f32,
+    set: fn (i32, f32) -> ()
+}
+
+fn make_empty_payload() = RayPayload{
+    get = @|_| { 0 },
+    set = @|_,_| {}
+};

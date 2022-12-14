@@ -1,0 +1,277 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 12,
+    "clamp": 10.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 39.597752709049864,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -0.6859207153320312,
+      -0.32401347160339355,
+      -0.6515582203865051,
+      5.542325019836426,
+      -0.7276763319969177,
+      0.3054208755493164,
+      0.6141703724861145,
+      -4.674445152282715,
+      4.011331711240018e-09,
+      0.8953956365585327,
+      -0.44527146220207214,
+      3.8037607669830322,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      1000.0,
+      1000.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "Circle",
+      "filename": "meshes/Circle.ply"
+    },
+    {
+      "type": "ply",
+      "name": "ZAxis",
+      "filename": "meshes/ZAxis.ply"
+    },
+    {
+      "type": "ply",
+      "name": "XAxis",
+      "filename": "meshes/XAxis.ply"
+    },
+    {
+      "type": "ply",
+      "name": "YAxis",
+      "filename": "meshes/YAxis.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Roundcube",
+      "filename": "meshes/Roundcube.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "diffuse",
+      "name": "XMat",
+      "reflectance": "color(0.800000011920929, 0.0, 0.0, 1.0)"
+    },
+    {
+      "type": "diffuse",
+      "name": "YMat",
+      "reflectance": "color(0.0, 0.800000011920929, 0.0, 1.0)"
+    },
+    {
+      "type": "diffuse",
+      "name": "Block",
+      "reflectance": "color(0.8000000715255737, 0.4254274070262909, 0.016942542046308517, 1.0)"
+    },
+    {
+      "type": "principled",
+      "name": "Material.001",
+      "base_color": "select(checkerboard(uvw * 20.0) == 1, color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0), color(0.20000000298023224, 0.20000000298023224, 0.20000000298023224, 1.0))",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.5
+    },
+    {
+      "type": "diffuse",
+      "name": "ZMat",
+      "reflectance": "color(0.0, 0.0, 0.8000000715255737, 1.0)"
+    }
+  ],
+  "entities": [
+    {
+      "name": "Circle-Circle",
+      "shape": "Circle",
+      "bsdf": "Material.001",
+      "transform": [
+        10.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        10.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        10.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "ZAxis-ZAxis",
+      "shape": "ZAxis",
+      "bsdf": "ZMat",
+      "transform": [
+        0.19999998807907104,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.19999998807907104,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "XAxis-XAxis",
+      "shape": "XAxis",
+      "bsdf": "XMat",
+      "transform": [
+        3.8941433189165764e-08,
+        -2.6871767033753713e-08,
+        1.0,
+        1.0,
+        0.0,
+        0.19999998807907104,
+        1.3435884227419592e-07,
+        0.0,
+        -0.19999998807907104,
+        -5.232126326838076e-15,
+        1.9470718370939721e-07,
+        0.19999998807907104,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "YAxis-YAxis",
+      "shape": "YAxis",
+      "bsdf": "YMat",
+      "transform": [
+        3.8941433189165764e-08,
+        -0.19999998807907104,
+        -1.6292068494294654e-07,
+        0.0,
+        0.0,
+        -3.258413627804657e-08,
+        1.0,
+        0.9000000357627869,
+        -0.19999998807907104,
+        -3.8941433189165764e-08,
+        -3.172182771993791e-14,
+        0.19999998807907104,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Roundcube-Roundcube",
+      "shape": "Roundcube",
+      "bsdf": "Block",
+      "transform": [
+        0.19999998807907104,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.19999998807907104,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.19999998807907104,
+        0.20000000298023224,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "spot",
+      "name": "Light",
+      "position": [
+        4.076245307922363,
+        1.0054539442062378,
+        5.903861999511719
+      ],
+      "direction": [
+        -0.5663931965827942,
+        -0.21839119493961334,
+        -0.7946722507476807
+      ],
+      "intensity": [
+        75.06035322051608,
+        75.06035322051608,
+        75.06035322051608
+      ],
+      "cutoff": 37.49999933598528,
+      "falloff": 31.874999212070072
+    },
+    {
+      "type": "env",
+      "name": "__scene_world",
+      "radiance": "color(0.009999999776482582, 0.009999999776482582, 0.009999999776482582, 1.0)",
+      "transform": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}

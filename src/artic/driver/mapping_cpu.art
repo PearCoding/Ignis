@@ -1,0 +1,992 @@
+// Swap functions ------------------------------------------------------------------
+fn @cpu_swap_ray_entry(rays: &RayStream, a: i32, b: i32) -> () {
+    swap(&mut rays.id(a),    &mut rays.id(b));
+    swap(&mut rays.org_x(a), &mut rays.org_x(b));
+    swap(&mut rays.org_y(a), &mut rays.org_y(b));
+    swap(&mut rays.org_z(a), &mut rays.org_z(b));
+    swap(&mut rays.dir_x(a), &mut rays.dir_x(b));
+    swap(&mut rays.dir_y(a), &mut rays.dir_y(b));
+    swap(&mut rays.dir_z(a), &mut rays.dir_z(b));
+    swap(&mut rays.tmin(a),  &mut rays.tmin(b));
+    swap(&mut rays.tmax(a),  &mut rays.tmax(b));
+    swap(&mut rays.flags(a), &mut rays.flags(b));
+}
+
+fn @cpu_swap_primary_entry(primary: &PrimaryStream, payload_count: i32, capacity: i32, a: i32, b: i32, is_payload_soa: bool) -> () {
+    cpu_swap_ray_entry(primary.rays, a, b);
+
+    swap(&mut primary.ent_id(a),  &mut primary.ent_id(b));
+    swap(&mut primary.prim_id(a), &mut primary.prim_id(b));
+    swap(&mut primary.t(a),       &mut primary.t(b));
+    swap(&mut primary.u(a),       &mut primary.u(b));
+    swap(&mut primary.v(a),       &mut primary.v(b));
+    swap(&mut primary.rnd(a),     &mut primary.rnd(b));
+
+    if !is_payload_soa {
+        for c in unroll(0, payload_count) {
+            swap(&mut primary.payload(a*payload_count + c), &mut primary.payload(b*payload_count + c));
+        }
+    } else {
+        for c in unroll(0, payload_count) {
+            swap(&mut primary.payload(a + c*capacity), &mut primary.payload(b + c*capacity));
+        }
+    }
+
+}
+
+fn @cpu_swap_secondary_entry(secondary: &SecondaryStream, payload_count: i32, capacity: i32, a: i32, b: i32, is_payload_soa: bool) -> () {
+    cpu_swap_ray_entry(secondary.rays, a, b);
+
+    swap(&mut secondary.color_r(a), &mut secondary.color_r(b));
+    swap(&mut secondary.color_g(a), &mut secondary.color_g(b));
+    swap(&mut secondary.color_b(a), &mut secondary.color_b(b));
+    swap(&mut secondary.mat_id(a),  &mut secondary.mat_id(b));
+
+    if !is_payload_soa {
+        for c in unroll(0, payload_count) {
+            swap(&mut secondary.payload(a*payload_count + c), &mut secondary.payload(b*payload_count + c));
+        }
+    } else {
+        for c in unroll(0, payload_count) {
+            swap(&mut secondary.payload(a + c*capacity), &mut secondary.payload(b + c*capacity));
+        }
+    }
+}
+
+// Sort functions ------------------------------------------------------------------
+fn @cpu_sort_primary(primary: &PrimaryStream, size: i32, ray_begins: &mut[i32], ray_ends: &mut[i32], num_geometries: i32, payload_count: i32, capacity: i32, is_payload_soa: bool) -> i32 {
+    // Count the number of rays per shader
+    for i in range(0, num_geometries + 1) {
+        ray_ends(i) = 0;
+    }
+
+    fn @get_ent_arr_id(i: i32) {
+        let k = primary.ent_id(i);
+        select(k == InvalidHitId, num_geometries, k)
+    }
+
+    for i in range(0, size) {
+        ray_ends(get_ent_arr_id(i))++;
+    }
+
+    // Compute scan over shader bins
+    let mut n = 0;
+    for i in range(0, num_geometries + 1) {
+        ray_begins(i) = n;
+        n += ray_ends(i);
+        ray_ends(i) = n;
+    }
+
+    // Sort by shader
+    for i in range(0, num_geometries) {
+        let (begin, end) = (ray_begins(i), ray_ends(i));
+        let mut j = begin;
+        while j < end {
+            let ent_id = get_ent_arr_id(j);
+            if ent_id != i {
+                let k = ray_begins(ent_id)++;
+                cpu_swap_primary_entry(primary, payload_count, capacity, k, j, is_payload_soa);
+            } else {
+                j++;
+            }
+        }
+    }
+
+    // Kill rays that have not intersected anything
+    ray_ends(num_geometries - 1)
+}
+
+fn @cpu_sort_secondary(secondary: &SecondaryStream, size: i32, payload_count: i32, capacity: i32, is_payload_soa: bool) -> i32 {
+    fn @map_id(i:i32) = select(secondary.mat_id(i) < 0, 0:i32, 1:i32);
+
+    // Get number of hits
+    let mut count = 0;
+    for i in range(0, size) {
+        if map_id(i) == 0 { count++; }
+    }
+    
+    let mut counters : [i32*2];
+    counters(0) = 0;
+    counters(1) = count;
+
+    // Sort
+    for i in unroll(0, 2) {
+        let (begin, end) = if i == 0 { (0, count) } else { (count, size) };
+        let mut j = begin;
+        while j < end {
+            let id = map_id(j);
+            if id != i {
+                let g = counters(id)++;
+                cpu_swap_secondary_entry(secondary, payload_count, capacity, g, j, is_payload_soa);
+            } else {
+                j++;
+            }
+        }
+    }
+
+    // Number of entries not hitting something
+    count
+}
+
+fn @cpu_sort_secondary_with_materials(secondary: &SecondaryStream, size: i32, ray_begins: &mut[i32], ray_ends: &mut[i32], num_materials: i32, payload_count: i32, capacity: i32, is_payload_soa: bool) -> i32 {
+    fn @map_id(i:i32) -> i32 {
+        let id = secondary.mat_id(i); // Is +1
+        select(id < 0, -id, num_materials + id) - 1
+    }
+
+    // Reset
+    for i in range(0, 2 * num_materials) {
+        ray_ends(i) = 0;
+    }
+
+    // Count the number of rays per shader
+    for i in range(0, size) {
+        ray_ends(map_id(i))++;
+    }
+
+    // Compute scan over shader bins
+    let mut n = 0;
+    for i in range(0, 2 * num_materials) {
+        ray_begins(i) = n;
+        n += ray_ends(i);
+        ray_ends(i) = n;
+    }
+
+    // Sort by shader
+    for i in range(0, 2 * num_materials) {
+        let (begin, end) = (ray_begins(i), ray_ends(i));
+        let mut j = begin;
+        while j < end {
+            let id = map_id(j);
+            if id != i {
+                let g = ray_begins(id)++;
+                cpu_swap_secondary_entry(secondary, payload_count, capacity, g, j, is_payload_soa);
+            } else {
+                j++;
+            }
+        }
+    }
+
+    // Number of entries not hitting something
+    ray_ends(num_materials-1)
+}
+
+// Compact functions ------------------------------------------------------------------
+fn @cpu_compact_ray_stream(rays: RayStream, i: i32, j: i32, mask: bool) -> () {
+    rays.org_x(i) = rv_compact(rays.org_x(j), mask);
+    rays.org_y(i) = rv_compact(rays.org_y(j), mask);
+    rays.org_z(i) = rv_compact(rays.org_z(j), mask);
+    rays.dir_x(i) = rv_compact(rays.dir_x(j), mask);
+    rays.dir_y(i) = rv_compact(rays.dir_y(j), mask);
+    rays.dir_z(i) = rv_compact(rays.dir_z(j), mask);
+    rays.tmin(i)  = rv_compact(rays.tmin(j),  mask);
+    rays.tmax(i)  = rv_compact(rays.tmax(j),  mask);
+    rays.flags(i) = bitcast[u32](rv_compact(bitcast[f32](rays.flags(j)), mask));
+}
+
+fn @cpu_move_ray_stream(rays: RayStream, i: i32, j: i32) -> () {
+    rays.org_x(i) = rays.org_x(j);
+    rays.org_y(i) = rays.org_y(j);
+    rays.org_z(i) = rays.org_z(j);
+    rays.dir_x(i) = rays.dir_x(j);
+    rays.dir_y(i) = rays.dir_y(j);
+    rays.dir_z(i) = rays.dir_z(j);
+    rays.tmin(i)  = rays.tmin(j);
+    rays.tmax(i)  = rays.tmax(j);
+    rays.flags(i) = rays.flags(j);
+}
+
+fn @cpu_compact_primary(primary: &PrimaryStream, size: i32, payload_count: i32, capacity: i32, vector_width: i32, vector_compact: bool, is_payload_soa: bool) -> i32 {
+    let mut k = 0;
+    if vector_compact {
+        for i in range_step(0, size, vector_width) {
+            vectorize(vector_width, |j| { 
+                let id = primary.rays.id(i + j);
+                let mask = (id >= 0) & (i + j < size);
+
+                primary.rays.id(k + j) = bitcast[i32](rv_compact(bitcast[f32](id), mask));
+
+                cpu_compact_ray_stream(primary.rays, k + j, i + j, mask);
+
+                primary.rnd(k + j) = bitcast[u32](rv_compact(bitcast[f32](primary.rnd(i + j)), mask));
+                if !is_payload_soa {
+                    for c in unroll(0, payload_count) {
+                        primary.payload((k + j)*payload_count + c) = rv_compact(primary.payload((i + j)*payload_count + c), mask);
+                    }
+                } else {
+                    for c in unroll(0, payload_count) {
+                        primary.payload(k + j + c*capacity) = rv_compact(primary.payload(i + j + c*capacity), mask);
+                    }
+                }
+
+                k += cpu_popcount32(rv_ballot(mask));
+            });
+        }
+    } else {
+        for i in range(0, size) {
+            let id = primary.rays.id(i);
+            if id >= 0 {
+                primary.rays.id(k) = id;
+                cpu_move_ray_stream(primary.rays, k, i);
+                primary.rnd(k) = primary.rnd(i);
+
+                if !is_payload_soa {
+                    for c in unroll(0, payload_count) {
+                        primary.payload(k*payload_count + c) = primary.payload(i*payload_count + c);
+                    }
+                } else {
+                    for c in unroll(0, payload_count) {
+                        primary.payload(k + c*capacity) = primary.payload(i + c*capacity);
+                    }
+                }
+                k++;
+            }
+        } 
+    }
+    k
+}
+
+fn @cpu_compact_secondary(secondary: &SecondaryStream, size: i32, payload_count: i32, capacity: i32, vector_width: i32, vector_compact: bool, is_payload_soa: bool) -> i32 {
+    let mut k = 0;
+    if vector_compact {
+        for i in range_step(0, size, vector_width) {
+            vectorize(vector_width, |j| {
+                let id = secondary.rays.id(i + j);
+                let mask = (id >= 0) & (i + j < size);
+
+                secondary.rays.id(k + j) = bitcast[i32](rv_compact(bitcast[f32](id), mask));
+
+                cpu_compact_ray_stream(secondary.rays, k + j, i + j, mask);
+
+                secondary.mat_id(k + j)  = bitcast[i32](rv_compact(bitcast[f32](secondary.mat_id(i + j)), mask));
+                secondary.color_r(k + j) = rv_compact(secondary.color_r(i + j), mask);
+                secondary.color_g(k + j) = rv_compact(secondary.color_g(i + j), mask);
+                secondary.color_b(k + j) = rv_compact(secondary.color_b(i + j), mask);
+
+                if !is_payload_soa {
+                    for c in unroll(0, payload_count) {
+                        secondary.payload((k + j)*payload_count + c) = rv_compact(secondary.payload((i + j)*payload_count + c), mask);
+                    }
+                } else {
+                    for c in unroll(0, payload_count) {
+                        secondary.payload(k + j + c*capacity) = rv_compact(secondary.payload(i + j + c*capacity), mask);
+                    }
+                }
+
+                k += cpu_popcount32(rv_ballot(mask));
+            });
+        }
+    } else {
+        for i in range(0, size) {
+            let id = secondary.rays.id(i);
+            if id >= 0 {
+                secondary.rays.id(k) = id;
+                cpu_move_ray_stream(secondary.rays, k, i);
+                secondary.mat_id(k)  = secondary.mat_id(i);
+                secondary.color_r(k) = secondary.color_r(i);
+                secondary.color_g(k) = secondary.color_g(i);
+                secondary.color_b(k) = secondary.color_b(i);
+
+                if !is_payload_soa {
+                    for c in unroll(0, payload_count) {
+                        secondary.payload(k*payload_count + c) = secondary.payload(i*payload_count + c);
+                    }
+                } else {
+                    for c in unroll(0, payload_count) {
+                        secondary.payload(k + c*capacity) = secondary.payload(i + c*capacity);
+                    }
+                }
+                k++;
+            }
+        }
+    }
+    k
+}
+
+// Ray generator ------------------------------------------------------------------
+fn @cpu_generate_rays( primary: PrimaryStream
+                     , current_size: i32
+                     , capacity: i32
+                     , emitter: RayEmitter
+                     , next_id: i32
+                     , xmin: i32
+                     , ymin: i32
+                     , xmax: i32
+                     , ymax: i32
+                     , film_width: i32
+                     , film_height: i32
+                     , spi: i32
+                     , payload_info: PayloadInfo
+                     , vector_width: i32
+                     , is_payload_soa: bool
+                     ) -> i32 {
+    let write_ray = make_ray_stream_writer(primary.rays, 1);
+    let write_rnd = make_primary_stream_rnd_state_writer(primary, 1);
+    let get_payload = make_primary_stream_payload_handler(primary, payload_info.primary_count, capacity, 1, is_payload_soa);
+    let first_id = next_id;
+    let (tile_width, tile_height) = (xmax - xmin, ymax - ymin);
+    let num_rays = min(spi * tile_width * tile_height - first_id, capacity - current_size);
+    let tile_div = make_fast_div(tile_width as u32);
+    for i, _ in vectorized_range(vector_width, 0, num_rays) {
+        let in_tile_id = first_id + i;
+
+        // Compute x, y of ray within tile
+        let sample = in_tile_id % spi;
+        let in_tile_pixel = in_tile_id / spi;
+        let in_tile_y = fast_div(tile_div, in_tile_pixel as u32) as i32;
+        let in_tile_x = in_tile_pixel - in_tile_y * tile_width;
+        let x = xmin + in_tile_x;
+        let y = ymin + in_tile_y;
+        let cur_ray = current_size + i;
+        let payload = get_payload(cur_ray, 0);
+        let (ray, rnd) = @emitter(sample, x, y, film_width, film_height, payload);
+        write_ray(cur_ray, 0, ray);
+        write_rnd(cur_ray, 0, rnd);
+        primary.rays.id(cur_ray) = y * film_width + x;
+    }
+    
+    current_size + num_rays
+}
+
+fn @cpu_generate_rays_handler(size: i32
+                            , capacity: i32
+                            , emitter: RayEmitter
+                            , next_id: i32
+                            , xmin: i32
+                            , ymin: i32
+                            , xmax: i32
+                            , ymax: i32
+                            , spi: i32
+                            , payload_info: PayloadInfo
+                            , vector_width: i32
+                            , is_payload_soa: bool) -> i32 {
+    let work_info = get_work_info();
+
+    let mut primary : PrimaryStream;
+    ignis_get_primary_stream(0, 0, &mut primary, capacity);
+    cpu_generate_rays(primary, size, capacity, emitter, next_id, xmin, ymin, xmax, ymax, work_info.width, work_info.height, spi, payload_info, vector_width, is_payload_soa)
+}
+
+// Traverse functions ------------------------------------------------------------------
+fn @cpu_traverse_primary(scene: SceneTracer, size: i32, min_max: MinMax, vector_width: i32) -> () {
+    let mut primary : PrimaryStream;
+    ignis_get_primary_stream_const(0, 0, &mut primary);
+
+    let rays  = make_ray_stream_reader(primary.rays, vector_width);
+    let hits  = make_primary_stream_hit_reader(primary, vector_width);
+    let whits = make_primary_stream_hit_writer(primary, vector_width);
+
+    for k in unroll(0, scene.type_count) {
+        let geom = scene.get(k);
+        let init_hit = if k == 0 { 
+            @|_:i32, _:i32, r: Ray| empty_hit(r.tmax)
+        } else {
+            @|i:i32, j:i32, _: Ray| hits(i, j)
+        };
+
+        cpu_traverse(
+            min_max,
+            geom,
+            rays,
+            whits,
+            init_hit,
+            vector_width /*packet_size*/,
+            size / vector_width + select(size % vector_width != 0, 1, 0),
+            false /*any_hit*/
+        );
+    }
+}
+
+fn @cpu_traverse_secondary(scene: SceneTracer, size: i32, min_max: MinMax, vector_width: i32) -> () {
+    let mut secondary : SecondaryStream;
+    ignis_get_secondary_stream_const(0, 0, &mut secondary);
+    
+    let rays  = make_ray_stream_reader(secondary.rays, vector_width);
+    let hits  = make_secondary_stream_hit_reader(secondary, vector_width);
+    let whits = make_secondary_stream_hit_writer(secondary, vector_width);
+    
+    for k in unroll(0, scene.type_count) {
+        let geom = scene.get(k);
+        
+        let init_hit = if k == 0 { 
+            @|_:i32, _:i32, r: Ray| empty_hit(r.tmax)
+        } else {
+            @|i:i32, j:i32, _: Ray| hits(i, j)
+        };
+
+        // TODO: Check any hit!!
+        cpu_traverse(
+            min_max,
+            geom,
+            rays,
+            whits,
+            init_hit,
+            vector_width /*packet_size*/,
+            size / vector_width + select(size % vector_width != 0, 1, 0),
+            true /*any_hit*/
+        );
+    }
+}
+
+fn @cpu_splat_rv(id: i32, color: Color, framebuffer: AOVImage, vector_width: i32) {
+    for lane in unroll(0, vector_width) {
+        let j = bitcast[i32](rv_extract(bitcast[f32](id), lane));
+        let color_lane = make_color(
+            rv_extract(color.r, lane),
+            rv_extract(color.g, lane),
+            rv_extract(color.b, lane),
+            1
+        );
+        framebuffer.splat(make_pixelcoord_from_linear(j, framebuffer.width, framebuffer.height, 0, 0), color_lane);
+    }
+}
+
+fn @cpu_get_framebuffer(spi: i32, use_framebuffer: bool) -> AOVImage {
+    let (film_pixels, film_width, film_height) = cpu_get_film_data();
+    if !use_framebuffer { make_empty_aov_image() } else { make_rv_aov_image("", film_pixels, film_width, film_height, spi) }
+}
+
+// Hit shader ------------------------------------------------------------------
+fn @cpu_hit_shade(primary: &PrimaryStream
+    , secondary: &SecondaryStream
+    , shader: MaterialShader
+    , scene: Scene
+    , technique: Technique
+    , framebuffer: AOVImage
+    , payload_info: PayloadInfo
+    , begin: i32
+    , end: i32
+    , capacity: i32
+    , vector_width: i32
+    , is_payload_soa: bool) -> () {
+    if begin == end { return() }
+
+    let read_primary_ray        = make_ray_stream_reader(primary.rays, 1);
+    let read_primary_hit        = make_primary_stream_hit_reader(*primary, 1);
+    let read_primary_rnd_state  = make_primary_stream_rnd_state_reader(*primary, 1);
+    let write_primary_ray       = make_ray_stream_writer(primary.rays, 1);
+    let write_secondary_ray     = make_ray_stream_writer(secondary.rays, 1);
+    let write_primary_rnd_state = make_primary_stream_rnd_state_writer(*primary, 1);
+    
+    let get_primary_payload   = make_primary_stream_payload_handler(*primary, payload_info.primary_count, capacity, 1, is_payload_soa);
+    let get_secondary_payload = make_secondary_stream_payload_handler(*secondary, payload_info.secondary_count, capacity, 1, is_payload_soa);
+
+    let entities  = scene.entities;
+    let shapes    = scene.shapes;
+    let on_hit    = technique.on_hit;
+    let on_shadow = technique.on_shadow;
+    let on_bounce = technique.on_bounce;
+
+    // In contrary to the GPU the hit shader is still called per entity
+    let entity_id = read_primary_hit(begin, 0).ent_id;
+    let entity    = @entities(entity_id);
+    let shape     = @shapes(entity.shape_id);
+
+    for i, r_vector_width in vectorized_range(vector_width, begin, end) {
+        let ray     = read_primary_ray(i, 0);
+        let hit     = read_primary_hit(i, 0);
+        let mut rnd = read_primary_rnd_state(i, 0);
+        let ray_id  = primary.rays.id(i);
+        let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
+
+        let primary_payload   = get_primary_payload(i, 0);
+        let secondary_payload = get_secondary_payload(i, 0);
+
+        let pmset    = make_standard_pointmapperset(shape, entity);
+        let glb_surf = shape.surface_element(ray, hit, pmset);
+        
+        // Execute hit point shading, and add the contribution of each lane to the frame buffer
+        let ctx       = make_surface_shading_context(entity.id, pixel, ray, hit, glb_surf, pmset);
+        let mat       = @shader(ctx);
+        let hit_color = if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) { color } else { color_builtins::black };
+        
+        cpu_splat_rv(ray_id, hit_color, framebuffer, r_vector_width);
+
+        // Compute shadow rays
+        match @on_shadow(ctx, &mut rnd, primary_payload, secondary_payload, mat) {
+            ShadowRay::Simple(new_ray, color) => {
+                write_secondary_ray(i, 0, new_ray);
+                secondary.mat_id(i)  = mat.id + 1;
+                secondary.color_r(i) = color.r;
+                secondary.color_g(i) = color.g;
+                secondary.color_b(i) = color.b;
+                secondary.rays.id(i) = ray_id;
+            },
+            ShadowRay::Advanced(new_ray, color, mat_id) => {
+                write_secondary_ray(i, 0, new_ray);
+                secondary.mat_id(i)  = mat_id + 1;
+                secondary.color_r(i) = color.r;
+                secondary.color_g(i) = color.g;
+                secondary.color_b(i) = color.b;
+                secondary.rays.id(i) = ray_id;
+            },
+            _ => { /* None */
+                secondary.rays.id(i) = -1;
+            }
+        }
+
+        // Sample new rays
+        if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, &mut rnd, primary_payload, mat) {
+            write_primary_ray(i, 0, new_ray);
+            write_primary_rnd_state(i, 0, rnd);
+        } else {
+            primary.rays.id(i) = -1;
+        }
+    }
+}
+
+fn @cpu_hit_shade_handler(shader: MaterialShader
+    , scene: Scene
+    , technique: Technique
+    , payload_info: PayloadInfo
+    , begin: i32
+    , end: i32
+    , capacity: i32
+    , spi: i32
+    , use_framebuffer: bool
+    , vector_width: i32
+    , is_payload_soa: bool) -> () {
+    let mut primary : PrimaryStream;
+    ignis_get_primary_stream_const(0, 0, &mut primary);
+    let mut secondary : SecondaryStream;
+    ignis_get_secondary_stream_const(0, 0, &mut secondary);
+
+    let framebuffer = cpu_get_framebuffer(spi, use_framebuffer);
+    cpu_hit_shade(primary, secondary, shader, scene, technique, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
+}
+
+// Miss shader ------------------------------------------------------------------
+fn @cpu_miss_shade(primary: &PrimaryStream
+    , technique: Technique
+    , framebuffer: AOVImage
+    , payload_info: PayloadInfo
+    , begin: i32
+    , end: i32
+    , capacity: i32
+    , vector_width: i32
+    , is_payload_soa: bool) -> () {
+    if begin == end { return() }
+
+    let read_primary_ray    = make_ray_stream_reader(primary.rays, 1);
+    let get_primary_payload = make_primary_stream_payload_handler(*primary, payload_info.primary_count, capacity, 1, is_payload_soa);
+    
+    let on_miss = technique.on_miss;
+
+    for i, r_vector_width in vectorized_range(vector_width, begin, end) {
+        let ray     = read_primary_ray(i, 0);
+        let payload = get_primary_payload(i, 0);
+        let ray_id  = primary.rays.id(i);
+        let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
+
+        // Execute hit point shading, and add the contribution of each lane to the frame buffer
+        let hit_color = if let Option[Color]::Some(color) = @on_miss(ray, pixel, payload) { color } else { color_builtins::black };
+
+        cpu_splat_rv(ray_id, hit_color, framebuffer, r_vector_width);
+
+        primary.rays.id(i) = -1;
+    }
+}
+
+fn @cpu_miss_shade_handler(technique: Technique
+    , begin: i32
+    , end: i32
+    , capacity: i32
+    , spi: i32
+    , payload_info: PayloadInfo
+    , use_framebuffer: bool
+    , vector_width: i32
+    , is_payload_soa: bool) -> () {
+    let mut primary : PrimaryStream;
+    ignis_get_primary_stream_const(0, 0, &mut primary);
+
+    let framebuffer = cpu_get_framebuffer(spi, use_framebuffer);
+    cpu_miss_shade(primary, technique, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
+}
+
+// Advanced shadow shader ------------------------------------------------------------------
+fn @cpu_advanced_shadow(is_hit: bool
+    , shader: MaterialShader
+    , secondary: &SecondaryStream
+    , technique: Technique
+    , framebuffer: AOVImage
+    , payload_info: PayloadInfo
+    , begin: i32
+    , end: i32
+    , capacity: i32
+    , vector_width: i32
+    , is_payload_soa: bool) -> () {
+    if begin == end { return() }
+
+    let read_secondary_ray    = make_ray_stream_reader(secondary.rays, 1);
+    let read_secondary_color  = make_secondary_stream_color_reader(*secondary, 1);
+    let get_secondary_payload = make_secondary_stream_payload_handler(*secondary, payload_info.secondary_count, capacity, 1, is_payload_soa);
+    
+    let on_hit  = technique.on_shadow_hit;
+    let on_miss = technique.on_shadow_miss;
+
+    let callback = if is_hit { on_hit } else { on_miss };
+
+    for i, r_vector_width in vectorized_range(vector_width, begin, end) {
+        let ray     = read_secondary_ray(i, 0);
+        let color   = read_secondary_color(i, 0);
+        let payload = get_secondary_payload(i, 0);
+        let ray_id  = secondary.rays.id(i);
+        let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
+
+        // Execute hit point shading, and add the contribution of each lane to the frame buffer
+        if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, payload, color) { 
+            cpu_splat_rv(ray_id, new_color, framebuffer, r_vector_width);
+        }
+    }
+}
+
+fn @cpu_advanced_shadow_handler(shader: MaterialShader
+    , technique: Technique
+    , payload_info: PayloadInfo
+    , begin: i32
+    , end: i32
+    , capacity: i32
+    , spi: i32
+    , use_framebuffer: bool
+    , is_hit: bool
+    , vector_width: i32
+    , is_payload_soa: bool) -> () {
+    let mut secondary : SecondaryStream;
+    ignis_get_secondary_stream_const(0, 0, &mut secondary);
+
+    let framebuffer = cpu_get_framebuffer(spi, use_framebuffer);
+    cpu_advanced_shadow(is_hit, shader, secondary, technique, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
+}
+
+// Framebuffer & AOVs ------------------------------------------------------------------
+fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
+    let mut film_pixels : &mut [f32];
+    let mut film_width  : i32;
+    let mut film_height : i32;
+    ignis_get_film_data(0, &mut film_pixels, &mut film_width, &mut film_height);
+    (film_pixels, film_width, film_height)
+}
+
+fn @cpu_get_aov_image(id: &[u8], w: i32, h: i32, spi: i32) -> AOVImage {
+    // Width & height always the same as film_width, film_height
+    let mut ptr : &mut [f32];
+    ignis_get_aov_image(0, id, &mut ptr);
+    make_rv_aov_image(id, ptr, w, h, spi)
+}
+
+// Main shader ------------------------------------------------------------------
+fn @cpu_get_stream_capacity(spi: i32, tile_size: i32) = spi * tile_size * tile_size;
+
+fn @cpu_trace( scene_info: SceneInfo
+             , pipeline: Pipeline
+             , payload_info: PayloadInfo
+             , tile_size: i32
+             , spi: i32
+             , num_cores: i32
+             , vector_width: i32
+             , vector_compact: bool
+             , is_payload_soa: bool
+             ) -> () {
+    let work_info = get_work_info();
+
+    for xmin, ymin, xmax, ymax in cpu_parallel_tiles(work_info.width, work_info.height, tile_size, tile_size, num_cores) {
+        ignis_register_thread();
+        
+        // Get ray streams/states from the CPU driver
+        let mut primary   : PrimaryStream;
+        let mut secondary : SecondaryStream;
+        let capacity = cpu_get_stream_capacity(spi, tile_size);
+        ignis_get_primary_stream(  0, 0, &mut primary,   capacity);
+        ignis_get_secondary_stream(0, 0, &mut secondary, capacity);
+
+        let framebuffer = cpu_get_framebuffer(spi, true/*!work_info.framebuffer_locked*/); // Will only be used if framebuffer is not locked down the line
+
+        let mut temp : TemporaryStorageHost;
+        ignis_get_temporary_storage(0, &mut temp);
+
+        let mut id = 0;
+        let mut current_size = 0;
+        let num_rays = spi * (ymax - ymin) * (xmax - xmin);
+        while id < num_rays || current_size > 0 {
+            // (Re-)generate primary rays
+            if current_size < capacity && id < num_rays {
+                let before_s = current_size;
+                current_size = pipeline.on_generate(id, current_size, xmin, ymin, xmax, ymax);
+                let added    = current_size - before_s;
+                id += added;
+                stats::add_quantity(stats::Quantity::CameraRayCount, added);
+            }
+
+            if scene_info.num_entities == 0 {
+                pipeline.on_miss_shade(0, current_size);
+                current_size = 0;
+            } else {
+                // Trace primary rays
+                pipeline.on_traverse_primary(current_size);
+
+                // Sort hits by shader id, and filter invalid hits
+                current_size = cpu_sort_primary(primary, current_size, temp.ray_begins, temp.ray_ends, scene_info.num_entities, payload_info.primary_count, capacity, is_payload_soa);
+
+                // Perform (vectorized) shading
+                // In contrary to the GPU the hit shader is still called per entity,
+                // as the utilization is less a problem 
+                // and knowing the entity per call opens up for some optimization 
+                let mut begin  = 0;
+                let mut ent_id = 0;
+                for mat_id in range(0, scene_info.num_materials) {
+                    let n = temp.entity_per_material(mat_id);
+                    for _ in range(0, n) {
+                        let end = temp.ray_ends(ent_id++);
+                        if begin < end {
+                            pipeline.on_hit_shade(mat_id, begin, end);
+                        }
+                        begin = end;
+                    }
+                }
+
+                // Shade misses as well
+                let last = temp.ray_ends(scene_info.num_entities);
+                if begin < last {
+                    pipeline.on_miss_shade(begin, last);
+                }
+
+                // Filter terminated rays
+                let mut secondary_size = current_size;
+                current_size = cpu_compact_primary(primary, current_size, payload_info.primary_count, capacity, vector_width, vector_compact, is_payload_soa);
+                stats::add_quantity(stats::Quantity::BounceRayCount, current_size);
+
+                // Compact and trace secondary rays
+                secondary_size = cpu_compact_secondary(secondary, secondary_size, payload_info.secondary_count, capacity, vector_width, vector_compact, is_payload_soa);
+                if likely(secondary_size > 0) {
+                    pipeline.on_traverse_secondary(secondary_size);
+                    stats::add_quantity(stats::Quantity::ShadowRayCount, secondary_size);
+
+                    // Add the contribution for secondary rays to the frame buffer
+                    if work_info.advanced_shadows {
+                        let hit_start = cpu_sort_secondary(secondary, secondary_size, payload_info.secondary_count, capacity, is_payload_soa);
+                        if hit_start != 0 {
+                            // Call valids (miss)
+                            pipeline.on_advanced_shadow(0, 0, hit_start, false);
+                        }
+
+                        if hit_start < secondary_size {
+                            // Call invalids (hits)
+                            pipeline.on_advanced_shadow(0, hit_start, secondary_size, true);
+                        }
+                    } else if work_info.advanced_shadows_with_materials {
+                        let hit_start = cpu_sort_secondary_with_materials(secondary, secondary_size, temp.ray_begins, temp.ray_ends, scene_info.num_materials, payload_info.secondary_count, capacity, is_payload_soa);
+
+                        let mut sbegin = 0;
+                        if hit_start != 0 {
+                            // Call valids (miss)
+                            for mat_id in range(0, scene_info.num_materials) {
+                                let end = temp.ray_ends(mat_id);
+                                if sbegin < end {
+                                    pipeline.on_advanced_shadow(mat_id, sbegin, end, false);
+                                }
+                                sbegin = end;
+                            }
+                        }
+
+                        if hit_start < secondary_size {
+                            // Call invalids (hits)
+                            for mat_id in range(0, scene_info.num_materials) {
+                                let end = temp.ray_ends(mat_id + scene_info.num_materials);
+                                if sbegin < end {
+                                    pipeline.on_advanced_shadow(mat_id, sbegin, end, true);
+                                }
+                                sbegin = end;
+                            }
+                        }
+                    } else if !work_info.framebuffer_locked /* TODO: We should make this a embedded constant! */ {    
+                        for i in range(0, secondary_size) {
+                            if secondary.mat_id(i) < 0 {
+                                let j = secondary.rays.id(i);
+                                let j_pixel = make_pixelcoord_from_linear(j, framebuffer.width, framebuffer.height, 0, 0);
+                                framebuffer.splat(j_pixel, make_color(
+                                        secondary.color_r(i),
+                                        secondary.color_g(i),
+                                        secondary.color_b(i),
+                                        1
+                                    ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        ignis_unregister_thread();
+    }
+}
+
+// CPU device ----------------------------------------------------------------------
+fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_width: i32, num_cores: i32, tile_size: i32, is_payload_soa: bool) = Device {
+    id    = 0,
+    trace = @ |scene_info, pipeline, payload_info, spi| {
+        cpu_trace(
+            scene_info,
+            pipeline,
+            payload_info,
+            tile_size,
+            spi,
+            num_cores,
+            vector_width,
+            vector_compact,
+            is_payload_soa
+        )
+    },
+    generate_rays = @ | emitter, payload_info, next_id, size, xmin, ymin, xmax, ymax, spi | -> i32 {
+        cpu_generate_rays_handler(size, @cpu_get_stream_capacity(spi, tile_size), emitter, next_id, xmin, ymin, xmax, ymax, spi, payload_info, vector_width, is_payload_soa)
+    },
+    handle_traversal_primary = @ | scene_tracer, size | {
+        cpu_traverse_primary(scene_tracer, size, min_max, vector_width);
+    },
+    handle_traversal_secondary = @ | scene_tracer, size, _is_advanced, _spi, _use_framebuffer | {
+        cpu_traverse_secondary(scene_tracer, size, min_max, vector_width);
+    },
+    handle_miss_shader = @ | technique, payload_info, first, last, spi, use_framebuffer | {
+        cpu_miss_shade_handler(technique, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, payload_info, use_framebuffer, vector_width, is_payload_soa);
+    },
+    handle_hit_shader = @ | shader, scene, technique, payload_info, first, last, spi, use_framebuffer | {
+        cpu_hit_shade_handler(shader, scene, technique, payload_info, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, use_framebuffer, vector_width, is_payload_soa);
+    },
+    handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit | {
+        cpu_advanced_shadow_handler(shader, technique, payload_info, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, use_framebuffer, is_hit, vector_width, is_payload_soa);
+    },
+    get_traversal_handler_multiple = @ | prims | make_cpu_scene_local_handler_multiple(prims, vector_width, single, min_max), 
+    sync    = @ || {},
+    parallel_range = @ |body| {
+        @|start, end| {
+            for i in parallel(num_cores, start, end) {
+                @ body(i)
+            }
+        }
+    },
+    parallel_range_2d = @ |body| {
+        @|start_x, end_x, start_y, end_y| {
+            for xmin, ymin, xmax, ymax in cpu_parallel_tiles(end_x - start_x, end_y - start_y, tile_size, tile_size, num_cores) {
+                for x in range(xmin + start_x, xmax + start_x) {
+                    for y in range(ymin + start_y, ymax + start_y) {
+                        @ body(x,y)
+                    }   
+                }
+            }
+        }
+    },
+    parallel_reduce_i32     = @|n, elem, op| reduce[i32](make_cpu_parallel_reduce_handler(), n, elem, op),
+    parallel_reduce_f32     = @|n, elem, op| reduce[f32](make_cpu_parallel_reduce_handler(), n, elem, op),
+    parallel_reduce_handler = make_cpu_parallel_reduce_handler(),
+    get_device_buffer_accessor = @|| { @|ptr| make_cpu_buffer(ptr, 0) },
+    load_scene_bvh = @ |prim_type| {
+        if vector_width >= 8 {
+            let mut nodes: &[Node8];
+            let mut objs: &[EntityLeaf1];
+            ignis_load_bvh8_ent(0, prim_type, &mut nodes, &mut objs);
+            make_cpu_bvh8_ent(nodes, objs)
+        } else {
+            let mut nodes: &[Node4];
+            let mut objs: &[EntityLeaf1];
+            ignis_load_bvh4_ent(0, prim_type, &mut nodes, &mut objs);
+            make_cpu_bvh4_ent(nodes, objs)
+        }
+    },
+    load_scene_info = @ || {
+        let mut info: SceneInfo;
+        ignis_load_scene_info(0, &mut info);
+        info
+    },
+    load_dyntable = @ |name| -> DynTable {
+        let mut table: DynTableData;
+        ignis_load_dyntable(0, name, &mut table);
+        make_dyntable(table, @|ptr| make_cpu_buffer(ptr, 0))
+    },
+    load_fixtable = @ |name| -> DeviceBuffer {
+        let mut ptr      : &[u8];
+        let mut bytesize : i32;
+        ignis_load_fixtable(0, name, &mut ptr, &mut bytesize);
+        make_cpu_buffer(ptr, (bytesize as i64 / sizeof[i32]()) as i32)
+    },
+    load_image = @ |filename, channel_count| {
+        let mut pixel_data : &[f32];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_image(0, filename, &mut pixel_data, &mut width, &mut height, channel_count);
+        if channel_count == 1 {
+            make_image_mono(@ |x, y| pixel_data(y * width + x), width, height)
+        } else {
+            make_image_rgba32(@ |x, y| cpu_load_vec4(pixel_data, y * width + x), width, height)
+        }
+    },
+    load_image_by_id = @ |id, channel_count| {
+        let mut pixel_data : &[f32];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_image_by_id(0, id, &mut pixel_data, &mut width, &mut height, channel_count);
+        if channel_count == 1 {
+            make_image_mono(@ |x, y| pixel_data(y * width + x), width, height)
+        } else {
+            make_image_rgba32(@ |x, y| cpu_load_vec4(pixel_data, y * width + x), width, height)
+        }
+    },
+    load_packed_image = @ |filename, channel_count, is_linear| {
+        let mut pixel_data : &[u8];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_packed_image(0, filename, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
+        if channel_count == 1 {
+            make_image_mono(@ |x, y| image_mono_unpack(pixel_data(y * width + x)), width, height)
+        } else {
+            let q = pixel_data as &[u32];
+            make_image_rgba32(@ |x, y| image_rgba_unpack(q(y * width + x), channel_count == 3), width, height)
+        }
+    },
+    load_packed_image_by_id = @ |id, channel_count, is_linear| {
+        let mut pixel_data : &[u8];
+        let mut width      : i32;
+        let mut height     : i32;
+        ignis_load_packed_image_by_id(0, id, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
+        if channel_count == 1 {
+            make_image_mono(@ |x, y| image_mono_unpack(pixel_data(y * width + x)), width, height)
+        } else {
+            let q = pixel_data as &[u32];
+            make_image_rgba32(@ |x, y| image_rgba_unpack(q(y * width + x), channel_count == 3), width, height)
+        }
+    },
+    load_aov_image = @|id, spi| {
+        let work_info = get_work_info();
+        cpu_get_aov_image(id, work_info.width, work_info.height, spi)
+    },
+    load_rays = @ || {
+        let mut rays: &[StreamRay];
+        ignis_load_rays(0, &mut rays);
+        rays
+    },
+    load_host_buffer       = load_cpu_buffer,
+    load_host_buffer_by_id = load_cpu_buffer_by_id,
+    load_buffer       = load_cpu_buffer,
+    load_buffer_by_id = load_cpu_buffer_by_id,
+    request_buffer = @ |name, size, flags| {
+        let mut ptr : &[u8];
+        ignis_request_buffer(0, name, &mut ptr, size * sizeof[i32]() as i32, flags);
+        make_cpu_buffer(ptr, size)
+    },
+    make_buffer = @ |ptr, size| make_cpu_buffer(ptr, size),
+    dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(0, id, filename),
+    request_debug_output = @|| {
+        if vector_width != 1 {
+            // FIXME: Fix this for vectorized systems!
+            make_fallback_debug_output()
+        } else {
+            let mut ptr : &[u8];
+            let size = 4096;
+            ignis_request_buffer(0, "__dbg_output", &mut ptr, size * sizeof[i32]() as i32, 0);
+            let buffer = make_cpu_buffer(ptr, size);
+            make_debug_output(buffer)
+        }
+    },
+    get_local_parameter_i32   = @|name, def| registry::get_local_parameter_i32(  0, name, def),
+    get_local_parameter_f32   = @|name, def| registry::get_local_parameter_f32(  0, name, def),
+    get_local_parameter_vec3  = @|name, def| registry::get_local_parameter_vec3( 0, name, def),
+    get_local_parameter_color = @|name, def| registry::get_local_parameter_color(0, name, def)
+};

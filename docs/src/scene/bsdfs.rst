@@ -26,14 +26,15 @@ Smooth diffuse (:monosp:`diffuse`)
 
 .. objectparameters::
 
- * - reflectance
-   - |color|
-   - 0.5
-   - Albedo
+  * - reflectance
+    - |color|
+    - :code:`0.8`
+    - Yes
+    - Albedo
 
 .. subfigstart::
   
-.. figure:: images/mat_diffuse.jpg
+.. figure:: images/bsdf_diffuse.jpg
   :width: 90%
 
   Diffuse
@@ -49,19 +50,21 @@ Rough diffuse (:monosp:`roughdiffuse`)
 
 .. objectparameters::
 
- * - reflectance
-   - |color|
-   - 0.5
-   - Albedo
+  * - reflectance
+    - |color|
+    - :code:`0.8`
+    - Yes
+    - Albedo
 
- * - alpha
-   - |number|
-   - 0
-   - Isotropic roughness.
+  * - alpha
+    - |number|
+    - :code:`0`
+    - Yes
+    - Isotropic roughness.
 
 .. subfigstart::
 
-.. figure::  images/mat_roughdiffuse.jpg
+.. figure::  images/bsdf_roughdiffuse.jpg
   :width: 90%
   :align: center
   
@@ -78,44 +81,46 @@ Smooth dielectric (:monosp:`dielectric`)
 
 .. objectparameters::
 
- * - specular_reflectance
-   - |color|
-   - 1.0
-   - TODO
- * - specular_transmittance
-   - |color|
-   - 1.0
-   - TODO
- * - ext_ior, int_ior
-   - |number|
-   - vacuum, bk7
-   - Specifies exterior and interior index of refraction.
- * - ext_ior_material, int_ior_material
-   - |string|
-   - *None*, *None*
-   - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
- * - thin
-   - |bool|
-   - false
-   - True if the glass should be treated as a thin interface. :monosp:`int_ior` will be always the inside of the thin surface, regardless of the direction of the surface normal.
+  * - specular_reflectance
+    - |color|
+    - :code:`1.0`
+    - Yes
+    - TODO
+  * - specular_transmittance
+    - |color|
+    - :code:`1.0`
+    - Yes
+    - TODO
+  * - ext_ior, int_ior
+    - |number|
+    - ~vacuum, ~bk7
+    - Yes
+    - Specifies exterior and interior index of refraction.
+  * - ext_ior_material, int_ior_material
+    - |string|
+    - *None*, *None*
+    - No
+    - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
+  * - thin
+    - |bool|
+    - |false|
+    - No
+    - True if the glass should be treated as a thin interface. :paramtype:`int_ior` will be always the inside of the thin surface, regardless of the direction of the surface normal.
 
 
 .. subfigstart::
 
-.. figure::  images/mat_dielectric.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_dielectric.jpg
   :align: center
   
   Dielectric
 
-.. figure::  images/mat_thindielectric.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_thindielectric.jpg
   :align: center
   
   Dielectric with thin approximation 
 
 .. subfigend::
-  :width: 0.30
   :label: fig-dielectric 
 
 .. _bsdf-roughdielectric:
@@ -125,30 +130,35 @@ Rough dielectric (:monosp:`roughdielectric`)
 
 .. objectparameters::
 
- * - specular_reflectance
-   - |color|
-   - 1.0
-   - TODO
- * - specular_transmittance
-   - |color|
-   - 1.0
-   - TODO
- * - ext_ior, int_ior
-   - |number|
-   - vacuum, bk7   
-   - Specifies exterior and interior index of refraction.
- * - ext_ior_material, int_ior_material
-   - |string|
-   - *None*, *None*
-   - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
- * - alpha_u, alpha_v
-   - |number|
-   - 0.1, 0.1
-   - Roughness terms. Can be specified isotropically with just `alpha` as well. 
+  * - specular_reflectance
+    - |color|
+    - :code:`1.0`
+    - Yes
+    - TODO
+  * - specular_transmittance
+    - |color|
+    - :code:`1.0`
+    - Yes
+    - TODO
+  * - ext_ior, int_ior
+    - |number|
+    - ~vacuum, ~bk7 
+    - Yes  
+    - Specifies exterior and interior index of refraction.
+  * - ext_ior_material, int_ior_material
+    - |string|
+    - *None*, *None*
+    - No
+    - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
+  * - alpha_u, alpha_v
+    - |number|
+    - :code:`0.1`, :code:`0.1`
+    - Yes
+    - Roughness terms. Can be specified isotropic using :paramtype:`alpha` as well. 
 
 .. subfigstart::
 
-.. figure::  images/mat_roughdielectric.jpg
+.. figure::  images/bsdf_roughdielectric.jpg
   :width: 90%
   :align: center
   
@@ -165,14 +175,15 @@ Perfect smooth mirror (:monosp:`mirror`)
 
 .. objectparameters::
 
- * - specular_reflectance
-   - |texture|
-   - 1.0
-   - TODO
+  * - specular_reflectance
+    - |texture|
+    - :code:`1.0`
+    - Yes
+    - TODO
 
 .. subfigstart::
 
-.. figure::  images/mat_mirror.jpg
+.. figure::  images/bsdf_mirror.jpg
   :width: 90%
   :align: center
   
@@ -189,23 +200,26 @@ Smooth conductor (:monosp:`conductor`)
 
 .. objectparameters::
 
- * - eta, k
-   - |color|
-   - ~ Perfect mirror
-   - Real and imaginary components of the material's index of refraction.
- * - material
-   - |string|
-   - "none"
-   - Instead of eta, k a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
- * - specular_reflectance
-   - |color|
-   - 1.0
-   - Optional factor that can be used to modulate the specular reflection component.
-     Note that for physical realism, this parameter should never be touched. 
+  * - eta, k
+    - |color|
+    - ~Perfect mirror
+    - Yes
+    - Real and imaginary components of the material's index of refraction.
+  * - material
+    - |string|
+    - *None*
+    - No
+    - Instead of eta, k a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
+  * - specular_reflectance
+    - |color|
+    - :code:`1.0`
+    - Yes
+    - Optional factor that can be used to modulate the specular reflection component.
+      Note that for physical realism, this parameter should never be touched. 
 
 .. subfigstart::
 
-.. figure::  images/mat_conductor.jpg
+.. figure::  images/bsdf_conductor.jpg
   :width: 90%
   :align: center
   
@@ -222,27 +236,31 @@ Rough conductor (:monosp:`roughconductor`)
 
 .. objectparameters::
 
- * - eta, k
-   - |color|
-   - ~ Gold
-   - Real and imaginary components of the material's index of refraction.
- * - material
-   - |string|
-   - "none"
-   - Instead of eta, k a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
- * - specular_reflectance
-   - |color|
-   - 1.0
-   - Optional factor that can be used to modulate the specular reflection component.
-     Note that for physical realism, this parameter should never be touched. 
- * - alpha_u, alpha_v
-   - |number|
-   - 0.1, 0.1
-   - Roughness terms. Can be specified isotropically with just `alpha` as well.
+  * - eta, k
+    - |color|
+    - ~Gold
+    - Yes
+    - Real and imaginary components of the material's index of refraction.
+  * - material
+    - |string|
+    - *None*
+    - No
+    - Instead of eta, k a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
+  * - specular_reflectance
+    - |color|
+    - :code:`1.0`
+    - Yes
+    - Optional factor that can be used to modulate the specular reflection component.
+      Note that for physical realism, this parameter should never be touched. 
+  * - alpha_u, alpha_v
+    - |number|
+    - :code:`0.1`, :code:`0.1`
+    - Yes
+    - Roughness terms. Can be specified isotropic using :paramtype:`alpha` as well.
    
 .. subfigstart::
 
-.. figure::  images/mat_roughconductor.jpg
+.. figure::  images/bsdf_roughconductor.jpg
   :width: 90%
   :align: center
   
@@ -259,26 +277,30 @@ Smooth plastic (:monosp:`plastic`)
 
 .. objectparameters::
 
- * - specular_reflectance
-   - |color|
-   - 1.0
-   - TODO
- * - diffuse_reflectance
-   - |color|
-   - 0.5
-   - TODO
- * - ext_ior, int_ior
-   - |number|
-   - vacuum, bk7   
-   - Specifies exterior and interior index of refraction.
- * - ext_ior_material, int_ior_material
-   - |string|
-   - *None*, *None*
-   - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
+  * - specular_reflectance
+    - |color|
+    - :code:`1.0`
+    - Yes
+    - TODO
+  * - diffuse_reflectance
+    - |color|
+    - :code:`0.8`
+    - Yes
+    - TODO
+  * - ext_ior, int_ior
+    - |number|
+    - ~vacuum, ~bk7
+    - Yes   
+    - Specifies exterior and interior index of refraction.
+  * - ext_ior_material, int_ior_material
+    - |string|
+    - *None*, *None*
+    - No
+    - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
 
 .. subfigstart::
 
-.. figure::  images/mat_plastic.jpg
+.. figure::  images/bsdf_plastic.jpg
   :width: 90%
   :align: center
   
@@ -295,30 +317,35 @@ Rough plastic (:monosp:`roughplastic`)
 
 .. objectparameters::
 
- * - specular_reflectance
-   - |color|
-   - 1.0
-   - TODO
- * - diffuse_reflectance
-   - |color|
-   - 0.5
-   - TODO
- * - ext_ior, int_ior
-   - |number| 
-   - vacuum, bk7   
-   - Specifies exterior and interior index of refraction.
- * - ext_ior_material, int_ior_material
-   - |string|
-   - *None*, *None*
-   - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
- * - alpha_u, alpha_v
-   - |number|
-   - 0.1, 0.1
-   - Roughness terms. Can be specified isotropically with just `alpha` as well. 
+  * - specular_reflectance
+    - |color|
+    - :code:`1.0`
+    - Yes
+    - TODO
+  * - diffuse_reflectance
+    - |color|
+    - :code:`0.8`
+    - Yes
+    - TODO
+  * - ext_ior, int_ior
+    - |number| 
+    - ~vacuum, ~bk7   
+    - Yes
+    - Specifies exterior and interior index of refraction.
+  * - ext_ior_material, int_ior_material
+    - |string|
+    - *None*, *None*
+    - No
+    - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
+  * - alpha_u, alpha_v
+    - |number|
+    - :code:`0.1`, :code:`0.1`
+    - Yes
+    - Roughness terms. Can be specified isotropic using :paramtype:`alpha` as well. 
 
 .. subfigstart::
 
-.. figure::  images/mat_roughplastic.jpg
+.. figure::  images/bsdf_roughplastic.jpg
   :width: 90%
   :align: center
   
@@ -335,18 +362,20 @@ Phong (:monosp:`phong`)
 
 .. objectparameters::
 
- * - specular_reflectance
-   - |color|
-   - 1.0
-   - TODO
- * - exponent
-   - |number|
-   - 30
-   - TODO
+  * - specular_reflectance
+    - |color|
+    - :code:`1.0`
+    - Yes
+    - TODO
+  * - exponent
+    - |number|
+    - :code:`30`
+    - Yes
+    - TODO
 
 .. subfigstart::
 
-.. figure::  images/mat_phong.jpg
+.. figure::  images/bsdf_phong.jpg
   :width: 90%
   :align: center
   
@@ -365,78 +394,95 @@ Disney *Principled* (:monosp:`principled`)
 
 .. objectparameters::
 
- * - base_color
-   - |color|
-   - 0.8
-   - TODO
- * - metallic
-   - |number|
-   - 0.0
-   - TODO
- * - roughness
-   - |number|
-   - 0.5
-   - TODO
- * - anisotropic
-   - |number|
-   - 0.0
-   - TODO
- * - ior
-   - |number|
-   - bk7   
-   - Specifies index of refraction.
- * - ior_material
-   - |string|
-   - *None*
-   - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
- * - thin
-   - |bool|
-   - false
-   - TODO
- * - flatness
-   - |number|
-   - 0.0
-   - TODO
- * - specular_transmission
-   - |number|
-   - 0.0
-   - TODO
- * - specular_tint
-   - |number|
-   - 0.0
-   - TODO
- * - sheen
-   - |number|
-   - 0.0
-   - TODO
- * - sheen_tint
-   - |number|
-   - 0.0
-   - TODO
- * - clearcoat
-   - |number|
-   - 0.0
-   - TODO
- * - clearcoat_gloss
-   - |number|
-   - 0.0
-   - TODO
- * - clearcoat_top_only
-   - |bool|
-   - true
-   - True if clearcoat should only be applied to the front side of the surface only.
- * - clearcoat_roughness
-   - |number|
-   - 0.1
-   - TODO
- * - diffuse_transmission
-   - |number|
-   - 0.0
-   - TODO
+  * - base_color
+    - |color|
+    - :code:`0.8`
+    - Yes
+    - TODO
+  * - metallic
+    - |number|
+    - :code:`0.0`
+    - Yes
+    - TODO
+  * - roughness
+    - |number|
+    - :code:`0.5`
+    - Yes
+    - TODO
+  * - anisotropic
+    - |number|
+    - :code:`0.0`
+    - Yes
+    - TODO
+  * - ior
+    - |number|
+    - ~bk7   
+    - Yes
+    - Specifies index of refraction.
+  * - ior_material
+    - |string|
+    - *None*
+    - No
+    - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
+  * - thin
+    - |bool|
+    - |false|
+    - No
+    - TODO
+  * - flatness
+    - |number|
+    - :code:`0.0`
+    - Yes
+    - TODO
+  * - specular_transmission
+    - |number|
+    - :code:`0.0`
+    - Yes
+    - TODO
+  * - specular_tint
+    - |number|
+    - :code:`0.0`
+    - Yes
+    - TODO
+  * - sheen
+    - |number|
+    - :code:`0.0`
+    - Yes
+    - TODO
+  * - sheen_tint
+    - |number|
+    - :code:`0.0`
+    - Yes
+    - TODO
+  * - clearcoat
+    - |number|
+    - :code:`0.0`
+    - Yes
+    - TODO
+  * - clearcoat_gloss
+    - |number|
+    - :code:`0.0`
+    - Yes
+    - TODO
+  * - clearcoat_top_only
+    - |bool|
+    - |true|
+    - No
+    - |true| if clearcoat should only be applied to the front side of the surface only.
+  * - clearcoat_roughness
+    - |number|
+    - :code:`0.1`
+    - Yes
+    - TODO
+  * - diffuse_transmission
+    - |number|
+    - :code:`0.0`
+    - Yes
+    - TODO
 
 .. subfigstart::
 
-.. figure::  images/mat_principled.jpg
+.. figure::  images/bsdf_principled.jpg
   :width: 90%
   :align: center
   
@@ -453,18 +499,20 @@ Blend (:monosp:`blend`)
 
 .. objectparameters::
 
- * - first, second
-   - |bsdf|
-   - *None*
-   - TODO
- * - weight
-   - |number|
-   - 0.5
-   - TODO
+  * - first, second
+    - |bsdf|
+    - *None*
+    - No
+    - TODO
+  * - weight
+    - |number|
+    - :code:`0.5`
+    - Yes
+    - TODO
 
 .. subfigstart::
 
-.. figure::  images/mat_blend.jpg
+.. figure::  images/bsdf_blend.jpg
   :width: 90%
   :align: center
   
@@ -481,22 +529,25 @@ Mask (:monosp:`mask`)
 
 .. objectparameters::
 
- * - bsdf
-   - |bsdf|
-   - *None*
-   - TODO
- * - weight
-   - |number|
-   - 0.5
-   - TODO
- * - inverted
-   - |bool|
-   - false
-   - TODO
+  * - bsdf
+    - |bsdf|
+    - *None*
+    - No
+    - TODO
+  * - weight
+    - |number|
+    - :code:`0.5`
+    - Yes
+    - TODO
+  * - inverted
+    - |bool|
+    - |false|
+    - No
+    - TODO
 
 .. subfigstart::
 
-.. figure::  images/mat_mask.jpg
+.. figure::  images/bsdf_mask.jpg
   :width: 90%
   :align: center
   
@@ -513,26 +564,30 @@ Cutoff (:monosp:`cutoff`)
 
 .. objectparameters::
 
- * - bsdf
-   - |bsdf|
-   - *None*
-   - TODO
- * - weight
-   - |number|
-   - 0.5
-   - TODO
- * - cutoff
-   - |number|
-   - 0.5
-   - TODO
- * - inverted
-   - |bool|
-   - false
-   - TODO
+  * - bsdf
+    - |bsdf|
+    - *None*
+    - No
+    - TODO
+  * - weight
+    - |number|
+    - :code:`0.5`
+    - Yes
+    - TODO
+  * - cutoff
+    - |number|
+    - :code:`0.5`
+    - Yes
+    - TODO
+  * - inverted
+    - |bool|
+    - |false|
+    - No
+    - TODO
 
 .. subfigstart::
 
-.. figure::  images/mat_cutoff.jpg
+.. figure::  images/bsdf_cutoff.jpg
   :width: 90%
   :align: center
   
@@ -549,7 +604,7 @@ Passthrough (:monosp:`passthrough`)
 
 .. subfigstart::
 
-.. figure::  images/mat_passthrough.jpg
+.. figure::  images/bsdf_passthrough.jpg
   :width: 90%
   :align: center
   
@@ -568,22 +623,25 @@ Normal mapping (:monosp:`normalmap`)
 
 .. objectparameters::
 
- * - bsdf
-   - |bsdf|
-   - *None*
-   - TODO
- * - map
-   - |color|
-   - 1
-   - Usually a texture used for normal mapping.
- * - strength
-   - |number|
-   - 1
-   - TODO
+  * - bsdf
+    - |bsdf|
+    - *None*
+    - No
+    - TODO
+  * - map
+    - |color|
+    - :code:`1`
+    - Yes
+    - Usually a texture used for normal mapping.
+  * - strength
+    - |number|
+    - :code:`1`
+    - Yes
+    - TODO
 
 .. subfigstart::
 
-.. figure::  images/mat_normalmap.jpg
+.. figure::  images/bsdf_normalmap.jpg
   :width: 90%
   :align: center
   
@@ -600,22 +658,25 @@ Bump mapping (:monosp:`bumpmap`)
 
 .. objectparameters::
 
- * - bsdf
-   - |bsdf|
-   - *None*
-   - TODO
- * - map
-   - |texture|
-   - *None*
-   - A grayscale texture used for texture mapping.
- * - strength
-   - |number|
-   - 1
-   - TODO
+  * - bsdf
+    - |bsdf|
+    - *None*
+    - No
+    - TODO
+  * - map
+    - |texture|
+    - *None*
+    - Yes
+    - A grayscale texture used for texture mapping.
+  * - strength
+    - |number|
+    - :code:`1`
+    - Yes
+    - TODO
 
 .. subfigstart::
 
-.. figure::  images/mat_bumpmap.jpg
+.. figure::  images/bsdf_bumpmap.jpg
   :width: 90%
   :align: center
   
@@ -632,22 +693,25 @@ Transform (:monosp:`transform`)
 
 .. objectparameters::
 
- * - bsdf
-   - |bsdf|
-   - *None*
-   - Bsdf the normal transformation will be applied to.
- * - normal
-   - |vector|
-   - (0,0,1)
-   - Normal to use instead of the callee normal (e.g., surface normal).
- * - tangent
-   - |vector|
-   - *None*
-   - Tangent to use instead of the callee tangent (e.g., surface tangent). Will be calculated from the normal parameter if not set.
+  * - bsdf
+    - |bsdf|
+    - *None*
+    - No
+    - Bsdf the normal transformation will be applied to.
+  * - normal
+    - |vector|
+    - :code:`(0,0,1)`
+    - Yes
+    - Normal to use instead of the callee normal (e.g., surface normal).
+  * - tangent
+    - |vector|
+    - *None*
+    - Yes
+    - Tangent to use instead of the callee tangent (e.g., surface tangent). Will be calculated from the normal parameter if not set.
 
 .. subfigstart::
 
-.. figure::  images/mat_transform.jpg
+.. figure::  images/bsdf_transform.jpg
   :width: 90%
   :align: center
   
@@ -657,6 +721,36 @@ Transform (:monosp:`transform`)
   :width: 0.6
   :label: fig-transform
 
+.. _bsdf-djmeasured:
+
+Dupuy & Jakob measured materials (:monosp:`djmeasured`)
+-------------------------------------------------------
+
+.. objectparameters::
+
+  * - filename
+    - |string|
+    - *None*
+    - No
+    - Path to a valid brdf.
+  * - tint
+    - |color|
+    - :code:`1`
+    - Yes
+    - Tint.
+
+.. subfigstart::
+
+.. figure::  images/bsdf_djmeasured.jpg
+  :width: 90%
+  :align: center
+  
+  Dupuy & Jakob based measured material. More information and measured data available at https://rgl.epfl.ch/materials
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-djmeasured
+
 .. _bsdf-klems:
 
 Klems (:monosp:`klems`)
@@ -664,20 +758,23 @@ Klems (:monosp:`klems`)
 
 .. objectparameters::
 
- * - filename
-   - |string|
-   - *None*
-   - Path to a valid windows xml specifying a klems bsdf.
- * - base_color
-   - |color|
-   - 1
-   - Tint.
- * - up
-   - |vector|
-   - (0, 0, 1)
-   - Up vector
+  * - filename
+    - |string|
+    - *None*
+    - No
+    - Path to a valid windows xml specifying a klems bsdf.
+  * - base_color
+    - |color|
+    - :code:`1`
+    - Yes
+    - Tint.
+  * - up
+    - |vector|
+    - :code:`(0, 0, 1)`
+    - Yes
+    - Up vector
 
-.. WARNING:: The :monosp:`klems` bsdf is still experimental.
+.. WARNING:: The :monosp:`klems` bsdf is still experimental and has some issues.
 
 .. _bsdf-tensortree:
 
@@ -686,20 +783,21 @@ TensorTree (:monosp:`tensortree`)
 
 .. objectparameters::
 
- * - filename
-   - |string|
-   - *None*
-   - Path to a valid windows xml specifying a tensortree bsdf.
- * - base_color
-   - |color|
-   - 1
-   - Tint.
- * - up
-   - |vector|
-   - (0, 0, 1)
-   - Up vector
-
-.. WARNING:: The :monosp:`tensortree` bsdf is still experimental.
+  * - filename
+    - |string|
+    - *None*
+    - No
+    - Path to a valid windows xml specifying a tensortree bsdf.
+  * - base_color
+    - |color|
+    - :code:`1`
+    - Yes
+    - Tint.
+  * - up
+    - |vector|
+    - :code:`(0, 0, 1)`
+    - Yes
+    - Up vector
 
 .. _bsdf-dielectric-list:
 

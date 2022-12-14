@@ -1,0 +1,173 @@
+// Additional math functions
+
+mod math {
+use super as all;
+use super::math_builtins;
+use super::interval;
+
+fn @erf(x: f32) -> f32  {
+    let a1 =  0.254829592:f32;
+    let a2 = -0.284496736:f32;
+    let a3 =  1.421413741:f32;
+    let a4 = -1.453152027:f32;
+    let a5 =  1.061405429:f32;
+    let p  =  0.327591100:f32;
+ 
+    let sign = math_builtins::copysign(1:f32, x);
+    let ax   = math_builtins::fabs(x);
+ 
+    // A&S formula 7.1.26
+    let t = 1 / (1 + p * ax);
+    let y = 1 - (((((a5*t + a4) * t) + a3)*t + a2)*t + a1) * t * math_builtins::exp(-x*x);
+ 
+    sign*y
+}
+
+fn @erfinv(x: f32) -> f32  {
+    let mut w = -math_builtins::log((1 - x)*(1 + x));
+    let mut p = all::undef[f32]();
+
+    if w < 5 {
+        w = w - 2.5;
+        p =  2.81022636e-08;
+        p =  3.43273939e-07 + p*w;
+        p = -3.52338770e-06 + p*w;
+        p = -4.39150654e-06 + p*w;
+        p =  0.000218580870 + p*w;
+        p = -0.001253725030 + p*w;
+        p = -0.004177681640 + p*w;
+        p =  0.246640727000 + p*w;
+        p =  1.501409410000 + p*w;
+    } else {
+        w = math_builtins::sqrt(w) - 3;
+        p = -0.000200214257;
+        p =  0.000100950558 + p*w;
+        p =  0.001349343220 + p*w;
+        p = -0.003673428440 + p*w;
+        p =  0.005739507730 + p*w;
+        p = -0.007622461300 + p*w;
+        p =  0.009438870470 + p*w;
+        p =  1.001674060000 + p*w;
+        p =  2.832976820000 + p*w;
+    }
+    p*x
+}
+
+fn @abgam(x: f32) -> f32 {
+    let gam0 = 0.083333333:f32;
+    let gam1 = 0.033333333:f32;
+    let gam2 = 0.252380952:f32;
+    let gam3 = 0.525606469:f32;
+    let gam4 = 1.011523068:f32;
+    let gam5 = 1.517473649:f32;
+    let gam6 = 2.269488974:f32;
+
+    0.5 * math_builtins::log(2*all::flt_pi) - x + (x - 0.5) * math_builtins::log(x)
+        + gam0/(x + gam1/(x + gam2/(x + gam3/(x + gam4 /
+        (x + gam5/(x + gam6/x))))))
+}
+
+fn @gamma(x: f32)        = math_builtins::exp(abgam(x + 5)) / (x*(x + 1)*(x + 2)*(x + 3)*(x + 4));
+fn @beta(m: f32, n: f32) = gamma(m) * gamma(n) / gamma(m + n);
+
+fn @trunc(x: f32) = (x as i32) as f32;
+fn @fract(x: f32)  = x - math_builtins::floor(x);
+
+// It would be great to have this as a builtin in math_builtins
+fn @fmod(x: f32, n: f32) = x - trunc(x / n) * n;
+
+// https://iquilezles.org/articles/smin/
+fn @smoothmin(x: f32, y: f32, k: f32) {
+    let h = all::safe_div(math_builtins::fmax[f32](k - math_builtins::fabs(x - y), 0), k);
+    math_builtins::fmin(x, y) - h*h*h*k/6
+}
+fn @smoothmax(x: f32, y: f32, k: f32) = -smoothmin(-x, -y, k);
+
+fn @wrap(v: f32, min: f32, max: f32) {
+    let range = max - min;
+    all::select(range <= all::flt_eps, min, v - (range * math_builtins::floor((v - min)/range)))
+}
+
+fn @snap(x: f32, y: f32)     = math_builtins::floor(all::safe_div(x, y)) * y;
+fn @pingpong(x: f32, y: f32) = all::select(math_builtins::fabs(y) <= all::flt_pi, 0:f32, math_builtins::fabs(fract((x - y) / (y * 2)) * y * 2 - y));
+
+fn @lookup_curve(count: i32, t: f32, x: fn (i32)->f32, y: fn (i32)->f32, interpolate: bool, extrapolate: bool) {
+    if t < 0 || t > 1 {
+        if extrapolate {
+            let (y0, dy, f0) = if t < 0 {
+                (y(0), y(0) - y(1), -t)
+            } else {
+                (y(count-1), y(count-1) - y(count-2), t-1)
+            };
+            y0 + dy * f0 * (count - 1) as f32
+        } else {
+            all::select(t < 0, y(0), y(count-1))
+        }
+    } else {
+        let i = all::min(count-1, interval::binary_search(count, @|k| x(k) <= t));
+        if interpolate {
+            let t0 = all::clampf((t - x(i)) / (x(i+1) - x(i)), 0, 1);
+            all::lerp(y(i), y(i+1), t0)
+        } else {
+            y(i)
+        }
+    }
+}
+
+// Simple function used in nodes
+fn @fresnel_dielectric(eta: f32, cos_i: f32)     = match all::fresnel(eta, cos_i) {
+                                                        all::Option[all::FresnelTerm]::Some(x) => x.factor,
+                                                        _ => 1
+                                                   };
+fn @fresnel_conductor(n: f32, k:f32, cos_i: f32) = all::conductor_factor(n, k, cos_i);
+
+// An approximative blackbody function returning a color tone
+// Only valid between [1000, 20000] kelvin
+fn @blackbody(temp: f32) -> all::Color {
+    let TS =  1000:f32;
+    let TM =  6500:f32;
+    let TE = 20000:f32;
+    let temp2 = all::clampf(temp, TS, TE);
+
+    // Based on two optimization processes specified for sRGB with D65 as white point
+    if temp2 <= TM {
+        let t = (temp2-TS)/(TM-TS);
+
+        let a_r = -6.43983699:f32;
+        let b_r =  0.75651596:f32;
+        let c_r =  0.79760204:f32;
+        let d_r = -2.04782763:f32;
+        let e_r =  2.33744911:f32;
+        let r = math_builtins::exp(a_r*t+b_r) + all::fmaf(all::fmaf(c_r, t, d_r), t, e_r);
+
+        let a_b =  0.24888616:f32;
+        let b_b =  1.39095510:f32;
+        let c_b = -4.17216437:f32;
+        let b = math_builtins::exp(a_b*t+b_b) + c_b;
+
+        // Normalize based on luminance
+        let g = (1 - r * 0.2126 - b * 0.0722) / 0.7152;
+
+        all::make_color(r, g, b, 1)
+    } else {
+        let t = (temp2-TM)/(TE-TM);
+
+        let a_r = -5.08603402:f32;
+        let b_r = -1.68935495:f32;
+        let c_r =  0.07954146:f32;
+        let d_r = -0.23566459:f32;
+        let e_r =  0.85280697:f32;
+        let r   = math_builtins::exp(a_r*t+b_r) + all::fmaf(all::fmaf(c_r, t, d_r), t, e_r);
+
+        let a_b = -2.25659290:f32;
+        let b_b =  2.11298599:f32;
+        let c_b =  1.02683036:f32;
+        let b   = all::fmaf(all::fmaf(t + a_b, t, b_b), t, c_b);
+
+        // Normalize based on luminance
+        let g = (1 - r * 0.2126 - b * 0.0722) / 0.7152;
+        
+        all::make_color(r, g, b, 1)
+    }
+}
+}

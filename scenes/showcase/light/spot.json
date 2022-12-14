@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"lights": [
+		{"type":"spot", "name":"Light", "position": [4, 4, 0], "intensity": 10, "direction": [-1, -1, 0], "cutoff": 25, "falloff": 10}
+	]
+}

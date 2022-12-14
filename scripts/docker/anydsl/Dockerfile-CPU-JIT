@@ -1,0 +1,14 @@
+FROM gcc:12
+
+LABEL maintainer="Ömercan Yazici" \
+      description="Anydsl Meta package without GPU support" \
+      version="0.1.0"
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update && apt-get install -y git subversion cmake ninja-build && rm -rf /var/lib/apt/lists/* 
+
+WORKDIR /
+COPY compile.sh /compile.sh
+COPY config-cpu.sh /config.sh
+RUN bash /compile.sh && rm /compile.sh && rm /config.sh

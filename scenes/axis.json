@@ -36,7 +36,7 @@
 		{"type":"obj", "name":"AxisZ", "filename":"meshes/AxisZ.obj"}
 	],
 	"entities": [
-		{"name":"Bottom","shape":"Bottom", "bsdf":"ground", "transform": { "translate": [0,0.95,0] } },
+		{"name":"Bottom","shape":"Bottom", "bsdf":"ground", "transform": [{ "translate": [0,0.95,0] }] },
 		{"name":"AxisX","shape":"AxisX", "bsdf":"axis_x" },
 		{"name":"AxisY","shape":"AxisY", "bsdf":"axis_y" },
 		{"name":"AxisZ","shape":"AxisZ", "bsdf":"axis_z" }

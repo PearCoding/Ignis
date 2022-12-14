@@ -18,6 +18,17 @@ elif [ "$ZSH_VERSION" ]; then
     export IGNIS_DIR=$(dirname "$0:A")
 fi
 
-export PATH="$IGNIS_DIR/build/bin:$IGNIS_DIR/build/Release/bin:$PATH"
-export PATH="$IGNIS_DIR/build/lib:$IGNIS_DIR/build/Release/lib:$PATH"
-export PYTHONPATH="$IGNIS_DIR/build/api:$IGNIS_DIR/build/Release/api:$PYTHONPATH"
+if [ -d "$IGNIS_DIR/build/Release" ]; then
+    BUILD_DIR="$IGNIS_DIR/build/Release"
+else
+    BUILD_DIR="$IGNIS_DIR/build/"
+fi
+
+export PATH="$BUILD_DIR/bin:$PATH"
+export PATH="$BUILD_DIR/lib:$PATH"
+export PYTHONPATH="$BUILD_DIR/api:$PYTHONPATH"
+
+# Include completion scripts if available
+if [ -f "${IGNIS_DIR}/scripts/bash/ignis-completion.bash" ]; then
+    source "${IGNIS_DIR}/scripts/bash/ignis-completion.bash"
+fi

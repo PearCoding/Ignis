@@ -1,17 +1,12 @@
-static RayPayloadComponents = 0;
-
 // Dummy file used to generate a C interface for the renderer
-#[export]
-fn _dummy1(_tri1: &[Tri1], _tri4: &[Tri4]) -> () {
-}
 
 #[export]
-fn ig_render(_settings: &Settings) -> () {
+fn ig_callback_shader(_settings: &Settings) -> () {
     // Force the export of the primary and secondary stream types
     let mut primary : PrimaryStream;
     let mut secondary : SecondaryStream;
-    ignis_cpu_get_primary_stream(&mut primary, 0);
-    ignis_cpu_get_secondary_stream(&mut secondary, 0);
+    ignis_get_primary_stream(  0, 0, &mut primary,   0);
+    ignis_get_secondary_stream(0, 0, &mut secondary, 0);
 
     let mut temp : TemporaryStorageHost;
     ignis_get_temporary_storage(0, &mut temp);
@@ -25,13 +20,13 @@ fn ig_render(_settings: &Settings) -> () {
     let mut node8 : &[Node8];
     let mut entityleaf : &[EntityLeaf1];
     
-    ignis_load_bvh2_ent(0, &mut node2, &mut entityleaf);
-    ignis_load_bvh4_ent(0, &mut node4, &mut entityleaf);
-    ignis_load_bvh8_ent(0, &mut node8, &mut entityleaf);
+    ignis_load_bvh2_ent(0, "", &mut node2, &mut entityleaf);
+    ignis_load_bvh4_ent(0, "", &mut node4, &mut entityleaf);
+    ignis_load_bvh8_ent(0, "", &mut node8, &mut entityleaf);
 
     // Force the export
-    let mut dtb : SceneDatabase;
-    ignis_load_scene(0, &mut dtb);
+    let mut tbl : DynTableData;
+    ignis_load_dyntable(0, "", &mut tbl);
 
     let mut info : SceneInfo;
     ignis_load_scene_info(0, &mut info);
@@ -41,8 +36,12 @@ fn ig_render(_settings: &Settings) -> () {
 }
 
 #[export]
-fn ig_ray_generation_shader(_settings: &Settings, _iter: i32, _id: &mut i32, _size: i32, _xmin: i32, _ymin: i32, _xmax: i32, _ymax: i32) -> i32 {
+fn ig_ray_generation_shader(_settings: &Settings, _next_id: i32, _size: i32, _xmin: i32, _ymin: i32, _xmax: i32, _ymax: i32) -> i32 {
     0
+}
+
+#[export]
+fn ig_traversal_shader(_settings: &Settings, _size: i32) -> () {
 }
 
 #[export]
@@ -50,7 +49,7 @@ fn ig_miss_shader(_settings: &Settings, _first: i32, _last: i32) -> () {
 }
 
 #[export]
-fn ig_hit_shader(_settings: &Settings, _entity_id: i32, _mat_id: i32, _first: i32, _last: i32) -> () {
+fn ig_hit_shader(_settings: &Settings, _mat_id: i32, _first: i32, _last: i32) -> () {
 }
 
 #[export]
@@ -59,16 +58,13 @@ fn ig_advanced_shadow_shader(_settings: &Settings, _mat_id: i32, _first: i32, _l
 }
 
 #[export]
-fn ig_callback_shader(_settings: &Settings, _iter: i32) -> () {
-    let device = make_cpu_default_device();
-    for _i in device.parallel_range(0, 16) {
-    }
+fn ig_imageinfo_shader(_settings: &Settings, _in_pixels: &[f32], _width: i32, _height: i32, _ii_settings: &ImageInfoSettings, _output: &ImageInfoOutput) -> () {
 }
 
 #[export]
-fn ig_utility_imageinfo(_device_id: i32, _in_pixels: &[f32], _width: i32, _height: i32, _settings: &ImageInfoSettings, _output: &ImageInfoOutput) -> () {
+fn ig_tonemap_shader(_settings: &Settings, _in_pixels: &[f32], _out_pixels: &mut [u32], _width: i32, _height: i32, _t_settings: &TonemapSettings) -> () {
 }
 
 #[export]
-fn ig_utility_tonemap(_device_id: i32, _in_pixels: &[f32], _out_pixels: &mut [u32], _width: i32, _height: i32, _settings: &TonemapSettings) -> () {
+fn ig_bake_shader(_settings: &Settings, _output: &mut [f32]) -> () {
 }

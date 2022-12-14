@@ -1,0 +1,41 @@
+// Creates a plastic bsdf based on Fresnel equation (which is just a variadic mix bsdf with extra diffuse term)
+fn @make_plastic_bsdf(surf: SurfaceElement, n1: f32, n2: f32, kd: Color, specularBsdf: Bsdf) -> Bsdf {
+   
+    // Layered BSDF
+    let diffuse = make_diffuse_bsdf(surf, kd);
+
+    let N   = surf.local.col(2);
+    let eta = n1 / n2; // Some systems use n2 / n1 for eta
+    // Calculate approximate diffuse Fresnel reflectance
+    let fdr = fresnel_diffuse_factor(eta);
+
+    // Diffuse inner scattering term
+    let diff_scattering = @|cos_i : f32| {
+        let fi = math::fresnel_dielectric(eta, cos_i);
+         (1 - fi) * eta * eta / (1 - fdr)
+    };
+
+    // Apply inner scattering term to diffuse bsdf
+    let diffuse_extra = diffuse. {
+        eval   = @ |in_dir, out_dir| {
+            let cos_i = absolute_cos(in_dir, N);
+            color_mulf(diffuse.eval(in_dir, out_dir), diff_scattering(cos_i))
+        },
+        sample = @ |rnd, out_dir, adjoint| {
+            if let Option[BsdfSample]::Some(s) = diffuse.sample(rnd, out_dir, adjoint) {
+                make_bsdf_sample(s.in_dir, s.pdf, color_mulf(s.color, diff_scattering(absolute_cos(s.in_dir, surf.local.col(2)))), 1)
+            } else {
+                reject_bsdf_sample()
+            }
+        }
+    };
+
+    // Fresnel based mix function
+    let mix_f = @|out_dir : Vec3| -> f32 {
+        let cos_o = absolute_cos(out_dir, N);
+        let fo    = math::fresnel_dielectric(eta, cos_o);
+        fo
+    };
+
+    make_variadic_mix_bsdf(diffuse_extra, specularBsdf, mix_f)
+}

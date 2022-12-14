@@ -1,0 +1,11 @@
+{
+	"externals": [
+		{"filename": "plane-array-tensortree-front.json"}
+	],
+	"camera": {
+		"type": "fishlens",
+		"near_clip": 0.01,
+		"far_clip": 100,
+		"transform": { "lookat": {"origin": [1.5, 1.15, 1.15], "direction": [-1,0,0], "up":[0,0,-1]} }
+	}
+}

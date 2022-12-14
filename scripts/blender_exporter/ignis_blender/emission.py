@@ -1,16 +1,16 @@
 import bpy
 
-from .node import export_node, handle_node_group_begin, handle_node_group_end, handle_node_reroute
+from .node import export_node, handle_node_group_begin, handle_node_group_end, handle_node_reroute, handle_node_implicit_mappings
 from .utils import *
 from .bsdf import _get_bsdf_link
 
 
 def _get_emission_mix(ctx, bsdf):
     mat1 = get_emission(
-        ctx, bsdf.inputs[0])
-    mat2 = get_emission(
         ctx, bsdf.inputs[1])
-    factor = export_node(ctx, bsdf.inputs["Fac"])
+    mat2 = get_emission(
+        ctx, bsdf.inputs[2])
+    factor = export_node(ctx, bsdf.inputs[0])
 
     if mat1 is None and mat2 is None:
         return None
@@ -86,27 +86,32 @@ def get_emission(ctx, socket):
     bsdf = socket.links[0].from_node
     output_name = socket.links[0].from_socket.name
 
-    if isinstance(bsdf, bpy.types.ShaderNodeMixShader):
-        return _get_emission_mix(ctx, bsdf)
-    elif isinstance(bsdf, bpy.types.ShaderNodeAddShader):
-        return _get_emission_add(ctx, bsdf)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfPrincipled):
-        return _get_emission_principled(ctx, bsdf)
-    elif isinstance(bsdf, bpy.types.ShaderNodeEmission):
-        return _get_emission_pure(ctx, bsdf)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBackground):  # Same as emission node
-        return _get_emission_pure(ctx, bsdf)
-    elif isinstance(bsdf, bpy.types.ShaderNodeGroup):
-        return handle_node_group_begin(ctx, bsdf, output_name, get_emission)
-    elif isinstance(bsdf, bpy.types.NodeGroupInput):
-        return handle_node_group_end(ctx, bsdf, output_name, get_emission)
-    elif isinstance(bsdf, bpy.types.NodeReroute):
-        return handle_node_reroute(ctx, bsdf, get_emission)
+    def check_instance(typename):
+        return hasattr(bpy.types, typename) and isinstance(bsdf, getattr(bpy.types, typename))
+
+    if check_instance("ShaderNodeMixShader"):
+        expr = _get_emission_mix(ctx, bsdf)
+    elif check_instance("ShaderNodeAddShader"):
+        expr = _get_emission_add(ctx, bsdf)
+    elif check_instance("ShaderNodeBsdfPrincipled"):
+        expr = _get_emission_principled(ctx, bsdf)
+    elif check_instance("ShaderNodeEmission"):
+        expr = _get_emission_pure(ctx, bsdf)
+    elif check_instance("ShaderNodeBackground"):  # Same as emission node
+        expr = _get_emission_pure(ctx, bsdf)
+    elif check_instance("ShaderNodeGroup"):
+        expr = handle_node_group_begin(ctx, bsdf, output_name, get_emission)
+    elif check_instance("NodeGroupInput"):
+        expr = handle_node_group_end(ctx, bsdf, output_name, get_emission)
+    elif check_instance("NodeReroute"):
+        expr = handle_node_reroute(ctx, bsdf, get_emission)
     elif isinstance(bsdf, bpy.types.ShaderNode) and socket.links[0].from_socket.type in ['VALUE', 'INT', 'RGBA', 'VECTOR']:
         # Used if a non-shader node is connected directly to the surface output
         return export_node(ctx, socket)
     else:
         return None
+
+    return handle_node_implicit_mappings(socket, expr)
 
 
 def get_material_emission(ctx, material):

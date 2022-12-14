@@ -1,6 +1,8 @@
 add_subdirectory(common)
 
-add_subdirectory(cli)
+if(IG_WITH_CLI)
+    add_subdirectory(cli)
+endif()
 
 if(IG_HAS_UI)
     add_subdirectory(view)

@@ -32,6 +32,10 @@ fn @flip_orthonormal_mat3x3(m: Mat3x3) = make_mat3x3(m.col(0), vec3_neg(m.col(1)
 fn @make_mat3x4(c0: Vec3, c1: Vec3, c2: Vec3, c3: Vec3) = Mat3x4 { col = [c0, c1, c2, c3] };
 fn @make_mat4x4(c0: Vec4, c1: Vec4, c2: Vec4, c3: Vec4) = Mat4x4 { col = [c0, c1, c2, c3] };
 
+// Extract linear part (3x3) from a larger matrix
+fn @mat3x4_linear(m: Mat3x4) = make_mat3x3(m.col(0), m.col(1), m.col(2));
+fn @mat4x4_linear(m: Mat4x4) = make_mat3x3(vec4_to_3(m.col(0)), vec4_to_3(m.col(1)), vec4_to_3(m.col(2)));
+
 fn @mat2x2_transpose(m: Mat2x2) = make_mat2x2(make_vec2(m.col(0).x, m.col(1).x),
                                               make_vec2(m.col(0).y, m.col(1).y));
 
@@ -113,6 +117,11 @@ fn @mat4x4_matmul(a: Mat4x4, b: Mat4x4) = make_mat4x4(
     mat4x4_mul(a, b.col(1)),
     mat4x4_mul(a, b.col(2)),
     mat4x4_mul(a, b.col(3)));
+
+fn @mat2x2_diag(m: Mat2x2) = make_vec2(m.col(0).x, m.col(1).y);
+fn @mat3x3_diag(m: Mat3x3) = make_vec3(m.col(0).x, m.col(1).y, m.col(2).z);
+fn @mat3x4_diag(m: Mat3x4) = make_vec4(m.col(0).x, m.col(1).y, m.col(2).z, 1);
+fn @mat4x4_diag(m: Mat4x4) = make_vec4(m.col(0).x, m.col(1).y, m.col(2).z, m.col(3).w);
 
 fn @mat3x3_at(a: Mat3x3, row: i32, col: i32) = vec3_at(a.col(col), row);
 fn @mat4x4_at(a: Mat4x4, row: i32, col: i32) = vec4_at(a.col(col), row);

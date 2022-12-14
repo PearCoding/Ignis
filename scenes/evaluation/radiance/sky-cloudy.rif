@@ -1,0 +1,17 @@
+ZONE=I  -1.00001   1.00001  -1.00001   1.00001  -1.00001   1.00001
+
+scene=sky-cloudy.rad
+
+view=-vta -vp 0 0 0 -vd 0 0 1 -vu 0 1 0 -vh 180 -vv 180 -vo 0 -va 0 -vs 0 -vl 0
+
+RESOLUTION=256 256
+INDIRECT=0
+QUALITY=MEDIUM
+DETAIL=MEDIUM
+VARIABILITY=MEDIUM
+EXPOSURE=1
+
+RAWFILE=ref-sky-cloudy-rad-raw
+PICTURE=ref-sky-cloudy-rad
+
+REPORT=0.1

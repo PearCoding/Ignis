@@ -1,7 +1,7 @@
 import bpy
 import math
 
-from .node import export_node, handle_node_group_begin, handle_node_group_end, handle_node_reroute
+from .node import export_node, handle_node_group_begin, handle_node_group_end, handle_node_reroute, handle_node_implicit_mappings
 from .utils import *
 
 
@@ -38,7 +38,7 @@ def _export_diffuse_bsdf(ctx, bsdf, export_name):
     has_roughness = try_extract_node_value(roughness, default=1) > 0
 
     if has_roughness:
-        roughness = f"({roughness})^2" # Square it
+        roughness = f"({roughness})^2"  # Square it
         return _handle_normal(ctx, bsdf,
                               {"type": "roughdiffuse", "name": export_name,
                                   "reflectance": reflectance, "roughness": roughness})
@@ -51,7 +51,7 @@ def _export_diffuse_bsdf(ctx, bsdf, export_name):
 def _export_glass_bsdf(ctx, bsdf, export_name):
     reflectance = export_node(ctx, bsdf.inputs["Color"])
     if bsdf.distribution == 'SHARP':
-        roughness = 1
+        roughness = 0
     else:
         roughness = export_node(ctx, bsdf.inputs["Roughness"])
     ior = export_node(ctx, bsdf.inputs["IOR"])
@@ -63,7 +63,7 @@ def _export_glass_bsdf(ctx, bsdf, export_name):
                               {"type": "dielectric", "name": export_name,
                                "specular_reflectance": reflectance, "specular_transmittance": reflectance, "int_ior": ior})
     else:
-        roughness = f"({roughness})^2" # Square it
+        roughness = f"({roughness})^2"  # Square it
         return _handle_normal(ctx, bsdf,
                               {"type": "roughdielectric", "name": export_name,
                                "specular_reflectance": reflectance, "specular_transmittance": reflectance, "roughness": roughness, "int_ior": ior})  # Square roughness?
@@ -73,13 +73,13 @@ def _export_refraction_bsdf(ctx, bsdf, export_name):
     # TODO: Need better support for this?
     base_color = export_node(ctx, bsdf.inputs["Color"])
     if bsdf.distribution == 'SHARP':
-        roughness = 1
+        roughness = 0
     else:
         roughness = export_node(ctx, bsdf.inputs["Roughness"])
     ior = export_node(ctx, bsdf.inputs["IOR"])
     return _handle_normal(ctx, bsdf,
                           {"type": "principled", "name": export_name,
-                           "base_color": base_color, "roughness": roughness, "specular_transmission": 1, "metallic": 1, "ior": ior})
+                           "base_color": base_color, "roughness": roughness, "specular_transmission": 1, "metallic": 0, "ior": ior})
 
 
 def _export_transparent_bsdf(ctx, bsdf, export_name):
@@ -103,7 +103,7 @@ def _export_glossy_bsdf(ctx, bsdf, export_name):
     base_color = export_node(ctx, bsdf.inputs["Color"])
 
     if bsdf.distribution == 'SHARP':
-        roughness = 1
+        roughness = 0
     else:  # Only supports GGX
         roughness = export_node(ctx, bsdf.inputs["Roughness"])
 
@@ -115,10 +115,10 @@ def _export_glossy_bsdf(ctx, bsdf, export_name):
 
 def _map_specular_to_ior(specular):
     value = try_extract_node_value(specular, default=None)
-    if not value:
+    if value is None:
         return f"(2/(1-sqrt(0.08*{specular}))-1)"
     else:  # Compute actual value to simplify code generation
-        return 2 * (1 - math.sqrt(0.08 * value)) - 1
+        return 2 / (1 - math.sqrt(0.08 * value)) - 1
 
 
 def _export_principled_bsdf(ctx, bsdf, export_name):
@@ -172,7 +172,7 @@ def _export_mix_bsdf(ctx, bsdf, export_name):
         ctx, bsdf.inputs[1], export_name + "__1")
     mat2 = _export_bsdf(
         ctx, bsdf.inputs[2], export_name + "__2")
-    factor = export_node(ctx, bsdf.inputs["Fac"])
+    factor = export_node(ctx, bsdf.inputs[0])
 
     if mat1 is None or mat2 is None:
         print(f"Mix BSDF {export_name} has no valid bsdf input")
@@ -196,42 +196,50 @@ def _export_bsdf(ctx, socket, name):
     bsdf = socket.links[0].from_node
     output_name = socket.links[0].from_socket.name
 
+    def check_instance(typename):
+        return hasattr(bpy.types, typename) and isinstance(bsdf, getattr(bpy.types, typename))
+
     if bsdf is None:
         print(f"Material {name} has no valid bsdf")
         return None
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfDiffuse):
-        return _export_diffuse_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfGlass):
-        return _export_glass_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfRefraction):
-        return _export_refraction_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfTransparent):
-        return _export_transparent_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfTranslucent):
-        return _export_translucent_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfGlossy):
-        return _export_glossy_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeBsdfPrincipled):
-        return _export_principled_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeMixShader):
-        return _export_mix_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeAddShader):
-        return _export_add_bsdf(ctx, bsdf, name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeEmission):
-        return _export_emission_bsdf_black(name)
-    elif isinstance(bsdf, bpy.types.ShaderNodeGroup):
-        return handle_node_group_begin(ctx, bsdf, output_name, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
-    elif isinstance(bsdf, bpy.types.NodeGroupInput):
-        return handle_node_group_end(ctx, bsdf, output_name, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
-    elif isinstance(bsdf, bpy.types.NodeReroute):
-        return handle_node_reroute(ctx, bsdf, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
+    elif check_instance("ShaderNodeBsdfDiffuse"):
+        expr = _export_diffuse_bsdf(ctx, bsdf, name)
+    elif check_instance("ShaderNodeBsdfGlass"):
+        expr = _export_glass_bsdf(ctx, bsdf, name)
+    elif check_instance("ShaderNodeBsdfRefraction"):
+        expr = _export_refraction_bsdf(ctx, bsdf, name)
+    elif check_instance("ShaderNodeBsdfTransparent"):
+        expr = _export_transparent_bsdf(ctx, bsdf, name)
+    elif check_instance("ShaderNodeBsdfTranslucent"):
+        expr = _export_translucent_bsdf(ctx, bsdf, name)
+    elif check_instance("ShaderNodeBsdfGlossy"):
+        expr = _export_glossy_bsdf(ctx, bsdf, name)
+    elif check_instance("ShaderNodeBsdfPrincipled"):
+        expr = _export_principled_bsdf(ctx, bsdf, name)
+    elif check_instance("ShaderNodeMixShader"):
+        expr = _export_mix_bsdf(ctx, bsdf, name)
+    elif check_instance("ShaderNodeAddShader"):
+        expr = _export_add_bsdf(ctx, bsdf, name)
+    elif check_instance("ShaderNodeEmission"):
+        expr = _export_emission_bsdf_black(name)
+    elif check_instance("ShaderNodeGroup"):
+        expr = handle_node_group_begin(
+            ctx, bsdf, output_name, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
+    elif check_instance("NodeGroupInput"):
+        expr = handle_node_group_end(
+            ctx, bsdf, output_name, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
+    elif check_instance("NodeReroute"):
+        expr = handle_node_reroute(
+            ctx, bsdf, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
     elif isinstance(bsdf, bpy.types.ShaderNode) and socket.links[0].from_socket.type in ['VALUE', 'INT', 'RGBA', 'VECTOR']:
-        # Export as emission, which returns black only
-        return _export_emission_bsdf_black(name)
+        # Used if a non-shader node is connected directly to the surface output (Implicits already handled)
+        return export_node(ctx, socket)
     else:
         print(
             f"Material {name} has a bsdf of type {type(bsdf).__name__}  which is not supported")
         return None
+
+    return handle_node_implicit_mappings(socket, expr)
 
 
 def _get_bsdf_link(material):

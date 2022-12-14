@@ -12,6 +12,10 @@ fn @make_empty_bbox() = make_bbox(
     make_vec3( flt_max,  flt_max,  flt_max),
     make_vec3(-flt_max, -flt_max, -flt_max));
 
+fn @make_centered_bbox(origin: Vec3, size: Vec3) = make_bbox(
+    vec3_sub(origin, vec3_mulf(size, 0.5)),
+    vec3_add(origin, vec3_mulf(size, 0.5)));
+
 fn @bbox_is_empty(bbox: BBox) = bbox.max.x < bbox.min.x || bbox.max.y < bbox.min.y || bbox.max.z < bbox.min.z;
 
 fn @bbox_size(bbox: BBox)    = vec3_sub(bbox.max, bbox.min);

@@ -7,6 +7,7 @@
 
 #include "imgui.h"
 #include "imgui_markdown.h"
+#include "implot.h"
 
 #if SDL_VERSION_ATLEAST(2, 0, 17)
 #include "backends/imgui_impl_sdl.h"
@@ -26,15 +27,9 @@
 
 namespace IG {
 
-constexpr size_t HISTOGRAM_SIZE                     = 100;
+constexpr size_t HISTOGRAM_SIZE                     = 50;
 static const char* const ToneMappingMethodOptions[] = {
-    "None", "Reinhard", "Mod. Reinhard", "ACES"
-};
-
-static const char* const DebugModeOptions[] = {
-    "Normal", "Tangent", "Bitangent", "Geometric Normal", "Texture Coords", "Prim Coords", "Point", "Hit Distance", "Area",
-    "Raw Prim ID", "Prim ID", "Raw Entity ID", "Entity ID", "Raw Material ID", "Material ID",
-    "Is Emissive", "Is Specular", "Is Entering", "Check BSDF", "Albedo", "Medium Inner", "Medium Outer"
+    "None", "Reinhard", "Mod. Reinhard", "ACES", "Uncharted2"
 };
 
 // Pose IO
@@ -48,6 +43,9 @@ struct LuminanceInfo {
     float SoftMax = 0.0f;
     float Med     = 0.0f;
     float Est     = 1e-5f;
+    int InfCount  = 0;
+    int NaNCount  = 0;
+    int NegCount  = 0;
 
     LuminanceInfo& operator=(const LuminanceInfo& other) = default;
 };
@@ -74,15 +72,15 @@ public:
     bool ShowUI                             = true;
     bool ShowInspector                      = false;
     bool LockInteraction                    = false;
+    bool ZoomIsScale                        = false;
 
     size_t Width = 0, Height = 0;
 
     // Stats
     LuminanceInfo LastLum;
-    std::array<int, HISTOGRAM_SIZE> Histogram;
-    std::array<float, HISTOGRAM_SIZE> HistogramF;
+    std::array<int, HISTOGRAM_SIZE * 4> Histogram;
 
-    bool ToneMapping_Automatic              = true;
+    bool ToneMapping_Automatic              = false;
     float ToneMapping_Exposure              = 1.0f;
     float ToneMapping_Offset                = 0.0f;
     bool ToneMappingGamma                   = true;
@@ -97,6 +95,7 @@ public:
     CameraPose LastCameraPose;
 
     float CurrentTravelSpeed = 1.0f;
+    float CurrentZoom        = 1.0f; // Only important if orthogonal
 
     // Buffer stuff
     bool setupTextureBuffer(size_t width, size_t height)
@@ -115,7 +114,7 @@ public:
     }
 
     // Events
-    void handlePoseInput(size_t posenmbr, bool capture, const Camera& cam)
+    void handlePoseInput(size_t posenmbr, bool capture, const CameraProxy& cam)
     {
         if (!capture) {
             PoseRequest = (int)posenmbr;
@@ -170,7 +169,7 @@ public:
     };
 
     // Events
-    bool handleEvents(size_t& iter, bool& run, Camera& cam)
+    bool handleEvents(size_t& iter, bool& run, CameraProxy& cam)
     {
         const Vector3f sceneCenter = Runtime->sceneBoundingBox().center();
 
@@ -455,7 +454,10 @@ public:
 
                 if (!hover && canInteract) {
                     if (event.wheel.y != 0) {
-                        cam.move(0, 0, event.wheel.y * CurrentTravelSpeed);
+                        if (ZoomIsScale)
+                            CurrentZoom *= (event.wheel.y < 0) ? -event.wheel.y * 1.05f : event.wheel.y * 0.95f;
+                        else
+                            cam.move(0, 0, event.wheel.y * CurrentTravelSpeed);
                         iter = 0;
                     }
                 }
@@ -527,6 +529,7 @@ public:
                 auto pose = PoseResetRequest ? PoseManager.initialPose() : PoseManager.pose(PoseRequest);
                 cam.Eye   = pose.Eye;
                 cam.update_dir(pose.Dir, pose.Up);
+                CurrentZoom      = 1;
                 iter             = 0;
                 PoseRequest      = -1;
                 PoseResetRequest = false;
@@ -536,36 +539,40 @@ public:
         LastCameraPose = CameraPose(cam);
         Running        = run;
 
+        if (Running && ZoomIsScale)
+            Runtime->setParameter("__camera_scale", CurrentZoom);
+
         return false;
     }
 
-    void analzeLuminance(size_t width, size_t height)
+    void analzeLuminance()
     {
         const std::string aov_name = currentAOVName();
         ImageInfoSettings settings{ aov_name.c_str(),
-                                    Histogram.data(), Histogram.size(),
-                                    1.0f };
-        ImageInfoOutput output;
-        Runtime->imageinfo(settings, output);
+                                    1.0f, HISTOGRAM_SIZE,
+                                    Histogram.data() + 0 * HISTOGRAM_SIZE, Histogram.data() + 1 * HISTOGRAM_SIZE,
+                                    Histogram.data() + 2 * HISTOGRAM_SIZE, Histogram.data() + 3 * HISTOGRAM_SIZE,
+                                    true, true };
 
-        LastLum         = LuminanceInfo();
-        LastLum.Avg     = output.Average;
-        LastLum.Max     = output.Max;
-        LastLum.Min     = output.Min;
-        LastLum.Med     = output.Median;
-        LastLum.SoftMax = output.SoftMax;
-        LastLum.SoftMin = output.SoftMin;
-        LastLum.Est     = output.SoftMax;
+        const ImageInfoOutput output = Runtime->imageinfo(settings);
 
-        const float avgFactor = 1.0f / (width * height);
-        for (size_t i = 0; i < Histogram.size(); ++i)
-            HistogramF[i] = Histogram[i] * avgFactor;
+        LastLum          = LuminanceInfo();
+        LastLum.Avg      = output.Average;
+        LastLum.Max      = output.Max;
+        LastLum.Min      = output.Min;
+        LastLum.Med      = output.Median;
+        LastLum.SoftMax  = output.SoftMax;
+        LastLum.SoftMin  = output.SoftMin;
+        LastLum.Est      = output.SoftMax;
+        LastLum.InfCount = output.InfCount;
+        LastLum.NaNCount = output.NaNCount;
+        LastLum.NegCount = output.NegCount;
     }
 
     void updateSurface()
     {
         const std::string aov_name = currentAOVName();
-        analzeLuminance(Width, Height);
+        analzeLuminance();
 
         // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
         uint32* buf = Buffer.data();
@@ -681,8 +688,9 @@ public:
 
     void handleImgui(size_t iter, size_t samples)
     {
-        constexpr size_t UI_W = 300;
-        constexpr size_t UI_H = 440;
+        constexpr size_t UI_W   = 300;
+        constexpr size_t UI_H   = 500;
+        constexpr size_t HIST_W = 250;
         int mouse_x, mouse_y;
         SDL_GetMouseState(&mouse_x, &mouse_y);
 
@@ -701,12 +709,48 @@ public:
                 ImGui::Text("Lum Max %8.3f | 95%% %8.3f", LastLum.Max, LastLum.SoftMax);
                 ImGui::Text("Lum Min %8.3f |  5%% %8.3f", LastLum.Min, LastLum.SoftMin);
                 ImGui::Text("Lum Avg %8.3f | Med %8.3f", LastLum.Avg, LastLum.Med);
+
+                // Draw informative section
+                if (LastLum.InfCount > 0 || LastLum.NaNCount > 0 || LastLum.NegCount > 0) {
+                    const size_t pixel_comp_count = Width * Height * 3;
+                    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(200, 0, 0, 255));
+                    if (LastLum.InfCount > 0)
+                        ImGui::Text("Infinite %7.3f%%", 100 * LastLum.InfCount / (float)pixel_comp_count);
+                    if (LastLum.NaNCount > 0)
+                        ImGui::Text("NaN     %8.3f%%", 100 * LastLum.NaNCount / (float)pixel_comp_count);
+                    if (LastLum.NegCount > 0)
+                        ImGui::Text("Negative %7.3f%%", 100 * LastLum.NegCount / (float)pixel_comp_count);
+                    ImGui::PopStyleColor();
+                }
+
                 ImGui::Text("Cam Eye (%6.3f, %6.3f, %6.3f)", LastCameraPose.Eye(0), LastCameraPose.Eye(1), LastCameraPose.Eye(2));
                 ImGui::Text("Cam Dir (%6.3f, %6.3f, %6.3f)", LastCameraPose.Dir(0), LastCameraPose.Dir(1), LastCameraPose.Dir(2));
                 ImGui::Text("Cam Up  (%6.3f, %6.3f, %6.3f)", LastCameraPose.Up(0), LastCameraPose.Up(1), LastCameraPose.Up(2));
 
                 ImGui::PushItemWidth(-1);
-                ImGui::PlotHistogram("", HistogramF.data(), HISTOGRAM_SIZE, 0, nullptr, 0.0f, 1.0f, ImVec2(0, 60));
+                ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0, 0));
+                if (ImPlot::BeginPlot("Histogram", ImVec2((int)HIST_W, 100), ImPlotFlags_NoTitle | ImPlotFlags_NoInputs | ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus)) {
+                    ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickLabels);
+                    ImPlot::SetupAxesLimits(0, (double)HISTOGRAM_SIZE, 0, static_cast<double>(Width * Height), ImPlotCond_Always);
+                    ImPlot::SetupFinish();
+
+                    constexpr double BarWidth = 0.67;
+                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
+                    ImPlot::SetNextFillStyle(ImVec4(1, 0, 0, 1), 0.25f);
+                    ImPlot::PlotBars("R", Histogram.data() + 0 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
+                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
+                    ImPlot::SetNextFillStyle(ImVec4(0, 1, 0, 1), 0.25f);
+                    ImPlot::PlotBars("G", Histogram.data() + 1 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
+                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
+                    ImPlot::SetNextFillStyle(ImVec4(0, 0, 1, 1), 0.25f);
+                    ImPlot::PlotBars("B", Histogram.data() + 2 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
+                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
+                    ImPlot::SetNextFillStyle(ImVec4(1, 1, 0, 1), 0.25f);
+                    ImPlot::PlotBars("L", Histogram.data() + 3 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
+
+                    ImPlot::EndPlot();
+                }
+                ImPlot::PopStyleVar();
                 ImGui::PopItemWidth();
             }
 
@@ -730,13 +774,14 @@ public:
 
             if (ShowDebugMode) {
                 if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    static auto debugModeNames = getDebugModeNames();
                     ImGui::BeginDisabled(!Running);
-                    const char* current_method = DebugModeOptions[(int)Parent->mDebugMode];
-                    if (ImGui::BeginCombo("Mode", current_method)) {
-                        for (int i = 0; i < IM_ARRAYSIZE(DebugModeOptions); ++i) {
-                            bool is_selected = (current_method == DebugModeOptions[i]);
-                            if (ImGui::Selectable(DebugModeOptions[i], is_selected) && Running)
-                                Parent->mDebugMode = (DebugMode)i;
+                    std::string current_method = debugModeToString(Parent->mDebugMode);
+                    if (ImGui::BeginCombo("Mode", current_method.c_str())) {
+                        for (const auto& s : debugModeNames) {
+                            bool is_selected = (current_method == s);
+                            if (ImGui::Selectable(s.c_str(), is_selected) && Running)
+                                Parent->mDebugMode = stringToDebugMode(s).value();
                             if (is_selected && Running)
                                 ImGui::SetItemDefaultFocus();
                         }
@@ -817,6 +862,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
     mInternal->Width         = width;
     mInternal->Height        = height;
     mInternal->ShowDebugMode = showDebug;
+    mInternal->ZoomIsScale   = runtime->camera() == "orthogonal";
 
     mInternal->Window = SDL_CreateWindow(
         "Ignis",
@@ -844,6 +890,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool show
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
+    ImPlot::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
@@ -873,9 +920,15 @@ UI::~UI()
     ImGuiSDL::Deinitialize();
 #endif
 
-    SDL_DestroyTexture(mInternal->Texture);
-    SDL_DestroyRenderer(mInternal->Renderer);
-    SDL_DestroyWindow(mInternal->Window);
+    ImPlot::DestroyContext();
+    ImGui::DestroyContext();
+
+    if (mInternal->Texture)
+        SDL_DestroyTexture(mInternal->Texture);
+    if (mInternal->Renderer)
+        SDL_DestroyRenderer(mInternal->Renderer);
+    if (mInternal->Window)
+        SDL_DestroyWindow(mInternal->Window);
     SDL_Quit();
 
     mInternal->Buffer.clear();
@@ -896,14 +949,14 @@ void UI::setTitle(const char* str)
     case SPPMode::Capped:
         sstream << " [Capped]";
         break;
-    case SPPMode::Continous:
-        sstream << " [Continous]";
+    case SPPMode::Continuos:
+        sstream << " [Continuos]";
         break;
     }
     SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());
 }
 
-bool UI::handleInput(size_t& iter, bool& run, Camera& cam)
+bool UI::handleInput(size_t& iter, bool& run, CameraProxy& cam)
 {
     return mInternal->handleEvents(iter, run, cam);
 }

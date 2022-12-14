@@ -13,3 +13,7 @@
 #else
 #include "imgui_old_sdl.cpp"
 #endif
+
+// Include implementation of implot
+#include "implot.cpp"
+#include "implot_items.cpp"

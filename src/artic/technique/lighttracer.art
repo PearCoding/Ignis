@@ -1,0 +1,165 @@
+struct LTRayPayload {
+    contrib: Color,
+    depth:   i32,
+    eta:     f32,
+}
+
+struct LTSecondaryPayload {
+    pixel: Vec2
+}
+
+fn @write_ltraypayload(payload: RayPayload, lt: LTRayPayload) -> () {
+    payload.set(0, lt.contrib.r);
+    payload.set(1, lt.contrib.g);
+    payload.set(2, lt.contrib.b);
+    payload.set(3, lt.depth as f32);
+    payload.set(4, lt.eta);
+}
+
+fn @unwrap_ltraypayload(payload: RayPayload) = LTRayPayload {
+    contrib = make_color(payload.get(0), payload.get(1), payload.get(2), 1),
+    depth   = payload.get(3) as i32,
+    eta     = payload.get(4)
+};
+
+fn @write_ltsecondarypayload(payload: RayPayload, lt: LTSecondaryPayload) -> () {
+    payload.set(0, lt.pixel.x);
+    payload.set(1, lt.pixel.y);
+}
+
+fn @unwrap_ltsecondarypayload(payload: RayPayload) = LTSecondaryPayload {
+    pixel = make_vec2(payload.get(0), payload.get(1)),
+};
+
+fn @make_lt_emitter(light_selector: LightSelector, iter: i32) -> RayEmitter {
+    let offset = 0.001:f32;
+
+    @ |sample, x, y, _width, _height, payload| {
+        let mut hash = fnv_init();
+        hash = fnv_hash(hash, sample as u32);
+        hash = fnv_hash(hash, iter as u32);
+        hash = fnv_hash(hash, x as u32);
+        hash = fnv_hash(hash, y as u32);
+        let mut rnd = hash /*as RndState*/;
+        
+        let (light, light_pdf) = light_selector.sample(&mut rnd, vec3_expand(0));
+        let sample_emission    = light.sample_emission;
+        let light_sample       = @sample_emission(rnd);
+        
+        let sample_f = 1:f32;
+
+        let ray      = make_ray(light_sample.pos, light_sample.dir, select(light.infinite, 0:f32, offset), flt_max, ray_flag_light);
+        let radiance = color_mulf(light_sample.intensity, safe_div(math_builtins::fabs(light_sample.cos), light_pdf * sample_f));
+        
+        write_ltraypayload(payload, LTRayPayload {
+            contrib = radiance,
+            depth   = 1,
+            eta     = 1
+        });
+
+        (ray, rnd)
+    }
+}
+
+/////////////////////////////////////
+/// TODO: This ignores the first vertex on the light surface
+fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, clamp_value: f32) -> Technique {
+    let offset : f32 = 0.001;
+    
+    let handle_color = if clamp_value > 0 {
+        @|c: Color| color_saturate(c, clamp_value)
+    } else {
+        @|c: Color| c
+    };
+
+    fn @on_shadow( ctx: ShadingContext
+                 , rnd: &mut RndState
+                 , payload: RayPayload
+                 , secondary_payload: RayPayload
+                 , mat: Material
+                 ) -> ShadowRay {
+        // No shadow rays for specular materials
+        if mat.bsdf.is_specular {
+            return(ShadowRay::None)
+        }
+        
+        let pt = unwrap_ltraypayload(payload);
+        if pt.depth + 1 > max_path_len {
+            return(ShadowRay::None)
+        }
+
+        if let Option[CameraSample]::Some(camera_sample) = camera.sample_pixel(rnd, ctx.surf.point) {
+            let in_dir  = vec3_normalize(camera_sample.dir); 
+            let out_dir = vec3_neg(ctx.ray.dir);
+            let cos_o   = vec3_dot(out_dir, ctx.surf.local.col(2));
+            let cos_i   = vec3_dot(in_dir, ctx.surf.local.col(2));
+
+            if cos_o * cos_i > flt_eps {
+                let factor  = 1:f32;//safe_div(math_builtins::fabs(cos_o), math_builtins::fabs(cos_i));
+                let contrib = handle_color(color_mulf(color_mul(camera_sample.weight, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), factor));
+
+                write_ltsecondarypayload(secondary_payload, LTSecondaryPayload { pixel = make_vec2(camera_sample.coord.nx, camera_sample.coord.ny) });
+                make_simple_shadow_ray(
+                    make_ray(ctx.surf.point, camera_sample.dir, offset, 1 - offset, ray_flag_shadow),
+                    contrib
+                )
+            } else {
+                ShadowRay::None
+            }
+        } else {
+            ShadowRay::None
+        }
+    }
+
+    // No surface was between the surface and the camera -> There is a contribution from the light!
+    fn @on_advanced_shadow_miss(_ray: Ray, pixel: PixelCoord, _shader: MaterialShader, secondary_payload: RayPayload, contrib: Color) -> Option[Color] {
+        let lt = unwrap_ltsecondarypayload(secondary_payload);
+        framebuffer.splat(make_pixelcoord_from_normalized(lt.pixel.x, lt.pixel.y, pixel.w, pixel.h), contrib);
+        Option[Color]::None
+    }
+
+    // Same as pathtracer, except adjoint = true
+    fn @on_bounce( ctx: ShadingContext
+                 , rnd: &mut RndState
+                 , payload: RayPayload
+                 , mat: Material
+                 ) -> Option[Ray] {
+        let pt = unwrap_ltraypayload(payload);
+
+        if pt.depth + 1 > max_path_len {
+            return(Option[Ray]::None)
+        }
+
+        // Bounce
+        let out_dir = vec3_neg(ctx.ray.dir);
+        if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, true) {
+            let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+            let rr_prob = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
+            if randf(rnd) >= rr_prob {
+                return(Option[Ray]::None)
+            }
+
+            let new_contrib = color_mulf(contrib, 1 / rr_prob);
+            
+            write_ltraypayload(payload, LTRayPayload {
+                contrib = new_contrib,
+                depth   = pt.depth + 1,
+                eta     = pt.eta * mat_sample.eta
+            });
+            make_option(
+                make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
+            )
+        } else {
+            Option[Ray]::None
+        }
+    }
+
+    Technique {
+        on_hit         = TechniqueNoHitFunction,
+        on_miss        = TechniqueNoMissFunction,
+        on_shadow      = on_shadow,
+        on_bounce      = on_bounce,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = on_advanced_shadow_miss,
+    }
+}

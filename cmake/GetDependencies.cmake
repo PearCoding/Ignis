@@ -10,7 +10,7 @@ CPMAddPackage(
 CPMAddPackage(
     NAME tinyobjloader
     GITHUB_REPOSITORY tinyobjloader/tinyobjloader
-    GIT_TAG master
+    GIT_TAG release
     DOWNLOAD_ONLY YES
 )
 
@@ -31,22 +31,15 @@ CPMAddPackage(
 CPMAddPackage(
     NAME tinyexr
     GITHUB_REPOSITORY syoyo/tinyexr 
-    GIT_TAG master
+    GIT_TAG release
     DOWNLOAD_ONLY YES
 )
 
 CPMAddPackage(
     NAME tinygltf
     GITHUB_REPOSITORY syoyo/tinygltf 
-    GIT_TAG master
+    GIT_TAG release
     DOWNLOAD_ONLY YES
-)
-
-CPMAddPackage(
-    NAME stpp
-    GITHUB_REPOSITORY PearCoding/stpp 
-    GIT_TAG main
-    EXCLUDE_FROM_ALL YES
 )
 
 CPMAddPackage(

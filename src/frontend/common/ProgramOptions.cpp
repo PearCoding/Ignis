@@ -1,13 +1,13 @@
 #include "ProgramOptions.h"
 #include "Runtime.h"
 #include "config/Build.h"
+#include "loader/Transpiler.h"
 
 #include <CLI/CLI.hpp>
 
 namespace IG {
 static const std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };
-static const std::map<std::string, Target> TargetMap{ { "generic", Target::GENERIC }, { "single", Target::SINGLE }, { "asimd", Target::ASIMD }, { "sse42", Target::SSE42 }, { "avx", Target::AVX }, { "avx2", Target::AVX2 }, { "avx512", Target::AVX512 }, { "amdgpu", Target::AMDGPU }, { "nvvm", Target::NVVM } };
-static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continous", SPPMode::Continous } };
+static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continuos", SPPMode::Continuos } };
 
 class MyTransformer : public CLI::Validator {
 public:
@@ -76,8 +76,38 @@ public:
     }
 };
 
+static void handleListPExprVariables()
+{
+    std::cout << Transpiler::availableVariables() << std::endl;
+}
+
+static void handleListPExprFunctions()
+{
+    std::cout << Transpiler::availableFunctions() << std::endl;
+}
+
+static void handleListCLIOptions(const CLI::App& app)
+{
+    const auto options = app.get_options();
+    for (auto option : options) {
+        const auto shortNames = option->get_snames();
+        for (const auto& s : shortNames)
+            std::cout << "-" << s << std::endl;
+
+        const auto longNames = option->get_lnames();
+        for (const auto& s : longNames)
+            std::cout << "--" << s << std::endl;
+    }
+}
+
 ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, const std::string& desc)
 {
+    bool useCPU        = false;
+    bool useGPU        = false;
+    uint32 threadCount = 0;
+    uint32 vectorWidth = 0;
+    uint32 device      = 0;
+
     Type = type;
 
     CLI::App app{ desc, argc >= 1 ? argv[0] : "unknown" };
@@ -116,23 +146,32 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_flag_callback(
         "--debug", [&]() { TechniqueType = "debug"; }, "Same as --technique debug");
 
-    app.add_option("--target", Target, "Sets the target platform (default: autodetect GPU)")->transform(MyTransformer(TargetMap, CLI::ignore_case));
-    app.add_option("--device", Device, "Sets the device to use on the selected platform")->default_val(0);
-    app.add_flag("--cpu", AutodetectCPU, "Use autodetected CPU target");
-    app.add_flag("--gpu", AutodetectGPU, "Use autodetected GPU target");
+    app.add_flag("--cpu", useCPU, "Use CPU as target only");
+    app.add_flag("--gpu", useGPU, "Use GPU as target only");
+    app.add_option("--gpu-device", device, "Pick GPU device to use on the selected platform")->default_val(0);
+    app.add_option("--cpu-threads", threadCount, "Number of threads used on a CPU target. Set to 0 to detect automatically")->default_val(threadCount);
+    app.add_option("--cpu-vectorwidth", vectorWidth, "Number of vector lanes used on a CPU target. Set to 0 to detect automatically")->default_val(vectorWidth);
 
-    app.add_option("--spp", SPP, "Enables benchmarking mode and sets the number of iterations based on the given spp");
+    app.add_option("--spp", SPP, "Number of samples per pixel a frame contains");
     app.add_option("--spi", SPI, "Number of samples per iteration. This is only considered a hint for the underlying technique");
-    if (type == ApplicationType::View)
+    if (type == ApplicationType::View) {
         app.add_option("--spp-mode", SPPMode, "Sets the current spp mode")->transform(MyTransformer(SPPModeMap, CLI::ignore_case))->default_str("fixed");
+        app.add_flag_callback(
+            "--realtime", [&]() { this->SPPMode = SPPMode::Continuos; SPI = 1; SPP = 1; },
+            "Same as setting SPPMode='Continuos', SPI=1 and SPP=1 to emulate realtime rendering");
+    }
 
     app.add_flag("--stats", AcquireStats, "Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session");
     app.add_flag("--stats-full", AcquireFullStats, "Acquire all stats alongside rendering. Will be dumped at the end of the rendering session");
+
+    app.add_flag("--debug-trace", DebugTrace, "Dump information regarding calls on the device. Will slow down execution and produce a lot of output!");
 
     app.add_flag("--dump-shader", DumpShader, "Dump produced shaders to files in the current working directory");
     app.add_flag("--dump-shader-full", DumpFullShader, "Dump produced shaders with standard library to files in the current working directory");
 
     app.add_option("--script-dir", ScriptDir, "Override internal script standard library by '.art' files from the given directory");
+
+    app.add_option("-O,--shader-optimization", ShaderOptimizationLevel, "Level of optimization applied to shaders. Range is [0, 3]. Level 0 will also add debug information")->default_val(ShaderOptimizationLevel);
 
     app.add_flag("--add-env-light", AddExtraEnvLight, "Add additional constant environment light. This is automatically done for glTF scenes without any lights");
     app.add_flag("--force-specialization", ForceSpecialization, "Enforce specialization for parameters in shading tree. This will increase compile time drastically for potential runtime optimization");
@@ -160,28 +199,80 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         app.add_option("-o,--output", Output, "Writes the output image to a file");
     }
 
+    // Add some hidden commandline parameters
+    bool listPExprVariables = false;
+    bool listPExprFunctions = false;
+    bool listCLI            = false;
+    auto grp                = app.add_option_group("");
+    grp->add_flag("--list-pexpr-variables", listPExprVariables);
+    grp->add_flag("--list-pexpr-functions", listPExprFunctions);
+    grp->add_flag("--list-cli-options", listCLI);
+
+    auto handleHiddenExtras = [&]() {
+        if (listPExprVariables) {
+            handleListPExprVariables();
+            ShouldExit = true;
+        }
+        if (listPExprFunctions) {
+            handleListPExprFunctions();
+            ShouldExit = true;
+        }
+        if (listCLI) {
+            handleListCLIOptions(app);
+            ShouldExit = true;
+        }
+    };
+
     try {
         app.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
-        app.exit(e);
+        handleHiddenExtras();
+        if (!ShouldExit) // If true, exit is already handled
+            app.exit(e);
         ShouldExit = true;
+        return;
     }
+
+    // Handle hidden options
+    handleHiddenExtras();
+    if (ShouldExit)
+        return;
+
+    // Make sure the paths are given in absolutes
+    try {
+        if (!Output.is_absolute())
+            Output = std::filesystem::absolute(Output);
+    } catch (...) {
+        // Ignore it
+    }
+
+    // Setup target
+    if (useGPU)
+        Target = IG::Target::pickGPU(device);
+    else if (useCPU)
+        Target = IG::Target::pickCPU();
+    else
+        Target = IG::Target::pickBest();
+
+    Target.setDevice((size_t)device);
+    Target.setThreadCount((size_t)threadCount);
+
+    if (vectorWidth >= 1)
+        Target.setVectorWidth((size_t)vectorWidth);
 }
 
 void ProgramOptions::populate(RuntimeOptions& options) const
 {
     IG_LOGGER.setQuiet(Quiet);
-    IG_LOGGER.setVerbosity(VerbosityLevel);
+    IG_LOGGER.setVerbosity(DebugTrace ? IG::L_DEBUG : VerbosityLevel);
     IG_LOGGER.enableAnsiTerminal(!NoColor);
 
     options.IsTracer      = Type == ApplicationType::Trace;
     options.IsInteractive = Type == ApplicationType::View;
 
-    options.DesiredTarget  = Target;
-    options.RecommendCPU   = AutodetectCPU;
-    options.RecommendGPU   = AutodetectGPU;
-    options.Device         = Device;
+    options.Target         = Target;
     options.AcquireStats   = AcquireStats || AcquireFullStats;
+    options.DebugTrace     = DebugTrace;
     options.DumpShader     = DumpShader;
     options.DumpShaderFull = DumpFullShader;
     options.SPI            = SPI.value_or(0);
@@ -198,7 +289,27 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.Denoiser.FollowSpecular     = DenoiserFollowSpecular;
     options.Denoiser.OnlyFirstIteration = DenoiserOnlyFirstIteration;
 
-    options.ScriptDir = ScriptDir;
+    options.ScriptDir               = ScriptDir;
+    options.ShaderOptimizationLevel = std::min<size_t>(3, ShaderOptimizationLevel);
+
+    // Check for power of two and round up if not the case
+    uint64_t vectorWidth = options.Target.vectorWidth();
+    if (vectorWidth == 2) {
+        vectorWidth = 4;
+        IG_LOG(L_WARNING) << "Given vector width is 2, which is invalid. Setting it to " << vectorWidth << std::endl;
+    } else if ((vectorWidth & (vectorWidth - 1)) != 0) {
+        vectorWidth--;
+        vectorWidth |= vectorWidth >> 1;
+        vectorWidth |= vectorWidth >> 2;
+        vectorWidth |= vectorWidth >> 4;
+        vectorWidth |= vectorWidth >> 8;
+        vectorWidth |= vectorWidth >> 16;
+        vectorWidth |= vectorWidth >> 32;
+        vectorWidth++;
+
+        IG_LOG(L_WARNING) << "Given vector width is not power of 2. Setting it to " << vectorWidth << std::endl;
+    }
+    options.Target.setVectorWidth((size_t)vectorWidth);
 }
 
 } // namespace IG

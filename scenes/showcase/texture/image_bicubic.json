@@ -1,0 +1,11 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"textures": [
+		{"type":"image", "name":"tex", "filter_type": "bicubic", "filename": "../../textures/bitmap.png"}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name":"mat-Plane", "reflectance": "tex"}
+	]
+}

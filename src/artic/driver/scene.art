@@ -1,0 +1,23 @@
+// Scene data
+struct SceneInfo {
+    num_entities:  i32,
+    num_materials: i32
+}
+
+struct Scene {
+    info:     SceneInfo,
+    shapes:   ShapeTable,   // Defined in shape.art
+    entities: EntityTable,  // Defined in entity.art
+}
+
+type SceneTraverseLocalHandler = fn (Ray, EntityLeaf, bool) -> Hit;
+struct SceneGeometry {
+    database:     TraceAccessor,
+    bvh:          SceneBvh,
+    handle_local: SceneTraverseLocalHandler
+}
+
+struct SceneTracer {
+    type_count: i32,
+    get:        fn (i32) -> SceneGeometry
+}

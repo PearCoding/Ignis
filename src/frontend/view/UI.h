@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Camera.h"
-#include "DebugMode.h"
+#include "CameraProxy.h"
+#include "technique/DebugMode.h"
 #include "SPPMode.h"
 
 #include <memory>
@@ -11,7 +11,8 @@ enum class ToneMappingMethod {
     None = 0,
     Reinhard,
     ModifiedReinhard,
-    ACES
+    ACES,
+    Uncharted2
 };
 
 class Runtime;
@@ -21,7 +22,7 @@ public:
     ~UI();
 
     void setTitle(const char* str);
-    bool handleInput(size_t& iter, bool& run, Camera& cam);
+    bool handleInput(size_t& iter, bool& run, CameraProxy& cam);
     void update(size_t iter, size_t samples);
 
     inline DebugMode currentDebugMode() const { return mDebugMode; }

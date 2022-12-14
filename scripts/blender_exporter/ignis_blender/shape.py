@@ -1,6 +1,7 @@
 import os
 import bmesh
 
+from .addon_preferences import get_prefs
 
 def get_shape_name_base(obj):
     return obj.original.data.name  # We use the original mesh name!
@@ -51,7 +52,8 @@ def _export_bmesh_by_material(me, name, rootPath):
         shape_name = name if mat_count == 1 else _shape_name_material(
             name, mat_id)
 
-        ply_save(filepath=os.path.join(rootPath, "Meshes", shape_name+".ply"),
+        abs_filepath = os.path.join(rootPath, get_prefs().mesh_dir_name, shape_name+".ply")
+        ply_save(filepath=abs_filepath,
                  bm=bm,
                  use_ascii=False,
                  use_normals=True,
@@ -79,7 +81,7 @@ def export_shape(result, obj, depsgraph, meshpath):
     for shape in shapes:
         result["shapes"].append(
             {"type": "ply", "name": shape[0],
-                "filename": f"Meshes/{shape[0]}.ply"},
+                "filename": f"{get_prefs().mesh_dir_name}/{shape[0]}.ply"},
         )
 
     return shapes

@@ -1,10 +1,10 @@
-from . import exporter_ui
+from . import exporter_ui, render_ui, render_properties, render, addon_preferences
 
 bl_info = {
     "name": "Ignis Scene",
-    "author": "Maher Rayes, Ömercan Yazici, Pascal Grittmann",
-    "description": "Export scene to Ignis",
-    "version": (0, 3, 0),
+    "author": "Ömercan Yazici, Maher Rayes, Pascal Grittmann",
+    "description": "Export scene to Ignis and render it within Blender",
+    "version": (0, 4, 0),
     "blender": (2, 92, 0),
     "location": "File > Import-Export",
     "category": "Import-Export",
@@ -15,8 +15,16 @@ bl_info = {
 
 
 def register():
+    addon_preferences.register()
+    render_properties.register()
     exporter_ui.register()
+    render_ui.register()
+    render.register()
 
 
 def unregister():
+    render.unregister()
+    render_ui.unregister()
     exporter_ui.unregister()
+    render_properties.unregister()
+    addon_preferences.unregister()

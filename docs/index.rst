@@ -1,44 +1,21 @@
-Welcome to Ignis's documentation!
-=================================
+:html_theme.sidebar_secondary.remove:
+:html_theme.show_prev_next.disable:
+
+Welcome to the documentation of Ignis!
+======================================
 
 .. image:: screenshot.jpeg
-    :alt: Screenshot of the Ignis frontend `igview`.
-    :width: 50%
-    :align: center
+   :alt: Screenshot of the Ignis frontend `igview`.
+   :width: 50%
+   :align: center
 
 
-**Ignis** is a raytracer for the RENEGADE project implemented using the Artic frontend of the AnyDSL compiler framework (https://anydsl.github.io/) and based on Rodent (https://github.com/AnyDSL/rodent).
-
-
-Table of Contents:
-------------------
+**Ignis** is a high-performance raytracer implemented using the Artic frontend of the AnyDSL compiler framework (https://anydsl.github.io/) and based on Rodent (https://github.com/AnyDSL/rodent). The renderer is usable on all three major platforms (Linux, Windows, MacOs).
 
 .. toctree::
    :maxdepth: 1
-   :caption: Getting Started:
-   
-   src/getting_started/start
-   src/getting_started/building
-   src/getting_started/tutorials/index.rst
+   :hidden:
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Scene reference
-
-   src/scene/file_format
-   src/scene/pexpr
-   src/scene/externals
-   src/scene/shapes
-   src/scene/entities
-   src/scene/bsdfs
-   src/scene/media
-   src/scene/lights
-   src/scene/textures
-   src/scene/cameras
-   src/scene/techniques
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Python API
-
-   src/python/overview
+   src/getting_started/index
+   src/scene/index
+   src/python/index

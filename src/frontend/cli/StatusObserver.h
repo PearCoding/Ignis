@@ -67,6 +67,11 @@ public:
         const auto duration     = std::chrono::duration_cast<std::chrono::seconds>(now - mLastUpdate);
         const auto fullDuration = std::chrono::duration_cast<std::chrono::seconds>(now - mStart);
 
+        // Skip first iteration for eta if possible as it contains JIT computations which falsify future time estimation
+        if (mFirstTime)
+            mStartAfterFirst = now;
+        const auto fullDurationAfterFirst = std::chrono::duration_cast<std::chrono::seconds>(now - mStartAfterFirst);
+
         if ((uint64)duration.count() >= mUpdateCycleSeconds) {
             if (mBeautify) {
                 if (mFirstTime) {
@@ -88,9 +93,10 @@ public:
                       << " | RT: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count());
 
             if (mTargetSamples != 0) {
+                const int64_t fullDur  = fullDurationAfterFirst.count() > 0 ? fullDurationAfterFirst.count() : fullDuration.count();
                 const float percentage = 100 * (currentSamples / float(mTargetSamples));
                 const float etaFactor  = percentage > FltEps ? (100 - percentage) / percentage : 100.0f /* Just something high*/;
-                std::cout << " ETA: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(static_cast<uint64>(fullDuration.count() * etaFactor));
+                std::cout << " ETA: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(static_cast<uint64>(fullDur * etaFactor));
             }
 
             if (!mBeautify)
@@ -103,7 +109,7 @@ public:
     }
 
 private:
-    inline void drawProgressbar(float perc)
+    inline static void drawProgressbar(float perc)
     {
         constexpr size_t LENGTH = 20;
         size_t full_count       = (size_t)std::floor(LENGTH * perc);
@@ -129,6 +135,7 @@ private:
     const uint64 mUpdateCycleSeconds;
     const uint64 mTargetSamples;
     std::chrono::high_resolution_clock::time_point mStart;
+    std::chrono::high_resolution_clock::time_point mStartAfterFirst;
     std::chrono::high_resolution_clock::time_point mLastUpdate;
     bool mFirstTime;
 };

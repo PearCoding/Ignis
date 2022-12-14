@@ -5,7 +5,24 @@
 # * a subdirectory named 'build' or within a subdirectory named 'build/Release'.
 # ***************************************************************
 
-$env:IGNIS_DIR=Get-Location
-$env:PATH=$env:PATH + ";" + $env:IGNIS_DIR + "\build\bin;" + $env:IGNIS_DIR + "\build\Release\bin"
-$env:PATH=$env:PATH + ";" + $env:IGNIS_DIR + "\build\lib;" + $env:IGNIS_DIR + "\build\Release\lib"
-$env:PYTHONPATH=$env:PYTHONPATH + ";" +$env:IGNIS_DIR + "\build\api;" + $env:IGNIS_DIR + "\build\Release\api"
+$env:IGNIS_DIR=$PSScriptRoot
+
+$BUILD_DIR="$env:IGNIS_DIR\build"
+$BIN_DIR="$BUILD_DIR\bin\Release"
+$LIB_DIR="$BUILD_DIR\lib\Release"
+$API_DIR="$BUILD_DIR\api"
+
+If (!(Test-Path $BIN_DIR)) {
+    $BIN_DIR="$BUILD_DIR\Release\bin"
+    $LIB_DIR="$BUILD_DIR\Release\lib"
+    $API_DIR="$BUILD_DIR\Release\api"
+
+    If (!(Test-Path $BIN_DIR)) {
+        $BIN_DIR="$BUILD_DIR\bin"
+        $LIB_DIR="$BUILD_DIR\lib"
+        $API_DIR="$BUILD_DIR\api"
+    }
+}
+
+$env:PATH=$env:PATH + ";$BIN_DIR;$LIB_DIR"
+$env:PYTHONPATH=$env:PYTHONPATH + ";$API_DIR"

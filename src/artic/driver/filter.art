@@ -1,0 +1,83 @@
+fn @filter_square_kernel(body: fn(i32, i32) -> ()) {
+    fn @loop(x: i32, y: i32, kw: i32, kh: i32, iw: i32, ih: i32) -> () {
+        let rw = kw / 2;
+        let rh = kh / 2;
+        for i in safe_unroll(-rh, rh + 1) {
+            let iy = y + i;
+            if iy >= 0 && iy < ih {
+                for j in safe_unroll(-rw, rw + 1) {
+                    let ix = x + j;
+                    if ix >= 0 && ix < iw {
+                        body(ix, iy)
+                    }
+                }
+            }
+        }
+    }
+
+    loop
+}
+
+fn @attach_no_filter(image: AOVImage) = image;
+
+fn @attach_block_filter(image: AOVImage, radius: i32) -> AOVImage {
+    let width = 2*radius + 1;
+    let norm = 1 / (width * width) as f32;
+
+    fn @new_splat(pixel: PixelCoord, color: Color) {
+        for ix, iy in filter_square_kernel(pixel.x, pixel.y, 2*radius+1, 2*radius+1, image.width, image.height) {
+            let new_pixel = make_pixelcoord_from_xy(ix, iy, image.width, image.height, 0/* TODO */, 0/* TODO */);
+            let new_color = color_mulf(color, norm);
+            image.splat(new_pixel, new_color);
+        }
+    }
+
+    image.{ splat = new_splat }
+} 
+
+fn @attach_radial_filter(image: AOVImage, radius: i32, filter: fn (f32) -> f32) -> AOVImage {
+    fn @new_splat(pixel: PixelCoord, color: Color) {
+        for ix, iy in filter_square_kernel(pixel.x, pixel.y, 2*radius+1, 2*radius+1, image.width, image.height) {
+            let i = ix - pixel.x;
+            let j = iy - pixel.y;
+            let new_pixel = make_pixelcoord_from_xy(ix, iy, image.width, image.height, 0/* TODO */, 0/* TODO */);
+            let r = math_builtins::sqrt( (i*i + j*j) as f32 );
+            let factor = filter(r);
+            let new_color = color_mulf(color, factor);
+            image.splat(new_pixel, new_color);
+        }
+    }
+
+    image.{ splat = new_splat }
+}
+
+fn @attach_triangle_filter(image: AOVImage, radius: i32) -> AOVImage {
+    let norm = flt_inv_pi / ( radius * radius ) as f32; // TODO: Really?
+
+    fn @triangle(x: f32) -> f32 {
+        math_builtins::fmax[f32](0, 1 - math_builtins::fabs(x))
+	}
+
+    attach_radial_filter(image, radius, @|r| norm * triangle(r / radius as f32))
+} 
+
+fn @attach_mitchell_filter(image: AOVImage, radius: i32) -> AOVImage {
+    let nwidth = radius + 1; // radius divided by 2 to match definition
+    let norm = 1 / ( 3 * nwidth * nwidth ) as f32; // TODO: Really?
+
+    fn @mitchell(mut x: f32) -> f32 {
+        let B : f32 = 1 / 3.0;
+        let C : f32 = 1 / 3.0;
+
+		x = math_builtins::fabs(x);
+		if x < 1 {
+			((12 - 9 * B - 6 * C) * x * x * x + (-18 + 12 * B + 6 * C) * x * x + (6 - 2 * B)) / 6
+        } else if x < 2 {
+			((-B - 6 * C) * x * x * x + (6 * B + 30 * C) * x * x + (-12 * B - 48 * C) * x + (8 * B + 24 * C)) / 6
+        } else {
+            0
+        }
+	}
+
+    attach_radial_filter(image, radius, @|r| norm * mitchell(r / radius as f32))
+} 

@@ -1,0 +1,20 @@
+fn @node_brick(uv: Vec2, gap_size: Vec2) -> f32 {
+    let step = @|edge: f32, x: f32| select(x < edge, 0:f32, 1:f32);
+
+    let x = math::fract(select(math::fract(uv.y * 0.5) > 0.5, uv.x + 0.5, uv.x));
+    let y = math::fract(uv.y);
+
+    let bx = step(x, 1 - gap_size.x);
+    let by = step(y, 1 - gap_size.y);
+
+    bx * by
+}
+
+fn @make_brick_texture(color0: Color, color1: Color, scale: Vec2, gap_size: Vec2, transform: Mat3x3) -> Texture {
+    @ |ctx| {
+        let uv2 = mat3x3_transform_point_affine(transform, vec3_to_2(ctx.uvw));
+        let suv = vec2_mul(uv2, scale); 
+        
+        color_lerp(color0, color1, node_brick(suv, gap_size))
+    }
+}

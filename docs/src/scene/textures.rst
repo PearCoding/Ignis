@@ -25,30 +25,35 @@ Image texture (:monosp:`image`)
 
 .. objectparameters::
 
- * - filename
-   - |string|
-   - *None*
-   - Path to a valid image file.
- * - filter_type
-   - |string|
-   - "bilinear"
-   - The filter type to be used. Has to be one of the following: ["bilinear", "nearest"].
- * - wrap_mode
-   - |string|
-   - "repeat"
-   - The wrap method to be used. Has to be one of the following: ["repeat", "mirror", "clamp"].
- * - transform
-   - |transform|
-   - Identity
-   - Optional 2d transformation applied to texture coordinates.
- * - linear
-   - |bool|
-   - false
-   - The given image file is already in linear space and inverse gamma mapping can be skipped. Ignored for EXR and HDR images as it is expected that they are always in linear space.
+  * - filename
+    - |string|
+    - *None*
+    - No
+    - Path to a valid image file.
+  * - filter_type
+    - |string|
+    - :code:`"bicubic"`
+    - No
+    - The filter type to be used. Has to be one of the following: ["bicubic", "bilinear", "nearest"].
+  * - wrap_mode
+    - |string|
+    - :code:`"repeat"`
+    - No
+    - The wrap method to be used. Has to be one of the following: ["repeat", "mirror", "clamp"].
+  * - transform
+    - |transform|
+    - Identity
+    - No
+    - Optional 2d transformation applied to texture coordinates.
+  * - linear
+    - |bool|
+    - |false|
+    - No
+    - The given image file is already in linear space and inverse gamma mapping can be skipped. Ignored for EXR and HDR images as it is expected that they are always in linear space.
 
 .. subfigstart::
 
-.. figure::  images/tex_image.jpg
+.. figure::  images/texture_image.jpg
   :width: 90%
   :align: center
   
@@ -58,31 +63,56 @@ Image texture (:monosp:`image`)
   :width: 0.6
   :label: fig-image
 
+.. subfigstart::
+
+.. subfigure::  images/texture_image_nearest.jpg
+  :align: center
+  
+  Nearest filter
+
+.. subfigure::  images/texture_image_bilinear.jpg
+  :align: center
+  
+  Bilinear filter
+
+.. subfigure::  images/texture_image_bicubic.jpg
+  :align: center
+  
+  Bicubic filter
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-image-filters
+
 Brick (:monosp:`brick`)
 -------------------------------------
 
 .. objectparameters::
 
- * - color0, color1
-   - |color|
-   - (0,0,0), (1,1,1)
-   - The colors to used for the brick. color0 is the mortar, color1 is the actual brick.
- * - scale_x, scale_y
-   - |number|
-   - 6, 3
-   - Numbers of grids in a normalized frame [0,0]x[1,1].
- * - gap_x, gap_y
-   - |number|
-   - 0.05, 0.1
-   - Normalized gap size.
- * - transform
-   - |transform|
-   - Identity
-   - Optional 2d transformation applied to texture coordinates.
+  * - color0, color1
+    - |color|
+    - :code:`0`, :code:`1`
+    - Yes
+    - The colors to used for the brick. color0 is the mortar, color1 is the actual brick.
+  * - scale_x, scale_y
+    - |number|
+    - :code:`6`, :code:`3`
+    - Yes
+    - Numbers of grids in a normalized frame [0,0]x[1,1].
+  * - gap_x, gap_y
+    - |number|
+    - :code:`0.05`, :code:`0.1`
+    - Yes
+    - Normalized gap size.
+  * - transform
+    - |transform|
+    - Identity
+    - No
+    - Optional 2d transformation applied to texture coordinates.
 
 .. subfigstart::
 
-.. figure::  images/tex_brick.jpg
+.. figure::  images/texture_brick.jpg
   :width: 90%
   :align: center
   
@@ -97,22 +127,25 @@ Checkerboard (:monosp:`checkerboard`)
 
 .. objectparameters::
 
- * - color0, color1
-   - |color|
-   - (0,0,0), (1,1,1)
-   - The colors to use in the checkerboard.
- * - scale_x, scale_y
-   - |number|
-   - 2, 2
-   - Numbers of grids in a normalized frame [0,0]x[1,1].
- * - transform
-   - |transform|
-   - Identity
-   - Optional 2d transformation applied to texture coordinates.
+  * - color0, color1
+    - |color|
+    - :code:`0`, :code:`1`
+    - Yes
+    - The colors to use in the checkerboard.
+  * - scale_x, scale_y
+    - |number|
+    - :code:`2`, :code:`2`
+    - Yes
+    - Numbers of grids in a normalized frame [0,0]x[1,1].
+  * - transform
+    - |transform|
+    - Identity
+    - No
+    - Optional 2d transformation applied to texture coordinates.
 
 .. subfigstart::
 
-.. figure::  images/tex_checkerboard.jpg
+.. figure::  images/texture_checkerboard.jpg
   :width: 90%
   :align: center
   
@@ -127,18 +160,20 @@ Noise (:monosp:`noise`)
 
 .. objectparameters::
 
- * - color
-   - |color|
-   - (1,1,1)
-   - Tint
- * - colored
-   - |bool|
-   - false
-   - True will generate a colored texture, instead of a grayscale one.
+  * - color
+    - |color|
+    - :code:`1`
+    - Yes
+    - Tint
+  * - colored
+    - |bool|
+    - |false|
+    - No
+    - True will generate a colored texture, instead of a grayscale one.
 
 .. subfigstart::
 
-.. figure::  images/tex_noise.jpg
+.. figure::  images/texture_noise.jpg
   :width: 90%
   :align: center
   
@@ -155,26 +190,30 @@ Original noise used in legacy perlin implementation.
 
 .. objectparameters::
 
- * - color
-   - |color|
-   - (1,1,1)
-   - Tint
- * - colored
-   - |bool|
-   - false
-   - True will generate a colored texture, instead of a grayscale one.
- * - scale_x, scale_y
-   - |number|
-   - 20, 20
-   - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
- * - transform
-   - |transform|
-   - Identity
-   - Optional 2d transformation applied to texture coordinates.
+  * - color
+    - |color|
+    - :code:`1`
+    - Yes
+    - Tint
+  * - colored
+    - |bool|
+    - |false|
+    - No
+    - True will generate a colored texture, instead of a grayscale one.
+  * - scale_x, scale_y
+    - |number|
+    - :code:`20`, :code:`20`
+    - Yes
+    - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
+  * - transform
+    - |transform|
+    - Identity
+    - No
+    - Optional 2d transformation applied to texture coordinates.
 
 .. subfigstart::
 
-.. figure::  images/tex_pnoise.jpg
+.. figure::  images/texture_pnoise.jpg
   :width: 90%
   :align: center
   
@@ -189,26 +228,30 @@ Cell Noise (:monosp:`cellnoise`)
 
 .. objectparameters::
 
- * - color
-   - |color|
-   - (1,1,1)
-   - Tint
- * - colored
-   - |bool|
-   - false
-   - True will generate a colored texture, instead of a grayscale one.
- * - scale_x, scale_y
-   - |number|
-   - 20, 20
-   - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
- * - transform
-   - |transform|
-   - Identity
-   - Optional 2d transformation applied to texture coordinates.
+  * - color
+    - |color|
+    - :code:`1`
+    - Yes
+    - Tint
+  * - colored
+    - |bool|
+    - |false|
+    - No
+    - True will generate a colored texture, instead of a grayscale one.
+  * - scale_x, scale_y
+    - |number|
+    - :code:`20`, :code:`20`
+    - Yes
+    - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
+  * - transform
+    - |transform|
+    - Identity
+    - No
+    - Optional 2d transformation applied to texture coordinates.
 
 .. subfigstart::
 
-.. figure::  images/tex_cellnoise.jpg
+.. figure::  images/texture_cellnoise.jpg
   :width: 90%
   :align: center
   
@@ -223,26 +266,30 @@ Perlin Noise (:monosp:`perlin`)
 
 .. objectparameters::
 
- * - color
-   - |color|
-   - (1,1,1)
-   - Tint
- * - colored
-   - |bool|
-   - false
-   - True will generate a colored texture, instead of a grayscale one.
- * - scale_x, scale_y
-   - |number|
-   - 20, 20
-   - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
- * - transform
-   - |transform|
-   - Identity
-   - Optional 2d transformation applied to texture coordinates.
+  * - color
+    - |color|
+    - :code:`1`
+    - Yes
+    - Tint
+  * - colored
+    - |bool|
+    - |false|
+    - No
+    - True will generate a colored texture, instead of a grayscale one.
+  * - scale_x, scale_y
+    - |number|
+    - :code:`20`, :code:`20`
+    - Yes
+    - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
+  * - transform
+    - |transform|
+    - Identity
+    - No
+    - Optional 2d transformation applied to texture coordinates.
 
 .. subfigstart::
 
-.. figure::  images/tex_perlin.jpg
+.. figure::  images/texture_perlin.jpg
   :width: 90%
   :align: center
   
@@ -257,26 +304,30 @@ Voronoi Noise (:monosp:`voronoi`)
 
 .. objectparameters::
 
- * - color
-   - |color|
-   - (1,1,1)
-   - Tint
- * - colored
-   - |bool|
-   - false
-   - True will generate a colored texture, instead of a grayscale one.
- * - scale_x, scale_y
-   - |number|
-   - 20, 20
-   - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
- * - transform
-   - |transform|
-   - Identity
-   - Optional 2d transformation applied to texture coordinates.
+  * - color
+    - |color|
+    - :code:`1`
+    - Yes
+    - Tint
+  * - colored
+    - |bool|
+    - |false|
+    - No
+    - True will generate a colored texture, instead of a grayscale one.
+  * - scale_x, scale_y
+    - |number|
+    - :code:`20`, :code:`20`
+    - Yes
+    - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
+  * - transform
+    - |transform|
+    - Identity
+    - No
+    - Optional 2d transformation applied to texture coordinates.
 
 .. subfigstart::
 
-.. figure::  images/tex_voronoi.jpg
+.. figure::  images/texture_voronoi.jpg
   :width: 90%
   :align: center
   
@@ -291,26 +342,30 @@ Fractional Brownian Motion (:monosp:`fbm`)
 
 .. objectparameters::
 
- * - color
-   - |color|
-   - (1,1,1)
-   - Tint
- * - colored
-   - |bool|
-   - false
-   - True will generate a colored texture, instead of a grayscale one.
- * - scale_x, scale_y
-   - |number|
-   - 20, 20
-   - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
- * - transform
-   - |transform|
-   - Identity
-   - Optional 2d transformation applied to texture coordinates.
+  * - color
+    - |color|
+    - :code:`1`
+    - Yes
+    - Tint
+  * - colored
+    - |bool|
+    - |false|
+    - No
+    - True will generate a colored texture, instead of a grayscale one.
+  * - scale_x, scale_y
+    - |number|
+    - :code:`20`, :code:`20`
+    - Yes
+    - Numbers of grids used for noise in a normalized frame [0,0]x[1,1].
+  * - transform
+    - |transform|
+    - Identity
+    - No
+    - Optional 2d transformation applied to texture coordinates.
 
 .. subfigstart::
 
-.. figure::  images/tex_fbm.jpg
+.. figure::  images/texture_fbm.jpg
   :width: 90%
   :align: center
   
@@ -332,14 +387,15 @@ E.g., ``color_tint`` will be called ``tint`` inside the expression.
 
 .. objectparameters::
 
- * - expr
-   - |string|
-   - *None*
-   - A :ref:`PExpr <PExpr>` based expression
+  * - expr
+    - |string|
+    - *None*
+    - Yes
+    - A :ref:`PExpr <PExpr>` based expression
 
 .. subfigstart::
 
-.. figure::  images/tex_expr.jpg
+.. figure::  images/texture_expr.jpg
   :width: 90%
   :align: center
   
@@ -349,23 +405,32 @@ E.g., ``color_tint`` will be called ``tint`` inside the expression.
   :width: 0.6
   :label: fig-expr
 
+.. literalinclude:: ../../../scenes/showcase/texture/expr.json
+    :language: javascript
+    :tab-width: 4
+    :lines: 6-12
+    :dedent:
+    :caption: The following texture specification generates the above image. 
+
 Texture transform (:monosp:`transform`)
 ---------------------------------------------
 
 .. objectparameters::
 
- * - texture
-   - |color|
-   - *None*
-   - The texture the transform is applied to.
- * - transform
-   - |transform|
-   - Identity
-   - 2d transformation applied to texture coordinates.
+  * - texture
+    - |color|
+    - *None*
+    - Yes
+    - The texture the transform is applied to.
+  * - transform
+    - |transform|
+    - Identity
+    - No
+    - 2d transformation applied to texture coordinates.
 
 .. subfigstart::
 
-.. figure::  images/tex_transform.jpg
+.. figure::  images/texture_transform.jpg
   :width: 90%
   :align: center
   

@@ -1,9 +1,0 @@
-// General-purpose render settings
-struct Settings {
-    device: i32,
-    spi:    i32,
-    frame:  i32,
-    iter:   i32,
-    width:  i32,
-    height: i32
-}

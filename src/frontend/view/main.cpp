@@ -1,4 +1,4 @@
-#include "Camera.h"
+#include "CameraProxy.h"
 #include "IO.h"
 #include "Logger.h"
 #include "ProgramOptions.h"
@@ -69,7 +69,7 @@ int main(int argc, char** argv)
     }
 
     if (cmd.SPPMode != SPPMode::Fixed && !cmd.SPP.has_value()) {
-        IG_LOG(L_ERROR) << "No valid spp count given. Required by the capped or continous spp mode" << std::endl;
+        IG_LOG(L_ERROR) << "No valid spp count given. Required by the capped or continuos spp mode" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -94,10 +94,8 @@ int main(int argc, char** argv)
     timer_loading.stop();
 
     const auto def = runtime->initialCameraOrientation();
-    Camera camera(cmd.EyeVector().value_or(def.Eye), cmd.DirVector().value_or(def.Dir), cmd.UpVector().value_or(def.Up));
-    runtime->setParameter("__camera_eye", camera.Eye);
-    runtime->setParameter("__camera_dir", camera.Direction);
-    runtime->setParameter("__camera_up", camera.Up);
+    CameraProxy camera(cmd.EyeVector().value_or(def.Eye), cmd.DirVector().value_or(def.Dir), cmd.UpVector().value_or(def.Up));
+    runtime->setCameraOrientationParameter(camera.asOrientation());
 
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(cmd.SPP.value_or(0) / (float)SPI));
@@ -108,14 +106,14 @@ int main(int argc, char** argv)
     std::unique_ptr<UI> ui;
     try {
         ui = std::make_unique<UI>(cmd.SPPMode, runtime.get(), runtime->framebufferWidth(), runtime->framebufferHeight(), runtime->technique() == "debug");
-
-        // Setup initial travelspeed
-        BoundingBox bbox = runtime->sceneBoundingBox();
-        bbox.extend(camera.Eye);
-        ui->setTravelSpeed(std::max(1e-4f, bbox.diameter().maxCoeff() / 50));
     } catch (...) {
         return EXIT_FAILURE;
     }
+
+    // Setup initial travel-speed
+    BoundingBox bbox = runtime->sceneBoundingBox();
+    bbox.extend(camera.Eye);
+    ui->setTravelSpeed(std::max(1e-4f, bbox.diameter().maxCoeff() / 50));
 
     auto lastDebugMode = ui->currentDebugMode();
 
@@ -143,15 +141,13 @@ int main(int argc, char** argv)
             runtime->reset();
             lastDebugMode = ui->currentDebugMode();
         } else if (iter != runtime->currentIterationCount()) {
-            runtime->setParameter("__camera_eye", camera.Eye);
-            runtime->setParameter("__camera_dir", camera.Direction);
-            runtime->setParameter("__camera_up", camera.Up);
+            runtime->setCameraOrientationParameter(camera.asOrientation());
             runtime->reset();
         }
 
         if (running) {
             if (cmd.SPPMode != SPPMode::Capped || runtime->currentIterationCount() < desired_iter) {
-                if (cmd.SPPMode == SPPMode::Continous && runtime->currentIterationCount() >= desired_iter) {
+                if (cmd.SPPMode == SPPMode::Continuos && runtime->currentIterationCount() >= desired_iter) {
                     runtime->reset();
                     runtime->incFrameCount(); // Not affected by reset
                 }

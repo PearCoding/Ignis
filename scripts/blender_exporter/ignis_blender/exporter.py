@@ -10,16 +10,46 @@ from .emission import get_material_emission
 from .node import NodeContext
 from .utils import *
 from .defaults import *
+from .addon_preferences import get_prefs
 
 
 def export_technique(result, scene):
-    if scene.cycles is None:
-        max_depth = 8
-        clamp = 0
-    else:
+    if getattr(scene, 'ignis', None) is not None and bpy.context.engine == 'IGNIS_RENDER':
+        if scene.ignis.integrator == 'PATH':
+            result["technique"] = {
+                "type": "path",
+                "max_depth": scene.ignis.max_ray_depth,
+                "clamp": scene.ignis.clamp_value
+            }
+            return
+        elif scene.ignis.integrator == 'VOLPATH':
+            result["technique"] = {
+                "type": "volpath",
+                "max_depth": scene.ignis.max_ray_depth,
+                "clamp": scene.ignis.clamp_value
+            }
+            return
+        elif scene.ignis.integrator == 'PPM':
+            result["technique"] = {
+                "type": "ppm",
+                "max_depth": scene.ignis.max_ray_depth,  # TODO
+                "clamp": scene.ignis.clamp_value,
+                "photons": scene.ignis.ppm_photons_per_pass
+            }
+            return
+        elif scene.ignis.integrator == 'AO':
+            result["technique"] = {"type": "ao"}
+            return
+    elif getattr(scene, 'cycles', None) is not None and bpy.context.engine == 'CYCLES':
         max_depth = scene.cycles.max_bounces
         clamp = max(scene.cycles.sample_clamp_direct,
                     scene.cycles.sample_clamp_indirect)
+    elif getattr(scene, 'eevee', None) is not None and bpy.context.engine == 'BLENDER_EEVEE':
+        max_depth = scene.eevee.gi_diffuse_bounces
+        clamp = scene.eevee.gi_glossy_clamp
+    else:
+        max_depth = 8
+        clamp = 0
 
     result["technique"] = {
         "type": "path",
@@ -142,7 +172,8 @@ def delete_none(_dict):
 
 
 def export_scene(filepath, context, use_selection, export_materials, export_lights, enable_background, enable_camera, enable_technique, copy_images):
-    depsgraph = context.evaluated_depsgraph_get()
+    depsgraph = context.evaluated_depsgraph_get() if not isinstance(
+        context, bpy.types.Depsgraph) else context
 
     # Write all materials and cameras to a dict with the layout of our json file
     result = {}
@@ -159,10 +190,12 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
     if enable_camera:
         export_camera(result, depsgraph.scene)
 
-    # Create a path for meshes
+    # Create a path for meshes & textures
     rootPath = os.path.dirname(filepath)
-    os.makedirs(os.path.join(rootPath, 'Meshes'), exist_ok=True)
-    os.makedirs(os.path.join(rootPath, 'Textures'), exist_ok=True)
+    meshDir = os.path.join(rootPath, get_prefs().mesh_dir_name)
+    texDir = os.path.join(rootPath, get_prefs().tex_dir_name)
+    os.makedirs(meshDir, exist_ok=True)
+    os.makedirs(texDir, exist_ok=True)
 
     # Export all objects, materials, textures and lights
     export_all(rootPath, result, depsgraph, use_selection,
@@ -177,6 +210,22 @@ def export_scene(filepath, context, use_selection, export_materials, export_ligh
     del result["_image_textures"]
     del result["_materials"]
     result = delete_none(result)
+
+    # Remove mesh & texture directory if empty
+    try:
+        if len(os.listdir(meshDir)) == 0:
+            os.rmdir(meshDir)
+        if len(os.listdir(texDir)) == 0:
+            os.rmdir(texDir)
+    except:
+        pass  # Ignore any errors
+
+    return result
+
+
+def export_scene_to_file(filepath, context, use_selection, export_materials, export_lights, enable_background, enable_camera, enable_technique, copy_images):
+    result = export_scene(filepath, context, use_selection, export_materials,
+                          export_lights, enable_background, enable_camera, enable_technique, copy_images)
 
     # Write the result into the .json
     with open(filepath, 'w') as fp:
