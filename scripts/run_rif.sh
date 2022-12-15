@@ -5,7 +5,7 @@
 # In contrary to run_rad.sh, this one extracts most information in the given rif file.
 # The script ignores QUALITY, DETAIL, VARIABILITY and EXPOSURE however.
 # The intended use case is limited to short renderings for comparison purposes
-# `oconv` and `rpict` (both Radiance tools) have to be available in the current scope
+# `oconv`, `rpict`, `rtrace` and `vwrays` (all Radiance tools) have to be available in the current scope
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 source $SCRIPT_DIR/../source.sh
@@ -85,9 +85,13 @@ if [[ $input_file =~ $regex ]]; then
     OUTPUT="${BASH_REMATCH[1]}"
 fi
 
-# See https://floyd.lbl.gov/radiance/man_html/rpict.1.html for documentation
+# See 
+# https://floyd.lbl.gov/radiance/man_html/rpict.1.html
+# https://floyd.lbl.gov/radiance/man_html/rtrace.1.html
+# https://floyd.lbl.gov/radiance/man_html/vwrays.1.html
+# for documentation
 # The preselected parameters should ensure unbiased images from the first sample on
-# Comparing to SPP based renderer (like Ignis) is difficult, as Radiance `rpict` does not have such an option
+# Comparing to SPP based renderer (like Ignis) is difficult, as Radiance `rpict`, `rtrace` or `vwrays` do not have such an option
 
 SS=0 #TODO: -ss N might be a good indicator for sample count (even while this is more like splitting per ray)
 AD=800
