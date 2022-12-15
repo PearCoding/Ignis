@@ -93,8 +93,6 @@ and a few as ``bool``:
 
 -   ``frontside`` |true| if normal and ray orientation is front facing. This will be always ``true`` if the point is not lying on a surface.
 
-.. NOTE:: More special variables might be introduced in the future.
-
 Predefined constants of type ``num`` are:
 
 -   ``Pi`` The famous pi constant.
