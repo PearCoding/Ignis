@@ -1,1 +1,0 @@
--t 10 -u+ -ps 1 -pj 0.65 -ar 0 -aa 0 -as 0 -av 0 0 0 -aw 0 -pt 0 -st 0 -as 0 -dt 0 -dp 0 -dc 0 -lr 0

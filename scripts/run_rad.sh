@@ -39,8 +39,8 @@ unset SCENES[${#SCENES[@]}-1]
 SS=1 #TODO: -ss N might be a good indicator for sample count (even while this is more like splitting per ray)
 AD=800
 LW=$(awk "BEGIN {print 1/$AD}")
-DEF=$(cat "$SCRIPT_DIR/rpict_default.txt")
-ARGS="$DEF -ad $AD -lw $LW -ss $SS ${ARGS[@]}"
+DEF=$(cat "$SCRIPT_DIR/rtrace_default.txt")
+ARGS="$DEF -ad $AD -lw $LW -ss $SS -t 10 -ps 1 -pj 0.65 -pt 0 ${ARGS[@]}"
 
 # See https://floyd.lbl.gov/radiance/man_html/rpict.1.html for documentation
 # The preselected parameters should ensure unbiased images from the first sample on

@@ -10,13 +10,23 @@
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 source $SCRIPT_DIR/../source.sh
 
+# We do not cache temporary files
 TMP_OCT=$(mktemp).oct
 TMP_HDR=$(mktemp).hdr
 
 INPUT="$1"
-
 input_file=$(cat "$INPUT")
 
+# Change to directory containing the input file if possible, to ensure correct loading of dependent files
+parent_dir="$(dirname "$INPUT")"
+if [[ $parent_dir != '' ]]; then
+    cd $parent_dir
+fi
+
+# Get number of available threads on the system
+thread_count=$(nproc --all 2> /dev/null || echo 8)
+
+# Extract all the scenes required for oconv
 SCENES=""
 regex="materials[[:blank:]]*=[[:blank:]]*([^
 ]+)"
@@ -30,6 +40,7 @@ if [[ $input_file =~ $regex ]]; then
     SCENES+="${BASH_REMATCH[1]}"
 fi
 
+# Get optional render arguments
 RENDER_ARGS=""
 regex="render[[:blank:]]*=[[:blank:]]*([^
 ]+)"
@@ -37,6 +48,7 @@ if [[ $input_file =~ $regex ]]; then
     RENDER_ARGS="${BASH_REMATCH[1]}"
 fi
 
+# Get the resolution, or use (our) default
 WIDTH=512
 HEIGHT=512
 regex="RESOLUTION[[:blank:]]*=[[:blank:]]*([[:digit:]]+)[[:blank:]]+([[:digit:]]+)"
@@ -45,12 +57,14 @@ if [[ $input_file =~ $regex ]]; then
     HEIGHT="${BASH_REMATCH[2]}"
 fi
 
+# Get number of indirect bounces
 INDIRECT=0
 regex="INDIRECT[[:blank:]]*=[[:blank:]]*([[:digit:]]+)"
 if [[ $input_file =~ $regex ]]; then
     INDIRECT="${BASH_REMATCH[1]}"
 fi
 
+# Get all the views and put it into an array
 VIEWS=()
 regex="view[[:blank:]]*=[[:blank:]]*([^
 ]+)"
@@ -63,6 +77,7 @@ function handle_view {
 }
 handle_view "$input_file"
 
+# Extract name of the output file
 OUTPUT="output"
 regex="PICTURE[[:blank:]]*=[[:blank:]]*([^
 ]+)"
@@ -77,18 +92,23 @@ fi
 SS=0 #TODO: -ss N might be a good indicator for sample count (even while this is more like splitting per ray)
 AD=800
 LW=$(awk "BEGIN {print 1/$AD}")
-DEF=$(cat "$SCRIPT_DIR/rpict_default.txt")
-ARGS="$DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -x $WIDTH -y $HEIGHT $EXTRA_ARGS"
+DEF=$(cat "$SCRIPT_DIR/rtrace_default.txt")
+
+#ARGS="$DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -x $WIDTH -y $HEIGHT $EXTRA_ARGS"
+VWARGS="-x $WIDTH -y $HEIGHT"
+TRARGS="-n $thread_count $DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -ld -ov -ffc -h+ $EXTRA_ARGS"
 
 oconv $SCENES > $TMP_OCT || exit 1
 
 if [[ ${#VIEWS[@]} == 1 ]]; then
-    rpict ${VIEWS[0]} $ARGS $TMP_OCT > $TMP_HDR || exit 1
+    #rpict ${VIEWS[0]} $ARGS $TMP_OCT > $TMP_HDR || exit 1
+    vwrays -ff $VWARGS ${VIEWS[0]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[0]}) $TMP_OCT > $TMP_HDR || exit 1
     hdr2exr "$TMP_HDR" "$OUTPUT.exr"
 else
     for i in ${!VIEWS[@]}; do
         view_output="${OUTPUT%%.*}_$i" # Expand given output filename
-        rpict ${VIEWS[$i]} $ARGS $TMP_OCT > $TMP_HDR || exit 1
+        #rpict ${VIEWS[$i]} $ARGS $TMP_OCT > $TMP_HDR || exit 1
+        vwrays $VWARGS -ff ${VIEWS[$i]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[$i]}) $TMP_OCT > $TMP_HDR || exit 1
         hdr2exr "$TMP_HDR" "$view_output.exr"
     done
 fi
