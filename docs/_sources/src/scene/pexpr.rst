@@ -68,20 +68,20 @@ Variables
 Some special variables given are available as ``vec2``:
 
 -   ``uv`` The current texture coordinates.
--   ``prim_coords`` Primitive specific coordinates if surface, else a zero.
+-   ``prim_coords`` Primitive specific coordinates if surface, else zero vector.
 
 some as ``vec3``:
 
--   ``uvw`` The current texture coordinates given in as a triplet.
+-   ``uvw`` The current texture coordinates given as triplet.
 -   ``V`` World ray direction facing from a surface or any other source outwards.
 -   ``Rd`` Same as ``V``.
 -   ``Ro`` World ray origin.
--   ``P`` World position if bsdf or medium, else zero.
--   ``Np`` Normalized position if bsdf or medium, else a zero.
--   ``N`` World shading normal if bsdf, else a zero.
--   ``Ng`` World geometry normal if bsdf, else a zero.
--   ``Nx`` World shading tangent if bsdf, else a zero.
--   ``Ny`` World shading bitangent if bsdf, else a zero.
+-   ``P`` World position if bsdf or medium, else zero vector.
+-   ``Np`` Normalized position if bsdf or medium, else zero vector.
+-   ``N`` World shading normal if bsdf, else zero vector.
+-   ``Ng`` World geometry normal if bsdf, else zero vector.
+-   ``Nx`` World shading tangent if bsdf, else zero vector.
+-   ``Ny`` World shading bitangent if bsdf, else zero vector.
 
 few as ``int``:
 
@@ -380,4 +380,3 @@ Functions
 
 All textures defined in the scene representation are also available as functions with signature ``TEXTURE(vec2) -> vec4``, with ``TEXTURE`` being the texture name.
 The above defined function names have precedence over texture names, if the signature matches.
-

@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <meta property="article:modified_time" content="2022-11-22T15:21:50+00:00" />
+    <meta property="article:modified_time" content="2022-12-15T11:57:46+00:00" />
     <title>PExpr &#8212; Ignis  documentation</title>
   
   
@@ -389,20 +389,20 @@ SeExpr is more complex and industry proven, however, more difficult to transpile
 <p>Some special variables given are available as <code class="docutils literal notranslate"><span class="pre">vec2</span></code>:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">uv</span></code> The current texture coordinates.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">prim_coords</span></code> Primitive specific coordinates if surface, else a zero.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prim_coords</span></code> Primitive specific coordinates if surface, else zero vector.</p></li>
 </ul>
 <p>some as <code class="docutils literal notranslate"><span class="pre">vec3</span></code>:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">uvw</span></code> The current texture coordinates given in as a triplet.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uvw</span></code> The current texture coordinates given as triplet.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">V</span></code> World ray direction facing from a surface or any other source outwards.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Rd</span></code> Same as <code class="docutils literal notranslate"><span class="pre">V</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Ro</span></code> World ray origin.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">P</span></code> World position if bsdf or medium, else zero.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Np</span></code> Normalized position if bsdf or medium, else a zero.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">N</span></code> World shading normal if bsdf, else a zero.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Ng</span></code> World geometry normal if bsdf, else a zero.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Nx</span></code> World shading tangent if bsdf, else a zero.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Ny</span></code> World shading bitangent if bsdf, else a zero.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">P</span></code> World position if bsdf or medium, else zero vector.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Np</span></code> Normalized position if bsdf or medium, else zero vector.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">N</span></code> World shading normal if bsdf, else zero vector.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ng</span></code> World geometry normal if bsdf, else zero vector.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Nx</span></code> World shading tangent if bsdf, else zero vector.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ny</span></code> World shading bitangent if bsdf, else zero vector.</p></li>
 </ul>
 <p>few as <code class="docutils literal notranslate"><span class="pre">int</span></code>:</p>
 <ul class="simple">
@@ -773,7 +773,7 @@ The above defined function names have precedence over texture names, if the sign
         <footer class="bd-footer-content">
           <div class="bd-footer-content__inner">
             <p class="last-updated">
-Last updated on Nov 22, 2022.<br>
+Last updated on Dec 15, 2022.<br>
 </p>
           </div>
         </footer>
