@@ -24,7 +24,7 @@ if [[ $parent_dir != '' ]]; then
 fi
 
 # Get number of available threads on the system
-thread_count=$(nproc --all 2> /dev/null || echo 8)
+thread_count=$(nproc --all 2>/dev/null || echo 8)
 
 # Extract all the scenes required for oconv
 SCENES=""
@@ -69,11 +69,11 @@ VIEWS=()
 regex="view[[:blank:]]*=[[:blank:]]*([^
 ]+)"
 function handle_view {
-  msg="$1"
-  if [[ "$msg" =~ $regex ]] ; then
-    VIEWS+=("${BASH_REMATCH[1]}")
-    handle_view "${msg/${BASH_REMATCH[0]}/}"
-  fi
+    msg="$1"
+    if [[ "$msg" =~ $regex ]]; then
+        VIEWS+=("${BASH_REMATCH[1]}")
+        handle_view "${msg/${BASH_REMATCH[0]}/}"
+    fi
 }
 handle_view "$input_file"
 
@@ -85,7 +85,7 @@ if [[ $input_file =~ $regex ]]; then
     OUTPUT="${BASH_REMATCH[1]}"
 fi
 
-# See 
+# See
 # https://floyd.lbl.gov/radiance/man_html/rpict.1.html
 # https://floyd.lbl.gov/radiance/man_html/rtrace.1.html
 # https://floyd.lbl.gov/radiance/man_html/vwrays.1.html
@@ -102,17 +102,19 @@ DEF=$(cat "$SCRIPT_DIR/rtrace_default.txt")
 VWARGS="-x $WIDTH -y $HEIGHT"
 TRARGS="-n $thread_count $DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -ld -ov -ffc -h+ $EXTRA_ARGS"
 
-oconv $SCENES > $TMP_OCT || exit 1
+oconv $SCENES >$TMP_OCT || exit 1
 
 if [[ ${#VIEWS[@]} == 1 ]]; then
     #rpict ${VIEWS[0]} $ARGS $TMP_OCT > $TMP_HDR || exit 1
-    vwrays -ff $VWARGS ${VIEWS[0]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[0]}) $TMP_OCT > $TMP_HDR || exit 1
+    vwrays -ff $VWARGS ${VIEWS[0]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[0]}) $TMP_OCT >$TMP_HDR || exit 1
     hdr2exr "$TMP_HDR" "$OUTPUT.exr"
+    echo "Generated output $OUTPUT.exr"
 else
     for i in ${!VIEWS[@]}; do
         view_output="${OUTPUT%%.*}_$i" # Expand given output filename
         #rpict ${VIEWS[$i]} $ARGS $TMP_OCT > $TMP_HDR || exit 1
-        vwrays $VWARGS -ff ${VIEWS[$i]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[$i]}) $TMP_OCT > $TMP_HDR || exit 1
+        vwrays $VWARGS -ff ${VIEWS[$i]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[$i]}) $TMP_OCT >$TMP_HDR || exit 1
         hdr2exr "$TMP_HDR" "$view_output.exr"
+        echo "Generated output $view_output.exr"
     done
 fi
