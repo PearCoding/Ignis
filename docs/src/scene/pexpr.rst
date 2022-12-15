@@ -374,7 +374,5 @@ Functions
 -   ``wrap(vec4, vec4, vec4) -> vec4``
 -   ``xyztorgb(vec4) -> vec4``
 
-.. NOTE:: More functions will be added in the future.
-
 All textures defined in the scene representation are also available as functions with signature ``TEXTURE(vec2) -> vec4``, with ``TEXTURE`` being the texture name.
 The above defined function names have precedence over texture names, if the signature matches.
