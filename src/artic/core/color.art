@@ -60,6 +60,10 @@ static yellow  = super::Color { r = 1, g = 1, b = 0, a = 1 };
 static magenta = super::Color { r = 1, g = 0, b = 1, a = 1 };
 static cyan    = super::Color { r = 0, g = 1, b = 1, a = 1 };  
 static orange  = super::Color { r = 1, g = 0.5, b = 0, a = 1 }; 
+
+// Color used to indicate true & false (we use blue instead of green, like Blender, for people with color vision deficiency)
+static true_color  = blue; 
+static false_color = red; 
 }
 
 fn @xyz_to_srgb(c : Color) -> Color {

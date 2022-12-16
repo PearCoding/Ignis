@@ -101,13 +101,13 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     make_option(color_map(mat.id))
                 },
                 21 => { // DEBUG_EMISSIVE
-                    make_option(if mat.is_emissive { color_builtins::green } else { color_builtins::red })
+                    make_option(if mat.is_emissive { color_builtins::true_color } else { color_builtins::false_color })
                 },
                 22 => { // DEBUG_SPECULAR
-                    make_option(if mat.bsdf.is_specular { color_builtins::green } else { color_builtins::red })
+                    make_option(if mat.bsdf.is_specular { color_builtins::true_color } else { color_builtins::false_color })
                 },
                 23 => { // DEBUG_ENTERING
-                    make_option(if ctx.surf.is_entering { color_builtins::green } else { color_builtins::red })
+                    make_option(if ctx.surf.is_entering { color_builtins::true_color } else { color_builtins::false_color })
                 },
                 24 => { // DEBUG_CHECK_BSDF
                     if mat.bsdf.is_specular {
@@ -130,7 +130,7 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                             let pdf_good = select(pdf_diff <= 0.001:f32, 1:i32, 0:i32);
                             let w_good   = select(w_diff   <= 0.001:f32, 1:i32, 0:i32);
                             let index    = (w_good << 1) | pdf_good;
-                            let color    = [color_builtins::red, color_builtins::orange, color_builtins::yellow, color_builtins::green](index);
+                            let color    = [color_builtins::red, color_builtins::orange, color_builtins::yellow, color_builtins::blue](index);
                             make_option(color)
                         } else { 
                             make_option(color_builtins::cyan)
