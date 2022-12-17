@@ -1,5 +1,4 @@
 {
-  // Exported via Blender plugin, testing point light, camera projection and basic principled BSDF 
   "technique": {
     "type": "path",
     "max_depth": 32,
@@ -109,7 +108,7 @@
         1.0054539442062378,
         5.903861999511719
       ],
-      "intensity": [
+      "power": [
         1000.0,
         1000.0,
         1000.0

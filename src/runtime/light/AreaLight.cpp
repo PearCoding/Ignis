@@ -13,7 +13,8 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
     : Light(name, light->pluginType())
     , mLight(light)
 {
-    mEntity = light->property("entity").getString();
+    mEntity   = light->property("entity").getString();
+    mUsePower = light->hasProperty("power");
 
     const auto entity = ctx.Entities->getEmissiveEntity(mEntity);
     if (!entity.has_value()) {
@@ -63,7 +64,7 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
 
             mPosition  = entity->Transform * shape.BoundingBox.center();
             mDirection = Vector3f::Zero();
-            mArea      = trishape.Area * std::abs(entity->computeGlobalMatrix().block<3, 3>(0, 0).determinant());
+            mArea      = trishape.Area * std::abs(entity->computeGlobalMatrix().block<3, 3>(0, 0).determinant()) /*FIXME: Bad approximation*/;
         } else {
             IG_LOG(L_ERROR) << "Given entity '" << mEntity << "' primitive type is not triangular" << std::endl;
         }
@@ -73,15 +74,20 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
 
 float AreaLight::computeFlux(const ShadingTree& tree) const
 {
-    const float power = tree.computeNumber("radiance", *mLight, 1);
-    return power * mArea * Pi;
+    if (mUsePower)
+        return tree.computeNumber("power", *mLight, mArea * Pi);
+    else
+        return tree.computeNumber("radiance", *mLight, 1) * mArea * Pi;
 }
 
 void AreaLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    input.Tree.addColor("radiance", *mLight, Vector3f::Constant(1.0f), true);
+    if (mUsePower)
+        input.Tree.addColor("power", *mLight, Vector3f::Constant(mArea * Pi), true);
+    else
+        input.Tree.addColor("radiance", *mLight, Vector3f::Constant(1.0f), true);
 
     const auto entity = input.Tree.context().Entities->getEmissiveEntity(mEntity);
     if (!entity.has_value()) {
@@ -144,8 +150,12 @@ void AreaLight::serialize(const SerializationInput& input) const
     }
 
     input.Stream << "  let light_" << light_id << " = make_area_light(" << input.ID
-                 << ", ae_" << light_id
-                 << ", @|ctx| { maybe_unused(ctx); " << input.Tree.getInline("radiance") << " });" << std::endl;
+                 << ", ae_" << light_id;
+
+    if (mUsePower)
+        input.Stream << ", @|ctx| { maybe_unused(ctx); color_mulf(" << input.Tree.getInline("power") << ", flt_inv_pi / " << mArea << ") });" << std::endl;
+    else
+        input.Stream << ", @|ctx| { maybe_unused(ctx); " << input.Tree.getInline("radiance") << " });" << std::endl;
 
     input.Tree.endClosure();
 }
@@ -153,7 +163,7 @@ void AreaLight::serialize(const SerializationInput& input) const
 std::optional<std::string> AreaLight::getEmbedClass() const
 {
     // TODO: Basic texture?
-    const auto radiance = mLight->property("radiance");
+    const auto radiance = mUsePower ? mLight->property("power") : mLight->property("radiance");
     const bool simple   = (!radiance.isValid() || radiance.canBeNumber() || radiance.type() == SceneProperty::PT_VECTOR3);
 
     if (!simple)
@@ -172,7 +182,7 @@ std::optional<std::string> AreaLight::getEmbedClass() const
 void AreaLight::embed(const EmbedInput& input) const
 {
     const std::string entityName = mLight->property("entity").getString();
-    const Vector3f radiance      = input.Tree.computeColor("radiance", *mLight, Vector3f::Ones());
+    const Vector3f radiance      = mUsePower ? input.Tree.computeColor("power", *mLight, Vector3f::Constant(mArea * Pi)) / (mArea * Pi) : input.Tree.computeColor("radiance", *mLight, Vector3f::Ones());
 
     const auto& ctx   = input.Tree.context();
     const auto entity = ctx.Entities->getEmissiveEntity(entityName);

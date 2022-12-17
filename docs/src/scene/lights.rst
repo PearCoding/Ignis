@@ -31,12 +31,16 @@ Point Light (:monosp:`point`)
     - :code:`(0,0,0)`
     - No
     - Position of the point light.
-    
   * - intensity
     - |color|
     - :code:`1`
     - Yes
-    - Intensity of the point light.
+    - Intensity of the point light given in radiometric [W/sr] or photometric [lm/sr] units. Can not be specified with :paramtype:`power`.
+  * - power
+    - |color|
+    - *None*
+    - Yes
+    - Power of the point light given in radiometric [W] or photometric [lm] units. Can not be specified with :paramtype:`intensity`.
 
 .. subfigstart::
   
@@ -63,7 +67,7 @@ Spot Light (:monosp:`spot`)
     - |number|
     - :code:`20`
     - No
-    - Falloff angle in degree. Greater angles will linearly falloff towards the cutoff angle. Falloff angle should be less or equal to the cutoff angle.
+    - Falloff angle in degree. Greater angles will smoothly falloff towards the cutoff angle. Falloff angle should be less or equal to the cutoff angle.
   * - position
     - |vector|
     - :code:`(0,0,0)`
@@ -88,7 +92,12 @@ Spot Light (:monosp:`spot`)
     - |color|
     - :code:`1`
     - Yes
-    - Intensity of the light.
+    - Intensity of the light given in radiometric [W/sr] or photometric [lm/sr] units. Can not be specified with :paramtype:`power`.
+  * - power
+    - |color|
+    - *None*
+    - Yes
+    - Power of the point light given in radiometric [W] or photometric [lm] units. Can not be specified with :paramtype:`intensity`. The actual emitted intensity scales with the :paramtype:`falloff` and :paramtype:`cutoff` angle. 
    
 .. subfigstart::
   
@@ -125,7 +134,7 @@ Directional Light (:monosp:`directional`)
     - |color|
     - :code:`1`
     - Yes
-    - Output of the directional light.
+    - Output of the directional light in radiometric [W/m^2] or photometric [lm/m^2] units.
 
 .. subfigstart::
   
@@ -152,14 +161,19 @@ Area Light (:monosp:`area`)
     - |color|
     - :code:`1`
     - Yes
-    - Output of the area light.
+    - Output of the area light in radiometric [W/sr/m^2] or photometric [lm/sr/m^2] units. Can not be specified with :paramtype:`power`. This means if the entity is scaled up, the emitted energy increases!
+  * - power
+    - |color|
+    - *None*
+    - Yes
+    - Output of the area light in radiometric [W] or photometric [lm] units. Can not be specified with :paramtype:`intensity`.  This means if the entity is scaled up, the emitted energy remains the same!
    
 .. subfigstart::
   
 .. figure:: images/light_area.jpg
   :width: 90%
 
-  Area light
+  Area light emitting light over the entire surface area in all directions.
 
 .. subfigend::
   :width: 0.6

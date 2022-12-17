@@ -18,6 +18,7 @@ public:
 
 private:
     Vector3f mPosition;
+    bool mUsingPower;
 
     std::shared_ptr<SceneObject> mLight;
 };

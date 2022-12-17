@@ -1,4 +1,11 @@
-fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_angle: f32, color: Color) -> Light {
+fn @spot_from_power(power: Color, cutoff_angle: f32, falloff_angle: f32) -> Color {
+    let cosCutoffAngle  = math_builtins::cos(cutoff_angle);
+    let cosFalloffAngle = math_builtins::cos(falloff_angle);
+    let factor = 2 * flt_pi * (1 - 0.5 * cosFalloffAngle - 0.5 * cosCutoffAngle);
+    color_mulf(power, 1 / factor)
+}
+
+fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_angle: f32, intensity: Color) -> Light {
     let frame           = make_orthonormal_mat3x3(dir);
     let cosCutoffAngle  = math_builtins::cos(cutoff_angle);
     let cosFalloffAngle = math_builtins::cos(falloff_angle);
@@ -14,24 +21,24 @@ fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_an
                         } else {
                             smoothstep(clampf((cos_angle - cosCutoffAngle) / blendRange, 0, 1))
                         };
-        color_mulf(color, cos_angle * factor / (4 * flt_pi))
+        color_mulf(intensity, cos_angle * factor)
     }
 
     Light{
         id = id,
         sample_direct = @ |_, from_surf| {
-            let out_dir_  = vec3_sub(pos, from_surf.point);
-            let dist      = vec3_len(out_dir_);
-            let out_dir   = vec3_mulf(out_dir_, safe_div(1, dist));
-            let intensity = eval_dir(vec3_neg(out_dir));
+            let out_dir_ = vec3_sub(pos, from_surf.point);
+            let dist     = vec3_len(out_dir_);
+            let out_dir  = vec3_mulf(out_dir_, safe_div(1, dist));
+            let color    = eval_dir(vec3_neg(out_dir));
 
-            make_direct_sample(pos, out_dir, intensity, make_area_pdf(1), 1, dist)
+            make_direct_sample(pos, out_dir, color, make_area_pdf(1), 1, dist)
         },
         sample_emission = @ |rnd| {
-            let sample    = sample_uniform_disk(randf(rnd), randf(rnd), cutoffRadius);
-            let out_dir   = vec3_normalize(to_world(vec3_add(sample.pos, make_vec3(0,0,1))));
-            let intensity = eval_dir(out_dir);
-            make_emission_sample(pos, out_dir, color_mulf(intensity, 1 / sample.pdf), 1, sample.pdf, 1)
+            let sample  = sample_uniform_disk(randf(rnd), randf(rnd), cutoffRadius);
+            let out_dir = vec3_normalize(to_world(vec3_add(sample.pos, make_vec3(0,0,1))));
+            let color   = color_mulf(eval_dir(out_dir), 1 / sample.pdf);
+            make_emission_sample(pos, out_dir, color, 1, sample.pdf, 1)
         },
         emission     = @ |_|    color_builtins::black,
         pdf_direct   = @ |_, _| make_area_pdf(0), // Does not matter

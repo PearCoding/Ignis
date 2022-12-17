@@ -24,6 +24,7 @@ private:
     Vector3f mDirection; // ~ Normal
     float mArea;
     std::string mEntity;
+    bool mUsePower;
 
     enum class RepresentationType {
         None,

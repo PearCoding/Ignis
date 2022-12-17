@@ -9,24 +9,36 @@ PointLight::PointLight(const std::string& name, const std::shared_ptr<SceneObjec
     : Light(name, light->pluginType())
     , mLight(light)
 {
-    mPosition = light->property("position").getVector3();
+    mPosition   = light->property("position").getVector3();
+    mUsingPower = light->hasProperty("power");
 }
 
+constexpr float SR = 4 * Pi;
 float PointLight::computeFlux(const ShadingTree& tree) const
 {
-    return tree.computeNumber("intensity", *mLight, 1) * 4 * Pi;
+    if (mUsingPower)
+        return tree.computeNumber("power", *mLight, SR);
+    else
+        return tree.computeNumber("intensity", *mLight, 1) * SR;
 }
 
 void PointLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
-    input.Tree.addColor("intensity", *mLight, Vector3f::Ones(), true);
+    if (mUsingPower)
+        input.Tree.addColor("power", *mLight, Vector3f::Constant(SR), true);
+    else
+        input.Tree.addColor("intensity", *mLight, Vector3f::Ones(), true);
 
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()
                  << "  let light_" << light_id << " = make_point_light(" << input.ID
-                 << ", " << LoaderUtils::inlineVector(mPosition)
-                 << ", " << input.Tree.getInline("intensity") << ");" << std::endl;
+                 << ", " << LoaderUtils::inlineVector(mPosition);
+
+    if (mUsingPower)
+        input.Stream << ", color_mulf(" << input.Tree.getInline("power") << ", 1 / (4*flt_pi)));" << std::endl;
+    else
+        input.Stream << ", " << input.Tree.getInline("intensity") << ");" << std::endl;
 
     input.Tree.endClosure();
 }
@@ -41,7 +53,6 @@ std::optional<std::string> PointLight::getEmbedClass() const
 
     return simple ? std::make_optional("SimplePointLight") : std::nullopt;
 }
-
 
 void PointLight::embed(const EmbedInput& input) const
 {
