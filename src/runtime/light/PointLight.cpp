@@ -46,7 +46,7 @@ void PointLight::serialize(const SerializationInput& input) const
 std::optional<std::string> PointLight::getEmbedClass() const
 {
     const auto position  = mLight->property("position");
-    const auto intensity = mLight->property("intensity");
+    const auto intensity = mUsingPower ? mLight->property("power") : mLight->property("intensity");
 
     const bool simple = (!position.isValid() || position.type() == SceneProperty::PT_VECTOR3)
                         && (!intensity.isValid() || intensity.canBeNumber() || intensity.type() == SceneProperty::PT_VECTOR3);
@@ -56,11 +56,11 @@ std::optional<std::string> PointLight::getEmbedClass() const
 
 void PointLight::embed(const EmbedInput& input) const
 {
-    const Vector3f radiance = input.Tree.computeColor("intensity", *mLight, Vector3f::Ones());
+    const Vector3f intensity = mUsingPower ? input.Tree.computeColor("power", *mLight, Vector3f::Constant(SR)) / SR : input.Tree.computeColor("intensity", *mLight, Vector3f::Ones());
 
     input.Serializer.write(mPosition);             // +3   = 3
     input.Serializer.write((uint32)0 /*Padding*/); // +1   = 4
-    input.Serializer.write(radiance);              // +3   = 7
+    input.Serializer.write(intensity);             // +3   = 7
     input.Serializer.write((uint32)0 /*Padding*/); // +1   = 8
 }
 

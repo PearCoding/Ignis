@@ -38,7 +38,8 @@ fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_an
             let sample  = sample_uniform_disk(randf(rnd), randf(rnd), cutoffRadius);
             let out_dir = vec3_normalize(to_world(vec3_add(sample.pos, make_vec3(0,0,1))));
             let color   = color_mulf(eval_dir(out_dir), 1 / sample.pdf);
-            make_emission_sample(pos, out_dir, color, 1, sample.pdf, 1)
+
+            make_emission_sample(pos, out_dir, color, 1, sample.pdf, vec3_dot(out_dir, dir)/* TODO: Really? */)
         },
         emission     = @ |_|    color_builtins::black,
         pdf_direct   = @ |_, _| make_area_pdf(0), // Does not matter

@@ -47,7 +47,7 @@ struct Light {
     pdf_direct: fn (Ray, SurfaceElement) -> Pdf,
     // Returns the pdf properties of the light at a given point on its surface for emission. The SurfaceElement is only valid if delta & infinite is false
     pdf_emission: fn (Ray, SurfaceElement) -> EmissivePdf,
-    // true if the light is a delta light (can not be hit by a ray)
+    // true if the light is a delta light (can not be hit by a ray). This only relates to `sample_direct`, not `sample_emission`
     delta: bool,
     // true if the light is infinite
     infinite: bool
