@@ -9,6 +9,31 @@
 #include "table/SceneDatabase.h"
 
 namespace IG {
+static inline float approximate_area_scale(const Transformf& transform, const BoundingBox& local_bbox)
+{
+    // Assume area distribution is uniform over bounding box in local space (which is not the case most of the time, but hopefully close to it).
+    // Extract scale factor after applying transformation to given bounding box, making sure the rotation is not accounted for.
+    // Only taking the determinant of the linear transformation would not account for the non-uniform size of an object.
+
+    const Vector3f ls = local_bbox.diameter();
+    const float w     = (transform.linear() * Vector3f::UnitX() * ls.x()).norm();
+    const float h     = (transform.linear() * Vector3f::UnitY() * ls.y()).norm();
+    const float d     = (transform.linear() * Vector3f::UnitZ() * ls.z()).norm();
+
+    return (w * h + w * d + h * d) / local_bbox.halfArea();
+}
+
+static inline float approximate_ellipsoid_area(const Transformf& transform, float local_radius)
+{
+    const float w = (transform.linear() * Vector3f::UnitX() * local_radius).norm();
+    const float h = (transform.linear() * Vector3f::UnitY() * local_radius).norm();
+    const float d = (transform.linear() * Vector3f::UnitZ() * local_radius).norm();
+
+    // See https://en.wikipedia.org/wiki/Ellipsoid
+    constexpr float P = 1.6075f;
+    return 4 * Pi * std::pow((std::pow(w * h, P) + std::pow(w * d, P) + std::pow(h * d, P)) / 3, 1 / P);
+}
+
 AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mLight(light)
@@ -50,11 +75,10 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
 
         const auto& shape = ctx.Shapes->getSphereShape(entity->ShapeID);
         Vector3f origin   = entity->Transform * shape.Origin;
-        float radius      = entity->Transform.linear().diagonal().cwiseAbs().maxCoeff() * shape.Radius; // TODO: Ignoring non-uniform scale
 
         mPosition  = origin;
         mDirection = Vector3f::Zero();
-        mArea      = 4 * Pi * radius * radius;
+        mArea      = approximate_ellipsoid_area(entity->Transform, shape.Radius);
     } break;
     default:
     case RepresentationType::None:
@@ -64,7 +88,7 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
 
             mPosition  = entity->Transform * shape.BoundingBox.center();
             mDirection = Vector3f::Zero();
-            mArea      = trishape.Area * std::abs(entity->computeGlobalMatrix().block<3, 3>(0, 0).determinant()) /*FIXME: Bad approximation*/;
+            mArea      = trishape.Area * approximate_area_scale(entity->Transform, shape.BoundingBox);
         } else {
             IG_LOG(L_ERROR) << "Given entity '" << mEntity << "' primitive type is not triangular" << std::endl;
         }
