@@ -231,12 +231,32 @@ def _export_rgb_value(ctx, node):
     return f"color({default_value[0]}, {default_value[1]}, {default_value[2]}, {default_value[3]})"
 
 
+def _export_mix(ctx, node):
+    # New ShaderNodeMix node (Blender 3.4)
+    if node.data_type == 'FLOAT':
+        return _export_scalar_mix(ctx, node)
+    elif node.data_type == 'VECTOR':
+        return _export_vector_mix(ctx, node)
+    elif node.data_type == 'RGBA':
+        return _export_rgb_math(ctx, node)
+    else:
+        print(f"Unknown data type {node.data_type} for ShaderNodeMix")
+        return None
+
+
 def _export_rgb_math(ctx, node):
     # See https://docs.gimp.org/en/gimp-concepts-layer-modes.html
 
+    is_new_node = hasattr(node, "clamp_factor")
+
     fac = export_node(ctx, node.inputs[0])
-    col1 = export_node(ctx, node.inputs[1])  # Background (I)
-    col2 = export_node(ctx, node.inputs[2])  # Foreground (M)
+    col1 = export_node(ctx, node.inputs[6 if is_new_node else 1])  # Background (I)
+    col2 = export_node(ctx, node.inputs[7 if is_new_node else 2])  # Foreground (M)
+
+    # Support for new node ShaderNodeMix (Blender 3.4)
+    clamp_factor = getattr(node, "clamp_factor", False)
+    if clamp_factor:
+        fac = f"clamp({fac},0,1)"
 
     ops = ""
     if node.blend_type == "MIX":
@@ -280,10 +300,47 @@ def _export_rgb_math(ctx, node):
             f"Not supported rgb math operation type {node.operation} for node {node.name}")
         return "color(0)"
 
-    if node.use_clamp:
+    use_clamp = getattr(node, "use_clamp", getattr(
+        node, "clamp_result", False))
+    if use_clamp:
         return f"clamp({ops}, color(0), color(1))"
     else:
         return ops
+
+
+def _export_scalar_mix(ctx, node):
+    fac = export_node(ctx, node.inputs[0])
+    v1 = export_node(ctx, node.inputs[2])
+    v2 = export_node(ctx, node.inputs[3])
+
+    # Support for new node ShaderNodeMix (Blender 3.4)
+    clamp_factor = getattr(node, "clamp_factor", False)
+    if clamp_factor:
+        fac = f"clamp({fac},0,1)"
+
+    return f"mix({v1}, {v2}, {fac})"
+
+
+def _export_vector_mix(ctx, node):
+    is_uniform = getattr(node, "factor_mode", "UNIFORM") == 'UNIFORM'
+
+    fac = export_node(ctx, node.inputs[0 if is_uniform else 1])
+    v1 = export_node(ctx, node.inputs[4])
+    v2 = export_node(ctx, node.inputs[5])
+
+    # Support for new node ShaderNodeMix (Blender 3.4)
+    clamp_factor = getattr(node, "clamp_factor", False)
+
+    if is_uniform:
+        if clamp_factor:
+            fac = f"clamp({fac},0,1)"
+
+        return f"mix({v1}, {v2}, {fac})"
+    else:
+        if clamp_factor:
+            fac = f"clamp({fac},vec3(0),vec3(1))"
+
+        return f"(({v1}) *(vec3(1) - {fac}) + ({v2}) * ({fac}))"
 
 
 def _export_rgb_gamma(ctx, node):
@@ -1349,6 +1406,8 @@ def export_node(ctx, socket):
             expr = _export_maprange(ctx, node)
         elif check_instance("ShaderNodeMixRGB"):
             expr = _export_rgb_math(ctx, node)
+        elif check_instance("ShaderNodeMix"):
+            expr = _export_mix(ctx, node)
         elif check_instance("ShaderNodeInvert"):
             expr = _export_rgb_invert(ctx, node)
         elif check_instance("ShaderNodeGamma"):

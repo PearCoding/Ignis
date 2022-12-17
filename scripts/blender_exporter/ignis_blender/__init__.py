@@ -4,7 +4,7 @@ bl_info = {
     "name": "Ignis Scene",
     "author": "Ömercan Yazici, Maher Rayes, Pascal Grittmann",
     "description": "Export scene to Ignis and render it within Blender",
-    "version": (0, 4, 0),
+    "version": (0, 4, 1),
     "blender": (2, 92, 0),
     "location": "File > Import-Export",
     "category": "Import-Export",
