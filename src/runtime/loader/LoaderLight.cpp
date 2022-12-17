@@ -213,7 +213,7 @@ std::string LoaderLight::generateFinite(ShadingTree& tree)
                 stream << "    if ";
 
             stream << "id < " << (offset + p.second) << " {" << std::endl
-                   << "      e_" << var_name << "(id - " << offset << ")" << std::endl
+                   << "      e_" << var_name << ".get(id - " << offset << ")" << std::endl
                    << "    }" << std::endl;
 
             offset += p.second;
