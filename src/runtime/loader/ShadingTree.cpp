@@ -373,15 +373,17 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::str
 LoaderContext ShadingTree::copyContextForBake() const
 {
     LoaderContext ctx;
-    ctx.Options = mContext.Options;
+    ctx.Options  = mContext.Options;
+    ctx.Textures = mContext.Textures;
+
     // Maybe copy more?
+    // TODO: Refactor this to LoaderContext
     return ctx;
 }
 
-bool ShadingTree::beginClosure(const std::string& name)
+void ShadingTree::beginClosure(const std::string& name)
 {
     mClosures.emplace_back(Closure{ name, getClosureID(name), {} });
-    return true;
 }
 
 void ShadingTree::endClosure()
@@ -421,13 +423,7 @@ void ShadingTree::registerTextureUsage(const std::string& name)
 
 std::string ShadingTree::loadTexture(const std::string& tex_name)
 {
-    const auto tex = mContext.Options.Scene->texture(tex_name);
-    if (!tex) {
-        IG_LOG(L_ERROR) << "Unknown texture '" << tex_name << "'" << std::endl;
-        return "let tex_" + getClosureID(tex_name) + " = make_invalid_texture();\n";
-    } else {
-        return LoaderTexture::generate(tex_name, *tex, *this);
-    }
+    return context().Textures->generate(tex_name, *this);
 }
 
 std::string ShadingTree::handleTexture(const std::string& prop_name, const std::string& expr, bool needColor)

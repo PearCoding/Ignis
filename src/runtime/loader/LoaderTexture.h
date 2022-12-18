@@ -1,12 +1,20 @@
 #pragma once
 
-#include "LoaderContext.h"
-#include "ShadingTree.h"
+#include "IG_Config.h"
 
 namespace IG {
-struct LoaderTexture {
-    // Returns the filename if available
-    static std::filesystem::path getFilename(const SceneObject& obj, const LoaderContext& ctx);
-    static std::string generate(const std::string& name, const SceneObject& obj, ShadingTree& tree);
+class Pattern;
+class LoaderContext;
+class ShadingTree;
+class LoaderTexture {
+public:
+    void prepare(const LoaderContext& ctx);
+
+    [[nodiscard]] std::string generate(const std::string& name, ShadingTree& tree);
+
+    [[nodiscard]] inline size_t textureCount() const { return mAvailablePatterns.size(); }
+
+private:
+    std::unordered_map<std::string, std::shared_ptr<Pattern>> mAvailablePatterns; // All available patterns, not necessarily the ones loaded at the end!
 };
 } // namespace IG

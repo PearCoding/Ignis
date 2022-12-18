@@ -90,7 +90,7 @@ public:
     explicit ShadingTree(LoaderContext& ctx);
 
     /// Register new closure, can be empty if not a texture
-    bool beginClosure(const std::string& name);
+    void beginClosure(const std::string& name);
     void endClosure();
 
     void addNumber(const std::string& name, const SceneObject& obj, const std::optional<float>& def = std::make_optional<float>(0), const NumberOptions& options = NumberOptions::Full());

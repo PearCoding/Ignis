@@ -6,6 +6,7 @@
 #include "LoaderMedium.h"
 #include "LoaderShape.h"
 #include "LoaderTechnique.h"
+#include "LoaderTexture.h"
 #include "Logger.h"
 #include "shader/AdvancedShadowShader.h"
 #include "shader/DeviceShader.h"
@@ -24,6 +25,7 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     LoaderContext ctx;
     ctx.Options = opts;
 
+    ctx.Textures  = std::make_shared<LoaderTexture>();
     ctx.Lights    = std::make_unique<LoaderLight>();
     ctx.BSDFs     = std::make_unique<LoaderBSDF>();
     ctx.Media     = std::make_unique<LoaderMedium>();
@@ -34,6 +36,7 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
 
     ctx.Shapes->prepare(ctx);
     ctx.Entities->prepare(ctx);
+    ctx.Textures->prepare(ctx);
     ctx.Lights->prepare(ctx);
     ctx.BSDFs->prepare(ctx);
     ctx.Media->prepare(ctx);

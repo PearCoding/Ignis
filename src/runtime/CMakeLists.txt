@@ -179,6 +179,22 @@ set(SRC
   mesh/Triangulation.h
   mesh/TriMesh.cpp
   mesh/TriMesh.h
+  pattern/BrickPattern.cpp
+  pattern/BrickPattern.h
+  pattern/CheckerBoardPattern.cpp
+  pattern/CheckerBoardPattern.h
+  pattern/ExprPattern.cpp
+  pattern/ExprPattern.h
+  pattern/ImagePattern.cpp
+  pattern/ImagePattern.h
+  pattern/InvalidPattern.cpp
+  pattern/InvalidPattern.h
+  pattern/NoisePattern.cpp
+  pattern/NoisePattern.h
+  pattern/Pattern.cpp
+  pattern/Pattern.h
+  pattern/TransformPattern.cpp
+  pattern/TransformPattern.h
   serialization/BufferSerializer.cpp
   serialization/BufferSerializer.h
   serialization/FileSerializer.cpp

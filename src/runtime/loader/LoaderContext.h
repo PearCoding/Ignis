@@ -42,6 +42,7 @@ public:
 
     LoaderOptions Options;
 
+    std::shared_ptr<class LoaderTexture> Textures;
     std::unique_ptr<class LoaderLight> Lights;
     std::unique_ptr<class LoaderBSDF> BSDFs;
     std::unique_ptr<class LoaderMedium> Media;

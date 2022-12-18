@@ -118,37 +118,6 @@ static std::shared_ptr<BSDF> bsdf_doublesided(const std::string& name, const std
 {
     return std::make_shared<PlasticBSDF>(name, obj);
 }
-/*
-static void bsdf_twosided(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
-{
-    // Ignore
-    tree.beginClosure(name);
-    const std::string other   = bsdf->property("bsdf").getString();
-    const std::string bsdf_id = tree.currentClosureID();
-    stream << LoaderBSDF::generate(other, tree);
-    stream << "  let bsdf_" << bsdf_id << " = bsdf_" << tree.getClosureID(other) << ";" << std::endl;
-    tree.endClosure();
-}
-
-static void bsdf_doublesided(std::ostream& stream, const std::string& name, const std::shared_ptr<SceneObject>& bsdf, ShadingTree& tree)
-{
-    tree.beginClosure(name);
-    const std::string inner = bsdf->property("bsdf").getString();
-
-    const std::string bsdf_id = tree.currentClosureID();
-    if (inner.empty()) {
-        IG_LOG(L_ERROR) << "Bsdf '" << name << "' has no inner bsdf given" << std::endl;
-        stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_error_bsdf(ctx.surf);" << std::endl;
-    } else {
-        stream << LoaderBSDF::generate(inner, tree);
-
-        const std::string inner_id = tree.getClosureID(inner);
-        stream << tree.pullHeader()
-               << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_doublesided_bsdf(ctx.surf, "
-               << "@|surf2| -> Bsdf {  bsdf_" << inner_id << "(ctx.{surf=surf2}) });" << std::endl;
-    }
-    tree.endClosure();
-}*/
 
 using BSDFLoader = std::shared_ptr<BSDF> (*)(const std::string& name, const std::shared_ptr<SceneObject>& obj);
 static const struct {
@@ -182,7 +151,7 @@ static const struct {
     { "normalmap", bsdf_normalmap },
     { "transform", bsdf_transform },
     { "twosided", bsdf_ignore }, // Deprecated
-    { "doublesided", bsdf_doublesided }, 
+    { "doublesided", bsdf_doublesided },
     { "", nullptr }
 };
 

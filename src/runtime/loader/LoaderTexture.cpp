@@ -1,278 +1,63 @@
 #include "LoaderTexture.h"
-#include "Image.h"
-#include "Loader.h"
-#include "LoaderUtils.h"
+#include "LoaderContext.h"
 #include "Logger.h"
 #include "ShadingTree.h"
-#include "StringUtils.h"
-#include "Transpiler.h"
+
+#include "pattern/BrickPattern.h"
+#include "pattern/CheckerBoardPattern.h"
+#include "pattern/ExprPattern.h"
+#include "pattern/ImagePattern.h"
+#include "pattern/InvalidPattern.h"
+#include "pattern/NoisePattern.h"
+#include "pattern/TransformPattern.h"
 
 namespace IG {
-static void tex_image(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
+static std::shared_ptr<Pattern> tex_image(const std::string& name, const std::shared_ptr<SceneObject>& tex)
 {
-    if (!tree.beginClosure(name))
-        return;
-
-    const std::filesystem::path filename = tree.context().handlePath(tex.property("filename").getString(), tex);
-    const std::string filter_type        = tex.property("filter_type").getString("bicubic");
-    const Transformf transform           = tex.property("transform").getTransform();
-    const bool force_unpacked            = tex.property("force_unpacked").getBool(false); // Force the use of unpacked (float) images
-    const bool linear                    = tex.property("linear").getBool(false);         // Hint that the image is already in linear. Only important if image type is not EXR or HDR, as they are always given in linear
-
-    size_t res_id = tree.context().registerExternalResource(filename);
-
-    std::string filter = "make_bicubic_filter()";
-    if (filter_type == "bilinear")
-        filter = "make_bilinear_filter()";
-    else if (filter_type == "nearest")
-        filter = "make_nearest_filter()";
-
-    const auto getWrapMode = [](const std::string& str) {
-        if (str == "mirror")
-            return "make_mirror_border()";
-        else if (str == "clamp")
-            return "make_clamp_border()";
-        else
-            return "make_repeat_border()";
-    };
-
-    std::string wrap;
-    if (tex.property("wrap_mode_u").isValid()) {
-        std::string wrap_u = getWrapMode(tex.property("wrap_mode_u").getString("repeat"));
-        std::string wrap_v = getWrapMode(tex.property("wrap_mode_v").getString("repeat"));
-        if (wrap_u == wrap_v)
-            wrap = wrap_u;
-        else
-            wrap = "make_split_border(" + wrap_u + ", " + wrap_v + ")";
-    } else {
-        wrap = getWrapMode(tex.property("wrap_mode").getString("repeat"));
-    }
-
-    const std::string tex_id = tree.getClosureID(name);
-
-    // Anonymize lookup by using the local registry
-    tree.context().LocalRegistry.IntParameters["img_" + tex_id] = (int32)res_id;
-
-    const size_t channel_count = Image::extractChannelCount(filename);
-
-    stream << "  let img_" << tex_id << "_res_id = device.get_local_parameter_i32(\"img_" << tex_id << "\", 0);" << std::endl;
-    if (!force_unpacked && Image::isPacked(filename))
-        stream << "  let img_" << tex_id << " = device.load_packed_image_by_id(img_" << tex_id << "_res_id, " << channel_count << ", " << (linear ? "true" : "false") << ");" << std::endl;
-    else
-        stream << "  let img_" << tex_id << " = device.load_image_by_id(img_" << tex_id << "_res_id, " << channel_count << ");" << std::endl;
-
-    stream << "  let tex_" << tex_id << " : Texture = make_image_texture("
-           << wrap << ", "
-           << filter << ", "
-           << "img_" << tex_id << ", "
-           << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
-
-    tree.endClosure();
+    return std::make_shared<ImagePattern>(name, tex);
+}
+static std::shared_ptr<Pattern> tex_checkerboard(const std::string& name, const std::shared_ptr<SceneObject>& tex)
+{
+    return std::make_shared<CheckerBoardPattern>(name, tex);
+}
+static std::shared_ptr<Pattern> tex_brick(const std::string& name, const std::shared_ptr<SceneObject>& tex)
+{
+    return std::make_shared<BrickPattern>(name, tex);
+}
+static std::shared_ptr<Pattern> tex_noise(const std::string& name, const std::shared_ptr<SceneObject>& tex)
+{
+    return std::make_shared<NoisePattern>(NoisePattern::Type::Noise, name, tex);
+}
+static std::shared_ptr<Pattern> tex_cellnoise(const std::string& name, const std::shared_ptr<SceneObject>& tex)
+{
+    return std::make_shared<NoisePattern>(NoisePattern::Type::CellNoise, name, tex);
+}
+static std::shared_ptr<Pattern> tex_pnoise(const std::string& name, const std::shared_ptr<SceneObject>& tex)
+{
+    return std::make_shared<NoisePattern>(NoisePattern::Type::PNoise, name, tex);
+}
+static std::shared_ptr<Pattern> tex_perlin(const std::string& name, const std::shared_ptr<SceneObject>& tex)
+{
+    return std::make_shared<NoisePattern>(NoisePattern::Type::Perlin, name, tex);
+}
+static std::shared_ptr<Pattern> tex_voronoi(const std::string& name, const std::shared_ptr<SceneObject>& tex)
+{
+    return std::make_shared<NoisePattern>(NoisePattern::Type::Voronoi, name, tex);
+}
+static std::shared_ptr<Pattern> tex_fbm(const std::string& name, const std::shared_ptr<SceneObject>& tex)
+{
+    return std::make_shared<NoisePattern>(NoisePattern::Type::FBM, name, tex);
+}
+static std::shared_ptr<Pattern> tex_expr(const std::string& name, const std::shared_ptr<SceneObject>& tex)
+{
+    return std::make_shared<ExprPattern>(name, tex);
+}
+static std::shared_ptr<Pattern> tex_transform(const std::string& name, const std::shared_ptr<SceneObject>& tex)
+{
+    return std::make_shared<TransformPattern>(name, tex);
 }
 
-static void tex_checkerboard(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
-{
-    if (!tree.beginClosure(name))
-        return;
-
-    tree.addColor("color0", tex, Vector3f::Zero());
-    tree.addColor("color1", tex, Vector3f::Ones());
-    tree.addNumber("scale_x", tex, 2.0f);
-    tree.addNumber("scale_y", tex, 2.0f);
-
-    const Transformf transform = tex.property("transform").getTransform();
-
-    const std::string tex_id = tree.getClosureID(name);
-    stream << tree.pullHeader()
-           << "  let tex_" << tex_id << " : Texture = make_checkerboard_texture("
-           << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
-           << tree.getInline("color0") << ", "
-           << tree.getInline("color1") << ", "
-           << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
-
-    tree.endClosure();
-}
-
-static void tex_brick(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
-{
-    if (!tree.beginClosure(name))
-        return;
-
-    tree.addColor("color0", tex, Vector3f::Zero());
-    tree.addColor("color1", tex, Vector3f::Ones());
-    tree.addNumber("scale_x", tex, 3.0f);
-    tree.addNumber("scale_y", tex, 6.0f);
-    tree.addNumber("gap_x", tex, 0.05f);
-    tree.addNumber("gap_y", tex, 0.1f);
-
-    const Transformf transform = tex.property("transform").getTransform();
-
-    const std::string tex_id = tree.getClosureID(name);
-    stream << tree.pullHeader()
-           << "  let tex_" << tex_id << " : Texture = make_brick_texture("
-           << tree.getInline("color0") << ", "
-           << tree.getInline("color1") << ", "
-           << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
-           << "make_vec2(" << tree.getInline("gap_x") << ", " << tree.getInline("gap_y") << "), "
-           << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
-
-    tree.endClosure();
-}
-
-static void tex_gen_noise(const std::string& func, std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
-{
-    constexpr float DefaultSeed = 36326639.0f;
-
-    if (!tree.beginClosure(name))
-        return;
-
-    tree.addColor("color", tex, Vector3f::Ones());
-    tree.addNumber("seed", tex, DefaultSeed);
-    tree.addNumber("scale_x", tex, 10.0f);
-    tree.addNumber("scale_y", tex, 10.0f);
-    const Transformf transform = tex.property("transform").getTransform();
-
-    std::string afunc = tex.property("colored").getBool() ? "c" + func : func;
-
-    const std::string tex_id = tree.getClosureID(name);
-    stream << tree.pullHeader()
-           << "  let tex_" << tex_id << " : Texture = make_" << afunc << "_texture("
-           << "make_vec2(" << tree.getInline("scale_x") << ", " << tree.getInline("scale_y") << "), "
-           << tree.getInline("color") << ", "
-           << tree.getInline("seed") << ", "
-           << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
-
-    tree.endClosure();
-}
-static void tex_noise(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
-{
-    return tex_gen_noise("noise", stream, name, tex, tree);
-}
-static void tex_cellnoise(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
-{
-    return tex_gen_noise("cellnoise", stream, name, tex, tree);
-}
-static void tex_pnoise(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
-{
-    return tex_gen_noise("pnoise", stream, name, tex, tree);
-}
-static void tex_perlin(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
-{
-    return tex_gen_noise("perlin", stream, name, tex, tree);
-}
-static void tex_voronoi(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
-{
-    // TODO: More customization
-    return tex_gen_noise("voronoi", stream, name, tex, tree);
-}
-static void tex_fbm(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
-{
-    // TODO: More customization
-    return tex_gen_noise("fbm", stream, name, tex, tree);
-}
-
-static void tex_expr(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
-{
-    if (!tree.beginClosure(name))
-        return;
-
-    std::string expr = tex.property("expr").getString();
-    if (expr.empty()) {
-        IG_LOG(L_ERROR) << "Texture '" << name << "' requires an expression" << std::endl;
-        expr = "vec4(1, 0, 1, 1)"; // ~ Pink -> Mark as error
-    }
-
-    // Register on the shading tree first
-    for (const auto& pair : tex.properties()) {
-        if (string_starts_with(pair.first, "num_"))
-            tree.addNumber(pair.first, tex, 0.0f);
-        else if (string_starts_with(pair.first, "vec_"))
-            tree.addVector(pair.first, tex, Vector3f::Ones());
-        else if (string_starts_with(pair.first, "color_"))
-            tree.addColor(pair.first, tex, Vector3f::Ones());
-    }
-
-    // Register available variables to transpiler as well
-    Transpiler transpiler(tree);
-    for (const auto& pair : tex.properties()) {
-        if (string_starts_with(pair.first, "num_"))
-            transpiler.registerCustomVariableNumber(pair.first.substr(4), "var_tex_" + tree.getClosureID(pair.first.substr(4)));
-        else if (string_starts_with(pair.first, "color_"))
-            transpiler.registerCustomVariableColor(pair.first.substr(6), "var_tex_" + tree.getClosureID(pair.first.substr(6)));
-        else if (string_starts_with(pair.first, "vec_"))
-            transpiler.registerCustomVariableVector(pair.first.substr(4), "var_tex_" + tree.getClosureID(pair.first.substr(4)));
-        else if (string_starts_with(pair.first, "bool_"))
-            transpiler.registerCustomVariableBool(pair.first.substr(5), "var_tex_" + tree.getClosureID(pair.first.substr(5)));
-    }
-
-    // Transpile
-    auto res    = transpiler.transpile(expr);
-    bool failed = !res.has_value();
-    if (failed) {
-        // Mark as failed output
-        res = Transpiler::Result{ "color_builtins::pink", {}, {}, false };
-    }
-
-    // Patch output to color
-    std::string output;
-    if (res.value().ScalarOutput)
-        output = "make_gray_color(" + res.value().Expr + ")";
-    else
-        output = res.value().Expr;
-
-    // Make sure all texture is loaded
-    for (const auto& used_tex : res.value().Textures)
-        tree.registerTextureUsage(used_tex);
-
-    // Pull texture usage
-    const std::string tex_id = tree.getClosureID(name);
-    stream << tree.pullHeader()
-           << "  let tex_" << tex_id << " : Texture = @|ctx| -> Color {" << std::endl;
-
-    if (!failed) {
-        // Inline custom variables
-        for (const auto& pair : tex.properties()) {
-            if (string_starts_with(pair.first, "num_")) {
-                const std::string var_id = tree.getClosureID(pair.first.substr(4));
-                stream << "    let var_tex_" << var_id << " = " << tree.getInline(pair.first) << ";" << std::endl;
-            } else if (string_starts_with(pair.first, "color_")) {
-                const std::string var_id = tree.getClosureID(pair.first.substr(6));
-                stream << "    let var_tex_" << var_id << " = " << tree.getInline(pair.first) << ";" << std::endl;
-            } else if (string_starts_with(pair.first, "vec_")) {
-                const std::string var_id = tree.getClosureID(pair.first.substr(4));
-                stream << "    let var_tex_" << var_id << " = " << tree.getInline(pair.first) << ";" << std::endl;
-            } else if (string_starts_with(pair.first, "bool_")) {
-                const std::string var_id = tree.getClosureID(pair.first.substr(5));
-                stream << "    let var_tex_" << var_id << " = " << (pair.second.getBool() ? "true" : "false") << ";" << std::endl;
-            }
-        }
-    }
-
-    // End output
-    stream << "    " << output << " };" << std::endl;
-
-    tree.endClosure();
-}
-
-static void tex_transform(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree)
-{
-    if (!tree.beginClosure(name))
-        return;
-
-    tree.addTexture("texture", tex, Vector3f::Zero());
-
-    const Transformf transform = tex.property("transform").getTransform();
-
-    const std::string tex_id = tree.getClosureID(name);
-    stream << tree.pullHeader()
-           << "  let tex_" << tex_id << " : Texture = make_transform_texture("
-           << tree.getInline("texture") << ", "
-           << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
-
-    tree.endClosure();
-}
-
-using TextureLoader = void (*)(std::ostream& stream, const std::string& name, const SceneObject& tex, ShadingTree& tree);
+using TextureLoader = std::shared_ptr<Pattern> (*)(const std::string& name, const std::shared_ptr<SceneObject>& tex);
 static const struct {
     const char* Name;
     TextureLoader Loader;
@@ -292,36 +77,40 @@ static const struct {
     { "", nullptr }
 };
 
-std::string LoaderTexture::generate(const std::string& name, const SceneObject& obj, ShadingTree& tree)
+void LoaderTexture::prepare(const LoaderContext& ctx)
 {
-    for (size_t i = 0; _generators[i].Loader; ++i) {
-        if (_generators[i].Name == obj.pluginType()) {
-            std::stringstream stream;
-            _generators[i].Loader(stream, name, obj, tree);
-            return stream.str();
+    for (const auto& pair : ctx.Options.Scene->textures()) {
+        const std::string name = pair.first;
+        const auto obj         = pair.second;
+        bool found             = false;
+        for (size_t i = 0; _generators[i].Loader; ++i) {
+            if (_generators[i].Name == obj->pluginType()) {
+                mAvailablePatterns.emplace(name, _generators[i].Loader(name, obj));
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            IG_LOG(L_ERROR) << "No texture type '" << obj->pluginType() << "' for '" << name << "' available" << std::endl;
+            mAvailablePatterns.emplace(name, std::make_shared<InvalidPattern>(name));
         }
     }
+}
 
-    IG_LOG(L_ERROR) << "No texture type '" << obj.pluginType() << "' available" << std::endl;
-
+std::string LoaderTexture::generate(const std::string& name, ShadingTree& tree)
+{
     std::stringstream stream;
-    stream << "  let tex_" << tree.getClosureID(name) << " : Texture = make_invalid_texture();" << std::endl;
+    auto it = mAvailablePatterns.find(name);
+    if (it == mAvailablePatterns.end()) {
+        IG_LOG(L_ERROR) << "Unknown texture '" << name << "'" << std::endl;
+        stream << InvalidPattern::inlineError(tree.getClosureID(name)) << std::endl;
+        return stream.str();
+    }
+
+    it->second->serialize(Pattern::SerializationInput{ stream, tree });
+
     return stream.str();
 }
 
-std::filesystem::path LoaderTexture::getFilename(const SceneObject& obj, const LoaderContext& ctx)
-{
-    for (size_t i = 0; _generators[i].Loader; ++i) {
-        if (_generators[i].Name == obj.pluginType()) {
-            if (_generators[i].Loader == tex_image) {
-                return ctx.handlePath(obj.property("filename").getString(), obj);
-            } else {
-                return {};
-            }
-        }
-    }
-
-    IG_LOG(L_ERROR) << "No texture type '" << obj.pluginType() << "' available" << std::endl;
-    return {};
-}
 } // namespace IG

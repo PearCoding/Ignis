@@ -12,6 +12,7 @@
 #include "LoaderMedium.h"
 #include "LoaderShape.h"
 #include "LoaderTechnique.h"
+#include "LoaderTexture.h"
 
 namespace IG {
 
