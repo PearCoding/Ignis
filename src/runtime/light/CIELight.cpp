@@ -41,10 +41,10 @@ void CIELight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    input.Tree.addColor("scale", *mLight, Vector3f::Ones(), true);
-    input.Tree.addColor("zenith", *mLight, Vector3f::Ones(), true);
-    input.Tree.addColor("ground", *mLight, Vector3f::Ones(), true);
-    input.Tree.addNumber("ground_brightness", *mLight, 0.2f, true);
+    input.Tree.addColor("scale", *mLight, Vector3f::Ones());
+    input.Tree.addColor("zenith", *mLight, Vector3f::Ones());
+    input.Tree.addColor("ground", *mLight, Vector3f::Ones());
+    input.Tree.addNumber("ground_brightness", *mLight, 0.2f);
 
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 

@@ -32,12 +32,12 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
     if (cache_data != input.Tree.context().ExportedData.end()) {
         baked = std::any_cast<ShadingTree::BakeOutputTexture>(cache_data->second);
     } else {
-        baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones(), true, ShadingTree::TextureBakeOptions{ 1024, 256, true });
+        baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones(), ShadingTree::TextureBakeOptions{ 1024, 256, true });
 
         input.Tree.context().ExportedData[exported_id] = baked;
     }
 
-    input.Tree.addColor("scale", *mLight, Vector3f::Ones(), true);
+    input.Tree.addColor("scale", *mLight, Vector3f::Ones());
     input.Tree.addTexture("radiance", *mLight, Vector3f::Ones());
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 

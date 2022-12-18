@@ -91,10 +91,10 @@ public:
     bool beginClosure(const std::string& name);
     void endClosure();
 
-    void addNumber(const std::string& name, const SceneObject& obj, float def = 0, bool hasDef = true, const NumberOptions& options = NumberOptions::Full());
-    void addColor(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const ColorOptions& options = ColorOptions::Full());
-    void addVector(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const VectorOptions& options = VectorOptions::Full());
-    void addTexture(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const TextureOptions& options = TextureOptions::Default());
+    void addNumber(const std::string& name, const SceneObject& obj, const std::optional<float>& def = std::make_optional<float>(0), const NumberOptions& options = NumberOptions::Full());
+    void addColor(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const ColorOptions& options = ColorOptions::Full());
+    void addVector(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const VectorOptions& options = VectorOptions::Full());
+    void addTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureOptions& options = TextureOptions::Default());
 
     using BakeOutputTexture = std::optional<std::shared_ptr<Image>>;
     using BakeOutputNumber  = std::optional<float>;
@@ -104,7 +104,7 @@ public:
     float computeNumber(const std::string& name, const SceneObject& obj, float def = 0) const;
     Vector3f computeColor(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero()) const;
 
-    BakeOutputTexture bakeTexture(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const TextureBakeOptions& options = TextureBakeOptions::Default());
+    BakeOutputTexture bakeTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureBakeOptions& options = TextureBakeOptions::Default());
 
     inline std::string currentClosureID() const { return currentClosure().ID; }
     std::string getClosureID(const std::string& name);

@@ -28,6 +28,42 @@ set(SRC
   StringUtils.cpp
   StringUtils.h
   Timer.h
+  bsdf/BlendBSDF.cpp
+  bsdf/BlendBSDF.h
+  bsdf/BSDF.cpp
+  bsdf/BSDF.h
+  bsdf/ConductorBSDF.cpp
+  bsdf/ConductorBSDF.h
+  bsdf/DielectricBSDF.cpp
+  bsdf/DielectricBSDF.h
+  bsdf/DiffuseBSDF.cpp
+  bsdf/DiffuseBSDF.h
+  bsdf/DJMeasuredBSDF.cpp
+  bsdf/DJMeasuredBSDF.h
+  bsdf/DoubleSidedBSDF.cpp
+  bsdf/DoubleSidedBSDF.h
+  bsdf/ErrorBSDF.cpp
+  bsdf/ErrorBSDF.h
+  bsdf/IgnoreBSDF.cpp
+  bsdf/IgnoreBSDF.h
+  bsdf/KlemsBSDF.cpp
+  bsdf/KlemsBSDF.h
+  bsdf/MapBSDF.cpp
+  bsdf/MapBSDF.h
+  bsdf/MaskBSDF.cpp
+  bsdf/MaskBSDF.h
+  bsdf/PassthroughBSDF.cpp
+  bsdf/PassthroughBSDF.h
+  bsdf/PhongBSDF.cpp
+  bsdf/PhongBSDF.h
+  bsdf/PlasticBSDF.cpp
+  bsdf/PlasticBSDF.h
+  bsdf/PrincipledBSDF.cpp
+  bsdf/PrincipledBSDF.h
+  bsdf/TensorTreeBSDF.cpp
+  bsdf/TensorTreeBSDF.h
+  bsdf/TransformBSDF.cpp
+  bsdf/TransformBSDF.h
   bvh/BvhNAdapter.h
   bvh/NArityBvh.h
   bvh/SceneBVHAdapter.h

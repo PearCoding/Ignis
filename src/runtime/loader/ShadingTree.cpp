@@ -133,7 +133,7 @@ std::string ShadingTree::handlePropertyNumber(const std::string& name, const Sce
     }
 }
 
-void ShadingTree::addNumber(const std::string& name, const SceneObject& obj, float def, bool hasDef, const NumberOptions& options)
+void ShadingTree::addNumber(const std::string& name, const SceneObject& obj, const std::optional<float>& def, const NumberOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -144,9 +144,9 @@ void ShadingTree::addNumber(const std::string& name, const SceneObject& obj, flo
 
     std::string inline_str;
     if (prop.type() == SceneProperty::PT_NONE) {
-        if (!hasDef)
+        if (!def.has_value())
             return;
-        inline_str = acquireNumber(name, def, options);
+        inline_str = acquireNumber(name, def.value(), options);
     } else {
         inline_str = handlePropertyNumber(name, prop, options);
     }
@@ -154,7 +154,7 @@ void ShadingTree::addNumber(const std::string& name, const SceneObject& obj, flo
     currentClosure().Parameters[name] = inline_str;
 }
 
-void ShadingTree::addColor(const std::string& name, const SceneObject& obj, const Vector3f& def, bool hasDef, const ColorOptions& options)
+void ShadingTree::addColor(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def, const ColorOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -169,9 +169,9 @@ void ShadingTree::addColor(const std::string& name, const SceneObject& obj, cons
         IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
         [[fallthrough]];
     case SceneProperty::PT_NONE:
-        if (!hasDef)
+        if (!def.has_value())
             return;
-        inline_str = acquireColor(name, def, options);
+        inline_str = acquireColor(name, def.value(), options);
         break;
     case SceneProperty::PT_INTEGER:
     case SceneProperty::PT_NUMBER:
@@ -188,7 +188,7 @@ void ShadingTree::addColor(const std::string& name, const SceneObject& obj, cons
     currentClosure().Parameters[name] = inline_str;
 }
 
-void ShadingTree::addVector(const std::string& name, const SceneObject& obj, const Vector3f& def, bool hasDef, const VectorOptions& options)
+void ShadingTree::addVector(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def, const VectorOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -203,9 +203,9 @@ void ShadingTree::addVector(const std::string& name, const SceneObject& obj, con
         IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
         [[fallthrough]];
     case SceneProperty::PT_NONE:
-        if (!hasDef)
+        if (!def.has_value())
             return;
-        inline_str = acquireVector(name, def, options);
+        inline_str = acquireVector(name, def.value(), options);
         break;
     case SceneProperty::PT_INTEGER:
     case SceneProperty::PT_NUMBER:
@@ -223,7 +223,7 @@ void ShadingTree::addVector(const std::string& name, const SceneObject& obj, con
 }
 
 // Only use this if no basic color information suffices
-void ShadingTree::addTexture(const std::string& name, const SceneObject& obj, const Vector3f& def, bool hasDef, const TextureOptions& options)
+void ShadingTree::addTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def, const TextureOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -238,9 +238,9 @@ void ShadingTree::addTexture(const std::string& name, const SceneObject& obj, co
         IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
         [[fallthrough]];
     case SceneProperty::PT_NONE:
-        if (!hasDef)
+        if (!def.has_value())
             return;
-        inline_str = "make_constant_texture(" + acquireColor(name, def, mapToColorOptions(options)) + ")";
+        inline_str = "make_constant_texture(" + acquireColor(name, def.value(), mapToColorOptions(options)) + ")";
         break;
     case SceneProperty::PT_INTEGER:
     case SceneProperty::PT_NUMBER:
@@ -258,7 +258,7 @@ void ShadingTree::addTexture(const std::string& name, const SceneObject& obj, co
     currentClosure().Parameters[name] = inline_str;
 }
 
-ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name, const SceneObject& obj, const Vector3f& def, bool hasDef, const TextureBakeOptions& options)
+ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def, const TextureBakeOptions& options)
 {
     // options only affect bake process with PExpr expressions
 
@@ -270,9 +270,9 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name,
         IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
         [[fallthrough]];
     case SceneProperty::PT_NONE:
-        if (!hasDef)
+        if (!def.has_value())
             return {};
-        return std::make_shared<Image>(Image::createSolidImage(Vector4f(def.x(), def.y(), def.z(), 1)));
+        return std::make_shared<Image>(Image::createSolidImage(Vector4f(def->x(), def->y(), def->z(), 1)));
     case SceneProperty::PT_INTEGER:
     case SceneProperty::PT_NUMBER:
         return std::make_shared<Image>(Image::createSolidImage(Vector4f(prop.getNumber(), prop.getNumber(), prop.getNumber(), 1)));

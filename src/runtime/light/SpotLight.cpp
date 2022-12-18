@@ -35,12 +35,12 @@ void SpotLight::serialize(const SerializationInput& input) const
     input.Tree.beginClosure(name());
 
     if (mUsingPower)
-        input.Tree.addColor("power", *mLight, Vector3f::Ones(), true);
+        input.Tree.addColor("power", *mLight, Vector3f::Ones());
     else
-        input.Tree.addColor("intensity", *mLight, Vector3f::Ones(), true);
+        input.Tree.addColor("intensity", *mLight, Vector3f::Ones());
 
-    input.Tree.addNumber("cutoff", *mLight, 30, true);
-    input.Tree.addNumber("falloff", *mLight, 20, true);
+    input.Tree.addNumber("cutoff", *mLight, 30);
+    input.Tree.addNumber("falloff", *mLight, 20);
 
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()

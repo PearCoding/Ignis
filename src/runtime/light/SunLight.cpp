@@ -24,8 +24,8 @@ void SunLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    input.Tree.addNumber("sun_scale", *mLight, 1, true);
-    input.Tree.addNumber("sun_radius_scale", *mLight, 1, true);
+    input.Tree.addNumber("sun_scale", *mLight, 1);
+    input.Tree.addNumber("sun_radius_scale", *mLight, 1);
 
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()

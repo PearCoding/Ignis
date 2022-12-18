@@ -26,9 +26,9 @@ void PointLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
     if (mUsingPower)
-        input.Tree.addColor("power", *mLight, Vector3f::Constant(SR), true);
+        input.Tree.addColor("power", *mLight, Vector3f::Constant(SR));
     else
-        input.Tree.addColor("intensity", *mLight, Vector3f::Ones(), true);
+        input.Tree.addColor("intensity", *mLight, Vector3f::Ones());
 
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()

@@ -3,6 +3,6 @@
         {"filename":"base.json"}
     ],
 	"bsdfs": [
-		{"type":"roughplastic", "name": "mat-Sphere", "alpha":0.1}
+		{"type":"plastic", "name": "mat-Sphere", "roughness":0.1}
 	]
 }

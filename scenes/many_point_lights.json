@@ -32,7 +32,7 @@
 	],
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Ground", "reflectance":"check"},
-		{"type":"roughconductor", "name": "mat-Inner", "reflectance":[1,1,1], "alpha":0.16},
+		{"type":"conductor", "name": "mat-Inner", "reflectance":[1,1,1], "roughness":0.16},
 		{"type":"bumpmap", "name": "mat-Pillar", "bsdf":"mat-Inner", "map":"tex", "strength":0.2}
 	],
 	"shapes": [

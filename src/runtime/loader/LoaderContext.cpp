@@ -5,6 +5,7 @@
 #include "table/SceneDatabase.h"
 
 // Include for constructor & deconstructor
+#include "LoaderBSDF.h"
 #include "LoaderCamera.h"
 #include "LoaderEntity.h"
 #include "LoaderLight.h"

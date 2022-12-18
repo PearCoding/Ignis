@@ -14,9 +14,9 @@ void HomogeneousMedium::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    input.Tree.addColor("sigma_a", *mMedium, Vector3f::Zero(), true);
-    input.Tree.addColor("sigma_s", *mMedium, Vector3f::Zero(), true);
-    input.Tree.addNumber("g", *mMedium, 0, true);
+    input.Tree.addColor("sigma_a", *mMedium, Vector3f::Zero());
+    input.Tree.addColor("sigma_s", *mMedium, Vector3f::Zero());
+    input.Tree.addNumber("g", *mMedium, 0);
 
     // const std::string pms_func = generateReferencePMS(input);
 

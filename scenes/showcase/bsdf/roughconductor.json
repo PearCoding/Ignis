@@ -3,6 +3,6 @@
         {"filename":"base.json"}
     ],
 	"bsdfs": [
-		{"type":"roughconductor", "name": "mat-Sphere", "material": "gold", "alpha": 0.1}
+		{"type":"conductor", "name": "mat-Sphere", "material": "gold", "roughness": 0.1}
 	]
 }

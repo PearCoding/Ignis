@@ -21,7 +21,7 @@ void DirectionalLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    input.Tree.addColor("irradiance", *mLight, Vector3f::Ones(), true);
+    input.Tree.addColor("irradiance", *mLight, Vector3f::Ones());
 
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()

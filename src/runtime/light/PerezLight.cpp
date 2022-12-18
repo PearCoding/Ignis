@@ -63,7 +63,7 @@ void PerezLight::serialize(const SerializationInput& input) const
     const float solar_zenith  = std::acos(std::min(1.0f, std::max(-1.0f, mSunDirection(1))));
 
     input.Tree.beginClosure(name());
-    input.Tree.addColor("ground", *mLight, Vector3f::Ones(), true);
+    input.Tree.addColor("ground", *mLight, Vector3f::Ones());
 
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
@@ -73,10 +73,10 @@ void PerezLight::serialize(const SerializationInput& input) const
 
     bool usesLuminance = false;
     if (mLight->properties().count("luminance")) {
-        input.Tree.addColor("luminance", *mLight, Vector3f::Ones(), true);
+        input.Tree.addColor("luminance", *mLight, Vector3f::Ones());
         usesLuminance = true;
     } else {
-        input.Tree.addColor("zenith", *mLight, Vector3f::Ones(), true);
+        input.Tree.addColor("zenith", *mLight, Vector3f::Ones());
         usesLuminance = false;
     }
 

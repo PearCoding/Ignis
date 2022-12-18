@@ -52,7 +52,7 @@ void SkyLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    input.Tree.addColor("scale", *mLight, Vector3f::Ones(), true);
+    input.Tree.addColor("scale", *mLight, Vector3f::Ones());
 
     const std::string path = setup_sky(input.Tree.context(), name(), mLight);
     const auto cdf         = LoaderUtils::setup_cdf2d(input.Tree.context(), path, true, false);

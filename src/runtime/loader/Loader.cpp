@@ -25,6 +25,7 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     ctx.Options = opts;
 
     ctx.Lights    = std::make_unique<LoaderLight>();
+    ctx.BSDFs     = std::make_unique<LoaderBSDF>();
     ctx.Media     = std::make_unique<LoaderMedium>();
     ctx.Shapes    = std::make_unique<LoaderShape>();
     ctx.Entities  = std::make_unique<LoaderEntity>();
@@ -34,6 +35,7 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     ctx.Shapes->prepare(ctx);
     ctx.Entities->prepare(ctx);
     ctx.Lights->prepare(ctx);
+    ctx.BSDFs->prepare(ctx);
     ctx.Media->prepare(ctx);
 
     // Load content

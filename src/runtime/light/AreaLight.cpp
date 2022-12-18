@@ -109,9 +109,9 @@ void AreaLight::serialize(const SerializationInput& input) const
     input.Tree.beginClosure(name());
 
     if (mUsePower)
-        input.Tree.addColor("power", *mLight, Vector3f::Constant(mArea * Pi), true);
+        input.Tree.addColor("power", *mLight, Vector3f::Constant(mArea * Pi));
     else
-        input.Tree.addColor("radiance", *mLight, Vector3f::Constant(1.0f), true);
+        input.Tree.addColor("radiance", *mLight, Vector3f::Constant(1.0f));
 
     const auto entity = input.Tree.context().Entities->getEmissiveEntity(mEntity);
     if (!entity.has_value()) {

@@ -21,7 +21,7 @@ The type has to be one of the bsdfs listed at this section below.
 
 .. _bsdf-diffuse:
 
-Smooth diffuse (:monosp:`diffuse`)
+Diffuse (:monosp:`diffuse`)
 ----------------------------------
 
 .. objectparameters::
@@ -31,52 +31,28 @@ Smooth diffuse (:monosp:`diffuse`)
     - :code:`0.8`
     - Yes
     - Albedo
-
-.. subfigstart::
-  
-.. figure:: images/bsdf_diffuse.jpg
-  :width: 90%
-
-  Diffuse
-
-.. subfigend::
-  :width: 0.6
-  :label: fig-diffuse
-
-.. _bsdf-roughdiffuse:
-
-Rough diffuse (:monosp:`roughdiffuse`)
---------------------------------------
-
-.. objectparameters::
-
-  * - reflectance
-    - |color|
-    - :code:`0.8`
-    - Yes
-    - Albedo
-
-  * - alpha
+  * - roughness
     - |number|
     - :code:`0`
     - Yes
-    - Isotropic roughness.
+    - Isotropic roughness. If :paramtype:`roughness` > 0, the Oren-Nayar model will be used.
 
 .. subfigstart::
+  
+.. subfigure:: images/bsdf_diffuse.jpg
 
-.. figure::  images/bsdf_roughdiffuse.jpg
-  :width: 90%
-  :align: center
+  Diffuse
+
+.. subfigure::  images/bsdf_roughdiffuse.jpg
   
   Rough diffuse, also called Oren-Nayar 
 
 .. subfigend::
-  :width: 0.6
-  :label: fig-rough-diffuse
+  :label: fig-diffuse
 
 .. _bsdf-dielectric:
 
-Smooth dielectric (:monosp:`dielectric`)
+Dielectric (:monosp:`dielectric`)
 ----------------------------------------
 
 .. objectparameters::
@@ -106,7 +82,11 @@ Smooth dielectric (:monosp:`dielectric`)
     - |false|
     - No
     - True if the glass should be treated as a thin interface. :paramtype:`int_ior` will be always the inside of the thin surface, regardless of the direction of the surface normal.
-
+  * - roughness_u, roughness_v
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness of the dielectric. Can be specified isotropic using :paramtype:`roughness` as well. :paramtype:`thin` will be ignored if roughness is greater than zero.
 
 .. subfigstart::
 
@@ -120,82 +100,17 @@ Smooth dielectric (:monosp:`dielectric`)
   
   Dielectric with thin approximation 
 
-.. subfigend::
-  :label: fig-dielectric 
-
-.. _bsdf-roughdielectric:
-
-Rough dielectric (:monosp:`roughdielectric`)
---------------------------------------------
-
-.. objectparameters::
-
-  * - specular_reflectance
-    - |color|
-    - :code:`1.0`
-    - Yes
-    - TODO
-  * - specular_transmittance
-    - |color|
-    - :code:`1.0`
-    - Yes
-    - TODO
-  * - ext_ior, int_ior
-    - |number|
-    - ~vacuum, ~bk7 
-    - Yes  
-    - Specifies exterior and interior index of refraction.
-  * - ext_ior_material, int_ior_material
-    - |string|
-    - *None*, *None*
-    - No
-    - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
-  * - alpha_u, alpha_v
-    - |number|
-    - :code:`0.1`, :code:`0.1`
-    - Yes
-    - Roughness terms. Can be specified isotropic using :paramtype:`alpha` as well. 
-
-.. subfigstart::
-
-.. figure::  images/bsdf_roughdielectric.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_roughdielectric.jpg
   :align: center
   
   Rough dielectric
 
 .. subfigend::
-  :width: 0.6
-  :label: fig-rough-dielectric
-
-.. _bsdf-mirror:
-
-Perfect smooth mirror (:monosp:`mirror`)
-----------------------------------------
-
-.. objectparameters::
-
-  * - specular_reflectance
-    - |texture|
-    - :code:`1.0`
-    - Yes
-    - TODO
-
-.. subfigstart::
-
-.. figure::  images/bsdf_mirror.jpg
-  :width: 90%
-  :align: center
-  
-  Mirror, or a perfect conductor
-
-.. subfigend::
-  :width: 0.6
-  :label: fig-mirror
+  :label: fig-dielectric 
 
 .. _bsdf-conductor:
 
-Smooth conductor (:monosp:`conductor`)
+Conductor (:monosp:`conductor`)
 --------------------------------------
 
 .. objectparameters::
@@ -209,70 +124,42 @@ Smooth conductor (:monosp:`conductor`)
     - |string|
     - *None*
     - No
-    - Instead of eta, k a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
+    - Instead of :paramtype:`eta`, :paramtype:`k` a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
   * - specular_reflectance
     - |color|
     - :code:`1.0`
     - Yes
     - Optional factor that can be used to modulate the specular reflection component.
       Note that for physical realism, this parameter should never be touched. 
+  * - roughness_u, roughness_v
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness terms. Can be specified isotropic using :paramtype:`roughness` as well.
 
 .. subfigstart::
 
-.. figure::  images/bsdf_conductor.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_conductor.jpg
   :align: center
   
   Gold conductor
 
-.. subfigend::
-  :width: 0.6
-  :label: fig-conductor
-
-.. _bsdf-roughconductor:
-
-Rough conductor (:monosp:`roughconductor`)
-------------------------------------------
-
-.. objectparameters::
-
-  * - eta, k
-    - |color|
-    - ~Gold
-    - Yes
-    - Real and imaginary components of the material's index of refraction.
-  * - material
-    - |string|
-    - *None*
-    - No
-    - Instead of eta, k a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
-  * - specular_reflectance
-    - |color|
-    - :code:`1.0`
-    - Yes
-    - Optional factor that can be used to modulate the specular reflection component.
-      Note that for physical realism, this parameter should never be touched. 
-  * - alpha_u, alpha_v
-    - |number|
-    - :code:`0.1`, :code:`0.1`
-    - Yes
-    - Roughness terms. Can be specified isotropic using :paramtype:`alpha` as well.
-   
-.. subfigstart::
-
-.. figure::  images/bsdf_roughconductor.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_roughconductor.jpg
   :align: center
   
   Rough gold conductor
 
+.. subfigure::  images/bsdf_mirror.jpg
+  :align: center
+  
+  A perfect conductor (also called a mirror), can be specified with :paramtype:`eta` = 0 and :paramtype:`k` = 1
+
 .. subfigend::
-  :width: 0.6
-  :label: fig-rough-conductor
+  :label: fig-conductor
 
 .. _bsdf-plastic:
 
-Smooth plastic (:monosp:`plastic`)
+Plastic (:monosp:`plastic`)
 ----------------------------------
 
 .. objectparameters::
@@ -297,63 +184,26 @@ Smooth plastic (:monosp:`plastic`)
     - *None*, *None*
     - No
     - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
+  * - roughness_u, roughness_v
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness terms. Can be specified isotropic using :paramtype:`roughness` as well. 
 
 .. subfigstart::
 
-.. figure::  images/bsdf_plastic.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_plastic.jpg
   :align: center
   
   Plastic
 
-.. subfigend::
-  :width: 0.6
-  :label: fig-plastic
-
-.. _bsdf-roughplastic:
-
-Rough plastic (:monosp:`roughplastic`)
---------------------------------------
-
-.. objectparameters::
-
-  * - specular_reflectance
-    - |color|
-    - :code:`1.0`
-    - Yes
-    - TODO
-  * - diffuse_reflectance
-    - |color|
-    - :code:`0.8`
-    - Yes
-    - TODO
-  * - ext_ior, int_ior
-    - |number| 
-    - ~vacuum, ~bk7   
-    - Yes
-    - Specifies exterior and interior index of refraction.
-  * - ext_ior_material, int_ior_material
-    - |string|
-    - *None*, *None*
-    - No
-    - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
-  * - alpha_u, alpha_v
-    - |number|
-    - :code:`0.1`, :code:`0.1`
-    - Yes
-    - Roughness terms. Can be specified isotropic using :paramtype:`alpha` as well. 
-
-.. subfigstart::
-
-.. figure::  images/bsdf_roughplastic.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_roughplastic.jpg
   :align: center
   
   Rough plastic
 
 .. subfigend::
-  :width: 0.6
-  :label: fig-rough-plastic
+  :label: fig-plastic
 
 .. _bsdf-phong:
 
@@ -375,21 +225,19 @@ Phong (:monosp:`phong`)
 
 .. subfigstart::
 
-.. figure::  images/bsdf_phong.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_phong.jpg
   :align: center
   
   Phong
 
 .. subfigend::
-  :width: 0.6
   :label: fig-phong
 
-.. NOTE:: It is not recommended to use this bsdf for new projects as it disregards some PBR principles and is only included for legacy purposes.
+.. NOTE:: It is not recommended to use this BSDF for new projects as it disregards some PBR principles and is only included for legacy purposes.
 
 .. _bsdf-principled:
 
-Disney *Principled* (:monosp:`principled`)
+Principled (:monosp:`principled`)
 ------------------------------------------
 
 .. objectparameters::
@@ -482,14 +330,12 @@ Disney *Principled* (:monosp:`principled`)
 
 .. subfigstart::
 
-.. figure::  images/bsdf_principled.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_principled.jpg
   :align: center
   
   Disney *Principled* 
 
 .. subfigend::
-  :width: 0.6
   :label: fig-principled
 
 .. _bsdf-blend:
@@ -512,14 +358,12 @@ Blend (:monosp:`blend`)
 
 .. subfigstart::
 
-.. figure::  images/bsdf_blend.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_blend.jpg
   :align: center
   
   Blend of two bsdfs. One dielectric, one diffuse
 
 .. subfigend::
-  :width: 0.6
   :label: fig-blend
 
 .. _bsdf-mask:
@@ -547,14 +391,12 @@ Mask (:monosp:`mask`)
 
 .. subfigstart::
 
-.. figure::  images/bsdf_mask.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_mask.jpg
   :align: center
   
   Mask with a uniform weight
 
 .. subfigend::
-  :width: 0.6
   :label: fig-mask
 
 .. _bsdf-cutoff:
@@ -587,14 +429,12 @@ Cutoff (:monosp:`cutoff`)
 
 .. subfigstart::
 
-.. figure::  images/bsdf_cutoff.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_cutoff.jpg
   :align: center
   
   Cutoff with a uniform weight
 
 .. subfigend::
-  :width: 0.6
   :label: fig-cutoff
 
 .. _bsdf-passthrough:
@@ -604,17 +444,15 @@ Passthrough (:monosp:`passthrough`)
 
 .. subfigstart::
 
-.. figure::  images/bsdf_passthrough.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_passthrough.jpg
   :align: center
   
   Passthrough
 
 .. subfigend::
-  :width: 0.6
   :label: fig-passthrough
 
-.. WARNING:: The :monosp:`passthrough` bsdf should be used carefully, as simple techniques like Next-Event Estimation still see the object geometry.
+.. WARNING:: The :monosp:`passthrough` bsdf should be used carefully, as simple techniques like Next-Event Estimation still intersect the object geometry.
 
 .. _bsdf-normalmap:
 
@@ -641,14 +479,12 @@ Normal mapping (:monosp:`normalmap`)
 
 .. subfigstart::
 
-.. figure::  images/bsdf_normalmap.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_normalmap.jpg
   :align: center
   
   Normal mapping
 
 .. subfigend::
-  :width: 0.6
   :label: fig-normalmap
 
 .. _bsdf-bumpmap:
@@ -676,14 +512,12 @@ Bump mapping (:monosp:`bumpmap`)
 
 .. subfigstart::
 
-.. figure::  images/bsdf_bumpmap.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_bumpmap.jpg
   :align: center
   
   Bump mapping
 
 .. subfigend::
-  :width: 0.6
   :label: fig-bumpmap
 
 .. _bsdf-transform:
@@ -711,14 +545,12 @@ Transform (:monosp:`transform`)
 
 .. subfigstart::
 
-.. figure::  images/bsdf_transform.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_transform.jpg
   :align: center
   
   Normal transformed by a PExpr to mimic a normal map
 
 .. subfigend::
-  :width: 0.6
   :label: fig-transform
 
 .. _bsdf-djmeasured:
@@ -741,14 +573,12 @@ Dupuy & Jakob measured materials (:monosp:`djmeasured`)
 
 .. subfigstart::
 
-.. figure::  images/bsdf_djmeasured.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_djmeasured.jpg
   :align: center
   
   Dupuy & Jakob based measured material. More information and measured data available at https://rgl.epfl.ch/materials
 
 .. subfigend::
-  :width: 0.6
   :label: fig-djmeasured
 
 .. _bsdf-klems:

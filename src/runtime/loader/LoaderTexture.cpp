@@ -75,10 +75,10 @@ static void tex_checkerboard(std::ostream& stream, const std::string& name, cons
     if (!tree.beginClosure(name))
         return;
 
-    tree.addColor("color0", tex, Vector3f::Zero(), true);
-    tree.addColor("color1", tex, Vector3f::Ones(), true);
-    tree.addNumber("scale_x", tex, 2.0f, true);
-    tree.addNumber("scale_y", tex, 2.0f, true);
+    tree.addColor("color0", tex, Vector3f::Zero());
+    tree.addColor("color1", tex, Vector3f::Ones());
+    tree.addNumber("scale_x", tex, 2.0f);
+    tree.addNumber("scale_y", tex, 2.0f);
 
     const Transformf transform = tex.property("transform").getTransform();
 
@@ -98,12 +98,12 @@ static void tex_brick(std::ostream& stream, const std::string& name, const Scene
     if (!tree.beginClosure(name))
         return;
 
-    tree.addColor("color0", tex, Vector3f::Zero(), true);
-    tree.addColor("color1", tex, Vector3f::Ones(), true);
-    tree.addNumber("scale_x", tex, 3.0f, true);
-    tree.addNumber("scale_y", tex, 6.0f, true);
-    tree.addNumber("gap_x", tex, 0.05f, true);
-    tree.addNumber("gap_y", tex, 0.1f, true);
+    tree.addColor("color0", tex, Vector3f::Zero());
+    tree.addColor("color1", tex, Vector3f::Ones());
+    tree.addNumber("scale_x", tex, 3.0f);
+    tree.addNumber("scale_y", tex, 6.0f);
+    tree.addNumber("gap_x", tex, 0.05f);
+    tree.addNumber("gap_y", tex, 0.1f);
 
     const Transformf transform = tex.property("transform").getTransform();
 
@@ -126,10 +126,10 @@ static void tex_gen_noise(const std::string& func, std::ostream& stream, const s
     if (!tree.beginClosure(name))
         return;
 
-    tree.addColor("color", tex, Vector3f::Ones(), true);
-    tree.addNumber("seed", tex, DefaultSeed, true);
-    tree.addNumber("scale_x", tex, 10.0f, true);
-    tree.addNumber("scale_y", tex, 10.0f, true);
+    tree.addColor("color", tex, Vector3f::Ones());
+    tree.addNumber("seed", tex, DefaultSeed);
+    tree.addNumber("scale_x", tex, 10.0f);
+    tree.addNumber("scale_y", tex, 10.0f);
     const Transformf transform = tex.property("transform").getTransform();
 
     std::string afunc = tex.property("colored").getBool() ? "c" + func : func;
@@ -185,11 +185,11 @@ static void tex_expr(std::ostream& stream, const std::string& name, const SceneO
     // Register on the shading tree first
     for (const auto& pair : tex.properties()) {
         if (string_starts_with(pair.first, "num_"))
-            tree.addNumber(pair.first, tex, 0.0f, true);
+            tree.addNumber(pair.first, tex, 0.0f);
         else if (string_starts_with(pair.first, "vec_"))
-            tree.addVector(pair.first, tex, Vector3f::Ones(), true);
+            tree.addVector(pair.first, tex, Vector3f::Ones());
         else if (string_starts_with(pair.first, "color_"))
-            tree.addColor(pair.first, tex, Vector3f::Ones(), true);
+            tree.addColor(pair.first, tex, Vector3f::Ones());
     }
 
     // Register available variables to transpiler as well
@@ -259,7 +259,7 @@ static void tex_transform(std::ostream& stream, const std::string& name, const S
     if (!tree.beginClosure(name))
         return;
 
-    tree.addTexture("texture", tex, Vector3f::Zero(), true);
+    tree.addTexture("texture", tex, Vector3f::Zero());
 
     const Transformf transform = tex.property("transform").getTransform();
 
