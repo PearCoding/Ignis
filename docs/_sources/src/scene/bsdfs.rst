@@ -59,12 +59,12 @@ Dielectric (:monosp:`dielectric`)
 
   * - specular_reflectance
     - |color|
-    - :code:`1.0`
+    - :code:`1`
     - Yes
     - TODO
   * - specular_transmittance
     - |color|
-    - :code:`1.0`
+    - :code:`1`
     - Yes
     - TODO
   * - ext_ior, int_ior
@@ -127,7 +127,7 @@ Conductor (:monosp:`conductor`)
     - Instead of :paramtype:`eta`, :paramtype:`k` a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
   * - specular_reflectance
     - |color|
-    - :code:`1.0`
+    - :code:`1`
     - Yes
     - Optional factor that can be used to modulate the specular reflection component.
       Note that for physical realism, this parameter should never be touched. 
@@ -166,7 +166,7 @@ Plastic (:monosp:`plastic`)
 
   * - specular_reflectance
     - |color|
-    - :code:`1.0`
+    - :code:`1`
     - Yes
     - TODO
   * - diffuse_reflectance
@@ -214,7 +214,7 @@ Phong (:monosp:`phong`)
 
   * - specular_reflectance
     - |color|
-    - :code:`1.0`
+    - :code:`1`
     - Yes
     - TODO
   * - exponent
@@ -249,7 +249,7 @@ Principled (:monosp:`principled`)
     - TODO
   * - metallic
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
     - TODO
   * - roughness
@@ -259,7 +259,7 @@ Principled (:monosp:`principled`)
     - TODO
   * - anisotropic
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
     - TODO
   * - ior
@@ -279,37 +279,37 @@ Principled (:monosp:`principled`)
     - TODO
   * - flatness
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
     - TODO
   * - specular_transmission
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
     - TODO
   * - specular_tint
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
     - TODO
   * - sheen
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
     - TODO
   * - sheen_tint
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
     - TODO
   * - clearcoat
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
     - TODO
   * - clearcoat_gloss
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
     - TODO
   * - clearcoat_top_only
@@ -324,7 +324,7 @@ Principled (:monosp:`principled`)
     - TODO
   * - diffuse_transmission
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
     - TODO
 
@@ -600,7 +600,7 @@ Klems (:monosp:`klems`)
     - Tint.
   * - up
     - |vector|
-    - :code:`(0, 0, 1)`
+    - :code:`(0,0,1)`
     - Yes
     - Up vector
 
@@ -625,7 +625,7 @@ TensorTree (:monosp:`tensortree`)
     - Tint.
   * - up
     - |vector|
-    - :code:`(0, 0, 1)`
+    - :code:`(0,0,1)`
     - Yes
     - Up vector
 
