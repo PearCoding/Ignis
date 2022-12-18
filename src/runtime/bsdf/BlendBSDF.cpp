@@ -25,10 +25,16 @@ void BlendBSDF::serialize(const SerializationInput& input) const
         IG_LOG(L_ERROR) << "Bsdf '" << name() << "' has no inner bsdfs given" << std::endl;
         input.Stream << ErrorBSDF::inlineError(bsdf_id) << std::endl;
     } else if (first == second) {
-        // Ignore it
-        // TODO: Add type should scale by 2!
         input.Stream << input.Tree.context().BSDFs->generate(first, input.Tree);
-        input.Stream << "  let bsdf_" << bsdf_id << " = bsdf_" << input.Tree.getClosureID(first) << ";" << std::endl;
+        if (mType == Type::Mix) {
+            // Ignore it
+            input.Stream << "  let bsdf_" << bsdf_id << " = bsdf_" << input.Tree.getClosureID(first) << ";" << std::endl;
+        } else {
+            input.Stream << input.Tree.pullHeader()
+                         << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_add_bsdf("
+                         << "bsdf_" << input.Tree.getClosureID(first) << "(ctx), "
+                         << "bsdf_" << input.Tree.getClosureID(first) << "(ctx));" << std::endl;
+        }
     } else {
         if (mType == Type::Mix)
             input.Tree.addNumber("weight", *mBSDF, 0.5f);
