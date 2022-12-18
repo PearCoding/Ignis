@@ -19,7 +19,7 @@ void MapBSDF::serialize(const SerializationInput& input) const
     input.Tree.beginClosure(name());
     const std::string inner = mBSDF->property("bsdf").getString();
     if (mType == Type::Normal)
-        input.Tree.addColor("map", *mBSDF, Vector3f::Constant(1.0f));
+        input.Tree.addColor("map", *mBSDF, Vector3f::Constant(1.0f), ShadingTree::ColorOptions::Dynamic());
     else
         input.Tree.addTexture("map", *mBSDF); // Better use some node system with explicit gradients...
 

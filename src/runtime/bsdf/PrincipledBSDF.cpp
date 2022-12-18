@@ -16,19 +16,19 @@ void PrincipledBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.beginClosure(name());
     input.Tree.addColor("base_color", *mBSDF, Vector3f::Constant(0.8f));
-    input.Tree.addNumber("ior", *mBSDF, ior_spec.value_or(int_ior_default));
-    input.Tree.addNumber("diffuse_transmission", *mBSDF, 0);
+    input.Tree.addNumber("ior", *mBSDF, ior_spec.value_or(int_ior_default), ShadingTree::NumberOptions::Dynamic());
+    input.Tree.addNumber("diffuse_transmission", *mBSDF, 0, ShadingTree::NumberOptions::Zero());
     input.Tree.addNumber("specular_transmission", *mBSDF, 0);
     input.Tree.addNumber("specular_tint", *mBSDF, 0);
-    input.Tree.addNumber("roughness", *mBSDF, 0.5f);
-    input.Tree.addNumber("anisotropic", *mBSDF, 0);
+    input.Tree.addNumber("roughness", *mBSDF, 0.5f, ShadingTree::NumberOptions::Dynamic());
+    input.Tree.addNumber("anisotropic", *mBSDF, 0, ShadingTree::NumberOptions::Zero());
     input.Tree.addNumber("flatness", *mBSDF, 0);
     input.Tree.addNumber("metallic", *mBSDF, 0);
-    input.Tree.addNumber("sheen", *mBSDF, 0);
+    input.Tree.addNumber("sheen", *mBSDF, 0, ShadingTree::NumberOptions::Zero());
     input.Tree.addNumber("sheen_tint", *mBSDF, 0);
-    input.Tree.addNumber("clearcoat", *mBSDF, 0);
+    input.Tree.addNumber("clearcoat", *mBSDF, 0, ShadingTree::NumberOptions::Zero());
     input.Tree.addNumber("clearcoat_gloss", *mBSDF, 0);
-    input.Tree.addNumber("clearcoat_roughness", *mBSDF, 0.1f);
+    input.Tree.addNumber("clearcoat_roughness", *mBSDF, 0.1f, ShadingTree::NumberOptions::Dynamic());
 
     bool is_thin            = mBSDF->property("thin").getBool(false);
     bool clearcoat_top_only = mBSDF->property("clearcoat_top_only").getBool(true);

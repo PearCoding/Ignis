@@ -39,8 +39,8 @@ void BlendBSDF::serialize(const SerializationInput& input) const
         if (mType == Type::Mix)
             input.Tree.addNumber("weight", *mBSDF, 0.5f);
 
-        input.Stream << input.Tree.context().BSDFs->generate(first, input.Tree);
-        input.Stream << input.Tree.context().BSDFs->generate(second, input.Tree);
+        input.Stream << input.Tree.context().BSDFs->generate(first, input.Tree)
+                     << input.Tree.context().BSDFs->generate(second, input.Tree);
 
         if (mType == Type::Mix) {
             input.Stream << input.Tree.pullHeader()

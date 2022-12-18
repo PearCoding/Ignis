@@ -35,6 +35,8 @@ struct ColorOptions {
 
     static constexpr ColorOptions Dynamic() { return ColorOptions{ EmbedType::Dynamic, false, false }; }
     static constexpr ColorOptions Structural() { return ColorOptions{ EmbedType::Structural, true, true }; }
+    static constexpr ColorOptions White() { return ColorOptions{ EmbedType::Default, false, true }; }
+    static constexpr ColorOptions Black() { return ColorOptions{ EmbedType::Default, true, false }; }
     static constexpr ColorOptions Full() { return ColorOptions{ EmbedType::Default, true, true }; }
     static constexpr ColorOptions None() { return ColorOptions{ EmbedType::Default, false, false }; }
 };

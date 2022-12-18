@@ -16,8 +16,8 @@ void ConductorBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.beginClosure(name());
     input.Tree.addColor("specular_reflectance", *mBSDF, Vector3f::Ones());
-    input.Tree.addColor("eta", *mBSDF, spec.value_or(def).Eta);
-    input.Tree.addColor("k", *mBSDF, spec.value_or(def).Kappa);
+    input.Tree.addColor("eta", *mBSDF, spec.value_or(def).Eta, ShadingTree::ColorOptions::Black());
+    input.Tree.addColor("k", *mBSDF, spec.value_or(def).Kappa, ShadingTree::ColorOptions::White());
 
     setupRoughness(mBSDF, input);
 
