@@ -44,16 +44,16 @@
 		{"name":"Pillar","shape":"Pillar", "bsdf":"mat-Pillar", "transform": [ 0.25,0,0,0, 0,0.5,0,-1, 0,0,0.25,0, 0,0,0,1 ]}
 	],
 	"lights": [
-		{"type":"point", "name":"L1", "intensity": [1.0, 1.0, 1.0], "position": [1, 1, 1]},
-		{"type":"point", "name":"L2", "intensity": [1.0, 0.0, 1.0], "position": [-1, 1, 1]},
-		{"type":"point", "name":"L3", "intensity": [1.0, 1.0, 0.0], "position": [1, -1, 1]},
-		{"type":"point", "name":"L4", "intensity": [0.0, 1.0, 1.0], "position": [-1, -1, 1]},
-		{"type":"point", "name":"L5", "intensity": [1.0, 0.0, 0.0], "position": [1, 0, 1]},
-		{"type":"point", "name":"L6", "intensity": [0.0, 1.0, 0.0], "position": [0, 1, 1]},
-		{"type":"point", "name":"L7", "intensity": [0.0, 0.0, 1.0], "position": [0, 0, 1]},
-		{"type":"point", "name":"L8", "intensity": [0.5, 1.0, 0.5], "position": [1, 1, 2]},
-		{"type":"point", "name":"L9", "intensity": [1.0, 0.5, 0.5], "position": [1, 2, 1]},
-		{"type":"point", "name":"L10", "intensity": [0.5, 0.5, 1.0], "position": [2, 1, 1]},
+		{"type":"point", "name":"L1", "intensity": "color(1.0, 1.0, 1.0)", "position": [1, 1, 1]},
+		{"type":"point", "name":"L2", "intensity": "color(1.0, 0.0, 1.0)", "position": [-1, 1, 1]},
+		{"type":"point", "name":"L3", "intensity": "color(1.0, 1.0, 0.0)", "position": [1, -1, 1]},
+		{"type":"point", "name":"L4", "intensity": "color(0.0, 1.0, 1.0)", "position": [-1, -1, 1]},
+		{"type":"point", "name":"L5", "intensity": "color(1.0, 0.0, 0.0)", "position": [1, 0, 1]},
+		{"type":"point", "name":"L6", "intensity": "color(0.0, 1.0, 0.0)", "position": [0, 1, 1]},
+		{"type":"point", "name":"L7", "intensity": "color(0.0, 0.0, 1.0)", "position": [0, 0, 1]},
+		{"type":"point", "name":"L8", "intensity": "color(0.5, 1.0, 0.5)", "position": [1, 1, 2]},
+		{"type":"point", "name":"L9", "intensity": "color(1.0, 0.5, 0.5)", "position": [1, 2, 1]},
+		{"type":"point", "name":"L10", "intensity": "color(0.5, 0.5, 1.0)", "position": [2, 1, 1]},
 		{"type":"sky", "name":"Sky"}
 	]
 }

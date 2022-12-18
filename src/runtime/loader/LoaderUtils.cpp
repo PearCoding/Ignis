@@ -165,8 +165,8 @@ LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::str
 LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate)
 {
     const std::string exported_id = "_cdf2d_" + name;
-    const auto data               = ctx.ExportedData.find(exported_id);
-    if (data != ctx.ExportedData.end())
+    const auto data               = ctx.Cache->ExportedData.find(exported_id);
+    if (data != ctx.Cache->ExportedData.end())
         return std::any_cast<CDFData>(data->second);
 
     IG_LOG(L_DEBUG) << "Generating environment cdf for '" << name << "'" << std::endl;
@@ -177,8 +177,8 @@ LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::str
     size_t slice_marginal    = 0;
     CDF::computeForImage(image, path, slice_conditional, slice_marginal, premultiplySin, compensate);
 
-    const CDFData cdf_data        = { path, slice_conditional, slice_marginal };
-    ctx.ExportedData[exported_id] = cdf_data;
+    const CDFData cdf_data               = { path, slice_conditional, slice_marginal };
+    ctx.Cache->ExportedData[exported_id] = cdf_data;
     return cdf_data;
 }
 

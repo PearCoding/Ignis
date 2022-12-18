@@ -73,48 +73,6 @@ static inline ShadingTree::ColorOptions mapToColorOptions(const ShadingTree::Tex
     };
 }
 
-float ShadingTree::computeNumber(const std::string& name, const SceneObject& obj, float def) const
-{
-    const auto prop = obj.property(name);
-
-    std::string inline_str;
-    switch (prop.type()) {
-    default:
-        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
-        [[fallthrough]];
-    case SceneProperty::PT_NONE:
-        return def;
-    case SceneProperty::PT_INTEGER:
-    case SceneProperty::PT_NUMBER:
-        return prop.getNumber();
-    case SceneProperty::PT_VECTOR3:
-        return prop.getVector3().mean();
-    case SceneProperty::PT_STRING:
-        return approxTexture(name, prop.getString(), Vector3f::Constant(def)).mean();
-    }
-}
-
-Vector3f ShadingTree::computeColor(const std::string& name, const SceneObject& obj, const Vector3f& def) const
-{
-    const auto prop = obj.property(name);
-
-    std::string inline_str;
-    switch (prop.type()) {
-    default:
-        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
-        [[fallthrough]];
-    case SceneProperty::PT_NONE:
-        return def;
-    case SceneProperty::PT_INTEGER:
-    case SceneProperty::PT_NUMBER:
-        return Vector3f::Constant(prop.getNumber());
-    case SceneProperty::PT_VECTOR3:
-        return prop.getVector3();
-    case SceneProperty::PT_STRING:
-        return approxTexture(name, prop.getString(), def);
-    }
-}
-
 std::string ShadingTree::handlePropertyNumber(const std::string& name, const SceneProperty& prop, const NumberOptions& options)
 {
     switch (prop.type()) {
@@ -258,6 +216,60 @@ void ShadingTree::addTexture(const std::string& name, const SceneObject& obj, co
     currentClosure().Parameters[name] = inline_str;
 }
 
+float ShadingTree::computeNumber(const std::string& name, const SceneObject& obj, float def)
+{
+    const auto prop = obj.property(name);
+
+    std::string inline_str;
+    switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        [[fallthrough]];
+    case SceneProperty::PT_NONE:
+        return def;
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
+        return prop.getNumber();
+    case SceneProperty::PT_VECTOR3:
+        return prop.getVector3().mean();
+    case SceneProperty::PT_STRING: {
+        if (const auto it = mContext.Cache->ExprComputation.find(prop.getString()); it != mContext.Cache->ExprComputation.end())
+            return it->second.mean();
+
+        IG_LOG(L_DEBUG) << "Computing number for expression '" << prop.getString() << "'" << std::endl;
+        LoaderContext ctx_copy = mContext.copyForBake();
+        return ShadingTree(ctx_copy).bakeTextureExpressionAverage(name, prop.getString(), Vector3f::Constant(def)).mean();
+    }
+    }
+}
+
+Vector3f ShadingTree::computeColor(const std::string& name, const SceneObject& obj, const Vector3f& def)
+{
+    const auto prop = obj.property(name);
+
+    std::string inline_str;
+    switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        [[fallthrough]];
+    case SceneProperty::PT_NONE:
+        return def;
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
+        return Vector3f::Constant(prop.getNumber());
+    case SceneProperty::PT_VECTOR3:
+        return prop.getVector3();
+    case SceneProperty::PT_STRING: {
+        if (const auto it = mContext.Cache->ExprComputation.find(prop.getString()); it != mContext.Cache->ExprComputation.end())
+            return it->second;
+
+        IG_LOG(L_DEBUG) << "Computing color for expression '" << prop.getString() << "'" << std::endl;
+        LoaderContext ctx_copy = mContext.copyForBake();
+        return ShadingTree(ctx_copy).bakeTextureExpressionAverage(name, prop.getString(), def);
+    }
+    }
+}
+
 ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def, const TextureBakeOptions& options)
 {
     // options only affect bake process with PExpr expressions
@@ -282,8 +294,8 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name,
     }
     case SceneProperty::PT_STRING: {
         IG_LOG(L_DEBUG) << "Baking property '" << name << "'" << std::endl;
-        LoaderContext ctx = copyContextForBake();
-        return ShadingTree(ctx).bakeTextureExpression(name, prop.getString(), options);
+        LoaderContext ctx_copy = mContext.copyForBake();
+        return ShadingTree(ctx_copy).bakeTextureExpression(name, prop.getString(), options);
     }
     }
 }
@@ -328,8 +340,6 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::str
 
             // Constant expression with no ctx and textures
             const std::string script = BakeShader::setupConstantColor("  let main_func = @|| " + expr_art + ";");
-            // IG_LOG(L_DEBUG) << "Compiling constant shader:" << std::endl
-            //                 << script;
 
             void* shader  = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_constant_color");
             auto callback = reinterpret_cast<BakeShader::ConstantColorFunc>(shader);
@@ -355,8 +365,6 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::str
         inner_script << "  let main_func = @|ctx:ShadingContext|->Color{maybe_unused(ctx); " + expr_art + "};" << std::endl;
 
         const std::string script = BakeShader::setupTexture2d(mContext, inner_script.str(), options.Width, options.Height);
-        // IG_LOG(L_DEBUG) << "Compiling bake shader:" << std::endl
-        //                 << script;
 
         void* shader = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_bake_shader");
 
@@ -364,21 +372,53 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::str
         const auto resources = mContext.generateResourceMap();
         mContext.Options.Device->bake(ShaderOutput<void*>{ shader, mContext.LocalRegistry }, &resources, image.pixels.get());
 
-        image.save("bake.exr");
-
         return std::make_shared<Image>(std::move(image));
     }
 }
 
-LoaderContext ShadingTree::copyContextForBake() const
+Vector3f ShadingTree::bakeTextureExpressionAverage(const std::string& name, const std::string& expr, const Vector3f& def)
 {
-    LoaderContext ctx;
-    ctx.Options  = mContext.Options;
-    ctx.Textures = mContext.Textures;
+    auto res = mTranspiler.transpile(expr);
 
-    // Maybe copy more?
-    // TODO: Refactor this to LoaderContext
-    return ctx;
+    if (!res.has_value()) {
+        return def;
+    } else {
+        const auto& result   = res.value();
+        std::string expr_art = result.Expr;
+        if (result.ScalarOutput)
+            expr_art = "make_gray_color(" + expr_art + ")";
+
+        if (result.Textures.empty() && result.Variables.empty()) {
+            // Handle simple case where it is just a number
+            const auto potential_number = tryExtractFloat(expr_art);
+            if (potential_number) {
+                const Vector3f val = Vector3f::Constant(*potential_number);
+
+                mContext.Cache->ExprComputation[expr] = val;
+                return val;
+            }
+
+            // Constant expression with no ctx and textures
+            const std::string script = BakeShader::setupConstantColor("  let main_func = @|| " + expr_art + ";");
+
+            void* shader  = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_constant_color");
+            auto callback = reinterpret_cast<BakeShader::ConstantColorFunc>(shader);
+            Vector4f color;
+            callback(&color.x(), &color.y(), &color.z(), &color.w());
+
+            mContext.Cache->ExprComputation[expr] = color.block<3, 1>(0, 0);
+            return color.block<3, 1>(0, 0);
+        }
+
+        const auto ret = bakeTextureExpression(name, expr, TextureBakeOptions{ 16, 16, true });
+        if (ret) {
+            const Vector4f average                = ret.value()->computeAverage();
+            mContext.Cache->ExprComputation[expr] = average.block<3, 1>(0, 0);
+            return average.block<3, 1>(0, 0);
+        } else {
+            return def;
+        }
+    }
 }
 
 void ShadingTree::beginClosure(const std::string& name)
@@ -423,7 +463,7 @@ void ShadingTree::registerTextureUsage(const std::string& name)
 
 std::string ShadingTree::loadTexture(const std::string& tex_name)
 {
-    return context().Textures->generate(tex_name, *this);
+    return mContext.Textures->generate(tex_name, *this);
 }
 
 std::string ShadingTree::handleTexture(const std::string& prop_name, const std::string& expr, bool needColor)
@@ -457,14 +497,6 @@ std::string ShadingTree::handleTexture(const std::string& prop_name, const std::
     }
 }
 
-Vector3f ShadingTree::approxTexture(const std::string& prop_name, const std::string& expr, const Vector3f& def) const
-{
-    // TODO
-    IG_UNUSED(prop_name);
-    IG_UNUSED(expr);
-    return def;
-}
-
 bool ShadingTree::checkIfEmbed(float val, const NumberOptions& options) const
 {
     switch (options.EmbedType) {
@@ -474,7 +506,7 @@ bool ShadingTree::checkIfEmbed(float val, const NumberOptions& options) const
         return false;
     default:
     case EmbedType::Default:
-        if (mForceSpecialization || context().Options.ForceSpecialization)
+        if (mForceSpecialization || mContext.Options.ForceSpecialization)
             return true;
         else if (options.SpecializeZero && std::abs(val) <= FltEps)
             return true;
@@ -494,7 +526,7 @@ bool ShadingTree::checkIfEmbed(const Vector3f& color, const ColorOptions& option
         return false;
     default:
     case EmbedType::Default:
-        if (mForceSpecialization || context().Options.ForceSpecialization)
+        if (mForceSpecialization || mContext.Options.ForceSpecialization)
             return true;
         else if (options.SpecializeBlack && color.isZero(FltEps))
             return true;
@@ -514,7 +546,7 @@ bool ShadingTree::checkIfEmbed(const Vector3f& vec, const VectorOptions& options
         return false;
     default:
     case EmbedType::Default:
-        if (mForceSpecialization || context().Options.ForceSpecialization)
+        if (mForceSpecialization || mContext.Options.ForceSpecialization)
             return true;
         else if (options.SpecializeZero && vec.isZero(FltEps))
             return true;

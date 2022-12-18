@@ -25,6 +25,8 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     LoaderContext ctx;
     ctx.Options = opts;
 
+    ctx.Cache = std::make_shared<LoaderCache>();
+
     ctx.Textures  = std::make_shared<LoaderTexture>();
     ctx.Lights    = std::make_unique<LoaderLight>();
     ctx.BSDFs     = std::make_unique<LoaderBSDF>();

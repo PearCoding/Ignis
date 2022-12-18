@@ -26,7 +26,7 @@ public:
         }
     }
 
-    virtual float computeFlux(const ShadingTree&) const override;
+    virtual float computeFlux(ShadingTree&) const override;
     virtual void serialize(const SerializationInput& input) const override;
 
 private:

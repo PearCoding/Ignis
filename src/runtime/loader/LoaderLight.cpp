@@ -446,8 +446,8 @@ std::filesystem::path LoaderLight::generateLightSelectionCDF(ShadingTree& tree)
 {
     const std::string exported_id = "_light_cdf_";
 
-    const auto data = tree.context().ExportedData.find(exported_id);
-    if (data != tree.context().ExportedData.end())
+    const auto data = tree.context().Cache->ExportedData.find(exported_id);
+    if (data != tree.context().Cache->ExportedData.end())
         return std::any_cast<std::string>(data->second);
 
     if (lightCount() == 0)
@@ -463,7 +463,7 @@ std::filesystem::path LoaderLight::generateLightSelectionCDF(ShadingTree& tree)
 
     CDF::computeForArray(estimated_powers, path);
 
-    tree.context().ExportedData[exported_id] = path;
+    tree.context().Cache->ExportedData[exported_id] = path;
     return path;
 }
 } // namespace IG

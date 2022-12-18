@@ -14,7 +14,7 @@ EnvironmentLight::EnvironmentLight(const std::string& name, const std::shared_pt
     mUseCompensation = light->property("compensate").getBool(true);
 }
 
-float EnvironmentLight::computeFlux(const ShadingTree& tree) const
+float EnvironmentLight::computeFlux(ShadingTree& tree) const
 {
     const float radius   = tree.context().SceneDiameter / 2;
     const float radiance = tree.computeNumber("radiance", *mLight, 1.0f);
@@ -28,13 +28,13 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
 
     ShadingTree::BakeOutputTexture baked;
     const std::string exported_id = "_light_" + name();
-    const auto cache_data         = input.Tree.context().ExportedData.find(exported_id);
-    if (cache_data != input.Tree.context().ExportedData.end()) {
+    const auto cache_data         = input.Tree.context().Cache->ExportedData.find(exported_id);
+    if (cache_data != input.Tree.context().Cache->ExportedData.end()) {
         baked = std::any_cast<ShadingTree::BakeOutputTexture>(cache_data->second);
     } else {
         baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones(), ShadingTree::TextureBakeOptions{ 1024, 256, true });
 
-        input.Tree.context().ExportedData[exported_id] = baked;
+        input.Tree.context().Cache->ExportedData[exported_id] = baked;
     }
 
     input.Tree.addColor("scale", *mLight, Vector3f::Ones());

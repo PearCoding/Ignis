@@ -18,8 +18,8 @@ static TTExportedData setup_tensortree(const std::string& name, const std::share
 
     const std::string exported_id = "_tt_" + filename.u8string();
 
-    const auto data = ctx.ExportedData.find(exported_id);
-    if (data != ctx.ExportedData.end())
+    const auto data = ctx.Cache->ExportedData.find(exported_id);
+    if (data != ctx.Cache->ExportedData.end())
         return std::any_cast<TTExportedData>(data->second);
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
@@ -29,8 +29,8 @@ static TTExportedData setup_tensortree(const std::string& name, const std::share
     if (!TensorTreeLoader::prepare(filename, path, spec))
         ctx.signalError();
 
-    const TTExportedData res      = { path, spec };
-    ctx.ExportedData[exported_id] = res;
+    const TTExportedData res             = { path, spec };
+    ctx.Cache->ExportedData[exported_id] = res;
     return res;
 }
 

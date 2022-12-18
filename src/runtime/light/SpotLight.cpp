@@ -19,7 +19,7 @@ static inline float power_factor(float cutoff, float falloff)
     return 2 * Pi * (1 - 0.5f * (std::cos(cutoff) + std::cos(falloff)));
 }
 
-float SpotLight::computeFlux(const ShadingTree& tree) const
+float SpotLight::computeFlux(ShadingTree& tree) const
 {
     const float cutoff  = tree.computeNumber("cutoff", *mLight, 30) * Deg2Rad;
     const float falloff = tree.computeNumber("falloff", *mLight, 20) * Deg2Rad;

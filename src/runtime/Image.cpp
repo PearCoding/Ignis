@@ -84,13 +84,32 @@ void Image::applyGammaCorrection(bool inverse, bool sRGB)
 
 void Image::flipY()
 {
-    const size_t slice = 4 * width;
+    const size_t slice = channels * width;
     for (size_t y = 0; y < height / 2; ++y) {
         float* s1 = &pixels[y * slice];
         float* s2 = &pixels[(height - y - 1) * slice];
         if (s1 != s2)
             std::swap_ranges(s1, s1 + slice, s2);
     }
+}
+
+Vector4f Image::computeAverage() const
+{
+    Vector4f sum = Vector4f::Zero();
+    if (channels == 1) {
+        for (size_t i = 0; i < width * height; ++i) {
+            const float v = pixels[i];
+            sum += Vector4f(v, v, v, 1);
+        }
+    } else if (channels == 3) {
+        for (size_t i = 0; i < width * height; ++i)
+            sum += Vector4f(pixels[i * 3 + 0], pixels[i * 3 + 1], pixels[i * 3 + 2], 1);
+    } else {
+        for (size_t i = 0; i < width * height; ++i)
+            sum += Vector4f(pixels[i * 4 + 0], pixels[i * 4 + 1], pixels[i * 4 + 2], pixels[i * 4 + 3]);
+    }
+
+    return sum / (float)(width * height);
 }
 
 static inline uint32 pack_rgba(uint8 r, uint8 g, uint8 b, uint8 a)

@@ -23,7 +23,7 @@ public:
     virtual std::optional<Vector3f> direction() const { return std::nullopt; }
     virtual std::optional<std::string> entity() const { return std::nullopt; }
 
-    virtual float computeFlux(const ShadingTree&) const { return 0; }
+    virtual float computeFlux(ShadingTree&) const { return 0; }
 
     struct SerializationInput {
         size_t ID;

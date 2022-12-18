@@ -11,7 +11,7 @@ DirectionalLight::DirectionalLight(const std::string& name, const std::shared_pt
     mDirection = LoaderUtils::getDirection(*light);
 }
 
-float DirectionalLight::computeFlux(const ShadingTree& tree) const
+float DirectionalLight::computeFlux(ShadingTree& tree) const
 {
     const float radius = tree.context().SceneDiameter / 2;
     return tree.computeNumber("irradiance", *mLight, 1) * Pi * radius * radius;

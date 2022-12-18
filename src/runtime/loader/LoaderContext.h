@@ -30,6 +30,11 @@ inline bool operator==(const Material& a, const Material& b)
     return a.BSDF == b.BSDF && a.MediumInner == b.MediumInner && a.MediumOuter == b.MediumOuter && a.Entity == b.Entity; // Ignore Count
 }
 
+struct LoaderCache {
+    std::unordered_map<std::string, std::any> ExportedData;    // Cache with already exported data and auxillary info
+    std::unordered_map<std::string, Vector3f> ExprComputation; // Cache with already computed expressions
+};
+
 constexpr size_t DefaultAlignment = sizeof(float) * 4;
 class LoaderContext {
     IG_CLASS_NON_COPYABLE(LoaderContext);
@@ -40,7 +45,11 @@ public:
     LoaderContext& operator=(LoaderContext&&);
     ~LoaderContext();
 
+    LoaderContext copyForBake() const;
+
     LoaderOptions Options;
+
+    std::shared_ptr<LoaderCache> Cache;
 
     std::shared_ptr<class LoaderTexture> Textures;
     std::unique_ptr<class LoaderLight> Lights;
@@ -63,8 +72,6 @@ public:
     {
         LocalRegistry = ParameterSet();
     }
-
-    std::unordered_map<std::string, std::any> ExportedData; // Cache with already exported data and auxillary info
 
     std::vector<Material> Materials;
 

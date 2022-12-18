@@ -98,14 +98,10 @@ public:
     void addVector(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const VectorOptions& options = VectorOptions::Full());
     void addTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureOptions& options = TextureOptions::Default());
 
+    float computeNumber(const std::string& name, const SceneObject& obj, float def = 0);
+    Vector3f computeColor(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero());
+
     using BakeOutputTexture = std::optional<std::shared_ptr<Image>>;
-    using BakeOutputNumber  = std::optional<float>;
-    using BakeOutputColor   = std::optional<Vector3f>;
-
-    // Approximation (TODO: Change to bake interface!)
-    float computeNumber(const std::string& name, const SceneObject& obj, float def = 0) const;
-    Vector3f computeColor(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero()) const;
-
     BakeOutputTexture bakeTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureBakeOptions& options = TextureBakeOptions::Default());
 
     inline std::string currentClosureID() const { return currentClosure().ID; }
@@ -140,11 +136,10 @@ private:
     bool checkIfEmbed(const Vector3f& vec, const VectorOptions& options) const;
 
     BakeOutputTexture bakeTextureExpression(const std::string& name, const std::string& expr, const TextureBakeOptions& options);
-    Vector3f approxTexture(const std::string& prop_name, const std::string& expr, const Vector3f& def) const;
+    Vector3f bakeTextureExpressionAverage(const std::string& name, const std::string& expr, const Vector3f& def);
     std::string loadTexture(const std::string& tex_name);
 
     LoaderContext& mContext;
-    LoaderContext copyContextForBake() const;
 
     std::vector<std::string> mHeaderLines; // The order matters
     std::unordered_set<std::string> mLoadedTextures;

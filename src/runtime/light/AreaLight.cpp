@@ -96,7 +96,7 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
     }
 }
 
-float AreaLight::computeFlux(const ShadingTree& tree) const
+float AreaLight::computeFlux(ShadingTree& tree) const
 {
     if (mUsePower)
         return tree.computeNumber("power", *mLight, mArea * Pi);

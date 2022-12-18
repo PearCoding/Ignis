@@ -12,7 +12,7 @@ public:
     virtual std::optional<Vector3f> position() const override { return mPosition; }
     virtual std::optional<Vector3f> direction() const override { return mRepresentation == RepresentationType::Plane ? std::make_optional(mDirection) : std::nullopt; }
     virtual std::optional<std::string> entity() const override { return mEntity; }
-    virtual float computeFlux(const ShadingTree&) const override;
+    virtual float computeFlux(ShadingTree&) const override;
 
     virtual void serialize(const SerializationInput& input) const override;
 

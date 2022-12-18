@@ -14,7 +14,7 @@ PointLight::PointLight(const std::string& name, const std::shared_ptr<SceneObjec
 }
 
 constexpr float SR = 4 * Pi;
-float PointLight::computeFlux(const ShadingTree& tree) const
+float PointLight::computeFlux(ShadingTree& tree) const
 {
     if (mUsingPower)
         return tree.computeNumber("power", *mLight, SR);

@@ -9,7 +9,7 @@ public:
 
     virtual bool isInfinite() const override { return true; }
     
-    virtual float computeFlux(const ShadingTree& tree) const override;
+    virtual float computeFlux(ShadingTree& tree) const override;
     virtual void serialize(const SerializationInput& input) const override;
 
 private:

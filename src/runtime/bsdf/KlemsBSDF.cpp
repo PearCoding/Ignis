@@ -19,8 +19,8 @@ static KlemsExportedData setup_klems(const std::string& name, const std::shared_
 
     const std::string exported_id = "_klems_" + filename.u8string();
 
-    const auto data = ctx.ExportedData.find(exported_id);
-    if (data != ctx.ExportedData.end())
+    const auto data = ctx.Cache->ExportedData.find(exported_id);
+    if (data != ctx.Cache->ExportedData.end())
         return std::any_cast<KlemsExportedData>(data->second);
 
     std::filesystem::create_directories("data/"); // Make sure this directory exists
@@ -30,8 +30,8 @@ static KlemsExportedData setup_klems(const std::string& name, const std::shared_
     if (!KlemsLoader::prepare(filename, path, spec))
         ctx.signalError();
 
-    const KlemsExportedData res   = { path, spec };
-    ctx.ExportedData[exported_id] = res;
+    const KlemsExportedData res          = { path, spec };
+    ctx.Cache->ExportedData[exported_id] = res;
     return res;
 }
 

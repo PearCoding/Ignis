@@ -10,7 +10,6 @@
 namespace IG {
 class LightEntry : public ISerializable {
 public:
-
     Vector3f Position;
     Vector3f Direction;
     float Flux;
@@ -88,8 +87,8 @@ std::filesystem::path LightHierarchy::setup(const std::vector<std::shared_ptr<Li
     // Check if already setup
     const std::string exported_id = "_light_hierarchy_";
 
-    const auto data = tree.context().ExportedData.find(exported_id);
-    if (data != tree.context().ExportedData.end())
+    const auto data = tree.context().Cache->ExportedData.find(exported_id);
+    if (data != tree.context().Cache->ExportedData.end())
         return std::any_cast<std::string>(data->second);
 
     // Setup bvh
@@ -127,7 +126,7 @@ std::filesystem::path LightHierarchy::setup(const std::vector<std::shared_ptr<Li
     serializer.writeAlignmentPad(sizeof(float) * 4);
     serializer.write(innerNodes, true);
 
-    tree.context().ExportedData[exported_id] = path;
+    tree.context().Cache->ExportedData[exported_id] = path;
     return path;
 }
 } // namespace IG

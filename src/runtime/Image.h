@@ -53,6 +53,8 @@ struct IG_LIB Image {
     /// Flip image in y-axis
     void flipY();
 
+    [[nodiscard]] Vector4f computeAverage() const;
+
     /// Will format to packed format (RGBA or Mono, 8bit each)
     /// Use this only for byte formats, else image quality will be lost
     void copyToPackedFormat(std::vector<uint8>& dst) const;

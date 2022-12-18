@@ -15,7 +15,7 @@ PerezLight::PerezLight(const std::string& name, const std::shared_ptr<SceneObjec
     mHasGround    = mLight->property("has_ground").getBool(true);
 }
 
-float PerezLight::computeFlux(const ShadingTree& tree) const
+float PerezLight::computeFlux(ShadingTree& tree) const
 {
     // TODO
     const float radius = tree.context().SceneDiameter / 2;

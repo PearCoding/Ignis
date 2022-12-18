@@ -10,7 +10,7 @@ public:
     virtual bool isDelta() const override { return true; }
     virtual std::optional<Vector3f> position() const override { return mPosition; }
     virtual std::optional<Vector3f> direction() const override { return mDirection; }
-    virtual float computeFlux(const ShadingTree&) const override;
+    virtual float computeFlux(ShadingTree&) const override;
 
     virtual void serialize(const SerializationInput& input) const override;
 

@@ -15,7 +15,7 @@ CIELight::CIELight(CIEType classification, const std::string& name, const std::s
     mHasGround    = mLight->property("has_ground").getBool(true);
 }
 
-float CIELight::computeFlux(const ShadingTree& tree) const
+float CIELight::computeFlux(ShadingTree& tree) const
 {
     // TODO: Use new bake system!
     const float radius = tree.context().SceneDiameter / 2;

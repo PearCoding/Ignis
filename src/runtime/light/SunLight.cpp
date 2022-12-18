@@ -11,7 +11,7 @@ SunLight::SunLight(const std::string& name, const std::shared_ptr<SceneObject>& 
     mDirection = LoaderUtils::getDirection(*light);
 }
 
-float SunLight::computeFlux(const ShadingTree& tree) const
+float SunLight::computeFlux(ShadingTree& tree) const
 {
     IG_UNUSED(tree);
 
