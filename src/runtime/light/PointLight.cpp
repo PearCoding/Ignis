@@ -19,7 +19,7 @@ float PointLight::computeFlux(ShadingTree& tree) const
     if (mUsingPower)
         return tree.computeNumber("power", *mLight, SR);
     else
-        return tree.computeNumber("intensity", *mLight, 1) * SR;
+        return tree.computeNumber("intensity", *mLight, 1.0f) * SR;
 }
 
 void PointLight::serialize(const SerializationInput& input) const

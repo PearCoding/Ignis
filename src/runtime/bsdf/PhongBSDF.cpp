@@ -13,7 +13,7 @@ void PhongBSDF::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
     input.Tree.addColor("specular_reflectance", *mBSDF, Vector3f::Ones());
-    input.Tree.addNumber("exponent", *mBSDF, 30, ShadingTree::NumberOptions::Dynamic());
+    input.Tree.addNumber("exponent", *mBSDF, 30.0f, ShadingTree::NumberOptions::Dynamic());
 
     const std::string bsdf_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()

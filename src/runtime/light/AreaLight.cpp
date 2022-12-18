@@ -101,7 +101,7 @@ float AreaLight::computeFlux(ShadingTree& tree) const
     if (mUsePower)
         return tree.computeNumber("power", *mLight, mArea * Pi);
     else
-        return tree.computeNumber("radiance", *mLight, 1) * mArea * Pi;
+        return tree.computeNumber("radiance", *mLight, 1.0f) * mArea * Pi;
 }
 
 void AreaLight::serialize(const SerializationInput& input) const

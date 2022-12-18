@@ -39,8 +39,8 @@ void SpotLight::serialize(const SerializationInput& input) const
     else
         input.Tree.addColor("intensity", *mLight, Vector3f::Ones());
 
-    input.Tree.addNumber("cutoff", *mLight, 30);
-    input.Tree.addNumber("falloff", *mLight, 20);
+    input.Tree.addNumber("cutoff", *mLight, 30.0f);
+    input.Tree.addNumber("falloff", *mLight, 20.0f);
 
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()

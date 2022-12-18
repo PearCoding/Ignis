@@ -26,31 +26,31 @@ static std::tuple<PerezModel, float> getModel(const SceneObject& obj, float sola
 {
     if (obj.properties().count("clearness") || obj.properties().count("brightness")) {
         const PerezModel model = PerezModel::fromSky(obj.property("brightness").getNumber(0.2f),
-                                                     obj.property("clearness").getNumber(1),
+                                                     obj.property("clearness").getNumber(1.0f),
                                                      solar_zenith);
         return { model,
                  PerezModel::computeDiffuseIrradiance(obj.property("brightness").getNumber(0.2f), solar_zenith, timepoint.dayOfTheYear()) };
     } else if (obj.properties().count("direct_irradiance") || obj.properties().count("diffuse_irradiance")) {
-        const PerezModel model = PerezModel::fromIrrad(obj.property("diffuse_irradiance").getNumber(1),
-                                                       obj.property("direct_irradiance").getNumber(1),
+        const PerezModel model = PerezModel::fromIrrad(obj.property("diffuse_irradiance").getNumber(1.0f),
+                                                       obj.property("direct_irradiance").getNumber(1.0f),
                                                        solar_zenith,
                                                        timepoint.dayOfTheYear());
         return { model,
                  obj.property("diffuse_irradiance").getNumber(1) };
     } else if (obj.properties().count("direct_illuminance") || obj.properties().count("diffuse_illuminance")) {
-        const PerezModel model = PerezModel::fromIllum(obj.property("diffuse_illuminance").getNumber(1),
-                                                       obj.property("direct_illuminance").getNumber(1),
+        const PerezModel model = PerezModel::fromIllum(obj.property("diffuse_illuminance").getNumber(1.0f),
+                                                       obj.property("direct_illuminance").getNumber(1.0f),
                                                        solar_zenith,
                                                        timepoint.dayOfTheYear());
         return { model,
-                 convertIlluminanceToIrradiance(obj.property("diffuse_illuminance").getNumber(1)) /* TODO: Not that simple */ };
+                 convertIlluminanceToIrradiance(obj.property("diffuse_illuminance").getNumber(1.0f)) /* TODO: Not that simple */ };
     } else {
         return { PerezModel::fromParameters(
-                     obj.property("a").getNumber(1),
-                     obj.property("b").getNumber(1),
-                     obj.property("c").getNumber(1),
-                     obj.property("d").getNumber(1),
-                     obj.property("e").getNumber(1)),
+                     obj.property("a").getNumber(1.0f),
+                     obj.property("b").getNumber(1.0f),
+                     obj.property("c").getNumber(1.0f),
+                     obj.property("d").getNumber(1.0f),
+                     obj.property("e").getNumber(1.0f)),
                  1.0f /* TODO*/ };
     }
 }

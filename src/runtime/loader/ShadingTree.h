@@ -93,7 +93,7 @@ public:
     void beginClosure(const std::string& name);
     void endClosure();
 
-    void addNumber(const std::string& name, const SceneObject& obj, const std::optional<float>& def = std::make_optional<float>(0), const NumberOptions& options = NumberOptions::Full());
+    void addNumber(const std::string& name, const SceneObject& obj, const std::optional<float>& def = std::make_optional<float>(0.0f), const NumberOptions& options = NumberOptions::Full());
     void addColor(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const ColorOptions& options = ColorOptions::Full());
     void addVector(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const VectorOptions& options = VectorOptions::Full());
     void addTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureOptions& options = TextureOptions::Default());
