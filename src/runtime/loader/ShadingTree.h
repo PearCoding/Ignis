@@ -137,6 +137,8 @@ private:
 
     BakeOutputTexture bakeTextureExpression(const std::string& name, const std::string& expr, const TextureBakeOptions& options);
     Vector3f bakeTextureExpressionAverage(const std::string& name, const std::string& expr, const Vector3f& def);
+    Vector3f computeConstantColor(const std::string& name, const Transpiler::Result& result);
+    Image computeImage(const std::string& name, const Transpiler::Result& result, const TextureBakeOptions& options);
     std::string loadTexture(const std::string& tex_name);
 
     LoaderContext& mContext;

@@ -317,6 +317,61 @@ static inline std::optional<float> tryExtractFloat(const std::string& str)
     }
 }
 
+Vector3f ShadingTree::computeConstantColor(const std::string& name, const Transpiler::Result& result)
+{
+    IG_UNUSED(name);
+
+    // Handle simple case where it is just a number
+    const auto potential_number = tryExtractFloat(result.Expr);
+    if (potential_number)
+        return Vector3f::Constant(*potential_number);
+
+    std::string expr_art = result.Expr;
+    if (result.ScalarOutput)
+        expr_art = "make_gray_color(" + expr_art + ")";
+
+    // Constant expression with no ctx and textures
+    const std::string script = BakeShader::setupConstantColor("  let main_func = @|| " + expr_art + ";");
+
+    void* shader  = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_constant_color");
+    auto callback = reinterpret_cast<BakeShader::ConstantColorFunc>(shader);
+    Vector4f color;
+    callback(&color.x(), &color.y(), &color.z(), &color.w());
+    return color.block<3, 1>(0, 0);
+}
+
+Image ShadingTree::computeImage(const std::string& name, const Transpiler::Result& result, const TextureBakeOptions& options)
+{
+    bool warn = false;
+    for (const std::string& var : result.Variables) {
+        if (var != "uv")
+            warn = true;
+    }
+
+    if (warn)
+        IG_LOG(L_WARNING) << "Given expression for '" << name << "' contains variables outside `uv`. Baking process might be incomplete" << std::endl;
+
+    std::stringstream inner_script;
+    for (const auto& tex : result.Textures) {
+        inner_script << loadTexture(tex);
+    }
+
+    std::string expr_art = result.Expr;
+    if (result.ScalarOutput)
+        expr_art = "make_gray_color(" + expr_art + ")";
+
+    inner_script << "  let main_func = @|ctx:ShadingContext|->Color{maybe_unused(ctx); " + expr_art + "};" << std::endl;
+
+    const std::string script = BakeShader::setupTexture2d(mContext, inner_script.str(), options.Width, options.Height);
+
+    void* shader = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_bake_shader");
+
+    Image image          = Image::createSolidImage(Vector4f::Zero(), options.Width, options.Height);
+    const auto resources = mContext.generateResourceMap();
+    mContext.Options.Device->bake(ShaderOutput<void*>{ shader, mContext.LocalRegistry }, &resources, image.pixels.get());
+    return image;
+}
+
 ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::string& name, const std::string& expr, const TextureBakeOptions& options)
 {
     auto res = mTranspiler.transpile(expr);
@@ -324,54 +379,17 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::str
     if (!res.has_value()) {
         return {};
     } else {
-        const auto& result   = res.value();
-        std::string expr_art = result.Expr;
-        if (result.ScalarOutput)
-            expr_art = "make_gray_color(" + expr_art + ")";
+        const auto& result = res.value();
 
         if (result.Textures.empty() && result.Variables.empty()) {
             if (options.SkipConstant)
                 return {};
 
-            // Handle simple case where it is just a number
-            const auto potential_number = tryExtractFloat(expr_art);
-            if (potential_number)
-                return std::make_shared<Image>(Image::createSolidImage(Vector4f::Constant(*potential_number)));
-
-            // Constant expression with no ctx and textures
-            const std::string script = BakeShader::setupConstantColor("  let main_func = @|| " + expr_art + ";");
-
-            void* shader  = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_constant_color");
-            auto callback = reinterpret_cast<BakeShader::ConstantColorFunc>(shader);
-            Vector4f color;
-            callback(&color.x(), &color.y(), &color.z(), &color.w());
-            return std::make_shared<Image>(Image::createSolidImage(color));
+            const Vector3f color = computeConstantColor(name, result);
+            return std::make_shared<Image>(Image::createSolidImage(Vector4f(color.x(), color.y(), color.z(), 1)));
         }
 
-        bool warn = false;
-        for (const std::string& var : result.Variables) {
-            if (var != "uv")
-                warn = true;
-        }
-
-        if (warn)
-            IG_LOG(L_WARNING) << "Given expression for '" << name << "' contains variables outside `uv`. Baking process might be incomplete" << std::endl;
-
-        std::stringstream inner_script;
-        for (const auto& tex : res.value().Textures) {
-            inner_script << loadTexture(tex);
-        }
-
-        inner_script << "  let main_func = @|ctx:ShadingContext|->Color{maybe_unused(ctx); " + expr_art + "};" << std::endl;
-
-        const std::string script = BakeShader::setupTexture2d(mContext, inner_script.str(), options.Width, options.Height);
-
-        void* shader = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_bake_shader");
-
-        Image image          = Image::createSolidImage(Vector4f::Zero(), options.Width, options.Height);
-        const auto resources = mContext.generateResourceMap();
-        mContext.Options.Device->bake(ShaderOutput<void*>{ shader, mContext.LocalRegistry }, &resources, image.pixels.get());
-
+        Image image = computeImage(name, result, options);
         return std::make_shared<Image>(std::move(image));
     }
 }
@@ -383,41 +401,19 @@ Vector3f ShadingTree::bakeTextureExpressionAverage(const std::string& name, cons
     if (!res.has_value()) {
         return def;
     } else {
-        const auto& result   = res.value();
-        std::string expr_art = result.Expr;
-        if (result.ScalarOutput)
-            expr_art = "make_gray_color(" + expr_art + ")";
+        const auto& result = res.value();
 
         if (result.Textures.empty() && result.Variables.empty()) {
-            // Handle simple case where it is just a number
-            const auto potential_number = tryExtractFloat(expr_art);
-            if (potential_number) {
-                const Vector3f val = Vector3f::Constant(*potential_number);
+            const Vector3f color = computeConstantColor(name, result);
 
-                mContext.Cache->ExprComputation[expr] = val;
-                return val;
-            }
-
-            // Constant expression with no ctx and textures
-            const std::string script = BakeShader::setupConstantColor("  let main_func = @|| " + expr_art + ";");
-
-            void* shader  = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_constant_color");
-            auto callback = reinterpret_cast<BakeShader::ConstantColorFunc>(shader);
-            Vector4f color;
-            callback(&color.x(), &color.y(), &color.z(), &color.w());
-
-            mContext.Cache->ExprComputation[expr] = color.block<3, 1>(0, 0);
-            return color.block<3, 1>(0, 0);
+            mContext.Cache->ExprComputation[expr] = color;
+            return color;
         }
 
-        const auto ret = bakeTextureExpression(name, expr, TextureBakeOptions{ 16, 16, true });
-        if (ret) {
-            const Vector4f average                = ret.value()->computeAverage();
-            mContext.Cache->ExprComputation[expr] = average.block<3, 1>(0, 0);
-            return average.block<3, 1>(0, 0);
-        } else {
-            return def;
-        }
+        const Image image                     = computeImage(name, result, TextureBakeOptions{ 16, 16, true });
+        const Vector4f average                = image.computeAverage();
+        mContext.Cache->ExprComputation[expr] = average.block<3, 1>(0, 0);
+        return average.block<3, 1>(0, 0);
     }
 }
 
