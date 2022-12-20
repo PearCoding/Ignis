@@ -199,16 +199,21 @@ Sun Light (:monosp:`sun`)
     - :code:`2020`, :code:`5`, :code:`6`, :code:`12`, :code:`0`, :code:`0`, :code:`49.235422`, :code:`-6.9965744`, :code:`-2`
     - No
     - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
-  * - sun_scale
+  * - irradiance
     - |number|
     - :code:`1`
     - Yes
-    - Scale of the sun power in the sky.
-  * - sun_radius_scale
+    - Output of the sun in radiometric [W/m^2] or photometric [lm/m^2] units.
+  * - radius
     - |number|
     - :code:`1`
     - No
-    - Scale of the sun radius in the sky.
+    - Radius of the sun seen from the earth. Can not be specified together with :paramtype:`angle`.
+  * - angle
+    - |number|
+    - :code:`11.4`
+    - No
+    - Angular diameter of the sun seen from the earth. Can not be specified together with :paramtype:`radius`.
 
 .. subfigstart::
   
