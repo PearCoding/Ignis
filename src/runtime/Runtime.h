@@ -101,12 +101,20 @@ public:
 
     /// Set integer parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, int value);
+    /// Return constant map of available integer parameters
+    [[nodiscard]] const std::unordered_map<std::string, int>& getIntParameters() const;
     /// Set number parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, float value);
+    /// Return constant map of available number parameters
+    [[nodiscard]] const std::unordered_map<std::string, float>& getNumberParameters() const;
     /// Set 3d vector parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, const Vector3f& value);
+    /// Return constant map of available vector parameters
+    [[nodiscard]] const AlignedUnorderedMap<std::string, Vector3f>& getVectorParameters() const;
     /// Set 4d vector parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, const Vector4f& value);
+    /// Return constant map of available color parameters
+    [[nodiscard]] const AlignedUnorderedMap<std::string, Vector4f>& getColorParameters() const;
 
     /// The current framebuffer width
     [[nodiscard]] inline size_t framebufferWidth() const { return mFilmWidth; }

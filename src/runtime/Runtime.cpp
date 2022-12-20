@@ -621,9 +621,19 @@ void Runtime::setParameter(const std::string& name, int value)
     mGlobalRegistry.IntParameters[name] = value;
 }
 
+const std::unordered_map<std::string, int>& Runtime::getIntParameters() const
+{
+    return mGlobalRegistry.IntParameters;
+}
+
 void Runtime::setParameter(const std::string& name, float value)
 {
     mGlobalRegistry.FloatParameters[name] = value;
+}
+
+const std::unordered_map<std::string, float>& Runtime::getNumberParameters() const
+{
+    return mGlobalRegistry.FloatParameters;
 }
 
 void Runtime::setParameter(const std::string& name, const Vector3f& value)
@@ -631,9 +641,19 @@ void Runtime::setParameter(const std::string& name, const Vector3f& value)
     mGlobalRegistry.VectorParameters[name] = value;
 }
 
+const AlignedUnorderedMap<std::string, Vector3f>& Runtime::getVectorParameters() const
+{
+    return mGlobalRegistry.VectorParameters;
+}
+
 void Runtime::setParameter(const std::string& name, const Vector4f& value)
 {
     mGlobalRegistry.ColorParameters[name] = value;
+}
+
+const AlignedUnorderedMap<std::string, Vector4f>& Runtime::getColorParameters() const
+{
+    return mGlobalRegistry.ColorParameters;
 }
 
 std::vector<std::string> Runtime::getAvailableTechniqueTypes()
