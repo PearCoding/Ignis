@@ -10,6 +10,8 @@ fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_an
     let cosCutoffAngle  = math_builtins::cos(cutoff_angle);
     let cosFalloffAngle = math_builtins::cos(falloff_angle);
     let blendRange      = cosFalloffAngle - cosCutoffAngle;
+    let spot_radius     = math_builtins::sqrt(1 - cosCutoffAngle * cosCutoffAngle) / cosCutoffAngle;
+    let spot_area       = flt_pi * spot_radius * spot_radius;
 
     fn @to_world(vec: Vec3) = mat3x3_mul(frame, vec);
 
@@ -21,7 +23,7 @@ fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_an
                         } else {
                             smoothstep(clampf((cos_angle - cosCutoffAngle) / blendRange, 0, 1))
                         };
-        color_mulf(intensity, cos_angle * factor)
+        color_mulf(intensity, factor)
     }
 
     Light{
@@ -31,20 +33,21 @@ fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_an
             let dist     = vec3_len(out_dir_);
             let out_dir  = vec3_mulf(out_dir_, safe_div(1, dist));
             let color    = eval_dir(vec3_neg(out_dir));
+            let cos      = -vec3_dot(out_dir, dir);
 
             let area_pdf = select(check_valid(vec3_neg(out_dir)), 1:f32, 0:f32);
-            make_direct_sample(pos, out_dir, color, make_area_pdf(area_pdf), 1, dist)
+            make_direct_sample(pos, out_dir, color, make_area_pdf(area_pdf), cos, dist)
         },
         sample_emission = @ |rnd| {
             let sample  = sample_uniform_cone(randf(rnd), randf(rnd), cosCutoffAngle);
-            let out_dir = vec3_normalize(to_world(sample.dir));
-            let color   = color_mulf(eval_dir(out_dir), 1 / sample.pdf);
+            let out_dir = to_world(sample.dir);
+            let color   = color_mulf(eval_dir(out_dir), 1 / (spot_area * sample.pdf));
 
-            make_emission_sample(pos, out_dir, color, 1, sample.pdf, 1)
+            make_emission_sample(pos, out_dir, color, 1, spot_area * sample.pdf, sample.dir.z)
         },
         emission     = @ |_|    color_builtins::black,
         pdf_direct   = @ |_, _| make_area_pdf(0), // Does not matter
-        pdf_emission = @ |_, _| make_emissive_pdf(1, uniform_cone_pdf(cosCutoffAngle)),
+        pdf_emission = @ |_, _| make_emissive_pdf(1, spot_area * uniform_cone_pdf(cosCutoffAngle)),
         delta    = true,
         infinite = false
     }
