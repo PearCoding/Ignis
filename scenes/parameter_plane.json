@@ -29,10 +29,10 @@
 		}
 	],
 	"parameters": [
-		{ "type": "number", "name": "param_scale_x", "default": 10 },
-		{ "type": "number", "name": "param_scale_y", "default": 10 },
-		{ "type": "color", "name": "param_color_0", "default": 0 },
-		{ "type": "color", "name": "param_color_1", "default": 1 }
+		{ "type": "number", "name": "param_scale_x", "value": 10 },
+		{ "type": "number", "name": "param_scale_y", "value": 10 },
+		{ "type": "color", "name": "param_color_0", "value": 0 },
+		{ "type": "color", "name": "param_color_1", "value": 1 }
 	],
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Floor", "reflectance":"check"}

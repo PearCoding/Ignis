@@ -104,7 +104,34 @@ Predefined constants of type ``num`` are:
 
 All textures defined in the scene representation are also available as variables of type ``vec4``.
 These texture variables use the variable ``uv`` as their texture coordinate implicitly.
-The above defined special variable and constant names have precedence over texture names.
+The above defined special variable and constant names have precedence over texture names and parameters as explained below.
+
+.. _pexpr_parameters:
+
+Parameters
+----------
+
+Defining parameters inside the :code:`"parameters"` section in the scene description allows the convenient usage of user input in the viewer and the cli. All defined parameters are available as variables inside a PExpr expression.
+Parameters can be defined as follow:
+
+.. code-block:: javascript
+    
+    {
+        // ...
+        "parameters": [
+            // ...
+            { "name":"NAME1", "type":"number", "value":42 },
+            { "name":"NAME2", "type":"vector", "value":[1,0,0] },
+            { "name":"NAME3", "type":"color",  "value":[1,0,1] }
+            // ...
+        ]
+        // ...
+    }
+
+Currently only the types ``number`` for ``num``, ``vector`` for ``vec3`` and ``color`` for ``vec4`` are available. The given ``value`` can not be a PExpr!
+The above defined parameters have precedence over texture names, but not the above defined special variables and constants.
+
+.. NOTE:: Defining color with alpha is currently not supported. Use an array of three numbers to define color.
 
 Functions
 ---------

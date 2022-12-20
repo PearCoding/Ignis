@@ -29,37 +29,83 @@ void ShadingTree::signalError()
 
 void ShadingTree::setupGlobalParameters()
 {
+    auto& reg = mContext.GlobalRegistry;
     // Register all available user parameters
     for (const auto& pair : mContext.Options.Scene->parameters()) {
         const auto param       = pair.second;
         const std::string type = param->pluginType();
 
         if (type == "number") {
-            const float value = param->property("default").getNumber();
-
-            mContext.GlobalRegistry.FloatParameters[pair.first] = value;
-
-            const std::string param_name = "param_f32_" + whitespace_escaped(pair.first);
+            const auto prop                 = param->property("value");
+            reg.FloatParameters[pair.first] = handleGlobalParameterNumber(pair.first, prop);
+            const std::string param_name    = "param_f32_" + whitespace_escaped(pair.first);
             mHeaderLines.push_back("  let " + param_name + " = registry::get_global_parameter_f32(\"" + pair.first + "\", 0); maybe_unused(" + param_name + ");\n");
             mTranspiler.registerCustomVariableNumber(pair.first, param_name);
         } else if (type == "vector") {
-            const Vector3f value = param->property("default").getVector3();
-
-            mContext.GlobalRegistry.VectorParameters[pair.first] = value;
-
-            const std::string param_name = "param_vec3_" + whitespace_escaped(pair.first);
+            const auto prop                  = param->property("value");
+            reg.VectorParameters[pair.first] = handleGlobalParameterVector(pair.first, prop);
+            const std::string param_name     = "param_vec3_" + whitespace_escaped(pair.first);
             mHeaderLines.push_back("  let " + param_name + " = registry::get_global_parameter_vec3(\"" + pair.first + "\", vec3_expand(0)); maybe_unused(" + param_name + ");\n");
             mTranspiler.registerCustomVariableVector(pair.first, param_name);
         } else if (type == "color") {
-            const Vector3f value = param->property("default").getVector3();
-
-            mContext.GlobalRegistry.ColorParameters[pair.first] = Vector4f(value.x(), value.y(), value.z(), 1); // TODO: Support alpha?
-
-            const std::string param_name = "param_color_" + whitespace_escaped(pair.first);
+            const auto prop                 = param->property("value");
+            reg.ColorParameters[pair.first] = handleGlobalParameterColor(pair.first, prop);
+            const std::string param_name    = "param_color_" + whitespace_escaped(pair.first);
             mHeaderLines.push_back("  let " + param_name + " = registry::get_global_parameter_color(\"" + pair.first + "\", color_builtins::black); maybe_unused(" + param_name + ");\n");
             mTranspiler.registerCustomVariableColor(pair.first, param_name);
         }
     }
+}
+
+float ShadingTree::handleGlobalParameterNumber(const std::string& name, const SceneProperty& prop)
+{
+    float value = 0;
+    switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid value type" << std::endl;
+        break;
+    case SceneProperty::PT_NONE:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has no value!" << std::endl;
+        break;
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
+        value = prop.getNumber();
+        break;
+    case SceneProperty::PT_STRING:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' is using PExpr expressions, which is not supported!" << std::endl;
+        break;
+    }
+    return value;
+}
+
+Vector3f ShadingTree::handleGlobalParameterVector(const std::string& name, const SceneProperty& prop)
+{
+    Vector3f value = Vector3f::Zero();
+    switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid value type" << std::endl;
+        break;
+    case SceneProperty::PT_NONE:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has no value!" << std::endl;
+        break;
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
+        value = Vector3f::Constant(prop.getNumber());
+        break;
+    case SceneProperty::PT_VECTOR3:
+        value = prop.getVector3();
+        break;
+    case SceneProperty::PT_STRING:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' is using PExpr expressions, which is not supported!" << std::endl;
+        break;
+    }
+    return value;
+}
+
+Vector4f ShadingTree::handleGlobalParameterColor(const std::string& name, const SceneProperty& prop)
+{
+    const Vector3f a = handleGlobalParameterVector(name, prop);
+    return Vector4f(a.x(), a.y(), a.z(), 1); // TODO: Support alpha?
 }
 
 // ------------------ Number

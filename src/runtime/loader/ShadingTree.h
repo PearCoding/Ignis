@@ -126,6 +126,9 @@ private:
     inline Closure& currentClosure() { return mClosures.back(); }
 
     void setupGlobalParameters();
+    float handleGlobalParameterNumber(const std::string& name, const SceneProperty& prop);
+    Vector3f handleGlobalParameterVector(const std::string& name, const SceneProperty& prop);
+    Vector4f handleGlobalParameterColor(const std::string& name, const SceneProperty& prop);
 
     std::string handlePropertyNumber(const std::string& name, const SceneProperty& prop, const NumberOptions& options);
 
