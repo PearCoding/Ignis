@@ -20,9 +20,10 @@ public:
         F_LoadShapes   = 0x100,
         F_LoadEntities = 0x200,
 
-        F_LoadExternals = 0x1000,
+        F_LoadExternals  = 0x1000,
+        F_LoadParameters = 0x2000,
 
-        F_LoadAll = F_LoadCamera | F_LoadFilm | F_LoadTechnique | F_LoadBSDFs | F_LoadTextures | F_LoadLights | F_LoadMedia | F_LoadShapes | F_LoadEntities | F_LoadExternals
+        F_LoadAll = F_LoadCamera | F_LoadFilm | F_LoadTechnique | F_LoadBSDFs | F_LoadTextures | F_LoadLights | F_LoadMedia | F_LoadShapes | F_LoadEntities | F_LoadExternals | F_LoadParameters
     };
 
     inline SceneParser() = default;

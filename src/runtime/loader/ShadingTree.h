@@ -125,6 +125,8 @@ private:
     inline const Closure& currentClosure() const { return mClosures.back(); }
     inline Closure& currentClosure() { return mClosures.back(); }
 
+    void setupGlobalParameters();
+
     std::string handlePropertyNumber(const std::string& name, const SceneProperty& prop, const NumberOptions& options);
 
     std::string handleTexture(const std::string& prop_name, const std::string& expr, bool needColor);

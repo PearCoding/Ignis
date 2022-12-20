@@ -17,6 +17,7 @@ public:
         OT_SHAPE,
         OT_TECHNIQUE,
         OT_TEXTURE,
+        OT_PARAMETER,
         _OT_COUNT
     };
 

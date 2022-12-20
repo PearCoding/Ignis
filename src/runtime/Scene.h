@@ -30,13 +30,15 @@ public:
     inline const auto& lights() const { return mLights; }
     inline const auto& media() const { return mMedia; }
     inline const auto& entities() const { return mEntities; }
+    inline const auto& parameters() const { return mParameters; }
 
-    inline std::shared_ptr<SceneObject> texture(const std::string& name) const { return mTextures.count(name) > 0 ? mTextures.at(name) : nullptr; }
-    inline std::shared_ptr<SceneObject> bsdf(const std::string& name) const { return mBSDFs.count(name) > 0 ? mBSDFs.at(name) : nullptr; }
-    inline std::shared_ptr<SceneObject> shape(const std::string& name) const { return mShapes.count(name) > 0 ? mShapes.at(name) : nullptr; }
-    inline std::shared_ptr<SceneObject> light(const std::string& name) const { return mLights.count(name) > 0 ? mLights.at(name) : nullptr; }
-    inline std::shared_ptr<SceneObject> medium(const std::string& name) const { return mMedia.count(name) > 0 ? mMedia.at(name) : nullptr; }
-    inline std::shared_ptr<SceneObject> entity(const std::string& name) const { return mEntities.count(name) > 0 ? mEntities.at(name) : nullptr; }
+    inline std::shared_ptr<SceneObject> texture(const std::string& name) const { return get(mTextures, name); }
+    inline std::shared_ptr<SceneObject> bsdf(const std::string& name) const { return get(mBSDFs, name); }
+    inline std::shared_ptr<SceneObject> shape(const std::string& name) const { return get(mShapes, name); }
+    inline std::shared_ptr<SceneObject> light(const std::string& name) const { return get(mLights, name); }
+    inline std::shared_ptr<SceneObject> medium(const std::string& name) const { return get(mMedia, name); }
+    inline std::shared_ptr<SceneObject> entity(const std::string& name) const { return get(mEntities, name); }
+    inline std::shared_ptr<SceneObject> parameter(const std::string& name) const { return get(mParameters, name); }
 
     inline void addTexture(const std::string& name, const std::shared_ptr<SceneObject>& texture) { mTextures[name] = texture; }
     inline void addBSDF(const std::string& name, const std::shared_ptr<SceneObject>& bsdf) { mBSDFs[name] = bsdf; }
@@ -44,6 +46,7 @@ public:
     inline void addLight(const std::string& name, const std::shared_ptr<SceneObject>& light) { mLights[name] = light; }
     inline void addMedium(const std::string& name, const std::shared_ptr<SceneObject>& medium) { mMedia[name] = medium; }
     inline void addEntity(const std::string& name, const std::shared_ptr<SceneObject>& entity) { mEntities[name] = entity; }
+    inline void addParameter(const std::string& name, const std::shared_ptr<SceneObject>& param) { mParameters[name] = param; }
 
     /// Add all information from other to this scene, replacing present information
     void addFrom(const Scene& other);
@@ -51,15 +54,26 @@ public:
     void addConstantEnvLight();
 
 private:
+    using ObjectMap = std::unordered_map<std::string, std::shared_ptr<SceneObject>>;
+
+    inline std::shared_ptr<SceneObject> get(const ObjectMap& map, const std::string& name) const
+    {
+        if (auto it = map.find(name); it != map.end())
+            return it->second;
+        else
+            return nullptr;
+    }
+
     std::shared_ptr<SceneObject> mTechnique;
     std::shared_ptr<SceneObject> mCamera;
     std::shared_ptr<SceneObject> mFilm;
 
-    std::unordered_map<std::string, std::shared_ptr<SceneObject>> mTextures;
-    std::unordered_map<std::string, std::shared_ptr<SceneObject>> mBSDFs;
-    std::unordered_map<std::string, std::shared_ptr<SceneObject>> mShapes;
-    std::unordered_map<std::string, std::shared_ptr<SceneObject>> mLights;
-    std::unordered_map<std::string, std::shared_ptr<SceneObject>> mMedia;
-    std::unordered_map<std::string, std::shared_ptr<SceneObject>> mEntities;
+    ObjectMap mTextures;
+    ObjectMap mBSDFs;
+    ObjectMap mShapes;
+    ObjectMap mLights;
+    ObjectMap mMedia;
+    ObjectMap mEntities;
+    ObjectMap mParameters;
 };
 } // namespace IG

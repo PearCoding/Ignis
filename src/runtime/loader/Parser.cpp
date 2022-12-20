@@ -383,6 +383,9 @@ static void handleNamedObject(Scene& scene, SceneObject::Type type, const std::f
     case SceneObject::OT_ENTITY:
         scene.addEntity(name, ptr);
         break;
+    case SceneObject::OT_PARAMETER:
+        scene.addParameter(name, ptr);
+        break;
     default:
         IG_ASSERT(false, "Unknown object type");
         break;
@@ -447,10 +450,10 @@ public:
         // Handle externals first, such that the current file can replace parts of it later on
         if (_CHECK_FLAG(SceneParser::F_LoadExternals) && doc.HasMember("externals")) {
             if (!doc["externals"].IsArray())
-                throw std::runtime_error("Expected external elements to be an array");
+                throw std::runtime_error("Expected 'external' elements to be an array");
             for (const auto& exts : doc["externals"].GetArray()) {
                 if (!exts.IsObject())
-                    throw std::runtime_error("Expected external element to be an object");
+                    throw std::runtime_error("Expected 'external' element to be an object");
 
                 handleExternalObject(loader, *scene, baseDir, exts, flags);
             }
@@ -467,61 +470,71 @@ public:
 
         if (_CHECK_FLAG(SceneParser::F_LoadShapes) && doc.HasMember("shapes")) {
             if (!doc["shapes"].IsArray())
-                throw std::runtime_error("Expected shapes element to be an array");
+                throw std::runtime_error("Expected 'shapes' element to be an array");
             for (const auto& shape : doc["shapes"].GetArray()) {
                 if (!shape.IsObject())
-                    throw std::runtime_error("Expected shape element to be an object");
+                    throw std::runtime_error("Expected 'shape' element to be an object");
                 handleNamedObject(*scene, SceneObject::OT_SHAPE, baseDir, shape);
             }
         }
 
         if (_CHECK_FLAG(SceneParser::F_LoadTextures) && doc.HasMember("textures")) {
             if (!doc["textures"].IsArray())
-                throw std::runtime_error("Expected textures element to be an array");
+                throw std::runtime_error("Expected 'textures' element to be an array");
             for (const auto& tex : doc["textures"].GetArray()) {
                 if (!tex.IsObject())
-                    throw std::runtime_error("Expected texture element to be an object");
+                    throw std::runtime_error("Expected 'texture' element to be an object");
                 handleNamedObject(*scene, SceneObject::OT_TEXTURE, baseDir, tex);
             }
         }
 
         if (_CHECK_FLAG(SceneParser::F_LoadBSDFs) && doc.HasMember("bsdfs")) {
             if (!doc["bsdfs"].IsArray())
-                throw std::runtime_error("Expected bsdfs element to be an array");
+                throw std::runtime_error("Expected 'bsdfs' element to be an array");
             for (const auto& bsdf : doc["bsdfs"].GetArray()) {
                 if (!bsdf.IsObject())
-                    throw std::runtime_error("Expected bsdf element to be an object");
+                    throw std::runtime_error("Expected 'bsdf' element to be an object");
                 handleNamedObject(*scene, SceneObject::OT_BSDF, baseDir, bsdf);
             }
         }
 
         if (_CHECK_FLAG(SceneParser::F_LoadLights) && doc.HasMember("lights")) {
             if (!doc["lights"].IsArray())
-                throw std::runtime_error("Expected lights element to be an array");
+                throw std::runtime_error("Expected 'lights' element to be an array");
             for (const auto& light : doc["lights"].GetArray()) {
                 if (!light.IsObject())
-                    throw std::runtime_error("Expected light element to be an object");
+                    throw std::runtime_error("Expected 'light' element to be an object");
                 handleNamedObject(*scene, SceneObject::OT_LIGHT, baseDir, light);
             }
         }
 
         if (_CHECK_FLAG(SceneParser::F_LoadMedia) && doc.HasMember("media")) {
             if (!doc["media"].IsArray())
-                throw std::runtime_error("Expected lights element to be an array");
+                throw std::runtime_error("Expected 'media' element to be an array");
             for (const auto& medium : doc["media"].GetArray()) {
                 if (!medium.IsObject())
-                    throw std::runtime_error("Expected medium element to be an object");
+                    throw std::runtime_error("Expected 'medium' element to be an object");
                 handleNamedObject(*scene, SceneObject::OT_MEDIUM, baseDir, medium);
             }
         }
 
         if (_CHECK_FLAG(SceneParser::F_LoadEntities) && doc.HasMember("entities")) {
             if (!doc["entities"].IsArray())
-                throw std::runtime_error("Expected entities element to be an array");
+                throw std::runtime_error("Expected 'entities' element to be an array");
             for (const auto& entity : doc["entities"].GetArray()) {
                 if (!entity.IsObject())
-                    throw std::runtime_error("Expected entity element to be an object");
+                    throw std::runtime_error("Expected 'entity' element to be an object");
                 handleNamedObject(*scene, SceneObject::OT_ENTITY, baseDir, entity);
+            }
+        }
+
+        if (_CHECK_FLAG(SceneParser::F_LoadParameters) && doc.HasMember("parameters")) {
+            if (!doc["parameters"].IsArray())
+                throw std::runtime_error("Expected 'parameters' element to be an array");
+            for (const auto& param : doc["parameters"].GetArray()) {
+                if (!param.IsObject())
+                    throw std::runtime_error("Expected 'parameter' element to be an object");
+                handleNamedObject(*scene, SceneObject::OT_PARAMETER, baseDir, param);
             }
         }
 

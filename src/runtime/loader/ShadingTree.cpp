@@ -19,11 +19,47 @@ ShadingTree::ShadingTree(LoaderContext& ctx)
     , mForceSpecialization(false)
 {
     beginClosure("_root");
+    setupGlobalParameters();
 }
 
 void ShadingTree::signalError()
 {
     mContext.signalError();
+}
+
+void ShadingTree::setupGlobalParameters()
+{
+    // Register all available user parameters
+    for (const auto& pair : mContext.Options.Scene->parameters()) {
+        const auto param       = pair.second;
+        const std::string type = param->pluginType();
+
+        if (type == "number") {
+            const float value = param->property("default").getNumber();
+
+            mContext.GlobalRegistry.FloatParameters[pair.first] = value;
+
+            const std::string param_name = "param_f32_" + whitespace_escaped(pair.first);
+            mHeaderLines.push_back("  let " + param_name + " = registry::get_global_parameter_f32(\"" + pair.first + "\", 0); maybe_unused(" + param_name + ");\n");
+            mTranspiler.registerCustomVariableNumber(pair.first, param_name);
+        } else if (type == "vector") {
+            const Vector3f value = param->property("default").getVector3();
+
+            mContext.GlobalRegistry.VectorParameters[pair.first] = value;
+
+            const std::string param_name = "param_vec3_" + whitespace_escaped(pair.first);
+            mHeaderLines.push_back("  let " + param_name + " = registry::get_global_parameter_vec3(\"" + pair.first + "\", vec3_expand(0)); maybe_unused(" + param_name + ");\n");
+            mTranspiler.registerCustomVariableVector(pair.first, param_name);
+        } else if (type == "color") {
+            const Vector3f value = param->property("default").getVector3();
+
+            mContext.GlobalRegistry.ColorParameters[pair.first] = Vector4f(value.x(), value.y(), value.z(), 1); // TODO: Support alpha?
+
+            const std::string param_name = "param_color_" + whitespace_escaped(pair.first);
+            mHeaderLines.push_back("  let " + param_name + " = registry::get_global_parameter_color(\"" + pair.first + "\", color_builtins::black); maybe_unused(" + param_name + ");\n");
+            mTranspiler.registerCustomVariableColor(pair.first, param_name);
+        }
+    }
 }
 
 // ------------------ Number
