@@ -30,10 +30,15 @@ public:
         Reset,    // Reset the rendering
         Quit      // Quit the application
     };
-    InputResult handleInput(CameraProxy& cam);
-    void update();
+    [[nodiscard]] InputResult handleInput(CameraProxy& cam);
 
-    inline DebugMode currentDebugMode() const { return mDebugMode; }
+    enum class UpdateResult {
+        Continue, // Continue, nothing of importance changed
+        Reset     // Reset the rendering
+    };
+    [[nodiscard]] UpdateResult update();
+
+    [[nodiscard]] inline DebugMode currentDebugMode() const { return mDebugMode; }
 
     void setTravelSpeed(float v);
 

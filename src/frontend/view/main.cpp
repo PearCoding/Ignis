@@ -217,7 +217,13 @@ int main(int argc, char** argv)
         }
 
         timer_ui.start();
-        ui->update();
+        switch (ui->update()) {
+        case UI::UpdateResult::Reset:
+            runtime->reset();
+            break;
+        default:
+            break;
+        }
         timer_ui.stop();
     }
 

@@ -28,6 +28,8 @@ SET(SRC_FILES
     Inspector.h
     Pose.cpp
     Pose.h
+    PropertyView.cpp
+    PropertyView.h
     UI.cpp
     UI.h)
 
