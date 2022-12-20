@@ -65,10 +65,16 @@ def export_light(result, inst):
             )), "intensity": map_rgb([power[0] * factor, power[1] * factor, power[2] * factor]), "cutoff": math.degrees(cutoff), "falloff": math.degrees(falloff)}
         )
     elif l.type == "SUN":
-        result["lights"].append(
-            {"type": "direction", "name": light.name, "direction": map_vector(
-                direction.normalized()), "irradiance": map_rgb(power)}
-        )
+        if l.angle < 1e-4:
+            result["lights"].append(
+                {"type": "directional", "name": light.name, "direction": map_vector(
+                    direction.normalized()), "irradiance": map_rgb(power) }
+            )
+        else:
+            result["lights"].append(
+                {"type": "sun", "name": light.name, "direction": map_vector(
+                    direction.normalized()), "irradiance": map_rgb(power), "angle": math.degrees(l.angle) }
+            )
     elif l.type == "AREA":
         size_x = l.size
         if l.shape == 'SQUARE':

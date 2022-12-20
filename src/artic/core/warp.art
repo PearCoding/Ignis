@@ -59,7 +59,7 @@ fn @dir_from_spherical(theta: f32, phi: f32) -> Vec3 {
 // ----------------------------------------------
 // Clarberg: Fast Equal-Area Mapping of the (Hemi)Sphere using SIMD
 // The implementation for equal area maps from (0.5, 0.5) -> UnitZ
-// incontrary to the spherical map with (0,0) -> UnitZ 
+// in contrary to the spherical map with (0,0) -> UnitZ 
 fn @equal_area_square_to_sphere(p: Vec2) -> Vec3 {
     let u = 2 * p.x - 1;
     let v = 2 * p.y - 1;

@@ -94,6 +94,7 @@ predef_eps = {
     "cycles-lights": 5e-2,  # Ignis should resemble Blender Cycles, but there is no need to be exact
     "cycles-principled": 5e-2,
     "cycles-tex": 1e-2,
+    "cycles-sun": 1e-2,
     "room": 1e-3,
     "volume": 5e-3,
     "env4k": 8e-2,

@@ -10,7 +10,7 @@ struct EmissionSample {
 
 // Result from sampling direct lighting from a light source
 struct DirectLightSample {
-    pos:       Vec3,  // Position on the light source
+    pos:       Vec3,  // Position on the light source. If infinite this can be undefined and should not be used
     dir:       Vec3,  // Normalized direction towards the light source
     intensity: Color, // Intensity along the direction, already divided by the generating pdf
     pdf:       Pdf,   // Probability to sample the light. If the light is infinite the pdf has to be given in solid angle!

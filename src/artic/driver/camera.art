@@ -61,7 +61,7 @@ struct CameraSample {
     coord:  PixelCoord, // Sampled pixel
     dir:    Vec3,       // Sampled direction from given point TOWARDS the camera. The vector is NOT normalized
     weight: Color,      // Importance (already divided by pdf)
-    pdf:    f32         // Pdf of sample to connect
+    pdf:    f32         // Pdf of sample to connect (in area measure)
 }
 
 // Opaque camera object

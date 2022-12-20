@@ -1,6 +1,7 @@
 enum PdfMeasure {
     SolidAngle, // Projected
-    Area
+    Area,
+    Delta
 }
 
 // Variable version of the pdf. Might be in area or solid angle measure
@@ -28,4 +29,11 @@ fn @make_solid_pdf(value: f32) = Pdf {
     measure  = PdfMeasure::SolidAngle,
     as_area  = @|cos, dist2| measure::to_area(value, cos, dist2),
     as_solid = @|_, _| value,
+};
+
+fn @make_delta_pdf() = Pdf {
+    value    = 1,
+    measure  = PdfMeasure::Delta,
+    as_area  = @|_, _| 1:f32,
+    as_solid = @|_, _| 1:f32,
 };
