@@ -166,7 +166,7 @@ Functions
 -   ``avg(vec2) -> num``
 -   ``avg(vec3) -> num``
 -   ``avg(vec4) -> num``
--   ``bump(vec3, vec3, vec3, num, num, num, num) -> vec3``
+-   ``bump(vec3, vec3, vec3, num, num, num) -> vec3``
 -   ``blackbody(num) -> vec4``
 -   ``cbrt(num) -> num``
 -   ``cbrt(vec2) -> vec2``
