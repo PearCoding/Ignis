@@ -8,8 +8,9 @@ namespace IG {
 
 static inline void draw_header()
 {
-    ImGui::TableSetupColumn("Name");
-    ImGui::TableSetupColumn("Value");
+    constexpr int HeaderFlags = ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoHide | ImGuiTableColumnFlags_NoSort;
+    ImGui::TableSetupColumn("Name", HeaderFlags | ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn("Value", HeaderFlags | ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
 }
 
@@ -20,9 +21,10 @@ static AlignedUnorderedMap<std::string, Vector4f> sColParameters;
 
 bool ui_property_view(Runtime* runtime)
 {
-    constexpr int TableFlags = ImGuiTableFlags_PadOuterX;
-    constexpr int InputFlags = ImGuiInputTextFlags_EnterReturnsTrue;
-    constexpr int ColorFlags = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_PickerHueBar | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview;
+    constexpr int TableFlags  = ImGuiTableFlags_PadOuterX;
+    constexpr int InputFlags  = ImGuiInputTextFlags_EnterReturnsTrue;
+    constexpr int SliderFlags = ImGuiSliderFlags_None;
+    constexpr int ColorFlags  = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_PickerHueBar | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview;
 
     const auto& intParams = runtime->getIntParameters();
     const auto& numParams = runtime->getNumberParameters();
@@ -83,8 +85,11 @@ bool ui_property_view(Runtime* runtime)
                     const bool changeable = !string_starts_with(param.first, "_");
 
                     if (changeable) {
+                        const float min      = std::min(0.0f, std::floor(param.second));
+                        const float max      = std::max(1.0f, std::ceil(param.second));
                         const std::string id = "##" + param.first;
-                        if (ImGui::InputFloat(id.c_str(), &param.second, 0, 0, "%.3f", InputFlags)) {
+                        ImGui::SetNextItemWidth(-1);
+                        if (ImGui::SliderFloat(id.c_str(), &param.second, min, max, "%.3f", SliderFlags)) {
                             runtime->setParameter(param.first, param.second);
                             updated = true;
                         }
