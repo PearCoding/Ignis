@@ -11,5 +11,6 @@ public:
 
 private:
     std::shared_ptr<SceneObject> mBSDF;
+    bool mUseExplicitRoughness;
 };
 } // namespace IG

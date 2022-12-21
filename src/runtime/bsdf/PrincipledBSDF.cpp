@@ -7,6 +7,7 @@ PrincipledBSDF::PrincipledBSDF(const std::string& name, const std::shared_ptr<Sc
     : BSDF(name, "principled")
     , mBSDF(bsdf)
 {
+    mUseExplicitRoughness = bsdf->hasProperty("roughness_u") || bsdf->hasProperty("roughness_v");
 }
 
 void PrincipledBSDF::serialize(const SerializationInput& input) const
@@ -20,8 +21,13 @@ void PrincipledBSDF::serialize(const SerializationInput& input) const
     input.Tree.addNumber("diffuse_transmission", *mBSDF, 0.0f, ShadingTree::NumberOptions::Zero());
     input.Tree.addNumber("specular_transmission", *mBSDF, 0.0f);
     input.Tree.addNumber("specular_tint", *mBSDF, 0.0f);
-    input.Tree.addNumber("roughness", *mBSDF, 0.5f, ShadingTree::NumberOptions::Dynamic());
-    input.Tree.addNumber("anisotropic", *mBSDF, 0.0f, ShadingTree::NumberOptions::Zero());
+    if (mUseExplicitRoughness) {
+        input.Tree.addNumber("roughness_u", *mBSDF, 0.5f, ShadingTree::NumberOptions::Dynamic());
+        input.Tree.addNumber("roughness_v", *mBSDF, 0.5f, ShadingTree::NumberOptions::Dynamic());
+    } else {
+        input.Tree.addNumber("roughness", *mBSDF, 0.5f, ShadingTree::NumberOptions::Dynamic());
+        input.Tree.addNumber("anisotropic", *mBSDF, 0.0f, ShadingTree::NumberOptions::Zero());
+    }
     input.Tree.addNumber("flatness", *mBSDF, 0.0f);
     input.Tree.addNumber("metallic", *mBSDF, 0.0f);
     input.Tree.addNumber("sheen", *mBSDF, 0.0f, ShadingTree::NumberOptions::Zero());
@@ -35,15 +41,22 @@ void PrincipledBSDF::serialize(const SerializationInput& input) const
 
     const std::string bsdf_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()
-                 << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| "
-                 << "make_principled_bsdf(ctx.surf, "
+                 << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| { ";
+
+    if (mUseExplicitRoughness) {
+        input.Stream << "let ru = " << input.Tree.getInline("roughness_u") << ";"
+                     << "let rv = " << input.Tree.getInline("roughness_v") << ";";
+    } else {
+        input.Stream << "let (ru, rv) = principled::compute_roughness(" << input.Tree.getInline("roughness") << "," << input.Tree.getInline("anisotropic") << ");";
+    }
+
+    input.Stream << "make_principled_bsdf(ctx.surf, "
                  << input.Tree.getInline("base_color") << ", "
                  << input.Tree.getInline("ior") << ", "
                  << input.Tree.getInline("diffuse_transmission") << ", "
                  << input.Tree.getInline("specular_transmission") << ", "
                  << input.Tree.getInline("specular_tint") << ", "
-                 << input.Tree.getInline("roughness") << ", "
-                 << input.Tree.getInline("anisotropic") << ", "
+                 << "ru, rv, "
                  << input.Tree.getInline("flatness") << ", "
                  << input.Tree.getInline("metallic") << ", "
                  << input.Tree.getInline("sheen") << ", "
@@ -52,7 +65,7 @@ void PrincipledBSDF::serialize(const SerializationInput& input) const
                  << input.Tree.getInline("clearcoat_gloss") << ", "
                  << input.Tree.getInline("clearcoat_roughness") << ", "
                  << (is_thin ? "true" : "false") << ", "
-                 << (clearcoat_top_only ? "true" : "false") << ");" << std::endl;
+                 << (clearcoat_top_only ? "true" : "false") << ") };" << std::endl;
 
     input.Tree.endClosure();
 }

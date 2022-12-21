@@ -26,8 +26,8 @@ struct Closure {
     diffuse_transmission:  f32,
     specular_transmission: f32,
     specular_tint:         f32,
-    roughness:             f32,
-    anisotropic:           f32,
+    roughness_u:           f32,
+    roughness_v:           f32,
     flatness:              f32,
     metallic:              f32, 
     sheen:                 f32,
@@ -57,25 +57,28 @@ fn @tint_color(color: Color) -> Color {
 }
 fn @sheen_tint_color(color: Color, tint: f32) = super::color_lerp(color_builtins::white, tint_color(color), tint);
 
-fn @getMicro(closure: Closure, roughness: f32) -> microfacet::MicrofacetDistribution {
-    let aspect = if ?closure.anisotropic && closure.anisotropic == 0 { 1 } else { math_builtins::sqrt[f32](1 - super::clampf(closure.anisotropic, 0, 1) * 0.9) };
-    let ax	   = math_builtins::fmax[f32](1e-3, roughness * roughness / aspect);
-    let ay	   = math_builtins::fmax[f32](1e-3, roughness * roughness * aspect);
+fn @compute_roughness(roughness: f32, anisotropic: f32) -> (f32, f32) {
+    let aspect = if ?anisotropic && anisotropic == 0 { 1 } else { math_builtins::sqrt[f32](1 - super::clampf(anisotropic, 0, 1) * 0.9) };
+    let ax	   = roughness * roughness / aspect;
+    let ay	   = roughness * roughness * aspect;
+    (ax, ay)
+}
 
+fn @getMicro(closure: Closure) -> microfacet::MicrofacetDistribution {
     let face_normal = shading::to_local(closure.surf.local, closure.surf.face_normal);
-    microfacet::make_vndf_ggx_distribution(face_normal, super::mat3x3_identity(), ax, ay)
-    // microfacet::make_ggx_distribution(super::mat3x3_identity(), ax, ay)
+    microfacet::make_vndf_ggx_distribution(face_normal, super::mat3x3_identity(), closure.roughness_u, closure.roughness_v)
+    // microfacet::make_ggx_distribution(super::mat3x3_identity(), roughness_u, roughness_v)
 }
 
-fn @getReflectionMicro(closure: Closure) = getMicro(closure, closure.roughness);
-fn @getRefractionMicro(closure: Closure) -> microfacet::MicrofacetDistribution {
-    let roughness = if closure.thin { 
-        super::clampf((0.65 * closure.ior - 0.35) * closure.roughness, 0, 1)
+fn @getReflectionMicro(closure: Closure) = getMicro(closure);
+fn @getRefractionMicro(closure: Closure) = getMicro(if closure.thin { 
+        closure.{ 
+            roughness_u = super::clampf((0.65 * closure.ior - 0.35) * closure.roughness_u, 0, 1),
+            roughness_v = super::clampf((0.65 * closure.ior - 0.35) * closure.roughness_v, 0, 1)
+        }
     } else { 
-        closure.roughness
-    };
-    getMicro(closure, roughness)
-}
+        closure
+    });
 
 fn @lerpFresnelTerm(closure: EvalClosure, r0: Color) -> Color {
     //let cl = super::absolute_cos(closure.wi, closure.h);
@@ -108,7 +111,7 @@ fn @evalDisneyFresnelTerm(closure: EvalClosure) -> Color {
 }
 
 fn @evalSubsurfaceTerm(closure: EvalClosure) -> f32 {
-    let r2    = closure.general.roughness * closure.general.roughness;
+    let r2    = closure.general.roughness_u * closure.general.roughness_v;
     let HdotL = super::vec3_dot(closure.wi, closure.h);
     let fss90 = HdotL * HdotL * r2;
     let aNdL  = shading::abs_cos_theta(closure.wi);
@@ -132,7 +135,7 @@ fn @evalDiffuseTerm(closure: EvalClosure) -> f32 {
     let diff = (1 - 0.5 * lk) * (1 - 0.5 * vk);
 
     let VdotL = super::absolute_cos(closure.wi, closure.wo);
-    let rr    = (VdotL + 1) * closure.general.roughness;
+    let rr    = (VdotL + 1) * (closure.general.roughness_u + closure.general.roughness_v) / 2;
     let retro = rr * (lk + vk + lk * vk * (rr - 1));
 
     let ss = if closure.general.thin {1 - closure.general.flatness + evalSubsurfaceTerm(closure) * closure.general.flatness } else { 1 };
@@ -249,7 +252,7 @@ fn @calcLobeDistribution(closure: Closure, wo: Vec3) -> LobeDistribution {
 fn @make_principled_bsdf(surf: SurfaceElement,
                      base_color: Color,
                      ior: f32, diffuse_transmission: f32, specular_transmission: f32, specular_tint: f32,
-                     roughness: f32, anisotropic: f32, flatness: f32, metallic: f32, 
+                     roughness_u: f32, roughness_v: f32, flatness: f32, metallic: f32, 
                      sheen: f32, sheen_tint: f32, clearcoat: f32, clearcoat_gloss: f32, clearcoat_roughness: f32,
                      thin: bool, clearcoat_top_only: bool) -> Bsdf {
     let micro_eps   = 1e-5:f32; // Pdf epsilon for microfacet samples
@@ -263,8 +266,8 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         diffuse_transmission  = diffuse_transmission,
         specular_transmission = specular_transmission,
         specular_tint         = specular_tint,
-        roughness             = roughness,
-        anisotropic           = anisotropic,
+        roughness_u           = math_builtins::fmax[f32](1e-3, roughness_u),
+        roughness_v           = math_builtins::fmax[f32](1e-3, roughness_v),
         flatness              = flatness,
         metallic              = metallic,
         sheen                 = sheen,

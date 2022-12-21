@@ -262,6 +262,11 @@ Principled (:monosp:`principled`)
     - :code:`0`
     - Yes
     - Anisotropy within 0 and 1. The number indicates the effect of anisotropy. The orientation is given by the normal and tangent frame.
+  * - roughness_u, roughness_v
+    - |number|
+    - :code:`0.5`, :code:`0.5`
+    - Yes
+    - Anisotropic roughness terms. Can not be specified together with :paramtype:`roughness` and :paramtype:`anisotropic`.
   * - ior
     - |number|
     - ~bk7   
