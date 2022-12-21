@@ -98,12 +98,12 @@ Dielectric (:monosp:`dielectric`)
 .. subfigure::  images/bsdf_dielectric.jpg
   :align: center
   
-  Dielectric
+  Smooth dielectric
 
 .. subfigure::  images/bsdf_thindielectric.jpg
   :align: center
   
-  Dielectric with thin approximation 
+  Smooth dielectric with thin approximation 
 
 .. subfigure::  images/bsdf_roughdielectric.jpg
   :align: center
@@ -152,7 +152,7 @@ Conductor (:monosp:`conductor`)
 .. subfigure::  images/bsdf_conductor.jpg
   :align: center
   
-  Gold conductor
+  Smooth gold conductor
 
 .. subfigure::  images/bsdf_roughconductor.jpg
   :align: center
@@ -210,7 +210,7 @@ Plastic (:monosp:`plastic`)
 .. subfigure::  images/bsdf_plastic.jpg
   :align: center
   
-  Plastic
+  Smooth plastic
 
 .. subfigure::  images/bsdf_roughplastic.jpg
   :align: center
