@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <meta property="article:modified_time" content="2022-12-21T09:33:34+00:00" />
+    <meta property="article:modified_time" content="2022-12-21T10:17:06+00:00" />
     <title>PExpr &#8212; Ignis  documentation</title>
   
   
@@ -336,10 +336,6 @@
               
   <section id="pexpr">
 <span id="id1"></span><h1>PExpr<a class="headerlink" href="#pexpr" title="Permalink to this heading">#</a></h1>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The PExpr documentation is not complete. For further details it is recommended to have a look at the scenes distributed together with the framework.</p>
-</div>
 <p><strong>P</strong>ear<strong>Expr</strong>ession is a single line, math like, functional language.
 It is, by design, easy to transpile to other languages like <code class="docutils literal notranslate"><span class="pre">artic</span></code>, like in the case of the Ignis rendering framework.
 It has <strong>no</strong> support for control flow, like <code class="docutils literal notranslate"><span class="pre">if</span></code> or <code class="docutils literal notranslate"><span class="pre">while</span></code>, and statements in general.
@@ -444,13 +440,14 @@ Parameters can be defined as follow:</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<p>Currently only the types <code class="docutils literal notranslate"><span class="pre">number</span></code> for <code class="docutils literal notranslate"><span class="pre">num</span></code>, <code class="docutils literal notranslate"><span class="pre">vector</span></code> for <code class="docutils literal notranslate"><span class="pre">vec3</span></code> and <code class="docutils literal notranslate"><span class="pre">color</span></code> for <code class="docutils literal notranslate"><span class="pre">vec4</span></code> are available. The given <code class="docutils literal notranslate"><span class="pre">value</span></code> can not be a PExpr!
-The above defined parameters have precedence over texture names, but not the above defined special variables and constants.</p>
-<p>Property names starting with an <code class="docutils literal notranslate"><span class="pre">_</span></code> are considered read-only and can not be changed within the viewer or cli.</p>
+<p>Currently only the types <code class="docutils literal notranslate"><span class="pre">number</span></code> for <code class="docutils literal notranslate"><span class="pre">num</span></code>, <code class="docutils literal notranslate"><span class="pre">vector</span></code> for <code class="docutils literal notranslate"><span class="pre">vec3</span></code> and <code class="docutils literal notranslate"><span class="pre">color</span></code> for <code class="docutils literal notranslate"><span class="pre">vec4</span></code> are available. The given <code class="docutils literal notranslate"><span class="pre">value</span></code> can not be a PExpr!</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Defining color with alpha is currently not supported. Use an array of three numbers to define color.</p>
+<p>Defining color with alpha is currently not supported. Use an array of <strong>three</strong> numbers to define color.</p>
 </div>
+<p>The above defined parameters have precedence over texture names, but not the already defined special variables and constants in the previous section.</p>
+<p>Property names starting with an <code class="docutils literal notranslate"><span class="pre">_</span></code> are considered read-only and can not be changed within the viewer. You may have to press <code class="docutils literal notranslate"><span class="pre">F4</span></code> to open up the property view in <code class="docutils literal notranslate"><span class="pre">igview</span></code>.</p>
+<p>The command line options <code class="docutils literal notranslate"><span class="pre">--Pi</span></code>, <code class="docutils literal notranslate"><span class="pre">--Pn</span></code>, <code class="docutils literal notranslate"><span class="pre">--Pv</span></code> and <code class="docutils literal notranslate"><span class="pre">--Pc</span></code> allow setting the parameters to a different value at the start of the rendering. Using the command line parameters allow changing internal and read-only flagged parameters as well.</p>
 </section>
 <section id="functions">
 <h2>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">#</a></h2>
