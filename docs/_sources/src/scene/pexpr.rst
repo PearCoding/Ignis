@@ -106,10 +106,10 @@ The above defined special variable and constant names have precedence over textu
 
 .. _pexpr_parameters:
 
-Parameters
-----------
+Scene Parameters
+----------------
 
-Defining parameters inside the :code:`"parameters"` section in the scene description allows the convenient usage of user input in the viewer and the cli. All defined parameters are available as variables inside a PExpr expression.
+Defining scene-wide parameters inside the :code:`"parameters"` section in the scene description allows the convenient usage of user input in the viewer and the cli. All defined parameters are available as variables inside a PExpr expression.
 Parameters can be defined as follow:
 
 .. code-block:: javascript

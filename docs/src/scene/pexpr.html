@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <meta property="article:modified_time" content="2022-12-21T10:17:06+00:00" />
+    <meta property="article:modified_time" content="2022-12-21T10:18:19+00:00" />
     <title>PExpr &#8212; Ignis  documentation</title>
   
   
@@ -423,9 +423,9 @@ SeExpr is more complex and industry proven, however, more difficult to transpile
 These texture variables use the variable <code class="docutils literal notranslate"><span class="pre">uv</span></code> as their texture coordinate implicitly.
 The above defined special variable and constant names have precedence over texture names and parameters as explained below.</p>
 </section>
-<section id="parameters">
-<span id="pexpr-parameters"></span><h2>Parameters<a class="headerlink" href="#parameters" title="Permalink to this heading">#</a></h2>
-<p>Defining parameters inside the <code class="code docutils literal notranslate"><span class="pre">&quot;parameters&quot;</span></code> section in the scene description allows the convenient usage of user input in the viewer and the cli. All defined parameters are available as variables inside a PExpr expression.
+<section id="scene-parameters">
+<span id="pexpr-parameters"></span><h2>Scene Parameters<a class="headerlink" href="#scene-parameters" title="Permalink to this heading">#</a></h2>
+<p>Defining scene-wide parameters inside the <code class="code docutils literal notranslate"><span class="pre">&quot;parameters&quot;</span></code> section in the scene description allows the convenient usage of user input in the viewer and the cli. All defined parameters are available as variables inside a PExpr expression.
 Parameters can be defined as follow:</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
@@ -771,8 +771,8 @@ The above defined function names have precedence over texture names, if the sign
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#parameters">
-   Parameters
+  <a class="reference internal nav-link" href="#scene-parameters">
+   Scene Parameters
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
