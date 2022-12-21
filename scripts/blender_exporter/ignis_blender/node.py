@@ -250,8 +250,10 @@ def _export_rgb_math(ctx, node):
     is_new_node = hasattr(node, "clamp_factor")
 
     fac = export_node(ctx, node.inputs[0])
-    col1 = export_node(ctx, node.inputs[6 if is_new_node else 1])  # Background (I)
-    col2 = export_node(ctx, node.inputs[7 if is_new_node else 2])  # Foreground (M)
+    # Background (I)
+    col1 = export_node(ctx, node.inputs[6 if is_new_node else 1])
+    # Foreground (M)
+    col2 = export_node(ctx, node.inputs[7 if is_new_node else 2])
 
     # Support for new node ShaderNodeMix (Blender 3.4)
     clamp_factor = getattr(node, "clamp_factor", False)
@@ -810,6 +812,7 @@ def _export_vector_transform(ctx, node):
 
     vec = export_node(ctx, node.inputs["Vector"])
     if node.convert_from == 'CAMERA' or node.convert_to == 'CAMERA':
+        # TODO: Add support for this as it is easy to implement if the orientation is exposed to PExpr
         print(
             f"Transforming from {node.convert_from} to {node.convert_to} is not supported")
     elif node.convert_from != node.convert_to:
@@ -834,24 +837,25 @@ def _export_normal(ctx, node, output_name):
 
 
 def _export_normalmap(ctx, node):
-    # Only supporting tangent space
-    if node.space != 'TANGENT' and node.space != 'WORLD':
-        print(
-            f"Only tangent and world space normal mapping supported")
-
     color = export_node(ctx, node.inputs["Color"])
     strength = export_node(ctx, node.inputs["Strength"])
 
     ln = f"(2*{color}-color(1)).xyz"
     if node.space == 'TANGENT':
         dn = f"norm(Nx*({ln}).x + Ny*({ln}).y + N*({ln}).z)"
+    elif node.space == 'OBJECT':
+        dn = f"norm(transform_normal({ln},\"object\",\"global\"))"
+    elif node.space == 'BLENDER_OBJECT':
+        dn = f"norm(transform_normal(({ln})*vec3(-1,-1,1),\"object\",\"global\"))"
+    elif node.space == 'BLENDER_WORLD':
+        dn = f"norm(({ln})*vec3(-1,-1,1))"
     else:
         dn = f"norm({ln})"
 
     if try_extract_node_value(strength) == 1:
         return dn
     elif try_extract_node_value(strength) == 0:
-        return "vec3(0)"
+        return "N"
     else:
         return f"norm(({dn} - N)*{strength} + N)"
 
