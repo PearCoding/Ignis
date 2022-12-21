@@ -61,12 +61,12 @@ Dielectric (:monosp:`dielectric`)
     - |color|
     - :code:`1`
     - Yes
-    - TODO
+    - Reflectance factor. Should be less or equal to 1 for each component for physical correctness.
   * - specular_transmittance
     - |color|
     - :code:`1`
     - Yes
-    - TODO
+    - Transmittance factor. Should be less or equal to 1 for each component for physical correctness.
   * - ext_ior, int_ior
     - |number|
     - ~vacuum, ~bk7
@@ -81,12 +81,17 @@ Dielectric (:monosp:`dielectric`)
     - |bool|
     - |false|
     - No
-    - True if the glass should be treated as a thin interface. :paramtype:`int_ior` will be always the inside of the thin surface, regardless of the direction of the surface normal.
+    - |true| if the glass should be treated as a thin interface. :paramtype:`int_ior` will be always the inside of the thin surface, regardless of the direction of the surface normal.
   * - roughness_u, roughness_v
     - |number|
     - :code:`0`, :code:`0`
     - Yes
-    - Roughness of the dielectric. Can be specified isotropic using :paramtype:`roughness` as well. :paramtype:`thin` will be ignored if roughness is greater than zero.
+    - Roughness of the dielectric. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead. :paramtype:`thin` will be ignored if roughness is greater than zero.
+  * - roughness, anisotropic
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness and anisotropic terms. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution. :paramtype:`thin` will be ignored if roughness is greater than zero.
 
 .. subfigstart::
 
@@ -135,7 +140,12 @@ Conductor (:monosp:`conductor`)
     - |number|
     - :code:`0`, :code:`0`
     - Yes
-    - Roughness terms. Can be specified isotropic using :paramtype:`roughness` as well.
+    - Roughness terms. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead.
+  * - roughness, anisotropic
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness and anisotropic terms. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution.
 
 .. subfigstart::
 
@@ -168,12 +178,12 @@ Plastic (:monosp:`plastic`)
     - |color|
     - :code:`1`
     - Yes
-    - TODO
+    - Specular reflectance. Should be less or equal to 1 for each component for physical correctness.
   * - diffuse_reflectance
     - |color|
     - :code:`0.8`
     - Yes
-    - TODO
+    - Diffuse reflectance. Should be less or equal to 1 for each component for physical correctness.
   * - ext_ior, int_ior
     - |number|
     - ~vacuum, ~bk7
@@ -188,7 +198,12 @@ Plastic (:monosp:`plastic`)
     - |number|
     - :code:`0`, :code:`0`
     - Yes
-    - Roughness terms. Can be specified isotropic using :paramtype:`roughness` as well. 
+    - Roughness terms. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead.
+  * - roughness, anisotropic
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness and anisotropic terms. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution.
 
 .. subfigstart::
 
@@ -216,12 +231,12 @@ Phong (:monosp:`phong`)
     - |color|
     - :code:`1`
     - Yes
-    - TODO
+    - Reflectance factor. Should be less or equal to 1 for each component for physical correctness. See note below for PBR consideration.
   * - exponent
     - |number|
     - :code:`30`
     - Yes
-    - TODO
+    - Exponent of the lobe. Greater number results into a greater peak, therefore the visible peak spot will be smaller.
 
 .. subfigstart::
 
@@ -246,22 +261,22 @@ Principled (:monosp:`principled`)
     - |color|
     - :code:`0.8`
     - Yes
-    - TODO
+    - Base color of the principled bsdf. Should be less or equal to 1 for each component for physical correctness.
   * - metallic
     - |number|
     - :code:`0`
     - Yes
-    - TODO
-  * - roughness
+    - A number between 0 and 1. A metallic value of 1 displays a full metallic (conductor), which can not transmit via refraction.
+  * - roughness_u, roughness_v
     - |number|
-    - :code:`0.5`
+    - :code:`0.5`, :code:`0.5`
     - Yes
-    - TODO
-  * - anisotropic
+    - Anisotropic microfacet roughness for specular, diffuse and sheen reflection terms. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead. The roughness is computed via the GGX method.
+  * - roughness, anisotropic
     - |number|
-    - :code:`0`
+    - :code:`0.5`, :code:`0`
     - Yes
-    - TODO
+    - The microfacet roughness for specular, diffuse and sheen reflection and anisotropic terms. The roughness is computed via the GGX method. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution.
   * - ior
     - |number|
     - ~bk7   
@@ -276,42 +291,47 @@ Principled (:monosp:`principled`)
     - |bool|
     - |false|
     - No
-    - TODO
+    - |true| if the bsdf should be treated as a thin interface, which affects the refraction and subsurface behavior.
   * - flatness
     - |number|
     - :code:`0`
     - Yes
-    - TODO
+    - Amount of subsurface approximation. Only available if :paramtype:`thin` is |true|.
   * - specular_transmission
     - |number|
     - :code:`0`
     - Yes
-    - TODO
+    - Amount of specular transmission. Should be less or equal to 1 for physical correctness.
   * - specular_tint
     - |number|
     - :code:`0`
     - Yes
-    - TODO
+    - Mix factor of white and :paramtype:`base_color` for specular reflections.
+  * - diffuse_transmission
+    - |number|
+    - :code:`0`
+    - Yes
+    - Amount of diffuse transmission. Should be less or equal to 1 for physical correctness. This is often named *translucency* in other applications.
   * - sheen
     - |number|
     - :code:`0`
     - Yes
-    - TODO
+    - Amount of soft velvet layer resulting into a soft reflection near the edges.
   * - sheen_tint
     - |number|
     - :code:`0`
     - Yes
-    - TODO
+    - Mix factor of white and :paramtype:`base_color` for sheen reflections.
   * - clearcoat
     - |number|
     - :code:`0`
     - Yes
-    - TODO
+    - Amount of white specular layer at the top.
   * - clearcoat_gloss
     - |number|
     - :code:`0`
     - Yes
-    - TODO
+    - Amount of shininess of the clearcoat layer.
   * - clearcoat_top_only
     - |bool|
     - |true|
@@ -321,12 +341,7 @@ Principled (:monosp:`principled`)
     - |number|
     - :code:`0.1`
     - Yes
-    - TODO
-  * - diffuse_transmission
-    - |number|
-    - :code:`0`
-    - Yes
-    - TODO
+    - The isotropic microfacet roughness for clearcoat. Higher values result into a rougher appearance. The roughness computed via the GGX method.
 
 .. subfigstart::
 
@@ -349,12 +364,12 @@ Blend (:monosp:`blend`)
     - |bsdf|
     - *None*
     - No
-    - TODO
+    - The two bsdfs which should be blended.
   * - weight
     - |number|
     - :code:`0.5`
     - Yes
-    - TODO
+    - Amount of blend between the first and second bsdf.
 
 .. subfigstart::
 
@@ -377,17 +392,17 @@ Mask (:monosp:`mask`)
     - |bsdf|
     - *None*
     - No
-    - TODO
+    - The bsdf which should be masked out.
   * - weight
     - |number|
     - :code:`0.5`
     - Yes
-    - TODO
+    - Amount of masking. This is only useful if the weight is spatially varying, else it behaves like opacity.
   * - inverted
     - |bool|
     - |false|
     - No
-    - TODO
+    - |true| if the weight should be inverted.
 
 .. subfigstart::
 
@@ -410,22 +425,22 @@ Cutoff (:monosp:`cutoff`)
     - |bsdf|
     - *None*
     - No
-    - TODO
+    - The bsdf which should be cutoff.
   * - weight
     - |number|
     - :code:`0.5`
     - Yes
-    - TODO
+    - Weight factor for cutoff. This is only useful if the weight or :paramtype:`cutoff` is spatially varying.
   * - cutoff
     - |number|
     - :code:`0.5`
     - Yes
-    - TODO
+    - Threshold for cutoff. This is only useful if cutoff or :paramtype:`weight` is spatially varying.
   * - inverted
     - |bool|
     - |false|
     - No
-    - TODO
+    - |true| if the weight should be inverted. Keep in mind that :paramtype:`cutoff` is not inverted.
 
 .. subfigstart::
 
@@ -465,7 +480,7 @@ Normal mapping (:monosp:`normalmap`)
     - |bsdf|
     - *None*
     - No
-    - TODO
+    - The bsdf the new normal will be forwarded to.
   * - map
     - |color|
     - :code:`1`
@@ -475,7 +490,7 @@ Normal mapping (:monosp:`normalmap`)
     - |number|
     - :code:`1`
     - Yes
-    - TODO
+    - Interpolation factor between the old and new normal.
 
 .. subfigstart::
 
@@ -498,7 +513,7 @@ Bump mapping (:monosp:`bumpmap`)
     - |bsdf|
     - *None*
     - No
-    - TODO
+    - The bsdf the new normal will be forwarded to.
   * - map
     - |texture|
     - *None*
@@ -508,7 +523,7 @@ Bump mapping (:monosp:`bumpmap`)
     - |number|
     - :code:`1`
     - Yes
-    - TODO
+    - Interpolation factor between the old and new normal.
 
 .. subfigstart::
 
@@ -531,7 +546,7 @@ Transform (:monosp:`transform`)
     - |bsdf|
     - *None*
     - No
-    - Bsdf the normal transformation will be applied to.
+    - Bsdf the normal transformation will be forwarded to.
   * - normal
     - |vector|
     - :code:`(0,0,1)`
