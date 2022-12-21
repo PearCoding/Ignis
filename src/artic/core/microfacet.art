@@ -393,4 +393,11 @@ fn @make_vndf_ggx_distribution(face_normal: Vec3, local: Mat3x3, alpha_u: f32, a
         }
     }
 }
+
+fn @compute_explicit(roughness: f32, anisotropic: f32) -> (f32, f32) {
+    let aspect = if ?anisotropic && anisotropic == 0 { 1 } else { math_builtins::sqrt[f32](1 - super::clampf(anisotropic, 0, 1) * 0.99) };
+    let rx	   = roughness / aspect;
+    let ry	   = roughness * aspect;
+    (rx, ry)
+}
 }

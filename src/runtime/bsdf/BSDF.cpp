@@ -62,13 +62,14 @@ bool BSDF::setupRoughness(const std::shared_ptr<SceneObject>& bsdf, const Serial
         return false;
     }
 
-    const bool isAnisotropic = input.Tree.hasParameter(param + "_u") || input.Tree.hasParameter(param + "_v");
+    const bool isExplicit = input.Tree.hasParameter(param + "_u") || input.Tree.hasParameter(param + "_v");
 
-    if (isAnisotropic) {
+    if (isExplicit) {
         input.Tree.addNumber(param + "_u", *bsdf, 0.1f, ShadingTree::NumberOptions::Zero());
         input.Tree.addNumber(param + "_v", *bsdf, 0.1f, ShadingTree::NumberOptions::Zero());
     } else {
         input.Tree.addNumber(param, *bsdf, 0.1f, ShadingTree::NumberOptions::Zero());
+        input.Tree.addNumber("anisotropic", *bsdf, 0.0f, ShadingTree::NumberOptions::Zero());
     }
 
     std::string distribution = "microfacet::make_vndf_ggx_distribution(ctx.surf.face_normal, ";
@@ -82,16 +83,17 @@ bool BSDF::setupRoughness(const std::shared_ptr<SceneObject>& bsdf, const Serial
     }
 
     const std::string md_id = input.Tree.currentClosureID();
-    if (isAnisotropic) {
+    if (isExplicit) {
         input.Stream << input.Tree.pullHeader()
                      << "  let md_" << md_id << " = @|ctx : ShadingContext| " << distribution << "ctx.surf.local, "
                      << input.Tree.getInline(param + "_u") << ", "
                      << input.Tree.getInline(param + "_v") << ");" << std::endl;
     } else {
         input.Stream << input.Tree.pullHeader()
-                     << "  let md_" << md_id << " = @|ctx : ShadingContext| " << distribution << "ctx.surf.local, "
+                     << "  let md_" << md_id << " = @|ctx : ShadingContext| { let (ru, rv) = microfacet::compute_explicit("
                      << input.Tree.getInline(param) << ", "
-                     << input.Tree.getInline(param) << ");" << std::endl;
+                     << input.Tree.getInline("anisotropic") << ");"
+                     << distribution << "ctx.surf.local, ru, rv) };" << std::endl;
     }
     return true;
 }

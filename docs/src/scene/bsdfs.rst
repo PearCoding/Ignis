@@ -86,7 +86,12 @@ Dielectric (:monosp:`dielectric`)
     - |number|
     - :code:`0`, :code:`0`
     - Yes
-    - Roughness of the dielectric. Can be specified isotropic using :paramtype:`roughness` as well. :paramtype:`thin` will be ignored if roughness is greater than zero.
+    - Roughness of the dielectric. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead. :paramtype:`thin` will be ignored if roughness is greater than zero.
+  * - roughness, anisotropic
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness and anisotropic terms. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution. :paramtype:`thin` will be ignored if roughness is greater than zero.
 
 .. subfigstart::
 
@@ -135,7 +140,12 @@ Conductor (:monosp:`conductor`)
     - |number|
     - :code:`0`, :code:`0`
     - Yes
-    - Roughness terms. Can be specified isotropic using :paramtype:`roughness` as well.
+    - Roughness terms. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead.
+  * - roughness, anisotropic
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness and anisotropic terms. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution.
 
 .. subfigstart::
 
@@ -188,7 +198,12 @@ Plastic (:monosp:`plastic`)
     - |number|
     - :code:`0`, :code:`0`
     - Yes
-    - Roughness terms. Can be specified isotropic using :paramtype:`roughness` as well. 
+    - Roughness terms. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead.
+  * - roughness, anisotropic
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness and anisotropic terms. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution.
 
 .. subfigstart::
 
@@ -252,21 +267,16 @@ Principled (:monosp:`principled`)
     - :code:`0`
     - Yes
     - A number between 0 and 1. A metallic value of 1 displays a full metallic (conductor), which can not transmit via refraction.
-  * - roughness
-    - |number|
-    - :code:`0.5`
-    - Yes
-    - The microfacet roughness for specular, diffuse and sheen reflection. Higher values result into a rougher appearance. The roughness computed via the GGX method.
-  * - anisotropic
-    - |number|
-    - :code:`0`
-    - Yes
-    - Anisotropy within 0 and 1. The number indicates the effect of anisotropy. The orientation is given by the normal and tangent frame.
   * - roughness_u, roughness_v
     - |number|
     - :code:`0.5`, :code:`0.5`
     - Yes
-    - Anisotropic roughness terms. Can not be specified together with :paramtype:`roughness` and :paramtype:`anisotropic`.
+    - Anisotropic microfacet roughness for specular, diffuse and sheen reflection terms. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead. The roughness is computed via the GGX method.
+  * - roughness, anisotropic
+    - |number|
+    - :code:`0.5`, :code:`0`
+    - Yes
+    - The microfacet roughness for specular, diffuse and sheen reflection and anisotropic terms. The roughness is computed via the GGX method. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution.
   * - ior
     - |number|
     - ~bk7   
