@@ -3,8 +3,6 @@
 PExpr
 =====
 
-.. NOTE:: The PExpr documentation is not complete. For further details it is recommended to have a look at the scenes distributed together with the framework.
-
 **P**\ ear\ **Expr**\ ession is a single line, math like, functional language.
 It is, by design, easy to transpile to other languages like ``artic``, like in the case of the Ignis rendering framework.
 It has **no** support for control flow, like ``if`` or ``while``, and statements in general.
@@ -129,11 +127,14 @@ Parameters can be defined as follow:
     }
 
 Currently only the types ``number`` for ``num``, ``vector`` for ``vec3`` and ``color`` for ``vec4`` are available. The given ``value`` can not be a PExpr!
-The above defined parameters have precedence over texture names, but not the above defined special variables and constants.
 
-Property names starting with an ``_`` are considered read-only and can not be changed within the viewer or cli.
+.. NOTE:: Defining color with alpha is currently not supported. Use an array of **three** numbers to define color.
 
-.. NOTE:: Defining color with alpha is currently not supported. Use an array of three numbers to define color.
+The above defined parameters have precedence over texture names, but not the already defined special variables and constants in the previous section.
+
+Property names starting with an ``_`` are considered read-only and can not be changed within the viewer. You may have to press ``F4`` to open up the property view in ``igview``.
+
+The command line options ``--Pi``, ``--Pn``, ``--Pv`` and ``--Pc`` allow setting the parameters to a different value at the start of the rendering. Using the command line parameters allow changing internal and read-only flagged parameters as well.
 
 Functions
 ---------
