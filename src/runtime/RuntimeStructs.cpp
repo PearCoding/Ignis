@@ -17,16 +17,27 @@ std::string ParameterSet::dump() const
     return stream.str();
 }
 
-void ParameterSet::mergeFrom(const ParameterSet& other)
+void ParameterSet::mergeFrom(const ParameterSet& other, bool replace)
 {
-    for (auto p : other.IntParameters)
-        IntParameters.try_emplace(p.first, p.second);
-    for (auto p : other.FloatParameters)
-        FloatParameters.try_emplace(p.first, p.second);
-    for (auto p : other.VectorParameters)
-        VectorParameters.try_emplace(p.first, p.second);
-    for (auto p : other.ColorParameters)
-        ColorParameters.try_emplace(p.first, p.second);
+    if (!replace) {
+        for (auto p : other.IntParameters)
+            IntParameters.try_emplace(p.first, p.second);
+        for (auto p : other.FloatParameters)
+            FloatParameters.try_emplace(p.first, p.second);
+        for (auto p : other.VectorParameters)
+            VectorParameters.try_emplace(p.first, p.second);
+        for (auto p : other.ColorParameters)
+            ColorParameters.try_emplace(p.first, p.second);
+    } else {
+        for (auto p : other.IntParameters)
+            IntParameters.insert_or_assign(p.first, p.second);
+        for (auto p : other.FloatParameters)
+            FloatParameters.insert_or_assign(p.first, p.second);
+        for (auto p : other.VectorParameters)
+            VectorParameters.insert_or_assign(p.first, p.second);
+        for (auto p : other.ColorParameters)
+            ColorParameters.insert_or_assign(p.first, p.second);
+    }
 }
 
 } // namespace IG

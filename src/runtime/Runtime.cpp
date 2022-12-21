@@ -656,6 +656,11 @@ const AlignedUnorderedMap<std::string, Vector4f>& Runtime::getColorParameters() 
     return mGlobalRegistry.ColorParameters;
 }
 
+void Runtime::mergeParameterFrom(const ParameterSet& other)
+{
+    mGlobalRegistry.mergeFrom(other, true);
+}
+
 std::vector<std::string> Runtime::getAvailableTechniqueTypes()
 {
     return Loader::getAvailableTechniqueTypes();

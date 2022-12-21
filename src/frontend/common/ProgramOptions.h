@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Logger.h"
+#include "RuntimeStructs.h"
 #include "SPPMode.h"
 #include "device/Target.h"
 
@@ -76,6 +77,8 @@ public:
     std::filesystem::path InputRay;
 
     std::filesystem::path ScriptDir;
+
+    ParameterSet UserEntries;
 
     void populate(RuntimeOptions& options) const;
 };

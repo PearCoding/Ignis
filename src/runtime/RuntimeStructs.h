@@ -36,7 +36,7 @@ struct ImageInfoOutput {
     int NegCount;
 };
 
-struct ParameterSet {
+struct IG_LIB ParameterSet {
     std::unordered_map<std::string, int> IntParameters;
     std::unordered_map<std::string, float> FloatParameters;
     AlignedUnorderedMap<std::string, Vector3f> VectorParameters;
@@ -47,8 +47,8 @@ struct ParameterSet {
     /// @brief Dump current registry information as a multi-line string for debug purposes
     std::string dump() const;
 
-    /// @brief Will merge `other` into this, but only if not already defined
-    void mergeFrom(const ParameterSet& other);
+    /// @brief Will merge `other` into this. If replace true, will replace regardless if already defined
+    void mergeFrom(const ParameterSet& other, bool replace = false);
 };
 
 struct Ray {

@@ -200,6 +200,91 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         app.add_option("-o,--output", Output, "Writes the output image to a file");
     }
 
+    // Add user entries
+    app.add_option(
+           "--Pi,--parameter-int", [&](const CLI::results_t& r) -> bool {
+               if (r.size() != 2)
+                   return false;
+               const std::string name  = r.at(0);
+               const std::string val_s = r.at(1);
+
+               try {
+                   const int value                 = std::stoi(val_s);
+                   UserEntries.IntParameters[name] = value;
+                   return true;
+               } catch (...) {
+                   return false;
+               }
+           },
+           "Set integer value in global registry")
+        ->expected(2);
+
+    app.add_option(
+           "--Pn,--parameter-num", [&](const CLI::results_t& r) -> bool {
+               if (r.size() != 2)
+                   return false;
+               const std::string name  = r.at(0);
+               const std::string val_s = r.at(1);
+
+               try {
+                   const float value                 = std::stof(val_s);
+                   UserEntries.FloatParameters[name] = value;
+                   return true;
+               } catch (...) {
+                   return false;
+               }
+           },
+           "Set number value in global registry")
+        ->expected(2);
+
+    app.add_option(
+           "--Pv,--parameter-vec", [&](const CLI::results_t& r) -> bool {
+               if (r.size() != 4)
+                   return false;
+               const std::string name    = r.at(0);
+               const std::string val_X_s = r.at(1);
+               const std::string val_Y_s = r.at(2);
+               const std::string val_Z_s = r.at(3);
+
+               try {
+                   const float x = std::stof(val_X_s);
+                   const float y = std::stof(val_Y_s);
+                   const float z = std::stof(val_Z_s);
+
+                   UserEntries.VectorParameters[name] = Vector3f(x, y, z);
+                   return true;
+               } catch (...) {
+                   return false;
+               }
+           },
+           "Set vector value in global registry")
+        ->expected(4);
+
+    app.add_option(
+           "--Pc,--parameter-col", [&](const CLI::results_t& r) -> bool {
+               if (r.size() != 4 && r.size() != 5)
+                   return false;
+               const std::string name    = r.at(0);
+               const std::string val_R_s = r.at(1);
+               const std::string val_G_s = r.at(2);
+               const std::string val_B_s = r.at(3);
+               const std::string val_A_s = r.size() > 4 ? r.at(4) : "1";
+
+               try {
+                   const float r = std::stof(val_R_s);
+                   const float g = std::stof(val_G_s);
+                   const float b = std::stof(val_B_s);
+                   const float a = std::stof(val_A_s);
+
+                   UserEntries.ColorParameters[name] = Vector4f(r, g, b, a);
+                   return true;
+               } catch (...) {
+                   return false;
+               }
+           },
+           "Set color value in global registry")
+        ->expected(4, 5);
+
     // Add some hidden commandline parameters
     bool listPExprVariables = false;
     bool listPExprFunctions = false;

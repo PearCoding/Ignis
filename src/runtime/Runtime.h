@@ -115,6 +115,8 @@ public:
     void setParameter(const std::string& name, const Vector4f& value);
     /// Return constant map of available color parameters
     [[nodiscard]] const AlignedUnorderedMap<std::string, Vector4f>& getColorParameters() const;
+    /// Merge parameters from other registry
+    void mergeParameterFrom(const ParameterSet& other);
 
     /// The current framebuffer width
     [[nodiscard]] inline size_t framebufferWidth() const { return mFilmWidth; }
