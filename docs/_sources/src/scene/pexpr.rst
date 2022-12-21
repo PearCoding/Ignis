@@ -166,6 +166,7 @@ Functions
 -   ``avg(vec2) -> num``
 -   ``avg(vec3) -> num``
 -   ``avg(vec4) -> num``
+-   ``bump(vec3, vec3, vec3, num, num, num, num) -> vec3``
 -   ``blackbody(num) -> vec4``
 -   ``cbrt(num) -> num``
 -   ``cbrt(vec2) -> vec2``
@@ -231,6 +232,7 @@ Functions
 -   ``dot(vec2, vec2) -> num``
 -   ``dot(vec3, vec3) -> num``
 -   ``dot(vec4, vec4) -> num``
+-   ``ensure_valid_reflection(vec3, vec3, vec3) -> vec3``
 -   ``exp(num) -> num``
 -   ``exp(vec2) -> vec2``
 -   ``exp(vec3) -> vec3``
@@ -346,6 +348,13 @@ Functions
 -   ``select(bool, vec3, vec3) -> vec3``
 -   ``select(bool, vec4, vec4) -> vec4``
 -   ``select(bool, str, str) -> str``
+-   ``sign(num) -> num``
+-   ``sign(vec2) -> vec2``
+-   ``sign(vec3) -> vec3``
+-   ``sign(vec4) -> vec4``
+-   ``sign(int) -> int``
+-   ``signbit(int) -> bool``
+-   ``signbit(num) -> bool``
 -   ``sin(num) -> num``
 -   ``sin(vec2) -> vec2``
 -   ``sin(vec3) -> vec3``
