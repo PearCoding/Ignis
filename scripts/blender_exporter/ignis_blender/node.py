@@ -5,16 +5,14 @@ from .utils import *
 from .addon_preferences import get_prefs
 
 
-TEXCOORD_UV = "uvw"
-
-
 class NodeContext:
     def __init__(self, result, path, depsgraph, always_copy_images):
         self.result = result
         self.path = path
         self.depsgraph = depsgraph
         self.always_copy_images = always_copy_images
-        self.cache = {}
+        self._cache = {}
+        self.offset_texcoord = (0, 0, 0)
 
         self._stack = []
         self._cur = 0
@@ -40,6 +38,23 @@ class NodeContext:
     @property
     def scene(self):
         return self.depsgraph.scene
+
+    def shift_texcoord(self, dx=0, dy=0, dz=0):
+        self.offset_texcoord = (
+            self.offset_texcoord[0]+dx, self.offset_texcoord[1]+dy, self.offset_texcoord[2]+dz)
+
+    @property
+    def texcoord(self):
+        if self.offset_texcoord[0] == 0 and self.offset_texcoord[1] == 0 and self.offset_texcoord[2] == 0:
+            return "uvw"
+        else:
+            return f"(vec3({self.offset_texcoord[0]}, {self.offset_texcoord[1]}, {self.offset_texcoord[2]}) + uvw)"
+
+    def get_from_cache(self, socket):
+        return self._cache.get((socket, self.offset_texcoord))
+
+    def put_in_cache(self, socket, expr):
+        self._cache[(socket, self.offset_texcoord)] = expr
 
 
 def _export_default(socket):
@@ -165,8 +180,7 @@ def _export_scalar_math(ctx, node):
     elif node.operation == "GREATER_THAN":
         ops = f"select({export_node(ctx, node.inputs[0])} > {export_node(ctx, node.inputs[1])}, 1, 0)"
     elif node.operation == "SIGN":
-        # TODO: If value is zero, zero should be returned!
-        ops = f"select({export_node(ctx, node.inputs[0])} < 0, -1, 1)"
+        ops = f"sign({export_node(ctx, node.inputs[0])})"
     elif node.operation == "COMPARE":
         ops = f"select(abs({export_node(ctx, node.inputs[0])} - {export_node(ctx, node.inputs[1])}) <= Eps, 1, 0)"
     elif node.operation == "ROUND":
@@ -860,13 +874,47 @@ def _export_normalmap(ctx, node):
         return f"norm(({dn} - N)*{strength} + N)"
 
 
+def _export_bumpmap(ctx, node):
+    strength = export_node(ctx, node.inputs["Strength"])
+    distance = export_node(ctx, node.inputs["Distance"])
+    normal = export_node(
+        ctx, node.inputs["Normal"]) if node.inputs["Normal"].is_linked else "N"
+
+    # Early exit if strength is zero
+    if try_extract_node_value(strength) == 0:
+        return normal
+
+    if node.invert:
+        distance = f"-({distance})"
+
+    # We do not support extracting gradients from expressions (yet), so just use forward difference
+    delta = 0.001  # TODO: This should be based on ray differentials
+    center = export_node(ctx, node.inputs["Height"])
+    ctx.shift_texcoord(delta, 0)
+    sample_x = export_node(ctx, node.inputs["Height"])
+    ctx.shift_texcoord(-delta, delta)
+    sample_y = export_node(ctx, node.inputs["Height"])
+    ctx.shift_texcoord(0, -delta)
+
+    dx = f"((({sample_x})-({center}))/{delta})"
+    dy = f"((({sample_y})-({center}))/{delta})"
+    func = f"bump({normal}, Nx, Ny, {distance}, {dx}, {dy})"
+
+    if try_extract_node_value(strength) == 1:
+        out = func
+    else:
+        out = f"norm(mix({normal},{func},{strength}))"
+
+    return f"ensure_valid_reflection(Ng, V, {out})"
+
+
 def _export_checkerboard(ctx, node, output_name):
     scale = export_node(ctx, node.inputs["Scale"])
 
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     raw = f"checkerboard({uv} * {scale})"
     if output_name == "Color":
@@ -1024,7 +1072,7 @@ def _get_noise_vector(ctx, node):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     if node.noise_dimensions == '1D':
         w = export_node(ctx, node.inputs["W"])
@@ -1063,7 +1111,7 @@ def _export_voronoi(ctx, node, output_name):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     ops = f"{uv}.xy"
     if node.voronoi_dimensions != '2D':
@@ -1086,7 +1134,7 @@ def _export_musgrave(ctx, node, output_name):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     ops = f"{uv}.xy"
     if node.musgrave_dimensions != '2D':
@@ -1103,7 +1151,7 @@ def _export_wave(ctx, node, output_name):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     scale = export_node(ctx, node.inputs["Scale"])
     uv = f"({uv}*{scale})"
@@ -1184,7 +1232,7 @@ def _export_gradient(ctx, node, output_name):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     if node.gradient_type == "LINEAR":
         fac = f"{uv}.x"
@@ -1231,7 +1279,7 @@ def _export_surface_attributes(ctx, node, output_name):
 
 def _export_tex_coordinate(ctx, node, output_name):
     if output_name == 'UV':
-        return TEXCOORD_UV
+        return ctx.texcoord
     elif output_name == 'Generated':
         return "Np"
     elif output_name == 'Normal':
@@ -1244,14 +1292,14 @@ def _export_tex_coordinate(ctx, node, output_name):
     else:
         print(
             f"Given texture coordinate output '{output_name}' is not supported")
-        return TEXCOORD_UV
+        return ctx.texcoord
 
 
 def _export_uvmap(ctx, node):
     # TODO: Maybe support this with texture lookups?
     if node.uv_map != "":
         print(f"Additional UV Maps are not supported, default to first one")
-    return TEXCOORD_UV
+    return ctx.texcoord
 
 
 def _export_object_info(ctx, node, output_name):
@@ -1352,7 +1400,7 @@ def handle_node_implicit_mappings(socket, expr):
 
 def export_node(ctx, socket):
     # Missing:
-    # ShaderNodeAttribute, ShaderNodeBevel, ShaderNodeBump, ShaderNodeCameraData,
+    # ShaderNodeAttribute, ShaderNodeBevel, ShaderNodeCameraData,
     # ShaderNodeCustomGroup, ShaderNodeHairInfo, ShaderNodeLightFalloff,
     # ShaderNodeObjectInfo, ShaderNodeScript,
     # ShaderNodeShaderToRGB, ShaderNodeSubsurfaceScattering, ShaderNodeTangent,
@@ -1365,8 +1413,9 @@ def export_node(ctx, socket):
     # ShaderNodeParticleInfo, ShaderNodeOutputLineStyle, ShaderNodePointInfo, ShaderNodeHoldout
 
     if socket.is_linked:
-        if socket in ctx.cache:
-            return ctx.cache[socket]
+        cached_value = ctx.get_from_cache(socket)
+        if cached_value is not None:
+            return cached_value
 
         node = socket.links[0].from_node
         output_name = socket.links[0].from_socket.name
@@ -1462,6 +1511,8 @@ def export_node(ctx, socket):
             expr = _export_normal(ctx, node, output_name)
         elif check_instance("ShaderNodeNormalMap"):
             expr = _export_normalmap(ctx, node)
+        elif check_instance("ShaderNodeBump"):
+            expr = _export_bumpmap(ctx, node)
         elif check_instance("ShaderNodeUVMap"):
             expr = _export_uvmap(ctx, node)
         elif check_instance("ShaderNodeObjectInfo"):
@@ -1484,7 +1535,7 @@ def export_node(ctx, socket):
 
         full_expr = handle_node_implicit_mappings(socket, expr)
 
-        ctx.cache[socket] = full_expr
+        ctx.put_in_cache(socket, full_expr)
         return full_expr
     else:
         return _export_default(socket)

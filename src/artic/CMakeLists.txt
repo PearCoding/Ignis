@@ -101,6 +101,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/volpathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/wireframe.art
     ${CMAKE_CURRENT_SOURCE_DIR}/texture/brick.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/texture/bump.art
     ${CMAKE_CURRENT_SOURCE_DIR}/texture/checkerboard.art
     ${CMAKE_CURRENT_SOURCE_DIR}/texture/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/texture/image.art

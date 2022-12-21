@@ -583,6 +583,10 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     _MF1A("cbrt", "math_builtins::cbrt"),
     _MF1A("abs", "math_builtins::fabs"),
     cF("abs", createFunction("abs"), PExprType::Integer, PExprType::Integer),
+    _MF1A("sign", "math::signf"),
+    cF("sign", createFunction("math::sign"), PExprType::Integer, PExprType::Integer),
+    cF("signbit", createFunction("math_builtins::signbit"), PExprType::Boolean, PExprType::Integer),
+    cF("signbit", createFunction("math_builtins::signbit"), PExprType::Boolean, PExprType::Number),
 
     _MF1A("rad", "rad"),
     _MF1A("deg", "deg"),
@@ -765,6 +769,10 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("select", handleSelect, PExprType::Vec3, PExprType::Boolean, PExprType::Vec3, PExprType::Vec3),
     cF("select", handleSelect, PExprType::Vec4, PExprType::Boolean, PExprType::Vec4, PExprType::Vec4),
     cF("select", handleSelect, PExprType::String, PExprType::Boolean, PExprType::String, PExprType::String),
+
+    // Some special purpose functions
+    cF("bump", createFunction("node_bump"), PExprType::Vec3, PExprType::Vec3, PExprType::Vec3, PExprType::Vec3, PExprType::Number, PExprType::Number, PExprType::Number),
+    cF("ensure_valid_reflection", createFunction("ensure_valid_reflection"), PExprType::Vec3, PExprType::Vec3, PExprType::Vec3, PExprType::Vec3),
 
     cFV("lookup", handleCurveLookup, PExprType::Number, PExprType::String, PExprType::Boolean, PExprType::Number, PExprType::Vec2)
 };
