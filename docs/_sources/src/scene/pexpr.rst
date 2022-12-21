@@ -131,6 +131,8 @@ Parameters can be defined as follow:
 Currently only the types ``number`` for ``num``, ``vector`` for ``vec3`` and ``color`` for ``vec4`` are available. The given ``value`` can not be a PExpr!
 The above defined parameters have precedence over texture names, but not the above defined special variables and constants.
 
+Property names starting with an ``_`` are considered read-only and can not be changed within the viewer or cli.
+
 .. NOTE:: Defining color with alpha is currently not supported. Use an array of three numbers to define color.
 
 Functions

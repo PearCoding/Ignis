@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <meta property="article:modified_time" content="2022-12-20T23:57:13+00:00" />
+    <meta property="article:modified_time" content="2022-12-21T09:33:34+00:00" />
     <title>PExpr &#8212; Ignis  documentation</title>
   
   
@@ -446,6 +446,7 @@ Parameters can be defined as follow:</p>
 </div>
 <p>Currently only the types <code class="docutils literal notranslate"><span class="pre">number</span></code> for <code class="docutils literal notranslate"><span class="pre">num</span></code>, <code class="docutils literal notranslate"><span class="pre">vector</span></code> for <code class="docutils literal notranslate"><span class="pre">vec3</span></code> and <code class="docutils literal notranslate"><span class="pre">color</span></code> for <code class="docutils literal notranslate"><span class="pre">vec4</span></code> are available. The given <code class="docutils literal notranslate"><span class="pre">value</span></code> can not be a PExpr!
 The above defined parameters have precedence over texture names, but not the above defined special variables and constants.</p>
+<p>Property names starting with an <code class="docutils literal notranslate"><span class="pre">_</span></code> are considered read-only and can not be changed within the viewer or cli.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Defining color with alpha is currently not supported. Use an array of three numbers to define color.</p>
@@ -794,7 +795,7 @@ The above defined function names have precedence over texture names, if the sign
         <footer class="bd-footer-content">
           <div class="bd-footer-content__inner">
             <p class="last-updated">
-Last updated on Dec 20, 2022.<br>
+Last updated on Dec 21, 2022.<br>
 </p>
           </div>
         </footer>
