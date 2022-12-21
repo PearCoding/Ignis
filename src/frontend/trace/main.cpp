@@ -120,7 +120,7 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
         }
 
-        runtime->mergeParameterFrom(cmd.UserEntries);
+        runtime->mergeParametersFrom(cmd.UserEntries);
 
         const size_t SPI          = runtime->samplesPerIteration();
         const size_t desired_iter = std::max<size_t>(1, static_cast<size_t>(std::ceil(cmd.SPP.value_or(1) / (float)SPI)));

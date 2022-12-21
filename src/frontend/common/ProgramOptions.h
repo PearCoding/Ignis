@@ -59,9 +59,10 @@ public:
     bool AcquireFullStats = false;
     bool DebugTrace       = false;
 
-    bool DumpShader     = false;
-    bool DumpFullShader = false;
-    bool DumpRegistry   = false;
+    bool DumpShader       = false;
+    bool DumpFullShader   = false;
+    bool DumpRegistry     = false;
+    bool DumpFullRegistry = false;
 
     bool AddExtraEnvLight    = false;
     bool ForceSpecialization = false;

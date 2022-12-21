@@ -84,6 +84,7 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mCurrentFrame(0)
     , mFilmWidth(0)
     , mFilmHeight(0)
+    , mHasSceneParameters(false)
     , mCameraName()
     , mInitialCameraOrientation()
     , mTechniqueName()
@@ -208,6 +209,8 @@ bool Runtime::load(const std::filesystem::path& path, const std::shared_ptr<Scen
     lopts.Denoiser.Enabled    = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
     lopts.Compiler            = &mCompiler;
     lopts.Device              = mDevice.get();
+
+    mHasSceneParameters = !scene->parameters().empty();
 
     // Print a warning if denoiser was requested but none is available
     if (mOptions.Denoiser.Enabled && !lopts.Denoiser.Enabled && !mOptions.IsTracer && hasDenoiser())
@@ -499,7 +502,7 @@ bool Runtime::setupScene()
         return false;
 
     if (IG_LOGGER.verbosity() <= L_DEBUG) {
-        if (mOptions.DumpRegistry) {
+        if (mOptions.DumpRegistryFull) {
             for (size_t i = 0; i < mTechniqueVariantShaderSets.size(); ++i) {
                 auto& stream = IG_LOG_UNSAFE(L_DEBUG);
                 stream << "Local Variant [" << i << "] Registries:" << std::endl;
@@ -621,19 +624,9 @@ void Runtime::setParameter(const std::string& name, int value)
     mGlobalRegistry.IntParameters[name] = value;
 }
 
-const std::unordered_map<std::string, int>& Runtime::getIntParameters() const
-{
-    return mGlobalRegistry.IntParameters;
-}
-
 void Runtime::setParameter(const std::string& name, float value)
 {
     mGlobalRegistry.FloatParameters[name] = value;
-}
-
-const std::unordered_map<std::string, float>& Runtime::getNumberParameters() const
-{
-    return mGlobalRegistry.FloatParameters;
 }
 
 void Runtime::setParameter(const std::string& name, const Vector3f& value)
@@ -641,22 +634,12 @@ void Runtime::setParameter(const std::string& name, const Vector3f& value)
     mGlobalRegistry.VectorParameters[name] = value;
 }
 
-const AlignedUnorderedMap<std::string, Vector3f>& Runtime::getVectorParameters() const
-{
-    return mGlobalRegistry.VectorParameters;
-}
-
 void Runtime::setParameter(const std::string& name, const Vector4f& value)
 {
     mGlobalRegistry.ColorParameters[name] = value;
 }
 
-const AlignedUnorderedMap<std::string, Vector4f>& Runtime::getColorParameters() const
-{
-    return mGlobalRegistry.ColorParameters;
-}
-
-void Runtime::mergeParameterFrom(const ParameterSet& other)
+void Runtime::mergeParametersFrom(const ParameterSet& other)
 {
     mGlobalRegistry.mergeFrom(other, true);
 }

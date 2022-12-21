@@ -91,7 +91,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    runtime->mergeParameterFrom(cmd.UserEntries);
+    runtime->mergeParametersFrom(cmd.UserEntries);
     timer_loading.stop();
 
     const auto def = runtime->initialCameraOrientation();

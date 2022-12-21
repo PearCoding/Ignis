@@ -16,6 +16,7 @@ struct RuntimeOptions {
     bool DumpShader        = false;
     bool DumpShaderFull    = false;
     bool DumpRegistry      = false;
+    bool DumpRegistryFull  = false;
     bool AcquireStats      = false;
     bool DebugTrace        = false; // Show debug information regarding the calls on the device
     uint32 SPI             = 0;     // Detect automatically

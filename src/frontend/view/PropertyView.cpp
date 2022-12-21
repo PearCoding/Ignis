@@ -14,11 +14,6 @@ static inline void draw_header()
     ImGui::TableHeadersRow();
 }
 
-static std::unordered_map<std::string, int> sIntParameters;
-static std::unordered_map<std::string, float> sNumParameters;
-static AlignedUnorderedMap<std::string, Vector3f> sVecParameters;
-static AlignedUnorderedMap<std::string, Vector4f> sColParameters;
-
 bool ui_property_view(Runtime* runtime)
 {
     constexpr int TableFlags  = ImGuiTableFlags_PadOuterX;
@@ -26,32 +21,17 @@ bool ui_property_view(Runtime* runtime)
     constexpr int SliderFlags = ImGuiSliderFlags_None;
     constexpr int ColorFlags  = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_PickerHueBar | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview;
 
-    const auto& intParams = runtime->getIntParameters();
-    const auto& numParams = runtime->getNumberParameters();
-    const auto& vecParams = runtime->getVectorParameters();
-    const auto& colParams = runtime->getColorParameters();
+    auto& registry = runtime->accessParameters();
+    bool updated   = false;
 
-    // Initialize internal storage if necessary
-    if (sIntParameters.size() != intParams.size()
-        || sNumParameters.size() != numParams.size()
-        || sVecParameters.size() != vecParams.size()
-        || sColParameters.size() != colParams.size()) {
-        sIntParameters = intParams;
-        sNumParameters = numParams;
-        sVecParameters = vecParams;
-        sColParameters = colParams;
-    }
-
-    bool updated = false;
-
-    if (!intParams.empty()) {
+    if (!registry.IntParameters.empty()) {
         if (ImGui::CollapsingHeader("Integers", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::BeginTable("_table_integers", 2, TableFlags)) {
                 // Header
                 draw_header();
 
                 // Content
-                for (auto& param : sIntParameters) {
+                for (auto& param : registry.IntParameters) {
                     ImGui::TableNextColumn();
                     ImGui::TextUnformatted(param.first.c_str());
                     ImGui::TableNextColumn();
@@ -59,10 +39,8 @@ bool ui_property_view(Runtime* runtime)
 
                     if (changeable) {
                         const std::string id = "##" + param.first;
-                        if (ImGui::InputInt(id.c_str(), &param.second, 1, 100, InputFlags)) {
-                            runtime->setParameter(param.first, param.second);
+                        if (ImGui::InputInt(id.c_str(), &param.second, 1, 100, InputFlags))
                             updated = true;
-                        }
                     } else {
                         ImGui::Text("%i", param.second);
                     }
@@ -71,14 +49,15 @@ bool ui_property_view(Runtime* runtime)
             }
         }
     }
-    if (!numParams.empty()) {
+
+    if (!registry.FloatParameters.empty()) {
         if (ImGui::CollapsingHeader("Numbers", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::BeginTable("_table_numbers", 2, TableFlags)) {
                 // Header
                 draw_header();
 
                 // Content
-                for (auto& param : sNumParameters) {
+                for (auto& param : registry.FloatParameters) {
                     ImGui::TableNextColumn();
                     ImGui::TextUnformatted(param.first.c_str());
                     ImGui::TableNextColumn();
@@ -89,10 +68,8 @@ bool ui_property_view(Runtime* runtime)
                         const float max      = std::max(1.0f, std::ceil(param.second));
                         const std::string id = "##" + param.first;
                         ImGui::SetNextItemWidth(-1);
-                        if (ImGui::SliderFloat(id.c_str(), &param.second, min, max, "%.3f", SliderFlags)) {
-                            runtime->setParameter(param.first, param.second);
+                        if (ImGui::SliderFloat(id.c_str(), &param.second, min, max, "%.3f", SliderFlags))
                             updated = true;
-                        }
                     } else {
                         ImGui::Text("%.3f", param.second);
                     }
@@ -101,14 +78,15 @@ bool ui_property_view(Runtime* runtime)
             }
         }
     }
-    if (!vecParams.empty()) {
+
+    if (!registry.VectorParameters.empty()) {
         if (ImGui::CollapsingHeader("Vectors", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::BeginTable("_table_vectors", 2, TableFlags)) {
                 // Header
                 draw_header();
 
                 // Content
-                for (auto& param : sVecParameters) {
+                for (auto& param : registry.VectorParameters) {
                     ImGui::TableNextColumn();
                     ImGui::TextUnformatted(param.first.c_str());
                     ImGui::TableNextColumn();
@@ -116,10 +94,8 @@ bool ui_property_view(Runtime* runtime)
 
                     if (changeable) {
                         const std::string id = "##" + param.first;
-                        if (ImGui::InputFloat3(id.c_str(), param.second.data(), "%.3f", InputFlags)) {
-                            runtime->setParameter(param.first, param.second);
+                        if (ImGui::InputFloat3(id.c_str(), param.second.data(), "%.3f", InputFlags))
                             updated = true;
-                        }
                     } else {
                         ImGui::Text("[%.3f, %.3f, %.3f]", param.second.x(), param.second.y(), param.second.z());
                     }
@@ -128,23 +104,22 @@ bool ui_property_view(Runtime* runtime)
             }
         }
     }
-    if (!colParams.empty()) {
+
+    if (!registry.ColorParameters.empty()) {
         if (ImGui::CollapsingHeader("Colors", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::BeginTable("_table_colors", 2, TableFlags)) {
                 // Header
                 draw_header();
 
                 // Content
-                for (auto& param : sColParameters) {
+                for (auto& param : registry.ColorParameters) {
                     ImGui::TableNextColumn();
                     ImGui::TextUnformatted(param.first.c_str());
                     ImGui::TableNextColumn();
                     const bool changeable = !string_starts_with(param.first, "_");
 
-                    if (ImGui::ColorEdit4(param.first.c_str(), param.second.data(), ColorFlags | (changeable ? ImGuiColorEditFlags_NoInputs : 0))) {
-                        runtime->setParameter(param.first, param.second);
+                    if (ImGui::ColorEdit4(param.first.c_str(), param.second.data(), ColorFlags | (changeable ? ImGuiColorEditFlags_NoInputs : 0)))
                         updated = true;
-                    }
                 }
 
                 ImGui::EndTable();

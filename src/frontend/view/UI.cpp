@@ -992,9 +992,12 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
 
     mInternal->PoseManager.load(POSE_FILE);
 
+    mInternal->ShowProperties = runtime->hasSceneParameters();
+
     if (mInternal->Width < 350 || mInternal->Height < 500) {
-        IG_LOG(L_WARNING) << "Window too small to show UI. Hiding it by default. Press F2 to show it" << std::endl;
-        mInternal->ShowControl = false;
+        IG_LOG(L_WARNING) << "Window too small to show UI. Hiding it by default. Press F2 and F4 to show it" << std::endl;
+        mInternal->ShowControl    = false;
+        mInternal->ShowProperties = false;
     }
 }
 

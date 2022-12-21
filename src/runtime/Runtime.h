@@ -101,22 +101,19 @@ public:
 
     /// Set integer parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, int value);
-    /// Return constant map of available integer parameters
-    [[nodiscard]] const std::unordered_map<std::string, int>& getIntParameters() const;
     /// Set number parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, float value);
-    /// Return constant map of available number parameters
-    [[nodiscard]] const std::unordered_map<std::string, float>& getNumberParameters() const;
     /// Set 3d vector parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, const Vector3f& value);
-    /// Return constant map of available vector parameters
-    [[nodiscard]] const AlignedUnorderedMap<std::string, Vector3f>& getVectorParameters() const;
     /// Set 4d vector parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, const Vector4f& value);
-    /// Return constant map of available color parameters
-    [[nodiscard]] const AlignedUnorderedMap<std::string, Vector4f>& getColorParameters() const;
+
+    /// Get read-only registry
+    [[nodiscard]] inline const ParameterSet& getParameters() const { return mGlobalRegistry; }
+    /// Get modifiable registry. A reset might be needed when changing parameters!
+    [[nodiscard]] inline ParameterSet& accessParameters() { return mGlobalRegistry; }
     /// Merge parameters from other registry
-    void mergeParameterFrom(const ParameterSet& other);
+    void mergeParametersFrom(const ParameterSet& other);
 
     /// The current framebuffer width
     [[nodiscard]] inline size_t framebufferWidth() const { return mFilmWidth; }
@@ -125,9 +122,14 @@ public:
 
     /// The initial camera orientation the scene was loaded with. Can be used to reset in later iterations
     [[nodiscard]] inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
+    /// Set internal parameters for the camera orientation. This is only a convenient wrapper around multiple setParameter calls
     void setCameraOrientationParameter(const CameraOrientation& orientation);
 
+    /// True if denoising can be applied
     [[nodiscard]] bool hasDenoiser() const;
+
+    /// True if the scene has entries in the `parameters` section
+    [[nodiscard]] inline bool hasSceneParameters() const { return mHasSceneParameters; }
 
     /// Get a list of all available techniques
     [[nodiscard]] static std::vector<std::string> getAvailableTechniqueTypes();
@@ -161,6 +163,8 @@ private:
 
     size_t mFilmWidth;
     size_t mFilmHeight;
+
+    bool mHasSceneParameters;
 
     std::string mCameraName;
     CameraOrientation mInitialCameraOrientation;
