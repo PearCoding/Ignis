@@ -210,6 +210,8 @@ public:
 
     void handleOldSDLMouse()
     {
+        ImGuiIO& io = ImGui::GetIO();
+
         int mouseX, mouseY;
         const int buttons = SDL_GetMouseState(&mouseX, &mouseY);
 
