@@ -39,7 +39,7 @@ language = "en"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 sys.path.append(os.path.abspath('exts'))
-extensions = ['objectparameters', 'subfig',
+extensions = ['objectparameters', 'subfig', 'pythonfunc',
               'sphinx_design', 'sphinx_copybutton',
               'sphinx_last_updated_by_git']
 
@@ -49,7 +49,8 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'README.md', '*/README.md']
+exclude_patterns = ['_build', 'Thumbs.db',
+                    '.DS_Store', 'README.md', '*/README.md']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -61,6 +62,8 @@ html_show_sourcelink = False
 html_sourcelink_suffix = ""
 
 html_theme_options = {
+    "pygment_light_style": "manni",
+    "pygment_dark_style": "material",
     "show_toc_level": 1,
     "show_nav_level": 2,
     "navbar_align": "content",
