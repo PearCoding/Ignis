@@ -272,12 +272,12 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
                const std::string val_A_s = r.size() > 4 ? r.at(4) : "1";
 
                try {
-                   const float r = std::stof(val_R_s);
-                   const float g = std::stof(val_G_s);
-                   const float b = std::stof(val_B_s);
-                   const float a = std::stof(val_A_s);
+                   const float col_r = std::stof(val_R_s);
+                   const float col_g = std::stof(val_G_s);
+                   const float col_b = std::stof(val_B_s);
+                   const float col_a = std::stof(val_A_s);
 
-                   UserEntries.ColorParameters[name] = Vector4f(r, g, b, a);
+                   UserEntries.ColorParameters[name] = Vector4f(col_r, col_g, col_b, col_a);
                    return true;
                } catch (...) {
                    return false;
