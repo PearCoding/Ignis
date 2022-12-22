@@ -11,7 +11,7 @@ using namespace IG;
 
 void scene_module(py::module_& m)
 {
-    auto prop = py::class_<SceneProperty>(m, "SceneProperty")
+    auto prop = py::class_<SceneProperty>(m, "SceneProperty", "Property of an object in the scene")
                     .def_property_readonly("type", &SceneProperty::type)
                     .def("isValid", &SceneProperty::isValid)
                     .def("canBeNumber", &SceneProperty::canBeNumber)
@@ -41,7 +41,7 @@ void scene_module(py::module_& m)
                         "getVector3", [](const SceneProperty& prop, const Vector3f& def) { return prop.getVector3(def); }, py::arg("def") = Vector3f::Zero())
                     .def_static("fromVector3", &SceneProperty::fromVector3);
 
-    py::enum_<SceneProperty::Type>(prop, "Type")
+    py::enum_<SceneProperty::Type>(prop, "Type", "Enum holding type of scene property")
         .value("None", SceneProperty::PT_NONE)
         .value("Bool", SceneProperty::PT_BOOL)
         .value("Integer", SceneProperty::PT_INTEGER)
@@ -54,7 +54,7 @@ void scene_module(py::module_& m)
         .value("NumberArray", SceneProperty::PT_NUMBER_ARRAY)
         .export_values();
 
-    auto obj = py::class_<SceneObject, std::shared_ptr<SceneObject>>(m, "SceneObject")
+    auto obj = py::class_<SceneObject, std::shared_ptr<SceneObject>>(m, "SceneObject", "Class representing an object in the scene")
                    .def(py::init([](SceneObject::Type type, const std::string& pType, const std::string& dir) {
                        return SceneObject(type, pType, dir);
                    }))
@@ -69,7 +69,7 @@ void scene_module(py::module_& m)
                    .def("__contains__", &SceneObject::hasProperty)
                    .def_property_readonly("properties", &SceneObject::properties);
 
-    py::enum_<SceneObject::Type>(obj, "Type")
+    py::enum_<SceneObject::Type>(obj, "Type", "Enum holding type of scene object")
         .value("Bsdf", SceneObject::OT_BSDF)
         .value("Camera", SceneObject::OT_CAMERA)
         .value("Entity", SceneObject::OT_ENTITY)
@@ -81,7 +81,7 @@ void scene_module(py::module_& m)
         .value("Texture", SceneObject::OT_TEXTURE)
         .export_values();
 
-    py::class_<Scene, std::shared_ptr<Scene>>(m, "Scene")
+    py::class_<Scene, std::shared_ptr<Scene>>(m, "Scene", "Class representing a whole scene")
         .def(py::init<>())
         .def_property("camera", &Scene::camera, &Scene::setCamera)
         .def_property("technique", &Scene::technique, &Scene::setTechnique)
@@ -107,7 +107,7 @@ void scene_module(py::module_& m)
         .def("addConstantEnvLight", &Scene::addConstantEnvLight)
         .def("addFrom", &Scene::addFrom);
 
-    auto parser = py::class_<SceneParser>(m, "SceneParser")
+    auto parser = py::class_<SceneParser>(m, "SceneParser", "Parser for standard JSON and glTF scene description")
                       .def(py::init<>())
                       .def(
                           "loadFromFile", [](SceneParser& parser, const std::string& path, uint32 flags) {
@@ -120,7 +120,7 @@ void scene_module(py::module_& m)
                           },
                           py::arg("str"), py::arg("opt_dir") = "", py::arg("flags") = (uint32)SceneParser::F_LoadAll);
 
-    py::enum_<SceneParser::Flags>(parser, "Flags", py::arithmetic())
+    py::enum_<SceneParser::Flags>(parser, "Flags", py::arithmetic(), "Flags modifying parsing behaviour and allowing partial scene loads")
         .value("F_LoadCamera", SceneParser::F_LoadCamera)
         .value("F_LoadFilm", SceneParser::F_LoadFilm)
         .value("F_LoadTechnique", SceneParser::F_LoadTechnique)

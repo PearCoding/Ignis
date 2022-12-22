@@ -61,7 +61,7 @@ html_show_sourcelink = False
 html_sourcelink_suffix = ""
 
 html_theme_options = {
-    "show_toc_level": 2,
+    "show_toc_level": 1,
     "show_nav_level": 2,
     "navbar_align": "content",
     "secondary_sidebar_items": ["page-toc"],

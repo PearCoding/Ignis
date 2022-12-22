@@ -30,17 +30,25 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, w: i32,
     let right = vec3_normalize(vec3_cross(dir, up));
     let view  = make_mat3x3(right, up, dir);
 
+    // nx, ny in [-1, 1]
+    fn @compute_dir(nx: f32, ny: f32) = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * nx, scale.y * ny, 1)));
+
+    let image_area = 1:f32;//4 * scale.x * scale.y * (w * h) as f32; // Area total image area per pixel in world space without projection due to the normalization
+
     Camera {
         generate_ray = @ |_, coord| {
-            let d = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * coord.nx, scale.y * coord.ny, 1)));
+            let d = compute_dir(coord.nx, coord.ny);
             make_ray(eye, d, tmin, tmax, ray_flag_camera)
         },
         sample_pixel = @ |_, pos| {
             if let Option[PixelCoord]::Some(coord) = perspective_pos_to_pixel(pos, eye, view, scale, w, h) {
+                let s_dir = vec3_sub(eye, pos);
+                // let cos   = safe_div(vec3_dot(s_dir, dir), vec3_len(s_dir));
+                let jacobian = safe_div(image_area, 1/* math_builtins::fabs(cos*cos)*/);
                 make_option(CameraSample{
                     coord  = coord,
-                    dir    = vec3_sub(eye, pos),
-                    weight = color_builtins::white,
+                    dir    = s_dir,
+                    weight = make_gray_color(jacobian),
                     pdf    = 1,
                 })
             } else {
@@ -77,11 +85,18 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, ape
         generate_ray = gen_ray,
         sample_pixel = @ |rnd, pos| {
             if let Option[PixelCoord]::Some(coord) = perspective_pos_to_pixel(pos, eye, view, scale, w, h) {
+                let ray = gen_ray(rnd, coord);
+                let s_dir = vec3_sub(ray.org, pos);
+                // let inv_area = if aperture_radius > flt_eps { 1 / (flt_pi * aperture_radius * aperture_radius) } else { 1:f32 };
+
+                let cos = vec3_dot(dir, ray.dir);
+                let jacobian = 1 / math_builtins::fabs(cos * cos * cos);
+
                 make_option(CameraSample{
                     coord  = coord,
-                    dir    = vec3_neg(gen_ray(rnd, coord).dir),
-                    weight = color_builtins::white,
-                    pdf    = 1 / (2*flt_pi*aperture_radius*aperture_radius), // TODO
+                    dir    = s_dir, // From pos to camera
+                    weight = make_gray_color(jacobian),
+                    pdf    = 1,
                 })
             } else {
                 Option[CameraSample]::None
