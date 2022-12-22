@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <meta property="article:modified_time" content="2022-11-22T13:06:12+00:00" />
+    <meta property="article:modified_time" content="2022-12-22T19:07:27+00:00" />
     <title>Python API &#8212; Ignis  documentation</title>
   
   
@@ -197,6 +197,10 @@
   
 
   
+  <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+  </label>
+  
 
 </div>
   </nav>
@@ -306,10 +310,434 @@
               
   <section id="python-api">
 <h1>Python API<a class="headerlink" href="#python-api" title="Permalink to this heading">#</a></h1>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>TODO</p>
-</div>
+<section id="ignis-module">
+<span id="id1"></span><h2>Ignis (module)<a class="headerlink" href="#ignis-module" title="Permalink to this heading">#</a></h2>
+<p>Ignis python interface</p>
+<section id="methods">
+<h3>Methods<a class="headerlink" href="#methods" title="Permalink to this heading">#</a></h3>
+<ul>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">flushLog</span></span><span class="punctuation"><span class="pre">()</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p>
+<p>Flush internal logs</p>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromFile</span></span><span class="punctuation"><span class="pre">(</span></span><span class="operator"><span class="pre">*</span></span><span class="name"><span class="pre">args</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="operator"><span class="pre">**</span></span><span class="name"><span class="pre">kwargs</span></span><span class="punctuation"><span class="pre">)</span></span></code></p>
+<p>Overloaded function.</p>
+<ol class="arabic">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromFile</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#runtimewrap"><span class="name"><span class="pre">RuntimeWrap</span></span></a></code></p>
+<p>Load a scene from file and generate a default runtime</p>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromFile</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtimeoptions"><span class="name"><span class="pre">RuntimeOptions</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#runtimewrap"><span class="name"><span class="pre">RuntimeWrap</span></span></a></code></p>
+<p>Load a scene from file and generate a runtime with given options</p>
+</li>
+</ol>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromScene</span></span><span class="punctuation"><span class="pre">(</span></span><span class="operator"><span class="pre">*</span></span><span class="name"><span class="pre">args</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="operator"><span class="pre">**</span></span><span class="name"><span class="pre">kwargs</span></span><span class="punctuation"><span class="pre">)</span></span></code></p>
+<p>Overloaded function.</p>
+<ol class="arabic">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromScene</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#runtimewrap"><span class="name"><span class="pre">RuntimeWrap</span></span></a></code></p>
+<p>Generate a default runtime from an already loaded scene</p>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromScene</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#runtimewrap"><span class="name"><span class="pre">RuntimeWrap</span></span></a></code></p>
+<p>Generate a default runtime from an already loaded scene with directory for external resources</p>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromScene</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtimeoptions"><span class="name"><span class="pre">RuntimeOptions</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#runtimewrap"><span class="name"><span class="pre">RuntimeWrap</span></span></a></code></p>
+<p>Generate a runtime with given options from an already loaded scene</p>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromScene</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg2</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtimeoptions"><span class="name"><span class="pre">RuntimeOptions</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#runtimewrap"><span class="name"><span class="pre">RuntimeWrap</span></span></a></code></p>
+<p>Generate a runtime with given options from an already loaded scene with directory for external resources</p>
+</li>
+</ol>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="operator"><span class="pre">*</span></span><span class="name"><span class="pre">args</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="operator"><span class="pre">**</span></span><span class="name"><span class="pre">kwargs</span></span><span class="punctuation"><span class="pre">)</span></span></code></p>
+<p>Overloaded function.</p>
+<ol class="arabic">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#runtimewrap"><span class="name"><span class="pre">RuntimeWrap</span></span></a></code></p>
+<p>Load a scene from a string and generate a default runtime</p>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#runtimewrap"><span class="name"><span class="pre">RuntimeWrap</span></span></a></code></p>
+<p>Load a scene from a string with directory for external resources and generate a default runtime</p>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtimeoptions"><span class="name"><span class="pre">RuntimeOptions</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#runtimewrap"><span class="name"><span class="pre">RuntimeWrap</span></span></a></code></p>
+<p>Load a scene from a string and generate a runtime with given options</p>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg2</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtimeoptions"><span class="name"><span class="pre">RuntimeOptions</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#runtimewrap"><span class="name"><span class="pre">RuntimeWrap</span></span></a></code></p>
+<p>Load a scene from a string with directory for external resources and generate a runtime with given options</p>
+</li>
+</ol>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">saveExr</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">buffer</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">bool</span></span></code></p>
+<p>Save an OpenEXR image to the filesystem</p>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">setQuiet</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">bool</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p>
+<p>Set True to disable all messages from the framework</p>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">setVerbose</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">bool</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p>
+<p>Set True to enable all messages from the framework, else only important messages will be shown</p>
+</li>
+</ul>
+</section>
+</section>
+<section id="cpuarchitecture">
+<span id="id2"></span><h2>CPUArchitecture<a class="headerlink" href="#cpuarchitecture" title="Permalink to this heading">#</a></h2>
+<p>Enum holding supported CPU architectures</p>
+<section id="entries">
+<h3>Entries<a class="headerlink" href="#entries" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">ARM</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">X86</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Unknown</span></span></code></p></li>
+</ul>
+</section>
+<section id="properties">
+<h3>Properties<a class="headerlink" href="#properties" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">name</span></span></code>: <code class="code Python docutils literal notranslate"><span class="name"><span class="pre">name</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">handle</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">str</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">value</span></span></code>:</p></li>
+</ul>
+</section>
+</section>
+<section id="cameraorientation">
+<span id="id3"></span><h2>CameraOrientation<a class="headerlink" href="#cameraorientation" title="Permalink to this heading">#</a></h2>
+<p>General camera orientation</p>
+<section id="id4">
+<h3>Properties<a class="headerlink" href="#id4" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Dir</span></span></code>: Direction the camera is facing</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Eye</span></span></code>: Origin of the camera</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Up</span></span></code>: Vector defining the up of the camera</p></li>
+</ul>
+</section>
+</section>
+<section id="gpuvendor">
+<span id="id5"></span><h2>GPUVendor<a class="headerlink" href="#gpuvendor" title="Permalink to this heading">#</a></h2>
+<p>Enum holding supported GPU vendors</p>
+<section id="id6">
+<h3>Entries<a class="headerlink" href="#id6" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">AMD</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Intel</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Nvidia</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Unknown</span></span></code></p></li>
+</ul>
+</section>
+<section id="id7">
+<h3>Properties<a class="headerlink" href="#id7" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">name</span></span></code>: <code class="code Python docutils literal notranslate"><span class="name"><span class="pre">name</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">handle</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">str</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">value</span></span></code>:</p></li>
+</ul>
+</section>
+</section>
+<section id="ray">
+<span id="id8"></span><h2>Ray<a class="headerlink" href="#ray" title="Permalink to this heading">#</a></h2>
+<p>Single ray traced into the scene</p>
+<section id="id9">
+<h3>Properties<a class="headerlink" href="#id9" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Direction</span></span></code>: Direction of the ray</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Origin</span></span></code>: Origin of the ray</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Range</span></span></code>: Range (tmin, tmax) of the ray</p></li>
+</ul>
+</section>
+</section>
+<section id="runtime">
+<span id="id10"></span><h2>Runtime<a class="headerlink" href="#runtime" title="Permalink to this heading">#</a></h2>
+<p>Renderer runtime allowing control of simulation and access to results</p>
+<section id="id11">
+<h3>Properties<a class="headerlink" href="#id11" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Camera</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">FrameCount</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">FramebufferHeight</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">FramebufferWidth</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">InitialCameraOrientation</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">IterationCount</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">SPI</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">SampleCount</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Target</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Technique</span></span></code>:</p></li>
+</ul>
+</section>
+<section id="id12">
+<h3>Methods<a class="headerlink" href="#id12" title="Permalink to this heading">#</a></h3>
+<ul>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">clearFramebuffer</span></span><span class="punctuation"><span class="pre">(</span></span><span class="operator"><span class="pre">*</span></span><span class="name"><span class="pre">args</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="operator"><span class="pre">**</span></span><span class="name"><span class="pre">kwargs</span></span><span class="punctuation"><span class="pre">)</span></span></code></p>
+<p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">clearFramebuffer</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">clearFramebuffer</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+</ol>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">getFramebuffer</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">aov</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal string single"><span class="pre">''</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">memoryview</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">incFrameCount</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">reset</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">setCameraOrientationParameter</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#cameraorientation"><span class="name"><span class="pre">CameraOrientation</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">setParameter</span></span><span class="punctuation"><span class="pre">(</span></span><span class="operator"><span class="pre">*</span></span><span class="name"><span class="pre">args</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="operator"><span class="pre">**</span></span><span class="name"><span class="pre">kwargs</span></span><span class="punctuation"><span class="pre">)</span></span></code></p>
+<p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">setParameter</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">setParameter</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">float</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">setParameter</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">ndarray</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">[</span></span><span class="literal number integer"><span class="pre">3</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number integer"><span class="pre">1</span></span><span class="punctuation"><span class="pre">]])</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">setParameter</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">ndarray</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">[</span></span><span class="literal number integer"><span class="pre">4</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number integer"><span class="pre">1</span></span><span class="punctuation"><span class="pre">]])</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+</ol>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">step</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">ignoreDenoiser</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">bool</span></span> <span class="operator"><span class="pre">=</span></span> <span class="keyword constant"><span class="pre">False</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">tonemap</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">buffer</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">trace</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtime"><span class="name"><span class="pre">Runtime</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">List</span></span><span class="punctuation"><span class="pre">[</span></span><a class="name reference external" href="#ray"><span class="name"><span class="pre">Ray</span></span></a><span class="punctuation"><span class="pre">])</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">memoryview</span></span></code></p></li>
+</ul>
+</section>
+</section>
+<section id="runtimeoptions">
+<span id="id13"></span><h2>RuntimeOptions<a class="headerlink" href="#runtimeoptions" title="Permalink to this heading">#</a></h2>
+<p>Options to customize runtime behaviour</p>
+<section id="id14">
+<h3>Properties<a class="headerlink" href="#id14" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">AcquireStats</span></span></code>: Set True if statistical data should be acquired while rendering</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">DumpShader</span></span></code>: Set True if most shader should be dumped into the filesystem</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">DumpShaderFull</span></span></code>: Set True if all shader should be dumped into the filesystem</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">EnableTonemapping</span></span></code>: Set True if any of the two tonemapping functions <code class="docutils literal notranslate"><span class="pre">tonemap</span></code> and <code class="docutils literal notranslate"><span class="pre">imageinfo</span></code> is to be used</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">OverrideCamera</span></span></code>: Type of camera to use instead of the one used by the scene</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">OverrideFilmSize</span></span></code>: Type of film size to use instead of the one used by the scene</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">OverrideTechnique</span></span></code>: Type of technique to use instead of the one used by the scene</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">SPI</span></span></code>: The requested sample per iteration. Can be 0 to set automatically</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Target</span></span></code>: The target device</p></li>
+</ul>
+</section>
+<section id="id15">
+<h3>Methods<a class="headerlink" href="#id15" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeDefault</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">trace</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">bool</span></span> <span class="operator"><span class="pre">=</span></span> <span class="keyword constant"><span class="pre">False</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#runtimeoptions"><span class="name"><span class="pre">RuntimeOptions</span></span></a></code></p></li>
+</ul>
+</section>
+</section>
+<section id="runtimewrap">
+<span id="id16"></span><h2>RuntimeWrap<a class="headerlink" href="#runtimewrap" title="Permalink to this heading">#</a></h2>
+<p>Wrapper around the runtime used for proper runtime loading and shutdown</p>
+<section id="id17">
+<h3>Properties<a class="headerlink" href="#id17" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">instance</span></span></code>:</p></li>
+</ul>
+</section>
+<section id="id18">
+<h3>Methods<a class="headerlink" href="#id18" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">shutdown</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#runtimewrap"><span class="name"><span class="pre">RuntimeWrap</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+</ul>
+</section>
+</section>
+<section id="scene">
+<span id="id19"></span><h2>Scene<a class="headerlink" href="#scene" title="Permalink to this heading">#</a></h2>
+<p>Class representing a whole scene</p>
+<section id="id20">
+<h3>Properties<a class="headerlink" href="#id20" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">bsdfs</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">camera</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">entities</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">film</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">lights</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">media</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">shapes</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">technique</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">textures</span></span></code>:</p></li>
+</ul>
+</section>
+<section id="id21">
+<h3>Methods<a class="headerlink" href="#id21" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">addBSDF</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">addConstantEnvLight</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">addEntity</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">addFrom</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">addLight</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">addMedium</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">addShape</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">addTexture</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">bsdf</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">entity</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">light</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">medium</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">shape</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">texture</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a></code></p></li>
+</ul>
+</section>
+</section>
+<section id="sceneobject">
+<span id="id22"></span><h2>SceneObject<a class="headerlink" href="#sceneobject" title="Permalink to this heading">#</a></h2>
+<p>Class representing an object in the scene</p>
+<section id="id23">
+<h3>Properties<a class="headerlink" href="#id23" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">baseDir</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">pluginType</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">properties</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name builtin"><span class="pre">type</span></span></code>:</p></li>
+</ul>
+</section>
+<section id="id24">
+<h3>Methods<a class="headerlink" href="#id24" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">hasProperty</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">bool</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name builtin"><span class="pre">property</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">setProperty</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+</ul>
+</section>
+</section>
+<section id="sceneparser">
+<span id="id25"></span><h2>SceneParser<a class="headerlink" href="#sceneparser" title="Permalink to this heading">#</a></h2>
+<p>Parser for standard JSON and glTF scene description</p>
+<section id="id26">
+<h3>Methods<a class="headerlink" href="#id26" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromFile</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneparser"><span class="name"><span class="pre">SceneParser</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">path</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">flags</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal number integer"><span class="pre">13303</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneparser"><span class="name"><span class="pre">SceneParser</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">opt_dir</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal string single"><span class="pre">''</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">flags</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal number integer"><span class="pre">13303</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#scene"><span class="name"><span class="pre">Scene</span></span></a></code></p></li>
+</ul>
+</section>
+</section>
+<section id="sceneproperty">
+<span id="id27"></span><h2>SceneProperty<a class="headerlink" href="#sceneproperty" title="Permalink to this heading">#</a></h2>
+<p>Property of an object in the scene</p>
+<section id="id28">
+<h3>Properties<a class="headerlink" href="#id28" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name builtin"><span class="pre">type</span></span></code>:</p></li>
+</ul>
+</section>
+<section id="id29">
+<h3>Methods<a class="headerlink" href="#id29" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">canBeNumber</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">bool</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">fromBool</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">bool</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">fromInteger</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">fromIntegerArray</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">List</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">])</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">fromNumber</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">float</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">fromNumberArray</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">List</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name builtin"><span class="pre">float</span></span><span class="punctuation"><span class="pre">])</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">fromString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">fromTransform</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">ndarray</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">[</span></span><span class="literal number integer"><span class="pre">4</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number integer"><span class="pre">4</span></span><span class="punctuation"><span class="pre">]])</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">fromVector2</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">ndarray</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">[</span></span><span class="literal number integer"><span class="pre">2</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number integer"><span class="pre">1</span></span><span class="punctuation"><span class="pre">]])</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">fromVector3</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">ndarray</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">[</span></span><span class="literal number integer"><span class="pre">3</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number integer"><span class="pre">1</span></span><span class="punctuation"><span class="pre">]])</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">getBool</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">def</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">bool</span></span> <span class="operator"><span class="pre">=</span></span> <span class="keyword constant"><span class="pre">False</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">bool</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">getInteger</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">def</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal number integer"><span class="pre">0</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">int</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">getIntegerArray</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name"><span class="pre">List</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">]</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">getNumber</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">def</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">float</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal number float"><span class="pre">0.0</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">float</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">getNumberArray</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name"><span class="pre">List</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name builtin"><span class="pre">float</span></span><span class="punctuation"><span class="pre">]</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">getString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">def</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal string single"><span class="pre">''</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">str</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">getTransform</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">def</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">ndarray</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">[</span></span><span class="literal number integer"><span class="pre">4</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number integer"><span class="pre">4</span></span><span class="punctuation"><span class="pre">]]</span></span> <span class="operator"><span class="pre">=</span></span> <span class="name"><span class="pre">array</span></span><span class="punctuation"><span class="pre">([[</span></span><span class="literal number float"><span class="pre">1.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">],</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">1.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">],</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">1.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">],</span></span> <span class="punctuation"><span class="pre">[</span></span><span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">1.</span></span><span class="punctuation"><span class="pre">]],</span></span> <span class="name"><span class="pre">dtype</span></span><span class="operator"><span class="pre">=</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">))</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">ndarray</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">[</span></span><span class="literal number integer"><span class="pre">4</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number integer"><span class="pre">4</span></span><span class="punctuation"><span class="pre">]]</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">getVector2</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">def</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">ndarray</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">[</span></span><span class="literal number integer"><span class="pre">2</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number integer"><span class="pre">1</span></span><span class="punctuation"><span class="pre">]]</span></span> <span class="operator"><span class="pre">=</span></span> <span class="name"><span class="pre">array</span></span><span class="punctuation"><span class="pre">([</span></span><span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">],</span></span> <span class="name"><span class="pre">dtype</span></span><span class="operator"><span class="pre">=</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">))</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">ndarray</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">[</span></span><span class="literal number integer"><span class="pre">2</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number integer"><span class="pre">1</span></span><span class="punctuation"><span class="pre">]]</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">getVector3</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">def</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">ndarray</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">[</span></span><span class="literal number integer"><span class="pre">3</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number integer"><span class="pre">1</span></span><span class="punctuation"><span class="pre">]]</span></span> <span class="operator"><span class="pre">=</span></span> <span class="name"><span class="pre">array</span></span><span class="punctuation"><span class="pre">([</span></span><span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number float"><span class="pre">0.</span></span><span class="punctuation"><span class="pre">],</span></span> <span class="name"><span class="pre">dtype</span></span><span class="operator"><span class="pre">=</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">))</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">ndarray</span></span><span class="punctuation"><span class="pre">[</span></span><span class="name"><span class="pre">numpy</span></span><span class="operator"><span class="pre">.</span></span><span class="name"><span class="pre">float32</span></span><span class="punctuation"><span class="pre">[</span></span><span class="literal number integer"><span class="pre">3</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="literal number integer"><span class="pre">1</span></span><span class="punctuation"><span class="pre">]]</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">isValid</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">bool</span></span></code></p></li>
+</ul>
+</section>
+</section>
+<section id="target">
+<span id="id30"></span><h2>Target<a class="headerlink" href="#target" title="Permalink to this heading">#</a></h2>
+<p>Target specification the runtime is using</p>
+<section id="id31">
+<h3>Properties<a class="headerlink" href="#id31" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">CPUArchitecture</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Device</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">GPUVendor</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">IsCPU</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">IsGPU</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">IsValid</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">ThreadCount</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">VectorWidth</span></span></code>:</p></li>
+</ul>
+</section>
+<section id="id32">
+<h3>Methods<a class="headerlink" href="#id32" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeCPU</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeGPU</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#gpuvendor"><span class="name"><span class="pre">GPUVendor</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeGeneric</span></span><span class="punctuation"><span class="pre">()</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeSingle</span></span><span class="punctuation"><span class="pre">()</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">pickBest</span></span><span class="punctuation"><span class="pre">()</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">pickCPU</span></span><span class="punctuation"><span class="pre">()</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">pickGPU</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">device</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal number integer"><span class="pre">0</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">toString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">str</span></span></code></p></li>
+</ul>
+</section>
+</section>
+<section id="sceneobject-type">
+<span id="id33"></span><h2>SceneObject.Type<a class="headerlink" href="#sceneobject-type" title="Permalink to this heading">#</a></h2>
+<p>Enum holding type of scene object</p>
+<section id="id34">
+<h3>Entries<a class="headerlink" href="#id34" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Bsdf</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Camera</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Entity</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Film</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Light</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Medium</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Shape</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Technique</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Texture</span></span></code></p></li>
+</ul>
+</section>
+<section id="id35">
+<h3>Properties<a class="headerlink" href="#id35" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">name</span></span></code>: <code class="code Python docutils literal notranslate"><span class="name"><span class="pre">name</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">handle</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">str</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">value</span></span></code>:</p></li>
+</ul>
+</section>
+</section>
+<section id="sceneparser-flags">
+<span id="id36"></span><h2>SceneParser.Flags<a class="headerlink" href="#sceneparser-flags" title="Permalink to this heading">#</a></h2>
+<p>Flags modifying parsing behaviour and allowing partial scene loads</p>
+<section id="id37">
+<h3>Entries<a class="headerlink" href="#id37" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">F_LoadCamera</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">F_LoadFilm</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">F_LoadTechnique</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">F_LoadBSDFs</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">F_LoadMedia</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">F_LoadLights</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">F_LoadTextures</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">F_LoadShapes</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">F_LoadEntities</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">F_LoadExternals</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">F_LoadAll</span></span></code></p></li>
+</ul>
+</section>
+<section id="id38">
+<h3>Properties<a class="headerlink" href="#id38" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">name</span></span></code>: <code class="code Python docutils literal notranslate"><span class="name"><span class="pre">name</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">handle</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">str</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">value</span></span></code>:</p></li>
+</ul>
+</section>
+</section>
+<section id="sceneproperty-type">
+<span id="id39"></span><h2>SceneProperty.Type<a class="headerlink" href="#sceneproperty-type" title="Permalink to this heading">#</a></h2>
+<p>Enum holding type of scene property</p>
+<section id="id40">
+<h3>Entries<a class="headerlink" href="#id40" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="keyword constant"><span class="pre">None</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Bool</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Integer</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Number</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">String</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Transform</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Vector2</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Vector3</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">IntegerArray</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">NumberArray</span></span></code></p></li>
+</ul>
+</section>
+<section id="id41">
+<h3>Properties<a class="headerlink" href="#id41" title="Permalink to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">name</span></span></code>: <code class="code Python docutils literal notranslate"><span class="name"><span class="pre">name</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">handle</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">str</span></span></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">value</span></span></code>:</p></li>
+</ul>
+</section>
+</section>
 </section>
 
 
@@ -333,6 +761,274 @@
           </div>
           
           
+          
+            <div class="bd-sidebar-secondary bd-toc">
+              
+<div class="toc-item">
+  
+<div class="tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+</div>
+<nav id="bd-toc-nav" class="page-toc">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#ignis-module">
+   Ignis (module)
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#methods">
+     Methods
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#cpuarchitecture">
+   CPUArchitecture
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#entries">
+     Entries
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#properties">
+     Properties
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#cameraorientation">
+   CameraOrientation
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id4">
+     Properties
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#gpuvendor">
+   GPUVendor
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id6">
+     Entries
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id7">
+     Properties
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#ray">
+   Ray
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id9">
+     Properties
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#runtime">
+   Runtime
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id11">
+     Properties
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id12">
+     Methods
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#runtimeoptions">
+   RuntimeOptions
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id14">
+     Properties
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id15">
+     Methods
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#runtimewrap">
+   RuntimeWrap
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id17">
+     Properties
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id18">
+     Methods
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#scene">
+   Scene
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id20">
+     Properties
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id21">
+     Methods
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#sceneobject">
+   SceneObject
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id23">
+     Properties
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id24">
+     Methods
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#sceneparser">
+   SceneParser
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id26">
+     Methods
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#sceneproperty">
+   SceneProperty
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id28">
+     Properties
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id29">
+     Methods
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#target">
+   Target
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id31">
+     Properties
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id32">
+     Methods
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#sceneobject-type">
+   SceneObject.Type
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id34">
+     Entries
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id35">
+     Properties
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#sceneparser-flags">
+   SceneParser.Flags
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id37">
+     Entries
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id38">
+     Properties
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#sceneproperty-type">
+   SceneProperty.Type
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id40">
+     Entries
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id41">
+     Properties
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+</nav>
+</div>
+
+            </div>
           
           
         </div>
