@@ -901,8 +901,8 @@ public:
         constexpr size_t PROP_W = 350;
         constexpr size_t PROP_H = 400;
         UI::UpdateResult result = UI::UpdateResult::Continue;
-        ImGui::SetNextWindowPos(ImVec2(Width - 5 - PROP_W, 5), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(PROP_W, PROP_H), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2((float)(Width - 5 - PROP_W), 5.0f), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2((float)PROP_W, (float)PROP_H), ImGuiCond_Once);
         if (ImGui::Begin("Properties", &ShowProperties, WindowFlags)) {
             const bool changed = ui_property_view(Runtime);
             if (changed)
