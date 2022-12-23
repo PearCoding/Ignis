@@ -19,7 +19,7 @@ The following will need ``ccmake``, but works also with ``cmake-gui`` or with pl
 
 2.  Clone Ignis from https://github.com/PearCoding/Ignis
 
-    1.  Make sure all the dependencies listed in official top `README.md <https://github.com/PearCoding/Ignis/blob/master/README.md>`_ are installed.
+    1.  Make sure all the dependencies listed in `README.md <https://github.com/PearCoding/Ignis/blob/master/README.md>`_ are installed.
     2.  Run ``mkdir build && cd build && cmake ..``
     3.  Run ``ccmake .`` inside the ``build/`` directory.
     4.  Change ``AnyDSL_runtime_DIR`` to ``ANYDSL_ROOT/runtime/build/share/anydsl/cmake``, with ``ANYDSL_ROOT`` being the path to the root of the AnyDSL framework.
@@ -102,7 +102,7 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
 2.  Clone Ignis from https://github.com/PearCoding/Ignis. This time the ``master`` branch is fine.
 
     1.  Getting AnyDSL to work is the hardest part. Congrats if you made it so far. However, Ignis requires some dependencies and configurations to work with AnyDSL.
-    2.  Make sure zlib, Intel oneAPI TBB and Eigen 3 are installed on your system. It is also recommended to install SDL2 to be able to use the viewer.
+    2.  Make sure zlib and Intel oneAPI TBB are installed on your system. It is also recommended to install SDL2 to be able to use the viewer.
     3.  Create a new directory named ``build``
     4.  Open the command line interface in the newly created directory. Make sure the recent VC environment is available.
     5.  In the command line interface write the following and adapt it to your AnyDSL setup:
