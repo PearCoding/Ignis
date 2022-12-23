@@ -19,7 +19,7 @@ public:
     static std::string inlineTransformAs2d(const Transformf& t);
     static std::string inlineMatrix2d(const Matrix2f& mat);
     static std::string inlineMatrix(const Matrix3f& mat);
-    static std::string inlineMatrix34(const Eigen::Matrix<float, 3, 4>& mat);
+    static std::string inlineMatrix34(const Matrix34f& mat);
     static std::string inlineVector2d(const Vector2f& pos);
     static std::string inlineVector(const Vector3f& pos);
     static std::string inlineColor(const Vector3f& color);

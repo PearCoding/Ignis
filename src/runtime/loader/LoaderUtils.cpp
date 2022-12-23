@@ -23,9 +23,9 @@ std::string LoaderUtils::inlineSceneBBox(const LoaderContext& ctx)
 
 std::string LoaderUtils::inlineEntity(const Entity& entity)
 {
-    const Eigen::Matrix<float, 3, 4> localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
-    const Eigen::Matrix<float, 3, 4> globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
-    const Matrix3f normalMat                   = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
+    const Matrix34f localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
+    const Matrix34f globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
+    const Matrix3f normalMat  = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
 
     std::stringstream stream;
     stream << "Entity{ id = " << entity.ID
@@ -84,7 +84,7 @@ std::string LoaderUtils::inlineMatrix(const Matrix3f& mat)
     }
 }
 
-std::string LoaderUtils::inlineMatrix34(const Eigen::Matrix<float, 3, 4>& mat)
+std::string LoaderUtils::inlineMatrix34(const Matrix34f& mat)
 {
     if (mat.isIdentity()) {
         return "mat3x4_identity()";

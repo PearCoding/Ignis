@@ -147,9 +147,9 @@ bool LoaderEntity::load(LoaderContext& ctx)
             if (ctx.Lights->isAreaLight(pair.first))
                 mEmissiveEntities.insert({ pair.first, Entity{ mEntityCount, transform, pair.first, shapeID, ctx.Materials.at(materialID).BSDF } });
 
-            const Eigen::Matrix<float, 3, 4> toLocal        = invTransform.matrix().block<3, 4>(0, 0);
-            const Eigen::Matrix<float, 3, 4> toGlobal       = transform.matrix().block<3, 4>(0, 0);
-            const Eigen::Matrix<float, 3, 3> toGlobalNormal = toGlobal.block<3, 3>(0, 0).inverse().transpose();
+            const Matrix34f toLocal       = invTransform.matrix().block<3, 4>(0, 0);
+            const Matrix34f toGlobal      = transform.matrix().block<3, 4>(0, 0);
+            const Matrix3f toGlobalNormal = toGlobal.block<3, 3>(0, 0).inverse().transpose();
 
             // Write data to dyntable
             auto& entityData = entityTable.addEntry(0);

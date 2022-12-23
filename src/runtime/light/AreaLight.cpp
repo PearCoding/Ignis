@@ -215,9 +215,9 @@ void AreaLight::embed(const EmbedInput& input) const
         return;
     }
 
-    const Eigen::Matrix<float, 3, 4> localMat  = entity->computeLocalMatrix();        // To Local
-    const Eigen::Matrix<float, 3, 4> globalMat = entity->computeGlobalMatrix();       // To Global
-    const Matrix3f normalMat                   = entity->computeGlobalNormalMatrix(); // To Global [Normal]
+    const Matrix34f localMat  = entity->computeLocalMatrix();        // To Local
+    const Matrix34f globalMat = entity->computeGlobalMatrix();       // To Global
+    const Matrix3f normalMat  = entity->computeGlobalNormalMatrix(); // To Global [Normal]
 
     switch (mRepresentation) {
     case RepresentationType::Plane: {
