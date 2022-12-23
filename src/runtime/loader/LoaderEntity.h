@@ -21,7 +21,7 @@ struct Entity {
     {
         return Transform.matrix().block<3, 4>(0, 0);
     }
-    inline Eigen::Matrix<float, 3, 3> computeGlobalNormalMatrix() const
+    inline Matrix3f computeGlobalNormalMatrix() const
     {
         return Transform.matrix().block<3, 3>(0, 0).inverse().transpose();
     }

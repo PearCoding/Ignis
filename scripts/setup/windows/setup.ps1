@@ -73,10 +73,6 @@ If($Config.GET_AnyDSL) {
     & $PSScriptRoot\setup_anydsl.ps1
 }
 
-If($Config.GET_Eigen3) {
-    & $PSScriptRoot\setup_eigen3.ps1
-}
-
 If($Config.GET_TBB) {
     & $PSScriptRoot\setup_tbb.ps1
 }

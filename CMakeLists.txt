@@ -113,9 +113,6 @@ find_package(AnyDSL_runtime REQUIRED)
 # Make sure the filesystem library is available
 find_package(Filesystem REQUIRED)
 
-# Locate Eigen
-find_package(Eigen3 REQUIRED NO_MODULE)
-
 # Locate tbb
 find_package(TBB REQUIRED) 
 

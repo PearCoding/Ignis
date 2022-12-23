@@ -391,5 +391,8 @@ template <typename Scalar, int Rows, int Cols, int Options>
 IG_SER_OPERATOR_T4(Eigen::Matrix, Scalar, Rows, Cols, Options)
 
 #undef IG_SER_OPERATOR
+#undef IG_SER_OPERATOR_T2
+#undef IG_SER_OPERATOR_T3
+#undef IG_SER_OPERATOR_T4
 
 } // namespace IG
