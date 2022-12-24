@@ -475,7 +475,7 @@ std::string TriMeshProvider::generateTraversalCode(const LoaderContext& ctx)
     stream << ShaderUtils::generateShapeLookup("trimesh_shapes", this, ctx) << std::endl;
 
     if (ctx.Options.Target.isGPU()) {
-        stream << "  let prim_bvhs = make_gpu_trimesh_bvh_table(device, " << (ctx.Options.Target.gpuVendor() == GPUVendor::Nvidia ? "true" : "false") << ");" << std::endl;
+        stream << "  let prim_bvhs = make_gpu_trimesh_bvh_table(device);" << std::endl;
     } else {
         stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, " << ctx.Options.Target.vectorWidth() << ");" << std::endl;
     }

@@ -880,7 +880,7 @@ fn @make_gpu_device( dev_id: i32
         let mut nodes: &[Node2];
         let mut objs:  &[EntityLeaf1];
         ignis_load_bvh2_ent(dev_id, prim_type, &mut nodes, &mut objs);
-        make_gpu_bvh2_ent(nodes, objs, is_nvvm)
+        make_gpu_bvh2_ent(nodes, objs, accb)
     },
     load_scene_info = @|| {
         let mut info: SceneInfo;
@@ -896,7 +896,7 @@ fn @make_gpu_device( dev_id: i32
         let mut ptr      : &[u8];
         let mut bytesize : i32;
         ignis_load_fixtable(dev_id, name, &mut ptr, &mut bytesize);
-        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
+        accb(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */)
     },
     load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];
@@ -989,26 +989,26 @@ fn @make_gpu_device( dev_id: i32
         let mut ptr      : &[u8];
         let mut bytesize : i32;
         ignis_load_buffer(dev_id, filename, &mut ptr, &mut bytesize);
-        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
+        accb(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */)
     },
     load_buffer_by_id = @ |id| {
         let mut ptr      : &[u8];
         let mut bytesize : i32;
         ignis_load_buffer_by_id(dev_id, id, &mut ptr, &mut bytesize);
-        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */, atomics, is_nvvm)
+        accb(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */)
     },
     request_buffer = @ |name, size, flags| {
         let mut ptr : &[u8];
         ignis_request_buffer(dev_id, name, &mut ptr, size * sizeof[i32]() as i32, flags);
-        make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm)
+        accb(ptr as &[f32], size)
     },
-    make_buffer = @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm),
+    make_buffer = accb,
     dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(dev_id, id, filename),
     request_debug_output = @|| {
         let mut ptr : &[u8];
         let size = 4096;
         ignis_request_buffer(dev_id, "__dbg_output", &mut ptr, size * sizeof[i32]() as i32, 0);
-        let buffer = make_gpu_buffer(dev_id, ptr as &addrspace(1)[u8], size, atomics, is_nvvm);
+        let buffer = accb(ptr as &[f32], size);
         make_debug_output(buffer)
     },
     get_local_parameter_i32   = @|name, def| registry::get_local_parameter_i32(  dev_id, name, def),
@@ -1027,11 +1027,24 @@ fn @make_nvvm_device(dev: i32) -> Device {
         add_shared_i32 = @ |p, i| nvvm_atomic_add_shared(p, i),
         add_shared_f32 = @ |p, i| atomic_p3(11:u32, p, i, 2:u32, "")
     };
+    let accessor = DeviceBufferGlobalElementAccessor {
+        load_f32  = @|p: &addrspace(1)[f32], i: i32| nvvm_ldg_f32(&(p(i))),
+        load_i32  = @|p: &addrspace(1)[i32], i: i32| nvvm_ldg_i32(&(p(i))),
+        load_vf32 = @|p: &addrspace(1)[f32], i: i32| {
+            let v = nvvm_ldg4_f32(&(&p(i) as &addrspace(1)[simd[f32 * 4]](0)));
+            (v(0), v(1), v(2), v(3))
+        },
+        load_vi32 = @|p: &addrspace(1)[i32], i: i32| {
+            let v = nvvm_ldg4_i32(&(&p(i) as &addrspace(1)[simd[i32 * 4]](0)));
+            (v(0), v(1), v(2), v(3))
+        }
+    };
+
     make_gpu_device(
         dev_id,
         nvvm_accelerator(dev),
         make_default_min_max(), //make_nvvm_min_max(), // The NVVM min_max stuff seems to be slow compared to the default one
-        @ |ptr| make_gpu_buffer(dev, ptr as &addrspace(1)[u8], 0, atomics, true),
+        @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[f32], size, atomics, accessor),
         atomics,
         true
     )
@@ -1047,11 +1060,24 @@ fn @make_amdgpu_device(dev: i32) -> Device {
         add_shared_i32 = @ |p, i| amdgcn_atomic_add_shared(p, i),
         add_shared_f32 = @ |p, i| atomic_p3(11:u32, p, i, 2:u32, "wavefront")
     };
+    let accessor = DeviceBufferGlobalElementAccessor {
+        load_f32  = @|p: &addrspace(1)[f32], i:i32| p(i),
+        load_i32  = @|p: &addrspace(1)[i32], i:i32| p(i),
+        load_vf32 = @|p: &addrspace(1)[f32], i:i32| {
+            let v = (&p(i) as &addrspace(1)[simd[f32 * 4]])(0);
+            (v(0), v(1), v(2), v(3))
+        },
+        load_vi32 = @|p: &addrspace(1)[i32], i:i32| {
+            let v = (&p(i) as &addrspace(1)[simd[i32 * 4]])(0);
+            (v(0), v(1), v(2), v(3))
+        }
+    };
+
     make_gpu_device(
         dev_id,
         amdgpu_accelerator(dev),
         make_default_min_max(), //make_amdgpu_min_max(),
-        @ |ptr| make_gpu_buffer(dev, ptr as &addrspace(1)[u8], 0, atomics, false),
+        @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[f32], size, atomics, accessor),
         atomics,
         false
     )

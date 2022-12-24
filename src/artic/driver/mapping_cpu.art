@@ -877,7 +877,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     parallel_reduce_i32     = @|n, elem, op| reduce[i32](make_cpu_parallel_reduce_handler(), n, elem, op),
     parallel_reduce_f32     = @|n, elem, op| reduce[f32](make_cpu_parallel_reduce_handler(), n, elem, op),
     parallel_reduce_handler = make_cpu_parallel_reduce_handler(),
-    get_device_buffer_accessor = @|| { @|ptr| make_cpu_buffer(ptr, 0) },
+    get_device_buffer_accessor = @|| make_cpu_buffer,
     load_scene_bvh = @ |prim_type| {
         if vector_width >= 8 {
             let mut nodes: &[Node8];
@@ -899,13 +899,13 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     load_dyntable = @ |name| -> DynTable {
         let mut table: DynTableData;
         ignis_load_dyntable(0, name, &mut table);
-        make_dyntable(table, @|ptr| make_cpu_buffer(ptr, 0))
+        make_dyntable(table, make_cpu_buffer)
     },
     load_fixtable = @ |name| -> DeviceBuffer {
         let mut ptr      : &[u8];
         let mut bytesize : i32;
         ignis_load_fixtable(0, name, &mut ptr, &mut bytesize);
-        make_cpu_buffer(ptr, (bytesize as i64 / sizeof[i32]()) as i32)
+        make_cpu_buffer(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32)
     },
     load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];
@@ -969,9 +969,9 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     request_buffer = @ |name, size, flags| {
         let mut ptr : &[u8];
         ignis_request_buffer(0, name, &mut ptr, size * sizeof[i32]() as i32, flags);
-        make_cpu_buffer(ptr, size)
+        make_cpu_buffer(ptr as &[f32], size)
     },
-    make_buffer = @ |ptr, size| make_cpu_buffer(ptr, size),
+    make_buffer = make_cpu_buffer,
     dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(0, id, filename),
     request_debug_output = @|| {
         if vector_width != 1 {
@@ -981,7 +981,7 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             let mut ptr : &[u8];
             let size = 4096;
             ignis_request_buffer(0, "__dbg_output", &mut ptr, size * sizeof[i32]() as i32, 0);
-            let buffer = make_cpu_buffer(ptr, size);
+            let buffer = make_cpu_buffer(ptr as &[f32], size);
             make_debug_output(buffer)
         }
     },

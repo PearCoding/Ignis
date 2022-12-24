@@ -8,12 +8,14 @@ fn @amdgpu_load_vec4(p: &addrspace(1)[f32], elem: i32) {
     make_vec4(v(0), v(1), v(2), v(3))
 }
 
-fn @make_gpu_buffer(dev: i32, p: &addrspace(1)[u8], count: i32, atomics: Atomics, is_nvvm: bool) -> DeviceBuffer {
-    let load_f32  = if is_nvvm { @|i: i32| nvvm_ldg_f32(&((p as &addrspace(1)[f32])(i))) } else { @|i: i32| (p as &addrspace(1)[f32])(i) };
-    let load_i32  = if is_nvvm { @|i: i32| nvvm_ldg_i32(&((p as &addrspace(1)[i32])(i))) } else { @|i: i32| (p as &addrspace(1)[i32])(i) };
-    let load_vf32 = if is_nvvm { @|i: i32| nvvm_ldg4_f32(&(&p(i * 4) as &addrspace(1)[simd[f32 * 4]](0))) } else { @|i: i32| (&p(i * 4) as &addrspace(1)[simd[f32 * 4]])(0) };
-    let load_vi32 = if is_nvvm { @|i: i32| nvvm_ldg4_i32(&(&p(i * 4) as &addrspace(1)[simd[i32 * 4]](0))) } else { @|i: i32| (&p(i * 4) as &addrspace(1)[simd[i32 * 4]])(0) };
+struct DeviceBufferGlobalElementAccessor {
+    load_f32 : fn (&addrspace(1)[f32], i32) -> f32,
+    load_i32 : fn (&addrspace(1)[i32], i32) -> i32,
+    load_vf32: fn (&addrspace(1)[f32], i32) -> (f32, f32, f32, f32),
+    load_vi32: fn (&addrspace(1)[i32], i32) -> (i32, i32, i32, i32)
+}
 
+fn @make_gpu_buffer(dev: i32, p: &addrspace(1)[f32], count: i32, atomics: Atomics, access: DeviceBufferGlobalElementAccessor) -> DeviceBuffer {
     DeviceBuffer {
         add_atomic_i32 = @ |i, v| atomics.add_global_i32(&mut ((p as &mut [i32])(i)), v),
         add_atomic_f32 = @ |i, v| atomics.add_global_f32(&mut ((p as &mut [f32])(i)), v),
@@ -21,73 +23,73 @@ fn @make_gpu_buffer(dev: i32, p: &addrspace(1)[u8], count: i32, atomics: Atomics
         max_atomic_i32 = @ |i, v| atomics.max_global_i32(&mut ((p as &mut [i32])(i)), v),
         load_i32_host  = @ |i| {
             let mut host_data: i32;
-            runtime_copy(dev, p as &[i8], i as i64 * 4, 0 /* Host */, &mut host_data as &mut [i8], 0, 4);
+            runtime_copy(dev, &p(i) as &[i8], 0 /* Src Offset */, 0 /* Host */, &mut host_data as &mut [i8], 0 /* Dst Offset */, sizeof[i32]());
             host_data
         },
         store_i32_host = @ |i, v| {
             let host_data = v;
-            runtime_copy(0 /* Host */, &host_data as &[i8], 0, dev, p as &mut [i8], i as i64 * 4, 4);
+            runtime_copy(0 /* Host */, &host_data as &[i8], 0 /* Src Offset */, dev, &p(i) as &mut [i8], 0 /* Dst Offset */, sizeof[i32]());
         },
         copy_from_host = @ |s, e, ptr| {
             let size = e - s;
-            runtime_copy(0 /* Host */, ptr as &[i8], 0, dev, p as &mut [i8], s as i64 * 4, sizeof[i32]() * size as i64);
+            runtime_copy(0 /* Host */, ptr as &[i8], 0 /* Src Offset */, dev, &p(s) as &mut [i8], 0 /* Dst Offset */, sizeof[i32]() * size as i64);
         },
         copy_to_host   = @ |s, e, ptr| {
             let size = e - s;
-            runtime_copy(dev, p as &[i8], s as i64 * 4, 0 /* Host */, ptr as &mut [i8], 0, sizeof[i32]() * size as i64);
+            runtime_copy(dev, &p(s) as &[i8], 0 /* Src Offset */, 0 /* Host */, ptr as &mut [i8], 0 /* Dst Offset */, sizeof[i32]() * size as i64);
         },
-        load_f32  = load_f32,
-        load_i32  = load_i32,
+        load_f32  = @ |i| access.load_f32(p, i),
+        load_i32  = @ |i| access.load_i32(p as &addrspace(1)[i32], i),
         load_vec2 = @ |i| {
-            let v = load_vf32(i);
-            make_vec2(v(0), v(1))
+            let v = access.load_vf32(p, i);
+            make_vec2(v.0, v.1)
         },
         load_vec3 = @ |i| {
-            let v = load_vf32(i);
-            make_vec3(v(0), v(1), v(2))
+            let v = access.load_vf32(p, i);
+            make_vec3(v.0, v.1, v.2)
         },
         load_vec4 = @ |i| {
-            let v = load_vf32(i);
-            make_vec4(v(0), v(1), v(2), v(3))
+            let v = access.load_vf32(p, i);
+            make_vec4(v.0, v.1, v.2, v.3)
         },
         load_int2 = @ |i| {
-            let v = load_vi32(i);
-            (v(0), v(1))
+            let v = access.load_vi32(p as &addrspace(1)[i32], i);
+            (v.0, v.1)
         },
         load_int3 = @ |i| {
-            let v = load_vi32(i);
-            (v(0), v(1), v(2))
+            let v = access.load_vi32(p as &addrspace(1)[i32], i);
+            (v.0, v.1, v.2)
         },
         load_int4 = @ |i| {
-            let v = load_vi32(i);
-            (v(0), v(1), v(2), v(3))
+            let v = access.load_vi32(p as &addrspace(1)[i32], i);
+            (v.0, v.1, v.2, v.3)
         },
         load_mat3x3 = @ |i| {
-            let v0 = load_vf32(i+0);
-            let v1 = load_vf32(i+4);
-            let v2 = load_vf32(i+8);
-            make_mat3x3(make_vec3(v0(0), v0(1), v0(2)),
-                        make_vec3(v0(3), v1(0), v1(1)), 
-                        make_vec3(v1(2), v1(3), v2(0)))
+            let v0 = access.load_vf32(p, i + 0);
+            let v1 = access.load_vf32(p, i + 4);
+            let v2 = access.load_vf32(p, i + 8);
+            make_mat3x3(make_vec3(v0.0, v0.1, v0.2),
+                        make_vec3(v0.3, v1.0, v1.1), 
+                        make_vec3(v1.2, v1.3, v2.0))
         },
         load_mat3x4 = @ |i| {
-            let v0 = load_vf32(i+0);
-            let v1 = load_vf32(i+4);
-            let v2 = load_vf32(i+8);
-            make_mat3x4(make_vec3(v0(0), v0(1), v0(2)),
-                        make_vec3(v0(3), v1(0), v1(1)),
-                        make_vec3(v1(2), v1(3), v2(0)),
-                        make_vec3(v2(1), v2(2), v2(3)))
+            let v0 = access.load_vf32(p, i + 0);
+            let v1 = access.load_vf32(p, i + 4);
+            let v2 = access.load_vf32(p, i + 8);
+            make_mat3x4(make_vec3(v0.0, v0.1, v0.2),
+                        make_vec3(v0.3, v1.0, v1.1),
+                        make_vec3(v1.2, v1.3, v2.0),
+                        make_vec3(v2.1, v2.2, v2.3))
         },
         load_mat4x4 = @ |i| {
-            let v0 = load_vf32(i+ 0);
-            let v1 = load_vf32(i+ 4);
-            let v2 = load_vf32(i+ 8);
-            let v3 = load_vf32(i+12);
-            make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)),
-                        make_vec4(v1(0), v1(1), v1(2), v1(3)),
-                        make_vec4(v2(0), v2(1), v2(2), v2(3)), 
-                        make_vec4(v3(0), v3(1), v3(2), v3(3)))
+            let v0 = access.load_vf32(p, i +  0);
+            let v1 = access.load_vf32(p, i +  4);
+            let v2 = access.load_vf32(p, i +  8);
+            let v3 = access.load_vf32(p, i + 12);
+            make_mat4x4(make_vec4(v0.0, v0.1, v0.2, v0.3),
+                        make_vec4(v1.0, v1.1, v1.2, v1.3),
+                        make_vec4(v2.0, v2.1, v2.2, v2.3), 
+                        make_vec4(v3.0, v3.1, v3.2, v3.3))
         },
         store_i32     = @ |i, v| { (p as &mut addrspace(1)[i32])(i) = v; },
         store_f32     = @ |i, v| { (p as &mut addrspace(1)[f32])(i) = v; },
@@ -117,7 +119,7 @@ fn @make_gpu_buffer(dev: i32, p: &addrspace(1)[u8], count: i32, atomics: Atomics
             q(i +  8) = v.col(2).x; q(i +  9) = v.col(2).y; q(i + 10) = v.col(2).z; q(i + 11) = v.col(2).w;
             q(i + 12) = v.col(3).x; q(i + 13) = v.col(3).y; q(i + 14) = v.col(3).z; q(i + 15) = v.col(3).w;
         },
-        pointer       = @ |i| &(p as &[i32])(i) as &[u8],
+        pointer       = @ |i| &p(i) as &[f32],
         count         = count,
         has_alignment = true
     }
