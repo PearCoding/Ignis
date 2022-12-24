@@ -44,11 +44,17 @@ public:
 
     [[nodiscard]] static Target makeCPU(size_t threads, size_t vectorWidth);
     [[nodiscard]] static Target makeCPU(CPUArchitecture arch, size_t threads, size_t vectorWidth);
-    [[nodiscard]] static Target makeGPU(GPUArchitecture vendor, size_t device);
+    [[nodiscard]] static Target makeGPU(GPUArchitecture arch, size_t device);
 
     [[nodiscard]] static Target pickCPU();
     [[nodiscard]] static Target pickGPU(size_t device = 0);
     [[nodiscard]] static Target pickBest();
+
+    [[nodiscard]] static CPUArchitecture getCPUArchitectureFromString(const std::string& str);
+    [[nodiscard]] static GPUArchitecture getGPUArchitectureFromString(const std::string& str);
+
+    [[nodiscard]] static std::vector<std::string> getAvailableCPUArchitectureNames();
+    [[nodiscard]] static std::vector<std::string> getAvailableGPUArchitectureNames();
 
 private:
     bool mInitialized;

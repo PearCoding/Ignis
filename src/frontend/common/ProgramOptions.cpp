@@ -107,6 +107,8 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     uint32 threadCount = 0;
     uint32 vectorWidth = 0;
     uint32 device      = 0;
+    std::string gpu_arch;
+    std::string cpu_arch;
 
     Type = type;
 
@@ -148,7 +150,9 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
 
     app.add_flag("--cpu", useCPU, "Use CPU as target only");
     app.add_flag("--gpu", useGPU, "Use GPU as target only");
+    app.add_option("--gpu-arch", gpu_arch, "Explicitly set GPU architecture to use. Will not check if available or not")->check(CLI::IsMember(IG::Target::getAvailableGPUArchitectureNames(), CLI::ignore_case));
     app.add_option("--gpu-device", device, "Pick GPU device to use on the selected platform")->default_val(0);
+    app.add_option("--cpu-arch", cpu_arch, "Explicitly set CPU architecture to use. Only choose a host compatible architecture, else the application will crash")->check(CLI::IsMember(IG::Target::getAvailableCPUArchitectureNames(), CLI::ignore_case));
     app.add_option("--cpu-threads", threadCount, "Number of threads used on a CPU target. Set to 0 to detect automatically")->default_val(threadCount);
     app.add_option("--cpu-vectorwidth", vectorWidth, "Number of vector lanes used on a CPU target. Set to 0 to detect automatically")->default_val(vectorWidth);
 
@@ -333,13 +337,30 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         // Ignore it
     }
 
+    // Handle explicit target choices
+    const CPUArchitecture fix_cpu_arch = IG::Target::getCPUArchitectureFromString(cpu_arch);
+    const GPUArchitecture fix_gpu_arch = IG::Target::getGPUArchitectureFromString(gpu_arch);
+
+    if (fix_cpu_arch != CPUArchitecture::Unknown)
+        useCPU = true;
+    if (fix_gpu_arch != GPUArchitecture::Unknown)
+        useGPU = true;
+
     // Setup target
-    if (useGPU)
-        Target = IG::Target::pickGPU(device);
-    else if (useCPU)
-        Target = IG::Target::pickCPU();
-    else
+    if (useGPU) {
+        if (fix_gpu_arch != GPUArchitecture::Unknown)
+            Target = IG::Target::makeGPU(fix_gpu_arch, 0 /* Will be set later */);
+        else
+            Target = IG::Target::pickGPU(device);
+
+    } else if (useCPU) {
+        if (fix_cpu_arch != CPUArchitecture::Unknown)
+            Target = IG::Target::makeCPU(fix_cpu_arch, 0 /* Will be set later */, 1 /* Will be set later*/);
+        else
+            Target = IG::Target::pickCPU();
+    } else {
         Target = IG::Target::pickBest();
+    }
 
     Target.setDevice((size_t)device);
     Target.setThreadCount((size_t)threadCount);
