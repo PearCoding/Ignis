@@ -1,8 +1,0 @@
-{
-	"externals": [
-        {"filename":"base.json"}
-    ],
-	"bsdfs": [
-		{"type":"roughdiffuse", "name": "mat-Sphere", "alpha": 0.5}
-	]
-}

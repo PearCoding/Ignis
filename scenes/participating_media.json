@@ -1,0 +1,50 @@
+{
+	"technique": {
+		"type": "volpath",
+		"max_depth": 64
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 40,
+		"near_clip": 0.1,
+		"far_clip": 100,
+		"transform": [ -1,0,0,0, 0,1,0,0, 0,0,-1,3.85, 0,0,0,1 ]
+	},
+	"film": {
+		"size": [1000, 1000]
+	},
+	"bsdfs": [
+		{"type":"diffuse", "name": "mat-Light", "reflectance":[0,0,0]},
+		{"type":"diffuse", "name": "mat-GrayWall", "reflectance":[0.8,0.8,0.8]},
+		{"type":"diffuse", "name": "mat-ColoredWall", "reflectance":[0.106039, 0.195687, 0.800000]},
+		{"type":"passthrough", "name": "mat-Object"}
+	],
+	"shapes": [
+		{"type":"rectangle", "name":"AreaLight", "flip_normals":true, "transform": [0, 0.084366, -0.053688, -0.7, 0, 0.053688, 0.084366, 0.1, 0.1, 0, 0, 0, 0, 0, 0, 1]},
+		{"type":"external", "name":"Bottom", "filename":"meshes/Bottom.ply"},
+		{"type":"external", "name":"Top", "filename":"meshes/Top.ply"},
+		{"type":"external", "name":"Left", "filename":"meshes/Left.ply"},
+		{"type":"external", "name":"Right", "filename":"meshes/Right.ply"},
+		{"type":"external", "name":"Back", "filename":"meshes/Back.ply"},
+		{"type":"external", "name":"Object", "filename":"meshes/CubeInCube.obj", "face_normals": true }
+	],
+	"entities": [
+		{"name":"AreaLight", "shape":"AreaLight", "bsdf":"mat-Light"},
+		{"name":"Bottom","shape":"Bottom", "bsdf":"mat-GrayWall"},
+		{"name":"Top","shape":"Top", "bsdf":"mat-GrayWall"},
+		{"name":"Left","shape":"Left", "bsdf":"mat-ColoredWall"},
+		{"name":"Right","shape":"Right", "bsdf":"mat-ColoredWall"},
+		{"name":"Back","shape":"Back", "bsdf":"mat-GrayWall"},
+		{"name":"Object","shape":"Object", "bsdf":"mat-Object", "inner_medium": "Medium", "transform": [{"translate": [0,-0.59,0]}, {"scale": 0.4}]}
+	],
+	"lights": [
+		{"type":"area", "name":"AreaLight", "entity":"AreaLight", "radiance":[100,100,100]}
+	],
+	"media": [
+		// {"type": "homogeneous", "name": "Medium", "sigma_a": [0.0015333, 0.0046, 0.019933], "sigma_s": [4.5513, 5.8294, 7.136], "g": -0.6}
+		// {"type": "homogeneous", "name": "Medium", "sigma_a": [0,0,0], "sigma_s": [0,0,0], "g": 0}
+		// {"type": "homogeneous", "name": "Medium", "sigma_a": [0.2,0.6,0.8], "sigma_s": [0.3,0.2,0.1], "g": 0}
+		// {"type": "homogeneous", "name": "Medium", "sigma_a": "color(0.2,0.6,0.8)*exp(-abs(V)).xyzz", "sigma_s": "color(0.3,0.2,0.1)*exp(-abs(V)).xyzz", "g": 0}
+		{"type": "homogeneous", "name": "Medium", "sigma_a": "4*Np.xyzz", "sigma_s": "0.2*(color(1)-Np.xyzz)", "g": 0}
+	]
+}

@@ -1,0 +1,450 @@
+{
+  // Exported via Blender plugin, modified for size and testing principled bsdf and environment map 
+  "technique": {
+    "type": "path",
+    "max_depth": 32,
+    "clamp": 0.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 39.597752709049864,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -1.000000238418579,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -1.3435885648505064e-07,
+      1.0000001192092896,
+      -12.96484088897705,
+      0.0,
+      1.0000001192092896,
+      -1.3435885648505064e-07,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      256.0,
+      256.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "Suzanne",
+      "filename": "meshes/Suzanne.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "principled",
+      "name": "Material.008",
+      "base_color": "color(0.05998991057276726, 0.16459377110004425, 0.8000000715255737, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.5
+    },
+    {
+      "type": "principled",
+      "name": "Material.001",
+      "base_color": "color(0.8000000715255737, 0.2137010246515274, 0.07701645791530609, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.5
+    },
+    {
+      "type": "principled",
+      "name": "Material.007",
+      "base_color": "color(0.05998991057276726, 0.16459377110004425, 0.8000000715255737, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.0
+    },
+    {
+      "type": "principled",
+      "name": "Material.006",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 1.0,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.5
+    },
+    {
+      "type": "principled",
+      "name": "Material.004",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.5
+    },
+    {
+      "type": "principled",
+      "name": "Material.009",
+      "base_color": "color(0.05998991057276726, 0.16459377110004425, 0.8000000715255737, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.7887885053796064
+    },
+    {
+      "type": "principled",
+      "name": "Material.002",
+      "base_color": "color(0.8000000715255737, 0.2137010246515274, 0.07701645791530609, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.5
+    },
+    {
+      "type": "principled",
+      "name": "Material.003",
+      "base_color": "color(0.8000000715255737, 0.2137010246515274, 0.07701645791530609, 1.0)",
+      "metallic": 0.0,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.5
+    },
+    {
+      "type": "principled",
+      "name": "Material.005",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.5
+    }
+  ],
+  "entities": [
+    {
+      "name": "Suzanne-Suzanne",
+      "shape": "Suzanne",
+      "bsdf": "Material.005",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Suzanne.001-Suzanne.005",
+      "shape": "Suzanne",
+      "bsdf": "Material.006",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        3.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Suzanne.002-Suzanne.006",
+      "shape": "Suzanne",
+      "bsdf": "Material.004",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -3.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Suzanne.003-Suzanne.007",
+      "shape": "Suzanne",
+      "bsdf": "Material.007",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -3.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        -2.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Suzanne.004-Suzanne.008",
+      "shape": "Suzanne",
+      "bsdf": "Material.008",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        -2.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Suzanne.005-Suzanne.009",
+      "shape": "Suzanne",
+      "bsdf": "Material.009",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        3.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        -2.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Suzanne.006-Suzanne.010",
+      "shape": "Suzanne",
+      "bsdf": "Material.003",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        3.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        2.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Suzanne.007-Suzanne.011",
+      "shape": "Suzanne",
+      "bsdf": "Material.002",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        2.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Suzanne.008-Suzanne.012",
+      "shape": "Suzanne",
+      "bsdf": "Material.001",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -3.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        2.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "env",
+      "name": "__scene_world",
+      "radiance": "_tex_0",
+      "transform": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "type": "image",
+      "name": "_tex_0",
+      "filename": "../textures/environment/phalzer_forest_01_4k.exr",
+      "wrap_mode": "clamp",
+      "filter_type": "bilinear"
+    }
+  ]
+}

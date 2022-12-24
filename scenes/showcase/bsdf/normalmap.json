@@ -1,0 +1,12 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"textures": [
+		{"type":"image", "name":"weight", "filename":"../../textures/grid_normal.png"}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name":"first"},
+		{"type":"normalmap", "name":"mat-Sphere", "bsdf": "first", "map":"weight", "strength":-4}
+	]
+}

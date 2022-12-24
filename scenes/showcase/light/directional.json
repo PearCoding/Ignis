@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"lights": [
+		{"type":"directional", "name":"Light", "direction": [-1, -1, 0]}
+	]
+}

@@ -1,4 +1,4 @@
-// Bottom level SBVH
+// Bottom level BVH
 struct PrimBvh {
     node:     fn (i32) -> Node, // Access to one node of the BVH
     prim:     fn (i32) -> Prim, // Access to one (possibly packed) primitive
@@ -6,7 +6,7 @@ struct PrimBvh {
     arity:    i32,              // Arity of the BVH (number of children per node)
 }
 
-type BVHTable = fn (i32) -> PrimBvh;
+type BVHTable = fn (u64) -> PrimBvh;
 
 // Top level BVH
 struct SceneBvh {
@@ -14,6 +14,14 @@ struct SceneBvh {
     ent:      fn (i32) -> EntityLeaf, // Access to one EntityLeaf
     prefetch: fn (i32) -> (),         // Prefetches a leaf or inner node
     arity:    i32,                    // Arity of the BVH (number of children per node)
+}
+
+// Abstract traversal bvh
+struct TraversalBvh {
+    node:     fn (i32) -> Node,                         // Access to one node of the BVH
+    handle:   fn (NodeRef, &mut Ray, &mut Hit) -> bool, // Handle leaf
+    prefetch: fn (i32) -> (),                           // Prefetches a leaf or inner node
+    arity:    i32,                                      // Arity of the BVH (number of children per node)
 }
 
 struct Node {
@@ -30,10 +38,14 @@ struct Prim {
 }
 
 struct EntityLeaf {
-    bbox      : BBox,  // Bounding box
-    entity_id : i32,   // Entity ID
-    shape_id  : i32,   // Shape ID
-    local     : Mat3x4 // Matrix to local system
+    bbox      : BBox,   // Bounding box
+    entity_id : i32,    // Entity ID
+    shape_id  : i32,    // Shape ID
+    user1     : i32,    // Custom (most of the time the bvh id)
+    user2     : i32,    // Custom
+    user3     : i32,    // Custom
+    local     : Mat3x4, // Matrix to local system
+    flags     : u32     // Visibility flags and other stuff, partially the same as ray flags
 }
 
 // Used as storage
@@ -41,13 +53,19 @@ struct EntityLeaf1 {
     min       : [f32 * 3], // Minimum corner
     entity_id : i32,       // Entity ID
     max       : [f32 * 3], // Maximum corner
-    shape_id  : i32,       // Shape/BVH ID
-    local     : Mat3x4     // Matrix to local system
+    shape_id  : i32,       // Shape ID
+    local     : Mat3x4,    // Matrix to local system
+    flags     : u32,       // Flags
+    user      : [i32 * 3]  // Paddings
 }
 
-fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, local: Mat3x4) = EntityLeaf {
+fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, user1: i32, user2: i32, user3: i32, local: Mat3x4, flags: u32) = EntityLeaf {
     bbox      = bbox,
     entity_id = entity_id,
     shape_id  = shape_id,
-    local     = local
+    user1     = user1,
+    user2     = user2,
+    user3     = user3,
+    local     = local,
+    flags     = flags
 };

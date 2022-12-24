@@ -1,4 +1,4 @@
-#include "Camera.h"
+#include "CameraProxy.h"
 #include "IO.h"
 #include "Logger.h"
 #include "ProgramOptions.h"
@@ -19,6 +19,9 @@ struct SectionTimer {
 
 static std::string beautiful_time(uint64 ms)
 {
+    if (ms == 0)
+        return "0ms";
+
     uint64_t pms = ms % 1000;
     ms /= 1000;
     uint64_t ps = ms % 60;
@@ -56,6 +59,7 @@ int main(int argc, char** argv)
 
     RuntimeOptions opts;
     cmd.populate(opts);
+    opts.EnableTonemapping = false;
 
     if (!cmd.Quiet)
         std::cout << Build::getCopyrightString() << std::endl;
@@ -93,12 +97,14 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    runtime->mergeParametersFrom(cmd.UserEntries);
     timer_loading.stop();
 
-    const auto def = runtime->initialCameraOrientation();
-    runtime->setParameter("__camera_eye", cmd.EyeVector().value_or(def.Eye));
-    runtime->setParameter("__camera_dir", cmd.DirVector().value_or(def.Dir));
-    runtime->setParameter("__camera_up", cmd.UpVector().value_or(def.Up));
+    auto orientation = runtime->initialCameraOrientation();
+    orientation.Eye  = cmd.EyeVector().value_or(orientation.Eye);
+    orientation.Dir  = cmd.DirVector().value_or(orientation.Dir);
+    orientation.Up   = cmd.UpVector().value_or(orientation.Up);
+    runtime->setCameraOrientationParameter(orientation);
 
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(cmd.SPP.value_or(0) / (float)SPI));
@@ -121,7 +127,7 @@ int main(int argc, char** argv)
         auto ticks = std::chrono::high_resolution_clock::now();
 
         timer_render.start();
-        runtime->step();
+        runtime->step(samples_sec.size() != desired_iter - 1);
         timer_render.stop();
 
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
@@ -136,7 +142,7 @@ int main(int argc, char** argv)
 
     SectionTimer timer_saving;
     timer_saving.start();
-    if (!saveImageOutput(cmd.Output, *runtime))
+    if (!saveImageOutput(cmd.Output, *runtime, nullptr))
         IG_LOG(L_ERROR) << "Failed to save EXR file " << cmd.Output << std::endl;
     else
         IG_LOG(L_INFO) << "Result saved to " << cmd.Output << std::endl;

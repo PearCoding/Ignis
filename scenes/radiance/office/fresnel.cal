@@ -1,0 +1,16 @@
+{ Fresnel factors }
+
+N1 = 1;
+N2 = A1;
+
+ETA = N1 / N2;
+COS_I = abs(Rdot);
+COS_T = 1 - (1 - COS_I * COS_I) * ETA * ETA;
+
+R_s = (ETA * COS_I - COS_T)/(ETA * COS_I + COS_T);
+R_p = (COS_I - ETA * COS_T)/(COS_I + ETA * COS_T);
+
+F = if(COS_T, (R_s * R_s + R_p * R_p) / 2, 1);
+
+{ Thin layer approximation }
+refl = F + (1 - F) * F / (F + 1);

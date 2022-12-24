@@ -5,5 +5,6 @@ if(IG_WITH_CONVERTER_MITSUBA)
 endif()
 
 add_subdirectory(exr2hdr)
+add_subdirectory(exr2jpg)
 add_subdirectory(exr2png)
 add_subdirectory(hdr2exr)

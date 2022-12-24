@@ -1,0 +1,11 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"textures": [
+		{"type":"brick", "name":"tex", "scale_x": 3, "scale_y": 6, "color0": [0.4,0.3,0.3], "color1": [0.95, 0.75, 0.6]}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name":"mat-Plane", "reflectance": "tex"}
+	]
+}

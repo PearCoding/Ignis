@@ -1,0 +1,7 @@
+// Special camera to satisfy issues when using tracing mode
+fn @make_null_camera() = Camera {
+    generate_ray = @ |_, _| make_zero_ray(),
+    sample_pixel = @ |_, _| Option[CameraSample]::None,
+    pos_to_pixel = @ |_| Option[PixelCoord]::None,
+    differential = @ |_| ( make_vec3(0,0,0), make_vec3(0,0,0) )
+};

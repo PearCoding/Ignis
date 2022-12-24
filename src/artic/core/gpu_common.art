@@ -85,3 +85,35 @@ fn @gpu_reduce[T](acc: Accelerator, n: i32, block_size: i32, elem: fn (i32) -> T
         }
     }
 }
+
+// Swizzling based on https://developer.nvidia.com/blog/optimizing-compute-shaders-for-l2-locality-using-thread-group-id-swizzling/
+fn @gpu_swizzle_2d_id(tile_width: i32, work_item: WorkItem) -> (i32, i32) {
+    let dim   = (work_item.nblkx(), work_item.nblky()); // Also called CTA
+    let block = (work_item.bdimx(), work_item.bdimy());
+
+    let tiles         = dim.0 / tile_width;
+    let cta_per_tiles = dim.1 * tile_width;
+
+    let all_cta = tiles * tile_width * dim.1;
+
+    let flat_block_id = work_item.bidy() * dim.0 + work_item.bidx();
+    let cta_id        = flat_block_id / cta_per_tiles;
+    let local_cta_id  = flat_block_id % cta_per_tiles;
+
+    let (l_x, l_y) = if (all_cta <= flat_block_id) {
+        let last_x = dim.0 % tile_width;
+        (local_cta_id % last_x, local_cta_id / last_x)
+    } else {
+        (local_cta_id % tile_width, local_cta_id / tile_width)
+    };
+
+    let sw_cta_id = cta_id * tile_width + l_y * dim.0 + l_x;
+
+    let sw_b_x = sw_cta_id % dim.0;
+    let sw_b_y = sw_cta_id / dim.0;
+
+    let sw_t_x = block.0 * sw_b_x + work_item.tidx();
+    let sw_t_y = block.1 * sw_b_y + work_item.tidy();
+
+    (sw_t_x, sw_t_y)
+}

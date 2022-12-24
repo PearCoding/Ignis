@@ -1,18 +1,14 @@
 #pragma once
 
 #include "Logger.h"
-#include "Target.h"
+#include "RuntimeStructs.h"
+#include "SPPMode.h"
+#include "device/Target.h"
 
 #include <array>
 #include <optional>
 
 namespace IG {
-enum class SPPMode {
-    Fixed,
-    Capped,
-    Continous
-};
-
 enum class ApplicationType {
     View,
     CLI,
@@ -23,6 +19,8 @@ struct RuntimeOptions;
 class ProgramOptions {
 public:
     ProgramOptions(int argc, char** argv, ApplicationType type, const std::string& desc);
+
+    ApplicationType Type;
 
     // If true, program options already handled standard stuff. Just exit the application
     bool ShouldExit = false;
@@ -51,10 +49,7 @@ public:
     std::string CameraType;
     std::string TechniqueType;
 
-    IG::Target Target  = Target::INVALID;
-    int Device         = 0;
-    bool AutodetectCPU = false;
-    bool AutodetectGPU = false;
+    IG::Target Target;
 
     std::optional<int> SPP;
     std::optional<int> SPI;
@@ -62,15 +57,29 @@ public:
 
     bool AcquireStats     = false;
     bool AcquireFullStats = false;
+    bool DebugTrace       = false;
 
-    bool DumpShader     = false;
-    bool DumpFullShader = false;
+    bool DumpShader       = false;
+    bool DumpFullShader   = false;
+    bool DumpRegistry     = false;
+    bool DumpFullRegistry = false;
+
+    bool AddExtraEnvLight    = false;
+    bool ForceSpecialization = false;
+
+    bool Denoise                    = false;
+    bool DenoiserFollowSpecular     = false;
+    bool DenoiserOnlyFirstIteration = false;
+
+    size_t ShaderOptimizationLevel = 3;
 
     std::filesystem::path Output;
     std::filesystem::path InputScene;
     std::filesystem::path InputRay;
 
     std::filesystem::path ScriptDir;
+
+    ParameterSet UserEntries;
 
     void populate(RuntimeOptions& options) const;
 };

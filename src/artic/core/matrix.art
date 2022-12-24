@@ -18,9 +18,9 @@ fn @make_mat2x2(c0: Vec2, c1: Vec2) = Mat2x2 { col = [c0, c1] };
 fn @make_mat3x3(c0: Vec3, c1: Vec3, c2: Vec3) = Mat3x3 { col = [c0, c1, c2] };
 
 fn @make_orthonormal_mat3x3(n: Vec3) -> Mat3x3 {
-    let sign : f32 = if math_builtins::signbit(n.z) { -1 } else { 1 };
-    let a          = -1 / (sign + n.z);
-    let b          = n.x * n.y * a;
+    let sign = math_builtins::copysign[f32](1, n.z);
+    let a    = -1 / (sign + n.z);
+    let b    = n.x * n.y * a;
 
     let t  = make_vec3(1 + sign * n.x * n.x * a, sign * b, -sign * n.x);
     let bt = make_vec3(b, sign + n.y * n.y * a, -n.y);
@@ -31,6 +31,10 @@ fn @flip_orthonormal_mat3x3(m: Mat3x3) = make_mat3x3(m.col(0), vec3_neg(m.col(1)
 
 fn @make_mat3x4(c0: Vec3, c1: Vec3, c2: Vec3, c3: Vec3) = Mat3x4 { col = [c0, c1, c2, c3] };
 fn @make_mat4x4(c0: Vec4, c1: Vec4, c2: Vec4, c3: Vec4) = Mat4x4 { col = [c0, c1, c2, c3] };
+
+// Extract linear part (3x3) from a larger matrix
+fn @mat3x4_linear(m: Mat3x4) = make_mat3x3(m.col(0), m.col(1), m.col(2));
+fn @mat4x4_linear(m: Mat4x4) = make_mat3x3(vec4_to_3(m.col(0)), vec4_to_3(m.col(1)), vec4_to_3(m.col(2)));
 
 fn @mat2x2_transpose(m: Mat2x2) = make_mat2x2(make_vec2(m.col(0).x, m.col(1).x),
                                               make_vec2(m.col(0).y, m.col(1).y));
@@ -114,18 +118,13 @@ fn @mat4x4_matmul(a: Mat4x4, b: Mat4x4) = make_mat4x4(
     mat4x4_mul(a, b.col(2)),
     mat4x4_mul(a, b.col(3)));
 
-fn @mat3x3_at(a: Mat3x3, row: i32, col: i32) = match(row) {
-    0 => a.col(col).x,
-    1 => a.col(col).y,
-    _ => a.col(col).z
-};
+fn @mat2x2_diag(m: Mat2x2) = make_vec2(m.col(0).x, m.col(1).y);
+fn @mat3x3_diag(m: Mat3x3) = make_vec3(m.col(0).x, m.col(1).y, m.col(2).z);
+fn @mat3x4_diag(m: Mat3x4) = make_vec4(m.col(0).x, m.col(1).y, m.col(2).z, 1);
+fn @mat4x4_diag(m: Mat4x4) = make_vec4(m.col(0).x, m.col(1).y, m.col(2).z, m.col(3).w);
 
-fn @mat4x4_at(a: Mat4x4, row: i32, col: i32) = match(row) {
-    0 => a.col(col).x,
-    1 => a.col(col).y,
-    2 => a.col(col).z,
-    _ => a.col(col).w
-};
+fn @mat3x3_at(a: Mat3x3, row: i32, col: i32) = vec3_at(a.col(col), row);
+fn @mat4x4_at(a: Mat4x4, row: i32, col: i32) = vec4_at(a.col(col), row);
 
 fn @mat3x3_normalize_cols(a : Mat3x3) = make_mat3x3(vec3_normalize(a.col(0)), vec3_normalize(a.col(1)), vec3_normalize(a.col(2)));
 
@@ -216,11 +215,25 @@ fn @mat4x4_invert(a: Mat4x4) -> Mat4x4 {
     m
 }
 
+fn @mat3x3_transform_point(a: Mat3x3, v: Vec2) -> Vec2 {
+    let res   = mat3x3_mul(a, make_vec3(v.x, v.y, 1));
+    let inv_w = 1/res.z;
+    make_vec2(res.x*inv_w, res.y*inv_w)
+}
+fn @mat3x3_transform_point_affine(a: Mat3x3, v: Vec2)-> Vec2 {
+    let res = mat3x3_mul(a, make_vec3(v.x, v.y, 1));
+    make_vec2(res.x, res.y)
+}
+fn @mat3x3_transform_direction(a: Mat3x3, v: Vec2) -> Vec2 {
+    let res = mat3x3_mul(a, make_vec3(v.x, v.y, 0));
+    make_vec2(res.x, res.y)
+}
+
 fn @mat3x4_transform_point(a: Mat3x4, v: Vec3)     = mat3x4_mul(a, make_vec4(v.x, v.y, v.z, 1));
 fn @mat3x4_transform_direction(a: Mat3x4, v: Vec3) = mat3x4_mul(a, make_vec4(v.x, v.y, v.z, 0));
 
 fn @mat4x4_transform_point(a: Mat4x4, v: Vec3) -> Vec3 {
-    let res = mat4x4_mul(a, make_vec4(v.x, v.y, v.z, 1));
+    let res   = mat4x4_mul(a, make_vec4(v.x, v.y, v.z, 1));
     let inv_w = 1/res.w;
     make_vec3(res.x*inv_w, res.y*inv_w, res.z*inv_w)
 }
@@ -228,4 +241,30 @@ fn @mat4x4_transform_point(a: Mat4x4, v: Vec3) -> Vec3 {
 fn @mat4x4_transform_direction(a: Mat4x4, v: Vec3) -> Vec3 {
     let res = mat4x4_mul(a, make_vec4(v.x, v.y, v.z, 0));
     make_vec3(res.x, res.y, res.z)
+}
+
+/// Construct an orthogonal matrix M such that b = M*a for a given a and b
+fn @mat3x3_align_vectors(a: Vec3, b: Vec3) -> Mat3x3 {
+    let axis = vec3_cross(b, a);
+    let cosA = vec3_dot(a, b);
+    if cosA <= -1 {
+        return(make_mat3x3(
+                make_vec3(-1,  0,  0),
+                make_vec3( 0, -1,  0),
+                make_vec3( 0,  0, -1)
+            ))
+    }
+    let k = 1 / (1 + cosA);
+
+    make_mat3x3(
+        make_vec3((axis.x * axis.x * k) + cosA,
+                  (axis.y * axis.x * k) - axis.z, 
+                  (axis.z * axis.x * k) + axis.y),
+        make_vec3((axis.x * axis.y * k) + axis.z,  
+                  (axis.y * axis.y * k) + cosA,      
+                  (axis.z * axis.y * k) - axis.x),
+        make_vec3((axis.x * axis.z * k) - axis.y,  
+                  (axis.y * axis.z * k) + axis.x,  
+                  (axis.z * axis.z * k) + cosA) 
+                 )
 }

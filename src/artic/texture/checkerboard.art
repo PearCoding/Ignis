@@ -1,0 +1,13 @@
+fn @node_checkerboard2(p: Vec2) = select( (math::wrap(p.x, 0, 2) as i32 % 2) == (math::wrap(p.y, 0, 2) as i32 % 2)                                              , 1:i32, 0:i32);
+fn @node_checkerboard3(p: Vec3) = select(((math::wrap(p.x, 0, 2) as i32 % 2) == (math::wrap(p.y, 0, 2) as i32 % 2)) == ((math::wrap(p.z, 0, 2) as i32 % 2) == 1), 1:i32, 0:i32);
+
+fn @make_checkerboard_texture(scale: Vec2, color0: Color, color1: Color, transform: Mat3x3) -> Texture {
+    @ |ctx| { 
+        let uv2 = mat3x3_transform_point_affine(transform, vec3_to_2(ctx.uvw));
+        let suv = vec2_mul(uv2, scale);
+        let parity_x = (math::wrap(suv.x, 0, 2) as i32 % 2) == 0;
+        let parity_y = (math::wrap(suv.y, 0, 2) as i32 % 2) == 0;
+
+        select(parity_x ^ parity_y, color0, color1)
+    }
+}

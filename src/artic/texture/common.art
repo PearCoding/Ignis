@@ -1,0 +1,38 @@
+fn @make_constant_texture(color: Color) -> Texture {
+    @ |_ctx| { color }
+}
+
+fn @make_channel_texture(tex: Texture, channel: i32) -> Texture {
+    @ |ctx| { 
+        let color = tex(ctx);
+        match(channel) {
+            0 => make_gray_color(color.r),
+            1 => make_gray_color(color.g),
+            _ => make_gray_color(color.b),
+        }
+    }
+}
+
+fn @make_transform_texture(tex: Texture, transform: Mat3x3) -> Texture {
+    @ |ctx| { tex(ctx.{uvw=mat3x3_mul(transform, ctx.uvw)}) }
+}
+
+fn @make_black_texture() -> Texture {
+    @ |_ctx| { color_builtins::black }
+}
+
+fn @make_invalid_texture() -> Texture {
+    @ |_ctx| { color_builtins::pink }
+}
+
+fn @texture_dx(tex: Texture, ctx: ShadingContext) -> Color {
+    let delta = 0.001:f32;
+    //color_mulf(color_sub(tex(make_vec2(point.x + delta, point.y)), tex(make_vec2(point.x - delta, point.y))), 1/(2*delta))
+    color_mulf(color_sub(tex(ctx.{uvw=make_vec3(ctx.uvw.x + delta, ctx.uvw.y, ctx.uvw.z)}), tex(ctx)), 1/delta)
+}
+
+fn @texture_dy(tex: Texture, ctx: ShadingContext) -> Color {
+    let delta = 0.001:f32;
+    //color_mulf(color_sub(tex(make_vec2(point.x, point.y + delta)), tex(make_vec2(point.x, point.y - delta))), 1/(2*delta))
+    color_mulf(color_sub(tex(ctx.{uvw=make_vec3(ctx.uvw.x, ctx.uvw.y + delta, ctx.uvw.z)}), tex(ctx)), 1/delta)
+}

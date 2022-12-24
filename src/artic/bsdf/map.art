@@ -1,0 +1,68 @@
+fn @shading_normal_adjoint(in_dir: Vec3, out_dir: Vec3, ns: Vec3, ng: Vec3) -> f32 {
+    let ons = positive_cos(out_dir, ns);
+    let ins = positive_cos(in_dir, ns);
+    let ong = positive_cos(out_dir, ng);
+    let ing = positive_cos(in_dir, ng);
+    if ins <= flt_eps || ong <= flt_eps { 0 } else { (ons/ins) * (ing/ong) }
+    /*
+    let ons = vec3_dot(out_dir, ns);
+    let ins = vec3_dot(in_dir, ns);
+    let ong = vec3_dot(out_dir, ng);
+    let ing = vec3_dot(in_dir, ng);
+    math_builtins::fmax[f32](0, safe_div(ons,ins) * safe_div(ing,ong))
+    */
+}
+
+fn @transform_surf_bsdf(old_surf: SurfaceElement, new_surf: SurfaceElement, bsdf_factory: fn (SurfaceElement) -> Bsdf) -> Bsdf {
+    let bsdf = @bsdf_factory(new_surf);
+    bsdf.{
+        sample = @ |rnd, out_dir, adjoint| {
+            if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, out_dir, adjoint) {
+                if adjoint {
+                    let fac = shading_normal_adjoint(s.in_dir, out_dir, new_surf.local.col(2), old_surf.local.col(2));
+                    make_bsdf_sample(s.in_dir, s.pdf, color_mulf(s.color, fac), s.eta)
+                } else {
+                    make_option(s)
+                }
+            } else {
+                reject_bsdf_sample()
+            }
+        }
+    }
+}
+
+//--------------------------------------
+// Special bsdf replacing the normal orientation
+fn @make_normal_set(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Vec3) -> Bsdf {
+    let n = ensure_valid_reflection(ctx.surf.face_normal, vec3_neg(ctx.ray.dir), vec3_normalize(normal));
+    let trans = mat3x3_align_vectors(ctx.surf.local.col(2), n);
+
+    let new_surf = ctx.surf.{ local = mat3x3_matmul(trans, ctx.surf.local) };
+    transform_surf_bsdf(ctx.surf, new_surf, bsdf_factory)
+}
+
+//--------------------------------------
+// Special bsdf replacing the normal and tangent orientation
+fn @make_normal_tangent_set(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Vec3, tangent: Vec3) -> Bsdf {
+    let n = ensure_valid_reflection(ctx.surf.face_normal, vec3_neg(ctx.ray.dir), vec3_normalize(normal));
+
+    let new_surf = ctx.surf.{ local = make_mat3x3(tangent, vec3_cross(tangent, n), n) };
+    transform_surf_bsdf(ctx.surf, new_surf, bsdf_factory)
+}
+
+//--------------------------------------
+// Normal Mapping
+// Normal given in [0, 1] RGB fashion
+fn @make_normalmap(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bsdf, normal: Color, strength: f32) -> Bsdf {
+    let oN = mat3x3_left_mul(ctx.surf.local, vec3_normalize(make_vec3(2 * normal.r - 1, 2 * normal.g - 1, 2 * normal.b - 1)));
+    let N  = if !?strength || strength != 1 { vec3_normalize(vec3_add(ctx.surf.local.col(2), vec3_mulf(vec3_sub(oN, ctx.surf.local.col(2)), strength))) } else { oN };
+    make_normal_set(ctx, bsdf_factory, N)
+}
+
+//--------------------------------------
+// Bump Mapping
+fn @make_bumpmap(ctx: ShadingContext, bsdf_factory: fn (SurfaceElement) -> Bsdf, dx: f32, dy: f32, strength: f32) -> Bsdf {
+    let N = vec3_normalize(vec3_sub(ctx.surf.local.col(2), vec3_mulf(vec3_add(vec3_mulf(ctx.surf.local.col(0), dx), vec3_mulf(ctx.surf.local.col(1), dy)), strength)));
+    make_normal_set(ctx, bsdf_factory, N)
+}
+

@@ -1,0 +1,26 @@
+// Opaque description of a point on a surface
+struct SurfaceElement {
+    is_entering: bool,  // True if the path enters the surface
+    point:       Vec3,  // Point on the surface
+    face_normal: Vec3,  // Geometric normal at the surface point
+    inv_area:    f32,   // Inverse area of surface element
+    prim_coords: Vec2,  // UV coordinates on the surface
+    tex_coords:  Vec2,  // Vertex attributes (interpolated)
+    local:       Mat3x3 // Local coordinate system at the surface point
+}
+
+fn make_invalid_surface_element() = SurfaceElement {
+    is_entering = false,
+    point       = vec3_expand(0),
+    face_normal = vec3_expand(0),
+    inv_area    = 0,
+    prim_coords = vec2_expand(0),
+    tex_coords  = vec2_expand(0),
+    local       = mat3x3_identity()
+};
+
+fn @invert_surface_element(surf: SurfaceElement) = surf.{
+    is_entering = !surf.is_entering,
+    face_normal = vec3_neg(surf.face_normal),
+    local       = flip_orthonormal_mat3x3(surf.local)
+};

@@ -1,0 +1,37 @@
+#pragma once
+
+#include "Light.h"
+
+namespace IG {
+class LoaderContext;
+
+class AreaLight : public Light {
+public:
+    AreaLight(const std::string& name, const LoaderContext& ctx, const std::shared_ptr<SceneObject>& light);
+
+    virtual std::optional<Vector3f> position() const override { return mPosition; }
+    virtual std::optional<Vector3f> direction() const override { return mRepresentation == RepresentationType::Plane ? std::make_optional(mDirection) : std::nullopt; }
+    virtual std::optional<std::string> entity() const override { return mEntity; }
+    virtual float computeFlux(ShadingTree&) const override;
+
+    virtual void serialize(const SerializationInput& input) const override;
+
+    virtual std::optional<std::string> getEmbedClass() const override;
+    virtual void embed(const EmbedInput& input) const override;
+
+private:
+    Vector3f mPosition;
+    Vector3f mDirection; // ~ Normal
+    float mArea;
+    std::string mEntity;
+    bool mUsePower;
+
+    enum class RepresentationType {
+        None,
+        Plane,
+        Sphere
+    };
+    RepresentationType mRepresentation;
+    std::shared_ptr<SceneObject> mLight;
+};
+} // namespace IG

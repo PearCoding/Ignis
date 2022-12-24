@@ -1,0 +1,76 @@
+mod shading {
+use super as all;
+use super::math_builtins;
+
+type Mat3x3 = all::Mat3x3;
+type Vec3 = all::Vec3;
+
+fn @to_world(local: Mat3x3, v: Vec3) = all::vec3_add(all::vec3_add(all::vec3_mulf(local.col(0), v.x), all::vec3_mulf(local.col(1), v.y)), all::vec3_mulf(local.col(2), v.z));
+fn @to_local(local: Mat3x3, v: Vec3) = all::make_vec3(all::vec3_dot(local.col(0), v), all::vec3_dot(local.col(1), v), all::vec3_dot(local.col(2), v));
+
+// All function below expect a local vector!
+fn @cos2_theta(v: Vec3)    = v.z * v.z;
+fn @cos_theta(v: Vec3)     = v.z;
+fn @abs_cos_theta(v: Vec3) = math_builtins::fabs[f32](v.z);
+fn @sin2_theta(v: Vec3)    = 1 - cos2_theta(v);
+fn @sin_theta(v: Vec3)     = super::safe_sqrt(sin2_theta(v));
+fn @tan2_theta(v: Vec3)    = super::safe_div(sin2_theta(v), cos2_theta(v));
+fn @tan_theta(v: Vec3)     = super::safe_sqrt(tan2_theta(v));
+
+// If vector (0,0,1) the cos_phi will be 1 and sin_phi 0
+fn @cos_phi(v: Vec3) -> f32 {
+    let denom = sin_theta(v);
+    if math_builtins::fabs(denom) > super::flt_eps {
+        v.x / denom
+    } else {
+        1
+    }
+}
+fn @cos2_phi(v: Vec3) -> f32 {
+    let denom = sin2_theta(v);
+    if math_builtins::fabs(denom) > super::flt_eps {
+        v.x * v.x / denom
+    } else {
+        1
+    }
+}
+
+fn @sin_phi(v: Vec3)  = super::safe_div(v.y, sin_theta(v));
+fn @sin2_phi(v: Vec3) = super::safe_div(v.y * v.y, sin2_theta(v));
+
+fn @sin_cos_phi(v: Vec3) -> (f32, f32) {
+    let denom = sin_theta(v);
+    if math_builtins::fabs(denom) > super::flt_eps {
+        (v.y / denom, v.x / denom)
+    } else {
+        (0, 1)
+    }
+}
+
+fn @cos_diff_phi(a: Vec3, b: Vec3) -> f32 {
+    let A = a.x * a.x + a.y * a.y;
+    let B = b.x * b.x + b.y * b.y;
+    (a.x * b.x + a.y * b.y) / math_builtins::sqrt[f32](A * B)
+}
+
+fn @theta(v: Vec3) = math_builtins::acos[f32](cos_theta(v));
+fn @phi(v: Vec3) -> f32 {
+    let a = math_builtins::atan2[f32](v.y, v.x);
+    if a < 0 { a + 2 * super::flt_pi } else { a }
+}
+
+fn @is_positive_hemisphere(v: Vec3)      = cos_theta(v) >= 0;
+fn @is_same_hemisphere(a: Vec3, b: Vec3) = is_positive_hemisphere(a) == is_positive_hemisphere(b);
+
+fn @make_same_hemisphere(a: Vec3, b: Vec3) = if is_same_hemisphere(a, b) { b } else { all::vec3_neg(b) };
+fn @make_positive_hemisphere(v: Vec3)      = if is_positive_hemisphere(v) { v } else { all::vec3_neg(v) };
+
+// Jacobian of the half-direction mapping
+fn @halfway_reflective_jacobian(cos: f32) = all::safe_div(1, 4 * cos);
+// Jacobian of the half-direction mapping for refraction
+fn @halfway_refractive_jacobian(eta: f32, cos_i: f32, cos_o: f32) -> f32 {
+    let jacob_d = cos_i + cos_o * eta;
+    all::safe_div(eta * eta * cos_i, jacob_d * jacob_d)
+}
+
+}

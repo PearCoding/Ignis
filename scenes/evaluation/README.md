@@ -1,1 +1,14 @@
-This is the same scene as in Mitsuba2 adapted to Ignis for the purpose of evaluating and comparing both implementations. The image file reference4096.exr was rendered with Mitsuba2 with the RGB setup ('scalar_rgb') and 4096 samples.
+This directory contains scenes used for evaluation.
+Used reference renderers are:
+ 
+ - Mitsuba 2 and Mitsuba 3 ('scalar_rgb')
+ - Blender Cycles
+ - Radiance
+
+The reference Blender scenes are in `blender/` and were used to export into the Ignis scene format. The resulting scene descriptions are modified manually to reduce size within the repository.
+
+The reference Mitsuba 2 scenes are available in `mitsuba/`
+
+The reference Radiance scenes are available in `radiance/`
+
+All references are saved in `references/`

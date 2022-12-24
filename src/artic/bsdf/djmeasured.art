@@ -1,0 +1,761 @@
+struct Warp {
+    size : Vec2i,
+    patch_size : Vec2,
+    inv_patch_size : Vec2,
+    param_values_offset : i32,
+    param_size : fn(i32) -> u32,
+    param_strides : fn(i32) -> u32,
+    param_values : fn(i32) -> f32,
+    data : fn(i32) -> f32,
+    marginal_cdf : fn(i32) -> f32,
+    conditional_cdf : fn(i32) -> f32,
+    array_sizes : [u32 * 6]
+}
+
+struct BRDFData {
+    ndf : Warp,
+    sigma : Warp,
+    vndf : Warp,
+    luminance : Warp,
+    rgb : Warp,
+    isotropic : bool,
+    jacobian : bool
+}
+
+struct InvertResult {
+    sample : Vec2,
+    vndf_pdf : f32
+}
+
+struct SampleResult {
+    sample : Vec2,
+    pdf : f32
+}
+
+struct MeasuredBRDFSampleData {
+    res : Vec3,
+    out : Vec3,
+    pdf : f32
+}
+
+fn @ elevation(v : Vec3) -> f32 {
+    2.0 * math_builtins::asin(0.5 * math_builtins::sqrt(v.x * v.x + v.y * v.y + (v.z - 1.0) * (v.z - 1.0)))
+}
+
+fn @ theta2u(theta : f32) -> f32 {
+    math_builtins::sqrt(theta * (2.0 / flt_pi))
+}
+
+fn @ phi2u(phi : f32) -> f32 {
+    (phi + flt_pi) / (2.0 * flt_pi)
+}
+
+fn @ u2theta(u : f32) -> f32 {
+    (u * u) * (flt_pi / 2.0)
+}
+
+fn @ u2phi(u : f32) -> f32 {
+    (2.0 * u - 1.0) * flt_pi
+}
+
+fn @ vec2_rowmul(v1 : Vec2, v2 : Vec2) -> Vec2 {
+    Vec2{
+        x = v1.x * v2.x,
+        y = v1.y * v2.y
+    }
+}
+
+fn @ vec2_rowadd(v1 : Vec2, s : f32) -> Vec2 {
+    Vec2 {
+        x = v1.x + s,
+        y = v1.y + s
+    }
+}
+
+struct Vec2i {
+    x : i32,
+    y : i32
+}
+
+fn @ vec2i_to_vec2(v : Vec2i) -> Vec2 {
+    make_vec2(v.x as f32, v.y as f32)
+}
+
+fn @ vec2_to_vec2i(v : Vec2) -> Vec2i {
+    Vec2i{
+        x = v.x as i32,
+        y = v.y as i32
+    }
+}
+
+fn @ maxf(val1 : f32, val2 : f32) -> f32 {
+    if val1 > val2 {
+        val1
+    } else {
+        val2
+    }
+}
+
+fn @ absf(val : f32) -> f32 {
+    if (val < 0.0) {
+        -val
+    } else {
+        val
+    }
+}
+
+fn @ fma(x : f32, y : f32, z : f32) -> f32 {
+    (x * y) + z
+}
+
+fn @ find_interval_eval(warp: Warp, dim : i32, param_val : f32) -> i32 {
+    let size_ : i32 = warp.param_size(dim) as i32;
+    let mut size : i32 = size_ - 2;
+    let mut first : i32 = 1;
+
+    while size > 0 {
+        let h = size >> 1;
+        let middle = first + h;
+        
+        //predicate        
+        if warp.param_values(dim * warp.param_values_offset + middle) <= param_val {
+            first = middle + 1;
+            size = size - (h + 1);
+        } else {
+            size = h;
+        }
+    }
+
+    clamp((first-1), 0, (size_ - 2))
+}
+
+fn @ find_interval_sample_row(warp: Warp, offset : i32, param_weight : &[f32], sample_y : f32) -> i32 {
+    let size_ : i32 = warp.size.y;
+    let mut size : i32 = size_ - 2;
+    let mut first : i32 = 1;
+
+    while size > 0 {
+        let h = size >> 1;
+        let middle = first + h;
+        
+        //predicate        
+        if fetch_marginal_warp2D2(warp, offset, middle, param_weight) < sample_y {
+            first = middle + 1;
+            size = size - (h + 1);
+        } else {
+            size = h;
+        }
+    }
+
+    clamp((first-1), 0, (size_ - 2))
+}
+
+fn @ find_interval_sample_col(warp: Warp, offset : i32, sample : Vec2, slice_size : i32, param_weight : &[f32]) -> i32 {
+    let size_ : i32 = warp.size.x;
+    let mut size : i32 = size_ - 2;
+    let mut first : i32 = 1;
+
+    while size > 0 {
+        let h = size >> 1;
+        let middle = first + h;
+        
+        //predicate        
+        if fetch_conditional_warp2D2(warp, offset, middle, slice_size, sample, param_weight) < sample.x {
+            first = middle + 1;
+            size = size - (h + 1);
+        } else {
+            size = h;
+        }
+    }
+
+    clamp((first-1), 0, (size_ - 2))
+}
+
+fn @ fetch_marginal_warp2D2(warp : Warp, offset : i32, idx : i32, param_weight : &[f32]) -> f32 {
+    lookup_warp(warp, 2, warp.marginal_cdf, offset + idx, warp.size.y, param_weight)
+}
+
+fn @ fetch_conditional_warp2D2(warp : Warp, offset : i32, idx : i32, slice_size : i32, sample : Vec2, param_weight : &[f32]) -> f32 {
+    let v0 = lookup_warp(warp, 2, warp.conditional_cdf, offset + idx, slice_size, param_weight);
+    let v1 = lookup_warp(warp, 2, |i|warp.conditional_cdf(i+warp.size.x), offset + idx, slice_size, param_weight);
+
+    (1.0 - sample.y) * v0 + sample.y * v1
+}
+
+fn @lookup_warp(warp : Warp, dim: i32, data : fn(i32) -> f32, i0 : i32, size : i32, param_weight : &[f32]) -> f32 {
+    if dim == 0 {
+        data(i0)
+    } else {
+        let i1 = i0 + warp.param_strides(dim - 1) as i32 * size;
+        let w0 = param_weight(2 * dim - 2);
+        let w1 = param_weight(2 * dim - 1);
+        let v0 = lookup_warp(warp, dim - 1, data, i0, size, param_weight);
+        let v1 = lookup_warp(warp, dim - 1, data, i1, size, param_weight);
+        
+        (v0 * w0) + (v1 * w1)
+    }
+}
+
+fn @ eval_warp2D0(warp: Warp, pos : Vec2) -> f32 {
+    let param_weight = [0.0:f32];
+    let slice_offset = 0;
+
+    // linear interpolation
+    let n_pos = vec2_rowmul(pos, warp.inv_patch_size);
+
+    let m_size = vec2i_to_vec2(warp.size);
+    let off_v = vec2_rowadd(m_size, -2.0);
+    
+    let offset = vec2_floor(vec2_min(n_pos, off_v));
+
+    let w1 = vec2_sub(n_pos, offset);
+    let w0 = vec2_sub(make_vec2(1.0, 1.0), w1);
+
+    let size = warp.size.x * warp.size.y;
+    let mut index = offset.x as i32 + offset.y as i32 * warp.size.x;
+    index += slice_offset * size;
+    
+    let v00 = lookup_warp(warp, 0, warp.data, index, size, param_weight);
+    let v10 = lookup_warp(warp, 0, |i|warp.data(i+1), index, size, param_weight);
+    let v01 = lookup_warp(warp, 0, |i|warp.data(i+warp.size.x), index, size, param_weight);
+    let v11 = lookup_warp(warp, 0, |i|warp.data(i+warp.size.x + 1), index, size, param_weight);
+
+    let hprod = warp.inv_patch_size.x * warp.inv_patch_size.y;
+    (w0.y * ((w0.x * v00) + (w1.x * v10)) + w1.y * ((w0.x * v01) + (w1.x * v11))) * hprod
+}
+
+fn @ eval_warp2D2(warp: Warp, pos : Vec2, phi_i : f32, theta_i : f32) -> f32 {
+    let mut param_weight = [0.0:f32,0.0:f32,0.0:f32,0.0:f32];
+    let mut slice_offset = 0;
+
+
+    let mut dim = 0;
+    while dim < 2 {
+        if warp.param_size(dim) == 1 {
+            param_weight(2 * dim) = 1.0;
+            param_weight(2 * dim + 1) = 0.0;
+            dim++;
+            continue()
+        }
+        
+        let mut dim_param = phi_i;
+        if dim == 1 {
+            dim_param = theta_i;
+        }
+
+        let param_index = find_interval_eval(warp, dim, dim_param);
+        
+        let p0 = warp.param_values(dim * warp.param_values_offset + param_index);
+        let p1 = warp.param_values(dim * warp.param_values_offset + param_index + 1);
+        
+        param_weight(2 * dim + 1) = clampf((dim_param - p0) / (p1 - p0), 0.0, 1.0);
+        param_weight(2 * dim) = 1.0 - param_weight(2 * dim + 1);
+        slice_offset += warp.param_strides(dim) as i32 * param_index;
+        dim++;
+    }
+
+    // linear interpolation
+    let n_pos = vec2_rowmul(pos, warp.inv_patch_size);
+
+    let m_size = vec2i_to_vec2(warp.size);
+    let off_v = vec2_rowadd(m_size, -2.0);
+    
+    let offset = vec2_floor(vec2_min(n_pos, off_v));
+
+    let w1 = vec2_sub(n_pos, offset);
+    let w0 = vec2_sub(make_vec2(1.0, 1.0), w1);
+
+    let size = warp.size.x * warp.size.y;
+    let mut index = offset.x as i32 + offset.y as i32 * warp.size.x;
+    index += slice_offset * size;
+    
+    let v00 = lookup_warp(warp, 2, warp.data, index, size, param_weight);
+    let v10 = lookup_warp(warp, 2, |i|warp.data(i+1), index, size, param_weight);
+    let v01 = lookup_warp(warp, 2, |i|warp.data(i+warp.size.x), index, size, param_weight);
+    let v11 = lookup_warp(warp, 2, |i|warp.data(i+warp.size.x + 1), index, size, param_weight);
+
+    let hprod = warp.inv_patch_size.x * warp.inv_patch_size.y;
+    (w0.y * ((w0.x * v00) + (w1.x * v10)) + w1.y * ((w0.x * v01) + (w1.x * v11))) * hprod
+}
+
+fn @ eval_warp2D3(warp: Warp, pos : Vec2, phi_i : f32, theta_i : f32, channel : f32) -> f32 {
+    let mut param_weight = [0.0:f32,0.0:f32,0.0:f32,0.0:f32,0.0:f32,0.0:f32];
+    let mut slice_offset = 0;
+
+    let mut dim = 0;
+    while dim < 3 {
+        if warp.param_size(dim) == 1 {
+            param_weight(2 * dim) = 1.0;
+            param_weight(2 * dim + 1) = 0.0;
+            dim++;
+            continue()
+        }
+        
+        let mut dim_param = phi_i;
+        if (dim == 1) {
+            dim_param = theta_i;
+        } else if (dim == 2) {
+            dim_param = channel;
+        }
+
+        let param_index = find_interval_eval(warp, dim, dim_param);
+        
+        let p0 = warp.param_values(dim * warp.param_values_offset + param_index);
+        let p1 = warp.param_values(dim * warp.param_values_offset + param_index + 1);
+        
+        param_weight(2 * dim + 1) = clampf((dim_param - p0) / (p1 - p0), 0.0, 1.0);
+        param_weight(2 * dim) = 1.0 - param_weight(2 * dim + 1);
+        slice_offset += warp.param_strides(dim) as i32 * param_index;
+        dim++;
+    }
+
+    // linear interpolation
+    let n_pos = vec2_rowmul(pos, warp.inv_patch_size);
+
+    let m_size = vec2i_to_vec2(warp.size);
+    let off_v = vec2_rowadd(m_size, -2.0);
+    
+    let offset = vec2_floor(vec2_min(n_pos, off_v));
+
+    let w1 = vec2_sub(n_pos, offset);
+    let w0 = vec2_sub(make_vec2(1.0, 1.0), w1);
+
+    let size = warp.size.x * warp.size.y;
+    let mut index = offset.x as i32 + offset.y as i32 * warp.size.x;
+    index += slice_offset * size;
+    
+    let v00 = lookup_warp(warp, 3, @|i|{warp.data(i)}, index, size, param_weight);
+    let v10 = lookup_warp(warp, 3, @|i|{warp.data(i+1)}, index, size, param_weight);
+    let v01 = lookup_warp(warp, 3, @|i|{warp.data(i+warp.size.x)}, index, size, param_weight);
+    let v11 = lookup_warp(warp, 3, @|i|{warp.data(i+warp.size.x + 1)}, index, size, param_weight);
+
+    let hprod = warp.inv_patch_size.x * warp.inv_patch_size.y;
+    (w0.y * ((w0.x * v00) + (w1.x * v10)) + w1.y * ((w0.x * v01) + (w1.x * v11))) * hprod
+}
+
+fn make_invert_result() -> InvertResult {
+    InvertResult{
+        sample = make_vec2(0.0,0.0),
+        vndf_pdf = 0.0
+    }
+}
+
+// only needed for vndf (2 parameter dimensions)
+fn @ invert_warp2D2(warp: Warp, sample : Vec2, phi_i : f32, theta_i : f32) -> InvertResult {
+    
+    let mut param_weight = [0.0:f32, 0.0:f32, 0.0:f32, 0.0:f32];
+    let mut slice_offset = 0;
+
+    let mut dim = 0;
+    while dim < 2 {
+        if warp.param_size(dim) == 1 {
+            param_weight(2 * dim) = 1.0;
+            param_weight(2 * dim + 1) = 0.0;
+            dim++;
+            continue()
+        }
+
+        let mut dim_param = phi_i;
+        if dim == 1 {
+            dim_param = theta_i;
+        }
+        
+        let param_index = find_interval_eval(warp, dim, dim_param);
+        
+        let p0 = warp.param_values(dim * warp.param_values_offset + param_index);
+        let p1 = warp.param_values(dim * warp.param_values_offset + param_index + 1);
+        
+        param_weight(2 * dim + 1) = clampf((dim_param - p0) / (p1 - p0), 0.0, 1.0);
+        param_weight(2 * dim) = 1.0 - param_weight(2 * dim + 1);
+        slice_offset += warp.param_strides(dim) as i32 * param_index;
+        dim++;
+    }
+
+    let mut sample_n = vec2_rowmul(sample, warp.inv_patch_size);
+    let pos = vec2_to_vec2i(vec2_min(sample_n, vec2_rowadd(vec2i_to_vec2(warp.size), -2.0)));
+    sample_n = vec2_sub(sample_n, vec2i_to_vec2(pos));
+
+    let mut offset = pos.x + pos.y * warp.size.x;
+    let slice_size = warp.size.x * warp.size.y;
+    offset = offset + slice_offset * slice_size;
+
+    let v00 = lookup_warp(warp, 2, warp.data, offset, slice_size, param_weight);
+    let v10 = lookup_warp(warp, 2, |i|warp.data(i+1), offset, slice_size, param_weight);
+    let v01 = lookup_warp(warp, 2, |i|warp.data(i+warp.size.x), offset, slice_size, param_weight);
+    let v11 = lookup_warp(warp, 2, |i|warp.data(i+warp.size.x + 1), offset, slice_size, param_weight);
+
+    let w1 = sample_n;
+    let w0 = vec2_sub(make_vec2(1.0,1.0), w1);
+    
+    let c0 = fma(w0.y, v00, w1.y * v01);
+    let c1 = fma(w0.y, v10, w1.y * v11);
+    let pdf = fma(w0.x, c0, w1.x * c1);
+
+    sample_n.x *= c0 + 0.5 * sample_n.x * (c1 - c0);
+
+    let v0 = lookup_warp(warp, 2, warp.conditional_cdf, offset, slice_size, param_weight);
+    let v1 = lookup_warp(warp, 2, |i|warp.conditional_cdf(i+warp.size.x), offset, slice_size, param_weight);
+
+    sample_n.x += (1.0 - sample_n.y) * v0 + sample_n.y * v1;
+
+    offset = pos.y * warp.size.x;
+    offset += slice_offset * slice_size;
+
+    let r0 = lookup_warp(warp, 2, warp.conditional_cdf, offset + warp.size.x - 1, slice_size, param_weight);
+    let r1 = lookup_warp(warp, 2, warp.conditional_cdf, offset + (warp.size.x * 2 - 1), slice_size, param_weight);
+
+    sample_n.x /= (1.0 - sample_n.y) * r0 + sample_n.y * r1;
+
+    sample_n.y *= r0 + 0.5 * sample_n.y * (r1 - r0);
+
+    offset = pos.y;
+    offset += slice_offset * warp.size.y;
+
+    sample_n.y += lookup_warp(warp, 2, warp.marginal_cdf, offset, warp.size.y, param_weight);
+
+    InvertResult{
+        sample = sample_n,
+        vndf_pdf = pdf * (warp.inv_patch_size.x * warp.inv_patch_size.y)
+    }
+}
+
+fn @ make_sample_result() -> SampleResult {
+    SampleResult{
+        sample = make_vec2(0.0,0.0),
+        pdf = 0.0
+    }
+}
+
+fn @ sample_warp2D2(warp : Warp, sample : Vec2, phi_i : f32, theta_i : f32) -> SampleResult {
+    let mut n_sample = make_vec2(sample.x, sample.y);
+
+    let mut param_weight = [0.0:f32, 0.0:f32, 0.0:f32, 0.0:f32];
+    let mut slice_offset = 0;
+
+    for dim in unroll(0,2) {
+        if warp.param_size(dim) == 1 {
+            param_weight(2 * dim) = 1.0;
+            param_weight(2 * dim + 1) = 0.0;
+            continue()
+        }
+
+        let mut dim_param = phi_i;
+        if dim == 1 {
+            dim_param = theta_i;
+        }
+        
+        let param_index = find_interval_eval(warp, dim, dim_param);
+        
+        let p0 = warp.param_values(dim * warp.param_values_offset + param_index);
+        let p1 = warp.param_values(dim * warp.param_values_offset + param_index + 1);
+        
+        param_weight(2 * dim + 1) = clampf((dim_param - p0) / (p1 - p0), 0.0, 1.0);
+        param_weight(2 * dim) = 1.0 - param_weight(2 * dim + 1);
+        slice_offset += warp.param_strides(dim) as i32 * param_index;
+    }
+
+    let mut offset = slice_offset * warp.size.y;
+
+    // sample row
+    let row = find_interval_sample_row(warp, offset, &param_weight, n_sample.y);
+
+    n_sample.y -= fetch_marginal_warp2D2(warp, offset, row, &param_weight); 
+
+    let slice_size = warp.size.x * warp.size.y;
+    offset = row * warp.size.x;
+    offset += slice_offset * slice_size;
+
+    let r0 = lookup_warp(warp, 2, warp.conditional_cdf, offset + warp.size.x - 1, slice_size, &param_weight);
+    let r1 = lookup_warp(warp, 2, warp.conditional_cdf, offset + (warp.size.x * 2 - 1), slice_size, &param_weight);
+
+    let mut is_const = absf(r0 - r1) < 1e-4 * (r0 + r1);
+    if (is_const) {
+        n_sample.y = 2.0 * n_sample.y;
+        n_sample.y = n_sample.y / (r0 + r1);
+    } else {
+        n_sample.y = (r0 - math_builtins::sqrt(r0 * r0 - 2.0 * n_sample.y * (r0 - r1)));
+        n_sample.y = n_sample.y / (r0 - r1);
+    }
+
+    // sample column
+    n_sample.x = n_sample.x * ((1.0 - n_sample.y) * r0 + n_sample.y * r1);
+
+    let col = find_interval_sample_col(warp, offset, n_sample, slice_size, &param_weight);
+    n_sample.x = n_sample.x - fetch_conditional_warp2D2(warp, offset, col, slice_size, n_sample, &param_weight);
+
+    offset = offset + col;
+
+    let v00 = lookup_warp(warp, 2, warp.data, offset, slice_size, &param_weight);
+    let v10 = lookup_warp(warp, 2, |i| warp.data(i+1), offset, slice_size, &param_weight);
+    let v01 = lookup_warp(warp, 2, |i| warp.data(i+warp.size.x), offset, slice_size, &param_weight);
+    let v11 = lookup_warp(warp, 2, |i| warp.data(i+warp.size.x + 1), offset, slice_size, &param_weight);
+
+    let c0 = fma((1.0 - n_sample.y), v00, n_sample.y * v01);
+    let c1 = fma((1.0 - n_sample.y), v10, n_sample.y * v11);
+
+    is_const = absf(c0 - c1) < 1e-4 * (c0 + c1);
+    if (is_const) {
+        n_sample.x = 2.0 * n_sample.x;
+        n_sample.x = n_sample.x / (c0 + c1);
+    } else {
+        n_sample.x = (c0 - math_builtins::sqrt(c0 * c0 - 2.0 * n_sample.x * (c0 - c1)));
+        n_sample.x = n_sample.x / (c0 - c1);
+    }
+
+    SampleResult{
+        sample = vec2_rowmul(vec2_add(make_vec2(col as f32, row as f32), n_sample), warp.patch_size),
+        pdf = ((1.0 - n_sample.x) * c0 + n_sample.x * c1) * (warp.inv_patch_size.x * warp.inv_patch_size.y)
+    }
+}
+ 
+fn @ evaluate_brdf(sampler: BRDFData, incoming : Vec3, outgoing : Vec3) -> Color {
+    if (incoming.z <= 0.0 || outgoing.z <= 0.0) {
+        return(make_color(0.0, 0.0, 0.0, 1.0))
+    }
+
+    let wi = make_vec3(incoming.x, incoming.y, incoming.z);
+    let wo = make_vec3(outgoing.x, outgoing.y, outgoing.z);
+
+    let wm = vec3_normalize(vec3_add(wi, wo));
+
+    let theta_i = elevation(wi);
+    let phi_i = math_builtins::atan2(wi.y, wi.x);
+    let theta_m = elevation(wm);
+    let phi_m = math_builtins::atan2(wm.y, wm.x);
+
+
+    let u_wi = make_vec2(theta2u(theta_i), phi2u(phi_i));
+    let mut u_wm = make_vec2(theta2u(theta_m), phi2u(phi_m));
+    if (sampler.isotropic) {u_wm.y = phi2u((phi_m - phi_i));}
+    
+    u_wm.y = u_wm.y - math_builtins::floor(u_wm.y);
+
+    let invert_res = invert_warp2D2(sampler.vndf, u_wm, phi_i, theta_i);
+    
+    let sample = invert_res.sample;
+    //let vndf_pdf = invert_res.vndf_pdf;
+
+    let mut fr = make_vec3(0.0,0.0,0.0);
+    
+    fr.x = eval_warp2D3(sampler.rgb, sample, phi_i, theta_i, 0.0);
+    fr.y = eval_warp2D3(sampler.rgb, sample, phi_i, theta_i, 1.0);
+    fr.z = eval_warp2D3(sampler.rgb, sample, phi_i, theta_i, 2.0);
+
+    let factor = eval_warp2D0(sampler.ndf, u_wm) / (4.0 * eval_warp2D0(sampler.sigma, u_wi));
+    fr = vec3_mulf(fr, factor);
+
+    
+    make_color(fr.x, fr.y, fr.z, 1.0)
+}
+
+fn @ pdf_brdf(sampler: BRDFData, incoming : Vec3, outgoing : Vec3) -> f32 {
+
+    if (incoming.z <= 0.0 || outgoing.z <= 0.0) {
+        0.0
+    } else {
+
+        let wi = make_vec3(incoming.x, incoming.y, incoming.z);
+        let wo = make_vec3(outgoing.x, outgoing.y, outgoing.z);
+
+        let wm = vec3_normalize(vec3_add(wi, wo));
+
+        let theta_i = elevation(wi);
+        let phi_i = math_builtins::atan2(wi.y, wi.x);
+        let theta_m = elevation(wm);
+        let phi_m = math_builtins::atan2(wm.y, wm.x);
+
+        let mut u_wm = make_vec2(theta2u(theta_m), phi2u(phi_m));
+        if (sampler.isotropic) {u_wm.y = phi2u((phi_m - phi_i));}
+        
+        u_wm.y = u_wm.y - math_builtins::floor(u_wm.y);
+
+        
+        let invert_res = invert_warp2D2(sampler.vndf, u_wm, phi_i, theta_i);
+
+        let sample = invert_res.sample;
+        let vndf_pdf = invert_res.vndf_pdf;
+
+        let pdf = eval_warp2D2(sampler.luminance, sample, phi_i, theta_i);
+
+        let sin_theta_m = math_builtins::sqrt(wm.x * wm.x + wm.y * wm.y);
+        let jacobian = maxf(2.0 * flt_pi * flt_pi * u_wm.x * sin_theta_m, 1e-6) * 4.0 * vec3_dot(wi, wm);
+
+        vndf_pdf * pdf / jacobian
+    }
+}
+
+
+fn @make_sample_data() -> MeasuredBRDFSampleData {
+    MeasuredBRDFSampleData {
+        res = make_vec3(0.0 ,0.0 ,0.0),
+        out = make_vec3(0.0 ,1.0 ,0.0),
+        pdf = 0.0
+    }
+}
+
+fn @ sample_brdf(sampler: BRDFData, u : Vec2, incoming : Vec3) -> MeasuredBRDFSampleData {
+   
+    if (incoming.z <= 0.0) {
+        return (make_sample_data())
+    }
+    
+    let wi = make_vec3(incoming.x, incoming.y, incoming.z);
+    
+    let theta_i = elevation(wi);
+    let phi_i = math_builtins::atan2(wi.y, wi.x);
+
+    let u_wi = make_vec2(theta2u(theta_i), phi2u(phi_i));
+    let mut sample = make_vec2(u.y, u.x);
+
+    
+    let lum_sample_res = sample_warp2D2(sampler.luminance, sample, phi_i, theta_i);
+    
+    
+    sample = lum_sample_res.sample;
+    let lum_pdf = lum_sample_res.pdf;
+    
+    let vndf_sample_res = sample_warp2D2(sampler.vndf, sample, phi_i, theta_i);
+    
+    let u_wm = vndf_sample_res.sample;
+    let ndf_pdf = vndf_sample_res.pdf;
+    
+    let mut phi_m = u2phi(u_wm.y);
+    let theta_m = u2theta(u_wm.x);
+    
+    if (sampler.isotropic) {
+        phi_m = phi_m + phi_i;
+    }
+    
+    let sin_phi_m = math_builtins::sin(phi_m);
+    let cos_phi_m = math_builtins::cos(phi_m);
+    let sin_theta_m = math_builtins::sin(theta_m);
+    let cos_theta_m = math_builtins::cos(theta_m);
+    
+    let wm = make_vec3(cos_phi_m * sin_theta_m, sin_phi_m * sin_theta_m, cos_theta_m);
+    
+    let wo = vec3_sub(vec3_mulf(wm, 2.0 * vec3_dot(wm, wi)), wi);
+    if (wo.z <= 0.0) {
+        return(make_sample_data())
+    }
+    
+    let mut fr = make_vec3(0.0, 0.0, 0.0);
+    
+    fr.x = eval_warp2D3(sampler.rgb, sample, phi_i, theta_i, 0.0);
+    fr.y = eval_warp2D3(sampler.rgb, sample, phi_i, theta_i, 1.0);
+    fr.z = eval_warp2D3(sampler.rgb, sample, phi_i, theta_i, 2.0);
+    
+
+    let ndf_eval = eval_warp2D0(sampler.ndf, u_wm);
+    let sigma_eval = eval_warp2D0(sampler.sigma, u_wi);
+    fr = vec3_mulf(fr, ndf_eval / (4.0 * sigma_eval));
+
+    let jacobian = maxf(2.0 * flt_pi * flt_pi * u_wm.x * sin_theta_m, 1e-6) * 4.0 * vec3_dot(wi, wm);
+
+    let pdf = ndf_pdf * lum_pdf / jacobian;
+    fr = vec3_mulf(fr, 1.0 / pdf);
+
+    MeasuredBRDFSampleData {
+        res = fr,
+        out = wo,
+        pdf = pdf
+    }
+} 
+
+fn @delinearize_warp(buffer : DeviceBuffer, start : i32) {
+    let mut offset = 0;
+
+    let sizes = [
+        buffer.load_f32(start + offset + 0) as u32,
+        buffer.load_f32(start + offset + 1) as u32,
+        buffer.load_f32(start + offset + 2) as u32,
+        buffer.load_f32(start + offset + 3) as u32,
+        buffer.load_f32(start + offset + 4) as u32,
+        buffer.load_f32(start + offset + 5) as u32,
+    ];
+
+    offset += 6;
+
+    let size = Vec2i{ 
+        x = buffer.load_f32(start + offset) as i32,
+        y = buffer.load_f32(start + offset + 1) as i32
+    };
+    offset += 2;
+
+    let patch_size = make_vec2(buffer.load_f32(start + offset), buffer.load_f32(start + offset + 1));
+    offset += 2;
+
+    let inv_patch_size = make_vec2(buffer.load_f32(start + offset), buffer.load_f32(start + offset + 1));
+    offset += 2;
+
+    let param_values_off = buffer.load_f32(start+offset) as i32;
+    offset += 1;
+
+    let param_size_offset = offset;
+    offset += sizes(0) as i32;
+
+    let param_strides_offset = offset;
+    offset += sizes(1) as i32;
+
+    let param_values_offset = offset;
+    offset += sizes(2) as i32;
+
+    let data_offset = offset;
+    offset += sizes(3) as i32;
+
+    let marginal_cdf_offset = offset;
+    offset += sizes(4) as i32;
+
+    let conditional_cdf_offset = offset;
+    offset += sizes(5) as i32;
+
+    Warp {
+        size = size,
+        patch_size = patch_size,
+        inv_patch_size = inv_patch_size,
+        param_values_offset = param_values_off,
+        param_size = @|i| buffer.load_f32(start + param_size_offset + i) as u32,
+        param_strides = @|i| buffer.load_f32(start + param_strides_offset + i) as u32,
+        param_values = @|i| buffer.load_f32(start + param_values_offset + i),
+        data = @|i| buffer.load_f32(start + data_offset + i),
+        marginal_cdf = @|i| buffer.load_f32(start + marginal_cdf_offset + i),
+        conditional_cdf = @|i| buffer.load_f32(start + conditional_cdf_offset + i),
+        array_sizes = sizes
+    }
+}
+
+// Creates a measured BRDF (Dupuy & Jakob 2018)
+fn @make_djmeasured_bsdf(surf: SurfaceElement, isotropic : bool, jacobian : bool, 
+    buffer_ndf : DeviceBuffer, buffer_vndf : DeviceBuffer, buffer_sigma : DeviceBuffer,
+    buffer_luminance : DeviceBuffer, buffer_rgb : DeviceBuffer,
+    tint: Color) {  
+
+    let brdf_data = BRDFData {
+        ndf = delinearize_warp(buffer_ndf, 0),
+        sigma = delinearize_warp(buffer_sigma, 0),
+        vndf = delinearize_warp(buffer_vndf, 0),
+        luminance = delinearize_warp(buffer_luminance, 0),
+        rgb = delinearize_warp(buffer_rgb, 0),
+        isotropic = isotropic,
+        jacobian = jacobian
+    };
+
+    Bsdf {
+        eval = @ |in_dir, out_dir| {
+            let wo = shading::to_local(surf.local, out_dir);
+            let wi = shading::to_local(surf.local, in_dir);
+            color_mul(tint, evaluate_brdf(brdf_data, wi, wo))
+        },
+        pdf = @ |in_dir, out_dir| {
+            let wo = shading::to_local(surf.local, out_dir);
+            let wi = shading::to_local(surf.local, in_dir);
+            pdf_brdf(brdf_data, wi, wo)
+        },
+        sample = @ |rnd, out_dir, _| {
+            let out_local = shading::to_local(surf.local, out_dir);
+            let sample = sample_brdf(brdf_data, make_vec2(randf(rnd), randf(rnd)), out_local);
+            let in_global = shading::to_world(surf.local, sample.out);
+            make_bsdf_sample(in_global, sample.pdf, color_mul(tint, vec3_to_color(sample.res)), 1)
+        },
+        is_specular = false
+    }
+}

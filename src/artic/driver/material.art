@@ -1,0 +1,28 @@
+struct Material {
+    id:          i32,
+    bsdf:        Bsdf,
+    light:       Light,
+    interface:   MediumInterface,
+    emission:    fn (ShadingContext) -> DirectEmissionValue,
+    is_emissive: bool
+}
+
+// Creates a material with no emission
+fn @make_material(id: i32, bsdf: Bsdf, interface: MediumInterface) = Material {
+    id          = id,
+    bsdf        = bsdf,
+    light       = make_null_light(0),
+    interface   = interface,
+    emission    = @ |_| make_direct_emission_value(color_builtins::black, make_area_pdf(1)),
+    is_emissive = false,
+};
+
+// Creates a material that emits light
+fn @make_emissive_material(id: i32, bsdf: Bsdf, interface: MediumInterface, light: Light) = Material {
+    id          = id,
+    bsdf        = bsdf,
+    light       = light,
+    interface   = interface,
+    emission    = @ |ctx| make_direct_emission_value(light.emission(ctx), light.pdf_direct(ctx.ray, ctx.surf)),
+    is_emissive = true
+};

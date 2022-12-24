@@ -16,9 +16,12 @@ int main(int argc, char** argv)
 
     try {
         // Input
-        ImageRgba32 image = ImageRgba32::load(input);
+        Image image = Image::load(input);
         if (!image.isValid())
             return EXIT_FAILURE;
+
+        // Flip Y
+        image.flipY();
 
         // Output
         if (!image.save(output))

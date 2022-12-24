@@ -1,0 +1,10 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 4,
+    "light_selector": "uniform"
+  },
+  "externals": [
+    {"filename": "multilight.json"}
+  ]
+}

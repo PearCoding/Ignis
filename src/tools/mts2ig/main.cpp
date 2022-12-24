@@ -246,11 +246,13 @@ static void export_property(const Property& prop, JsonWriter& writer)
             std::cerr << "No support for Animation" << std::endl;
         writer.w() << "0";
         break;
-    case PT_BLACKBODY: // TODO
-        if (!sQuiet)
-            std::cerr << "No support for Blackbody curve" << std::endl;
-        writer.w() << "0";
-        break;
+    case PT_BLACKBODY: {
+        const auto bb = prop.getBlackbody();
+        writer.w() << "\"blackbody(" << bb.temperature << ")";
+        if (bb.scale != 1)
+            writer.w() << "*" << bb.scale;
+        writer.w() << "\"";
+    } break;
     case PT_SPECTRUM: {
         const auto spec = prop.getSpectrum();
         if (spec.isUniform()) { // Scaled white
@@ -483,6 +485,45 @@ static void export_bsdf(const std::string& name, const Object& obj, JsonWriter& 
     writer.objEnd();
 }
 
+static void export_medium(const std::string& name, const Object& obj, JsonWriter& writer, const std::vector<Object*>& textures)
+{
+    writer.objBegin();
+    writer.key("name");
+    writer.w() << "\"" << name << "\",";
+    writer.endl();
+    writer.key("type");
+    writer.w() << "\"" << obj.pluginType() << "\",";
+    writer.endl();
+
+    for (const auto& pair : obj.properties()) {
+        writer.key(translate(pair.first));
+        export_property(pair.second, writer);
+        writer.w() << ",";
+        writer.endl();
+    }
+
+    // Include textures
+    for (const auto& child : obj.anonymousChildren()) {
+        if (child->type() == OT_TEXTURE) {
+            int tex = std::distance(textures.begin(), std::find(textures.begin(), textures.end(), child.get()));
+            writer.key("texture");
+            writer.w() << "\"" << make_id("texture", tex) << "\",";
+            writer.endl();
+        }
+    }
+
+    for (const auto& pair : obj.namedChildren()) {
+        if (pair.second->type() == OT_TEXTURE) {
+            int tex = std::distance(textures.begin(), std::find(textures.begin(), textures.end(), pair.second.get()));
+            writer.key(pair.first);
+            writer.w() << "\"" << make_id("texture", tex) << "\",";
+            writer.endl();
+        }
+    }
+
+    writer.objEnd();
+}
+
 static void export_shape(const std::string& name, const Object& obj, JsonWriter& writer)
 {
     std::string plugin_type = obj.pluginType();
@@ -603,7 +644,7 @@ static void export_light(const std::string& name, const Object& obj, JsonWriter&
     writer.objEnd();
 }
 
-static std::string replace(const std::string& str, const std::string& from, const std::string& to)
+static inline std::string replace(const std::string& str, const std::string& from, const std::string& to)
 {
     size_t start_pos = str.find(from);
     if (start_pos == std::string::npos)
@@ -613,43 +654,80 @@ static std::string replace(const std::string& str, const std::string& from, cons
     return tmp;
 }
 
-static void export_entity(const std::string& name, const Object& obj, JsonWriter& writer, const std::vector<Object*>& bsdfs)
+struct Entity {
+    Transform transform;
+    std::vector<Object*> shapes;
+};
+static void export_entity(const std::string& name, const Entity& entity, JsonWriter& writer, const std::vector<Object*>& shapes, const std::vector<Object*>& bsdfs, const std::vector<Object*>& media)
 {
-    writer.objBegin();
-    writer.key("name");
-    writer.w() << "\"" << name << "\",";
-    writer.endl();
-    writer.key("shape");
-    writer.w() << "\"" << replace(name, "entity", "shape") << "\",";
-    writer.endl();
+    for (size_t k = 0; k < entity.shapes.size(); ++k) {
+        size_t shape_id = std::distance(shapes.begin(), std::find(shapes.begin(), shapes.end(), entity.shapes[k])); // TODO: This can be improved by bookkeeping the actual ids
+        const auto& obj = *entity.shapes[k];
 
-    bool has_bsdf = false;
-    for (const auto& child : obj.anonymousChildren()) {
-        if (child->type() == OT_BSDF) {
-            int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), child.get()));
+        const std::string real_name = entity.shapes.size() == 1 ? name : (name + "_" + std::to_string(k));
+        writer.objBegin();
+        writer.key("name");
+        writer.w() << "\"" << real_name << "\",";
+        writer.endl();
+        writer.key("shape");
+        writer.w() << "\"" << make_id("shape", shape_id) << "\",";
+        writer.endl();
+        writer.key("transform");
+        export_property(Property::fromTransform(entity.transform), writer);
+        writer.w() << ",";
+        writer.endl();
+
+        // Handle BSDF
+        bool has_bsdf = false;
+        for (const auto& child : obj.anonymousChildren()) {
+            if (child->type() == OT_BSDF) {
+                int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), child.get()));
+                writer.key("bsdf");
+                writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
+                writer.endl();
+                has_bsdf = true;
+            }
+        }
+
+        for (const auto& pair : obj.namedChildren()) {
+            if (pair.second->type() == OT_BSDF) {
+                int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), pair.second.get()));
+                writer.key(pair.first);
+                writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
+                writer.endl();
+                has_bsdf = true;
+            }
+        }
+
+        // Handle Media
+        bool has_media = false;
+        for (const auto& pair : obj.namedChildren()) {
+            if (pair.second->type() == OT_MEDIUM && (pair.first == "exterior" || pair.first == "interior")) {
+                int medium = std::distance(media.begin(), std::find(media.begin(), media.end(), pair.second.get()));
+                if (pair.first == "exterior")
+                    writer.key("outer_medium");
+                else
+                    writer.key("inner_medium");
+                writer.w() << "\"" << make_id("medium", medium) << "\",";
+                writer.endl();
+                has_media = true;
+            }
+        }
+
+        // Handle special case
+        if (!has_bsdf) {
             writer.key("bsdf");
-            writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
+            if (!has_media)
+                writer.w() << "\"__black\",";
+            else
+                writer.w() << "\"__pass\",";
             writer.endl();
-            has_bsdf = true;
         }
-    }
 
-    for (const auto& pair : obj.namedChildren()) {
-        if (pair.second->type() == OT_BSDF) {
-            int bsdf = std::distance(bsdfs.begin(), std::find(bsdfs.begin(), bsdfs.end(), pair.second.get()));
-            writer.key(pair.first);
-            writer.w() << "\"" << make_id("bsdf", bsdf) << "\",";
-            writer.endl();
-            has_bsdf = true;
-        }
-    }
-
-    if (!has_bsdf) {
-        writer.key("bsdf");
-        writer.w() << "\"__black\",";
+        writer.objEnd();
+        writer.w() << ",";
         writer.endl();
     }
-    writer.objEnd();
 }
 
 static void extract_textures(const Object& obj, std::vector<Object*>& textures)
@@ -706,18 +784,81 @@ static void extract_bsdfs(const Object& obj, std::vector<Object*>& bsdfs)
     }
 }
 
-static void extract_shapes(const Object& obj, std::vector<Object*>& shapes)
+static void extract_media(const Object& obj, std::vector<Object*>& media)
 {
     for (const auto& child : obj.anonymousChildren()) {
-        if (child->type() == OT_SHAPE) {
-            shapes.push_back(child.get());
+        if (child->type() == OT_MEDIUM) {
+            media.push_back(child.get());
+            extract_bsdfs(*child.get(), media);
         }
     }
 
     for (const auto& pair : obj.namedChildren()) {
-        if (pair.second->type() == OT_SHAPE) {
-            shapes.push_back(pair.second.get());
+        if (pair.second->type() == OT_MEDIUM) {
+            media.push_back(pair.second.get());
+            extract_media(*pair.second.get(), media);
         }
+    }
+
+    for (const auto& child : obj.anonymousChildren()) {
+        if (child->type() == OT_SHAPE) {
+            extract_media(*child, media);
+        }
+    }
+}
+
+static void extract_shapes(const Object& obj, std::vector<Object*>&);
+static void extract_shape(Object* obj, std::vector<Object*>& shapes)
+{
+    if (obj->pluginType() == "shapegroup") {
+        extract_shapes(*obj, shapes);
+    } else if (obj->pluginType() != "instance") {
+        shapes.push_back(obj);
+    }
+}
+
+static void extract_shapes(const Object& obj, std::vector<Object*>& shapes)
+{
+    for (const auto& child : obj.anonymousChildren()) {
+        if (child->type() == OT_SHAPE)
+            extract_shape(child.get(), shapes);
+    }
+
+    for (const auto& pair : obj.namedChildren()) {
+        if (pair.second->type() == OT_SHAPE)
+            extract_shape(pair.second.get(), shapes);
+    }
+}
+
+static void extract_entity(Object* obj, std::vector<Entity>& entities)
+{
+    if (obj->pluginType() == "instance") {
+        Entity entity;
+
+        entity.transform = obj->property("to_world").getTransform();
+        const auto shape = obj->namedChild("shape");
+        if (shape && shape->type() == OT_SHAPE && shape->pluginType() == "shapegroup") {
+            extract_shapes(*shape, entity.shapes);
+            entities.push_back(entity);
+        }
+    } else if (obj->pluginType() != "shapegroup") {
+        Entity entity;
+        entity.transform = Transform::fromIdentity();
+        entity.shapes.push_back(obj);
+        entities.push_back(entity);
+    }
+}
+
+static void extract_entities(const Object& obj, std::vector<Entity>& entities)
+{
+    for (const auto& child : obj.anonymousChildren()) {
+        if (child->type() == OT_SHAPE)
+            extract_entity(child.get(), entities);
+    }
+
+    for (const auto& pair : obj.namedChildren()) {
+        if (pair.second->type() == OT_SHAPE)
+            extract_entity(pair.second.get(), entities);
     }
 }
 
@@ -789,18 +930,20 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
     std::vector<Object*> textures;
     extract_textures(scene, textures);
 
-    writer.key("textures");
-    writer.arrBegin();
-    writer.goIn();
-    for (int i = 0; i < (int)textures.size(); ++i) {
-        export_texture(make_id("texture", i), *textures[i], writer);
+    if (!textures.empty()) {
+        writer.key("textures");
+        writer.arrBegin();
+        writer.goIn();
+        for (int i = 0; i < (int)textures.size(); ++i) {
+            export_texture(make_id("texture", i), *textures[i], writer);
+            writer.w() << ",";
+            writer.endl();
+        }
+        writer.goOut();
+        writer.arrEnd();
         writer.w() << ",";
         writer.endl();
     }
-    writer.goOut();
-    writer.arrEnd();
-    writer.w() << ",";
-    writer.endl();
 
     // Bsdfs
     std::vector<Object*> bsdfs;
@@ -822,6 +965,17 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
     writer.w() << ",";
     writer.endl();
 
+    writer.objBegin();
+    writer.key("name");
+    writer.w() << "\"__pass\",";
+    writer.endl();
+    writer.key("type");
+    writer.w() << "\"passthrough\"";
+    writer.endl();
+    writer.objEnd();
+    writer.w() << ",";
+    writer.endl();
+
     for (int i = 0; i < (int)bsdfs.size(); ++i) {
         export_bsdf(make_id("bsdf", i), *bsdfs[i], writer, textures, bsdfs);
         writer.w() << ",";
@@ -832,36 +986,58 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
     writer.w() << ",";
     writer.endl();
 
+    // Media
+    std::vector<Object*> media;
+    extract_media(scene, media);
+
+    if (!media.empty()) {
+        writer.key("media");
+        writer.arrBegin();
+        writer.goIn();
+
+        for (int i = 0; i < (int)media.size(); ++i) {
+            export_medium(make_id("medium", i), *media[i], writer, textures);
+            writer.w() << ",";
+            writer.endl();
+        }
+        writer.goOut();
+        writer.arrEnd();
+        writer.w() << ",";
+        writer.endl();
+    }
+
     // Shapes
     std::vector<Object*> shapes;
     extract_shapes(scene, shapes);
 
-    writer.key("shapes");
-    writer.arrBegin();
-    writer.goIn();
-    for (int i = 0; i < (int)shapes.size(); ++i) {
-        export_shape(make_id("shape", i), *shapes[i], writer);
-        writer.w() << ",";
-        writer.endl();
-    }
-    writer.goOut();
-    writer.arrEnd();
-    writer.w() << ",";
-    writer.endl();
+    std::vector<Entity> entities;
+    extract_entities(scene, entities);
 
-    // Entities
-    writer.key("entities");
-    writer.arrBegin();
-    writer.goIn();
-    for (int i = 0; i < (int)shapes.size(); ++i) {
-        export_entity(make_id("entity", i), *shapes[i], writer, bsdfs);
+    if (!shapes.empty()) {
+        writer.key("shapes");
+        writer.arrBegin();
+        writer.goIn();
+        for (int i = 0; i < (int)shapes.size(); ++i) {
+            export_shape(make_id("shape", i), *shapes[i], writer);
+            writer.w() << ",";
+            writer.endl();
+        }
+        writer.goOut();
+        writer.arrEnd();
+        writer.w() << ",";
+        writer.endl();
+
+        // Entities
+        writer.key("entities");
+        writer.arrBegin();
+        writer.goIn();
+        for (int i = 0; i < (int)entities.size(); ++i)
+            export_entity(make_id("entity", i), entities[i], writer, shapes, bsdfs, media);
+        writer.goOut();
+        writer.arrEnd();
         writer.w() << ",";
         writer.endl();
     }
-    writer.goOut();
-    writer.arrEnd();
-    writer.w() << ",";
-    writer.endl();
 
     // Lights
     std::vector<std::pair<Object*, Object*>> area_lights;
@@ -870,22 +1046,24 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
     std::vector<Object*> lights;
     extract_lights(scene, lights);
 
-    writer.key("lights");
-    writer.arrBegin();
-    writer.goIn();
-    for (int i = 0; i < (int)area_lights.size(); ++i) {
-        int entity = std::distance(shapes.begin(), std::find(shapes.begin(), shapes.end(), area_lights[i].first));
-        export_area_light(make_id("light", i), *area_lights[i].second, writer, entity, textures);
-        writer.w() << ",";
-        writer.endl();
+    if (!area_lights.empty() || !lights.empty()) {
+        writer.key("lights");
+        writer.arrBegin();
+        writer.goIn();
+        for (int i = 0; i < (int)area_lights.size(); ++i) {
+            int entity = std::distance(shapes.begin(), std::find(shapes.begin(), shapes.end(), area_lights[i].first));
+            export_area_light(make_id("light", i), *area_lights[i].second, writer, entity, textures);
+            writer.w() << ",";
+            writer.endl();
+        }
+        for (int i = 0; i < (int)lights.size(); ++i) {
+            export_light(make_id("light", i + area_lights.size()), *lights[i], writer, textures);
+            writer.w() << ",";
+            writer.endl();
+        }
+        writer.goOut();
+        writer.arrEnd();
     }
-    for (int i = 0; i < (int)lights.size(); ++i) {
-        export_light(make_id("light", i + area_lights.size()), *lights[i], writer, textures);
-        writer.w() << ",";
-        writer.endl();
-    }
-    writer.goOut();
-    writer.arrEnd();
 }
 
 int main(int argc, char** argv)

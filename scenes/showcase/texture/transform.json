@@ -1,0 +1,11 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"textures": [
+		{"type":"transform", "name":"tex", "texture":"checkerboard(uv)", "transform":[{"translate": [10,10,0]}, {"rotate": [0, 0, 30]}, {"scale":10}]}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name":"mat-Plane", "reflectance": "tex"}
+	]
+}

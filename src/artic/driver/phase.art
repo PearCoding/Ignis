@@ -1,0 +1,23 @@
+// Result of sampling a phase function
+struct PhaseSample {
+    in_dir: Vec3, // Sampled direction
+    pdf:    f32,  // Probability to sample the direction
+    weight: f32,  // Weight of the sample, pdf already applied
+}
+
+// Opaque BSDF structure
+struct PhaseFunction {
+    // Evaluates the phase function for the given pair of directions
+    eval: fn (Vec3, Vec3) -> f32,
+    // Evaluates the sampling probability density for a given pair of directions
+    pdf: fn (Vec3, Vec3) -> f32,
+    // Samples a direction
+    sample: fn (&mut RndState, Vec3) -> PhaseSample
+}
+
+// Creates a BSDF sample and checks that it lies on the right side of the surface
+fn @make_phase_sample(in_dir: Vec3, pdf: f32, weight: f32) = PhaseSample {
+    in_dir = in_dir,
+    pdf    = pdf,
+    weight = weight,
+};

@@ -8,6 +8,12 @@ static flt_pi     = 3.14159265359:f32;
 static flt_inv_pi = 0.31830988618379067154:f32;
 static flt_sqrt2  = 1.41421356237:f32;
 static flt_sqrt3  = 1.73205080757:f32;
+static flt_e      = 2.71828182845904523536:f32;
+
+// Convert from radians to degree
+fn deg(v: f32) = v * 180 * flt_inv_pi;
+// Convert from degree to radians
+fn rad(v: f32) = v / 180 * flt_pi;
 
 // Option --------------------------------------------------------------------------
 
@@ -123,6 +129,9 @@ fn @lerp2(a: f32, b: f32, c: f32, k1: f32, k2: f32) -> f32 {
     (1 - k1 - k2) * a + k1 * b + k2 * c
 }
 
+fn @smoothstep(x: f32)   = x * x * (3 - 2 * x);
+fn @smootherstep(x: f32) = x * x * x * (x * (x * 6 - 15) + 10);
+
 // a*b - c*d
 fn @diff_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
     let cd   = c * d;
@@ -137,13 +146,6 @@ fn @sum_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
     let sum = fmaf(a, b, cd);
     let err = fmaf(c, d, -cd);
     sum + err
-}
-
-fn @triangle_area(v0: Vec3, v1: Vec3, v2: Vec3) -> f32 {
-    let e1 = vec3_sub(v1, v0);
-    let e2 = vec3_sub(v2, v0);
-    let  n = vec3_cross(e1, e2);
-    0.5 * vec3_len(n)
 }
 
 fn @positive_cos(a: Vec3, b: Vec3) -> f32 {
@@ -168,8 +170,9 @@ fn @clamp(v: i32, l: i32, u: i32) = min(u, max(l, v));
 
 fn @clampf(v: f32, l: f32, u: f32) = math_builtins::fmin[f32](u, math_builtins::fmax[f32](l, v));
 
-fn @safe_div(a: f32, b: f32) = if math_builtins::fabs(b) <= flt_eps { 0:f32 } else { a / b };
-fn @safe_sqrt(a: f32) = if a < 0 { 0:f32 } else { math_builtins::sqrt(a) };
+fn @safe_div(a: f32, b: f32)     = if math_builtins::fabs(b) <= flt_eps { 0:f32 } else { a / b };
+fn @safe_div_one(a: f32, b: f32) = if math_builtins::fabs(b) <= flt_eps { 1:f32 } else { a / b };
+fn @safe_sqrt(a: f32)            = math_builtins::sqrt(math_builtins::fmax(0:f32, a));
 
 /// A safe, (but less extreme) unroll function... making sure the stack aint exploding
 fn @safe_unroll(body: fn(i32) -> ()) {
@@ -180,6 +183,43 @@ fn @safe_unroll(body: fn(i32) -> ()) {
         }
     }
     loop
+}
+
+fn @permute_element(mut i: u32, l: u32, seed: u32) -> u32 {
+	let mut w = l - 1;
+
+	if w == 0 {
+		0
+	} else {
+		w |= w >> 1;
+		w |= w >> 2;
+		w |= w >> 4;
+		w |= w >> 8;
+		w |= w >> 16;
+		while true {
+			i ^= seed;
+			i *= 0xe170893d;
+			i ^= seed >> 16;
+			i ^= (i & w) >> 4;
+			i ^= seed >> 8;
+			i *= 0x0929eb3f;
+			i ^= seed >> 23;
+			i ^= (i & w) >> 1;
+			i *= 1 | seed >> 27;
+			i *= 0x6935fa69;
+			i ^= (i & w) >> 11;
+			i *= 0x74dcb303;
+			i ^= (i & w) >> 2;
+			i *= 0x9e501cc3;
+			i ^= (i & w) >> 2;
+			i *= 0xc860a3df;
+			i &= w;
+			i ^= i >> 5;
+            if i < l { break() }
+		}
+
+		(i + seed) % l
+	}
 }
 
 #[import(cc = "device", name = "llvm.fma.f32")] fn fmaf(f32, f32, f32) -> f32;

@@ -111,12 +111,61 @@ fn test_matrix4_transform() {
     err
 }
 
+fn test_matrix3_align_identity() {
+    let mut err = 0;
+
+    let a = make_vec3(0,0,1);
+    let M = mat3x3_align_vectors(a, a);
+
+    if !eq_mat3x3(mat3x3_identity(), M) {
+        ++err;
+        ignis_test_fail("Alignment does not return identity!");
+    }
+
+    err
+}
+
+fn test_matrix3_align_neg_identity() {
+    let mut err = 0;
+
+    let a = make_vec3(0,0,1);
+    let M = mat3x3_align_vectors(a, vec3_neg(a));
+
+    let R = make_mat3x3(make_vec3(-1,0,0), make_vec3(0,-1,0), make_vec3(0,0,-1));
+    if !eq_mat3x3(R, M) {
+        ++err;
+        ignis_test_fail("Alignment does not return negative identity!");
+    }
+
+    err
+}
+
+fn test_matrix3_align(a: Vec3, b: Vec3) {
+    let mut err = 0;
+
+    let M = mat3x3_align_vectors(a, b);
+
+    let r = mat3x3_mul(M, a);
+    if !eq_vec3(b, r) {
+        ++err;
+        ignis_test_fail("Alignment does not return correct transform!");
+    }
+
+    err
+}
+
 fn test_matrix() -> i32 { 
     let mut err = 0;
 
     err += test_matrix3_invert();
     err += test_matrix4_invert();
     err += test_matrix4_transform();
+    err += test_matrix3_align_identity();
+    err += test_matrix3_align_neg_identity();
+    err += test_matrix3_align(make_vec3(0,0,1), make_vec3(0,1,0));
+    err += test_matrix3_align(make_vec3(1,0,0), make_vec3(0,1,0));
+    err += test_matrix3_align(make_vec3(0,0,1), make_vec3(0,-1,0));
+    err += test_matrix3_align(vec3_normalize(make_vec3(0,1,1)), make_vec3(0,-1,0));
 
     err
  }

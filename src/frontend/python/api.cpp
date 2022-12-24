@@ -3,7 +3,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "Runtime.h"
+#include "Logger.h"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -11,133 +11,18 @@
 namespace py = pybind11;
 using namespace IG;
 
-static void flush_io()
-{
-    std::cout.flush();
-    std::cerr.flush();
-}
-
-class RuntimeWrap {
-    std::unique_ptr<Runtime> mInstance;
-
-    RuntimeOptions mOptions;
-    std::string mSource;
-    std::string mPath;
-
-public:
-    RuntimeWrap(const RuntimeOptions& opts, const std::string& source, const std::string& path)
-        : mOptions(opts)
-        , mSource(source)
-        , mPath(path)
-    {
-        IG_ASSERT(source.empty() ^ path.empty(), "Only source or a path is allowed");
-    }
-
-    Runtime* enter()
-    {
-        mInstance = std::make_unique<Runtime>(mOptions);
-
-        if (mSource.empty()) {
-            if (!mInstance->loadFromFile(mPath))
-                return nullptr;
-        } else {
-            if (!mInstance->loadFromString(mSource))
-                return nullptr;
-        }
-
-        return mInstance.get();
-    }
-
-    bool exit(const py::object&, const py::object&, const py::object&)
-    {
-        mInstance.reset();
-        flush_io();
-        return true; // TODO: Be more sensitive?
-    }
-};
+void scene_module(py::module_& m);   // Defined in scene.cpp
+void runtime_module(py::module_& m); // Defined in runtime.cpp
 
 PYBIND11_MODULE(pyignis, m)
 {
-    m.doc() = R"pbdoc(
-        Ignis python plugin
-        -----------------------
-        .. currentmodule:: pyignis
-        .. autosummary::
-           :toctree: _generate
-    )pbdoc";
-
+    m.doc() = "Ignis python interface";
     m.attr("__version__") = MACRO_STRINGIFY(IGNIS_VERSION);
 
     // Logger IO stuff
-    m.def("flush_log", flush_io);
+    m.def("setQuiet", [](bool b) { IG_LOGGER.setQuiet(b); }, "Set True to disable all messages from the framework");
+    m.def("setVerbose", [](bool b) { IG_LOGGER.setVerbosity(b ? L_DEBUG : L_INFO); }, "Set True to enable all messages from the framework, else only important messages will be shown");
 
-    py::class_<RuntimeOptions>(m, "RuntimeOptions")
-        .def(py::init([]() { return RuntimeOptions(); }))
-        .def_readwrite("DesiredTarget", &RuntimeOptions::DesiredTarget)
-        .def_readwrite("RecommendCPU", &RuntimeOptions::RecommendCPU)
-        .def_readwrite("RecommendGPU", &RuntimeOptions::RecommendGPU)
-        .def_readwrite("DumpShader", &RuntimeOptions::DumpShader)
-        .def_readwrite("DumpShaderFull", &RuntimeOptions::DumpShaderFull)
-        .def_readwrite("AcquireStats", &RuntimeOptions::AcquireStats)
-        .def_readwrite("Device", &RuntimeOptions::Device)
-        .def_readwrite("OverrideCamera", &RuntimeOptions::OverrideCamera)
-        .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique)
-        .def_property(
-            "ModulePath", [](const RuntimeOptions& opts) { return opts.ModulePath.generic_u8string(); }, [](RuntimeOptions& opts, const std::string& val) { opts.ModulePath = val; });
-
-    py::class_<RuntimeRenderSettings>(m, "RuntimeRenderSettings")
-        .def(py::init([]() { return RuntimeRenderSettings(); }))
-        .def_readwrite("FilmWidth", &RuntimeRenderSettings::FilmWidth)
-        .def_readwrite("FilmHeight", &RuntimeRenderSettings::FilmHeight);
-
-    py::class_<Ray>(m, "Ray")
-        .def(py::init([](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, 1) }; }))
-        .def(py::init([](const Vector3f& org, const Vector3f& dir, float tmin, float tmax) { return Ray{ org, dir, Vector2f(tmin, tmax) }; }))
-        .def_readwrite("Origin", &Ray::Origin)
-        .def_readwrite("Direction", &Ray::Direction)
-        .def_readwrite("Range", &Ray::Range);
-
-    py::enum_<Target>(m, "Target")
-        .value("GENERIC", Target::GENERIC)
-        .value("ASIMD", Target::ASIMD)
-        .value("SSE42", Target::SSE42)
-        .value("AVX", Target::AVX)
-        .value("AVX2", Target::AVX2)
-        .value("AVX512", Target::AVX512)
-        .value("NVVM", Target::NVVM)
-        .value("AMDGPU", Target::AMDGPU)
-        .value("OPENCL", Target::OPENCL);
-
-    py::class_<Runtime>(m, "Runtime")
-        .def("step", &Runtime::step)
-        .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
-            std::vector<float> data;
-            r.trace(rays, data);
-            return data;
-        })
-        .def("reset", &Runtime::reset)
-        .def("getFramebuffer", [](const Runtime& r, uint32 aov) {
-            const size_t width  = r.framebufferWidth();
-            const size_t height = r.framebufferHeight();
-            return py::memoryview::from_buffer(
-                r.getFramebuffer(aov),                                                             // buffer pointer
-                std::vector<size_t>{ height, width, 3ul },                                         // shape (rows, cols)
-                std::vector<size_t>{ sizeof(float) * width * 3, sizeof(float) * 3, sizeof(float) } // strides in bytes
-            );
-        })
-        .def("clearFramebuffer", py::overload_cast<>(&Runtime::clearFramebuffer))
-        .def("clearFramebuffer", py::overload_cast<size_t>(&Runtime::clearFramebuffer))
-        .def_property_readonly("iterationCount", &Runtime::currentIterationCount)
-        .def_property_readonly("sampleCount", &Runtime::currentSampleCount)
-        .def_property_readonly("framebufferWidth", &Runtime::framebufferWidth)
-        .def_property_readonly("framebufferHeight", &Runtime::framebufferHeight);
-
-    py::class_<RuntimeWrap>(m, "RuntimeWrap")
-        .def("__enter__", &RuntimeWrap::enter, py::return_value_policy::reference)
-        .def("__exit__", &RuntimeWrap::exit);
-
-    m.def("loadFromFile", [](const std::string& path) { return std::make_unique<RuntimeWrap>(RuntimeOptions(), std::string{}, path); });
-    m.def("loadFromFile", [](const std::string& path, const RuntimeOptions& opts) { return std::make_unique<RuntimeWrap>(opts, std::string{}, path); });
-    m.def("loadFromString", [](const std::string& str) { return std::make_unique<RuntimeWrap>(RuntimeOptions(), str, std::string{}); });
-    m.def("loadFromString", [](const std::string& str, const RuntimeOptions& opts) { return std::make_unique<RuntimeWrap>(opts, str, std::string{}); });
+    scene_module(m);
+    runtime_module(m);
 }

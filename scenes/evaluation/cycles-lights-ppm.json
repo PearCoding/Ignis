@@ -1,0 +1,11 @@
+{
+  // Exported via Blender plugin, testing environment map, camera projection and the conformity of the Photonmapper 
+  "technique": {
+    "type": "ppm",
+    "max_depth": 16,
+    "clamp": 0.0
+  },
+  "externals": [
+    {"filename": "cycles-lights.json"}
+  ]
+}

@@ -3,9 +3,9 @@ Cameras
 
 Ignis contains several useful camera models. Only one camera can be specified per scene.
 The camera is specified in the :monosp:`camera` block with a :monosp:`type` listed in this section below.
-The actual image size is specified in the :monosp:`film` block.
 
-.. NOTE:: Currently there is no way to specifiy type-specific parameters for camera models and film types.
+The actual image (or viewport) size is specified in the :monosp:`film` block with an optional sample strategy in :monosp:`sampler`.
+The sample strategy has to be one of :code:`"independent"` (default), :code:`"mjitt"` or :code:`"halton"`.
 
 .. code-block:: javascript
     
@@ -19,22 +19,111 @@ The actual image size is specified in the :monosp:`film` block.
             "transform": TRANSFORM
         },
         "film": {
-            "size": [SX, SZ]
+            "size": [SX, SZ],
+            "sampler": "independent"
         }
         // ...
     }
 
 Perspective Camera (:monosp:`perspective`)
----------------------------------------------
+------------------------------------------
 
-// TODO
+.. objectparameters::
+
+  * - fov
+    - |number|
+    - :code:`60`
+    - No
+    - Horizontal field of view given in degrees. Can be also given via the name :monosp:`hfov`.
+  * - vfov
+    - |number|
+    - *None*
+    - No
+    - Vertical field of view given in degrees. Can not be defined together with :monosp:`fov` or :monosp:`hfov`.
+  * - aspect_ratio
+    - |number|
+    - *None*
+    - No
+    - Aspect ratio (width over height). If not specified the current viewport will be used.
+  * - near_clip, far_clip
+    - |number|
+    - :code:`0`, :code:`inf`
+    - No
+    - Near and far clip of the camera.
+  * - focal_length
+    - |number|
+    - :code:`1`
+    - No
+    - Focal length given in scene units. Only used if aperture_radius != 0.
+  * - aperture_radius
+    - |number|
+    - :code:`0`
+    - No
+    - Aperture radius in scene units. 0 disables depth of field.
+  
+.. subfigstart::
+
+.. subfigure::  images/camera_perspective.jpg  
+  
+  Perspective camera
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-perspective-camera
 
 Orthogonal Camera (:monosp:`orthogonal`)
----------------------------------------------
+----------------------------------------
 
-// TODO
+.. objectparameters::
 
-Fisheye Camera (:monosp:`fisheye`)
----------------------------------------------
+  * - near_clip, far_clip
+    - |number|
+    - :code:`0`, :code:`inf`
+    - No
+    - Near and far clip of the camera.
+  * - scale
+    - |number|
+    - :code:`1`
+    - No
+    - Horizontal scale factor given in scene units.
+  * - aspect_ratio
+    - |number|
+    - *None*
+    - No
+    - Aspect ratio (width over height). If not specified the current viewport will be used.
 
-// TODO
+.. subfigstart::
+
+.. subfigure::  images/camera_orthogonal.jpg  
+  
+  Orthogonal camera
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-orthogonal-camera
+
+Fisheye Camera (:monosp:`fisheye`, :monosp:`fishlens`)
+------------------------------------------------------
+
+.. objectparameters::
+
+  * - near_clip, far_clip
+    - |number|
+    - :code:`0`, :code:`inf`
+    - No
+    - Near and far clip of the camera.
+  * - mode
+    - |string|
+    - :code:`"circular"`
+    - No
+    - Clipping mode. Must be one of :code:`"circular"`, :code:`"cropped"` or :code:`"full"`.
+
+.. subfigstart::
+
+.. subfigure::  images/camera_fishlens.jpg  
+  
+  Fishlens camera
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-fishlens-camera

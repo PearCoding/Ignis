@@ -1,3 +1,4 @@
+static InvalidHitId : i32 = -1;
 struct Hit {
     distance:    f32,  // Distance to the intersection point
     prim_coords: Vec2, // Surface coordinates
@@ -63,43 +64,52 @@ fn @make_tri(v0: Vec3, e1: Vec3, e2: Vec3, n: Vec3) = Tri {
     n  = n
 };
 
-fn @empty_hit(tmax: f32) = make_hit(-1, -1, tmax, undef[Vec2]());
+fn @empty_hit(tmax: f32) = make_hit(InvalidHitId, InvalidHitId, tmax, undef[Vec2]());
 
-fn @intersect_ray_tri_mt(backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
+// Möller - Trumbore approach
+fn @intersect_ray_tri_mt_gen(backface_culling: bool, ray: Ray, tri: Tri, check: fn (bool) -> bool) -> Option[(f32, f32, f32)] {
+    let tolerance = -flt_eps;
+
     let c = vec3_sub(tri.v0, ray.org);
     let r = vec3_cross(ray.dir, c);
     let det = vec3_dot(tri.n, ray.dir);
-    let abs_det = math_builtins::fabs(det);
+    let inv_det = 1 / det;
 
-    let u = prodsign(vec3_dot(r, tri.e2), det);
-    let mut mask = u >= 0;
+    let u = vec3_dot(r, tri.e2) * inv_det;
+    let v = vec3_dot(r, tri.e1) * inv_det;
+    let w = 1 - u - v;
+    let mut mask = u >= tolerance;
+    mask &= v >= tolerance;
+    mask &= w >= tolerance;
+    
+    if backface_culling {
+        mask &= det < 0;
+    }
 
-    let v = prodsign(vec3_dot(r, tri.e1), det);
-    mask &= v >= 0;
-    mask &= u + v <= abs_det;
+    if check(mask) { return(Option[(f32, f32, f32)]::None) }
 
-    if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
-
-    let t = prodsign(vec3_dot(c, tri.n), det);
-    mask &= if backface_culling { det < 0 } else { abs_det != 0 };
-    mask &= t >= abs_det * ray.tmin;
-    mask &= t <= abs_det * ray.tmax;
-
-    if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
+    let t = vec3_dot(c, tri.n) * inv_det;
+    mask &= t >= ray.tmin;
+    mask &= t <= ray.tmax;
 
     if mask {
-        let inv_det = 1 / abs_det;
-        make_option(t * inv_det, u * inv_det, v * inv_det)
+        make_option(t, if u > 0 { u } else { 0 }, if v > 0 { v } else { 0 })
     } else {
         Option[(f32, f32, f32)]::None
     }
 }
 
-fn @intersect_ray_tri_bw(_backface_culling: bool, ray: Ray, tri: Tri) -> Option[(f32, f32, f32)] {
+fn @intersect_ray_tri_mt_cpu(backface_culling: bool, ray: Ray, tri: Tri) 
+    = intersect_ray_tri_mt_gen(backface_culling, ray, tri, @|mask| likely(rv_all(!mask)));
+fn @intersect_ray_tri_mt_gpu(backface_culling: bool, ray: Ray, tri: Tri)
+    = intersect_ray_tri_mt_gen(backface_culling, ray, tri, @|mask| !mask);
+
+// Baldwin - Weber approach
+fn @intersect_ray_tri_bw_gen(_backface_culling: bool, ray: Ray, tri: Tri, check: fn (bool) -> bool) -> Option[(f32, f32, f32)] {
     // Permute components of triangle vertices and ray direction
     let kz = vec3_max_index(vec3_abs(ray.dir));
-    let kx = if kz + 1 == 3 { 0 } else { kz + 1 };
-    let ky = if kx + 1 == 3 { 0 } else { kx + 1 };
+    let kx = select(kz + 1 == 3, 0, kz + 1);
+    let ky = select(kx + 1 == 3, 0, kx + 1);
     
     let d       = vec3_permute(ray.dir, kx, ky, kz);
     let mut p0t = vec3_permute(vec3_sub(tri.v0, ray.org), kx, ky, kz);
@@ -126,7 +136,7 @@ fn @intersect_ray_tri_bw(_backface_culling: bool, ray: Ray, tri: Tri) -> Option[
     let abs_det = math_builtins::fabs(det);
     let mut mask = !((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0)) && abs_det != 0;
 
-    if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
+    if check(mask) { return(Option[(f32, f32, f32)]::None) }
 
     // Compute scaled hit distance to triangle and test against ray range
     p0t.z *= Sz;
@@ -135,7 +145,7 @@ fn @intersect_ray_tri_bw(_backface_culling: bool, ray: Ray, tri: Tri) -> Option[
     let t = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
     mask &= !(det < 0 && (t >= ray.tmin * det || t < ray.tmax * det)) && !(det > 0 && (t <= ray.tmin * det || t > ray.tmax * det));
 
-    if likely(rv_all(!mask)) { return(Option[(f32, f32, f32)]::None) }
+    if check(mask) { return(Option[(f32, f32, f32)]::None) }
 
     if mask {
         let inv_det = 1 / det;
@@ -145,8 +155,17 @@ fn @intersect_ray_tri_bw(_backface_culling: bool, ray: Ray, tri: Tri) -> Option[
     }
 }
 
-fn @intersect_ray_tri(backface_culling: bool, ray: Ray, tri: Tri) = intersect_ray_tri_mt(backface_culling, ray, tri);
+fn @intersect_ray_tri_bw_cpu(backface_culling: bool, ray: Ray, tri: Tri) 
+    = intersect_ray_tri_bw_gen(backface_culling, ray, tri, @|mask| likely(rv_all(!mask)));
+fn @intersect_ray_tri_bw_gpu(backface_culling: bool, ray: Ray, tri: Tri)
+    = intersect_ray_tri_bw_gen(backface_culling, ray, tri, @|mask| !mask);
 
+// Pick triangle intersection method
+// TODO: In the future this might be a good (advanced) user parameter
+fn @intersect_ray_tri_cpu(backface_culling: bool, ray: Ray, tri: Tri) = intersect_ray_tri_mt_cpu(backface_culling, ray, tri);
+fn @intersect_ray_tri_gpu(backface_culling: bool, ray: Ray, tri: Tri) = intersect_ray_tri_mt_gpu(backface_culling, ray, tri);
+
+// Ray - Box intersection
 fn @intersect_ray_box(min_max: MinMax, ordered: bool, ray: Ray, bbox: BBox) -> (f32, f32) {
     let t0 = vec3_add(vec3_mul(ray.inv_dir, bbox.min), ray.inv_org);
     let t1 = vec3_add(vec3_mul(ray.inv_dir, bbox.max), ray.inv_org);

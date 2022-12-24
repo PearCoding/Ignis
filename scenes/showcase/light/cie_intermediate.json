@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"lights": [
+		{"type":"cie_intermediate", "name":"Light", "scale": 0.1}
+	]
+}

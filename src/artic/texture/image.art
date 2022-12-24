@@ -1,0 +1,153 @@
+struct BorderHandling {
+    horz: fn (i32, i32) -> i32,
+    vert: fn (i32, i32) -> i32
+}
+
+type Texture     = fn (ShadingContext) -> Color;
+type ImageFilter = fn (Image, BorderHandling, Vec2) -> Color;
+
+fn @make_clamp_border() -> BorderHandling {
+    fn @clamp_(x: i32, w: i32) = clamp(x, 0, w-1);
+    BorderHandling {
+        horz = clamp_,
+        vert = clamp_
+    }
+}
+
+fn @make_repeat_border() -> BorderHandling {
+    fn @repeat_(x: i32, w: i32) {
+        let t = x % w;
+        select(t < 0, t+w, t)
+    }
+    BorderHandling {
+        horz = repeat_,
+        vert = repeat_
+    }
+}
+
+fn @make_mirror_border() -> BorderHandling {
+    fn @mirror_(x: i32, w: i32) {
+        let t = select(x < 0, -1-x, x);
+        let i = t / w;
+        let k = t - i * w;
+        select((i & 1) == 0, /* odd */ w - 1 - k, /* even */ k)
+    };
+
+    BorderHandling {
+        horz = mirror_,
+        vert = mirror_
+    }
+}
+
+fn @make_split_border(border_u: BorderHandling, border_v: BorderHandling) = BorderHandling {
+    horz = border_u.horz,
+    vert = border_v.vert
+};
+
+struct ImageTexelPoint {
+    ix: i32,
+    iy: i32,
+    fx: f32,
+    fy: f32
+}
+
+fn @map_uv_to_image_pixel_nearest(img: Image, uv: Vec2) -> ImageTexelPoint {
+    // Edge samples are exactly on border (sample_border = 1 on OpenImageIO)
+    let u = uv.x * img.width  as f32;
+    let v = uv.y * img.height as f32;
+    
+    ImageTexelPoint {
+        ix = math_builtins::floor(u) as i32,
+        iy = math_builtins::floor(v) as i32,
+        fx = math::fract(u),
+        fy = math::fract(v),
+    }
+}
+
+fn @map_uv_to_image_pixel(img: Image, uv: Vec2) -> ImageTexelPoint {    
+    // Texels are on the middle of each ~pixel~
+    let u = uv.x * img.width  as f32 - 0.5;
+    let v = uv.y * img.height as f32 - 0.5;
+    
+    ImageTexelPoint {
+        ix = math_builtins::floor(u) as i32,
+        iy = math_builtins::floor(v) as i32,
+        fx = math::fract(u),
+        fy = math::fract(v),
+    }
+}
+
+fn @make_nearest_filter() -> ImageFilter {
+    @ |img, border, uv| {
+        let texel = map_uv_to_image_pixel_nearest(img, uv);
+        img.pixels(
+            border.horz(texel.ix, img.width ),
+            border.vert(texel.iy, img.height))
+    }
+}
+
+fn @make_bilinear_filter() -> ImageFilter {
+    @ |img, border, uv| {
+        let texel = map_uv_to_image_pixel(img, uv);
+        let x0 = border.horz(texel.ix + 0, img.width );
+        let y0 = border.vert(texel.iy + 0, img.height);
+        let x1 = border.horz(texel.ix + 1, img.width );
+        let y1 = border.vert(texel.iy + 1, img.height);
+
+        let p00 = img.pixels(x0, y0);
+        let p10 = img.pixels(x1, y0);
+        let p01 = img.pixels(x0, y1);
+        let p11 = img.pixels(x1, y1);
+
+        color_lerp(color_lerp(p00, p10, texel.fx), color_lerp(p01, p11, texel.fx), texel.fy)
+    }
+}
+
+fn @make_bicubic_filter() -> ImageFilter {
+    // w0, w1, w2, and w3 are the four cubic B-spline basis functions
+    fn @cubic_w0(a: f32) = (a * (a * (-a + 3) - 3) + 1) / 6;
+    fn @cubic_w1(a: f32) = (a * a * (3 * a - 6) + 4) / 6;
+    fn @cubic_w2(a: f32) = (a * (a * (-3 * a + 3) + 3) + 1) / 6;
+    fn @cubic_w3(a: f32) = (a * a * a) / 6;
+
+    // g0 and g1 are the two amplitude functions
+    fn @cubic_g0(a: f32) = cubic_w0(a) + cubic_w1(a);
+    fn @cubic_g1(a: f32) = cubic_w2(a) + cubic_w3(a);
+
+    // h0 and h1 are the two offset functions
+    fn @cubic_h0(a: f32) = (cubic_w1(a) / cubic_g0(a)) - 1;
+    fn @cubic_h1(a: f32) = (cubic_w3(a) / cubic_g1(a)) + 1;
+
+    @ |img, border, uv| {
+        let texel = map_uv_to_image_pixel(img, uv);
+
+        let g0x = cubic_g0(texel.fx);
+        let g0y = cubic_g0(texel.fy);
+        let g1x = cubic_g1(texel.fx);
+        let g1y = cubic_g1(texel.fy);
+
+        let ix0 = math_builtins::floor(texel.ix as f32 + cubic_h0(texel.fx) + 0.5) as i32;
+        let iy0 = math_builtins::floor(texel.iy as f32 + cubic_h0(texel.fy) + 0.5) as i32;
+        let ix1 = math_builtins::floor(texel.ix as f32 + cubic_h1(texel.fx) + 0.5) as i32;
+        let iy1 = math_builtins::floor(texel.iy as f32 + cubic_h1(texel.fy) + 0.5) as i32;
+
+        let x0 = border.horz(ix0, img.width );
+        let y0 = border.vert(iy0, img.height);
+        let x1 = border.horz(ix1, img.width );
+        let y1 = border.vert(iy1, img.height);
+
+        let p00 = color_mulf(img.pixels(x0, y0), g0x * g0y);
+        let p10 = color_mulf(img.pixels(x1, y0), g1x * g0y);
+        let p01 = color_mulf(img.pixels(x0, y1), g0x * g1y);
+        let p11 = color_mulf(img.pixels(x1, y1), g1x * g1y);
+
+        color_add(color_add(p00, p10), color_add(p01, p11))
+    }
+}
+
+fn @make_image_texture(border: BorderHandling, filter: ImageFilter, image: Image, transform: Mat3x3) -> Texture {
+    @ |ctx| {
+        let uv2 = mat3x3_transform_point_affine(transform, vec3_to_2(ctx.uvw));
+        filter(image, border, uv2)
+    }
+}

@@ -1,0 +1,28 @@
+Running Ignis on GPU with 16384 spp (depth 64) takes 0m56,428s
+Running Ignis on GPU with 16384 spp (depth 8) takes 0m45,166s
+Running Ignis on AVX2 with 16384 spp (depth 8) takes 14m22,062s
+Running Ignis on Generic with 16384 spp (depth 8) takes 10m16,009s (Faster then AVX2... this is not good)
+Running Radiance with "QUALITY" on MEDIUM takes 2m1,138s, but has a slight bias
+Running Radiance with "QUALITY" on HIGH takes 40m7,983s, with less bias. Very similar results compared to Ignis.
+
+-> Ignis is more noisy, but no bias
+
+Test System>
+OS:  Ubuntu 22.04 LTS
+CPU: Intel® Core™ i9-10885H CPU @ 2.40GHz × 16
+GPU: NVIDIA Corporation Quadro T2000 Mobile / Max-Q
+
+------------------------------------------------------------------------------------------------------------------------
+Running Ignis on GPU with 16384 spp (depth 64) takes 0m16,706s
+Running Ignis on GPU with 16384 spp (depth 8) takes 0m13,516s
+Running Ignis on AVX2 with 16384 spp (depth 8) takes 2m26,673s
+Running Ignis on Generic with 16384 spp (depth 8) takes 1m38,664s (Faster then AVX2... this is not good)
+Running Radiance with "QUALITY" on MEDIUM takes 1m43,174s, but has a slight bias
+Running Radiance with "QUALITY" on HIGH takes 36m33,303s, with less bias. Very similar results compared to Ignis.
+
+-> Ignis is more noisy, but no bias
+
+Test System>
+OS:  Ubuntu 22.04 LTS
+CPU: AMD Ryzen 9 3950X 16-Core Processor
+GPU: NVIDIA Corporation GeForce RTX 3080 12GB

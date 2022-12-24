@@ -1,0 +1,106 @@
+// Result from sampling a light source
+struct EmissionSample {
+    pos:       Vec3,  // Position on the light source
+    dir:       Vec3,  // Direction of the light going outwards
+    intensity: Color, // Intensity along the direction, already divided by the generating pdf
+    pdf_area:  f32,   // Probability to sample the point on the light
+    pdf_dir:   f32,   // Probability to sample the direction on the light, conditioned on the point on the light source
+    cos:       f32    // Cosine between the direction and the light source geometry
+}
+
+// Result from sampling direct lighting from a light source
+struct DirectLightSample {
+    pos:       Vec3,  // Position on the light source. If infinite this can be undefined and should not be used
+    dir:       Vec3,  // Normalized direction towards the light source
+    intensity: Color, // Intensity along the direction, already divided by the generating pdf
+    pdf:       Pdf,   // Probability to sample the light. If the light is infinite the pdf has to be given in solid angle!
+    cos:       f32,   // Cosine between the direction and the light source geometry
+    dist:      f32    // Distance from point of surface towards point on light source
+}
+
+// Pdf properties of a light source
+struct EmissivePdf {
+    pdf_area: f32, // Probability to sample the point on the light
+    pdf_dir:  f32  // Probability to sample the direction on the light, conditioned on the point on the light source
+}
+
+// Emission properties of a light source for direct illumination used in materials
+// The respective light is never delta nor infinite!
+struct DirectEmissionValue {
+    intensity: Color, // Intensity along the direction
+    pdf:       Pdf,   // Probability to sample the point on the light
+}
+
+// Opaque light structure
+struct Light {
+    // ID of the light given by the system
+    id: i32,
+    // Samples direct illumination from this light source at the given point on a surface
+    sample_direct: fn (&mut RndState, SurfaceElement) -> DirectLightSample,
+    // Samples the emitting surface of the light
+    sample_emission: fn (&mut RndState) -> EmissionSample,
+    // Returns the emission properties of the light at a given point on its surface. The SurfaceElement is only valid if delta & infinite is false
+    emission: fn (ShadingContext) -> Color,
+    // Returns the pdf properties of the light at a given point on its surface for direct illumination. 
+    // In contrary to sample_direct, the surface element is on the light source. 
+    // The SurfaceElement is only valid if delta & infinite is false
+    pdf_direct: fn (Ray, SurfaceElement) -> Pdf,
+    // Returns the pdf properties of the light at a given point on its surface for emission. The SurfaceElement is only valid if delta & infinite is false
+    pdf_emission: fn (Ray, SurfaceElement) -> EmissivePdf,
+    // true if the light is a delta light (can not be hit by a ray). This only relates to `sample_direct`, not `sample_emission`
+    delta: bool,
+    // true if the light is infinite
+    infinite: bool
+}
+
+fn @make_emission_sample(pos: Vec3, dir: Vec3, intensity: Color, pdf_area: f32, pdf_dir: f32, cos: f32) = EmissionSample {
+    pos       = pos,
+    dir       = dir,
+    intensity = intensity,
+    pdf_area  = pdf_area,
+    pdf_dir   = pdf_dir,
+    cos       = cos
+};
+
+fn @make_direct_sample(pos: Vec3, dir: Vec3, intensity: Color, pdf: Pdf, cos: f32, dist: f32) = DirectLightSample {
+    pos       = pos,
+    dir       = dir,
+    intensity = intensity,
+    pdf       = pdf,
+    cos       = cos,
+    dist      = dist
+};
+
+fn @make_emissive_pdf(pdf_area: f32, pdf_dir: f32) = EmissivePdf {
+    pdf_area  = pdf_area,
+    pdf_dir   = pdf_dir
+};
+
+fn @make_direct_emission_value(intensity: Color, pdf: Pdf) = DirectEmissionValue {
+    intensity = intensity,
+    pdf       = pdf
+};
+
+fn @make_null_light(id: i32) = Light {
+    id              = id,
+    sample_direct   = @ |_, _| undef[DirectLightSample](),
+    sample_emission = @ |_|    undef[EmissionSample](),
+    emission        = @ |_|    color_builtins::black,
+    pdf_direct      = @ |_, _| make_solid_pdf(1),
+    pdf_emission    = @ |_, _| make_emissive_pdf(1, 1),
+    delta           = true,
+    infinite        = true
+};
+
+struct LightTable {
+    count: i32,
+    get:   fn (i32) -> Light
+}
+
+/// Set count, but return no valid light. Useful for miss shaders
+fn @make_proxy_light_table(count: i32) = LightTable {
+    count = count,
+    get   = @|_| make_null_light(0)
+};
+
+fn @make_empty_light_table() = make_proxy_light_table(0);

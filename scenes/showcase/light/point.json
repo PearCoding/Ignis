@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"lights": [
+		{"type":"point", "name":"Light", "position": [2, 2, 0], "intensity": 10}
+	]
+}

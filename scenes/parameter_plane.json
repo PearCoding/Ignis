@@ -1,0 +1,49 @@
+{
+	"technique": {
+		"type": "path",
+		"max_depth": 8
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 40,
+		"near_clip": 0.1,
+		"far_clip": 100,
+		"transform": [ -1,0,0,0, 0,1,0,0, 0,0,-1,15, 0,0,0,1 ]
+	},
+	"film": {
+		"size": [1000, 1000]
+	},
+	"textures": [
+		{
+			"type": "bitmap",
+			"name": "env",
+			"filename": "textures/environment/phalzer_forest_01_4k.exr"
+		},
+		{
+			"type": "checkerboard",
+			"name": "check",
+			"scale_x": "param_scale_x",
+			"scale_y": "param_scale_y",
+			"color0": "param_color_0",
+			"color1": "param_color_1"
+		}
+	],
+	"parameters": [
+		{ "type": "number", "name": "param_scale_x", "value": 10 },
+		{ "type": "number", "name": "param_scale_y", "value": 10 },
+		{ "type": "color", "name": "param_color_0", "value": 0 },
+		{ "type": "color", "name": "param_color_1", "value": 1 }
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name": "mat-Floor", "reflectance":"check"}
+	],
+	"shapes": [
+		{"type":"rectangle", "name":"Floor", "width": 10, "height": 10}
+	],
+	"entities": [
+		{"name":"Floor","shape":"Floor", "bsdf":"mat-Floor"}
+	],
+	"lights": [
+		{"type":"env", "name":"Sky", "radiance": "env", "transform": [1,0,0, 0,0,1, 0,1,0]}
+	]
+}

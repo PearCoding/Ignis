@@ -1,0 +1,34 @@
+// Images are discrete collections of pixels with a fixed number of channels
+struct Image {
+    pixels: fn (i32, i32) -> Color,
+    width:  i32,
+    height: i32
+}
+
+// Packed images are always RGBA or mono
+fn @image_rgba_unpack(packed: u32, hint_opaque: bool) =
+    make_vec4( (packed & 0x000000FF)        as f32 / 255,
+              ((packed & 0x0000FF00) >> 8)  as f32 / 255,
+              ((packed & 0x00FF0000) >> 16) as f32 / 255,
+              if ?hint_opaque && hint_opaque { 1:f32 } else { ((packed & 0xFF000000) >> 24) as f32 / 255 }
+             );
+
+fn @image_mono_unpack(packed: u8) = packed as f32 / 255;
+
+fn @make_image_rgba32(pixels: fn (i32, i32) -> Vec4, width: i32, height: i32) = Image {
+    pixels = @ |x, y| {
+        let pixel = pixels(x, y);
+        make_color(pixel.x, pixel.y, pixel.z, pixel.w)
+    },
+    width  = width,
+    height = height
+};
+
+fn @make_image_mono(pixels: fn (i32, i32) -> f32, width: i32, height: i32) = Image {
+    pixels = @ |x, y| {
+        let pixel = pixels(x, y);
+        make_gray_color(pixel)
+    },
+    width  = width,
+    height = height
+};

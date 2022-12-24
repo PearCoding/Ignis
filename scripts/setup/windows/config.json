@@ -1,0 +1,23 @@
+{
+    "LOCATION": "",
+    "BUILD_DIR": "build/Release",
+    "CONFIGURE_IGNIS": true,
+    "GIT_BIN": "git",
+    "CMAKE_BIN": "cmake",
+    "CMAKE_EXTRA_ARGS": ["-GNinja", "-UCMAKE_CONFIGURATION_TYPES"],
+    "SKIP_VC_ENV": false,
+    "GET_ZLIB": true,
+    "ZLIB_BUILD_TYPE": "Release",
+    "ZLIB_URL": "https://zlib.net/zlib1213.zip",
+    "GET_AnyDSL": true,
+    "AnyDSL_BUILD_TYPE": "Release",
+    "AnyDSL_LLVM_VERSION": "14.0.6",
+    "AnyDSL_LLVM_URL": "https://github.com/llvm/llvm-project/releases/download/llvmorg-14.0.6/llvm-project-14.0.6.src.tar.xz",
+    "AnyDSL_LLVM_TARGETS": "AMDGPU;NVPTX;X86",
+    "AnyDSL_RV_TAG": "origin/release/14.x",
+    "AnyDSL_CMAKE_EXTRA_ARGS": [],
+    "GET_TBB": true,
+    "TBB_URL": "https://github.com/oneapi-src/oneTBB/releases/download/v2021.5.0/oneapi-tbb-2021.5.0-win.zip",
+    "GET_SDL2": true,
+    "SDL2_URL":"https://github.com/libsdl-org/SDL/releases/download/release-2.24.0/SDL2-devel-2.24.0-VC.zip"
+}

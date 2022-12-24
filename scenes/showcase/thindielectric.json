@@ -1,8 +1,0 @@
-{
-	"externals": [
-        {"filename":"base.json"}
-    ],
-	"bsdfs": [
-		{"type":"thindielectric", "name": "mat-Sphere"}
-	]
-}

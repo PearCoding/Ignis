@@ -1,0 +1,6 @@
+// In contrary to dummy_main.art, dummy_extra.art is intended to be modified or extended by the user
+
+// Dummy file used to generate a C interface for the renderer
+#[export]
+fn _dummy1(_tri1: &[Tri1], _tri4: &[Tri4]) -> () {
+}

@@ -1,0 +1,11 @@
+// Based on "Bump Mapping Unparameterized Surfaces on the GPU" by Morten S. Mikkelsen, 2010
+
+fn @node_bump(input: Vec3, Nx: Vec3, Ny: Vec3, distance: f32, sample_dx: f32, sample_dy: f32) -> Vec3 {
+    let Rx = vec3_cross(Ny, input);
+    let Ry = vec3_cross(input, Nx);
+
+    let det  = vec3_dot(Nx, Rx);
+    let grad = vec3_add(vec3_mulf(Rx, sample_dx), vec3_mulf(Ry, sample_dy));
+
+    vec3_normalize(vec3_sub(vec3_mulf(input, math_builtins::fabs(det)), vec3_mulf(grad, math::signf(det)*distance)))
+}

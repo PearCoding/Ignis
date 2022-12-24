@@ -1,0 +1,39 @@
+name: Docs
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout master
+      uses: actions/checkout@v3
+      with:
+        path: master
+        fetch-depth: 0 # Ensure git tags are available
+    - name: Checkout docs
+      uses: actions/checkout@v3
+      with:
+        ref: docs
+        path: docs
+    - name: Install sphinx
+      run: | 
+        python3 -m pip install -r ./master/docs/Requirements.txt
+    - name: Run sphinx
+      run: sphinx-build -a -E -b html ./master/docs ./docs/docs
+    - name: Patch changes
+      run: |
+        cd docs
+        touch docs/.nojekyll
+    - name: Apply changes
+      run: |
+        cd docs
+        git config user.email github-actions@github.com
+        git config user.name github-actions
+        git add .
+        git commit -m "Updated docs" -a
+        git push

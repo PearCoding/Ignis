@@ -1,0 +1,26 @@
+struct Triangle {
+    v0: Vec3,
+    v1: Vec3,
+    v2: Vec3,
+    e1: Vec3,
+    e2: Vec3,
+    n:  Vec3,
+    area: f32
+}
+
+fn @make_triangle(v0: Vec3, v1: Vec3, v2: Vec3) -> Triangle {
+    let e1 = vec3_sub(v1, v0);
+    let e2 = vec3_sub(v2, v0);
+    let n  = vec3_cross(e1, e2);
+    let nn = vec3_len(n);
+
+    Triangle{
+        v0 = v0,
+        v1 = v1,
+        v2 = v2,
+        e1 = e1,
+        e2 = e2,
+        n  = vec3_mulf(n, 1/nn),
+        area = nn / 2
+    }
+}

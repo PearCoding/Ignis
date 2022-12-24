@@ -1,7 +1,7 @@
-# Ignis ![Build](https://img.shields.io/github/workflow/status/PearCoding/Ignis/Docker%20AVX2) [![Docker Pulls](https://img.shields.io/docker/pulls/pearcoding/ignis)](https://hub.docker.com/repository/docker/pearcoding/ignis)
-'Ignis' is a raytracer for the RENEGADE project implemented using the Artic frontend of the AnyDSL compiler framework (https://anydsl.github.io/) and based on Rodent (https://github.com/AnyDSL/rodent). The renderer is usable on all three major platforms (Linux, Windows, MacOs).
+# Ignis
+'Ignis' is a high-performance raytracer implemented using the Artic frontend of the AnyDSL compiler framework (https://anydsl.github.io/) and based on Rodent (https://github.com/AnyDSL/rodent). The renderer is usable on all three major platforms (Linux, Windows, MacOs).
 
-![A scene containing diamonds rendered by Ignis](docs/screenshot.jpg)
+![A scene containing diamonds rendered by Ignis with photonmapping](docs/screenshot.jpeg)
 
 ## Gallery
 
@@ -11,10 +11,13 @@ Some scenes rendered with Ignis. Acquired from https://benedikt-bitterli.me/reso
 
 ![Livingroom scene by Jay-Artist](docs/gallery2.jpeg)
 
+A sample scene from https://github.com/KhronosGroup/glTF-Sample-Models directly rendered within `igview`.
+
+![DragonAttenuation scene by Stanford Scan and Morgan McGuire's Computer Graphics Archive](docs/gallery3.jpeg)
+
 ## Dependencies
 
  - AnyDSL <https://github.com/AnyDSL/anydsl>
- - Eigen3 <http://eigen.tuxfamily.org>
  - Intel® Threading Building Blocks https://www.threadingbuildingblocks.org/
  - ZLib <https://zlib.net/>
 
@@ -26,46 +29,36 @@ Some scenes rendered with Ignis. Acquired from https://benedikt-bitterli.me/reso
 The following dependencies will be downloaded and compiled automatically.
 Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more information. 
 
+ - bvh <https://github.com/madmann91/bvh>
+ - Catch2 <https://github.com/catchorg/Catch2>
+ - CLI11 <https://github.com/CLIUtils/CLI11>
+ - Eigen3 <http://eigen.tuxfamily.org>
  - imgui <https://github.com/ocornut/imgui>
  - imgui-markdown <https://github.com/juliettef/imgui_markdown>
+ - implot <https://github.com/epezent/implot>
+ - PExpr <https://github.com/PearCoding/PExpr>
  - pugixml <https://github.com/zeux/pugixml>
+ - pybind11 <https://github.com/pybind/pybind11>
  - RapidJSON <https://rapidjson.org/>
- - Simple Hardware Feature Extractor <https://github.com/PearCoding/hwinfo>
- - Simple Tag Preprocessor <https://github.com/PearCoding/stpp>
  - stb <https://github.com/nothings/stb>
  - tinyexr <https://github.com/syoyo/tinyexr>
+ - tinygltf <https://github.com/syoyo/tinygltf>
  - tinyobjloader <https://github.com/tinyobjloader/tinyobjloader>
  - tinyparser-mitsuba <https://github.com/PearCoding/TinyParser-Mitsuba>
 
 ## Docker Image
 
-Ignis is available on docker hub with some preconfigured backends! [pearcoding/ignis](https://hub.docker.com/repository/docker/pearcoding/ignis)
+Ignis is available on docker hub with some preconfigured flavours! [pearcoding/ignis](https://hub.docker.com/repository/docker/pearcoding/ignis)
 
 More information is available here [docker/README.md](docker/README.md)
 
 ## Building
 
-If you made sure the required dependencies are installed in your system, create a directory to build the application in:
-
-    mkdir build
-    cd build
-
-Next step would be to configure and finally build the framework. You might use your favorite generator (e.g. `Ninja`)
-
-    cmake -G Ninja ..
-    cmake --build .
-
-If `Ninja` is not available, skip the `-G Ninja` parameter. You can also set `FETCHCONTENT_UPDATES_DISCONNECTED` to `ON` to speed up the cmake steps after the initial cmake configuration.  
-
-## Backends
-
-The raytracer has multiple backends available to make sure the best optimized kernel is used for certain tasks. Therefore, multiple device and feature specific modules, so-called drivers, have to be compiled.
-
-The compilation process might take a while depending on your hardware and feature selection. Parallel compilation of the drivers is disabled by default. Multithreading might freeze your operating system due to the high memory and cpu use. You can use the CMake option `IG_BUILD_DRIVER_PARALLEL` to enable it if you are sure your system can handle it.
+Information about building Ignis is available in the documentation [online](https://pearcoding.github.io/Ignis/src/getting_started/building.html) or in the offline version of the documentation inside `docs/`
 
 ## Frontends
 
-The frontends of the raytracer communicate with the user and one, optimal selected, backend.
+The frontends of the raytracer communicate with the user and the runtime.
 Currently, four frontends are available:
 
  - `igview` This is the standard UI interface which displays the scene getting progressively rendered. This frontend is very good to get a first impression of the rendered scene and fly around to pick the one best camera position. Keep in mind that some power of your underlying hardware is used to render the UI and the tonemapping algorithms. Switching to the UI-less frontend `igcli` might be a good idea if no preview is necessary. Note, `igview` will be only available if the UI feature is enabled and SDL2 is available on your system. Disable this frontend by setting the CMake option `IG_WITH_VIEWER` to Off.
@@ -73,11 +66,9 @@ Currently, four frontends are available:
  - `igtrace` This commandline only frontend ignores camera specific information and expects a list of rays from the user. It returns the contribution back to the user for each ray initially specified.
  - `Python API` This simple python API allows to communicate with the runtime and allows you to work with the raytracer in interactive notebooks and more. The API is only available if Python3 was found in the system. You might disable the API by setting the CMake option `IG_WITH_PYTHON_API` to Off.
 
-Use the `--help` argument on each of the executables to get information of possible arguments for each frontend. Also have a look at the Wiki(TODO) and Website(TODO) for more in-depth information.
+Use the `--help` argument on each of the executables to get information of possible arguments for each frontend.
 
 ## Running
-
-Each frontend requires the exact location of the backends to run. An automatic search procedure will detect them in the system. In some rare cases the automatic search procedure might fail to find all the backends. In that case the environment variable `IG_DRIVER_PATH` can be used to point to the directories containing driver modules. The environment variable is similar to the `PATH` variable used in Linux environments and should contain absolute paths only, separated by ':' if multiple paths are provided. Setting `IG_DRIVER_SKIP_SYSTEM_PATH` will prevent the automatic search and only depend on `IG_DRIVER_PATH`.
 
 Run a frontend of your choice like this:
 
@@ -92,10 +83,12 @@ All available components are documented in the `docs/` folder. A documentation c
 
 from the `build/` folder.
 
+A quite recent version of the above documentation is available at: https://pearcoding.github.io/Ignis/ 
+
 ## Scene description
 
-Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is planned. Image and procedural texture support is available.
-A schema is available at [refs/ignis.schema.json](refs/ignis.schema.json)
+Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is available via PExpr, image and procedural textures.
+A schema is available at [docs/refs/ignis.schema.json](docs/refs/ignis.schema.json)
 
 You might use the `mts2ig` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.
 
@@ -103,7 +96,7 @@ You can also use `rad2json` to convert geometry used in the Radiance framework t
 
 Ignis is able to understand glTF files. You can embed glTF files in Ignis's own scene description file or directly use the glTF file as an input to the multiple frontends.
 
-A Blender plugin is planned for the future.
+A Blender plugin is available in `scripts/blender_exporter/`.
 
 ## Tiny tools
 
@@ -139,3 +132,14 @@ The Ignis client has an optional UI and multiple ways to interact with the scene
  - `Numpad 9` to look behind you.
  - `Numpad 2468` to rotate the camera.
  - Use with `Strg/Ctrl` to rotate the camera around the center of the scene. Use with `Alt` to enable first person camera behaviour. 
+
+## Funding and Cooperation
+
+The project is funded by the [Velux Stiftung](https://veluxstiftung.ch) and developed in cooperation with the [Computer Graphics](https://graphics.cg.uni-saarland.de/) chair of the [Saarland University](https://www.uni-saarland.de/en/home.html), [Fraunhofer Institute for Solar Energy Systems ISE](https://www.ise.fraunhofer.de/en.html) and [DFKI](https://www.dfki.de/en/web).
+
+<a href="https://veluxstiftung.ch">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/funding/PNG_VeluxStiftung_Logo_negative.png">
+  <img alt="Velux Stiftung Logo" src="docs/funding/PNG_VeluxStiftung_Logo_positive.png" width="33%">
+</picture>
+</a>

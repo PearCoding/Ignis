@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"shapes": [
+		{"type":"external", "name":"Object", "filename": "../../meshes/Diamond.ply", "transform": [{"translate": [0,0,2]}, {"scale": 4}]}
+	]
+}

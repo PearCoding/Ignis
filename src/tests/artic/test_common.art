@@ -36,4 +36,5 @@ fn eq_mat4x4(A : Mat4x4, B : Mat4x4) -> bool {
     true
 }
 
+fn eq_vec2(A : Vec2, B : Vec2) = eq_f32(A.x, B.x) && eq_f32(A.y, B.y);
 fn eq_vec3(A : Vec3, B : Vec3) = eq_f32(A.x, B.x) && eq_f32(A.y, B.y) && eq_f32(A.z, B.z);

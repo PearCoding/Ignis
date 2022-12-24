@@ -7,16 +7,16 @@
 # Setups targets
 #  TBB::tbb
 #
-# Calling convection: <tbb/tbb_stddef.h>
+# Calling convection: <tbb/version.h>
 
 if(TBB_FOUND)
   return()
 endif()
 
-SET(TBB_FOUND FALSE)
-SET(TBB_INCLUDE_DIRS)
-SET(TBB_LIBRARIES)
-SET(TBB_ONEAPI FALSE)
+set(TBB_FOUND FALSE)
+set(TBB_INCLUDE_DIRS)
+set(TBB_LIBRARIES)
+set(TBB_ONEAPI FALSE)
 
 set(_def_search_paths
   ~/Library/Frameworks
@@ -29,49 +29,51 @@ set(_def_search_paths
   "${TBB_DIR}"
 )
 
-# Old version.h is deprecated!
-find_path(TBB_INCLUDE_DIR tbb/tbb_stddef.h
+find_path(TBB_INCLUDE_DIR 
+  NAMES 
+    oneapi/tbb/version.h
+    tbb/tbb_stddef.h
+    tbb/version.h
   HINTS
     ENV TBB_HOME
   PATH_SUFFIXES include/ local/include/
   PATHS ${_def_search_paths}
 )
 
-if(NOT TBB_INCLUDE_DIR)
-  find_path(TBB_INCLUDE_DIR oneapi/tbb/version.h
-    HINTS
-      ENV TBB_HOME
-    PATH_SUFFIXES include/ local/include/
-    PATHS ${_def_search_paths}
-  )
-
-  if(TBB_INCLUDE_DIR)
-    set(TBB_ONEAPI TRUE)
-  endif()
-endif()
-
-if(NOT TBB_ONEAPI)
-  if(TBB_INCLUDE_DIR MATCHES ".*\\/oneAPI\\/.*")
-    set(TBB_ONEAPI TRUE)
-    set(TBB_VERSION_FILE "${TBB_INCLUDE_DIR}/oneapi/tbb/version.h")
-  else()
-    set(TBB_VERSION_FILE "${TBB_INCLUDE_DIR}/tbb/tbb_stddef.h")
-  endif()
+if(EXISTS "${TBB_INCLUDE_DIR}/oneapi/tbb/version.h")
+  set(TBB_ONEAPI TRUE)
+  set(TBB_VERSION_FILE "${TBB_INCLUDE_DIR}/oneapi/tbb/version.h")
+elseif(EXISTS "${TBB_INCLUDE_DIR}/tbb/tbb_stddef.h")
+  set(TBB_VERSION_FILE "${TBB_INCLUDE_DIR}/tbb/tbb_stddef.h")
+elseif(EXISTS "${TBB_INCLUDE_DIR}/tbb/version.h")
+  set(TBB_VERSION_FILE "${TBB_INCLUDE_DIR}/tbb/version.h")
 endif()
 
 get_filename_component(_TBB_ROOT_DIR ${TBB_INCLUDE_DIR} DIRECTORY)
 
-# Extract the version
 if(TBB_INCLUDE_DIR)
-  set(TBB_INCLUDE_DIRS "${TBB_INCLUDE_DIR}")
+  if(TBB_ONEAPI)
+    set(TBB_INCLUDE_DIRS "${TBB_INCLUDE_DIR}/oneapi" "${TBB_INCLUDE_DIR}")
+  else()
+    set(TBB_INCLUDE_DIRS "${TBB_INCLUDE_DIR}")
+  endif()
+endif()
 
+# Extract the version
+if(TBB_VERSION_FILE)
   file(READ "${TBB_VERSION_FILE}" _tbb_version_file)
-  string(REGEX REPLACE ".*#define TBB_VERSION_MAJOR ([0-9]+).*" "\\1"
+  string(REGEX REPLACE ".*#define TBB_VERSION_MAJOR[ \t\r\n]+([0-9]+).*" "\\1"
       TBB_VERSION_MAJOR "${_tbb_version_file}")
-  string(REGEX REPLACE ".*#define TBB_VERSION_MINOR ([0-9]+).*" "\\1"
+  string(REGEX REPLACE ".*#define TBB_VERSION_MINOR[ \t\r\n]+([0-9]+).*" "\\1"
       TBB_VERSION_MINOR "${_tbb_version_file}")
-  string(REGEX REPLACE ".*#define TBB_INTERFACE_VERSION ([0-9]+).*" "\\1"
-    TBB_VERSION_PATCH "${_tbb_version_file}")
+  string(REGEX REPLACE ".*#define TBB_VERSION_PATCH[ \t\r\n]+([0-9]+).*" "\\1"
+      TBB_VERSION_PATCH "${_tbb_version_file}")
+  
+  if(NOT CMAKE_MATCH_1 STREQUAL TBB_VERSION_PATCH)
+    string(REGEX REPLACE ".*#define TBB_INTERFACE_VERSION[ \t\r\n]+([0-9]+).*" "\\1"
+      TBB_VERSION_PATCH "${_tbb_version_file}")
+  endif()
+
   set(TBB_VERSION "${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR}.${TBB_VERSION_PATCH}")
 endif()
 
@@ -94,7 +96,6 @@ set(_TBB_tbb_DEPS )
 set(_TBB_tbb_LIBNAMES tbb )
 set(_TBB_tbbmalloc_DEPS )
 set(_TBB_tbbmalloc_LIBNAMES tbbmalloc )
-
 
 # If COMPONENTS are not given, set it to default
 if(NOT TBB_FIND_COMPONENTS)
@@ -163,7 +164,7 @@ foreach(component ${TBB_FIND_COMPONENTS})
   endif()
 endforeach(component)
 
-if (TBB_INCLUDE_DIRS AND TBB_LIBRARIES)
+if(TBB_INCLUDE_DIRS AND TBB_LIBRARIES)
 	set(TBB_FOUND TRUE)
 endif()
 

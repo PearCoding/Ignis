@@ -1,48 +1,73 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "ignis.schema.json",
-    "title": "Ignis Rodent",
-    "description": "Ignis rodent scene description language",
+    "title": "Ignis Scene Description",
+    "description": "Ignis scene description language",
     "type": "object",
-    "required": ["camera", "film"],
     "properties": {
-        "technique": { "$ref": "#/definitions/Technique"},
-        "camera": { "$ref": "#/definitions/Camera" },
-        "film": { "$ref": "#/definitions/Film" },
+        "technique": {
+            "$ref": "#/definitions/Technique"
+        },
+        "camera": {
+            "$ref": "#/definitions/Camera"
+        },
+        "film": {
+            "$ref": "#/definitions/Film"
+        },
         "externals": {
             "description": "List of external files",
             "type": "array",
-            "items": { "$ref": "#/definitions/External" },
+            "items": {
+                "$ref": "#/definitions/External"
+            },
             "uniqueItems": true
         },
         "textures": {
             "description": "List of textures",
             "type": "array",
-            "items": { "$ref": "#/definitions/Texture" },
+            "items": {
+                "$ref": "#/definitions/Texture"
+            },
             "uniqueItems": true
         },
         "bsdfs": {
             "description": "List of bsdfs",
             "type": "array",
-            "items": { "$ref": "#/definitions/BSDF" },
+            "items": {
+                "$ref": "#/definitions/BSDF"
+            },
+            "uniqueItems": true
+        },
+        "media": {
+            "description": "List of volumes",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/Medium"
+            },
             "uniqueItems": true
         },
         "shapes": {
             "description": "List of shapes",
             "type": "array",
-            "items": { "$ref": "#/definitions/Shape" },
+            "items": {
+                "$ref": "#/definitions/Shape"
+            },
             "uniqueItems": true
         },
         "entities": {
             "description": "List of entities",
             "type": "array",
-            "items": {"$ref": "#/definitions/Entity" },
+            "items": {
+                "$ref": "#/definitions/Entity"
+            },
             "uniqueItems": true
         },
         "lights": {
             "description": "List of lights",
             "type": "array",
-            "items": { "$ref": "#/definitions/Light" },
+            "items": {
+                "$ref": "#/definitions/Light"
+            },
             "uniqueItems": true
         }
     },
@@ -50,20 +75,29 @@
         "External": {
             "description": "External properties",
             "type": "object",
-            "required": ["path"],
-            "properties": { 
-                "type": { "type":"string"},
-                "path": { "type":"string"}
+            "required": [
+                "filename"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                }
             },
             "additionalProperties": true
         },
         "Technique": {
             "description": "Technique properties",
             "type": "object",
-            "required": ["type"],
-            "properties": { 
-                "type": { "type":"string"},
-                "max_depth": { "type":"integer", "minimum":0 }
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string"
+                }
             },
             "additionalProperties": true
         },
@@ -71,126 +105,299 @@
             "description": "Camera properties",
             "type": "object",
             "required": [],
-            "properties": { 
-                "type": { "type":"string"},
-                "fov": { "type":"number", "minimum":0 },
-                "transform": { "$ref":"#/definitions/Transform" }
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "transform": {
+                    "$ref": "#/definitions/Transform"
+                }
             },
             "additionalProperties": true
         },
         "Film": {
             "description": "Film/Image properties",
             "type": "object",
-            "required": ["size"],
-            "properties": { 
-                "size": { "$ref":"#/definitions/Size" }
+            "required": [
+                "size"
+            ],
+            "properties": {
+                "size": {
+                    "$ref": "#/definitions/Size"
+                },
+                "sampler": {
+                    "type": "string"
+                }
             },
             "additionalProperties": true
         },
         "Texture": {
             "description": "Texture properties",
             "type": "object",
-            "required": ["type", "name"],
-            "properties": { 
-                "type": { "type":"string"},
-                "name": { "type":"string"}
+            "required": [
+                "type",
+                "name"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
             },
             "additionalProperties": true
         },
         "BSDF": {
             "description": "BSDF properties",
             "type": "object",
-            "required": ["type", "name"],
-            "properties": { 
-                "type": { "type":"string"},
-                "name": { "type":"string"}
+            "required": [
+                "type",
+                "name"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": true
+        },
+        "Medium": {
+            "description": "Medium/Volume properties",
+            "type": "object",
+            "required": [
+                "type",
+                "name"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
             },
             "additionalProperties": true
         },
         "Shape": {
             "description": "Shape properties",
             "type": "object",
-            "required": ["type", "name"],
-            "properties": { 
-                "type": { "type":"string"},
-                "name": { "type":"string"},
-                "filename": { "type":"string"}
+            "required": [
+                "type",
+                "name"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                }
             },
             "additionalProperties": true
         },
         "Entity": {
             "description": "Entity properties",
             "type": "object",
-            "required": ["type", "name"],
-            "properties": { 
-                "type": { "type":"string"},
-                "name": { "type":"string"},
-                "transform": { "$ref":"#/definitions/Transform" },
-                "bsdf": { "type":"string" },
-                "shape": { "type":"string" }
+            "required": [
+                "name",
+                "shape"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "transform": {
+                    "$ref": "#/definitions/Transform"
+                },
+                "bsdf": {
+                    "type": "string"
+                },
+                "shape": {
+                    "type": "string"
+                },
+                "inner_medium": {
+                    "type": "string"
+                },
+                "outer_medium": {
+                    "type": "string"
+                }
             },
             "additionalProperties": true
         },
         "Light": {
             "description": "Light properties",
             "type": "object",
-            "required": ["type", "name"],
-            "properties": { 
-                "type": { "type":"string"},
-                "name": { "type":"string"}
+            "required": [
+                "type",
+                "name"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
             },
             "additionalProperties": true
         },
         "Transform": {
+            "description": "Transform properties (proxy)",
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/TransformObject"
+                },
+                {
+                    "$ref": "#/definitions/Matrix3x3"
+                },
+                {
+                    "$ref": "#/definitions/Matrix3x4"
+                },
+                {
+                    "$ref": "#/definitions/Matrix4x4"
+                }
+            ]
+        },
+        "TransformObject": {
             "description": "Transform properties",
+            "type": "array",
+            "required": [],
+            "items": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "translate": {
+                            "$ref": "#/definitions/Vector3"
+                        }
+                    }
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "rotate": {
+                            "$ref": "#/definitions/Vector4"
+                        }
+                    }
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "scale": {
+                            "oneOf": [
+                                {
+                                    "$ref": "#/definitions/Vector3"
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "matrix": {
+                            "oneOf": [
+                                {
+                                    "$ref": "#/definitions/Matrix3x3"
+                                },
+                                {
+                                    "$ref": "#/definitions/Matrix3x4"
+                                },
+                                {
+                                    "$ref": "#/definitions/Matrix4x4"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "lookat": {
+                            "$ref": "#/definitions/Lookat"
+                        }
+                    }
+                }
+            ]
+        },
+        "Lookat": {
+            "description": "Lookat properties",
             "type": "object",
             "required": [],
-            "properties": { 
-                "position": { "$ref":"#/definitions/Vector3" },
-                "rotation": { "$ref":"#/definitions/Vector4" },
-                "scale": { 
-                    "oneOf":[
-                        {"$ref":"#/definitions/Vector3"},
-                        {"type":"number"}
-                    ]
+            "properties": {
+                "origin": {
+                    "$ref": "#/definitions/Vector3"
                 },
-                "matrix": { 
-                    "oneOf":[
-                        {"$ref":"#/definitions/Matrix3"},
-                        {"$ref":"#/definitions/Matrix4"}
-                    ]
+                "up": {
+                    "$ref": "#/definitions/Vector3"
+                },
+                "target": {
+                    "$ref": "#/definitions/Vector3"
+                },
+                "direction": {
+                    "$ref": "#/definitions/Vector3"
                 }
             }
         },
         "Size": {
-            "type":"array",
+            "type": "array",
             "minItems": 2,
             "maxItems": 2,
-            "items": { "type": "number" }
+            "items": {
+                "type": "number"
+            }
         },
         "Vector3": {
-            "type":"array",
+            "type": "array",
             "minItems": 3,
             "maxItems": 3,
-            "items": { "type": "number" }
+            "items": {
+                "type": "number"
+            }
         },
         "Vector4": {
-            "type":"array",
+            "type": "array",
             "minItems": 4,
             "maxItems": 4,
-            "items": { "type": "number" }
+            "items": {
+                "type": "number"
+            }
         },
-        "Matrix3": {
-            "type":"array",
+        "Matrix3x3": {
+            "type": "array",
             "minItems": 9,
             "maxItems": 9,
-            "items": { "type": "number" }
+            "items": {
+                "type": "number"
+            }
         },
-        "Matrix4": {
-            "type":"array",
+        "Matrix3x4": {
+            "type": "array",
+            "minItems": 12,
+            "maxItems": 12,
+            "items": {
+                "type": "number"
+            }
+        },
+        "Matrix4x4": {
+            "type": "array",
             "minItems": 16,
             "maxItems": 16,
-            "items": { "type": "number" }
+            "items": {
+                "type": "number"
+            }
         }
     }
 }

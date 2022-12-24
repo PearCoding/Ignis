@@ -1,0 +1,67 @@
+enum FisheyeAspectMode {
+    Circular,
+    Cropped,
+    Full
+}
+
+// Creates a fishlens camera
+fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, mode: FisheyeAspectMode, tmin: f32, tmax: f32) -> Camera {
+    let right = vec3_normalize(vec3_cross(dir, up));
+    let view  = make_mat3x3(right, up, dir);
+    let fov   = flt_pi;
+    let asp   = w / h;
+
+    // Select aspect ratio mode
+    let (xasp, yasp) = match(mode) {
+        FisheyeAspectMode::Circular => {
+            let xasp = if asp < 1 { 1 } else { asp };
+            let yasp = if asp > 1 { 1 } else { asp };
+            (xasp, yasp)
+        },
+        FisheyeAspectMode::Cropped => {
+            let xasp = if asp < 1 { 1 / asp } else { 1 };
+            let yasp = if asp > 1 { 1 / asp } else { 1 };
+            (xasp, yasp)
+        },
+        FisheyeAspectMode::Full => {
+            let diameter = math_builtins::sqrt(asp * asp + 1) * h;
+            let min_s	 = math_builtins::fmin(w, h);
+            let f        = diameter / min_s;
+            let xasp = if asp < 1 { f } else { f / asp };
+            let yasp = if asp > 1 { f } else { f * asp };
+            (xasp, yasp)
+        }
+    };
+
+    fn compute_d(x:f32,y:f32) -> Vec3 {
+        let nx    = x * xasp;
+        let ny    = y * yasp;
+        let r	  = math_builtins::sqrt(nx * nx + ny * ny);
+		let theta = r * fov / 2;
+
+		let sT = math_builtins::sin(theta);
+        let cT = math_builtins::cos(theta);
+        let sP = if r < flt_eps { 0 } else { ny / r };
+        let cP = if r < flt_eps { 0 } else { nx / r };
+        let nd = make_vec3(sT*cP, sT*sP, cT);
+        vec3_normalize(mat3x3_mul(view, nd))
+    }
+
+    Camera {
+        generate_ray = @ |_, coord| {
+            make_ray(eye, compute_d(coord.nx, coord.ny), tmin, tmax, ray_flag_camera)
+        },
+        sample_pixel = @ |_, _| Option[CameraSample]::None, // TODO
+        pos_to_pixel = @ |_| Option[PixelCoord]::None,      // TODO
+        differential = @ |coord| {
+            let d0  = compute_d(coord.nx, coord.ny);
+            let d1x = compute_d(coord.nx + 1 / w, coord.ny);
+            let d1y = compute_d(coord.nx, coord.ny + 1 / h);
+            
+            (
+                vec3_mulf(vec3_sub(d1x, d0), w),
+                vec3_mulf(vec3_sub(d1y, d0), h)
+            )
+        }
+    }
+}

@@ -3,8 +3,10 @@
 
 #include "Image.h"
 
+IG_BEGIN_IGNORE_WARNINGS
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+IG_END_IGNORE_WARNINGS
 
 using namespace IG;
 inline float gamma(float c)
@@ -28,7 +30,7 @@ int main(int argc, char** argv)
 
     try {
         // Input
-        ImageRgba32 image = ImageRgba32::load(input);
+        Image image = Image::load(input);
         if (!image.isValid())
             return EXIT_FAILURE;
 

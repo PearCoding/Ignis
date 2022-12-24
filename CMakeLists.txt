@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1...3.20)
+cmake_minimum_required(VERSION 3.9...3.20)
 
 if(${CMAKE_VERSION} VERSION_LESS 3.12)
     cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
@@ -7,7 +7,7 @@ endif()
 # Prevent in source builds
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 	if(NOT DEFINED WITH_IN_SOURCE_BUILD)
-		messag(FATAL_ERROR "CMake generation for Ignis is not allowed within the source directory! Define WITH_IN_SOURCE_BUILD if absolutely necessary!" )
+		message(FATAL_ERROR "CMake generation for Ignis is not allowed within the source directory! Define WITH_IN_SOURCE_BUILD if absolutely necessary!" )
 	endif()
 endif()
 
@@ -22,7 +22,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 project(Ignis
-	VERSION 0.1
+	VERSION 0.3
 	DESCRIPTION "Experimental ray tracer")
 
 # For whatever reason Ignis might be used as a subproject...
@@ -41,6 +41,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 set(CMAKE_DEBUG_POSTFIX  "_d")
 
 set(Ignis_VENDOR "Ignis project 2020-2022")
+set(Ignis_DESCRIPTION "Device agnostic raytracing framework with shared codebase for offline and realtime rendering and for CPU and GPU")
+set(Ignis_URL "https://github.com/PearCoding/Ignis")
 include(Git)
 
 message(STATUS "Building Ignis Rodent ${Ignis_VERSION}")
@@ -50,13 +52,38 @@ if(NOT IG_SUBPROJECT)
 endif()
 
 # Options
+option(IG_WITH_CLI           "Build commandline interface igcli" ON)
 option(IG_WITH_VIEWER        "Build interactive viewer igview" ON)
 option(IG_WITH_TRACER        "Build tracing frontend igtrace" ON)
 option(IG_WITH_PYTHON_API    "Build python API" ON)
 option(IG_WITH_TOOLS         "Build tools" ON)
 option(IG_WITH_DOCUMENTATION "Build the documentation if Sphinx is available on the system" ON)
 option(IG_WITH_ASSERTS       "Build with asserts even in release. It is always enabled on debug" OFF)
+option(IG_WITH_DENOISER      "Integrate Intel Open Image Denoise if available" ON)
 option(IG_USE_LTO 			 "Use linked time optimization if available in release" ON)
+
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.21)
+	if(WIN32 OR (NOT CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT))
+		set(_default ON)
+	else()
+		set(_default OFF)
+	endif()
+	option(IG_INSTALL_RUNTIME_DEPENDENCIES "Install runtime libraries together with Ignis" ${_default})
+endif()
+
+if(SKBUILD)
+	find_package(PythonExtensions REQUIRED)
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+	# set(CMAKE_SKIP_BUILD_RPATH FALSE)
+	# set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+	# set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+	set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
+	set(_IG_RUNTIME_SET RUNTIME_DEPENDENCY_SET ignis_runtime_set)
+    message(STATUS "Using scikit-build, rpath=${CMAKE_INSTALL_RPATH}")
+elseif(IG_INSTALL_RUNTIME_DEPENDENCIES)
+	set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+	set(_IG_RUNTIME_SET RUNTIME_DEPENDENCY_SET ignis_runtime_set)
+endif()
 
 # Setup artic clang flags
 if(APPLE)
@@ -86,17 +113,19 @@ find_package(AnyDSL_runtime REQUIRED)
 # Make sure the filesystem library is available
 find_package(Filesystem REQUIRED)
 
-# Locate Eigen
-find_package(Eigen3 REQUIRED NO_MODULE)
-
 # Locate tbb
 find_package(TBB REQUIRED) 
 
 # ZLib is used in the generator
 find_package(ZLIB REQUIRED)
 
+if(IG_WITH_DENOISER)
+	find_package(OpenImageDenoise)
+endif()
+
 include(cmake/GetDependencies.cmake)
 include(cmake/Install.cmake)
+include(cmake/Bash.cmake)
 include(cmake/ExtraUtils.cmake)
 
 # Enable folders for Visual Studio
@@ -106,9 +135,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(IG_OPTIMIZE_FOR_NATIVE "Build with -march=native if possible" ON)
 include(CheckCXXCompilerFlag)
 if(IG_OPTIMIZE_FOR_NATIVE)
-	CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+	set(NATIVE_FLAG "-march=native")
+	check_cxx_compiler_flag("${NATIVE_FLAG}" COMPILER_SUPPORTS_MARCH_NATIVE)
 	if(COMPILER_SUPPORTS_MARCH_NATIVE)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+		message(STATUS "Added compiler flag '${NATIVE_FLAG}' to targets")
+		add_compile_options(${NATIVE_FLAG})
 	endif()
 endif()
 
@@ -128,25 +159,30 @@ if(IG_HAS_UI)
 endif()
 
 if(IG_WITH_PYTHON_API)
-	find_package (Python3 COMPONENTS Development)
+	find_package (Python3 COMPONENTS Development Interpreter)
 	if(Python3_FOUND)
 		set(IG_HAS_PYTHON_API ON)
+		message(STATUS "Building with Python API")
+	else()
+		message(WARNING "Python API was requested but no Python libraries were found. Disabling Python API")
 	endif()
 endif()
 
-if(IG_HAS_PYTHON_API)
-	message(STATUS "Building with Python API")
-endif()
-
-configure_file(src/backend/runtime/config/Git.h.in     ${CMAKE_CURRENT_BINARY_DIR}/config/Git.h)
-configure_file(src/backend/runtime/config/Version.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/Version.h)
+configure_file(src/runtime/config/Version.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/Version.h)
 
 # Add warnings per default
-if(MSVC)
-  add_compile_options(/W4)
+set(WARNING_FLAGS -Wall -Wextra -pedantic)
+check_cxx_compiler_flag("${WARNING_FLAGS}" COMPILER_SUPPORTS_WARNINGS_GNU)
+if(COMPILER_SUPPORTS_WARNINGS_GNU)
+	add_compile_options(${WARNING_FLAGS})
 else()
-  add_compile_options(-Wall -Wextra -pedantic)
+	set(WARNING_FLAGS /W4)
+	check_cxx_compiler_flag("${WARNING_FLAGS}" COMPILER_SUPPORTS_WARNINGS_MSVC)
+	if(COMPILER_SUPPORTS_WARNINGS_MSVC)
+		add_compile_options(${WARNING_FLAGS})
+	endif()
 endif()
+
 # Traverse to underlying directories
 add_subdirectory(src)
 

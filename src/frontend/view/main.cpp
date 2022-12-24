@@ -1,4 +1,4 @@
-#include "Camera.h"
+#include "CameraProxy.h"
 #include "IO.h"
 #include "Logger.h"
 #include "ProgramOptions.h"
@@ -19,6 +19,9 @@ struct SectionTimer {
 
 static std::string beautiful_time(uint64 ms)
 {
+    if (ms == 0)
+        return "0ms";
+
     uint64_t pms = ms % 1000;
     ms /= 1000;
     uint64_t ps = ms % 60;
@@ -66,7 +69,7 @@ int main(int argc, char** argv)
     }
 
     if (cmd.SPPMode != SPPMode::Fixed && !cmd.SPP.has_value()) {
-        IG_LOG(L_ERROR) << "No valid spp count given. Required by the capped or continous spp mode" << std::endl;
+        IG_LOG(L_ERROR) << "No valid spp count given. Required by the capped or continuos spp mode" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -88,13 +91,12 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    runtime->mergeParametersFrom(cmd.UserEntries);
     timer_loading.stop();
 
     const auto def = runtime->initialCameraOrientation();
-    Camera camera(cmd.EyeVector().value_or(def.Eye), cmd.DirVector().value_or(def.Dir), cmd.UpVector().value_or(def.Up));
-    runtime->setParameter("__camera_eye", camera.Eye);
-    runtime->setParameter("__camera_dir", camera.Direction);
-    runtime->setParameter("__camera_up", camera.Up);
+    CameraProxy camera(cmd.EyeVector().value_or(def.Eye), cmd.DirVector().value_or(def.Dir), cmd.UpVector().value_or(def.Up));
+    runtime->setCameraOrientationParameter(camera.asOrientation());
 
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(cmd.SPP.value_or(0) / (float)SPI));
@@ -104,58 +106,70 @@ int main(int argc, char** argv)
 
     std::unique_ptr<UI> ui;
     try {
-        ui = std::make_unique<UI>(runtime.get(), runtime->framebufferWidth(), runtime->framebufferHeight(), runtime->technique() == "debug");
-
-        // Setup initial travelspeed
-        BoundingBox bbox = runtime->sceneBoundingBox();
-        bbox.extend(camera.Eye);
-        ui->setTravelSpeed(bbox.diameter().maxCoeff() / 50);
+        ui = std::make_unique<UI>(cmd.SPPMode, runtime.get(), runtime->technique() == "debug");
     } catch (...) {
         return EXIT_FAILURE;
     }
+
+    // Setup initial travel-speed
+    BoundingBox bbox = runtime->sceneBoundingBox();
+    bbox.extend(camera.Eye);
+    ui->setTravelSpeed(std::max(1e-4f, bbox.diameter().maxCoeff() / 50));
 
     auto lastDebugMode = ui->currentDebugMode();
 
     IG_LOG(L_INFO) << "Started rendering..." << std::endl;
 
-    bool running    = true;
-    bool done       = false;
-    uint64_t timing = 0;
-    uint32_t frames = 0;
+    bool running     = true;
+    bool done        = false;
+    uint64_t timing  = 0;
+    uint32_t frames  = 0;
+    size_t totalIter = 0; // Total number of iterations, without ever reseting
     std::vector<double> samples_stats;
 
     SectionTimer timer_input;
     SectionTimer timer_ui;
     SectionTimer timer_render;
     while (!done) {
-        bool prevRun = running;
-
         timer_input.start();
-        size_t iter = runtime->currentIterationCount();
-        done        = ui->handleInput(iter, running, camera);
-        timer_input.stop();
+        const auto input_result = ui->handleInput(camera);
+        switch (input_result) {
+        case UI::InputResult::Quit:
+            done = true;
+            break;
+        case UI::InputResult::Resume:
+            running = true;
+            break;
+        case UI::InputResult::Pause:
+            running = false;
+            break;
+        case UI::InputResult::Reset:
+            runtime->setCameraOrientationParameter(camera.asOrientation());
+            runtime->reset();
+            break;
+        default:
+            break;
+        }
 
         if (lastDebugMode != ui->currentDebugMode()) {
             runtime->setParameter("__debug_mode", (int)ui->currentDebugMode());
             runtime->reset();
             lastDebugMode = ui->currentDebugMode();
-        } else if (iter != runtime->currentIterationCount()) {
-            runtime->setParameter("__camera_eye", camera.Eye);
-            runtime->setParameter("__camera_dir", camera.Direction);
-            runtime->setParameter("__camera_up", camera.Up);
-            runtime->reset();
         }
+        timer_input.stop();
 
         if (running) {
             if (cmd.SPPMode != SPPMode::Capped || runtime->currentIterationCount() < desired_iter) {
-                if (cmd.SPPMode == SPPMode::Continous && runtime->currentIterationCount() >= desired_iter) {
+                if (cmd.SPPMode == SPPMode::Continuos && runtime->currentIterationCount() >= desired_iter) {
                     runtime->reset();
+                    runtime->incFrameCount(); // Not affected by reset
                 }
 
                 auto ticks = std::chrono::high_resolution_clock::now();
 
                 timer_render.start();
                 runtime->step();
+                ++totalIter;
                 timer_render.stop();
 
                 auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
@@ -192,7 +206,7 @@ int main(int argc, char** argv)
         } else {
             frames++;
 
-            if (prevRun != running || frames > 100) {
+            if (input_result == UI::InputResult::Pause || frames > 100) {
                 std::ostringstream os;
                 os << "Ignis [Paused, "
                    << runtime->currentSampleCount() << " "
@@ -204,7 +218,13 @@ int main(int argc, char** argv)
         }
 
         timer_ui.start();
-        ui->update(runtime->currentIterationCount(), runtime->currentSampleCount());
+        switch (ui->update()) {
+        case UI::UpdateResult::Reset:
+            runtime->reset();
+            break;
+        default:
+            break;
+        }
         timer_ui.stop();
     }
 
@@ -213,7 +233,11 @@ int main(int argc, char** argv)
     SectionTimer timer_saving;
     timer_saving.start();
     if (!cmd.Output.empty()) {
-        if (!saveImageOutput(cmd.Output, *runtime))
+        CameraOrientation orientation;
+        orientation.Eye = camera.Eye;
+        orientation.Up  = camera.Up;
+        orientation.Dir = camera.Direction;
+        if (!saveImageOutput(cmd.Output, *runtime, &orientation))
             IG_LOG(L_ERROR) << "Failed to save EXR file " << cmd.Output << std::endl;
         else
             IG_LOG(L_INFO) << "Result saved to " << cmd.Output << std::endl;
@@ -225,8 +249,8 @@ int main(int argc, char** argv)
     auto stats = runtime->getStatistics();
     if (stats) {
         IG_LOG(L_INFO)
-            << stats->dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats)
-            << "  Iterations: " << runtime->currentIterationCount() << std::endl
+            << stats->dump(timer_all.duration_ms, totalIter, cmd.AcquireFullStats)
+            << "  Iterations: " << runtime->currentIterationCount() << " (total: " << totalIter << ")" << std::endl
             << "  SPP: " << runtime->currentSampleCount() << std::endl
             << "  SPI: " << SPI << std::endl
             << "  Time: " << beautiful_time(timer_all.duration_ms) << std::endl

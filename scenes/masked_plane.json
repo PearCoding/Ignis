@@ -1,7 +1,7 @@
 {
 	"technique": {
 		"type": "path",
-		"max_depth": 8
+		"max_depth": 4
 	},
 	"camera": {
 		"type": "perspective",
@@ -35,19 +35,23 @@
 	],
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Fallback"},
-		{"type":"diffuse", "name": "mat-Floor", "reflectance":"check"},
+		{"type":"conductor", "name": "mat-BackInner", "specular_reflectance": [0.7, 0.4, 0.04]},
+		{"type":"bumpmap", "name": "mat-Back", "bsdf":"mat-BackInner", "map":"perlin(20*uv)*voronoi(15*uv)*0.02"},
+		{"type":"diffuse", "name": "mat-Floor", "reflectance":"check(uv*2*sin(uv.x*4*Pi) + P.xy*avg(uv) - vec2(Eps, E)) * select(uv.x > noise(sum(uv)), color(1,0.5,0), color(0,0.5,1))"},
 		{"type":"diffuse", "name": "mat-PlaneSurface", "reflectance":[0, 0.552, 0.721]},
-		{"type":"mask", "name": "mat-Plane", "bsdf": "mat-PlaneSurface", "weight":"mask"}
+		{"type":"mask", "name": "mat-Plane", "bsdf": "mat-PlaneSurface", "weight":"mask.r"}
 	],
 	"shapes": [
 		{"type":"rectangle", "name":"Floor", "width": 10, "height": 10},
+		{"type":"rectangle", "name":"Back", "width": 10, "height": 5},
 		{"type":"box", "name":"Plane", "width": 4, "height": 4, "depth": 0.1}
 	],
 	"entities": [
 		{"name":"Floor","shape":"Floor", "bsdf":"mat-Floor"},
-		{"name":"Plane","shape":"Plane", "bsdf":"mat-Plane", "transform": {"rotate": [0,0,45], "translate": [0,0,2]}}
+		{"name":"Back","shape":"Back", "bsdf":"mat-Back", "transform": [{"rotate": [90,0,0]}, {"translate": [0,2.5,-5]}]},
+		{"name":"Plane","shape":"Plane", "bsdf":"mat-Plane", "transform": [{"rotate": [0,0,45]}, {"translate": [0,0,2]}]}
 	],
 	"lights": [
-		{"type":"env", "name":"Sky", "radiance": "env"}
+		{"type":"env", "name":"Sky", "radiance": "env", "transform": [1,0,0, 0,0,1, 0,1,0]}
 	]
 }

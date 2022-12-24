@@ -1,8 +1,0 @@
-{
-	"externals": [
-        {"filename":"base.json"}
-    ],
-	"bsdfs": [
-		{"type":"roughconductor", "name": "mat-Sphere", "alpha": 0.1}
-	]
-}

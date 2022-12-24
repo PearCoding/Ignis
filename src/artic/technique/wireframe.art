@@ -1,0 +1,73 @@
+struct WireframeRayPayload {
+    depth:    i32,
+    distance: f32
+}
+
+fn write_wireframeraypayload(payload: RayPayload, w: WireframeRayPayload) -> () {
+    payload.set(0, w.depth as f32);
+    payload.set(1, w.distance);
+}
+
+fn unwrap_wireframeraypayload(payload: RayPayload) = WireframeRayPayload {
+    depth    = payload.get(0) as i32,
+    distance = payload.get(1),
+};
+
+fn @init_wireframe_raypayload(payload: RayPayload) = write_wireframeraypayload(payload, WireframeRayPayload {
+    depth = 1,
+    distance = 0
+});
+
+fn @make_wireframe_renderer(camera: Camera) -> Technique {
+    let offset:f32 = 0.001;
+
+    fn is_edge_hit(pixel: PixelCoord, hit: Hit, surf: SurfaceElement, add_distance: f32) -> (bool, f32) {
+        let (dx, dy)    = camera.differential(pixel);
+        let footprint_u = vec3_len(vec3_cross(dx, dy));
+        let edge_t      = vec3_min_value(make_vec3(hit.prim_coords.x, hit.prim_coords.y, clampf(0, 1, 1 - hit.prim_coords.x - hit.prim_coords.y)));
+        let footprint   = (hit.distance + add_distance) * footprint_u;
+        let cond        = 0.01 * footprint * math_builtins::sqrt(surf.inv_area);
+        (edge_t <= cond, edge_t)
+    }
+
+    fn @on_hit( ctx: ShadingContext
+              , payload: RayPayload
+              , _mat: Material
+        ) -> Option[Color] {
+        let (is_edge, t) = is_edge_hit(ctx.pixel, ctx.hit, ctx.surf, unwrap_wireframeraypayload(payload).distance);
+        if is_edge { 
+            make_option(color_lerp(color_builtins::white, color_builtins::black, t))
+        } else {
+            Option[Color]::None
+        }
+    }
+
+    fn @on_bounce( ctx: ShadingContext
+                , _rnd: &mut RndState
+                , payload: RayPayload
+                , _mat: Material
+        ) -> Option[Ray] {
+        let wpt = unwrap_wireframeraypayload(payload);
+        let (is_edge, _) = is_edge_hit(ctx.pixel, ctx.hit, ctx.surf, wpt.distance);
+        if !is_edge { 
+            write_wireframeraypayload(payload, WireframeRayPayload{
+                depth    = wpt.depth + 1,
+                distance = wpt.distance + ctx.hit.distance,
+            });
+            make_option(
+                make_ray(ctx.surf.point, ctx.ray.dir, offset, flt_max, ray_flag_bounce)
+            )
+        } else {
+            Option[Ray]::None
+        }
+    }
+
+    Technique {
+        on_hit         = on_hit,
+        on_miss        = TechniqueNoMissFunction,
+        on_shadow      = TechniqueNoShadowFunction,
+        on_bounce      = on_bounce,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = TechniqueNoShadowMissFunction,
+    }
+}

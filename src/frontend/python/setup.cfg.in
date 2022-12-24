@@ -1,0 +1,20 @@
+[metadata]
+name = ignis
+version = ${Ignis_VERSION}
+author = ${Ignis_VENDOR}
+description = ${Ignis_DESCRIPTION}
+long_description = file: README.md
+long_description_content_type = text/x-markdown
+license = MIT
+platforms = any
+classifiers = 
+    Development Status :: 4 - Beta
+    Programming Language :: Python :: 3
+    License :: OSI Approved :: MIT License
+    Operating System :: OS Independent
+keywords =
+    graphics
+    raytracer
+    research
+url = ${Ignis_URL}
+

@@ -1,0 +1,19 @@
+void plastic window_bsdf_bl
+0
+0
+5 0.8 0.8 0.8 0 0
+
+void plastic window_bsdf_br
+0
+0
+5 0.8 0.8 0.8 0 0
+
+void plastic window_bsdf_tl
+0
+0
+5 0.8 0.8 0.8 0 0
+
+void plastic window_bsdf_tr
+0
+0
+5 0.8 0.8 0.8 0 0

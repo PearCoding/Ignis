@@ -1,0 +1,111 @@
+/* Some overrides */
+:root {
+    --pst-header-height: 40px;
+}
+
+html[data-theme="light"] {
+    --pst-color-background: #fdfdfd;
+    --pst-color-on-background: #f2f2f2;
+}
+
+html[data-theme="dark"] {
+    --pst-color-background: #222222;
+    --pst-color-on-background: #1b1b1b;
+}
+
+/* Reduce primary sidebar */
+.bd-sidebar-primary {
+    max-width:20%;
+}
+
+/* Make each footer item in-line so they stack horizontally instead of vertically */
+.footer-item {
+    display: inline-block;
+}
+
+/* Add a separating border line for all but the last item */
+.footer-item:not(:last-child) {
+    border-right: 1px solid var(--pst-color-text-base);
+    margin-right: .5em;
+    padding-right: .5em;
+}
+
+.bd-footer-content__inner .last-updated {
+	margin: 0.5rem 3rem;
+	color: var(--pst-color-muted);
+	font-style: italic;
+}
+
+/* Roles */
+.paramtype {
+	font-family: 'Courier New', Courier, monospace;
+    color: var(--pst-color-primary);
+}
+
+.param-true {
+	font-family: 'Courier New', Courier, monospace;
+    color: var(--pst-color-success);
+}
+
+.param-false {
+	font-family: 'Courier New', Courier, monospace;
+    color: var(--pst-color-danger);
+}
+
+.monosp {
+	font-family: 'Courier New', Courier, monospace;
+    font-size: 90%;
+}
+
+/* Figures */
+/* give figures a nice rounded box style */
+div.figure {
+	border: 1px solid var(--pst-color-border);
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	border-radius: 3px;
+}
+
+/* change figure captions to be aligned nicely */
+div.body p.caption {
+	text-align: justify;
+}
+div.subfigure > p.caption {
+	text-align: center;
+}
+
+div.figure.compound {
+	padding: 0;
+	padding-top: 10px;
+}
+div.figure.compound > p.caption {
+	margin-left: 7px;
+	margin-right: 7px;
+}
+div.subfigure {
+	display: inline-block !important;
+	vertical-align: top;
+	padding-left: 7px;
+	padding-right: 7px;
+}
+
+@media only screen and (min-width: 768px) {
+	div.subfigure {
+		/* display: inline-block; */
+		display: inline-flex !important;
+		flex-direction: row;
+
+		vertical-align: top;
+		padding-left: 7px;
+		padding-right: 7px;
+	}
+}
+
+div.subsubfigure {
+	flex-direction: column;
+}
+
+a.subsubfigure > img {
+    margin-top: 0.25em !important;
+    margin-bottom: 0.5em !important;
+}

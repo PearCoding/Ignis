@@ -1,0 +1,17 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"textures": [
+		{
+			"type": "expr",
+			"name": "tex",
+			"color_tint_1": [0.8, 0.4, 0.6],
+			"color_tint_2": [0.2, 0.1, 0.6],
+			"expr": "perlin(20*uv)*select(cos(8*Pi*uv.x*uv.y)*sperlin(10*uv) < 0, tint_1, tint_2)"
+		}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name":"mat-Plane", "reflectance": "tex"}
+	]
+}
