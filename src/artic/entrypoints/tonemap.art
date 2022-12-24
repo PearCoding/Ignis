@@ -7,8 +7,8 @@ fn @make_byte_color(c : Color) = make_packed_color(
 );
 
 fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &TonemapSettings) -> () {
-    let buffer_in  = device.make_buffer(in_pixels  as &[u8], width * height * 3);
-    let buffer_out = device.make_buffer(out_pixels as &[u8], width * height);
+    let buffer_in  = device.make_buffer(in_pixels           , width * height * 3);
+    let buffer_out = device.make_buffer(out_pixels as &[f32], width * height);
 
     let use_gamma       = settings.use_gamma;
     let scale           = settings.scale;

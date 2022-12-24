@@ -326,7 +326,7 @@ Target Target::pickGPU(size_t device)
     // TODO: Runtime check?
 
     if (hasNvidiaSupport)
-        return makeGPU(GPUArchitecture::OpenCL, device);
+        return makeGPU(GPUArchitecture::Nvidia, device);
     else if (hasAMDSupport)
         return makeGPU(GPUArchitecture::AMD, device);
     else if (hasCLSupport)
