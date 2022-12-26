@@ -71,12 +71,12 @@ fn @make_amdgpu_min_max() = make_min_max(ocml_fminf, ocml_fmaxf, false);
 
 // Traversal kernel  ---------------------------------------------------------------
 fn @gpu_traverse_helper( min_max: MinMax
-                              , mut ray: Ray
-                              , mut hit: Hit
-                              , bvh: TraversalBvh
-                              , any_hit: bool
-                              , root: i32
-                              ) -> Hit {
+                       , mut ray: Ray
+                       , mut hit: Hit
+                       , bvh: TraversalBvh
+                       , any_hit: bool
+                       , root: i32
+                       ) -> Hit {
     let stack = alloc_stack();
     stack.push(root, undef[f32]());
 
@@ -88,7 +88,7 @@ fn @gpu_traverse_helper( min_max: MinMax
         let small_stack = make_small_stack(bvh.arity);
         for k in unroll(0, bvh.arity) {
             let bbox = node.bbox(k);
-            if likely(!bbox_is_empty(bbox)) {
+            if !bbox_is_empty(bbox) {
                 let (t0, t1) = intersect_ray_box(min_max, false, ray, bbox);
                 if t0 <= t1 {
                     mask |= 1 << k;
@@ -186,12 +186,12 @@ fn @make_gpu_scene_local_handler_multiple(prims: BVHTable, min_max: MinMax) -> S
 
 // Traverses a single ray at a time. 
 fn @gpu_traverse_scene( min_max: MinMax
-                        , ray: Ray
-                        , init_hit: Hit
-                        , scene: SceneGeometry
-                        , any_hit: bool
-                        , root: i32
-                        ) -> Hit {
+                      , ray: Ray
+                      , init_hit: Hit
+                      , scene: SceneGeometry
+                      , any_hit: bool
+                      , root: i32
+                      ) -> Hit {
 
     let bvh = scene.bvh;
     fn @scene_handle(leaf_ref: NodeRef, ray2: &mut Ray, hit: &mut Hit) -> bool {

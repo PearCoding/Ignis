@@ -664,6 +664,7 @@ fn @gpu_trace( dev_id: i32
              , pipeline: Pipeline
              , payload_info: PayloadInfo
              , spi: i32
+             , likely: fn (bool) -> bool
              ) -> () {
     let work_info = get_work_info();
 
@@ -809,7 +810,8 @@ fn @make_gpu_device( dev_id: i32
             scene_info,
             pipeline,
             payload_info,
-            spi
+            spi,
+            if is_nvvm { nvvm_likely } else { null_likely }
         )
     },
     generate_rays = @ | emitter, payload_info, next_id, size, _xmin, _ymin, _xmax, _ymax, spi | -> i32 {

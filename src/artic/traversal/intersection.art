@@ -100,7 +100,7 @@ fn @intersect_ray_tri_mt_gen(backface_culling: bool, ray: Ray, tri: Tri, check: 
 }
 
 fn @intersect_ray_tri_mt_cpu(backface_culling: bool, ray: Ray, tri: Tri) 
-    = intersect_ray_tri_mt_gen(backface_culling, ray, tri, @|mask| likely(rv_all(!mask)));
+    = intersect_ray_tri_mt_gen(backface_culling, ray, tri, @|mask| cpu_likely(rv_all(!mask)));
 fn @intersect_ray_tri_mt_gpu(backface_culling: bool, ray: Ray, tri: Tri)
     = intersect_ray_tri_mt_gen(backface_culling, ray, tri, @|mask| !mask);
 
@@ -156,7 +156,7 @@ fn @intersect_ray_tri_bw_gen(_backface_culling: bool, ray: Ray, tri: Tri, check:
 }
 
 fn @intersect_ray_tri_bw_cpu(backface_culling: bool, ray: Ray, tri: Tri) 
-    = intersect_ray_tri_bw_gen(backface_culling, ray, tri, @|mask| likely(rv_all(!mask)));
+    = intersect_ray_tri_bw_gen(backface_culling, ray, tri, @|mask| cpu_likely(rv_all(!mask)));
 fn @intersect_ray_tri_bw_gpu(backface_culling: bool, ray: Ray, tri: Tri)
     = intersect_ray_tri_bw_gen(backface_culling, ray, tri, @|mask| !mask);
 
