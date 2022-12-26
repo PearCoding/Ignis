@@ -10,12 +10,11 @@ fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32
     let buffer_in  = device.make_buffer(in_pixels           , width * height * 3);
     let buffer_out = device.make_buffer(out_pixels as &[f32], width * height);
 
-    let use_gamma       = settings.use_gamma;
     let scale           = settings.scale;
     let exposure_factor = settings.exposure_factor;
     let exposure_offset = settings.exposure_offset;
 
-    fn @tonemap(method: i32) -> () {
+    fn @tonemap(method: i32, use_gamma: bool) -> () {
         for ind in device.parallel_range(0, width * height) {
             // TODO: It would be more load friendly if the image buffer was actually 4 units per component, instead of 3
             let rgb = color_mulf(make_color(buffer_in.load_f32(ind * 3 + 0), buffer_in.load_f32(ind * 3 + 1), buffer_in.load_f32(ind * 3 + 2), 1), scale);
@@ -54,12 +53,13 @@ fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32
     }
 
     // Force expansion of the actual methods
+    fn @tonemap2(method: i32) = if settings.use_gamma { tonemap(method, true) } else { tonemap(method, false) };
     match settings.method {
-        0 => tonemap(0),
-        1 => tonemap(1),
-        2 => tonemap(2),
-        3 => tonemap(3),
-        _ => tonemap(4)
+        0 => tonemap2(0),
+        1 => tonemap2(1),
+        2 => tonemap2(2),
+        3 => tonemap2(3),
+        _ => tonemap2(4)
     };
     
     device.sync();
