@@ -843,13 +843,19 @@ fn @make_gpu_device( dev_id: i32
         @|start, end| {
             let size = end - start;
             if size > 0 {
-                let block_size = if size <= 256 { 32:i32 } else { 64:i32 };
+                fn @run_1d(block_size: i32) {
+                    gpu_exec_1d(acc, size, block_size, |work_item| {
+                        let gid = work_item.gidx();
+                        if gid >= size { return() }
+                        @ body(gid + start)
+                    })
+                }
 
-                gpu_exec_1d(acc, size, block_size, |work_item| {
-                    let gid = work_item.gidx();
-                    if gid >= size { return() }
-                    @ body(gid + start)
-                })
+                if size <= 256 { 
+                    run_1d(32)
+                } else { 
+                    run_1d(64)
+                }
             }
         }
     },
@@ -859,16 +865,22 @@ fn @make_gpu_device( dev_id: i32
             let size_y = end_y - start_y;
 
             if size_x > 0 && size_y > 0 {
-                let block_size = if size_x <= 48 && size_y <= 48 { 16:i32 } else { 32:i32 };
+                fn @run_2d(block_size:i32) {
+                    let grid  = (round_up(size_x, block_size), round_up(size_y, block_size), 1);
+                    let block = (block_size, block_size, 1);
+                    acc.exec( @|work_item| {
+                        let (sw_t_x, sw_t_y) = gpu_swizzle_2d_id(8, work_item);
+                        if sw_t_x >= size_x || sw_t_y >= size_y { return() }
+                        
+                        @ body(sw_t_x + start_x, sw_t_y + start_y)
+                    })(grid, block);
+                }
 
-                let grid  = (round_up(size_x, block_size), round_up(size_y, block_size), 1);
-                let block = (block_size, block_size, 1);
-                acc.exec( @|work_item| {
-                    let (sw_t_x, sw_t_y) = gpu_swizzle_2d_id(8, work_item);
-                    if sw_t_x >= size_x || sw_t_y >= size_y { return() }
-                    
-                    @ body(sw_t_x + start_x, sw_t_y + start_y)
-                })(grid, block);
+                if size_x <= 48 && size_y <= 48 { 
+                    run_2d(16)
+                } else { 
+                    run_2d(32)
+                }
             }
         }
     },
