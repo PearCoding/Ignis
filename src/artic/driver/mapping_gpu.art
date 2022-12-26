@@ -100,6 +100,10 @@ fn @gpu_hit_shade( acc: Accelerator
              , primary: PrimaryStream
              , secondary: SecondaryStream
              , first: i32, last: i32, capacity: i32) -> () {
+    let block_size = 64; // Depends on the complexity of the actual technique + shader
+                         // We could set it based the given n,
+                         // but that would require dynamic block_size or shader for each block_size which is too costly
+
     let n = last - first;
 
     let entities = scene.entities;
@@ -118,7 +122,7 @@ fn @gpu_hit_shade( acc: Accelerator
     let on_hit    = technique.on_hit;
     let on_shadow = technique.on_shadow;
     let on_bounce = technique.on_bounce;
-    gpu_exec_1d(acc, n, 64 /*block_size*/, |work_item| {
+    gpu_exec_1d(acc, n, block_size, |work_item| {
         let i = first + work_item.gidx();
         if i >= last {
             return()
@@ -204,13 +208,15 @@ fn @gpu_miss_shade( acc: Accelerator
                 , framebuffer: AOVImage
                 , primary: PrimaryStream
                 , first: i32, last: i32, capacity: i32) -> () {
+    let block_size = 64;
+
     let n = last - first;
     
     let read_primary_ray    = make_ray_stream_reader(primary.rays, 1);
     let get_primary_payload = make_primary_stream_payload_handler(primary, payload_info.primary_count, capacity, 1, false);
 
     let on_miss = technique.on_miss;
-    gpu_exec_1d(acc, n, 64, |work_item| {
+    gpu_exec_1d(acc, n, block_size, |work_item| {
         let i = first + work_item.gidx();
         if i >= last {
             return()
@@ -255,6 +261,8 @@ fn @gpu_advanced_shadow(is_hit: bool
                       , framebuffer: AOVImage
                       , secondary: SecondaryStream
                       , first: i32, last: i32, capacity: i32) -> () {
+    let block_size = 64;
+
     let n = last - first;
 
     let read_secondary_ray    = make_ray_stream_reader(secondary.rays, 1);
@@ -265,7 +273,7 @@ fn @gpu_advanced_shadow(is_hit: bool
     let on_hit   = technique.on_shadow_hit;
     let callback = if is_hit { on_hit } else { on_miss };
 
-    gpu_exec_1d(acc, n, 64, |work_item| {
+    gpu_exec_1d(acc, n, block_size, |work_item| {
         let i = first + work_item.gidx();
         if i >= last { return() }
 
@@ -369,7 +377,7 @@ fn @gpu_sort_primary( primary: PrimaryStream
                     , ray_begins: &mut [i32]
                     , ray_ends: &mut [i32]
                     ) -> () {
-    let block_size = 64;
+    let block_size = 1024;
 
     // Fill temporary buffer with 0s
     gpu_exec_1d(acc, scene_info.num_entities + 1, block_size, |work_item| {
@@ -444,7 +452,7 @@ fn @gpu_sort_secondary(secondary: SecondaryStream
                      , atomics: Atomics
                      , gpu_tmp:  &mut [i32]
                      ) -> (i32, i32) {
-    let block_size = 64;
+    let block_size = 1024;
 
     // Init temporary values to zero on the GPU
     let zero = 0 : i32;
@@ -499,7 +507,7 @@ fn @gpu_sort_secondary_with_materials( secondary: SecondaryStream
                                      , ray_begins: &mut [i32]
                                      , ray_ends: &mut [i32]
                                      ) -> (i32, i32) {
-    let block_size    = 64;
+    let block_size    = 1024;
     let num_materials = scene_info.num_materials;
     let limit         = num_materials * 2;
 
@@ -558,6 +566,8 @@ fn @gpu_generate_rays( primary: PrimaryStream
                      , film_height: i32
                      , spi: i32
                      ) -> i32 {
+    let block_size = 64;
+
     let first_ray_id = next_id;
     let first_dst_id = current_size;
     let film_size    = film_width * film_height;
@@ -573,7 +583,7 @@ fn @gpu_generate_rays( primary: PrimaryStream
 
     if num_rays <= 0 { /* TODO: Add error message! */ return(0) }
 
-    gpu_exec_1d(acc, num_rays, 64 /*block_size*/, |work_item| {
+    gpu_exec_1d(acc, num_rays, block_size, |work_item| {
         let gid = work_item.gidx();
         if gid >= num_rays {
             return()
@@ -623,12 +633,14 @@ fn @gpu_compact_primary( primary: PrimaryStream
                        , atomics: Atomics
                        , gpu_tmp: &mut [i32]
                        ) -> i32 {
+    let block_size = 1024;
+
     // reset temporary memory
     let mut counter = 0;
     runtime_copy(0, &counter as &[i8], 0, dev_id, gpu_tmp as &mut [i8], 0, sizeof[i32]());
 
     // Compact primary rays into another queue
-    gpu_exec_1d(acc, size, 64 /*block_size*/, |work_item| {
+    gpu_exec_1d(acc, size, block_size, |work_item| {
         let src_id = work_item.gidx();
         if src_id >= size { return() }
 
@@ -1097,14 +1109,14 @@ fn @make_amdgpu_device(dev: i32) -> Device {
     )
 }
 
-// Should be in intrinsics_opencl.impala
+// Should be in intrinsics_opencl.impala [legacy atomics (OpenCL 1.1)]
 #[import(cc = "device", name = "atomic_max")]     fn ig_opencl_atomic_max_global(&mut addrspace(1)i32, i32) -> i32;
 #[import(cc = "device", name = "atomic_cmpxchg")] fn ig_opencl_atomic_cmpxchg_global(&mut addrspace(1)i32, i32, i32) -> i32;
 #[import(cc = "device", name = "atomic_cmpxchg")] fn ig_opencl_atomic_cmpxchg_shared(&mut addrspace(3)i32, i32, i32) -> i32;
 
 // Not deterministic :/
 // https://stackoverflow.com/questions/57729249/why-does-the-opencl-atomic-add-implementation-for-float-produce-a-non-determinis
-fn opencl_atomic_add_global_f32(p: &mut addrspace(1)f32, val: f32) -> f32 {
+fn ig_opencl_atomic_add_global_f32(p: &mut addrspace(1)f32, val: f32) -> f32 {
     let mut old = *p;
     let mut sum = old + val;
     while ig_opencl_atomic_cmpxchg_global(p as &mut addrspace(1)i32, bitcast[i32](old), bitcast[i32](sum)) != bitcast[i32](old) {
@@ -1114,7 +1126,7 @@ fn opencl_atomic_add_global_f32(p: &mut addrspace(1)f32, val: f32) -> f32 {
     old
 }
 
-fn opencl_atomic_add_shared_f32(p: &mut addrspace(3)f32, val: f32) -> f32 {
+fn ig_opencl_atomic_add_shared_f32(p: &mut addrspace(3)f32, val: f32) -> f32 {
     let mut old = *p;
     let mut sum = old + val;
     while ig_opencl_atomic_cmpxchg_shared(p as &mut addrspace(3)i32, bitcast[i32](old), bitcast[i32](sum)) != bitcast[i32](old) {
@@ -1126,15 +1138,13 @@ fn opencl_atomic_add_shared_f32(p: &mut addrspace(3)f32, val: f32) -> f32 {
 
 fn @make_opencl_device(dev: i32) -> Device {
     let dev_id  = runtime_device(2, dev);
-    let atomics = Atomics {
+    let atomics = Atomics { // TODO: These are all legacy atomics (OpenCL 1.1)
         add_global_i32 = @ |p, i| opencl_atomic_add_global(p as &mut addrspace(1)i32, i),
-        // add_global_f32 = @ |p, i| atomic_p1(11:u32, p as &mut addrspace(1)f32, i, 2:u32, ""),
-        add_global_f32 = @ |p, i| opencl_atomic_add_global_f32(p as &mut addrspace(1)f32, i),
+        add_global_f32 = @ |p, i| ig_opencl_atomic_add_global_f32(p as &mut addrspace(1)f32, i),
         min_global_i32 = @ |p, i| opencl_atomic_min_global(p as &mut addrspace(1)i32, i),
         max_global_i32 = @ |p, i| ig_opencl_atomic_max_global(p as &mut addrspace(1)i32, i),
         add_shared_i32 = @ |p, i| opencl_atomic_add_shared(p, i),
-        // add_shared_f32 = @ |p, i| atomic_p3(11:u32, p, i, 2:u32, ""),
-        add_shared_f32 = @ |p, i| opencl_atomic_add_shared_f32(p, i),
+        add_shared_f32 = @ |p, i| ig_opencl_atomic_add_shared_f32(p, i),
     };
     let accessor = DeviceBufferGlobalElementAccessor {
         load_f32  = @|p: &addrspace(1)[f32], i:i32| p(i),
