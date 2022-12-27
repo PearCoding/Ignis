@@ -166,15 +166,15 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
             let restart = continue;
             let exit    = break;
 
-            if unlikely(stack.is_empty()) { exit() }
+            if cpu_unlikely(stack.is_empty()) { exit() }
             // Cull nodes that cannot be intersected by the ray
-            if !any_hit && unlikely(stack.top().tmin > ray.tmax) {
+            if !any_hit && cpu_unlikely(stack.top().tmin > ray.tmax) {
                 stack.pop();
                 restart()
             }
 
             // Intersect inner nodes
-            while likely(is_inner(stack.top())) {
+            while cpu_likely(is_inner(stack.top())) {
                 let node = bvh.node(stack.pop().node - 1);
 
                 // Intersect children
@@ -187,7 +187,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
                 };
                 
                 // Restart the loop when no intersection is found to trigger culling
-                if likely(mask == 0) {
+                if cpu_likely(mask == 0) {
                     if any_hit { continue() } else { restart() }
                 }
                 
@@ -219,7 +219,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
                 }
             }
 
-            if any_hit && unlikely(stack.is_empty()) { exit() }
+            if any_hit && cpu_unlikely(stack.is_empty()) { exit() }
 
             // Intersect leaves here
             let mut prim_id    = !stack.pop().node;
@@ -305,10 +305,10 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
 
         // Cull nodes and switch to single ray tracing when SIMD utilization is too low
         while true {
-            if unlikely(stack.is_empty()) { exit() }
+            if cpu_unlikely(stack.is_empty()) { exit() }
             let active = (stack.top().tmin <= ray.tmax) & !terminated;
             let mask = rv_ballot(active);
-            if likely(mask != 0) {
+            if cpu_likely(mask != 0) {
                 if single && cpu_popcount32(mask) <= switch_threshold {
                     for lane in cpu_one_bits(mask) {
                         let lane_ray = load_ray(&ray, lane);
@@ -328,14 +328,14 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
         }
 
         // Intersect inner nodes
-        while likely(is_inner(stack.top())) {
+        while cpu_likely(is_inner(stack.top())) {
             let node = bvh.node(stack.pop().node - 1);
 
             // Intersect children
             let mut pushed = false;
             for i in unroll(0, bvh.arity) {
                 let child_id = node.child(i);
-                if unlikely(child_id == 0) { break() }
+                if cpu_unlikely(child_id == 0) { break() }
 
                 let (tentry, texit) = intersect_ray_box(min_max, false /*ordered*/, ray, node.bbox(i));
                 // Special case when integer comparisons are faster than floating point comparisons
@@ -354,16 +354,16 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                     pushed = true;
                 }
             }
-            if unlikely(!pushed) { cull() }
+            if cpu_unlikely(!pushed) { cull() }
         }
 
-        if unlikely(is_leaf(stack.top())) {
+        if cpu_unlikely(is_leaf(stack.top())) {
             let mut active = (stack.top().tmin <= ray.tmax) & !terminated;
             let mut prim_id = !stack.pop().node;
             while true {
                 let prim = bvh.prim(prim_id++);
                 for i in unroll(0, prim.size) {
-                    if unlikely(!prim.is_valid(i)) { break() }
+                    if cpu_unlikely(!prim.is_valid(i)) { break() }
 
                     if active {
                         // Single primitive intersection
@@ -376,11 +376,11 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                             }
                         }
                     }
-                    if any_hit && unlikely(rv_all(terminated)) { exit() }
+                    if any_hit && cpu_unlikely(rv_all(terminated)) { exit() }
                 }
 
                 // Sentinel test
-                if unlikely(prim.is_last) { break() }
+                if cpu_unlikely(prim.is_last) { break() }
             }
         }
     }
@@ -415,22 +415,22 @@ fn @cpu_traverse_helper( mut ray: Ray
 
         // Cull nodes (in contrary to Primitive BVHs we do not switch to single mode at any time!)
         while true {
-            if unlikely(stack.is_empty()) { exit() }
+            if cpu_unlikely(stack.is_empty()) { exit() }
             let active = (stack.top().tmin <= ray.tmax) & !terminated;
             let mask = rv_ballot(active);
-            if likely(mask != 0) { break() }
+            if cpu_likely(mask != 0) { break() }
             stack.pop();
         }
 
         // Intersect inner nodes
-        while likely(is_inner(stack.top())) {
+        while cpu_likely(is_inner(stack.top())) {
             let node = bvh.node(stack.pop().node - 1);
 
             // Intersect children
             let mut pushed = false;
             for i in unroll(0, bvh.arity) {
                 let child_id = node.child(i);
-                if unlikely(child_id == 0) { break() }
+                if cpu_unlikely(child_id == 0) { break() }
 
                 let (tentry, texit) = intersect_ray_box(min_max, false /*ordered*/, ray, node.bbox(i));
                 // Special case when integer comparisons are faster than floating point comparisons
@@ -449,10 +449,10 @@ fn @cpu_traverse_helper( mut ray: Ray
                     pushed = true;
                 }
             }
-            if unlikely(!pushed) { cull() }
+            if cpu_unlikely(!pushed) { cull() }
         }
 
-        if unlikely(is_leaf(stack.top())) {
+        if cpu_unlikely(is_leaf(stack.top())) {
             let mut active = (stack.top().tmin <= ray.tmax) & !terminated;
             let mut ref_id = !stack.pop().node;
             while true {
@@ -482,7 +482,7 @@ fn @cpu_traverse_helper( mut ray: Ray
                 }
 
                 // Early exit mode
-                if any_hit && unlikely(rv_all(terminated)) { exit() }
+                if any_hit && cpu_unlikely(rv_all(terminated)) { exit() }
 
                 if leaf.entity_id < 0 { break() }
             }

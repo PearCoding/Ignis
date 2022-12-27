@@ -1,5 +1,9 @@
 // Misc. ---------------------------------------------------------------------------
 
+#[import(cc = "device", name = "llvm.expect.i1")] fn llvm_expect(bool, bool) -> bool;
+fn @  cpu_likely(cond: bool) = llvm_expect(cond,  true);
+fn @cpu_unlikely(cond: bool) = llvm_expect(cond, false);
+
 fn @cpu_atomic_add_i64(a: &mut i64, b: i64) -> i64 = atomic[i64](1, a, b, 7, "");
 fn @cpu_atomic_add_i32(a: &mut i32, b: i32) -> i32 = cpu_atomic_add(a, b);
 fn @cpu_atomic_min_i32(a: &mut i32, b: i32) -> i32 = cpu_atomic_min(a, b);

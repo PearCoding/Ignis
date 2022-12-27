@@ -757,7 +757,7 @@ fn @cpu_trace( scene_info: SceneInfo
 
                 // Compact and trace secondary rays
                 secondary_size = cpu_compact_secondary(secondary, secondary_size, payload_info.secondary_count, capacity, vector_width, vector_compact, is_payload_soa);
-                if likely(secondary_size > 0) {
+                if cpu_likely(secondary_size > 0) {
                     pipeline.on_traverse_secondary(secondary_size);
                     stats::add_quantity(stats::Quantity::ShadowRayCount, secondary_size);
 
