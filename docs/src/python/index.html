@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <meta property="article:modified_time" content="2022-12-22T19:07:27+00:00" />
+    <meta property="article:modified_time" content="2022-12-27T10:58:27+00:00" />
     <title>Python API &#8212; Ignis  documentation</title>
   
   
@@ -407,9 +407,9 @@
 </ul>
 </section>
 </section>
-<section id="gpuvendor">
-<span id="id5"></span><h2>GPUVendor<a class="headerlink" href="#gpuvendor" title="Permalink to this heading">#</a></h2>
-<p>Enum holding supported GPU vendors</p>
+<section id="gpuarchitecture">
+<span id="id5"></span><h2>GPUArchitecture<a class="headerlink" href="#gpuarchitecture" title="Permalink to this heading">#</a></h2>
+<p>Enum holding supported GPU architectures</p>
 <section id="id6">
 <h3>Entries<a class="headerlink" href="#id6" title="Permalink to this heading">#</a></h3>
 <ul class="simple">
@@ -638,7 +638,7 @@
 <ul class="simple">
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">CPUArchitecture</span></span></code>:</p></li>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Device</span></span></code>:</p></li>
-<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">GPUVendor</span></span></code>:</p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">GPUArchitecture</span></span></code>:</p></li>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">IsCPU</span></span></code>:</p></li>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">IsGPU</span></span></code>:</p></li>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">IsValid</span></span></code>:</p></li>
@@ -650,7 +650,7 @@
 <h3>Methods<a class="headerlink" href="#id32" title="Permalink to this heading">#</a></h3>
 <ul class="simple">
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeCPU</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
-<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeGPU</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#gpuvendor"><span class="name"><span class="pre">GPUVendor</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeGPU</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="name reference external" href="#gpuarchitecture"><span class="name"><span class="pre">GPUArchitecture</span></span></a><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeGeneric</span></span><span class="punctuation"><span class="pre">()</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeSingle</span></span><span class="punctuation"><span class="pre">()</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">pickBest</span></span><span class="punctuation"><span class="pre">()</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="name reference external" href="#target"><span class="name"><span class="pre">Target</span></span></a></code></p></li>
@@ -813,8 +813,8 @@
   </ul>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#gpuvendor">
-   GPUVendor
+  <a class="reference internal nav-link" href="#gpuarchitecture">
+   GPUArchitecture
   </a>
   <ul class="nav section-nav flex-column">
    <li class="toc-h3 nav-item toc-entry">
