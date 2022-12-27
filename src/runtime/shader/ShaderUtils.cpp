@@ -33,18 +33,19 @@ std::string ShaderUtils::constructDevice(const Target& target)
                << ", 16"
                << ", true);";
     } else {
+        // TODO: Customize kernel config for device?
         switch (target.gpuArchitecture()) {
         case GPUArchitecture::AMD:
-            stream << "make_amdgpu_device(settings.device);";
+            stream << "make_amdgpu_device(settings.device, make_default_gpu_kernel_config());";
             break;
         case GPUArchitecture::OpenCL:
-            stream << "make_opencl_device(settings.device);";
+            stream << "make_opencl_device(settings.device, make_default_gpu_kernel_config());";
             break;
         default:
             IG_LOG(L_WARNING) << "Unknown GPU architecture " << (int)target.gpuArchitecture() << " given" << std::endl;
             [[fallthrough]];
         case GPUArchitecture::Nvidia:
-            stream << "make_nvvm_device(settings.device);";
+            stream << "make_nvvm_device(settings.device, make_default_gpu_kernel_config());";
             break;
         }
     }

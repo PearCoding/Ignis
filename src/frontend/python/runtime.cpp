@@ -114,7 +114,7 @@ void runtime_module(py::module_& m)
         .value("X86", CPUArchitecture::X86)
         .value("Unknown", CPUArchitecture::Unknown);
 
-    py::enum_<GPUArchitecture>(m, "GPUArchitecture", "Enum holding supported GPU vendors")
+    py::enum_<GPUArchitecture>(m, "GPUArchitecture", "Enum holding supported GPU architectures")
         .value("AMD", GPUArchitecture::AMD)
         .value("Intel", GPUArchitecture::Intel)
         .value("Nvidia", GPUArchitecture::Nvidia)

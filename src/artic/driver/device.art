@@ -46,7 +46,7 @@ struct Device {
     parallel_reduce_f32: fn (i32 /* size */, fn (i32) -> f32 /* accessor */, fn (f32, f32) -> f32 /* operator */) -> f32,
 
     // Generic parallel reduce handler to be used with the generic 'reduce' function
-    parallel_reduce_handler: ParellelReduceHandler,
+    parallel_reduce_handler: ParallelReduceHandler,
 
     // Returns a callback function to create a virtual device buffer by providing a pointer on device memory
     get_device_buffer_accessor: fn () -> DeviceBufferAccessor,

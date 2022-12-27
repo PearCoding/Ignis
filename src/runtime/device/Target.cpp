@@ -134,11 +134,11 @@ Target Target::makeCPU(CPUArchitecture arch, size_t threads, size_t vectorWidth)
     return target;
 }
 
-Target Target::makeGPU(GPUArchitecture vendor, size_t device)
+Target Target::makeGPU(GPUArchitecture arch, size_t device)
 {
     Target target;
     target.mGPU             = true;
-    target.mGPUArchitecture = vendor;
+    target.mGPUArchitecture = arch;
     target.mDevice          = device;
     target.mInitialized     = true;
     return target;
