@@ -32,13 +32,14 @@ std::string ShaderUtils::constructDevice(const Target& target)
                << ", 16"
                << ", true);";
     } else {
+        // TODO: Customize kernel config for device?
         switch (target.gpuArchitecture()) {
         case GPUArchitecture::AMD:
-            stream << "make_amdgpu_device(settings.device);";
+            stream << "make_amdgpu_device(settings.device, make_default_gpu_kernel_config());";
             break;
         default:
         case GPUArchitecture::Nvidia:
-            stream << "make_nvvm_device(settings.device);";
+            stream << "make_nvvm_device(settings.device, make_default_gpu_kernel_config());";
             break;
         }
     }
