@@ -229,12 +229,12 @@ public:
 
     inline int getDevID(size_t device) const
     {
-        switch (setup.target.gpuVendor()) {
+        switch (setup.target.gpuArchitecture()) {
         default:
             return 0;
-        case GPUVendor::Nvidia:
+        case GPUArchitecture::Nvidia:
             return ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
-        case GPUVendor::AMD:
+        case GPUArchitecture::AMD:
             return ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
         }
     }

@@ -10,7 +10,7 @@ namespace IG {
 Target::Target()
     : mInitialized(false)
     , mGPU(false)
-    , mGPUVendor(GPUVendor::Unknown)
+    , mGPUArchitecture(GPUArchitecture::Unknown)
     , mCPUArchitecture(CPUArchitecture::Unknown)
     , mDevice(0)
     , mThreadCount(0)
@@ -23,18 +23,18 @@ std::string Target::toString() const
     std::stringstream stream;
     if (mGPU) {
         stream << "GPU[";
-        switch (mGPUVendor) {
-        case GPUVendor::AMD:
+        switch (mGPUArchitecture) {
+        case GPUArchitecture::AMD:
             stream << "AMD";
             break;
-        case GPUVendor::Intel:
+        case GPUArchitecture::Intel:
             stream << "Intel";
             break;
-        case GPUVendor::Nvidia:
+        case GPUArchitecture::Nvidia:
             stream << "Nvidia";
             break;
         default:
-        case GPUVendor::Unknown:
+        case GPUArchitecture::Unknown:
             stream << "Unknown";
             break;
         }
@@ -94,13 +94,13 @@ Target Target::makeCPU(CPUArchitecture arch, size_t threads, size_t vectorWidth)
     return target;
 }
 
-Target Target::makeGPU(GPUVendor vendor, size_t device)
+Target Target::makeGPU(GPUArchitecture arch, size_t device)
 {
     Target target;
-    target.mGPU         = true;
-    target.mGPUVendor   = vendor;
-    target.mDevice      = device;
-    target.mInitialized = true;
+    target.mGPU             = true;
+    target.mGPUArchitecture = arch;
+    target.mDevice          = device;
+    target.mInitialized     = true;
     return target;
 }
 
@@ -317,17 +317,17 @@ Target Target::pickGPU(size_t device)
     // TODO: Runtime check?
 
     if (hasNvidiaSupport)
-        return makeGPU(GPUVendor::Nvidia, device);
+        return makeGPU(GPUArchitecture::Nvidia, device);
     else if (hasAMDSupport)
-        return makeGPU(GPUVendor::AMD, device);
+        return makeGPU(GPUArchitecture::AMD, device);
     else
-        return makeGPU(GPUVendor::Unknown, device);
+        return makeGPU(GPUArchitecture::Unknown, device);
 }
 
 Target Target::pickBest()
 {
     Target t = pickGPU();
-    if (t.isValid() && t.mGPUVendor != GPUVendor::Unknown)
+    if (t.isValid() && t.mGPUArchitecture != GPUArchitecture::Unknown)
         return t;
 
     return pickCPU();

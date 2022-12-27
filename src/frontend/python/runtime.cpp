@@ -114,18 +114,18 @@ void runtime_module(py::module_& m)
         .value("X86", CPUArchitecture::X86)
         .value("Unknown", CPUArchitecture::Unknown);
 
-    py::enum_<GPUVendor>(m, "GPUVendor", "Enum holding supported GPU vendors")
-        .value("AMD", GPUVendor::AMD)
-        .value("Intel", GPUVendor::Intel)
-        .value("Nvidia", GPUVendor::Nvidia)
-        .value("Unknown", GPUVendor::Unknown);
+    py::enum_<GPUArchitecture>(m, "GPUArchitecture", "Enum holding supported GPU architectures")
+        .value("AMD", GPUArchitecture::AMD)
+        .value("Intel", GPUArchitecture::Intel)
+        .value("Nvidia", GPUArchitecture::Nvidia)
+        .value("Unknown", GPUArchitecture::Unknown);
 
     py::class_<Target>(m, "Target", "Target specification the runtime is using")
         .def(py::init<>())
         .def_property_readonly("IsValid", &Target::isValid)
         .def_property_readonly("IsCPU", &Target::isCPU)
         .def_property_readonly("IsGPU", &Target::isGPU)
-        .def_property_readonly("GPUVendor", &Target::gpuVendor)
+        .def_property_readonly("GPUArchitecture", &Target::gpuArchitecture)
         .def_property_readonly("CPUArchitecture", &Target::cpuArchitecture)
         .def_property("Device", &Target::device, &Target::setDevice)
         .def_property("VectorWidth", &Target::vectorWidth, &Target::setVectorWidth)

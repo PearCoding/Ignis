@@ -32,12 +32,12 @@ std::string ShaderUtils::constructDevice(const Target& target)
                << ", 16"
                << ", true);";
     } else {
-        switch (target.gpuVendor()) {
-        case GPUVendor::AMD:
+        switch (target.gpuArchitecture()) {
+        case GPUArchitecture::AMD:
             stream << "make_amdgpu_device(settings.device);";
             break;
         default:
-        case GPUVendor::Nvidia:
+        case GPUArchitecture::Nvidia:
             stream << "make_nvvm_device(settings.device);";
             break;
         }

@@ -125,12 +125,12 @@ Properties
 - :pythonfunc:`Up`: Vector defining the up of the camera
 
 
-.. _GPUVendor:
+.. _GPUArchitecture:
 
-GPUVendor
+GPUArchitecture
 -----------------------------------------------
 
-Enum holding supported GPU vendors
+Enum holding supported GPU architectures
 
 Entries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -562,7 +562,7 @@ Properties
 
 - :pythonfunc:`Device`: 
 
-- :pythonfunc:`GPUVendor`: 
+- :pythonfunc:`GPUArchitecture`: 
 
 - :pythonfunc:`IsCPU`: 
 
@@ -581,7 +581,7 @@ Methods
 
   
 
-- :pythonfunc:`makeGPU(arg0: {GPUVendor}, arg1: int) -> {Target}`
+- :pythonfunc:`makeGPU(arg0: {GPUArchitecture}, arg1: int) -> {Target}`
 
   
 
