@@ -652,11 +652,6 @@ public:
         return proxy;
     }
 
-    inline DeviceBuffer loadFixtable(int32_t dev, const FixTable& tbl)
-    {
-        return DeviceBuffer{ copyToDevice(dev, tbl.data()), 1 };
-    }
-
     inline SceneInfo loadSceneInfo(int32_t dev)
     {
         IG_UNUSED(dev);
@@ -679,6 +674,11 @@ public:
         return tables[name] = loadDyntable(dev, scene.database->DynTables.at(name));
     }
 
+    inline DeviceBuffer loadFixtable(int32_t dev, const FixTable& tbl)
+    {
+        return DeviceBuffer{ copyToDevice(dev, tbl.data()), 1 };
+    }
+
     inline const DeviceBuffer& loadFixtable(int32_t dev, const char* name)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
@@ -689,6 +689,7 @@ public:
             return it->second;
 
         IG_LOG(L_DEBUG) << "Loading fixtable '" << name << "'" << std::endl;
+        IG_ASSERT(scene.database->FixTables.count(name) > 0, "Expected given fixtable name to be available");
 
         return tables[name] = loadFixtable(dev, scene.database->FixTables.at(name));
     }
