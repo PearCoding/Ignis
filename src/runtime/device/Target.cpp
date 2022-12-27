@@ -1,4 +1,5 @@
 #include "Target.h"
+#include "StringUtils.h"
 
 #include "anydsl_runtime.h"
 
@@ -56,6 +57,40 @@ std::string Target::toString() const
         stream << ",T=" << mThreadCount << ",V=" << mVectorWidth << "]";
     }
     return stream.str();
+}
+
+CPUArchitecture Target::getCPUArchitectureFromString(const std::string& str)
+{
+    const std::string lstr = to_lowercase(str);
+    if (lstr == "arm")
+        return CPUArchitecture::ARM;
+    else if (lstr == "x86")
+        return CPUArchitecture::X86;
+    else
+        return CPUArchitecture::Unknown;
+}
+
+GPUArchitecture Target::getGPUArchitectureFromString(const std::string& str)
+{
+    const std::string lstr = to_lowercase(str);
+    if (lstr == "amd")
+        return GPUArchitecture::AMD;
+    else if (lstr == "intel")
+        return GPUArchitecture::Intel;
+    else if (lstr == "nvidia")
+        return GPUArchitecture::Nvidia;
+    else
+        return GPUArchitecture::Unknown;
+}
+
+std::vector<std::string> Target::getAvailableCPUArchitectureNames()
+{
+    return { "ARM", "x86" };
+}
+
+std::vector<std::string> Target::getAvailableGPUArchitectureNames()
+{
+    return { "AMD", "Intel", "Nvidia" };
 }
 
 static inline CPUArchitecture getCPUArchitecture()

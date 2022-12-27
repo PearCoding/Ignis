@@ -49,6 +49,12 @@ public:
     [[nodiscard]] static Target pickGPU(size_t device = 0);
     [[nodiscard]] static Target pickBest();
 
+    [[nodiscard]] static CPUArchitecture getCPUArchitectureFromString(const std::string& str);
+    [[nodiscard]] static GPUArchitecture getGPUArchitectureFromString(const std::string& str);
+
+    [[nodiscard]] static std::vector<std::string> getAvailableCPUArchitectureNames();
+    [[nodiscard]] static std::vector<std::string> getAvailableGPUArchitectureNames();
+
 private:
     bool mInitialized;
     bool mGPU;
