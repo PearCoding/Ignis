@@ -92,8 +92,6 @@ struct ContinuosPdf2d {
 }
 
 struct CDF2D {
-    conditional:      fn (i32) -> CDF1D,
-    marginal:         CDF1D,
     sample_discrete:  fn (Vec2) -> DiscreteSample2d,
     pdf_discrete:     fn (i32, i32) -> DiscretePdf2d,
     sample_continuos: fn (Vec2) -> ContinuosSample2d,
@@ -141,8 +139,6 @@ fn @make_cdf_2d(marginal: CDF1D, conditional: fn (i32) -> CDF1D) -> CDF2D {
     };
 
     CDF2D {
-        conditional      = conditional,
-        marginal         = marginal,
         sample_discrete  = sample_discrete,
         pdf_discrete     = pdf_discrete,
         sample_continuos = sample_continuos,
@@ -152,7 +148,63 @@ fn @make_cdf_2d(marginal: CDF1D, conditional: fn (i32) -> CDF1D) -> CDF2D {
 
 // First entry is the marginal!
 fn @make_cdf_2d_from_buffer(data: DeviceBuffer, size_x: i32, size_y: i32) = make_cdf_2d(
-        make_cdf_1d_from_buffer(data, size_y, 0),
-        @|i:i32| make_cdf_1d_from_buffer(data, size_x, size_y + i * size_x)
-    );
+    make_cdf_1d_from_buffer(data, size_y, 0),
+    @|i:i32| make_cdf_1d_from_buffer(data, size_x, size_y + i * size_x)
+);
+
+fn @make_cdf_2d_sat(entries: CDF1D, slice: i32) -> CDF2D {
+    let slice_w   = slice;
+    let slice_h   = entries.func_size / slice;
+    let slice_w_f = 1 / (slice_w as f32 - 1);
+    let slice_h_f = 1 / (slice_h as f32 - 1);
+
+    let sample_discrete = @|uv: Vec2| -> DiscreteSample2d {
+        let sample = entries.sample_discrete(uv.x);
+    
+        let ix = sample.off % slice_w;
+        let iy = sample.off / slice_w;
+        DiscreteSample2d {
+            off = (ix, iy),
+            pdf = sample.pdf
+        }
+    };
+    let pdf_discrete = @|x: i32, y: i32| DiscretePdf2d {
+        pdf = entries.pdf_discrete(y * slice_w + x).pdf
+    };
+    let sample_continuos = @|uv: Vec2| -> ContinuosSample2d {
+        let sample = entries.sample_discrete(uv.x);
+        let rem    = all::safe_div(uv.x - entries.get(sample.off), sample.pdf); // Get unused portion of the floating point
+    
+        let ix = sample.off % slice_w;
+        let iy = sample.off / slice_w;
+        ContinuosSample2d {
+            off = (ix, iy),
+            rem = all::make_vec2(rem, uv.y),
+            pos = all::make_vec2((ix as f32 + rem) * slice_w_f, (iy as f32 + uv.y) * slice_h_f),
+            pdf = sample.pdf
+        }
+    };
+    let pdf_continuos = @|pos: Vec2| -> ContinuosPdf2d {
+        let ix  = all::clamp((pos.x * slice_w as f32) as i32, 0, slice_w - 1);
+        let iy  = all::clamp((pos.y * slice_h as f32) as i32, 0, slice_h - 1);
+        let pdf = entries.pdf_discrete(iy * slice_w + ix);
+    
+        ContinuosPdf2d {
+            off = (ix, iy),
+            pdf = pdf.pdf
+        }
+    };
+
+    CDF2D {
+        sample_discrete  = sample_discrete,
+        pdf_discrete     = pdf_discrete,
+        sample_continuos = sample_continuos,
+        pdf_continuos    = pdf_continuos
+    }
+}
+
+fn @make_cdf_2d_sat_from_buffer(data: DeviceBuffer, size: i32, slice: i32) = make_cdf_2d_sat(
+    make_cdf_1d_from_buffer(data, size, 0), slice
+);
+
 }

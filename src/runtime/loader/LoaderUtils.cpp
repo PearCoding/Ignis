@@ -155,19 +155,19 @@ Vector3f LoaderUtils::getDirection(const SceneObject& obj)
     return getEA(obj).toDirectionYUp();
 }
 
-LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate)
+LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate)
 {
     std::string name = std::filesystem::path(filename).stem().generic_u8string();
     Image image      = Image::load(filename);
     return setup_cdf2d(ctx, name, image, premultiplySin, compensate);
 }
 
-LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate)
+LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate)
 {
     const std::string exported_id = "_cdf2d_" + name;
     const auto data               = ctx.Cache->ExportedData.find(exported_id);
     if (data != ctx.Cache->ExportedData.end())
-        return std::any_cast<CDFData>(data->second);
+        return std::any_cast<CDF2DData>(data->second);
 
     IG_LOG(L_DEBUG) << "Generating environment cdf for '" << name << "'" << std::endl;
     std::filesystem::create_directories("data/"); // Make sure this directory exists
@@ -177,7 +177,34 @@ LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::str
     size_t slice_marginal    = 0;
     CDF::computeForImage(image, path, slice_conditional, slice_marginal, premultiplySin, compensate);
 
-    const CDFData cdf_data               = { path, slice_conditional, slice_marginal };
+    const CDF2DData cdf_data             = { path, slice_conditional, slice_marginal };
+    ctx.Cache->ExportedData[exported_id] = cdf_data;
+    return cdf_data;
+}
+
+LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate)
+{
+    std::string name = std::filesystem::path(filename).stem().generic_u8string();
+    Image image      = Image::load(filename);
+    return setup_cdf2d_sat(ctx, name, image, premultiplySin, compensate);
+}
+
+LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate)
+{
+    const std::string exported_id = "_cdf2dsat_" + name;
+    const auto data               = ctx.Cache->ExportedData.find(exported_id);
+    if (data != ctx.Cache->ExportedData.end())
+        return std::any_cast<CDF2DSATData>(data->second);
+
+    IG_LOG(L_DEBUG) << "Generating environment cdf (SAT) for '" << name << "'" << std::endl;
+    std::filesystem::create_directories("data/"); // Make sure this directory exists
+    std::string path = "data/cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin";
+
+    size_t size  = 0;
+    size_t slice = 0;
+    CDF::computeForImageSAT(image, path, size, slice, premultiplySin, compensate);
+
+    const CDF2DSATData cdf_data          = { path, size, slice };
     ctx.Cache->ExportedData[exported_id] = cdf_data;
     return cdf_data;
 }
