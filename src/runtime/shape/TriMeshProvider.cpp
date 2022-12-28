@@ -205,7 +205,7 @@ inline TriMesh setup_mesh_inline(const std::string& name, const SceneObject& ele
     bool hasNormals   = false;
     bool hasTexCoords = false;
 
-    // TODO: Would be nice to acquire the arrays and remove data from the properties, as, very likely, they will not be needed anymore. 
+    // TODO: Would be nice to acquire the arrays and remove data from the properties, as, very likely, they will not be needed anymore.
     // This however requires write access to Scene to consume properties
     SceneProperty::IntegerArray indices;
     if (propIndices.has_value())
@@ -388,6 +388,10 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
 
     if (!elem.property("transform").getTransform().matrix().isIdentity())
         mesh.transform(elem.property("transform").getTransform());
+
+    const size_t subdivisionCount = elem.property("subdivision").getInteger(0);
+    for (size_t i = 0; i < subdivisionCount; ++i)
+        mesh.subdivide();
 
     // Build bounding box
     BoundingBox bbox = mesh.computeBBox();

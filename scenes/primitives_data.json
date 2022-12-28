@@ -6,6 +6,7 @@
 	"shapes": [
 		{"type":"rectangle", "name":"Bottom", "width":10, "height":8},
 		{"type":"cube", "name":"Box"},
+		{"type":"cube", "name":"SubdivBox", "subdivision": 3},
 		{"type":"sphere", "name":"Sphere"}, 
 		{"type":"icosphere", "name":"IcoSphere"}, 
 		{"type":"uvsphere", "name":"UVSphere"},
@@ -21,6 +22,7 @@
 		{"name":"IcoSphere","shape":"IcoSphere", "bsdf":"object", "transform": [{"translate":[-2,0,0]}]},
 		{"name":"UVSphere","shape":"UVSphere", "bsdf":"object", "transform": [{"translate":[-2,-2,0]}]},
 		{"name":"Cube","shape":"Box", "bsdf":"object", "transform": [{"translate":[-4,0,0]}, {"scale":0.5}]},
+		{"name":"SubdivCube","shape":"SubdivBox", "bsdf":"object", "transform": [{"translate":[-4,-2,0]}, {"scale":0.5}]},
 		{"name":"Cylinder","shape":"Cylinder", "bsdf":"object", "transform": [{"translate":[0,-1,-1]}]},
 		{"name":"Cylinder2","shape":"Cylinder2", "bsdf":"object", "transform": [{"translate":[0,1,-1]}]},
 		{"name":"Cone","shape":"Cone", "bsdf":"object", "transform": [1,0,0,2, 0,1,0,-1, 0,0,-1,0]},

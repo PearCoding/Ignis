@@ -219,9 +219,8 @@ struct TransformCache {
 
     [[nodiscard]] inline Vector3f applyTransform(const Vector3f& v) const
     {
-        Vector4f w = TransformMatrix * Vector4f(v(0), v(1), v(2), 1.0f);
-        w /= w(3);
-        return Vector3f(w(0), w(1), w(2));
+        const Vector4f w = TransformMatrix * v.homogeneous();
+        return w.block<3, 1>(0, 0) / w.w();
     }
 
     [[nodiscard]] inline Vector3f applyNormal(const Vector3f& n) const
@@ -240,6 +239,129 @@ void TriMesh::transform(const Transformf& t)
         v = transform.applyTransform(v);
     for (auto& n : normals)
         n = transform.applyNormal(n);
+}
+
+struct EdgeKey {
+    uint32 A;
+    uint32 B;
+
+    inline EdgeKey(uint32 a, uint32 b)
+        : A(a < b ? a : b)
+        , B(a < b ? b : a)
+    {
+        IG_ASSERT(a != b, "Only valid edges allowed");
+    }
+};
+
+inline bool operator==(const EdgeKey& a, const EdgeKey& b)
+{
+    return a.A == b.A && a.B == b.B;
+}
+
+struct EdgeKeyHash {
+    auto operator()(const EdgeKey& key) const -> size_t
+    {
+        return std::hash<decltype(EdgeKey::A)>{}(key.A) ^ std::hash<decltype(EdgeKey::B)>{}(key.B);
+    }
+};
+
+using EdgeMap = std::unordered_map<EdgeKey, uint32, EdgeKeyHash>;
+static EdgeMap computeEdgeMap(const std::vector<uint32>& triangleIndices)
+{
+    const size_t triangles = triangleIndices.size() / 4;
+
+    EdgeMap edges; // always [e0, e1]...
+    edges.reserve(triangles * 3);
+
+    for (size_t t = 0; t < triangles; ++t) {
+        const uint32 v0 = triangleIndices[t * 4 + 0];
+        const uint32 v1 = triangleIndices[t * 4 + 1];
+        const uint32 v2 = triangleIndices[t * 4 + 2];
+
+        edges.try_emplace(EdgeKey(v0, v1), (uint32)edges.size());
+        edges.try_emplace(EdgeKey(v1, v2), (uint32)edges.size());
+        edges.try_emplace(EdgeKey(v2, v0), (uint32)edges.size());
+    }
+
+    return edges;
+}
+
+void TriMesh::subdivide()
+{
+    const auto edges = computeEdgeMap(indices);
+
+    const size_t newEdgeCount          = edges.size();
+    const size_t previousVertexCount   = vertices.size();
+    const size_t previousTriangleCount = indices.size() / 4;
+
+    // Append new vertices
+    vertices.resize(previousVertexCount + newEdgeCount);
+    for (const auto& p : edges)
+        vertices[previousVertexCount + p.second] = (vertices.at(p.first.A) + vertices.at(p.first.B)) / 2;
+
+    // Append new normals if needed
+    if (previousVertexCount == normals.size()) {
+        normals.resize(previousVertexCount + newEdgeCount);
+        for (const auto& p : edges)
+            normals[previousVertexCount + p.second] = (normals.at(p.first.A) + normals.at(p.first.B)).normalized();
+    }
+
+    // Append new texcoords if needed
+    if (previousVertexCount == texcoords.size()) {
+        texcoords.resize(previousVertexCount + newEdgeCount);
+        for (const auto& p : edges)
+            texcoords[previousVertexCount + p.second] = (texcoords.at(p.first.A) + texcoords.at(p.first.B)) / 2;
+    }
+
+    // Setup indices
+    std::vector<uint32> newIndices;
+    newIndices.reserve(previousTriangleCount * 4 * 4); // For new triangles for each triangle, which is given as a pack of 4 uints
+    for (size_t t = 0; t < previousTriangleCount; ++t) {
+        const uint32 v0  = indices[t * 4 + 0];
+        const uint32 v1  = indices[t * 4 + 1];
+        const uint32 v2  = indices[t * 4 + 2];
+        const uint32 e01 = previousVertexCount + edges.at(EdgeKey(v0, v1));
+        const uint32 e12 = previousVertexCount + edges.at(EdgeKey(v1, v2));
+        const uint32 e20 = previousVertexCount + edges.at(EdgeKey(v2, v0));
+
+        newIndices.insert(newIndices.end(), { v0, e01, e20, 0,
+                                              v1, e12, e01, 0,
+                                              v2, e20, e12, 0,
+                                              e01, e12, e20, 0 });
+    }
+
+    indices = std::move(newIndices);
+}
+
+void TriMesh::applySkinning(const std::vector<float>& weightsPerVertexPerJoint,
+                            const std::vector<uint32>& indexPerVertexPerJoint,
+                            const AlignedVector<Matrix4f>& transformsPerJoint,
+                            size_t numJointsPerVertex)
+{
+    if (numJointsPerVertex == 0)
+        return;
+
+    if (weightsPerVertexPerJoint.size() / numJointsPerVertex != vertices.size()) {
+        IG_LOG(L_ERROR) << "Given weights for skinning do not match the number of vertices multiplied by the number of joints per vertices!" << std::endl;
+        return;
+    }
+
+    if (weightsPerVertexPerJoint.size() != indexPerVertexPerJoint.size()) {
+        IG_LOG(L_ERROR) << "Given weights and indices for skinning are not of the same size!" << std::endl;
+        return;
+    }
+
+    const bool hasNormals = normals.size() == vertices.size();
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        Matrix4f transform = Matrix4f::Zero();
+        for (size_t j = 0; j < numJointsPerVertex; ++j)
+            transform += weightsPerVertexPerJoint[i * numJointsPerVertex + j] * transformsPerJoint.at(indexPerVertexPerJoint[i * numJointsPerVertex + j]);
+
+        Vector4f homogenous = transform * vertices[i].homogeneous();
+        vertices[i]         = homogenous.block<3, 1>(0, 0) / homogenous.w();
+        if (hasNormals)
+            normals[i] = (transform.block<3, 3>(0, 0).transpose().inverse() * normals[i]).normalized();
+    }
 }
 
 std::optional<PlaneShape> TriMesh::getAsPlane() const
