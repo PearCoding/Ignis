@@ -266,7 +266,7 @@ struct EdgeKeyHash {
 };
 
 using EdgeMap = std::unordered_map<EdgeKey, uint32, EdgeKeyHash>;
-static EdgeMap computeEdgeMap(const std::vector<uint32>& triangleIndices)
+static EdgeMap computeEdgeMap(const std::vector<uint32>& triangleIndices, const std::vector<bool>* mask)
 {
     const size_t triangles = triangleIndices.size() / 4;
 
@@ -274,6 +274,9 @@ static EdgeMap computeEdgeMap(const std::vector<uint32>& triangleIndices)
     edges.reserve(triangles * 3);
 
     for (size_t t = 0; t < triangles; ++t) {
+        if (mask && !mask->at(t))
+            continue;
+
         const uint32 v0 = triangleIndices[t * 4 + 0];
         const uint32 v1 = triangleIndices[t * 4 + 1];
         const uint32 v2 = triangleIndices[t * 4 + 2];
@@ -286,9 +289,10 @@ static EdgeMap computeEdgeMap(const std::vector<uint32>& triangleIndices)
     return edges;
 }
 
-void TriMesh::subdivide()
+void TriMesh::subdivide(const std::vector<bool>* mask)
 {
-    const auto edges = computeEdgeMap(indices);
+    const bool hasMask = mask && mask->size() == faceCount();
+    const auto edges   = computeEdgeMap(indices, hasMask ? mask : nullptr);
 
     const size_t newEdgeCount          = edges.size();
     const size_t previousVertexCount   = vertices.size();
@@ -316,7 +320,7 @@ void TriMesh::subdivide()
     // Setup indices
     std::vector<uint32> newIndices;
     newIndices.reserve(previousTriangleCount * 4 * 4); // For new triangles for each triangle, which is given as a pack of 4 uints
-    for (size_t t = 0; t < previousTriangleCount; ++t) {
+    const auto addNewIndices = [&](size_t t) {
         const uint32 v0  = indices[t * 4 + 0];
         const uint32 v1  = indices[t * 4 + 1];
         const uint32 v2  = indices[t * 4 + 2];
@@ -328,9 +332,92 @@ void TriMesh::subdivide()
                                               v1, e12, e01, 0,
                                               v2, e20, e12, 0,
                                               e01, e12, e20, 0 });
+    };
+
+    if (hasMask) {
+        for (size_t t = 0; t < previousTriangleCount; ++t) {
+            if (mask->at(t)) {
+                addNewIndices(t);
+            } else {
+                const uint32 v0 = indices[t * 4 + 0];
+                const uint32 v1 = indices[t * 4 + 1];
+                const uint32 v2 = indices[t * 4 + 2];
+
+                const auto it01 = edges.find(EdgeKey(v0, v1));
+                const auto it12 = edges.find(EdgeKey(v1, v2));
+                const auto it20 = edges.find(EdgeKey(v2, v0));
+
+                const uint8 bits = (it01 != edges.end() ? 0x1 : 0) | (it12 != edges.end() ? 0x2 : 0) | (it20 != edges.end() ? 0x4 : 0);
+
+                const uint32 e01 = it01 != edges.end() ? previousVertexCount + it01->second : 0;
+                const uint32 e12 = it12 != edges.end() ? previousVertexCount + it12->second : 0;
+                const uint32 e20 = it20 != edges.end() ? previousVertexCount + it20->second : 0;
+
+                switch (bits) {
+                default:
+                case 0x0:
+                    // No neighboring subdivisions
+                    newIndices.insert(newIndices.end(), { v0, v1, v2, 0 });
+                    break;
+                    // A single neighbor is subdivided, so fix the opposing vertex to prevent cuts
+                case 0x1: // e01
+                    newIndices.insert(newIndices.end(), { v0, e01, v2, 0,
+                                                          v1, v2, e01, 0 });
+                    break;
+                case 0x2: // e12
+                    newIndices.insert(newIndices.end(), { v1, e12, v0, 0,
+                                                          v2, v0, e12, 0 });
+                    break;
+                case 0x4: // e20
+                    newIndices.insert(newIndices.end(), { v0, v1, e20, 0,
+                                                          v1, v2, e20, 0 });
+                    break;
+                    // Two neighbors are subdivided, we have to get creative
+                case 0x3: // e01, e12
+                    newIndices.insert(newIndices.end(), { v0, e01, v2, 0,
+                                                          v1, e12, e01, 0,
+                                                          v2, e01, e12, 0 });
+                    break;
+                case 0x5: // e01, e20
+                    newIndices.insert(newIndices.end(), { v0, e01, e20, 0,
+                                                          v1, e20, e01, 0,
+                                                          v2, e20, v1, 0 });
+                    break;
+                case 0x6: // e12, e20
+                    newIndices.insert(newIndices.end(), { v0, v1, e20, 0,
+                                                          v1, e12, e20, 0,
+                                                          v2, e20, e12, 0 });
+                    break;
+                    // All neighbors are subdivided, so just subdivide this one as well
+                case 0x7: // e01, e12, e20
+                    newIndices.insert(newIndices.end(), { v0, e01, e20, 0,
+                                                          v1, e12, e01, 0,
+                                                          v2, e20, e12, 0,
+                                                          e01, e12, e20, 0 });
+                    break;
+                }
+            }
+        }
+    } else {
+        for (size_t t = 0; t < previousTriangleCount; ++t)
+            addNewIndices(t);
     }
 
     indices = std::move(newIndices);
+}
+
+void TriMesh::markAreaGreater(std::vector<bool>& mask, float threshold) const
+{
+    mask.resize(faceCount(), false);
+
+    const float threshold2 = threshold * threshold;
+    for (size_t i = 0; i < faceCount(); ++i) {
+        const Vector3f v0 = vertices[indices[4 * i + 0]];
+        const Vector3f v1 = vertices[indices[4 * i + 1]];
+        const Vector3f v2 = vertices[indices[4 * i + 2]];
+        const Vector3f N  = computeTriangleNormal(v0, v1, v2);
+        mask[i]           = N.squaredNorm() >= threshold2;
+    }
 }
 
 void TriMesh::applySkinning(const std::vector<float>& weightsPerVertexPerJoint,

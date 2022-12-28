@@ -42,7 +42,13 @@ public:
     void transform(const Transformf& t);
 
     /// @brief Apply basic triangle subdivision
-    void subdivide();
+    /// @param mask Optional mask to mark faces to subdivide. If specified, must have faceCount() entries
+    void subdivide(const std::vector<bool>* mask = nullptr);
+
+    /// @brief Will mask the entry in the array true if the given face has an area greater or equal the given threshold
+    /// @param mask Array of bool resized to faceCount()
+    /// @param threshold Greater or equal threshold which the areas will be marked true
+    void markAreaGreater(std::vector<bool>& mask, float threshold) const;
 
     /// @brief Will skin the current vertices to the given joints and transforms. The perVertexPerJoint arrays have the size numVertices * numJointsPerVertex
     /// @param weightsPerVertexPerJoint Weights per vertex per joint
