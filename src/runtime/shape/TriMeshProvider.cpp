@@ -327,31 +327,38 @@ static uint64 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mut
     return offset;
 }
 
-static void applyDisplacement(TriMesh& mesh, const Image& image, float amount, float min_area)
+static void handleRefinement(TriMesh& mesh, const SceneObject& elem)
 {
-    if (min_area > 0.0f) {
-        // Refine the mesh until sufficient or max iterations
-        IG_LOG(L_DEBUG) << "Refining mesh for displacement" << std::endl;
-        for (size_t k = 0; k < 6; ++k) {
-            std::vector<bool> mask;
-            mesh.markAreaGreater(mask, min_area);
+    const float min_area = elem.property("refinement").getNumber(0);
+    if (min_area <= FltEps)
+        return;
 
-            // Check if we still have to refine the mesh
-            bool check = false;
-            for (const bool b : mask) {
-                if (b) {
-                    check = true;
-                    break;
-                }
-            }
+    constexpr size_t MaxIter = 16; // Just to prevent infinite iterations
 
-            if (!check)
+    // Refine the mesh until sufficient or max iterations
+    IG_LOG(L_DEBUG) << "Refining mesh until " << min_area << std::endl;
+    for (size_t k = 0; k < MaxIter; ++k) {
+        std::vector<bool> mask;
+        mesh.markAreaGreater(mask, min_area);
+
+        // Check if we still have to refine the mesh
+        bool check = false;
+        for (const bool b : mask) {
+            if (b) {
+                check = true;
                 break;
-
-            mesh.subdivide(&mask);
+            }
         }
-    }
 
+        if (!check)
+            break;
+
+        mesh.subdivide(&mask);
+    }
+}
+
+static void applyDisplacement(TriMesh& mesh, const Image& image, float amount)
+{
     // Generate necessary attributes if necessary
     if (mesh.normals.size() != mesh.vertices.size())
         mesh.computeVertexNormals();
@@ -386,7 +393,7 @@ static void handleDisplacement(TriMesh& mesh, const LoaderContext& ctx, const Sc
 
     const float amount = elem.property("displacement_amount").getNumber(1.0f);
 
-    applyDisplacement(mesh, image, amount, elem.property("displacement_min_area").getNumber(0));
+    applyDisplacement(mesh, image, amount);
 
     // Re-Evaluate normals if necessary
     if (elem.property("smooth_normals").getBool(false))
@@ -464,6 +471,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
     for (size_t i = 0; i < subdivisionCount; ++i)
         mesh.subdivide();
 
+    handleRefinement(mesh, elem);
     handleDisplacement(mesh, ctx, elem);
 
     // Build bounding box
