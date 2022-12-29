@@ -99,6 +99,8 @@ public:
     float CurrentTravelSpeed = 1.0f;
     float CurrentZoom        = 1.0f; // Only important if orthogonal
 
+    inline bool isAnyWindowShown() const { return ShowControl || ShowProperties || ShowInspector || ShowHelp; }
+
     // Buffer stuff
     bool setupTextureBuffer(size_t width, size_t height)
     {
@@ -258,7 +260,7 @@ public:
 
         bool reset = false;
         SDL_Event event;
-        const bool hover = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
+        const bool hover = isAnyWindowShown() && (ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
         while (SDL_PollEvent(&event)) {
 #ifndef USE_OLD_SDL
             ImGui_ImplSDL2_ProcessEvent(&event);
@@ -357,7 +359,7 @@ public:
             }
 
             // Skip application input if any ImGui window is captured
-            if (io.WantCaptureKeyboard || io.WantCaptureMouse || io.WantTextInput)
+            if (isAnyWindowShown() && (io.WantCaptureKeyboard || io.WantCaptureMouse || io.WantTextInput))
                 continue;
 
             // Handle application input
@@ -1136,24 +1138,25 @@ UI::UpdateResult UI::update()
     SDL_RenderClear(mInternal->Renderer);
     SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr);
 
-    UpdateResult result = UpdateResult::Continue;
-    if (mInternal->ShowControl || mInternal->ShowProperties || mInternal->ShowInspector || mInternal->ShowHelp) {
 #ifndef USE_OLD_SDL
-        ImGui_ImplSDLRenderer_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
+    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
 #endif
+    ImGui::NewFrame();
 
-        ImGui::NewFrame();
+    UpdateResult result = UpdateResult::Continue;
+    if (mInternal->isAnyWindowShown()) {
         result = mInternal->handleImgui();
         if (mInternal->ShowHelp)
             handleHelp();
-        ImGui::Render();
-#ifndef USE_OLD_SDL
-        ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
-#else
-        ImGuiSDL::Render(ImGui::GetDrawData());
-#endif
     }
+
+    ImGui::Render();
+#ifndef USE_OLD_SDL
+    ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+#else
+    ImGuiSDL::Render(ImGui::GetDrawData());
+#endif
 
     SDL_RenderPresent(mInternal->Renderer);
     return result;
