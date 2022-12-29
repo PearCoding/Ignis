@@ -10,6 +10,7 @@ from bpy_extras.io_utils import (
 from bpy_extras.wm_utils.progress_report import (
     ProgressReport
 )
+from collections import namedtuple
 
 from .exporter import *
 
@@ -70,6 +71,12 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
         default=True,
     )
 
+    triangulate_shapes: BoolProperty(
+        name="Triangulate Shapes",
+        description="Triangulate all shapes before exporting.",
+        default=True,
+    )
+
     copy_images: BoolProperty(
         name="Copy all Images",
         description="If true, copy all images next to the scene file, not only Generated or Packed images.",
@@ -92,6 +99,8 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
         if bpy.ops.object.mode_set.poll():
             bpy.ops.object.mode_set(mode='OBJECT')
 
+        settings = namedtuple("Settings", keywords.keys())(*keywords.values())
+
         with ProgressReport(context.window_manager) as progress:
             if self.animations is True:
                 scene_frames = range(
@@ -101,10 +110,10 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
                     context.scene.frame_set(frame)
                     progress.enter_substeps(1)
                     export_scene_to_file(self.filepath.replace(
-                        '.json', f'{frame:04}.json'), context, **keywords)
+                        '.json', f'{frame:04}.json'), context, settings=settings)
                 progress.leave_substeps()
             else:
-                export_scene_to_file(self.filepath, context, **keywords)
+                export_scene_to_file(self.filepath, context, settings=settings)
         return {'FINISHED'}
 
     def draw(self, context):
@@ -143,6 +152,10 @@ class IGNIS_PT_export_include(bpy.types.Panel):
         col.prop(operator, 'enable_background', text="Background")
         col.prop(operator, 'enable_camera', text="Camera")
         col.prop(operator, 'enable_technique', text="Technique")
+
+        layout.separator()
+        col = layout.column(heading="Shapes")
+        col.prop(operator, 'triangulate_shapes', text="Triangulate")
 
         layout.separator()
         col = layout.column(heading="Images")

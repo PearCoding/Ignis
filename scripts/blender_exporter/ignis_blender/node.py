@@ -6,11 +6,11 @@ from .addon_preferences import get_prefs
 
 
 class NodeContext:
-    def __init__(self, result, path, depsgraph, always_copy_images):
+    def __init__(self, result, path, depsgraph, settings):
         self.result = result
         self.path = path
         self.depsgraph = depsgraph
-        self.always_copy_images = always_copy_images
+        self.settings = settings
         self._cache = {}
         self.offset_texcoord = (0, 0, 0)
 
@@ -969,7 +969,7 @@ def _handle_image(ctx, image):
         if img_path.startswith("//"):
             img_path = img_path[2:]
 
-        export_image = image.packed_file or ctx.always_copy_images or img_path == ''
+        export_image = image.packed_file or getattr(ctx.settings, "always_copy_images", False) or img_path == ''
 
         if export_image:
             img_name = bpy.path.basename(img_path)

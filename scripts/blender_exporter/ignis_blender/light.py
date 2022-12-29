@@ -7,7 +7,7 @@ from .emission import get_emission
 from .defaults import *
 
 
-def export_background(result, out_dir, depsgraph, copy_images):
+def export_background(result, out_dir, depsgraph, settings):
     scene = depsgraph.scene
 
     # It might be that no world is given at all
@@ -32,7 +32,7 @@ def export_background(result, out_dir, depsgraph, copy_images):
         return None
 
     radiance = get_emission(NodeContext(
-        result, out_dir, depsgraph, copy_images), surface)
+        result, out_dir, depsgraph, settings), surface)
 
     if not radiance:
         return
