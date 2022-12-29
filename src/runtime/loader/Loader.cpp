@@ -159,6 +159,13 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
         return std::nullopt;
     }
 
+    // Put some information into the registry
+    ctx.GlobalRegistry.IntParameters["__entity_count"]        = (int)ctx.Entities->entityCount();
+    ctx.GlobalRegistry.IntParameters["__shape_count"]         = (int)ctx.Shapes->shapeCount();
+    ctx.GlobalRegistry.IntParameters["__material_count"]      = (int)ctx.Materials.size();
+    ctx.GlobalRegistry.VectorParameters["__scene_bbox_lower"] = ctx.SceneBBox.min;
+    ctx.GlobalRegistry.VectorParameters["__scene_bbox_upper"] = ctx.SceneBBox.max;
+
     if (ctx.HasError)
         return std::nullopt;
     else

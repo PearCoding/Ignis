@@ -3,6 +3,7 @@
 #include "ShaderUtils.h"
 #include "loader/Loader.h"
 #include "loader/LoaderCamera.h"
+#include "loader/LoaderEntity.h"
 #include "loader/LoaderShape.h"
 #include "loader/LoaderTechnique.h"
 #include "loader/LoaderUtils.h"
@@ -31,7 +32,7 @@ std::string TraversalShader::setupPrimary(const LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    if (ctx.EntityCount == 0) {
+    if (ctx.Entities->entityCount() == 0) {
         stream << begin(ctx) << std::endl
                << "  maybe_unused(size);" << std::endl
                << end();
@@ -52,7 +53,7 @@ std::string TraversalShader::setupSecondary(const LoaderContext& ctx)
 
     std::stringstream stream;
 
-    if (ctx.EntityCount == 0) {
+    if (ctx.Entities->entityCount() == 0) {
         stream << begin(ctx) << std::endl
                << "  maybe_unused(size);" << std::endl
                << end();

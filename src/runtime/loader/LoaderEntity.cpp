@@ -179,8 +179,7 @@ bool LoaderEntity::load(LoaderContext& ctx)
 
     IG_LOG(L_DEBUG) << "Storing Entities took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
 
-    ctx.EntityCount = mEntityCount;
-    if (ctx.EntityCount == 0) {
+    if (mEntityCount == 0) {
         ctx.SceneDiameter = 0;
         return true;
     }

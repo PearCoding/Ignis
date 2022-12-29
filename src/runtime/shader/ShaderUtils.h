@@ -19,6 +19,7 @@ public:
 
     static std::string inlineSPI(const LoaderContext& ctx);
     static std::string inlineSceneBBox(const LoaderContext& ctx);
+    static std::string inlineSceneInfo(const LoaderContext& ctx, bool embed);
     static std::string inlinePayloadInfo(const LoaderContext& ctx);
 };
 } // namespace IG

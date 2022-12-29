@@ -10,9 +10,7 @@ struct Entity;
 
 class LoaderUtils {
 public:
-    static std::string inlineSceneInfo(const LoaderContext& ctx);
     static std::string inlineSceneBBox(const LoaderContext& ctx);
-
     static std::string inlineEntity(const Entity& entity);
 
     static std::string escapeIdentifier(const std::string& name);

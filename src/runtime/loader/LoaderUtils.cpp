@@ -7,14 +7,6 @@
 #include <sstream>
 
 namespace IG {
-std::string LoaderUtils::inlineSceneInfo(const LoaderContext& ctx)
-{
-    // TODO: Not always needed to be exposed as constant in scene files!
-    std::stringstream stream;
-    stream << "SceneInfo { num_entities = " << ctx.EntityCount << ", num_materials = " << ctx.Materials.size() << " }";
-    return stream.str();
-}
-
 std::string LoaderUtils::inlineSceneBBox(const LoaderContext& ctx)
 {
 #if 0
@@ -29,6 +21,7 @@ std::string LoaderUtils::inlineSceneBBox(const LoaderContext& ctx)
 
 std::string LoaderUtils::inlineEntity(const Entity& entity)
 {
+    // TODO: Might be beneficial to put this into the registry?
     const Matrix34f localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
     const Matrix34f globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
     const Matrix3f normalMat  = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
