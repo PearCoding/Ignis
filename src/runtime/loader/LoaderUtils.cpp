@@ -9,6 +9,7 @@
 namespace IG {
 std::string LoaderUtils::inlineSceneInfo(const LoaderContext& ctx)
 {
+    // TODO: Not always needed to be exposed as constant in scene files!
     std::stringstream stream;
     stream << "SceneInfo { num_entities = " << ctx.EntityCount << ", num_materials = " << ctx.Materials.size() << " }";
     return stream.str();
@@ -16,9 +17,14 @@ std::string LoaderUtils::inlineSceneInfo(const LoaderContext& ctx)
 
 std::string LoaderUtils::inlineSceneBBox(const LoaderContext& ctx)
 {
+#if 0
     std::stringstream stream;
     stream << "make_bbox(" << LoaderUtils::inlineVector(ctx.SceneBBox.min) << ", " << LoaderUtils::inlineVector(ctx.SceneBBox.max) << ")";
     return stream.str();
+#else
+    IG_UNUSED(ctx);
+    return "scene_bbox"; // Defined in each respective shader
+#endif
 }
 
 std::string LoaderUtils::inlineEntity(const Entity& entity)

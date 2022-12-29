@@ -267,6 +267,10 @@ bool Runtime::load(const std::filesystem::path& path, const std::shared_ptr<Scen
     // Merge global registry
     mGlobalRegistry.mergeFrom(ctx->GlobalRegistry);
 
+    // Add scene bbox information to registry
+    setParameter("__scene_bbox_lower", ctx->SceneBBox.min);
+    setParameter("__scene_bbox_upper", ctx->SceneBBox.max);
+
     // Free memory from loader context
     ctx.reset();
 

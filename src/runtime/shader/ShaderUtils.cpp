@@ -122,7 +122,9 @@ std::string ShaderUtils::beginCallback(const LoaderContext& ctx)
 
     stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl;
+           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
+           << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl;
+
     return stream.str();
 }
 
@@ -141,6 +143,15 @@ std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
         stream << "registry::get_global_parameter_i32(\"__spi\", 1)";
 
     // We do not hardcode the spi as default to prevent recompilations if spi != 1
+    return stream.str();
+}
+
+std::string ShaderUtils::inlineSceneBBox(const LoaderContext& ctx)
+{
+    IG_UNUSED(ctx);
+
+    std::stringstream stream;
+    stream << "make_bbox(registry::get_global_parameter_vec3(\"__scene_bbox_lower\", vec3_expand(0)), registry::get_global_parameter_vec3(\"__scene_bbox_upper\", vec3_expand(0)))";
     return stream.str();
 }
 
