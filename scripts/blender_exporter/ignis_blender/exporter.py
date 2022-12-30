@@ -80,11 +80,17 @@ def export_entity(result, depsgraph, inst, filepath, shape_name, mat_i, settings
     # Export actual entity
     matrix = inst.matrix_world
     entity_name = f"{inst.object.name}-{shape_name}"
-    result["entities"].append(
-        {"name": entity_name, "shape": shape_name,
-            "bsdf": mat_name, "transform": flat_matrix(matrix),
-            "shadow_visible": shadow_visibility}
-    )
+    entity_dict = {"name": entity_name, "shape": shape_name,
+                   "bsdf": mat_name, "transform": flat_matrix(matrix)}
+
+    if not shadow_visibility or not inst.object.visible_shadow:
+        entity_dict["shadow_visible"] = False
+    if not inst.object.visible_camera:
+        entity_dict["camera_visible"] = False
+    if not inst.object.visible_diffuse and not inst.object.visible_glossy and not inst.object.visible_transmission:
+        entity_dict["bounce_visible"] = False
+
+    result["entities"].append(entity_dict)
 
     # Export entity as area light if necessary
     if (emission is not None) and settings.export_lights:
@@ -117,12 +123,13 @@ def export_all(filepath, result, depsgraph, settings):
             continue
 
         objType = object_eval.type
-        if objType == "MESH" or objType == "CURVE" or objType == "SURFACE":
+        if objType in {'MESH', 'CURVE', 'SURFACE', 'FONT', 'META'}:
             name = get_shape_name_base(object_eval)
             if name in exported_shapes:
                 shapes = exported_shapes[name]
             else:
-                shapes = export_shape(result, object_eval, depsgraph, filepath, settings)
+                shapes = export_shape(
+                    result, object_eval, depsgraph, filepath, settings)
                 exported_shapes[name] = shapes
 
             if len(shapes) == 0:
@@ -130,7 +137,8 @@ def export_all(filepath, result, depsgraph, settings):
                     f"Entity {object_eval.name} has no material or shape and will be ignored")
 
             for shape in shapes:
-                export_entity(result, depsgraph, inst, filepath, shape[0], shape[1], settings)
+                export_entity(result, depsgraph, inst, filepath,
+                              shape[0], shape[1], settings)
         elif objType == "LIGHT" and settings.export_lights:
             export_light(
                 result, inst)
