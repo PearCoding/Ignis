@@ -31,18 +31,8 @@ Triangle (:monosp:`triangle`)
     - |vector|
     - :code:`(0,0,0)`, :code:`(1,0,0)`, :code:`(0,1,0)`
     - Vertices of the triangle.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. subfigstart::
 
@@ -75,18 +65,8 @@ Rectangle (:monosp:`rectangle`)
     - |vector|
     - :code:`(-1,-1,0)`, :code:`(1,-1,0)`, :code:`(1,1,0)`, :code:`(-1,1,0)`
     - Vertices of the rectangle. This will only be used if no :monosp:`width` or :monosp:`height` is specified.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. subfigstart::
 
@@ -115,18 +95,8 @@ Box (:monosp:`box`)
     - |vector|
     - :code:`(0,0,0)`
     - The origin of the box.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. subfigstart::
 
@@ -189,18 +159,8 @@ Ico-Sphere (:monosp:`icosphere`)
     - |int|
     - :code:`4`
     - Number of subdivions used.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. subfigstart::
 
@@ -233,18 +193,8 @@ UV-Sphere (:monosp:`uvsphere`)
     - |int|
     - :code:`32`, :code:`16`
     - Stacks and slices used for internal triangulation.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. subfigstart::
 
@@ -285,18 +235,8 @@ Cylinder (:monosp:`cylinder`)
     - |int|
     - :code:`32`
     - Sections used for internal triangulation.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. subfigstart::
 
@@ -333,18 +273,8 @@ Cone (:monosp:`cone`)
     - |int|
     - :code:`32`
     - Sections used for internal triangulation.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. subfigstart::
 
@@ -381,18 +311,8 @@ Disk (:monosp:`disk`)
     - |int|
     - :code:`32`
     - Sections used for internal triangulation.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. subfigstart::
 
@@ -421,18 +341,8 @@ Wavefront Object Format (:monosp:`obj`)
     - |int|
     - :code:`-1`
     - If greater or equal 0 a specific shape given by the index will be loaded, else all shapes will be merged to one.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. _shape-ply:
 
@@ -445,18 +355,8 @@ Polygon File Format (:monosp:`ply`)
     - |string|
     - *None*
     - Path to a valid .ply file.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. _shape-mitsuba:
 
@@ -473,18 +373,8 @@ Mitsuba Serialized Format (:monosp:`mitsuba`)
     - |int|
     - :code:`0`
     - A Mitsuba Serialized Format is able to contain multiple shapes. This parameter allows to select the requested one.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. _shape-external:
 
@@ -535,18 +425,8 @@ Inline Mesh (:monosp:`inline`)
     - |array| of |number|
     - *none*
     - Two dimensional texture coordinates given as a flat list of numbers. The number of entries must be a multiple of 2 and must match the number of vertices.
-  * - flip_normals
-    - |bool|
-    - |false|
-    - Flip the normals.
-  * - face_normals
-    - |bool|
-    - |false|
-    - Use normals from triangles as vertex normals. This will let the object look *hard*.
-  * - transform
-    - |transform|
-    - Identity
-    - Apply given transformation to shape.
+
+The parameters specified in :ref:`Triangular Mesh <shape-triangular-mesh>` can be used as well.
 
 .. NOTE:: A list of |number| or |int| can be specified via the ``{"type": "number", values=[...]}`` with ``number`` or ``integer`` as type respectively.
 
@@ -572,3 +452,49 @@ Inline Mesh (:monosp:`inline`)
     :dedent:
     :emphasize-lines: 5-6
     :caption: The following shape definition is a simple example of an inlined mesh specification. 
+
+.. _shape-triangular-mesh:
+
+Triangular Mesh
+---------------
+
+A triangular mesh specified above can have the following parameters additionally to the mentioned above as well:
+
+.. objectparameters::
+
+  * - flip_normals
+    - |bool|
+    - |false|
+    - Flip the normals.
+  * - face_normals
+    - |bool|
+    - |false|
+    - Use normals from triangles as vertex normals. This will let the object look *hard*.
+  * - smooth_normals
+    - |bool|
+    - |false|
+    - Use shared normals from triangles as vertex normals. This will let the object look *smooth*.
+  * - subdivision
+    - |int|
+    - :code:`0`
+    - Number of triangular subdivisions to apply.
+  * - refinement
+    - |number|
+    - :code:`0`
+    - Adaptive threshold. If greater than zero, triangles greater or equal than the threshold will be subdivided until all triangle areas are less than the given threshold.
+  * - displacement
+    - |string|
+    - *None*
+    - Path to a image file containing grayscale values. This can not be an PExpr nor a reference to a texture. Use a plain filename.
+  * - displacement_amount
+    - |number|
+    - :code:`1`
+    - Amount of displacement to apply. Can be negative to make the displacement inwards.
+  * - transform
+    - |transform|
+    - Identity
+    - Apply given transformation to shape.
+
+.. WARNING:: Keep in mind that parameters like :paramtype:`subdivision`, :paramtype:`refinement` and :paramtype:`displacement` have a large impact on the performance of the loading process. If possible, the process should be precomputed with external software for large objects.
+
+.. NOTE:: Displacement within a shape is a tesselation step and creates a more dense mesh. Support for dynamic patterns and entities is planned for the future and will be implemented in the :ref:`Entity <Entities>` interface.
