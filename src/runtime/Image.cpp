@@ -112,18 +112,18 @@ Vector4f Image::computeAverage() const
     return sum / (float)(width * height);
 }
 
-static inline int32 clampBorder(int32 v, size_t w)
+static inline int32 clampBorder(int32 v, int32 w)
 {
-    return std::max(0, std::min(v, (int32)w - 1));
+    return std::max<int32>(0, std::min(v, w - 1));
 }
 
-static inline int32 repeatBorder(int32 v, size_t w)
+static inline int32 repeatBorder(int32 v, int32 w)
 {
     const int32 t = v % w;
     return t < 0 ? t + w : t;
 }
 
-static inline int32 mirrorBorder(int32 v, size_t w)
+static inline int32 mirrorBorder(int32 v, int32 w)
 {
     const int32 t = v < 0 ? -1 - v : v;
     const int32 i = t / w;
@@ -137,8 +137,8 @@ static inline Vector4f evalAccessorNearest(const Vector2f& uv, T accessor, B bor
     // Nearest
     const int32 ix = (int32)std::floor(uv.x() * (float)width);
     const int32 iy = (int32)std::floor(uv.y() * (float)height);
-    const int32 x0 = borderHandler(ix + 0, width);
-    const int32 y0 = borderHandler(iy + 0, height);
+    const int32 x0 = borderHandler(ix + 0, (int32)width);
+    const int32 y0 = borderHandler(iy + 0, (int32)height);
 
     return accessor(x0, y0);
 }
@@ -155,10 +155,10 @@ static inline Vector4f evalAccessorBilinear(const Vector2f& uv, T accessor, B bo
     const float fx = u - std::floor(u);
     const float fy = v - std::floor(v);
 
-    const int32 x0 = borderHandler(ix + 0, width);
-    const int32 y0 = borderHandler(iy + 0, height);
-    const int32 x1 = borderHandler(ix + 1, width);
-    const int32 y1 = borderHandler(iy + 1, height);
+    const int32 x0 = borderHandler(ix + 0, (int32)width);
+    const int32 y0 = borderHandler(iy + 0, (int32)height);
+    const int32 x1 = borderHandler(ix + 1, (int32)width);
+    const int32 y1 = borderHandler(iy + 1, (int32)height);
 
     const Vector4f p00 = accessor(x0, y0);
     const Vector4f p10 = accessor(x1, y0);
@@ -206,10 +206,10 @@ static inline Vector4f evalAccessorBicubic(const Vector2f& uv, T accessor, B bor
     const int32 ix1 = (int32)std::floor((float)ix + cubic_h1(fx) + 0.5f);
     const int32 iy1 = (int32)std::floor((float)iy + cubic_h1(fy) + 0.5f);
 
-    const int32 x0 = borderHandler(ix0, width);
-    const int32 y0 = borderHandler(iy0, height);
-    const int32 x1 = borderHandler(ix1, width);
-    const int32 y1 = borderHandler(iy1, height);
+    const int32 x0 = borderHandler(ix0, (int32)width);
+    const int32 y0 = borderHandler(iy0, (int32)height);
+    const int32 x1 = borderHandler(ix1, (int32)width);
+    const int32 y1 = borderHandler(iy1, (int32)height);
 
     const Vector4f p00 = accessor(x0, y0) * g0x * g0y;
     const Vector4f p10 = accessor(x1, y0) * g1x * g0y;

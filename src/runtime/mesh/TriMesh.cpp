@@ -324,9 +324,9 @@ void TriMesh::subdivide(const std::vector<bool>* mask)
         const uint32 v0  = indices[t * 4 + 0];
         const uint32 v1  = indices[t * 4 + 1];
         const uint32 v2  = indices[t * 4 + 2];
-        const uint32 e01 = previousVertexCount + edges.at(EdgeKey(v0, v1));
-        const uint32 e12 = previousVertexCount + edges.at(EdgeKey(v1, v2));
-        const uint32 e20 = previousVertexCount + edges.at(EdgeKey(v2, v0));
+        const uint32 e01 = (uint32)previousVertexCount + edges.at(EdgeKey(v0, v1));
+        const uint32 e12 = (uint32)previousVertexCount + edges.at(EdgeKey(v1, v2));
+        const uint32 e20 = (uint32)previousVertexCount + edges.at(EdgeKey(v2, v0));
 
         newIndices.insert(newIndices.end(), { v0, e01, e20, 0,
                                               v1, e12, e01, 0,
@@ -349,9 +349,9 @@ void TriMesh::subdivide(const std::vector<bool>* mask)
 
                 const uint8 bits = (it01 != edges.end() ? 0x1 : 0) | (it12 != edges.end() ? 0x2 : 0) | (it20 != edges.end() ? 0x4 : 0);
 
-                const uint32 e01 = it01 != edges.end() ? previousVertexCount + it01->second : 0;
-                const uint32 e12 = it12 != edges.end() ? previousVertexCount + it12->second : 0;
-                const uint32 e20 = it20 != edges.end() ? previousVertexCount + it20->second : 0;
+                const uint32 e01 = it01 != edges.end() ? (uint32)previousVertexCount + it01->second : 0;
+                const uint32 e12 = it12 != edges.end() ? (uint32)previousVertexCount + it12->second : 0;
+                const uint32 e20 = it20 != edges.end() ? (uint32)previousVertexCount + it20->second : 0;
 
                 switch (bits) {
                 default:
