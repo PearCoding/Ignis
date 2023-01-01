@@ -341,24 +341,24 @@ It is, by design, easy to transpile to other languages like <code class="docutil
 It has <strong>no</strong> support for control flow, like <code class="docutils literal notranslate"><span class="pre">if</span></code> or <code class="docutils literal notranslate"><span class="pre">while</span></code>, and statements in general.
 For more complex shading networks multiple expressions can be chained with textures and function calls.</p>
 <p>Some examples for the PExpr language:</p>
-<div class="highlight-maxima notranslate"><div class="highlight"><pre><span></span><span class="nf">sin</span><span class="p">(</span><span class="nv">uv</span><span class="o">.</span><span class="nv">x</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nv">uv</span><span class="o">.</span><span class="nv">xyxy</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nf">color</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.4</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"></span>
-<span class="cm">/* or */</span><span class="w"></span>
-<span class="nf">fract</span><span class="p">(</span><span class="nv">P</span><span class="o">.</span><span class="nv">x</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nf">perlin</span><span class="p">(</span><span class="nv">N</span><span class="o">.</span><span class="nv">yx</span><span class="p">)</span><span class="w"></span>
+<div class="highlight-maxima notranslate"><div class="highlight"><pre><span></span><span class="nf">sin</span><span class="p">(</span><span class="nv">uv</span><span class="o">.</span><span class="nv">x</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nv">uv</span><span class="o">.</span><span class="nv">xyxy</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nf">color</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.4</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<span class="cm">/* or */</span>
+<span class="nf">fract</span><span class="p">(</span><span class="nv">P</span><span class="o">.</span><span class="nv">x</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nf">perlin</span><span class="p">(</span><span class="nv">N</span><span class="o">.</span><span class="nv">yx</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>A very similar language is <a class="reference external" href="https://github.com/wdas/SeExpr">SeExpr</a> by Walt Disney Animation Studios.
 SeExpr is more complex and industry proven, however, more difficult to transpile to other languages. Nevertheless, both languages are easy to learn and to tinkle around.</p>
 <p>An expression can be defined in many places where a number, vector or color can be given as a parameter to a light, texture, bsdf, medium, etc…</p>
 <p>An example for a PExpr used inside a BSDF definition:</p>
-<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
-<span class="w">    </span><span class="s2">&quot;bsdfs&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// ...</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;NAME&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;diffuse&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;reflectance&quot;</span><span class="o">:</span><span class="s2">&quot;some_tex.r * perlin(uv.yx * abs(sin(uv.x * 10 * Pi))) * some_other_tex(uv.yx)&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// ...</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="s2">&quot;bsdfs&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="c1">// ...</span>
+<span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;NAME&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;diffuse&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;reflectance&quot;</span><span class="o">:</span><span class="s2">&quot;some_tex.r * perlin(uv.yx * abs(sin(uv.x * 10 * Pi))) * some_other_tex(uv.yx)&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">        </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>A direct connection to a texture is just a simple use-case of a PExpr expression. Keep in mind that throughout the use of textures and expressions cycles are prohibited at all times.</p>
@@ -376,7 +376,7 @@ SeExpr is more complex and industry proven, however, more difficult to transpile
 <li><p><code class="docutils literal notranslate"><span class="pre">str</span></code> String.</p></li>
 </ul>
 <p>Vectorized types like <code class="docutils literal notranslate"><span class="pre">vec2</span></code>, <code class="docutils literal notranslate"><span class="pre">vec3</span></code> and <code class="docutils literal notranslate"><span class="pre">vec4</span></code> can be cast or extended to each other by the access/swizzle operation like:</p>
-<div class="highlight-maxima notranslate"><div class="highlight"><pre><span></span><span class="nf">vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="nv">zyxx</span><span class="w"> </span><span class="cm">/* Return type is vec4 (same as color) with values (3,2,1,1) */</span><span class="w"></span>
+<div class="highlight-maxima notranslate"><div class="highlight"><pre><span></span><span class="nf">vec3</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="nv">zyxx</span><span class="w"> </span><span class="cm">/* Return type is vec4 (same as color) with values (3,2,1,1) */</span>
 </pre></div>
 </div>
 </section>
@@ -427,17 +427,17 @@ The above defined special variable and constant names have precedence over textu
 <span id="pexpr-parameters"></span><h2>Scene Parameters<a class="headerlink" href="#scene-parameters" title="Permalink to this heading">#</a></h2>
 <p>Defining scene-wide parameters inside the <code class="code docutils literal notranslate"><span class="pre">&quot;parameters&quot;</span></code> section in the scene description allows the convenient usage of user input in the viewer and the cli. All defined parameters are available as variables inside a PExpr expression.
 Parameters can be defined as follow:</p>
-<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
-<span class="w">    </span><span class="s2">&quot;parameters&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// ...</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;NAME1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;number&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;value&quot;</span><span class="o">:</span><span class="mf">42</span><span class="w"> </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;NAME2&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;vector&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;value&quot;</span><span class="o">:</span><span class="p">[</span><span class="mf">1</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">]</span><span class="w"> </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;NAME3&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;color&quot;</span><span class="p">,</span><span class="w">  </span><span class="s2">&quot;value&quot;</span><span class="o">:</span><span class="p">[</span><span class="mf">1</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">]</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="c1">// ...</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="s2">&quot;parameters&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="c1">// ...</span>
+<span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;NAME1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;number&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;value&quot;</span><span class="o">:</span><span class="mf">42</span><span class="w"> </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;NAME2&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;vector&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;value&quot;</span><span class="o">:</span><span class="p">[</span><span class="mf">1</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">0</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="s2">&quot;NAME3&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="s2">&quot;color&quot;</span><span class="p">,</span><span class="w">  </span><span class="s2">&quot;value&quot;</span><span class="o">:</span><span class="p">[</span><span class="mf">1</span><span class="p">,</span><span class="mf">0</span><span class="p">,</span><span class="mf">1</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<span class="w">        </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>Currently only the types <code class="docutils literal notranslate"><span class="pre">number</span></code> for <code class="docutils literal notranslate"><span class="pre">num</span></code>, <code class="docutils literal notranslate"><span class="pre">vector</span></code> for <code class="docutils literal notranslate"><span class="pre">vec3</span></code> and <code class="docutils literal notranslate"><span class="pre">color</span></code> for <code class="docutils literal notranslate"><span class="pre">vec4</span></code> are available. The given <code class="docutils literal notranslate"><span class="pre">value</span></code> can not be a PExpr!</p>

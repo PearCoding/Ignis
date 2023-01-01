@@ -340,21 +340,21 @@
 The camera is specified in the <span class="monosp">camera</span> block with a <span class="monosp">type</span> listed in this section below.</p>
 <p>The actual image (or viewport) size is specified in the <span class="monosp">film</span> block with an optional sample strategy in <span class="monosp">sampler</span>.
 The sample strategy has to be one of <code class="code docutils literal notranslate"><span class="pre">&quot;independent&quot;</span></code> (default), <code class="code docutils literal notranslate"><span class="pre">&quot;mjitt&quot;</span></code> or <code class="code docutils literal notranslate"><span class="pre">&quot;halton&quot;</span></code>.</p>
-<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
-<span class="w">   </span><span class="s2">&quot;camera&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;TYPE&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;fov&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">FOV</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;near_clip&quot;</span><span class="o">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;far_clip&quot;</span><span class="o">:</span><span class="w"> </span><span class="mf">100</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;transform&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">TRANSFORM</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="s2">&quot;film&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;size&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="nx">SX</span><span class="p">,</span><span class="w"> </span><span class="nx">SZ</span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;sampler&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;independent&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// ...</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="w">   </span><span class="s2">&quot;camera&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="s2">&quot;type&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;TYPE&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="s2">&quot;fov&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">FOV</span><span class="p">,</span>
+<span class="w">        </span><span class="s2">&quot;near_clip&quot;</span><span class="o">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span>
+<span class="w">        </span><span class="s2">&quot;far_clip&quot;</span><span class="o">:</span><span class="w"> </span><span class="mf">100</span><span class="p">,</span>
+<span class="w">        </span><span class="s2">&quot;transform&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">TRANSFORM</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="s2">&quot;film&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="s2">&quot;size&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="nx">SX</span><span class="p">,</span><span class="w"> </span><span class="nx">SZ</span><span class="p">],</span>
+<span class="w">        </span><span class="s2">&quot;sampler&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;independent&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <section id="perspective-camera-perspective">
@@ -410,7 +410,7 @@ The sample strategy has to be one of <code class="code docutils literal notransl
 </table>
 <div class="figure subfigure compound align-center" id="fig-perspective-camera">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id1" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/camera_perspective.jpg" style="width: 60%" data-lightbox="-6468488289056912199" data-title=""><img alt="../../_images/camera_perspective.jpg" src="../../_images/camera_perspective.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/camera_perspective.jpg" style="width: 60%" data-lightbox="-2097129303845131455" data-title=""><img alt="../../_images/camera_perspective.jpg" src="../../_images/camera_perspective.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Perspective camera</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id1" title="Permalink to this image">#</a></p>
 </figcaption>
@@ -451,7 +451,7 @@ The sample strategy has to be one of <code class="code docutils literal notransl
 </table>
 <div class="figure subfigure compound align-center" id="fig-orthogonal-camera">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id2" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/camera_orthogonal.jpg" style="width: 60%" data-lightbox="-4065813906977655073" data-title=""><img alt="../../_images/camera_orthogonal.jpg" src="../../_images/camera_orthogonal.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/camera_orthogonal.jpg" style="width: 60%" data-lightbox="-5724468473198524207" data-title=""><img alt="../../_images/camera_orthogonal.jpg" src="../../_images/camera_orthogonal.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Orthogonal camera</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id2" title="Permalink to this image">#</a></p>
 </figcaption>
@@ -486,7 +486,7 @@ The sample strategy has to be one of <code class="code docutils literal notransl
 </table>
 <div class="figure subfigure compound align-center" id="fig-fishlens-camera">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id3" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/camera_fishlens.jpg" style="width: 60%" data-lightbox="9185329744085041922" data-title=""><img alt="../../_images/camera_fishlens.jpg" src="../../_images/camera_fishlens.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/camera_fishlens.jpg" style="width: 60%" data-lightbox="6302317686619746277" data-title=""><img alt="../../_images/camera_fishlens.jpg" src="../../_images/camera_fishlens.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Fishlens camera</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id3" title="Permalink to this image">#</a></p>
 </figcaption>
