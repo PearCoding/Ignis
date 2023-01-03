@@ -3,6 +3,7 @@ CMakeSettings.json
 
 # Visual Studio stuff
 .vs/
+.vscode/
 
 # Compiled Object files
 *.slo
